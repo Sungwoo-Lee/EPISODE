@@ -1147,7 +1147,8 @@ thermal.min_fire_separation            thermal.food_min_fire_distance
 thermal.temperature_setpoint           thermal.min_temperature
 thermal.max_temperature                thermal.k_exchange
 thermal.k_loss                         thermal.k_metabolic
-thermal.grid_range                     thermal.relative
+thermal.metabolic_coupling             thermal.grid_range
+thermal.relative
 ```
 
 and, only when `thermal.use_random_spots` is true:
@@ -1157,12 +1158,16 @@ thermal.random_spots.count             thermal.random_spots.size
 thermal.random_spots.temp
 ```
 
+and, only when `thermal.metabolic_coupling` is true:
+
+```
+thermal.metabolic_coupling_rate
+```
+
 `thermal.enabled` itself is **unconditionally mandatory** and has no fallback default —
 `config.get('thermal.enabled', False)` is explicitly forbidden, because a fallback on a
 gating key would let a config with a misspelled `thermal:` block train as if thermal were
-off. The one remaining key shown in `default.yaml`'s `thermal:` block
-(`metabolic_coupling`) is **not read yet** — Stage 5 of the temperature plan adds its
-reader.
+off. Every key in `default.yaml`'s `thermal:` block is now read.
 
 **Body-block validation** (all raise `ValueError` naming the offending key, at the point
 the key is read):
@@ -1174,9 +1179,11 @@ the key is read):
 | `thermal.max_temperature` | float | — (also the drive's thermal scale: the third homeostatic axis is `(T − temperature_setpoint) · max_satiation / max_temperature`, so this key sets the warmth-vs-hunger exchange rate as well as the survivable band — see CONFIG_GUIDE.md) |
 | `thermal.k_exchange` | float | `>= 0`, and `k_exchange + k_loss <= 1` |
 | `thermal.k_loss` | float | `>= 0`, and `k_exchange + k_loss <= 1` (above 1 the discrete update overshoots its own fixed point every step and body temperature oscillates instead of settling) |
-| `thermal.k_metabolic` | float | — (may be any sign; zero until Stage 5 couples it to activity) |
+| `thermal.k_metabolic` | float | — (may be any sign; still zero — the metabolic coupling below runs the other way, charging nutrition for defence rather than feeding heat back into the body) |
+| `thermal.metabolic_coupling` | bool | — (gate; when true, defending body temperature drains nutrition. **Static** — it gates a Python `if` in `update_body`, so with it false the drain contributes nothing to the traced graph) |
+| `thermal.metabolic_coupling_rate` | float | `>= 0`, read **only** when `metabolic_coupling` is true. Nutrition units drawn per degree-per-step of thermoregulatory defence: the per-step drain is `rate * \|k_loss * (body_temp − temperature_setpoint)\|`, charged inside the `with_nutrition` block after the linear decay and before the food refill and the single clip to `[0, max_nutrition]`. A negative rate would pay the agent for being cold |
 
-These six drive the body-temperature recurrence documented in
+The first six drive the body-temperature recurrence documented in
 [05_body_homeostasis.md](05_body_homeostasis.md#body-temperature-thermal), and leaving the
 band `[min_temperature, max_temperature]` ends the episode with **termination code 5**
 ([06_reward_and_termination.md](06_reward_and_termination.md)). From Stage 4 the first two also

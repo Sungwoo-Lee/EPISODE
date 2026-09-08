@@ -311,6 +311,12 @@ thermal:
   k_loss: 0.01
   k_metabolic: 0.0
   metabolic_coupling: false
+  # Read ONLY when metabolic_coupling is true. Nutrition units drawn per
+  # degree-per-step of thermoregulatory defence, i.e. the per-step drain is
+  #   rate * |k_loss * (body_temp - temperature_setpoint)|
+  # charged inside the with_nutrition block, after the linear decay and before
+  # the food refill and the single clip to [0, max_nutrition].
+  metabolic_coupling_rate: 1.0
 
   # --- sensor (read from Stage 3 onward) ---
   grid_range: 1             # validated >= 0

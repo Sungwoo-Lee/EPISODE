@@ -1252,6 +1252,28 @@ def load_env_params(config: Config) -> EnvParams:
                 f"above 1 the discrete update overshoots its own fixed point every "
                 f"step and the body temperature oscillates instead of settling.")
 
+        # ── Metabolic coupling (Stage 5) ──────────────────────────────────
+        # `metabolic_coupling` is conditional-mandatory under `thermal.enabled`;
+        # `metabolic_coupling_rate` is conditional-mandatory one level deeper,
+        # read ONLY when the coupling is switched on. Same shape as
+        # `random_spots.*` under `use_random_spots` (CONFIG_GUIDE.md §5): a key
+        # that nothing reads must not be able to fail a load, and a key that IS
+        # read must have no fallback default.
+        _th_met_coupling = bool(config.get_mandatory('thermal.metabolic_coupling'))
+        if _th_met_coupling:
+            _th_met_coupling_rate = float(
+                config.get_mandatory('thermal.metabolic_coupling_rate'))
+            if _th_met_coupling_rate < 0.0:
+                raise ValueError(
+                    f"thermal.metabolic_coupling_rate must be >= 0 (it is the "
+                    f"nutrition drawn per degree-per-step of thermoregulatory "
+                    f"defence; a negative rate would pay the agent for being "
+                    f"cold), got {_th_met_coupling_rate}.")
+        else:
+            # Never read: `update_body`'s drain sits behind a static
+            # `if params.thermal_metabolic_coupling:`.
+            _th_met_coupling_rate = 0.0
+
         # Thermoceptor (Stage 3). `grid_range` is a RADIUS, not a side length,
         # exactly like `olfactory_grid_range` and `visual_sensor_range`:
         # 0 -> 1 cell, 1 -> 5 cells, 2 -> 13 cells (a Manhattan diamond).
@@ -1288,6 +1310,12 @@ def load_env_params(config: Config) -> EnvParams:
         _th_setpoint = 0.0
         _th_min_temp, _th_max_temp = 0.0, 0.0
         _th_k_exchange, _th_k_loss, _th_k_metabolic = 0.0, 0.0, 0.0
+        # Metabolic coupling block (Stage 5), inert. `False` is the value that
+        # makes the drain in `update_body` untraceable on a thermal-off config:
+        # it gates a static Python `if`, so the nutrition update is the
+        # pre-thermal three lines verbatim.
+        _th_met_coupling = False
+        _th_met_coupling_rate = 0.0
         # Thermoceptor block (Stage 3), inert. `get_observation` and
         # `get_observation_breakdown` skip the modality under a static
         # `if params.thermal_enabled:`, so the observation width is unchanged
@@ -1917,6 +1945,8 @@ def load_env_params(config: Config) -> EnvParams:
         thermal_k_exchange=_th_k_exchange,
         thermal_k_loss=_th_k_loss,
         thermal_k_metabolic=_th_k_metabolic,
+        thermal_metabolic_coupling=_th_met_coupling,
+        thermal_metabolic_coupling_rate=_th_met_coupling_rate,
         temperature_setpoint=_th_setpoint,
         min_temperature=_th_min_temp,
         max_temperature=_th_max_temp,

@@ -122,8 +122,52 @@ def update_body(state: EnvState, info: dict, params: EnvParams, new_agent_pos: j
     prev_rest_streak = state.rest_streak
     # --- Nutrition Dynamics (Linear Decay) ---
     if params.with_nutrition:
+        # ORDER IS PINNED, and it is not recoverable from the config:
+        #   1. linear decay          2. thermoregulatory drain (Stage 5)
+        #   3. refill from food      4. a SINGLE clip to [0, max_nutrition]
+        # The clip comes last, after both the drain and the refill, which is what
+        # decides whether a cold step can starve an agent that also ate this step:
+        # eating offsets the drain within the same step rather than after it. And
+        # because that one clip floors at 0.0 while the termination test below
+        # reads the CLIPPED value (`new_nutrition <= 0.0`), the drain cannot push
+        # nutrition negative and cannot slip past the starvation path — an
+        # arbitrarily large drain lands on exactly 0.0 and dies there.
+        #
         # Nutrition decays linearly
         new_nutrition = prev_nutrition - params.metabolic_cost
+        # --- Thermoregulatory drain (Stage 5, `thermal.metabolic_coupling`) ---
+        # STATIC branch. `thermal_metabolic_coupling` is False on every
+        # thermal-off config by construction (config_loader forces the inert
+        # sentinel when the gate is off), and False by default when thermal is
+        # on, so with the flag off this block contributes zero operations to the
+        # traced graph and the nutrition update is the pre-Stage-5 lines verbatim.
+        #
+        # WHAT IT CHARGES FOR, and why that quantity. The body recurrence below
+        # carries `- k_loss*(T - temperature_setpoint)`: the degrees per step
+        # that physiology actively undoes to pull the body back to setpoint —
+        # shivering in the cold, sweating in the heat. That term IS the defence,
+        # so its magnitude is the work, and the work is what costs energy. Two
+        # near-misses are wrong for the same reason: charging on |T - setpoint|
+        # alone bills the agent for a deviation even when `k_loss` is 0 and the
+        # body is doing no defending at all, and charging on the net temperature
+        # change bills for passive exchange with the cell, which is heat moving
+        # on its own rather than the body spending anything to move it.
+        #
+        # `state.body_temp` is the PRE-step temperature, which is exactly the `T`
+        # that appears in this step's `k_loss` term further down. So the nutrition
+        # charged on step t pays for the defence performed on step t. Using the
+        # post-step temperature would charge a step early, and would also make
+        # this block depend on the body update, forcing a reorder of the whole
+        # function for no gain.
+        #
+        # Symmetric by |.|: defending against heat costs the same as defending
+        # against cold. The recurrence's k_loss term is signed (it pushes both
+        # ways); the energy bill is not.
+        if params.thermal_metabolic_coupling:
+            thermoregulatory_work = jnp.abs(
+                params.thermal_k_loss * (state.body_temp - params.temperature_setpoint))
+            new_nutrition = new_nutrition - (
+                params.thermal_metabolic_coupling_rate * thermoregulatory_work)
         # Refill from food (immediate) - with consumption cost
         ate_food_gain = params.food_nutrition_gain - params.eating_nutrition_cost
         new_nutrition = jnp.where(info['ate_food'], new_nutrition + ate_food_gain, new_nutrition)

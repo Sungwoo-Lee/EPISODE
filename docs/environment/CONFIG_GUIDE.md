@@ -323,8 +323,23 @@ All the sub-keys are **conditional-mandatory** (§5 pattern), read only when
 `thermal.enabled` is true, and the `random_spots.*` trio only when `use_random_spots` is
 true as well. The body sub-keys validate at the point they are read: `min_temperature <
 max_temperature`, `temperature_setpoint` inside that band, `k_exchange` and `k_loss` each
-`>= 0` and summing to `<= 1`, and `grid_range >= 0`. `metabolic_coupling` is present in
-`default.yaml` but not read yet — Stage 5 of the temperature plan adds its reader.
+`>= 0` and summing to `<= 1`, and `grid_range >= 0`. `metabolic_coupling` is read too,
+and `metabolic_coupling_rate` is conditional-mandatory one level deeper — read only when
+`metabolic_coupling` is true, and validated `>= 0` there.
+
+**`metabolic_coupling` makes staying warm compete with staying fed, and it is off.**
+With it false — which is every config in the repo — nothing changes: the drain sits behind
+a static Python `if`, so it contributes no operation to the traced graph, and a thermal-on
+rollout is bit-identical to what it was before the feature existed
+(`tests/env/test_metabolic_coupling.py::test_off_by_default_is_a_provable_noop`, held
+against a fixture captured from source that predates it). Switch it on and each step costs
+`metabolic_coupling_rate * |k_loss * (body_temp − temperature_setpoint)|` nutrition — the
+magnitude of the `k_loss` term of the body recurrence, i.e. the thermoregulatory work the
+body is actually doing, rather than the raw deviation it is doing it against. Turning it
+on is a research decision, not a tuning one: it changes the task from "keep warm" to "keep
+warm *and* keep fed, out of one budget", and every run before the switch is on the other
+task. Mechanism and the pinned update ordering:
+[05_body_homeostasis.md](05_body_homeostasis.md#metabolic-coupling-thermal).
 
 **`max_temperature` has a second job: it is the warmth-vs-hunger exchange rate.** From
 Stage 4 the homeostatic drive has three axes, and the third one is body temperature. The

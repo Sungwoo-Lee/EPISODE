@@ -387,6 +387,20 @@ class EnvParams:
     temperature_setpoint: float
     min_temperature: float
     max_temperature: float
+    # Metabolic coupling (Stage 5). When ON, the thermoregulatory work the body
+    # does each step — the `k_loss` term of the recurrence above — is charged to
+    # nutrition in `core.py::update_body`.
+    #
+    # `thermal_metabolic_coupling` is STATIC because it gates a Python `if` at
+    # trace time: with it False the drain contributes not one operation to the
+    # graph, which is what makes "off is a no-op" a fact about the traced program
+    # rather than a numerical coincidence. `thermal_metabolic_coupling_rate` is
+    # traced, like the three `thermal_k_*` knobs, so it can be swept without a
+    # recompile. Its units are NUTRITION UNITS PER DEGREE OF DEFENCE PER STEP:
+    # the drain is `rate * |k_loss * (T - temperature_setpoint)|`, and the inner
+    # magnitude is in degrees-per-step.
+    thermal_metabolic_coupling: bool = struct.field(pytree_node=False)
+    thermal_metabolic_coupling_rate: float
     # Thermoceptor (Stage 3). Both are STATIC: `thermal_grid_range` fixes the
     # number of observation dimensions (2r^2 + 2r + 1) and `thermal_relative`
     # selects a trace-time branch. Both are also part of the curriculum modality

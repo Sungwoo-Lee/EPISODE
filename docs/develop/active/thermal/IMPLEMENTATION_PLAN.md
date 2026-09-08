@@ -802,6 +802,7 @@ Everything the first draft listed as open is now settled — see *Decisions sett
 - [x] **S2** Every consumer in the Analysis table ticked off, each line number re-verified against the file rather than trusted: `train.py:1543,2054,2260,2413`; `dreamer_srl_main.py:1231`; `episode_metrics.py:41-45,232-238,269-277`; `trajectory_store.py:141,172`; `_ladder.py:90`; `grid_ladder_figures.py:150,160,168`; `check_env.py:35`; plus `tests/models/test_gae_truncation.py:132`. The six `>= 2` real-death masks were read and left unedited, and the pinning test now asserts they cover code 5. Done 2026-09-09.
 - [x] **S3** Printed before the suite: thermal OFF (`default.yaml`) 27 == 27; thermal ON (`campfire_world.yaml`) 32 == 32. Done 2026-09-09.
 - [x] **S4** Better than a character-by-character diff: the thermal-off expression was never edited. The thermal branch was inserted **above** it with an early `return`, so `git diff src/environment/core.py` shows those three lines as unchanged **context lines** — the diff itself is the proof. `test_drive_bit_identical_when_thermal_off` (72 configs, `np.array_equal`, no tolerance) and `test_thermal_off_ignores_body_temp_entirely` back it from the other side. Done 2026-09-09.
+- [x] **S5** The no-op is proved on a **thermal-ON** config, not just the thermal-off fixture set: 68 arrays / 259,430 scalars over 300 steps of `campfire_world.yaml`, `np.array_equal`, **0 mismatched**, against a fixture generated from a `git worktree` at `c0c0a619`. Independently, the lowered StableHLO of `jax_step` on that config is byte-identical before and after (sha256 `beff83c1…`). The disabled-coupling-fires mutation (M1a/M1b) turns the test red; M1c documents the loader's rate-sentinel as a second layer. Done 2026-09-09.
 - [ ] **S6** Load every config in the Stage 1 migration set and confirm none newly raises. The structure check must be unreachable when `thermal.enabled` is false. (Deferred configs are expected to raise on `thermal.enabled` — that is the policy, not a failure; do not "fix" them here.)
 - [ ] **Every stage** Record before/after steps-per-second on the same node, GPU and seed. The field build is once per episode and the recurrence is three multiply-adds per step, so a measurable slowdown means something landed in the wrong loop. Per the verification protocol, >5% warrants discussion and >15% blocks.
 
@@ -1756,6 +1757,186 @@ is the stronger statement: no new recompilation boundary. **No regression.**
 
 Signed: `Implemented by: developer`
 
+
+### Stage 5 — Metabolic coupling (complete)
+
+**Plain-language summary.** The agent's body already fights the cold: every step its
+physiology undoes a slice of however far its temperature has drifted from comfortable.
+Until now that fight was free. This stage makes it cost food — nutrition drains in
+proportion to how hard the body is working to hold its temperature — and ships the whole
+thing **switched off** (`thermal.metabolic_coupling: false` in every config in the repo).
+Because it ships off, the work here is almost entirely the proof that it really is off: a
+300-step run of the thermal world is byte-for-byte the run Stage 4 produced, checked
+against a recording taken from **Stage 4's own source code** (a `git worktree` at
+`c0c0a619`) rather than from the edited code.
+
+**What the drain is charged on, and why.** The body-temperature recurrence carries the term
+`− k_loss·(T − temperature_setpoint)`: the degrees per step that physiology actively undoes
+to pull the body back to setpoint — shivering in the cold, sweating in the heat. That term
+*is* the defence, so its magnitude is the work, and the work is what costs energy:
+
+```
+thermal_drain = metabolic_coupling_rate · |k_loss · (T_pre-step − temperature_setpoint)|
+```
+
+Two near-misses were rejected for the same reason. Charging on `|T − setpoint|` alone bills
+the agent for a *deviation* even when `k_loss` is 0 and the body is doing no defending at
+all — it charges for being cold rather than for resisting cold. Charging on the net
+per-step temperature change bills for passive exchange with the cell, which is heat moving
+on its own rather than the body spending anything to move it. `T` is the **pre-step** body
+temperature, which is exactly the `T` that appears in this step's `k_loss` term, so the
+nutrition charged on step *t* pays for the defence performed on step *t*; it also means the
+drain needs nothing from the body update and no reordering of `update_body`. The absolute
+value is load-bearing: the `k_loss` term is signed (it pushes both ways) and the energy bill
+is not, so defending against heat costs the same as defending against an equal cold. Without
+it, overheating would *pay* the agent (mutation M3).
+
+**Ordering, pinned in a comment at the definition.** Linear decay → thermoregulatory drain →
+food refill → a **single** `jnp.clip(·, 0.0, max_nutrition)`. The clip last is what lets
+eating offset the drain *within* the step, and it is also why the drain cannot bypass
+starvation: the termination test at `core.py` reads the **clipped** value
+(`new_nutrition <= 0.0`), so an arbitrarily large drain lands on exactly `0.0` and dies
+there with termination reason 2 (mutation M5, and
+`test_drain_cannot_go_negative_or_bypass_starvation` at `rate = 1e6`).
+
+**Files.**
+
+| File | Change |
+|---|---|
+| `src/environment/core.py` | `update_body` — the drain inside the existing `if params.with_nutrition:` block, between the decay and the refill, behind a **static** `if params.thermal_metabolic_coupling:`. The pinned ordering and the quantity-choice rationale are comments at the definition. |
+| `src/environment/state.py` | `EnvParams` gains `thermal_metabolic_coupling` (**static**, `pytree_node=False` — it gates a trace-time branch) and `thermal_metabolic_coupling_rate` (traced, like the three `thermal_k_*` knobs). |
+| `src/environment/config_loader.py` | Reads `thermal.metabolic_coupling` (conditional-mandatory under `thermal.enabled`) and `thermal.metabolic_coupling_rate` (conditional-mandatory one level deeper, read only when the coupling is on; validated `>= 0`). Inert sentinels `False` / `0.0` in the thermal-off branch. |
+| `configs/environment/default.yaml` | `metabolic_coupling_rate: 1.0` with an inline comment. Unread while the gate is false. |
+| `configs/environment/experiment/thermal/campfire_world.yaml` | Same. |
+| `tests/env/test_metabolic_coupling.py` | **New.** 11 tests. |
+| `scripts/fixtures/generate_metabolic_coupling_fixture.py` | **New.** Hand-run generator, `--src-root` pointed at a worktree of the pre-Stage-5 tip. |
+| `tests/env/fixtures/metabolic_coupling/thermal_on_coupling_off.npz` | **New.** 68 arrays / 259,430 scalars, generated at `c0c0a619` (SHA stamped into the file as `_provenance_sha`). |
+| `docs/environment/05_body_homeostasis.md` | New "Metabolic coupling (thermal)" section; the nutrition governing equation and the pinned ordering. |
+| `docs/environment/02_config_schema.md` | Both keys in the conditional-mandatory lists and the body-block validation table; removed the now-false "`metabolic_coupling` is not read yet". |
+| `docs/environment/CONFIG_GUIDE.md` | Same correction plus the "turning it on is a research decision" note. |
+| `docs/environment/SCRIPTS_DEPENDENCY_MAP.md` | Row for the new generator (Maintenance Contract). |
+
+**The no-op proof — the important result.** Two independent forms, both against `c0c0a619`
+checked out in a `git worktree` at `/tmp/gwp_stage4_baseline` (`results/` untouched).
+
+1. **Behavioural, on a THERMAL-ON config.** `campfire_world.yaml`, seed 0, a fixed 300-step
+   action sequence, capturing every numeric `EnvState` leaf, `reward`, `done` and every
+   numeric `info` entry — **68 arrays, 259,430 scalars**. `np.array_equal`, no tolerance:
+   **0 mismatched**. The rollout is not degenerate — body temperature travels `0.0 → −19.74`
+   and nutrition spans the full `0 → 100`, so there is plenty for a leak to show up in. This
+   is what the Stage 0 fixtures structurally cannot do: every config in that set is
+   thermal-off (`test_thermal_parity.py` asserts it), so they are blind to code that only
+   exists on a thermal-on world. Committed as the fixture behind
+   `test_off_by_default_is_a_provable_noop`.
+2. **Structural.** The lowered StableHLO of `jax.jit(jax_step)` on `campfire_world.yaml` is
+   **byte-identical** before and after — 221,528 chars, sha256
+   `beff83c1…8342a1d` both sides. The traced program is literally the same program, which is
+   a stronger statement than equal outputs.
+
+**Test results.**
+
+| Suite | Result |
+|---|---|
+| `tests/env/test_thermal_parity.py` | **72 passed**, 285 skipped (166s) |
+| `tests/env/test_metabolic_coupling.py` (new) | 11 passed (13s) |
+| `tests/env/test_thermal_body.py` | 5 passed |
+| `tests/env/test_thermal_field.py` | 9 passed |
+| `tests/env/test_thermoception.py` | 14 passed |
+| `tests/env/test_thermal_reward_gate.py` | 78 passed (139s) |
+| `tests/env/test_unified_parity.py` | 34 passed, 323 skipped (317s) |
+| `tests/env/test_visual_parity.py` | 8 passed (182s) |
+| `tests/env/test_no_recompile.py` | 3 passed (58s) |
+
+**Mutation check** (`tmp/20260909_stage5_mutation_check.sh`, `tmp/20260909_stage5_mutation_m1.sh`).
+Each mutation applied, the named test run, then both source files restored and
+**sha256-verified** — final hashes equal the baseline hashes in both scripts.
+
+| # | Mutation | Test | Result |
+|---|---|---|---|
+| M1a | gate reads `thermal_enabled`, rate forced live — the drain fires while disabled | `test_off_by_default_is_a_provable_noop` | **caught** (red) |
+| M1b | gate removed entirely (`if True`), rate 0.5 | `test_off_by_default_is_a_provable_noop` | **caught** (red) |
+| M1c | gate reads `thermal_enabled`, loader's `rate = 0.0` sentinel left intact | `test_off_by_default_is_a_provable_noop` | stayed green — **correctly**; see below |
+| M2 | charged on `\|T − setpoint\|`, not on the `k_loss` work | `test_on_costs_nutrition_in_the_cold` | **caught** |
+| M3 | `jnp.abs` dropped — defending heat pays instead of costs | `test_defending_against_heat_costs_the_same_as_against_cold` | **caught** |
+| M4 | flat per-step fee instead of work-proportional | `test_at_the_setpoint_the_coupling_is_free` | **caught** |
+| M5 | drain moved after the clip | `test_drain_cannot_go_negative_or_bypass_starvation` | **caught** |
+| M6 | fallback default on `metabolic_coupling_rate` | `test_rate_is_mandatory_once_the_coupling_is_on` | **caught** |
+| M7 | negative-rate validation removed | `test_negative_rate_is_rejected` | **caught** |
+
+M1c is worth recording rather than glossing. A first attempt at the "fires when disabled"
+mutation moved the rate read out of its `if` but left the loader's `else: rate = 0.0` branch
+in place — so a coupling-off config still got `rate = 0.0` and the drain, though *executed*,
+was numerically zero. The test stayed green, correctly: that mutant is a genuine no-op. The
+mutation was ineffective, not the test. M1a and M1b are the same bug made real, and both
+turn the test red. The incident does document a **second layer of defence** that was not
+designed in deliberately: even if the `core.py` gate were mis-wired, the loader's inert rate
+sentinel keeps the drain at zero on any config whose `metabolic_coupling` is false.
+
+**Speed check.** Same bench as Stage 4 (`tmp/20260909_stage5_sps_bench.py`, adapted from
+`tmp/20260909_132000_sps_bench.py`): 64 envs × 200 steps under one `lax.scan`, CPU, best of
+5. "Before" is the `c0c0a619` worktree.
+
+| Config | before | after | Δ |
+|---|---|---|---|
+| `default.yaml` (thermal off) | 32,226 SPS | 32,910 SPS | +2.1% |
+| `campfire_world.yaml` (thermal **on**) | 31,092 SPS | 30,544 SPS | −1.8% |
+
+Both deltas are noise on a machine with other work running (load average ~8), and the
+byte-identical HLO above says the compiled program did not change at all. **No regression.**
+
+**Deviations from the plan, and things the plan got wrong.**
+
+1. **The plan's File Changes for Stage 5 names only `core.py`. That is not implementable.**
+   `params.thermal_metabolic_coupling` did not exist — `metabolic_coupling` was in the YAML
+   but never read (`02_config_schema.md` said so explicitly). `state.py` and
+   `config_loader.py` were both required. Flagged rather than silently expanded.
+2. **The plan's closed form names a `coupling_rate` that no config key supplies.** The design
+   doc's §09 YAML block has `metabolic_coupling` and no rate. A rate is physically
+   unavoidable — `k_loss·|ΔT|` is in degrees per step and nutrition is in nutrition units —
+   and hard-coding it would be a magic number in violation of the no-fallback rule. Added
+   `thermal.metabolic_coupling_rate`, conditional-mandatory under `metabolic_coupling`, so a
+   thermal-on config that never turns the coupling on is not forced to carry it. **Value
+   judgement for `senior-developer`:** the shipped `1.0` is unread today; at `k_loss = 0.01`
+   and a body at −12 (the fixed point in a −15 world) it would cost 0.12 nutrition/step
+   against `metabolic_cost: 1.0`, i.e. ~12%, rising to ~15% at the edge of the survivable
+   band. That is deliberately modest, and it is a research parameter, not a tuning one.
+3. **The plan asks the no-op test to compare "the nutrition trajectory".** That is too
+   narrow: a leak in `update_body` also moves satiation (derived from nutrition), the drive,
+   the reward, and the termination reason. The fixture captures every numeric leaf instead.
+4. **A trap the plan does not warn about, and I hit it.** A uniform-field test world at −25
+   is *lethal*: the body's fixed point is `k_exchange·T_field/(k_exchange + k_loss) = −20`,
+   past `min_temperature = −15`, so the agent freezes part-way through and the two rollouts
+   being compared end up different lengths. The coupling tests use −15 (fixed point −12) and
+   assert `not done.any()` rather than assuming it. Stage 2's report records the same fact
+   for its own test; it did not reach the Stage 5 text.
+5. **`k_metabolic`'s "zero until Stage 5 couples it to activity" is wrong** and was in both
+   `05_body_homeostasis.md` and `02_config_schema.md`. Stage 5 couples *nutrition to
+   `k_loss`*; it runs the other way and leaves `k_metabolic` at zero. Corrected in both.
+6. `with_nutrition: false` plus coupling on is a silent no-op by construction — the drain
+   lives inside the `with_nutrition` block, as the plan specifies. Correct (there is no
+   nutrition to draw on), and stated here so nobody reads it as a bug later.
+7. **Not done, flagged for `senior-developer`:** `thermal.metabolic_coupling` arguably
+   belongs in `CONFIG_CRITICAL_SETTINGS.md` — flipping it changes the task the agent is
+   solving, so every run before the flip is on a different task. The plan's per-stage
+   documentation table lists registry rows for Stages 1, 2 and 3 and **none** for Stage 5, so
+   adding one would be an unrequested scope expansion. Recorded, not done.
+8. `docs/environment/05_body_homeostasis.md` carries several stale `core.py:NN` line
+   references in the nutrition section (`core.py:50–58`, `:108–110`, `:52`) that were already
+   wrong before this change — they point at a much older layout. Left as found; my insertion
+   shifts them further. Candidate for routine cleanup.
+
+**Known-bugs prior-art check.** `grep -i 'metabolic\|thermal\|nutrition.*clip\|coupling'
+docs/develop/active/issues/KNOWN_BUGS.md` — no matching row. Nothing here duplicates a
+recorded bug; items 7 and 8 above are new and named for `senior-developer` / `bug-curator`.
+
+**Housekeeping.** Nothing committed, nothing staged, per instruction. The `c0c0a619`
+worktree at `/tmp/gwp_stage4_baseline` was created with `git worktree add --detach` and
+removed afterwards; `results/` was never touched. Scratch artefacts (capture scripts, HLO
+dumps, mutation scripts, per-suite logs) are in `tmp/` with `20260909_` prefixes.
+
+Signed: `Implemented by: developer`
+
+---
 
 ## Verification Report
 

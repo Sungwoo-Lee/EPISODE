@@ -50,17 +50,31 @@ A core design principle is the decoupling of **Ground Truth Body State** from **
 **Governing equation** (applied each step when `with_nutrition=True`):
 
 ```
-new_nutrition = clip(prev_nutrition - metabolic_cost + ate_food_gain, 0.0, max_nutrition)
+new_nutrition = clip(prev_nutrition - metabolic_cost - thermal_drain + ate_food_gain,
+                     0.0, max_nutrition)
 
 where:
   ate_food_gain = food_nutrition_gain - eating_nutrition_cost   (if ate_food else 0)
+  thermal_drain = metabolic_coupling_rate * |k_loss * (T - temperature_setpoint)|
+                                                (if thermal.metabolic_coupling else 0)
 ```
+
+**The order of those four operations is pinned and is not recoverable from the
+config**: linear decay, then the thermoregulatory drain, then the refill from food,
+then a **single** clip to `[0, max_nutrition]`. Putting the clip last is what decides
+whether a cold step can starve an agent that also ate this step — eating offsets the
+drain *within* the step rather than after it — and it is also what stops the drain from
+going anywhere near a negative nutrition value: the termination test reads the clipped
+number, so an arbitrarily large drain lands on exactly `0.0` and dies of starvation
+(code 2) rather than slipping past the check.
 
 - `metabolic_cost` (default 1.0): drained unconditionally every step, even while resting.
 - `food_nutrition_gain` (default 6): gross nutrition from consuming a food resource.
 - `eating_nutrition_cost` (default 1.0): the physical cost of the eating act, subtracted from gain.
 - Net gain from eating: `6 - 1 = 5` nutrition in the default config.
-- Clamped to `[0.0, max_nutrition]` at `core.py:56`.
+- `thermal_drain` (default: absent — `thermal.metabolic_coupling` is `false`): see
+  [Metabolic coupling](#metabolic-coupling-thermal) below.
+- Clamped to `[0.0, max_nutrition]` — one clip, after everything else.
 
 **When `with_nutrition=False`**: `new_nutrition = prev_nutrition` — no decay, no gain, no starvation death (`core.py:57–58`).
 
@@ -460,7 +474,7 @@ $$
 |---|---|---|---|
 | `k_exchange` | `thermal.k_exchange` | 0.04 | Fraction of the gap to the cell's temperature the body closes each step — the world pulling on the body |
 | `k_loss` | `thermal.k_loss` | 0.01 | Fraction of the deviation from setpoint that physiology undoes each step — the body pulling back |
-| `k_metabolic` | `thermal.k_metabolic` | 0.0 | Constant heat the body produces per step. Zero until Stage 5 couples it to activity |
+| `k_metabolic` | `thermal.k_metabolic` | 0.0 | Constant heat the body produces per step. Still zero: the metabolic coupling added below runs the other way, charging nutrition for defence rather than feeding heat back into the body |
 | `temperature_setpoint` | `thermal.temperature_setpoint` | 0.0 | The temperature the body is trying to hold |
 | `min_temperature` / `max_temperature` | `thermal.min_temperature` / `.max_temperature` | −15 / +15 | Survivable band; leaving it ends the episode with code 5 |
 
@@ -481,6 +495,45 @@ Delete `k_loss` and the code still *looks* correct: the body still tracks the wo
 The gap to the fixed point shrinks by a factor `(1 − k_exchange − k_loss)` per step, i.e. a time constant of `1/(k_exchange + k_loss) = 20` steps against a 500-step episode.
 
 `k_loss` is in the [critical-settings registry](CONFIG_CRITICAL_SETTINGS.md) for a reason: at roughly `k_loss = 0.036` the survivable ambient window widens past ±25, the world's own baseline can no longer kill anything, and the thermal task quietly disappears while still appearing to be configured.
+
+### Metabolic coupling (thermal)
+
+Off by default (`thermal.metabolic_coupling: false`), and every config in the repo ships
+it off. When it is switched on, defending body temperature stops being free: nutrition is
+drained each step in proportion to the thermoregulatory work.
+
+```
+thermal_drain = metabolic_coupling_rate * |k_loss * (T_t - temperature_setpoint)|
+```
+
+| Symbol | Config key | Default | Meaning |
+|---|---|---|---|
+| `metabolic_coupling` | `thermal.metabolic_coupling` | false | Gate. A **static** Python `if` in `update_body`, so with it off the drain contributes nothing to the traced graph |
+| `metabolic_coupling_rate` | `thermal.metabolic_coupling_rate` | 1.0 (unread while the gate is off) | Nutrition units drawn per degree-per-step of defence. Validated `>= 0` |
+
+**What it charges for, and why that quantity.** The body's recurrence carries
+`- k_loss*(T - temperature_setpoint)`: the degrees per step that physiology actively
+undoes to pull the body back to setpoint — shivering in the cold, sweating in the heat.
+That term *is* the defence, so its magnitude is the work, and the work is what costs
+energy. Two near-misses are wrong for the same reason. Charging on `|T - setpoint|`
+alone bills the agent for a deviation even when `k_loss` is 0 and the body is doing no
+defending at all. Charging on the net temperature change bills for passive exchange with
+the cell, which is heat moving on its own rather than the body spending anything to move
+it.
+
+**Which `T`.** The *pre*-step body temperature — exactly the `T` that appears in this
+step's `k_loss` term — so the nutrition charged on step `t` pays for the defence
+performed on step `t`.
+
+**Symmetric.** The `k_loss` term is signed (it pushes both ways); the energy bill is not,
+hence the absolute value. Defending against heat costs the same as defending against an
+equal amount of cold.
+
+**Ordering.** The drain sits between the linear decay and the food refill, before the one
+clip — see [Nutrition Dynamics](#nutrition-dynamics) above for why that matters.
+
+Proved a no-op while off by `tests/env/test_metabolic_coupling.py::test_off_by_default_is_a_provable_noop`,
+against a fixture captured from source that predates the feature.
 
 ### Death
 
