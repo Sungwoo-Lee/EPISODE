@@ -27,6 +27,11 @@ from src.environment.renderer import (
     _load_icons, COLORS,
     draw_categorical_visual, draw_boresight_diamond,
     save_jax_video,
+    # Thermal (temperature system, Stage 6a). Imported rather than
+    # re-implemented: this module is DORMANT — `render_jax_state_v2` has zero
+    # call sites — and a second copy of the colour mapping is exactly how the
+    # dormant copy drifts away from the live one.
+    THERMAL_CMAP, thermal_color_limits, _thermal_rgba, draw_thermal_diamond,
 )
 from src.environment.state import select_by_class
 from src.environment.sensor import get_visual_offsets  # noqa: F401 (used by draw_boresight_diamond)
@@ -102,6 +107,46 @@ def draw_vital_card(ax, label, real_pct, obs_pct,
             f"real {real_val_str}  ·  Δ {sign}{delta:.2f}",
             transform=ax.transAxes,
             color=COLORS['text_label'], fontsize=6, va='bottom')
+
+
+def draw_temperature_card(ax, body_temp, params, clim):
+    """Body-temperature vital card — the v2 mirror of `draw_temperature_gauge`.
+
+    Body temperature is NOT observed (the thermoceptor reports the world's
+    temperature, never the body's), so this card carries no OBS/REAL split: one
+    value, one bar spanning the survivable interval, and the two death
+    thresholds marked at its ends.
+    """
+    t_min = float(params.min_temperature)
+    t_max = float(params.max_temperature)
+    t_set = float(params.temperature_setpoint)
+    span = max(t_max - t_min, 1e-6)
+    frac = float(np.clip((float(body_temp) - t_min) / span, 0.0, 1.0))
+
+    _style_card(ax)
+    ax.text(0.05, 0.93, 'BODY TEMP', transform=ax.transAxes,
+            color=COLORS['text_label'], fontsize=7, fontweight='bold', va='top')
+    ax.text(0.95, 0.93, f'{float(body_temp):+.2f}', transform=ax.transAxes,
+            color=COLORS['temperature'], fontsize=14, fontweight='bold',
+            ha='right', va='top')
+
+    ax.add_patch(matplotlib.patches.Rectangle(
+        (0.05, 0.40), 0.90, 0.26, facecolor='#F3F4F6', edgecolor='none',
+        transform=ax.transAxes, zorder=1))
+    ax.add_patch(matplotlib.patches.Rectangle(
+        (0.05, 0.40), 0.90 * frac, 0.26,
+        facecolor=(_thermal_rgba(body_temp, clim) if clim else COLORS['temperature']),
+        edgecolor='none', transform=ax.transAxes, zorder=2))
+    set_frac = float(np.clip((t_set - t_min) / span, 0.0, 1.0))
+    ax.plot([0.05 + 0.90 * set_frac] * 2, [0.36, 0.70],
+            color=COLORS['text_label'], linewidth=0.8, linestyle=(0, (2, 1)),
+            transform=ax.transAxes, zorder=3)
+    for edge in (0.05, 0.95):
+        ax.plot([edge, edge], [0.34, 0.72], color=COLORS['injury'],
+                linewidth=1.2, transform=ax.transAxes, zorder=3)
+    ax.text(0.05, 0.08, f'die {t_min:+.0f}  ·  setpoint {t_set:+.0f}  ·  die {t_max:+.0f}',
+            transform=ax.transAxes, color=COLORS['text_label'],
+            fontsize=6, va='bottom')
 
 
 def draw_offline_card(ax, label):
@@ -256,10 +301,17 @@ def render_jax_state_v2(state, params,
     ax_hdr.set_facecolor(COLORS['bg'])
     ax_hdr.axis('off')
 
-    # Left column: 3 vital cards
-    left_axes = sf_left.subplot_mosaic(
-        [['satiation'], ['nutrition'], ['injury']],
-        gridspec_kw={'hspace': 0.35})
+    # Left column: 3 vital cards, 4 when thermal is on.
+    thermal_field = getattr(state, 'thermal_field', None)
+    thermal_field = np.asarray(thermal_field) if thermal_field is not None else None
+    thermal_on = (bool(getattr(params, 'thermal_enabled', False))
+                  and thermal_field is not None and thermal_field.size > 0)
+    thermal_clim = thermal_color_limits(thermal_field, params) if thermal_on else None
+
+    _left_rows = [['satiation'], ['nutrition'], ['injury']]
+    if thermal_on:
+        _left_rows.append(['temperature'])
+    left_axes = sf_left.subplot_mosaic(_left_rows, gridspec_kw={'hspace': 0.35})
 
     # Centre column: large arena + compact minimap
     center_axes = sf_center.subplot_mosaic(
@@ -267,13 +319,14 @@ def render_jax_state_v2(state, params,
         gridspec_kw={'hspace': 0.06, 'height_ratios': [1, 1, 1, 0.65]})
 
     # Right column: sensor pods + action badge
+    _right_rows = [['olfactory'], ['nociception'], ['collision'], ['visual'], ['action']]
+    _right_ratios = [1, 1, 1.4, 1.4, 0.55]
+    if thermal_on:
+        _right_rows.insert(2, ['thermoception'])
+        _right_ratios.insert(2, 1.1)
     right_axes = sf_right.subplot_mosaic(
-        [['olfactory'],
-         ['nociception'],
-         ['collision'],
-         ['visual'],
-         ['action']],
-        gridspec_kw={'hspace': 0.4, 'height_ratios': [1, 1, 1.4, 1.4, 0.55]})
+        _right_rows,
+        gridspec_kw={'hspace': 0.4, 'height_ratios': _right_ratios})
 
     sensor_map = {s['name']: s for s in sensory_data} if sensory_data else {}
 
@@ -311,6 +364,12 @@ def render_jax_state_v2(state, params,
                     inj_real, inj_obs,
                     f'{inj_real:.2f}', f'{inj_obs:.2f}', COLORS['injury'])
 
+    if thermal_on:
+        draw_temperature_card(left_axes['temperature'],
+                              float(getattr(state, 'body_temp',
+                                            params.temperature_setpoint)),
+                              params, thermal_clim)
+
     # ── Centre panel: arena ────────────────────────────────────────────
     ax_arena = center_axes['arena']
     ax_arena.set_facecolor('#ECFDF5')
@@ -345,6 +404,15 @@ def render_jax_state_v2(state, params,
                 ax_arena.add_patch(plt.Rectangle(
                     (col - 0.5, row - 0.5), 1, 1,
                     color=location_colors.get(l_type, COLORS['bg']), zorder=0))
+
+    # Thermal field underlay — same fixed-limit diverging scale as renderer.py.
+    if thermal_on:
+        for row in range(r_start, r_end):
+            for col in range(c_start, c_end):
+                ax_arena.add_patch(plt.Rectangle(
+                    (col - 0.5, row - 0.5), 1, 1,
+                    facecolor=_thermal_rgba(thermal_field[row, col], thermal_clim),
+                    edgecolor='none', alpha=0.85, zorder=0))
 
     # Icon helpers
     scale_factor = (4.0 / view_size) * icon_scale
@@ -477,6 +545,8 @@ def render_jax_state_v2(state, params,
         ('collision',    'Collision'),
         ('visual',       'Visual'),
     ]
+    if thermal_on:
+        pod_map.insert(2, ('thermoception', 'Thermoception'))
 
     for ax_key, s_name in pod_map:
         ax = right_axes[ax_key]
@@ -488,7 +558,18 @@ def render_jax_state_v2(state, params,
 
         s_type = s_data.get('type', 'spectrum')
 
-        if s_type == 'intensity':
+        if s_name == 'Thermoception':
+            _style_card(ax)
+            _card_title(ax, s_name)
+            draw_thermal_diamond(
+                ax, 0.06, 0.06, 0.88, 0.76,
+                np.asarray(s_data['vector']), int(s_data.get('range', 1)),
+                thermal_clim, transform=ax.transAxes,
+                colour_offset=(float(getattr(state, 'body_temp', 0.0))
+                               if bool(getattr(params, 'thermal_relative', False))
+                               else 0.0))
+
+        elif s_type == 'intensity':
             ti = s_data.get('true_intensity')
             obs_only = (ti is None
                         or abs(float(ti) - float(s_data['intensity'])) < 1e-6)

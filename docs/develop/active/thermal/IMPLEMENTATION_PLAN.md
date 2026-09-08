@@ -803,7 +803,7 @@ Everything the first draft listed as open is now settled — see *Decisions sett
 - [x] **S3** Printed before the suite: thermal OFF (`default.yaml`) 27 == 27; thermal ON (`campfire_world.yaml`) 32 == 32. Done 2026-09-09.
 - [x] **S4** Better than a character-by-character diff: the thermal-off expression was never edited. The thermal branch was inserted **above** it with an early `return`, so `git diff src/environment/core.py` shows those three lines as unchanged **context lines** — the diff itself is the proof. `test_drive_bit_identical_when_thermal_off` (72 configs, `np.array_equal`, no tolerance) and `test_thermal_off_ignores_body_temp_entirely` back it from the other side. Done 2026-09-09.
 - [x] **S5** The no-op is proved on a **thermal-ON** config, not just the thermal-off fixture set: 68 arrays / 259,430 scalars over 300 steps of `campfire_world.yaml`, `np.array_equal`, **0 mismatched**, against a fixture generated from a `git worktree` at `c0c0a619`. Independently, the lowered StableHLO of `jax_step` on that config is byte-identical before and after (sha256 `beff83c1…`). The disabled-coupling-fires mutation (M1a/M1b) turns the test red; M1c documents the loader's rate-sentinel as a second layer. Done 2026-09-09.
-- [ ] **S6** Load every config in the Stage 1 migration set and confirm none newly raises. The structure check must be unreachable when `thermal.enabled` is false. (Deferred configs are expected to raise on `thermal.enabled` — that is the policy, not a failure; do not "fix" them here.)
+- [x] **S6** Done, and widened: **all 357** configs `collect_configs` returns were loaded, not just the migration set. The 72 fixtured configs load **72/72, 0 failures**. Of the 285 deferred, **zero** raise on the structure check — 204 on the pre-existing `sensory.visual_value_mode` gap, 55 on `thermal.enabled` (the Stage 1 policy), 26 on other pre-existing gaps, 1 loads. Script: `tmp/20260909_s6_load_all.py`. Done 2026-09-09.
 - [ ] **Every stage** Record before/after steps-per-second on the same node, GPU and seed. The field build is once per episode and the recurrence is three multiply-adds per step, so a measurable slowdown means something landed in the wrong loop. Per the verification protocol, >5% warrants discussion and >15% blocks.
 
 ---
@@ -1933,6 +1933,249 @@ recorded bug; items 7 and 8 above are new and named for `senior-developer` / `bu
 worktree at `/tmp/gwp_stage4_baseline` was created with `git worktree add --detach` and
 removed afterwards; `results/` was never touched. Scratch artefacts (capture scripts, HLO
 dumps, mutation scripts, per-suite logs) are in `tmp/` with `20260909_` prefixes.
+
+Signed: `Implemented by: developer`
+
+---
+
+## Implementation Report — Stage 6 (rendering, load-time structure check, documentation)
+
+> **Implemented by**: `developer`
+> **Date**: 2026-09-09
+> **Base**: `25a55d6f` (v4.0), working tree clean at start.
+
+### Plain-language summary
+
+Three things landed. **(6a)** Videos of a thermal episode now show the world's temperature
+painted under the grid and the agent's own body temperature as a gauge beside the other
+vitals, plus a debug-only outline of the five cells the thermoceptor reads. **(6b)** A
+config whose fire is mis-tuned — too weak to hurt, too strong to have a survivable ring, or
+blurred flat — now fails at load with a message naming the key and the numbers, instead of
+training quietly for a week on a different task. **(6c)** The two documents the Maintenance
+Contract binds to a schema change were updated; the earlier stages' rows were already done.
+
+### Files changed
+
+| File | Change |
+|---|---|
+| `src/environment/core.py` | New `heat_source_mask()` — THE single definition of "a heat source is a slot with a non-zero declared temperature in either style", called from `jax_reset`'s placement constraints (replacing the inline expression) and from the new load-time check. |
+| `src/environment/config_loader.py` | `_thermal_single_fire_field`, `_thermal_equilibrium`, `_thermal_radial_equilibria`, `_thermal_structure_verdict`, `_check_thermal_structure`; called from `load_env_params` after the entity blocks are built. |
+| `src/environment/renderer.py` | `COLORS['temperature']`; `THERMAL_CMAP`, `thermal_color_limits`, `_thermal_rgba`, `draw_temperature_gauge`, `draw_thermal_diamond`; field underlay + fixed-scale strip + debug read-cell outline in the arena; body-temp gauge in the vitals stack; `'Thermoception'` in `known_sensors` (thermal-on only); `thermal_clim` / `debug_thermal_cells` kwargs; `label_dy`/`obs_dy` on `draw_dual_capsule_bar`; a pod-height budget. |
+| `src/environment/renderer_v2.py` | Mirror of the underlay, the body-temp card and the thermoception pod, importing the helpers from `renderer.py` rather than re-implementing them. |
+| `src/utils/eval_recording.py` | `_snapshot_state` adds `thermal_field` and `body_temp`. **No `RECORDING_FORMAT_VERSION` bump** (D4/F10). |
+| `scripts/eval/render_recordings.py` | Computes the thermal colour limits ONCE from the episode's first snapshot and passes the same pair to every frame. |
+| `tests/env/test_thermal_validation.py` | **new** — 34 tests (6b). |
+| `tests/env/test_thermal_rendering.py` | **new** — 16 tests (6a). |
+| `docs/environment/02_config_schema.md` | New section "The load-time structure check (Stage 6b)". |
+| `docs/environment/CONFIG_GUIDE.md` | Structure-check + rendering paragraphs in §3.9; corrected the equilibrium formula (see D6-4). |
+
+`scripts/eval/render_recordings.py` is **not in the plan's Stage 6 file list** — flagged per
+the File Changes rule. It is the reader the plan's own "handle the two fields as
+present-or-absent" requirement refers to, and it is where "fixed for the whole episode" is
+actually enforced for offline video. `SCRIPTS_DEPENDENCY_MAP.md` needs no update: no file
+under `scripts/` was added, moved, renamed, or had a caller changed.
+
+### Deviations from the plan
+
+**D6-1 — the structure check's precondition needs a FOURTH condition, and the plan's three
+would have broken Stage 1.** The plan gates the check on `use_object_sources` **and** at
+least one heat source, reasoning that the Stage 2–5 test configs declare none. That is true
+of Stages 2, 4 and 5 — they all set `use_object_sources: false` — but **not** of Stage 1.
+`tests/env/test_thermal_field.py` builds degenerate worlds through an ABSOLUTE
+`temperature:` so the raw stamps can be reconstructed from state alone and compared against
+the numpy oracle, and those configs are thermal-on, object-sources-on and *do* declare heat
+sources. Measured with the real blur and the real equilibrium:
+
+| Stage 1 config | d0 | d1 | d3 | verdict |
+|---|---|---|---|---|
+| `temperature: 300` over baseline −25 | +57.93 | +8.09 | −19.68 | passes |
+| `temperature: 100` over baseline **0.0** | +25.98 | +9.36 | +0.11 | **fails** (no cold clock) |
+| `temperature: 100` over baseline −25 | +5.98 | −10.64 | −19.89 | **fails** (fire has no bite) |
+
+Neither failing case can be retuned into the band: the 0.0 baseline IS the setpoint, so no
+distance is ever cold enough to kill at any amplitude, and that baseline is documented in
+`test_stamps_are_additive` as load-bearing against float32 cancellation. So an exemption is
+not optional — only its shape was a choice. The one implemented: **run the check only when
+at least one heat-source slot declares a `temperature_ratio`.** Rationale, stated in the
+code and the schema doc: the calibrated band is expressed as a multiple of the world's
+coldness (11–13×), `temperature_ratio` is the form that locks the fire to that coldness,
+every shipped and derived config uses it, and `temperature:` is documented in
+`_read_temperature` as the raw escape hatch. An absolute-temperature config logs
+`structure check SKIPPED: ... NOT certified` — never silently.
+
+**D6-2 — `heat_source_mask` lives in `core.py`, not `config_loader.py`.** The plan says
+"define it as a single helper in `config_loader.py` and call it from both the placement
+constraints and this check". The placement constraints are inside `jax_reset` in `core.py`,
+under jit, on jnp arrays; `config_loader` already has to import `core` for the blur, so the
+reverse import would be a cycle. Putting the helper in `core.py` satisfies the plan's actual
+requirement — ONE definition, called from both — without one.
+
+**D6-3 — `draw_temperature_gauge` is its own helper, not a fifth `draw_dual_capsule_bar`.**
+That widget's grammar is "translucent = reality, solid interior bar = what the agent
+perceives", and body temperature is **not observed** — the thermoceptor reports the world's
+temperature, never the body's. Reusing it would assert an observation channel that does not
+exist, and it cannot mark the ±15 thresholds the plan asks for.
+
+**D6-4 — corrected a formula the Stage 2 docs had already stated in its special-case form.**
+`CONFIG_GUIDE.md` said `T* = k_exchange·T_field/(k_exchange + k_loss)` flatly. That is the
+setpoint-zero case. Replaced with the general form and a note that the shorter one holds
+only because the shipped config has `temperature_setpoint: 0` and `k_metabolic: 0`. This is
+the same correction the plan demands of the check itself; leaving the doc stating the
+special case is how the next reader re-derives the wrong thing.
+
+**D6-5 — the plan asks for `k_exchange > 0` among the unconditional validations; the shipped
+Stage 1 code validates `>= 0`.** Not tightened: it is a Stage 1 line, already committed and
+tested, and `k_exchange: 0` is a legitimate degenerate ablation. The check guards the
+division instead (`k_exchange + k_loss <= 0` → logged skip). Flagged for
+`senior-developer` rather than changed unilaterally.
+
+### Rendering: what the rewrite's state turned out to be, and how 6a stayed additive
+
+**Checked before building.** The rendering rewrite on record is
+`docs/develop/active/refactors/UI_REDESIGN_PROPOSAL.md` — `status: active`, "IN PROGRESS",
+`last_updated: 2026-04-24`. It produced `renderer_v2.py`, whose last commit
+(`c27f229c`/`36532478`) is months old and which has **zero call sites** outside its own
+module: `grep -rn --include='*.py' 'renderer_v2|render_jax_state_v2' src scripts tests`
+returns only its own definition line. `renderer.py` is the live renderer (six call sites in
+`scripts/` and `src/`); `grid_world.py:344` holds a third, stale copy that nothing calls.
+So the rewrite is dormant, not imminent.
+
+6a was therefore kept additive anyway: every new artist is drawn in a `if thermal_on:`
+branch, no existing pod, bar or pointer was moved, and the two geometry helpers that did
+change (`draw_dual_capsule_bar`'s text offsets, the pod-height budget) take defaults that
+reproduce the previous numbers exactly. **Proof, not assertion:** frames rendered from
+`default.yaml` and `01-interoNocicept.yaml` (4 frames each, action-stepped) are
+**sha256-identical** between HEAD's `renderer.py` and this one —
+`32b608d2…` (default) and `0a5de3d6…` (interoNoc), both matching. `renderer_v2.py` got the
+mirrored change so the dormant copy does not drift further; it remains uncalled.
+
+### How the fixed colour limits were verified rather than asserted
+
+Four independent ways, none of which is "the code says `thermal_clim`":
+
+1. **Rendered early and late frames of a cooling world and compared them.** A campfire world
+   with the animals stripped, agent resting; body temperature falls `+0.00 → −10.78` over 15
+   steps and the episode ends at step 26 with termination reason 5. The **arena crop is
+   byte-identical** between the two frames while the full frames differ (the gauge moved).
+   `tests/env/test_thermal_rendering.py::test_a_cooling_world_does_not_rescale_its_colours`.
+   Frames are in `tmp/thermal_frames/cool_step000.png` / `cool_step015.png` and were looked
+   at, not just diffed.
+2. **The scale strip prints its own limits on the frame**, `−66 … +66` on both, so a
+   rescale is visible to a human reading the video rather than only to a test.
+3. **`thermal_clim` is proved to be honoured**: rendering the same state with a deliberately
+   different clim changes the arena, and rendering with the clim the renderer would have
+   derived changes nothing (`test_render_honours_an_explicitly_pinned_clim`).
+4. **Mutation M1** replaced the pinned limits with a per-frame recomputation from
+   `field − body_temp`; two tests went red.
+
+Note for the record: within an episode the field is built once at reset and never mutated,
+so limits derived from `state.thermal_field` are *already* frame-invariant. The explicit
+`thermal_clim` argument exists so the guarantee does not depend on that invariant, and
+`render_recordings.py` now pins it once per episode.
+
+### Test results
+
+| Suite | Result |
+|---|---|
+| `tests/env/test_thermal_parity.py` | **72 passed**, 285 skipped (179s) |
+| `tests/env/test_thermal_field.py` | 9 passed |
+| `tests/env/test_thermal_body.py` | 5 passed |
+| `tests/env/test_thermoception.py` | 14 passed |
+| `tests/env/test_thermal_reward_gate.py` | 78 passed |
+| `tests/env/test_metabolic_coupling.py` | 11 passed |
+| `tests/env/test_thermal_validation.py` | **34 passed** (new) |
+| `tests/env/test_thermal_rendering.py` | **16 passed** (new) |
+| `tests/env/test_unified_parity.py` | 34 passed, 323 skipped |
+| `tests/env/test_visual_parity.py` | 8 passed |
+| `tests/env/test_no_recompile.py` | 3 passed |
+| `tests/algorithms/dreamer_srl/test_eval_recording.py` | 4 passed |
+
+Run one file at a time: two concurrent JAX-CPU pytest processes segfaulted the box once.
+
+**6b breaks nothing (checkpoint S6, widened).** All **357** configs `collect_configs`
+returns were loaded. The 72 fixtured full configs: **72/72, zero failures**. Of the 285
+deferred: **zero** raise on the structure check — 204 on the pre-existing
+`sensory.visual_value_mode` gap, 55 on `thermal.enabled` (Stage 1 policy), 26 on other
+pre-existing gaps, 1 loads. `tests/env/test_thermal_validation.py` additionally pins 17
+named must-load configs covering every stage's shape, mode A and an all-zero-temperature
+world.
+
+### Mutation check
+
+11 mutants, applied one at a time to a pristine copy, files restored and **sha256-verified**
+after each (`tmp/mutation/BEFORE.sha256`, all four `OK`). Script: `tmp/20260909_mutate.py`.
+
+| # | Mutation | Result |
+|---|---|---|
+| M1 | per-frame colour limits instead of fixed | **2 failed** |
+| M2 | diverging colormap inverted (`RdBu_r` → `RdBu`) | 1 failed |
+| M3 | `'Thermoception'` dropped from the drawn pod list | 1 failed |
+| M4 | gauge fill fraction pinned to 0.5 | *survived first pass* → test strengthened, then **1 failed** |
+| M5 | renderer requires the thermal fields (old recordings break) | 1 failed |
+| M6 | `_snapshot_state` forgets `thermal_field` | 1 failed |
+| M7 | setpoint-zero equilibrium instead of the general one | 2 failed |
+| M8 | numpy twin of the blur (`scipy.gaussian_filter`) | *survived first pass* → mutation strengthened to zero-fill, then **1 failed** |
+| M9 | merged-fire refusal removed | 3 failed |
+| M10 | structure check gate short-circuited to always skip | 8 failed |
+| M11 | `heat_source_mask` counts absolute temperature only | 7 failed |
+
+The two survivors are worth recording because both were *real* findings.
+**M4** survived because a frozen gauge bar still repaints its numeric readout, so a
+whole-panel pixel comparison passes on a completely inert bar; the test now asserts the fill
+patch's geometry directly (monotone in temperature, and equal to the linear map at the
+midpoint and the top). **M8**'s first form (`mode='nearest'`) was numerically equivalent to
+the real blur on this grid — a weak mutation, not a weak test; re-run with `mode='constant'`
+(the zero-fill error the design explicitly warns about) it dies immediately.
+
+### Speed check
+
+Not measured as steps-per-second; something stronger was available. The only change that can
+touch the traced graph is `jax_reset`'s fire mask, and the **lowered StableHLO of
+`jax_reset` is byte-identical before and after** on both `campfire_world.yaml` (where the
+mask branch is live — `76157ac0…`) and `default.yaml` (`fa891746…`). The other changes are
+load-time (`config_loader`) or host-side rendering, neither of which is on the training hot
+path. `test_no_recompile` and the 72-config parity gate are both green.
+
+**Load time**, measured for completeness since 6b adds work there: a thermal-ON config
+(check runs, five blurs) loads in **194 ms**, a thermal-OFF one (check skipped) in
+**7.8 ms** — so the check costs ~186 ms, once per process, on configs that have a fire.
+Against a training run that is nothing; recorded so nobody is surprised by it later. If it
+ever matters, `_gaussian_smooth_normalised` is unjitted here on purpose (jitting it would
+trade the 186 ms for compile time and a cache entry).
+
+### Things in the plan that are wrong or need `senior-developer`
+
+1. **The check's stated precondition is insufficient** — D6-1 above. This is the fourth
+   consecutive stage in which the plan's model of the codebase was wrong, and the failure
+   mode here would have been Stage 1's oracle tests becoming unrunnable.
+2. **`k_exchange > 0`** is listed as an unconditional validation but Stage 1 shipped `>= 0`.
+   Not changed; see D6-5.
+3. **The plan's 6a instruction "one more `draw_dual_capsule_bar` block… with the ±15 death
+   thresholds marked"** is not implementable as written — that widget cannot draw threshold
+   marks and its two-bar grammar asserts an observation that does not exist (D6-3).
+4. **The plan does not mention that `known_sensors` draws an OFFLINE pod for an absent
+   sensor.** Adding `'Thermoception'` unconditionally, exactly as the plan says, put an empty
+   THERMOCEPTION panel on every *non-thermal* frame and pushed the Visual pod into the Action
+   pod. Caught only by rendering. The entry is now inserted only when thermal is on.
+5. **The plan does not mention that the right panel has no room for a fifth pod.** The
+   `y_cursor < 0.20` floor silently drops the last pod rather than overflowing. A height
+   budget was added, applied *only* on thermal configs so no existing frame moves.
+6. **`scripts/eval/render_recordings.py` is missing from the Stage 6 file list** — flagged
+   above.
+7. **Cosmetic, pre-existing, not touched:** on the right panel an intensity pod's `OBS:` row
+   overlaps the *next* pod's title, and its `REAL:` row floats above its own frame. Both are
+   visible in a HEAD-rendered thermal-off frame and are unchanged by this work.
+
+**Known-bugs prior-art check.** `grep -i 'thermal|render|structure check|temperature'
+docs/develop/active/issues/KNOWN_BUGS.md` — no row covers the renderer's thermal layer or
+the load-time check. Item 7 above is a pre-existing cosmetic defect in `renderer.py`'s pod
+stack and is a candidate row for `bug-curator`.
+
+**Housekeeping.** Nothing committed, nothing staged. No worktree created; `git worktree
+list` was checked at start (four pre-existing worktrees, all clean apart from two untracked
+diary files in `memorize_20260518_1511`, untouched). `results/` never touched. Scratch
+artefacts under `tmp/` with `20260909_` prefixes plus `tmp/thermal_frames/` (rendered PNGs
+that were actually looked at) and `tmp/mutation/` (pristine copies + the sha256 manifest).
 
 Signed: `Implemented by: developer`
 

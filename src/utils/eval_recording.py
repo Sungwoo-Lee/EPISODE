@@ -25,8 +25,23 @@ def _snapshot_state(state) -> Dict[str, Any]:
     """Exactly the fields render_jax_state reads. Keep in lockstep with renderer.py.
 
     Uses unified animal_pos (CP6). Renderers slice by class via select_by_class.
+
+    Thermal (temperature system, Stage 6a): `thermal_field` and `body_temp` are
+    added here because offline video rendering reads nothing else — a recording
+    without them renders a thermal episode with no field and no gauge.
+
+    `RECORDING_FORMAT_VERSION` is deliberately NOT bumped. Every `.rec` written
+    before this change lacks both keys, so the reader has to branch on their
+    presence either way; a version bump would not have removed a line of that
+    branch, and the stamp it would change is one that nothing in the codebase
+    reads. The branch lives in `renderer.py` (a `getattr(state, ..., None)` on
+    each field), which is what keeps every pre-thermal recording rendering
+    exactly as it does today.
+
+    On a thermal-OFF config `state.thermal_field` is `jnp.zeros((0, 0))`, so the
+    added payload is two scalars' worth of nothing.
     """
-    return {
+    snap = {
         'agent_pos': np.asarray(state.agent_pos),
         'satiation': float(state.satiation),
         'nutrition': float(state.nutrition),
@@ -37,6 +52,11 @@ def _snapshot_state(state) -> Dict[str, Any]:
         'animal_pos': np.asarray(state.animal_pos),
         'obs_pos': np.asarray(state.obs_pos),
     }
+    if getattr(state, 'thermal_field', None) is not None:
+        snap['thermal_field'] = np.asarray(state.thermal_field)
+    if getattr(state, 'body_temp', None) is not None:
+        snap['body_temp'] = float(state.body_temp)
+    return snap
 
 
 class EpisodeRecorder:

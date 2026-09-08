@@ -103,6 +103,17 @@ def _render_episode(episode_path_str: str, out_video_path_str: str, fps: int) ->
     frames = []
     num_steps = len(ep['snapshots'])
     t0 = time.perf_counter()
+
+    # Thermal colour limits are computed ONCE, from the episode's first frame,
+    # and passed to every frame after it. Recomputing per frame would make a
+    # cooling world render as a world of constant appearance — the colours would
+    # track the shrinking range instead of the falling temperature. A recording
+    # made before the thermal system carries no `thermal_field`, so this is None
+    # and the renderer's thermal layer is skipped entirely.
+    from src.environment.renderer import thermal_color_limits
+    thermal_clim = thermal_color_limits(
+        ep['snapshots'][0].get('thermal_field') if num_steps else None, params)
+
     for t in range(num_steps):
         snap = ep['snapshots'][t]
 
@@ -123,6 +134,7 @@ def _render_episode(episode_path_str: str, out_video_path_str: str, fps: int) ->
             train_episode=checkpoint_pct,
             action=action_t, sensory_data=sensory_data,
             info=None, icon_config=icon_config,
+            thermal_clim=thermal_clim,
         ))
 
     out = Path(out_video_path_str)

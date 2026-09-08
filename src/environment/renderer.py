@@ -8,6 +8,7 @@ import os
 import numpy as np
 import matplotlib
 matplotlib.use('Agg')
+import matplotlib.patheffects
 import matplotlib.pyplot as plt
 from matplotlib.offsetbox import OffsetImage, AnnotationBbox
 from matplotlib.backends.backend_agg import FigureCanvasAgg as FigureCanvas
@@ -128,11 +129,187 @@ COLORS = {
     # Damage Segments
     'dmg_hiding_predator': '#EF4444',
     'dmg_predator': '#111827',
-    'dmg_obstacle': '#6B7280'
+    'dmg_obstacle': '#6B7280',
+
+    # Body temperature (thermal system). Deliberately not one of the four hues
+    # already in use above — amber (#D97706) is nutrition and ruby (#BE123C) is
+    # injury, and a gauge the reader mistakes for either is worse than no gauge.
+    'temperature': '#EA580C',
 }
 
-def draw_dual_capsule_bar(ax, x, y, w, h, state_pct, obs_pct, color, label=None, state_val=None, obs_val=None, transform=None):
-    """Draws a professional capsule-style progress bar showing reality vs perception."""
+# ── Thermal rendering (temperature system, Stage 6a) ──────────────────────────
+#
+# Everything below is ADDITIVE and self-contained: a field underlay, a body
+# temperature gauge, and a debug outline of the cells the thermoceptor reads.
+# It deliberately does not restructure the panel layout or the sensor pointer
+# logic, because a larger rendering rewrite is expected separately and this
+# stage must not entrench assumptions that rewrite would have to undo.
+#
+# A DIVERGING scale is right here, not a sequential one, because temperature has
+# a meaningful zero: `temperature_setpoint`, the value the agent's body is
+# defending. Blue is below it, red above it, and the neutral midpoint is the
+# temperature at which the body has nothing to do.
+THERMAL_CMAP = 'RdBu_r'
+
+
+def thermal_color_limits(thermal_field, params):
+    """Colour limits for the field underlay — FIXED for the whole episode.
+
+    Returns `(vmin, vmax)` symmetric about `temperature_setpoint`, or None when
+    there is no field to draw (thermal off, or an old recording that predates
+    the thermal fields — see `_snapshot_state` in `src/utils/eval_recording.py`).
+
+    WHY FIXED MATTERS. If the limits were recomputed per frame from whatever
+    that frame happened to contain, a world that is steadily cooling would
+    render as a world of constant appearance: the colours would track the
+    shrinking range instead of the falling temperature, and the one thing the
+    visualisation exists to show would be the one thing it hid.
+
+    Within an episode the field is built once at reset and never mutated, so
+    deriving the limits from `state.thermal_field` is already frame-invariant.
+    The guarantee is nevertheless made explicit rather than left to that
+    invariant: `render_jax_state` takes a `thermal_clim` argument, and the
+    offline recording renderer computes it ONCE from the episode's first frame
+    and passes the same pair to every frame after it. That is what keeps the
+    scale fixed even if a future change makes the field move during an episode.
+    """
+    if thermal_field is None:
+        return None
+    field = np.asarray(thermal_field)
+    if field.size == 0:
+        return None
+    setpoint = float(getattr(params, 'temperature_setpoint', 0.0))
+    span = float(np.max(np.abs(field - setpoint)))
+    if not np.isfinite(span) or span <= 0.0:
+        span = 1.0
+    return (setpoint - span, setpoint + span)
+
+
+def _thermal_rgba(value, clim):
+    """Map one temperature onto the diverging scale, given FIXED limits."""
+    vmin, vmax = clim
+    t = 0.0 if vmax <= vmin else (float(value) - vmin) / (vmax - vmin)
+    return matplotlib.colormaps[THERMAL_CMAP](float(np.clip(t, 0.0, 1.0)))
+
+
+def draw_temperature_gauge(ax, x, y, w, h, body_temp, params, clim,
+                           transform=None, label_dy=0.02):
+    """Body-temperature gauge, with the two death thresholds marked.
+
+    Not `draw_dual_capsule_bar`, and the reason is honesty rather than taste:
+    that widget's grammar is "translucent = reality, solid interior = what the
+    agent perceives", and body temperature is NOT observed — the thermoceptor
+    reports the world's temperature, never the body's. Drawing a perception bar
+    here would assert an observation channel that does not exist.
+
+    The bar spans `[min_temperature, max_temperature]`, the interval outside
+    which the episode ends with termination reason 5, so the two ends of the
+    trough ARE the death thresholds; they are marked, and so is the setpoint.
+    The fill takes its colour from the same diverging scale as the field
+    underlay, so a cold body reads blue on a blue patch of world.
+    """
+    t_min = float(params.min_temperature)
+    t_max = float(params.max_temperature)
+    t_set = float(params.temperature_setpoint)
+    span = max(t_max - t_min, 1e-6)
+    frac = float(np.clip((float(body_temp) - t_min) / span, 0.0, 1.0))
+
+    ax.add_patch(matplotlib.patches.FancyBboxPatch(
+        (x, y), w, h, boxstyle=f"round,pad=0,rounding_size={h/2}",
+        facecolor='#F3F4F6', edgecolor='none', transform=transform, zorder=0))
+
+    fill_color = _thermal_rgba(body_temp, clim) if clim else COLORS['temperature']
+    ax.add_patch(matplotlib.patches.FancyBboxPatch(
+        (x, y), max(h, w * frac), h,
+        boxstyle=f"round,pad=0,rounding_size={h/2}",
+        facecolor=fill_color, edgecolor='none', transform=transform, zorder=1))
+
+    # Setpoint tick — where the body has nothing to defend against.
+    set_frac = float(np.clip((t_set - t_min) / span, 0.0, 1.0))
+    ax.plot([x + w * set_frac] * 2, [y - h * 0.2, y + h * 1.2],
+            color=COLORS['text_label'], linewidth=0.8, linestyle=(0, (2, 1)),
+            transform=transform, zorder=3)
+
+    # Death thresholds — the two ends of the survivable interval.
+    for edge in (x, x + w):
+        ax.plot([edge, edge], [y - h * 0.3, y + h * 1.3],
+                color=COLORS['injury'], linewidth=1.2, transform=transform,
+                zorder=3)
+
+    # Everything on ONE line, left-aligned, and the value INSIDE the bar. The
+    # vitals stack has five rows on a thermal config and no room for a second
+    # text row per bar; a right-aligned value here would also land on the OBS
+    # readout of the bar above it.
+    ax.text(x, y + h + label_dy,
+            f"BODY TEMP   DIE {t_min:+.0f} / {t_max:+.0f}",
+            color=COLORS['text_label'], fontsize=6.5, fontweight='bold',
+            transform=transform)
+    # Right-aligned INSIDE the bar. Centring it put the number over the empty
+    # trough whenever the body was cold, where it collided with the setpoint
+    # tick; the right end is always clear.
+    ax.text(x + w - 0.015, y + h * 0.5, f"{float(body_temp):+.2f}",
+            color=COLORS['text_main'], fontsize=7, fontweight='bold',
+            ha='right', va='center', transform=transform, zorder=4,
+            fontfamily='monospace',
+            path_effects=[matplotlib.patheffects.withStroke(
+                linewidth=2.0, foreground='#FFFFFF')])
+
+
+def draw_thermal_diamond(ax, x, y, w, h, values, sensor_range, clim,
+                         transform=None, colour_offset=0.0):
+    """The thermoceptor pod: one diverging patch per cell of the Manhattan diamond.
+
+    Drawn on its own rather than through `draw_categorical_visual` because that
+    widget draws bar height proportional to the value on a 0-1 assumption. A
+    thermoceptive reading is `thermal_field - body_temp`, which spans roughly
+    -43 to +170 on the shipped config, so it would render as bars several times
+    the height of their own pod — and negative readings would draw downward,
+    out of the frame entirely.
+    """
+    offsets = np.array(get_visual_offsets(int(sensor_range)))
+    vals = np.asarray(values).reshape(-1)
+    if len(vals) != len(offsets):
+        return
+
+    n_r = int(offsets[:, 0].max() - offsets[:, 0].min()) + 1
+    n_c = int(offsets[:, 1].max() - offsets[:, 1].min()) + 1
+    # Sized separately in x and y: these are AXES fractions, and the panel is
+    # about three times taller than it is wide, so a "square" cell here would
+    # render as a tall thin sliver.
+    cell_w = (w / max(n_c, 1)) * 0.86
+    cell_h = (h / max(n_r, 1)) * 0.86
+    cx, cy = x + w / 2.0, y + h / 2.0
+
+    for (dr, dc), v in zip(offsets, vals):
+        px = cx + dc * (w / max(n_c, 1)) - cell_w / 2.0
+        py = cy - dr * (h / max(n_r, 1)) - cell_h / 2.0
+        rgba = _thermal_rgba(float(v) + colour_offset, clim) if clim else (0.8, 0.8, 0.8, 1.0)
+        ax.add_patch(plt.Rectangle(
+            (px, py), cell_w, cell_h, facecolor=rgba,
+            edgecolor=COLORS['border'], linewidth=0.4,
+            transform=transform, zorder=2))
+        # Text colour follows the patch's luminance. The two ends of a diverging
+        # scale are dark, and dark-on-dark is exactly where the fire cell — the
+        # one reading anybody looks at — becomes unreadable.
+        lum = 0.299 * rgba[0] + 0.587 * rgba[1] + 0.114 * rgba[2]
+        ax.text(px + cell_w / 2.0, py + cell_h / 2.0, f"{float(v):+.0f}",
+                color=(COLORS['text_main'] if lum > 0.55 else '#FFFFFF'),
+                fontsize=5.5, fontweight='bold',
+                ha='center', va='center', transform=transform, zorder=3,
+                fontfamily='monospace')
+
+def draw_dual_capsule_bar(ax, x, y, w, h, state_pct, obs_pct, color, label=None, state_val=None, obs_val=None, transform=None,
+                          label_dy=0.02, obs_dy=0.03):
+    """Draws a professional capsule-style progress bar showing reality vs perception.
+
+    `label_dy` / `obs_dy` are the vertical offsets of the two text rows (the
+    label + REAL row above the bar, the OBS row below it). They default to the
+    values this widget has always used, so every existing call is unchanged;
+    callers that have to pack the bars tighter — the five-row vitals stack on a
+    thermal config, and the squeezed sensor pods — pass smaller ones. Without
+    them one row's OBS readout lands on the next row's REAL readout, which is
+    not visible in the source and is unmissable in the frame.
+    """
     # Background (Trough)
     bg_rect = matplotlib.patches.FancyBboxPatch(
         (x, y), w, h, boxstyle=f"round,pad=0,rounding_size={h/2}", 
@@ -160,15 +337,15 @@ def draw_dual_capsule_bar(ax, x, y, w, h, state_pct, obs_pct, color, label=None,
 
     # Labels
     if label:
-        ax.text(x, y + h + 0.02, label.upper(), color=COLORS['text_label'], 
+        ax.text(x, y + h + label_dy, label.upper(), color=COLORS['text_label'],
                 fontsize=7, fontweight='bold', transform=transform)
     
     # Value labels (Reality: Bold black, Obs: Smaller Gray)
     if state_val is not None:
-        ax.text(x + w, y + h + 0.02, f"REAL: {state_val}", color=COLORS['text_main'], 
+        ax.text(x + w, y + h + label_dy, f"REAL: {state_val}", color=COLORS['text_main'],
                 fontsize=7, fontweight='bold', ha='right', transform=transform, fontfamily='monospace')
     if obs_val is not None:
-        ax.text(x + w, y - 0.03, f"OBS:  {obs_val}", color=COLORS['text_label'], 
+        ax.text(x + w, y - obs_dy, f"OBS:  {obs_val}", color=COLORS['text_label'],
                 fontsize=6, fontweight='bold', ha='right', transform=transform, fontfamily='monospace')
 
 def draw_pod_frame(ax, x, y, w, h, title, offline=False, obs_only=False, transform=None):
@@ -352,9 +529,18 @@ def draw_categorical_visual(ax, x, y, w, h, obs_vec, r, num_features, true_vec=N
                 ax.text(bx + bw*1.1/2, y + 0.002, feature_labels[f_idx], color=COLORS['text_label'], 
                         fontsize=4.0, ha='center', va='bottom', rotation=90, transform=transform)
 
-def render_jax_state(state, params, episode=None, step=None, train_episode=None, dpi=100, icon_scale=1.0, action=None, sensory_data=None, info=None, icon_config=None):
+def render_jax_state(state, params, episode=None, step=None, train_episode=None, dpi=100, icon_scale=1.0, action=None, sensory_data=None, info=None, icon_config=None,
+                     thermal_clim=None, debug_thermal_cells=False):
     """
     Render a JAX EnvState to an RGB numpy array (Industrial White V2).
+
+    thermal_clim: optional `(vmin, vmax)` pair pinning the field underlay's
+        colour scale for a whole episode. When None it is derived from
+        `state.thermal_field` via `thermal_color_limits`. Pass it explicitly
+        when rendering a sequence of frames so the scale provably cannot drift
+        between them (`scripts/eval/render_recordings.py` does).
+    debug_thermal_cells: outline the cells the thermoceptor reads. Off by
+        default — it is a debugging aid, not part of the standard frame.
     """
     from src.environment.core import calculate_drive
     start_time = time.time()
@@ -431,6 +617,34 @@ def render_jax_state(state, params, episode=None, step=None, train_episode=None,
             if l_type != 0:
                 ax_grid.add_patch(plt.Rectangle((c - 0.5, r - 0.5), 1, 1, color=location_colors.get(l_type, COLORS['bg']), zorder=0))
 
+    # ── Thermal field underlay (temperature system, Stage 6a) ─────────────────
+    # `getattr` with a default, not `state.thermal_field`, and that is required
+    # rather than defensive: a `.rec` file recorded before the thermal system
+    # existed carries no `thermal_field` key, its snapshot object therefore has
+    # no such attribute, and every such recording must keep rendering exactly as
+    # it does today. `RECORDING_FORMAT_VERSION` was deliberately NOT bumped
+    # (plan D4/F10) — the version stamp nothing reads would not have removed a
+    # single line of this branch.
+    thermal_field = np.asarray(getattr(state, 'thermal_field', None)) \
+        if getattr(state, 'thermal_field', None) is not None else None
+    thermal_on = bool(getattr(params, 'thermal_enabled', False)) \
+        and thermal_field is not None and thermal_field.size > 0
+    if thermal_on:
+        if thermal_clim is None:
+            thermal_clim = thermal_color_limits(thermal_field, params)
+        # zorder 0, same as the terrain tiles but added AFTER them, so it tints
+        # the terrain rather than being hidden by it — and still sits BELOW the
+        # grid lines (zorder 2) and every entity artist drawn after this point,
+        # whose stacking is therefore untouched.
+        for r in range(r_start, r_end):
+            for c in range(c_start, c_end):
+                ax_grid.add_patch(plt.Rectangle(
+                    (c - 0.5, r - 0.5), 1, 1,
+                    facecolor=_thermal_rgba(thermal_field[r, c], thermal_clim),
+                    edgecolor='none', alpha=0.85, zorder=0))
+    else:
+        thermal_clim = None
+
     # Icon Drawing
     scale_factor = (4.0 / view_size) * icon_scale
     def draw_icon(ax, r, c, icon_key, zoom=0.038, s_fac=1.0, is_axes_coords=False):
@@ -504,7 +718,44 @@ def render_jax_state(state, params, episode=None, step=None, train_episode=None,
         agent_icon = 'agent'
         
     draw_icon(ax_grid, ar, ac, agent_icon, zoom=0.035, s_fac=scale_factor)
-    
+
+    if thermal_on:
+        # Debug-only outline of the five cells the thermoceptor reads. Off by
+        # default: it answers "is the sensor looking where I think it is",
+        # which is a question you ask while debugging, not on every frame.
+        if debug_thermal_cells:
+            for dr, dc in np.array(get_visual_offsets(int(params.thermal_grid_range))):
+                rr = int(np.clip(ar + dr, 0, height - 1))     # edge-CLAMPED, matching
+                cc = int(np.clip(ac + dc, 0, width - 1))      # sense_thermoception (F3)
+                ax_grid.add_patch(plt.Rectangle(
+                    (cc - 0.5, rr - 0.5), 1, 1, fill=False,
+                    edgecolor=COLORS['temperature'], linewidth=1.4,
+                    linestyle=(0, (3, 2)), zorder=6))
+
+        # A compact scale strip, so the fixed limits are readable off the frame
+        # itself rather than taken on trust. Both end labels are printed: if a
+        # later frame shows different numbers, the scale rescaled.
+        vmin, vmax = thermal_clim
+        strip_x, strip_y, strip_w, strip_h = 0.24, -0.045, 0.52, 0.018
+        for i in range(52):
+            t = i / 51.0
+            ax_grid.add_patch(plt.Rectangle(
+                (strip_x + t * strip_w, strip_y), strip_w / 51.0 + 0.002, strip_h,
+                facecolor=matplotlib.colormaps[THERMAL_CMAP](t), edgecolor='none',
+                transform=ax_grid.transAxes, clip_on=False, zorder=5))
+        ax_grid.text(strip_x - 0.01, strip_y + strip_h / 2, f"{vmin:+.0f}",
+                     color=COLORS['text_label'], fontsize=6, fontweight='bold',
+                     ha='right', va='center', transform=ax_grid.transAxes,
+                     clip_on=False, fontfamily='monospace')
+        ax_grid.text(strip_x + strip_w + 0.01, strip_y + strip_h / 2, f"{vmax:+.0f}",
+                     color=COLORS['text_label'], fontsize=6, fontweight='bold',
+                     ha='left', va='center', transform=ax_grid.transAxes,
+                     clip_on=False, fontfamily='monospace')
+        ax_grid.text(strip_x + strip_w / 2, strip_y - 0.022,
+                     "THERMAL FIELD (fixed scale)", color=COLORS['text_label'],
+                     fontsize=6, fontweight='bold', ha='center', va='top',
+                     transform=ax_grid.transAxes, clip_on=False)
+
     # -- Sidebar Minimap (Integrated into ax_left) --
     # In V4, the minimap moves to the bottom of the left panel
     from mpl_toolkits.axes_grid1.inset_locator import inset_axes
@@ -544,37 +795,57 @@ def render_jax_state(state, params, episode=None, step=None, train_episode=None,
     # --- 2. Left Panel: Vitals (Dual View) ---
     y_ptr = 0.95
     ax_left.text(0.05, y_ptr, "INTEROCEPTION", color=COLORS['text_main'], fontsize=10, fontweight='black', transform=ax_left.transAxes)
-    y_ptr -= 0.12
-    
+
     # Known sensor observations for mapping
     sensor_map = {s['name']: s for s in sensory_data} if sensory_data else {}
-    
-    # Compact spacing when intero nociception is enabled (4 bars instead of 3)
+
+    # Compact spacing as bars are added. Satiation / Nutrition / Injury are
+    # always drawn; Intero Nociception and Body Temperature are conditional.
+    # The 3-bar and 4-bar cases keep their exact previous geometry, so a frame
+    # rendered from a thermal-OFF config is pixel-for-pixel what it was before
+    # this stage. Only the 5-bar case is new, and it has to tighten: at the
+    # 4-bar spacing the fifth gauge would land on top of the Run Context pod,
+    # whose top edge is at y = 0.48.
     intero_noc_enabled = bool(getattr(params, 'interoceptive_nociception_enabled', False))
-    bar_step = 0.10 if intero_noc_enabled else 0.15  # tighter when 4 bars
-    
+    n_bars = 3 + int(intero_noc_enabled) + int(thermal_on)
+    if n_bars >= 5:
+        # Five rows have to fit between the section header (0.95) and the
+        # "RUN CONTEXT" pod TITLE, which draw_pod_frame puts at 0.495 — the
+        # pod's box top at 0.48 is not the real floor. Bars are also shortened,
+        # because each row spans label (+h+0.02) to OBS readout (-0.03) and at
+        # h = 0.04 that span exceeds the step.
+        head_gap, bar_step, bar_h = 0.08, 0.085, 0.032
+        label_dy, obs_dy = 0.012, 0.018
+    elif n_bars == 4:
+        head_gap, bar_step, bar_h = 0.12, 0.10, 0.04
+        label_dy, obs_dy = 0.02, 0.03
+    else:
+        head_gap, bar_step, bar_h = 0.12, 0.15, 0.04
+        label_dy, obs_dy = 0.02, 0.03
+    y_ptr -= head_gap
+
     # Satiation
     sat_real, max_sat = float(state.satiation), float(params.max_satiation)
     sat_obs_data = sensor_map.get('Satiation', {'intensity': sat_real/max_sat})
     sat_obs = float(sat_obs_data.get('intensity', 0))
-    draw_dual_capsule_bar(ax_left, 0.05, y_ptr, 0.9, 0.04, sat_real/max_sat, sat_obs, COLORS['satiation'], 
-                          "Satiation", f"{sat_real/max_sat:.2f}", f"{sat_obs:.2f}", transform=ax_left.transAxes)
+    draw_dual_capsule_bar(ax_left, 0.05, y_ptr, 0.9, bar_h, sat_real/max_sat, sat_obs, COLORS['satiation'], 
+                          "Satiation", f"{sat_real/max_sat:.2f}", f"{sat_obs:.2f}", transform=ax_left.transAxes, label_dy=label_dy, obs_dy=obs_dy)
     y_ptr -= bar_step
     
     # Nutrition
     nut_real, max_nut = float(state.nutrition), float(params.max_nutrition)
     nut_obs_data = sensor_map.get('Nutrition', {'intensity': nut_real/max_nut})
     nut_obs = float(nut_obs_data.get('intensity', 0))
-    draw_dual_capsule_bar(ax_left, 0.05, y_ptr, 0.9, 0.04, nut_real/max_nut, nut_obs, COLORS['nutrition'], 
-                          "Nutrition", f"{nut_real/max_nut:.2f}", f"{nut_obs:.2f}", transform=ax_left.transAxes)
+    draw_dual_capsule_bar(ax_left, 0.05, y_ptr, 0.9, bar_h, nut_real/max_nut, nut_obs, COLORS['nutrition'], 
+                          "Nutrition", f"{nut_real/max_nut:.2f}", f"{nut_obs:.2f}", transform=ax_left.transAxes, label_dy=label_dy, obs_dy=obs_dy)
     y_ptr -= bar_step
     
     # Injury
     inj_real, max_inj = float(state.injury_level), float(params.max_injury)
     inj_obs_data = sensor_map.get('Injury', {'intensity': inj_real/max_inj})
     inj_obs = float(inj_obs_data.get('intensity', 0))
-    draw_dual_capsule_bar(ax_left, 0.05, y_ptr, 0.9, 0.04, inj_real/max_inj, inj_obs, COLORS['injury'], 
-                          "Injury", f"{inj_real/max_inj:.2f}", f"{inj_obs:.2f}", transform=ax_left.transAxes)
+    draw_dual_capsule_bar(ax_left, 0.05, y_ptr, 0.9, bar_h, inj_real/max_inj, inj_obs, COLORS['injury'], 
+                          "Injury", f"{inj_real/max_inj:.2f}", f"{inj_obs:.2f}", transform=ax_left.transAxes, label_dy=label_dy, obs_dy=obs_dy)
     y_ptr -= bar_step
 
     # Interoceptive Nociception (only when enabled)
@@ -601,10 +872,21 @@ def render_jax_state(state, params, episode=None, step=None, train_episode=None,
                 intero_real = float(state.injury_level) / max_inj
             intero_obs = intero_real
 
-        draw_dual_capsule_bar(ax_left, 0.05, y_ptr, 0.9, 0.04, intero_real, intero_obs, COLORS['intero_noc'],
-                              "Intero Noc", f"{intero_real:.2f}", f"{intero_obs:.2f}", transform=ax_left.transAxes)
+        draw_dual_capsule_bar(ax_left, 0.05, y_ptr, 0.9, bar_h, intero_real, intero_obs, COLORS['intero_noc'],
+                              "Intero Noc", f"{intero_real:.2f}", f"{intero_obs:.2f}", transform=ax_left.transAxes,
+                              label_dy=label_dy, obs_dy=obs_dy)
         y_ptr -= bar_step
-    
+
+    # Body temperature (temperature system, Stage 6a). Without this gauge a
+    # video shows the world's temperature and not the agent's — and the agent's
+    # is the half that decides whether the episode ends.
+    if thermal_on:
+        body_temp = float(getattr(state, 'body_temp', params.temperature_setpoint))
+        draw_temperature_gauge(ax_left, 0.05, y_ptr, 0.9, bar_h, body_temp,
+                               params, thermal_clim, transform=ax_left.transAxes,
+                               label_dy=label_dy)
+        y_ptr -= bar_step
+
     draw_pod_frame(ax_left, 0.05, 0.32, 0.9, 0.16, "Run Context", transform=ax_left.transAxes)
     ctxt_y = 0.43
     ax_left.text(0.1, ctxt_y, f"EPISODE:", color=COLORS['text_label'], fontsize=7, transform=ax_left.transAxes)
@@ -626,7 +908,43 @@ def render_jax_state(state, params, episode=None, step=None, train_episode=None,
     
 
     known_sensors = ['Olfactory', 'Extero Nociception', 'Collision', 'Visual', 'LOC']
-    
+    # 'Thermoception' is emitted by `sensor.py::build_sensory_viz` (Stage 3);
+    # without it in this list the pod is built and then never drawn, so the
+    # modality that decides half the episode is invisible in every video.
+    #
+    # Inserted ONLY when thermal is on, and that is not tidiness. An absent name
+    # in this list is still drawn — as an "OFFLINE" pod — so an unconditional
+    # entry would put an empty THERMOCEPTION panel on every non-thermal frame
+    # AND push the Visual pod past the `y_cursor < 0.20` floor into the Action
+    # pod. Checked by rendering: that is exactly what it did.
+    if thermal_on or 'Thermoception' in sensor_map:
+        known_sensors.insert(2, 'Thermoception')
+
+    # Pod heights are budgeted before anything is drawn. Without this, adding a
+    # fifth pod does not add a pod — it pushes the LAST one past the same floor,
+    # and the frame silently loses the Visual panel instead. The budget (0.74)
+    # is exactly what the pre-thermal four-pod stack consumed.
+    #
+    # Applied ONLY on thermal configs (`_squeeze` is pinned to 1.0 otherwise),
+    # so every frame this project has ever rendered keeps its exact geometry —
+    # including the pre-existing behaviour where a config with the location
+    # sensor on has its LOC pod cut off by the floor. Fixing that is a
+    # different change from this one.
+    def _pod_height(name):
+        d = sensor_map.get(name)
+        if d is None:
+            return pod_h_default
+        if name == 'Thermoception':
+            return 0.13          # a 5-cell diamond of numbers; no bars to clear
+        return 0.20 if d.get('type') in ('diamond', 'visual_grid') else pod_h_default
+
+    _drawn = [s for s in known_sensors if s in sensor_map]
+    _requested = sum(_pod_height(s) for s in _drawn)
+    _gaps = 0.03 * len(_drawn)
+    _available = max(0.74 - _gaps, 0.05)
+    _squeeze = (min(1.0, _available / _requested)
+                if (thermal_on and _requested > 0) else 1.0)
+
     for s_name in known_sensors:
         s_data = sensor_map.get(s_name)
         offline = s_data is None
@@ -639,27 +957,37 @@ def render_jax_state(state, params, episode=None, step=None, train_episode=None,
             obs_only = tv is None or np.array_equal(np.asarray(tv), np.asarray(s_data['vector']))
         
         # Dynamic pod height: Visual/Diamond pods get more room for bars + labels
-        if not offline and s_data.get('type') in ('diamond', 'visual_grid'):
-            pod_h = 0.20
-        else:
-            pod_h = pod_h_default
-        
+        pod_h = _pod_height(s_name) * _squeeze if not offline else pod_h_default
+
         y_frame_bottom = y_cursor - pod_h
         draw_pod_frame(ax_right, 0.05, y_frame_bottom, 0.9, pod_h, s_name, offline=offline, obs_only=obs_only, transform=ax_right.transAxes)
         
         if not offline:
-            px, py, pw, ph = 0.15, y_frame_bottom + 0.02, 0.7, 0.07
-            if s_data['type'] == 'intensity':
+            px, py, pw, ph = 0.15, y_frame_bottom + 0.02 * _squeeze, 0.7, 0.07 * _squeeze
+            if s_name == 'Thermoception':
+                # Its own drawing, on the same fixed diverging scale as the
+                # field underlay — see `draw_thermal_diamond` for why the
+                # generic bar widgets cannot render this modality's range.
+                draw_thermal_diamond(
+                    ax_right, 0.10, y_frame_bottom + 0.01, 0.80, pod_h - 0.02,
+                    s_data['vector'], s_data.get('range', 1), thermal_clim,
+                    transform=ax_right.transAxes,
+                    colour_offset=(float(getattr(state, 'body_temp', 0.0))
+                                   if bool(getattr(params, 'thermal_relative', False))
+                                   else 0.0))
+            elif s_data['type'] == 'intensity':
                 # Dual Capsule Bar for Intensity Sensors (e.g. Nociception)
                 true_v = float(s_data.get('true_intensity', s_data['intensity']))
                 obs_v = float(s_data['intensity'])
                 # Adding numerical labels for research clarity
                 if obs_only:
-                    draw_dual_capsule_bar(ax_right, px, py, pw, ph, 0, obs_v, COLORS['action'], 
-                                          state_val="--", obs_val=f"{obs_v:.2f}", transform=ax_right.transAxes)
+                    draw_dual_capsule_bar(ax_right, px, py, pw, ph, 0, obs_v, COLORS['action'],
+                                          state_val="--", obs_val=f"{obs_v:.2f}", transform=ax_right.transAxes,
+                                          label_dy=0.02 * _squeeze, obs_dy=0.03 * _squeeze)
                 else:
-                    draw_dual_capsule_bar(ax_right, px, py, pw, ph, true_v, obs_v, COLORS['action'], 
-                                          state_val=f"{true_v:.2f}", obs_val=f"{obs_v:.2f}", transform=ax_right.transAxes)
+                    draw_dual_capsule_bar(ax_right, px, py, pw, ph, true_v, obs_v, COLORS['action'],
+                                          state_val=f"{true_v:.2f}", obs_val=f"{obs_v:.2f}", transform=ax_right.transAxes,
+                                          label_dy=0.02 * _squeeze, obs_dy=0.03 * _squeeze)
             elif s_data['type'] == 'spectrum':
                 obs_vec = np.array(s_data['vector'])
                 true_vec = np.array(s_data.get('true_vector', obs_vec))

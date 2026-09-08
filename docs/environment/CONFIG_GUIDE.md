@@ -301,8 +301,13 @@ Six things that bite:
   cell-`(0,0)` fallback in `resolve_overlaps_global` (an entity parked outside its own
   spawn area when the area fills up), not the separation value.
 - **`k_loss` is the number most likely to be changed by accident, and it can delete the
-  task.** The body's equilibrium is `T* = k_exchange·T_field/(k_exchange + k_loss)`, i.e.
-  `0.8 · T_field` at the shipped values: standing in a −25 cell settles the body at −20,
+  task.** The body's equilibrium is
+  `T* = (k_exchange·T_field + k_loss·temperature_setpoint + k_metabolic) / (k_exchange + k_loss)`.
+  On the shipped config `temperature_setpoint` and `k_metabolic` are both `0`, which
+  collapses it to `k_exchange·T_field/(k_exchange + k_loss)`, i.e.
+  `0.8 · T_field` — but that shorter form is the special case, not the rule, and the
+  load-time structure check uses the general one because a config with either key non-zero
+  would otherwise be certified against a world it does not build. At the shipped values: standing in a −25 cell settles the body at −20,
   not at −25, because physiology holds off 20% of the cold. That 20% is exactly what makes
   a −25 world cold-but-survivable rather than instantly lethal. Raise `k_loss` to about
   0.036 and the survivable ambient window reaches ±25 — the world's own baseline can no
@@ -326,6 +331,36 @@ max_temperature`, `temperature_setpoint` inside that band, `k_exchange` and `k_l
 `>= 0` and summing to `<= 1`, and `grid_range >= 0`. `metabolic_coupling` is read too,
 and `metabolic_coupling_rate` is conditional-mandatory one level deeper — read only when
 `metabolic_coupling` is true, and validated `>= 0` there.
+
+**A mis-tuned thermal config fails at load, and the message tells you how to retune it.**
+Beyond the per-key validation above, a thermal config with a real fire in it gets its
+radial profile *simulated* at load: the loader builds a single-fire field with the same
+blur `jax_reset` uses, at the corners and midpoint of the sampled ranges, and checks that
+standing on the fire is lethal, that the ring one cell out is survivable indefinitely, and
+that three cells out the cold kills. If any of those three fails it raises `ValueError`
+naming the key, the drawn values, the three equilibria and which condition broke — because
+the alternative is a run that looks healthy for a week while the agent learns a different
+task. The full contract — the four preconditions that decide whether it runs, why an
+absolute `temperature:` is skipped rather than certified, and why
+`min_fire_separation: 0` with more than one fire is refused outright — is in
+[02_config_schema.md](02_config_schema.md#the-load-time-structure-check-stage-6b).
+
+Two things follow for anyone editing a thermal config. **A skip is logged, never silent** —
+if you are not sure whether your config was checked, the load log says either
+`thermal structure check PASSED` or `thermal structure check SKIPPED: <reason>`. And **the
+check is deliberately narrow**: it certifies the pain-plus-comfort structure and nothing
+else, so a config it skips is not thereby endorsed.
+
+**Videos of a thermal episode show two new things**, and both come from
+`src/environment/renderer.py`. The world's temperature is painted under the grid as a
+diverging blue–red underlay whose colour limits are **fixed for the whole episode** and
+centred on `temperature_setpoint` (a per-frame rescale would make a cooling world look
+stable, which is the one thing the picture exists to disprove), and the agent's own body
+temperature appears as a gauge in the vitals stack with the two death thresholds marked.
+`render_jax_state` also takes `debug_thermal_cells=True`, off by default, which outlines
+the five cells the thermoceptor actually reads. Recordings made before the thermal system
+carry neither field and render exactly as they always did — the recording format was not
+versioned for this, the reader simply treats both fields as optional.
 
 **`metabolic_coupling` makes staying warm compete with staying fed, and it is off.**
 With it false — which is every config in the repo — nothing changes: the drain sits behind

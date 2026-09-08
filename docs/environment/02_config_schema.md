@@ -155,6 +155,92 @@ satisfies the validity mask, `resolve_overlaps_global` parks the entity at cell 
 outside its own spawn area — with nothing raised. `tests/env/test_thermal_field.py::test_fires_respect_min_separation`
 therefore also asserts that every fire lands inside its own area.
 
+### The load-time structure check (Stage 6b)
+
+**What it is for.** The temperature task only exists inside a narrow band of settings. The
+fire has to be hot enough to hurt when the agent stands on it, the ring one cell out has to
+be somewhere the agent can survive indefinitely, and three cells out the cold has to
+actually end the episode. Miss that band — by changing `sigma`, `default_temp`, the fire's
+`temperature_ratio`, or the grid size — and the run still looks perfectly healthy while the
+agent learns a different task: a fire with no bite, or a world with nowhere survivable
+beside it, or a cold that never runs out. `thermal.sigma` has already produced one silent
+all-NaN training run in this project. This check makes the next one **fail at load**.
+
+**Where it runs.** `config_loader.load_env_params`, at load — not at reset. Reset runs under
+`jit` on every episode of every parallel environment, and every input the check needs is a
+config constant.
+
+**What it computes.** For the corners of the sampled ranges (`thermal.default_temp`
+low/high × the entity's `temperature_ratio` low/high — four draws — plus the midpoint) it
+builds a single-fire field on the config's own grid, using the **same blur `jax_reset`
+calls** (`core._gaussian_smooth_normalised`, never a numpy twin), averages it over the
+Manhattan rings at distance 0, 1 and 3, and converts each ring's mean into the body
+temperature the recurrence settles at:
+
+$$
+T^{*} = \frac{k_{ex} \cdot T_{field} + k_{loss} \cdot T_{setpoint} + k_{met}}{k_{ex} + k_{loss}}
+$$
+
+This is the **general** fixed point. The special case `k_ex·T_field / (k_ex + k_loss)`
+quoted in the design sandbox is only correct when `temperature_setpoint` and `k_metabolic`
+are both zero; both are config keys with non-zero-capable values, and with either set the
+special case will pass a lethal comfort ring or reject a perfectly good one. The approach to
+`T*` is monotone, so "equilibrium inside `[min_temperature, max_temperature]`" is exactly
+"survivable indefinitely" and "outside" is exactly "dies eventually".
+
+Corners rather than a random draw is deliberate: the check must be **deterministic**, so a
+config either always loads or never does. One that passed on Monday and failed on Tuesday
+would be worse than none.
+
+**When it runs.** All four of these, or the check logs one line saying which precondition
+failed and continues:
+
+1. `thermal.enabled` is true.
+2. `thermal.use_object_sources` is true — mode A (`use_random_spots: true`,
+   `use_object_sources: false`) has no fire to check at all.
+3. At least one allocated **slot** is a heat source. A heat source is *a slot with a
+   non-zero declared temperature in either style*, defined once in `core.heat_source_mask`
+   and shared with the placement constraints. Slots, not entries: two separate
+   single-count fire entries are two fires, and they can spawn adjacent.
+4. At least one heat-source slot declares its heat as a **`temperature_ratio`**. The
+   calibrated band is stated as a multiple of the world's coldness (11–13× |`default_temp`|),
+   so an absolute `temperature:` stamp — the documented escape hatch that adds a number
+   straight into the field — is outside the band's domain and is **not certified**. The log
+   line says so; it never passes silently.
+
+**It also refuses `min_fire_separation: 0` with more than one heat-source slot.** The check
+models a single fire. With the separation constraint disabled two fires can spawn adjacent,
+their stamps add, and the merged comfort ring goes lethal exactly where the agent would
+have to stand (+33.0 at separation 1 and +15.4 at separation 2 against a +15 threshold,
+versus +8.4 at the shipped separation of 3). Certifying a world the model does not cover is
+worse than not certifying it, so this raises and names **both** keys.
+
+**On failure it raises `ValueError`, never warns.** A warning is what the sigma-floor
+incident produced, and it trained silently for a full run. The message names the offending
+key, the drawn corner, all three distances' equilibria, the survivable band, and which of
+the three conditions failed — enough to retune without opening this document:
+
+```
+thermal structure check FAILED for heat source 'campfire'. Drawn corner:
+thermal.default_temp = -28 (declared range [-28, -22]), temperature_ratio = 3
+(declared range [3, 4]) -> a single fire of +84.0 on a 10x10 grid with
+thermal.sigma = 0.7.
+  Equilibrium body temperature by Manhattan distance from the fire:
+  d0 = +2.53, d1 = -18.28, d3 = -22.06; survivable band
+  [thermal.min_temperature, thermal.max_temperature] = [-15, 15].
+  Failed: the fire does not hurt: standing ON it settles at +2.53, inside the
+  survivable band [-15.0, 15.0]; there is no comfort ring: one cell out settles
+  at -18.28, ...
+  Retune thermal.default_temp, the entity's temperature_ratio, or thermal.sigma.
+  The calibrated band is sigma near 0.7 with a ratio of 11-13.
+```
+
+`tests/env/test_thermal_validation.py` holds both halves: the configs that must be refused
+(each asserting on the message text, not merely that something raised) and — equally
+important — the Stage 1–5 test configs, mode A and an all-zero-temperature world, which
+must all still **load**. A check that rejected any of those would surface as four earlier
+stages becoming unrunnable.
+
 ---
 
 ## Overview — what this document is about

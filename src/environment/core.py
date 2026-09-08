@@ -1238,6 +1238,25 @@ _THERMAL_FIELD_KEY = 0x7EE7   # field build (default_temp, spots, per-slot ratio
 _THERMAL_FOOD_KEY = 0xF00D    # D3's second placement pass
 
 
+def heat_source_mask(temperature, ratio_low, ratio_high):
+    """THE definition of "heat source", used everywhere one is needed.
+
+    A heat source is an allocated entity **slot** whose declared temperature is
+    non-zero in EITHER style (absolute `temperature:` or `temperature_ratio:`).
+    Slots, not entries: `count_high` expansion has already happened by the time
+    these arrays exist, so two separate single-count fire entries count as two
+    fires — which is exactly the reading that "an entry with `count_high > 1`"
+    would miss, and those two fires can spawn adjacent.
+
+    Called from `jax_reset`'s placement constraints (D2 / D3) and from
+    `config_loader`'s load-time structure check (6b). One definition, because
+    two definitions of "fire" is how a config gets certified against a world it
+    does not build. Works on jnp arrays under trace and on numpy arrays on the
+    host — the ops are the same three comparisons either way.
+    """
+    return (temperature != 0.0) | (ratio_low != 0.0) | (ratio_high != 0.0)
+
+
 def _gaussian_smooth_normalised(field: jnp.ndarray, sigma, radius: int) -> jnp.ndarray:
     """Weight-normalised Gaussian blur — EVAAA's `sum / weightSum` at the edges.
 
@@ -1460,10 +1479,12 @@ def jax_reset(params: EnvParams, key: jax.random.PRNGKey) -> EnvState:
         _is_fire_concat = None
         if _min_fire_sep > 0 or _food_min_dist > 0:
             # A "heat source" is a SLOT with a non-zero declared temperature,
-            # in either style — not a named entry.
-            _obs_is_fire = ((params.obs_temperature != 0.0)
-                            | (params.obs_temp_ratio_low != 0.0)
-                            | (params.obs_temp_ratio_high != 0.0))
+            # in either style — not a named entry. `heat_source_mask` is the
+            # single definition, shared with the load-time structure check.
+            _obs_is_fire = heat_source_mask(
+                params.obs_temperature,
+                params.obs_temp_ratio_low,
+                params.obs_temp_ratio_high)
             _is_fire_concat = jnp.concatenate([
                 jnp.zeros(num_res, dtype=jnp.bool_),
                 jnp.zeros(num_pred_class, dtype=jnp.bool_),

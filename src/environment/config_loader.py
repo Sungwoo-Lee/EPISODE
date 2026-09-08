@@ -401,6 +401,311 @@ def _apply_edge_margin(area, margin, grid_h: int, grid_w: int, entity_label: str
     return [[r1, c1], [r2, c2]]
 
 
+# ── Load-time thermal structure check (temperature system, Stage 6b) ─────────
+#
+# WHAT IT IS FOR. The temperature task only exists inside a narrow band of
+# configurations. The design measured it: with sigma near 0.7 and a fire roughly
+# 11-13x the magnitude of the world's baseline coldness, standing ON the fire is
+# lethal, the ring one cell out is survivable indefinitely, and three cells out
+# the cold kills you on a clock. Drift outside that band and the run still looks
+# healthy while the agent is learning a different task — either a fire with no
+# bite, or a world with no survivable spot beside it, or a cold that never
+# actually ends an episode. `thermal.sigma` has already produced one silent
+# all-NaN training run in this project; this check is why the next one raises.
+#
+# WHERE IT RUNS. At LOAD, in `load_env_params` — not at reset. Reset runs under
+# jit on every episode of every parallel environment, and every input this check
+# needs is a config constant, so a per-episode cost would buy nothing.
+#
+# IT IS DETERMINISTIC ON PURPOSE. It evaluates the CORNERS of the sampled ranges
+# plus their midpoint, never a random draw, so a config either always loads or
+# never does. A check that passes on Monday and fails on Tuesday is worse than
+# no check at all.
+
+_THERMAL_CHECK_DISTANCES = (0, 1, 3)
+
+
+def _thermal_equilibrium(ambient, k_exchange, k_loss, k_metabolic, setpoint):
+    """Body temperature the recurrence in `core.py::update_body` settles at.
+
+        T <- T + k_ex*(T_field - T) + k_met - k_loss*(T - setpoint)
+
+    has the fixed point
+
+        T* = (k_ex*T_field + k_loss*setpoint + k_met) / (k_ex + k_loss)
+
+    This is the GENERAL form, deliberately. The special case `k_ex*T_field /
+    (k_ex + k_loss)` quoted in the design sandbox is only correct when both
+    `temperature_setpoint` and `k_metabolic` are zero; both are config keys with
+    non-zero-capable values, and with either one set the special case will pass a
+    lethal comfort ring or reject a perfectly good one.
+
+    The approach to T* is monotone from any start, so "the equilibrium lies
+    inside [min_temperature, max_temperature]" is exactly "the agent survives
+    here indefinitely", and "outside" is exactly "the agent dies here eventually".
+    That equivalence is what lets this check use the fixed point instead of
+    simulating a 4000-step trajectory the way the sandbox does.
+    """
+    return (k_exchange * ambient + k_loss * setpoint + k_metabolic) \
+        / (k_exchange + k_loss)
+
+
+def _thermal_single_fire_field(amplitude, default_temp, sigma, kernel_radius,
+                               grid_h, grid_w):
+    """The field one fire at the grid centre produces — the environment's own build.
+
+    Same three stages, same order, as `core.py::_build_thermal_field`: fill with
+    `default_temp`, ADD one stamp of `amplitude`, blur ONCE at the end with
+    `core.py::_gaussian_smooth_normalised` — the very function `jax_reset` calls.
+
+    Calling the real blur is not a stylistic preference. A numpy twin would
+    validate a field the environment never builds, which is the exact
+    circular-verification shape this check exists to avoid, and it would drift
+    silently the first time the kernel is touched.
+    """
+    from src.environment.core import _gaussian_smooth_normalised   # local: avoids
+    # any import-order coupling between the loader and the env core, and keeps
+    # jax out of the import path of configs that never reach this check.
+
+    raw = np.full((int(grid_h), int(grid_w)), float(default_temp), dtype=np.float32)
+    c_r, c_c = int(grid_h) // 2, int(grid_w) // 2
+    raw[c_r, c_c] += float(amplitude)
+    return np.asarray(_gaussian_smooth_normalised(
+        jnp.asarray(raw), float(sigma), int(kernel_radius)))
+
+
+def _thermal_radial_equilibria(amplitude, default_temp, sigma, kernel_radius,
+                               grid_h, grid_w, k_exchange, k_loss, k_metabolic,
+                               setpoint):
+    """Equilibrium body temperature at Manhattan distance 0, 1 and 3 from ONE fire.
+
+    Averages `_thermal_single_fire_field` over each Manhattan ring around the
+    fire and converts the ring's mean ambient temperature into the body
+    temperature the recurrence settles at there.
+
+    Returns `{distance: equilibrium}`; a distance whose ring falls entirely off
+    the grid maps to None.
+    """
+    field = _thermal_single_fire_field(
+        amplitude, default_temp, sigma, kernel_radius, grid_h, grid_w)
+    c_r, c_c = int(grid_h) // 2, int(grid_w) // 2
+
+    out = {}
+    for d in _THERMAL_CHECK_DISTANCES:
+        ring = [field[r, c]
+                for r in range(int(grid_h)) for c in range(int(grid_w))
+                if abs(r - c_r) + abs(c - c_c) == d]
+        out[d] = None if not ring else _thermal_equilibrium(
+            float(np.mean(ring)), k_exchange, k_loss, k_metabolic, setpoint)
+    return out
+
+
+def _thermal_structure_verdict(eq, min_temperature, max_temperature):
+    """Which of the three structural conditions hold for one radial profile.
+
+    Returns `(ok, failures)` where `failures` is a list of plain-English strings.
+    """
+    failures = []
+
+    def _survivable(t):
+        return min_temperature <= t <= max_temperature
+
+    if eq[0] is not None and _survivable(eq[0]):
+        failures.append(
+            f"the fire does not hurt: standing ON it settles at {eq[0]:+.2f}, "
+            f"inside the survivable band [{min_temperature}, {max_temperature}]")
+    if eq[1] is not None and not _survivable(eq[1]):
+        failures.append(
+            f"there is no comfort ring: one cell out settles at {eq[1]:+.2f}, "
+            f"outside the survivable band [{min_temperature}, {max_temperature}], "
+            f"so no reachable cell beside the fire is survivable")
+    if eq[3] is not None and _survivable(eq[3]):
+        failures.append(
+            f"the cold is not a clock: three cells out settles at {eq[3]:+.2f}, "
+            f"inside the survivable band [{min_temperature}, {max_temperature}], "
+            f"so the agent never has to return to the fire")
+    return (not failures), failures
+
+
+def _check_thermal_structure(*, obs_temperature, obs_ratio_low, obs_ratio_high,
+                             obs_labels, res_temperature, res_ratio_low,
+                             res_ratio_high, res_labels, use_object_sources,
+                             default_temp_low, default_temp_high, sigma,
+                             kernel_radius, grid_h, grid_w, k_exchange, k_loss,
+                             k_metabolic, setpoint, min_temperature,
+                             max_temperature, min_fire_separation):
+    """Refuse to load a thermal config whose radial profile has lost the task.
+
+    WHEN IT RUNS. All four of these must hold, or the check logs one line saying
+    which precondition failed and returns:
+
+      1. `thermal.use_object_sources` is true. Mode A (`use_random_spots: true,
+         use_object_sources: false`) has no fire to check at all.
+      2. At least one allocated slot is a heat source (`core.heat_source_mask`).
+      3. At least one heat-source slot declares its heat as a
+         `temperature_ratio`.
+      4. The grid is large enough to have a distance-3 ring.
+
+    PRECONDITION 3 IS A DEPARTURE FROM THE PLAN, AND IT IS LOAD-BEARING.
+    The plan's gate was preconditions 1 and 2 only, on the stated reasoning that
+    the Stage 2-5 test configs are thermal-on but declare no heat source. That is
+    true of Stages 2, 4 and 5 — they all set `use_object_sources: false` — but it
+    is NOT true of Stage 1: `tests/env/test_thermal_field.py` builds DEGENERATE
+    single-value worlds through an absolute `temperature:` precisely so the raw
+    stamps can be reconstructed from state alone and compared against the numpy
+    oracle. Two of them (`temperature: 100` over a baseline of 0.0, and over
+    -25.0) demonstrably lack the pain-plus-comfort structure — a baseline of 0.0
+    is the setpoint, so no distance is ever cold enough to kill — and neither can
+    be retuned into the band without destroying what it tests (the 0.0 baseline
+    is documented there as load-bearing against float32 cancellation).
+
+    So an exemption is not optional; the only choice is which one. The
+    ratio/absolute split is the principled one available: `temperature_ratio` is
+    the form that locks the fire's strength to the world's coldness, it is the
+    form the calibrated band is stated in ("11-13x the world's coldness"), it is
+    the form the shipped `campfire_world.yaml` and every config derived from it
+    uses, and `temperature:` is documented in `_read_temperature` as the raw
+    escape hatch that adds a number straight into the field. A config that takes
+    the escape hatch is not certified, and says so in the log rather than
+    silently.
+
+    WHAT IT CHECKS. For the corners of the sampled ranges (`default_temp`
+    low/high x `temperature_ratio` low/high, four draws, plus the midpoint) it
+    builds a single-fire field and asserts the three-part structure: distance 0
+    is lethal, distance 1 is survivable indefinitely, distance 3 is lethal.
+
+    It also refuses to certify `min_fire_separation: 0` alongside more than one
+    heat-source slot. The single-fire model cannot see merged fires, and merged
+    fires are lethal exactly where the agent would have to stand (+33.0 at
+    separation 1 and +15.4 at separation 2, against a +15 threshold, versus +8.4
+    at the shipped separation of 3). Certifying a world the model does not cover
+    is worse than not certifying it.
+
+    ON FAILURE IT RAISES. Not a warning: a warning is what the sigma-floor
+    incident produced, and it trained silently for a full run.
+    """
+    from src.environment.core import heat_source_mask
+
+    if not use_object_sources:
+        _log.info(
+            "thermal structure check SKIPPED: thermal.use_object_sources is "
+            "false, so no entity stamps heat into the field and there is no "
+            "fire whose radial profile could be checked.")
+        return
+
+    obs_fire = np.asarray(heat_source_mask(
+        np.asarray(obs_temperature), np.asarray(obs_ratio_low),
+        np.asarray(obs_ratio_high)))
+    res_fire = np.asarray(heat_source_mask(
+        np.asarray(res_temperature), np.asarray(res_ratio_low),
+        np.asarray(res_ratio_high)))
+    n_fire_slots = int(obs_fire.sum() + res_fire.sum())
+
+    if n_fire_slots == 0:
+        _log.info(
+            "thermal structure check SKIPPED: thermal.enabled is true and "
+            "thermal.use_object_sources is true, but no allocated entity slot "
+            "declares a non-zero 'temperature' or 'temperature_ratio' — there "
+            "is no heat source to check.")
+        return
+
+    # Distinct ratio bands across every heat-source slot, in declaration order.
+    bands = []
+    for fire_mask, lo_arr, hi_arr, labels in (
+            (obs_fire, obs_ratio_low, obs_ratio_high, obs_labels),
+            (res_fire, res_ratio_low, res_ratio_high, res_labels)):
+        lo_arr = np.asarray(lo_arr)
+        hi_arr = np.asarray(hi_arr)
+        for i in np.flatnonzero(fire_mask):
+            lo, hi = float(lo_arr[i]), float(hi_arr[i])
+            if lo == 0.0 and hi == 0.0:
+                continue                       # absolute-temperature slot
+            key = (lo, hi)
+            if key not in [b[0] for b in bands]:
+                bands.append((key, str(labels[i]) if i < len(labels) else '?'))
+
+    if not bands:
+        _log.info(
+            "thermal structure check SKIPPED: every heat source declares an "
+            "ABSOLUTE 'temperature:' rather than a 'temperature_ratio:'. The "
+            "calibrated pain-plus-comfort band is stated as a multiple of the "
+            "world's coldness (11-13x |thermal.default_temp|), so an absolute "
+            "stamp is outside the band's domain and this config is NOT "
+            "certified. Declare 'temperature_ratio: [low, high]' to have the "
+            "radial profile checked at load.")
+        return
+
+    if min_fire_separation == 0 and n_fire_slots > 1:
+        raise ValueError(
+            f"thermal.min_fire_separation is 0 while {n_fire_slots} heat-source "
+            f"slots are allocated, and that combination cannot be certified. "
+            f"The load-time structure check models a SINGLE fire; with the "
+            f"separation constraint disabled two fires can spawn adjacent, "
+            f"their stamps add, and the merged comfort ring goes lethal exactly "
+            f"where the agent would have to stand (+33.0 at separation 1, +15.4 "
+            f"at separation 2, against a +15 threshold — versus +8.4 at the "
+            f"shipped separation of 3). Set thermal.min_fire_separation >= 3, "
+            f"or reduce the heat-source count_high to 1.")
+
+    if k_exchange + k_loss <= 0.0:
+        # Both rate constants zero: the recurrence has no fixed point (the body
+        # never moves at all beyond the constant `k_metabolic` drift), so there
+        # is no equilibrium to compare against the death thresholds. Stage 1
+        # validates each of the two as `>= 0` and this is the one combination
+        # that leaves the profile undefined.
+        _log.info(
+            "thermal structure check SKIPPED: thermal.k_exchange + "
+            "thermal.k_loss is 0, so the body-temperature recurrence has no "
+            "equilibrium and no radial profile can be computed.")
+        return
+
+    # Corners of the sampled ranges plus the midpoint. Deterministic by design.
+    d_lo, d_hi = float(default_temp_low), float(default_temp_high)
+    d_mid = 0.5 * (d_lo + d_hi)
+
+    for (r_lo, r_hi), label in bands:
+        r_mid = 0.5 * (r_lo + r_hi)
+        draws = [(d_lo, r_lo), (d_lo, r_hi), (d_hi, r_lo), (d_hi, r_hi),
+                 (d_mid, r_mid)]
+        for d_temp, ratio in draws:
+            amplitude = ratio * abs(d_temp)
+            eq = _thermal_radial_equilibria(
+                amplitude, d_temp, sigma, kernel_radius, grid_h, grid_w,
+                k_exchange, k_loss, k_metabolic, setpoint)
+            if eq[3] is None:
+                _log.info(
+                    "thermal structure check SKIPPED: a %dx%d grid has no "
+                    "Manhattan ring at distance 3 around its centre cell, so "
+                    "the 'the cold is a real clock' condition cannot be "
+                    "evaluated.", int(grid_h), int(grid_w))
+                return
+            ok, failures = _thermal_structure_verdict(
+                eq, min_temperature, max_temperature)
+            if not ok:
+                raise ValueError(
+                    f"thermal structure check FAILED for heat source "
+                    f"{label!r}. Drawn corner: thermal.default_temp = "
+                    f"{d_temp:g} (declared range [{d_lo:g}, {d_hi:g}]), "
+                    f"temperature_ratio = {ratio:g} (declared range "
+                    f"[{r_lo:g}, {r_hi:g}]) -> a single fire of "
+                    f"{amplitude:+.1f} on a {int(grid_h)}x{int(grid_w)} grid "
+                    f"with thermal.sigma = {sigma:g}.\n"
+                    f"  Equilibrium body temperature by Manhattan distance "
+                    f"from the fire: d0 = {eq[0]:+.2f}, d1 = {eq[1]:+.2f}, "
+                    f"d3 = {eq[3]:+.2f}; survivable band "
+                    f"[thermal.min_temperature, thermal.max_temperature] = "
+                    f"[{min_temperature:g}, {max_temperature:g}].\n"
+                    f"  Failed: " + "; ".join(failures) + ".\n"
+                    f"  Retune thermal.default_temp, the entity's "
+                    f"temperature_ratio, or thermal.sigma. The calibrated band "
+                    f"is sigma near 0.7 with a ratio of 11-13.")
+
+    _log.info(
+        "thermal structure check PASSED for %d heat-source slot(s) over %d "
+        "ratio band(s), at the corners and midpoint of the sampled ranges.",
+        n_fire_slots, len(bands))
+
+
 def _read_properties_std(entry, entity_label):
     """Same, for the `*_std` variant."""
     if 'properties_std' in entry:
@@ -1703,6 +2008,43 @@ def load_env_params(config: Config) -> EnvParams:
             "constraints attach to. Use placement.mode: per_entity, or set both "
             f"constraints to 0 (currently min_fire_separation={_th_min_fire_sep}, "
             f"food_min_fire_distance={_th_food_min_dist})."
+        )
+
+    # ── Load-time thermal structure check (Stage 6b) ──────────────────────────
+    # Runs here because it needs BOTH the `thermal:` block (parsed far above) and
+    # the per-slot temperature arrays (built with the obstacle/resource blocks
+    # just above), and because a config that fails it must not reach EnvParams.
+    # See `_check_thermal_structure` for when it runs, when it is skipped, and
+    # why. Everything it reads is a config constant, so it costs nothing at reset.
+    if _thermal_on:
+        _obs_names_np = np.asarray(obs_type)
+        _obs_labels = [obstacle_names[int(t)] if int(t) < len(obstacle_names) else '?'
+                       for t in _obs_names_np]
+        _res_labels = ['food' if int(t) == 0 else 'hiding_predator'
+                       for t in np.asarray(res_type)]
+        _check_thermal_structure(
+            obs_temperature=obs_temperature,
+            obs_ratio_low=obs_temp_ratio_low,
+            obs_ratio_high=obs_temp_ratio_high,
+            obs_labels=_obs_labels,
+            res_temperature=res_temperature,
+            res_ratio_low=res_temp_ratio_low,
+            res_ratio_high=res_temp_ratio_high,
+            res_labels=_res_labels,
+            use_object_sources=_th_object_sources,
+            default_temp_low=_th_default_low,
+            default_temp_high=_th_default_high,
+            sigma=_th_sigma,
+            kernel_radius=_th_kernel_radius,
+            grid_h=height,
+            grid_w=width,
+            k_exchange=_th_k_exchange,
+            k_loss=_th_k_loss,
+            k_metabolic=_th_k_metabolic,
+            setpoint=_th_setpoint,
+            min_temperature=_th_min_temp,
+            max_temperature=_th_max_temp,
+            min_fire_separation=_th_min_fire_sep,
         )
 
     _log.debug("=" * 60)
