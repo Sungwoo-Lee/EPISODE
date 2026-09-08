@@ -257,7 +257,7 @@ One row per `(episode, t)`, `t ∈ [0, T]`. Sorted by `(episode_seed, t)`. Colum
 | 18 | `hit_hiding_predator` | `bool` | **arriving** | `info['hit_hiding_predator']` |
 | 19 | `event_collided` | `bool` | **arriving** | `info['event_collided']` |
 | 20 | `agent_in_bush` | `bool` | state at `t` | `info['agent_in_bush']` for `t≥1`; recomputed at reset for `t=0` (§D8) |
-| 21 | `termination_reason` | `int8` | **arriving** (`0` except final row) | `info['termination_reason']`; codes `0`=active, `1`=max_steps, `2`=starvation, `3`=overeating, `4`=injury (`core.py:702-712`) |
+| 21 | `termination_reason` | `int8` | **arriving** (`0` except final row) | `info['termination_reason']`; codes `0`=active, `1`=max_steps, `2`=starvation, `3`=overeating, `4`=injury, `5`=thermal (`core.py`, termination block) |
 | 22 | `animal_row` | `fixed_size_list<int16>[A]` | state at `t` | `state.animal_pos[:,0]` |
 | 23 | `animal_col` | `fixed_size_list<int16>[A]` | state at `t` | `state.animal_pos[:,1]` |
 | 24 | `animal_state` | `fixed_size_list<int8>[A]` | state at `t` | `state.animal_state` — `0`=PATROL, `1`=HUNT, `2`=RETURN |

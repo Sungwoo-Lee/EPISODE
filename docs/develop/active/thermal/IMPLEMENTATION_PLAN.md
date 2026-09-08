@@ -798,8 +798,8 @@ Everything the first draft listed as open is now settled — see *Decisions sett
 - [ ] **S3** Render one frame with thermal on and check the Collision panel against the observation slice by hand. `build_sensory_viz` fails silently (F7); nothing else in the suite will tell you.
 - [x] **S1** Asserted, not eyeballed: `test_placement_constraints_are_noops_when_disabled` compares `state.key` (plus all three position arrays) against the Stage 0 fixture, for thermal OFF *and* thermal ON with both constraints at 0. The 72-config parity gate additionally compares `state.key` at all 101 states. Done 2026-09-08.
 - [x] **S1** One campfire at (3,2), `default_temp: [-25,-25]`, absolute `temperature: 300`: peak `+72.42`, d=1 ring `[+10.12, +10.12, +10.46, +10.11]`, far corner `-25.00`. Sandbox `gaussian_smooth` on the same raw stamps prints the identical numbers. Done 2026-09-08, before the test was written.
-- [ ] **S2** Confirm `body_temp` equilibrates at −20 (not −25) in a uniform −25 field. If it equilibrates at −25, `k_loss` is not wired in.
-- [ ] **S2** `grep -rn "termination_reason"` and tick off every consumer in the Analysis table before committing.
+- [x] **S2** Equilibrium confirmed against the closed form. A uniform −25 field is *lethal* (the body crosses −15 on step 28), so the standing check uses a uniform **−10** field, where `T* = 0.8·(−10) = −8`: measured **−7.99999237** after 400 steps, and the test additionally refuses any settling point within 1.5 of the cell temperature. The −25 case is checked as steps-to-death against `sim.body_traj` instead. Done 2026-09-09.
+- [x] **S2** Every consumer in the Analysis table ticked off, each line number re-verified against the file rather than trusted: `train.py:1543,2054,2260,2413`; `dreamer_srl_main.py:1231`; `episode_metrics.py:41-45,232-238,269-277`; `trajectory_store.py:141,172`; `_ladder.py:90`; `grid_ladder_figures.py:150,160,168`; `check_env.py:35`; plus `tests/models/test_gae_truncation.py:132`. The six `>= 2` real-death masks were read and left unedited, and the pinning test now asserts they cover code 5. Done 2026-09-09.
 - [ ] **S3** `sum(get_observation_breakdown(params).values()) == get_observation(...).shape[0]` on both a thermal-on and a thermal-off config, printed, before running the suite.
 - [ ] **S4** Diff `calculate_drive`'s thermal-off branch against the original character by character — it must be the same expression, not an equivalent one.
 - [ ] **S6** Load every config in the Stage 1 migration set and confirm none newly raises. The structure check must be unreachable when `thermal.enabled` is false. (Deferred configs are expected to raise on `thermal.enabled` — that is the policy, not a failure; do not "fix" them here.)
@@ -1056,6 +1056,264 @@ comment nit). **No row covers the silent cell-(0,0) placement fallback** in
 3. Incidental: the edits to `resolve_overlaps_global` stripped trailing whitespace from
    several blank lines inside the function, so the diff carries a few whitespace-only
    hunks in otherwise-unchanged context.
+
+Signed: `Implemented by: developer`
+
+### Stage 2 — Body temperature and termination reason 5 (complete)
+
+**Plain-language summary.** The agent now has a body temperature. Every step it drifts
+toward the temperature of the cell it is standing on, while its own physiology pulls it
+back toward a comfortable setpoint of zero; if it ever leaves the band −15 to +15 the
+episode ends and the environment reports that as a **death** (a new termination code, 5),
+not as running out of time. The agent still cannot *sense* its temperature and the reward
+still does not know about it — those are Stages 3 and 4. On every config in the project
+except the one thermal example, none of this is even compiled, and the Stage 0 recording
+proves the environment is byte-for-byte what it was.
+
+**Files changed** (21 modified + 1 new; this plan doc makes 23).
+
+| File | Change |
+|---|---|
+| `src/environment/state.py` | `EnvState` gains `body_temp` (`[]` float32, always a real leaf). `EnvParams` gains six traced floats: `thermal_k_exchange`, `thermal_k_loss`, `thermal_k_metabolic`, `temperature_setpoint`, `min_temperature`, `max_temperature`. |
+| `src/environment/config_loader.py` | The six body keys read as conditional-mandatory inside the existing `if _thermal_on:` block, each validated at the point it is read (`min < max`; setpoint inside the band; `k_exchange`/`k_loss` `>= 0` and summing to `<= 1`). Inert zeros in the `else:` branch. |
+| `src/environment/core.py` | `update_body` gains a required 4th argument `new_agent_pos`, the recurrence under a static `if params.thermal_enabled:`, and a widened return tuple (`… , new_body_temp, thermal_death, done`). `jax_step` unpacks it, adds `reason = jnp.where(thermal_death, 5, reason)` **after** the truncation line, and carries `body_temp` on the step state. `jax_reset` initialises `body_temp` at `params.temperature_setpoint`. Enum comment extended to 0–5. |
+| `train.py` (×4), `src/algorithms/dreamer_srl/dreamer_srl_main.py` (×1) | The five label-map copies gain `(5, 'Thermal')`. |
+| `src/behavior/episode_metrics.py` | `_TERM_THERMAL = 5`; new `Episode/Term_Thermal` one-hot; `episode_wandb_keys()` goes 20 → **21** keys; three docstrings updated. |
+| `src/utils/trajectory_store.py` | Both `termination_reason` column descriptions carry code 5, with a note that older stores carry 1–4 only. |
+| `docs/environment/TRAJECTORY_STORE_SCHEMA.md` | **Regenerated** by `scripts/eval/traj_collect/gen_schema_doc.py` — see Deviation D2-3. |
+| `scripts/analysis/ladder/_ladder.py` | `TERM_NAMES` gains `5: "frozen or overheated"`. |
+| `scripts/analysis/studies/nmn_site_grid/grid_ladder_figures.py` | `fig4`'s `keys`/`cols`/`txt` gain a fourth outcome, plus a length assertion and a comment explaining the `zip`-truncation trap; the legend's `ncol` is now derived. |
+| `check_env.py` | The stale legend (it omitted 0 and 3) rewritten as the full 0–5 list. |
+| `tests/models/test_gae_truncation.py` | `test_termination_reason_to_terminated_mask` extended to `[0,1,2,3,4,5]`. |
+| `tests/env/thermal_sandbox_oracle.py` | `body_traj` vendored verbatim from `sim.py`, alongside the existing `gaussian_smooth`. |
+| `tests/env/test_thermal_body.py` | **New.** Five tests. |
+| Docs (Maintenance Contract) | `05_body_homeostasis.md` (new "Body Temperature (thermal)" section + state/reset tables), `06_reward_and_termination.md`, `04_step_loop.md`, `02_config_schema.md`, `CONFIG_GUIDE.md` §3.9, `CONFIG_CRITICAL_SETTINGS.md` (`thermal.k_loss` row + dated change-log entry), `WANDB_METRICS_REFERENCE.md`, `TRAJECTORY_COLLECTION_PIPELINE.md`. |
+
+**No config file changed.** All six body keys already shipped in `default.yaml` and
+`campfire_world.yaml` from Stage 1 at exactly these values; Stage 2 only starts reading
+them. No config becomes newly loadable or newly unloadable, so there is no migration.
+
+---
+
+**Deviation D2-1 — the plan does not say WHICH cell the body reads, and it matters.**
+The recurrence is written as `T_field[agent_cell]`, but `update_body` is called with the
+*pre-move* `state` and a *post-move* `info`. Implemented as the **post-move** cell, passed
+in as a new required argument `new_agent_pos`, because every other quantity `update_body`
+consumes (`damage`, `ate_food`, `rested`) is post-move. Reading the pre-move cell would
+make body temperature the one body variable that lags the agent by a step: stepping *onto*
+the fire would not burn until the following step and stepping *off* it would keep burning
+for one more. **A constant-temperature field cannot see this difference**, so the plan's
+named test would have passed either way — `test_body_reads_the_post_move_cell` was written
+specifically to pin it, using a field where every cell has a different value.
+
+**Deviation D2-2 — `thermal_death` is returned from `update_body`, not only folded into
+`done`.** The plan says the function "returns `new_body_temp` and folds the out-of-range
+test into `done`". Both happen, but the predicate is also returned, because `jax_step`
+needs the specific cause to emit reason 5 and recomputing the same out-of-range test at the
+call site would be a second copy of it that can silently drift from the first.
+
+**Deviation D2-3 — `docs/environment/TRAJECTORY_STORE_SCHEMA.md` is generated, not
+hand-edited.** It was first hand-edited, which turned
+`tests/test_trajectory_collection.py::test_schema_doc_matches_code` red. That test runs
+`scripts/eval/traj_collect/gen_schema_doc.py --check`. Correct procedure: edit the `Column`
+descriptions in `src/utils/trajectory_store.py`, then run the generator. Done, and the test
+is green. Worth recording because the plan's §6c table names the doc by line number
+(`:66,177`), which invites exactly the hand-edit that fails.
+
+**Plan corrections found (three).**
+
+1. **§6c's `TRAJECTORY_STORE_SCHEMA.md` line refs are `:66,177`; the real pair is `:177`
+   (step-level) and `:221` (episode-level).** Line 66 is an unrelated table header. And the
+   file is generated, so neither line should be edited directly (D2-3).
+2. **§6c points at `docs/environment/04_step_loop.md:944` for "the Code 0–4 table".**
+   Line 944 is a one-line *field description* in the info-dict table (`Code 0–4 (see table
+   in "Termination Check" section)`); the actual code table is at `:851-854`, the
+   pseudocode at `:841-842`, the verbatim block at `:418-424`, and an FAQ answer at
+   `:1010` that says "The four `jnp.where` calls". All five were updated; a change that
+   followed only the plan's line number would have left four stale copies.
+3. **`scripts/analysis/ladder/lad03_how_it_ends.py:17-20` is an unlisted sibling with the
+   same three-key assumption as `grid_ladder_figures.py`, and it has NO share-sum guard.**
+   It is not in the plan's checklist and I have **not** edited it (out of the File Changes
+   list). On a thermal run it would silently draw a stacked bar that does not sum to 100
+   and print a table missing the thermal column, with no error. Its module docstring also
+   asserts "The three shares sum to 100% by construction". Flagging for `senior-developer`
+   to fold into the plan.
+
+Two further pre-existing observations, neither touched:
+- `scripts/verification/verify_noise.py:29` constructs an `EnvState` positionally by
+  keyword and has been missing required fields since well before this work (`res_allocated`,
+  `res_visual_property_sampled`, `animal_active`, `thermal_field`, …). Stage 2 adds
+  `body_temp` to the list of fields it does not pass. It is already broken; not fixed here.
+- `_ladder.py`'s `TERM_NAMES` has never listed code 3 (over-eating). Left as found, with a
+  comment saying so.
+
+---
+
+**What `grid_ladder_figures.py`'s share-sum check does with code 5.** `fig4` sums only the
+outcome keys it lists and then hard-`SystemExit`s at `:168` if the per-run total is not
+100 ± 0.05. `term_pct` (built at `collect_arm_data.py:177`) carries one entry per code that
+actually occurs, named via `_ladder.TERM_NAMES`. So **before** this change a thermal run
+would have produced a `"5"`-keyed share that `fig4` never adds, the total would fall short
+of 100 by exactly the thermal-death percentage, and the script would refuse to draw the
+figure — a loud, correct failure, but one that makes the script unusable on thermal data
+and whose message ("outcome shares do not sum to 100") does not say why.
+
+**After** this change: `TERM_NAMES[5] = "frozen or overheated"` and `fig4` lists that key,
+so the total is 100 on thermal and non-thermal data alike. There is a trap here worth
+naming: `fig4` iterates `zip(keys, cols, txt)`, and `zip` truncates to the shortest — a key
+added without a matching colour would be **silently dropped from the stack** and the
+share-sum check would then be the only thing that noticed. A fourth colour and label colour
+were added with the key, plus `assert len(keys) == len(cols) == len(txt)` so the next person
+gets an error instead of a wrong picture. Every run recorded before the temperature system
+scores 0.0 on the new key through the existing `.get(k, 0.0)`, so this study's own figures
+are numerically unchanged (the legend gains a zero-width entry).
+
+---
+
+**Test results.**
+
+| Suite | Result |
+|---|---|
+| `tests/env/test_thermal_parity.py` (the Stage 0 byte-identity gate) | **72 passed, 285 skipped** — unchanged from Stage 1 |
+| `tests/env/test_unified_parity.py` | **34 passed, 323 skipped** |
+| `tests/env/test_visual_parity.py` | **8 passed** |
+| `tests/env/test_no_recompile.py` | **3 passed** |
+| `tests/env/test_thermal_field.py` (Stage 1's nine) | **9 passed** |
+| `tests/env/test_thermal_body.py` (new) | **5 passed** |
+| `tests/models/test_gae_truncation.py` (enum consumer) | **11 passed** |
+| `tests/algorithms/dreamer_srl/test_episode_metrics.py` (enum consumer) | **3 passed** |
+| combined run of the seven non-thermal-parity suites | **73 passed, 323 skipped, 0 failed** in 646 s |
+
+**The parity gate stayed green.** It never went red, no tolerance was widened, and the
+`properties_std`-keyed ulp exemption was not exercised beyond what Stage 0 already
+measured — even though `body_temp` adds a second new leaf to the reset pytree. The skip
+count is 285, identical to Stage 1.
+
+**The five new tests, and the deliberate-perturbation trial that shows each one bites.**
+Each perturbation was applied to `src/environment/core.py` alone, the suite re-run, and the
+file restored from a backup (`tmp/20260909_perturb.py`, `tmp/20260909_core_backup.py`).
+
+| Perturbation | Test that caught it | Message |
+|---|---|---|
+| `k_loss` term zeroed | `test_equilibrium_and_time_to_death` | "body settled at −10.0000, closed-form equilibrium is −8.0000" |
+| reason-5 line moved **before** the truncation line | `test_thermal_death_on_the_final_step_overrides_truncation` | "a thermal death on the final step reported 1" |
+| `done = where(thermal_death, …)` removed from `update_body` (reason 5 kept) | `test_thermal_death_reports_reason_5` **and** the truncation test | "reward on the thermal-death step was 0.0000 … the penalty (100) did not fire — termination_reason 5 is being reported for an episode end that `real_death` never saw" |
+| `new_agent_pos` → `state.agent_pos` | `test_body_reads_the_post_move_cell` | "action 0 moved (2, 2) → (1, 2); body temperature followed the field value at the wrong cell" |
+
+All four turned exactly one intended test red and left the others green; the restored tree
+is 5 passed. The third row is the one the brief singled out: an implementation that adds
+the label without adding the death satisfies `termination_reason == 5` and fails only on
+the reward assertion.
+
+What each test would catch:
+
+| Test | What would fail without it |
+|---|---|
+| `test_equilibrium_and_time_to_death` | the missing-`k_loss` implementation that *looks* correct. Three independent claims: the fixed point `T* = (k_ex·T_field + k_loss·T_set + k_met)/(k_ex + k_loss)` (a −10 cell settles at **−8**, and the test also refuses any settling point within 1.5 of the cell temperature); the time constant `1/(k_ex + k_loss) = 20` steps, asserted as the first step at which the remaining gap is under 1/e of the initial gap; and steps-to-death in a lethal cold cell (−25, dies at step **28**) and a lethal hot one (+30, dies at step **20**), both compared against `thermal_sandbox_oracle.body_traj` run with the same constants. The whole trajectory is compared to the oracle at `atol=2e-4`, not just its endpoints. |
+| `test_thermal_death_reports_reason_5` | reason 5 emitted without `real_death`. Asserts the code, that the body really is outside the band, **and** that `reward == (prev_drive − curr_drive) − death_penalty`, where the no-penalty term is rebuilt from `calculate_drive` on the two states rather than read out of `info`. |
+| `test_thermal_death_on_the_final_step_overrides_truncation` | the reason-5 line placed before the truncation line. Runs once to learn the death step (28), then rebuilds the same config with `max_steps` set to exactly that step. |
+| `test_body_reads_the_post_move_cell` | the pre/post-move choice of D2-1, on a field where every cell differs. Also asserts the two cells differ, so it cannot pass vacuously. |
+| `test_body_temp_is_inert_when_thermal_is_off` | someone converting the static `if params.thermal_enabled:` into a `jnp.where`, which would start reading the `[0, 0]` field. |
+
+The equilibrium test needs a config where *nothing else* can end the episode: on the
+shipped `campfire_world.yaml` the agent dies of injury at step 8 (a `rock` obstacle with
+`damage: [1, 5]`) and of starvation at step 100. `_uniform_field_config` therefore empties
+`environment.entities`, keeps only the campfire obstacle and the food resource, and sets
+`body.metabolic_cost: 0.0`. Without that the equilibrium is never reached and the test
+would be measuring a transient.
+
+---
+
+**`tests/test_trajectory_collection.py` — investigated on request; not caused by this
+work.** Current tree: **33 failed, 26 passed, 8 errors**. Every one of those 41 traces to a
+single `ValueError: Strict Config: Configuration key 'sensory.visual_value_mode' is
+required but missing`, raised from `load_env_params` at `config_loader.py:1096`.
+
+The source is `_base_cfg()` (`tests/test_trajectory_collection.py:71`), which does not use
+an inline YAML base at all: it loads **a real saved training config from the gitignored
+results tree** —
+`results/JAX_RecurrentPPO/20260816-152742_rppo_restpremNH_a10_n112/models/config.yaml`,
+written **2026-08-16**. `sensory.visual_value_mode` became mandatory in commit `9771e98c`
+(2026-08-26), which is an ancestor of the Stage 0 commit. That config therefore has been
+unloadable since ten days after it was written, and it predates every line of thermal work.
+It also lacks `thermal.enabled`, but never reaches that check — `visual_value_mode` is read
+~60 lines earlier.
+
+Measured, not inferred. A `git worktree` at the Stage 1 commit `dd3b5dfa`, with that same
+run directory copied in so nothing skips for missing data, gives **36 failed, 21 passed,
+2 skipped, 8 errors** — the same `visual_value_mode` cause. The three extra failures and
+two skips there are worktree artefacts (`test_spec_loader_*` and
+`test_dry_run_does_not_delete_completion_markers` fail on the collection spec naming run
+directories that were not copied). `36 − 3 = 33`, and `21 + 3 + 2 = 26`: **Stage 2 changes
+zero outcomes in this file.** The worktree and its 4.3 GB copy have been removed; the NAS
+original was verified intact afterwards.
+
+The clean-worktree figure quoted to me (3 failed / 13 passed / 51 skipped) is not
+comparable: with `results/` absent, `_base_cfg()` calls `pytest.skip`, so 51 tests never
+run rather than passing.
+
+Two conclusions: **(a)** nothing here belongs to Stage 1's migration — the offending file is
+gitignored *data*, not a repo config, and no `thermal: {enabled: false}` gate would fix it;
+`tests/fixtures/trajectory_collection/dual_format_config.yaml` already carries its gate and
+is not implicated. **(b)** The one failure in that file that *was* mine —
+`test_schema_doc_matches_code` — is fixed (D2-3), which is why the count went 34 → 33.
+Naming an owner: this is a `bug-curator` row, and the fix is either to re-save that run's
+config through the current loader or to point `REAL_RUN` at a post-`9771e98c` run.
+
+---
+
+**Speed check.** Env throughput on `default.yaml` (thermal off), 64 envs × 200 steps under
+one jit, best of 3, CPU, **interleaved** before/after so a drifting machine cannot be
+mistaken for a regression:
+
+| | run 1 | run 2 | mean |
+|---|---|---|---|
+| **before** (`dd3b5dfa`, git worktree) | 56,857 steps/s | 55,604 steps/s | 56,231 |
+| **after** (working tree) | 55,142 steps/s | 56,088 steps/s | 55,615 |
+
+**−1.1%**, inside the ±2.3% spread between the two runs *within* each arm. Treated as no
+measurable regression. Stage 2 does touch `jax_step` — `update_body`'s signature and return
+widen, and `body_temp` is a new `EnvState` leaf carried through every step — but on a
+thermal-off config the recurrence is not traced (static `if`) and the leaf is an identity
+pass-through of one scalar. The parity gate independently confirms the traced graph did not
+move: a different graph would have shifted `state.key`. Scripts:
+`tmp/20260909_thermal_stage2_speed.py`, and the same file copied into the worktree.
+
+**Prior-art pass.** `grep -inE 'termination_reason|term_|thermal|body temp|death penalty'`
+over `docs/develop/active/issues/KNOWN_BUGS.md`. 132 rows; no row covers the
+termination-code enum, the label maps, or `episode_metrics`' key count. The nearest hits are
+the 1-ulp reset-divergence row (`:125`, the one Stage 0's adjudication rule is built on) and
+a *different* stale-fixture row about `test_unified_parity` (`:159`) — neither applies.
+The `sensory.visual_value_mode` staleness of the saved run config used by
+`tests/test_trajectory_collection.py` is **not** in the registry — owner named:
+`bug-curator`.
+
+**`bug-curator` handoffs from this stage** (I do not file registry rows myself):
+1. **`tests/test_trajectory_collection.py` is red on any tree, at any commit since
+   2026-08-26, whenever the gitignored `results/` data is present** — 33 failures + 8
+   errors from one stale saved config predating a mandatory-key addition. Pre-existing;
+   independent of thermal.
+2. Stage 0's and Stage 1's open handoffs (F9 archive-migration drift, F10 unvalidated
+   recording version stamp, the silent cell-(0,0) placement fallback) are unchanged.
+
+**Blockers / follow-ups.**
+1. Not committed and nothing staged, per instruction. Working tree left dirty for
+   verification. Note that the branch tip moved from `dd3b5dfa` to `3dc5595b` while this
+   stage was in progress (a parallel session's nmn-grid doc commits); `dd3b5dfa` is still an
+   ancestor, and every hunk in `git diff` was checked to be mine —
+   `scripts/analysis/studies/nmn_site_grid/grid_ladder_figures.py` is the one file both
+   sessions have been near, and its working-tree diff contains only Stage 2 hunks.
+2. `scripts/analysis/ladder/lad03_how_it_ends.py` needs the same treatment as
+   `grid_ladder_figures.py` and is not in the plan's File Changes list — see plan
+   correction 3. Left untouched.
+3. `tests/algorithms/dreamer_srl/test_eval_rollout_batched.py` (Stage 1's follow-up 2) was
+   not re-run this stage; it is unrelated to the enum.
+4. The naming of the six new `EnvParams` fields is inconsistent — three carry the
+   `thermal_` prefix (`thermal_k_exchange`, `thermal_k_loss`, `thermal_k_metabolic`) and
+   three do not (`temperature_setpoint`, `min_temperature`, `max_temperature`). This follows
+   the plan's Stage 2 field list verbatim, and F1's Stage 4 drive already reads
+   `params.temperature_setpoint` and `params.max_temperature` under those exact names, so
+   changing it now would need F1 changed with it. Recorded rather than silently "fixed".
 
 Signed: `Implemented by: developer`
 

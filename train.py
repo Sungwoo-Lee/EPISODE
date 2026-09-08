@@ -1540,7 +1540,7 @@ def main():
             })
             # Termination reason distribution (fraction of episodes ending each way)
             term_reasons = [ep['termination_reason'] for ep in eps]
-            for code, name in [(1, 'MaxSteps'), (2, 'Starvation'), (3, 'Overeating'), (4, 'Injury')]:
+            for code, name in [(1, 'MaxSteps'), (2, 'Starvation'), (3, 'Overeating'), (4, 'Injury'), (5, 'Thermal')]:
                 ep_log[f"Episode/Term_{name}"] = np.mean([1.0 if r == code else 0.0 for r in term_reasons])
             # Per-tag fan-out
             _append_per_tag_means(ep_log, eps, neutral_tags,
@@ -2051,7 +2051,7 @@ def main():
                                 })
                                 # Termination reason distribution
                                 term_reasons = [ep['termination_reason'] for ep in iteration_episodes]
-                                for code, name in [(1, 'MaxSteps'), (2, 'Starvation'), (3, 'Overeating'), (4, 'Injury')]:
+                                for code, name in [(1, 'MaxSteps'), (2, 'Starvation'), (3, 'Overeating'), (4, 'Injury'), (5, 'Thermal')]:
                                     ep_logs[f"Episode/Term_{name}"] = np.mean([1.0 if r == code else 0.0 for r in term_reasons])
                                 # Per-tag fan-out (Site 3: DQN)
                                 _append_per_tag_means(ep_logs, iteration_episodes, neutral_tags,
@@ -2257,7 +2257,7 @@ def main():
                                 })
                                 # Termination reason distribution
                                 term_reasons = [ep['termination_reason'] for ep in iteration_episodes]
-                                for code, name in [(1, 'MaxSteps'), (2, 'Starvation'), (3, 'Overeating'), (4, 'Injury')]:
+                                for code, name in [(1, 'MaxSteps'), (2, 'Starvation'), (3, 'Overeating'), (4, 'Injury'), (5, 'Thermal')]:
                                     ep_logs[f"Episode/Term_{name}"] = np.mean([1.0 if r == code else 0.0 for r in term_reasons])
                                 # Per-tag fan-out (Site 4: DRQN)
                                 _append_per_tag_means(ep_logs, iteration_episodes, neutral_tags,
@@ -2410,7 +2410,7 @@ def main():
                                 })
                                 # Termination reason distribution
                                 term_reasons = [ep['termination_reason'] for ep in iteration_episodes]
-                                for code, name in [(1, 'MaxSteps'), (2, 'Starvation'), (3, 'Overeating'), (4, 'Injury')]:
+                                for code, name in [(1, 'MaxSteps'), (2, 'Starvation'), (3, 'Overeating'), (4, 'Injury'), (5, 'Thermal')]:
                                     ep_logs[f"Episode/Term_{name}"] = np.mean([1.0 if r == code else 0.0 for r in term_reasons])
                                 # Per-tag fan-out (Site 5: PPO non-recurrent)
                                 _append_per_tag_means(ep_logs, iteration_episodes, neutral_tags,

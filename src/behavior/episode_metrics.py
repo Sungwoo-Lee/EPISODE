@@ -1,4 +1,4 @@
-"""Per-episode scalar accumulators for the 20 Episode/* WandB keys.
+"""Per-episode scalar accumulators for the 21 Episode/* WandB keys.
 
 Mirrors the pattern of src/behavior/accumulators.py and
 src/behavior/distance_aggregator.py.  Pure numpy — no JAX, no PyTorch.
@@ -13,13 +13,13 @@ API:
                               cumulative completed episodes across resets.
   episode_step_update()     — accumulate per-step scalars.
   episode_finalise_episode() — compute final Episode/* dict at episode done.
-  episode_wandb_keys()      — return the 20 WandB key strings (stable order).
+  episode_wandb_keys()      — return the 21 WandB key strings (stable order).
 
 Key mapping (JAX info dict → WandB key):
   reward                   → Episode/Reward (sum), Episode/Reward_Min, Episode/Reward_Max
   step_count (incremented) → Episode/Steps
   episode_counter          → Episode/Number
-  termination_reason       → Episode/Term_{MaxSteps,Starvation,Overeating,Injury} (one-hot)
+  termination_reason       → Episode/Term_{MaxSteps,Starvation,Overeating,Injury,Thermal} (one-hot)
   damage                   → Episode/TotalDamage
   damage_predator          → Episode/DamagePredator
   damage_hiding_predator   → Episode/DamageDanger  (renamed at boundary)
@@ -42,6 +42,7 @@ _TERM_MAX_STEPS   = 1
 _TERM_STARVATION  = 2
 _TERM_OVEREATING  = 3
 _TERM_INJURY      = 4
+_TERM_THERMAL     = 5   # body temperature left [min_temperature, max_temperature]
 
 
 @dataclass
@@ -198,7 +199,7 @@ def episode_finalise_episode(
     env_idx: int,
     terminated_reason: int,
 ) -> dict:
-    """Compute the 20 WandB Episode/* scalars for env slot *env_idx*.
+    """Compute the 21 WandB Episode/* scalars for env slot *env_idx*.
 
     Increments ``episode_counter[env_idx]`` as a side effect (called once
     per completed episode).
@@ -208,10 +209,11 @@ def episode_finalise_episode(
         env_idx:           Which env slot is terminating.
         terminated_reason: Integer termination code from info_jax['termination_reason'].
                            0=active (should not be called), 1=max_steps,
-                           2=starvation, 3=overeating, 4=injury.
+                           2=starvation, 3=overeating, 4=injury, 5=thermal
+                           (frozen or overheated).
 
     Returns:
-        Flat dict of 20 ``Episode/*`` WandB keys → scalar float values.
+        Flat dict of 21 ``Episode/*`` WandB keys → scalar float values.
     """
     i = env_idx
     state.episode_counter[i] += 1
@@ -233,6 +235,7 @@ def episode_finalise_episode(
     out['Episode/Term_Starvation']= 1.0 if r == _TERM_STARVATION else 0.0
     out['Episode/Term_Overeating']= 1.0 if r == _TERM_OVEREATING else 0.0
     out['Episode/Term_Injury']    = 1.0 if r == _TERM_INJURY      else 0.0
+    out['Episode/Term_Thermal']   = 1.0 if r == _TERM_THERMAL     else 0.0
 
     # Damage
     out['Episode/TotalDamage']    = float(state.total_damage[i])
@@ -253,7 +256,7 @@ def episode_finalise_episode(
 
 
 def episode_wandb_keys() -> list:
-    """Return the 20 WandB key strings emitted by this module (stable order).
+    """Return the 21 WandB key strings emitted by this module (stable order).
 
     Used by the sheeprl aggregator to register metrics at startup.
     """
@@ -270,6 +273,7 @@ def episode_wandb_keys() -> list:
         'Episode/Term_Starvation',
         'Episode/Term_Overeating',
         'Episode/Term_Injury',
+        'Episode/Term_Thermal',
         # Damage
         'Episode/TotalDamage',
         'Episode/DamagePredator',

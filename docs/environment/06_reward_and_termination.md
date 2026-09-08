@@ -15,7 +15,7 @@ The environment offers two reward modes, selected once at config time:
 
 **Performance is always measured in survival steps** (how long the agent stays alive), never cumulative reward. Reward shapes learning; survival steps measure success.
 
-An episode can end in four ways (termination codes 1–4), or keep running (code 0). The integer code is in `info['termination_reason']` each step for logging.
+An episode can end in five ways (termination codes 1–5), or keep running (code 0). The integer code is in `info['termination_reason']` each step for logging.
 
 ---
 
@@ -202,8 +202,9 @@ FAQ: Is the death penalty also applied on truncation? **Yes.** `done = done_from
 | 2 | Starvation | `new_nutrition <= 0.0` | Yes (via `update_body`) | No `with_nutrition` guard in `jax_step` — see note below |
 | 3 | Overeating | `new_satiation >= params.max_satiation` | **No** | Only set if `params.overeating_death=True`; does NOT set `done=True` |
 | 4 | Injury | `new_injury >= params.max_injury` | Yes (via `update_body`) | No `with_injury` guard in `jax_step` — see note below |
+| 5 | Thermal | `new_body_temp` outside `[params.min_temperature, params.max_temperature]` | Yes (via `update_body`) | Only set if `params.thermal_enabled=True`; the body-temperature recurrence is in [05_body_homeostasis.md](05_body_homeostasis.md) |
 
-**Priority** (highest code wins): `4 > 3 > 2 > 1 > 0`. Codes are applied via sequential `jnp.where` — later checks overwrite earlier ones:
+**Priority** (highest code wins): `5 > 4 > 3 > 2 > 1 > 0`. Codes are applied via sequential `jnp.where` — later checks overwrite earlier ones:
 
 ```python
 # core.py:540–545
@@ -212,10 +213,12 @@ reason = jnp.where(truncated,                              1, reason)   # lowest
 reason = jnp.where(new_nutrition <= 0.0,                   2, reason)
 if params.overeating_death:
     reason = jnp.where(new_satiation >= params.max_satiation, 3, reason)
-reason = jnp.where(new_injury >= params.max_injury,        4, reason)   # highest priority
+reason = jnp.where(new_injury >= params.max_injury,        4, reason)
+if params.thermal_enabled:
+    reason = jnp.where(thermal_death,                      5, reason)   # highest priority
 ```
 
-If starvation and truncation both fire in the same step, `reason=2` wins (starvation overwrites truncation). If injury and starvation both fire, `reason=4` wins.
+If starvation and truncation both fire in the same step, `reason=2` wins (starvation overwrites truncation). If injury and starvation both fire, `reason=4` wins. A thermal death that lands on the last step of the episode reports 5, not 1 — which is the whole reason the thermal assignment sits after the truncation line rather than before it.
 
 ### Full termination block — verbatim
 
@@ -229,13 +232,15 @@ The truncation check, priority-chain termination codes, `done` assembly, and whe
     truncated = next_step >= params.max_steps
     
     # Termination Reason (Integer codes for JIT compatibility)
-    # 0: active, 1: max_steps, 2: starvation, 3: overeating, 4: injury
+    # 0: active, 1: max_steps, 2: starvation, 3: overeating, 4: injury, 5: thermal
     reason = jnp.array(0, dtype=jnp.int32)
     reason = jnp.where(truncated, 1, reason)
     reason = jnp.where(new_nutrition <= 0.0, 2, reason)
     if params.overeating_death:
         reason = jnp.where(new_satiation >= params.max_satiation, 3, reason)
     reason = jnp.where(new_injury >= params.max_injury, 4, reason)
+    if params.thermal_enabled:
+        reason = jnp.where(thermal_death, 5, reason)
     
     info['termination_reason'] = reason
     done = jnp.logical_or(done, truncated)
@@ -243,7 +248,7 @@ The truncation check, priority-chain termination codes, `done` assembly, and whe
 
 > **API notes**
 >
-> - **Priority chain via sequential `jnp.where`**: each `reason = jnp.where(cond, new_code, reason)` overwrites `reason` when `cond` is true. Later calls have higher priority because they can overwrite earlier ones. Code 4 (injury) is last, so it wins any simultaneous multi-condition step. This is the standard JAX idiom for priority selection without branching. See [primer: branchless](00_jax_primer.md#branchless).
+> - **Priority chain via sequential `jnp.where`**: each `reason = jnp.where(cond, new_code, reason)` overwrites `reason` when `cond` is true. Later calls have higher priority because they can overwrite earlier ones. Code 5 (thermal) is last, so it wins any simultaneous multi-condition step; with the temperature system off, code 4 (injury) is last. This is the standard JAX idiom for priority selection without branching. See [primer: branchless](00_jax_primer.md#branchless).
 > - **`if params.overeating_death:`** — Python-level static branch. When `overeating_death=False`, the JIT-compiled graph contains no `jnp.where` for code 3 at all; the check is compiled out entirely. See [primer: static vs. dynamic](00_jax_primer.md#static-dynamic).
 > - **`jnp.array(0, dtype=jnp.int32)`**: explicitly typed to `int32`. Without this, JAX defaults to `int32` on most platforms anyway, but the explicit dtype prevents a subtle shape-mismatch if `jnp.where` returns a different default integer type on a particular accelerator.
 > - **`done = jnp.logical_or(done, truncated)`**: `done` on the right-hand side is `done_from_body`, the boolean returned by `update_body`. `truncated` is a traced boolean from the step-count comparison. `logical_or` is branchless and vmap-safe. See [primer: masking](00_jax_primer.md#masking).

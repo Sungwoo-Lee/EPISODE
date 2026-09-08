@@ -1228,7 +1228,7 @@ def main() -> None:
                 "Episode/HidingPredatorHits":      float(np.mean([ep['hit_hiding_predator']       for ep in eps])),
             })
             term_reasons = [ep['termination_reason'] for ep in eps]
-            for code, name in [(1, 'MaxSteps'), (2, 'Starvation'), (3, 'Overeating'), (4, 'Injury')]:
+            for code, name in [(1, 'MaxSteps'), (2, 'Starvation'), (3, 'Overeating'), (4, 'Injury'), (5, 'Thermal')]:
                 ep_log[f"Episode/Term_{name}"] = float(np.mean([1.0 if r == code else 0.0 for r in term_reasons]))
 
             from src.utils.episode_logging import append_per_tag_means

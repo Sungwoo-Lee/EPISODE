@@ -8,7 +8,9 @@
 
 The agent has an internal body — a small physiological simulation that runs inside every step of the environment. Three numbers matter: **nutrition** (how much energy the agent has stored), **satiation** (a subjective sense of fullness derived from nutrition), and **injury level** (accumulated physical damage). The agent dies of starvation when nutrition hits zero, or of injury when accumulated damage reaches its maximum. In between, drive-reduction reward pushes the agent to keep its body close to a healthy setpoint.
 
-This doc describes exactly how those three numbers change each step, including all constants, clip bounds, and the two supporting buffers — the injury smoothing ring buffer and the nociception history buffer — that connect body state to the interoceptive sensor (doc 09).
+A fourth number, **body temperature**, exists only when the temperature system is switched on (`thermal.enabled: true`). It drifts toward the temperature of the cell the agent is standing on while the agent's own physiology pulls it back toward a comfortable setpoint, and leaving its survivable band ends the episode with termination code 5. On every config that does not enable the temperature system it is a constant zero that nothing reads — see [Body Temperature](#body-temperature-thermal) below.
+
+This doc describes exactly how those numbers change each step, including all constants, clip bounds, and the two supporting buffers — the injury smoothing ring buffer and the nociception history buffer — that connect body state to the interoceptive sensor (doc 09).
 
 ---
 
@@ -25,6 +27,7 @@ All fields are scalars (shape `[]`) unless noted. Declared in `src/environment/s
 | `nociception_history_buffer` | `[interoceptive_kernel_length]` | float32 | Sliding window of past `injury_level` values; idx 0 = most recent |
 | `last_collision_noc` | `[]` | float32 | Nociception intensity of the most recent wall/obstacle collision |
 | `rest_streak` | `[]` | int32 | Consecutive resting steps (used to accelerate recovery) |
+| `body_temp` | `[]` | float32 | Body temperature. Updated only when `thermal.enabled=True`; a constant `temperature_setpoint` (0.0) otherwise |
 
 ---
 
@@ -108,6 +111,9 @@ Since satiation is fully derived from nutrition, `random_start_satiation` is a n
 | `nociception_history_buffer` | always | `jnp.zeros(interoceptive_kernel_length)` |
 | `last_collision_noc` | always | `0.0` |
 | `rest_streak` | always | `0` |
+| `body_temp` | always | `params.temperature_setpoint` (0.0 with the temperature system off) |
+
+The agent starts each episode **comfortable**, at its own setpoint, rather than at the temperature of the cell it happens to spawn on. The cold has to work on it.
 
 ---
 
@@ -418,6 +424,48 @@ def update_body(state: EnvState, info: dict, params: EnvParams) -> tuple[jnp.nda
 > - The two `if params.with_nutrition:` / `if params.with_injury:` guards are again **static Python branches** — determined at compile time. Only the active termination condition is traced into the XLA computation graph. [primer: static-dynamic](00_jax_primer.md#static-dynamic)
 > - `jnp.where(new_injury >= params.max_injury, True, done)` is the injury-death check — notice `>=` (inclusive). [primer: branchless](00_jax_primer.md#branchless)
 > - The `else: done = jnp.where(damage > 0, True, done)` branch handles `with_injury=False` — any nonzero damage is instantly fatal regardless of injury level (which is frozen at 0). This is a design choice: injury tracking is entirely optional; disabling it makes any damage lethal to model a "no health bar" scenario.
+
+---
+
+## Body Temperature (thermal)
+
+Present only when `thermal.enabled: true`. The whole block below sits behind a **static Python `if params.thermal_enabled:`** inside `update_body`, so a config with the temperature system off traces none of this arithmetic and its `body_temp` never moves off zero.
+
+### The recurrence
+
+$$
+T_{t+1} = T_t + k_{\text{exchange}}\,(T_{\text{field}}[\text{agent cell}] - T_t) + k_{\text{metabolic}} - k_{\text{loss}}\,(T_t - T_{\text{setpoint}})
+$$
+
+| Constant | Config key | Default | What it does |
+|---|---|---|---|
+| `k_exchange` | `thermal.k_exchange` | 0.04 | Fraction of the gap to the cell's temperature the body closes each step — the world pulling on the body |
+| `k_loss` | `thermal.k_loss` | 0.01 | Fraction of the deviation from setpoint that physiology undoes each step — the body pulling back |
+| `k_metabolic` | `thermal.k_metabolic` | 0.0 | Constant heat the body produces per step. Zero until Stage 5 couples it to activity |
+| `temperature_setpoint` | `thermal.temperature_setpoint` | 0.0 | The temperature the body is trying to hold |
+| `min_temperature` / `max_temperature` | `thermal.min_temperature` / `.max_temperature` | −15 / +15 | Survivable band; leaving it ends the episode with code 5 |
+
+`T_field[agent cell]` is read at the **post-move** cell — the one the agent stepped into this step, not the one it left — matching every other quantity `update_body` consumes (`damage`, `ate_food`, `rested`).
+
+### The tug-of-war reading
+
+The two coefficients are pulling in opposite directions, and the balance between them is the whole mechanic. Setting `T_{t+1} = T_t` gives the fixed point
+
+$$
+T^{*} = \frac{k_{\text{exchange}}\,T_{\text{field}} + k_{\text{loss}}\,T_{\text{setpoint}} + k_{\text{metabolic}}}{k_{\text{exchange}} + k_{\text{loss}}}
+$$
+
+which at the defaults is `0.8 · T_field`. **Standing in a −25 cell settles the body at −20, not at −25**: physiology holds off 20% of the cold. That 20% is what creates a cold-but-survivable band — a world whose baseline is −25 does not kill an agent outright, so the agent can leave the fire and come back.
+
+Delete `k_loss` and the code still *looks* correct: the body still tracks the world and still freezes in a cold enough cell. But the fixed point becomes `T_field` exactly, the survivable-ambient window collapses to `[min_temperature, max_temperature]`, and the entire cold-but-survivable band disappears. This is the failure mode `tests/env/test_thermal_body.py::test_equilibrium_and_time_to_death` exists to catch.
+
+The gap to the fixed point shrinks by a factor `(1 − k_exchange − k_loss)` per step, i.e. a time constant of `1/(k_exchange + k_loss) = 20` steps against a 500-step episode.
+
+`k_loss` is in the [critical-settings registry](CONFIG_CRITICAL_SETTINGS.md) for a reason: at roughly `k_loss = 0.036` the survivable ambient window widens past ±25, the world's own baseline can no longer kill anything, and the thermal task quietly disappears while still appearing to be configured.
+
+### Death
+
+`thermal_death = (T_{t+1} < min_temperature) OR (T_{t+1} > max_temperature)`, folded into `update_body`'s `done` return **inside `update_body`** — which is what makes it a *real death* rather than merely an episode end. `jax_step` captures `real_death` from that return value before it merges truncation in, so the `death_penalty` applies. Termination code 5 is assigned separately, after the truncation line, so a thermal death on the final step reports 5 rather than 1. See [06_reward_and_termination.md](06_reward_and_termination.md).
 
 ---
 

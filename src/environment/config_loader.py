@@ -1214,6 +1214,43 @@ def load_env_params(config: Config) -> EnvParams:
         # (docs/develop/active/thermal/temperature_system_plan/sim.py). Static,
         # because it fixes the number of unrolled shifts in the blur.
         _th_kernel_radius = int(np.ceil(3.0 * _th_sigma))
+
+        # ── Body (Stage 2) ────────────────────────────────────────────────
+        # The recurrence these four numbers drive lives in `core.py::update_body`:
+        #   T <- T + k_exchange*(T_field[cell] - T) + k_metabolic
+        #          - k_loss*(T - temperature_setpoint)
+        _th_setpoint = float(config.get_mandatory('thermal.temperature_setpoint'))
+        _th_min_temp = float(config.get_mandatory('thermal.min_temperature'))
+        _th_max_temp = float(config.get_mandatory('thermal.max_temperature'))
+        if _th_min_temp >= _th_max_temp:
+            raise ValueError(
+                f"thermal.min_temperature ({_th_min_temp}) must be < "
+                f"thermal.max_temperature ({_th_max_temp}); they are the two ends of "
+                f"the survivable body-temperature interval.")
+        if not (_th_min_temp <= _th_setpoint <= _th_max_temp):
+            raise ValueError(
+                f"thermal.temperature_setpoint ({_th_setpoint}) must lie inside "
+                f"[thermal.min_temperature, thermal.max_temperature] = "
+                f"[{_th_min_temp}, {_th_max_temp}]; a setpoint outside the survivable "
+                f"interval makes the body's own resting state lethal.")
+        _th_k_exchange = float(config.get_mandatory('thermal.k_exchange'))
+        _th_k_loss = float(config.get_mandatory('thermal.k_loss'))
+        _th_k_metabolic = float(config.get_mandatory('thermal.k_metabolic'))
+        if _th_k_exchange < 0.0:
+            raise ValueError(
+                f"thermal.k_exchange must be >= 0 (it is the per-step fraction of the "
+                f"gap to the cell's temperature that the body closes), got "
+                f"{_th_k_exchange}.")
+        if _th_k_loss < 0.0:
+            raise ValueError(
+                f"thermal.k_loss must be >= 0 (it is the per-step fraction of the "
+                f"deviation from setpoint that physiology undoes), got {_th_k_loss}.")
+        if _th_k_exchange + _th_k_loss > 1.0:
+            raise ValueError(
+                f"thermal.k_exchange + thermal.k_loss must be <= 1 "
+                f"({_th_k_exchange} + {_th_k_loss} = {_th_k_exchange + _th_k_loss}); "
+                f"above 1 the discrete update overshoots its own fixed point every "
+                f"step and the body temperature oscillates instead of settling.")
     else:
         # Inert; never read when thermal is off.
         #
@@ -1230,6 +1267,15 @@ def load_env_params(config: Config) -> EnvParams:
         _th_min_fire_sep = 0
         _th_food_min_dist = 0
         _th_kernel_radius = 0
+        # Body block (Stage 2), inert. `update_body`'s recurrence is behind a
+        # static `if params.thermal_enabled:`, so none of these is ever read on a
+        # thermal-off config. `temperature_setpoint` is nevertheless the value
+        # `jax_reset` writes into `state.body_temp`, so 0.0 is the deliberate
+        # choice: a thermal-off episode carries a body temperature of exactly
+        # zero that nothing moves and nothing reads.
+        _th_setpoint = 0.0
+        _th_min_temp, _th_max_temp = 0.0, 0.0
+        _th_k_exchange, _th_k_loss, _th_k_metabolic = 0.0, 0.0, 0.0
 
     _vis_v = config.get('sensory.visual_vector_size')
     visual_vector_size: int = int(_vis_v) if _vis_v is not None else 8
@@ -1849,6 +1895,12 @@ def load_env_params(config: Config) -> EnvParams:
         thermal_spot_temp=_th_spot_temp,
         thermal_default_temp_low=_th_default_low,
         thermal_default_temp_high=_th_default_high,
+        thermal_k_exchange=_th_k_exchange,
+        thermal_k_loss=_th_k_loss,
+        thermal_k_metabolic=_th_k_metabolic,
+        temperature_setpoint=_th_setpoint,
+        min_temperature=_th_min_temp,
+        max_temperature=_th_max_temp,
         obs_temperature=obs_temperature,
         obs_temp_ratio_low=obs_temp_ratio_low,
         obs_temp_ratio_high=obs_temp_ratio_high,

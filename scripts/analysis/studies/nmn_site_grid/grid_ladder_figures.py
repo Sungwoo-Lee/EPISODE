@@ -145,15 +145,22 @@ def fig3(D):
 
 
 def fig4(D):
-    """Which of the three ways of dying each cell actually dies of."""
+    """Which of the ways of dying each cell actually dies of."""
     names = ORDER
-    keys = ["killed by predator", "starved", "survived to time limit"]
+    # Every outcome `_ladder.TERM_NAMES` can produce must appear here, and the three lists
+    # below must stay the same length: `zip` truncates to the shortest, so a key added
+    # without a colour is SILENTLY dropped from the stack — and the share-sum check at the
+    # bottom is then the only thing that notices. "frozen or overheated" (termination code 5,
+    # the temperature system) is 0.0 on every run recorded before that system existed, via the
+    # `.get(k, 0.0)` below, so the shares still total 100 on this study's own data.
+    keys = ["killed by predator", "starved", "survived to time limit", "frozen or overheated"]
     # A dark-to-light neutral ramp. Deliberately NOT hue-coded: every hue on this page is spent
     # (purple/blue/green mean what the modulator reads, red is the callout accent, ochre is
     # "pending"), and a figure that reaches for a fourth hue lands on one of them. Ordering the
-    # three neutrals dark-to-light also matches the order they are stacked in.
-    cols = ["#3c4650", "#8d99a6", "#ccd3d9"]
-    txt  = ["#ffffff", "#ffffff", "#2a3138"]
+    # neutrals dark-to-light also matches the order they are stacked in.
+    cols = ["#3c4650", "#8d99a6", "#ccd3d9", "#e8ecef"]
+    txt  = ["#ffffff", "#ffffff", "#2a3138", "#2a3138"]
+    assert len(keys) == len(cols) == len(txt), "fig4: one colour and one label colour per outcome"
     fig, ax = plt.subplots(figsize=(12.2, 9.0))
     y = np.arange(len(names)); left = np.zeros(len(names))
     for k, c, tc in zip(keys, cols, txt):
@@ -165,11 +172,15 @@ def fig4(D):
                         fontsize=16, color=tc, fontweight="bold")
         left += v
     if not np.allclose(left, 100, atol=.05):
+        # Reached when a run ended episodes some way `keys` does not list — add the outcome
+        # to `keys`/`cols`/`txt` above rather than relaxing the tolerance. The point of the
+        # check is that a stacked-share figure which does not account for every episode is
+        # misleading in a way the picture itself cannot show.
         raise SystemExit(f"outcome shares do not sum to 100: {left.min():.2f}..{left.max():.2f}")
     ax.set_yticks(y); ax.set_yticklabels([label(n) for n in names]); ax.invert_yaxis()
     ax.set_xlim(0, 100); ax.set_xlabel("share of that run's 1,000,000 episodes (%)")
     ax.set_title("How each episode ended", loc="left")
-    ax.legend(loc="upper center", bbox_to_anchor=(.5, -.09), ncol=3, frameon=False)
+    ax.legend(loc="upper center", bbox_to_anchor=(.5, -.09), ncol=len(keys), frameon=False)
     ax.grid(axis="x", alpha=.25, lw=.5)
     finish(fig, "g04_how_it_ends")
 

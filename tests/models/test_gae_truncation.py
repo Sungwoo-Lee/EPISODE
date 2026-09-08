@@ -126,12 +126,19 @@ def test_bootstrap_retained_on_overeating_quirk_mid_episode():
 
 def test_termination_reason_to_terminated_mask():
     """Pins the `termination_reason >= 2` mapping used in `train_iteration`:
-    0 = still active, 1 = timeout (truncation, NOT terminated), 2/3/4 = real death
-    (starvation / over-eating / injury, terminated).
+    0 = still active, 1 = timeout (truncation, NOT terminated), 2/3/4/5 = real death
+    (starvation / over-eating / injury / thermal, terminated).
+
+    Code 5 (body temperature left [min_temperature, max_temperature]) is included
+    deliberately: the `>= 2` masks in both PPO trainers and in Dreamer were NOT edited
+    when the temperature system added it, on the argument that the inequality already
+    covers any new death code. This assertion is what makes that argument checkable
+    instead of asserted — if someone ever narrows one of those masks to an explicit
+    2/3/4 set, thermal deaths would silently start bootstrapping as truncations.
     """
-    reasons = jnp.array([0, 1, 2, 3, 4])
+    reasons = jnp.array([0, 1, 2, 3, 4, 5])
     terminated = (reasons >= 2).astype(jnp.float32)
-    expected = jnp.array([0.0, 0.0, 1.0, 1.0, 1.0])
+    expected = jnp.array([0.0, 0.0, 1.0, 1.0, 1.0, 1.0])
     assert jnp.array_equal(terminated, expected)
 
 

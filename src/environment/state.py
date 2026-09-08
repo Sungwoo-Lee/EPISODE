@@ -87,6 +87,14 @@ class EnvState:
     # memory cost is nil and any accidental read on a thermal-off config fails
     # loudly on shape rather than quietly on value.
     thermal_field: jnp.ndarray   # [H, W] float32 (or [0, 0] when thermal is off)
+    # Body temperature (Stage 2). ALWAYS a real scalar leaf, thermal on or off —
+    # unlike `thermal_field` there is no shape trick available for a scalar, and a
+    # [0] array would only move the failure from "reads 0.0" to "reads nothing".
+    # When thermal is off it is initialised to `params.temperature_setpoint` (the
+    # inert 0.0) at reset and never updated: `update_body`'s recurrence sits behind
+    # a STATIC `if params.thermal_enabled:`, so a thermal-off config traces no
+    # temperature arithmetic at all.
+    body_temp: jnp.ndarray       # [] float32
 
     # Environment status
     terminated: jnp.ndarray      # bool
@@ -360,6 +368,25 @@ class EnvParams:
     res_temperature: jnp.ndarray      # [num_res] float32
     res_temp_ratio_low: jnp.ndarray   # [num_res] float32
     res_temp_ratio_high: jnp.ndarray  # [num_res] float32
+    # Body-temperature recurrence (Stage 2), design section 5:
+    #   T <- T + k_exchange*(T_field[agent_cell] - T) + k_metabolic
+    #          - k_loss*(T - temperature_setpoint)
+    # All traced: they are continuous knobs that must be sweepable without a
+    # recompile. `min_temperature` / `max_temperature` bound the survivable body
+    # temperature; leaving the interval ends the episode with reason 5.
+    #
+    # Naming note: the six names below follow IMPLEMENTATION_PLAN.md's Stage 2
+    # field list verbatim (three `thermal_k_*`, three unprefixed), because F1's
+    # Stage 4 drive already reads `params.temperature_setpoint` and
+    # `params.max_temperature` under exactly those names. `setpoint` (unprefixed)
+    # already means the SATIATION setpoint on this dataclass, which is why the
+    # temperature one keeps its qualifier.
+    thermal_k_exchange: float
+    thermal_k_loss: float
+    thermal_k_metabolic: float
+    temperature_setpoint: float
+    min_temperature: float
+    max_temperature: float
 
     # ── Legacy @property aliases (B3 fix — kept for one release cycle) ────────
     # These accessors allow code that reads `params.predator_tags` / `params.neutral_tags`

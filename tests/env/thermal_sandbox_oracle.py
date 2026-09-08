@@ -1,4 +1,4 @@
-"""Independent numpy oracle for the thermal field's Gaussian blur.
+"""Independent numpy oracle for the thermal field's blur and body-temperature recurrence.
 
 **Vendored copy.** The source is the design's calibration sandbox at
 `docs/develop/active/thermal/temperature_system_plan/sim.py::gaussian_smooth`,
@@ -15,6 +15,9 @@ The only change from the source is that the grid size is read from the field's
 own shape instead of the module-level constants. **The two must stay in step:**
 if `sim.py`'s blur changes, this copy changes with it, or the oracle silently
 stops being the thing the design was calibrated against.
+
+`body_traj` below is vendored from the same module, unmodified. It is the loop
+every steps-to-death and equilibrium number in the design was printed from.
 
 The reason this is a real oracle and not a tautology: a test that re-derived the
 expected field with the same JAX helper would only verify that the function
@@ -51,3 +54,22 @@ def gaussian_smooth(f, sigma):
             out += np.where(inb, f[np.ix_(rs, cs)] * wt, 0.0)
             wsum += np.where(inb, wt, 0.0)
     return out / wsum
+
+
+def body_traj(T_field_seq, T0=0.0, k_ex=0.04, k_loss=0.01, k_met=0.0, T_neutral=0.0):
+    """Body-temperature trajectory under the design's recurrence.
+
+    Vendored verbatim from `sim.py::body_traj`. One entry per step PLUS the
+    initial value, so `out[n]` is the body temperature after `n` steps and
+    `out[0] == T0`.
+
+    The `k_loss` term is what makes this an oracle rather than a restatement of
+    the environment: drop it and the body equilibrates at exactly the cell
+    temperature instead of at `k_ex*T_field/(k_ex+k_loss)`.
+    """
+    T = T0
+    out = [T]
+    for Tf in T_field_seq:
+        T = T + k_ex * (Tf - T) + k_met - k_loss * (T - T_neutral)
+        out.append(T)
+    return np.array(out)

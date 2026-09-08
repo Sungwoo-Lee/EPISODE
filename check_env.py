@@ -32,7 +32,8 @@ def check_params():
         step += 1
     
     print(f"Terminated at step: {step}")
-    print(f"Termination Reason: {info['termination_reason']} (1: truncation, 2: starvation, 4: injury)")
+    print(f"Termination Reason: {info['termination_reason']} "
+          "(0: still active, 1: truncation, 2: starvation, 3: overeating, 4: injury, 5: thermal)")
     print(f"Final Nutrition: {state.nutrition}")
 
 if __name__ == "__main__":

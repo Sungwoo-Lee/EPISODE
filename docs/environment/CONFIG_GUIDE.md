@@ -244,6 +244,12 @@ thermal:
   use_object_sources: true
   min_fire_separation: 3    # Manhattan, between heat sources
   food_min_fire_distance: 0 # Manhattan, food to fire; 0 = today's behaviour
+  temperature_setpoint: 0.0 # the body temperature the agent is trying to hold
+  min_temperature: -15.0    # survivable band; leaving it ends the episode (code 5)
+  max_temperature: 15.0
+  k_exchange: 0.04          # per step, fraction of the gap to the cell's temperature
+  k_loss: 0.01              # per step, fraction of the deviation from setpoint undone
+  k_metabolic: 0.0          # constant heat produced per step
 
 environment:
   obstacles:
@@ -256,7 +262,7 @@ environment:
       blocking: false
 ```
 
-Five things that bite:
+Six things that bite:
 
 - **The campfire entry must NOT go into `default.yaml`.** `Config.merge` replaces lists
   wholesale (§1's list-replace footgun), so an obstacle entry in the base file silently
@@ -292,6 +298,17 @@ Five things that bite:
   centre already satisfy it). If fires look wrongly placed, the cause is the silent
   cell-`(0,0)` fallback in `resolve_overlaps_global` (an entity parked outside its own
   spawn area when the area fills up), not the separation value.
+- **`k_loss` is the number most likely to be changed by accident, and it can delete the
+  task.** The body's equilibrium is `T* = k_exchange·T_field/(k_exchange + k_loss)`, i.e.
+  `0.8 · T_field` at the shipped values: standing in a −25 cell settles the body at −20,
+  not at −25, because physiology holds off 20% of the cold. That 20% is exactly what makes
+  a −25 world cold-but-survivable rather than instantly lethal. Raise `k_loss` to about
+  0.036 and the survivable ambient window reaches ±25 — the world's own baseline can no
+  longer kill anything and the thermal task disappears, while the config still reads as
+  fully configured. Lower it toward 0 and the body simply becomes the cell it stands on.
+  It has a [critical-settings registry](CONFIG_CRITICAL_SETTINGS.md) row for this reason.
+  Full recurrence and the tug-of-war reading:
+  [05_body_homeostasis.md](05_body_homeostasis.md#body-temperature-thermal).
 - **`food_min_fire_distance` is a knob that is off, and turning it on is a research
   decision.** At `0` food spawns anywhere, exactly as today. The risk it exists to
   address: an episode whose food lands inside the comfort ring has **no thermal trade-off
@@ -302,7 +319,11 @@ Five things that bite:
 
 All the sub-keys are **conditional-mandatory** (§5 pattern), read only when
 `thermal.enabled` is true, and the `random_spots.*` trio only when `use_random_spots` is
-true as well. `temperature` and `temperature_ratio` are mutually exclusive on one entry,
+true as well. The body sub-keys validate at the point they are read: `min_temperature <
+max_temperature`, `temperature_setpoint` inside that band, `k_exchange` and `k_loss` each
+`>= 0` and summing to `<= 1`. `metabolic_coupling`, `grid_range` and `relative` are
+present in `default.yaml` but not read yet — Stages 3 and 5 of the temperature plan add
+their readers. `temperature` and `temperature_ratio` are mutually exclusive on one entry,
 and **an animal entry declaring either one raises** — the field is built once at reset and
 animals move.
 

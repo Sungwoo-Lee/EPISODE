@@ -415,13 +415,15 @@ Source: `src/environment/core.py:534–548`
     truncated = next_step >= params.max_steps
     
     # Termination Reason (Integer codes for JIT compatibility)
-    # 0: active, 1: max_steps, 2: starvation, 3: overeating, 4: injury
+    # 0: active, 1: max_steps, 2: starvation, 3: overeating, 4: injury, 5: thermal
     reason = jnp.array(0, dtype=jnp.int32)
     reason = jnp.where(truncated, 1, reason)
     reason = jnp.where(new_nutrition <= 0.0, 2, reason)
     if params.overeating_death:
         reason = jnp.where(new_satiation >= params.max_satiation, 3, reason)
     reason = jnp.where(new_injury >= params.max_injury, 4, reason)
+    if params.thermal_enabled:                      # temperature system
+        reason = jnp.where(thermal_death, 5, reason)
     
     info['termination_reason'] = reason
     done = jnp.logical_or(done, truncated)
@@ -840,6 +842,7 @@ reason = where(truncated,                         1, reason)
 reason = where(new_nutrition <= 0.0,              2, reason)
 reason = where(new_satiation >= max_satiation,    3, reason)   # only if overeating_death=True
 reason = where(new_injury >= max_injury,          4, reason)
+reason = where(thermal_death,                     5, reason)   # only if thermal.enabled=True
 done = done_from_body OR truncated
 ```
 
@@ -852,10 +855,11 @@ Termination reason codes:
 | 2 | Starvation | `new_nutrition <= 0.0` |
 | 3 | Overeating | `new_satiation >= max_satiation` AND `overeating_death=True` |
 | 4 | Injury | `new_injury >= max_injury` |
+| 5 | Thermal | `new_body_temp` outside `[min_temperature, max_temperature]` AND `thermal.enabled=True` |
 
 `info['termination_reason']` is set here.
 
-**Note on ordering**: reason assignments use `jnp.where` in sequence, so later conditions overwrite earlier ones. If both truncation and injury fire on the same step, `reason=4` (injury) is returned because it is assigned last.
+**Note on ordering**: reason assignments use `jnp.where` in sequence, so later conditions overwrite earlier ones. If both truncation and injury fire on the same step, `reason=4` (injury) is returned because it is assigned last. Code 5 (thermal) is assigned after code 4 for the same reason: an agent that freezes on the final step of the episode should be reported as having frozen, not as having run out of time.
 
 **Note on `current_step`**: `next_step = state.current_step + 1` then `truncated = next_step >= max_steps`. Since `current_step` starts at 0, the episode runs for exactly `max_steps` transitions before truncation fires.
 
@@ -941,7 +945,7 @@ All keys returned by `jax_step` in the `info` dict, in construction order.
 
 | Key | Type/Shape | Description |
 |-----|-----------|-------------|
-| `termination_reason` | int32 scalar | Code 0–4 (see table in "Termination Check" section). |
+| `termination_reason` | int32 scalar | Code 0–5 (see table in "Termination Check" section). |
 
 ### Reward and drive (Stage 6)
 
@@ -1007,7 +1011,7 @@ When the agent steps onto an obstacle with `obs_hides_agent=True` (a "bush"), `a
 
 **Q: What order are the termination reason codes applied?**
 
-The four `jnp.where` calls execute in sequence: truncated=1, starvation=2, overeating=3, injury=4. Each overwrites the previous. If both truncation and injury fire on the same step, `reason=4` (injury) is returned.
+The `jnp.where` calls execute in sequence: truncated=1, starvation=2, overeating=3, injury=4, thermal=5. Each overwrites the previous. If both truncation and injury fire on the same step, `reason=4` (injury) is returned; if truncation and a thermal death coincide, `reason=5`. The thermal call is present only when `thermal.enabled=True` (a static Python branch).
 
 **Q: Is Stage 1 (resource regeneration) affected by the agent's current position?**
 

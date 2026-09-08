@@ -52,8 +52,28 @@ def calculate_drive(satiation, injury, params):
     current = jnp.stack([satiation, injury], axis=-1)
     return jnp.linalg.norm(current - target, axis=-1)
 
-def update_body(state: EnvState, info: dict, params: EnvParams) -> tuple[jnp.ndarray, jnp.ndarray, jnp.ndarray, jnp.ndarray, jnp.ndarray, jnp.ndarray, bool]:
-    """Updates satiation, nutrition, and injury levels with streak-based recovery."""
+def update_body(state: EnvState, info: dict, params: EnvParams, new_agent_pos: jnp.ndarray) -> tuple[jnp.ndarray, jnp.ndarray, jnp.ndarray, jnp.ndarray, jnp.ndarray, jnp.ndarray, jnp.ndarray, jnp.ndarray, bool]:
+    """Updates satiation, nutrition, injury and body temperature.
+
+    `new_agent_pos` is the POST-move agent cell, and it is a required argument
+    rather than `state.agent_pos` on purpose. Every other quantity this function
+    consumes (`info['damage']`, `info['ate_food']`, `info['rested']`) is already
+    post-move, so reading the thermal field at the pre-move cell would make body
+    temperature the one body variable that lags the agent by a step: walking ONTO
+    the fire would not burn until the following step, and walking OFF it would
+    keep burning for one more. A constant-temperature field cannot see that
+    difference, which is exactly why the choice is stated here rather than left
+    to the test.
+
+    Returns:
+        (satiation, nutrition, injury, injury_buffer, nociception_history,
+         rest_streak, body_temp, thermal_death, done)
+
+        `done` is REAL DEATH only — starvation / over-eating / injury / thermal.
+        `thermal_death` is returned separately because `jax_step` needs the
+        specific cause to emit termination reason 5; recomputing the same
+        out-of-range predicate at the call site would be a second copy of it.
+    """
     prev_nutrition = state.nutrition
     prev_injury = state.injury_level
     prev_rest_streak = state.rest_streak
@@ -124,8 +144,40 @@ def update_body(state: EnvState, info: dict, params: EnvParams) -> tuple[jnp.nda
     else:
         # Instant death logic for levels without health system
         done = jnp.where(damage > 0, True, done)
-    
-    return new_satiation, new_nutrition, new_injury, new_buffer, new_nociception_history, new_rest_streak, done
+
+    # --- Body Temperature Dynamics (design section 5) ---
+    #   T <- T + k_exchange*(T_field[agent_cell] - T) + k_metabolic
+    #          - k_loss*(T - temperature_setpoint)
+    #
+    # The k_loss term is NOT decoration. Without it the body equilibrates at
+    # exactly the cell temperature, so the survivable ambient window collapses to
+    # [min_temperature, max_temperature] and the cold-but-survivable band the whole
+    # design rests on disappears — while the code still looks like it works.
+    # With it the fixed point is  T* = k_ex*T_field / (k_ex + k_loss),  i.e. a -25
+    # cell settles the body at -20, because physiology holds off 20% of the cold.
+    #
+    # A STATIC Python branch: a thermal-off config traces none of this.
+    if params.thermal_enabled:
+        cell_temp = state.thermal_field[new_agent_pos[0], new_agent_pos[1]]
+        new_body_temp = (
+            state.body_temp
+            + params.thermal_k_exchange * (cell_temp - state.body_temp)
+            + params.thermal_k_metabolic
+            - params.thermal_k_loss * (state.body_temp - params.temperature_setpoint)
+        )
+        thermal_death = jnp.logical_or(new_body_temp < params.min_temperature,
+                                       new_body_temp > params.max_temperature)
+        # Folded into `done` HERE, inside update_body, so that `real_death` — which
+        # jax_step captures from this return value BEFORE the truncation merge —
+        # picks freezing/overheating up as a real death and the death_penalty fires.
+        # Assigning reason 5 without this line would produce the exact half-built
+        # state the Stage 2 test guards against: a labelled death with no penalty.
+        done = jnp.where(thermal_death, True, done)
+    else:
+        new_body_temp = state.body_temp
+        thermal_death = jnp.array(False)
+
+    return new_satiation, new_nutrition, new_injury, new_buffer, new_nociception_history, new_rest_streak, new_body_temp, thermal_death, done
 
 def update_resources(res_active, res_reg_timer, res_cons_count, params,
                      res_allocated=None):
@@ -687,7 +739,7 @@ def jax_step(state: EnvState, action: int, params: EnvParams) -> tuple[EnvState,
         'hit_neutral': jnp.any(at_neutral_pre) if state.animal_pos.shape[0] > 0 else jnp.array(False),
     }
     
-    new_satiation, new_nutrition, new_injury, next_injury_buffer, next_nociception_history, new_rest_streak, done = update_body(state, info, params)
+    new_satiation, new_nutrition, new_injury, next_injury_buffer, next_nociception_history, new_rest_streak, new_body_temp, thermal_death, done = update_body(state, info, params, new_agent_pos)
     # `done` here is REAL DEATH only (starvation / over-eating / injury). update_body does not know
     # about the step clock, so it never fires on a timeout. Capture it BEFORE the truncation merge
     # below so the death_penalty can be gated on real death and NOT on surviving to the step limit.
@@ -700,7 +752,8 @@ def jax_step(state: EnvState, action: int, params: EnvParams) -> tuple[EnvState,
     truncated = next_step >= params.max_steps
     
     # Termination Reason (Integer codes for JIT compatibility)
-    # 0: active, 1: max_steps, 2: starvation, 3: overeating, 4: injury
+    # 0: active, 1: max_steps, 2: starvation, 3: overeating, 4: injury, 5: thermal
+    # (5 = body temperature left [min_temperature, max_temperature] — frozen or overheated)
     reason = jnp.array(0, dtype=jnp.int32)
     reason = jnp.where(truncated, 1, reason)
     if params.with_nutrition:
@@ -708,6 +761,11 @@ def jax_step(state: EnvState, action: int, params: EnvParams) -> tuple[EnvState,
     if params.overeating_death:
         reason = jnp.where(new_satiation >= params.max_satiation, 3, reason)
     reason = jnp.where(new_injury >= params.max_injury, 4, reason)
+    # AFTER the truncation line, deliberately: later assignments in this chain win,
+    # so a thermal death landing on the final step reports 5 rather than 1 — the same
+    # override injury already gets on the line above.
+    if params.thermal_enabled:
+        reason = jnp.where(thermal_death, 5, reason)
     
     info['termination_reason'] = reason
     # `done` below is the EPISODE-END flag: real death OR timeout. It is used ONLY for episode reset,
@@ -834,6 +892,7 @@ def jax_step(state: EnvState, action: int, params: EnvParams) -> tuple[EnvState,
         nociception_history_buffer=next_nociception_history,
         last_collision_noc=collision_noc,
         rest_streak=new_rest_streak,
+        body_temp=new_body_temp,
         terminated=done,
         key=key,
         last_action=jnp.array(action, dtype=jnp.int32),
@@ -1677,6 +1736,10 @@ def jax_reset(params: EnvParams, key: jax.random.PRNGKey) -> EnvState:
         nociception_history_buffer=nociception_history_buffer,
         last_collision_noc=jnp.array(0.0, dtype=jnp.float32),
         rest_streak=jnp.array(0, dtype=jnp.int32),
+        # The body starts at its own setpoint, not at the cell it spawns on: the
+        # agent begins comfortable and the cold has to work on it. On a thermal-off
+        # config `temperature_setpoint` is the inert 0.0 and nothing ever moves it.
+        body_temp=jnp.asarray(params.temperature_setpoint, dtype=jnp.float32),
         terminated=jnp.array(False, dtype=jnp.bool_),
         key=key,
         last_action=jnp.array(4 if params.rest_action_enabled else 5, dtype=jnp.int32),

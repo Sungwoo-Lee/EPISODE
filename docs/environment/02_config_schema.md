@@ -1110,6 +1110,9 @@ thermal.enabled
 thermal.sigma                          thermal.default_temp
 thermal.use_random_spots               thermal.use_object_sources
 thermal.min_fire_separation            thermal.food_min_fire_distance
+thermal.temperature_setpoint           thermal.min_temperature
+thermal.max_temperature                thermal.k_exchange
+thermal.k_loss                         thermal.k_metabolic
 ```
 
 and, only when `thermal.use_random_spots` is true:
@@ -1122,10 +1125,26 @@ thermal.random_spots.temp
 `thermal.enabled` itself is **unconditionally mandatory** and has no fallback default —
 `config.get('thermal.enabled', False)` is explicitly forbidden, because a fallback on a
 gating key would let a config with a misspelled `thermal:` block train as if thermal were
-off. The remaining keys shown in `default.yaml`'s `thermal:` block (`temperature_setpoint`,
-`min_temperature`, `max_temperature`, `k_exchange`, `k_loss`, `k_metabolic`,
-`metabolic_coupling`, `grid_range`, `relative`) are **not read yet** — Stages 2–5 of the
-temperature plan add their readers.
+off. The remaining keys shown in `default.yaml`'s `thermal:` block (`metabolic_coupling`,
+`grid_range`, `relative`) are **not read yet** — Stages 3 and 5 of the temperature plan
+add their readers.
+
+**Body-block validation** (all raise `ValueError` naming the offending key, at the point
+the key is read):
+
+| Key | Type | Validation |
+|---|---|---|
+| `thermal.temperature_setpoint` | float | must lie inside `[min_temperature, max_temperature]` — a setpoint outside the survivable band makes the body's own resting state lethal |
+| `thermal.min_temperature` | float | must be `< max_temperature` |
+| `thermal.max_temperature` | float | — |
+| `thermal.k_exchange` | float | `>= 0`, and `k_exchange + k_loss <= 1` |
+| `thermal.k_loss` | float | `>= 0`, and `k_exchange + k_loss <= 1` (above 1 the discrete update overshoots its own fixed point every step and body temperature oscillates instead of settling) |
+| `thermal.k_metabolic` | float | — (may be any sign; zero until Stage 5 couples it to activity) |
+
+These six drive the body-temperature recurrence documented in
+[05_body_homeostasis.md](05_body_homeostasis.md#body-temperature-thermal), and leaving the
+band `[min_temperature, max_temperature]` ends the episode with **termination code 5**
+([06_reward_and_termination.md](06_reward_and_termination.md)).
 
 **Removed in v2.0 (raises `ValueError` if present):** `environment.predator_enabled`
 

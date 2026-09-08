@@ -87,7 +87,11 @@ INJ_EDGES = np.array([25.0, 50.0, 75.0])          # start injury 0-100, four equ
 INJ_NAMES = ["0-25", "25-50", "50-75", "75-100"]
 DIST_MAX  = 8                                      # chebyshev distance bins 1..7, then "8+"
 DIST_NAMES = ["1", "2", "3", "4", "5", "6", "7", "8+"]
-TERM_NAMES = {1: "survived to time limit", 2: "starved", 4: "killed by predator"}
+# Termination codes as `core.py` emits them. 3 (over-eating) has never been listed here;
+# `collect_arm_data` degrades an unlisted code to its stringified int, so a 3 would show
+# up as the bare key "3". Left as found — the omission predates the temperature system.
+TERM_NAMES = {1: "survived to time limit", 2: "starved", 4: "killed by predator",
+              5: "frozen or overheated"}
 
 
 def arm_runs() -> dict[str, str]:

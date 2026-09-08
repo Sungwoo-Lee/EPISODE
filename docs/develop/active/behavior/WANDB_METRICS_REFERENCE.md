@@ -47,7 +47,7 @@ During each episode, per-step data from the environment's `info` dict is accumul
 | **Event counts** (FoodEaten, PredatorHits, etc.) | `episode_behavior[k] += info[k]` each step | Raw sum over all steps in the episode | Agent ate food 3 times → `ate_food = 3` |
 | **Damage metrics** (TotalDamage, DamagePredator, etc.) | `episode_behavior[k] += info[k]` each step | Raw sum of damage over the episode | 5.0 damage per predator hit × 15 hits → `damage_predator = 75.0` |
 | **Distance metrics** (MeanDistFood, MeanDistPredator) | `episode_dist_sums[k] += info[k]` each step | Sum divided by episode length: `dist_sum / max(ep_length, 1)` | Sum of distances = 150.0 over 50 steps → `dist_to_food = 3.0` |
-| **Termination reason** | Captured once at episode end | Integer code: 1=MaxSteps, 2=Starvation, 3=Overeating, 4=Injury | Agent died from injury → `termination_reason = 4` |
+| **Termination reason** | Captured once at episode end | Integer code: 1=MaxSteps, 2=Starvation, 3=Overeating, 4=Injury, 5=Thermal | Agent died from injury → `termination_reason = 4` |
 | **Reward** | Accumulated by the environment | Total episode return | — |
 | **Steps** | Counted by the environment | Episode length (integer) | — |
 
@@ -72,6 +72,7 @@ At the end of each training iteration, **all episodes that completed during that
 | `Episode/TotalDamage` | Mean cumulative damage per episode | Already float from per-step damage values |
 | `Episode/MeanDistFood` | Mean of per-episode mean distances | Double-averaged: per-step → per-episode → per-iteration |
 | `Episode/Term_Injury` | Fraction of N episodes ending in injury | e.g., 8 of 10 episodes → 0.80 |
+| `Episode/Term_Thermal` | Fraction of N episodes ending in a thermal death (frozen or overheated) | Always 0.0 unless `thermal.enabled=true` |
 
 #### Practical example
 
@@ -113,6 +114,7 @@ Logged whenever episodes complete during an iteration. See above for aggregation
 | `Episode/Term_Injury` | float | binary (1 if reason==4) | Fraction of episodes ending in injury (health < 0.0) |
 | `Episode/Term_Overeating` | float | binary (1 if reason==3) | Fraction of episodes ending in overeating (stomach > capacity) |
 | `Episode/Term_MaxSteps` | float | binary (1 if reason==1) | Fraction of episodes reaching maximum episode length |
+| `Episode/Term_Thermal` | float | binary (1 if reason==5) | Fraction of episodes ending in a thermal death — body temperature outside `[thermal.min_temperature, thermal.max_temperature]`. Emitted on every run; identically 0.0 when the temperature system is off |
 | `timesteps` | int | — | Global environment step counter |
 | `iteration` | int | — | Training iteration counter |
 
