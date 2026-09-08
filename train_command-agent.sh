@@ -3264,12 +3264,12 @@ cd /media/nas01/projects/Interoceptive-AI/grid_world_pain
 # then launched with `run_command.py --no-tail`.
 # ===========================================================================
 
-/home/vncuser/miniconda3/envs/grid_world_pain/bin/python train.py \
-  --config configs/environment/experiment/basic/04-jump_attack_10x10.yaml \
-  --agent_config configs/models/recurrent_ppo/nmn_input_site_grid_gaenorm/nmngaenorm_t1none.yaml \
-  --episodes 10000000 --device cuda:0 --log-interval 10 \
-  --tag "rppo_nmngaenorm_t1none_s42" --wandb-name "rppo_nmngaenorm_t1none_s42" \
-  --wandb-group "nmn_input_site_grid_gaenorm" --wandb-job-type "pilot"
+# /home/vncuser/miniconda3/envs/grid_world_pain/bin/python train.py \
+#   --config configs/environment/experiment/basic/04-jump_attack_10x10.yaml \
+#   --agent_config configs/models/recurrent_ppo/nmn_input_site_grid_gaenorm/nmngaenorm_t1none.yaml \
+#   --episodes 10000000 --device cuda:0 --log-interval 10 \
+#   --tag "rppo_nmngaenorm_t1none_s42" --wandb-name "rppo_nmngaenorm_t1none_s42" \
+#   --wandb-group "nmn_input_site_grid_gaenorm" --wandb-job-type "pilot"
 
 # Runs 2-16 (same command shape; only these three fields differ):
 #  2  --agent_config .../nmngaenorm_t2enc_ALL.yaml    --device cuda:1  --tag/--wandb-name rppo_nmngaenorm_t2enc_ALL_s42
@@ -3324,4 +3324,135 @@ cd /media/nas01/projects/Interoceptive-AI/grid_world_pain
 # 14   rppo_nmngaenorm_t16quad_ALL_s42  t16quad  ALL    114:1     270737   u69q0auc  logs/20260907_155904_rppo_nmngaenorm_t16quad_ALL_s42.log
 # 15   rppo_nmngaenorm_t16quad_I_s42    t16quad  I      114:2     270998   khcs2pxc  logs/20260907_155905_rppo_nmngaenorm_t16quad_I_s42.log
 # 16   rppo_nmngaenorm_t16quad_X_s42    t16quad  X      114:3     271243   d4okzt4v  logs/20260907_155907_rppo_nmngaenorm_t16quad_X_s42.log
+# ---------------------------------------------------------------------------
+
+# ===========================================================================
+# WAVE: nmn_site_grid_olf_mc — neuromodulator input x site grid on the
+# OLFACTION-ONLY sensor-ladder arm (2026-09-09)
+# ---------------------------------------------------------------------------
+# What changed vs the two previous waves: the ENVIRONMENT. Both earlier waves
+# (rppo_nmnsite_* MC, rppo_nmngaenorm_* GAE_NORM) ran on
+# configs/environment/experiment/basic/04-jump_attack_10x10.yaml. This wave runs
+# the same UNCHANGED 16-arm MC agent grid on
+# configs/environment/experiment/sensory_ladder/B_olf_only.yaml — the
+# olfaction-only ladder arm, chosen because it previously produced the strongest
+# bush-hiding and some state-dependent behaviour.
+#
+# OBSERVATION-DIMENSION DISCRIMINATOR (the single most valuable pre-flight check):
+#   B_olf_only              -> 47  {Satiation 1, Interoceptive Nociception 1,
+#                                   Extero Nociception 1, Olfaction 25,
+#                                   Collision 5, Proprioception 6, Visual 8}
+#   04-jump_attack_10x10    -> 27  (same seven sensors, Olfaction 5)
+# The difference is sensory.olfactory_grid_range: 1 (B_olf_only) vs 0 (basic/04),
+# which widens Olfaction from 1x5 to a 5-cell diamond x 5 = 25. If a run's banner
+# prints 27, the WRONG environment loaded and the wave is void.
+#
+# Modulator input widths against obs_dim 47: ALL = 47, I = 2
+# (Satiation + Interoceptive Nociception), X = 39 (Extero Nociception 1 +
+# Olfaction 25 + Collision 5 + Visual 8). Verified pre-launch.
+#
+# REGISTRY DEVIATION (flagged, intentional): sensory.olfactory_grid_range is 1
+# here against the canonical 0 in configs/environment/default.yaml
+# (docs/environment/CONFIG_CRITICAL_SETTINGS.md). That IS the sensory_ladder
+# B-arm's defining property, not drift. sensory.decay_power = 1.0 and
+# thermal.enabled = false both match their canonical registry values.
+#
+# --seed / --num-envs / --checkpoint-frequency are NOT passed (config-owned).
+# --episodes IS passed explicitly (10,000,000) as the convention requires.
+#
+# Nodes 109-114 deliberately untouched — reserved for a parallel session's
+# thermal work and for the GAE_NORM wave that follows this one.
+#
+# Run 1 below is the active block; runs 2-16 differ from it ONLY in
+# --agent_config, --device and the tag/wandb-name pair, and are recorded in the
+# table that follows. Each run is staged to a unique /tmp/train_cmd_<epoch>_<rand>.sh
+# on its target node (CIFS-bypass), asserted non-empty + carrying its own --tag,
+# then launched with `run_command.py --no-tail`.
+# ===========================================================================
+
+/home/vncuser/miniconda3/envs/grid_world_pain/bin/python train.py \
+  --config configs/environment/experiment/sensory_ladder/B_olf_only.yaml \
+  --agent_config configs/models/recurrent_ppo/nmn_input_site_grid/nmnsite_t1none.yaml \
+  --episodes 10000000 --device cuda:0 --log-interval 10 \
+  --tag "rppo_olfmc_t1none_s42" --wandb-name "rppo_olfmc_t1none_s42" \
+  --wandb-group "nmn_site_grid_olf_mc" --wandb-job-type "pilot"
+
+# Runs 2-16 (same command shape; only these three fields differ):
+#  2  --agent_config .../nmnsite_t2enc_ALL.yaml    101:1  --tag/--wandb-name rppo_olfmc_t2enc_ALL_s42
+#  3  --agent_config .../nmnsite_t2enc_I.yaml      102:0  --tag/--wandb-name rppo_olfmc_t2enc_I_s42
+#  4  --agent_config .../nmnsite_t2enc_X.yaml      102:1  --tag/--wandb-name rppo_olfmc_t2enc_X_s42
+#  5  --agent_config .../nmnsite_t3rnn_ALL.yaml    103:0  --tag/--wandb-name rppo_olfmc_t3rnn_ALL_s42
+#  6  --agent_config .../nmnsite_t3rnn_I.yaml      103:1  --tag/--wandb-name rppo_olfmc_t3rnn_I_s42
+#  7  --agent_config .../nmnsite_t3rnn_X.yaml      104:0  --tag/--wandb-name rppo_olfmc_t3rnn_X_s42
+#  8  --agent_config .../nmnsite_t4act_ALL.yaml    104:1  --tag/--wandb-name rppo_olfmc_t4act_ALL_s42
+#  9  --agent_config .../nmnsite_t4act_I.yaml      105:0  --tag/--wandb-name rppo_olfmc_t4act_I_s42
+# 10  --agent_config .../nmnsite_t4act_X.yaml      105:1  --tag/--wandb-name rppo_olfmc_t4act_X_s42
+# 11  --agent_config .../nmnsite_t5crt_ALL.yaml    106:0  --tag/--wandb-name rppo_olfmc_t5crt_ALL_s42
+# 12  --agent_config .../nmnsite_t5crt_I.yaml      106:1  --tag/--wandb-name rppo_olfmc_t5crt_I_s42
+# 13  --agent_config .../nmnsite_t5crt_X.yaml      107:0  --tag/--wandb-name rppo_olfmc_t5crt_X_s42
+# 14  --agent_config .../nmnsite_t16quad_ALL.yaml  107:1  --tag/--wandb-name rppo_olfmc_t16quad_ALL_s42
+# 15  --agent_config .../nmnsite_t16quad_I.yaml    108:0  --tag/--wandb-name rppo_olfmc_t16quad_I_s42
+# 16  --agent_config .../nmnsite_t16quad_X.yaml    108:1  --tag/--wandb-name rppo_olfmc_t16quad_X_s42
+#
+# LAUNCH RECORD -- all 16 verified TRAINING, exactly one PID per tag, 2026-09-09T02:41
+#
+# ENVIRONMENT CONFIRMED (the check that mattered): all sixteen startup banners print
+#   "Observation Dim: 47 (Satiation=1, Interoceptive Nociception=1, Extero Nociception=1,
+#    Olfaction=25, Collision=5, Proprioception=6, Visual=8)"
+# i.e. B_olf_only, NOT the 27-dim basic/04 of the two previous waves. Pre-computed the
+# same breakdown locally through train.py's own load path (get_default_config +
+# load_env_config + load_env_params + get_observation_breakdown) BEFORE launching, so a
+# wrong-env wave would have been caught at zero cost; the banners then confirmed it.
+#
+# Ground truth from each run's OWN saved models/config.yaml (all 16):
+#   sensory.olfactory_grid_range = 1  (B_olf_only's defining key; basic/04 is 0)
+#   thermal.enabled = false           (thermal system off, as required)
+#   agent.return_mode = MC            (this is the MC grid, not GAE_NORM)
+#   modulation.sites + modulation.input_sensors match the intended arm on all 16
+#   run 1 (t1none) has modulation.type = null
+#   TOP-LEVEL seed: 42 and episodes: 10000000; num_envs 128
+#   (read seed/episodes from the TOP-LEVEL keys -- the nested training: pair is a known
+#    stale duplicate that always reads 42/100; see KNOWN_BUGS.md)
+# provenance.json git_short = 880f1077 on ALL SIXTEEN (no split-SHA wave).
+# git_dirty is MIXED this time -- some runs wrote true, others "unknown". Both are the
+# same 10 s git-timeout race against the NAS under 16 simultaneous launches; "true" is
+# correct (the tree carried uncommitted sensory_directional + docs edits at launch).
+#
+# Health at T+5min: every log GROWING between two samples (+6.8-11.7 KB), every assigned
+# GPU resident and busy (73-100% util, 4.5-6.6 GB), all 16 advancing at 489-711 it/s
+# (Iter 353-562). No OOM / traceback in any log. Exactly 16 results dirs, one per tag.
+#
+# NODE 102 FOREIGN TENANT (reported, not acted on): pre-flight showed 102 completely idle
+# (2 MiB, no compute apps), but a third-party job appeared AFTER launch holding 18570 MiB
+# on GPU 0 and 386 MiB on GPU 1. Our two runs there are unaffected and are in fact the
+# fastest in the wave (4090s, Iter 560/562), but GPU 0 is now at 23986/24564 MiB -- only
+# ~580 MiB headroom. NOTE: nvidia-smi on these nodes reports PIDs in a DIFFERENT namespace
+# than ssh `ps`, so "unknown" nvidia-smi PIDs are normally our own runs; 102 is the one
+# node where a genuine THIRD pid exists.
+#
+# Staging note: scripts were staged with `ssh ... "cat > $TMP" < local.sh` WITHOUT the -n
+# flag (which would force stdin to /dev/null and write 0 bytes), and each staged file was
+# asserted >100 bytes AND carrying its own --tag AND the B_olf_only path before
+# run_command.py ran. All 16 asserted STAGE_OK at 494-509 bytes. The launch loop read the
+# matrix into an ARRAY (never `while read`, which would drain its own stdin and let
+# run_command.py's ssh eat the rest of the matrix) and passed </dev/null to each inner
+# call. No local `timeout` wrapped run_command.py.
+#
+# Run  Tag                          Arm      Slice  Node:GPU  PID      WandB     Log
+# 1    rppo_olfmc_t1none_s42        t1none   -      101:0     631777   683qk0uj  logs/20260909_023635.log
+# 2    rppo_olfmc_t2enc_ALL_s42     t2enc    ALL    101:1     631817   uj1w5uu7  logs/20260909_023636.log
+# 3    rppo_olfmc_t2enc_I_s42       t2enc    I      102:0     3915681  4019the7  logs/20260909_023637.log
+# 4    rppo_olfmc_t2enc_X_s42       t2enc    X      102:1     3915711  2mi860zc  logs/20260909_023639.log
+# 5    rppo_olfmc_t3rnn_ALL_s42     t3rnn    ALL    103:0     618423   br8tl82k  logs/20260909_023640.log
+# 6    rppo_olfmc_t3rnn_I_s42       t3rnn    I      103:1     618461   5olp3iva  logs/20260909_023641.log
+# 7    rppo_olfmc_t3rnn_X_s42       t3rnn    X      104:0     636340   gbr992lc  logs/20260909_023642.log
+# 8    rppo_olfmc_t4act_ALL_s42     t4act    ALL    104:1     636380   xerdg69k  logs/20260909_023644.log
+# 9    rppo_olfmc_t4act_I_s42       t4act    I      105:0     722948   7ell8l1x  logs/20260909_023645.log
+# 10   rppo_olfmc_t4act_X_s42       t4act    X      105:1     722988   b3l8bzz0  logs/20260909_023646.log
+# 11   rppo_olfmc_t5crt_ALL_s42     t5crt    ALL    106:0     711026   89mjw56e  logs/20260909_023648.log
+# 12   rppo_olfmc_t5crt_I_s42       t5crt    I      106:1     711066   fsmuo106  logs/20260909_023649.log
+# 13   rppo_olfmc_t5crt_X_s42       t5crt    X      107:0     450985   i7ymftsy  logs/20260909_023650.log
+# 14   rppo_olfmc_t16quad_ALL_s42   t16quad  ALL    107:1     451025   lomvrpyc  logs/20260909_023652.log
+# 15   rppo_olfmc_t16quad_I_s42     t16quad  I      108:0     445218   supdbzxk  logs/20260909_023653.log
+# 16   rppo_olfmc_t16quad_X_s42     t16quad  X      108:1     445258   xume2sw4  logs/20260909_023654.log
 # ---------------------------------------------------------------------------
