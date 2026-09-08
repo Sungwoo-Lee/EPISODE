@@ -1,0 +1,550 @@
+<title>Thermoregulation Design</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans+Condensed:wght@600;700&family=IBM+Plex+Serif:ital,wght@0,400;0,600;1,400&display=swap">
+<style>
+:root {
+  color-scheme: light;
+  --ground:#fbfbfa; --surface:#f1f2f0; --sunk:#e9ebe8; --line:#dcdedb; --rule:#c9cdc9;
+  --ink:#16181d; --ink-2:#4e545e; --ink-3:#767c86;
+  --cold:#2a78d6; --hot:#b02b2b; --warm:#eb6834; --ok:#0f7a55;
+  --pick:#e8f0fc;
+}
+@media (prefers-color-scheme: dark) {
+  :root:where(:not([data-theme="light"])) {
+    color-scheme: dark;
+    --ground:#14161a; --surface:#1e2126; --sunk:#191c21; --line:#2f333a; --rule:#3a3f47;
+    --ink:#f2f3f1; --ink-2:#b4b9c1; --ink-3:#868d97;
+    --cold:#6da7ec; --hot:#e08a8a; --warm:#eb6834; --ok:#3fbf8f;
+    --pick:#1c2836;
+  }
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --ground:#14161a; --surface:#1e2126; --sunk:#191c21; --line:#2f333a; --rule:#3a3f47;
+  --ink:#f2f3f1; --ink-2:#b4b9c1; --ink-3:#868d97;
+  --cold:#6da7ec; --hot:#e08a8a; --warm:#eb6834; --ok:#3fbf8f;
+  --pick:#1c2836;
+}
+* { box-sizing:border-box; }
+body { background:var(--ground); color:var(--ink);
+  font-family:"IBM Plex Serif",Georgia,serif; font-size:17px; line-height:1.62; }
+.wrap { max-width:1140px; margin:0 auto; padding:56px 28px 110px;
+  display:flex; flex-direction:column; gap:52px; }
+.col { max-width:70ch; display:flex; flex-direction:column; gap:18px; }
+h1,h2,h3,h4,.eyebrow,.num { font-family:"IBM Plex Sans Condensed",system-ui,sans-serif; }
+h1 { font-size:clamp(36px,5.2vw,54px); line-height:1.04; font-weight:700; margin:0;
+  letter-spacing:-.018em; text-wrap:balance; }
+h2 { font-size:28px; font-weight:700; margin:0; letter-spacing:-.012em; text-wrap:balance;
+  display:flex; align-items:baseline; gap:14px; }
+h2 .num { font-size:15px; font-weight:600; color:var(--cold); letter-spacing:.06em;
+  font-variant-numeric:tabular-nums; }
+h3 { font-size:19px; font-weight:600; margin:0; }
+h4 { font-size:14px; font-weight:600; margin:0; color:var(--ink-3);
+  letter-spacing:.1em; text-transform:uppercase; }
+p { margin:0; }
+.eyebrow { font-size:12px; font-weight:600; letter-spacing:.14em; text-transform:uppercase;
+  color:var(--ink-3); margin:0; }
+.lede { font-size:20px; color:var(--ink-2); }
+strong { font-weight:600; }
+em { font-style:italic; }
+code { font-family:"IBM Plex Mono",ui-monospace,monospace; font-size:.87em;
+  background:var(--surface); padding:1px 5px; border-radius:2px; }
+pre { margin:0; background:var(--sunk); border-left:3px solid var(--line); padding:18px 20px;
+  overflow-x:auto; font-family:"IBM Plex Mono",monospace; font-size:13px; line-height:1.62; }
+pre .c { color:var(--ink-3); }
+pre .k { color:var(--cold); font-weight:500; }
+.callout { background:var(--surface); border-left:3px solid var(--cold);
+  padding:20px 24px; display:flex; flex-direction:column; gap:10px; }
+.callout.warn { border-left-color:var(--warm); }
+.callout.pick { border-left-color:var(--ok); background:var(--pick); }
+figure { margin:0; display:flex; flex-direction:column; gap:12px; }
+figure img { width:100%; height:auto; display:block; background:#fcfcfb; border-radius:2px; }
+figcaption { font-size:14.5px; color:var(--ink-2); max-width:88ch; }
+figcaption b { color:var(--ink); font-weight:600; }
+.scroll { overflow-x:auto; }
+table { border-collapse:collapse; font-size:14px; min-width:560px; width:100%;
+  font-variant-numeric:tabular-nums; }
+th,td { padding:9px 14px; text-align:left; border-bottom:1px solid var(--line);
+  vertical-align:top; }
+td.n, th.n { text-align:right; font-family:"IBM Plex Mono",monospace; font-size:13px; }
+thead th { color:var(--ink-3); font-weight:600; font-size:11.5px; letter-spacing:.07em;
+  text-transform:uppercase; border-bottom:1px solid var(--rule);
+  font-family:"IBM Plex Sans Condensed",sans-serif; }
+tbody tr.pick { background:var(--pick); }
+tbody tr.pick td:first-child { color:var(--cold); font-weight:600; }
+dl { margin:0; display:grid; grid-template-columns:max-content 1fr; gap:10px 22px;
+  align-items:baseline; }
+dt { font-family:"IBM Plex Mono",monospace; font-size:13px; color:var(--cold); }
+dd { margin:0; font-size:15.5px; color:var(--ink-2); }
+hr { border:0; border-top:1px solid var(--line); margin:0; width:100%; }
+.stages { display:flex; flex-direction:column; gap:0; counter-reset:st; }
+.stage { display:grid; grid-template-columns:52px 1fr; gap:20px; padding:16px 0;
+  border-bottom:1px solid var(--line); align-items:baseline; }
+.stage:last-child { border-bottom:0; }
+.stage .s { font-family:"IBM Plex Sans Condensed",sans-serif; font-size:13px; font-weight:700;
+  color:var(--ink-3); letter-spacing:.07em; }
+.stage .b { display:flex; flex-direction:column; gap:6px; }
+.stage .t { font-weight:600; }
+.stage .d { font-size:15px; color:var(--ink-2); }
+.q { display:flex; flex-direction:column; gap:6px; padding:15px 0;
+  border-bottom:1px solid var(--line); }
+.q:last-child { border-bottom:0; }
+.q .h { font-weight:600; }
+.q .d { font-size:15.5px; color:var(--ink-2); }
+.foot { font-size:14px; color:var(--ink-3); }
+</style>
+
+<div class="wrap">
+
+<header class="col">
+  <p class="eyebrow">grid_world_pain &middot; v4.0 &middot; environment design plan</p>
+  <h1>Thermoregulation</h1>
+  <p class="lede">A design for giving the agent a body temperature it can die of, a world
+  with warm and cold places, and a sense that tells it which way is warmer.</p>
+</header>
+
+<section class="col">
+  <h2><span class="num">PURPOSE</span></h2>
+  <p>Today the agent has two things it must keep in range: how full it is, and how injured it
+  is. This plan adds a third &mdash; <strong>body temperature</strong> &mdash; modelled on the
+  temperature system in EVAAA, the Unity environment this project takes its interoceptive
+  framing from.</p>
+  <p>The idea in one line: the world gets a <em>temperature field</em>, a number attached to
+  every cell of the grid. Warm objects like rocks heat the cells around them; shaded ones like
+  bushes cool them. The agent's own temperature drifts toward whatever the cell it is standing
+  on is, so standing somewhere too hot or too cold eventually kills it, and it has a
+  short-range sense of which neighbouring cells are warmer. Because temperature also enters the
+  reward, the agent has to trade thermal comfort against food and safety rather than solving
+  them one at a time.</p>
+  <p>This document is the plan, not the implementation. Nothing described here is built yet.
+  It exists to be argued with &mdash; every number in it is a proposal, and the sections are
+  ordered so you can reject one without unpicking the others.</p>
+</section>
+
+<section class="col">
+  <h4>Decisions already settled</h4>
+  <div class="scroll"><table>
+    <thead><tr><th>Question</th><th>Decision</th><th>Why</th></tr></thead>
+    <tbody>
+      <tr><td>Does temperature affect reward?</td><td><strong>Yes</strong> &mdash; a third
+        homeostatic axis</td><td>Matches EVAAA; makes thermoregulation a trade-off, not a
+        side-quest</td></tr>
+      <tr><td>How is it weighted?</td><td>Normalised, equal weight</td><td>Each axis divided by
+        its own range, as EVAAA divides by <code>maxDeviation</code></td></tr>
+      <tr><td>Which cells does the sense read?</td><td>von Neumann diamond,
+        <code>range&nbsp;1</code></td><td>Measured: same accuracy as EVAAA's 8 probes, four
+        fewer dimensions &mdash; &sect;4</td></tr>
+      <tr><td>Where does field heat come from?</td><td>Random spots <em>and</em> objects</td>
+        <td>Both mechanisms EVAAA ships</td></tr>
+      <tr><td>Does the field change during an episode?</td><td>No &mdash; static</td>
+        <td>Day/night deferred; EVAAA ships its cycle disabled anyway</td></tr>
+      <tr><td>Does staying warm cost energy?</td><td>Configurable, <strong>off</strong> by
+        default</td><td>Keeps the nutrition loop unchanged until we choose to test it</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<hr>
+
+<section class="col">
+  <h2><span class="num">01</span> The thermal field</h2>
+  <p>The field is one number per grid cell, built once when the episode resets and then held
+  fixed. It is built in four stages, in this order.</p>
+</section>
+
+<figure>
+  <img src="data:image/png;base64,@@pipeline@@" alt="Four 10x10 grids showing the thermal field construction: a uniform fill, then random hot and cold spots stamped on, then object sources added, then the whole thing Gaussian-smoothed into gradients.">
+  <figcaption><b>Fill, stamp, stamp, blur.</b> Dotted cells are object sources &mdash; a warm
+  rock pair at +18 and a cold bush pair at &minus;14. Only the final panel is what the agent
+  ever sees; the first three are intermediate state.</figcaption>
+</figure>
+
+<section class="col">
+  <h3>Random spots</h3>
+  <p>Each spot picks a uniformly random cell, a sign, and paints a square of side
+  <code>spot_size</code> around it at &plusmn;<code>spot_temp</code>. EVAAA paints only hot
+  spots; allowing the sign to flip costs nothing and gives us cold refuges as well as hot ones,
+  which matters because a world with only hot spots makes "move away from heat" a sufficient
+  policy.</p>
+  <h3>One departure from EVAAA: stamps add</h3>
+  <p>EVAAA writes <code>areaTemp[x,z] = obstacle.temperature</code> &mdash; a straight
+  assignment. Two overlapping sources therefore do not combine; the one spawned last silently
+  wins. We propose <strong>adding</strong> instead. Two rocks beside each other make a hotter
+  spot than one, which is the physically sensible reading, and the result no longer depends on
+  spawn order &mdash; which matters for us in a way it does not for EVAAA, because our
+  byte-parity tests would otherwise be at the mercy of iteration order.</p>
+  <h3>Smoothing is what makes the field navigable</h3>
+  <p>Stamping alone produces cliffs: a cell is either +20 or 0, and an agent standing next to
+  one has no way to tell which direction leads somewhere warmer. The Gaussian blur turns those
+  cliffs into slopes. It is not cosmetic &mdash; it is the step that makes the field something
+  a gradient-following policy can act on at all.</p>
+</section>
+
+<figure>
+  <img src="data:image/png;base64,@@sigma@@" alt="Six 10x10 fields on one shared colour scale at smoothing sigma 0, 0.5, 1, 1.5, 3 and 6, fading toward uniform as sigma rises; below, two charts showing mean gradient magnitude and field range both falling as sigma increases, with a highlighted usable band from 1.0 to 2.0.">
+  <figcaption><b>All six panels share one colour scale</b>, so the fade at high sigma is a real
+  loss of contrast rather than a rescaling artefact. Below &sigma;&nbsp;=&nbsp;1 the field is
+  mostly cliff; above &sigma;&nbsp;=&nbsp;3 a 10&times;10 grid is too small to hold any
+  structure and the whole world converges on one temperature. <b>Proposed default
+  &sigma;&nbsp;=&nbsp;1.5.</b></figcaption>
+</figure>
+
+<div class="col callout warn">
+  <p class="eyebrow">Scale warning</p>
+  <p>EVAAA's shipped values are <code>smoothingSigma: 3.0</code> with
+  <code>hotSpotSize: 20</code> on a <strong>100&times;100</strong> grid. Ours is
+  <strong>10&times;10</strong>. Copying those numbers across would blur the entire world into a
+  single temperature and stamp spots larger than the map. Every constant in this document has
+  been re-derived for our grid; none is inherited.</p>
+</div>
+
+<hr>
+
+<section class="col">
+  <h2><span class="num">02</span> Temperature from objects</h2>
+  <p>Any entity type may declare a <code>thermal_output</code>. At field-build time each active
+  instance adds its value to the cell it occupies, before the blur. This is EVAAA's
+  <code>ObstacleTemperature</code> component, read the same way our existing per-entity
+  <code>blocks_sight</code> flag is read.</p>
+  <p>The appeal is that it gives scenery we already have a second job. Rocks become thermal
+  mass and bushes become shade, so the same object that blocks sight also shapes the thermal
+  landscape &mdash; and the agent's existing reason to sit in a bush (hiding from predators)
+  now competes with a thermal reason to sit somewhere else.</p>
+  <div class="scroll"><table>
+    <thead><tr><th>Entity</th><th class="n">thermal_output</th><th>Existing role</th><th>New role</th></tr></thead>
+    <tbody>
+      <tr><td><code>rock</code></td><td class="n">+18</td><td>damage on contact, blocks sight</td><td>warm refuge</td></tr>
+      <tr><td><code>bush</code></td><td class="n">&minus;14</td><td>hides agent from predators</td><td>cool refuge</td></tr>
+      <tr><td><code>food</code></td><td class="n">0</td><td>nutrition</td><td>&mdash;</td></tr>
+      <tr><td><code>predator</code>, <code>rabbit</code>, <code>hiding_predator</code></td><td class="n">0</td><td>threat / neutral</td><td>&mdash; (see open questions)</td></tr>
+    </tbody>
+  </table></div>
+  <p class="foot">Values are proposals. Setting every entity to 0 and relying on random spots
+  alone is a valid configuration, and is the right control arm for measuring whether
+  object-sourced heat matters.</p>
+</section>
+
+<hr>
+
+<section class="col">
+  <h2><span class="num">03</span> Body temperature</h2>
+  <p>The agent carries one number, <code>body_temp</code>, that relaxes toward the temperature
+  of the cell it currently stands on. Each step:</p>
+  <pre><span class="c"># T = body temperature, T_field = temperature of the agent's own cell</span>
+T &larr; T + <span class="k">k_exchange</span>&middot;(T_field &minus; T) + <span class="k">k_metabolic</span> &minus; <span class="k">k_loss</span>&middot;(T &minus; T_neutral)</pre>
+  <p>The first term is Newton's law of cooling: you drift toward your surroundings, faster when
+  the gap is larger. The third pulls you back toward a neutral set point regardless of
+  surroundings &mdash; a standing-in of physiological regulation. The middle term is constant
+  heat production, zero by default.</p>
+  <p>Leaving the range <code>[&minus;15, +15]</code> ends the episode, exactly as starvation
+  does.</p>
+
+  <h3>Why not EVAAA's formulation</h3>
+  <p>EVAAA computes <code>surroundTemp</code> as the <em>sum</em> of its eight probe
+  differentials and multiplies by one coefficient. Two consequences: the effective gain is
+  eight times the coefficient, so changing the number of probes silently changes the body's
+  time constant; and its <code>change_3&middot;(bodyTemp&nbsp;+&nbsp;15)</code> term is an
+  unbounded exponential rather than a restoring force, so it has no set point to return to. The
+  form above avoids both while producing the same qualitative behaviour.</p>
+</section>
+
+<figure>
+  <img src="data:image/png;base64,@@body@@" alt="Three charts. Left: body temperature over 500 steps under constant ambient temperatures from -20 to +20, with dotted death thresholds at plus and minus 15. Middle: the effect of four k_exchange values at ambient +20. Right: steps to heat death against k_exchange, with a shaded region below 0.03 where a +20 cell never kills, and the proposed 0.04 marked at 55 steps.">
+  <figcaption><b>Calibrated against our episode, not EVAAA's clock.</b> At the proposed
+  <code>k_exchange&nbsp;=&nbsp;0.04</code> and <code>k_loss&nbsp;=&nbsp;0.01</code>, the body's
+  time constant is <b>@@tau@@ steps</b> against a 500-step episode, a +20 cell kills in
+  <b>@@d20@@ steps</b>, and a +10 cell never does. The shaded band on the right marks where
+  temperature stops being a survival pressure at all.</figcaption>
+</figure>
+
+<section class="col">
+  <h3>What the proposed constants buy</h3>
+  <dl>
+    <dt>tau = @@tau@@ steps</dt>
+    <dd>One time constant, <code>1/(k_exchange + k_loss)</code>. Long enough that a single
+    misstep is survivable, short enough that a bad choice compounds within an episode.</dd>
+    <dt>equilibrium in a +20 cell = @@eq20@@</dt>
+    <dd>Above the death threshold of 15, so the hottest cells are genuinely lethal if you
+    stay.</dd>
+    <dt>@@d20@@ steps to die there</dt>
+    <dd>Standing in the hottest cell from a neutral start. Roughly a ninth of an episode &mdash;
+    a real deadline, not an instant kill.</dd>
+    <dt>equilibrium in a +10 cell = @@eq10@@</dt>
+    <dd>Survivable indefinitely (<code>@@d10@@</code>). Warm regions are uncomfortable but not
+    fatal, which is what makes the field a landscape rather than a minefield.</dd>
+    <dt>@@rec@@ steps to recover</dt>
+    <dd>From a dangerous T&nbsp;=&nbsp;14 back down to 5, having moved to a neutral cell.
+    Escape is cheap once the agent understands what to do.</dd>
+    <dt>k_exchange &gt; @@kcrit@@</dt>
+    <dd>The threshold below which even the hottest cell can never kill. Set it lower and
+    temperature stops being a survival pressure at all.</dd>
+  </dl>
+</section>
+
+<hr>
+
+<section class="col">
+  <h2><span class="num">04</span> What the thermoceptor reads</h2>
+  <p>The agent samples the field over a small diamond of cells centred on itself and reports
+  each one <em>relative to its own body temperature</em> &mdash; so the observation answers
+  "which way is more comfortable than I am now", not "how hot is it here". At
+  <code>range&nbsp;1</code> that is five numbers: the agent's cell and its four neighbours.</p>
+  <p>The one real choice here was the shape. EVAAA uses eight compass probes &mdash; a Moore
+  neighbourhood, a 3&times;3 square. Every sensor we already have (olfaction, vision, collision)
+  uses a Manhattan diamond, the von Neumann neighbourhood. So: does dropping the four corners
+  cost anything?</p>
+</section>
+
+<figure>
+  <img src="data:image/png;base64,@@nbhd@@" alt="Four grids: von Neumann radius 1 samples 5 cells in a plus shape, Moore radius 1 samples 9 cells in a square, von Neumann radius 2 samples 13 cells, Moore radius 2 samples 25 cells.">
+  <figcaption><b>The two candidate shapes.</b> EVAAA's eight probes plus the agent's own cell
+  make the 3&times;3 square; our diamond drops the four corners, costing four observation
+  dimensions.</figcaption>
+</figure>
+
+<figure>
+  <img src="data:image/png;base64,@@acc@@" alt="Two line charts of median gradient-direction error in degrees against observation noise and against field smoothing sigma. Blue is von Neumann, orange Moore; solid is radius 1, dashed radius 2. Same-colour pairs at matched radius sit nearly on top of each other while the radius-1 and radius-2 lines separate widely.">
+  <figcaption><b>Colour is shape; line style is radius.</b> Measured by fitting a plane through
+  the sampled cells and comparing its gradient against the field's analytic gradient, over
+  random fields and positions. The two colours nearly coincide within a radius; the solid and
+  dashed pairs separate widely.</figcaption>
+</figure>
+
+<section class="col">
+  <div class="scroll"><table>
+    <thead><tr><th>Layout</th><th class="n">cells</th><th class="n">error at &sigma; = 0.2</th><th>verdict</th></tr></thead>
+    <tbody>
+      <tr class="pick"><td>von Neumann r = 1</td><td class="n">5</td><td class="n">@@vn1@@&deg;</td><td>best accuracy, fewest dimensions &mdash; <strong>chosen</strong></td></tr>
+      <tr><td>Moore r = 1 (EVAAA)</td><td class="n">9</td><td class="n">@@mo1@@&deg;</td><td>+4 dims for +0.4&deg; of error</td></tr>
+      <tr><td>von Neumann r = 2</td><td class="n">13</td><td class="n">@@vn2@@&deg;</td><td>wider is worse</td></tr>
+      <tr><td>Moore r = 2</td><td class="n">25</td><td class="n">@@mo2@@&deg;</td><td>five times the cells, four times the error</td></tr>
+    </tbody>
+  </table></div>
+  <p><strong>Shape barely matters; radius matters about ten times more &mdash; and wider is
+  worse.</strong> That is counter-intuitive until you notice that a plane fit assumes the field
+  is locally flat. The field is a sum of Gaussians, so a wider stencil straddles more curvature
+  and the fitted plane tilts away from the true tangent. That is a bias, not noise: it does not
+  average out with more samples, which is why Moore r&nbsp;=&nbsp;2 reads 25 cells and still
+  loses to von Neumann r&nbsp;=&nbsp;1 reading 5.</p>
+  <p>Extra cells only start paying once noise dominates bias &mdash; the crossover sits near
+  &sigma;&nbsp;=&nbsp;0.4 on the left chart, and our configs currently run with perceptual noise
+  switched off entirely.</p>
+</section>
+
+<div class="col callout pick">
+  <p class="eyebrow">Consequence for the config</p>
+  <p>Use the diamond at <code>thermal_grid_range: 1</code>, and match sensor radius to field
+  smoothing &mdash; the right-hand chart shows radius 1 is the correct partner for
+  &sigma;&nbsp;&asymp;&nbsp;1.5. Do not add a Moore option: it buys under half a degree, costs
+  four dimensions, and introduces a second neighbourhood geometry to test and maintain.</p>
+</div>
+
+<div class="col callout warn">
+  <p class="eyebrow">Method correction, kept on the record</p>
+  <p>An earlier version of this measurement used <code>numpy.gradient</code> as ground truth and
+  reported von Neumann r&nbsp;=&nbsp;1 as <em>exactly</em> perfect at zero noise. That was an
+  artefact: <code>numpy.gradient</code> uses central differences, whose stencil is identical to
+  a five-point plane fit, so the comparison was rigged in the diamond's favour. Every number
+  here uses the analytic gradient of the Gaussian field instead. The conclusion survived; the
+  margin shrank.</p>
+</div>
+
+<hr>
+
+<section class="col">
+  <h2><span class="num">05</span> Rendering</h2>
+  <p>The field is the only new pixel data, and it is a scalar per cell &mdash; so it belongs
+  underneath everything else as a background layer, with entities drawn on top exactly as they
+  are now. A diverging blue&ndash;red scale with a neutral midpoint reads correctly here because
+  temperature has a meaningful zero: the set point the agent is trying to hold.</p>
+</section>
+
+<figure>
+  <img src="data:image/png;base64,@@render@@" alt="Two 10x10 grid renders side by side. Left, the current render: a plain grid with coloured circles for food, predator, bush and rock and a black circle for the agent. Right, the proposal: the same scene over a blue-to-red temperature background, with the five cells the thermoceptor reads outlined in black around the agent.">
+  <figcaption><b>Temperature underneath, entities unchanged on top.</b> The black outline marks
+  the five cells the thermoceptor reads &mdash; worth drawing during debugging, since a sensor
+  that silently reads the wrong cells is the failure mode that cost us most time on the visual
+  sensor.</figcaption>
+</figure>
+
+<section class="col">
+  <p>Three additions, in decreasing order of how much they are worth:</p>
+  <dl>
+    <dt>field underlay</dt>
+    <dd>The diverging scale, drawn beneath the grid lines. Fixed colour limits across a whole
+    episode &mdash; per-frame rescaling would make a cooling world look stable.</dd>
+    <dt>body-temp gauge</dt>
+    <dd>A bar with the death thresholds marked, beside the existing satiation and injury
+    readouts. Without it a video shows the world's temperature but not the agent's.</dd>
+    <dt>read-cell outline</dt>
+    <dd>Debug-only. Cheap to draw, and it makes an off-by-one in the sampling stencil visible
+    instead of silent.</dd>
+  </dl>
+</section>
+
+<hr>
+
+<section class="col">
+  <h2><span class="num">06</span> Reward</h2>
+  <p>The drive is the distance of the body's state from its set point. Today it has two axes;
+  temperature makes three, each divided by its own range so that an equal fractional deviation
+  pulls equally:</p>
+  <pre>drive = ‖( (satiation &minus; setpoint)/max_satiation ,
+           injury/max_injury ,
+           (T &minus; T_neutral)/max_thermal_deviation )‖</pre>
+  <p>Reward stays what it is now &mdash; the <em>reduction</em> in drive from one step to the
+  next &mdash; so warming up when you are cold is rewarded and drifting toward an extreme is
+  punished, without any new reward term.</p>
+  <p>This is the change with the widest blast radius in the whole plan, and it must be gated:
+  with <code>thermal.enabled: false</code> the drive has to be bit-identical to today's, or
+  every past run becomes incomparable.</p>
+</section>
+
+<hr>
+
+<section class="col">
+  <h2><span class="num">07</span> Configuration</h2>
+  <pre><span class="k">thermal:</span>
+  enabled: false            <span class="c"># gate; every key below is read only when true</span>
+
+  <span class="c"># --- field (section 01) ---</span>
+  default_temp: 0.0
+  sigma: 1.5                <span class="c"># &gt; 0 enforced at load</span>
+  random_spots:
+    count: 2
+    size: 2
+    temp: 20.0              <span class="c"># sign chosen per spot</span>
+  use_object_sources: true  <span class="c"># section 02</span>
+
+  <span class="c"># --- body (section 03) ---</span>
+  neutral_temp: 0.0
+  death_low: -15.0          <span class="c"># low &lt; high enforced at load</span>
+  death_high: 15.0
+  k_exchange: 0.04
+  k_loss: 0.01
+  k_metabolic: 0.0
+  metabolic_coupling: false <span class="c"># when true, defending T draws on nutrition</span>
+
+  <span class="c"># --- sensor (section 04) ---</span>
+  grid_range: 1
+  relative: true            <span class="c"># report field &minus; body_temp</span>
+
+<span class="c"># per entity, alongside the existing blocks_sight flag:</span>
+<span class="k">obstacles:</span>
+  - name: rock
+    blocks_sight: true
+    thermal_output: 18.0</pre>
+  <p>Sub-keys are <em>conditional-mandatory</em>: read only when <code>enabled</code> is true,
+  and validated at load when they are read. That is the pattern the blur and occlusion knobs
+  settled on, and it exists because an unvalidated <code>sigma_floor: 0.0</code> once produced
+  an all-NaN observation that trained silently.</p>
+</section>
+
+<hr>
+
+<section class="col">
+  <h2><span class="num">08</span> Implementation order</h2>
+  <p>Each stage is independently testable. Stages 0 to 2 must leave every existing config
+  byte-identical &mdash; if they do not, something is wired in that should be gated.</p>
+</section>
+
+<section class="col stages">
+  <div class="stage"><div class="s">STAGE 0</div><div class="b">
+    <div class="t">Parity harness, before any change</div>
+    <div class="d">Snapshot observation, reward <em>and</em> drive for a sample of configs on a
+    pinned CPU backend. This is the gate every later stage runs against. Building it first is
+    what caught the sigma-floor and mask-leak bugs during the sensor work.</div></div></div>
+  <div class="stage"><div class="s">STAGE 1</div><div class="b">
+    <div class="t">The field</div>
+    <div class="d"><code>thermal_field</code> in state, built at reset: fill, spots, object
+    stamps, blur. No observation change, no body change. Parity must hold.</div></div></div>
+  <div class="stage"><div class="s">STAGE 2</div><div class="b">
+    <div class="t">Body temperature</div>
+    <div class="d"><code>body_temp</code> and its update; death adds a sixth termination reason.
+    Not observable and not in the drive yet.</div></div></div>
+  <div class="stage"><div class="s">STAGE 3</div><div class="b">
+    <div class="t">The thermoceptor</div>
+    <div class="d">Diamond sampling, reusing the olfactory grid machinery with a scalar field.
+    Observation width grows by five. This is the stage that breaks curriculum
+    compatibility.</div></div></div>
+  <div class="stage"><div class="s">STAGE 4</div><div class="b">
+    <div class="t">Reward</div>
+    <div class="d">The third drive axis, gated so that with thermal off the returned value is
+    bit-identical to today's.</div></div></div>
+  <div class="stage"><div class="s">STAGE 5</div><div class="b">
+    <div class="t">Metabolic coupling</div>
+    <div class="d">Off by default. When on, defending body temperature draws on nutrition.</div></div></div>
+  <div class="stage"><div class="s">STAGE 6</div><div class="b">
+    <div class="t">Rendering and documentation</div>
+    <div class="d">Field underlay, body-temp gauge, read-cell debug outline; then the config
+    guide, schema and sensor docs that the maintenance contract requires.</div></div></div>
+</section>
+
+<hr>
+
+<section class="col">
+  <h2><span class="num">09</span> Known hazards</h2>
+  <dl>
+    <dt>observation width</dt>
+    <dd>Five new dimensions change <code>obs_dim</code>, which the curriculum-stage
+    compatibility check tests <em>first</em>. Any curriculum spanning thermal and non-thermal
+    stages will be rejected. This is the same trap the olfactory-range change hit.</dd>
+    <dt>reward comparability</dt>
+    <dd>Once temperature enters the drive, reward is incomparable with every previous run.
+    Gating is mandatory, not a nicety.</dd>
+    <dt>load-time validation</dt>
+    <dd><code>sigma &gt; 0</code> and <code>death_low &lt; death_high</code>. Skipping this is
+    how the sensor work produced an all-NaN observation that trained without complaint.</dd>
+    <dt>termination codes</dt>
+    <dd>Reasons currently run 0&ndash;4; thermal death needs 5, and every consumer that
+    enumerates them needs updating in the same change.</dd>
+    <dt>inherited constants</dt>
+    <dd>None of EVAAA's numbers transfer &mdash; different grid size, different clock. Every
+    constant here was re-derived; treat any future one the same way.</dd>
+  </dl>
+</section>
+
+<hr>
+
+<section class="col">
+  <h2><span class="num">10</span> Open questions</h2>
+  <p>These are the places where the plan is genuinely undecided, and where feedback changes
+  what gets built.</p>
+  <div class="q"><div class="h">Should creatures carry heat?</div>
+    <div class="d">A predator that is warm becomes detectable through the thermal sense at
+    range, which is either a rich second detection channel or an accidental radar that trivialises
+    predator avoidance. Currently proposed at 0.</div></div>
+  <div class="q"><div class="h">Is a static field enough?</div>
+    <div class="d">A field fixed for the whole episode can be memorised. The agent may learn
+    the map rather than the sense. A day/night offset would break that, and the hook is left in
+    place, but it is not in this plan.</div></div>
+  <div class="q"><div class="h">Should the death range be symmetric?</div>
+    <div class="d">&plusmn;15 treats overheating and freezing as equally fast. Real
+    thermoregulation is not symmetric, and asymmetry would make warm and cold refuges
+    behaviourally distinct rather than mirror images.</div></div>
+  <div class="q"><div class="h">Does the agent need to know its own temperature?</div>
+    <div class="d">The thermoceptor reports the field <em>relative</em> to body temperature, so
+    the agent can tell which way is warmer without knowing how hot it is. Injury and nutrition
+    are both currently hidden (<code>injury_observable: false</code>), so hiding temperature too
+    is the consistent choice &mdash; but it means the agent must infer its own state from the
+    consequences.</div></div>
+  <div class="q"><div class="h">One field per episode, or one per world?</div>
+    <div class="d">Re-randomising the field every episode forces the sense to be used. Fixing it
+    across an experiment makes runs more comparable. Proposed: re-randomise, matching how
+    entities already spawn.</div></div>
+</section>
+
+<hr>
+
+<section class="col">
+  <h4>Provenance</h4>
+  <p class="foot">Every number in this page is computed at build time from the sandbox in this
+  folder &mdash; <code>sim.py</code> (field construction and body dynamics),
+  <code>nbhd_compare.py</code> (neighbourhood accuracy), <code>figs.py</code> (figures). Rebuild
+  with <code>build_page.py</code>. The sandbox is pure numpy and deliberately independent of
+  <code>src/</code>, so parameters can be swept without touching the environment. Source review:
+  EVAAA at <code>vendor/evaaa/evaaa_unity</code> &mdash; <code>ThermoGridSpawner.cs</code>,
+  <code>ThermalSensing.cs</code>, the thermo paths in <code>InteroceptiveAgent.cs</code>,
+  <code>DayAndNight.cs</code>, and the shipped configs under <code>Config/</code>.</p>
+</section>
+
+</div>
