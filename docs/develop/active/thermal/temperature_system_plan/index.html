@@ -673,7 +673,7 @@ T &larr; T + <span class="k">k_exchange</span>&middot;(T_field &minus; T) + <spa
   <span class="c">#   use_object_sources: false</span>
 
   <span class="c"># mode B - object sources: cold world, campfire refuge  (proposed default)</span>
-  default_temp: [-30, -20]  <span class="c"># sampled per episode</span>
+  default_temp: [-28, -22]  <span class="c"># sampled per episode; structure holds 100% of draws</span>
   use_random_spots: false
   random_spots:
     count: 4
@@ -701,6 +701,7 @@ T &larr; T + <span class="k">k_exchange</span>&middot;(T_field &minus; T) + <spa
     count_low: 1              <span class="c"># how many fires this episode</span>
     count_high: 3
     temperature_ratio: [11, 13]  <span class="c"># fire = ratio x |default_temp|, per fire</span>
+    min_fire_separation: 3    <span class="c"># 0 disables; below 3 the comfort ring goes lethal</span>
     edge_margin: 2            <span class="c"># keep fires off the border</span>
     blocks_sight: false
   - name: bush
