@@ -82,6 +82,12 @@ class EnvState:
     last_collision_noc: jnp.ndarray # float (intensity of last collision)
     rest_streak: jnp.ndarray     # [] int
 
+    # Thermal (temperature system, Stage 1)
+    # [H, W] float32 when thermal is ON; `jnp.zeros((0, 0))` when it is OFF, so the
+    # memory cost is nil and any accidental read on a thermal-off config fails
+    # loudly on shape rather than quietly on value.
+    thermal_field: jnp.ndarray   # [H, W] float32 (or [0, 0] when thermal is off)
+
     # Environment status
     terminated: jnp.ndarray      # bool
 
@@ -318,6 +324,42 @@ class EnvParams:
     noise_injury_scales: jnp.ndarray  # [13] float32 (Injury Noise Scale)
     noise_clip_min: jnp.ndarray       # [13] float32 (Per-modality observation lower bound)
     noise_clip_max: jnp.ndarray       # [13] float32 (Per-modality observation upper bound)
+
+    # ── Thermal (temperature system, Stage 1) ─────────────────────────────────
+    # `thermal_enabled` is the gate. Every other key here is read at load ONLY
+    # when the gate is true (the conditional-mandatory pattern the visual blur /
+    # occlusion knobs already use), and carries an inert placeholder otherwise.
+    #
+    # Static (pytree_node=False) where the value gates a trace-time branch or
+    # fixes an array shape; traced where it is a continuous knob that should be
+    # sweepable without recompiling.
+    thermal_enabled: bool = struct.field(pytree_node=False)
+    thermal_use_random_spots: bool = struct.field(pytree_node=False)
+    thermal_use_object_sources: bool = struct.field(pytree_node=False)
+    thermal_kernel_radius: int = struct.field(pytree_node=False)   # ceil(3*sigma), fixes the kernel shape
+    thermal_spot_count: int = struct.field(pytree_node=False)
+    thermal_spot_size: int = struct.field(pytree_node=False)
+    # Placement constraints (D2 / D3). Both are STATIC: they gate a Python `if`
+    # in `resolve_overlaps_global`, so a zero value must trace the identical
+    # graph — and therefore draw the identical keys — that the pre-thermal code
+    # did. See IMPLEMENTATION_PLAN.md hazard H10.
+    thermal_min_fire_separation: int = struct.field(pytree_node=False)     # Manhattan; 0 = disabled
+    thermal_food_min_fire_distance: int = struct.field(pytree_node=False)  # Manhattan; 0 = disabled
+    thermal_sigma: float
+    thermal_spot_temp: float
+    thermal_default_temp_low: float
+    thermal_default_temp_high: float
+    # Per-entity heat sources. `*_temperature` is an absolute stamp; the ratio
+    # pair is a per-episode multiple of |default_temp| (mutually exclusive with
+    # the absolute form at load). Animals carry no temperature array on purpose:
+    # the field is built once at reset and animals move, so a non-zero
+    # `temperature` on an animal entry is a load-time error, not a silent no-op.
+    obs_temperature: jnp.ndarray      # [num_obs] float32
+    obs_temp_ratio_low: jnp.ndarray   # [num_obs] float32
+    obs_temp_ratio_high: jnp.ndarray  # [num_obs] float32
+    res_temperature: jnp.ndarray      # [num_res] float32
+    res_temp_ratio_low: jnp.ndarray   # [num_res] float32
+    res_temp_ratio_high: jnp.ndarray  # [num_res] float32
 
     # ── Legacy @property aliases (B3 fix — kept for one release cycle) ────────
     # These accessors allow code that reads `params.predator_tags` / `params.neutral_tags`

@@ -791,13 +791,13 @@ Everything the first draft listed as open is now settled — see *Decisions sett
 
 - [x] **S0** Fixtures generated on the pre-change tip, on CPU; the perturbation trial turned the gate red on **72 of 72** fixtured configs, and the revert turned it green again. `collect_configs` total **356**, fixtures written **72** (not 34 — see Deviation D0-1). Done 2026-09-08.
 - [x] **S0** The adjudication rule is a commented `properties_std`-keyed branch at `tests/env/test_thermal_parity.py:265-289` (two asserts: exact where std == 0, <= 1 ulp where std != 0). The olfaction bound is derived in `_olfaction_tolerance` and is exactly `0.0` on 29 of the 71 olfaction-carrying configs. Done 2026-09-08.
-- [ ] **S1** The migration set loads (`default.yaml` + 34 fixtured + ~21 test modules) and the full suite is green — run the load loop before the parity gate, so a `ValueError` is not mistaken for a parity failure.
-- [ ] **S1** The 106 deferred configs raise the *named* `thermal.enabled` error, not a silent default and not some other error. Spot-check three by hand; a config that loads here means a fallback default crept in.
-- [ ] **S1** Exactly the expected ~55 files changed. `git diff --stat` well above that means the deferred set was migrated against an explicit user decision; well below means a fixtured config or a test module was missed.
-- [ ] **S1** `configs/environment/default.yaml`'s `obstacles:` list is byte-identical before and after the migration (F8). Diff it explicitly; the campfire must not be in the base file.
+- [x] **S1** The migration set loads — `default.yaml` + the **72** fixtured full configs (not 34; see Stage 0's deviation D0-1) + 20 test modules/fixtures. Load loop run **before** the parity gate: 72/72 loaded, 0 failures. Done 2026-09-08.
+- [x] **S1** The deferred set is **68** configs, not 106 (140 full − 72 fixtured). **55** raise `Strict Config: Configuration key 'thermal.enabled' is required but missing.`; the other **13** raise earlier on the pre-existing `sensory.visual_value_mode` gap (F9). **Zero load.** Three spot-checked by hand. Finding: the 68 deferred configs are *exactly* the 68 that already fail for want of `sensory.injury_observable` — thermal adds no newly-broken config. Done 2026-09-08.
+- [x] **S1** 101 files touched (102 with this plan doc): 72 configs (default + 71 fixtured), 20 test modules/fixtures, 3 `src/` files, 3 Maintenance-Contract docs, plus 3 new files (the thermal example config and two new test modules). Re-derived from 72 fixtures rather than 34, per D0-1 — the ~55 estimate was keyed to the stale count. No deferred config touched. Done 2026-09-08.
+- [x] **S1** `default.yaml`'s `obstacles:` list parses identically before and after (3 entries: rock, tree, bush). The campfire lives in the new `configs/environment/experiment/thermal/campfire_world.yaml`. Done 2026-09-08.
 - [ ] **S3** Render one frame with thermal on and check the Collision panel against the observation slice by hand. `build_sensory_viz` fails silently (F7); nothing else in the suite will tell you.
-- [ ] **S1** `jax_reset` on a thermal-off config produces a jaxpr with no new random calls — check by asserting the reset key stream is unchanged, not by eyeballing.
-- [ ] **S1** Print the built field for a one-campfire config and confirm the peak cell and the distance-1 ring match the sandbox's printed values before writing any test.
+- [x] **S1** Asserted, not eyeballed: `test_placement_constraints_are_noops_when_disabled` compares `state.key` (plus all three position arrays) against the Stage 0 fixture, for thermal OFF *and* thermal ON with both constraints at 0. The 72-config parity gate additionally compares `state.key` at all 101 states. Done 2026-09-08.
+- [x] **S1** One campfire at (3,2), `default_temp: [-25,-25]`, absolute `temperature: 300`: peak `+72.42`, d=1 ring `[+10.12, +10.12, +10.46, +10.11]`, far corner `-25.00`. Sandbox `gaussian_smooth` on the same raw stamps prints the identical numbers. Done 2026-09-08, before the test was written.
 - [ ] **S2** Confirm `body_temp` equilibrates at −20 (not −25) in a uniform −25 field. If it equilibrates at −25, `k_loss` is not wired in.
 - [ ] **S2** `grep -rn "termination_reason"` and tick off every consumer in the Analysis table before committing.
 - [ ] **S3** `sum(get_observation_breakdown(params).values()) == get_observation(...).shape[0]` on both a thermal-on and a thermal-off config, printed, before running the suite.
@@ -919,6 +919,146 @@ coverage by more than half). That is a candidate registry row; per the developer
 2. Not committed, per instruction. Working tree left dirty for verification.
 
 Signed: `Implemented by: developer`
+
+### Stage 1 — Field, campfire, per-entity temperature (complete)
+
+**Plain-language summary.** The world now has a temperature map. At the start of every
+episode the environment fills a 10x10 grid with a cold baseline, adds each campfire's
+heat on top of whatever is already in that cell, blurs the result once, and stores it on
+the episode state. **Nothing reads it yet** — the agent cannot sense it, it does not
+change the body, and it does not change the reward. Two new placement rules ship with it:
+fires cannot spawn on top of each other, and (off by default) food can be pushed away
+from fires. When the temperature system is switched off — which is every config in the
+project except the one new example — the environment is byte-for-byte what it was before
+this change, and the Stage 0 recording is what proves it.
+
+**Files changed.**
+
+| File | Change |
+|---|---|
+| `src/environment/state.py` | `EnvState` gains `thermal_field` (`[H,W]` float32; `jnp.zeros((0,0))` when thermal is off). `EnvParams` gains the 12-field `thermal_*` block plus six per-entity temperature arrays (`obs_*` and `res_*`; absolute + ratio pair each). |
+| `src/environment/config_loader.py` | New `_read_temperature` and `_apply_edge_margin` helpers. New conditional-mandatory `thermal:` block in `load_env_params`, placed immediately after the occlusion block and following its exact shape. Per-slot temperature arrays appended to the resource and obstacle builders; `edge_margin` applied as a load-time inset of the obstacle `area`. Load-time raises: animals declaring a temperature, `edge_margin` on a non-obstacle, both temperature styles on one entry, an empty inset rectangle, and either placement constraint under `placement_mode: per_type`. `height`/`width` moved up (they are needed by `_apply_edge_margin`), and the redundant function-local `import numpy as np` removed — it made `np` a function-local name for the whole body and would have turned every earlier use into `UnboundLocalError`. |
+| `src/environment/core.py` | `resolve_overlaps_global` gains the optional D2 term. New `relocate_blocked_entities` (D3's second pass). New `_gaussian_smooth_normalised`, `_entity_temperatures`, `_stamp_sources`, `_build_thermal_field`. `jax_reset` builds the field after placement and the activation masks, under a static `if params.thermal_enabled:`. |
+| `configs/environment/default.yaml` | The full commented `thermal:` key block, **and nothing else** — the `obstacles:` list is unchanged (F8 check below). |
+| 71 fixtured full configs | The two-line `thermal: {enabled: false}` gate. |
+| 19 test modules + `tests/fixtures/trajectory_collection/dual_format_config.yaml` | Same gate in their inline YAML bases. |
+| `configs/environment/experiment/thermal/campfire_world.yaml` | **New.** The worked example: `thermal.enabled: true` plus one campfire entry with `edge_margin: 2` and `temperature_ratio: [11, 13]`. A full config, so the test harness can load it. |
+| `tests/env/test_thermal_field.py`, `tests/env/thermal_sandbox_oracle.py` | **New.** Nine tests and the vendored numpy oracle. |
+| `docs/environment/{CONFIG_GUIDE,02_config_schema,CONFIG_CRITICAL_SETTINGS}.md` | Stage 1's four Maintenance-Contract rows (§6c). |
+
+**101 files touched** — 72 configs (`default.yaml` + 71 fixtured), 20 test modules/fixtures,
+3 `src/` files, 3 Maintenance-Contract docs, 3 new files (this plan doc makes 102).
+
+**Deviation D1-1 — the migration set is 72 fixtured configs, not 34, and the deferred set
+is 68, not 106.** This is Stage 0's deviation D0-1 carried through, confirmed by
+re-measurement: `collect_configs()` returns **356** configs (357 now that the thermal
+example exists), of which **140** are full (no `extends:`) and **216** are layered.
+**72** of the 140 carry a committed `.npz`, so group (b) is 72; the deferred remainder is
+**68**. The plan's "roughly 55 files" was keyed to the stale 34.
+
+**Deviation D1-2 — the deferred set is exactly the already-broken set.** All **68**
+deferred full configs lack `sensory.injury_observable` and therefore already failed to
+load before this change (F9). **Thermal newly breaks nothing.** Of the 68, **55** now
+raise `Strict Config: Configuration key 'thermal.enabled' is required but missing.` and
+the other **13** raise earlier on the pre-existing `sensory.visual_value_mode` gap — the
+thermal block is read before the animal/sensory blocks those 13 trip on. Zero of the 68
+load, so no fallback default crept in.
+
+**Deviation D1-3 — no `animal_temperature` array.** The plan's field list names one, but
+the plan's own resolution (a) — which the user selected — makes an animal's temperature a
+**load error**. An always-zero array read nowhere is the "dead key" that resolution
+forbids, so the array is not carried. Animals raise instead.
+
+**Deviation D1-4 — D3's second pass is its own function, not another mask term.** The
+first implementation followed the plan literally and added `constrained_mask` /
+`blocked_cells` to `resolve_overlaps_global`, re-running the full overlap scan. That is
+**wrong**, and the test caught it at roughly 1 reset in 600: a relocated food takes a
+later entity's cell, that entity is displaced, and the cascade can land on the **fire's**
+cell — which moves the very fire the exclusion mask was computed from, leaving food inside
+the zone around its new position. `relocate_blocked_entities` moves only the marked
+entities and freezes everything else, so the fires the mask describes cannot move. Same
+PRNG discipline: one permutation, zero per-entity draws.
+
+**H10 — how the placement constraints attach.** Exactly as the plan specifies. Both
+constraints are extra terms in the existing validity mask, both behind a **static Python
+`if`** on a config-time constant, and `load_env_params` pins both to `0` whenever
+`thermal.enabled` is false. `resolve_overlaps_global` still draws exactly one
+`jax.random.permutation` and walks it deterministically. No rejection loop was written.
+
+**Test results.**
+
+| Suite | Result |
+|---|---|
+| `tests/env/test_thermal_parity.py` (the Stage 0 byte-identity gate) | **72 passed, 285 skipped** |
+| `tests/env/test_unified_parity.py` | **34 passed, 323 skipped** |
+| `tests/env/test_visual_parity.py` | **8 passed** |
+| `tests/env/test_no_recompile.py` | **3 passed** |
+| `tests/env/test_thermal_field.py` (new) | **9 passed** |
+| combined run of the five | **126 passed, 608 skipped, 0 failed** in 260 s |
+
+**The parity gate stayed green — it never went red.** No tolerance was widened, and the
+`properties_std`-keyed ulp exemption was not exercised beyond what Stage 0 already
+measured. The skip count rose 284 → 285 only because `campfire_world.yaml` is a new config
+that `collect_configs` walks and has no fixture.
+
+**The nine new tests.**
+
+| Test | What would fail without it |
+|---|---|
+| `test_field_matches_numpy_sandbox` | the blur, checked through `jax_reset` against the vendored sandbox oracle on the same raw stamps, `rtol=1e-5`. Uses a degenerate config (`default_temp: [-25,-25]`, absolute `temperature: 300`) so both per-episode draws vanish and the raw stamps are reconstructible from state alone |
+| `test_stamps_are_additive` | assignment semantics (EVAAA's last-writer-wins). Two fires on ONE cell — set up by calling `_build_thermal_field` directly, because placement exists precisely to stop that co-location. Baseline pinned to 0 so the comparison is not a difference of two numbers near −25, where float32 cancellation destroys the tail values |
+| `test_field_is_order_independent` | the same regression, from the other side: swapping the two fires' slot indices |
+| `test_edge_renormalisation_matches_oracle` ×3 | a naive convolution at the edges, and a row/column transposition in the kernel — parametrised over 10×10, **7×13 and 13×7**, since a transposition is invisible on a square grid |
+| `test_fires_respect_min_separation` | 500 resets, count pinned to a fixed 3. Asserts every pair ≥ 3 Manhattan apart **and** that no fire lands outside its own spawn area — the second assertion is what turns the silent cell-(0,0) park into a visible failure |
+| `test_food_min_fire_distance_is_enforced_when_enabled` | 100 resets at `food_min_fire_distance: 4`; this is the test that found D1-4 |
+| `test_placement_constraints_are_noops_when_disabled` | the H10 guard. `state.key`, `res_pos`, `animal_pos`, `obs_pos` compared for exact equality against the Stage 0 thermal-parity fixture, in **two** configurations: thermal off, and thermal **on** with both constraints at 0 — so the no-op is shown to be a property of the constraint values, not merely of the master switch |
+
+**F8 check (the campfire must not be in the base file).** `default.yaml`'s `obstacles:`
+list parses identically before and after: 3 entries, `rock` / `tree` / `bush`. The campfire
+is only in `configs/environment/experiment/thermal/campfire_world.yaml`.
+
+**Field sanity print, before any test was written.** One campfire at (3,2),
+`default_temp: [-25,-25]`, absolute `temperature: 300`: peak cell **+72.42**, d=1 ring
+**[+10.12, +10.12, +10.46, +10.11]**, far corner **−25.00**. The sandbox `gaussian_smooth`
+on the same raw stamps prints the identical numbers.
+
+**Speed check.** Env throughput on `default.yaml` (thermal off), 64 envs x 200 steps under
+one jit, best of 3, CPU: **65,355 steps/s** at the Stage 0 tip (measured in a `git worktree`
+at `765c8769`) vs **87,861 steps/s** on the working tree. The *implied* +34% is not real —
+the two runs were not contention-matched (three pytest sessions were live during the
+first). The change cannot plausibly affect thermal-off throughput: `jax_step` is untouched,
+`jax_reset`'s thermal branch is a static Python `if` that a thermal-off config never
+enters, and the parity gate proves the traced graph is unchanged (a different graph would
+have moved `state.key`). Treated as **no measurable regression**; a contention-matched
+re-measurement is cheap if `senior-developer` wants a defensible number. Script:
+`tmp/20260908_thermal_stage1_speed.py`.
+
+**Prior-art pass.** `grep -in 'thermal|temperature|placement|resolve_overlaps|spawn area|edge_margin'`
+over `docs/develop/active/issues/KNOWN_BUGS.md`. Two hits, both unrelated (a snapshot
+utility's hand-built config that mentions a `temperature` key of the neuromodulator, and a
+comment nit). **No row covers the silent cell-(0,0) placement fallback** in
+`resolve_overlaps_global`, confirming the plan's note. Owner named: `bug-curator`.
+
+**`bug-curator` handoffs from this stage** (I do not file registry rows myself):
+1. **The silent cell-(0,0) placement fallback** — pre-existing and independent of thermal:
+   when an entity's spawn area fills up, `resolve_overlaps_global` parks it at (0,0),
+   outside its own declared area, with nothing raised. Stage 1 makes it more reachable and
+   guards it with a test, but does not fix it.
+2. Stage 0's two open handoffs (F9 archive-migration drift, F10 unvalidated recording
+   version stamp) are unchanged.
+
+**Blockers / follow-ups.**
+1. Not committed, per instruction. Working tree left dirty for verification.
+2. `tests/algorithms/dreamer_srl/test_eval_rollout_batched.py::test_batched_eval_rollout_episode_measures_computable`
+   fails, and it **fails identically at the Stage 0 tip** — verified by running it in a
+   `git worktree` at `765c8769`. The test's expected key set contains `bush_dwell`, which
+   appears nowhere in `src/`. Pre-existing and unrelated; a candidate `bug-curator` row.
+3. Incidental: the edits to `resolve_overlaps_global` stripped trailing whitespace from
+   several blank lines inside the function, so the diff carries a few whitespace-only
+   hunks in otherwise-unchanged context.
+
+Signed: `Implemented by: developer`
+
 
 ## Verification Report
 

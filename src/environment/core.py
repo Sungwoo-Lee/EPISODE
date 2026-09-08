@@ -847,13 +847,36 @@ def resolve_overlaps_global(
     all_spawn_areas: jnp.ndarray,
     grid_height: int,
     grid_width: int,
-    key: jax.random.PRNGKey
+    key: jax.random.PRNGKey,
+    is_fire: jnp.ndarray = None,
+    min_fire_separation: int = 0,
 ) -> jnp.ndarray:
     """Resolve entity position overlaps via single-pass sequential scan.
-    
+
     Uses a flat boolean occupancy mask. For each entity, if its cell is
     already taken, picks a random free cell within its spawn area using
     a pre-shuffled global permutation. All ops are JIT-compatible.
+
+    **This is not reject-and-resample.** Exactly ONE `jax.random.permutation`
+    is drawn, up front; the scan then deterministically takes the first valid
+    cell in that pre-shuffled order. There are ZERO per-entity PRNG draws, and
+    that is what the two optional thermal constraints below rely on: they are
+    extra terms in the `valid` mask, not extra draws. A rejection loop here
+    would draw fresh keys, shift every downstream PRNG stream, and turn the
+    byte-parity gate red across every fixture (IMPLEMENTATION_PLAN.md, H10).
+
+    The optional thermal constraint (D2 — no two heat sources within
+    `min_fire_separation` Manhattan cells) is enforced by carrying a DILATED
+    fire-occupancy mask alongside `occ`. It is OFF by default and gated by a
+    STATIC Python `if` on a trace-time constant, so a config with it disabled
+    traces the identical graph it did before the constraint existed.
+
+    Note the silent fallback this shares with the pre-existing code: when NO
+    cell satisfies `valid`, `first_valid_mask` is all-False and
+    `replacement_flat` sums to 0 — the entity is parked at cell (0, 0), outside
+    its own spawn area, with nothing raised. Tightening `valid` makes that more
+    reachable, which is why `test_fires_respect_min_separation` also asserts
+    that every fire lands inside its own area.
     """
     num_entities = all_positions.shape[0]
     total_cells = grid_height * grid_width
@@ -861,32 +884,127 @@ def resolve_overlaps_global(
     global_perm = jax.random.permutation(key, total_cells)
     cell_rows = jnp.arange(total_cells) // grid_width
     cell_cols = jnp.arange(total_cells) % grid_width
-    
+
+    # Static Python guard — NOT a traced condition.
+    _use_separation = (is_fire is not None) and int(min_fire_separation) > 0
+
     def resolve_one(carry, _unused):
-        occ, positions, i = carry
+        if _use_separation:
+            occ, fire_block, positions, i = carry
+        else:
+            occ, positions, i = carry
         flat_idx = positions[i, 0] * grid_width + positions[i, 1]
         is_taken = occ[flat_idx]
-        
+
         min_r, min_c, max_r, max_c = all_spawn_areas[i]
         in_area = (cell_rows >= min_r) & (cell_rows < max_r) & \
                   (cell_cols >= min_c) & (cell_cols < max_c)
         valid = in_area & (~occ)
-        
+
+        if _use_separation:
+            fire_i = is_fire[i]
+            valid = valid & jnp.where(fire_i, ~fire_block, True)
+            # A fire that was SAMPLED too close to an earlier fire must move even
+            # though its own cell is free — "taken" generalises to "invalid here".
+            is_taken = is_taken | (fire_i & fire_block[flat_idx])
+
         valid_in_perm = valid[global_perm]
         first_valid_mask = valid_in_perm & (jnp.cumsum(valid_in_perm) == 1)
         replacement_flat = jnp.where(first_valid_mask, global_perm, 0).sum()
-        
+
         new_flat = jnp.where(is_taken, replacement_flat, flat_idx)
         new_r = new_flat // grid_width
         new_c = new_flat % grid_width
-        
+
         positions = positions.at[i].set(jnp.array([new_r, new_c]))
         occ = occ.at[new_flat].set(True)
+        if _use_separation:
+            near_new = (jnp.abs(cell_rows - new_r) + jnp.abs(cell_cols - new_c)) \
+                < min_fire_separation
+            fire_block = fire_block | (is_fire[i] & near_new)
+            return (occ, fire_block, positions, i + 1), None
         return (occ, positions, i + 1), None
-    
-    init_carry = (occupancy, all_positions, jnp.array(0))
-    (_, all_positions, _), _ = jax.lax.scan(
-        resolve_one, init_carry, None, length=num_entities
+
+    if _use_separation:
+        init_carry = (occupancy, jnp.zeros(total_cells, dtype=jnp.bool_),
+                      all_positions, jnp.array(0))
+        (_, _, all_positions, _), _ = jax.lax.scan(
+            resolve_one, init_carry, None, length=num_entities
+        )
+    else:
+        init_carry = (occupancy, all_positions, jnp.array(0))
+        (_, all_positions, _), _ = jax.lax.scan(
+            resolve_one, init_carry, None, length=num_entities
+        )
+    return all_positions
+
+
+def relocate_blocked_entities(
+    all_positions: jnp.ndarray,
+    all_spawn_areas: jnp.ndarray,
+    grid_height: int,
+    grid_width: int,
+    key: jax.random.PRNGKey,
+    entity_mask: jnp.ndarray,
+    blocked_cells: jnp.ndarray,
+) -> jnp.ndarray:
+    """Move ONLY the marked entities off `blocked_cells`. Nothing else moves.
+
+    This is D3's second pass. It is separate from `resolve_overlaps_global`
+    rather than another term in its mask because the scan order is
+    [res, pred, obs, neutral]: resources are placed before any fire exists, so
+    "no food within M of a fire" cannot be evaluated in the first pass at all.
+
+    Why "nothing else moves" is load-bearing rather than tidy. Re-running the
+    full overlap scan with the extra term lets a relocated food take a later
+    entity's cell, which displaces that entity, which can cascade onto the
+    FIRE's cell — moving the very fire the block mask was computed from, and
+    leaving food inside the exclusion zone around its new position. That was
+    observed on roughly 1 reset in 600. Here each marked entity frees its own
+    cell and takes a free, in-area, unblocked one; every other entity keeps the
+    cell the first pass gave it, so the fires the mask describes cannot move.
+
+    Same PRNG discipline as `resolve_overlaps_global`: ONE permutation drawn up
+    front, then a deterministic walk. Zero per-entity draws. The whole call is
+    reached only inside a static `if food_min_fire_distance > 0`.
+
+    Shares the same silent fallback: if no cell satisfies the mask the entity is
+    parked at (0, 0) with nothing raised.
+    """
+    num_entities = all_positions.shape[0]
+    total_cells = grid_height * grid_width
+    perm = jax.random.permutation(key, total_cells)
+    cell_rows = jnp.arange(total_cells) // grid_width
+    cell_cols = jnp.arange(total_cells) % grid_width
+
+    flat0 = all_positions[:, 0] * grid_width + all_positions[:, 1]
+    occupancy = jnp.zeros(total_cells, dtype=jnp.bool_).at[flat0].set(True)
+
+    def relocate_one(carry, i):
+        occ, positions = carry
+        flat_idx = positions[i, 0] * grid_width + positions[i, 1]
+        needs_move = entity_mask[i] & blocked_cells[flat_idx]
+
+        min_r, min_c, max_r, max_c = all_spawn_areas[i]
+        in_area = (cell_rows >= min_r) & (cell_rows < max_r) & \
+                  (cell_cols >= min_c) & (cell_cols < max_c)
+        valid = in_area & (~occ) & (~blocked_cells)
+
+        valid_in_perm = valid[perm]
+        first_valid_mask = valid_in_perm & (jnp.cumsum(valid_in_perm) == 1)
+        replacement_flat = jnp.where(first_valid_mask, perm, 0).sum()
+
+        new_flat = jnp.where(needs_move, replacement_flat, flat_idx)
+        positions = positions.at[i].set(
+            jnp.array([new_flat // grid_width, new_flat % grid_width]))
+        # Free the vacated cell (a no-op when the entity stayed put), then claim
+        # the new one.
+        occ = occ.at[flat_idx].set(jnp.logical_not(needs_move))
+        occ = occ.at[new_flat].set(True)
+        return (occ, positions), None
+
+    (_, all_positions), _ = jax.lax.scan(
+        relocate_one, (occupancy, all_positions), jnp.arange(num_entities)
     )
     return all_positions
 
@@ -939,6 +1057,144 @@ def place_in_area(
     pos_c = selected_flat % grid_width
     positions = jnp.stack([pos_r, pos_c], axis=-1)
     return positions, selected_flat
+
+
+# ── Thermal field (temperature system, Stage 1) ───────────────────────────────
+# Fold-in constants for the thermal draws. They are unique across the file
+# (0xAE1 = animal_episode_key, 0x7150A1 = visual_property_key,
+# 0xC0A1..3 = count activation) so no existing PRNG stream moves. Every use is
+# inside a STATIC `if params.thermal_enabled:` branch, so a thermal-off config
+# does not reach them at all.
+_THERMAL_FIELD_KEY = 0x7EE7   # field build (default_temp, spots, per-slot ratios)
+_THERMAL_FOOD_KEY = 0xF00D    # D3's second placement pass
+
+
+def _gaussian_smooth_normalised(field: jnp.ndarray, sigma, radius: int) -> jnp.ndarray:
+    """Weight-normalised Gaussian blur — EVAAA's `sum / weightSum` at the edges.
+
+    A direct translation of the calibration sandbox's `gaussian_smooth`
+    (`docs/develop/active/thermal/temperature_system_plan/sim.py`), which is the
+    oracle every calibrated number in the design was computed from and which
+    `tests/env/test_thermal_field.py` checks this against.
+
+    Out-of-bounds contributions are dropped from BOTH the weighted sum and the
+    weight sum, so an edge cell is the average of its real neighbours rather
+    than an average that silently counts zeros. A plain convolution differs here.
+
+    `radius` is static (it fixes the number of unrolled shifts); `sigma` is
+    traced, so it can be swept without recompiling.
+    """
+    H, W = field.shape
+    offs = jnp.arange(-radius, radius + 1)
+    k = jnp.exp(-0.5 * (offs / sigma) ** 2)          # [2*radius+1]
+    rows = jnp.arange(H)
+    cols = jnp.arange(W)
+    out = jnp.zeros_like(field)
+    wsum = jnp.zeros_like(field)
+    for i, dr in enumerate(range(-radius, radius + 1)):
+        row_in = (rows + dr >= 0) & (rows + dr < H)
+        rs = jnp.clip(rows + dr, 0, H - 1)
+        for j, dc in enumerate(range(-radius, radius + 1)):
+            col_in = (cols + dc >= 0) & (cols + dc < W)
+            cs = jnp.clip(cols + dc, 0, W - 1)
+            wt = k[i] * k[j]
+            inb = row_in[:, None] & col_in[None, :]
+            shifted = jnp.take(jnp.take(field, rs, axis=0), cs, axis=1)
+            out = out + jnp.where(inb, shifted * wt, 0.0)
+            wsum = wsum + jnp.where(inb, wt, 0.0)
+    return out / wsum
+
+
+def _entity_temperatures(key, absolute, ratio_low, ratio_high, default_temp):
+    """Per-slot heat contribution: `absolute + ratio * |default_temp|`.
+
+    The two styles are mutually exclusive per config entry (enforced in
+    `_read_temperature`), so whichever is absent contributes exactly zero and
+    the sum is not an approximation. `ratio` is drawn per slot per episode from
+    `[ratio_low, ratio_high]`, which is what keeps the fire's structure locked
+    to the world's coldness instead of drifting with it.
+    """
+    n = absolute.shape[0]
+    if n == 0:
+        return jnp.zeros(0, dtype=jnp.float32)
+    ratio = jax.random.uniform(
+        key, (n,), minval=ratio_low, maxval=jnp.maximum(ratio_high, ratio_low))
+    return absolute + ratio * jnp.abs(default_temp)
+
+
+def _stamp_sources(field, pos, active, temp):
+    """Scatter-ADD entity temperatures into the raw field.
+
+    Addition, never assignment. EVAAA assigns (`areaTemp[x,z] = obstacle.temperature`,
+    ThermoGridSpawner.cs:218) so its last-spawned source silently wins; ours must
+    not, both because two fires making a hotter spot is the physically sensible
+    reading and because assignment would make the result depend on slot
+    iteration order.
+    """
+    n = pos.shape[0]
+    if n == 0:
+        return field
+    H, W = field.shape
+    r, c = pos[:, 0], pos[:, 1]
+    in_grid = (r >= 0) & (r < H) & (c >= 0) & (c < W)   # inactive slots park off-grid
+    contrib = jnp.where(active & in_grid, temp, 0.0)
+    return field.at[jnp.clip(r, 0, H - 1), jnp.clip(c, 0, W - 1)].add(contrib)
+
+
+def _build_thermal_field(params, key, obs_pos, obs_active, res_pos, res_active) -> jnp.ndarray:
+    """Build the [H, W] thermal field for one episode.
+
+    Stage order is load-bearing (design §1):
+      fill `default_temp` -> random spots -> object stamps (ADDITIVE)
+      -> ONE weight-normalised Gaussian blur.
+
+    Blurring once at the end is what makes the field order-independent and what
+    the sandbox oracle reproduces; blurring per source would not.
+    """
+    H, W = params.height, params.width
+    k_default, k_spots, k_obs, k_res = jax.random.split(key, 4)
+
+    # 1. Fill — the world baseline, sampled once per episode.
+    default_temp = jax.random.uniform(
+        k_default, (),
+        minval=params.thermal_default_temp_low,
+        maxval=jnp.maximum(params.thermal_default_temp_high,
+                           params.thermal_default_temp_low))
+    field = jnp.full((H, W), default_temp, dtype=jnp.float32)
+
+    # 2. Random spots (off by default) — square stamps of +/- spot_temp.
+    if params.thermal_use_random_spots and params.thermal_spot_count > 0:
+        half = int(params.thermal_spot_size) // 2
+        spot_keys = jax.random.split(k_spots, params.thermal_spot_count)
+        for si in range(params.thermal_spot_count):
+            kr, kc, ks = jax.random.split(spot_keys[si], 3)
+            sr = jax.random.randint(kr, (), 0, H)
+            sc = jax.random.randint(kc, (), 0, W)
+            sign = jnp.where(jax.random.bernoulli(ks), 1.0, -1.0)
+            for dr in range(-half, half + 1):
+                for dc in range(-half, half + 1):
+                    rr, cc = sr + dr, sc + dc
+                    inb = (rr >= 0) & (rr < H) & (cc >= 0) & (cc < W)
+                    field = field.at[
+                        jnp.clip(rr, 0, H - 1), jnp.clip(cc, 0, W - 1)
+                    ].add(jnp.where(inb, sign * params.thermal_spot_temp, 0.0))
+
+    # 3. Object stamps — obstacles AND resources (Stage 1, resolution (a)).
+    #    Animals are excluded by construction: a non-zero `temperature` on an
+    #    animal entry is a load-time error, not a silently ignored key.
+    if params.thermal_use_object_sources:
+        obs_temp = _entity_temperatures(
+            k_obs, params.obs_temperature,
+            params.obs_temp_ratio_low, params.obs_temp_ratio_high, default_temp)
+        field = _stamp_sources(field, obs_pos, obs_active, obs_temp)
+        res_temp = _entity_temperatures(
+            k_res, params.res_temperature,
+            params.res_temp_ratio_low, params.res_temp_ratio_high, default_temp)
+        field = _stamp_sources(field, res_pos, res_active, res_temp)
+
+    # 4. One blur, at the end.
+    return _gaussian_smooth_normalised(
+        field, params.thermal_sigma, params.thermal_kernel_radius)
 
 
 @jax.jit
@@ -1025,10 +1281,58 @@ def jax_reset(params: EnvParams, key: jax.random.PRNGKey) -> EnvState:
             params.res_spawn_area, pred_sa_all,
             params.obs_spawn_area, neutral_sa_all,
         ], axis=0)
+        # Thermal placement constraints (D2 / D3). Both are gated by a STATIC
+        # Python `if` on a config-time constant, so a config with them disabled
+        # (every non-thermal config: `load_env_params` pins both to 0 when
+        # `thermal.enabled` is false) calls `resolve_overlaps_global` with the
+        # same arguments and traces the same graph it always did.
+        _min_fire_sep = params.thermal_min_fire_separation
+        _food_min_dist = params.thermal_food_min_fire_distance
+        _is_fire_concat = None
+        if _min_fire_sep > 0 or _food_min_dist > 0:
+            # A "heat source" is a SLOT with a non-zero declared temperature,
+            # in either style — not a named entry.
+            _obs_is_fire = ((params.obs_temperature != 0.0)
+                            | (params.obs_temp_ratio_low != 0.0)
+                            | (params.obs_temp_ratio_high != 0.0))
+            _is_fire_concat = jnp.concatenate([
+                jnp.zeros(num_res, dtype=jnp.bool_),
+                jnp.zeros(num_pred_class, dtype=jnp.bool_),
+                _obs_is_fire,
+                jnp.zeros(num_neutral_class, dtype=jnp.bool_),
+            ])
+
         if all_positions.shape[0] > 0:
             all_positions = resolve_overlaps_global(
-                all_positions, all_spawn_areas, params.height, params.width, resolve_key
+                all_positions, all_spawn_areas, params.height, params.width, resolve_key,
+                is_fire=_is_fire_concat, min_fire_separation=_min_fire_sep,
             )
+
+            # D3 — "no food within M of a fire" needs a SECOND pass: the scan
+            # order is [res, pred, obs, neutral], so no fire exists in the
+            # occupancy mask when resources are placed in the first pass.
+            if _food_min_dist > 0:
+                _total_cells = params.height * params.width
+                _cr = jnp.arange(_total_cells) // params.width
+                _cc = jnp.arange(_total_cells) % params.width
+                _d = (jnp.abs(_cr[None, :] - all_positions[:, 0][:, None])
+                      + jnp.abs(_cc[None, :] - all_positions[:, 1][:, None]))
+                _fire_block = jnp.any(
+                    (_d < _food_min_dist) & _is_fire_concat[:, None], axis=0)
+                # Only food-type resources are constrained.
+                _is_food_concat = jnp.concatenate([
+                    params.res_type == 0,
+                    jnp.zeros(num_pred_class, dtype=jnp.bool_),
+                    jnp.zeros(num_obs, dtype=jnp.bool_),
+                    jnp.zeros(num_neutral_class, dtype=jnp.bool_),
+                ])
+                # An independent stream via fold_in — never widen an existing
+                # split (H10). Unreachable when the constraint is off.
+                _food_key = jax.random.fold_in(resolve_key, _THERMAL_FOOD_KEY)
+                all_positions = relocate_blocked_entities(
+                    all_positions, all_spawn_areas, params.height, params.width, _food_key,
+                    entity_mask=_is_food_concat, blocked_cells=_fire_block,
+                )
 
     else:  # per_type
         # ── Type-Level: lax.scan over spawn-area groups ──
@@ -1270,6 +1574,22 @@ def jax_reset(params: EnvParams, key: jax.random.PRNGKey) -> EnvState:
     if num_obs > 0 and params.has_obs_range:
         obs_pos = jnp.where(obs_activation_mask[:, None], obs_pos, _off_grid[None, :])
 
+    # 7c. Thermal field — built ONCE per episode, after placement and after the
+    # activation masks park inactive slots off-grid (so an inactive campfire
+    # stamps nothing). A STATIC Python branch: a thermal-off config traces the
+    # identical graph it did before this change and draws no extra keys, and its
+    # `thermal_field` is a [0, 0] array so any accidental read fails loudly on
+    # shape rather than quietly on value.
+    if params.thermal_enabled:
+        thermal_field = _build_thermal_field(
+            params,
+            jax.random.fold_in(property_key, _THERMAL_FIELD_KEY),
+            obs_pos, obs_activation_mask,
+            res_pos, res_activation_mask,
+        )
+    else:
+        thermal_field = jnp.zeros((0, 0), dtype=jnp.float32)
+
     # 7. Per-episode distributional sampling for the 4 float + 3 integer behavioural fields.
     #    7 independent draws per field — shape (N,) each.
     #    For wander/static entries the ranges are [0, 0] (from _load_animals);
@@ -1349,6 +1669,7 @@ def jax_reset(params: EnvParams, key: jax.random.PRNGKey) -> EnvState:
         obs_property_sampled=obs_property_sampled,
         obs_visual_property_sampled=obs_visual_property_sampled,
         obs_active=obs_activation_mask,
+        thermal_field=thermal_field,
         satiation=jnp.array(satiation, dtype=jnp.float32),
         nutrition=jnp.array(nutrition, dtype=jnp.float32),
         injury_level=jnp.array(injury, dtype=jnp.float32),

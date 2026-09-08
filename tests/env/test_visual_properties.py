@@ -166,6 +166,8 @@ def _make_v4_config() -> str:
           location_areas: []
           placement:
             mode: per_entity
+        thermal:
+          enabled: false   # mandatory gate, no fallback default
         sensory:
           visual_value_mode: sum
           visual_occlusion_enabled: false
@@ -288,6 +290,8 @@ def _make_v4_config_with_noise() -> str:
           location_areas: []
           placement:
             mode: per_entity
+        thermal:
+          enabled: false   # mandatory gate, no fallback default
         sensory:
           visual_value_mode: sum
           visual_occlusion_enabled: false
@@ -442,6 +446,8 @@ def _base_yaml_v4_resource_missing_vp() -> str:
           location_areas: []
           placement:
             mode: per_entity
+        thermal:
+          enabled: false   # mandatory gate, no fallback default
         sensory:
           visual_value_mode: sum
           visual_occlusion_enabled: false

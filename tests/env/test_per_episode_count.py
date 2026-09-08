@@ -77,6 +77,11 @@ body:
   start_nutrition_high: 100
   start_injury_low: 0
   start_injury_high: 100
+# Thermal system OFF — `thermal.enabled` is a mandatory gate with no fallback
+# default (docs/develop/active/thermal/IMPLEMENTATION_PLAN.md, F6).
+thermal:
+  enabled: false
+
 sensory:
   visual_value_mode: sum
   visual_occlusion_enabled: false

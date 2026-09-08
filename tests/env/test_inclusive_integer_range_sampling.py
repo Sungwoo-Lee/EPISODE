@@ -90,6 +90,11 @@ body:
   use_homeostatic_reward: true
   eating_nutrition_cost: 0.0
   eating_reward_penalty: 0.0
+# Thermal system OFF — `thermal.enabled` is a mandatory gate with no fallback
+# default (docs/develop/active/thermal/IMPLEMENTATION_PLAN.md, F6).
+thermal:
+  enabled: false
+
 sensory:
   visual_value_mode: sum
   visual_occlusion_enabled: false

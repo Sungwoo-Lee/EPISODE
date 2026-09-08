@@ -50,6 +50,79 @@ forbid legitimate schedules.
 
 ---
 
+## Thermal (temperature system)
+
+The world gets a per-episode `[H, W]` temperature map — cold everywhere, hot near a
+campfire. Stage 1 builds the map and stores it on `EnvState.thermal_field`; nothing reads
+it yet (no observation, no body, no reward change). Plan: [[thermal_implementation_plan]].
+
+### `thermal:` keys
+
+| Key | EnvParams field | Static | Validation | Meaning |
+|---|---|---|---|---|
+| `enabled` | `thermal_enabled` | **yes** | — | master gate; unconditionally mandatory, no fallback |
+| `sigma` | `thermal_sigma` | no | `> 0` | blur width in cells |
+| `default_temp` | `thermal_default_temp_low/high` | no | `low <= high` | world baseline, drawn uniformly once per episode |
+| `use_random_spots` | `thermal_use_random_spots` | **yes** | — | gates the `random_spots:` sub-block |
+| `use_object_sources` | `thermal_use_object_sources` | **yes** | — | whether entity `temperature` is stamped at all |
+| `random_spots.count` | `thermal_spot_count` | **yes** | `>= 0` | number of random square stamps |
+| `random_spots.size` | `thermal_spot_size` | **yes** | `>= 1` | stamp width in cells |
+| `random_spots.temp` | `thermal_spot_temp` | no | — | stamp magnitude; sign is drawn per spot |
+| `min_fire_separation` | `thermal_min_fire_separation` | **yes** | `>= 0` | Manhattan; `0` disables |
+| `food_min_fire_distance` | `thermal_food_min_fire_distance` | **yes** | `>= 0` | Manhattan; `0` disables |
+
+`thermal_kernel_radius` is derived, not configured: `ceil(3 * sigma)`, static because it
+fixes the number of unrolled shifts in the blur.
+
+### How the field is built
+
+`_build_thermal_field` (`src/environment/core.py`) runs once per episode inside
+`jax_reset`, after placement and after the per-episode activation masks have parked
+inactive slots off-grid. The order is load-bearing:
+
+1. fill the whole grid with `default_temp`;
+2. random spots, if enabled;
+3. entity stamps — **additive**, never assignment;
+4. **one** weight-normalised Gaussian blur.
+
+Stamps add because two fires making a hotter spot is the physically sensible reading, and
+because assignment would make the result depend on slot iteration order. The blur drops
+out-of-bounds neighbours from both the weighted sum and the weight sum (EVAAA's
+`sum / weightSum`), so an edge cell is the mean of its real neighbours; a plain convolution
+differs there.
+
+When `thermal.enabled` is false the whole build is skipped by a **static Python branch** and
+`thermal_field` is `jnp.zeros((0, 0))` — so an accidental read fails loudly on shape rather
+than quietly on value, and the traced graph (and therefore every PRNG stream) is identical
+to the pre-thermal environment.
+
+### The two placement constraints
+
+Both attach as extra terms in `resolve_overlaps_global`'s validity mask, **not** as a
+rejection loop. That function draws exactly one `jax.random.permutation` up front and then
+walks it deterministically — zero per-entity draws — so a rejection loop would draw fresh
+keys, shift every downstream PRNG stream, and break byte-parity across the whole project
+for a reason unrelated to temperature. Both are gated by a static Python `if` on a
+config-time constant, so `0` traces the pre-thermal graph exactly.
+
+- **`min_fire_separation`** is enforced in the first pass, by carrying a dilated
+  fire-occupancy mask in the scan carry alongside the ordinary occupancy mask.
+- **`food_min_fire_distance`** needs a **second pass** (`relocate_blocked_entities`): the
+  scan order is `[res, pred, obs, neutral]`, so resources are placed before any fire
+  exists. The second pass moves *only* food and leaves every other entity where the first
+  pass put it — re-running the full overlap scan instead lets a displaced entity cascade
+  onto the fire's own cell, moving the very fire the exclusion mask was computed from.
+- Under **`placement.mode: per_type`** neither constraint is supported (that mode uses
+  `place_in_area` and bypasses the validity mask), and a non-zero value **raises at load**
+  rather than being silently ignored.
+
+**A pre-existing silent fallback both constraints make more reachable.** When no cell
+satisfies the validity mask, `resolve_overlaps_global` parks the entity at cell `(0, 0)` —
+outside its own spawn area — with nothing raised. `tests/env/test_thermal_field.py::test_fires_respect_min_separation`
+therefore also asserts that every fire lands inside its own area.
+
+---
+
 ## Overview — what this document is about
 
 This document describes how a YAML configuration file is translated into the typed `EnvParams` data structure that the JAX-based GridWorld uses at runtime. The translation is performed by `load_env_params(config)` in `src/environment/config_loader.py`.
@@ -916,6 +989,13 @@ Each entry under `environment.resources` (after `count` expansion):
 | `count` | (expansion only) | optional | default `1`; mutually exclusive with `count_low`/`count_high` |
 | `count_low` | `res_count_low [E]` (per-entry) | optional | v3.0: per-episode lower bound; requires `count_high`; absence → `count` fallback |
 | `count_high` | `res_count_high [E]` (per-entry) | optional | v3.0: per-episode upper bound = slot allocation; requires `count_low` |
+| `temperature` | `res_temperature [N]` | optional | thermal: absolute heat stamped into the field (default `0.0`). Mutually exclusive with `temperature_ratio` |
+| `temperature_ratio` | `res_temp_ratio_low/high [N]` | optional | thermal: `[low, high]`; heat = `ratio × abs(default_temp)`, drawn per slot per episode |
+
+**Animals carry no temperature array.** `temperature` / `temperature_ratio` on an animal
+entry **raises at load**, naming the entity. The thermal field is built once at reset from
+static positions and animals move, so a moving heat source is a promise the mechanism
+cannot keep — and a key that loaded and did nothing would read as a broken feature.
 
 ---
 
@@ -937,6 +1017,9 @@ Each entry under `environment.obstacles` (after `count` expansion):
 | `count` | (expansion only) | optional | `1` | mutually exclusive with `count_low`/`count_high` |
 | `count_low` | `obs_count_low [E]` (per-entry) | optional | — | v3.0: per-episode lower bound; requires `count_high` |
 | `count_high` | `obs_count_high [E]` (per-entry) | optional | — | v3.0: per-episode upper bound = slot allocation | |
+| `temperature` | `obs_temperature [N]` | optional | `0.0` | thermal: absolute heat stamped into the field. Mutually exclusive with `temperature_ratio` |
+| `temperature_ratio` | `obs_temp_ratio_low/high [N]` | optional | `[0, 0]` | thermal: `[low, high]`; heat = `ratio × abs(default_temp)`, ratio drawn per slot per episode. Mutually exclusive with `temperature` |
+| `edge_margin` | (transforms `area` at load) | optional | `0` | thermal: insets `area` by N cells on all four sides **at load time**; an empty intersection raises |
 
 `obstacle_names` is the **sorted unique** tuple of all obstacle `name` values (`config_loader.py:720`). Renaming an obstacle can shift its index — don't hardcode indices outside the config.
 
@@ -1017,7 +1100,32 @@ sensory.interoceptive_convolution_enabled
 sensory.interoceptive_kernel_length    sensory.interoceptive_kernel_tau
 
 visualization.local_view_size
+
+thermal.enabled
 ```
+
+**Conditional-mandatory — read ONLY when `thermal.enabled` is true:**
+
+```
+thermal.sigma                          thermal.default_temp
+thermal.use_random_spots               thermal.use_object_sources
+thermal.min_fire_separation            thermal.food_min_fire_distance
+```
+
+and, only when `thermal.use_random_spots` is true:
+
+```
+thermal.random_spots.count             thermal.random_spots.size
+thermal.random_spots.temp
+```
+
+`thermal.enabled` itself is **unconditionally mandatory** and has no fallback default —
+`config.get('thermal.enabled', False)` is explicitly forbidden, because a fallback on a
+gating key would let a config with a misspelled `thermal:` block train as if thermal were
+off. The remaining keys shown in `default.yaml`'s `thermal:` block (`temperature_setpoint`,
+`min_temperature`, `max_temperature`, `k_exchange`, `k_loss`, `k_metabolic`,
+`metabolic_coupling`, `grid_range`, `relative`) are **not read yet** — Stages 2–5 of the
+temperature plan add their readers.
 
 **Removed in v2.0 (raises `ValueError` if present):** `environment.predator_enabled`
 

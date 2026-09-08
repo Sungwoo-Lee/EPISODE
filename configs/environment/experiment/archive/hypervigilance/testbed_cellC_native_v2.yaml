@@ -1021,3 +1021,9 @@ wandb:
   mode: online
   name: hypervigilance-round26-C-seed44_n101_gpu0_relaunch
   project: grid_world_pain
+
+# Thermal (body-temperature) system — OFF. `thermal.enabled` is a mandatory
+# gate with no fallback default; see configs/environment/default.yaml for the
+# full key block and docs/develop/active/thermal/IMPLEMENTATION_PLAN.md (F6).
+thermal:
+  enabled: false

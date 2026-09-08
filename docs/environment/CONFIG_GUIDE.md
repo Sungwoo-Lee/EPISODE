@@ -225,6 +225,89 @@ run from before a key existed can never gain it. Every key made unconditionally 
 is a key that some historical run snapshot will fail to load without. Keep the mandatory
 surface as small as the feature allows.
 
+### 3.9 Thermal — the body-temperature system (`thermal:`)
+
+The world can be made cold everywhere with a campfire in it. Each episode builds a
+`[H, W]` map of how warm every cell is; the agent's temperature will drift toward
+whatever cell it stands on, so it freezes if it wanders and burns if it sits on the
+fire. **Everything ships off** — `thermal.enabled: false` in `default.yaml` — and the
+thermal-off path is a static branch that traces the identical graph, so a config that
+leaves it off is byte-identical to before. Deep key list:
+[02_config_schema.md](02_config_schema.md#thermal-temperature-system).
+
+```yaml
+thermal:
+  enabled: true
+  sigma: 0.7                # blur width; the tight band is 0.6-0.8
+  default_temp: [-28, -22]  # world baseline, drawn once per episode
+  use_random_spots: false
+  use_object_sources: true
+  min_fire_separation: 3    # Manhattan, between heat sources
+  food_min_fire_distance: 0 # Manhattan, food to fire; 0 = today's behaviour
+
+environment:
+  obstacles:
+    - name: "campfire"
+      count_low: 1
+      count_high: 3
+      area: [[1, 1], [10, 10]]
+      edge_margin: 2              # inset applied to `area` at LOAD time
+      temperature_ratio: [11, 13] # heat = ratio x |default_temp|, per fire
+      blocking: false
+```
+
+Five things that bite:
+
+- **The campfire entry must NOT go into `default.yaml`.** `Config.merge` replaces lists
+  wholesale (§1's list-replace footgun), so an obstacle entry in the base file silently
+  gives a fire to all 216 layered configs that do not declare their own `obstacles:`
+  block — and it would be nearly undetectable, because the campfire is non-blocking,
+  renders on the same visual channel as a rock, and has no thermal effect while thermal
+  is off. It is simply an extra entity in the placement occupancy mask, shifting where
+  everything else spawns. Put it in a config under
+  `configs/environment/experiment/thermal/` instead; `campfire_world.yaml` is the worked
+  example.
+- **`thermal.enabled` is mandatory in every full config** (one without `extends:`). It has
+  no fallback default, deliberately: `config.get('thermal.enabled', False)` would let a
+  config with a misspelled `thermal:` block train as if thermal were off. A full config
+  missing the key raises `Configuration key 'thermal.enabled' is required` at load.
+- **Fires must not merge, and 3 is the measured threshold.** Adjacent fires **add** their
+  stamps, and the merged field is lethal exactly where the agent needs to stand. Measured
+  at sigma 0.7, campfire 300, world -25:
+
+  | Manhattan separation between two fires | comfort-ring (d = 1) equilibrium | verdict |
+  |---|---|---|
+  | 1 | **+33.0** | past the +15 death threshold — the ring is lethal |
+  | 2 | **+15.4** | past the threshold — the ring is lethal |
+  | **3** | **+8.4** | intact, and matches the single-fire reference |
+  | single fire (reference) | +8.1 | — |
+
+  So a two-fire draw at separation 1 or 2 gives an episode with **no survivable position
+  near the fire at all** — burn or freeze — while every metric still calls it a normal
+  thermal episode. `0` is documented as "disabled, accepts merged fires" for anyone who
+  wants to study that regime on purpose.
+- **The default separation is feasible; do not "fix" a placement failure that is not
+  happening.** `edge_margin: 2` leaves a 6x6 interior on a 10x10 grid, and three fires
+  each 3 or more apart fit there comfortably (the four corners of that interior plus its
+  centre already satisfy it). If fires look wrongly placed, the cause is the silent
+  cell-`(0,0)` fallback in `resolve_overlaps_global` (an entity parked outside its own
+  spawn area when the area fills up), not the separation value.
+- **`food_min_fire_distance` is a knob that is off, and turning it on is a research
+  decision.** At `0` food spawns anywhere, exactly as today. The risk it exists to
+  address: an episode whose food lands inside the comfort ring has **no thermal trade-off
+  at all** — sit on the ring, eat, stay warm is optimal — and it teaches the agent nothing
+  about thermoregulation while still counting as a thermal episode in every metric. If
+  such episodes are common the results will understate the task's difficulty. Measure the
+  frequency before switching it on.
+
+All the sub-keys are **conditional-mandatory** (§5 pattern), read only when
+`thermal.enabled` is true, and the `random_spots.*` trio only when `use_random_spots` is
+true as well. `temperature` and `temperature_ratio` are mutually exclusive on one entry,
+and **an animal entry declaring either one raises** — the field is built once at reset and
+animals move.
+
+---
+
 ---
 
 ## 4. How to author a new config (worked example)
@@ -269,6 +352,8 @@ The project rule is **no fallback defaults**: critical keys are read with `confi
 
 1. **Add the key to `configs/environment/default.yaml`** with an explicit value and an inline comment explaining it. The base must always carry every key it reads, so layered configs inherit a valid default-of-record.
 2. **Read it in `config_loader.py`** via `config.get_mandatory(...)` (or, for a conditional key, gate the `get_mandatory` behind its enabling flag — see the initial-state range keys for the pattern). If it is shape-determining, store it on `EnvParams` as a static field (`struct.field(pytree_node=False)`); otherwise as a traced leaf.
+   - **The gating flag of a conditional block is itself unconditionally mandatory, and never gets a fallback default.** `thermal.enabled` is the worked example: `config.get('thermal.enabled', False)` would let a config with a misspelled `thermal:` block load clean and train as if the feature were off. The fallback is also what would make deferring a config migration unsafe — a deferred config is only safe because `get_mandatory` fails loudly and names the missing key.
+   - **`Config` does not resolve `extends:`.** `load_env_config` in `train.py` does; `Config.load_yaml` is `cls(yaml.safe_load(f))` and nothing more. So the fixture generators and the parity tests, which build params straight from a raw `Config`, cannot inherit a new gate from `default.yaml` — **every full config** (one with no `extends:`) has to carry the key itself, as do the test modules with inline YAML bases. Budget for that migration in the same change; commit `0e8a4ef8` (`visual_blur_enabled`) and the 2026-09-08 thermal change are the two precedents.
 3. **Document it here** (in the quick-reference if it is a feature surface) **and in [02_config_schema.md](02_config_schema.md)** (the deep key list). Both move in the same change.
 4. **Add or extend a test** that proves the key is read and that a missing/invalid value raises. For a regression-class change, the test must fail before the code change and pass after.
 5. **For sensory / noise keys, keep observation↔noise width in sync.** Observation width is computed in one place, `get_observation_breakdown`; the per-modality noise block auto-resizes from it. A new sensor or a width change must keep the noise modality list aligned — route through `env-config-reviewer`.

@@ -384,3 +384,9 @@ perceptual_noise:
       injury_noise_scale: 0.0
       clip_min: -1.0       # Normalized to [-1, 1]
       clip_max: 1.0
+
+# Thermal (body-temperature) system — OFF. `thermal.enabled` is a mandatory
+# gate with no fallback default; see configs/environment/default.yaml for the
+# full key block and docs/develop/active/thermal/IMPLEMENTATION_PLAN.md (F6).
+thermal:
+  enabled: false

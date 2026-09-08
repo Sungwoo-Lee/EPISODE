@@ -333,6 +333,74 @@ def _read_blocks_sight(entry: dict) -> bool:
     return bool(entry.get('blocks_sight', False))
 
 
+def _read_temperature(entry: dict, entity_label: str) -> tuple:
+    """Per-entity heat-source declaration → (absolute, ratio_low, ratio_high).
+
+    Two mutually exclusive styles, same rule and same error shape as
+    `count` vs `count_low`/`count_high` in `_resolve_count_range`:
+
+      temperature: 40.0            # absolute, added straight into the field
+      temperature_ratio: [11, 13]  # per-episode multiple of |default_temp|
+
+    Absent → (0.0, 0.0, 0.0): zero is a genuine default (an entity that is not a
+    heat source), not a fallback for a critical value, so this reads like
+    `blocks_sight` rather than through `get_mandatory`.
+
+    The two styles are combined downstream as `absolute + ratio * |default_temp|`,
+    which is exact precisely because they are mutually exclusive: whichever style
+    is absent contributes zero.
+    """
+    has_abs = 'temperature' in entry
+    has_ratio = 'temperature_ratio' in entry
+    if has_abs and has_ratio:
+        raise ValueError(
+            f"{entity_label}: 'temperature' and 'temperature_ratio' are mutually exclusive. "
+            "Use either the absolute 'temperature: T' OR the ratio "
+            "'temperature_ratio: [low, high]' (a multiple of |thermal.default_temp|)."
+        )
+    if has_ratio:
+        raw = entry['temperature_ratio']
+        vals = list(raw) if isinstance(raw, (list, tuple)) else [raw, raw]
+        if len(vals) != 2:
+            raise ValueError(
+                f"{entity_label}: 'temperature_ratio' must be [low, high], got {raw!r}.")
+        lo, hi = float(vals[0]), float(vals[1])
+        if lo > hi:
+            raise ValueError(
+                f"{entity_label}: temperature_ratio low={lo} must be <= high={hi}.")
+        return 0.0, lo, hi
+    return float(entry.get('temperature', 0.0)), 0.0, 0.0
+
+
+def _apply_edge_margin(area, margin, grid_h: int, grid_w: int, entity_label: str):
+    """Inset a spawn `area` by `margin` cells on all four sides, at LOAD time.
+
+    `edge_margin` is a config-time constant, so it belongs here and not as a
+    traced condition inside the placement scan (IMPLEMENTATION_PLAN.md, F4): the
+    sampler is left untouched and a nonsensical margin fails at load rather than
+    producing a degenerate spawn box.
+
+    `area` is the raw 1-based inclusive YAML form `[[r1, c1], [r2, c2]]`; the
+    returned rectangle is in the same form. An empty intersection raises.
+    """
+    margin = int(margin)
+    if margin < 0:
+        raise ValueError(f"{entity_label}: edge_margin must be >= 0, got {margin}.")
+    if margin == 0:
+        return area
+    r1 = max(int(area[0][0]), 1 + margin)
+    c1 = max(int(area[0][1]), 1 + margin)
+    r2 = min(int(area[1][0]), grid_h - margin)
+    c2 = min(int(area[1][1]), grid_w - margin)
+    if r1 > r2 or c1 > c2:
+        raise ValueError(
+            f"{entity_label}: edge_margin={margin} leaves an EMPTY spawn area. "
+            f"Declared area {area} inset by {margin} on a {grid_h}x{grid_w} grid "
+            f"gives [[{r1}, {c1}], [{r2}, {c2}]]. Lower edge_margin or widen 'area'."
+        )
+    return [[r1, c1], [r2, c2]]
+
+
 def _read_properties_std(entry, entity_label):
     """Same, for the `*_std` variant."""
     if 'properties_std' in entry:
@@ -860,6 +928,24 @@ def _load_animals(config: Config, visual_vector_size: int = 8):
         visual_property_std_list.append(_read_visual_properties_std(_raw_src, V, e['tag_label']))
         visual_mask_list.append(_read_visual_mask(_raw_src, e['tag_label']))
         blocks_sight_list.append(_read_blocks_sight(_raw_src))
+        # Animals are not heat sources. The thermal field is built ONCE at reset
+        # and never updated, so a moving heat source is a promise the mechanism
+        # cannot keep. Raise rather than load an array that is read nowhere —
+        # a config key that loads and does nothing is how a future reader
+        # concludes the feature is broken (IMPLEMENTATION_PLAN.md, Stage 1,
+        # resolution (a)).
+        if 'edge_margin' in _raw_src:
+            raise ValueError(
+                f"Animal entity {e['tag_label']!r}: 'edge_margin' is supported on obstacle "
+                "entries only. Inset the animal's 'spawn_area' directly instead.")
+        _an_temp_abs, _an_ratio_lo, _an_ratio_hi = _read_temperature(_raw_src, e['tag_label'])
+        if _an_temp_abs != 0.0 or _an_ratio_lo != 0.0 or _an_ratio_hi != 0.0:
+            raise ValueError(
+                f"Animal entity {e['tag_label']!r}: animals cannot be thermal heat sources. "
+                "The thermal field is built once at reset from static positions, and animals "
+                "move — declare 'temperature'/'temperature_ratio' on an obstacle or a resource "
+                "instead, or remove the key."
+            )
         classes_tuple.append(cls)
         behaviours_tuple.append(beh)
         tags_tuple.append(_normalise_tag(e['tag_raw'], i, e.get('type_label', e['tag_label'])))
@@ -1065,6 +1151,86 @@ def load_env_params(config: Config) -> EnvParams:
     else:
         _occ_cos, _occ_strength = 1.0, 0.0     # inert; never read when disabled
 
+    # ── Thermal (temperature system) ──────────────────────────────────────────
+    # Grid size is read here (rather than at the grid-location block below)
+    # because `_apply_edge_margin` needs it while the obstacle areas are parsed.
+    height = config.get_mandatory('environment.height')
+    width = config.get_mandatory('environment.width')
+
+    # `thermal.enabled` is the gate and is MANDATORY; every sub-key below is
+    # conditional-mandatory (CONFIG_GUIDE.md §5) — read only when the gate is
+    # true, and validated at the point it is read. This is the same shape as the
+    # blur / occlusion blocks above, for the same recorded reason: an
+    # unvalidated sigma produced an all-NaN observation that trained silently.
+    #
+    # The `config.get('thermal.enabled', False)` route is FORBIDDEN. A fallback
+    # default on a gating key is exactly what the no-fallback rule exists to
+    # prevent — it would let a config with a misspelled `thermal:` block train
+    # as if thermal were off, and it is also what would make the lazy config
+    # migration unsafe (IMPLEMENTATION_PLAN.md, F6).
+    _thermal_on = bool(config.get_mandatory('thermal.enabled'))
+    if _thermal_on:
+        _th_sigma = float(config.get_mandatory('thermal.sigma'))
+        if _th_sigma <= 0.0:
+            raise ValueError(
+                f"thermal.sigma must be > 0 (it is the only thing keeping the blur "
+                f"kernel's weight normalisation finite), got {_th_sigma}.")
+        _th_default = config.get_mandatory('thermal.default_temp')
+        _th_default_list = list(_th_default) if isinstance(_th_default, (list, tuple)) \
+            else [_th_default, _th_default]
+        if len(_th_default_list) != 2:
+            raise ValueError(
+                f"thermal.default_temp must be [low, high], got {_th_default!r}.")
+        _th_default_low, _th_default_high = float(_th_default_list[0]), float(_th_default_list[1])
+        if _th_default_low > _th_default_high:
+            raise ValueError(
+                f"thermal.default_temp low={_th_default_low} must be <= high={_th_default_high}.")
+        _th_random_spots = bool(config.get_mandatory('thermal.use_random_spots'))
+        _th_object_sources = bool(config.get_mandatory('thermal.use_object_sources'))
+        if _th_random_spots:
+            _th_spot_count = int(config.get_mandatory('thermal.random_spots.count'))
+            _th_spot_size = int(config.get_mandatory('thermal.random_spots.size'))
+            _th_spot_temp = float(config.get_mandatory('thermal.random_spots.temp'))
+            if _th_spot_count < 0:
+                raise ValueError(
+                    f"thermal.random_spots.count must be >= 0, got {_th_spot_count}.")
+            if _th_spot_size < 1:
+                raise ValueError(
+                    f"thermal.random_spots.size must be >= 1 (it is a stamp width in "
+                    f"cells), got {_th_spot_size}.")
+        else:
+            _th_spot_count, _th_spot_size, _th_spot_temp = 0, 1, 0.0
+        _th_min_fire_sep = int(config.get_mandatory('thermal.min_fire_separation'))
+        if _th_min_fire_sep < 0:
+            raise ValueError(
+                f"thermal.min_fire_separation must be >= 0 (Manhattan cells; 0 disables "
+                f"the constraint and accepts merged fires), got {_th_min_fire_sep}.")
+        _th_food_min_dist = int(config.get_mandatory('thermal.food_min_fire_distance'))
+        if _th_food_min_dist < 0:
+            raise ValueError(
+                f"thermal.food_min_fire_distance must be >= 0 (Manhattan cells; 0 is "
+                f"today's unconstrained behaviour), got {_th_food_min_dist}.")
+        # Kernel half-width, matching the sandbox oracle's `int(ceil(3*sigma))`
+        # (docs/develop/active/thermal/temperature_system_plan/sim.py). Static,
+        # because it fixes the number of unrolled shifts in the blur.
+        _th_kernel_radius = int(np.ceil(3.0 * _th_sigma))
+    else:
+        # Inert; never read when thermal is off.
+        #
+        # The two placement constraints MUST be 0 here. They gate static Python
+        # branches in `resolve_overlaps_global`, so a non-zero value would change
+        # the traced graph — and with it the PRNG stream — of every config in the
+        # project (hazard H10). Zero is what makes the thermal-off path provably
+        # the same graph it was before this change.
+        _th_sigma = 1.0
+        _th_default_low, _th_default_high = 0.0, 0.0
+        _th_random_spots = False
+        _th_object_sources = False
+        _th_spot_count, _th_spot_size, _th_spot_temp = 0, 1, 0.0
+        _th_min_fire_sep = 0
+        _th_food_min_dist = 0
+        _th_kernel_radius = 0
+
     _vis_v = config.get('sensory.visual_vector_size')
     visual_vector_size: int = int(_vis_v) if _vis_v is not None else 8
 
@@ -1118,6 +1284,11 @@ def load_env_params(config: Config) -> EnvParams:
         _res_vis_std_list = []
         _res_mask_list = []
         _res_blocks_list = []
+        # Thermal: resources are stampable heat sources too (Stage 1,
+        # resolution (a)) — food and hiding predators can carry heat.
+        _res_temp_list = []
+        _res_ratio_lo_list = []
+        _res_ratio_hi_list = []
         for r in expanded_resources:
             _rtype = r_get(r, 'type')
             _default_ch = 3 if _rtype == 'food' else 4  # food=3, hiding_predator=4
@@ -1131,6 +1302,17 @@ def load_env_params(config: Config) -> EnvParams:
             _res_vis_std_list.append(_read_visual_properties_std(r, visual_vector_size, f'Resource({_rtype})'))
             _res_mask_list.append(_read_visual_mask(r, f'Resource({_rtype})'))
             _res_blocks_list.append(_read_blocks_sight(r))
+            if 'edge_margin' in r:
+                raise ValueError(
+                    f"Resource({_rtype}): 'edge_margin' is supported on obstacle entries "
+                    "only. Inset the resource's 'spawn_area' directly instead.")
+            _rt_abs, _rt_lo, _rt_hi = _read_temperature(r, f'Resource({_rtype})')
+            _res_temp_list.append(_rt_abs)
+            _res_ratio_lo_list.append(_rt_lo)
+            _res_ratio_hi_list.append(_rt_hi)
+        res_temperature = jnp.array(_res_temp_list, dtype=jnp.float32)
+        res_temp_ratio_low = jnp.array(_res_ratio_lo_list, dtype=jnp.float32)
+        res_temp_ratio_high = jnp.array(_res_ratio_hi_list, dtype=jnp.float32)
         res_visual_property = jnp.array(_res_vis_list, dtype=jnp.float32)
         res_visual_property_std = jnp.array(_res_vis_std_list, dtype=jnp.float32)
         res_visual_mask = jnp.array(_res_mask_list, dtype=jnp.int32)
@@ -1148,6 +1330,9 @@ def load_env_params(config: Config) -> EnvParams:
         res_visual_property_std = jnp.zeros((0, visual_vector_size), dtype=jnp.float32)
         res_visual_mask = jnp.zeros(0, dtype=jnp.int32)
         res_blocks_sight = jnp.zeros(0, dtype=jnp.bool_)
+        res_temperature = jnp.zeros(0, dtype=jnp.float32)
+        res_temp_ratio_low = jnp.zeros(0, dtype=jnp.float32)
+        res_temp_ratio_high = jnp.zeros(0, dtype=jnp.float32)
 
     # ── Guard against stale `predator_enabled` key (removed in v2.0) ──────────
     # The 86 migrated configs have this key stripped by the CP1 migration sweep.
@@ -1258,8 +1443,18 @@ def load_env_params(config: Config) -> EnvParams:
         chem_dim = res_property.shape[-1]
         obs_property = jnp.array([_read_properties(o, 'Obstacle') for o in expanded_obstacles])
         obs_property_std = jnp.array([_read_properties_std(o, 'Obstacle') for o in expanded_obstacles])
-        # Adjust for 0-based min and exclusive max
-        obs_spawn_area = jnp.array([[a[0][0]-1, a[0][1]-1, a[1][0], a[1][1]] for a in [obs_get(o, 'area') for o in expanded_obstacles]])
+        # Adjust for 0-based min and exclusive max.
+        # `edge_margin` (F4) is applied HERE, as a load-time inset of the declared
+        # rectangle, so the runtime sampler is untouched and an impossible margin
+        # fails at load instead of producing a degenerate spawn box.
+        _obs_area_rows = []
+        for o in expanded_obstacles:
+            _a = obs_get(o, 'area')
+            _a = _apply_edge_margin(
+                _a, o.get('edge_margin', 0), height, width,
+                f"Obstacle({o.get('name', 'rock')})")
+            _obs_area_rows.append([_a[0][0]-1, _a[0][1]-1, _a[1][0], _a[1][1]])
+        obs_spawn_area = jnp.array(_obs_area_rows)
         
         # Obstacle types for visual sensor
         obstacle_names = tuple(sorted(list(set([o.get('name', 'rock') for o in expanded_obstacles]))))
@@ -1271,6 +1466,10 @@ def load_env_params(config: Config) -> EnvParams:
         _obs_vis_std_list = []
         _obs_mask_list = []
         _obs_blocks_list = []
+        # Thermal: the campfire is an obstacle slot with a non-zero temperature.
+        _obs_temp_list = []
+        _obs_ratio_lo_list = []
+        _obs_ratio_hi_list = []
         for o in expanded_obstacles:
             _oname = o.get('name', 'rock')
             if visual_vector_size != 8 and 'visual_properties' not in o:
@@ -1283,6 +1482,13 @@ def load_env_params(config: Config) -> EnvParams:
             _obs_vis_std_list.append(_read_visual_properties_std(o, visual_vector_size, f'Obstacle({_oname})'))
             _obs_mask_list.append(_read_visual_mask(o, f'Obstacle({_oname})'))
             _obs_blocks_list.append(_read_blocks_sight(o))
+            _ot_abs, _ot_lo, _ot_hi = _read_temperature(o, f'Obstacle({_oname})')
+            _obs_temp_list.append(_ot_abs)
+            _obs_ratio_lo_list.append(_ot_lo)
+            _obs_ratio_hi_list.append(_ot_hi)
+        obs_temperature = jnp.array(_obs_temp_list, dtype=jnp.float32)
+        obs_temp_ratio_low = jnp.array(_obs_ratio_lo_list, dtype=jnp.float32)
+        obs_temp_ratio_high = jnp.array(_obs_ratio_hi_list, dtype=jnp.float32)
         obs_visual_property = jnp.array(_obs_vis_list, dtype=jnp.float32)
         obs_visual_property_std = jnp.array(_obs_vis_std_list, dtype=jnp.float32)
         obs_visual_mask = jnp.array(_obs_mask_list, dtype=jnp.int32)
@@ -1303,11 +1509,14 @@ def load_env_params(config: Config) -> EnvParams:
         obs_visual_property_std = jnp.zeros((0, visual_vector_size), dtype=jnp.float32)
         obs_visual_mask = jnp.zeros(0, dtype=jnp.int32)
         obs_blocks_sight = jnp.zeros(0, dtype=jnp.bool_)
+        obs_temperature = jnp.zeros(0, dtype=jnp.float32)
+        obs_temp_ratio_low = jnp.zeros(0, dtype=jnp.float32)
+        obs_temp_ratio_high = jnp.zeros(0, dtype=jnp.float32)
     
     # Build Grid Location Types
-    import numpy as np
-    height = config.get_mandatory('environment.height')
-    width = config.get_mandatory('environment.width')
+    # (numpy is imported at module scope; a function-local `import numpy as np`
+    # here would make `np` a local name for the WHOLE function and turn every
+    # earlier use into an UnboundLocalError.)
     grid_np = np.zeros((height, width), dtype=np.int32)
     location_areas = config.get_mandatory('environment.location_areas')
     for area_config in location_areas:
@@ -1386,6 +1595,22 @@ def load_env_params(config: Config) -> EnvParams:
     # Parse placement mode
     placement_mode = config.get('environment.placement.mode', 'per_entity')
     assert placement_mode in ('per_entity', 'per_type'), f"Unknown placement mode: {placement_mode}"
+
+    # The thermal placement constraints are implemented as extra terms in
+    # `resolve_overlaps_global`'s validity mask, which the 'per_type' mode
+    # bypasses entirely (it uses `place_in_area` under a lax.scan over type
+    # groups). Raise rather than silently ignore them: a config whose own
+    # validation says fires cannot merge, while the placement mode it selected
+    # never enforces that, is worse than a config that fails to load.
+    if placement_mode == 'per_type' and (_th_min_fire_sep > 0 or _th_food_min_dist > 0):
+        raise ValueError(
+            "thermal.min_fire_separation / thermal.food_min_fire_distance are not "
+            "supported under environment.placement.mode: per_type — that mode uses "
+            "`place_in_area`, which bypasses the placement validity mask the "
+            "constraints attach to. Use placement.mode: per_entity, or set both "
+            f"constraints to 0 (currently min_fire_separation={_th_min_fire_sep}, "
+            f"food_min_fire_distance={_th_food_min_dist})."
+        )
 
     _log.debug("=" * 60)
     _log.debug("ENTITY PLACEMENT STRATEGY: %s", placement_mode)
@@ -1611,6 +1836,25 @@ def load_env_params(config: Config) -> EnvParams:
         res_visual_mask=res_visual_mask,
         animal_visual_mask=animal_visual_mask,
         obs_visual_mask=obs_visual_mask,
+        # ── Thermal (temperature system, Stage 1) ────────────────────────────
+        thermal_enabled=_thermal_on,
+        thermal_use_random_spots=_th_random_spots,
+        thermal_use_object_sources=_th_object_sources,
+        thermal_kernel_radius=_th_kernel_radius,
+        thermal_spot_count=_th_spot_count,
+        thermal_spot_size=_th_spot_size,
+        thermal_min_fire_separation=_th_min_fire_sep,
+        thermal_food_min_fire_distance=_th_food_min_dist,
+        thermal_sigma=_th_sigma,
+        thermal_spot_temp=_th_spot_temp,
+        thermal_default_temp_low=_th_default_low,
+        thermal_default_temp_high=_th_default_high,
+        obs_temperature=obs_temperature,
+        obs_temp_ratio_low=obs_temp_ratio_low,
+        obs_temp_ratio_high=obs_temp_ratio_high,
+        res_temperature=res_temperature,
+        res_temp_ratio_low=res_temp_ratio_low,
+        res_temp_ratio_high=res_temp_ratio_high,
         olfactory_vector_size=config.get_mandatory('sensory.vector_size'),
         visual_vector_size=visual_vector_size,
         visual_background_property=visual_background_property,

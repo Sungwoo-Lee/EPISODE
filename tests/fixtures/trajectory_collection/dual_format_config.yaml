@@ -873,6 +873,10 @@ perceptual_noise:
       mode: state_dependent
       sigma: 0.2
 seed: 42
+# Thermal system OFF — mandatory gate, no fallback default.
+thermal:
+  enabled: false
+
 sensory:
   visual_value_mode: sum
   visual_occlusion_enabled: false

@@ -607,3 +607,9 @@ behavior_measures:
   motif_kmeans_seed: 42
   motif_standardise: zscore_pooled
   eval_output_root: results/eval
+
+# Thermal (body-temperature) system — OFF. `thermal.enabled` is a mandatory
+# gate with no fallback default; see configs/environment/default.yaml for the
+# full key block and docs/develop/active/thermal/IMPLEMENTATION_PLAN.md (F6).
+thermal:
+  enabled: false
