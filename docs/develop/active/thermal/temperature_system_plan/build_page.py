@@ -1,41 +1,55 @@
 #!/usr/bin/env python
-"""Builds index.html for the temperature-system plan. Figures are embedded as
-base64 so the page is a single self-contained file. Regenerate with:
+"""Builds index.html for the temperature-system plan.
+
+Figures are embedded as base64 so the page is one self-contained file. Every
+number quoted in the prose is recomputed here from sim.py, so the text cannot
+drift away from the figures. Regenerate with:
 
     /home/vncuser/miniconda3/envs/grid_world_pain/bin/python build_page.py
-
-Figures come from figs.py (field + body dynamics + rendering mock) and
-nbhd_compare.py (thermoceptor neighbourhood accuracy). Numbers quoted in the
-prose are recomputed here from sim.py so text and figures cannot drift apart.
 """
 import base64, json, os
+import numpy as np
 os.chdir(os.path.dirname(os.path.abspath(__file__)))
-import sim
+from sim import gaussian_smooth, body_traj, H, W
 
 def b64(p): return base64.b64encode(open(p, 'rb').read()).decode()
 FIG = {k: b64(v) for k, v in {
-    'pipeline': 'figA_pipeline.png', 'sigma': 'figB_sigma.png',
-    'body': 'figC_body.png', 'render': 'figD_render.png',
+    'pipeline': 'figA_pipeline.png', 'sigma': 'figB_sigma.png', 'body': 'figC_body.png',
+    'render': 'figD_render.png', 'tether': 'figE_tether.png',
     'nbhd': 'fig1_geometry.png', 'acc': 'fig3_accuracy.png'}.items()}
 
-# --- recompute every number quoted in the prose ---
-K_EX, K_LOSS, T_DEATH = 0.04, 0.01, 15.0
-TAU = 1.0 / (K_EX + K_LOSS)
-def equilib(tf): return K_EX * tf / (K_EX + K_LOSS)
-def steps_to_death(tf):
-    tr = sim.body_traj([tf] * 5000, k_ex=K_EX, k_loss=K_LOSS)
-    i = int((abs(tr) >= T_DEATH).argmax())
-    return i if i > 0 else None
-K_CRIT = K_LOSS * T_DEATH / (20.0 - T_DEATH)
-REC = int((sim.body_traj([0.0] * 400, T0=14.0, k_ex=K_EX, k_loss=K_LOSS) <= 5.0).argmax())
-D20, D10 = steps_to_death(20.0), steps_to_death(10.0)
+DEFAULT, SIGMA, K_EX, K_LOSS, DEATH = -25.0, 1.2, 0.04, 0.01, 15.0
+
+def radial(A):
+    raw = np.full((H, W), DEFAULT); raw[5, 5] += A
+    f = gaussian_smooth(raw, SIGMA); out = {}
+    for d in range(0, 11):
+        c = [f[r, cc] for r in range(H) for cc in range(W) if abs(r-5)+abs(cc-5) == d]
+        if not c: continue
+        amb = float(np.mean(c))
+        tr = body_traj([amb]*4000, k_ex=K_EX, k_loss=K_LOSS)
+        i = int((np.abs(tr) >= DEATH).argmax())
+        out[d] = (amb, K_EX*amb/(K_EX+K_LOSS), None if i == 0 else i)
+    return out
+
+R300, R900 = radial(300.0), radial(900.0)
+safe300 = max(d for d in R300 if R300[d][2] is None)
+safe900 = [d for d in R900 if R900[d][2] is None]
 ACC = json.load(open('sweep2.json'))['res']
 
-N = dict(tau=f'{TAU:.0f}', eq20=f'{equilib(20.0):+.0f}', eq10=f'{equilib(10.0):+.0f}',
-         d20=str(D20), d10=('never' if D10 is None else str(D10)),
-         kcrit=f'{K_CRIT:.3f}', rec=str(REC),
-         vn1=f"{ACC['vN r=1']['err'][3]:.2f}", mo1=f"{ACC['Moore r=1']['err'][3]:.2f}",
-         vn2=f"{ACC['vN r=2']['err'][3]:.2f}", mo2=f"{ACC['Moore r=2']['err'][3]:.2f}")
+N = dict(
+    tau=f'{1/(K_EX+K_LOSS):.0f}',
+    default=f'{DEFAULT:.0f}', sigma=f'{SIGMA}',
+    fire_eq=f'{R300[0][1]:+.1f}', d1=f'{R300[1][1]:+.1f}', d2=f'{R300[2][1]:+.1f}',
+    d3=f'{R300[3][1]:+.1f}', d3_steps=str(R300[3][2]),
+    far_eq=f'{R300[10][1]:+.1f}', far_steps=str(R300[10][2]),
+    safe=str(safe300),
+    kcrit=f'{K_LOSS*DEATH/(abs(DEFAULT)-DEATH):.3f}',
+    h_d0=str(R900[0][2]), h_d1=str(R900[1][2]),
+    h_d2=f'{R900[2][1]:+.1f}', h_d3=f'{R900[3][1]:+.1f}', h_d4=str(R900[4][2]),
+    h_ring=f'{min(safe900)}–{max(safe900)}',
+    vn1=f"{ACC['vN r=1']['err'][3]:.2f}", mo1=f"{ACC['Moore r=1']['err'][3]:.2f}",
+    vn2=f"{ACC['vN r=2']['err'][3]:.2f}", mo2=f"{ACC['Moore r=2']['err'][3]:.2f}")
 
 HTML = open('page_template.html').read()
 for k, v in {**FIG, **N}.items():
@@ -43,4 +57,4 @@ for k, v in {**FIG, **N}.items():
 assert '@@' not in HTML, 'unreplaced token: ' + HTML[HTML.index('@@'):HTML.index('@@')+40]
 open('index.html', 'w').write(HTML)
 print(f'index.html written ({os.path.getsize("index.html")/1024:.0f} KB)')
-print(f'  tau={N["tau"]}  eq(+20)={N["eq20"]}  death@+20={N["d20"]}  k_crit={N["kcrit"]}  recovery={N["rec"]}')
+for k, v in N.items(): print(f'  {k:10s} {v}')
