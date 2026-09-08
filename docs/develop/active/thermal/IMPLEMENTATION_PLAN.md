@@ -29,6 +29,8 @@ aliases: [thermal_implementation_plan]
 
 Medium and low findings are folded into the stages they belong to and are not separately tabulated.
 
+**Fourth amendment, same day — migration-scope decisions.** The user set the migration policy: **lazy** (D4) and **the 68 already-broken configs stay broken** (D5). Stage 1's migration shrinks from 140+ configs to roughly **55 files** — `default.yaml` (which covers the whole `basic/` level and all 216 layered configs by inheritance, since all 7 `basic/` files use `extends:`), the 34 fixtured full configs (non-negotiable: they are the measuring instrument), and the ~21 test modules plus 1 test-fixture YAML (non-deferrable: they run on every test invocation). The other 106 full configs are deferred and must **not** be touched. F6 rewritten around the policy; F9 added for the 68 pre-existing failures with a `bug-curator` handoff; every "byte-identical" claim reworded to the measured scope — **34 of 356 configs, no live experiment family among them** — which the user has accepted knowingly.
+
 **Third amendment, same day — second plan review.** HIGH-3 (6b gating) and HIGH-4 (`build_sensory_viz`) closed; four items remained, all confirmed against the code before amending:
 
 | Finding | What was wrong | Where it is now addressed |
@@ -48,7 +50,7 @@ Mediums and lows folded in: a single definition of "heat source" (a slot, not an
 
 The agent in this project currently has two things it must keep in range: how full it is (satiation) and how hurt it is (injury). A separate, already-approved design adds a third — **body temperature** — by making the world cold everywhere and putting a campfire in it. The agent's temperature drifts toward whatever cell it stands on, so it freezes if it wanders and burns if it sits on the fire; the only comfortable place is a ring one cell out from the flames. Food grows away from the fire, so eating means a timed round trip into the cold.
 
-That design is settled. **This document is the build plan for it**: seven stages, each one independently testable, each one with the specific test that would fail if that stage were built wrong, and each one with a way to undo it. Stages 0 through 2 must leave every existing config producing byte-for-byte identical behaviour — if they do not, something has been wired into the live path that should have been behind the off switch.
+That design is settled. **This document is the build plan for it**: seven stages, each one independently testable, each one with the specific test that would fail if that stage were built wrong, and each one with a way to undo it. Stages 0 through 2 must leave existing behaviour byte-for-byte identical — if they do not, something has been wired into the live path that should have been behind the off switch. **What "identical" is actually measured over is 34 of the project's 356 environment configs** — the ones with a committed reference fixture. That coverage limit is a knowing trade, not an oversight; it and the lazy-migration policy behind it are set out in F6.
 
 Five things in this plan are corrections to, or gaps in, the design document rather than restatements of it. They are called out in **Findings that change the build** below, and the most important one is that the reward formula as written in the design is *not* bit-identical to today's reward even with temperature switched off — it silently rescales every reward in the project by a factor of 100.
 
@@ -137,14 +139,39 @@ The consequence is not a failing assertion; it is `ValueError` at load, and the 
 
 The 34 figure the previous draft used was the fixture count, and it is the wrong number for migration scope: configs without a fixture are **silently skipped** by the gate, not excluded from loading. They still have to load — other tests and every training launch go through them — and they would still raise.
 
-**So the rule is: every YAML that is loaded WITHOUT `extends:` resolution needs the key.** That is:
+In principle every YAML loaded *without* `extends:` resolution needs the key — all 140 full configs. **The user has chosen not to migrate all of them.**
 
-1. the **140 full configs** under `configs/environment/experiment/**`, `configs/continual/**`, `configs/verification/**`;
-2. **`configs/environment/default.yaml`**, which covers the 216 layered children through the merge (see F8 for what must *not* go in it);
-3. the **inline YAML bases inside ~21 test modules** that construct params without going through `load_env_config` — including `tests/env/test_no_recompile.py`, `tests/env/test_directional_sensors.py` and `tests/env/test_per_episode_count.py`;
-4. the test-fixture YAMLs, notably `tests/fixtures/trajectory_collection/dual_format_config.yaml`.
+### The migration policy: lazy, with three non-deferrable groups
 
-Item 3 is the one that bites hardest: **this plan names `tests/env/test_no_recompile.py` as a Stage 1 required-green gate**, so a migration that skips the test modules makes Stage 1 fail its own gate. The precedent commit `0e8a4ef8` touched **153 files including 21 test modules** for exactly this reason — the earlier draft cited that commit while listing none of what it actually had to touch.
+> *"Update only the default and basic levels, not the others — I will make them update when they need to be run."*
+
+Applied concretely, that gives a Stage 1 set of roughly **55 files**, not 140+:
+
+**(a) `configs/environment/default.yaml`** — gets the `thermal:` block. This single edit **covers the entire "basic level" and all 216 layered configs through inheritance**. Verified: all 7 files in `configs/environment/experiment/basic/` use `extends:` (four chain to `environment/default`, three chain through `basic/03` and `basic/04`), so **there are no per-file `basic/` edits to make** — a reader expecting seven of them will go looking for changes that are correctly absent. See F8 for what must *not* go into this file.
+
+**(b) The 34 configs with a committed `.npz` fixture — non-negotiable under any policy.** All 34 are full configs (the generator uses raw `Config(yaml.safe_load(f))`, so only a full config can ever be fixtured). Measured breakdown: **archive 22, verification 6, continual 5, `default.yaml` 1**. If these do not carry `thermal.enabled` inline, `get_mandatory` raises and **the existing parity suite fails before Stage 1's own gate can run** — these are the instrument the stage is measured with, so they are exempt from deferral by construction, not by preference.
+
+**(c) The ~21 test modules with inline YAML bases, plus `tests/fixtures/trajectory_collection/dual_format_config.yaml` — also non-deferrable.** `tests/env/test_no_recompile.py`, `tests/env/test_directional_sensors.py`, `tests/env/test_per_episode_count.py` and the rest of the `0e8a4ef8` set build params without going through `load_env_config`. **These are not configs anyone chooses to run** — they execute on every test invocation, so deferring them leaves the suite red from the moment Stage 1 lands. This plan also names `test_no_recompile.py` as a Stage 1 required-green gate, so skipping them makes the stage fail its own gate.
+
+### What is deferred, and why that is safe
+
+The remaining **106 non-fixtured full configs** (archive 69, sensory_ladder 14, continual 13, sensory_directional 10) are **deliberately not migrated**. The user updates each one when a run next needs it.
+
+This is safe for one specific reason worth stating rather than assuming: a deferred config fails **loudly and self-describingly**. `get_mandatory` raises `Configuration key 'thermal.enabled' is required` — it names the missing key, at load, before anything trains. There is no silent-wrong-result path, because the no-fallback rule is what forbids one. Deferral would *not* be safe under a `.get(..., False)` default, which is a further reason that route stays forbidden.
+
+It is also less of a change than it looks: **68 of those configs already fail to load today**, predating two earlier mandatory-key additions (see F9). Thermal does not change their status.
+
+### The honest coverage statement
+
+With this policy the byte-parity gate covers **34 of 356 configs (under 10%)**, and no currently-live experiment family is among them — the fixtured set is mostly archive. So the guarantee this plan can actually make is *"byte-identical on the 34 fixtured configs"*, not *"byte-identical everywhere"*. The user has accepted that trade knowingly. Every claim in this document is worded to that measured scope, and any future reader tempted to read more into a green gate should read this paragraph first.
+
+### F9 — 68 configs are already unloadable, and that is not this work's problem
+
+Independent of thermal, **68 full configs** — mostly under `configs/environment/experiment/archive/` — currently fail `load_env_params` because they predate two mandatory-key additions: **68 lack `sensory.injury_observable`** and **13 lack `sensory.visual_value_mode`** (the second set is a subset of the first, so the union is 68).
+
+**Explicitly out of scope.** Not caused by this work, not fixed by it, and not Stage 1's job — the user's decision is "leave them". Recorded here so that a developer who trips over one during the migration recognises it as pre-existing rather than something they broke, and does not silently expand Stage 1 to chase it.
+
+**Handoff to `bug-curator`:** file as its own registry item, separate from the thermal plan and from the cell-0 placement fallback (Stage 1). The bug is that mandatory-key additions have been landing without migrating the archive, so the archive is quietly accumulating unloadable configs; thermal is simply the third instance.
 
 **Stage 1 therefore includes an explicit config migration, in the same commit.** The `.get('thermal.enabled', False)` route is forbidden: a fallback default for a gating key is exactly what the no-fallback rule exists to prevent, and it would let a config with a typo'd `thermal:` block train as if thermal were off. Precedent for the bulk migration is commit `0e8a4ef8`, which did the same for `visual_blur_enabled`.
 
@@ -367,7 +394,7 @@ Use `jnp.nextafter(x, jnp.inf)` — a true 1-ulp bump — or, if a visible const
 
 ## Stage 1 — Field, campfire, per-entity temperature
 
-**Goal.** The `[H,W]` field exists in state and is built at reset. No observation change, no body change, no reward change. Every existing config byte-identical.
+**Goal.** The `[H,W]` field exists in state and is built at reset. No observation change, no body change, no reward change. **Byte-identical on the 34 fixtured configs** (the measured guarantee — see F6 for what that does and does not cover).
 
 **Files and functions.**
 
@@ -384,14 +411,11 @@ Use `jnp.nextafter(x, jnp.inf)` — a true 1-ulp bump — or, if a visible const
   - Because slots are allocated at `count_high` and each slot is expanded from the same entry dict (`for slot_i in range(hi): expanded_obstacles.append(o)`, `:1235-1241`), the per-slot temperature replicates correctly with no extra work for the count-range feature.
 
 **Config migration — part of this commit, not a follow-up (F6).** Add `thermal: {enabled: false}` to:
-- the **140 full configs** (no `extends:`) that `collect_configs` returns across `configs/environment/experiment/**`, `configs/continual/**`, `configs/verification/**`,
-- the **inline YAML bases in ~21 test modules** — `tests/env/test_no_recompile.py`, `tests/env/test_directional_sensors.py`, `tests/env/test_per_episode_count.py` and the rest that build params without `load_env_config`,
-- `tests/fixtures/trajectory_collection/dual_format_config.yaml`,
-- and `configs/environment/default.yaml`, which carries the 216 layered children through the merge.
+- **`configs/environment/default.yaml`** — the full commented `thermal:` key block **and nothing else** (F8: no campfire entry). This one file covers the whole `basic/` level and all 216 layered configs by inheritance; **there are no per-file `basic/` edits**, because all 7 of those files use `extends:`.
+- **the 33 other fixtured full configs** (archive 22, verification 6, continual 5) — the two-line gate each. Non-negotiable: they are the instrument the byte-parity claim is measured with, and without the key the existing parity suite raises before Stage 1's gate can run.
+- **the ~21 test modules with inline YAML bases** — `tests/env/test_no_recompile.py`, `tests/env/test_directional_sensors.py`, `tests/env/test_per_episode_count.py` and the rest of the `0e8a4ef8` set — plus `tests/fixtures/trajectory_collection/dual_format_config.yaml`. Non-deferrable because they run on every test invocation, not when someone chooses to run them.
 
-Scope figures and the reason the fixture count is the wrong number are in F6. `0e8a4ef8` touched 153 files doing the equivalent migration for `visual_blur_enabled`; expect the same order of magnitude, not 34 files.
-
-`default.yaml` gets the full commented `thermal:` key block **and nothing else** — see F8; the rest get only the two-line gate. **The `.get('thermal.enabled', False)` route is forbidden** — a fallback default on a gating key is the failure mode the no-fallback rule exists to prevent, and it would let a config with a misspelled `thermal:` block train silently as if thermal were off. Commit `0e8a4ef8` is the precedent for the bulk edit; follow its shape.
+**Roughly 55 files.** The remaining **106 non-fixtured full configs are deliberately deferred** by user decision and must **not** be migrated here — see F6 for the policy, why a loud `get_mandatory` failure makes deferral safe, and the coverage this costs. A developer who "helpfully" migrates them has expanded the change by 100 files against an explicit decision. **The `.get('thermal.enabled', False)` route is forbidden** — a fallback default on a gating key is the failure mode the no-fallback rule exists to prevent, and it would let a config with a misspelled `thermal:` block train silently as if thermal were off. Commit `0e8a4ef8` is the precedent for the bulk edit; follow its shape.
 
 **How the placement constraints actually attach (D2, D3).**
 
@@ -449,7 +473,7 @@ And two placement tests for D2/D3, both of which must sample many resets rather 
 - `test_fires_respect_min_separation` — over ~500 resets of the default config, assert **every** pair of active campfires is at least `min_fire_separation` Manhattan cells apart, and that three fires are actually placed (the feasibility claim: 3 fires at 3+ apart fit the 6×6 interior left by `edge_margin: 2`). A sampler that quietly gives up and returns a merged pair would otherwise look like a rare unlucky draw.
 - `test_placement_constraints_are_noops_when_disabled` — with `min_fire_separation: 0` and `food_min_fire_distance: 0`, assert `state.key` and `res_pos` / `animal_pos` / `obs_pos` are **identical** to the **Stage 0 thermal-parity fixture** (`tests/env/fixtures/thermal_parity/<slug>.npz`), which is why Stage 0's capture list includes the position arrays. The existing `tests/env/fixtures/parity/` set is the wrong reference here — it captures `obs_pos` but not the full set, and it is the gate this test is meant to be independent of. This is the H10 guard: any implementation that draws a key when it has nothing to reject moves every downstream stream.
 
-And the migration guard, which is broader than the gate: **all 356 configs `collect_configs` returns must load** after the migration — not just the 34 fixtured ones, since the unfixtured 322 are skipped by the gate but still raise on a missing mandatory key. Run the load loop over the full set. A `ValueError` from `get_mandatory` is the failure this stage is most likely to ship with (F6).
+And the migration guard, scoped to the lazy policy: **every file in the Stage 1 migration set must load** — `default.yaml`, the 34 fixtured configs, and the ~21 test modules — and the **full test suite must be green**, which is the part the test-module edits exist for. The 106 deferred configs are *expected* to raise `Configuration key 'thermal.enabled' is required`; assert that they do so with that message rather than asserting they load, so the deferral is itself tested and a future silent-default regression is caught (F6).
 
 The thermal-off branch must not have introduced a traced conditional, which is what `test_no_recompile.py` catches.
 
@@ -461,7 +485,7 @@ The thermal-off branch must not have introduced a traced conditional, which is w
 
 ## Stage 2 — Body temperature and termination reason 5
 
-**Goal.** `body_temp` updates each step and can end an episode. Not observable, not in the drive. Every existing config still byte-identical.
+**Goal.** `body_temp` updates each step and can end an episode. Not observable, not in the drive. **Still byte-identical on the 34 fixtured configs.**
 
 **Recurrence** (design §5):
 
@@ -671,7 +695,7 @@ For 6a the check is a rendered frame, not a static read: render one thermal epis
 | H13 | Existing Parquet stores hold `int8` termination codes under the old enum | `trajectory_store.py:140,172` | Code 5 fits int8; docstring enum updated; old stores remain valid, no migration | 2 |
 | H14 | Byte-parity gate goes red on 1 ulp of compiler noise; the tempting fix retires the gate | `jax_reset` lowering; olfaction slice | Adjudication rule pre-declared in Stage 0: exact everywhere, ≤1 ulp on olfaction only where `properties_std` is non-zero, everything else a regression | 0 |
 | H15 | New modality silently shifts every later renderer panel — no exception, wrong videos | `sensor.py:540-608` (no terminal `else`); `renderer.py:626`; `renderer_v2.py:474` | `Thermoception` branch + `else: raise` in the same diff; pod lists updated; slice-offset test | 3, 6 |
-| H16 | Conditional-mandatory gate with no config declaring it makes 140 full configs + ~21 test modules unloadable | `get_mandatory('thermal.enabled')`; `Config` does not resolve `extends:` | Config migration in the Stage 1 commit; `.get(..., False)` explicitly forbidden | 1 |
+| H16 | Conditional-mandatory gate with no config declaring it makes full configs + ~21 test modules unloadable | `get_mandatory('thermal.enabled')`; `Config` does not resolve `extends:` | Lazy migration in the Stage 1 commit — `default.yaml` + 34 fixtured + ~21 test modules (~55 files); 106 deferred by user decision and expected to raise a *named* error; `.get(..., False)` explicitly forbidden, since it is what would make deferral unsafe | 1 |
 | H17 | Load-time structure check rejects the Stage 2–5 test configs and mode A | `config_loader` | Check gated on `use_object_sources` **and** a non-zero declared temperature; negative cases asserted in the validation test | 6 |
 | H18 | Noise clips at ±100 while the fire-cell relative reading is ≈ +300 | `config_loader.py:1688-1697` defaults | Explicit `clip_min`/`clip_max` in the `thermoception:` block, derived from the field range | 3 |
 
@@ -733,7 +757,9 @@ The three questions the first draft listed as open — the campfire's visual ide
 
 - [ ] **S0** Fixtures generated on the pre-change tip, on CPU; the `nextafter` perturbation trial turned the gate red on every fixtured config, and the revert turned it green again. Record both the fixtured count and the `collect_configs` total.
 - [ ] **S0** The adjudication rule is written into the test as a commented `properties_std`-keyed branch, not as a global tolerance. Confirm by reading the assert, not the docstring.
-- [ ] **S1** All 356 configs load after the migration (not just the 34 fixtured ones), and the ~21 test modules with inline YAML bases pass — run the load loop before the parity gate, so a `ValueError` is not mistaken for a parity failure.
+- [ ] **S1** The migration set loads (`default.yaml` + 34 fixtured + ~21 test modules) and the full suite is green — run the load loop before the parity gate, so a `ValueError` is not mistaken for a parity failure.
+- [ ] **S1** The 106 deferred configs raise the *named* `thermal.enabled` error, not a silent default and not some other error. Spot-check three by hand; a config that loads here means a fallback default crept in.
+- [ ] **S1** Exactly the expected ~55 files changed. `git diff --stat` well above that means the deferred set was migrated against an explicit user decision; well below means a fixtured config or a test module was missed.
 - [ ] **S1** `configs/environment/default.yaml`'s `obstacles:` list is byte-identical before and after the migration (F8). Diff it explicitly; the campfire must not be in the base file.
 - [ ] **S3** Render one frame with thermal on and check the Collision panel against the observation slice by hand. `build_sensory_viz` fails silently (F7); nothing else in the suite will tell you.
 - [ ] **S1** `jax_reset` on a thermal-off config produces a jaxpr with no new random calls — check by asserting the reset key stream is unchanged, not by eyeballing.
@@ -742,7 +768,7 @@ The three questions the first draft listed as open — the campfire's visual ide
 - [ ] **S2** `grep -rn "termination_reason"` and tick off every consumer in the Analysis table before committing.
 - [ ] **S3** `sum(get_observation_breakdown(params).values()) == get_observation(...).shape[0]` on both a thermal-on and a thermal-off config, printed, before running the suite.
 - [ ] **S4** Diff `calculate_drive`'s thermal-off branch against the original character by character — it must be the same expression, not an equivalent one.
-- [ ] **S6** Load every existing config in `configs/` and confirm none newly raises. The structure check must be unreachable when `thermal.enabled` is false.
+- [ ] **S6** Load every config in the Stage 1 migration set and confirm none newly raises. The structure check must be unreachable when `thermal.enabled` is false. (Deferred configs are expected to raise on `thermal.enabled` — that is the policy, not a failure; do not "fix" them here.)
 - [ ] **Every stage** Record before/after steps-per-second on the same node, GPU and seed. The field build is once per episode and the recurrence is three multiply-adds per step, so a measurable slowdown means something landed in the wrong loop. Per the verification protocol, >5% warrants discussion and >15% blocks.
 
 ---
