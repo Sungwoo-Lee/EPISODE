@@ -89,7 +89,8 @@ def main():
     ax[0].set_xticks(x); ax[0].set_xticklabels(L.INJ_NAMES)
     ax[0].set_xlabel("wound the environment dealt at the start,\non the 0-100 scale, in quarters")
     ax[0].set_ylabel("bush hiding over the episode's first 25 steps\n(% of those steps spent in a bush)")
-    ax[0].set_title("The ladder's agents hide more. These hide less.", loc="left")
+    ax[0].set_title("Over the first 25 steps: the ladder's agents hide more, these hide less",
+                    loc="left", fontsize=17)
     ax[0].grid(alpha=.25, lw=.5)
     b, t = ax[0].get_ylim(); ax[0].set_ylim(b - (t - b) * .30, t)
     ax[0].legend(loc="lower left", framealpha=.95, fontsize=13, ncol=2)
@@ -101,12 +102,17 @@ def main():
          [(slope(lad[a]), LAD, "o") for a in L.ARM_ORDER if a != "A_baseline"]),
 ("ladder A_baseline\nthis study's exact config",
          [(slope(lad["A_baseline"]), ANNO, "D")]),
-("this study, 10\nunmodulated runs",
+("this study, 12\nunmodulated runs",
          [(slope(grids[g][n]), C["ctrl"], "o") for g in grids for n in CTRL]
          + [(slope(grids[g]["t1none"]), C["none"], "*") for g in grids]),
-("this study, 32\nmodulated cells",
+("this study, 30\nmodulated cells",
          [(slope(grids[g][n]), C[n.split("_")[1]], "o") for g in grids for n in CELLS]),
     ]
+    n_mod = len(CELLS) * len(grids)
+    n_unmod = (1 + len(CTRL)) * len(grids)
+    assert rows[2][0].startswith(f"this study, {n_unmod}\n") and rows[3][0].startswith(f"this study, {n_mod}\n"), \
+        f"row labels claim counts the data does not have: {n_unmod} unmodulated, {n_mod} modulated"
+    assert len(rows[2][1]) == n_unmod and len(rows[3][1]) == n_mod
     for yi, (lab, pts) in enumerate(rows):
         for v, col, mk in pts:
             ax[1].scatter(v, yi + np.random.RandomState(int(abs(v) * 1e4) % 9973).uniform(-.16, .16),
@@ -117,7 +123,8 @@ def main():
     ax[1].set_ylim(len(rows) - .5, -.75)
     ax[1].set_xlabel("wound sensitivity, in percentage points\n"
                      "hiding in the heaviest wound quarter MINUS the lightest")
-    ax[1].set_title("Every run in this study falls on the same side of zero", loc="left")
+    ax[1].set_title("Over this window, every run in this study falls on the same side of zero",
+                    loc="left", fontsize=17)
     ax[1].grid(axis="x", alpha=.25, lw=.5)
     ax[1].annotate("hides LESS when wounded", xy=(-3.6, -0.40), ha="center", fontsize=15,
                    color=ANNO, fontweight="bold")
@@ -146,6 +153,13 @@ def main():
         c = [slope(grids[g][n]) for n in CTRL]; m = [slope(grids[g][n]) for n in CELLS]
         print(f"  this study {g:4} controls       : {np.mean(c):+.2f} +- {np.std(c, ddof=1):.2f}"
               f"   t1none {slope(grids[g]['t1none']):+.2f}   16 cells {min(m):+.2f} .. {max(m):+.2f}")
+    used = sum(float(np.asarray(grids[g][n]["grids"]["dwt_early"], float).sum())
+               for g in grids for n in CELLS + ["t1none"] + CTRL)
+    tot = 0
+    for g, root in (("MC", MC), ("GAE", GAE)):
+        for n in CELLS + ["t1none"] + CTRL:
+            tot += int(np.load(f"{root}/{n}_episodes.npz")["n_steps"].sum())
+    print(f"  this study, 25-step window: {used:,.0f} of {tot:,.0f} step rows ({100*used/tot:.1f}%)")
     allv = [slope(grids[g][n]) for g in grids for n in CELLS + ["t1none"] + CTRL]
     print(f"  every one of the study's {len(allv)} runs is negative: "
           f"{all(q < 0 for q in allv)}   (max {max(allv):+.2f})")
