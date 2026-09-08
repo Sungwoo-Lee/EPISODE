@@ -789,8 +789,8 @@ Everything the first draft listed as open is now settled — see *Decisions sett
 
 ## Checkpoints for the implementing agent
 
-- [ ] **S0** Fixtures generated on the pre-change tip, on CPU; the `nextafter` perturbation trial turned the gate red on every fixtured config, and the revert turned it green again. Record both the fixtured count and the `collect_configs` total.
-- [ ] **S0** The adjudication rule is written into the test as a commented `properties_std`-keyed branch, not as a global tolerance. Confirm by reading the assert, not the docstring.
+- [x] **S0** Fixtures generated on the pre-change tip, on CPU; the perturbation trial turned the gate red on **72 of 72** fixtured configs, and the revert turned it green again. `collect_configs` total **356**, fixtures written **72** (not 34 — see Deviation D0-1). Done 2026-09-08.
+- [x] **S0** The adjudication rule is a commented `properties_std`-keyed branch at `tests/env/test_thermal_parity.py:265-289` (two asserts: exact where std == 0, <= 1 ulp where std != 0). The olfaction bound is derived in `_olfaction_tolerance` and is exactly `0.0` on 29 of the 71 olfaction-carrying configs. Done 2026-09-08.
 - [ ] **S1** The migration set loads (`default.yaml` + 34 fixtured + ~21 test modules) and the full suite is green — run the load loop before the parity gate, so a `ValueError` is not mistaken for a parity failure.
 - [ ] **S1** The 106 deferred configs raise the *named* `thermal.enabled` error, not a silent default and not some other error. Spot-check three by hand; a config that loads here means a fallback default crept in.
 - [ ] **S1** Exactly the expected ~55 files changed. `git diff --stat` well above that means the deferred set was migrated against an explicit user decision; well below means a fixtured config or a test module was missed.
@@ -809,11 +809,116 @@ Everything the first draft listed as open is now settled — see *Decisions sett
 
 ## Implementation Report
 
-> **Implemented by**:
-> **Date**:
+> **Implemented by**: `developer`
+> **Date**: 2026-09-08
 
 <!-- Filled by the `developer` agent. Per stage: what was done, deviations and why,
      the speed measurement, and the deliberate-perturbation result for Stage 0. -->
+
+### Stage 0 — Parity harness (complete)
+
+**Plain-language summary.** Before any temperature code exists, this stage recorded what the
+environment currently *does* — what the agent sees, what reward it gets, and how far from
+comfortable it is — for every config that runs, and committed that recording. Later stages
+promise not to change any of it; this recording is what turns that promise into something a
+test can check.
+
+**Files.**
+
+| File | Change |
+|---|---|
+| `scripts/fixtures/generate_thermal_parity_fixtures.py` | **New.** Hand-run generator. `config_slug` and `collect_configs` copied verbatim from `generate_parity_fixtures.py:36-52` so both fixture sets key on identical slugs. `ACTIONS = [0,1,2,3,4]*20`, `SEED = 0`, `os.environ.setdefault("JAX_PLATFORMS", "cpu")` before any jax import. |
+| `tests/env/test_thermal_parity.py` | **New.** The gate. Same backend pinning, same `collect_configs`; configs without an `.npz` are skipped. |
+| `tests/env/fixtures/thermal_parity/*.npz` | **New.** 72 fixtures, 848 KB total. |
+| `docs/environment/SCRIPTS_DEPENDENCY_MAP.md` | Per-file roll-up (§3) gains a row for the new script, in the same change, per that map's Maintenance Contract. |
+
+Nothing under `src/` or `configs/` was touched.
+
+**What is captured**, per config, over the reset state plus 100 steps: the full observation with
+`apply_noise=False`; the same with noise on; the scalar `reward`; `done`;
+`calculate_drive(state.satiation, state.injury_level, params)` before and after each step;
+`info['termination_reason']`; `sum(get_observation_breakdown(params).values())`; the observation
+dimension; `state.key` (the PRNG-stream tripwire); all three sampled-property arrays; and all
+three entity position arrays. Each field is stored as one array stacked over steps rather than
+one array per step — same content, ~19 arrays per `.npz` instead of ~1,300.
+
+**The two config counts, not conflated.**
+
+| Quantity | Count |
+|---|---|
+| Configs `collect_configs()` returns (the set the gate walks) | **356** |
+| Configs that produced a fixture (the set the gate adjudicates) | **72** |
+| Skipped — `load_env_params` raised | **284** |
+| Skipped — episode raised | **0** |
+
+**Deviation D0-1 — the plan's "34 fixtured configs" is stale, and the real number is 72.**
+The plan states in three places (Stage 0 scope, F6, "The honest coverage statement") that 34
+configs carry a committed fixture, and derives the migration policy's non-negotiable group (b)
+from that number. 34 is the size of the **pre-existing** `tests/env/fixtures/parity/` set, which
+was generated at the CP1 commit and has not been regenerated since. Re-running the same
+`collect_configs` today, **72 configs load and run**. The new set is a strict superset: all 34
+old slugs are present, plus 38 more, all under `configs/environment/experiment/`. Consequence
+for later stages: Stage 1's non-deferrable fixtured group is **72 configs, not 34**, and the
+coverage statement is **72 of 356 (20%)**, not "34 of 356 (under 10%)". `senior-developer`
+should re-check F6's ~55-file migration estimate against 72 before Stage 1 starts. Flagged, not
+worked around.
+
+**The adjudication rule as implemented.** Exact equality (`np.array_equal`) on `key`, `reward`,
+`done`, `termination_reason`, `drive_before`, `drive_after`, `res_pos`, `animal_pos`, `obs_pos`,
+the breakdown total and the observation dimension. The three sampled-property state arrays get
+the one exemption, written as an explicit two-branch check: where `properties_std == 0` any
+difference at all fails; where it is non-zero the difference must not exceed one float32 ulp at
+that element's magnitude. The observation is exact outside the Olfaction slice; inside it, the
+tolerance is **derived**, per element, and the derivation is in the `_olfaction_tolerance`
+docstring:
+
+> `obs[cell, v] = SUM_e prop[e, v] * w(dist) * mask`, so
+> `|d obs[cell, v]| <= (SUM_e ulp32(prop[e, v]) * [std[e, v] != 0]) * w_max`, with
+> `w_max = max(2 ** decay_power, 1.0)` — the largest weight `sense_resource` can emit
+> (`1 / 0.5**p` when the agent stands on the entity; `< 1` at any other integer-grid cell).
+
+Measured over the 72 fixtures: 71 carry an Olfaction slice; the derived tolerance is **exactly
+0.0 on 29 of them** (no entity declares a non-zero `properties_std`, so the check is strict
+equality) and ranges **2.38e-07 to 7.15e-07** on the other 42. It is never a global `allclose`
+and it is never a typed-in constant. The same array bounds the noisy observation, because
+`apply_perceptual_noise` adds a noise term drawn from `fold_in(state.key, 999)` — and `state.key`
+is asserted exactly equal — then applies a monotone clip.
+
+**The deliberate-perturbation trial (the check that this stage is not vacuous).**
+
+| Step | Command | Result |
+|---|---|---|
+| Baseline | `pytest tests/env/test_thermal_parity.py -q` | **72 passed, 284 skipped** (148 s) |
+| Perturbed — `sensor.py:440` satiation obs `+ 1e-3` | same | **72 failed, 284 skipped** (150 s) |
+| Reverted (`git checkout -- src/environment/sensor.py`) | same | **72 passed, 284 skipped** (148 s) |
+
+Red on **every** fixtured config, as expected — `Satiation` is unconditional in
+`get_observation_breakdown`, and it sits before the Olfaction slice, so the failure lands on the
+"differs OUTSIDE the Olfaction slice" assert rather than on the exempted branch. `+1e-3` was used
+rather than the rejected `+1e-7` for the reason the plan gives: at float32, `1e-7` rounds away
+entirely for values >= 2 and the trial would prove nothing.
+
+**Speed check: skipped, and why.** Stage 0 adds no code to `src/` — it is a new hand-run script,
+a new test, new fixture data, and one doc row. Nothing on the env-step, model or observation hot
+path changed, so there is no before/after to measure. (`git status --porcelain src/` is clean.)
+
+**Prior-art pass.** `grep -in` over `docs/develop/active/issues/KNOWN_BUGS.md` for `parity`,
+`ulp`, `fixture`, `thermal`. Two rows are relevant and both were read: **line 125** — the reset
+ulp divergence, already adjudicated *NOT A BUG — documented compiler behaviour (do not
+re-escalate)*, which is exactly the exemption this test encodes; and **line 159** — the 2026-08-20
+stale-`observability_gates` fixtures, FIXED by regenerating four snapshots and closing with "the
+gate is now 34 passed". That row is where the plan's 34 comes from, and it confirms 34 is the
+current size of the *old* set rather than the number of configs that can be fixtured today.
+Nothing in the registry covers **D0-1** (the old `tests/env/fixtures/parity/` set never grew to
+cover the 38 configs that have since become loadable, so it under-reports the gate's reachable
+coverage by more than half). That is a candidate registry row; per the developer profile I name
+`bug-curator` as its owner rather than filing it myself. No `thermal` row exists.
+
+**Blockers / follow-ups.**
+1. D0-1 above — Stage 1's scope numbers need re-deriving from 72, not 34.
+2. Not committed, per instruction. Working tree left dirty for verification.
+
+Signed: `Implemented by: developer`
 
 ## Verification Report
 
