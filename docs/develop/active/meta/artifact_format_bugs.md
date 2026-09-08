@@ -421,6 +421,29 @@ it — do not assume the component's spacing was designed for more than it had.
 check the measurement fires by removing the rule and confirming it reports 0 px. A spacing assertion
 that has never been seen to fail is not evidence.
 
+### F23 amendment — a component that styles only `p` restyles nothing else
+
+**Saw:** a bulleted list inside a callout rendering one point larger and airier than the paragraphs
+directly above and below it, so the callout read as two components welded together. Measured: `li`
+at 16.5px/26.7px against `.callout p` at 15.5px/24.3px, and 26px of space after the list against
+12px between paragraphs.
+
+**Cause:** `.callout p{font-size:15.5px;line-height:1.57}`. The component had only ever contained
+paragraphs, so styling `p` was indistinguishable from styling the component. The first `<ul>` placed
+inside one inherited the page's body type instead, and the mismatch is small enough to read as
+sloppiness rather than as a bug.
+
+**Why neither review method catches it:** the CSS is correct for everything it was written against,
+the markup is correct, nothing overflows or overlaps, and the text is perfectly legible. The defect
+is a typographic inconsistency of one point, which a screenshot scan reads as a design choice.
+
+**Rule:** style the component, not the tag it happens to contain — `.callout{font-size:…}` with
+children inheriting, or at minimum `.callout p, .callout li`. Whenever a new element type first
+appears inside an existing component, check its computed type against a sibling paragraph.
+
+**Verifying:** for each component instance, read `font-size` and `line-height` on every direct child
+and assert they agree with the component's paragraphs.
+
 ### F24 — `width:max-content` on a table that has a prose column hides the last column, at every width
 
 **Saw:** a new results section whose headline table listed three training arms and their scores. The

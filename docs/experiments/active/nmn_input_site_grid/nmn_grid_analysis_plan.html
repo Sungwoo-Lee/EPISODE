@@ -146,6 +146,11 @@ figcaption b{color:var(--ink);font-weight:640}
 .callout.note{border-left-color:var(--muted);background:var(--rule-2)}
 .callout p{font-size:15.5px;line-height:1.57;margin:0 0 12px}
 .callout p:last-child{margin-bottom:0}
+/* `li`, not just `p`. This component set its type on `p` alone because for a long time it only ever
+   held paragraphs; the first list put inside one inherited the 16.5px body size and read as a
+   different, airier component wedged between two paragraphs (F23 amendment). */
+.callout li{font-size:15.5px;line-height:1.57}
+.callout ul{margin-bottom:12px}
 pre{background:var(--card);border:1px solid var(--rule);border-radius:4px;padding:16px 18px;
   overflow-x:auto;font-family:var(--mono);font-size:12.5px;line-height:1.62;margin:22px auto;
   max-width:730px}
@@ -809,8 +814,8 @@ both quantities on the same scale. Neither of the first two y-axes starts at zer
 own reference span in words on the panel &mdash; how much ground the five control runs cover across
 all three injury bins &mdash; because an axis that has been stretched to make room for a legend can
 no longer be read as a scale. The bottom panel starts at zero, which is what makes the comparison
-honest. Thin lines are the sixteen cells, coloured by what the modulator reads; the thick near-black
-line is <code>t1none</code>, the in-grid control; the grey band is the range of the five reference
+honest. Thin lines are the fifteen modulated cells, coloured by what the modulator reads; the thick
+near-black line is <code>t1none</code>, the in-grid control; the grey band is the range of the five reference
 controls.</figcaption>
 </figure>
 <p class="prov">Reproduce this figure:
@@ -858,7 +863,7 @@ study measures and the behaviour beside it. The panel annotations say the same t
 reference agents: across all three injury bins the five controls' bush-entry values occupy a total
 range of 1.2 points and their rest values 24.1. In the bottom panel, where neither is rescaled,
 entering cover is the nearly flat line hugging the bottom of the axis while resting climbs from
-about a third of all steps to well over half. Every one of the sixteen modulated cells traces the
+about a third of all steps to well over half. Every one of the fifteen modulated cells traces the
 same two shapes as the unmodulated control. A wounded agent in this environment does not travel to
 cover; it stops moving where it already is, and cover is whatever happens to be underneath
 it.</p></div>
@@ -1064,7 +1069,7 @@ class, in chebyshev steps &mdash; the number of moves a chess king would need &m
 into the last bin; <b>y</b> = the percentage of those steps on which the agent was standing inside a
 bush. <b>Both panels share one y-scale</b>, which is what
 makes the comparison readable: the rabbit curve is flat because the agent barely reacts to a rabbit,
-not because it has been drawn on a scale that flattens it. Thin lines are the sixteen
+not because it has been drawn on a scale that flattens it. Thin lines are the fifteen
 modulated cells coloured by what the modulator reads, the thick near-black line is
 <code>t1none</code>, and the grey band is the range of the five reference runs.</figcaption>
 <p class="prov">Reproduce this figure:
@@ -1277,7 +1282,7 @@ numbers existed.</p>
 <div class="callout key">
 <h4>The measurement that told me my own test was broken</h4>
 <p>The grid contains its own unmodulated control &mdash; cell <code>t1none</code>, identical to the
-sixteen arms in every respect except that it has no modulator. When the first version of this
+fifteen modulated cells in every respect except that it has no modulator. When the first version of this
 analysis flagged cells as &ldquo;outside the control range&rdquo;, <strong>the control cell was one
 of them</strong>.</p>
 <p>That cannot be a property of the agent, so it is a property of the test. The range of five
@@ -1446,7 +1451,7 @@ than it was when it was declined.</p>
 
 <section class="col">
 <h2>2 &middot; The twin grid, and what the return estimator does</h2>
-<p class="lede">The same sixteen modulator cells, the same control, the same five reference runs, the
+<p class="lede">The same sixteen cells, the same control, the same five reference runs, the
 same environment and the same ten-million-episode budget &mdash; trained a second time with one
 thing changed. Every agent has to guess how good its current situation is. The first grid works that
 out by adding up what actually happened for the rest of the episode; the twin uses the standard
@@ -1597,8 +1602,8 @@ the strength of the claim is unchanged. It is a re-measurement, not a second res
 &mdash; killed, starved, ran out of time &mdash; are within a tenth of a point of each other across
 the two estimators. Whatever changed, it did not change the balance of the two dangers.</p>
 <p><strong>What the predator-contrast result is worth.</strong> All five GAE runs sit above all five
-Monte-Carlo runs, and so do all sixteen modulated cells of each grid &mdash; 21 against 21 with no
-overlap. The formal test lands at about p&nbsp;=&nbsp;0.007, which is exactly on the line once seven
+Monte-Carlo runs, and so do the fifteen modulated cells and the in-grid control of each grid
+&mdash; 21 against 21 with no overlap. The formal test lands at about p&nbsp;=&nbsp;0.007, which is exactly on the line once seven
 measures are accounted for. The sixteen cells are not independent replicates &mdash; they share a
 seed and a training batch &mdash; so this is a consistency check rather than a second sample. It is a
 strong one, and it is still five seeds against five.</p>
@@ -1696,7 +1701,7 @@ the sensory ladder &mdash; and so does the one ladder arm whose environment it s
 quarters; <b>y</b> = bush hiding over the episode's first 25 steps, as a percentage of those steps.
 Faint grey lines are the sensory study's thirteen better-sensed agents, the dashed line is its
 <code>A_baseline</code> agent &mdash; the one whose environment this study shares &mdash; the grey band is this study's five reference runs, the thick black
-line is <code>t1none</code>, and the thin coloured lines are the sixteen modulated cells, coloured
+line is <code>t1none</code>, and the thin coloured lines are the fifteen modulated cells, coloured
 by what each modulator reads. <b>Bottom panel</b>: <b>x</b> = wound sensitivity in percentage points
 &mdash; hiding in the heaviest wound quarter minus hiding in the lightest, so positive means hides
 more when wounded; <b>y</b> = which population each point belongs to, jittered vertically only so
