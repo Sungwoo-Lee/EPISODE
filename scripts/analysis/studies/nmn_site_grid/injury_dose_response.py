@@ -92,7 +92,7 @@ def main():
     ax[0].set_xticks(x); ax[0].set_xticklabels(L.INJ_NAMES)
     ax[0].set_xlabel("wound the environment dealt at the start,\non the 0-100 scale, in quarters")
     ax[0].set_ylabel("bush hiding over the episode's first 25 steps\n(% of those steps spent in a bush)")
-    ax[0].set_title("Over the first 25 steps: the ladder's agents hide more, these hide less",
+    ax[0].set_title("A bigger wound makes the ladder's agents hide MORE, and these hide LESS",
                     loc="left", fontsize=17)
     ax[0].grid(alpha=.25, lw=.5)
     b, t = ax[0].get_ylim(); ax[0].set_ylim(b - (t - b) * .30, t)
