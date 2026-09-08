@@ -175,6 +175,11 @@ def _sensor_stat_columns(sensor_name, dim, params, prefix):
     elif sensor_name == "Collision":
         coll_offsets = get_visual_offsets(params.sensor_range)
         names = [f"{prefix}coll_r{dr}c{dc}" for dr, dc in coll_offsets]
+    elif sensor_name == "Thermoception":
+        # Named from the offsets, like Collision above, so a column heading says
+        # WHICH cell it is rather than an index the reader has to decode.
+        thermo_offsets = get_visual_offsets(params.thermal_grid_range)
+        names = [f"{prefix}thermo_r{dr}c{dc}" for dr, dc in thermo_offsets]
     elif sensor_name == "Location":
         names = [f"{prefix}loc_r", f"{prefix}loc_c"]
     elif sensor_name == "Visual":

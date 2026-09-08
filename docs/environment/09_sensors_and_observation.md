@@ -30,11 +30,12 @@ Sensors appear in the vector in the exact order listed below. Sensors toggled of
 | 3 | Satiation | Always on | 1 | `[0, 1]` | `satiation / max_satiation` |
 | 4 | Interoceptive Nociception | `interoceptive_nociception_enabled` | 1 | `[0, 1]` | Convolved (delayed) injury trace, or direct `injury/max_injury` in passthrough mode |
 | 5 | Extero Nociception | `nociception_enabled` | 1 | `[0, 1]` | Max intensity among current painful contacts |
-| 6 | Olfaction | `olfactory_enabled` | `vector_size` (typically 5) | `[0, ∞)` | Σ property·decay(dist)·active over **3** entity pools: resources + unified animals + obstacles |
-| 7 | Collision | Always on | `2r²+2r+1` | `{0, 1}` | Binary Manhattan diamond (OOB or blocking obstacle) |
-| 8 | Proprioception | `proprioception_enabled` | `action_dim` | `{0, 1}` | One-hot of last action taken |
-| 9 | Visual | `visual_sensor_enabled` | `(2r²+2r+1)×8` | `{0, 1}` | 8-channel Manhattan diamond (terrain + entity type) |
-| 10 | Location | `location_sensor_enabled` | 2 | `[-1, 1]` | Normalised (row, col) |
+| 6 | Thermoception | `thermal_enabled` | `2r²+2r+1` (`r = thermal_grid_range`) | `(-∞, ∞)` | `thermal_field[cell] − body_temp` over a Manhattan diamond; OOB cells **clamp** |
+| 7 | Olfaction | `olfactory_enabled` | `vector_size` (typically 5) | `[0, ∞)` | Σ property·decay(dist)·active over **3** entity pools: resources + unified animals + obstacles |
+| 8 | Collision | Always on | `2r²+2r+1` | `{0, 1}` | Binary Manhattan diamond (OOB or blocking obstacle) |
+| 9 | Proprioception | `proprioception_enabled` | `action_dim` | `{0, 1}` | One-hot of last action taken |
+| 10 | Visual | `visual_sensor_enabled` | `(2r²+2r+1)×8` | `{0, 1}` | 8-channel Manhattan diamond (terrain + entity type) |
+| 11 | Location | `location_sensor_enabled` | 2 | `[-1, 1]` | Normalised (row, col) |
 
 With `sensor_range=1`, the collision diamond has 5 cells: `{center, up, right, down, left}`.
 With `visual_sensor_range=0`, the visual diamond has 1 cell (agent's own cell): `1×8=8` dims.
@@ -42,7 +43,9 @@ With `visual_sensor_range=1`, it has `5×8=40` dims.
 
 ---
 
-**Olfaction is NOT bounded** — it is a weighted sum of `property × decay × mask`, so values can exceed 1.0 when multiple entities are present or the agent overlaps a source (decay = 2.0 at zero distance). All other sensors are bounded as shown above.
+**Neither Olfaction nor Thermoception is bounded.** Thermoception is a temperature difference in the field's own units, so it is signed and routinely leaves `[-1, 1]`: on the shipped campfire config it spans roughly −43 (deep cold, warm body) to about +170 (standing on a fire). Anything that clips observations — the perceptual-noise clips in particular — has to be told so explicitly; see [10_perceptual_noise.md](10_perceptual_noise.md).
+
+**Olfaction is NOT bounded** — it is a weighted sum of `property × decay × mask`, so values can exceed 1.0 when multiple entities are present or the agent overlaps a source (decay = 2.0 at zero distance). Every other sensor is bounded as shown above.
 
 ### Hidden States & Gating
 
@@ -229,7 +232,31 @@ def sense_extero_nociception(agent_pos, state: EnvState, params: EnvParams):
 
 ---
 
-### 6 · Olfaction / Chemical Gradient
+### 6 · Thermoception
+
+`sense_thermoception(state, params)` — present only when `thermal.enabled` is true.
+
+Reads `state.thermal_field` at every cell of a Manhattan diamond of radius
+`thermal.grid_range`, using the **same** `get_visual_offsets` stencil as the collision and
+visual sensors, so at `grid_range: 1` the five values are **centre, up, right, down, left**
+in that order. With `thermal.relative: true` (the default) each value is
+`field[cell] − body_temp` — "how much warmer than me is that cell" — which is the quantity
+the agent can act on; with `relative: false` it is the raw field, at the identical width,
+which is why `thermal_relative` is part of the curriculum modality fingerprint.
+
+**Out-of-bounds cells clamp the coordinate; they do not read zero.** Olfaction and vision
+zero-fill out of bounds. Thermoception must not, and the reason is specific to a *relative*
+reading: zero means "that cell is exactly my own temperature", so in a world whose baseline
+is −25 the map edge would read as a warm refuge to an agent standing in the cold. Clamping
+reports the nearest real cell, matching what the field build already does at its own edges
+(`_gaussian_smooth_normalised` renormalises by the in-bounds weight sum). Do not "fix" this
+back to the zero-fill convention.
+
+Adding this modality widens the observation by `2r²+2r+1` dimensions, which the curriculum
+pre-flight check treats as an architecture-visible change: **a curriculum is thermal
+throughout or non-thermal throughout.**
+
+### 7 · Olfaction / Chemical Gradient
 
 `sense_resource(agent_pos, res_pos, res_active, res_property, radius, decay_power)` (`sensor.py:5`)
 
@@ -348,7 +375,7 @@ def sense_resource(agent_pos, res_pos, res_active, res_property, radius, decay_p
 
 ---
 
-### 7 · Collision Sensor
+### 8 · Collision Sensor
 
 `sense_collision(agent_pos, state, params)` (`sensor.py:24`)
 
@@ -458,7 +485,7 @@ def get_visual_offsets(sensor_range):
 
 ---
 
-### 8 · Proprioception
+### 9 · Proprioception
 
 Inlined in `get_observation` (`sensor.py:309–310`):
 
@@ -479,7 +506,7 @@ One-hot encoding of `last_action` — the action taken on the immediately previo
 
 ---
 
-### 9 · Visual Sensor
+### 10 · Visual Sensor
 
 `sense_visual(agent_pos, state, params)` (`sensor.py:145`)
 
@@ -612,7 +639,7 @@ def sense_visual(agent_pos, state: EnvState, params: EnvParams):
 
 ---
 
-### 10 · Location Sensor
+### 11 · Location Sensor
 
 `sense_location(agent_pos, height, width)` (`sensor.py:52`):
 
@@ -660,6 +687,7 @@ breakdown = {
     "Satiation": 1,                      # always
     "Interoceptive Nociception": 1,      # if params.interoceptive_nociception_enabled
     "Extero Nociception": 1,             # if params.nociception_enabled
+    "Thermoception": 2*r² + 2*r + 1,     # if params.thermal_enabled (r = thermal_grid_range)
     "Olfaction": params.res_property.shape[-1],  # if params.olfactory_enabled (sensor.py:349)
     "Collision": 2*r² + 2*r + 1,        # always (r = params.sensor_range)
     "Proprioception": params.action_dim, # if params.proprioception_enabled
@@ -856,6 +884,10 @@ def get_observation(state: EnvState, params: EnvParams, apply_noise=True):
 This function is **renderer-facing** — it parses the flat observation vector into the structured `sensory_data` list consumed by `renderer.render_jax_state`. It is not part of the training pipeline. Full coverage is in doc 12 (renderer); only the hookup is noted here.
 
 It iterates `get_observation_breakdown(params)` to find each sensor's slice in the flat vector, then packages each slice into a typed dict (`'type': 'intensity'`, `'type': 'diamond'`, `'type': 'visual_grid'`, etc.) that the renderer knows how to draw. The optional `true_obs` argument enables side-by-side noisy vs. clean display.
+
+**Every modality needs a branch here, and the failure mode is silent.** The walk keeps a slice pointer that only advances inside a branch, so a modality with no branch leaves the pointer short and **every later panel draws its neighbour's numbers** — no exception, plausible-looking videos. That is how the thermoceptor would have shifted the olfaction, collision, proprioception, visual and location panels by five. The chain now ends in `else: raise ValueError(...)`, so the next new modality fails loudly at the first frame instead. `tests/env/test_thermoception.py::test_sensory_viz_panels_are_not_shifted` checks every panel against an offset computed from the breakdown, never against this function's own pointer.
+
+The **renderer's** own `known_sensors` list (`renderer.py`) is a separate, second edit: a pod whose name is not in that list is simply not drawn. Thermoception is currently built into `sensory_data` but not yet drawn — Stage 6 of the temperature plan adds it to the pod lists.
 
 ---
 

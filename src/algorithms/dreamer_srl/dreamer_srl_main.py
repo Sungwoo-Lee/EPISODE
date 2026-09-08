@@ -768,7 +768,7 @@ def main() -> None:
     # -----------------------------------------------------------------------
     # 4b. Pre-flight obs/action + modality-fingerprint check (curriculum only)
     # Ported from train.py:483-534. Validates that all stage configs produce
-    # the same obs_dim, action_dim, and 23-field modality fingerprint so the
+    # the same obs_dim, action_dim, and modality fingerprint so the
     # retained weights fit every stage. Fails fast with a descriptive error.
     # -----------------------------------------------------------------------
     def _mask_fp(arr):
@@ -783,7 +783,7 @@ def main() -> None:
         return "none" if not any(vals) else vals
 
     def _modality_fingerprint(p):
-        """23-field tuple of sensor enables + shape params affecting obs layout.
+        """Tuple of sensor enables + shape params affecting obs layout.
 
         Ported verbatim from train.py:L485-L503.
         If any two stages produce different fingerprints, obs semantics differ
@@ -827,6 +827,18 @@ def main() -> None:
             _mask_fp(p.res_blocks_sight),
             _mask_fp(p.animal_blocks_sight),
             _mask_fp(p.obs_blocks_sight),
+            # Thermal (Stage 3). thermal_enabled and thermal_grid_range both
+            # change obs_dim, so the dim check above already catches them --
+            # included as defence in depth, same reasoning as
+            # olfactory_grid_range. thermal_relative is the one that EARNS its
+            # place: `field - body_temp` and the raw field have the identical
+            # dimension count and mean different things, which is exactly the
+            # case the dim check cannot see. thermal_sigma and the rate
+            # constants stay OUT, matching the existing rule that continuous
+            # floats are not fingerprinted.
+            p.thermal_enabled,
+            p.thermal_grid_range,
+            p.thermal_relative,
             # NOT fingerprinted, deliberately: visual_blur_radial_scale /
             # _anisotropy / _sigma_floor are continuous, and fingerprinting floats
             # would forbid legitimate schedules. Same pre-existing choice applies

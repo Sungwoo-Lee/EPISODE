@@ -1251,6 +1251,18 @@ def load_env_params(config: Config) -> EnvParams:
                 f"({_th_k_exchange} + {_th_k_loss} = {_th_k_exchange + _th_k_loss}); "
                 f"above 1 the discrete update overshoots its own fixed point every "
                 f"step and the body temperature oscillates instead of settling.")
+
+        # Thermoceptor (Stage 3). `grid_range` is a RADIUS, not a side length,
+        # exactly like `olfactory_grid_range` and `visual_sensor_range`:
+        # 0 -> 1 cell, 1 -> 5 cells, 2 -> 13 cells (a Manhattan diamond).
+        # It fixes the observation width at 2r^2 + 2r + 1, so it is static.
+        _th_grid_range = int(config.get_mandatory('thermal.grid_range'))
+        if _th_grid_range < 0:
+            raise ValueError(
+                f"thermal.grid_range must be >= 0 (it is the RADIUS of the "
+                f"thermoceptive Manhattan diamond: 0 -> 1 cell, 1 -> 5 cells, "
+                f"2 -> 13 cells), got {_th_grid_range}.")
+        _th_relative = bool(config.get_mandatory('thermal.relative'))
     else:
         # Inert; never read when thermal is off.
         #
@@ -1276,6 +1288,13 @@ def load_env_params(config: Config) -> EnvParams:
         _th_setpoint = 0.0
         _th_min_temp, _th_max_temp = 0.0, 0.0
         _th_k_exchange, _th_k_loss, _th_k_metabolic = 0.0, 0.0, 0.0
+        # Thermoceptor block (Stage 3), inert. `get_observation` and
+        # `get_observation_breakdown` skip the modality under a static
+        # `if params.thermal_enabled:`, so the observation width is unchanged
+        # and neither of these is read. 0 / False are the sentinels the
+        # curriculum fingerprint sees on every non-thermal config.
+        _th_grid_range = 0
+        _th_relative = False
 
     _vis_v = config.get('sensory.visual_vector_size')
     visual_vector_size: int = int(_vis_v) if _vis_v is not None else 8
@@ -1901,6 +1920,8 @@ def load_env_params(config: Config) -> EnvParams:
         temperature_setpoint=_th_setpoint,
         min_temperature=_th_min_temp,
         max_temperature=_th_max_temp,
+        thermal_grid_range=_th_grid_range,
+        thermal_relative=_th_relative,
         obs_temperature=obs_temperature,
         obs_temp_ratio_low=obs_temp_ratio_low,
         obs_temp_ratio_high=obs_temp_ratio_high,
@@ -1934,6 +1955,13 @@ _YAML_KEY_TO_SENSOR_NAME = {
     "satiation":                 "Satiation",
     "extero_nociception":        "Extero Nociception",
     "interoceptive_nociception": "Interoceptive Nociception",
+    # Thermoception (Stage 3). This entry and the `thermoception:` block in
+    # configs/environment/default.yaml are MUTUALLY BLOCKING and must land in
+    # the same change: without the entry the config raises "unknown
+    # perceptual-noise modality key(s)" below, and without the config block
+    # `apply_perceptual_noise` raises a bare KeyError inside a jit trace that
+    # names neither the config nor the fix (IMPLEMENTATION_PLAN.md F2).
+    "thermoception":             "Thermoception",
     "olfaction":                 "Olfaction",
     "collision":                 "Collision",
     "proprioception":            "Proprioception",

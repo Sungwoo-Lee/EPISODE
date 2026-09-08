@@ -62,6 +62,36 @@ def sense_olfaction_cells(state: EnvState, params: EnvParams):
     return (per_cell * in_bounds[:, None]).flatten()
 
 
+def sense_thermoception(state: EnvState, params: EnvParams):
+    """Thermoceptive field sampled over a Manhattan diamond around the agent.
+
+    Same stencil as olfaction and vision — `get_visual_offsets(r)` — with a
+    vector size of 1, so the five values at `thermal_grid_range: 1` are
+    centre, up, right, down, left, in the project's existing cell order.
+    Reports `thermal_field - body_temp` when `thermal.relative` is true, i.e.
+    "how much warmer than me is that cell", which is the quantity the agent can
+    act on; the absolute field otherwise.
+
+    OUT-OF-BOUNDS CELLS CLAMP, they do not read zero. This is a DELIBERATE
+    departure from the zero-fill convention that `sense_olfaction_cells` and
+    `sense_visual` use, and it must not be "fixed" back (IMPLEMENTATION_PLAN.md
+    F3, hazard H11): a zero on a RELATIVE reading means "that cell is exactly my
+    own temperature", which in a world whose baseline is -25 would make the map
+    edge look like a warm refuge to an agent standing in the cold. Clamping the
+    coordinate reports the nearest real cell instead, which is also what the
+    field itself does at its edges — `_gaussian_smooth_normalised` renormalises
+    by the in-bounds weight sum rather than averaging in zeros.
+    """
+    offsets = get_visual_offsets(params.thermal_grid_range)          # [C, 2]
+    cells = state.agent_pos + offsets                                # [C, 2]
+    rows = jnp.clip(cells[:, 0], 0, params.height - 1)
+    cols = jnp.clip(cells[:, 1], 0, params.width - 1)
+    reading = state.thermal_field[rows, cols]                        # [C]
+    if params.thermal_relative:                    # static branch, trace time
+        reading = reading - state.body_temp
+    return reading
+
+
 def sense_collision(agent_pos, state: EnvState, params: EnvParams):
     """Manhattan Collision Sensor (checks OOB and blocking obstacles)."""
     sensor_range = params.sensor_range
@@ -448,6 +478,13 @@ def get_observation(state: EnvState, params: EnvParams, apply_noise=True):
     if params.nociception_enabled:
         obs_parts.append(sense_extero_nociception(state.agent_pos, state, params))
 
+    # 5b. Thermoception — exteroceptive (the thermal field over a diamond).
+    #     Position in this list is load-bearing: it must match the identical
+    #     position in get_observation_breakdown below, and the `thermoception:`
+    #     entry's position in perceptual_noise.modalities.
+    if params.thermal_enabled:
+        obs_parts.append(sense_thermoception(state, params))
+
     # 5. Olfaction Sensor (Resources + Animals + Obstacles)
     # B2 fix: unified animal_chem replaces separate pred_chem + neutral_chem calls.
     if params.olfactory_enabled:
@@ -497,7 +534,15 @@ def get_observation_breakdown(params: EnvParams):
     # 5. Extero Nociception — exteroceptive
     if params.nociception_enabled:
         breakdown["Extero Nociception"] = 1
-    
+    # 5b. Thermoception — exteroceptive. MUST stay at the same position as the
+    # matching append in get_observation above; the two functions are the same
+    # layout stated twice and dreamer_srl_main.py / agent.py raise if their
+    # totals disagree.
+    if params.thermal_enabled:
+        n_thermo_cells = (2 * (params.thermal_grid_range ** 2)
+                          + 2 * params.thermal_grid_range + 1)
+        breakdown["Thermoception"] = int(n_thermo_cells)
+
     # 5. Olfaction
     if params.olfactory_enabled:
         n_olf_cells = (2 * (params.olfactory_grid_range ** 2)
@@ -567,6 +612,14 @@ def build_sensory_viz(obs, state, params, true_obs=None):
             ptr += dim; t_ptr += dim
             viz.append({'name': 'Extero Nociception', 'intensity': noc_obs, 'true_intensity': noc_true, 'color': '#c0392b', 'type': 'intensity'})
         
+        elif sensor_name == "Thermoception":
+            th_obs = obs[ptr:ptr+dim]
+            th_true = true_obs[t_ptr:t_ptr+dim] if true_obs is not None else th_obs
+            ptr += dim; t_ptr += dim
+            viz.append({'name': 'Thermoception', 'vector': th_obs, 'true_vector': th_true,
+                        'type': 'diamond', 'range': params.thermal_grid_range,
+                        'num_features': 1})
+
         elif sensor_name == "Collision":
             coll_obs = obs[ptr:ptr+dim]
             coll_true = true_obs[t_ptr:t_ptr+dim] if true_obs is not None else coll_obs
@@ -604,5 +657,21 @@ def build_sensory_viz(obs, state, params, true_obs=None):
             proprio_vec = obs[ptr:ptr+dim]
             ptr += dim; t_ptr += dim
             viz.append({'name': 'Proprioception', 'vector': proprio_vec, 'type': 'radial', 'color': '#be4bdb'})
+
+        else:
+            # NOT optional. Before this branch existed, an unrecognised sensor
+            # name matched nothing, so `ptr` never advanced and EVERY LATER
+            # PANEL rendered from a slice shifted by that modality's width —
+            # silently, with plausible-looking output and no exception. That is
+            # how a new modality corrupts the videos (IMPLEMENTATION_PLAN.md F7,
+            # hazard H15). Fail loudly instead.
+            raise ValueError(
+                f"build_sensory_viz has no branch for sensor {sensor_name!r} "
+                f"(dim={dim}). Every key get_observation_breakdown() can emit "
+                f"needs one: without it the slice pointer stops advancing and "
+                f"every panel after this modality renders another modality's "
+                f"numbers, with nothing raising. Add a branch here in the same "
+                f"change that adds the modality."
+            )
 
     return viz

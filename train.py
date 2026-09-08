@@ -835,6 +835,18 @@ def main():
             _mask_fp(p.res_blocks_sight),
             _mask_fp(p.animal_blocks_sight),
             _mask_fp(p.obs_blocks_sight),
+            # Thermal (Stage 3). thermal_enabled and thermal_grid_range both
+            # change obs_dim, so the dim check above already catches them --
+            # included as defence in depth, same reasoning as
+            # olfactory_grid_range. thermal_relative is the one that EARNS its
+            # place: `field - body_temp` and the raw field have the identical
+            # dimension count and mean different things, which is exactly the
+            # case the dim check cannot see. thermal_sigma and the rate
+            # constants stay OUT, matching the existing rule that continuous
+            # floats are not fingerprinted.
+            p.thermal_enabled,
+            p.thermal_grid_range,
+            p.thermal_relative,
             # NOT fingerprinted, deliberately: visual_blur_radial_scale /
             # _anisotropy / _sigma_floor are continuous, and fingerprinting floats
             # would forbid legitimate schedules. Same pre-existing choice applies

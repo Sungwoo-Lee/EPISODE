@@ -387,6 +387,17 @@ class EnvParams:
     temperature_setpoint: float
     min_temperature: float
     max_temperature: float
+    # Thermoceptor (Stage 3). Both are STATIC: `thermal_grid_range` fixes the
+    # number of observation dimensions (2r^2 + 2r + 1) and `thermal_relative`
+    # selects a trace-time branch. Both are also part of the curriculum modality
+    # fingerprint (train.py / dreamer_srl_main.py `_modality_fingerprint`) —
+    # `thermal_relative` because it changes what the five numbers MEAN at an
+    # identical dimension count, which is the only case the obs_dim check
+    # cannot catch. When thermal is off both carry inert sentinels (0 / False)
+    # and nothing reads them: `get_observation` and `get_observation_breakdown`
+    # skip the modality entirely under a static `if params.thermal_enabled:`.
+    thermal_grid_range: int = struct.field(pytree_node=False)
+    thermal_relative: bool = struct.field(pytree_node=False)
 
     # ── Legacy @property aliases (B3 fix — kept for one release cycle) ────────
     # These accessors allow code that reads `params.predator_tags` / `params.neutral_tags`

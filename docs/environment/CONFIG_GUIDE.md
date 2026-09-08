@@ -250,6 +250,8 @@ thermal:
   k_exchange: 0.04          # per step, fraction of the gap to the cell's temperature
   k_loss: 0.01              # per step, fraction of the deviation from setpoint undone
   k_metabolic: 0.0          # constant heat produced per step
+  grid_range: 1             # thermoceptor RADIUS; 1 -> 5 cells (+5 obs dims)
+  relative: true            # report `field - body_temp`, not the raw field
 
 environment:
   obstacles:
@@ -321,9 +323,19 @@ All the sub-keys are **conditional-mandatory** (§5 pattern), read only when
 `thermal.enabled` is true, and the `random_spots.*` trio only when `use_random_spots` is
 true as well. The body sub-keys validate at the point they are read: `min_temperature <
 max_temperature`, `temperature_setpoint` inside that band, `k_exchange` and `k_loss` each
-`>= 0` and summing to `<= 1`. `metabolic_coupling`, `grid_range` and `relative` are
-present in `default.yaml` but not read yet — Stages 3 and 5 of the temperature plan add
-their readers. `temperature` and `temperature_ratio` are mutually exclusive on one entry,
+`>= 0` and summing to `<= 1`, and `grid_range >= 0`. `metabolic_coupling` is present in
+`default.yaml` but not read yet — Stage 5 of the temperature plan adds its reader.
+
+**Turning thermal on widens the observation, and that is a one-way door for curricula.**
+`grid_range: 1` adds **five** dimensions (`2r² + 2r + 1` cells of a Manhattan diamond),
+inserted after Extero Nociception and before Olfaction. The curriculum pre-flight check
+compares `obs_dim` across stages *before* it compares the modality fingerprint, so a
+curriculum that mixes thermal and non-thermal stages is rejected with "changes obs_dim".
+That is correct and must not be relaxed: **a curriculum is thermal throughout or
+non-thermal throughout.** A thermal curriculum whose early stages have no fire still
+declares `thermal.enabled: true` with a neutral field, so the width stays constant.
+`relative` is in the modality fingerprint for the complementary reason — it changes what
+the five numbers *mean* at an identical width, which the `obs_dim` check cannot see. `temperature` and `temperature_ratio` are mutually exclusive on one entry,
 and **an animal entry declaring either one raises** — the field is built once at reset and
 animals move.
 

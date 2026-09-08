@@ -795,12 +795,12 @@ Everything the first draft listed as open is now settled — see *Decisions sett
 - [x] **S1** The deferred set is **68** configs, not 106 (140 full − 72 fixtured). **55** raise `Strict Config: Configuration key 'thermal.enabled' is required but missing.`; the other **13** raise earlier on the pre-existing `sensory.visual_value_mode` gap (F9). **Zero load.** Three spot-checked by hand. Finding: the 68 deferred configs are *exactly* the 68 that already fail for want of `sensory.injury_observable` — thermal adds no newly-broken config. Done 2026-09-08.
 - [x] **S1** 101 files touched (102 with this plan doc): 72 configs (default + 71 fixtured), 20 test modules/fixtures, 3 `src/` files, 3 Maintenance-Contract docs, plus 3 new files (the thermal example config and two new test modules). Re-derived from 72 fixtures rather than 34, per D0-1 — the ~55 estimate was keyed to the stale count. No deferred config touched. Done 2026-09-08.
 - [x] **S1** `default.yaml`'s `obstacles:` list parses identically before and after (3 entries: rock, tree, bush). The campfire lives in the new `configs/environment/experiment/thermal/campfire_world.yaml`. Done 2026-09-08.
-- [ ] **S3** Render one frame with thermal on and check the Collision panel against the observation slice by hand. `build_sensory_viz` fails silently (F7); nothing else in the suite will tell you.
+- [x] **S3** Done better than by hand: `tmp/20260909_125000_render_check.py` renders a real thermal-on episode and compares **every** pod, at every step, against a slice offset computed from `get_observation_breakdown` alone. 10 frames, all aligned. The pre-fix F7 world (no branch, no terminal `else`) was reconstructed and the check went red with the Olfactory panel drawing the thermoception values. Done 2026-09-09.
 - [x] **S1** Asserted, not eyeballed: `test_placement_constraints_are_noops_when_disabled` compares `state.key` (plus all three position arrays) against the Stage 0 fixture, for thermal OFF *and* thermal ON with both constraints at 0. The 72-config parity gate additionally compares `state.key` at all 101 states. Done 2026-09-08.
 - [x] **S1** One campfire at (3,2), `default_temp: [-25,-25]`, absolute `temperature: 300`: peak `+72.42`, d=1 ring `[+10.12, +10.12, +10.46, +10.11]`, far corner `-25.00`. Sandbox `gaussian_smooth` on the same raw stamps prints the identical numbers. Done 2026-09-08, before the test was written.
 - [x] **S2** Equilibrium confirmed against the closed form. A uniform −25 field is *lethal* (the body crosses −15 on step 28), so the standing check uses a uniform **−10** field, where `T* = 0.8·(−10) = −8`: measured **−7.99999237** after 400 steps, and the test additionally refuses any settling point within 1.5 of the cell temperature. The −25 case is checked as steps-to-death against `sim.body_traj` instead. Done 2026-09-09.
 - [x] **S2** Every consumer in the Analysis table ticked off, each line number re-verified against the file rather than trusted: `train.py:1543,2054,2260,2413`; `dreamer_srl_main.py:1231`; `episode_metrics.py:41-45,232-238,269-277`; `trajectory_store.py:141,172`; `_ladder.py:90`; `grid_ladder_figures.py:150,160,168`; `check_env.py:35`; plus `tests/models/test_gae_truncation.py:132`. The six `>= 2` real-death masks were read and left unedited, and the pinning test now asserts they cover code 5. Done 2026-09-09.
-- [ ] **S3** `sum(get_observation_breakdown(params).values()) == get_observation(...).shape[0]` on both a thermal-on and a thermal-off config, printed, before running the suite.
+- [x] **S3** Printed before the suite: thermal OFF (`default.yaml`) 27 == 27; thermal ON (`campfire_world.yaml`) 32 == 32. Done 2026-09-09.
 - [ ] **S4** Diff `calculate_drive`'s thermal-off branch against the original character by character — it must be the same expression, not an equivalent one.
 - [ ] **S6** Load every config in the Stage 1 migration set and confirm none newly raises. The structure check must be unreachable when `thermal.enabled` is false. (Deferred configs are expected to raise on `thermal.enabled` — that is the policy, not a failure; do not "fix" them here.)
 - [ ] **Every stage** Record before/after steps-per-second on the same node, GPU and seed. The field build is once per episode and the recurrence is three multiply-adds per step, so a measurable slowdown means something landed in the wrong loop. Per the verification protocol, >5% warrants discussion and >15% blocks.
@@ -1314,6 +1314,216 @@ The `sensory.visual_value_mode` staleness of the saved run config used by
    the plan's Stage 2 field list verbatim, and F1's Stage 4 drive already reads
    `params.temperature_setpoint` and `params.max_temperature` under those exact names, so
    changing it now would need F1 changed with it. Recorded rather than silently "fixed".
+
+Signed: `Implemented by: developer`
+
+---
+
+### Stage 3 — Thermoceptor (+5 observation dimensions) (complete)
+
+**Plain-language summary.** The agent can now *feel* temperature. Five new numbers are
+added to what it perceives each step: how much warmer or colder than its own body the cell
+it stands on is, and the same for its four neighbours. Nothing yet rewards it for using
+them — temperature enters the reward in Stage 4 — but for the first time the fire is
+findable, because the campfire looks exactly like a rock and thermoception is the only
+sense that can tell them apart. On every config that leaves `thermal.enabled: false` the
+new sense is not even compiled: the observation is the same width, the same numbers, and
+the byte-parity gate is unchanged at **72 passed**.
+
+**This is the one-way door.** With thermal on the observation is 27 dimensions wide
+instead of 32 on the example config, and that width is baked into every checkpoint. A
+curriculum cannot mix thermal and non-thermal stages, and a checkpoint trained after this
+stage with thermal on cannot be restored into the reverted code. No such checkpoint exists
+yet.
+
+**Files changed** (12 modified + 1 new; this plan doc makes 14).
+
+| File | Change |
+|---|---|
+| `src/environment/sensor.py` | New `sense_thermoception(state, params)` — `get_visual_offsets(thermal_grid_range)` over `state.thermal_field`, minus `body_temp` under a static `if params.thermal_relative:`; out-of-bounds cells clamp. `get_observation` appends it after Extero Nociception, before Olfaction, under a static `if params.thermal_enabled:`. `get_observation_breakdown` gains `"Thermoception" = 2r²+2r+1` at the identical position. `build_sensory_viz` gains a `Thermoception` branch **and a terminal `else: raise ValueError(...)`** (F7 / H15). |
+| `src/environment/state.py` | `EnvParams` gains `thermal_grid_range: int` and `thermal_relative: bool`, both `pytree_node=False` (one fixes the observation width, the other selects a trace-time branch, and both are fingerprinted). |
+| `src/environment/config_loader.py` | `thermal.grid_range` (validated `>= 0`) and `thermal.relative` read as conditional-mandatory inside the existing `if _thermal_on:` block; inert `0` / `False` in the `else:`. `_YAML_KEY_TO_SENSOR_NAME` gains `"thermoception": "Thermoception"` (F2). |
+| `configs/environment/default.yaml` | A `thermoception:` block in `perceptual_noise.modalities`, positioned between `extero_nociception` and `olfaction` to match observation order, with **explicit** `clip_min: -100.0` / `clip_max: 400.0` and their derivation in the comment (F2 / H18). Index comments renumbered. |
+| `configs/environment/experiment/thermal/campfire_world.yaml` | The same block — **not in the plan's file list, and necessary**; see Deviation D3-2. |
+| `src/utils/evaluation_core.py` | `_sensor_stat_columns` gains a `Thermoception` branch naming the five cells from the offsets (`obs_thermo_r0c0`, `obs_thermo_r-1c0`, …), exactly as `Collision` does. |
+| `train.py`, `src/algorithms/dreamer_srl/dreamer_srl_main.py` | Both `_modality_fingerprint` copies gain `thermal_enabled`, `thermal_grid_range` and `thermal_relative` (23 → 26 fields); the stale "23-field" comments in the Dreamer copy corrected. |
+| `tests/env/test_thermoception.py` | **New.** 14 tests. |
+| Docs (Maintenance Contract) | `02_config_schema.md` (key-table rows, the mandatory-key list, a new "The thermoceptor (Stage 3)" section carrying F3's clamp rationale, fingerprint count), `09_sensors_and_observation.md` (observation-order table, new sensor section 6, renumbering, the `build_sensory_viz` branch contract), `10_perceptual_noise.md` (11-modality table + the clip derivation + the mutually-blocking-edits note), `CONFIG_GUIDE.md` §3.9 (the two keys, and the curriculum rule), `CONFIG_CRITICAL_SETTINGS.md` (`thermal.grid_range` and `thermal.relative` rows + a dated change-log entry). |
+
+**Observation width: 27 → 32** on `campfire_world.yaml` (thermal on). Unchanged at 27 on
+`default.yaml` (thermal off). `sum(get_observation_breakdown(params).values()) ==
+get_observation(...).shape[0]` on both — checkpoint S3, printed before the suite was run.
+
+**The clip bounds, and why.** `[-100.0, +400.0]`, declared explicitly.
+`apply_perceptual_noise` clips **every** modality whenever `perceptual_noise.enabled` is
+true — including a modality in mode `none`, because the clip is applied after the (zero)
+noise rather than instead of it — and the loader's defaults are ±100. The relative
+thermal reading is not a bounded quantity: measured over 300 resets of `campfire_world.yaml`
+the field spans −27.99 to **+89.88** with the shipped `min_fire_separation: 3`, and to
+**+151.86** with the separation disabled and three fires forced adjacent (two fires can
+never share a cell, so the stamps only partially merge — F2's "around +300" is the raw
+stamp sum, not the post-blur field). Adding `|body_temp| <= 15` gives a real range of about
+`[-43, +167]`. `[-100, +400]` therefore carries better than 2× headroom at both ends and
+never binds; its job is to bound a runaway noise draw, not to rescale the signal. `sigma`
+is `0.0` with `mode: state_dependent`, matching the "declared but silenced" pattern
+`injury` and `nutrition` already use — no thermal-noise magnitude has been calibrated, and
+copying olfaction's `0.2` onto a signal spanning ~200 units would look like noise while
+doing nothing.
+
+**F8 re-asserted, because this stage edits `default.yaml` again.** Parsing the file before
+(`c35e9e3a`) and after and diffing the loaded structures: the `environment.obstacles:` list
+is **identical** (3 entries: rock, tree, bush — no campfire), and the *only* parsed
+difference anywhere in the file is `perceptual_noise.modalities.thermoception`. Nothing
+propagates to the 216 layered children except a noise block that is inert while
+`perceptual_noise.enabled` is false and, when true, is only ever looked up on a config
+whose breakdown actually emits `Thermoception`. Inserting the key mid-list renumbers the
+noise array indices of `olfaction`..`location` by one; every lookup in
+`apply_perceptual_noise` is by NAME through `modality_map`, so no value moves — which the
+72-config parity gate confirms rather than assumes.
+
+---
+
+**Deviation D3-1 — `sense_thermoception` reuses `get_visual_offsets`, not
+`sense_olfaction_cells`.** The instruction was to reuse the olfactory diamond machinery
+rather than write a second neighbourhood implementation. The reusable part is
+`get_visual_offsets(r)` and the `agent_pos + offsets` cell construction, and both are
+reused verbatim. `sense_olfaction_cells` itself cannot be called: it evaluates the
+three-pool olfactory sum at each cell (there is no `vector_size` argument that would turn
+it into a field sampler), and its out-of-bounds handling is the zero-fill that F3
+explicitly forbids here. Writing the five-line sampler is the smaller change; wrapping the
+olfaction function would have meant changing olfaction.
+
+**Deviation D3-2 — `campfire_world.yaml` also needs the `thermoception:` noise block, and
+the plan lists only `default.yaml`.** `campfire_world.yaml` is a **full** config (no
+`extends:`), so it inherits nothing. It is also the only thermal-on config in the tree —
+i.e. the only config where the missing block can actually fire, since
+`apply_perceptual_noise` only looks a modality up when `get_observation_breakdown` emits
+it. Without the entry, `perceptual_noise.enabled: true` on a thermal run raises a bare
+`KeyError: 'Thermoception'` inside a jit trace. `tests/env/test_thermoception.py::test_noise_enabled_thermal_run_loads_and_runs`
+is the guard, and it goes red if either half of F2 is removed.
+
+**Deviation D3-3 — `src/environment/state.py` is not in the plan's Stage 3 file list.** It
+has to be: the plan's own Stage 3 text reads `params.thermal_grid_range` and names
+`thermal_relative` as a fingerprint entry, and neither field existed after Stage 2.
+
+**Plan correction 1 — F2's "+300" is the raw stamp sum, not a reading the sensor can
+produce.** Measured (300 resets each): the post-blur field peaks at **+89.9** on the
+shipped example and **+151.9** with fires allowed to merge. The blur is
+weight-normalised, so a stamp of 364 lands as roughly a third of that above baseline, and
+the placement occupancy mask stops two fires sharing a cell even at
+`min_fire_separation: 0`. The conclusion F2 draws is still correct and still important —
+±100 is far too tight — but the number a future reader should calibrate against is ~170,
+not ~300.
+
+**Plan correction 2 — the Stage 3 file list omits `_sensor_stat_columns`' sibling risk and
+the renderer pod lists, correctly, but a reader should know what "the renderer is not
+updated" means here.** `renderer.py`'s `known_sensors` list is a fixed iteration order, so
+a pod whose name it does not know is silently **not drawn** rather than mis-drawn — no
+crash, no shift. Stage 6a adds it. Verified by rendering, not by reading: see below.
+
+---
+
+**Verification**
+
+| Gate | Result |
+|---|---|
+| `tests/env/test_thermal_parity.py` | **72 passed**, 285 skipped (2m30s) — unchanged from Stage 2, so +5 dims touched no thermal-off config |
+| `tests/env/test_unified_parity.py` | **34 passed**, 323 skipped (5m04s) |
+| `tests/env/test_visual_parity.py` | **8 passed** |
+| `tests/env/test_thermal_field.py` | **9 passed** |
+| `tests/env/test_thermal_body.py` | **5 passed** |
+| `tests/env/test_no_recompile.py` | **3 passed** |
+| `tests/env/test_thermoception.py` (new) | **14 passed** |
+| whole-directory sweep `tests/env` (minus the two parity modules, run as an extra) | **259 passed**, 297 skipped, **1 failed** — a pre-existing test-ordering artifact, see below |
+
+**The one red in the whole-directory sweep is not this stage's, and it is not a parity
+failure.** `test_directional_sensors.py::test_observation_is_bit_identical_to_stored_pre_change_fixture`
+fails with `AssertionError: parity fixture must run on CPU, got 'gpu'` — the module's own
+backend guard, not an observation mismatch. Run alone it is **27 passed**. Reproduced on
+demand with `pytest tests/env/test_bush_blocks_animals.py tests/env/test_directional_sensors.py`
+(**1 failed, 30 passed**), two modules neither of which this stage touches: whichever test
+file imports `jax` first in a shared process wins the backend, and
+`os.environ.setdefault("JAX_PLATFORMS", "cpu")` at the top of a later module is then a
+no-op. Pre-existing collection-order fragility in the test suite; recorded, not fixed here.
+
+
+**Every new test was mutation-checked** — each was run against the specific wrong
+implementation it exists to catch, and each went red; all files were restored and verified
+byte-identical by sha256 (`tmp/20260909_123000_mutation_check.py`):
+
+| Mutation | Test that caught it |
+|---|---|
+| Drop the `Thermoception` branch from `build_sensory_viz` | `test_sensory_viz_panels_are_not_shifted` |
+| Drop the branch **and** the terminal `else` — the true pre-fix F7 world, where nothing raises | `test_sensory_viz_panels_are_not_shifted`: *"panel 'Olfactory' is drawing the wrong slice — ACTUAL `[39.5, 29.5, 40.5, 49.5, 38.5]`"*, i.e. the thermoception values, exactly the silent corruption F7 describes |
+| Zero-fill out-of-bounds cells the way olfaction does | `test_oob_reads_the_clamped_neighbour` |
+| Transpose the stencil (`offsets[:, ::-1]`) | `test_reads_the_five_cells_it_claims` |
+| Restore the loader's default `clip_max: 100` | `test_noise_clip_does_not_compress_the_fire` |
+| Remove the `_YAML_KEY_TO_SENSOR_NAME` entry | `test_noise_enabled_thermal_run_loads_and_runs` |
+
+**Checkpoint S3 — the renderer was rendered, not read.** `tmp/20260909_125000_render_check.py`
+runs a real thermal-on episode, and for **every** step and **every** pod compares the
+panel's vector against a slice offset computed from `get_observation_breakdown` alone —
+never against `build_sensory_viz`'s own pointer, which would re-derive the bug being
+checked. It then calls `render_jax_state` and asserts a frame comes back. Result: 10 frames
+at 1000×1400, all panels aligned, thermoception occupying `obs[3:8]`. One frame written to
+`tmp/20260909_125000_thermal_frame.png` and looked at: the five drawn pods are Olfactory,
+Extero Nociception, Collision, Visual and LOC — Thermoception is built into `sensory_data`
+but not yet in `renderer.py`'s `known_sensors`, which is Stage 6a's edit, and its absence
+is silent-but-harmless rather than silent-and-wrong.
+
+**Every `get_observation_breakdown` consumer was exercised, not just read**
+(`tmp/20260909_130000_consumer_check.py`, all green):
+
+| Consumer | Result |
+|---|---|
+| `src/models/recurrent_ppo_network.py::_resolve_modulator_input_indices` (rPPO modulation slice — raises on unknown names) | `input_sensors: ["Thermoception"]` resolves to `(3, 4, 5, 6, 7)`; `"all"` gives 32; a typo'd name still raises and now lists `Thermoception` as available |
+| `src/algorithms/dreamer_srl/agent.py::HierarchicalMLPEncoder` (keys off `observation_breakdown.keys()`) | 8 groups including `Thermoception`; forward pass on a `[2, 32]` batch returns `[2, 32]` |
+| `src/algorithms/dreamer_srl/agent.py:2467` / `dreamer_srl_main.py:754` breakdown-sum tripwires | sums agree (32 == 32) |
+| `src/utils/evaluation_core.py::build_stat_headers` / `_sensor_stat_columns` | 10 new columns (`obs_thermo_*` + `true_thermo_*`) |
+| `scripts/eval/traj_collect/traj_scan.py::_sensor_of_index` | index 5 → `"Thermoception (dims 3..7)"` |
+| `scripts/verification/analyze_noise_diagnostics.py::EXPECTED_SIGMA`, `src/models/archive/.../THRESH_PER_CHANNEL` | both use `.get(name, default)` — no hard failure; left unedited |
+| `renderer.py::known_sensors`, `renderer_v2.py::pod_map`, `grid_world.py` (stale copy) | fixed lists — an unknown pod is not drawn, never mis-drawn. Stage 6a; `grid_world.py` left alone per the plan |
+| `scripts/verification/check_olfaction_parity.py`, `trajectory_story.py`, `save_snapshot.py`, `record_env_demo.py`, `eval_rollout.py`, `collect_trajectories.py`, `visualize_dream.py`, `replay.py`, `check_observability_gates.py` | all walk the dict generically (offset accumulation or `.items()`), no name whitelist |
+| `configs/models/recurrent_ppo/nmn_input_site_grid/generate_site_grid_arms.py` | the **one** consumer with hard-coded widths — `SLICES` declares `ALL: 27`, `X: 19`, `I: 2` and `--verify` asserts them against a live construction. Its `ENV_CONFIG` is a non-thermal `basic/04` config, so all three still hold and nothing was changed. Recorded because **a thermal arm set would need all three numbers recomputed** (`ALL` becomes 32 and `X` 24 at `grid_range: 1`, and someone has to decide whether Thermoception belongs in the exteroceptive slice) |
+
+**Curriculum fingerprint** (`tmp/20260909_131000_fingerprint_check.py`, both copies loaded
+from their own source rather than re-typed): 26 fields each. Thermal on/off, `relative`
+true/false and `grid_range` 1 vs 2 all produce distinct fingerprints. `relative` is the one
+that matters — relative and absolute have the **identical** width (32), so only the
+fingerprint can separate them; thermal on/off changes the width (32 vs 27) and is caught by
+the earlier `obs_dim` check, which is H2 behaving as designed.
+
+**Speed check.** Env-step SPS on a thermal-**off** config (`default.yaml`, 64 envs × 200
+steps under one `lax.scan`, CPU, best of 5, `tmp/20260909_132000_sps_bench.py`). "Before" is
+the same benchmark run against `c35e9e3a`'s copies of the four touched hot-path files,
+restored and sha256-verified afterwards (`tmp/20260909_133000_sps_before.py`).
+
+| | run 1 | run 2 | run 3 |
+|---|---|---|---|
+| before (`c35e9e3a`) | 27,566 | 31,831 | 32,457 |
+| after | 33,693 | 32,968 | 32,766 |
+
+Both sit at 32–33k SPS; run 1's 27.6k is a cold-machine outlier. The delta is within noise
+and in the favourable direction, which is what a static Python branch that adds nothing to
+the thermal-off traced graph should look like. **No regression.**
+
+**Follow-ups (not done here, deliberately)**
+
+1. `renderer.py:628` `known_sensors` and `renderer_v2.py:474` `pod_map` still lack
+   `Thermoception`, so the pod is built but not drawn — **Stage 6a**, as the plan schedules.
+   F7's `build_sensory_viz` fix is the part that could not wait and did not.
+2. `docs/environment/10_perceptual_noise.md:169` says unknown YAML modality keys "are
+   silently dropped". That has not been true since the strict whitelist was added — they
+   raise. Pre-existing, unrelated to this stage, left as found; flagged for `bug-curator`
+   or whoever next touches that doc.
+3. `tests/env` has a collection-order dependency: any module that pins
+   `JAX_PLATFORMS=cpu` with `os.environ.setdefault` loses the pin when an earlier module in
+   the same pytest process has already initialised JAX on GPU.
+   `test_directional_sensors.py` is the one that currently notices, via its own guard.
+   Candidate for `bug-curator`; a `conftest.py`-level pin would fix the class rather than
+   the instance. Not touched here.
+4. Nothing committed, nothing staged, per instruction. `git status` shows 12 modified files
+   and 1 new test module, and every hunk was checked to be this stage's.
 
 Signed: `Implemented by: developer`
 

@@ -43,7 +43,8 @@ Measured share of live entities hidden, obstacles-only blocking: **5° → 31%, 
 
 `olfactory_grid_range`, `visual_blur_enabled`, `visual_value_mode`,
 `visual_occlusion_enabled` and the three per-entity mask/blocks arrays are part of the
-23-field modality fingerprint (`train.py`, `dreamer_srl_main.py`) — they change what an
+26-field modality fingerprint (`train.py`, `dreamer_srl_main.py`) — as are
+`thermal_enabled`, `thermal_grid_range` and `thermal_relative` — they change what an
 observation *means* at an identical width, which the `obs_dim` check cannot catch. The
 continuous blur and cone knobs are deliberately **out**: fingerprinting floats would
 forbid legitimate schedules.
@@ -53,8 +54,11 @@ forbid legitimate schedules.
 ## Thermal (temperature system)
 
 The world gets a per-episode `[H, W]` temperature map — cold everywhere, hot near a
-campfire. Stage 1 builds the map and stores it on `EnvState.thermal_field`; nothing reads
-it yet (no observation, no body, no reward change). Plan: [[thermal_implementation_plan]].
+campfire. Stage 1 builds the map and stores it on `EnvState.thermal_field`; Stage 2 gives
+the agent a `body_temp` that drifts toward the cell it stands on and can end the episode
+(termination code 5); Stage 3 lets the agent **feel** the field through a five-cell
+thermoceptor. Temperature is not in the reward yet (Stage 4). Plan:
+[[thermal_implementation_plan]].
 
 ### `thermal:` keys
 
@@ -70,6 +74,8 @@ it yet (no observation, no body, no reward change). Plan: [[thermal_implementati
 | `random_spots.temp` | `thermal_spot_temp` | no | — | stamp magnitude; sign is drawn per spot |
 | `min_fire_separation` | `thermal_min_fire_separation` | **yes** | `>= 0` | Manhattan; `0` disables |
 | `food_min_fire_distance` | `thermal_food_min_fire_distance` | **yes** | `>= 0` | Manhattan; `0` disables |
+| `grid_range` | `thermal_grid_range` | **yes** | `>= 0` | thermoceptor **radius**; contributes `2r²+2r+1` observation dims |
+| `relative` | `thermal_relative` | **yes** | — | `true` reports `field − body_temp`; `false` reports the raw field |
 
 `thermal_kernel_radius` is derived, not configured: `ceil(3 * sigma)`, static because it
 fixes the number of unrolled shifts in the blur.
@@ -95,6 +101,34 @@ When `thermal.enabled` is false the whole build is skipped by a **static Python 
 `thermal_field` is `jnp.zeros((0, 0))` — so an accidental read fails loudly on shape rather
 than quietly on value, and the traced graph (and therefore every PRNG stream) is identical
 to the pre-thermal environment.
+
+### The thermoceptor (Stage 3)
+
+`sense_thermoception` (`src/environment/sensor.py`) samples `thermal_field` over the same
+Manhattan diamond the collision and visual sensors use — `get_visual_offsets(grid_range)`,
+so at `grid_range: 1` the five values are **centre, up, right, down, left** in that order.
+With `relative: true` each value is `field[cell] − body_temp`: "how much warmer than me is
+that cell", which is the quantity the agent can act on. The modality is inserted after
+Extero Nociception and before Olfaction, in `get_observation` and
+`get_observation_breakdown` alike, and is absent entirely when `thermal.enabled` is false.
+
+**Out-of-bounds cells CLAMP; they do not read zero.** This is a deliberate departure from
+the convention `sense_olfaction_cells` and `sense_visual` follow, and it must not be
+"fixed" back. On a *relative* reading, zero means "that cell is exactly my own
+temperature" — the single most misleading value available, and in a world whose baseline
+is −25 it would make the map edge look like a warm refuge to an agent standing in the
+cold. Clamping the coordinate reports the nearest real cell instead, which is also what
+the field itself does at its edges: `_gaussian_smooth_normalised` renormalises by the
+in-bounds weight sum rather than averaging in zeros.
+`tests/env/test_thermoception.py::test_oob_reads_the_clamped_neighbour` asserts the
+clamped identity exactly, not merely the absence of a zero.
+
+**The `thermoception:` perceptual-noise block declares its clips explicitly**, and must.
+`apply_perceptual_noise` clips every modality whenever `perceptual_noise.enabled` is true
+— including modalities in mode `none` — and the loader's defaults are ±100, while a
+fire-cell relative reading measures up to about +170 on the shipped example. The declared
+bounds are `[-100, 400]`; the derivation is in the YAML comment. See
+[10_perceptual_noise.md](10_perceptual_noise.md).
 
 ### The two placement constraints
 
@@ -1113,6 +1147,7 @@ thermal.min_fire_separation            thermal.food_min_fire_distance
 thermal.temperature_setpoint           thermal.min_temperature
 thermal.max_temperature                thermal.k_exchange
 thermal.k_loss                         thermal.k_metabolic
+thermal.grid_range                     thermal.relative
 ```
 
 and, only when `thermal.use_random_spots` is true:
@@ -1125,9 +1160,9 @@ thermal.random_spots.temp
 `thermal.enabled` itself is **unconditionally mandatory** and has no fallback default —
 `config.get('thermal.enabled', False)` is explicitly forbidden, because a fallback on a
 gating key would let a config with a misspelled `thermal:` block train as if thermal were
-off. The remaining keys shown in `default.yaml`'s `thermal:` block (`metabolic_coupling`,
-`grid_range`, `relative`) are **not read yet** — Stages 3 and 5 of the temperature plan
-add their readers.
+off. The one remaining key shown in `default.yaml`'s `thermal:` block
+(`metabolic_coupling`) is **not read yet** — Stage 5 of the temperature plan adds its
+reader.
 
 **Body-block validation** (all raise `ValueError` naming the offending key, at the point
 the key is read):

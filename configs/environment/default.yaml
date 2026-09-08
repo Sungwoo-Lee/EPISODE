@@ -356,7 +356,7 @@ behavior_measures:
 
 perceptual_noise:
   enabled: false
-  # Key order here is the single source of truth for noise array indices (0-8).
+  # Key order here is the single source of truth for noise array indices (0-10).
   # config_loader.py reads this order; sensor.py consumes it via params.noise_modality_order.
   modalities:
     injury:          # index 0
@@ -389,31 +389,59 @@ perceptual_noise:
       injury_noise_scale: 1.5
       clip_min: 0.0
       clip_max: 100.0     # Unbounded (pain intensity)
-    olfaction:       # index 5 (was 4)
+    thermoception:   # index 5 (new) — exteroceptive; slots between extero
+                     # nociception and olfaction, matching the observation order
+                     # assembled in sensor.py::get_observation.
+      mode: "state_dependent"
+      # sigma is deliberately 0.0: no thermal-noise magnitude has been
+      # calibrated, and this signal spans roughly 200 units, so copying
+      # olfaction's 0.2 would add nothing while looking like it added noise.
+      # A real thermal-noise study must set a sigma on the FIELD's scale.
+      sigma: 0.0
+      injury_noise_scale: 1.5
+      # Clip bounds are declared EXPLICITLY and are wide on purpose.
+      # apply_perceptual_noise clips every modality whenever
+      # perceptual_noise.enabled is true — including mode "none" — so the
+      # loader's ±100 default would silently compress the fire and its comfort
+      # ring into one saturated value, on a sensor whose readings routinely
+      # exceed +100. Every test in the thermal suite runs noise OFF, so nothing
+      # would catch it (IMPLEMENTATION_PLAN.md F2 / hazard H18).
+      # Derivation, both ends of `thermal_field - body_temp`:
+      #   cold: default_temp low (-28) - max survivable body temp (+15) = -43
+      #   hot:  measured field peak +151.9 over 300 resets of the campfire
+      #         example with min_fire_separation: 0 (adjacent fires; two fires
+      #         can never share a cell, so the stamps only partially merge),
+      #         + |body_temp| <= 15  =  +167
+      # The bounds below carry >2x headroom on both ends so they never bind on
+      # a plausible config; their job is to bound a runaway noise draw, not to
+      # rescale the signal.
+      clip_min: -100.0
+      clip_max: 400.0
+    olfaction:       # index 6 (was 5, was 4)
       mode: "state_dependent"
       sigma: 0.2
       injury_noise_scale: 1.5
       clip_min: 0.0
       clip_max: 100.0     # Unbounded (aggregated chemical gradient)
-    collision:       # index 6 (was 5)
+    collision:       # index 7 (was 6, was 5)
       mode: "constant"
       sigma: 0.01
       injury_noise_scale: 0.0
       clip_min: 0.0
       clip_max: 1.0
-    proprioception:  # index 7 (was 6)
+    proprioception:  # index 8 (was 7, was 6)
       mode: "constant"
       sigma: 0.05
       injury_noise_scale: 0.0
       clip_min: 0.0
       clip_max: 1.0
-    visual:          # index 8 (was 7)
+    visual:          # index 9 (was 8, was 7)
       mode: "state_dependent"
       sigma: 0.2
       injury_noise_scale: 1.5
       clip_min: 0.0
       clip_max: 100.0     # Unbounded (one-hot counts)
-    location:        # index 9 (was 8)
+    location:        # index 10 (was 9, was 8)
       mode: "constant"
       sigma: 0.01
       injury_noise_scale: 0.0

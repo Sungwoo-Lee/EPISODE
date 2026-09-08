@@ -66,7 +66,7 @@ perceptual_noise:
 
 **YAML key order is the single source of truth for noise array indices.** `config_loader.py:963–967` builds `noise_modality_order` by iterating `modalities_cfg` in YAML declaration order. Any reordering of YAML keys changes the array indices stored in `EnvParams` — see the Critical Invariant section below.
 
-**All 10 modalities** (values from `configs/environment/default.yaml`):
+**All 11 modalities** (values from `configs/environment/default.yaml`):
 
 | YAML key | Sensor name in code | Array index (default YAML order) | Mode | σ_base | α | clip |
 |----------|--------------------|---------------------------------|------|--------|---|------|
@@ -75,17 +75,37 @@ perceptual_noise:
 | `satiation` | `Satiation` | 2 | `state_dependent` | 0.1 | 1.5 | [0, 1] |
 | `interoceptive_nociception` | `Interoceptive Nociception` | 3 | `state_dependent` | 0.1 | 1.5 | [0, 1] |
 | `extero_nociception` | `Extero Nociception` | 4 | `state_dependent` | 0.1 | 1.5 | [0, 100] |
-| `olfaction` | `Olfaction` | 5 | `state_dependent` | 0.2 | 1.5 | [0, 100] |
-| `collision` | `Collision` | 6 | `constant` | 0.01 | 0.0 | [0, 1] |
-| `proprioception` | `Proprioception` | 7 | `constant` | 0.05 | 0.0 | [0, 1] |
-| `visual` | `Visual` | 8 | `state_dependent` | 0.2 | 1.5 | [0, 100] |
-| `location` | `Location` | 9 | `constant` | 0.01 | 0.0 | [-1, 1] |
+| `thermoception` | `Thermoception` | 5 | `state_dependent` | 0.0 | 1.5 | [-100, 400] |
+| `olfaction` | `Olfaction` | 6 | `state_dependent` | 0.2 | 1.5 | [0, 100] |
+| `collision` | `Collision` | 7 | `constant` | 0.01 | 0.0 | [0, 1] |
+| `proprioception` | `Proprioception` | 8 | `constant` | 0.05 | 0.0 | [0, 1] |
+| `visual` | `Visual` | 9 | `state_dependent` | 0.2 | 1.5 | [0, 100] |
+| `location` | `Location` | 10 | `constant` | 0.01 | 0.0 | [-1, 1] |
 
 **Notes on the default values:**
 - `injury` and `nutrition` have `σ_base = 0.0` — noise is declared but silenced. Mode is `state_dependent` so it activates immediately if `sigma` is raised in a derived config without changing `mode`.
 - `collision` and `proprioception` use `constant` mode — their noise is fixed regardless of injury level.
 - `visual` has `clip_max = 100.0` even though one-hot channels are nominally in [0, 1]; the permissive bound allows noisy one-hots to exceed 1.0 without hard-clipping.
 - `location` has `clip_min = -1.0` to match its `[-1, 1]` normalised coordinate range.
+- `thermoception` is the one modality whose clips **must** be declared explicitly, and it
+  is worth understanding why. Every modality is clipped whenever `perceptual_noise.enabled`
+  is true — **including modalities in mode `none`**, because the clip is applied after the
+  (zero) noise, not instead of it. The loader's defaults are `clip_min = -100`,
+  `clip_max = +100`, and a thermoceptive reading near a fire measures up to about **+170**
+  on the shipped example config (and past +300 on a config that lets fires merge). A
+  noise-enabled thermal run would therefore have trained on a sensor saturated at 100,
+  with the fire and its comfort ring indistinguishable, while every test — all of which
+  run with noise off — saw the true value. `[-100, 400]` is chosen to never bind: the cold
+  end is `default_temp` low (−28) minus the highest survivable body temperature (+15), and
+  the hot end is the measured field peak plus `|body_temp|`, each with better than 2×
+  headroom. Its `σ_base` is `0.0` because no thermal-noise magnitude has been calibrated;
+  copying olfaction's 0.2 onto a signal that spans ~200 units would look like noise while
+  doing nothing.
+- **A new modality needs two edits that block each other.** The YAML block alone raises
+  `Strict Config: unknown perceptual-noise modality key(s)` (the `_YAML_KEY_TO_SENSOR_NAME`
+  whitelist), and the whitelist entry alone leaves `apply_perceptual_noise` raising a bare
+  `KeyError` inside a jit trace that names neither the config nor the fix. Land both, plus
+  the `_sensor_stat_columns` and `build_sensory_viz` branches, in one change.
 
 ---
 
