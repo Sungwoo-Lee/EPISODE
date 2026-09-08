@@ -235,7 +235,7 @@ hr { border:0; border-top:1px solid var(--line); margin:0; width:100%; }
 </section>
 
 <figure>
-  <img src="data:image/png;base64,@@sigma@@" alt="Six cold fields with a campfire at smoothing sigma 0, 0.5, 0.8, 1.2, 2 and 4 on one shared colour scale, with the survivable radius labelled under each; below, charts of peak fire temperature and safe radius against sigma.">
+  <img src="data:image/png;base64,@@fig_sigma@@" alt="Six cold fields with a campfire at smoothing sigma 0, 0.5, 0.8, 1.2, 2 and 4 on one shared colour scale, with the survivable radius labelled under each; below, charts of peak fire temperature and safe radius against sigma.">
   <figcaption><b>Sigma decides how far the fire reaches.</b> Too sharp and the warmth never
   leaves the fire cell; too smooth and it spreads until the whole map is survivable and the
   fire stops mattering. <b>Proposed &sigma; = @@sigma@@.</b></figcaption>
@@ -253,7 +253,7 @@ hr { border:0; border-top:1px solid var(--line); margin:0; width:100%; }
 
 <section class="col">
   <h2><span class="num">02</span> Every object can carry a temperature</h2>
-  <p>Each entity type declares a <code>thermal_output</code>, defaulting to <code>0.0</code>.
+  <p>Each entity type declares a <code>temperature</code>, defaulting to <code>0.0</code>.
   At build time every active instance adds its value to the cell it occupies, before the blur.
   This mirrors EVAAA exactly: every obstacle group in its configs carries a
   <code>temperature</code> field, and nearly all of them sit at <code>0.0</code>.</p>
@@ -270,7 +270,7 @@ hr { border:0; border-top:1px solid var(--line); margin:0; width:100%; }
   <p>So we add a <code>campfire</code> object whose job is to be the heat source, and leave the
   existing scenery thermally neutral until there is a reason not to.</p>
   <div class="scroll"><table>
-    <thead><tr><th>Object</th><th class="n">thermal_output</th><th>Role</th></tr></thead>
+    <thead><tr><th>Object</th><th class="n">temperature</th><th>Role</th></tr></thead>
     <tbody>
       <tr class="pick"><td><code>campfire</code> <em>(new)</em></td><td class="n">300</td>
         <td>the only warmth in the world</td></tr>
@@ -341,7 +341,7 @@ hr { border:0; border-top:1px solid var(--line); margin:0; width:100%; }
   <p>The agent carries one number, <code>body_temp</code>, that relaxes toward the temperature
   of the cell it stands on. Each step:</p>
   <pre><span class="c"># T = body temperature, T_field = temperature of the agent's own cell</span>
-T &larr; T + <span class="k">k_exchange</span>&middot;(T_field &minus; T) + <span class="k">k_metabolic</span> &minus; <span class="k">k_loss</span>&middot;(T &minus; T_neutral)</pre>
+T &larr; T + <span class="k">k_exchange</span>&middot;(T_field &minus; T) + <span class="k">k_metabolic</span> &minus; <span class="k">k_loss</span>&middot;(T &minus; temperature_setpoint)</pre>
   <p>The first term is Newton's law of cooling: you drift toward your surroundings, faster when
   the gap is larger. The third pulls you back toward a neutral set point regardless of
   surroundings &mdash; a stand-in for physiological regulation, and the reason the agent does
@@ -483,7 +483,7 @@ T &larr; T + <span class="k">k_exchange</span>&middot;(T_field &minus; T) + <spa
   equally:</p>
   <pre>drive = ‖( (satiation &minus; setpoint)/max_satiation ,
            injury/max_injury ,
-           (T &minus; T_neutral)/max_thermal_deviation )‖</pre>
+           (T &minus; temperature_setpoint)/max_thermal_deviation )‖</pre>
   <p>Reward stays what it is now &mdash; the <em>reduction</em> in drive from one step to the
   next &mdash; so moving toward the fire while cold is rewarded and drifting outward is
   punished, with no new reward term.</p>
@@ -518,9 +518,9 @@ T &larr; T + <span class="k">k_exchange</span>&middot;(T_field &minus; T) + <spa
   use_object_sources: true
 
   <span class="c"># --- body (sections 03-04) ---</span>
-  neutral_temp: 0.0
-  death_low: -15.0          <span class="c"># low &lt; high enforced at load</span>
-  death_high: 15.0
+  temperature_setpoint: 0.0
+  min_temperature: -15.0    <span class="c"># min &lt; max enforced at load</span>
+  max_temperature: 15.0
   k_exchange: 0.04
   k_loss: 0.01
   k_metabolic: 0.0
@@ -530,16 +530,16 @@ T &larr; T + <span class="k">k_exchange</span>&middot;(T_field &minus; T) + <spa
   grid_range: 1
   relative: true            <span class="c"># report field &minus; body_temp</span>
 
-<span class="c"># thermal_output sits on EVERY entity type, defaulting to 0.0,</span>
+<span class="c"># temperature sits on EVERY entity type, defaulting to 0.0,</span>
 <span class="c"># alongside the existing blocks_sight flag:</span>
 <span class="k">obstacles:</span>
   - name: campfire
     count_low: 1
     count_high: 1
-    thermal_output: 300.0
+    temperature: 300.0
     blocks_sight: false
   - name: bush
-    thermal_output: 0.0     <span class="c"># set negative later for shade</span>
+    temperature: 0.0     <span class="c"># set negative later for shade</span>
     hides_agent: true</pre>
   <p>Sub-keys are <em>conditional-mandatory</em>: read only when <code>enabled</code> is true,
   and validated at load when they are read. That is the pattern the blur and occlusion knobs
@@ -563,7 +563,7 @@ T &larr; T + <span class="k">k_exchange</span>&middot;(T_field &minus; T) + <spa
     the sigma-floor and mask-leak bugs during the sensor work.</div></div></div>
   <div class="stage"><div class="s">STAGE 1</div><div class="b">
     <div class="t">The field and the campfire object</div>
-    <div class="d"><code>thermal_field</code> in state, built at reset; <code>thermal_output</code>
+    <div class="d"><code>thermal_field</code> in state, built at reset; <code>temperature</code>
     read on every entity type; the new <code>campfire</code> obstacle. No observation change, no
     body change. Parity must hold.</div></div></div>
   <div class="stage"><div class="s">STAGE 2</div><div class="b">
@@ -601,7 +601,7 @@ T &larr; T + <span class="k">k_exchange</span>&middot;(T_field &minus; T) + <spa
     <dd>Once temperature enters the drive, reward is incomparable with every previous run.
     Gating is mandatory, not a nicety.</dd>
     <dt>load-time validation</dt>
-    <dd><code>sigma &gt; 0</code> and <code>death_low &lt; death_high</code>. Skipping this is
+    <dd><code>sigma &gt; 0</code> and <code>min_temperature &lt; max_temperature</code>. Skipping this is
     how the sensor work produced an all-NaN observation that trained without complaint.</dd>
     <dt>termination codes</dt>
     <dd>Reasons currently run 0&ndash;4; thermal death needs 5, and every consumer that

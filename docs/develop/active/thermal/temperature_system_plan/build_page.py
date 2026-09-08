@@ -14,7 +14,7 @@ from sim import gaussian_smooth, body_traj, H, W
 
 def b64(p): return base64.b64encode(open(p, 'rb').read()).decode()
 FIG = {k: b64(v) for k, v in {
-    'pipeline': 'figA_pipeline.png', 'sigma': 'figB_sigma.png', 'body': 'figC_body.png',
+    'pipeline': 'figA_pipeline.png', 'fig_sigma': 'figB_sigma.png', 'body': 'figC_body.png',
     'render': 'figD_render.png', 'tether': 'figE_tether.png', 'modes': 'figF_modes.png',
     'nbhd': 'fig1_geometry.png', 'acc': 'fig3_accuracy.png'}.items()}
 
@@ -72,6 +72,9 @@ N = dict(
     cf_safe=f'{CF_SAFE:.0f}',
     vn1=f"{ACC['vN r=1']['err'][3]:.2f}", mo1=f"{ACC['Moore r=1']['err'][3]:.2f}",
     vn2=f"{ACC['vN r=2']['err'][3]:.2f}", mo2=f"{ACC['Moore r=2']['err'][3]:.2f}")
+
+clash = set(FIG) & set(N)
+assert not clash, f'token name collision between figures and numbers: {clash}'
 
 HTML = open('page_template.html').read()
 for k, v in {**FIG, **N}.items():
