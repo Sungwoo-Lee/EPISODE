@@ -211,6 +211,54 @@ hr { border:0; border-top:1px solid var(--line); margin:0; width:100%; }
   characterised alone.</p>
 </section>
 
+<section class="col">
+  <h2><span class="num">02</span> None of these are fixed numbers</h2>
+  <p>Everything above is written as though the world had one temperature and one fire. It
+  should not. The environment already samples nearly every entity property per episode &mdash;
+  <code>count_low</code>/<code>count_high</code> for how many spawn,
+  <code>damage: [1, 5]</code>, <code>attack_range: [2, 3]</code>,
+  <code>detection_range: [1, 7]</code> &mdash; and the thermal system should follow the same
+  convention rather than inventing a fixed-constant one.</p>
+  <p>So the campfire count, each fire's temperature, and the world's baseline are all
+  <strong>ranges, drawn afresh at every reset</strong>. There is no optimal set to find; there
+  is a distribution to choose. This also removes a hazard I flagged earlier &mdash; with a fixed
+  field the agent can memorise the map instead of using the sense &mdash; because no two
+  episodes give it the same world to memorise.</p>
+</section>
+
+<figure>
+  <img src="data:image/png;base64,@@ranges@@" alt="Top: six sampled episodes from one range showing one to three campfires in cold worlds of varying baseline, each labelled with its survivable percentage. Bottom: four candidate range combinations shown as horizontal bars from the tenth to ninetieth percentile of survivable map percentage, with medians marked, against a dashed reference line for a single fixed world.">
+  <figcaption><b>One range, six episodes.</b> Count, each fire's temperature and the world's
+  baseline are all resampled, so the agent meets a different thermal landscape every time.
+  Circles mark the fires.</figcaption>
+</figure>
+
+<section class="col">
+  <h3>Candidate combinations</h3>
+  <p>Four ranges worth considering, scored on how much of the map ends up survivable &mdash;
+  the 10th to 90th percentile across 600 sampled episodes:</p>
+  <div class="scroll"><table>
+    <thead><tr><th>Combination</th><th class="n">fires</th><th class="n">temperature</th>
+      <th class="n">world baseline</th><th class="n">% safe (p10&ndash;p90)</th>
+      <th class="n">median</th><th class="n">structure holds</th><th>character</th></tr></thead>
+    <tbody>
+@@combo_rows@@
+    </tbody>
+  </table></div>
+  <p>The column to read is <strong>structure holds</strong> &mdash; the share of sampled
+  episodes that still deliver pain on the fire, safety beside it, and lethal cold beyond. A range
+  scoring below 100% quietly produces episodes with no fire pain, or with no survivable ring, and
+  those episodes train the agent on a different task than the one you specified. A, B and C hold
+  everywhere in their box; D does not, which is the price of its width.</p>
+  <p>Among the three that hold, the choice is how much episode-to-episode variety you want.
+  <strong>B is proposed</strong>: three possible fire counts and a six-degree spread of world
+  baselines, so the map cannot be memorised, while every draw is still a real thermal
+  problem.</p>
+  <p class="foot">One constraint applied throughout: fires spawn at least two cells from the
+  edge. Without it a fire in the corner wastes most of its warm zone off-map, and episode
+  difficulty swings for a reason unrelated to the range you chose.</p>
+</section>
+
 <figure>
   <img src="data:image/png;base64,@@pipeline@@" alt="Four 10x10 grids showing field construction: a uniformly cold fill at -25, then a campfire stamped at the centre, then other object temperatures added, then the whole field Gaussian-smoothed so the fire's warmth spreads into a gradient.">
   <figcaption><b>Object mode, stage by stage.</b> Fill cold, stamp the fire, add any other
@@ -252,7 +300,7 @@ hr { border:0; border-top:1px solid var(--line); margin:0; width:100%; }
 <hr>
 
 <section class="col">
-  <h2><span class="num">02</span> Every object can carry a temperature</h2>
+  <h2><span class="num">03</span> Every object can carry a temperature</h2>
   <p>Each entity type declares a <code>temperature</code>, defaulting to <code>0.0</code>.
   At build time every active instance adds its value to the cell it occupies, before the blur.
   This mirrors EVAAA exactly: every obstacle group in its configs carries a
@@ -289,7 +337,7 @@ hr { border:0; border-top:1px solid var(--line); margin:0; width:100%; }
 <hr>
 
 <section class="col">
-  <h2><span class="num">03</span> The thermal tether</h2>
+  <h2><span class="num">04</span> The thermal tether</h2>
   <p>Put a cold default and one fire together and you get the behaviour the whole system exists
   to produce: a <strong>leash</strong>. The agent can go as far as it likes, but the clock
   starts as soon as it leaves the warm zone, and it has to be back before the clock runs out.
@@ -303,41 +351,62 @@ hr { border:0; border-top:1px solid var(--line); margin:0; width:100%; }
 </figure>
 
 <section class="col">
-  <h3>The proposed setting: a hearth</h3>
-  <p>With <code>default_temp = @@default@@</code>, a campfire at <code>300</code> and
-  <code>&sigma; = @@sigma@@</code>:</p>
-  <dl>
-    <dt>d = 0 &nbsp;(on the fire)</dt><dd>settles at <strong>@@fire_eq@@</strong> &mdash; warm, safe</dd>
-    <dt>d = 1</dt><dd>settles at @@d1@@ &mdash; comfortable</dd>
-    <dt>d = 2</dt><dd>settles at @@d2@@ &mdash; cold, uncomfortable, but survivable forever</dd>
-    <dt>d = 3</dt><dd>settles at @@d3@@ &mdash; <strong>lethal in @@d3_steps@@ steps</strong></dd>
-    <dt>far field</dt><dd>settles at @@far_eq@@ &mdash; lethal in @@far_steps@@ steps</dd>
-  </dl>
-  <p>So the safe zone is a diamond of radius <strong>@@safe@@</strong> &mdash; 13 of the 100
-  cells &mdash; and beyond it the agent has between @@far_steps@@ and @@d3_steps@@ steps before
-  it must be back. On a 500-step episode that is roughly ten foraging trips, which feels like
-  the right order: enough that the task is about managing a cycle, not about surviving a single
-  sprint.</p>
-  <p>Note that lethality is not the only pressure. Because temperature enters the drive, sitting
-  at d&nbsp;=&nbsp;2 is <em>rewarded worse</em> than sitting at the fire even though it never
-  kills. The reward gradient pulls the agent home long before the death threshold does.</p>
+  <h3>The fire has to hurt</h3>
+  <p>A fire you can sit on indefinitely is a radiator, not a fire. What we want is what a real
+  animal does: creep close enough to be warm, and no closer. That means the cell the fire
+  occupies should be <em>painful</em> &mdash; and painful without adding a nociceptor or a second
+  internal state, purely by letting the temperature dynamics overshoot.</p>
+  <p>This is achievable with a single Gaussian, but only in a narrow band of settings. It needs
+  the fire's own cell to drive the body clean past the heat-death threshold while the cell
+  <em>next to it</em> settles near the set point. Searched over smoothing and fire strength, the
+  shape appears at <strong>&sigma; = @@sigma@@</strong> with a campfire near
+  <strong>@@afire@@</strong> in a world at <strong>@@default@@</strong>:</p>
+</section>
 
-  <h3>The alternative: a fire too hot to sit on</h3>
-  <p>Raise the campfire to <code>900</code> and the geometry inverts. The fire kills in
-  <strong>@@h_d0@@ steps</strong> at d&nbsp;=&nbsp;0 and @@h_d1@@ at d&nbsp;=&nbsp;1; the
-  comfortable band moves out to a <em>ring</em> at d&nbsp;=&nbsp;@@h_ring@@ (@@h_d2@@ and
-  @@h_d3@@), with cold death returning at d&nbsp;=&nbsp;4 in @@h_d4@@ steps.</p>
-  <p>That is approach-avoidance: the agent must find an annulus rather than a point, and both
-  directions off it are fatal. It is behaviourally richer and closer to how a real animal
-  treats a fire. It is also harder to learn. Both are one config value apart, which is the
-  argument for treating this as an experiment rather than a decision &mdash; see the open
-  questions.</p>
+<figure>
+  <img src="data:image/png;base64,@@pain@@" alt="Three panels. Left: equilibrium body temperature against distance from the fire, with a red band above the heat-death line where the fire cell sits, a comfort point one cell out near the set point, and a blue lethal-cold band from three cells out. Middle: body temperature over time for an agent that stays at each distance, the fire-cell curve rising past heat death. Right: the field with the fire cell outlined red and the four surrounding cells outlined green.">
+  <figcaption><b>Thermal pain with no pain sensor.</b> Standing on the fire drives the body to
+  @@pain_eq@@ and kills in @@pain_steps@@ steps. One cell away it settles at @@comfy_eq@@ and is
+  safe forever. Same equation, same single sense &mdash; only the field does the work.</figcaption>
+</figure>
+
+<section class="col">
+  <dl>
+    <dt>d = 0 &nbsp;on the fire</dt><dd>body driven to <strong>@@pain_eq@@</strong>, far past the
+    +15 threshold &mdash; <strong>lethal in @@pain_steps@@ steps</strong>. Brief contact is
+    survivable and costly; lingering is not.</dd>
+    <dt>d = 1 &nbsp;beside it</dt><dd>settles at <strong>@@comfy_eq@@</strong>, the closest any
+    cell comes to the set point &mdash; so this ring is both the safest place and the
+    best-rewarded one.</dd>
+    <dt>d = 2</dt><dd>@@cool_eq@@ &mdash; cool, uncomfortable, survivable indefinitely.</dd>
+    <dt>d = 3 and beyond</dt><dd>lethal cold, @@cold_steps@@ steps and falling.</dd>
+  </dl>
+  <p>The behavioural consequence is the one you asked for: the agent should learn to
+  <strong>orbit</strong> the fire rather than occupy it. Both directions off the comfort ring are
+  punished, by different mechanisms &mdash; heat inward, cold outward &mdash; and the reward
+  gradient does the fine work in between, since d&nbsp;=&nbsp;1 is simply the cell whose
+  equilibrium sits nearest the set point.</p>
+  <p>One consequence worth being explicit about: the same sensor reports both dangers. The
+  thermoceptor returns field&nbsp;&minus;&nbsp;body temperature, so nothing in the observation
+  itself distinguishes "too hot" from "too cold" &mdash; the agent has to learn the sign
+  convention from consequences, exactly as it does with nociception today.</p>
+
+  <h3>Why this is a narrow band</h3>
+  <p>Sharper than &sigma;&nbsp;&asymp;&nbsp;0.9 and the warmth never escapes the fire cell: at
+  &sigma;&nbsp;=&nbsp;0.5 the profile jumps from +178 on the fire to +7 beside it to &minus;18
+  two cells out, which is a cliff, not an approach gradient. Smoother and the peak flattens until
+  the fire stops hurting &mdash; at &sigma;&nbsp;=&nbsp;1.2 the same campfire leaves the fire cell
+  merely warm.</p>
+  <p>Fire strength is equally tight. Below about 250 the fire is comfortable to stand on and the
+  pain disappears; above about 400 the <em>comfort ring</em> turns lethal too and the agent has
+  nowhere to be. That band, roughly 250 to 350, is what the sampling range in &sect;2 is built
+  around.</p>
 </section>
 
 <hr>
 
 <section class="col">
-  <h2><span class="num">04</span> Body temperature</h2>
+  <h2><span class="num">05</span> Body temperature</h2>
   <p>The agent carries one number, <code>body_temp</code>, that relaxes toward the temperature
   of the cell it stands on. Each step:</p>
   <pre><span class="c"># T = body temperature, T_field = temperature of the agent's own cell</span>
@@ -348,6 +417,70 @@ T &larr; T + <span class="k">k_exchange</span>&middot;(T_field &minus; T) + <spa
   not simply equalise with the world. The middle term is constant heat production, zero by
   default.</p>
   <p>Leaving <code>[&minus;15, +15]</code> ends the episode, exactly as starvation does.</p>
+
+  <h3>Reading the equation: a tug of war</h3>
+  <p>The equation has <strong>two</strong> restoring terms, and it is easy to miss that they
+  pull in different directions. <code>k_exchange</code> drags the body toward the cell it is
+  standing on. <code>k_loss</code> drags it back toward its own set point, whatever the cell is
+  doing. The body ends up somewhere between the two, never at either.</p>
+  <p><code>k_loss</code> is the agent's <em>physiology</em> &mdash; shivering, vasoconstriction,
+  the metabolic work of defending a body temperature. It is the term that makes the agent an
+  animal rather than a thermometer.</p>
+</section>
+
+<figure>
+  <img src="data:image/png;base64,@@fig_kloss@@" alt="Three panels. Left: a temperature axis showing the cell at -25 and the setpoint at 0, with a thick short arrow labelled k_exchange pulling the body toward the cell and a thin long arrow labelled k_loss pulling it toward the setpoint, the body settling at -20 between them. Middle: body temperature trajectories in a -25 cell for four k_loss values, where k_loss 0.04 never reaches the death threshold. Right: the coldest survivable ambient temperature rising with k_loss, crossing our -25 world at about 0.027.">
+  <figcaption><b>Left: why the body settles where it does.</b> The pull toward the world is
+  strong but short; the pull toward the set point is weak but long. They balance at
+  &minus;20.</figcaption>
+</figure>
+
+<section class="col">
+  <p>Setting the step change to zero gives the equilibrium directly &mdash; a weighted average
+  of the two attractors:</p>
+  <pre>T* = ( <span class="k">k_exchange</span>&middot;T_field  +  <span class="k">k_loss</span>&middot;setpoint ) / ( <span class="k">k_exchange</span> + <span class="k">k_loss</span> )</pre>
+  <p>So the body adopts a <em>fraction</em> of whatever the cell is offering, and that fraction
+  is fixed by the ratio of the two constants:</p>
+  <dl>
+    <dt>adopted fraction</dt>
+    <dd><code>k_exchange / (k_exchange + k_loss)</code> = <strong>@@adopted@@%</strong> at the
+    proposed values. Stand in a &minus;25 cell and the body settles at &minus;20, not
+    &minus;25 &mdash; @@held@@% of the cold is held off by physiology.</dd>
+    <dt>survivable ambient</dt>
+    <dd><code>&plusmn;15 &middot; (k_exchange + k_loss) / k_exchange</code> =
+    <strong>&plusmn;@@window@@</strong>. Any cell colder than that is eventually fatal;
+    anything inside it can be endured forever. This single number decides the safe radius
+    around the fire.</dd>
+    <dt>time constant</dt>
+    <dd><code>1 / (k_exchange + k_loss)</code> = @@tau@@ steps. Note <code>k_loss</code> appears
+    here too, so raising it makes the body both more resistant <em>and</em> faster to
+    respond.</dd>
+  </dl>
+
+  <h3>The two ways to get this wrong</h3>
+  <p><strong>Set <code>k_loss</code> to zero</strong> and the body becomes a passive
+  thermometer. It adopts the cell's temperature exactly, the set point stops meaning anything,
+  and every cell outside <code>[&minus;15, +15]</code> is fatal with no exceptions &mdash; there
+  is no band of cold-but-survivable ground, so the field becomes a binary map of safe and
+  deadly cells with no gradient of discomfort in between.</p>
+  <p><strong>Set it too high</strong> and physiology wins outright. At
+  <code>k_loss = @@kceil@@</code> the survivable window reaches &plusmn;25 and our
+  <code>default_temp</code> of @@default@@ can no longer kill; every cell in the world becomes
+  survivable and the thermal task quietly disappears while still appearing to be configured.
+  <strong>This is a hard ceiling, and it is the one number in this plan most likely to be
+  changed by accident.</strong></p>
+  <p>The proposed <code>@@kloss@@</code> sits well below it: the body defends
+  <em>partially</em>, which is what makes cold uncomfortable long before it is lethal, and
+  therefore what makes the reward gradient do useful work in the region where nothing is dying
+  yet.</p>
+
+  <h3>Where the cost lives</h3>
+  <p>Right now this defence is <strong>free</strong>. The agent resists the cold at no charge,
+  which is exactly what <code>k_metabolic</code> and the <code>metabolic_coupling</code> flag
+  exist to change: turning coupling on makes the work represented by <code>k_loss</code> draw
+  on nutrition, so staying warm competes with staying fed. That is the single most interesting
+  extension in this plan, and it is deliberately off by default so the thermal system can be
+  characterised on its own first.</p>
 
   <h3>Why not EVAAA's formulation</h3>
   <p>EVAAA computes <code>surroundTemp</code> as the <em>sum</em> of its eight probe
@@ -379,7 +512,7 @@ T &larr; T + <span class="k">k_exchange</span>&middot;(T_field &minus; T) + <spa
 <hr>
 
 <section class="col">
-  <h2><span class="num">05</span> What the thermoceptor reads</h2>
+  <h2><span class="num">06</span> What the thermoceptor reads</h2>
   <p>The agent samples the field over a small diamond centred on itself and reports each cell
   <em>relative to its own body temperature</em> &mdash; so the observation answers "which way is
   warmer than I am", not "how hot is it here". At <code>range&nbsp;1</code> that is five
@@ -443,7 +576,7 @@ T &larr; T + <span class="k">k_exchange</span>&middot;(T_field &minus; T) + <spa
 <hr>
 
 <section class="col">
-  <h2><span class="num">06</span> Rendering</h2>
+  <h2><span class="num">07</span> Rendering</h2>
   <p>The field is the only new pixel data and it is a scalar per cell, so it belongs underneath
   everything else, with entities drawn on top exactly as they are now. A diverging
   blue&ndash;red scale reads correctly here because temperature has a meaningful zero: the set
@@ -477,7 +610,7 @@ T &larr; T + <span class="k">k_exchange</span>&middot;(T_field &minus; T) + <spa
 <hr>
 
 <section class="col">
-  <h2><span class="num">07</span> Reward</h2>
+  <h2><span class="num">08</span> Reward</h2>
   <p>The drive is the distance of the body's state from its set point. Today it has two axes;
   temperature makes three, each divided by its own range so an equal fractional deviation pulls
   equally:</p>
@@ -495,12 +628,12 @@ T &larr; T + <span class="k">k_exchange</span>&middot;(T_field &minus; T) + <spa
 <hr>
 
 <section class="col">
-  <h2><span class="num">08</span> Configuration</h2>
+  <h2><span class="num">09</span> Configuration</h2>
   <pre><span class="k">thermal:</span>
   enabled: false            <span class="c"># gate; every key below is read only when true</span>
 
   <span class="c"># --- field: pick a mode, or both (sections 01-02) ---</span>
-  sigma: @@sigma@@                <span class="c"># &gt; 0 enforced at load</span>
+  sigma: @@sigma@@                <span class="c"># tight band 0.8-1.0, see section 04</span>
 
   <span class="c"># mode A - random field: neutral world, scattered hazards</span>
   <span class="c">#   default_temp: 0.0</span>
@@ -509,7 +642,7 @@ T &larr; T + <span class="k">k_exchange</span>&middot;(T_field &minus; T) + <spa
   <span class="c">#   use_object_sources: false</span>
 
   <span class="c"># mode B - object sources: cold world, campfire refuge  (proposed default)</span>
-  default_temp: @@default@@
+  default_temp: [-28, -22]  <span class="c"># sampled per episode</span>
   use_random_spots: false
   random_spots:
     count: 4
@@ -534,9 +667,10 @@ T &larr; T + <span class="k">k_exchange</span>&middot;(T_field &minus; T) + <spa
 <span class="c"># alongside the existing blocks_sight flag:</span>
 <span class="k">obstacles:</span>
   - name: campfire
-    count_low: 1
-    count_high: 1
-    temperature: 300.0
+    count_low: 1              <span class="c"># how many fires this episode</span>
+    count_high: 3
+    temperature: [250, 350]   <span class="c"># sampled per fire, per episode</span>
+    edge_margin: 2            <span class="c"># keep fires off the border</span>
     blocks_sight: false
   - name: bush
     temperature: 0.0     <span class="c"># set negative later for shade</span>
@@ -550,7 +684,7 @@ T &larr; T + <span class="k">k_exchange</span>&middot;(T_field &minus; T) + <spa
 <hr>
 
 <section class="col">
-  <h2><span class="num">09</span> Implementation order</h2>
+  <h2><span class="num">10</span> Implementation order</h2>
   <p>Each stage is independently testable. Stages 0 to 2 must leave every existing config
   byte-identical &mdash; if they do not, something is wired in that should be gated.</p>
 </section>
@@ -591,7 +725,7 @@ T &larr; T + <span class="k">k_exchange</span>&middot;(T_field &minus; T) + <spa
 <hr>
 
 <section class="col">
-  <h2><span class="num">10</span> Known hazards</h2>
+  <h2><span class="num">11</span> Known hazards</h2>
   <dl>
     <dt>observation width</dt>
     <dd>Five new dimensions change <code>obs_dim</code>, which the curriculum-stage
@@ -619,14 +753,13 @@ T &larr; T + <span class="k">k_exchange</span>&middot;(T_field &minus; T) + <spa
 <hr>
 
 <section class="col">
-  <h2><span class="num">11</span> Open questions</h2>
+  <h2><span class="num">12</span> Open questions</h2>
   <p>Where the plan is genuinely undecided, and where your feedback changes what gets built.</p>
-  <div class="q"><div class="h">Hearth or approach-avoidance?</div>
-    <div class="d">Campfire at 300 gives a warm spot to sit on; at 900 the fire itself is lethal
-    and the comfortable zone is a ring at d&nbsp;=&nbsp;@@h_ring@@. The second is richer and
-    harder. They differ by one config value, so this could be an experimental arm rather than a
-    decision &mdash; but the reward landscape is different enough that the two are really
-    different tasks.</div></div>
+  <div class="q"><div class="h">Is the pain window too narrow to be safe?</div>
+    <div class="d">The pain-plus-comfort structure exists only for &sigma; near 0.9 and fire
+    strength roughly 250&ndash;350. That is a real constraint, not a preference: a config drifting
+    outside it silently loses either the fire pain or the comfort ring, and the run still looks
+    healthy. Worth a load-time warning rather than trusting the range alone.</div></div>
   <div class="q"><div class="h">One fire or several?</div>
     <div class="d">EVAAA's risk-taking task uses three. Multiple fires turn a leash into a
     network and let food be placed <em>between</em> refuges, which is a much more interesting

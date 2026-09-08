@@ -265,3 +265,199 @@ fig.text(.5,.005,'Dotted cells are lethal at equilibrium. Random spots scatter h
  'EVAAA and both can be on at once.',ha='center',color=INK2,fontsize=9)
 fig.savefig('figF_modes.png',dpi=140,bbox_inches='tight'); plt.close(fig)
 print('figF written')
+
+# ---------- FIG G : what k_loss does ----------
+fig=plt.figure(figsize=(13.2,4.6))
+gs=fig.add_gridspec(1,3,wspace=.30)
+
+# panel 1 — the tug of war
+ax=fig.add_subplot(gs[0,0])
+TF, SP = -25.0, 0.0
+Tstar = K_EX*TF/(K_EX+K_LOSS)
+ax.set_xlim(-32,11); ax.set_ylim(-1.5,2.05)
+ax.axhline(0,color=GRID,lw=1.8)
+ax.plot([TF],[0],marker='o',ms=11,color='#184f95',zorder=4)
+ax.annotate('T_field\nthe cell you stand on\n-25',(TF,0),textcoords='offset points',
+            xytext=(0,-16),ha='center',va='top',fontsize=9,color='#184f95',fontweight='bold')
+ax.plot([SP],[0],marker='s',ms=10,color='#5c6068',zorder=4)
+ax.annotate('setpoint\n0',(SP,0),textcoords='offset points',xytext=(0,-16),ha='center',
+            va='top',fontsize=9,color='#5c6068',fontweight='bold')
+ax.plot([Tstar],[0],marker='D',ms=14,color=C2,zorder=5)
+ax.annotate(f'body settles here  {Tstar:.0f}',(Tstar,0),textcoords='offset points',
+            xytext=(0,11),ha='center',va='bottom',fontsize=9.5,color=C2,fontweight='bold')
+ax.annotate('',xy=(TF+.8,1.30),xytext=(Tstar,1.30),
+            arrowprops=dict(arrowstyle='-|>',lw=4,color='#184f95'))
+ax.annotate(f'k_exchange = {K_EX}   pulls toward the world',(-12.5,1.52),ha='center',
+            fontsize=9.2,color='#184f95',fontweight='bold')
+ax.annotate('',xy=(SP-.8,0.62),xytext=(Tstar,0.62),
+            arrowprops=dict(arrowstyle='-|>',lw=1.6,color='#5c6068'))
+ax.annotate(f'k_loss = {K_LOSS}   pulls toward the setpoint',(-10,0.80),ha='center',
+            fontsize=9.2,color='#5c6068',fontweight='bold')
+ax.annotate('80% of the way to the cell, 20% held back',(-10.5,-1.32),ha='center',
+            fontsize=9,color=INK2,style='italic')
+ax.set_yticks([]); ax.set_xlabel('temperature')
+for s_ in ('top','right','left'): ax.spines[s_].set_visible(False)
+ax.set_title('A tug of war between two attractors',color=INK)
+
+# panel 2 — trajectories
+ax=fig.add_subplot(gs[0,1])
+for kl,col in [(0.0,'#184f95'),(0.01,C1),(0.02,C3),(0.04,C2)]:
+    tr=body_traj([-25.0]*400,k_ex=K_EX,k_loss=kl)
+    i=int((np.abs(tr)>=DEATH).argmax())
+    ax.plot(tr,color=col,lw=2.2,label=f'k_loss = {kl}' + ('  (never dies)' if i==0 else f'  (dies at {i})'))
+ax.axhline(-DEATH,color=INK,ls=':',lw=1.4)
+ax.text(200,-13.6,'death threshold',ha='center',fontsize=8.5,color=INK)
+ax.set_xlabel('step'); ax.set_ylabel('body temperature')
+ax.set_title('Standing in the far field  (-25)',color=INK)
+ax.legend(frameon=False,fontsize=8.5,loc='lower left'); ax.set_ylim(-27,2); ax.set_xlim(0,400)
+
+# panel 3 — survivable window
+ax=fig.add_subplot(gs[0,2])
+kls=np.linspace(0,0.05,200)
+win=DEATH*(K_EX+kls)/K_EX
+k_ceiling=K_EX*(25.0/DEATH-1)
+ax.plot(kls,win,color=C1,lw=2.4)
+ax.axhline(25,color=C2,lw=2,ls='--')
+ax.annotate('our world is -25 cold',(0.049,25.9),ha='right',fontsize=9,color=C2,fontweight='bold')
+ax.axvspan(k_ceiling,0.05,color='#8a8f97',alpha=.20)
+ax.annotate('above here the world\ncan never kill you',( (k_ceiling+0.05)/2, 19),ha='center',
+            fontsize=8.8,color='#4e545e',fontweight='bold')
+ax.axvline(K_LOSS,color=C3,lw=1.8)
+ax.plot([K_LOSS],[DEATH*(K_EX+K_LOSS)/K_EX],marker='o',ms=7,color=C3,zorder=5)
+ax.annotate(f'proposed {K_LOSS}\nsurvives to +/-{DEATH*(K_EX+K_LOSS)/K_EX:.1f}',
+            (K_LOSS,DEATH*(K_EX+K_LOSS)/K_EX),textcoords='offset points',xytext=(12,-30),
+            fontsize=9,color='#0f7a55',fontweight='bold')
+ax.set_xlabel('k_loss'); ax.set_ylabel('coldest ambient you can survive')
+ax.set_title('k_loss decides how hostile the world may be',color=INK)
+ax.set_xlim(0,0.05); ax.set_ylim(13,35)
+for a in fig.axes[1:]:
+    a.grid(True,color=GRID,lw=.8); a.set_axisbelow(True)
+    for s_ in ('top','right'): a.spines[s_].set_visible(False)
+fig.suptitle('k_loss is the strength of the body\'s own thermoregulation',
+             fontsize=13,fontweight='bold',y=.99)
+fig.text(.5,-.02,'With k_loss = 0 the body is a passive thermometer: it adopts the cell\'s temperature '
+ 'exactly and the setpoint means nothing. Raise it too far and the body defends so well that no cell '
+ 'in the world can hurt it, and the thermal task disappears.',ha='center',color=INK2,fontsize=9)
+fig.savefig('figG_kloss.png',dpi=140,bbox_inches='tight'); plt.close(fig)
+print('figG written')
+
+# ---------- FIG H : ranges, not fixed values ----------
+def sample_world(rng, cnt, temp, dflt, sigma=SIGMA, margin=2):
+    n=rng.integers(cnt[0],cnt[1]+1); d=rng.uniform(dflt[0],dflt[1])
+    raw=np.full((H,W),d); pos=[]
+    for _ in range(n):
+        r=rng.integers(margin,H-margin); c=rng.integers(margin,W-margin)
+        raw[r,c]+=rng.uniform(temp[0],temp[1]); pos.append((r,c))
+    return gaussian_smooth(raw,sigma), n, d, pos
+def pct_safe(f):
+    return (np.abs(K_EX*f/(K_EX+K_LOSS))<DEATH).mean()*100
+
+COMBOS=[('A  gentle',   dict(cnt=(1,2),temp=(300,600),dflt=(-22,-18))),
+        ('B  moderate', dict(cnt=(1,3),temp=(200,600),dflt=(-30,-22))),
+        ('C  harsh',    dict(cnt=(1,1),temp=(150,350),dflt=(-35,-28))),
+        ('D  varied',   dict(cnt=(1,4),temp=(150,700),dflt=(-35,-18)))]
+
+fig=plt.figure(figsize=(13.2,6.6))
+gs=fig.add_gridspec(2,6,height_ratios=[1,1.0],hspace=.42,wspace=.20)
+rng=np.random.default_rng(5); NR=TwoSlopeNorm(0,-45,45)
+for i in range(6):
+    ax=fig.add_subplot(gs[0,i]); f,n,d,pos=sample_world(rng,**COMBOS[1][1])
+    ax.imshow(f,cmap=DIV,norm=NR)
+    for (r,c) in pos: ax.add_patch(Circle((c,r),.40,fc='none',ec=INK,lw=1.7))
+    ax.set_title(f'{n} fire{"s" if n>1 else ""}',color=INK,fontsize=10)
+    ax.set_xlabel(f'{pct_safe(f):.0f}% safe',fontsize=9,color=INK2,labelpad=3); bare(ax)
+
+ax=fig.add_subplot(gs[1,0:6])
+ys=np.arange(len(COMBOS))[::-1]
+for (lab,cfg),y in zip(COMBOS,ys):
+    r2=np.random.default_rng(5)
+    v=np.array([pct_safe(sample_world(r2,**cfg)[0]) for _ in range(600)])
+    p10,med,p90=np.percentile(v,[10,50,90])
+    ax.plot([p10,p90],[y,y],color=C1,lw=7,solid_capstyle='round',alpha=.32)
+    ax.plot([med],[y],marker='o',ms=11,color=C1,zorder=4)
+    ax.annotate(f'{p10:.0f}–{p90:.0f}%',(p90,y),textcoords='offset points',xytext=(14,0),
+                va='center',fontsize=9.5,color=INK2)
+    ax.annotate(f"fires {cfg['cnt'][0]}–{cfg['cnt'][1]}   temp {cfg['temp'][0]}–{cfg['temp'][1]}"
+                f"   world {cfg['dflt'][0]}–{cfg['dflt'][1]}",(1,y),textcoords='offset points',
+                xytext=(0,15),fontsize=8.5,color=INK2,ha='left')
+ax.axvline(13,color=C2,lw=2,ls='--')
+ax.annotate('a single fixed world\n(1 fire, 300, -25)',(13,-0.62),ha='center',fontsize=9,
+            color=C2,fontweight='bold')
+ax.set_yticks(ys); ax.set_yticklabels([l for l,_ in COMBOS],fontsize=10.5)
+ax.set_xlabel('% of the map survivable   (bar = 10th to 90th percentile across episodes, dot = median)')
+ax.set_xlim(0,100); ax.set_ylim(-1.05,len(COMBOS)-.3)
+ax.grid(True,axis='x',color=GRID,lw=.8); ax.set_axisbelow(True)
+for s_ in ('top','right','left'): ax.spines[s_].set_visible(False)
+ax.set_title('Each range produces a family of worlds, not one world',color=INK)
+fig.suptitle('Campfire settings are ranges, sampled per episode',fontsize=13,fontweight='bold',y=.99)
+fig.text(.5,-.01,'Top: six episodes drawn from combination B alone — the count, each fire\'s '
+ 'temperature and the world\'s baseline are all resampled. Circles mark the fires.',
+ ha='center',color=INK2,fontsize=9)
+fig.savefig('figH_ranges.png',dpi=140,bbox_inches='tight'); plt.close(fig)
+print('figH written')
+
+# ---------- FIG I : sit beside the fire, not on it ----------
+SG_F, A_F, D_F = 0.9, 300.0, -25.0
+def fire_field(A=A_F, sg=SG_F, dflt=D_F, fire=(5,5)):
+    raw=np.full((H,W),float(dflt)); raw[fire]+=A; return gaussian_smooth(raw,sg)
+def fire_prof(A=A_F, sg=SG_F, dflt=D_F):
+    f=fire_field(A,sg,dflt); o={}
+    for d in range(0,7):
+        c=[f[r,cc] for r in range(H) for cc in range(W) if abs(r-5)+abs(cc-5)==d]
+        if not c: continue
+        amb=float(np.mean(c)); tr=body_traj([amb]*4000,k_ex=K_EX,k_loss=K_LOSS)
+        i=int((np.abs(tr)>=DEATH).argmax()); o[d]=(amb,K_EX*amb/(K_EX+K_LOSS),None if i==0 else i)
+    return o
+
+P=fire_prof(); f=fire_field()
+fig=plt.figure(figsize=(13.4,4.7)); gs=fig.add_gridspec(1,3,wspace=.30)
+
+ax=fig.add_subplot(gs[0,0])
+ds=sorted(P); eq=[P[d][1] for d in ds]
+ax.axhspan(DEATH,70,color='#b02b2b',alpha=.13)
+ax.axhspan(-70,-DEATH,color='#184f95',alpha=.13)
+ax.plot(ds,eq,color=INK,lw=2.6,marker='o',ms=7,zorder=4)
+ax.axhline(0,color=C3,lw=1.6,ls='--')
+ax.annotate('set point',(6,1.6),ha='right',fontsize=8.5,color=C3,fontweight='bold')
+ax.annotate(f'PAIN\n{P[0][2]} steps',(0,P[0][1]),textcoords='offset points',xytext=(8,-2),
+            fontsize=9.5,color='#b02b2b',fontweight='bold',va='center')
+ax.annotate('comfort',(1,P[1][1]),textcoords='offset points',xytext=(12,4),
+            fontsize=9.5,color='#0f7a55',fontweight='bold')
+ax.annotate(f'lethal cold',(4,P[4][1]),textcoords='offset points',xytext=(6,-16),
+            fontsize=9.5,color='#184f95',fontweight='bold')
+ax.set_xlabel('Manhattan distance from the fire'); ax.set_ylabel('equilibrium body temperature')
+ax.set_title('Beside the fire, not on it',color=INK); ax.set_ylim(-28,42); ax.set_xlim(-.3,6.3)
+
+ax=fig.add_subplot(gs[0,1])
+for d,col,lab in [(0,'#b02b2b','d=0  on the fire'),(1,'#0ca30c','d=1  beside it'),
+                  (2,'#6da7ec','d=2  cool'),(3,'#184f95','d=3  too far')]:
+    tr=body_traj([P[d][0]]*260,k_ex=K_EX,k_loss=K_LOSS)
+    ax.plot(tr,color=col,lw=2.2,label=lab)
+ax.axhline(DEATH,color=INK,ls=':',lw=1.4); ax.axhline(-DEATH,color=INK,ls=':',lw=1.4)
+ax.text(130,16.4,'heat death',ha='center',fontsize=8.5,color=INK)
+ax.text(130,-18.6,'cold death',ha='center',fontsize=8.5,color=INK)
+ax.set_xlabel('steps spent there'); ax.set_ylabel('body temperature')
+ax.set_title('What happens if the agent stays',color=INK)
+ax.legend(frameon=False,fontsize=8.5,loc='center right'); ax.set_ylim(-24,34); ax.set_xlim(0,260)
+
+ax=fig.add_subplot(gs[0,2])
+ax.imshow(f,cmap=DIV,norm=TwoSlopeNorm(0,-45,45))
+for r in range(H):
+    for c in range(W):
+        dd=abs(r-5)+abs(c-5)
+        if dd==1: ax.add_patch(Rectangle((c-.5,r-.5),1,1,fc='none',ec='#0ca30c',lw=2.4))
+ax.add_patch(Rectangle((4.5,4.5),1,1,fc='none',ec='#b02b2b',lw=2.6))
+ax.plot([5],[5],marker='*',ms=15,color='#fff3d6',zorder=5)
+ax.set_title('red = pain, green = the comfort ring',color=INK); bare(ax)
+
+for a in fig.axes[:2]:
+    a.grid(True,color=GRID,lw=.8); a.set_axisbelow(True)
+    for s_ in ('top','right'): a.spines[s_].set_visible(False)
+fig.suptitle('Thermal pain without a pain sensor — the fire cell simply overshoots',
+             fontsize=13,fontweight='bold',y=.99)
+fig.text(.5,-.02,f'campfire {A_F:.0f}, sigma {SG_F}, world {D_F:.0f}. Standing on the fire drives the body '
+ f'to {P[0][1]:.0f} and kills in {P[0][2]} steps; one cell away it settles at {P[1][1]:.1f} and is safe '
+ 'forever. No new internal state and no new sensor — the same temperature dynamics produce both.',
+ ha='center',color=INK2,fontsize=9)
+fig.savefig('figI_pain.png',dpi=140,bbox_inches='tight'); plt.close(fig)
+print('figI written')
