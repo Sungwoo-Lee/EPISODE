@@ -29,6 +29,8 @@ aliases: [thermal_implementation_plan]
 
 Medium and low findings are folded into the stages they belong to and are not separately tabulated.
 
+**Fifth amendment, same day — closing the Open Decisions list.** Two more user decisions: **do not bump `RECORDING_FORMAT_VERSION`** (D4 — grounded in the finding that nothing reads it back, F10) and **keep `topic: sensors`** (D5 — matching the `dreamer_srl_v1` / `dreamer_srl_v2` / `sheeprl_bridge` precedent). The candidate-range item closes too (D6): the design page's config block has been corrected to `[-28, -22]`, so design and plan now agree. Stage 6a gains a caveat that **a separate rendering rewrite is coming and may supersede it** — with F7's `build_sensory_viz` fix explicitly exempt, since it is a correctness fix that lands with Stage 3. A third `bug-curator` handoff recorded (F10). **Open Decisions now holds one item, and it is a measurement rather than a decision.**
+
 **Fourth amendment, same day — migration-scope decisions.** The user set the migration policy: **lazy** (D4) and **the 68 already-broken configs stay broken** (D5). Stage 1's migration shrinks from 140+ configs to roughly **55 files** — `default.yaml` (which covers the whole `basic/` level and all 216 layered configs by inheritance, since all 7 `basic/` files use `extends:`), the 34 fixtured full configs (non-negotiable: they are the measuring instrument), and the ~21 test modules plus 1 test-fixture YAML (non-deferrable: they run on every test invocation). The other 106 full configs are deferred and must **not** be touched. F6 rewritten around the policy; F9 added for the 68 pre-existing failures with a `bug-curator` handoff; every "byte-identical" claim reworded to the measured scope — **34 of 356 configs, no live experiment family among them** — which the user has accepted knowingly.
 
 **Third amendment, same day — second plan review.** HIGH-3 (6b gating) and HIGH-4 (`build_sensory_viz`) closed; four items remained, all confirmed against the code before amending:
@@ -172,6 +174,14 @@ Independent of thermal, **68 full configs** — mostly under `configs/environmen
 **Explicitly out of scope.** Not caused by this work, not fixed by it, and not Stage 1's job — the user's decision is "leave them". Recorded here so that a developer who trips over one during the migration recognises it as pre-existing rather than something they broke, and does not silently expand Stage 1 to chase it.
 
 **Handoff to `bug-curator`:** file as its own registry item, separate from the thermal plan and from the cell-0 placement fallback (Stage 1). The bug is that mandatory-key additions have been landing without migrating the archive, so the archive is quietly accumulating unloadable configs; thermal is simply the third instance.
+
+### F10 — The recording format carries a version stamp that nothing validates
+
+`RECORDING_FORMAT_VERSION` is written into every `.rec` payload (`eval_recording.py:65`) and every `run_meta.pkl` (`:82`), and **no code anywhere reads it back** — not the renderer, `async_render.py`, `evaluation_core.py`, `dreamer_srl/eval.py`, or the behaviour-measure scripts.
+
+A reader of `eval_recording.py` would reasonably assume recordings are checked for compatibility on load. They are not. Today that costs nothing, which is exactly what makes it a trap: **the first time someone makes a real format change and relies on the stamp to catch stale recordings, it will silently do nothing** and old files will be read as if they were new.
+
+Out of scope for this plan — D4 routes around it rather than depending on it. **Handoff to `bug-curator`**, as a third registry item distinct from the archive-migration drift (F9) and the cell-0 placement fallback (Stage 1). Frame it as the pattern: *a version stamp that is written but never validated is worse than no stamp, because it advertises a guarantee that does not exist.*
 
 **Stage 1 therefore includes an explicit config migration, in the same commit.** The `.get('thermal.enabled', False)` route is forbidden: a fallback default for a gating key is exactly what the no-fallback rule exists to prevent, and it would let a config with a typo'd `thermal:` block train as if thermal were off. Precedent for the bulk migration is commit `0e8a4ef8`, which did the same for `visual_blur_enabled`.
 
@@ -596,6 +606,12 @@ Three companions:
 
 ### 6a — Rendering
 
+> **Check the state of the rendering rewrite before starting 6a.** A large rendering update is coming separately, and **this stage may be superseded or absorbed by it**. Whoever picks 6a up should look first rather than build against a renderer that is about to change.
+>
+> Two things follow. **Keep the thermal drawing additive and self-contained** — a field underlay, a body-temp gauge, a debug read-cell outline — and do **not** restructure the existing panel layout or pointer logic beyond what F7 requires. The point is to avoid entrenching assumptions the rewrite would then have to undo.
+>
+> **This does not defer F7's `build_sensory_viz` fix.** That is a correctness fix for a silent slice shift, it lands with **Stage 3**, and it is independent of whatever happens to the renderer — a rewritten renderer walking a mis-advanced pointer is wrong in exactly the same way.
+
 All of this lands in **`src/environment/renderer.py`** — the renderer that actually runs. `renderer_v2.py` gets the mirrored change afterwards so the dormant copy does not diverge further; `grid_world.py` gets nothing.
 
 - `renderer.py:425-432` — a diverging blue–red underlay drawn in the same double loop that paints terrain tiles now, at `zorder=0`, so entities (drawn later at `:447-506` via `AnnotationBbox` / `plot`) keep their current stacking untouched. **Colour limits fixed for the whole episode**, computed once from `state.thermal_field` at reset — per-frame rescaling makes a cooling world look stable, which is the one thing the visualisation exists to disprove. A diverging scale is right here because temperature has a meaningful zero: the setpoint the agent is defending.
@@ -603,7 +619,8 @@ All of this lands in **`src/environment/renderer.py`** — the renderer that act
 - **`renderer.py:626` — add `'Thermoception'` to `known_sensors`** (currently `['Olfactory', 'Extero Nociception', 'Collision', 'Visual', 'LOC']`), and the same to the `pod_map` copy at `renderer_v2.py:474-479`. Paired with the `build_sensory_viz` branch from Stage 3 (F7); the branch makes the data correct, this makes it visible.
 - Debug-only outline of the five thermoceptor cells, off by default.
 - Mirror the underlay and gauge into `renderer_v2.py`: underlay at `:338-347`, and a `'temperature'` row added to the left mosaic at `:260-262` plus a fourth `draw_vital_card` call after `:312`.
-- `src/utils/eval_recording.py:24-40` `_snapshot_state` — add `thermal_field` and `body_temp`. Its docstring says "Exactly the fields render_jax_state reads. Keep in lockstep with renderer.py", and offline video rendering reads nothing else. **`RECORDING_FORMAT_VERSION` is currently 1 and bumping it needs the user's explicit go-ahead** (project rule: no version numbers without permission) — see Open Decisions.
+- `src/utils/eval_recording.py:24-40` `_snapshot_state` — add `thermal_field` and `body_temp`. Its docstring says "Exactly the fields render_jax_state reads. Keep in lockstep with renderer.py", and offline video rendering reads nothing else.
+  **Do not bump `RECORDING_FORMAT_VERSION`** (D4). Handle the two fields as **present-or-absent in the reader**: check for them and skip the thermal layer when they are missing, so every pre-thermal `.rec` keeps rendering exactly as it does today. That branch is required either way — a bump would not have removed a line of it — and the stamp it would change is one that nothing reads (F10).
 
 ### 6b — The load-time structure check
 
@@ -740,16 +757,33 @@ So a two-fire draw at separation 1 or 2 produces an episode with **no survivable
 
 **The measurement that settles it**, to run before the first real training run: over ~600 sampled resets of the proposed default config, report **the share of episodes with at least one food item within the comfort ring** (Manhattan distance ≤ 1 of any fire), and the share with all food beyond it. That is a sandbox-or-reset-loop measurement, cheap, and it turns a reopened debate into a number. Belongs to `experiment-designer`.
 
+### D4 — Do not bump `RECORDING_FORMAT_VERSION`; handle the fields as present-or-absent
+
+**Decided: no bump.** The renderer checks for `thermal_field` and `body_temp` and skips the thermal layer when they are absent, so pre-thermal recordings render unchanged.
+
+The grounding matters, because it changes *why* this is right rather than merely permitted. `RECORDING_FORMAT_VERSION` is written at `eval_recording.py:65` and `:82` into every `.rec` payload and every `run_meta.pkl` — and **nothing anywhere reads it back**. Not the renderer, not `async_render.py`, not `evaluation_core.py`, not `dreamer_srl/eval.py`, not the behaviour-measure scripts (verified by grep). So bumping it would change a number no code consults, while the actual work — a reader that copes with older recordings — has to be done either way. The bump buys nothing and costs a permission round-trip.
+
+### D5 — Keep `topic: sensors`; do not touch the topic enum
+
+**Decided: leave it.** This document lives in `docs/develop/active/thermal/` while declaring `topic: sensors`. The index validates the *enum*, not the folder name, so regeneration passes — and the arrangement follows existing precedent rather than inventing one: `dreamer_srl_v1/`, `dreamer_srl_v2/` and `sheeprl_bridge/` are all directories under `docs/develop/active/` whose names are not in `VALID_TOPICS`. **Do not edit `scripts/claude/regen_dev_index.py` or `FRONTMATTER_CONTRACT.md`.**
+
+One observation, handed on rather than actioned here: `env_entities` is present in the script's `VALID_TOPICS` but missing from the topic list in `FRONTMATTER_CONTRACT.md`. That is a pre-existing drift between the validator and the contract that documents it. It belongs to whoever owns that doc; it is **not** an open item on this plan.
+
+### D6 — Combination B, and the design now agrees
+
+**Decided and no longer a divergence.** The plan recommended combination B — `count_low: 1, count_high: 3`, `temperature_ratio: [11, 13]`, `default_temp: [-28, -22]` — which holds the pain-plus-comfort structure in 100% of 600 sampled draws. The design page previously showed a wider `[-30, -20]` in its §9 example block; **that block has since been corrected to `[-28, -22]`**, so the design and the plan now say the same thing.
+
+For the record, the wider range was **looser, not wrong**: `[-30, -20]` measures at 98%, so roughly one draw in fifty would have produced an episode missing either the fire's bite or the survivable ring. B is chosen because 100% means every episode trains the task that was specified.
+
 ---
 
-## Open decisions — needed before Stage 6, none blocking Stage 0
+## Open decisions
 
-1. **`RECORDING_FORMAT_VERSION`.** Adding `thermal_field` and `body_temp` to the offline-render snapshot changes the payload. The project rule is that no version is invented or bumped without permission. Options: bump to 2 (clean, needs sign-off), or make the renderer treat the thermal keys as present-or-absent with an explicit branch (no bump, slightly more code). **Recommend asking.**
-2. **Topic folder.** This document sits in `docs/develop/active/thermal/`, but `thermal` is not in `VALID_TOPICS` (`scripts/claude/regen_dev_index.py:27-40`), so the frontmatter above declares `topic: sensors` — the index validates the enum, not the folder, so regeneration passes. Adding a real `thermal` topic means editing that script **and** `docs/develop/active/meta/FRONTMATTER_CONTRACT.md` in the same commit, which is outside this agent's write scope. Note that `env_entities` already exists in the script but is missing from the contract doc — a pre-existing drift worth fixing at the same time.
-3. **Which candidate range ships as the default.** The design proposes combination B (`count_low: 1, count_high: 3`, `temperature_ratio: [11,13]`, `default_temp: [-28,-22]`), which holds the structure in 100% of 600 sampled draws. The design's own §9 example block writes `default_temp: [-30, -20]`, which is wider than B and was not scored. **Use B**, and treat the §9 block as illustrative.
-4. **The comfort-ring food measurement** (from D3) has to be run before the first real training run. Not a decision so much as a scheduled piece of evidence — it is listed here so it does not fall between this plan and the experiment design.
+Nothing here requires a user decision. One item remains, and it is evidence to collect rather than a call to make:
 
-The three questions the first draft listed as open — the campfire's visual identity, the single-fire calibration gap, and food placement — are **settled**; see *Decisions settled by the user* above.
+1. **The comfort-ring food measurement** (from D3): over ~600 sampled resets of the proposed default config, the share of episodes with at least one food item within Manhattan 1 of any fire. It has to run before the first real training run, and it belongs to `experiment-designer`. Listed here so it does not fall between this plan and the experiment design.
+
+Everything the first draft listed as open is now settled — see *Decisions settled by the user*.
 
 ---
 
