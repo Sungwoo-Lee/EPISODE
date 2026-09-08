@@ -356,11 +356,16 @@ hr { border:0; border-top:1px solid var(--line); margin:0; width:100%; }
   animal does: creep close enough to be warm, and no closer. That means the cell the fire
   occupies should be <em>painful</em> &mdash; and painful without adding a nociceptor or a second
   internal state, purely by letting the temperature dynamics overshoot.</p>
-  <p>This is achievable with a single Gaussian, but only in a narrow band of settings. It needs
-  the fire's own cell to drive the body clean past the heat-death threshold while the cell
-  <em>next to it</em> settles near the set point. Searched over smoothing and fire strength, the
-  shape appears at <strong>&sigma; = @@sigma@@</strong> with a campfire near
-  <strong>@@afire@@</strong> in a world at <strong>@@default@@</strong>:</p>
+  <p>And it has to hurt <em>fast</em>. An earlier version of this design killed in 16 steps on
+  the fire, which is attrition, not pain &mdash; for comparison a predator lands 15 to 120 damage
+  in a single step. Retuned so that walking onto the fire from the comfort ring kills in
+  <strong>@@burn@@ steps</strong>, which puts it in the same register as the other acute
+  hazards.</p>
+  <p>This is achievable with a single Gaussian, but only in a narrow band. The fire's own cell
+  must drive the body clean past the heat-death threshold while the cell <em>next to it</em>
+  settles somewhere liveable. Searched over smoothing and fire strength, the shape appears at
+  <strong>&sigma; = @@sigma@@</strong> with a campfire near <strong>@@afire@@</strong> in a world
+  at <strong>@@default@@</strong> &mdash; a fire-cell ambient of <strong>+@@peak@@</strong>:</p>
 </section>
 
 <figure>
@@ -372,9 +377,9 @@ hr { border:0; border-top:1px solid var(--line); margin:0; width:100%; }
 
 <section class="col">
   <dl>
-    <dt>d = 0 &nbsp;on the fire</dt><dd>body driven to <strong>@@pain_eq@@</strong>, far past the
-    +15 threshold &mdash; <strong>lethal in @@pain_steps@@ steps</strong>. Brief contact is
-    survivable and costly; lingering is not.</dd>
+    <dt>d = 0 &nbsp;on the fire</dt><dd>ambient +@@peak@@ drives the body to
+    <strong>@@pain_eq@@</strong>, far past the +15 threshold &mdash; <strong>dead @@burn@@ steps
+    after stepping on</strong>. One step is a sharp, recoverable jolt; three is fatal.</dd>
     <dt>d = 1 &nbsp;beside it</dt><dd>settles at <strong>@@comfy_eq@@</strong>, the closest any
     cell comes to the set point &mdash; so this ring is both the safest place and the
     best-rewarded one.</dd>
@@ -392,15 +397,38 @@ hr { border:0; border-top:1px solid var(--line); margin:0; width:100%; }
   convention from consequences, exactly as it does with nociception today.</p>
 
   <h3>Why this is a narrow band</h3>
-  <p>Sharper than &sigma;&nbsp;&asymp;&nbsp;0.9 and the warmth never escapes the fire cell: at
-  &sigma;&nbsp;=&nbsp;0.5 the profile jumps from +178 on the fire to +7 beside it to &minus;18
-  two cells out, which is a cliff, not an approach gradient. Smoother and the peak flattens until
-  the fire stops hurting &mdash; at &sigma;&nbsp;=&nbsp;1.2 the same campfire leaves the fire cell
-  merely warm.</p>
-  <p>Fire strength is equally tight. Below about 250 the fire is comfortable to stand on and the
-  pain disappears; above about 400 the <em>comfort ring</em> turns lethal too and the agent has
-  nowhere to be. That band, roughly 250 to 350, is what the sampling range in &sect;2 is built
-  around.</p>
+  <p>Making the fire hurt quickly means concentrating it, and concentrating it costs the approach
+  gradient. At &sigma;&nbsp;=&nbsp;0.5 the fire kills in 2 steps but the field jumps from +222 on
+  the fire to +8 beside it to &minus;23 two cells out and then flat &mdash; a cliff, with no slope
+  to climb from any distance. Smoother and the peak flattens until the fire stops hurting at all:
+  at &sigma;&nbsp;=&nbsp;1.2 the same campfire leaves its own cell merely warm.</p>
+  <p>&sigma;&nbsp;=&nbsp;@@sigma@@ was chosen because it is the point where both survive. It kills
+  in @@burn@@ steps <em>and</em> leaves a measurable slope out to three cells &mdash; four times
+  the gradient of the &sigma;&nbsp;=&nbsp;0.5 version at the same burn time.</p>
+  <p>Fire strength is tighter still. Below about 290 the fire takes more than four steps to kill;
+  above about 370 the <em>comfort ring itself</em> becomes lethal and the agent has nowhere to
+  stand.</p>
+
+  <h3>The range has to scale with the world</h3>
+  <p>This is the part that bites when the values are sampled rather than fixed. The valid fire
+  strength <strong>moves with the world's baseline</strong>: in a &minus;22 world the window is
+  roughly 265&ndash;315, in a &minus;28 world it is 305&ndash;365. Sampling both independently
+  over the ranges in &sect;2 leaves an overlap only ten units wide, and draws outside it silently
+  produce either a fire that does not hurt or a ring that is not survivable.</p>
+  <p>Two ways out, both measured over 400 sampled episodes:</p>
+  <dl>
+    <dt>narrow the absolute range</dt>
+    <dd><code>temperature: [275, 315]</code> against <code>default_temp: [-28, -22]</code> holds
+    the structure in <strong>100%</strong> of draws &mdash; but the fire barely varies.</dd>
+    <dt>scale it to the world &nbsp;(recommended)</dt>
+    <dd>Sample the fire as a <em>multiple of the world's coldness</em> &mdash;
+    <code>11&ndash;13 &times; |default_temp|</code>. That holds in <strong>100%</strong> of draws
+    over the same world range, and still <strong>94%</strong> over a much wider
+    <code>[-32, -20]</code>, because a colder world automatically gets a stronger fire.</dd>
+  </dl>
+  <p>The second is the better design and it is barely more config: one ratio instead of one
+  temperature. It also expresses something true &mdash; a fire that is a refuge in a mild winter
+  is not a refuge in a hard one.</p>
 </section>
 
 <hr>
@@ -633,7 +661,7 @@ T &larr; T + <span class="k">k_exchange</span>&middot;(T_field &minus; T) + <spa
   enabled: false            <span class="c"># gate; every key below is read only when true</span>
 
   <span class="c"># --- field: pick a mode, or both (sections 01-02) ---</span>
-  sigma: @@sigma@@                <span class="c"># tight band 0.8-1.0, see section 04</span>
+  sigma: @@sigma@@                <span class="c"># tight band 0.6-0.8, see section 04</span>
 
   <span class="c"># mode A - random field: neutral world, scattered hazards</span>
   <span class="c">#   default_temp: 0.0</span>
@@ -642,7 +670,7 @@ T &larr; T + <span class="k">k_exchange</span>&middot;(T_field &minus; T) + <spa
   <span class="c">#   use_object_sources: false</span>
 
   <span class="c"># mode B - object sources: cold world, campfire refuge  (proposed default)</span>
-  default_temp: [-28, -22]  <span class="c"># sampled per episode</span>
+  default_temp: [-30, -20]  <span class="c"># sampled per episode</span>
   use_random_spots: false
   random_spots:
     count: 4
@@ -669,7 +697,7 @@ T &larr; T + <span class="k">k_exchange</span>&middot;(T_field &minus; T) + <spa
   - name: campfire
     count_low: 1              <span class="c"># how many fires this episode</span>
     count_high: 3
-    temperature: [250, 350]   <span class="c"># sampled per fire, per episode</span>
+    temperature_ratio: [11, 13]  <span class="c"># fire = ratio x |default_temp|, per fire</span>
     edge_margin: 2            <span class="c"># keep fires off the border</span>
     blocks_sight: false
   - name: bush
@@ -756,10 +784,12 @@ T &larr; T + <span class="k">k_exchange</span>&middot;(T_field &minus; T) + <spa
   <h2><span class="num">12</span> Open questions</h2>
   <p>Where the plan is genuinely undecided, and where your feedback changes what gets built.</p>
   <div class="q"><div class="h">Is the pain window too narrow to be safe?</div>
-    <div class="d">The pain-plus-comfort structure exists only for &sigma; near 0.9 and fire
-    strength roughly 250&ndash;350. That is a real constraint, not a preference: a config drifting
-    outside it silently loses either the fire pain or the comfort ring, and the run still looks
-    healthy. Worth a load-time warning rather than trusting the range alone.</div></div>
+    <div class="d">The pain-plus-comfort structure exists only for &sigma; near @@sigma@@ and a
+    fire within roughly 11&ndash;13&times; the world's coldness. A config drifting outside it
+    silently loses either the fire pain or the comfort ring, and the run still looks healthy.
+    This deserves a load-time check that actually simulates the profile, not just a documented
+    range &mdash; it is cheap to compute once at reset and it is the difference between a failed
+    experiment and a noticed one.</div></div>
   <div class="q"><div class="h">One fire or several?</div>
     <div class="d">EVAAA's risk-taking task uses three. Multiple fires turn a leash into a
     network and let food be placed <em>between</em> refuges, which is a much more interesting

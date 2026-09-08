@@ -18,7 +18,7 @@ FIG = {k: b64(v) for k, v in {
     'render': 'figD_render.png', 'tether': 'figE_tether.png', 'modes': 'figF_modes.png', 'fig_kloss': 'figG_kloss.png', 'ranges': 'figH_ranges.png', 'pain': 'figI_pain.png',
     'nbhd': 'fig1_geometry.png', 'acc': 'fig3_accuracy.png'}.items()}
 
-DEFAULT, SIGMA, K_EX, K_LOSS, DEATH = -25.0, 0.9, 0.04, 0.01, 15.0
+DEFAULT, SIGMA, K_EX, K_LOSS, DEATH = -25.0, 0.7, 0.04, 0.01, 15.0
 A_FIRE = 300.0
 
 def radial(A):
@@ -101,6 +101,19 @@ COMBO_ROWS = '\n'.join(rows)
 
 R300, R900 = radial(300.0), radial(900.0)
 R_PAIN = radial(A_FIRE)
+
+def _burn(A=A_FIRE, dflt=DEFAULT):
+    raw = np.full((H, W), float(dflt)); raw[5, 5] += A
+    f = gaussian_smooth(raw, SIGMA)
+    amb = {d: float(np.mean([f[r, c] for r in range(H) for c in range(W)
+                             if abs(r-5)+abs(c-5) == d])) for d in (0, 1)}
+    T = K_EX*amb[1]/(K_EX+K_LOSS)
+    for k in range(30):
+        T = T + K_EX*(amb[0]-T) - K_LOSS*T
+        if abs(T) >= DEATH: return k+1, amb[0]
+    return None, amb[0]
+
+BURN, PEAK = _burn()
 safe300 = max(d for d in R300 if R300[d][2] is None)
 safe900 = [d for d in R900 if R900[d][2] is None]
 ACC = json.load(open('sweep2.json'))['res']
@@ -118,6 +131,7 @@ N = dict(
     h_ring=f'{min(safe900)}–{max(safe900)}',
     combo_rows=COMBO_ROWS,
     pain_eq=f'{R_PAIN[0][1]:.0f}', pain_steps=str(R_PAIN[0][2]),
+    burn=str(BURN), peak=f'{PEAK:.0f}',
     comfy_eq=f'{R_PAIN[1][1]:.1f}', cool_eq=f'{R_PAIN[2][1]:.1f}',
     cold_steps=str(R_PAIN[3][2]), afire=f'{A_FIRE:.0f}',
     adopted=f'{K_EX/(K_EX+K_LOSS)*100:.0f}',

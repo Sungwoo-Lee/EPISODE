@@ -17,7 +17,7 @@ def bare(ax):
     ax.set_xticks([]); ax.set_yticks([])
     for s in ax.spines.values(): s.set_visible(False)
 
-DEFAULT, A_FIRE, SIGMA = -25.0, 300.0, 1.2
+DEFAULT, A_FIRE, SIGMA = -25.0, 300.0, 0.7
 K_EX, K_LOSS, DEATH = 0.04, 0.01, 15.0
 FIRES=[(5,5)]; BUSH=[(2,7),(3,7)]
 
@@ -397,7 +397,7 @@ fig.savefig('figH_ranges.png',dpi=140,bbox_inches='tight'); plt.close(fig)
 print('figH written')
 
 # ---------- FIG I : sit beside the fire, not on it ----------
-SG_F, A_F, D_F = 0.9, 300.0, -25.0
+SG_F, A_F, D_F = 0.7, 300.0, -25.0
 def fire_field(A=A_F, sg=SG_F, dflt=D_F, fire=(5,5)):
     raw=np.full((H,W),float(dflt)); raw[fire]+=A; return gaussian_smooth(raw,sg)
 def fire_prof(A=A_F, sg=SG_F, dflt=D_F):
@@ -410,35 +410,45 @@ def fire_prof(A=A_F, sg=SG_F, dflt=D_F):
     return o
 
 P=fire_prof(); f=fire_field()
+def burn_from_ring(P):
+    T=K_EX*P[1][0]/(K_EX+K_LOSS)
+    for k in range(30):
+        T=T+K_EX*(P[0][0]-T)-K_LOSS*T
+        if abs(T)>=DEATH: return k+1
+    return None
+BURN=burn_from_ring(P)
 fig=plt.figure(figsize=(13.4,4.7)); gs=fig.add_gridspec(1,3,wspace=.30)
 
 ax=fig.add_subplot(gs[0,0])
 ds=sorted(P); eq=[P[d][1] for d in ds]
-ax.axhspan(DEATH,70,color='#b02b2b',alpha=.13)
-ax.axhspan(-70,-DEATH,color='#184f95',alpha=.13)
+ax.axhspan(DEATH,200,color='#b02b2b',alpha=.13)
+ax.axhspan(-200,-DEATH,color='#184f95',alpha=.13)
 ax.plot(ds,eq,color=INK,lw=2.6,marker='o',ms=7,zorder=4)
 ax.axhline(0,color=C3,lw=1.6,ls='--')
 ax.annotate('set point',(6,1.6),ha='right',fontsize=8.5,color=C3,fontweight='bold')
-ax.annotate(f'PAIN\n{P[0][2]} steps',(0,P[0][1]),textcoords='offset points',xytext=(8,-2),
+ax.annotate(f'PAIN\ndead in {BURN}\nsteps',(0,P[0][1]),textcoords='offset points',xytext=(10,-6),
             fontsize=9.5,color='#b02b2b',fontweight='bold',va='center')
 ax.annotate('comfort',(1,P[1][1]),textcoords='offset points',xytext=(12,4),
             fontsize=9.5,color='#0f7a55',fontweight='bold')
 ax.annotate(f'lethal cold',(4,P[4][1]),textcoords='offset points',xytext=(6,-16),
             fontsize=9.5,color='#184f95',fontweight='bold')
 ax.set_xlabel('Manhattan distance from the fire'); ax.set_ylabel('equilibrium body temperature')
-ax.set_title('Beside the fire, not on it',color=INK); ax.set_ylim(-28,42); ax.set_xlim(-.3,6.3)
+ax.set_title('Beside the fire, not on it',color=INK)
+ax.set_ylim(-30,max(eq)*1.18); ax.set_xlim(-.35,6.35)
 
 ax=fig.add_subplot(gs[0,1])
 for d,col,lab in [(0,'#b02b2b','d=0  on the fire'),(1,'#0ca30c','d=1  beside it'),
                   (2,'#6da7ec','d=2  cool'),(3,'#184f95','d=3  too far')]:
-    tr=body_traj([P[d][0]]*260,k_ex=K_EX,k_loss=K_LOSS)
+    T0=K_EX*P[1][0]/(K_EX+K_LOSS) if d==0 else 0.0
+    tr=body_traj([P[d][0]]*70,T0=T0,k_ex=K_EX,k_loss=K_LOSS)
     ax.plot(tr,color=col,lw=2.2,label=lab)
 ax.axhline(DEATH,color=INK,ls=':',lw=1.4); ax.axhline(-DEATH,color=INK,ls=':',lw=1.4)
-ax.text(130,16.4,'heat death',ha='center',fontsize=8.5,color=INK)
-ax.text(130,-18.6,'cold death',ha='center',fontsize=8.5,color=INK)
-ax.set_xlabel('steps spent there'); ax.set_ylabel('body temperature')
-ax.set_title('What happens if the agent stays',color=INK)
-ax.legend(frameon=False,fontsize=8.5,loc='center right'); ax.set_ylim(-24,34); ax.set_xlim(0,260)
+ax.text(38,16.4,'heat death',ha='center',fontsize=8.5,color=INK)
+ax.annotate(f'{BURN} steps',(BURN,DEATH),textcoords='offset points',xytext=(10,10),fontsize=9,color='#b02b2b',fontweight='bold')
+ax.text(38,-18.6,'cold death',ha='center',fontsize=8.5,color=INK)
+ax.set_xlabel('steps spent there  (first 70)'); ax.set_ylabel('body temperature')
+ax.set_title('What happens if the agent stays\n(fire curve starts from the ring)',color=INK,fontsize=10)
+ax.legend(frameon=False,fontsize=8.5,loc='upper right'); ax.set_ylim(-24,36); ax.set_xlim(0,70)
 
 ax=fig.add_subplot(gs[0,2])
 ax.imshow(f,cmap=DIV,norm=TwoSlopeNorm(0,-45,45))
@@ -455,9 +465,9 @@ for a in fig.axes[:2]:
     for s_ in ('top','right'): a.spines[s_].set_visible(False)
 fig.suptitle('Thermal pain without a pain sensor — the fire cell simply overshoots',
              fontsize=13,fontweight='bold',y=.99)
-fig.text(.5,-.02,f'campfire {A_F:.0f}, sigma {SG_F}, world {D_F:.0f}. Standing on the fire drives the body '
- f'to {P[0][1]:.0f} and kills in {P[0][2]} steps; one cell away it settles at {P[1][1]:.1f} and is safe '
- 'forever. No new internal state and no new sensor — the same temperature dynamics produce both.',
+fig.text(.5,-.02,f'campfire {A_F:.0f}, sigma {SG_F}, world {D_F:.0f}. The fire cell sits at ambient '
+ f'{P[0][0]:.0f}: walking onto it from the comfort ring kills in {BURN} steps. One cell away the body '
+ f'settles at {P[1][1]:.1f} and is safe forever. No new internal state and no new sensor.',
  ha='center',color=INK2,fontsize=9)
 fig.savefig('figI_pain.png',dpi=140,bbox_inches='tight'); plt.close(fig)
 print('figI written')
