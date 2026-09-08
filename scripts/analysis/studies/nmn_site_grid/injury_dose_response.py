@@ -8,12 +8,15 @@ steps by that dealt wound and found thirteen of its fourteen agents hiding MORE 
 one, by +2.6 to +6.7 percentage points. One arm went the other way: `A_baseline`, the agent with
 neither directional smell nor useful sight, at -2.34.
 
-WHY THAT MATTERS HERE, AND IT IS NOT A COINCIDENCE. Every run in the neuromodulator study - all
-sixteen cells, the in-grid control and the five reference runs, under both return estimators - is
-configured EXACTLY as `A_baseline` is. The two configs differ in four leaf keys out of 251, and all
-four are the run tag and wandb labels. So this study is not merely near the bottom of the sensory
-ladder; it sits on the one rung whose wound response runs backwards, and its ten unmodulated runs
-are ten fresh seeds of an arm the ladder had only one of.
+WHY THAT MATTERS HERE, AND IT IS NOT A COINCIDENCE. Every run in the neuromodulator study was trained in the
+same ENVIRONMENT as `A_baseline` - same world, same sensors, same nociceptor. How far each goes
+beyond that differs, and the distinction matters: the five Monte-Carlo reference runs are that agent
+exactly (4 differing leaf keys of 251, all of them the run name and logging labels); the GAE
+references add the return estimator; the two in-grid controls add a critic learning rate no code
+reads; the thirty cells add that plus the modulator. So this study sits on the ladder rung whose
+EARLY-WINDOW wound response is negative - a 25-step statement, since twelve of the thirteen rising
+arms also go negative over a whole episode. And the replication it supplies is four fresh seeds, not
+ten: the ladder ran at seed 42 and so does `baseline_s42`, which is a repeat rather than a replicate.
 
 The 25-step window is the ladder's, not a choice made here: the wound heals, so a whole-episode
 average dilutes the dealt dose with whatever the agent's own later behaviour produced. Both windows
@@ -77,7 +80,7 @@ def main():
             continue
         ax[0].plot(x, curve(lad[a]), color=LAD, lw=1.2, alpha=.55)
     ax[0].plot(x, curve(lad["A_baseline"]), color=ANNO, lw=2.6, ls=(0, (5, 2)),
-               label="ladder A_baseline (same config as this study)", zorder=6)
+               label="ladder A_baseline (this study's environment)", zorder=6)
     for n in CELLS:
         ax[0].plot(x, curve(grids["MC"][n]), color=C[n.split("_")[1]], lw=1.0, alpha=.5)
     B = np.array([curve(grids["MC"][n]) for n in CTRL])
@@ -100,7 +103,7 @@ def main():
     rows = [
 ("the ladder's 13\nbetter-sensed arms",
          [(slope(lad[a]), LAD, "o") for a in L.ARM_ORDER if a != "A_baseline"]),
-("ladder A_baseline\nthis study's exact config",
+("ladder A_baseline\nthis study's environment",
          [(slope(lad["A_baseline"]), ANNO, "D")]),
 ("this study, 12\nunmodulated runs",
          [(slope(grids[g][n]), C["ctrl"], "o") for g in grids for n in CTRL]
