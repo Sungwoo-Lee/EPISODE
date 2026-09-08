@@ -15,7 +15,7 @@ from sim import gaussian_smooth, body_traj, H, W
 def b64(p): return base64.b64encode(open(p, 'rb').read()).decode()
 FIG = {k: b64(v) for k, v in {
     'pipeline': 'figA_pipeline.png', 'sigma': 'figB_sigma.png', 'body': 'figC_body.png',
-    'render': 'figD_render.png', 'tether': 'figE_tether.png',
+    'render': 'figD_render.png', 'tether': 'figE_tether.png', 'modes': 'figF_modes.png',
     'nbhd': 'fig1_geometry.png', 'acc': 'fig3_accuracy.png'}.items()}
 
 DEFAULT, SIGMA, K_EX, K_LOSS, DEATH = -25.0, 1.2, 0.04, 0.01, 15.0
@@ -31,6 +31,26 @@ def radial(A):
         i = int((np.abs(tr) >= DEATH).argmax())
         out[d] = (amb, K_EX*amb/(K_EX+K_LOSS), None if i == 0 else i)
     return out
+
+def rand_field(rng, default, n, temp, size, sigma):
+    raw = np.full((H, W), float(default)); s = int(size)//2
+    for _ in range(n):
+        r, c = rng.integers(0, H), rng.integers(0, W); sign = rng.choice([-1, 1])
+        for dr in range(-s, s+1):
+            for dc in range(-s, s+1):
+                rr, cc = r+dr, c+dc
+                if 0 <= rr < H and 0 <= cc < W: raw[rr, cc] += sign*temp
+    return gaussian_smooth(raw, sigma)
+
+def pct_safe(temp, trials=200):
+    rng = np.random.default_rng(3)
+    v = [(np.abs(K_EX*rand_field(rng, 0, 4, temp, 2, SIGMA)/(K_EX+K_LOSS)) < DEATH).mean()
+         for _ in range(trials)]
+    return float(np.mean(v))*100
+
+RAND = {t: pct_safe(t) for t in (20, 40, 120)}
+_cf = np.full((H, W), DEFAULT); _cf[5, 5] += 300.0
+CF_SAFE = float((np.abs(K_EX*gaussian_smooth(_cf, SIGMA)/(K_EX+K_LOSS)) < DEATH).mean())*100
 
 R300, R900 = radial(300.0), radial(900.0)
 safe300 = max(d for d in R300 if R300[d][2] is None)
@@ -48,6 +68,8 @@ N = dict(
     h_d0=str(R900[0][2]), h_d1=str(R900[1][2]),
     h_d2=f'{R900[2][1]:+.1f}', h_d3=f'{R900[3][1]:+.1f}', h_d4=str(R900[4][2]),
     h_ring=f'{min(safe900)}–{max(safe900)}',
+    r20=f'{RAND[20]:.0f}', r40=f'{RAND[40]:.0f}', r120=f'{RAND[120]:.0f}',
+    cf_safe=f'{CF_SAFE:.0f}',
     vn1=f"{ACC['vN r=1']['err'][3]:.2f}", mo1=f"{ACC['Moore r=1']['err'][3]:.2f}",
     vn2=f"{ACC['vN r=2']['err'][3]:.2f}", mo2=f"{ACC['Moore r=2']['err'][3]:.2f}")
 

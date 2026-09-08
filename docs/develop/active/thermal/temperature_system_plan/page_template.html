@@ -128,8 +128,9 @@ hr { border:0; border-top:1px solid var(--line); margin:0; width:100%; }
         homeostatic axis</td><td>Matches EVAAA; makes warmth a trade-off, not a side-quest</td></tr>
       <tr><td>How is it weighted?</td><td>Normalised, equal weight</td><td>Each axis divided by
         its own range, as EVAAA divides by <code>maxDeviation</code></td></tr>
-      <tr><td>Where does heat come from?</td><td>A <strong>campfire</strong>, in a cold
-        world</td><td>EVAAA's own thermal experiments do exactly this &mdash; &sect;2</td></tr>
+      <tr><td>Where does heat come from?</td><td><strong>Two modes</strong>, chosen by
+        config: random spots, or objects in a cold world</td><td>EVAAA has both flags and
+        allows both at once &mdash; &sect;1</td></tr>
       <tr><td>Which objects can carry heat?</td><td><strong>All of them</strong>, default
         zero</td><td>Every EVAAA obstacle group has a <code>temperature</code> field</td></tr>
       <tr><td>Which cells does the sense read?</td><td>von Neumann diamond,
@@ -146,22 +147,76 @@ hr { border:0; border-top:1px solid var(--line); margin:0; width:100%; }
 <hr>
 
 <section class="col">
-  <h2><span class="num">01</span> The thermal field</h2>
+  <h2><span class="num">01</span> Two ways to build the field</h2>
   <p>The field is one number per grid cell, built once at episode reset and then held fixed.
   Four stages, in order: fill every cell with <code>default_temp</code>, add any random spots,
   add each object's temperature to the cell it occupies, then blur the whole thing once.</p>
-  <p><strong>The default is cold.</strong> This is the part that makes the system work, and it
-  is what EVAAA's own thermal experiments do: <code>exp-two-resource-temp</code> sets
-  <code>fieldDefaultTemp: -20.0</code> with <code>hotSpotCount: 0</code> and a single campfire.
-  A world that is neutral by default with warm patches scattered in it gives the agent nothing
-  to solve &mdash; it can stand anywhere. A world that is cold by default with one warm place
-  in it creates a destination.</p>
+  <p>The two middle stages are the two <strong>modes</strong>, and they are independent config
+  flags &mdash; exactly as EVAAA has <code>useRandomHotSpot</code> and
+  <code>useObjectHotSpot</code>. Either, or both, or neither. They are not variations on a
+  theme: they produce opposite worlds and ask the agent for different competences.</p>
+</section>
+
+<figure>
+  <img src="data:image/png;base64,@@modes@@" alt="Top row: three randomly generated thermal fields plus one campfire field, all on the same colour scale, with lethal cells dotted and the survivable percentage under each. Bottom: a chart of percentage of map survivable against random spot temperature, with the campfire mode marked as a horizontal reference at 13 percent.">
+  <figcaption><b>The two modes sit at opposite ends of one axis.</b> Random spots scatter
+  hazards through an otherwise safe world; a campfire puts a single refuge in an otherwise
+  lethal one. Dotted cells are lethal at equilibrium.</figcaption>
+</figure>
+
+<section class="col">
+  <div class="scroll"><table>
+    <thead><tr><th></th><th>Random field</th><th>Object / campfire</th></tr></thead>
+    <tbody>
+      <tr><td><strong>World is</strong></td><td>mostly safe (@@r40@@% at the proposed
+        amplitude)</td><td>mostly lethal (@@cf_safe@@% safe)</td></tr>
+      <tr><td><strong>The agent must</strong></td><td>avoid scattered hot and cold patches</td>
+        <td>return to a refuge before it freezes</td></tr>
+      <tr><td><strong>Privileged place</strong></td><td>none &mdash; every region is equivalent</td>
+        <td>the fire</td></tr>
+      <tr><td><strong>Needs memory</strong></td><td>no &mdash; local gradient is enough</td>
+        <td>yes &mdash; it must know where home is</td></tr>
+      <tr><td><strong>Tests</strong></td><td>thermoception as a navigation sense</td>
+        <td>thermoregulation as a scheduling problem</td></tr>
+      <tr><td><strong>Difficulty knob</strong></td><td><code>random_spots.temp</code></td>
+        <td><code>default_temp</code> and fire strength</td></tr>
+      <tr><td><strong>EVAAA flag</strong></td><td><code>useRandomHotSpot</code></td>
+        <td><code>useObjectHotSpot</code></td></tr>
+    </tbody>
+  </table></div>
+  <h3>Random-field mode</h3>
+  <p>Each spot picks a uniformly random cell, a sign, and paints a square of side
+  <code>spot_size</code> at &plusmn;<code>spot_temp</code>. Allowing the sign to flip is a
+  departure from EVAAA, which paints only hot spots; it costs nothing and it stops "move away
+  from heat" being a sufficient policy.</p>
+  <p>Amplitude is the difficulty dial and it is sharp: at <code>temp&nbsp;=&nbsp;20</code> the
+  map is @@r20@@% survivable and the hazards are decorative; at 40 it is @@r40@@%, a real
+  avoidance task; at 120 it is @@r120@@% and half the world will kill you.
+  <strong>Proposed default 40.</strong> The escape distance stays around one cell throughout,
+  so this mode never demands planning &mdash; one correct step is always enough.</p>
+  <h3>Object mode: a cold world and a fire</h3>
+  <p>Here <code>default_temp</code> goes negative and objects carry the heat. This is what
+  EVAAA's own thermal experiments do: <code>exp-two-resource-temp</code> sets
+  <code>fieldDefaultTemp: -20.0</code> with <code>hotSpotCount: 0</code> and a single campfire
+  at 20,000; <code>exp-riskTaking</code> uses three fires at 10,000 each, every other object
+  left at zero.</p>
+  <p>This is the mode that creates structure. A world that is safe by default gives the agent
+  nothing to organise its behaviour around; a world that is hostile by default with one warm
+  place in it creates a destination, and turns foraging into round trips against a clock
+  (&sect;3).</p>
+  <h3>Both at once</h3>
+  <p>Nothing prevents it, and EVAAA allows it. A cold world with a campfire <em>and</em>
+  scattered patches gives a refuge plus a hazardous route to it &mdash; probably the most
+  interesting version, and the one I would reach for third, after each mode has been
+  characterised alone.</p>
 </section>
 
 <figure>
   <img src="data:image/png;base64,@@pipeline@@" alt="Four 10x10 grids showing field construction: a uniformly cold fill at -25, then a campfire stamped at the centre, then other object temperatures added, then the whole field Gaussian-smoothed so the fire's warmth spreads into a gradient.">
-  <figcaption><b>Fill cold, stamp the fire, blur once.</b> The circled cell is the campfire;
-  dotted cells are a shaded bush pair. Only the last panel is what the agent ever sees.</figcaption>
+  <figcaption><b>Object mode, stage by stage.</b> Fill cold, stamp the fire, add any other
+  object temperatures, blur once. The circled cell is the campfire; dotted cells are a shaded
+  bush pair. Random mode inserts its spots between stages 1 and 2. Only the last panel is what
+  the agent ever sees.</figcaption>
 </figure>
 
 <section class="col">
@@ -444,13 +499,22 @@ T &larr; T + <span class="k">k_exchange</span>&middot;(T_field &minus; T) + <spa
   <pre><span class="k">thermal:</span>
   enabled: false            <span class="c"># gate; every key below is read only when true</span>
 
-  <span class="c"># --- field (sections 01-02) ---</span>
-  default_temp: @@default@@         <span class="c"># the world is cold</span>
+  <span class="c"># --- field: pick a mode, or both (sections 01-02) ---</span>
   sigma: @@sigma@@                <span class="c"># &gt; 0 enforced at load</span>
+
+  <span class="c"># mode A - random field: neutral world, scattered hazards</span>
+  <span class="c">#   default_temp: 0.0</span>
+  <span class="c">#   use_random_spots: true</span>
+  <span class="c">#   random_spots: {count: 4, size: 2, temp: 40.0}</span>
+  <span class="c">#   use_object_sources: false</span>
+
+  <span class="c"># mode B - object sources: cold world, campfire refuge  (proposed default)</span>
+  default_temp: @@default@@
+  use_random_spots: false
   random_spots:
-    count: 0                <span class="c"># off by default; the fire is the heat source</span>
+    count: 4
     size: 2
-    temp: 20.0
+    temp: 40.0
   use_object_sources: true
 
   <span class="c"># --- body (sections 03-04) ---</span>

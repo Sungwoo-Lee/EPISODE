@@ -206,3 +206,62 @@ fig.text(.5,.03,'Orange star is the campfire. Black outline marks the five cells
  ha='center',color=INK2,fontsize=9)
 fig.tight_layout(rect=[0,.08,1,.92]); fig.savefig('figD_render.png',dpi=140,bbox_inches='tight'); plt.close(fig)
 print('figures rebuilt: A B C D E')
+
+# ---------- FIG F : the two field modes ----------
+def rand_field(rng, default, n, temp, size, sigma):
+    raw=np.full((H,W),float(default)); s=int(size)//2
+    for _ in range(n):
+        r,c=rng.integers(0,H),rng.integers(0,W); sign=rng.choice([-1,1])
+        for dr in range(-s,s+1):
+            for dc in range(-s,s+1):
+                rr,cc=r+dr,c+dc
+                if 0<=rr<H and 0<=cc<W: raw[rr,cc]+=sign*temp
+    return gaussian_smooth(raw,sigma)
+def eqf(f): return K_EX*f/(K_EX+K_LOSS)
+
+fig=plt.figure(figsize=(13.0,6.4))
+gs=fig.add_gridspec(2,4,height_ratios=[1,.95],hspace=.42,wspace=.20)
+rng=np.random.default_rng(3); NR=TwoSlopeNorm(0,-45,45)
+def mark(ax,f):
+    e=eqf(f)
+    for r in range(H):
+        for c in range(W):
+            if abs(e[r,c])>=DEATH:
+                ax.add_patch(Rectangle((c-.5,r-.5),1,1,fc='none',ec=INK,lw=1.1,ls=':'))
+    return (np.abs(e)<DEATH).mean()*100
+for i in range(3):
+    ax=fig.add_subplot(gs[0,i]); f=rand_field(rng,0,4,40,2,1.2)
+    ax.imshow(f,cmap=DIV,norm=NR); pct=mark(ax,f)
+    ax.set_title(f'random  #{i+1}',color=INK,fontsize=10.5)
+    ax.set_xlabel(f'{pct:.0f}% safe',fontsize=9.5,color=INK2,labelpad=3); bare(ax)
+ax=fig.add_subplot(gs[0,3])
+raw=np.full((H,W),-25.0); raw[5,5]+=300.0; f=gaussian_smooth(raw,1.2)
+ax.imshow(f,cmap=DIV,norm=NR); pct=mark(ax,f)
+ax.add_patch(Circle((5,5),.42,fc='none',ec=INK,lw=2))
+ax.set_title('campfire',color=INK,fontsize=10.5)
+ax.set_xlabel(f'{pct:.0f}% safe',fontsize=9.5,color=INK2,labelpad=3); bare(ax)
+
+axL=fig.add_subplot(gs[1,0:4])
+temps=[20,30,40,60,80,120]; sf=[]
+for t in temps:
+    r2=np.random.default_rng(3); v=[(np.abs(eqf(rand_field(r2,0,4,t,2,1.2)))<DEATH).mean()
+                                   for _ in range(200)]
+    sf.append(np.mean(v)*100)
+axL.axhspan(50,85,color=C3,alpha=.12)
+axL.plot(temps,sf,color=C1,lw=2.4,marker='o',ms=7,label='random mode')
+axL.axhline(13.0,color=C2,lw=2.2,ls='--',label='campfire mode (13% safe)')
+axL.annotate('useful difficulty band',(26,68),fontsize=9.5,color='#0f7a55',fontweight='bold')
+axL.annotate('proposed 40',(40,sf[2]),textcoords='offset points',xytext=(10,16),
+             fontsize=9.5,color=C1,fontweight='bold')
+axL.set_xlabel('random spot temperature'); axL.set_ylabel('% of the map survivable')
+axL.set_title('The two modes sit at opposite ends of the same axis',color=INK)
+axL.set_ylim(0,100); axL.legend(frameon=False,fontsize=9,loc='upper right')
+axL.grid(True,color=GRID,lw=.8); axL.set_axisbelow(True)
+for s_ in ('top','right'): axL.spines[s_].set_visible(False)
+fig.suptitle('Two ways to build the field — chosen by configuration, not baked in',
+             fontsize=13,fontweight='bold',y=.98)
+fig.text(.5,.005,'Dotted cells are lethal at equilibrium. Random spots scatter hazards through an '
+ 'otherwise safe world; a campfire puts one refuge in an otherwise lethal one. Both flags exist in '
+ 'EVAAA and both can be on at once.',ha='center',color=INK2,fontsize=9)
+fig.savefig('figF_modes.png',dpi=140,bbox_inches='tight'); plt.close(fig)
+print('figF written')
