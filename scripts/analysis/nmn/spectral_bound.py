@@ -28,6 +28,14 @@ combination of a number in `(-1, 1)` and the old state. The run starts at `h = 0
 (`NeuromodulatorRNN.initial_state`), so by induction every state the modulator can
 ever occupy satisfies `|h_j| < 1`. **This is exact, not an approximation.**
 
+Every bound below is nonetheless stated on the CLOSED cube `[-1, 1]^m`, for two
+reasons: it is what makes the "two states at opposite corners" swing well defined,
+and in float32 the corner is actually attainable — `tanh` saturates to exactly 1.0
+beyond an argument of about 9, and the update gate saturates to exactly 0 or 1. A
+replay of the real runs measures `|h|` reaching exactly 1.0 in some arms
+(`run_mod_distribution.py` checks this on every arm and fails if it ever exceeds 1),
+so using the closed cube is not conservatism, it is correctness.
+
 **(A2) The gain and offset are affine in that state.** From `neuromodulator.py`,
 `gamma_i = (g_i + b_i) + sum_j K_ji h_j` (with `grouping_size = 1`; for `G > 1` the
 head's group value is repeated across `G` units, which this module reproduces). The
