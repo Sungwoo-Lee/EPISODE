@@ -1171,7 +1171,7 @@ the key is read):
 |---|---|---|
 | `thermal.temperature_setpoint` | float | must lie inside `[min_temperature, max_temperature]` — a setpoint outside the survivable band makes the body's own resting state lethal |
 | `thermal.min_temperature` | float | must be `< max_temperature` |
-| `thermal.max_temperature` | float | — |
+| `thermal.max_temperature` | float | — (also the drive's thermal scale: the third homeostatic axis is `(T − temperature_setpoint) · max_satiation / max_temperature`, so this key sets the warmth-vs-hunger exchange rate as well as the survivable band — see CONFIG_GUIDE.md) |
 | `thermal.k_exchange` | float | `>= 0`, and `k_exchange + k_loss <= 1` |
 | `thermal.k_loss` | float | `>= 0`, and `k_exchange + k_loss <= 1` (above 1 the discrete update overshoots its own fixed point every step and body temperature oscillates instead of settling) |
 | `thermal.k_metabolic` | float | — (may be any sign; zero until Stage 5 couples it to activity) |
@@ -1179,7 +1179,11 @@ the key is read):
 These six drive the body-temperature recurrence documented in
 [05_body_homeostasis.md](05_body_homeostasis.md#body-temperature-thermal), and leaving the
 band `[min_temperature, max_temperature]` ends the episode with **termination code 5**
-([06_reward_and_termination.md](06_reward_and_termination.md)).
+([06_reward_and_termination.md](06_reward_and_termination.md)). From Stage 4 the first two also
+enter the **reward**: `calculate_drive` is three-axis when `thermal.enabled` is true, and
+`info['drive_thermal']` — the squared normalised deviation
+`((T − temperature_setpoint)/max_temperature)²`, matching `drive_hunger` / `drive_injury` —
+is emitted alongside them, only when thermal is on.
 
 **Removed in v2.0 (raises `ValueError` if present):** `environment.predator_enabled`
 

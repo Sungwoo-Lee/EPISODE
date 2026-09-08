@@ -46,8 +46,51 @@ def move_agent(pos: jnp.ndarray, action: int, obs_pos: jnp.ndarray, obs_blocking
     final_pos = jnp.where(is_collision, pos, new_pos)
     return final_pos, is_collision
 
-def calculate_drive(satiation, injury, params):
-    """Calculates homeostatic drive (Euclidean distance to setpoint)."""
+def calculate_drive(satiation, injury, params, body_temp=None):
+    """Calculates homeostatic drive (Euclidean distance to setpoint).
+
+    Two axes today (satiation, injury); three when thermal is on. The split is a
+    STATIC Python branch on `params.thermal_enabled`, and the thermal-OFF path
+    below is the pre-thermal expression *verbatim* — same three lines, same
+    order, same indentation — so bit-parity with every pre-thermal run is a fact
+    about the source rather than a thing to be measured. See
+    docs/develop/active/thermal/IMPLEMENTATION_PLAN.md finding F1.
+
+    WHY THE THIRD AXIS IS SCALED UP RATHER THAN THE OTHER TWO SCALED DOWN. The
+    design writes the three-axis drive normalised per axis:
+
+        ||( (S - S_set)/max_satiation, I/max_injury, (T - T_set)/max_temperature )||
+
+    Writing that literally would divide EVERY reward in the project by
+    `max_satiation` (= 100) while `death_penalty` (= 100) stayed put — a 100x
+    change in the relative weight of dying, firing on thermal-off configs too.
+    Multiplying that whole expression through by `max_satiation` gives the
+    algebraically identical drive in today's units: axes one and two are left
+    exactly as they are, and the temperature axis is scaled by
+    `max_satiation / max_temperature`. With the design's numbers that factor is
+    100/15 = 6.67, i.e. one degree of body-temperature deviation costs the same
+    drive as 6.67 satiation units. Equal FRACTIONAL deviation on any axis pulls
+    equally, which is what the design asked for.
+
+    `body_temp` is required when thermal is on and ignored when it is off.
+    """
+    if params.thermal_enabled:
+        # Third axis in satiation units (see the docstring). `max_temperature` is
+        # the deviation scale: it is the distance from the setpoint at which the
+        # agent dies, so a full-scale thermal deviation and a full-scale hunger
+        # deviation weigh the same.
+        if body_temp is None:
+            raise ValueError(
+                "calculate_drive: body_temp is required when thermal.enabled is true "
+                "(it is the third homeostatic axis). Pass state.body_temp / the "
+                "post-step body temperature at the call site."
+            )
+        t_axis = (body_temp - params.temperature_setpoint) * (
+            params.max_satiation / params.max_temperature)
+        target = jnp.array([params.setpoint, 0.0, 0.0])
+        current = jnp.stack([satiation, injury, t_axis], axis=-1)
+        return jnp.linalg.norm(current - target, axis=-1)
+    # ── thermal OFF: the pre-thermal expression, untouched ────────────────────
     target = jnp.array([params.setpoint, 0.0])
     current = jnp.stack([satiation, injury], axis=-1)
     return jnp.linalg.norm(current - target, axis=-1)
@@ -784,8 +827,15 @@ def jax_step(state: EnvState, action: int, params: EnvParams) -> tuple[EnvState,
     drive_injury = jnp.power(new_injury / params.max_injury, 2)
     
     if params.use_homeostatic_reward:
-        prev_drive = calculate_drive(state.satiation, state.injury_level, params)
-        curr_drive = calculate_drive(new_satiation, new_injury, params)
+        # `body_temp` is the third axis when thermal is on and is ignored when it
+        # is off (static branch inside `calculate_drive`). PRE-step temperature for
+        # the previous drive, POST-step for the current one — the same pairing the
+        # satiation / injury arguments already use, so the reward stays exactly
+        # `prev_drive - curr_drive` over one consistent state transition.
+        prev_drive = calculate_drive(state.satiation, state.injury_level, params,
+                                     state.body_temp)
+        curr_drive = calculate_drive(new_satiation, new_injury, params,
+                                     new_body_temp)
         reward_homeostatic = prev_drive - curr_drive
         # Death penalty gated on REAL DEATH only (starvation / over-eating / injury), NOT on `done`.
         # Timeout / truncation (reason == 1) keeps just the normal homeostatic step value. Finding B.
@@ -803,6 +853,22 @@ def jax_step(state: EnvState, action: int, params: EnvParams) -> tuple[EnvState,
     info['reward_extrinsic'] = reward_extrinsic
     info['drive_hunger'] = drive_hunger
     info['drive_injury'] = drive_injury
+    # CONVENTION — read this before comparing the three series. Like its two
+    # siblings above, `drive_thermal` is the SQUARED NORMALISED deviation, and is
+    # NOT the axis `calculate_drive` feeds to the norm (that one is unsquared and
+    # in satiation units, scaled by max_satiation/max_temperature). The three keys
+    # are diagnostics meant to be read against each other and against historical
+    # runs, so they must share one convention; the norm's axes are a different
+    # quantity that no info key exposes.
+    #
+    # Emitted ONLY when thermal is on, and that is not tidiness: `max_temperature`
+    # is the inert placeholder 0.0 on a thermal-off config (config_loader.py, the
+    # `else` of the thermal block), so an ungated version would divide by zero and
+    # log a NaN on every existing run. Gating also keeps the thermal-off info dict
+    # structurally identical to the pre-thermal one.
+    if params.thermal_enabled:
+        info['drive_thermal'] = jnp.power(
+            (new_body_temp - params.temperature_setpoint) / params.max_temperature, 2)
     info['metabolic_drain'] = params.metabolic_cost
     info['event_collided'] = just_collided
     

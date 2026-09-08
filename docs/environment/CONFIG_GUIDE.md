@@ -326,6 +326,35 @@ max_temperature`, `temperature_setpoint` inside that band, `k_exchange` and `k_l
 `>= 0` and summing to `<= 1`, and `grid_range >= 0`. `metabolic_coupling` is present in
 `default.yaml` but not read yet — Stage 5 of the temperature plan adds its reader.
 
+**`max_temperature` has a second job: it is the warmth-vs-hunger exchange rate.** From
+Stage 4 the homeostatic drive has three axes, and the third one is body temperature. The
+drive is the Euclidean norm in *satiation units* — the two existing axes are untouched and
+the thermal axis is scaled up by `max_satiation / max_temperature`:
+
+```
+drive = || ( satiation - satiation_setpoint,  injury,
+             (T - temperature_setpoint) * max_satiation / max_temperature ) ||
+```
+
+That is the design's per-axis-normalised drive multiplied through by `max_satiation`, and
+the multiplication is not cosmetic: writing the normalised form literally would divide
+**every reward in the project** by 100 while `death_penalty` stayed at 100, changing the
+relative weight of dying by two orders of magnitude on thermal-**off** configs too. With
+the shipped numbers (`max_satiation: 100`, `max_temperature: 15`) the factor is
+**100/15 = 6.67**, i.e. **one degree of body-temperature deviation costs the same drive as
+6.67 satiation units**. Nothing else in the config makes that exchange rate visible, so
+halving `max_temperature` does not merely narrow the survivable band — it doubles how much
+the agent is paid to stay warm. On `thermal.enabled: false` the drive is the two-axis
+expression it has always been, character for character, behind a static Python branch
+(`core.py::calculate_drive`).
+
+`info['drive_thermal']` joins `drive_hunger` and `drive_injury` in the step info dict when
+thermal is on, and follows *their* convention rather than the drive's: it is the **squared
+normalised** deviation `((T - temperature_setpoint) / max_temperature)²`, so the three
+logged series stay comparable with each other and with historical runs. It is emitted only
+when thermal is on — `max_temperature` is `0.0` on a thermal-off config — so consumers must
+read it with `.get`.
+
 **Turning thermal on widens the observation, and that is a one-way door for curricula.**
 `grid_range: 1` adds **five** dimensions (`2r² + 2r + 1` cells of a Manhattan diamond),
 inserted after Extero Nociception and before Olfaction. The curriculum pre-flight check

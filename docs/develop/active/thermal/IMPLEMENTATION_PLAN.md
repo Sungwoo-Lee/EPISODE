@@ -801,7 +801,7 @@ Everything the first draft listed as open is now settled — see *Decisions sett
 - [x] **S2** Equilibrium confirmed against the closed form. A uniform −25 field is *lethal* (the body crosses −15 on step 28), so the standing check uses a uniform **−10** field, where `T* = 0.8·(−10) = −8`: measured **−7.99999237** after 400 steps, and the test additionally refuses any settling point within 1.5 of the cell temperature. The −25 case is checked as steps-to-death against `sim.body_traj` instead. Done 2026-09-09.
 - [x] **S2** Every consumer in the Analysis table ticked off, each line number re-verified against the file rather than trusted: `train.py:1543,2054,2260,2413`; `dreamer_srl_main.py:1231`; `episode_metrics.py:41-45,232-238,269-277`; `trajectory_store.py:141,172`; `_ladder.py:90`; `grid_ladder_figures.py:150,160,168`; `check_env.py:35`; plus `tests/models/test_gae_truncation.py:132`. The six `>= 2` real-death masks were read and left unedited, and the pinning test now asserts they cover code 5. Done 2026-09-09.
 - [x] **S3** Printed before the suite: thermal OFF (`default.yaml`) 27 == 27; thermal ON (`campfire_world.yaml`) 32 == 32. Done 2026-09-09.
-- [ ] **S4** Diff `calculate_drive`'s thermal-off branch against the original character by character — it must be the same expression, not an equivalent one.
+- [x] **S4** Better than a character-by-character diff: the thermal-off expression was never edited. The thermal branch was inserted **above** it with an early `return`, so `git diff src/environment/core.py` shows those three lines as unchanged **context lines** — the diff itself is the proof. `test_drive_bit_identical_when_thermal_off` (72 configs, `np.array_equal`, no tolerance) and `test_thermal_off_ignores_body_temp_entirely` back it from the other side. Done 2026-09-09.
 - [ ] **S6** Load every config in the Stage 1 migration set and confirm none newly raises. The structure check must be unreachable when `thermal.enabled` is false. (Deferred configs are expected to raise on `thermal.enabled` — that is the policy, not a failure; do not "fix" them here.)
 - [ ] **Every stage** Record before/after steps-per-second on the same node, GPU and seed. The field build is once per episode and the recurrence is three multiply-adds per step, so a measurable slowdown means something landed in the wrong loop. Per the verification protocol, >5% warrants discussion and >15% blocks.
 
@@ -1524,6 +1524,235 @@ the thermal-off traced graph should look like. **No regression.**
    the instance. Not touched here.
 4. Nothing committed, nothing staged, per instruction. `git status` shows 12 modified files
    and 1 new test module, and every hunk was checked to be this stage's.
+
+Signed: `Implemented by: developer`
+
+
+### Stage 4 — Drive integration (gated) (complete)
+
+**Plain-language summary.** Being cold now hurts. Body temperature becomes the third thing
+the agent is trying to hold steady, alongside how full it is and how hurt it is, and the
+reward it gets each step is the reduction in the combined distance from all three
+setpoints. On any config that leaves `thermal.enabled: false` — which is every config in
+every live experiment — **nothing whatsoever changes**: the reward is not merely close to
+what it was, it is the same bits, because the two-axis expression was not edited at all.
+
+**The one decision in this stage, and it is the whole stage.** The design document writes
+the three-axis drive with each axis divided by its own range. Written literally that is
+today's drive divided by `max_satiation` (100), so every reward in the project would shrink
+100-fold while `death_penalty` stayed at 100 — and it would happen on thermal-off configs
+too, since `calculate_drive` has no gate of its own. Finding **F1** called this and the fix
+is the algebraically identical form in today's units: leave the first two axes alone and
+scale the third by `max_satiation / max_temperature`. The two forms differ by a constant
+factor, so they are the same design; only one of them keeps `death_penalty` calibrated.
+
+**The exact expression, both branches.**
+
+```python
+def calculate_drive(satiation, injury, params, body_temp=None):
+    if params.thermal_enabled:
+        if body_temp is None:
+            raise ValueError(...)                       # loud, never a silent setpoint
+        t_axis = (body_temp - params.temperature_setpoint) * (
+            params.max_satiation / params.max_temperature)
+        target = jnp.array([params.setpoint, 0.0, 0.0])
+        current = jnp.stack([satiation, injury, t_axis], axis=-1)
+        return jnp.linalg.norm(current - target, axis=-1)
+    # ── thermal OFF: the pre-thermal expression, untouched ────────────────────
+    target = jnp.array([params.setpoint, 0.0])
+    current = jnp.stack([satiation, injury], axis=-1)
+    return jnp.linalg.norm(current - target, axis=-1)
+```
+
+**Why the thermal-off path is structurally identical and not merely numerically equal.**
+The thermal branch was inserted **above** the existing body with an early `return`; the
+three original lines were not retyped, re-indented or reordered. `git diff` renders them as
+**context lines** — the mechanical proof the checkpoint asked for. The branch condition is
+`params.thermal_enabled`, which is `struct.field(pytree_node=False)`, so it is resolved at
+trace time and a thermal-off config compiles a graph in which the thermal arithmetic does
+not exist. Passing `state.body_temp` as a fourth argument adds nothing: `body_temp` is
+already a leaf of `EnvState`, and on the thermal-off path the argument is never read.
+Bit-parity here is a property of the source, not a floating-point coincidence.
+
+**Files changed** (4 modified + 1 new under `src/`+`tests/`; 5 docs; this plan doc).
+
+| File | Change |
+|---|---|
+| `src/environment/core.py` | `calculate_drive` gains `body_temp=None` and the F1 three-axis form under a static `if params.thermal_enabled:`, with the pre-thermal expression untouched below it and a `ValueError` when `body_temp` is omitted on a thermal-on config. The two call sites in `jax_step` pass `state.body_temp` / `new_body_temp`. `info['drive_thermal']` added, **gated on `thermal_enabled`**, as the squared-normalised deviation. |
+| `tests/env/test_thermal_reward_gate.py` | **New.** 72 fixture-parity cases + 6 behavioural tests (below). |
+| `tests/env/test_thermal_body.py` | `_homeostatic_reward_without_death_penalty` now passes both body temperatures. **Not in the plan's File Changes list — see Deviation D4-1.** |
+| `docs/environment/06_reward_and_termination.md` | The `calculate_drive` "verbatim" block was stale the moment the source changed; updated, plus a new *The third axis — body temperature* section with the F1 argument and the 6.67 exchange rate, and `drive_thermal` added to the logged-components notes. (Plan's Stage-4 doc row.) |
+| `docs/environment/CONFIG_GUIDE.md` | The three-axis drive and the warmth-vs-hunger exchange rate in the `thermal:` feature section, plus the `drive_thermal` convention and its gating. (Plan's Stage-4 doc row.) |
+| `docs/environment/CONFIG_CRITICAL_SETTINGS.md` | Registry row for **`thermal.max_temperature`** (it now sets the exchange rate as well as the survivable band) + dated change-log entry. **Scope addition — D4-2.** |
+| `docs/environment/02_config_schema.md` | `thermal.max_temperature`'s second role noted in the validation table; the body-key paragraph now says these keys enter the reward. **Scope addition — D4-2.** |
+| `docs/environment/05_body_homeostasis.md` | A "Two axes, or three" note under Drive Computation, so the file's verbatim two-axis quote is no longer the whole story. **Scope addition — D4-2.** |
+
+**`info['drive_thermal']` — the convention, stated.** It is the **squared normalised**
+deviation `((new_body_temp - temperature_setpoint) / max_temperature) ** 2`, matching
+`drive_hunger` and `drive_injury`. It is **not** the axis fed to the norm — that one is
+unsquared, in satiation units, and about 100x larger here. The three keys are diagnostics
+meant to be read against each other and against historical runs, so they must share one
+convention; a comment at the definition says so, and
+`test_info_drive_thermal_is_the_squared_normalised_deviation` asserts both halves (equals
+the squared-normalised form, and is *not* the norm's axis).
+
+**It is gated on `thermal_enabled`, and that is a correctness requirement rather than
+tidiness.** On a thermal-off config `max_temperature` is the inert placeholder `0.0`
+(`config_loader.py`, the `else:` of the thermal block), so an ungated `drive_thermal` would
+divide by zero and write a NaN into every existing run's logs. Gating also leaves the
+thermal-off info dict structurally identical. Consumers must therefore use `.get`;
+`plot_physiology.py` — the only reader of the sibling keys — already guards with
+`if col in df.columns`.
+
+**Consumers checked (the plan asked for `evaluation_core.py` "and any analysis script that
+reads drive components"; the answer is that there are almost none).**
+
+| Site | Finding |
+|---|---|
+| `src/utils/evaluation_core.py:10` | Imports `calculate_drive` and **never calls it** — a dead import. Its `_write_episode_stats` `info_keys` list does not contain any drive component, so the stats CSV never carried them and needs no column. No change. |
+| `src/environment/renderer.py:359`, `src/environment/grid_world.py:348` | Both do `from src.environment.core import calculate_drive` **inside** `render_jax_state` and never call it. Two more dead imports. Left as found — deleting them is unrelated cleanup, but they are worth knowing about because they look like call sites in a grep. |
+| `plot_physiology.py:56-58` | The only reader of `drive_hunger` / `drive_injury`, from a CSV, behind `if 'drive_hunger' in df.columns`. Nothing in the current pipeline writes those columns, so adding a `drive_thermal` line would be an unreachable plot. Flagged, not done. |
+| `scripts/eval/motif_cluster.py`, `eval_rollout.py` | `drive_injury_change` is a **different quantity** — a nociception delta over a window, not `info['drive_injury']`. Unaffected; the name collision is a trap worth recording. |
+| trainers (`ppo_trainer.py`, `recurrent_ppo_trainer.py`, dreamer) | Pull named keys out of `info`; nothing iterates its keys generically (`grep` for `info.items()` / `info.keys()` / `for k in info` returns nothing across `src/` and `train.py`). Adding a key is inert. |
+
+**Test results.**
+
+| Suite | Result |
+|---|---|
+| `tests/env/test_thermal_parity.py` | **72 passed, 285 skipped** in 159s — identical to the pre-change baseline measured on `ef88519d` (72 passed, 285 skipped, 158s) |
+| `tests/env/test_thermal_reward_gate.py` (new) | **78 passed** (72 fixture cases in 134s + 6 behavioural in 10s) |
+| `tests/env/test_thermal_body.py` | 5 passed |
+| `tests/env/test_thermal_field.py` | 9 passed |
+| `tests/env/test_thermoception.py` | 14 passed |
+| `tests/env/test_unified_parity.py` | 34 passed, 323 skipped |
+| `tests/env/test_visual_parity.py` | 8 passed |
+| `tests/env/test_no_recompile.py` | 3 passed |
+
+**The new tests, and what each refuses.**
+
+1. `test_drive_bit_identical_when_thermal_off` — 72 parametrised cases, `np.array_equal` on
+   `reward`, `drive_before` and `drive_after` against the **Stage 0** `.npz` fixtures. No
+   tolerance of any kind. Narrower than `test_thermal_parity.py` on purpose: this is the
+   *reward* gate, and it compares against ground truth captured before `calculate_drive`
+   was touched.
+2. `test_thermal_off_ignores_body_temp_entirely` — the drive on a thermal-off config is
+   independent of the third argument for three different values of it, and equals the
+   two-axis closed form. "Untouched" means independent, not just equal on one trajectory.
+3. `test_thermal_axis_moves_the_drive` — the anti-circularity test at its smallest.
+   `calculate_drive` at four deviations must equal `|dev| * max_satiation/max_temperature`,
+   plus a three-axis case against a numpy closed form. A drive of `|dev|` means the axis was
+   never scaled into satiation units; a drive of `0.0` means it was never summed into the
+   norm.
+4. `test_reward_tracks_the_thermal_axis_alone` — the plan's "walk out and come back", with
+   the walk replaced by a change of field so the result does not depend on where placement
+   put the fire. Cool for 40 steps (reward strictly negative on every one), then warm back
+   for 40 (strictly positive), with the magnitudes checked against a numpy oracle built from
+   the recorded temperatures.
+5. `test_info_drive_thermal_is_the_squared_normalised_deviation` — the convention, asserted
+   in both directions.
+6. `test_drive_thermal_absent_and_body_temp_required_when_thermal_off` — the key is absent
+   when thermal is off, and the test pins *why* by asserting `max_temperature == 0.0` there.
+7. `test_calculate_drive_raises_without_body_temp_when_thermal_on`.
+
+**De-confounding, and why the obvious version of test 4 would have been worthless.** With
+`metabolic_cost: 1.0` satiation falls on every step, so the homeostatic reward is already
+negative on any outward walk — a test that only checks "reward goes negative when the agent
+walks away from the fire" is green against an implementation that does nothing at all. The
+config used here therefore sets `with_nutrition: false`, `with_injury: false` and
+`metabolic_cost: 0`, and starts satiation exactly **on** its setpoint (`satiation_setpoint
+== max_satiation == start_nutrition`), which puts the first two axes at a constant **zero**
+rather than a large constant. The drive is then exactly the thermal axis. Every rollout
+re-asserts that satiation and injury really did stay flat and that `ate_food` never fired,
+so the de-confounding is checked rather than claimed.
+
+**Mutation check.** Eight mutations, applied to a copy-restored `src/environment/core.py`;
+`sha256` verified identical to `72ef2979…` after every restore, and the two test files were
+never edited (`9eb83f8b…`, `a2380b94…` unchanged throughout).
+
+| # | Mutation | Went red | Verdict |
+|---|---|---|---|
+| **M1** | **The thermal axis gated off in BOTH branches** (`if False:`) — the circularity check the task named | `test_thermal_axis_moves_the_drive`, `test_reward_tracks_the_thermal_axis_alone`, `test_calculate_drive_raises_…` | **The tests are not circular.** And the informative half: with M1 applied, `test_drive_bit_identical_when_thermal_off[default]`, `test_thermal_off_ignores_body_temp_entirely` **and** `test_thermal_parity[default]` all stayed **green** — exactly as the plan predicted. A gate suite alone would have shipped a no-op. |
+| **M2** | The design's literal normalisation (`1/max_temperature`, no `max_satiation` rescale) | `test_thermal_axis_moves_the_drive` (0.533 vs 53.3), `test_reward_tracks_the_thermal_axis_alone` | The F1 scale factor is pinned, not assumed |
+| **M3** | `drive_thermal` logs the norm's unsquared axis | `test_info_drive_thermal_is_the_squared_normalised_deviation` only | Convention pinned |
+| **M4** | `drive_thermal` emitted ungated | `test_drive_thermal_absent_and_body_temp_required_when_thermal_off` only | Gating pinned |
+| **M5** | **The F1 hazard itself** — the design's normalised form leaking onto the thermal-**off** path | `test_drive_bit_identical_when_thermal_off[default]` (max diff **1.067e+01**), `test_thermal_off_ignores_body_temp_entirely`, **and `test_thermal_parity[default]`** | The 1/100 rescale cannot ship silently |
+| **M6** | Thermal-on branch taken whenever `body_temp is not None` (thermal-off path made to depend on it) | `test_thermal_off_ignores_body_temp_entirely` (`ZeroDivisionError` — `max_temperature` is 0.0 when off) | Independence pinned |
+| **M7** | `body_temp` silently defaulted to the setpoint instead of raising | `test_calculate_drive_raises_…` only | The loud failure is pinned |
+
+**Speed check.** Env-step SPS, 64 envs × 200 steps under one `lax.scan`, CPU, best of 5
+(`tmp/20260909_stage4_sps_bench.py`). "Before" is the same benchmark against `ef88519d`'s
+`core.py`, restored and sha256-verified afterwards.
+
+| config | before (`ef88519d`) | after | delta |
+|---|---|---|---|
+| `default.yaml` (thermal **off**) | 34,969 SPS | 34,468 SPS | −1.4% |
+| `campfire_world.yaml` (thermal **on**) | 34,099 SPS | 34,502 SPS | +1.2% |
+
+Both deltas are within run-to-run noise and straddle zero, which is what a trace-time branch
+plus one extra element in a length-3 norm should look like. `test_no_recompile.py` (3 passed)
+is the stronger statement: no new recompilation boundary. **No regression.**
+
+**Deviations from the plan.**
+
+- **D4-1 — one file changed that the plan's File Changes list does not name:
+  `tests/env/test_thermal_body.py`.** Its
+  `_homeostatic_reward_without_death_penalty` helper calls `calculate_drive(sat, injury,
+  params)` on a **thermal-on** config, and every config in that file is thermal-on. After
+  this stage that call raises `ValueError` (by design — the alternative, defaulting the
+  temperature to the setpoint, would have returned a two-axis drive and silently broken the
+  Stage 2 death-penalty assertions against a wrong baseline, on the step where the thermal
+  term is largest). The helper now passes `prev_state.body_temp` and `state.body_temp`, in
+  the same pre/post pairing `jax_step` uses. Flagged rather than done silently, per the
+  developer contract. **The plan missed this**: Stage 4's File Changes list names only
+  `core.py`.
+- **D4-2 — three documentation files beyond the plan's Stage-4 row.** The plan assigns
+  Stage 4 `06_reward_and_termination.md` and `CONFIG_GUIDE.md`. Also updated:
+  `CONFIG_CRITICAL_SETTINGS.md` (registry row + change-log entry — `thermal.max_temperature`
+  acquired a second, invisible role as the warmth-vs-hunger exchange rate, and the
+  Maintenance Contract binds a registry-affecting change to log it in the same change);
+  `02_config_schema.md` (the same fact, in the validation table, since `CONFIG_GUIDE.md`'s
+  contract binds the two together); and `05_body_homeostasis.md`, whose "Drive Computation"
+  section quotes the two-axis `calculate_drive` verbatim and would otherwise have been
+  simply wrong. All three are additive notes; none rewrites existing prose.
+- **No other deviation.** Nothing committed, nothing staged.
+
+**Things in the plan that did not match the code.**
+
+1. **Stage 4's File Changes list is incomplete** — `tests/env/test_thermal_body.py` (D4-1).
+   The plan's own Stage 2 test suite is a caller of `calculate_drive` on a thermal-on config
+   and the Stage 4 section does not mention it.
+2. **`core.py:~725-735` (the two call sites) and `core.py:723-724` (the info keys) are both
+   stale line references** — Stage 2 and Stage 3 moved them. They are now at `:834-838` and
+   `:854-855`. Harmless, but the numbers are no longer usable for navigation.
+3. **The plan does not say `info['drive_thermal']` must be gated**, and an ungated version is
+   a live bug rather than a style choice: `max_temperature` is `0.0` on every thermal-off
+   config, so the unconditional form logs `nan` on every existing run. This is a real
+   interaction between Stage 2's placeholder choice and Stage 4's info key that neither
+   stage's text notices.
+4. **The plan's test 1 substantially duplicates `test_thermal_parity.py`.** Both replay the
+   same 72 fixture configs for 100 steps and both assert `reward`, `drive_before` and
+   `drive_after` exactly. Built as specified anyway — it is cheaper (no observations
+   recomputed: 134s vs 159s), it is the reward-specific gate, and duplication of *the*
+   load-bearing assertion is the cheap kind of redundancy — but a reader should know the two
+   are not independent evidence.
+5. **`max_temperature` is used as the thermal *deviation* scale**, which is only correct
+   because `temperature_setpoint` is `0.0`. On a config with, say, `temperature_setpoint:
+   37`, `min_temperature: 32`, `max_temperature: 42`, the exchange rate would be
+   `100/42` rather than the intended `100/5`, and the thermal axis would be roughly 8x too
+   weak — silently, with no validation catching it. F1 names `params.max_temperature`
+   explicitly so this is implemented as written, but the general form is
+   `max_satiation / (max_temperature - temperature_setpoint)` and the loader validates only
+   that the setpoint lies *inside* the band. Recorded here rather than fixed: changing it now
+   would change the shipped exchange rate (100/15 either way at the current values, since the
+   setpoint is zero) and it is a design call, not an implementation one. **Owner:
+   `senior-developer`.** A candidate cheap guard is a load-time warning when
+   `temperature_setpoint != 0`.
+6. **Three dead `calculate_drive` imports** (`evaluation_core.py:10`,
+   `renderer.py:359`, `grid_world.py:348`) — none of the three files calls it. They matter
+   only because they make a grep for call sites look three times more dangerous than it is.
+   Left as found; candidate for `bug-curator` / routine cleanup.
+
+**Known-bugs prior-art check.** `grep -i 'drive\|reward\|thermal' docs/develop/active/issues/KNOWN_BUGS.md` — no row covering the drive formula, the reward scale, or `drive_thermal`. Nothing here duplicates a recorded bug; items 5 and 6 above are new and are named for `senior-developer` / `bug-curator` rather than curated here.
 
 Signed: `Implemented by: developer`
 

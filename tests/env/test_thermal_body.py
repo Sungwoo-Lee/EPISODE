@@ -115,12 +115,23 @@ def _rollout(params, n_steps, action=REST, seed=0):
 def _homeostatic_reward_without_death_penalty(prev_state, state, params):
     """What the step's reward would have been if no death penalty had fired.
 
-    Rebuilt from the two drives the reward is defined as (`prev_drive -
-    curr_drive`), so the death-penalty assertions below compare against a
-    quantity that does not itself depend on whether the penalty fired.
+    Rebuilt from the drives the reward is defined as (`prev_drive - curr_drive`),
+    so the death-penalty assertions below compare against a quantity that does
+    not itself depend on whether the penalty fired.
+
+    Stage 4 note: body temperature is now the third axis of the drive on a
+    thermal-ON config, and every config in this file is thermal-on. Both body
+    temperatures MUST be passed (pre-step for `prev_drive`, post-step for
+    `curr_drive`, exactly as `jax_step` pairs them) or this helper would return
+    the two-axis drive change and the death-penalty assertions would compare the
+    reward against the wrong baseline — on a thermal death, by far the largest
+    term. `calculate_drive` raises rather than defaulting, so an omission here is
+    loud instead of silently wrong.
     """
-    prev_drive = calculate_drive(prev_state.satiation, prev_state.injury_level, params)
-    curr_drive = calculate_drive(state.satiation, state.injury_level, params)
+    prev_drive = calculate_drive(prev_state.satiation, prev_state.injury_level, params,
+                                 prev_state.body_temp)
+    curr_drive = calculate_drive(state.satiation, state.injury_level, params,
+                                 state.body_temp)
     return float(prev_drive - curr_drive)
 
 

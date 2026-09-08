@@ -87,7 +87,7 @@ Both reward modes live in the same function and share the combined-reward tail; 
 > - **Static flag / Python `if`**: `if params.use_homeostatic_reward:` is a compile-time branch, not a runtime conditional. `use_homeostatic_reward` is declared `struct.field(pytree_node=False)`, so JIT treats it as a Python constant and traces **only one branch**. Changing the flag forces a full recompile. The same applies to `with_nutrition`, `with_injury`, and `overeating_death` throughout this file. See [primer: static vs. dynamic](00_jax_primer.md#static-dynamic).
 > - **Branchless `jnp.where`**: every `reward = jnp.where(condition, x, y)` inside the traced path evaluates **both** `x` and `y` at every step; the condition selects the result without branching the execution graph. This is what makes the death penalty expressible as arithmetic rather than an `if done:` guard. See [primer: branchless](00_jax_primer.md#branchless).
 > - **`reward_homeostatic = 0.0` / `reward_extrinsic = 0.0`** initialised as Python scalars. The `jnp.where` on each branch returns a JAX scalar array. The final addition is safe because NumPy broadcasting promotes `0.0` — but the *inactive* variable is never a traced zero, so its shape/dtype is invisible to JAX’s checker until the `+`. In practice this is harmless for scalar reward.
-> - **`drive_hunger` / `drive_injury`** (lines 556–557): normalised squared components, logging only. They approximate the per-axis contribution to drive for analysis scripts but are **not** fed into `reward_homeostatic`. The actual reward uses the Euclidean norm in `calculate_drive`. See [Reward — Homeostatic Mode](#reward--homeostatic-mode) below.
+> - **`drive_hunger` / `drive_injury`** (and `drive_thermal` when `thermal.enabled`): normalised squared components, logging only. They approximate the per-axis contribution to drive for analysis scripts but are **not** fed into `reward_homeostatic`. The actual reward uses the Euclidean norm in `calculate_drive`. See [Reward — Homeostatic Mode](#reward--homeostatic-mode) below.
 
 ---
 
@@ -143,19 +143,70 @@ drive_hunger = (1.0 - new_satiation / params.max_satiation) ** 2
 drive_injury = (new_injury / params.max_injury) ** 2
 ```
 
+When `thermal.enabled` is true a third one joins them, `drive_thermal`, on the **same**
+squared-normalised convention — `((body_temp - temperature_setpoint) / max_temperature) ** 2`
+— so the three logged series stay comparable with each other and with historical runs. It
+is emitted **only** when thermal is on (`max_temperature` is the inert `0.0` on a
+thermal-off config), so read it with `.get`.
+
+### The third axis — body temperature
+
+With `thermal.enabled: true` the drive gains a temperature axis and becomes
+
+```
+drive = || ( satiation - setpoint,  injury,
+             (T - temperature_setpoint) * max_satiation / max_temperature ) ||
+```
+
+**Why the third axis is scaled up rather than the other two scaled down.** The design
+document writes the three-axis drive normalised per axis — each term divided by its own
+range. Written literally that is today's drive divided by `max_satiation` (100), so **every
+reward in the project** would shrink 100-fold while `death_penalty` stayed at 100: the
+death penalty would go from comparable-to-a-few-steps to overwhelming, on thermal-**off**
+configs as much as thermal-on ones. Multiplying the whole expression through by
+`max_satiation` gives the algebraically identical drive in today's units — the first two
+axes untouched, the temperature axis scaled by `max_satiation / max_temperature`. See the
+temperature plan's finding F1.
+
+At the shipped values (`max_satiation: 100`, `max_temperature: 15`) that factor is
+**100/15 = 6.67**: one degree of body-temperature deviation costs the same drive as 6.67
+satiation units. `thermal.max_temperature` is therefore the warmth-vs-hunger exchange rate
+as well as the edge of the survivable band — see
+[CONFIG_CRITICAL_SETTINGS.md](CONFIG_CRITICAL_SETTINGS.md).
+
+Both call sites pass a temperature from the same state transition the satiation and injury
+arguments come from: `state.body_temp` for `prev_drive`, the post-step temperature for
+`curr_drive`. `body_temp` is **required** when thermal is on — `calculate_drive` raises
+`ValueError` rather than defaulting to the setpoint, because a forgotten call site would
+otherwise look exactly like a perfectly comfortable agent.
+
 ### `calculate_drive` — verbatim
 
 `calculate_drive` is the single function that defines what “homeostasis” means numerically. It is called twice per step (before and after the body update); the difference is the reward signal.
 
-`Source: src/environment/core.py:38–42`
+`Source: src/environment/core.py::calculate_drive` (docstring elided)
 
 ```python
-def calculate_drive(satiation, injury, params):
+def calculate_drive(satiation, injury, params, body_temp=None):
     """Calculates homeostatic drive (Euclidean distance to setpoint)."""
+    if params.thermal_enabled:
+        t_axis = (body_temp - params.temperature_setpoint) * (
+            params.max_satiation / params.max_temperature)
+        target = jnp.array([params.setpoint, 0.0, 0.0])
+        current = jnp.stack([satiation, injury, t_axis], axis=-1)
+        return jnp.linalg.norm(current - target, axis=-1)
+    # ── thermal OFF: the pre-thermal expression, untouched ────────────────────
     target = jnp.array([params.setpoint, 0.0])
     current = jnp.stack([satiation, injury], axis=-1)
     return jnp.linalg.norm(current - target, axis=-1)
 ```
+
+`params.thermal_enabled` is `struct.field(pytree_node=False)`, so this is a **compile-time**
+branch: a thermal-off config traces only the two-axis expression, which is the pre-thermal
+one character for character. That is why the reward on every existing config is
+bit-identical rather than merely close, and it is checked against pre-change fixtures by
+`tests/env/test_thermal_parity.py` and
+`tests/env/test_thermal_reward_gate.py::test_drive_bit_identical_when_thermal_off`.
 
 > **API notes**
 >

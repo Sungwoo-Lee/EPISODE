@@ -284,6 +284,25 @@ drive_injury = (new_injury / max_injury)^2
 
 These are for analysis logging **only** — they are not used in the reward formula. The actual reward uses the raw Euclidean drive via `calculate_drive`.
 
+**Two axes, or three.** Everything above describes the drive with `thermal.enabled: false`,
+which is every config that does not opt in. When thermal is on, `calculate_drive` takes a
+fourth argument (`body_temp`) and the norm gains a temperature axis, scaled into the same
+satiation units the other two already use:
+
+```
+drive = || ( satiation - setpoint,  injury,
+             (T - temperature_setpoint) * max_satiation / max_temperature ) ||
+```
+
+The split is a **static** Python branch on `params.thermal_enabled`, and the thermal-off
+side is the two-axis expression above unchanged — see
+[06_reward_and_termination.md](06_reward_and_termination.md#the-third-axis--body-temperature)
+for the full statement, including why the third axis is scaled *up* rather than the other
+two scaled down (it is what keeps `death_penalty` calibrated). `info` gains a matching
+`drive_thermal = ((T - temperature_setpoint) / max_temperature)^2` — the same
+squared-normalised logging convention as its two siblings, and likewise not part of the
+reward — emitted only when thermal is on.
+
 **Drive is not normalised**: raw values (0–100) are used. Both `drive_hunger` and `drive_injury` are dimensionless `[0, 1]` by construction, but the reward-driving `drive` value is in the same units as the body state variables. Reconfiguring `max_satiation` or `max_injury` changes the drive scale.
 
 ---
