@@ -942,6 +942,33 @@ them, not on the one being fixed.
 **Verifying:** for every table, print declared floor, `max-content` and `min-content` side by side
 both before and after the edit. A min-content that moved on a table you did not touch is the defect.
 
+### F36 — a bin vocabulary carried from one figure script into another whose edges differ
+
+**Saw:** an axis labelled "randomised starting injury (0-100 scale), in quarters" printed directly
+above tick labels reading `0-25 | 25-50 | 50-100`. Three bins, and the last one is a half. Four
+captions, two "What it shows" blocks and two table captions on the same page repeated the word,
+speaking of the "highest quarter" of a scale that had no fourth quarter. A later section of the same
+page used a different script whose bins really are quartiles, so one word meant two things and the
+reader had no way to know which.
+
+**Cause:** the phrase was written for the sensory study's script, where `INJ_EDGES` are the three
+quartile boundaries, and reused when a second script binned the same variable on
+`[0+, 25, 50]` — which after dropping an empty zero bin leaves three unequal bands. The label
+travelled with the copied code; the edges did not.
+
+**Why neither review method catches it:** the caption is right for the figure its author had in
+mind, the PNG is right for its own data, and the two are read separately — the caption when checking
+prose, the image when checking layout. Nothing overflows, nothing is illegible, and every number in
+the figure is correct. Only holding the sentence against the tick labels shows the disagreement.
+
+**Rule:** whenever a caption or an axis label names a binning — quarters, quartiles, deciles, halves
+— count the tick labels on the rendered figure and check the span of the last one against the word.
+Better, derive the label from the edge array rather than writing it: a label that says "three bands"
+because the array has three entries cannot drift from the data.
+
+**Verifying a fix:** for each figure, print the bin edges the script used beside every occurrence of
+a binning word in its caption and in any prose that cites it.
+
 ## Related
 
 - [`artifact_generation_guide`](artifact_generation_guide.md) — the wider guide: content, claims,

@@ -50,6 +50,11 @@ DASH = {"t2enc": (0,()), "t3rnn": (0,(5,2)), "t4act": (0,(1,1.5)),
         "t5crt": (0,(6,2,1,2)), "t16quad": (0,(3,1,1,1,1,1))}
 BINS = ["0-25", "25-50", ">=50"]
 XT = ["0-25", "25-50", "50-100"]
+# NOT "quarters". context_dependence.py bins on INJ_EDGES = [0+, 25, 50], which after dropping the
+# empty `injury 0` bin leaves THREE bands whose last one is the upper HALF of the scale. The axis
+# label said "in quarters" for months, copied from the sensory study's script, where the edges
+# really are quartiles - so this page carried two different meanings of the word, one of them
+# describing a half (defect F36). Section 3's figure does use true quarters; these do not.
 
 
 def load(lab):
@@ -125,7 +130,7 @@ def main():
             ax[i].plot(x, fn(d), color=C[k.split("_")[1]], lw=1.0, alpha=.45)
         ax[i].plot(x, fn(none), color=C["none"], lw=2.4, label="t1none (control)", zorder=5)
         ax[i].set_xticks(x); ax[i].set_xticklabels(XT)
-        ax[i].set_xlabel("randomised starting injury (0-100 scale), in quarters")
+        ax[i].set_xlabel("randomised starting injury on the 0-100 scale, in three bands")
         ax[i].set_ylabel(yl, fontsize=18)
         ax[i].set_title(ttl, fontsize=21, loc="left")
         ax[i].grid(alpha=.25, lw=.5)
@@ -148,7 +153,7 @@ def main():
     ax[2].plot(x, b0_curve(none), color=C["none"], lw=2.4, zorder=5)
     ax[2].plot(x, rest_curve(none), color=C["none"], lw=2.4, zorder=5)
     ax[2].set_ylim(0, 70); ax[2].set_xticks(x); ax[2].set_xticklabels(XT)
-    ax[2].set_xlabel("randomised starting injury (0-100 scale), in quarters")
+    ax[2].set_xlabel("randomised starting injury on the 0-100 scale, in three bands")
     ax[2].set_ylabel("percent of steps\nboth quantities, one scale", fontsize=18)
     ax[2].set_title("The same two quantities, on one axis", fontsize=21, loc="left")
     ax[2].grid(alpha=.25, lw=.5)
@@ -184,7 +189,7 @@ def main():
         ax[i].legend(fontsize=16, ncol=2, framealpha=.92, loc="upper left")
     # sharex=True: only the bottom panel carries the axis label, otherwise the top panel's label
     # is drawn into the gap between the two panels and reads as a caption for neither.
-    ax[1].set_xlabel("randomised starting injury (0-100 scale), in quarters")
+    ax[1].set_xlabel("randomised starting injury on the 0-100 scale, in three bands")
     b, t = ax[0].get_ylim()
     ax[0].set_ylim(b, b + (t - b) * 1.40)
     for a in ax: a.set_ylabel("threat response (pp):\npredator near minus none", fontsize=19)
