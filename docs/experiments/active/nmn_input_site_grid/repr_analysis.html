@@ -91,6 +91,19 @@ table{border-collapse:collapse;width:100%;font-size:.88rem}
 table.tprose{min-width:480px}
 table.tprose.survey{min-width:0}
 table.tprose.survey.volt{min-width:400px}
+/* the three breakdown tables sit inside .m cards; widest max-content is 511px.
+   Their scroll box is W-84 (20 wrap + 20 card padding + 1 card border +
+   1 scroll border = 42 each side), so they overflow at W < 520+84 = 604
+   -> the .narrowtbl cue is set at 603. Measured at W=604: box is exactly 520. */
+table.tprose.breakdown,table.tprose.survey.breakdown{min-width:520px}
+/* nit 2: the row-wise summary column is a summary, not a fourth slice -- give it
+   the same 2px rule the total row gets, so both summaries read the same way. */
+table.survey.breakdown th:nth-child(5),table.survey.breakdown td:nth-child(5){border-left:2px solid var(--rule2)}
+/* nit 1: mark where MC ends and GAE_NORM begins in the analysis-3 table. */
+.breakdown th.gnstart,.breakdown td.gnstart{border-left:2px solid var(--rule2)}
+.breakdown th.grp{text-align:center;border-bottom:1px solid var(--rule);font-size:.78rem;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);padding-bottom:5px}
+tbody tr.total td{border-top:2px solid var(--rule2)}
+tbody tr.total td.n{font-weight:500}
 th,td{padding:10px 13px;text-align:left;border-bottom:1px solid var(--rule);vertical-align:top}
 th{font-family:"Azeret Mono",monospace;font-size:.64rem;letter-spacing:.08em;text-transform:uppercase;
   color:var(--hdr);font-weight:500;background:var(--sunk)}
@@ -98,7 +111,7 @@ tbody tr:last-child td{border-bottom:none}
 td.n,th.n{font-family:"Azeret Mono",monospace;font-variant-numeric:tabular-nums;text-align:right}
 td.n{white-space:nowrap}
 .cap{font-size:.83rem;color:var(--muted)}
-.narrowonly,.narrowonly2{display:none}
+.narrowonly,.narrowonly2,.narrowtbl{display:none}
 ul{margin:0;padding-left:20px;display:flex;flex-direction:column;gap:9px}
 li::marker{color:var(--muted)}
 footer{margin-top:54px;padding-top:21px;border-top:1px solid var(--rule);
@@ -108,6 +121,9 @@ footer{margin-top:54px;padding-top:21px;border-top:1px solid var(--rule);
 }
 @media(max-width:484px){
   .narrowonly2{display:block}
+}
+@media(max-width:603px){
+  .narrowtbl{display:block}
 }
 @media(max-width:560px){
   .kv{grid-template-columns:1fr;gap:2px}
@@ -241,7 +257,7 @@ a:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
         </tbody>
       </table>
     </div>
-    <p class="cap narrowonly2">Four columns — scroll the table sideways to reach the last one.</p>
+    <p class="cap narrowonly2">Wider than the screen — scroll sideways; the right-hand column is cut off.</p>
     <p class="cap">Two descriptions of exactly the same bird on exactly the same wire. The absolute
     voltages differ by 400,000; every measurable quantity is unchanged. Physicists say you may add any
     constant to every voltage in a circuit and nothing observable moves — that freedom is the gauge.</p>
@@ -339,6 +355,28 @@ a:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
         <dt>Also</dt><dd>Across all 60 measurements the range is <strong>smallest at the first checkpoint and largest at the last</strong>, growing about 1.6× over training. The modulator's capability only ever expands.</dd>
         <dt>Holds up?</dt><dd>Yes — that expansion is measured <em>within</em> each agent, so it does not depend on having only one agent per configuration.</dd>
       </dl>
+      <div class="scroll">
+        <table class="tprose survey breakdown">
+          <thead><tr><th>Site</th><th class="n">all 27</th><th class="n">intero 2</th><th class="n">extero 19</th><th class="n">mean ± sd</th></tr></thead>
+          <tbody>
+            <tr><td>encoder · 1</td><td class="n">12.31</td><td class="n">10.52</td><td class="n">12.65</td><td class="n">11.83 ± 1.04</td></tr>
+            <tr><td>encoder · 2</td><td class="n">12.12</td><td class="n">10.56</td><td class="n">11.65</td><td class="n">11.44 ± 0.83</td></tr>
+            <tr><td>actor</td><td class="n">11.50</td><td class="n">10.30</td><td class="n">11.05</td><td class="n">10.95 ± 1.48</td></tr>
+            <tr><td>critic</td><td class="n">10.01</td><td class="n">12.35</td><td class="n">9.01</td><td class="n">10.46 ± 1.59</td></tr>
+            <tr><td>rnn</td><td class="n">9.33</td><td class="n">10.85</td><td class="n">9.97</td><td class="n">10.05 ± 1.25</td></tr>
+            <tr class="total"><td><strong>all sites</strong></td><td class="n">11.05</td><td class="n">10.92</td><td class="n">10.87</td><td class="n">10.94 ± 1.38</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="cap narrowtbl">Wider than the screen — scroll sideways; the right-hand column is cut off.</p>
+      <p class="cap">Reachable gain swing at the final checkpoint — 60 agent-site combinations, 12 per
+      site. Higher means the modulator <em>could</em> vary that site's gain more between two situations.
+      <strong>The bottom row is the finding: the three input slices are indistinguishable</strong> —
+      11.05, 10.92, 10.87, against a spread of about 1.4 within any one of them. What the modulator is
+      allowed to read does not change how much range it has.</p>
+      <p class="src"><strong>By training recipe:</strong> 11.23 ± 1.32 for GAE_NORM against 10.66 ± 1.42
+      for MC — a difference well inside the spread. <strong>Growth over training:</strong> all 60
+      combinations end wider than they began; mean 1.64×, sd 0.20, range 1.19–2.03. Not one contracts.</p>
       <p class="src">A pleasant surprise in the derivation: the headline number is <em>exact</em> rather
       than an upper estimate. The memory cell's arithmetic guarantees its internal state can never leave
       a fixed range, which pins the gain's swing precisely. Analysis 02 later confirmed this by
@@ -360,6 +398,35 @@ a:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
         <dt>Sharpest</dt><dd>Modulators allowed to read <em>only the body signals</em> — how full the agent is, and how much pain it currently feels — are <strong>2–4× less responsive at every site, 15 of 15 with no exceptions</strong>. At the encoder, 97% of their variation is fixed.</dd>
         <dt>Holds up?</dt><dd>That ordering repeats within every site, which is what makes it survive having one agent per configuration.</dd>
       </dl>
+      <div class="scroll">
+        <table class="tprose survey breakdown">
+          <thead><tr><th>Site</th><th class="n">all 27</th><th class="n">intero 2</th><th class="n">extero 19</th><th class="n">mean ± sd</th></tr></thead>
+          <tbody>
+            <tr><td>actor</td><td class="n">0.333</td><td class="n">0.083</td><td class="n">0.206</td><td class="n">0.207 ± 0.111</td></tr>
+            <tr><td>critic</td><td class="n">0.223</td><td class="n">0.143</td><td class="n">0.235</td><td class="n">0.200 ± 0.066</td></tr>
+            <tr><td>encoder · 2</td><td class="n">0.171</td><td class="n">0.041</td><td class="n">0.147</td><td class="n">0.120 ± 0.061</td></tr>
+            <tr><td>rnn</td><td class="n">0.165</td><td class="n">0.066</td><td class="n">0.113</td><td class="n">0.115 ± 0.068</td></tr>
+            <tr><td>encoder · 1</td><td class="n">0.139</td><td class="n">0.034</td><td class="n">0.127</td><td class="n">0.100 ± 0.053</td></tr>
+            <tr class="total"><td><strong>all sites</strong></td><td class="n">0.206</td><td class="n">0.073</td><td class="n">0.166</td><td class="n">0.148 ± 0.085</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="cap narrowtbl">Wider than the screen — scroll sideways; the right-hand column is cut off.</p>
+      <p class="cap">Contextual fraction of the gain — the share of its variation happening over time
+      rather than between units. 1.0 would mean every unit's gain is driven entirely by the situation;
+      0.0 would mean a fixed re-tuning that never responds to anything.</p>
+      <p class="src"><strong>Read this against the table in analysis 01.</strong> There the three slices
+      were indistinguishable — the same range available. Here they differ almost three-fold: 0.206 for
+      all-senses, <strong>0.073</strong> for body-only, 0.166 for external-only. <strong>Same dial, very
+      different use.</strong> The body-only modulators are not less capable; they simply move less.</p>
+      <p class="src"><strong>By training recipe, essentially identical:</strong> 0.151 for GAE_NORM
+      against 0.146 for MC. Whatever the return estimator changed about training, it did not change the
+      shape of what the modulator emits — which makes the recipe difference in analysis 03 more striking,
+      not less.</p>
+      <p class="src"><strong>Sign structure by site.</strong> Negative gains run from 0.111 at the actor
+      and rnn to 0.235 at encoder · 1; negative offsets from 0.506 at the rnn to 0.836 at encoder · 1. The
+      encoder is both the most sign-inverting site and the least contextual one — it re-tunes hard, then
+      largely holds still.</p>
       <p class="src"><strong>Against a published comparison.</strong> The original FiLM paper reports 36%
       of its gains going negative and 76% of its offsets; ours are 16.8% and 68.5%. Offsets match closely;
       negative gains are about half as common. And where their modulation shows a sharp spike of gains at
@@ -391,6 +458,42 @@ a:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
         <dt>Shape</dt><dd>Lopsided, not uniform. At the actor site the typical episode loses 10 steps, but the worst 5% lose 480. Freezing usually costs a little and occasionally costs the whole episode.</dd>
         <dt>Holds up?</dt><dd>Yes — it compares an agent against itself on identical episodes, so it does not lean on having several agents per configuration. The lopsidedness is only visible <em>because</em> the episodes are paired.</dd>
       </dl>
+      <div class="scroll">
+        <table class="tprose breakdown">
+          <thead>
+            <tr><th></th><th class="grp" colspan="2">MC</th><th class="grp gnstart" colspan="2">GAE_NORM</th></tr>
+            <tr><th>Site frozen</th><th class="n">gain</th><th class="n">offset</th><th class="n gnstart">gain</th><th class="n">offset</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>encoder</td><td class="n">−122.8</td><td class="n">−107.7</td><td class="n gnstart">−47.2</td><td class="n">−130.0</td></tr>
+            <tr><td>rnn</td><td class="n">+11.0</td><td class="n">−147.5</td><td class="n gnstart">−4.2</td><td class="n">−76.0</td></tr>
+            <tr><td>actor</td><td class="n">−123.2</td><td class="n">−14.0</td><td class="n gnstart">−121.3</td><td class="n">−4.2</td></tr>
+            <tr><td>critic</td><td class="n gnstart">0.0</td><td class="n">0.0</td><td class="n">0.0</td><td class="n">0.0</td></tr>
+            <tr><td>all four</td><td class="n">−177.0</td><td class="n">−173.4</td><td class="n gnstart">−48.5</td><td class="n">−80.2</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="cap narrowtbl">Wider than the screen — scroll sideways; the right-hand column is cut off.</p>
+      <p class="cap">Mean paired change in survival steps, the two training recipes shown separately
+      (GN = GAE_NORM). Negative means freezing made the agent worse. All on the all-senses slice, 128
+      paired episodes per cell.</p>
+      <p class="src"><strong>A comparison the averages were hiding: MC-trained agents lean on their
+      modulation about twice as heavily.</strong> Across the modulated arms, freezing the gain costs
+      <strong>−82.4 ± 83.3</strong> under MC against <strong>−44.2 ± 48.8</strong> under GAE_NORM;
+      freezing the offset, −88.5 against −58.1. Analysis 02 found the two recipes produce near-identical
+      modulation signals — so this is not a difference in what the modulator emits, but in how much the
+      rest of the network has come to depend on it.</p>
+      <p class="src"><strong>Which of gain or offset dominates replicates at two sites, not at the other
+      two.</strong> The actor favours the gain under both recipes (+117 and +109 on the
+      |gain| − |offset| difference); the rnn favours the offset under both (−72 and −137). The encoder and
+      the all-four arm disagree between recipes (+15 vs −83; +4 vs −32), so those two should not be
+      quoted as settled.</p>
+      <p class="src"><strong>Spread, and a correction.</strong> Across the ten modulated arms, freezing
+      the gain averages −63.3 with a between-arm sd of 67.5; the offset −73.3 ± 65.9; both together
+      −132.9 ± 71.3. Within an arm the episode-to-episode spread is larger still (sd 121–162), which is
+      the skew described above. <strong>Not every effect is significant:</strong> the largest sign-test
+      p-value among the gain-freeze arms is 0.788. The large effects are all below 0.001, but the small
+      ones are not distinguishable from zero, and an earlier version of this page implied otherwise.</p>
       <p class="src"><strong>A check that makes the rest trustworthy.</strong> Freezing the modulation at
       the <em>critic</em> site changed nothing whatsoever — 0.000 steps, in 0 of 128 episodes. That is
       exactly right by construction, because the critic estimates how good a situation is and does not
@@ -421,7 +524,7 @@ a:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
       </tbody>
     </table>
   </div>
-  <p class="cap narrowonly">Four columns — scroll sideways to reach them all.</p>
+  <p class="cap narrowonly">Wider than the screen — scroll sideways; the right-hand column is cut off.</p>
   <p class="cap">Change in survival steps when that signal is frozen, averaged over both training
   recipes. Negative means freezing made the agent worse. Live agents survive about 190–220 steps, so
   −123 is a large loss and −14 is a small one. The <span class="mono">+11</span> is a genuine small
