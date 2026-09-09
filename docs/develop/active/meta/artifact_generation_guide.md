@@ -20,6 +20,26 @@ building anything; the rest explains the entries that need explaining.
 
 ---
 
+## 0. How this guide gets read (2026-09-09)
+
+It did not, for a long time. `Artifact` is a native Claude Code tool: a request to "make an
+artifact" reaches it directly, and nothing in that path loads this file. So the rules below were
+written, were right, and were skipped — most visibly when the click-to-open-full-size figure viewer
+(§2.6) worked on one page for weeks and then failed to reach the next page built from the same
+pattern, because it lived in that page's implementation rather than in a rule anybody re-read.
+
+The route is now: **[`publish-page`](../../../../.claude/skills/publish-page/SKILL.md)**, a
+project skill that is the only sanctioned way to reach the `Artifact` tool. Its step 0 is reading
+this guide and the [format-defect register](artifact_format_bugs.md); it then sequences design,
+build, the [`artifact-format-reviewer`](../../../../.claude/agents/artifact-format-reviewer.md)
+gate, and the publish. `CLAUDE.md` names it as mandatory before every publish and republish.
+
+Two consequences worth stating plainly. **This guide is now load-bearing** — it is read at the top
+of every artifact job, so a rule that is wrong here is a rule that gets followed anyway; fix the
+document rather than working around it. And **a pattern that lives only in one page's source is not
+a pattern** — if a page does something worth repeating, it belongs in §2 or §4 of this file on the
+same day, or it will not survive to the next page.
+
 ## 1. Terminology: the single largest source of rework
 
 Roughly half the revisions were terminology. Three rules, in priority order.
