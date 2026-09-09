@@ -90,6 +90,7 @@ section{display:flex;flex-direction:column;gap:17px}
 table{border-collapse:collapse;width:100%;font-size:.88rem}
 table.tprose{min-width:480px}
 table.tprose.survey{min-width:0}
+table.tprose.survey.volt{min-width:400px}
 th,td{padding:10px 13px;text-align:left;border-bottom:1px solid var(--rule);vertical-align:top}
 th{font-family:"Azeret Mono",monospace;font-size:.64rem;letter-spacing:.08em;text-transform:uppercase;
   color:var(--hdr);font-weight:500;background:var(--sunk)}
@@ -97,13 +98,16 @@ tbody tr:last-child td{border-bottom:none}
 td.n,th.n{font-family:"Azeret Mono",monospace;font-variant-numeric:tabular-nums;text-align:right}
 td.n{white-space:nowrap}
 .cap{font-size:.83rem;color:var(--muted)}
-.narrowonly{display:none}
+.narrowonly,.narrowonly2{display:none}
 ul{margin:0;padding-left:20px;display:flex;flex-direction:column;gap:9px}
 li::marker{color:var(--muted)}
 footer{margin-top:54px;padding-top:21px;border-top:1px solid var(--rule);
   font-size:.84rem;color:var(--muted);display:flex;flex-direction:column;gap:8px}
 @media(max-width:521px){
   .narrowonly{display:block}
+}
+@media(max-width:484px){
+  .narrowonly2{display:block}
 }
 @media(max-width:560px){
   .kv{grid-template-columns:1fr;gap:2px}
@@ -199,13 +203,65 @@ a:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
   <div class="prose">
     <p>One idea runs underneath both of the later analyses, and it is worth a minute because it changes
     what the numbers are allowed to mean.</p>
-    <p>A <strong>gauge quantity</strong> is a number in a description that you can change freely without
-    changing anything observable. Altitude is the everyday example: measure a building from sea level or
-    from its own ground floor and every number shifts, but no prediction about it changes. The choice of
-    reference point is real in the description and absent from the world.</p>
-    <p><strong>The modulator's average gain and average offset are gauge quantities.</strong> Here is why,
-    as arithmetic. Suppose the modulator emitted a fixed gain and offset — the same values in every
-    situation. The layer it adjusts would compute:</p>
+    <p>A <strong>gauge quantity</strong> is a number in a description that you can change freely
+    without changing anything you could observe. It is a feature of the bookkeeping, not of the world.
+    The idea is old and the standard examples are worth having in mind before meeting it inside a
+    network.</p>
+  </div>
+
+  <div class="note">
+    <p class="rowlab">Textbook example 1 · height</p>
+    <p>Measure a building from sea level, or from its own ground floor. Every number changes. Nothing you
+    could check with a tape measure does.</p>
+    <div class="scroll">
+      <table class="tprose survey">
+        <thead><tr><th>Zero point</th><th class="n">roof</th><th class="n">first floor</th><th class="n">roof − first floor</th></tr></thead>
+        <tbody>
+          <tr><td>sea level</td><td class="n">120 m</td><td class="n">45 m</td><td class="n">75 m</td></tr>
+          <tr><td>the ground floor</td><td class="n">75 m</td><td class="n">0 m</td><td class="n">75 m</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="cap">The last column is the only one anybody can measure, and it is identical. The choice of
+    zero is a <em>gauge</em>: real in the description, absent from the building.</p>
+  </div>
+
+  <div class="note">
+    <p class="rowlab">Textbook example 2 · voltage</p>
+    <p>The canonical case from physics, and the one that makes the idea feel less like a technicality. A
+    bird perches on a 400,000-volt power line and is unharmed. Its feet are at 400,000 volts — an enormous
+    number — but both feet are at the <em>same</em> enormous number, and only the difference across the
+    bird can do anything to it.</p>
+    <div class="scroll">
+      <table class="tprose survey volt">
+        <thead><tr><th>Zero point</th><th class="n">the wire</th><th class="n">other foot</th><th class="n">across the bird</th></tr></thead>
+        <tbody>
+          <tr><td>the earth is 0 V</td><td class="n">400,000 V</td><td class="n">400,000 V</td><td class="n">0 V</td></tr>
+          <tr><td>the wire is 0 V</td><td class="n">0 V</td><td class="n">0 V</td><td class="n">0 V</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="cap narrowonly2">Four columns — scroll the table sideways to reach the last one.</p>
+    <p class="cap">Two descriptions of exactly the same bird on exactly the same wire. The absolute
+    voltages differ by 400,000; every measurable quantity is unchanged. Physicists say you may add any
+    constant to every voltage in a circuit and nothing observable moves — that freedom is the gauge.</p>
+  </div>
+
+  <div class="prose">
+    <p>Both examples share one shape, and it gives a test you can apply to anything:
+    <strong>change the number, and ask whether any measurement changes. If none does, the number was
+    gauge</strong> — it was telling you about your own choice of description, not about the thing being
+    described.</p>
+    <p>The trap is that gauge quantities look like ordinary facts. "The roof is at 120 metres" and "the
+    bird is at 400,000 volts" are perfectly sensible sentences. They are just not sentences about the roof
+    or the bird alone; they are half about where somebody decided to put zero. Averaging them, comparing
+    them between buildings, or watching them drift over time will all produce numbers that mean less than
+    they appear to.</p>
+    <p><strong>The modulator's average gain and average offset are gauge quantities in exactly this
+    sense.</strong> The difference is that here the freedom is not "add a constant to every reading" but
+    "move a multiplication from one place to another". Here it is, as arithmetic. Suppose the modulator
+    emitted a fixed gain and offset — the same values in every situation. The layer it adjusts would
+    compute:</p>
   </div>
 
   <div class="note">
