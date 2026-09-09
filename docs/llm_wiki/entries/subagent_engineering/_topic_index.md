@@ -6,8 +6,8 @@
 > To improve a row, set a `headline:` field on the entry itself.
 
 **Folder definition**: Subagent + worktree usage gotchas
-**Insights**: 22
-**Last updated**: 2026-07-28
+**Insights**: 23
+**Last updated**: 2026-09-09
 
 ---
 
@@ -15,6 +15,7 @@
 
 | Date | Time | ID | Summary |
 |---|---|---|---|
+| 2026-09-09 | 14:04 | [20260909_1404_verify_handover_claims_against_code](20260909_1404_verify_handover_claims_against_code.md) | A handover note written by the session that did the work was wrong about the codebase in three of its six bug claims and in its central dia… |
 | 2026-07-28 | 16:47 | [20260728_1647_agent_jargon_rename_vs_gloss_drift_check](20260728_1647_agent_jargon_rename_vs_gloss_drift_check.md) | Replaced software jargon across all agent profiles with plain words (blocker/concern/nit -> Critical/Moderate/Low; pre-mortem, blast radius… |
 | 2026-07-28 | 16:45 | [20260728_1645_agent_model_tiering_fable_reviewers_no_sonnet](20260728_1645_agent_model_tiering_fable_reviewers_no_sonnet.md) | Team re-tiered to 10 Fable / 11 Opus with Sonnet retired entirely: all four reviewers plus the six professors run on Fable, while orchestra… |
 | 2026-07-28 | 16:45 | [20260728_1645_wiki_search_subagent_rejected_on_economics](20260728_1645_wiki_search_subagent_rejected_on_economics.md) | Considered and rejected a dedicated wiki-search sub-agent that would answer topic queries so main Claude never loads wiki content. |

@@ -3,7 +3,7 @@
 > Check this file before inventing a new tag. If a suitable tag already exists, use it exactly as written.
 > Tag drift leads to missed recall — use the canonical form.
 
-**Last updated**: 2026-08-20
+**Last updated**: 2026-09-09
 
 ---
 
@@ -28,6 +28,7 @@
 | `refutation` | `20260508_2003_nmn_heterogeneity_sweep_verdict_film_worse` | Negative-result insight: a pre-registered hypothesis is refuted (or a candidate cause is ruled out) |
 | `config` | `20260619_0111_config_v3_extends_layering_default_base` | Config loader / layering / schema / authoring system |
 | `wandb` | `20260723_1914_dreamer_noise_is_logging_granularity_artifact` | WandB logging cadence, run tracking, metric granularity |
+| `testing` | `20260909_1402_parity_gates_green_without_comparing` | Test suite / gate correctness — parity fixtures, backend pinning, tests that pass without testing |
 | `rl` | `20260723_1916_train_ratio_replay_ratio_conversion` | Reinforcement-learning algorithm decisions (replay/train ratio, UTD) |
 
 ---

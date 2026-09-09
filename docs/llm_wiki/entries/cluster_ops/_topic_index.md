@@ -6,8 +6,8 @@
 > To improve a row, set a `headline:` field on the entry itself.
 
 **Folder definition**: Lab cluster ops and env mgmt
-**Insights**: 45
-**Last updated**: 2026-08-19
+**Insights**: 46
+**Last updated**: 2026-09-09
 
 ---
 
@@ -15,6 +15,7 @@
 
 | Date | Time | ID | Summary |
 |---|---|---|---|
+| 2026-09-09 | 14:03 | [20260909_1403_cpu_pin_directory_conftest_not_repo_wide](20260909_1403_cpu_pin_directory_conftest_not_repo_wide.md) | The CPU backend for tests/env is pinned by a directory conftest, not a repo-wide setting: a repo-wide pin would make test_gpu_buffer.py sil… |
 | 2026-08-19 | 19:44 | [20260819_1944_run_command_parallel_race_and_remote_pkill_self_kill](20260819_1944_run_command_parallel_race_and_remote_pkill_self_kill.md) | run_command.py is NOT safe to invoke concurrently: five parallel calls to five different nodes all returned node 112's two PIDs (532510/532… |
 | 2026-08-18 | 16:21 | [20260818_1621_wandb_log_code_walks_whole_repo](20260818_1621_wandb_log_code_walks_whole_repo.md) | wandb.run.log_code('.') walked the ENTIRE repo before every training run: wandb's filtered_dir() iterates os.walk(root) and DISCARDS the di… |
 | 2026-08-06 | 03:06 | [20260806_0306_gpu_claim_and_nas_git_lock_protocol](20260806_0306_gpu_claim_and_nas_git_lock_protocol.md) | Three cluster-ops rules from the Dreamer Gate-2 arc: a free-looking GPU can already be claimed by a run still in its CPU phase (check proce… |
