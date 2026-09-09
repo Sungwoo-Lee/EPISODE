@@ -99,6 +99,55 @@ table.tprose.survey.volt{min-width:400px}
    -> the .narrowtbl cue is set at 603. Measured at W=604: box is exactly 520. */
 table.tprose.breakdown,table.tprose.survey.breakdown{min-width:520px}
 /* ---- diagram + walkthrough vocabulary (architecture and per-analysis) ---- */
+/* unified network figure: shared input on top, side network branching right and
+   injecting gamma/beta back into each site. Narrow = natural stacking (no explicit
+   placement); wide = a 3-column grid whose middle column carries the injections. */
+.unet{display:grid;grid-template-columns:1fr;gap:7px;margin:4px 0 2px}
+.u-obs,.u-out{text-align:center}
+.u-obs{border:1px solid var(--rule2);border-radius:6px;background:var(--sunk);
+  padding:9px 12px;font-family:"Azeret Mono",monospace;font-size:.78rem;color:var(--body)}
+.u-dn,.u-dn2{color:var(--muted);text-align:center;font-size:.8rem;line-height:1}
+.u-mod{border:1px solid var(--accent);border-radius:7px;background:var(--card);padding:12px 13px}
+.u-modtag{font-family:"Azeret Mono",monospace;font-size:.66rem;letter-spacing:.09em;
+  text-transform:uppercase;color:var(--accent);margin-bottom:9px}
+.u-modnote{font-size:.86rem;color:var(--body);margin-top:10px;line-height:1.5}
+.u-inj{display:flex;align-items:center;justify-content:center;gap:7px;flex-wrap:wrap}
+/* Narrow: no columns exist, so a card sitting between "observation" and "encoder"
+   reads as the first STAGE of the main pathway — the exact misreading this figure
+   exists to prevent. Drop the second branch arrow and send the card to the end, so
+   the main pathway runs unbroken and the card trails it as a sidebar the three
+   "from the modulator" labels point back to. */
+@media(max-width:699px){.u-dn2{display:none}.u-mod{order:99}.u-tail{display:none}}
+.u-ar{display:none;color:var(--accent);font-size:1.05rem;line-height:1}
+.u-gb{font-family:"Azeret Mono",monospace;font-size:.74rem;letter-spacing:.06em;
+  color:var(--accent);background:var(--accent-bg);border:1px solid var(--accent);
+  border-radius:4px;padding:2px 7px;white-space:nowrap}
+.u-tail{display:none}
+.u-from{font-family:"Azeret Mono",monospace;font-size:.62rem;letter-spacing:.07em;
+  text-transform:uppercase;color:var(--body)}
+@media(min-width:700px){
+  .unet{grid-template-columns:minmax(0,1fr) auto minmax(190px,.68fr);gap:6px 14px;align-items:center}
+  .u-obs{grid-column:1/-1;grid-row:1}
+  .u-dn.d1{grid-column:1;grid-row:2}
+  .u-dn2{grid-column:3;grid-row:2}
+  .u-mod{grid-column:3;grid-row:3/span 5;align-self:stretch}
+  .u-main.s1{grid-column:1;grid-row:3}
+  .u-inj.i1{grid-column:2;grid-row:3}
+  .u-dn.d2{grid-column:1;grid-row:4}
+  .u-main.s2{grid-column:1;grid-row:5}
+  .u-inj.i2{grid-column:2;grid-row:5}
+  .u-dn.d3{grid-column:1;grid-row:6}
+  .u-main.s3{grid-column:1;grid-row:7}
+  .u-inj.i3{grid-column:2;grid-row:7}
+  .u-dn.d4{grid-column:1;grid-row:8}
+  .u-out{grid-column:1;grid-row:9}
+  .u-ar{display:inline}
+  .u-from{display:none}
+  /* bridge the 14px grid gap so the injection reaches the card, rather than being
+     joined to it by adjacency alone. margin-left -7 cancels the flex gap and
+     margin-right -14 cancels its own width, so column 2 keeps the pill's width. */
+  .u-tail{display:block;width:14px;height:1px;background:var(--accent);margin:0 -14px 0 -7px}
+}
 .dia{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:4px 0 2px}
 @media(max-width:660px){.dia{grid-template-columns:1fr}}
 .lane{border:1px solid var(--rule2);border-radius:7px;background:var(--card);padding:13px 14px}
@@ -114,8 +163,6 @@ table.tprose.breakdown,table.tprose.survey.breakdown{min-width:520px}
 .tagf{color:var(--body)}
 .tagv{color:var(--accent)}
 .blk.varyp{background:var(--accent-bg);border-color:var(--accent);color:var(--accent)}
-.feeds{border:1px dashed var(--rule2);border-radius:7px;background:var(--sunk);
-  padding:11px 14px;margin:10px 0 2px;font-size:.9rem;line-height:1.55}
 .chain.padded{padding:2px}
 .eqn{background:var(--sunk);border:1px solid var(--rule);border-radius:6px;padding:13px 15px;
   display:flex;flex-direction:column;gap:8px}
@@ -265,39 +312,40 @@ a:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
     fixed, and all three analyses are measurements on different parts of that arithmetic.</p>
   </div>
 
-  <p class="rowlab">The two networks, and where they meet</p>
-  <div class="dia">
-    <div class="lane">
-      <p class="lanetag">Main network — turns senses into an action</p>
+  <p class="rowlab">The two networks, drawn the usual way</p>
+  <div class="unet">
+    <div class="u-obs">observation — what the agent senses, 27 numbers</div>
+    <div class="u-dn d1">↓</div>
+    <div class="u-dn2">↓</div>
+
+    <div class="u-mod">
+      <p class="u-modtag">The modulator</p>
       <div class="vchain">
-        <span class="blk wide">encoder — processes the raw senses</span>
-        <span class="down">↓</span>
-        <span class="blk wide">rnn — memory carried between timesteps</span>
-        <span class="down">↓</span>
-        <span class="blk wide">actor → action &nbsp;·&nbsp; critic → value</span>
-      </div>
-      <p class="lanenote">The four <strong>sites</strong> — encoder, rnn, actor, critic — are the places
-      the modulator is allowed to reach into.</p>
-    </div>
-    <div class="lane">
-      <p class="lanetag">Modulator — a much smaller side network</p>
-      <div class="vchain">
-        <span class="blk wide">reads the same senses</span>
-        <span class="down">↓</span>
         <span class="blk wide varyp">GRU → hidden state <em>h</em>, 16 numbers<span class="tagv">changes every step</span></span>
         <span class="down">↓</span>
-        <span class="blk wide">gain head &nbsp;·&nbsp; offset head</span>
+        <span class="blk wide">gain head → γ &nbsp;·&nbsp; offset head → β</span>
       </div>
-      <p class="lanenote">The hidden state <em>h</em> is the modulator's "how things are right now". It is
-      the <strong>only</strong> thing in the whole calculation that changes during an episode.</p>
+      <p class="u-modnote"><em>h</em> is the <strong>only</strong> thing in this whole figure that
+      changes during an episode. One γ and one β per unit, per site, every timestep.</p>
     </div>
-  </div>
 
-  <div class="feeds">
-    <p>The modulator sends a <strong>gain</strong> (γ) and an <strong>offset</strong> (β) into each site it
-    is pointed at — one pair per unit, 128 units per site, recomputed every timestep. At the site the
-    arithmetic is just <span class="mono">adjusted = gain × original + offset</span>.</p>
+    <div class="u-main s1"><span class="blk wide">encoder — processes the raw senses</span></div>
+    <div class="u-inj i1"><span class="u-ar">←</span><span class="u-gb">γ β</span><span class="u-from">from the modulator</span><span class="u-tail"></span></div>
+    <div class="u-dn d2">↓</div>
+    <div class="u-main s2"><span class="blk wide">rnn — memory carried between timesteps</span></div>
+    <div class="u-inj i2"><span class="u-ar">←</span><span class="u-gb">γ β</span><span class="u-from">from the modulator</span><span class="u-tail"></span></div>
+    <div class="u-dn d3">↓</div>
+    <div class="u-main s3"><span class="blk wide">actor &nbsp;·&nbsp; critic</span></div>
+    <div class="u-inj i3"><span class="u-ar">←</span><span class="u-gb">γ β</span><span class="u-from">from the modulator</span><span class="u-tail"></span></div>
+    <div class="u-dn d4">↓</div>
+    <div class="u-out"><span class="blk wide">action &nbsp;·&nbsp; value</span></div>
   </div>
+  <p class="cap">Both networks read the same observation; the modulator branches off it and injects a
+  <strong>gain</strong> (γ) and an <strong>offset</strong> (β) back into the main pathway. At each site the
+  arithmetic is just <span class="mono">adjusted = gain × original + offset</span>. The three <strong>γ β</strong> markers mark
+  the <strong>sites</strong> the modulator is allowed to reach into — encoder, rnn, and the actor and
+  critic layers, which this page counts as two sites because either can be modulated alone. Any given
+  agent uses only the subset its configuration enables.</p>
 
   <p class="rowlab">Zoom in: how one site's 128 gains are produced</p>
   <div class="scroll">
