@@ -1296,6 +1296,58 @@ hash** in its report, and a review should quote them. A finding that cannot be t
 a finding the author cannot reproduce — and the natural author response, "I already fixed that",
 is unfalsifiable without it.
 
+### F44 — a caption naming a rendered property of a CSS-drawn picture, where that property flips with theme
+
+**Saw:** a schematic drawn from CSS boxes — a grid of cells tinted by `opacity` on `var(--accent)` to
+show a quantity — under a caption reading *"darker is a larger gain"*. True in light theme. In dark
+theme `--accent` is a light lilac on a near-black card, so the largest value renders **brightest**,
+and every reader on a dark screen read the picture inverted.
+
+**Cause:** the caption described the *rendering* rather than the *encoding*. "Darker" is a fact about
+one theme's output; "larger" is a fact about the data. Bind a caption to the first and it inverts the
+moment the other theme paints it.
+
+**Why neither review method catches it:** the caption is accurate in the theme most authors compose
+and screenshot in, and the CSS is plainly correct — one token, one opacity ramp, nothing conditional.
+Nothing in the source says which end of the ramp is dark, because that depends on a token defined a
+hundred lines away and redefined again under a media query. Only rendering the page in the *other*
+theme shows it.
+
+**Rule:** never describe a theme-dependent rendered property (darker, lighter, brighter, paler) in a
+caption. Either name the encoding theme-neutrally ("the more strongly tinted, the larger the value")
+or, better, **emit a swatch legend** so the reader calibrates against swatches that live in the same
+theme as the picture. A legend is also the only version that survives a later palette change.
+
+**Verifying a fix:** render the page in both themes and read the caption against the picture in each.
+If the sentence is still true in both, it was not theme-dependent.
+
+**Related:** [F11](#f11) — same root cause seen from the other side: a colour carrying a meaning the
+page has not pinned down. F11 is about one token meaning two things; this is about one token meaning
+two *opposite* things in the two themes.
+
+### F45 — a case-changing `text-transform` applied over case-sensitive identifiers
+
+**Saw:** a table header rendering `LARGEST |(B − G) − 1| ACROSS THE 128 UNITS` — capital *B* and *G* —
+sitting directly beneath a callout that spends a paragraph explaining what the lowercase *b* and *g*
+are and warning they must not be confused with γ and β.
+
+**Cause:** a blanket `th{text-transform:uppercase}`, which is a perfectly reasonable typographic
+choice for prose headers, reaching an `<em>` holding a mathematical symbol. In maths, source code and
+gene names, case *is* the identity — `b` and `B` are different objects — so a presentational transform
+silently renamed the thing the page was about.
+
+**Why neither review method catches it:** the HTML is right (`<em>b</em>` is exactly what the author
+typed), so reading the source shows the correct symbol. The CSS is right in isolation. The defect
+exists only in the composed output, and a screenshot scan reads `B` as a plausible symbol rather than
+as a corrupted `b` unless the reviewer knows which one the page meant.
+
+**Rule:** any `text-transform` that changes case must exclude the elements that carry identifiers —
+`th em, th code, th .sym {text-transform:none}` — or not be applied to that header at all. The same
+applies to `font-variant:small-caps`, which flattens case visually while leaving it in the DOM.
+
+**Verifying a fix:** assert `getComputedStyle(el).textTransform === 'none'` on every element inside a
+transformed header that carries a symbol, and read the rendered header back against the source string.
+
 ## Related
 
 - [`artifact_generation_guide`](artifact_generation_guide.md) — the wider guide: content, claims,
