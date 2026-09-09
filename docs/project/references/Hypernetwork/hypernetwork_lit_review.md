@@ -1756,9 +1756,14 @@ $$
     42.9% test success) and a *2-fold* improvement on ML10 (10.2% →
     23.9%). RL2 with Bias-HyperInit also doubles ML10 success (7.2% →
     14.2%).
-  - **FiLM is also improved by Bias-HyperInit** (Pick-Place 5.5% → 25.5%),
-    showing the init scheme generalises to any conditional architecture
-    where a hypernet outputs scaling/bias parameters.
+  - **FiLM is also improved by Bias-HyperInit** (Pick-Place 5.5% → **34.2 ±
+    15.9%**), showing the init scheme generalises to any conditional
+    architecture where a hypernet outputs scaling/bias parameters.
+    <!-- CORRECTED 2026-09-09: this line previously read "5.5% → 25.5%".
+         25.5 ± 14.5 is the HYPERNETWORK + HFI row, not a FiLM row. See the
+         Table 2 correction note at the end of this document. -->
+
+> ⚠️ **Table 2 was misread in an earlier pass — see [the correction note](#correction-2026-09-09--table-2-of-beck-et-al-was-misread) at the end of this document before quoting any number from it.**
   - **Network-size scan (Figure 3).** Hypernet matches or beats standard
     architecture across base-policy sizes from XS to XL on Cheetah-Dir
     and Walker, *and* matches or beats it for equivalent total
@@ -1941,13 +1946,37 @@ practice the embedding is rarely close to one-hot.
 #### Hypernet vs. FiLM under Bias-HyperInit (Table 2)
 
 The most concrete result for the project is the FiLM ablation. Under
-default init, FiLM-VariBAD on Pick-Place gets 5.5% test success. Under
-Bias-HyperInit, it gets 25.5%. So even in FiLM — where only the
-$(\gamma, \beta)$ parameters are generated — the same init pathology
-applies and the same fix works. *Hypernet-VariBAD with Bias-HyperInit
-beats FiLM-VariBAD with Bias-HyperInit (42.9% vs. 25.5%)*, supporting
-Galanti & Wolf's modularity argument: generating *all* parameters beats
-generating only $(\gamma, \beta)$.
+default (Normc) init, FiLM-VariBAD on Pick-Place gets 5.5 ± 4.8% test
+success. Under Bias-HyperInit, it gets **34.2 ± 15.9%**. So even in FiLM —
+where only the $(\gamma, \beta)$ parameters are generated — the same init
+pathology applies and the same fix works, and the size of that fix is
+large: a roughly **six-fold** swing from re-initialising the *same*
+architecture.
+
+The like-for-like architecture comparison is **hypernet 42.9 ± 16.3% vs
+FiLM 34.2 ± 15.9%**, both under Bias-HyperInit, over ten seeds. Those
+intervals overlap heavily, so this is an **8.7-point difference that the
+paper does not establish as significant** — it is suggestive of Galanti &
+Wolf's modularity argument, not a demonstration of it. The paper's own
+summary sentence is consistent with this reading: *"Bias-HyperInit improves
+the FiLM architecture and exceeds the performance of HFI."*
+
+Note also that the ordering **reverses** on ML10, where hypernet + HFI
+(28.4 ± 6.0) beats hypernet + Bias-HyperInit (23.9 ± 6.2).
+
+**What Table 2 supports is that initialisation dominates architecture**:
+re-initialising FiLM moves it 5.5 → 34.2, while changing the architecture
+from FiLM to a full hypernetwork under a fixed initialisation moves it
+34.2 → 42.9 with overlapping error bars.
+
+<!-- CORRECTED 2026-09-09. This section previously read: "Under Bias-HyperInit,
+     it [FiLM] gets 25.5% ... Hypernet-VariBAD with Bias-HyperInit beats
+     FiLM-VariBAD with Bias-HyperInit (42.9% vs. 25.5%)". See the correction
+     note at the end of this document for how the table was misread. -->
+
+> ⚠️ **These numbers were corrected on 2026-09-09** — see [the correction
+> note](#correction-2026-09-09--table-2-of-beck-et-al-was-misread) at the end
+> of this document.
 
 #### Network-size analysis (Figure 3)
 
@@ -2713,3 +2742,63 @@ empirical question.
   configuration) and wants to distil them into a single
   precision-conditioned policy, Paper 7's HyperZero framework + TD
   regulariser is the right starting recipe.
+
+---
+
+## Correction 2026-09-09 — Table 2 of Beck et al. was misread
+
+**Signed:** `literature-reviewer` (re-extraction) + top-level Claude (verification),
+2026-09-09. Session: https://claude.ai/code/session_01V9JvujapBYcQGKEwcTREgu
+
+An earlier pass of this document reported the paper's Table 2 (ML1 Pick-Place, ML10 and
+RL², test success rate, ten seeds) as showing **FiLM 5.5% → 25.5%** under Bias-HyperInit and
+a decisive **42.9% vs 25.5%** win for hypernetworks over FiLM. That reading was wrong in
+three places. The table was re-extracted from the held PDF with coordinate-preserving
+extraction and checked against the paper's own prose.
+
+### What the table actually says
+
+| Architecture | Initialisation | ML1 Pick-Place | ML10 | RL² on ML10 |
+|---|---|---|---|---|
+| Standard (no modulation at all) | — | 4.4 ± 2.4 | 10.2 ± 3.0 | 7.2 ± 5.0 |
+| FiLM | Normc (default) | 5.5 ± 4.8 | — | — |
+| **FiLM** | **Bias-HyperInit** | **34.2 ± 15.9** | — | — |
+| Hypernetwork | HFI | 25.5 ± 14.5 | 28.4 ± 6.0 | 7.1 ± 2.4 |
+| **Hypernetwork** | **Bias-HyperInit** | **42.9 ± 16.3** | 23.9 ± 6.2 | 14.2 ± 7.2 |
+
+### The three errors
+
+1. **`25.5` was read as FiLM + Bias-HyperInit. It is Hypernetwork + HFI.** The tell is in
+   the columns: the FiLM rows carry `—` in the ML10 and RL² columns because FiLM was only
+   run on Pick-Place, while the row scoring 25.5 has values in all three columns. FiLM under
+   Bias-HyperInit is **34.2 ± 15.9**.
+2. **`4.4` was read as a hypernetwork under default initialisation.** It is the **Standard**
+   architecture — no modulation of any kind — so the "9-fold improvement" compares a
+   hypernetwork against an unmodulated baseline, not against a badly-initialised hypernetwork.
+3. **The architecture gap was reported as decisive.** Like-for-like it is 42.9 ± 16.3 vs
+   34.2 ± 15.9 over ten seeds: an 8.7-point difference with heavily overlapping intervals,
+   which the paper does not claim as significant. On ML10 the ordering **reverses** (HFI 28.4
+   beats Bias-HyperInit 23.9), which the earlier framing omitted.
+
+### Why it matters
+
+This was the corpus's only clean FiLM-versus-hypernetwork comparison, and several downstream
+documents leaned on it as *the* evidence that generating all parameters beats generating only
+`(γ, β)`. Corrected, the table supports a different and better-evidenced claim:
+**initialisation dominates architecture.** Re-initialising FiLM moves it 5.5 → 34.2 (a ~6×
+swing on a fixed architecture); switching architecture under a fixed initialisation moves it
+34.2 → 42.9 with overlapping error bars.
+
+Anything that cited "42.9 vs 25.5" as a decisive architecture result should be re-read. The
+practical consequence for any future FiLM-versus-hypernetwork experiment is unchanged and now
+better supported: **apply Bias-HyperInit to both arms**, or the comparison measures
+initialisation rather than architecture.
+
+### How the misread happened, so the next reader avoids it
+
+The table uses a block layout in which the architecture name (`FiLM`, `Hypernetwork`) sits on
+its own line as a spanning label above two initialisation rows. Linear text extraction emits
+that label, then both of its rows, then the next label — so a row can appear to belong to the
+block printed above it when it belongs to the block below. **Any table with spanning row
+labels should be read from a coordinate-preserving extraction, or from the rendered page, and
+never from linear `extract_text()` output.**
