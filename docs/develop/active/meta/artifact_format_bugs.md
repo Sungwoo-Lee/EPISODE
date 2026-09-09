@@ -53,6 +53,15 @@ agent, which runs the tool, reads this register, and looks at the rendering.
   is fast. Text layout is identical; anything about the image content itself is not tested.
 - It knows nothing about whether the design is good, whether a colour means two different things,
   or whether an axis label is wrong. Those need a reader.
+- **It does not tell you whether the web fonts actually loaded.** A page measured under the DejaVu
+  fallback has different metrics from the same page under its real faces, so a `min-width` floor
+  derived in a fallback render can be wrong on every reader's screen. Probe `document.fonts` for
+  `status === 'loaded'` on each declared family before trusting any width measurement
+  (see [F35](#f35), whose floor-vs-content check is only as good as the face it was measured in).
+- **`--out` is a shared directory, not a per-page one.** Two pages checked into the same `--out`
+  overwrite each other's screenshots, and the second review then reads the first page's rendering.
+  Give each page its own directory — `tmp/artifact_layout_<page>` — whenever more than one page is
+  in flight, which on this project is most of the time.
 
 ---
 
@@ -824,6 +833,34 @@ The measurement-bound version is also right in a way no breakpoint can be: the f
 depends on the monospace face the *reader's* browser resolves, which is not the one the page was
 measured in. A breakpoint derived on this machine encodes this machine's font metrics.
 
+### F32 amendment — a derivation comment that does not sum to the breakpoint it justifies
+
+**Saw:** three tables clipping their right-hand column across a 2px band (602–603px) with no scroll
+cue, on a page whose CSS carried a comment explaining exactly why the cue sat where it did.
+
+**Cause:** the comment read *"scroll box is W-82 (20 wrap + 20 card padding + 1 border, each side)"*
+and then used `520+84 = 604` two lines later. The arithmetic in the prose and the arithmetic in the
+rule disagreed by 2px, and the rule was the one that was right: the `.scroll` element has its own
+1px border, and `clientWidth` excludes it, so the box is `W-84`. The author had measured correctly
+and then written down a term short.
+
+**Why neither review method catches it:** the comment *looks* like a derivation, so a reader
+checking the breakpoint reads it and moves on — that is the entire purpose F32 gives it. A geometry
+checker never reads comments at all. The defect is that the justification and the thing it justifies
+were never actually reconciled, and nothing in either review method reconciles them.
+
+**Rule:** [F32](#f32) requires the derivation to sit beside the breakpoint "so it can be checked
+rather than trusted". Extend that: the derivation must **sum to the number in the rule**. A comment
+whose terms do not add up to the constant beneath it is worse than no comment, because it converts
+a checkable claim into a trusted one. Include every border in the sum — the container's *and* the
+scroll box's own — and state the measured `clientWidth` at the boundary width so the claim is
+falsifiable against a render rather than against the author's addition.
+
+**Verifying a fix:** probe `clientWidth` at the boundary and assert it equals the declared floor
+exactly; then sweep widths asserting `cueVisible == (scrollWidth > clientWidth)`. A 2px band is
+invisible at the usual 500/560/610/834/1440 checkpoints — it needs the boundary itself, and the
+width either side of it, in the sweep.
+
 ### F11, second amendment — a figure that borrows the page's *status* palette
 
 The original F11 and its first amendment forbid the page's chrome from using the data colours. This
@@ -919,6 +956,26 @@ box's own measured `clientWidth`, not from the column's.
 **Verifying a fix:** for every table, assert its declared floor is no greater than its `max-content`
 width plus whatever headroom was intended; and for every `.scroll`, assert `cueVisible ==
 (scrollWidth > clientWidth)` at a sweep of widths rather than at two checkpoints.
+
+### F34 amendment — a scroll cue that counts hidden columns, defeated by the mid-value clip
+
+**Saw:** a cue reading *"2 columns hidden — scroll sideways"* under a table where the clip edge fell
+inside a value, so the reader saw `0.207 ± 0.11` where the data said `0.207 ± 0.111`. Three columns
+were visible and the third was wrong; the cue's count was right and its implication was not.
+
+**Cause:** the cue described the *layout* (how many columns did not fit) when the reader's problem
+is the *data* (a number on screen is a truncation). F34's own mid-value trap and the cue wording
+were written at different times and never reconciled: the register knew the clip lands mid-value,
+and the cue still promised that everything shown was intact.
+
+**Why neither review method catches it:** the cue is present, styled, and numerically accurate, so
+it passes a static read; the geometry checker only asks whether a cue exists when a box overflows,
+which it does. Only reading a rendered value against the source shows the miscount.
+
+**Rule:** a scroll cue warns that **the visible values may be cut**, never how many columns are
+missing. Wording that survives every clip position: *"Wider than the screen — scroll sideways; the
+right-hand column is cut off."* A count is also a maintenance liability — it is a hand-typed
+constant that silently goes stale the next time a column is added.
 
 ### F35 — a shared `min-width` floor SMALLER than a table's content, where a value takes the hit
 
