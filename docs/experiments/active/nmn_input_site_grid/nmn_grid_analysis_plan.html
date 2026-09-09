@@ -239,6 +239,40 @@ details pre{margin:12px 0;max-width:none;padding:16px 14px}
    are what centre it. The shorthand zeroes them and drops the entire section 175px out of column. */
 .terms{margin-top:26px;margin-bottom:26px}
 .terms h3{margin:30px 0 12px}
+
+/* ---------- full-size figure viewer ----------
+   Every figure here is rendered far above its display width, so the detail is genuinely present
+   and the page simply cannot show it in a 730px column. The `.figscroll` box below keeps the
+   in-page view legible for a reader who scrolls; this gives the other reader the whole figure at
+   its true pixel size. Ported from the sensor-ladder page, where it already existed -- it had
+   never been written into the artifact guide, so it did not travel with the rest of the pattern. */
+figure img{cursor:zoom-in}
+figure img:focus-visible{outline:2px solid var(--ink);outline-offset:3px}
+.zoomhint{font-family:var(--mono);font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;
+  color:var(--muted);margin:9px 0 0;text-align:right;max-width:730px;margin-left:auto;
+  margin-right:auto}
+.lb{position:fixed;inset:0;z-index:99;background:rgba(12,12,14,.93);display:flex;
+  flex-direction:column}
+/* An author `display` rule beats the UA's [hidden]{display:none} unless the host marks its own
+   rule !important. Never rely on the host: state it here. */
+.lb[hidden]{display:none!important}
+.lb-bar{display:flex;align-items:center;gap:16px;padding:12px 18px;flex:0 0 auto;
+  border-bottom:1px solid rgba(255,255,255,.13);color:#e9e6e1;font-size:13.5px}
+.lb-bar .t{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+  font-family:var(--sans)}
+.lb-bar .px{font-family:var(--mono);font-size:11.5px;color:#9b968e;flex:0 0 auto}
+.lb-bar button{font:inherit;font-size:12.5px;background:rgba(255,255,255,.1);color:#e9e6e1;
+  border:1px solid rgba(255,255,255,.2);border-radius:4px;padding:5px 12px;cursor:pointer;
+  flex:0 0 auto}
+.lb-bar button:hover{background:rgba(255,255,255,.18)}
+.lb-bar button:focus-visible{outline:2px solid #7fd0a5;outline-offset:2px}
+.lb-scroll{flex:1 1 auto;overflow:auto;display:grid;place-items:center;padding:18px}
+.lb-scroll img{display:block;background:#fff;border-radius:3px}
+.lb.fit .lb-scroll img{max-width:100%;max-height:100%;width:auto;height:auto;cursor:zoom-in}
+.lb.actual .lb-scroll{place-items:start}
+.lb.actual .lb-scroll img{max-width:none;max-height:none;cursor:zoom-out}
+@media (prefers-reduced-motion:no-preference){.lb{animation:lbin .14s ease-out}}
+@keyframes lbin{from{opacity:0}to{opacity:1}}
 </style>
 
 <div class="wrap">
@@ -1829,3 +1863,79 @@ pre-registration for the twin:
 <code>docs/experiments/active/nmn_input_site_grid/NMN_INPUT_SITE_GRID_GAENORM.md</code>.</p>
 </div>
 </div>
+
+<div class="lb fit" id="lb" hidden role="dialog" aria-modal="true" aria-label="Full-size figure">
+  <div class="lb-bar">
+    <span class="t" id="lb-t"></span>
+    <span class="px" id="lb-px"></span>
+    <button type="button" id="lb-zoom">Actual size</button>
+    <button type="button" id="lb-x">Close &nbsp;Esc</button>
+  </div>
+  <div class="lb-scroll" id="lb-s"><img id="lb-img" alt=""></div>
+</div>
+
+<script>
+(function () {
+  var lb = document.getElementById('lb'), img = document.getElementById('lb-img'),
+      ttl = document.getElementById('lb-t'), px = document.getElementById('lb-px'),
+      zoom = document.getElementById('lb-zoom'), shut = document.getElementById('lb-x'),
+      scroll = document.getElementById('lb-s'), opener = null;
+
+  function setMode(actual) {
+    lb.classList.toggle('actual', actual);
+    lb.classList.toggle('fit', !actual);
+    zoom.textContent = actual ? 'Fit to window' : 'Actual size';
+    if (actual) { scroll.scrollLeft = (scroll.scrollWidth - scroll.clientWidth) / 2; }
+  }
+  function open(src, caption, el) {
+    opener = el;
+    img.src = src;
+    img.alt = el.alt || '';
+    ttl.textContent = caption;
+    px.textContent = el.naturalWidth ? el.naturalWidth + ' x ' + el.naturalHeight + ' px' : '';
+    setMode(false);
+    lb.hidden = false;
+    document.body.style.overflow = 'hidden';
+    shut.focus();
+  }
+  function close() {
+    lb.hidden = true;
+    img.removeAttribute('src');
+    document.body.style.overflow = '';
+    if (opener) { opener.focus(); opener = null; }
+  }
+
+  Array.prototype.forEach.call(document.querySelectorAll('figure img'), function (el) {
+    var fig = el.closest('figure');
+    var cap = fig ? fig.querySelector('figcaption') : null;
+    var label = cap ? cap.textContent.trim().replace(/\s+/g, ' ') : 'Figure';
+    el.tabIndex = 0;
+    el.setAttribute('role', 'button');
+    el.setAttribute('aria-label', 'Open full size: ' + label.slice(0, 90));
+    el.addEventListener('click', function () { open(el.src, label, el); });
+    el.addEventListener('keydown', function (e) {
+      if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); open(el.src, label, el); }
+    });
+    if (cap) {
+      var hint = document.createElement('p');
+      hint.className = 'zoomhint';
+      hint.textContent = 'Click the figure to view it full size';
+      fig.insertBefore(hint, cap);
+    }
+  });
+
+  zoom.addEventListener('click', function () { setMode(!lb.classList.contains('actual')); });
+  img.addEventListener('click', function () { setMode(!lb.classList.contains('actual')); });
+  shut.addEventListener('click', close);
+  lb.addEventListener('click', function (e) { if (e.target === lb || e.target === scroll) close(); });
+  document.addEventListener('keydown', function (e) {
+    if (lb.hidden) return;
+    if (e.key === 'Escape') close();
+    if (e.key === 'Tab') {
+      var f = [zoom, shut], i = f.indexOf(document.activeElement);
+      e.preventDefault();
+      f[(i + (e.shiftKey ? f.length - 1 : 1)) % f.length].focus();
+    }
+  });
+})();
+</script>

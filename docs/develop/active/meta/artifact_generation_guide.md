@@ -105,6 +105,33 @@ heights across panels, which is wrong. Say "compare shapes, not heights" on the 
 Three rotated axis titles overflowed their plot height, one by more than double. Estimate
 `chars × 0.55 × font-size` against the available span and keep under ~90%.
 
+### 2.6 Every raster figure opens at full size, on click (2026-09-09)
+
+A figure is rendered far above the width it is displayed at — typically 1500–2300 px into a 730 px
+column. The detail is genuinely in the file; the page simply cannot show it. So **every raster
+figure on a results artifact must be clickable, opening a viewer that shows it fitted to the window
+and, on a second click, at its true pixel size with the surrounding box scrollable.** Give it a
+keyboard route (`tabIndex`, Enter/Space, Escape to close, focus returned to the figure), an
+`aria-label` naming the figure, and a one-line hint above the caption saying it can be opened.
+
+This is not the same as the author-side rule in §6 item 42 ("open the rendered file, at full size,
+every time" — that is about catching a clipped label before shipping). This one is about the reader.
+
+**Why it is written here rather than left to each page.** The viewer was built once, for the
+sensor-ladder artifact, and worked. It was never written down, so it did not travel: the next
+results page built from the same pattern reinvented a weaker answer to the same problem — a
+horizontal-scroll box with a `min-width` floor, which keeps a phone reader scrolling a strip of a
+figure instead of letting them see the whole thing. A pattern that lives only in one file's
+implementation is not a pattern; it is a thing that happened once.
+
+The scroll box and the viewer are complements, not alternatives: the box keeps the in-page view
+legible for a reader who does not want a modal, and the viewer serves the reader who wants the whole
+figure. A page may carry both.
+
+**Reference implementation:** `docs/experiments/active/sensor_ladder/sensor_ladder.html` — 18 CSS
+rules (`.lb*`, `.zoomhint`, `figure img{cursor:zoom-in}`), one markup block, one script. Copy it;
+adapt only the colour tokens, and check the page actually defines every token the copy references.
+
 ### 2.5 An internal analysis wants more figures than an introduction
 
 The reader asked for this directly. A results document is not a landing page; it should show the
@@ -345,6 +372,7 @@ the pattern span them. The build check now catches this class regardless.
 - [ ] Known weaknesses are stated, not only strengths
 - [ ] Corrections made during the work are recorded
 - [ ] One script per figure, and the merge step fails loudly
+- [ ] Every raster figure opens at full size on click, with a keyboard route and a hint (§2.6)
 - [ ] Every interpretive claim has a result that would have falsified it
 - [ ] The HTML has been **rebuilt** since the last source edit, and republished
 - [ ] Every headline count recomputed from the data, not carried forward
