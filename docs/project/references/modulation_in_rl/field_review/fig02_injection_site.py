@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-"""Figure 4 — where in a reinforcement-learning agent the modulation is injected.
+"""Figure 2 — where in a reinforcement-learning agent the modulation is injected.
 
 Question: an actor-critic agent has several places conditioning could enter — the perceptual
 encoder, the shared trunk, the actor, the critic, the world model — and the corpus disagrees
@@ -54,7 +54,7 @@ ax.set_ylim(0, max(vals) * 1.18)
 ax.yaxis.grid(True, color=S.GRID, linewidth=0.8)
 ax.set_axisbelow(True)
 
-S.record_samples("fig04_injection_site", [
+S.record_samples("fig02_injection_site", [
     {"what": "RL papers whose injection-site cell names a site",
      "used": len(rl), "total": len(rows),
      "note": "excludes non-RL papers and theory papers with no site to name"},
@@ -64,4 +64,4 @@ S.record_samples("fig04_injection_site", [
      "note": "the corpus carries one older report that critic modulation is unstable and "
              "several newer ones that it helps; this is the count behind that dispute"},
 ])
-S.finish(fig, "fig04_injection_site")
+S.finish(fig, "fig02_injection_site")

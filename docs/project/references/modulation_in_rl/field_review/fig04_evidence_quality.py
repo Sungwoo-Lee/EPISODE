@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-"""Figure 2 — how much of the RL evidence you can actually lean on.
+"""Figure 4 — how much of the RL evidence you can actually lean on.
 
 Question: the field cites modulation constantly, but how often does a paper isolate what the
 modulation contributes, and how often is that paper refereed? This is the figure the review
@@ -62,7 +62,7 @@ fig.text(0.005, -0.04,
          fontsize=8.5, color=S.MUTED, ha="left")
 fig.tight_layout(rect=(0, 0, 1, 0.94))
 
-S.record_samples("fig02_evidence_quality", [
+S.record_samples("fig04_evidence_quality", [
     {"what": "papers whose RL-algorithm column names a learning algorithm",
      "used": len(rl), "total": len(rows),
      "note": "imitation-learning and vision papers are excluded; they carry the mechanism "
@@ -71,4 +71,4 @@ S.record_samples("fig02_evidence_quality", [
      "used": claims.get("ablated", 0), "total": len(rl),
      "note": "the subset a quantitative claim in this review is allowed to rest on"},
 ])
-S.finish(fig, "fig02_evidence_quality")
+S.finish(fig, "fig04_evidence_quality")

@@ -8,20 +8,20 @@
       "pct": 99.0
     }
   ],
-  "fig02_evidence_quality": [
+  "fig02_injection_site": [
     {
-      "what": "papers whose RL-algorithm column names a learning algorithm",
+      "what": "RL papers whose injection-site cell names a site",
       "used": 52,
       "total": 98,
-      "note": "imitation-learning and vision papers are excluded; they carry the mechanism lineage but cannot speak to whether modulation helps an RL agent",
+      "note": "excludes non-RL papers and theory papers with no site to name",
       "pct": 53.1
     },
     {
-      "what": "of those, ablations with no reviewer hedge against them",
-      "used": 31,
+      "what": "of those, papers modulating a critic (alone or with the actor)",
+      "used": 20,
       "total": 52,
-      "note": "the subset a quantitative claim in this review is allowed to rest on",
-      "pct": 59.6
+      "note": "the corpus carries one older report that critic modulation is unstable and several newer ones that it helps; this is the count behind that dispute",
+      "pct": 38.5
     }
   ],
   "fig03_what_the_modulator_reads": [
@@ -40,20 +40,20 @@
       "pct": 55.3
     }
   ],
-  "fig04_injection_site": [
+  "fig04_evidence_quality": [
     {
-      "what": "RL papers whose injection-site cell names a site",
+      "what": "papers whose RL-algorithm column names a learning algorithm",
       "used": 52,
       "total": 98,
-      "note": "excludes non-RL papers and theory papers with no site to name",
+      "note": "imitation-learning and vision papers are excluded; they carry the mechanism lineage but cannot speak to whether modulation helps an RL agent",
       "pct": 53.1
     },
     {
-      "what": "of those, papers modulating a critic (alone or with the actor)",
-      "used": 20,
+      "what": "of those, ablations with no reviewer hedge against them",
+      "used": 31,
       "total": 52,
-      "note": "the corpus carries one older report that critic modulation is unstable and several newer ones that it helps; this is the count behind that dispute",
-      "pct": 38.5
+      "note": "the subset a quantitative claim in this review is allowed to rest on",
+      "pct": 59.6
     }
   ]
 }
