@@ -70,6 +70,41 @@ def corpus_stats() -> dict[str, str]:
     }
 
 
+def references_block() -> tuple[str, dict[str, int], int]:
+    """Render the full reference list, and return the key -> number map for in-text cites.
+
+    Every corpus row gets an entry, so the list length equals the paper count quoted in the
+    statistics. Entries whose PDF the library holds print the full title recovered from the
+    filename; entries it does not hold print the digest's label and say so, because a reader
+    is entitled to know which entries are first-hand.
+    """
+    refs = json.loads((HERE / "references.json").read_text())
+    nums = {e["key"]: e["num"] for e in refs}
+    cov = {e["key"]: e for e in json.loads((HERE / "review_coverage.json").read_text())}
+    LEVEL = {"per-paper": ("read", "reviewed in full, own review file"),
+             "master": ("read", "reviewed in full, inside a topic review"),
+             "pending": ("read", "reviewed in full this session, merge pending"),
+             "catalogued": ("cited", "catalogued from a survey; not read end-to-end")}
+    items = []
+    for e in refs:
+        lvl, tip = LEVEL[cov[e["key"]]["level"]]
+        title = e["title"] or "<i>title as recorded by the digest</i>"
+        ident = f" <span class='id'>{e['identifier']}</span>" if e["identifier"] else ""
+        topic = f" <span class='topic'>{e['topic']}</span>" if e["topic"] else ""
+        held = "" if e["held"] else " <span class='nothold'>not held in this library</span>"
+        # Each entry is a small BLOCK, not one flowing paragraph. As inline spans with
+        # inline-block badges, the badges' top margin pulled them into the line above and
+        # the renderer reported 22 genuine text overlaps.
+        items.append(
+            f"<li id='ref-{e['key']}' value='{e['num']}'>"
+            f"<span class='l1'><span class='au'>{e['authors']}</span> ({e['year']}). "
+            f"<span class='ti'>{title}</span>.</span>"
+            f"<span class='l2'>{e['venue']}</span>"
+            f"<span class='tags'>{ident}{topic}{held}"
+            f"<span class='lvl lvl-{lvl}'>{tip}</span></span></li>")
+    return "<ol class='refs'>" + "".join(items) + "</ol>", nums, len(refs)
+
+
 def fig1_years() -> dict[str, str]:
     meta = json.loads((FIGDIR / "_fig01_meta.json").read_text())
     return {"FIG1_YEAR_MIN": str(meta["year_min"]), "FIG1_YEAR_MAX": str(meta["year_max"])}
@@ -114,9 +149,37 @@ def main() -> int:
     for stem in sorted(re.findall(r"\{\{SAMPLES:([a-z0-9_]+)\}\}", html)):
         html = html.replace(f"{{{{SAMPLES:{stem}}}}}", samples_block(stem, samples))
 
+    # --- references -------------------------------------------------------------------
+    refs_html, ref_nums, n_refs = references_block()
+    cov = json.loads((HERE / "review_coverage.json").read_text())
+    refs_meta = json.loads((HERE / "references.json").read_text())
+    lv = Counter(e["level"] for e in cov)
+    for k, v in {
+        "N_PER_PAPER": lv["per-paper"], "N_MASTER": lv["master"],
+        "N_PENDING": lv["pending"], "N_CATALOGUED": lv["catalogued"],
+        "N_READ": lv["per-paper"] + lv["master"] + lv["pending"],
+        "N_NOT_HELD": sum(1 for e in refs_meta if not e["held"]),
+    }.items():
+        html = html.replace(f"{{{{{k}}}}}", str(v))
+    html = html.replace("{{REFERENCES}}", refs_html)
+
+    # Resolve {{CITE:key}} to a numbered, linked citation.
+    for key in sorted(set(re.findall(r"\{\{CITE:([a-z0-9_]+)\}\}", html))):
+        if key not in ref_nums:
+            die(f"citation to unknown reference key: {key}")
+        html = html.replace(
+            f"{{{{CITE:{key}}}}}",
+            f"<a class='cite' href='#ref-{key}'>{ref_nums[key]}</a>")
+
     # --- corpus counts ---------------------------------------------------------------
     for k, v in {**corpus_stats(), **fig1_years()}.items():
         html = html.replace(f"{{{{{k}}}}}", v)
+
+    # The reference list must BE the corpus, not a selection from it — the page quotes
+    # statistics over the same set a few screens above.
+    n_papers = int(corpus_stats()["N_PAPERS"])
+    if n_refs != n_papers:
+        die(f"reference list has {n_refs} entries but the corpus has {n_papers} papers")
 
     leftover = re.findall(r"\{\{([A-Z0-9_:a-z]+)\}\}", html)
     if leftover:

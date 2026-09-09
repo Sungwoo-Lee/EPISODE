@@ -1,7 +1,7 @@
 {
   "n_rows_parsed": 127,
-  "n_distinct_papers": 98,
-  "n_merged_across_digests": 28,
+  "n_distinct_papers": 97,
+  "n_merged_across_digests": 29,
   "rows_per_source_file": {
     "digest_film.md": 64,
     "digest_hypernet.md": 20,
@@ -16,9 +16,9 @@
   },
   "mechanism_counts": {
     "other": 14,
-    "concatenation": 12,
+    "concatenation": 13,
     "routing": 11,
-    "hypernetwork": 21,
+    "hypernetwork": 19,
     "FiLM": 31,
     "attention": 6,
     "plasticity": 3
@@ -26,28 +26,28 @@
   "venue_tier_counts": {
     "other-peer-reviewed": 6,
     "top-tier": 51,
-    "preprint": 32,
+    "preprint": 31,
     "workshop": 3,
     "unclassified": 6
   },
   "claim_counts": {
-    "asserted": 17,
-    "ablated": 58,
+    "asserted": 18,
+    "ablated": 57,
     "no-experiment": 10,
-    "ablated-qualified": 10,
+    "ablated-qualified": 9,
     "unclassified": 3
   },
   "rl_counts": {
-    "RL": 52,
+    "RL": 51,
     "not RL": 46
   },
   "site_counts": {
-    "other": 22,
-    "generated weights": 12,
+    "other": 23,
+    "generated weights": 11,
     "trunk / all blocks": 18,
     "encoder": 6,
     "n/a": 5,
-    "actor + critic": 15,
+    "actor + critic": 14,
     "critic only": 11,
     "actor only": 8,
     "world model": 1
@@ -61,7 +61,7 @@
     "index / noise (not a task signal)": 4,
     "observation (raw)": 8,
     "algorithmic knob": 4,
-    "physical parameters": 6,
+    "physical parameters": 5,
     "inferred belief / latent": 10,
     "denoising timestep": 7,
     "exogenous phase / clock": 1
@@ -75,7 +75,7 @@
     "inferred belief / latent": 9,
     "observation (raw)": 5,
     "denoising timestep": 1,
-    "physical parameters": 3,
+    "physical parameters": 2,
     "exogenous phase / clock": 1
   },
   "year_range": [

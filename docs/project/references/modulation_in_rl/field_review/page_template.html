@@ -271,6 +271,31 @@ tbody tr:last-child td{border-bottom:0}
   .ledger > div + div{border-left:0;border-top:1px solid var(--rule)}
 }
 
+/* ---------- citations + references ---------- */
+a.cite{font-family:var(--mono);font-size:.72em;line-height:0;vertical-align:super;
+  text-decoration:none;color:var(--accent);background:var(--accent-soft);
+  padding:.18em .34em;border-radius:3px;margin-left:1px;white-space:nowrap}
+a.cite:hover{text-decoration:underline}
+a.cite::before{content:"["} a.cite::after{content:"]"}
+ol.refs{list-style:decimal;padding-left:2.7em;margin:24px 0 0;font-size:14px}
+ol.refs li{margin:0 0 15px;padding-left:2px;scroll-margin-top:24px;
+  display:flex;flex-direction:column;gap:2px;min-width:0}
+ol.refs li:target{background:var(--accent-soft);border-radius:4px;
+  box-shadow:0 0 0 6px var(--accent-soft)}
+ol.refs .l1{line-height:1.5;min-width:0}
+ol.refs .l2{color:var(--muted);font-size:13.2px;line-height:1.45;min-width:0}
+ol.refs .tags{display:flex;flex-wrap:wrap;gap:5px;margin-top:3px;min-width:0}
+ol.refs .au{font-weight:600}
+ol.refs .ti{font-style:italic}
+ol.refs .id,ol.refs .topic,ol.refs .lvl,ol.refs .nothold{font-family:var(--mono);
+  font-size:10.5px;letter-spacing:.03em;padding:.15em .4em;border-radius:3px;
+  white-space:nowrap;flex:0 0 auto}
+ol.refs .id{background:var(--accent-soft);color:var(--accent)}
+ol.refs .topic{border:1px solid var(--rule);color:var(--muted)}
+ol.refs .nothold{background:var(--warn-bg);color:var(--warn-text)}
+ol.refs .lvl-read{border:1px solid var(--rule);color:var(--muted)}
+ol.refs .lvl-cited{background:var(--warn-bg);color:var(--warn-text)}
+
 /* ---------- footer ---------- */
 .foot{margin-top:70px;padding-top:26px;border-top:1px solid var(--rule-strong);
   font-family:var(--mono);font-size:11.5px;line-height:1.75;color:var(--muted)}
@@ -464,7 +489,7 @@ economic argument for FiLM over generating weights, and it is why the operator s
 at scales where full weight generation is impossible.</p>
 
 <p><strong>The gain does nearly all the work.</strong> In the paper that named the
-family, freezing &gamma; at its training-set mean cost <strong>65.4 points</strong> of
+family, freezing &gamma; at its training-set mean cost <strong>65.4 points</strong>{{CITE:perez_2018_film}} of
 accuracy; freezing &beta; cost <strong>1.0</strong>. About 36% of the learned gains
 were negative &mdash; the operator is not merely "turning things up", it is also
 inverting and suppressing them. Bounding the gain with a sigmoid, a hyperbolic tangent
@@ -480,7 +505,7 @@ architectural choice on this page.</p>
 
 <div class="callout">
   <h5>A distinction worth keeping</h5>
-  <p>Not everything called neuromodulation belongs on this operator. One line of work
+  <p>Not everything called neuromodulation belongs on this operator. One line of work{{CITE:miconi_2019_backpropamin}}
   gates <em>plasticity</em> &mdash; a scalar multiplies the <em>weight update</em>, so
   the network's state changes in weight space and persists. FiLM is stateless: it
   changes activations for the current forward pass and leaves nothing behind. Grouping
@@ -515,7 +540,7 @@ optimisation problem.</p>
       &mdash; a real expressive limit, and also a structural immunity to gains blowing
       up.</p>
       <span class="who">Gated-attention language grounding; the neuromodulatory gate in
-      continual-learning architectures.</span>
+      continual-learning architectures{{CITE:beaulieu_2020_anml}}.</span>
     </div>
   </div>
   <div class="rung" style="--tone:var(--m-film)">
@@ -525,7 +550,7 @@ optimisation problem.</p>
       <p class="cost">cost: two numbers per channel</p>
       <p>The full affine operator, with an unrestricted signed gain. Folded into a
       normalisation layer it is called adaLN and is the default conditioning primitive
-      of modern robot action heads.</p>
+      of modern robot action heads{{CITE:reuss_2025_flower}}.</p>
       <span class="who">The largest group in this corpus: {{N_FILM_RL}} of the
       {{N_RL}} reinforcement-learning papers.</span>
     </div>
@@ -538,7 +563,7 @@ optimisation problem.</p>
       <p>The first rung that genuinely changes the weights rather than the
       activations, while refusing to pay for all of them. Attention itself lands here:
       multi-head attention is provably a <em>linear</em> hypernetwork composing a fixed
-      basis, and at one head it degenerates to exactly a scalar gain.</p>
+      basis{{CITE:schug_2025_attention}}, and at one head it degenerates to exactly a scalar gain.</p>
       <span class="who">LoRA-style adapters; generated adapter modules inside a policy;
       dynamic predictive coding.</span>
     </div>
@@ -550,7 +575,7 @@ optimisation problem.</p>
       <p class="cost">cost: the generator's output layer is (hidden &times; all target weights)</p>
       <p>Emit every weight of the target network. Expressive, and structurally capped:
       at ResNet-50 scale the output layer alone would hold on the order of 10<sup>9</sup>
-      parameters. Every reinforcement-learning paper here therefore generates a
+      parameters{{CITE:chauhan_2023_brief}}. Every reinforcement-learning paper here therefore generates a
       deliberately <em>small</em> target &mdash; large primary network, small generated
       one.</p>
       <span class="who">{{N_HYPER_RL}} of the {{N_RL}} reinforcement-learning papers,
@@ -564,7 +589,7 @@ optimisation problem.</p>
   <p>Rungs 2 and 4 are usually presented as alternatives. At least one hypernetwork
   design in this corpus keeps a FiLM-style gain <em>on top of</em> its generated
   weights &mdash; <code>x&nbsp;&larr;&nbsp;&sigma;((1&nbsp;+&nbsp;g(z))&nbsp;&middot;&nbsp;x&nbsp;W(z)&nbsp;+&nbsp;b(z))</code>
-  &mdash; and documents that gain as <em>necessary for stability</em>, not as an
+  {{CITE:sarafian_2021_hypernetwork}} &mdash; and documents that gain as <em>necessary for stability</em>, not as an
   addition. On that reading FiLM and hypernetworks are complements, and the question
   "which one" is less well posed than the literature's framing suggests.</p>
 </div>
@@ -580,8 +605,8 @@ repeated argument about where the two numbers come from and what they attach to.
     <h6>Style, then language</h6>
     <p>The gain and offset live in a normalisation layer. First looked up from a table
     indexed by a discrete style &mdash; 32 painting styles in 0.2% of a network's
-    parameters &mdash; then generated from a language encoder, then computed directly
-    from another image's feature statistics.</p>
+    parameters{{CITE:dumoulin_2017_conditional}} &mdash; then generated from a language encoder, then computed directly
+    from another image's feature statistics{{CITE:huangbelongie_2017_adain}}.</p>
     <span class="op">&gamma;, &beta; &larr; lookup table</span>
   </div>
   <div class="era">
@@ -600,6 +625,9 @@ repeated argument about where the two numbers come from and what they attach to.
     normalisation layer, with the generator zero-initialised so the block starts as an
     identity. The re-coupling is mundane &mdash; the affine slot was already there. The
     zero-init is not.</p>
+    <p class="muted" style="font-size:13px">The diffusion-transformer paper that introduced
+    this convention was acquired for the library while this page was written, but has no
+    review yet, so it is deliberately absent from the {{N_PAPERS}} counted here.</p>
     <span class="op">&gamma;, &beta; &larr; timestep, zero-init</span>
   </div>
 </div>
@@ -826,7 +854,7 @@ individually. This is all of them in the corpus.</p>
   </tr></thead>
   <tbody>
     <tr class="hl">
-      <td><strong>Generated adapter vs concatenation vs FiLM-style gate</strong></td>
+      <td><strong>Generated adapter vs concatenation vs FiLM-style gate</strong>{{CITE:beukman_2023_dynamics}}</td>
       <td>Contextual RL, off-policy actor&ndash;critic, <em>parameter counts equalised
       across all five arms</em>, 16 seeds</td>
       <td class="tnum">With clean, fully-relevant context: <strong>all arms tie</strong>.
@@ -839,7 +867,7 @@ individually. This is all of them in the corpus.</p>
       <em>losing to plain concatenation</em></td>
     </tr>
     <tr>
-      <td>Attention-routing vs generated weights</td>
+      <td>Attention-routing vs generated weights{{CITE:xiong_2023_universal}}</td>
       <td>Universal morphology control, 5 held-out robot morphologies</td>
       <td class="tnum">Attention-routing helps <strong>5 of 5</strong> and never hurts.
       Weight generation helps only where the task is hard and <strong>actively
@@ -850,7 +878,7 @@ individually. This is all of them in the corpus.</p>
       context is exactly an additive bias &mdash; FiLM with the gain frozen at 1</td>
     </tr>
     <tr class="hl">
-      <td><strong>Gain-only FiLM vs concatenation</strong></td>
+      <td><strong>Gain-only FiLM vs concatenation</strong>{{CITE:chaplot_2018_gated}}</td>
       <td>Language-grounded navigation, on-policy actor&ndash;critic; identical encoder,
       language model and policy head across arms</td>
       <td class="tnum">Gating wins all 12 matched cells. Hard mode <strong>0.83</strong>
@@ -861,7 +889,7 @@ individually. This is all of them in the corpus.</p>
       operator is the paper's central controlled variable</td>
     </tr>
     <tr class="hl">
-      <td><strong>FiLM vs concatenation vs cross-attention</strong></td>
+      <td><strong>FiLM vs concatenation vs cross-attention</strong>{{CITE:morissette_2026_tactile}}</td>
       <td>Tactile stream modulating a vision-language-action policy; one backbone, one
       encoder, 1,000+ real-robot rollouts</td>
       <td class="tnum"><strong>86.7%</strong> vs <strong>64.8%</strong> vs
@@ -872,7 +900,7 @@ individually. This is all of them in the corpus.</p>
       scale</td>
     </tr>
     <tr>
-      <td>Hypernetwork vs FiLM</td>
+      <td>Hypernetwork vs FiLM{{CITE:beck_2023_hypernetwork}}, measured on{{CITE:zintgraf_2020_varibad}}</td>
       <td>Meta-RL, robot pick-and-place, belief-conditioned policy, 10 seeds</td>
       <td class="tnum"><strong>42.9 &plusmn; 16.3</strong> vs
       <strong>34.2 &plusmn; 15.9</strong> test success under matched initialisation</td>
@@ -881,7 +909,7 @@ individually. This is all of them in the corpus.</p>
       <a href="#corrections">Corrections</a></td>
     </tr>
     <tr>
-      <td>Attention-mixture vs FiLM</td>
+      <td>Attention-mixture vs FiLM{{CITE:sodhani_2021_multi}}</td>
       <td>Multi-task manipulation, off-policy actor&ndash;critic, language task
       descriptions</td>
       <td class="tnum">0.84 vs <strong>0.75</strong> on the 10-task suite &mdash; no
@@ -891,7 +919,7 @@ individually. This is all of them in the corpus.</p>
       difficulty-moderates-benefit pattern below</td>
     </tr>
     <tr>
-      <td>Soft routing vs concatenation</td>
+      <td>Soft routing vs concatenation{{CITE:yang_2020_multi}}</td>
       <td>50-task manipulation, off-policy actor&ndash;critic</td>
       <td class="tnum"><strong>60.0%</strong> vs <strong>31.4%</strong> concatenation and
       35.5% multi-head, at 1&times; the parameters of a 4.2&times;-parameter baseline
@@ -900,7 +928,7 @@ individually. This is all of them in the corpus.</p>
       one when tasks are many</td>
     </tr>
     <tr>
-      <td>Generated weights vs concatenation</td>
+      <td>Generated weights vs concatenation{{CITE:fu_2025_cash}}</td>
       <td>Heterogeneous multi-robot coordination; capability vector conditions a shared
       generator</td>
       <td class="tnum">Ties in 4 of 6 in-distribution cells; wins <strong>6 of 6</strong>
@@ -909,7 +937,7 @@ individually. This is all of them in the corpus.</p>
       training range, not inside it</td>
     </tr>
     <tr>
-      <td>FiLM vs feeding the same signal as a direct input</td>
+      <td>FiLM vs feeding the same signal as a direct input{{CITE:yuan_2024_unpacking}}</td>
       <td>Diffusion-based imitation policy, 8 independently trained manipulation tasks</td>
       <td class="tnum">+62 and +36 points on the two hardest tasks;
       <strong>&asymp;0 or &minus;4</strong> on the two easy ones</td>
@@ -958,25 +986,25 @@ individually. This is all of them in the corpus.</p>
   headline number on the corpus's central benchmark by a factor of six.</li>
 
   <li><strong>Operator choice, through the loss surface.</strong> In an offline-RL
-  exploration bonus, concatenation produced a bumpy surface with local minima the actor
+  exploration bonus{{CITE:nikulin_2023_sac}}, concatenation produced a bumpy surface with local minima the actor
   could not descend, even though the bonus itself was perfectly discriminative. FiLM
   produced a smoother one. The failure was not in what the network could represent but
   in what the optimiser could follow.</li>
 
   <li><strong>Optimiser settings, not architecture.</strong> Generated weights need
-  their own learning rate; one continual-RL paper cut its gradient-norm clip by three
+  their own learning rate; one continual-RL paper{{CITE:schopf_2022_hn}} cut its gradient-norm clip by three
   orders of magnitude to stop explosions. A FiLM arm's hyperparameters are not portable
   to a hypernetwork arm.</li>
 
   <li><strong>Conditioner/observation entanglement &mdash; the mechanism story, and its
   confound.</strong> When the generator reads the same signal as the policy it
   generates, the derivation that lets the generator's Jacobian be pulled out of a
-  covariance term no longer holds, and the reported effect is degradation across
+  covariance term no longer holds{{CITE:tessera_2024_hypermarl}}, and the reported effect is degradation across
   environments. But the ablation that shows this changes <em>two</em> things at once:
   the arm that reads the observation also regenerates its weights <em>every
   timestep</em>, where the baseline regenerates once per training iteration. Self-conditioning and regeneration frequency are confounded, and a second paper whose
   generator reads local observations &mdash; but re-queries only on events &mdash; beats
-  that baseline outright. The mechanism is plausible and the experiment does not isolate
+  that baseline outright{{CITE:buchi_2026_events}}. The mechanism is plausible and the experiment does not isolate
   it.</li>
 
   <li><strong>Regenerating too often.</strong> The axis the confound above exposes, and
@@ -995,7 +1023,7 @@ individually. This is all of them in the corpus.</p>
   <li><strong>Gain blow-up is conspicuously absent.</strong> No paper in this corpus
   reports a modulator that worked and then destabilised because its gains grew. Either
   it does not happen, or it happens and goes unreported &mdash; and the field has no
-  name for it. The one instrument that exists is a Lipschitz bound (the product of the
+  name for it. The one instrument that exists is a Lipschitz bound{{CITE:marquis_2026_farhood}} (the product of the
   modulator's weight-matrix spectral norms), which tracked performance across six
   configurations in one preprint and comes with a named remedy.</li>
 </ul>
@@ -1054,7 +1082,7 @@ individually. This is all of them in the corpus.</p>
       bands heavily overlapping throughout &mdash; the paper's own text names a "sweet
       spot" its figure does not show.</li>
       <li><strong>Modulation inside a world model.</strong> Essentially untried. The
-      apparent precedent concatenates.</li>
+      apparent precedent concatenates{{CITE:zhang_2025_dymodreamer}}.</li>
     </ul>
   </div>
 </div>
@@ -1137,6 +1165,30 @@ distribution reflects that history and not the field's. And <strong>the venue ru
 strict</strong>: a tier is what the held PDF prints, so several papers with genuine
 top-tier acceptances are counted as preprints here because the held copy is the
 preprint. Both biases are known and neither is corrected for.</p>
+
+<h2 id="references"><span class="num">References</span>All {{N_PAPERS}} papers</h2>
+
+<p>Every paper the statistics on this page are computed over, in one list &mdash; the
+reference list and the corpus are the same set by construction, and the build fails if
+they diverge. Titles come from the library's own files rather than being retyped. Each
+entry says which shard of the library holds it, and whether it has been read end-to-end or
+only catalogued from a survey.</p>
+
+<div class="callout">
+  <h5>How much of this corpus has actually been read</h5>
+  <p><strong>{{N_PER_PAPER}}</strong> papers have their own dedicated review file.
+  <strong>{{N_MASTER}}</strong> are reviewed as a section inside a topic's master review.
+  <strong>{{N_PENDING}}</strong> were read in full while this page was being written and
+  their reviews are still being merged into the topic documents. <strong>{{N_CATALOGUED}}</strong>
+  are <em>catalogued only</em> &mdash; named and characterised in a survey, but never read
+  end-to-end, and marked as such below. {{N_NOT_HELD}} papers are cited without the library
+  holding a copy.</p>
+  <p>So the honest summary is that {{N_READ}} of {{N_PAPERS}} have a review behind them, and
+  the remainder are carried on someone else's summary. Claims on this page that rest on a
+  catalogued-only entry are not quantitative ones.</p>
+</div>
+
+{{REFERENCES}}
 
 <div class="foot col">
   <p><strong>Sources.</strong> Reference corpus under

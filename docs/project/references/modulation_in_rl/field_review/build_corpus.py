@@ -240,6 +240,33 @@ ALIASES = {
     "sarafian_2021_recomposing": "sarafian_2021_hypernetwork",   # Recomposing the RL Building Blocks with Hypernetworks
     "schopf_2022_hypernetwork": "schopf_2022_hn",                # Hypernetwork-PPO / HN-PPO
     "vecoven_2020_introducing": "vecoven_2020_neuromodulat",     # Introducing neuromodulation in deep neural networks
+    # Split by YEAR, not by surname: the arXiv v1 is 2024 and the venue is NeurIPS 2025, and
+    # two digests recorded different years for the one paper. The same-author-same-year
+    # warning cannot see this, which is why the collision check below also compares titles.
+    "tessera_2025_hypermarl": "tessera_2024_hypermarl",
+    # Split by surname PARSING: "Marquis & Farhood" keyed once as `marquis` and once as
+    # `marquisfarhood`, depending on which delimiter the digest used.
+    "marquisfarhood_2026_hypernetwork": "marquis_2026_farhood",
+}
+
+# One digest cell that names TWO papers. A digest wrote "Schaul et al. — UVFA; Borsa et al.
+# — USFA" as a single row because both are universal value-function approximators cited
+# together; they are separate works, published three years apart, and both are held as
+# separate PDFs. Left merged, the corpus undercounts by one and the reference list could
+# never match the paper statistics quoted on the page.
+#
+# Each entry replaces one parsed row with several. Fields not given are inherited from the
+# row being split, since the shared cells (mechanism, site, claim strength) were written
+# about both papers together.
+SPLITS = {
+    "schaul_2015_uvfa": [
+        {"key": "schaul_2015_universal", "year": "2015",
+         "paper": "Schaul et al. — Universal Value Function Approximators (UVFA)",
+         "venue_raw": "ICML 2015"},
+        {"key": "borsa_2018_universal", "year": "2018",
+         "paper": "Borsa et al. — Universal Successor Features Approximators (USFA)",
+         "venue_raw": "ICLR 2019"},
+    ],
 }
 
 
@@ -367,6 +394,19 @@ def main() -> int:
         if row["sources"] not in old["sources"]:
             old["sources"] += "; " + row["sources"]
             old["n_sources"] += 1
+
+    # Split any row that names more than one paper. This runs BEFORE classification so each
+    # part is classified from its own (inherited) text rather than copying a label computed
+    # for the pair.
+    for src_key, parts in SPLITS.items():
+        if src_key not in merged:
+            continue
+        base = merged.pop(src_key)
+        for part in parts:
+            row = dict(base)
+            row.update(part)
+            row["sources"] = base["sources"] + f"; split from {src_key}"
+            merged[row["key"]] = row
 
     # Derive every classified field from the merged free text, so a label always describes
     # the cell printed beside it in the CSV.

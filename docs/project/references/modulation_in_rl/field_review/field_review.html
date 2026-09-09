@@ -271,6 +271,31 @@ tbody tr:last-child td{border-bottom:0}
   .ledger > div + div{border-left:0;border-top:1px solid var(--rule)}
 }
 
+/* ---------- citations + references ---------- */
+a.cite{font-family:var(--mono);font-size:.72em;line-height:0;vertical-align:super;
+  text-decoration:none;color:var(--accent);background:var(--accent-soft);
+  padding:.18em .34em;border-radius:3px;margin-left:1px;white-space:nowrap}
+a.cite:hover{text-decoration:underline}
+a.cite::before{content:"["} a.cite::after{content:"]"}
+ol.refs{list-style:decimal;padding-left:2.7em;margin:24px 0 0;font-size:14px}
+ol.refs li{margin:0 0 15px;padding-left:2px;scroll-margin-top:24px;
+  display:flex;flex-direction:column;gap:2px;min-width:0}
+ol.refs li:target{background:var(--accent-soft);border-radius:4px;
+  box-shadow:0 0 0 6px var(--accent-soft)}
+ol.refs .l1{line-height:1.5;min-width:0}
+ol.refs .l2{color:var(--muted);font-size:13.2px;line-height:1.45;min-width:0}
+ol.refs .tags{display:flex;flex-wrap:wrap;gap:5px;margin-top:3px;min-width:0}
+ol.refs .au{font-weight:600}
+ol.refs .ti{font-style:italic}
+ol.refs .id,ol.refs .topic,ol.refs .lvl,ol.refs .nothold{font-family:var(--mono);
+  font-size:10.5px;letter-spacing:.03em;padding:.15em .4em;border-radius:3px;
+  white-space:nowrap;flex:0 0 auto}
+ol.refs .id{background:var(--accent-soft);color:var(--accent)}
+ol.refs .topic{border:1px solid var(--rule);color:var(--muted)}
+ol.refs .nothold{background:var(--warn-bg);color:var(--warn-text)}
+ol.refs .lvl-read{border:1px solid var(--rule);color:var(--muted)}
+ol.refs .lvl-cited{background:var(--warn-bg);color:var(--warn-text)}
+
 /* ---------- footer ---------- */
 .foot{margin-top:70px;padding-top:26px;border-top:1px solid var(--rule-strong);
   font-family:var(--mono);font-size:11.5px;line-height:1.75;color:var(--muted)}
@@ -319,8 +344,8 @@ tbody tr:last-child td{border-bottom:0}
   actually done in reinforcement learning &mdash; and of how thin the evidence is
   that it works.</p>
   <div class="byline">
-    <span>98 papers &middot; 2002&ndash;2026</span>
-    <span>52 run a reinforcement-learning algorithm</span>
+    <span>97 papers &middot; 2002&ndash;2026</span>
+    <span>51 run a reinforcement-learning algorithm</span>
     <span>Compiled 2026-09-09</span>
   </div>
 </header>
@@ -352,9 +377,9 @@ allowed to read; and &mdash; the part that matters most and is least often asked
 &mdash; whether any of it is demonstrated rather than merely described.</p>
 
 <p>The short answer to the last question is that the literature is much thinner than
-its citation count suggests. Of the 52 reinforcement-learning papers here, 31
+its citation count suggests. Of the 51 reinforcement-learning papers here, 30
 run a controlled comparison that isolates what the conditioning contributes
-(60%), and several of the most-quoted numbers do not survive being
+(59%), and several of the most-quoted numbers do not survive being
 checked against the original table. One of them did not survive being checked while
 this page was being written &mdash; see <a href="#corrections">Corrections</a>.</p>
 
@@ -464,7 +489,7 @@ economic argument for FiLM over generating weights, and it is why the operator s
 at scales where full weight generation is impossible.</p>
 
 <p><strong>The gain does nearly all the work.</strong> In the paper that named the
-family, freezing &gamma; at its training-set mean cost <strong>65.4 points</strong> of
+family, freezing &gamma; at its training-set mean cost <strong>65.4 points</strong><a class='cite' href='#ref-perez_2018_film'>61</a> of
 accuracy; freezing &beta; cost <strong>1.0</strong>. About 36% of the learned gains
 were negative &mdash; the operator is not merely "turning things up", it is also
 inverting and suppressing them. Bounding the gain with a sigmoid, a hyperbolic tangent
@@ -480,7 +505,7 @@ architectural choice on this page.</p>
 
 <div class="callout">
   <h5>A distinction worth keeping</h5>
-  <p>Not everything called neuromodulation belongs on this operator. One line of work
+  <p>Not everything called neuromodulation belongs on this operator. One line of work<a class='cite' href='#ref-miconi_2019_backpropamin'>56</a>
   gates <em>plasticity</em> &mdash; a scalar multiplies the <em>weight update</em>, so
   the network's state changes in weight space and persists. FiLM is stateless: it
   changes activations for the current forward pass and leaves nothing behind. Grouping
@@ -515,7 +540,7 @@ optimisation problem.</p>
       &mdash; a real expressive limit, and also a structural immunity to gains blowing
       up.</p>
       <span class="who">Gated-attention language grounding; the neuromodulatory gate in
-      continual-learning architectures.</span>
+      continual-learning architectures<a class='cite' href='#ref-beaulieu_2020_anml'>7</a>.</span>
     </div>
   </div>
   <div class="rung" style="--tone:var(--m-film)">
@@ -525,9 +550,9 @@ optimisation problem.</p>
       <p class="cost">cost: two numbers per channel</p>
       <p>The full affine operator, with an unrestricted signed gain. Folded into a
       normalisation layer it is called adaLN and is the default conditioning primitive
-      of modern robot action heads.</p>
+      of modern robot action heads<a class='cite' href='#ref-reuss_2025_flower'>63</a>.</p>
       <span class="who">The largest group in this corpus: 12 of the
-      52 reinforcement-learning papers.</span>
+      51 reinforcement-learning papers.</span>
     </div>
   </div>
   <div class="rung" style="--tone:var(--m-hyper)">
@@ -538,7 +563,7 @@ optimisation problem.</p>
       <p>The first rung that genuinely changes the weights rather than the
       activations, while refusing to pay for all of them. Attention itself lands here:
       multi-head attention is provably a <em>linear</em> hypernetwork composing a fixed
-      basis, and at one head it degenerates to exactly a scalar gain.</p>
+      basis<a class='cite' href='#ref-schug_2025_attention'>72</a>, and at one head it degenerates to exactly a scalar gain.</p>
       <span class="who">LoRA-style adapters; generated adapter modules inside a policy;
       dynamic predictive coding.</span>
     </div>
@@ -550,10 +575,10 @@ optimisation problem.</p>
       <p class="cost">cost: the generator's output layer is (hidden &times; all target weights)</p>
       <p>Emit every weight of the target network. Expressive, and structurally capped:
       at ResNet-50 scale the output layer alone would hold on the order of 10<sup>9</sup>
-      parameters. Every reinforcement-learning paper here therefore generates a
+      parameters<a class='cite' href='#ref-chauhan_2023_brief'>21</a>. Every reinforcement-learning paper here therefore generates a
       deliberately <em>small</em> target &mdash; large primary network, small generated
       one.</p>
-      <span class="who">12 of the 52 reinforcement-learning papers,
+      <span class="who">10 of the 51 reinforcement-learning papers,
       concentrated in meta-RL, continual RL, zero-shot transfer and multi-agent.</span>
     </div>
   </div>
@@ -564,7 +589,7 @@ optimisation problem.</p>
   <p>Rungs 2 and 4 are usually presented as alternatives. At least one hypernetwork
   design in this corpus keeps a FiLM-style gain <em>on top of</em> its generated
   weights &mdash; <code>x&nbsp;&larr;&nbsp;&sigma;((1&nbsp;+&nbsp;g(z))&nbsp;&middot;&nbsp;x&nbsp;W(z)&nbsp;+&nbsp;b(z))</code>
-  &mdash; and documents that gain as <em>necessary for stability</em>, not as an
+  <a class='cite' href='#ref-sarafian_2021_hypernetwork'>68</a> &mdash; and documents that gain as <em>necessary for stability</em>, not as an
   addition. On that reading FiLM and hypernetworks are complements, and the question
   "which one" is less well posed than the literature's framing suggests.</p>
 </div>
@@ -580,8 +605,8 @@ repeated argument about where the two numbers come from and what they attach to.
     <h6>Style, then language</h6>
     <p>The gain and offset live in a normalisation layer. First looked up from a table
     indexed by a discrete style &mdash; 32 painting styles in 0.2% of a network's
-    parameters &mdash; then generated from a language encoder, then computed directly
-    from another image's feature statistics.</p>
+    parameters<a class='cite' href='#ref-dumoulin_2017_conditional'>31</a> &mdash; then generated from a language encoder, then computed directly
+    from another image's feature statistics<a class='cite' href='#ref-huangbelongie_2017_adain'>44</a>.</p>
     <span class="op">&gamma;, &beta; &larr; lookup table</span>
   </div>
   <div class="era">
@@ -600,6 +625,9 @@ repeated argument about where the two numbers come from and what they attach to.
     normalisation layer, with the generator zero-initialised so the block starts as an
     identity. The re-coupling is mundane &mdash; the affine slot was already there. The
     zero-init is not.</p>
+    <p class="muted" style="font-size:13px">The diffusion-transformer paper that introduced
+    this convention was acquired for the library while this page was written, but has no
+    review yet, so it is deliberately absent from the 97 counted here.</p>
     <span class="op">&gamma;, &beta; &larr; timestep, zero-init</span>
   </div>
 </div>
@@ -784,10 +812,10 @@ uncomfortable. Modulation is cited constantly and isolated rarely.</p>
     isolates what the modulation contributes. Right panel, horizontal axis: venue tier
     as printed inside the held PDF. Neither horizontal axis is an ordered scale.
     <br><br>
-    31 of 52 reinforcement-learning papers run a clean controlled
-    comparison of the conditioning mechanism; 6 more run one that a
-    reviewer recorded a hedge against, and 8 describe an architecture
-    that works without isolating the mechanism at all. 13 are preprints
+    30 of 51 reinforcement-learning papers run a clean controlled
+    comparison of the conditioning mechanism; 5 more run one that a
+    reviewer recorded a hedge against, and 9 describe an architecture
+    that works without isolating the mechanism at all. 12 are preprints
     whose held copy prints no venue.
   </figcaption>
   <div class='samples'><h5>How much of the corpus this figure uses</h5><p class='gen'>Generated by <code>fig04_evidence_quality.py</code></p><div class='scroll'><table class='samp'><thead><tr><th>Subset</th><th>Used</th><th>Available</th><th>Share</th><th>Why this subset</th></tr></thead><tbody><tr><td>papers whose RL-algorithm column names a learning algorithm</td><td class='n'>52</td><td class='n'>98</td><td class='n'>53.1%</td><td class='why'>imitation-learning and vision papers are excluded; they carry the mechanism lineage but cannot speak to whether modulation helps an RL agent</td></tr><tr><td>of those, ablations with no reviewer hedge against them</td><td class='n'>31</td><td class='n'>52</td><td class='n'>59.6%</td><td class='why'>the subset a quantitative claim in this review is allowed to rest on</td></tr></tbody></table></div></div>
@@ -826,7 +854,7 @@ individually. This is all of them in the corpus.</p>
   </tr></thead>
   <tbody>
     <tr class="hl">
-      <td><strong>Generated adapter vs concatenation vs FiLM-style gate</strong></td>
+      <td><strong>Generated adapter vs concatenation vs FiLM-style gate</strong><a class='cite' href='#ref-beukman_2023_dynamics'>12</a></td>
       <td>Contextual RL, off-policy actor&ndash;critic, <em>parameter counts equalised
       across all five arms</em>, 16 seeds</td>
       <td class="tnum">With clean, fully-relevant context: <strong>all arms tie</strong>.
@@ -839,7 +867,7 @@ individually. This is all of them in the corpus.</p>
       <em>losing to plain concatenation</em></td>
     </tr>
     <tr>
-      <td>Attention-routing vs generated weights</td>
+      <td>Attention-routing vs generated weights<a class='cite' href='#ref-xiong_2023_universal'>86</a></td>
       <td>Universal morphology control, 5 held-out robot morphologies</td>
       <td class="tnum">Attention-routing helps <strong>5 of 5</strong> and never hurts.
       Weight generation helps only where the task is hard and <strong>actively
@@ -850,7 +878,7 @@ individually. This is all of them in the corpus.</p>
       context is exactly an additive bias &mdash; FiLM with the gain frozen at 1</td>
     </tr>
     <tr class="hl">
-      <td><strong>Gain-only FiLM vs concatenation</strong></td>
+      <td><strong>Gain-only FiLM vs concatenation</strong><a class='cite' href='#ref-chaplot_2018_gated'>20</a></td>
       <td>Language-grounded navigation, on-policy actor&ndash;critic; identical encoder,
       language model and policy head across arms</td>
       <td class="tnum">Gating wins all 12 matched cells. Hard mode <strong>0.83</strong>
@@ -861,7 +889,7 @@ individually. This is all of them in the corpus.</p>
       operator is the paper's central controlled variable</td>
     </tr>
     <tr class="hl">
-      <td><strong>FiLM vs concatenation vs cross-attention</strong></td>
+      <td><strong>FiLM vs concatenation vs cross-attention</strong><a class='cite' href='#ref-morissette_2026_tactile'>58</a></td>
       <td>Tactile stream modulating a vision-language-action policy; one backbone, one
       encoder, 1,000+ real-robot rollouts</td>
       <td class="tnum"><strong>86.7%</strong> vs <strong>64.8%</strong> vs
@@ -872,7 +900,7 @@ individually. This is all of them in the corpus.</p>
       scale</td>
     </tr>
     <tr>
-      <td>Hypernetwork vs FiLM</td>
+      <td>Hypernetwork vs FiLM<a class='cite' href='#ref-beck_2023_hypernetwork'>8</a>, measured on<a class='cite' href='#ref-zintgraf_2020_varibad'>96</a></td>
       <td>Meta-RL, robot pick-and-place, belief-conditioned policy, 10 seeds</td>
       <td class="tnum"><strong>42.9 &plusmn; 16.3</strong> vs
       <strong>34.2 &plusmn; 15.9</strong> test success under matched initialisation</td>
@@ -881,7 +909,7 @@ individually. This is all of them in the corpus.</p>
       <a href="#corrections">Corrections</a></td>
     </tr>
     <tr>
-      <td>Attention-mixture vs FiLM</td>
+      <td>Attention-mixture vs FiLM<a class='cite' href='#ref-sodhani_2021_multi'>75</a></td>
       <td>Multi-task manipulation, off-policy actor&ndash;critic, language task
       descriptions</td>
       <td class="tnum">0.84 vs <strong>0.75</strong> on the 10-task suite &mdash; no
@@ -891,7 +919,7 @@ individually. This is all of them in the corpus.</p>
       difficulty-moderates-benefit pattern below</td>
     </tr>
     <tr>
-      <td>Soft routing vs concatenation</td>
+      <td>Soft routing vs concatenation<a class='cite' href='#ref-yang_2020_multi'>89</a></td>
       <td>50-task manipulation, off-policy actor&ndash;critic</td>
       <td class="tnum"><strong>60.0%</strong> vs <strong>31.4%</strong> concatenation and
       35.5% multi-head, at 1&times; the parameters of a 4.2&times;-parameter baseline
@@ -900,7 +928,7 @@ individually. This is all of them in the corpus.</p>
       one when tasks are many</td>
     </tr>
     <tr>
-      <td>Generated weights vs concatenation</td>
+      <td>Generated weights vs concatenation<a class='cite' href='#ref-fu_2025_cash'>33</a></td>
       <td>Heterogeneous multi-robot coordination; capability vector conditions a shared
       generator</td>
       <td class="tnum">Ties in 4 of 6 in-distribution cells; wins <strong>6 of 6</strong>
@@ -909,7 +937,7 @@ individually. This is all of them in the corpus.</p>
       training range, not inside it</td>
     </tr>
     <tr>
-      <td>FiLM vs feeding the same signal as a direct input</td>
+      <td>FiLM vs feeding the same signal as a direct input<a class='cite' href='#ref-yuan_2024_unpacking'>93</a></td>
       <td>Diffusion-based imitation policy, 8 independently trained manipulation tasks</td>
       <td class="tnum">+62 and +36 points on the two hardest tasks;
       <strong>&asymp;0 or &minus;4</strong> on the two easy ones</td>
@@ -958,25 +986,25 @@ individually. This is all of them in the corpus.</p>
   headline number on the corpus's central benchmark by a factor of six.</li>
 
   <li><strong>Operator choice, through the loss surface.</strong> In an offline-RL
-  exploration bonus, concatenation produced a bumpy surface with local minima the actor
+  exploration bonus<a class='cite' href='#ref-nikulin_2023_sac'>59</a>, concatenation produced a bumpy surface with local minima the actor
   could not descend, even though the bonus itself was perfectly discriminative. FiLM
   produced a smoother one. The failure was not in what the network could represent but
   in what the optimiser could follow.</li>
 
   <li><strong>Optimiser settings, not architecture.</strong> Generated weights need
-  their own learning rate; one continual-RL paper cut its gradient-norm clip by three
+  their own learning rate; one continual-RL paper<a class='cite' href='#ref-schopf_2022_hn'>70</a> cut its gradient-norm clip by three
   orders of magnitude to stop explosions. A FiLM arm's hyperparameters are not portable
   to a hypernetwork arm.</li>
 
   <li><strong>Conditioner/observation entanglement &mdash; the mechanism story, and its
   confound.</strong> When the generator reads the same signal as the policy it
   generates, the derivation that lets the generator's Jacobian be pulled out of a
-  covariance term no longer holds, and the reported effect is degradation across
+  covariance term no longer holds<a class='cite' href='#ref-tessera_2024_hypermarl'>77</a>, and the reported effect is degradation across
   environments. But the ablation that shows this changes <em>two</em> things at once:
   the arm that reads the observation also regenerates its weights <em>every
   timestep</em>, where the baseline regenerates once per training iteration. Self-conditioning and regeneration frequency are confounded, and a second paper whose
   generator reads local observations &mdash; but re-queries only on events &mdash; beats
-  that baseline outright. The mechanism is plausible and the experiment does not isolate
+  that baseline outright<a class='cite' href='#ref-buchi_2026_events'>19</a>. The mechanism is plausible and the experiment does not isolate
   it.</li>
 
   <li><strong>Regenerating too often.</strong> The axis the confound above exposes, and
@@ -995,7 +1023,7 @@ individually. This is all of them in the corpus.</p>
   <li><strong>Gain blow-up is conspicuously absent.</strong> No paper in this corpus
   reports a modulator that worked and then destabilised because its gains grew. Either
   it does not happen, or it happens and goes unreported &mdash; and the field has no
-  name for it. The one instrument that exists is a Lipschitz bound (the product of the
+  name for it. The one instrument that exists is a Lipschitz bound<a class='cite' href='#ref-marquis_2026_farhood'>55</a> (the product of the
   modulator's weight-matrix spectral norms), which tracked performance across six
   configurations in one preprint and comes with a named remedy.</li>
 </ul>
@@ -1054,7 +1082,7 @@ individually. This is all of them in the corpus.</p>
       bands heavily overlapping throughout &mdash; the paper's own text names a "sweet
       spot" its figure does not show.</li>
       <li><strong>Modulation inside a world model.</strong> Essentially untried. The
-      apparent precedent concatenates.</li>
+      apparent precedent concatenates<a class='cite' href='#ref-zhang_2025_dymodreamer'>94</a>.</li>
     </ul>
   </div>
 </div>
@@ -1115,10 +1143,10 @@ individually. This is all of them in the corpus.</p>
 
 <h2 id="method"><span class="num">Method</span>How this page was built</h2>
 
-<p>The corpus is 98 distinct papers, assembled from three cross-corpus
+<p>The corpus is 97 distinct papers, assembled from three cross-corpus
 digests and the per-paper reviews written for the papers acquired for this review.
 Those 10 source documents contributed 127 table rows,
-which merge to 98 papers &mdash; 28 of them appear in more than one
+which merge to 97 papers &mdash; 29 of them appear in more than one
 digest, because the reference library files a paper by mechanism while this review
 files it by question.</p>
 
@@ -1137,6 +1165,30 @@ distribution reflects that history and not the field's. And <strong>the venue ru
 strict</strong>: a tier is what the held PDF prints, so several papers with genuine
 top-tier acceptances are counted as preprints here because the held copy is the
 preprint. Both biases are known and neither is corrected for.</p>
+
+<h2 id="references"><span class="num">References</span>All 97 papers</h2>
+
+<p>Every paper the statistics on this page are computed over, in one list &mdash; the
+reference list and the corpus are the same set by construction, and the build fails if
+they diverge. Titles come from the library's own files rather than being retyped. Each
+entry says which shard of the library holds it, and whether it has been read end-to-end or
+only catalogued from a survey.</p>
+
+<div class="callout">
+  <h5>How much of this corpus has actually been read</h5>
+  <p><strong>48</strong> papers have their own dedicated review file.
+  <strong>37</strong> are reviewed as a section inside a topic's master review.
+  <strong>9</strong> were read in full while this page was being written and
+  their reviews are still being merged into the topic documents. <strong>3</strong>
+  are <em>catalogued only</em> &mdash; named and characterised in a survey, but never read
+  end-to-end, and marked as such below. 4 papers are cited without the library
+  holding a copy.</p>
+  <p>So the honest summary is that 94 of 97 have a review behind them, and
+  the remainder are carried on someone else's summary. Claims on this page that rest on a
+  catalogued-only entry are not quantitative ones.</p>
+</div>
+
+<ol class='refs'><li id='ref-abdollahzadeh_2021_kernel' value='1'><span class='l1'><span class='au'>Abdollahzadeh et al.</span> (2021). <span class='ti'>Revisit multimodal meta-learning through the lens of multi-task learning</span>.</span><span class='l2'>NeurIPS 2021</span><span class='tags'> <span class='topic'>FiLM</span><span class='lvl lvl-read'>reviewed in full, own review file</span></span></li><li id='ref-alkilanygoodman_2025_neuromodulat' value='2'><span class='l1'><span class='au'>AlKilany and Goodman</span> (2025). <span class='ti'>Neuromodulation enhances dynamic sensory processing in spiking neural network models</span>.</span><span class='l2'>bioRxiv 2025.07.25.666748 (Imperial College London preprint, posted 31 Jul 2025)</span><span class='tags'> <span class='topic'>neuromodulatory_algorithms</span><span class='lvl lvl-read'>reviewed in full, own review file</span></span></li><li id='ref-andreas_2016_neural' value='3'><span class='l1'><span class='au'>Andreas et al.</span> (2016). <span class='ti'>Neural Module Networks</span>.</span><span class='l2'>CVPR 2016</span><span class='tags'> <span class='topic'>FiLM</span><span class='lvl lvl-read'>reviewed in full, own review file</span></span></li><li id='ref-asadilittman_2017_mellowmax' value='4'><span class='l1'><span class='au'>Asadi and Littman</span> (2017). <span class='ti'>An Alternative Softmax Operator for Reinforcement Learning</span>.</span><span class='l2'>ICML 2017</span><span class='tags'> <span class='topic'>Temperature</span><span class='lvl lvl-read'>reviewed in full, inside a topic review</span></span></li><li id='ref-badia_2020_agent' value='5'><span class='l1'><span class='au'>Badia et al.</span> (2020). <span class='ti'>Agent57 - Outperforming the Atari human benchmark</span>.</span><span class='l2'>No venue line printed in the PDF</span><span class='tags'> <span class='id'>arXiv:2003.13350</span> <span class='topic'>modulation_in_rl</span><span class='lvl lvl-read'>reviewed in full this session, merge pending</span></span></li><li id='ref-badia_2020_never' value='6'><span class='l1'><span class='au'>Badia et al.</span> (2020). <span class='ti'>Never Give Up - Learning directed exploration strategies</span>.</span><span class='l2'>Published as a conference paper at ICLR 2020</span><span class='tags'> <span class='topic'>modulation_in_rl</span><span class='lvl lvl-read'>reviewed in full this session, merge pending</span></span></li><li id='ref-beaulieu_2020_anml' value='7'><span class='l1'><span class='au'>Beaulieu et al.</span> (2020). <span class='ti'>Learning to continually learn (ANML)</span>.</span><span class='l2'>Published as a conference paper at ECAI 2020</span><span class='tags'> <span class='id'>arXiv:2002.09571</span> <span class='topic'>neuromodulatory_algorithms</span><span class='lvl lvl-read'>reviewed in full, own review file</span></span></li><li id='ref-beck_2023_hypernetwork' value='8'><span class='l1'><span class='au'>Beck et al.</span> (2023). <span class='ti'>Hypernetworks in Meta-Reinforcement Learning</span>.</span><span class='l2'>CoRL 2022 (as printed in the review's citation line)</span><span class='tags'> <span class='topic'>Hypernetwork</span><span class='lvl lvl-read'>reviewed in full, inside a topic review</span></span></li><li id='ref-beck_2023_recurrent' value='9'><span class='l1'><span class='au'>Beck et al.</span> (2023). <span class='ti'>Recurrent hypernetworks are surprisingly strong in meta-RL</span>.</span><span class='l2'>37th Conference on Neural Information Processing Systems (NeurIPS 2023)</span><span class='tags'> <span class='topic'>Hypernetwork</span><span class='lvl lvl-read'>reviewed in full, inside a topic review</span></span></li><li id='ref-benad_2026_dynamics' value='10'><span class='l1'><span class='au'>Benad et al.</span> (2026). <span class='ti'>Dynamics-aligned shared hypernetworks for contextual RL</span>.</span><span class='l2'>Preprint</span><span class='tags'> <span class='id'>DOI 10.48550/arXiv.2602.06550</span> <span class='topic'>modulation_in_rl</span><span class='lvl lvl-read'>reviewed in full this session, merge pending</span></span></li><li id='ref-beniwhiwhu_2022_context' value='11'><span class='l1'><span class='au'>Ben-Iwhiwhu et al.</span> (2022). <span class='ti'>Context meta-reinforcement learning via neuromodulation</span>.</span><span class='l2'>Neural Networks 152, 70</span><span class='tags'> <span class='topic'>neuromodulatory_algorithms</span><span class='lvl lvl-read'>reviewed in full, own review file</span></span></li><li id='ref-beukman_2023_dynamics' value='12'><span class='l1'><span class='au'>Beukman et al.</span> (2023). <span class='ti'>Dynamics generalisation in RL via adaptive context-aware policies (Decision Adapter)</span>.</span><span class='l2'>37th Conference on Neural Information Processing Systems (NeurIPS 2023)" printed on p. 1</span><span class='tags'> <span class='topic'>modulation_in_rl</span><span class='lvl lvl-read'>reviewed in full this session, merge pending</span></span></li><li id='ref-birnbaum_2019_temporal' value='13'><span class='l1'><span class='au'>Birnbaum et al.</span> (2019). <span class='ti'>Temporal FiLM - Capturing long-range sequence dependencies with feature-wise modulations</span>.</span><span class='l2'>NeurIPS 2019</span><span class='tags'> <span class='topic'>FiLM</span><span class='lvl lvl-read'>reviewed in full, own review file</span></span></li><li id='ref-black_2024' value='14'><span class='l1'><span class='au'>Black et al.</span> (2024). <span class='ti'>pi0 - a vision-language-action flow model (preprint)</span>.</span><span class='l2'>unstated (preprint)</span><span class='tags'> <span class='topic'>modulation_in_rl</span><span class='lvl lvl-read'>reviewed in full, inside a topic review</span></span></li><li id='ref-borsa_2018_universal' value='15'><span class='l1'><span class='au'>Borsa et al.</span> (2018). <span class='ti'>Universal Successor Features Approximators</span>.</span><span class='l2'>ICLR 2019</span><span class='tags'> <span class='topic'>TD</span><span class='lvl lvl-read'>reviewed in full, inside a topic review</span></span></li><li id='ref-borycki_2022_hypernetwork' value='16'><span class='l1'><span class='au'>Borycki et al.</span> (2022). <span class='ti'>Hypernetwork approach to Bayesian MAML</span>.</span><span class='l2'>arXiv:2210.02796</span><span class='tags'> <span class='topic'>Hypernetwork</span><span class='lvl lvl-read'>reviewed in full, inside a topic review</span></span></li><li id='ref-botteghi_2025_hyperl' value='17'><span class='l1'><span class='au'>Botteghi et al.</span> (2026). <span class='ti'>HypeRL - Hypernetwork-based reinforcement learning for control of parametrized dynamical systems (preprint)</span>.</span><span class='l2'>PREPRINT</span><span class='tags'> <span class='topic'>Hypernetwork</span><span class='lvl lvl-read'>reviewed in full, own review file</span></span></li><li id='ref-brohan_2022_rt' value='18'><span class='l1'><span class='au'>Brohan et al.</span> (2022). <span class='ti'>RT-1 - Robotics transformer for real-world control at scale</span>.</span><span class='l2'>Preprint</span><span class='tags'> <span class='topic'>FiLM</span><span class='lvl lvl-read'>reviewed in full, own review file</span></span></li><li id='ref-buchi_2026_events' value='19'><span class='l1'><span class='au'>Büchi et al.</span> (2026). <span class='ti'>Events as triggers - event-triggered LoRA hypernetwork (preprint)</span>.</span><span class='l2'>Preprint</span><span class='tags'> <span class='topic'>modulation_in_rl</span><span class='lvl lvl-read'>reviewed in full this session, merge pending</span></span></li><li id='ref-chaplot_2018_gated' value='20'><span class='l1'><span class='au'>Chaplot et al.</span> (2018). <span class='ti'>Gated-Attention architectures for task-oriented language grounding</span>.</span><span class='l2'>AAAI copyright block 2018 ("Copyright © 2018, Association for the Advancement of Artificial Intelligence")</span><span class='tags'> <span class='topic'>FiLM</span><span class='lvl lvl-read'>reviewed in full, own review file</span></span></li><li id='ref-chauhan_2023_brief' value='21'><span class='l1'><span class='au'>Chauhan et al.</span> (2023). <span class='ti'>A Brief Review of Hypernetworks in Deep Learning</span>.</span><span class='l2'>arXiv:2306.06955</span><span class='tags'> <span class='topic'>Hypernetwork</span><span class='lvl lvl-read'>reviewed in full, inside a topic review</span></span></li><li id='ref-chen_2021_decision' value='22'><span class='l1'><span class='au'>Chen et al.</span> (2021). <span class='ti'>Decision transformer - Reinforcement learning via sequence modeling</span>.</span><span class='l2'>NeurIPS 2021</span><span class='tags'> <span class='topic'>TD</span><span class='lvl lvl-read'>reviewed in full, inside a topic review</span></span></li><li id='ref-chevalierboisvert_2019_babyai' value='23'><span class='l1'><span class='au'>Chevalier-Boisvert et al.</span> (2019). <span class='ti'>BabyAI - A platform to study the sample efficiency of grounded language learning</span>.</span><span class='l2'>Published as a conference paper at ICLR 2019</span><span class='tags'> <span class='topic'>FiLM</span><span class='lvl lvl-read'>reviewed in full, own review file</span></span></li><li id='ref-chi_2023_diffusion' value='24'><span class='l1'><span class='au'>Chi et al.</span> (2023). <span class='ti'>Diffusion Policy - Visuomotor policy learning via action diffusion</span>.</span><span class='l2'>No venue line printed in the PDF</span><span class='tags'> <span class='topic'>FiLM</span><span class='lvl lvl-read'>reviewed in full, own review file</span></span></li><li id='ref-cui_2025_entropy' value='25'><span class='l1'><span class='au'>Cui et al.</span> (2025). <span class='ti'>The Entropy Mechanism of RL for Reasoning LLMs (preprint)</span>.</span><span class='l2'>(as recorded in the continual-learning corpus)</span><span class='tags'> <span class='topic'>continual_learning</span><span class='lvl lvl-read'>reviewed in full, own review file</span></span></li><li id='ref-dabney_2018_iqn' value='26'><span class='l1'><span class='au'>Dabney et al.</span> (2018). <span class='ti'>Distributional reinforcement learning with quantile regression</span>.</span><span class='l2'>ICML 2018</span><span class='tags'> <span class='topic'>TD</span><span class='lvl lvl-read'>reviewed in full, inside a topic review</span></span></li><li id='ref-devries_2017_conditional' value='27'><span class='l1'><span class='au'>De Vries et al. — Conditional Batch Norm / MODERN</span> (2017). <span class='ti'><i>title as recorded by the digest</i></span>.</span><span class='l2'>NeurIPS 2017</span><span class='tags'> <span class='nothold'>not held in this library</span><span class='lvl lvl-read'>reviewed in full, inside a topic review</span></span></li><li id='ref-diverse_2026' value='28'><span class='l1'><span class='au'>DIVERSE</span> (2026). <span class='ti'><i>title as recorded by the digest</i></span>.</span><span class='l2'>ICLR 2026 Poster</span><span class='tags'> <span class='nothold'>not held in this library</span><span class='lvl lvl-cited'>catalogued from a survey; not read end-to-end</span></span></li><li id='ref-dontflatten_2025_tokenize' value='29'><span class='l1'><span class='au'>Don't flatten, tokenize! (SoftMoE in deep RL)</span> (2025). <span class='ti'><i>title as recorded by the digest</i></span>.</span><span class='l2'>ICLR 2025 Spotlight</span><span class='tags'> <span class='nothold'>not held in this library</span><span class='lvl lvl-cited'>catalogued from a survey; not read end-to-end</span></span></li><li id='ref-doya_2002_metalearning' value='30'><span class='l1'><span class='au'>Doya</span> (2002). <span class='ti'>Metalearning and neuromodulation</span>.</span><span class='l2'>Neural Networks 15:495</span><span class='tags'> <span class='topic'>neuromodulatory_algorithms</span><span class='lvl lvl-read'>reviewed in full, own review file</span></span></li><li id='ref-dumoulin_2017_conditional' value='31'><span class='l1'><span class='au'>Dumoulin et al.</span> (2017). <span class='ti'>A Learned Representation For Artistic Style</span>.</span><span class='l2'>ICLR 2017</span><span class='tags'> <span class='topic'>FiLM</span><span class='lvl lvl-read'>reviewed in full, own review file</span></span></li><li id='ref-fergusoncardin_2020_mechanisms' value='32'><span class='l1'><span class='au'>Ferguson and Cardin</span> (2020). <span class='ti'>Mechanisms underlying gain modulation in the cortex</span>.</span><span class='l2'>Nature Reviews Neuroscience 21, 80</span><span class='tags'> <span class='topic'>neuromodulatory_algorithms</span><span class='lvl lvl-read'>reviewed in full, own review file</span></span></li><li id='ref-fu_2025_cash' value='33'><span class='l1'><span class='au'>Fu et al.</span> (2025). <span class='ti'>Capability-aware shared hypernetworks for heterogeneous multi-robot coordination (CASH)</span>.</span><span class='l2'>9th Conference on Robot Learning (CoRL 2025), Seoul, Korea</span><span class='tags'> <span class='topic'>Hypernetwork</span><span class='lvl lvl-read'>reviewed in full, own review file</span></span></li><li id='ref-galantiwolf_2020_modularity' value='34'><span class='l1'><span class='au'>Galanti and Wolf</span> (2020). <span class='ti'>On the modularity of hypernetworks</span>.</span><span class='l2'>NeurIPS 2020</span><span class='tags'> <span class='topic'>FiLM</span><span class='lvl lvl-read'>reviewed in full, own review file</span></span></li><li id='ref-gawlikowski_2023_survey' value='35'><span class='l1'><span class='au'>Gawlikowski et al.</span> (2023). <span class='ti'>A survey of uncertainty in deep neural networks</span>.</span><span class='l2'>Artificial Intelligence Review (journal)</span><span class='tags'> <span class='topic'>FiLM</span><span class='lvl lvl-read'>reviewed in full, own review file</span></span></li><li id='ref-gorishniy_2025_tabm' value='36'><span class='l1'><span class='au'>Gorishniy et al.</span> (2025). <span class='ti'>TabM - Advancing tabular deep learning with parameter-efficient ensembling</span>.</span><span class='l2'>ICLR 2025</span><span class='tags'> <span class='topic'>FiLM</span><span class='lvl lvl-read'>reviewed in full, own review file</span></span></li><li id='ref-grooten_2025_sparc' value='37'><span class='l1'><span class='au'>Grooten et al.</span> (2025). <span class='ti'>SPARC</span>.</span><span class='l2'>AAAI 2026 Oral</span><span class='tags'> <span class='topic'>modulation_in_rl</span><span class='lvl lvl-read'>reviewed in full, inside a topic review</span></span></li><li id='ref-guo_2026_gear' value='38'><span class='l1'><span class='au'>Guo et al.</span> (2026). <span class='ti'>GEAR - drone aerobatics (preprint)</span>.</span><span class='l2'>unstated</span><span class='tags'> <span class='topic'>modulation_in_rl</span><span class='lvl lvl-read'>reviewed in full, inside a topic review</span></span></li><li id='ref-guo_2026_moe' value='39'><span class='l1'><span class='au'>Guo et al.</span> (2026). <span class='ti'>MoE-ACT (preprint)</span>.</span><span class='l2'>unstated</span><span class='tags'> <span class='topic'>modulation_in_rl</span><span class='lvl lvl-read'>reviewed in full, inside a topic review</span></span></li><li id='ref-ha_2016_hypernetwork' value='40'><span class='l1'><span class='au'>Ha et al.</span> (2016). <span class='ti'>HyperNetworks</span>.</span><span class='l2'>arXiv</span><span class='tags'> <span class='topic'>FiLM</span><span class='lvl lvl-read'>reviewed in full, own review file</span></span></li><li id='ref-hafner_2020_dreamer' value='41'><span class='l1'><span class='au'>Hafner et al.</span> (2020). <span class='ti'>Dream to control - Learning behaviors by latent imagination</span>.</span><span class='l2'>ICLR / Nature / preprint (varies by member)</span><span class='tags'> <span class='topic'>Dreamer</span><span class='lvl lvl-read'>reviewed in full, inside a topic review</span></span></li><li id='ref-hu_2017_end' value='42'><span class='l1'><span class='au'>Hu et al.</span> (2017). <span class='ti'>Learning to reason - End-to-End Module Networks for visual question answering</span>.</span><span class='l2'>ICCV 2017</span><span class='tags'> <span class='topic'>FiLM</span><span class='lvl lvl-read'>reviewed in full, own review file</span></span></li><li id='ref-huang_2024_mentor' value='43'><span class='l1'><span class='au'>Huang et al.</span> (2024). <span class='ti'>MENTOR - mixture of experts for single-task visual RL</span>.</span><span class='l2'>ICML 2025</span><span class='tags'> <span class='topic'>modulation_in_rl</span><span class='lvl lvl-read'>reviewed in full, inside a topic review</span></span></li><li id='ref-huangbelongie_2017_adain' value='44'><span class='l1'><span class='au'>Huang and Belongie</span> (2017). <span class='ti'>Arbitrary style transfer in real-time with adaptive instance normalization</span>.</span><span class='l2'>ICCV 2017</span><span class='tags'> <span class='topic'>FiLM</span><span class='lvl lvl-read'>reviewed in full, own review file</span></span></li><li id='ref-jang_2022_bc' value='45'><span class='l1'><span class='au'>Jang et al.</span> (2022). <span class='ti'>BC-Z - Zero-shot task generalization with robotic imitation learning</span>.</span><span class='l2'>Conference on Robot Learning (CoRL 2021)</span><span class='tags'> <span class='topic'>FiLM</span><span class='lvl lvl-read'>reviewed in full, own review file</span></span></li><li id='ref-jiang_2021_dynamic' value='46'><span class='l1'><span class='au'>Jiang et al.</span> (2021). <span class='ti'>Dynamic Predictive Coding with Hypernetworks</span>.</span><span class='l2'>bioRxiv 2021.02.22.432194</span><span class='tags'> <span class='topic'>Hypernetwork</span><span class='lvl lvl-read'>reviewed in full, inside a topic review</span></span></li><li id='ref-kang_2026_splitadapter' value='47'><span class='l1'><span class='au'>Kang et al.</span> (2026). <span class='ti'>SplitAdapter - two-source factorised FiLM (preprint)</span>.</span><span class='l2'>unstated</span><span class='tags'> <span class='topic'>modulation_in_rl</span><span class='lvl lvl-read'>reviewed in full, own review file</span></span></li><li id='ref-kendallgal_2017_what' value='48'><span class='l1'><span class='au'>Kendall and Gal</span> (2017). <span class='ti'>What uncertainties do we need in Bayesian deep learning for computer vision</span>.</span><span class='l2'>NeurIPS 2017</span><span class='tags'> <span class='topic'>FiLM</span><span class='lvl lvl-read'>reviewed in full, own review file</span></span></li><li id='ref-kolouri_2019_attention' value='49'><span class='l1'><span class='au'>Kolouri et al.</span> (2019). <span class='ti'>Attention-Based Structural-Plasticity</span>.</span><span class='l2'>arXiv:1903.06070 (preprint)</span><span class='tags'> <span class='id'>arXiv:1903.06070</span> <span class='topic'>neuromodulatory_algorithms</span><span class='lvl lvl-read'>reviewed in full, own review file</span></span></li><li id='ref-krueger_2017_bayesian' value='50'><span class='l1'><span class='au'>Krueger et al.</span> (2017). <span class='ti'>Bayesian Hypernetworks</span>.</span><span class='l2'>arXiv</span><span class='tags'> <span class='topic'>FiLM</span><span class='lvl lvl-read'>reviewed in full, own review file</span></span></li><li id='ref-lee_2024_lifelong' value='51'><span class='l1'><span class='au'>Lee et al.</span> (2024). <span class='ti'>Lifelong reinforcement learning via neuromodulation</span>.</span><span class='l2'>arXiv:2408.08446 (Imperial College London / Oxford / Google DeepMind)</span><span class='tags'> <span class='topic'>neuromodulatory_algorithms</span><span class='lvl lvl-read'>reviewed in full, own review file</span></span></li><li id='ref-li_2025_cogvla' value='52'><span class='l1'><span class='au'>Li et al.</span> (2025). <span class='ti'>CogVLA - modulation as routing</span>.</span><span class='l2'>NeurIPS 2025</span><span class='tags'> <span class='topic'>modulation_in_rl</span><span class='lvl lvl-read'>reviewed in full, inside a topic review</span></span></li><li id='ref-li_2025_neuro' value='53'><span class='l1'><span class='au'>Li et al.</span> (2025). <span class='ti'>Neuro-Vesicles - critique of FiLM as neuromodulation (preprint)</span>.</span><span class='l2'>unstated (preprint)</span><span class='tags'> <span class='topic'>modulation_in_rl</span><span class='lvl lvl-read'>reviewed in full, inside a topic review</span></span></li><li id='ref-lin_2020_cat' value='54'><span class='l1'><span class='au'>Lin et al.</span> (2020). <span class='ti'>Cat-sac - Soft actor-critic with curiosity-aware entropy temperature</span>.</span><span class='l2'>AAAI 2020</span><span class='tags'> <span class='topic'>Temperature</span><span class='lvl lvl-read'>reviewed in full, inside a topic review</span></span></li><li id='ref-marquis_2026_farhood' value='55'><span class='l1'><span class='au'>Marquis et al.</span> (2026). <span class='ti'>Hypernetwork-conditioned RL under actuator failures (preprint)</span>.</span><span class='l2'>unstated</span><span class='tags'> <span class='topic'>modulation_in_rl</span><span class='lvl lvl-read'>reviewed in full, inside a topic review</span></span></li><li id='ref-miconi_2019_backpropamin' value='56'><span class='l1'><span class='au'>Miconi et al.</span> (2019). <span class='ti'>Backpropamine - Training self-modifying neural networks with differentiable neuromodulated plasticity</span>.</span><span class='l2'>Published as a conference paper at ICLR 2019</span><span class='tags'> <span class='id'>arXiv:2002.10585</span> <span class='topic'>neuromodulatory_algorithms</span><span class='lvl lvl-read'>reviewed in full, own review file</span></span></li><li id='ref-moon_2023_hierarchical' value='57'><span class='l1'><span class='au'>Moon et al.</span> (2023). <span class='ti'>Discovering hierarchical achievements in reinforcement learning via contrastive learning</span>.</span><span class='l2'>NeurIPS 2023</span><span class='tags'> <span class='topic'>FiLM</span><span class='lvl lvl-read'>reviewed in full, own review file</span></span></li><li id='ref-morissette_2026_tactile' value='58'><span class='l1'><span class='au'>Morissette et al.</span> (2026). <span class='ti'>TacFiLM - Tactile modality fusion for vision-language-action models</span>.</span><span class='l2'>No venue line printed in the PDF</span><span class='tags'> <span class='topic'>FiLM</span><span class='lvl lvl-read'>reviewed in full, own review file</span></span></li><li id='ref-nikulin_2023_sac' value='59'><span class='l1'><span class='au'>Nikulin et al.</span> (2023). <span class='ti'>Anti-exploration by Random Network Distillation</span>.</span><span class='l2'>ICML 2023 (PMLR 202)</span><span class='tags'> <span class='topic'>FiLM</span><span class='lvl lvl-read'>reviewed in full, own review file</span></span></li><li id='ref-nvidia_2025_gr' value='60'><span class='l1'><span class='au'>NVIDIA et al.</span> (2025). <span class='ti'>GR00T N1 (preprint)</span>.</span><span class='l2'>unstated</span><span class='tags'> <span class='topic'>modulation_in_rl</span><span class='lvl lvl-read'>reviewed in full, inside a topic review</span></span></li><li id='ref-perez_2018_film' value='61'><span class='l1'><span class='au'>Perez et al.</span> (2018). <span class='ti'>FiLM - Visual Reasoning with a General Conditioning Layer</span>.</span><span class='l2'>AAAI-18</span><span class='tags'> <span class='topic'>FiLM</span><span class='lvl lvl-read'>reviewed in full, own review file</span></span></li><li id='ref-ren_2025_hypogen' value='62'><span class='l1'><span class='au'>Ren et al.</span> (2025). <span class='ti'>HyPoGen - Optimization-biased hypernetworks for generalizable policy generation</span>.</span><span class='l2'>Published as a conference paper at ICLR 2025</span><span class='tags'> <span class='topic'>Hypernetwork</span><span class='lvl lvl-read'>reviewed in full, own review file</span></span></li><li id='ref-reuss_2025_flower' value='63'><span class='l1'><span class='au'>Reuss et al.</span> (2025). <span class='ti'>FLOWER - democratizing generalist robot policies</span>.</span><span class='l2'>CoRL 2025</span><span class='tags'> <span class='topic'>modulation_in_rl</span><span class='lvl lvl-read'>reviewed in full, inside a topic review</span></span></li><li id='ref-rezaeishoshtari_2023_hyperzero' value='64'><span class='l1'><span class='au'>Rezaei-Shoshtari et al.</span> (2023). <span class='ti'>Hypernetworks for Zero-Shot Transfer in Reinforcement Learning</span>.</span><span class='l2'>(as recorded in the Hypernetwork corpus)</span><span class='tags'> <span class='topic'>Hypernetwork</span><span class='lvl lvl-read'>reviewed in full, inside a topic review</span></span></li><li id='ref-roder_2025_dynamics' value='65'><span class='l1'><span class='au'>Benad et al.</span> (2026). <span class='ti'>Dynamics-aligned shared hypernetworks for contextual RL</span>.</span><span class='l2'>39th Conference on Neural Information Processing Systems (NeurIPS 2025)</span><span class='tags'> <span class='topic'>modulation_in_rl</span><span class='lvl lvl-read'>reviewed in full this session, merge pending</span></span></li><li id='ref-rodriguezgarcia_2026_noradrenergi' value='66'><span class='l1'><span class='au'>Rodriguez-Garcia et al.</span> (2026). <span class='ti'>Noradrenergic-inspired gain modulation attenuates the stability gap in joint training</span>.</span><span class='l2'>arXiv:2507.14056 (v2, 27 Jan 2026)</span><span class='tags'> <span class='topic'>neuromodulatory_algorithms</span><span class='lvl lvl-read'>reviewed in full, own review file</span></span></li><li id='ref-santurkar_2018_how' value='67'><span class='l1'><span class='au'>Santurkar, Tsipras, Ilyas & Madry</span> (2018). <span class='ti'>How Does Batch Normalization Help Optimization?</span>.</span><span class='l2'>NeurIPS 2018</span><span class='tags'> <span class='topic'>FiLM</span><span class='lvl lvl-read'>reviewed in full, own review file</span></span></li><li id='ref-sarafian_2021_hypernetwork' value='68'><span class='l1'><span class='au'>Sarafian et al.</span> (2021). <span class='ti'>Recomposing the Reinforcement Learning Building Blocks with Hypernetworks</span>.</span><span class='l2'>ICML 2021 (PMLR 139)</span><span class='tags'> <span class='topic'>TD</span><span class='lvl lvl-read'>reviewed in full, inside a topic review</span></span></li><li id='ref-schaul_2015_universal' value='69'><span class='l1'><span class='au'>Schaul et al.</span> (2015). <span class='ti'>Universal Value Function Approximators</span>.</span><span class='l2'>ICML 2015</span><span class='tags'> <span class='topic'>Gamma</span><span class='lvl lvl-read'>reviewed in full, inside a topic review</span></span></li><li id='ref-schopf_2022_hn' value='70'><span class='l1'><span class='au'>Schöpf et al.</span> (2022). <span class='ti'>Hypernetwork-ppo for continual reinforcement learning</span>.</span><span class='l2'>(as recorded in the Hypernetwork corpus)</span><span class='tags'> <span class='topic'>Hypernetwork</span><span class='lvl lvl-read'>reviewed in full, inside a topic review</span></span></li><li id='ref-schug_2024_discovering' value='71'><span class='l1'><span class='au'>Schug et al.</span> (2024). <span class='ti'>Discovering modular solutions that generalize compositionally</span>.</span><span class='l2'>Published as a conference paper at ICLR 2024</span><span class='tags'> <span class='topic'>Hypernetwork</span><span class='lvl lvl-read'>reviewed in full, inside a topic review</span></span></li><li id='ref-schug_2025_attention' value='72'><span class='l1'><span class='au'>Schug et al.</span> (2025). <span class='ti'>Attention as a hypernetwork</span>.</span><span class='l2'>Published as a conference paper at ICLR 2025</span><span class='tags'> <span class='topic'>Hypernetwork</span><span class='lvl lvl-read'>reviewed in full, own review file</span></span></li><li id='ref-shazeer_2017_sparsely' value='73'><span class='l1'><span class='au'>Shazeer et al.</span> (2017). <span class='ti'>Outrageously large neural networks - The Sparsely-Gated Mixture-of-experts layer</span>.</span><span class='l2'>ICLR 2017</span><span class='tags'> <span class='topic'>FiLM</span><span class='lvl lvl-read'>reviewed in full, own review file</span></span></li><li id='ref-sherstan_2020_nets' value='74'><span class='l1'><span class='au'>Sherstan et al.</span> (2020). <span class='ti'>Gamma-nets - Generalizing value estimation over timescale</span>.</span><span class='l2'>AAAI 2020</span><span class='tags'> <span class='topic'>Gamma</span><span class='lvl lvl-read'>reviewed in full, inside a topic review</span></span></li><li id='ref-sodhani_2021_multi' value='75'><span class='l1'><span class='au'>Sodhani et al.</span> (2021). <span class='ti'>Multi-task reinforcement learning with context-based representations (CARE)</span>.</span><span class='l2'>Proceedings of the 38th International Conference on Machine Learning, PMLR 139, 2021"</span><span class='tags'> <span class='topic'>modulation_in_rl</span><span class='lvl lvl-read'>reviewed in full this session, merge pending</span></span></li><li id='ref-takeda_2021_multi' value='76'><span class='l1'><span class='au'>Takeda et al.</span> (2021). <span class='ti'>Training of multiple and mixed tasks with a single network using feature modulation</span>.</span><span class='l2'>ICPR 2020 Workshops (Springer LNCS 12662)</span><span class='tags'> <span class='topic'>FiLM</span><span class='lvl lvl-read'>reviewed in full, own review file</span></span></li><li id='ref-tessera_2024_hypermarl' value='77'><span class='l1'><span class='au'>Tessera et al.</span> (2024). <span class='ti'>HyperMARL - adaptive hypernetworks for multi-agent RL</span>.</span><span class='l2'>39th Conference on Neural Information Processing Systems (NeurIPS 2025)"</span><span class='tags'> <span class='topic'>modulation_in_rl</span><span class='lvl lvl-read'>reviewed in full, inside a topic review</span></span></li><li id='ref-turkoglu_2022_film' value='78'><span class='l1'><span class='au'>Turkoglu et al.</span> (2022). <span class='ti'>FiLM-ensemble - Probabilistic deep learning via Feature-wise Linear Modulation</span>.</span><span class='l2'>NeurIPS 2022</span><span class='tags'> <span class='topic'>FiLM</span><span class='lvl lvl-read'>reviewed in full, own review file</span></span></li><li id='ref-vaswani_2017_attention' value='79'><span class='l1'><span class='au'>Vaswani et al.</span> (2017). <span class='ti'>Attention is all you need</span>.</span><span class='l2'>NeurIPS 2017</span><span class='tags'> <span class='topic'>FiLM</span><span class='lvl lvl-read'>reviewed in full, own review file</span></span></li><li id='ref-vecoven_2020_neuromodulat' value='80'><span class='l1'><span class='au'>Vecoven et al.</span> (2020). <span class='ti'>Introducing neuromodulation in deep neural networks to learn adaptive behaviours</span>.</span><span class='l2'>PLOS ONE 15(1):e0227922</span><span class='tags'> <span class='topic'>neuromodulatory_algorithms</span><span class='lvl lvl-read'>reviewed in full, own review file</span></span></li><li id='ref-volumetransmission_2025' value='81'><span class='l1'><span class='au'>Volume Transmission… (e-nmRNN)</span> (2025). <span class='ti'><i>title as recorded by the digest</i></span>.</span><span class='l2'>NeurIPS 2025 Poster</span><span class='tags'> <span class='nothold'>not held in this library</span><span class='lvl lvl-cited'>catalogued from a survey; not read end-to-end</span></span></li><li id='ref-wang_2024_neuromodulat' value='82'><span class='l1'><span class='au'>Wang et al.</span> (2024). <span class='ti'>Neuromodulated Meta-Learning</span>.</span><span class='l2'>arXiv:2411.06476 (IEEE Trans. PAMI submission)</span><span class='tags'> <span class='topic'>neuromodulatory_algorithms</span><span class='lvl lvl-read'>reviewed in full, own review file</span></span></li><li id='ref-wisnu_2025_stsm' value='83'><span class='l1'><span class='au'>Wisnu et al.</span> (2025). <span class='ti'>STSM-FiLM - A FiLM-conditioned neural architecture for time-Scale Modification of speech</span>.</span><span class='l2'>arXiv preprint (Oct 2025)</span><span class='tags'> <span class='topic'>FiLM</span><span class='lvl lvl-read'>reviewed in full, own review file</span></span></li><li id='ref-xing_2020_neuromodulat' value='84'><span class='l1'><span class='au'>Xing et al.</span> (2020). <span class='ti'>Neuromodulated patience for robot and self-driving vehicle navigation</span>.</span><span class='l2'>IJCNN 2020 (IEEE International Joint Conference on Neural Networks)</span><span class='tags'> <span class='topic'>neuromodulatory_algorithms</span><span class='lvl lvl-read'>reviewed in full, own review file</span></span></li><li id='ref-xing_2022_adapting' value='85'><span class='l1'><span class='au'>Xing et al.</span> (2022). <span class='ti'>Adapting to Environment Changes Through Neuromodulation of Reinforcement Learning</span>.</span><span class='l2'>SAB 2022</span><span class='tags'> <span class='topic'>neuromodulatory_algorithms</span><span class='lvl lvl-read'>reviewed in full, own review file</span></span></li><li id='ref-xiong_2023_universal' value='86'><span class='l1'><span class='au'>Xiong et al.</span> (2023). <span class='ti'>Universal morphology control via contextual modulation (ModuMorph)</span>.</span><span class='l2'>Proceedings of the 40th International Conference on Machine Learning, Honolulu, Hawaii, USA. PMLR 202, 2023" printed in the</span><span class='tags'> <span class='topic'>modulation_in_rl</span><span class='lvl lvl-read'>reviewed in full, inside a topic review</span></span></li><li id='ref-xiong_2024_distilling' value='87'><span class='l1'><span class='au'>Xiong et al.</span> (2024). <span class='ti'>Distilling morphology-conditioned hypernetworks (HyperDistill)</span>.</span><span class='l2'>Proceedings of the 41st International Conference on Machine Learning, Vienna, Austria. PMLR 235, 2024</span><span class='tags'> <span class='topic'>Hypernetwork</span><span class='lvl lvl-read'>reviewed in full this session, merge pending</span></span></li><li id='ref-xu_2018_meta' value='88'><span class='l1'><span class='au'>Xu et al.</span> (2018). <span class='ti'>Meta-gradient reinforcement learning</span>.</span><span class='l2'>NeurIPS 2018</span><span class='tags'> <span class='topic'>Learning_Rate</span><span class='lvl lvl-read'>reviewed in full, inside a topic review</span></span></li><li id='ref-yang_2020_multi' value='89'><span class='l1'><span class='au'>Yang et al.</span> (2020). <span class='ti'>Multi-task reinforcement learning with soft modularization</span>.</span><span class='l2'>34th Conference on Neural Information Processing Systems (NeurIPS 2020), Vancouver, Canada"</span><span class='tags'> <span class='topic'>modulation_in_rl</span><span class='lvl lvl-read'>reviewed in full, inside a topic review</span></span></li><li id='ref-yanguo_2025_casa' value='90'><span class='l1'><span class='au'>Yan and Guo</span> (2025). <span class='ti'>Context-Aware Self-adaptation for domain generalization</span>.</span><span class='l2'>2nd AdvML Frontiers workshop at ICML</span><span class='tags'> <span class='topic'>FiLM</span><span class='lvl lvl-read'>reviewed in full, own review file</span></span></li><li id='ref-yao_2025_hyper' value='91'><span class='l1'><span class='au'>Yao et al.</span> (2025). <span class='ti'>Hyper-GoalNet - Goal-conditioned manipulation policy learning with hypernetworks</span>.</span><span class='l2'>39th Conference on Neural Information Processing Systems (NeurIPS 2025)" printed on p.1</span><span class='tags'> <span class='topic'>Hypernetwork</span><span class='lvl lvl-read'>reviewed in full this session, merge pending</span></span></li><li id='ref-yoon_2026_papl' value='92'><span class='l1'><span class='au'>Yoon et al.</span> (2026). <span class='ti'>PAPL - phase-aware policy learning via FiLM</span>.</span><span class='l2'>unstated</span><span class='tags'> <span class='topic'>modulation_in_rl</span><span class='lvl lvl-read'>reviewed in full, inside a topic review</span></span></li><li id='ref-yuan_2024_unpacking' value='93'><span class='l1'><span class='au'>Yuan</span> (2024). <span class='ti'>Unpacking the individual components of diffusion policy (preprint)</span>.</span><span class='l2'>arXiv 2412.00084, venue unconfirmed</span><span class='tags'> <span class='topic'>modulation_in_rl</span><span class='lvl lvl-read'>reviewed in full, inside a topic review</span></span></li><li id='ref-zhang_2025_dymodreamer' value='94'><span class='l1'><span class='au'>Zhang et al.</span> (2025). <span class='ti'>DyMoDreamer - world modeling with dynamic modulation</span>.</span><span class='l2'>39th Conference on Neural Information Processing Systems (NeurIPS 2025)"</span><span class='tags'> <span class='topic'>modulation_in_rl</span><span class='lvl lvl-read'>reviewed in full, inside a topic review</span></span></li><li id='ref-zhu_2025_equact' value='95'><span class='l1'><span class='au'>Zhu et al.</span> (2025). <span class='ti'>EquAct - SE(3) equivariant FiLM</span>.</span><span class='l2'>unstated</span><span class='tags'> <span class='topic'>modulation_in_rl</span><span class='lvl lvl-read'>reviewed in full, inside a topic review</span></span></li><li id='ref-zintgraf_2020_varibad' value='96'><span class='l1'><span class='au'>Zintgraf et al.</span> (2020). <span class='ti'>VariBAD - A very good method for Bayes-adaptive deep RL via meta-learning</span>.</span><span class='l2'>Published as a conference paper at ICLR 2020</span><span class='tags'> <span class='topic'>modulation_in_rl</span><span class='lvl lvl-read'>reviewed in full, inside a topic review</span></span></li><li id='ref-zou_2020_neuromodulat' value='97'><span class='l1'><span class='au'>Xing et al.</span> (2020). <span class='ti'>Neuromodulated patience for robot and self-driving vehicle navigation</span>.</span><span class='l2'>(as recorded in the neuromodulation corpus)</span><span class='tags'> <span class='topic'>neuromodulatory_algorithms</span><span class='lvl lvl-read'>reviewed in full, own review file</span></span></li></ol>
 
 <div class="foot col">
   <p><strong>Sources.</strong> Reference corpus under
