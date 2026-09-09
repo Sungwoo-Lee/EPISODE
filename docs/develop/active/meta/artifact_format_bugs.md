@@ -1234,6 +1234,68 @@ the same in the console before shipping a hand-authored diagram.
 The difference is where the fix lives: F18 belongs in the figure script, F42 belongs in the checker,
 because a hand-drawn SVG has no script to guard it.
 
+### F40 amendment — a wrapping `auto-fit` grid whose cells carry a one-sided border
+
+**Saw:** a three-panel timeline built with `repeat(auto-fit,minmax(220px,1fr))`. Between about
+500 and 700&nbsp;px it wrapped to two columns, and the third panel arrived underneath the first
+**with no rule above it** and an empty cell beside it showing the container's ground — nearly
+invisible in light mode, a darker block in dark.
+
+**Cause:** the cells separate themselves with `border-right` only, which is correct for a
+single row: N cells give N&minus;1 internal verticals and `:last-child` clears the trailing one.
+The moment `auto-fit` adds a row there is a horizontal join that no cell draws, and a trailing
+empty track that no cell fills. `auto-fit` decides the column count from the container width, so
+the author never chose the wrapped state and never saw it.
+
+**Why neither review method catches it:** nothing overflows, overlaps or clips, so the geometry
+checker is silent; and the CSS is right for the layout the author had in mind. The defect only
+exists in a column count the stylesheet never names.
+
+**Rule:** a grid whose cells draw a border on **one** side only must have an explicit column
+count per breakpoint, not `auto-fit`. Where the count changes, swap the border side with it
+(`border-right` in a row, `border-bottom` when stacked). If `auto-fit` is genuinely wanted, put
+the separators on the container (`gap` + a background) rather than on the cells.
+
+**Verifying a fix:** render at the breakpoints either side of every wrap and count the visible
+rules; a wrapped grid with R rows and C columns needs R&minus;1 horizontal and C&minus;1 vertical.
+
+### F43 — a token sized for a border, reused as text, fails contrast while looking on-palette
+
+**Saw:** a two-column ledger whose right-hand heading — 11&nbsp;px, uppercase, letter-spaced —
+measured **2.3:1** against the light ground. Its left-hand twin was fine. Both headings took
+their colour from the same family of tokens, and the page looked coherent.
+
+**Cause:** the token was authored as `--warn-line`, for a 3&nbsp;px `border-left` on a callout,
+where a mid-chroma amber reads perfectly. Reused as `color:` on small uppercase text it fails,
+because a border only has to be *seen* while text has to be *read*: the contrast a 3&nbsp;px
+band needs and the contrast an 11&nbsp;px glyph needs are different requirements against the
+same background.
+
+**Why neither review method catches it:** the colour is "correct" — it is the page's own warn
+hue, used on the element that means warning, so both a stylesheet read and a screenshot scan
+report a consistent palette. Nothing is clipped, overlapped or mis-coloured; it is simply too
+light to read, and only a measurement says so.
+
+**Rule:** type the tokens. A `*-line` / `*-border` token is for borders and rules; a `*-text`
+token is for text, and is a darker step of the same hue. Never set `color:` from a `-line`
+token. Add the text variants in the same commit as the border ones, in every theme.
+
+**Verifying a fix:** walk every element whose computed `color` came from a token, compute the
+contrast ratio against its own computed background, and flag anything under 4.5:1 (3:1 for text
+at or above 18.66&nbsp;px bold / 24&nbsp;px regular). Run it in **both** themes — this one
+passed in dark and failed in light.
+
+### Tool note — a review is not tied to the build it reviewed
+
+**Saw:** a page was rebuilt while a format review was in flight. The first screenshots described
+the previous build, and only a mid-review re-render caught it. The differences were text-only
+that time, so no finding was wrong; that was luck.
+
+**Rule:** `check_artifact_layout.py` should print the reviewed file's **mtime and a short content
+hash** in its report, and a review should quote them. A finding that cannot be tied to a build is
+a finding the author cannot reproduce — and the natural author response, "I already fixed that",
+is unfalsifiable without it.
+
 ## Related
 
 - [`artifact_generation_guide`](artifact_generation_guide.md) — the wider guide: content, claims,
