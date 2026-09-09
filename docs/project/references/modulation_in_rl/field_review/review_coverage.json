@@ -162,15 +162,15 @@
   },
   {
     "key": "badia_2020_agent",
-    "level": "pending",
-    "where": "tmp/.../reviews_modrl_classics.md",
+    "level": "per-paper",
+    "where": "modulation_in_rl/reviews/badia_2020_agent57.md",
     "is_rl": "RL",
     "paper": "Badia et al. — Agent57: Outperforming the Atari Human Benchmark"
   },
   {
     "key": "badia_2020_never",
-    "level": "pending",
-    "where": "tmp/.../reviews_modrl_classics.md",
+    "level": "per-paper",
+    "where": "modulation_in_rl/reviews/badia_2020_never_give_up.md",
     "is_rl": "RL",
     "paper": "Badia et al. — Never Give Up: Learning Directed Exploration Strategies"
   },
@@ -226,21 +226,21 @@
   {
     "key": "xing_2020_neuromodulat",
     "level": "per-paper",
-    "where": "neuromodulatory_algorithms/reviews/hwu_krichmar_2020_schemas_memory.md",
+    "where": "neuromodulatory_algorithms/reviews/xing_2020_neuromodulated_patience.md",
     "is_rl": "RL",
     "paper": "Xing, Zou & Krichmar — Neuromodulated Patience for Robot and Self-Driv"
   },
   {
     "key": "yang_2020_multi",
-    "level": "master",
-    "where": "uncertainty/perceptual_noise_lit_review.md",
+    "level": "per-paper",
+    "where": "modulation_in_rl/reviews/yang_2020_soft_modularization.md",
     "is_rl": "RL",
     "paper": "Yang et al. — Multi-Task RL with Soft Modularization"
   },
   {
     "key": "zintgraf_2020_varibad",
-    "level": "master",
-    "where": "Hypernetwork/hypernetwork_lit_review.md",
+    "level": "per-paper",
+    "where": "modulation_in_rl/reviews/zintgraf_2020_varibad.md",
     "is_rl": "RL",
     "paper": "Zintgraf et al. — VariBAD: A Very Good Method for Bayes-Adaptive Deep "
   },
@@ -281,8 +281,8 @@
   },
   {
     "key": "sodhani_2021_multi",
-    "level": "pending",
-    "where": "tmp/.../reviews_modrl_classics.md",
+    "level": "per-paper",
+    "where": "modulation_in_rl/reviews/sodhani_2021_care.md",
     "is_rl": "RL",
     "paper": "Sodhani et al. — Multi-Task RL with Context-based Representations (CAR"
   },
@@ -344,22 +344,22 @@
   },
   {
     "key": "beck_2023_hypernetwork",
-    "level": "master",
-    "where": "Hypernetwork/hypernetwork_lit_review.md",
+    "level": "per-paper",
+    "where": "Hypernetwork/reviews/beck_2023_recurrent_hypernetworks.md",
     "is_rl": "RL",
     "paper": "Beck, Jackson, Vuorio & Whiteson — Hypernetworks in Meta-Reinforcement"
   },
   {
     "key": "beck_2023_recurrent",
-    "level": "master",
-    "where": "Hypernetwork/hypernetwork_lit_review.md",
+    "level": "per-paper",
+    "where": "Hypernetwork/reviews/beck_2023_recurrent_hypernetworks.md",
     "is_rl": "RL",
     "paper": "Beck, Vuorio, Xiong & Whiteson — Recurrent Hypernetworks are Surprisin"
   },
   {
     "key": "beukman_2023_dynamics",
-    "level": "pending",
-    "where": "tmp/.../reviews_modrl_modern.md",
+    "level": "per-paper",
+    "where": "modulation_in_rl/reviews/beukman_2023_decision_adapter.md",
     "is_rl": "RL",
     "paper": "Beukman et al. — Dynamics Generalisation in RL via Adaptive Context-Aw"
   },
@@ -373,7 +373,7 @@
   {
     "key": "chi_2023_diffusion",
     "level": "per-paper",
-    "where": "FiLM/reviews/moon_2023_hierarchical_achievements.md",
+    "where": "FiLM/reviews/chi_2023_diffusion_policy.md",
     "is_rl": "not RL",
     "paper": "Chi et al., Diffusion Policy: Visuomotor Policy Learning via Action Di"
   },
@@ -407,8 +407,8 @@
   },
   {
     "key": "xiong_2023_universal",
-    "level": "master",
-    "where": "Hypernetwork/hypernetwork_lit_review.md",
+    "level": "per-paper",
+    "where": "Hypernetwork/reviews/beck_2023_recurrent_hypernetworks.md",
     "is_rl": "RL",
     "paper": "Xiong, Beck & Whiteson — Universal Morphology Control via Contextual M"
   },
@@ -435,15 +435,15 @@
   },
   {
     "key": "schug_2024_discovering",
-    "level": "master",
-    "where": "continual_learning/continual_learning_lit_review.md",
+    "level": "per-paper",
+    "where": "Hypernetwork/reviews/schug_2024_modular_solutions.md",
     "is_rl": "not RL",
     "paper": "Schug, Kobayashi, Akram, Wołczyk, Proca, von Oswald, Pascanu, Sacramen"
   },
   {
     "key": "tessera_2024_hypermarl",
-    "level": "master",
-    "where": "modulation_in_rl/modulation_in_rl_lit_review.md",
+    "level": "per-paper",
+    "where": "modulation_in_rl/reviews/tessera_2024_hypermarl.md",
     "is_rl": "RL",
     "paper": "Tessera et al. — HyperMARL: Adaptive Hypernetworks for Multi-Agent RL"
   },
@@ -456,8 +456,8 @@
   },
   {
     "key": "xiong_2024_distilling",
-    "level": "pending",
-    "where": "tmp/.../reviews_hypernet_apps.md",
+    "level": "per-paper",
+    "where": "Hypernetwork/reviews/xiong_2024_hyperdistill.md",
     "is_rl": "not RL",
     "paper": "Xiong, Vuorio, Beck, Zimmer, Shao & Whiteson — Distilling Morphology-C"
   },
@@ -491,15 +491,15 @@
   },
   {
     "key": "dontflatten_2025_tokenize",
-    "level": "catalogued",
-    "where": "",
+    "level": "per-paper",
+    "where": "modulation_in_rl/reviews/sokar_2025_dont_flatten_tokenize.md",
     "is_rl": "RL",
     "paper": "Don't flatten, tokenize! (SoftMoE in deep RL)"
   },
   {
     "key": "fu_2025_cash",
     "level": "per-paper",
-    "where": "in_context_learning/reviews/reuter_2025_full_bayesian_inference.md",
+    "where": "Hypernetwork/reviews/fu_2025_cash.md",
     "is_rl": "not RL",
     "paper": "Fu, Jain, Howell, Ravichandar — CASH: Capability-Aware Shared Hypernet"
   },
@@ -519,15 +519,15 @@
   },
   {
     "key": "li_2025_cogvla",
-    "level": "master",
-    "where": "FiLM/film_lit_review.md",
+    "level": "per-paper",
+    "where": "modulation_in_rl/reviews/roder_2025_dali.md",
     "is_rl": "not RL",
     "paper": "Li et al. — CogVLA"
   },
   {
     "key": "li_2025_neuro",
-    "level": "master",
-    "where": "FiLM/film_lit_review.md",
+    "level": "per-paper",
+    "where": "modulation_in_rl/reviews/roder_2025_dali.md",
     "is_rl": "not RL",
     "paper": "Li et al. — Neuro-Vesicles"
   },
@@ -541,7 +541,7 @@
   {
     "key": "ren_2025_hypogen",
     "level": "per-paper",
-    "where": "in_context_learning/reviews/reuter_2025_full_bayesian_inference.md",
+    "where": "Hypernetwork/reviews/ren_2025_hypogen.md",
     "is_rl": "RL",
     "paper": "Ren et al., HyPoGen: Optimization-Biased Hypernetworks for Generalizab"
   },
@@ -554,15 +554,15 @@
   },
   {
     "key": "roder_2025_dynamics",
-    "level": "pending",
-    "where": "tmp/.../reviews_modrl_modern.md",
+    "level": "per-paper",
+    "where": "modulation_in_rl/reviews/roder_2025_dali.md",
     "is_rl": "RL",
     "paper": "Röder, Benad, Eppe & Banerjee — Dynamics-Aligned Latent Imagination in"
   },
   {
     "key": "schug_2025_attention",
     "level": "per-paper",
-    "where": "in_context_learning/reviews/schug_2025_attention_as_hypernetwork.md",
+    "where": "Hypernetwork/reviews/schug_2025_attention_hypernetwork.md",
     "is_rl": "not RL",
     "paper": "Schug, Kobayashi, Akram, Sacramento & Pascanu — Attention as a Hyperne"
   },
@@ -589,15 +589,15 @@
   },
   {
     "key": "yao_2025_hyper",
-    "level": "pending",
-    "where": "tmp/.../reviews_hypernet_apps.md",
+    "level": "per-paper",
+    "where": "Hypernetwork/reviews/yao_2025_hyper_goalnet.md",
     "is_rl": "not RL",
     "paper": "Yao et al. (Zhou, Yao, Luo, Zhou, Yang), Hyper-GoalNet: Goal-Condition"
   },
   {
     "key": "zhang_2025_dymodreamer",
-    "level": "master",
-    "where": "continual_learning/continual_learning_lit_review.md",
+    "level": "per-paper",
+    "where": "modulation_in_rl/reviews/zhang_2025_dymodreamer.md",
     "is_rl": "RL",
     "paper": "Zhang et al. — DyMoDreamer: World Modeling with Dynamic Modulation"
   },
@@ -610,22 +610,22 @@
   },
   {
     "key": "benad_2026_dynamics",
-    "level": "pending",
-    "where": "tmp/.../reviews_modrl_modern.md",
+    "level": "per-paper",
+    "where": "modulation_in_rl/reviews/benad_2026_shared_hypernetworks.md",
     "is_rl": "RL",
     "paper": "Benad, Banerjee, Röder, Ay, Butz & Eppe — Dynamics-Aligned Shared Hype"
   },
   {
     "key": "buchi_2026_events",
-    "level": "pending",
-    "where": "tmp/.../reviews_held_unreviewed.md",
+    "level": "per-paper",
+    "where": "modulation_in_rl/reviews/buchi_2026_events.md",
     "is_rl": "RL",
     "paper": "Büchi et al. — Events as Triggers for Behavioral Diversity in MARL"
   },
   {
     "key": "diverse_2026",
-    "level": "catalogued",
-    "where": "",
+    "level": "per-paper",
+    "where": "FiLM/reviews/eerlings_2026_diverse.md",
     "is_rl": "not RL",
     "paper": "DIVERSE"
   },

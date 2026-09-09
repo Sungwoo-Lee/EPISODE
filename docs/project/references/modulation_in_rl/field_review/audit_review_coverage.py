@@ -73,10 +73,16 @@ def main() -> int:
         names = surnames(r["paper"], r["key"])
         level, where = "catalogued", ""
 
-        for stem_f, path in per_paper_folded.items():
-            if year in stem_f and any(n in stem_f for n in names):
-                level, where = "per-paper", str(path.relative_to(LIB))
-                break
+        # Candidates first, then prefer the one whose stem also carries the key's title
+        # token. Badia 2020 is BOTH Agent57 and Never Give Up, and each has its own review
+        # file — surname+year alone matched whichever came first in the dict, so one row
+        # pointed at the other paper's review.
+        cands = [(stem_f, path) for stem_f, path in per_paper_folded.items()
+                 if year in stem_f and any(n in stem_f for n in names)]
+        if cands:
+            tok = r["key"].split("_", 2)[2] if r["key"].count("_") >= 2 else ""
+            best = [c for c in cands if tok and tok[:5] in c[0]]
+            level, where = "per-paper", str((best or cands)[0][1].relative_to(LIB))
 
         if level == "catalogued":
             # A document counts only if it names an author AND the year within 400 chars —

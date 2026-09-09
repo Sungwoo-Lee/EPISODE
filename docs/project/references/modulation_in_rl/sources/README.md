@@ -1,7 +1,14 @@
 # `modulation_in_rl/sources/` — raw source PDFs
 
-**Read-only.** Reviews live at the topic root, not here:
-[`../modulation_in_rl_lit_review.md`](../modulation_in_rl_lit_review.md).
+**Read-only.** Reviews live at the topic root and, since 2026-09-09, in a per-paper
+`../reviews/` folder matching the convention `FiLM/` and `neuromodulatory_algorithms/`
+already use:
+
+- [`../modulation_in_rl_lit_review.md`](../modulation_in_rl_lit_review.md) — the ten-paper
+  master review of the 2026-08-05 shard.
+- [`../reviews/`](../reviews/) — one file per paper, for everything reviewed since. Twelve
+  papers live here: the five historical-backbone papers, the four modern controlled
+  comparisons, the three that this folder's scope rule had excluded, and Sokar et al. 2025.
 
 **26 PDFs are held.**
 

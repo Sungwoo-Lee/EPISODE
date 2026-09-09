@@ -37,6 +37,11 @@ OUT = HERE / "references.json"
 # whose held filename cannot be matched by surname+year alone. Each maps a corpus key to the
 # exact PDF filename stem, so the match is stated rather than guessed.
 MANUAL_FILE = {
+    # Two rows the digests labelled by METHOD name rather than by author ("DIVERSE",
+    # "Don't flatten, tokenize!"), so no surname can be recovered from the label and the
+    # generic-word blocklist correctly refuses "diverse"/"flatten" as surnames.
+    "dontflatten_2025_tokenize": "Sokar et al. 2025 - Don't flatten, tokenize - Unlocking the key to SoftMoE's efficacy in deep RL",
+    "diverse_2026": "Eerlings et al. 2026 - DIVERSE - Disagreement-inducing vector evolution for Rashomon set exploration (preprint)",
     "botteghi_2025_hyperl": "Botteghi et al. 2026 - HypeRL - Hypernetwork-based reinforcement learning for control of parametrized dynamical systems (preprint)",
     "schaul_2015_universal": "Schaul et al. 2015 - Universal Value Function Approximators",
     "borsa_2018_universal": "Borsa et al. 2018 - Universal Successor Features Approximators",

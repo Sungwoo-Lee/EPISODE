@@ -1176,16 +1176,21 @@ only catalogued from a survey.</p>
 
 <div class="callout">
   <h5>How much of this corpus has actually been read</h5>
-  <p><strong>{{N_PER_PAPER}}</strong> papers have their own dedicated review file.
-  <strong>{{N_MASTER}}</strong> are reviewed as a section inside a topic's master review.
-  <strong>{{N_PENDING}}</strong> were read in full while this page was being written and
-  their reviews are still being merged into the topic documents. <strong>{{N_CATALOGUED}}</strong>
-  are <em>catalogued only</em> &mdash; named and characterised in a survey, but never read
-  end-to-end, and marked as such below. {{N_NOT_HELD}} papers are cited without the library
-  holding a copy.</p>
-  <p>So the honest summary is that {{N_READ}} of {{N_PAPERS}} have a review behind them, and
-  the remainder are carried on someone else's summary. Claims on this page that rest on a
-  catalogued-only entry are not quantitative ones.</p>
+  <p><strong>{{N_PER_PAPER}}</strong> papers have their own dedicated review file and
+  <strong>{{N_MASTER}}</strong> are reviewed as a section inside a topic's master review, so
+  <strong>{{N_READ}} of {{N_PAPERS}}</strong> have a review behind them. {{N_NOT_HELD}} are
+  cited without the library holding a copy.</p>
+  <p><strong>{{N_CATALOGUED}}</strong> is <em>catalogued only</em> &mdash; characterised from a
+  survey but never read end-to-end &mdash; and it is marked as such in the list below. That
+  paper is <em>Volume Transmission Implements Context Factorization</em> (the e-nmRNN paper,
+  NeurIPS 2025), which is hosted only on a site that refuses automated download; plain
+  fetching, a headless browser and the conference proceedings were all tried. No quantitative
+  claim on this page rests on it.</p>
+  <p class="muted" style="font-size:13.5px">This breakdown is generated, not asserted: a
+  script matches every corpus row against the review files and topic documents on disk. It
+  reports a paper as read only where a review names it <em>and</em> the library holds the PDF
+  &mdash; a synthesis or survey cites papers nobody has read, and an earlier version of this
+  audit was fooled by exactly that.</p>
 </div>
 
 {{REFERENCES}}
