@@ -46,4 +46,5 @@ Animal behavioural fields can be redrawn EACH EPISODE by writing `field: [lo, hi
 - [[20260630_1718_cover_use_late_emerging_run_vs_hide]] (behavior_measures, 2026-06-30) — Cross-model: an EARLY model (randpred, 1.5M) RUNS/kites around the grid perimete
 - [[20260703_0343_predator_jump_pounce_mechanism]] (env_entities, 2026-07-03) — Added an opt-in predator JUMP/POUNCE: a hunting predator within a sampled Manhat
 - [[20260819_1947_basic04_predator_combinatorics_fully_latent]] (env_entities, 2026-08-19) — At basic level 04 the mobile predator has 42 distinct DISCRETE per-episode types
+- [[20260909_1504_env_parameter_surface_and_degenerate_traits]] (env_entities, 2026-09-09) — The grid world has 65 settings; only 15 have ever been tested as drivers of bush
 <!-- END BACKLINKS -->

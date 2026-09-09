@@ -6,8 +6,8 @@
 > To improve a row, set a `headline:` field on the entry itself.
 
 **Folder definition**: Behavior-measure platform & probes
-**Insights**: 20
-**Last updated**: 2026-08-19
+**Insights**: 21
+**Last updated**: 2026-09-09
 
 ---
 
@@ -15,6 +15,7 @@
 
 | Date | Time | ID | Summary |
 |---|---|---|---|
+| 2026-09-09 | 15:05 | [20260909_1505_one_python_figure_pipeline_not_split](20260909_1505_one_python_figure_pipeline_not_split.md) | User rejected splitting figure work into a Python script that computes numbers and JavaScript that draws them: it makes each figure two art… |
 | 2026-08-19 | 19:46 | [20260819_1946_probe_snapshot_staleness_verdict_on_partial_training](20260819_1946_probe_snapshot_staleness_verdict_on_partial_training.md) | A watermark-incremental probe only covers checkpoints that existed WHEN IT LAST RAN. |
 | 2026-08-19 | 19:45 | [20260819_1945_ambush_risk_refuted_normalize_gap_floor_effect](20260819_1945_ambush_risk_refuted_normalize_gap_floor_effect.md) | REFUTED: ambush risk does NOT explain why injury suppresses cover use. |
 | 2026-08-18 | 16:20 | [20260818_1620_rest_premium_sweep_refuted](20260818_1620_rest_premium_sweep_refuted.md) | REFUTED: making uninterrupted rest valuable does NOT drive an injured agent to the refuge bush. 10 arms spanning a 1x-129962x rest-streak p… |

@@ -69,4 +69,5 @@ in-flight run is affected (all current experiment configs override the scene).
 - [[20260629_1723_ghost_predator_inactive_slots_render]] (env_entities, 2026-06-29) — Per-episode count masking gated damage/sensing/obs by animal_active but NOT per-
 - [[20260630_1630_predator_params_per_episode_ranges]] (env_entities, 2026-06-30) — Predator behavioural params are per-episode randomizable via a [lo,hi] range. 5 
 - [[20260630_1721_per_episode_variance_dreamer_recompile_safe]] (env_entities, 2026-06-30) — The per-episode environment-variance feature (count ranges via count_high-static
+- [[20260909_1504_env_parameter_surface_and_degenerate_traits]] (env_entities, 2026-09-09) — The grid world has 65 settings; only 15 have ever been tested as drivers of bush
 <!-- END BACKLINKS -->

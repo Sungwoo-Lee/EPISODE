@@ -6,7 +6,7 @@
 > To improve a row, set a `headline:` field on the entry itself.
 
 **Folder definition**: Env entity architecture decisions
-**Insights**: 21
+**Insights**: 22
 **Last updated**: 2026-09-09
 
 ---
@@ -15,6 +15,7 @@
 
 | Date | Time | ID | Summary |
 |---|---|---|---|
+| 2026-09-09 | 15:04 | [20260909_1504_env_parameter_surface_and_degenerate_traits](20260909_1504_env_parameter_surface_and_degenerate_traits.md) | The grid world has 65 settings; only 15 have ever been tested as drivers of bush hiding. |
 | 2026-09-09 | 14:02 | [20260909_1402_parity_gates_green_without_comparing](20260909_1402_parity_gates_green_without_comparing.md) | Two of the environment's byte-identity gates were reporting success without comparing anything — one skipped for three months after its con… |
 | 2026-09-01 | 15:31 | [20260901_1528_interoceptive_channel_is_two_dims_by_design](20260901_1528_interoceptive_channel_is_two_dims_by_design.md) | Injury and nutrition are deliberately NOT observable. |
 | 2026-08-20 | 16:06 | [20260820_1606_reset_ulp_divergence_is_compiler_fusion](20260820_1606_reset_ulp_divergence_is_compiler_fusion.md) | Two runs of the same environment-reset code can disagree by one float32 last-bit (about 6e-08) on the sampled animal property, because the… |

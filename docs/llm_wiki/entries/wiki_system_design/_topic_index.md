@@ -6,8 +6,8 @@
 > To improve a row, set a `headline:` field on the entry itself.
 
 **Folder definition**: Claude LLM Wiki's own design decisions
-**Insights**: 14
-**Last updated**: 2026-07-28
+**Insights**: 15
+**Last updated**: 2026-09-09
 **Current belief**: [`_state.md`](_state.md)
 
 ---
@@ -16,6 +16,7 @@
 
 | Date | Time | ID | Summary |
 |---|---|---|---|
+| 2026-09-09 | 15:06 | [20260909_1506_diary_incomplete_artifact_index](20260909_1506_diary_incomplete_artifact_index.md) | The diary is a status board, not a complete index of what has been published. |
 | 2026-07-28 | 16:44 | [20260728_1644_wiki_pull_gate_widened_before_any_task](20260728_1644_wiki_pull_gate_widened_before_any_task.md) | The wiki is pull-only and was gated on 'when wiki work is requested', so it was never consulted during ordinary work (bug fixes, refactors,… |
 | 2026-07-28 | 16:43 | [20260728_1643_bulk_rename_component_path_and_domain_term_traps](20260728_1643_bulk_rename_component_path_and_domain_term_traps.md) | Two traps in a repo-wide mechanical rename, both of which a naive sed would have gotten wrong. |
 | 2026-07-28 | 16:42 | [20260728_1642_llm_wiki_rename_ends_memory_collision](20260728_1642_llm_wiki_rename_ends_memory_collision.md) | The project's in-repo session-insight layer and Claude Code's built-in auto-memory were both called 'memory', forcing a disambiguation ever… |
