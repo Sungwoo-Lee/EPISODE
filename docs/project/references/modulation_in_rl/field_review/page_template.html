@@ -923,11 +923,25 @@ individually. This is all of them in the corpus.</p>
   orders of magnitude to stop explosions. A FiLM arm's hyperparameters are not portable
   to a hypernetwork arm.</li>
 
-  <li><strong>Conditioner/observation entanglement.</strong> The one mechanism story for
-  why self-conditioning might hurt: when the generator reads the same signal as the
-  policy it generates, a variance-decomposition assumption about the generator's
-  Jacobian fails, and the reported effect is a consistent degradation across
-  environments.</li>
+  <li><strong>Conditioner/observation entanglement &mdash; the mechanism story, and its
+  confound.</strong> When the generator reads the same signal as the policy it
+  generates, the derivation that lets the generator's Jacobian be pulled out of a
+  covariance term no longer holds, and the reported effect is degradation across
+  environments. But the ablation that shows this changes <em>two</em> things at once:
+  the arm that reads the observation also regenerates its weights <em>every
+  timestep</em>, where the baseline regenerates once per training iteration. Self-
+  conditioning and regeneration frequency are confounded, and a second paper whose
+  generator reads local observations &mdash; but re-queries only on events &mdash; beats
+  that baseline outright. The mechanism is plausible and the experiment does not isolate
+  it.</li>
+
+  <li><strong>Regenerating too often.</strong> The axis the confound above exposes, and
+  the corpus supports an ordering on it without ever having tested it directly: once per
+  episode is <em>brittle</em> (one paper's single-query arm collapses from 98.5% to 0%),
+  once per event <em>works</em>, and once per timestep is reported as unstable by two
+  papers independently. A third finds per-rollout regeneration scores 0.50 against 0.52
+  for per-step &mdash; i.e. buys nothing &mdash; at roughly a tenth of the per-step
+  cost. Nobody has swept frequency with the architecture and conditioner held fixed.</li>
 
   <li><strong>Conditional computation, not gain.</strong> The 2024&ndash;2026
   instabilities cluster on mixture-of-experts rather than on modulation: NaN losses, an
@@ -988,6 +1002,13 @@ individually. This is all of them in the corpus.</p>
       attested?</strong> Once, and forced by a symmetry constraint rather than chosen.
       An independent test finds the constrained form <em>worse</em> where the symmetry
       only approximately holds.</li>
+      <li><strong>How often should the weights be regenerated?</strong> A live axis the
+      field has not named. Two papers reading the same conditioning signal reach opposite
+      conclusions, and the difference between them is query frequency, not architecture.</li>
+      <li><strong>Does modulator capacity matter at all?</strong> The corpus's only
+      direct capacity sweep varies an adapter's rank over a 32-fold range and finds the
+      bands heavily overlapping throughout &mdash; the paper's own text names a "sweet
+      spot" its figure does not show.</li>
       <li><strong>Modulation inside a world model.</strong> Essentially untried. The
       apparent precedent concatenates.</li>
     </ul>

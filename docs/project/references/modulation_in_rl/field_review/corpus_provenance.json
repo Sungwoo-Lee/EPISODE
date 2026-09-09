@@ -1,5 +1,5 @@
 {
-  "n_rows_parsed": 126,
+  "n_rows_parsed": 127,
   "n_distinct_papers": 98,
   "n_merged_across_digests": 28,
   "rows_per_source_file": {
@@ -7,7 +7,7 @@
     "digest_hypernet.md": 20,
     "digest_modulation_rl.md": 16,
     "rows_film_new.md": 5,
-    "rows_held_unreviewed.md": 2,
+    "rows_held_unreviewed.md": 3,
     "rows_hypernet_apps.md": 4,
     "rows_hypernet_new.md": 4,
     "rows_modrl_classics.md": 5,
@@ -47,10 +47,10 @@
     "trunk / all blocks": 18,
     "encoder": 6,
     "n/a": 5,
-    "actor + critic": 14,
+    "actor + critic": 15,
     "critic only": 11,
     "actor only": 8,
-    "world model": 2
+    "world model": 1
   },
   "conditioner_counts": {
     "other": 13,
