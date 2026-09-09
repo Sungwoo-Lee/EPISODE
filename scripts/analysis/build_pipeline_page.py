@@ -87,7 +87,11 @@ def code_block(spec: str) -> str:
     lexer = BashLexer() if path.endswith(".sh") else PythonLexer()
     hl = highlight(body, lexer, FMT).rstrip("\n")
     ref = f"{path} &middot; line{'s' if b > a else ''} {a}{f'&ndash;{b}' if b > a else ''}"
-    return (f'<figure class="code">\n<pre class="hl"><code>{hl}</code></pre>\n'
+    # The cue is emitted here rather than typed per block, so a new code block cannot arrive
+    # without one. Below the breakout width the longest line does not fit, and the page argues in
+    # its own stylesheet that an overlay scrollbar is not a cue.
+    cue = ('<p class="code-hint">&larr; the block scrolls sideways at this width</p>\n')
+    return (f'<figure class="code">\n{cue}<pre class="hl"><code>{hl}</code></pre>\n'
             f'<figcaption class="srcref">{ref}</figcaption>\n</figure>')
 
 

@@ -637,6 +637,15 @@ follow it: write `table.results.repl`, not `table.repl`. And never trust a `min-
 read — confirm it with `getComputedStyle(el).minWidth` on the rendered page, then derive any
 breakpoint from that number.
 
+**A scoping trap the fix itself creates.** The clean repair for a tie like this is often to move the
+rule onto a *wrapper* — breaking out `figure.code` rather than the `<pre>` inside it, say. That works,
+and it silently excludes every element of the same tag that lacks the wrapper. On the page where this
+was done, eleven code blocks broke out correctly and the twelfth — the one `<pre>` written directly
+into a section — kept clipping its longest line at every desktop width. **After moving a rule to a
+wrapper, grep the page for the same tag outside that wrapper**; the block that still misbehaves is
+the one nobody wrapped. Better still, emit the wrapper from the builder so a new block cannot arrive
+without it.
+
 **Verifying a fix:** for every element carrying a floor, print the declared value beside
 `getComputedStyle(el).minWidth`. Any disagreement is a rule that lost a tie you did not know it was
 in.

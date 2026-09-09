@@ -175,6 +175,11 @@ pre.hl{margin:0}
 .dia-hint{display:none;font-family:var(--mono);font-size:11px;letter-spacing:.04em;
   color:var(--muted);margin:0 0 7px}
 @media (max-width:971px){ .dia-hint{display:block} }   /* 920 floor + 2x26 padding - 1 */
+/* The same argument applies to the code: below the breakout the longest line does not fit, and an
+   overlay scrollbar is not a cue. Shown wherever a block can still clip. */
+.code-hint{display:none;font-family:var(--mono);font-size:11px;letter-spacing:.04em;
+  color:var(--muted);margin:0 0 6px}
+@media (max-width:779px){ .code-hint{display:block} }
 .srcref{font-family:var(--mono);font-size:11px;color:var(--muted);margin:6px 0 0;
   letter-spacing:.02em;text-align:right;overflow-wrap:anywhere}
 .srcref::before{content:"\2197\00a0"}
@@ -342,7 +347,7 @@ described at the end.</figcaption>
   <text x="34" y="82" font-size="10" fill="var(--muted)">store.py &middot; L105</text>
   <text x="34" y="98" font-size="10" fill="var(--muted)">finds every shard, both passes</text>
 
-  <rect x="20" y="132" width="196" height="88" rx="4" fill="var(--warn-soft)" stroke="var(--warn)"/>
+  <rect x="20" y="132" width="196" height="88" rx="4" fill="var(--card)" stroke="var(--warn)" stroke-width="1.6"/>
   <text x="34" y="154" font-size="11" font-family="monospace" fill="var(--warn)" font-weight="600">GUARD 1 &mdash; at open</text>
   <text x="34" y="172" font-size="10.5" fill="var(--ink)">seeds are contiguous,</text>
   <text x="34" y="187" font-size="10.5" fill="var(--ink)">unique, across the union</text>
@@ -358,13 +363,13 @@ described at the end.</figcaption>
   <text x="304" y="102" font-size="11" font-family="monospace" fill="var(--ink)">read shard &rarr; Frame</text>
   <text x="304" y="118" font-size="10" fill="var(--muted)">scan.py &middot; L39</text>
 
-  <rect x="292" y="146" width="180" height="86" rx="4" fill="var(--warn-soft)" stroke="var(--warn)"/>
+  <rect x="292" y="146" width="180" height="86" rx="4" fill="var(--card)" stroke="var(--warn)" stroke-width="1.6"/>
   <text x="304" y="168" font-size="11" font-family="monospace" fill="var(--warn)" font-weight="600">GUARD 2 &mdash; per shard</text>
   <text x="304" y="186" font-size="10.5" fill="var(--ink)">no episode is split</text>
   <text x="304" y="201" font-size="10.5" fill="var(--ink)">across two files</text>
   <text x="304" y="220" font-size="10" fill="var(--muted)">scan.py &middot; L53</text>
 
-  <rect x="292" y="248" width="180" height="88" rx="4" fill="var(--core-soft)" stroke="var(--core)"/>
+  <rect x="292" y="248" width="180" height="88" rx="4" fill="var(--card)" stroke="var(--core)" stroke-width="1.6"/>
   <text x="304" y="270" font-size="11" font-family="monospace" fill="var(--core)" font-weight="600">PROVIDES</text>
   <text x="304" y="288" font-size="10.5" fill="var(--ink)">is_step &middot; prev &middot; initial</text>
   <text x="304" y="303" font-size="10.5" fill="var(--ink)">estart &middot; per_episode_sum</text>
@@ -388,7 +393,7 @@ described at the end.</figcaption>
   <path d="M 590 146 L 590 108 L 476 108" fill="none" stroke="var(--muted)" stroke-width="1.2" stroke-dasharray="4 3" marker-end="url(#ar2)"/>
   <text x="600" y="128" font-size="10" fill="var(--muted)">next shard</text>
 
-  <rect x="720" y="146" width="256" height="106" rx="4" fill="var(--warn-soft)" stroke="var(--warn)"/>
+  <rect x="720" y="146" width="256" height="106" rx="4" fill="var(--card)" stroke="var(--warn)" stroke-width="1.6"/>
   <text x="734" y="168" font-size="11" font-family="monospace" fill="var(--warn)" font-weight="600">GUARD 3 &mdash; at the end</text>
   <text x="734" y="188" font-size="10.5" fill="var(--ink)">steps counted per episode</text>
   <text x="734" y="203" font-size="10.5" fill="var(--ink)">must equal the episode</text>
@@ -401,8 +406,8 @@ described at the end.</figcaption>
   <text x="734" y="316" font-size="10" fill="var(--muted)">~7 KB per arm, from 452 GB</text>
   <line x1="848" y1="252" x2="848" y2="274" stroke="var(--muted)" stroke-width="1.4" marker-end="url(#ar2)"/>
 
-  <text x="20" y="392" font-size="10.5" fill="var(--warn)" font-family="monospace">red = a guard: cannot be bypassed, cannot change a number &mdash; it either passes or it stops the run</text>
-  <text x="20" y="410" font-size="10.5" fill="var(--core)" font-family="monospace">green = a convention: the callback may ignore it, so the guarantee is auditable rather than structural</text>
+  <text x="20" y="392" font-size="10.5" fill="var(--warn)" font-family="monospace">red outline = a guard: cannot be bypassed, cannot change a number &mdash; it either passes or it stops the run</text>
+  <text x="20" y="410" font-size="10.5" fill="var(--core)" font-family="monospace">green outline = a convention: the callback may ignore it, so the guarantee is auditable rather than structural</text>
 </svg></div>
 <figcaption><b>The slow stage, opened up.</b> Three guards and one escape hatch. The distinction
 between the red boxes and the green one is the whole design: a <b>guard</b> is a property of the
@@ -444,7 +449,7 @@ that starts bypassing the conventions is one <code>grep</code> away, rather than
   <text x="360" y="260" font-size="10.5" fill="var(--study)" text-anchor="middle">was taken while the agent was looking at t=1</text>
   <text x="360" y="278" font-size="10.5" fill="var(--muted)" text-anchor="middle" font-family="monospace">frame.prev &middot; scan.py L62</text>
 
-  <rect x="700" y="150" width="284" height="112" rx="4" fill="var(--warn-soft)" stroke="var(--warn)"/>
+  <rect x="700" y="150" width="284" height="112" rx="4" fill="var(--card)" stroke="var(--warn)" stroke-width="1.6"/>
   <text x="714" y="172" font-size="11" font-family="monospace" fill="var(--warn)" font-weight="600">what goes wrong without it</text>
   <text x="714" y="192" font-size="10.5" fill="var(--ink)">Count the reset row and every</text>
   <text x="714" y="207" font-size="10.5" fill="var(--ink)">denominator inflates. Read a</text>
@@ -697,6 +702,8 @@ the template verbatim, checked <em>before</em> anything is written so a stale co
 <h2>Running it</h2>
 <p>Two commands rebuild everything downstream of the store. The first is the slow one and is only
 needed when the store changes; the rest take seconds.</p>
+<figure class="code">
+<p class="code-hint">&larr; the block scrolls sideways at this width</p>
 <pre class="sh">P=/home/vncuser/miniconda3/envs/grid_world_pain/bin/python
 
 # stage 2 - slow, only when the store changes
@@ -707,6 +714,8 @@ $P scripts/analysis/studies/sensor_ladder/collect_time_course.py  # ~2.5 min per
 $P scripts/analysis/ladder/run_all.py              # all fifteen figures
 $P scripts/analysis/ladder/make_report_tables.py   # every table in the report
 $P scripts/analysis/ladder/build_artifact.py       # the shareable HTML page</pre>
+<figcaption class="srcref">shell &middot; not a file</figcaption>
+</figure>
 <p>Both sweeps take <code>--arms</code> to rebuild a subset, which is what makes a fourteen-arm
 rebuild parallelisable across nodes. The figure runner is twenty-four lines and exists only to save
 typing &mdash; each figure script still runs standalone:</p>
