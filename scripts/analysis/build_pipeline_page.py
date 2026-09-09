@@ -86,7 +86,13 @@ def code_block(spec: str) -> str:
     body = "\n".join(l[pad:] if len(l) >= pad else l for l in body.splitlines())
     lexer = BashLexer() if path.endswith(".sh") else PythonLexer()
     hl = highlight(body, lexer, FMT).rstrip("\n")
-    ref = f"{path} &middot; line{'s' if b > a else ''} {a}{f'&ndash;{b}' if b > a else ''}"
+    # Only the PATH may break mid-token; the `lines a-b` label must not. `overflow-wrap:anywhere`
+    # on the whole caption was insurance against a long path, and it also licensed a break inside
+    # the short label, so a phone rendered "... collect_arm_data.py *" / "lines 102-113". Scope the
+    # escape hatch to the span that needs it and glue the label with non-breaking spaces.
+    span = a if b == a else f"{a}&ndash;{b}"
+    ref = (f'<span class="path">{path}</span> &middot; '
+           f'<span class="lines">line{"s" if b > a else ""}&nbsp;{span}</span>')
     # The cue is emitted here rather than typed per block, so a new code block cannot arrive
     # without one. Below the breakout width the longest line does not fit, and the page argues in
     # its own stylesheet that an overlay scrollbar is not a cue.

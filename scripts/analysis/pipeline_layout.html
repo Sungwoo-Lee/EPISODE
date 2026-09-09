@@ -186,7 +186,12 @@ pre.hl{margin:0}
    and the media query above would keep a cue visible after the script hides it. F14. */
 [hidden]{display:none!important}
 .srcref{font-family:var(--mono);font-size:11px;color:var(--muted);margin:6px 0 0;
-  letter-spacing:.02em;text-align:right;overflow-wrap:anywhere}
+  letter-spacing:.02em;text-align:right}
+/* The escape hatch belongs on the path, which is the only part that can be too long to fit; on the
+   whole caption it also let the short `lines a-b` label break across two lines at phone width. */
+.srcref .path{overflow-wrap:anywhere}
+/* A line may break after an en-dash, so gluing only the space still allowed "lines 20-" / "28". */
+.srcref .lines{white-space:nowrap}
 .srcref::before{content:"\2197\00a0"}
 </style>
 <div class="wrap">
@@ -510,7 +515,7 @@ figure that looks entirely normal.</p>
         <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">n_episodes</span><span class="si">:</span><span class="s2">,</span><span class="si">}</span><span class="s2"> episodes spanning </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">seeds</span><span class="o">.</span><span class="n">min</span><span class="p">()</span><span class="si">:</span><span class="s2">,</span><span class="si">}</span><span class="s2">..</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">seeds</span><span class="o">.</span><span class="n">max</span><span class="p">()</span><span class="si">:</span><span class="s2">,</span><span class="si">}</span><span class="s2"> &quot;</span>
         <span class="sa">f</span><span class="s2">&quot;(</span><span class="si">{</span><span class="n">span</span><span class="si">:</span><span class="s2">,</span><span class="si">}</span><span class="s2"> seeds). A gap or an overlap means the population is not what the &quot;</span>
         <span class="sa">f</span><span class="s2">&quot;analysis will report it to be.&quot;</span><span class="p">)</span></code></pre>
-<figcaption class="srcref">scripts/analysis/core/store.py &middot; lines 57&ndash;62</figcaption>
+<figcaption class="srcref"><span class="path">scripts/analysis/core/store.py</span> &middot; <span class="lines">lines&nbsp;57&ndash;62</span></figcaption>
 </figure>
 <p>The rest of the module is small readers &mdash; <code>episode()</code> for a column of the
 per-episode table, <code>episode_list()</code> for a column that holds a list per episode, and
@@ -531,7 +536,7 @@ per-episode table, <code>episode_list()</code> for a column that holds a list pe
             <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2"> is not (episodes x </span><span class="si">{</span><span class="n">per_episode</span><span class="si">}</span><span class="s2"> x channels): </span><span class="si">{</span><span class="n">flat</span><span class="o">.</span><span class="n">size</span><span class="si">:</span><span class="s2">,</span><span class="si">}</span><span class="s2"> values do not &quot;</span>
             <span class="sa">f</span><span class="s2">&quot;divide by </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">n_episodes</span><span class="si">:</span><span class="s2">,</span><span class="si">}</span><span class="s2"> x </span><span class="si">{</span><span class="n">per_episode</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
     <span class="k">return</span> <span class="n">flat</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">n_episodes</span><span class="p">,</span> <span class="n">per_episode</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">)[</span><span class="bp">self</span><span class="o">.</span><span class="n">order</span><span class="p">]</span></code></pre>
-<figcaption class="srcref">scripts/analysis/core/store.py &middot; lines 80&ndash;93</figcaption>
+<figcaption class="srcref"><span class="path">scripts/analysis/core/store.py</span> &middot; <span class="lines">lines&nbsp;80&ndash;93</span></figcaption>
 </figure>
 <p>The shape of that array is not written down anywhere in the file, so it has to be inferred from
 the total number of values &mdash; and an inferred shape that happens to divide evenly is exactly
@@ -562,7 +567,7 @@ decision was taken on.</p>
 <span class="n">row</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">n</span><span class="p">)</span>
 <span class="bp">self</span><span class="o">.</span><span class="n">is_step</span> <span class="o">=</span> <span class="n">row</span> <span class="o">&gt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">estart</span>                <span class="c1"># excludes every reset row</span>
 <span class="bp">self</span><span class="o">.</span><span class="n">prev</span> <span class="o">=</span> <span class="n">row</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">is_step</span><span class="p">]</span> <span class="o">-</span> <span class="mi">1</span>               <span class="c1"># the row the action was chosen on</span></code></pre>
-<figcaption class="srcref">scripts/analysis/core/scan.py &middot; lines 49&ndash;62</figcaption>
+<figcaption class="srcref"><span class="path">scripts/analysis/core/scan.py</span> &middot; <span class="lines">lines&nbsp;49&ndash;62</span></figcaption>
 </figure>
 <p>Then <code>sweep()</code> walks the shards, hands each <code>Frame</code> to the study's own
 function, and &mdash; the important part &mdash; counts the steps itself as it goes, so it can
@@ -590,7 +595,7 @@ because the driver is not asking the study for it:</p>
                   <span class="n">flush</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
     <span class="n">store</span><span class="o">.</span><span class="n">assert_step_counts</span><span class="p">(</span><span class="n">counted</span><span class="p">)</span>
     <span class="k">return</span> <span class="n">acc</span></code></pre>
-<figcaption class="srcref">scripts/analysis/core/scan.py &middot; lines 100&ndash;119</figcaption>
+<figcaption class="srcref"><span class="path">scripts/analysis/core/scan.py</span> &middot; <span class="lines">lines&nbsp;100&ndash;119</span></figcaption>
 </figure>
 <p>Note what <code>sweep()</code> deliberately is <em>not</em>: it is a driver, not a language for
 describing measurements. An earlier design had studies declare what to count and never write a
@@ -626,7 +631,7 @@ step rows.</p>
         <span class="n">ok</span> <span class="o">=</span> <span class="n">src</span> <span class="o">&gt;</span> <span class="n">estart</span>
         <span class="n">out</span><span class="p">[</span><span class="n">ok</span><span class="p">]</span> <span class="o">+=</span> <span class="n">kernel</span><span class="p">[</span><span class="n">j</span><span class="p">]</span> <span class="o">*</span> <span class="n">inj</span><span class="p">[</span><span class="n">src</span><span class="p">[</span><span class="n">ok</span><span class="p">]]</span>
     <span class="k">return</span> <span class="n">out</span></code></pre>
-<figcaption class="srcref">scripts/analysis/core/env.py &middot; lines 74&ndash;89</figcaption>
+<figcaption class="srcref"><span class="path">scripts/analysis/core/env.py</span> &middot; <span class="lines">lines&nbsp;74&ndash;89</span></figcaption>
 </figure>
 <p>That one is worth reading closely even if you skip the rest: the agent does not feel its wound
 directly. It feels a weighted average of the last twelve steps of damage, which means an agent that
@@ -650,7 +655,7 @@ after the fact by reclassifying a field that failed.</p>
 <pre class="hl"><code><span class="k">def</span><span class="w"> </span><span class="nf">_is_intlike</span><span class="p">(</span><span class="n">v</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
     <span class="k">return</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">v</span><span class="p">,</span> <span class="p">(</span><span class="nb">int</span><span class="p">,</span> <span class="nb">float</span><span class="p">))</span> <span class="ow">and</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">v</span><span class="p">,</span> <span class="nb">bool</span><span class="p">)</span> \
         <span class="ow">and</span> <span class="n">math</span><span class="o">.</span><span class="n">isfinite</span><span class="p">(</span><span class="n">v</span><span class="p">)</span> <span class="ow">and</span> <span class="n">v</span> <span class="o">==</span> <span class="nb">round</span><span class="p">(</span><span class="n">v</span><span class="p">)</span></code></pre>
-<figcaption class="srcref">scripts/analysis/core/golden.py &middot; lines 33&ndash;35</figcaption>
+<figcaption class="srcref"><span class="path">scripts/analysis/core/golden.py</span> &middot; <span class="lines">lines&nbsp;33&ndash;35</span></figcaption>
 </figure>
 <p>One further guard is easy to miss and does real work: a field that is a whole number in the old
 output and not in the new one is reported as a <b>tier break</b>, not quietly demoted to the looser
@@ -711,7 +716,7 @@ own folder, and the bookkeeping it used to carry is gone:</p>
     <span class="n">E</span><span class="p">[</span><span class="s2">&quot;bush_steps&quot;</span><span class="p">][</span><span class="n">gidx</span><span class="p">]</span> <span class="o">+=</span> <span class="n">fr</span><span class="o">.</span><span class="n">per_episode_sum</span><span class="p">(</span><span class="n">bu</span><span class="p">)</span>
     <span class="n">E</span><span class="p">[</span><span class="s2">&quot;dmg&quot;</span><span class="p">][</span><span class="n">gidx</span><span class="p">]</span> <span class="o">+=</span> <span class="n">fr</span><span class="o">.</span><span class="n">per_episode_sum_with_initial</span><span class="p">(</span><span class="n">fr</span><span class="o">.</span><span class="n">raw</span><span class="p">(</span><span class="s2">&quot;damage&quot;</span><span class="p">))</span>
     <span class="n">E</span><span class="p">[</span><span class="s2">&quot;n_ate&quot;</span><span class="p">][</span><span class="n">gidx</span><span class="p">]</span> <span class="o">+=</span> <span class="n">fr</span><span class="o">.</span><span class="n">per_episode_sum_with_initial</span><span class="p">(</span><span class="n">fr</span><span class="o">.</span><span class="n">raw</span><span class="p">(</span><span class="s2">&quot;ate_food&quot;</span><span class="p">))</span></code></pre>
-<figcaption class="srcref">scripts/analysis/studies/sensor_ladder/collect_arm_data.py &middot; lines 102&ndash;113</figcaption>
+<figcaption class="srcref"><span class="path">scripts/analysis/studies/sensor_ladder/collect_arm_data.py</span> &middot; <span class="lines">lines&nbsp;102&ndash;113</span></figcaption>
 </figure>
 <p>Two conventions here are preserved rather than tidied, because tidying them would move published
 numbers: bush steps exclude the reset row while damage and eating include it &mdash; both forms are
@@ -791,7 +796,7 @@ page, so the two cannot drift apart by being edited separately.</p>
 <span class="n">curves</span> <span class="o">=</span> <span class="p">{</span><span class="n">a</span><span class="p">:</span> <span class="n">L</span><span class="o">.</span><span class="n">rate</span><span class="p">(</span><span class="n">D</span><span class="p">[</span><span class="n">a</span><span class="p">][</span><span class="s2">&quot;grids&quot;</span><span class="p">][</span><span class="s2">&quot;dw_early&quot;</span><span class="p">],</span> <span class="n">D</span><span class="p">[</span><span class="n">a</span><span class="p">][</span><span class="s2">&quot;grids&quot;</span><span class="p">][</span><span class="s2">&quot;dwt_early&quot;</span><span class="p">])</span> <span class="k">for</span> <span class="n">a</span> <span class="ow">in</span> <span class="n">arms</span><span class="p">}</span>
 <span class="n">slope</span> <span class="o">=</span> <span class="p">{</span><span class="n">a</span><span class="p">:</span> <span class="n">curves</span><span class="p">[</span><span class="n">a</span><span class="p">][</span><span class="mi">3</span><span class="p">]</span> <span class="o">-</span> <span class="n">curves</span><span class="p">[</span><span class="n">a</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span> <span class="k">for</span> <span class="n">a</span> <span class="ow">in</span> <span class="n">arms</span><span class="p">}</span>
 <span class="n">GRP</span> <span class="o">=</span> <span class="p">{</span><span class="n">a</span><span class="p">:</span> <span class="n">L</span><span class="o">.</span><span class="n">resolves_identity</span><span class="p">(</span><span class="n">D</span><span class="p">[</span><span class="n">a</span><span class="p">][</span><span class="s2">&quot;sensory&quot;</span><span class="p">])</span> <span class="k">for</span> <span class="n">a</span> <span class="ow">in</span> <span class="n">arms</span><span class="p">}</span></code></pre>
-<figcaption class="srcref">scripts/analysis/ladder/lad08_injury_dose_response.py &middot; lines 20&ndash;28</figcaption>
+<figcaption class="srcref"><span class="path">scripts/analysis/ladder/lad08_injury_dose_response.py</span> &middot; <span class="lines">lines&nbsp;20&ndash;28</span></figcaption>
 </figure>
 <p>That is the whole contract: <code>load_all()</code> for the aggregates,
 <code>rate(numerator, denominator)</code> to turn a stored pair into a percentage, and
@@ -810,7 +815,7 @@ reads the regression output the third sweep wrote:</p>
         <span class="k">if</span> <span class="n">r</span><span class="p">[</span><span class="s2">&quot;model&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="n">model</span> <span class="ow">and</span> <span class="n">r</span><span class="p">[</span><span class="s2">&quot;term&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="n">term</span><span class="p">:</span>
             <span class="k">return</span> <span class="nb">float</span><span class="p">(</span><span class="n">r</span><span class="p">[</span><span class="s2">&quot;dpp_per_sd&quot;</span><span class="p">])</span>
     <span class="k">return</span> <span class="nb">float</span><span class="p">(</span><span class="s2">&quot;nan&quot;</span><span class="p">)</span></code></pre>
-<figcaption class="srcref">scripts/analysis/ladder/make_report_tables.py &middot; lines 53&ndash;58</figcaption>
+<figcaption class="srcref"><span class="path">scripts/analysis/ladder/make_report_tables.py</span> &middot; <span class="lines">lines&nbsp;53&ndash;58</span></figcaption>
 </figure>
 </div>
 
@@ -830,7 +835,7 @@ than a blank panel nobody notices.</p>
 <span class="n">left</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">findall</span><span class="p">(</span><span class="sa">r</span><span class="s2">&quot;\{\{[^}]+\}\}&quot;</span><span class="p">,</span> <span class="n">html</span><span class="p">)</span>
 <span class="k">if</span> <span class="n">left</span><span class="p">:</span>
     <span class="k">raise</span> <span class="ne">SystemExit</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;unsubstituted tokens remain: </span><span class="si">{</span><span class="nb">sorted</span><span class="p">(</span><span class="nb">set</span><span class="p">(</span><span class="n">left</span><span class="p">))</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span></code></pre>
-<figcaption class="srcref">scripts/analysis/ladder/build_artifact.py &middot; lines 209&ndash;215</figcaption>
+<figcaption class="srcref"><span class="path">scripts/analysis/ladder/build_artifact.py</span> &middot; <span class="lines">lines&nbsp;209&ndash;215</span></figcaption>
 </figure>
 <p>It enforces a good deal more than substitution, and all of it as hard build failures rather than
 warnings: every figure must name an existing generating script and appear exactly once; every
@@ -871,7 +876,7 @@ typing &mdash; each figure script still runs standalone:</p>
         <span class="n">runpy</span><span class="o">.</span><span class="n">run_path</span><span class="p">(</span><span class="n">f</span><span class="p">,</span> <span class="n">run_name</span><span class="o">=</span><span class="s2">&quot;__main__&quot;</span><span class="p">)</span>
         <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;[ok] </span><span class="si">{</span><span class="n">n</span><span class="si">}</span><span class="s2">  </span><span class="si">{</span><span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span><span class="o">-</span><span class="n">t</span><span class="si">:</span><span class="s2">.1f</span><span class="si">}</span><span class="s2">s&quot;</span><span class="p">,</span> <span class="n">flush</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
     <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span></code></pre>
-<figcaption class="srcref">scripts/analysis/ladder/run_all.py &middot; lines 11&ndash;18</figcaption>
+<figcaption class="srcref"><span class="path">scripts/analysis/ladder/run_all.py</span> &middot; <span class="lines">lines&nbsp;11&ndash;18</span></figcaption>
 </figure>
 <p>It runs every figure even after one fails, then exits non-zero with the list &mdash; so one broken
 figure gives you the other fourteen plus a report, instead of stopping at the first traceback.</p>

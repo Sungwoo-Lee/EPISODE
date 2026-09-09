@@ -186,7 +186,12 @@ pre.hl{margin:0}
    and the media query above would keep a cue visible after the script hides it. F14. */
 [hidden]{display:none!important}
 .srcref{font-family:var(--mono);font-size:11px;color:var(--muted);margin:6px 0 0;
-  letter-spacing:.02em;text-align:right;overflow-wrap:anywhere}
+  letter-spacing:.02em;text-align:right}
+/* The escape hatch belongs on the path, which is the only part that can be too long to fit; on the
+   whole caption it also let the short `lines a-b` label break across two lines at phone width. */
+.srcref .path{overflow-wrap:anywhere}
+/* A line may break after an en-dash, so gluing only the space still allowed "lines 20-" / "28". */
+.srcref .lines{white-space:nowrap}
 .srcref::before{content:"\2197\00a0"}
 </style>
 <div class="wrap">
