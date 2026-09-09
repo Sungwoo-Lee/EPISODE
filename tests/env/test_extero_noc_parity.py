@@ -43,8 +43,11 @@ from src.environment.sensor import get_observation, get_observation_breakdown
 
 # ── Paths ─────────────────────────────────────────────────────────────────────
 
+# Moved under experiment/archive/ in 4e975fb8 (2026-06-17). The old path was never
+# repointed, and because the `params` fixture SKIPS on a missing config, this module
+# reported "3 skipped" — green — for three months while testing nothing.
 _PARITY_CFG = os.path.join(
-    _ROOT, "configs", "experiment", "hypervigilance",
+    _ROOT, "configs", "environment", "experiment", "archive", "hypervigilance",
     "01-interoNocicept_sameProp.yaml"
 )
 _FIXTURE_PATH = os.path.join(
@@ -115,7 +118,11 @@ def pytest_addoption(parser):
 @pytest.fixture(scope="module")
 def params():
     if not os.path.exists(_PARITY_CFG):
-        pytest.skip(f"Parity reference config not found: {_PARITY_CFG}")
+        pytest.fail(
+            f"Parity reference config not found: {_PARITY_CFG}. This used to skip, "
+            f"which is how this gate sat green for three months after the config was "
+            f"moved. If the config moved again, repoint _PARITY_CFG — do not re-skip."
+        )
     return _load_params()
 
 
@@ -123,8 +130,17 @@ def params():
 def extero_noc_fixture(params, request):
     """Load or generate the extero-noc parity fixture."""
     gen = request.config.getoption("--gen-fixtures", default=False)
-    if gen or not os.path.exists(_FIXTURE_PATH):
+    if gen:
         return _generate_fixture(params)
+    if not os.path.exists(_FIXTURE_PATH):
+        # Regenerating on absence would capture today's code on today's backend and
+        # then compare it against itself — a byte-parity gate that always passes.
+        # The fixture is committed; if it is missing, that is the thing to fix.
+        pytest.fail(
+            f"Parity fixture missing: {_FIXTURE_PATH}. It is committed to the repo, so "
+            f"a missing file means a broken checkout — not a cue to recapture. Pass "
+            f"--gen-fixtures only when deliberately re-baselining on a known-good commit."
+        )
     data = np.load(_FIXTURE_PATH)
     return data["extero_noc_all"]
 
