@@ -43,6 +43,8 @@ h3{font-size:1.04rem;font-weight:600;line-height:1.3}
 p{margin:0}
 a{color:var(--accent)}
 .mono{font-family:"Azeret Mono",ui-monospace,monospace;font-size:.84em;overflow-wrap:anywhere}
+sup,sub{font-size:.72em;line-height:0;vertical-align:baseline;position:relative;white-space:nowrap}
+sub{top:.25em}sup{top:-.4em}
 .eyebrow{font-family:"Azeret Mono",monospace;font-size:.68rem;letter-spacing:.16em;
   text-transform:uppercase;color:var(--muted);margin:0}
 
@@ -96,6 +98,58 @@ table.tprose.survey.volt{min-width:400px}
    1 scroll border = 42 each side), so they overflow at W < 520+84 = 604
    -> the .narrowtbl cue is set at 603. Measured at W=604: box is exactly 520. */
 table.tprose.breakdown,table.tprose.survey.breakdown{min-width:520px}
+/* ---- diagram + walkthrough vocabulary (architecture and per-analysis) ---- */
+.dia{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:4px 0 2px}
+@media(max-width:660px){.dia{grid-template-columns:1fr}}
+.lane{border:1px solid var(--rule2);border-radius:7px;background:var(--card);padding:13px 14px}
+.lanetag{font-family:"Azeret Mono",monospace;font-size:.66rem;letter-spacing:.09em;
+  text-transform:uppercase;color:var(--muted);margin-bottom:9px}
+.lanenote{font-size:.86rem;color:var(--body);margin-top:10px;line-height:1.5}
+.vchain{display:flex;flex-direction:column;gap:4px}
+.vchain .blk{text-align:center}
+.down{color:var(--muted);text-align:center;font-size:.8rem;line-height:1}
+.blk.wide{display:block;width:100%;box-sizing:border-box}
+.tagf,.tagv{display:block;font-family:"Azeret Mono",monospace;font-size:.6rem;
+  letter-spacing:.08em;text-transform:uppercase;margin-top:3px;font-style:normal}
+.tagf{color:var(--body)}
+.tagv{color:var(--accent)}
+.blk.varyp{background:var(--accent-bg);border-color:var(--accent);color:var(--accent)}
+.feeds{border:1px dashed var(--rule2);border-radius:7px;background:var(--sunk);
+  padding:11px 14px;margin:10px 0 2px;font-size:.9rem;line-height:1.55}
+.chain.padded{padding:2px}
+.eqn{background:var(--sunk);border:1px solid var(--rule);border-radius:6px;padding:13px 15px;
+  display:flex;flex-direction:column;gap:8px}
+.eqn .mono{font-size:1rem;color:var(--ink)}
+.eqnleg{font-size:.84rem;color:var(--body);line-height:1.55}
+.lb{font-family:"Azeret Mono",monospace;font-size:.78em;background:var(--accent-bg);
+  color:var(--accent);border-radius:3px;padding:1px 5px}
+.numstrip{display:flex;flex-wrap:wrap;gap:4px;font-family:"Azeret Mono",monospace;
+  font-size:.78rem;padding:2px}
+.numstrip span{border:1px solid var(--rule);border-radius:4px;background:var(--card);
+  padding:5px 6px;color:var(--body)}
+.head.sub{margin-top:6px}
+.head.sub h3{font-size:1.02rem}
+.kv.steps{grid-template-columns:186px 1fr;gap:11px 16px}
+.kv.steps dt{font-size:.68rem;color:var(--accent);letter-spacing:.06em;text-transform:none}
+@media(max-width:620px){.kv.steps{grid-template-columns:1fr;gap:3px 0}
+  .kv.steps dd{margin-bottom:9px}}
+/* the variance-split picture: a units x time grid of cells */
+.vsplit{display:grid;grid-template-columns:auto 1fr;gap:8px 10px;align-items:center;
+  margin:2px 0;font-size:.8rem}
+.vgrid{display:grid;grid-template-columns:repeat(12,1fr);gap:2px;min-width:210px}
+.vgrid i{display:block;aspect-ratio:1;border-radius:2px;background:var(--ink);
+  border:1px solid var(--rule)}
+.vaxis{font-family:"Azeret Mono",monospace;font-size:.64rem;letter-spacing:.07em;
+  text-transform:uppercase;color:var(--muted)}
+.vaxis.rot{writing-mode:vertical-rl;transform:rotate(180deg);justify-self:center}
+.splitleg{display:flex;flex-wrap:wrap;gap:8px 16px;margin-top:9px;font-size:.84rem}
+.splitleg span{display:inline-flex;align-items:center;gap:6px}
+.sw{width:13px;height:13px;border-radius:3px;border:1px solid var(--rule2);flex:none}
+/* the paired-episode picture */
+.pair{display:grid;grid-template-columns:1fr auto 1fr;gap:10px;align-items:stretch;margin:4px 0}
+@media(max-width:600px){.pair{grid-template-columns:1fr}}
+.pairmid{display:flex;align-items:center;justify-content:center;color:var(--muted);
+  font-family:"Azeret Mono",monospace;font-size:.72rem}
 /* nit 2: the row-wise summary column is a summary, not a fourth slice -- give it
    the same 2px rule the total row gets, so both summaries read the same way. */
 table.survey.breakdown th:nth-child(5),table.survey.breakdown td:nth-child(5){border-left:2px solid var(--rule2)}
@@ -105,6 +159,7 @@ table.survey.breakdown th:nth-child(5),table.survey.breakdown td:nth-child(5){bo
 tbody tr.total td{border-top:2px solid var(--rule2)}
 tbody tr.total td.n{font-weight:500}
 th,td{padding:10px 13px;text-align:left;border-bottom:1px solid var(--rule);vertical-align:top}
+th em{text-transform:none;font-style:italic;letter-spacing:0}
 th{font-family:"Azeret Mono",monospace;font-size:.64rem;letter-spacing:.08em;text-transform:uppercase;
   color:var(--hdr);font-weight:500;background:var(--sunk)}
 tbody tr:last-child td{border-bottom:none}
@@ -199,6 +254,105 @@ a:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
     training recipes. <strong>One agent per configuration</strong> — which constrains what can be
     concluded, and is flagged wherever it bites.</p>
   </div>
+</section>
+
+<section id="how-gamma">
+  <div class="head"><h2>Where the gain actually comes from</h2></div>
+  <div class="prose">
+    <p>One thing is worth spelling out before the analyses, because it is easy to get backwards:
+    <strong>the gain is not a stored setting, it is a signal the modulator computes fresh at every
+    timestep</strong>. The arithmetic that produces it involves several quantities that <em>are</em>
+    fixed, and all three analyses are measurements on different parts of that arithmetic.</p>
+  </div>
+
+  <p class="rowlab">The two networks, and where they meet</p>
+  <div class="dia">
+    <div class="lane">
+      <p class="lanetag">Main network — turns senses into an action</p>
+      <div class="vchain">
+        <span class="blk wide">encoder — processes the raw senses</span>
+        <span class="down">↓</span>
+        <span class="blk wide">rnn — memory carried between timesteps</span>
+        <span class="down">↓</span>
+        <span class="blk wide">actor → action &nbsp;·&nbsp; critic → value</span>
+      </div>
+      <p class="lanenote">The four <strong>sites</strong> — encoder, rnn, actor, critic — are the places
+      the modulator is allowed to reach into.</p>
+    </div>
+    <div class="lane">
+      <p class="lanetag">Modulator — a much smaller side network</p>
+      <div class="vchain">
+        <span class="blk wide">reads the same senses</span>
+        <span class="down">↓</span>
+        <span class="blk wide varyp">GRU → hidden state <em>h</em>, 16 numbers<span class="tagv">changes every step</span></span>
+        <span class="down">↓</span>
+        <span class="blk wide">gain head &nbsp;·&nbsp; offset head</span>
+      </div>
+      <p class="lanenote">The hidden state <em>h</em> is the modulator's "how things are right now". It is
+      the <strong>only</strong> thing in the whole calculation that changes during an episode.</p>
+    </div>
+  </div>
+
+  <div class="feeds">
+    <p>The modulator sends a <strong>gain</strong> (γ) and an <strong>offset</strong> (β) into each site it
+    is pointed at — one pair per unit, 128 units per site, recomputed every timestep. At the site the
+    arithmetic is just <span class="mono">adjusted = gain × original + offset</span>.</p>
+  </div>
+
+  <p class="rowlab">Zoom in: how one site's 128 gains are produced</p>
+  <div class="scroll">
+    <div class="chain padded">
+      <span class="blk varyp"><em>h</em> · 16 numbers<span class="tagv">per step</span></span>
+      <span class="step"><span class="arw">→</span><span class="blk">× <em>K</em> · 16×128<span class="tagf">fixed</span></span></span>
+      <span class="step"><span class="arw">→</span><span class="blk">+ <em>b</em> · bias<span class="tagf">fixed</span></span></span>
+      <span class="step"><span class="arw">→</span><span class="blk">+ <em>g</em> · baseline<span class="tagf">fixed</span></span></span>
+      <span class="step"><span class="arw">→</span><span class="blk varyp">γ · 128 gains<span class="tagv">per&nbsp;step</span></span></span>
+    </div>
+  </div>
+  <p class="cap">The gain pathway, from the modulator's hidden state to the 128 gains delivered to one
+  site. Shaded blocks marked "per step" are recomputed at every timestep; plain blocks marked "fixed" are
+  learned during training and then never change again. <strong>γ varies because <em>h</em> varies</strong>
+  — everything between them is frozen once training ends. The offset β is produced by a second, entirely
+  separate head with its own <em>K</em>, <em>b</em> and <em>g</em>.</p>
+
+  <div class="note">
+    <p><strong>A naming warning.</strong> <em>g</em> and <em>b</em> are <strong>not</strong> γ and β. They
+    are two fixed learned constants <em>inside</em> the gain pathway: <em>b</em> is the gain head's own
+    bias, <em>g</em> a separate per-unit baseline. γ is what comes <em>out</em> of that pathway. The
+    letters are unfortunate — they are the names the source code uses — so where it matters this page
+    calls the fixed part <span class="mono">γ_rest</span> and the varying part
+    <span class="mono">γ_ctx</span>.</p>
+  </div>
+
+  <div class="prose"><p>Written out, unit <em>i</em>'s gain is:</p></div>
+  <div class="eqn">
+    <p class="mono">γ<sub>i</sub> &nbsp;=&nbsp; (g<sub>i</sub> + b<sub>i</sub>) &nbsp;+&nbsp; Σ<sub>j</sub> K<sub>ji</sub> h<sub>j</sub></p>
+    <p class="eqnleg"><span class="lb">γ_rest</span> where the dial sits at rest — fixed after training.
+    &nbsp; <span class="lb">γ_ctx</span> how far the modulator pushes it away from rest right now — the
+    only part that can differ between two moments.</p>
+  </div>
+
+  <div class="prose">
+    <p>Only <span class="mono">γ_ctx</span> can carry information about the situation, because
+    <span class="mono">γ_rest</span> is the same in every situation. That is the distinction the next
+    section calls a <strong>gauge</strong> quantity, and the trained weights make it unusually literal.
+    <em>b</em> starts at 1 (so a freshly enabled site is a no-op) and <em>g</em> starts at 0; from then on
+    both receive identical gradients, so their difference never moves:</p>
+  </div>
+  <div class="scroll">
+    <table class="tprose survey">
+      <thead><tr><th>Checkpoint</th><th class="n">largest |(<em>b</em> − <em>g</em>) − 1| across the 128 units</th></tr></thead>
+      <tbody>
+        <tr><td>step 200,195 — first</td><td class="n">0.0000039</td></tr>
+        <tr><td>step 10,000,026 — last</td><td class="n">0.0000408</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p class="cap">Ten million steps of training and the two constants stay exactly 1.0 apart, to float32
+  rounding. For the offset pair — which both start at 0 — they are bit-identical at every checkpoint.
+  <strong>They are one degree of freedom stored twice</strong>, which is why the constant part cannot be
+  read as a meaningful learned quantity, and why the freeze test in analysis 03 has to write its frozen
+  value into the per-unit baseline rather than the per-group head bias.</p>
 </section>
 
 <section>
@@ -364,7 +518,7 @@ a:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
             <tr><td>actor</td><td class="n">11.50</td><td class="n">10.30</td><td class="n">11.05</td><td class="n">10.95 ± 1.48</td></tr>
             <tr><td>critic</td><td class="n">10.01</td><td class="n">12.35</td><td class="n">9.01</td><td class="n">10.46 ± 1.59</td></tr>
             <tr><td>rnn</td><td class="n">9.33</td><td class="n">10.85</td><td class="n">9.97</td><td class="n">10.05 ± 1.25</td></tr>
-            <tr class="total"><td><strong>all sites</strong></td><td class="n">11.05</td><td class="n">10.92</td><td class="n">10.87</td><td class="n">10.94 ± 1.38</td></tr>
+            <tr class="total"><td><strong>all sites</strong></td><td class="n">11.05</td><td class="n">10.92</td><td class="n">10.87</td><td class="n">10.95 ± 1.39</td></tr>
           </tbody>
         </table>
       </div>
@@ -468,7 +622,7 @@ a:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
             <tr><td>encoder</td><td class="n">−122.8</td><td class="n">−107.7</td><td class="n gnstart">−47.2</td><td class="n">−130.0</td></tr>
             <tr><td>rnn</td><td class="n">+11.0</td><td class="n">−147.5</td><td class="n gnstart">−4.2</td><td class="n">−76.0</td></tr>
             <tr><td>actor</td><td class="n">−123.2</td><td class="n">−14.0</td><td class="n gnstart">−121.3</td><td class="n">−4.2</td></tr>
-            <tr><td>critic</td><td class="n gnstart">0.0</td><td class="n">0.0</td><td class="n">0.0</td><td class="n">0.0</td></tr>
+            <tr><td>critic</td><td class="n">0.0</td><td class="n">0.0</td><td class="n gnstart">0.0</td><td class="n">0.0</td></tr>
             <tr><td>all four</td><td class="n">−177.0</td><td class="n">−173.4</td><td class="n gnstart">−48.5</td><td class="n">−80.2</td></tr>
           </tbody>
         </table>
@@ -502,6 +656,281 @@ a:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
       shown up there as noise. It didn't.</p>
     </div>
 
+  </div>
+</section>
+
+<section id="how-computed">
+  <div class="head"><h2>How each number was calculated</h2></div>
+  <div class="prose">
+    <p>Each analysis is worked below on <strong>the same single agent</strong>, so the three can be read as
+    three questions about one thing rather than three unrelated procedures. The agent: trained under the
+    Monte-Carlo recipe, with modulation at the <strong>actor</strong> site only, and a modulator allowed to
+    read <strong>all 27 senses</strong>. Its final checkpoint is at 10 million steps. Every number quoted
+    is that agent's real value, recomputed from the stored weights and replays.</p>
+    <p>Each analysis opens with the same diagram of the gain pathway, with <strong>one convention
+    throughout: a shaded block is the part that analysis acts on</strong>, and its small label says how —
+    <em>measured</em>, <em>recorded</em>, or <em>edited</em>. Everything unshaded is left alone.</p>
+  </div>
+
+  <div class="head sub"><h3>01 · Reachable swing — how much the modulator <em>could</em> move a gain</h3></div>
+  <p class="rowlab">What this analysis touches</p>
+  <div class="scroll">
+    <div class="chain padded">
+      <span class="blk">GRU → <em>h</em></span>
+      <span class="step"><span class="arw">→</span><span class="blk varyp">× <em>K</em><span class="tagv">measured</span></span></span>
+      <span class="step"><span class="arw">→</span><span class="blk">+ <em>b</em> + <em>g</em><span class="tagf">drops out</span></span></span>
+      <span class="step"><span class="arw">→</span><span class="blk">γ</span></span>
+      <span class="step"><span class="arw">→</span><span class="blk">site</span></span>
+    </div>
+  </div>
+  <p class="cap">Analysis 01 reads <strong>one matrix</strong> and nothing else. No environment, no
+  episodes, no replay — just the trained weights. That is why it was worth running first: it is nearly
+  free, and a small answer would have ruled the modulator out before any expensive replay.</p>
+
+  <dl class="kv steps">
+    <dt>1 · The state lives in a box</dt>
+    <dd>A GRU updates as <span class="mono">h_new = (1−z)·n + z·h</span>, where <em>n</em> comes from a
+    <span class="mono">tanh</span> (always between −1 and 1) and <em>z</em> is a gate between 0 and 1. Every
+    new state is a blend of the old state and something inside (−1, 1), and the run starts at
+    <em>h</em> = 0. So by induction <strong>every state the modulator can ever reach has all 16 numbers
+    between −1 and +1</strong>. Exact, not an approximation — and the fact everything else rests on.</dd>
+    <dt>2 · The gain is a straight line in that state</dt>
+    <dd>From the equation in the previous section, γ is a fixed part plus a weighted sum of the 16 state
+    numbers. Only the weighted sum can move.</dd>
+    <dt>3 · One unit's reachable swing</dt>
+    <dd>Each of the 16 numbers ranges over [−1, 1] independently, so the sum is largest when every term is
+    pushed positive and smallest when every term is pushed negative. The gap between those extremes is
+    <span class="mono">swing<sub>i</sub> = 2 × Σ<sub>j</sub> |K<sub>ji</sub>|</span> — twice that column's
+    sum of absolute values. The 2 is the two opposite corners of the box.</dd>
+    <dt>4 · Average over the 128 units</dt>
+    <dd>Do that for all 128 columns and take the <strong>mean</strong>. This is the number the table
+    reports — the mean, not the maximum. Worth stating, because "reachable swing" could mean either and the
+    maximum is about twice as large (22.33 overall against 10.95).</dd>
+    <dt>5 · Keep the final checkpoint</dt>
+    <dd>Every run × checkpoint × site gives one row — 3,000 in all. The table uses only each run's
+    <strong>last</strong> checkpoint, leaving <strong>60</strong>: 5 sites × 2 recipes × 3 input slices ×
+    the 2 arms that touch each site.</dd>
+    <dt>6 · Aggregate</dt>
+    <dd>A <strong>cell</strong> averages the 4 runs sharing that site and slice. A row's
+    <strong>mean ± sd</strong> is over all 12 measurements at that site — not the average of the three
+    cells.</dd>
+  </dl>
+
+  <p class="rowlab">Step 3 on a real unit — the 16 weights in column <em>K</em>[:,0] of this agent's gain head</p>
+  <div class="scroll">
+    <div class="numstrip">
+      <span>−0.4818</span><span>+0.0839</span><span>−0.4931</span><span>−0.1327</span>
+      <span>+0.3731</span><span>+0.5824</span><span>+0.0810</span><span>−0.4068</span>
+      <span>+0.2624</span><span>+1.5256</span><span>−0.3639</span><span>+0.2338</span>
+      <span>−0.1528</span><span>−1.0106</span><span>+0.4563</span><span>+0.1914</span>
+    </div>
+  </div>
+  <p class="cap">Sum of absolute values = <strong>6.831745</strong>, so this unit's swing is
+  2 × 6.831745 = <strong>13.663489</strong> — its gain could sit anywhere in a window 13.66 wide,
+  depending only on how the modulator feels. The first eight units give 13.663, 5.467, 9.491, 7.952,
+  5.890, 7.272, 11.851, 8.379; averaging all 128 gives <strong>9.2418</strong>, this agent's contribution
+  to the table. Recomputing from the raw checkpoint reproduces the stored value to six decimals.</p>
+
+  <p class="rowlab">Step 6 — the four agents behind one cell (actor site, modulator reads every sense)</p>
+  <div class="scroll">
+    <table class="tprose survey">
+      <thead><tr><th>Recipe</th><th>Arm</th><th class="n">mean swing</th></tr></thead>
+      <tbody>
+        <tr><td>MC</td><td>actor only <em>— the worked agent</em></td><td class="n">9.2418</td></tr>
+        <tr><td>MC</td><td>all four sites</td><td class="n">13.7989</td></tr>
+        <tr><td>GAE_NORM</td><td>actor only</td><td class="n">9.5686</td></tr>
+        <tr><td>GAE_NORM</td><td>all four sites</td><td class="n">13.3723</td></tr>
+        <tr class="total"><td colspan="2"><strong>cell value</strong></td><td class="n">11.4954</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p class="cap">Printed as 11.50 in the analysis-01 table. Note the spread inside the cell: the arm
+  modulating all four sites has visibly more reach at the actor than the arm modulating the actor alone.
+  The row's <strong>10.95 ± 1.48</strong> is then the mean and standard deviation of all 12 measurements
+  at that site; the ± is one standard deviation with the n−1 divisor, describing <strong>spread across
+  agents</strong>, not uncertainty in the average.</p>
+
+  <div class="note w">
+    <p><strong>Why the fixed part never appears.</strong> The formula involves <em>K</em> alone —
+    <em>g</em> and <em>b</em> drop out, because adding a constant to both ends of an interval shifts it
+    without changing its width. The table measures how wide the dial's range is, not where the dial sits.
+    The resting value is recorded separately for the gauge check only; in this agent it drifted from +1.04
+    at the first checkpoint to +0.69 at the last, while the reachable width was 9.24.</p>
+  </div>
+
+  <div class="head sub"><h3>02 · Contextual fraction — how much the modulator <em>actually</em> moves</h3></div>
+  <p class="rowlab">What this analysis touches</p>
+  <div class="scroll">
+    <div class="chain padded">
+      <span class="blk">GRU → <em>h</em></span>
+      <span class="step"><span class="arw">→</span><span class="blk">× <em>K</em> + <em>b</em> + <em>g</em></span></span>
+      <span class="step"><span class="arw">→</span><span class="blk varyp">γ recorded every step<span class="tagv">measured</span></span></span>
+      <span class="step"><span class="arw">→</span><span class="blk">site</span></span>
+    </div>
+  </div>
+  <p class="cap">Analysis 02 needs a <strong>replay</strong>: the agent is run in the environment and every
+  gain it emits is written down. Where analysis 01 read the machinery, this reads the output.</p>
+
+  <div class="prose">
+    <p>The replay produces a table of gains with one row per unit and one column per timestep. For this
+    agent that is <strong>128 units × 27,331 timesteps = 3,498,368 numbers</strong> at the actor site. The
+    question is where their spread lives — and the total variance splits into exactly two pieces:</p>
+  </div>
+
+  <p class="rowlab">The variance split, pictured</p>
+  <div class="dia">
+    <div class="lane">
+      <p class="lanetag">Between units — fixed re-tuning</p>
+      <div class="vsplit">
+        <span class="vaxis rot">units</span>
+        <div class="vgrid">
+          <i style="opacity:.30"></i><i style="opacity:.30"></i><i style="opacity:.30"></i><i style="opacity:.30"></i><i style="opacity:.30"></i><i style="opacity:.30"></i><i style="opacity:.30"></i><i style="opacity:.30"></i><i style="opacity:.30"></i><i style="opacity:.30"></i><i style="opacity:.30"></i><i style="opacity:.30"></i>
+          <i style="opacity:.85"></i><i style="opacity:.85"></i><i style="opacity:.85"></i><i style="opacity:.85"></i><i style="opacity:.85"></i><i style="opacity:.85"></i><i style="opacity:.85"></i><i style="opacity:.85"></i><i style="opacity:.85"></i><i style="opacity:.85"></i><i style="opacity:.85"></i><i style="opacity:.85"></i>
+          <i style="opacity:.15"></i><i style="opacity:.15"></i><i style="opacity:.15"></i><i style="opacity:.15"></i><i style="opacity:.15"></i><i style="opacity:.15"></i><i style="opacity:.15"></i><i style="opacity:.15"></i><i style="opacity:.15"></i><i style="opacity:.15"></i><i style="opacity:.15"></i><i style="opacity:.15"></i>
+          <i style="opacity:.60"></i><i style="opacity:.60"></i><i style="opacity:.60"></i><i style="opacity:.60"></i><i style="opacity:.60"></i><i style="opacity:.60"></i><i style="opacity:.60"></i><i style="opacity:.60"></i><i style="opacity:.60"></i><i style="opacity:.60"></i><i style="opacity:.60"></i><i style="opacity:.60"></i>
+        </div>
+      </div>
+      <p class="vaxis" style="text-align:center;margin-top:6px">time →</p>
+      <p class="lanenote">Each unit sits at its own level and stays there. Rows differ, but nothing changes
+      along a row. This is a <strong>fixed re-tuning</strong> — and it is exactly what the next layer's own
+      weights could have learned instead, so it carries no information about the situation.</p>
+    </div>
+    <div class="lane">
+      <p class="lanetag">Along time — contextual modulation</p>
+      <div class="vsplit">
+        <span class="vaxis rot">units</span>
+        <div class="vgrid">
+          <i style="opacity:.20"></i><i style="opacity:.55"></i><i style="opacity:.85"></i><i style="opacity:.40"></i><i style="opacity:.20"></i><i style="opacity:.70"></i><i style="opacity:.90"></i><i style="opacity:.35"></i><i style="opacity:.60"></i><i style="opacity:.25"></i><i style="opacity:.80"></i><i style="opacity:.45"></i>
+          <i style="opacity:.75"></i><i style="opacity:.30"></i><i style="opacity:.50"></i><i style="opacity:.90"></i><i style="opacity:.35"></i><i style="opacity:.20"></i><i style="opacity:.65"></i><i style="opacity:.85"></i><i style="opacity:.25"></i><i style="opacity:.55"></i><i style="opacity:.40"></i><i style="opacity:.70"></i>
+          <i style="opacity:.45"></i><i style="opacity:.85"></i><i style="opacity:.25"></i><i style="opacity:.60"></i><i style="opacity:.80"></i><i style="opacity:.30"></i><i style="opacity:.50"></i><i style="opacity:.20"></i><i style="opacity:.75"></i><i style="opacity:.90"></i><i style="opacity:.35"></i><i style="opacity:.55"></i>
+          <i style="opacity:.65"></i><i style="opacity:.20"></i><i style="opacity:.70"></i><i style="opacity:.30"></i><i style="opacity:.55"></i><i style="opacity:.85"></i><i style="opacity:.40"></i><i style="opacity:.75"></i><i style="opacity:.30"></i><i style="opacity:.60"></i><i style="opacity:.90"></i><i style="opacity:.25"></i>
+        </div>
+      </div>
+      <p class="vaxis" style="text-align:center;margin-top:6px">time →</p>
+      <p class="lanenote">Each unit's gain moves as the situation changes. This is the only part that can
+      respond to context — and the only part a fixed re-parameterisation cannot imitate.</p>
+    </div>
+  </div>
+  <p class="splitleg"><span><i class="sw" style="background:var(--ink);opacity:.18"></i>small gain</span>
+  <span><i class="sw" style="background:var(--ink);opacity:.55"></i>middling</span>
+  <span><i class="sw" style="background:var(--ink);opacity:.9"></i>large gain</span></p>
+  <p class="cap">Two extreme cases, drawn. Each cell is one unit's gain at one timestep, tinted by size
+  against the swatches above. Real modulators are a mixture of the two pictures, and the
+  <strong>contextual fraction</strong> ρ is how much of the mixture is the right-hand kind. The
+  illustration is schematic — 4 units × 12 timesteps, where the real table is 128 × 27,331.</p>
+
+  <div class="prose"><p>The split is an exact identity, not an approximation:</p></div>
+  <div class="eqn">
+    <p class="mono">Var<sub>total</sub> &nbsp;=&nbsp; Var<sub>between units</sub> &nbsp;+&nbsp; Var<sub>along time</sub></p>
+    <p class="eqnleg">and the contextual fraction is
+    <span class="lb">ρ = Var<sub>along time</sub> ÷ Var<sub>total</sub></span>. It holds whenever every
+    unit is observed at the same timesteps, which is true here because the alive/dead mask is per timestep,
+    not per unit — and the code asserts it rather than assuming it.</p>
+  </div>
+
+  <p class="rowlab">The identity on this agent's real numbers</p>
+  <div class="scroll">
+    <table class="tprose survey">
+      <thead><tr><th>Piece</th><th class="n">variance</th><th class="n">share</th></tr></thead>
+      <tbody>
+        <tr><td>between units — fixed re-tuning</td><td class="n">0.332176</td><td class="n">64.9%</td></tr>
+        <tr><td>along time — contextual</td><td class="n">0.179619</td><td class="n">35.1%</td></tr>
+        <tr class="total"><td><strong>total</strong></td><td class="n">0.511795</td><td class="n">100%</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p class="cap">The two pieces add to the total exactly. So for this agent ρ = 0.179619 ÷ 0.511795 =
+  <strong>0.351</strong> — 35% of its gain's variation responds to the situation. It is one of the more
+  responsive agents in the set; the cell it sits in averages 0.333 over four agents, and the whole
+  60-measurement set averages <strong>0.148</strong>. Aggregation into cells and rows works exactly as in
+  analysis 01.</p>
+
+  <div class="note w">
+    <p><strong>Why a pooled standard deviation cannot answer this.</strong> Training logs record the spread
+    of the gain over units <em>and</em> time together, in one number. Both pictures above can produce the
+    identical pooled figure while meaning opposite things. Splitting the variance is what separates them —
+    and it is why ρ can be near zero no matter how large the modulator's mean or spread has grown.</p>
+  </div>
+
+  <div class="head sub"><h3>03 · Freeze at the mean — whether that movement does any work</h3></div>
+  <p class="rowlab">What this analysis touches</p>
+  <div class="scroll">
+    <div class="chain padded">
+      <span class="blk">GRU → <em>h</em><span class="tagf">still runs</span></span>
+      <span class="step"><span class="arw">→</span><span class="blk varyp"><em>K</em> := 0<span class="tagv">edited</span></span></span>
+      <span class="step"><span class="arw">→</span><span class="blk varyp"><em>b</em> := 0<span class="tagv">edited</span></span></span>
+      <span class="step"><span class="arw">→</span><span class="blk varyp"><em>g</em> := mean γ<span class="tagv">edited</span></span></span>
+      <span class="step"><span class="arw">→</span><span class="blk">γ — now constant</span></span>
+    </div>
+  </div>
+  <p class="cap">Analysis 03 <strong>edits three weights</strong> and changes no code. Zero out the matrix
+  and the bias, put the unit's own time-average into the baseline, and the head emits that average at every
+  timestep forever — for any input. The main network's forward pass is byte-identical, and the modulator's
+  GRU still runs, so any head left un-edited keeps varying exactly as before. That is what makes "freeze
+  the gain but not the offset" a clean intervention rather than an approximation.</p>
+
+  <p class="rowlab">The comparison: same seeds, two versions of the same agent</p>
+  <div class="pair">
+    <div class="lane">
+      <p class="lanetag">Live</p>
+      <div class="vchain">
+        <span class="blk wide">episode seed 1 … 128</span>
+        <span class="down">↓</span>
+        <span class="blk wide varyp">modulator varying</span>
+        <span class="down">↓</span>
+        <span class="blk wide">213.5 survival steps</span>
+      </div>
+    </div>
+    <div class="pairmid">paired<br>difference</div>
+    <div class="lane">
+      <p class="lanetag">Gain frozen at its mean</p>
+      <div class="vchain">
+        <span class="blk wide">the same seeds 1 … 128</span>
+        <span class="down">↓</span>
+        <span class="blk wide">modulator constant</span>
+        <span class="down">↓</span>
+        <span class="blk wide">90.3 survival steps</span>
+      </div>
+    </div>
+  </div>
+  <p class="cap">Because both sides run the <strong>same 128 episode seeds</strong>, the two worlds are
+  identical and the only difference is the modulation. That makes the comparison a distribution of 128
+  paired differences rather than two noisy averages — which is what lets a single agent say anything at
+  all. <strong>Pairing is what buys interpretability at one agent per configuration.</strong></p>
+
+  <p class="rowlab">This agent's four conditions</p>
+  <div class="scroll">
+    <table class="tprose survey">
+      <thead><tr><th>Condition</th><th class="n">survival</th><th class="n">change</th><th class="n">episodes changed</th></tr></thead>
+      <tbody>
+        <tr><td>live — nothing frozen</td><td class="n">213.5</td><td class="n">—</td><td class="n">0%</td></tr>
+        <tr><td>gain frozen</td><td class="n">90.3</td><td class="n">−123.2</td><td class="n">72%</td></tr>
+        <tr><td>offset frozen</td><td class="n">199.5</td><td class="n">−14.0</td><td class="n">39%</td></tr>
+        <tr class="total"><td><strong>both frozen</strong></td><td class="n">33.6</td><td class="n">−180.0</td><td class="n">80%</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p class="cap">Survival steps, averaged over the 128 paired episodes. Freezing this agent's gain costs it
+  <strong>123 of its 213 steps</strong> and changes the outcome in 72% of episodes — so its movement was
+  doing real work, even though analysis 02 found only 35% of that movement to be contextual. Freezing the
+  offset costs 14 steps and does not reach significance (sign test p = 0.12), while the gain does
+  overwhelmingly (p = 0.00000000016). That gain-over-offset asymmetry is the original FiLM paper's finding,
+  reproduced here in a completely different domain.</p>
+
+  <div class="note">
+    <p><strong>The control that makes the rest believable.</strong> Freezing the <em>critic</em>'s
+    modulation changed nothing at all — 0.0 steps, 0% of episodes, in every agent tested. The critic
+    estimates how good a situation is; it does not choose actions, so under a greedy policy freezing it
+    <em>must</em> be a no-op. Any stray randomness in the replay machinery would have surfaced there as
+    noise. It didn't, so the numbers above are the intervention and not the apparatus.</p>
+  </div>
+
+  <div class="note w">
+    <p><strong>What a null here would have meant.</strong> Because the time-averaged gain is a gauge
+    quantity, freezing at the mean is mathematically the same as deleting the modulator and folding its
+    constant part into the layer it feeds. So no change would have said <em>"the modulator's variation is
+    unused"</em> — a positive finding about what the modulation is. It would <em>not</em> have said the
+    modulator changed nothing during training, which is a different claim entirely.</p>
   </div>
 </section>
 
