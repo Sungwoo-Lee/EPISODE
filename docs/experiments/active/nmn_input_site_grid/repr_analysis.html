@@ -1,0 +1,516 @@
+<title>Looking Inside the Modulator</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Familjen+Grotesk:wght@500;600;700&family=Literata:opsz,wght@7..72,400;7..72,500;7..72,600&family=Azeret+Mono:wght@400;500&display=swap">
+<style>
+:root{
+  color-scheme:light dark;
+  --bg:#F2F1F6; --card:#FFFFFF; --sunk:#E6E4EE;
+  --ink:#191625; --body:#3C3850; --muted:#6E6A85;
+  --rule:#D8D5E2; --rule2:#BCB7CC;
+  --ready:#1C6B52; --ready-bg:#DFEFE8;
+  --gated:#8A5A16; --gated-bg:#F6EEDF;
+  --stop:#A3302F;  --stop-bg:#F8E7E7;
+  --accent:#4A3D8F; --accent-bg:#E7E3F3; --hdr:#565270;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#131119; --card:#1B1826; --sunk:#0D0B12;
+  --ink:#EFEDF5; --body:#C3BFD2; --muted:#8D88A1;
+  --rule:#2C2839; --rule2:#403B52;
+  --ready:#5DC49F; --ready-bg:#102C24;
+  --gated:#DDA95A; --gated-bg:#2E2415;
+  --stop:#E88582;  --stop-bg:#331B1B;
+  --accent:#A79AE8; --accent-bg:#241F38; --hdr:#8D88A1;
+}}
+:root[data-theme="dark"]{
+  color-scheme:dark;
+  --bg:#131119; --card:#1B1826; --sunk:#0D0B12;
+  --ink:#EFEDF5; --body:#C3BFD2; --muted:#8D88A1;
+  --rule:#2C2839; --rule2:#403B52;
+  --ready:#5DC49F; --ready-bg:#102C24;
+  --gated:#DDA95A; --gated-bg:#2E2415;
+  --stop:#E88582;  --stop-bg:#331B1B;
+  --accent:#A79AE8; --accent-bg:#241F38; --hdr:#8D88A1;
+}
+:root[data-theme="light"]{color-scheme:light}
+body{background:var(--bg);color:var(--body);
+  font-family:Literata,Georgia,"Times New Roman",serif;font-size:16.5px;line-height:1.65;
+  -webkit-font-smoothing:antialiased}
+.wrap{max-width:660px;margin:0 auto;padding:0 20px 84px}
+h1,h2,h3{font-family:"Familjen Grotesk","Helvetica Neue",sans-serif;color:var(--ink);
+  text-wrap:balance;margin:0}
+h1{font-size:clamp(2rem,5.4vw,2.8rem);font-weight:700;line-height:1.04;letter-spacing:-.02em}
+h2{font-size:1.36rem;font-weight:600;line-height:1.2}
+h3{font-size:1.04rem;font-weight:600;line-height:1.3}
+p{margin:0}
+a{color:var(--accent)}
+.mono{font-family:"Azeret Mono",ui-monospace,monospace;font-size:.84em;overflow-wrap:anywhere}
+.eyebrow{font-family:"Azeret Mono",monospace;font-size:.68rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--muted);margin:0}
+
+header{display:flex;flex-direction:column;gap:15px;padding:58px 0 30px}
+.lede{font-size:1.14rem;color:var(--ink)}
+main{display:flex;flex-direction:column;gap:48px;padding-top:36px}
+section{display:flex;flex-direction:column;gap:17px}
+.prose{display:flex;flex-direction:column;gap:13px}
+.head{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap}
+.head::after{content:"";flex:1;min-width:24px;height:1px;background:var(--rule);align-self:center}
+
+.banner{border-left:4px solid var(--stop);background:var(--stop-bg);border-radius:0 6px 6px 0;
+  padding:20px 22px;display:flex;flex-direction:column;gap:11px}
+.banner .eyebrow{color:var(--stop)}
+.banner.good{border-left-color:var(--ready);background:var(--ready-bg)}
+.banner.good .eyebrow{color:var(--ready)}
+.note{background:var(--card);border:1px solid var(--rule);border-radius:6px;
+  padding:17px 20px;display:flex;flex-direction:column;gap:10px}
+.note + .note{margin-top:2px}
+.note.w{border-left:3px solid var(--gated)}
+.note.f{border-left:3px solid var(--stop)}
+
+.badge{display:inline-flex;align-items:center;font-family:"Azeret Mono",monospace;font-size:.63rem;
+  letter-spacing:.1em;text-transform:uppercase;padding:3px 8px;border-radius:3px;font-weight:500;
+  white-space:nowrap}
+.badge::before{content:attr(data-g);margin-right:5px}
+.badge.r{background:var(--ready-bg);color:var(--ready)}
+.badge.g{background:var(--gated-bg);color:var(--gated)}
+
+.m{background:var(--card);border:1px solid var(--rule);border-radius:6px;padding:18px 20px;
+  display:flex;flex-direction:column;gap:11px}
+.m .top{display:flex;align-items:baseline;gap:10px 12px;flex-wrap:wrap}
+.m .top h3{flex:1 1 260px}
+.m .rank{font-family:"Azeret Mono",monospace;font-size:.8rem;color:var(--muted);font-weight:500}
+.methods{display:flex;flex-direction:column;gap:12px}
+.kv{display:grid;grid-template-columns:104px 1fr;gap:5px 14px;font-size:.92rem}
+.kv dt{font-family:"Azeret Mono",monospace;font-size:.66rem;letter-spacing:.09em;
+  text-transform:uppercase;color:var(--muted);padding-top:5px}
+.kv dd{margin:0}
+.kv{margin:14px 0}
+.src{font-size:.82rem;color:var(--muted);border-top:1px solid var(--rule);padding-top:9px}
+.src + .src{border-top:0;padding-top:0}
+
+.scroll{overflow-x:auto;border:1px solid var(--rule);border-radius:6px;background:var(--card)}
+table{border-collapse:collapse;width:100%;font-size:.88rem}
+table.tprose{min-width:480px}
+table.tprose.survey{min-width:0}
+th,td{padding:10px 13px;text-align:left;border-bottom:1px solid var(--rule);vertical-align:top}
+th{font-family:"Azeret Mono",monospace;font-size:.64rem;letter-spacing:.08em;text-transform:uppercase;
+  color:var(--hdr);font-weight:500;background:var(--sunk)}
+tbody tr:last-child td{border-bottom:none}
+td.n,th.n{font-family:"Azeret Mono",monospace;font-variant-numeric:tabular-nums;text-align:right}
+td.n{white-space:nowrap}
+.cap{font-size:.83rem;color:var(--muted)}
+.narrowonly{display:none}
+ul{margin:0;padding-left:20px;display:flex;flex-direction:column;gap:9px}
+li::marker{color:var(--muted)}
+footer{margin-top:54px;padding-top:21px;border-top:1px solid var(--rule);
+  font-size:.84rem;color:var(--muted);display:flex;flex-direction:column;gap:8px}
+@media(max-width:521px){
+  .narrowonly{display:block}
+}
+@media(max-width:560px){
+  .kv{grid-template-columns:1fr;gap:2px}
+  .kv dt{padding-top:13px}
+}
+.chain{display:flex;align-items:center;gap:5px;flex-wrap:wrap;font-family:"Azeret Mono",monospace;
+  font-size:.75rem;line-height:1.3}
+.step{display:inline-flex;align-items:center;gap:5px}
+.blk{border:1px solid var(--rule2);border-radius:5px;padding:7px 8px;background:var(--sunk);
+  color:var(--ink)}
+.blk.hl{background:var(--accent-bg);border-color:var(--accent);color:var(--accent)}
+.arw{color:var(--muted)}
+.rowlab{font-family:"Azeret Mono",monospace;font-size:.66rem;letter-spacing:.09em;
+  text-transform:uppercase;color:var(--muted);margin-bottom:7px}
+.samefn{text-align:center;font-family:"Familjen Grotesk",sans-serif;font-weight:600;
+  color:var(--ink);padding:4px 0}
+a:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
+</style>
+
+<div class="wrap">
+
+<header>
+  <p class="eyebrow">Results · neuromodulator vs unmodulated</p>
+  <h1>Looking Inside the Modulator</h1>
+  <p class="lede">Agents built with a neuromodulator do not behave measurably differently from agents
+  built without one. So is the modulator doing anything at all? Three analyses, run on already-trained
+  agents with no retraining, say yes — and say what.</p>
+  <p class="cap">Written for a reader who has not seen this project before. Every term is explained
+  where it first appears. Updated 2026-09-09; the page previously listed these three as work to be
+  done and now carries their results.</p>
+</header>
+
+<main>
+
+<section>
+  <div class="head"><h2>What the thing under test actually is</h2></div>
+  <div class="prose">
+    <p>The agent lives in a small grid world and has to stay alive — find food, avoid predators, heal.
+    Its <strong>main network</strong> turns what it senses into an action.</p>
+    <p>Alongside it sits a second, much smaller network: the <strong>neuromodulator</strong>. It reads
+    the same senses and, at every timestep, nudges the main network's internal signals. The nudge is
+    plain arithmetic. For each internal unit of the main network, the modulator emits two numbers:</p>
+  </div>
+
+  <div class="note">
+    <p class="mono" style="font-size:1rem;color:var(--ink)">adjusted&nbsp;value&nbsp;=&nbsp;gain&nbsp;×&nbsp;original&nbsp;value&nbsp;+&nbsp;offset</p>
+    <p>A <strong>gain</strong> of 1 and an <strong>offset</strong> of 0 leaves the unit untouched. A gain
+    of 0.3 turns it down; a negative gain flips its sign. In the literature this scheme is called
+    <strong>FiLM</strong>, and the two numbers are usually written γ (gain) and β (offset). This page
+    says gain and offset.</p>
+    <p>Because the modulator recomputes them at every timestep from what the agent currently senses, they
+    are a <em>running signal</em>, not fixed settings — which is the whole point, and the thing these
+    analyses test.</p>
+  </div>
+
+  <div class="prose">
+    <p>The modulator can be pointed at four places in the main network, called <strong>sites</strong>:</p>
+  </div>
+  <dl class="kv">
+    <dt>encoder</dt><dd>where raw senses are first processed</dd>
+    <dt>rnn</dt><dd>the memory cell, which carries information between timesteps</dd>
+    <dt>actor</dt><dd>the layer that chooses the action</dd>
+    <dt>critic</dt><dd>the layer that estimates how good the current situation is</dd>
+  </dl>
+
+  <div class="prose">
+    <p>Two more terms used throughout. A <strong>checkpoint</strong> is a snapshot of the network's
+    weights saved during training — there are 50 per run, so a checkpoint series shows how something
+    changed as the agent learned. And <strong>survival steps</strong> is how long the agent stays alive,
+    which is the only performance measure this project uses; it never scores agents on accumulated
+    reward.</p>
+    <p>Thirty-two trained agents were available: sixteen configurations, run under two different
+    training recipes. <strong>One agent per configuration</strong> — which constrains what can be
+    concluded, and is flagged wherever it bites.</p>
+  </div>
+</section>
+
+<section>
+  <div class="banner good">
+    <p class="eyebrow">Headline</p>
+    <p><strong>The modulator's moment-to-moment variation is doing real work.</strong> Replay a trained
+    agent with its modulation held fixed at its own average — still adjusting the network, but identically
+    in every situation — and it loses <strong>47–180 survival steps out of about 200</strong>, with the
+    outcome changing in 33–84% of episodes.</p>
+    <p>That was not the expected answer. Two analyses in, the evidence pointed at a modulator that had
+    settled into a fixed re-tuning the main network could have learned by itself: only <strong>15%</strong>
+    of its variation turned out to respond to context at all. That 15% is nonetheless load-bearing.</p>
+  </div>
+</section>
+
+<section>
+  <div class="head"><h2>Why the modulator's average does not count</h2></div>
+  <div class="prose">
+    <p>One idea runs underneath both of the later analyses, and it is worth a minute because it changes
+    what the numbers are allowed to mean.</p>
+    <p>A <strong>gauge quantity</strong> is a number in a description that you can change freely without
+    changing anything observable. Altitude is the everyday example: measure a building from sea level or
+    from its own ground floor and every number shifts, but no prediction about it changes. The choice of
+    reference point is real in the description and absent from the world.</p>
+    <p><strong>The modulator's average gain and average offset are gauge quantities.</strong> Here is why,
+    as arithmetic. Suppose the modulator emitted a fixed gain and offset — the same values in every
+    situation. The layer it adjusts would compute:</p>
+  </div>
+
+  <div class="note">
+    <p class="rowlab">With a modulator, emitting a constant</p>
+    <div class="chain">
+      <span class="blk">input</span>
+      <span class="step"><span class="arw">→</span><span class="blk">layer <em>W</em>, bias <em>b</em></span></span>
+      <span class="step"><span class="arw">→</span><span class="blk hl">× gain, + offset</span></span>
+      <span class="step"><span class="arw">→</span><span class="blk">ReLU</span></span>
+      <span class="step"><span class="arw">→</span><span class="blk">output</span></span>
+    </div>
+    <p class="samefn">computes exactly the same function as</p>
+    <p class="rowlab">No modulator at all, weights rescaled once</p>
+    <div class="chain">
+      <span class="blk">input</span>
+      <span class="step"><span class="arw">→</span><span class="blk hl">layer gain×<em>W</em>, bias gain×<em>b</em>+offset</span></span>
+      <span class="step"><span class="arw">→</span><span class="blk">ReLU</span></span>
+      <span class="step"><span class="arw">→</span><span class="blk">output</span></span>
+    </div>
+    <p class="cap">Schematic, not a measurement — it shows an algebraic identity, not data. The two
+    highlighted boxes are deliberately the same colour: they are the same arithmetic in two places, which
+    is the whole point. Multiplying a
+    layer's output by a constant is the same as having scaled that layer's weights by the constant in the
+    first place; adding a constant afterwards is the same as having shifted its bias.</p>
+  </div>
+
+  <div class="prose">
+    <p>So a modulator that emits a fixed value is doing nothing the network could not have done by itself.
+    Training could have found the rescaled weights directly. The constant part of the modulation is
+    <em>invisible</em> from outside the network.</p>
+    <p>Three consequences, all of which shaped these analyses:</p>
+  </div>
+  <ul>
+    <li><strong>A mean gain of 0.35 tells you nothing on its own.</strong> It looks like heavy suppression,
+    but the layer's own weights may simply be larger to compensate. Comparing average gains between two
+    agents compares their bookkeeping, not their behaviour.</li>
+    <li><strong>"Have the averages settled?" is not a real question.</strong> Because moving along this
+    direction changes nothing, there is no pressure pushing it anywhere — the loss is <em>flat</em> along
+    it. With no term penalising large weights, the averages simply drift for as long as you keep training.
+    An earlier version of this project's training audit treated that drift as unfinished learning; it
+    isn't.</li>
+    <li><strong>Only the variation is observable.</strong> The part of the signal that <em>changes</em>
+    with the situation cannot be folded into fixed weights, because fixed weights cannot change. That is
+    the entire reason analysis 02 measures the varying share and analysis 03 destroys it deliberately.</li>
+  </ul>
+
+  <div class="note w">
+    <h3>One thing the gauge argument does <em>not</em> excuse</h3>
+    <p>The rescaling above is exact only for what the layer computes <em>before</em> the ReLU. ReLU passes
+    positive values and blocks negative ones — so where a unit sits relative to zero is not a bookkeeping
+    choice, it is a fact about the network.</p>
+    <p>If the gain and offset together push a unit below zero <strong>in every situation</strong>, that
+    unit outputs nothing, ever. And because it outputs nothing, the learning process gets no signal about
+    it, so it cannot recover — it is stuck. That is a genuine failure mode hiding underneath a set of
+    numbers the gauge argument otherwise tells us to ignore, and nothing currently recorded distinguishes
+    it from a harmless turning-down. It is the top item in the still-open list below.</p>
+  </div>
+</section>
+
+<section>
+  <div class="head"><h2>The three analyses</h2></div>
+
+  <div class="methods">
+
+    <div class="m">
+      <div class="top"><span class="rank">01</span><h3>Could the modulator matter at all?</h3><span class="badge r" data-g="●">done</span></div>
+      <p><strong>Method, in plain terms.</strong> Read the modulator's learned weights and work out
+      arithmetically the widest range of gains it is <em>capable</em> of producing. No simulations at
+      all — just the numbers in the saved model files. It measures the range of a dial rather than
+      watching anyone turn it.</p>
+      <p>This ran first because it is the cheap test that could have stopped everything: a dial with no
+      range would have made the rest pointless.</p>
+      <dl class="kv">
+        <dt>Found</dt><dd>The narrowest range anywhere is <strong>7.95</strong> — one unit's multiplier could differ by roughly ±5 between two situations. Zero would have meant "physically incapable of varying". Nothing came close.</dd>
+        <dt>Also</dt><dd>Across all 60 measurements the range is <strong>smallest at the first checkpoint and largest at the last</strong>, growing about 1.6× over training. The modulator's capability only ever expands.</dd>
+        <dt>Holds up?</dt><dd>Yes — that expansion is measured <em>within</em> each agent, so it does not depend on having only one agent per configuration.</dd>
+      </dl>
+      <p class="src">A pleasant surprise in the derivation: the headline number is <em>exact</em> rather
+      than an upper estimate. The memory cell's arithmetic guarantees its internal state can never leave
+      a fixed range, which pins the gain's swing precisely. Analysis 02 later confirmed this by
+      measurement — the state reached that limit and never exceeded it, in all 30 agents.</p>
+    </div>
+
+    <div class="m">
+      <div class="top"><span class="rank">02</span><h3>Does it actually vary with context?</h3><span class="badge r" data-g="●">done</span></div>
+      <p><strong>Method, in plain terms.</strong> Run each trained agent through 128 episodes and record
+      every gain and offset it emits. Then split that variation into two parts: how much the numbers
+      differ <em>between units</em> — a fixed re-tuning, where unit 5 always gets 0.3 and unit 6 always
+      gets 0.9 — versus how much they differ <em>over time</em>, which is genuine responsiveness to what
+      is happening.</p>
+      <p>The second share is what this page calls the <strong>contextual fraction</strong>. A fixed
+      re-tuning is not nothing, but it is something the main network could have learned in its own
+      weights without any modulator — mathematically, it can be folded in and cancelled out.</p>
+      <dl class="kv">
+        <dt>Found</dt><dd>Only about <strong>15%</strong> of the gain's variation is contextual. The other 85% is fixed re-tuning.</dd>
+        <dt>Sharpest</dt><dd>Modulators allowed to read <em>only the body signals</em> — how full the agent is, and how much pain it currently feels — are <strong>2–4× less responsive at every site, 15 of 15 with no exceptions</strong>. At the encoder, 97% of their variation is fixed.</dd>
+        <dt>Holds up?</dt><dd>That ordering repeats within every site, which is what makes it survive having one agent per configuration.</dd>
+      </dl>
+      <p class="src"><strong>Against a published comparison.</strong> The original FiLM paper reports 36%
+      of its gains going negative and 76% of its offsets; ours are 16.8% and 68.5%. Offsets match closely;
+      negative gains are about half as common. And where their modulation shows a sharp spike of gains at
+      zero — features switched off outright — ours has none. <strong>Theirs switches features off; ours
+      turns them down</strong>, with 77% of gains sitting below 1.</p>
+      <p class="src"><strong>The counterweight, which is real.</strong> Hunger and pain change
+      <em>slowly</em>. A modulator tracking them varies slowly by construction, so low variation is not
+      proof of no effect — which is exactly what analysis 03 was built to settle.</p>
+      <p class="src"><strong>An unexpected structural result.</strong> About a third of units at every
+      site genuinely take <em>both</em> signs during an episode, and almost none is permanently negative.
+      That distinction matters: a permanently negative gain is something the layer's own weights could
+      have absorbed, whereas a unit that flips a feature's sign in some situations and not others is doing
+      something no fixed setting can imitate.</p>
+    </div>
+
+    <div class="m">
+      <div class="top"><span class="rank">03</span><h3>Does that variation do any work?</h3><span class="badge r" data-g="●">done</span></div>
+      <p><strong>Method, in plain terms.</strong> Take a trained agent and replay it on the same episodes
+      twice — once normally, once with the modulator's output <strong>frozen at its own average</strong>.
+      Frozen means it still adjusts the network, but identically in every situation, ignoring context
+      entirely. If the agent does just as well frozen, the responsiveness was decoration.</p>
+      <p>Two design choices carry the result. Episodes are <strong>paired</strong> — the same starting
+      conditions in both conditions — so the comparison is like with like rather than two averages that
+      might differ for unrelated reasons. And the gain and offset are frozen <strong>separately</strong>,
+      because an earlier paper found freezing the gain cost 65 points of accuracy while freezing the
+      offset cost 1; freezing both at once would have hidden which one mattered.</p>
+      <dl class="kv">
+        <dt>Found</dt><dd>Freezing costs <strong>47–180 survival steps</strong> of about 200, and changes the outcome in 33–84% of episodes.</dd>
+        <dt>Shape</dt><dd>Lopsided, not uniform. At the actor site the typical episode loses 10 steps, but the worst 5% lose 480. Freezing usually costs a little and occasionally costs the whole episode.</dd>
+        <dt>Holds up?</dt><dd>Yes — it compares an agent against itself on identical episodes, so it does not lean on having several agents per configuration. The lopsidedness is only visible <em>because</em> the episodes are paired.</dd>
+      </dl>
+      <p class="src"><strong>A check that makes the rest trustworthy.</strong> Freezing the modulation at
+      the <em>critic</em> site changed nothing whatsoever — 0.000 steps, in 0 of 128 episodes. That is
+      exactly right by construction, because the critic estimates how good a situation is and does not
+      choose the action. It works as a <strong>positive control</strong>: a test whose answer is known in
+      advance, run to check the apparatus. Any accidental randomness in the replay machinery would have
+      shown up there as noise. It didn't.</p>
+    </div>
+
+  </div>
+</section>
+
+<section>
+  <div class="head"><h2>The result worth publishing</h2></div>
+  <div class="prose">
+    <p>The original FiLM paper found the gain and the offset wildly unequal in importance — freezing the
+    gain cost 65 accuracy points, freezing the offset cost 1 — and that asymmetry has since been treated
+    as a property of this kind of modulation. <strong>It is not. It is a property of where the modulation
+    is applied.</strong></p>
+  </div>
+  <div class="scroll">
+    <table class="tprose">
+      <thead><tr><th>Site</th><th class="n">freeze gain</th><th class="n">freeze offset</th><th>which matters</th></tr></thead>
+      <tbody>
+        <tr><td><span class="mono">actor</span> — chooses the action</td><td class="n">−123</td><td class="n">−14</td><td>gain, by about 9×</td></tr>
+        <tr><td><span class="mono">rnn</span> — the memory cell</td><td class="n">+11</td><td class="n">−148</td><td>offset — the reverse</td></tr>
+        <tr><td><span class="mono">encoder</span> — early sense processing</td><td class="n">−123</td><td class="n">−108</td><td>both, about equally</td></tr>
+        <tr><td><span class="mono">critic</span> — judges the situation</td><td class="n">0</td><td class="n">0</td><td>neither (the control)</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p class="cap narrowonly">Four columns — scroll sideways to reach them all.</p>
+  <p class="cap">Change in survival steps when that signal is frozen, averaged over both training
+  recipes. Negative means freezing made the agent worse. Live agents survive about 190–220 steps, so
+  −123 is a large loss and −14 is a small one. The <span class="mono">+11</span> is a genuine small
+  <em>improvement</em>, not a typo.</p>
+
+  <div class="note">
+    <h3>And the pattern was predicted before it was measured</h3>
+    <p>Analysis 02 found that at the encoder the <em>offset</em> carries more of the responsiveness than
+    the gain — the reverse of the actor. That yielded a prediction that could have failed: if the
+    published gain-dominates pattern transfers here, it should transfer <em>least</em> at the encoder.</p>
+    <p>Ranking all eight arms by the analysis-02 measure against the analysis-03 result gives a rank
+    correlation of <strong>0.643</strong> — a measure running from 0 (no relationship) to 1 (perfect
+    agreement in ordering) — with both extremes called correctly.</p>
+    <p>Two independent measurements agreeing on an ordering nobody had proposed: one passive, simply
+    watching what the modulator emits, the other interventional, switching it off and seeing what breaks.
+    The single miss is the encoder under one of the two training recipes, where the gain came out
+    marginally larger than predicted.</p>
+  </div>
+</section>
+
+<section>
+  <div class="head"><h2>What this does not say</h2></div>
+
+  <div class="note">
+    <h3>It does not say the modulator helps</h3>
+    <p>Freezing at the average is mathematically the same as deleting the modulator and folding its
+    constants into the layer it was adjusting. So this shows the variation is used <em>within</em> an
+    agent that has a modulator. Whether agents with a modulator beat agents without one is a different
+    comparison — and that is the one that came back with no difference.</p>
+    <p>Both findings are correct about what they measured, and they are not in conflict.</p>
+  </div>
+
+  <div class="note">
+    <h3>The literature's warning is untested here, not refuted</h3>
+    <p>The papers that report a benefit from neuromodulation report it only in settings where the agent
+    faces genuinely different tasks and must work out which one it is in. Ours faces one task family. That
+    warning is about an <em>advantage over an unmodulated agent</em>; everything on this page is measured
+    within a single agent, so none of it bears on the warning either way.</p>
+  </div>
+
+  <div class="note w">
+    <h3>One observation deliberately left uninterpreted</h3>
+    <p>Every frozen agent ends up <em>worse</em> than the agents trained without a modulator at all. That
+    is consistent with the main network having grown dependent on a varying gain — but comparing across
+    differently-trained agents at one agent per configuration is exactly the comparison this project's own
+    bug registry warns against. Named, not concluded.</p>
+  </div>
+</section>
+
+<section>
+  <div class="head"><h2>A caution that turned out to be the story</h2></div>
+  <div class="prose">
+    <p>This page warned from the start that <strong>a null result from a coarse instrument is not a
+    null</strong> — citing a study whose population-level measure found nothing in a condition where their
+    per-unit measure found the structure intact.</p>
+    <p>That is what happened here. The behavioural comparison is the coarsest instrument available: it
+    asks whether the whole agent visibly acts differently. It found nothing. A within-agent intervention
+    on the very same runs finds an effect worth 47–180 survival steps. The behavioural null remains a fact
+    about behaviour — it was never evidence that nothing was happening inside.</p>
+  </div>
+</section>
+
+<section>
+  <div class="head"><h2>Still open</h2></div>
+  <div class="prose">
+    <p>The cheapest remaining analysis is the most informative. Analysis 03 was run only on modulators
+    that read <em>everything</em> the agent senses. Analysis 02 says the body-signal-only modulators are
+    2–4× less responsive — so freezing those should cost far less. If it costs <em>nothing</em>, the whole
+    finding localises to modulators reading the outside world, which speaks directly to this project's
+    interest in body signals.</p>
+  </div>
+  <ul>
+    <li><strong>The freeze test on the body-signal and external-signal modulators.</strong> Same code, same
+    episodes, roughly the same cost as what has already run. Highest value per unit of effort by a wide
+    margin.</li>
+    <li><strong>How many units are still active after the adjustment is applied.</strong> A gain near zero
+    combined with a strongly negative offset could mean a unit is switched off permanently — and a unit
+    that is off in every situation can never recover, because it produces nothing for the learning process
+    to act on. Nothing currently recorded can tell that apart from a harmless turning-down.</li>
+    <li><strong>A per-unit test of what the network encodes about the body.</strong> Fit a small model per
+    unit predicting its activity from hunger and injury together, and compare modulated against unmodulated
+    agents.</li>
+  </ul>
+
+  <div class="note f">
+    <p class="eyebrow">A blocker that affects all future re-analysis</p>
+    <p>The current code <strong>can no longer load these 32 agents at all.</strong> A newer feature made
+    one of its configuration keys mandatory, and files saved before that feature existed do not have it.
+    Analysis 03 worked around this by running in an isolated copy of the code from before the change,
+    verified to produce numbers identical to the earlier analysis — but every future re-analysis meets the
+    same wall.</p>
+    <p>It was deliberately <em>not</em> worked around by quietly supplying the missing value, which would
+    be exactly the kind of silent default this project forbids. The choice is between a documented
+    compatibility path for older saved files, or a standing instruction to analyse these agents at a pinned
+    version. That is an engineering decision.</p>
+  </div>
+</section>
+
+<section>
+  <div class="head"><h2>Why this was worth doing at all</h2></div>
+  <div class="prose">
+    <p>A survey of 31 papers in this project's library whose own mechanism is this kind of modulation — or
+    a network that generates another network's weights — found that almost nobody looks inside.</p>
+  </div>
+  <div class="scroll">
+    <table class="tprose survey">
+      <thead><tr><th>Of 31 modulation / weight-generating papers</th><th class="n">count</th><th class="n">share</th></tr></thead>
+      <tbody>
+        <tr><td>Report task scores and ablations only — never inspect what the network represents</td><td class="n">16</td><td class="n">52%</td></tr>
+        <tr><td>Inspect something internal, substantively</td><td class="n">10</td><td class="n">32%</td></tr>
+        <tr><td>Inspect the internal units of the network that was <em>modulated</em></td><td class="n">4</td><td class="n">13%</td></tr>
+        <tr><td>Papers applying this in reinforcement learning that inspect the policy's internal units</td><td class="n">0</td><td class="n">of 10</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p class="cap">Every paper that opens the modulated network is from 2016–2021, plus one 2023 outlier.
+  The 2024–2026 wave of robot-policy papers — ten of them, using the same operator — inspects nothing
+  internal at all.</p>
+
+  <div class="banner">
+    <p class="eyebrow">The standing counterweight</p>
+    <p>Both neuromodulation papers reviewed report their benefit <em>only where context matters for the
+    reward</em>. One states outright that its advantage vanishes when the different tasks can be solved
+    with similar internal representations — and its authors ran their own representational analysis on
+    their own null results and found no advantage there either.</p>
+    <p>A single-task-family setting is the regime where this literature reports no benefit, and ours is a
+    single task family. Nothing on this page tests that claim. It predicts that the move which would make
+    the modulator matter is <strong>an environment where context has to matter</strong> — not a finer
+    instrument.</p>
+  </div>
+</section>
+
+</main>
+
+<footer>
+  <p>Code and outputs:
+  <span class="mono">scripts/<wbr>analysis/<wbr>nmn/</span> and
+  <span class="mono">results/<wbr>analysis/<wbr>nmn_representation/</span> —
+  three commits, each with a test shown failing against a deliberately broken version before it passed.</p>
+  <p>Literature behind the method choice:
+  <span class="mono">docs/<wbr>project/<wbr>references/<wbr>neural_representation_analysis/</span>.
+  The review that raised the fixed-versus-responsive question:
+  <span class="mono">docs/<wbr>project/<wbr>critiques/<wbr>nmn_input_site_grid_optimisation_dynamics.md</span>.</p>
+  <p>32 agents, one per configuration. Comparisons of an agent against itself survive that; comparisons
+  between differently-trained agents do not, and are marked where they appear.</p>
+</footer>
+
+</div>

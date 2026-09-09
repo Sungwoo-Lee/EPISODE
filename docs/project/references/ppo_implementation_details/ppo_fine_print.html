@@ -1,0 +1,426 @@
+<title>PPO's Fine Print</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,400&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+:root{
+  color-scheme:light dark;
+  --paper:#F1F3F5; --card:#FFFFFF; --ground:#E7EAEE;
+  --ink:#151E28; --body:#37424F; --muted:#6B7684;
+  --rule:#D8DDE3; --rule-strong:#BCC4CC;
+  --measured:#166F63;  --measured-bg:#E4F0ED;
+  --weak:#8A5A14;      --weak-bg:#F6EEDF;
+  --silent:#5B5470;    --silent-bg:#ECEAF1;
+  --wrong:#A32A21;     --wrong-bg:#F8E8E6;
+  --accent:#1B4E6B;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --paper:#12171C; --card:#191F26; --ground:#0D1116;
+    --ink:#EDF1F5; --body:#C0C9D3; --muted:#8B96A3;
+    --rule:#2A323B; --rule-strong:#3C4650;
+    --measured:#5FBFAE; --measured-bg:#12302C;
+    --weak:#D9A653;     --weak-bg:#312716;
+    --silent:#A79FC0;   --silent-bg:#232030;
+    --wrong:#E58279;    --wrong-bg:#331B19;
+    --accent:#7FB6D6;
+  }
+}
+:root[data-theme="dark"]{
+  color-scheme:dark;
+  --paper:#12171C; --card:#191F26; --ground:#0D1116;
+  --ink:#EDF1F5; --body:#C0C9D3; --muted:#8B96A3;
+  --rule:#2A323B; --rule-strong:#3C4650;
+  --measured:#5FBFAE; --measured-bg:#12302C;
+  --weak:#D9A653;     --weak-bg:#312716;
+  --silent:#A79FC0;   --silent-bg:#232030;
+  --wrong:#E58279;    --wrong-bg:#331B19;
+  --accent:#7FB6D6;
+}
+body{background:var(--paper);color:var(--body);
+  font-family:"IBM Plex Sans",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+  font-size:16.5px;line-height:1.62;-webkit-font-smoothing:antialiased}
+.wrap{max-width:690px;margin:0 auto;padding:0 22px 90px}
+h1,h2,h3,h4{color:var(--ink);text-wrap:balance;font-family:Newsreader,Georgia,"Times New Roman",serif}
+h1{font-size:clamp(2.1rem,6vw,3.05rem);line-height:1.06;font-weight:600;margin:0;letter-spacing:-.015em}
+h2{font-size:1.62rem;font-weight:600;line-height:1.2;margin:0}
+h3{font-size:1.16rem;font-weight:600;line-height:1.3;margin:0}
+h4{font-size:1rem;font-weight:600;margin:0;font-family:"IBM Plex Sans",sans-serif}
+p{margin:0}
+a{color:var(--accent);text-decoration-thickness:1px;text-underline-offset:2px}
+.mono{font-family:"IBM Plex Mono",ui-monospace,monospace;font-size:.88em}
+.eyebrow{font-family:"IBM Plex Mono",monospace;font-size:.7rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--muted);margin:0}
+
+/* ---- page rhythm: layout owns the spacing, not per-element margins ---- */
+header.hd{display:flex;flex-direction:column;gap:18px;padding:64px 0 34px;border-bottom:2px solid var(--ink)}
+.lede{font-family:Newsreader,Georgia,serif;font-size:1.3rem;line-height:1.42;color:var(--ink)}
+.byline{display:flex;flex-wrap:wrap;gap:8px 18px;font-family:"IBM Plex Mono",monospace;
+  font-size:.72rem;letter-spacing:.06em;color:var(--muted);text-transform:uppercase}
+main{display:flex;flex-direction:column;gap:56px;padding-top:44px}
+section{display:flex;flex-direction:column;gap:18px}
+section > .prose{display:flex;flex-direction:column;gap:14px}
+
+/* ---- the era rail: the YEAR is the marker, because the year is the information ---- */
+.era{display:grid;grid-template-columns:92px 1fr;gap:0 22px;align-items:start}
+.eras{display:flex;flex-direction:column;gap:0}
+.yr{font-family:"IBM Plex Mono",monospace;font-size:1.32rem;font-weight:500;color:var(--ink);
+  text-align:right;padding-top:2px;font-variant-numeric:tabular-nums;line-height:1.2}
+.yr small{display:block;font-size:.62rem;letter-spacing:.1em;color:var(--muted);
+  text-transform:uppercase;margin-top:5px;font-weight:400}
+.era-body{border-left:1px solid var(--rule-strong);padding:0 0 34px 22px;
+  display:flex;flex-direction:column;gap:12px}
+.era:last-child .era-body{padding-bottom:0}
+.era-body .work{font-family:Newsreader,Georgia,serif;font-size:1.02rem;color:var(--muted);font-style:italic}
+
+/* ---- evidence status: the structural device the whole review turns on ---- */
+.chip::before{content:attr(data-g);font-size:.9em;line-height:1}
+.chip{display:inline-flex;align-items:center;gap:6px;font-family:"IBM Plex Mono",monospace;
+  font-size:.66rem;letter-spacing:.11em;text-transform:uppercase;padding:3px 9px;
+  border-radius:3px;font-weight:500;white-space:nowrap}
+.chip.m{background:var(--measured-bg);color:var(--measured)}
+.chip.w{background:var(--weak-bg);color:var(--weak)}
+.chip.s{background:var(--silent-bg);color:var(--silent)}
+.chip.x{background:var(--wrong-bg);color:var(--wrong)}
+.claim{display:flex;flex-direction:column;gap:10px;padding:18px 20px;background:var(--card);
+  border:1px solid var(--rule);border-left-width:3px;border-radius:0 5px 5px 0}
+.claim.m{border-left-color:var(--measured)}
+.claim.w{border-left-color:var(--weak)}
+.claim.s{border-left-color:var(--silent);border-left-style:dashed}
+.claim.x{border-left-color:var(--wrong);border-left-style:dotted}
+.claim .top{display:flex;flex-wrap:wrap;align-items:baseline;gap:10px 12px}
+.claim .top h3{flex:1 1 240px}
+.claims{display:flex;flex-direction:column;gap:14px}
+.src{font-family:"IBM Plex Mono",monospace;font-size:.72rem;color:var(--muted);
+  padding-top:2px;border-top:1px solid var(--rule)}
+
+/* ---- tables: width:100% + a floor, so a prose column wraps instead of vanishing ---- */
+.scroll{overflow-x:auto;border:1px solid var(--rule);border-radius:5px;background:var(--card)}
+table{border-collapse:collapse;width:100%;min-width:560px;font-size:.86rem}
+th,td{padding:11px 14px;text-align:left;border-bottom:1px solid var(--rule);vertical-align:top}
+th{font-family:"IBM Plex Mono",monospace;font-size:.66rem;letter-spacing:.09em;text-transform:uppercase;
+  color:var(--muted);font-weight:500;background:var(--ground)}
+tbody tr:last-child td{border-bottom:none}
+td.n{font-family:"IBM Plex Mono",monospace;font-variant-numeric:tabular-nums;white-space:nowrap}
+.cap{font-size:.79rem;color:var(--muted)}
+
+.note{background:var(--ground);border-radius:5px;padding:17px 20px;
+  display:flex;flex-direction:column;gap:9px}
+.note.flag{background:var(--wrong-bg)}
+.note.flag .eyebrow{color:var(--wrong)}
+blockquote{margin:0;padding:2px 0 2px 18px;border-left:2px solid var(--rule-strong);
+  font-family:Newsreader,Georgia,serif;font-size:1.06rem;font-style:italic;color:var(--ink)}
+blockquote cite{display:block;font-style:normal;font-family:"IBM Plex Mono",monospace;
+  font-size:.7rem;letter-spacing:.05em;color:var(--muted);margin-top:8px;text-transform:uppercase}
+.kicker{display:flex;align-items:center;gap:12px}
+.kicker::after{content:"";flex:1;height:1px;background:var(--rule)}
+ul{margin:0;padding-left:20px;display:flex;flex-direction:column;gap:9px}
+li::marker{color:var(--muted)}
+footer{margin-top:60px;padding-top:22px;border-top:1px solid var(--rule);
+  font-size:.82rem;color:var(--muted);display:flex;flex-direction:column;gap:8px}
+@media (max-width:560px){
+  .era{grid-template-columns:1fr;gap:8px}
+  .yr{text-align:left}
+  .yr small{display:inline;margin-left:10px}
+  .era-body{border-left:none;padding-left:0;padding-bottom:26px;border-bottom:1px solid var(--rule)}
+}
+@media (prefers-reduced-motion:no-preference){a{transition:opacity .15s}}
+a:focus-visible,summary:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
+</style>
+
+<div class="wrap">
+
+<header class="hd">
+  <p class="eyebrow">Literature review · on-policy RL</p>
+  <h1>PPO's Fine Print</h1>
+  <p class="lede">Between 2019 and 2022 the field went looking for where PPO's advantage actually
+  lives, and found a good deal of it in code nobody had written down. This is what the three studies
+  that went looking actually measured — and, just as usefully, what they never tested at all.</p>
+  <div class="byline">
+    <span>3 works · 4 PDFs · ~250,000 trained agents</span>
+    <span>Reviewed 2026-09-04</span>
+  </div>
+</header>
+
+<main>
+
+<section>
+  <div class="prose">
+    <p>Proximal Policy Optimization is one of the most used algorithms in reinforcement learning, and
+    its 2017 paper explains its improvement in terms of a single idea: a <em>clipped objective</em>
+    that stops a policy update from moving too far in one step. That is the contribution the paper
+    claims, and it is the one everybody cites.</p>
+    <p>The trouble is that every working implementation of PPO also does perhaps thirty other things
+    the paper never mentions — rescaling rewards, rescaling observations, initialising one particular
+    layer far smaller than the rest, decaying the learning rate, clipping the value loss. None of
+    these are in the equations. All of them are in the code. The three works below are the field's
+    attempt to find out how much of PPO's reputation belongs to the equation and how much to the
+    fine print.</p>
+    <p>They reached an uncomfortable answer, and then a more careful one.</p>
+  </div>
+</section>
+
+<section>
+  <div class="kicker"><h2>How the question developed</h2></div>
+
+  <div class="eras">
+  <div class="era">
+    <div class="yr">2017<small>the claim</small></div>
+    <div class="era-body">
+      <h3>The clipped objective is the contribution</h3>
+      <p class="work">Schulman et al., <em>Proximal Policy Optimization Algorithms</em></p>
+      <p>PPO is introduced as a simpler, better-behaved alternative to trust-region methods. The
+      mechanism offered is the clipped surrogate objective. The surrounding engineering is not
+      presented as part of the method.</p>
+    </div>
+  </div>
+
+  <div class="era">
+    <div class="yr">2020<small>the doubt</small></div>
+    <div class="era-body">
+      <h3>Take the fine print away and much of the advantage goes with it</h3>
+      <p class="work">Engstrom, Ilyas, Santurkar, Tsipras, Janoos, Rudolph &amp; Madry —
+      <em>Implementation Matters in Deep Policy Gradients: A Case Study on PPO and TRPO</em>, ICLR 2020</p>
+      <p>The authors name nine <strong>code-level optimizations</strong> present in PPO's reference
+      implementation but absent from its paper, then run a full factorial over four of them — value
+      clipping, reward scaling, orthogonal initialisation, learning-rate annealing — <strong>with the
+      learning rate re-tuned separately inside every one of the sixteen cells</strong>, so that no
+      setting is handicapped by hyperparameters chosen for a different one. Eighty agents per
+      environment.</p>
+      <p>Their conclusion is that reward normalisation, learning-rate annealing and initialisation
+      each move the results materially, and were <em>necessary</em> to reach PPO's best scores in the
+      grid they searched.</p>
+      <div class="note">
+        <p class="eyebrow">Worth knowing before citing it</p>
+        <p>The headline figure is a <strong>distribution plot</strong>, not a bar chart:
+        <strong>no effect size is reported anywhere</strong> for the individual optimizations. The
+        paper shows that the landscape changes shape, not by how much any one switch is worth.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="era">
+    <div class="yr">2021<small>the survey</small></div>
+    <div class="era-body">
+      <h3>Fifty choices, a quarter of a million agents, one at a time</h3>
+      <p class="work">Andrychowicz, Raichuk, Stańczyk, Orsini, Girgin, Marinier, Hussenot, Geist,
+      Pietquin, Michalski, Gelly &amp; Bachem — <em>What Matters for On-Policy Deep Actor-Critic
+      Methods? A Large-Scale Study</em>, ICLR 2021</p>
+      <p>Rather than argue about one switch, this study exposes roughly fifty design choices in a
+      single unified codebase and samples them in large random searches across five continuous-control
+      tasks — varying one group at a time while everything else is drawn at random, so each result is
+      averaged over the settings of the rest instead of measured against one hand-tuned baseline.</p>
+      <p>The output is an importance <em>ranking</em>, and it does not match what the literature
+      emphasises. Some of the largest effects come from choices that are barely discussed.</p>
+      <div class="note">
+        <p class="eyebrow">A naming trap</p>
+        <p>This paper was <strong>retitled between preprint and publication</strong>. The arXiv copy
+        is <em>"What Matters In On-Policy Reinforcement Learning? A Large-Scale Empirical Study"</em>;
+        the ICLR version of record is the title above. Searching the old one finds only the preprint —
+        which is worth having anyway, because the camera-ready is ten pages of main text and all
+        thirty-eight pages of supporting experiments live only in the preprint.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="era">
+    <div class="yr">2022<small>the consolidation</small></div>
+    <div class="era-body">
+      <h3>The folklore, finally written down</h3>
+      <p class="work">Huang, Dossa, Raffin, Kanervisto &amp; Wang — <em>The 37 Implementation Details
+      of Proximal Policy Optimization</em>, ICLR Blog Track 2022</p>
+      <p>Not a study but a catalogue: every undocumented detail in the reference implementation, named,
+      explained, and reproduced to matching performance. It is the document that turns "everyone knows
+      you have to do this" into something a newcomer can look up — and it is careful to say which
+      details it has tested and which it is merely recording.</p>
+    </div>
+  </div>
+  </div>
+</section>
+
+<section>
+  <div class="kicker"><h2>Three different things called "normalization"</h2></div>
+  <div class="prose">
+    <p>This is the single most useful thing to take from reading all three together. The word
+    <em>normalization</em> is used across this literature for at least three operations that touch
+    different quantities, use different statistics, and do not imply one another. One of these papers
+    even describes another's operation using the wrong one of the three names.</p>
+    <p><strong>A claim that says "normalization" without saying which one is not a citable claim.</strong></p>
+  </div>
+  <div class="scroll">
+    <table>
+      <thead><tr>
+        <th>Operation</th><th>Statistic</th><th>Applied to</th><th>Critic target ends up in</th><th>Advantage ends up in</th>
+      </tr></thead>
+      <tbody>
+        <tr>
+          <td><strong>Reward scaling</strong><br><span class="mono">VecNormalize</span></td>
+          <td>running standard deviation of a discounted reward accumulator — <strong>no mean subtracted</strong></td>
+          <td>the per-step reward, upstream of everything</td>
+          <td>scaled units</td><td>scaled units</td>
+        </tr>
+        <tr>
+          <td><strong>Value-function normalization</strong><br><span class="mono">C66</span></td>
+          <td>running mean <em>and</em> standard deviation of value targets</td>
+          <td>the critic's regression target, undone again at read-out</td>
+          <td>normalized, inside the network only</td><td>raw units</td>
+        </tr>
+        <tr>
+          <td><strong>Advantage normalization</strong><br><span class="mono">C67</span></td>
+          <td>mean and standard deviation of the <strong>current minibatch</strong></td>
+          <td>the advantage, in the policy loss only</td>
+          <td>untouched</td><td>standardized</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+  <p class="cap">What each operation rescales, and what units the downstream quantities end up in.</p>
+  <div class="note">
+    <p class="eyebrow">The disagreement this dissolves</p>
+    <p>On the Walker2d task, Engstrom's figure shows <em>reward scaling</em> helping while
+    Andrychowicz's shows <em>value-target normalization</em> hurting by 42%. These look like a
+    contradiction and are not: they are different interventions. Anyone writing "the literature says
+    normalizing helps on Walker" is choosing which paper to quote without saying which operation
+    they mean.</p>
+  </div>
+</section>
+
+<section>
+  <div class="kicker"><h2>What is actually established</h2></div>
+  <div class="prose">
+    <p>Each claim below carries its evidence status. <span class="chip m" data-g="●">measured</span> means an
+    experiment exists and reports a number. <span class="chip w" data-g="◐">weak</span> means an experiment
+    exists but its design limits what it shows. <span class="chip s" data-g="○">silent</span> means
+    <strong>the experiment does not exist in these papers</strong> — which is neither evidence for
+    nor against, and is the status most often misread as a finding.</p>
+  </div>
+
+  <div class="claims">
+
+    <div class="claim m">
+      <div class="top"><h3>Shrinking the policy's last layer at initialization</h3><span class="chip m" data-g="●">measured</span></div>
+      <p>Scaling the policy output layer's initial weights down by 100× — so the first action
+      distribution is near-zero-mean, low-variance and barely depends on the observation — is worth
+      about <strong>+66%</strong> on the hardest task, by the paper's own reckoning.</p>
+      <p>But read the <em>shape</em>: it is <strong>a cliff, not a slope</strong>. Scales of 0.001,
+      0.01 and 0.1 sit inside each other's error bars everywhere; only leaving the layer at its default
+      1.0 is clearly bad. What makes the result credible is the control — the same rescaling applied
+      to the <em>value</em> head does almost nothing, which is exactly what the explanation predicts.</p>
+      <p class="src">Andrychowicz §3.2, Fig. 24 · control: C58, Fig. 19</p>
+    </div>
+
+    <div class="claim m">
+      <div class="top"><h3>Value-target normalization is powerful and unpredictable</h3><span class="chip m" data-g="●">measured</span></div>
+      <p>Rescaling the critic's target with a running statistic is <strong>+78% on one task and
+      −42% on another</strong>. On the task where it hurts, 99% of the best configurations had it
+      switched off. The authors write, in the paper, "We are not sure why the value function scale
+      matters that much."</p>
+      <p>Their recommendation is accordingly conditional — <em>check whether it helps</em> — not
+      <em>use it</em>. This is the closest thing in the literature to a warning that scale choices
+      are environment-specific rather than universally good.</p>
+      <p class="src">Andrychowicz C66, §3.3, Fig. 37</p>
+    </div>
+
+    <div class="claim w">
+      <div class="top"><h3>Advantage normalization barely registers</h3><span class="chip w" data-g="◐">weak</span></div>
+      <p>The near-universal practice of standardizing advantages per minibatch was measured, and the
+      verdict is a shrug: <em>"seems not to affect the performance too much."</em> It is absent from
+      the paper's recommendations, and the authors' own default leaves it <strong>off</strong>.</p>
+      <p>Two cautions in the other direction. It is ahead on three tasks and behind on two, all
+      confidence intervals overlapping — but pooled across tasks it accounts for <strong>53.5%</strong>
+      of the best configurations against 47%, a mild tilt in its favour that a flat "no effect" hides.
+      And no significance test was run on it at all.</p>
+      <p class="src">Andrychowicz C67, §3.3, Fig. 35 · Engstrom: silent · Huang: documents, does not test</p>
+    </div>
+
+    <div class="claim w">
+      <div class="top"><h3>Separate policy and value networks beat a shared trunk</h3><span class="chip w" data-g="◐">weak</span></div>
+      <p>Separate networks won on four of five continuous-control tasks and took 61% of the best
+      configurations; a smaller discrete-action comparison agrees on two of three. As an
+      <em>outcome</em> this is real.</p>
+      <p>As <em>evidence</em> it is softer than it sounds. The shared arm was additionally forced to
+      draw its value-loss weight from a set spanning five orders of magnitude, so much of that arm was
+      handicapped by a weight no practitioner would choose — and the marginal for that weight was
+      <strong>never reported</strong>, because the experiment was re-run with the shared arm removed.
+      The effect also reverses on one task.</p>
+      <p class="src">Andrychowicz C47, §3.1 · Huang §"shared vs separate"</p>
+    </div>
+
+    <div class="claim s">
+      <div class="top"><h3>Why a shared trunk would be worse</h3><span class="chip s" data-g="○">silent</span></div>
+      <p>The intuitive story — in a shared trunk the value loss dominates the combined gradient, and
+      the actor is left reading out features shaped only by value regression — <strong>is not measured
+      anywhere in this literature</strong>. One author states it in a single sentence as a conjecture
+      and points at a different paper for the answer. Nobody reports gradient magnitudes, loss ratios
+      or feature usage.</p>
+      <p>And the same literature supplies a direct counterweight: for Atari, the reference
+      implementation <strong>shares</strong> its convolutional trunk between policy and value, and the
+      only <em>recurrent</em> PPO in this corpus is built on that shared trunk. The real convention is
+      architecture-conditional — separate when the trunk is a cheap two-layer network, shared when it
+      is an expensive feature extractor.</p>
+      <p class="src">Conjectured in Huang; not measured by Engstrom (whose networks never share a parameter) or Andrychowicz</p>
+    </div>
+
+    <div class="claim s">
+      <div class="top"><h3>Normalizing the critic's target per batch</h3><span class="chip s" data-g="○">silent</span></div>
+      <p>Nobody does it. The nearest relative — value-function normalization — differs on both counts
+      that matter: its statistic is <strong>running rather than per-batch</strong>, and it is
+      <strong>undone at read-out</strong>, so the quantity the advantage is built from never leaves raw
+      units. Recomputing a target's scale from scratch every batch appears nowhere in these three
+      works, and normalization of the value target appears nowhere among the 37 catalogued details.</p>
+      <p class="src">Checked across all three works</p>
+    </div>
+
+  </div>
+</section>
+
+<section>
+  <div class="kicker"><h2>The limit on all of it</h2></div>
+  <div class="prose">
+    <p>Every <em>ablation</em> in this literature was run on fully-observed continuous-control physics
+    tasks, with feed-forward networks and Gaussian policies. Not one experiment in any of these three
+    works varies the action space, adds recurrence, or introduces partial observability
+    <em>while measuring the effect of a normalization or architecture choice</em>.</p>
+    <p>The one paper that covers discrete and recurrent settings runs no ablations in them, and says
+    so itself, noting that prior conclusions drawn in physics tasks "do not necessarily transfer to
+    other games such as Atari".</p>
+    <p>So the honest reading is narrow. These papers are strong evidence about a well-studied family
+    of settings, and they are <em>silent</em> — not reassuring, not discouraging — about
+    partially-observed, recurrent, discrete-action agents, and about any reward built from an internal
+    state rather than a task score. Silence licenses running the experiment yourself. It does not
+    license borrowing the conclusion.</p>
+  </div>
+</section>
+
+<section>
+  <div class="kicker"><h2>Two things I had wrong</h2></div>
+  <div class="claims">
+    <div class="claim x">
+      <div class="top"><h3>"No significant effect"</h3><span class="chip x" data-g="✕">corrected</span></div>
+      <p>I described the advantage-normalization result that way. It is wrong twice over: the authors
+      <strong>ran no significance test</strong>, so the phrase attributes a statistical claim nobody
+      made — and "no effect" overstates their data, which tilts mildly <em>toward</em> normalizing
+      when pooled across tasks.</p>
+      <p>The defensible wording is longer and duller: a small, environment-dependent, sign-inconsistent
+      effect that the confidence intervals cannot separate from zero, neither recommended nor warned
+      against.</p>
+    </div>
+    <div class="claim x">
+      <div class="top"><h3>The shared-trunk mechanism</h3><span class="chip x" data-g="✕">corrected</span></div>
+      <p>I leaned on it repeatedly as an explanation. It is a conjecture stated once in passing by one
+      practitioner, measured by nobody, and the same literature contains a counterexample in which the
+      shared trunk is standard practice. It may still be true — but it cannot be cited to these
+      papers, and in our own setting it would have to be measured directly.</p>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <p>Full review, with figure-level numbers, section-by-section summaries and the citation-hygiene
+  corrections: <span class="mono">docs/project/references/ppo_implementation_details/</span></p>
+  <p>Sources: Engstrom et al., ICLR 2020 · Andrychowicz et al., ICLR 2021 (camera-ready and 48-page
+  preprint) · Huang et al., ICLR Blog Track 2022.</p>
+</footer>
+
+</main>
+</div>
+
+<style>:root[data-theme="light"]{color-scheme:light}</style>
