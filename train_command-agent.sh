@@ -3456,3 +3456,163 @@ cd /media/nas01/projects/Interoceptive-AI/grid_world_pain
 # 15   rppo_olfmc_t16quad_I_s42     t16quad  I      108:0     445218   supdbzxk  logs/20260909_023653.log
 # 16   rppo_olfmc_t16quad_X_s42     t16quad  X      108:1     445258   xume2sw4  logs/20260909_023654.log
 # ---------------------------------------------------------------------------
+
+# ===========================================================================
+# WAVE: nmn_site_grid_olf_gaenorm — the ESTIMATOR-SWAPPED TWIN of the
+# nmn_site_grid_olf_mc wave launched earlier today at 02:41 (2026-09-09)
+# ---------------------------------------------------------------------------
+# Same environment, same 16-arm neuromodulator input x site grid, same budget.
+# The ONLY thing that changes is how the advantage/return target is estimated:
+#   MC wave        -> configs/models/recurrent_ppo/nmn_input_site_grid/nmnsite_<cell>.yaml
+#                     (return_mode: MC)
+#   THIS wave      -> configs/models/recurrent_ppo/nmn_input_site_grid_gaenorm/nmngaenorm_<cell>.yaml
+#                     (return_mode: GAE_NORM)
+# All 16 config pairs were diffed comment-stripped before launch: each pair
+# differs on exactly ONE line, `return_mode: MC` -> `return_mode: GAE_NORM`,
+# and on nothing else. No config was created or edited for this wave.
+#
+# Tags/wandb-names use `olfgae` where the MC wave used `olfmc`, and
+# --wandb-group is "nmn_site_grid_olf_gaenorm" (MC wave: "nmn_site_grid_olf_mc").
+# --wandb-job-type stays "pilot".
+#
+# OBSERVATION-DIMENSION DISCRIMINATOR (the check that decides wave validity —
+# identical reasoning to the MC block above, and it applies unchanged):
+#   B_olf_only              -> 47  {Satiation 1, Interoceptive Nociception 1,
+#                                   Extero Nociception 1, Olfaction 25,
+#                                   Collision 5, Proprioception 6, Visual 8}
+#   04-jump_attack_10x10    -> 27  (same seven sensors, Olfaction 5)
+# The difference is sensory.olfactory_grid_range: 1 (B_olf_only) vs 0, which
+# widens Olfaction from 1x5 to a 5-cell diamond x 5 = 25. A banner printing 27
+# means the WRONG environment loaded and that run is void.
+# Pre-computed locally through train.py's OWN load path before launching
+# (get_default_config + load_env_config + load_env_params +
+# get_observation_breakdown) -> exactly 47 with Olfaction=25, so a wrong-env
+# wave would have been caught at zero GPU cost.
+#
+# Modulator input widths against obs_dim 47, re-verified on the GAE_NORM
+# configs (not inherited from the MC audit):
+#   ALL = 47 (input_sensors: "all")
+#   I   = 2  ["Satiation", "Interoceptive Nociception"]
+#   X   = 39 ["Extero Nociception" 1, "Olfaction" 25, "Collision" 5, "Visual" 8]
+# Proprioception (6) is deliberately in neither slice; 2 + 39 + 6 = 47.
+# All 16 modulation.sites blocks match their intended arm; t1none has
+# modulation.type = null.
+#
+# REGISTRY DEVIATION (flagged, intentional, same as the MC wave):
+# sensory.olfactory_grid_range is 1 here against the canonical 0 in
+# configs/environment/default.yaml (docs/environment/CONFIG_CRITICAL_SETTINGS.md).
+# That IS the sensory_ladder B-arm's defining property, not drift.
+# sensory.decay_power = 1.0 and thermal.enabled = false both match canonical.
+#
+# --seed / --num-envs / --checkpoint-frequency are NOT passed (config-owned).
+# --episodes IS passed explicitly (10,000,000) as the convention requires.
+#
+# NODE SELECTION (supplied by the caller, verified not re-picked): 102, 106,
+# 107:0, 109, 111, 112, 113, 114:0-2. Nodes 101/103/104/105/107:1/108 still
+# carry the 11 unfinished MC runs and were excluded; 110 excluded entirely for
+# foreign PIDs on 110:0. Pre-flight confirmed NAS mounted on all 8 target
+# nodes, all 16 target GPUs idle (<=133 MiB, 0% util), and a REAL JAX GPU
+# compile (4x4 matmul + block_until_ready) on every node at jax 0.9.0.1 /
+# flax 0.12.4. The foreign tenant seen on 102 during the MC wave is GONE
+# (102:0 and 102:1 both at 2 MiB at this pre-flight).
+#
+# Run 1 below is the active block; runs 2-16 differ from it ONLY in
+# --agent_config, --device and the tag/wandb-name pair, and are recorded in the
+# table that follows. Each run is staged to a unique /tmp/train_cmd_<epoch>_<rand>.sh
+# on its target node (CIFS-bypass), asserted non-empty + carrying its own --tag,
+# then launched with `run_command.py --no-tail`.
+# ===========================================================================
+
+/home/vncuser/miniconda3/envs/grid_world_pain/bin/python train.py \
+  --config configs/environment/experiment/sensory_ladder/B_olf_only.yaml \
+  --agent_config configs/models/recurrent_ppo/nmn_input_site_grid_gaenorm/nmngaenorm_t1none.yaml \
+  --episodes 10000000 --device cuda:0 --log-interval 10 \
+  --tag "rppo_olfgae_t1none_s42" --wandb-name "rppo_olfgae_t1none_s42" \
+  --wandb-group "nmn_site_grid_olf_gaenorm" --wandb-job-type "pilot"
+
+# Runs 2-16 (same command shape; only these three fields differ):
+#  2  --agent_config .../nmngaenorm_t2enc_ALL.yaml    109:1  --tag/--wandb-name rppo_olfgae_t2enc_ALL_s42
+#  3  --agent_config .../nmngaenorm_t2enc_I.yaml      111:0  --tag/--wandb-name rppo_olfgae_t2enc_I_s42
+#  4  --agent_config .../nmngaenorm_t2enc_X.yaml      111:1  --tag/--wandb-name rppo_olfgae_t2enc_X_s42
+#  5  --agent_config .../nmngaenorm_t3rnn_ALL.yaml    112:0  --tag/--wandb-name rppo_olfgae_t3rnn_ALL_s42
+#  6  --agent_config .../nmngaenorm_t3rnn_I.yaml      112:1  --tag/--wandb-name rppo_olfgae_t3rnn_I_s42
+#  7  --agent_config .../nmngaenorm_t3rnn_X.yaml      106:0  --tag/--wandb-name rppo_olfgae_t3rnn_X_s42
+#  8  --agent_config .../nmngaenorm_t4act_ALL.yaml    106:1  --tag/--wandb-name rppo_olfgae_t4act_ALL_s42
+#  9  --agent_config .../nmngaenorm_t4act_I.yaml      107:0  --tag/--wandb-name rppo_olfgae_t4act_I_s42
+# 10  --agent_config .../nmngaenorm_t4act_X.yaml      102:0  --tag/--wandb-name rppo_olfgae_t4act_X_s42
+# 11  --agent_config .../nmngaenorm_t5crt_ALL.yaml    102:1  --tag/--wandb-name rppo_olfgae_t5crt_ALL_s42
+# 12  --agent_config .../nmngaenorm_t5crt_I.yaml      113:0  --tag/--wandb-name rppo_olfgae_t5crt_I_s42
+# 13  --agent_config .../nmngaenorm_t5crt_X.yaml      113:1  --tag/--wandb-name rppo_olfgae_t5crt_X_s42
+# 14  --agent_config .../nmngaenorm_t16quad_ALL.yaml  114:0  --tag/--wandb-name rppo_olfgae_t16quad_ALL_s42
+# 15  --agent_config .../nmngaenorm_t16quad_I.yaml    114:1  --tag/--wandb-name rppo_olfgae_t16quad_I_s42
+# 16  --agent_config .../nmngaenorm_t16quad_X.yaml    114:2  --tag/--wandb-name rppo_olfgae_t16quad_X_s42
+#
+# LAUNCH RECORD -- all 16 verified TRAINING, exactly one PID per tag, 2026-09-09T16:11
+#
+# ENVIRONMENT CONFIRMED (the check that mattered): all sixteen startup banners print
+#   "Observation Dim: 47 (Satiation=1, Interoceptive Nociception=1, Extero Nociception=1,
+#    Olfaction=25, Collision=5, Proprioception=6, Visual=8)"
+# i.e. B_olf_only, NOT the 27-dim basic/04. Read from each run's OWN
+# wandb/run-*/files/output.log (see the LOG COLLISION note below -- the shared NAS
+# run_command logs were NOT usable for this). Pre-computed the same breakdown locally
+# through train.py's own load path BEFORE launching, so a wrong-env wave would have been
+# caught at zero cost; the banners then confirmed it on all 16.
+#
+# Ground truth from each run's OWN saved models/config.yaml (all 16):
+#   sensory.olfactory_grid_range = 1  (B_olf_only's defining key; basic/04 is 0)
+#   thermal.enabled = false
+#   agent.return_mode = GAE_NORM      (this is the GAE_NORM grid, not MC -- the one
+#                                      field that separates this wave from rppo_olfmc_*)
+#   modulation.sites + modulation.input_sensors match the intended arm on all 16
+#   run 1 (t1none) has modulation.type = null
+#   Modulator input widths recomputed from each saved config against its own obs
+#   breakdown: ALL = 47 (x6... n/a for t1none), I = 2, X = 39 on every arm, as designed.
+#   TOP-LEVEL seed: 42 and episodes: 10000000; num_envs 128
+#   (read seed/episodes from the TOP-LEVEL keys -- the nested training: pair is a known
+#    stale duplicate that always reads 42/100; see KNOWN_BUGS.md)
+# provenance.json git_short = 53b2611e on ALL SIXTEEN (no split-SHA wave).
+# git_dirty is MIXED (14x "unknown", 2x true) -- the same 10 s git-timeout race against
+# the NAS under 16 simultaneous launches seen in the MC wave; "true" is correct (the tree
+# carried uncommitted sensory_directional + docs edits at launch).
+#
+# LOG COLLISION (deviation from the MC wave -- READ THIS BEFORE READING THE LOGS):
+# run_command.py names its NAS log logs/YYYYMMDD_HHMMSS.log at SECOND resolution. These
+# 16 launches completed inside ~4 s, so the 16 runs collapsed onto only FIVE log files
+# (161133-161137), 2-4 writers each, appending concurrently to the same NAS file. The
+# result is byte-interleaved and corrupt at line granularity -- e.g. a literal
+# "rppo_olfgae_t3wandb" where two writers' bytes landed in one line, and only ONE
+# surviving "Observation Dim" line per file instead of 2-4. Those five files are NOT a
+# per-run record and must not be parsed per run. The MC wave at 02:41 did not hit this
+# only because its launches happened to straddle second boundaries.
+# The authoritative per-run stdout is wandb/run-20260909_1611*-<id>/files/output.log
+# (one file per run, unshared) -- that is what the banner + health checks above used.
+#
+# Health at T+3min: every assigned GPU resident and busy (5.5-6.8 GB, 54-100% util),
+# all 16 advancing (Iteration 425-847), no traceback / OOM / RESOURCE_EXHAUSTED in any
+# per-run log. Exactly 16 results dirs, one per tag. wandb metadata `host` field
+# independently confirms every run landed on its intended node.
+#
+# NODE 102 FOREIGN TENANT: GONE. The third-party job that held 18570 MiB on 102:0 during
+# the MC wave was absent at this pre-flight (102:0 and 102:1 both at 2 MiB) and has not
+# returned. NOTE: this container runs on the 102 host, so `ps` on 102 also shows the
+# launcher's own shells -- a naive pgrep on 102 over-counts. The verification below
+# counted only processes whose argv[0] is the env interpreter and argv[1] is train.py.
+#
+# Run  Tag                            Arm      Slice  Node:GPU  PID      WandB     Per-run log
+# 1    rppo_olfgae_t1none_s42         t1none   -      109:0     433931   fixefbop  wandb/run-20260909_161148-fixefbop/files/output.log
+# 2    rppo_olfgae_t2enc_ALL_s42      t2enc    ALL    109:1     433936   svust7zw  wandb/run-20260909_161148-svust7zw/files/output.log
+# 3    rppo_olfgae_t2enc_I_s42        t2enc    I      111:0     385343   bkqeyxs6  wandb/run-20260909_161148-bkqeyxs6/files/output.log
+# 4    rppo_olfgae_t2enc_X_s42        t2enc    X      111:1     385348   15i9vlrk  wandb/run-20260909_161148-15i9vlrk/files/output.log
+# 5    rppo_olfgae_t3rnn_ALL_s42      t3rnn    ALL    112:0     371906   re0xu8wg  wandb/run-20260909_161149-re0xu8wg/files/output.log
+# 6    rppo_olfgae_t3rnn_I_s42        t3rnn    I      112:1     371946   1fjn7kro  wandb/run-20260909_161149-1fjn7kro/files/output.log
+# 7    rppo_olfgae_t3rnn_X_s42        t3rnn    X      106:0     888815   8zl38wbn  wandb/run-20260909_161149-8zl38wbn/files/output.log
+# 8    rppo_olfgae_t4act_ALL_s42      t4act    ALL    106:1     888855   ldr2gtfe  wandb/run-20260909_161149-ldr2gtfe/files/output.log
+# 9    rppo_olfgae_t4act_I_s42        t4act    I      107:0     620470   74ynx017  wandb/run-20260909_161149-74ynx017/files/output.log
+# 10   rppo_olfgae_t4act_X_s42        t4act    X      102:0     335161   3wyfh97p  wandb/run-20260909_161143-3wyfh97p/files/output.log
+# 11   rppo_olfgae_t5crt_ALL_s42      t5crt    ALL    102:1     335169   1cw3oibv  wandb/run-20260909_161143-1cw3oibv/files/output.log
+# 12   rppo_olfgae_t5crt_I_s42        t5crt    I      113:0     553737   5z28xpjw  wandb/run-20260909_161149-5z28xpjw/files/output.log
+# 13   rppo_olfgae_t5crt_X_s42        t5crt    X      113:1     553805   045humwu  wandb/run-20260909_161149-045humwu/files/output.log
+# 14   rppo_olfgae_t16quad_ALL_s42    t16quad  ALL    114:0     782689   339g62q7  wandb/run-20260909_161150-339g62q7/files/output.log
+# 15   rppo_olfgae_t16quad_I_s42      t16quad  I      114:1     782757   udjh94rw  wandb/run-20260909_161150-udjh94rw/files/output.log
+# 16   rppo_olfgae_t16quad_X_s42      t16quad  X      114:2     782825   f2wxnymu  wandb/run-20260909_161150-f2wxnymu/files/output.log
+# ---------------------------------------------------------------------------
