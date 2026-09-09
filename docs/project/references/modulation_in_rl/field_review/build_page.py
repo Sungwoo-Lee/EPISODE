@@ -95,13 +95,20 @@ def references_block() -> tuple[str, dict[str, int], int]:
         # Each entry is a small BLOCK, not one flowing paragraph. As inline spans with
         # inline-block badges, the badges' top margin pulled them into the line above and
         # the renderer reported 22 genuine text overlaps.
+        # The number is RENDERED, not left to the list marker. Making each entry a flex
+        # column (to stop the badges overlapping the line above) also stops the <li> being
+        # display:list-item, so the browser drops its marker and the list silently loses the
+        # numbers the in-text citations point at. Emitting it explicitly also guarantees the
+        # printed number IS e['num'] — the same value the {{CITE:}} links resolve to.
         items.append(
-            f"<li id='ref-{e['key']}' value='{e['num']}'>"
+            f"<li id='ref-{e['key']}'>"
+            f"<span class='rnum'>{e['num']}</span>"
+            f"<span class='rbody'>"
             f"<span class='l1'><span class='au'>{e['authors']}</span> ({e['year']}). "
             f"<span class='ti'>{title}</span>.</span>"
             f"<span class='l2'>{e['venue']}</span>"
             f"<span class='tags'>{ident}{topic}{held}"
-            f"<span class='lvl lvl-{lvl}'>{tip}</span></span></li>")
+            f"<span class='lvl lvl-{lvl}'>{tip}</span></span></span></li>")
     return "<ol class='refs'>" + "".join(items) + "</ol>", nums, len(refs)
 
 
