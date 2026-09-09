@@ -94,9 +94,17 @@ pre{background:var(--card);border:1px solid var(--rule);border-radius:4px;paddin
    That is deliberate, but it means an `overflow:hidden` added later to .col, .stage or section
    would clip these silently -- there is no layout error to notice, the code just disappears. */
 @media (min-width:780px){
-  .col pre{max-width:none;box-sizing:border-box;
+  /* The FIGURE breaks out, not the <pre> inside it. Two reasons, one of which already bit:
+     `pre.hl{margin:0}` ties with a `.col pre` rule on specificity and wins on source order, which
+     killed `margin-left:50%` while leaving `transform:translateX(-50%)` alive -- every code block
+     then hung half its own width off the left edge of the window, into space a reader cannot
+     scroll to (defect F3, second amendment). And breaking out the figure keeps the source
+     reference with the code it labels instead of leaving it re-centred on the prose column. */
+  .col figure.code{max-width:none;box-sizing:border-box;
     width:min(calc(100vw - 52px), 1060px);
     margin-left:50%;transform:translateX(-50%)}
+  .col figure.code pre{max-width:none;width:auto;margin-left:0;transform:none}
+  .col figure.code .srcref{max-width:none}
 }
 /* Below the breakout the widest line still cannot fit, so shrink the code a notch rather than
    scroll it silently -- 99 characters is the longest excerpt on the page. */
@@ -141,15 +149,15 @@ pre.tight{margin-top:12px}
    page has a dark theme; a palette baked into the markup at build time would be unreadable in half
    of it. The colours are tokens, so they flip with everything else. */
 :root{
-  --hl-kw:#8a4b8f; --hl-str:#2d6a4f; --hl-com:#8b8781; --hl-num:#a8562a;
+  --hl-kw:#8a4b8f; --hl-str:#2d6a4f; --hl-com:#6f6d69; --hl-num:#a8562a;
   --hl-fn:#2f6f9f; --hl-cls:#8a6d1f; --hl-op:#6f6d69; --hl-bi:#3d3c3a;
 }
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
-  --hl-kw:#c78fcc; --hl-str:#6fbf95; --hl-com:#7e7a74; --hl-num:#e09a6a;
+  --hl-kw:#c78fcc; --hl-str:#6fbf95; --hl-com:#918d86; --hl-num:#e09a6a;
   --hl-fn:#79b2d8; --hl-cls:#d9b64e; --hl-op:#918d86; --hl-bi:#c8c4bd;
 }}
 :root[data-theme="dark"]{
-  --hl-kw:#c78fcc; --hl-str:#6fbf95; --hl-com:#7e7a74; --hl-num:#e09a6a;
+  --hl-kw:#c78fcc; --hl-str:#6fbf95; --hl-com:#918d86; --hl-num:#e09a6a;
   --hl-fn:#79b2d8; --hl-cls:#d9b64e; --hl-op:#918d86; --hl-bi:#c8c4bd;
 }
 figure.code{margin:20px 0}
@@ -166,9 +174,9 @@ pre.hl{margin:0}
    that it scrolls -- an overlay scrollbar is not a cue. */
 .dia-hint{display:none;font-family:var(--mono);font-size:11px;letter-spacing:.04em;
   color:var(--muted);margin:0 0 7px}
-@media (max-width:972px){ .dia-hint{display:block} }   /* 920 floor + 2x26 padding - 1 */
+@media (max-width:971px){ .dia-hint{display:block} }   /* 920 floor + 2x26 padding - 1 */
 .srcref{font-family:var(--mono);font-size:11px;color:var(--muted);margin:6px 0 0;
-  letter-spacing:.02em;text-align:right}
+  letter-spacing:.02em;text-align:right;overflow-wrap:anywhere}
 .srcref::before{content:"\2197\00a0"}
 </style>
 <div class="wrap">
@@ -214,6 +222,7 @@ noticed.</p>
 </section>
 
 <figure>
+<p class="dia-hint">&larr; the diagram is wider than a phone screen &mdash; scroll it sideways</p>
 <div class="dia"><svg viewBox="0 0 1000 500" role="img" aria-label="Five-stage pipeline: a Parquet trajectory store is read by three sweep programs, which write small JSON and CSV aggregates; fifteen figure scripts and a table script read those aggregates through shared plumbing modules and write PNGs and markdown; a build script combines them into one HTML page.">
   <defs>
     <marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
@@ -376,7 +385,7 @@ described at the end.</figcaption>
   <line x1="382" y1="132" x2="382" y2="144" stroke="var(--muted)" stroke-width="1.4" marker-end="url(#ar2)"/>
   <line x1="382" y1="232" x2="382" y2="246" stroke="var(--muted)" stroke-width="1.4" marker-end="url(#ar2)"/>
   <line x1="472" y1="292" x2="498" y2="250" stroke="var(--muted)" stroke-width="1.4" marker-end="url(#ar2)"/>
-  <path d="M 590 146 L 590 108 L 382 108 L 382 78" fill="none" stroke="var(--muted)" stroke-width="1.2" stroke-dasharray="4 3" marker-end="url(#ar2)"/>
+  <path d="M 590 146 L 590 108 L 476 108" fill="none" stroke="var(--muted)" stroke-width="1.2" stroke-dasharray="4 3" marker-end="url(#ar2)"/>
   <text x="600" y="128" font-size="10" fill="var(--muted)">next shard</text>
 
   <rect x="720" y="146" width="256" height="106" rx="4" fill="var(--warn-soft)" stroke="var(--warn)"/>
@@ -427,8 +436,8 @@ that starts bypassing the conventions is one <code>grep</code> away, rather than
   </g>
 
   <text x="20" y="176" font-size="11" fill="var(--amber)" font-family="monospace">not a step</text>
-  <path d="M 150 132 L 150 166" fill="none" stroke="var(--amber)" stroke-width="1.4"/>
-  <text x="150" y="182" font-size="10.5" fill="var(--amber)" text-anchor="middle" font-family="monospace">excluded from every rate</text>
+  <path d="M 150 132 L 150 180" fill="none" stroke="var(--amber)" stroke-width="1.4"/>
+  <text x="150" y="198" font-size="10.5" fill="var(--amber)" text-anchor="middle" font-family="monospace">excluded from every rate</text>
 
   <path d="M 290 200 L 290 224 L 430 224 L 430 200" fill="none" stroke="var(--study)" stroke-width="1.6"/>
   <text x="360" y="244" font-size="11" fill="var(--study)" text-anchor="middle" font-family="monospace">the decision that produced row t=2</text>

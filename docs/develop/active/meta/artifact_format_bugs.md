@@ -1117,6 +1117,27 @@ than presenting the geometry as the page's.
 **Verifying a fix:** run the probe twice on a page with a web font and a wrap-sensitive component;
 the two passes agree only once the wait is in place.
 
+### F42 — hand-placed labels in an inline SVG collide, and the checker cannot see SVG text
+
+**Saw:** in a hand-authored diagram, `not a ste` with `excluded from every rate` stamped through
+the final letter — two labels printed over each other at every viewport, in both themes.
+
+**Cause:** both `<text>` nodes have sensible coordinates read on their own: one starts at x=20, the
+other is centred at x=150, and their baselines are six units apart. The collision only exists once
+glyph widths are applied — the first runs to x≈86 and the second starts at x≈74.
+
+**Why neither review method catches it:** the layout checker's overlap test walks **HTML** text
+boxes; SVG `<text>` is invisible to it, so the tool reports a clean page. And reading the source
+shows two coordinates that look fine, because the width of a string is not in the source.
+
+**Rule:** any hand-placed SVG label is checked by rendering, not by reading. The checker should walk
+SVG `<text>` nodes and assert pairwise `getBBox()` disjointness; until it does, an author verifies
+the same in the console before shipping a hand-authored diagram.
+
+**Related:** [F18](#f18) is the raster cousin — a matplotlib label wider than the panel it sits in.
+The difference is where the fix lives: F18 belongs in the figure script, F42 belongs in the checker,
+because a hand-drawn SVG has no script to guard it.
+
 ## Related
 
 - [`artifact_generation_guide`](artifact_generation_guide.md) — the wider guide: content, claims,
