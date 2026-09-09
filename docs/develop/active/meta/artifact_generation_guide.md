@@ -125,6 +125,12 @@ heights across panels, which is wrong. Say "compare shapes, not heights" on the 
 Three rotated axis titles overflowed their plot height, one by more than double. Estimate
 `chars × 0.55 × font-size` against the available span and keep under ~90%.
 
+### 2.5 An internal analysis wants more figures than an introduction
+
+The reader asked for this directly. A results document is not a landing page; it should show the
+data, not summarise it.
+
+
 ### 2.6 Every raster figure opens at full size, on click (2026-09-09)
 
 A figure is rendered far above the width it is displayed at — typically 1500–2300 px into a 730 px
@@ -151,12 +157,6 @@ figure. A page may carry both.
 **Reference implementation:** `docs/experiments/active/sensor_ladder/sensor_ladder.html` — 18 CSS
 rules (`.lb*`, `.zoomhint`, `figure img{cursor:zoom-in}`), one markup block, one script. Copy it;
 adapt only the colour tokens, and check the page actually defines every token the copy references.
-
-### 2.5 An internal analysis wants more figures than an introduction
-
-The reader asked for this directly. A results document is not a landing page; it should show the
-data, not summarise it.
-
 ---
 
 ## 3. Technical traps

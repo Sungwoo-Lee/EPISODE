@@ -1,0 +1,363 @@
+<title>Reading Anthropic's Figure Style</title>
+<style>
+/* ============================================================================
+   Every value below is quoted from the three stylesheets this page documents.
+   Nothing here is a guess; where a value could not be found, the page says so
+   rather than inventing one.
+
+   SINGLE-THEME BY CHOICE. The system being documented is a light academic page
+   -- white ground, #333 ink. Rendering this document in a dark variant would
+   misrepresent the thing it describes. So there is no dark block, and every
+   colour is painted explicitly so the page holds whatever ground the host uses.
+   ========================================================================== */
+:root{
+  color-scheme:light;
+  /* --- typefaces, verbatim from shared-styles.css --- */
+  --font-sans:'Anthropic Sans',system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+  --font-serif:'Anthropic Serif',Georgia,"Times New Roman",serif;
+  --font-mono:'Anthropic Mono',ui-monospace,"SF Mono",Menlo,monospace;
+  /* --- type scale, verbatim --- */
+  --fs-body:13px; --fs-figure:14px; --fs-label:11px; --fs-small:12px; --fs-title:15px;
+  --lh-body:1.6; --lh-heading:1.25;
+  /* --- greys. In the source every one of these is written `var(--gray-N, #hex)`,
+         and --gray-N is defined in none of the three stylesheets, so the fallback
+         is what actually renders. These are the real colours. --- */
+  --text:#333; --text-light:#888; --text-faint:#bbb;
+  --tick:#555; --tick-line:#ddd; --rule:#eee; --bg-soft:#fafafa; --ink-900:#111;
+  /* --- the two data series: Paul Tol's colourblind-safe pair --- */
+  --tol-blue:#0077bb; --tol-orange:#ee7733;
+  --accent-orange-soft:hsl(28,100%,94%);
+  --hl-yellow:#fff59d;
+  /* --- the grid, verbatim --- */
+  --grid-column-gap:16px;
+}
+body{background:#fff;color:var(--text);font-family:var(--font-sans);
+  font-size:var(--fs-body);line-height:var(--lh-body);margin:0;
+  -webkit-font-smoothing:antialiased}
+.wrap{max-width:1080px;margin:0 auto;padding:0 28px 120px}
+.col{max-width:720px;margin-left:auto;margin-right:auto}
+header{padding:72px 0 30px;border-bottom:1px solid var(--rule);margin-bottom:40px}
+.kicker{font-family:var(--font-mono);font-size:var(--fs-label);letter-spacing:.1em;
+  text-transform:uppercase;color:var(--text-light);margin:0 0 16px}
+h1{font-family:var(--font-sans);font-size:38px;font-weight:600;line-height:var(--lh-heading);
+  letter-spacing:-.015em;margin:0 0 16px;color:var(--ink-900);text-wrap:balance}
+.standfirst{font-size:16px;line-height:1.55;color:var(--text);margin:0;max-width:640px}
+h2{font-family:var(--font-sans);font-size:26px;font-weight:600;line-height:var(--lh-heading);
+  margin:64px 0 8px;color:var(--ink-900)}
+h3{font-family:var(--font-sans);font-size:19px;font-weight:600;line-height:1.4;
+  margin:34px 0 8px;color:var(--ink-900)}
+p{margin:0 0 14px}
+a{color:var(--tol-blue)}
+code{font-family:var(--font-mono);font-size:12px;background:var(--bg-soft);
+  border:1px solid var(--rule);border-radius:3px;padding:1px 4px;overflow-wrap:anywhere}
+.note{border-left:2px solid var(--tol-orange);background:var(--accent-orange-soft);
+  padding:16px 20px;margin:26px 0;border-radius:0 3px 3px 0}
+.note p:last-child{margin-bottom:0}
+.note h4{font-family:var(--font-mono);font-size:var(--fs-label);letter-spacing:.09em;
+  text-transform:uppercase;color:#8a4a18;margin:0 0 8px;font-weight:400}
+mark{background:var(--hl-yellow);padding:0 2px}
+
+/* ---------- tables ---------- */
+.scroll{overflow-x:auto;margin:0 0 18px}
+table{border-collapse:collapse;width:100%;min-width:520px;font-size:var(--fs-small);
+  font-variant-numeric:tabular-nums}
+th,td{text-align:left;padding:7px 12px;border-bottom:1px solid var(--rule);vertical-align:top}
+thead th{font-family:var(--font-mono);font-size:var(--fs-label);letter-spacing:.05em;
+  text-transform:uppercase;color:var(--text-light);font-weight:400;
+  border-bottom:1px solid var(--tick-line)}
+td.mono,th.mono{font-family:var(--font-mono);white-space:nowrap}
+.tbl-hint{display:none;font-family:var(--font-mono);font-size:var(--fs-label);
+  color:var(--text-light);margin:0 0 6px}
+@media (max-width:623px){.tbl-hint{display:block}}   /* 520 floor + 2x28 padding - 1 */
+
+/* ---------- figures: the conventions this page is about ---------- */
+figure{margin:48px auto;max-width:720px}
+figure+figure{margin-top:64px}
+.fig-title{font-size:var(--fs-title);font-weight:600;color:var(--text);margin:0 0 14px;
+  font-family:var(--font-sans);line-height:var(--lh-heading)}
+figcaption{font-size:var(--fs-body);color:var(--text-light);margin:8px auto 0;
+  line-height:1.5;font-style:normal;max-width:720px}
+figure svg{display:block;width:100%;height:auto;overflow:visible}
+/* the axis treatment, transcribed */
+.axis .domain{display:none}
+.axis .tick line{stroke:var(--tick-line)}
+.axis text{fill:var(--text-light);font-size:var(--fs-label);font-family:var(--font-sans)}
+.axis-title{font-size:var(--fs-body);fill:var(--text);font-weight:600;font-family:var(--font-sans)}
+.line-legend{display:flex;gap:16px;justify-content:center;margin-top:12px}
+.legend-item{display:flex;gap:4px;align-items:center;font-family:var(--font-mono);
+  font-size:var(--fs-label);white-space:nowrap;color:var(--text)}
+.legend-swatch{width:14px;height:3px;flex-shrink:0}
+.legend-dot{display:inline-block;width:10px;height:10px;border-radius:50%;flex-shrink:0}
+
+/* ---------- specimens ---------- */
+.spec{border:1px solid var(--rule);border-radius:3px;padding:18px 20px;margin:0 0 14px;
+  background:#fff}
+.spec .lbl{font-family:var(--font-mono);font-size:var(--fs-label);color:var(--text-faint);
+  letter-spacing:.06em;text-transform:uppercase;margin:0 0 8px}
+.swatches{display:grid;grid-template-columns:repeat(auto-fill,minmax(148px,1fr));gap:10px;margin:0 0 18px}
+.sw{border:1px solid var(--rule);border-radius:3px;overflow:hidden}
+.sw .chip{height:46px}
+.sw .meta{padding:7px 9px;font-family:var(--font-mono);font-size:var(--fs-label);line-height:1.45}
+.sw .meta b{display:block;color:var(--text);font-weight:600}
+.sw .meta span{color:var(--text-light)}
+/* the layout demo */
+.gridwrap{border:1px solid var(--rule);border-radius:3px;background:var(--bg-soft);padding:14px;
+  overflow-x:auto}
+.gridrow{display:grid;gap:var(--grid-column-gap);min-width:660px;
+  grid-template-columns:repeat(10,45px);margin:0 0 8px;align-items:center}
+.gband{height:26px;border-radius:2px;display:flex;align-items:center;justify-content:center;
+  font-family:var(--font-mono);font-size:10px;color:#fff;white-space:nowrap}
+.glabel{font-family:var(--font-mono);font-size:var(--fs-label);color:var(--text-light);
+  min-width:660px;margin:0 0 12px}
+.foot{margin-top:72px;padding-top:20px;border-top:1px solid var(--rule);
+  font-size:var(--fs-small);color:var(--text-light)}
+.foot code{font-size:11px}
+</style>
+
+<div class="wrap">
+<header class="col">
+  <p class="kicker">Design reference &middot; extracted from source &middot; 2026-09-09</p>
+  <h1>Reading Anthropic's Figure Style</h1>
+  <p class="standfirst">A working transcription of the design system behind
+  <a href="https://transformer-circuits.pub/2026/workspace/index.html">transformer-circuits.pub/2026/workspace</a>
+  &mdash; taken from its three stylesheets rather than from looking at it &mdash; and what it would
+  take to put this project's own figures into that style. This page is rendered in the system it
+  describes, so it doubles as the specimen.</p>
+</header>
+
+<section class="col">
+<h2>How this was obtained, and what that limits</h2>
+<p>The page links three stylesheets. All three were fetched and read:
+<code>public/paper.css</code> (24 KB), <code>public/shared-styles.css</code> (21 KB) and
+<code>public/bundle.css</code> (147 KB). Every value in this document is quoted from them.</p>
+<p>That matters because the first attempt at this used a summarising fetch, which returned a
+plausible and largely wrong answer: it reported the body text as 16px (it is <mark>13px</mark>), the
+typefaces as a generic system stack (they are three proprietary Anthropic faces with system
+fallbacks), and the figure palette as &ldquo;viridis or similar&rdquo; (the two series colours are
+<mark>Paul Tol's blue and orange</mark>). A style document built on that would have been confidently
+wrong in exactly the details it exists to get right.</p>
+
+<div class="note">
+<h4>One finding that changes how to read every colour below</h4>
+<p>In the source, every grey is written as a fallback pair &mdash; <code>--text: var(--gray-700, #333)</code>,
+<code>--tick-line: var(--gray-300, #ddd)</code>, and so on. <strong>None of the
+<code>--gray-N</code> tokens is defined in any of the three stylesheets.</strong> So the fallback is
+what renders: <code>#333</code> really is the body ink, <code>#ddd</code> really is the tick colour.
+The greys in this document are the rendered values, not the intended ones.</p>
+<p>The same check finds two tokens that are used but never defined &mdash;
+<code>--brand-manilla</code> and <code>--brand-clay</code>, both consumed by rich-text annotation
+colours. Those declarations resolve to nothing in the sheets fetched here; they are presumably set
+by the page's template script, which is not a stylesheet and was not read.</p>
+</div>
+</section>
+
+<section class="col">
+<h2>Type</h2>
+<p>Three faces, one role each, all with system fallbacks. The proprietary faces will not load
+outside Anthropic's own pages &mdash; <strong>including on this page</strong>, which is therefore
+rendering in the fallbacks. That is the honest state of things rather than a defect to hide: the
+scale and the hierarchy transfer, the letterforms do not.</p>
+
+<div class="spec">
+  <p class="lbl">--font-sans &middot; 'Anthropic Sans', system-ui, &hellip;</p>
+  <p style="font-size:26px;font-weight:600;line-height:1.25;margin:0 0 6px">Section heading &mdash; 26px / 600</p>
+  <p style="font-size:19px;font-weight:600;line-height:1.4;margin:0 0 6px">Subsection &mdash; 19px / 600 / 1.4</p>
+  <p style="margin:0">Body text at 13px with a 1.6 line-height. Small for a web page and deliberately
+  so: it is an academic measure, set to put a lot of argument in front of the reader without making
+  the column wide.</p>
+</div>
+<div class="spec">
+  <p class="lbl">--font-mono &middot; 'Anthropic Mono', ui-monospace, &hellip;</p>
+  <p style="font-family:var(--font-mono);margin:0">Mono carries labels, legends and figure
+  furniture &mdash; not just code. <code>legend-item</code> sets <code>font-family: var(--font-mono)</code>.</p>
+</div>
+<div class="spec">
+  <p class="lbl">--font-serif &middot; 'Anthropic Serif', Georgia, &hellip;</p>
+  <p style="font-family:var(--font-serif);margin:0">Serif is declared but barely used &mdash; two
+  rules in 190 KB of CSS. It is not the body face.</p>
+</div>
+
+<p class="tbl-hint">&larr; the table is wider than the column &mdash; scroll it sideways</p>
+<div class="scroll">
+<table>
+<thead><tr><th>token</th><th class="mono">value</th><th>what it sets</th></tr></thead>
+<tbody>
+<tr><td class="mono">--fs-body</td><td class="mono">13px</td><td>body copy, and figure axis titles</td></tr>
+<tr><td class="mono">--fs-figure</td><td class="mono">14px</td><td>text inside figures</td></tr>
+<tr><td class="mono">--fs-title</td><td class="mono">15px</td><td>the title above a figure</td></tr>
+<tr><td class="mono">--fs-small</td><td class="mono">12px</td><td>secondary text</td></tr>
+<tr><td class="mono">--fs-label</td><td class="mono">11px</td><td>axis tick labels, legends</td></tr>
+<tr><td class="mono">--lh-body</td><td class="mono">1.6</td><td>body line-height</td></tr>
+<tr><td class="mono">--lh-heading</td><td class="mono">1.25</td><td>heading line-height</td></tr>
+</tbody>
+</table>
+</div>
+<p>Headings are set directly rather than through the scale: <code>h3</code> is 26px/600 and
+<code>h4</code> is 19px/600 with a 1.4 line-height, both in the sans face. Figure captions are
+13px, the same size as body.</p>
+</section>
+
+<section class="col">
+<h2>Colour</h2>
+<p>The palette is almost entirely achromatic. Colour is spent on data and on one accent, and
+nowhere else &mdash; there is no coloured chrome, no tinted headings, no branded rules.</p>
+<div class="swatches">
+  <div class="sw"><div class="chip" style="background:#333"></div><div class="meta"><b>#333</b><span>--text &middot; body ink</span></div></div>
+  <div class="sw"><div class="chip" style="background:#555"></div><div class="meta"><b>#555</b><span>--tick</span></div></div>
+  <div class="sw"><div class="chip" style="background:#888"></div><div class="meta"><b>#888</b><span>--text-light &middot; captions, axis labels</span></div></div>
+  <div class="sw"><div class="chip" style="background:#bbb"></div><div class="meta"><b>#bbb</b><span>--text-faint</span></div></div>
+  <div class="sw"><div class="chip" style="background:#ddd"></div><div class="meta"><b>#ddd</b><span>--tick-line</span></div></div>
+  <div class="sw"><div class="chip" style="background:#eee"></div><div class="meta"><b>#eee</b><span>--rule &middot; borders</span></div></div>
+  <div class="sw"><div class="chip" style="background:#fafafa;border-bottom:1px solid #eee"></div><div class="meta"><b>#fafafa</b><span>--bg-soft</span></div></div>
+  <div class="sw"><div class="chip" style="background:#0077bb"></div><div class="meta"><b>#0077bb</b><span>--tol-blue &middot; series 1</span></div></div>
+  <div class="sw"><div class="chip" style="background:#ee7733"></div><div class="meta"><b>#ee7733</b><span>--tol-orange &middot; series 2, accent</span></div></div>
+  <div class="sw"><div class="chip" style="background:hsl(28,100%,94%)"></div><div class="meta"><b>hsl(28,100%,94%)</b><span>--accent-orange-soft</span></div></div>
+  <div class="sw"><div class="chip" style="background:#fff59d"></div><div class="meta"><b>#fff59d</b><span>--hl-yellow &middot; highlight</span></div></div>
+</div>
+<h3>The two series colours are a named, colourblind-safe pair</h3>
+<p><code>#0077bb</code> and <code>#ee7733</code> are the blue and orange of <strong>Paul Tol's
+qualitative scheme</strong>, a palette designed so that its members stay distinguishable under the
+common forms of colour vision deficiency. The source names them as such:
+<code>--series-blue: var(--tol-blue, #0077bb)</code>. Two facts follow. Blue and orange are chosen
+*because* they survive; and the scheme has more members, so a third series has a defined next
+colour rather than a free choice.</p>
+</section>
+
+<section class="col">
+<h2>Layout</h2>
+<p>A named-line CSS grid in the Distill tradition: columns are named rather than numbered, so a
+figure declares how far it breaks out by naming an edge, not by computing a width.</p>
+<div class="gridwrap">
+  <p class="glabel">10 columns &times; 45px, 16px gaps</p>
+  <div class="gridrow">
+    <div class="gband" style="grid-column:1 / span 8;background:var(--text)">text-start &rarr; text-end &nbsp;(472px)</div>
+    <div class="gband" style="grid-column:9 / span 1;background:var(--text-light)">gutter</div>
+    <div class="gband" style="grid-column:10 / span 1;background:var(--text-faint)"></div>
+  </div>
+  <div class="gridrow">
+    <div class="gband" style="grid-column:1 / span 9;background:var(--tol-blue)">text-start &rarr; gutter-end</div>
+  </div>
+  <div class="gridrow">
+    <div class="gband" style="grid-column:1 / span 10;background:var(--tol-orange)">page-start &rarr; page-end</div>
+  </div>
+</div>
+<p>The text measure is <strong>eight 45px columns plus seven 16px gaps = 472px</strong> &mdash;
+computed from the grid declaration, not measured in a browser, so treat it as the specification
+rather than as a rendered fact. Figures step outward by naming <code>text-end</code>,
+<code>gutter-end</code> or <code>screen-end</code>; all three appear in the source. Captions carry
+their own <code>max-width: 720px</code>, so a caption is allowed to be wider than the text it
+explains.</p>
+<p>Vertical rhythm is set once and left alone: <code>figure { margin: 48px auto }</code>, and
+<code>figure + figure { margin-top: 64px }</code> &mdash; two figures in a row get more air than a
+figure after prose, which is a detail most systems forget.</p>
+</section>
+
+<section class="col">
+<h2>Figures &mdash; the part worth copying</h2>
+<p>This is where the system is most opinionated, and most of it is subtraction.</p>
+
+<figure>
+  <p class="fig-title">The house chart style, reconstructed from the CSS</p>
+  <svg viewBox="0 0 640 250" role="img" aria-label="A two-series line chart in the documented style: no axis spine, faint horizontal tick lines, 11px grey tick labels, a bold 13px axis title, and a centred legend in monospace with 14 by 3 pixel line swatches.">
+    <g class="axis">
+      <line class="domain" x1="52" y1="20" x2="52" y2="196"/>
+      <g class="tick"><line x1="52" y1="196" x2="620" y2="196"/><text x="44" y="200" text-anchor="end">0</text></g>
+      <g class="tick"><line x1="52" y1="152" x2="620" y2="152"/><text x="44" y="156" text-anchor="end">10</text></g>
+      <g class="tick"><line x1="52" y1="108" x2="620" y2="108"/><text x="44" y="112" text-anchor="end">20</text></g>
+      <g class="tick"><line x1="52" y1="64"  x2="620" y2="64"/><text x="44" y="68"  text-anchor="end">30</text></g>
+      <g class="tick"><line x1="52" y1="20"  x2="620" y2="20"/><text x="44" y="24"  text-anchor="end">40</text></g>
+      <text x="120" y="220" text-anchor="middle">layer 4</text>
+      <text x="290" y="220" text-anchor="middle">layer 8</text>
+      <text x="460" y="220" text-anchor="middle">layer 12</text>
+      <text x="610" y="220" text-anchor="middle">16</text>
+    </g>
+    <text class="axis-title" x="4" y="14">effect size</text>
+    <polyline fill="none" stroke="var(--tol-blue)" stroke-width="2"
+      points="60,180 150,150 240,104 330,70 420,54 510,46 600,42"/>
+    <polyline fill="none" stroke="var(--tol-orange)" stroke-width="2"
+      points="60,188 150,178 240,168 330,150 420,128 510,120 600,116"/>
+  </svg>
+  <div class="line-legend">
+    <span class="legend-item"><span class="legend-swatch" style="background:var(--tol-blue)"></span>with workspace</span>
+    <span class="legend-item"><span class="legend-swatch" style="background:var(--tol-orange)"></span>ablated</span>
+  </div>
+  <figcaption><b>The conventions, applied.</b> <b>Axes.</b> <b>x</b> = transformer layer index,
+  counting from the embedding; <b>y</b> = effect size in arbitrary units, which is why the axis
+  title carries no unit. Note what is absent: there is no axis spine, no box, no vertical
+  gridlines, and no tick marks &mdash; only faint horizontal rules at the labelled values. The data
+  are illustrative, not measured; this figure exists to show the styling.</figcaption>
+</figure>
+
+<h3>The five rules, in the order they matter</h3>
+<p><strong>1. The axis spine is deleted outright.</strong> <code>.axis path.domain { display: none }</code>.
+Not lightened &mdash; removed. What remains of the axis is a set of faint horizontal rules in
+<code>#ddd</code> at the tick values, so the eye reads values off the chart rather than off a frame
+around it.</p>
+<p><strong>2. Axis text is 11px in <code>#888</code>; the axis title is 13px in <code>#333</code> at
+weight 600.</strong> A two-step hierarchy inside the figure itself: the title of the quantity is
+darker and heavier than the numbers on the scale, so a reader scanning finds out <em>what</em> is
+plotted before <em>how much</em>.</p>
+<p><strong>3. A title above, a caption below.</strong> <code>.fig-title</code> is 15px/600 in
+<code>#333</code> with 14px of space beneath it; the caption is 13px in <code>#888</code>, upright,
+not italic. Most systems have one or the other. Having both splits two jobs: the title says what
+you are looking at, the caption says what to conclude.</p>
+<p><strong>4. Legends are set in mono, and a line swatch is 14&times;3px.</strong> A line series gets
+a 14&times;3 rectangle &mdash; a segment of the line itself, not a filled square; a point series gets
+a 10px dot. Legends sit centred below the chart with a 16px gap, never floating inside the plot.</p>
+<p><strong>5. Two data colours, and they are chosen for vision, not taste.</strong> Everything else
+in the figure is grey.</p>
+
+<div class="note">
+<h4>What this style does not do, which is as instructive</h4>
+<p>No chart junk, obviously &mdash; but more specifically: no coloured backgrounds behind plots, no
+drop shadows, no rounded plot frames, no gradient fills, no legends boxed in a border, no italic
+captions, and no colour used to mean &ldquo;good&rdquo; or &ldquo;bad&rdquo;. The greys carry all
+structure; the two hues carry only which series is which.</p>
+</div>
+</section>
+
+<section class="col">
+<h2>Putting this project's figures into that style</h2>
+<p>Our figures are matplotlib PNGs, not D3. The conventions above translate almost directly, and
+the translation is short enough to live in one shared style module rather than being repeated per
+script. What follows is the mapping, not a claim that it has been applied yet.</p>
+<div class="scroll">
+<table>
+<thead><tr><th>their rule</th><th class="mono">matplotlib equivalent</th></tr></thead>
+<tbody>
+<tr><td>no axis spine</td><td class="mono">ax.spines[:].set_visible(False)</td></tr>
+<tr><td>faint horizontal rules at ticks</td><td class="mono">ax.grid(axis="y", color="#ddd", lw=.8); ax.set_axisbelow(True)</td></tr>
+<tr><td>no tick marks</td><td class="mono">ax.tick_params(length=0)</td></tr>
+<tr><td>tick labels 11px #888</td><td class="mono">xtick.labelsize / ytick.labelsize = 11; xtick.color = "#888"</td></tr>
+<tr><td>axis title 13px #333 bold</td><td class="mono">axes.labelsize = 13; axes.labelcolor = "#333"; axes.labelweight = 600</td></tr>
+<tr><td>two series, Tol blue/orange</td><td class="mono">cycler(color=["#0077bb", "#ee7733"])</td></tr>
+<tr><td>legend below, centred, no frame</td><td class="mono">ax.legend(loc="upper center", bbox_to_anchor=(.5,-.12), ncol=2, frameon=False)</td></tr>
+<tr><td>title above the figure, not on the axes</td><td>emit as page markup, not <code class="mono">ax.set_title</code></td></tr>
+</tbody>
+</table>
+</div>
+<div class="note">
+<h4>Two of our own rules this style would collide with</h4>
+<p><strong>Legibility floor.</strong> An 11px tick label is fine at the size they display figures.
+Ours are rendered around 1500&ndash;2300px wide and shown in a 730px column, so an 11pt label lands
+near 5px &mdash; well under the 9px floor this project enforces. Adopting their <em>sizes</em>
+literally would break our figures; adopting their <em>ratios</em> (labels smaller than the axis
+title, axis title smaller than the figure title) is what transfers.</p>
+<p><strong>Colour meaning.</strong> Our pages already spend purple, blue and green on what a
+modulator reads. Their blue and orange would collide with that on any page that carries both. The
+resolution is theirs, in fact: greys carry structure, and hue is reserved for the one distinction the
+argument turns on &mdash; whichever distinction that happens to be on a given page.</p>
+</div>
+</section>
+
+<div class="col foot">
+<p>Extracted 2026-09-09 from
+<code>https://transformer-circuits.pub/2026/workspace/public/{paper,shared-styles,bundle}.css</code>
+(24 KB, 21 KB, 147 KB) and the page's own HTML (408 KB, 18 PNG figures, 1 inline SVG, no canvas).
+Values are quoted; the 472px text measure is computed from the grid declaration rather than measured
+in a browser, and is marked as such above. The proprietary Anthropic faces are not loadable here, so
+this page renders in the declared fallbacks.</p>
+<p>This document is a reading of someone else's design system for our own use. It reproduces no
+proprietary font, and links the source rather than copying its content.</p>
+</div>
+</div>
