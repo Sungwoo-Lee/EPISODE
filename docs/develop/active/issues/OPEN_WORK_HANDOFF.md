@@ -1,17 +1,19 @@
 ---
-title: "Open-Work Handoff — remaining v3.0-audit work"
+title: "Open-Work Handoff — carried-over work items"
 topic: issues
 status: active
 created: 2026-07-04
-last_updated: 2026-07-04
+last_updated: 2026-09-09
 ---
 
-# Open-Work Handoff — remaining v3.0-audit work
+# Open-Work Handoff — carried-over work items
 
 ## What this is
 
-A **handoff checklist** of the work left over from the 2026-07-04 v3.0-audit
-session, written so another Claude session can pick it up cold. Each item is a
+A **handoff checklist** of work that is deferred rather than forgotten, written so
+another Claude session can pick it up cold. It began as the leftovers from the
+2026-07-04 v3.0-audit session (sections A-D) and now also carries deferrals from
+later work (section E onward). Each item is a
 one-line, actionable task with the file refs and links you need — **not**
 re-analysis. For the full bug record and root-cause detail, see [[KNOWN_BUGS]]
 (owned by `bug-curator`) and the [[v3_pipeline_correctness_diagnosis]].
@@ -49,6 +51,56 @@ lands — do not hand-edit [[KNOWN_BUGS]].
 - [ ] **D1 — Relaunch jump-reach (node 113)** with `attack_range: [2,3]` on corrected code (reward fix `ef0fd25` + range fix `7ff8d1f`) for clean {2,3} semantics.
 - [ ] **D2 — Relaunch the 6-run basic ladder** on the corrected reward + range semantics when desired (current runs carry the old semantics).
 - [ ] **D3 — 266 commits are unpushed** — decide whether to push.
+
+---
+
+## E. Temperature system — deferred by user decision (2026-09-09)
+
+Both items are **user-deferred, not blocked**: the user asked for each to be handled as
+part of a larger piece of work rather than as a one-off patch. Neither is broken today at
+the shipped settings; both are traps for whoever changes those settings next.
+
+- [ ] **E1 — Review every temperature setting together, including the two uncalibrated
+  ones.** To be done as one pass over the whole `thermal:` block rather than
+  value-by-value. Two known items to fold in. **(a) The energy cost of thermoregulation
+  is uncalibrated.** `thermal.metabolic_coupling_rate` ships at `1.0` and is currently
+  unread (`metabolic_coupling: false`; the loader forces the inert `0.0` when the gate is
+  off). At `k_loss = 0.01` with a body at −12 it would add roughly **12%** on top of
+  `metabolic_cost: 1.0`. Note the shape, not just the magnitude: the drain is
+  `rate * |k_loss * (body_temp − temperature_setpoint)|`, so it grows with distance from
+  the setpoint in **either** direction — at the campfire comfort ring the body settles
+  near **+8.9**, so switching this on charges nearly as much for sitting at the fire as
+  for freezing, and with the world baseline at −22 to −28 there is nowhere the agent can
+  stand that is near setpoint. **(b) The thermal drive axis is mis-scaled unless the
+  survivable band is symmetric about the setpoint.** `core.py:88-89` computes
+  `t_axis = (body_temp − temperature_setpoint) * (max_satiation / max_temperature)`, but
+  its own docstring defines that denominator as "the distance from the setpoint at which
+  the agent dies" — true only when the setpoint is 0. At setpoint 37 / max 42 the real
+  danger range is 5, so the thermal axis would weigh about **8× too little**, silently.
+  **The obvious guard is the wrong one:** warning on a non-zero setpoint misses
+  `setpoint 0, min −10, max +20`, where the setpoint *is* zero and full-scale cold still
+  weighs half of full-scale heat. The condition is **asymmetry about the setpoint**, and
+  the fix is a per-side scale or an enforced-symmetry rule — not merely swapping the
+  denominator to `(max_temperature − setpoint)`, which still gets the cold side wrong.
+  The loader today checks only `min < max` and `min <= setpoint <= max`
+  (`config_loader.py:1530-1540`). Shipped values (`0 / −15 / +15`) are symmetric, so
+  **nothing is wrong at today's settings**. Ref: [[thermal_handover]] Task 3.
+- [ ] **E2 — Fold food-vs-fire separation into the entity-placement algorithm update.**
+  The user intends to revise entity allocation generally, so this is a requirement for
+  that work rather than a config tweak. Measured over 20,000 real resets of the campfire
+  config: **28.66%** of episodes place food within 1 Manhattan cell of a fire (95% CI
+  28.03-29.29), and **27.37%** put such food on a cell warm enough to occupy
+  indefinitely — those episodes contain no warmth-versus-food trade-off at all, yet count
+  as thermal episodes in every aggregate. Only **8.30%** of individual food items are
+  affected, so the task is not broken; the cost is an optimistically biased and noisier
+  estimate of thermal competence. The existing knob `thermal.food_min_fire_distance` is
+  **verified genuinely wired** (mandatory read, real second placement pass) and binds at
+  `2` with the food count unchanged and nothing hitting the cell-(0,0) fallback; `2` is
+  the smallest binding value and sufficient because the comfort ring is one cell wide,
+  while `3` would wrongly clear the genuinely-hard distance-2 band. Whether the new
+  algorithm keeps this knob or subsumes it is the open design question. Changing it is a
+  critical-settings change and needs a same-commit dated entry in
+  [[CONFIG_CRITICAL_SETTINGS]]. Ref: [[FOOD_FIRE_SEPARATION_MEASUREMENT]].
 
 ---
 
