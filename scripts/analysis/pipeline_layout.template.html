@@ -456,8 +456,8 @@ a study gets both right by default.</figcaption>
 
 <section class="col">
 <h2 id="core">The core, function by function</h2>
-<p>Four modules, 107 + 119 +
-96 + 244 lines, that every
+<p>Four modules, {{LC:scripts/analysis/core/store.py}} + {{LC:scripts/analysis/core/scan.py}} +
+{{LC:scripts/analysis/core/env.py}} + {{LC:scripts/analysis/core/golden.py}} lines, that every
 analysis in the project goes through. They are worth reading in this order, because each one
 assumes the one before it.</p>
 
@@ -483,35 +483,11 @@ repeat.</p>
 <p>A gap means episodes are missing and the analysis will report a population it does not have. A
 repeat means some world was counted twice. Neither would raise on its own; both would produce a
 figure that looks entirely normal.</p>
-<figure class="code">
-<pre class="hl"><code><span class="k">if</span> <span class="n">span</span> <span class="o">!=</span> <span class="bp">self</span><span class="o">.</span><span class="n">n_episodes</span> <span class="ow">or</span> <span class="nb">len</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">unique</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">seeds</span><span class="p">))</span> <span class="o">!=</span> <span class="bp">self</span><span class="o">.</span><span class="n">n_episodes</span><span class="p">:</span>
-    <span class="k">raise</span> <span class="ne">SystemExit</span><span class="p">(</span>
-        <span class="sa">f</span><span class="s2">&quot;the </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">roots</span><span class="p">)</span><span class="si">}</span><span class="s2"> collection pass(es) do not form one contiguous seed range: &quot;</span>
-        <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">n_episodes</span><span class="si">:</span><span class="s2">,</span><span class="si">}</span><span class="s2"> episodes spanning </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">seeds</span><span class="o">.</span><span class="n">min</span><span class="p">()</span><span class="si">:</span><span class="s2">,</span><span class="si">}</span><span class="s2">..</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">seeds</span><span class="o">.</span><span class="n">max</span><span class="p">()</span><span class="si">:</span><span class="s2">,</span><span class="si">}</span><span class="s2"> &quot;</span>
-        <span class="sa">f</span><span class="s2">&quot;(</span><span class="si">{</span><span class="n">span</span><span class="si">:</span><span class="s2">,</span><span class="si">}</span><span class="s2"> seeds). A gap or an overlap means the population is not what the &quot;</span>
-        <span class="sa">f</span><span class="s2">&quot;analysis will report it to be.&quot;</span><span class="p">)</span></code></pre>
-<figcaption class="srcref">scripts/analysis/core/store.py &middot; lines 57&ndash;62</figcaption>
-</figure>
+{{CODE:scripts/analysis/core/store.py#57-62}}
 <p>The rest of the module is small readers &mdash; <code>episode()</code> for a column of the
 per-episode table, <code>episode_list()</code> for a column that holds a list per episode, and
 <code>episode_property()</code>, which deserves its own note:</p>
-<figure class="code">
-<pre class="hl"><code><span class="k">def</span><span class="w"> </span><span class="nf">episode_property</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">per_episode</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;A ragged-looking episode column that is really (episodes x entities x channels).</span>
-
-<span class="sd">    The width of the last axis is not stored anywhere, so it is inferred - and then CHECKED,</span>
-<span class="sd">    because an inferred shape that happens to divide evenly is exactly how a silently</span>
-<span class="sd">    transposed array gets into a figure.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
-    <span class="n">flat</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">concatenate</span><span class="p">([</span><span class="n">c</span><span class="o">.</span><span class="n">flatten</span><span class="p">()</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">(</span><span class="n">zero_copy_only</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
-                           <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_ep</span><span class="o">.</span><span class="n">column</span><span class="p">(</span><span class="n">name</span><span class="p">)</span><span class="o">.</span><span class="n">chunks</span><span class="p">])</span>
-    <span class="k">if</span> <span class="n">flat</span><span class="o">.</span><span class="n">size</span> <span class="o">%</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">n_episodes</span> <span class="o">*</span> <span class="n">per_episode</span><span class="p">):</span>
-        <span class="k">raise</span> <span class="ne">SystemExit</span><span class="p">(</span>
-            <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2"> is not (episodes x </span><span class="si">{</span><span class="n">per_episode</span><span class="si">}</span><span class="s2"> x channels): </span><span class="si">{</span><span class="n">flat</span><span class="o">.</span><span class="n">size</span><span class="si">:</span><span class="s2">,</span><span class="si">}</span><span class="s2"> values do not &quot;</span>
-            <span class="sa">f</span><span class="s2">&quot;divide by </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">n_episodes</span><span class="si">:</span><span class="s2">,</span><span class="si">}</span><span class="s2"> x </span><span class="si">{</span><span class="n">per_episode</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
-    <span class="k">return</span> <span class="n">flat</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">n_episodes</span><span class="p">,</span> <span class="n">per_episode</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">)[</span><span class="bp">self</span><span class="o">.</span><span class="n">order</span><span class="p">]</span></code></pre>
-<figcaption class="srcref">scripts/analysis/core/store.py &middot; lines 80&ndash;93</figcaption>
-</figure>
+{{CODE:scripts/analysis/core/store.py#Store.episode_property}}
 <p>The shape of that array is not written down anywhere in the file, so it has to be inferred from
 the total number of values &mdash; and an inferred shape that happens to divide evenly is exactly
 how a silently transposed array reaches a figure. Hence the check rather than a bare
@@ -525,50 +501,12 @@ absent one. They now share this loop.</p>
 <p><code>Frame</code> wraps a single shard and works out, once, the things every study needs and
 most get wrong: where each episode starts, which rows are real steps, and which row a given
 decision was taken on.</p>
-<figure class="code">
-<pre class="hl"><code><span class="c1"># Episode boundaries. `t == 0` is the reset row: the world as handed to the agent, before it</span>
-<span class="c1"># has acted. It is not a step, and counting it as one inflates every denominator.</span>
-<span class="bp">self</span><span class="o">.</span><span class="n">initial</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">flatnonzero</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">t</span> <span class="o">==</span> <span class="mi">0</span><span class="p">)</span>      <span class="c1"># row indices of the reset rows</span>
-<span class="bp">self</span><span class="o">.</span><span class="n">episodes</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">episode_id</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">initial</span><span class="p">]</span>   <span class="c1"># global index of each episode in this shard</span>
-<span class="k">if</span> <span class="ow">not</span> <span class="n">np</span><span class="o">.</span><span class="n">array_equal</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">episodes</span><span class="p">,</span>
-                      <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">episodes</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="bp">self</span><span class="o">.</span><span class="n">episodes</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">+</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">episodes</span><span class="p">))):</span>
-    <span class="k">raise</span> <span class="ne">SystemExit</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">path</span><span class="si">}</span><span class="s2">: episodes are not shard-aligned - an episode&#39;s rows are split &quot;</span>
-                     <span class="sa">f</span><span class="s2">&quot;across shard files, so any per-episode sum here is partial&quot;</span><span class="p">)</span>
-<span class="n">ends</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">initial</span><span class="p">[</span><span class="mi">1</span><span class="p">:],</span> <span class="bp">self</span><span class="o">.</span><span class="n">n</span><span class="p">)</span>
-<span class="bp">self</span><span class="o">.</span><span class="n">estart</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">repeat</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">initial</span><span class="p">,</span> <span class="n">ends</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">initial</span><span class="p">)</span>   <span class="c1"># first row of MY episode</span>
-
-<span class="n">row</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">n</span><span class="p">)</span>
-<span class="bp">self</span><span class="o">.</span><span class="n">is_step</span> <span class="o">=</span> <span class="n">row</span> <span class="o">&gt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">estart</span>                <span class="c1"># excludes every reset row</span>
-<span class="bp">self</span><span class="o">.</span><span class="n">prev</span> <span class="o">=</span> <span class="n">row</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">is_step</span><span class="p">]</span> <span class="o">-</span> <span class="mi">1</span>               <span class="c1"># the row the action was chosen on</span></code></pre>
-<figcaption class="srcref">scripts/analysis/core/scan.py &middot; lines 49&ndash;62</figcaption>
-</figure>
+{{CODE:scripts/analysis/core/scan.py#49-62}}
 <p>Then <code>sweep()</code> walks the shards, hands each <code>Frame</code> to the study's own
 function, and &mdash; the important part &mdash; counts the steps itself as it goes, so it can
 check the total against the episode table at the end. The study's code cannot fake that number,
 because the driver is not asking the study for it:</p>
-<figure class="code">
-<pre class="hl"><code><span class="k">def</span><span class="w"> </span><span class="nf">sweep</span><span class="p">(</span><span class="n">store</span><span class="p">,</span> <span class="n">columns</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span> <span class="n">on_shard</span><span class="p">,</span> <span class="n">init</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">verbose</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span> <span class="n">label</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Walk every shard once, hand each to `on_shard`, and cross-check the population at the end.</span>
-
-<span class="sd">    `on_shard(frame, acc, shard_index)` does the study&#39;s own accumulation in ordinary NumPy. The</span>
-<span class="sd">    driver counts steps per episode itself and asserts the total against the episode table, so a</span>
-<span class="sd">    callback that silently drops rows is caught even though the driver cannot see what it counted.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
-    <span class="n">acc</span> <span class="o">=</span> <span class="n">init</span><span class="p">()</span> <span class="k">if</span> <span class="nb">callable</span><span class="p">(</span><span class="n">init</span><span class="p">)</span> <span class="k">else</span> <span class="p">({}</span> <span class="k">if</span> <span class="n">init</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">init</span><span class="p">)</span>
-    <span class="n">counted</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">store</span><span class="o">.</span><span class="n">n_episodes</span><span class="p">)</span>
-    <span class="n">t0</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span>
-    <span class="k">for</span> <span class="n">fi</span><span class="p">,</span> <span class="n">path</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">store</span><span class="o">.</span><span class="n">step_files</span><span class="p">):</span>
-        <span class="n">table</span> <span class="o">=</span> <span class="n">pq</span><span class="o">.</span><span class="n">read_table</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="n">columns</span><span class="o">=</span><span class="n">columns</span><span class="p">)</span>
-        <span class="n">frame</span> <span class="o">=</span> <span class="n">Frame</span><span class="p">(</span><span class="n">table</span><span class="p">,</span> <span class="n">store</span><span class="p">,</span> <span class="n">path</span><span class="p">)</span>
-        <span class="n">counted</span><span class="p">[</span><span class="n">frame</span><span class="o">.</span><span class="n">episodes</span><span class="p">]</span> <span class="o">+=</span> <span class="n">frame</span><span class="o">.</span><span class="n">steps_per_episode</span>
-        <span class="n">on_shard</span><span class="p">(</span><span class="n">frame</span><span class="p">,</span> <span class="n">acc</span><span class="p">,</span> <span class="n">fi</span><span class="p">)</span>
-        <span class="k">if</span> <span class="n">verbose</span> <span class="ow">and</span> <span class="p">(</span><span class="n">fi</span> <span class="o">%</span> <span class="mi">15</span> <span class="o">==</span> <span class="mi">14</span> <span class="ow">or</span> <span class="n">fi</span> <span class="o">==</span> <span class="nb">len</span><span class="p">(</span><span class="n">store</span><span class="o">.</span><span class="n">step_files</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span><span class="p">):</span>
-            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;  </span><span class="si">{</span><span class="n">label</span><span class="si">}</span><span class="s2">: shard </span><span class="si">{</span><span class="n">fi</span><span class="o">+</span><span class="mi">1</span><span class="si">}</span><span class="s2">/</span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">store</span><span class="o">.</span><span class="n">step_files</span><span class="p">)</span><span class="si">}</span><span class="s2">  </span><span class="si">{</span><span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span><span class="o">-</span><span class="n">t0</span><span class="si">:</span><span class="s2">5.0f</span><span class="si">}</span><span class="s2">s&quot;</span><span class="p">,</span>
-                  <span class="n">flush</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
-    <span class="n">store</span><span class="o">.</span><span class="n">assert_step_counts</span><span class="p">(</span><span class="n">counted</span><span class="p">)</span>
-    <span class="k">return</span> <span class="n">acc</span></code></pre>
-<figcaption class="srcref">scripts/analysis/core/scan.py &middot; lines 100&ndash;119</figcaption>
-</figure>
+{{CODE:scripts/analysis/core/scan.py#sweep}}
 <p>Note what <code>sweep()</code> deliberately is <em>not</em>: it is a driver, not a language for
 describing measurements. An earlier design had studies declare what to count and never write a
 loop. That does not survive contact with what these sweeps do &mdash; crossed two-dimensional
@@ -585,25 +523,7 @@ actually lived in rather than today's defaults.</p>
 <p>This module exists because those derivations were copied into eleven places and had all drifted.
 They were merged only after proving the variants agreed on all fourteen agents and on 870,172 real
 step rows.</p>
-<figure class="code">
-<pre class="hl"><code><span class="k">def</span><span class="w"> </span><span class="nf">perceived_nociception</span><span class="p">(</span><span class="n">inj</span><span class="p">,</span> <span class="n">t</span><span class="p">,</span> <span class="n">estart</span><span class="p">,</span> <span class="n">kernel</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Rebuild the scalar the nociceptor actually hands the agent, row by row.</span>
-
-<span class="sd">    Mirrors core.py:115 (roll the buffer, write the new injury at slot 0) and core.py:1112 (the</span>
-<span class="sd">    buffer is ZEROED at reset, so the reset row&#39;s injury is never in it). The `src &gt; estart` guard</span>
-<span class="sd">    is strict for exactly that reason - including the reset row was a real bug once (Known Bugs,</span>
-<span class="sd">    2026-08-25) and it leaks the randomised starting injury into the first steps as if the agent had</span>
-<span class="sd">    felt it immediately, which is precisely the claim the sensor-ladder study tests.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
-    <span class="n">idx</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">t</span><span class="p">))</span>
-    <span class="n">out</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">t</span><span class="p">))</span>
-    <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">kernel</span><span class="p">)):</span>
-        <span class="n">src</span> <span class="o">=</span> <span class="n">idx</span> <span class="o">-</span> <span class="n">j</span>
-        <span class="n">ok</span> <span class="o">=</span> <span class="n">src</span> <span class="o">&gt;</span> <span class="n">estart</span>
-        <span class="n">out</span><span class="p">[</span><span class="n">ok</span><span class="p">]</span> <span class="o">+=</span> <span class="n">kernel</span><span class="p">[</span><span class="n">j</span><span class="p">]</span> <span class="o">*</span> <span class="n">inj</span><span class="p">[</span><span class="n">src</span><span class="p">[</span><span class="n">ok</span><span class="p">]]</span>
-    <span class="k">return</span> <span class="n">out</span></code></pre>
-<figcaption class="srcref">scripts/analysis/core/env.py &middot; lines 74&ndash;89</figcaption>
-</figure>
+{{CODE:scripts/analysis/core/env.py#perceived_nociception}}
 <p>That one is worth reading closely even if you skip the rest: the agent does not feel its wound
 directly. It feels a weighted average of the last twelve steps of damage, which means an agent that
 wakes badly hurt feels <em>nothing</em> for the first two steps and does not feel the full wound
@@ -621,12 +541,7 @@ anything that is a whole number &mdash; a count, a sum of zeros and ones &mdash;
 anything else must match to twelve decimal places. Which tier a field is in is decided
 mechanically, by whether its values are whole numbers on both sides, so the gate cannot be relaxed
 after the fact by reclassifying a field that failed.</p>
-<figure class="code">
-<pre class="hl"><code><span class="k">def</span><span class="w"> </span><span class="nf">_is_intlike</span><span class="p">(</span><span class="n">v</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
-    <span class="k">return</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">v</span><span class="p">,</span> <span class="p">(</span><span class="nb">int</span><span class="p">,</span> <span class="nb">float</span><span class="p">))</span> <span class="ow">and</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">v</span><span class="p">,</span> <span class="nb">bool</span><span class="p">)</span> \
-        <span class="ow">and</span> <span class="n">math</span><span class="o">.</span><span class="n">isfinite</span><span class="p">(</span><span class="n">v</span><span class="p">)</span> <span class="ow">and</span> <span class="n">v</span> <span class="o">==</span> <span class="nb">round</span><span class="p">(</span><span class="n">v</span><span class="p">)</span></code></pre>
-<figcaption class="srcref">scripts/analysis/core/golden.py &middot; lines 33&ndash;35</figcaption>
-</figure>
+{{CODE:scripts/analysis/core/golden.py#_is_intlike}}
 <p>One further guard is easy to miss and does real work: a field that is a whole number in the old
 output and not in the new one is reported as a <b>tier break</b>, not quietly demoted to the looser
 comparison. A count that has grown a fractional part is wrong however small the difference.</p>
@@ -672,21 +587,7 @@ starts bypassing the driver becomes visible.</p>
 <p class="meta">one arm&rsquo;s store &rarr; results/analysis/ladder/&lt;arm&gt;.json &middot; ~60 s per arm</p>
 <p>A study now supplies only its own arithmetic. The callback is ordinary NumPy in the study&rsquo;s
 own folder, and the bookkeeping it used to carry is gone:</p>
-<figure class="code">
-<pre class="hl"><code><span class="k">def</span><span class="w"> </span><span class="nf">collect</span><span class="p">(</span><span class="n">fr</span><span class="p">,</span> <span class="n">acc</span><span class="p">,</span> <span class="n">fi</span><span class="p">):</span>
-    <span class="n">gi</span><span class="p">,</span> <span class="n">gidx</span> <span class="o">=</span> <span class="n">fr</span><span class="o">.</span><span class="n">episode_id</span><span class="p">,</span> <span class="n">fr</span><span class="o">.</span><span class="n">episodes</span>
-    <span class="n">bu</span> <span class="o">=</span> <span class="n">fr</span><span class="o">.</span><span class="n">raw</span><span class="p">(</span><span class="s2">&quot;agent_in_bush&quot;</span><span class="p">);</span> <span class="n">inj</span> <span class="o">=</span> <span class="n">fr</span><span class="o">.</span><span class="n">raw</span><span class="p">(</span><span class="s2">&quot;injury_level&quot;</span><span class="p">);</span> <span class="n">nut</span> <span class="o">=</span> <span class="n">fr</span><span class="o">.</span><span class="n">raw</span><span class="p">(</span><span class="s2">&quot;nutrition&quot;</span><span class="p">)</span>
-    <span class="n">ar</span><span class="p">,</span> <span class="n">ac</span> <span class="o">=</span> <span class="n">fr</span><span class="o">.</span><span class="n">raw</span><span class="p">(</span><span class="s2">&quot;agent_row&quot;</span><span class="p">),</span> <span class="n">fr</span><span class="o">.</span><span class="n">raw</span><span class="p">(</span><span class="s2">&quot;agent_col&quot;</span><span class="p">)</span>
-    <span class="n">anr</span> <span class="o">=</span> <span class="n">fr</span><span class="o">.</span><span class="n">list_raw</span><span class="p">(</span><span class="s2">&quot;animal_row&quot;</span><span class="p">,</span> <span class="n">na</span><span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">)</span>
-    <span class="n">anc</span> <span class="o">=</span> <span class="n">fr</span><span class="o">.</span><span class="n">list_raw</span><span class="p">(</span><span class="s2">&quot;animal_col&quot;</span><span class="p">,</span> <span class="n">na</span><span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">)</span>
-
-    <span class="n">E</span><span class="p">[</span><span class="s2">&quot;inj0&quot;</span><span class="p">][</span><span class="n">gidx</span><span class="p">]</span> <span class="o">=</span> <span class="n">fr</span><span class="o">.</span><span class="n">at_initial</span><span class="p">(</span><span class="n">inj</span><span class="p">);</span> <span class="n">E</span><span class="p">[</span><span class="s2">&quot;nut0&quot;</span><span class="p">][</span><span class="n">gidx</span><span class="p">]</span> <span class="o">=</span> <span class="n">fr</span><span class="o">.</span><span class="n">at_initial</span><span class="p">(</span><span class="n">nut</span><span class="p">)</span>
-    <span class="n">E</span><span class="p">[</span><span class="s2">&quot;n_steps&quot;</span><span class="p">][</span><span class="n">gidx</span><span class="p">]</span> <span class="o">+=</span> <span class="n">fr</span><span class="o">.</span><span class="n">steps_per_episode</span>
-    <span class="n">E</span><span class="p">[</span><span class="s2">&quot;bush_steps&quot;</span><span class="p">][</span><span class="n">gidx</span><span class="p">]</span> <span class="o">+=</span> <span class="n">fr</span><span class="o">.</span><span class="n">per_episode_sum</span><span class="p">(</span><span class="n">bu</span><span class="p">)</span>
-    <span class="n">E</span><span class="p">[</span><span class="s2">&quot;dmg&quot;</span><span class="p">][</span><span class="n">gidx</span><span class="p">]</span> <span class="o">+=</span> <span class="n">fr</span><span class="o">.</span><span class="n">per_episode_sum_with_initial</span><span class="p">(</span><span class="n">fr</span><span class="o">.</span><span class="n">raw</span><span class="p">(</span><span class="s2">&quot;damage&quot;</span><span class="p">))</span>
-    <span class="n">E</span><span class="p">[</span><span class="s2">&quot;n_ate&quot;</span><span class="p">][</span><span class="n">gidx</span><span class="p">]</span> <span class="o">+=</span> <span class="n">fr</span><span class="o">.</span><span class="n">per_episode_sum_with_initial</span><span class="p">(</span><span class="n">fr</span><span class="o">.</span><span class="n">raw</span><span class="p">(</span><span class="s2">&quot;ate_food&quot;</span><span class="p">))</span></code></pre>
-<figcaption class="srcref">scripts/analysis/studies/sensor_ladder/collect_arm_data.py &middot; lines 102&ndash;113</figcaption>
-</figure>
+{{CODE:scripts/analysis/studies/sensor_ladder/collect_arm_data.py#102-113}}
 <p>Two conventions here are preserved rather than tidied, because tidying them would move published
 numbers: bush steps exclude the reset row while damage and eating include it &mdash; both forms are
 asked for explicitly at the call site rather than hidden in one default &mdash; and the odour
@@ -754,18 +655,7 @@ missing. Each one opens with a docstring stating its question, why it matters, a
 computed &mdash; that docstring is the source of the "How it is computed" block on the published
 page, so the two cannot drift apart by being edited separately.</p>
 <p>They all follow the same six lines of setup. Here is Figure 8's, verbatim:</p>
-<figure class="code">
-<pre class="hl"><code><span class="kn">import</span><span class="w"> </span><span class="nn">sys</span><span class="o">,</span><span class="w"> </span><span class="nn">os</span><span class="p">;</span> <span class="n">sys</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">insert</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">dirname</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">abspath</span><span class="p">(</span><span class="vm">__file__</span><span class="p">)))</span>
-<span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span><span class="o">,</span><span class="w"> </span><span class="nn">matplotlib.pyplot</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">plt</span>
-<span class="kn">import</span><span class="w"> </span><span class="nn">_ladder</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">L</span><span class="o">,</span><span class="w"> </span><span class="nn">_plot</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">PL</span>
-
-<span class="n">D</span> <span class="o">=</span> <span class="n">L</span><span class="o">.</span><span class="n">load_all</span><span class="p">();</span> <span class="n">arms</span> <span class="o">=</span> <span class="n">L</span><span class="o">.</span><span class="n">ARM_ORDER</span><span class="p">;</span> <span class="n">col</span> <span class="o">=</span> <span class="n">PL</span><span class="o">.</span><span class="n">arm_colors</span><span class="p">()</span>
-<span class="n">x</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="mi">4</span><span class="p">)</span>
-<span class="n">curves</span> <span class="o">=</span> <span class="p">{</span><span class="n">a</span><span class="p">:</span> <span class="n">L</span><span class="o">.</span><span class="n">rate</span><span class="p">(</span><span class="n">D</span><span class="p">[</span><span class="n">a</span><span class="p">][</span><span class="s2">&quot;grids&quot;</span><span class="p">][</span><span class="s2">&quot;dw_early&quot;</span><span class="p">],</span> <span class="n">D</span><span class="p">[</span><span class="n">a</span><span class="p">][</span><span class="s2">&quot;grids&quot;</span><span class="p">][</span><span class="s2">&quot;dwt_early&quot;</span><span class="p">])</span> <span class="k">for</span> <span class="n">a</span> <span class="ow">in</span> <span class="n">arms</span><span class="p">}</span>
-<span class="n">slope</span> <span class="o">=</span> <span class="p">{</span><span class="n">a</span><span class="p">:</span> <span class="n">curves</span><span class="p">[</span><span class="n">a</span><span class="p">][</span><span class="mi">3</span><span class="p">]</span> <span class="o">-</span> <span class="n">curves</span><span class="p">[</span><span class="n">a</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span> <span class="k">for</span> <span class="n">a</span> <span class="ow">in</span> <span class="n">arms</span><span class="p">}</span>
-<span class="n">GRP</span> <span class="o">=</span> <span class="p">{</span><span class="n">a</span><span class="p">:</span> <span class="n">L</span><span class="o">.</span><span class="n">resolves_identity</span><span class="p">(</span><span class="n">D</span><span class="p">[</span><span class="n">a</span><span class="p">][</span><span class="s2">&quot;sensory&quot;</span><span class="p">])</span> <span class="k">for</span> <span class="n">a</span> <span class="ow">in</span> <span class="n">arms</span><span class="p">}</span></code></pre>
-<figcaption class="srcref">scripts/analysis/ladder/lad08_injury_dose_response.py &middot; lines 20&ndash;28</figcaption>
-</figure>
+{{CODE:scripts/analysis/ladder/lad08_injury_dose_response.py#20-28}}
 <p>That is the whole contract: <code>load_all()</code> for the aggregates,
 <code>rate(numerator, denominator)</code> to turn a stored pair into a percentage, and
 <code>arm_colors()</code> so every figure agrees on which colour means which arm. A new figure is a
@@ -775,15 +665,7 @@ new file that starts with those lines.</p>
 <p class="meta">aggregates &rarr; markdown tables, consumed by the page builder</p>
 <p>Emits every numeric table in the report so that no number in the document is typed by hand. It
 reads the regression output the third sweep wrote:</p>
-<figure class="code">
-<pre class="hl"><code><span class="k">def</span><span class="w"> </span><span class="nf">glm</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="n">model</span><span class="p">,</span> <span class="n">term</span><span class="p">):</span>
-    <span class="n">p</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;results/analysis/lad/</span><span class="si">{</span><span class="n">a</span><span class="si">}</span><span class="s2">/multivariate.csv&quot;</span>
-    <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="n">csv</span><span class="o">.</span><span class="n">DictReader</span><span class="p">(</span><span class="nb">open</span><span class="p">(</span><span class="n">p</span><span class="p">)):</span>
-        <span class="k">if</span> <span class="n">r</span><span class="p">[</span><span class="s2">&quot;model&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="n">model</span> <span class="ow">and</span> <span class="n">r</span><span class="p">[</span><span class="s2">&quot;term&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="n">term</span><span class="p">:</span>
-            <span class="k">return</span> <span class="nb">float</span><span class="p">(</span><span class="n">r</span><span class="p">[</span><span class="s2">&quot;dpp_per_sd&quot;</span><span class="p">])</span>
-    <span class="k">return</span> <span class="nb">float</span><span class="p">(</span><span class="s2">&quot;nan&quot;</span><span class="p">)</span></code></pre>
-<figcaption class="srcref">scripts/analysis/ladder/make_report_tables.py &middot; lines 53&ndash;58</figcaption>
-</figure>
+{{CODE:scripts/analysis/ladder/make_report_tables.py#glm}}
 </div>
 
 <div class="stage">
@@ -793,16 +675,7 @@ reads the regression output the third sweep wrote:</p>
 <p>The prose lives in a hand-written template; the numbers and images do not. The builder
 substitutes two kinds of token and fails if any is left over, so a renamed figure is an error rather
 than a blank panel nobody notices.</p>
-<figure class="code">
-<pre class="hl"><code><span class="n">html</span><span class="p">,</span> <span class="n">scripts</span> <span class="o">=</span> <span class="n">attach_provenance</span><span class="p">(</span><span class="n">html</span><span class="p">)</span>
-<span class="n">html</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">sub</span><span class="p">(</span><span class="sa">r</span><span class="s2">&quot;\{\{FIG:([a-z0-9_]+)\}\}&quot;</span><span class="p">,</span> <span class="n">fig</span><span class="p">,</span> <span class="n">html</span><span class="p">)</span>
-<span class="n">html</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">sub</span><span class="p">(</span><span class="sa">r</span><span class="s2">&quot;\{\{TABLE:(\d+)\}\}&quot;</span><span class="p">,</span> <span class="n">tab</span><span class="p">,</span> <span class="n">html</span><span class="p">)</span>
-
-<span class="n">left</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">findall</span><span class="p">(</span><span class="sa">r</span><span class="s2">&quot;\{\{[^}]+\}\}&quot;</span><span class="p">,</span> <span class="n">html</span><span class="p">)</span>
-<span class="k">if</span> <span class="n">left</span><span class="p">:</span>
-    <span class="k">raise</span> <span class="ne">SystemExit</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;unsubstituted tokens remain: </span><span class="si">{</span><span class="nb">sorted</span><span class="p">(</span><span class="nb">set</span><span class="p">(</span><span class="n">left</span><span class="p">))</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span></code></pre>
-<figcaption class="srcref">scripts/analysis/ladder/build_artifact.py &middot; lines 209&ndash;215</figcaption>
-</figure>
+{{CODE:scripts/analysis/ladder/build_artifact.py#209-215}}
 <p>It enforces a good deal more than substitution, and all of it as hard build failures rather than
 warnings: every figure must name an existing generating script and appear exactly once; every
 caption must carry an <code>Axes.</code> sentence and a "How it is computed" block; every figure must
@@ -815,30 +688,20 @@ the template verbatim, checked <em>before</em> anything is written so a stale co
 <h2>Running it</h2>
 <p>Two commands rebuild everything downstream of the store. The first is the slow one and is only
 needed when the store changes; the rest take seconds.</p>
-<pre class="hl"><code><span class="nv">P</span><span class="o">=</span>/home/vncuser/miniconda3/envs/grid_world_pain/bin/python
+<pre class="sh">P=/home/vncuser/miniconda3/envs/grid_world_pain/bin/python
 
-<span class="c1"># stage 2 - slow, only when the store changes</span>
-<span class="nv">$P</span><span class="w"> </span>scripts/analysis/studies/sensor_ladder/collect_arm_data.py<span class="w">     </span><span class="c1"># ~60 s per arm, 14 arms</span>
-<span class="nv">$P</span><span class="w"> </span>scripts/analysis/studies/sensor_ladder/collect_time_course.py<span class="w">  </span><span class="c1"># ~2.5 min per arm, 14 arms</span>
+# stage 2 - slow, only when the store changes
+$P scripts/analysis/studies/sensor_ladder/collect_arm_data.py     # ~60 s per arm, 14 arms
+$P scripts/analysis/studies/sensor_ladder/collect_time_course.py  # ~2.5 min per arm, 14 arms
 
-<span class="c1"># stages 4 and 5 - seconds</span>
-<span class="nv">$P</span><span class="w"> </span>scripts/analysis/ladder/run_all.py<span class="w">              </span><span class="c1"># all fifteen figures</span>
-<span class="nv">$P</span><span class="w"> </span>scripts/analysis/ladder/make_report_tables.py<span class="w">   </span><span class="c1"># every table in the report</span>
-<span class="nv">$P</span><span class="w"> </span>scripts/analysis/ladder/build_artifact.py<span class="w">       </span><span class="c1"># the shareable HTML page</span></code></pre>
+# stages 4 and 5 - seconds
+$P scripts/analysis/ladder/run_all.py              # all fifteen figures
+$P scripts/analysis/ladder/make_report_tables.py   # every table in the report
+$P scripts/analysis/ladder/build_artifact.py       # the shareable HTML page</pre>
 <p>Both sweeps take <code>--arms</code> to rebuild a subset, which is what makes a fourteen-arm
 rebuild parallelisable across nodes. The figure runner is twenty-four lines and exists only to save
 typing &mdash; each figure script still runs standalone:</p>
-<figure class="code">
-<pre class="hl"><code><span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">glob</span><span class="o">.</span><span class="n">glob</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">HERE</span><span class="si">}</span><span class="s2">/lad*.py&quot;</span><span class="p">)):</span>
-    <span class="n">n</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">basename</span><span class="p">(</span><span class="n">f</span><span class="p">)</span>
-    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="se">\n</span><span class="si">{</span><span class="s1">&#39;=&#39;</span><span class="o">*</span><span class="mi">78</span><span class="si">}</span><span class="se">\n</span><span class="si">{</span><span class="n">n</span><span class="si">}</span><span class="se">\n</span><span class="si">{</span><span class="s1">&#39;=&#39;</span><span class="o">*</span><span class="mi">78</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">flush</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
-    <span class="n">t</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span>
-    <span class="k">try</span><span class="p">:</span>
-        <span class="n">runpy</span><span class="o">.</span><span class="n">run_path</span><span class="p">(</span><span class="n">f</span><span class="p">,</span> <span class="n">run_name</span><span class="o">=</span><span class="s2">&quot;__main__&quot;</span><span class="p">)</span>
-        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;[ok] </span><span class="si">{</span><span class="n">n</span><span class="si">}</span><span class="s2">  </span><span class="si">{</span><span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span><span class="o">-</span><span class="n">t</span><span class="si">:</span><span class="s2">.1f</span><span class="si">}</span><span class="s2">s&quot;</span><span class="p">,</span> <span class="n">flush</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
-    <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span></code></pre>
-<figcaption class="srcref">scripts/analysis/ladder/run_all.py &middot; lines 11&ndash;18</figcaption>
-</figure>
+{{CODE:scripts/analysis/ladder/run_all.py#11-18}}
 <p>It runs every figure even after one fails, then exits non-zero with the list &mdash; so one broken
 figure gives you the other fourteen plus a report, instead of stopping at the first traceback.</p>
 </section>
