@@ -3,7 +3,7 @@ title: Artifact format bugs — the register, and why reading the CSS never find
 topic: meta
 status: active
 created: 2026-08-31
-last_updated: 2026-08-31
+last_updated: 2026-09-09
 ---
 
 # Artifact format bugs
@@ -1037,6 +1037,85 @@ mid-sentence, and looks like a footnote marker.
 `<code>` and `<pre>`. It is a one-line check and it is the only thing that reliably finds this.
 
 **Verifying a fix:** the grep returns nothing.
+
+### F40 — an `auto-fit` grid whose container carries the gap colour as a background
+
+**Saw:** the four-cell evidence tally on a parameter-reference page rendered, between about 561 and
+720 px, as three cells and **a solid grey slab** occupying the remaining two column tracks. The slab
+looked like a rendering failure; it was empty grid area.
+
+**Cause:** `grid-template-columns:repeat(auto-fit,minmax(168px,1fr))` on a container using the
+1px-gap-plus-container-background trick to draw hairlines between cells. `auto-fit` chose four
+columns in that band while the content supplied three rows' worth of items, and every cell the items
+did not occupy showed the container's background — which here is the *line* colour, not the surface.
+With a transparent container the same orphan is invisible; with this one it is a filled block.
+
+**Why neither review method catches it:** nothing overflows and nothing overlaps, so a geometry
+checker sees a clean box. The defect only exists in the width band where the item count fails to
+divide the column count, so a review at 500 and 1440 — the two widths most likely to be checked —
+misses it in both directions.
+
+**Rule:** a grid that paints its gaps via the container background gets **explicit column counts per
+breakpoint**, never `auto-fit`. If the column count is not chosen by hand, the empty cells are not
+either.
+
+**Verifying a fix:** step the viewport across the component's whole range and assert
+`cells × cellWidth + gaps == containerWidth` at every step, or simply that the item count is a
+multiple of the resolved column count.
+
+### F41 — a sticky offset hard-coded to another sticky element's height, which wraps
+
+**Saw:** a sticky group-navigation rail set to `top:78px` below a sticky toolbar. Between 861 and
+~950 px the toolbar's chip row wrapped to a second line, making it 99 px tall, and the rail's first
+row — the *active* one — sat underneath it, showing only a sliver of its accent border. Clicking a
+rail link also landed the target heading 13 px under the toolbar, because `scroll-margin-top` was
+hard-coded from the same stale measurement.
+
+**Cause:** two sticky elements whose offsets were written from one measurement of the first one's
+height. That height is not a constant: a flex-wrap toolbar grows a row whenever its contents stop
+fitting, so the offset is correct only at the widths where the author happened to look.
+
+**This is not F5.** F5 is `position:sticky` constraining the margin box so an element's *own* padding
+pushes it down. This is a *sibling's* height changing with viewport width, which no amount of care
+about the second element's own box will catch.
+
+**Why neither review method catches it:** the CSS reads as obviously correct — `top:78px` against a
+toolbar that is 68px tall plus 10px of clearance. Both numbers are true at desktop width. A
+screenshot scan at 500 (rail hidden) and 1440 (toolbar one row) shows no defect, because the failure
+lives in a ~90px band between them.
+
+**Rule:** a second sticky element's `top`, and any `scroll-margin-top` derived from it, is either
+measured from the first element at runtime and written to a custom property, or the first element is
+**prevented from wrapping at every width where the second is shown**. The cheap fix is usually the
+second: hide the dependent element at the same breakpoint where the toolbar gains its row.
+
+**Verifying a fix:** step the viewport across the band, scroll each element into its stuck state, and
+assert `railTop >= toolbarBottom` at every step. Sample widths on either side of the band will pass a
+broken page.
+
+### Tool note — a DOM probe that runs at `DOMContentLoaded` measures fallback-font layout
+
+**Saw:** a review harness probing the same page twice returned twelve badges wrapped onto their own
+row, then seven; element offsets differed from the screenshots by 50–250 px. Neither pass was buggy.
+
+**Cause:** the probe fired at `DOMContentLoaded`, before the Google Fonts faces arrived, so it
+measured Georgia and system-ui metrics — different advance widths, different wrap points, different
+heights, and a different `ch` for every `max-width` expressed in it. The screenshot, taken under
+`--virtual-time-budget`, waits for the real faces. So the numbers describe a page nobody sees while
+the image beside them describes the real one.
+
+**This is a property of `scripts/claude/check_artifact_layout.py` itself** — its probe is attached at
+`DOMContentLoaded` (line ~136) deliberately, because under `--virtual-time-budget` a `load`-plus-
+`setTimeout` path never runs (the reason is in the comment at line 133). The trade-off is sound; its
+consequence for the reported geometry is what was never written down.
+
+**Rule:** any renderer probe awaits `document.fonts.ready` before measuring, and records
+`[...document.fonts].filter(f => f.status === 'loaded').map(f => f.family)` alongside its numbers. A
+pass that reports zero loaded families is a fallback-font pass and must say so in its output rather
+than presenting the geometry as the page's.
+
+**Verifying a fix:** run the probe twice on a page with a web font and a wrap-sensitive component;
+the two passes agree only once the wait is in place.
 
 ## Related
 
