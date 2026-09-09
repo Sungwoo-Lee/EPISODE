@@ -36,9 +36,9 @@ nrl_counts = [sum(1 for r in scored if r["cond_class"] == k and r["is_rl"] != "R
 
 y = np.arange(len(present))
 fig, ax = plt.subplots(figsize=(9.4, 5.0))
-ax.barh(y, rl_counts, height=0.62, color="#1F8A8F", edgecolor="white", linewidth=0.7,
+ax.barh(y, rl_counts, height=0.62, color=S.PRIMARY, edgecolor="white", linewidth=0.7,
         label="Reinforcement learning")
-ax.barh(y, nrl_counts, height=0.62, left=rl_counts, color="#B9C0C8", edgecolor="white",
+ax.barh(y, nrl_counts, height=0.62, left=rl_counts, color=S.NEUTRAL, edgecolor="white",
         linewidth=0.7, label="Not reinforcement learning (vision, imitation, language)")
 
 for i, (a, b) in enumerate(zip(rl_counts, nrl_counts)):
@@ -77,6 +77,6 @@ S.record_samples("fig03_what_the_modulator_reads", [
              "no particular conditioner"},
     {"what": "of those, papers running a reinforcement-learning algorithm",
      "used": sum(rl_counts), "total": len(scored),
-     "note": "the teal segment of every bar"},
+     "note": "the darker segment of every bar"},
 ])
 S.finish(fig, "fig03_what_the_modulator_reads")

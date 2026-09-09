@@ -27,12 +27,11 @@ order = ["encoder", "trunk / all blocks", "actor only", "critic only", "actor + 
 present = [k for k in order if counts.get(k)]
 vals = [counts[k] for k in present]
 
-# One colour per structural role; 'other' stays grey so it never reads as a finding.
-role_color = {
-    "encoder": "#1F8A8F", "trunk / all blocks": "#2E9AA0", "actor only": "#C2681B",
-    "critic only": "#D98A3D", "actor + critic": "#8A4A12", "world model": "#6E4E9E",
-    "generated weights": "#B03A5B", "other": "#B9C0C8",
-}
+# ONE hue for every real site, grey for 'other'. The mechanism palette is spent on
+# figure 1 and must not reappear here: a reader who learned "teal = FiLM" on figure 1
+# would otherwise read "teal = encoder" here (format defect F11).
+role_color = {k: S.PRIMARY for k in order}
+role_color["other"] = S.NEUTRAL
 
 fig, ax = plt.subplots(figsize=(9.4, 4.4))
 bars = ax.bar(range(len(present)), vals, color=[role_color[k] for k in present],

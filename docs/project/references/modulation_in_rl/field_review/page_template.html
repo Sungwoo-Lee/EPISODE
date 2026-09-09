@@ -13,14 +13,15 @@
 
 :root{
   --paper:#FAFBFC; --plate:#FFFFFF; --ink:#14181D; --muted:#5C6773;
-  --rule:#E962E6EA; --rule:#E2E6EA; --rule-strong:#C9D0D8;
+  --rule:#E2E6EA; --rule-strong:#C9D0D8;
   --accent:#33406B; --accent-soft:#EEF1F8;
   --fig-plate:#FFFFFF;
   /* data palette — mirrored in _style.py */
   --m-film:#1F8A8F; --m-hyper:#C2681B; --m-route:#6E4E9E;
   --m-attn:#B03A5B; --m-plast:#4A7C3F; --m-concat:#7A8590;
   --warn-bg:#FDF6E8; --warn-line:#D9A441;
-  --good-bg:#EDF6F5; --good-line:#1F8A8F;
+  --good-bg:#EEF1F8; --good-line:#33406B;
+  --warn-text:#8A6210;
   --serif:"Newsreader",Georgia,"Times New Roman",serif;
   --sans:"IBM Plex Sans",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
   --mono:"IBM Plex Mono",ui-monospace,"SF Mono",Menlo,Consolas,monospace;
@@ -36,7 +37,8 @@
     --m-film:#3FB3B8; --m-hyper:#E08B3E; --m-route:#9B79C9;
     --m-attn:#D96A87; --m-plast:#72A863; --m-concat:#9AA5AF;
     --warn-bg:#241E12; --warn-line:#B8862E;
-    --good-bg:#12211F; --good-line:#3FB3B8;
+    --good-bg:#1A2130; --good-line:#93A6E0;
+    --warn-text:#D9A441;
     color-scheme:dark;
   }
 }
@@ -48,7 +50,8 @@
   --m-film:#3FB3B8; --m-hyper:#E08B3E; --m-route:#9B79C9;
   --m-attn:#D96A87; --m-plast:#72A863; --m-concat:#9AA5AF;
   --warn-bg:#241E12; --warn-line:#B8862E;
-  --good-bg:#12211F; --good-line:#3FB3B8;
+  --good-bg:#1A2130; --good-line:#93A6E0;
+  --warn-text:#D9A441;
   color-scheme:dark;
 }
 
@@ -166,24 +169,32 @@ sup{font-size:.72em;line-height:0;vertical-align:super}   /* F26: pin it, don't 
   padding:11px 13px;background:var(--paper)}
 .anat .node b{display:block;font-size:14px;font-weight:600;margin-bottom:3px}
 .anat .node span{display:block;font-size:12.8px;color:var(--muted);line-height:1.45}
-.anat .node.hit{border-color:var(--m-film);border-width:2px}
+.anat .node.hit{border-color:var(--accent);border-width:2px}
 .anat .arrow{flex:0 0 auto;align-self:center;color:var(--muted);font-size:17px;line-height:1}
 .anat .split{display:flex;flex-wrap:wrap;gap:10px;margin-top:10px}
 .anat .legend{font-size:13.2px;color:var(--muted);margin:14px 0 0;line-height:1.55}
 @media (max-width:640px){ .anat .arrow{display:none} }
 
 /* ---------- timeline ---------- */
-.timeline{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:0;
+.timeline{display:grid;grid-template-columns:repeat(3,1fr);gap:0;
   margin:28px 0;border:1px solid var(--rule);border-radius:6px;overflow:hidden}
 .era{padding:18px 20px;border-right:1px solid var(--rule);min-width:0;background:var(--plate)}
 .era:last-child{border-right:0}
+/* Explicit counts, not auto-fit. An auto-fit grid wrapped to two columns between about
+   500 and 700px, and because the cells draw only a border-RIGHT the new row arrived with
+   no rule above it and an empty cell showing the container ground. */
+@media (max-width:719px){
+  .timeline{grid-template-columns:1fr}
+  .era{border-right:0;border-bottom:1px solid var(--rule)}
+  .era:last-child{border-bottom:0}
+}
 .era .yr{font-family:var(--mono);font-size:11.5px;letter-spacing:.09em;color:var(--accent);
   text-transform:uppercase;margin:0 0 8px}
 .era h6{font-size:15.5px;font-weight:600;margin:0 0 6px;font-family:var(--sans)}
 .era p{font-size:14px;line-height:1.53;margin:0;color:var(--muted)}
 .era .op{font-family:var(--mono);font-size:12.5px;color:var(--ink);
   background:var(--accent-soft);padding:6px 9px;border-radius:4px;margin:9px 0 0;
-  display:block;overflow-x:auto;white-space:nowrap}
+  display:block;white-space:normal;overflow-wrap:anywhere}
 
 /* ---------- figures ---------- */
 figure{margin:44px 0}
@@ -203,6 +214,8 @@ figcaption .lab{font-family:var(--mono);font-size:11px;letter-spacing:.1em;
   color:var(--muted);margin:0 0 8px;font-weight:500}
 .method p{font-size:14.3px;line-height:1.6;margin:0;color:var(--ink)}
 .samples{max-width:var(--col);margin:14px auto 0}
+.samples .gen{font-family:var(--mono);font-size:10.5px;color:var(--muted);margin:0 0 8px}
+.samples .gen code{background:none;padding:0;font-size:inherit}
 .samples h5{font-family:var(--mono);font-size:11px;letter-spacing:.1em;text-transform:uppercase;
   color:var(--muted);margin:0 0 8px;font-weight:500}
 
@@ -220,10 +233,26 @@ th{font-family:var(--mono);font-size:10.5px;letter-spacing:.07em;text-transform:
 td.n,th.n{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap;
   padding-right:16px}
 td.why{color:var(--muted);font-size:13.4px}
+/* F6/F24: a prose table at width:100% has no floor, so at 500px its columns fall to
+   ~110px and every cell ribbons one to three words per line. width:max-content is the
+   wrong fix for a prose table (F24) — a floor plus explicit column shares is the right
+   one, and the floor stays under the 730px column so desktop never scrolls. */
+table.samp{min-width:560px}
 table.samp td:first-child{width:31%}
 table.samp td.why{width:34%}
+table.ht{min-width:660px}
+table.ht col.c1{width:21%} table.ht col.c2{width:23%}
+table.ht col.c3{width:33%} table.ht col.c4{width:23%}
+/* The cue is added by script when a box actually overflows, not by a media query —
+   a viewport-keyed cue is wrong for an overflow keyed to the column (F31/F32). */
+.scroll{position:relative}
+.scroll.over::after{content:"Scroll sideways to see the rest of this table \2192";
+  display:block;font-family:var(--mono);font-size:10.5px;letter-spacing:.06em;
+  text-transform:uppercase;color:var(--muted);padding:7px 0 0}
 tbody tr:last-child td{border-bottom:0}
 .hl td{background:var(--good-bg)}
+.hl td:first-child{padding-left:9px}
+.hl td:last-child{padding-right:9px}
 
 /* ---------- ledger ---------- */
 .ledger{display:grid;grid-template-columns:1fr 1fr;gap:0;margin:28px 0;
@@ -232,8 +261,8 @@ tbody tr:last-child td{border-bottom:0}
 .ledger > div + div{border-left:1px solid var(--rule)}
 .ledger h5{font-family:var(--mono);font-size:11px;letter-spacing:.1em;text-transform:uppercase;
   margin:0 0 12px;font-weight:500}
-.ledger .settled h5{color:var(--m-film)}
-.ledger .open h5{color:var(--warn-line)}
+.ledger .settled h5{color:var(--accent)}
+.ledger .open h5{color:var(--warn-text)}
 .ledger ul{margin:0;padding-left:19px;font-size:14.4px;line-height:1.55}
 .ledger li{margin-bottom:10px}
 .ledger li:last-child{margin-bottom:0}
@@ -575,6 +604,8 @@ repeated argument about where the two numbers come from and what they attach to.
   </div>
 </div>
 
+</div><!-- /col -->
+
 <figure class="wide">
   <img data-fig="fig01_mechanism_over_time" src="{{FIG:fig01_mechanism_over_time}}"
        alt="Stacked bar chart of papers per publication year, coloured by conditioning mechanism, from 2015 to 2026.">
@@ -613,6 +644,8 @@ repeated argument about where the two numbers come from and what they attach to.
   </div>
 </figure>
 
+<div class="col">
+
 <h2 id="where"><span class="num">Question 4</span>Where it goes in an agent</h2>
 
 <p>A reinforcement-learning agent has several places conditioning could enter, and the
@@ -628,7 +661,6 @@ modulating the critic changes the training signal that shapes the actor.</p>
     <div class="node hit"><b>Shared trunk / memory</b><span>Recurrent core or
       transformer blocks. Where adaLN sits in modern action heads &mdash; often at
       every block.</span></div>
-    <div class="arrow" aria-hidden="true">&rarr;</div>
   </div>
   <div class="split">
     <div class="node hit"><b>Actor</b><span>Chooses the action. The obvious site, and
@@ -643,6 +675,8 @@ modulating the critic changes the training signal that shapes the actor.</p>
   instances of affine modulation inside the latent dynamics; the one paper that appeared
   to fill the gap turns out to concatenate rather than modulate.</p>
 </div>
+
+</div><!-- /col -->
 
 <figure class="wide">
   <img data-fig="fig02_injection_site" src="{{FIG:fig02_injection_site}}"
@@ -679,12 +713,16 @@ modulating the critic changes the training signal that shapes the actor.</p>
   </div>
 </figure>
 
+<div class="col">
+
 <h2 id="reads"><span class="num">Question 5</span>What the modulator is allowed to read</h2>
 
 <p>This is the axis on which the reinforcement-learning literature is most consistent,
 and the consistency is easy to overstate. The conditioning signals that appear are task
 identity, language, an inferred belief about the task, measured physical parameters,
 an algorithmic knob, or a statistic the network computed about itself.</p>
+
+</div><!-- /col -->
 
 <figure class="wide">
   <img data-fig="fig03_what_the_modulator_reads" src="{{FIG:fig03_what_the_modulator_reads}}"
@@ -726,10 +764,14 @@ an algorithmic knob, or a statistic the network computed about itself.</p>
   </div>
 </figure>
 
+<div class="col">
+
 <h2 id="evidence"><span class="num">Question 6</span>Does any of it work?</h2>
 
 <p>Here the page turns from description to assessment, and the assessment is
 uncomfortable. Modulation is cited constantly and isolated rarely.</p>
+
+</div><!-- /col -->
 
 <figure class="wide">
   <img data-fig="fig04_evidence_quality" src="{{FIG:fig04_evidence_quality}}"
@@ -769,13 +811,16 @@ uncomfortable. Modulation is cited constantly and isolated rarely.</p>
   </div>
 </figure>
 
+<div class="col">
+
 <h3>The head-to-head evidence, in full</h3>
 
 <p>Direct comparisons between conditioning mechanisms are rare enough to list
 individually. This is all of them in the corpus.</p>
 
 <div class="scroll">
-<table>
+<table class="ht">
+  <colgroup><col class="c1"><col class="c2"><col class="c3"><col class="c4"></colgroup>
   <thead><tr>
     <th>Comparison</th><th>Setting</th><th>Result</th><th>How much it carries</th>
   </tr></thead>
@@ -1169,6 +1214,17 @@ preprint. Both biases are known and neither is corrected for.</p>
       fig.insertBefore(hint, cap);
     }
   });
+
+  // Mark scroll boxes that actually overflow, so the cue appears for the box that needs
+  // it rather than at a guessed viewport width (F31/F32).
+  function markScrollers() {
+    Array.prototype.forEach.call(document.querySelectorAll('.scroll'), function (el) {
+      el.classList.toggle('over', el.scrollWidth - el.clientWidth > 2);
+    });
+  }
+  if (document.fonts && document.fonts.ready) { document.fonts.ready.then(markScrollers); }
+  markScrollers();
+  window.addEventListener('resize', markScrollers);
 
   zoom.addEventListener('click', function () { setMode(!lb.classList.contains('actual')); });
   img.addEventListener('click', function () { setMode(!lb.classList.contains('actual')); });

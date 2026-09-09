@@ -44,16 +44,20 @@ ax.set_xticklabels([str(y) for y in years], rotation=0)
 ax.yaxis.grid(True, color=S.GRID, linewidth=0.8)
 ax.set_axisbelow(True)
 ax.legend(ncol=4, loc="upper left", bbox_to_anchor=(0, 1.0))
-# Sit the caveat directly over the final (short) column. Anchoring it to the tallest bar
-# put it on top of that bar's segments at every figure size.
-ax.annotate("2026 partial year\n(library built 2026-09)",
-            xy=(years[-1], bottom[-1]), xytext=(0, 12), textcoords="offset points",
-            ha="center", va="bottom", fontsize=8, color=S.MUTED, linespacing=1.35)
+# The caveat goes in EMPTY MARGIN, not over the plot. Placing it above the final column
+# still printed it across the 2025 bar's segments, because "above the last bar" is inside
+# the data area whenever a neighbouring bar is taller (format defect F33).
+ax.set_xlim(years[0] - 0.8, years[-1] + 1.9)
 ax.set_ylim(0, max(bottom) * 1.12)
+ax.annotate("2026 is a\npartial year", xy=(years[-1] + 1.0, max(bottom) * 0.52),
+            ha="center", va="center", fontsize=8, color=S.MUTED, linespacing=1.4)
 
 S.record_samples("fig01_mechanism_over_time", [
     {"what": "papers with a parseable publication year, 2015-2026",
      "used": len(dated), "total": len(rows),
      "note": "undated rows are survey entries whose digest cell carried no year"},
 ])
+import json as _json
+(S.FIGDIR / "_fig01_meta.json").write_text(_json.dumps(
+    {"year_min": years[0], "year_max": years[-1]}))
 S.finish(fig, "fig01_mechanism_over_time")

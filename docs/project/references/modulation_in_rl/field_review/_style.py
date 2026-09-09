@@ -41,6 +41,17 @@ MUTED = "#5C6773"
 GRID = "#DFE3E8"
 PAPER = "#FFFFFF"
 
+# --- the colour contract -------------------------------------------------------------
+# A format review found teal carrying FOUR meanings across the figure set — FiLM, then
+# "encoder site", then "runs an RL algorithm", then "ablated" — with the page's own chrome
+# borrowing it for a fifth. That is F11 and its amendment, and it is exactly what this
+# module's docstring promised not to do.
+#
+# The contract now: the six MECHANISM_COLORS are spent on figure 1 and NOWHERE else. Every
+# other figure encodes an ordinal or a binary, so each uses a single-hue steel ramp, where
+# darker means "more" of whatever that figure's axis measures. Nothing carries a semantic
+# hue it does not own, and the page's chrome uses its indigo accent, which appears in no
+# palette here.
 MECHANISM_COLORS = {
     "FiLM": "#1F8A8F",            # teal — the affine operator
     "hypernetwork": "#C2681B",    # amber — generated weights
@@ -51,21 +62,27 @@ MECHANISM_COLORS = {
     "other": "#B9C0C8",
 }
 
+# Single-hue steel ramp, dark → light. Used wherever the categories are ordered.
+STEEL = ["#2B4A5E", "#41647A", "#5C8096", "#7D9CAF", "#A2BAC8", "#C6D4DD"]
+NEUTRAL = "#B9C0C8"      # always and only "other / unclassified"
+PRIMARY = "#41647A"      # the single-series colour, for figures with one meaning
+
+# Ordinal: strongest evidence darkest. Not semantic — no green-good / amber-bad here.
 CLAIM_COLORS = {
-    "ablated": "#1F8A8F",
-    "ablated-qualified": "#7FB9B5",
-    "asserted": "#E0A24B",
-    "no-experiment": "#C4693F",
-    "unverified": "#B9C0C8",
+    "ablated": STEEL[0],
+    "ablated-qualified": STEEL[2],
+    "asserted": STEEL[3],
+    "no-experiment": STEEL[4],
+    "unverified": NEUTRAL,
     "unclassified": "#D6DBE0",
 }
 
 VENUE_COLORS = {
-    "top-tier": "#23506E",
-    "other-peer-reviewed": "#5B87A8",
-    "workshop": "#9FB6C6",
-    "preprint": "#D9A441",
-    "unclassified": "#C9CFD6",
+    "top-tier": STEEL[0],
+    "other-peer-reviewed": STEEL[2],
+    "workshop": STEEL[3],
+    "preprint": STEEL[4],
+    "unclassified": NEUTRAL,
 }
 
 MECHANISM_ORDER = ["FiLM", "hypernetwork", "routing", "attention", "plasticity",
