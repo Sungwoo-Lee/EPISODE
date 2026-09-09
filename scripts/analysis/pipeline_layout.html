@@ -33,6 +33,8 @@
   --study:#79b2d8; --study-soft:#17232b;
 }
 :root[data-theme="light"]{
+  --hl-kw:#8a4b8f; --hl-str:#2d6a4f; --hl-com:#6f6d69; --hl-num:#a8562a;
+  --hl-fn:#2f6f9f; --hl-cls:#8a6d1f; --hl-op:#6f6d69; --hl-bi:#3d3c3a;
   color-scheme:light;
   --paper:#f8f7f5; --card:#ffffff; --ink:#1b1b1d; --ink-2:#3d3c3a; --muted:#6f6d69;
   --rule:#e3e0db; --rule-2:#efedea;
@@ -180,6 +182,9 @@ pre.hl{margin:0}
 .code-hint{display:none;font-family:var(--mono);font-size:11px;letter-spacing:.04em;
   color:var(--muted);margin:0 0 6px}
 @media (max-width:779px){ .code-hint{display:block} }
+/* An author `display` rule beats the UA's [hidden]{display:none} unless the page says otherwise,
+   and the media query above would keep a cue visible after the script hides it. F14. */
+[hidden]{display:none!important}
 .srcref{font-family:var(--mono);font-size:11px;color:var(--muted);margin:6px 0 0;
   letter-spacing:.02em;text-align:right;overflow-wrap:anywhere}
 .srcref::before{content:"\2197\00a0"}
@@ -449,7 +454,7 @@ that starts bypassing the conventions is one <code>grep</code> away, rather than
   <text x="360" y="260" font-size="10.5" fill="var(--study)" text-anchor="middle">was taken while the agent was looking at t=1</text>
   <text x="360" y="278" font-size="10.5" fill="var(--muted)" text-anchor="middle" font-family="monospace">frame.prev &middot; scan.py L62</text>
 
-  <rect x="700" y="150" width="284" height="112" rx="4" fill="var(--card)" stroke="var(--warn)" stroke-width="1.6"/>
+  <rect x="700" y="150" width="284" height="112" rx="4" fill="var(--card)" stroke="var(--rule)" stroke-width="1.4"/>
   <text x="714" y="172" font-size="11" font-family="monospace" fill="var(--warn)" font-weight="600">what goes wrong without it</text>
   <text x="714" y="192" font-size="10.5" fill="var(--ink)">Count the reset row and every</text>
   <text x="714" y="207" font-size="10.5" fill="var(--ink)">denominator inflates. Read a</text>
@@ -941,3 +946,20 @@ produces: <code>docs/experiments/active/sensor_ladder/sensor_ladder.md</code>.</
 </div>
 </div>
 
+<script>
+// The cue must state a fact about THIS block at THIS width, not a guess derived from the widest
+// block on the page. The stylesheet's media query is the no-JS fallback; this narrows it to the
+// blocks that actually overflow -- which also makes it correct in whatever monospace face the
+// reader's browser resolves, rather than in the one this page was measured in.
+(function () {
+  function sync() {
+    document.querySelectorAll('figure.code').forEach(function (f) {
+      var pre = f.querySelector('pre'), hint = f.querySelector('.code-hint');
+      if (pre && hint) hint.hidden = !(pre.scrollWidth > pre.clientWidth);
+    });
+  }
+  sync();
+  addEventListener('resize', sync);
+  addEventListener('load', sync);
+})();
+</script>

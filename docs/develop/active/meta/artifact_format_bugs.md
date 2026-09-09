@@ -794,6 +794,36 @@ condition and an overflow whose condition were allowed to drift apart.
 **Verifying a fix:** for each scroll box, at three widths spanning the floors, assert
 `cueVisible == (scrollWidth > clientWidth)`.
 
+**F32, amendment — N blocks styled by one class are N floors, not one.** The original entry reads as
+though the defect needs two *kinds* of component (a diagram and a raster figure) to appear. It does
+not. Twelve code blocks sharing one `.code-hint` class have twelve different content floors, because
+each one's floor is set by its own longest line; a single breakpoint derived from the widest is
+false for the other eleven across the whole band between their floors. That band was 456–779px here,
+which the standard 390 / 500 / 834 / 1440 review widths straddle without landing in — 500 sits below
+it and 834 above, so a four-width check reports clean while eleven of twelve blocks announce a
+scrollbar they do not have.
+
+The general fix is not a better breakpoint. A breakpoint is a *proxy* for overflow, and every proxy
+eventually disagrees with the thing it stands for. Ask the box: bind the cue to the measurement
+itself, per block, on load and on resize —
+
+```
+document.querySelectorAll('figure.code').forEach(f => {
+  const pre = f.querySelector('pre'), hint = f.querySelector('.code-hint');
+  if (pre && hint) hint.hidden = !(pre.scrollWidth > pre.clientWidth);
+});
+```
+
+— keeping the media query underneath as the no-JS fallback. Two things this needs to be correct.
+The page must declare its own `[hidden]{display:none!important}`, because `.code-hint{display:block}`
+inside a media query otherwise beats the `hidden` attribute and the script's work is invisible
+(that is [F14](#f14--the-hidden-attribute-loses-to-a-display-rule) arriving from a new direction).
+And the listener must include `resize`, or the cue is correct only at the width the page loaded at.
+
+The measurement-bound version is also right in a way no breakpoint can be: the floor of a code block
+depends on the monospace face the *reader's* browser resolves, which is not the one the page was
+measured in. A breakpoint derived on this machine encodes this machine's font metrics.
+
 ### F11, second amendment — a figure that borrows the page's *status* palette
 
 The original F11 and its first amendment forbid the page's chrome from using the data colours. This
