@@ -969,6 +969,54 @@ because the array has three entries cannot drift from the data.
 **Verifying a fix:** for each figure, print the bin edges the script used beside every occurrence of
 a binning word in its caption and in any prose that cites it.
 
+### F37 — a percentage `max-height` on a grid item resolves against a track the item itself sizes
+
+**Saw:** a figure viewer whose "Fit to window" mode fitted the width only. A 1539×2664 figure opened
+at 1404×2430 inside a 756px-tall box: the reader got the top third and a scrollbar, under a button
+labelled "Actual size" implying the current state was already the fitted one. Live on two pages, for
+weeks.
+
+**Cause:** `.lb-scroll{display:grid; place-items:center}` with an implicit `auto` row, and
+`max-height:100%` on the image. A grid item's percentage resolves against its track; an `auto` track
+is sized **from the item**. The constraint is circular, so it never binds and the declaration is
+inert — while reading as though it obviously works.
+
+**Why nothing caught it:** landscape figures fit by width alone, so the mode looked proven on every
+figure anyone happened to open. The layout checker never opens the viewer at all — it is behaviour,
+not layout. And the CSS is not wrong in any way a reader can see; `max-height:100%` inside a
+full-height box is what you would write.
+
+**Rule:** an image that must fit a box gets **flex** centring, where a percentage resolves against a
+definite flex item — `display:flex; align-items:center; justify-content:center` on the box and
+`flex:0 0 auto` on the image. (`grid-template-rows:minmax(0,1fr)` also fixes the fit but silently
+drops the box's trailing padding in the other mode.)
+
+**Verifying a fix:** open the **tallest** figure on the page and assert
+`img.height <= scroll.clientHeight`. A viewer ported from another page inherits that page's
+untested cases, so re-run this on the new page rather than trusting the old one.
+
+### F38 — a focus ring offset outward, inside an overflow container, is clipped to nothing
+
+**Saw:** nothing at all — which is the defect. Every figure was made a `tabindex=0` `role="button"`,
+and a `:focus-visible` outline was written for it. Focused, `:focus-visible` matched, and a pixel
+census of the 7px band around the image found **zero** ring pixels. A keyboard user tabbing the page
+lands on a focusable figure with no indication, and after closing the viewer focus returns to that
+figure equally invisibly.
+
+**Cause:** `outline-offset:3px` draws the ring *outside* the element's border box, and the element
+sits inside `.figscroll{overflow-x:auto}` — which makes `overflow-y` computed `auto` as well, so the
+container clips it away.
+
+**Why neither review method catches it:** the rule is present and correct-looking in the stylesheet,
+the element really does receive focus, and a screenshot review does not tab through a page. Absence
+of a ring looks exactly like a page you did not happen to focus.
+
+**Rule:** anything focusable inside `overflow:auto|hidden|clip` uses a **negative** `outline-offset`
+(or the container carries padding to hold the ring).
+
+**Verifying a fix:** focus the element programmatically and count ring-coloured pixels in the band
+around it. Reading the rule proves nothing — the rule was already right.
+
 ## Related
 
 - [`artifact_generation_guide`](artifact_generation_guide.md) — the wider guide: content, claims,
