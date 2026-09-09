@@ -52,13 +52,45 @@ def arm_ylabels(arms=None):
     return [f"{a}  -  {L.ARM_LABEL[a][0]}" for a in arms]
 
 
-def finish(fig, path, tight=True):
+# Vector by default. A figure drawn only as a raster cannot go into a manuscript at print
+# resolution, and re-drawing it later from a screenshot is how a paper figure stops matching the
+# numbers it came from. SVG rather than PDF as the vector default for one reason: an HTML artifact
+# can embed an SVG and cannot embed a PDF, so SVG is the format both consumers of these figures can
+# actually take. PDF remains one argument away for submission.
+#   override per call:  PL.finish(fig, path, formats=("pdf", "png"))
+#   override globally:  LADDER_FIG_FORMATS=pdf,png
+DEFAULT_FORMATS = ("svg", "png")
+
+
+def _formats(path, formats):
+    """Which extensions to write. The caller's own extension is ALWAYS one of them.
+
+    Every existing call site passes a `.png` path and something downstream reads that exact file -
+    `build_artifact.py` base64s `<name>.png`, and the refactor's golden gate compares its md5. So a
+    new default must ADD outputs, never replace the one the caller named.
+    """
+    ext = os.path.splitext(path)[1].lstrip(".").lower()
+    env = os.environ.get("LADDER_FIG_FORMATS")
+    fmts = tuple(f.strip().lower() for f in env.split(",") if f.strip()) if env \
+        else (tuple(formats) if formats is not None else DEFAULT_FORMATS)
+    return fmts + ((ext,) if ext and ext not in fmts else ())
+
+
+def finish(fig, path, tight=True, formats=None):
     os.makedirs(os.path.dirname(path), exist_ok=True)
     if tight:
         fig.tight_layout()
-    fig.savefig(path, bbox_inches="tight", facecolor="white")
+    stem = os.path.splitext(path)[0]
+    written = []
+    for f in _formats(path, formats):
+        out = f"{stem}.{f}"
+        # Date metadata makes two SVGs of identical content differ, which would defeat any
+        # byte-comparison gate later. Suppress it where the backend supports the argument.
+        kw = {"metadata": {"Date": None}} if f == "svg" else {}
+        fig.savefig(out, bbox_inches="tight", facecolor="white", **kw)
+        written.append(out)
     plt.close(fig)
-    print(f"written: {path}")
+    print(f"written: {'  '.join(written)}")
     return path
 
 
