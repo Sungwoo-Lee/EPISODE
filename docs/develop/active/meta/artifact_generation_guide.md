@@ -405,6 +405,13 @@ the pattern span them. The build check now catches this class regardless.
 - [ ] Every caption carries an **Axes.** sentence naming x and y, with units (11a)
 - [ ] Every figure declares used / available / percentage, emitted by its script (11b)
 - [ ] Every 'How it is computed' block is 150-250 words and glosses its jargon (11c)
+- [ ] Sourced claims carry a `[n]` citation linking to a reference entry (12a)
+- [ ] Reference numbers are RENDERED, not left to the list marker — check a flex/grid `<li>`
+      has not silently dropped it (12b)
+- [ ] A citation to an unknown source fails the build, and does so by name (12c)
+- [ ] Where the page quotes statistics over its sources, the reference list is that same set,
+      asserted at build time (12c)
+- [ ] Entries say what is first-hand and what is carried on someone else's summary (12d)
 
 ---
 
@@ -459,3 +466,104 @@ not looking at the figures at all.
 - **Write the corrections into the artifact.** Each of the three analysis errors is now a short note
   in the report saying what the wrong number was and why. A reader who reproduces the old result
   learns why it differs instead of doubting the new one.
+
+---
+
+## 12. Citations and a reference list, for any page that makes sourced claims (2026-09-09)
+
+A page that argues from sources needs a reader to be able to get from a claim to the paper
+behind it, and back. The field review
+(`docs/project/references/modulation_in_rl/field_review/`) is the reference implementation;
+this section is the pattern, so the next page does not reinvent a weaker one.
+
+**When this applies.** Any artifact whose claims rest on identifiable sources — a literature
+review, an analysis citing prior work, a design doc arguing from papers. Not needed for a
+page reporting only this project's own runs, where the provenance footer is enough.
+
+### 12a. The reader-facing behaviour
+
+Each citation renders as a small bracketed number, `[12]`, linking to that entry in a
+reference list at the foot of the page. The reader clicks it, lands on the entry, reads it,
+and returns with the browser's own back gesture (`Cmd+[` on macOS, `Alt+←` elsewhere). That
+is the whole interaction, and its virtue is that it uses navigation the reader already has
+rather than a bespoke popover — no JavaScript, and it survives the page being saved or
+printed.
+
+Three details make it work rather than merely function:
+
+- **The landed-on entry highlights.** `li:target` gets a tinted background and the number
+  inverts to solid accent. Without it, a reader who jumps to `[63]` in a 97-item list has to
+  hunt for which line they arrived at.
+- **`scroll-margin-top` on the entry**, so it sits clear of the viewport edge rather than
+  flush against it.
+- **The citation and the entry number look the same.** Same mono face, same accent, same
+  bracket treatment, so they read as one system.
+
+### 12b. Render the number; never rely on the list marker
+
+**The trap, which cost a round on the field review:** reference entries usually want to be a
+small block — authors and title on one line, venue on the next, metadata badges below — and
+the natural way to build that is `display:flex` on the `<li>`. **A flex `<li>` is no longer
+`display:list-item`, so the browser silently drops its marker**, and the list loses the very
+numbers the in-text citations point at. The `value="n"` attribute stays in the markup, doing
+nothing. Nothing errors, nothing overflows, and a screenshot scan reads it as a styled list.
+
+So: `list-style:none` on the `<ol>`, and emit the number yourself into its own grid column.
+Beyond fixing the marker, this buys the invariant that matters — **the printed number and the
+link target both read from the same value**, so they cannot drift apart.
+
+```
+ol.refs{list-style:none;padding-left:0}
+ol.refs li{display:grid;grid-template-columns:2.9em 1fr;gap:0 8px;
+  align-items:start;min-width:0;scroll-margin-top:24px}
+ol.refs .rnum{font-family:var(--mono);font-size:12px;color:var(--accent);
+  background:var(--accent-soft);border-radius:3px;text-align:center;
+  font-variant-numeric:tabular-nums}
+ol.refs .rnum::before{content:"["} ol.refs .rnum::after{content:"]"}
+ol.refs .rbody{display:flex;flex-direction:column;gap:2px;min-width:0}   /* F2 */
+ol.refs li:target{background:var(--accent-soft);border-radius:4px;
+  box-shadow:0 0 0 6px var(--accent-soft)}
+ol.refs li:target .rnum{background:var(--accent);color:var(--paper)}
+
+a.cite{font-family:var(--mono);font-size:.72em;line-height:0;vertical-align:super;
+  text-decoration:none;color:var(--accent);background:var(--accent-soft);
+  padding:.18em .34em;border-radius:3px;white-space:nowrap}
+a.cite::before{content:"["} a.cite::after{content:"]"}
+```
+
+`tabular-nums` on the number keeps the column aligned from `[1]` to `[97]`. `line-height:0`
+on the citation stops the superscript widening the line box it sits in (**F26**).
+
+### 12c. Build-time invariants
+
+Citations are written in the template as a token — `{{CITE:some_key}}` — and resolved by the
+page builder against a generated reference list. That indirection is what lets the build
+enforce two things a hand-maintained list cannot:
+
+1. **A citation to an unknown source fails the build.** This fires in practice: the field
+   review cited a paper that was held in the library but absent from the corpus the page's
+   statistics were computed over. The right fix was to drop the citation, not to loosen the
+   check.
+2. **Where the page quotes statistics over its sources, the reference list must be that same
+   set** — same count, no exceptions. The build compares the two and refuses to write
+   otherwise. A list that silently disagrees with the numbers beside it is worse than no
+   list, because it looks authoritative.
+
+Both checks belong in the builder, next to the §11 figure checks, and both should print the
+offending key rather than a bare count.
+
+### 12d. Say what is first-hand
+
+Where entries differ in provenance, mark it. The field review tags each with the library
+shard holding it, whether a PDF is held at all, and whether it was read in full or only
+catalogued from a survey — and carries a short generated breakdown above the list. Deriving
+that from the files on disk rather than asserting it is what caught an earlier version
+scoring a paper as "reviewed" on the strength of a mention in a survey that had never read
+it. A reader is entitled to know which entries are someone else's summary.
+
+### 12e. Related defect
+
+The flex-`<li>` marker loss in §12b belongs in the format register as a member of the F1
+family (a `display` change silently altering an element's box type and taking a rendered
+feature with it). It is recorded here because the register had a parallel session's
+uncommitted work in it at the time of writing; **add it there when that file is free.**
