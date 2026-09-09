@@ -38,8 +38,13 @@ y = np.arange(len(present))
 fig, ax = plt.subplots(figsize=(9.4, 5.0))
 ax.barh(y, rl_counts, height=0.62, color=S.PRIMARY, edgecolor="white", linewidth=0.7,
         label="Reinforcement learning")
-ax.barh(y, nrl_counts, height=0.62, left=rl_counts, color=S.NEUTRAL, edgecolor="white",
-        linewidth=0.7, label="Not reinforcement learning (vision, imitation, language)")
+# Hollow, not grey. S.NEUTRAL means "other / residual" on every other figure, and
+# "not reinforcement learning" is a substantive class here, not a leftover — so the
+# distinction is carried by fill-versus-outline instead of by a colour that is spoken
+# for elsewhere (format defect F11).
+ax.barh(y, nrl_counts, height=0.62, left=rl_counts, facecolor="white",
+        edgecolor=S.PRIMARY, linewidth=1.1, hatch="///",
+        label="Not reinforcement learning (vision, imitation, language)")
 
 for i, (a, b) in enumerate(zip(rl_counts, nrl_counts)):
     if a + b:

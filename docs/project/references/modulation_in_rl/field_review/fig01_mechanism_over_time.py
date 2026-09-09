@@ -52,10 +52,19 @@ ax.set_ylim(0, max(bottom) * 1.12)
 ax.annotate("2026 is a\npartial year", xy=(years[-1] + 1.0, max(bottom) * 0.52),
             ha="center", va="center", fontsize=8, color=S.MUTED, linespacing=1.4)
 
+# The reason string is DERIVED, not typed. It drifted once already: it claimed the
+# excluded rows were undated survey entries, when in fact every row carries a year and the
+# only exclusion is a single pre-window paper. A reason written beside a filter goes stale
+# the moment the filter moves, so compute it from the same data the filter used.
+_excluded = [r for r in rows if r not in dated]
+_years_out = sorted({r["year"] for r in _excluded if r["year"].isdigit()})
+_note = (f"the window starts at {years[0]}; "
+         f"{len(_excluded)} paper(s) fall outside it"
+         + (f", dated {', '.join(_years_out)}" if _years_out else "")
+         + ". The corpus itself reaches further back than this axis does.")
 S.record_samples("fig01_mechanism_over_time", [
-    {"what": "papers with a parseable publication year, 2015-2026",
-     "used": len(dated), "total": len(rows),
-     "note": "undated rows are survey entries whose digest cell carried no year"},
+    {"what": f"papers dated within the plotted window, {years[0]}\u2013{years[-1]}",
+     "used": len(dated), "total": len(rows), "note": _note},
 ])
 import json as _json
 (S.FIGDIR / "_fig01_meta.json").write_text(_json.dumps(

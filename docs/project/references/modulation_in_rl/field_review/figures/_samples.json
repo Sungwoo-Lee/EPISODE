@@ -1,10 +1,10 @@
 {
   "fig01_mechanism_over_time": [
     {
-      "what": "papers with a parseable publication year, 2015-2026",
+      "what": "papers dated within the plotted window, 2015\u20132026",
       "used": 97,
       "total": 98,
-      "note": "undated rows are survey entries whose digest cell carried no year",
+      "note": "the window starts at 2015; 1 paper(s) fall outside it, dated 2002. The corpus itself reaches further back than this axis does.",
       "pct": 99.0
     }
   ],
@@ -36,7 +36,7 @@
       "what": "of those, papers running a reinforcement-learning algorithm",
       "used": 52,
       "total": 94,
-      "note": "the teal segment of every bar",
+      "note": "the darker segment of every bar",
       "pct": 55.3
     }
   ],

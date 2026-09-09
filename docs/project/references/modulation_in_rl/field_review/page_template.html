@@ -240,9 +240,9 @@ td.why{color:var(--muted);font-size:13.4px}
 table.samp{min-width:560px}
 table.samp td:first-child{width:31%}
 table.samp td.why{width:34%}
-table.ht{min-width:660px}
-table.ht col.c1{width:21%} table.ht col.c2{width:23%}
-table.ht col.c3{width:33%} table.ht col.c4{width:23%}
+table.ht{min-width:652px}
+table.ht col.c1{width:26%} table.ht col.c2{width:21%}
+table.ht col.c3{width:31%} table.ht col.c4{width:22%}
 /* The cue is added by script when a box actually overflows, not by a media query —
    a viewport-keyed cue is wrong for an overflow keyed to the column (F31/F32). */
 .scroll{position:relative}
@@ -612,7 +612,7 @@ repeated argument about where the two numbers come from and what they attach to.
   <figcaption>
     <span class="lab">Figure 1</span>
     <b>Axes.</b> Horizontal axis: year of publication, as printed on the paper, one bar
-    per year from {{YEAR_MIN}} to {{YEAR_MAX}}. Vertical axis: number of papers held in
+    per year from {{FIG1_YEAR_MIN}} to {{FIG1_YEAR_MAX}}. Vertical axis: number of papers held in
     this library (a count, not a rate); bar segments stack to the year's total and are
     coloured by conditioning mechanism.
     <br><br>
@@ -974,8 +974,7 @@ individually. This is all of them in the corpus.</p>
   covariance term no longer holds, and the reported effect is degradation across
   environments. But the ablation that shows this changes <em>two</em> things at once:
   the arm that reads the observation also regenerates its weights <em>every
-  timestep</em>, where the baseline regenerates once per training iteration. Self-
-  conditioning and regeneration frequency are confounded, and a second paper whose
+  timestep</em>, where the baseline regenerates once per training iteration. Self-conditioning and regeneration frequency are confounded, and a second paper whose
   generator reads local observations &mdash; but re-queries only on events &mdash; beats
   that baseline outright. The mechanism is plausible and the experiment does not isolate
   it.</li>

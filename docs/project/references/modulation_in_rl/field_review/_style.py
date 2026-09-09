@@ -68,13 +68,15 @@ NEUTRAL = "#B9C0C8"      # always and only "other / unclassified"
 PRIMARY = "#41647A"      # the single-series colour, for figures with one meaning
 
 # Ordinal: strongest evidence darkest. Not semantic — no green-good / amber-bad here.
+# One word, one colour, across panels that sit side by side. "unclassified" was drawn
+# #D6DBE0 here and NEUTRAL in VENUE_COLORS, so figure 4's two panels gave the same label
+# two greys; and "unverified" is a class the corpus no longer produces.
 CLAIM_COLORS = {
     "ablated": STEEL[0],
     "ablated-qualified": STEEL[2],
     "asserted": STEEL[3],
     "no-experiment": STEEL[4],
-    "unverified": NEUTRAL,
-    "unclassified": "#D6DBE0",
+    "unclassified": NEUTRAL,
 }
 
 VENUE_COLORS = {
@@ -87,8 +89,7 @@ VENUE_COLORS = {
 
 MECHANISM_ORDER = ["FiLM", "hypernetwork", "routing", "attention", "plasticity",
                    "concatenation", "other"]
-CLAIM_ORDER = ["ablated", "ablated-qualified", "asserted", "no-experiment",
-               "unverified", "unclassified"]
+CLAIM_ORDER = ["ablated", "ablated-qualified", "asserted", "no-experiment", "unclassified"]
 VENUE_ORDER = ["top-tier", "other-peer-reviewed", "workshop", "preprint", "unclassified"]
 
 
