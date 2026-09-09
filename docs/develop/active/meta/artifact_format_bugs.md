@@ -1325,6 +1325,39 @@ If the sentence is still true in both, it was not theme-dependent.
 page has not pinned down. F11 is about one token meaning two things; this is about one token meaning
 two *opposite* things in the two themes.
 
+### F44 amendment — a caption naming an element that a responsive breakpoint hides
+
+The original F44 is a caption bound to a **theme**-dependent rendering. This is the same defect bound
+to a **breakpoint**-dependent one.
+
+**Saw:** under a CSS-drawn network figure, the caption "The three arrows mark the sites the modulator
+is allowed to reach into." Two problems at once. At wide widths the figure contains eight arrows —
+five vertical, three horizontal — so "the three arrows" was already ambiguous. Below the layout's
+700px breakpoint the three horizontal arrows are `display:none` (they are meaningless once the
+columns collapse and are replaced by a text label), so the sentence referred to nothing on screen at
+all.
+
+**Cause:** the caption was written against the wide rendering, which is the one the author composes
+in. A responsive figure is not one picture — it is a family of them — and a caption is shared by
+every member of the family.
+
+**Why neither review method catches it:** the caption is accurate in the composing width, and the
+CSS is correct — hiding a directional arrow when the direction stops existing is the right call. The
+defect is only visible by reading the caption against the *narrow* screenshot, which is a step
+neither a source read nor a single-width render performs.
+
+**Rule:** a caption may only name pieces of a CSS-drawn figure that exist at **every** width. Prefer
+naming the thing that carries the meaning rather than the thing that draws it — "the three γ β
+markers" survives a breakpoint that removes the arrows, because the marker is present in both forms.
+Where a count appears, check it against the widest rendering too; a figure often gains decorative
+strokes there that make a bare count ambiguous.
+
+**Verifying a fix:** read the caption aloud against the narrowest and the widest screenshot in turn.
+Every noun it names must be findable in both.
+
+**Related:** [F34 amendment](#f34-amendment) is the same failure in a scroll cue — text describing a
+layout state that the layout no longer has.
+
 ### F45 — a case-changing `text-transform` applied over case-sensitive identifiers
 
 **Saw:** a table header rendering `LARGEST |(B − G) − 1| ACROSS THE 128 UNITS` — capital *B* and *G* —
