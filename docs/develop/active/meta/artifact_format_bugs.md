@@ -906,6 +906,8 @@ breakable space. So the table met the floor by splitting a *value* across two li
 narrow, nothing overlaps, nothing sticks out, and the table is fully legible at desktop and at the
 floor. The defect exists only between the two, and it is one deformed row.
 
+**Second instance (2026-09-09):** a mapping table whose cells carry `td.mono{white-space:nowrap}` measured a 684px content floor against a declared 520 inherited from a shared `table{}` rule, and its cue was derived from the declared number. Note the extra hazard there: the measured floor depends on which monospace fallback the machine loads, so the fix is to **declare** a floor for that table rather than to hard-code the number that was measured once.
+
 **Rule:** a numeric table's floor is *its own* measured max-content width, never a number borrowed
 from a wider table — and `td.num` carries `white-space:nowrap`, so no future floor can split a value
 whatever else it does.
@@ -1016,6 +1018,25 @@ of a ring looks exactly like a page you did not happen to focus.
 
 **Verifying a fix:** focus the element programmatically and count ring-coloured pixels in the band
 around it. Reading the rule proves nothing — the rule was already right.
+
+### F39 — markdown syntax printed literally in an HTML page
+
+**Saw:** body prose reading `Blue and orange are chosen *because* they survive` — asterisks and all,
+at every viewport, in both themes.
+
+**Cause:** the prose was drafted in a markdown habit inside an HTML file. `*…*`, `**…**` and `_…_`
+are inert in HTML; the browser prints the punctuation. Every other emphasis on the same page used
+`<em>` correctly, which is what makes the slip survive a read-through: the author sees the intent.
+
+**Why neither review method catches it:** the geometry is perfect — the text is the right size, in
+the right box, in the right colour, and nothing overflows — so a layout checker has nothing to say.
+And a screenshot review reads prose for sense rather than for punctuation; an asterisk is small,
+mid-sentence, and looks like a footnote marker.
+
+**Rule:** before publishing, grep the page body for `\*\w[^*]*\w\*`, `\*\*` and `_\w+_` outside
+`<code>` and `<pre>`. It is a one-line check and it is the only thing that reliably finds this.
+
+**Verifying a fix:** the grep returns nothing.
 
 ## Related
 

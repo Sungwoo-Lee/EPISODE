@@ -68,7 +68,23 @@ thead th{font-family:var(--font-mono);font-size:var(--fs-label);letter-spacing:.
 td.mono,th.mono{font-family:var(--font-mono);white-space:nowrap}
 .tbl-hint{display:none;font-family:var(--font-mono);font-size:var(--fs-label);
   color:var(--text-light);margin:0 0 6px}
-@media (max-width:623px){.tbl-hint{display:block}}   /* 520 floor + 2x28 padding - 1 */
+@media (max-width:575px){.tbl-hint{display:block}}   /* 520 floor + 2x28 padding - 1 */
+/* 1. The mapping table's cells are `td.mono{white-space:nowrap}` and hold long code, so its real
+   content floor is ~684px, not the shared 520 -- a second instance of F35. Declare a floor rather
+   than inheriting one, because the measured number depends on whichever mono fallback loads. */
+table.wide{min-width:700px}
+@media (max-width:755px){.tbl-hint.wide{display:block}}   /* 700 + 2x28 - 1 */
+/* 2. The grid diagram is 660px of bands + 2x14 padding + 2px border = 690. */
+.grid-hint{display:none;font-family:var(--font-mono);font-size:var(--fs-label);
+  color:var(--text-light);margin:0 0 6px}
+@media (max-width:745px){.grid-hint{display:block}}       /* 690 + 2x28 - 1 */
+/* 4. The chart has to keep its 11px tick labels above the 9px floor this project enforces:
+   11 x 560/640 = 9.6px. Below that it scrolls rather than shrinking. */
+.figscroll{overflow-x:auto}
+.figscroll svg{min-width:560px}
+.fig-hint{display:none;font-family:var(--font-mono);font-size:var(--fs-label);
+  color:var(--text-light);margin:0 0 6px}
+@media (max-width:615px){.fig-hint{display:block}}        /* 560 + 2x28 - 1 */
 
 /* ---------- figures: the conventions this page is about ---------- */
 figure{margin:48px auto;max-width:720px}
@@ -192,8 +208,11 @@ scale and the hierarchy transfer, the letterforms do not.</p>
 </tbody>
 </table>
 </div>
-<p>Headings are set directly rather than through the scale: <code>h3</code> is 26px/600 and
-<code>h4</code> is 19px/600 with a 1.4 line-height, both in the sans face. Figure captions are
+<p>Headings are set directly rather than through the scale. In <em>their</em> markup the section
+heading is <code>h3</code> at 26px/600 and the subsection is <code>h4</code> at 19px/600 with a 1.4
+line-height, both sans &mdash; their <code>h1</code> and <code>h2</code> belong to the article
+template, which is why the visible hierarchy starts one level down. This page uses <code>h2</code>
+and <code>h3</code> for those same two roles. Figure captions are
 13px, the same size as body.</p>
 </section>
 
@@ -219,7 +238,7 @@ nowhere else &mdash; there is no coloured chrome, no tinted headings, no branded
 qualitative scheme</strong>, a palette designed so that its members stay distinguishable under the
 common forms of colour vision deficiency. The source names them as such:
 <code>--series-blue: var(--tol-blue, #0077bb)</code>. Two facts follow. Blue and orange are chosen
-*because* they survive; and the scheme has more members, so a third series has a defined next
+<em>because</em> they survive; and the scheme has more members, so a third series has a defined next
 colour rather than a free choice.</p>
 </section>
 
@@ -227,6 +246,7 @@ colour rather than a free choice.</p>
 <h2>Layout</h2>
 <p>A named-line CSS grid in the Distill tradition: columns are named rather than numbered, so a
 figure declares how far it breaks out by naming an edge, not by computing a width.</p>
+<p class="grid-hint">&larr; the diagram is wider than the column &mdash; scroll it sideways to see all three breakout levels</p>
 <div class="gridwrap">
   <p class="glabel">10 columns &times; 45px, 16px gaps</p>
   <div class="gridrow">
@@ -258,25 +278,26 @@ figure after prose, which is a detail most systems forget.</p>
 
 <figure>
   <p class="fig-title">The house chart style, reconstructed from the CSS</p>
-  <svg viewBox="0 0 640 250" role="img" aria-label="A two-series line chart in the documented style: no axis spine, faint horizontal tick lines, 11px grey tick labels, a bold 13px axis title, and a centred legend in monospace with 14 by 3 pixel line swatches.">
+  <p class="fig-hint">&larr; the chart is wider than the column here &mdash; scroll it sideways</p>
+  <div class="figscroll"><svg viewBox="0 0 640 250" role="img" aria-label="A two-series line chart in the documented style: no axis spine, faint horizontal tick lines, 11px grey tick labels, a bold 13px axis title, and a centred legend in monospace with 14 by 3 pixel line swatches.">
     <g class="axis">
-      <line class="domain" x1="52" y1="20" x2="52" y2="196"/>
+      <line class="domain" x1="52" y1="32" x2="52" y2="196"/>
       <g class="tick"><line x1="52" y1="196" x2="620" y2="196"/><text x="44" y="200" text-anchor="end">0</text></g>
-      <g class="tick"><line x1="52" y1="152" x2="620" y2="152"/><text x="44" y="156" text-anchor="end">10</text></g>
-      <g class="tick"><line x1="52" y1="108" x2="620" y2="108"/><text x="44" y="112" text-anchor="end">20</text></g>
-      <g class="tick"><line x1="52" y1="64"  x2="620" y2="64"/><text x="44" y="68"  text-anchor="end">30</text></g>
-      <g class="tick"><line x1="52" y1="20"  x2="620" y2="20"/><text x="44" y="24"  text-anchor="end">40</text></g>
+      <g class="tick"><line x1="52" y1="155" x2="620" y2="155"/><text x="44" y="159" text-anchor="end">10</text></g>
+      <g class="tick"><line x1="52" y1="114" x2="620" y2="114"/><text x="44" y="118" text-anchor="end">20</text></g>
+      <g class="tick"><line x1="52" y1="73"  x2="620" y2="73"/><text x="44" y="77"  text-anchor="end">30</text></g>
+      <g class="tick"><line x1="52" y1="32"  x2="620" y2="32"/><text x="44" y="36"  text-anchor="end">40</text></g>
       <text x="120" y="220" text-anchor="middle">layer 4</text>
       <text x="290" y="220" text-anchor="middle">layer 8</text>
       <text x="460" y="220" text-anchor="middle">layer 12</text>
-      <text x="610" y="220" text-anchor="middle">16</text>
+      <text x="600" y="220" text-anchor="middle">layer 16</text>
     </g>
-    <text class="axis-title" x="4" y="14">effect size</text>
+    <text class="axis-title" x="4" y="12">effect size</text>
     <polyline fill="none" stroke="var(--tol-blue)" stroke-width="2"
       points="60,180 150,150 240,104 330,70 420,54 510,46 600,42"/>
     <polyline fill="none" stroke="var(--tol-orange)" stroke-width="2"
       points="60,188 150,178 240,168 330,150 420,128 510,120 600,116"/>
-  </svg>
+  </svg></div>
   <div class="line-legend">
     <span class="legend-item"><span class="legend-swatch" style="background:var(--tol-blue)"></span>with workspace</span>
     <span class="legend-item"><span class="legend-swatch" style="background:var(--tol-orange)"></span>ablated</span>
@@ -285,7 +306,8 @@ figure after prose, which is a detail most systems forget.</p>
   counting from the embedding; <b>y</b> = effect size in arbitrary units, which is why the axis
   title carries no unit. Note what is absent: there is no axis spine, no box, no vertical
   gridlines, and no tick marks &mdash; only faint horizontal rules at the labelled values. The data
-  are illustrative, not measured; this figure exists to show the styling.</figcaption>
+  are illustrative, not measured; this figure exists to show the styling, and it is hand-authored
+  inline SVG rather than script output &mdash; there is no generating script to name.</figcaption>
 </figure>
 
 <h3>The five rules, in the order they matter</h3>
@@ -321,8 +343,9 @@ structure; the two hues carry only which series is which.</p>
 <p>Our figures are matplotlib PNGs, not D3. The conventions above translate almost directly, and
 the translation is short enough to live in one shared style module rather than being repeated per
 script. What follows is the mapping, not a claim that it has been applied yet.</p>
+<p class="tbl-hint wide">&larr; the table is wider than the column &mdash; scroll it sideways for the matplotlib column</p>
 <div class="scroll">
-<table>
+<table class="wide">
 <thead><tr><th>their rule</th><th class="mono">matplotlib equivalent</th></tr></thead>
 <tbody>
 <tr><td>no axis spine</td><td class="mono">ax.spines[:].set_visible(False)</td></tr>
