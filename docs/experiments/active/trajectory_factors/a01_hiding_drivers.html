@@ -450,13 +450,16 @@ why it is carried here as an outcome in its own right rather than as a denominat
   <div class="fignum">Figure 4 &mdash; one factor, three ways of counting</div>
   <div id="three"></div>
   <figcaption><b>Horizontal axis:</b> how far the predator can see, in tiles, from 1 to 7.
-  <b>Vertical axis:</b> each measure indexed to 100 at range&nbsp;1 so that all three share one
-  scale; the raw values are printed beside each line. Green is the share of the episode spent
+  <b>Vertical axis:</b> each measure as a <em>multiple
+  of its own value at range&nbsp;1</em>, so that three quantities in two different units share one
+  scale &mdash; <code>&times;1</code> is where every line starts, and the raw values are printed
+  beside each line. The axis deliberately carries no unit: a tick reading &ldquo;283%&rdquo; beside
+  a green line whose real value is 56.58% would be a percentage of a percentage. Green is the share of the episode spent
   hidden, grey the total number of steps spent in a bush, amber the number of steps survived. Green
-  rises to 283, grey falls to 53, amber falls to 19 &mdash; the agent hides
+  rises to &times;2.83, grey falls to &times;0.53, amber to &times;0.19 &mdash; the agent hides
   <em>more intensely</em> and <em>less in total</em>, because it is dead sooner. Read the grey line
   on its own and you would conclude that dangerous predators make this agent hide less.</figcaption>
-<div class="method"><b>How this was computed</b><dl><dt>data used</dt><dd>the 333,743 episodes with exactly one predator, 33.4% of the 1,000,000 collected. Detection range belongs to a predator, so it is undefined when there is none and ambiguous when there are two</dd><dt>share hidden</dt><dd>total bush steps in the bin &divide; total action steps in the bin &mdash; the same quantity drawn green in Figure&nbsp;3, with the spawn row (<code>t=0</code>) excluded from both</dd><dt>total bush steps</dt><dd>the share above &times; the mean episode length in the bin. Derived rather than counted, because the stored aggregates behind this page hold the rate and the length but not the raw total. Against the earlier environment study, which counted the total directly and did <em>not</em> exclude the spawn row, the derivation agrees to within 0.27%</dd><dt>steps survived</dt><dd>mean episode length in the bin, in steps &mdash; the amber line of Figure&nbsp;3</dd><dt>indexing</dt><dd>each series divided by its own value at range&nbsp;1, then multiplied by 100. Indexing is what lets three quantities in three different units (one percentage, two step counts) be read against one axis. It shows relative movement only &mdash; the heights carry no absolute meaning, which is why the raw values are printed too</dd><dt>why this is causal</dt><dd>detection range is rolled at random by the environment before the agent acts, so comparing bins is a randomised contrast rather than an observed correlation</dd></dl></div>
+<div class="method"><b>How this was computed</b><dl><dt>data used</dt><dd>the 333,743 episodes with exactly one predator, 33.4% of the 1,000,000 collected. Detection range belongs to a predator, so it is undefined when there is none and ambiguous when there are two</dd><dt>a bin</dt><dd>a group of episodes sharing one value of the factor on the horizontal axis. Detection range is a whole number, so there is <strong>one bin per tile value</strong> &mdash; seven bins of about 47,700 episodes each, since the environment draws the trait uniformly at random. Continuous factors elsewhere on this page are binned into ranges instead (<code>max stamina</code> as 30&ndash;50, 50&ndash;70, and so on)</dd><dt>share hidden</dt><dd>all the bush steps in the bin &divide; all the action steps in the bin, with the spawn row (<code>t=0</code>) excluded from both &mdash; the same quantity drawn green in Figure&nbsp;3. At 4 tiles that is 1,477,597 bush steps out of 3,687,539, giving 40.07%. <strong>Note this pools the bin's steps rather than averaging its episodes' percentages</strong>, so a long episode counts for more than a short one. That is deliberate and it is the same weighting the model uses: a rate measured over 500 steps is worth more than one measured over 20</dd><dt>total bush steps</dt><dd>the share above &times; the mean episode length in the bin. Derived rather than counted, because the stored aggregates behind this page hold the rate and the length but not the raw total. Against the earlier environment study, which counted the total directly and did <em>not</em> exclude the spawn row, the derivation agrees to within 0.27%</dd><dt>steps survived</dt><dd>mean episode length in the bin, in steps &mdash; the amber line of Figure&nbsp;3</dd><dt>the vertical scale</dt><dd>each series divided by its own value at range&nbsp;1, so every line starts at <code>&times;1</code> and the axis reads in multiples. That is what lets three quantities in two different units (one percentage, two step counts) be read against one axis. It shows relative movement only &mdash; a height carries no absolute meaning, which is why the raw endpoints are printed beside each line. To recover a value at any point: <em>multiply the tick by the left-hand number for that line</em>. Grey at &times;0.64 is 0.64 &times; 48.5 = 31 steps</dd><dt>why this is causal</dt><dd>detection range is rolled at random by the environment before the agent acts, so comparing bins is a randomised contrast rather than an observed correlation</dd></dl></div>
 <details class="samples"><summary>Data behind this figure &mdash; 333,743 of 1,000,000 (33.4%)</summary><div class="sbox"><table><thead><tr><th class="txt">what</th><th>used</th><th>available</th><th>share</th><th class="txt">why this subset</th></tr></thead><tbody><tr><td class="txt">episodes with exactly one predator</td><td>333,743</td><td>1,000,000</td><td>33.4%</td><td class="txt">a predator trait is undefined when no predator is present and ambiguous when two are, so only the exactly-one-predator episodes can be used</td></tr></tbody></table></div><p class="shint">&larr; wider than the screen &mdash; scroll the table sideways; the &ldquo;why this subset&rdquo; column is off to the right</p></details>
 </figure>
 
@@ -1499,7 +1502,7 @@ const CV = n => "var(" + n + ")";
   for (const g of [0,100,200,300]) {
     s.appendChild(el("line",{x1:ml,y1:Y(g),x2:ml+pw,y2:Y(g),
       style:"stroke:"+CV(g===100?"--rule":"--grid"), "stroke-width":g===100?1.4:.6}));
-    s.appendChild(txt(ml-7, Y(g)+3, g, "ax", "end"));
+    s.appendChild(txt(ml-7, Y(g)+3, "\u00d7" + (g/100), "ax", "end"));
   }
   const LBL = [];
   const SER = [["share of the episode hidden","--cover",idx(T.rate),T.ends[0]],
@@ -1526,7 +1529,7 @@ const CV = n => "var(" + n + ")";
   });
   T.labels.forEach((l,j) => s.appendChild(txt(X(j), H-mb+16, l, "ax", "middle")));
   xlab(s, ml+pw/2, H-36, "how far the predator can see, in tiles  →");
-  ylab(s, 15, mt+ph/2, "each measure indexed to 100 at range 1");
+  ylab(s, 15, mt+ph/2, "multiple of the range-1 value");
   put("three", s);
 })();
 
