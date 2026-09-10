@@ -53,6 +53,14 @@ CSS = CSS[CSS.index('CSS = f"""') + len('CSS = f"""'):]
 CSS = CSS[:CSS.index('"""')]
 CSS = (CSS.replace('--accent:#1f7a6c', '--accent:#2f6f3e').replace('--accent:#5cc4b0', '--accent:#7fc48f')
           .replace('--ember:#c9852b', '--ember:#a8532f').replace('--ember:#e8b45c', '--ember:#e0876a'))
+# The scraped text came out of an f-string in the other build script, so every CSS brace is
+# DOUBLED for that f-string's benefit. Here it is interpolated as a VALUE (`{CSS}`), and a
+# substituted value is inserted literally - the doubling is never undone. The result was a
+# stylesheet in which every rule read `:root {{ ... }}`, which is invalid CSS, so the published
+# page rendered with no styling at all from the day it shipped. Un-escape it.
+CSS = CSS.replace('{{', '{').replace('}}', '}')
+if '{{' in CSS or '}}' in CSS:
+    raise SystemExit('CSS still contains doubled braces - the page would ship unstyled')
 
 HTML = f"""<title>Directional Sensors Shipped</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
