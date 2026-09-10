@@ -58,6 +58,10 @@ CSS = """
 #the-model h3:first-of-type{margin-top:1.1rem}
 #the-model table{font-size:.84rem}
 #the-model p.note{margin-top:1rem}
+#the-model .say{text-align:left;white-space:normal}
+#the-model .formula-ish{background:var(--panel2);border-left:3px solid var(--rule);
+  border-radius:2px;padding:.7rem .9rem;margin:.9rem 0}
+#the-model .formula-ish p{margin:0;line-height:1.9}
 """
 
 BLOCK = """
@@ -82,6 +86,44 @@ decide what a bar means, and the fourth is the one that surprises people:</p>
   the largest set of episodes where that factor is defined. Figure 2 is not one regression; it is
   __NFAC__ regressions whose effect sizes are collected onto a single axis.</dd>
 </dl>
+
+<h3>What &ldquo;log-odds per unit&rdquo; means, in numbers</h3>
+<p>Take one real number off the page &mdash; an agent facing a predator that can see
+<strong>4 tiles</strong> hides <strong>__P4__%</strong> of its episode (Figure&nbsp;3). That single
+rate can be written three ways:</p>
+<div class="scroll"><table>
+<thead><tr><th>written as&hellip;</th><th class="num">value</th><th class="say">read as</th></tr></thead>
+<tbody>
+<tr><td>a rate <code>p</code></td><td class="num">__P4__%</td>
+    <td class="say">__P4__ steps in every hundred are spent in a bush</td></tr>
+<tr><td>odds <code>p / (1 &minus; p)</code></td><td class="num">__O4__</td>
+    <td class="say">about two steps in cover for every three out of it</td></tr>
+<tr><td>log-odds <code>ln(odds)</code></td><td class="num">__L4__</td>
+    <td class="say">the scale the model is linear on &mdash; no units, and no ceiling at 100%</td></tr>
+</tbody></table></div>
+<p>Detection range's coefficient is <strong>&beta; = __BETA__ per tile</strong>. That means: for
+each extra tile, <em>add __BETA__ to the log-odds</em>. Equivalently, since adding on a log scale is
+multiplying on the original one, <em>multiply the odds by <code>e<sup>__BETA__</sup></code> =
+__ODDSMULT__</em>. Doing exactly that, from 4 tiles to 5:</p>
+<div class="formula-ish">
+<p><code>log-odds at 4 tiles = __L4__</code><br>
+<code>+ __BETA__ &nbsp;&rarr;&nbsp; __L5__</code><br>
+<code>odds = e<sup>__L5__</sup> = __O5__</code><br>
+<code>p = __O5__ / (1 + __O5__) = <strong>__P5PRED__%</strong></code></p>
+</div>
+<p>The measured rate at 5 tiles is <strong>__P5REAL__%</strong>. The coefficient reproduced it to
+__P5ERR__ of a percentage point &mdash; that is what it means for the model to be linear in
+log-odds.</p>
+<p><strong>And here is why the same coefficient is not a number of percentage points.</strong> Apply
+that identical __BETA__ at three different starting points:</p>
+<div class="scroll"><table>
+<thead><tr><th>starting from</th><th class="num">rate now</th><th class="num">after __BETA__ log-odds</th>
+<th class="num">worth</th></tr></thead>
+<tbody>__PPROWS__</tbody></table></div>
+<p>Same coefficient; __PPMIN__ pp in one place and __PPMAX__ pp in another, because the logistic
+curve is flat near 0% and steep in the middle. A coefficient is a fixed step in log-odds and a
+<em>moving</em> number of percentage points &mdash; which is why every bar in Figure 2 has to say
+where it was priced.</p>
 
 <h3>Why one chart has three different denominators</h3>
 <p>The data-accounting block under Figure 2 reports three populations for one figure, which looks
@@ -169,7 +211,35 @@ def main():
     beta_pc = bar_pc / (sd_pc * pbar_all * (1 - pbar_all) * 100)
     beta_dr = bar_dr / (sd_dr * pbar_p1 * (1 - pbar_p1) * 100)
 
-    sub = {"__NFAC__": str(len(rank)), "__NP1__": f"{n_p1:,}",
+    # the worked example: one real rate, then the coefficient applied one tile along
+    beta = round(beta_dr, 3)
+    p4 = dr_c["dwell"][3] / 100
+    o4, l4 = p4 / (1 - p4), logit(p4)
+    l5 = l4 + beta
+    o5 = math.exp(l5)
+    p5 = o5 / (1 + o5)
+    p5real = dr_c["dwell"][4]
+    pprows = ""
+    for lbl, p0 in (("no predator at all", pc_c["dwell"][0] / 100),
+                    ("a predator seeing 4 tiles", p4),
+                    ("a predator seeing 7 tiles", dr_c["dwell"][-1] / 100)):
+        pn = math.exp(logit(p0) + beta)
+        pn = pn / (1 + pn)
+        pprows += (f'<tr><td>{lbl}</td><td class="num">{p0*100:.2f}%</td>'
+                   f'<td class="num">{pn*100:.2f}%</td>'
+                   f'<td class="num">{100*(pn-p0):+.2f} pp</td></tr>')
+    deltas = []
+    for p0 in (pc_c["dwell"][0] / 100, p4, dr_c["dwell"][-1] / 100):
+        pn = math.exp(logit(p0) + beta); pn = pn / (1 + pn); deltas.append(100 * (pn - p0))
+
+    sub = {"__NFAC__": str(len(rank)),
+           "__P4__": f"{p4*100:.2f}", "__O4__": f"{o4:.4f}", "__L4__": f"{l4:+.4f}",
+           "__BETA__": f"{beta:+.3f}", "__ODDSMULT__": f"{math.exp(beta):.3f}",
+           "__L5__": f"{l5:+.4f}", "__O5__": f"{o5:.4f}",
+           "__P5PRED__": f"{p5*100:.2f}", "__P5REAL__": f"{p5real:.2f}",
+           "__P5ERR__": f"{abs(p5*100-p5real):.2f}",
+           "__PPROWS__": pprows,
+           "__PPMIN__": f"{min(deltas):+.2f}", "__PPMAX__": f"{max(deltas):+.2f}", "__NP1__": f"{n_p1:,}",
            "__NR1__": "333,766", "__CONVROWS__": "".join(rows),
            "__PBAR_ALL__": f"{pbar_all*100:.2f}", "__PBAR_P1__": f"{pbar_p1*100:.2f}",
            "__SURV0__": f"{pc_c['survival'][0]:,.0f}", "__RATE0__": f"{pc_c['dwell'][0]:.1f}",

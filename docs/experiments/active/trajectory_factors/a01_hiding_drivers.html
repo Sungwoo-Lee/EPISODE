@@ -50,6 +50,10 @@ td.num{font-family:var(--mono);font-size:.83rem}
 #the-model h3:first-of-type{margin-top:1.1rem}
 #the-model table{font-size:.84rem}
 #the-model p.note{margin-top:1rem}
+#the-model .say{text-align:left;white-space:normal}
+#the-model .formula-ish{background:var(--panel2);border-left:3px solid var(--rule);
+  border-radius:2px;padding:.7rem .9rem;margin:.9rem 0}
+#the-model .formula-ish p{margin:0;line-height:1.9}
 
 /* Data accounting, one per figure. Same disclosure the sensor-ladder page uses, in this page's
    own tokens. Closed by default: it is provenance a reader should be able to reach, not read.
@@ -288,6 +292,44 @@ decide what a bar means, and the fourth is the one that surprises people:</p>
   the largest set of episodes where that factor is defined. Figure 2 is not one regression; it is
   25 regressions whose effect sizes are collected onto a single axis.</dd>
 </dl>
+
+<h3>What &ldquo;log-odds per unit&rdquo; means, in numbers</h3>
+<p>Take one real number off the page &mdash; an agent facing a predator that can see
+<strong>4 tiles</strong> hides <strong>40.07%</strong> of its episode (Figure&nbsp;3). That single
+rate can be written three ways:</p>
+<div class="scroll"><table>
+<thead><tr><th>written as&hellip;</th><th class="num">value</th><th class="say">read as</th></tr></thead>
+<tbody>
+<tr><td>a rate <code>p</code></td><td class="num">40.07%</td>
+    <td class="say">40.07 steps in every hundred are spent in a bush</td></tr>
+<tr><td>odds <code>p / (1 &minus; p)</code></td><td class="num">0.6686</td>
+    <td class="say">about two steps in cover for every three out of it</td></tr>
+<tr><td>log-odds <code>ln(odds)</code></td><td class="num">-0.4025</td>
+    <td class="say">the scale the model is linear on &mdash; no units, and no ceiling at 100%</td></tr>
+</tbody></table></div>
+<p>Detection range's coefficient is <strong>&beta; = +0.288 per tile</strong>. That means: for
+each extra tile, <em>add +0.288 to the log-odds</em>. Equivalently, since adding on a log scale is
+multiplying on the original one, <em>multiply the odds by <code>e<sup>+0.288</sup></code> =
+1.334</em>. Doing exactly that, from 4 tiles to 5:</p>
+<div class="formula-ish">
+<p><code>log-odds at 4 tiles = -0.4025</code><br>
+<code>+ +0.288 &nbsp;&rarr;&nbsp; -0.1145</code><br>
+<code>odds = e<sup>-0.1145</sup> = 0.8918</code><br>
+<code>p = 0.8918 / (1 + 0.8918) = <strong>47.14%</strong></code></p>
+</div>
+<p>The measured rate at 5 tiles is <strong>47.10%</strong>. The coefficient reproduced it to
+0.04 of a percentage point &mdash; that is what it means for the model to be linear in
+log-odds.</p>
+<p><strong>And here is why the same coefficient is not a number of percentage points.</strong> Apply
+that identical +0.288 at three different starting points:</p>
+<div class="scroll"><table>
+<thead><tr><th>starting from</th><th class="num">rate now</th><th class="num">after +0.288 log-odds</th>
+<th class="num">worth</th></tr></thead>
+<tbody><tr><td>no predator at all</td><td class="num">7.93%</td><td class="num">10.30%</td><td class="num">+2.37 pp</td></tr><tr><td>a predator seeing 4 tiles</td><td class="num">40.07%</td><td class="num">47.14%</td><td class="num">+7.07 pp</td></tr><tr><td>a predator seeing 7 tiles</td><td class="num">56.58%</td><td class="num">63.48%</td><td class="num">+6.90 pp</td></tr></tbody></table></div>
+<p>Same coefficient; +2.37 pp in one place and +7.07 pp in another, because the logistic
+curve is flat near 0% and steep in the middle. A coefficient is a fixed step in log-odds and a
+<em>moving</em> number of percentage points &mdash; which is why every bar in Figure 2 has to say
+where it was priced.</p>
 
 <h3>Why one chart has three different denominators</h3>
 <p>The data-accounting block under Figure 2 reports three populations for one figure, which looks
