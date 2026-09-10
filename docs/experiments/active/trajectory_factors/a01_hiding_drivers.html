@@ -46,6 +46,34 @@ thead th{font-size:.71rem;letter-spacing:.06em;text-transform:uppercase;color:va
   font-weight:600;border-bottom:1px solid var(--fg)}
 tbody tr:last-child td{border-bottom:0}
 td.num{font-family:var(--mono);font-size:.83rem}
+/* Data accounting, one per figure. Same disclosure the sensor-ladder page uses, in this page's
+   own tokens. Closed by default: it is provenance a reader should be able to reach, not read.
+   NOTE the alignment rules below are not optional. This page sets `th,td{text-align:right}`
+   globally and left-aligns only the FIRST cell, so without an override the prose column of this
+   table renders right-aligned and its header is pushed out of the visible area. */
+.samples{margin:.9rem 0 0;border:1px solid var(--rule);border-radius:3px;background:var(--panel2)}
+.samples summary{cursor:pointer;padding:.5rem .7rem;font-family:var(--mono);font-size:.68rem;
+  letter-spacing:.06em;text-transform:uppercase;color:var(--muted);list-style:none}
+.samples summary::-webkit-details-marker{display:none}
+.samples summary::before{content:'\25B8\00a0\00a0';color:var(--cover)}
+.samples[open] summary::before{content:'\25BE\00a0\00a0'}
+.samples summary:hover{color:var(--fg)}
+.samples .sbox{overflow-x:auto;border-top:1px solid var(--rule)}
+/* fixed layout + width:100% makes the prose column WRAP rather than push the table wider than
+   its box; only genuinely long single tokens can then cause a scroll. */
+.samples table{font-size:.75rem;table-layout:fixed;width:100%;min-width:34rem}
+.samples th,.samples td{padding:.34rem .6rem;vertical-align:top;text-align:right;
+  white-space:nowrap}
+.samples td.txt,.samples th.txt{text-align:left;white-space:normal;overflow-wrap:anywhere}
+.samples th:nth-child(1),.samples td:nth-child(1){width:26%}
+.samples th:nth-child(2),.samples td:nth-child(2),
+.samples th:nth-child(3),.samples td:nth-child(3){width:11%}
+.samples th:nth-child(4),.samples td:nth-child(4){width:8%}
+.samples th:nth-child(5),.samples td:nth-child(5){width:44%}
+.samples thead th{font-size:.62rem;color:var(--muted)}
+.samples tbody tr:last-child td{border-bottom:0}
+
+.sub{display:block;font-family:var(--mono);font-size:.68rem;color:var(--muted);margin-top:.12rem;white-space:normal}
 .hi{color:var(--false);font-weight:650}.lo{color:var(--true);font-weight:650}
 .key{display:flex;gap:1.1rem;flex-wrap:wrap;font-size:.8rem;color:var(--muted)}
 .key span{display:flex;align-items:center;gap:.4rem}
@@ -204,6 +232,7 @@ saved, not from what we assumed.</p>
 <figcaption>The agent is blind at distance and its only long-range sense is smell. That single
 fact drives the largest finding in this document.</figcaption>
 <div class="method"><b>How this was computed</b><dl><dt>source</dt><dd>the run's own <code>models/config.yaml</code>, written at training time — not the repository defaults, which have since changed</dd><dt>keys read</dt><dd><code>sensory.visual_sensor_range</code> = 0, <code>sensory.olfactory_enabled</code> = true with <code>sensor_radius</code> 20, <code>sensory.injury_observable</code> = false, <code>sensory.nutrition_observable</code> = false, <code>sensory.interoceptive_nociception_enabled</code> = true</dd><dt>verified</dt><dd>today's environment code reproduces this run's sensors exactly — recorded actions from 25 episodes (5,298 steps) replayed through current code differ from the observations the original code wrote by at most 2.4e-07 across all 27 channels</dd></dl></div>
+<details class="samples"><summary>Data behind this figure &mdash; 25 of 1,000,000 (0.0%)</summary><div class="sbox"><table><thead><tr><th class="txt">what</th><th>used</th><th>available</th><th>share</th><th class="txt">why this subset</th></tr></thead><tbody><tr><td class="txt">episodes replayed to check the sensors</td><td>25</td><td>1,000,000</td><td>0.0%</td><td class="txt">this figure is read from the run's saved config.yaml rather than measured, so the only data behind it is the replay that confirms today's code reproduces those sensors: 25 episodes, 5,298 steps, agreeing to 2.4e-07 across all 27 channels</td></tr></tbody></table></div></details>
 </figure>
 
 <p>And here is a trap built into the world on purpose. There are two kinds of animal: predators,
@@ -230,6 +259,7 @@ world rolls them before the agent acts, these are causes.</p>
   because they cannot have an effect. Three genuine controls land at zero:
   <code>rock_count</code>, where on the map the agent wakes up, and <code>max_stamina</code>.</figcaption>
 <div class="method"><b>How this was computed</b><dl><dt>outcome</dt><dd>bush hiding = bush steps &divide; action steps, per episode. The spawn row (<code>t=0</code>) is excluded from both, because the agent did not choose where it woke</dd><dt>model</dt><dd>a regression that models the <em>rate</em> of bush hiding directly &mdash; each step is a hit or a miss &mdash; so episode length does not have to be carried as a separate variable (a quasi-binomial GLM with a logit link)</dd><dt>error bars</dt><dd>steps within an episode are nowhere near independent, so the data are far lumpier than the model assumes. The uncertainty is widened by about 4&times; to compensate (overdispersion 13&ndash;25, absorbed by scaling the standard errors)</dd><dt>bar length</dt><dd>the change in bush hiding, in percentage points, for a <strong>typical episode-to-episode swing</strong> in that factor &mdash; one standard deviation, written 1 SD. Predator count varies by about 0.8 predators from episode to episode, so its bar is the effect of 0.8 predators, not of one. Using a common unit is what lets a count and a stamina value be compared at all</dd><dt>subsets</dt><dd>factors defined for every episode use all 1,000,000. Predator traits use the 333,743 exactly-one-predator episodes so the trait is unambiguous; rabbit olfaction uses the 333,766 one-rabbit episodes</dd><dt>a caution</dt><dd>rows are fitted on different subsets: factors defined in every episode use all 1,000,000, predator traits use only the 333,743 episodes with exactly one predator, rabbit odour the 333,766 with exactly one rabbit. The bars are comparable in unit, not in population</dd><dt>significance</dt><dd>not used for ranking. At n = 10<sup>6</sup> every factor clears any threshold; ordering is by effect size only</dd></dl></div>
+<details class="samples"><summary>Data behind this figure &mdash; 3 subsets, 333,743 to 1,000,000 of 1,000,000</summary><div class="sbox"><table><thead><tr><th class="txt">what</th><th>used</th><th>available</th><th>share</th><th class="txt">why this subset</th></tr></thead><tbody><tr><td class="txt">factors defined in every episode</td><td>1,000,000</td><td>1,000,000</td><td>100.0%</td><td class="txt">defined in every episode, so nothing has to be dropped</td></tr><tr><td class="txt">predator traits</td><td>333,743</td><td>1,000,000</td><td>33.4%</td><td class="txt">a predator trait is undefined when no predator is present and ambiguous when two are, so only the exactly-one-predator episodes can be used</td></tr><tr><td class="txt">rabbit odour terms</td><td>333,766</td><td>1,000,000</td><td>33.4%</td><td class="txt">the same problem one animal along: a rabbit's smell needs exactly one rabbit</td></tr></tbody></table></div></details>
 </figure>
 
 <p>Two features dominate everything else: whether predators exist at all, and how far they can
@@ -263,7 +293,94 @@ hiding and how long it lives change as the factor is dialled up.</p>
   controls.</figcaption>
 
 <div class="method"><b>How this was computed</b><dl><dt>binning</dt><dd>each factor split at its own natural levels — integer counts get one bin per value; continuous ones (max stamina, start injury, start nutrition, distances) get fixed edges</dd><dt>green line</dt><dd>total bush steps in the bin &divide; total action steps in the bin. A ratio of sums, not a mean of per-episode ratios, so long and short episodes weight correctly</dd><dt>amber line</dt><dd>mean episode length in the bin, in steps</dd><dt>conditioning</dt><dd>none — every episode counts, including those that ended early. Because the factor was rolled at random before the agent acted, comparing bins is a causal contrast</dd><dt>scaling</dt><dd>each panel normalised to its own maximum: shapes comparable between panels, heights are not</dd></dl></div>
+<details class="samples"><summary>Data behind this figure &mdash; 15 subsets, 333,743 to 1,000,000 of 1,000,000</summary><div class="sbox"><table><thead><tr><th class="txt">what</th><th>used</th><th>available</th><th>share</th><th class="txt">why this subset</th></tr></thead><tbody><tr><td class="txt">panel: predator detection range</td><td>333,743</td><td>1,000,000</td><td>33.4%</td><td class="txt">a predator trait is undefined when no predator is present and ambiguous when two are, so only the exactly-one-predator episodes can be used</td></tr><tr><td class="txt">panel: predator count</td><td>1,000,000</td><td>1,000,000</td><td>100.0%</td><td class="txt">defined in every episode, so nothing has to be dropped</td></tr><tr><td class="txt">panel: rabbit count</td><td>1,000,000</td><td>1,000,000</td><td>100.0%</td><td class="txt">defined in every episode, so nothing has to be dropped</td></tr><tr><td class="txt">panel: bushes available</td><td>1,000,000</td><td>1,000,000</td><td>100.0%</td><td class="txt">defined in every episode, so nothing has to be dropped</td></tr><tr><td class="txt">panel: rocks</td><td>1,000,000</td><td>1,000,000</td><td>100.0%</td><td class="txt">defined in every episode, so nothing has to be dropped</td></tr><tr><td class="txt">panel: predator attack delay</td><td>333,743</td><td>1,000,000</td><td>33.4%</td><td class="txt">a predator trait is undefined when no predator is present and ambiguous when two are, so only the exactly-one-predator episodes can be used</td></tr><tr><td class="txt">panel: predator attack range</td><td>333,743</td><td>1,000,000</td><td>33.4%</td><td class="txt">a predator trait is undefined when no predator is present and ambiguous when two are, so only the exactly-one-predator episodes can be used</td></tr><tr><td class="txt">panel: predator max stamina</td><td>333,743</td><td>1,000,000</td><td>33.4%</td><td class="txt">a predator trait is undefined when no predator is present and ambiguous when two are, so only the exactly-one-predator episodes can be used</td></tr><tr><td class="txt">panel: spawn distance to nearest bush</td><td>1,000,000</td><td>1,000,000</td><td>100.0%</td><td class="txt">defined in every episode, so nothing has to be dropped</td></tr><tr><td class="txt">panel: randomised START injury</td><td>1,000,000</td><td>1,000,000</td><td>100.0%</td><td class="txt">defined in every episode, so nothing has to be dropped</td></tr><tr><td class="txt">panel: randomised START nutrition</td><td>1,000,000</td><td>1,000,000</td><td>100.0%</td><td class="txt">defined in every episode, so nothing has to be dropped</td></tr><tr><td class="txt">panel: predator smell 'predator-likeness'</td><td>333,743</td><td>1,000,000</td><td>33.4%</td><td class="txt">a predator trait is undefined when no predator is present and ambiguous when two are, so only the exactly-one-predator episodes can be used</td></tr><tr><td class="txt">panel: RABBIT smell 'predator-likeness'</td><td>333,766</td><td>1,000,000</td><td>33.4%</td><td class="txt">needs exactly one rabbit</td></tr><tr><td class="txt">panel: hiding predators</td><td>1,000,000</td><td>1,000,000</td><td>100.0%</td><td class="txt">defined in every episode, so nothing has to be dropped</td></tr><tr><td class="txt">panel: food count</td><td>1,000,000</td><td>1,000,000</td><td>100.0%</td><td class="txt">defined in every episode, so nothing has to be dropped</td></tr></tbody></table></div></details>
 </figure>
+
+
+<h3 id="share-not-total">Why hiding is counted as a share, not a total</h3>
+<p>There are two obvious ways to write down how much an agent hid, and on the strongest factors in
+this world they point in <strong>opposite directions</strong>. Counting the <em>share of the
+episode</em> spent in a bush says a keener predator makes the agent hide far more. Counting the
+<em>total steps</em> spent in a bush says the same predator makes it hide rather less. Both are
+arithmetically correct.</p>
+<p>They disagree because of the third measure. A predator that sees further kills sooner, so the
+episode collapses from 242 steps to 45. Hiding for 57% of a 45-step life
+is fewer steps than hiding for 20% of a 242-step one, even though the second agent is
+doing far more hiding relative to the life it has. <strong>The total is mostly a measurement of how
+long the agent stayed alive</strong>, with its behaviour as a minor term.</p>
+
+<div class="motive"><b>Why this analysis</b>This page reports a rate everywhere, and that choice
+deserves defending rather than assuming &mdash; a reader is entitled to ask what the raw counts
+would have said. The answer turned out to be worth its own section: the raw count does not merely
+lose power, it reverses the sign on the two largest effects in the environment. Survival is not a
+nuisance to be divided out. It is the quantity that makes the other two measures disagree, which is
+why it is carried here as an outcome in its own right rather than as a denominator.</div>
+
+<figure class="panel">
+  <div class="fignum">Figure 4 &mdash; one factor, three ways of counting</div>
+  <div id="three"></div>
+  <figcaption><b>Horizontal axis:</b> how far the predator can see, in tiles, from 1 to 7.
+  <b>Vertical axis:</b> each measure indexed to 100 at range&nbsp;1 so that all three share one
+  scale; the raw values are printed beside each line. Green is the share of the episode spent
+  hidden, red the total number of steps spent in a bush, amber the number of steps survived. Green
+  rises to 283, red falls to 53, amber falls to 19 &mdash; the agent hides
+  <em>more intensely</em> and <em>less in total</em>, because it is dead sooner. Read the red line
+  on its own and you would conclude that dangerous predators make this agent hide less.</figcaption>
+<div class="method"><b>How this was computed</b><dl><dt>data used</dt><dd>the 333,743 episodes with exactly one predator, 33.4% of the 1,000,000 collected. Detection range belongs to a predator, so it is undefined when there is none and ambiguous when there are two</dd><dt>share hidden</dt><dd>total bush steps in the bin &divide; total action steps in the bin &mdash; the same quantity drawn green in Figure&nbsp;3, with the spawn row (<code>t=0</code>) excluded from both</dd><dt>total bush steps</dt><dd>the share above &times; the mean episode length in the bin. Derived rather than counted, because the stored aggregates behind this page hold the rate and the length but not the raw total. Against the earlier environment study, which counted the total directly and did <em>not</em> exclude the spawn row, the derivation agrees to within 0.27%</dd><dt>steps survived</dt><dd>mean episode length in the bin, in steps &mdash; the amber line of Figure&nbsp;3</dd><dt>indexing</dt><dd>each series divided by its own value at range&nbsp;1, then multiplied by 100. Indexing is what lets three quantities in three different units (one percentage, two step counts) be read against one axis. It shows relative movement only &mdash; the heights carry no absolute meaning, which is why the raw values are printed too</dd><dt>why this is causal</dt><dd>detection range is rolled at random by the environment before the agent acts, so comparing bins is a randomised contrast rather than an observed correlation</dd></dl></div>
+<details class="samples"><summary>Data behind this figure &mdash; 333,743 of 1,000,000 (33.4%)</summary><div class="sbox"><table><thead><tr><th class="txt">what</th><th>used</th><th>available</th><th>share</th><th class="txt">why this subset</th></tr></thead><tbody><tr><td class="txt">episodes with exactly one predator</td><td>333,743</td><td>1,000,000</td><td>33.4%</td><td class="txt">a predator trait is undefined when no predator is present and ambiguous when two are, so only the exactly-one-predator episodes can be used</td></tr></tbody></table></div></details>
+</figure>
+
+<p>This is not a quirk of one factor. Of the seven world settings a predator or the terrain
+controls, <strong>three</strong> move the share and the total in opposite directions &mdash;
+predator count, predator detection range and hiding predators &mdash; and those three include the two largest effects on this page.</p>
+
+<figure class="panel">
+  <div class="fignum">Figure 5 &mdash; every factor, all three measures</div>
+  <div id="tri"></div>
+  <figcaption><b>Horizontal axis:</b> the change in each measure between the factor's lowest and
+  highest setting, as a percentage of its value at the lowest. <b>Vertical axis:</b> the seven
+  world settings, one group of three bars each, ordered by how much they move the share. Wherever
+  the green and the red bar point opposite ways, the two ways of counting disagree about what that
+  factor does. Predator count's green bar runs off the scale at +614% and is marked as clipped
+  rather than quietly truncated. Note the flat case as well: <code>predator max stamina</code>
+  moves nothing on any of the three, which is a real null rather than a measurement that
+  failed.</figcaption>
+<div class="method"><b>How this was computed</b><dl><dt>the three bars</dt><dd>green is the share of the episode spent hidden, red the total steps spent in a bush, amber the steps survived &mdash; each read at the factor's lowest and highest setting, expressed as the percentage change between the two</dd><dt>data used</dt><dd>the four predator traits use only the 333,743 exactly-one-predator episodes, 33.4% of the million, for the reason given in Figure&nbsp;4. Predator count, bushes available and hiding predators are defined in every episode and use all 1,000,000. The bars are therefore comparable in unit, not in population</dd><dt>a caution on percentages</dt><dd>the percentage change in a rate depends on how small that rate started. Predator count's +614% is large partly because hiding starts at only 7.9% when no predator is present; the same change stated in percentage points is +49 pp. The table below carries the underlying values so no reader is left with the ratio alone</dd><dt>why these seven</dt><dd>they are the settings the earlier environment-factor study covered. The full set of everything this world varies &mdash; twenty-five factors, including the agent's own starting state and every smell channel &mdash; is Figure&nbsp;2</dd></dl></div>
+<details class="samples"><summary>Data behind this figure &mdash; 2 subsets, 333,743 to 1,000,000 of 1,000,000</summary><div class="sbox"><table><thead><tr><th class="txt">what</th><th>used</th><th>available</th><th>share</th><th class="txt">why this subset</th></tr></thead><tbody><tr><td class="txt">the four predator traits</td><td>333,743</td><td>1,000,000</td><td>33.4%</td><td class="txt">a predator trait is undefined when no predator is present and ambiguous when two are, so only the exactly-one-predator episodes can be used</td></tr><tr><td class="txt">predator count, bushes available, hiding predators</td><td>1,000,000</td><td>1,000,000</td><td>100.0%</td><td class="txt">defined in every episode, so nothing has to be dropped</td></tr></tbody></table></div></details>
+</figure>
+
+<figure class="panel scroll">
+<div class="fignum">Figure 6 &mdash; the same seven factors, as exact numbers</div>
+<table>
+<thead><tr><th>factor<span class="sub">lowest &rarr; highest setting</span></th><th>share hidden</th><th>chg</th><th>bush steps</th><th>chg</th><th>survived</th><th>chg</th></tr></thead>
+<tbody>
+<tr><td>predator count<span class="sub">how many predators are in the scene</span></td><td class="num">7.9% &rarr; 56.6%</td><td class="num">+614%</td><td class="num">33.0 &rarr; 28.7</td><td class="num">&minus;13%</td><td class="num">416 &rarr; 51</td><td class="num">&minus;88%</td></tr>
+<tr><td>predator detection range<span class="sub">how far a predator can see</span></td><td class="num">20.0% &rarr; 56.6%</td><td class="num">+183%</td><td class="num">48.5 &rarr; 25.5</td><td class="num">&minus;47%</td><td class="num">242 &rarr; 45</td><td class="num">&minus;81%</td></tr>
+<tr><td>bushes available<span class="sub">how many bushes exist</span></td><td class="num">11.9% &rarr; 20.3%</td><td class="num">+71%</td><td class="num">21.8 &rarr; 39.6</td><td class="num">+82%</td><td class="num">184 &rarr; 195</td><td class="num">+6%</td></tr>
+<tr><td>predator attack delay<span class="sub">how long it pauses before striking</span></td><td class="num">30.6% &rarr; 33.6%</td><td class="num">+10%</td><td class="num">27.1 &rarr; 38.3</td><td class="num">+41%</td><td class="num">89 &rarr; 114</td><td class="num">+29%</td></tr>
+<tr><td>hiding predators<span class="sub">how many are buried out of sight</span></td><td class="num">16.3% &rarr; 17.1%</td><td class="num">+5%</td><td class="num">33.2 &rarr; 30.0</td><td class="num">&minus;10%</td><td class="num">204 &rarr; 175</td><td class="num">&minus;14%</td></tr>
+<tr><td>predator attack range<span class="sub">how far it can pounce</span></td><td class="num">32.9% &rarr; 31.4%</td><td class="num">&minus;5%</td><td class="num">35.9 &rarr; 30.2</td><td class="num">&minus;16%</td><td class="num">109 &rarr; 96</td><td class="num">&minus;12%</td></tr>
+<tr><td>predator max stamina<span class="sub">how long it can keep chasing</span></td><td class="num">32.2% &rarr; 32.3%</td><td class="num">+0%</td><td class="num">32.8 &rarr; 32.9</td><td class="num">+0%</td><td class="num">102 &rarr; 102</td><td class="num">+0%</td></tr>
+</tbody>
+</table>
+<figcaption><b>Rows:</b> the seven world settings, ordered by how much they move the share hidden. <b>Columns:</b> each of the three measures at the factor's lowest setting and at its highest, each followed by the change between them. The disagreement drawn in Figure&nbsp;5 reads here as a rise in one change column beside a fall in another &mdash; predator count, detection range and hiding predators each gain share while losing total. Deliberately uncoloured: red already means &ldquo;total bush steps&rdquo; in Figure&nbsp;5, and reusing it for &ldquo;a rise&rdquo; would give one colour two meanings on the same screen.</figcaption>
+<div class="method"><b>How this was computed</b><dl><dt>the three measures</dt><dd>share of the episode spent hidden, total steps spent in a bush, and steps survived &mdash; defined exactly as in Figure&nbsp;4</dd><dt>chg columns</dt><dd>the change from the lowest to the highest setting as a percentage of the value at the lowest &mdash; the same quantity Figure&nbsp;5 draws as bars, printed here because a bar chart cannot be read to a decimal place</dd><dt>data used</dt><dd>as Figure&nbsp;5: the four predator traits on the exactly-one-predator episodes, the other three factors on all 1,000,000</dd></dl></div>
+<details class="samples"><summary>Data behind this figure &mdash; 2 subsets, 333,743 to 1,000,000 of 1,000,000</summary><div class="sbox"><table><thead><tr><th class="txt">what</th><th>used</th><th>available</th><th>share</th><th class="txt">why this subset</th></tr></thead><tbody><tr><td class="txt">the four predator traits</td><td>333,743</td><td>1,000,000</td><td>33.4%</td><td class="txt">a predator trait is undefined when no predator is present and ambiguous when two are, so only the exactly-one-predator episodes can be used</td></tr><tr><td class="txt">predator count, bushes available, hiding predators</td><td>1,000,000</td><td>1,000,000</td><td>100.0%</td><td class="txt">defined in every episode, so nothing has to be dropped</td></tr></tbody></table></div></details>
+</figure>
+
+<h3 id="cannot-perceive">The strongest thing in its world is one it cannot perceive</h3>
+<p>Detection range is the second-largest effect on this page, and the agent has no sense for it. As
+Section&nbsp;1 sets out, a predator's traits never reach the observation at all: what arrives is a
+fixed class marker and a smell drawn from an <em>independent</em> random stream. Nothing the agent
+can see, smell or feel tells it whether the predator in front of it sees one tile or seven.</p>
+<p>So this is not an agent recognising a dangerous-looking predator and taking cover. It is an
+agent that gets detected and chased more often, and hides more as a result. The effect is
+<em>causally</em> identified &mdash; the trait is rerolled at random every episode, so nothing about
+the agent can confound it &mdash; but the whole pathway runs through experienced consequence rather
+than perception. The agent responds to what the trait <em>does to it</em>, not to the trait.</p>
+<p>That distinction matters for reading the rest of this page. A large, clean, causally identified
+effect turns out not to be evidence of anything the agent perceives &mdash; and it sets up the
+opposite case in Section&nbsp;3, a factor the agent perceives <em>vividly</em> and gets wrong.</p>
 
 <h2>3 &nbsp;The mistake it makes</h2>
 <p>Because every animal's smell is redrawn at random each episode, we can watch what happens when
@@ -272,7 +389,7 @@ happens to smell exactly the same way.</p>
 
 <div class="motive"><b>Why this analysis</b>The ranking threw up something odd: the rabbit's smell moves behaviour almost as much as the predator's does. Rabbits are harmless, so if that is real it means the agent cannot tell the two apart from smell alone. This tests that directly, and attaches the consequence &mdash; because a mistake that costs nothing is not much of a mistake.</div>
 <figure class="panel">
-  <div class="fignum">Figure 4 &mdash; same response, opposite consequence</div>
+  <div class="fignum">Figure 7 &mdash; same response, opposite consequence</div>
   <div id="dd"></div>
   <div class="key">
     <span><i class="sw" style="background:var(--true)"></i>the predator's own smell &mdash; a true signal</span>
@@ -284,6 +401,7 @@ happens to smell exactly the same way.</p>
   costs 9% of it.</figcaption>
 
 <div class="method"><b>How this was computed</b><dl><dt>x quantity</dt><dd>olfactory identity = channel 1 &minus; channel 2 of <code>animal_property_sampled</code>, averaged over active animals of that class. Redrawn each episode from a clipped normal — predators around (0.7, 0.5), rabbits around (0.5, 0.7), spread 0.3 each</dd><dt>subsets</dt><dd>predator panel: the 333,743 exactly-one-predator episodes. Rabbit panel: the 333,766 one-rabbit episodes. One animal makes the draw unambiguous</dd><dt>bins</dt><dd>six, at identity &lt; &minus;0.2, then 0.2-wide steps to &gt; 0.6</dd><dt>causal status</dt><dd>drawn at reset before the agent acts, and verified in <code>src/environment/sensor.py</code> to feed only the olfactory sensor. Both ladders are causal</dd></dl></div>
+<details class="samples"><summary>Data behind this figure &mdash; 2 subsets, 333,743 to 333,766 of 1,000,000</summary><div class="sbox"><table><thead><tr><th class="txt">what</th><th>used</th><th>available</th><th>share</th><th class="txt">why this subset</th></tr></thead><tbody><tr><td class="txt">predator smell ladder</td><td>333,743</td><td>1,000,000</td><td>33.4%</td><td class="txt">a predator trait is undefined when no predator is present and ambiguous when two are, so only the exactly-one-predator episodes can be used</td></tr><tr><td class="txt">rabbit smell ladder</td><td>333,766</td><td>1,000,000</td><td>33.4%</td><td class="txt">needs exactly one rabbit, for the same reason</td></tr></tbody></table></div></details>
 </figure>
 
 <p>The agent is not being stupid. It is doing the only thing available to a blind animal with an
@@ -292,7 +410,7 @@ which is which until too late.</p>
 
 <div class="motive"><b>Why this analysis</b>Knowing the agent hides more is not enough on its own. We wanted the whole path from the misread smell to the outcome the project actually cares about &mdash; does it eat less, starve more, and die sooner? A mistake that costs nothing is not much of a mistake.</div>
 <figure class="panel scroll">
-<div class="fignum">Figure 5 &mdash; the full chain, from nose to grave</div>
+<div class="fignum">Figure 8 &mdash; the full chain, from nose to grave</div>
 <table>
 <thead><tr><th>a rabbit that smells&hellip;</th><th>hides</th><th>food per step</th>
 <th>starves</th><th>is caught</th><th>survives</th></tr></thead>
@@ -305,6 +423,7 @@ its own. Hiding does buy real protection
 &mdash; being caught falls &mdash; but when the threat was never there the protection is worth
 nothing and the missed meals are real.</figcaption>
 <div class="method"><b>How this was computed</b><dl><dt>rows</dt><dd>the extreme bins of the same six-way split as the figure above, on the one-rabbit episodes</dd><dt>food per step</dt><dd>total <code>ate_food</code> events &divide; total action steps in the bin</dd><dt>starves / is caught</dt><dd>share of episodes in the bin whose <code>termination_reason</code> was starvation (2) or injury death (4)</dd><dt>survives</dt><dd>mean episode length in the bin</dd><dt>what this licenses</dt><dd>the smell is randomised, so it causally affects each endpoint separately. It does NOT by itself establish the ordering smell &rarr; dwell &rarr; eat less &rarr; starve; that ordering is an interpretation</dd></dl></div>
+<details class="samples"><summary>Data behind this figure &mdash; 333,766 of 1,000,000 (33.4%)</summary><div class="sbox"><table><thead><tr><th class="txt">what</th><th>used</th><th>available</th><th>share</th><th class="txt">why this subset</th></tr></thead><tbody><tr><td class="txt">rabbit smell, every endpoint</td><td>333,766</td><td>1,000,000</td><td>33.4%</td><td class="txt">one rabbit, so the smell that was rolled is the smell the agent met</td></tr></tbody></table></div></details>
 </figure>
 
 <h3>Is it really mistaking the rabbit, or just generally jumpy?</h3>
@@ -314,7 +433,7 @@ mistake should be <em>aimed</em>.</p>
 
 <div class="motive"><b>Why this analysis</b>A sceptic could reasonably say the agent is not mistaking anything &mdash; a predator-ish smell anywhere just makes it generally nervous, so it hides more everywhere. That would be a mood, not a misidentification. The two make different predictions about WHERE the extra hiding shows up, so they can be told apart.</div>
 <figure class="panel">
-  <div class="fignum">Figure 6 &mdash; the response is aimed at the rabbit</div>
+  <div class="fignum">Figure 9 &mdash; the response is aimed at the rabbit</div>
   <div id="aim"></div>
   <div class="key">
     <span><i class="sw" style="background:var(--muted);opacity:.55"></i>rabbit smells rabbit-like</span>
@@ -325,12 +444,13 @@ mistake should be <em>aimed</em>.</p>
   anywhere else. When that rabbit comes near, hiding jumps from 26.7% to 49.8% &mdash; close to how
   this agent treats a genuine predator, 56.4%.</figcaption>
 <div class="method"><b>How this was computed</b><dl><dt>subset</dt><dd>the 111,211 episodes with exactly one predator AND exactly one rabbit, so the predator context is held fixed while the rabbit's draw varies</dd><dt>split</dt><dd>rabbit olfactory identity &lt; 0 (&ldquo;smells rabbit-like&rdquo;) against &ge; 0.3 (&ldquo;smells predator-like&rdquo;)</dd><dt>nearby</dt><dd>Chebyshev distance &le; 2 tiles, same step, using the recorded per-step positions of every active animal</dd><dt>three states</dt><dd>predator near takes precedence; &ldquo;rabbit near&rdquo; means a rabbit within 2 and no predator within 2</dd><dt>caveat</dt><dd>splitting on &ldquo;rabbit is nearby&rdquo; conditions on a state the agent partly controls, so this localises where the extra dwell falls rather than estimating a causal effect. The selection runs against the finding: the predator-smelling group spends slightly less time near the rabbit, 13.0% of steps against 14.3%</dd></dl></div>
+<details class="samples"><summary>Data behind this figure &mdash; 111,211 of 1,000,000 (11.1%)</summary><div class="sbox"><table><thead><tr><th class="txt">what</th><th>used</th><th>available</th><th>share</th><th class="txt">why this subset</th></tr></thead><tbody><tr><td class="txt">exactly one predator AND one rabbit</td><td>111,211</td><td>1,000,000</td><td>11.1%</td><td class="txt">holds the predator context fixed while the rabbit's draw varies, which is what separates a targeted false alarm from general jumpiness</td></tr></tbody></table></div></details>
 </figure>
 
 <h2>4 &nbsp;Nearness</h2>
 <div class="motive"><b>Why this analysis</b>Before crediting smell with anything, check the simpler explanation: is a predator just physically close? This also lets us test the obvious reverse reading &mdash; that predators linger near an agent that is already hiding, rather than the agent hiding because a predator arrived.</div>
 <figure class="panel">
-  <div class="fignum">Figure 7 &mdash; what was nearby one step earlier</div>
+  <div class="fignum">Figure 10 &mdash; what was nearby one step earlier</div>
   <div id="prox"></div>
   <figcaption>We use each animal's position on the <em>previous</em> step to predict hiding now, so
   the agent's own choice cannot manufacture the pattern. A rabbit nearby lifts hiding a little; a
@@ -338,6 +458,7 @@ mistake should be <em>aimed</em>.</p>
   gets is partly the agent's own doing.</figcaption>
 
 <div class="method"><b>How this was computed</b><dl><dt>lagging</dt><dd>each step classified by animal positions at <code>t&minus;1</code>, scored by bush occupancy at <code>t</code>, within the same episode. Boundary steps dropped</dd><dt>nearby</dt><dd>Chebyshev distance &le; 2 tiles. &ldquo;Rabbit near&rdquo; means a rabbit within 2 and no predator within 2</dd><dt>population</dt><dd>all 189,906,610 action steps, unconditioned</dd><dt>why lagged</dt><dd>same-step gives 63.1 / 17.6 / 11.9. The lagged version being <em>stronger</em> argues against the reverse reading, though consecutive steps are autocorrelated so it weakens that objection rather than eliminating it</dd></dl></div>
+<details class="samples"><summary>Data behind this figure &mdash; 189,906,610 of 189,906,610 (100.0%)</summary><div class="sbox"><table><thead><tr><th class="txt">what</th><th>used</th><th>available</th><th>share</th><th class="txt">why this subset</th></tr></thead><tbody><tr><td class="txt">action steps, unconditioned</td><td>189,906,610</td><td>189,906,610</td><td>100.0%</td><td class="txt">every step counts; the lag is within an episode, so only the boundary steps drop</td></tr></tbody></table></div></details>
 </figure>
 
 <h2>5 &nbsp;Nociception</h2>
@@ -366,7 +487,7 @@ confirms our hiding measure means what its name says.</figcaption>
 <h3>Getting hurt produces a reaction &mdash; a modest one</h3>
 <div class="motive"><b>Why this analysis</b>Does being hurt change what the agent does, and over what timescale? Aligning every damage event and averaging around it is the standard way to see a response emerge and decay. It also tells us whether the response timing is consistent with the agent's nociceptive signal, which peaks three steps after an injury.</div>
 <figure class="panel">
-  <div class="fignum">Figure 8 &mdash; behaviour around a moment of damage</div>
+  <div class="fignum">Figure 11 &mdash; behaviour around a moment of damage</div>
   <div id="peri"></div>
   <div class="key">
     <span><i class="sw" style="background:var(--muted)"></i>every injury</span>
@@ -380,6 +501,7 @@ confirms our hiding measure means what its name says.</figcaption>
   one and four and a half points &mdash; real, but small.</figcaption>
 
 <div class="method"><b>How this was computed</b><dl><dt>events</dt><dd>every step with <code>damage</code> &gt; 0, aligned at lag 0; bush occupancy collected from lag &minus;10 to +25 within the same episode</dd><dt>isolated</dt><dd>the subset with no other damage event in the 10 steps before or 25 after</dd><dt>baseline</dt><dd>the value at lag &minus;10, not lag &minus;1 — lag &minus;1 is mechanically depressed because the agent must be out of cover to be hit</dd><dt>known bias</dt><dd>the isolated filter is a collider: hiding prevents damage, so it preferentially keeps cases where hiding worked. Treat it as an upper bound, all-events as a lower bound</dd><dt>correction</dt><dd>an earlier version quoted +8 pp sustained to +25, measured from lag &minus;1 on the isolated subset. Both choices inflated it</dd></dl></div>
+<details class="samples"><summary>Data behind this figure &mdash; 10,779,288 of 189,906,610 (5.7%)</summary><div class="sbox"><table><thead><tr><th class="txt">what</th><th>used</th><th>available</th><th>share</th><th class="txt">why this subset</th></tr></thead><tbody><tr><td class="txt">moments damage was taken</td><td>10,779,288</td><td>189,906,610</td><td>5.7%</td><td class="txt">the figure aligns on damage, so a step with none is not an event</td></tr><tr><td class="txt">of those, the isolated subset</td><td>not recorded</td><td>10,779,288</td><td>&mdash;</td><td class="txt">the count of events with no other damage within the window was never written into the page; the figure draws the subset but did not record its size</td></tr></tbody></table></div></details>
 </figure>
 
 <h3>The same signal, but where did it come from?</h3>
@@ -387,7 +509,7 @@ confirms our hiding measure means what its name says.</figcaption>
 
 <div class="motive"><b>Why this analysis</b>This is the central question of the whole study. Nociception could drive behaviour in two quite different ways: as something to flinch from, or as evidence that a predator is nearby. Those are indistinguishable in normal circumstances &mdash; but the environment randomly assigns some agents a wound at the start of an episode, with nothing having attacked them. That gives a nociceptive signal without the evidence, and lets the two accounts come apart.</div>
 <figure class="panel">
-  <div class="fignum">Figure 9 &mdash; feeling held constant, origin varied</div>
+  <div class="fignum">Figure 12 &mdash; feeling held constant, origin varied</div>
   <div id="hits"></div>
   <figcaption>Rows are the nociception level; columns are how many times it has actually been
   struck this episode. Read along the bottom row: at a high nociception level, an agent struck once hides
@@ -396,6 +518,7 @@ confirms our hiding measure means what its name says.</figcaption>
   <strong>22.6%</strong>. Same feeling, near-double response.</figcaption>
 
 <div class="method"><b>How this was computed</b><dl><dt>nociception</dt><dd>reconstructed, because the store records <code>injury_level</code> but not the observation vector. Mirrors <code>core.py:115</code> — a 12-slot buffer of injury LEVELS, rolled each step, zeroed at reset — convolved with the alpha kernel from the run's own config (&tau; = 3, length 12, current step weighted zero)</dd><dt>pairing</dt><dd>bush occupancy at <code>t</code> against the observation at <code>t&minus;1</code>, since the action producing row <code>t</code> was chosen on the <code>t&minus;1</code> observation</dd><dt>columns</dt><dd>cumulative count of prior <code>damage</code> &gt; 0 events in the episode, excluding the current step</dd><dt>conditioning</dt><dd>steps with no predator within 2 tiles only, so current proximity cannot drive the pattern</dd><dt>bug fixed</dt><dd>the first version used a boundary guard that leaked the episode's randomised start injury into the first few reconstructed steps. About 5% of steps were inflated by up to 13.8 points, fabricating an all-zero column. Corrected and rerun; recorded in the bug registry</dd></dl></div>
+<details class="samples"><summary>Data behind this figure &mdash; 175,100,000 of 189,906,610 (92.2%)</summary><div class="sbox"><table><thead><tr><th class="txt">what</th><th>used</th><th>available</th><th>share</th><th class="txt">why this subset</th></tr></thead><tbody><tr><td class="txt">steps with no predator within 2 tiles</td><td>175,100,000</td><td>189,906,610</td><td>92.2%</td><td class="txt">current proximity is exactly what this figure holds constant, so steps with a predator nearby must be excluded. Reconstructed from the figure's own per-cell counts and so rounded to the nearest hundred thousand</td></tr></tbody></table></div></details>
 </figure>
 
 <p>That is what you would expect if the agent treats nociception as <em>news that a predator is about</em>
@@ -409,7 +532,7 @@ strike count marks a hopeless situation as much as a memory.</p>
 <h3>Is nociception just standing in for "late in the episode"?</h3>
 <div class="motive"><b>Why this analysis</b>A worry about every injury result so far: injury accumulates over an episode and so does almost everything else, so the wound-behaviour link might just be a proxy for &ldquo;late in the episode&rdquo;. Splitting by elapsed time as well as by wound level tests that directly.</div>
 <figure class="panel">
-  <div class="fignum">Figure 10 &mdash; hiding by wound level and by how far into the episode</div>
+  <div class="fignum">Figure 13 &mdash; hiding by wound level and by how far into the episode</div>
   <div id="hminj"></div>
   <figcaption>Darker means more hiding. If the wound-hiding link were merely a proxy for elapsed
   time, the pattern would run flat across each row. It does not: within almost every time band,
@@ -417,18 +540,20 @@ strike count marks a hopeless situation as much as a memory.</p>
   hides a lot too, because hiding is exactly what keeps it uninjured.</figcaption>
 
 <div class="method"><b>How this was computed</b><dl><dt>rows</dt><dd>elapsed-step bands 0&ndash;10, 10&ndash;25, 25&ndash;50, 50&ndash;100, 100&ndash;200, 200&ndash;500</dd><dt>columns</dt><dd><code>injury_level</code> at that step: exactly 0, then 0&ndash;25, 25&ndash;50, &ge; 50</dd><dt>cell</dt><dd>bush steps in the cell &divide; all steps in the cell</dd><dt>caveat</dt><dd>columns bin the <em>contemporaneous</em> wound, which is the agent's own doing — this shows the wound-dwell link is not merely a proxy for elapsed time, but it is not a causal estimate. The causal handle is the randomised start injury, reported separately</dd></dl></div>
+<details class="samples"><summary>Data behind this figure &mdash; 189,906,610 of 189,906,610 (100.0%)</summary><div class="sbox"><table><thead><tr><th class="txt">what</th><th>used</th><th>available</th><th>share</th><th class="txt">why this subset</th></tr></thead><tbody><tr><td class="txt">action steps</td><td>189,906,610</td><td>189,906,610</td><td>100.0%</td><td class="txt">no conditioning; every step falls in some cell</td></tr></tbody></table></div></details>
 </figure>
 
 <h3>Approaching death</h3>
 <div class="motive"><b>Why this analysis</b>Clinical accounts of protective behaviour differ on what happens near the extreme &mdash; whether protective behaviour keeps rising or gives way. The environment has a hard lethal ceiling, so we can simply look.</div>
 <figure class="panel">
-  <div class="fignum">Figure 11 &mdash; hiding as the wound nears fatal</div>
+  <div class="fignum">Figure 14 &mdash; hiding as the wound nears fatal</div>
   <div id="lethal"></div>
   <figcaption>Hiding rises with the wound up to about three-quarters of fatal, then <strong>falls
   back</strong> as death approaches. Whatever the agent does when nearly dead, it is not seeking
   more cover.</figcaption>
 
 <div class="method"><b>How this was computed</b><dl><dt>bins</dt><dd><code>injury_level</code> at 0, 0&ndash;25, 25&ndash;50, 50&ndash;75, 75&ndash;90, 90&ndash;100, where 100 is fatal</dd><dt>conditioning</dt><dd>no predator within 2 tiles</dd><dt>cell size</dt><dd>the top bin holds 140,000 steps, the smallest reported anywhere in this document; all others exceed a million</dd></dl></div>
+<details class="samples"><summary>Data behind this figure &mdash; 175,100,000 of 189,906,610 (92.2%)</summary><div class="sbox"><table><thead><tr><th class="txt">what</th><th>used</th><th>available</th><th>share</th><th class="txt">why this subset</th></tr></thead><tbody><tr><td class="txt">steps with no predator within 2 tiles</td><td>175,100,000</td><td>189,906,610</td><td>92.2%</td><td class="txt">the same exclusion as Figure 12, reconstructed and rounded the same way</td></tr></tbody></table></div></details>
 </figure>
 
 <h3>What kind of content does the signal carry?</h3>
@@ -496,13 +621,14 @@ environment is built around: a bush is safe and holds no food, so time spent hid
 spent eating.</p>
 <div class="motive"><b>Why this analysis</b>The same confound check as for injury, applied to hunger. The raw hunger-hiding association is enormous, so before interpreting it we need to know whether it survives holding elapsed time constant.</div>
 <figure class="panel">
-  <div class="fignum">Figure 12 &mdash; hiding by hunger and by how far into the episode</div>
+  <div class="fignum">Figure 15 &mdash; hiding by hunger and by how far into the episode</div>
   <div id="hmnut"></div>
   <figcaption>The pattern here is enormous and it does <em>not</em> wash out with elapsed time
   &mdash; a starving agent hides far more in every band. Read naively that says hunger drives
   hiding. It runs the other way.</figcaption>
 
-<div class="method"><b>How this was computed</b><dl><dt>rows</dt><dd>the same elapsed-step bands as Figure 10</dd><dt>columns</dt><dd><code>nutrition</code> at that step: &lt; 25, 25&ndash;50, 50&ndash;75, &ge; 75</dd><dt>cell</dt><dd>bush steps &divide; all steps in the cell</dd><dt>correction</dt><dd>an earlier draft read this figure's first row as showing randomised hunger has no immediate effect. It does not show that — the columns bin contemporaneous nutrition, not the randomised draw. Binned correctly by the assigned start value, bush hiding runs 16.4% to 21.4%, the opposite direction to the observational gradient</dd></dl></div>
+<div class="method"><b>How this was computed</b><dl><dt>rows</dt><dd>the same elapsed-step bands as Figure 13</dd><dt>columns</dt><dd><code>nutrition</code> at that step: &lt; 25, 25&ndash;50, 50&ndash;75, &ge; 75</dd><dt>cell</dt><dd>bush steps &divide; all steps in the cell</dd><dt>correction</dt><dd>an earlier draft read this figure's first row as showing randomised hunger has no immediate effect. It does not show that — the columns bin contemporaneous nutrition, not the randomised draw. Binned correctly by the assigned start value, bush hiding runs 16.4% to 21.4%, the opposite direction to the observational gradient</dd></dl></div>
+<details class="samples"><summary>Data behind this figure &mdash; 189,906,610 of 189,906,610 (100.0%)</summary><div class="sbox"><table><thead><tr><th class="txt">what</th><th>used</th><th>available</th><th>share</th><th class="txt">why this subset</th></tr></thead><tbody><tr><td class="txt">action steps</td><td>189,906,610</td><td>189,906,610</td><td>100.0%</td><td class="txt">no conditioning; every step falls in some cell</td></tr></tbody></table></div></details>
 </figure>
 
 <div class="panel">
@@ -532,7 +658,7 @@ difference between them is the agent, never the world.</p>
 
 <div class="motive"><b>Why this analysis</b>Every result up to here comes from one trained agent. If different agents behave very differently, none of it generalises. Because all ten see the identical set of worlds, any difference between them is the agent and not the environment &mdash; which is a much cleaner comparison than usual.</div>
 <figure class="panel">
-  <div class="fignum">Figure 13 &mdash; the ten agents</div>
+  <div class="fignum">Figure 16 &mdash; the ten agents</div>
   <div id="runs"></div>
   <figcaption>Each dot is one trained agent. They spread over about three points of bush hiding and
   ten steps of survival. For scale, the <em>world</em> moves those same quantities far further: going
@@ -541,11 +667,12 @@ difference between them is the agent, never the world.</p>
   below.</figcaption>
 
 <div class="method"><b>How this was computed</b><dl><dt>each dot</dt><dd>one trained agent, aggregated over its own million episodes</dd><dt>pairing</dt><dd>all ten replay the identical 1,000,000 world draws — verified by comparing every exogenous column across runs — so differences are the agent, never the world</dd><dt>shading</dt><dd><code>recovery_accel_rate</code>, read from each run's own config. The real values are 0, 0.3, 0.5, 0.7, 0.9, 1.0, 1.2, 1.5, 2.0, 2.7 — not the linear ramp an earlier version assumed</dd></dl></div>
+<details class="samples"><summary>Data behind this figure &mdash; 10,000,000 of 10,000,000 (100.0%)</summary><div class="sbox"><table><thead><tr><th class="txt">what</th><th>used</th><th>available</th><th>share</th><th class="txt">why this subset</th></tr></thead><tbody><tr><td class="txt">episodes, per agent</td><td>1,000,000</td><td>1,000,000</td><td>100.0%</td><td class="txt">each of the ten agents replays the identical 1,000,000 world draws, so a difference between dots is the agent and never the world</td></tr><tr><td class="txt">episodes across all ten agents</td><td>10,000,000</td><td>10,000,000</td><td>100.0%</td><td class="txt">ten agents x one million</td></tr></tbody></table></div></details>
 </figure>
 
 <div class="motive"><b>Why this analysis</b>The scatter shows the agents differ, but by how much compared with everything else? Since both the agent and the environment are deterministic, the variation can be split exactly rather than estimated &mdash; so we can put a precise number on how much choosing a different trained agent actually matters.</div>
 <figure class="panel">
-  <div class="fignum">Figure 14 &mdash; where the variation comes from</div>
+  <div class="fignum">Figure 17 &mdash; where the variation comes from</div>
   <div id="var"></div>
   <figcaption>Both agent and world are fully deterministic, so this is not a sample &mdash; it is
   the complete table, and it splits exactly. The world accounts for nearly everything. <em>Which</em>
@@ -553,6 +680,7 @@ difference between them is the agent, never the world.</p>
   agent does something particular in <em>this</em> world" &mdash; is enormous.</figcaption>
 
 <div class="method"><b>How this was computed</b><dl><dt>why exact</dt><dd>both policy and environment are deterministic given (world, agent), so the 1,000,000 &times; 10 outcome table has no noise term and decomposes without residual</dd><dt>decomposition</dt><dd>total variance splits into the variance of the world means, the variance of the agent means, and the variance of the double-centred residual — world effect, agent effect, and their interaction</dd><dt>reading</dt><dd>the agent main effect asks whether agents differ on average; the interaction asks whether they differ world by world. Here the second is roughly 300&times; the first</dd></dl></div>
+<details class="samples"><summary>Data behind this figure &mdash; 10,000,000 of 10,000,000 (100.0%)</summary><div class="sbox"><table><thead><tr><th class="txt">what</th><th>used</th><th>available</th><th>share</th><th class="txt">why this subset</th></tr></thead><tbody><tr><td class="txt">(agent, world) outcomes</td><td>10,000,000</td><td>10,000,000</td><td>100.0%</td><td class="txt">the complete table rather than a sample: both policy and world are deterministic given the pair, so it decomposes with no residual term</td></tr></tbody></table></div></details>
 </figure>
 
 <div class="panel">
@@ -573,13 +701,14 @@ difference between them is the agent, never the world.</p>
 
 <div class="motive"><b>Why this analysis</b>Is the coupling between nociception and behaviour a property of this task, or an accident of one training run? Ten independently trained agents give a direct answer.</div>
 <figure class="panel">
-  <div class="fignum">Figure 15 &mdash; all ten respond to nociception the same way</div>
+  <div class="fignum">Figure 18 &mdash; all ten respond to nociception the same way</div>
   <div id="armpain"></div>
   <figcaption>Share of time hidden against nociception level, one line per trained agent. The
   shape is the same in all ten &mdash; a shallow dip, then a steep climb. Whatever this coupling is,
   it is a property of the task rather than of any single training run.</figcaption>
 
-<div class="method"><b>How this was computed</b><dl><dt>per agent</dt><dd>the same nociception reconstruction as Figure 9, run independently on each of the ten stores using that run's own kernel settings</dd><dt>conditioning</dt><dd>none — all action steps, so this is the raw shape rather than the proximity-controlled version</dd><dt>slopes</dt><dd>top bin minus the 0&ndash;8 bin, ranging +19.7 to +27.5 pp across the ten agents</dd></dl></div>
+<div class="method"><b>How this was computed</b><dl><dt>per agent</dt><dd>the same nociception reconstruction as Figure 12, run independently on each of the ten stores using that run's own kernel settings</dd><dt>conditioning</dt><dd>none — all action steps, so this is the raw shape rather than the proximity-controlled version</dd><dt>slopes</dt><dd>top bin minus the 0&ndash;8 bin, ranging +19.7 to +27.5 pp across the ten agents</dd></dl></div>
+<details class="samples"><summary>Data behind this figure &mdash; 189,906,610 of 189,906,610 (100.0%)</summary><div class="sbox"><table><thead><tr><th class="txt">what</th><th>used</th><th>available</th><th>share</th><th class="txt">why this subset</th></tr></thead><tbody><tr><td class="txt">action steps, per agent</td><td>189,906,610</td><td>189,906,610</td><td>100.0%</td><td class="txt">unconditioned, so this is the raw shape rather than the proximity-controlled one</td></tr><tr><td class="txt">agents</td><td>10</td><td>10</td><td>100.0%</td><td class="txt">all ten arms of the rest-premium sweep</td></tr></tbody></table></div></details>
 </figure>
 
 <h2>8 &nbsp;Does a neuromodulator help?</h2>
@@ -599,7 +728,7 @@ not. We ran all four pairs through the same million worlds each.</p>
 
 <div class="motive"><b>Why this analysis</b>The neuromodulator was built on a specific hope: an agent that can adjust its perception according to its internal state should respond to the world more appropriately. The rabbit false alarm is the sharpest available test of that, because it is a case where the agent's current perception is demonstrably leading it astray.</div>
 <figure class="panel">
-  <div class="fignum">Figure 16 &mdash; four pairs, and they do not agree</div>
+  <div class="fignum">Figure 19 &mdash; four pairs, and they do not agree</div>
   <div id="nmn"></div>
   <figcaption>How much each agent leans on the <em>useful</em> smell (a real predator's) relative
   to the <em>misleading</em> one (a rabbit's). Above the line means it weights the real threat more.
@@ -607,6 +736,7 @@ not. We ran all four pairs through the same million worlds each.</p>
   modulator has <strong>no effect you can carry from one setup to another</strong>.</figcaption>
 
 <div class="method"><b>How this was computed</b><dl><dt>the ratio</dt><dd>the GLM coefficient on predator olfactory identity divided by the coefficient on rabbit olfactory identity, both from the same model on the same episodes. Above 1 means the agent weights the real cue more</dd><dt>pairing</dt><dd>within each pair the two runs differ only in the seven keys of <code>agent.modulation</code> — environment, sensory, body, perceptual-noise and training configs are byte-identical, both from seed 42, both replayed at a step-matched checkpoint over the same million worlds</dd><dt>step matching</dt><dd>b04 pairs match at exactly 45,700,001 steps (zero apart); b03 at 43,600,044 vs 43,600,085 (41 apart)</dd><dt>modulation verified live</dt><dd>the two agents' behaviour diverges in 2,931 of the first 5,000 paired episodes, so the modulated checkpoint is not being silently loaded into an unmodulated model</dd></dl></div>
+<details class="samples"><summary>Data behind this figure &mdash; 8 of 8 (100.0%)</summary><div class="sbox"><table><thead><tr><th class="txt">what</th><th>used</th><th>available</th><th>share</th><th class="txt">why this subset</th></tr></thead><tbody><tr><td class="txt">agents, as four matched pairs</td><td>8</td><td>8</td><td>100.0%</td><td class="txt">all eight of the modulator runs. Note these are a DIFFERENT population from the ten rest-premium arms of Figures 16-18, not a subset of them: within a pair the two runs differ only in the seven modulation keys, and both are replayed at a step-matched checkpoint over the same million worlds</td></tr></tbody></table></div></details>
 </figure>
 
 <p>The split is not random, though. Both pairs where the modulator <em>helped</em> came from a world
@@ -615,9 +745,9 @@ where predators can pounce from two or three tiles away. And the survival effect
 different line entirely &mdash; by the return estimator the training used (GAE against Monte-Carlo). With only two
 pairs on each side, that could still be coincidence, but it is the pattern to watch.</p>
 
-<div class="motive"><b>Why this analysis</b>If the modulator does not reliably change average behaviour, does it change anything at all? Splitting the variation exactly, as in Figure 14, answers that without relying on any single comparison.</div>
+<div class="motive"><b>Why this analysis</b>If the modulator does not reliably change average behaviour, does it change anything at all? Splitting the variation exactly, as in Figure 17, answers that without relying on any single comparison.</div>
 <figure class="panel">
-  <div class="fignum">Figure 17 &mdash; what survives all four pairs</div>
+  <div class="fignum">Figure 20 &mdash; what survives all four pairs</div>
   <div id="nmnvar"></div>
   <figcaption>One result holds everywhere: the modulator's <em>average</em> effect never exceeds
   three tenths of one percent of the variation, while its interaction with the world &mdash; doing
@@ -625,7 +755,8 @@ pairs on each side, that could still be coincidence, but it is the pattern to wa
   <em>which world produces which behaviour</em> and reliably does almost nothing on average. This is
   the same shape the ten agents in section 7 produced.</figcaption>
 
-<div class="method"><b>How this was computed</b><dl><dt>decomposition</dt><dd>identical to Figure 14 but with two agents instead of ten</dd><dt>reading</dt><dd>the modulator's own share never exceeds 0.27% in any pair, while its interaction with the world runs 25&ndash;32% for bush hiding and 8&ndash;12% for survival</dd></dl></div>
+<div class="method"><b>How this was computed</b><dl><dt>decomposition</dt><dd>identical to Figure 17 but with two agents instead of ten</dd><dt>reading</dt><dd>the modulator's own share never exceeds 0.27% in any pair, while its interaction with the world runs 25&ndash;32% for bush hiding and 8&ndash;12% for survival</dd></dl></div>
+<details class="samples"><summary>Data behind this figure &mdash; 8 of 8 (100.0%)</summary><div class="sbox"><table><thead><tr><th class="txt">what</th><th>used</th><th>available</th><th>share</th><th class="txt">why this subset</th></tr></thead><tbody><tr><td class="txt">agents, as four matched pairs</td><td>8</td><td>8</td><td>100.0%</td><td class="txt">all eight of the modulator runs. Note these are a DIFFERENT population from the ten rest-premium arms of Figures 16-18, not a subset of them: within a pair the two runs differ only in the seven modulation keys, and both are replayed at a step-matched checkpoint over the same million worlds</td></tr></tbody></table></div></details>
 </figure>
 
 <h2>9 &nbsp;The measure built for the modulator</h2>
@@ -649,7 +780,7 @@ second is a cause.</div>
 
 <div class="motive"><b>Why this analysis</b>The comparisons above ask whether the modulated agent behaves differently on average, which is arguably the wrong question. A modulator adjusts perception <em>according to internal state</em>, so its real prediction is an interaction: the agent's reaction to a nearby predator should depend more on how hurt it is. This is the measure built specifically to test that, and it is intended to be re-run against future versions of the modulator.</div>
 <figure class="panel">
-  <div class="fignum">Figure 18 &mdash; predator-proximity effect against randomly assigned injury</div>
+  <div class="fignum">Figure 21 &mdash; predator-proximity effect against randomly assigned injury</div>
   <div id="ctx"></div>
   <div class="key">
     <span><i class="sw" style="background:var(--muted);opacity:.6"></i>no modulator</span>
@@ -660,11 +791,12 @@ second is a cause.</div>
   wound was assigned at random it is a genuine cause, present in all eight agents.</figcaption>
 
 <div class="method"><b>How this was computed</b><dl><dt>predator-proximity effect</dt><dd>P(in bush | a predator within 2 tiles) &minus; P(in bush | none), computed separately within each level of internal state. A modulator that gates perception by state should make this vary more across states</dd><dt>this figure is the causal version</dt><dd>state is binned by the injury the world assigned at episode start, before the agent acted, and only the first 25 steps are counted. The observational version — binning by the agent's own current nociception — is computed too and disagrees in sign, which is why the two are kept apart</dd><dt>state bins</dt><dd>reconstructed nociception observation at 0, 0&ndash;8, 8&ndash;18, 18&ndash;32, &gt; 32. The zero bin is excluded from the trend because it is &ldquo;no signal at all&rdquo; rather than a level of signal, and it dominates the step count</dd><dt>tool</dt><dd><code>scripts/analysis/context_dependence.py</code>, run-agnostic and re-runnable against future checkpoints</dd></dl></div>
+<details class="samples"><summary>Data behind this figure &mdash; 16,969,747 of 186,754,143 (9.1%)</summary><div class="sbox"><table><thead><tr><th class="txt">what</th><th>used</th><th>available</th><th>share</th><th class="txt">why this subset</th></tr></thead><tbody><tr><td class="txt">steps in the randomised-injury slice, per agent</td><td>16,969,747</td><td>186,754,143</td><td>9.1%</td><td class="txt">these two figures use the CAUSAL version: injury assigned by the world at episode start, first 25 steps only. The available column is the observational slice - binning by the agent's own current nociception - which is kept apart because it disagrees in sign. Across the eight agents the used figure runs 16,969,747 to 18,696,834 depending on the agent; the smallest is shown so the share is not flattered</td></tr><tr><td class="txt">agents</td><td>8</td><td>8</td><td>100.0%</td><td class="txt">four matched pairs, modulated against unmodulated</td></tr></tbody></table></div></details>
 </figure>
 
 <div class="motive"><b>Why this analysis</b>The figure above shows the shape of the effect; this puts a single number on it, so a future version of the modulator can be compared against this baseline rather than eyeballed.</div>
 <figure class="panel scroll">
-<div class="fignum">Figure 19 &mdash; does the modulator widen the effect?</div>
+<div class="fignum">Figure 22 &mdash; does the modulator widen the effect?</div>
 <table>
 <thead><tr><th>pair</th><th>no modulator</th><th>with modulator</th><th>difference</th></tr></thead>
 <tbody id="ctxtab"></tbody>
@@ -675,6 +807,7 @@ is for. <strong>The modulated agent is wider in all four pairs.</strong> This is
 directionally consistent result across all four in this entire comparison.</figcaption>
 
 <div class="method"><b>How this was computed</b><dl><dt>the number</dt><dd>the span of the predator-proximity effect across state bins — its maximum minus its minimum — in percentage points. Wider means internal state matters more to the agent's reaction</dd><dt>caveat</dt><dd>effects are 0.2 to 1.4 pp, and all eight agents come from seed 42, so this is not attributable to the modulator. It is a baseline to re-run against</dd></dl></div>
+<details class="samples"><summary>Data behind this figure &mdash; 16,969,747 of 186,754,143 (9.1%)</summary><div class="sbox"><table><thead><tr><th class="txt">what</th><th>used</th><th>available</th><th>share</th><th class="txt">why this subset</th></tr></thead><tbody><tr><td class="txt">steps in the randomised-injury slice, per agent</td><td>16,969,747</td><td>186,754,143</td><td>9.1%</td><td class="txt">these two figures use the CAUSAL version: injury assigned by the world at episode start, first 25 steps only. The available column is the observational slice - binning by the agent's own current nociception - which is kept apart because it disagrees in sign. Across the eight agents the used figure runs 16,969,747 to 18,696,834 depending on the agent; the smallest is shown so the share is not flattered</td></tr><tr><td class="txt">agents</td><td>8</td><td>8</td><td>100.0%</td><td class="txt">four matched pairs, modulated against unmodulated</td></tr></tbody></table></div></details>
 </figure>
 
 <p>The effect is small &mdash; a few tenths of a point to about one and a half. And all eight
@@ -1218,4 +1351,99 @@ heat("hits",D.hits.hide,["feels nothing","a little","some","a lot","severe","ext
    tr.innerHTML=`<td>${nm}</td><td class="num">${a.toFixed(1)}</td>`+
     `<td class="num">${b.toFixed(1)}</td><td class="num lo">+${d.toFixed(1)}</td>`;
    tb.appendChild(tr);});})();
+</script>
+<script>
+/* Merged from the environment-factor study. Every number here is derived
+   from D.curves above by scripts/analysis/studies/trajectory_factors/
+   merge_env_into_a01.py - none of it is typed by hand. */
+const TM={"predator count": {"labels": ["0", "1", "2"], "rate": [7.93, 32.17, 56.61], "steps": [32.96, 33.04, 28.7], "surv": [415.6, 102.7, 50.7], "gloss": "how many predators are in the scene", "d": [614, -13, -88]}, "predator detection range": {"labels": ["1", "2", "3", "4", "5", "6", "7"], "rate": [19.99, 26.73, 33.19, 40.07, 47.1, 52.17, 56.58], "steps": [48.48, 37.61, 33.79, 30.89, 28.78, 26.19, 25.52], "surv": [242.5, 140.7, 101.8, 77.1, 61.1, 50.2, 45.1], "gloss": "how far a predator can see", "d": [183, -47, -81]}, "bushes available": {"labels": ["4", "5", "6", "7", "8", "9", "10"], "rate": [11.87, 13.84, 15.51, 16.95, 18.2, 19.27, 20.34], "steps": [21.81, 25.91, 29.33, 32.1, 34.87, 37.33, 39.58], "surv": [183.7, 187.2, 189.1, 189.4, 191.6, 193.7, 194.6], "gloss": "how many bushes exist", "d": [71, 82, 6]}, "predator attack delay": {"labels": ["1", "2", "3"], "rate": [30.61, 31.96, 33.58], "steps": [27.12, 33.65, 38.35], "surv": [88.6, 105.3, 114.2], "gloss": "how long it pauses before striking", "d": [10, 41, 29]}, "hiding predators": {"labels": ["2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12"], "rate": [16.26, 16.42, 16.42, 16.47, 16.47, 16.57, 16.63, 16.82, 16.8, 16.97, 17.14], "steps": [33.15, 32.77, 32.41, 32.45, 31.74, 31.73, 31.13, 31.18, 30.54, 30.12, 29.96], "surv": [203.9, 199.6, 197.4, 197.0, 192.7, 191.5, 187.2, 185.4, 181.8, 177.5, 174.8], "gloss": "how many are buried out of sight", "d": [5, -10, -14]}, "predator attack range": {"labels": ["2", "3"], "rate": [32.88, 31.38], "steps": [35.87, 30.22], "surv": [109.1, 96.3], "gloss": "how far it can pounce", "d": [-5, -16, -12]}, "predator max stamina": {"labels": ["30-50", "50-70", "70-90", "90-110", "110-130", "130-151"], "rate": [32.2, 32.33, 32.0, 32.17, 32.03, 32.3], "steps": [32.84, 33.2, 33.09, 32.75, 33.34, 32.95], "surv": [102.0, 102.7, 103.4, 101.8, 104.1, 102.0], "gloss": "how long it can keep chasing", "d": [0, 0, 0]}};
+
+const CV = n => "var(" + n + ")";
+
+/* FIGURE 4 - one factor, three ways of counting. Indexed, because the divergence IS the point. */
+(function(){
+  const T = TM["predator detection range"], N = T.labels.length;
+  const W=700, H=316, ml=54, mr=170, mt=24, mb=72, s=svg(W,H), pw=W-ml-mr, ph=H-mt-mb;
+  const idx = a => a.map(v => v / a[0] * 100), YMAX = 300;
+  const Y = v => H - mb - (Math.min(v, YMAX) / YMAX) * ph, X = j => ml + pw * j / (N - 1);
+  for (const g of [0,100,200,300]) {
+    s.appendChild(el("line",{x1:ml,y1:Y(g),x2:ml+pw,y2:Y(g),
+      style:"stroke:"+CV(g===100?"--rule":"--grid"), "stroke-width":g===100?1.4:.6}));
+    s.appendChild(txt(ml-7, Y(g)+3, g, "ax", "end"));
+  }
+  const LBL = [];
+  const SER = [["share of the episode hidden","--cover",idx(T.rate),T.rate,"%",1],
+               ["total steps spent in a bush","--false",idx(T.steps),T.steps,"",1],
+               ["steps survived","--warm",idx(T.surv),T.surv,"",0]];
+  SER.forEach(function(row){
+    const name=row[0], cvar=row[1], ix=row[2], raw=row[3], unit=row[4], dec=row[5];
+    let d=""; ix.forEach((v,j) => d += (j?"L":"M") + X(j) + " " + Y(v));
+    s.appendChild(el("path",{d:d, fill:"none", style:"stroke:"+CV(cvar),
+      "stroke-width":2.4, "stroke-linejoin":"round"}));
+    ix.forEach((v,j) => s.appendChild(el("circle",{cx:X(j), cy:Y(v), r:2.8,
+      style:"fill:"+CV(cvar)})));
+    LBL.push({y: Y(ix[N-1]), name: name, cvar: cvar,
+              val: raw[0].toFixed(dec)+unit+" → "+raw[N-1].toFixed(dec)+unit});
+  });
+  /* Two of these three lines finish close together, and each label is two lines tall. Push them
+     apart rather than trusting the data to stay conveniently spaced - the label block is 30px and
+     the gap between "total steps" and "steps survived" is 25px on this data alone. */
+  LBL.sort((a,b) => a.y - b.y);
+  for (let i = 1; i < LBL.length; i++)
+    if (LBL[i].y - LBL[i-1].y < 32) LBL[i].y = LBL[i-1].y + 32;
+  LBL.forEach(function(L){
+    s.appendChild(txt(ml+pw+10, L.y-3, L.name, "lbl", null, CV(L.cvar)));
+    s.appendChild(txt(ml+pw+10, L.y+11, L.val, "ax", null, CV("--muted")));
+  });
+  T.labels.forEach((l,j) => s.appendChild(txt(X(j), H-mb+16, l, "ax", "middle")));
+  xlab(s, ml+pw/2, H-36, "how far the predator can see, in tiles  →");
+  ylab(s, 15, mt+ph/2, "each measure indexed to 100 at range 1");
+  put("three", s);
+})();
+
+/* FIGURE 5 - the same three measures, every factor, low setting to high. */
+(function(){
+  const K = Object.keys(TM), W=700, L=186, gh=16, gap=3, mt=44;
+  const grp = 3*gh + 2*gap, pad = 16;
+  const H = mt + K.length*(grp+pad) + 54, xw = W-L-34, LO=-100, HI=200;
+  const s = svg(W,H);
+  const X = v => L + (Math.max(LO, Math.min(HI, v)) - LO) / (HI - LO) * xw;
+  for (const g of [-100,-50,0,50,100,150,200]) {
+    s.appendChild(el("line",{x1:X(g), y1:mt-12, x2:X(g), y2:H-46,
+      style:"stroke:"+CV(g===0?"--rule":"--grid"), "stroke-width":g===0?1.4:.5}));
+    s.appendChild(txt(X(g), H-32, (g>0?"+":"")+g+"%", "ax", "middle"));
+  }
+  const SER = [["share of the episode hidden","--cover"],
+               ["total steps spent in a bush","--false"],
+               ["steps survived","--warm"]];
+  K.forEach(function(k,i){
+    const top = mt + i*(grp+pad), t = TM[k];
+    s.appendChild(txt(L-11, top+12, k, "lbl", "end"));
+    s.appendChild(txt(L-11, top+25, t.gloss, "ax", "end", CV("--muted")));
+    t.d.forEach(function(v,b){
+      const y = top + b*(gh+gap), x0 = X(0), x1 = X(v), clipped = (v>HI || v<LO);
+      s.appendChild(el("rect",{x:Math.min(x0,x1), y:y,
+        width:Math.max(Math.abs(x1-x0), 1.5), height:gh, style:"fill:"+CV(SER[b][1]), rx:1}));
+      /* A clipped bar must SAY it is clipped. An axis that silently truncates the largest effect
+         on the page would be the very failure this section is about. */
+      if (clipped) { for (const o of [0,4]) s.appendChild(el("line",
+        {x1:x1-o-4, y1:y, x2:x1-o+2, y2:y+gh, style:"stroke:"+CV("--bg"), "stroke-width":2})); }
+      /* A clipped bar's label cannot sit BEYOND the clip: there is no axis left to put it on,
+         and it runs off the drawing. Print it inside the bar instead, the way Figure 17 prints
+         its shares - white on the fill, right-aligned at the clipped end. */
+      if (clipped) {
+        s.appendChild(txt(x1-9, y+gh-4, (v>0?"+":"")+v+"% (off scale)", "ax", "end", CV("--bg")));
+      } else {
+        s.appendChild(txt(x1 + (v>=0?7:-7), y+gh-4, (v>0?"+":"")+v+"%", "ax",
+                          v>=0?"start":"end"));
+      }
+    });
+  });
+  SER.forEach(function(c,j){ const x = L + j*168;
+    s.appendChild(el("rect",{x:x, y:10, width:10, height:10, style:"fill:"+CV(c[1]), rx:2}));
+    s.appendChild(txt(x+15, 19, c[0], "ax"));
+  });
+  xlab(s, L+xw/2, H-14, "change from the factor's lowest setting to its highest");
+  put("tri", s);
+})();
 </script>
