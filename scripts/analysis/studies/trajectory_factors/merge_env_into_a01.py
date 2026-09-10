@@ -22,7 +22,7 @@ project - the store column is `n_hide` - so the project's own term is used.
 Refuses to run twice, so a second invocation cannot double-renumber the figures.
 """
 from __future__ import annotations
-import json, os, re, sys
+import json, math, os, re, sys
 
 ROOT = os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(__file__)),
                                     "..", "..", "..", ".."))
@@ -31,6 +31,16 @@ PAGE = "docs/experiments/active/trajectory_factors/a01_hiding_drivers.html"
 MARKER = 'id="three"'
 SHIFT_FROM, SHIFT_BY = 4, 3      # old Figures 4..19 become 7..22
 TOTAL_EPISODES = 1_000_000
+
+
+def halfup(x: float) -> int:
+    """Round half AWAY from zero, once, in one place.
+
+    Python's round() is banker's and JavaScript's toFixed() is half-up, so the same 242.5 became
+    242 in the table and 243 in the chart label - one screen apart, in a page whose whole subject
+    is that two ways of counting the same thing disagree.
+    """
+    return int(math.floor(x + 0.5)) if x >= 0 else -int(math.floor(-x + 0.5))
 
 
 def fail(msg):
@@ -95,9 +105,9 @@ def build_table(M):
     charts (see the chain table), so a bare table under a paragraph would be a second idiom.
 
     Deliberately UNCOLOURED. The obvious move is to tint rises and falls, and this page already
-    has `.hi`/`.lo` for that - but `.hi` is `--false`, the same red Figure 5 spends on "total bush
-    steps". Colouring a rise red here would make one colour mean two things on a single screen,
-    which is the defect the figures were just built to avoid. The signs carry the direction.
+    has `.hi`/`.lo` for that - but `.hi` is `--false`, and Figure 2 one screen up already spends
+    red on "this factor moves hiding DOWN". A colour cannot pick up a second meaning one screen
+    later. The signs carry the direction.
     """
     rows = []
     for m in M:
@@ -108,7 +118,7 @@ def build_table(M):
             f'<td class="num">{signed(m["d_rate"])}%</td>'
             f'<td class="num">{st[0]:.1f} &rarr; {st[-1]:.1f}</td>'
             f'<td class="num">{signed(m["d_steps"])}%</td>'
-            f'<td class="num">{sv[0]:,.0f} &rarr; {sv[-1]:,.0f}</td>'
+            f'<td class="num">{halfup(sv[0]):,} &rarr; {halfup(sv[-1]):,}</td>'
             f'<td class="num">{signed(m["d_surv"])}%</td></tr>')
     return (
         '<figure class="panel scroll">\n'
@@ -123,9 +133,9 @@ def build_table(M):
         'and at its highest, each followed by the change between them. The disagreement drawn in '
         'Figure&nbsp;5 reads here as a rise in one change column beside a fall in another &mdash; '
         'predator count, detection range and hiding predators each gain share while losing total. '
-        'Deliberately uncoloured: red already means &ldquo;total bush steps&rdquo; in '
-        'Figure&nbsp;5, and reusing it for &ldquo;a rise&rdquo; would give one colour two '
-        'meanings on the same screen.</figcaption>\n'
+        'Deliberately uncoloured: this page already spends red on &ldquo;moves hiding '
+        'DOWN&rdquo; in Figure&nbsp;2, and a colour cannot pick up a second meaning one '
+        'screen later.</figcaption>\n'
         '<div class="method"><b>How this was computed</b><dl>'
         '<dt>the three measures</dt><dd>share of the episode spent hidden, total steps spent in a '
         'bush, and steps survived &mdash; defined exactly as in Figure&nbsp;4</dd>'
@@ -158,18 +168,17 @@ const CV = n => "var(" + n + ")";
     s.appendChild(txt(ml-7, Y(g)+3, g, "ax", "end"));
   }
   const LBL = [];
-  const SER = [["share of the episode hidden","--cover",idx(T.rate),T.rate,"%",1],
-               ["total steps spent in a bush","--false",idx(T.steps),T.steps,"",1],
-               ["steps survived","--warm",idx(T.surv),T.surv,"",0]];
+  const SER = [["share of the episode hidden","--cover",idx(T.rate),T.ends[0]],
+               ["total steps spent in a bush","--muted",idx(T.steps),T.ends[1]],
+               ["steps survived","--warm",idx(T.surv),T.ends[2]]];
   SER.forEach(function(row){
-    const name=row[0], cvar=row[1], ix=row[2], raw=row[3], unit=row[4], dec=row[5];
+    const name=row[0], cvar=row[1], ix=row[2], ends=row[3];
     let d=""; ix.forEach((v,j) => d += (j?"L":"M") + X(j) + " " + Y(v));
     s.appendChild(el("path",{d:d, fill:"none", style:"stroke:"+CV(cvar),
       "stroke-width":2.4, "stroke-linejoin":"round"}));
     ix.forEach((v,j) => s.appendChild(el("circle",{cx:X(j), cy:Y(v), r:2.8,
       style:"fill:"+CV(cvar)})));
-    LBL.push({y: Y(ix[N-1]), name: name, cvar: cvar,
-              val: raw[0].toFixed(dec)+unit+" → "+raw[N-1].toFixed(dec)+unit});
+    LBL.push({y: Y(ix[N-1]), name: name, cvar: cvar, val: ends});
   });
   /* Two of these three lines finish close together, and each label is two lines tall. Push them
      apart rather than trusting the data to stay conveniently spaced - the label block is 30px and
@@ -189,7 +198,7 @@ const CV = n => "var(" + n + ")";
 
 /* FIGURE 5 - the same three measures, every factor, low setting to high. */
 (function(){
-  const K = Object.keys(TM), W=700, L=186, gh=16, gap=3, mt=44;
+  const K = Object.keys(TM), W=700, L=202, gh=16, gap=3, mt=44;
   const grp = 3*gh + 2*gap, pad = 16;
   const H = mt + K.length*(grp+pad) + 54, xw = W-L-34, LO=-100, HI=200;
   const s = svg(W,H);
@@ -200,7 +209,7 @@ const CV = n => "var(" + n + ")";
     s.appendChild(txt(X(g), H-32, (g>0?"+":"")+g+"%", "ax", "middle"));
   }
   const SER = [["share of the episode hidden","--cover"],
-               ["total steps spent in a bush","--false"],
+               ["total steps spent in a bush","--muted"],
                ["steps survived","--warm"]];
   K.forEach(function(k,i){
     const top = mt + i*(grp+pad), t = TM[k];
@@ -240,6 +249,9 @@ def build_js(M):
                      "rate": [round(x, 2) for x in m["rate"]],
                      "steps": [round(x, 2) for x in m["steps"]],
                      "surv": m["surv"], "gloss": m["gloss"],
+                     "ends": [f'{m["rate"][0]:.1f}% \u2192 {m["rate"][-1]:.1f}%',
+                              f'{m["steps"][0]:.1f} \u2192 {m["steps"][-1]:.1f}',
+                              f'{halfup(m["surv"][0]):,} \u2192 {halfup(m["surv"][-1]):,}'],
                      "d": [round(m["d_rate"]), round(m["d_steps"]), round(m["d_surv"])]}
           for m in M}
     return ("<script>\n/* Merged from the environment-factor study. Every number here is derived\n"
@@ -274,9 +286,9 @@ why it is carried here as an outcome in its own right rather than as a denominat
   <figcaption><b>Horizontal axis:</b> how far the predator can see, in tiles, from 1 to 7.
   <b>Vertical axis:</b> each measure indexed to 100 at range&nbsp;1 so that all three share one
   scale; the raw values are printed beside each line. Green is the share of the episode spent
-  hidden, red the total number of steps spent in a bush, amber the number of steps survived. Green
-  rises to __IDXR__, red falls to __IDXS__, amber falls to __IDXV__ &mdash; the agent hides
-  <em>more intensely</em> and <em>less in total</em>, because it is dead sooner. Read the red line
+  hidden, grey the total number of steps spent in a bush, amber the number of steps survived. Green
+  rises to __IDXR__, grey falls to __IDXS__, amber falls to __IDXV__ &mdash; the agent hides
+  <em>more intensely</em> and <em>less in total</em>, because it is dead sooner. Read the grey line
   on its own and you would conclude that dangerous predators make this agent hide less.</figcaption>
 <div class="method"><b>How this was computed</b><dl><dt>data used</dt><dd>the __NDR__ episodes with exactly one predator, __PCTDR__% of the 1,000,000 collected. Detection range belongs to a predator, so it is undefined when there is none and ambiguous when there are two</dd><dt>share hidden</dt><dd>total bush steps in the bin &divide; total action steps in the bin &mdash; the same quantity drawn green in Figure&nbsp;3, with the spawn row (<code>t=0</code>) excluded from both</dd><dt>total bush steps</dt><dd>the share above &times; the mean episode length in the bin. Derived rather than counted, because the stored aggregates behind this page hold the rate and the length but not the raw total. Against the earlier environment study, which counted the total directly and did <em>not</em> exclude the spawn row, the derivation agrees to within 0.27%</dd><dt>steps survived</dt><dd>mean episode length in the bin, in steps &mdash; the amber line of Figure&nbsp;3</dd><dt>indexing</dt><dd>each series divided by its own value at range&nbsp;1, then multiplied by 100. Indexing is what lets three quantities in three different units (one percentage, two step counts) be read against one axis. It shows relative movement only &mdash; the heights carry no absolute meaning, which is why the raw values are printed too</dd><dt>why this is causal</dt><dd>detection range is rolled at random by the environment before the agent acts, so comparing bins is a randomised contrast rather than an observed correlation</dd></dl></div>
 </figure>
@@ -291,12 +303,12 @@ __DISLIST__ &mdash; and those __NDIS__ include the two largest effects on this p
   <figcaption><b>Horizontal axis:</b> the change in each measure between the factor's lowest and
   highest setting, as a percentage of its value at the lowest. <b>Vertical axis:</b> the seven
   world settings, one group of three bars each, ordered by how much they move the share. Wherever
-  the green and the red bar point opposite ways, the two ways of counting disagree about what that
+  the green and the grey bar point opposite ways, the two ways of counting disagree about what that
   factor does. Predator count's green bar runs off the scale at +614% and is marked as clipped
   rather than quietly truncated. Note the flat case as well: <code>predator max stamina</code>
   moves nothing on any of the three, which is a real null rather than a measurement that
   failed.</figcaption>
-<div class="method"><b>How this was computed</b><dl><dt>the three bars</dt><dd>green is the share of the episode spent hidden, red the total steps spent in a bush, amber the steps survived &mdash; each read at the factor's lowest and highest setting, expressed as the percentage change between the two</dd><dt>data used</dt><dd>the four predator traits use only the __NTRAIT__ exactly-one-predator episodes, __PCTTRAIT__% of the million, for the reason given in Figure&nbsp;4. Predator count, bushes available and hiding predators are defined in every episode and use all 1,000,000. The bars are therefore comparable in unit, not in population</dd><dt>a caution on percentages</dt><dd>the percentage change in a rate depends on how small that rate started. Predator count's +614% is large partly because hiding starts at only __P0__% when no predator is present; the same change stated in percentage points is +__P0PP__ pp. The table below carries the underlying values so no reader is left with the ratio alone</dd><dt>why these seven</dt><dd>they are the settings the earlier environment-factor study covered. The full set of everything this world varies &mdash; twenty-five factors, including the agent's own starting state and every smell channel &mdash; is Figure&nbsp;2</dd></dl></div>
+<div class="method"><b>How this was computed</b><dl><dt>the three bars</dt><dd>green is the share of the episode spent hidden, grey the total steps spent in a bush, amber the steps survived &mdash; each read at the factor's lowest and highest setting, expressed as the percentage change between the two</dd><dt>data used</dt><dd>the four predator traits use only the __NTRAIT__ exactly-one-predator episodes, __PCTTRAIT__% of the million, for the reason given in Figure&nbsp;4. Predator count, bushes available and hiding predators are defined in every episode and use all 1,000,000. The bars are therefore comparable in unit, not in population</dd><dt>a caution on percentages</dt><dd>the percentage change in a rate depends on how small that rate started. Predator count's +614% is large partly because hiding starts at only __P0__% when no predator is present; the same change stated in percentage points is +__P0PP__ pp. The table below carries the underlying values so no reader is left with the ratio alone</dd><dt>why these seven</dt><dd>they are the settings the earlier environment-factor study covered. The full set of everything this world varies &mdash; twenty-five factors, including the agent's own starting state and every smell channel &mdash; is Figure&nbsp;2</dd></dl></div>
 </figure>
 
 __TABLE__
@@ -356,7 +368,7 @@ def main():
         else dis_names[0]
     n_trait = dr["n"]
     subs = {
-        "__SURV0__": f"{dr['surv'][0]:,.0f}",   "__SURV1__": f"{dr['surv'][-1]:,.0f}",
+        "__SURV0__": f"{halfup(dr['surv'][0]):,}", "__SURV1__": f"{halfup(dr['surv'][-1]):,}",
         "__RATE0__": f"{dr['rate'][0]:.0f}",    "__RATE1__": f"{dr['rate'][-1]:.0f}",
         "__IDXR__":  f"{idx(dr['rate']):.0f}",  "__IDXS__":  f"{idx(dr['steps']):.0f}",
         "__IDXV__":  f"{idx(dr['surv']):.0f}",

@@ -61,15 +61,21 @@ td.num{font-family:var(--mono);font-size:.83rem}
 .samples .sbox{overflow-x:auto;border-top:1px solid var(--rule)}
 /* fixed layout + width:100% makes the prose column WRAP rather than push the table wider than
    its box; only genuinely long single tokens can then cause a scroll. */
-.samples table{font-size:.75rem;table-layout:fixed;width:100%;min-width:34rem}
+/* NOT `table-layout:fixed` with percentage columns. Under fixed layout a `nowrap` cell whose
+   content exceeds its column neither wraps nor widens it - it paints straight into the next cell,
+   and at the 500px floor this fused three numbers into one string ("16,969,747186,754,1439.1%").
+   Auto layout lets each numeric column take the width its widest value actually needs; only the
+   prose column is given a floor, and it is the one column allowed to wrap. */
+/* NOT `table-layout:fixed` with percentage columns. Under fixed layout a `nowrap` cell whose
+   content exceeds its column neither wraps nor widens it - it paints straight into the next cell,
+   and at the 500px floor that fused three numbers into one string ("16,969,747186,754,1439.1%").
+   Auto layout lets each numeric column take the width its widest value needs; only the prose
+   column carries a floor, and it is the only column allowed to wrap. */
+.samples table{font-size:.75rem;width:100%}
 .samples th,.samples td{padding:.34rem .6rem;vertical-align:top;text-align:right;
   white-space:nowrap}
-.samples td.txt,.samples th.txt{text-align:left;white-space:normal;overflow-wrap:anywhere}
-.samples th:nth-child(1),.samples td:nth-child(1){width:26%}
-.samples th:nth-child(2),.samples td:nth-child(2),
-.samples th:nth-child(3),.samples td:nth-child(3){width:11%}
-.samples th:nth-child(4),.samples td:nth-child(4){width:8%}
-.samples th:nth-child(5),.samples td:nth-child(5){width:44%}
+.samples td.txt,.samples th.txt{text-align:left;white-space:normal;overflow-wrap:anywhere;
+  min-width:13rem}
 .samples thead th{font-size:.62rem;color:var(--muted)}
 .samples tbody tr:last-child td{border-bottom:0}
 
@@ -304,8 +310,8 @@ episode</em> spent in a bush says a keener predator makes the agent hide far mor
 <em>total steps</em> spent in a bush says the same predator makes it hide rather less. Both are
 arithmetically correct.</p>
 <p>They disagree because of the third measure. A predator that sees further kills sooner, so the
-episode collapses from 242 steps to 45. Hiding for 57% of a 45-step life
-is fewer steps than hiding for 20% of a 242-step one, even though the second agent is
+episode collapses from 243 steps to 45. Hiding for 57% of a 45-step life
+is fewer steps than hiding for 20% of a 243-step one, even though the second agent is
 doing far more hiding relative to the life it has. <strong>The total is mostly a measurement of how
 long the agent stayed alive</strong>, with its behaviour as a minor term.</p>
 
@@ -322,9 +328,9 @@ why it is carried here as an outcome in its own right rather than as a denominat
   <figcaption><b>Horizontal axis:</b> how far the predator can see, in tiles, from 1 to 7.
   <b>Vertical axis:</b> each measure indexed to 100 at range&nbsp;1 so that all three share one
   scale; the raw values are printed beside each line. Green is the share of the episode spent
-  hidden, red the total number of steps spent in a bush, amber the number of steps survived. Green
-  rises to 283, red falls to 53, amber falls to 19 &mdash; the agent hides
-  <em>more intensely</em> and <em>less in total</em>, because it is dead sooner. Read the red line
+  hidden, grey the total number of steps spent in a bush, amber the number of steps survived. Green
+  rises to 283, grey falls to 53, amber falls to 19 &mdash; the agent hides
+  <em>more intensely</em> and <em>less in total</em>, because it is dead sooner. Read the grey line
   on its own and you would conclude that dangerous predators make this agent hide less.</figcaption>
 <div class="method"><b>How this was computed</b><dl><dt>data used</dt><dd>the 333,743 episodes with exactly one predator, 33.4% of the 1,000,000 collected. Detection range belongs to a predator, so it is undefined when there is none and ambiguous when there are two</dd><dt>share hidden</dt><dd>total bush steps in the bin &divide; total action steps in the bin &mdash; the same quantity drawn green in Figure&nbsp;3, with the spawn row (<code>t=0</code>) excluded from both</dd><dt>total bush steps</dt><dd>the share above &times; the mean episode length in the bin. Derived rather than counted, because the stored aggregates behind this page hold the rate and the length but not the raw total. Against the earlier environment study, which counted the total directly and did <em>not</em> exclude the spawn row, the derivation agrees to within 0.27%</dd><dt>steps survived</dt><dd>mean episode length in the bin, in steps &mdash; the amber line of Figure&nbsp;3</dd><dt>indexing</dt><dd>each series divided by its own value at range&nbsp;1, then multiplied by 100. Indexing is what lets three quantities in three different units (one percentage, two step counts) be read against one axis. It shows relative movement only &mdash; the heights carry no absolute meaning, which is why the raw values are printed too</dd><dt>why this is causal</dt><dd>detection range is rolled at random by the environment before the agent acts, so comparing bins is a randomised contrast rather than an observed correlation</dd></dl></div>
 <details class="samples"><summary>Data behind this figure &mdash; 333,743 of 1,000,000 (33.4%)</summary><div class="sbox"><table><thead><tr><th class="txt">what</th><th>used</th><th>available</th><th>share</th><th class="txt">why this subset</th></tr></thead><tbody><tr><td class="txt">episodes with exactly one predator</td><td>333,743</td><td>1,000,000</td><td>33.4%</td><td class="txt">a predator trait is undefined when no predator is present and ambiguous when two are, so only the exactly-one-predator episodes can be used</td></tr></tbody></table></div></details>
@@ -340,12 +346,12 @@ predator count, predator detection range and hiding predators &mdash; and those 
   <figcaption><b>Horizontal axis:</b> the change in each measure between the factor's lowest and
   highest setting, as a percentage of its value at the lowest. <b>Vertical axis:</b> the seven
   world settings, one group of three bars each, ordered by how much they move the share. Wherever
-  the green and the red bar point opposite ways, the two ways of counting disagree about what that
+  the green and the grey bar point opposite ways, the two ways of counting disagree about what that
   factor does. Predator count's green bar runs off the scale at +614% and is marked as clipped
   rather than quietly truncated. Note the flat case as well: <code>predator max stamina</code>
   moves nothing on any of the three, which is a real null rather than a measurement that
   failed.</figcaption>
-<div class="method"><b>How this was computed</b><dl><dt>the three bars</dt><dd>green is the share of the episode spent hidden, red the total steps spent in a bush, amber the steps survived &mdash; each read at the factor's lowest and highest setting, expressed as the percentage change between the two</dd><dt>data used</dt><dd>the four predator traits use only the 333,743 exactly-one-predator episodes, 33.4% of the million, for the reason given in Figure&nbsp;4. Predator count, bushes available and hiding predators are defined in every episode and use all 1,000,000. The bars are therefore comparable in unit, not in population</dd><dt>a caution on percentages</dt><dd>the percentage change in a rate depends on how small that rate started. Predator count's +614% is large partly because hiding starts at only 7.9% when no predator is present; the same change stated in percentage points is +49 pp. The table below carries the underlying values so no reader is left with the ratio alone</dd><dt>why these seven</dt><dd>they are the settings the earlier environment-factor study covered. The full set of everything this world varies &mdash; twenty-five factors, including the agent's own starting state and every smell channel &mdash; is Figure&nbsp;2</dd></dl></div>
+<div class="method"><b>How this was computed</b><dl><dt>the three bars</dt><dd>green is the share of the episode spent hidden, grey the total steps spent in a bush, amber the steps survived &mdash; each read at the factor's lowest and highest setting, expressed as the percentage change between the two</dd><dt>data used</dt><dd>the four predator traits use only the 333,743 exactly-one-predator episodes, 33.4% of the million, for the reason given in Figure&nbsp;4. Predator count, bushes available and hiding predators are defined in every episode and use all 1,000,000. The bars are therefore comparable in unit, not in population</dd><dt>a caution on percentages</dt><dd>the percentage change in a rate depends on how small that rate started. Predator count's +614% is large partly because hiding starts at only 7.9% when no predator is present; the same change stated in percentage points is +49 pp. The table below carries the underlying values so no reader is left with the ratio alone</dd><dt>why these seven</dt><dd>they are the settings the earlier environment-factor study covered. The full set of everything this world varies &mdash; twenty-five factors, including the agent's own starting state and every smell channel &mdash; is Figure&nbsp;2</dd></dl></div>
 <details class="samples"><summary>Data behind this figure &mdash; 2 subsets, 333,743 to 1,000,000 of 1,000,000</summary><div class="sbox"><table><thead><tr><th class="txt">what</th><th>used</th><th>available</th><th>share</th><th class="txt">why this subset</th></tr></thead><tbody><tr><td class="txt">the four predator traits</td><td>333,743</td><td>1,000,000</td><td>33.4%</td><td class="txt">a predator trait is undefined when no predator is present and ambiguous when two are, so only the exactly-one-predator episodes can be used</td></tr><tr><td class="txt">predator count, bushes available, hiding predators</td><td>1,000,000</td><td>1,000,000</td><td>100.0%</td><td class="txt">defined in every episode, so nothing has to be dropped</td></tr></tbody></table></div></details>
 </figure>
 
@@ -355,7 +361,7 @@ predator count, predator detection range and hiding predators &mdash; and those 
 <thead><tr><th>factor<span class="sub">lowest &rarr; highest setting</span></th><th>share hidden</th><th>chg</th><th>bush steps</th><th>chg</th><th>survived</th><th>chg</th></tr></thead>
 <tbody>
 <tr><td>predator count<span class="sub">how many predators are in the scene</span></td><td class="num">7.9% &rarr; 56.6%</td><td class="num">+614%</td><td class="num">33.0 &rarr; 28.7</td><td class="num">&minus;13%</td><td class="num">416 &rarr; 51</td><td class="num">&minus;88%</td></tr>
-<tr><td>predator detection range<span class="sub">how far a predator can see</span></td><td class="num">20.0% &rarr; 56.6%</td><td class="num">+183%</td><td class="num">48.5 &rarr; 25.5</td><td class="num">&minus;47%</td><td class="num">242 &rarr; 45</td><td class="num">&minus;81%</td></tr>
+<tr><td>predator detection range<span class="sub">how far a predator can see</span></td><td class="num">20.0% &rarr; 56.6%</td><td class="num">+183%</td><td class="num">48.5 &rarr; 25.5</td><td class="num">&minus;47%</td><td class="num">243 &rarr; 45</td><td class="num">&minus;81%</td></tr>
 <tr><td>bushes available<span class="sub">how many bushes exist</span></td><td class="num">11.9% &rarr; 20.3%</td><td class="num">+71%</td><td class="num">21.8 &rarr; 39.6</td><td class="num">+82%</td><td class="num">184 &rarr; 195</td><td class="num">+6%</td></tr>
 <tr><td>predator attack delay<span class="sub">how long it pauses before striking</span></td><td class="num">30.6% &rarr; 33.6%</td><td class="num">+10%</td><td class="num">27.1 &rarr; 38.3</td><td class="num">+41%</td><td class="num">89 &rarr; 114</td><td class="num">+29%</td></tr>
 <tr><td>hiding predators<span class="sub">how many are buried out of sight</span></td><td class="num">16.3% &rarr; 17.1%</td><td class="num">+5%</td><td class="num">33.2 &rarr; 30.0</td><td class="num">&minus;10%</td><td class="num">204 &rarr; 175</td><td class="num">&minus;14%</td></tr>
@@ -363,7 +369,7 @@ predator count, predator detection range and hiding predators &mdash; and those 
 <tr><td>predator max stamina<span class="sub">how long it can keep chasing</span></td><td class="num">32.2% &rarr; 32.3%</td><td class="num">+0%</td><td class="num">32.8 &rarr; 32.9</td><td class="num">+0%</td><td class="num">102 &rarr; 102</td><td class="num">+0%</td></tr>
 </tbody>
 </table>
-<figcaption><b>Rows:</b> the seven world settings, ordered by how much they move the share hidden. <b>Columns:</b> each of the three measures at the factor's lowest setting and at its highest, each followed by the change between them. The disagreement drawn in Figure&nbsp;5 reads here as a rise in one change column beside a fall in another &mdash; predator count, detection range and hiding predators each gain share while losing total. Deliberately uncoloured: red already means &ldquo;total bush steps&rdquo; in Figure&nbsp;5, and reusing it for &ldquo;a rise&rdquo; would give one colour two meanings on the same screen.</figcaption>
+<figcaption><b>Rows:</b> the seven world settings, ordered by how much they move the share hidden. <b>Columns:</b> each of the three measures at the factor's lowest setting and at its highest, each followed by the change between them. The disagreement drawn in Figure&nbsp;5 reads here as a rise in one change column beside a fall in another &mdash; predator count, detection range and hiding predators each gain share while losing total. Deliberately uncoloured: this page already spends red on &ldquo;moves hiding DOWN&rdquo; in Figure&nbsp;2, and a colour cannot pick up a second meaning one screen later.</figcaption>
 <div class="method"><b>How this was computed</b><dl><dt>the three measures</dt><dd>share of the episode spent hidden, total steps spent in a bush, and steps survived &mdash; defined exactly as in Figure&nbsp;4</dd><dt>chg columns</dt><dd>the change from the lowest to the highest setting as a percentage of the value at the lowest &mdash; the same quantity Figure&nbsp;5 draws as bars, printed here because a bar chart cannot be read to a decimal place</dd><dt>data used</dt><dd>as Figure&nbsp;5: the four predator traits on the exactly-one-predator episodes, the other three factors on all 1,000,000</dd></dl></div>
 <details class="samples"><summary>Data behind this figure &mdash; 2 subsets, 333,743 to 1,000,000 of 1,000,000</summary><div class="sbox"><table><thead><tr><th class="txt">what</th><th>used</th><th>available</th><th>share</th><th class="txt">why this subset</th></tr></thead><tbody><tr><td class="txt">the four predator traits</td><td>333,743</td><td>1,000,000</td><td>33.4%</td><td class="txt">a predator trait is undefined when no predator is present and ambiguous when two are, so only the exactly-one-predator episodes can be used</td></tr><tr><td class="txt">predator count, bushes available, hiding predators</td><td>1,000,000</td><td>1,000,000</td><td>100.0%</td><td class="txt">defined in every episode, so nothing has to be dropped</td></tr></tbody></table></div></details>
 </figure>
@@ -1356,7 +1362,7 @@ heat("hits",D.hits.hide,["feels nothing","a little","some","a lot","severe","ext
 /* Merged from the environment-factor study. Every number here is derived
    from D.curves above by scripts/analysis/studies/trajectory_factors/
    merge_env_into_a01.py - none of it is typed by hand. */
-const TM={"predator count": {"labels": ["0", "1", "2"], "rate": [7.93, 32.17, 56.61], "steps": [32.96, 33.04, 28.7], "surv": [415.6, 102.7, 50.7], "gloss": "how many predators are in the scene", "d": [614, -13, -88]}, "predator detection range": {"labels": ["1", "2", "3", "4", "5", "6", "7"], "rate": [19.99, 26.73, 33.19, 40.07, 47.1, 52.17, 56.58], "steps": [48.48, 37.61, 33.79, 30.89, 28.78, 26.19, 25.52], "surv": [242.5, 140.7, 101.8, 77.1, 61.1, 50.2, 45.1], "gloss": "how far a predator can see", "d": [183, -47, -81]}, "bushes available": {"labels": ["4", "5", "6", "7", "8", "9", "10"], "rate": [11.87, 13.84, 15.51, 16.95, 18.2, 19.27, 20.34], "steps": [21.81, 25.91, 29.33, 32.1, 34.87, 37.33, 39.58], "surv": [183.7, 187.2, 189.1, 189.4, 191.6, 193.7, 194.6], "gloss": "how many bushes exist", "d": [71, 82, 6]}, "predator attack delay": {"labels": ["1", "2", "3"], "rate": [30.61, 31.96, 33.58], "steps": [27.12, 33.65, 38.35], "surv": [88.6, 105.3, 114.2], "gloss": "how long it pauses before striking", "d": [10, 41, 29]}, "hiding predators": {"labels": ["2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12"], "rate": [16.26, 16.42, 16.42, 16.47, 16.47, 16.57, 16.63, 16.82, 16.8, 16.97, 17.14], "steps": [33.15, 32.77, 32.41, 32.45, 31.74, 31.73, 31.13, 31.18, 30.54, 30.12, 29.96], "surv": [203.9, 199.6, 197.4, 197.0, 192.7, 191.5, 187.2, 185.4, 181.8, 177.5, 174.8], "gloss": "how many are buried out of sight", "d": [5, -10, -14]}, "predator attack range": {"labels": ["2", "3"], "rate": [32.88, 31.38], "steps": [35.87, 30.22], "surv": [109.1, 96.3], "gloss": "how far it can pounce", "d": [-5, -16, -12]}, "predator max stamina": {"labels": ["30-50", "50-70", "70-90", "90-110", "110-130", "130-151"], "rate": [32.2, 32.33, 32.0, 32.17, 32.03, 32.3], "steps": [32.84, 33.2, 33.09, 32.75, 33.34, 32.95], "surv": [102.0, 102.7, 103.4, 101.8, 104.1, 102.0], "gloss": "how long it can keep chasing", "d": [0, 0, 0]}};
+const TM={"predator count": {"labels": ["0", "1", "2"], "rate": [7.93, 32.17, 56.61], "steps": [32.96, 33.04, 28.7], "surv": [415.6, 102.7, 50.7], "gloss": "how many predators are in the scene", "ends": ["7.9% \u2192 56.6%", "33.0 \u2192 28.7", "416 \u2192 51"], "d": [614, -13, -88]}, "predator detection range": {"labels": ["1", "2", "3", "4", "5", "6", "7"], "rate": [19.99, 26.73, 33.19, 40.07, 47.1, 52.17, 56.58], "steps": [48.48, 37.61, 33.79, 30.89, 28.78, 26.19, 25.52], "surv": [242.5, 140.7, 101.8, 77.1, 61.1, 50.2, 45.1], "gloss": "how far a predator can see", "ends": ["20.0% \u2192 56.6%", "48.5 \u2192 25.5", "243 \u2192 45"], "d": [183, -47, -81]}, "bushes available": {"labels": ["4", "5", "6", "7", "8", "9", "10"], "rate": [11.87, 13.84, 15.51, 16.95, 18.2, 19.27, 20.34], "steps": [21.81, 25.91, 29.33, 32.1, 34.87, 37.33, 39.58], "surv": [183.7, 187.2, 189.1, 189.4, 191.6, 193.7, 194.6], "gloss": "how many bushes exist", "ends": ["11.9% \u2192 20.3%", "21.8 \u2192 39.6", "184 \u2192 195"], "d": [71, 82, 6]}, "predator attack delay": {"labels": ["1", "2", "3"], "rate": [30.61, 31.96, 33.58], "steps": [27.12, 33.65, 38.35], "surv": [88.6, 105.3, 114.2], "gloss": "how long it pauses before striking", "ends": ["30.6% \u2192 33.6%", "27.1 \u2192 38.3", "89 \u2192 114"], "d": [10, 41, 29]}, "hiding predators": {"labels": ["2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12"], "rate": [16.26, 16.42, 16.42, 16.47, 16.47, 16.57, 16.63, 16.82, 16.8, 16.97, 17.14], "steps": [33.15, 32.77, 32.41, 32.45, 31.74, 31.73, 31.13, 31.18, 30.54, 30.12, 29.96], "surv": [203.9, 199.6, 197.4, 197.0, 192.7, 191.5, 187.2, 185.4, 181.8, 177.5, 174.8], "gloss": "how many are buried out of sight", "ends": ["16.3% \u2192 17.1%", "33.2 \u2192 30.0", "204 \u2192 175"], "d": [5, -10, -14]}, "predator attack range": {"labels": ["2", "3"], "rate": [32.88, 31.38], "steps": [35.87, 30.22], "surv": [109.1, 96.3], "gloss": "how far it can pounce", "ends": ["32.9% \u2192 31.4%", "35.9 \u2192 30.2", "109 \u2192 96"], "d": [-5, -16, -12]}, "predator max stamina": {"labels": ["30-50", "50-70", "70-90", "90-110", "110-130", "130-151"], "rate": [32.2, 32.33, 32.0, 32.17, 32.03, 32.3], "steps": [32.84, 33.2, 33.09, 32.75, 33.34, 32.95], "surv": [102.0, 102.7, 103.4, 101.8, 104.1, 102.0], "gloss": "how long it can keep chasing", "ends": ["32.2% \u2192 32.3%", "32.8 \u2192 32.9", "102 \u2192 102"], "d": [0, 0, 0]}};
 
 const CV = n => "var(" + n + ")";
 
@@ -1372,18 +1378,17 @@ const CV = n => "var(" + n + ")";
     s.appendChild(txt(ml-7, Y(g)+3, g, "ax", "end"));
   }
   const LBL = [];
-  const SER = [["share of the episode hidden","--cover",idx(T.rate),T.rate,"%",1],
-               ["total steps spent in a bush","--false",idx(T.steps),T.steps,"",1],
-               ["steps survived","--warm",idx(T.surv),T.surv,"",0]];
+  const SER = [["share of the episode hidden","--cover",idx(T.rate),T.ends[0]],
+               ["total steps spent in a bush","--muted",idx(T.steps),T.ends[1]],
+               ["steps survived","--warm",idx(T.surv),T.ends[2]]];
   SER.forEach(function(row){
-    const name=row[0], cvar=row[1], ix=row[2], raw=row[3], unit=row[4], dec=row[5];
+    const name=row[0], cvar=row[1], ix=row[2], ends=row[3];
     let d=""; ix.forEach((v,j) => d += (j?"L":"M") + X(j) + " " + Y(v));
     s.appendChild(el("path",{d:d, fill:"none", style:"stroke:"+CV(cvar),
       "stroke-width":2.4, "stroke-linejoin":"round"}));
     ix.forEach((v,j) => s.appendChild(el("circle",{cx:X(j), cy:Y(v), r:2.8,
       style:"fill:"+CV(cvar)})));
-    LBL.push({y: Y(ix[N-1]), name: name, cvar: cvar,
-              val: raw[0].toFixed(dec)+unit+" → "+raw[N-1].toFixed(dec)+unit});
+    LBL.push({y: Y(ix[N-1]), name: name, cvar: cvar, val: ends});
   });
   /* Two of these three lines finish close together, and each label is two lines tall. Push them
      apart rather than trusting the data to stay conveniently spaced - the label block is 30px and
@@ -1403,7 +1408,7 @@ const CV = n => "var(" + n + ")";
 
 /* FIGURE 5 - the same three measures, every factor, low setting to high. */
 (function(){
-  const K = Object.keys(TM), W=700, L=186, gh=16, gap=3, mt=44;
+  const K = Object.keys(TM), W=700, L=202, gh=16, gap=3, mt=44;
   const grp = 3*gh + 2*gap, pad = 16;
   const H = mt + K.length*(grp+pad) + 54, xw = W-L-34, LO=-100, HI=200;
   const s = svg(W,H);
@@ -1414,7 +1419,7 @@ const CV = n => "var(" + n + ")";
     s.appendChild(txt(X(g), H-32, (g>0?"+":"")+g+"%", "ax", "middle"));
   }
   const SER = [["share of the episode hidden","--cover"],
-               ["total steps spent in a bush","--false"],
+               ["total steps spent in a bush","--muted"],
                ["steps survived","--warm"]];
   K.forEach(function(k,i){
     const top = mt + i*(grp+pad), t = TM[k];

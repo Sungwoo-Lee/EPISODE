@@ -164,15 +164,21 @@ CSS = """
 .samples .sbox{overflow-x:auto;border-top:1px solid var(--rule)}
 /* fixed layout + width:100% makes the prose column WRAP rather than push the table wider than
    its box; only genuinely long single tokens can then cause a scroll. */
-.samples table{font-size:.75rem;table-layout:fixed;width:100%;min-width:34rem}
+/* NOT `table-layout:fixed` with percentage columns. Under fixed layout a `nowrap` cell whose
+   content exceeds its column neither wraps nor widens it - it paints straight into the next cell,
+   and at the 500px floor this fused three numbers into one string ("16,969,747186,754,1439.1%").
+   Auto layout lets each numeric column take the width its widest value actually needs; only the
+   prose column is given a floor, and it is the one column allowed to wrap. */
+/* NOT `table-layout:fixed` with percentage columns. Under fixed layout a `nowrap` cell whose
+   content exceeds its column neither wraps nor widens it - it paints straight into the next cell,
+   and at the 500px floor that fused three numbers into one string ("16,969,747186,754,1439.1%").
+   Auto layout lets each numeric column take the width its widest value needs; only the prose
+   column carries a floor, and it is the only column allowed to wrap. */
+.samples table{font-size:.75rem;width:100%}
 .samples th,.samples td{padding:.34rem .6rem;vertical-align:top;text-align:right;
   white-space:nowrap}
-.samples td.txt,.samples th.txt{text-align:left;white-space:normal;overflow-wrap:anywhere}
-.samples th:nth-child(1),.samples td:nth-child(1){width:26%}
-.samples th:nth-child(2),.samples td:nth-child(2),
-.samples th:nth-child(3),.samples td:nth-child(3){width:11%}
-.samples th:nth-child(4),.samples td:nth-child(4){width:8%}
-.samples th:nth-child(5),.samples td:nth-child(5){width:44%}
+.samples td.txt,.samples th.txt{text-align:left;white-space:normal;overflow-wrap:anywhere;
+  min-width:13rem}
 .samples thead th{font-size:.62rem;color:var(--muted)}
 .samples tbody tr:last-child td{border-bottom:0}
 """
