@@ -1,8 +1,22 @@
 # Which parts of the environment make the agent hide?
 
-**Shareable page:** https://claude.ai/code/artifact/40bd0021-9f74-4df6-84cf-7e523c9d31a4
+> **Merged, 2026-09-10.** This study's findings now live inside the newer, larger page about the
+> same run - **What makes this agent hide?** - as the section *"Why hiding is counted as a share,
+> not a total"* and its three figures, plus *"The strongest thing in its world is one it cannot
+> perceive"*. Read them there: <https://claude.ai/code/artifact/1351009f-d7f7-4114-a290-f6582bb9a004>.
+> This document is kept as the record of the original analysis and its method.
+>
+> Two things changed in the merge, both deliberate. The hiding rates here are computed over every
+> recorded row; the newer page excludes the spawn row (`t=0`), because the agent did not choose
+> where it woke, so its rates are very slightly lower (19.99% against the 20.02% below at detection
+> range 1). Survival is identical in both. And what this page calls "ambush predators" is called
+> **hiding predators** there, which is the name the rest of the project and the store column
+> (`n_hide`) use.
+
+**Original shareable page:** https://claude.ai/code/artifact/40bd0021-9f74-4df6-84cf-7e416990a51b (superseded by the merged page above)
 **Figures + per-point data:** `results/analysis/trajectory_glm/` (gitignored)
 **Reproduce:** `scripts/analysis/trajectory_glm.py`
+**Merged into the a01 page by:** `scripts/analysis/studies/trajectory_factors/merge_env_into_a01.py`
 
 ## Question
 

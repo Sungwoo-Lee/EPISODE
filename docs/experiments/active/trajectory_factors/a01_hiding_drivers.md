@@ -7,7 +7,12 @@ where `$CONDA` is `/home/vncuser/miniconda3/envs/grid_world_pain`. The supplemen
 behind findings 2-4 — lagged proximity, the scent ladders, the targeted false-alarm split, the
 injury conditional table, the injury window, and the eat-block check — are archived in
 `scripts/analysis/supplementary/` and are *not* produced by the command above.
-**Extends:** [[a01_factor_analysis]] (same run, same store, narrower question)
+**Absorbs:** [[a01_factor_analysis]] (same run, same store) - merged in on 2026-09-10 as the
+section *"Why hiding is counted as a share, not a total"* (Figures 4-6) and *"The strongest
+thing in its world is one it cannot perceive"*. Its numbers were recomputed in this page's
+convention rather than imported; the merge is reproducible via
+`scripts/analysis/studies/trajectory_factors/merge_env_into_a01.py`. **All figures from the
+old Figure 4 onward were renumbered +3.**
 **Pipeline:** [[TRAJECTORY_COLLECTION_PIPELINE]]
 **Reviewed by:** `plan-reviewer`, 2026-08-25, two rounds; then corrected again after a
 reader challenge — see [Corrections](#review-response). Finding 3 was rewritten after the
