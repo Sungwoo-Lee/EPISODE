@@ -46,6 +46,11 @@ thead th{font-size:.71rem;letter-spacing:.06em;text-transform:uppercase;color:va
   font-weight:600;border-bottom:1px solid var(--fg)}
 tbody tr:last-child td{border-bottom:0}
 td.num{font-family:var(--mono);font-size:.83rem}
+#the-model h3{margin:1.6rem 0 .45rem}
+#the-model h3:first-of-type{margin-top:1.1rem}
+#the-model table{font-size:.84rem}
+#the-model p.note{margin-top:1rem}
+
 /* Data accounting, one per figure. Same disclosure the sensor-ladder page uses, in this page's
    own tokens. Closed by default: it is provenance a reader should be able to reach, not read.
    NOTE the alignment rules below are not optional. This page sets `th,td{text-align:right}`
@@ -260,6 +265,73 @@ Since the agent is blind at distance, smell is all it has.</p>
 <h2>2 &nbsp;Everything that moves the behaviour, ranked</h2>
 <p>Every feature the world rolls at random, ordered by how strongly it shifts hiding. Because the
 world rolls them before the agent acts, these are causes.</p>
+
+
+<div class="panel" id="the-model">
+<div class="fignum">The model behind Figure 2 &mdash; and why its rows sit on different populations</div>
+<p>Figure 2's bars come from a <strong>quasi-binomial GLM with a logit link</strong>. Four choices
+decide what a bar means, and the fourth is the one that surprises people:</p>
+<dl class="dl">
+  <dt>response</dt><dd>the per-episode hiding rate, <em>with that episode's action-step count
+  carried as the binomial weight</em>. A 500-step episode contributes 500 trials and a 20-step one
+  contributes 20, which is how episode length is handled without ever appearing as a covariate.
+  It matters here because dangerous worlds end episodes early, so weighting every episode equally
+  would hand the most leverage to the shortest and least reliable rows.</dd>
+  <dt>link</dt><dd>logit &mdash; so a coefficient is in <strong>log-odds per unit</strong>, not in
+  percentage points.</dd>
+  <dt>dispersion</dt><dd><strong>quasi</strong>: the variance is measured, not assumed. A factor
+  &phi; is estimated from the Pearson residuals and every standard error multiplied by &radic;&phi;.
+  Here &phi; runs 13&ndash;25, so the uncertainty is about 4&times; wider than a plain binomial
+  would claim. The coefficients are untouched &mdash; &phi; widens an error bar and never moves a
+  bar.</dd>
+  <dt>one model per bar</dt><dd><strong>Each factor is fitted on its own, univariate</strong>, on
+  the largest set of episodes where that factor is defined. Figure 2 is not one regression; it is
+  25 regressions whose effect sizes are collected onto a single axis.</dd>
+</dl>
+
+<h3>Why one chart has three different denominators</h3>
+<p>The data-accounting block under Figure 2 reports three populations for one figure, which looks
+like a mistake until the last setting above is taken seriously. A predator's detection range does
+not exist in an episode with no predator, and means two different things in an episode with two, so
+that row is fitted on the 333,743 exactly-one-predator episodes. A rabbit's smell needs exactly one
+rabbit: 333,766 episodes. Everything the world rolls in every episode uses all 1,000,000. Separate
+models, separate populations, one axis.</p>
+<div class="note"><strong>What this costs.</strong> Because each bar is univariate, the bars do
+<em>not</em> hold one another constant. A factor's bar carries its own effect plus anything it is
+correlated with. In this environment that is a smaller worry than it usually would be &mdash; the
+world rolls its settings independently of each other, so the correlations are near zero by
+construction &mdash; but it is the reason the figure's caption calls the bars comparable in
+<em>unit</em>, not in <em>population</em>, and the reason the multivariate models live separately
+in <code>multivariate.csv</code> rather than in this chart.</div>
+
+<h3>Why a bar is not the coefficient</h3>
+<p>A logit coefficient buys a fixed amount of log-odds, which is a different number of percentage
+points depending on where you start &mdash; the curve is flat near 0 and 100% and steep between. The
+conversion used here takes the slope of the logistic at the subset's own <strong>pooled rate</strong>
+p&#772;:</p>
+<div class="scroll"><table>
+<thead><tr><th>&nbsp;</th><th class="num">pooled rate p&#772;</th><th class="num">slope p&#772;(1&minus;p&#772;)</th>
+<th class="num">&beta;</th><th class="num">1 SD</th><th class="num">bar = &beta; &times; SD &times; slope</th></tr></thead>
+<tbody><tr><td>predator count</td><td class="num">16.62%</td><td class="num">13.86</td><td class="num">+1.417</td><td class="num">0.82</td><td class="num">+16.03 pp</td></tr><tr><td>detection range</td><td class="num">32.17%</td><td class="num">21.82</td><td class="num">+0.288</td><td class="num">2.00</td><td class="num">+12.55 pp</td></tr></tbody></table></div>
+<p>Note that the two rows are priced at <em>different</em> p&#772;. Factors defined in every episode
+are converted at 16.62%, the hiding rate across all 189.9 million steps; the predator traits
+are converted at 32.17%, the rate inside the one-predator episodes. The gap is not a
+discrepancy &mdash; it is the same weighting point again. Predator-free episodes are long
+(416 steps) and hide little (7.9%), so they dominate the step count and pull the
+overall rate down, while a one-predator episode is short and hides far more.</p>
+
+<h3>Why the bars are scaled by 1 SD</h3>
+<p>A coefficient answers &ldquo;per extra predator&rdquo; or &ldquo;per extra tile of sight&rdquo;.
+Those are not comparable quantities, so ranking on them answers a question with no meaning.
+Multiplying by each factor's own episode-to-episode spread asks the answerable one instead:
+<em>given how much this world actually moves this dial, how far does hiding move?</em></p>
+<p><strong>It changes the answer, not just the units.</strong> Per unit, one more predator is worth
+about <strong>4.9&times;</strong> one more tile of sight. On the scale the environment
+actually varies them, that collapses to <strong>1.3&times;</strong> &mdash; because the
+world swings detection range across 2.0 tiles from episode to episode and predator count by
+only 0.82. Ranked on raw coefficients these two would sit far apart; ranked on what the world
+does to them, they are neighbours at the top of the chart.</p>
+</div>
 
 <div class="motive"><b>Why this analysis</b>The starting question was simply &ldquo;what makes this agent hide?&rdquo; Sixteen things vary from episode to episode at once, so no amount of watching individual episodes will answer it. Putting every factor on one common scale says where the behaviour actually comes from, and just as usefully, which factors do nothing.</div>
 <figure class="panel">
