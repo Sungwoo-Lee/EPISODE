@@ -180,6 +180,16 @@ CSS = """
 .samples td.txt,.samples th.txt{text-align:left;white-space:normal;overflow-wrap:anywhere;
   min-width:13rem}
 .samples thead th{font-size:.62rem;color:var(--muted)}
+/* The reason column is the one the standing requirement asks for, and on a phone the table now
+   clips exactly on a column boundary - so it vanishes with no half-word to hint that it is there.
+   The cue is bound to the MEASUREMENT, not to a breakpoint: 22 tables built by one class have 22
+   different content widths, so any single breakpoint is wrong for 21 of them (F32's amendment).
+   The media query is the no-JS fallback; the script narrows it to the tables that actually clip. */
+.samples .shint{display:none;padding:.35rem .7rem;border-top:1px solid var(--rule);
+  font-family:var(--mono);font-size:.62rem;color:var(--muted)}
+@media (max-width:900px){.samples .shint{display:block}}
+/* an author display rule inside a media query beats the `hidden` attribute unless this is said */
+.samples .shint[hidden]{display:none!important}
 .samples tbody tr:last-child td{border-bottom:0}
 """
 
@@ -212,7 +222,31 @@ def block(rows):
             f'{cap}</summary><div class="sbox"><table><thead><tr>'
             '<th class="txt">what</th><th>used</th><th>available</th><th>share</th>'
             '<th class="txt">why this subset</th></tr></thead>'
-            f'<tbody>{body}</tbody></table></div></details>')
+            f'<tbody>{body}</tbody></table></div>'
+            '<p class="shint">&larr; wider than the screen &mdash; scroll the table sideways; '
+            'the &ldquo;why this subset&rdquo; column is off to the right</p></details>')
+
+
+SCRIPT = """<script>
+/* Show a table's scroll cue only when THAT table actually scrolls. Re-run on resize, because a
+   cue that is correct only at the width the page loaded at is a cue that lies on rotation. */
+(function () {
+  function sync() {
+    document.querySelectorAll("details.samples").forEach(function (d) {
+      var box = d.querySelector(".sbox"), hint = d.querySelector(".shint");
+      if (box && hint) hint.hidden = !(box.scrollWidth > box.clientWidth + 1);
+    });
+  }
+  sync();
+  addEventListener("resize", sync);
+  addEventListener("load", sync);
+  /* a closed <details> has no layout, so its box measures 0 - measure again when it opens */
+  document.querySelectorAll("details.samples").forEach(function (d) {
+    d.addEventListener("toggle", sync);
+  });
+})();
+</script>
+"""
 
 
 def main():
@@ -240,6 +274,9 @@ def main():
     out = re.sub(r'<figure class="panel[^"]*">(?:(?!</figure>).)*?</figure>',
                  lambda m: add(m) if 'class="fignum"' in m.group(0) else m.group(0),
                  html, flags=re.S)
+
+    # bound to the box, once, at the end of the page
+    out = out.replace("</body>", SCRIPT + "</body>") if "</body>" in out else out + SCRIPT
 
     anchor = "td.num{font-family:var(--mono);font-size:.83rem}"
     if out.count(anchor) != 1:
