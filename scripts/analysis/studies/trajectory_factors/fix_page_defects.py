@@ -207,5 +207,32 @@ FIXES += [
      "separates <em>feeling</em> from <em>origin</em>, not one channel from the other</dd>"),
 ]
 
+PANEL_ARMS = ("<div class=\"panel\" id=\"arm-table\">\n<div class=\"fignum\">What actually differs between the ten agents</div>\n<p>Diffing the ten runs&rsquo; own saved <code>config.yaml</code> files leaf by leaf &mdash; 244 keys compared &mdash; <strong>two</strong> settings differ, not one, and they move together. Healing while resting is <code>base_rate &times; (1 + accel_rate)<sup>streak&minus;1</sup></code>, so the pair decides <em>how back-loaded</em> resting&rsquo;s payoff is: a01 pays a flat 5 per rest step forever, a10 pays almost nothing until about ten consecutive rest steps and then pays enormously. Everything else &mdash; environment, sensors, training length, seed &mdash; is identical. <strong>heal @10</strong> below is the injury recovered on the tenth consecutive rest step, and <strong>total</strong> the sum over a fifteen-step rest &mdash; which is roughly matched across the arms, so the sweep varies the SHAPE of the payoff rather than its size. The first rest step is not shown because it always equals the base rate.</p>\n<div class=\"scroll\"><table>\n<thead><tr><th>agent</th><th class=\"num\">accel</th><th class=\"num\">base</th><th class=\"num\">heal @10</th><th class=\"num\">total, 15 rests</th><th class=\"num\">hiding</th><th class=\"num\">survived</th></tr></thead>\n<tbody><tr><td>a01</td><td class=\"num\">0</td><td class=\"num\">5</td><td class=\"num\">5</td><td class=\"num\">75</td><td class=\"num\">16.62%</td><td class=\"num\">189.9</td></tr><tr><td>a02</td><td class=\"num\">0.3</td><td class=\"num\">0.55</td><td class=\"num\">5.83</td><td class=\"num\">92</td><td class=\"num\">18.98%</td><td class=\"num\">187.9</td></tr><tr><td>a03</td><td class=\"num\">0.5</td><td class=\"num\">0.12</td><td class=\"num\">4.61</td><td class=\"num\">105</td><td class=\"num\">17.29%</td><td class=\"num\">186.9</td></tr><tr><td>a04</td><td class=\"num\">0.7</td><td class=\"num\">0.029</td><td class=\"num\">3.44</td><td class=\"num\">119</td><td class=\"num\">17.62%</td><td class=\"num\">186.7</td></tr><tr><td>a05</td><td class=\"num\">0.9</td><td class=\"num\">0.0079</td><td class=\"num\">2.55</td><td class=\"num\">133</td><td class=\"num\">17.82%</td><td class=\"num\">184.1</td></tr><tr><td>a06 <span class=\"sub\">off-trend</span></td><td class=\"num\">1</td><td class=\"num\">0.01</td><td class=\"num\">5.12</td><td class=\"num\">328</td><td class=\"num\">18.73%</td><td class=\"num\">186.9</td></tr><tr><td>a07</td><td class=\"num\">1.2</td><td class=\"num\">0.0014</td><td class=\"num\">1.69</td><td class=\"num\">160</td><td class=\"num\">18.64%</td><td class=\"num\">182.3</td></tr><tr><td>a08</td><td class=\"num\">1.5</td><td class=\"num\">0.00028</td><td class=\"num\">1.07</td><td class=\"num\">174</td><td class=\"num\">17.13%</td><td class=\"num\">180.3</td></tr><tr><td>a09</td><td class=\"num\">2</td><td class=\"num\">2.9e-05</td><td class=\"num\">0.571</td><td class=\"num\">208</td><td class=\"num\">18.96%</td><td class=\"num\">184.6</td></tr><tr><td>a10</td><td class=\"num\">2.7</td><td class=\"num\">2.1e-06</td><td class=\"num\">0.273</td><td class=\"num\">259</td><td class=\"num\">18.75%</td><td class=\"num\">183.2</td></tr></tbody></table></div>\n<div class=\"note\"><strong>So nothing here can be credited to the accel rate alone.</strong> The base rate was evidently re-tuned for each setting to keep total healing over a long rest in the same range, so the two are confounded by construction. It is one conceptual dial implemented with two keys &mdash; which is why Figure&nbsp;16 shades by the accel rate but the section below declines to credit it. a06 is also slightly off the trend: its base rate, 0.01, is larger than a05&rsquo;s 0.0079 where every other step decreases.</div>\n</div>\n")
+
+# ---- Section 7 -------------------------------------------------------------------------------
+# The page says the ten agents are "identical except for one dial" and "differing in one setting".
+# Diffing their saved configs leaf by leaf (244 keys) says TWO body settings differ:
+#   body.recovery_accel_rate  0.0 0.3 0.5 0.7 0.9 1.0 1.2 1.5 2.0 2.7
+#   body.recovery_base_rate   5.0 .55 .12 .029 .0079 .01 .0014 .00028 2.9e-5 2.1e-6
+# plus `tag` and `wandb.name`, which are naming only. Healing is
+# `base_rate * (1+accel_rate)**(streak-1)` (core.py:207), so the two are a single design axis --
+# how back-loaded resting's payoff is -- implemented with two knobs that were co-tuned. The claim
+# "one setting" is therefore wrong as written, and it matters: it is a second reason the accel
+# rate cannot be credited, which the section's own "ruled out" list does not mention.
+# Values are literals because they come from ten immutable saved configs under results/, which is
+# gitignored and absent on a fresh clone; the derivation is the diff described above.
+FIXES += [
+    ("section 7: two settings differ, not one",
+     "We trained ten, identical except for one dial &mdash; how much extra healing they earn for\n"
+     "<em>continuing</em> to rest &mdash; and dropped all ten through the <em>same</em> million worlds.",
+     "We trained ten that differ in how much extra healing they earn for <em>continuing</em> to "
+     "rest, and dropped all ten through the <em>same</em> million worlds."),
+
+    ("section 7: the ten agents, side by side",
+     '<div class="motive"><b>Why this analysis</b>Every result up to here comes from one trained agent.',
+     PANEL_ARMS +
+     '<div class="motive"><b>Why this analysis</b>Every result up to here comes from one trained agent.'),
+]
+
 if __name__ == "__main__":
     main()
