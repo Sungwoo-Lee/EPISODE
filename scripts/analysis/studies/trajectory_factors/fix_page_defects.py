@@ -172,5 +172,40 @@ FIXES += [
      "0.96M and 0.44M steps respectively</dd>"),
 ]
 
+# The run carries TWO nociceptors and the figure named neither:
+#   sense_interoceptive_nociception - tonic, a 12-slot injury buffer convolved with an alpha
+#     kernel (tau 3), kernel[0]=0 so the current step never leaks in. This is what Figure 12 bins.
+#   sense_extero_nociception - phasic, the maximum intensity among CURRENT painful contacts
+#     (hiding predator, damaging animal, rock overlap, rock collision). Instantaneous.
+# Both are enabled in this run's saved config (nociception_enabled: true alongside
+# interoceptive_nociception_enabled: true) and both appear as separate entries in its
+# perceptual-noise block, so "nociception level" was genuinely ambiguous. 25 characters fits the
+# rotated row block; 52 did not, which is why this is a rename and not a sentence.
+FIXES += [
+    ("figure 12: name which nociceptor",
+     '"nociception level","how many times it has actually been struck this episode",45,',
+     '"interoceptive nociception","how many times it has actually been struck this episode",45,'),
+
+    ("figure 12: say the other channel is live and uncontrolled",
+     "<dt>the rows</dt><dd>the reconstructed nociception signal, binned at 0, 0&ndash;8, "
+     "8&ndash;18, 18&ndash;32, 32&ndash;50 and 50+ &mdash; the same 0&ndash;100 scale injury uses, "
+     "and the same bins Figure&nbsp;18 draws</dd>",
+     "<dt>the rows</dt><dd>the reconstructed <strong>interoceptive</strong> signal, binned at 0, "
+     "0&ndash;8, 8&ndash;18, 18&ndash;32, 32&ndash;50 and 50+ &mdash; the same 0&ndash;100 scale "
+     "injury uses, and the same bins Figure&nbsp;18 draws</dd>"
+     "<dt>which nociceptor</dt><dd>this run has <strong>two</strong>, and they are different "
+     "signals. <code>sense_interoceptive_nociception</code> is <em>tonic</em>: a 12-slot buffer of "
+     "recent injury convolved with an alpha kernel, peaking about three steps back and never "
+     "including the present one. That is the signal binned here. "
+     "<code>sense_extero_nociception</code> is <em>phasic</em>: the strongest painful contact "
+     "happening right now &mdash; a hiding predator, a damaging animal, a rock. Both were enabled "
+     "in this run and both reach the agent as separate observation entries</dd>"
+     "<dt>and so</dt><dd>holding the interoceptive row constant does <strong>not</strong> hold the "
+     "phasic channel constant. A step at high interoceptive nociception with one strike behind it "
+     "may also be carrying a contact signal that a step with zero strikes cannot. This is the same "
+     "gap &ldquo;What we cannot say about nociception&rdquo; names below &mdash; the figure "
+     "separates <em>feeling</em> from <em>origin</em>, not one channel from the other</dd>"),
+]
+
 if __name__ == "__main__":
     main()
