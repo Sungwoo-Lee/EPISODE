@@ -22,22 +22,40 @@ os.chdir(ROOT)
 PAGE = "docs/experiments/active/trajectory_factors/a01_hiding_drivers.html"
 
 
+
+CAP_BEFORE = """<figcaption>Extra hiding caused by a rabbit smelling predator-like, split by what was actually
+  nearby at the time."""
+
+CAP_AFTER = """<figcaption><b>Read the gap inside each row, not the bars across rows.</b> Each row is one
+  situation, and its two bars are the same measurement under two draws of the rabbit&rsquo;s smell.
+  The distance between them is the extra hiding the smell alone caused: <strong>+8.1</strong> points
+  with nothing nearby, <strong>+6.3</strong> with the predator nearby, and <strong>+23.1</strong>
+  when the misread rabbit is itself the animal standing close. A smell that merely made the agent
+  jumpy would move all three rows alike; this one is aimed, about three times as strongly."""
+
 FIXES = [
-    # ---------------------------------------------------------------------------------------
-    # Figure 9 drew THREE fills and legended two. Its second bar is `aim ? --false : --true`,
-    # so the two rows where the rabbit is not nearby render teal and only the aimed row renders
-    # red - and a reader sees an unexplained teal. Teal and red are the SAME quantity; red is
-    # emphasis on the row the finding is about, which the legend now says.
-    ("figure 9 legend: the unlabelled teal",
-     '''  <div class="key">
-    <span><i class="sw" style="background:var(--muted);opacity:.55"></i>rabbit smells rabbit-like</span>
-    <span><i class="sw" style="background:var(--false)"></i>rabbit smells predator-like</span>
-  </div>''',
-     '''  <div class="key">
-    <span><i class="sw" style="background:var(--muted);opacity:.55"></i>rabbit smells rabbit-like</span>
-    <span><i class="sw" style="background:var(--true);opacity:.75"></i>rabbit smells predator-like</span>
-    <span><i class="sw" style="background:var(--false)"></i>the same, in the row this figure is about &mdash; that rabbit nearby</span>
-  </div>'''),
+    # Figure 9 drew its second bar as `aim ? --false : --true`, so two rows came out teal and one
+    # red - three fills, two legend entries, and an unexplained colour. But the teal and the red
+    # are the SAME measurement; the red was only emphasis on the row the argument turns on. The
+    # honest fix is to delete the distinction rather than document it: one quantity, one colour.
+    # Red is the right one to keep - Figure 7 already spends `--false` on "the rabbit's smell, a
+    # false alarm", and every bar in this figure is that same false alarm.
+    ("figure 9: one quantity drawn in two colours",
+     'bar(d[1],y,V("--muted"),.55); bar(d[2],y+16,aim?V("--false"):V("--true"),aim?1:.75);',
+     'bar(d[1],y,V("--muted"),.55); bar(d[2],y+16,V("--false"),.9);'),
+
+    # The figure is read WITHIN a row - the distance between a row's two bars is the effect - and
+    # nothing said so. Read across rows instead and it looks like it says "the agent hides most
+    # when a predator is near", which is true, uninteresting, and not the point.
+    ("figure 9 caption: say the comparison is within a row",
+     CAP_BEFORE, CAP_AFTER),
+
+    # the rewritten caption makes the aiming claim with numbers, so the sentence that made it
+    # without them is now a repeat
+    ("figure 9 caption: drop the duplicated claim",
+     """The response is aimed at the rabbit roughly three times more strongly than
+  anywhere else. When that rabbit""",
+     """When that rabbit"""),
 ]
 
 
@@ -46,7 +64,9 @@ def main():
     html = open(PAGE, encoding="utf-8").read()
     applied = skipped = 0
     for name, before, after in FIXES:
-        if after in html:
+        if html.count(before) == 1:
+            pass                                  # anchor present: apply it below
+        elif before not in html and after in html:
             print(f"  already applied: {name}")
             skipped += 1
             continue
@@ -64,7 +84,6 @@ def main():
         return
     open(PAGE, "w", encoding="utf-8").write(html)
     print(f"  wrote {PAGE}")
-
 
 if __name__ == "__main__":
     main()

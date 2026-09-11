@@ -641,12 +641,14 @@ mistake should be <em>aimed</em>.</p>
   <div id="aim"></div>
   <div class="key">
     <span><i class="sw" style="background:var(--muted);opacity:.55"></i>rabbit smells rabbit-like</span>
-    <span><i class="sw" style="background:var(--true);opacity:.75"></i>rabbit smells predator-like</span>
-    <span><i class="sw" style="background:var(--false)"></i>the same, in the row this figure is about &mdash; that rabbit nearby</span>
+    <span><i class="sw" style="background:var(--false)"></i>rabbit smells predator-like</span>
   </div>
-  <figcaption>Extra hiding caused by a rabbit smelling predator-like, split by what was actually
-  nearby at the time. The response is aimed at the rabbit roughly three times more strongly than
-  anywhere else. When that rabbit comes near, hiding jumps from 26.7% to 49.8% &mdash; close to how
+  <figcaption><b>Read the gap inside each row, not the bars across rows.</b> Each row is one
+  situation, and its two bars are the same measurement under two draws of the rabbit&rsquo;s smell.
+  The distance between them is the extra hiding the smell alone caused: <strong>+8.1</strong> points
+  with nothing nearby, <strong>+6.3</strong> with the predator nearby, and <strong>+23.1</strong>
+  when the misread rabbit is itself the animal standing close. A smell that merely made the agent
+  jumpy would move all three rows alike; this one is aimed, about three times as strongly. When that rabbit comes near, hiding jumps from 26.7% to 49.8% &mdash; close to how
   this agent treats a genuine predator, 56.4%.</figcaption>
 <div class="method"><b>How this was computed</b><dl><dt>subset</dt><dd>the 111,211 episodes with exactly one predator AND exactly one rabbit, so the predator context is held fixed while the rabbit's draw varies</dd><dt>split</dt><dd>rabbit olfactory identity &lt; 0 (&ldquo;smells rabbit-like&rdquo;) against &ge; 0.3 (&ldquo;smells predator-like&rdquo;)</dd><dt>nearby</dt><dd>Chebyshev distance &le; 2 tiles, same step, using the recorded per-step positions of every active animal</dd><dt>three states</dt><dd>predator near takes precedence; &ldquo;rabbit near&rdquo; means a rabbit within 2 and no predator within 2</dd><dt>caveat</dt><dd>splitting on &ldquo;rabbit is nearby&rdquo; conditions on a state the agent partly controls, so this localises where the extra dwell falls rather than estimating a causal effect. The selection runs against the finding: the predator-smelling group spends slightly less time near the rabbit, 13.0% of steps against 14.3%</dd></dl></div>
 <details class="samples"><summary>Data behind this figure &mdash; 111,211 of 1,000,000 (11.1%)</summary><div class="sbox"><table><thead><tr><th class="txt">what</th><th>used</th><th>available</th><th>share</th><th class="txt">why this subset</th></tr></thead><tbody><tr><td class="txt">exactly one predator AND one rabbit</td><td>111,211</td><td>1,000,000</td><td>11.1%</td><td class="txt">holds the predator context fixed while the rabbit's draw varies, which is what separates a targeted false alarm from general jumpiness</td></tr></tbody></table></div><p class="shint">&larr; wider than the screen &mdash; scroll the table sideways; the &ldquo;why this subset&rdquo; column is off to the right</p></details>
@@ -1322,7 +1324,7 @@ const RANK=[["predator count",16.03],["detection range",12.55],
  A.forEach((d,i)=>{const y=22+i*rh,aim=i===2;
   const bar=(v,yy,c,o)=>{s.appendChild(el("rect",{x:L,y:yy,width:Math.max(xw*v/70,1),height:13,
     fill:c,opacity:o,rx:1}));s.appendChild(txt(L+xw*v/70+6,yy+11,v.toFixed(1)+"%","ax"));};
-  bar(d[1],y,V("--muted"),.55); bar(d[2],y+16,aim?V("--false"):V("--true"),aim?1:.75);
+  bar(d[1],y,V("--muted"),.55); bar(d[2],y+16,V("--false"),.9);
   const t=txt(L-10,y+17,d[0],"lbl","end"); if(aim)t.setAttribute("font-weight","650");
   s.appendChild(t);
   s.appendChild(txt(L+xw*Math.max(d[1],d[2])/70+50,y+17,"+"+(d[2]-d[1]).toFixed(1),"ax"));});
