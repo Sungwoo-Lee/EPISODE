@@ -156,6 +156,13 @@ figcaption b{color:var(--ink);font-weight:640}
 .fig-blocks h5{font-family:var(--mono);font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;
   color:var(--accent);margin:0 0 6px;font-weight:400}
 .fig-blocks p{margin:0;font-size:15px;line-height:1.56;color:var(--ink-2)}
+.fig-blocks p + p{margin-top:11px}
+/* A figure block held one paragraph until Figure 7 needed to name sixteen regressors. A prose
+   run of sixteen is unreadable; a list is not. Match the block's own type size rather than
+   inheriting the page's, which is larger, or the list reads as body text inside a caption. */
+.fig-blocks ul{margin:9px 0 0;padding-left:20px;font-size:15px;line-height:1.56;color:var(--ink-2)}
+.fig-blocks li{margin-bottom:6px}
+.fig-blocks li:last-child{margin-bottom:0}
 
 /* ---------- tables ---------- */
 .tbl{width:fit-content;max-width:100%;margin:34px auto}
@@ -781,9 +788,34 @@ animal.</p>
 <figure class="wide">
   <img src="{{FIG:lad07_odour_regression}}" alt="Paired horizontal bars per arm for the adjusted effect of predator odour and rabbit odour on bush hiding. A_baseline shows +4.33 and +3.81; the reference agent shows effects indistinguishable from zero.">
   <figcaption><b>Figure 7.</b> The effect of a predator's and a rabbit's odour strength on bush hiding,
-  with the rest of the world held fixed. <b>Axes.</b> <b>y</b> = the fourteen arms, poorest senses at the bottom. <b>x</b> = the effect on bush hiding, in percentage points, of a one-standard-deviation stronger smell, with everything else in the regression held fixed. Centred on zero; right of the line means the agent hides more when that animal smells stronger.</figcaption>
+  with the rest of the world held fixed. Like Figure 6 this is a <b>multivariate</b> fit &mdash; 16
+  regressors in one regression over one set of episodes &mdash; so each bar is that odour's effect
+  with the other 15 held fixed. The block below names all 16. <b>Axes.</b> <b>y</b> = the fourteen arms, poorest senses at the bottom. <b>x</b> = the effect on bush hiding, in percentage points, of a one-standard-deviation stronger smell, with everything else in the regression held fixed. Centred on zero; right of the line means the agent hides more when that animal smells stronger.</figcaption>
   <div class="fig-blocks">
-    <div><h5>How it is computed</h5><p>The same quasi-binomial machinery as Figure 6, but restricted to the episodes in which there is exactly one predator and exactly one rabbit. That restriction is what makes the question answerable: with two predators in a world, "the predator's smell" would have to be an average over two independently drawn odours, and the regression would be relating behaviour to a quantity that does not correspond to anything the agent encountered. Requiring exactly one of each costs a great deal of data &mdash; it is the smallest sample behind any figure here, about 11 percent of episodes &mdash; but it buys a well-defined regressor. Each animal's odour is redrawn at random every episode, independently of everything else, which is what makes this a causal contrast rather than a correlation: the agent cannot choose what a rabbit smells like. The coefficients shown are adjusted for the number of bushes, rocks, food patches and ambush predators, the distance the agent spawned from cover, the predator's detection range, attack delay, attack range and stamina, the predator's own smell, and the agent's starting wound and hunger. Throughout, an animal's odour <b>intensity</b> is the sum of its two odour channels, drawn fresh each episode; it runs 0 to 2 and averages 1.17. The "strongest-smelling quarter" means the top 25% of episodes by that sum &mdash; a typical intensity of 1.58 against 0.75 in the weakest quarter, about 2.1&times; as loud. Because the agent's nose receives intensity divided by distance, a strong-smelling rabbit six cells away reads like a weak one at three. Intensity says nothing about which class the animal is: both average 1.2.</p></div>
+    <div><h5>How it is computed</h5><p>The same quasi-binomial machinery as Figure 6, but restricted to the episodes in which there is exactly one predator and exactly one rabbit. That restriction is what makes the question answerable: with two predators in a world, "the predator's smell" would have to be an average over two independently drawn odours, and the regression would be relating behaviour to a quantity that does not correspond to anything the agent encountered. Requiring exactly one of each costs a great deal of data &mdash; it is the smallest sample behind any figure here, about 11 percent of episodes &mdash; but it buys a well-defined regressor. Each animal's odour is redrawn at random every episode, independently of everything else, which is what makes this a causal contrast rather than a correlation: the agent cannot choose what a rabbit smells like. Throughout, an animal's odour <b>intensity</b> is the sum of its two odour channels, drawn fresh each episode; it runs 0 to 2 and averages 1.17. The "strongest-smelling quarter" means the top 25% of episodes by that sum &mdash; a typical intensity of 1.58 against 0.75 in the weakest quarter, about 2.1&times; as loud. Because the agent's nose receives intensity divided by distance, a strong-smelling rabbit six cells away reads like a weak one at three. Intensity says nothing about which class the animal is: both average 1.2.</p></div>
+    <div><h5>The 16 regressors, in full</h5>
+    <p>Every one of these is drawn by the environment before the agent acts, and all 16 enter a
+    single regression per arm. Two of them are the bars in the figure; the other 14 are there so
+    that each bar is the effect of that odour and not of something the odour happens to travel
+    with. The list is the <code>term</code> column of the <code>M3</code> rows in each arm's
+    <code>multivariate.csv</code>, so it cannot drift from what was actually fitted.</p>
+    <ul>
+      <li><b>The world at reset (7):</b> the wound the agent woke up with; how well fed it woke up;
+      the number of bushes; of rocks; of food patches; of ambush predators; and how far it spawned
+      from the nearest bush.</li>
+      <li><b>The one predator in the episode (7):</b> how far it can notice the agent (detection
+      range); how long it waits before striking (attack delay); how far it can strike from (attack
+      range); how long it can chase (maximum stamina); how far the agent spawned from it; how
+      <i>predator-like</i> it smells &mdash; the difference between its two odour channels, which is
+      what distinguishes the classes; and <b>how loudly it smells</b> (odour intensity, the sum of
+      those two channels) &mdash; <b>the red bar</b>.</li>
+      <li><b>The one rabbit in the episode (2):</b> how <i>predator-like</i> the rabbit smells, and
+      <b>how loudly it smells</b> &mdash; <b>the blue bar</b>.</li>
+    </ul>
+    <p>The count of predators and the count of rabbits are deliberately <i>not</i> in this model:
+    it is restricted to episodes holding exactly one of each, so inside that subset both are
+    constant and carry no information. They do appear in Figure 6, which is fitted over every
+    episode. Sample here: 111,211 episodes per arm, with a Pearson overdispersion of 19.5.</p></div>
     <div><h5>What it shows</h5><p>The same split, on a different cue and with the world held fixed.
     <code>A_baseline</code> hides +3.81 points harder for a strong-smelling rabbit; the reference agent
     is at &minus;0.00 and not distinguishable from zero.</p></div>

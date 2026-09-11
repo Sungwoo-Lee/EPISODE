@@ -21,11 +21,19 @@ in the weakest - about 2.1x as loud. The nose receives intensity divided by dist
 distance the loud one reads 2.1x higher, and equivalently reaches further: a strong-smelling rabbit
 six cells away produces the same reading as a weak-smelling one at about three cells.
 
-HOW IT IS COMPUTED. Quasi-binomial regression on the episode-level bush-hiding rate, restricted to
-episodes with exactly one predator and one rabbit so that "the predator's smell" and "the rabbit's
-smell" are each a single well-defined number rather than an average over several animals. Standard
-errors are scaled by the Pearson overdispersion. Bars are the effect of a one-standard-deviation
-change in odour intensity, in percentage points.
+HOW IT IS COMPUTED. A MULTIVARIATE quasi-binomial regression on the episode-level bush-hiding
+rate - 16 regressors entered together in one fit over one set of episodes, so each bar is that
+odour's effect with the other 15 held fixed. The full list is in the page's caption for this
+figure and is the term column of the "M3" rows in each arm's multivariate.csv; it is NOT summarised
+by hand here, because a hand summary of it was wrong for a while (it said "the predator's own
+smell", which is two different regressors - how LOUDLY the predator smells and how PREDATOR-LIKE
+it smells - and omitted three others entirely).
+
+Restricted to episodes with exactly one predator and one rabbit so that "the predator's smell" and
+"the rabbit's smell" are each a single well-defined number rather than an average over several
+animals. n_predators and n_rabbits are therefore absent from the model: inside this subset both
+are constant. Standard errors are scaled by the Pearson overdispersion. Bars are the effect of a
+one-standard-deviation change in odour intensity, in percentage points.
 """
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import csv, numpy as np, matplotlib.pyplot as plt
@@ -54,8 +62,8 @@ ax.axvline(0, color=PL.INK, lw=1)
 ax.set_yticks(y); ax.set_yticklabels(PL.arm_ylabels(arms), fontsize=8)
 ax.set_ylabel("sensor-ladder arm  (poorest senses at the bottom)")
 ax.set_xlabel("effect on bush hiding of a one-standard-deviation stronger smell  "
-              "(percentage points)\nadjusted for bushes, food, cover distance, predator traits, "
-              "and the agent's starting wound and hunger")
+              "(percentage points)\nMULTIVARIATE fit: each bar is adjusted for the 15 other "
+              "regressors, which the caption names in full")
 ax.grid(axis="y", visible=False)
 for i in range(len(arms)):
     for val, off, pv in ((P[i], +h/2, Pp[i]), (R[i], -h/2, Rp[i])):
