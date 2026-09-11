@@ -19,11 +19,32 @@ import _ladder as L
 DPI = 260
 INK, MUTED, GRID = "#1c1c1e", "#6b6b70", "#dcdce0"
 # poorest senses -> richest, so colour carries the ladder itself
-# turbo, not viridis. Fourteen arms off viridis land in a blue-green-yellow band where adjacent
-# arms - which are exactly the ones a reader compares - are near-identical. turbo sweeps dark blue
-# through cyan, green and yellow to orange and red, so the same fourteen steps are spread over far
-# more hue. Used at nearly the full range for the same reason.
-LADDER_CMAP = plt.get_cmap("turbo")
+# The ladder ramp is built here rather than taken off the shelf, and the reason is the two failures
+# it replaces. viridis put all fourteen arms into one blue-green-yellow band, and the arms a reader
+# compares are ADJACENT on the ladder, so the hardest pairs to tell apart were exactly the pairs
+# that matter. turbo fixed the separation and broke the page: fluorescent cyan and yellow read as a
+# different document from the prose around them.
+#
+# So: turbo's end-to-end hue span, drawn from the colours the page already uses. Every stop below
+# is either a token defined in this file or a tone between two of them - the rabbit blue, the
+# section green, the amber, the family orange, the threat red - which is what keeps a fourteen-line
+# figure looking like it belongs to the same report as the paragraph above it.
+#
+# NOT colourblind-safe: the green and red ends collapse under deuteranopia. Accepted because these
+# are a discrete ordered set told apart with names attached, not a field read off a scale. If a
+# figure ever has to survive that, cubehelix is the drop-in (and also survives greyscale print).
+LADDER_CMAP = matplotlib.colors.LinearSegmentedColormap.from_list("ladder_house", [
+    "#23395b",   # deep navy      - poorest senses
+    "#2f6f9f",   # rabbit blue    = HARMLESS
+    "#3f8f86",   # teal
+    "#2d6a4f",   # section green  = GROUP_YES
+    "#63a583",   # light green    = GROUP_YES_ALT
+    "#9aa83c",   # olive
+    "#c9a227",   # gold
+    "#c9762e",   # orange         = GROUP_NO
+    "#a8442a",   # rust
+    "#7d1f1a",   # deep red       - richest senses
+])
 # ONE MEANING PER COLOUR, ACROSS EVERY FIGURE. An earlier draft used red and blue for five
 # different things - sign of a change, predator, "cannot resolve identity", heavy wound, and cause
 # of death - twice within a single image. A reader who learns a colour on one figure must not be
