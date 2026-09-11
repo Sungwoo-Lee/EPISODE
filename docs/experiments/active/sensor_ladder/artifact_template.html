@@ -674,10 +674,15 @@ scale goes 4.0 &rarr; 2.0 &rarr; 1.0 &rarr; 0.5 &rarr; off. There is an optimum 
 So the rabbit response is a clean measure of wasted defence &mdash; and asking which sensory settings
 remove it tells us what discrimination actually requires.</p></div>
 <figure class="wide">
-  <img src="{{FIG:lad05_discrimination}}" alt="Left: for each arm, the response to a nearby predator and to a nearby rabbit joined by a line. Right: the rabbit response alone, positive for five arms and negative for nine.">
-  <figcaption><b>Figure 5.</b> Left: each arm's response to a nearby predator and to a nearby rabbit,
-  joined by a line whose length is that arm's discrimination. Right: the rabbit response alone,
-  coloured by whether the arm's sight can resolve identity. <b>Axes.</b> Both panels: <b>y</b> = the fourteen arms, poorest senses at the bottom. <b>x</b> = a DIFFERENCE in percentage points &mdash; bush hiding when the animal is 1-2 cells away minus bush hiding when it is 6 or more cells away. Left panel shows that difference for a predator and for a rabbit; right panel shows the rabbit one alone. Below zero means the agent hides LESS when the animal is near.</figcaption>
+  <img src="{{FIG:lad05_discrimination}}" alt="Left: for each arm, the rabbit response alone as a bar, positive for five arms and negative for nine. Right: the same contrast for a nearby predator and a nearby rabbit, joined by a line.">
+  <figcaption><b>Figure 5.</b> Every number on this figure is one subtraction: how much of its time
+  the agent spent hiding when the nearest animal was <b>1&ndash;2 cells away</b>, minus how much it
+  spent hiding when the nearest animal was <b>6 or more cells away</b>. A positive value means a
+  nearby animal made it hide more. <b>Left:</b> that subtraction for a nearby <i>rabbit</i> alone
+  &mdash; a rabbit cannot hurt the agent, so anything above zero here is hiding spent for nothing.
+  Bars are coloured by whether the arm's sight can resolve identity. <b>Right:</b> the same
+  subtraction for a rabbit and for a predator side by side, joined by a line whose length is that
+  arm's discrimination. <b>Axes.</b> Both panels: <b>y</b> = the fourteen arms, poorest senses at the bottom. <b>x</b> = a DIFFERENCE in percentage points &mdash; bush hiding when the animal is 1-2 cells away minus bush hiding when it is 6 or more cells away. The left panel shows that difference for a rabbit alone; the right panel shows it for a rabbit and a predator together. Left of zero means the agent hides LESS when the animal is near.</figcaption>
   <div class="fig-blocks">
     <div><h5>How it is computed</h5><p>For each arm and each class of animal, one number is computed: the probability of being in a bush when the nearest animal of that class is 1&ndash;2 cells away, minus the same probability when it is 6 or more cells away. Distances of 3&ndash;5 are deliberately left out of the contrast, so the two ends are cleanly separated; they are visible in Figure 4. The counts from the two "near" distance bins are added together before the division, and likewise for the three "far" bins, rather than averaging the per-bin percentages &mdash; pooling counts weights each bin by how much evidence it actually carries, whereas averaging rates would let a sparse bin swing the result. As in Figure 4, the distance is read from the row before the action, and episodes lacking the animal class in question are excluded. A bin with fewer than 1,000 steps behind it is treated as unsupported and dropped rather than plotted as a noisy point; in practice, at this sample size, none is.</p></div>
     <div><h5>What it shows</h5><p>The fourteen split cleanly, and the split is <strong>not</strong>

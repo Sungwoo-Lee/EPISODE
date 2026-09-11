@@ -404,7 +404,7 @@ which is the subject of the next section.
 whose length is that arm's discrimination. Right: the rabbit response alone, coloured by whether the
 arm's sight can resolve identity.
 
-**Axes.** Both panels: y = the fourteen arms, poorest senses at the bottom. x = a DIFFERENCE in percentage points — bush hiding when the animal is 1-2 cells away minus bush hiding when it is 6 or more cells away. Left panel shows that difference for a predator and for a rabbit; right panel shows the rabbit one alone. Below zero means the agent hides LESS when the animal is near.
+**Axes.** Both panels: y = the fourteen arms, poorest senses at the bottom. x = a DIFFERENCE in percentage points — bush hiding when the animal is 1-2 cells away minus bush hiding when it is 6 or more cells away. The left panel shows that difference for a rabbit alone; the right panel shows it for a rabbit and a predator together. Left of zero means the agent hides LESS when the animal is near.
 
 **Motivation.** A rabbit cannot hurt the agent. Hiding when one comes near costs foraging time and
 returns nothing. So the rabbit response is a clean measure of wasted defence &mdash; and asking which
