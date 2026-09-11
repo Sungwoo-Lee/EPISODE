@@ -46,6 +46,30 @@ thead th{font-size:.71rem;letter-spacing:.06em;text-transform:uppercase;color:va
   font-weight:600;border-bottom:1px solid var(--fg)}
 tbody tr:last-child td{border-bottom:0}
 td.num{font-family:var(--mono);font-size:.83rem}
+#arm-grids .dia{overflow-x:auto;margin:1rem 0 .2rem}
+#arm-grids .dia svg{display:block;width:100%;min-width:700px;height:auto}
+#arm-grids .diahint{display:none;font-family:var(--mono);font-size:.62rem;color:var(--muted);
+  margin:0 0 .6rem}
+@media (max-width:820px){#arm-grids .diahint{display:block}}
+#arm-grids .diahint[hidden]{display:none!important}
+#arm-grids details{border:1px solid var(--rule);border-radius:3px;background:var(--panel2);
+  margin:.45rem 0}
+#arm-grids summary{cursor:pointer;padding:.45rem .7rem;font-family:var(--mono);font-size:.68rem;
+  letter-spacing:.05em;color:var(--muted);list-style:none}
+#arm-grids summary::-webkit-details-marker{display:none}
+#arm-grids summary::before{content:'\25B8\00a0\00a0';color:var(--cover)}
+#arm-grids details[open] summary::before{content:'\25BE\00a0\00a0'}
+#arm-grids summary:hover{color:var(--fg)}
+/* the grids are 5-6 nowrap numeric columns; without this they push the page sideways at
+   phone width, which the checker sees as ~175 elements past the viewport. */
+#arm-grids .gwrap{padding:.2rem .7rem .7rem;overflow-x:auto}
+#arm-grids table{min-width:26rem}
+#arm-grids table{font-size:.72rem;width:100%}
+#arm-grids th,#arm-grids td{padding:.26rem .45rem;text-align:right;white-space:nowrap}
+#arm-grids th:first-child,#arm-grids td:first-child{text-align:left}
+#arm-grids .gt{font-family:var(--mono);font-size:.62rem;color:var(--muted);
+  letter-spacing:.05em;margin:.5rem 0 .1rem}
+
 #the-model h3{margin:1.6rem 0 .45rem}
 #the-model h3:first-of-type{margin-top:1.1rem}
 #the-model table{font-size:.84rem}
@@ -925,6 +949,26 @@ difference between them is the agent, never the world.</p>
 <details class="samples"><summary>Data behind this figure &mdash; 189,906,610 of 189,906,610 (100.0%)</summary><div class="sbox"><table><thead><tr><th class="txt">what</th><th>used</th><th>available</th><th>share</th><th class="txt">why this subset</th></tr></thead><tbody><tr><td class="txt">action steps, per agent</td><td>189,906,610</td><td>189,906,610</td><td>100.0%</td><td class="txt">unconditioned, so this is the raw shape rather than the proximity-controlled one</td></tr><tr><td class="txt">agents</td><td>10</td><td>10</td><td>100.0%</td><td class="txt">all ten arms of the rest-premium sweep</td></tr></tbody></table></div><p class="shint">&larr; wider than the screen &mdash; scroll the table sideways; the &ldquo;why this subset&rdquo; column is off to the right</p></details>
 </figure>
 
+
+<div class="panel" id="arm-grids">
+<div class="fignum">The same two cross-tabs, in all ten agents</div>
+<p>Figures&nbsp;12 and 13 are computed from <strong>a01 alone</strong>, so the page's two sharpest
+claims about the nociceptive channel rest on one training run. Both have now been recomputed over
+every arm &mdash; the same bin edges, the same masks, the same reconstruction, 175,101,809 steps per
+agent. The two panels plot the single row of each grid that carries the claim; the full grids are
+underneath, one foldable per agent.</p>
+<div class="dia" id="arm-grid-fig"></div>
+<p class="diahint">&larr; wider than the screen &mdash; scroll the panels sideways</p>
+<p><strong>A.</strong> At the top nociception band, every agent hides more once it has been struck
+than at matched feeling with no strike behind it. The step from zero strikes to one runs
++8.4&ndash;+18.3 points across the ten, a01's +18.3 sitting the largest. <strong>B.</strong>
+Every agent shows the same U: heavy hiding while unwounded, a trough in the lightest wound band,
+then a climb. The climb out of that trough runs +10.0&ndash;+23.6 points, a01's +23.6
+the largest.</p>
+<div class="note"><strong>Both patterns replicate in all ten agents.</strong> Every one shows the strike effect and the climb out of the trough in the same direction as a01, so neither is an accident of the single run this page is built on. What differs is size, not sign. <strong>But a01 is the largest of the ten on both.</strong> Its +18.3 and +23.6 points are the top of ranges running from +8.4 and +10.0. The effects are real and general; the numbers quoted throughout this page are the strongest instance of them rather than the typical one, and a reader should treat them as an upper end.</div>
+<details><summary>a01 &mdash; full grids</summary><div class="gwrap"><p class="gt">nociception &times; prior strikes (Figure 12)</p><table><thead><tr><th>nociception</th><th>0 strikes</th><th>1</th><th>2</th><th>3–4</th><th>5+</th></tr></thead><tbody><tr><td>felt 0</td><td>23.9%</td><td>18.2%</td><td>13.8%</td><td>11.3%</td><td>9.5%</td></tr><tr><td>0–8</td><td>19.2%</td><td>16.5%</td><td>14.4%</td><td>12.5%</td><td>9.6%</td></tr><tr><td>8–18</td><td>14.6%</td><td>15.3%</td><td>14.3%</td><td>13.4%</td><td>11.0%</td></tr><tr><td>18–32</td><td>16.2%</td><td>17.6%</td><td>16.4%</td><td>15.7%</td><td>12.7%</td></tr><tr><td>32–50</td><td>19.1%</td><td>26.6%</td><td>24.3%</td><td>24.0%</td><td>17.4%</td></tr><tr><td>50+</td><td>22.6%</td><td>40.9%</td><td>40.0%</td><td>40.7%</td><td>29.1%</td></tr></tbody></table><p class="gt">elapsed step &times; injury (Figure 13)</p><table><thead><tr><th>steps in</th><th>injury 0</th><th>0–25</th><th>25–50</th><th>≥50</th></tr></thead><tbody><tr><td>0–10</td><td>32.8%</td><td>17.6%</td><td>18.9%</td><td>18.7%</td></tr><tr><td>10–25</td><td>56.8%</td><td>19.2%</td><td>24.0%</td><td>29.1%</td></tr><tr><td>25–50</td><td>45.2%</td><td>13.4%</td><td>18.9%</td><td>37.0%</td></tr><tr><td>50–100</td><td>29.1%</td><td>14.8%</td><td>26.2%</td><td>46.4%</td></tr><tr><td>100–200</td><td>17.0%</td><td>11.9%</td><td>21.7%</td><td>38.3%</td></tr><tr><td>200–500</td><td>10.7%</td><td>8.9%</td><td>13.6%</td><td>21.8%</td></tr></tbody></table></div></details><details><summary>a02 &mdash; full grids</summary><div class="gwrap"><p class="gt">nociception &times; prior strikes (Figure 12)</p><table><thead><tr><th>nociception</th><th>0 strikes</th><th>1</th><th>2</th><th>3–4</th><th>5+</th></tr></thead><tbody><tr><td>felt 0</td><td>25.4%</td><td>21.2%</td><td>16.6%</td><td>13.7%</td><td>11.3%</td></tr><tr><td>0–8</td><td>25.4%</td><td>17.4%</td><td>15.4%</td><td>13.5%</td><td>9.9%</td></tr><tr><td>8–18</td><td>23.9%</td><td>20.4%</td><td>17.0%</td><td>14.9%</td><td>10.5%</td></tr><tr><td>18–32</td><td>24.4%</td><td>21.4%</td><td>18.1%</td><td>16.1%</td><td>12.2%</td></tr><tr><td>32–50</td><td>26.3%</td><td>27.0%</td><td>22.3%</td><td>20.0%</td><td>14.5%</td></tr><tr><td>50+</td><td>28.4%</td><td>42.3%</td><td>39.3%</td><td>37.9%</td><td>26.7%</td></tr></tbody></table><p class="gt">elapsed step &times; injury (Figure 13)</p><table><thead><tr><th>steps in</th><th>injury 0</th><th>0–25</th><th>25–50</th><th>≥50</th></tr></thead><tbody><tr><td>0–10</td><td>37.4%</td><td>24.2%</td><td>24.0%</td><td>24.1%</td></tr><tr><td>10–25</td><td>48.7%</td><td>26.6%</td><td>31.7%</td><td>36.9%</td></tr><tr><td>25–50</td><td>47.0%</td><td>18.0%</td><td>17.4%</td><td>33.8%</td></tr><tr><td>50–100</td><td>33.6%</td><td>18.4%</td><td>21.5%</td><td>47.3%</td></tr><tr><td>100–200</td><td>20.3%</td><td>14.1%</td><td>18.4%</td><td>43.0%</td></tr><tr><td>200–500</td><td>12.5%</td><td>9.6%</td><td>12.2%</td><td>23.4%</td></tr></tbody></table></div></details><details><summary>a03 &mdash; full grids</summary><div class="gwrap"><p class="gt">nociception &times; prior strikes (Figure 12)</p><table><thead><tr><th>nociception</th><th>0 strikes</th><th>1</th><th>2</th><th>3–4</th><th>5+</th></tr></thead><tbody><tr><td>felt 0</td><td>22.8%</td><td>18.4%</td><td>13.9%</td><td>11.2%</td><td>9.9%</td></tr><tr><td>0–8</td><td>21.3%</td><td>14.0%</td><td>12.2%</td><td>10.8%</td><td>9.1%</td></tr><tr><td>8–18</td><td>22.4%</td><td>20.2%</td><td>17.2%</td><td>14.9%</td><td>10.2%</td></tr><tr><td>18–32</td><td>21.8%</td><td>20.6%</td><td>17.8%</td><td>16.1%</td><td>12.5%</td></tr><tr><td>32–50</td><td>22.3%</td><td>23.5%</td><td>20.1%</td><td>18.8%</td><td>14.4%</td></tr><tr><td>50+</td><td>24.4%</td><td>37.3%</td><td>35.4%</td><td>34.2%</td><td>25.3%</td></tr></tbody></table><p class="gt">elapsed step &times; injury (Figure 13)</p><table><thead><tr><th>steps in</th><th>injury 0</th><th>0–25</th><th>25–50</th><th>≥50</th></tr></thead><tbody><tr><td>0–10</td><td>49.0%</td><td>21.2%</td><td>22.2%</td><td>22.7%</td></tr><tr><td>10–25</td><td>45.1%</td><td>24.9%</td><td>28.3%</td><td>34.7%</td></tr><tr><td>25–50</td><td>44.8%</td><td>16.3%</td><td>18.1%</td><td>32.1%</td></tr><tr><td>50–100</td><td>33.1%</td><td>14.4%</td><td>21.9%</td><td>46.3%</td></tr><tr><td>100–200</td><td>17.8%</td><td>11.5%</td><td>19.2%</td><td>43.0%</td></tr><tr><td>200–500</td><td>11.0%</td><td>9.0%</td><td>12.9%</td><td>24.2%</td></tr></tbody></table></div></details><details><summary>a04 &mdash; full grids</summary><div class="gwrap"><p class="gt">nociception &times; prior strikes (Figure 12)</p><table><thead><tr><th>nociception</th><th>0 strikes</th><th>1</th><th>2</th><th>3–4</th><th>5+</th></tr></thead><tbody><tr><td>felt 0</td><td>23.8%</td><td>23.1%</td><td>17.6%</td><td>14.2%</td><td>12.0%</td></tr><tr><td>0–8</td><td>19.3%</td><td>12.2%</td><td>11.3%</td><td>10.5%</td><td>9.5%</td></tr><tr><td>8–18</td><td>22.2%</td><td>18.2%</td><td>15.9%</td><td>14.0%</td><td>9.6%</td></tr><tr><td>18–32</td><td>22.5%</td><td>19.1%</td><td>16.5%</td><td>14.7%</td><td>11.4%</td></tr><tr><td>32–50</td><td>23.6%</td><td>22.6%</td><td>19.2%</td><td>17.1%</td><td>13.0%</td></tr><tr><td>50+</td><td>25.2%</td><td>36.7%</td><td>34.6%</td><td>33.2%</td><td>23.0%</td></tr></tbody></table><p class="gt">elapsed step &times; injury (Figure 13)</p><table><thead><tr><th>steps in</th><th>injury 0</th><th>0–25</th><th>25–50</th><th>≥50</th></tr></thead><tbody><tr><td>0–10</td><td>50.1%</td><td>21.5%</td><td>22.5%</td><td>22.5%</td></tr><tr><td>10–25</td><td>44.6%</td><td>23.2%</td><td>28.3%</td><td>35.1%</td></tr><tr><td>25–50</td><td>46.9%</td><td>14.8%</td><td>17.3%</td><td>31.6%</td></tr><tr><td>50–100</td><td>38.9%</td><td>14.1%</td><td>20.0%</td><td>43.0%</td></tr><tr><td>100–200</td><td>22.9%</td><td>11.4%</td><td>17.1%</td><td>40.0%</td></tr><tr><td>200–500</td><td>13.0%</td><td>9.2%</td><td>11.6%</td><td>21.7%</td></tr></tbody></table></div></details><details><summary>a05 &mdash; full grids</summary><div class="gwrap"><p class="gt">nociception &times; prior strikes (Figure 12)</p><table><thead><tr><th>nociception</th><th>0 strikes</th><th>1</th><th>2</th><th>3–4</th><th>5+</th></tr></thead><tbody><tr><td>felt 0</td><td>26.7%</td><td>24.7%</td><td>17.8%</td><td>14.5%</td><td>12.2%</td></tr><tr><td>0–8</td><td>20.4%</td><td>11.5%</td><td>10.7%</td><td>10.0%</td><td>9.4%</td></tr><tr><td>8–18</td><td>24.4%</td><td>19.1%</td><td>16.0%</td><td>14.0%</td><td>10.0%</td></tr><tr><td>18–32</td><td>24.6%</td><td>19.9%</td><td>17.0%</td><td>15.0%</td><td>11.8%</td></tr><tr><td>32–50</td><td>24.8%</td><td>22.9%</td><td>19.3%</td><td>17.1%</td><td>13.1%</td></tr><tr><td>50+</td><td>25.7%</td><td>36.8%</td><td>35.0%</td><td>33.1%</td><td>22.3%</td></tr></tbody></table><p class="gt">elapsed step &times; injury (Figure 13)</p><table><thead><tr><th>steps in</th><th>injury 0</th><th>0–25</th><th>25–50</th><th>≥50</th></tr></thead><tbody><tr><td>0–10</td><td>75.6%</td><td>22.0%</td><td>23.0%</td><td>22.7%</td></tr><tr><td>10–25</td><td>45.7%</td><td>23.2%</td><td>29.0%</td><td>35.7%</td></tr><tr><td>25–50</td><td>48.2%</td><td>15.4%</td><td>17.5%</td><td>30.1%</td></tr><tr><td>50–100</td><td>37.4%</td><td>13.7%</td><td>19.9%</td><td>41.6%</td></tr><tr><td>100–200</td><td>22.4%</td><td>10.7%</td><td>17.5%</td><td>39.4%</td></tr><tr><td>200–500</td><td>13.3%</td><td>9.0%</td><td>11.9%</td><td>21.2%</td></tr></tbody></table></div></details><details><summary>a06 &mdash; full grids</summary><div class="gwrap"><p class="gt">nociception &times; prior strikes (Figure 12)</p><table><thead><tr><th>nociception</th><th>0 strikes</th><th>1</th><th>2</th><th>3–4</th><th>5+</th></tr></thead><tbody><tr><td>felt 0</td><td>26.5%</td><td>20.3%</td><td>15.2%</td><td>12.7%</td><td>11.5%</td></tr><tr><td>0–8</td><td>29.3%</td><td>16.9%</td><td>14.6%</td><td>12.7%</td><td>10.4%</td></tr><tr><td>8–18</td><td>29.0%</td><td>21.2%</td><td>18.0%</td><td>15.7%</td><td>10.1%</td></tr><tr><td>18–32</td><td>24.1%</td><td>18.8%</td><td>16.0%</td><td>14.1%</td><td>11.3%</td></tr><tr><td>32–50</td><td>23.8%</td><td>21.6%</td><td>18.1%</td><td>16.3%</td><td>12.5%</td></tr><tr><td>50+</td><td>24.6%</td><td>36.2%</td><td>34.5%</td><td>33.1%</td><td>22.4%</td></tr></tbody></table><p class="gt">elapsed step &times; injury (Figure 13)</p><table><thead><tr><th>steps in</th><th>injury 0</th><th>0–25</th><th>25–50</th><th>≥50</th></tr></thead><tbody><tr><td>0–10</td><td>29.8%</td><td>22.9%</td><td>22.5%</td><td>22.1%</td></tr><tr><td>10–25</td><td>43.7%</td><td>27.5%</td><td>26.5%</td><td>34.6%</td></tr><tr><td>25–50</td><td>45.6%</td><td>23.5%</td><td>14.9%</td><td>30.6%</td></tr><tr><td>50–100</td><td>32.3%</td><td>22.6%</td><td>18.6%</td><td>43.4%</td></tr><tr><td>100–200</td><td>18.6%</td><td>16.3%</td><td>16.7%</td><td>40.2%</td></tr><tr><td>200–500</td><td>12.4%</td><td>10.5%</td><td>11.5%</td><td>22.2%</td></tr></tbody></table></div></details><details><summary>a07 &mdash; full grids</summary><div class="gwrap"><p class="gt">nociception &times; prior strikes (Figure 12)</p><table><thead><tr><th>nociception</th><th>0 strikes</th><th>1</th><th>2</th><th>3–4</th><th>5+</th></tr></thead><tbody><tr><td>felt 0</td><td>29.6%</td><td>28.1%</td><td>19.8%</td><td>14.9%</td><td>11.5%</td></tr><tr><td>0–8</td><td>25.6%</td><td>14.3%</td><td>12.7%</td><td>11.2%</td><td>9.7%</td></tr><tr><td>8–18</td><td>28.0%</td><td>21.3%</td><td>17.5%</td><td>14.7%</td><td>9.7%</td></tr><tr><td>18–32</td><td>25.2%</td><td>20.5%</td><td>16.9%</td><td>14.6%</td><td>11.3%</td></tr><tr><td>32–50</td><td>24.8%</td><td>22.3%</td><td>18.3%</td><td>16.0%</td><td>12.2%</td></tr><tr><td>50+</td><td>24.8%</td><td>33.2%</td><td>31.4%</td><td>29.1%</td><td>18.5%</td></tr></tbody></table><p class="gt">elapsed step &times; injury (Figure 13)</p><table><thead><tr><th>steps in</th><th>injury 0</th><th>0–25</th><th>25–50</th><th>≥50</th></tr></thead><tbody><tr><td>0–10</td><td>86.2%</td><td>23.6%</td><td>23.8%</td><td>23.3%</td></tr><tr><td>10–25</td><td>48.8%</td><td>26.8%</td><td>28.8%</td><td>34.4%</td></tr><tr><td>25–50</td><td>49.9%</td><td>19.3%</td><td>16.1%</td><td>26.1%</td></tr><tr><td>50–100</td><td>40.1%</td><td>16.2%</td><td>18.3%</td><td>38.8%</td></tr><tr><td>100–200</td><td>23.7%</td><td>12.1%</td><td>16.1%</td><td>34.8%</td></tr><tr><td>200–500</td><td>12.8%</td><td>9.4%</td><td>11.4%</td><td>17.9%</td></tr></tbody></table></div></details><details><summary>a08 &mdash; full grids</summary><div class="gwrap"><p class="gt">nociception &times; prior strikes (Figure 12)</p><table><thead><tr><th>nociception</th><th>0 strikes</th><th>1</th><th>2</th><th>3–4</th><th>5+</th></tr></thead><tbody><tr><td>felt 0</td><td>22.9%</td><td>22.7%</td><td>17.3%</td><td>14.0%</td><td>11.7%</td></tr><tr><td>0–8</td><td>20.2%</td><td>10.8%</td><td>10.3%</td><td>9.9%</td><td>9.4%</td></tr><tr><td>8–18</td><td>22.6%</td><td>17.6%</td><td>14.8%</td><td>12.8%</td><td>9.6%</td></tr><tr><td>18–32</td><td>22.7%</td><td>18.6%</td><td>15.8%</td><td>14.0%</td><td>11.1%</td></tr><tr><td>32–50</td><td>22.8%</td><td>22.6%</td><td>18.8%</td><td>16.5%</td><td>12.3%</td></tr><tr><td>50+</td><td>23.5%</td><td>36.3%</td><td>34.7%</td><td>33.5%</td><td>21.6%</td></tr></tbody></table><p class="gt">elapsed step &times; injury (Figure 13)</p><table><thead><tr><th>steps in</th><th>injury 0</th><th>0–25</th><th>25–50</th><th>≥50</th></tr></thead><tbody><tr><td>0–10</td><td>86.6%</td><td>22.1%</td><td>22.4%</td><td>21.7%</td></tr><tr><td>10–25</td><td>42.5%</td><td>21.7%</td><td>26.8%</td><td>33.7%</td></tr><tr><td>25–50</td><td>42.1%</td><td>11.8%</td><td>16.0%</td><td>29.1%</td></tr><tr><td>50–100</td><td>34.7%</td><td>11.4%</td><td>18.2%</td><td>42.4%</td></tr><tr><td>100–200</td><td>21.4%</td><td>9.6%</td><td>15.6%</td><td>38.8%</td></tr><tr><td>200–500</td><td>12.9%</td><td>8.9%</td><td>10.9%</td><td>19.9%</td></tr></tbody></table></div></details><details><summary>a09 &mdash; full grids</summary><div class="gwrap"><p class="gt">nociception &times; prior strikes (Figure 12)</p><table><thead><tr><th>nociception</th><th>0 strikes</th><th>1</th><th>2</th><th>3–4</th><th>5+</th></tr></thead><tbody><tr><td>felt 0</td><td>27.3%</td><td>25.9%</td><td>19.9%</td><td>15.1%</td><td>12.4%</td></tr><tr><td>0–8</td><td>27.9%</td><td>13.2%</td><td>11.8%</td><td>11.0%</td><td>9.9%</td></tr><tr><td>8–18</td><td>33.0%</td><td>22.9%</td><td>17.6%</td><td>14.7%</td><td>10.0%</td></tr><tr><td>18–32</td><td>28.1%</td><td>21.2%</td><td>16.9%</td><td>14.5%</td><td>11.1%</td></tr><tr><td>32–50</td><td>27.6%</td><td>24.1%</td><td>19.1%</td><td>16.3%</td><td>12.1%</td></tr><tr><td>50+</td><td>28.9%</td><td>38.6%</td><td>35.4%</td><td>32.8%</td><td>19.6%</td></tr></tbody></table><p class="gt">elapsed step &times; injury (Figure 13)</p><table><thead><tr><th>steps in</th><th>injury 0</th><th>0–25</th><th>25–50</th><th>≥50</th></tr></thead><tbody><tr><td>0–10</td><td>95.8%</td><td>25.3%</td><td>25.4%</td><td>25.8%</td></tr><tr><td>10–25</td><td>45.3%</td><td>30.9%</td><td>30.9%</td><td>38.3%</td></tr><tr><td>25–50</td><td>45.7%</td><td>21.7%</td><td>16.6%</td><td>30.0%</td></tr><tr><td>50–100</td><td>35.5%</td><td>17.4%</td><td>19.0%</td><td>42.5%</td></tr><tr><td>100–200</td><td>22.1%</td><td>13.1%</td><td>16.4%</td><td>37.8%</td></tr><tr><td>200–500</td><td>13.8%</td><td>10.1%</td><td>11.5%</td><td>19.2%</td></tr></tbody></table></div></details><details><summary>a10 &mdash; full grids</summary><div class="gwrap"><p class="gt">nociception &times; prior strikes (Figure 12)</p><table><thead><tr><th>nociception</th><th>0 strikes</th><th>1</th><th>2</th><th>3–4</th><th>5+</th></tr></thead><tbody><tr><td>felt 0</td><td>28.5%</td><td>25.9%</td><td>18.0%</td><td>13.9%</td><td>11.4%</td></tr><tr><td>0–8</td><td>24.8%</td><td>13.0%</td><td>12.1%</td><td>10.9%</td><td>9.6%</td></tr><tr><td>8–18</td><td>26.7%</td><td>21.0%</td><td>17.8%</td><td>15.0%</td><td>9.6%</td></tr><tr><td>18–32</td><td>26.2%</td><td>21.1%</td><td>17.9%</td><td>15.4%</td><td>11.4%</td></tr><tr><td>32–50</td><td>26.7%</td><td>23.9%</td><td>19.4%</td><td>17.0%</td><td>12.8%</td></tr><tr><td>50+</td><td>27.9%</td><td>37.5%</td><td>34.8%</td><td>32.0%</td><td>22.1%</td></tr></tbody></table><p class="gt">elapsed step &times; injury (Figure 13)</p><table><thead><tr><th>steps in</th><th>injury 0</th><th>0–25</th><th>25–50</th><th>≥50</th></tr></thead><tbody><tr><td>0–10</td><td>75.6%</td><td>23.7%</td><td>24.4%</td><td>24.5%</td></tr><tr><td>10–25</td><td>46.2%</td><td>26.1%</td><td>30.9%</td><td>38.0%</td></tr><tr><td>25–50</td><td>46.9%</td><td>17.4%</td><td>17.9%</td><td>29.8%</td></tr><tr><td>50–100</td><td>38.3%</td><td>15.9%</td><td>20.1%</td><td>41.9%</td></tr><tr><td>100–200</td><td>22.5%</td><td>11.6%</td><td>17.2%</td><td>38.8%</td></tr><tr><td>200–500</td><td>12.7%</td><td>8.9%</td><td>11.5%</td><td>20.6%</td></tr></tbody></table></div></details>
+</div>
+
 <h2>8 &nbsp;Does a neuromodulator help?</h2>
 <p>The findings above describe an agent that reacts strongly to an ambiguous smell and pays for it
 in survival. A natural response is to give it machinery for adjusting its perception according to
@@ -1784,6 +1828,64 @@ const CV = n => "var(" + n + ")";
   put("glmviz", s);
   /* show the scroll cue only when the box actually scrolls, and keep it true on resize */
   var box = document.getElementById("glmviz");
+  var hint = box && box.parentNode.querySelector(".diahint");
+  function sync() { if (box && hint) hint.hidden = !(box.scrollWidth > box.clientWidth + 1); }
+  sync(); addEventListener("resize", sync); addEventListener("load", sync);
+})();
+</script>
+<script>
+(function () {
+  var C = function (n) { return "var(" + n + ")"; };
+  var A = {"a01": {"hits": [22.6, 40.95, 39.98, 40.72, 29.11], "inj": [45.16, 13.43, 18.87, 37.04]}, "a02": {"hits": [28.36, 42.28, 39.33, 37.95, 26.72], "inj": [46.97, 18.04, 17.43, 33.79]}, "a03": {"hits": [24.45, 37.31, 35.38, 34.18, 25.31], "inj": [44.81, 16.31, 18.11, 32.07]}, "a04": {"hits": [25.24, 36.73, 34.58, 33.19, 23.01], "inj": [46.87, 14.82, 17.32, 31.62]}, "a05": {"hits": [25.72, 36.82, 34.96, 33.12, 22.33], "inj": [48.17, 15.44, 17.47, 30.09]}, "a06": {"hits": [24.57, 36.21, 34.47, 33.09, 22.41], "inj": [45.62, 23.46, 14.86, 30.63]}, "a07": {"hits": [24.76, 33.17, 31.43, 29.11, 18.5], "inj": [49.85, 19.3, 16.08, 26.1]}, "a08": {"hits": [23.52, 36.33, 34.72, 33.48, 21.61], "inj": [42.09, 11.78, 16.01, 29.05]}, "a09": {"hits": [28.93, 38.58, 35.38, 32.81, 19.57], "inj": [45.71, 21.75, 16.65, 29.99]}, "a10": {"hits": [27.93, 37.46, 34.84, 31.98, 22.05], "inj": [46.9, 17.44, 17.85, 29.78]}}, arms = Object.keys(A).sort();
+  var W = 700, H = 660, s = svg(W, H);
+  var ml = 62, mr = 116, pw = W - ml - mr;
+
+  function panel(oy, ph, series, labs, ymax, step, title, sub, ylabel) {
+    s.appendChild(txt(ml - 4, oy + 14, title, "axt"));
+    s.appendChild(txt(ml - 4, oy + 29, sub, "ax", null, C("--muted")));
+    var Y = function (v) { return oy + 46 + ph - (v / ymax) * ph; };
+    var X = function (j) { return ml + pw * j / (labs.length - 1); };
+    for (var g = 0; g <= ymax + 0.001; g += step) {
+      s.appendChild(el("line", {x1: ml, y1: Y(g), x2: ml + pw, y2: Y(g),
+        style: "stroke:" + C("--grid"), "stroke-width": .6}));
+      s.appendChild(txt(ml - 7, Y(g) + 3, g + "%", "ax", "end"));
+    }
+    labs.forEach(function (l, j) {
+      s.appendChild(txt(X(j), Y(0) + 15, l, "ax", "middle")); });
+    series.forEach(function (row) {
+      var v = row.v, first = row.arm === "a01";
+      var d = ""; v.forEach(function (q, j) { d += (j ? "L" : "M") + X(j) + " " + Y(q); });
+      s.appendChild(el("path", {d: d, fill: "none",
+        style: "stroke:" + C(first ? "--false" : "--cover"),
+        "stroke-width": first ? 2.6 : 1.3, opacity: first ? 1 : .5,
+        "stroke-linejoin": "round"}));
+      if (first) v.forEach(function (q, j) {
+        s.appendChild(el("circle", {cx: X(j), cy: Y(q), r: 3, style: "fill:" + C("--false")})); });
+    });
+    /* name the extremes at the right edge so ten lines stay readable */
+    var last = series.map(function (r) { return {a: r.arm, y: r.v[r.v.length - 1]}; })
+                     .sort(function (p, q) { return q.y - p.y; });
+    [last[0], last[last.length - 1]].forEach(function (e) {
+      s.appendChild(txt(ml + pw + 8, Y(e.y) + 3, e.a, "ax", null,
+        C(e.a === "a01" ? "--false" : "--muted"))); });
+    s.appendChild(txt(ml + pw + 8, oy + 52, "a01 in red,", "ax", null, C("--false")));
+    s.appendChild(txt(ml + pw + 8, oy + 64, "the other nine", "ax", null, C("--muted")));
+    s.appendChild(txt(ml + pw + 8, oy + 76, "behind it", "ax", null, C("--muted")));
+    ylab(s, 15, oy + 46 + ph / 2, ylabel);
+  }
+
+  panel(6, 214, arms.map(function (a) { return {arm: a, v: A[a].hits}; }),
+        ["0 strikes", "1", "2", "3\u20134", "5+"], 50, 10,
+        "A \u00b7 Figure 12's claim in all ten \u2014 at the TOP nociception band (50+)",
+        "does having been struck predict more hiding, at matched feeling?",
+        "bush hiding");
+  panel(336, 214, arms.map(function (a) { return {arm: a, v: A[a].inj}; }),
+        ["injury 0", "0\u201325", "25\u201350", "\u226550"], 60, 15,
+        "B \u00b7 Figure 13's claim in all ten \u2014 within the 25\u201350 step band",
+        "does hiding climb with the wound, once past the trough?",
+        "bush hiding");
+  put("arm-grid-fig", s);
+  var box = document.getElementById("arm-grid-fig");
   var hint = box && box.parentNode.querySelector(".diahint");
   function sync() { if (box && hint) hint.hidden = !(box.scrollWidth > box.clientWidth + 1); }
   sync(); addEventListener("resize", sync); addEventListener("load", sync);
