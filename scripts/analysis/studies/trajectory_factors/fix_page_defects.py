@@ -108,5 +108,31 @@ FIXES += [
      "difference from Figure&nbsp;9, which reads position and cover at the same step</dd>"),
 ]
 
+# ---- Figure 11 -------------------------------------------------------------------------------
+# Its two lines were --muted and --cover: relative luminance 0.147 against 0.115, a contrast of
+# 1.19:1. Separable by hue alone, and both desaturated mid-tones, so on a thin line they read as
+# one series. This palette is luminance-flat (0.115-0.146) everywhere except --warm at 0.274, so
+# amber is its only member that separates by LIGHTNESS as well as hue. Grey keeps "every injury",
+# where a neutral suits the unfiltered set; the subset takes amber and a heavier stroke.
+FIXES += [
+    ("figure 11: the two lines were the same lightness",
+     '[[A,V("--muted"),2],[I,V("--cover"),2.3]]',
+     '[[A,V("--muted"),2],[I,V("--warm"),2.9]]'),
+
+    ("figure 11 legend: match the new colour",
+     '<span><i class="sw" style="background:var(--cover)"></i>isolated injuries only</span>',
+     '<span><i class="sw" style="background:var(--warm)"></i>isolated injuries only</span>'),
+
+    # "isolated" named a filter without saying what it selects for, or why anyone would want it.
+    ("figure 11: say what an isolated injury is",
+     "<dt>isolated</dt><dd>the subset with no other damage event in the 10 steps before or 25 after</dd>",
+     "<dt>isolated</dt><dd>the subset of hits with <strong>no other damage in the 10 steps before "
+     "or the 25 after</strong> &mdash; a single, one-off wound rather than one blow inside a "
+     "sustained mauling. It matters because during a chase the agent is struck again and again, so "
+     "what follows a hit there is its response to an <em>attack still in progress</em> rather than "
+     "to the wound itself. Isolating single hits is the only way to watch one injury's effect rise "
+     "and decay on its own &mdash; at the cost recorded in the next row</dd>"),
+]
+
 if __name__ == "__main__":
     main()

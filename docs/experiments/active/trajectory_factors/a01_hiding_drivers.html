@@ -698,7 +698,7 @@ confirms our hiding measure means what its name says.</figcaption>
   <div id="peri"></div>
   <div class="key">
     <span><i class="sw" style="background:var(--muted)"></i>every injury</span>
-    <span><i class="sw" style="background:var(--cover)"></i>isolated injuries only</span>
+    <span><i class="sw" style="background:var(--warm)"></i>isolated injuries only</span>
   </div>
   <figcaption>Bush hiding falls away in the steps before the hit &mdash; being out of cover is <em>how</em> it
   got hit &mdash; reaches exactly zero at the moment of impact, then recovers. Measured against the baseline ten steps <em>before</em>, the rise
@@ -707,7 +707,7 @@ confirms our hiding measure means what its name says.</figcaption>
   for "no further damage" preferentially keeps the cases where hiding worked. The truth is between
   one and four and a half points &mdash; real, but small.</figcaption>
 
-<div class="method"><b>How this was computed</b><dl><dt>events</dt><dd>every step with <code>damage</code> &gt; 0, aligned at lag 0; bush occupancy collected from lag &minus;10 to +25 within the same episode</dd><dt>isolated</dt><dd>the subset with no other damage event in the 10 steps before or 25 after</dd><dt>baseline</dt><dd>the value at lag &minus;10, not lag &minus;1 — lag &minus;1 is mechanically depressed because the agent must be out of cover to be hit</dd><dt>known bias</dt><dd>the isolated filter is a collider: hiding prevents damage, so it preferentially keeps cases where hiding worked. Treat it as an upper bound, all-events as a lower bound</dd><dt>correction</dt><dd>an earlier version quoted +8 pp sustained to +25, measured from lag &minus;1 on the isolated subset. Both choices inflated it</dd></dl></div>
+<div class="method"><b>How this was computed</b><dl><dt>events</dt><dd>every step with <code>damage</code> &gt; 0, aligned at lag 0; bush occupancy collected from lag &minus;10 to +25 within the same episode</dd><dt>isolated</dt><dd>the subset of hits with <strong>no other damage in the 10 steps before or the 25 after</strong> &mdash; a single, one-off wound rather than one blow inside a sustained mauling. It matters because during a chase the agent is struck again and again, so what follows a hit there is its response to an <em>attack still in progress</em> rather than to the wound itself. Isolating single hits is the only way to watch one injury's effect rise and decay on its own &mdash; at the cost recorded in the next row</dd><dt>baseline</dt><dd>the value at lag &minus;10, not lag &minus;1 — lag &minus;1 is mechanically depressed because the agent must be out of cover to be hit</dd><dt>known bias</dt><dd>the isolated filter is a collider: hiding prevents damage, so it preferentially keeps cases where hiding worked. Treat it as an upper bound, all-events as a lower bound</dd><dt>correction</dt><dd>an earlier version quoted +8 pp sustained to +25, measured from lag &minus;1 on the isolated subset. Both choices inflated it</dd></dl></div>
 <details class="samples"><summary>Data behind this figure &mdash; 10,779,288 of 189,906,610 (5.7%)</summary><div class="sbox"><table><thead><tr><th class="txt">what</th><th>used</th><th>available</th><th>share</th><th class="txt">why this subset</th></tr></thead><tbody><tr><td class="txt">moments damage was taken</td><td>10,779,288</td><td>189,906,610</td><td>5.7%</td><td class="txt">the figure aligns on damage, so a step with none is not an event</td></tr><tr><td class="txt">of those, the isolated subset</td><td>not recorded</td><td>10,779,288</td><td>&mdash;</td><td class="txt">the count of events with no other damage within the window was never written into the page; the figure draws the subset but did not record its size</td></tr></tbody></table></div><p class="shint">&larr; wider than the screen &mdash; scroll the table sideways; the &ldquo;why this subset&rdquo; column is off to the right</p></details>
 </figure>
 
@@ -1356,7 +1356,7 @@ const RANK=[["predator count",16.03],["detection range",12.55],
  s.appendChild(el("line",{x1:X(0),y1:mt-8,x2:X(0),y2:H-mb,stroke:V("--false"),"stroke-width":1.2,
    "stroke-dasharray":"3 3"}));
  s.appendChild(txt(X(0)+5,mt,"the hit","ax"));
- [[A,V("--muted"),2],[I,V("--cover"),2.3]].forEach(([arr,c,w])=>{
+ [[A,V("--muted"),2],[I,V("--warm"),2.9]].forEach(([arr,c,w])=>{
   const pts=L1.map((l,j)=>[l,arr[j]]);
   const seg=q=>{let d="";q.forEach((p,j)=>d+=(j?"L":"M")+X(p[0])+" "+Y(p[1]));return d};
   s.appendChild(el("path",{d:seg(pts.filter(p=>p[0]<0)),fill:"none",stroke:c,"stroke-width":w,
