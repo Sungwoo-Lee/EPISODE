@@ -63,15 +63,15 @@ fig, ax = plt.subplots(1, 2, figsize=(13.6, 5.9), sharey=True,
                        gridspec_kw={"width_ratios": [1.2, 1]})
 y = np.arange(len(arms)); h = 0.36
 ax[0].barh(y + h/2, r_lo, height=h, color=PL.WOUND_LO, edgecolor="none",
-           label="episodes that began nearly unhurt  (start wound 0-25)")
+           label="episodes that began nearly unhurt  (initial injury level 0-25)")
 ax[0].barh(y - h/2, r_hi, height=h, color=PL.WOUND_HI, edgecolor="none",
-           label="episodes that began badly wounded  (start wound 75-100)")
+           label="episodes that began badly hurt  (initial injury level 75-100)")
 ax[0].axvline(0, color=PL.INK, lw=1)
 ax[0].set_yticks(y); ax[0].set_yticklabels(PL.arm_ylabels(arms), fontsize=8)
 ax[0].set_ylabel("sensor-ladder arm  (poorest senses at the bottom)")
 ax[0].set_xlabel("response to a strong RABBIT smell\n"
                  "a DIFFERENCE, in percentage points\n"
-                 "dwell in the strongest-smelling quarter MINUS the weakest")
+                 "bush hiding in the strongest-smelling quarter MINUS the weakest")
 ax[0].grid(axis="y", visible=False)
 ax[0].legend(loc="lower center", bbox_to_anchor=(0.5, 1.01), ncol=1, fontsize=8.5)
 ax[0].set_xlim(min(0, r_lo.min(), r_hi.min()) - 0.6, max(r_lo.max(), r_hi.max()) * 1.16)
@@ -79,9 +79,9 @@ ax[0].set_xlim(min(0, r_lo.min(), r_hi.min()) - 0.6, max(r_lo.max(), r_hi.max())
 ax[1].barh(y + h/2, d_r, height=h, color=[CY if g else CN for g in grp], edgecolor="none")
 ax[1].barh(y - h/2, d_p, height=h, color=PL.GRID, edgecolor="none")
 ax[1].axvline(0, color=PL.INK, lw=1)
-ax[1].set_xlabel("how much the wound AMPLIFIED that response\n"
+ax[1].set_xlabel("how much a high INITIAL INJURY LEVEL amplified that response\n"
                  "a DIFFERENCE of two differences, in percentage points\n"
-                 "the response at left when wounded MINUS when unhurt")
+                 "the response at left at injury level 75-100 MINUS at 0-25")
 ax[1].grid(axis="y", visible=False)
 m = max(np.max(np.abs(np.r_[d_r, d_p])), 1e-6)
 ax[1].set_xlim(min(0, np.min(np.r_[d_r, d_p])) - m * 0.45, m * 1.5)

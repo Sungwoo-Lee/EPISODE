@@ -41,8 +41,8 @@ fig, ax = plt.subplots(1, 2, figsize=(12.6, 5.4), sharey=True)
 for j, (dat, ttl, xl) in enumerate([
         (nut, "HUNGER - assigned at random at the start of the episode",
          "how well fed the agent woke up  (nutrition, 0-100)\nleft = woke up starving"),
-        (inj, "WOUND - also assigned at random at the start of the episode",
-         "how wounded the agent woke up  (injury level, 0-100)\nleft = woke up unhurt")]):
+        (inj, "INITIAL INJURY LEVEL - also assigned at random at the start of the episode",
+         "initial injury level  (0-100)\nleft = woke up unhurt")]):
     h = PL.group_lines(ax[j], x, dat, GRP, spotlight=SPOT, label_end=True)
     ax[j].set_xlim(-0.25, 3.75)
     ax[j].set_xticks(x); ax[j].set_xticklabels(L.INJ_NAMES)

@@ -88,9 +88,9 @@ ax[0].set_ylabel("bush hiding over the episode's first 25 steps\n(% of those ste
 h = [plt.Line2D([], [], color=PL.GROUP_YES, lw=2.6, label=L.GROUP_LABEL[True] + "  (9 arms)"),
      plt.Line2D([], [], color=PL.GROUP_NO, lw=2.6, label=L.GROUP_LABEL[False] + "  (5 arms)"),
      plt.Line2D([], [], color=PL.MUTED, lw=2.4, marker="o", ms=4.6,
-                label="solid = episodes that began nearly unhurt  (start wound 0-25)"),
+                label="solid = episodes that began nearly unhurt  (initial injury level 0-25)"),
      plt.Line2D([], [], color=PL.MUTED, lw=2.0, ls="--", marker="s", ms=4.2,
-                label="dashed = episodes that began badly wounded  (start wound 75-100)")]
+                label="dashed = episodes that began badly hurt  (initial injury level 75-100)")]
 ax[0].legend(handles=h, loc="lower center", bbox_to_anchor=(1.03, 1.10), ncol=2, fontsize=8.2)
 fig.text(0.5, -0.03, "Bold lines pool the counts within each group; the faint lines behind them are "
          "the fourteen individual arms.", ha="center", fontsize=8, color=PL.MUTED)

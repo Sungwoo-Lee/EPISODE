@@ -29,7 +29,7 @@ import _ladder as L, _plot as PL
 
 MODEL = "M1 exogenous, all episodes"
 PRETTY = {
-    "start_injury": "wound it woke up with",
+    "start_injury": "initial injury level",
     "start_nutrition": "how well fed it woke up",
     "n_predators": "number of predators",
     "n_rabbits": "number of rabbits",

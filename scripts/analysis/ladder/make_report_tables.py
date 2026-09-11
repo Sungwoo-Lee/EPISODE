@@ -89,10 +89,10 @@ for nm, f in MEAS.items():
     who = [a for a, v in yes.items() if v == my][0]
     w(f"| {nm} | {my:+.2f} | {mn:+.2f} | {mn-my:+.2f} | `{who}` |")
 
-w("\n### TABLE 6 - what a randomised starting wound does\n")
-w("| arm | bush hiding, first 25 steps (pp per full wound range) | "
+w("\n### TABLE 6 - what a randomised initial injury level does\n")
+w("| arm | bush hiding, first 25 steps (pp per full injury-level range) | "
   "shift in rabbit proximity (pp) | shift in predator proximity (pp) | "
-  "wound amplifies rabbit odour (pp) | wound amplifies predator odour (pp) |")
+  "injury level amplifies rabbit odour (pp) | injury level amplifies predator odour (pp) |")
 w("|---|---|---|---|---|---|")
 def sl(a, kind, ib):
     o = D[a]["odour"]
@@ -108,7 +108,7 @@ for a in arms:
       f"{sl(a,'rab',3)-sl(a,'rab',0):+.2f} | {sl(a,'pred',3)-sl(a,'pred',0):+.2f} |")
 
 w("\n### TABLE 9 - the two internal drives, first 25 steps\n")
-w("| arm | hunger: change in bush hiding (pp, signed) | wound: change in bush hiding (pp, signed) | ratio |")
+w("| arm | hunger: change in bush hiding (pp, signed) | injury level: change in bush hiding (pp, signed) | ratio |")
 w("|---|---|---|---|")
 for a in arms:
     z = np.load(f"{L.OUT_ROOT}/{a}_episodes.npz")
@@ -120,11 +120,11 @@ for a in arms:
         sp[key] = c[3] - c[0]
     r = sp["nut0"] / sp["inj0"] if sp["inj0"] > 0 else float("nan")
     w(f"| `{a}` | {sp['nut0']:+.2f} | {sp['inj0']:+.2f} | "
-      f"{('%.1fx' % r) if np.isfinite(r) else 'wound effect is negative'} |")
+      f"{('%.1fx' % r) if np.isfinite(r) else 'injury effect is negative'} |")
 
 w("\n### TABLE 7 - the three readings of the injury question (Figure 14)\n")
-w("| arm | A: assigned wound, first 25 steps (pp) | B: assigned wound, whole episode (pp) | "
-  "C: carried wound, whole episode (pp) |")
+w("| arm | A: assigned injury level, first 25 steps (pp) | B: assigned injury level, whole episode (pp) | "
+  "C: carried injury level, whole episode (pp) |")
 w("|---|---|---|---|")
 for a in arms:
     z = np.load(f"{L.OUT_ROOT}/{a}_episodes.npz")
@@ -134,7 +134,7 @@ for a in arms:
     c = L.rate(D[a]["grids"]["dw_carried"], D[a]["grids"]["dwt_carried"])
     w(f"| `{a}` | {e[3]-e[0]:+.2f} | {h[3]-h[0]:+.2f} | {c[3]-c[0]:+.2f} |")
 
-w("\n### TABLE 8 - how long an episode lasts, by the wound the agent woke up with\n")
+w("\n### TABLE 8 - how long an episode lasts, by the initial injury level\n")
 w("| arm | started 0-25 | started 25-50 | started 50-75 | started 75-100 | difference |")
 w("|---|---|---|---|---|---|")
 for a in arms:
@@ -143,7 +143,7 @@ for a in arms:
     m = [z["length"][ib == k].mean() for k in range(4)]
     w(f"| `{a}` | {m[0]:.1f} | {m[1]:.1f} | {m[2]:.1f} | {m[3]:.1f} | {m[3]-m[0]:+.1f} |")
 
-w("\n### TABLE 10 - the wound's effect through time (Figure 9)\n")
+w("\n### TABLE 10 - the injury level's effect through time (Figure 9)\n")
 try:
     TC = L.load_time_course()
 except SystemExit:

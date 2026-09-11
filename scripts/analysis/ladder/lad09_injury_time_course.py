@@ -59,7 +59,7 @@ ax[0].plot(x, inj[3, :XMAX], lw=2.2, color=PL.THREAT, label="injury level, woke 
 ax[0].plot(x, noc[3, :XMAX], lw=2.2, color=PL.THREAT, ls="--", label="what it FEELS, same agents")
 ax[0].plot(x, inj[0, :XMAX], lw=1.6, color=PL.HARMLESS, label="injury level, woke up at 0-25")
 ax[0].plot(x, noc[0, :XMAX], lw=1.6, color=PL.HARMLESS, ls="--", label="what it FEELS, same agents")
-ax[0].annotate("feels nothing at all for the first two steps,\nand not the whole wound until step 12",
+ax[0].annotate("feels nothing at all for the first two steps,\nand not the full injury level until step 12",
                xy=(2, 1), xycoords="data", xytext=(0.34, 0.44), textcoords="axes fraction",
                fontsize=7.4, color=PL.MUTED, ha="left",
                arrowprops=dict(arrowstyle="->", lw=0.7, color=PL.MUTED,
@@ -113,7 +113,7 @@ for want, c in ((True, PL.GROUP_YES), (False, PL.GROUP_NO)):
 ax[3].axhline(0, color=PL.INK, lw=1)
 ax[3].set_title("D.  And the bill\nthe hiding was paid for in food", fontsize=9.4, loc="left", pad=8)
 ax[3].set_ylabel("nutrition gap  -  a DIFFERENCE, 0-100 scale\n"
-                 "heaviest starting wound MINUS lightest")
+                 "highest initial injury level MINUS lowest")
 ax[3].legend(fontsize=7.4, loc="lower right")
 
 for a_ in ax[:2]: a_.set_xlabel("step within the episode")

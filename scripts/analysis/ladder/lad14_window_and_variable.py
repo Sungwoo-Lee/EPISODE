@@ -61,12 +61,12 @@ for a in arms:
 
 fig, ax = plt.subplots(1, 3, figsize=(15.6, 5.6), sharey=True)
 panels = [
-    (early, "A.  ASSIGNED wound, first 25 steps\nthe honest measurement",
-     "wound the environment handed it at t=0  (0-100)"),
-    (whole, "B.  ASSIGNED wound, whole episode\nsame cause, diluted window - effect reverses",
-     "wound the environment handed it at t=0  (0-100)"),
-    (carried, "C.  CARRIED wound, whole episode\ndifferent variable - a consequence, not a cause",
-     "wound it was carrying when it decided  (0-100)")]
+    (early, "A.  ASSIGNED injury level, first 25 steps\nthe honest measurement",
+     "initial injury level  (0-100)"),
+    (whole, "B.  ASSIGNED injury level, whole episode\nsame cause, diluted window - effect reverses",
+     "initial injury level  (0-100)"),
+    (carried, "C.  CARRIED injury level, whole episode\ndifferent variable - a consequence, not a cause",
+     "injury level it was carrying at step t-1  (0-100)")]
 for j, (dat, ttl, xl) in enumerate(panels):
     h = PL.group_lines(ax[j], x, dat, GRP, spotlight=SPOT, label_end=(j == 2))
     ax[j].set_xlim(-0.25, 3.9 if j == 2 else 3.3)
