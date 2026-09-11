@@ -26,19 +26,40 @@ x = np.arange(4)
 curves = {a: L.rate(D[a]["grids"]["dw_early"], D[a]["grids"]["dwt_early"]) for a in arms}
 slope = {a: curves[a][3] - curves[a][0] for a in arms}
 GRP = {a: L.resolves_identity(D[a]["sensory"]) for a in arms}
-# A_baseline is the one arm whose line goes DOWN, so it is the one the prose names.
-SPOT = ("A_baseline", "V4_blur05")
+# Name the arms a reader will actually look for: the one line that goes DOWN, the highest line in
+# each family, and the reference agent the rest of the page is written against. Everything else
+# stays thin. Asserted rather than hardcoded blind, so the figure cannot keep naming "the highest"
+# arm after the data stops making it the highest.
+SPOT = ("A_baseline", "B_olf_only", "V4_blur05", "V5_sharp")
+_top = lambda want: max((a for a in arms if GRP[a] == want), key=lambda a: curves[a][-1])
+assert _top(False) == "B_olf_only", f"highest non-resolving arm is now {_top(False)}, not B_olf_only"
+assert _top(True) == "V5_sharp", f"highest identity-resolving arm is now {_top(True)}, not V5_sharp"
+assert min(slope, key=slope.get) == "A_baseline"
 
 fig, ax = plt.subplots(1, 2, figsize=(12.4, 5.5),
                        gridspec_kw={"width_ratios": [1.1, 1]})
-h = PL.group_lines(ax[0], x, curves, GRP, spotlight=SPOT, label_end=True)
-ax[0].set_xlim(-0.25, 3.7)
+# Colour by ARM, with the identical colour in the right panel, instead of by the two-family split
+# used elsewhere on the page. The right panel names all fourteen arms down its y-axis, so it IS
+# this panel's key; a legend repeating fourteen names beside a four-point plot would be larger
+# than the plot. The named arms stay thicker and carry their name at the end of the line.
+ends = []
+for a in arms:
+    yv = curves[a]
+    if a in SPOT:
+        ax[0].plot(x, yv, lw=2.7, color=col[a], marker="o", ms=5.2, zorder=3)
+        ends.append((x[-1], yv[-1], f" {a}", col[a]))
+    else:
+        ax[0].plot(x, yv, lw=1.5, color=col[a], alpha=0.9, zorder=2)
+PL.stagger_end_labels(ax[0], ends)
+ax[0].set_xlim(-0.25, 3.9)
 ax[0].set_xticks(x); ax[0].set_xticklabels(L.INJ_NAMES)
-ax[0].set_xlabel("wound the agent was handed at the start of the episode\n"
-                 "(injury level, 0-100, assigned at random by the environment)")
+ax[0].set_xlabel("initial injury level  (0-100, in four equal quarters)")
 ax[0].set_ylabel("bush hiding over the episode's first 25 steps\n(% of those steps spent in a bush)")
-ax[0].set_title("Response to a wound the agent did not earn", fontsize=9.5, loc="left", pad=8)
-ax[0].legend(handles=h, loc="lower right", fontsize=7.8)
+ax[0].set_title("Bush hiding against the initial injury level\n"
+                "One line per arm, in the same colour that arm has in the right panel, which "
+                "names all fourteen.\nThe four the text discusses are drawn thicker and named "
+                "at the end of their line.",
+                fontsize=9, color=PL.MUTED, loc="left", pad=8)
 
 y = np.arange(len(arms))
 v = np.array([slope[a] for a in arms])
@@ -46,8 +67,8 @@ ax[1].barh(y, v, color=[col[a] for a in arms], height=0.72, edgecolor="none")
 ax[1].axvline(0, color=PL.INK, lw=1)
 ax[1].set_yticks(y); ax[1].set_yticklabels(PL.arm_ylabels(arms), fontsize=8)
 ax[1].set_ylabel("sensor-ladder arm  (poorest senses at the bottom)")
-ax[1].set_xlabel("wound sensitivity  -  a DIFFERENCE, in percentage points\n"
-                 "bush hiding in the heaviest wound quarter MINUS the lightest")
+ax[1].set_xlabel("a DIFFERENCE, in percentage points:\n"
+                 "bush hiding in the highest initial-injury quarter MINUS the lowest")
 ax[1].grid(axis="y", visible=False)
 for i, q in enumerate(v):
     ax[1].text(q + np.sign(q) * 0.06, y[i], f"{q:+.2f}", va="center",

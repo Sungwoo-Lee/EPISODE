@@ -33,9 +33,9 @@ GRP = {a: L.resolves_identity(D[a]["sensory"]) for a in arms}
 # second named arm takes a shifted SHADE of the same hue -- darker orange, lighter green -- kept
 # close enough to read as the same family and far enough to separate two lines that cross.
 SPOT = {"A_baseline":  ("smell, no direction",   "-",  "o", PL.GROUP_NO),
-        "B_olf_only":  ("smell with direction",  "--", "s", "#8a4413"),
+        "B_olf_only":  ("smell with direction",  "--", "s", PL.GROUP_NO_ALT),
         "V4_blur05":   ("reference agent",       "-",  "o", PL.GROUP_YES),
-        "V5_sharp":    ("sharp sight",           "--", "^", "#63a583")}
+        "V5_sharp":    ("sharp sight",           "--", "^", PL.GROUP_YES_ALT)}
 
 fig, ax = plt.subplots(1, 2, figsize=(12.8, 5.6), sharey=True)
 for j, (key, ttl) in enumerate([("pd", "Nearest PREDATOR - a real threat"),

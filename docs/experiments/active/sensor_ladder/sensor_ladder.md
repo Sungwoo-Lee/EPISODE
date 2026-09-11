@@ -586,7 +586,7 @@ the policy's input &mdash; and the worst disagreement over 1.36 million rows was
 **Figure 8.** Bush hiding over each episode's first 25 steps, against the injury level the environment
 handed the agent at `t=0`.
 
-**Axes.** Left: x = the injury level the environment handed the agent at t=0, in four equal quarters of the 0-100 range; y = bush hiding over the episode's first 25 steps, as a percentage of those steps. Right: y = the fourteen arms; x = the difference between that arm's heaviest and lightest quarter, in percentage points. The left panel's y-axis does not start at zero; it is cropped to the range the curves occupy.
+**Axes.** Left: x = the initial injury level, in four equal quarters of the 0-100 range; y = bush hiding over the episode's first 25 steps, as a percentage of those steps. Right: y = the fourteen arms; x = the difference between that arm's heaviest and lightest quarter, in percentage points. The left panel's y-axis does not start at zero; it is cropped to the range the curves occupy.
 
 **Method.** Episodes are split into four equal quarters of the starting wound. Bush hiding is pooled
 over the **first 25 steps only**. Figure 9 explains why 25, and Figure 14 shows what happens if you

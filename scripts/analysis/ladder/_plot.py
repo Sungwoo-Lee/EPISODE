@@ -19,7 +19,11 @@ import _ladder as L
 DPI = 260
 INK, MUTED, GRID = "#1c1c1e", "#6b6b70", "#dcdce0"
 # poorest senses -> richest, so colour carries the ladder itself
-LADDER_CMAP = plt.get_cmap("viridis")
+# turbo, not viridis. Fourteen arms off viridis land in a blue-green-yellow band where adjacent
+# arms - which are exactly the ones a reader compares - are near-identical. turbo sweeps dark blue
+# through cyan, green and yellow to orange and red, so the same fourteen steps are spread over far
+# more hue. Used at nearly the full range for the same reason.
+LADDER_CMAP = plt.get_cmap("turbo")
 # ONE MEANING PER COLOUR, ACROSS EVERY FIGURE. An earlier draft used red and blue for five
 # different things - sign of a change, predator, "cannot resolve identity", heavy wound, and cause
 # of death - twice within a single image. A reader who learns a colour on one figure must not be
@@ -27,6 +31,11 @@ LADDER_CMAP = plt.get_cmap("viridis")
 THREAT, HARMLESS = "#b3322b", "#2f6f9f"          # predator (red) vs rabbit (blue). ALWAYS.
 WOUND_LO, WOUND_HI = "#c3b3d4", "#54346e"        # wound level: light purple -> deep purple
 GROUP_YES, GROUP_NO = "#2d6a4f", "#c9762e"       # sight resolves identity (green) or not (orange)
+# A second SHADE of each family hue, for figures that spotlight two arms inside one family. Hue
+# still says which family; the shade, with a dash pattern and a marker, says which arm. Without
+# this the two are drawn identically and can only be told apart by the label at the end of the
+# line, which is unreadable wherever the lines cross.
+GROUP_YES_ALT, GROUP_NO_ALT = "#63a583", "#8a4413"
 NEUTRAL = "#6d8595"                              # a bar whose colour carries nothing but its sign
 ACCENT = GROUP_YES                               # alias: the page accent is the same green
 
@@ -43,7 +52,7 @@ plt.rcParams.update({
 
 def arm_colors(arms=None):
     arms = arms or L.ARM_ORDER
-    return {a: LADDER_CMAP(i / max(len(arms) - 1, 1) * 0.88) for i, a in enumerate(arms)}
+    return {a: LADDER_CMAP(0.02 + i / max(len(arms) - 1, 1) * 0.96) for i, a in enumerate(arms)}
 
 
 def arm_ylabels(arms=None):
@@ -176,7 +185,10 @@ def group_lines(ax, x, curves: dict, grp: dict, spotlight=(), lw_thin=0.9, lw_bo
             _plt.Line2D([], [], color=GROUP_NO, lw=2.2,
                         label="sight cannot resolve WHAT it sees  (5 arms)"),
             _plt.Line2D([], [], color=MUTED, lw=2.4, marker="o", ms=4,
-                        label="thick + named = an arm the text discusses")]
+                        label="thick + named = an arm the text discusses; its shade, dashes\n"
+                              "and marker mark identity only"),
+            _plt.Line2D([], [], color=MUTED, lw=0.9, alpha=0.30,
+                        label="thin = the remaining arms, drawn to show each family's shape")]
 
 
 def stagger_end_labels(ax, points, min_gap_frac=0.055):
