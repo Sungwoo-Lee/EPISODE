@@ -25,8 +25,17 @@ x = np.arange(1, L.DIST_MAX + 1)
 GRP = {a: L.resolves_identity(D[a]["sensory"]) for a in arms}
 # The four the prose names. Everything else is background, drawn thin so the shape of the two
 # families is still visible without fourteen near-identical colours competing for attention.
-SPOT = {"A_baseline": "smell, no direction", "B_olf_only": "smell with direction",
-        "V4_blur05": "reference agent", "V5_sharp": "sharp sight"}
+# Colour carries the family (can this arm's sight resolve WHAT it is looking at?), so the two
+# named arms inside a family were drawn identically and could only be told apart by the label at
+# the end of the line. Give each named arm its own dash pattern and marker as well. These carry
+# no meaning beyond identity -- they exist so a reader can follow one line across the panel.
+# HUE still means the family, so the two families stay readable at a glance. Within a family the
+# second named arm takes a shifted SHADE of the same hue -- darker orange, lighter green -- kept
+# close enough to read as the same family and far enough to separate two lines that cross.
+SPOT = {"A_baseline":  ("smell, no direction",   "-",  "o", PL.GROUP_NO),
+        "B_olf_only":  ("smell with direction",  "--", "s", "#8a4413"),
+        "V4_blur05":   ("reference agent",       "-",  "o", PL.GROUP_YES),
+        "V5_sharp":    ("sharp sight",           "--", "^", "#63a583")}
 
 fig, ax = plt.subplots(1, 2, figsize=(12.8, 5.6), sharey=True)
 for j, (key, ttl) in enumerate([("pd", "Nearest PREDATOR - a real threat"),
@@ -37,7 +46,8 @@ for j, (key, ttl) in enumerate([("pd", "Nearest PREDATOR - a real threat"),
         y = L.dist_curve(g[f"{key}_bush"], g[f"{key}_tot"])
         c = PL.GROUP_YES if GRP[a] else PL.GROUP_NO
         if a in SPOT:
-            ax[j].plot(x, y, lw=2.4, color=c, marker="o", ms=4.2, zorder=3)
+            _, ls, mk, c = SPOT[a]
+            ax[j].plot(x, y, lw=2.4, color=c, ls=ls, marker=mk, ms=5.0, zorder=3)
             ends.append((x[-1], y[-1], f" {a}", c))
         else:
             ax[j].plot(x, y, lw=1.0, color=c, alpha=0.34, zorder=2)
@@ -45,17 +55,27 @@ for j, (key, ttl) in enumerate([("pd", "Nearest PREDATOR - a real threat"),
     # Name the timestep on each axis rather than paraphrasing it. "when it decided" read as
     # though the ANIMAL decided, and the one thing the reader needs is that the two axes come
     # from DIFFERENT rows: the distance the agent was looking at, and what it then did.
-    ax[j].set_xlabel("distance to the nearest animal at step t-1\n"
-                     "8 = eight or more")
+    ax[j].set_xlabel("distance to the nearest animal at step t-1")
     ax[j].set_xticks(x); ax[j].set_xticklabels(L.DIST_NAMES)
     ax[j].set_xlim(0.7, L.DIST_MAX + 1.6)
     PL.stagger_end_labels(ax[j], ends)
 ax[0].set_ylabel("bush hiding at step t  (% of those steps spent in a bush)")
+# The ten background arms were drawn thin with no way to find out what they were; the legend said
+# only "the other ten". Name them. They stay individually unidentifiable BY DESIGN -- ten more
+# colours would bury the two-family shape this figure is about -- so the legend says that too,
+# rather than leaving the reader to work out that no key is coming. Built from ARM_ORDER so it
+# cannot go stale if an arm is added or renamed.
+rest = [a for a in arms if a not in SPOT]
+rest_txt = "thin, unlabelled = the other %d arms, drawn to show the shape of each family.\n" % len(rest)
+rest_txt += "They are not told apart individually here: " + ", ".join(rest[:5]) + ",\n" + ", ".join(rest[5:])
 h = [plt.Line2D([], [], color=PL.GROUP_YES, lw=2.2, label=L.GROUP_LABEL[True] + "  (9 arms)"),
      plt.Line2D([], [], color=PL.GROUP_NO, lw=2.2, label=L.GROUP_LABEL[False] + "  (5 arms)"),
-     plt.Line2D([], [], color=PL.MUTED, lw=2.4, marker="o", ms=4,
-                label="thick + named = an arm the text discusses; thin = the other ten")]
-ax[0].legend(handles=h, loc="lower center", bbox_to_anchor=(1.03, 1.10), ncol=1, fontsize=8.3)
+     plt.Line2D([], [], color=PL.MUTED, lw=2.4, ls="-", marker="o", ms=4.6,
+                label="thick, with markers = one of the four arms the text discusses, named at the\n"
+                      "end of its line. Hue is the family; shade, dashes and marker mark only identity"),
+     plt.Line2D([], [], color=PL.MUTED, lw=1.0, alpha=0.34, label=rest_txt)]
+ax[0].legend(handles=h, loc="lower center", bbox_to_anchor=(1.03, 1.055), ncol=1, fontsize=8.3,
+             labelspacing=0.85, handletextpad=0.9)
 POP = L.population()
 pd_used = sum(int(np.asarray(D[a]["grids"]["pd_tot"], float).sum()) for a in arms)
 rd_used = sum(int(np.asarray(D[a]["grids"]["rd_tot"], float).sum()) for a in arms)
