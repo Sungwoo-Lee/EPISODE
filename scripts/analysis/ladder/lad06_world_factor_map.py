@@ -12,8 +12,11 @@ agent has done anything, so none of them can be a consequence of its behaviour. 
 consequences - how much it ate, how long it survived, how injured it got - are deliberately absent;
 they belong to a different question and would swamp this one.
 
-HOW IT IS COMPUTED. A quasi-binomial regression per arm on the episode-level bush-hiding rate
-(bush steps out of steps), all nine features entered together so each is adjusted for the others.
+HOW IT IS COMPUTED. A MULTIVARIATE quasi-binomial regression per arm on the episode-level
+bush-hiding rate (bush steps out of steps): all nine features are entered together in a single fit,
+over a single common set of episodes, so each number is that feature's effect with the other eight
+held fixed. This is a different fit from a univariate screen, which gives each feature its own
+model and its own subset and therefore lets two correlated features each claim the same effect.
 Standard errors are scaled by the Pearson overdispersion, which runs 13-27 here - without that
 scaling every p-value in the table would be meaningless. The number plotted is the effect of moving
 that feature by one standard deviation, converted to percentage points of bush hiding. Red = hides
@@ -70,9 +73,10 @@ for i in range(len(terms)):
 cb = fig.colorbar(im, ax=ax, pad=0.015, fraction=0.028)
 cb.set_label("effect on bush hiding of moving this feature by one standard deviation\n"
              "(percentage points; red = hides more, blue = hides less)", fontsize=8)
-ax.set_title("Adjusted for all the other features in the same regression. The number printed in "
-             "each cell is the exact value,\nso rows that saturate the colour scale can still be "
-             "read and compared.", fontsize=9, color=PL.MUTED, loc="left", pad=10)
+ax.set_title("MULTIVARIATE fit: per arm, one quasi-binomial regression with all nine features "
+             "entered together, so every\nnumber is that feature's effect ADJUSTED for the other "
+             "eight. The value is printed in each cell, so rows\nthat saturate the colour scale "
+             "can still be read and compared.", fontsize=9, color=PL.MUTED, loc="left", pad=10)
 POP = L.population()
 _n = sum(int(r["n"]) for a in arms
          for r in csv.DictReader(open(f"{GLM_ROOT}/{a}/multivariate.csv"))

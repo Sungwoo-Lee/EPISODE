@@ -486,7 +486,11 @@ overlap** &mdash; the largest value among the nine never reaches the smallest am
 ![Which features of the world drive hiding, per arm](figures/lad06_world_factor_map.png)
 
 **Figure 6.** Every feature of the world that is randomised before the agent acts, against every arm.
-Red means the agent hides more; blue, less.
+Red means the agent hides more; blue, less. These numbers come from a **multivariate** fit: for each
+arm, all nine features go into *one* regression over *one* set of episodes, so each cell is that
+feature's effect with the other eight held fixed. That is the opposite of a univariate screen, where
+every feature gets its own model and two correlated features can each be credited with the same
+effect.
 
 **Axes.** y = the nine features of the world that are randomised before the agent acts. x = the fourteen arms, poorest senses on the left. The colour of each cell, and the number printed in it, is the effect on bush hiding in percentage points of moving that feature by one standard deviation — red for more hiding, blue for less.
 
