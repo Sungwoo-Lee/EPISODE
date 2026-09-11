@@ -82,7 +82,7 @@ L.record_samples("lad08_injury_dose_response", [
          note="the first 25 steps of every episode of every arm; episodes shorter than 25 steps "
               "contribute all the steps they have"),
     dict(what="episodes contributing", used=POP["episodes"], total=POP["episodes"],
-         note="every episode has a randomised starting wound, so none is excluded")])
+         note="every episode has a randomised initial injury level, so none is excluded")])
 
 PL.assert_labels_fit(fig, ax)
 PL.finish(fig, f"{L.FIG_ROOT}/lad08_injury_dose_response.png")

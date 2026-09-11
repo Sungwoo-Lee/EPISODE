@@ -286,7 +286,7 @@ pre code{background:none;padding:0;font-size:inherit}
   <h1>The Sensor Ladder</h1>
   <p class="standfirst">Fourteen agents, one world, one seed. They differ in exactly one thing:
   what they are allowed to sense. Here is what each sense buys &mdash; and what an injury does to an
-  animal that cannot see its own wound.</p>
+  animal that has no sensor for it.</p>
   <dl class="meta">
     <div><dt>Arms</dt><dd>14<small>one training run each</small></dd></div>
     <div><dt>Test worlds</dt><dd>1,000,000<small>identical for every arm</small></dd></div>
@@ -322,8 +322,8 @@ will carry the new word throughout.</p>
   <a href="#ends">2 &middot; What kills them</a>
   <a href="#sharp">3 &middot; Sharp vs blurred</a>
   <a href="#rabbit">4 &middot; The rabbit false alarm</a>
-  <a href="#wound">5 &middot; What a wound does</a>
-  <a href="#hunger">6 &middot; Wound vs hunger</a>
+  <a href="#injury">5 &middot; What an injury does</a>
+  <a href="#hunger">6 &middot; Injury vs hunger</a>
   <a href="#wrong">7 &middot; Two ways to be wrong</a>
   <a href="#cost">8 &middot; What hiding costs</a>
   <a href="#method">Method</a>
@@ -360,9 +360,9 @@ not a benefit they help it collect &mdash; the agents that hide most are the one
 
 <p>We also asked what an <strong>injury</strong> does to behaviour. This world lets us ask cleanly: at
 the start of every episode the agent is handed an injury level drawn at random from 0 to 100 that it
-did nothing to earn, and it has no sensor that reads that number. The only route from a wound to
+did nothing to earn, and it has no sensor that reads that number. The only route from an injury to
 behaviour is an internal channel reporting a smoothed running trace of how injured the body is. So
-any behaviour that tracks the assigned wound is <em>caused</em> by it.</p>
+any behaviour that tracks the assigned injury level is <em>caused</em> by it.</p>
 
 <h3>The seven findings</h3>
 
@@ -396,11 +396,11 @@ any behaviour that tracks the assigned wound is <em>caused</em> by it.</p>
   on two different cues separate the groups with no overlap.</p>
 </div></li>
 <li><div>
-  <p class="f-claim">The agent responds to what it <strong>FEELS</strong>, not to the wound it has.
+  <p class="f-claim">The agent responds to what it <strong>SENSES</strong>, not to the injury level it has.
   <span class="badge b-strong">all 14 arms agree on the timing</span></p>
   <p class="f-note">It has no sensor for its own injury &mdash; only a delayed, smoothed trace of it,
   which is <strong>exactly zero for the first two steps</strong> however badly hurt it woke up. The
-  wound's gap between the heaviest and lightest quarters is largest at <em>step 0</em>, where the
+  injury's gap between the heaviest and lightest quarters is largest at <em>step 0</em>, where the
   response is nil. The <em>perceived</em> gap peaks at <em>step 12</em> in all fourteen arms, and
   extra hiding at <em>step 14&ndash;16</em> in thirteen. An earlier version of this page told this
   story against the injury level, which the agent cannot sense.</p>
@@ -408,13 +408,13 @@ any behaviour that tracks the assigned wound is <em>caused</em> by it.</p>
 <li><div>
   <p class="f-claim">Hypervigilance shows up on the <strong>ambiguous</strong> channel &mdash; but
   weakly. <span class="badge b-weak">weakest finding here</span></p>
-  <p class="f-note">A wound does not make the agent treat a nearby rabbit more like a nearby predator.
+  <p class="f-note">An injury does not make the agent treat a nearby rabbit more like a nearby predator.
   It does amplify the response to a harmless animal's <em>smell</em> more than to a predator's smell,
   in <strong>12 of the 14 arms</strong>. A cleaner group split claimed by an earlier version of this
   page <strong>did not survive</strong> tripling the sample &mdash; see the correction in Section 5.</p>
 </div></li>
 <li><div>
-  <p class="f-claim">Hunger outweighs the wound by 1.6&times; to 4.5&times;, and hiding is a
+  <p class="f-claim">Hunger outweighs the injury by 1.6&times; to 4.5&times;, and hiding is a
   <strong>cost</strong>, not a good. <span class="badge b-strong">pattern across arms</span></p>
   <p class="f-note">Across the fourteen arms, more bush hiding goes with shorter life and less eating.</p>
 </div></li>
@@ -456,7 +456,7 @@ and can never be negative. A <em>difference</em> ("+4 pp") is one rate minus ano
 can be. Several figures here plot differences, and each such axis says so; a negative value there
 means the agent hid <strong>less</strong> in one condition than the other &mdash; never that a
 percentage went below zero.</dd>
-<dt>injury level</dt><dd>the wound in the agent's body, 0&ndash;100. The agent has <strong>no sensor
+<dt>injury level</dt><dd>the injury the agent's body is carrying, 0&ndash;100. The agent has <strong>no sensor
 for it</strong>.</dd>
 <dt>odour intensity, and what "strong" means</dt><dd>every animal carries two odour channels, drawn
 fresh for it in every episode. <em>Intensity</em> is their sum &mdash; how loudly the animal smells,
@@ -569,7 +569,7 @@ reference, and those pairs are what Figure 2 shows.</p></div>
   <figcaption><b>Figure 2.</b> Each row is one arm minus its reference arm &mdash; a change of exactly
   one setting. <b>Axes.</b> Both panels: <b>y</b> = the twelve single-setting changes, each labelled with the arm it compares and the reference it is compared against. <b>x</b>, left = change in mean survival in steps; <b>x</b>, right = change in bush hiding in percentage points. Both x-axes are differences and are centred on zero, so a bar left of the line means the change made that quantity smaller.</figcaption>
   <div class="fig-blocks">
-    <div><h5>How it is computed</h5><p>Each row takes one arm, subtracts its reference arm, and reports the difference. The reference is the arm that differs from it in exactly one sensory setting &mdash; so the row labelled "visual blur disabled" is <code>V5_sharp</code> minus <code>V4_blur05</code>, two agents identical in every respect except that one has the blur switched off. The numbers being differenced are the same pooled values shown in Figure 1. Because every arm was run on the same one million evaluation worlds, seeded identically, both members of a pair met the same predators in the same places, the same food, and the same randomised starting wounds; the difference between them therefore cannot be explained by one arm having had easier worlds. The claim that each pair differs in exactly one setting is not a matter of trust: <code>check_single_variable_pairs()</code> compares the two saved configurations and refuses to draw the figure if any pair differs in more than one. That guard exists because one pairing had silently drifted to two settings and inflated a headline number fourfold.</p></div>
+    <div><h5>How it is computed</h5><p>Each row takes one arm, subtracts its reference arm, and reports the difference. The reference is the arm that differs from it in exactly one sensory setting &mdash; so the row labelled "visual blur disabled" is <code>V5_sharp</code> minus <code>V4_blur05</code>, two agents identical in every respect except that one has the blur switched off. The numbers being differenced are the same pooled values shown in Figure 1. Because every arm was run on the same one million evaluation worlds, seeded identically, both members of a pair met the same predators in the same places, the same food, and the same randomised initial injury levels; the difference between them therefore cannot be explained by one arm having had easier worlds. The claim that each pair differs in exactly one setting is not a matter of trust: <code>check_single_variable_pairs()</code> compares the two saved configurations and refuses to draw the figure if any pair differs in more than one. That guard exists because one pairing had silently drifted to two settings and inflated a headline number fourfold.</p></div>
     <div><h5>What it shows</h5><p><strong>Direction beats acuity.</strong> Giving smell a direction
     is worth +45.3 steps, the biggest single win, even though the agent still has no useful sight.
     <strong>Identity beats sharpness.</strong> Collapsing eight appearance channels to one costs
@@ -750,11 +750,11 @@ which says range matters too.</li>
 <div class="col">
 <div class="callout">
 <h4>Two rows here look like they contradict the rest of the page. They do not.</h4>
-<p><code>wound it woke up with</code> reads &minus;0.5 to +0.2 &mdash; essentially nothing &mdash;
-while Section 5 reports the wound moving bush hiding by up to +13 points. <code>how well fed it woke
+<p><code>injury it woke up with</code> reads &minus;0.5 to +0.2 &mdash; essentially nothing &mdash;
+while Section 5 reports the injury moving bush hiding by up to +13 points. <code>how well fed it woke
 up</code> reads +0.6 to +1.7 against Section 6's much larger numbers.</p>
 <p>Both regressions are fitted on the <strong>whole-episode</strong> bush-hiding rate, and both internal
-states are <em>transient</em>: the wound is 90% healed by step 28. Averaging over an episode of 250
+states are <em>transient</em>: the injury is 90% healed by step 28. Averaging over an episode of 250
 steps dilutes a 30-step effect almost to nothing. Section 5 shows the full time course; Section 7 shows
 exactly how much the choice of window changes the answer.</p>
 </div>
@@ -799,7 +799,7 @@ animal.</p>
     running 0 to 2 with a mean of 1.17 and a standard deviation of <b>0.38</b> across episodes.
     So the bar says: take two worlds that are identical in all 15 other respects &mdash; same
     number of bushes, rocks and food, same predator with the same detection range and attack
-    delay, same starting wound and hunger &mdash; and give one of them a rabbit whose smell is
+    delay, same initial injury level and hunger &mdash; and give one of them a rabbit whose smell is
     0.38 louder. That agent spends <b>3.81 more percentage points</b> of its life inside a bush.
     <code>A_baseline</code> lives about 166 steps, so that is roughly <b>six extra steps hidden
     per episode</b>, bought by a rabbit that cannot hurt it.</p>
@@ -827,7 +827,7 @@ animal.</p>
     with. The list is the <code>term</code> column of the <code>M3</code> rows in each arm's
     <code>multivariate.csv</code>, so it cannot drift from what was actually fitted.</p>
     <ul>
-      <li><b>The world at reset (7):</b> the wound the agent woke up with; how well fed it woke up;
+      <li><b>The world at reset (7):</b> the injury the agent woke up with; how well fed it woke up;
       the number of bushes; of rocks; of food patches; of ambush predators; and how far it spawned
       from the nearest bush.</li>
       <li><b>The one predator in the episode (7):</b> how far it can notice the agent (detection
@@ -852,31 +852,31 @@ animal.</p>
 
 <hr class="col">
 
-<section id="wound">
-<div class="col"><h2><span class="n">Section 5</span>What a wound does</h2>
-<div class="col"><h3>First: what the agent can actually feel</h3>
-<p>Everywhere else a wounded agent is a suspicious comparison &mdash; it got hurt by doing something,
+<section id="injury">
+<div class="col"><h2><span class="n">Section 5</span>What an injury does</h2>
+<div class="col"><h3>First: what the agent can actually sense</h3>
+<p>Everywhere else an injured agent is a suspicious comparison &mdash; it got hurt by doing something,
 so its later behaviour is contaminated by whatever it was doing. This environment removes that
-problem: the agent begins every episode with a wound drawn uniformly from 0 to 100 that it did
+problem: the agent begins every episode with an injury drawn uniformly from 0 to 100 that it did
 nothing to earn, so behaviour that tracks <em>that</em> number is caused by it.</p>
 <p>But there is a second thing to get right, and an earlier version of this page got it wrong.
 <strong>The agent has no sensor for its injury level.</strong> What it receives is a single scalar
 from the interoceptive nociceptor: the last twelve injury levels convolved with a normalised alpha
 kernel, with the current step's slot weighted <strong>zero</strong> so nothing leaks in
 instantaneously, and with the whole buffer <strong>zeroed at reset</strong>. An agent handed an
-injury of 100 feels:</p>
+injury of 100 is sensed as:</p>
 </div>
 <div class="col">
-<figure class="tbl"><figcaption>What the agent feels, as a share of the wound it actually
+<figure class="tbl"><figcaption>What the agent senses, as a share of the injury level it actually
 has</figcaption><div class="scroll"><table>
 <thead><tr><th>step</th><th>0</th><th>1</th><th>2</th><th>4</th><th>6</th><th>8</th><th>12</th></tr></thead>
-<tbody><tr><td class="txt">share of the real wound it can feel</td><td>0%</td><td>0%</td><td>9%</td>
+<tbody><tr><td class="txt">share of the real injury level it can sense</td><td>0%</td><td>0%</td><td>9%</td>
 <td>36%</td><td>61%</td><td>79%</td><td>100%</td></tr></tbody></table></div></figure>
 </div>
 <div class="col">
-<p>It feels <strong>nothing at all for two steps</strong>, and does not feel the whole wound until
-step 12 &mdash; by which time the wound itself has begun to heal. So "the wound" and "what the agent
-feels" are two different signals with two different time courses, and an analysis that bins behaviour
+<p>It senses <strong>nothing at all for two steps</strong>, and does not sense the whole of it until
+step 12 &mdash; by which time the injury itself has begun to heal. So "the injury" and "what the agent
+senses" are two different signals with two different time courses, and an analysis that bins behaviour
 by the injury level bins it by a quantity the agent cannot sense. That is what the earlier version
 did.</p>
 <p>The perceived signal is reconstructed from each episode's recorded injury sequence exactly as the
@@ -888,51 +888,51 @@ which is float32 rounding.</p>
 <figure class="wide">
   <img src="{{FIG:lad08_injury_dose_response}}" alt="Left: bush hiding over the first 25 steps against the initial injury level, one line per arm, each arm in the same colour it has in the right panel; thirteen rise and A_baseline falls. Right: the slope per arm, from -2.34 to +6.69 percentage points.">
   <figcaption><b>Figure 8.</b> Bush hiding over each episode's first 25 steps, against the
-  <b>initial injury level</b> &mdash; the wound the environment hands the agent at
+  <b>initial injury level</b> &mdash; the injury the environment hands the agent at
   <code>t=0</code>, drawn uniformly from 0 to 100. It is assigned at random <i>before the agent
   acts</i>, so nothing the agent did can have caused it, and any behaviour that tracks it is
   caused <i>by</i> it. That is what makes this figure a causal test rather than a correlation, and
   it is the only such test on the page besides the odour draw. <b>Each arm keeps one colour across
   both panels</b>, so the right panel's named bars are the left panel's key. <b>Axes.</b> Left: <b>x</b> = the initial injury level, in four equal quarters of the 0-100 range; <b>y</b> = bush hiding over the episode's first 25 steps, as a percentage of those steps. Right: <b>y</b> = the fourteen arms; <b>x</b> = the difference between that arm's heaviest and lightest quarter, in percentage points. The left panel's y-axis does not start at zero; it is cropped to the range the curves occupy.</figcaption>
   <div class="fig-blocks">
-    <div><h5>How it is computed</h5><p>Episodes are sorted into four equal quarters by the injury level the environment handed the agent at <code>t=0</code> &mdash; 0&ndash;25, 25&ndash;50, 50&ndash;75, 75&ndash;100 &mdash; and within each quarter bush hiding is pooled over the first 25 steps of every episode. The starting wound is drawn uniformly at random before the agent has acted, which is what makes this a causal contrast rather than a correlation: nothing the agent did could have influenced which quarter it landed in. Episodes shorter than 25 steps contribute whatever steps they have. The window matters and is not arbitrary; Figure 9 explains where 25 comes from, and Figure 14 shows how different the answer looks if you choose otherwise. One caveat to carry into the next figure: this bins by the injury level in the agent's body, which the agent has no sensor for. What it can actually feel is a delayed, smoothed trace of that number, and the two behave quite differently in the first dozen steps.</p></div>
-    <div><h5>What it shows</h5><p>Thirteen of the fourteen arms hide more when handed a bigger wound,
+    <div><h5>How it is computed</h5><p>Episodes are sorted into four equal quarters by the injury level the environment handed the agent at <code>t=0</code> &mdash; 0&ndash;25, 25&ndash;50, 50&ndash;75, 75&ndash;100 &mdash; and within each quarter bush hiding is pooled over the first 25 steps of every episode. The initial injury level is drawn uniformly at random before the agent has acted, which is what makes this a causal contrast rather than a correlation: nothing the agent did could have influenced which quarter it landed in. Episodes shorter than 25 steps contribute whatever steps they have. The window matters and is not arbitrary; Figure 9 explains where 25 comes from, and Figure 14 shows how different the answer looks if you choose otherwise. One caveat to carry into the next figure: this bins by the injury level in the agent's body, which the agent has no sensor for. What it can actually sense is a delayed, smoothed trace of that number, and the two behave quite differently in the first dozen steps.</p></div>
+    <div><h5>What it shows</h5><p>Thirteen of the fourteen arms hide more when handed a bigger injury,
     by +2.6 to +6.7 percentage points across the full range. The exception is <code>A_baseline</code>
     at &minus;2.3, the one agent with neither directional smell nor useful sight. Note that this bins
-    by the injury level, not by what the agent feels &mdash; Figure 9 shows how much that
+    by the injury level, not by what the agent senses &mdash; Figure 9 shows how much that
     matters.</p></div>
   </div>
 </figure>
 <div class="col">
-<h3>The timing: behaviour follows the feeling, not the wound</h3>
+<h3>The timing: behaviour follows what is sensed, not the body</h3>
 <p>Figure 8 measures over 25 steps. Widen the window and the effect shrinks &mdash; +4.0 percentage
 points at 25 steps, +0.7 at 50, &minus;0.4 over the whole episode &mdash; which looks like a result
-reported at a flattering window. The answer is that the window is not tracking the wound. It is
-tracking how long the agent can <em>feel</em> the wound.</p>
+reported at a flattering window. The answer is that the window is not tracking the injury. It is
+tracking how long the agent can <em>sense</em> the injury.</p>
 </div>
 <figure class="wide">
-  <img src="{{FIG:lad09_injury_time_course}}" alt="Four panels. A: injury level and the perceived signal over time; the perceived curve starts at zero and peaks around step 12 while the injury curve is already falling. B: the injury gap, perceived gap and extra hiding as fractions of their own peaks, peaking at steps 0, 12 and 15 respectively. C: bush hiding rising with how hurt the agent feels right now. D: the nutrition gap opening to about -16 and closing by step 100.">
+  <img src="{{FIG:lad09_injury_time_course}}" alt="Four panels. A: injury level and the perceived signal over time; the perceived curve starts at zero and peaks around step 12 while the injury curve is already falling. B: the injury gap, perceived gap and extra hiding as fractions of their own peaks, peaking at steps 0, 12 and 15 respectively. C: bush hiding rising with how much injury the agent senses right now. D: the nutrition gap opening to about -16 and closing by step 100.">
   <figcaption><b>Figure 9.</b> A: the injury level and the perceived signal. B: the three quantities as
   fractions of their own peak, so their timing can be compared. C: bush hiding against how hurt the
-  agent feels <i>right now</i>. D: the food the caution cost. <b>Axes.</b> Panels A, B and D: <b>x</b> = step number within the episode, 0 to 100. <b>y</b> in A = injury level and perceived signal, both on the same 0-100 scale; <b>y</b> in B = each curve as a fraction of its own maximum, so only shape and timing are comparable, not size; <b>y</b> in D = the nutrition difference between the heaviest and lightest starting-wound quarters, on the 0-100 nutrition scale. Panel C: <b>x</b> = the perceived nociception the agent is receiving right now, in four equal quarters of the 0-100 range; <b>y</b> = bush hiding as a percentage of those steps. None of the four y-axes starts at zero; each is cropped to its own data.</figcaption>
+  agent senses <i>right now</i>. D: the food the caution cost. <b>Axes.</b> Panels A, B and D: <b>x</b> = step number within the episode, 0 to 100. <b>y</b> in A = injury level and perceived signal, both on the same 0-100 scale; <b>y</b> in B = each curve as a fraction of its own maximum, so only shape and timing are comparable, not size; <b>y</b> in D = the nutrition difference between the heaviest and lightest initial-injury quarters, on the 0-100 nutrition scale. Panel C: <b>x</b> = the perceived nociception the agent is receiving right now, in four equal quarters of the 0-100 range; <b>y</b> = bush hiding as a percentage of those steps. None of the four y-axes starts at zero; each is cropped to its own data.</figcaption>
   <div class="fig-blocks">
-    <div><h5>How it is computed</h5><p>A step-by-step sweep records, for each arm and each quarter of the assigned starting wound, four things at every step up to 120: the injury level still in the body, the perceived nociception signal, bush hiding, and nutrition. The perceived signal is not recorded by the environment as a column, so it is reconstructed exactly as the environment builds it: a twelve-slot buffer holding the last twelve injury levels, convolved with a normalised alpha kernel, with the current step's slot weighted zero and the whole buffer zeroed at reset. The reconstruction was checked against the observation vector the environment itself wrote &mdash; perceptual noise is disabled in this configuration, so the recorded channel <i>is</i> the policy's input &mdash; and agreed to within 2.2 &times; 10<sup>&minus;7</sup> over 1.36 million rows, which is float32 rounding. Panels A, B and D are keyed to the randomised starting wound and are therefore causal; the perceived signal is a deterministic function of that assigned wound, so describing the response in terms of one or the other does not change what was manipulated. Panel C is keyed to the perceived signal the agent is receiving <i>at that moment</i>, which is a consequence of its own behaviour, and is associational.</p></div>
+    <div><h5>How it is computed</h5><p>A step-by-step sweep records, for each arm and each quarter of the assigned initial injury level, four things at every step up to 120: the injury level still in the body, the perceived nociception signal, bush hiding, and nutrition. The perceived signal is not recorded by the environment as a column, so it is reconstructed exactly as the environment builds it: a twelve-slot buffer holding the last twelve injury levels, convolved with a normalised alpha kernel, with the current step's slot weighted zero and the whole buffer zeroed at reset. The reconstruction was checked against the observation vector the environment itself wrote &mdash; perceptual noise is disabled in this configuration, so the recorded channel <i>is</i> the policy's input &mdash; and agreed to within 2.2 &times; 10<sup>&minus;7</sup> over 1.36 million rows, which is float32 rounding. Panels A, B and D are keyed to the randomised initial injury level and are therefore causal; the perceived signal is a deterministic function of that assigned injury level, so describing the response in terms of one or the other does not change what was manipulated. Panel C is keyed to the perceived signal the agent is receiving <i>at that moment</i>, which is a consequence of its own behaviour, and is associational.</p></div>
     <div><h5>What it shows</h5><p>The injury gap peaks at <strong>step 0</strong> in all fourteen
     arms; the perceived gap at <strong>step 12</strong> in all fourteen; extra hiding at
-    <strong>step 14&ndash;16</strong> in thirteen. At step 0 the wound is at its most extreme &mdash;
+    <strong>step 14&ndash;16</strong> in thirteen. At step 0 the injury is at its most extreme &mdash;
     a 75-point gap &mdash; and the response is <strong>nil</strong>. Under the physical reading that
     is inexplicable; under the perceptual one it is required, because the buffer is empty. The
     exception is <code>A_baseline</code>, at noise level throughout (+1.05 pp, step 4).</p></div>
-    <div><h5>The size was understated too</h5><p>Binning by the assigned wound averages over the
-    ramp-up window in which the agent feels almost nothing. Binned by what it is actually feeling
+    <div><h5>The size was understated too</h5><p>Binning by the assigned injury level averages over the
+    ramp-up window in which the agent senses almost nothing. Binned by what it is actually sensing
     (panel C), bush hiding runs from <strong>12.6&ndash;17.9%</strong> at the lowest quarter of felt
     nociception to <strong>31.7&ndash;49.5%</strong> at the highest &mdash; three to five times the
     spread of anything in Figure 8. That panel is associational, so it is not a substitute for the
     causal contrast, but it is the right scale for the perceptual effect.</p></div>
-    <div><h5>And the bill</h5><p>An agent handed a heavy wound eats 4.4 food items in its first 25
+    <div><h5>And the bill</h5><p>An agent handed a heavy injury eats 4.4 food items in its first 25
     steps against 8.0 for one handed almost none, and runs 13&ndash;20 nutrition points behind by
-    around step 25. Once the feeling fades it hides <em>less</em> than the unhurt agent while it makes
-    up the shortfall. Comparisons beyond about step 40 condition on survival, and the heavy-wound
+    around step 25. Once the sensed signal fades it hides <em>less</em> than the unhurt agent while it makes
+    up the shortfall. Comparisons beyond about step 40 condition on survival, and the high-injury
     quarter dies sooner, so the late convergence is measured on differently-selected
     survivors.</p></div>
   </div>
@@ -940,23 +940,23 @@ tracking how long the agent can <em>feel</em> the wound.</p>
 <div class="col">
 <div class="correction">
 <h4>Correction</h4>
-<p>An earlier version of this section said the extra hiding "falls away on roughly the wound's own
+<p>An earlier version of this section said the extra hiding "falls away on roughly the injury's own
 schedule" and that 25 steps "is approximately the lifetime of the dose". Both were wrong, because
-both described the injury level rather than the perceived signal. The wound's gap is maximal at step
+both described the injury level rather than the perceived signal. The injury's gap is maximal at step
 0 and half gone by step 17; the <em>felt</em> gap peaks at step 12 and is still around 30 points at
 step 24. Twenty-five steps is roughly the lifetime of the <strong>felt</strong> dose, not the
 physical one. The causal claims are unaffected &mdash; they are keyed to the randomised starting
-wound either way &mdash; but the mechanism they were attached to was the wrong one.</p>
+injury either way &mdash; but the mechanism they were attached to was the wrong one.</p>
 </div>
 <div class="correction">
 <h4>And a second correction, larger than the first</h4>
 <p>This page called the extra hiding &ldquo;ordinary caution&rdquo;. That reading is too strong, and
-the data underneath it says something more interesting. A wound raises the agent's <strong>Rest</strong>
+the data underneath it says something more interesting. An injury raises the agent's <strong>Rest</strong>
 rate by <strong>+17.7 to +35.2 percentage points in all fourteen arms</strong> &mdash; about five times
 the size of the bush-hiding effect &mdash; and that extra resting happens overwhelmingly <em>in the
 open</em>. Split the steps into resting and acting, and bush occupancy <strong>while the agent is
-acting falls with the wound in all fourteen arms</strong>, whether or not a predator is present.</p>
-<p>So the wounded agent is not travelling to cover. It is freezing to heal, and with four to ten
+acting falls with the injury in all fourteen arms</strong>, whether or not a predator is present.</p>
+<p>So the injured agent is not travelling to cover. It is freezing to heal, and with four to ten
 bushes scattered over a hundred squares, a slice of that freezing happens to land on one. Every
 number on this page stands &mdash; none of them changed &mdash; but &ldquo;hides more when hurt&rdquo;
 describes where the agent stops, not a decision to seek cover.</p>
@@ -972,22 +972,22 @@ about where the cover happens to be.</p>
 
 <section>
 <div class="col"><h3>But it is not hypervigilance &mdash; on this channel</h3>
-<p>Figure 8 shows a wounded agent hides more &mdash; which, as the correction above establishes, is
-mostly a wounded agent holding still. Either way it is not hypervigilance. The claim that
-would earn the word <em>hypervigilance</em> is stronger and more specific: that being wounded changes
+<p>Figure 8 shows an injured agent hides more &mdash; which, as the correction above establishes, is
+mostly an injured agent holding still. Either way it is not hypervigilance. The claim that
+would earn the word <em>hypervigilance</em> is stronger and more specific: that being injured changes
 <strong>what the agent treats as evidence of danger</strong>, so an ambiguous, harmless cue starts
 driving the same defence a real threat does. Testing that means comparing the shift in the harmless cue
-against the shift in the real one. If a wound raised both by the same amount, the agent has simply
+against the shift in the real one. If an injury raised both by the same amount, the agent has simply
 become more defensive across the board &mdash; a gain change, not a criterion change.</p></div>
 <figure class="wide">
-  <img src="{{FIG:lad10_hypervigilance_proximity}}" alt="Three panels. A: response to a nearby rabbit at light and heavy starting wound. B: the same for a nearby predator, on the same scale, and much larger. C: the two shifts, where the predator shift exceeds the rabbit shift in most arms.">
+  <img src="{{FIG:lad10_hypervigilance_proximity}}" alt="Three panels. A: response to a nearby rabbit at light and heavy initial injury level. B: the same for a nearby predator, on the same scale, and much larger. C: the two shifts, where the predator shift exceeds the rabbit shift in most arms.">
   <figcaption><b>Figure 10.</b> Panels A and B: response to a nearby rabbit and to a nearby predator, at
-  the lightest and heaviest starting wound, <b>on one shared scale</b>. Panel C: the two shifts. <b>Axes.</b> All three panels: <b>y</b> = the fourteen arms, poorest senses at the bottom. <b>x</b> in A and B = a DIFFERENCE in percentage points, bush hiding with the animal 1-2 cells away minus 6 or more cells away, drawn once for the lightest and once for the heaviest starting wound, and A and B share one scale. <b>x</b> in C = the difference between those two, in percentage points.</figcaption>
+  the lightest and heaviest initial injury level, <b>on one shared scale</b>. Panel C: the two shifts. <b>Axes.</b> All three panels: <b>y</b> = the fourteen arms, poorest senses at the bottom. <b>x</b> in A and B = a DIFFERENCE in percentage points, bush hiding with the animal 1-2 cells away minus 6 or more cells away, drawn once for the lightest and once for the heaviest initial injury level, and A and B share one scale. <b>x</b> in C = the difference between those two, in percentage points.</figcaption>
   <div class="fig-blocks">
-    <div><h5>How it is computed</h5><p>Within each starting-wound quarter separately, the same proximity effect as Figure 5 is computed: bush hiding with the nearest animal 1&ndash;2 cells away minus bush hiding with it 6 or more cells away. Panels A and B show that quantity for the lightest quarter and the heaviest, for a rabbit and for a predator; panel C is the difference between those two, that is, how much waking up wounded moved each response. Panels A and B deliberately share one x-scale. An earlier version gave them their own, which made the rabbit response &mdash; a few percentage points &mdash; look comparable to the predator response, which is around forty. The comparison in panel C is the actual test: hiding harder from a predator when wounded is ordinary caution that almost any account predicts, so the question is whether the <i>harmless</i> cue is amplified more than the real one. Only that would be a change in what the agent treats as evidence of danger, rather than a general increase in defensiveness.</p></div>
+    <div><h5>How it is computed</h5><p>Within each initial-injury quarter separately, the same proximity effect as Figure 5 is computed: bush hiding with the nearest animal 1&ndash;2 cells away minus bush hiding with it 6 or more cells away. Panels A and B show that quantity for the lightest quarter and the heaviest, for a rabbit and for a predator; panel C is the difference between those two, that is, how much waking up injured moved each response. Panels A and B deliberately share one x-scale. An earlier version gave them their own, which made the rabbit response &mdash; a few percentage points &mdash; look comparable to the predator response, which is around forty. The comparison in panel C is the actual test: hiding harder from a predator when injured is ordinary caution that almost any account predicts, so the question is whether the <i>harmless</i> cue is amplified more than the real one. Only that would be a change in what the agent treats as evidence of danger, rather than a general increase in defensiveness.</p></div>
     <div><h5>What it shows</h5><p><strong>No criterion shift on this channel.</strong> The rabbit
     shift is between +0.0 and +0.8 percentage points in every arm; the predator shift is larger in most,
-    up to +3.5. A wounded agent becomes more responsive to the animal that can actually kill it &mdash;
+    up to +3.5. A injured agent becomes more responsive to the animal that can actually kill it &mdash;
     the opposite of what hypervigilance predicts. Panels A and B share a scale so the rabbit response can
     be seen for what it is: small.</p></div>
   </div>
@@ -998,19 +998,19 @@ become more defensive across the board &mdash; a gain change, not a criterion ch
 <div class="col"><h3>It <em>is</em> hypervigilance &mdash; on the ambiguous channel</h3>
 <p>Proximity is not the ambiguous cue. For an agent that can see, a nearby animal is a
 <em>resolved</em> cue &mdash; it can look and tell what the animal is. Smell is the ambiguous one, and
-an animal's odour is redrawn at random every episode. If a wound shifts the agent's criterion, this is
+an animal's odour is redrawn at random every episode. If an injury shifts the agent's criterion, this is
 the channel where it should show.</p></div>
 <figure class="wide">
-  <img src="{{FIG:lad11_hypervigilance_odour}}" alt="Left: each arm's response to a strong rabbit smell, unhurt versus badly wounded. Right: the difference between the two, alongside a grey predator-smell control; the difference is positive in twelve of the fourteen arms and the two negative ones are close to zero.">
+  <img src="{{FIG:lad11_hypervigilance_odour}}" alt="Left: each arm's response to a strong rabbit smell, unhurt versus badly hurt. Right: the difference between the two, alongside a grey predator-smell control; the difference is positive in twelve of the fourteen arms and the two negative ones are close to zero.">
   <figcaption><b>Figure 11.</b> Left: how strongly each arm responds to a strong rabbit smell, having
-  begun the episode nearly unhurt or badly wounded. Right: the difference, with the predator smell as a
-  control. <b>Axes.</b> Both panels: <b>y</b> = the fourteen arms, poorest senses at the bottom. <b>x</b>, left = a DIFFERENCE in percentage points, bush hiding in the strongest-smelling quarter of episodes minus the weakest, drawn once for episodes begun unhurt and once for begun badly wounded. <b>x</b>, right = the difference between those two.</figcaption>
+  begun the episode nearly unhurt or badly hurt. Right: the difference, with the predator smell as a
+  control. <b>Axes.</b> Both panels: <b>y</b> = the fourteen arms, poorest senses at the bottom. <b>x</b>, left = a DIFFERENCE in percentage points, bush hiding in the strongest-smelling quarter of episodes minus the weakest, drawn once for episodes begun unhurt and once for begun badly hurt. <b>x</b>, right = the difference between those two.</figcaption>
   <div class="fig-blocks">
-    <div><h5>How it is computed</h5><p>Within each arm, episodes are sorted into quartiles by the odour intensity drawn for their rabbits &mdash; intensity being the sum of the two olfactory channels that separate predators from rabbits, with those two channels derived from each run's own saved configuration rather than assumed. The <i>slope</i> is then bush hiding in the strongest-smelling quarter minus the weakest, pooled over the first 25 steps. That slope is computed twice for each arm: once over the episodes that began nearly unhurt (starting wound 0&ndash;25) and once over those that began badly wounded (75&ndash;100). The bar in the right panel is the difference between those two, so it is a difference of differences: how much the wound amplified the agent's response to a smell that carries no danger at all. The predator-smell slope is computed identically and shown as a control. Episodes containing no rabbit are excluded from the rabbit measure, and likewise for the predator; an animal that is not in the world has no odour draw, and letting those episodes fall into a bin would make "there was no rabbit" the comparison group. Throughout, an animal's odour <b>intensity</b> is the sum of its two odour channels, drawn fresh each episode; it runs 0 to 2 and averages 1.17. The "strongest-smelling quarter" means the top 25% of episodes by that sum &mdash; a typical intensity of 1.58 against 0.75 in the weakest quarter, about 2.1&times; as loud. Because the agent's nose receives intensity divided by distance, a strong-smelling rabbit six cells away reads like a weak one at three. Intensity says nothing about which class the animal is: both average 1.2.</p></div>
-    <div><h5>What it shows</h5><p>In <strong>12 of the 14 arms</strong> the wound amplifies the
+    <div><h5>How it is computed</h5><p>Within each arm, episodes are sorted into quartiles by the odour intensity drawn for their rabbits &mdash; intensity being the sum of the two olfactory channels that separate predators from rabbits, with those two channels derived from each run's own saved configuration rather than assumed. The <i>slope</i> is then bush hiding in the strongest-smelling quarter minus the weakest, pooled over the first 25 steps. That slope is computed twice for each arm: once over the episodes that began nearly unhurt (initial injury level 0&ndash;25) and once over those that began badly hurt (75&ndash;100). The bar in the right panel is the difference between those two, so it is a difference of differences: how much the injury amplified the agent's response to a smell that carries no danger at all. The predator-smell slope is computed identically and shown as a control. Episodes containing no rabbit are excluded from the rabbit measure, and likewise for the predator; an animal that is not in the world has no odour draw, and letting those episodes fall into a bin would make "there was no rabbit" the comparison group. Throughout, an animal's odour <b>intensity</b> is the sum of its two odour channels, drawn fresh each episode; it runs 0 to 2 and averages 1.17. The "strongest-smelling quarter" means the top 25% of episodes by that sum &mdash; a typical intensity of 1.58 against 0.75 in the weakest quarter, about 2.1&times; as loud. Because the agent's nose receives intensity divided by distance, a strong-smelling rabbit six cells away reads like a weak one at three. Intensity says nothing about which class the animal is: both average 1.2.</p></div>
+    <div><h5>What it shows</h5><p>In <strong>12 of the 14 arms</strong> the injury amplifies the
     rabbit-smell response more than the predator-smell response; the gap runs &minus;0.34 to +1.67
     points, and the two arms below zero are small enough to be noise. The predator-smell response
-    <em>falls</em> with the wound in ten of the fourteen while the rabbit-smell response rises in
+    <em>falls</em> with the injury in ten of the fourteen while the rabbit-smell response rises in
     twelve, so the direction of the shift &mdash; toward the ambiguous channel &mdash; is consistent
     even where the gap is small. The largest absolute amplification is in the three occlusion arms
     (+1.42, +1.99, +1.71), where sight is present but scenery intermittently blocks it.</p></div>
@@ -1037,12 +1037,12 @@ predators are also the <em>least</em> distinguishable ones, because odour intens
 channels while predator-ness is their difference. That mechanically flattens the predator slope &mdash;
 which is the quantity the rabbit slope is being compared against. Some of the rabbit-minus-predator gap
 is therefore an artefact of how intensity is defined, not a fact about the agent.</p>
-<p><strong>It is window-dependent, like everything else about the wound.</strong> Measured over 50 steps
-instead of 25, the gap goes negative in several arms. Given Figure 9 that is expected &mdash; the wound
-is gone by then &mdash; but it means the finding is a statement about the wounded phase, not about the
+<p><strong>It is window-dependent, like everything else about the injury.</strong> Measured over 50 steps
+instead of 25, the gap goes negative in several arms. Given Figure 9 that is expected &mdash; the injury
+is gone by then &mdash; but it means the finding is a statement about the injured phase, not about the
 episode.</p>
 </div>
-<p>Taken with those caveats, the reading this supports is a modest one: a wound does not make the
+<p>Taken with those caveats, the reading this supports is a modest one: an injury does not make the
 agent generically more afraid, and what shift there is goes toward the <strong>ambiguous</strong>
 channel rather than the resolved one. The mechanism the occlusion arms suggest &mdash; that an agent
 leans hardest on smell when its sight is unreliable &mdash; fits their being largest in absolute
@@ -1057,7 +1057,7 @@ seed replication.</p>
   predators (right) happened to smell. Bold lines pool the counts within each group; faint lines are the
   fourteen individual arms. <b>Axes.</b> Both panels: <b>x</b> = how strongly that episode's animals happened to smell, in four quartiles of the randomised odour draw, weakest on the left. <b>y</b> = bush hiding over the episode's first 25 steps, as a percentage of those steps. Both panels share one y-scale. The y-axis does not start at zero; it is cropped to the range the curves occupy.</figcaption>
   <div class="fig-blocks">
-    <div><h5>How it is computed</h5><p>The same quartiles of the randomised odour draw as Figure 11, but plotted as curves rather than collapsed into a slope, so the shape is visible. Each arm contributes two faint lines &mdash; one for episodes begun nearly unhurt, one for begun badly wounded &mdash; and the bold lines pool the counts of all the arms within each of the two sensory groups. Pooling counts rather than averaging the arms' percentages matters: an arm contributes to the bold line in proportion to how much evidence it actually carries in that bin. Bush hiding is again taken over the first 25 steps, and episodes lacking the animal in question are excluded. One feature of the predator panel is worth understanding before reading it as a behavioural result: odour intensity is the <i>sum</i> of the two channels while what marks an animal as a predator is their <i>difference</i>, so an episode whose predators smell very loudly has both channels near their ceiling and the difference squeezed toward zero. The loudest predators are therefore also the least distinguishable ones, which is why that curve turns down at the top quartile. Throughout, an animal's odour <b>intensity</b> is the sum of its two odour channels, drawn fresh each episode; it runs 0 to 2 and averages 1.17. The "strongest-smelling quarter" means the top 25% of episodes by that sum &mdash; a typical intensity of 1.58 against 0.75 in the weakest quarter, about 2.1&times; as loud. Because the agent's nose receives intensity divided by distance, a strong-smelling rabbit six cells away reads like a weak one at three. Intensity says nothing about which class the animal is: both average 1.2.</p></div>
+    <div><h5>How it is computed</h5><p>The same quartiles of the randomised odour draw as Figure 11, but plotted as curves rather than collapsed into a slope, so the shape is visible. Each arm contributes two faint lines &mdash; one for episodes begun nearly unhurt, one for begun badly hurt &mdash; and the bold lines pool the counts of all the arms within each of the two sensory groups. Pooling counts rather than averaging the arms' percentages matters: an arm contributes to the bold line in proportion to how much evidence it actually carries in that bin. Bush hiding is again taken over the first 25 steps, and episodes lacking the animal in question are excluded. One feature of the predator panel is worth understanding before reading it as a behavioural result: odour intensity is the <i>sum</i> of the two channels while what marks an animal as a predator is their <i>difference</i>, so an episode whose predators smell very loudly has both channels near their ceiling and the difference squeezed toward zero. The loudest predators are therefore also the least distinguishable ones, which is why that curve turns down at the top quartile. Throughout, an animal's odour <b>intensity</b> is the sum of its two odour channels, drawn fresh each episode; it runs 0 to 2 and averages 1.17. The "strongest-smelling quarter" means the top 25% of episodes by that sum &mdash; a typical intensity of 1.58 against 0.75 in the weakest quarter, about 2.1&times; as loud. Because the agent's nose receives intensity divided by distance, a strong-smelling rabbit six cells away reads like a weak one at three. Intensity says nothing about which class the animal is: both average 1.2.</p></div>
     <div><h5>Why the predator panel dips at the loudest quartile</h5><p>That dip is real behaviour,
     not an artefact. Intensity is the <strong>sum</strong> of the two odour channels while what marks an
     animal out as a predator is their <strong>difference</strong>, so an episode whose predators smell
@@ -1074,12 +1074,12 @@ seed replication.</p>
 <hr class="col">
 
 <section id="hunger">
-<div class="col"><h2><span class="n">Section 6</span>The wound competes with hunger, and loses</h2>
-<p>The agent carries two internal states that pull in opposite directions. A wound argues for staying in
+<div class="col"><h2><span class="n">Section 6</span>The injury competes with hunger, and loses</h2>
+<p>The agent carries two internal states that pull in opposite directions. An injury argues for staying in
 cover; an empty stomach argues for leaving it, because a bush contains no food. Both are randomised at
 reset, so both can be tested causally and on the same footing.</p></div>
 <figure class="wide">
-  <img src="{{FIG:lad13_two_internal_drives}}" alt="Two line charts on a shared y-scale. Left: bush hiding against starting nutrition, rising steeply. Right: bush hiding against starting wound, rising far less.">
+  <img src="{{FIG:lad13_two_internal_drives}}" alt="Two line charts on a shared y-scale. Left: bush hiding against starting nutrition, rising steeply. Right: bush hiding against initial injury level, rising far less.">
   <figcaption><b>Figure 13.</b> Bush hiding over the first 25 steps against the two internal states the
   environment assigns at random, on a shared y-scale. <b>Axes.</b> Both panels: <b>x</b> = the internal state the environment assigned at t=0, in four equal quarters of the 0-100 range &mdash; nutrition on the left (so the left end is an agent that woke starving) and injury on the right. <b>y</b> = bush hiding over the episode's first 25 steps, as a percentage of those steps. Both panels share one y-scale so their slopes can be compared directly. The shared y-axis does not start at zero; it is cropped to the range the curves occupy.</figcaption>
   <div class="fig-blocks">
@@ -1089,7 +1089,7 @@ reset, so both can be tested causally and on the same footing.</p></div>
     meaning a <strong>well-fed</strong> agent hides more &mdash; equivalently, a hungry one hides less,
     because it has to go and eat.</p></div>
     <div><h5>What it shows</h5><p>Nutrition moves bush hiding by +6.5 to +19.2 percentage points
-    across its range; the wound moves it by &minus;2.3 to +6.7. The ratio runs 1.6&times; to 4.5&times;
+    across its range; the injury moves it by &minus;2.3 to +6.7. The ratio runs 1.6&times; to 4.5&times;
     depending on the arm. The metabolic drive is the larger of the two in every arm, and any account of
     this agent's hiding that leaves it out is describing a small part of the behaviour.</p></div>
   </div>
@@ -1105,23 +1105,23 @@ reset, so both can be tested causally and on the same footing.</p></div>
 are wrong. They are shown together because the two mistakes have <em>different</em> causes that are easy
 to conflate, and because a reader who reproduced either one deserves to know why it differs.</p></div>
 <figure class="wide">
-  <img src="{{FIG:lad14_window_and_variable}}" alt="Three line charts on one shared y-scale. A: assigned wound over the first 25 steps, rising. B: assigned wound over the whole episode, nearly flat. C: carried wound over the whole episode, rising steeply.">
+  <img src="{{FIG:lad14_window_and_variable}}" alt="Three line charts on one shared y-scale. A: assigned injury level over the first 25 steps, rising. B: assigned injury level over the whole episode, nearly flat. C: carried injury level over the whole episode, rising steeply.">
   <figcaption><b>Figure 14.</b> The same question answered three ways, on one shared y-scale. All three
   use identical bins and the identical outcome; they differ only in which injury number a step is filed
-  under, and over which steps the average is taken. <b>Axes.</b> All three panels: <b>x</b> = an injury level in four equal quarters of the 0-100 range &mdash; the wound assigned at t=0 in panels A and B, the wound the agent was carrying when it decided in panel C. <b>y</b> = bush hiding as a percentage of steps. All three share one y-scale, which is the point of the figure. The shared y-axis does not start at zero; it is cropped to the range the curves occupy.</figcaption>
+  under, and over which steps the average is taken. <b>Axes.</b> All three panels: <b>x</b> = an injury level in four equal quarters of the 0-100 range &mdash; the injury assigned at t=0 in panels A and B, the injury the agent was carrying when it decided in panel C. <b>y</b> = bush hiding as a percentage of steps. All three share one y-scale, which is the point of the figure. The shared y-axis does not start at zero; it is cropped to the range the curves occupy.</figcaption>
   <div class="fig-blocks">
-    <div><h5>How it is computed</h5><p>Three ways of asking the same question, drawn on one shared y-scale so their sizes are directly comparable. All three use identical bins &mdash; four equal quarters of an injury level on the 0&ndash;100 range &mdash; and the identical outcome, bush hiding with the <code>t=0</code> row excluded. They differ in only two respects. Panel A files each step under the wound the environment <i>assigned</i> at reset and averages over the first 25 steps. Panel B files it under the same assigned wound but averages over the whole episode. Panel C files it under the wound the agent was <i>carrying</i> at the moment it decided, over the whole episode. Panel A is the honest measurement. Panel B changes only the window and shows how much a transient effect is diluted by averaging over 250 steps. Panel C changes the variable to one that is a consequence of behaviour rather than a cause of it &mdash; an agent carries a large wound precisely because it was out in the open near a predator, which is also where the bushes are not &mdash; and so measures where the agent was while appearing to measure what it decided.</p></div>
-    <div><h5>A &mdash; the honest measurement</h5><p>The randomised wound, measured while the
+    <div><h5>How it is computed</h5><p>Three ways of asking the same question, drawn on one shared y-scale so their sizes are directly comparable. All three use identical bins &mdash; four equal quarters of an injury level on the 0&ndash;100 range &mdash; and the identical outcome, bush hiding with the <code>t=0</code> row excluded. They differ in only two respects. Panel A files each step under the injury the environment <i>assigned</i> at reset and averages over the first 25 steps. Panel B files it under the same assigned injury level but averages over the whole episode. Panel C files it under the injury the agent was <i>carrying</i> at the moment it decided, over the whole episode. Panel A is the honest measurement. Panel B changes only the window and shows how much a transient effect is diluted by averaging over 250 steps. Panel C changes the variable to one that is a consequence of behaviour rather than a cause of it &mdash; an agent carries a large injury precisely because it was out in the open near a predator, which is also where the bushes are not &mdash; and so measures where the agent was while appearing to measure what it decided.</p></div>
+    <div><h5>A &mdash; the honest measurement</h5><p>The randomised injury, measured while the
     assigned dose is still largely present. Positive in thirteen of fourteen arms.</p></div>
-    <div><h5>B &mdash; same cause, wrong window</h5><p>The same randomised wound averaged over the
-    whole episode, and the answer collapses to between &minus;2.0 and +0.0. The wound heals by step
-    28, so an average over 250 steps is mostly measuring an agent with no wound, plus the compensatory
+    <div><h5>B &mdash; same cause, wrong window</h5><p>The same randomised injury averaged over the
+    whole episode, and the answer collapses to between &minus;2.0 and +0.0. The injury heals by step
+    28, so an average over 250 steps is mostly measuring an agent with no injury, plus the compensatory
     foraging that follows. On the shared scale the panel looks nearly flat, which is the correct
     impression.</p></div>
-    <div><h5>C &mdash; wrong variable entirely</h5><p>The wound the agent was carrying mid-episode
+    <div><h5>C &mdash; wrong variable entirely</h5><p>The injury the agent was carrying mid-episode
     &mdash; what falls out of any trajectory log for free &mdash; reports <strong>+9 to +28
-    points</strong>. This is the most misleading of the three, because a mid-episode wound is a
-    <em>consequence</em> of behaviour: the agent carries a big wound precisely because it was out in the
+    points</strong>. This is the most misleading of the three, because a mid-episode injury level is a
+    <em>consequence</em> of behaviour: the agent carries a large injury precisely because it was out in the
     open near a predator, which is also where the bushes are not. Panel C measures where the agent
     <em>was</em> and reports it as what the agent <em>decided</em>.</p></div>
   </div>
@@ -1204,7 +1204,7 @@ shorter visual range from &minus;8.0 steps to &minus;33.5. The code now asserts 
 and refuses to draw the figure otherwise.</li>
 <li><strong>The whole-episode injury result was explained by the wrong mechanism.</strong> An earlier
 draft attributed it to episode-length weighting. The decomposition in Figure 9 shows the real cause: the
-wound heals, and the agent then repays a food debt. The earlier explanation predicted the wrong
+injury heals, and the agent then repays a food debt. The earlier explanation predicted the wrong
 sign.</li>
 </ol>
 </div>
@@ -1219,9 +1219,9 @@ observation vector width, so under one seed they plausibly share initial weights
 Counts of agreeing arms must not be read as independent confirmations. Replicating the ladder at two or
 three seeds is the single change that would move this study from exploratory to confirmatory. Nothing
 here was pre-registered.</li>
-<li><strong>Everything about the wound is window-dependent, because the wound is transient.</strong>
+<li><strong>Everything about the injury is window-dependent, because the injury is transient.</strong>
 Figure 9 makes the time course explicit and shows that the 25-step window matches the dose's lifetime,
-but any single number quoted for the wound is a statement about a window, and the hypervigilance gap in
+but any single number quoted for the injury is a statement about a window, and the hypervigilance gap in
 Section 5 changes sign in several arms at 50 steps.</li>
 <li><strong>Proximity is not randomised.</strong> The distance curves in Figures 4, 5 and 10 describe a
 real regularity but do not on their own establish causation.</li>

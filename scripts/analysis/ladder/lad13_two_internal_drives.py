@@ -57,7 +57,7 @@ L.record_samples("lad13_two_internal_drives", [
          note="both panels use the same rows; they differ only in which internal state the "
               "episode is filed under"),
     dict(what="episodes contributing", used=POP["episodes"], total=POP["episodes"],
-         note="every episode has both a randomised starting wound and a randomised starting "
+         note="every episode has both a randomised initial injury level and a randomised starting "
               "nutrition, so none is excluded from either panel")])
 
 PL.assert_labels_fit(fig, ax)

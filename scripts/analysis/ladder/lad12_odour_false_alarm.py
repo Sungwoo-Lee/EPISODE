@@ -100,7 +100,7 @@ _p = sum(int(np.asarray(D[a]["odour"]["pred_tot"], float).sum()) for a in arms)
 L.record_samples("lad12_odour_false_alarm", [
     dict(what="step rows, rabbit panel", used=_r, total=POP["steps"],
          note="the first 25 steps of every episode that contains a rabbit, across all four "
-              "starting-wound quarters"),
+              "initial-injury quarters"),
     dict(what="step rows, predator panel", used=_p, total=POP["steps"],
          note="same, for episodes containing a predator")])
 

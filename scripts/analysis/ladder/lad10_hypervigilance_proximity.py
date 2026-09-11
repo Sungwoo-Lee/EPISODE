@@ -81,15 +81,15 @@ def _q(key, bins, q):
     return sum(int(np.asarray(D[a]["grids"][f"{key}_tot"], float)[list(bins)][:, list(q)].sum())
                for a in arms)
 L.record_samples("lad10_hypervigilance_proximity", [
-    dict(what="step rows, rabbit panel, lightest wound quarter",
+    dict(what="step rows, rabbit panel, lowest initial-injury quarter",
          used=_q("rd", L.NEAR_BINS, LOW) + _q("rd", L.FAR_BINS, LOW), total=POP["steps"],
-         note="near and far bins together, for episodes that began with a wound of 0-25"),
-    dict(what="step rows, rabbit panel, heaviest wound quarter",
+         note="near and far bins together, for episodes that began with an initial injury level of 0-25"),
+    dict(what="step rows, rabbit panel, highest initial-injury quarter",
          used=_q("rd", L.NEAR_BINS, HIGH) + _q("rd", L.FAR_BINS, HIGH), total=POP["steps"], note=""),
-    dict(what="step rows, predator panel, lightest wound quarter",
+    dict(what="step rows, predator panel, lowest initial-injury quarter",
          used=_q("pd", L.NEAR_BINS, LOW) + _q("pd", L.FAR_BINS, LOW), total=POP["steps"],
          note="smaller than the rabbit rows because a third of episodes contain no predator"),
-    dict(what="step rows, predator panel, heaviest wound quarter",
+    dict(what="step rows, predator panel, highest initial-injury quarter",
          used=_q("pd", L.NEAR_BINS, HIGH) + _q("pd", L.FAR_BINS, HIGH), total=POP["steps"], note="")])
 
 PL.assert_labels_fit(fig, ax)

@@ -96,10 +96,10 @@ POP = L.population()
 def _o(kind, q):
     return sum(int(np.asarray(D[a]["odour"][f"{kind}_tot"], float)[:, q].sum()) for a in arms)
 L.record_samples("lad11_hypervigilance_odour", [
-    dict(what="step rows, rabbit odour, lightest wound quarter", used=_o("rab", 0),
+    dict(what="step rows, rabbit odour, lowest initial-injury quarter", used=_o("rab", 0),
          total=POP["steps"],
-         note="the first 25 steps of episodes that contain a rabbit and began with a wound of 0-25"),
-    dict(what="step rows, rabbit odour, heaviest wound quarter", used=_o("rab", 3),
+         note="the first 25 steps of episodes that contain a rabbit and began with an initial injury level of 0-25"),
+    dict(what="step rows, rabbit odour, highest initial-injury quarter", used=_o("rab", 3),
          total=POP["steps"], note=""),
     dict(what="step rows, predator odour control, lightest quarter", used=_o("pred", 0),
          total=POP["steps"], note="episodes containing no predator are excluded"),

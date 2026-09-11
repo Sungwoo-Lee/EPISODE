@@ -1,4 +1,4 @@
-"""FIGURE 9 - What the agent FEELS, not what its body is, and what that costs.
+"""FIGURE 9 - What the agent SENSES, not what its body is, and what that costs.
 
 QUESTION. Everywhere else this report talks about "the wound" it means the injury level: a number
 in the body. But the agent has no sensor for that number - `injury_observable` is false in all
@@ -6,27 +6,27 @@ fourteen arms. What it actually receives is one scalar from the interoceptive no
 twelve injury levels convolved with a normalised alpha kernel (tau=3), with the current step's slot
 weighted ZERO so nothing leaks in instantaneously, and with the whole buffer ZEROED at reset.
 
-The consequence is not a detail. An agent handed an injury of 100 at reset feels **exactly nothing**
-at t=0. It feels 9% of it by step 2, 36% by step 4, and does not feel the whole wound until about
+The consequence is not a detail. An agent handed an injury of 100 at reset senses **exactly nothing**
+at t=0. It senses 9% of it by step 2, 36% by step 4, and does not sense the whole of it until about
 step 12 - by which time the wound itself is already healing. So the thing that drives behaviour and
 the thing the earlier version of this figure plotted are two different signals with two different
 time courses, and binning behaviour by the injury level bins it by a quantity the agent cannot sense.
 
 WHAT THE PANELS SHOW.
 
-  A - the body against the feeling. Injury level and perceived nociception, for the agents that
+  A - the body against what is sensed. Injury level and perceived nociception, for the agents that
       woke up in the lightest and heaviest quarters. The perceived curve starts at zero and climbs
       while the injury curve is already falling.
 
   B - the timing, which is the argument. The three quantities as fractions of their own peak, so
       their shapes can be compared: the injury gap peaks at step 0 (it is largest the instant it is
       assigned), the perceived gap peaks around step 12 (where the kernel saturates), and the extra
-      hiding peaks around step 15. Behaviour follows the FEELING, three steps behind it, not the
+      hiding peaks around step 15. Behaviour follows what is SENSED, three steps behind it, not the
       body state it is a delayed trace of.
 
-  C - the perceptual dose-response. Bush hiding against how strongly the agent is feeling hurt right
+  C - the perceptual dose-response. Bush hiding against how strongly the agent senses injury right
       now, pooled over every step of every episode. This is an ASSOCIATIONAL panel and is marked as
-      such: an agent feels hurt because it got hurt, which depends on what it was doing. Panels A
+      such: an agent senses injury because it got hurt, which depends on what it was doing. Panels A
       and B carry the causal claim, because the starting wound they are keyed to was assigned at
       random before the agent acted.
 
@@ -53,19 +53,19 @@ gap = lambda a, key, s=1.0: s * (np.asarray(T[a][key], float)[3, :XMAX]
 
 fig, ax = plt.subplots(1, 4, figsize=(19.6, 5.0))
 
-# --- A: the body against the feeling -----------------------------------------------------------
+# --- A: the body against what is sensed -----------------------------------------------------------
 inj = np.asarray(T[REF]["injury"], float); noc = np.asarray(T[REF]["noci"], float)
 ax[0].plot(x, inj[3, :XMAX], lw=2.2, color=PL.THREAT, label="injury level, woke up at 75-100")
-ax[0].plot(x, noc[3, :XMAX], lw=2.2, color=PL.THREAT, ls="--", label="what it FEELS, same agents")
+ax[0].plot(x, noc[3, :XMAX], lw=2.2, color=PL.THREAT, ls="--", label="what it SENSES, same agents")
 ax[0].plot(x, inj[0, :XMAX], lw=1.6, color=PL.HARMLESS, label="injury level, woke up at 0-25")
-ax[0].plot(x, noc[0, :XMAX], lw=1.6, color=PL.HARMLESS, ls="--", label="what it FEELS, same agents")
-ax[0].annotate("feels nothing at all for the first two steps,\nand not the full injury level until step 12",
+ax[0].plot(x, noc[0, :XMAX], lw=1.6, color=PL.HARMLESS, ls="--", label="what it SENSES, same agents")
+ax[0].annotate("senses nothing at all for the first two steps,\nand not the full injury level until step 12",
                xy=(2, 1), xycoords="data", xytext=(0.34, 0.44), textcoords="axes fraction",
                fontsize=7.4, color=PL.MUTED, ha="left",
                arrowprops=dict(arrowstyle="->", lw=0.7, color=PL.MUTED,
                                connectionstyle="arc3,rad=0.25"))
 ax[0].set_ylim(0, 100)
-ax[0].set_title("A.  The body, and the feeling\nsolid = injury level, dashed = perceived",
+ax[0].set_title("A.  The body, and what is sensed\nsolid = injury level, dashed = perceived",
                 fontsize=9.4, loc="left", pad=8)
 ax[0].set_ylabel("injury level, and the perceived signal\non the same 0-100 scale")
 ax[0].legend(fontsize=7.0, loc="upper right")
@@ -73,7 +73,7 @@ ax[0].legend(fontsize=7.0, loc="upper right")
 # --- B: the timing -----------------------------------------------------------------------------
 ig, ng, bg = gap(REF, "injury"), gap(REF, "noci"), gap(REF, "bush", 100.0)
 for k, (v, c, ls, lab) in enumerate(((ig, PL.MUTED, "-", "injury gap (the body)"),
-                                     (ng, PL.THREAT, "-", "perceived gap (what it feels)"),
+                                     (ng, PL.THREAT, "-", "perceived gap (what it senses)"),
                                      (bg, PL.ACCENT, "-", "extra hiding (what it does)"))):
     ax[1].plot(x, v / np.abs(v).max(), lw=2.2, color=c, ls=ls, label=lab)
     pk = int(np.argmax(v))
@@ -83,7 +83,7 @@ for k, (v, c, ls, lab) in enumerate(((ig, PL.MUTED, "-", "injury gap (the body)"
                    xytext=(4, 0), textcoords="offset points")
 ax[1].axhline(0, color=PL.INK, lw=1)
 ax[1].set_ylim(-0.75, 1.42)
-ax[1].set_title("B.  Behaviour follows the FEELING, not the body\n"
+ax[1].set_title("B.  Behaviour follows what it SENSES, not the body\n"
                 "each curve as a fraction of its own peak", fontsize=9.4, loc="left", pad=8)
 ax[1].set_ylabel("fraction of that curve's own maximum\n(shape only - the three have different units)")
 ax[1].legend(fontsize=7.4, loc="lower right")
@@ -96,7 +96,7 @@ ax[2].set_xticks(np.arange(4)); ax[2].set_xticklabels(L.INJ_NAMES, fontsize=8)
 ax[2].set_xlim(-0.25, 3.95)
 _dmax = max(v.max() for v in dose.values()); _dmin = min(v.min() for v in dose.values())
 ax[2].set_ylim(_dmin - 3, _dmax + 9)
-ax[2].set_title("C.  How hard it hides by how hurt it FEELS\n"
+ax[2].set_title("C.  How hard it hides by how much injury it SENSES\n"
                 "associational - a hurt agent got hurt somehow", fontsize=9.4, loc="left", pad=8)
 ax[2].set_xlabel("perceived nociception right now  (0-100)")
 ax[2].set_ylabel("bush hiding  (% of those steps spent in a bush)")
