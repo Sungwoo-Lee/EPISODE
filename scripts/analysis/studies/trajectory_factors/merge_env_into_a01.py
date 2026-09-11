@@ -261,6 +261,35 @@ def build_js(M):
             "const TM=" + json.dumps(tm) + ";\n" + JS_BODY + "</script>\n")
 
 
+BINPANEL = """
+<div class="panel" id="bin-walkthrough">
+<div class="fignum">Where those two numbers come from &mdash; predator count, bin by bin</div>
+<p>Figure&nbsp;5's green bar for predator count is built from the first and last rows of this table
+and nothing else. Every column is the pooled total across that bin's episodes.</p>
+<div class="scroll"><table>
+<thead><tr><th>bin</th><th class="num">episodes</th><th class="num">mean len</th>
+<th class="num">action</th><th class="num">bush</th><th class="num">share</th>
+<th class="num">% of steps</th></tr></thead>
+<tbody>__BINROWS__</tbody></table></div>
+<p>The bar is <code>(__PC_HI__ &minus; __PC_LO__) / __PC_LO__ &times; 100 = +614%</code>. But two
+other things in the table matter more than that division.</p>
+<p><strong>The zero-predator bin is a third of the episodes and __PC_SHARE0__% of all the
+steps.</strong> Those agents live __PC_LEN0__ steps instead of __PC_LEN2__. That one fact is why the
+overall rate is __PC_ALL__% &mdash; far nearer the predator-free 7.93% than the ~32% of a middling
+bin &mdash; and it is the rate Figure&nbsp;2 prices its all-episode factors at. Pool over steps and
+the long safe episodes dominate.</p>
+<p><strong>And bins 0 and 1 hold almost the same number of bush steps</strong> &mdash;
+__PC_B0__ against __PC_B1__ &mdash; from rates of 7.93% and 32.17%. One agent hides a little for a
+long time; the other hides a great deal, briefly. That is the whole total-versus-share reversal of
+this section, visible in the raw counts before any measure is chosen.</p>
+<div class="note"><strong>Why an agent with no predator hides at all.</strong> Mostly it is not
+hiding: a bush is just a tile. The grid is 10&times;10 and the world rolls 4&ndash;10 bushes, so
+roughly 7% of tiles are bush, and an agent moving with no particular regard for them would stand on
+one about 7% of the time. The measured 7.93% is barely above that, which makes the predator-free bin
+close to a floor &mdash; how often you end up in cover by accident.</div>
+</div>
+"""
+
 HTML_BLOCK = """
 <h3 id="share-not-total">Why hiding is counted as a share, not a total</h3>
 <p>There are two obvious ways to write down how much an agent hid, and on the strongest factors in
@@ -311,9 +340,18 @@ __DISLIST__ &mdash; and those __NDIS__ include the two largest effects on this p
   factor does. Predator count's green bar runs off the scale at +614% and is marked as clipped
   rather than quietly truncated. Note the flat case as well: <code>predator max stamina</code>
   moves nothing on any of the three, which is a real null rather than a measurement that
-  failed.</figcaption>
-<div class="method"><b>How this was computed</b><dl><dt>the three bars</dt><dd>green is the share of the episode spent hidden, grey the total steps spent in a bush, amber the steps survived &mdash; each read at the factor's lowest and highest setting, expressed as the percentage change between the two</dd><dt>data used</dt><dd>the four predator traits use only the __NTRAIT__ exactly-one-predator episodes, __PCTTRAIT__% of the million, for the reason given in Figure&nbsp;4. Predator count, bushes available and hiding predators are defined in every episode and use all 1,000,000. The bars are therefore comparable in unit, not in population</dd><dt>a caution on percentages</dt><dd>the percentage change in a rate depends on how small that rate started. Predator count's +614% is large partly because hiding starts at only __P0__% when no predator is present; the same change stated in percentage points is +__P0PP__ pp. The table below carries the underlying values so no reader is left with the ratio alone</dd><dt>why these seven</dt><dd>they are the settings the earlier environment-factor study covered. The full set of everything this world varies &mdash; twenty-five factors, including the agent's own starting state and every smell channel &mdash; is Figure&nbsp;2</dd></dl></div>
+  failed.<br><br><strong>These bars are measured, not modelled.</strong> Each one is two binned
+  averages and a division &mdash; no coefficient, no fit, no standard error. They are also
+  <em>percentage change</em>, not the <em>percentage points</em> of Figure&nbsp;2, and they span the
+  factor's whole range rather than one standard deviation of it. So the same movement carries three
+  different numbers: predator count is <strong>+614%</strong> here, <strong>+__PC_PP__ pp</strong>
+  if the same two bins are differenced instead of divided, and <strong>+__F2BAR__ pp</strong> in
+  Figure&nbsp;2. All three are true; none converts into another without knowing the baseline and the
+  span.</figcaption>
+<div class="method"><b>How this was computed</b><dl><dt>the three bars</dt><dd>green is the share of the episode spent hidden, grey the total steps spent in a bush, amber the steps survived &mdash; each read at the factor's lowest and highest setting, expressed as the percentage change between the two</dd><dt>worked</dt><dd>take predator count, green bar. Its <strong>lowest bin</strong> is every episode the world rolled with no predator at all &mdash; __PC_EPS__ of them. Pool their steps: <strong>__PC_BUSH__ bush steps out of __PC_STEPS__</strong>, which is <strong>__PC_LO__%</strong>. Its highest bin, the two-predator episodes, gives <strong>__PC_HI__%</strong>. The bar is then simply <code>(__PC_HI__ &minus; __PC_LO__) / __PC_LO__ &times; 100 = +614%</code> &mdash; hiding ended up __PC_MULT__&times; what it was. Nothing else happens</dd><dt>why relative</dt><dd>the three bars in a group are a rate and two step counts. &ldquo;Percentage points of a share&rdquo; and &ldquo;steps&rdquo; cannot share an axis, so each is divided by its own starting value to strip the unit off &mdash; the same move Figure&nbsp;4 makes with multiples</dd><dt>blind spots</dt><dd>only the two endpoints are read, so the shape between them is invisible: a factor that rose and then fell back would report +0% while doing a great deal. Figure&nbsp;3's curves are the check on that. And, as in Figure&nbsp;2, nothing is held constant &mdash; each factor is read on its own</dd><dt>data used</dt><dd>the four predator traits use only the __NTRAIT__ exactly-one-predator episodes, __PCTTRAIT__% of the million, for the reason given in Figure&nbsp;4. Predator count, bushes available and hiding predators are defined in every episode and use all 1,000,000. The bars are therefore comparable in unit, not in population</dd><dt>a caution</dt><dd>the percentage change in a rate depends on how small that rate started. Predator count's +614% is large partly because hiding starts at only __P0__% when no predator is present; the same change stated in percentage points is +__P0PP__ pp. The table below carries the underlying values so no reader is left with the ratio alone</dd><dt>why these seven</dt><dd>they are the settings the earlier environment-factor study covered. The full set of everything this world varies &mdash; twenty-five factors, including the agent's own starting state and every smell channel &mdash; is Figure&nbsp;2</dd></dl></div>
 </figure>
+
+__BINPANEL__
 
 __TABLE__
 
@@ -360,7 +398,30 @@ def main():
     if MARKER in html:
         fail("the page already carries the merged section - refusing to renumber a second time")
 
-    M = three_measures(load_curves(html))
+    curves = load_curves(html)
+    pcc = curves["predator count"]
+    rank_src = html[html.index("const RANK="):html.index("const RANK=") + 1400]
+    rank = dict(re.findall(r'\["([^"]+)",(-?[\d.]+)\]', rank_src))
+    if "predator count" not in rank:
+        fail("Figure 2's RANK no longer holds 'predator count'; the caption would cite a stale bar")
+    f2bar = float(rank["predator count"])
+    # the bin-by-bin walkthrough table, pooled per bin
+    pcs = [n * sv for n, sv in zip(pcc["n"], pcc["survival"])]
+    pcb = [st * d / 100 for st, d in zip(pcs, pcc["dwell"])]
+    tot_steps, tot_bush = sum(pcs), sum(pcb)
+    binrows = ""
+    for lab, n, sv, st, bu, d in zip(pcc["labels"], pcc["n"], pcc["survival"], pcs, pcb,
+                                     pcc["dwell"]):
+        binrows += (f'<tr><td>{lab}</td><td class="num">{n:,}</td>'
+                    f'<td class="num">{sv:,.1f}</td><td class="num">{st:,.0f}</td>'
+                    f'<td class="num">{bu:,.0f}</td><td class="num">{d:.2f}%</td>'
+                    f'<td class="num">{st/tot_steps*100:.1f}%</td></tr>')
+    binrows += (f'<tr><td><strong>all</strong></td><td class="num">{sum(pcc["n"]):,}</td>'
+                f'<td class="num">&mdash;</td><td class="num">{tot_steps:,.0f}</td>'
+                f'<td class="num">{tot_bush:,.0f}</td>'
+                f'<td class="num">{tot_bush/tot_steps*100:.2f}%</td>'
+                f'<td class="num">100%</td></tr>')
+    M = three_measures(curves)
     dis, flat = check(M)
     by = {m["key"]: m for m in M}
     dr, pc = by["predator detection range"], by["predator count"]
@@ -388,11 +449,31 @@ def main():
         "__P0__":    f"{pc['rate'][0]:.1f}",
         "__P0PP__":  f"{pc['rate'][-1] - pc['rate'][0]:.0f}",
         "__TABLE__": build_table(M),
+        # the worked example, from the predator-count curve's own bins
+        "__PC_EPS__":   f"{pcc['n'][0]:,}",
+        "__PC_STEPS__": f"{pcc['n'][0]*pcc['survival'][0]:,.0f}",
+        "__PC_BUSH__":  f"{pcc['n'][0]*pcc['survival'][0]*pcc['dwell'][0]/100:,.0f}",
+        "__PC_LO__":    f"{pcc['dwell'][0]:.2f}",
+        "__PC_HI__":    f"{pcc['dwell'][-1]:.2f}",
+        "__PC_MULT__":  f"{pcc['dwell'][-1]/pcc['dwell'][0]:.1f}",
+        "__PC_PP__":    f"{pcc['dwell'][-1]-pcc['dwell'][0]:.1f}",
+        "__F2BAR__":    f"{f2bar:.2f}",
+        "__BINPANEL__": BINPANEL,
+        "__BINROWS__":  binrows,
+        "__PC_SHARE0__": f"{pcs[0]/tot_steps*100:.1f}",
+        "__PC_LEN0__":  f"{pcc['survival'][0]:,.0f}",
+        "__PC_LEN2__":  f"{pcc['survival'][-1]:,.0f}",
+        "__PC_ALL__":   f"{tot_bush/tot_steps*100:.2f}",
+        "__PC_B0__":    f"{pcb[0]:,.0f}", "__PC_B1__": f"{pcb[1]:,.0f}",
     }
     block = HTML_BLOCK
-    for k, v in subs.items():
-        block = block.replace(k, v)
-    left = re.findall(r"__[A-Z0-9]+__", block)
+    for _ in range(4):                    # a value may itself contain placeholders
+        prev = block
+        for k, v in subs.items():
+            block = block.replace(k, v)
+        if block == prev:
+            break
+    left = re.findall(r"__[A-Z0-9_]+__", block)
     if left:
         fail(f"unsubstituted placeholders remain: {sorted(set(left))}")
 

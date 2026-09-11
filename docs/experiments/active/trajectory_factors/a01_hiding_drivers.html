@@ -512,10 +512,46 @@ predator count, predator detection range and hiding predators &mdash; and those 
   factor does. Predator count's green bar runs off the scale at +614% and is marked as clipped
   rather than quietly truncated. Note the flat case as well: <code>predator max stamina</code>
   moves nothing on any of the three, which is a real null rather than a measurement that
-  failed.</figcaption>
-<div class="method"><b>How this was computed</b><dl><dt>the three bars</dt><dd>green is the share of the episode spent hidden, grey the total steps spent in a bush, amber the steps survived &mdash; each read at the factor's lowest and highest setting, expressed as the percentage change between the two</dd><dt>data used</dt><dd>the four predator traits use only the 333,743 exactly-one-predator episodes, 33.4% of the million, for the reason given in Figure&nbsp;4. Predator count, bushes available and hiding predators are defined in every episode and use all 1,000,000. The bars are therefore comparable in unit, not in population</dd><dt>a caution on percentages</dt><dd>the percentage change in a rate depends on how small that rate started. Predator count's +614% is large partly because hiding starts at only 7.9% when no predator is present; the same change stated in percentage points is +49 pp. The table below carries the underlying values so no reader is left with the ratio alone</dd><dt>why these seven</dt><dd>they are the settings the earlier environment-factor study covered. The full set of everything this world varies &mdash; twenty-five factors, including the agent's own starting state and every smell channel &mdash; is Figure&nbsp;2</dd></dl></div>
+  failed.<br><br><strong>These bars are measured, not modelled.</strong> Each one is two binned
+  averages and a division &mdash; no coefficient, no fit, no standard error. They are also
+  <em>percentage change</em>, not the <em>percentage points</em> of Figure&nbsp;2, and they span the
+  factor's whole range rather than one standard deviation of it. So the same movement carries three
+  different numbers: predator count is <strong>+614%</strong> here, <strong>+48.7 pp</strong>
+  if the same two bins are differenced instead of divided, and <strong>+16.03 pp</strong> in
+  Figure&nbsp;2. All three are true; none converts into another without knowing the baseline and the
+  span.</figcaption>
+<div class="method"><b>How this was computed</b><dl><dt>the three bars</dt><dd>green is the share of the episode spent hidden, grey the total steps spent in a bush, amber the steps survived &mdash; each read at the factor's lowest and highest setting, expressed as the percentage change between the two</dd><dt>worked</dt><dd>take predator count, green bar. Its <strong>lowest bin</strong> is every episode the world rolled with no predator at all &mdash; 333,947 of them. Pool their steps: <strong>11,005,918 bush steps out of 138,788,373</strong>, which is <strong>7.93%</strong>. Its highest bin, the two-predator episodes, gives <strong>56.61%</strong>. The bar is then simply <code>(56.61 &minus; 7.93) / 7.93 &times; 100 = +614%</code> &mdash; hiding ended up 7.1&times; what it was. Nothing else happens</dd><dt>why relative</dt><dd>the three bars in a group are a rate and two step counts. &ldquo;Percentage points of a share&rdquo; and &ldquo;steps&rdquo; cannot share an axis, so each is divided by its own starting value to strip the unit off &mdash; the same move Figure&nbsp;4 makes with multiples</dd><dt>blind spots</dt><dd>only the two endpoints are read, so the shape between them is invisible: a factor that rose and then fell back would report +0% while doing a great deal. Figure&nbsp;3's curves are the check on that. And, as in Figure&nbsp;2, nothing is held constant &mdash; each factor is read on its own</dd><dt>data used</dt><dd>the four predator traits use only the 333,743 exactly-one-predator episodes, 33.4% of the million, for the reason given in Figure&nbsp;4. Predator count, bushes available and hiding predators are defined in every episode and use all 1,000,000. The bars are therefore comparable in unit, not in population</dd><dt>a caution</dt><dd>the percentage change in a rate depends on how small that rate started. Predator count's +614% is large partly because hiding starts at only 7.9% when no predator is present; the same change stated in percentage points is +49 pp. The table below carries the underlying values so no reader is left with the ratio alone</dd><dt>why these seven</dt><dd>they are the settings the earlier environment-factor study covered. The full set of everything this world varies &mdash; twenty-five factors, including the agent's own starting state and every smell channel &mdash; is Figure&nbsp;2</dd></dl></div>
 <details class="samples"><summary>Data behind this figure &mdash; 2 subsets, 333,743 to 1,000,000 of 1,000,000</summary><div class="sbox"><table><thead><tr><th class="txt">what</th><th>used</th><th>available</th><th>share</th><th class="txt">why this subset</th></tr></thead><tbody><tr><td class="txt">the four predator traits</td><td>333,743</td><td>1,000,000</td><td>33.4%</td><td class="txt">a predator trait is undefined when no predator is present and ambiguous when two are, so only the exactly-one-predator episodes can be used</td></tr><tr><td class="txt">predator count, bushes available, hiding predators</td><td>1,000,000</td><td>1,000,000</td><td>100.0%</td><td class="txt">defined in every episode, so nothing has to be dropped</td></tr></tbody></table></div><p class="shint">&larr; wider than the screen &mdash; scroll the table sideways; the &ldquo;why this subset&rdquo; column is off to the right</p></details>
 </figure>
+
+
+<div class="panel" id="bin-walkthrough">
+<div class="fignum">Where those two numbers come from &mdash; predator count, bin by bin</div>
+<p>Figure&nbsp;5's green bar for predator count is built from the first and last rows of this table
+and nothing else. Every column is the pooled total across that bin's episodes.</p>
+<div class="scroll"><table>
+<thead><tr><th>bin</th><th class="num">episodes</th><th class="num">mean len</th>
+<th class="num">action</th><th class="num">bush</th><th class="num">share</th>
+<th class="num">% of steps</th></tr></thead>
+<tbody><tr><td>0</td><td class="num">333,947</td><td class="num">415.6</td><td class="num">138,788,373</td><td class="num">11,005,918</td><td class="num">7.93%</td><td class="num">73.1%</td></tr><tr><td>1</td><td class="num">333,743</td><td class="num">102.7</td><td class="num">34,275,406</td><td class="num">11,026,398</td><td class="num">32.17%</td><td class="num">18.0%</td></tr><tr><td>2</td><td class="num">332,310</td><td class="num">50.7</td><td class="num">16,848,117</td><td class="num">9,537,719</td><td class="num">56.61%</td><td class="num">8.9%</td></tr><tr><td><strong>all</strong></td><td class="num">1,000,000</td><td class="num">&mdash;</td><td class="num">189,911,896</td><td class="num">31,570,035</td><td class="num">16.62%</td><td class="num">100%</td></tr></tbody></table></div>
+<p>The bar is <code>(56.61 &minus; 7.93) / 7.93 &times; 100 = +614%</code>. But two
+other things in the table matter more than that division.</p>
+<p><strong>The zero-predator bin is a third of the episodes and 73.1% of all the
+steps.</strong> Those agents live 416 steps instead of 51. That one fact is why the
+overall rate is 16.62% &mdash; far nearer the predator-free 7.93% than the ~32% of a middling
+bin &mdash; and it is the rate Figure&nbsp;2 prices its all-episode factors at. Pool over steps and
+the long safe episodes dominate.</p>
+<p><strong>And bins 0 and 1 hold almost the same number of bush steps</strong> &mdash;
+11,005,918 against 11,026,398 &mdash; from rates of 7.93% and 32.17%. One agent hides a little for a
+long time; the other hides a great deal, briefly. That is the whole total-versus-share reversal of
+this section, visible in the raw counts before any measure is chosen.</p>
+<div class="note"><strong>Why an agent with no predator hides at all.</strong> Mostly it is not
+hiding: a bush is just a tile. The grid is 10&times;10 and the world rolls 4&ndash;10 bushes, so
+roughly 7% of tiles are bush, and an agent moving with no particular regard for them would stand on
+one about 7% of the time. The measured 7.93% is barely above that, which makes the predator-free bin
+close to a floor &mdash; how often you end up in cover by accident.</div>
+</div>
+
 
 <figure class="panel scroll">
 <div class="fignum">Figure 6 &mdash; the same seven factors, as exact numbers</div>
