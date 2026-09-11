@@ -85,5 +85,28 @@ def main():
     open(PAGE, "w", encoding="utf-8").write(html)
     print(f"  wrote {PAGE}")
 
+# One short worked row apiece, inside the method block each figure already has - not a new box.
+# Both figures report a share of STEPS, and the two differ in exactly one respect (when the
+# animal's position is read), which is the thing a reader is most likely to get wrong.
+FIXES += [
+    ("figure 9: worked example",
+     "<dt>three states</dt><dd>predator near takes precedence; &ldquo;rabbit near&rdquo; means a "
+     "rabbit within 2 and no predator within 2</dd>",
+     "<dt>three states</dt><dd>predator near takes precedence; &ldquo;rabbit near&rdquo; means a "
+     "rabbit within 2 and no predator within 2</dd>"
+     "<dt>worked</dt><dd>the 49.8% counts STEPS, not episodes. A step qualifies if, <em>at that "
+     "same step</em>, a rabbit is within 2 tiles and no predator is &mdash; in an episode whose "
+     "one rabbit was drawn predator-like. Of all such steps, 49.8% had the agent standing in a "
+     "bush</dd>"),
+
+    ("figure 10: worked example",
+     "<dt>population</dt><dd>all 189,906,610 action steps, unconditioned</dd>",
+     "<dt>population</dt><dd>all 189,906,610 action steps, unconditioned</dd>"
+     "<dt>worked</dt><dd>each step is filed by where the animals were <em>one step earlier</em>, "
+     "then scored by where the agent is <em>now</em>. So 67.9% is: of every step whose previous "
+     "step had a predator within 2 tiles, 67.9% found the agent in a bush. This is the one "
+     "difference from Figure&nbsp;9, which reads position and cover at the same step</dd>"),
+]
+
 if __name__ == "__main__":
     main()
