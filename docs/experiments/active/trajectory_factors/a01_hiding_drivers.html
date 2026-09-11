@@ -50,6 +50,12 @@ td.num{font-family:var(--mono);font-size:.83rem}
 #the-model h3:first-of-type{margin-top:1.1rem}
 #the-model table{font-size:.84rem}
 #the-model p.note{margin-top:1rem}
+#the-model .dia{overflow-x:auto;margin:1rem 0 .2rem}
+#the-model .dia svg{display:block;width:100%;min-width:700px;height:auto}
+#the-model .diahint{display:none;font-family:var(--mono);font-size:.62rem;color:var(--muted);
+  margin:0 0 .6rem}
+@media (max-width:820px){#the-model .diahint{display:block}}
+#the-model .diahint[hidden]{display:none!important}
 #the-model .say{text-align:left;white-space:normal}
 #the-model .formula-ish{background:var(--panel2);border-left:3px solid var(--rule);
   border-radius:2px;padding:.7rem .9rem;margin:.9rem 0}
@@ -292,6 +298,35 @@ decide what a bar means, and the fourth is the one that surprises people:</p>
   the largest set of episodes where that factor is defined. Figure 2 is not one regression; it is
   25 regressions whose effect sizes are collected onto a single axis.</dd>
 </dl>
+
+<h3>Why a binomial, and not the Gaussian model you may be used to</h3>
+<p>A GLM is two choices: a distribution for the response, and a <strong>link</strong> joining its
+mean to the linear predictor <code>X&beta;</code>. The familiar case &mdash; ordinary least squares,
+and the GLM used throughout fMRI &mdash; picks <em>Gaussian</em> and the <em>identity</em> link. Two
+conveniences follow from that pair, and neither survives here.</p>
+<div class="dia" id="glmviz"></div>
+<p class="diahint">&larr; wider than the screen &mdash; scroll the panels sideways</p>
+<p><strong>A.</strong> The response is a count out of n, so it is bounded and lumpy. A Gaussian of
+the same mean and spread puts 3.1% of its probability on counts below zero &mdash; outcomes that
+cannot occur. <strong>B.</strong> With an identity link the prediction is a straight line, and a
+straight line has no ceiling: extend it and it predicts more than 100% of the episode spent hidden.
+The logit bends instead, so no coefficient, however large, can predict an illegal rate.
+<strong>C.</strong> A Gaussian assumes one constant spread at every level of the response. For a
+rate the spread <em>is</em> a function of the rate &mdash; <code>p(1&minus;p)/n</code> &mdash; so a
+rate near 0 or 1 is intrinsically better pinned down than one near a half. Ignoring that would
+weight the page's quietest factors as though they were as noisy as its loudest.</p>
+<div class="note"><strong>If you read fMRI GLMs, this is where the habit breaks.</strong> There the
+identity link means &beta; is <em>already</em> in the response's units &mdash; so much signal per
+unit of regressor &mdash; and the regressors are convolved boxcars on comparable scales, so &beta;
+maps can be read and compared directly. Here neither holds: &beta; is in log-odds, which is nobody's
+unit, and the regressors run 0&ndash;2, 1&ndash;7, 30&ndash;151, 0&ndash;101, so &ldquo;per
+unit&rdquo; means something different in every row. The two corrections below fix exactly those two
+problems, in that order.<br><br>There is a deeper asymmetry too. Under an identity link
+<code>&part;E[Y]/&part;x = &beta;</code> everywhere, so &beta; <em>is</em> the effect, completely.
+Under a logit <code>&part;p/&part;x = &beta;&middot;p(1&minus;p)</code>, which panel C shows is
+four times larger at a half than at a tenth. On the log-odds scale one number describes the effect;
+on the scale this page is written in, no single number does &mdash; which is the real reason a bar
+has to say where it was priced.</div>
 
 <h3>What &ldquo;log-odds per unit&rdquo; means, in numbers</h3>
 <p>Take one real number off the page &mdash; an agent facing a predator that can see
@@ -1596,5 +1631,115 @@ const CV = n => "var(" + n + ")";
   document.querySelectorAll("details.samples").forEach(function (d) {
     d.addEventListener("toggle", sync);
   });
+})();
+</script>
+<script>
+(function () {
+  var C = function (n) { return "var(" + n + ")"; };
+  var W = 700, H = 756, s = svg(W, H);
+  var lgt = function (x) { return 1 / (1 + Math.exp(-x)); };
+  var ml = 58, mr = 22, pw = W - ml - mr, ph = 148;
+
+  /* ---- A: what a single episode's count can be. Bounded, lumpy, and never negative. ---- */
+  (function () {
+    var oy = 6, n = 20, p = 0.10, mu = n * p, sd = Math.sqrt(n * p * (1 - p));
+    var lc = [0], pm = [];
+    for (var i = 1; i <= n; i++) lc.push(lc[i - 1] + Math.log(i));
+    for (var k = 0; k <= n; k++)
+      pm.push(Math.exp(lc[n] - lc[k] - lc[n - k] + k * Math.log(p) + (n - k) * Math.log(1 - p)));
+    var ymax = 0.32, X = function (k) { return ml + pw * (k + 1.6) / (n + 2.6); };
+    var Y = function (v) { return oy + 30 + ph - (v / ymax) * ph; };
+    s.appendChild(txt(ml - 4, oy + 14, "A \u00b7 what ONE episode's count can be \u2014 n = 20 steps at a 10% hiding rate", "axt"));
+    for (var k = 0; k <= n; k++) {
+      var w = pw / (n + 2.6) * 0.6;
+      s.appendChild(el("rect", {x: X(k) - w / 2, y: Y(pm[k]), width: w,
+        height: Math.max(Y(0) - Y(pm[k]), 0.4), style: "fill:" + C("--cover"), rx: 1}));
+      if (k % 4 === 0) s.appendChild(txt(X(k), Y(0) + 13, k, "ax", "middle"));
+    }
+    var d = "";                                   /* stop the Gaussian at the panel edge */
+    for (var q = -1.5; q <= n + 0.001; q += 0.1) {
+      var g = Math.exp(-(q - mu) * (q - mu) / (2 * sd * sd)) / (sd * Math.sqrt(2 * Math.PI));
+      d += (d ? "L" : "M") + X(q) + " " + Y(Math.min(g, ymax));
+    }
+    s.appendChild(el("path", {d: d, fill: "none", style: "stroke:" + C("--false"),
+      "stroke-width": 2, "stroke-dasharray": "5 3"}));
+    s.appendChild(el("line", {x1: X(-0.5), y1: Y(0), x2: X(-0.5), y2: Y(ymax * 0.92),
+      style: "stroke:" + C("--rule"), "stroke-width": 1.2}));
+    s.appendChild(txt(X(4.6), Y(0.30), "binomial \u2014 mean 2.0, sd 1.34, and it simply stops at 0", "ax", null, C("--cover")));
+    s.appendChild(txt(X(4.6), Y(0.245), "\u2014 \u2014 Gaussian, same mean and sd \u2014 but 3.1% of its", "ax", null, C("--false")));
+    s.appendChild(txt(X(4.6), Y(0.215), "mass lands on counts below zero, which cannot happen", "ax", null, C("--false")));
+    xlab(s, ml + pw / 2, Y(0) + 32, "steps spent in a bush, out of 20  \u2192");
+  })();
+
+  /* ---- B: the link. A line has no ceiling; the logit bends instead. ---- */
+  (function () {
+    var oy = 258, lo = -0.16, hi = 1.16;
+    var X = function (v) { return ml + pw * (v + 4) / 8; };
+    var Y = function (v) { return oy + 34 + ph - (v - lo) / (hi - lo) * ph; };
+    s.appendChild(txt(ml - 4, oy + 14, "B \u00b7 the link \u2014 an identity link has no ceiling; a logit cannot leave 0\u2013100%", "axt"));
+    [0, 0.5, 1].forEach(function (g) {
+      s.appendChild(el("line", {x1: ml, y1: Y(g), x2: ml + pw, y2: Y(g),
+        style: "stroke:" + C(g === 0.5 ? "--grid" : "--rule"), "stroke-width": g === 0.5 ? .6 : 1.2}));
+      s.appendChild(txt(ml - 7, Y(g) + 3, (g * 100) + "%", "ax", "end"));
+    });
+    var d = "";
+    for (var x = -4; x <= 4.001; x += 0.06) d += (d ? "L" : "M") + X(x) + " " + Y(lgt(x));
+    s.appendChild(el("path", {d: d, fill: "none", style: "stroke:" + C("--cover"), "stroke-width": 2.6}));
+    var xa = (lo - 0.5) / 0.25, xb = (hi - 0.5) / 0.25;        /* clip the line to the band */
+    s.appendChild(el("line", {x1: X(xa), y1: Y(lo), x2: X(xb), y2: Y(hi),
+      style: "stroke:" + C("--false"), "stroke-width": 2, "stroke-dasharray": "5 3"}));
+    /* one worked point, where the two disagree and one of them is illegal */
+    var xp = 2.5;
+    s.appendChild(el("line", {x1: X(xp), y1: Y(lgt(xp)), x2: X(xp), y2: Y(0.5 + 0.25 * xp),
+      style: "stroke:" + C("--muted"), "stroke-width": 1}));
+    s.appendChild(el("circle", {cx: X(xp), cy: Y(lgt(xp)), r: 3.4, style: "fill:" + C("--cover")}));
+    s.appendChild(el("circle", {cx: X(xp), cy: Y(0.5 + 0.25 * xp), r: 3.4, style: "fill:" + C("--false")}));
+    s.appendChild(txt(X(xp) + 9, Y(lgt(xp)) + 4, "logit says 92.4%", "ax", null, C("--cover")));
+    s.appendChild(txt(X(xp) - 9, Y(0.5 + 0.25 * xp) + 4, "straight line says 112.5%", "ax", "end", C("--false")));
+    s.appendChild(txt(ml + 6, Y(1.10), "above 100% \u2014 impossible", "ax", null, C("--false")));
+    s.appendChild(txt(ml + 6, Y(-0.10), "below 0% \u2014 impossible", "ax", null, C("--false")));
+    xlab(s, ml + pw / 2, Y(lo) + 30, "the linear predictor X\u03b2, in log-odds  \u2192");
+    ylab(s, 15, oy + 34 + ph / 2, "predicted hiding rate");
+  })();
+
+  /* ---- C: the variance. Not a constant; it is a function of the rate. ---- */
+  (function () {
+    var oy = 510;
+    var X = function (v) { return ml + pw * v; };
+    var Y = function (v) { return oy + 34 + ph - (v / 0.30) * ph; };
+    s.appendChild(txt(ml - 4, oy + 14, "C \u00b7 the variance \u2014 a Gaussian assumes one spread; a rate's spread IS the rate", "axt"));
+    [0, 0.25].forEach(function (g) {
+      s.appendChild(el("line", {x1: ml, y1: Y(g), x2: ml + pw, y2: Y(g),
+        style: "stroke:" + C("--grid"), "stroke-width": .6}));
+      s.appendChild(txt(ml - 7, Y(g) + 3, g.toFixed(2), "ax", "end"));
+    });
+    var d = "";
+    for (var q = 0; q <= 1.001; q += 0.008) d += (d ? "L" : "M") + X(q) + " " + Y(q * (1 - q));
+    s.appendChild(el("path", {d: d, fill: "none", style: "stroke:" + C("--cover"), "stroke-width": 2.6}));
+    s.appendChild(el("line", {x1: ml, y1: Y(0.272), x2: ml + pw, y2: Y(0.272),
+      style: "stroke:" + C("--false"), "stroke-width": 2, "stroke-dasharray": "5 3"}));
+    s.appendChild(txt(ml + 6, Y(0.288), "\u2014 \u2014 what a Gaussian assumes: one constant spread, whatever the rate", "ax", null, C("--false")));
+    [[0.1662, "16.6%", "0.139"], [0.3217, "32.2%", "0.218"], [0.5, "50%", "0.250"]].forEach(function (m) {
+      var v = m[0] * (1 - m[0]);
+      s.appendChild(el("line", {x1: X(m[0]), y1: Y(0), x2: X(m[0]), y2: Y(v),
+        style: "stroke:" + C("--rule"), "stroke-width": 1}));
+      s.appendChild(el("circle", {cx: X(m[0]), cy: Y(v), r: 3.4, style: "fill:" + C("--cover")}));
+      s.appendChild(txt(X(m[0]) + (m[0] === 0.5 ? 8 : 0), Y(v) + (m[0] === 0.5 ? 4 : -8),
+        m[2], "ax", m[0] === 0.5 ? null : "middle", C("--cover")));
+      s.appendChild(txt(X(m[0]), Y(0) + 13, m[1], "ax", "middle"));
+    });
+    s.appendChild(txt(X(0.63), Y(0.115), "0.139 against 0.250 \u2014 a 16.6% rate carries", "ax", "middle", C("--muted")));
+    s.appendChild(txt(X(0.63), Y(0.086), "little more than half the variance of a 50% one", "ax", "middle", C("--muted")));
+    s.appendChild(txt(X(1), Y(0) + 13, "100%", "ax", "middle"));
+    xlab(s, ml + pw / 2, Y(0) + 32, "the hiding rate p  \u2192");
+    ylab(s, 15, oy + 34 + ph / 2, "variance factor p(1\u2212p)");
+  })();
+
+  put("glmviz", s);
+  /* show the scroll cue only when the box actually scrolls, and keep it true on resize */
+  var box = document.getElementById("glmviz");
+  var hint = box && box.parentNode.querySelector(".diahint");
+  function sync() { if (box && hint) hint.hidden = !(box.scrollWidth > box.clientWidth + 1); }
+  sync(); addEventListener("resize", sync); addEventListener("load", sync);
 })();
 </script>
