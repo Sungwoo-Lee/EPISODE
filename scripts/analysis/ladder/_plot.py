@@ -225,6 +225,12 @@ def assert_labels_fit(fig, axes, slack=1.04):
             if w > panel * slack:
                 bad.append(f"{which} is {w:.0f}px wide in a {panel:.0f}px panel: "
                            f"{art.get_text().splitlines()[0][:60]!r}")
+    # Tick labels are deliberately NOT checked here. `finish()` saves with bbox_inches="tight",
+    # which GROWS the canvas to include anything hanging outside it, so a tick label that runs off
+    # the pre-save canvas is not clipped in the output - verified by padding every label with 160
+    # characters and watching the saved PNG widen from 3231px to 4423px with nothing lost. An
+    # off-canvas test here reports a defect that the save has already prevented, and it fires on
+    # all thirteen rows of Figure 1.
     if bad:
         raise SystemExit("axis text does not fit its panel -\n  " + "\n  ".join(bad) +
                          "\nShorten it, or split it across more lines.")

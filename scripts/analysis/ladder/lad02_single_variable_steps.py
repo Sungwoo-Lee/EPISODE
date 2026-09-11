@@ -25,7 +25,10 @@ D = L.load_all()
 L.check_single_variable_pairs({a: L.arm_config(r) for a, r in L.arm_runs().items()})
 pairs = [(a, r) for a, r in L.ARM_REFERENCE.items()]
 pairs.sort(key=lambda p: L.ARM_ORDER.index(p[0]))
-lab = [f"{L.ARM_LABEL[a][1]}\n(vs {r})" for a, r in pairs]
+# Name BOTH sides. The label used to read "<what changed>\n(vs <reference>)", which shows
+# the reference arm but never the arm the row is about - so a reader could not tie a bar
+# back to Figure 1 or to any table, all of which key on the arm code.
+lab = [f"{a}  vs  {r}\n{L.ARM_LABEL[a][1]}" for a, r in pairs]
 d_surv = [D[a]["mean_survival"] - D[r]["mean_survival"] for a, r in pairs]
 d_dwell = [D[a]["bush_dwell_pct"] - D[r]["bush_dwell_pct"] for a, r in pairs]
 
@@ -52,7 +55,7 @@ for k, (vals, xl, ttl) in enumerate([
                    f"{v:+.1f}" + ("" if k == 0 else " pp"),
                    va="center", ha="left" if v >= 0 else "right", fontsize=8, color=PL.INK)
 ax[0].set_yticks(y); ax[0].set_yticklabels(lab, fontsize=8)
-ax[0].set_ylabel("single-variable sensor change")
+ax[0].set_ylabel("single-variable step  (arm vs its reference arm)")
 POP = L.population()
 used_arms = sorted({a for p in pairs for a in p})
 L.record_samples("lad02_single_variable_steps", [
