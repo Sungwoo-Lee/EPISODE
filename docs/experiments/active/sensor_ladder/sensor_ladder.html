@@ -117,7 +117,8 @@ figure{margin:44px 0}
 figure.wide{margin-top:44px;margin-bottom:44px}
 figure img{width:100%;height:auto;display:block;border:1px solid var(--rule);border-radius:4px;
   background:var(--fig-plate);cursor:zoom-in}
-figure img:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
+/* F38: offset inward, so a ring is not clipped by any scrolling ancestor. */
+figure img:focus-visible{outline:2px solid var(--accent);outline-offset:-3px}
 .zoomhint{font-family:var(--mono);font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;
   color:var(--muted);margin:9px 0 0;text-align:right;max-width:1120px}
 .prov{max-width:730px;margin:8px auto 0;font-family:var(--mono);font-size:11.5px;
@@ -182,6 +183,15 @@ td code{background:none;padding:0;font-size:12.5px;color:var(--ink)}
 .toc{display:none}
 @media (min-width:1300px){
   .wrap{grid-template-columns:190px 1fr;gap:44px;max-width:1420px}
+  /* Place EVERY direct child explicitly. This grid shipped broken from 2026-09-07 to
+     2026-09-11 because a <section> was added as a direct child of .wrap and grid
+     auto-placement silently shifted <main> into the 190px rail: the whole article
+     rendered 138px wide and 92,291px tall at viewports >= 1300px. Nothing overlapped
+     and nothing overflowed, so no static reading of this file could find it. Naming
+     the column for all children, rather than for .mast alone, makes the next added
+     child structurally unable to repeat it. */
+  .wrap > *{grid-column:2}
+  .toc{grid-column:1}
   .toc{display:block;position:sticky;top:-48px;align-self:start;padding-top:82px;
     font-size:13px;line-height:1.4}
   .toc div{font-family:var(--mono);font-size:10px;letter-spacing:.12em;text-transform:uppercase;
@@ -189,7 +199,6 @@ td code{background:none;padding:0;font-size:12.5px;color:var(--ink)}
   .toc a{display:block;padding:5px 0;color:var(--ink-2);text-decoration:none;
     border-left:2px solid var(--rule);padding-left:12px;margin-left:-2px}
   .toc a:hover{color:var(--accent);border-left-color:var(--accent)}
-  .mast{grid-column:2}
 }
 .foot{margin-top:90px;padding-top:26px;border-top:1px solid var(--rule);
   font-size:13.5px;color:var(--muted)}
@@ -241,11 +250,25 @@ pre code{background:none;padding:0;font-size:inherit}
   flex:0 0 auto}
 .lb-bar button:hover{background:rgba(255,255,255,.18)}
 .lb-bar button:focus-visible{outline:2px solid #7fd0a5;outline-offset:2px}
-.lb-scroll{flex:1 1 auto;overflow:auto;display:grid;place-items:center;padding:18px}
-.lb-scroll img{display:block;background:#fff;border-radius:3px}
+/* F37: NOT `display:grid; place-items:center`. A percentage max-height on a grid item
+   resolves against its track, and an auto track is sized FROM the item -- circular, so
+   `max-height:100%` never constrains and "fit to window" fits the width only. A portrait
+   figure then opens showing its top third under a button labelled "Actual size". Flex
+   centring gives the item a definite box to resolve against. */
+.lb-scroll{flex:1 1 auto;overflow:auto;display:flex;align-items:center;justify-content:center;padding:18px}
+.lb-scroll img{flex:0 0 auto;display:block;background:#fff;border-radius:3px}
 .lb.fit .lb-scroll img{max-width:100%;max-height:100%;width:auto;height:auto;cursor:zoom-in}
-.lb.actual .lb-scroll{place-items:start}
+.lb.actual .lb-scroll{align-items:flex-start;justify-content:flex-start}
 .lb.actual .lb-scroll img{max-width:none;max-height:none;cursor:zoom-out}
+/* On a phone the bar has to hold a title, a pixel readout and two buttons, and the title lost:
+   it clipped at about twenty characters. Let it take two lines below 640px rather than
+   truncating the one thing that says which figure is open. */
+@media (max-width:639px){
+  .lb-bar{flex-wrap:wrap;gap:8px 12px}
+  .lb-bar .t{flex:1 0 100%;white-space:normal;overflow:visible;text-overflow:clip;
+    display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;
+    line-height:1.35}
+}
 @media (prefers-reduced-motion:no-preference){.lb{animation:lbin .14s ease-out}}
 @keyframes lbin{from{opacity:0}to{opacity:1}}
 </style>
