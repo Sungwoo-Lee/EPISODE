@@ -134,5 +134,43 @@ FIXES += [
      "and decay on its own &mdash; at the cost recorded in the next row</dd>"),
 ]
 
+# ---- Figure 12 -------------------------------------------------------------------------------
+# Its rows were worded ("feels nothing" ... "extreme") while Figure 18, built from the SAME
+# reconstruction, labels the same six bins numerically. The producer is
+# scripts/analysis/supplementary/injdeep.py: `PE=[1e-9,8,18,32,50]` with
+# `PL=["felt 0","0-8","8-18","18-32","32-50","50+"]`, and `HB=[1,2,3,5]` for the hit columns.
+# Numbers let a reader see that the bins are uneven and that the signal shares the 0-100 scale
+# with injury, neither of which a word conveys.
+FIXES += [
+    ("figure 12: number the nociception rows",
+     'heat("hits",D.hits.hide,["feels nothing","a little","some","a lot","severe","extreme"],',
+     'heat("hits",D.hits.hide,["felt 0","0\u20138","8\u201318","18\u201332","32\u201350","50+"],'),
+
+    ("figure 12: how a step lands in a cell",
+     "<dt>conditioning</dt><dd>steps with no predator within 2 tiles only, so current proximity "
+     "cannot drive the pattern</dd>",
+     "<dt>conditioning</dt><dd>steps with no predator within 2 tiles only, so current proximity "
+     "cannot drive the pattern</dd>"
+     "<dt>the rows</dt><dd>the reconstructed nociception signal, binned at 0, 0&ndash;8, "
+     "8&ndash;18, 18&ndash;32, 32&ndash;50 and 50+ &mdash; the same 0&ndash;100 scale injury uses, "
+     "and the same bins Figure&nbsp;18 draws</dd>"
+     "<dt>one step, one cell</dt><dd>each step is filed by two things read at that moment: the "
+     "nociception it was feeling (row) and how many times it had <em>already</em> been struck "
+     "earlier in the same episode (column). Every step lands in exactly one cell and nothing is "
+     "counted twice</dd>"
+     "<dt>episodes move</dt><dd>so an episode travels <strong>rightward</strong> through the grid "
+     "as it goes: it starts in &ldquo;0 strikes&rdquo;, and each hit moves all its later steps one "
+     "column right. An episode struck exactly twice contributes steps to columns 0, 1 and 2 and "
+     "<strong>never appears in 3&ndash;4 or 5+</strong> &mdash; so the right-hand columns are not "
+     "the same episodes later on, they are a smaller and more heavily attacked set. It moves "
+     "<strong>vertically</strong> too: nociception climbs after a hit and decays over the next "
+     "dozen steps, so one episode's steps spread down and back up the rows as it is wounded and "
+     "recovers</dd>"
+     "<dt>cell sizes</dt><dd>the grid holds 175.1M steps, very unevenly: 47.8M sit in &ldquo;felt "
+     "0, 5+ strikes&rdquo; and only 0.29M in &ldquo;50+, 2 strikes&rdquo;. The comparison the "
+     "figure is built on &mdash; 50+ nociception at 0 strikes against 1 strike &mdash; rests on "
+     "0.96M and 0.44M steps respectively</dd>"),
+]
+
 if __name__ == "__main__":
     main()
