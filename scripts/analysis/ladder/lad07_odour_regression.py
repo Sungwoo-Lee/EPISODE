@@ -69,13 +69,24 @@ for i in range(len(arms)):
     for val, off, pv in ((P[i], +h/2, Pp[i]), (R[i], -h/2, Rp[i])):
         if np.isfinite(val):
             ax.text(val + np.sign(val) * 0.06, y[i] + off,
-                    f"{val:+.2f}" + ("" if pv < 0.001 else " (n.s.)"),
+                    f"{val:+.2f}" + ("" if pv < 0.001 else "  not significant"),
                     va="center", ha="left" if val >= 0 else "right", fontsize=7, color=PL.INK)
 hi = np.nanmax(np.concatenate([P, R])); lo = min(np.nanmin(np.concatenate([P, R])), 0.0)
 ax.set_xlim(lo - 0.35 - abs(lo) * 0.5, hi * 1.42 + 0.35)
-ax.legend(loc="lower center", bbox_to_anchor=(0.5, 1.02), ncol=1, fontsize=8.5)
-fig.text(0.5, -0.08, "'(n.s.)' marks an effect that is not distinguishable from zero at p < 0.001 "
-         "after scaling for overdispersion", ha="center", fontsize=7.6, color=PL.MUTED)
+hl = [plt.Rectangle((0, 0), 1, 1, color=PL.THREAT,
+                    label="stronger PREDATOR smell  (a real cue - hiding is correct)"),
+      plt.Rectangle((0, 0), 1, 1, color=PL.HARMLESS,
+                    label="stronger RABBIT smell  (harmless - hiding is a false alarm)"),
+      plt.Line2D([], [], color="none",
+                 label="\"not significant\" beside a value = not distinguishable from zero at "
+                       "p < 0.001,\nafter the standard errors are scaled for overdispersion")]
+ax.legend(handles=hl, loc="lower center", bbox_to_anchor=(0.5, 1.02), ncol=1, fontsize=8.5,
+          handlelength=1.6)
+fig.text(0.5, -0.09,
+         "Each bar is CONTINUOUS odour intensity, not a loud/quiet split: the regressor is the sum "
+         "of the animal's two odour channels,\nwhich runs 0 to 2 with a standard deviation of 0.38. "
+         "The bar is the effect of moving that number up by one standard deviation.",
+         ha="center", fontsize=7.6, color=PL.MUTED)
 POP = L.population()
 _n = sum(int(r["n"]) for a in arms
          for r in csv.DictReader(open(f"{GLM_ROOT}/{a}/multivariate.csv"))

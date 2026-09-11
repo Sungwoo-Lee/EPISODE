@@ -793,6 +793,33 @@ animal.</p>
   with the other 15 held fixed. The block below names all 16. <b>Axes.</b> <b>y</b> = the fourteen arms, poorest senses at the bottom. <b>x</b> = the effect on bush hiding, in percentage points, of a one-standard-deviation stronger smell, with everything else in the regression held fixed. Centred on zero; right of the line means the agent hides more when that animal smells stronger.</figcaption>
   <div class="fig-blocks">
     <div><h5>How it is computed</h5><p>The same quasi-binomial machinery as Figure 6, but restricted to the episodes in which there is exactly one predator and exactly one rabbit. That restriction is what makes the question answerable: with two predators in a world, "the predator's smell" would have to be an average over two independently drawn odours, and the regression would be relating behaviour to a quantity that does not correspond to anything the agent encountered. Requiring exactly one of each costs a great deal of data &mdash; it is the smallest sample behind any figure here, about 11 percent of episodes &mdash; but it buys a well-defined regressor. Each animal's odour is redrawn at random every episode, independently of everything else, which is what makes this a causal contrast rather than a correlation: the agent cannot choose what a rabbit smells like. Throughout, an animal's odour <b>intensity</b> is the sum of its two odour channels, drawn fresh each episode; it runs 0 to 2 and averages 1.17. The "strongest-smelling quarter" means the top 25% of episodes by that sum &mdash; a typical intensity of 1.58 against 0.75 in the weakest quarter, about 2.1&times; as loud. Because the agent's nose receives intensity divided by distance, a strong-smelling rabbit six cells away reads like a weak one at three. Intensity says nothing about which class the animal is: both average 1.2.</p></div>
+    <div><h5>How to read one bar</h5>
+    <p>Take <code>A_baseline</code>'s blue bar, <b>+3.81</b>. The regressor behind it is the
+    rabbit's <b>odour intensity</b> &mdash; the sum of its two odour channels, a continuous number
+    running 0 to 2 with a mean of 1.17 and a standard deviation of <b>0.38</b> across episodes.
+    So the bar says: take two worlds that are identical in all 15 other respects &mdash; same
+    number of bushes, rocks and food, same predator with the same detection range and attack
+    delay, same starting wound and hunger &mdash; and give one of them a rabbit whose smell is
+    0.38 louder. That agent spends <b>3.81 more percentage points</b> of its life inside a bush.
+    <code>A_baseline</code> lives about 166 steps, so that is roughly <b>six extra steps hidden
+    per episode</b>, bought by a rabbit that cannot hurt it.</p>
+    <p><b>Is it a competition to explain the variance?</b> Partly, and it is worth being exact
+    about when. A multivariate coefficient is a <i>partial</i> effect: the part of the association
+    between that regressor and hiding that <i>cannot</i> be attributed to any of the other 15. Two
+    regressors only take credit from each other when they are <b>correlated with each other</b>;
+    regressors that vary independently do not compete at all, and each one's coefficient is
+    essentially what it would have been on its own. So this is not a fixed pot of variance being
+    divided fifteen ways.</p>
+    <p>Where it genuinely bites here is one specific pair. An animal's <b>intensity</b> is the
+    <i>sum</i> of its two odour channels and its <b>predator-likeness</b> is the <i>difference</i>
+    between the same two channels &mdash; both are built from the same two random draws, and both
+    are in the model. Separating "the rabbit was louder" from "the rabbit smelled more like a
+    predator" is exactly what this fit does and what Figure 5's raw near-versus-far contrast
+    cannot. That is the main thing Figure 7 buys over Figure 5.</p>
+    <p><b>Not a high/low split.</b> The regressor is the continuous intensity value, entered as it
+    is. Nothing here is discretised. The quartile language used in Figures 11 and 12 &mdash; "the
+    strongest-smelling quarter" &mdash; is a different presentation of the same underlying number,
+    used there because those figures plot a curve rather than fit a coefficient.</p></div>
     <div><h5>The 16 regressors, in full</h5>
     <p>Every one of these is drawn by the environment before the agent acts, and all 16 enter a
     single regression per arm. Two of them are the bars in the figure; the other 14 are there so
