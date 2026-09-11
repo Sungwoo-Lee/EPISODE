@@ -42,13 +42,15 @@ for j, (key, ttl) in enumerate([("pd", "Nearest PREDATOR - a real threat"),
         else:
             ax[j].plot(x, y, lw=1.0, color=c, alpha=0.34, zorder=2)
     ax[j].set_title(ttl, fontsize=10, color=PL.INK, loc="left", pad=8)
-    ax[j].set_xlabel("distance to the nearest animal when it decided\n"
-                     "chebyshev steps - the moves a chess king would need\n"
+    # Name the timestep on each axis rather than paraphrasing it. "when it decided" read as
+    # though the ANIMAL decided, and the one thing the reader needs is that the two axes come
+    # from DIFFERENT rows: the distance the agent was looking at, and what it then did.
+    ax[j].set_xlabel("distance to the nearest animal at step t-1\n"
                      "8 = eight or more")
     ax[j].set_xticks(x); ax[j].set_xticklabels(L.DIST_NAMES)
     ax[j].set_xlim(0.7, L.DIST_MAX + 1.6)
     PL.stagger_end_labels(ax[j], ends)
-ax[0].set_ylabel("bush hiding  (% of those steps spent in a bush)")
+ax[0].set_ylabel("bush hiding at step t  (% of those steps spent in a bush)")
 h = [plt.Line2D([], [], color=PL.GROUP_YES, lw=2.2, label=L.GROUP_LABEL[True] + "  (9 arms)"),
      plt.Line2D([], [], color=PL.GROUP_NO, lw=2.2, label=L.GROUP_LABEL[False] + "  (5 arms)"),
      plt.Line2D([], [], color=PL.MUTED, lw=2.4, marker="o", ms=4,

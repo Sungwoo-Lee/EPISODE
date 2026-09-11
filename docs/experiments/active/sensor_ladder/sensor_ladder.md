@@ -374,7 +374,7 @@ survival runs 240.9 &rarr; 250.3 &rarr; 258.8 &rarr; **264.2** &rarr; 238.9 as t
 agent chose its move. Colour is the grouping of Section 4; the four arms the text discusses are
 drawn thick and named.
 
-**Axes.** Both panels: x = distance from the agent to the nearest animal at the moment it chose its move, in chebyshev steps, from 1 (adjacent) to 8 or more. y = bush hiding as a percentage of those steps. Both panels share one y-scale. The y-axis does not start at zero; it is cropped to the range the curves occupy.
+**Axes.** Both panels: x = distance from the agent to the nearest animal at step t-1, the row the agent was looking at when it chose its move, in chebyshev steps, from 1 (adjacent) to 8 or more. y = bush hiding at step t, as a percentage of those steps. Both panels share one y-scale. The y-axis does not start at zero; it is cropped to the range the curves occupy.
 
 **Motivation.** Hiding is only defensive if the threat triggers it. A flat curve would mean the
 agent hides on a schedule; a curve that rises as the animal approaches means it hides in response to
