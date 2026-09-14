@@ -1,0 +1,604 @@
+<title>Episode Dashboard Redesign</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans+Condensed:wght@600;700&display=swap">
+<style>
+/* House style (docs/develop/active/meta/house_style_sheet.template.html), light theme only by project
+   preference. Page source: docs/develop/active/refactors/renderer_layout_redesign/; built by build_page.py. */
+@font-face{font-family:'Pretendard';font-style:normal;font-weight:400;font-display:swap;
+  src:url(data:font/woff;base64,{{FONT:Regular}}) format('woff')}
+@font-face{font-family:'Pretendard';font-style:normal;font-weight:600;font-display:swap;
+  src:url(data:font/woff;base64,{{FONT:SemiBold}}) format('woff')}
+:root {
+  color-scheme: light;
+  --ground:#fbfbfa; --surface:#f1f2f0; --sunk:#e9ebe8; --line:#dcdedb; --rule:#c9cdc9;
+  --ink:#16181d; --ink-2:#4e545e; --ink-3:#6e747e;
+  --accent:#2a78d6; --warn:#eb6834; --ok:#0f7a55; --danger:#b02b2b; --pick:#e8f0fc;
+  --accent-text:#1f62b4;
+  --f-body:'Pretendard',system-ui,-apple-system,"Segoe UI",sans-serif;
+  --f-head:"IBM Plex Sans Condensed","Arial Narrow",system-ui,sans-serif;
+  --f-mono:"IBM Plex Mono",ui-monospace,"SF Mono",Menlo,monospace;
+}
+* { box-sizing:border-box; }
+[hidden] { display:none !important; }
+body { background:var(--ground); color:var(--ink); margin:0;
+  font-family:var(--f-body); font-size:16.5px; line-height:1.68; }
+.wrap { max-width:1140px; margin:0 auto; padding:56px 28px 110px;
+  display:flex; flex-direction:column; gap:52px; }
+@media (max-width:640px) { .wrap { padding:32px 16px 80px; gap:40px; } }
+.col { max-width:70ch; display:flex; flex-direction:column; gap:18px; }
+h1,h2,h3,h4,.eyebrow,.num { font-family:var(--f-head); }
+h1 { font-size:clamp(36px,5.2vw,54px); line-height:1.04; font-weight:700; margin:0;
+  letter-spacing:-.018em; text-wrap:balance; }
+h2 { font-size:28px; font-weight:700; margin:0; letter-spacing:-.012em; text-wrap:balance; line-height:1.2; }
+h2 .num { display:inline-block; margin-right:14px; font-size:15px; font-weight:600; color:var(--accent-text);
+  letter-spacing:.06em; font-variant-numeric:tabular-nums; }
+h3 { font-size:19px; font-weight:600; margin:0; line-height:1.3; }
+h4 { font-size:14px; font-weight:600; margin:0; color:var(--ink-3); letter-spacing:.1em; text-transform:uppercase; }
+p { margin:0; }
+ul { margin:0; padding-left:1.2em; display:flex; flex-direction:column; gap:6px; }
+a { color:var(--accent-text); text-underline-offset:2px; }
+a:focus-visible, button:focus-visible, input:focus-visible, [tabindex]:focus-visible {
+  outline:2px solid var(--accent); outline-offset:-2px; }
+.eyebrow { font-size:12px; font-weight:600; letter-spacing:.14em; text-transform:uppercase; color:var(--ink-3); margin:0; }
+.lede { font-size:20px; line-height:1.55; color:var(--ink-2); }
+strong { font-weight:600; }
+code { font-family:var(--f-mono); font-size:.84em; background:var(--surface); padding:1px 5px; border-radius:2px; overflow-wrap:anywhere; }
+hr { border:0; border-top:1px solid var(--line); margin:0; width:100%; }
+.foot { font-size:14px; color:var(--ink-3); display:flex; flex-direction:column; gap:8px; max-width:88ch; }
+.callout { background:var(--surface); border-left:3px solid var(--accent); padding:20px 24px; display:flex; flex-direction:column; gap:10px; max-width:88ch; }
+.callout.warn { border-left-color:var(--warn); }
+.callout.pick { border-left-color:var(--ok); background:var(--pick); }
+.callout .eyebrow { color:var(--ink-2); }
+.scroll { overflow-x:auto; }
+table { border-collapse:collapse; font-size:14.5px; width:100%; font-variant-numeric:tabular-nums; }
+th,td { padding:9px 14px; text-align:left; border-bottom:1px solid var(--line); vertical-align:top; }
+td.n, th.n { text-align:right; font-family:var(--f-mono); font-size:13px; }
+td.n { white-space:nowrap; }
+/* the toolkit table: five prose columns; a floor from its content so values never clip mid-token (F34) */
+/* five prose columns: a floor that leaves each one >= ~170px; still fits the 1084px desktop column unscrolled */
+table.toolkit { min-width:1040px; }
+table.toolkit th:nth-child(4), table.toolkit td:nth-child(4) { min-width:170px; }
+/* data-used tables: a prose "why" column needs room; below it the table scrolls behind a measured cue (F24 amendment) */
+table.samples { min-width:520px; }
+.cue { font-family:var(--f-mono); font-size:12px; color:var(--ink-3); margin:0; }
+thead th { color:var(--ink-3); font-weight:600; font-size:11.5px; letter-spacing:.07em; text-transform:uppercase;
+  border-bottom:1px solid var(--rule); font-family:var(--f-head); }
+tbody tr.pick { background:var(--pick); }
+tbody tr.pick td:first-child { color:var(--accent-text); font-weight:600; }
+.col.stages { gap:0; }
+.stage { display:grid; grid-template-columns:64px minmax(0,1fr); gap:20px; padding:16px 0; border-bottom:1px solid var(--line); align-items:baseline; }
+.stage:last-child { border-bottom:0; }
+.stage .s { font-family:var(--f-head); font-size:13px; font-weight:700; color:var(--ink-3); letter-spacing:.07em; }
+.stage .b { display:flex; flex-direction:column; gap:6px; min-width:0; }
+.stage .t { font-weight:600; }
+.stage .d { font-size:15px; color:var(--ink-2); }
+figure { margin:0; display:flex; flex-direction:column; gap:12px; }
+figcaption { font-size:14.5px; color:var(--ink-2); max-width:88ch; display:flex; flex-direction:column; gap:10px; }
+figcaption b { color:var(--ink); font-weight:600; }
+figure img { width:100%; height:auto; display:block; border:1px solid var(--rule); border-radius:3px; background:#fff; cursor:zoom-in; }
+figure img:focus-visible { outline:2px solid var(--accent); outline-offset:-3px; }
+.zoomhint { font-family:var(--f-mono); font-size:11px; letter-spacing:.08em; text-transform:uppercase; color:var(--ink-3); margin:0; text-align:right; }
+.howto { background:var(--surface); padding:16px 20px; display:flex; flex-direction:column; gap:8px; font-size:15px; color:var(--ink-2); max-width:88ch; }
+.howto .eyebrow { color:var(--ink-2); }
+.samples { font-size:13.5px; }
+.samples td, .samples th { padding:6px 10px; }
+.figpair { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:28px; align-items:start; }
+@media (max-width:860px) { .figpair { grid-template-columns:minmax(0,1fr); } }
+.ledger { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:28px; }
+@media (max-width:760px) { .ledger { grid-template-columns:minmax(0,1fr); } }
+.ledger section { display:flex; flex-direction:column; gap:12px; min-width:0; }
+.ledger ol { margin:0; padding-left:1.4em; display:flex; flex-direction:column; gap:10px; font-size:15px; color:var(--ink-2); }
+.ledger li strong { color:var(--ink); }
+.figside { display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:28px; align-items:start; }
+@media (max-width:860px) { .figside { grid-template-columns:minmax(0,1fr); } }
+
+/* ---------- step scrubber (page chrome: swaps script-rendered frames, draws nothing) ---------- */
+.controls { display:flex; flex-wrap:wrap; align-items:center; gap:8px 10px; padding:10px 12px; background:var(--surface); border:1px solid var(--line); }
+.controls button { font-family:var(--f-mono); font-size:13px; background:var(--ground); color:var(--ink); border:1px solid var(--rule); border-radius:3px; padding:4px 10px; cursor:pointer; }
+.controls button:hover { background:var(--sunk); }
+.controls input[type=range] { flex:1 1 180px; min-width:120px; accent-color:var(--accent); }
+/* width reserved for the longest readout ("step 34 / 34 · RIGHT") so the bar never re-wraps between steps */
+.controls .readout { font-family:var(--f-mono); font-size:13px; color:var(--ink-2); font-variant-numeric:tabular-nums; white-space:nowrap; min-width:21ch; }
+.values { display:grid; grid-template-columns:repeat(auto-fill,minmax(300px,1fr)); gap:0 28px; font-size:13.5px; }
+.values div { display:flex; justify-content:space-between; gap:12px; padding:5px 0; border-bottom:1px solid var(--line); min-width:0; }
+.values span:first-child { color:var(--ink-2); }
+.values span:last-child { font-family:var(--f-mono); font-size:12.5px; text-align:right; overflow-wrap:anywhere; min-width:0; }
+
+/* ---------- full-size figure viewer (copied from sensor_ladder.html, tokens adapted) ---------- */
+.lb{position:fixed;inset:0;z-index:99;background:rgba(12,12,14,.93);display:flex;flex-direction:column}
+.lb[hidden]{display:none!important}
+.lb-bar{display:flex;align-items:center;gap:16px;padding:12px 18px;flex:0 0 auto;border-bottom:1px solid rgba(255,255,255,.13);color:#e9e6e1;font-size:13.5px}
+.lb-bar .t{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-family:var(--f-body)}
+.lb-bar .px{font-family:var(--f-mono);font-size:11.5px;color:#9b968e;flex:0 0 auto}
+.lb-bar button{font:inherit;font-size:12.5px;background:rgba(255,255,255,.1);color:#e9e6e1;border:1px solid rgba(255,255,255,.2);border-radius:4px;padding:5px 12px;cursor:pointer;flex:0 0 auto}
+.lb-bar button:hover{background:rgba(255,255,255,.18)}
+.lb-bar button:focus-visible{outline:2px solid #7fd0a5;outline-offset:2px}
+.lb-scroll{flex:1 1 auto;overflow:auto;display:flex;align-items:center;justify-content:center;padding:18px}
+.lb-scroll img{flex:0 0 auto;display:block;background:#fff;border-radius:3px}
+.lb.fit .lb-scroll img{max-width:100%;max-height:100%;width:auto;height:auto;cursor:zoom-in}
+.lb.actual .lb-scroll{align-items:flex-start;justify-content:flex-start}
+.lb.actual .lb-scroll img{max-width:none;max-height:none;cursor:zoom-out}
+@media (max-width:639px){
+  .lb-bar{flex-wrap:wrap;gap:8px 12px}
+  .lb-bar .t{flex:1 0 100%;white-space:normal;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;line-height:1.35}
+}
+@media (prefers-reduced-motion:no-preference){.lb{animation:lbin .14s ease-out}}
+@keyframes lbin{from{opacity:0}to{opacity:1}}
+</style>
+
+<div class="wrap">
+
+<header class="col">
+  <p class="eyebrow">grid_world_pain &middot; development plan &middot; episode videos</p>
+  <h1>Episode Dashboard Redesign</h1>
+  <p class="lede">A plan to rebuild the frame drawn for every step of an evaluation video, so that no
+  panel or label can ever land on top of another, frames render faster, and the same drawing can be
+  scrubbed step by step in a viewer &mdash; built beside today's video pipeline, which stays exactly as it is.</p>
+</header>
+
+<section class="col">
+  <h2><span class="num">PURPOSE</span></h2>
+  <p>Every evaluation episode this project records can be turned into a video. Each frame is a
+  dashboard: the agent's internal readings on the left (satiation, interoceptive nociception, body
+  temperature), a close-up of the grid around the agent in the middle, and its outside-world senses
+  on the right (olfaction, extero nociception, thermoception, collision, vision). These videos are how
+  people check what an agent actually did.</p>
+  <p><strong>The frames drawn today have text printed on top of other text</strong>, most visibly since
+  the temperature system added two panels. An April redesign was half built and never used, and it has
+  its own collisions. The cause is structural: the drawing library's automatic layout cannot see text
+  placed inside a panel, so moving numbers around only moves the collisions.</p>
+  <p>This page shows the problem in real frames, the proposed system, a sketch of the new dashboard
+  drawn from a real recorded episode, the choice of drawing toolkit, and the decisions that are yours
+  to make. The plan itself is <code>docs/develop/active/refactors/RENDERER_LAYOUT_REDESIGN.md</code>.</p>
+</section>
+
+<div class="callout pick">
+  <p class="eyebrow">Your constraint: today's video pipeline is preserved</p>
+  <p>Nothing that training or evaluation runs today is edited while the new renderer is developed. The
+  production renderer, the script that turns recordings into videos, the in-training render dispatch,
+  the evaluation loop, the recorder and the sense adapter are all frozen. The new renderer gets its own
+  script and writes to its own <code>videos_v2/</code> folder, so it cannot overwrite a production video.
+  A guard records the frozen files' contents and fingerprints of production frames before work starts,
+  and must pass after every phase. Moving any training or evaluation video to the new renderer is a
+  later decision of yours, with no setting or default changed before then.</p>
+</div>
+
+{{REVIEW}}
+
+<hr>
+
+<section class="col">
+  <h2><span class="num">01</span> What goes wrong today</h2>
+  <p>Both frames below show the same moment: the campfire temperature world, after five fixed actions
+  from the same starting world. The left frame is the renderer every video uses today
+  (<code>renderer.py</code>, called V1 here). The right is the April attempt (<code>renderer_v2.py</code>),
+  which nothing calls. They are the renderers' own output, saved as PNG by their script rather than
+  redrawn in the house figure style, because the renderers' look is the subject.</p>
+</section>
+
+<div class="figpair">
+  <figure class="wide">
+    <img data-fig="v1_thermal" src="{{FIG:v1_thermal}}" alt="Current production dashboard frame, campfire temperature world">
+    <figcaption>
+      <p><b>Figure 1. The production renderer (V1).</b> Four collisions: the extero nociception
+      readout <code>OBS: 0.00</code> is printed over the THERMOCEPTION title; <code>REAL: --</code>
+      sits on the extero nociception title; the MINIMAP label runs into the run-context box; and about
+      a quarter of the frame is empty margin while the panels are cramped. Separately, it captions
+      nutrition and injury with <code>OBS</code> values although this world's agent observes neither.</p>
+      <p><b>Axes.</b> None &mdash; this is a rendered video frame, {{DIM:v1_thermal}} pixels. Horizontal and
+      vertical position is page layout, not a data scale. Inside the centre panel, each square is one
+      grid cell; its colour is the cell's temperature on a fixed blue (cold) to red (hot) scale, printed
+      under the grid in the environment's temperature units.</p>
+      {{SAMPLES:v1_thermal}}
+      <div class="howto"><p class="eyebrow">How it is computed</p>
+      <p>The script resets the campfire temperature world with random seed 3, takes five fixed actions
+      (right, down, right, down, rest), and draws the resulting state once. The inputs are prepared the
+      way the production video path prepares them: the agent's noisy observation and its noise-free
+      counterpart are both turned into per-sense panel data by <code>build_sensory_viz</code>, and the
+      temperature colour scale is fixed from the world's temperature field. Nothing was trained &mdash;
+      the agent's behaviour is irrelevant here, because the question is only what the drawing code does
+      with a valid state. This world has perceptual noise switched off, so each sense's observed value
+      equals its true value; that is why several panel titles say "obs only". The collisions named in
+      the caption were found by looking at the frame, and the plan's first verification step is an
+      automated check that must find these same collisions before it is trusted to find none. The
+      frame is one state from one world: it shows that collisions happen, not how often.</p></div>
+    </figcaption>
+  </figure>
+  <figure class="wide">
+    <img data-fig="v2_thermal" src="{{FIG:v2_thermal}}" alt="Dormant April redesign dashboard frame, same state">
+    <figcaption>
+      <p><b>Figure 2. The dormant April redesign (V2).</b> The COLLISION title is printed over its
+      direction letters; the minimap is tiny; the interoceptive nociception row and the
+      proprioception panel are silently missing; the vital cards are mostly empty space.</p>
+      <p><b>Axes.</b> None &mdash; a rendered video frame, {{DIM:v2_thermal}} pixels, where position is page
+      layout rather than a data scale. Inside the centre panel each square is one grid cell, coloured by
+      its temperature on the same blue-to-red scale as Figure 1.</p>
+      {{SAMPLES:v2_thermal}}
+      <div class="howto"><p class="eyebrow">How it is computed</p>
+      <p>Same world, seed, five actions and panel data as Figure 1, drawn by the April renderer instead.
+      That renderer lays its panels out with the drawing library's automatic "constrained" layout,
+      which sizes boxes around axis labels, titles and legends only. Text that a panel draws inside its
+      own box is invisible to that layout step, so nothing stops it from colliding &mdash; which is
+      exactly what happens to the collision panel's direction letters. The two missing panels are a
+      separate defect: the renderer keeps a fixed list of the panel names it knows and quietly skips
+      any sense not on the list, so the observation carries eight senses and the frame shows fewer. The
+      temperature colour scale is not pinned here, because this renderer does not accept a fixed scale;
+      for a single frame that makes no difference. As with Figure 1, this is one state from one world
+      and illustrates the defect classes rather than measuring their frequency.</p></div>
+    </figcaption>
+  </figure>
+</div>
+
+<section class="col">
+  <h3>Why tuning cannot fix it</h3>
+  <p>The drawing library, Matplotlib, has an automatic layout that "only considers ticklabels, axis
+  labels, titles, and legends", so other text "may be clipped and also may overlap" (its own
+  constrained-layout guide). V1 avoids the automatic layout by placing every label at hand-typed
+  coordinates, which are only right for the set of senses they were typed for &mdash; the temperature
+  work already had to add a special case. A guarantee needs three things neither renderer has: a step
+  that sizes each panel from what it contains, drawing that cannot leave its box, and a test that checks
+  the finished pixels.</p>
+</section>
+
+<hr>
+
+<section class="col">
+  <h2><span class="num">02</span> The proposed system</h2>
+  <p>The new renderer is built alongside V1, which stays the default for every video. It works in five
+  steps, of which the first three happen once per episode rather than once per frame.</p>
+</section>
+
+<div class="col stages">
+  <div class="stage"><span class="s">STEP 1</span><div class="b"><span class="t">Read the recording</span>
+    <span class="d">The same files the video path reads today: one <code>.rec.gz</code> per episode plus the run's
+    saved environment settings. Read-only, no new file format, and recordings made before the temperature
+    system keep working.</span></div></div>
+  <div class="stage"><span class="s">STEP 2</span><div class="b"><span class="t">Ask each sense what it needs</span>
+    <span class="d">A registry holds one entry per sense: whether it is present in this world, the smallest box
+    it can be drawn in, and which numbers it shows. Every sense in the observation must have an entry, or the
+    renderer refuses to start and names the missing one &mdash; so a sense can never be silently dropped, the
+    way proprioception is today. A value appears as "observed" only if the agent observes it. Adding a future
+    sense means adding an entry, never touching layout code.</span></div></div>
+  <div class="stage"><span class="s">STEP 3</span><div class="b"><span class="t">Give every panel its own box</span>
+    <span class="d">A small packer stacks the present panels in three columns and hands the spare height to the
+    minimap and the grid view. Boxes cannot overlap by construction. If the panels do not fit, it stops with an
+    error listing what asked for how much space, before a single frame is drawn &mdash; a colliding frame is
+    never produced. All text is measured and shrunk to fit its box down to a floor; a number is never cut off.</span></div></div>
+  <div class="stage"><span class="s">STEP 4</span><div class="b"><span class="t">Build the figure once, update it per step</span>
+    <span class="d">Today every step rebuilds the whole figure. The new renderer creates every bar, label and
+    icon slot once per episode and only changes their values per step. Its speed target is half V1's time per
+    frame, measured on the same lab node.</span></div></div>
+  <div class="stage"><span class="s">STEP 5</span><div class="b"><span class="t">Two outputs from one drawing</span>
+    <span class="d">MP4 videos written by the new renderer's own script into <code>videos_v2/</code>, and a local
+    step-scrubbing viewer that asks the same renderer for each frame and lists the exact numbers that frame
+    shows. The viewer cannot disagree with the video, because it is the video's own drawing code.</span></div></div>
+</div>
+
+<div class="callout">
+  <p class="eyebrow">Carried over from the April plan (your 2026-09-14 answers)</p>
+  <ul>
+    <li>One <strong>vitals card</strong> holding every observed internal reading as a row, freeing space for a larger minimap.</li>
+    <li><strong>True value beside the observed value</strong> when perceptual noise is on, with a tick on the bar; no difference (Δ) text anywhere.</li>
+    <li>The <strong>last action as a badge</strong> in the grid view's title strip instead of its own panel.</li>
+    <li><strong>Horizontal legends</strong> above bars, replacing tiny rotated labels.</li>
+  </ul>
+</div>
+
+<hr>
+
+<section class="col">
+  <h2><span class="num">03</span> A sketch on real data</h2>
+  <p>A design sketch of the proposed dashboard, drawn by a Python script in the plan's recommended
+  toolkit from a real 35-step episode of the campfire temperature world. Step through it below; every
+  frame was checked for text collisions after drawing. Figure 4 shows the layout re-packing when senses
+  are switched off.</p>
+  <div class="callout warn">
+    <p class="eyebrow">What this is, and is not</p>
+    <p>It is a sketch that exercises the plan's layout idea &mdash; registry, packer, figure built once,
+    measured text &mdash; on real recorded numbers. It is not the planned renderer: it imports nothing from
+    the renderer code, touches no pipeline file, and leaves exact sizes, fonts and colours to the
+    implementer. Its labels follow the open questions' proposals (for example <code>HPR</code> for
+    hiding_predator, and no rows for body values the agent does not observe).</p>
+  </div>
+</section>
+
+<figure class="wide">
+  <div class="controls" role="group" aria-label="Episode playback">
+    <button type="button" id="dv-first" aria-label="First step">|&lt;</button>
+    <button type="button" id="dv-prev" aria-label="Previous step">&lt;</button>
+    <button type="button" id="dv-play">Play</button>
+    <button type="button" id="dv-next" aria-label="Next step">&gt;</button>
+    <button type="button" id="dv-last" aria-label="Last step">&gt;|</button>
+    <input type="range" id="dv-step" min="0" max="{{FACT:last_step}}" value="{{FACT:rep_step}}" aria-label="Step">
+    <span class="readout" id="dv-readout">step {{FACT:rep_step}}</span>
+  </div>
+  <img id="dv-img" data-fig="fig03_proposed_dashboard" src="{{FIG:fig03_proposed_dashboard}}" alt="Sketch of the proposed dashboard for one step of the campfire episode">
+  <figcaption>
+    <p><b>Figure 3. The proposed dashboard, step by step.</b> Use the controls, or focus the frame and
+    press &larr; / &rarr; (Shift for ten steps). The episode ends when body temperature falls past the
+    survivable limit ({{FACT:final_temp}} at step {{FACT:last_step}}, against a limit of
+    {{FACT:die_low}}). Things the real data surfaced: proprioception gets a panel because every
+    observed sense must have one (V1 never draws it); <code>assets/</code> has no campfire icon, so the
+    minimap marks the campfire as an orange square (the agent never brings it into the grid view in this
+    episode); and no true-value slot appears because this world has perceptual noise off.</p>
+    <p><b>Axes.</b> None &mdash; a dashboard frame of 1440 &times; 896 pixels, where position is layout.
+    The grid view shows 5 &times; 5 grid cells centred on the agent (clamped at the world's edge); each
+    cell's colour, and its printed number, is its temperature on a blue (cold) to red (hot) scale fixed
+    for the whole episode at {{FACT:clim}} temperature units. Horizontal bars run from 0 at the left to 1
+    at the right; vertical bars from 0 at the bottom to 1 at the top, except olfaction, whose bars are
+    scaled to the largest olfaction reading in the episode. The body-temperature gauge runs from the lower
+    survivable limit at its left edge to the upper at its right, with the setpoint marked in between.</p>
+    {{SAMPLES:fig03_proposed_dashboard}}
+    <div class="howto"><p class="eyebrow">How it is computed</p>
+    <p>A script steps the real campfire world once per random seed, twelve seeds in all, with a simple
+    policy: rest every third step, otherwise a random action. It keeps the seed whose episode lasted
+    longest and saves, for every step, what the production recorder saves plus the per-sense panel data
+    that <code>build_sensory_viz</code> produces. A second script then draws the sketch. It lists the
+    panels this world needs from the observation, stacks them into three columns of boxes, and stops
+    with an error if a column overflows. It builds every card, bar, label and icon slot once, and for each
+    step only updates values and redraws. Every text is measured in the rendered font and shrunk into
+    its box, and each finished frame is audited: no two texts may overlap and none may leave its card,
+    or the script fails. Icons follow the production renderer's rules, including combined icons when the
+    agent shares a cell. The policy is not a trained agent, so the episode shows the dashboard, not a
+    learned strategy.</p></div>
+  </figcaption>
+</figure>
+
+<section class="col">
+  <h4>Numbers in the frame shown above</h4>
+</section>
+<div class="values" id="dv-values" aria-live="polite"></div>
+
+<figure class="wide">
+  <img data-fig="fig04_repacking" src="{{FIG:fig04_repacking}}" alt="The same step drawn under three sets of senses">
+  <figcaption>
+    <p><b>Figure 4. The same step, re-packed for three sets of senses.</b> Top: the full campfire
+    observation. Middle: temperature system and proprioception switched off &mdash; the body-temperature
+    row, the temperature colours, the thermoception panel and the proprioception panel disappear, and the
+    minimap and remaining panels take the space. Bottom: only satiation, extero nociception, collision and
+    visual. No layout code differs between the three; only the list of senses does.</p>
+    <p><b>Axes.</b> None &mdash; three dashboard frames of 1440 &times; 896 pixels stacked vertically, where
+    position is layout. Within each frame the scales are those of Figure 3: grid cells coloured by
+    temperature on the fixed episode scale (top frame only), bars from 0 to 1.</p>
+    {{SAMPLES:fig04_repacking}}
+    <div class="howto"><p class="eyebrow">How it is computed</p>
+    <p>The same drawing script as Figure 3 takes step 15 of the same recorded episode and draws it three
+    times, each time telling the registry that a different set of senses is present. For the middle and
+    bottom frames, the switched-off senses are declared as switched off on purpose; otherwise the
+    completeness rule would refuse to draw, because the recording still contains their values. The
+    recorded numbers are identical in all three frames &mdash; nothing is re-simulated &mdash; so any
+    difference between them is layout alone. The packer recomputes the boxes for each sense set: the
+    left column gives the height freed by removed rows to the minimap, and the right column divides its
+    height among the panels that remain in proportion to their minimum sizes. Each frame passed the same
+    text audit as Figure 3. What this does not show is a world whose observation genuinely lacks a sense
+    from the start, or directional olfaction with its larger grid; those are cells of the plan's
+    verification matrix, drawn from real recordings of those worlds.</p></div>
+  </figcaption>
+</figure>
+
+<hr>
+
+<section class="col">
+  <h2><span class="num">04</span> Choosing the drawing toolkit</h2>
+  <p>The registry, packer and checks are the same whichever toolkit draws the panels. What differs is
+  speed, how much existing drawing code carries over, and what runs where videos are rendered. Speeds
+  marked "est." are estimates from the research note; the plan's first phase measures toolkit A before
+  any panel is written.</p>
+</section>
+
+<p class="cue" hidden>&larr; wider than the screen &mdash; scroll sideways; the right-hand columns are cut off</p>
+<div class="scroll"><table class="toolkit">
+  <thead><tr><th>Toolkit</th><th>Overlap guarantee</th><th>Time per frame</th><th>Porting work</th><th>New requirements</th></tr></thead>
+  <tbody>
+    <tr class="pick"><td>A. Matplotlib, our own packer, figure built once (recommended, narrowly)</td><td>Boxes cannot overlap; every panel clipped to its box; text measured to fit; checked on the finished pixels</td><td class="n">est. 30&ndash;100 ms<br>target: half of V1</td><td>Low to medium: existing drawing code carries over</td><td>None; tests stay byte-exact</td></tr>
+    <tr><td>B. Pillow drawing, same packer (fallback)</td><td>Same as A</td><td class="n">est. 5&ndash;20 ms</td><td>High: every panel redrawn in basic shapes</td><td>None</td></tr>
+    <tr><td>C. A web page in headless Chrome, one per render worker</td><td>Strongest by default (the browser's own box layout)</td><td class="n">est. 20&ndash;60 ms</td><td>Highest: every panel rewritten as HTML</td><td>A new Python dependency to drive the browser; Chrome is present on the lab nodes checked (101, 106, 114); a browser (150&ndash;300 MB) per worker inside a render process that can already be orphaned; screenshot tests not byte-exact across nodes</td></tr>
+  </tbody>
+</table></div>
+
+<section class="col">
+  <p><strong>Why A is recommended.</strong> It fixes every defect class through the registry, packer
+  and pixel check, none of which depend on the toolkit; it removes the largest cost (rebuilding the
+  figure every step) without installing anything; and its viewer shares the video's drawing code. If
+  the first phase measures A slower than half of V1, the plan comes back to you with B. <strong>What C
+  would add</strong> is a static, shareable viewer with instant scrubbing and hover inspection of a cell.
+  If that is worth a browser in every render worker, C is the right pick, and only the drawing and
+  viewer parts of the plan change.</p>
+</section>
+
+<hr>
+
+<section class="col">
+  <h2><span class="num">05</span> How we will know it works</h2>
+</section>
+<div class="col stages">
+  <div class="stage"><span class="s">CHECK</span><div class="b"><span class="t">Today's pipeline did not move</span>
+    <span class="d">The frozen files' recorded contents and fingerprints of production frames for four worlds are re-checked after every phase. Any difference stops the work.</span></div></div>
+  <div class="stage"><span class="s">CHECK</span><div class="b"><span class="t">Real recordings, across worlds</span>
+    <span class="d">Recordings made through the production recorder for the default world, interoceptive nociception with and without noise, the campfire world, directional olfaction and a location sensor, plus real recordings from trained agents, including one made before the temperature system existed.</span></div></div>
+  <div class="stage"><span class="s">CHECK</span><div class="b"><span class="t">Collisions found from pixels, not from the layout</span>
+    <span class="d">Each label is rendered alone and with everything else, and the check flags any label whose ink touches another element's ink, a card border, or is cut off. It sorts what it sees itself rather than trusting the renderer's own labels. <strong>It must first find the collisions in Figures 1 and 2, and the missing panels in Figure 2</strong>; if it reports none, the check is broken.</span></div></div>
+  <div class="stage"><span class="s">CHECK</span><div class="b"><span class="t">Faster than V1, on the same frames</span>
+    <span class="d">Timed in the same kind of worker process that renders videos in production, on the same lab node, with memory checked to stay flat over ten episodes.</span></div></div>
+  <div class="stage"><span class="s">CHECK</span><div class="b"><span class="t">Somebody looks</span>
+    <span class="d">A contact sheet of every checked frame and screenshots of the viewer are opened and read. A green automated check is necessary, not sufficient.</span></div></div>
+</div>
+
+<hr>
+
+<section class="col">
+  <h2><span class="num">06</span> Decided and open</h2>
+</section>
+<div class="ledger">
+  <section>
+    <h4>Decided (your answers, 2026-09-14)</h4>
+    <ol>
+      <li><strong>Build it as V2, keep V1.</strong> V1 stays the default for every video.</li>
+      <li><strong>Today's pipeline is frozen</strong> during development; switching any video to V2 is a later decision.</li>
+      <li><strong>Toolkit open.</strong> Compare the candidates and recommend the best.</li>
+      <li><strong>Two outputs.</strong> MP4 videos and an interactive step viewer over the same recordings.</li>
+      <li><strong>All four April ideas stand.</strong> One vitals card, true value beside observed, action badge, horizontal legends.</li>
+    </ol>
+  </section>
+  <section>
+    <h4>Open &mdash; yours to decide</h4>
+    <ol>
+      <li><strong>Toolkit:</strong> A with B as fallback, or C.</li>
+      <li><strong>Name:</strong> <code>src/environment/dashboard/</code> (proposed), <code>episode_dashboard/</code> or <code>telemetry_view/</code>. It cannot reuse <code>renderer_v2</code>, which another session is still editing; the new entry script and output folder keep the <code>_v2</code> names (<code>render_recordings_v2.py</code>, <code>videos_v2/</code>).</li>
+      <li><strong>Frame size:</strong> 1440 &times; 896 pixels (today's videos are 1408 &times; 1008 after encoding).</li>
+      <li><strong>Action badge:</strong> in the grid view's title strip (as sketched), or over the top-right grid cell.</li>
+      <li><strong>Proprioception:</strong> a panel (as sketched), or "recorded, not displayed".</li>
+      <li><strong>Minimap:</strong> in the left column under the vitals (as sketched), or under the grid view.</li>
+      <li><strong>Viewer:</strong> local only, or also a single-file export for sharing an episode.</li>
+      <li><strong>Later switch-over:</strong> its own reviewed plan when you decide; at that point delete the stale renderer copy in <code>grid_world.py</code> and the unused <code>renderer_v2.py</code> (the latter once the other session's edits have landed and it has been told).</li>
+      <li><strong>Speed gate:</strong> half V1's frame time on the campfire world, and not slower on any other world?</li>
+      <li><strong>Unobserved body values:</strong> show them as rows captioned "not observed", or omit them (as sketched)?</li>
+      <li><strong>Hiding-predator label:</strong> <code>HPR</code> (as sketched), <code>HID</code> or <code>HPD</code>?</li>
+      <li><strong>Campfire icon:</strong> keep a drawn mark in the new renderer and add the real asset at the switch-over (proposed), or add it now as a stated exception to the freeze &mdash; today's videos read the same icon list, so they would change too.</li>
+    </ol>
+  </section>
+</div>
+
+<hr>
+
+<footer class="foot">
+  <p><strong>Sources.</strong> Plan: <code>docs/develop/active/refactors/RENDERER_LAYOUT_REDESIGN.md</code>.
+  Superseded April plan: <code>docs/develop/active/refactors/UI_REDESIGN_PROPOSAL.md</code>. Plan reviews:
+  <code>docs/reviews/plan_renderer_layout_redesign.md</code>. Web research note on overlap-free layout:
+  <code>tmp/20260914_renderer_layout_web_research.md</code>. Renderer reference: <code>docs/environment/12_renderer.md</code>.</p>
+  <p><strong>Regenerate.</strong> From the repo root, with the project's Python
+  (<code>/home/vncuser/miniconda3/envs/grid_world_pain/bin/python</code>), run in
+  <code>docs/develop/active/refactors/renderer_layout_redesign/</code>: <code>render_current_frames.py</code>
+  (Figures 1&ndash;2), <code>export_episode.py</code>, <code>fig03_proposed_dashboard.py</code> (Figures 3&ndash;4),
+  then <code>build_page.py</code>. The figures on this page were generated from the last commit, because
+  another session had uncommitted configuration changes in progress.</p>
+</footer>
+
+</div>
+
+<div class="lb fit" id="lb" hidden role="dialog" aria-modal="true" aria-label="Full-size figure">
+  <div class="lb-bar">
+    <span class="t" id="lb-t"></span>
+    <span class="px" id="lb-px"></span>
+    <button type="button" id="lb-zoom">Actual size</button>
+    <button type="button" id="lb-x">Close &nbsp;Esc</button>
+  </div>
+  <div class="lb-scroll" id="lb-s"><img id="lb-img" alt=""></div>
+</div>
+
+<script type="application/json" id="episode-data">{{DATA:episode}}</script>
+<script type="application/json" id="frame-data">{{FRAMES:fig03_frames}}</script>
+
+<script>
+(function () {
+  /* Step scrubber: swaps between frames the figure script rendered. It draws nothing itself. */
+  var EP = JSON.parse(document.getElementById('episode-data').textContent);
+  var FRAMES = JSON.parse(document.getElementById('frame-data').textContent);
+  var S = EP.steps, M = EP.meta;
+  var img = document.getElementById('dv-img'), slider = document.getElementById('dv-step'),
+      readout = document.getElementById('dv-readout'), values = document.getElementById('dv-values'),
+      playBtn = document.getElementById('dv-play'), timer = null;
+  slider.max = S.length - 1;
+
+  function esc(s) { return String(s).replace(/[&<>"]/g, function (c) { return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]; }); }
+  function sensor(st, name) { for (var i = 0; i < st.sensors.length; i++) if (st.sensors[i].name === name) return st.sensors[i]; return null; }
+  function signed(v, d) { var s = Math.abs(v).toFixed(d || 0); return (v > 0 ? '+' : v < 0 ? '−' : '') + s; }
+  function list(v, d) { return v.map(function (x) { return x.toFixed(d); }).join(' '); }
+
+  function show() {
+    var t = +slider.value, st = S[t], rows = [];
+    img.src = FRAMES[t];
+    var an = st.action >= 0 ? M.action_names[st.action] : null;
+    readout.textContent = 'step ' + t + ' / ' + (S.length - 1) + (an ? ' · ' + an : '');
+    var sat = sensor(st, 'Satiation'), noc = sensor(st, 'Intero Nociception'), ex = sensor(st, 'Extero Nociception'),
+        th = sensor(st, 'Thermoception'), olf = sensor(st, 'Olfactory'), co = sensor(st, 'Collision'),
+        pr = sensor(st, 'Proprioception'), vi = sensor(st, 'Visual');
+    rows.push(['Last action', an || 'none (initial state)'], ['Agent cell (row, column)', st.agent.join(', ')]);
+    if (sat) rows.push(['Satiation, observed', sat.intensity.toFixed(2)]);
+    if (noc) rows.push(['Interoceptive nociception', noc.intensity.toFixed(2)]);
+    rows.push(['Body temperature', signed(st.body_temp, 2)]);
+    if (ex) rows.push(['Extero nociception', ex.intensity.toFixed(2)]);
+    if (th) rows.push(['Thermoception, C U R D L', th.vector.map(function (v) { return signed(v); }).join(' ')]);
+    if (olf) rows.push(['Olfaction', list(olf.vector, 2)]);
+    if (co) rows.push(['Collision, C U R D L', co.vector.map(function (v) { return v > 0.5 ? '1' : '0'; }).join(' ')]);
+    if (pr) { var mx = Math.max.apply(null, pr.vector); rows.push(['Proprioception', mx > 0 ? M.action_names[pr.vector.indexOf(mx)] : 'none']); }
+    if (vi) rows.push(['Visual, agent cell', list(vi.vector.slice(0, 8), 2)]);
+    values.innerHTML = rows.map(function (r) { return '<div><span>' + esc(r[0]) + '</span><span>' + esc(r[1]) + '</span></div>'; }).join('');
+  }
+  function go(t) { slider.value = Math.max(0, Math.min(S.length - 1, t)); show(); }
+  function stop() { if (timer) { clearInterval(timer); timer = null; playBtn.textContent = 'Play'; } }
+  playBtn.addEventListener('click', function () {
+    if (timer) { stop(); return; }
+    if (+slider.value >= S.length - 1) go(0);
+    playBtn.textContent = 'Pause';
+    timer = setInterval(function () { if (+slider.value >= S.length - 1) stop(); else go(+slider.value + 1); }, 400);
+  });
+  slider.addEventListener('input', function () { stop(); show(); });
+  document.getElementById('dv-first').addEventListener('click', function () { stop(); go(0); });
+  document.getElementById('dv-last').addEventListener('click', function () { stop(); go(S.length - 1); });
+  document.getElementById('dv-prev').addEventListener('click', function () { stop(); go(+slider.value - 1); });
+  document.getElementById('dv-next').addEventListener('click', function () { stop(); go(+slider.value + 1); });
+  img.addEventListener('keydown', function (e) {
+    if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') {
+      e.preventDefault(); stop(); go(+slider.value + (e.key === 'ArrowRight' ? 1 : -1) * (e.shiftKey ? 10 : 1));
+    }
+  });
+  show();
+
+  /* Scroll cues: shown only while the box right after them really overflows -- measured, not keyed
+     to a viewport width (register F31, F32). */
+  function cues() {
+    Array.prototype.forEach.call(document.querySelectorAll('.cue'), function (hint) {
+      var box = hint.nextElementSibling;
+      if (box) hint.hidden = !(box.scrollWidth > box.clientWidth + 1);
+    });
+  }
+  window.addEventListener('resize', cues);
+  window.addEventListener('load', cues);
+  /* fonts.ready may already be resolved when this runs; loadingdone fires when the real faces apply */
+  if (document.fonts) {
+    if (document.fonts.ready) document.fonts.ready.then(cues);
+    if (document.fonts.addEventListener) document.fonts.addEventListener('loadingdone', cues);
+  }
+  cues();
+
+  /* Full-size figure viewer (sensor_ladder.html pattern). */
+  var lb = document.getElementById('lb'), big = document.getElementById('lb-img'),
+      ttl = document.getElementById('lb-t'), px = document.getElementById('lb-px'),
+      zoom = document.getElementById('lb-zoom'), shut = document.getElementById('lb-x'),
+      scroll = document.getElementById('lb-s'), opener = null;
+  function setMode(actual) {
+    lb.classList.toggle('actual', actual); lb.classList.toggle('fit', !actual);
+    zoom.textContent = actual ? 'Fit to window' : 'Actual size';
+    if (actual) { scroll.scrollLeft = (scroll.scrollWidth - scroll.clientWidth) / 2; }
+  }
+  function open(el, caption) {
+    stop(); opener = el; big.src = el.src; big.alt = el.alt || ''; ttl.textContent = caption;
+    px.textContent = el.naturalWidth ? el.naturalWidth + ' x ' + el.naturalHeight + ' px' : '';
+    setMode(false); lb.hidden = false; document.body.style.overflow = 'hidden'; shut.focus();
+  }
+  function close() {
+    lb.hidden = true; big.removeAttribute('src'); document.body.style.overflow = '';
+    if (opener) { opener.focus(); opener = null; }
+  }
+  Array.prototype.forEach.call(document.querySelectorAll('figure img[data-fig]'), function (el) {
+    var fig = el.closest('figure'), cap = fig ? fig.querySelector('figcaption') : null;
+    var label = cap ? (cap.querySelector('p b') || cap).textContent.trim().replace(/\s+/g, ' ') : 'Figure';
+    el.tabIndex = 0; el.setAttribute('role', 'button'); el.setAttribute('aria-label', 'Open full size: ' + label.slice(0, 90));
+    el.addEventListener('click', function () { open(el, el.id === 'dv-img' ? label + ' (step ' + slider.value + ')' : label); });
+    el.addEventListener('keydown', function (e) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); open(el, el.id === 'dv-img' ? label + ' (step ' + slider.value + ')' : label); } });
+    if (cap && fig.classList.contains('wide')) {
+      var hint = document.createElement('p'); hint.className = 'zoomhint';
+      hint.textContent = 'Click the figure to view it full size'; fig.insertBefore(hint, cap);
+    }
+  });
+  zoom.addEventListener('click', function () { setMode(!lb.classList.contains('actual')); });
+  big.addEventListener('click', function () { setMode(!lb.classList.contains('actual')); });
+  shut.addEventListener('click', close);
+  lb.addEventListener('click', function (e) { if (e.target === lb || e.target === scroll) close(); });
+  document.addEventListener('keydown', function (e) {
+    if (lb.hidden) return;
+    if (e.key === 'Escape') close();
+    if (e.key === 'Tab') { var f = [zoom, shut], i = f.indexOf(document.activeElement); e.preventDefault(); f[(i + (e.shiftKey ? f.length - 1 : 1)) % f.length].focus(); }
+  });
+})();
+</script>

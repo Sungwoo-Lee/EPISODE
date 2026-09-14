@@ -1,0 +1,2 @@
+recorded steps drawn	1	35	step 15, mid-episode, drawn under each sense set
+sense sets drawn	3	3	the full campfire observation and two reduced sets; the recorded numbers are identical, only the panels change

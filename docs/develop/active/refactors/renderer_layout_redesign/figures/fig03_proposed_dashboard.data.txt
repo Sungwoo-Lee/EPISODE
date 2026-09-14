@@ -1,0 +1,2 @@
+recorded steps drawn (step scrubber)	35	35	every step of the exported episode; each frame passed the text audit
+observed senses given a panel	8	8	the completeness rule refuses to draw if an observed sense has no panel
