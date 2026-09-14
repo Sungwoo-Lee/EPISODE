@@ -22,8 +22,31 @@ from src.utils.config import Config
 from src.environment.config_loader import load_env_params
 from src.environment.wrapper import ParallelEnv
 
+_REPO = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
 FIX = 'tests/env/fixtures/directional_sensors/obs_baseline.npz'
-CONFIGS = ['configs/environment/default.yaml']
+
+# THE WORLD THIS FIXTURE PINS IS FROZEN, AND THAT IS DELIBERATE.
+# `obs_baseline.npz` is a PRE-DIRECTIONAL_SENSORS artefact: it exists to show that the
+# sensor rewrite did not change observations. It is evidence about code that shipped
+# months ago, so it must keep being compared against the world it was captured in.
+#
+# On 2026-09-14 the bush gained `blocks_animals: true` (A1 of
+# BUSH_REFUGE_AND_LOCATION_DEPENDENT_RECOVERY) — a deliberate change to the LIVE world:
+# animals can no longer enter a bush, so animal trajectories, and every observation
+# downstream of them, moved. Re-capturing the fixture would have silently replaced the
+# refactor evidence with a snapshot of today, so the WORLD was frozen instead: a pinned
+# pre-change copy of `configs/environment/default.yaml` lives under
+# tests/env/fixtures/frozen_parity_worlds/ (see its README for the full rationale).
+#
+# CONTRAST, and do not "harmonise" them: tests/env/fixtures/thermal_parity/ reads the
+# LIVE configs on purpose — it tracks the CURRENT world, and going red on an intended
+# behaviour change is its loudness function.
+PARITY_WORLD = os.path.join(
+    _REPO, 'tests/env/fixtures/frozen_parity_worlds/environment__default.yaml')
+
+# The npz KEY stays the ORIGINAL config path: it names the config the fixture was
+# captured from, which has not changed. Only the file we read to rebuild that world has.
+CONFIGS = {'configs/environment/default.yaml': PARITY_WORLD}
 NUM_ENVS, STEPS, SEED = 32, 20, 12345
 
 
@@ -47,9 +70,11 @@ def main():
     ap.add_argument('--capture', action='store_true')
     a = ap.parse_args()
     out = {}
-    for c in CONFIGS:
-        out[c] = rollout(c)
+    for c, load_path in CONFIGS.items():
+        out[c] = rollout(load_path)
         print(f"  {c}: {out[c].shape}  (steps+1, envs, obs_dim)")
+        if load_path != c:
+            print(f"        ^ rebuilt from the FROZEN world {os.path.relpath(load_path, _REPO)}")
     if a.capture:
         np.savez_compressed(FIX, **{k.replace('/', '__'): v for k, v in out.items()})
         print(f"\ncaptured -> {FIX}")

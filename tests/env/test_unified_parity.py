@@ -102,14 +102,41 @@ def _fixture_subset(fixture, step_i, field, legacy_key, idx, slug):
 
 # ── Collect test cases ────────────────────────────────────────────────────────
 
+# ── Frozen (pinned pre-change) world ──────────────────────────────────────────
+# THIS GATE PINS A PAST REFACTOR, NOT THE CURRENT WORLD. The fixtures under
+# tests/env/fixtures/parity/ are pre-unified-animal-refactor artefacts; they exist to
+# show that refactor did not change the environment.
+#
+# On 2026-09-14 the bush gained `blocks_animals: true` (A1 of
+# BUSH_REFUGE_AND_LOCATION_DEPENDENT_RECOVERY) — a deliberate change to the LIVE
+# world that stops animals entering a bush, moving animal trajectories and the PRNG
+# stream with them. `configs/environment/default.yaml` went red here.
+#
+# Re-baselining would have destroyed the refactor evidence, so the WORLD is frozen
+# rather than the fixture: this one config is read from a pinned pre-change copy under
+# tests/env/fixtures/frozen_parity_worlds/ (see its README). The config keeps its
+# ORIGINAL slug, so the existing fixture is still the artefact compared against; only
+# the file the params are built from changes. Every other config keeps reading the
+# live tree.
+#
+# CONTRAST — do not "harmonise" these: tests/env/fixtures/thermal_parity/ reads the
+# LIVE configs on purpose, because it tracks the CURRENT world and going red on an
+# intended behaviour change is its loudness function.
+_FROZEN_LOAD_PATH = {
+    os.path.join(_ROOT, "configs", "environment", "default.yaml"):
+        os.path.join(_ROOT, "tests", "env", "fixtures", "frozen_parity_worlds",
+                     "environment__default.yaml"),
+}
+
 _all_configs = _collect_configs()
 _test_params = []
 
 for _cfg_path in _all_configs:
-    _slug = _config_slug(_cfg_path)
+    _slug = _config_slug(_cfg_path)          # slug from the ORIGINAL path — fixture identity
+    _load_path = _FROZEN_LOAD_PATH.get(_cfg_path, _cfg_path)   # frozen world if pinned
     _fixture_path = os.path.join(FIXTURE_DIR, _slug + ".npz")
     _has_fixture = os.path.exists(_fixture_path)
-    _test_params.append((_cfg_path, _slug, _has_fixture))
+    _test_params.append((_load_path, _slug, _has_fixture))
 
 
 @pytest.mark.parametrize("config_path,slug,has_fixture", _test_params, ids=[p[1] for p in _test_params])

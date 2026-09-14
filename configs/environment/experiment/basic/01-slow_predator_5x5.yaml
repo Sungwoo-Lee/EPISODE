@@ -66,6 +66,8 @@ environment:
       area: [[1, 1], [5, 5]]
       blocking: false
       hides_agent: true
+      blocks_animals: true   # matches environment/default; this file redeclares obstacles,
+                             # so the key must be explicit (list-replace, CONFIG_GUIDE §1)
       damage: [0.0, 0.0]
       nociception_intensity: 0.0
       properties: [0.0, 0.0, 0.0, 1.0, 0.0]

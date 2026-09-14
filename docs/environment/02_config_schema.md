@@ -1151,7 +1151,7 @@ Each entry under `environment.obstacles` (after `count` expansion):
 | `properties_std` | `obs_property_std [N, V]` | yes | — | std dev |
 | `blocking` | `obs_blocking [N]` bool | optional | `True` | blocks movement for both agent and animals |
 | `hides_agent` | `obs_hides_agent [N]` bool | optional | `False` | bush-type concealment |
-| `blocks_animals` | `obs_blocks_animals [N]` bool | optional | `False` | blocks animal movement; agent still enters freely |
+| `blocks_animals` | `obs_blocks_animals [N]` bool | optional | `False` (loader) — but `default.yaml` ships **`true`** on the bush | blocks animal movement; agent still enters freely. See the note below. |
 | `damage` | `obs_damage [N, 2]` | optional | `0.0` → `[0,0]` | per-event damage range |
 | `nociception_intensity` | `obs_nociception [N]` | optional | `0.3` | |
 | `name` | `obs_type [N]` int | optional | `"rock"` | index into `obstacle_names` |
@@ -1162,7 +1162,28 @@ Each entry under `environment.obstacles` (after `count` expansion):
 | `temperature_ratio` | `obs_temp_ratio_low/high [N]` | optional | `[0, 0]` | thermal: `[low, high]`; heat = `ratio × abs(default_temp)`, ratio drawn per slot per episode. Mutually exclusive with `temperature` |
 | `edge_margin` | (transforms `area` at load) | optional | `0` | thermal: insets `area` by N cells on all four sides **at load time**; an empty intersection raises |
 
-`obstacle_names` is the **sorted unique** tuple of all obstacle `name` values (`config_loader.py:720`). Renaming an obstacle can shift its index — don't hardcode indices outside the config.
+
+**`blocks_animals`: the loader default and the shipped value differ, on purpose.** The loader
+reads it as `o.get('blocks_animals', False)` (`config_loader.py:1851`) while
+`configs/environment/default.yaml` ships `blocks_animals: true` on the bush entry. That is not
+drift — it is a **deliberate, dated exception** to the project's no-fallback-defaults rule,
+recorded in
+[CONFIG_CRITICAL_SETTINGS.md](CONFIG_CRITICAL_SETTINGS.md) (registry row + the 2026-09-14
+change-log entry). Making the key mandatory would raise at load on every config that
+redeclares its own `obstacles:` list without spelling the key out, which is a project-wide
+migration the owning change deliberately did not take on.
+
+The consequence you must hold in mind when authoring: because lists **replace** wholesale
+(see [CONFIG_GUIDE.md](CONFIG_GUIDE.md) §1), a config that redeclares `obstacles:` and omits
+`blocks_animals` gets `false` — it does **not** inherit the base's `true`, and nothing warns
+you. If your config declares its own obstacle list and contains a `hides_agent: true` bush,
+**write `blocks_animals: true` explicitly**. Every maintained world does.
+
+`obs_blocks_animals` is merged into the ANIMAL movement mask only
+(`obs_block_for_animals = obs_blocking | obs_blocks_animals`, `core.py:560`) and is **not**
+read by any placement validity mask, so animals can still *spawn* on a blocking bush.
+
+`obstacle_names` is the **sorted unique** tuple of all obstacle `name` values (`config_loader.py:1876`). Renaming an obstacle can shift its index — don't hardcode indices outside the config.
 
 ---
 
@@ -1437,9 +1458,9 @@ def load_behavior_measure_cfg(config) -> "BehaviorMeasureCfg | None":
 | Per-animal `patrol_area` | full grid `[[1,1],[h,w]]` | `config_loader.py:242` |
 | Per-animal `count` | `1` | `config_loader.py:299,337,368` |
 | Per-animal `tag` | `"idx{i}"` | `_normalise_tag()` `config_loader.py:165` |
-| Per-obstacle `blocking` | `True` | `config_loader.py:704` |
-| Per-obstacle `hides_agent` | `False` | `config_loader.py:705` |
-| Per-obstacle `blocks_animals` | `False` | `config_loader.py:706` |
+| Per-obstacle `blocking` | `True` | `config_loader.py:1849` |
+| Per-obstacle `hides_agent` | `False` | `config_loader.py:1850` |
+| Per-obstacle `blocks_animals` | `False` (loader) — `default.yaml` ships `true` on the bush, a dated exception; see Obstacle Entity Fields | `config_loader.py:1851` |
 | Per-obstacle `damage` | `0.0` → `[0,0]` | `config_loader.py:708` |
 | Per-obstacle `nociception_intensity` | `0.3` | `config_loader.py:711` |
 | Per-obstacle `count` | `1` | `config_loader.py:695` |

@@ -72,8 +72,17 @@ def test_observation_is_bit_identical_to_stored_pre_change_fixture():
     if not os.path.exists(fix):
         pytest.skip('baseline fixture not captured')
     import scripts.verification.capture_sensor_baseline as cap
+    # THIS GATE PINS A PAST REFACTOR, NOT THE CURRENT WORLD. The fixture is a
+    # pre-DIRECTIONAL_SENSORS artefact, so it must keep being compared against the
+    # world it was captured in. On 2026-09-14 the bush gained `blocks_animals: true`
+    # (A1 of BUSH_REFUGE_AND_LOCATION_DEPENDENT_RECOVERY), a deliberate change to the
+    # LIVE world that moved animal trajectories and reddened this test. Freezing the
+    # WORLD keeps the refactor evidence; re-baselining the fixture would destroy it.
+    # The npz KEY stays 'configs__environment__default.yaml' — it names the config the
+    # fixture was captured from, which has not changed. Contrast
+    # tests/env/fixtures/thermal_parity/, which reads the LIVE configs on purpose.
     ref = np.load(fix)['configs__environment__default.yaml']
-    got = cap.rollout('configs/environment/default.yaml')
+    got = cap.rollout(cap.PARITY_WORLD)
     assert got.shape == ref.shape
     assert got.tobytes() == ref.tobytes(), (
         f"max abs diff {np.abs(got - ref).max():.3e}")

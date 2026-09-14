@@ -3,7 +3,7 @@ title: "Bush as Perfect Refuge — Phase 1: Animal-Blocking Toggle"
 topic: refactors
 status: active
 created: 2026-06-23
-last_updated: 2026-06-23
+last_updated: 2026-09-14
 ---
 
 # Bush as Perfect Refuge — Phase 1: Animal-Blocking Toggle
@@ -37,6 +37,22 @@ obstacles:
 ## Phase 1 Scope: Movement Only
 
 Phase 1 implements **movement blocking only**. It does NOT change spawn logic — if a bush occupies a cell, an animal can still be spawned there at episode start (spawn exclusion is Phase 2, deferred).
+
+> ⚠️ **STALE as a practical concern (marked 2026-09-14).** The sentence above describes the
+> code correctly — no placement validity mask reads `obs_blocks_animals` — but the caveat it
+> raises does not bite in practice, and it should not be acted on as written.
+> [[BUSH_REFUGE_AND_LOCATION_DEPENDENT_RECOVERY]] finding **F1** measured the four places
+> `obs_blocks_animals` appears in `src/`: the `EnvParams` field, the loader read, the
+> empty-obstacle case, and the merge into the animal movement mask at `core.py:560`. Neither
+> `resolve_overlaps_global` (`core.py:1014–1108`) nor `relocate_blocked_entities`
+> (`core.py:1111–1177`) reads it — **nor `obs_blocking` either** — so turning the switch on
+> adds no term to any placement mask. Separately, wiki entry
+> `20260624_0517_bush_spawn_exclusion_free_via_overlap_resolution` measured that
+> `resolve_overlaps_global` already gives every entity a unique cell (0 collisions across
+> 2000 vmapped resets), so an animal sharing a bush cell at reset is not a state the sampler
+> produces. Phase 2's spawn exclusion is therefore not a prerequisite for anything; the
+> switch was turned on project-wide in A1 of that plan with this caveat left unimplemented,
+> deliberately.
 
 ### What changes
 - Animals (both wandering neutrals and hunting predators) cannot move onto a cell occupied by an active obstacle with `blocks_animals: true`.

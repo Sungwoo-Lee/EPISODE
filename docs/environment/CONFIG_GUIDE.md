@@ -46,6 +46,50 @@ environment:
 
 If you **omit** `entities:` instead of setting it to `[]`, the base's animals survive the merge and silently appear in your world. **Omitting a list does not remove it — only an explicit empty list does.** This is the single most common authoring mistake; keep it in mind whenever you want fewer entities than the base.
 
+#### The footgun's sharper edge: a redeclared list can silently reverse a project-wide decision
+
+Omitting a list is the common mistake. The rarer and nastier one runs the other way: you
+*do* declare the list, and by declaring it you **drop every field the base set on those
+entries** — including a field you have never heard of, that somebody else set deliberately,
+project-wide, months ago.
+
+`blocks_animals` is the worked example. A bush with `hides_agent: true` conceals the agent
+from a hunting predator. Since 2026-09-14 `configs/environment/default.yaml` also ships
+`blocks_animals: true` on that bush, which makes it a physical barrier an animal cannot step
+onto — a real refuge rather than only concealment. The loader reads the key with a fallback,
+`o.get('blocks_animals', False)` (`config_loader.py:1851`), kept deliberately as a dated
+exception to the no-fallback-defaults rule (see
+[CONFIG_CRITICAL_SETTINGS.md](CONFIG_CRITICAL_SETTINGS.md)). Put the two together:
+
+```yaml
+environment:
+  obstacles:                     # <- redeclares the list, so the BASE's bush is gone
+    - name: "bush"
+      hides_agent: true
+      # blocks_animals not written  ->  falls back to FALSE
+      ...                        # your bush is permeable; the base's is not
+```
+
+This config loads without a warning, runs without an error, and trains an agent in a world
+where the bush is not a refuge — the opposite of the project's decision, reached silently
+through an omission. Nothing in the YAML text shows it; the only place the truth is visible
+is the resolved `EnvParams`.
+
+Two habits follow:
+
+- **If you redeclare `obstacles:` and your list contains a `hides_agent: true` bush, write
+  `blocks_animals: true` explicitly.** All four maintained world files with a bush do.
+- **Check bindings at the loader, never by grepping YAML.** A grep re-derives the answer from
+  the same text that hides the problem. The check that actually binds resolves the config and
+  asserts on the arrays:
+
+  ```python
+  params = load_env_params(load_env_config(path))
+  assert not bool((params.obs_hides_agent & ~params.obs_blocks_animals).any()), path
+  ```
+
+  The same shape of check applies to any base-set field on a scene-list entry.
+
 ---
 
 ## 2. Where configs live
