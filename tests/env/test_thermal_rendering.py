@@ -50,7 +50,7 @@ from src.environment.renderer import (
 from src.utils.eval_recording import _snapshot_state
 
 THERMAL_CONFIG = os.path.join(
-    _ROOT, "configs", "environment", "experiment", "thermal", "campfire_world.yaml")
+    _ROOT, "configs", "environment", "experiment", "archive", "thermal", "campfire_world.yaml")
 DEFAULT_CONFIG = os.path.join(_ROOT, "configs", "environment", "default.yaml")
 
 REST = 4

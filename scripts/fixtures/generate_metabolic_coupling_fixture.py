@@ -54,7 +54,7 @@ _ROOT = os.path.dirname(os.path.dirname(_HERE))
 # The config, the action sequence and the seed are duplicated in
 # tests/env/test_metabolic_coupling.py. They must agree; the test says so too.
 CONFIG_REL = os.path.join(
-    "configs", "environment", "experiment", "thermal", "campfire_world.yaml")
+    "configs", "environment", "experiment", "archive", "thermal", "campfire_world.yaml")
 OUT_REL = os.path.join(
     "tests", "env", "fixtures", "metabolic_coupling", "thermal_on_coupling_off.npz")
 # 300 steps. Long enough that the agent moves around the world, eats, and lets

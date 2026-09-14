@@ -11,7 +11,7 @@
 name: bushrefuge_rppo
 algo: rppo
 output_dir: results/eval/avoidance/bushrefuge/rppo
-probe: configs/environment/experiment/behavior_probes/core/avoidance_bushrefuge
+probe: configs/environment/experiment/archive/behavior_probes/core/avoidance_bushrefuge
 conditions: all
 episodes: 30
 nodes: [114]

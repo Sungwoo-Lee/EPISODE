@@ -73,9 +73,9 @@ from src.environment.sensor import (
 from src.utils.evaluation_core import build_stat_headers
 
 THERMAL_CONFIG = os.path.join(
-    _ROOT, "configs", "environment", "experiment", "thermal", "campfire_world.yaml")
+    _ROOT, "configs", "environment", "experiment", "archive", "thermal", "campfire_world.yaml")
 HIDDEN_CONFIG = os.path.join(
-    _ROOT, "configs", "environment", "experiment", "thermal",
+    _ROOT, "configs", "environment", "experiment", "archive", "thermal",
     "campfire_world_body_temp_hidden.yaml")
 DEFAULT_CONFIG = os.path.join(_ROOT, "configs", "environment", "default.yaml")
 

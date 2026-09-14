@@ -53,7 +53,7 @@ from run_sweep import _measure_cell, HEAD, KEYS  # noqa: E402 (bare-name import,
 
 PY = sys.executable
 EVAL_ROLLOUT = REPO_ROOT / "scripts" / "eval" / "eval_rollout.py"
-DEFAULT_PROBE_DIR = REPO_ROOT / "configs" / "environment" / "experiment" / "behavior_probes" / "core" / "avoidance"
+DEFAULT_PROBE_DIR = REPO_ROOT / "configs" / "environment" / "experiment" / "archive" / "behavior_probes" / "core" / "avoidance"
 
 
 def _capped_env(run_dir_hint: str) -> dict:

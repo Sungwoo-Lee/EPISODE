@@ -1,0 +1,15 @@
+# Hypervigilance CONTROL — no animal at all (hg10-matched, decay_power 1.0).
+# Hungry+injured agent, food by start, bush near, NOTHING chasing. Does hg10 eat?
+# If it eats here but flees the harmless rabbit -> genuine hypervigilance.
+extends: environment/experiment/archive/behavior_probes/explore/conflict/conflict_bush_near
+sensory:
+  visual_value_mode: sum
+  visual_occlusion_enabled: false
+  olfactory_grid_range: 0
+  visual_blur_enabled: false
+  visual_blur_radial_scale: 0.5
+  visual_blur_anisotropy: 3.0
+  visual_blur_sigma_floor: 0.5
+  decay_power: 1.0
+environment:
+  entities: []

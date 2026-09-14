@@ -74,7 +74,7 @@ from src.environment.sensor import (
 )
 
 THERMAL_CONFIG = os.path.join(
-    _ROOT, "configs", "environment", "experiment", "thermal", "campfire_world.yaml")
+    _ROOT, "configs", "environment", "experiment", "archive", "thermal", "campfire_world.yaml")
 DEFAULT_CONFIG = os.path.join(_ROOT, "configs", "environment", "default.yaml")
 
 BODY_TEMP = 7.5   # deliberately non-zero: it separates "reads zero" from

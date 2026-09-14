@@ -735,7 +735,7 @@ cd /media/nas01/projects/Interoceptive-AI/grid_world_pain
 # ---------------------------------------------------------------------------
 # Run 1: rppo_nmn_film_g1_curric_longL4_s42   — node 106, cuda:0
 # /home/vncuser/miniconda3/envs/grid_world_pain/bin/python train.py \
-#   --configs-dir configs/environment/experiment/basic_curriculum \
+#   --configs-dir configs/environment/experiment/archive/basic_curriculum \
 #   --continual-schedule configs/continual/basic_curriculum_schedule_longL4.yaml \
 #   --agent_config configs/models/recurrent_ppo/recurrent_ppo_nmn_film_g1_screen.yaml \
 #   --num-envs 128 --seed 42 --log-interval 10 \
@@ -746,7 +746,7 @@ cd /media/nas01/projects/Interoceptive-AI/grid_world_pain
 #
 # Run 2: rppo_nmn_film_g2_curric_longL4_s42   — node 106, cuda:1
 # /home/vncuser/miniconda3/envs/grid_world_pain/bin/python train.py \
-#   --configs-dir configs/environment/experiment/basic_curriculum \
+#   --configs-dir configs/environment/experiment/archive/basic_curriculum \
 #   --continual-schedule configs/continual/basic_curriculum_schedule_longL4.yaml \
 #   --agent_config configs/models/recurrent_ppo/recurrent_ppo_nmn_film_g2_screen.yaml \
 #   --num-envs 128 --seed 42 --log-interval 10 \
@@ -757,7 +757,7 @@ cd /media/nas01/projects/Interoceptive-AI/grid_world_pain
 #
 # Run 3: rppo_nmn_film_g4_curric_longL4_s42   — node 110, cuda:0
 # /home/vncuser/miniconda3/envs/grid_world_pain/bin/python train.py \
-#   --configs-dir configs/environment/experiment/basic_curriculum \
+#   --configs-dir configs/environment/experiment/archive/basic_curriculum \
 #   --continual-schedule configs/continual/basic_curriculum_schedule_longL4.yaml \
 #   --agent_config configs/models/recurrent_ppo/recurrent_ppo_nmn_film_g4_screen.yaml \
 #   --num-envs 128 --seed 42 --log-interval 10 \
@@ -768,7 +768,7 @@ cd /media/nas01/projects/Interoceptive-AI/grid_world_pain
 #
 # Run 4: rppo_nmn_film_g8_curric_longL4_s42   — node 110, cuda:1
 # /home/vncuser/miniconda3/envs/grid_world_pain/bin/python train.py \
-#   --configs-dir configs/environment/experiment/basic_curriculum \
+#   --configs-dir configs/environment/experiment/archive/basic_curriculum \
 #   --continual-schedule configs/continual/basic_curriculum_schedule_longL4.yaml \
 #   --agent_config configs/models/recurrent_ppo/recurrent_ppo_nmn_film_g8_screen.yaml \
 #   --num-envs 128 --seed 42 --log-interval 10 \
@@ -779,7 +779,7 @@ cd /media/nas01/projects/Interoceptive-AI/grid_world_pain
 #
 # Run 5: rppo_nmn_film_g16_curric_longL4_s42  — node 108, cuda:0
 # /home/vncuser/miniconda3/envs/grid_world_pain/bin/python train.py \
-#   --configs-dir configs/environment/experiment/basic_curriculum \
+#   --configs-dir configs/environment/experiment/archive/basic_curriculum \
 #   --continual-schedule configs/continual/basic_curriculum_schedule_longL4.yaml \
 #   --agent_config configs/models/recurrent_ppo/recurrent_ppo_nmn_film_g16_screen.yaml \
 #   --num-envs 128 --seed 42 --log-interval 10 \
@@ -790,7 +790,7 @@ cd /media/nas01/projects/Interoceptive-AI/grid_world_pain
 #
 # Run 6: rppo_nmn_film_g32_curric_longL4_s42  — node 108, cuda:1
 # /home/vncuser/miniconda3/envs/grid_world_pain/bin/python train.py \
-#   --configs-dir configs/environment/experiment/basic_curriculum \
+#   --configs-dir configs/environment/experiment/archive/basic_curriculum \
 #   --continual-schedule configs/continual/basic_curriculum_schedule_longL4.yaml \
 #   --agent_config configs/models/recurrent_ppo/recurrent_ppo_nmn_film_g32_screen.yaml \
 #   --num-envs 128 --seed 42 --log-interval 10 \
@@ -801,7 +801,7 @@ cd /media/nas01/projects/Interoceptive-AI/grid_world_pain
 #
 # Run 7: rppo_nmn_film_g64_curric_longL4_s42  — node 109, cuda:0
 # /home/vncuser/miniconda3/envs/grid_world_pain/bin/python train.py \
-#   --configs-dir configs/environment/experiment/basic_curriculum \
+#   --configs-dir configs/environment/experiment/archive/basic_curriculum \
 #   --continual-schedule configs/continual/basic_curriculum_schedule_longL4.yaml \
 #   --agent_config configs/models/recurrent_ppo/recurrent_ppo_nmn_film_g64_screen.yaml \
 #   --num-envs 128 --seed 42 --log-interval 10 \
@@ -812,7 +812,7 @@ cd /media/nas01/projects/Interoceptive-AI/grid_world_pain
 #
 # Run 8: rppo_nmn_film_g128_curric_longL4_s42 — node 109, cuda:1
 # /home/vncuser/miniconda3/envs/grid_world_pain/bin/python train.py \
-#   --configs-dir configs/environment/experiment/basic_curriculum \
+#   --configs-dir configs/environment/experiment/archive/basic_curriculum \
 #   --continual-schedule configs/continual/basic_curriculum_schedule_longL4.yaml \
 #   --agent_config configs/models/recurrent_ppo/recurrent_ppo_nmn_film_g128_screen.yaml \
 #   --num-envs 128 --seed 42 --log-interval 10 \
@@ -1421,7 +1421,7 @@ cd /media/nas01/projects/Interoceptive-AI/grid_world_pain
 # ---------------------------------------------------------------------------
 # Run v01: rppo_b04v01_slowmove_128env_n111 — node 111, cuda:0 — LAUNCHED (WandB 78nirb3q, PID 44147)
 # /home/vncuser/miniconda3/envs/grid_world_pain/bin/python train.py \
-#   --config configs/environment/experiment/basic04_variants/01-slow_move_interval.yaml \
+#   --config configs/environment/experiment/archive/basic04_variants/01-slow_move_interval.yaml \
 #   --agent_config configs/models/recurrent_ppo/recurrent_ppo.yaml \
 #   --num-envs 128 --episodes 100000000 --checkpoint-frequency 100000 \
 #   --device cuda:0 --log-interval 50 \
@@ -1430,7 +1430,7 @@ cd /media/nas01/projects/Interoceptive-AI/grid_world_pain
 #
 # Run v02: rppo_b04v02_shortjump_128env_n111 — node 111, cuda:1 — LAUNCHED (WandB ugxsegwy, PID 47014)
 # /home/vncuser/miniconda3/envs/grid_world_pain/bin/python train.py \
-#   --config configs/environment/experiment/basic04_variants/02-short_attack_range.yaml \
+#   --config configs/environment/experiment/archive/basic04_variants/02-short_attack_range.yaml \
 #   --agent_config configs/models/recurrent_ppo/recurrent_ppo.yaml \
 #   --num-envs 128 --episodes 100000000 --checkpoint-frequency 100000 \
 #   --device cuda:1 --log-interval 50 \
@@ -1439,7 +1439,7 @@ cd /media/nas01/projects/Interoceptive-AI/grid_world_pain
 #
 # Run v03: rppo_b04v03_lowdmg_128env_n112 — node 112, cuda:0 — LAUNCHED (WandB lhy6be5b, PID 685263)
 # /home/vncuser/miniconda3/envs/grid_world_pain/bin/python train.py \
-#   --config configs/environment/experiment/basic04_variants/03-reduced_damage.yaml \
+#   --config configs/environment/experiment/archive/basic04_variants/03-reduced_damage.yaml \
 #   --agent_config configs/models/recurrent_ppo/recurrent_ppo.yaml \
 #   --num-envs 128 --episodes 100000000 --checkpoint-frequency 100000 \
 #   --device cuda:0 --log-interval 50 \
@@ -1448,7 +1448,7 @@ cd /media/nas01/projects/Interoceptive-AI/grid_world_pain
 #
 # Run v04: rppo_b04v04_allcomb_128env_n112 — node 112, cuda:1
 # /home/vncuser/miniconda3/envs/grid_world_pain/bin/python train.py \
-#   --config configs/environment/experiment/basic04_variants/04-all_combined.yaml \
+#   --config configs/environment/experiment/archive/basic04_variants/04-all_combined.yaml \
 #   --agent_config configs/models/recurrent_ppo/recurrent_ppo.yaml \
 #   --num-envs 128 --episodes 100000000 --checkpoint-frequency 100000 \
 #   --device cuda:1 --log-interval 50 \
@@ -1481,7 +1481,7 @@ cd /media/nas01/projects/Interoceptive-AI/grid_world_pain
 # ---------------------------------------------------------------------------
 # Run v05: rppo_b04v05_asr030_128env_n106 — node 106, cuda:0 — LAUNCHED (WandB bpb8wja7, PID 3168139)
 # /home/vncuser/miniconda3/envs/grid_world_pain/bin/python train.py \
-#   --config configs/environment/experiment/basic04_variants/05-attack_success_030.yaml \
+#   --config configs/environment/experiment/archive/basic04_variants/05-attack_success_030.yaml \
 #   --agent_config configs/models/recurrent_ppo/recurrent_ppo.yaml \
 #   --num-envs 128 --episodes 100000000 --checkpoint-frequency 100000 \
 #   --device cuda:0 --log-interval 50 \
@@ -1490,7 +1490,7 @@ cd /media/nas01/projects/Interoceptive-AI/grid_world_pain
 #
 # Run v06: rppo_b04v06_asr070_128env_n106 — node 106, cuda:1 — LAUNCHED (WandB 7lwxbf2j, PID 3168391)
 # /home/vncuser/miniconda3/envs/grid_world_pain/bin/python train.py \
-#   --config configs/environment/experiment/basic04_variants/06-attack_success_070.yaml \
+#   --config configs/environment/experiment/archive/basic04_variants/06-attack_success_070.yaml \
 #   --agent_config configs/models/recurrent_ppo/recurrent_ppo.yaml \
 #   --num-envs 128 --episodes 100000000 --checkpoint-frequency 100000 \
 #   --device cuda:1 --log-interval 50 \
@@ -1499,7 +1499,7 @@ cd /media/nas01/projects/Interoceptive-AI/grid_world_pain
 #
 # Run v07: rppo_b04v07_comb030_128env_n107 — node 107, cuda:0 — LAUNCHED (WandB unvd1rbw, PID 3229788)
 # /home/vncuser/miniconda3/envs/grid_world_pain/bin/python train.py \
-#   --config configs/environment/experiment/basic04_variants/07-combined_move1_asr030.yaml \
+#   --config configs/environment/experiment/archive/basic04_variants/07-combined_move1_asr030.yaml \
 #   --agent_config configs/models/recurrent_ppo/recurrent_ppo.yaml \
 #   --num-envs 128 --episodes 100000000 --checkpoint-frequency 100000 \
 #   --device cuda:0 --log-interval 50 \
@@ -1508,7 +1508,7 @@ cd /media/nas01/projects/Interoceptive-AI/grid_world_pain
 #
 # Run v08: rppo_b04v08_comb070_128env_n107 — node 107, cuda:1 — LAUNCHED (WandB n9jtaqi7, PID 3230039)
 # /home/vncuser/miniconda3/envs/grid_world_pain/bin/python train.py \
-#   --config configs/environment/experiment/basic04_variants/08-combined_move1_asr070.yaml \
+#   --config configs/environment/experiment/archive/basic04_variants/08-combined_move1_asr070.yaml \
 #   --agent_config configs/models/recurrent_ppo/recurrent_ppo.yaml \
 #   --num-envs 128 --episodes 100000000 --checkpoint-frequency 100000 \
 #   --device cuda:1 --log-interval 50 \
@@ -1807,7 +1807,7 @@ cd /media/nas01/projects/Interoceptive-AI/grid_world_pain
 # ---------------------------------------------------------------------------
 # WHAT THIS TESTS (plain language): the bush in this project has always concealed the
 # agent from predator detection, but predators could still walk THROUGH a bush cell.
-# The new configs/environment/experiment/basic_bushrefuge/ ladder (commit 76711de) is a
+# The new configs/environment/experiment/archive/basic_bushrefuge/ ladder (commit 76711de) is a
 # byte-for-byte sibling of configs/environment/experiment/basic/ with exactly ONE key
 # changed — the bush obstacle now carries `blocks_animals: true`, so predators and the
 # wandering rabbit cannot MOVE INTO a bush cell while the agent still enters freely and
@@ -1840,7 +1840,7 @@ cd /media/nas01/projects/Interoceptive-AI/grid_world_pain
 # Run 1: rppo_bushrefuge_b01_n102 — node 102, cuda:0 — 5x5, slow predator (move_interval 3)
 # LAUNCHED 2026-08-04, PID 3514180, launcher log logs/20260804_040530.log
 # /home/vncuser/miniconda3/envs/grid_world_pain/bin/python train.py \
-#   --config configs/environment/experiment/basic_bushrefuge/01-slow_predator_5x5.yaml \
+#   --config configs/environment/experiment/archive/basic_bushrefuge/01-slow_predator_5x5.yaml \
 #   --agent_config configs/models/recurrent_ppo/recurrent_ppo.yaml \
 #   --eval-config configs/evaluation/experiment_on.yaml \
 #   --num-envs 128 --episodes 100000000 --checkpoint-frequency 100000 \
@@ -1851,7 +1851,7 @@ cd /media/nas01/projects/Interoceptive-AI/grid_world_pain
 # Run 2: rppo_bushrefuge_b02_n102 — node 102, cuda:1 — 10x10, fast predator + wandering rabbit
 # LAUNCHED 2026-08-04, PID 3514932, launcher log logs/20260804_040708.log
 # /home/vncuser/miniconda3/envs/grid_world_pain/bin/python train.py \
-#   --config configs/environment/experiment/basic_bushrefuge/02-predator_and_rabbit_10x10.yaml \
+#   --config configs/environment/experiment/archive/basic_bushrefuge/02-predator_and_rabbit_10x10.yaml \
 #   --agent_config configs/models/recurrent_ppo/recurrent_ppo.yaml \
 #   --eval-config configs/evaluation/experiment_on.yaml \
 #   --num-envs 128 --episodes 100000000 --checkpoint-frequency 100000 \
@@ -1862,7 +1862,7 @@ cd /media/nas01/projects/Interoceptive-AI/grid_world_pain
 # Run 3: rppo_bushrefuge_b03_n113 — node 113, cuda:0 — 10x10 random-init + all-combined pressure
 # LAUNCHED 2026-08-04, PID 1315, launcher log logs/20260804_040843.log
 # /home/vncuser/miniconda3/envs/grid_world_pain/bin/python train.py \
-#   --config configs/environment/experiment/basic_bushrefuge/03-random_init_10x10.yaml \
+#   --config configs/environment/experiment/archive/basic_bushrefuge/03-random_init_10x10.yaml \
 #   --agent_config configs/models/recurrent_ppo/recurrent_ppo.yaml \
 #   --eval-config configs/evaluation/experiment_on.yaml \
 #   --num-envs 128 --episodes 100000000 --checkpoint-frequency 100000 \
@@ -1873,7 +1873,7 @@ cd /media/nas01/projects/Interoceptive-AI/grid_world_pain
 # Run 4: rppo_bushrefuge_b04_n113 — node 113, cuda:1 — 10x10 jump/pounce (attack_range [2,3], 50% hit)
 # LAUNCHED 2026-08-04, PID 1692, launcher log logs/20260804_041012.log
 # /home/vncuser/miniconda3/envs/grid_world_pain/bin/python train.py \
-#   --config configs/environment/experiment/basic_bushrefuge/04-jump_attack_10x10.yaml \
+#   --config configs/environment/experiment/archive/basic_bushrefuge/04-jump_attack_10x10.yaml \
 #   --agent_config configs/models/recurrent_ppo/recurrent_ppo.yaml \
 #   --eval-config configs/evaluation/experiment_on.yaml \
 #   --num-envs 128 --episodes 100000000 --checkpoint-frequency 100000 \
@@ -1909,7 +1909,7 @@ cd /media/nas01/projects/Interoceptive-AI/grid_world_pain
 #   a09  19683x       2.9e-05     2.0     <- WATCH: very small base rate
 #   a10  129962x      2.1e-06     2.7     <- WATCH: very small base rate
 #
-# Base task: configs/environment/experiment/basic_bushrefuge/04-jump_attack_10x10
+# Base task: configs/environment/experiment/archive/basic_bushrefuge/04-jump_attack_10x10
 # (bush blocks_animals, jump/pounce predator attack_range [2,3]) — each arm `extends:`
 # it and overrides ONLY body.recovery_base_rate + body.recovery_accel_rate.
 # Configs committed at 5e170a1; the agent did not modify them.
@@ -1939,7 +1939,7 @@ cd /media/nas01/projects/Interoceptive-AI/grid_world_pain
 # Arm a01: rppo_restprem_a01_n106 — node 106, cuda:0 — premium 1x (base 5.0, accel 0.0)
 # LAUNCHED 2026-08-10, PID 3906803, launcher log logs/20260810_185746.log, WandB szje7o9w
 # /home/vncuser/miniconda3/envs/grid_world_pain/bin/python train.py \
-#   --config configs/environment/experiment/basic_bushrefuge_restpremium/04-restprem_a01.yaml \
+#   --config configs/environment/experiment/archive/basic_bushrefuge_restpremium/04-restprem_a01.yaml \
 #   --agent_config configs/models/recurrent_ppo/recurrent_ppo.yaml \
 #   --eval-config configs/evaluation/experiment_on.yaml \
 #   --num-envs 128 --episodes 100000000 --checkpoint-frequency 100000 \
@@ -1950,7 +1950,7 @@ cd /media/nas01/projects/Interoceptive-AI/grid_world_pain
 # Arm a02: rppo_restprem_a02_n106 — node 106, cuda:1
 # LAUNCHED 2026-08-10, PID 3906972, launcher log logs/20260810_185754.log (SHARED/garbled — see note), WandB 96xmquu3
 # /home/vncuser/miniconda3/envs/grid_world_pain/bin/python train.py \
-#   --config configs/environment/experiment/basic_bushrefuge_restpremium/04-restprem_a02.yaml \
+#   --config configs/environment/experiment/archive/basic_bushrefuge_restpremium/04-restprem_a02.yaml \
 #   --agent_config configs/models/recurrent_ppo/recurrent_ppo.yaml \
 #   --eval-config configs/evaluation/experiment_on.yaml \
 #   --num-envs 128 --episodes 100000000 --checkpoint-frequency 100000 \
@@ -1961,7 +1961,7 @@ cd /media/nas01/projects/Interoceptive-AI/grid_world_pain
 # Arm a03: rppo_restprem_a03_n107 — node 107, cuda:0 — 38x, reproduces current default
 # LAUNCHED 2026-08-10, PID 3560982, launcher log logs/20260810_185754.log (SHARED/garbled), WandB 2na5mqbl
 # /home/vncuser/miniconda3/envs/grid_world_pain/bin/python train.py \
-#   --config configs/environment/experiment/basic_bushrefuge_restpremium/04-restprem_a03.yaml \
+#   --config configs/environment/experiment/archive/basic_bushrefuge_restpremium/04-restprem_a03.yaml \
 #   --agent_config configs/models/recurrent_ppo/recurrent_ppo.yaml \
 #   --eval-config configs/evaluation/experiment_on.yaml \
 #   --num-envs 128 --episodes 100000000 --checkpoint-frequency 100000 \
@@ -1972,7 +1972,7 @@ cd /media/nas01/projects/Interoceptive-AI/grid_world_pain
 # Arm a04: rppo_restprem_a04_n107 — node 107, cuda:1
 # LAUNCHED 2026-08-10, PID 3561022, launcher log logs/20260810_185754.log (SHARED/garbled), WandB idv8vkjl
 # /home/vncuser/miniconda3/envs/grid_world_pain/bin/python train.py \
-#   --config configs/environment/experiment/basic_bushrefuge_restpremium/04-restprem_a04.yaml \
+#   --config configs/environment/experiment/archive/basic_bushrefuge_restpremium/04-restprem_a04.yaml \
 #   --agent_config configs/models/recurrent_ppo/recurrent_ppo.yaml \
 #   --eval-config configs/evaluation/experiment_on.yaml \
 #   --num-envs 128 --episodes 100000000 --checkpoint-frequency 100000 \
@@ -1983,7 +1983,7 @@ cd /media/nas01/projects/Interoceptive-AI/grid_world_pain
 # Arm a05: rppo_restprem_a05_n108 — node 108, cuda:0
 # LAUNCHED 2026-08-10, PID 1521914, launcher log logs/20260810_185754.log (SHARED/garbled), WandB f6u0z3mo
 # /home/vncuser/miniconda3/envs/grid_world_pain/bin/python train.py \
-#   --config configs/environment/experiment/basic_bushrefuge_restpremium/04-restprem_a05.yaml \
+#   --config configs/environment/experiment/archive/basic_bushrefuge_restpremium/04-restprem_a05.yaml \
 #   --agent_config configs/models/recurrent_ppo/recurrent_ppo.yaml \
 #   --eval-config configs/evaluation/experiment_on.yaml \
 #   --num-envs 128 --episodes 100000000 --checkpoint-frequency 100000 \
@@ -1994,7 +1994,7 @@ cd /media/nas01/projects/Interoceptive-AI/grid_world_pain
 # Arm a06: rppo_restprem_a06_n108 — node 108, cuda:1
 # LAUNCHED 2026-08-10, PID 1521919, launcher log logs/20260810_185754.log (SHARED/garbled), WandB m7pm9xqm
 # /home/vncuser/miniconda3/envs/grid_world_pain/bin/python train.py \
-#   --config configs/environment/experiment/basic_bushrefuge_restpremium/04-restprem_a06.yaml \
+#   --config configs/environment/experiment/archive/basic_bushrefuge_restpremium/04-restprem_a06.yaml \
 #   --agent_config configs/models/recurrent_ppo/recurrent_ppo.yaml \
 #   --eval-config configs/evaluation/experiment_on.yaml \
 #   --num-envs 128 --episodes 100000000 --checkpoint-frequency 100000 \
@@ -2018,7 +2018,7 @@ cd /media/nas01/projects/Interoceptive-AI/grid_world_pain
 # (commented 2026-08-16: still running on 111:1 lineage; superseded as the live block
 #  by the NO-HIDING-PREDATOR batch below)
 # /home/vncuser/miniconda3/envs/grid_world_pain/bin/python train.py \
-#   --config configs/environment/experiment/basic_bushrefuge_restpremium/04-restprem_a07.yaml \
+#   --config configs/environment/experiment/archive/basic_bushrefuge_restpremium/04-restprem_a07.yaml \
 #   --agent_config configs/models/recurrent_ppo/recurrent_ppo.yaml \
 #   --eval-config configs/evaluation/experiment_on.yaml \
 #   --num-envs 128 --episodes 100000000 --checkpoint-frequency 100000 \
@@ -2031,7 +2031,7 @@ cd /media/nas01/projects/Interoceptive-AI/grid_world_pain
 # launcher log logs/20260810_restprem_a08_n111.log, WandB wezpfd69
 # (commented 2026-08-16 — see note on a07 above)
 # /home/vncuser/miniconda3/envs/grid_world_pain/bin/python train.py \
-#   --config configs/environment/experiment/basic_bushrefuge_restpremium/04-restprem_a08.yaml \
+#   --config configs/environment/experiment/archive/basic_bushrefuge_restpremium/04-restprem_a08.yaml \
 #   --agent_config configs/models/recurrent_ppo/recurrent_ppo.yaml \
 #   --eval-config configs/evaluation/experiment_on.yaml \
 #   --num-envs 128 --episodes 100000000 --checkpoint-frequency 100000 \
@@ -2042,7 +2042,7 @@ cd /media/nas01/projects/Interoceptive-AI/grid_world_pain
 # Arm a09: rppo_restprem_a09_n110 — node 110, cuda:0 — 19683x (base 2.9e-05) WATCH ITEM
 # LAUNCHED 2026-08-10, PID 1017751, launcher log logs/20260810_185754.log (SHARED/garbled), WandB evrn1amy
 # /home/vncuser/miniconda3/envs/grid_world_pain/bin/python train.py \
-#   --config configs/environment/experiment/basic_bushrefuge_restpremium/04-restprem_a09.yaml \
+#   --config configs/environment/experiment/archive/basic_bushrefuge_restpremium/04-restprem_a09.yaml \
 #   --agent_config configs/models/recurrent_ppo/recurrent_ppo.yaml \
 #   --eval-config configs/evaluation/experiment_on.yaml \
 #   --num-envs 128 --episodes 100000000 --checkpoint-frequency 100000 \
@@ -2068,7 +2068,7 @@ cd /media/nas01/projects/Interoceptive-AI/grid_world_pain
 #    was still 0%. Expected-slow, not a hang.
 # (commented 2026-08-10: the live block is now the a07/a08 node-111 pair above)
 # /home/vncuser/miniconda3/envs/grid_world_pain/bin/python train.py \
-#   --config configs/environment/experiment/basic_bushrefuge_restpremium/04-restprem_a10.yaml \
+#   --config configs/environment/experiment/archive/basic_bushrefuge_restpremium/04-restprem_a10.yaml \
 #   --agent_config configs/models/recurrent_ppo/recurrent_ppo.yaml \
 #   --eval-config configs/evaluation/experiment_on.yaml \
 #   --num-envs 128 --episodes 100000000 --checkpoint-frequency 100000 \
@@ -2084,7 +2084,7 @@ cd /media/nas01/projects/Interoceptive-AI/grid_world_pain
 # whether "moving is dangerous" is what stopped injured agents from travelling
 # to the refuge bush. WandB group: rppo_restpremNH (new group).
 #
-# Configs: configs/environment/experiment/basic_bushrefuge_restpremium_nohide/
+# Configs: configs/environment/experiment/archive/basic_bushrefuge_restpremium_nohide/
 #          committed cfc0293, verified food-only; recovery curves, bush-refuge
 #          blocks_animals and jump/pounce all inherited from the parent arms.
 #
@@ -2108,7 +2108,7 @@ cd /media/nas01/projects/Interoceptive-AI/grid_world_pain
 # Arm a01: rppo_restpremNH_a01_n106 — node 106, cuda:0
 # LAUNCHED 2026-08-16, PID 1550979, launcher log logs/20260816_restpremNH_a01_n106.log, WandB oloh6yt3
 # /home/vncuser/miniconda3/envs/grid_world_pain/bin/python train.py \
-#   --config configs/environment/experiment/basic_bushrefuge_restpremium_nohide/04-restprem_nohide_a01.yaml \
+#   --config configs/environment/experiment/archive/basic_bushrefuge_restpremium_nohide/04-restprem_nohide_a01.yaml \
 #   --agent_config configs/models/recurrent_ppo/recurrent_ppo.yaml \
 #   --eval-config configs/evaluation/experiment_on.yaml \
 #   --num-envs 128 --episodes 100000000 --checkpoint-frequency 100000 \
@@ -2119,7 +2119,7 @@ cd /media/nas01/projects/Interoceptive-AI/grid_world_pain
 # Arm a02: rppo_restpremNH_a02_n106 — node 106, cuda:1
 # LAUNCHED 2026-08-16, PID 1551189, launcher log logs/20260816_restpremNH_a02_n106.log, WandB o2ze4gji
 # /home/vncuser/miniconda3/envs/grid_world_pain/bin/python train.py \
-#   --config configs/environment/experiment/basic_bushrefuge_restpremium_nohide/04-restprem_nohide_a02.yaml \
+#   --config configs/environment/experiment/archive/basic_bushrefuge_restpremium_nohide/04-restprem_nohide_a02.yaml \
 #   --agent_config configs/models/recurrent_ppo/recurrent_ppo.yaml \
 #   --eval-config configs/evaluation/experiment_on.yaml \
 #   --num-envs 128 --episodes 100000000 --checkpoint-frequency 100000 \
@@ -2130,7 +2130,7 @@ cd /media/nas01/projects/Interoceptive-AI/grid_world_pain
 # Arm a03: rppo_restpremNH_a03_n107 — node 107, cuda:0
 # LAUNCHED 2026-08-16, PID 1204293, launcher log logs/20260816_restpremNH_a03_n107.log, WandB ob3rkm8u
 # /home/vncuser/miniconda3/envs/grid_world_pain/bin/python train.py \
-#   --config configs/environment/experiment/basic_bushrefuge_restpremium_nohide/04-restprem_nohide_a03.yaml \
+#   --config configs/environment/experiment/archive/basic_bushrefuge_restpremium_nohide/04-restprem_nohide_a03.yaml \
 #   --agent_config configs/models/recurrent_ppo/recurrent_ppo.yaml \
 #   --eval-config configs/evaluation/experiment_on.yaml \
 #   --num-envs 128 --episodes 100000000 --checkpoint-frequency 100000 \
@@ -2141,7 +2141,7 @@ cd /media/nas01/projects/Interoceptive-AI/grid_world_pain
 # Arm a04: rppo_restpremNH_a04_n107 — node 107, cuda:1
 # LAUNCHED 2026-08-16, PID 1204507, launcher log logs/20260816_restpremNH_a04_n107.log, WandB vk5upgay
 # /home/vncuser/miniconda3/envs/grid_world_pain/bin/python train.py \
-#   --config configs/environment/experiment/basic_bushrefuge_restpremium_nohide/04-restprem_nohide_a04.yaml \
+#   --config configs/environment/experiment/archive/basic_bushrefuge_restpremium_nohide/04-restprem_nohide_a04.yaml \
 #   --agent_config configs/models/recurrent_ppo/recurrent_ppo.yaml \
 #   --eval-config configs/evaluation/experiment_on.yaml \
 #   --num-envs 128 --episodes 100000000 --checkpoint-frequency 100000 \
@@ -2152,7 +2152,7 @@ cd /media/nas01/projects/Interoceptive-AI/grid_world_pain
 # Arm a05: rppo_restpremNH_a05_n108 — node 108, cuda:0
 # LAUNCHED 2026-08-16, PID 3161807, launcher log logs/20260816_restpremNH_a05_n108.log, WandB 1atfgt5p
 # /home/vncuser/miniconda3/envs/grid_world_pain/bin/python train.py \
-#   --config configs/environment/experiment/basic_bushrefuge_restpremium_nohide/04-restprem_nohide_a05.yaml \
+#   --config configs/environment/experiment/archive/basic_bushrefuge_restpremium_nohide/04-restprem_nohide_a05.yaml \
 #   --agent_config configs/models/recurrent_ppo/recurrent_ppo.yaml \
 #   --eval-config configs/evaluation/experiment_on.yaml \
 #   --num-envs 128 --episodes 100000000 --checkpoint-frequency 100000 \
@@ -2163,7 +2163,7 @@ cd /media/nas01/projects/Interoceptive-AI/grid_world_pain
 # Arm a06: rppo_restpremNH_a06_n110 — node 110, cuda:0
 # LAUNCHED 2026-08-16, PID 2838529, launcher log logs/20260816_restpremNH_a06_n110.log, WandB 7jgvntqe
 # /home/vncuser/miniconda3/envs/grid_world_pain/bin/python train.py \
-#   --config configs/environment/experiment/basic_bushrefuge_restpremium_nohide/04-restprem_nohide_a06.yaml \
+#   --config configs/environment/experiment/archive/basic_bushrefuge_restpremium_nohide/04-restprem_nohide_a06.yaml \
 #   --agent_config configs/models/recurrent_ppo/recurrent_ppo.yaml \
 #   --eval-config configs/evaluation/experiment_on.yaml \
 #   --num-envs 128 --episodes 100000000 --checkpoint-frequency 100000 \
@@ -2174,7 +2174,7 @@ cd /media/nas01/projects/Interoceptive-AI/grid_world_pain
 # Arm a07: rppo_restpremNH_a07_n110 — node 110, cuda:1
 # LAUNCHED 2026-08-16, PID 2838740, launcher log logs/20260816_restpremNH_a07_n110.log, WandB 45jsidrg
 # /home/vncuser/miniconda3/envs/grid_world_pain/bin/python train.py \
-#   --config configs/environment/experiment/basic_bushrefuge_restpremium_nohide/04-restprem_nohide_a07.yaml \
+#   --config configs/environment/experiment/archive/basic_bushrefuge_restpremium_nohide/04-restprem_nohide_a07.yaml \
 #   --agent_config configs/models/recurrent_ppo/recurrent_ppo.yaml \
 #   --eval-config configs/evaluation/experiment_on.yaml \
 #   --num-envs 128 --episodes 100000000 --checkpoint-frequency 100000 \
@@ -2185,7 +2185,7 @@ cd /media/nas01/projects/Interoceptive-AI/grid_world_pain
 # Arm a08: rppo_restpremNH_a08_n111 — node 111, cuda:0
 # LAUNCHED 2026-08-16, PID 1800371, launcher log logs/20260816_restpremNH_a08_n111.log, WandB edlxgeum
 # /home/vncuser/miniconda3/envs/grid_world_pain/bin/python train.py \
-#   --config configs/environment/experiment/basic_bushrefuge_restpremium_nohide/04-restprem_nohide_a08.yaml \
+#   --config configs/environment/experiment/archive/basic_bushrefuge_restpremium_nohide/04-restprem_nohide_a08.yaml \
 #   --agent_config configs/models/recurrent_ppo/recurrent_ppo.yaml \
 #   --eval-config configs/evaluation/experiment_on.yaml \
 #   --num-envs 128 --episodes 100000000 --checkpoint-frequency 100000 \
@@ -2196,7 +2196,7 @@ cd /media/nas01/projects/Interoceptive-AI/grid_world_pain
 # Arm a09: rppo_restpremNH_a09_n112 — node 112, cuda:0 — recovery_base_rate 2.9e-05 WATCH ITEM
 # LAUNCHED 2026-08-16, PID 532510, launcher log logs/20260816_restpremNH_a09_n112.log, WandB neta4235
 # /home/vncuser/miniconda3/envs/grid_world_pain/bin/python train.py \
-#   --config configs/environment/experiment/basic_bushrefuge_restpremium_nohide/04-restprem_nohide_a09.yaml \
+#   --config configs/environment/experiment/archive/basic_bushrefuge_restpremium_nohide/04-restprem_nohide_a09.yaml \
 #   --agent_config configs/models/recurrent_ppo/recurrent_ppo.yaml \
 #   --eval-config configs/evaluation/experiment_on.yaml \
 #   --num-envs 128 --episodes 100000000 --checkpoint-frequency 100000 \
@@ -2207,7 +2207,7 @@ cd /media/nas01/projects/Interoceptive-AI/grid_world_pain
 # Arm a10: rppo_restpremNH_a10_n112 — node 112, cuda:1 — recovery_base_rate 2.1e-06 WATCH ITEM
 # LAUNCHED 2026-08-16, PID 532722, launcher log logs/20260816_restpremNH_a10_n112.log, WandB ff0r7qrs
 # /home/vncuser/miniconda3/envs/grid_world_pain/bin/python train.py \
-#   --config configs/environment/experiment/basic_bushrefuge_restpremium_nohide/04-restprem_nohide_a10.yaml \
+#   --config configs/environment/experiment/archive/basic_bushrefuge_restpremium_nohide/04-restprem_nohide_a10.yaml \
 #   --agent_config configs/models/recurrent_ppo/recurrent_ppo.yaml \
 #   --eval-config configs/evaluation/experiment_on.yaml \
 #   --num-envs 128 --episodes 100000000 --checkpoint-frequency 100000 \
@@ -3334,7 +3334,7 @@ cd /media/nas01/projects/Interoceptive-AI/grid_world_pain
 # (rppo_nmnsite_* MC, rppo_nmngaenorm_* GAE_NORM) ran on
 # configs/environment/experiment/basic/04-jump_attack_10x10.yaml. This wave runs
 # the same UNCHANGED 16-arm MC agent grid on
-# configs/environment/experiment/sensory_ladder/B_olf_only.yaml — the
+# configs/environment/experiment/archive/sensory_ladder/B_olf_only.yaml — the
 # olfaction-only ladder arm, chosen because it previously produced the strongest
 # bush-hiding and some state-dependent behaviour.
 #
@@ -3371,7 +3371,7 @@ cd /media/nas01/projects/Interoceptive-AI/grid_world_pain
 # ===========================================================================
 
 /home/vncuser/miniconda3/envs/grid_world_pain/bin/python train.py \
-  --config configs/environment/experiment/sensory_ladder/B_olf_only.yaml \
+  --config configs/environment/experiment/archive/sensory_ladder/B_olf_only.yaml \
   --agent_config configs/models/recurrent_ppo/nmn_input_site_grid/nmnsite_t1none.yaml \
   --episodes 10000000 --device cuda:0 --log-interval 10 \
   --tag "rppo_olfmc_t1none_s42" --wandb-name "rppo_olfmc_t1none_s42" \
@@ -3524,7 +3524,7 @@ cd /media/nas01/projects/Interoceptive-AI/grid_world_pain
 # ===========================================================================
 
 /home/vncuser/miniconda3/envs/grid_world_pain/bin/python train.py \
-  --config configs/environment/experiment/sensory_ladder/B_olf_only.yaml \
+  --config configs/environment/experiment/archive/sensory_ladder/B_olf_only.yaml \
   --agent_config configs/models/recurrent_ppo/nmn_input_site_grid_gaenorm/nmngaenorm_t1none.yaml \
   --episodes 10000000 --device cuda:0 --log-interval 10 \
   --tag "rppo_olfgae_t1none_s42" --wandb-name "rppo_olfgae_t1none_s42" \
@@ -3676,7 +3676,7 @@ cd /media/nas01/projects/Interoceptive-AI/grid_world_pain
 
 # Relaunch A — cell 10, t4act_X, node 113 GPU 0
 /home/vncuser/miniconda3/envs/grid_world_pain/bin/python train.py \
-  --config configs/environment/experiment/sensory_ladder/B_olf_only.yaml \
+  --config configs/environment/experiment/archive/sensory_ladder/B_olf_only.yaml \
   --agent_config configs/models/recurrent_ppo/nmn_input_site_grid_gaenorm/nmngaenorm_t4act_X.yaml \
   --episodes 10000000 --device cuda:0 --log-interval 10 \
   --tag "rppo_olfgae_t4act_X_s42" --wandb-name "rppo_olfgae_t4act_X_s42" \
@@ -3684,7 +3684,7 @@ cd /media/nas01/projects/Interoceptive-AI/grid_world_pain
 
 # Relaunch B — cell 11, t5crt_ALL, node 113 GPU 1
 /home/vncuser/miniconda3/envs/grid_world_pain/bin/python train.py \
-  --config configs/environment/experiment/sensory_ladder/B_olf_only.yaml \
+  --config configs/environment/experiment/archive/sensory_ladder/B_olf_only.yaml \
   --agent_config configs/models/recurrent_ppo/nmn_input_site_grid_gaenorm/nmngaenorm_t5crt_ALL.yaml \
   --episodes 10000000 --device cuda:1 --log-interval 10 \
   --tag "rppo_olfgae_t5crt_ALL_s42" --wandb-name "rppo_olfgae_t5crt_ALL_s42" \

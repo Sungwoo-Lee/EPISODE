@@ -57,8 +57,8 @@ PY = "/home/vncuser/miniconda3/envs/grid_world_pain/bin/python"
 RUN_COMMAND = REPO_ROOT / "run_command.py"
 WORKER = _HERE.parent / "sweep_worker.sh"
 
-CLEAN_PROBE_DIR = REPO_ROOT / "configs/environment/experiment/behavior_probes/core/avoidance"
-NOISE_PROBE_DIR = REPO_ROOT / "configs/environment/experiment/behavior_probes/explore/avoidance_stat_noise"
+CLEAN_PROBE_DIR = REPO_ROOT / "configs/environment/experiment/archive/behavior_probes/core/avoidance"
+NOISE_PROBE_DIR = REPO_ROOT / "configs/environment/experiment/archive/behavior_probes/explore/avoidance_stat_noise"
 
 # Tuned NPAR defaults (see README.md "Tuning notes"): rPPO's single-env eval is light
 # enough for ~1 process/core; batched Dreamer's vmap parallelises across cores on its

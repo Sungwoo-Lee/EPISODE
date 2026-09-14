@@ -285,7 +285,7 @@ sensory:
 # NOTE: no campfire entry belongs in this file. `Config.merge` REPLACES lists
 # wholesale, so an obstacle entry here would silently propagate to every layered
 # config that does not declare its own `obstacles:` block. The campfire lives in
-# the example config under configs/environment/experiment/thermal/ instead.
+# the example config under configs/environment/experiment/archive/thermal/ instead.
 thermal:
   enabled: false            # gate; every key below is read ONLY when true
 
@@ -337,7 +337,7 @@ thermal:
   # this file in tests that flip `enabled` on a copy of it
   # (tests/env/test_thermal_validation.py:213-215) — not decoration, do not delete.
   # This is the switch the "inferred vs. given" ablation flips; the two sides ship
-  # as two configs under experiment/thermal/, so no file is edited between runs.
+  # as two configs under experiment/archive/thermal/, so no file is edited between runs.
   body_temp_observable: true
 
 visualization:

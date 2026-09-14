@@ -612,12 +612,13 @@ Each check has a stated expected value the change could plausibly violate. "It p
 - [x] CP0 — **P1 holds**: `git status --short configs/environment/default.yaml` was **empty** at the start of A1; no parallel session's work in that file. ✅
 - [ ] CP1 — D2 is answered before B2's source is written.
 - [x] CP2 — A1: **met, after the instrument was corrected.** For `thermal_parity/` the prediction held exactly (1 modified, 0 added, 71 untouched). Three OTHER byte-parity families the plan never enumerated also went red; that was escalated rather than worked around, the user decided **freeze the worlds, not the fixtures**, and all four families are now green at their pre-A1 baselines (8 / 34 / 27 / 72) with **no fixture re-baselined**. F6 rewritten to count all four. ✅
-- [ ] CP3 — A2: the pre-move reference sweep is run **before** any `git mv` and its full output pasted into the Implementation Report, triaged live-vs-prose. This is the step whose omission produced `b093023`'s two red tests, at 227× the scale.
-- [ ] CP4 — A2: `--configs-dir` occurrences are included in the sweep. Curriculum stage directories are referenced only from launch commands, so archiving one breaks nothing at rest and everything at launch, with no test to catch it.
-- [ ] CP5 — A2: 60 fixtures deleted, 0 modified, 0 added; gate reports 12.
+- [x] CP3 — A2: **met, and it is what caught three plan errors.** The sweep ran before any `git mv`; artefact `tmp/20260915_012443_a2_premove_reference_sweep.txt` (five sections), triaged live-vs-prose. Re-deriving the triage rather than trusting F5 is what surfaced the 124 broken `extends:` edges, the ten joined-component callers and the two hard-coded generator `OUT` paths. Post-move sweep: zero stale references outside two deliberately-frozen comment lines. ✅
+- [x] CP4 — A2: **met.** `--configs-dir` was section [3] of the sweep (150 hits). Two curricula are affected and both are named in the report: `configs/continual/basic_01_02_03_dreamer.yaml` (comment → `archive/curriculum_basic_01_02_03/`) and `configs/continual/basic_curriculum_schedule_longL4.yaml` (launched in practice with `--configs-dir …/experiment/basic_curriculum`, per `train_command-agent.sh:738–815`). Both repointed; nothing was red either way, which is the point. ✅
+- [x] CP5 — A2: **met exactly.** 60 deleted (36 `archive` + 14 `sensory_ladder__*` + 10 `sensory_directional__*`), 0 modified, 0 added, nothing untracked; `test_thermal_parity.py` → **12 passed, 20 skipped**. The other three families measured separately and unchanged (34 / 8 / 27), so the four-family total is **119 → 59** as F6 predicts. ✅
 - [ ] CP6 — B1: the diff touches `src/environment/core.py` and nothing else, and no fixture moves.
 - [ ] CP7 — B2: the three new tests are demonstrated **red** on the pre-change tree before the source edit is made permanent.
 - [x] CP8 (A1 portion) — Every count in the A1 Implementation Report below is re-derived from a command whose output is pasted. None is copied from this plan.
+- [x] CP8 (A2 portion) — Every count in A2's Implementation Report is re-derived from a command whose output is pasted or saved under `tmp/`. Two of the plan's own numbers were **contradicted** by that re-derivation (three collectors → four; two `trajectory_collection` files → three) and one prediction was confirmed to the file (the 60-fixture delete set). ✅
 - [ ] CP8 — Every count in the Implementation Report is re-derived, never copied from this plan. **One exception**: B2's migration list is captured at the pre-change tree and held fixed (B2.3) — re-deriving it after the key is mandatory silently drops every config that now fails to load, turning the check into a tautology.
 
 ---
@@ -1214,6 +1215,373 @@ one read).
 `senior-developer` independently re-derived the frozen-world equivalence — full merged dict plus
 all **189** `EnvParams` fields identical for all three worlds — so that claim rests on someone
 else's measurement, not only on the gate.
+
+---
+
+### Commit A2 — archive everything but the maintained 8
+
+> **Implemented by**: `developer`
+> **Date**: 2026-09-15
+> **Status: IMPLEMENTED. Green on both documented passes.** Four errors in the plan were found
+> and are named below; one of them (F11 / A2.4, the `extends:` chains) would have silently
+> broken 124 archived configs including the whole probe battery the commit repoints live
+> tooling at, and one (F5's live-reference list) was incomplete by **ten** live code sites,
+> nine of which are test modules that went red on the move.
+
+#### Plain-English summary
+
+Two hundred and twenty-seven world-settings files moved into an `archive/` folder, because the
+project has decided to maintain only the base settings file and the seven-stage `basic/` ladder
+and to regenerate anything else from its generator when it is next needed. Nothing about any
+world the project still runs changed. What the commit actually had to get right was everything
+that *points at* those files: two sweep scripts, three evaluation-sweep definitions, two launch
+scripts, nine test modules, a fixture generator, and — the part the plan missed — the 124
+inheritance links **between** the moved files themselves. The project's byte-for-byte regression
+gate deliberately shrinks from 72 adjudicated worlds to 12, which is logged with its number in
+the critical-settings registry because a smaller instrument is a real cost, not a detail.
+
+#### What was done, file by file
+
+| Group | Files | Change |
+|---|---:|---|
+| The move | **234 `git mv` renames** | 13 directories → `configs/environment/experiment/archive/<dir>/`, structure preserved. **227 `.yaml`** + **5 directory `README.md`** + **2 generator `.py`**. `git mv` throughout — never `mv`, never `clean`, never `checkout -f`, never `stash`. |
+| `extends:` repair | **124 files** (all inside the moved set) | 124 `extends:` edges repointed to their `archive/` path. **Not in the plan — see Plan error 1.** |
+| Live callers | `scripts/eval/dwell_sweep/run_sweep.py` (`CLEAN_PROBE_DIR`, `NOISE_PROBE_DIR`), `scripts/eval/experiment_eval_checkpoint.py` (`DEFAULT_PROBE_DIR` — **not in the plan**), `configs/eval_sweeps/{bushrefuge,restprem,restprem_nohide}_rppo.yaml` (`probe:`), `scripts/lab/launch_ladder_arm.sh`, `scripts/lab/launch_sensory_arm.sh` | repointed at `archive/` |
+| Live callers the plan missed | `tests/env/test_{body_temperature_observation,metabolic_coupling,thermal_body,thermal_field,thermal_rendering,thermal_reward_gate,thermal_validation,thermoception}.py` + `scripts/fixtures/generate_metabolic_coupling_fixture.py` | all nine build `experiment/thermal/campfire_world.yaml` from **`os.path.join` components**, invisible to the plan's string-literal sweep. **92 tests went red before this was fixed — see Plan error 2.** |
+| Live caller the plan named | `tests/env/test_inactive_animal_offgrid.py` | repointed (docstring + the joined path). The one the plan predicted; **3 passed**. |
+| The archived generators | `archive/sensory_ladder/generate_ladder.py`, `archive/sensory_directional/generate_weakened_vision_arms.py` | hard-coded `OUT` repointed; `generate_weakened_vision_arms.py`'s repo-root walk `['..'] * 4 → * 5`. **See Plan error 3.** |
+| Gate scope | `scripts/fixtures/generate_thermal_parity_fixtures.py::collect_configs`, `tests/env/test_thermal_parity.py::_collect_configs`, `tests/env/test_backward_compat_configs.py::_collect_all_configs`, `tests/env/test_thermal_reward_gate.py::_collect_configs` | all four exclude `*/archive/*`. **The plan lists three; there are four — see Plan error 4.** |
+| Fixtures | `tests/env/fixtures/thermal_parity/` | **60 deleted**, 0 modified, 0 added |
+| Prose | `configs/environment/default.yaml` (2), `configs/continual/basic_01_02_03_dreamer.yaml` (1), `configs/trajectory_collection/nmn_olf_{gae_grid,gae_rerun,mc_grid}.yaml` (1 each — the plan named **two**, there are **three**), `configs/models/recurrent_ppo/nmn_input_site_grid/generate_site_grid_arms.py` (1), `scripts/eval/dreamer_srl_probe_eval.py` (2), `scripts/eval/parity_check_eval_rollout.py` (1), `scripts/eval/dwell_sweep/README.md` (1), `scripts/behavior_measures/README.md` (1), `archive/basic_curriculum/README.md` (2), `train_command-agent.sh` (**48**) | path strings updated for accuracy. `train_command-new.sh` **not touched** (the user's file). |
+| Docs | `docs/environment/CONFIG_CRITICAL_SETTINGS.md`, `docs/environment/SCRIPTS_DEPENDENCY_MAP.md` | dated change-log entry; two stale launcher rows + `Last updated` |
+
+**Working tree**: 234 `R`/`RM` renames + 60 `D` + **34 `M` of mine** (33 code/config/doc files plus this plan doc, whose Implementation Report and Checkpoints this section is). **Nothing committed, nothing of
+the parallel session's staged** (`docs/develop/INDEX.md` and
+`docs/develop/active/refactors/SAVED_RUN_CONFIG_COMPAT.md` were already staged by them before I
+started and were never touched; `docs/develop/active/meta/artifact_format_bugs.md` and
+`docs/diary/2026-09-14.md` are theirs too, unstaged).
+
+#### ⚠️ Four errors in the plan
+
+**1 — F11 and A2.4 are wrong about `extends:`, and this is the one that would have shipped
+silently.** The plan says the 24 bush-refuge configs' inheritance chain "resolves itself in A2,
+because all 24 files move together and the chain stays closed" (F11), and A2.4 expects the
+archived chains to "survive unchanged". **They do not.** `extends:` targets resolve against
+`configs/` by their **literal repo-relative string** (`config_loader.py::_resolve_extends`
+joins `base_rel` onto `_CONFIGS_ROOT`), **not** relative to the extending file. Moving a base and
+its dependent together therefore breaks the link exactly as surely as moving one alone. Measured
+on the tree before touching anything: **124** `extends:` edges inside the moved set named a base
+that also moved — 93 in `behavior_probes/`, 10 in `basic_bushrefuge_restpremium/`, 10 in
+`_nohide/`, 10 in `olfactory_ambiguity_lindecay/`, 1 in `basic_bushrefuge/`. Left alone, 124
+archived configs — **including the entire probe battery this very commit repoints the dwell and
+avoidance sweeps at** — would have raised `ValueError: Config extends: target … not found` on
+first use, with nothing red in CI to say so. The precedent confirms the hazard is real rather
+than theoretical: the **99 configs archived in earlier passes** still carry `extends:` strings
+naming `basic/05-random_init_10x10`, `basic/07-jump_attack_10x10` and `basic05_variants/…`,
+none of which exist — those chains *were* broken on the way out and left broken.
+
+**Deviation taken, and why**: all 124 edges were repointed to their `archive/` path. The plan's
+own Assumption 9 says A2 should not break archived chains on the way out, and more decisively,
+the commit's stated purpose for repointing `run_sweep.py` and the three `eval_sweeps` files is
+"so they keep working" — which is false if the configs behind those paths no longer load.
+**Measured both sides**: 227/227 of the moved configs resolved through `load_env_config` before
+the move, 227/227 after, and the per-file OK/FAIL diff is **byte-identical**
+(`tmp/20260915_012443_a2_{pre,post}move_loadability.txt`).
+
+**2 — F5's live-reference list is incomplete by ten sites, and the missing form is the `b093023`
+failure mode exactly.** F5 names one test (`test_inactive_animal_offgrid.py`). In fact **nine
+test modules and one fixture generator** load `configs/environment/experiment/thermal/campfire_world.yaml`,
+and every one of them builds the path from `os.path.join` **components** —
+`_ROOT, "configs", "environment", "experiment", "thermal", "campfire_world.yaml"` — which the
+plan's sweep pattern (a slash-joined string literal) structurally cannot see. Measured: the
+first post-move whole-directory run was **92 failed, 314 passed, 374 skipped**, every failure a
+`FileNotFoundError`. Fixed by repointing all ten; re-measured green. Also missing from F5:
+`scripts/eval/experiment_eval_checkpoint.py:56`, a **third** live probe-directory constant
+(`DEFAULT_PROBE_DIR`, the during-training evaluation hook), and a third
+`configs/trajectory_collection/` file (`nmn_olf_gae_rerun.yaml`).
+**The lesson for the next move: sweep for joined-component path forms and for moved
+*basenames*, not only for slash-joined literals.** A basename sweep over all 164 distinct moved
+filenames was run afterwards and returned 46 hits, all either already repointed or references to
+the **kept** `basic/*` files (`tmp/20260915_012443_a2_basename_sweep.txt`).
+
+**3 — F4/A2 says the generators "travel with their directories" but not that they must be
+rewired.** Both carry a hard-coded `OUT` naming their pre-move output directory, so a
+post-archive run would have written a fresh copy of every arm back into a directory that no
+longer exists — the precise "generator pointing at a moved output" failure the instruction to
+move them was meant to prevent. Worse, `generate_weakened_vision_arms.py` computes the repo root
+as `['..'] * 4` from its own location; one directory deeper that resolves to `configs/`, and its
+`os.chdir(_ROOT)` would have silently relocated every relative path in the file. This is the
+repo-root depth hazard `SCRIPTS_DEPENDENCY_MAP.md` warns about, firing for real. Both fixed
+(`* 4 → * 5`, verified to resolve to the repo root), with the regenerate-don't-resurrect warning
+from F11 added as a comment in each.
+
+**4 — "the three collectors" are four.** The plan (F6, A2 File Changes) names
+`generate_thermal_parity_fixtures.py::collect_configs`,
+`test_thermal_parity.py::_collect_configs` and
+`test_backward_compat_configs.py::_collect_all_configs`. There is a fourth verbatim copy in
+`tests/env/test_thermal_reward_gate.py::_collect_configs`. All four now exclude `*/archive/*`
+and were verified to return the **identical** list of **32** configs with **0** under `archive/`.
+Narrowing the fourth changed no test outcome (**18 passed** before and after), because its
+parametrisation is already filtered by fixture existence — but leaving one of four copies
+diverged is how this class of drift starts.
+
+*(Note on the brief vs. the plan: the task brief named two collectors, the plan three. I followed
+the plan, and then found the fourth. The brief and plan do not otherwise conflict.)*
+
+#### The decision the plan required A2 to make explicitly
+
+F6 says applying the archive exclusion to `tests/env/test_unified_parity.py::_collect_configs`
+as well would drop that family **34 → 12**, and that A2 must decide rather than inherit.
+**Decision: do not narrow it; `parity/` stays at 34.** Its fixtures, like `visual_parity/`'s and
+`directional_sensors/`'s, pin the claim that a *past* refactor preserved observations — they are
+evidence about code that shipped months ago, not a description of the world as it is now, and 22
+of its 34 belong to configs that were already under `experiment/archive/` before A2. Deleting
+them would destroy the evidence rather than retire an unmaintained gate. `thermal_parity/` is
+the opposite case — it tracks the current world — which is why it is the one that shrinks.
+Measured after the move: **34 passed, 324 skipped**, unchanged.
+
+#### Verification — A2's seven checks
+
+**A2.1 — the pre-move reference sweep (CP3), run BEFORE any `git mv`.**
+Artefact: `tmp/20260915_012443_a2_premove_reference_sweep.txt` (107 hits on the plan's own
+pattern, plus four further sections: bare directory names across all tracked non-doc files, all
+`--configs-dir` occurrences, the ~90 doc files that mention a moved directory, and the
+`SCRIPTS_DEPENDENCY_MAP.md` grep the plan asks for). Triaged live-vs-prose file by file; the
+live list is the table above. **The triage was not trusted — it was re-derived**, and that is
+how Plan errors 1–3 surfaced.
+Post-move sweep: `tmp/20260915_012443_a2_postmove_reference_sweep.txt`. **The only remaining
+non-`archive/` references to the 13 directories are two comment lines inside
+`tests/env/fixtures/frozen_parity_worlds/environment__default.yaml`** — a frozen pre-A1 world
+whose body must stay byte-identical to `git show f02e76b9:configs/environment/default.yaml`.
+Deliberately untouched; it is a frozen test *input*, not a config.
+
+**CP4 — `--configs-dir` was in the sweep, and here are the curricula it names.** Every
+`configs/continual/*.yaml` was audited for the stage directory it names. Two are affected and
+neither goes red at rest:
+- `configs/continual/basic_01_02_03_dreamer.yaml:3` — comment naming
+  `curriculum_basic_01_02_03/`. Repointed.
+- `configs/continual/basic_curriculum_schedule_longL4.yaml` — its own header names the **kept**
+  `experiment/basic`, but `train_command-agent.sh:738–815` shows the eight runs that actually
+  used it were launched with `--configs-dir configs/environment/experiment/basic_curriculum`,
+  now archived. All eight comment lines repointed.
+The other continual configs name `experiment/basic` (kept) or directories archived long ago.
+
+**A2.2 — both documented passes.**
+
+*Pass 1, `JAX_PLATFORMS=cpu pytest tests/env/`* — **the pre-existing whole-directory abort did
+NOT reproduce today.** A1 recorded `Fatal Python error: Aborted` (exit 134) inside
+`test_thermal_rendering.py` and had to fall back to per-file runs. On this tree the whole
+directory completed: **406 passed, 374 skipped, 1 warning in 1112.33s, exit 0, zero failures.**
+So the whole-directory total *can* be reported this time; the abort looks intermittent rather
+than deterministic, which is worth adding to the row already routed to `bug-curator`.
+The per-file run was done anyway, for comparability with A1's table and because the first
+attempt is what exposed the 92 `FileNotFoundError`s:
+
+```
+test_backward_compat_configs.py                  12 passed, 20 skipped      <- was 74 passed, 284 skipped
+test_behaviour_validation.py                     10 passed
+test_body_temperature_observation.py             15 passed                  <- repointed
+test_bush_blocks_animals.py                       4 passed
+test_config_layer_silent_failures_20260723.py     5 passed, 1 warning
+test_config_strict_load.py                        3 passed
+test_directional_sensors.py                      27 passed                  <- family 4, unchanged
+test_disengage_on_contact.py                      3 passed
+test_distributional_yaml.py                      12 passed
+test_entities_schema.py                           5 passed, 2 skipped
+test_extends_layering.py                          7 passed
+test_extero_noc_parity.py                         3 passed
+test_inactive_animal_offgrid.py                   3 passed                  <- the plan's predicted red, repointed
+test_inclusive_integer_range_sampling.py          7 passed
+test_info_dict_aliases.py                         5 skipped
+test_initial_state_ranges.py                      6 passed
+test_int_distributional_sampling.py               8 passed
+test_maintained_worlds_bush_blocks_animals.py    10 passed                  <- A1's new loader invariant
+test_metabolic_coupling.py                       11 passed                  <- repointed
+test_no_recompile.py                              3 passed
+test_per_episode_count.py                        10 passed
+test_per_episode_logging.py                       9 passed
+test_per_episode_sampling.py                      8 passed
+test_predator_jump.py                             8 passed
+test_thermal_body.py                              5 passed                  <- repointed
+test_thermal_field.py                             9 passed                  <- repointed
+test_thermal_parity.py                           12 passed, 20 skipped      <- THE GATE, was 72 passed, 286 skipped
+test_thermal_rendering.py                        16 passed                  <- repointed
+test_thermal_reward_gate.py                      18 passed                  <- repointed; was 78 (= 72 fixtures + 6)
+test_thermal_validation.py                       34 passed                  <- repointed
+test_thermoception.py                            14 passed                  <- repointed
+test_truncation_not_death.py                      2 passed
+test_unified_parity.py                           34 passed, 324 skipped     <- family 2, unchanged
+test_v1_path_guard.py                            54 passed
+test_visual_parity.py                             8 passed                  <- family 3, unchanged
+test_visual_properties.py                         5 passed, 2 skipped
+test_visual_sampling.py                           6 passed, 1 skipped
+```
+`test_thermal_reward_gate.py` was re-run after the fourth collector was narrowed: **18 passed**,
+identical.
+
+*Pass 2, `pytest tests/ --ignore=tests/env` (no pin, as documented)* — run **alone**, per A1's
+contention lesson. Measured: **55 failed, 576 passed, 2 skipped, 8 errors in 4098.39s (1:08:18)**.
+Baseline for comparison is A1's **51 failed, 580 passed, 2 skipped, 8 errors**. Triaged:
+
+| Group | Count | Verdict |
+|---|---:|---|
+| `tests/test_trajectory_collection.py` — 33 failed + 8 errors, all `ValueError: Strict Config: key 'sensory.visual_value_mode' is required but missing` | **41** | **Pre-existing**, identical to A1. `_base_cfg()` loads a **gitignored saved run config** from `results/…/20260816-152742_rppo_restpremNH_a10_n112/models/config.yaml` that predates an August mandatory key. Both KNOWN_BUGS rows cover it. A2 adds no key and touches nothing here. |
+| 12 `tests/models/test_modulation_{sites,input_slice}.py` golden bit-identity + 3 `tests/scripts/test_evaluation_model_rebuild.py` topology + 1 `tests/algorithms/dreamer_srl/test_hierarchical_encoder.py` | **16** | **Not real.** Re-run alone on this same tree together with the two new suspects: **1 failed, 160 passed** — all 16 pass. Exactly the group A1 recorded as its own measurement error; it reproduces here even though this pass ran alone, so the interference is internal to the whole-suite run rather than to a parallel job. The 55 headline is inflated by these. |
+| `test_eval_rollout_batched.py::…episode_measures_computable` (`bush_entry_*` vs `bush_dwell_*` key-set mismatch) and `tests/scripts/test_context_dependence_b0.py::test_b1_rest_rate` (`assert nan == 5.882…`) | **2** | **Pre-existing**, both red at A1's baseline; the first has an OPEN KNOWN_BUGS row already naming `developer`. |
+| `tests/algorithms/dreamer_srl/test_eval_telemetry_wandb.py` — `wandb.errors.CommError: Run initialization has timed out after 90.0s` | **2** | **Environmental** — the test reaches out to WandB. Nothing to do with A2. |
+| `tests/algorithms/dreamer_srl/test_loss.py` — `SymlogDistribution.log_prob deviates from the reference` | **1** | **Not real** — passes when run alone (inside the 160-passed group above). Same whole-suite interaction. |
+| `tests/test_provenance.py::test_write_provenance_writes_complete_valid_json` — `assert isinstance('unknown', bool)` for `git_dirty` | **1** | **Red, and the cause is measured rather than guessed.** `src/utils/provenance.py::git_dirty` shells out to `git status --porcelain --untracked-files=no` under a **10-second** budget (`_GIT_TIMEOUT_S = 10`) and returns the string `"unknown"` on timeout. Timed on this tree: **301.4 seconds** — 30× the budget, because the repo lives on a NAS and the working tree currently carries 294 staged rename/delete entries. Not a code defect and not caused by any edit in A2; it is A2's *uncommitted size* meeting a latency guard. Expect it to clear once the commit lands. Flagged rather than waved away, because it is a test that was green at A1 and is red now. |
+
+**So the honest non-env result: zero failures caused by A2's code changes.** 41 pre-existing
+saved-config load failures + 2 pre-existing reds + 2 WandB-network + 1 NAS-latency artefact of
+the uncommitted tree, and 17 that pass when run alone.
+
+**A2.3 — `git status --porcelain`, renames not delete-plus-add.**
+
+```
+   234  R / RM   (renames, rename-detected — `git log --follow` survives)
+    60  D        (thermal_parity fixtures)
+    35   M       (33 mine + 2 unstaged files belonging to parallel sessions)
+     2  MM       (staged by a parallel session — NOT touched)
+    15  ??       (parallel sessions' diary + sensor-ladder figures — NOT touched)
+```
+
+Reconciliation of the 234: **227 `.yaml`** — the number the plan and the brief both predict —
+plus **5 `README.md`** (`basic04_variants`, `basic_curriculum`, `behavior_probes`,
+`olfactory_ambiguity`, `olfactory_ambiguity_lindecay`) and **2 generator `.py`**. Of the 234,
+107 are pure `R` and 127 are `RM` — the 127 being the 124 `extends:`-repaired configs plus the
+2 generators plus `basic_curriculum/README.md`. **Zero `D`/`A` pairs among the moved files.**
+
+**A2.4 — the archived `extends:` chains resolve, measured against a pre-move capture.**
+227/227 OK before, 227/227 OK after, diff of the per-file OK/FAIL lists **identical**. See Plan
+error 1: this check passes *because* the 124 edges were repaired, and would have failed 124/227
+otherwise. This is the single most valuable check in the plan and it earned its place.
+
+**A2.5 — the gate shrank by exactly the predicted set (CP5).**
+`tests/env/fixtures/thermal_parity/`: **60 deleted, 0 modified, 0 added**, nothing untracked.
+The 60 are exactly **36 `…__archive__…` slugs + 14 `sensory_ladder__*` + 10
+`sensory_directional__*`**, the plan's prediction to the file. The 12 survivors are 5
+`continual/nmn_double_return_stages`, 6 `verification/`, 1 `environment/default` — and they are
+**exactly the 12 configs F6/F7 predict as Part B's rollout set**, so that cross-check holds.
+`pytest tests/env/test_thermal_parity.py` → **12 passed, 20 skipped** (baseline 72 passed, 286
+skipped).
+
+**The four parity families, each measured separately, before and after.**
+
+| Family | Test | Fixtures before | Fixtures after | Test result before | Test result after |
+|---|---|---:|---:|---|---|
+| `thermal_parity/` | `test_thermal_parity.py` | 72 | **12** | 72 passed, 286 skipped | **12 passed, 20 skipped** |
+| `parity/` | `test_unified_parity.py` | 34 | **34** | 34 passed, 324 skipped | **34 passed, 324 skipped** |
+| `visual_parity/` | `test_visual_parity.py` | 12 | **12** | 8 passed | **8 passed** |
+| `directional_sensors/` | `test_directional_sensors.py` | 1 | **1** | 27 passed | **27 passed** |
+| **total fixtures** | | **119** | **59** | | |
+
+**119 → 59, with the entire reduction inside `thermal_parity/` — the plan's F6 prediction,
+confirmed rather than assumed.** Each of the other three was measured at its own pre-A2 baseline
+in the same session (`tmp/20260915_012443_a2_baseline.log`) and is unchanged.
+`tests/env/fixtures/frozen_parity_worlds/` was not touched.
+
+**A2.6 — the collectors agree.** All **four** (see Plan error 4) return the **identical** list of
+**32** configs, with **0** under `archive/`.
+
+**A2.7 — `CONFIG_CRITICAL_SETTINGS.md` records the reduction with its number.** A dated
+2026-09-15 change-log entry carries: the policy; the 227/13/234 move counts per directory; the
+60 deleted fixtures and the gate's **72 → 12**; the four-family **119 → 59**; the explicit
+decision to leave `test_unified_parity.py` un-narrowed and why; the four collectors; the
+repointed live callers; the 124 `extends:` edges with the 227/227-before-and-after measurement;
+the `--configs-dir` curricula; and the regenerate-don't-resurrect warning for the two drifted
+generator families.
+
+**`SCRIPTS_DEPENDENCY_MAP.md`** — the plan asks for the grep rather than assuming. Run: the map
+**does** document both launchers' config paths, at lines 124–125. Both rows repointed and the
+`Last updated` line extended, in this change. No file under `scripts/` was added, moved, renamed
+or deleted, so the Maintenance Contract did not fire on its face — the rows were simply stale
+the moment the configs moved.
+
+**Live tooling proved live, not merely repointed.** Each constant was imported and resolved:
+
+```
+run_sweep.CLEAN_PROBE_DIR        → …/archive/behavior_probes/core/avoidance              exists, 12 yaml
+run_sweep.NOISE_PROBE_DIR        → …/archive/behavior_probes/explore/avoidance_stat_noise exists, 12 yaml
+experiment_eval_checkpoint.DEFAULT_PROBE_DIR → …/archive/behavior_probes/core/avoidance  exists, 12 yaml
+eval_sweeps {bushrefuge,restprem,restprem_nohide} probe: → …/archive/…/avoidance_bushrefuge  exists, 12 yaml each
+launch_ladder_arm.sh  A_baseline → …/archive/sensory_ladder/A_baseline.yaml               exists
+launch_sensory_arm.sh A_baseline → …/archive/sensory_directional/A_baseline.yaml          exists
+```
+
+#### Speed check — skipped, with the reason
+
+`git diff -- src/` and `git diff --cached -- src/` are both **empty**: A2 changes no environment,
+model or training code whatsoever. The move renames settings files; the only content edits inside
+them are `extends:` strings in archived configs that no maintained world reads, and comments. No
+traced graph, op, shape or array changes, so there is no hot path to measure. Per the Speed Check
+Protocol this is a change that provably cannot affect runtime. (The plan likewise asks for speed
+numbers only on B1 and B2.)
+
+#### Known-bugs prior-art check
+
+Ran, not skipped:
+`grep -in 'archive\|config move\|FileNotFoundError\|configs-dir\|extends' docs/develop/active/issues/KNOWN_BUGS.md`.
+
+| What I hit | Registry row |
+|---|---|
+| 92 `FileNotFoundError` from tests pointing at moved configs | **Recorded precedent, FIXED**: "Two env tests pointed at config paths retired by the basic-ladder re-level" (`b093023`, `ee8b981`+`79775e5`). Same class, caught here **before** commit rather than after. Not a new bug — but the *reason* it was nearly missed (joined-component paths are invisible to a string sweep) is a lesson the row does not carry. |
+| A tool pinned at a config directory that no longer exists | **Recorded, OPEN**: "Dreamer speed benchmark points at a config folder that no longer exists". Unaffected by A2 (it names `configs/dreamer_srl/`), but it is the standing example of this failure mode rotting silently. |
+| Archived configs that no longer load | **Recorded, OPEN**: "Mandatory config keys keep landing without migrating the archive — 68 stand-alone configs no longer load". A2 does **not** add to that population; it repairs 124 chains that would have joined it. |
+| The whole-directory `tests/env/` abort | Routed to `bug-curator` by A1 as believed-unrecorded. **New datum: it did not reproduce today** — the full directory ran clean (406 passed). Intermittent, not deterministic. |
+| `generate_thermal_parity_fixtures.py` cannot fixture the two campfire configs | Routed to `bug-curator` by A1. **Still true, and A2 makes it moot for the gate** (those configs are archived and no longer collected) **but not for the tests**: nine test modules still load them — see Follow-up 1. |
+
+**Believed unrecorded, `bug-curator` named as owner** (I cannot spawn it):
+- **`extends:` is resolved by literal path, so any config move breaks every chain into the moved
+  set — and the repo already contains 99 archived configs with dead `extends:` targets from
+  earlier moves.** There is no test that would catch this: `test_backward_compat_configs.py`
+  *skips* a config that fails to load rather than failing. This is a structural hazard with a
+  demonstrated history, not a one-off.
+- **Nine test modules and one fixture generator depend on `experiment/thermal/campfire_world.yaml`,
+  which policy now classifies as archived and "not kept loadable"** — see Follow-up 1.
+
+#### Follow-ups (named, not done here)
+
+1. **⚠️ The policy and the test suite now disagree about `experiment/thermal/`. Owner:
+   `senior-developer`.** The maintenance policy says archived worlds are not kept loadable and
+   will be regenerated on demand. But **nine test modules** (~140 tests: `test_thermoception`,
+   `test_thermal_{body,field,rendering,reward_gate,validation}`, `test_metabolic_coupling`,
+   `test_body_temperature_observation`) and one fixture generator load
+   `archive/thermal/campfire_world.yaml` on every run. The entire temperature-system test suite
+   now depends on a file the project has declared unmaintained. The plan's F5 and follow-up 2
+   noticed that archiving removes the only live worked examples of the thermal system; neither
+   noticed that the tests hold it up. Either those two configs are not really archive material,
+   or the thermal tests need their own fixture world under `tests/` (the shape `frozen_parity_worlds/`
+   already established). **This is a policy question, not an implementation one, which is why it
+   is flagged rather than decided.**
+2. **`docs/develop/active/refactors/renderer_layout_redesign/render_current_frames.py:44`** names
+   `configs/environment/experiment/thermal/campfire_world.yaml` and is now broken. It is a
+   figure-export script that lives under `docs/`, which this role does not edit — flagged rather
+   than fixed. One-line change.
+3. **Regenerate, do not resurrect** (the plan's own follow-up 3, now load-bearing): both archived
+   generators produce output 41–43 lines different from the YAML on disk. The warning is now a
+   comment inside each generator as well as in the registry.
+4. **The evaluation hazard from A1 (plan follow-up 0) is NOT resolved by A2 and is now one commit
+   older.** A2 repoints the dwell-sweep probe paths, which keeps the sweep *running*; it does not
+   change the probe worlds' semantics. `archive/behavior_probes/core/avoidance` and
+   `…/explore/avoidance_stat_noise` are still **permeable** (`blocks_animals` absent), while
+   post-A1 `basic/*` training worlds are blocking. An agent trained after A1 and scored through
+   the dwell sweep is measured in a world whose bush rules differ from the one it learned.
+   Owner remains `experiment-designer`.
+
+#### Working-tree state at hand-off
+
+Dirty and **uncommitted**, as required. The only staged entries are my own `git mv` renames and
+`git rm` fixture deletions (both stage by construction) — plus the two files a parallel session
+had already staged before this work began (`docs/develop/INDEX.md`,
+`docs/develop/active/refactors/SAVED_RUN_CONFIG_COMPAT.md`), which were never touched. **Commit
+A2 with an explicit pathspec.** `scripts/claude/regen_dev_index.py` was **not** run: no develop-doc
+frontmatter changed in A2, and `INDEX.md` is staged by that other session.
+
+Scratch artefacts (all under `tmp/`, all timestamped `20260915_012443_a2_*`):
+`premove_reference_sweep.txt`, `postmove_reference_sweep.txt`, `basename_sweep.txt`,
+`premove_loadability.txt`, `postmove_loadability.txt`, `move_set.txt`, `baseline.log`,
+`after.log`, `env_suite.log`, `pass2.log`, `git_status.txt`.
 
 ## Verification Report
 

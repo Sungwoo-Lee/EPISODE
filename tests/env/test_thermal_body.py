@@ -49,7 +49,7 @@ from src.environment.core import jax_reset, jax_step, calculate_drive
 from thermal_sandbox_oracle import body_traj
 
 THERMAL_CONFIG = os.path.join(
-    _ROOT, "configs", "environment", "experiment", "thermal", "campfire_world.yaml")
+    _ROOT, "configs", "environment", "experiment", "archive", "thermal", "campfire_world.yaml")
 DEFAULT_CONFIG = os.path.join(_ROOT, "configs", "environment", "default.yaml")
 
 REST = 4          # the stay-in-place action; `campfire_world.yaml` enables it

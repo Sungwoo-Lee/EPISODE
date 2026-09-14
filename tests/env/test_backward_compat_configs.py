@@ -22,8 +22,16 @@ from src.environment.config_loader import load_env_params
 
 
 def _collect_all_configs():
+    """Every maintained standalone config.
+
+    `configs/environment/experiment/archive/**` is EXCLUDED: per the settings-tree
+    maintenance policy (CONFIG_CRITICAL_SETTINGS.md, 2026-09-15) archived worlds are
+    explicitly NOT kept loadable, so asserting anything about them — even a skip — is
+    a claim the project has decided not to make.
+    """
     configs = sorted(
-        glob.glob(os.path.join(_ROOT, "configs", "environment", "experiment", "**", "*.yaml"), recursive=True) +
+        [p for p in glob.glob(os.path.join(_ROOT, "configs", "environment", "experiment", "**", "*.yaml"), recursive=True)
+         if os.sep + "archive" + os.sep not in p] +
         glob.glob(os.path.join(_ROOT, "configs", "continual", "**", "*.yaml"), recursive=True) +
         glob.glob(os.path.join(_ROOT, "configs", "verification", "**", "*.yaml"), recursive=True)
     )

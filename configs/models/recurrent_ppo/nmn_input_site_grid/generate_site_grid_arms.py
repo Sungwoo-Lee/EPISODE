@@ -46,7 +46,7 @@ supposed to differ in one key quietly come to differ in two. This script lives u
 configs/ rather than scripts/ deliberately: scripts/ carries a dependency-map
 maintenance contract (docs/environment/SCRIPTS_DEPENDENCY_MAP.md) that a config
 generator has no business triggering. Precedent:
-configs/environment/experiment/sensory_directional/generate_weakened_vision_arms.py
+configs/environment/experiment/archive/sensory_directional/generate_weakened_vision_arms.py
 
 HOW THE COMMON PART IS GUARANTEED IDENTICAL
 -------------------------------------------

@@ -300,14 +300,14 @@ def test_allactive_config_no_offgrid_parking():
     up at (height, width) during normal stepping (the predator starts in-bounds
     and stays in-bounds due to grid boundary clipping).
 
-    Uses configs/environment/experiment/basic_curriculum/04-far_sight_predator_10x10.yaml
+    Uses configs/environment/experiment/archive/basic_curriculum/04-far_sight_predator_10x10.yaml
     (the basic-ladder re-level b093023 archived the old basic/ copy; the curriculum
     copy is identical) — all entity groups use fixed 'count: N', no count-range feature.
     """
     from src.environment.config_loader import _resolve_extends
 
     config_path = os.path.join(
-        _ROOT, "configs", "environment", "experiment", "basic_curriculum",
+        _ROOT, "configs", "environment", "experiment", "archive", "basic_curriculum",
         "04-far_sight_predator_10x10.yaml"
     )
     config = _resolve_extends(config_path, frozenset())

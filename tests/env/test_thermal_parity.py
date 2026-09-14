@@ -90,9 +90,24 @@ def _config_slug(config_path: str) -> str:
 
 
 def _collect_configs():
-    """Matches generate_thermal_parity_fixtures.py:collect_configs."""
+    """Matches generate_thermal_parity_fixtures.py:collect_configs, archive
+    exclusion included.
+
+    `configs/environment/experiment/archive/**` is EXCLUDED. Per the settings-tree
+    maintenance policy (CONFIG_CRITICAL_SETTINGS.md, 2026-09-15), the project
+    maintains only `configs/environment/default.yaml` and `experiment/basic/`;
+    archived worlds are explicitly NOT kept loadable and are regenerated fresh when
+    needed. A world nobody maintains must not gate CI, so it gets no fixture.
+
+    Keep this function and
+    `scripts/fixtures/generate_thermal_parity_fixtures.py::collect_configs`
+    byte-identical to each other — they are documented as verbatim copies.
+    """
     configs = []
-    configs += sorted(glob.glob(os.path.join(_ROOT, "configs", "environment", "experiment", "**", "*.yaml"), recursive=True))
+    configs += sorted(
+        p for p in glob.glob(os.path.join(_ROOT, "configs", "environment", "experiment", "**", "*.yaml"), recursive=True)
+        if os.sep + "archive" + os.sep not in p
+    )
     configs += sorted(glob.glob(os.path.join(_ROOT, "configs", "continual", "**", "*.yaml"), recursive=True))
     configs += sorted(glob.glob(os.path.join(_ROOT, "configs", "verification", "**", "*.yaml"), recursive=True))
     env_default = os.path.join(_ROOT, "configs", "environment", "default.yaml")

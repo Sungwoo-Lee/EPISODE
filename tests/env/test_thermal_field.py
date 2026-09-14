@@ -38,7 +38,7 @@ from src.environment.core import jax_reset, _build_thermal_field, _gaussian_smoo
 from thermal_sandbox_oracle import gaussian_smooth
 
 THERMAL_CONFIG = os.path.join(
-    _ROOT, "configs", "environment", "experiment", "thermal", "campfire_world.yaml")
+    _ROOT, "configs", "environment", "experiment", "archive", "thermal", "campfire_world.yaml")
 DEFAULT_CONFIG = os.path.join(_ROOT, "configs", "environment", "default.yaml")
 THERMAL_PARITY_FIXTURES = os.path.join(_ROOT, "tests", "env", "fixtures", "thermal_parity")
 

@@ -63,7 +63,7 @@ ACTIONS = [0, 1, 2, 3, 4] * 20   # 100 steps — must match the Stage 0 generato
 SEED = 0
 
 THERMAL_CONFIG = os.path.join(
-    _ROOT, "configs", "environment", "experiment", "thermal", "campfire_world.yaml")
+    _ROOT, "configs", "environment", "experiment", "archive", "thermal", "campfire_world.yaml")
 
 REST = 4
 
@@ -81,9 +81,23 @@ def _config_slug(config_path):
 
 
 def _collect_configs():
-    """Matches scripts/fixtures/generate_thermal_parity_fixtures.py:collect_configs."""
+    """Matches scripts/fixtures/generate_thermal_parity_fixtures.py:collect_configs, archive
+    exclusion included.
+
+    `configs/environment/experiment/archive/**` is EXCLUDED. Per the settings-tree
+    maintenance policy (CONFIG_CRITICAL_SETTINGS.md, 2026-09-15), the project maintains
+    only `configs/environment/default.yaml` and `experiment/basic/`; archived worlds are
+    explicitly NOT kept loadable and are regenerated fresh when needed. This is the FOURTH
+    verbatim copy of this collector (the others are in
+    `scripts/fixtures/generate_thermal_parity_fixtures.py`,
+    `tests/env/test_thermal_parity.py` and `tests/env/test_backward_compat_configs.py`);
+    keep all four in step.
+    """
     configs = []
-    configs += sorted(glob.glob(os.path.join(_ROOT, "configs", "environment", "experiment", "**", "*.yaml"), recursive=True))
+    configs += sorted(
+        p for p in glob.glob(os.path.join(_ROOT, "configs", "environment", "experiment", "**", "*.yaml"), recursive=True)
+        if os.sep + "archive" + os.sep not in p
+    )
     configs += sorted(glob.glob(os.path.join(_ROOT, "configs", "continual", "**", "*.yaml"), recursive=True))
     configs += sorted(glob.glob(os.path.join(_ROOT, "configs", "verification", "**", "*.yaml"), recursive=True))
     env_default = os.path.join(_ROOT, "configs", "environment", "default.yaml")

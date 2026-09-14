@@ -1,7 +1,7 @@
 # nmn_olf_gae_grid - post-training evaluation population for the EXTENDED-OLFACTION neuromodulator grid.
 #
 # This grid is the site x input-slice grid re-trained on the olfaction-only sensory arm
-# (configs/environment/experiment/sensory_ladder/B_olf_only.yaml, olfactory_grid_range: 1), so the
+# (configs/environment/experiment/archive/sensory_ladder/B_olf_only.yaml, olfactory_grid_range: 1), so the
 # agent gets a five-cell directional smell field instead of one omnidirectional whiff. Observation
 # width is 47 here against 27 for the range-0 grids, which is why a store costs roughly 10-12 GB
 # per run rather than 7.

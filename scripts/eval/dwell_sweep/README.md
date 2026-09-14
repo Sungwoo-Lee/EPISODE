@@ -96,7 +96,7 @@ A "condition" name like `avoid_pred_inj00` decodes as: animal = `pred` (a huntin
 predator; other values are `none`, `rabbit`, `rabbit_olfzero`, `rabbitwander`,
 `rabbitwander_predsmell`), starting injury = `00` (vs `70`). The 12 core conditions are
 every animal x injury combination; see
-`configs/environment/experiment/behavior_probes/core/avoidance/` for the actual YAML
+`configs/environment/experiment/archive/behavior_probes/core/avoidance/` for the actual YAML
 files (each one fully specifies the probe scenario: grid size, bush location, predator
 spawn point, etc.).
 

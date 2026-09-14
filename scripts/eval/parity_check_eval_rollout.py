@@ -34,7 +34,7 @@ Usage
 -----
     /home/vncuser/miniconda3/envs/grid_world_pain/bin/python \\
         scripts/eval/parity_check_eval_rollout.py \\
-        --config configs/environment/experiment/behavior_probes/core/avoidance/avoid_pred_inj00.yaml \\
+        --config configs/environment/experiment/archive/behavior_probes/core/avoidance/avoid_pred_inj00.yaml \\
         --checkpoint results/JAX_RecurrentPPO/<run>/models/8500010 \\
         --n-episodes 30 --device cpu
 

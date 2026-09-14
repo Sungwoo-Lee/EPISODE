@@ -17,7 +17,7 @@ ARM="${1:?usage: launch_ladder_arm.sh <arm> <cuda_index> <node_label>}"
 DEV="${2:?missing cuda index}"
 NODE="${3:?missing node label}"
 
-CONFIG="configs/environment/experiment/sensory_ladder/${ARM}.yaml"
+CONFIG="configs/environment/experiment/archive/sensory_ladder/${ARM}.yaml"
 [[ -f "$CONFIG" ]] || { echo "no such arm config: $CONFIG" >&2; exit 2; }
 
 /home/vncuser/miniconda3/envs/grid_world_pain/bin/python train.py \

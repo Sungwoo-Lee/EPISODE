@@ -9,7 +9,7 @@ Plain-language purpose
 rPPO agent but raises `NotImplementedError` for Dreamer checkpoints. This
 script fills that gap for dreamer_srl: it loads a frozen checkpoint (world
 model + actor), builds one of the 12 avoidance "behavior probe" environments
-(configs under `configs/environment/experiment/behavior_probes/`) — NOT the
+(configs under `configs/environment/experiment/archive/behavior_probes/`) — NOT the
 environment the model was trained in — and runs deterministic (argmax) eval
 episodes through it. Each episode is written to
 `<output-root>/recordings/<episode>/episode_NNNNNN.rec.gz`, which is exactly
@@ -67,7 +67,7 @@ Usage
     JAX_PLATFORMS=cpu OMP_NUM_THREADS=1 /home/vncuser/miniconda3/envs/grid_world_pain/bin/python \\
         scripts/eval/dreamer_srl_probe_eval.py \\
         --agent-config results/JAX_DreamerSRL/<run>/models/agent_config.yaml \\
-        --env-config configs/environment/experiment/behavior_probes/core/avoidance/avoid_pred_inj00.yaml \\
+        --env-config configs/environment/experiment/archive/behavior_probes/core/avoidance/avoid_pred_inj00.yaml \\
         --run-dir results/JAX_DreamerSRL/<run> \\
         --episode 30000 \\
         --output-root tmp/<probe_name>_eval \\

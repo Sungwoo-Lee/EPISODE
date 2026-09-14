@@ -27,7 +27,7 @@ All scripts run from the repo root with the project conda interpreter
   Expects the layout `<results-root>/<config>/models/<ckpt>/recordings/<ckpt>/episode_*.rec.gz`
   (as written by `scripts/eval/eval_rollout.py --record`). Configs auto-discovered; `--ckpt`,
   `--configs`, `--title` optional. To generate the input recordings, run the stat-variant configs
-  in `configs/environment/experiment/behavior_probes/explore/avoidance_stat/` with many seeds.
+  in `configs/environment/experiment/archive/behavior_probes/explore/avoidance_stat/` with many seeds.
 
 
 - **`_heatmap_style.py`** — shared journal-style heatmap renderer (`render(...)`). Card-style cells,

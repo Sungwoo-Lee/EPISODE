@@ -17,7 +17,7 @@
 name: restprem_nohide_rppo
 algo: rppo
 output_dir: results/eval/avoidance/restprem_nohide
-probe: configs/environment/experiment/behavior_probes/core/avoidance_bushrefuge
+probe: configs/environment/experiment/archive/behavior_probes/core/avoidance_bushrefuge
 conditions: all
 episodes: 30
 nodes: [101, 102, 103, 105, 113]

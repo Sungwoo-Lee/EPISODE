@@ -1,6 +1,6 @@
 # 3-stage Dreamer curriculum over the basic ladder: 01 -> 02 -> 03.
 #
-# Stages (alphabetic order in configs/environment/experiment/curriculum_basic_01_02_03/):
+# Stages (alphabetic order in configs/environment/experiment/archive/curriculum_basic_01_02_03/):
 #   01-slow_predator_5x5          -- 5x5, slow predator + cover
 #   02-predator_and_rabbit_10x10  -- 10x10, + harmless rabbit distractor
 #   03-random_init_10x10          -- 10x10, random init (the target task)
