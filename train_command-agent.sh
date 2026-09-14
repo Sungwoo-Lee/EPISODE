@@ -3616,3 +3616,126 @@ cd /media/nas01/projects/Interoceptive-AI/grid_world_pain
 # 15   rppo_olfgae_t16quad_I_s42      t16quad  I      114:1     782757   udjh94rw  wandb/run-20260909_161150-udjh94rw/files/output.log
 # 16   rppo_olfgae_t16quad_X_s42      t16quad  X      114:2     782825   f2wxnymu  wandb/run-20260909_161150-f2wxnymu/files/output.log
 # ---------------------------------------------------------------------------
+
+# ===========================================================================
+# RELAUNCH: two nmn_site_grid_olf_gaenorm cells that DIED mid-training
+# 2026-09-14 — cells 10 (t4act_X) and 11 (t5crt_ALL) of the GAE_NORM wave above
+# ---------------------------------------------------------------------------
+# Both originally launched 2026-09-09T16:11 onto node 102 (102:0 and 102:1,
+# runs 10 and 11 in the table above) and died mid-training. Node 102 carries a
+# foreign tenant and is EXCLUDED for this relaunch. Caller supplied node 113
+# (two RTX 4090s) — not re-picked here.
+#
+# Settings are COPIED from the GAE_NORM wave block above, not reconstructed.
+# Only --device changes relative to the original launch of these two cells
+# (102:0/102:1 -> 113:0/113:1). Config paths, --episodes, tags, wandb-name,
+# wandb-group and wandb-job-type are byte-identical to the original.
+#
+# Tags are reused EXACTLY (rppo_olfgae_t4act_X_s42 / rppo_olfgae_t5crt_ALL_s42)
+# so the reruns stay joinable to the rest of the 16-cell grid. This creates a
+# SECOND WandB run per tag; the dead 2026-09-09 runs (WandB 3wyfh97p and
+# 1cw3oibv) are the ones being superseded.
+#
+# The two dead result dirs are LEFT UNTOUCHED by this relaunch (they hold
+# partial checkpoints + a dangling orbax-checkpoint-tmp; the user moves them
+# aside separately). Their actual names are timestamped 161139, NOT 161137/
+# 161138:
+#   results/JAX_RecurrentPPO/20260909-161139_rppo_olfgae_t4act_X_s42
+#   results/JAX_RecurrentPPO/20260909-161139_rppo_olfgae_t5crt_ALL_s42
+# No --load-checkpoint is passed: these are clean restarts from scratch, which
+# is what keeps them comparable with the 14 sibling cells that ran uninterrupted.
+#
+# PRE-FLIGHT (2026-09-14, node 113):
+#   - 113:0 and 113:1 both 3 MiB / 0% util, no train.py processes on the node.
+#     NOTE: runs 12 and 13 of the wave above (t5crt_I / t5crt_X) were assigned
+#     113:0/113:1 and are no longer present either — node 113 is fully idle.
+#   - NAS mounted (//192.168.0.250/cocoanlab01 on /media/nas01).
+#   - REAL JAX GPU compile (4x4 matmul + block_until_ready) OK:
+#     jax 0.9.0.1 / flax 0.12.4 / optax 0.2.6, devices [CudaDevice(0), CudaDevice(1)]
+#     — version-matched to the rest of the cluster and to the original wave.
+#   - return_mode: GAE_NORM confirmed present in BOTH agent configs (line 54).
+#   - Modulator slices confirmed: t4act_X input_sensors
+#     ["Extero Nociception","Olfaction","Collision","Visual"] (39 of 47);
+#     t5crt_ALL input_sensors "all" (47 of 47).
+#   - No live process carried either tag on 102 or 113 before launch, so the
+#     relaunch cannot duplicate a survivor.
+#
+# REGISTRY DEVIATION (flagged, intentional, unchanged from the original wave):
+# sensory.olfactory_grid_range = 1 against the canonical 0 in
+# configs/environment/default.yaml. That IS the sensory_ladder B-arm's defining
+# property. sensory.decay_power = 1.0 and thermal.enabled = false both match
+# the canonical values in docs/environment/CONFIG_CRITICAL_SETTINGS.md.
+#
+# --seed / --num-envs / --checkpoint-frequency are NOT passed (config-owned:
+# seed 42, num_envs 128, checkpoint_frequency 200000 from the rPPO train config).
+# --episodes IS passed explicitly (10,000,000) as the convention requires.
+#
+# Each run is staged to a unique /tmp/train_cmd_<epoch>_<rand>.sh on node 113
+# (CIFS-bypass) and launched with `run_command.py --no-tail`.
+# ===========================================================================
+
+# Relaunch A — cell 10, t4act_X, node 113 GPU 0
+/home/vncuser/miniconda3/envs/grid_world_pain/bin/python train.py \
+  --config configs/environment/experiment/sensory_ladder/B_olf_only.yaml \
+  --agent_config configs/models/recurrent_ppo/nmn_input_site_grid_gaenorm/nmngaenorm_t4act_X.yaml \
+  --episodes 10000000 --device cuda:0 --log-interval 10 \
+  --tag "rppo_olfgae_t4act_X_s42" --wandb-name "rppo_olfgae_t4act_X_s42" \
+  --wandb-group "nmn_site_grid_olf_gaenorm" --wandb-job-type "pilot"
+
+# Relaunch B — cell 11, t5crt_ALL, node 113 GPU 1
+/home/vncuser/miniconda3/envs/grid_world_pain/bin/python train.py \
+  --config configs/environment/experiment/sensory_ladder/B_olf_only.yaml \
+  --agent_config configs/models/recurrent_ppo/nmn_input_site_grid_gaenorm/nmngaenorm_t5crt_ALL.yaml \
+  --episodes 10000000 --device cuda:1 --log-interval 10 \
+  --tag "rppo_olfgae_t5crt_ALL_s42" --wandb-name "rppo_olfgae_t5crt_ALL_s42" \
+  --wandb-group "nmn_site_grid_olf_gaenorm" --wandb-job-type "pilot"
+
+# LAUNCH RECORD -- both verified TRAINING, exactly one PID per tag, 2026-09-14T12:55
+#
+# Run  Tag                        Arm      Slice  Node:GPU  PID     WandB     Per-run log
+# 10r  rppo_olfgae_t4act_X_s42    t4act    X      113:0     811011  xbn9b2yg  wandb/run-20260914_125045-xbn9b2yg/files/output.log
+# 11r  rppo_olfgae_t5crt_ALL_s42  t5crt    ALL    113:1     811177  xqc146jl  wandb/run-20260914_125048-xqc146jl/files/output.log
+#
+# Launches were STAGGERED (12:50:31 / 12:50:35) so run_command.py's
+# second-resolution NAS log names did not collide -- logs/20260914_125031.log and
+# logs/20260914_125035.log are one-writer-each and ARE parsable per run, unlike the
+# five interleaved files of the original 16-way wave.
+#
+# ENVIRONMENT CONFIRMED: both startup banners print
+#   "Observation Dim: 47 (Satiation=1, Interoceptive Nociception=1, Extero Nociception=1,
+#    Olfaction=25, Collision=5, Proprioception=6, Visual=8)"
+# i.e. B_olf_only, NOT the 27-dim basic/04. wandb metadata `host` = docker-113 on both,
+# independently confirming they landed on the intended node.
+#
+# Ground truth from each run's OWN saved models/config.yaml:
+#   agent.return_mode = GAE_NORM on both (the field separating this grid from rppo_olfmc_*)
+#   t4act_X   : modulation.type FiLM, sites {actor: true, others false},
+#               input_sensors ["Extero Nociception","Olfaction","Collision","Visual"] (39 of 47)
+#   t5crt_ALL : modulation.type FiLM, sites {critic: true, others false},
+#               input_sensors "all" (47 of 47)
+#   TOP-LEVEL seed: 42, episodes: 10000000, num_envs 128, checkpoint_frequency 200000
+#   (read seed/episodes from the TOP-LEVEL keys -- the nested training: pair is a known
+#    stale duplicate that always reads 42/100; see KNOWN_BUGS.md)
+#   sensory.olfactory_grid_range = 1, decay_power = 1.0, thermal.enabled = false
+#
+# Health at T+5min: both GPUs resident and busy (5667 MiB, 92% and 100% util), both
+# processes in R state with CPU time accruing, ~811 it/s (t4act_X) and ~973 it/s
+# (t5crt_ALL), no traceback / OOM / RESOURCE_EXHAUSTED in either per-run log.
+#
+# CHECKPOINTING CONFIRMED (the specific thing the dead runs failed at): the first
+# 200k-episode checkpoint completed cleanly on BOTH runs --
+#   models/200170 (t4act_X) and models/200039 (t5crt_ALL), 5.4M each,
+#   and `find -name '*orbax-checkpoint-tmp*'` returns ZERO on both, i.e. no dangling
+#   partial write of the kind left behind in the dead 2026-09-09 dirs.
+#
+# The two dead run dirs were NOT touched by this relaunch:
+#   results/JAX_RecurrentPPO/20260909-161139_rppo_olfgae_t4act_X_s42
+#   results/JAX_RecurrentPPO/20260909-161139_rppo_olfgae_t5crt_ALL_s42
+# (both still carry their partial checkpoints through 1000047 plus the dangling
+#  1200001.orbax-checkpoint-tmp; the user moves them aside separately.)
+#
+# SIDE OBSERVATION, NOT ACTED ON: runs 12 and 13 of the wave above (t5crt_I on 113:0,
+# t5crt_X on 113:1) were also absent at this pre-flight -- node 113 was fully idle
+# before these two launches. Those two cells are therefore ALSO dead and are not
+# covered by this relaunch. Surfaced to the user rather than relaunched unasked.
+# ---------------------------------------------------------------------------
