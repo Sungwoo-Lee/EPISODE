@@ -615,7 +615,11 @@ Each check has a stated expected value the change could plausibly violate. "It p
 - [x] CP3 — A2: **met, and it is what caught three plan errors.** The sweep ran before any `git mv`; artefact `tmp/20260915_012443_a2_premove_reference_sweep.txt` (five sections), triaged live-vs-prose. Re-deriving the triage rather than trusting F5 is what surfaced the 124 broken `extends:` edges, the ten joined-component callers and the two hard-coded generator `OUT` paths. Post-move sweep: zero stale references outside two deliberately-frozen comment lines. ✅
 - [x] CP4 — A2: **met.** `--configs-dir` was section [3] of the sweep (150 hits). Two curricula are affected and both are named in the report: `configs/continual/basic_01_02_03_dreamer.yaml` (comment → `archive/curriculum_basic_01_02_03/`) and `configs/continual/basic_curriculum_schedule_longL4.yaml` (launched in practice with `--configs-dir …/experiment/basic_curriculum`, per `train_command-agent.sh:738–815`). Both repointed; nothing was red either way, which is the point. ✅
 - [x] CP5 — A2: **met exactly.** 60 deleted (36 `archive` + 14 `sensory_ladder__*` + 10 `sensory_directional__*`), 0 modified, 0 added, nothing untracked; `test_thermal_parity.py` → **12 passed, 20 skipped**. The other three families measured separately and unchanged (34 / 8 / 27), so the four-family total is **119 → 59** as F6 predicts. ✅
-- [ ] CP6 — B1: the diff touches `src/environment/core.py` and nothing else, and no fixture moves.
+- [x] CP6 — B1: **met.** `git diff --name-only -- src/ tests/ configs/ scripts/` returns exactly
+  `src/environment/core.py` (34 insertions, 13 deletions); `git status --short tests/env/fixtures/`
+  is empty. All four byte-parity families measured separately, before **and** after, at
+  12 / 34 / 8 / 27 — unmoved. Speed 0% on an interleaved A/B against a worktree at `f3161dcc`
+  (a naive sequential before/after said −6.3% and was machine drift; both numbers reported). ✅
 - [ ] CP7 — B2: the three new tests are demonstrated **red** on the pre-change tree before the source edit is made permanent.
 - [x] CP8 (A1 portion) — Every count in the A1 Implementation Report below is re-derived from a command whose output is pasted. None is copied from this plan.
 - [x] CP8 (A2 portion) — Every count in A2's Implementation Report is re-derived from a command whose output is pasted or saved under `tmp/`. Two of the plan's own numbers were **contradicted** by that re-derivation (three collectors → four; two `trajectory_collection` files → three) and one prediction was confirmed to the file (the 60-fixture delete set). ✅
@@ -1582,6 +1586,413 @@ Scratch artefacts (all under `tmp/`, all timestamped `20260915_012443_a2_*`):
 `premove_reference_sweep.txt`, `postmove_reference_sweep.txt`, `basename_sweep.txt`,
 `premove_loadability.txt`, `postmove_loadability.txt`, `move_set.txt`, `baseline.log`,
 `after.log`, `env_suite.log`, `pass2.log`, `git_status.txt`.
+
+---
+
+### Commit B1 — one in-bush predicate, shared by its callers (no behaviour change)
+
+> **Implemented by**: `developer`
+> **Date**: 2026-09-15
+> **Status: IMPLEMENTED.** Tree left dirty for review. `src/environment/core.py` is the only
+> file changed. All four byte-parity families are at their post-A2 baselines and **no fixture
+> moved**. One instruction in the briefing contradicts the plan and was **not** followed — see
+> **Deviation D-B1.1**, which is the first thing to read.
+
+#### Plain-language summary
+
+"Is the agent standing in a bush that hides it?" was written out by hand in two different places
+inside the environment's step function. Both copies said the same thing, in slightly different
+words. This commit writes the sentence **once**, as a small named function, and has both places
+call it. Nothing about the simulation changes: the same worlds, the same numbers, the same
+recorded observations, byte for byte. The point of doing it now is that the next commit (B2)
+needs a **third** reader of that sentence, and a third hand-written copy is how three copies
+quietly drift apart.
+
+#### What was implemented, file by file
+
+| File | Change |
+|---|---|
+| `src/environment/core.py` | **+1 helper**: `agent_in_hiding_obstacle(agent_pos, obs_pos, obs_hides_agent, obs_active=None)` at `:98`, between `calculate_drive` and `update_body` (the position the plan specifies — above `update_body`, B2's future caller). |
+| `src/environment/core.py` | `_hunt_step`'s `_eff_hides` / `agent_hidden` block (was `:351–355`) → one call to the helper (now `:376–378`). The explanatory comment is kept. |
+| `src/environment/core.py` | `jax_step`'s `agent_in_bush` block (was `:961–964`), **including** its `if state.obs_pos.shape[0] > 0 else jnp.array(False)` tail → one call to the helper (now `:979–986`). The stale cross-reference *"Mirrors the agent_hidden computation inside update_predators (line ~150)"* is replaced by a reference that names the helper, as the plan requires. |
+
+Nothing else. No config, no doc, no fixture, no test file.
+
+```
+$ git diff --stat -- src/
+ src/environment/core.py | 47 ++++++++++++++++++++++++++++++++++-------------
+ 1 file changed, 34 insertions(+), 13 deletions(-)
+
+$ git diff --name-only -- src/ tests/ configs/ scripts/
+src/environment/core.py
+```
+
+#### ⚠️ Deviation D-B1.1 — the briefing asks for a third call site; the plan rules it out. I followed the plan.
+
+The briefing says B1 should produce *"one shared helper consumed by all three call sites, the
+third being a new hoisted call above the `update_body` invocation at `:829`"*, justified as
+*"B2's recovery gate has to read it, and cannot as the code stands."*
+
+**The plan says the opposite, in three separate places, and I could not implement both:**
+
+1. F9 (plan `:241`): *"A third copy is ruled out. B1 extracts one helper and rewires **these two**;
+   **B2** makes `update_body` its third consumer."*
+2. The B1 File Changes section ends with *"Nothing else."* after listing exactly two replacements.
+3. B2's own source snippet does **not** read `info['agent_in_bush']`. It calls the helper
+   **inside** `update_body`, behind the static `if params.recovery_in_bush_multiplier != 1.0:`
+   guard, and its comment explains precisely why: *"it is evaluated here rather than read from
+   `info['agent_in_bush']` because `update_body` runs at `jax_step:829` and that key is not
+   written until `jax_step:961` — and it is legitimate to evaluate early because obstacle
+   positions are constant within an episode."*
+
+So the ordering problem the briefing raises is **already solved by the plan**, and the helper is
+what solves it: B2 recomputes the predicate early rather than reading a value that does not exist
+yet. F9's word "hoisting" means *evaluating the predicate earlier inside `update_body`* — not
+restructuring `jax_step`. The plan states this explicitly: *"`jax_step`'s call order does not
+change."*
+
+Implementing the briefing's version literally would have added, in B1, a computation with **no
+consumer** (B2 has not landed), i.e. dead code inside a commit whose contract is "no behaviour
+change, nothing else". The only non-dead reading of it — hoist the computation above `:829` and
+put it on `info` there, so `update_body` can read `info['agent_in_bush']` — is a real design
+choice, but it is **B2's** design choice and it contradicts B2's written source. Since the
+briefing itself says the plan is authoritative, I implemented the plan.
+
+**If you do want the hoist**, it is a ~6-line change and it changes B2, not B1: move the
+`agent_in_bush = agent_in_hiding_obstacle(...)` statement and its `info['agent_in_bush'] = ...`
+assignment from `:979` up into the `info = {...}` construction at `:817`, then have B2's gate read
+`info['agent_in_bush']` instead of calling the helper again. Say the word and I will do it as a
+separate change. I did not do it silently.
+
+#### The graph, measured at the primitive level — and one honest caveat
+
+The briefing asks for source-level proof where it exists, and plain disclosure where it does not.
+Both apply here, in different places. Measured with `tmp/20260915_b1_micro.py`, which traces the
+helper next to verbatim copies of the two blocks it replaced:
+
+```
+n_obs > 0 -- helper vs the two originals:
+  helper                       n_obs=22  eqns=6  ['and', 'broadcast_in_dim', 'eq', 'reduce_and', 'and', 'reduce_or']
+  old _hunt_step longhand      n_obs=22  eqns=6  ['and', 'broadcast_in_dim', 'eq', 'reduce_and', 'and', 'reduce_or']
+  old jax_step longhand        n_obs=22  eqns=6  ['broadcast_in_dim', 'eq', 'reduce_and', 'and', 'and', 'reduce_or']
+  helper == old_hunt  text: True
+  helper == old_step  text: False
+
+n_obs == 0 -- the empty-obstacle guard the code-reviewer flagged:
+  helper (guard folds)         n_obs=0   eqns=0  []
+  old _hunt_step (no guard)    n_obs=0   eqns=6  ['and', 'broadcast_in_dim', 'eq', 'reduce_and', 'and', 'reduce_or']
+  old jax_step (had guard)     n_obs=0   eqns=0  []
+
+value equality over every cell of a small world, n_obs=3:
+  mismatches over 64 mask combos x 16 cells x 2 call shapes = 0
+```
+
+Read that as three separate statements:
+
+1. **`_hunt_step`, obstacles present — source-level identity, nothing to measure.** The helper's
+   jaxpr is **text-identical** to the block it replaced. This is the `calculate_drive` standard
+   the briefing asks for: the old expression survives verbatim, so parity is a fact about the
+   source.
+2. **`jax_step`, obstacles present — same six primitives, different emission order. I cannot claim
+   source-level identity here, and I am not claiming it.** The old site computed
+   `obs_hides_agent & obs_active` *inside* the `jnp.logical_and(...)` call, so it was traced
+   **after** the position comparison; the helper computes it on its own line, so it is traced
+   **before**. The resulting DAG is isomorphic — identical primitive multiset, identical operand
+   pairing (`reduce_and` result `&` `eff_hides`), one `reduce_or` — but two independent equations
+   swap places in the jaxpr. **This is unavoidable with one shared helper**: the two original
+   sites had *opposite* orders, so whichever order the helper picks, one of the two sites moves.
+   Values are unaffected (0 mismatches over 2,048 enumerated cases above), and the **parity gate
+   carries the proof**: all four families pass unchanged with no fixture regenerated.
+   Confirmed at whole-`jax_step` scale too — `tmp/20260915_b1_jaxpr_default_n_obs_gt0_{before,after}.txt`
+   differ in **exactly** this one region, 5 equations in, 5 equations out, everything else byte-identical:
+   ```
+   < btq:i32[1,2] = broadcast_in_dim[...]      > btq:bool[22] = and ij ks
+   < btr:bool[22,2] = eq kp btq                > btr:i32[1,2] = broadcast_in_dim[...]
+   < bts:bool[22] = reduce_and[axes=(1,)] btr  > bts:bool[22,2] = eq kp btr
+   < btt:bool[22] = and ij ks                  > btt:bool[22] = reduce_and[axes=(1,)] bts
+   < btu:bool[22] = and bts btt                > btu:bool[22] = and btt btq
+   ```
+3. **The empty-obstacle guard `code-reviewer` flagged during A1 — handled explicitly, and it turns
+   out to be unreachable in every maintained world.** The helper's static
+   `if obs_pos.shape[0] == 0` guard folds a six-equation reduction over a zero-length axis into a
+   constant `False` on `_hunt_step`'s path, which previously had no guard. Value-identical
+   (`jnp.any` over an empty array is already `False`), but a genuine graph change, and the
+   docstring says so in as many words rather than pretending otherwise. **It cannot fire in any
+   world the project maintains**, because a hunter and zero obstacles never co-occur:
+
+   | maintained world | n_obs | predators | neutrals |
+   |---|---:|---:|---:|
+   | `configs/environment/default.yaml` | 22 | 2 | 2 |
+   | `basic/00-static_predator_5x5.yaml` | **0** | **0** | **0** |
+   | `basic/01-slow_predator_5x5.yaml` | 6 | 1 | 0 |
+   | `basic/02-predator_and_rabbit_10x10.yaml` | 22 | 1 | 1 |
+   | `basic/03-random_init_10x10.yaml` | 22 | 2 | 2 |
+   | `basic/03-random_init_10x10_ckpt1k.yaml` | 22 | 2 | 2 |
+   | `basic/04-jump_attack_10x10.yaml` | 22 | 2 | 2 |
+   | `basic/05-sensory_noise_10x10.yaml` | 22 | 2 | 2 |
+
+   The only zero-obstacle world, `basic/00`, has **no animals at all**, so `_hunt_step` is never
+   traced there. Confirmed end-to-end: `basic/00`'s whole-`jax_step` jaxpr is **sha1-identical**
+   before and after (`d6fd8970669a` both sides).
+
+#### Verification — every number re-derived, output pasted
+
+**B1.1 / B1.2 — all four byte-parity families, measured separately, before and after.**
+The `tests/env/` baseline was captured **before** the source edit, so these are before/after pairs
+rather than a post-hoc comparison against the plan's text:
+
+| Family | Test module | Before | After | Δ |
+|---|---|---|---|:--:|
+| `thermal_parity/` | `test_thermal_parity.py` | 12 passed, 20 skipped | **12 passed, 20 skipped** | — |
+| `parity/` | `test_unified_parity.py` | 34 passed, 324 skipped | **34 passed, 324 skipped** | — |
+| `visual_parity/` | `test_visual_parity.py` | 8 passed | **8 passed** | — |
+| `directional_sensors/` | `test_directional_sensors.py` | 27 passed | **27 passed** | — |
+
+All four match the briefing's expected post-A2 sizes (12 / 34 / 8 / 27) exactly. Any movement
+would have been a behaviour change; there is none.
+
+```
+$ git status --short tests/env/fixtures/
+(empty)
+```
+
+**No fixture moved, none added, none deleted.** A pure refactor that moves a fixture is not a pure
+refactor.
+
+**A1's committed test still green** — `tests/env/test_maintained_worlds_bush_blocks_animals.py`
+→ **10 passed** (before **and** after). `tests/env/test_bush_blocks_animals.py` → **4 passed**
+(before and after).
+
+**B1.3 — "no surviving inline copy". The plan's stated check is wrong; here is the corrected one.**
+The plan predicts `grep -c 'jnp.all(.*obs_pos ==' src/environment/core.py` → **1**. Measured: it
+was **8** before this commit and is **7** after. The pattern does not isolate the concealment
+predicate — it also matches `move_agent`'s obstacle-collision test (`:41`), the hunter and
+wanderer **blocking** checks (`:419`, `:458`, `:518`) and the obstacle-damage tests (`:780`,
+`:790`), which are a different predicate (`obs_blocking`, not `obs_hides_agent`) and are out of
+scope. **The check that actually binds** is on `obs_hides_agent`, and it passes:
+
+```
+$ grep -n 'obs_hides_agent' src/environment/core.py
+98:def agent_in_hiding_obstacle(agent_pos, obs_pos, obs_hides_agent, obs_active=None):   <- helper signature
+121:    eff_hides = obs_hides_agent if obs_active is None else (obs_hides_agent & obs_active)   <- the ONE consumption
+333:               agent_pos, obs_pos, obs_blocking_for_collision, obs_hides_agent, key,      <- _hunt_step signature
+348:      - params.obs_hides_agent for the agent_hidden computation inside the function       <- docstring
+376:    # agent_hidden: uses obs_hides_agent (bush concealment) AND obs_active ...             <- comment
+378:    agent_hidden = agent_in_hiding_obstacle(agent_pos, obs_pos, obs_hides_agent, obs_active)  <- call
+605:            params.obs_hides_agent,   # for agent_hidden (byte-parity ...)                 <- pass-through
+985:        new_agent_pos, state.obs_pos, params.obs_hides_agent, state.obs_active)            <- call
+```
+
+Exactly **one** line consumes `obs_hides_agent` in an expression (`:121`, inside the helper).
+Every other occurrence is a signature, a comment, a pass-through argument or a call to the helper.
+
+**B1.4 — the diff touches `src/environment/core.py` and nothing else.** Confirmed above.
+Four files in the working tree belong to a parallel session (`docs/develop/INDEX.md`,
+`docs/develop/active/meta/artifact_format_bugs.md`,
+`docs/develop/active/refactors/SAVED_RUN_CONFIG_COMPAT.md`, `docs/diary/2026-09-14.md`; the first
+and third are **staged by that session**). **Nothing was staged by me and nothing was committed.**
+
+**Both documented passes, CPU pin on `tests/env/`:**
+
+```
+$ JAX_PLATFORMS=cpu .../python -m pytest tests/env/ -q
+406 passed, 374 skipped, 1 warning in 633.08s (0:10:33)          exit 0
+```
+
+The intermittent whole-directory abort the briefing warns about **did not fire** this time (it
+fired for A1, not for A2, not here). No fallback to file-by-file was needed.
+
+```
+$ .../python -m pytest tests/ --ignore=tests/env -q
+53 failed, 578 passed, 2 skipped, 1023 warnings, 8 errors in 2998.85s (0:49:58)
+```
+
+**None of those 53 is caused by B1, and I measured that rather than asserting it.** Three
+independent checks, because this suite turned out to be a poor differential instrument and saying
+so is part of the result:
+
+**(a) The same suite, same invocation, run against the pre-change source.** `src/environment/core.py`
+was swapped for a copy taken from the throwaway worktree at `f3161dcc`, the full non-env suite
+re-run, and the file restored (verified after: helper present, `git diff --numstat -- src/` →
+`34 13 src/environment/core.py`). Result:
+
+```
+pre-change : 121 failed, 500 passed, 2 skipped, 18 errors in 2619.55s (0:43:39)
+post-change:  53 failed, 578 passed, 2 skipped,  8 errors in 2998.85s (0:49:58)
+```
+
+**The pre-change tree fails *more* than the post-change tree — 139 failing/erroring node IDs
+against 61.** Comparing the node-ID sets:
+
+- **Exactly one** node ID fails post-change but not pre-change:
+  `tests/algorithms/dreamer_srl/test_loss.py::test_symlog_distribution_matches_reference_formula`.
+  Run on its own on the post-change tree it **passes** (`1 passed in 10.98s`). Order-dependent,
+  not a B1 regression — and it has no environment dependency at all.
+- **79** node IDs fail pre-change and pass post-change, every one of them in `tests/models/`
+  (`test_modulation_sites.py` 53, `test_modulation_input_slice.py` 13, `test_gae_norm_mode.py` 5,
+  `test_mc_fixed_mode.py` 3, `test_mc_raw_mode.py` 2, `test_network_construction.py` 2,
+  `test_modulation_compat.py` 1). These are neural-network golden-comparison tests that touch no
+  environment code whatsoever, and they flipped **79 results** between two runs whose only
+  difference was a boolean reordering inside `jax_step`. That is the suite being order-sensitive
+  (`pytest-randomly` reshuffles each run), not the code moving.
+
+**(b) A like-for-like subset comparison, which is the clean measurement.** All 61 of the
+post-change failures/errors live in nine modules. Running exactly those nine, pre and post:
+
+```
+pre-change subset : 35 failed, 201 passed, 8 errors in 259.97s
+post-change subset: 36 failed, 200 passed, 8 errors in 236.11s
+```
+
+Node-ID set diff — **one line**:
+
+```
+> FAILED tests/test_provenance.py::test_write_provenance_writes_complete_valid_json
+```
+
+**(c) That one line is a demonstrated flake, not a regression.** Five identical repeats of that
+single test on the unchanged post-change tree: **4 failed, 1 passed**. It fails on
+`assert isinstance(rec["git_dirty"], bool)` receiving the string `"unknown"` —
+`src/utils/provenance.py:82` returns `"unknown"` when its `git` subprocess exceeds
+`_GIT_TIMEOUT_S = 10` (`:43`). On this NAS-backed repo with parallel sessions holding the index,
+`git status` routinely takes longer than that — the exact slowness `CLAUDE.md` warns about. It
+imports no environment code.
+
+**Failure classes present in both runs, all pre-existing and all already in the registry:** ~41
+`Strict Config: Configuration key 'sensory.visual_value_mode' is required but missing` (the
+saved-run-config wall, two registry rows, and the A1 report recorded the same 41); the
+`bush_dwell` → `bush_hiding` rename leaving one Dreamer eval assertion red (registry row, OPEN);
+`tests/scripts/test_context_dependence_b0.py::test_b1_rest_rate` (`assert nan == 5.88…`, recorded
+as pre-existing in the A1 report); the modulation golden trees; and
+`test_evaluation_model_rebuild.py`'s topology mismatch. **Note `tests/test_trajectory_collection.py::test_v4_agent_in_bush_recomputed_in_numpy`
+— the one test in the suite that independently re-derives `agent_in_bush` in NumPy and compares it
+to the environment's own value, i.e. the perfect regression test for this commit — errors at
+config load on `sensory.visual_value_mode`, identically before and after. It could not adjudicate
+B1 and did not.**
+
+#### Speed check — the first measurement was machine drift; the interleaved A/B is the real number
+
+`git diff -- src/` is non-empty for the first time in this plan, so the waiver the earlier commits
+legitimately took does not apply. Measured with the project's own harness,
+`scripts/verification/bench_sensor_sps.py::sps_for` (128 envs × 200 steps under a jitted
+`lax.scan`, best of 7, `PRNGKey(0)`), on **node 102, RTX 4090, GPU 0**, same config
+(`configs/environment/default.yaml`), same seed, same step budget.
+
+**A naive sequential before/after said −6.3%, and it was wrong.** The "before" was taken on a
+freshly-idle machine at the very start of the session; the "after" came after ~25 minutes of CPU
+test load. That is exactly the "re-run if anything else on the machine could have skewed the
+result" case:
+
+| case | naive before | naive after | naive Δ |
+|---|---:|---:|---:|
+| baseline (all features off) | 1,686,338 SPS | 1,579,987 SPS | **−6.31%** |
+| BOTH (chosen settings) | 1,502,587 SPS | 1,384,093 SPS | **−7.89%** |
+
+A boolean-equation reordering cannot cost 6%, so I re-measured properly: a throwaway
+`git worktree` at `f3161dcc` (the A2 tip, i.e. the pre-change source — verified: 0 occurrences of
+`agent_in_hiding_obstacle`), **interleaved** pre/post three times back to back on the same GPU.
+The live tree was never stashed or checked out; the worktree was removed afterwards.
+
+| case | pre r1 | post r1 | pre r2 | post r2 | pre r3 | post r3 | median pre | median post | **Δ** |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| baseline | 1,578,857 | 1,570,985 | 1,567,741 | 1,579,433 | 1,575,376 | 1,576,134 | 1,575,376 | 1,576,134 | **+0.05%** |
+| BOTH | 1,392,995 | 1,396,111 | 1,388,594 | 1,387,165 | 1,469,685 | 1,391,072 | 1,392,995 | 1,391,072 | **−0.14%** |
+
+**Verdict: 0% within noise**, as the plan predicts ("identical arithmetic behind a call JAX
+inlines"). Both deltas are far inside the run-to-run spread visible in the pre-change column
+itself (`BOTH` pre ranges 1.389M–1.470M, a 5.8% spread with **no code change at all**). Nothing to
+escalate. The naive numbers are reported anyway rather than deleted, because the failure mode —
+a 25-minute gap between "before" and "after" manufacturing an 8% regression — is worth having on
+the record.
+
+**JIT / recompile check.** `tests/env/test_no_recompile.py` → **3 passed** before, **3 passed**
+after. No new recompilation is introduced: the helper is an ordinary Python function inlined at
+trace time, and its only static branch (`obs_pos.shape[0] == 0`) keys on a shape that was already
+part of the trace-cache key.
+
+#### Known-bugs prior-art check — run, not skipped
+
+`grep -in 'bush\|agent_in_bush\|hides_agent\|hunt_step\|refactor\|helper\|jaxpr\|recompil' docs/develop/active/issues/KNOWN_BUGS.md`,
+plus `grep -in 'avoidance_stats_heatmap\|slot 0\|obstacle slot'`.
+
+| What I touched / hit | Registry row |
+|---|---|
+| Environment step results are not bit-identical across *compilations* — one float32 ULP on `animal_property_sampled`, caused by code **near** a site flipping XLA's fusion choice | **Recorded, NOT A BUG** (2026-08-20). Directly relevant: my change reorders two equations in `jax_step`. Ruled out as a hazard here — the reordered ops are **boolean** (`and` / `eq` / `reduce_and` / `reduce_or`), which carry no rounding, and all four parity families assert exact float equality and passed unchanged. |
+| `agent_in_bush` consumers in analysis tooling | **Recorded, OPEN** — `hiding_drivers.py:214` bins injury contemporaneously (`c0717e6f`). Not touched by B1 (B1 changes no values); it is B2's F10 concern. |
+| The `bush_dwell` → `bush_hiding` rename leaving a red Dreamer eval test | **Recorded, OPEN, diagnosed.** Pre-existing; appears in pass 2 below and is not mine. |
+| A refactor missing one of several copies of the same logic, latent for weeks | **Recorded, FIXED** — "Continual stage-transition crash … a large refactor missed one of six reset sites". This is the precedent that makes B1 worth doing at all. |
+
+**One thing the registry does not record — owner `bug-curator`.** The concealment predicate exists
+in **four** places repo-wide, not two. Besides the two in `core.py` that this commit merged:
+
+- `scripts/eval/traj_collect/traj_scan.py:90–96` holds a **correct** third copy, structurally
+  identical to the pre-B1 `jax_step` form including the empty-obstacle guard. Its docstring says
+  it lives outside `src/` deliberately ("this plan touches no environment code") and that a
+  verification step asserts it agrees with the env at every step. It also handles a case the
+  helper does not: the reset row `t = 0`, where the env emits no `info` dict. **Out of B1's scope**
+  (the plan says `core.py` only) and left alone — but it is now the only copy that can drift.
+- `scripts/behavior_measures/avoidance_stats_heatmap.py:75–77` holds a **knowingly wrong** fourth
+  copy: `bush = obs_pos[0]`, which hardcodes obstacle slot 0 and ignores both `obs_hides_agent`
+  and `obs_active`. `traj_scan.py`'s docstring calls this out as "systematically wrong whenever
+  bush count varies per episode — i.e. always, in a training environment. Do not copy that."
+  **This defect is recorded only in that docstring — it has no row in `KNOWN_BUGS.md`.** The
+  registry's only mention of this file is the unrelated `bush_dwell`/`bush_hiding` rename row.
+  It feeds a published behaviour measure, so it is not cosmetic. Flagging rather than fixing, per
+  scope; `bug-curator` owns the decision to file it.
+
+So F9's *"The predicate exists twice today"* is true **within `core.py`** and incomplete
+repo-wide. B1's contract ("one in-bush predicate") should be read as one predicate in the
+environment core, which is what was delivered.
+
+**Two further things the registry does not record, found while proving the non-env failures were
+pre-existing — same owner, `bug-curator`:**
+
+- **`tests/test_provenance.py::test_write_provenance_writes_complete_valid_json` is intermittently
+  red on this machine, 4 failures in 5 identical repeats.** `git_dirty()`
+  (`src/utils/provenance.py:82`) returns the string `"unknown"` when its `git` subprocess exceeds
+  `_GIT_TIMEOUT_S = 10` (`:43`); the test asserts a `bool`. On a NAS-backed `.git` with parallel
+  sessions the timeout is reachable in normal use. The registry has **no** provenance row.
+- **`tests/models/` is heavily test-order-dependent: 79 node IDs flipped between two full-suite
+  runs whose only difference was a boolean reordering inside `jax_step`** — code those tests never
+  execute. `pytest-randomly` reshuffles each run, so the non-env suite cannot be used as a
+  differential instrument at whole-suite granularity without `-p no:randomly`. The registry
+  records two *stale-golden-fixture* rows but nothing about order dependence.
+
+**One operational note, not a code defect.** A stale `.git/index.lock` was present for the second
+half of this session (timestamp 07:12:51) with **no live `git` process** on the machine. Per
+`CLAUDE.md` I did **not** delete it; I worked around it by copying `core.py` between file copies
+instead of using `git checkout`. Worth a glance before the next git operation.
+
+#### Plan errors found (three)
+
+1. **B1 verification check 3 is unrunnable as written.** `grep -c 'jnp.all(.*obs_pos =='` →
+   predicted **1**, measured **8 before / 7 after**. The pattern catches five unrelated
+   `obs_blocking` sites. Corrected check given above.
+2. **F9 undercounts the copies.** "The predicate exists twice today" is `core.py`-only; there are
+   two further live copies under `scripts/` (one correct, one wrong). See the prior-art section.
+3. **The briefing contradicts the plan on B1's third call site.** Full write-up in Deviation
+   D-B1.1 above. This is the one that needs a decision before B2 is written, because B2's source
+   differs depending on the answer.
+
+#### Blockers / follow-ups
+
+- **Decision needed before B2**: the D-B1.1 hoist question. B2's `update_body` gate either calls
+  the helper (plan) or reads `info['agent_in_bush']` (briefing). Either works; they are not both
+  written.
+- **CP1 / D2 is still open** (does `rest_streak` reset when the agent leaves cover). The plan's
+  own Checkpoints list it as unanswered and it blocks B2's source, not B1.
+- `bug-curator` to decide whether three unrecorded items earn registry rows:
+  `avoidance_stats_heatmap.py`'s slot-0 bush predicate, the flaky provenance test, and
+  `tests/models/`'s order dependence.
+- A stale `.git/index.lock` (07:12:51, no live git process) is sitting in the repo. Not deleted,
+  per the project rule. Somebody with context should clear it.
+- Scratch artefacts kept under `tmp/`: `20260915_b1_micro.py` (primitive-level comparison),
+  `20260915_b1_jaxpr.py` + four `*_jaxpr_*.txt` captures, `20260915_b1_speed.py` +
+  `*_speed_*.json`, `20260915_b1_apply.py` (the edit script),
+  `20260915_b1_pass1_tests_env.log`, `20260915_b1_pass2_tests_rest.log`.
+
+**Implemented by: `developer`**
+
 
 ## Verification Report
 

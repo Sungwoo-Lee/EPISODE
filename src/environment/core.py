@@ -95,6 +95,32 @@ def calculate_drive(satiation, injury, params, body_temp=None):
     current = jnp.stack([satiation, injury], axis=-1)
     return jnp.linalg.norm(current - target, axis=-1)
 
+def agent_in_hiding_obstacle(agent_pos, obs_pos, obs_hides_agent, obs_active=None):
+    """True iff `agent_pos` is on an ACTIVE obstacle marked `hides_agent`.
+
+    ONE definition, shared by every consumer of "is the agent in a bush":
+    `_hunt_step` (a hidden agent is lost by a hunter) and `jax_step` (which
+    writes it onto `info` for the behaviour measures) call it today. It is a
+    pure function of the cell and the obstacle arrays, and obstacle positions
+    are constant within an episode (TRAJECTORY_STORE_SCHEMA, `obs_row`), so
+    evaluating it at different points of the same step gives the same answer --
+    which is what lets a later consumer (the in-bush recovery gate inside
+    `update_body`, which runs BEFORE `info['agent_in_bush']` is written) share
+    this definition instead of adding a third hand-copied one.
+
+    `obs_active=None` means "every obstacle counts", preserving `_hunt_step`'s
+    existing call shape. The empty-obstacle guard is static Python and matches
+    the one `jax_step` already had; `jnp.any` over an empty array is already
+    False, so the guard is value-identical for `_hunt_step` -- but note it does
+    change the emitted graph in that one case, folding the reduction over the
+    zero-length axis into a constant. Values are unaffected; see B1's
+    Implementation Report.
+    """
+    if obs_pos.shape[0] == 0:
+        return jnp.array(False)
+    eff_hides = obs_hides_agent if obs_active is None else (obs_hides_agent & obs_active)
+    return jnp.any(jnp.logical_and(jnp.all(obs_pos == agent_pos, axis=-1), eff_hides))
+
 def update_body(state: EnvState, info: dict, params: EnvParams, new_agent_pos: jnp.ndarray) -> tuple[jnp.ndarray, jnp.ndarray, jnp.ndarray, jnp.ndarray, jnp.ndarray, jnp.ndarray, jnp.ndarray, jnp.ndarray, bool]:
     """Updates satiation, nutrition, injury and body temperature.
 
@@ -348,11 +374,8 @@ def _hunt_step(hunt_pos, hunt_state, hunt_stamina, hunt_mt, hunt_at,
 
     # 2. State Transitions
     # agent_hidden: uses obs_hides_agent (bush concealment) AND obs_active (inactive bushes don't hide).
-    _eff_hides = obs_hides_agent if obs_active is None else (obs_hides_agent & obs_active)
-    agent_hidden = jnp.any(jnp.logical_and(
-        jnp.all(obs_pos == agent_pos, axis=-1),
-        _eff_hides
-    ))
+    # ONE definition, shared with jax_step's `info['agent_in_bush']` -- see agent_in_hiding_obstacle.
+    agent_hidden = agent_in_hiding_obstacle(agent_pos, obs_pos, obs_hides_agent, obs_active)
 
     rested_enough = hunt_stamina >= (hunt_max_stamina * hunt_thresh)
     become_hunt = jnp.logical_and(
@@ -953,15 +976,13 @@ def jax_step(state: EnvState, action: int, params: EnvParams) -> tuple[EnvState,
     info['dist_per_predator'] = dist_per_predator
     info['dist_per_animal'] = dist_per_animal
 
-    # Bush occupancy: True iff agent is standing on an obstacle marked hides_agent.
-    # Mirrors the agent_hidden computation inside update_predators (line ~150);
-    # recomputed here at minimal cost because EnvParams is in scope and we want it on `info`.
+    # Bush occupancy: True iff agent is standing on an ACTIVE obstacle marked hides_agent.
+    # Same definition the hunter uses to lose track of the agent: agent_in_hiding_obstacle,
+    # which `_hunt_step` also calls (it replaced the hand-copied `agent_hidden` block there).
     # Uses new_agent_pos (post-step position) — correct for M2's "agent dives into bush" semantics.
-    # AND with obs_active: inactive bushes do not conceal the agent.
-    agent_in_bush = jnp.any(jnp.logical_and(
-        jnp.all(state.obs_pos == new_agent_pos, axis=-1),
-        params.obs_hides_agent & state.obs_active
-    )) if state.obs_pos.shape[0] > 0 else jnp.array(False)
+    # obs_active is passed, so inactive bushes do not conceal the agent.
+    agent_in_bush = agent_in_hiding_obstacle(
+        new_agent_pos, state.obs_pos, params.obs_hides_agent, state.obs_active)
     info['agent_in_bush'] = agent_in_bush
 
     # 7. Final State
