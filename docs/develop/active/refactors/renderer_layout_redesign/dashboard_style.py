@@ -121,105 +121,75 @@ def luminance(rgb):
 
 
 # ------------------------------------------------------------------ temperature scale
-TEMP_STOPS = ["#9FBCE6", "#D3E1F2", "#F3F2EE", "#F7DCCB", "#E6806A", "#B8323A", "#5E1320"]
-TEMP_POS = [0.00, 0.25, 0.50, 0.58, 0.75, 0.88, 1.00]
-TEMP_CMAP = LinearSegmentedColormap.from_list("temperature", list(zip(TEMP_POS, TEMP_STOPS)))
-WARM_MULT, FIRE_MULT = 4.0, 10.0      # design rules: warm = setpoint + 4 x band half-width, fire = 10 x
+# ONE range per episode: vmin / vmax are the coldest and hottest cell of the episode's recorded thermal field
+# (a setup pre-pass), constant for every frame. Near-white at the setpoint, pale inside the survivable body
+# band, and colour deepens only beyond the body limits: blue toward the episode minimum, red toward its maximum.
+TEMP_COLD, TEMP_COOL, TEMP_NEUTRAL = "#9FBCE6", "#D3E1F2", "#F3F2EE"
+TEMP_WARM, TEMP_HOT_MID, TEMP_HOT = "#F7DCCB", "#E6806A", "#B8323A"
+BAND_WEIGHT, OUTER_WEIGHT = 1.0, 1.25     # share of the legend strip: each band half vs each outer tail
 
 
-def _mandatory(d, key, where):
-    if key not in d:
-        raise ValueError(f"{where}: missing mandatory key {key!r}")
-    return d[key]
-
-
-def temperature_bounds(cfg):
-    """Params-only colour bounds for the thermal field (plan RENDERER_LAYOUT_REDESIGN §D4.3, Revision 7).
-
-    The field is  default_temp  + random spots  + scatter-ADDED entity heat  (abs + ratio * |default_temp|),
-    then a weight-normalised blur that cannot leave the raw range. Refinement of the plan's formula: the
-    fire term is evaluated PER default-temperature corner d (and at 0 if the range crosses 0), because the
-    ratio multiplies |d| of the same draw. That is still an upper bound, and it is attained in the
-    separated case (a lone fire on the coldest ground), so it is the supremum:
-        vmax = max_d [ d + spots + fire(d) ],   fire(d) = max_i c_i(d)   if min_fire_separation > 0
-                                                          sum_i count_high_i * c_i(d)   otherwise
-        c_i(d) = absolute_i + max(ratio_low_i, ratio_high_i) * |d|,  positive c_i only
-        vmin = min_d [ d - spots + negative stamps ],  then both widened to include the body limits.
-    Returns a dict with the bounds, the anchors and the plan's un-refined vmax for the record.
-    """
-    th = _mandatory(cfg, "thermal", "config")
-    if not _mandatory(th, "enabled", "thermal"):
-        raise ValueError("temperature_bounds called on a config with thermal.enabled false")
-    lo_d, hi_d = [float(x) for x in _mandatory(th, "default_temp", "thermal")]
-    corners = sorted({lo_d, hi_d} | ({0.0} if lo_d < 0 < hi_d else set()))
-    D = max(abs(lo_d), abs(hi_d))
-    spot = 0.0
-    if _mandatory(th, "use_random_spots", "thermal"):
-        rs = _mandatory(th, "random_spots", "thermal")
-        spot = float(_mandatory(rs, "temp", "random_spots")) * int(_mandatory(rs, "count", "random_spots"))
-    sep = int(_mandatory(th, "min_fire_separation", "thermal"))
-    sources = []
-    if _mandatory(th, "use_object_sources", "thermal"):
-        env = _mandatory(cfg, "environment", "config")
-        for sec in ("obstacles", "resources"):
-            for e in env.get(sec, []) or []:
-                a = float(e.get("temperature", 0.0) or 0.0)
-                r = e.get("temperature_ratio")
-                rmax = max(float(r[0]), float(r[1])) if r is not None else 0.0
-                if a != 0.0 or rmax != 0.0:
-                    sources.append((e["name"], a, rmax, int(_mandatory(e, "count_high", e["name"]))))
-
-    def stamps(d, sign):
-        cs = [(a + rmax * abs(d), n) for _, a, rmax, n in sources]
-        cs = [(c, n) for c, n in cs if sign * c > 0]
-        if not cs:
-            return 0.0
-        return max(cs, key=lambda t: sign * t[0])[0] if sep > 0 else sum(c * n for c, n in cs)
-
-    vmax = max(d + spot + stamps(d, +1) for d in corners)
-    vmin = min(d - spot + stamps(d, -1) for d in corners)
-    plan_vmax = max(lo_d, hi_d) + spot + stamps(D if D else 0.0, +1) if sources else vmax
-    t_lo, t_hi = float(_mandatory(th, "min_temperature", "thermal")), float(_mandatory(th, "max_temperature", "thermal"))
-    sp = float(_mandatory(th, "temperature_setpoint", "thermal"))
-    vmin, vmax = min(vmin, t_lo), max(vmax, t_hi)
-    half = t_hi - sp
-    anchors = [("vmin", vmin), ("lower body limit", t_lo), ("setpoint", sp), ("upper body limit", t_hi),
-               ("warm", sp + WARM_MULT * half), ("fire", sp + FIRE_MULT * half), ("vmax", vmax)]
-    xs = [v for _, v in anchors]
-    if any(b <= a for a, b in zip(xs, xs[1:])):
-        raise ValueError("temperature anchors are not strictly increasing for this config: "
-                         + ", ".join(f"{n}={v:g}" for n, v in anchors))
-    return dict(vmin=vmin, vmax=vmax, setpoint=sp, low=t_lo, high=t_hi, anchors=anchors,
-                plan_vmax=plan_vmax, sources=sources, separation=sep, corners=corners)
+def _mix(c1, c2, t):
+    t = min(1.0, max(0.0, t))
+    return tuple(np.array(to_rgb(c1)) * (1 - t) + np.array(to_rgb(c2)) * t)
 
 
 class TemperatureScale:
-    """Piecewise-linear FuncNorm through the named anchors, colour stops sitting exactly on them."""
+    """Episode-range diverging scale. Anchors: episode min, lower body limit, setpoint, upper body limit,
+    episode max -- a limit the episode range does not reach is dropped, so the ramp stays monotonic.
+    Values outside the episode range are clamped to the end colour; callers outline them (out_of_range)."""
 
-    def __init__(self, bounds):
-        self.b = bounds
-        self.X = np.array([v for _, v in bounds["anchors"]], float)
-        self.Y = np.array(TEMP_POS, float)
+    def __init__(self, field, low, high, setpoint):
+        f = np.asarray(field, float)
+        if f.size == 0:
+            raise ValueError("TemperatureScale needs the episode's thermal field")
+        if not low < setpoint < high:
+            raise ValueError(f"body limits must bracket the setpoint: {low} < {setpoint} < {high}")
+        vmin, vmax = float(f.min()), float(f.max())
+        if vmax <= vmin:
+            raise ValueError(f"the episode's thermal field is constant ({vmin}); no colour range")
+        self.vmin, self.vmax, self.low, self.high, self.sp = vmin, vmax, float(low), float(high), float(setpoint)
+        cand = [("episode min", vmin), ("lower body limit", self.low), ("setpoint", self.sp),
+                ("upper body limit", self.high), ("episode max", vmax)]
+        anchors = [(n, v) for n, v in cand if n.startswith("episode") or vmin < v < vmax]
+        xs = [v for _, v in anchors]
+        pos = [0.0]
+        for x0, x1 in zip(xs, xs[1:]):
+            if x1 <= self.low or x0 >= self.high:
+                w = OUTER_WEIGHT                   # a tail beyond a body limit, always episode end to limit
+            else:
+                half = (self.sp - self.low) if x1 <= self.sp else (self.high - self.sp)
+                w = BAND_WEIGHT * (x1 - x0) / half
+            pos.append(pos[-1] + w)
+        pos = [q / pos[-1] for q in pos]
+        stops = [(q, self.ref_colour(v)) for q, v in zip(pos, xs)]
+        if vmax > self.high:                      # hue path peach -> salmon -> crimson in the hot tail
+            q0 = pos[xs.index(self.high)]
+            stops.insert(-1, ((q0 + 1.0) / 2, TEMP_HOT_MID))
+        self.X, self.Y = np.array(xs), np.array(pos)
+        self.cmap = LinearSegmentedColormap.from_list("temperature", stops)
         self.norm = FuncNorm((lambda v: np.interp(v, self.X, self.Y), lambda y: np.interp(y, self.Y, self.X)),
-                             vmin=self.X[0], vmax=self.X[-1])
-        self.cmap = TEMP_CMAP
+                             vmin=vmin, vmax=vmax)
+        self.b = dict(vmin=vmin, vmax=vmax, low=self.low, high=self.high, setpoint=self.sp, anchors=anchors,
+                      n_cells=int(f.size))
+
+    def ref_colour(self, v):
+        if v <= self.low:
+            return _mix(TEMP_COOL, TEMP_COLD, (self.low - v) / (self.low - self.vmin)) if self.vmin < self.low else TEMP_COOL
+        if v <= self.sp:
+            return _mix(TEMP_NEUTRAL, TEMP_COOL, (self.sp - v) / (self.sp - self.low))
+        if v <= self.high:
+            return _mix(TEMP_NEUTRAL, TEMP_WARM, (v - self.sp) / (self.high - self.sp))
+        return TEMP_HOT if v >= self.vmax else _mix(TEMP_WARM, TEMP_HOT, (v - self.high) / (self.vmax - self.high))
 
     def pos(self, v):
-        return float(np.interp(v, self.X, self.Y))
+        return float(np.interp(v, self.X, self.Y))           # np.interp clamps outside the episode range
 
     def colour(self, v):
         return self.cmap(self.pos(v))
 
-    def check_field_in_bounds(self, field, config_name=""):
-        """Raise (never clip) when a cell lies outside the params-only bounds: the bounds are wrong."""
-        f = np.asarray(field, float)
-        for bound, bad in (("vmin", f < self.X[0]), ("vmax", f > self.X[-1])):
-            if bad.any():
-                r, c = map(int, np.argwhere(bad)[0])
-                lim = self.X[0] if bound == "vmin" else self.X[-1]
-                raise ValueError(f"{config_name}: thermal_field cell (row {r}, col {c}) = {f[r, c]:.2f} lies outside "
-                                 f"{bound} = {lim:.2f}; the params-only temperature bounds do not cover this config")
-        return f.size
+    def out_of_range(self, v):
+        return v < self.vmin - 1e-9 or v > self.vmax + 1e-9
 
 
 def visual_offsets(sensor_range):

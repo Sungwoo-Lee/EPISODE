@@ -34,7 +34,7 @@ import house  # noqa: E402
 FIGS = os.path.join(HERE, "figures")
 ITEMS = [("Agent", "agent"), ("Food", "food"), ("Predator", "predator"), ("Hiding predator", "hiding_predator"),
          ("Neutral", "neutral"), ("Rock", "rock"), ("Bush", "bush"), ("Tree", "tree"), ("Campfire", "campfire")]
-NEUTRAL_CELL = ds.TEMP_STOPS[2]        # the temperature ramp's setpoint colour
+NEUTRAL_CELL = ds.TEMP_NEUTRAL        # the temperature ramp's setpoint colour
 
 
 def main():

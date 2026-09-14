@@ -11,10 +11,10 @@ Matplotlib with its layout engine unused, a small packer, the figure built once 
 artists updated per step. Tokens, type, temperature scale and glyphs come from dashboard_style.py.
 
 HOW IT IS COMPUTED. Reads data/episode.json (written by export_episode.py from the real campfire
-world) and the world's config file for the temperature parameters. For a given set of senses it
-registers the panels that are present (refusing to start if an observed sense has no panel), computes
-the params-only temperature bounds and checks the recorded thermal field lies inside them, runs a
-setup pre-pass over the episode for the per-sense colour scales, packs the boxes from params and
+world). For a given set of senses it
+registers the panels that are present (refusing to start if an observed sense has no panel), runs a
+setup pre-pass over the episode for the colour scales (ONE temperature range from the episode's
+recorded thermal field, shared by every step; per-sense smell and vision maxima), packs the boxes from params and
 measured text (raising LayoutOverflowError instead of squeezing), builds every card, bar, label and
 glyph once, then for each step updates values and visibility and draws. Every text must fit its slot
 at its design size or the script raises; every drawn frame passes a text audit on rendered extents
@@ -45,7 +45,6 @@ import matplotlib  # noqa: E402
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt  # noqa: E402
 import numpy as np  # noqa: E402
-import yaml  # noqa: E402
 from matplotlib.backends.backend_agg import FigureCanvasAgg  # noqa: E402
 from matplotlib.patches import Circle, Polygon, Rectangle  # noqa: E402
 from PIL import Image  # noqa: E402
@@ -119,7 +118,6 @@ class Dashboard:
                 raise ValueError(f"observed sense {name!r} has no panel in the registry")
         self.has = lambda name: name in bd and TOGGLE_OF[name] in (on | {""})
         self.thermal = "thermal" in on and scale is not None
-        self.checked_cells = scale.check_field_in_bounds(meta["thermal_field"], meta["config"]) if self.thermal else 0
         st0 = steps[0]
         self.olf_range = sensor(st0, "Olfactory")["range"] if self.has("Olfaction") else None
         self.vis_range = sensor(st0, "Visual")["range"] if self.has("Visual") else None
@@ -367,6 +365,8 @@ class Dashboard:
         g = np.linspace(lo, hi, 128)
         im = self.gradient(ax, x, y, w, 6, [self.scale.colour(v) for v in g], 3)
         im.set_alpha(0.9)
+        if self.scale.out_of_range(lo) or self.scale.out_of_range(hi):    # band reaches past the episode range
+            ds.rrect(ax, x, y, w, 6, 3, "none", ds.INK, 2, z=3)
         xs = x + w * (sp - lo) / (hi - lo)
         ax.plot([xs, xs], [y - 3, y + 9], color=ds.INK3, lw=1 * ds.PT, zorder=3)
         dot = ax.add_patch(Circle((x, y + 3), 6, fc="#FFFFFF", ec=ds.INK, lw=2 * ds.PT, zorder=4))
@@ -570,6 +570,9 @@ class Dashboard:
                 for (rect, t), v in zip(cells, sensor(st, "Thermoception")["vector"]):
                     col = sc.colour(v)
                     rect.set_facecolor(col)
+                    clipped = sc.out_of_range(v)          # clamp and outline: beyond the episode range
+                    rect.set_edgecolor(ds.INK if clipped else "none")
+                    rect.set_linewidth(2 * ds.PT if clipped else 0)
                     t.set(ds.signed(v))
                     t.t.set_color("#FFFFFF" if ds.luminance(col) < 0.45 else ds.INK)
             self.updates.append(upd)
@@ -579,7 +582,7 @@ class Dashboard:
             lx0 = ds.PAD + 12
         lw = w - lx0 - 22
         ly = 96
-        self.fit(ax, lx0, 66, "caption_medium", lw, color=ds.INK2).set("Temperature scale, fixed for this config")
+        self.fit(ax, lx0, 66, "caption_medium", lw, color=ds.INK2).set("Scale shared by every step of this episode")
         self.gradient(ax, lx0, ly, lw, 12, sc.cmap(np.linspace(0, 1, 512)), 0.01)
         ax.add_patch(Polygon([(lx0, ly), (lx0 - 9, ly + 6), (lx0, ly + 12)], fc=sc.cmap(0.0), lw=0, zorder=2))
         ax.add_patch(Polygon([(lx0 + lw, ly), (lx0 + lw + 9, ly + 6), (lx0 + lw, ly + 12)], fc=sc.cmap(1.0), lw=0, zorder=2))
@@ -589,9 +592,11 @@ class Dashboard:
         anchors = dict(b["anchors"])
         for name, v in b["anchors"]:
             ax.plot([xpos(v)] * 2, [ly + 12, ly + 17], color=ds.INK3, lw=1 * ds.PT, zorder=3)
-        for name in ("setpoint", "lower body limit", "upper body limit", "vmin", "vmax", "warm", "fire"):
+        for name in ("setpoint", "lower body limit", "upper body limit", "episode min", "episode max"):
+            if name not in anchors:
+                continue
             v = anchors[name]
-            t = ds.text(ax, xpos(v), ly + 32, ds.signed(v), "caption", ha="center")
+            t = ds.text(ax, xpos(v), ly + 32, ds.signed(v, 0 if float(v).is_integer() else 1), "caption", ha="center")
             bb = t.get_window_extent(self.r)
             if any(bb.x0 < o.x1 + 8 and o.x0 < bb.x1 + 8 for o in placed):
                 t.remove()
@@ -752,24 +757,17 @@ def write_data(stem, rows):
             fh.write("\t".join(str(r[k]) for k in ("what", "used", "total", "note")) + "\n")
 
 
-def load_scale(meta):
-    with open(os.path.join(ROOT, meta["config"])) as fh:
-        cfg = yaml.safe_load(fh)
-    if "extends" in cfg:
-        raise ValueError(f"{meta['config']} uses extends:, which this sketch does not resolve")
-    return ds.TemperatureScale(ds.temperature_bounds(cfg))
-
-
 def main():
     with open(os.path.join(HERE, "data", "episode.json")) as fh:
         ep = json.load(fh)
     meta, steps = ep["meta"], ep["steps"]
     house.apply()
     ds.register_fonts()
-    scale = load_scale(meta)
+    scale = ds.TemperatureScale(meta["thermal_field"], meta["min_temperature"], meta["max_temperature"],
+                                meta["temperature_setpoint"])
     b = scale.b
-    print("temperature anchors: " + ", ".join(f"{n} {v:+g}" for n, v in b["anchors"])
-          + f"  (plan's un-refined vmax {b['plan_vmax']:+g})")
+    print("temperature anchors (episode range): " + ", ".join(f"{n} {v:+.2f} @ {q:.3f}" for (n, v), q in
+                                                             zip(b["anchors"], scale.Y)))
     out_dir = os.path.join(FIGS, "fig03_frames")
     os.makedirs(out_dir, exist_ok=True)
 
@@ -809,9 +807,9 @@ def main():
              note="every step of the exported episode; each frame passed the text audit"),
         dict(what="observed senses given a panel", used=sum(1 for k in meta["breakdown"] if k in TOGGLE_OF),
              total=len(meta["breakdown"]), note="the completeness rule refuses to draw if an observed sense has no panel"),
-        dict(what="temperature cells inside the config's colour bounds", used=d.checked_cells, total=field.size,
-             note=f"field {field.min():+.1f} to {field.max():+.1f}, bounds {b['vmin']:+g} to {b['vmax']:+g} computed "
-                  "from the config's temperature parameters; the script raises on any cell outside"),
+        dict(what="thermal field cells setting the temperature colour range", used=b["n_cells"], total=field.size,
+             note=f"episode min {b['vmin']:+.1f} to max {b['vmax']:+.1f} over the one field recorded for the episode; "
+                  "every step uses this range, and readings beyond it are clamped and outlined"),
     ])
 
     # Figure 4: the same step under three sense sets, to show re-packing

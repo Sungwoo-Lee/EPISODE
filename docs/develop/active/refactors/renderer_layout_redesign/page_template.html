@@ -331,8 +331,10 @@ figure img:focus-visible { outline:2px solid var(--accent); outline-offset:-3px;
     recorded step, {{FACT:last_step}}, reads {{FACT:final_temp}}.</p>
     <p><b>Axes.</b> None &mdash; a dashboard frame of 1440 &times; 896 pixels, where position is layout.
     The grid view shows 5 &times; 5 grid cells centred on the agent; each cell's colour is its temperature
-    on one scale fixed for this world configuration, running from &minus;28 (mid-blue) through the setpoint
-    0 (near-white) to +336 (deep red), with its anchors ticked on the legend in the thermoception card.
+    on one scale shared by every step of this episode, running from the episode's coldest cell
+    ({{FACT:temp_min}}, pale blue) through the setpoint 0 (near-white) to its hottest ({{FACT:temp_max}}, red);
+    the survivable body range &minus;15 to +15 stays pale, and colour deepens only beyond it. The anchors are
+    ticked on the legend in the thermoception card.
     The body-temperature gauge uses the same absolute scale; the thermoception cells use the same colours
     for a different quantity, cell temperature minus body temperature. Grid cells carry no numbers. Bars run from 0 at the left to the state's maximum at the right. Each smell
     and vision map is a diamond of cells around the agent, with the agent's cell outlined in indigo, shaded
@@ -345,9 +347,9 @@ figure img:focus-visible { outline:2px solid var(--accent); outline-offset:-3px;
     and vision at range 2 &mdash; set in memory, because the campfire configuration itself ships with both
     at 0. Senses change what the agent observes, never what happens, so the episode is unchanged. For every
     step it saves what the production recorder saves plus the per-sense readings. A second script draws the
-    frames. It lists the panels this world needs, computes the temperature scale from the configuration
-    alone and stops if any recorded cell falls outside it, scans the episode once for each sense's largest
-    reading, packs the cards, builds every element once and then only updates values per step. Each
+    frames. It lists the panels this world needs, scans the episode once for its coldest and hottest cells
+    and for each sense's largest reading, so every colour scale stays the same for the whole video, packs the
+    cards, builds every element once and then only updates values per step. Each
     finished frame is audited: no two texts may overlap, none may leave its card, and no number may sit in
     the grid view. Perceptual noise is off, so observed and true values are equal wherever both exist. The
     policy is not a trained agent, so the episode shows the dashboard, not a learned strategy.</p></div>
@@ -371,7 +373,7 @@ figure img:focus-visible { outline:2px solid var(--accent); outline-offset:-3px;
     another card.</p>
     <p><b>Axes.</b> None &mdash; three dashboard frames of 1440 &times; 896 pixels stacked vertically, where
     position is layout. Within each frame the scales are those of Figure 3: grid cells coloured on the fixed
-    temperature scale (top frame only; plain grey where the temperature system is off), bars from 0 to each
+    episode temperature scale (top frame only; plain grey where the temperature system is off), bars from 0 to each
     state's maximum, and sense maps shaded from 0 to that sense's largest reading in the episode.</p>
     {{SAMPLES:fig04_repacking}}
     <div class="howto"><p class="eyebrow">How it is computed</p>
@@ -424,7 +426,7 @@ figure img:focus-visible { outline:2px solid var(--accent); outline-offset:-3px;
   (5 cells &times; 5 smell channels) and vision range 2 (13 cells &times; 8 channels, 104 numbers). In a
   306-pixel side panel that leaves 61 pixels per cell at range 2 and 34 at range 4 &mdash; not enough for a
   bar per channel. The three figures below draw the same real world state three ways, at the configured
-  ranges and at two stress ranges, so you can choose.</p>
+  ranges and at two stress ranges. You chose option A.</p>
 </section>
 
 <div class="callout pick">
@@ -435,7 +437,7 @@ figure img:focus-visible { outline:2px solid var(--accent); outline-offset:-3px;
     fit-or-fail check still guards it.</li>
     <li><strong>Support:</strong> the ranges in use today are tested, plus stress tests at ranges 3 and 4; the largest
     range that fits is written down, and anything larger stops with an error naming the sense.</li>
-    <li><strong>Still open:</strong> which of the three drawings below the new renderer uses.</li>
+    <li><strong>Chosen:</strong> option A, a small map per channel (Figure 5), from range 1. Figures 6 and 7 stay on the page as the options not taken.</li>
   </ul>
 </div>
 
@@ -543,20 +545,19 @@ figure img:focus-visible { outline:2px solid var(--accent); outline-offset:-3px;
 <div class="scroll"><table class="toolkit">
   <thead><tr><th>Toolkit</th><th>Overlap guarantee</th><th>Time per frame</th><th>Porting work</th><th>New requirements</th></tr></thead>
   <tbody>
-    <tr class="pick"><td>A. Matplotlib, our own packer, figure built once (recommended, narrowly)</td><td>Boxes cannot overlap; every panel clipped to its box; text measured to fit; checked on the finished pixels</td><td class="n">est. 30&ndash;100 ms<br>target: half of V1</td><td>Low to medium: existing drawing code carries over</td><td>None; tests stay byte-exact</td></tr>
-    <tr><td>B. Pillow drawing, same packer (fallback)</td><td>Same as A</td><td class="n">est. 5&ndash;20 ms</td><td>High: every panel redrawn in basic shapes</td><td>None</td></tr>
-    <tr><td>C. A web page in headless Chrome, one per render worker</td><td>Strongest by default (the browser's own box layout)</td><td class="n">est. 20&ndash;60 ms</td><td>Highest: every panel rewritten as HTML</td><td>A new Python dependency to drive the browser; Chrome is present on the lab nodes checked (101, 106, 114); a browser (150&ndash;300 MB) per worker inside a render process that can already be orphaned; screenshot tests not byte-exact across nodes</td></tr>
+    <tr class="pick"><td>A. Matplotlib, own layout (chosen)</td><td>Boxes cannot overlap; every panel clipped to its box; text measured to fit; checked on the finished pixels</td><td class="n">est. 30&ndash;100 ms<br>target: half of V1</td><td>Low to medium: existing drawing code carries over</td><td>None; tests stay byte-exact</td></tr>
+    <tr><td>B. Pillow, same layout (fallback)</td><td>Same as A</td><td class="n">est. 5&ndash;20 ms</td><td>High: every panel redrawn in basic shapes</td><td>None</td></tr>
+    <tr><td>C. Web page in headless Chrome</td><td>Strongest by default (the browser's own box layout)</td><td class="n">est. 20&ndash;60 ms</td><td>Highest: every panel rewritten as HTML</td><td>A new Python dependency to drive the browser; Chrome is present on the lab nodes checked (101, 106, 114); a browser (150&ndash;300 MB) per worker inside a render process that can already be orphaned; screenshot tests not byte-exact across nodes</td></tr>
   </tbody>
 </table></div>
 
 <section class="col">
-  <p><strong>Why A is recommended.</strong> It fixes every defect class through the registry, packer
-  and pixel check, none of which depend on the toolkit; it removes the largest cost (rebuilding the
-  figure every step) without installing anything; and its viewer shares the video's drawing code. If
-  the first phase measures A slower than half of V1, the plan comes back to you with B. <strong>What C
-  would add</strong> is a static, shareable viewer with instant scrubbing and hover inspection of a cell.
-  If that is worth a browser in every render worker, C is the right pick, and only the drawing and
-  viewer parts of the plan change.</p>
+  <p><strong>Chosen: A.</strong> It fixes every defect class through the registry, packer and
+  pixel check, none of which depend on the toolkit; it removes the largest cost (rebuilding the figure every
+  step) without installing anything; and its viewer shares the video's drawing code. If the first phase
+  measures A slower than half of V1's frame time, the plan falls back to B, drawing with Pillow behind the
+  same layout. C was not chosen: its static shareable viewer with hover inspection was not worth a browser in
+  every render worker.</p>
 </section>
 
 <hr>
@@ -580,40 +581,29 @@ figure img:focus-visible { outline:2px solid var(--accent); outline-offset:-3px;
 <hr>
 
 <section class="col">
-  <h2><span class="num">07</span> Decided and open</h2>
+  <h2><span class="num">07</span> Decisions</h2>
 </section>
 <div class="ledger">
   <section>
-    <h4>Decided (your answers, 2026-09-14)</h4>
+    <h4>Decided &mdash; scope and pipeline (2026-09-14)</h4>
     <ol>
-      <li><strong>Build it as V2, keep V1.</strong> V1 stays the default for every video.</li>
-      <li><strong>Today's pipeline is frozen</strong> during development; switching any video to V2 is a later decision.</li>
-      <li><strong>Two outputs.</strong> MP4 videos and an interactive step viewer over the same recordings.</li>
-      <li><strong>All four April ideas stand.</strong> One vitals card, true value beside observed, action badge, horizontal legends.</li>
-      <li><strong>Senses that read further</strong> move to a wide band under the grid view when they outgrow the side column.</li>
-      <li><strong>Range support:</strong> the ranges in use today plus stress tests at 3 and 4, with the largest range that fits written down.</li>
-      <li><strong>Drawing senses that read further:</strong> option A, a small map per channel (Figure 5).</li>
-      <li><strong>Internal states:</strong> every state is shown twice &mdash; what the agent observes, and its true (hidden) value &mdash; including states the agent does not observe.</li>
-      <li><strong>Grid view:</strong> no numbers in cells, and a temperature colour scale fixed per world configuration.</li>
-      <li><strong>Campfire:</strong> a new image file, used only by the new renderer.</li>
+      <li><strong>Build it beside V1, keep V1.</strong> V1 stays the default for every video.</li>
+      <li><strong>Today's pipeline is frozen</strong> during development. Switching any video to the new renderer gets its own reviewed plan later; deleting the unused <code>grid_world.py</code> renderer copy and <code>renderer_v2.py</code> is not approved.</li>
+      <li><strong>Toolkit:</strong> Matplotlib with our own layout, figure built once per episode; Pillow as the fallback if the first phase misses the speed target.</li>
+      <li><strong>Speed target:</strong> median frame time at most half of V1's on the campfire world, and never slower than V1 on any other world, measured on the same lab node.</li>
+      <li><strong>Outputs:</strong> MP4 videos plus a local step viewer served from the same drawing code; no static HTML export.</li>
+      <li><strong>Package name:</strong> <code>src/environment/dashboard/</code>, with <code>render_recordings_v2.py</code> writing to <code>videos_v2/</code>.</li>
     </ol>
   </section>
   <section>
-    <h4>Open &mdash; yours to decide</h4>
+    <h4>Decided &mdash; what the frame shows (2026-09-14)</h4>
     <ol>
-      <li><strong>Toolkit:</strong> A with B as fallback, or C.</li>
-      <li><strong>Name:</strong> <code>src/environment/dashboard/</code> (proposed), <code>episode_dashboard/</code> or <code>telemetry_view/</code>. It cannot reuse <code>renderer_v2</code>, which another session is still editing; the new entry script and output folder keep the <code>_v2</code> names (<code>render_recordings_v2.py</code>, <code>videos_v2/</code>).</li>
-      <li><strong>Frame size:</strong> 1440 &times; 896 pixels (today's videos are 1408 &times; 1008 after encoding).</li>
-      <li><strong>Action badge:</strong> in the grid view's title strip (as sketched), or over the top-right grid cell.</li>
-      <li><strong>Proprioception:</strong> a panel (as sketched), or "recorded, not displayed". This answer now blocks testing: every world that reads further also observes proprioception, so the renderer refuses to draw them until it is decided.</li>
-      <li><strong>Minimap:</strong> in the left column under the vitals (as sketched), or under the grid view.</li>
-      <li><strong>Viewer:</strong> local only, or also a single-file export for sharing an episode.</li>
-      <li><strong>Later switch-over:</strong> its own reviewed plan when you decide; at that point delete the stale renderer copy in <code>grid_world.py</code> and the unused <code>renderer_v2.py</code> (the latter once the other session's edits have landed and it has been told).</li>
-      <li><strong>Speed gate:</strong> half V1's frame time on the campfire world, and not slower on any other world?</li>
-      <li><strong>Hiding-predator label:</strong> <code>HPR</code> (as sketched), <code>HID</code> or <code>HPD</code>?</li>
-      <li><strong>Maps from range 1:</strong> Figure 5 draws olfaction at range 1 as maps too. Confirm option A applies from range 1, rather than keeping per-cell bars at range 1.</li>
-      <li><strong>A cell outside the temperature scale:</strong> stop the render with an error naming the cell (proposed, matching the project's no-fallback rule), or clamp its colour and outline it.</li>
-      <li><strong>Temperature scale anchors:</strong> keep the design rule (warm at 4&times; and fire at 10&times; the upper body limit), or take those two anchors from the world configuration.</li>
+      <li><strong>Layout and look:</strong> Figure 3 is the direction &mdash; no further layout questions. Frame size 1440 &times; 896; minimap under Interoception; last action as a title-row badge plus a chevron on the agent.</li>
+      <li><strong>Internal states:</strong> every state shown twice, observed and true, including states the agent does not observe.</li>
+      <li><strong>Proprioception:</strong> its own panel of six action chips.</li>
+      <li><strong>Senses that read further:</strong> option A, a small map per channel, from range 1; placed in a band under the grid view when they outgrow the side column; tested at the ranges in use plus stress ranges 3 and 4.</li>
+      <li><strong>Temperature colours:</strong> one range per episode, shared by all its steps; the setpoint near-white and the survivable body band pale, colour deepening only beyond it; anything outside the range is clamped and outlined. No numbers in grid cells.</li>
+      <li><strong>Campfire:</strong> a new image file, used only by the new renderer, as part of a flat icon set.</li>
     </ol>
   </section>
 </div>

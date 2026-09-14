@@ -105,6 +105,10 @@ def fact(name):
         return str(REP_STEP)
     if name == "die_low":
         return f"{meta['min_temperature']:+.0f}".replace("-", "−")
+    if name in ("temp_min", "temp_max"):
+        field = [v for row in meta["thermal_field"] for v in row]
+        v = min(field) if name == "temp_min" else max(field)
+        return f"{v:+.1f}".replace("-", "\u2212")
     if name == "clim":
         return f"{meta['clim'][0]:+.0f} to {meta['clim'][1]:+.0f}".replace("-", "−")
     errors.append(f"unknown fact {name}")
