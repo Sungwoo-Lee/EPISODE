@@ -73,6 +73,22 @@ tbody tr.pick { background:var(--pick); }
 tbody tr.pick td:first-child { color:var(--cold); font-weight:600; }
 dl { margin:0; display:grid; grid-template-columns:max-content 1fr; gap:10px 22px;
   align-items:baseline; }
+/* F48: a max-content track sized by an unbreakable mono key starves the prose
+   track on a phone (dd fell to 131px at 390). Stack below the widest key. */
+@media (max-width:640px) {
+  dl { grid-template-columns:1fr; gap:4px 0; }
+  dd { margin-bottom:12px; }
+}
+/* F34: min-width:560px belongs to the tables that need it, not to every table.
+   `.narrow` opts out — its own content fits a phone column unaided. */
+table.narrow { min-width:0; }
+/* Stop a hidden prose column from stretching every row on a phone. */
+table.steps td:last-child { min-width:170px; }
+.cue { font-size:13px; color:var(--ink-3); margin:0; }
+/* F32: a cue that is always on lies wherever nothing actually scrolls. The steps
+   table's measured max-content is 673px; the .scroll box is the 70ch text column,
+   so it stops scrolling once the viewport reaches 673 + 2*28 (.wrap padding) = 729. */
+@media (min-width:729px) { .cue { display:none; } }
 dt { font-family:"IBM Plex Mono",monospace; font-size:13px; color:var(--cold); }
 dd { margin:0; font-size:15.5px; color:var(--ink-2); }
 hr { border:0; border-top:1px solid var(--line); margin:0; width:100%; }
@@ -520,10 +536,22 @@ T &larr; T + <span class="k">k_exchange</span>&middot;(T_field &minus; T) + <spa
 </section>
 
 <figure>
-  <img src="data:image/png;base64,@@body@@" alt="Three charts. Left: body temperature over 500 steps at the fire and at increasing distances, with a cold-death threshold. Middle: a foraging cycle alternating between the fire and the cold, where the agent dies on the third trip. Right: steps to cold death against k_exchange with the proposed value marked.">
-  <figcaption><b>The middle panel is the task in one picture.</b> Two trips out and back are
-  survivable; the third is not, because the agent leaves before it has fully rewarmed. Nothing
-  in the environment tells it that &mdash; it has to learn the margin.</figcaption>
+  <img src="data:image/png;base64,@@body@@" alt="Three charts. Left: body temperature over 500 steps at five distances from the fire, from the fire cell itself out to the far field, with both a heat-death and a cold-death threshold; the fire-cell curve leaves the top of the panel after six steps. Middle: a foraging cycle alternating between the comfort ring and the cold, where two thirty-step trips survive and a longer one kills. Right: steps to cold death against k_exchange with the proposed value marked.">
+  <figcaption><b>The middle panel is the task in one picture.</b>
+  <b>Axes.</b> Left and middle: horizontal axis is step within the episode (one environment step
+  per unit); vertical axis is body temperature in raw degrees, where 0 is the setpoint and
+  &plusmn;15 is death. Right: horizontal axis is <code>k_exchange</code> (dimensionless, per step);
+  vertical axis is steps until cold death standing in the far field.
+  <b>What it shows.</b> Two thirty-step trips out and back survive, bottoming at
+  &minus;14.0 and &minus;14.4 &mdash; inside one degree of death. A forty-five-step trip does not:
+  the agent is dead thirty-three steps out. The margin is not about rewarming, which completes
+  each time; it is the length of the trip itself, and nothing in the environment announces it.
+  <b>Correction (2026-09-14).</b> This panel previously showed a gentler world and said the agent
+  &ldquo;dies on the third trip, because it leaves before it has fully rewarmed&rdquo;. Both halves
+  were wrong. The legend's ambient temperatures were typed by hand rather than read from the field:
+  the curve labelled <em>at the fire (+8)</em> was not the fire cell at all &mdash; the fire cell is
+  <strong>+72</strong>, and it kills in <strong>six steps</strong>, which is what the left panel now
+  shows. Every ambient here is now read from the same radial profile the rest of this page uses.</figcaption>
 </figure>
 
 <section class="col">
@@ -803,11 +831,16 @@ T &larr; T + <span class="k">k_exchange</span>&middot;(T_field &minus; T) + <spa
     <div class="d">&plusmn;15 treats overheating and freezing as equally fast. In a
     cold-by-default world the cold threshold does nearly all the work, so the two are not
     symmetric in practice even though they are in the config.</div></div>
-  <div class="q"><div class="h">Does the agent need to know its own temperature?</div>
-    <div class="d">The thermoceptor reports the field <em>relative</em> to body temperature, so
-    the agent can tell which way is warmer without knowing how cold it is. Injury and nutrition
-    are both currently hidden, so hiding temperature is the consistent choice &mdash; but it
-    means the agent must infer how close to death it is entirely from consequences.</div></div>
+  <div class="q"><div class="h">Does the agent need to know its own temperature?
+    &mdash; <span style="color:var(--ok)">answered in &sect;13, the other way</span></div>
+    <div class="d">This section originally concluded that hiding body temperature was
+    &ldquo;the consistent choice&rdquo;, on the grounds that injury and nutrition are hidden too.
+    <strong>That reasoning does not hold, and the decision has been reversed.</strong> Injury is
+    hidden <em>because</em> it sits behind a felt signal &mdash; Interoceptive Nociception &mdash;
+    and nutrition sits behind Satiation. Body temperature has no such percept: the thermoceptor is
+    exteroceptive, reporting the world minus the body rather than the body itself. Hiding it was
+    never a decision; it was what happened when the sense was built and the level was not.
+    &sect;13 adds the channel.</div></div>
   <div class="q"><div class="h">Should food spawn away from the fire?</div>
     <div class="d">The tether only creates a trade-off if food is out in the cold. If food can
     spawn next to the fire, the agent may never need to leave, and the whole system collapses
@@ -817,10 +850,139 @@ T &larr; T + <span class="k">k_exchange</span>&middot;(T_field &minus; T) + <spa
 <hr>
 
 <section class="col">
+  <h2><span class="num">13</span> What the agent is told about itself</h2>
+  <p>Everything above describes a body that has a temperature. This section is about whether the
+  agent is <em>told</em> that temperature, and the answer today is no. The agent receives
+  <strong>32 numbers</strong> each step. One of them is Satiation &mdash; how full it is. None of
+  them is how warm it is.</p>
+  <p>That is not a considered choice. EVAAA, the environment this design follows, hands the agent
+  its body temperature directly: <code>sensor.AddObservation(resourceLevels)</code>, where
+  <code>resourceLevels[2]</code> <em>is</em> the thermo level. The relative thermoceptor this plan
+  copies from EVAAA subtracts body temperature from every reading &mdash; which EVAAA can do
+  precisely because the agent already has the value. We took the subtraction and not the value.</p>
+</section>
+
+<figure>
+  <img src="data:image/png;base64,@@obs@@" alt="Two panels. Top: the observation vector drawn as a
+  horizontal band of labelled blocks, shown twice - today at 32 values, and with the new channel at
+  33 values, where a one-wide Body Temperature block is inserted after Satiation and every block to
+  its right shifts one place. Bottom: a line chart over fifty environment steps of an agent walking
+  from cold ground into the fire's comfort ring, plotting body temperature, the thermoceptor's
+  centre-cell reading, and the temperature of the cell the agent stands on, against shaded death
+  thresholds at plus and minus fifteen.">
+  <figcaption><b>Figure J &mdash; the channel, and why the thermoceptor does not already carry it.</b>
+  <b>Axes.</b> Panel A: horizontal axis is position in the observation vector (index, 0-based, 0&ndash;32);
+  there is no vertical axis &mdash; the two rows are the vector before and after the change, and block
+  width is the number of values that block occupies. Panel B: horizontal axis is step within the
+  episode (one environment step per unit, 0&ndash;49); vertical axis is temperature in raw degrees on
+  the body scale, where 0 is the setpoint and &plusmn;15 is death.
+  <b>What it shows.</b> Panel A: the channel is one value inserted after Satiation, grouping the
+  regulated levels together and shifting every later block one place. Panel B: the green line (the
+  new channel) and the orange dashed line (today's thermoceptor) are <em>different quantities</em>.
+  At step&nbsp;12 and step&nbsp;40 the agent stands on the <em>same cell</em>, at
+  @@ob_cell40@@&deg;, yet the thermoceptor reads @@ob_th12@@ and then @@ob_th40@@ &mdash; a swing of
+  @@ob_thdiff@@&deg; with nothing in the world having changed. The reading moved because the
+  <em>body</em> moved, and the agent cannot see which of the two it was.
+  <b>Data.</b> This figure is a worked example, not sampled data: one deterministic 50-step walk
+  through one campfire field built by <code>sim.py</code> at the shipped settings, used in full
+  (50 of 50 steps, 100%). No episodes were sampled and no run is summarised.</figcaption>
+</figure>
+
+<section class="col">
+  <h3>The identity, in numbers</h3>
+  <p>The thermoceptor reports <code>field &minus; body_temp</code>. Add the proposed channel back
+  and the agent's own cell temperature falls out exactly &mdash; which is the argument for keeping
+  the channel in raw degrees rather than normalising it.</p>
+  <p class="cue">Wider than a narrow screen &mdash; scroll the table sideways; the right-hand column is cut off.</p>
+  <div class="scroll"><table class="steps">
+    <thead><tr><th>Step</th><th class="n">Body Temperature<br><span style="font-weight:400">the new channel</span></th>
+      <th class="n">Thermoception, centre<br><span style="font-weight:400">field &minus; body</span></th>
+      <th class="n">sum</th><th class="n">cell the agent is on<br><span style="font-weight:400">never observed</span></th>
+      <th>where it is</th></tr></thead>
+    <tbody>
+      <tr><td>0</td><td class="n">@@ob_body0@@</td><td class="n">@@ob_th0@@</td>
+        <td class="n">@@ob_cell0@@</td><td class="n">@@ob_cell0@@</td>
+        <td>five cells out, on open cold ground</td></tr>
+      <tr class="pick"><td>12</td><td class="n">@@ob_body12@@</td><td class="n">@@ob_th12@@</td>
+        <td class="n">@@ob_sum12@@</td><td class="n">@@ob_cell12@@</td>
+        <td>just arrived in the comfort ring, still cold</td></tr>
+      <tr class="pick"><td>40</td><td class="n">@@ob_body40@@</td><td class="n">@@ob_th40@@</td>
+        <td class="n">@@ob_sum40@@</td><td class="n">@@ob_cell40@@</td>
+        <td>same cell, twenty-eight steps later, warmed up</td></tr>
+    </tbody>
+  </table></div>
+  <div class="callout warn">
+    <p><strong>The two highlighted rows are the whole argument.</strong> Same cell, same world,
+    same fire. The thermoceptor's centre reading falls from @@ob_th12@@ to @@ob_th40@@ &mdash;
+    @@ob_thdiff@@ degrees &mdash; purely because the body warmed. An agent reading only that number
+    cannot tell &ldquo;I moved somewhere cooler&rdquo; from &ldquo;I am no longer as cold&rdquo;.
+    The sum column is the same in both rows because the cell never changed.</p>
+  </div>
+  <p>The information is not lost today &mdash; it is <em>recoverable</em>. The centre reading is the
+  driving term of the body recurrence in &sect;5, and body temperature starts every episode at the
+  setpoint, so an agent that integrates its readings can track its own temperature exactly. That is
+  a real inference problem with a real answer, which is what makes it worth having as an
+  <em>ablation</em> rather than as the default.</p>
+</section>
+
+<section class="col">
+  <h3>Why temperature is delivered when injury is not</h3>
+  <p>Injury and nutrition are both deliberately hidden from the agent, and that is a decision this
+  project has defended: the gap between hidden damage and felt signal is the thing under study. So
+  a third interoceptive channel needs an argument, not an analogy.</p>
+  <p>The tempting one &mdash; <em>body temperature is a level the agent regulates, and regulated
+  levels should be observable</em> &mdash; is wrong, and the project has already declined it.
+  Nutrition is a regulated level and is hidden.</p>
+  <div class="callout pick">
+    <p><strong>The distinction that does hold: body temperature has no percept standing in front of
+    it.</strong> Injury is hidden behind Interoceptive Nociception. Nutrition is hidden behind
+    Satiation. Each is a hidden cause with a felt signal, and showing the cause would collapse the
+    two into one. Body temperature has no such pairing &mdash; thermoception is exteroceptive, a
+    reading about the <em>world</em> taken relative to the body. Hiding the level does not preserve
+    a cause-versus-percept distinction, because there is no percept to preserve it against.</p>
+  </div>
+  <div class="scroll"><table class="narrow">
+    <thead><tr><th>Internal state</th><th>Felt signal standing in front of it</th><th>Delivered?</th></tr></thead>
+    <tbody>
+      <tr><td><code>injury_level</code></td><td>Interoceptive Nociception</td><td>no &mdash; by decision</td></tr>
+      <tr><td><code>nutrition</code></td><td>Satiation</td><td>no &mdash; by decision</td></tr>
+      <tr class="pick"><td><code>body_temp</code></td><td><em>none</em></td><td>yes &mdash; proposed here</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<section class="col">
+  <h3>How it is switched, and what it costs</h3>
+  <dl>
+    <dt>thermal.body_temp_observable</dt>
+    <dd>New mandatory key, read only when <code>thermal.enabled</code> is true &mdash; the same
+    shape as every other <code>thermal.*</code> body key, so a config with the temperature system
+    off never has to declare it. No fallback default.</dd>
+    <dt>on</dt><dd>@@ob_dim_after@@ values; the channel carries <code>body_temp</code> in raw degrees.</dd>
+    <dt>off</dt><dd>@@ob_dim_before@@ values, byte-for-byte today's layout &mdash; so the
+    &ldquo;must infer it&rdquo; arm of any experiment is a config flip, not a code change.</dd>
+  </dl>
+  <p>The cost worth stating plainly: recurrent PPO applies <strong>no observation normalisation
+  anywhere</strong>, so a channel ranging &plusmn;15 sits in the same network input as channels
+  ranging 0&ndash;1. Dreamer is unaffected, because it compresses its inputs. Thermoception already
+  has this problem in a worse form &mdash; its readings reach past +160 &mdash; which is context,
+  not a justification. Raw degrees is chosen for consistency with that existing raw sense and with
+  EVAAA, and because the identity above stays exact. If normalisation is ever added, it should be
+  added for both.</p>
+  <div class="callout">
+    <p><strong>Reversible until the first thermal run, and not after.</strong> No training run in
+    this project has ever had the temperature system switched on &mdash; zero of 456 saved run
+    configs. Until one does, changing the scale costs a rebuild. After one does, it costs the run.</p>
+  </div>
+</section>
+
+<hr>
+
+<section class="col">
   <h4>Provenance</h4>
   <p class="foot">Every number on this page is computed at build time from the sandbox in this
   folder &mdash; <code>sim.py</code> (field construction and body dynamics),
-  <code>nbhd_compare.py</code> (neighbourhood accuracy), <code>figs.py</code> (figures). Rebuild
+  <code>nbhd_compare.py</code> (neighbourhood accuracy), <code>figs.py</code> (figures A&ndash;I), <code>figJ_obs.py</code> (figure J). Rebuild
   with <code>build_page.py</code>. The sandbox is pure numpy and deliberately independent of
   <code>src/</code>, so parameters can be swept without touching the environment. Source review:
   EVAAA at <code>vendor/evaaa/evaaa_unity</code> &mdash; <code>ThermoGridSpawner.cs</code>,

@@ -16,7 +16,8 @@ def b64(p): return base64.b64encode(open(p, 'rb').read()).decode()
 FIG = {k: b64(v) for k, v in {
     'pipeline': 'figA_pipeline.png', 'fig_sigma': 'figB_sigma.png', 'body': 'figC_body.png',
     'render': 'figD_render.png', 'tether': 'figE_tether.png', 'modes': 'figF_modes.png', 'fig_kloss': 'figG_kloss.png', 'ranges': 'figH_ranges.png', 'pain': 'figI_pain.png',
-    'nbhd': 'fig1_geometry.png', 'acc': 'fig3_accuracy.png'}.items()}
+    'nbhd': 'fig1_geometry.png', 'acc': 'fig3_accuracy.png',
+    'obs': 'figJ_obs.png'}.items()}
 
 DEFAULT, SIGMA, K_EX, K_LOSS, DEATH = -25.0, 0.7, 0.04, 0.01, 15.0
 A_FIRE = 300.0
@@ -143,6 +144,26 @@ N = dict(
     cf_safe=f'{CF_SAFE:.0f}',
     vn1=f"{ACC['vN r=1']['err'][3]:.2f}", mo1=f"{ACC['Moore r=1']['err'][3]:.2f}",
     vn2=f"{ACC['vN r=2']['err'][3]:.2f}", mo2=f"{ACC['Moore r=2']['err'][3]:.2f}")
+
+# ---- the worked walk quoted in section 13 (same recurrence as figJ_obs.py) ----
+_raw = np.full((H, W), DEFAULT); _raw[5, 5] += A_FIRE
+_FLD = gaussian_smooth(_raw, SIGMA)
+_PATH = [(5, 0), (5, 1), (5, 2), (5, 3)] + [(5, 4)] * 46
+_T = 0.0; _walk = []
+for (_r, _c) in _PATH:
+    _f = float(_FLD[_r, _c])
+    _walk.append((_T, _f - _T, _f))
+    _T = _T + K_EX * (_f - _T) - K_LOSS * (_T - 0.0)
+def _w(i, j): return f'{_walk[i][j]:+.2f}'
+N.update(
+    ob_dim_before='32', ob_dim_after='33',
+    ob_body0=_w(0, 0),  ob_th0=_w(0, 1),  ob_cell0=_w(0, 2),
+    ob_body12=_w(12, 0), ob_th12=_w(12, 1), ob_cell12=_w(12, 2),
+    ob_body40=_w(40, 0), ob_th40=_w(40, 1), ob_cell40=_w(40, 2),
+    ob_sum12=f'{_walk[12][0] + _walk[12][1]:+.2f}',
+    ob_sum40=f'{_walk[40][0] + _walk[40][1]:+.2f}',
+    ob_thdiff=f'{abs(_walk[12][1] - _walk[40][1]):.2f}',
+)
 
 clash = set(FIG) & set(N)
 assert not clash, f'token name collision between figures and numbers: {clash}'

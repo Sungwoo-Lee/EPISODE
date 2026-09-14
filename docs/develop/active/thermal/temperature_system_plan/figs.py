@@ -141,20 +141,46 @@ fig.tight_layout(rect=[0,.07,1,.91]); fig.savefig('figE_tether.png',dpi=140,bbox
 # ---------- FIG C : body dynamics ----------
 fig,axes=plt.subplots(1,3,figsize=(13.2,4.1))
 ax=axes[0]
-for Tf,col,lab in [(8,'#b02b2b','at the fire  (+8)'),(-12,'#e08a8a','d=2  (-12)'),
-                   (-20,'#6da7ec','d=3  (-21)'),(-25,'#184f95','far field  (-25)')]:
-    ax.plot(body_traj([Tf]*500,k_ex=K_EX,k_loss=K_LOSS),color=col,lw=2,label=lab)
-ax.axhline(-DEATH,color=INK,ls=':',lw=1.3); ax.text(250,-17.5,'cold death',ha='center',fontsize=8.5,color=INK)
-ax.set_xlabel('step'); ax.set_ylabel('body temperature'); ax.set_xlim(0,500); ax.set_ylim(-24,12)
-ax.set_title('Body temp at each distance',color=INK); ax.legend(frameon=False,fontsize=8,loc='upper right')
+# Ambients are read off the real radial profile, never typed. An earlier version of
+# this panel hard-coded them and labelled a +8 cell "at the fire"; the fire cell is
+# actually +72 and lethal, which contradicted section 04's own prose.
+_RP=radial(st['smoothed'])
+_AMB={d:_RP[d][0] for d in _RP}
+# d=3 and the far field settle within 0.4 deg of each other, so the two curves
+# overlap; the far field is dashed to keep five legend entries honest.
+for d,col,lab,ls in [(0,'#b02b2b','d=0, on the fire','-'),(1,'#eb6834','d=1, the comfort ring','-'),
+                     (2,'#e08a8a','d=2','-'),(3,'#6da7ec','d=3','-'),
+                     (4,'#184f95','far field','--')]:
+    tr=body_traj([_AMB[d]]*500,k_ex=K_EX,k_loss=K_LOSS)
+    hit=np.nonzero(np.abs(tr)>=DEATH)[0]
+    lab=f'{lab}  ({_AMB[d]:+.0f})'
+    if len(hit) and tr[hit[0]]>0:                 # heat death: clip, do not rescale
+        k=hit[0]; ax.plot(tr[:k+1],color=col,lw=2,ls=ls,label=lab)
+        ax.plot([k],[DEATH],marker='x',ms=8,mew=2.2,color=col)
+        ax.annotate(f'off the top at step {k} —\nsettles near {K_EX*_AMB[d]/(K_EX+K_LOSS):+.0f}',
+                    (k+12,DEATH-1.0),fontsize=8.2,color=col,va='top')
+    else:
+        ax.plot(tr,color=col,lw=2,ls=ls,label=lab)
+ax.axhline(-DEATH,color=INK,ls=':',lw=1.3); ax.axhline(DEATH,color=INK,ls=':',lw=1.3)
+ax.text(250,-DEATH-1.2,'cold death',ha='center',va='top',fontsize=8.5,color=INK)
+ax.text(250,DEATH+1.0,'heat death',ha='center',va='bottom',fontsize=8.5,color=INK)
+ax.set_xlabel('step'); ax.set_ylabel('body temperature'); ax.set_xlim(0,500); ax.set_ylim(-25,21)
+ax.set_title('Body temp at each distance',color=INK)
+ax.legend(frameon=False,fontsize=7.6,loc='center right',bbox_to_anchor=(1.0,0.42))
 ax=axes[1]
-seq=[-25.0]*60+[8.0]*60+[-25.0]*60+[8.0]*60+[-25.0]*120
-ax.plot(body_traj(seq,k_ex=K_EX,k_loss=K_LOSS),color=C1,lw=2.2)
-for a,b in [(0,60),(120,180),(240,360)]: ax.axvspan(a,b,color=C1,alpha=.09)
+# Same profile: out at d=3, back to the comfort ring at d=1.
+_OUT,_RING=_AMB[3],_AMB[1]
+seq=[_RING]*45+([_OUT]*30+[_RING]*40)*2+[_OUT]*45
+tr=body_traj(seq,k_ex=K_EX,k_loss=K_LOSS); _d=int((np.abs(tr)>=DEATH).argmax())
+ax.plot(tr,color=C1,lw=2.2)
+for a,b in [(45,75),(115,145),(185,len(tr)-1)]: ax.axvspan(a,b,color=C1,alpha=.09)
 ax.axhline(-DEATH,color=INK,ls=':',lw=1.3)
+ax.plot([_d],[tr[_d]],marker='x',ms=9,mew=2.4,color='#b02b2b')
+ax.annotate(f'two 30-step trips survive,\nbottoming at {tr[75]:+.1f} and {tr[145]:+.1f}',
+            (60,-23.2),fontsize=8.3,color=INK2)
+ax.annotate(f'a 45-step trip does not —\ndead {_d-185} steps out',(190,4.5),fontsize=8.3,color='#b02b2b')
 ax.set_xlabel('step'); ax.set_title('A foraging cycle  (shaded = away from fire)',color=INK)
-ax.set_ylim(-24,12)
-ax.annotate('dies on the third trip',(330,-16),fontsize=8.5,color=INK2)
+ax.set_xlim(0,len(tr)-1); ax.set_ylim(-25,21)
 ax=axes[2]
 ks=np.linspace(0.005,0.12,120); tt=[]
 for kx in ks:
