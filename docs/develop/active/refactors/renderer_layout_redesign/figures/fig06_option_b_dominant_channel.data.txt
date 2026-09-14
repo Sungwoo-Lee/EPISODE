@@ -1,0 +1,2 @@
+world states drawn	1	81	step 46 of seed 10: the step with the most non-terrain vision signal
+sensor ranges drawn	3	3	the configured ranges plus two in-memory stress overrides of the same state

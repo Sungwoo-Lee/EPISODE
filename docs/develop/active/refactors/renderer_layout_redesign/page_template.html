@@ -378,7 +378,116 @@ figure img:focus-visible { outline:2px solid var(--accent); outline-offset:-3px;
 <hr>
 
 <section class="col">
-  <h2><span class="num">04</span> Choosing the drawing toolkit</h2>
+  <h2><span class="num">04</span> Senses that read further</h2>
+  <p>Olfaction and vision no longer read only the agent's own cell. Since the directional-sensors change,
+  each can read a diamond of cells around the agent, and the range has no upper limit: a diamond of range
+  <em>r</em> holds 2<em>r</em>&sup2;+2<em>r</em>+1 cells. The worlds trained on today use olfaction range 1
+  (5 cells &times; 5 smell channels) and vision range 2 (13 cells &times; 8 channels, 104 numbers). In a
+  306-pixel side panel that leaves 61 pixels per cell at range 2 and 34 at range 4 &mdash; not enough for a
+  bar per channel. The three figures below draw the same real world state three ways, at the configured
+  ranges and at two stress ranges, so you can choose.</p>
+</section>
+
+<div class="callout pick">
+  <p class="eyebrow">Already decided (your answers, 2026-09-14)</p>
+  <ul>
+    <li><strong>Placement:</strong> when a sense no longer fits the side column, the layout switches &mdash; once per
+    world configuration &mdash; to a wide sensor band under the grid view. The frame size stays the same, and the
+    fit-or-fail check still guards it.</li>
+    <li><strong>Support:</strong> the ranges in use today are tested, plus stress tests at ranges 3 and 4; the largest
+    range that fits is written down, and anything larger stops with an error naming the sense.</li>
+    <li><strong>Still open:</strong> which of the three drawings below the new renderer uses.</li>
+  </ul>
+</div>
+
+<figure class="wide">
+  <img data-fig="fig05_option_a_channel_maps" src="{{FIG:fig05_option_a_channel_maps}}" alt="Option A: one small diamond map per channel, at three sensor ranges">
+  <figcaption>
+    <p><b>Figure 5. Option A &mdash; one small diamond map per channel.</b> Each row is the same world state
+    read at a different range; each small map is one channel &mdash; five smells, then vision's terrain
+    and its five object channels. Every number the agent receives stays visible, and where something lies
+    is read straight off the map; the price is eleven maps per row.</p>
+    <p><b>Axes.</b> None &mdash; each small map is a diamond of grid cells centred on the agent, with the
+    agent's own cell outlined in black, north at the top and east to the right. Within a row every cell is
+    drawn the same size, so smell and vision footprints can be compared. Colour is the reading, from pale
+    at 0 to dark at the largest reading of that sense in that row (the scale under each group); the
+    terrain map is grey, dark where terrain is present.</p>
+    {{SAMPLES:fig05_option_a_channel_maps}}
+    <div class="howto"><p class="eyebrow">How it is computed</p>
+    <p>A script loads the sensory-ladder world with vision range 2, blur switched on and olfaction range 1,
+    steps it with the same simple random policy used for Figure 3, keeps the longest-surviving of twelve
+    seeds, and picks the step at which the vision diamond holds the most object signal, so the maps have
+    something to show. At that step it asks the production observation code for the olfaction and vision
+    readings, then asks twice more with both ranges overridden in memory to 3 and to 4. The world state is
+    identical in all three rows; only how far the agent senses changes, so the lower two rows are derived
+    stress inputs rather than configurations anyone trains. Each reading is a table of cells by channels.
+    This option draws each channel as its own diamond, placing every cell at its offset from the agent.
+    Colour is scaled to the largest reading of that sense in the row rather than to 1, because summed
+    readings can exceed 1. A video would fix the scale for the whole episode instead of per state, as the
+    temperature colours already are. What this does not show is cost in a frame: eleven maps per row must
+    share the sensor band with everything else.</p></div>
+  </figcaption>
+</figure>
+
+<figure class="wide">
+  <img data-fig="fig06_option_b_dominant_channel" src="{{FIG:fig06_option_b_dominant_channel}}" alt="Option B: one diamond per sense coloured by its strongest channel">
+  <figcaption>
+    <p><b>Figure 6. Option B &mdash; one diamond per sense, coloured by the strongest channel.</b> The most
+    compact option and the only one that stays legible at any range, because each cell needs a single
+    colour. It shows where things are and what dominates each cell, but a weaker signal sharing a cell with
+    a stronger one disappears.</p>
+    <p><b>Axes.</b> None &mdash; each map is a diamond of grid cells centred on the agent, agent's cell
+    outlined in black, north at the top. A cell's hue names its strongest channel (legend below each map);
+    its strength runs from nearly paper-white for a faint reading to full colour at the largest reading of
+    that sense in the row. Outlined blank cells read nothing above 2% of that maximum.</p>
+    {{SAMPLES:fig06_option_b_dominant_channel}}
+    <div class="howto"><p class="eyebrow">How it is computed</p>
+    <p>Same world state, same three sensor ranges and same readings as Figure 5. For each diamond cell the
+    script finds the channel with the largest reading and paints the cell in that channel's colour. The
+    colour's strength follows the reading: nearly paper-white for a faint signal, full colour at the
+    largest reading of that sense in the row. Cells whose strongest reading is below 2% of that maximum are
+    drawn as outlined blanks. For vision the three terrain channels are left out, because terrain is present in every
+    cell inside the world and would win almost everywhere. Each channel keeps the same colour in every
+    row. The cost shows wherever two smells or two objects overlap: only the stronger survives, so a
+    predator standing in a bush reads as whichever signal happens to be larger. The picture can also no
+    longer be checked channel by channel against the observation numbers; the viewer's numbers table would
+    have to carry that.</p></div>
+  </figcaption>
+</figure>
+
+<figure class="wide">
+  <img data-fig="fig07_option_c_bars_or_table" src="{{FIG:fig07_option_c_bars_or_table}}" alt="Option C: bars per cell at range 1, a cells-by-channels table beyond">
+  <figcaption>
+    <p><b>Figure 7. Option C &mdash; bars while the range is small, a table beyond.</b> Range 0 and 1 keep
+    the per-cell bars the plan already uses; from range 2 each sense becomes a table with one row per cell,
+    the layout the directional-sensors report used. Every number stays exact and checkable, but the spatial
+    picture is gone and the table grows quickly with range.</p>
+    <p><b>Axes.</b> In each table the vertical axis lists the diamond's cells by their offset from the agent
+    (rows down, columns right, the agent's own cell first) and the horizontal axis lists channels; colour
+    is the reading, from pale at 0 to dark at the largest reading of that sense in that row, except
+    vision's three terrain columns, which use a grey scale of their own (dark where terrain is present)
+    so they do not wash out the object channels. The bar
+    diamonds have no axes: each cell sits at its offset from the agent, and each bar's height is one
+    channel's reading on the same 0-to-largest scale.</p>
+    {{SAMPLES:fig07_option_c_bars_or_table}}
+    <div class="howto"><p class="eyebrow">How it is computed</p>
+    <p>Same world state, three ranges and readings as Figures 5 and 6. Where a sense's range is 0 or 1
+    &mdash; here olfaction as configured &mdash; each diamond cell holds a small bar per channel, the style
+    the current plan already draws. Where the range is 2 or more, the sense is drawn as a table instead:
+    one row per diamond cell, labelled by its offset from the agent as rows down and columns right, and
+    one column per channel, with colour following the reading on a scale from 0 to the largest reading of
+    that sense in the row. This keeps every number the agent receives and suits checking values, but it
+    gives up the spatial picture: cells that neighbour each other in the world are not neighbouring rows
+    in the table. It also grows with the square of the range &mdash; 13 rows at range 2, 25 at range 3 and
+    41 at range 4 &mdash; which is why the lower rows of this figure are so much taller than the top one,
+    and why at range 4 the table alone would outgrow a video frame.</p></div>
+  </figcaption>
+</figure>
+
+<hr>
+
+<section class="col">
+  <h2><span class="num">05</span> Choosing the drawing toolkit</h2>
   <p>The registry, packer and checks are the same whichever toolkit draws the panels. What differs is
   speed, how much existing drawing code carries over, and what runs where videos are rendered. Speeds
   marked "est." are estimates from the research note; the plan's first phase measures toolkit A before
@@ -408,7 +517,7 @@ figure img:focus-visible { outline:2px solid var(--accent); outline-offset:-3px;
 <hr>
 
 <section class="col">
-  <h2><span class="num">05</span> How we will know it works</h2>
+  <h2><span class="num">06</span> How we will know it works</h2>
 </section>
 <div class="col stages">
   <div class="stage"><span class="s">CHECK</span><div class="b"><span class="t">Today's pipeline did not move</span>
@@ -426,7 +535,7 @@ figure img:focus-visible { outline:2px solid var(--accent); outline-offset:-3px;
 <hr>
 
 <section class="col">
-  <h2><span class="num">06</span> Decided and open</h2>
+  <h2><span class="num">07</span> Decided and open</h2>
 </section>
 <div class="ledger">
   <section>
@@ -434,9 +543,10 @@ figure img:focus-visible { outline:2px solid var(--accent); outline-offset:-3px;
     <ol>
       <li><strong>Build it as V2, keep V1.</strong> V1 stays the default for every video.</li>
       <li><strong>Today's pipeline is frozen</strong> during development; switching any video to V2 is a later decision.</li>
-      <li><strong>Toolkit open.</strong> Compare the candidates and recommend the best.</li>
       <li><strong>Two outputs.</strong> MP4 videos and an interactive step viewer over the same recordings.</li>
       <li><strong>All four April ideas stand.</strong> One vitals card, true value beside observed, action badge, horizontal legends.</li>
+      <li><strong>Senses that read further</strong> move to a wide band under the grid view when they outgrow the side column.</li>
+      <li><strong>Range support:</strong> the ranges in use today plus stress tests at 3 and 4, with the largest range that fits written down.</li>
     </ol>
   </section>
   <section>
@@ -446,7 +556,7 @@ figure img:focus-visible { outline:2px solid var(--accent); outline-offset:-3px;
       <li><strong>Name:</strong> <code>src/environment/dashboard/</code> (proposed), <code>episode_dashboard/</code> or <code>telemetry_view/</code>. It cannot reuse <code>renderer_v2</code>, which another session is still editing; the new entry script and output folder keep the <code>_v2</code> names (<code>render_recordings_v2.py</code>, <code>videos_v2/</code>).</li>
       <li><strong>Frame size:</strong> 1440 &times; 896 pixels (today's videos are 1408 &times; 1008 after encoding).</li>
       <li><strong>Action badge:</strong> in the grid view's title strip (as sketched), or over the top-right grid cell.</li>
-      <li><strong>Proprioception:</strong> a panel (as sketched), or "recorded, not displayed".</li>
+      <li><strong>Proprioception:</strong> a panel (as sketched), or "recorded, not displayed". This answer now blocks testing: every world that reads further also observes proprioception, so the renderer refuses to draw them until it is decided.</li>
       <li><strong>Minimap:</strong> in the left column under the vitals (as sketched), or under the grid view.</li>
       <li><strong>Viewer:</strong> local only, or also a single-file export for sharing an episode.</li>
       <li><strong>Later switch-over:</strong> its own reviewed plan when you decide; at that point delete the stale renderer copy in <code>grid_world.py</code> and the unused <code>renderer_v2.py</code> (the latter once the other session's edits have landed and it has been told).</li>
@@ -454,6 +564,7 @@ figure img:focus-visible { outline:2px solid var(--accent); outline-offset:-3px;
       <li><strong>Unobserved body values:</strong> show them as rows captioned "not observed", or omit them (as sketched)?</li>
       <li><strong>Hiding-predator label:</strong> <code>HPR</code> (as sketched), <code>HID</code> or <code>HPD</code>?</li>
       <li><strong>Campfire icon:</strong> keep a drawn mark in the new renderer and add the real asset at the switch-over (proposed), or add it now as a stated exception to the freeze &mdash; today's videos read the same icon list, so they would change too.</li>
+      <li><strong>Drawing senses at range 2 and above:</strong> option A, a map per channel (Figure 5); B, one map coloured by the strongest channel (Figure 6); or C, bars then a table (Figure 7). Whichever you pick is a single setting in the new renderer and does not change the layout.</li>
     </ol>
   </section>
 </div>
@@ -469,7 +580,8 @@ figure img:focus-visible { outline:2px solid var(--accent); outline-offset:-3px;
   (<code>/home/vncuser/miniconda3/envs/grid_world_pain/bin/python</code>), run in
   <code>docs/develop/active/refactors/renderer_layout_redesign/</code>: <code>render_current_frames.py</code>
   (Figures 1&ndash;2), <code>export_episode.py</code>, <code>fig03_proposed_dashboard.py</code> (Figures 3&ndash;4),
-  then <code>build_page.py</code>. The figures on this page were generated from the last commit, because
+  <code>export_extended.py</code>, <code>fig05_extended_encodings.py</code> (Figures 5&ndash;7), then
+  <code>build_page.py</code>. The figures on this page were generated from the last commit, because
   another session had uncommitted configuration changes in progress.</p>
 </footer>
 

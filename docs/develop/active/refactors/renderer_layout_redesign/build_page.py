@@ -37,6 +37,9 @@ ROOT = os.path.abspath(os.path.join(HERE, "..", "..", "..", "..", ".."))
 FIGS = os.path.join(HERE, "figures")
 FONTS = os.path.join(ROOT, "assets", "fonts", "pretendard", "subset")
 SCRIPT_OF = {"fig03_proposed_dashboard": "fig03_proposed_dashboard.py", "fig04_repacking": "fig03_proposed_dashboard.py",
+             "fig05_option_a_channel_maps": "fig05_extended_encodings.py",
+             "fig06_option_b_dominant_channel": "fig05_extended_encodings.py",
+             "fig07_option_c_bars_or_table": "fig05_extended_encodings.py",
              "v1_thermal": "render_current_frames.py", "v2_thermal": "render_current_frames.py"}
 errors = []
 
@@ -122,7 +125,7 @@ def substitute(m):
         script = SCRIPT_OF.get(arg)
         if not script or not os.path.exists(os.path.join(HERE, script)):
             errors.append(f"{arg}: shown on the page but no generating script")
-        if arg.startswith(("fig03", "fig04")):
+        if arg.startswith(("fig03", "fig04", "fig05", "fig06", "fig07")):
             for ext in ("svg", "pdf", "data.txt"):
                 if not os.path.exists(os.path.join(FIGS, f"{arg}.{ext}")):
                     errors.append(f"{arg}: no {ext} -- run {script}")
@@ -170,7 +173,13 @@ for i, fig in enumerate(re.findall(r"<figure\b.*?</figure>", page, flags=re.S), 
             errors.append(f"figure {i}: 'How it is computed' is {n} words (want 150-250)")
 
 visible = re.sub(r"<script\b.*?</script>|<style\b.*?</style>|<[^>]+>", " ", page, flags=re.S)
-for hit in re.finditer(r"[A-Za-z_]*pain[A-Za-z_]*", visible, flags=re.I):
+
+# every generating script is named on the page, so a reader can regenerate every figure (register F15 family)
+for script in sorted(set(SCRIPT_OF.values()) | {"export_episode.py", "export_extended.py", "build_page.py"}):
+    if script not in visible:
+        errors.append(f"generating script {script} is not named anywhere on the page (add it to the Regenerate paragraph)")
+# whole words only: "paints" is not the explanandum, and the repository name is allowed
+for hit in re.finditer(r"(?<![A-Za-z])[A-Za-z_]*pain(?:s|ful|less)?(?![A-Za-z])", visible, flags=re.I):
     if hit.group(0).lower() != "grid_world_pain":
         errors.append(f"vocabulary: '{hit.group(0)}' in visible text (say nociception)")
 
