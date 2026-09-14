@@ -1,0 +1,1 @@
+Illustrative, not measured: 2 analytic curves &times; 16 layer indices, all 32 of 32 points drawn (100%). No run, episode or seed is summarised.

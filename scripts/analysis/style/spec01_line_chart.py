@@ -37,8 +37,8 @@ def main():
     b = 18 * (1 - np.exp(-x / 7.5)) + 0.35 * x
 
     fig, ax = plt.subplots(figsize=(7.6, 4.0))
-    ax.plot(x, a, label="with workspace")
-    ax.plot(x, b, label="ablated")
+    ax.plot(x, a, label="series 1")
+    ax.plot(x, b, label="series 2")
     ax.set_xlabel("transformer layer index, counting from the embedding")
     ax.set_ylabel("effect size (arbitrary units)")
     ax.set_xticks([1, 4, 8, 12, 16])
@@ -48,6 +48,11 @@ def main():
     house.legend_below(ax, ncol=2)
     fig.subplots_adjust(bottom=0.26, left=0.09, top=0.96)
     house.save(fig, f"{OUT}/spec01_line_chart")
+    # the data-used line the page shows under the caption, emitted here rather than typed there
+    n = len(x)
+    with open(f"{OUT}/spec01_line_chart.data.txt", "w") as fh:
+        fh.write(f"Illustrative, not measured: 2 analytic curves &times; {n} layer indices, "
+                 f"all {2 * n} of {2 * n} points drawn (100%). No run, episode or seed is summarised.\n")
 
 
 if __name__ == "__main__":

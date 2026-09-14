@@ -3,10 +3,17 @@ title: "House figure style — state of the work, and what is left"
 topic: meta
 status: active
 created: 2026-09-09
-last_updated: 2026-09-09
+last_updated: 2026-09-14
 ---
 
 # House figure style — state of the work, and what is left
+
+> **Update 2026-09-14.** The page is no longer a reading of one site's style. It is the
+> **House Style Sheet** — the default look for every artifact page — built on the Thermoregulation
+> design page (palette, IBM Plex Sans Condensed headings, section numbering, boxes, glossaries,
+> steps) with Pretendard as the body face and a new tab component. `house.py` moved to the same
+> palette. Files renamed to `house_style_sheet{.template,}.html`; republished to the same artifact
+> URL. Items 1–2 under "What is NOT done" are superseded by that republish; items 3–4 still stand.
 
 ## What this is
 
@@ -27,7 +34,7 @@ describing a style, and not a chart hand-drawn in the page's HTML.
 | the style, as code | `scripts/analysis/style/house.py` |
 | one script, one figure (the specimen) | `scripts/analysis/style/spec01_line_chart.py` |
 | the page builder, six guards | `scripts/analysis/style/build_style_page.py` |
-| the page template and its built output | `docs/develop/active/meta/transformer_circuits_style{.template,}.html` |
+| the page template and its built output | `docs/develop/active/meta/house_style_sheet{.template,}.html` (was `transformer_circuits_style*`) |
 | Pretendard, vendored + Latin subsets | `assets/fonts/pretendard/` (SIL OFL 1.1, licence included) |
 | vector output for the *existing* figure pipeline | `scripts/analysis/ladder/_plot.py` — `finish()` now writes SVG + PNG |
 
@@ -43,7 +50,7 @@ or grid handling of its own. If it ever has to, the module has failed at its job
 ## Where the style came from, and one warning
 
 Read out of the page's own three stylesheets (`paper.css`, `shared-styles.css`, `bundle.css`),
-transcribed in `transformer_circuits_style.html`.
+transcribed in what is now `house_style_sheet.html` §10.
 
 **Do not use a summarising fetch for this.** The first attempt did, and it returned a plausible and
 largely wrong answer: body text 16px (it is 13px), a generic system font stack (three proprietary
@@ -104,7 +111,8 @@ Both are recorded on the page itself, and both are the reason a straight copy wo
 
 ## Related
 
-- [[transformer_circuits_style]] — the transcription, and the human-readable half of `house.py`
+- [[house_style_sheet]] — the default artifact style, and the human-readable half of `house.py`
+- `docs/develop/active/thermal/temperature_system_plan/page_template.html` — the page the house style was taken from
 - [[artifact_generation_guide]] §2.6 and §0 — the click-to-open rule, and how the guide gets read
 - [[artifact_format_bugs]] — F37, F38, F39 were found during this work
 - `.claude/skills/publish-page/SKILL.md` — every artifact publish now routes through it

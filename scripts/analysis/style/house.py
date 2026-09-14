@@ -1,38 +1,31 @@
 #!/usr/bin/env python3
 """house.py - the figure style, as code rather than as prose.
 
-WHAT THIS IS. A matplotlib translation of the design system behind
-transformer-circuits.pub/2026/workspace, read out of that page's own stylesheets rather than from
-looking at it. The values are quoted in `docs/develop/active/meta/transformer_circuits_style.html`,
-which is the human-readable half of this file; if the two ever disagree, this one is what actually
-draws, so fix the document.
+WHAT THIS IS. The matplotlib half of the project's house style. The page half - type, colour,
+numbering, boxes, tabs, glossaries - is `docs/develop/active/meta/house_style_sheet.html`, which
+also documents every value below. If the two ever disagree, this file is what actually draws, so
+fix the document.
+
+WHERE THE VALUES COME FROM. Two sources, kept apart on purpose:
+  * the PALETTE is the one the Thermoregulation design page settled on (2026-09-08): a faintly
+    green-grey ground, blue-black ink, and four hues - blue, orange, green, red;
+  * the CHART CONVENTIONS were read out of the stylesheets behind
+    transformer-circuits.pub/2026/workspace (2026-09-09) - spines deleted, no tick marks, faint
+    horizontal rules, a label < axis title hierarchy, legend below and unboxed.
 
 WHY IT IS A MODULE. A style written down in a document is a style that each figure script
-re-implements slightly differently. The point of putting it here is that `apply()` is the only
-place any of these numbers exist, so changing the house style is one edit rather than fifteen.
+re-implements slightly differently. `apply()` is the only place any of these numbers exist, so
+changing the house style is one edit rather than fifteen.
 
-THE CONVENTIONS, and what each one is for:
-  * no axis spines at all - the source deletes them (`.axis path.domain {display:none}`) rather
-    than lightening them, so the reader takes values off faint horizontal rules instead of off a
-    frame around the data;
-  * no tick marks, only those rules, in #ddd;
-  * a hierarchy INSIDE the figure: tick labels light and small, axis titles darker and heavier, so
-    a reader finds out what is plotted before how much;
-  * legends below the axes, never floating in the plot, in the mono face;
-  * two data colours, Paul Tol's blue and orange, chosen because they stay distinguishable under
-    the common colour-vision deficiencies. Everything else is grey.
+TWO RULES THE MODULE CANNOT ENFORCE BY ITSELF, both stated on the style sheet:
 
-TWO PLACES THE SOURCE STYLE CANNOT BE COPIED LITERALLY, both recorded in the document:
-
-  1. SIZES. Their pages display a figure at roughly its natural width, so an 11px tick label is
-     11px on screen. This project renders 1500-2300px wide and displays in a 730px column, so a
-     literal 11pt label lands near 5px - under the 9px floor the artifact guide enforces. What
-     transfers is the RATIO (labels < axis titles < figure title), not the absolute values, so the
-     sizes below are scaled and `check_floor()` exists to prove the result clears 9px.
-  2. COLOUR MEANING. Their blue and orange mean "series 1" and "series 2". Several pages in this
-     project already spend purple/blue/green on what a modulator reads. Passing `series=` an
-     explicit list is therefore supported: the house palette is a default, not a mandate, and a
-     page whose colours already mean something keeps its own.
+  1. SIZES. Figures here render 1500-2300px wide and display in a 730px column. What transfers
+     from the source is the RATIO (labels < axis titles < figure title); `check_floor()` proves
+     the smallest label still clears the guide's 9px floor.
+  2. COLOUR MEANING. The four series hues are the same values the page uses for its chrome accent
+     and its warning / decision / danger boxes. A page whose figure spends a hue on a data category
+     must not also spend it on chrome (format register F11 amendment). Pass `series=` to give a
+     figure its own meaning, and the page swaps its chrome token - never the other way round.
 """
 from __future__ import annotations
 
@@ -42,43 +35,43 @@ import os
 import matplotlib
 matplotlib.use("Agg")
 
-# The three Anthropic faces are proprietary and will not resolve anywhere but that site, which is
-# expected and documented -- the fallbacks are what render. Keeping them first in the stack records
-# the intent; silencing the lookup keeps every figure script from printing three warnings per save.
+# IBM Plex Mono is named first in the mono stack to match the page, but is not installed for
+# matplotlib, so the fallback renders. Silencing the lookup keeps every figure script from printing a
+# warning per save.
 logging.getLogger("matplotlib.font_manager").setLevel(logging.ERROR)
 import matplotlib.pyplot as plt
 from cycler import cycler
 
 _ROOT = os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", ".."))
 
-# --- the palette, verbatim from the source stylesheets -----------------------------------------
-# Each grey is written there as `var(--gray-N, #hex)` and no --gray-N is defined in any of the
-# three sheets, so these fallbacks are what actually render on that site.
-INK        = "#333333"   # --text
-TICK       = "#555555"   # --tick
-TEXT_LIGHT = "#888888"   # --text-light : captions, tick labels
-TEXT_FAINT = "#bbbbbb"   # --text-faint
-TICK_LINE  = "#dddddd"   # --tick-line  : the rules that replace the axes
-RULE       = "#eeeeee"   # --rule
-BG_SOFT    = "#fafafa"   # --bg-soft
-PAPER      = "#ffffff"
+# --- the palette, from the Thermoregulation design page ------------------------------------
+# Neutrals carry a slight green bias rather than being pure greys; the page's tokens are named in
+# the right-hand comments so the two halves of the house style can be checked against each other.
+INK        = "#16181d"   # --ink    : axis titles, legend text
+INK_2      = "#4e545e"   # --ink-2  : secondary text
+TEXT_LIGHT = "#6e747e"   # --ink-3  : tick labels (Thermoregulation #767c86, darkened for 4.5:1)
+TICK       = INK_2
+TICK_LINE  = "#dcdedb"   # --line   : the rules that replace the axes
+RULE       = "#c9cdc9"   # --rule
+BG_SOFT    = "#f1f2f0"   # --surface
+PAPER      = "#fbfbfa"   # --ground : figures sit on the page ground, not on a white card
 
-TOL_BLUE   = "#0077bb"   # --tol-blue   / --series-blue
-TOL_ORANGE = "#ee7733"   # --tol-orange / --series-orange
-# The rest of Paul Tol's vibrant qualitative set, so a third and fourth series have a defined next
-# colour instead of a free choice. Only the first two appear in the source; the others are the
-# published scheme those two come from.
-TOL_EXTRA  = ["#009988", "#cc3311", "#ee3377", "#0077bb"]
-SERIES     = [TOL_BLUE, TOL_ORANGE] + TOL_EXTRA
+BLUE       = "#2a78d6"   # --series-1 (same value as --accent)
+ORANGE     = "#eb6834"   # --series-2 (same value as --warn)
+GREEN      = "#0f7a55"   # --series-3 (same value as --ok)
+RED        = "#b02b2b"   # --series-4 (same value as --danger)
+# Blue and orange first: that pair stays distinguishable under the common colour-vision
+# deficiencies. Green and red are a poor pair for a red-green deficient reader, so a figure that
+# needs a third and fourth series should also vary line style or marker, not hue alone.
+SERIES     = [BLUE, ORANGE, GREEN, RED]
 
 # Pretendard, vendored at assets/fonts/pretendard/ under the SIL Open Font License 1.1 and
-# registered with matplotlib below. It is the project's chosen face: the source's own three
-# typefaces are proprietary and resolve nowhere else, and the DejaVu fallback that matplotlib
-# reaches for otherwise is heavy and wide at these sizes.
-FONT_SANS = ["Pretendard", "Anthropic Sans", "system-ui", "DejaVu Sans", "sans-serif"]
+# registered with matplotlib below. It is the house body face, so figure text matches the page's
+# running text; the DejaVu fallback matplotlib reaches for otherwise is heavy and wide at these sizes.
+FONT_SANS = ["Pretendard", "system-ui", "DejaVu Sans", "sans-serif"]
 # A real monospaced stack, for anything that must line up by column. NOT Pretendard, which is
 # proportional -- putting it first here would silently make "mono" mean nothing.
-FONT_MONO = ["Anthropic Mono", "DejaVu Sans Mono", "SF Mono", "Menlo", "monospace"]
+FONT_MONO = ["IBM Plex Mono", "DejaVu Sans Mono", "SF Mono", "Menlo", "monospace"]
 
 
 def _register_vendored_fonts() -> bool:

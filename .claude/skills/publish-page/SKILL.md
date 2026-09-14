@@ -55,6 +55,13 @@ how much design the piece actually warrants.
 
 ## Step 2 — build the page
 
+**Start from the house style.** [`house_style_sheet.template.html`](../../../docs/develop/active/meta/house_style_sheet.template.html)
+is the default look for every artifact page: Pretendard body text, IBM Plex Sans Condensed headings,
+the green-grey palette, `01`-style section numbers, callout boxes, tabs, glossaries, step lists and
+tables. Copy its `<style>` block (fonts included) rather than inventing a new look, and depart from it
+only for a reason the page can state. Figures use `scripts/analysis/style/house.py`. Published as
+*House Style Sheet*: https://claude.ai/code/artifact/a273f767-34de-47c6-899d-0162b1f3a7ee
+
 Write a self-contained `.html` file (usually into the same `tmp/<timestamp>_<topic>/` directory as
 the scripts that produced the figures, so the page and its source sit together — or, for a study
 that owns a docs folder, alongside its design doc). Write page content only — no `<!DOCTYPE>`,
