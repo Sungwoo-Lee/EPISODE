@@ -254,7 +254,11 @@ def fig6(D):
     P = np.array([pe[n] for n in ORDER]); R = np.array([re_[n] for n in ORDER])
     px, rx = (P.min(), P.max()), (R.min(), R.max())
     ax.set_xlim(px[0] - 1.4, px[1] + 1.4)
-    ax.set_ylim(max(0.0, rx[0] - .6), rx[1] + 1.5)
+    # The one-control note makes this corner annotation two lines taller, which reached the lowest
+    # markers. Covering them with the text's backing box would hide data to protect a caption, so
+    # the axis gives the text its own room instead.
+    pad_lo = 1.5 if len(CTRL) <= 1 else .6
+    ax.set_ylim(max(0.0, rx[0] - pad_lo), rx[1] + 1.5)
     if len(CTRL) > 1:
         cp = [pe[n] for n in CTRL]; cr = [re_[n] for n in CTRL]
         ax.add_patch(plt.Rectangle((min(cp), min(cr)), max(cp) - min(cp), max(cr) - min(cr),
@@ -263,13 +267,23 @@ def fig6(D):
         ax.annotate(f"the {WORD.get(len(CTRL), len(CTRL))} unmodulated controls\nspan this box",
                     xy=(np.mean(cp), max(cr) + .30), ha="center", fontsize=13, color=ANNO)
     else:
-        ax.annotate("this grid has ONE unmodulated run, not a band:\nevery comparison here is one "
-                    "run against one run", xy=(0.5, 0.02), xycoords="axes fraction",
-                    ha="center", fontsize=13, color=ANNO)
-    ax.annotate(f"every run answers a predator about {P.mean()/R.mean():.0f}x more strongly than a\n"
-                f"rabbit. The equal-response line is far above this view.",
-                xy=(.02, .04), xycoords="axes fraction", fontsize=14, color=ANNO,
-                fontweight="bold")
+        pass          # the note is carried by the annotation below, not by one of its own
+    note = (f"every run answers a predator about {P.mean()/R.mean():.0f}x more strongly than a\n"
+            f"rabbit. The equal-response line is far above this view.")
+    if len(CTRL) <= 1:
+        # Appended to THIS text rather than added as its own: the title fills the top strip and
+        # the legend the upper left, and this annotation is much wider than it looks. Three
+        # separate placements were tried and rendered, and every one printed through something.
+        # One text object cannot collide with itself.
+        note += ("\nThis grid has ONE unmodulated run, not a band, so every\n"
+                 "comparison here is one run against one run.")
+    # The backing box is applied ONLY to the taller one-control note. A cohort with a real
+    # control band renders exactly as it did before this flag existed - adding the box
+    # unconditionally changed that figure for no reason, which the gate caught.
+    box = dict(zorder=7, bbox=dict(facecolor="#ffffff", alpha=.82, edgecolor="none", pad=3.0)) \
+        if len(CTRL) <= 1 else {}
+    ax.annotate(note, xy=(.02, .04), xycoords="axes fraction", fontsize=14, color=ANNO,
+                fontweight="bold", **box)
     ax.set_xlabel("response to a nearby PREDATOR (percentage points)")
     ax.set_ylabel("response to a nearby RABBIT\n(percentage points)")
     ax.set_title("Predator or rabbit \u2014 does the agent tell them apart?", loc="left")
