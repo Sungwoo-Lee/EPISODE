@@ -93,11 +93,19 @@ table{border-collapse:collapse;width:100%;font-size:.88rem}
 table.tprose{min-width:480px}
 table.tprose.survey{min-width:0}
 table.tprose.survey.volt{min-width:400px}
+/* prose in BOTH columns, so auto layout starves the label column; hint it. */
+table.survey.lit th:first-child,table.survey.lit td:first-child{width:30%}
 /* the three breakdown tables sit inside .m cards; widest max-content is 511px.
    Their scroll box is W-84 (20 wrap + 20 card padding + 1 card border +
    1 scroll border = 42 each side), so they overflow at W < 520+84 = 604
    -> the .narrowtbl cue is set at 603. Measured at W=604: box is exactly 520. */
 table.tprose.breakdown,table.tprose.survey.breakdown{min-width:520px}
+/* The four-conditions table sits in an .m card, so its scroll box is W-84 (20 wrap +
+   20 card padding + 1 card border + 1 scroll border = 42 each side). Declared floor
+   350 (its min-content measured 346), so it overflows while W-84 < 350, i.e. W < 434,
+   and .narrowcond is set at 433. It gets its OWN breakpoint rather than the shared 603:
+   sharing would announce a cut across 434-603 where this table does not overflow. */
+table.tprose.survey.cond{min-width:350px}
 /* ---- diagram + walkthrough vocabulary (architecture and per-analysis) ---- */
 .toc{border:1px solid var(--rule);border-radius:7px;background:var(--card);padding:13px 16px;
   margin:16px 0 4px;font-size:.9rem}
@@ -240,7 +248,8 @@ tbody tr:last-child td{border-bottom:none}
 td.n,th.n{font-family:"Azeret Mono",monospace;font-variant-numeric:tabular-nums;text-align:right}
 td.n{white-space:nowrap}
 .cap{font-size:.83rem;color:var(--muted)}
-.narrowonly,.narrowonly2,.narrowtbl{display:none}
+.narrowonly,.narrowonly2,.narrowtbl,.narrowcond{display:none}
+@media(max-width:433px){.narrowcond{display:block}}
 ul{margin:0;padding-left:20px;display:flex;flex-direction:column;gap:9px}
 li::marker{color:var(--muted)}
 footer{margin-top:54px;padding-top:21px;border-top:1px solid var(--rule);
@@ -408,6 +417,45 @@ a:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
     letters are unfortunate — they are the names the source code uses — so where it matters this page
     calls the fixed part <span class="mono">γ_rest</span> and the varying part
     <span class="mono">γ_ctx</span>.</p>
+  </div>
+
+  <p class="rowlab">Is that two-constant arrangement standard? Half of it</p>
+  <div class="scroll">
+    <table class="tprose survey lit">
+      <thead><tr><th>Piece</th><th>In the literature</th></tr></thead>
+      <tbody>
+        <tr><td><em>b</em> — the gain head's bias</td>
+            <td><strong>Conventional.</strong> The original FiLM paper defines the generator as a linear
+            projection <em>with</em> a bias: <span class="mono">γ&nbsp;=&nbsp;W·h&nbsp;+&nbsp;b</span>. Any layer producing γ
+            has one.</td></tr>
+        <tr><td><em>g</em> — the extra per-unit baseline</td>
+            <td><strong>Ours.</strong> Canonical FiLM has no second additive constant. The closest
+            relative is conditional batch norm, which writes
+            <span class="mono">γ(z)&nbsp;=&nbsp;γ&nbsp;+&nbsp;Δγ(z)</span> — but there the base is the normalisation layer's
+            <em>own pre-existing</em> parameter, not an extra one beside an already-biased head.</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p class="cap">Worth knowing when comparing this page's numbers against published FiLM results. The
+  comparison is still sound: the extra parameter changes <em>where a constant is stored</em>, not what γ
+  comes out as.</p>
+
+  <div class="note">
+    <p><strong>Why <em>g</em> exists at all, and why it is nonetheless redundant here.</strong> The gain
+    head is <strong>per-group</strong> — with several units sharing a group it emits one value that is
+    repeated across them — while the baseline is <strong>per-unit</strong>. So when groups hold more than
+    one unit, a per-unit offset cannot be expressed through the head's bias at all, and <em>g</em> is the
+    only way to have it. That is a real capability, and it is why the freeze test in analysis 03 must
+    write its frozen value into the baseline rather than the bias.</p>
+    <p>But <strong>every agent on this page uses a group size of one</strong>, so the two are exactly
+    redundant in these runs — which is exactly what the trained weights show: <em>b</em> starts at 1 and
+    <em>g</em> at 0, they take identical gradients thereafter, and their difference never leaves 1.0
+    (measured over training in the checkpoint comparison that follows).
+    A capability the configuration never switches on, stored as a second copy of a constant that already
+    existed.</p>
+    <p>One related divergence, for anyone reading the two side by side: the page's gain starts at identity
+    because <em>b</em> is initialised to 1. Canonical implementations usually get the same effect by
+    zero-initialising the generator's last layer instead. Different route, same starting point.</p>
   </div>
 
   <div class="prose"><p>Written out, unit <em>i</em>'s gain is:</p></div>
@@ -993,7 +1041,7 @@ a:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
 
   <p class="rowlab">This agent's four conditions</p>
   <div class="scroll">
-    <table class="tprose survey">
+    <table class="tprose survey cond">
       <thead><tr><th>Condition</th><th class="n">survival</th><th class="n">change</th><th class="n">episodes changed</th></tr></thead>
       <tbody>
         <tr><td>live — nothing frozen</td><td class="n">213.5</td><td class="n">—</td><td class="n">0%</td></tr>
@@ -1003,6 +1051,7 @@ a:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
       </tbody>
     </table>
   </div>
+  <p class="cap narrowcond">Wider than the screen — scroll sideways; the right-hand column is cut off.</p>
   <p class="cap">Survival steps, averaged over the 128 paired episodes. Freezing this agent's gain costs it
   <strong>123 of its 213 steps</strong> and changes the outcome in 72% of episodes — so its movement was
   doing real work, even though analysis 02 found only 35% of that movement to be contextual. Freezing the
