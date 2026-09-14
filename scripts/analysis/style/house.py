@@ -103,6 +103,10 @@ def apply(series: list[str] | None = None) -> None:
     _register_vendored_fonts()
     plt.rcParams.update({
         "figure.facecolor": PAPER, "savefig.facecolor": PAPER, "axes.facecolor": PAPER,
+        # 220 dpi: the PNG is what the page embeds and what the full-size viewer shows, so it is
+        # rendered well above its display width (guide 2.6). check_floor() scales with dpi, so the
+        # legibility check is unaffected.
+        "figure.dpi": 220, "savefig.dpi": 220,
         "font.family": "sans-serif", "font.sans-serif": FONT_SANS,
         "font.size": FS_BODY,
         "axes.labelsize": FS_BODY, "axes.labelcolor": INK, "axes.labelweight": "semibold",   # CSS 600

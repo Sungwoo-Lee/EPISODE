@@ -159,6 +159,36 @@ rules (`.lb*`, `.zoomhint`, `figure img{cursor:zoom-in}`), one markup block, one
 adapt only the colour tokens, and check the page actually defines every token the copy references.
 ---
 
+### 2.7 Figures come from Python scripts, never from the page (2026-09-14)
+
+**An artifact page does not draw its own figures.** No chart, plot, diagram of data or annotated
+figure is written in the page's HTML — not as inline `<svg>`, not as CSS bars, not as a `<canvas>`
+script. Every figure is produced by a Python script that saves it to files, and the page builder
+embeds the file.
+
+**Why, in the user's words:** figures must be *replicable and usable from Python script generation*.
+A chart that lives only in a page cannot be re-run against new data, imported into a notebook,
+regenerated after a style change, or dropped into a paper; its numbers are typed into markup where
+no test reaches them (the F15 hazard). A script-drawn figure is all of those things by construction.
+
+**The pipeline**, as implemented for the House Style Sheet
+([[house_style_sheet]]; `scripts/analysis/style/`):
+
+1. **One script per figure** (§5). It calls `house.apply()` first and sets no colour, font size or
+   gridline of its own — the house style lives in `scripts/analysis/style/house.py`.
+2. **`house.save(fig, stem)`** writes `<stem>.svg`, `.pdf` and `.png`, and refuses a label under the
+   9 px display floor or ink touching the image edge. The script also writes `<stem>.data.txt`, the
+   used / available statement (§11b) — emitted, never typed.
+3. **The builder embeds, it never draws.** Each `<img data-fig="<stem>">` in the template is filled
+   with that PNG (base64). The build fails on a figure with no script, a missing PNG/SVG/PDF, a
+   missing data statement, or any `<svg>` / `<canvas>` inside a `<figure>`.
+4. **The reader can open it full size** (§2.6), and the page prints the command that regenerates it.
+
+**What this does not forbid:** page chrome that is not a figure — colour swatches, a layout diagram
+of the page itself, icons. If it encodes data or a result, it is a figure and it comes from a script.
+Hand-authored explanatory diagrams that encode no data are the one grey area; prefer a script there
+too, and never let one carry a number that a script computed elsewhere.
+
 ## 3. Technical traps
 
 ### 3.1 A CSS class beats a `fill` attribute in SVG

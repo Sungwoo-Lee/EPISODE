@@ -13,7 +13,9 @@ last_updated: 2026-09-14
 > design page (palette, IBM Plex Sans Condensed headings, section numbering, boxes, glossaries,
 > steps) with Pretendard as the body face and a new tab component. `house.py` moved to the same
 > palette. Files renamed to `house_style_sheet{.template,}.html`; republished to the same artifact
-> URL. Items 1–2 under "What is NOT done" are superseded by that republish; items 3–4 still stand.
+> URL. Later the same day: Pretendard settled as the body face (the ten-font comparison was removed),
+> and figures became file-based — the page embeds the script's PNG and the build rejects any chart drawn
+> in the HTML ([[artifact_generation_guide]] §2.7). Items 1–2 under "What is NOT done" are superseded by that republish; items 3–4 still stand.
 
 ## What this is
 
