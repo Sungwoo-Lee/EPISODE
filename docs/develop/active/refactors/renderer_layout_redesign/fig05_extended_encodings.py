@@ -58,7 +58,8 @@ VIS_TABLE = ["Grass", "Sand", "Plain"] + VIS_FULL
 # Figure 6 channel hues. None reuses a data colour with another meaning in these pages: no orange
 # (nociception), no blue or red (temperature), no iris (agent), no teal (smell ramp). Object icon colours
 # where free; the two odour components get plum and brown so they differ from each other and from teal.
-OLF_HUE = ["#1E9E5A", "#A23B72", "#7A5634", "#8FA832", "#2F7A45"]   # food, odour A, odour B, bush, tree
+# odour B: dark gold, a hue no icon, minimap marker or temperature stop uses (was the tree-trunk brown; F11)
+OLF_HUE = ["#1E9E5A", "#A23B72", "#B8860B", "#8FA832", "#2F7A45"]   # food, odour A, odour B, bush, tree
 VIS_HUE = ["#1E9E5A", "#33503A", "#1F2733", "#6B7380", "#0E7490"]   # food, hiding predator, predator, obstacle, neutral
 FW, OUT, PADX, DIV = 1440, 24, 16, 48
 
