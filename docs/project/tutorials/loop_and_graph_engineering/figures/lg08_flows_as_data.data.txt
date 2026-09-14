@@ -1,0 +1,1 @@
+Proposal sketch, not a measurement: 6 of 6 boxes drawn (100%) - existing sources, the proposed file and its readers - plus 1 example failure restated from the 2026-07-28 wiki entry. No run, episode or seed is summarised.

@@ -1,0 +1,1 @@
+Proposal sketch, not a measurement: 5 of 5 example ledger rows drawn (100%), all invented, plus a 3-step recovery path. No run, episode or seed is summarised.

@@ -63,8 +63,13 @@ def canvas(w_in: float, h_in: float):
     return fig, ax
 
 
+DRAWN = []   # (title, role) of every titled box, in drawing order - so a Data line can count, not type
+
+
 def box(ax, cx, cy, w, h, title, sub=None, role="plain", title_size=None, lw=1.3, ls="-", r=0.08):
     fc, ec = ROLE[role]
+    if title:
+        DRAWN.append((title, role))
     ax.add_patch(FancyBboxPatch((cx - w / 2, cy - h / 2), w, h,
                                 boxstyle=f"round,pad=0,rounding_size={r}",
                                 fc=fc, ec=ec, lw=lw, ls=ls, zorder=2))

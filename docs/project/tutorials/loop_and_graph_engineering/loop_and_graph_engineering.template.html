@@ -8,6 +8,9 @@
 :root { --accent: var(--ink-2); --accent-text: var(--ink); }
 .callout ul, .findings ul { margin:0; padding-left:1.2em; }
 .callout li + li, .findings li + li { margin-top:6px; }
+/* a heading that is not first in its section must sit nearer its own text than the paragraph above (register F51) */
+.col > h3:not(:first-child) { margin-top:24px; }
+table.ideas td:first-child { white-space:nowrap; }
 blockquote { margin:0; padding:4px 0 4px 18px; border-left:3px solid var(--rule);
   color:var(--ink-2); font-size:17px; }
 /* citations and reference list - guide 12b, rendered number, never the list marker */
@@ -53,7 +56,10 @@ ol.refs li:target .rnum{background:var(--ink);color:var(--ground)}
   strong and where it is fragile.</p>
   <p>The claim is modest. Both terms name ways of working, not new algorithms, and neither changes
   the model underneath. Both are only a few months old, and sources do not yet agree on exact
-  definitions. &sect;6 says where they disagree.</p>
+  definitions. &sect;7 says where they disagree.</p>
+  <p>&sect;6 turns from explaining to suggesting. It proposes six graph-engineering changes for this
+  project's own agent team, from a small checked file to flows that revise themselves, each tied to a
+  real incident and drawn as a diagram. They are ideas for you to weigh, not approved plans.</p>
 </section>
 
 <section class="col">
@@ -443,7 +449,7 @@ ol.refs li:target .rnum{background:var(--ink);color:var(--ground)}
     <p>By the survey's standard, the team's graph is <strong>static</strong>: the playbook fixes the
     flows, and agent-manager chooses among them per job rather than building a new graph. Its runtime
     state is also thin. The diary records that a step happened, but no checkpoint lets a half-finished
-    multi-agent job resume where it failed. If either becomes a bottleneck, &sect;3 is where to look.</p>
+    multi-agent job resume where it failed. &sect;6 sketches what fixing both could look like.</p>
   </div>
 </section>
 
@@ -466,7 +472,375 @@ ol.refs li:target .rnum{background:var(--ink);color:var(--ground)}
 <hr>
 
 <section class="col">
-  <h2><span class="num">06</span> How settled are these terms?</h2>
+  <h2><span class="num">06</span> Ideas for this project</h2>
+  <p>Graph engineering is only worth adopting here if it fixes something that has actually gone
+  wrong. Each idea below starts from a real incident recorded in this repository, in the LLM Wiki,
+  the auto-memory or <code>CLAUDE.md</code>, and sketches what would change. They run from a change
+  of a few days to one of several weeks.</p>
+  <div class="callout">
+    <p class="eyebrow">Proposals, not plans</p>
+    <p>Nothing here has been designed, reviewed or approved. Any one of these ideas would go through
+    the project's own feature flow before a file changed: senior-developer writes a plan,
+    plan-reviewer checks it, and you decide. The size labels are this page's judgement, not an
+    estimate anyone has checked. Every example row, session and proposal drawn in the figures is
+    invented; only the incidents cited in the text are real.</p>
+  </div>
+</section>
+
+<figure>
+  <img data-fig="lg07_suggestion_map" alt="Six grey boxes in three columns headed smaller change, medium and larger change. Left: A, Flows as data, above B, Evidence gates. Middle: C, Job ledger, above D, Resource claims. Right: E, Research cycle, above F, Self-revising flows. Solid arrows: A to B, A to C, C to E, B to E, C to F. A dashed arrow from C to D. A legend: solid means needs this first, dashed means easier with this.">
+  <p class="zoomhint">Click the figure to view it full size</p>
+  <figcaption>
+    <span><b>Figure 7 &mdash; Six ideas, from smaller to larger, and what each needs first.</b>
+    The flow file (A) is the foundation. Gates (B) and the job ledger (C) build on it. The research
+    cycle (E) and self-revising flows (F) need both. Resource claims (D) can stand alone. Start from
+    the left.</span>
+    <span><b>Axes.</b> None: this is a diagram, not a chart. Left to right is a rough judgement of how
+    much work each change is, not a measured quantity; top and bottom encode nothing.</span>
+    <span><b>Data.</b> {{DATA:lg07_suggestion_map}}</span>
+  </figcaption>
+  <p class="prov">Reproduce: <code>python scripts/analysis/tutorials/loop_graph_engineering/lg07_suggestion_map.py</code></p>
+  <div class="howto">
+    <p class="eyebrow">How it is drawn</p>
+    <p>The script places six boxes in three columns and draws two kinds of link between them. Both
+    come from two short lists in the script, so the Data line can count them. A solid arrow means the
+    later idea needs the earlier one in place. Evidence gates (B) need a flow file (A) to say where
+    each gate sits, and a job ledger (C) needs the flow file to know what the steps of a job are. The
+    research cycle (E) needs gates and ledgers, and self-revising flows (F) need months of ledgers to
+    learn from. The one dashed arrow means resource claims (D) are easier once ledgers exist, because
+    a claim is a row a session writes and a ledger already has that shape; but D can be built alone.
+    The column a box sits in is a judgement of how much work the change is, made by the author of this
+    page after reading the playbook and the incident records cited below. Nobody has estimated it. The
+    figure does not rank the ideas by value. An idea on the right is not better than one on the left,
+    only larger, and E and F should not be started until the smaller ones have shown they help.</p>
+  </div>
+</figure>
+
+<section class="col">
+  <p class="cue" hidden>&larr; the table is wider than the screen &mdash; scroll it sideways</p>
+  <div class="scroll"><table class="wide ideas">
+    <thead><tr><th>Idea</th><th>What it answers</th><th>Size</th><th>Needs</th></tr></thead>
+    <tbody>
+      <tr><td>A &middot; Flows as data</td><td>Flows written as prose, which nothing checks; an
+      agent instruction that could never run went unnoticed</td><td>smaller</td><td>&mdash;</td></tr>
+      <tr><td>B &middot; Evidence gates</td><td>Review steps that depend on someone remembering
+      them</td><td>smaller</td><td>A</td></tr>
+      <tr><td>C &middot; Job ledger</td><td>No record of where a multi-agent job stands once its
+      session ends</td><td>medium</td><td>A</td></tr>
+      <tr><td>D &middot; Resource claims</td><td>Parallel sessions colliding over GPUs, git and
+      shared files</td><td>medium</td><td>&mdash; (easier with C)</td></tr>
+      <tr><td>E &middot; Research cycle</td><td>The experiment flow ends at pi; the next step is
+      started by hand</td><td>larger</td><td>B, C</td></tr>
+      <tr><td>F &middot; Self-revising flows</td><td>No record of which reviewer catches what, so the
+      flows change only after incidents</td><td>larger</td><td>C</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<section class="col">
+  <h3>A &middot; Flows as data</h3>
+  <p><strong>What went wrong.</strong> The flows exist as text diagrams in the agent playbook and as
+  prose across the agent profiles, and nothing checks one against the other. On 28 July 2026 four
+  profiles (developer, plan-reviewer, code-reviewer, env-config-reviewer) told their agent to consult
+  bug-curator. But of the team's agents, only senior-developer holds the tool that starts another
+  agent, so the instruction silently did nothing. It surfaced only because one plan-reviewer
+  mentioned the workaround in its own output (LLM Wiki, 28 July 2026). Figure 6 on this page is
+  copied from the playbook by hand, with the same weakness.</p>
+  <p><strong>The change.</strong> Write each flow once as a small data file: its agents, hand-offs,
+  gates and back edges. Add a lint check that rejects an edge its source agent cannot perform, and
+  have agent-manager and the flow diagrams read the same file. The playbook keeps the prose that
+  explains <em>why</em> each flow looks the way it does.</p>
+</section>
+
+<figure>
+  <img data-fig="lg08_flows_as_data" alt="Left: grey boxes Agent playbook (flows as prose today) and Agent profiles (the tools each agent holds), both with arrows into a green Flow file box (nodes, hand-offs, gates). From the flow file, arrows lead to three boxes on the right: grey Diagrams, blue agent-manager, orange Lint check. Below, a dashed box: Example failure it would print, edge code-reviewer asks bug-curator is impossible, code-reviewer cannot start agents, a real defect from 2026-07-28.">
+  <p class="zoomhint">Click the figure to view it full size</p>
+  <figcaption>
+    <span><b>Figure 8 &mdash; Idea A: one flow file, three readers, one of them a check.</b> Diagrams
+    and routing read the same source, and a lint check refuses any edge the agents cannot actually
+    carry out. The dashed box is the July defect, as the check would have reported it.</span>
+    <span><b>Axes.</b> None: this is a diagram, not a chart. Position encodes no quantity; left is what
+    exists today, right is what the idea adds.</span>
+    <span><b>Data.</b> {{DATA:lg08_flows_as_data}}</span>
+  </figcaption>
+  <p class="prov">Reproduce: <code>python scripts/analysis/tutorials/loop_graph_engineering/lg08_flows_as_data.py</code></p>
+  <div class="howto">
+    <p class="eyebrow">How it is drawn</p>
+    <p>The script draws what exists today on the left and what the idea adds on the right. The agent
+    playbook holds each flow as a text diagram of arrows, and each agent profile lists the tools that
+    agent may use; nothing reads the two together. The proposed flow file is drawn green because it is
+    a file on disk. It would state each flow once, as data: which agents appear, who hands work to
+    whom, where the gates are, and which edges send work back. Three things would read it. Diagrams
+    such as Figure 6 would be drawn from it instead of being copied by hand. agent-manager would take
+    its routes from it instead of from prose. And a lint check, a small script run before a flow is
+    used, would reject edges that cannot work. The dashed box restates a defect that really happened.
+    On 28 July 2026 four agent profiles told their agent to consult bug-curator, but only
+    senior-developer can start another agent, so the instruction silently did nothing. It was found
+    by chance, in one agent's written output. The file name and the check's rules are not decided;
+    the figure shows the shape of the idea, not a design.</p>
+  </div>
+</figure>
+
+<section class="col">
+  <p><strong>Cost, and what would show it is not worth it.</strong> A few days: translate five flows
+  and write one short check. The flows do change, which is what makes drift likely: git records 15
+  commits to the playbook and 59 to the agent profiles. The risk is that the file and the prose drift apart, which the check can
+  partly guard by requiring every flow the playbook names to exist in the file. If the check finds
+  nothing on its first run, and the flows rarely change, the idea has earned little and the rest of
+  this section should wait.</p>
+
+  <h3>B &middot; Evidence gates</h3>
+  <p><strong>What went wrong.</strong> Every review step in the playbook holds only as long as a
+  session remembers it. <code>CLAUDE.md</code> says outright that the review of an analysis verdict
+  &ldquo;is the one that is easy to forget&rdquo;. The artifact guide records that its own rules
+  &ldquo;were written, were right, and were skipped&rdquo; until the <code>publish-page</code> skill put
+  them in the path. And a handover note written by the session that had just done the work was wrong
+  about three of its six bug claims (LLM Wiki, 9 September 2026). An agent's report that it did
+  something is not evidence that it did.</p>
+  <p><strong>The change.</strong> Give every hand-off a gate that looks for a specific line in a
+  specific file, such as a plan-reviewer verdict or your recorded approval, before the next agent
+  starts. <code>publish-page</code> is already the precedent: it put a format review between building
+  a page and publishing it.</p>
+</section>
+
+<figure>
+  <img data-fig="lg09_evidence_gates" alt="Two rows. Feature flow: blue senior-developer (writes the plan), orange Gate (review verdict and your approval in plan), blue developer (implements), orange Gate (tests pass and diff left uncommitted), blue senior-developer (verifies). Under each gate a dashed orange arrow to the text 'missing: stop, and name the missing line'. Analysis flow: blue experiment-analyzer (writes the verdict), orange Gate (plan-reviewer pass on the verdict), orange pi (continue or pivot), labelled 'the gate CLAUDE.md calls easy to forget'. A dashed box: A gate reads a file, so a skipped review cannot pass without anyone noticing.">
+  <p class="zoomhint">Click the figure to view it full size</p>
+  <figcaption>
+    <span><b>Figure 9 &mdash; Idea B: gates between steps that check a file, not an agent's
+    word.</b> Two flows the project already runs, with the proposed gates in orange. When a gate's
+    evidence is missing, the flow stops and says what is missing, instead of carrying on.</span>
+    <span><b>Axes.</b> None: this is a diagram, not a chart. Position encodes no quantity; each row is a
+    separate flow read left to right.</span>
+    <span><b>Data.</b> {{DATA:lg09_evidence_gates}}</span>
+  </figcaption>
+  <p class="prov">Reproduce: <code>python scripts/analysis/tutorials/loop_graph_engineering/lg09_evidence_gates.py</code></p>
+  <div class="howto">
+    <p class="eyebrow">How it is drawn</p>
+    <p>The script draws two flows the project already runs and inserts proposed gates, in orange,
+    between their steps. The top row is the feature flow from the agent playbook. Between planning
+    and implementing, a gate would look in the plan document for the plan-reviewer's verdict and a
+    recorded approval from you. Between implementing and verifying, it would look for passing tests
+    and an uncommitted change, since the playbook verifies against the uncommitted diff. The bottom
+    row is the analysis flow. Its gate would require plan-reviewer's pass on the analysis verdict
+    before pi is asked whether to continue; <code>CLAUDE.md</code> singles this step out as the one
+    that is easy to forget. Under each gate is what happens when the evidence is missing: the flow
+    stops and says which line is absent. The dashed box states the principle. A gate checks a file,
+    not an agent's report that it did the work, because such reports have been wrong here before. The
+    figure does not show where the check would run, whether in a hook, in the parent session or in
+    the flow file's tooling. Nor does it claim a gate proves a review was good, only that one
+    happened.</p>
+  </div>
+</figure>
+
+<section class="col">
+  <p><strong>Cost, and what would show it is not worth it.</strong> Small once idea A exists. The
+  risk is box-ticking: a verdict line can be written without a real review behind it. A gate proves
+  a step ran, not that it ran well.</p>
+
+  <h3>C &middot; Job ledger</h3>
+  <p><strong>What went wrong.</strong> Nothing records where a multi-agent job stands except the
+  conversation running it. The diary records that events happened, not what is still pending.
+  Sub-agents that start a background job and then return leave the job running with nobody watching
+  it (LLM Wiki, 26 July 2026). When a session ends mid-flow, the next one rebuilds the state from
+  memory, which is exactly how the wrong handover note above came about. The playbook's
+  &ldquo;Failure-Recovery Patterns&rdquo; are recovery edges written as prose.</p>
+  <p><strong>The change.</strong> Keep one small file per job, with a row per step: its agent, status
+  and evidence. The owning session updates it at every hand-off, and a new session reads it first.
+  This is the Launch Manifest pattern, which already works for training runs, extended to every
+  flow.</p>
+</section>
+
+<figure>
+  <img data-fig="lg10_job_ledger" alt="Left: a green box titled 'Job ledger: one small file per job' with monospaced rows: plan, senior-developer, done, plan.md; review, plan-reviewer, done, verdict SOUND; approve, you, done, approval line; implement, developer, running, session 7f3a; verify, senior-developer, waiting. Below it: the Launch Manifest already does this for training runs. Right: a column of three boxes, Session ends mid-job (a crash, a compaction, or a closed laptop), New session starts (reads the ledger first), Resumes at implement (after checking session 7f3a is gone), with a green 'read' arrow from the ledger to the new session.">
+  <p class="zoomhint">Click the figure to view it full size</p>
+  <figcaption>
+    <span><b>Figure 10 &mdash; Idea C: a ledger per job, so work survives the session doing
+    it.</b> The ledger is the runtime state graph of Figure 4 in its simplest form: a table of steps
+    and statuses. A new session reads it and resumes at the step marked running, instead of
+    reconstructing the job from memory.</span>
+    <span><b>Axes.</b> None: this is a diagram, not a chart. Position encodes no quantity; the right
+    column reads top to bottom.</span>
+    <span><b>Data.</b> {{DATA:lg10_job_ledger}}</span>
+  </figcaption>
+  <p class="prov">Reproduce: <code>python scripts/analysis/tutorials/loop_graph_engineering/lg10_job_ledger.py</code></p>
+  <div class="howto">
+    <p class="eyebrow">How it is drawn</p>
+    <p>The script draws an example ledger on the left and a recovery path on the right. Every row, the
+    session id 7f3a and the file itself are invented. A ledger would be one small file per multi-agent
+    job. Each row is a step: which agent owns it, its status, and the evidence it produced, such as a
+    plan document or a reviewer's verdict. The owning session writes a row at every hand-off, so the
+    file always says where the job stands. The right side shows why that matters. A session can end in
+    the middle of a job through a crash, a context compaction or simply being closed. Today the next
+    session has to rebuild the state from the conversation, the diary and memory. With a ledger it
+    reads one file and resumes at the step marked running. First, though, it checks that the session
+    named there really has stopped, so two sessions do not both carry on. The pattern is not new to
+    this project: the Launch Manifest in the playbook already records planned and actual columns for
+    every training run, written by different agents. The figure does not show how stale rows are
+    cleaned up; idea D's leases would handle that.</p>
+  </div>
+</figure>
+
+<section class="col">
+  <p><strong>Cost, and what would show it is not worth it.</strong> Medium: every flow step must write
+  its row, and the agent profiles must say so. A ledger nobody updates is worse than none, because a
+  stale &ldquo;running&rdquo; row looks authoritative. If the next month shows few jobs interrupted
+  mid-flow, keep the ledger for long jobs only.</p>
+
+  <h3>D &middot; Resource claims</h3>
+  <p><strong>What went wrong.</strong> Parallel sessions share things only one can use at a time, and
+  the current protections are procedures to remember. On 4 August 2026 node 102 was double-booked:
+  a session saw its GPUs as free while another session's runs were still in their setup phase
+  (auto-memory, GPU pre-flight rule). <code>CLAUDE.md</code> describes an empty git lock file stuck
+  for hours while other sessions committed. And while this page was being built, the format-defect
+  register held another session's unfinished edits, so this session could add its entry but not
+  commit it.</p>
+  <p><strong>The change.</strong> Keep a claims file. Before using a shared resource, a session writes
+  a claim with a lease, a time limit it must renew. The first claim wins, waiting sessions can see who
+  holds what until when, and an unrenewed lease expires.</p>
+</section>
+
+<figure>
+  <img data-fig="lg11_resource_claims" alt="Heading: First claim wins. A lease that is not renewed expires. Left: three blue boxes, Session A (renderer plan), Session B (tutorial page), Session C (training launch). Right: four grey boxes, CLAUDE.md, git index, format register, node 102 GPU 0. Arrows: Session A to format register, 'holds: editing, lease 30 min'; a dashed grey arrow from Session B to format register, 'waits: lease held by A'; Session B to git index, 'holds: committing, lease 2 min'; Session C to node 102 GPU 0, 'holds: until the run ends'.">
+  <p class="zoomhint">Click the figure to view it full size</p>
+  <figcaption>
+    <span><b>Figure 11 &mdash; Idea D: sessions claim shared resources, with leases.</b> The four
+    resources are real collision points in this repository; who holds what in the drawing is
+    invented. The dashed grey edge is a session told to wait instead of colliding.</span>
+    <span><b>Axes.</b> None: this is a diagram, not a chart. Position encodes no quantity; sessions are
+    on the left, resources on the right.</span>
+    <span><b>Data.</b> {{DATA:lg11_resource_claims}}</span>
+  </figcaption>
+  <p class="prov">Reproduce: <code>python scripts/analysis/tutorials/loop_graph_engineering/lg11_resource_claims.py</code></p>
+  <div class="howto">
+    <p class="eyebrow">How it is drawn</p>
+    <p>The script draws sessions on the left and shared resources on the right, with a claim as an
+    arrow between them. The four resources are real places where parallel sessions have collided in
+    this repository. On 4 August 2026 a GPU on node 102 was booked twice: one session checked only
+    whether the card was busy, while another session's runs were still in their setup phase. The git
+    index is guarded by a lock file that one session at a time may hold, and <code>CLAUDE.md</code>
+    records such a lock left behind for hours. The format-defect register held another session's
+    unfinished edits while this page was being built. And <code>CLAUDE.md</code> is edited by
+    parallel sessions with no locking at all. Which session holds which resource in the drawing is
+    invented. The proposal is a claims file. A session writes a claim before using a resource, with a
+    lease, meaning a time limit it must renew. The first claim wins. A waiting session sees who holds
+    the resource and until when. A lease nobody renews expires, so a crashed session cannot hold a
+    resource forever. The figure does not show what happens when a session ignores the file, which is
+    this idea's main weakness.</p>
+  </div>
+</figure>
+
+<section class="col">
+  <p><strong>Cost, and what would show it is not worth it.</strong> Medium, and it only works if every
+  session uses it; partial use gives false confidence. The diary and git history could first count
+  how often collisions actually happen. If they are rare, the procedures already written down may be
+  enough.</p>
+
+  <h3>E &middot; Research cycle as one graph</h3>
+  <p><strong>What could be better.</strong> The playbook's experiment flow is a straight line that ends
+  at the pi's decision. The next step, whether to deepen, pivot or write up, is a person starting a
+  new flow by hand. Designing, analysing and proposing new directions are written as separate flows,
+  and their joins are implicit.</p>
+  <p><strong>The change.</strong> Write the research cycle as one graph. Reviewers that read different
+  objects run in parallel and are then joined, one training-runner starts per manifest row, and pi's
+  three outcomes become edges back into the graph.</p>
+</section>
+
+<figure>
+  <img data-fig="lg12_research_cycle" alt="Top row left to right: grey Question (from a researcher), blue experiment-designer (design, manifest), which fans out to orange plan-reviewer (the design) and orange env-config-reviewer (the configs), labelled 'in parallel, then joined', both joining into orange pi (go, or not now), then You (approve, pick GPUs). An arrow down to the bottom row, right to left: stacked blue training-runner boxes (one per run), blue experiment-analyzer (writes the verdict), orange plan-reviewer (does evidence hold?), orange pi (deepen, pivot, or write up), and a grey Paper draft box reached by 'write up'. Orange arrows from the lower pi go up to experiment-designer ('deepen: next experiment') and to Question ('pivot'). A green box in the middle: Memory, wiki, diary, manifest.">
+  <p class="zoomhint">Click the figure to view it full size</p>
+  <figcaption>
+    <span><b>Figure 12 &mdash; Idea E: the research cycle, closed.</b> Planning runs along the top and
+    running and reading along the bottom. The two orange edges turn pi's decision into a path back
+    through the graph, where today a person starts a new flow. Both pi calls and your approval stay
+    decisions made by people.</span>
+    <span><b>Axes.</b> None: this is a diagram, not a chart. Position encodes no quantity; the top row
+    reads left to right, the bottom row right to left.</span>
+    <span><b>Data.</b> {{DATA:lg12_research_cycle}}</span>
+  </figcaption>
+  <p class="prov">Reproduce: <code>python scripts/analysis/tutorials/loop_graph_engineering/lg12_research_cycle.py</code></p>
+  <div class="howto">
+    <p class="eyebrow">How it is drawn</p>
+    <p>The script draws the experiment flow from the agent playbook as one cycle rather than a line.
+    The top row plans. A research question reaches experiment-designer, whose design is checked by
+    plan-reviewer and env-config-reviewer. The playbook runs those two reviews one after the other;
+    the figure runs them in parallel and joins the results, because they read different objects. pi
+    then asks whether the experiment is worth the GPU time, and you approve and choose the GPUs. The
+    bottom row runs the experiment and reads the results. One training-runner starts per row of the
+    Launch Manifest, drawn as stacked boxes. experiment-analyzer then writes the verdict, and
+    plan-reviewer checks whether the evidence supports it. The second pi call has three outcomes, and
+    the proposal is to make all three into edges of the graph. Deepen goes back to design for the next
+    experiment, pivot goes back to a new question, and write up leaves the cycle toward a paper.
+    Today each of those is a person starting a new flow by hand. The green box is the memory every
+    step already uses: the wiki, the diary and the manifest. The figure does not suggest automating
+    either pi call or your approval; those stay decisions made by people.</p>
+  </div>
+</figure>
+
+<section class="col">
+  <p><strong>Cost, and what would show it is not worth it.</strong> Weeks, and it needs B and C. The
+  danger is automating scientific judgement, so the graph must never launch GPU time on its own. If
+  the gain is only saving the few minutes it takes to start the next flow, it is not worth building.
+  It earns its place if a closed cycle makes it easier to see which experiments led where.</p>
+
+  <h3>F &middot; Self-revising flows</h3>
+  <p><strong>What could be better.</strong> The flows change only after an incident, and nobody records
+  which reviewer catches what. The July wiki entry lists as unmeasured even how often agent-manager is
+  actually used (LLM Wiki, 28 July 2026). The survey behind this page names graphs that improve
+  themselves across runs as an open problem {{CITE:feng}}.</p>
+  <p><strong>The change.</strong> Once ledgers exist, a periodic review reads them and proposes one
+  edit to the flow file, backed by counts. plan-reviewer checks the evidence and you decide.</p>
+</section>
+
+<figure>
+  <img data-fig="lg13_self_revising_flows" alt="Six boxes in a clockwise loop: green Flow file (the current graph), blue Jobs run (following the flows), green Job ledgers (what each gate caught), blue Periodic review (proposes one edit), orange plan-reviewer (is the evidence enough?), outlined You (accept or reject), with a green arrow from You back to Flow file labelled 'edit applied and logged'. In the centre a dashed box: A hypothetical proposal, math-reviewer was never needed on doc-only changes; drop it from that flow?">
+  <p class="zoomhint">Click the figure to view it full size</p>
+  <figcaption>
+    <span><b>Figure 13 &mdash; Idea F: the flows learn from past jobs, and a person makes every
+    change.</b> The loop runs around the graph rather than inside it. The only arrow that changes the
+    graph, in green because it writes the flow file, starts at you.</span>
+    <span><b>Axes.</b> None: this is a diagram, not a chart. Position encodes no quantity; the loop
+    reads clockwise from the flow file.</span>
+    <span><b>Data.</b> {{DATA:lg13_self_revising_flows}}</span>
+  </figcaption>
+  <p class="prov">Reproduce: <code>python scripts/analysis/tutorials/loop_graph_engineering/lg13_self_revising_flows.py</code></p>
+  <div class="howto">
+    <p class="eyebrow">How it is drawn</p>
+    <p>The script draws a loop around the flows themselves, running clockwise. Jobs follow the flow
+    file. Their ledgers, from idea C, would record which gate caught a problem, how often work was
+    sent back, and how long each step took. Every so often a periodic review, which could be an agent
+    run on a schedule, would read those ledgers and propose exactly one edit to the flow file, along
+    with the counts behind it. plan-reviewer would check whether the evidence really supports the
+    edit, and you would accept or reject it. An accepted edit is applied and written to a change log;
+    that arrow is green because it writes the flow file on disk. The box in the middle is invented, to
+    show the kind of proposal meant; no such count exists yet. This is the smallest version of what
+    the survey calls self-evolving graphs, and it keeps a person on the only arrow that changes the
+    graph. That matters because of a rule this project already holds: its reviewers overlap on
+    purpose. A count showing that a reviewer rarely catches anything can mean the reviewer is
+    unneeded, or that the rare thing it catches is expensive. The figure does not show how often the
+    review would run, which should depend on how many jobs there are to learn from.</p>
+  </div>
+</figure>
+
+<section class="col">
+  <p><strong>Cost, and what would show it is not worth it.</strong> Months, because it needs a long
+  record of ledgers before any count means anything. The main risk is tuning away reviewers that
+  rarely fire but catch expensive mistakes. So a proposal to remove a check should need a stronger
+  case than a proposal to add one.</p>
+  <div class="callout">
+    <p class="eyebrow">Where this page would start</p>
+    <p>With idea A alone, judged by one question: does the lint check find a real defect on its first
+    run? If it finds something like the July dead instruction, the flows are drifting and B is worth
+    building next. Take up C and D only if interrupted jobs and resource collisions keep appearing in
+    the diary. Leave E and F until the first four have shown they help. This is a suggestion for you
+    to weigh, not a decision.</p>
+  </div>
+</section>
+
+<hr>
+
+<section class="col">
+  <h2><span class="num">07</span> How settled are these terms?</h2>
   <p>Not very. Treat everything above as a snapshot from September 2026.</p>
 </section>
 <section class="col"><div class="qs">
@@ -492,7 +866,7 @@ ol.refs li:target .rnum{background:var(--ink);color:var(--ground)}
 <hr>
 
 <section class="col">
-  <h2><span class="num">07</span> References</h2>
+  <h2><span class="num">08</span> References</h2>
   <p class="foot">Each entry says how this page read the source. None was read in full as a PDF;
   quotations are as a summarising web fetch returned them on 14 September 2026, and should be
   checked against the original before being reused.</p>
