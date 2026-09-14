@@ -9,7 +9,7 @@ supersedes: UI_REDESIGN_PROPOSAL.md
 
 # Episode-video renderer redesign: panels that cannot overlap, a faster frame, and a step-scrubbing viewer
 
-> **Status**: PLANNED. Revised three times after `plan-reviewer` (first and second pass NOT READY; third pass SOUND WITH CONCERNS, applied in Revision 3). Revision 4 adds extended-range senses (user scope, 2026-09-14); fourth pass SOUND WITH CONCERNS, applied in Revision 5. Revision 6 records user decisions (2026-09-14); fifth pass SOUND WITH CONCERNS, applied in Revision 7. Plan only; awaiting re-review, then user approval. No code written.
+> **Status**: PLANNED. Revised three times after `plan-reviewer` (first and second pass NOT READY; third pass SOUND WITH CONCERNS, applied in Revision 3). Revision 4 adds extended-range senses (user scope, 2026-09-14); fourth pass SOUND WITH CONCERNS, applied in Revision 5. Revision 6 records user decisions (2026-09-14); fifth pass SOUND WITH CONCERNS, applied in Revision 7. Revision 8 adopts the visual design spec (`docs/reviews/design_episode_dashboard.md`). Plan only; awaiting re-review, then user approval. No code written.
 > **Opened**: 2026-09-14
 > **Related**: [[UI_REDESIGN_PROPOSAL]] (the April plan this one replaces) · [[12_renderer]] (renderer reference doc) · [thermal IMPLEMENTATION_PLAN](../thermal/IMPLEMENTATION_PLAN.md) (§"Rendering: what the rewrite's state turned out to be") · [[BODY_TEMPERATURE_OBSERVATION]] (thermal; **untracked work-in-progress in another session, read as unstable input only**) · [[ASYNC_CHECKPOINT_VIDEO_RENDER]] · [[SAVED_RUN_CONFIG_COMPAT]] · review: [`docs/reviews/plan_renderer_layout_redesign.md`](../../../reviews/plan_renderer_layout_redesign.md) · evidence frames + measuring script: [`renderer_layout_redesign/`](renderer_layout_redesign/) · web research note `tmp/20260914_renderer_layout_web_research.md`
 
@@ -167,6 +167,30 @@ The second pass confirmed findings #1–#15 resolved in the body and returned **
 
 ---
 
+## Revision 8 2026-09-14 (visual design spec adopted)
+
+**What this adopts.** The `visual-design-reviewer` report [`docs/reviews/design_episode_dashboard.md`](../../../reviews/design_episode_dashboard.md) concluded that the layout is sound but the look is dated. Its **§Spec** (Canvas theme, Type, Palette, Spacing/radii/cards, Components, Icon style guide) is adopted **by reference** as the new renderer's visual specification; hex values, sizes and component drawings live there, not here. Where that spec and this plan's earlier visual wording differ, the spec wins, except for the rules below, which change behaviour or tests and so are restated here.
+
+| # | Rule adopted | Plan impact |
+|---|---|---|
+| 1 | **Light theme for the video frame**: white cards on a green-grey canvas, no monospace anywhere. A deliberate departure from the house style sheet, **for the frame only** (artifact pages keep the house style). | §D1.3 styling follows the spec; CP-D judges against it. |
+| 2 | **Font "Dashboard Sans Tab"**: Pretendard with tabular digits frozen into the cmap, so numbers do not jitter between frames. It is renamed because the OFL Reserved Font Name forbids "Pretendard" in a derived name. Vendored at `assets/fonts/dashboard_sans_tab/` with `OFL.txt` and a `README` (source version, the digit-freezing step, licence). New asset; V1 unaffected. | File Changes (Phase 2); `fit_text` measures with this font; the guard records the font file sha256 with the machine/font record (§D7.7 item 4). |
+| 3 | **Flat icon set drawn from primitives**: creatures and food on white tokens, flat terrain, and a **composable agent marker** that replaces the `agent_*` combination images. Exported to a **new folder `assets/dashboard_icons/`**, plus `assets/campfire.png`. Existing `assets/*.png` are untouched and V1 is unaffected. **The new renderer draws its own glyphs/icons and does not load V1 icons** (supersedes Revision 7's copied cache-free loader of V1 icons). | §D1.4; File Changes; CP2.6 now checks `dashboard_icons` ink. |
+| 4 | **Temperature norm: piecewise-linear `FuncNorm` with named anchors**, replacing the Revision 7 two-slope description. Normalised positions: vmin **0.00**, lower body limit **0.25**, setpoint **0.50**, upper body limit **0.58**, warm anchor **0.75**, fire anchor **0.88**, vmax **1.00**. Anchor temperatures come from config params: `min_temperature`, `temperature_setpoint`, `max_temperature`. Default rule: warm = **4×** and fire = **10×** the upper body limit, measured from the setpoint (Q16). vmin/vmax are the Revision 7 §D4.3 params bound. **Out-of-range field value → raise at build time** naming the cell and the bound (no fallback); clamp-and-outline is the alternative, Q15. | §D4.3 bullet replaced; thermal tests updated. |
+| 5 | **Component rules that change behaviour or tests.** | See below. |
+| 6 | The sketch figures on the artifact page are being re-drawn to this spec (docs folder only). | No plan change. |
+
+**Rule 5 in detail:**
+- **One shared temperature legend** in the thermoception card. No second legend under the grid view; the arena card keeps no scale strip.
+- **"not observed" / "not recorded"** are drawn as text over an **outlined empty track** (no hatched fill). This supersedes Revision 6's hatched muted fill, and CP2.5 checks the outlined-track style.
+- **One global noise note** (header or footer, e.g. "perceptual noise: off" / "on, true observations not recorded") replaces per-card "obs only" / "no noise" captions (§D4.2). Audit rule 7 is updated to look for the global note.
+- **Option A maps:** value 0 = the track colour; the agent's own cell outlined in the agent colour.
+- **One meaning per colour:** iris = agent only; orange = nociception only; blue↔red = temperature only; teal = smell; slate = vision. New **CP-C** pixel census.
+- **Text floors:** **14 px** for anything read during playback, **12 px** for captions. These replace the 8 pt floor (`fit_text` minimum, audit rule 5).
+- **CP-D** already requires a passed visual-design review before retirement; it now judges against this spec.
+
+---
+
 ## Analysis
 
 ### A1. What runs today (verified 2026-09-14; line numbers as of HEAD `75757dfc`, working tree dirty, see revision note)
@@ -319,7 +343,7 @@ Stretchable/Taffy stays a possible later drop-in behind `Box`; it isn't needed f
 
 - **Axes.** One `fig.add_axes(rect)` per panel, `clip_on=True`, layout engine `'none'`.
 - **Card borders.** Drawn as a separate unfilled outline artist. Text may not touch it (§D5.2).
-- **`fit_text(ax, text, box, max_pt, min_pt=8, numeric: bool)`.** Measures with `get_window_extent` and shrinks down to 8 pt.
+- **`fit_text(ax, text, box, max_px, min_px, numeric: bool)`** (Revision 8). Text uses the vendored "Dashboard Sans Tab" font and floors of **14 px** for playback text and **12 px** for captions, which replace the earlier 8 pt floor wherever "8 pt" appears below. It measures with `get_window_extent` and shrinks down to the floor.
   - **Numeric kinds never ellipsise:** `vital_row`, `temp_row`, `hidden_state`, `intensity`, `thermal_diamond` cells and `text_row` raise `TextFitError` at the floor, in every mode.
   - **Free text** (header only) may ellipsise at the floor, and each ellipsis is written to the render log.
 - **Round 2 decisions carried in full:**
@@ -358,6 +382,11 @@ Stretchable/Taffy stays a possible later drop-in behind `Box`; it isn't needed f
 - **`frame(t)`.** `extract`, update artists (`set_width`, `fit_text` updates, `set_data`, `set_visible`, `set_offsets`), then `canvas.draw()`, then copy of `buffer_rgba()[..., :3]`.
 - **`close()`.** `plt.close(fig)`.
 - **`layout_signature()`.** Hash of the panel keys, kinds, boxes and REAL-slot flags, used by the concat check in §D4.2.
+- **Icon set (Revision 8, supersedes the icon-file lookup below).**
+  - **Source.** The new renderer draws every entity from its own flat icon set in `assets/dashboard_icons/`, drawn from primitives per the design spec §Icon style guide: creatures and food on white tokens, flat terrain. It does **not** load V1 icons or `icon_config` images.
+  - **Agent.** A composable marker drawn over whatever occupies the cell replaces V1's `agent_*` combination images.
+  - **Campfire.** `assets/campfire.png` joins the set.
+  - **Fallback.** The glyph described below remains only for an entity name with no `dashboard_icons` entry.
 - **Iconless entities (review finding 11).** For any obstacle, resource or animal whose icon key is missing from `icon_config` or whose file is absent, the arena draws a **deterministic glyph**: a filled rounded square in the entity's category colour, plus a centred 1–3 letter code derived from its name (e.g. `CF` for campfire), drawn as a vector path (`TextPath` → `PathPatch`) rather than a `Text` artist. The mapping lives in a small table in the painter module, with its own test that codes are unique across `params.obstacle_names`. This path is always needed because archived `icon_config` pickles lack keys added later. **Decided 2026-09-14 (Q12): a new asset `assets/campfire.png` is created.** The shared icon mapping (`configs/visualization/default.yaml`) has no `campfire` key and V1's `_load_icons` loads only mapped keys, so adding the file does not change V1 videos. The mapping stays frozen. The new renderer resolves `campfire` → `assets/campfire.png` through its own internal icon table. The glyph fallback remains for any other iconless entity and for a missing file.
 - **Single-frame wrapper.** `render_dashboard_frame(...)` builds a one-frame `EpisodeRenderer` for the demo, dream-visualiser and benchmark callers.
 
@@ -426,7 +455,7 @@ Speed figures are **estimates** unless marked measured. The Phase 0 gate (§D5.3
 - **Captions** when `real_available[m]` is true:
   - `true_obs` recorded: show REAL values and tick.
   - `true_obs is None` (e.g. `testing.record_true_observations: false`): reserve the slot and show the muted caption "true obs not recorded".
-- **When false:** no REAL slot, no tick, and a card caption "no noise".
+- **When false:** no REAL slot and no tick. Revision 8 replaces per-card captions with **one global noise note** in the header or footer (e.g. `perceptual noise: off`, or `on; true observations not recorded`). Audit rule 7 checks the note's presence and its consistency with params.
 - **Sub-epsilon differences:** never used to decide layout. Where REAL is shown and `|true − obs|` is below 1e-6, the tick sits on the fill end (12_renderer.md pitfall 4).
 - **Concat check.** `render_recordings_v2.py --concat` asserts all episodes' `layout_signature()` are equal before concatenating, and fails otherwise.
 
@@ -451,7 +480,22 @@ Speed figures are **estimates** unless marked measured. The Phase 0 gate (§D5.3
   - If it is 0, sources can merge, so the term is `Σ_i c_i`.
   
   Finally, `vmin` and `vmax` are widened, if needed, to include `min_temperature` / `max_temperature`, so the body gauge shares the scale. The campfire world's fires (`temperature_ratio` [11, 13]) put fire cells near +336, and this bound covers them by construction.
-- **Two-slope diverging scale (Revision 7).**
+- **Superseded by Revision 8: anchored piecewise-linear norm.**
+  - **Mapping.** `matplotlib.colors.FuncNorm` with named anchors at normalised positions:
+    - vmin 0.00 (params bound);
+    - lower body limit 0.25 (`min_temperature`);
+    - setpoint 0.50 (`temperature_setpoint`);
+    - upper body limit 0.58 (`max_temperature`);
+    - warm anchor 0.75;
+    - fire anchor 0.88;
+    - vmax 1.00 (params bound).
+  - **Warm and fire default rule (Q16).** Warm = setpoint + 4 × (`max_temperature` − setpoint); fire = setpoint + 10 × (`max_temperature` − setpoint).
+  - **Validity.** Anchors must be strictly increasing; a config where they are not raises at build time naming the anchors.
+  - **Out of range.** A field value outside [vmin, vmax] raises at build time naming the cell and the bound (Q15 records the clamp-and-outline alternative).
+  - **Colours and legend.** Anchor colours and the legend drawing come from the design spec (§Palette, §Components).
+  - **Tests.** Each anchor temperature maps to its normalised position within 1e-6. A non-monotone anchor config raises. An out-of-range doctored field raises naming the cell.
+  - The two-slope text below is kept for history only.
+- **Two-slope diverging scale (Revision 7; superseded by Revision 8).**
   - **Mapping.** `matplotlib.colors.TwoSlopeNorm(vmin, vcenter=temperature_setpoint, vmax)`: the setpoint is the neutral colour, and each side uses its own slope. The cold side is not washed out by a large hot side, and the survivable band stays readable.
   - **Ticks.** Asymmetric, at `vmin`, `min_temperature`, setpoint, `max_temperature`, `vmax`.
   - **Copied helpers.** The copies of `_thermal_rgba`, `draw_thermal_diamond` and `draw_temperature_gauge` in `src/environment/dashboard/thermal.py` use this norm. The frozen V1 versions stay linear and are not imported.
@@ -515,7 +559,7 @@ M8/M9 do not depend on archived configs loading. If M2/M3 cannot be generated, M
 2. **Ink masks.** One full render, plus one render per element with that element hidden. The element's ink = pixels that differ. This is N+1 renders per frame (~40 s for a V1 frame, est.).
 3. **Collision rule.** A text element's ink, dilated 1 px, intersecting any other foreground ink **fails**, including card-border outlines (text-on-border forbidden). Text over background ink is allowed. Every pair is reported with both strings and a crop.
 4. **Clip rule.** A text element re-rendered with clipping off whose ink differs has been cut off, and fails.
-5. **Legibility floor.** Every text element's ink height is at least the rendered height of a reference 8 pt "0" measured at the canvas dpi.
+5. **Legibility floor (Revision 8).** Every playback text element's cap height corresponds to a font size ≥ 14 px, and every caption ≥ 12 px. Measured from a reference "0" rendered in the vendored font at those sizes, not from the painter's requested size. (V1 control frames are judged at the old 8 pt floor.)
 6. **Presence (ground truth = breakdown).** For every name in `get_observation_breakdown(params)` not on the explicit not-displayed list (Q5), the report must contain foreground ink attributable to a panel for that name. The name → panel association is read from rendered text (the panel title string, matched against a fixed title table in the audit module), not from the registry.
 7. **Observed-caption rule (ground truth = breakdown).** Any rendered text beginning `OBS` or `REAL`, or containing "obs only", must belong to a panel whose title maps to a breakdown name that is present. Any `hidden_state` row's text must contain "not observed".
 8. **Vocabulary rule (V2 frames).** No rendered text matches `\bpain\b` (case-insensitive), and no legend contains `DNG`. V1 frames are exempt, because V1 is frozen and still shows `DNG`.
@@ -740,6 +784,9 @@ M8/M9 do not depend on archived configs loading. If M2/M3 cannot be generated, M
 | `src/environment/dashboard/episode.py` (new) | `EpisodeRenderer` (setup / `frame` / `close` / `layout_signature`), wrapper `render_dashboard_frame`. |
 | `tests/env/test_dashboard_frames.py` (new, `integration` marker) | Audit clean on all cells' checked frames + stress variant. Mutations M-A..M-D fail as expected. Value-to-pixel, obstacle-ink (CP2.6), observed-caption (CP2.5) and vocabulary (CP2.4) checks. Glyph-code uniqueness. |
 | `tests/env/test_dashboard_thermal.py` (new) | Thermal tests per §D4.3 as changed by Revision 6: params-only limits identical across episodes, field-extreme independence, out-of-range field raises, cooling-world crop, pre-thermal recording, mutation M1. |
+| `assets/fonts/dashboard_sans_tab/` (new asset folder, Revision 8) | "Dashboard Sans Tab" font files (Pretendard with tabular digits frozen into the cmap; renamed per the OFL Reserved Font Name clause), `OFL.txt`, `README` (upstream version, exact freezing step, licence note). Loaded only by `src/environment/dashboard/`. V1 unaffected (CP-G frames). |
+| `assets/dashboard_icons/` (new asset folder, Revision 8) | Flat icon set per the design spec §Icon style guide, including the composable agent marker. Existing `assets/*.png` untouched. Test: every entity name the matrix cells can place has an entry, or is listed as glyph-fallback. |
+| `src/environment/dashboard/palette.py` (new, Revision 8) | Named colour tokens from the design spec §Palette, with a machine-readable colour → meaning map used by CP-C. |
 | `assets/campfire.png` (new asset, decided Q12) | Campfire icon, RGBA PNG at the same pixel size as existing obstacle icons. Mapped only inside `src/environment/dashboard/`. Test: a V1 frame of M4 is byte-identical before and after the file is added (CP-G frames cover this). |
 | `src/environment/dashboard/painters.py` (Revision 4 addition) | `grid_kind(range, channels)`, the `GRID_ENCODING` constant, the three grid painter kinds `channel_maps` / `dominant_channel` / `bars_then_table` with one interface, noise-error map, footprint outlines, per-episode sense scales, sensor subtitle. |
 | `src/environment/dashboard/layout.py` (Revision 4 addition) | Side-column vs sensor-band layout selection (§D7.1); chosen layout in `layout_signature`. |
@@ -916,7 +963,16 @@ Each checkpoint states what would show it failed.
 - [ ] **CP3: Separate V2 entry point.** `render_recordings_v2.py --concat` writes playable MP4s (frame count = steps) for all cells including M7–M9, only under `videos_v2/`. The concat signature assertion holds on real runs and trips on the doctored dir. `test_render_recordings_v2.py` is green (V1 MP4 bytes unchanged after a V2 render of the same dir). CP-G passes. *Fails if:* any file appears or changes under `videos/`, the assertion trips on a real single-run dir, or CP-G fails.
 - [ ] **CP4: Speed.** Same node as CP0.4: V2 median ≤ V1 median on every cell and ≤ 0.5 × on M4; RSS growth < 50 MB over 10 episodes; FDs reported. *Fails if:* any gate is missed.
 - [ ] **CP5: Viewer.** `test_episode_viewer.py` is green; `check_artifact_layout.py` is clean at 500/834/1440; screenshots and the contact sheet are **looked at**, with findings in the report. *Fails if:* arrays differ, the checker flags a defect, or nobody looked.
-- [ ] **CP-D: Design quality (Revision 6; before retirement).** `visual-design-reviewer` looks at rendered frames from M1, M4, E2 and E8 plus viewer screenshots, at full size. It writes its design spec and verdict to `docs/reviews/design_renderer_layout_redesign.md`. The developer applies the spec: typography, colour system, hierarchy, spacing, iconography, all against the house style sheet. The Implementation Report lists each spec item as applied or rejected-with-reason. A second `visual-design-reviewer` pass on re-rendered frames then passes the "big-tech presentation" bar. *Fails if:* no spec file exists, a spec item is unaccounted for, or the second pass does not pass. Any layout change the spec forces must still pass CP2.1–CP2.7 and CP-G.
+- [ ] **CP-C: One meaning per colour (Revision 8).**
+  - **What is counted.** On checked frames from M1, M3, M4, E2 and E2n, a pixel census classifies each foreground pixel to the nearest palette token (ΔE threshold from the spec) and attributes it to the panel whose box contains it.
+  - **Rules.**
+    - Iris pixels appear only in the agent marker and the agent-cell outline.
+    - Orange appears only in the nociception rows and pods.
+    - The blue↔red temperature ramp appears only in the arena underlay, the thermoception card and its shared legend, and the body-temperature row.
+    - Teal appears only in smell panels; slate only in vision panels.
+    - There is exactly one temperature legend per frame, and a global noise note is present.
+  - *Fails if:* any token is found outside its allowed panels above a small anti-aliasing tolerance (stated in the test), a second temperature legend exists, or the noise note is missing or disagrees with params.
+- [ ] **CP-D: Design quality (Revision 6; before retirement; judged against the adopted spec `docs/reviews/design_episode_dashboard.md` since Revision 8).** `visual-design-reviewer` looks at rendered frames from M1, M4, E2 and E8 plus viewer screenshots, at full size. It writes its design spec and verdict to `docs/reviews/design_renderer_layout_redesign.md`. The developer applies the spec: typography, colour system, hierarchy, spacing, iconography, all against the house style sheet. The Implementation Report lists each spec item as applied or rejected-with-reason. A second `visual-design-reviewer` pass on re-rendered frames then passes the "big-tech presentation" bar. *Fails if:* no spec file exists, a spec item is unaccounted for, or the second pass does not pass. Any layout change the spec forces must still pass CP2.1–CP2.7 and CP-G.
 - [ ] **CP6: Docs.** `12_renderer.md` (with the V2 disambiguation sentence), `ENVIRONMENT_SUMMARY.md` and `SCRIPTS_DEPENDENCY_MAP.md` are updated in the same commits as the code. *Fails if:* a script-adding commit lacks the map.
 
 ---
@@ -945,6 +1001,8 @@ Numbers are kept so earlier references stay valid.
 9. **Speed gate.** Is "the new renderer's median frame time ≤ half of V1's, same lab node, campfire world" the right Phase 0 threshold, with "not slower than V1" on every other world?
 11. **Hiding-predator label.** Is `HPR` the right 3-letter abbreviation for the new renderer's Visual legend (e.g. `HID` / `HPD` instead)? V1 videos keep the legacy `DNG` until the retirement gate, because the sensor adapter is frozen.
 14. **Option A from range 1 (one-line confirmation).** Figure 5 drew range-1 smell as maps, so per-channel maps now start at range 1 (r ≥ 1) and bars remain only at range 0. This changes only the range-1 smell worlds (test cells E1, E1n and M5); vision in use is range 2 and unaffected. Confirm?
+15. **Temperature outside the colour scale.** If a world ever produces a temperature beyond the computed scale bounds, should the new renderer **stop with an error** naming the cell and the bound (proposed; matches the project's no-fallback rule)? Or should it **clamp** the colour to the scale end and **outline** the cell, so the video still renders but the overflow is marked?
+16. **Warm and fire colour anchors.** The scale places a "warm" anchor at 4× and a "fire" anchor at 10× the upper survivable body-temperature offset from the setpoint. Keep those default rules, or replace them with explicit per-config parameters (which would be new config keys, added only at the retirement gate under the freeze)?
 
 ---
 
