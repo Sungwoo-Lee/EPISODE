@@ -1,5 +1,7 @@
 <title>House Style Sheet</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans+Condensed:wght@600;700&display=swap">
+<!-- the ten most-used Google Fonts text families, for the body-font comparison in section 01 -->
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;600&family=Open+Sans:wght@400;600&family=Google+Sans:wght@400;600&family=Inter:wght@400;600&family=Montserrat:wght@400;600&family=Poppins:wght@400;600&family=Lato:wght@400;700&family=Arimo:wght@400;600&family=Roboto+Condensed:wght@400;600&family=Oswald:wght@400;600&display=swap">
 <style>
 /* ============================================================================
    HOUSE STYLE SHEET - the default look for every artifact page in this project.
@@ -52,7 +54,7 @@ h4 { font-size:14px; font-weight:600; margin:0; color:var(--ink-3);
   letter-spacing:.1em; text-transform:uppercase; }
 p { margin:0; }
 a { color:var(--accent-text); text-underline-offset:2px; }
-a:focus-visible, button:focus-visible, [tabindex]:focus-visible {
+a:focus-visible, button:focus-visible, select:focus-visible, [tabindex]:focus-visible {
   outline:2px solid var(--accent); outline-offset:-2px; }
 .eyebrow { font-size:12px; font-weight:600; letter-spacing:.14em; text-transform:uppercase;
   color:var(--ink-3); margin:0; }
@@ -131,6 +133,28 @@ dd { margin:0; font-size:15.5px; color:var(--ink-2); }
 .sw .meta b { color:var(--ink); font-weight:600; }
 .sw .meta span { color:var(--ink-2); }
 
+/* ---------- body-font comparison ---------- */
+.fontgrid { display:grid; grid-template-columns:repeat(auto-fill,minmax(250px,1fr)); gap:12px; max-width:880px; }
+.fontcard { text-align:left; background:var(--ground); color:var(--ink); border:1px solid var(--line);
+  padding:14px 16px 16px; cursor:pointer; display:flex; flex-direction:column; gap:8px; font:inherit; }
+.fontcard:hover { border-color:var(--rule); background:var(--surface); }
+.fontcard[aria-pressed="true"] { border-color:var(--accent); box-shadow:inset 0 0 0 1px var(--accent); background:var(--pick); }
+.fontcard .fc-head { display:flex; justify-content:space-between; gap:10px; align-items:baseline;
+  font-family:var(--f-head); font-size:12px; font-weight:600; letter-spacing:.1em; text-transform:uppercase; color:var(--ink-2); }
+.fontcard .fc-rank { font-family:var(--f-mono); font-size:12px; letter-spacing:0; text-transform:none; color:var(--ink-2); white-space:nowrap; }
+.fontcard .fc-sample { font-size:16px; line-height:1.6; }
+.fontcard .fc-sample strong { font-weight:600; }
+/* the floating picker: always reachable, so any section can be judged in any face */
+.fontbar { position:fixed; right:16px; bottom:16px; z-index:10; display:flex; align-items:center; gap:10px;
+  background:var(--ground); border:1px solid var(--rule); padding:8px 10px 8px 14px;
+  box-shadow:0 2px 10px rgba(22,24,29,.10); max-width:calc(100% - 32px); }
+.fontbar label { font-family:var(--f-head); font-size:12px; font-weight:600; letter-spacing:.1em;
+  text-transform:uppercase; color:var(--ink-2); white-space:nowrap; }
+.fontbar select { font-family:var(--f-mono); font-size:13px; color:var(--ink); background:var(--surface);
+  border:1px solid var(--line); padding:5px 8px; min-width:0; max-width:100%; }
+
+@media (max-width:560px) { .fontbar label { display:none; } .fontbar { padding-left:10px; } }   /* narrow: the bar covers less text; the select keeps its aria-label */
+
 /* ---------- type specimens ---------- */
 .spec { border-top:1px solid var(--line); padding:14px 0 0; display:flex; flex-direction:column; gap:6px; }
 
@@ -164,6 +188,9 @@ figcaption b { color:var(--ink); font-weight:600; }
   boxes, glossaries and step lists. Two things are changed or added. Running text is set in
   <strong>Pretendard</strong> instead of a serif, and there is a <strong>tab</strong> component the
   Thermoregulation page never had.</p>
+  <p>Pretendard is the default, not a closed question. The <strong>Body font</strong> picker in the
+  corner of the screen swaps the running text on this whole page for any of the ten most-used fonts on
+  Google Fonts, and &sect;1 shows all eleven side by side.</p>
   <p>The rules for charts come from a separate study of how a published research page draws its
   figures (&sect;10). The chart on this page is drawn by the same Python module every project figure
   can use, so the sheet shows the style working rather than describing it.</p>
@@ -211,6 +238,67 @@ figcaption b { color:var(--ink); font-weight:600; }
     <p class="eyebrow">IBM Plex Mono &middot; exact strings</p>
     <p style="font-family:var(--f-mono);font-size:14px">thermal.k_exchange: 0.04 &nbsp;&middot;&nbsp; 1 / (k_exchange + k_loss) = 20 steps</p>
   </div>
+  <h3>Compare body fonts</h3>
+  <p>The same paragraph in Pretendard and in the ten most-used text fonts on Google Fonts. Click a card,
+  or use the <strong>Body font</strong> picker in the corner, to set the running text of the whole page
+  in that face. Headings, labels and code stay in IBM Plex, so only the body changes.</p>
+</section>
+
+<div class="fontgrid" role="group" aria-label="Body font options">
+  <button class="fontcard" type="button" data-font="Pretendard" aria-pressed="true">
+    <span class="fc-head"><span>Pretendard</span><span class="fc-rank">house default</span></span>
+    <span class="fc-sample" style="font-family:'Pretendard',system-ui,sans-serif">The agent's temperature drifts toward the cell it stands on, so away from the fire it cools steadily. Every meal is a trip into the cold and back &mdash; <strong>semibold</strong> for the phrase that carries the sentence. 0123456789 &middot; &sigma; = 0.7 &middot; 20 steps.</span>
+  </button>
+  <button class="fontcard" type="button" data-font="Roboto" aria-pressed="false">
+    <span class="fc-head"><span>Roboto</span><span class="fc-rank">#2</span></span>
+    <span class="fc-sample" style="font-family:'Roboto',system-ui,sans-serif">The agent's temperature drifts toward the cell it stands on, so away from the fire it cools steadily. Every meal is a trip into the cold and back &mdash; <strong>semibold</strong> for the phrase that carries the sentence. 0123456789 &middot; &sigma; = 0.7 &middot; 20 steps.</span>
+  </button>
+  <button class="fontcard" type="button" data-font="Open Sans" aria-pressed="false">
+    <span class="fc-head"><span>Open Sans</span><span class="fc-rank">#3</span></span>
+    <span class="fc-sample" style="font-family:'Open Sans',system-ui,sans-serif">The agent's temperature drifts toward the cell it stands on, so away from the fire it cools steadily. Every meal is a trip into the cold and back &mdash; <strong>semibold</strong> for the phrase that carries the sentence. 0123456789 &middot; &sigma; = 0.7 &middot; 20 steps.</span>
+  </button>
+  <button class="fontcard" type="button" data-font="Google Sans" aria-pressed="false">
+    <span class="fc-head"><span>Google Sans</span><span class="fc-rank">#4</span></span>
+    <span class="fc-sample" style="font-family:'Google Sans',system-ui,sans-serif">The agent's temperature drifts toward the cell it stands on, so away from the fire it cools steadily. Every meal is a trip into the cold and back &mdash; <strong>semibold</strong> for the phrase that carries the sentence. 0123456789 &middot; &sigma; = 0.7 &middot; 20 steps.</span>
+  </button>
+  <button class="fontcard" type="button" data-font="Inter" aria-pressed="false">
+    <span class="fc-head"><span>Inter</span><span class="fc-rank">#5</span></span>
+    <span class="fc-sample" style="font-family:'Inter',system-ui,sans-serif">The agent's temperature drifts toward the cell it stands on, so away from the fire it cools steadily. Every meal is a trip into the cold and back &mdash; <strong>semibold</strong> for the phrase that carries the sentence. 0123456789 &middot; &sigma; = 0.7 &middot; 20 steps.</span>
+  </button>
+  <button class="fontcard" type="button" data-font="Montserrat" aria-pressed="false">
+    <span class="fc-head"><span>Montserrat</span><span class="fc-rank">#6</span></span>
+    <span class="fc-sample" style="font-family:'Montserrat',system-ui,sans-serif">The agent's temperature drifts toward the cell it stands on, so away from the fire it cools steadily. Every meal is a trip into the cold and back &mdash; <strong>semibold</strong> for the phrase that carries the sentence. 0123456789 &middot; &sigma; = 0.7 &middot; 20 steps.</span>
+  </button>
+  <button class="fontcard" type="button" data-font="Poppins" aria-pressed="false">
+    <span class="fc-head"><span>Poppins</span><span class="fc-rank">#7</span></span>
+    <span class="fc-sample" style="font-family:'Poppins',system-ui,sans-serif">The agent's temperature drifts toward the cell it stands on, so away from the fire it cools steadily. Every meal is a trip into the cold and back &mdash; <strong>semibold</strong> for the phrase that carries the sentence. 0123456789 &middot; &sigma; = 0.7 &middot; 20 steps.</span>
+  </button>
+  <button class="fontcard" type="button" data-font="Lato" aria-pressed="false">
+    <span class="fc-head"><span>Lato</span><span class="fc-rank">#10</span></span>
+    <span class="fc-sample" style="font-family:'Lato',system-ui,sans-serif">The agent's temperature drifts toward the cell it stands on, so away from the fire it cools steadily. Every meal is a trip into the cold and back &mdash; <strong>semibold</strong> for the phrase that carries the sentence. 0123456789 &middot; &sigma; = 0.7 &middot; 20 steps.</span>
+  </button>
+  <button class="fontcard" type="button" data-font="Arimo" aria-pressed="false">
+    <span class="fc-head"><span>Arimo</span><span class="fc-rank">#13</span></span>
+    <span class="fc-sample" style="font-family:'Arimo',system-ui,sans-serif">The agent's temperature drifts toward the cell it stands on, so away from the fire it cools steadily. Every meal is a trip into the cold and back &mdash; <strong>semibold</strong> for the phrase that carries the sentence. 0123456789 &middot; &sigma; = 0.7 &middot; 20 steps.</span>
+  </button>
+  <button class="fontcard" type="button" data-font="Roboto Condensed" aria-pressed="false">
+    <span class="fc-head"><span>Roboto Condensed</span><span class="fc-rank">#14</span></span>
+    <span class="fc-sample" style="font-family:'Roboto Condensed',system-ui,sans-serif">The agent's temperature drifts toward the cell it stands on, so away from the fire it cools steadily. Every meal is a trip into the cold and back &mdash; <strong>semibold</strong> for the phrase that carries the sentence. 0123456789 &middot; &sigma; = 0.7 &middot; 20 steps.</span>
+  </button>
+  <button class="fontcard" type="button" data-font="Oswald" aria-pressed="false">
+    <span class="fc-head"><span>Oswald</span><span class="fc-rank">#17</span></span>
+    <span class="fc-sample" style="font-family:'Oswald',system-ui,sans-serif">The agent's temperature drifts toward the cell it stands on, so away from the fire it cools steadily. Every meal is a trip into the cold and back &mdash; <strong>semibold</strong> for the phrase that carries the sentence. 0123456789 &middot; &sigma; = 0.7 &middot; 20 steps.</span>
+  </button>
+</div>
+
+<section class="col">
+  <p class="foot">Ranking (the <code>#</code> on each card): the <code>popularity</code> field of Google Fonts' own family metadata
+  (<code>fonts.google.com/metadata/fonts</code>), read 2026-09-14. The ten are the highest-ranked
+  families meant for running text; two higher-ranked families are left out &mdash; Noto Sans JP (rank 9),
+  a Japanese-script face, and Roboto Mono (rank 16), a monospace. Ranks 1, 8, 11, 12 and 15 are not text
+  families in that list. Lato has no 600 weight, so its bold is 700. Your choice is remembered in this
+  browser only. The chart in &sect;10 keeps Pretendard, because its text is drawn by the figure
+  script.</p>
   <p class="cue" hidden>&larr; the table is wider than the screen &mdash; scroll it sideways</p>
   <div class="scroll"><table class="wide">
     <thead><tr><th>Role</th><th>Face</th><th class="n">size (px)</th><th class="n">weight</th><th>Notes</th></tr></thead>
@@ -739,6 +827,23 @@ L 286.023969 252.292844
 
 </div>
 
+<div class="fontbar">
+  <label for="bodyfont">Body font</label>
+  <select id="bodyfont" aria-label="Body font">
+    <option value="Pretendard" selected>Pretendard</option>
+    <option value="Roboto">Roboto (#2)</option>
+    <option value="Open Sans">Open Sans (#3)</option>
+    <option value="Google Sans">Google Sans (#4)</option>
+    <option value="Inter">Inter (#5)</option>
+    <option value="Montserrat">Montserrat (#6)</option>
+    <option value="Poppins">Poppins (#7)</option>
+    <option value="Lato">Lato (#10)</option>
+    <option value="Arimo">Arimo (#13)</option>
+    <option value="Roboto Condensed">Roboto Condensed (#14)</option>
+    <option value="Oswald">Oswald (#17)</option>
+  </select>
+</div>
+
 <script>
 function updateCues() {
   document.querySelectorAll('.cue').forEach(function (cue) {
@@ -749,6 +854,25 @@ function updateCues() {
 window.addEventListener('load', updateCues);
 window.addEventListener('resize', updateCues);
 if (document.fonts && document.fonts.ready) document.fonts.ready.then(updateCues);
+(function () {
+  var KEY = 'house-style-body-font';
+  var select = document.getElementById('bodyfont');
+  var cards = Array.prototype.slice.call(document.querySelectorAll('.fontcard'));
+  function apply(name, remember) {
+    if (!cards.some(function (c) { return c.dataset.font === name; })) name = 'Pretendard';
+    document.documentElement.style.setProperty('--f-body',
+      "'" + name + "',system-ui,-apple-system,\"Segoe UI\",sans-serif");
+    select.value = name;
+    cards.forEach(function (c) { c.setAttribute('aria-pressed', c.dataset.font === name ? 'true' : 'false'); });
+    if (remember) { try { localStorage.setItem(KEY, name); } catch (e) {} }
+    updateCues();
+  }
+  select.addEventListener('change', function () { apply(select.value, true); });
+  cards.forEach(function (c) { c.addEventListener('click', function () { apply(c.dataset.font, true); }); });
+  var saved = null;
+  try { saved = localStorage.getItem(KEY); } catch (e) {}
+  if (saved) apply(saved, false);
+})();
 document.querySelectorAll('[data-tabs]').forEach(function (root) {
   var tabs = Array.prototype.slice.call(root.querySelectorAll('[role="tab"]'));
   function select(t, focus) {
