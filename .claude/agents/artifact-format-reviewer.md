@@ -49,9 +49,26 @@ open. The default pass deliberately skips content inside a closed `<details>` (i
 never painted, and it produced 24 false overlaps once) — which means a real defect can hide in there,
 and one did. Also pass `--shot-height` large enough that the tool does not report a truncated capture.
 
-Known limits, which you must not forget: Chrome headless **floors the viewport at 500px**, so true
-phone width is not covered; the run uses a lean copy with images replaced by placeholders, so nothing
+Known limits, which you must not forget: Chrome headless **floors the viewport at 500px** in this
+tool, so true phone width is covered only by step 2b; the run uses a lean copy with images replaced by placeholders, so nothing
 about image *content* is tested.
+
+**2b. Run the interaction check.**
+
+```bash
+python scripts/claude/check_artifact_interactions.py <page.html> --out tmp/artifact_interactions
+```
+
+The layout tool never clicks anything. This one drives the page in Chrome through Python Playwright at
+**true** viewport widths (390 / 834 / 1440 by default — the 500px floor above does not apply here) and
+exercises what a reader operates: every tab in every `[role=tablist]` (clicked and by ArrowRight),
+every `<details>`, every clickable figure's full-size viewer (Enter opens, Escape closes, focus
+returns), and a Tab-key walk that flags any stop with no visible focus indicator. It also reports
+fonts that failed to load, console and script errors, requests to hosts the Artifact CSP would block,
+`hidden` elements that still render (F14), and sideways page overflow. Non-zero exit means something
+is broken. It writes a screenshot per width, per tab panel and per opened viewer — open them in step 3
+like the others. Do not hand-build a browser driver for these checks; if the script cannot test
+something a page needs, say so and propose the addition to the script.
 
 **3. Open the screenshots.** This is not optional and it is the step that matters. The tool catches
 geometry; it does not catch ugly, misaligned, unreadable, or wrong. Read the PNGs it wrote with the
