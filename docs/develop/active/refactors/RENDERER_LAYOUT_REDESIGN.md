@@ -9,7 +9,7 @@ supersedes: UI_REDESIGN_PROPOSAL.md
 
 # Episode-video renderer redesign: panels that cannot overlap, a faster frame, and a step-scrubbing viewer
 
-> **Status**: PLANNED. Revised three times after `plan-reviewer` (first and second pass NOT READY; third pass SOUND WITH CONCERNS, applied in Revision 3). Revision 4 adds extended-range senses (user scope, 2026-09-14); fourth pass SOUND WITH CONCERNS, applied in Revision 5. Revision 6 records user decisions (2026-09-14); fifth pass SOUND WITH CONCERNS, applied in Revision 7. Revision 8 adopts the visual design spec (`docs/reviews/design_episode_dashboard.md`). Plan only; awaiting re-review, then user approval. No code written.
+> **Status**: PLANNED. Revised three times after `plan-reviewer` (first and second pass NOT READY; third pass SOUND WITH CONCERNS, applied in Revision 3). Revision 4 adds extended-range senses (user scope, 2026-09-14); fourth pass SOUND WITH CONCERNS, applied in Revision 5. Revision 6 records user decisions (2026-09-14); fifth pass SOUND WITH CONCERNS, applied in Revision 7. Revision 8 adopts the visual design spec (`docs/reviews/design_episode_dashboard.md`). Revision 9 records the user's answers (2026-09-14) and corrects the temperature scale to a per-episode range. Plan only; awaiting re-review, then user approval. No code written.
 > **Opened**: 2026-09-14
 > **Related**: [[UI_REDESIGN_PROPOSAL]] (the April plan this one replaces) · [[12_renderer]] (renderer reference doc) · [thermal IMPLEMENTATION_PLAN](../thermal/IMPLEMENTATION_PLAN.md) (§"Rendering: what the rewrite's state turned out to be") · [[BODY_TEMPERATURE_OBSERVATION]] (thermal; **untracked work-in-progress in another session, read as unstable input only**) · [[ASYNC_CHECKPOINT_VIDEO_RENDER]] · [[SAVED_RUN_CONFIG_COMPAT]] · review: [`docs/reviews/plan_renderer_layout_redesign.md`](../../../reviews/plan_renderer_layout_redesign.md) · evidence frames + measuring script: [`renderer_layout_redesign/`](renderer_layout_redesign/) · web research note `tmp/20260914_renderer_layout_web_research.md`
 
@@ -191,6 +191,51 @@ The second pass confirmed findings #1–#15 resolved in the body and returned **
 
 ---
 
+## Revision 9 2026-09-14 (user answers; temperature scale corrected)
+
+**Answers recorded** (moved to Decided questions):
+
+| Q | Answer |
+|---|---|
+| Q1 Stack | **A**: Matplotlib painters behind our own layout, figure built once, local server viewer. Pillow painters (B) are the fallback if Phase 0 misses the speed gate. |
+| Q3 Canvas | **1440 × 896 px.** |
+| Q5 Proprioception | **Draw a Proprioception panel**: six chips, one per action, with the previous action's chip highlighted in the agent colour. The registry row gains a `kind: action_chips` painter (min size = six measured chips at the 14 px floor). The completeness rule now finds an owner for `Proprioception`, which **unblocks the E cells and M5** (CP2.7 no longer blocked). |
+| Q7 Viewer | **Local server only**; no static HTML export (§D3's export bullet is dropped from scope). |
+| Q9 Speed gate | New renderer median frame time on the campfire world **≤ half of V1's**, and **not slower than V1** on any other world. Same lab node, same frames, same worker type. |
+| Q11 Hiding-predator label | **Closed (moot).** The new design writes "Hiding predator" in full; there is no abbreviation. V1 keeps `DNG` (frozen). |
+| Q14 Option A range | **Maps from range 1**; bars only at range 0. |
+| Q15 Out-of-range temperature | **Clamp and outline** (no raise). See below. |
+| Q16 Warm/fire anchors | **Withdrawn (moot)** with the per-config bound. |
+
+**Temperature scale: correction of Revisions 6–8.** The user clarified that "fixed" meant **shared by every step of an episode**, not a per-config bound. Therefore:
+
+1. **Range.** `vmin`/`vmax` come from a setup pre-pass over the episode's thermal field at **every step** (min and max across all steps). They are constant for the whole video. The setpoint stays the neutral centre: the range is widened to include `temperature_setpoint` if the field lies entirely on one side of it. If the resulting range is degenerate (`vmin == vmax`), it becomes setpoint ± 1 °.
+2. **Removed:**
+   - the Revision 7 per-config params bound (§D4.3 "How it is computed");
+   - the ten-seed bound test and the `thermal_min_fire_separation: 0` override test;
+   - the Q16 anchor rules;
+   - the Revision 8 default "raise on out-of-range".
+3. **Safety behaviour (Q15 = clamp and outline).** Any value outside the episode range has its colour clamped to the scale end, and its element gets a thin outline in the ink colour. This cannot happen for the episode's own field, by construction. It applies e.g. to the body-temperature gauge when body temperature leaves the field's range. No raise.
+4. **Consequence, stated for readers.** Colours are comparable **within an episode**, not across episodes of different worlds. The shared legend in the thermoception card prints the episode's numeric range so a viewer never compares colours across videos blindly.
+5. **Concatenated videos.** `render_recordings_v2.py --concat` runs the pre-pass over **all episodes being concatenated** and uses that one shared range for every frame, so frames in one MP4 stay comparable. Per-episode MP4s written in the same run use the same shared range, so a per-episode file matches its segment of the concatenated file. `layout_signature()` is unaffected: the range is paint-time data, never layout input (§D7.7 item 1).
+6. **Single-frame wrapper.** Uses that frame's field and says so.
+7. **Colour spread inside the range: decided (Q17, 2026-09-14): neutral setpoint with a pale survivable band.**
+   - **Anchors,** a piecewise-linear norm in order: episode minimum (cold end), lower body limit `min_temperature`, setpoint `temperature_setpoint` (near-white), upper body limit `max_temperature`, episode maximum (hot end).
+   - **Ramp shape.** Between the two body limits the ramp stays pale. Colour deepens only beyond them: blue toward the episode's coldest cell, red toward its hottest. Colours are the design review's temperature ramp, with its warm/fire anchors removed.
+   - **Edge case.** If the episode range does not reach a body limit on one side (e.g. the episode maximum is below `max_temperature`), that side's body-limit anchor is **dropped**, and the pale segment runs to the episode end on that side. If neither limit is reached, the whole ramp stays within the pale band. Anchors stay strictly increasing by construction; coincident anchors are merged.
+   - **Legend.** Ticks the episode minimum, the episode maximum, and each body limit that lies inside the range.
+   - **Tests** (added to item 8): each anchor maps to its colour; the one-sided-range case drops the anchor without error; legend ticks match.
+8. **Tests (replacing the Revision 6–8 thermal test list).**
+   - The cooling-world arena crop is byte-identical across steps.
+   - `vmin`/`vmax` equal the min/max over all steps of the recorded field (pre-pass correctness, checked against a direct numpy min/max).
+   - The setpoint maps to the neutral colour.
+   - A concatenated two-episode render uses the union range, and each episode's frames are identical to its segment.
+   - A doctored body temperature beyond the range renders clamped with an outline and no exception.
+   - The pre-thermal recording still renders.
+   - Mutation: per-step range recomputation turns the cooling-world test red.
+
+---
+
 ## Analysis
 
 ### A1. What runs today (verified 2026-09-14; line numbers as of HEAD `75757dfc`, working tree dirty, see revision note)
@@ -325,7 +370,7 @@ class PanelSpec:
 | thermoception | extero | thermal_diamond | `Thermoception` | name in breakdown | `2r²+2r+1` numeric cells |
 | collision | extero | cross_bars (r=1) / dir_grid | `Collision` | name in breakdown | 8 pt legend above bars |
 | visual | extero, or sensor band (§D7.1) | `grid_kind(visual_sensor_range, visual_vector_size)`: single-cell bars (r=0) / `channel_maps` (r≥1, decided) | `Visual` | name in breakdown | per kind (§D7.2); 8 pt legend |
-| proprioception | extero | Q5 | `Proprioception` | name in breakdown | Q5 |
+| proprioception | extero | `action_chips` (decided Q5, 2026-09-14): six chips, previous action highlighted in the agent colour | `Proprioception` | name in breakdown | six measured chips at the 14 px floor |
 
 **Completeness rule.** At episode setup, every breakdown name must be owned by exactly one present entry, or be on an explicit "recorded, not displayed" list (only if Q5 chooses that). Otherwise setup raises `ValueError` naming the orphan. A future modality that reuses a kind is a registry entry only. A new kind adds a painter. Neither touches layout.
 
@@ -460,6 +505,8 @@ Speed figures are **estimates** unless marked measured. The Phase 0 gate (§D5.3
 - **Concat check.** `render_recordings_v2.py --concat` asserts all episodes' `layout_signature()` are equal before concatenating, and fails otherwise.
 
 #### D4.3 Thermal colour limits
+
+> **Superseded by Revision 9 (2026-09-14).** The colour range is the **episode's** thermal-field min/max over all steps (for a concatenated video, over all concatenated episodes), with the setpoint kept neutral and clamp-and-outline for out-of-range values. The per-config params bound, the anchor rules and the raise-on-out-of-range text below are **withdrawn** and kept only as history. The authoritative rules and tests are in the Revision 9 note.
 
 **Decided 2026-09-14: the scale comes from params only, never from the field, and is identical for every episode of a config.**
 
@@ -783,7 +830,8 @@ M8/M9 do not depend on archived configs loading. If M2/M3 cannot be generated, M
 | `src/environment/dashboard/painters.py` (new) | One painter per kind with `build`/`update`, card outlines as separate artists, `gid`s, iconless-entity glyph table. Imports from `renderer.py` read-only only what §D1.3 still pins (`draw_boresight_diamond`, `save_jax_video`, `COLORS`). The icon loader (cache-free) and the thermal helpers (two-slope) are copied into `src/environment/dashboard/icons.py` and `thermal.py` (Revision 7). Any helper needing a change is **copied** into the package; **`renderer.py` is not edited** (frozen). |
 | `src/environment/dashboard/episode.py` (new) | `EpisodeRenderer` (setup / `frame` / `close` / `layout_signature`), wrapper `render_dashboard_frame`. |
 | `tests/env/test_dashboard_frames.py` (new, `integration` marker) | Audit clean on all cells' checked frames + stress variant. Mutations M-A..M-D fail as expected. Value-to-pixel, obstacle-ink (CP2.6), observed-caption (CP2.5) and vocabulary (CP2.4) checks. Glyph-code uniqueness. |
-| `tests/env/test_dashboard_thermal.py` (new) | Thermal tests per §D4.3 as changed by Revision 6: params-only limits identical across episodes, field-extreme independence, out-of-range field raises, cooling-world crop, pre-thermal recording, mutation M1. |
+| `tests/env/test_dashboard_thermal.py` (new) | Thermal tests per the **Revision 9** note item 8: episode-range pre-pass, neutral setpoint, concatenated union range, clamp-and-outline, cooling-world crop, pre-thermal recording, per-step-recompute mutation. The Revision 6–8 params-bound tests are withdrawn. |
+| `tests/env/test_dashboard_proprioception.py` (new, Revision 9) | E1 and M5 render a six-chip Proprioception panel. The highlighted chip equals the recorded previous action at a sample of steps, and highlight ink is the agent colour (CP-C). No chip is highlighted at step 0 if no previous action exists. |
 | `assets/fonts/dashboard_sans_tab/` (new asset folder, Revision 8) | "Dashboard Sans Tab" font files (Pretendard with tabular digits frozen into the cmap; renamed per the OFL Reserved Font Name clause), `OFL.txt`, `README` (upstream version, exact freezing step, licence note). Loaded only by `src/environment/dashboard/`. V1 unaffected (CP-G frames). |
 | `assets/dashboard_icons/` (new asset folder, Revision 8) | Flat icon set per the design spec §Icon style guide, including the composable agent marker. Existing `assets/*.png` untouched. Test: every entity name the matrix cells can place has an entry, or is listed as glyph-fallback. |
 | `src/environment/dashboard/palette.py` (new, Revision 8) | Named colour tokens from the design spec §Palette, with a machine-readable colour → meaning map used by CP-C. |
@@ -849,7 +897,7 @@ The switch itself gets its own plan section and review. Expected steps:
 3. Port the demo, dream-visualiser and benchmark callers.
 4. Move shared helpers into the package with re-exports.
 5. Delete V1's layout body. Rename `DNG` → `HPR` in `sensor.py` and the V1 default label list, now allowed.
-6. Delete the stale `grid_world.py` render copy **only after a grep confirms no importer and the user OKs it**. Delete the dormant `src/environment/renderer_v2.py` only after the thermal session has been told and its uncommitted edits to that file have landed or been abandoned by that session; confirm with `git status` on the file. Add the `campfire` key to the shared icon mapping (the asset already exists from Phase 2), and add the noise-free `sense_interoceptive_nociception` **scalar** to the recording snapshot (never the history buffer) (Revision 6 known gap; Revision 7).
+6. **Deletions not approved (Q8, 2026-09-14).** Neither the stale `grid_world.py` render copy nor the dormant `src/environment/renderer_v2.py` is deleted at switch-over; the switch-over plan must ask again. Add the `campfire` key to the shared icon mapping (the asset already exists from Phase 2), and add the noise-free `sense_interoceptive_nociception` **scalar** to the recording snapshot (never the history buffer) (Revision 6 known gap; Revision 7).
 7. Retarget `test_thermal_rendering.py` and `test_eval_recording.py` to V2.
 8. Update docs.
 
@@ -954,7 +1002,7 @@ Each checkpoint states what would show it failed.
     - M1 (disabled): no row.
   - **Label:** the column is labelled `noise-free` on that row, never `true`. *Fails if:* a row lacks the true column, or an unobserved row prints a number in the observed column. On M4, no rendered text starting `OBS`/`REAL` belongs to a panel whose name is absent from the breakdown. With Q10 = show, the Nutrition/Injury rows read "not observed". *Fails if:* either condition is violated.
 - [ ] **CP2.6: Entities drawn.** On M4, a step with the campfire in view shows non-empty foreground ink in its cell, and that ink belongs to an `AxesImage` (the `assets/campfire.png` icon, not the glyph fallback) (Revision 7), and glyph codes are unique across `obstacle_names`. *Fails if:* the cell is empty or grey-square-only (no glyph ink), or codes collide.
-- [ ] **CP2.7: Extended-range senses.** Blocked until Q5 (Proprioception) is answered, because every E cell and M5 observes it. `test_dashboard_extended_range.py` green for the decided encoding, A `channel_maps` (r ≥ 1), including:
+- [ ] **CP2.7: Extended-range senses.** (Unblocked 2026-09-14: Q5 answered, so Proprioception is drawn as `action_chips`.) `test_dashboard_extended_range.py` green for the decided encoding, A `channel_maps` (r ≥ 1), including:
   - E2n with and without true observations;
   - identical boxes across two episodes with different maxima;
   - forced side column raising wherever the band was chosen;
@@ -984,25 +1032,30 @@ Numbers are kept so earlier references stay valid.
 - **Q10 (decided 2026-09-14): show.** Every internal-state row shows the observed value (or `not observed`) and the true value; a hidden value is never captioned observed (§D1.1).
 - **Q12 (decided 2026-09-14): new asset `assets/campfire.png`.** The new renderer maps `campfire` internally; the shared icon mapping stays frozen, so V1 videos are unchanged (§D1.4).
 - **Q13 (decided 2026-09-14): option A**, per-channel diamond maps with per-sense colour scales fixed per episode, applied **from range 1** as in Figure 5 (§D7.2). *Awaiting one-line user confirmation of "from range 1".*
-- **Also decided 2026-09-14:** no temperature numbers in the grid view; temperature colour scale fixed from params (§D4.3).
+- **Also decided 2026-09-14:** no temperature numbers in the grid view. The temperature colour range is shared by every step of an episode, taken from the episode's field (**corrected in Revision 9**; the earlier "fixed from params" reading is withdrawn).
+- **Q1 (decided 2026-09-14): A.** Matplotlib painters behind our own layout, figure built once, local server viewer; Pillow (B) fallback if Phase 0 misses the speed gate.
+- **Q3 (decided 2026-09-14): canvas 1440 × 896 px.**
+- **Q5 (decided 2026-09-14): draw a Proprioception panel**, six chips with the previous action highlighted in the agent colour; unblocks the E cells and M5.
+- **Q7 (decided 2026-09-14): local server viewer only**; no static export.
+- **Q9 (decided 2026-09-14): speed gate.** Median frame time on the campfire world ≤ half of V1's, and not slower than V1 on any other world; same lab node, frames and worker type.
+- **Q11 (closed 2026-09-14, moot):** "Hiding predator" is written in full.
+- **Q13 range confirmation = Q14 (decided 2026-09-14):** option A maps from range 1; bars only at range 0.
+- **Q15 (decided 2026-09-14): clamp and outline** for any temperature outside the episode range; no raise.
+- **Q16 (withdrawn 2026-09-14):** moot once the per-config bound was removed.
+- **Q2 (decided 2026-09-14): package `src/environment/dashboard/`.**
+- **Q6 (decided 2026-09-14): minimap in the left column, under Interoception.**
+- **Q8 (decided 2026-09-14): the switch-over to the new renderer gets its own reviewed plan.** Deleting the stale `grid_world.py` render copy and the dormant `renderer_v2.py` is **not approved**; both are to be asked again in that plan.
+- **Q17 (decided 2026-09-14): neutral setpoint, pale survivable band.** Anchors: episode min, lower body limit, setpoint, upper body limit, episode max; an unreached body limit's anchor is dropped (Revision 9 item 7).
+- **Q4 (decided 2026-09-14): as in Figure 3.** An action pill badge sits in the grid-view card's title row, plus a chevron inside the agent marker pointing in the action's direction (a dot for Rest/Eat).
+- **Figure 3 is the canonical layout and visual reference (decided 2026-09-14).** The user's words: "I like your figure 3. So don't ask any decision for the layout. Make figure 3 as the direction." Figure 3 is the dashboard sketch on the artifact page, whose frames are produced by `docs/develop/active/refactors/renderer_layout_redesign/fig03_proposed_dashboard.py` with `dashboard_style.py`.
+  - The new renderer's implementation follows Figure 3, together with the adopted design review (`docs/reviews/design_episode_dashboard.md`).
+  - Layout choices are **not re-opened as user questions**. Implementation-level details are decided by the developer against Figure 3 and the design review.
+  - Every deviation from Figure 3 is reported in the Implementation Report with its reason. CP-D compares rendered frames against Figure 3.
+  - Where this plan's earlier ASCII blueprints or wording differ from Figure 3, Figure 3 wins; the plan's behavioural rules and checkpoints still apply.
 
 ## Open questions for the user
 
-1. **Stack.** A close call, with the full trade-off in §D2.1.
-   - **A (recommended):** Matplotlib painters behind our own layout, figure built once, a local server-based viewer. The training-time render path is unchanged and tests stay byte-exact. B (Pillow painters) is the fallback if A misses the Phase 0 speed ratio.
-   - **C:** HTML page in headless Chrome. It gives a static, shareable viewer with instant scrubbing and hover inspection. It costs a new Python dependency on the training render path, browser processes inside a render child that already orphans, re-authoring every panel, and screenshot tests that can't be byte-exact across nodes. Chrome is confirmed on nodes 101, 106 and 114; the rest would be checked before building.
-2. **Name.** The new package can't reuse `renderer_v2`: another session is editing the dormant `renderer_v2.py`, and a same-named package would silently shadow it on import. Proposed `src/environment/dashboard/`; alternatives `src/environment/episode_dashboard/` or `src/environment/telemetry_view/`. The entry script and output folder keep the `_v2` names from your constraint (`render_recordings_v2.py`, `videos_v2/`). No new version number is introduced.
-3. **Canvas size.** 1440 × 896 px. Today's videos are 1408 × 1008 after imageio's resize. This changes WandB video dimensions from switch-over onward.
-4. **Action badge.** In the arena card's title strip at top-right (proposed; covers nothing), or overlaid on the grid's top-right cell (covers that cell's icon)?
-5. **Proprioception.** **Now blocking:** every extended-range test world (E cells) and the directional-smell world (M5) observe it, so the new renderer's completeness rule stops those cells until this is answered. Never drawn today. Add a panel (kind to be designed), or mark it "recorded, not displayed" so the completeness rule allows it explicitly?
-6. **Minimap placement.** Left column under VITALS (proposed), or under the arena?
-7. **Viewer delivery.** Local server only, or also a static single-episode HTML export (~30 MB per 500 steps, est.) for sharing?
-8. **Retirement gate (for later, not now).** Per your 2026-09-14 constraint, nothing in training or eval moves to V2 during development. When you do decide to switch, do you want that as its own plan with review? It would be the first edit to the frozen V1 files. And do you approve, at that point, deleting the stale `grid_world.py` render copy and the dormant `renderer_v2.py` (the latter after the thermal session is told and its edits have landed)?
-9. **Speed gate.** Is "the new renderer's median frame time ≤ half of V1's, same lab node, campfire world" the right Phase 0 threshold, with "not slower than V1" on every other world?
-11. **Hiding-predator label.** Is `HPR` the right 3-letter abbreviation for the new renderer's Visual legend (e.g. `HID` / `HPD` instead)? V1 videos keep the legacy `DNG` until the retirement gate, because the sensor adapter is frozen.
-14. **Option A from range 1 (one-line confirmation).** Figure 5 drew range-1 smell as maps, so per-channel maps now start at range 1 (r ≥ 1) and bars remain only at range 0. This changes only the range-1 smell worlds (test cells E1, E1n and M5); vision in use is range 2 and unaffected. Confirm?
-15. **Temperature outside the colour scale.** If a world ever produces a temperature beyond the computed scale bounds, should the new renderer **stop with an error** naming the cell and the bound (proposed; matches the project's no-fallback rule)? Or should it **clamp** the colour to the scale end and **outline** the cell, so the video still renders but the overflow is marked?
-16. **Warm and fire colour anchors.** The scale places a "warm" anchor at 4× and a "fire" anchor at 10× the upper survivable body-temperature offset from the setpoint. Keep those default rules, or replace them with explicit per-config parameters (which would be new config keys, added only at the retirement gate under the freeze)?
+No open user questions (all decided 2026-09-14). See **Decided questions** above; Figure 3 settles any remaining layout detail.
 
 ---
 
