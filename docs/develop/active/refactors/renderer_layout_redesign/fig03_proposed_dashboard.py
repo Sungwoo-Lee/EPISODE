@@ -1,22 +1,24 @@
 """FIGURES 3 and 4 -- a sketch of the proposed episode dashboard, drawn from a real recorded episode.
 
 QUESTION IT ANSWERS. What would the dashboard proposed in
-docs/develop/active/refactors/RENDERER_LAYOUT_REDESIGN.md look like on real data, and does its layout
-idea -- a registry of panels, boxes packed once per episode, text measured into its box -- hold when
-senses are switched off?
+docs/develop/active/refactors/RENDERER_LAYOUT_REDESIGN.md look like on real data, in the visual design
+specified in docs/reviews/design_episode_dashboard.md, and does its layout idea -- a registry of panels,
+boxes packed once per episode, text measured into its box -- hold when senses are switched off?
 
-WHAT IT IS NOT. Not the planned renderer. Nothing under src/ is imported or edited, the production
-(V1) video path is untouched, and exact sizes, fonts and colours are the implementer's to settle. It
-is a design sketch written in the plan's recommended toolkit: Matplotlib with its layout engine
-unused, a small column packer, the figure built once per episode, and artists updated per step.
+WHAT IT IS NOT. Not the planned renderer. Nothing under src/ is imported or edited, and the production
+(V1) video path is untouched. It is a design sketch written in the plan's recommended toolkit:
+Matplotlib with its layout engine unused, a small packer, the figure built once per episode, and
+artists updated per step. Tokens, type, temperature scale and glyphs come from dashboard_style.py.
 
 HOW IT IS COMPUTED. Reads data/episode.json (written by export_episode.py from the real campfire
-world). For a given set of senses it registers the panels that are present, refuses to start if an
-observed sense has no panel, packs three columns of boxes (raising LayoutOverflowError instead of
-squeezing), builds every card, bar, label and icon slot once, then for each step updates their
-values and draws. Every text is measured and shrunk into its box, down to an 11 pt floor, and every
-drawn frame passes a text audit on the rendered extents: no two texts intersect and none leaves its
-card.
+world) and the world's config file for the temperature parameters. For a given set of senses it
+registers the panels that are present (refusing to start if an observed sense has no panel), computes
+the params-only temperature bounds and checks the recorded thermal field lies inside them, runs a
+setup pre-pass over the episode for the per-sense colour scales, packs the boxes from params and
+measured text (raising LayoutOverflowError instead of squeezing), builds every card, bar, label and
+glyph once, then for each step updates values and visibility and draws. Every text must fit its slot
+at its design size or the script raises; every drawn frame passes a text audit on rendered extents
+(no two texts intersect, none leaves its card, no number inside the grid view).
 
 OUTPUT (figures/, next to this file)
     fig03_frames/step_NNN.png                 every step, 1440 x 896 px (the page's step scrubber)
@@ -24,478 +26,686 @@ OUTPUT (figures/, next to this file)
     fig04_repacking.{svg,pdf,png}             step 15 under three sense sets
     <stem>.data.txt                           used / available statement per figure (guide 11b)
 
-Run (from the repo root)
+Run (from the repo root; run make_dashboard_assets.py once first, for the font)
     /home/vncuser/miniconda3/envs/grid_world_pain/bin/python \
         docs/develop/active/refactors/renderer_layout_redesign/fig03_proposed_dashboard.py
 """
 import json
 import os
+import re
 import sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.abspath(os.path.join(HERE, "..", "..", "..", "..", ".."))
 sys.path.insert(0, os.path.join(ROOT, "scripts", "analysis", "style"))
+sys.path.insert(0, HERE)
 os.chdir(ROOT)
 
 import matplotlib  # noqa: E402
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt  # noqa: E402
 import numpy as np  # noqa: E402
+import yaml  # noqa: E402
 from matplotlib.backends.backend_agg import FigureCanvasAgg  # noqa: E402
-from matplotlib.colors import to_rgb  # noqa: E402
-from matplotlib.patches import Circle, FancyBboxPatch, Rectangle  # noqa: E402
+from matplotlib.patches import Circle, Polygon, Rectangle  # noqa: E402
 from PIL import Image  # noqa: E402
 
+import dashboard_style as ds  # noqa: E402
 import house  # noqa: E402
 
 FIGS = os.path.join(HERE, "figures")
-W, H, DPI = 1440, 896, 100
-GUT, GAP, HEAD, PAD = 16, 12, 48, 12
-COL_L, COL_R = 300, 330
-MIN_PT = 11                      # text floor; numbers and labels raise rather than ellipsise
+W, H = 1440, 896
 REP_STEP = 15
-TRACK = "#e2e4e0"
-GRASS = np.array(to_rgb("#ECFDF5"))
-CMAP = matplotlib.colormaps["RdBu_r"]      # the production thermal colormap (renderer.py THERMAL_CMAP)
-MONO = house.FONT_MONO
-# colour -> meaning, fixed once for this sketch (register F11)
-C_SAT, C_INOC, C_HARM, C_SMELL, C_VIS, C_AGENT = house.GREEN, house.ORANGE, house.RED, house.BLUE, house.INK_2, house.BLUE
-ARROW = {"UP": "↑", "RIGHT": "→", "DOWN": "↓", "LEFT": "←", "REST": "○", "EAT": "+"}
-DIAMOND = [(0, 0), (-1, 0), (0, 1), (1, 0), (0, -1)]     # get_visual_offsets(1): C U R D L
-VIS_LABELS = ["GRS", "SND", "PLN", "FOD", "HPR", "PRD", "RCK", "NEU"]   # HPR = hiding_predator (plan Q11)
-OWNER = {"Satiation": "vitals", "Interoceptive Nociception": "vitals", "Extero Nociception": "extero",
-         "Thermoception": "thermo", "Olfaction": "olf", "Collision": "coll", "Proprioception": "prop",
-         "Visual": "vis"}
-TOGGLE_OF = {"Interoceptive Nociception": "intero", "Extero Nociception": "extero", "Thermoception": "thermal",
+LEFT_W = 320                  # left column width (spec)
+GRID_CELL = 96                # grid-view cell size (spec)
+MIN_RIGHT_W = 440             # the thermoception card needs this for its diamond + legend
+RES_NAMES = ["food", "hiding_predator"]          # res_type index -> name (export_episode.py)
+VIZ = {"Satiation": "Satiation", "Interoceptive Nociception": "Intero Nociception",
+       "Extero Nociception": "Extero Nociception", "Thermoception": "Thermoception", "Olfaction": "Olfactory",
+       "Collision": "Collision", "Proprioception": "Proprioception", "Visual": "Visual",
+       "Body Temperature": "Body Temperature", "Nutrition": "Nutrition", "Injury": "Injury"}
+# observed sense -> the toggle that switches its panel off on purpose ("" = always on)
+TOGGLE_OF = {"Satiation": "", "Nutrition": "", "Injury": "", "Interoceptive Nociception": "intero",
+             "Body Temperature": "thermal", "Extero Nociception": "extero", "Thermoception": "thermal",
              "Olfaction": "olf", "Collision": "coll", "Proprioception": "prop", "Visual": "vis"}
 ALL = frozenset({"thermal", "intero", "olf", "extero", "coll", "prop", "vis"})
+# AN-A / AN-B are two shared animal-odour components (predators load mostly on A, neutral animals on B,
+# with heavy overlap), so they are named by their leaning, never "Predator" / "Neutral"
+OLF_NAMES = {"FOOD": "Food", "AN-A": ("Odour A", "predator-leaning"), "AN-B": ("Odour B", "neutral-leaning"),
+             "BUSH": "Bush", "TREE": "Tree"}
+# channel 6 is shared by every obstacle (rock, bush, campfire), so it is "Obstacle", not "Rock"
+VIS_NAMES = {"FOD": "Food", "DNG": "Hiding predator", "HPR": "Hiding predator", "PRD": "Predator",
+             "RCK": "Obstacle", "NEU": "Neutral"}
 
 
 class LayoutOverflowError(ValueError):
     pass
 
 
-def load_icons():
-    out = {}
-    for name in ["agent", "agent_food", "agent_predator", "agent_hiding_predator", "bush_agent", "bush", "food",
-                 "hiding_predator", "neutral", "predator", "rock", "tree"]:
-        im = Image.open(os.path.join(ROOT, "assets", f"{name}.png")).convert("RGBA")
-        im.thumbnail((96, 96), Image.LANCZOS)
-        sq = Image.new("RGBA", (96, 96), (0, 0, 0, 0))
-        sq.paste(im, ((96 - im.width) // 2, (96 - im.height) // 2))
-        out[name] = np.asarray(sq).astype(float) / 255.0
-    return out
-
-
-class Fit:
-    """A text that is measured into a width: shrinks toward MIN_PT, and raises below it."""
-
-    def __init__(self, ax, x, y, size, max_w, **kw):
-        self.t = ax.text(x, y, "", fontsize=size, clip_on=True, **kw)
-        self.size, self.max_w = size, max_w
-
-    def set(self, s, renderer):
-        size = self.size
-        self.t.set_text(s)
-        self.t.set_fontsize(size)
-        while self.t.get_window_extent(renderer).width > self.max_w:
-            if size - 0.5 < MIN_PT:
-                raise LayoutOverflowError(f"text {s!r} does not fit {self.max_w:.0f}px at the {MIN_PT} pt floor")
-            size -= 0.5
-            self.t.set_fontsize(size)
-
-
 def sensor(st, name):
     for s in st["sensors"]:
         if s["name"] == name:
             return s
-    return None
+    raise KeyError(f"step {st['t']}: no sensory entry {name!r}")
 
 
-def signed(v, d=0):
-    return f"{v:+.{d}f}".replace("-", "−")
+def reset_limits(ax):
+    ax.set_xlim(0, ax._px_w)
+    ax.set_ylim(ax._px_h, 0)
+
+
+class Fit:
+    """A text measured against its slot at its design size: raises rather than overlapping or shrinking."""
+
+    def __init__(self, dash, ax, x, y, role, max_w, **kw):
+        self.d, self.max_w = dash, max_w
+        self.t = ds.text(ax, x, y, "", role, **kw)
+
+    def set(self, s):
+        self.t.set_text(s)
+        w = self.t.get_window_extent(self.d.r).width
+        if w > self.max_w + 0.5:
+            raise LayoutOverflowError(f"text {s!r} is {w:.0f}px wide; its slot is {self.max_w:.0f}px")
+        return w
 
 
 class Dashboard:
-    def __init__(self, meta, n_steps, icons, on=ALL):
-        self.m, self.n_steps, self.icons, self.on = meta, n_steps, icons, on
-        self.fig = plt.figure(figsize=(W / DPI, H / DPI), dpi=DPI)
+    def __init__(self, meta, steps, scale, on=ALL):
+        self.m, self.steps, self.scale, self.on = meta, steps, scale, on
+        self.n_steps = len(steps)
+        bd = meta["breakdown"]
+        for name in bd:                      # completeness rule
+            if name not in TOGGLE_OF:
+                raise ValueError(f"observed sense {name!r} has no panel in the registry")
+        self.has = lambda name: name in bd and TOGGLE_OF[name] in (on | {""})
+        self.thermal = "thermal" in on and scale is not None
+        self.checked_cells = scale.check_field_in_bounds(meta["thermal_field"], meta["config"]) if self.thermal else 0
+        st0 = steps[0]
+        self.olf_range = sensor(st0, "Olfactory")["range"] if self.has("Olfaction") else None
+        self.vis_range = sensor(st0, "Visual")["range"] if self.has("Visual") else None
+        for nm, r in (("Olfaction", self.olf_range), ("Visual", self.vis_range)):
+            if r is not None and r < 1:
+                raise LayoutOverflowError(f"{nm} at range {r}: this sketch draws option A maps only (range >= 1)")
+        # setup pre-pass: per-sense colour scales fixed for the whole episode
+        self.olf_max = max(max(sensor(s, "Olfactory")["vector"]) for s in steps) if self.olf_range else None
+        self.vis_max = (max(max(v for i, v in enumerate(sensor(s, "Visual")["vector"]) if i % 8 >= 3) for s in steps)
+                        if self.vis_range else None)
+
+        self.fig = plt.figure(figsize=(W / ds.DPI, H / ds.DPI), dpi=ds.DPI)
         self.fig.set_layout_engine("none")
         self.canvas = FigureCanvasAgg(self.fig)
         self.r = self.canvas.get_renderer()
+        bg = self.fig.add_axes([0, 0, 1, 1])
+        bg.axis("off")
+        bg.add_patch(Rectangle((0, 0), 1, 1, transform=bg.transAxes, fc=ds.CANVAS, lw=0))
+        self.bg = bg
         self.updates = []
-        bd = meta["breakdown"]
-        self.thermal = "thermal" in on and len(meta["thermal_field"]) > 0
-        # completeness rule: every observed sense has a present panel, or was switched off on purpose
-        for name in bd:
-            if name not in OWNER:
-                raise ValueError(f"observed sense {name!r} has no panel in the registry")
-        self.has = lambda name: name in bd and TOGGLE_OF.get(name, "") in on | {""}
-        panels = self.registry()
-        self.boxes = self.pack(panels)
-        self.header()
-        for p in panels:
-            ax = self.card(self.boxes[p["key"]])
+        self.panels = self.registry()
+        self.boxes = self.pack(self.panels)
+        self.b_header()
+        for p in self.panels:
+            ax = self.card(self.boxes[p["key"]], fill=p.get("card", True))
             p["build"](ax, *self.boxes[p["key"]][2:])
 
     # ------------------------------------------------------------------ registry + packer
+    def intero_rows(self):
+        m, bd = self.m, self.m["breakdown"]
+        rows = []
+        for label, name, key, mx in (("Satiation", "Satiation", "satiation", "max_satiation"),
+                                     ("Nutrition", "Nutrition", "nutrition", "max_nutrition"),
+                                     ("Injury", "Injury", "injury", "max_injury")):
+            rows.append(dict(label=label, kind="bar", colour=ds.STATE,
+                             obs=(lambda st, n=name: sensor(st, VIZ[n])["intensity"]) if name in bd else None,
+                             true=lambda st, k=key, mx=mx: st[k] / m[mx], note=None))
+        if self.has("Interoceptive Nociception"):
+            has_true = "true_intensity" in sensor(self.steps[0], "Intero Nociception")
+            rows.append(dict(label="Interoceptive nociception", kind="bar", colour=ds.NOCI,
+                             obs=lambda st: sensor(st, "Intero Nociception")["intensity"],
+                             true=(lambda st: sensor(st, "Intero Nociception")["true_intensity"]) if has_true else None,
+                             note="noise-free" if has_true else None))
+        if self.thermal:
+            rows.append(dict(label="Body temperature", kind="temp", colour=None,
+                             obs=(lambda st: sensor(st, "Body Temperature")["value"]) if self.has("Body Temperature") else None,
+                             true=lambda st: st["body_temp"], note=None))
+        return rows
+
     def registry(self):
-        rows = int("Satiation" in self.m["breakdown"]) + int(self.has("Interoceptive Nociception"))
+        self.rows = self.intero_rows()
+        band = bool(self.olf_range or self.vis_range)
         reg = [
-            dict(key="vitals", col="left", min_h=44 + 48 * rows + (68 if self.thermal else 0), build=self.b_vitals),
-            dict(key="minimap", col="left", min_h=220, grow=True, build=self.b_minimap),
-            dict(key="arena", col="centre", min_h=420, grow=True, build=self.b_arena),
-            dict(key="olf", col="right", min_h=132, present=self.has("Olfaction"), build=self.b_olf),
-            dict(key="extero", col="right", min_h=96, present=self.has("Extero Nociception"), build=self.b_extero),
-            dict(key="thermo", col="right", min_h=140, present=self.has("Thermoception") and self.thermal, build=self.b_thermo),
-            dict(key="coll", col="right", min_h=100, present=self.has("Collision"), build=self.b_coll),
-            dict(key="prop", col="right", min_h=112, present=self.has("Proprioception"), build=self.b_prop),
-            dict(key="vis", col="right", min_h=132, present=self.has("Visual"), build=self.b_vis),
+            dict(key="intero", region="left", h=76 * len(self.rows) + 124, build=self.b_intero),
+            # grows only until the map is as wide as the card; beyond that the column stays top-aligned
+            dict(key="minimap", region="left", h=220, grow=True, max_h=46 + LEFT_W - 2 * ds.PAD + ds.PAD,
+                 build=self.b_minimap),
+            dict(key="arena", region="centre", h=48 + self.m["view"] * GRID_CELL + 16, build=self.b_arena),
+            dict(key="prop", region="right", h=104, present=self.has("Proprioception"), build=self.b_prop),
+            dict(key="extero", region="right", row="ec", h=150, present=self.has("Extero Nociception"), build=self.b_extero),
+            dict(key="coll", region="right", row="ec", h=150, present=self.has("Collision"), build=self.b_coll),
+            dict(key="thermo", region="right", h=230, grow=True, present=self.thermal, build=self.b_thermo),
+            dict(key="band", region="band", h=200, present=band, build=self.b_band),
         ]
         return [p for p in reg if p.get("present", True)]
 
-    @staticmethod
-    def pack(panels):
-        cols = {"left": (GUT, COL_L), "centre": (2 * GUT + COL_L, W - 4 * GUT - COL_L - COL_R),
-                "right": (W - GUT - COL_R, COL_R)}
-        top, avail = HEAD + GUT, H - HEAD - 2 * GUT
-        boxes = {}
-        for col, (x, w) in cols.items():
-            ps = [p for p in panels if p["col"] == col]
-            if not ps:
+    def pack(self, panels):
+        top = ds.HEAD
+        bottom = H - ds.GAP
+        lx = ds.OUTER
+        cx = lx + LEFT_W + ds.GAP
+        cw = self.m["view"] * GRID_CELL + 64
+        rx = cx + cw + ds.GAP
+        rw = W - ds.OUTER - rx
+        if rw < MIN_RIGHT_W:
+            raise LayoutOverflowError(f"right column is {rw}px wide; needs {MIN_RIGHT_W}px")
+        arena_h = next(p["h"] for p in panels if p["key"] == "arena")
+        band = [p for p in panels if p["region"] == "band"]
+        col_bottom = top + arena_h if band else bottom
+        regions = {"left": (lx, LEFT_W, top, bottom), "right": (rx, rw, top, col_bottom)}
+        boxes = {"arena": (cx, top, cw, arena_h)}
+        if band:
+            by = top + arena_h + ds.GAP
+            if bottom - by < band[0]["h"]:
+                raise LayoutOverflowError(f"sensor band needs {band[0]['h']}px, has {bottom - by}px")
+            boxes["band"] = (cx, by, W - ds.OUTER - cx, bottom - by)
+        for region, (x, w, y0, y1) in regions.items():
+            rows = []
+            for p in (p for p in panels if p["region"] == region):
+                if rows and p.get("row") and rows[-1][0].get("row") == p["row"]:
+                    rows[-1].append(p)
+                else:
+                    rows.append([p])
+            if not rows:
                 continue
-            need = sum(p["min_h"] for p in ps) + GAP * (len(ps) - 1)
+            avail = y1 - y0
+            need = sum(max(p["h"] for p in r) for r in rows) + ds.GAP * (len(rows) - 1)
             if need > avail:
-                raise LayoutOverflowError(f"{col} column needs {need}px, has {avail}px: "
-                                          + ", ".join(f"{p['key']}={p['min_h']}" for p in ps))
-            growers = [p for p in ps if p.get("grow")] or ps
-            spare, total = avail - need, sum(p["min_h"] for p in growers)
-            y = top
-            for i, p in enumerate(ps):
-                h = p["min_h"] + (int(spare * p["min_h"] / total) if p in growers else 0)
-                if i == len(ps) - 1:
-                    h = top + avail - y
-                boxes[p["key"]] = (x, y, w, h)
-                y += h + GAP
+                raise LayoutOverflowError(f"{region} column needs {need}px, has {avail}px: "
+                                          + ", ".join(f"{p['key']}={p['h']}" for r in rows for p in r))
+            growers = [r for r in rows if any(p.get("grow") for p in r)]
+            spare = avail - need
+            y = y0
+            for r in rows:
+                h = max(p["h"] for p in r) + (spare // len(growers) if r in growers else 0)
+                h = min(h, min(p.get("max_h", h) for p in r))
+                pw = (w - ds.GAP * (len(r) - 1)) / len(r)
+                for i, p in enumerate(r):
+                    boxes[p["key"]] = (x + i * (pw + ds.GAP), y, pw, h)
+                y += h + ds.GAP                  # no grower: the column stays top-aligned
         keys = list(boxes)
-        for i, a in enumerate(keys):              # boxes are disjoint by construction; prove it
+        for i, a in enumerate(keys):             # boxes are disjoint by construction; prove it
+            ax_, ay, aw, ah = boxes[a]
+            if ax_ < 0 or ay < 0 or ax_ + aw > W or ay + ah > H:
+                raise LayoutOverflowError(f"box {a} leaves the frame")
             for b in keys[i + 1:]:
-                ax_, ay, aw, ah = boxes[a]
-                bx, by, bw, bh = boxes[b]
-                if ax_ < bx + bw and bx < ax_ + aw and ay < by + bh and by < ay + ah:
+                bx, by_, bw, bh = boxes[b]
+                if ax_ < bx + bw and bx < ax_ + aw and ay < by_ + bh and by_ < ay + ah:
                     raise LayoutOverflowError(f"boxes {a} and {b} intersect")
         return boxes
 
-    # ------------------------------------------------------------------ drawing helpers
+    # ------------------------------------------------------------------ helpers
     def card(self, box, fill=True):
         x, y, w, h = box
         ax = self.fig.add_axes([x / W, 1 - (y + h) / H, w / W, h / H])
+        ax._px_w, ax._px_h = w, h
         ax.set_autoscale_on(False)
-        ax.set_xlim(0, w)
-        ax.set_ylim(h, 0)
+        reset_limits(ax)
         ax.axis("off")
         if fill:
-            ax.add_patch(FancyBboxPatch((0.5, 0.5), w - 1, h - 1, boxstyle="round,pad=0,rounding_size=4",
-                                        facecolor=house.BG_SOFT, edgecolor=house.TICK_LINE, linewidth=1, zorder=0))
+            ds.rrect(ax, 0.5, 0.5, w - 1, h - 1, ds.CARD_RADIUS, ds.CARD, ds.LINE, 1, z=0)
         return ax
+
+    def fit(self, ax, x, y, role, max_w, **kw):
+        return Fit(self, ax, x, y, role, max_w, **kw)
+
+    def width(self, s, role):
+        t = ds.text(self.bg, 0, 0, s, role)
+        w = t.get_window_extent(self.r).width
+        t.remove()
+        return w
 
     def title(self, ax, w, text, sub=None, reserve=0):
         used = 0
         if sub:
-            s = ax.text(w - PAD, 12, sub, fontsize=MIN_PT, fontfamily=MONO, color=house.TEXT_LIGHT,
-                        ha="right", va="top", clip_on=True)
-            used = s.get_window_extent(self.r).width + 10
-        Fit(ax, PAD, 11, 13, w - 2 * PAD - used - reserve, fontweight="semibold", color=house.INK_2,
-            va="top").set(text.upper(), self.r)
+            used = self.fit(ax, w - ds.PAD, ds.TITLE_BASE, "card_sub", w / 2, ha="right").set(sub) + 12
+        self.fit(ax, ds.PAD, ds.TITLE_BASE, "card_title", w - 2 * ds.PAD - used - reserve).set(text)
 
-    def obs_note(self):
-        return None if self.m["noise"] else "obs only"
+    def bar(self, ax, x, y, w, h, colour):
+        ds.rrect(ax, x, y, w, h, h / 2, ds.TRACK, z=2)
+        fill = ds.rrect(ax, x, y, h, h, h / 2, colour, z=3)
 
-    def bar(self, ax, x, y, w, h, color):
-        ax.add_patch(Rectangle((x, y), w, h, facecolor=TRACK, edgecolor="none", zorder=1))
-        return ax.add_patch(Rectangle((x, y), 0, h, facecolor=color, edgecolor="none", zorder=2))
+        def set_v(v):
+            v = min(1.0, max(0.0, float(v)))
+            fill.set_visible(v > 0.003)
+            fill.set_width(max(h, w * v))
+        return set_v
 
-    # ------------------------------------------------------------------ panels
-    def header(self):
-        ax = self.card((0, 0, W, HEAD), fill=False)
-        ax.plot([0, W], [HEAD - 0.5, HEAD - 0.5], color=house.TICK_LINE, linewidth=1)
-        Fit(ax, 20, HEAD / 2, 17, 900, fontweight="semibold", color=house.INK, va="center").set(
-            f"GridWorld · campfire world · seed {self.m['seed']} · random policy", self.r)
-        right = Fit(ax, W - 20, HEAD / 2, 15, 300, fontfamily=MONO, color=house.INK_2, ha="right", va="center")
-        self.updates.append(lambda st: right.set(f"step {st['t']} / {self.n_steps - 1}", self.r))
+    def gradient(self, ax, x, y, w, h, colours, clip_r):
+        im = ax.imshow(np.asarray(colours)[None, :, :3], extent=(x, x + w, y + h, y), aspect="auto",
+                       interpolation="bilinear", zorder=2)
+        clip = ds.rrect(ax, x, y, w, h, clip_r, "none", z=2)
+        im.set_clip_path(clip)
+        reset_limits(ax)
+        return im
 
-    def b_vitals(self, ax, w, h):
-        self.title(ax, w, "Vitals", self.obs_note())
-        y, rows = 44, []
-        if "Satiation" in self.m["breakdown"]:
-            rows.append(("Satiation", "Satiation", C_SAT))
-        if self.has("Interoceptive Nociception"):
-            rows.append(("Interoceptive nociception", "Intero Nociception", C_INOC))
-        for label, name, color in rows:
-            # label takes the full card width; the value sits at the right end of the bar line, so a
-            # long sense name never competes with its number for the same line
-            Fit(ax, PAD, y, 12, w - 2 * PAD, fontweight="semibold", color=house.INK_2, va="top").set(label.upper(), self.r)
-            val = Fit(ax, w - PAD, y + 27, 14, 60, fontfamily=MONO, color=house.INK, ha="right", va="center")
-            bw = w - 2 * PAD - 70
-            fill = self.bar(ax, PAD, y + 22, bw, 10, color)
+    # ------------------------------------------------------------------ header
+    def b_header(self):
+        ax = self.card((0, 0, W, ds.HEAD), fill=False)
+        name = os.path.splitext(os.path.basename(self.m["config"]))[0].replace("_", " ").capitalize()
+        tw = self.fit(ax, ds.OUTER, 38, "frame_title", 360).set(name)
+        n = self.n_steps - 1
+        of_w = self.fit(ax, W - ds.OUTER, 36, "step_aux", 80, ha="right").set(f"/ {n}")
+        digits_w = self.width("0" * len(str(n)), "step")
+        num_x = W - ds.OUTER - of_w - 8
+        num = self.fit(ax, num_x, 36, "step", digits_w, ha="right")
+        lab_x = num_x - digits_w - 10
+        lab_w = self.fit(ax, lab_x, 36, "meta", 60, ha="right", color=ds.INK3).set("Step")
+        bar_w = 132
+        ds.rrect(ax, W - ds.OUTER - bar_w, 48, bar_w, 4, 2, ds.CANVAS_TRACK, z=2)
+        prog = ds.rrect(ax, W - ds.OUTER - bar_w, 48, 4, 4, 2, ds.IRIS, z=3)
+        meta_x = ds.OUTER + tw + 20
+        meta = f"seed {self.m['seed']}  ·  random policy  ·  {self.m['view']} × {self.m['view']} view of a " \
+               f"{self.m['width']} × {self.m['height']} world"
+        if self.m.get("synthetic"):
+            meta += "  ·  sensor ranges overridden for this sketch"
+        self.fit(ax, meta_x, 38, "meta", min(lab_x - lab_w, W - ds.OUTER - bar_w) - 32 - meta_x).set(meta)
 
-            def upd(st, name=name, val=val, fill=fill, bw=bw):
-                v = sensor(st, name)["intensity"]
-                val.set(f"{v:.2f}", self.r)
-                fill.set_width(bw * min(1.0, max(0.0, v)))
-            self.updates.append(upd)
-            y += 48
-        if self.thermal:
-            lo, hi, sp = self.m["min_temperature"], self.m["max_temperature"], self.m["temperature_setpoint"]
-            gw = w - 2 * PAD
-            Fit(ax, PAD, y, 12, gw - 70, fontweight="semibold", color=house.INK_2, va="top").set("BODY TEMPERATURE", self.r)
-            val = Fit(ax, w - PAD, y - 1, 14, 70, fontfamily=MONO, color=house.INK, ha="right", va="top")
-            ax.add_patch(Rectangle((PAD, y + 24), gw, 14, facecolor=TRACK, edgecolor="none", zorder=1))
-            fill = ax.add_patch(Rectangle((PAD, y + 24), 0, 14, facecolor="none", edgecolor="none", zorder=2))
-            xs = PAD + gw * (sp - lo) / (hi - lo)
-            ax.plot([xs, xs], [y + 22, y + 40], color=house.INK, linewidth=1, zorder=3)
-            for xd in (PAD + 1.5, PAD + gw - 1.5):
-                ax.plot([xd, xd], [y + 24, y + 38], color=house.RED, linewidth=3, zorder=3)
-            third = gw / 3 - 4
-            Fit(ax, PAD, y + 44, MIN_PT, third, fontfamily=MONO, color=house.TEXT_LIGHT, va="top").set(f"{signed(lo)} limit", self.r)
-            Fit(ax, w / 2, y + 44, MIN_PT, third, fontfamily=MONO, color=house.TEXT_LIGHT, ha="center", va="top").set("setpoint", self.r)
-            Fit(ax, w - PAD, y + 44, MIN_PT, third, fontfamily=MONO, color=house.TEXT_LIGHT, ha="right", va="top").set(f"limit {signed(hi)}", self.r)
+        def upd(st):
+            num.set(str(st["t"]))
+            prog.set_width(max(4, bar_w * st["t"] / max(1, n)))
+        self.updates.append(upd)
 
-            def upd(st):
-                bt = st["body_temp"]
-                val.set(signed(bt, 2), self.r)
-                xv = PAD + gw * (min(hi, max(lo, bt)) - lo) / (hi - lo)
-                fill.set_x(min(xv, xs))
-                fill.set_width(abs(xv - xs))
-                fill.set_facecolor(CMAP((min(hi, max(lo, bt)) - lo) / (hi - lo)))
-            self.updates.append(upd)
+    # ------------------------------------------------------------------ interoception
+    def b_intero(self, ax, w, h):
+        self.title(ax, w, "Interoception")
+        cw = (w - 2 * ds.PAD - ds.GAP) / 2
+        xs = (ds.PAD, ds.PAD + cw + ds.GAP)
+        self.fit(ax, xs[0], 66, "col_head", cw).set("Observed")
+        self.fit(ax, xs[1], 66, "col_head", cw).set("True")
+        ax.plot([ds.PAD, w - ds.PAD], [76, 76], color=ds.LINE, lw=1 * ds.PT)
+        y = 104
+        for row in self.rows:
+            reserve = 0
+            if row["kind"] == "temp":
+                t_lo, t_hi = self.scale.b["low"], self.scale.b["high"]
+                reserve = self.fit(ax, w - ds.PAD, y, "caption", cw, ha="right").set(
+                    f"limits {ds.signed(t_lo)} / {ds.signed(t_hi)}") + 12
+            self.fit(ax, xs[0], y, "row_label", w - 2 * ds.PAD - reserve).set(row["label"])
+            for col, x in zip(("obs", "true"), xs):
+                fn = row[col]
+                if fn is None:
+                    self.fit(ax, x, y + 30, "not_observed", cw).set("not observed" if col == "obs" else "not recorded")
+                    ds.rrect(ax, x, y + 40, cw, 6, 3, "none", ds.OUTLINE, 1, z=2)
+                    continue
+                note_w = 0
+                if col == "true" and row["note"]:
+                    note_w = self.fit(ax, x + cw, y + 30, "caption", cw / 2, ha="right").set(row["note"]) + 8
+                val = self.fit(ax, x, y + 30, "value", cw - note_w)
+                if row["kind"] == "bar":
+                    set_v = self.bar(ax, x, y + 40, cw, 6, row["colour"])
 
-    def cell_rgb(self, r, c, alpha):
-        if not self.thermal:
-            return GRASS
-        lo, hi = self.m["clim"]
-        rgb = np.array(CMAP((self.m["thermal_field"][r][c] - lo) / (hi - lo))[:3])
-        return rgb * alpha + GRASS * (1 - alpha)
+                    def upd(st, fn=fn, val=val, set_v=set_v):
+                        v = fn(st)
+                        val.set(f"{v:.2f}")
+                        set_v(v)
+                else:
+                    set_v = self.gauge(ax, x, y + 40, cw)
 
+                    def upd(st, fn=fn, val=val, set_v=set_v):
+                        v = fn(st)
+                        val.set(ds.signed(v, 1) + "°")
+                        set_v(v)
+                self.updates.append(upd)
+            y += 76
+        foot = y - 76 + 46 + 10
+        ax.plot([ds.PAD, w - ds.PAD], [foot, foot], color=ds.LINE, lw=1 * ds.PT)
+        note = ("Noise off in this episode, so observed = true." if not self.m["noise"]
+                else "Noise on: observed and true values differ.")
+        self.fit(ax, ds.PAD, foot + 24, "caption", w - 2 * ds.PAD).set(note)
+
+    def gauge(self, ax, x, y, w):
+        """Body temperature on the shared scale: track spans the survivable band, marker = value."""
+        lo, hi, sp = self.scale.b["low"], self.scale.b["high"], self.scale.b["setpoint"]
+        g = np.linspace(lo, hi, 128)
+        im = self.gradient(ax, x, y, w, 6, [self.scale.colour(v) for v in g], 3)
+        im.set_alpha(0.9)
+        xs = x + w * (sp - lo) / (hi - lo)
+        ax.plot([xs, xs], [y - 3, y + 9], color=ds.INK3, lw=1 * ds.PT, zorder=3)
+        dot = ax.add_patch(Circle((x, y + 3), 6, fc="#FFFFFF", ec=ds.INK, lw=2 * ds.PT, zorder=4))
+
+        def set_v(v):
+            dot.set_center((x + w * (min(hi, max(lo, v)) - lo) / (hi - lo), y + 3))
+        return set_v
+
+    # ------------------------------------------------------------------ minimap
     def view_origin(self, st):
         n, half = self.m["view"], self.m["view"] // 2
         ar, ac = st["agent"]
         return (max(0, min(self.m["height"] - n, ar - half)), max(0, min(self.m["width"] - n, ac - half)))
 
+    def cell_colour(self, r, c):
+        return self.scale.colour(self.m["thermal_field"][r][c]) if self.thermal else ds.TRACK
+
     def b_minimap(self, ax, w, h):
-        self.title(ax, w, "Minimap", f"{self.m['width']} × {self.m['height']} world")
-        hh, ww = self.m["height"], self.m["width"]
-        s = min(w - 2 * PAD, h - 52)
-        ox, oy, cell = (w - s) / 2, 40 + (h - 52 - s) / 2, s / max(hh, ww)
-        img = np.array([[self.cell_rgb(r, c, 0.55) for c in range(ww)] for r in range(hh)])
-        ax.imshow(img, extent=(ox, ox + cell * ww, oy + cell * hh, oy), interpolation="nearest", zorder=1)
-        ax.set_xlim(0, w)
-        ax.set_ylim(h, 0)
-        pos = lambda p: (ox + (p[1] + 0.5) * cell, oy + (p[0] + 0.5) * cell)  # noqa: E731
-        inside = lambda p: 0 <= p[0] < hh and 0 <= p[1] < ww  # noqa: E731  (inactive entities are parked off-grid)
-        obs_col = {"rock": "#4B5563", "bush": "#4d7c0f", "campfire": "#ea580c"}
-        obs = ax.scatter([], [], s=(cell * 0.45) ** 2, marker="s", zorder=3, linewidths=0)
-        res = ax.scatter([], [], s=(cell * 0.4) ** 2, zorder=4, linewidths=0)
-        ani = ax.scatter([], [], s=(cell * 0.5) ** 2, zorder=5, linewidths=0)
-        agent = ax.scatter([], [], s=(cell * 0.6) ** 2, zorder=7, color=C_AGENT, edgecolors="white", linewidths=1.2)
-        n = self.m["view"]
-        view = ax.add_patch(Rectangle((0, 0), n * cell, n * cell, fill=False, edgecolor=C_AGENT, linewidth=1.6, zorder=6))
         m = self.m
+        self.title(ax, w, "World", f"{m['width']} × {m['height']}")
+        hh, ww = m["height"], m["width"]
+        s = min(w - 2 * ds.PAD, h - 46 - ds.PAD)
+        cell = s / max(hh, ww)
+        ox, oy = (w - cell * ww) / 2, 46
+        for r in range(hh):
+            for c in range(ww):
+                ds.rrect(ax, ox + c * cell + 1, oy + r * cell + 1, cell - 2, cell - 2, 3, self.cell_colour(r, c),
+                         z=1, alpha=0.75 if self.thermal else 1.0)
+        inside = lambda p: 0 <= p[0] < hh and 0 <= p[1] < ww  # noqa: E731  (inactive entities park off-grid)
+        centre = lambda p: (ox + (p[1] + 0.5) * cell, oy + (p[0] + 0.5) * cell)  # noqa: E731
+        obs = [ds.rrect(ax, 0, 0, cell * 0.56, cell * 0.56, 2, ds.MINIMAP_COLOUR[m["obstacle_names"][t]], z=3)
+               for t in m["obs_type"]]
+        res = [ax.add_patch(Circle((0, 0), cell * 0.24, fc=ds.MINIMAP_COLOUR[RES_NAMES[t]], ec="#FFFFFF",
+                                   lw=1.2 * ds.PT, zorder=4)) for t in m["res_type"]]
+        ani = [ax.add_patch(Circle((0, 0), cell * 0.26, fc=ds.MINIMAP_COLOUR[k], ec="#FFFFFF", lw=1.2 * ds.PT, zorder=4))
+               for k in m["animal_classes"]]
+        # hiding predator: an amber pip (34 % of the dot width) echoing the glyph's eyes, so it is not a predator dot
+        pips = [ax.add_patch(Circle((0, 0), cell * 0.24 * 0.34, fc=ds.HIDE_EYE, lw=0, zorder=4.5))
+                if RES_NAMES[t] == "hiding_predator" else None for t in m["res_type"]]
+        agent = ax.add_patch(Circle((0, 0), cell * 0.32, fc=ds.IRIS, ec="#FFFFFF", lw=2 * ds.PT, zorder=6))
+        n = m["view"]
+        view = ds.rrect(ax, 0, 0, n * cell + 2, n * cell + 2, 6, "none", ds.IRIS, 2.2, z=7)
 
         def upd(st):
-            ok = [i for i, p in enumerate(st["obs_pos"]) if inside(p)]
-            obs.set_offsets([pos(st["obs_pos"][i]) for i in ok] or np.empty((0, 2)))
-            obs.set_facecolors([obs_col.get(m["obstacle_names"][m["obs_type"][i]], "#6b7280") for i in ok])
-            act = [i for i, a in enumerate(st["res_active"]) if a and inside(st["res_pos"][i])]
-            res.set_offsets([pos(st["res_pos"][i]) for i in act] or np.empty((0, 2)))
-            res.set_facecolors([house.GREEN if m["res_type"][i] == 0 else house.RED for i in act])
-            ok = [i for i, p in enumerate(st["animal_pos"]) if inside(p)]
-            ani.set_offsets([pos(st["animal_pos"][i]) for i in ok] or np.empty((0, 2)))
-            ani.set_facecolors(["#111827" if m["animal_classes"][i] == "predator" else "#0891B2" for i in ok])
-            agent.set_offsets([pos(st["agent"])])
+            for p, pos in zip(obs, st["obs_pos"]):
+                p.set_visible(inside(pos))
+                cx, cy = centre(pos)
+                p.set_x(cx - cell * 0.28)
+                p.set_y(cy - cell * 0.28)
+            for p, pip, pos, act in zip(res, pips, st["res_pos"], st["res_active"]):
+                for q in (p, pip):
+                    if q is not None:
+                        q.set_visible(bool(act) and inside(pos))
+                        q.set_center(centre(pos))
+            for p, pos in zip(ani, st["animal_pos"]):
+                p.set_visible(inside(pos))
+                p.set_center(centre(pos))
+            agent.set_center(centre(st["agent"]))
             r0, c0 = self.view_origin(st)
-            view.set_xy((ox + c0 * cell, oy + r0 * cell))
+            view.set_x(ox + c0 * cell - 1)
+            view.set_y(oy + r0 * cell - 1)
         self.updates.append(upd)
 
+    # ------------------------------------------------------------------ grid view
     def b_arena(self, ax, w, h):
-        n = self.m["view"]
-        badge = ax.text(w - PAD, 10, "", fontsize=13, fontfamily=MONO, color=C_AGENT, ha="right", va="top",
-                        clip_on=True, bbox=dict(boxstyle="round,pad=0.3", facecolor="white", edgecolor=house.TICK_LINE))
-        self.title(ax, w, f"Grid view · {n} × {n} around the agent", reserve=130)
-        strip = 64 if self.thermal else 0
-        side = min(w - 2 * PAD, h - 48 - PAD - strip)
-        x0, y0, cell = (w - side) / 2, 46, side / n
+        m, n = self.m, self.m["view"]
+        pill_w, pill_h = 118, 28
+        px = w - ds.PAD - pill_w
+        ds.rrect(ax, px, 12, pill_w, pill_h, 14, ds.IRIS_SOFT, z=2)
+        badge = self.fit(ax, px + pill_w / 2, 31, "badge", pill_w - 16, ha="center")
+        act_w = self.fit(ax, px - 10, 30, "card_sub", 80, ha="right").set("Action")
+        self.title(ax, w, "Grid view", reserve=pill_w + act_w + 10)
+        cell = GRID_CELL
+        x0, y0 = (w - n * cell) / 2, 48
+        self.grid_extent = (x0, y0, n * cell, n * cell)
+        names = sorted(set(m["obstacle_names"]) | {RES_NAMES[t] for t in m["res_type"]} | set(m["animal_classes"]))
+        for nm in names:
+            if nm not in ds.TERRAIN_GLYPHS and nm not in ds.TOKEN_GLYPHS:
+                raise ValueError(f"entity {nm!r} has no glyph in dashboard_style")
         slots = []
         for i in range(n):
             for j in range(n):
-                cx, cy = x0 + j * cell, y0 + i * cell
-                bg = ax.add_patch(Rectangle((cx + 0.5, cy + 0.5), cell - 1, cell - 1, edgecolor="none", zorder=1))
-                ins = cell * 0.13
-                ext = (cx + ins, cx + cell - ins, cy + cell - ins, cy + ins)
-                base = ax.imshow(np.zeros((96, 96, 4)), extent=ext, zorder=3, interpolation="bilinear")
-                top = ax.imshow(np.zeros((96, 96, 4)), extent=ext, zorder=4, interpolation="bilinear")
-                fire = ax.add_patch(Circle((cx + cell / 2, cy + cell / 2), cell * 0.2, facecolor="#f97316",
-                                           edgecolor="#b91c1c", linewidth=2, zorder=3))
-                tag = ax.text(cx + 6, cy + cell - 6, "", fontsize=MIN_PT, fontfamily=MONO, color=house.INK,
-                              va="bottom", clip_on=True, zorder=6,
-                              bbox=dict(boxstyle="square,pad=0.15", facecolor="white", alpha=0.8, edgecolor="none"))
-                slots.append((bg, base, top, fire, tag))
-        ax.set_xlim(0, w)
-        ax.set_ylim(h, 0)
-        if self.thermal:
-            lo, hi = self.m["clim"]
-            ys = y0 + side + 14
-            ax.imshow(CMAP(np.linspace(0, 1, 256))[None, :, :3], extent=(x0 + 90, x0 + side - 90, ys + 10, ys),
-                      aspect="auto", zorder=2)
-            ax.set_xlim(0, w)
-            ax.set_ylim(h, 0)
-            Fit(ax, x0 + 82, ys + 5, 12, 80, fontfamily=MONO, color=house.INK_2, ha="right", va="center").set(f"cold {signed(lo)}", self.r)
-            Fit(ax, x0 + side - 82, ys + 5, 12, 80, fontfamily=MONO, color=house.INK_2, va="center").set(f"{signed(hi)} hot", self.r)
-            Fit(ax, w / 2, ys + 20, MIN_PT, side, color=house.TEXT_LIGHT, ha="center", va="top").set(
-                "cell temperature, scale fixed for the whole episode", self.r)
-        m, icons, blank = self.m, self.icons, np.zeros((96, 96, 4))
+                cx, cy = x0 + (j + 0.5) * cell, y0 + (i + 0.5) * cell
+                bg = ds.rrect(ax, cx - cell / 2 + 1, cy - cell / 2 + 1, cell - 2, cell - 2, 8, ds.TRACK, z=1)
+                groups = {}
+                for nm in names:
+                    fn = ds.TERRAIN_GLYPHS.get(nm) or ds.TOKEN_GLYPHS[nm]
+                    groups[nm] = fn(ax, cx, cy, cell)
+                agent = ds.agent_marker(ax, cx, cy, cell)
+                for arts in groups.values():
+                    for a in arts:
+                        a.set_visible(False)
+                for k, a in agent.items():
+                    for p in (a if k == "base" else [a]):
+                        p.set_visible(False)
+                slots.append((bg, groups, agent))
+        reset_limits(ax)
 
         def upd(st):
             an = m["action_names"][st["action"]] if st["action"] >= 0 else None
-            badge.set_text(f"{ARROW[an]} {an}" if an else "start")
+            badge.set(f"{ds.ARROW_TEXT.get(an, '•')}  {an.title()}" if an else "Start")
             r0, c0 = self.view_origin(st)
             where = {}
             for k, p in enumerate(st["obs_pos"]):
-                where.setdefault(tuple(p), []).append(m["obstacle_names"][m["obs_type"][k]])
+                where.setdefault(tuple(p), set()).add(m["obstacle_names"][m["obs_type"][k]])
             for k, p in enumerate(st["res_pos"]):
                 if st["res_active"][k]:
-                    where.setdefault(tuple(p), []).append("food" if m["res_type"][k] == 0 else "hiding_predator")
+                    where.setdefault(tuple(p), set()).add(RES_NAMES[m["res_type"][k]])
             for k, p in enumerate(st["animal_pos"]):
-                where.setdefault(tuple(p), []).append(m["animal_classes"][k])
-            for idx, (bg, base, top, fire, tag) in enumerate(slots):
+                where.setdefault(tuple(p), set()).add(m["animal_classes"][k])
+            for idx, (bg, groups, agent) in enumerate(slots):
                 r, c = r0 + idx // n, c0 + idx % n
-                bg.set_facecolor(self.cell_rgb(r, c, 0.85))
-                names = where.get((r, c), [])
-                b_img = t_img = None
-                fire.set_visible(False)
-                if [r, c] == list(st["agent"]):
-                    t_img = ("agent_predator" if "predator" in names else "agent_hiding_predator" if "hiding_predator" in names
-                             else "bush_agent" if "bush" in names else "agent_food" if "food" in names else "agent")
-                else:
-                    for nm in names:
-                        if nm == "campfire":
-                            fire.set_visible(True)
-                        elif nm in ("predator", "neutral"):
-                            t_img = nm
-                        elif nm in icons:
-                            b_img = nm
-                base.set_data(icons[b_img] if b_img else blank)
-                top.set_data(icons[t_img] if t_img else blank)
-                tag.set_text(signed(m["thermal_field"][r][c]) if self.thermal else "")
-                tag.set_visible(self.thermal)
+                bg.set_facecolor(self.cell_colour(r, c))
+                here = where.get((r, c), set())
+                for nm, arts in groups.items():
+                    for a in arts:
+                        a.set_visible(nm in here)
+                is_agent = [r, c] == list(st["agent"])
+                mark = an if an in ds.ARROW_VEC else "dot"
+                for k, a in agent.items():
+                    for p in (a if k == "base" else [a]):
+                        p.set_visible(is_agent and k in ("base", mark))
         self.updates.append(upd)
 
-    def b_extero(self, ax, w, h):
-        self.title(ax, w, "Extero nociception", self.obs_note())
-        Fit(ax, PAD, 44, 12, 120, color=house.INK_2, va="top").set("observed", self.r)
-        val = Fit(ax, w - PAD, 43, 14, 64, fontfamily=MONO, color=house.INK, ha="right", va="top")
-        fill, bw = self.bar(ax, PAD, 68, w - 2 * PAD, 10, C_HARM), w - 2 * PAD
-
-        def upd(st):
-            v = sensor(st, "Extero Nociception")["intensity"]
-            val.set(f"{v:.2f}", self.r)
-            fill.set_width(bw * min(1.0, max(0.0, v)))
-        self.updates.append(upd)
-
-    def legend_and_bars(self, ax, w, h, labels, color):
-        n, gap = len(labels), 6
-        cw = (w - 2 * PAD - gap * (n - 1)) / n
-        for k, lab in enumerate(labels):
-            Fit(ax, PAD + k * (cw + gap) + cw / 2, 40, MIN_PT, cw, fontfamily=MONO, color=house.INK_2,
-                ha="center", va="top").set(lab, self.r)
-        top, bottom = 62, h - PAD
-        fills = []
-        for k in range(n):
-            x = PAD + k * (cw + gap)
-            ax.add_patch(Rectangle((x, top), cw, bottom - top, facecolor=TRACK, edgecolor="none", zorder=1))
-            fills.append(ax.add_patch(Rectangle((x, bottom), cw, 0, facecolor=color, edgecolor="none", zorder=2)))
-        return fills, bottom - top, bottom
-
-    def b_olf(self, ax, w, h):
-        self.title(ax, w, "Olfaction", self.obs_note())
-        fills, span, bottom = self.legend_and_bars(ax, w, h, ["FOOD", "AN-A", "AN-B", "BUSH", "TREE"], C_SMELL)
-        vmax = self.olf_max
-
-        def upd(st):
-            for f, v in zip(fills, sensor(st, "Olfactory")["vector"]):
-                f.set_y(bottom - span * v / vmax)
-                f.set_height(span * v / vmax)
-        self.updates.append(upd)
-
-    def b_vis(self, ax, w, h):
-        self.title(ax, w, "Visual", "agent cell" + (" · obs only" if not self.m["noise"] else ""))
-        fills, span, bottom = self.legend_and_bars(ax, w, h, VIS_LABELS, C_VIS)
-
-        def upd(st):
-            for f, v in zip(fills, sensor(st, "Visual")["vector"][:8]):
-                v = min(1.0, max(0.0, v))
-                f.set_y(bottom - span * v)
-                f.set_height(span * v)
-        self.updates.append(upd)
-
-    def b_thermo(self, ax, w, h):
-        self.title(ax, w, "Thermoception", "cell minus body")
-        cw, ch, g = 70, 28, 4
-        x0, y0 = (w - 3 * cw - 2 * g) / 2, 44
-        span = max(abs(v) for v in self.m["clim"])
-        cells = []
-        for dr, dc in DIAMOND:
-            x, y = x0 + (dc + 1) * (cw + g), y0 + (dr + 1) * (ch + g)
-            rect = ax.add_patch(Rectangle((x, y), cw, ch, edgecolor="none", zorder=1))
-            txt = Fit(ax, x + cw / 2, y + ch / 2, 13, cw - 6, fontfamily=MONO, ha="center", va="center")
-            cells.append((rect, txt))
-
-        def upd(st):
-            for (rect, txt), v in zip(cells, sensor(st, "Thermoception")["vector"]):
-                rect.set_facecolor(CMAP((v + span) / (2 * span)))
-                txt.set(signed(v), self.r)
-                txt.t.set_color("white" if abs(v) / span > 0.45 else house.INK)
-        self.updates.append(upd)
-
-    def b_coll(self, ax, w, h):
-        self.title(ax, w, "Collision", self.obs_note())
-        n, gap = 5, 6
-        cw = (w - 2 * PAD - gap * (n - 1)) / n
-        cells = []
-        for k, lab in enumerate("CURDL"):
-            x = PAD + k * (cw + gap)
-            Fit(ax, x + cw / 2, 40, MIN_PT, cw, fontfamily=MONO, color=house.INK_2, ha="center", va="top").set(lab, self.r)
-            cells.append(ax.add_patch(Rectangle((x, 62), cw, 24, facecolor=TRACK, edgecolor="none", zorder=1)))
-
-        def upd(st):
-            for rect, v in zip(cells, sensor(st, "Collision")["vector"]):
-                rect.set_facecolor(C_HARM if v > 0.5 else TRACK)
-        self.updates.append(upd)
-
+    # ------------------------------------------------------------------ right column
     def b_prop(self, ax, w, h):
         self.title(ax, w, "Proprioception", "previous action")
-        names, gap = self.m["action_names"], 6
-        per_row = 3
-        cw = (w - 2 * PAD - gap * (per_row - 1)) / per_row
+        names, gap = self.m["action_names"], 8
+        cw = (w - 2 * ds.PAD - gap * (len(names) - 1)) / len(names)
         chips = []
         for k, nm in enumerate(names):
-            x, y = PAD + (k % per_row) * (cw + gap), 42 + (k // per_row) * 30
-            rect = ax.add_patch(Rectangle((x, y), cw, 24, facecolor=TRACK, edgecolor="none", zorder=1))
-            txt = Fit(ax, x + cw / 2, y + 12, MIN_PT, cw - 6, fontfamily=MONO, ha="center", va="center")
-            txt.set(nm, self.r)
-            chips.append((rect, txt))
+            x = ds.PAD + k * (cw + gap)
+            rect = ds.rrect(ax, x, 52, cw, 32, 8, ds.TRACK, z=2)
+            t = self.fit(ax, x + cw / 2, 73, "chip_on", cw - 8, ha="center")
+            t.set(nm.title())                # measured at the heavier weight, so both states fit
+            chips.append((rect, t.t))
 
         def upd(st):
             vec = sensor(st, "Proprioception")["vector"]
             hot = int(np.argmax(vec)) if max(vec) > 0 else -1
-            for k, (rect, txt) in enumerate(chips):
-                rect.set_facecolor(C_AGENT if k == hot else TRACK)
-                txt.t.set_color("white" if k == hot else house.TEXT_LIGHT)
+            for k, (rect, t) in enumerate(chips):
+                on = k == hot
+                rect.set_facecolor(ds.IRIS if on else ds.TRACK)
+                weight, _, colour = ds.TYPE["chip_on" if on else "chip"]
+                t.set_color(colour)
+                t.set_fontweight(weight)
+        self.updates.append(upd)
+
+    def b_extero(self, ax, w, h):
+        self.title(ax, w, "Extero nociception")
+        val = self.fit(ax, ds.PAD, h - 58, "hero", w - 2 * ds.PAD)
+        set_v = self.bar(ax, ds.PAD, h - 38, w - 2 * ds.PAD, 8, ds.NOCI)
+
+        def upd(st):
+            v = sensor(st, "Extero Nociception")["intensity"]
+            val.set(f"{v:.2f}")
+            set_v(v)
+        self.updates.append(upd)
+
+    def b_coll(self, ax, w, h):
+        self.title(ax, w, "Collision")
+        c, g = 30, 4
+        ccx, ccy = w / 2, h - ds.PAD - 1.5 * c - g
+        cells = []
+        for (dr, dc), lab in zip(ds.visual_offsets(1), "CURDL"):
+            x, y = ccx + dc * (c + g) - c / 2, ccy + dr * (c + g) - c / 2
+            rect = ds.rrect(ax, x, y, c, c, 6, ds.TRACK, z=2)
+            t = self.fit(ax, x + c / 2, y + c / 2 + 1, "coll_letter", c - 4, ha="center", va="center")
+            t.set(lab)
+            cells.append((rect, t.t))
+
+        def upd(st):
+            for (rect, t), v in zip(cells, sensor(st, "Collision")["vector"]):
+                hit = v > 0.5
+                rect.set_facecolor(ds.NOCI if hit else ds.TRACK)
+                t.set_color("#FFFFFF" if hit else ds.INK3)
+        self.updates.append(upd)
+
+    def b_thermo(self, ax, w, h):
+        sensed = self.has("Thermoception")
+        sc, b = self.scale, self.scale.b
+        if sensed:
+            self.title(ax, w, "Thermoception", "cell minus body, °")
+            rng = sensor(self.steps[0], "Thermoception")["range"]
+            if rng != 1:
+                raise LayoutOverflowError(f"thermoception range {rng}: this sketch sizes the diamond for range 1")
+            tc, g = 46, 4
+            tcx, tcy = ds.PAD + 1.5 * tc + g, 56 + 1.5 * tc + g
+            cells = []
+            for dr, dc in ds.visual_offsets(1):
+                x, y = tcx + dc * (tc + g) - tc / 2, tcy + dr * (tc + g) - tc / 2
+                rect = ds.rrect(ax, x, y, tc, tc, 8, ds.TRACK, z=2)
+                cells.append((rect, self.fit(ax, x + tc / 2, y + tc / 2 + 1, "cell_num", tc - 6, ha="center", va="center")))
+
+            def upd(st):
+                for (rect, t), v in zip(cells, sensor(st, "Thermoception")["vector"]):
+                    col = sc.colour(v)
+                    rect.set_facecolor(col)
+                    t.set(ds.signed(v))
+                    t.t.set_color("#FFFFFF" if ds.luminance(col) < 0.45 else ds.INK)
+            self.updates.append(upd)
+            lx0 = tcx + 1.5 * tc + g + 36
+        else:
+            self.title(ax, w, "Temperature scale")
+            lx0 = ds.PAD + 12
+        lw = w - lx0 - 22
+        ly = 96
+        self.fit(ax, lx0, 66, "caption_medium", lw, color=ds.INK2).set("Temperature scale, fixed for this config")
+        self.gradient(ax, lx0, ly, lw, 12, sc.cmap(np.linspace(0, 1, 512)), 0.01)
+        ax.add_patch(Polygon([(lx0, ly), (lx0 - 9, ly + 6), (lx0, ly + 12)], fc=sc.cmap(0.0), lw=0, zorder=2))
+        ax.add_patch(Polygon([(lx0 + lw, ly), (lx0 + lw + 9, ly + 6), (lx0 + lw, ly + 12)], fc=sc.cmap(1.0), lw=0, zorder=2))
+        xpos = lambda v: lx0 + lw * sc.pos(v)  # noqa: E731
+        # ticks at every anchor; labels placed by priority, dropping any whose measured box crowds a neighbour
+        placed = []
+        anchors = dict(b["anchors"])
+        for name, v in b["anchors"]:
+            ax.plot([xpos(v)] * 2, [ly + 12, ly + 17], color=ds.INK3, lw=1 * ds.PT, zorder=3)
+        for name in ("setpoint", "lower body limit", "upper body limit", "vmin", "vmax", "warm", "fire"):
+            v = anchors[name]
+            t = ds.text(ax, xpos(v), ly + 32, ds.signed(v), "caption", ha="center")
+            bb = t.get_window_extent(self.r)
+            if any(bb.x0 < o.x1 + 8 and o.x0 < bb.x1 + 8 for o in placed):
+                t.remove()
+            else:
+                placed.append(bb)
+        self.temp_labels = len(placed)
+        xa, xb = xpos(b["low"]), xpos(b["high"])
+        ax.plot([xa, xa, xb, xb], [ly + 40, ly + 45, ly + 45, ly + 40], color=ds.INK2, lw=1.2 * ds.PT, zorder=3)
+        self.fit(ax, (xa + xb) / 2, ly + 62, "caption_medium", lw + 40, ha="center", color=ds.INK2).set("survivable body range")
+        for i, line in enumerate(("Grid cells and body temperature: absolute.", "Thermoception: cell minus body.",
+                                  f"Same colours; {ds.signed(b['setpoint'])} is neutral.")):
+            self.fit(ax, lx0, ly + 86 + 16 * i, "caption", w - lx0 - ds.PAD).set(line)
+        tri = ax.add_patch(Polygon([(0, 0), (0, 0), (0, 0)], fc=ds.INK, lw=0, zorder=4))
+        body = ds.text(ax, 0, ly - 3, "body", "caption_medium", color=ds.INK)
+
+        def upd_body(st):
+            x = xpos(st["body_temp"])
+            tri.set_xy([(x, ly - 2), (x - 6, ly - 11), (x + 6, ly - 11)])
+            right = x < lx0 + 0.75 * lw
+            body.set_x(x + 9 if right else x - 9)
+            body.set_ha("left" if right else "right")
+        self.updates.append(upd_body)
+
+    # ------------------------------------------------------------------ sensor band (option A)
+    def b_band(self, ax, w, h):
+        st0 = self.steps[0]
+        groups = []
+        if self.olf_range:
+            s = sensor(st0, "Olfactory")
+            R = s["range"]
+            groups.append(dict(title="Olfaction", R=R, box=(2 * R + 1) * 22, cmap=ds.OLF_CMAP, vmax=self.olf_max,
+                               viz="Olfactory", nf=s["num_features"],
+                               maps=[(OLF_NAMES[lab], "seq", k) for k, lab in enumerate(s["labels"])]))
+        if self.vis_range:
+            s = sensor(st0, "Visual")
+            R = s["range"]
+            box = 88
+            if box / (2 * R + 1) < 12:
+                raise LayoutOverflowError(f"vision range {R}: map cells would be {box / (2 * R + 1):.1f}px (< 12px)")
+            groups.append(dict(title="Vision", R=R, box=box, cmap=ds.VIS_CMAP, vmax=self.vis_max, viz="Visual",
+                               nf=s["num_features"],
+                               maps=[("Terrain", "terrain", None)]
+                               + [(VIS_NAMES[lab], "seq", 3 + k) for k, lab in enumerate(s["labels"][3:])]))
+        gap, divider = 6, 32
+        for g in groups:                         # measure: slot widths, wrapped labels, header width
+            g["slots"] = []
+            for label, kind, ch in g["maps"]:
+                slot = g["box"] + gap
+                if isinstance(label, tuple):
+                    lines, roles = list(label), ["map_label", "caption"]
+                else:
+                    lines = [label]
+                    if self.width(label, "map_label") > slot - 4 and " " in label:
+                        lines = label.split(" ", 1)
+                    roles = ["map_label"] * len(lines)
+                slot = max(slot, max(self.width(li, ro) for li, ro in zip(lines, roles)) + (12 if len(lines) > 1 else 4))
+                g["slots"].append((slot, list(zip(lines, roles))))
+            g["range_txt"] = f"range {g['R']}"
+            g["max_txt"] = f"{g['vmax']:.1f}"
+            g["head_w"] = (self.width(g["title"], "card_title") + 8 + self.width(g["range_txt"], "card_sub") + 16
+                           + self.width("0", "caption") + 6 + 96 + 6 + self.width(g["max_txt"], "caption"))
+            g["w"] = max(g["head_w"], sum(sl for sl, _ in g["slots"]))
+        need = 2 * ds.PAD + sum(g["w"] for g in groups) + divider * (len(groups) - 1)
+        if need > w:
+            raise LayoutOverflowError(f"sensor band needs {need:.0f}px, has {w:.0f}px: "
+                                      + ", ".join(f"{g['title']}={g['w']:.0f}" for g in groups))
+        maxbox = max(g["box"] for g in groups)
+        content = maxbox + 22 + 15 + 4
+        top = 52 + max(0, (h - ds.PAD - 52 - content) / 2)
+        x = ds.PAD
+        updates = []
+        for gi, g in enumerate(groups):
+            if gi:
+                ax.plot([x - divider / 2] * 2, [ds.PAD, h - ds.PAD], color=ds.LINE, lw=1 * ds.PT)
+            tw = self.fit(ax, x, ds.TITLE_BASE, "card_title", g["w"]).set(g["title"])
+            rw = self.fit(ax, x + tw + 8, ds.TITLE_BASE, "card_sub", 80).set(g["range_txt"])
+            zx = x + tw + 8 + rw + 16
+            zw = self.fit(ax, zx, ds.TITLE_BASE, "caption", 20).set("0")
+            sx = zx + zw + 6
+            self.gradient(ax, sx, ds.TITLE_BASE - 8, 96, 8, g["cmap"](np.linspace(0, 1, 128)), 4)
+            self.fit(ax, sx + 96 + 6, ds.TITLE_BASE, "caption", 40).set(g["max_txt"])
+            offs = ds.visual_offsets(g["R"])
+            k = 2 * g["R"] + 1
+            cs = g["box"] / k
+            mx = x
+            for (label, kind, ch), (slot, lines) in zip(g["maps"], g["slots"]):
+                bx = mx + (slot - g["box"]) / 2
+                by = top + (maxbox - g["box"]) / 2
+                cells = []
+                for dr, dc in offs:
+                    cells.append(ds.rrect(ax, bx + (dc + g["R"]) * cs + 1.5, by + (dr + g["R"]) * cs + 1.5,
+                                          cs - 3, cs - 3, 3, ds.TRACK, z=2))
+                ds.rrect(ax, bx + g["R"] * cs + 0.5, by + g["R"] * cs + 0.5, cs - 1, cs - 1, 3, "none", ds.IRIS, 2, z=3)
+                for li, (line, role) in enumerate(lines):
+                    self.fit(ax, mx + slot / 2, top + maxbox + 22 + li * 15, role, slot, ha="center").set(line)
+                updates.append((g, kind, ch, cells))
+                mx += slot
+            x += g["w"] + divider
+
+        def upd(st):
+            tabs = {}
+            for g, kind, ch, cells in updates:
+                if g["viz"] not in tabs:
+                    tabs[g["viz"]] = np.asarray(sensor(st, g["viz"])["vector"], float).reshape(-1, g["nf"])
+                tab = tabs[g["viz"]]
+                for p, row in zip(cells, tab):
+                    if kind == "terrain":
+                        off = row[:3].max() <= 0
+                        p.set_facecolor(ds.OFF_WORLD if off else ds.TERRAIN[int(np.argmax(row[:3]))])
+                        p.set_edgecolor(ds.OUTLINE if off else "none")
+                        p.set_linewidth(1 * ds.PT)
+                    else:
+                        v = row[ch]
+                        if v > g["vmax"] + 1e-9:
+                            raise ValueError(f"{g['title']} reading {v} above the episode maximum {g['vmax']}")
+                        p.set_facecolor(ds.TRACK if v <= 1e-6 else g["cmap"](min(1.0, v / g["vmax"])))
         self.updates.append(upd)
 
     # ------------------------------------------------------------------ per step
-    olf_max = 1.0
-
     def frame(self, st):
         for u in self.updates:
             u(st)
@@ -504,9 +714,11 @@ class Dashboard:
         return np.asarray(self.canvas.buffer_rgba())[..., :3].copy()
 
     def audit(self):
-        """Text audit on RENDERED extents: no text leaves its card, no two texts intersect."""
+        """Text audit on RENDERED extents: none leaves its card, no two intersect, no number in the grid view."""
         items = []
         for ax in self.fig.axes:
+            if ax is self.bg:
+                continue
             box = ax.bbox
             for t in ax.texts:
                 if not t.get_visible() or not t.get_text():
@@ -519,6 +731,13 @@ class Dashboard:
             for sb, b in items[i + 1:]:
                 if a.x0 < b.x1 - 1 and b.x0 < a.x1 - 1 and a.y0 < b.y1 - 1 and b.y0 < a.y1 - 1:
                     raise LayoutOverflowError(f"text collision: {sa!r} / {sb!r}")
+        ax_x, ax_y, _, _ = self.boxes["arena"]
+        gx, gy, gw, gh = self.grid_extent
+        x0, x1 = ax_x + gx, ax_x + gx + gw
+        y0, y1 = H - (ax_y + gy + gh), H - (ax_y + gy)            # display coords, y up
+        for s, bb in items:
+            if re.search(r"[-+−]?\d", s) and bb.x0 < x1 and x0 < bb.x1 and bb.y0 < y1 and y0 < bb.y1:
+                raise LayoutOverflowError(f"numeric text {s!r} inside the grid view")
         self.n_texts = len(items)
 
 
@@ -528,54 +747,100 @@ def write_data(stem, rows):
             fh.write("\t".join(str(r[k]) for k in ("what", "used", "total", "note")) + "\n")
 
 
+def load_scale(meta):
+    with open(os.path.join(ROOT, meta["config"])) as fh:
+        cfg = yaml.safe_load(fh)
+    if "extends" in cfg:
+        raise ValueError(f"{meta['config']} uses extends:, which this sketch does not resolve")
+    return ds.TemperatureScale(ds.temperature_bounds(cfg))
+
+
 def main():
     with open(os.path.join(HERE, "data", "episode.json")) as fh:
         ep = json.load(fh)
     meta, steps = ep["meta"], ep["steps"]
-    Dashboard.olf_max = max(max(sensor(st, "Olfactory")["vector"]) for st in steps) or 1.0
     house.apply()
-    icons = load_icons()
-    os.makedirs(os.path.join(FIGS, "fig03_frames"), exist_ok=True)
+    ds.register_fonts()
+    scale = load_scale(meta)
+    b = scale.b
+    print("temperature anchors: " + ", ".join(f"{n} {v:+g}" for n, v in b["anchors"])
+          + f"  (plan's un-refined vmax {b['plan_vmax']:+g})")
+    out_dir = os.path.join(FIGS, "fig03_frames")
+    os.makedirs(out_dir, exist_ok=True)
 
-    # Figure 3: every step, then the representative still through house.save
-    d = Dashboard(meta, len(steps), icons, ALL)
-    audited = 0
+    d = Dashboard(meta, steps, scale, ALL)
+    audited, max_diff, changed_px = 0, 0, 0
+    frames = []
     for st in steps:
         arr = d.frame(st)
         assert arr.shape == (H, W, 3), arr.shape
-        # 256-colour PNG, no dithering: a flat dashboard loses nothing visible and the page embeds 35 of these
-        Image.fromarray(arr).quantize(256, method=Image.Quantize.MEDIANCUT, dither=Image.Dither.NONE).save(
-            os.path.join(FIGS, "fig03_frames", f"step_{st['t']:03d}.png"), optimize=True)
+        frames.append(arr)
         audited += 1
+    # 256-colour PNG only if it is visually identical: measure the worst per-pixel change
+    quant = []
+    for arr in frames:
+        q = np.asarray(Image.fromarray(arr).quantize(256, method=Image.Quantize.MEDIANCUT,
+                                                     dither=Image.Dither.NONE).convert("RGB"))
+        diff = np.abs(q.astype(int) - arr.astype(int)).max(2)
+        max_diff = max(max_diff, int(diff.max()))
+        changed_px = max(changed_px, int((diff > 6).sum()))
+        quant.append(q)
+    use_quant = max_diff <= 6
+    for st, arr in zip(steps, frames):
+        im = Image.fromarray(arr)
+        if use_quant:
+            im = im.quantize(256, method=Image.Quantize.MEDIANCUT, dither=Image.Dither.NONE)
+        im.save(os.path.join(out_dir, f"step_{st['t']:03d}.png"), optimize=True)
+    size = sum(os.path.getsize(os.path.join(out_dir, f)) for f in os.listdir(out_dir))
+    print(f"frames: {audited}, {'256-colour' if use_quant else 'RGB'} PNG (quantised worst channel change {max_diff}, "
+          f"{changed_px} px changed by > 6 in the worst frame), folder {size / 1e6:.2f} MB")
     d.frame(steps[REP_STEP])
     n_panels = len(d.boxes)
+    print(f"step {REP_STEP}: {d.n_texts} texts audited, {d.temp_labels} temperature-scale labels placed")
     house.save(d.fig, os.path.join(FIGS, "fig03_proposed_dashboard"), column_px=1084)
+    field = np.asarray(meta["thermal_field"])
     write_data("fig03_proposed_dashboard", [
         dict(what="recorded steps drawn (step scrubber)", used=audited, total=len(steps),
              note="every step of the exported episode; each frame passed the text audit"),
-        dict(what="observed senses given a panel", used=sum(1 for k in meta["breakdown"] if k in OWNER), total=len(meta["breakdown"]),
-             note="the completeness rule refuses to draw if an observed sense has no panel"),
+        dict(what="observed senses given a panel", used=sum(1 for k in meta["breakdown"] if k in TOGGLE_OF),
+             total=len(meta["breakdown"]), note="the completeness rule refuses to draw if an observed sense has no panel"),
+        dict(what="temperature cells inside the config's colour bounds", used=d.checked_cells, total=field.size,
+             note=f"field {field.min():+.1f} to {field.max():+.1f}, bounds {b['vmin']:+g} to {b['vmax']:+g} computed "
+                  "from the config's temperature parameters; the script raises on any cell outside"),
     ])
 
     # Figure 4: the same step under three sense sets, to show re-packing
     variants = [
-        ("All eight observed senses", ALL),
+        ("All senses", ALL),
         ("Temperature system and proprioception switched off", ALL - {"thermal", "prop"}),
-        ("Only satiation, extero nociception, collision and visual", frozenset({"extero", "coll", "vis"})),
+        ("Only satiation, extero nociception, collision and vision", frozenset({"extero", "coll", "vis"})),
     ]
-    frames, titles = [], []
+    imgs, titles = [], []
     for label, on in variants:
-        dv = Dashboard(meta, len(steps), icons, on)
-        frames.append(dv.frame(steps[REP_STEP]))
-        titles.append(f"{label} · {len(dv.boxes)} panels, no text collisions")
+        dv = Dashboard(meta, steps, scale, on)
+        imgs.append(dv.frame(steps[REP_STEP]))
+        titles.append((label, f"{len(dv.boxes)} panels · text audit passed"))
         plt.close(dv.fig)
-    fig, axes = plt.subplots(3, 1, figsize=(7.2, 12.6))
-    for ax, img, ttl in zip(axes, frames, titles):
-        ax.imshow(img)
-        ax.set_title(ttl, fontsize=house.FS_LABEL)
-        ax.axis("off")
-    fig.subplots_adjust(hspace=0.16, left=0.01, right=0.99, top=0.97, bottom=0.01)
-    house.save(fig, os.path.join(FIGS, "fig04_repacking"))
+    head, gap, pad = 48, 24, 24
+    FW, FH = W + 2 * pad, pad + len(imgs) * (head + H) + (len(imgs) - 1) * gap + pad
+    fig = plt.figure(figsize=(FW / ds.DPI, FH / ds.DPI), dpi=ds.DPI)
+    ax = fig.add_axes([0, 0, 1, 1])
+    ax.set_xlim(0, FW)
+    ax.set_ylim(FH, 0)
+    ax.axis("off")
+    ax.add_patch(Rectangle((0, 0), FW, FH, fc=ds.CANVAS, lw=0, zorder=0))
+    y = pad
+    for img, (label, sub) in zip(imgs, titles):
+        t = ds.text(ax, pad, y + 30, label, "frame_title")
+        fig.canvas.draw()
+        ds.text(ax, pad + t.get_window_extent().width + 16, y + 30, sub, "card_sub")
+        ax.imshow(img, extent=(pad, pad + W, y + head + H, y + head), interpolation="none", zorder=1)
+        ds.rrect(ax, pad - 0.5, y + head - 0.5, W + 1, H + 1, 2, "none", ds.LINE, 1, z=2)
+        ax.set_xlim(0, FW)
+        ax.set_ylim(FH, 0)
+        y += head + H + gap
+    with matplotlib.rc_context({"savefig.dpi": ds.DPI}):
+        house.save(fig, os.path.join(FIGS, "fig04_repacking"), column_px=1084)
     write_data("fig04_repacking", [
         dict(what="recorded steps drawn", used=1, total=len(steps), note=f"step {REP_STEP}, mid-episode, drawn under each sense set"),
         dict(what="sense sets drawn", used=len(variants), total=len(variants),

@@ -58,7 +58,10 @@ td.n { white-space:nowrap; }
 table.toolkit { min-width:1040px; }
 table.toolkit th:nth-child(4), table.toolkit td:nth-child(4) { min-width:170px; }
 /* data-used tables: a prose "why" column needs room; below it the table scrolls behind a measured cue (F24 amendment) */
-table.samples { min-width:520px; }
+/* data-used tables: numbers on one row, the reason on a full-width row beneath it, so no prose column is squeezed */
+table.samples { min-width:360px; }
+table.samples tr.num td { border-bottom:0; padding-bottom:2px; }
+table.samples tr.why td { color:var(--ink-3); font-size:13px; padding-top:0; }
 .cue { font-family:var(--f-mono); font-size:12px; color:var(--ink-3); margin:0; }
 thead th { color:var(--ink-3); font-weight:600; font-size:11.5px; letter-spacing:.07em; text-transform:uppercase;
   border-bottom:1px solid var(--rule); font-family:var(--f-head); }
@@ -294,10 +297,12 @@ figure img:focus-visible { outline:2px solid var(--accent); outline-offset:-3px;
   <div class="callout warn">
     <p class="eyebrow">What this is, and is not</p>
     <p>It is a sketch that exercises the plan's layout idea &mdash; registry, packer, figure built once,
-    measured text &mdash; on real recorded numbers. It is not the planned renderer: it imports nothing from
-    the renderer code, touches no pipeline file, and leaves exact sizes, fonts and colours to the
-    implementer. Its labels follow the open questions' proposals (for example <code>HPR</code> for
-    hiding_predator, and no rows for body values the agent does not observe).</p>
+    measured text &mdash; on real recorded numbers, drawn in the visual design the design review specified
+    for the video frame (<code>docs/reviews/design_episode_dashboard.md</code>). That design is a stated
+    departure from this page's house style: white cards on a darker canvas and no monospace face, chosen
+    for video compression and for slides. It is not the planned renderer: it imports nothing from the
+    renderer code and touches no pipeline file. Smell and vision are read at the ranges trained with today
+    (1 and 2), set in memory on the campfire world.</p>
   </div>
 </section>
 
@@ -314,32 +319,36 @@ figure img:focus-visible { outline:2px solid var(--accent); outline-offset:-3px;
   <img id="dv-img" data-fig="fig03_proposed_dashboard" src="{{FIG:fig03_proposed_dashboard}}" alt="Sketch of the proposed dashboard for one step of the campfire episode">
   <figcaption>
     <p><b>Figure 3. The proposed dashboard, step by step.</b> Use the controls, or focus the frame and
-    press &larr; / &rarr; (Shift for ten steps). The episode ends when body temperature falls past the
-    survivable limit ({{FACT:final_temp}} at step {{FACT:last_step}}, against a limit of
-    {{FACT:die_low}}). Things the real data surfaced: proprioception gets a panel because every
-    observed sense must have one (V1 never draws it); <code>assets/</code> has no campfire icon, so the
-    minimap marks the campfire as an orange square (the agent never brings it into the grid view in this
-    episode); and no true-value slot appears because this world has perceptual noise off.</p>
+    press &larr; / &rarr; (Shift for ten steps). It is drawn in the design the video frame will use: white
+    cards, one typeface with fixed-width digits, one meaning per colour (indigo is the agent, orange is
+    nociception, blue to red is temperature, teal is smell, slate is vision) and flat icons. The
+    interoception card shows every internal state twice &mdash; what the agent observes and its true value
+    &mdash; so nutrition, injury and body temperature, which this agent does not observe, read "not observed"
+    beside their true values. Smell and vision are one small map per channel in the band under the grid
+    view (option A). The episode ends when body temperature falls past the survivable limit
+    ({{FACT:final_temp}} at step {{FACT:last_step}}, against a limit of {{FACT:die_low}}).</p>
     <p><b>Axes.</b> None &mdash; a dashboard frame of 1440 &times; 896 pixels, where position is layout.
-    The grid view shows 5 &times; 5 grid cells centred on the agent (clamped at the world's edge); each
-    cell's colour, and its printed number, is its temperature on a blue (cold) to red (hot) scale fixed
-    for the whole episode at {{FACT:clim}} temperature units. Horizontal bars run from 0 at the left to 1
-    at the right; vertical bars from 0 at the bottom to 1 at the top, except olfaction, whose bars are
-    scaled to the largest olfaction reading in the episode. The body-temperature gauge runs from the lower
-    survivable limit at its left edge to the upper at its right, with the setpoint marked in between.</p>
+    The grid view shows 5 &times; 5 grid cells centred on the agent; each cell's colour is its temperature
+    on one scale fixed for this world configuration, running from &minus;28 (mid-blue) through the setpoint
+    0 (near-white) to +336 (deep red), with its anchors ticked on the legend in the thermoception card.
+    The body-temperature gauge uses the same absolute scale; the thermoception cells use the same colours
+    for a different quantity, cell temperature minus body temperature. Grid cells carry no numbers. Bars run from 0 at the left to the state's maximum at the right. Each smell
+    and vision map is a diamond of cells around the agent, with the agent's cell outlined in indigo, shaded
+    from pale at 0 to dark at that sense's largest reading in the episode.</p>
     {{SAMPLES:fig03_proposed_dashboard}}
     <div class="howto"><p class="eyebrow">How it is computed</p>
     <p>A script steps the real campfire world once per random seed, twelve seeds in all, with a simple
-    policy: rest every third step, otherwise a random action. It keeps the seed whose episode lasted
-    longest and saves, for every step, what the production recorder saves plus the per-sense panel data
-    that <code>build_sensory_viz</code> produces. A second script then draws the sketch. It lists the
-    panels this world needs from the observation, stacks them into three columns of boxes, and stops
-    with an error if a column overflows. It builds every card, bar, label and icon slot once, and for each
-    step only updates values and redraws. Every text is measured in the rendered font and shrunk into
-    its box, and each finished frame is audited: no two texts may overlap and none may leave its card,
-    or the script fails. Icons follow the production renderer's rules, including combined icons when the
-    agent shares a cell. The policy is not a trained agent, so the episode shows the dashboard, not a
-    learned strategy.</p></div>
+    policy that rests every third step and otherwise acts at random, and keeps the longest-surviving
+    episode. It reads that world through the senses the project trains with today &mdash; smell at range 1
+    and vision at range 2 &mdash; set in memory, because the campfire configuration itself ships with both
+    at 0. Senses change what the agent observes, never what happens, so the episode is unchanged. For every
+    step it saves what the production recorder saves plus the per-sense readings. A second script draws the
+    frames. It lists the panels this world needs, computes the temperature scale from the configuration
+    alone and stops if any recorded cell falls outside it, scans the episode once for each sense's largest
+    reading, packs the cards, builds every element once and then only updates values per step. Each
+    finished frame is audited: no two texts may overlap, none may leave its card, and no number may sit in
+    the grid view. Perceptual noise is off, so observed and true values are equal wherever both exist. The
+    policy is not a trained agent, so the episode shows the dashboard, not a learned strategy.</p></div>
   </figcaption>
 </figure>
 
@@ -351,27 +360,55 @@ figure img:focus-visible { outline:2px solid var(--accent); outline-offset:-3px;
 <figure class="wide">
   <img data-fig="fig04_repacking" src="{{FIG:fig04_repacking}}" alt="The same step drawn under three sets of senses">
   <figcaption>
-    <p><b>Figure 4. The same step, re-packed for three sets of senses.</b> Top: the full campfire
-    observation. Middle: temperature system and proprioception switched off &mdash; the body-temperature
-    row, the temperature colours, the thermoception panel and the proprioception panel disappear, and the
-    minimap and remaining panels take the space. Bottom: only satiation, extero nociception, collision and
-    visual. No layout code differs between the three; only the list of senses does.</p>
+    <p><b>Figure 4. The same step, re-packed for three sets of senses.</b> Top: every sense this world
+    observes. Middle: temperature system and proprioception switched off &mdash; the body-temperature row,
+    the temperature colours, the thermoception card and the proprioception card disappear. Bottom: only
+    satiation, extero nociception, collision and vision. The interoception card keeps nutrition and injury
+    in every version, because true internal states are shown whether or not the agent observes them. No
+    layout code differs between the three; space a removed card leaves stays empty rather than stretching
+    another card.</p>
     <p><b>Axes.</b> None &mdash; three dashboard frames of 1440 &times; 896 pixels stacked vertically, where
-    position is layout. Within each frame the scales are those of Figure 3: grid cells coloured by
-    temperature on the fixed episode scale (top frame only), bars from 0 to 1.</p>
+    position is layout. Within each frame the scales are those of Figure 3: grid cells coloured on the fixed
+    temperature scale (top frame only; plain grey where the temperature system is off), bars from 0 to each
+    state's maximum, and sense maps shaded from 0 to that sense's largest reading in the episode.</p>
     {{SAMPLES:fig04_repacking}}
     <div class="howto"><p class="eyebrow">How it is computed</p>
     <p>The same drawing script as Figure 3 takes step 15 of the same recorded episode and draws it three
-    times, each time telling the registry that a different set of senses is present. For the middle and
-    bottom frames, the switched-off senses are declared as switched off on purpose; otherwise the
-    completeness rule would refuse to draw, because the recording still contains their values. The
-    recorded numbers are identical in all three frames &mdash; nothing is re-simulated &mdash; so any
-    difference between them is layout alone. The packer recomputes the boxes for each sense set: the
-    left column gives the height freed by removed rows to the minimap, and the right column divides its
-    height among the panels that remain in proportion to their minimum sizes. Each frame passed the same
-    text audit as Figure 3. What this does not show is a world whose observation genuinely lacks a sense
-    from the start, or directional olfaction with its larger grid; those are cells of the plan's
-    verification matrix, drawn from real recordings of those worlds.</p></div>
+    times, each time telling the registry that a different set of senses is present. The switched-off senses
+    are declared as switched off on purpose; otherwise the completeness rule would refuse to draw, because
+    the recording still contains their values. The recorded numbers are identical in all three frames
+    &mdash; nothing is re-simulated &mdash; so any difference between them is layout alone. The packer
+    recomputes the boxes for each sense set from the configuration and measured text only, and each frame
+    passed the same text audit as Figure 3. Unlike the earlier sketch, spare height is not shared out among
+    the remaining cards, because a stretched card holding one number read as unfinished; the space stays as
+    canvas. What this does not show is a world whose observation genuinely lacks a sense from the start, or
+    vision at range 3 or 4 inside the full frame; those are cells of the plan's verification matrix, drawn
+    from real recordings of those worlds.</p></div>
+  </figcaption>
+</figure>
+
+<figure class="wide">
+  <img data-fig="fig08_icon_set" src="{{FIG:fig08_icon_set}}" alt="The flat icon set used by the dashboard sketch, including the new campfire">
+  <figcaption>
+    <p><b>Figure 8. The flat icon set, including the new campfire.</b> Creatures and food sit on white
+    tokens so they stay readable on any cell temperature; terrain &mdash; rock, bush, tree and campfire
+    &mdash; is drawn flat on the cell. The agent is one indigo marker whose chevron shows the last action,
+    replacing the separate agent-in-bush and agent-with-food pictures. The campfire is also saved as
+    <code>assets/campfire.png</code>. None of these files replaces a production icon: they live in
+    <code>assets/dashboard_icons/</code>, which today's renderer never reads.</p>
+    <p><b>Axes.</b> None &mdash; a sheet of icons drawn at equal size; position has no meaning.</p>
+    {{SAMPLES:fig08_icon_set}}
+    <div class="howto"><p class="eyebrow">How it is computed</p>
+    <p>A script draws every icon from simple shapes &mdash; circles, rounded rectangles, polygons and
+    teardrop curves &mdash; in two or three flat colours each, following the icon rules in the design review,
+    and a second script exports each one as a 1000-pixel transparent image. The dashboard sketch calls the
+    same drawing functions directly, so the icons in Figures 3 and 4 are these shapes, not pictures scaled
+    down. The campfire follows the review's specification: a soft glow circle, two crossed logs and three
+    nested flames, with no token, because it is terrain. Before writing, the export script records the size
+    and timestamp of every existing file under <code>assets/</code> and afterwards confirms that none
+    changed, so the production renderer's icons are untouched. The sheet is drawn on the frame's canvas
+    colour with names in the dashboard typeface. It does not show how each icon reads at video scale;
+    Figures 3 and 4 do, at 96 pixels per grid cell.</p></div>
   </figcaption>
 </figure>
 
@@ -403,15 +440,20 @@ figure img:focus-visible { outline:2px solid var(--accent); outline-offset:-3px;
 <figure class="wide">
   <img data-fig="fig05_option_a_channel_maps" src="{{FIG:fig05_option_a_channel_maps}}" alt="Option A: one small diamond map per channel, at three sensor ranges">
   <figcaption>
-    <p><b>Figure 5. Option A &mdash; one small diamond map per channel.</b> Each row is the same world state
-    read at a different range; each small map is one channel &mdash; five smells, then vision's terrain
-    and its five object channels. Every number the agent receives stays visible, and where something lies
-    is read straight off the map; the price is eleven maps per row.</p>
+    <p><b>Figure 5. Option A &mdash; one small diamond map per channel (chosen).</b> Each row is the same
+    world state read at a different range; each small map is one channel &mdash; five smells, then vision's
+    terrain and its five object channels. Every number the agent receives stays visible, and where something
+    lies is read straight off the map. Channel six of vision is labelled "Obstacle", because rocks, bushes
+    and the campfire all register on it. Odour A and odour B are two shared animal odours rather than one
+    per animal: predators give off mostly A and neutral animals mostly B, with enough spread that the two
+    overlap, so the labels say "predator-leaning" and "neutral-leaning". Figure 3 shows the same encoding
+    inside the full frame.</p>
     <p><b>Axes.</b> None &mdash; each small map is a diamond of grid cells centred on the agent, with the
-    agent's own cell outlined in black, north at the top and east to the right. Within a row every cell is
-    drawn the same size, so smell and vision footprints can be compared. Colour is the reading, from pale
-    at 0 to dark at the largest reading of that sense in that row (the scale under each group); the
-    terrain map is grey, dark where terrain is present.</p>
+    agent's own cell outlined in indigo, north at the top and east to the right. Within a row every cell is
+    drawn the same size, so smell and vision footprints can be compared. Colour is the reading: teal for
+    smell and slate for vision, from pale at 0 to dark at the largest reading of that sense in that row
+    (the strip beside each sense's title); a reading of exactly zero is the grey track colour. The terrain
+    map uses light tints for grass, sand and plain ground.</p>
     {{SAMPLES:fig05_option_a_channel_maps}}
     <div class="howto"><p class="eyebrow">How it is computed</p>
     <p>A script loads the sensory-ladder world with vision range 2, blur switched on and olfaction range 1,
@@ -421,11 +463,11 @@ figure img:focus-visible { outline:2px solid var(--accent); outline-offset:-3px;
     readings, then asks twice more with both ranges overridden in memory to 3 and to 4. The world state is
     identical in all three rows; only how far the agent senses changes, so the lower two rows are derived
     stress inputs rather than configurations anyone trains. Each reading is a table of cells by channels.
-    This option draws each channel as its own diamond, placing every cell at its offset from the agent.
-    Colour is scaled to the largest reading of that sense in the row rather than to 1, because summed
-    readings can exceed 1. A video would fix the scale for the whole episode instead of per state, as the
-    temperature colours already are. What this does not show is cost in a frame: eleven maps per row must
-    share the sensor band with everything else.</p></div>
+    This option draws each channel as its own diamond, placing every cell at its offset from the agent, in
+    the dashboard's design. Colour is scaled to the largest reading of that sense in the row rather than to
+    1, because summed readings can exceed 1; a video fixes the scale for the whole episode instead. What
+    this does not show is cost in a frame: eleven maps per row must share the sensor band with everything
+    else, which Figure 3 shows at the ranges in use.</p></div>
   </figcaption>
 </figure>
 
@@ -547,6 +589,10 @@ figure img:focus-visible { outline:2px solid var(--accent); outline-offset:-3px;
       <li><strong>All four April ideas stand.</strong> One vitals card, true value beside observed, action badge, horizontal legends.</li>
       <li><strong>Senses that read further</strong> move to a wide band under the grid view when they outgrow the side column.</li>
       <li><strong>Range support:</strong> the ranges in use today plus stress tests at 3 and 4, with the largest range that fits written down.</li>
+      <li><strong>Drawing senses that read further:</strong> option A, a small map per channel (Figure 5).</li>
+      <li><strong>Internal states:</strong> every state is shown twice &mdash; what the agent observes, and its true (hidden) value &mdash; including states the agent does not observe.</li>
+      <li><strong>Grid view:</strong> no numbers in cells, and a temperature colour scale fixed per world configuration.</li>
+      <li><strong>Campfire:</strong> a new image file, used only by the new renderer.</li>
     </ol>
   </section>
   <section>
@@ -561,10 +607,10 @@ figure img:focus-visible { outline:2px solid var(--accent); outline-offset:-3px;
       <li><strong>Viewer:</strong> local only, or also a single-file export for sharing an episode.</li>
       <li><strong>Later switch-over:</strong> its own reviewed plan when you decide; at that point delete the stale renderer copy in <code>grid_world.py</code> and the unused <code>renderer_v2.py</code> (the latter once the other session's edits have landed and it has been told).</li>
       <li><strong>Speed gate:</strong> half V1's frame time on the campfire world, and not slower on any other world?</li>
-      <li><strong>Unobserved body values:</strong> show them as rows captioned "not observed", or omit them (as sketched)?</li>
       <li><strong>Hiding-predator label:</strong> <code>HPR</code> (as sketched), <code>HID</code> or <code>HPD</code>?</li>
-      <li><strong>Campfire icon:</strong> keep a drawn mark in the new renderer and add the real asset at the switch-over (proposed), or add it now as a stated exception to the freeze &mdash; today's videos read the same icon list, so they would change too.</li>
-      <li><strong>Drawing senses at range 2 and above:</strong> option A, a map per channel (Figure 5); B, one map coloured by the strongest channel (Figure 6); or C, bars then a table (Figure 7). Whichever you pick is a single setting in the new renderer and does not change the layout.</li>
+      <li><strong>Maps from range 1:</strong> Figure 5 draws olfaction at range 1 as maps too. Confirm option A applies from range 1, rather than keeping per-cell bars at range 1.</li>
+      <li><strong>A cell outside the temperature scale:</strong> stop the render with an error naming the cell (proposed, matching the project's no-fallback rule), or clamp its colour and outline it.</li>
+      <li><strong>Temperature scale anchors:</strong> keep the design rule (warm at 4&times; and fire at 10&times; the upper body limit), or take those two anchors from the world configuration.</li>
     </ol>
   </section>
 </div>
@@ -580,8 +626,9 @@ figure img:focus-visible { outline:2px solid var(--accent); outline-offset:-3px;
   (<code>/home/vncuser/miniconda3/envs/grid_world_pain/bin/python</code>), run in
   <code>docs/develop/active/refactors/renderer_layout_redesign/</code>: <code>render_current_frames.py</code>
   (Figures 1&ndash;2), <code>export_episode.py</code>, <code>fig03_proposed_dashboard.py</code> (Figures 3&ndash;4),
-  <code>export_extended.py</code>, <code>fig05_extended_encodings.py</code> (Figures 5&ndash;7), then
-  <code>build_page.py</code>. The figures on this page were generated from the last commit, because
+  <code>make_dashboard_assets.py</code> (font, flat icons, <code>assets/campfire.png</code>),
+  <code>fig08_icon_set.py</code> (Figure 8), <code>export_extended.py</code>, <code>fig05_extended_encodings.py</code>
+  (Figures 5&ndash;7), then <code>build_page.py</code>; <code>dashboard_style.py</code> holds the shared design tokens. The figures on this page were generated from the last commit, because
   another session had uncommitted configuration changes in progress.</p>
 </footer>
 
@@ -626,8 +673,9 @@ figure img:focus-visible { outline:2px solid var(--accent); outline-offset:-3px;
         pr = sensor(st, 'Proprioception'), vi = sensor(st, 'Visual');
     rows.push(['Last action', an || 'none (initial state)'], ['Agent cell (row, column)', st.agent.join(', ')]);
     if (sat) rows.push(['Satiation, observed', sat.intensity.toFixed(2)]);
+    rows.push(['Satiation, true', (st.satiation / M.max_satiation).toFixed(2)], ['Nutrition, true (not observed)', (st.nutrition / M.max_nutrition).toFixed(2)], ['Injury, true (not observed)', (st.injury / M.max_injury).toFixed(2)]);
     if (noc) rows.push(['Interoceptive nociception', noc.intensity.toFixed(2)]);
-    rows.push(['Body temperature', signed(st.body_temp, 2)]);
+    rows.push(['Body temperature, true (not observed)', signed(st.body_temp, 1)]);
     if (ex) rows.push(['Extero nociception', ex.intensity.toFixed(2)]);
     if (th) rows.push(['Thermoception, C U R D L', th.vector.map(function (v) { return signed(v); }).join(' ')]);
     if (olf) rows.push(['Olfaction', list(olf.vector, 2)]);

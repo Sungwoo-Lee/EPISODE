@@ -1,2 +1,3 @@
 recorded steps drawn (step scrubber)	35	35	every step of the exported episode; each frame passed the text audit
 observed senses given a panel	8	8	the completeness rule refuses to draw if an observed sense has no panel
+temperature cells inside the config's colour bounds	100	100	field -22.5 to +60.5, bounds -28 to +336 computed from the config's temperature parameters; the script raises on any cell outside

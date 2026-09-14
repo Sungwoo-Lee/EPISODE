@@ -515,3 +515,77 @@ Drawn from real data: step 15 of the recorded campfire-world episode
 4. **The house style sheet is unchanged.** This review departs from it only for the video frame (surface
    inversion, no mono). If the same look is wanted for artifact pages, that is a proposal to change the
    sheet.
+
+---
+
+## Second pass — 2026-09-14
+
+> **Reviewed by**: visual-design-reviewer
+> **Object**: the implemented sketch (`dashboard_style.py`, `fig03_proposed_dashboard.py`,
+> `fig05_extended_encodings.py`) as rendered.
+
+### Verdict (second pass)
+
+**It passes the big-tech-presentation bar, with two changes to make before the frame goes into a
+keynote.** The first-pass problems are fixed on screen: one typeface with fixed-width digits, sentence
+case, white cards, one colour per meaning, a single flat icon set with a real campfire, observed vs true
+side by side, and option A maps. It now reads as a product analytics view. Two things still weaken it.
+First, the grid view, the most important element, is a solid periwinkle slab, and the indigo agent
+sits on it with weak contrast. That comes from the cold end of this review's own ramp. Second, the
+temperature caption says "one scale", but the thermoception cells show a different quantity (cell
+minus body).
+
+### What was checked
+
+- **Frames** `fig03_frames/step_000.png`, `step_015.png` and `step_034.png` (1440×896, RGB), each at full
+  size, at 720×448, and in crops of the grid view, sensor band, minimap and step counter.
+- **Other figures:** `fig04_repacking.png` and `fig05_option_a_channel_maps.png`.
+- **Icons:** all 9 `assets/dashboard_icons/*.png` and `assets/campfire.png`, composited at 58 px on a
+  cold cell (`#92B2E0`) and a fire cell (`#B8323A`), and at 24 px. `fig08_icon_set.png` does not exist.
+- **Sampled pixels:** grid cell `#92B2E0`–`#95B5E1`, minimap cold cell `#ACC5E7`, off-world cell
+  `#FFFFFF`.
+- **Crude mock-up** (pixel recolour of step 15, not a re-render):
+  `tmp/20260914_101500_design_episode_dashboard/mock_pass2_{lighter_cold_step015,grid_crop,half}.png`.
+
+**Spec items now met:** Dashboard Sans Tab loads and raises if missing. Digits hold their width across
+steps 0/15/34. Card radius 12, 1 px hairline, no shadows. Iris is used only for the agent. Nociception
+orange is used only on nociception bars. Teal and slate map ramps are in place. The agent-cell outline
+is iris. The "not observed" outlined track is in place, with a single noise note. The gauge has a
+marker ring. The action pill has a matching chevron in the token. The thermoception luminance text
+switch works (white on −23, ink on −13). The legend has end caps, anchor ticks, a bracketed survivable
+band and a body marker. There are no numbers in grid cells. The agent token is composable. At half
+size every must-read label is still legible (smallest must-read text ≈ 7 px).
+
+### Remaining issues, ranked
+
+| # | Impact | What the viewer sees | Fix (component, value) | Owner |
+|---|---|---|---|---|
+| 1 | High | **The grid view is a solid mid-blue slab.** Cold ground (−23) is the default for almost every cell, and the ramp maps it to `#92B2E0`. The primary element reads "alarm cold" on every frame. The iris agent disc sits on a neighbouring hue at **2.8 : 1** contrast, and the grey rock glyph at **1.7 : 1**. The minimap view window has the same problem. This is a defect of the first-pass spec, not of the implementation. | **Temperature ramp, cold stops:** vmin `#6F9AD6` → **`#9FBCE6`**; lower body limit (−15) `#C3D6EF` → **`#D3E1F2`**. Positions unchanged. A −23 cell becomes ≈ `#B3CAEB`, and iris-on-cell rises to **3.9 : 1**. Cold stays visibly blue, but calm. Also darken the **rock base facet** `#7D8590` → **`#6B7380`** (≈ 2.6 : 1 on the new cell). The recolour mock-up shows the effect. Re-check that the thermoception text switch still picks a readable colour on the new cold fills. | developer (`dashboard_style.py` anchors); spec amended here |
+| 2 | Medium-high | **The caption overstates "one scale".** The caption says "Grid cells, thermoception and body temperature all use this one scale", but thermoception cells are coloured by *cell minus body*. At step 15 the agent's own grid cell is mid-blue (−23) while the centre thermoception cell is pale (−13). An audience will ask why the same place has two colours. | **Thermoception legend caption** (2 lines, 12 px ink-3): "Grid cells and body temperature: absolute. Thermoception: cell minus body. Same colours; 0 is neutral." Keep the card subtitle "cell minus body, °". | developer |
+| 3 | Medium | **Minimap: hiding predator and predator dots look identical.** `#33503A` vs `#1F2733` is 1.68 : 1; both read as "dark dot" at 12 px and at half size. | **Minimap hiding-predator dot:** keep the `#33503A` fill and add one centred **amber `#F59E0B` pip at 34 % of dot diameter**, echoing the glyph's eyes. Predator stays plain. | developer |
+| 4 | Medium | **"Animal A" / "Animal B" smell labels are opaque.** They come from `sensor.py`'s `'AN-A'`, `'AN-B'` chemical-channel labels. A viewer cannot tell which animal each one is, while vision names its channels Predator / Hiding predator / Neutral. | **Olfaction map labels:** take the names from what those `res_property` axes encode (e.g. which creature types load on each). Do not invent names. If no creature-level meaning exists, label them "Scent 2" and "Scent 3" and explain in the plan's glossary. | experiment-designer confirms meaning; developer applies |
+| 5 | Medium-low | **Header meta says "sensor ranges set in memory".** This is implementation jargon, shown whenever the episode is synthetic. | **Header meta:** "sensor ranges overridden for this sketch". Production frames (never synthetic) omit it. | developer |
+| 6 | Low | **The step progress track is invisible.** `track` `#ECEEEA` on canvas `#F2F3F0` is ≈ 1.05 : 1, so at step 0 the bar reads as a stray iris dot under the header. | **Header progress track:** `#D9DCD5` (canvas-only use; cards keep `track`). | developer |
+| 7 | Low | **Interoception is labelled twice.** The "observed vs true" card subtitle repeats the "Observed / True" column headers directly under it. | **Interoception card subtitle:** remove. Leave the right side of the title row empty. | developer |
+| 8 | Low | **The sensor band is airy.** Maps (≈ 88 px) sit in a 256 px card, with ≈ 55 px of empty space above and below the map row. The band is width-bound (label width sets map pitch), so the maps cannot grow. | **Band height:** 216 (spec), or keep 256 and accept. Do not enlarge the maps. | developer, optional |
+| 9 | Low | **fig05's range-4 row draws ≈ 10 px cells** that the production renderer (12 px floor) would refuse, so the figure promises a layout that cannot ship. | **fig05:** use the same 12 px floor. If range 4 falls below it, draw that row as the two-line wrap the spec describes, or caption it "below the renderer's 12 px floor". | developer |
+| 10 | Low | **The tree trunk nearly vanishes at 24 px** (half-size minimap and grid). | **Tree glyph:** trunk width ≥ 0.14 k, with the crown lowered so the trunk shows ≈ 0.25 k. | asset author |
+
+### Implementer departures
+
+| Departure | Verdict | Note |
+|---|---|---|
+| Vision channel 6 labelled **"Obstacle"** (rock, bush, campfire share it) | **Accept** | More truthful than "Rock". Cross-sense reading holds: smell has a separate Bush channel, and vision does not. |
+| **2 px grid seams** | **Accept** | Matches the spec for the grid. The minimap uses ≈ 2 px against a spec of 1 px, which is also fine: it survives downscaling better. |
+| **Off-world terrain cells outlined** | **Accept, adjust colour** | A white cell on a white card needs an outline. The outline uses `line` `#E2E4DF` and is barely visible at half size. Use **`#CDD1CB` 1 px**, the same outline as the "not observed" track, so "no signal" has one look everywhere. |
+| **Unused column space left as canvas** (fig04 variants 2 and 3) | **Accept** | A clean void at the bottom-right reads as "nothing more here". Stretched, mostly empty cards read as a broken layout, which was the first-pass complaint. The layout is fixed per config, so the viewer never sees it jump. |
+| **Vision maps below 12 px raise instead of wrapping** | **Accept for the sketch; conditional for production** | Raising fits the no-fallback rule. But it means a vision-range-4 config cannot produce a video at all. The production plan must implement the two-line wrap (or a wider band) before any range-4 config is recorded. |
+| **Frames kept RGB** (no palette quantisation) | **Accept** | H.264 converts to YUV 4:2:0 anyway. Quantising shifts the ramp and glyph colours for no gain. |
+| **Temperature bounds −28 … +336, anchors −28 / −15 / 0 / +15 / +60 / +150 / +336** | **Accept** | Matches the spec. Only the two cold-stop *colours* change (issue 1). Positions and anchor rules stay. |
+
+### Icons
+
+The set now shares one flat language: 2–3 fills, no outlines, white tokens for creatures and food, and
+terrain drawn directly on the cell. It holds on both cold and fire cells. The campfire's 28 % glow still
+separates it from a crimson cell. The wolf, hiding predator and rabbit are identifiable at 24 px. The
+only remaining note is issue 10 (tree trunk).

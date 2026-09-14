@@ -40,6 +40,7 @@ SCRIPT_OF = {"fig03_proposed_dashboard": "fig03_proposed_dashboard.py", "fig04_r
              "fig05_option_a_channel_maps": "fig05_extended_encodings.py",
              "fig06_option_b_dominant_channel": "fig05_extended_encodings.py",
              "fig07_option_c_bars_or_table": "fig05_extended_encodings.py",
+             "fig08_icon_set": "fig08_icon_set.py",
              "v1_thermal": "render_current_frames.py", "v2_thermal": "render_current_frames.py"}
 errors = []
 
@@ -64,13 +65,14 @@ def samples_table(rows, label):
     for r in rows:
         used, total = int(r["used"]), int(r["total"])
         pct = 100.0 * used / total if total else 0.0
-        body.append(f"<tr><td>{html.escape(r['what'])}</td><td class=\"n\">{used}</td><td class=\"n\">{total}</td>"
-                    f"<td class=\"n\">{pct:.0f}%</td><td>{html.escape(r['note'])}</td></tr>")
-    # no `wide` floor: that floor is sized for the toolkit table and hid this table's last column inside
-    # a half-width figure column (format review 2026-09-14, register F34)
+        body.append(f"<tr class=\"num\"><td>{html.escape(r['what'])}</td><td class=\"n\">{used}</td><td class=\"n\">{total}</td>"
+                    f"<td class=\"n\">{pct:.0f}%</td></tr>"
+                    f"<tr class=\"why\"><td colspan=\"4\">{html.escape(r['note'])}</td></tr>")
+    # The reason sits on its own full-width row under its numbers. Two prose columns beside three numeric
+    # ones squeezed one or the other into a ribbon at every narrow width (layout checker, 2026-09-14).
     return ("<p class=\"cue\" hidden>&larr; wider than the column &mdash; scroll sideways; the right-hand column is cut off</p>"
             "<div class=\"scroll\"><table class=\"samples\"><thead><tr><th>Data used</th><th class=\"n\">used</th>"
-            "<th class=\"n\">available</th><th class=\"n\">share</th><th>why</th></tr></thead><tbody>"
+            "<th class=\"n\">available</th><th class=\"n\">share</th></tr></thead><tbody>"
             + "".join(body) + "</tbody></table></div>")
 
 
@@ -125,7 +127,7 @@ def substitute(m):
         script = SCRIPT_OF.get(arg)
         if not script or not os.path.exists(os.path.join(HERE, script)):
             errors.append(f"{arg}: shown on the page but no generating script")
-        if arg.startswith(("fig03", "fig04", "fig05", "fig06", "fig07")):
+        if arg.startswith(("fig03", "fig04", "fig05", "fig06", "fig07", "fig08")):
             for ext in ("svg", "pdf", "data.txt"):
                 if not os.path.exists(os.path.join(FIGS, f"{arg}.{ext}")):
                     errors.append(f"{arg}: no {ext} -- run {script}")
@@ -175,7 +177,7 @@ for i, fig in enumerate(re.findall(r"<figure\b.*?</figure>", page, flags=re.S), 
 visible = re.sub(r"<script\b.*?</script>|<style\b.*?</style>|<[^>]+>", " ", page, flags=re.S)
 
 # every generating script is named on the page, so a reader can regenerate every figure (register F15 family)
-for script in sorted(set(SCRIPT_OF.values()) | {"export_episode.py", "export_extended.py", "build_page.py"}):
+for script in sorted(set(SCRIPT_OF.values()) | {"export_episode.py", "export_extended.py", "make_dashboard_assets.py", "dashboard_style.py", "build_page.py"}):
     if script not in visible:
         errors.append(f"generating script {script} is not named anywhere on the page (add it to the Regenerate paragraph)")
 # whole words only: "paints" is not the explanandum, and the repository name is allowed

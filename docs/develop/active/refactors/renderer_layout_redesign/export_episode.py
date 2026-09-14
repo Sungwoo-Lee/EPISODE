@@ -1,7 +1,9 @@
 """Export one real campfire-world episode to JSON, for the example view on the renderer-redesign page.
 
 What it does
-    Loads configs/environment/experiment/thermal/campfire_world.yaml, steps the REAL environment
+    Loads configs/environment/experiment/thermal/campfire_world.yaml with two in-memory overrides
+    (olfactory_grid_range 1, visual_sensor_range 2 -- the ranges trained with today; recorded in meta as
+    `overrides`, `synthetic: true`), steps the REAL environment
     (jax_reset / jax_step) with a seeded random policy that RESTs every third step, and keeps the
     longest-surviving of seeds 0-11 (capped at 80 steps). For every recorded step it writes the
     snapshot fields the renderer reads plus the build_sensory_viz() output -- the same dicts
@@ -42,7 +44,12 @@ CONFIG = "configs/environment/experiment/thermal/campfire_world.yaml"
 SEEDS = range(12)
 MAX_STEPS = 80
 
-params = load_env_params(Config(copy.deepcopy(yaml.safe_load(open(CONFIG)))))
+# Derived world: the campfire config read through the senses the project trains with today
+# (olfaction range 1, vision range 2), set in memory. The campfire config itself ships with both at 0.
+# Sensor ranges change only what the agent observes, never the world's dynamics, and the policy below
+# ignores observations, so every episode is identical to the unmodified config's.
+OVERRIDES = dict(olfactory_grid_range=1, visual_sensor_range=2)
+params = load_env_params(Config(copy.deepcopy(yaml.safe_load(open(CONFIG))))).replace(**OVERRIDES)
 n_act = 4 + int(params.rest_action_enabled) + int(params.eat_action_enabled)
 
 
@@ -92,7 +99,9 @@ action_names = ["UP", "RIGHT", "DOWN", "LEFT"] + (["REST"] if params.rest_action
     + (["EAT"] if params.eat_action_enabled else [])
 
 meta = dict(
-    config=CONFIG, seed=int(seed), seeds_tried=len(SEEDS), survival_by_seed={str(k): v for k, v in lengths.items()},
+    config=CONFIG, overrides=OVERRIDES, synthetic=True,
+    max_nutrition=float(params.max_nutrition), max_injury=float(params.max_injury),
+    seed=int(seed), seeds_tried=len(SEEDS), survival_by_seed={str(k): v for k, v in lengths.items()},
     max_steps=MAX_STEPS, episode_done=bool(done), termination=termination, action_names=action_names,
     height=int(params.height), width=int(params.width), view=int(params.local_view_size),
     max_satiation=float(params.max_satiation), noise=bool(params.perceptual_noise_enabled),
