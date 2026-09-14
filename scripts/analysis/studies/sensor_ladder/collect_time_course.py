@@ -42,9 +42,19 @@ EP_COLS = ["episode_seed", "length"]
 STEP_COLS = ["episode_seed", "t", "injury_level", "agent_in_bush", "nutrition", "ate_food"]
 
 
-def sweep(arm: str, verbose: bool = True) -> dict:
-    kernel = ENV.nociception_kernel(L.arm_config(L.arm_runs()[arm]))
-    st = STORE.open_run(L.arm_stores(arm), EP_COLS)
+def sweep(arm: str, verbose: bool = True, run: str | None = None,
+          stores: list[str] | None = None) -> dict:
+    """One arm's step-by-step sweep.
+
+    `run` and `stores` exist so the SAME sweep can be pointed at a population outside the sensor
+    ladder, exactly as `collect_arm_data.py::build` already allows. Both default to the ladder's
+    own discovery, so the golden gate still covers this file unchanged. The defaults are resolved
+    LAZILY: `L.arm_runs()` raises if the fourteen ladder runs are not on disk, which would make
+    this script unusable on any other machine's cohort even when the caller supplied both.
+    """
+    run = L.arm_runs()[arm] if run is None else run
+    kernel = ENV.nociception_kernel(L.arm_config(run))
+    st = STORE.open_run(L.arm_stores(arm) if stores is None else list(stores), EP_COLS)
 
     acc = {k: np.zeros((4, MAXT)) for k in ["injury", "noci", "bush", "nutrition", "ate", "n"]}
     dose = {"bush": np.zeros(4), "n": np.zeros(4)}
@@ -89,11 +99,20 @@ def sweep(arm: str, verbose: bool = True) -> dict:
 
 if __name__ == "__main__":
     ap = argparse.ArgumentParser(description=__doc__)
-    ap.add_argument("--arms", nargs="*", default=None)
+    ap.add_argument("--arms", nargs="*", default=None,
+                    help="subset to sweep; defaults to every name in --manifest when one is "
+                         "given, else the fourteen ladder arms.")
+    ap.add_argument("--manifest", default=None,
+                    help='JSON mapping name -> {"run": <run dir>, "stores": [<store dir>, ...]}, '
+                         "the same file collect_arm_data.py --manifest takes. Use it to sweep a "
+                         "population that is not the sensor ladder; pair it with $LADDER_OUT_ROOT "
+                         "so the per-arm files land elsewhere.")
     a = ap.parse_args()
+    man = json.load(open(a.manifest)) if a.manifest else None
     os.makedirs(L.OUT_ROOT, exist_ok=True)
-    for arm in (a.arms or L.ARM_ORDER):
+    for arm in (a.arms or (list(man) if man else L.ARM_ORDER)):
         t0 = time.time()
         p = f"{L.OUT_ROOT}/time_course_{arm}.json"
-        json.dump(sweep(arm), open(p, "w"))
+        kw = {"run": man[arm]["run"], "stores": man[arm]["stores"]} if man else {}
+        json.dump(sweep(arm, **kw), open(p, "w"))
         print(f"{arm:22} done ({time.time()-t0:.0f}s) -> {p}", flush=True)
