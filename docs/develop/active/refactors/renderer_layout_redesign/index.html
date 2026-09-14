@@ -152,8 +152,7 @@ figure img:focus-visible { outline:2px solid var(--accent); outline-offset:-3px;
   its own collisions. The cause is structural: the drawing library's automatic layout cannot see text
   placed inside a panel, so moving numbers around only moves the collisions.</p>
   <p>This page shows the problem in real frames, the proposed system, a sketch of the new dashboard
-  drawn from a real recorded episode, the choice of drawing toolkit, and the decisions that are yours
-  to make. The plan itself is <code>docs/develop/active/refactors/RENDERER_LAYOUT_REDESIGN.md</code>.</p>
+  drawn from a real recorded episode, the choice of drawing toolkit, and the decisions taken (section 07). The plan itself is <code>docs/develop/active/refactors/RENDERER_LAYOUT_REDESIGN.md</code>.</p>
 </section>
 
 <div class="callout pick">
@@ -351,7 +350,8 @@ figure img:focus-visible { outline:2px solid var(--accent); outline-offset:-3px;
     The grid view shows 5 &times; 5 grid cells centred on the agent; each cell's colour is its temperature
     on one scale shared by every step of this episode, running from the episode's coldest cell
     (−22.5, pale blue) through the setpoint 0 (near-white) to its hottest (+60.5, red);
-    the survivable body range &minus;15 to +15 stays pale, and colour deepens only beyond it. The anchors are
+    the survivable body range &minus;15 to +15 stays pale, and colour deepens only beyond it. The legend
+    strip is not linear: the survivable band is stretched so it stays readable, and each tick sits at its true value. The anchors are
     ticked on the legend in the thermoception card.
     The body-temperature gauge uses the same absolute scale; the thermoception cells use the same colours
     for a different quantity, cell temperature minus body temperature. Grid cells carry no numbers. Bars run from 0 at the left to the state's maximum at the right. Each smell
