@@ -46,8 +46,10 @@ import numpy as np
 
 #  20260907-050220_rppo_nmnsite_t2enc_ALL_s42
 #  20260907-045531_rppo_nmnsite_t1none_s42
+#  20260909-023639_rppo_olfmc_t2enc_ALL_s42      <- the extended-olfaction twins
+#  20260909-161137_rppo_olfgae_t3rnn_I_s42
 _RUN_RE = re.compile(
-    r"^(?P<stamp>\d{8}-\d{6})_rppo_(?P<grid>nmnsite|nmngaenorm)_"
+    r"^(?P<stamp>\d{8}-\d{6})_rppo_(?P<grid>nmnsite|nmngaenorm|olfmc|olfgae)_"
     r"(?P<arm>t\d+[a-z]+)(?:_(?P<slice>ALL|I|X))?_s(?P<seed>\d+)$"
 )
 
@@ -76,7 +78,9 @@ class RunInfo:
     tag: str                 # directory name
     run_dir: Path            # results/JAX_RecurrentPPO/<tag>
     models_dir: Path         # <run_dir>/models  (the CheckpointManager root)
-    grid: str                # "nmnsite" (Monte-Carlo returns) | "nmngaenorm"
+    grid: str                # nmnsite (MC) | nmngaenorm | olfmc | olfgae
+                             # the olf* pair is the same site x slice grid retrained on the
+                             # olfaction-only arm: olfactory range 1, observation width 47
     arm: str                 # t1none | t2enc | t3rnn | t4act | t5crt | t16quad
     input_slice: str | None  # ALL | I | X, or None for the control
     seed: int
