@@ -83,6 +83,7 @@ These use **bare-name imports** (no `scripts.` prefix), which resolve only becau
 | `tests/scripts/test_dreamer_srl_offline_wm_test.py:107` | `from scripts.dreamer.dreamer_srl_offline_wm_test import main` (uses `sys.path.insert(0, _REPO)`, `scripts.` package prefix) | `scripts/dreamer/dreamer_srl_offline_wm_test.py` |
 | `tests/algorithms/dreamer_srl/test_end_to_end_parity.py:48` | `OFFLINE_CHECK_SCRIPT = os.path.join(REPO_ROOT, "scripts", "dreamer", "dreamer_srl_offline_check.py")` → `subprocess.run([...])` | `scripts/dreamer/dreamer_srl_offline_check.py` |
 | `tests/scripts/test_eval_rollout_online_replay.py` and `tests/scripts/test_eval_rollout_stage_config.py` | `sys.path.insert(0, os.path.join(_REPO, "scripts", "eval"))` + `import eval_rollout as er` (bare-name import) | `scripts/eval/eval_rollout.py` |
+| `tests/env/test_v1_path_guard.py` | `sys.path.insert(0, str(_REPO / "scripts" / "eval"))` + `import v1_path_guard as guard` (bare-name import), plus one `subprocess.run([sys.executable, _REPO / "scripts" / "eval" / "v1_path_guard.py", ...])` CLI exit-code case (added 2026-09-14, RENDERER_LAYOUT_REDESIGN CP0.1a) | `scripts/eval/v1_path_guard.py` |
 
 **Rule:** moving either target requires editing the matching test.
 
@@ -175,6 +176,7 @@ Stakes legend: **CODE** = breaks Python/subprocess; **TOOL** = breaks a skill/ag
 | `scripts/eval/trajectory_story.py` | `trajectory-story` skill (primary); `experiment-analyzer` | TOOL | skill + agent |
 | `scripts/eval/motif_cluster.py` | none (test reimplements KMeans, no import) | HAND | depth fix only |
 | `scripts/eval/benchmark_render.py` | docs only | HAND | depth fix only |
+| `scripts/eval/v1_path_guard.py` | hand-run at every phase boundary of `docs/develop/active/refactors/RENDERER_LAYOUT_REDESIGN.md` (§D5.4, CP0.1a/CP-G; added 2026-09-14); `tests/env/test_v1_path_guard.py` (§1c bare import + CLI subprocess). Default baseline path `docs/develop/active/refactors/renderer_layout_redesign/v1_guard/baseline.json` is a constant in the script. `accept` is user-only. | HAND+TEST | already `parents[2]`; the test's `sys.path.insert` + subprocess path; its `DEFAULT_BASELINE_REL` constant if the baseline folder moves |
 | `scripts/claude/diary_append.py` | 4 agents + 3 skills | TOOL | all 7 commands (see §2) |
 | `scripts/claude/regen_dev_index.py` | `senior-developer` agent; 3 contract docs | TOOL | agent cmd + contract docs |
 | `scripts/claude/regen_wiki_links.py` | `wiki-write` skill; wiki contract | TOOL | skill + doc |

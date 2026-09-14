@@ -1,0 +1,70 @@
+{
+  "description": "V1 video-path guard baseline for RENDERER_LAYOUT_REDESIGN.md (section D5.4). Written by scripts/eval/v1_path_guard.py; do not hand-edit. user_accepted entries are added by the user only, via the accept subcommand.",
+  "recorded_at": "2026-09-14T22:14:52+09:00",
+  "plan_start_commit": "73d466d86d25a326694d14c6dd57bc96fe643034",
+  "frozen_files": {
+    "src/environment/renderer.py": {
+      "worktree_sha256": "c52f18904f084ac5f5b0d7500041674cc262f65cd23c232f74a32a7699fc309e",
+      "head_blob": "209bb75fa461ef52d0eada6c7f4d2c9039d70c95"
+    },
+    "scripts/eval/render_recordings.py": {
+      "worktree_sha256": "bc30f58f8bf987055ef6c6b9432f95cf22969ce80d04236b69368728aa76f95f",
+      "head_blob": "0fa647b9271ed7bc62abdb84ed250b382a9121b0"
+    },
+    "src/utils/async_render.py": {
+      "worktree_sha256": "dac83001b5b6e84305f4e71f2526e219655f02fb80d6a49d4f2e103971d7c1d4",
+      "head_blob": "529128d769968eb135daf2e06ff7f867559b1278"
+    },
+    "src/utils/evaluation_core.py": {
+      "worktree_sha256": "5f3efe23f5b6bb0f617f5178a10a6f328a0b019e519e52bdb245daf2cd8da637",
+      "head_blob": "af5caa0327cf97c6c964155b2602d96b35c897d6"
+    },
+    "src/algorithms/dreamer_srl/eval.py": {
+      "worktree_sha256": "33851597180529d2b123b17c2ea127dfc8b96ace6865cdf1e7bb6f8e4cd0dd59",
+      "head_blob": "cc24653255b584c268b0d7d1b6e9bedf0c7de561"
+    },
+    "src/utils/eval_recording.py": {
+      "worktree_sha256": "13d4416e9115f566061a6a398296974871faf80ce82ace5d2f10e97ac780253a",
+      "head_blob": "c81ee3a51d6c5b3190bb66f467474dc9c4671611"
+    },
+    "src/environment/sensor.py": {
+      "worktree_sha256": "22c1d87f2fa2fe6c827fcfc8966bd382ac51663d279f05766a932c3ec9f96b7a",
+      "head_blob": "b9651b66f495e5a6e8f8e1c35c68f6705170a149"
+    },
+    "scripts/eval/benchmark_render.py": {
+      "worktree_sha256": "30889a3f33c7eacf10557482398c665e92176f4683c641cd74159768bc30b397",
+      "head_blob": "d562896fb4d808730283ce8ec35b3c02873a6d26"
+    },
+    "src/environment/renderer_v2.py": {
+      "worktree_sha256": "0904d226ab1ff78b08381b392c8afbab8943f9a03f43eb8cdf0d4201283ffe79",
+      "head_blob": "505fd721fe0c77502550044ee51e65c236890e7d"
+    },
+    "configs/visualization/default.yaml": {
+      "worktree_sha256": "cb8a1b0ae2c58688d8355822164f1b4b752c1c2f4616666a7305fc53c870682a",
+      "head_blob": "5b11ed7d2fb89cf99579b4605f244a2605057d7b"
+    }
+  },
+  "plan_sessions": [
+    "https://claude.ai/code/session_01LG92Bg5jnSFoUMt4SaUUTk"
+  ],
+  "plan_owned_paths": [
+    "src/environment/dashboard/",
+    "scripts/eval/v1_path_guard.py",
+    "scripts/eval/make_render_fixture_recordings.py",
+    "scripts/eval/render_layout_audit.py",
+    "scripts/eval/render_recordings_v2.py",
+    "scripts/eval/episode_viewer.py",
+    "scripts/eval/episode_viewer.html",
+    "tests/env/test_v1_path_guard.py",
+    "tests/env/test_render_audit_controls.py",
+    "tests/env/test_dashboard_",
+    "tests/scripts/test_render_recordings_v2.py",
+    "tests/scripts/test_episode_viewer.py",
+    "assets/fonts/dashboard_sans_tab/",
+    "assets/dashboard_icons/",
+    "assets/campfire.png",
+    "docs/develop/active/refactors/renderer_layout_redesign/",
+    "docs/develop/active/refactors/RENDERER_LAYOUT_REDESIGN.md"
+  ],
+  "user_accepted": []
+}

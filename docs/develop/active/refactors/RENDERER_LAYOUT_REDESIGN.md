@@ -1023,6 +1023,7 @@ Collapse rules:
 Each checkpoint states what would show it failed.
 
 - [ ] **CP0.1a: File baseline first.** `v1_path_guard.py record-files` is run as the very first Phase 0 action. `baseline.json` (plan-start commit, ten frozen files' working-tree sha256 and HEAD blobs, empty `plan_sessions`) and `frozen_files_at_baseline.diff` are committed under `renderer_layout_redesign/v1_guard/`. `add-session` is recorded for the developer session. *Fails if:* any other Phase 0 file predates the baseline commit, or the diff file is missing.
+  - *2026-09-14 developer:* `record-files` + `add-session` run (plan start `73d466d8`, all ten files clean, diff is header-only); `check` exits 0 comparing 10 files. **Not yet committed** — the parent commits the guard, test, map rows and `v1_guard/` together after verification.
 - [ ] **CP0.1b: Frame baseline right after fixtures.** After the generator lands and writes M1/M2/M4, `record-frames` adds fixture hashes and 8 raw-frame hashes per cell for M1, M2, M4 and M7, from two separate processes; committed. `tests/env/test_v1_path_guard.py` green (all three states and FIXTURE CHANGED exercised). *Fails if:* the processes disagree (then switch to a pixel-diff tolerance and record it), any renderer code predates this commit, or the guard test passes a case it should flag.
 - [ ] **CP-G: V1 pipeline untouched (after every phase, 0 through 4).** `v1_path_guard.py check` exits 0. The report pastes the diff stat, the trailer-annotated `git log`, and each frozen file's state. ATTRIBUTED re-records cite the foreign commits. *Fails if:* any file or frame is UNATTRIBUTABLE (only the user clears it, via `accept` for that exact content), a phase commit touches a frozen file, or a `renderer_v2` package/module is created.
 - [ ] **CP0.2: Matrix recordings.** (Revision 10 check first.)
@@ -1104,21 +1105,95 @@ No open user questions (all decided 2026-09-14). See **Decided questions** above
 
 ## Implementation Report
 
-> **Implemented by**: [TBD]
-> **Date**: [TBD]
+> **Implemented by**: developer (Phase 0a / CP0.1a only)
+> **Date**: 2026-09-14
 
 <!-- Per phase: what was done, deviations, CP evidence (hashes, audit counts, timing table with node + CPU, screenshots looked at, empty src/ diff stat). -->
 
+### Phase 0a (CP0.1a): V1-path guard and file baseline
+
+**Files.** New `scripts/eval/v1_path_guard.py` (stdlib only; `record-files`, `add-session`, `check`, `accept` — user only, `record-frames` refuses until Phase 0b). New `tests/env/test_v1_path_guard.py` (no marker; 4 s). New `renderer_layout_redesign/v1_guard/baseline.json` + `frozen_files_at_baseline.diff`. `SCRIPTS_DEPENDENCY_MAP.md` §1c and §3 rows. No frozen file, `src/` or `configs/` touched.
+
+**Frozen files at record time.** All ten clean against HEAD `73d466d8` (no unstaged, no staged changes). The thermal session's delta that §D5.4 expected had already landed as `feaa3f1b` (trailer `session_01WAgZYVh2C1xh2diJaWT9Nm`), so the diff file is header-only. Baseline sha256 prefixes: renderer.py `c52f18904f08`, render_recordings.py `bc30f58f8bf9`, async_render.py `dac83001b5b6`, evaluation_core.py `5f3efe23f5b6`, dreamer_srl/eval.py `338515971805`, eval_recording.py `13d4416e9115`, sensor.py `22c1d87f2fa2`, benchmark_render.py `30889a3f33c7`, renderer_v2.py `0904d226ab1f`, visualization/default.yaml `cb8a1b0ae2c5`. `plan_sessions` = parent session `session_01LG92Bg5jnSFoUMt4SaUUTk`.
+
+**Tests.** `JAX_PLATFORMS=cpu pytest tests/env/test_v1_path_guard.py` → 23 passed. The cases are PASS, ATTRIBUTED, and ACCEPTED followed by a re-flag. The UNATTRIBUTABLE cases are: an uncommitted edit, a missing trailer, a plan-session trailer, a foreign commit plus our own uncommitted edit (the false-pass case), one bad commit among foreign ones, a mixed commit, content that moved with no commit, and a missing file. The guard-error cases (exit 2) are: no baseline, zero files, an entry with no hash, a frozen-set mismatch, and a frame baseline present that cannot yet be checked. The CLI exit codes are also tested. **Mutation check:** a scratch copy with change detection disabled gives 10 failed / 13 passed.
+
+**Choices where the plan was silent.**
+- If a file's content changed but no commit since plan start touches it, it is UNATTRIBUTABLE (there is nothing to attribute it to).
+- Plan-owned paths include this doc and the new asset folders (the review's #29 list).
+- `record-files --force` keeps `plan_sessions` and `user_accepted`.
+- `check` says in plain words that frames were not compared.
+
+**Review fixes (2026-09-14, after senior-developer VERIFIED WITH ISSUES + code-reviewer).** The baseline was **not** re-recorded; no schema change was needed.
+- `record-files --force` refuses (exit 2) if any file is UNATTRIBUTABLE against the previous baseline.
+- `accept` refuses (exit 2) a sha256 that is not the file's current content, or a missing or symlinked file.
+- `check` uses the union of the baseline's plan-owned paths and the script's list, and prints the drift.
+- Session matching compares the `session_…` id, so the URL form and the bare id match each other; `session_Xy` does not match `session_X`.
+- Added `configs/environment/experiment/basic/*-campfire_thermal_*.yaml` to plan-owned paths (glob, since `<NN>` is not chosen yet).
+- Commit history is read with `--full-history`.
+- Baseline entry shapes are validated. Any unexpected exception exits 2, never 1.
+- Baseline and diff are written atomically. A symlinked frozen path is UNATTRIBUTABLE. `--repo-root` must be the git toplevel.
+- The tests isolate git config for the guard's own git calls too.
+
+**Tests after fixes:** 47 passed. New cases cover `--force` after ATTRIBUTED (allowed) and after UNATTRIBUTABLE (refused), both `accept` refusals, plan-owned drift, and the campfire config. Trailer cases use the project's two-line block with a foreign session, a plan session, and one of each. Also covered: bare id ↔ URL in both directions, no substring match, the merge that hides an untrailed side commit, a symlink, a subdirectory `--repo-root`, seven malformed-baseline shapes plus binary garbage, and an unexpected exception exiting 2.
+
+**Mutant checks:** with change detection disabled, 20 failed / 27 passed. With `--full-history` removed, only the merge test fails (1 failed).
+
+**Real repo `check` after fixes:** 10/10 PASS, exit 0. It prints one note: the campfire glob is not in the recorded baseline but is applied anyway.
+
+**Speed check:** skipped (hand-run tool; not on the training path).
+
 ## Verification Report
 
-> **Verified by**: [TBD]
-> **Date**: [TBD]
+### Phase 0a (CP0.1a): V1-path guard and file baseline
+
+> **Verified by**: senior-developer
+> **Date**: 2026-09-14
+> **Verdict**: VERIFIED WITH ISSUES. All three issues are minor and none blocks the Phase 0a commit.
+
+**What was checked, in plain words.** The guard is the tool that proves the old (V1) video pipeline is left alone while the new dashboard is built. It records a fingerprint of each of the ten files it must never touch. I checked four things. The fingerprints are right, computed without using the guard. The rules match the plan. The tool catches a real change. Nothing else in the repo was edited.
 
 | File | Change | Status | Notes |
 |------|--------|:------:|-------|
-| | | | |
+| `scripts/eval/v1_path_guard.py` | new, 454 lines | ✅ | State order PASS → ACCEPTED → ATTRIBUTED → UNATTRIBUTABLE matches §D5.4 + Revisions 2/3. `accept` never touches `worktree_sha256`. `record-frames` refuses (exit 2). `check` exits 2 if a frame or fixture baseline exists that it cannot yet compare. Git is called read-only. |
+| `tests/env/test_v1_path_guard.py` | new, 296 lines | ✅ | Re-run by the verifier: **23 passed** (6.9 s, pytest exit 0). The developer's mutant run (10 failing) was not re-run; the independent scratch-clone test below covers the same claim. |
+| `v1_guard/baseline.json` | new | ✅ | The frozen set is exactly the ten §D5.4 files, including `renderer_v2.py` and `configs/visualization/default.yaml`. For all ten, the working-tree sha256 (Python `hashlib`, no guard import), the sha256 of `git show 73d466d8:<path>`, and `git rev-parse 73d466d8:<path>` all equal the recorded values. `plan_sessions` = `https://claude.ai/code/session_01LG92Bg5jnSFoUMt4SaUUTk`. `user_accepted` = []. |
+| `v1_guard/frozen_files_at_baseline.diff` | new | ✅ | Header-only, which is correct: all ten files were clean at `73d466d8`, and the header text matches §D5.4 exactly. |
+| `docs/environment/SCRIPTS_DEPENDENCY_MAP.md` | +2 rows | ✅ | The §1c row (bare import + CLI subprocess) and the §3 row (HAND+TEST, `parents[2]`, `DEFAULT_BASELINE_REL` constant) are accurate. The diff holds only these two hunks. |
+| `RENDERER_LAYOUT_REDESIGN.md` | CP0.1a note + Implementation Report | ✅ | Only the developer's two hunks, plus this report. |
+| `docs/diary/2026-09-14.md` | developer row | ⚠️ | The row is correct, but the same file carries a 22:12 Notes hunk from another session. Stage only the developer's hunks, or leave the diary to its own commit. |
 
-**Conclusion**: [one-line summary]
+**Independent evidence.**
+- **Real repo.** `check` gives exit 0 with PASS=10. HEAD has since moved to `401c821f`, a docs-only commit from another session that touches no frozen file. `git status` and `git diff --stat 73d466d8 HEAD` over the ten files are both empty.
+- **Detection (scratch `git clone --shared`, real files untouched).** Guard run in scratch; exit codes and states:
+
+  | Scratch scenario | Exit | State |
+  |---|:---:|---|
+  | Clean clone | 0 | PASS |
+  | One byte flipped in `sensor.py` | 1 | UNATTRIBUTABLE |
+  | `sensor.py` restored | 0 | PASS |
+  | One space appended to `default.yaml` | 1 | UNATTRIBUTABLE |
+  | That change committed with a foreign trailer | 0 | ATTRIBUTED |
+  | A further change committed with the plan-session trailer | 1 | UNATTRIBUTABLE |
+
+- **Scope.** `git status` over `scripts/`, `tests/`, `src/` and `configs/` shows only the two new files. The four dirty `configs/environment/*` files, the thermal `.npz` fixture and the other `docs/environment/` files belong to other sessions and must stay out of this commit.
+
+**Choices the developer made where the plan was silent. None contradicts the plan.**
+- *Changed content but no commit to attribute it to* → UNATTRIBUTABLE. Correct. The literal §D5.4 wording ("every commit carries…") would be vacuously true with zero commits, which would silently pass a reverted dirty baseline. The table's "anything else" row supports the stricter reading.
+- *The plan doc and the three asset paths are plan-owned.* This is stricter than §D5.4's list and follows 🟡29. `assets/campfire.png` already exists at HEAD; that is harmless.
+- *`record-files --force` keeps `plan_sessions` and `user_accepted`.* Correct. Dropping `plan_sessions` would let a plan commit look foreign after a re-record.
+
+**Issues (minor; for Phase 0b or later).**
+1. **A trailer counts as a plan session only if it matches the recorded value character for character.** A plan commit whose trailer carries the bare session ID, not the full URL, would be treated as foreign → a false ATTRIBUTED. Fix in Phase 0b: match on the `session_…` suffix.
+2. **The new Revision 10 test-world configs are missing from `PLAN_OWNED_PATHS`.** These are `configs/environment/experiment/basic/<NN>-campfire_thermal_<size>.yaml`. Add them with a filename-prefix entry when Phase 0b next touches the guard.
+3. **`git log <start>..HEAD -- <path>` uses default history simplification.** A frozen-file commit on the side branch of a merge could be hidden. The risk is low, since version branches advance by fast-forward. Consider `--full-history` in Phase 0b.
+
+**Speed:** ✅ not applicable. This is a hand-run tool and is off the training path.
+
+**Conclusion**: CP0.1a is met once the files below are committed together. The baseline is correct and independently reproduced, the rules match the plan, and detection is demonstrated. No frozen file was touched.
+
+**Phase 0a commit (explicit pathspec):**
+`scripts/eval/v1_path_guard.py`, `tests/env/test_v1_path_guard.py`, `docs/develop/active/refactors/renderer_layout_redesign/v1_guard/baseline.json`, `docs/develop/active/refactors/renderer_layout_redesign/v1_guard/frozen_files_at_baseline.diff`, `docs/environment/SCRIPTS_DEPENDENCY_MAP.md`, `docs/develop/active/refactors/RENDERER_LAYOUT_REDESIGN.md`. Exclude `docs/diary/2026-09-14.md` (it has a foreign hunk) and `docs/develop/INDEX.md` (it has foreign staged changes, and the frontmatter is unchanged so no regen is needed).
 
 ## Feedback from plan-reviewer
 
