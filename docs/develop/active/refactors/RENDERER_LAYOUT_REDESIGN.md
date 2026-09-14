@@ -9,7 +9,7 @@ supersedes: UI_REDESIGN_PROPOSAL.md
 
 # Episode-video renderer redesign: panels that cannot overlap, a faster frame, and a step-scrubbing viewer
 
-> **Status**: PLANNED. Revised three times after `plan-reviewer` (first and second pass NOT READY; third pass SOUND WITH CONCERNS, applied in Revision 3). Plan only; awaiting re-review, then user approval. No code written.
+> **Status**: PLANNED. Revised three times after `plan-reviewer` (first and second pass NOT READY; third pass SOUND WITH CONCERNS, applied in Revision 3). Revision 4 adds extended-range senses (user scope, 2026-09-14); fourth pass SOUND WITH CONCERNS, applied in Revision 5. Plan only; awaiting re-review, then user approval. No code written.
 > **Opened**: 2026-09-14
 > **Related**: [[UI_REDESIGN_PROPOSAL]] (the April plan this one replaces) · [[12_renderer]] (renderer reference doc) · [thermal IMPLEMENTATION_PLAN](../thermal/IMPLEMENTATION_PLAN.md) (§"Rendering: what the rewrite's state turned out to be") · [[BODY_TEMPERATURE_OBSERVATION]] (thermal; **untracked work-in-progress in another session, read as unstable input only**) · [[ASYNC_CHECKPOINT_VIDEO_RENDER]] · [[SAVED_RUN_CONFIG_COMPAT]] · review: [`docs/reviews/plan_renderer_layout_redesign.md`](../../../reviews/plan_renderer_layout_redesign.md) · evidence frames + measuring script: [`renderer_layout_redesign/`](renderer_layout_redesign/) · web research note `tmp/20260914_renderer_layout_web_research.md`
 
@@ -98,6 +98,36 @@ The second pass confirmed findings #1–#15 resolved in the body and returned **
 | 🟢30 | gzip embeds mtime | Fixture hashes are taken over the **decompressed** `.rec.gz` payload. |
 | 🟢31 | M5 config uses `extends:` | `config_sha256` hashes the resolved config, and `config_chain_sha256` hashes every file in the `extends` chain. |
 | 🟢32 | Diff file could be mistaken for a patch | `frozen_files_at_baseline.diff` starts with a header naming it as another session's work-in-progress snapshot, not to be applied. |
+
+---
+
+## Revision 4 2026-09-14 (user scope: extended-range senses)
+
+**Why.** The directional smell and vision senses shipped on 2026-08-21 accept any non-negative diamond radius: `config_loader.py` only rejects values below 0. Configs the project trains with today use smell radius 1 and vision radius 2. A radius-r diamond has `2r²+2r+1` cells, `2r+1` wide. In the ~306 px right column that is about 102 / 61 / 44 / 34 px per cell at r = 1/2/3/4, which is too small to carry 8 vision channels as per-cell bars from r = 2. The plan as written would have raised `LayoutOverflowError` on configs in use.
+
+| Item | Status | Where |
+|---|---|---|
+| Wide sensor band under the grid view when a sense does not fit the side column; chosen once per config; canvas unchanged; fit-or-fail still guards | **Decided** | §D7.1, §D1.2 step 4 |
+| Test the in-use configs (smell r1; vision r2 with blur off / anisotropic / isotropic, occlusion, presence value modes) plus synthetic r3 and r4 stress; document the largest range that fits; fail loudly above it | **Decided** | §D7.6, matrix cells E1–E9, CP2.7 |
+| Encoding for r ≥ 2 (per-channel maps / dominant channel / bars-then-table) | **Open: Q13**, chosen after the examples on the artifact page | §D7.2; one swappable painter kind |
+| Grid view shows each sense's footprint; colour scales not assumed to be [0,1]; panel subtitle states blur/mask/occlusion/value mode; true-vs-observed as a noise-error map at extended range; viewer values grouped by cell | Specified | §D7.3–D7.5, §D3 |
+| V1 freeze | Unchanged: V1 draws these configs exactly as today | §D5.4 |
+
+---
+
+## Revision 5 2026-09-14 (after plan-reviewer fourth pass: SOUND WITH CONCERNS)
+
+| # | Finding (short) | Handling |
+|---|---|---|
+| 🟡33 | Layout could depend on episode data | Layout and every `min_size` read only params + font metrics; scale labels are fixed-width; test that two episodes with different maxima give identical boxes (§D7.7, CP2.7). |
+| 🟡34 | Two arena cell floors; fallback order implicit | Single `ARENA_CELL_MIN_PX = 32`. Explicit order: W from ranges → side column → band → shrink W toward `local_view_size` with clip caption → compact → raise. Minimap rectangle shows the W actually drawn (§D1.2, §D7.7). |
+| 🟡35 | Largest radius recorded from the packer alone | r_max is recorded only after rendering and auditing a synthetic override at that r per encoding. Machine and fonts are named. Where the band was chosen, forcing the side column must raise (§D7.7, CP2.7). |
+| 🟡36 | Noise at extended range untested | New cell **E2n**: E2 with noise on, with and without true observations. The error-map box is reserved from params and captioned "true obs not recorded" when true observations are absent (§D7.7). |
+| 🟡37 | Terrain channels and labels assumed an 8-wide vision vector | Terrain := non-zero columns of `params.visual_background_property`; label table only when `visual_vector_size == 8`; A/B/C defined at V = 1; CP asserts E6's label is not `GRS` (§D7.7). |
+| 🟡38 | Subtitle missing radial scale | `visual_blur_radial_scale` added (§D7.5). |
+| 🟡39 | Override cells not marked | `synthetic: true` + `overrides` in fixture extras; printed at CP0.2 (§D5.1). |
+| 🟢40–45 | Zero-maximum guard; B hides terrain under blur; cell order from the env's offset function; E9 turns vision off; legend chips and clip caption in the non-ellipsising text class; per-episode maximum from a setup pre-pass | §D7.7, matrix E9, Q13 |
+| – | Proprioception now load-bearing | Every E cell and M5 observes it, so the completeness rule blocks CP2.7 until **Q5** is answered (noted in Q5). |
 
 ---
 
@@ -217,13 +247,13 @@ class PanelSpec:
 | body_temp | vitals | temp_row / hidden_state | `Body Temperature` (viz key `value`) | `body_temp` in snapshot; observed iff `Body Temperature` in breakdown, else hidden | label + value + threshold/setpoint marks |
 | minimap | world | minimap | – | always | ≥ 2 px/world cell, ≥ 180 px side |
 | location | world | text_row | `Location` | name in breakdown | one text line |
-| arena | arena | arena | – | always | square, ≥ 48 px/view cell; + scale strip when thermal on |
+| arena | arena | arena | – | always | square, ≥ `ARENA_CELL_MIN_PX` = 32 px/view cell (§D7.7); + scale strip when thermal on |
 | action_badge | arena | action_badge | – | action recorded | pill text in arena title strip |
-| olfactory | extero | spectrum / dir_grid | `Olfaction` | name in breakdown; kind by `olfactory_grid_range > 0` | 5 labelled bars / `(2r²+2r+1)` cells × 5 |
+| olfactory | extero, or sensor band (§D7.1) | `grid_kind(olfactory_grid_range, 5)`: spectrum (r=0) / dir_grid (r=1) / `GRID_ENCODING` (r≥2) | `Olfaction` | name in breakdown | per kind (§D7.2) |
 | extero_nociception | extero | intensity | `Extero Nociception` | name in breakdown | text row + bar |
 | thermoception | extero | thermal_diamond | `Thermoception` | name in breakdown | `2r²+2r+1` numeric cells |
 | collision | extero | cross_bars (r=1) / dir_grid | `Collision` | name in breakdown | 8 pt legend above bars |
-| visual | extero | dir_grid | `Visual` | name in breakdown | cells × `visual_vector_size`, 8 pt legend |
+| visual | extero, or sensor band (§D7.1) | `grid_kind(visual_sensor_range, visual_vector_size)`: dir_grid (r≤1) / `GRID_ENCODING` (r≥2) | `Visual` | name in breakdown | per kind (§D7.2); 8 pt legend |
 | proprioception | extero | Q5 | `Proprioception` | name in breakdown | Q5 |
 
 **Completeness rule.** At episode setup, every breakdown name must be owned by exactly one present entry, or be on an explicit "recorded, not displayed" list (only if Q5 chooses that). Otherwise setup raises `ValueError` naming the orphan. A future modality that reuses a kind is a registry entry only. A new kind adds a painter. Neither touches layout.
@@ -233,7 +263,7 @@ class PanelSpec:
 1. **Canvas.** Fixed at **1440 × 896 px**, multiples of 16 so imageio does not resample (Q3). Header = measured line + padding.
 2. **Columns.** Left 300, right 330, centre = remainder minus two 16 px gutters; module constants.
 3. **Heights.** Per column, sum the present panels' min heights plus gaps. Leftover height goes to the grow panel: minimap (left), arena (centre, capped at square), and shared in proportion on the right.
-4. **Fit-or-fail.** Try `compact` min sizes first. If a column still overflows, raise `LayoutOverflowError` with the panel demands **before any frame is drawn**. On the training path this fails only the render child: `async_render.py` isolates it, the recordings stay on disk, and the error is in the render log.
+4. **Fit-or-fail**, once per config, in the explicit order of §D7.7 item 3: grid-view width from the sensor ranges, then side column, then sensor band, then shrink the grid-view width with a clip caption, then `compact` min sizes, then raise. If a column still overflows, raise `LayoutOverflowError` with the panel demands **before any frame is drawn**. On the training path this fails only the render child: `async_render.py` isolates it, the recordings stay on disk, and the error is in the render log.
 5. **Output.** `dict[key → Box]` in integer px; boxes disjoint by construction (CP1).
 
 Stretchable/Taffy stays a possible later drop-in behind `Box`; it isn't needed for three stacked columns.
@@ -326,7 +356,7 @@ Speed figures are **estimates** unless marked measured. The Phase 0 gate (§D5.3
   - `/` (static HTML under git).
   - `/api/episodes` (index, steps, final step).
   - `/api/frame?ep=&t=` (PNG of `EpisodeRenderer.frame(t)`, one renderer per open episode, LRU cache).
-  - `/api/values?ep=&t=` (JSON of every panel's `extract`, including `observed`/`hidden` flags, action, termination).
+  - `/api/values?ep=&t=` (JSON of every panel's `extract`, including `observed`/`hidden` flags, action, termination; grid senses grouped by cell per §D7.5).
 - **Page.**
   - Episode picker, step slider; ←/→ steps by 1, Shift+←/→ by 10; play/pause at the video fps; jump to first or last step.
   - Prefetches ±5 frames.
@@ -367,7 +397,7 @@ Speed figures are **estimates** unless marked measured. The Phase 0 gate (§D5.3
 
 #### D5.1 Real recordings across a config matrix
 
-`scripts/eval/make_render_fixture_recordings.py` steps the **real environment** with a **seeded random policy**. It writes through the **production** `EpisodeRecorder` / `write_run_meta`, with `true_obs` from `get_observation(state, params, apply_noise=False)`, to `results/render_audit/recordings/<cell>/<cell>/` (gitignored; unique leaf names avoid the output-path collision in wiki `render_recordings_output_path_collision`). Each cell's `run_meta` `extras` records `config_path` plus two hashes: `config_sha256`, over the **resolved** config after `extends:` layering, serialised as sorted-key JSON; and `config_chain_sha256`, a map of every file in the `extends` chain to its content sha256. Both are taken at generation time. If the other session edits a config later, "M4" visibly means something different rather than silently changing. Real trained-policy recordings are added as further cells.
+`scripts/eval/make_render_fixture_recordings.py` steps the **real environment** with a **seeded random policy**. It writes through the **production** `EpisodeRecorder` / `write_run_meta`, with `true_obs` from `get_observation(state, params, apply_noise=False)`, to `results/render_audit/recordings/<cell>/<cell>/` (gitignored; unique leaf names avoid the output-path collision in wiki `render_recordings_output_path_collision`). Each cell's `run_meta` `extras` records `config_path` plus two hashes: `config_sha256`, over the **resolved** config after `extends:` layering, serialised as sorted-key JSON; and `config_chain_sha256`, a map of every file in the `extends` chain to its content sha256. Both are taken at generation time. Override cells (M4b, M6 if overridden, E2n, E7–E9) also record `synthetic: true` and `overrides` (the exact key → value map applied in memory); real-config cells record `synthetic: false`. If the other session edits a config later, "M4" visibly means something different rather than silently changing. Real trained-policy recordings are added as further cells.
 
 | Cell | World (plain description) | Source (resolve at CP0.2; archive configs may not load at current code) |
 |---|---|---|
@@ -379,6 +409,16 @@ Speed figures are **estimates** unless marked measured. The Phase 0 gate (§D5.3
 | M5 directional smell | Olfaction as a directional grid | `configs/environment/experiment/sensory_directional/B_olfaction.yaml` |
 | M6 location sensor | Location sensor on | grep `location_sensor_enabled: true` under `configs/`; if none, an **in-memory** override of M1 labelled as such (no config file written) |
 | M6b noise on, true obs not recorded | M3's world recorded with `true_obs=None` | generator flag `--no-true-obs` (exercises the "true obs not recorded" caption) |
+| E1 smell r1 | Directional smell, radius 1 | `configs/environment/experiment/sensory_ladder/B_olf_only.yaml` (also `sensory_directional/B_olfaction.yaml`, already M5) |
+| E2 vision r2 sharp | Vision radius 2, no blur | `sensory_ladder/V5_sharp.yaml` (directional equivalent `C_vision_sharp.yaml`) |
+| E3 vision r2 anisotropic blur | Blur on, anisotropic | `sensory_ladder/V1_blur40.yaml` (directional `D_vision_blur.yaml`) |
+| E4 vision r2 isotropic blur | Blur on, isotropic | `sensory_ladder/P1_blur05_iso.yaml` (directional `Dp_vision_blur_iso.yaml`) |
+| E5 vision r2 occlusion | Occlusion on | `sensory_ladder/O3_occl_all.yaml` (directional `H_occlusion05.yaml`) |
+| E6 vision r2 presence modes | Summed and binary presence values | `sensory_ladder/Q1_presence_sum.yaml` and `Q2_presence_binary.yaml` (directional `G_presence_binary.yaml`) |
+| E2n vision r2 with noise | **Synthetic override**: E2 with perceptual noise on, recorded twice (with true observations; `--no-true-obs`) | in-memory override, labelled |
+| E7 synthetic r3 | **Synthetic override**: E2 with vision and smell radius 3 | in-memory override, labelled |
+| E8 synthetic r4 | **Synthetic override**: E2 with vision and smell radius 4 | in-memory override, labelled |
+| E9 synthetic smell r4 only | **Synthetic override**: E1 with smell radius 4 and `visual_sensor_enabled: false` | in-memory override, labelled |
 | M7 pre-thermal, trained | Real policy, recorded before the thermal system | `results/eval/noPredator_chasingRabbit/models/9520028/recordings/9520028/` |
 | M8 interoceptive nociception, trained, noise off | Real policy | e.g. `results/JAX_RecurrentPPO/20260501-005013_interoNocicept_predRange5_decoy75_std4/recordings/100049/` |
 | M9 interoceptive nociception, trained, noise on | Real policy; REAL differs from OBS | e.g. `results/JAX_RecurrentPPO/20260501-050423_interoNocicept_predRange5_decoy75_std4_noise/recordings/100023/` |
@@ -489,6 +529,103 @@ M8/M9 do not depend on archived configs loading. If M2/M3 cannot be generated, M
 - Which renderer runs is decided by which script is invoked: `render_recordings.py` = V1 (unchanged, used by training and eval); `render_recordings_v2.py` = V2 (manual only). Canvas and font floors are module constants.
 - No `campfire` entry is added to `configs/visualization/default.yaml` `icons:` during Phases 0–4. Evaluation reads that mapping into `icon_config`, so the entry would change V1 production videos. The asset is deferred to the retirement gate unless the user grants an explicit exception (Q12).
 
+### D7. Extended-range senses (Revision 4)
+
+**Plain summary.** Smell and vision can be configured to sense a diamond of cells around the agent of any radius. At radius 2 and above, a vision panel squeezed into the side column becomes unreadable. The new renderer therefore moves such senses into a wide band under the grid view. It shows them with an encoding the user will choose from examples, marks on the grid view which cells each sense covers, and refuses to render above the largest radius it can show legibly.
+
+#### D7.1 Placement: side column or wide sensor band (decided)
+
+- The packer evaluates two layouts, **once per config**, before any frame:
+  - **(a) side-column:** the current blueprint;
+  - **(b) sensor-band:** grid-view card on top of the centre+right area, a full-width band below it spanning the centre and right columns (≈ 1440 − 300 − 16 ≈ 1124 px wide), and the non-grid right pods (extero nociception, thermoception, collision, location) in a narrowed right strip beside the grid view.
+- Layout (a) is used iff every grid-kind sense meets its `min_size` there; otherwise (b). The canvas stays 1440 × 896.
+- If (b) also fails, `LayoutOverflowError` names the sense, its range and channel count, and the encoding. No squeezing.
+- `layout_signature()` includes which layout was chosen, so a concatenated video can never switch mid-video.
+
+#### D7.2 Encoding for range ≥ 2: one swappable painter kind (open, Q13)
+
+**Registry.** The `olfactory` and `visual` entries get their `kind` from `grid_kind(range, channels)`:
+- range 0 (smell only): `spectrum`;
+- range 1: `dir_grid` (per-cell bars, as today);
+- range ≥ 2: the single module constant `GRID_ENCODING`.
+
+`GRID_ENCODING` is one of three painter kinds with the same `build`/`update`/`min_size` interface, so the Q13 choice changes one constant and touches no layout code. It is a module constant, not a config key (§D6). Terrain/entity channel split, labels, the V = 1 case, B's behaviour under blur and cell order are defined in §D7.7 and override the table below where they differ.
+
+| Kind | What a frame shows | Channel handling | Min size driver |
+|---|---|---|---|
+| **A `channel_maps`** | One small diamond map per channel. Smell: 5 maps (FOOD, AN-A, AN-B, BUSH, TREE). Vision: 1 terrain map + 5 entity maps. | Vision terrain map is categorical (which of GRS/SND/PLN is present per cell), because GRS reads 1.0 in every in-bounds cell and a per-channel GRS map carries no information. Entity maps: FOD, HPR, PRD, RCK, NEU. One colour scale per sense, fixed per episode (§D7.4). | maps × (2r+1) × min cell px (≥ 10 px) + titles |
+| **B `dominant_channel`** | One diamond. Cell colour = strongest channel, brightness = its value; legend of channel colours. | Terrain channels excluded from "strongest" unless no entity channel is non-zero in that cell (then the terrain type colour, dimmed). Ties broken by fixed channel order, stated in the legend. | (2r+1) × min cell px (≥ 16 px) + legend |
+| **C `bars_then_table`** | Per-cell bars up to r = 1; above that a heat table with one column per cell (cells ordered ring by ring, outward from the centre, with ring separators) and one row per channel. | All channels shown, including terrain rows. | cells × min column px (≥ 12 px) by channels × min row px (≥ 10 px) + labels |
+
+#### D7.3 Grid view window and sensor footprints
+
+- **Window.** The new renderer's grid view shows `W = max(params.local_view_size, 2·max_range + 1)` cells, where `max_range` is the largest diamond radius among the present senses. This is a rendering choice only; environment params are not changed. With `local_view_size = 5` (the in-use configs), vision r2 needs 5, so nothing changes. Synthetic r3/r4 widen the view to 7/9.
+- **Cell-size floor.** If `W` would push arena cells below `ARENA_CELL_MIN_PX` (32 px, the single floor in §D7.7), `W` is capped at the largest value keeping 32 px. The footprint outline is then clipped at the window edge, and the card caption says `footprint exceeds view (r=<r>)`. The audit checks that caption's presence whenever clipping occurs.
+- **Footprint outline.** Each directional sense draws its diamond footprint on the grid view as a thin outline in its sense colour (smell, vision, thermoception, and collision when r > 1). The outlines are foreground artists, and a legend chip in the arena title strip names each outline. A frame test checks outline ink along the expected diamond boundary cells.
+
+#### D7.4 Colour and bar scales are not [0,1]
+
+- Under `visual_value_mode` / olfactory value modes that sum (smell readings of 1.40 have been observed), values can exceed 1.
+- Each sense's scale is fixed **per episode** at setup: `[0, max(true, observed over the whole episode for that sense)]`, rounded up to a 2-significant-figure tick. It is printed on the panel, the same principle as `thermal_clim`. Bars use the same maximum.
+- Negative observed values (noise) are clipped for colour, and a small "clipped" tick counter is shown in the subtitle.
+- The single-frame wrapper uses that frame's maximum and says so.
+
+#### D7.5 Subtitles, true-vs-observed, viewer
+
+- **Subtitle.** Each grid panel shows one subtitle line built from params via `_recording_flag`:
+  - `range r · blur <off | aniso scale k, σ-floor f, ρ a | iso scale k, σ-floor f>` (`visual_blur_enabled`, `visual_blur_radial_scale`, `visual_blur_sigma_floor`, `visual_blur_anisotropy`; isotropic iff anisotropy == 1.0);
+  - `mask <on|off>` (any non-zero in `res_visual_mask`/`animal_visual_mask`/`obs_visual_mask`);
+  - `occlusion <off | cos c, strength s>`;
+  - `values <mode>` (`visual_value_mode`).
+  
+  Smell shows the analogous fields that exist on params; the list is resolved at CP0.2 from `EnvParams`. Numeric text, so it never ellipsises (§D1.3). If it cannot fit, it wraps to a second line inside the min size.
+- **True vs observed at range ≥ 2.** No ghost bars. When `real_available` (§D4.2), the panel adds one **noise-error map**: a diamond of `observed − true` per cell. It takes the strongest-magnitude channel for B, one per channel group for A, and an error row block for C. It uses a diverging scale symmetric about 0, fixed per episode. At r ≤ 1 the existing REAL tick on bars stays.
+- **Viewer.** `/api/values` groups grid senses by cell: `{sense: {cell_index: {offset: [dr, dc], channels: {name: {obs, true}}}}}`. The page's values table renders one row per cell with channel columns.
+
+#### D7.6 Support scope and the largest range that fits (decided)
+
+- **In-use configs** are tested as real recordings (matrix cells E1–E6 below).
+- **Synthetic stress.** In-memory overrides of the sharp-vision config set both radii to 3 (E7) and to 4 (E8), and a smell-only r4 (E9), each labelled "synthetic override" in the report.
+- **Largest fitting range.** For each encoding kind, `tests/env/test_dashboard_extended_range.py` computes the largest r at which the packer fits (vision 8 channels + smell 5 channels together, and each alone) in layout (b). It asserts that r+1 raises `LayoutOverflowError` naming sense and range. The resulting numbers are written into the Implementation Report and `docs/environment/12_renderer.md`. **No estimate is promised here**; they are measured. §D7.7 tightens the recording procedure.
+
+#### D7.7 Refinements (Revision 5)
+
+1. **Layout never reads episode data (33).**
+   - `RenderContext` is split. `LayoutContext` holds params, icon config, canvas and font metrics; `EpisodeContext` holds snapshot 0, `thermal_clim`, sense scales and the error-map scale.
+   - `layout.py` and every `min_size` accept only `LayoutContext`, and a test inspects their signatures. `real_available` is derived from params, so it may be used in layout.
+   - Scale labels are fixed-width, sized from the widest template string in the numeric format (e.g. `888.8`), never from the actual maximum.
+   - **Test:** two episodes of one run with different sense maxima yield identical boxes and identical `layout_signature()`.
+2. **Per-episode scale maximum (45, 40).**
+   - Computed in `EpisodeRenderer` setup by a pre-pass over the whole payload (`obs` and, when present, `true_obs`) before frame 0.
+   - **Zero guard:** if a sense's episode maximum is 0, the scale is `[0, 1]` with the caption `no signal this episode`, which avoids a divide-by-zero.
+   - The single-frame wrapper uses that frame and says so.
+3. **One arena cell floor and an explicit fallback order (34).**
+   - `ARENA_CELL_MIN_PX = 32` is the only arena floor; it replaces both the 48 px in §D1.1 and the 32 px in §D7.3.
+   - The packer tries, in order, and records which step succeeded in `layout_signature()`:
+     1. `W = max(local_view_size, 2·max_range + 1)`;
+     2. layout (a) side column;
+     3. layout (b) sensor band;
+     4. shrink `W` by 2 per step toward `local_view_size` (never below), with the `footprint exceeds view (r=…)` caption;
+     5. `compact` min sizes;
+     6. raise `LayoutOverflowError`.
+   - The minimap's viewport rectangle outlines the `W × W` window actually drawn.
+4. **Recording the largest radius (35).**
+   - A candidate r_max from the packer is **rendered**: a synthetic override at r_max, per encoding, for smell + vision together and each alone. It passes the full §D5.2 audit before being recorded, and r_max + 1 raises.
+   - Recorded with it: hostname, CPU model, Matplotlib version, FreeType version, and the resolved font family and font file path.
+   - For every cell where the band layout was chosen, the test forces layout (a) and asserts `LayoutOverflowError`.
+5. **Noise at extended range (36).** Cell **E2n** covers it (matrix).
+   - The noise-error map's box is reserved iff `real_available` (params).
+   - With `true_obs is None` the box stays, captioned `true obs not recorded`, with no map ink.
+   - The audit checks both variants.
+6. **Terrain, labels and V = 1 (37).**
+   - **Channel split.** Terrain channels are the indices `j` where any row of `params.visual_background_property[:, j]` is non-zero; every other channel is an entity channel. This replaces the hard-coded GRS/SND/PLN.
+   - **Labels.** The V2 label table (`HPR` etc.) applies only when `visual_vector_size == 8`; otherwise labels are `C0…C{V−1}`.
+   - **At V = 1** (e.g. presence modes), all three encodings collapse the same way. A = one map; B = one brightness map (no channel colour); C = single-row table / single bar per cell.
+   - **CP2.7** asserts E6's rendered channel label is not `GRS`.
+7. **B under blur (41).** With blur on, entity values spread into neighbouring cells, so the "strongest channel" is almost always an entity and terrain colour is rarely visible in B. The B legend states `terrain hidden where any entity > 0`. Q13 repeats the caveat.
+8. **Cell order (42).** Heat-table columns (C), per-cell value grouping (viewer) and noise-error cells follow the environment's own offset order: the sensor module's diamond-offset function (`get_visual_offsets`; exact name confirmed at CP0.2), imported read-only. They are never re-derived.
+9. **Text classes (44).** Footprint legend chips and the `footprint exceeds view` caption are `fit_text` elements in the **non-ellipsising** class, because they carry names and ranges a reader relies on. They shrink to 8 pt, then raise.
+
 ### File Changes
 
 **Frozen (not edited by any phase; see §D5.4):** `src/environment/renderer.py`, `scripts/eval/render_recordings.py`, `src/utils/async_render.py`, `src/utils/evaluation_core.py`, `src/algorithms/dreamer_srl/eval.py`, `src/utils/eval_recording.py`, `src/environment/sensor.py`, `scripts/eval/benchmark_render.py`, `src/environment/renderer_v2.py` (not edited, deleted or shadowed). `configs/visualization/default.yaml` is also frozen and hashed by the guard.
@@ -526,6 +663,9 @@ M8/M9 do not depend on archived configs loading. If M2/M3 cannot be generated, M
 | `src/environment/dashboard/episode.py` (new) | `EpisodeRenderer` (setup / `frame` / `close` / `layout_signature`), wrapper `render_dashboard_frame`. |
 | `tests/env/test_dashboard_frames.py` (new, `integration` marker) | Audit clean on all cells' checked frames + stress variant. Mutations M-A..M-D fail as expected. Value-to-pixel, obstacle-ink (CP2.6), observed-caption (CP2.5) and vocabulary (CP2.4) checks. Glyph-code uniqueness. |
 | `tests/env/test_dashboard_thermal.py` (new) | Thermal ports (§D4.3). |
+| `src/environment/dashboard/painters.py` (Revision 4 addition) | `grid_kind(range, channels)`, the `GRID_ENCODING` constant, the three grid painter kinds `channel_maps` / `dominant_channel` / `bars_then_table` with one interface, noise-error map, footprint outlines, per-episode sense scales, sensor subtitle. |
+| `src/environment/dashboard/layout.py` (Revision 4 addition) | Side-column vs sensor-band layout selection (§D7.1); chosen layout in `layout_signature`. |
+| `tests/env/test_dashboard_extended_range.py` (new, `integration` marker) | For each encoding kind:<br>• E1–E9 render audit-clean;<br>• largest fitting r measured, and r+1 raises naming sense and range;<br>• switching `GRID_ENCODING` changes no box outside the grid panels (layout-invariance);<br>• footprint outline ink on the expected boundary;<br>• scale maximum ≥ the episode maximum (a 1.40 smell value is not clipped);<br>• subtitle text matches params for E2–E6;<br>• noise-error map present iff `real_available`;<br>• grid view `W` rule and clipping caption;<br>• Revision 5 additions:<br>&nbsp;&nbsp;– layout-input signature check and two-episode box identity;<br>&nbsp;&nbsp;– fallback-order step recorded;<br>&nbsp;&nbsp;– rendered and audited r_max with machine/font record;<br>&nbsp;&nbsp;– forced-side-column raise;<br>&nbsp;&nbsp;– E2n both variants;<br>&nbsp;&nbsp;– terrain split from `visual_background_property`;<br>&nbsp;&nbsp;– V = 1 rendering for A/B/C;<br>&nbsp;&nbsp;– E6 label not `GRS`;<br>&nbsp;&nbsp;– zero-maximum caption;<br>&nbsp;&nbsp;– B-under-blur legend text;<br>&nbsp;&nbsp;– offset order matches the env function;<br>&nbsp;&nbsp;– legend chips and clip caption raise rather than ellipsise. |
 | `tests/env/test_dashboard_compat.py` (new) | M7 renders with V1 and V2 (explicit skip reason if `results/` path absent; the Phase 3 audit run may not skip). M1 shows "no noise" captions. M6b shows "true obs not recorded". |
 
 **Phase 3: separate V2 entry point (V1 pipeline untouched; nothing in training or eval calls it)**
@@ -671,7 +811,7 @@ Each checkpoint states what would show it failed.
 - [ ] **CP0.1a: File baseline first.** `v1_path_guard.py record-files` is run as the very first Phase 0 action. `baseline.json` (plan-start commit, nine frozen files' working-tree sha256 and HEAD blobs, empty `plan_sessions`) and `frozen_files_at_baseline.diff` are committed under `renderer_layout_redesign/v1_guard/`. `add-session` is recorded for the developer session. *Fails if:* any other Phase 0 file predates the baseline commit, or the diff file is missing.
 - [ ] **CP0.1b: Frame baseline right after fixtures.** After the generator lands and writes M1/M2/M4, `record-frames` adds fixture hashes and 8 raw-frame hashes per cell for M1, M2, M4 and M7, from two separate processes; committed. `tests/env/test_v1_path_guard.py` green (all three states and FIXTURE CHANGED exercised). *Fails if:* the processes disagree (then switch to a pixel-diff tolerance and record it), any renderer code predates this commit, or the guard test passes a case it should flag.
 - [ ] **CP-G: V1 pipeline untouched (after every phase, 0 through 4).** `v1_path_guard.py check` exits 0. The report pastes the diff stat, the trailer-annotated `git log`, and each frozen file's state. ATTRIBUTED re-records cite the foreign commits. *Fails if:* any file or frame is UNATTRIBUTABLE (only the user clears it, via `accept` for that exact content), a phase commit touches a frozen file, or a `renderer_v2` package/module is created.
-- [ ] **CP0.2: Matrix recordings.** M1–M6b are written, including M4b (M4b's breakdown must lack `Body Temperature`, and its temperature row renders "not observed"); M7–M9 load; V1 renders step 0 of each. Per cell, print the snapshot keys, `true_obs is None`, the breakdown names, and the breakdown ↔ noise-order mapping. Also print each cell's `config_sha256` and whether `Body Temperature` is in its breakdown, plus that viz entry's keys. *Fails if:* M4 lacks `thermal_field`; M4's breakdown contains Nutrition/Injury (the D10 premise is then wrong, so re-check); M4's `Body Temperature` entry lacks a `value` key, or the registry has no owner for a breakdown name; M3/M9 have `true_obs == obs` everywhere; M5's Olfactory is not `visual_grid`; M6b has `true_obs` present; an archive config won't load (substitute M8/M9 and note); or a mapping is unresolved.
+- [ ] **CP0.2: Matrix recordings.** M1–M6b are written, including M4b (M4b's breakdown must lack `Body Temperature`, and its temperature row renders "not observed"); M7–M9 load; V1 renders step 0 of each. Per cell, print the snapshot keys, `true_obs is None`, the breakdown names, and the breakdown ↔ noise-order mapping. Also print each cell's `synthetic` flag and `overrides`, its `config_sha256`, the diamond-offset function name (§D7.7 item 8), and whether `Body Temperature` is in its breakdown, plus that viz entry's keys. *Fails if:* M4 lacks `thermal_field`; M4's breakdown contains Nutrition/Injury (the D10 premise is then wrong, so re-check); M4's `Body Temperature` entry lacks a `value` key, or the registry has no owner for a breakdown name; M3/M9 have `true_obs == obs` everywhere; M5's Olfactory is not `visual_grid`; M6b has `true_obs` present; an archive config won't load (substitute M8/M9 and note); or a mapping is unresolved.
 - [ ] **CP0.3: Audit positive controls.** V1 M4 reports D1, D2, D3 and D10. Dormant V2 M4 reports D6, and Interoceptive Nociception absent (plus Location/Proprioception if in the breakdown). *Fails if:* any control is missed. **Stop; the audit is broken.**
 - [ ] **CP0.4: Spike and decision gate.** A minimal A-style `EpisodeRenderer` (arena + vitals + one pod, figure built once) versus V1, on M4, ≥ 200 frames, pool worker, same lab node (node + CPU recorded). *Fails the gate if:* A median > 0.5 × V1 median. Report to the user with option B before Phase 1.
 - [ ] **CP1: Registry and packer.** `test_dashboard_layout.py` is green. *Fails if:* boxes intersect; a disabled modality's height isn't freed; an unregistered name doesn't raise; M4 yields observed Nutrition/Injury rows; `real_available` differs between episodes of one run.
@@ -681,6 +821,12 @@ Each checkpoint states what would show it failed.
 - [ ] **CP2.4: Vocabulary.** `grep -rniw 'pain' src/environment/dashboard/` shows zero hits (comments included; keep them clean too), and the audit's vocabulary rule is clean on all frames. *Fails if:* any hit.
 - [ ] **CP2.5: Observed-caption.** On M4, no rendered text starting `OBS`/`REAL` belongs to a panel whose name is absent from the breakdown. With Q10 = show, the Nutrition/Injury rows read "not observed". *Fails if:* either condition is violated.
 - [ ] **CP2.6: Entities drawn.** On M4, a step with the campfire in view shows non-empty foreground ink in its cell, and glyph codes are unique across `obstacle_names`. *Fails if:* the cell is empty or grey-square-only (no glyph ink), or codes collide.
+- [ ] **CP2.7: Extended-range senses.** Blocked until Q5 (Proprioception) is answered, because every E cell and M5 observes it. `test_dashboard_extended_range.py` green for all three encoding kinds, including:
+  - E2n with and without true observations;
+  - identical boxes across two episodes with different maxima;
+  - forced side column raising wherever the band was chosen;
+  - E6's channel label not `GRS`;
+  - r_max recorded only after a rendered, audited override, with machine and fonts named. Largest fitting radius per kind recorded in the report and in `12_renderer.md`. E2–E6 take the sensor-band layout if and only if the side column fails its min size. *Fails if:* any in-use cell (E1–E6) raises; any synthetic cell renders past the recorded largest radius instead of raising; changing `GRID_ENCODING` moves a non-grid box; a value above 1 is clipped by the scale; or a concatenated video switches layout.
 - [ ] **CP3: Separate V2 entry point.** `render_recordings_v2.py --concat` writes playable MP4s (frame count = steps) for all cells including M7–M9, only under `videos_v2/`. The concat signature assertion holds on real runs and trips on the doctored dir. `test_render_recordings_v2.py` is green (V1 MP4 bytes unchanged after a V2 render of the same dir). CP-G passes. *Fails if:* any file appears or changes under `videos/`, the assertion trips on a real single-run dir, or CP-G fails.
 - [ ] **CP4: Speed.** Same node as CP0.4: V2 median ≤ V1 median on every cell and ≤ 0.5 × on M4; RSS growth < 50 MB over 10 episodes; FDs reported. *Fails if:* any gate is missed.
 - [ ] **CP5: Viewer.** `test_episode_viewer.py` is green; `check_artifact_layout.py` is clean at 500/834/1440; screenshots and the contact sheet are **looked at**, with findings in the report. *Fails if:* arrays differ, the checker flags a defect, or nobody looked.
@@ -696,7 +842,7 @@ Each checkpoint states what would show it failed.
 2. **Name.** The new package can't reuse `renderer_v2`: another session is editing the dormant `renderer_v2.py`, and a same-named package would silently shadow it on import. Proposed `src/environment/dashboard/`; alternatives `src/environment/episode_dashboard/` or `src/environment/telemetry_view/`. The entry script and output folder keep the `_v2` names from your constraint (`render_recordings_v2.py`, `videos_v2/`). No new version number is introduced.
 3. **Canvas size.** 1440 × 896 px. Today's videos are 1408 × 1008 after imageio's resize. This changes WandB video dimensions from switch-over onward.
 4. **Action badge.** In the arena card's title strip at top-right (proposed; covers nothing), or overlaid on the grid's top-right cell (covers that cell's icon)?
-5. **Proprioception.** Never drawn today. Add a panel (kind to be designed), or mark it "recorded, not displayed" so the completeness rule allows it explicitly?
+5. **Proprioception.** **Now blocking:** every extended-range test world (E cells) and the directional-smell world (M5) observe it, so the new renderer's completeness rule stops those cells until this is answered. Never drawn today. Add a panel (kind to be designed), or mark it "recorded, not displayed" so the completeness rule allows it explicitly?
 6. **Minimap placement.** Left column under VITALS (proposed), or under the arena?
 7. **Viewer delivery.** Local server only, or also a static single-episode HTML export (~30 MB per 500 steps, est.) for sharing?
 8. **Retirement gate (for later, not now).** Per your 2026-09-14 constraint, nothing in training or eval moves to V2 during development. When you do decide to switch, do you want that as its own plan with review? It would be the first edit to the frozen V1 files. And do you approve, at that point, deleting the stale `grid_world.py` render copy and the dormant `renderer_v2.py` (the latter after the thermal session is told and its edits have landed)?
@@ -704,6 +850,12 @@ Each checkpoint states what would show it failed.
 10. **Unobserved body state.** When the agent cannot observe a body variable (e.g. Nutrition and Injury in the campfire world), should the dashboard still show its true value as a row captioned "not observed", or omit the row entirely?
 11. **Hiding-predator label.** Is `HPR` the right 3-letter abbreviation for the new renderer's Visual legend (e.g. `HID` / `HPD` instead)? V1 videos keep the legacy `DNG` until the retirement gate, because the sensor adapter is frozen.
 12. **Campfire icon.** Adding a `campfire` icon mapping would change today's production (V1) videos too, because evaluation reads the shared icon mapping, and your freeze forbids that. Proposed: the new renderer uses the generated glyph (`CF`) only, and the real asset is deferred to the retirement gate. Alternative: add the asset now as an explicit exception to the freeze, knowing V1 videos will start showing the icon.
+13. **Encoding for smell and vision at radius 2 and above** (decide after seeing the examples on the artifact page).
+    - **(A) Per-channel maps:** a small diamond map per channel. Smell gets 5; vision gets 1 terrain map + 5 entity maps. Each sense has a colour scale fixed for the episode.
+    - **(B) Dominant channel:** one diamond, where cell colour = strongest channel and brightness = its value. With blur on, entity values spread into neighbouring cells, so terrain colour is rarely visible.
+    - **(C) Bars, then table:** per-cell bars up to radius 1; above that a cells × channels heat table.
+    
+    Whichever you pick is one constant in the new renderer and does not change the layout.
 
 ---
 
@@ -819,5 +971,38 @@ Severity legend: 🔴 Critical = fix before going further · 🟡 Moderate = lik
 **Assumptions (this pass)**: archive configs M2/M3 load at current code — ❓ (plan has the M8/M9 substitution); Agg output byte-stable across processes — ❓ (plan has the tolerance fallback); no `location_sensor_enabled: true` config exists — verified, so M6's in-memory override applies; the user is available to `accept`/clear at phase boundaries — ❓ (the first Moderate makes this the gating dependency).
 
 **Cost of being wrong**: no data-loss hazard and no training run at stake. The first Moderate costs a stalled phase boundary; the second lets the one config change the freeze most specifically forbids pass the guard unseen, changing production videos until someone notices by eye (reversible by a one-line revert). The third ships an untested painter path into the retirement-gate decision.
+
+Reviewed by: plan-reviewer
+
+## Feedback from plan-reviewer (fourth pass: Revision 4, extended-range senses)
+
+**Date**: 2026-09-14 (fourth pass, on Revision 4 only) · **Verdict**: SOUND WITH CONCERNS — no Critical finding. The three user decisions are carried faithfully: the band is chosen once per config from params and recorded in `layout_signature` (§D7.1), the canvas is unchanged, fit-or-fail still ends in `LayoutOverflowError`, the encoding is one module constant behind one painter interface (§D7.2), and the V1 freeze is untouched (Revision 4's File Changes rows are all new files plus `12_renderer.md`; the ten hashed files are not edited). Seven Moderate findings remain, all cheap to fix in the doc; two of them (#35, #36) decide whether the "largest range that fits" and the extended-range noise map are *measured* or merely *asserted*. Full table in [`docs/reviews/plan_renderer_layout_redesign.md`](../../../reviews/plan_renderer_layout_redesign.md) §Fourth pass.
+
+Severity legend: 🔴 Critical = fix before going further · 🟡 Moderate = likely costs a re-run · 🟢 Low = cosmetic · ❓ Open = an assumption nobody has verified yet.
+
+**Verified today (trainer's own loader, `JAX_PLATFORMS=cpu`):** E1–E6 (seven files) and M5 all load at current code. Ranges as the plan states (smell r1; vision r2 for E2–E6; E1 vision r0 with 8 dims — not off). **All eight have `perceptual_noise.enabled: false`** and **all eight carry `Proprioception: 6`** in their breakdown. Q1/Q2 (E6) have `visual_vector_size: 1` and all-zero `visual_background_properties`; `build_sensory_viz` labels that channel `'0'`. `noise_modality_order` uses the breakdown names `Olfaction` / `Visual`, so the D4.2 mapping resolves trivially. `sensor.py:715` still emits `DNG`. `get_visual_offsets` hand-codes the r=1 order and uses loop order at r≥2 (its sort code is dead). Known Bugs, the directional-sensors report and the wiki carry nothing on rendering grid senses at r≥2 — no prior art, no collision.
+
+**Should be resolved before Phase 2 (Moderate)**
+
+- 🟡 **#33 Layout choice must not be able to read episode data.** `RenderContext` holds snapshot 0 and `thermal_clim`, and Revision 4 adds a per-episode scale maximum that is printed on the panel. If any `min_size`, or the (a)/(b) decision, depends on such data — even through the width of the printed scale text — `layout_signature` differs between episodes of one run and the `--concat` assertion trips on a real run. Loud, not silent, but a rerun. Fix: state in §D7.1 that layout selection and every `min_size` read only params and `FontMetrics`; give the scale label a fixed-width format; add to `test_dashboard_layout.py`: two episodes of one run with different maxima and different snapshot 0 yield the identical layout choice and boxes. — owner `senior-developer`
+- 🟡 **#34 The grid-view widening rule contradicts the arena's registered floor, and its order against fit-or-fail is unspecified.** §D7.3 caps `W` "below 32 px"; §D1.1 registers the arena at "≥ 48 px/view cell". Which floor wins decides whether an r4 world (W=9, 432 px at 48) fits above the band. And "cap W + caption the clipped footprint" is a third outcome the packer sequence in §D1.2 step 4 ((a) → (b) → compact → raise) does not place. Fix: one floor; explicit order: `W` from ranges → pack (a) → pack (b) → reduce `W` toward `local_view_size` (never below) with the clip caption → compact → raise. The minimap's view rectangle should show `W`, not `local_view_size`. — owner `senior-developer`
+- 🟡 **#35 "Largest range that fits" is measured by the packer, not by pixels.** §D7.6 computes `r_max` per kind from `min_size` arithmetic and asserts `r_max+1` raises; nothing is rendered or audited at `r_max`. That is the packer's constants restated, not a measurement — the exact circularity the audit exists to break. Fix: for each kind, generate a synthetic override at `r_max` (both senses; each alone), render, run the pixel audit; `r_max` goes into the report and `12_renderer.md` only if audit-clean, with the machine/font named (the number depends on `FontMetrics`). Same fix for CP2.7's "E2–E6 take the band iff the side column fails": as written it can only agree with the packer; assert instead that when (b) was chosen, forcing (a) through a test hook raises. — owner `senior-developer`
+- 🟡 **#36 No fixture exercises the noise-error map.** Every E cell and M5 has noise off, so `real_available` is false for every grid sense at r≥1 in the matrix; the noise-on cells (M3/M9) have vision at r0. The test "noise-error map present iff `real_available`" can only ever see the absent branch — the same hole as #28. Fix: **E2n**, an in-memory override of E2 with `perceptual_noise_enabled: true` (its `noise_modes` already put Visual and Olfaction in mode 2), with `true_obs`; plus the same cell under `--no-true-obs`. §D7.5 should also say explicitly that the error-map **box** is reserved from params and captioned "true obs not recorded" when `true_obs is None`, the D4.2 rule applied to this slot. — owner `senior-developer`
+- 🟡 **#37 E6's single-channel vision breaks §D7.2's channel semantics.** The plan identifies terrain channels by index (GRS/SND/PLN = 0–2) and overrides labels from a table "keyed by channel index". At `visual_vector_size: 1` (Q1/Q2, verified) there is no terrain channel, one entity channel, and the index-keyed table would label it `GRS` — a false caption in a video, the D10 class. Fix: terrain channels := columns where `params.visual_background_property` is non-zero in any row (0–2 at the V=8 default; none at V=1); the label table applies only when V==8, else the adapter's numeric labels stand; A shows one map, B a single-channel brightness map with no legend, C one row; CP2.7 asserts E6's label is `0`. — owner `senior-developer`
+- 🟡 **#38 The subtitle omits the variable the ladder sweeps.** §D7.5 prints `σ-floor` and `ρ` but not `visual_blur_radial_scale`, which is what V1_blur40 (4.0) … V4_blur05 (0.5) vary (verified); those four arms would render identical subtitles. Fix: `blur aniso scale s, floor f, ρ a`. — owner `senior-developer`
+- 🟡 **#39 Synthetic override cells record the base config's hash as their ground truth.** E7/E8/E9 (and M4b/M6 from earlier revisions) are in-memory overrides, but `run_meta` extras carry the base file's `config_sha256`, so the recording says E7 *is* E2's config. The report label does not travel with the fixture. Fix: extras carry `synthetic: true` and `overrides: {key: value}`; CP0.2 prints them. No guard interaction: the frame baseline hashes M1/M2/M4/M7 only, and no config file is written. — owner `senior-developer`
+
+**Low**
+
+- 🟢 #40 A scale maximum of 0 (an episode that never senses anything) divides by zero; floor only that case (e.g. 1.0), never a fixed floor, since blurred readings are ≪ 1.
+- 🟢 #41 Encoding B shows terrain only when "no entity channel is non-zero"; under blur every cell carries Gaussian tails, so terrain would never show. Use a threshold relative to the scale.
+- 🟢 #42 Cell order: painters and `/api/values` offsets must call `get_visual_offsets(r)` rather than re-derive ring order; add a test that the painter's cell→offset table equals it for r = 0…4.
+- 🟢 #43 E9 says "vision off" but E1 has `visual_sensor_enabled: true` at range 0; the override must also disable vision, or the row should say "vision r0".
+- 🟢 #44 Footprint legend chips and the "footprint exceeds view" caption are new text in the arena title strip beside the title and action badge; classify them under `fit_text`'s numeric-raise / free-text rule.
+- 🟢 #45 §D7.4 says the scale is fixed at setup but not how. `EpisodeRenderer` receives the whole `episode_payload`, so a setup pre-pass over the obs/true-obs slices (by breakdown offsets, not N calls of `build_sensory_viz`) gives the maximum before the figure is built; random access in the viewer is unaffected (one renderer per episode). Say so, and count it in the setup ms that CP4 reports. Across a concatenated video the scale changes per episode, disclosed by the printed scale — the `thermal_clim` precedent.
+
+**Assumptions (this pass)**: ❓ **Q5 (Proprioception) is now load-bearing** — every E cell and M5 carries `Proprioception: 6`, so the completeness rule raises on all of them until Q5 is answered; CP2.7 cannot run before it. ❓ `r_max` is machine-dependent through fonts (state the machine, #35). Verified: configs load; noise off in all E cells; V=1 background all-zero; frozen set untouched by Revision 4; no prior art.
+
+**Cost of being wrong**: no data loss and no training run at stake. #35/#34 would put a packer number into `12_renderer.md` as "the largest range that fits" and let the first r3+ olfaction grid someone actually trains raise or clip on render — a day of re-rendering. #36/#37 ship the extended-range noise map and the presence cells untested into the Q13 decision, and could put a `GRS` label on a channel that is not terrain in every E6 video — a wrong caption, the D10 class, reversible by re-render.
 
 Reviewed by: plan-reviewer
