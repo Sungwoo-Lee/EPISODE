@@ -1,0 +1,517 @@
+<title>Loop and Graph Engineering</title>
+{{HOUSE_STYLE}}
+<style>
+/* ---- page-specific additions to the House Style Sheet ----
+   DEPARTURE, stated on the page (guide 0a; register F11 amendment): the figures spend blue on
+   "an agent", orange on "a check" and green on "state on disk", so page chrome must not reuse those
+   hues. Section numbers, glossary terms, links and box borders take the ink colours instead. */
+:root { --accent: var(--ink-2); --accent-text: var(--ink); }
+.callout ul, .findings ul { margin:0; padding-left:1.2em; }
+.callout li + li, .findings li + li { margin-top:6px; }
+blockquote { margin:0; padding:4px 0 4px 18px; border-left:3px solid var(--rule);
+  color:var(--ink-2); font-size:17px; }
+/* citations and reference list - guide 12b, rendered number, never the list marker */
+a.cite{font-family:var(--f-mono);font-size:.72em;line-height:0;vertical-align:super;
+  text-decoration:none;color:var(--ink);background:var(--surface);
+  padding:.18em .34em;border-radius:3px;white-space:nowrap;margin-left:.15em}
+a.cite::before{content:"["} a.cite::after{content:"]"}
+ol.refs{list-style:none;padding-left:0;margin:0;display:flex;flex-direction:column;gap:14px}
+ol.refs li{display:grid;grid-template-columns:2.9em 1fr;gap:0 8px;align-items:start;min-width:0;
+  scroll-margin-top:24px}
+ol.refs .rnum{font-family:var(--f-mono);font-size:12px;color:var(--ink);background:var(--surface);
+  border-radius:3px;text-align:center;font-variant-numeric:tabular-nums;line-height:1.9}
+ol.refs .rnum::before{content:"["} ol.refs .rnum::after{content:"]"}
+ol.refs .rbody{display:flex;flex-direction:column;gap:2px;min-width:0;font-size:15px}
+ol.refs .rmeta{color:var(--ink-2);font-size:14px}
+ol.refs .rmeta a{overflow-wrap:anywhere}
+ol.refs .rprov{color:var(--ink-3);font-size:13.5px}
+ol.refs li:target{background:var(--sunk);border-radius:4px;box-shadow:0 0 0 6px var(--sunk)}
+ol.refs li:target .rnum{background:var(--ink);color:var(--ground)}
+</style>
+
+<div class="wrap">
+
+<header class="col">
+  <p class="eyebrow">grid_world_pain &middot; tutorial &middot; how AI agents are built</p>
+  <h1>Loops and Graphs</h1>
+  <p class="lede">Two new names for one old instinct: stop typing every step yourself, and build the
+  structure that does it for you.</p>
+</header>
+
+<section class="col">
+  <h2><span class="num">PURPOSE</span></h2>
+  <p>The people who build software on large language models keep naming new kinds of
+  &ldquo;engineering&rdquo;. Two of the newest are <strong>loop engineering</strong> and
+  <strong>graph engineering</strong>. Loop engineering means designing the repeat-until-done cycle
+  that drives <em>one</em> AI agent, instead of prompting it by hand one step at a time. Graph
+  engineering means designing how <em>several</em> such agents, their tasks and their shared record of
+  progress fit together. This page explains both with diagrams. It is written for a reader who has
+  used a chat assistant but has not followed the new vocabulary.</p>
+  <p>The page lives in this repository for a practical reason. The project already runs a team of
+  Claude agents that plan, review, build and verify, plus skills that repeat a task until a condition
+  is met (&sect;5). Having names for these patterns makes it easier to see where our own setup is
+  strong and where it is fragile.</p>
+  <p>The claim is modest. Both terms name ways of working, not new algorithms, and neither changes
+  the model underneath. Both are only a few months old, and sources do not yet agree on exact
+  definitions. &sect;6 says where they disagree.</p>
+</section>
+
+<section class="col">
+  <div class="howto">
+    <p class="eyebrow">How to read this page</p>
+    <p>Every figure is a diagram, not a chart of data. Each still carries an <strong>Axes</strong> and a
+    <strong>Data</strong> line, because every figure on this project's pages must; here those lines say
+    plainly that position encodes no quantity. Click a figure to open it full size. A bracketed number
+    such as&#8288;<a class="cite" href="#ref-feng" style="pointer-events:none">1</a> jumps to its source in
+    the reference list; your browser's back gesture returns you. In the figures, <strong>blue</strong>
+    is an agent doing work, <strong>orange</strong> is a check that can send work back, and
+    <strong>green</strong> is state kept on disk.</p>
+  </div>
+</section>
+
+<hr>
+
+<section class="col">
+  <h2><span class="num">01</span> Five layers, one inside the next</h2>
+  <p>The clearest map of the vocabulary comes from a survey posted in August 2026 by Feng and 34
+  co-authors {{CITE:feng}}. It lists five kinds of engineering in the order the field turned to
+  them. Each one works on a wider unit than the one before.</p>
+  <dl>
+    <dt>prompt</dt><dd>Wording one request well: instructions, examples, constraints.</dd>
+    <dt>context</dt><dd>Choosing what information the model can see when it answers: retrieved
+    documents, earlier results, compressed history.</dd>
+    <dt>harness</dt><dd>Connecting the model to things outside it: tools it can call, memory it can
+    write, skills it can load.</dd>
+    <dt>loop</dt><dd>Running the model and its harness repeatedly, with feedback, until the goal is
+    backed by evidence.</dd>
+    <dt>graph</dt><dd>Organising many loops, meaning many agents, and the tasks and state between
+    them as an explicit structure.</dd>
+  </dl>
+</section>
+
+<figure>
+  <img data-fig="lg01_paradigm_nesting" alt="Five nested rounded boxes. Innermost is prompt engineering, then context engineering, harness engineering and loop engineering, which has a curved arrow labelled repeat. The outermost box is graph engineering, which also holds two collapsed boxes, Agent B and Agent C, joined to the loop by arrows.">
+  <p class="zoomhint">Click the figure to view it full size</p>
+  <figcaption>
+    <span><b>Figure 1 &mdash; Each layer is part of the next.</b> A prompt sits inside the context
+    the model sees. That context sits inside a harness of tools and memory, which a loop runs
+    repeatedly. A graph holds several such loops, each belonging to one agent, and wires them
+    together. Read it as containment, not as a timeline.</span>
+    <span><b>Axes.</b> None: this is a diagram, not a chart. Neither horizontal nor vertical position
+    encodes a quantity, and box size is set only so the labels fit. A box inside a box means
+    &ldquo;is part of&rdquo;.</span>
+    <span><b>Data.</b> {{DATA:lg01_paradigm_nesting}}</span>
+  </figcaption>
+  <p class="prov">Reproduce: <code>python scripts/analysis/tutorials/loop_graph_engineering/lg01_paradigm_nesting.py</code></p>
+  <div class="howto">
+    <p class="eyebrow">How it is drawn</p>
+    <p>The script places five rounded rectangles, each inside the last, on a canvas measured in
+    inches, so every coordinate in the file is a physical position rather than a value. Nothing is
+    computed from data. The order of the layers, with prompt innermost and graph outermost, follows the
+    list of paradigms in the survey by Feng and colleagues {{CITE:feng}}. Drawing them nested rather
+    than as a timeline is this page's choice. It rests on one detail of that survey: it writes a
+    single agent as a loop wrapped around its model and its harness, where the harness is the set of
+    tools, memory and skills the model is connected to. A loop therefore contains everything inside
+    it, and a graph contains several loops. That is why two collapsed agents sit beside the expanded
+    one. Two things the figure does not show. It does not show how large or important any layer is,
+    because box sizes only make room for labels. It also does not show that older layers stop
+    mattering once a newer one is named: the survey presents them as successive emphases, and a
+    graph of agents still depends on good prompts. Every box is grey on purpose. This is the one
+    figure on the page that makes no distinction between roles, so it spends no colour.</p>
+  </div>
+</figure>
+
+<hr>
+
+<section class="col">
+  <h2><span class="num">02</span> Loop engineering</h2>
+  <p>The shortest definition is Addy Osmani's, from June 2026 {{CITE:osmani}}:</p>
+  <blockquote>&ldquo;Loop engineering is replacing yourself as the person who prompts the agent. You
+  design the system that does it instead.&rdquo;</blockquote>
+  <p>In ordinary use of a chat assistant, <em>you</em> are the loop. You ask, read the answer, decide
+  what to ask next, and decide when you are finished. Loop engineering moves those decisions into a
+  written specification and a program that repeats. The agent works, a check judges the work, and the
+  loop goes round again until the check passes or a budget runs out.</p>
+</section>
+
+<figure>
+  <img data-fig="lg02_prompting_vs_loop" alt="Two panels. Left, titled 'Prompt engineering: you are the loop': a You box and an Agent box joined by two curved arrows, 'type the next request' and 'read the reply'. Right, titled 'Loop engineering: you design the loop': You writes a Loop spec once, listing trigger, goal, check, stop rule and memory; the spec feeds a blue Agent box, which hands to an orange Check box; an orange arrow labelled 'not yet: go again' returns to the Agent; a green Memory box is linked to the Agent in both directions; a 'passes' arrow leads from Check to a Done box, 'you review it'.">
+  <p class="zoomhint">Click the figure to view it full size</p>
+  <figcaption>
+    <span><b>Figure 2 &mdash; Who closes the loop.</b> On the left, a person decides every next step. On
+    the right, a person writes the loop's specification once and returns at the end. In between, the
+    agent (blue) and a check (orange) alternate, and memory on disk (green) carries progress between
+    passes. What changes is where human judgment goes: out of each prompt and into the design of the
+    check.</span>
+    <span><b>Axes.</b> None: this is a diagram, not a chart. Horizontal and vertical position encode no
+    quantity; left and right are two separate panels, and arrows show the order things happen in.</span>
+    <span><b>Data.</b> {{DATA:lg02_prompting_vs_loop}}</span>
+  </figcaption>
+  <p class="prov">Reproduce: <code>python scripts/analysis/tutorials/loop_graph_engineering/lg02_prompting_vs_loop.py</code></p>
+  <div class="howto">
+    <p class="eyebrow">How it is drawn</p>
+    <p>The script draws two panels on one canvas, each made of hand-placed boxes and arrows. No
+    quantity is plotted. The left panel is the everyday way of using a chat assistant. A person
+    writes a request, reads the reply and decides the next request, so the person is the part that
+    repeats. The right panel is the arrangement Osmani describes as replacing yourself as the person
+    who prompts the agent {{CITE:osmani}}. The person writes a loop specification once. The five
+    words inside it are the five parts Macedo identifies in real loops {{CITE:macedo}}, and Figure 3
+    unpacks them. From then on, a program alternates between an agent pass (blue) and a check
+    (orange), typically a test suite. The orange arrow is the check sending the agent round again.
+    Memory (green) is files on disk, because each pass may start with an empty context and must
+    re-read what earlier passes did. The picture leaves out two things. First, the person does not
+    vanish. They design the check and review the result, and a weak check lets the loop finish wrong
+    work with confidence. Second, the right panel is a single agent. Several agents wired together
+    is graph engineering, covered in &sect;3.</p>
+  </div>
+</figure>
+
+<section class="col">
+  <h3>What goes into a loop</h3>
+  <p>Macedo's preprint studies fifty loops people have actually built. It argues that each one comes
+  down to a <strong>loop specification</strong> with five parts {{CITE:macedo}}. IBM's explainer
+  describes the same running cycle as goal, action, observation and adjustment {{CITE:ibm}}. That is
+  the thought-action-observation pattern introduced by the ReAct paper in 2022 {{CITE:react}}, called
+  reason-act-observe below.</p>
+</section>
+
+<figure>
+  <img data-fig="lg03_loop_anatomy" alt="A grey Trigger box starts a blue 'Agent pass' box (reason, act, observe), whose result goes to an orange Verify box (tests, a build, a reviewer agent), then to an orange 'Stop rule' box (goal met, or budget spent). 'Yes' leads to an Exit box; 'no: next pass' is an orange right-angled arrow back to the Agent pass. A grey Goal box above has dashed arrows to the Agent pass ('read') and to Verify ('checked against'). A green Memory box has a dashed two-way arrow to the Agent pass, 'read and updated'.">
+  <p class="zoomhint">Click the figure to view it full size</p>
+  <figcaption>
+    <span><b>Figure 3 &mdash; The five parts of a loop specification, in motion.</b> A trigger starts a
+    pass. The agent works toward a fixed goal. A verifier judges the result against the same goal. A
+    stop rule either ends the loop or sends it round again. Memory on disk links one pass to the
+    next. The detail to notice is that the goal feeds <em>both</em> the agent and the verifier, so the
+    agent cannot quietly redefine success.</span>
+    <span><b>Axes.</b> None: this is a diagram, not a chart. Position encodes no quantity. Solid arrows
+    are hand-offs, dashed arrows are reads, and orange arrows send work back.</span>
+    <span><b>Data.</b> {{DATA:lg03_loop_anatomy}}</span>
+  </figcaption>
+  <p class="prov">Reproduce: <code>python scripts/analysis/tutorials/loop_graph_engineering/lg03_loop_anatomy.py</code></p>
+  <div class="howto">
+    <p class="eyebrow">How it is drawn</p>
+    <p>The script lays out seven boxes and the arrows between them; nothing is measured. The five
+    named parts are Macedo's breakdown of a loop specification {{CITE:macedo}}. A trigger starts the
+    loop: a timer, an event such as a new commit, or a person. A goal stays fixed for every pass. Then
+    come a verification step, a stopping rule and memory. The centre box compresses the
+    reason-act-observe cycle of the ReAct pattern {{CITE:react}}, which IBM's explainer calls goal,
+    action, observation and adjustment {{CITE:ibm}}. Inside one agent pass, the model decides what to
+    do, calls a tool such as running a command, and reads what came back. Dashed arrows are reads,
+    not hand-offs. The agent reads the goal, and the verifier judges the result against that same
+    goal. The stop rule has two ways out in practice. Either the goal is met, or a budget runs out,
+    such as a maximum number of passes or a spending cap. A well-designed loop reports which of the
+    two happened, because &ldquo;stopped&rdquo; and &ldquo;succeeded&rdquo; are different outcomes.
+    The figure does not show timing, cost, or how often each branch is taken. Those depend entirely
+    on the task and on how strict the verifier is.</p>
+  </div>
+</figure>
+
+<section class="col">
+  <h3>The smallest real loop</h3>
+  <p>The best-known example predates the name. In July 2025 Geoffrey Huntley described running a
+  coding agent inside a shell loop that never ends. He called it the <strong>Ralph Wiggum</strong>
+  technique {{CITE:huntley}}:</p>
+<p class="cue" hidden>&larr; the code is wider than the box &mdash; scroll it sideways</p>
+<pre>while :; do cat PROMPT.md | claude-code ; done</pre>
+  <p>Every pass starts a fresh agent with an empty context. The same prompt file is the goal. A
+  prioritised to-do file and a folder of specifications on disk are the memory, and each pass does
+  exactly one task. Huntley's check is the project's own tests and build. He calls it
+  &ldquo;backpressure&rdquo;: a pass that breaks the build is pushed back by the next pass, which
+  sees the failure {{CITE:huntley}}. Measured against Figure 3, the trigger is &ldquo;the last pass
+  ended&rdquo;, and the stop rule is a person pressing Ctrl-C. Macedo's fifty-loop survey found the
+  same weak spots in general. Most loops verify their own work (70%) and define an explicit end
+  state (74%), but automatic triggers and memory that persists across runs are still
+  underdeveloped {{CITE:macedo}}.</p>
+  <div class="callout">
+    <p class="eyebrow">Not the reinforcement-learning loop</p>
+    <p>This project trains reinforcement-learning agents, and their agent&ndash;environment loop
+    (act, observe, receive a reward, act again) resembles Figure 3, though the reward is a per-step
+    number, not a verifier's pass-or-fail verdict against a goal. The bigger difference is what
+    changes. In reinforcement-learning <em>training</em>, the experience the loop generates is used to
+    update the agent's weights, so the agent itself learns. In
+    loop engineering, the model's weights never change. What improves from pass to pass is the work
+    product (code, a document) and the files in memory. A loop-engineered agent is not learning in
+    the reinforcement-learning sense, and &ldquo;the loop got better&rdquo; means the artifact did.</p>
+  </div>
+  <div class="callout danger">
+    <p class="eyebrow">How loops go wrong</p>
+    <ul>
+      <li><strong>Unattended mistakes.</strong> A loop running overnight makes its mistakes overnight.
+      Huntley reports placeholder code written only to satisfy a compiler, and mornings that start
+      with a broken build {{CITE:huntley}}.</li>
+      <li><strong>Comprehension debt.</strong> Code ships faster than anyone reads it, so the team
+      understands less and less of what it owns {{CITE:osmani}} {{CITE:ibm}}.</li>
+      <li><strong>Cognitive surrender.</strong> Using the loop to avoid thinking rather than to think
+      better. Osmani's advice is to build the loop &ldquo;like someone who intends to stay the
+      engineer, not just the person who presses go&rdquo; {{CITE:osmani}}.</li>
+    </ul>
+  </div>
+</section>
+
+<hr>
+
+<section class="col">
+  <h2><span class="num">03</span> Graph engineering</h2>
+  <p>A single loop, however well built, runs out of room. The survey by Feng and colleagues names
+  what it cannot supply on its own: &ldquo;heterogeneous expertise, interdependent subtasks, parallel
+  execution, independent verification, and persistent state&rdquo; {{CITE:feng}}. A single agent
+  cannot review its own work independently, and it cannot be in two places at once.</p>
+  <p>Graph engineering responds by writing the relationships down. In the survey's words, it
+  &ldquo;uses graph structures as the core substrate for externalizing relationships among tasks,
+  components, and runtime states&rdquo; {{CITE:feng}}. A <em>graph</em> here is the ordinary
+  mathematical object: nodes joined by arrows. The survey keeps three of them, one for each kind of
+  relationship.</p>
+</section>
+
+<figure>
+  <img data-fig="lg04_graph_three_views" alt="Three panels. Tasks: Split goal feeds Find papers and Run baseline, which both feed Compare, which feeds Write report. Agents: a blue Orchestrator hands work to blue Researcher and Coder boxes; Researcher hands to Coder; Coder hands to an orange Reviewer, and an orange arrow labelled 'sends back' returns from Reviewer to Coder. Runtime state: Planned, Running, Verified and Done in a column; Running can move to a dashed Failed box, which returns to Running with a curved arrow labelled 'retry from a saved step'.">
+  <p class="zoomhint">Click the figure to view it full size</p>
+  <figcaption>
+    <span><b>Figure 4 &mdash; One system, three graphs.</b> The task graph says what depends on what,
+    so independent work (Find papers, Run baseline) can run in parallel. The agent graph says who
+    hands work to whom, including a reviewer that can send it back. The runtime state graph says
+    where the job is and how it recovers from a failure without starting over. The node names are
+    made-up examples.</span>
+    <span><b>Axes.</b> None: these are diagrams, not charts. Position encodes no quantity; within each
+    panel, top to bottom is roughly the order work happens in. The three panels are separate
+    graphs.</span>
+    <span><b>Data.</b> {{DATA:lg04_graph_three_views}}</span>
+  </figcaption>
+  <p class="prov">Reproduce: <code>python scripts/analysis/tutorials/loop_graph_engineering/lg04_graph_three_views.py</code></p>
+  <div class="howto">
+    <p class="eyebrow">How it is drawn</p>
+    <p>The script draws three small graphs side by side. Every node name is an invented example,
+    chosen to look like a familiar research job; none is taken from a system in the survey. The
+    three views follow how Feng and colleagues divide graph engineering {{CITE:feng}}. The first is a
+    task graph. A node is a piece of work, and an arrow means its output is an input to the next.
+    Find papers and Run baseline share no arrow, so they can run at the same time. The second is an
+    agent graph. A node is a role, and an arrow means &ldquo;hands work to&rdquo;. The orange arrow is
+    a reviewer returning work, which is the check from Figure 3 moved up to the level of the whole
+    team. The third is a runtime state graph, closer to a flowchart of statuses. It records where a
+    run is and which moves are allowed, including a retry from a saved point in the run (a workflow
+    checkpoint, not saved model weights) after a failure.
+    That retry is what lets a long multi-agent job recover without starting from scratch. A real
+    system keeps all three graphs at once, and they refer to each other. The figure does not show
+    how the graphs are built, whether a person writes them or an agent generates and revises them.
+    The survey treats that as a separate, open question.</p>
+  </div>
+</figure>
+
+<section class="col">
+  <p>The survey's examples show what each graph buys. <strong>LLMCompiler</strong> compiles a plan into
+  a dataflow graph so that independent tool calls run in parallel. <strong>AutoAgents</strong> creates
+  specialist roles and a plan for how they collaborate. <strong>AFlow</strong> has a model search over
+  workflow code for a better arrangement of steps {{CITE:feng}}. Whatever the system, the first
+  design choice is the graph's shape.</p>
+</section>
+
+<figure>
+  <img data-fig="lg05_topologies" alt="Five small graphs of blue dots. Chain: four dots in a row joined by arrows. Star: a centre dot with arrows out to five dots around it. Tree: one root, two children, four grandchildren. Mesh: five dots on a pentagon with every pair joined by a line. DAG: one dot branching to two, which rejoin into one, then an arrow to a final dot.">
+  <p class="zoomhint">Click the figure to view it full size</p>
+  <figcaption>
+    <span><b>Figure 5 &mdash; Five shapes for wiring agents together.</b> Each dot is an agent. A chain
+    is a pipeline; a star has one coordinator; a tree nests coordinators; a mesh lets everyone talk
+    to everyone; a DAG runs independent work in parallel and joins it where results meet. The shape
+    decides where the bottlenecks are and how many messages fly.</span>
+    <span><b>Axes.</b> None: these are diagrams, not charts. Position encodes no quantity, and the
+    number of dots in each panel is arbitrary.</span>
+    <span><b>Data.</b> {{DATA:lg05_topologies}}</span>
+  </figcaption>
+  <p class="prov">Reproduce: <code>python scripts/analysis/tutorials/loop_graph_engineering/lg05_topologies.py</code></p>
+  <div class="howto">
+    <p class="eyebrow">How it is drawn</p>
+    <p>The script places dots on simple geometric layouts (a row, a circle around a centre, the
+    levels of a tree, a pentagon) and connects them. Each dot stands for one agent, and the number of
+    dots is arbitrary. An arrow means &ldquo;hands work to&rdquo;. The mesh uses plain lines because
+    every agent exchanges messages with every other in both directions. These shapes recur in the
+    survey's examples {{CITE:feng}}. A chain passes work down a fixed pipeline. It is easy to follow,
+    but one slow stage holds up everything behind it. A star has one coordinator that assigns every
+    task and collects every result. That keeps control in one place and makes that place the
+    bottleneck. A tree nests coordinators under coordinators, for work that splits more than once. A
+    mesh lets all agents discuss freely, as in a multi-agent debate, but the number of links grows
+    with the square of the number of agents. A DAG (a directed acyclic graph, meaning no path of
+    arrows leads back to where it started) runs independent tasks in parallel and joins them where
+    their results meet. LLMCompiler does this with tool calls {{CITE:feng}}. The figure shows shape
+    only. It makes no claim about which shape performs best, which depends on the task.</p>
+  </div>
+</figure>
+
+<section class="col">
+  <h3>What the survey says is still open</h3>
+</section>
+<section class="col"><div class="qs">
+  <div class="q"><div class="h">Can the graph build and improve itself?</div>
+    <div class="d">Most graphs today are written by hand. The survey names self-evolving graphs,
+    ones an agent system discovers and revises across many runs, as an open problem
+    {{CITE:feng}}.</div></div>
+  <div class="q"><div class="h">What would a runtime built for graphs look like?</div>
+    <div class="d">Current frameworks were adapted from one-agent, one-step-after-another designs.
+    The survey calls for runtimes, and even operating-system-style layers, that treat scheduling,
+    resources and failure recovery as properties of the graph {{CITE:feng}}.</div></div>
+  <div class="q"><div class="h">How do you measure a system rather than an agent?</div>
+    <div class="d">Benchmarks score whether the task got done. Few test graph-level properties, such
+    as whether the coordination was correct or how the structure adapted over time
+    {{CITE:feng}}.</div></div>
+</div></section>
+
+<hr>
+
+<section class="col">
+  <h2><span class="num">04</span> Side by side</h2>
+  <p>The two ideas are not rivals. A graph is made of loops, and every agent in Figure 4 runs one.
+  They differ in what the engineer designs and in what goes wrong when that design is weak.</p>
+  <p class="cue" hidden>&larr; the table is wider than the screen &mdash; scroll it sideways</p>
+  <div class="scroll"><table class="wide">
+    <thead><tr><th></th><th>Loop engineering</th><th>Graph engineering</th></tr></thead>
+    <tbody>
+      <tr><td>Unit designed</td><td>One agent's repeat cycle</td><td>The wiring between several agents,
+      their tasks and their state</td></tr>
+      <tr><td>What gets written down</td><td>A loop specification: trigger, goal, check, stop rule,
+      memory</td><td>Who does which task, what depends on what, how a failed step recovers</td></tr>
+      <tr><td>Main risk it answers</td><td>Stopping early, never stopping, or finishing unchecked
+      work</td><td>One agent overloaded; no independent check; progress lost when a step
+      fails</td></tr>
+      <tr><td>Characteristic failure</td><td>A loop confidently finishes wrong work because its check
+      was weak</td><td>A fault whose origin in the graph is hard to locate</td></tr>
+      <tr><td>Where the person sits</td><td>Writes the specification, reviews the result</td><td>Designs
+      the graph, approves at chosen nodes</td></tr>
+    </tbody>
+  </table></div>
+  <p class="foot">The table summarises &sect;2 and &sect;3 and adds no new source. Its last two rows
+  are this page's reading of the sources, not a quotation.</p>
+</section>
+
+<hr>
+
+<section class="col">
+  <h2><span class="num">05</span> This repository already does both</h2>
+  <p>None of this is foreign to grid_world_pain. The agent team in <code>CLAUDE.md</code> and the flows
+  in <code>docs/AGENT_PLAYBOOK.md</code> form a graph designed by hand, and several of its nodes run
+  loops of their own. Figure 6 draws the flow for adding a feature, exactly as the playbook writes
+  it.</p>
+</section>
+
+<figure>
+  <img data-fig="lg06_project_team_graph" alt="Top row, left to right: You (ask for a feature), Top-level Claude (spawns each agent) linked both ways to agent-manager (returns the route) above it, senior-developer (writes the plan), orange plan-reviewer (hunts for failures) with an orange arrow back to senior-developer labelled 'NOT READY: revise', and You (approve the plan). An arrow runs down to the bottom row: blue developer (builds, runs tests) with an orange self-loop 'test, fix, re-test'; developer hands to orange senior-developer (checks against plan), which has an orange arrow back to developer, 'does not match: fix', and hands to green 'commit + diary'. A dashed arrow from developer leads to a dashed orange env-config-reviewer box, 'only if configs change'. A legend at bottom left explains the colours.">
+  <p class="zoomhint">Click the figure to view it full size</p>
+  <figcaption>
+    <span><b>Figure 6 &mdash; The feature-add flow of this project's agent team, read as a graph of
+    loops.</b> The top row plans; the bottom row builds. There are three places where work can be
+    sent back (orange arrows), and every agent runs its own loop inside. The work reads as a pipeline,
+    but control is a star centred on top-level Claude. agent-manager proposes the route but cannot
+    start agents, so the main session starts every one of them.</span>
+    <span><b>Axes.</b> None: this is a diagram, not a chart. Position encodes no quantity. The top row
+    reads left to right, and the bottom row reads right to left.</span>
+    <span><b>Data.</b> {{DATA:lg06_project_team_graph}}</span>
+  </figcaption>
+  <p class="prov">Reproduce: <code>python scripts/analysis/tutorials/loop_graph_engineering/lg06_project_team_graph.py</code></p>
+  <div class="howto">
+    <p class="eyebrow">How it is drawn</p>
+    <p>The script's nodes and arrows are transcribed by hand from two files in this repository: the
+    &ldquo;Adding a new feature&rdquo; flow in the agent playbook, and the default-routing paragraph of
+    <code>CLAUDE.md</code>, both read on 14 September 2026. Nothing is inferred from logs or run
+    history, so the figure shows the designed flow, not how often each path is actually taken.
+    Reading the top row left to right: a person asks for a feature. Top-level Claude, meaning the main
+    session, asks agent-manager for a routing plan and then starts each agent itself, because
+    agent-manager has no way to start agents. senior-developer writes a plan, plan-reviewer checks it
+    and can return it, and the person approves. Reading the bottom row right to left: developer
+    implements the plan and loops on its own tests. senior-developer checks the change against the
+    plan and can return it. The change is then committed and logged in the diary.
+    env-config-reviewer runs alongside only when the change touches configuration or environment
+    code. An optional step that consults the pi agent for multi-week plans is left out to keep the
+    picture readable. If the playbook changes, this script must be edited to match. Nothing checks the
+    two against each other.</p>
+  </div>
+</figure>
+
+<section class="col">
+  <p>Seen through &sect;2, the repository's loops are easy to spot:</p>
+  <dl>
+    <dt>/wake</dt><dd>A loop specification in miniature. The trigger is a timer, the goal and stop rule
+    are a done-condition the user states, and the skill re-arms itself until that condition is met.</dd>
+    <dt>/loop</dt><dd>Runs a prompt or command on a repeating interval. It supplies the trigger; the
+    check and the stop rule are whatever the repeated command does.</dd>
+    <dt>format gate</dt><dd>Every artifact, this page included, goes through
+    <code>publish-page</code>. <code>artifact-format-reviewer</code> renders the page in a real browser.
+    A &ldquo;do not publish&rdquo; verdict sends it back to be fixed and re-checked.</dd>
+    <dt>memory</dt><dd>The daily diary, the LLM Wiki and Claude's built-in memory play the part of
+    memory on disk. They are how a fresh session finds out what earlier sessions did.</dd>
+  </dl>
+  <div class="callout">
+    <p class="eyebrow">This page's reading, not a finding</p>
+    <p>By the survey's standard, the team's graph is <strong>static</strong>: the playbook fixes the
+    flows, and agent-manager chooses among them per job rather than building a new graph. Its runtime
+    state is also thin. The diary records that a step happened, but no checkpoint lets a half-finished
+    multi-agent job resume where it failed. If either becomes a bottleneck, &sect;3 is where to look.</p>
+  </div>
+</section>
+
+<section class="col">
+  <div class="callout findings">
+    <p class="eyebrow">In short</p>
+    <ul>
+      <li><strong>Loop engineering</strong> designs one agent's cycle (trigger, goal, check, stop rule,
+      memory) so the agent reaches a verified finish without a person typing each step.</li>
+      <li><strong>Graph engineering</strong> writes down the structure among many agents: which tasks
+      depend on which, who hands work to whom, and where the job stands. With that written down, work
+      can be split, run in parallel, checked independently and recovered.</li>
+      <li><strong>One contains the other.</strong> Every node in the graph is itself a loop.</li>
+      <li><strong>Neither changes the model, and neither removes review.</strong> Both move human
+      judgment from writing prompts to designing checks and structure.</li>
+    </ul>
+  </div>
+</section>
+
+<hr>
+
+<section class="col">
+  <h2><span class="num">06</span> How settled are these terms?</h2>
+  <p>Not very. Treat everything above as a snapshot from September 2026.</p>
+</section>
+<section class="col"><div class="qs">
+  <div class="q"><div class="h">Who coined them, and when?</div>
+    <div class="d">The practice came before the name: Huntley's loop dates from July 2025
+    {{CITE:huntley}}. The sources this page read that use &ldquo;loop engineering&rdquo; are all from
+    June&ndash;July 2026 {{CITE:osmani}} {{CITE:macedo}} {{CITE:ibm}}, and none of them claims to have
+    coined it. &ldquo;Graph engineering&rdquo; as a named paradigm comes from one August 2026
+    preprint {{CITE:feng}}, which has not been peer reviewed.</div></div>
+  <div class="q"><div class="h">Do the sources agree on what a loop is made of?</div>
+    <div class="d">Partly. Osmani lists tooling: scheduled automations, isolated worktrees, skills,
+    connectors, sub-agents and persistent state {{CITE:osmani}}. Macedo lists parts of a
+    specification: trigger, goal, verification, stop rule and memory {{CITE:macedo}}. IBM mixes the
+    two {{CITE:ibm}}. This page follows Macedo, because those parts describe any loop rather than one
+    toolchain.</div></div>
+  <div class="q"><div class="h">Is graph engineering just workflow graphs under a new name?</div>
+    <div class="d">It overlaps with them. The survey's scope is wider than a workflow of steps: it
+    also covers the agent graph and the runtime state graph (Figure 4) {{CITE:feng}}. Other names for
+    nearby ideas circulate, such as &ldquo;flow engineering&rdquo;. This page found no primary source
+    for them and does not compare them.</div></div>
+</div></section>
+
+<hr>
+
+<section class="col">
+  <h2><span class="num">07</span> References</h2>
+  <p class="foot">Each entry says how this page read the source. None was read in full as a PDF;
+  quotations are as a summarising web fetch returned them on 14 September 2026, and should be
+  checked against the original before being reused.</p>
+  {{REFS}}
+</section>
+
+<section class="col">
+  <h4>Provenance</h4>
+  <p class="foot">Built by <code>python scripts/analysis/tutorials/loop_graph_engineering/build_page.py</code>
+  from <code>docs/project/tutorials/loop_and_graph_engineering/loop_and_graph_engineering.template.html</code>.
+  The builder embeds the six figures written by <code>lg01</code>&ndash;<code>lg06</code> in the same
+  script folder, and takes its stylesheet and figure viewer directly from the House Style Sheet
+  template. <strong>One stated departure from the house style:</strong> the figures use blue, orange
+  and green to mean agent, check and state on disk. So that chrome does not borrow those meanings,
+  section numbers, glossary terms, links and box borders are in ink instead of blue (format register
+  F11 amendment). Red appears only in the &ldquo;How loops go wrong&rdquo; box, and no figure uses
+  it.</p>
+</section>
+
+</div>
+
+{{HOUSE_VIEWER}}
