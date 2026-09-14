@@ -3,7 +3,7 @@ title: Artifact generation guide — what went wrong and what to do instead
 topic: meta
 status: active
 created: 2026-08-26
-last_updated: 2026-09-01
+last_updated: 2026-09-14
 ---
 
 # Artifact generation guide
@@ -39,6 +39,36 @@ of every artifact job, so a rule that is wrong here is a rule that gets followed
 document rather than working around it. And **a pattern that lives only in one page's source is not
 a pattern** — if a page does something worth repeating, it belongs in §2 or §4 of this file on the
 same day, or it will not survive to the next page.
+
+## 0a. The default style is the House Style Sheet (2026-09-14)
+
+**Every artifact page uses the House Style Sheet.** It is this guide's visual half: the rules here say
+what a page must contain; the sheet says what it looks like. Nothing about a page's look is decided
+per page.
+
+| what | where |
+|---|---|
+| the page template to copy — `<style>` block, inlined Pretendard, tab and viewer scripts | [`house_style_sheet.template.html`](house_style_sheet.template.html) |
+| the rendered reference, with every component shown | [[house_style_sheet]] · <https://claude.ai/code/artifact/a273f767-34de-47c6-899d-0162b1f3a7ee> |
+| the figure style, as code | `scripts/analysis/style/house.py` |
+| how a page is assembled from template + script-written figures | `scripts/analysis/style/build_style_page.py` |
+
+What that fixes, so a page does not reinvent it:
+
+- **Type** — Pretendard for running text, IBM Plex Sans Condensed for headings and labels, IBM Plex
+  Mono for code and exact strings.
+- **Colour** — the green-grey neutrals and the four role hues (`--accent`, `--warn`, `--ok`,
+  `--danger`), with `--accent-text` for blue text and separate `--series-N` tokens for figures (F11
+  amendment: a hue a figure spends on a category is not also chrome on that page).
+- **Structure** — a `PURPOSE` entry section, `01`-style section numbers, callout boxes, glossaries,
+  step lists, open questions, tables, tabs.
+- **Figures** — drawn only by Python scripts through `house.py` and embedded as files (§2.7), opened
+  full size with the viewer in the template (§2.6), captioned per §11.
+
+**Departing from it** is allowed only for a reason the page itself states (for example, a page whose
+figure uses blue for a category overrides `--accent`). An unstated departure is a defect. If the sheet
+is wrong for a whole class of pages, change the sheet — template, `house.py`, republish — rather than
+forking a look in one page.
 
 ## 1. Terminology: the single largest source of rework
 
@@ -154,7 +184,7 @@ The scroll box and the viewer are complements, not alternatives: the box keeps t
 legible for a reader who does not want a modal, and the viewer serves the reader who wants the whole
 figure. A page may carry both.
 
-**Reference implementation:** `docs/experiments/active/sensor_ladder/sensor_ladder.html` — 18 CSS
+**Reference implementation:** the House Style Sheet template (§0a) now carries the viewer with the house tokens — copy it from there. Original: `docs/experiments/active/sensor_ladder/sensor_ladder.html` — 18 CSS
 rules (`.lb*`, `.zoomhint`, `figure img{cursor:zoom-in}`), one markup block, one script. Copy it;
 adapt only the colour tokens, and check the page actually defines every token the copy references.
 ---
