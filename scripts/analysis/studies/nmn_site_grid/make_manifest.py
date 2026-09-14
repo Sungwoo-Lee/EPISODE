@@ -26,8 +26,18 @@ os.chdir(ROOT)
 GRIDS = {
     "nmnsite":     ["results/trajectories_nmnsite", "results/trajectories_nmnsite2"],
     "nmngaenorm":  ["results/trajectories_nmngae"],
+    # The same site x slice grid re-trained on the olfaction-only ladder arm
+    # (olfactory_grid_range 1, observation width 47 instead of 27).
+    "olfmc":       ["results/trajectories_olfmc"],
+    "olfgae":      ["results/trajectories_olfgae"],
 }
-# the five unmodulated reference runs each grid is compared against
+# The five unmodulated reference runs each grid is compared against.
+#
+# THE OLF GRIDS ARE DELIBERATELY ABSENT HERE, and their absence is a claim, not an oversight: the
+# cmp10m runs are trained at olfactory_grid_range 0 on a different environment, so against an
+# extended-olfaction grid they are not a control band but a different experiment. Those grids'
+# only unmodulated reference is their own in-grid `t1none` cell - one seed, which every number
+# built on them has to say out loud.
 BASELINE_TAG = {"nmnsite": "cmp10m_mc", "nmngaenorm": "cmp10m_gaenorm"}
 
 
@@ -41,8 +51,9 @@ def cell_name(run_dir: str, tag: str) -> str:
 
 def build(tag: str) -> dict:
     roots = GRIDS[tag]
-    runs = sorted(glob.glob(f"results/JAX_RecurrentPPO/*_{tag}_*/")) \
-         + sorted(glob.glob(f"results/JAX_RecurrentPPO/*_{BASELINE_TAG[tag]}_*/"))
+    runs = sorted(glob.glob(f"results/JAX_RecurrentPPO/*_{tag}_*/"))
+    if tag in BASELINE_TAG:                      # a grid without a valid control band has none
+        runs += sorted(glob.glob(f"results/JAX_RecurrentPPO/*_{BASELINE_TAG[tag]}_*/"))
     out = {}
     for r in runs:
         base = os.path.basename(r.rstrip("/"))
