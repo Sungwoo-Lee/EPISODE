@@ -1,9 +1,10 @@
 ---
 title: Renderer UI Redesign — Dashboard
 topic: refactors
-status: active
+status: superseded
 created: 2026-04-24
-last_updated: 2026-04-24
+last_updated: 2026-09-14
+superseded_by: RENDERER_LAYOUT_REDESIGN.md
 ---
 
 # Renderer UI Redesign — Dashboard
