@@ -3,7 +3,7 @@ title: Artifact format bugs — the register, and why reading the CSS never find
 topic: meta
 status: active
 created: 2026-08-31
-last_updated: 2026-09-09
+last_updated: 2026-09-14
 ---
 
 # Artifact format bugs
@@ -358,6 +358,7 @@ details is closed and must stay in the default pass.
 - [ ] Mono-block column alignment uses `&nbsp;` or `pre`, not plain spaces (F21)
 - [ ] Numeric table columns are right-aligned, headers included (F22)
 - [ ] Every figure has exactly one generating script, and the page says which
+- [ ] No `max-content` grid track over unbreakable keys without a stacking breakpoint (F48)
 
 ### F20 — a nested max-width silently caps a designed-wider element
 
@@ -776,6 +777,42 @@ media-query form is correct only when the box is as wide as the viewport.
 **Verifying a fix:** for each `.scroll`, read `scrollWidth` and `clientWidth` at the widest
 supported viewport. Any box where `scrollWidth > clientWidth` there must have a cue that is visible
 at that width.
+
+### F31 amendment — the pinned-width pass reports page overflow only, so it cannot see inside a scroll box
+
+**Saw:** a four-column results table dropping its **entire last column** — the percentage that was the
+point of three of its four rows — on every phone between 390 and 429 px, with no scroll cue. It had
+survived four separate format reviews, mine included.
+
+**Cause, in two parts.** The table had no declared floor, so its width was whatever its content
+happened to need (min-content 346 px) against a box of `W − 84` inside a card — overflowing below
+434 px. And none of the page's three cue breakpoints was attached to it. Ordinary F31, except for
+where it lived: entirely **below Chrome's ~500 px viewport floor**, in the band only the pinned pass
+can reach.
+
+**Why the tool did not catch it:** `--pin-width` exists precisely to reach real phone widths, but it
+asserts on **page-level** horizontal overflow — `documentElement.scrollWidth > clientWidth`. A table
+inside `.scroll` never overflows the page; that is what the scroll box is *for*. So the pinned pass
+reports a clean page while a column sits off-screen inside it, and the wide passes cannot reproduce
+it because Chrome will not render the width at which it happens. Reading the CSS does not find it
+either: nothing is wrong with any single rule, only with the absence of a floor and a cue.
+
+**Rule:** a table gets a **declared** floor on its own class — declare a round number above the
+measured min-content, never hard-code the measurement — and a cue breakpoint derived from *its own*
+box, not shared with a table in a different container. A table in a bare section has box `W − 42`; in
+a card, `W − 84`. Two tables with different floors or different containers must not share a cue, or
+the band between them carries a cue for a cut that is not happening (F32).
+
+**Verifying a fix below 500 px:** the media query cannot be observed there — Chrome renders 500
+whatever you ask for, so the cue's own breakpoint is untestable by rendering. Verify the *arithmetic*
+instead: measure `clientWidth` at two or more widths ≥ 500 to confirm the box formula (`W − 84` here,
+checked at 500/560/604 giving 416/476/520), then the overflow threshold follows by subtraction and
+the breakpoint is a statement about it. State the measured pairs in the comment so a reader can
+re-derive rather than trust.
+
+**Tool fix worth making:** have the pinned pass print every `.scroll` whose `scrollWidth >
+clientWidth` at that width, with the overflow amount. One line, and it converts this whole class from
+invisible to reported.
 
 ### F32 — one scroll cue serving two components with different content floors
 
@@ -1388,3 +1425,179 @@ transformed header that carries a symbol, and read the rendered header back agai
 - `scripts/claude/check_artifact_layout.py` — the tool.
 - [`artifact-format-reviewer`](../../../../.claude/agents/artifact-format-reviewer.md) — the agent
   that runs it.
+
+### F46 — `table-layout:fixed` plus `nowrap`: a too-narrow column paints into its neighbour
+
+**Saw:** at phone width, a data-accounting table printed `16,969,747186,754,1439.1%` — three
+numbers with no boundary between them, the last one overprinting the tail of the one before. Every
+value was correct and present. They simply had no gaps.
+
+**Cause:** the table was `table-layout:fixed` with percentage column widths and `white-space:nowrap`
+on the numeric cells. Under fixed layout a column's width is what the rule says, full stop; content
+that does not fit neither wraps (`nowrap` forbids it) nor widens the column (fixed layout forbids
+it). It overflows the cell box and is painted on top of whatever is next to it. At the table's
+`min-width` floor the three numeric columns came out 60/60/44px against content needing ~64px and
+~92px, so all three collided at once. The percentages had been chosen against the *headings*, which
+are short, rather than against the widest value any row would hold.
+
+**Why neither review method catches it:** nothing overflows the scroll container — the table is
+sitting exactly at its declared floor, so `scrollWidth == clientWidth` on the box and the page
+reports no horizontal scroll. No cell wraps, so the squeezed-prose-ribbon heuristic finds nothing.
+The geometry checker walks elements, and every element is where its CSS says it should be. The
+defect exists only in the *painted* result, one level below the box tree, and only at widths where
+the table hits its floor — so a desktop-first look never sees it either.
+
+**Rule:** a `nowrap` column may not be given a width that was not derived from its widest content.
+Either let the numeric columns size themselves (auto layout, `width:100%`, floor only on the one
+column allowed to wrap), or keep fixed layout and set each column from the widest value it will
+ever hold with the floor as their sum. Prefer the first: it cannot go stale when the data grows.
+
+**Verifying a fix:** at the narrowest width the table is reachable at, assert
+`cell.scrollWidth <= cell.clientWidth` for **every** non-wrapping cell — not one sample — and
+separately assert that no cell's left edge sits left of the previous cell's right edge. The second
+check is the one that catches painting-into-a-neighbour, because a cell can overflow by a hair
+without visibly colliding. Both must run on every such table on the page: N tables built by one
+class are N different content widths, the same trap as
+[F32's amendment](#f32--one-scroll-cue-serving-two-components-with-different-content-floors).
+
+---
+
+### F47 — a new direct child of a two-column grid silently re-deals every sibling into the wrong track
+
+**Saw:** the whole of *The Sensor Ladder* rendered in the 190px table-of-contents rail at desktop
+width. Body paragraphs were 138px wide, headings broke every second word, and the document ran
+94,120px tall instead of 42,176px. Below 1300px it was perfect. The page had been published twice
+in that state, on 2026-09-07 and 2026-09-11, before a reader opened it on a wide screen.
+
+**Cause:** `.wrap` is `grid-template-columns:190px 1fr` above 1300px and held three children —
+`header.mast` pinned by `.mast{grid-column:2}`, then `nav.toc` and `main`, both auto-placed. That
+worked only because *two* auto items were left to fall into the remaining cells in exactly the
+right order. A later commit added an unrelated `<section>` (a one-paragraph rename notice) as a
+direct child of `.wrap`, between the header and the nav. Auto-placement then had three items to
+deal instead of two, every one of them shifted a cell, and `main` — the article — landed in the
+190px track. The commit that broke it touched no CSS, no layout, and no other page; nothing about
+adding a notice paragraph suggests it can move the article into the sidebar.
+
+**Why neither review method catches it:** nothing overflows and nothing overlaps, so the geometry
+checker reports the page *clean* on its primary checks — every box is exactly where the cascade
+says. Static reading fails worse: the CSS is correct as written, the HTML is correct as written,
+and the defect lives only in the *interaction* between a grid container's track list and the number
+of auto-placed children, which is not visible in either file alone. The one signal that fires is
+the squeezed-prose heuristic, and it fires ~62 times — easy to dismiss as a heuristic having a bad
+day on a long page. The unmistakable tell is the **page getting taller as the viewport gets
+wider**: 40,463px at 834px but 94,120px at 1440px. Width up, height up is never correct.
+
+**Rule:** in a multi-track grid, place **every** direct child explicitly, not just the one that
+needed moving. `.wrap > *{grid-column:2}` with `.toc{grid-column:1}` states the layout as an
+invariant, so a child added later inherits a correct position instead of re-dealing its siblings.
+Pinning one child and leaving the rest to auto-placement encodes the current child *count* into the
+layout, and nothing warns when that count changes.
+
+**Verifying a fix:** render at one width below the breakpoint and two above it, and assert on the
+grid container's children directly — for each, `getBoundingClientRect().width` and the resolved
+`gridColumnStart`. `main` must be in the wide track at every width above the breakpoint. Then check
+the cheap global invariant as a regression guard: **document height must not increase as viewport
+width increases.** That single comparison catches this whole defect class without knowing anything
+about the page's structure, and belongs in the layout checker rather than in any one page's tests.
+
+---
+
+### F48 — a `max-content` grid track, sized by an unbreakable key, starves the prose track on a phone
+
+**Saw:** a definition list whose left column holds a monospace config key
+(`thermal.body_temp_observable`, 218 px at 13 px mono) laid out as
+`dl{display:grid; grid-template-columns:max-content 1fr}`. At a 500 px viewport the `dd` column was
+204 px wide and its first entry ran nine lines of three to five words; at a real 390 px phone the
+column was **131 px** — two or three words per line, 377 px tall for one sentence. A second `dl` on
+the same page, with a longer mono term (281 px), had been shipping the same way at 141 px / 122 px since the page
+was first published. Nothing overflowed, nothing was clipped, and the desktop render was perfect.
+
+**Cause:** `max-content` is the right track size for a column of short keys — it makes the keys line
+up and gives the prose everything else. But a monospace identifier cannot wrap, so the track's
+`max-content` is also its `min-content`, and the `1fr` track absorbs the entire shortfall as the
+viewport narrows. The layout is doing exactly what it was told; it was told the wrong thing for a
+phone.
+
+**Why neither review method catches it:** the stylesheet reads as a textbook two-column list, and
+the geometry checker is nearly blind to it. Its narrow-column heuristic fires at 150 px, so it
+reported the older 141 px instance at 500 px and said nothing about the new 204 px one; and the
+`--pin-width 390` pass — the only pass that lays the page out at phone width — reports **overflow
+only**, not narrowness, so the 131 px column it would have seen is never printed. A defect that
+appears only below Chrome's 500 px floor and only as *narrowness* is in the tool's blind spot twice
+over.
+
+**Rule:** any grid whose first track is `max-content` over unbreakable content stacks to one column
+below the width at which the flexible track drops under about 40 characters:
+`@media (max-width: <key + 40ch + gap + padding>) { dl{grid-template-columns:1fr} }`, with the
+derivation beside the rule. Derive the breakpoint from the **widest key on the page**, since every
+`dl` shares the selector.
+
+**Verifying a fix:** in the pinned 390 px pass, read `getBoundingClientRect().width` on every `dd`
+and require it to be at least 40 × the `dd`'s `ch`; and extend the pinned probe to report narrow
+text columns as the default pass does, so the next instance is printed rather than inferred.
+
+### F49 — a short inline code chip splits after its leading hyphens at a line end
+
+**Saw (2026-09-14, House Style Sheet):** at 1440 px a sentence ended in `--` and the next line began
+`accent` — the custom-property name `--accent` torn in two, and `--series-1` exposed the same way.
+
+**Cause:** hyphen-minus is a native line-break opportunity. The browser breaks after it even when the
+whole chip would fit on the next line, so a chip that is short enough never to need wrapping still
+wraps. This is not F8 (an unbreakable string overflowing): the chip has too many break points, not
+too few. `overflow-wrap:anywhere` on `code`, correct for long paths, does nothing to stop it.
+
+**Why both review methods missed it:** static review reads `<code>--accent</code>` as one token; the
+geometry checker sees no overflow, because nothing overflows — the text just breaks in the wrong place.
+
+**Rule:** keep short identifier chips whole. The house-style builder
+(`scripts/analysis/style/build_style_page.py`) inserts U+2060 WORD JOINER after every `-` inside a
+`<code>` of 32 characters or fewer, and leaves longer, path-like chips free to wrap. A hand-built page
+can do the same, or give short chips `white-space:nowrap`.
+
+**Verifying a fix:** at several widths, for every inline `code` whose text starts with `-`, check that
+`getClientRects().length` is 1 unless the chip is longer than its line.
+
+### F49 amendment — a short chip wraps at a plain space it never needed
+
+The original F49 is a chip breaking after a leading hyphen. Same shape, different break character:
+an inline `.mono` expression carrying ordinary spaces — `γ = W·h + b` — split across two lines with
+the break falling **before the equals sign**, at every width below 1440. The chip is 84 px wide in a
+255 px column: it never needed to wrap at all. It wrapped because a space is a break opportunity and
+the line happened to end near it.
+
+`overflow-wrap:anywhere` is not the cause and removing it does not help; the spaces are.
+
+**Rule:** an expression or identifier chip short enough that it should never wrap gets `&nbsp;` for
+its internal spaces, or a `white-space:nowrap` scoped **to those spans only**. Never put `nowrap` on
+`.mono` or on a selector that reaches a table — that is a min-content change everywhere the selector
+lands, which is the F35 amendment.
+
+**Verifying a fix:** assert `getClientRects().length === 1` for every inline chip narrower than about
+a third of its container, at the narrowest width the page supports.
+
+### F50 — an inline citation chip separated from its word by a breakable space
+
+**Saw (2026-09-14, Loop and Graph Engineering tutorial, first format gate):** at every width a
+sentence read `34 co-authors [1] . It lists` — a visible gap between the chip and its full stop. At
+834 / 500 / 390 px, 1 / 3 / 2 chips began a line on their own, e.g. `…who prompts the agent` ↵
+`[2] . The person writes…`.
+
+**Cause:** the template wrote `word {{CITE:x}}.`. `white-space:nowrap` keeps the chip itself whole,
+but the ordinary space *before* it is still a break opportunity, so the chip can wrap alone; and the
+punctuation after it sits outside the chip's right padding, whose `--surface` tint is nearly
+invisible on `--ground`, so the padding reads as a space. Related to F49 (a chip breaking where it
+should not) and F26 (a superscript and its line box), but neither rule covers it.
+
+**Why both review methods missed it:** static review sees a correctly `nowrap`ped chip; the geometry
+checker sees nothing overflow. Only reading rendered lines, or probing which chips start a line box,
+shows it.
+
+**Rule:** a citation chip is never preceded by a breakable space and never followed by the sentence's
+punctuation. The builder moves any following `. , ; :` in front of the chip(s) and deletes the
+whitespace before each chip; the chip's own `margin-left` supplies the visual gap
+(`scripts/analysis/tutorials/loop_graph_engineering/build_page.py`). A page built from the
+field-review citation pattern (guide §12b) should do the same.
+
+**Verifying a fix:** at 834, 500 and 390 px, for every `a.cite`, check that its first client rect is
+not the first inline box on its line (compare its `top` with the previous text node's last rect), and
+that the character after the chip is never `.`, `,`, `;` or `:`.
