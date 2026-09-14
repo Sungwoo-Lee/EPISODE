@@ -170,6 +170,13 @@ def _sensor_stat_columns(sensor_name, dim, params, prefix):
         names = [f"{prefix}noc"]
     elif sensor_name == "Interoceptive Nociception":
         names = [f"{prefix}intero_nociception"]
+    elif sensor_name == "Body Temperature":
+        # Named apart from the intero_* group because the value is raw degrees,
+        # not a [0,1] fraction — a reader scanning the CSV must not assume the
+        # column is normalised like its neighbours. No unit suffix: the project
+        # names no temperature unit anywhere, and inventing one is exactly the
+        # kind of made-up convention the project rules forbid.
+        names = [f"{prefix}intero_body_temp"]
     elif sensor_name in ("Satiation", "Nutrition", "Injury"):
         names = [f"{prefix}intero_{sensor_name.lower()}"]
     elif sensor_name == "Collision":

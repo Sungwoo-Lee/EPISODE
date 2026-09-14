@@ -412,6 +412,14 @@ class EnvParams:
     # skip the modality entirely under a static `if params.thermal_enabled:`.
     thermal_grid_range: int = struct.field(pytree_node=False)
     thermal_relative: bool = struct.field(pytree_node=False)
+    # Does the agent receive its own body temperature as an observation dim?
+    # STATIC for both of the reasons the two fields above are: it gates a
+    # trace-time branch, and it changes the observation width (by 1). Also part
+    # of the curriculum modality fingerprint, as `injury_observable` and
+    # `nutrition_observable` are — defence in depth, since the width change
+    # means the obs_dim check already catches a mismatch.
+    # Inert (False) whenever `thermal_enabled` is False.
+    thermal_body_temp_observable: bool = struct.field(pytree_node=False)
 
     # ── Legacy @property aliases (B3 fix — kept for one release cycle) ────────
     # These accessors allow code that reads `params.predator_tags` / `params.neutral_tags`

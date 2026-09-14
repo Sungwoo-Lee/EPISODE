@@ -1590,6 +1590,19 @@ def load_env_params(config: Config) -> EnvParams:
                 f"thermoceptive Manhattan diamond: 0 -> 1 cell, 1 -> 5 cells, "
                 f"2 -> 13 cells), got {_th_grid_range}.")
         _th_relative = bool(config.get_mandatory('thermal.relative'))
+        # Conditional-mandatory under `thermal.enabled`, exactly like the four
+        # body constants above and `metabolic_coupling_rate` below. It is NOT
+        # read unconditionally like `sensory.injury_observable`: the 72
+        # byte-parity fixture configs are stand-alone (the generator and
+        # tests/env/test_thermal_parity.py build params from a RAW Config, which
+        # does not resolve `extends:`), so an unconditional read would raise on
+        # every one of them and the parity gate would go red before it compared
+        # a single byte. CONFIG_GUIDE.md sec.5.
+        # No `config.get(..., False)` fallback, ever: the 68 deliberately
+        # deferred configs are safe only because get_mandatory fails loudly and
+        # names the key.
+        _th_body_temp_observable = bool(
+            config.get_mandatory('thermal.body_temp_observable'))
     else:
         # Inert; never read when thermal is off.
         #
@@ -1628,6 +1641,11 @@ def load_env_params(config: Config) -> EnvParams:
         # curriculum fingerprint sees on every non-thermal config.
         _th_grid_range = 0
         _th_relative = False
+        # Inert. `get_observation` / `get_observation_breakdown` skip the
+        # modality under a static `if params.thermal_enabled and ...`, so this
+        # is never read on a thermal-off config. False is the sentinel the
+        # curriculum fingerprint sees on every non-thermal config.
+        _th_body_temp_observable = False
 
     _vis_v = config.get('sensory.visual_vector_size')
     visual_vector_size: int = int(_vis_v) if _vis_v is not None else 8
@@ -2294,6 +2312,7 @@ def load_env_params(config: Config) -> EnvParams:
         max_temperature=_th_max_temp,
         thermal_grid_range=_th_grid_range,
         thermal_relative=_th_relative,
+        thermal_body_temp_observable=_th_body_temp_observable,
         obs_temperature=obs_temperature,
         obs_temp_ratio_low=obs_temp_ratio_low,
         obs_temp_ratio_high=obs_temp_ratio_high,
@@ -2325,6 +2344,13 @@ _YAML_KEY_TO_SENSOR_NAME = {
     "injury":                    "Injury",
     "nutrition":                 "Nutrition",
     "satiation":                 "Satiation",
+    # Body temperature. This entry and the `body_temperature:` block in
+    # configs/environment/default.yaml are MUTUALLY BLOCKING and must land in
+    # the same change — the same pair thermoception documents below: without the
+    # entry the config raises "unknown perceptual-noise modality key(s)", and
+    # without the config block `apply_perceptual_noise` raises a bare KeyError
+    # inside a jit trace that names neither the config nor the fix.
+    "body_temperature":          "Body Temperature",
     "extero_nociception":        "Extero Nociception",
     "interoceptive_nociception": "Interoceptive Nociception",
     # Thermoception (Stage 3). This entry and the `thermoception:` block in
@@ -2365,7 +2391,22 @@ def _parse_noise_config(config: Config):
         for k in modalities_cfg
         if k in _YAML_KEY_TO_SENSOR_NAME
     )
-    pad = max(0, 13 - len(noise_modality_order))
+    # 13 is a SHAPE-STABILITY device, not a bounds check: with more modalities
+    # than slots `pad` clamps to 0 and the arrays simply become longer, which
+    # every lookup (by name, via `modality_map`) still handles correctly. What
+    # breaks is that EnvParams array shapes start varying with the config again.
+    # Worth a named error rather than a shrug — the Body Temperature modality
+    # (2026-09-14) took the 12th of the 13 slots.
+    _NOISE_SLOTS = 13   # the padded width EnvParams declares for the noise arrays
+    if len(noise_modality_order) > _NOISE_SLOTS:
+        raise ValueError(
+            f"perceptual_noise.modalities names {len(noise_modality_order)} "
+            f"modalities but the noise arrays are padded to {_NOISE_SLOTS} "
+            f"slots. Widen the pad and the [{_NOISE_SLOTS}] shape comments on "
+            f"EnvParams.noise_* together, or EnvParams array shapes start "
+            f"varying with the config again."
+        )
+    pad = max(0, _NOISE_SLOTS - len(noise_modality_order))
 
     noise_modes = jnp.pad(jnp.array([
         _parse_mode(modalities_cfg[k].get('mode', 'none'))

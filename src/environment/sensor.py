@@ -456,34 +456,54 @@ def get_observation(state: EnvState, params: EnvParams, apply_noise=True):
     # Salt the state key for observation noise
     obs_key = jax.random.fold_in(state.key, 999)
     
+    # Every block is appended as (breakdown name, array). The names are not
+    # decoration: they are checked against get_observation_breakdown() just
+    # below, which is what turns the "MUST stay at the same position" comment
+    # in that function from a convention into a structural check.
     obs_parts = []
     
     # 1. Injury (hidden when injury_observable=False) — interoceptive
     if params.injury_observable:
-        obs_parts.append(jnp.array([state.injury_level / params.max_injury]))
+        obs_parts.append(("Injury",
+                          jnp.array([state.injury_level / params.max_injury])))
 
     # 2. Nutrition (hidden when nutrition_observable=False) — interoceptive
     if params.nutrition_observable:
-        obs_parts.append(jnp.array([state.nutrition / params.max_nutrition]))
+        obs_parts.append(("Nutrition",
+                          jnp.array([state.nutrition / params.max_nutrition])))
 
     # 3. Satiation — interoceptive
-    obs_parts.append(jnp.array([state.satiation / params.max_satiation]))
+    obs_parts.append(("Satiation",
+                      jnp.array([state.satiation / params.max_satiation])))
+
+    # 3b. Body Temperature — interoceptive, delivered directly.
+    #     RAW DEGREES, not normalised: it shares units with the thermoceptor, so
+    #     `Thermoception[centre] + BodyTemperature == thermal_field[own cell]`
+    #     under the shipped `thermal.relative: true`. Rationale and the cost
+    #     (rPPO applies no observation normalisation) in the plan, Analysis sec.9.
+    #     Placed with the directly-delivered LEVELS (Injury / Nutrition /
+    #     Satiation), before the PERCEPT (Interoceptive Nociception), mirroring
+    #     EVAAA's contiguous `resourceLevels` block.
+    if params.thermal_enabled and params.thermal_body_temp_observable:
+        obs_parts.append(("Body Temperature", jnp.array([state.body_temp])))
 
     # 4. Interoceptive Nociception — interoceptive
     #    (Tonic — delayed function of hidden injury, or passthrough if convolution disabled)
     if params.interoceptive_nociception_enabled:
-        obs_parts.append(sense_interoceptive_nociception(state, params))
+        obs_parts.append(("Interoceptive Nociception",
+                          sense_interoceptive_nociception(state, params)))
 
     # 5. Extero Nociception — exteroceptive (phasic, multi-source contact)
     if params.nociception_enabled:
-        obs_parts.append(sense_extero_nociception(state.agent_pos, state, params))
+        obs_parts.append(("Extero Nociception",
+                          sense_extero_nociception(state.agent_pos, state, params)))
 
     # 5b. Thermoception — exteroceptive (the thermal field over a diamond).
     #     Position in this list is load-bearing: it must match the identical
     #     position in get_observation_breakdown below, and the `thermoception:`
     #     entry's position in perceptual_noise.modalities.
     if params.thermal_enabled:
-        obs_parts.append(sense_thermoception(state, params))
+        obs_parts.append(("Thermoception", sense_thermoception(state, params)))
 
     # 5. Olfaction Sensor (Resources + Animals + Obstacles)
     # B2 fix: unified animal_chem replaces separate pred_chem + neutral_chem calls.
@@ -491,25 +511,47 @@ def get_observation(state: EnvState, params: EnvParams, apply_noise=True):
         # DIRECTIONAL_SENSORS: sampled at every cell of a Manhattan diamond of radius
         # olfactory_grid_range. At range 0 this is the pre-DIRECTIONAL_SENSORS single sample,
         # bit-identical. Per-episode active masks keep inactive entities silent.
-        obs_parts.append(sense_olfaction_cells(state, params))
+        obs_parts.append(("Olfaction", sense_olfaction_cells(state, params)))
     
     # 6. Collision
-    obs_parts.append(sense_collision(state.agent_pos, state, params))
+    obs_parts.append(("Collision",
+                      sense_collision(state.agent_pos, state, params)))
     
     # 7. Proprioception (Previous Action)
     if params.proprioception_enabled:
-        obs_parts.append(jax.nn.one_hot(state.last_action, params.action_dim))
+        obs_parts.append(("Proprioception",
+                          jax.nn.one_hot(state.last_action, params.action_dim)))
     
     # 8. Visual Sensor
     if params.visual_sensor_enabled:
-        obs_parts.append(sense_visual(state.agent_pos, state, params))
+        obs_parts.append(("Visual", sense_visual(state.agent_pos, state, params)))
     
     # 9. Location
     if params.location_sensor_enabled:
-        obs_parts.append(sense_location(state.agent_pos, params.height, params.width))
+        obs_parts.append(("Location",
+                          sense_location(state.agent_pos, params.height, params.width)))
     
+    # The two functions are the SAME layout stated twice, and until now nothing
+    # checked it. The breakdown's TOTAL is asserted against obs_dim in
+    # dreamer_srl_main.py, but a REORDER leaves the total identical and every
+    # name-keyed consumer (stats CSV, renderer, modulator input slice) then
+    # labels the right columns with the wrong names, silently.
+    #
+    # Compares NAMES, not widths, and that is the whole point: Body Temperature
+    # and Interoceptive Nociception are both width 1, so a width-and-count check
+    # is blind to swapping exactly the pair this layout puts next to each other.
+    _names = [name for name, _ in obs_parts]
+    _declared = list(get_observation_breakdown(params))
+    if _names != _declared:
+        raise AssertionError(
+            f"get_observation assembles blocks in the order {_names}, but "
+            f"get_observation_breakdown declares {_declared}. The two functions "
+            f"are the same layout stated twice and they have diverged; every "
+            f"name-keyed consumer downstream would mislabel columns silently."
+        )
+
     # Assemble final vector
-    obs = jnp.concatenate(obs_parts)
+    obs = jnp.concatenate([a for _, a in obs_parts])
     
     # Apply Perceptual Precision Modulation
     if apply_noise:
@@ -528,6 +570,12 @@ def get_observation_breakdown(params: EnvParams):
         breakdown["Nutrition"] = 1
     # 3. Satiation — interoceptive
     breakdown["Satiation"] = 1
+    # 3b. Body Temperature — interoceptive, delivered directly (raw degrees).
+    # MUST stay at the same position as the matching append in get_observation
+    # above; get_observation now RAISES if the two orders disagree, comparing
+    # names rather than widths (this block and the next are both width 1).
+    if params.thermal_enabled and params.thermal_body_temp_observable:
+        breakdown["Body Temperature"] = 1
     # 4. Interoceptive Nociception — interoceptive (delayed/passthrough injury)
     if params.interoceptive_nociception_enabled:
         breakdown["Interoceptive Nociception"] = 1
@@ -631,6 +679,22 @@ def build_sensory_viz(obs, state, params, true_obs=None):
             ptr += dim; t_ptr += dim
             viz.append({'name': 'LOC', 'value_text': f"({loc_vec[0]:.2f}, {loc_vec[1]:.2f})", 'color': '#ADB5BD', 'type': 'text'})
         
+        elif sensor_name == "Body Temperature":
+            # Its own branch rather than joining the intensity tiles below: that
+            # group renders a [0,1] fraction, and this value is raw degrees on a
+            # roughly [-15, +15] band. Keys are `value` / `true_value` rather
+            # than `intensity` / `true_intensity` precisely so nothing treats it
+            # as a fraction by accident (draw_intensity_pod does `min(1.0, v)`).
+            # The renderers pick it up BY NAME from sensor_map (renderer.py:800,
+            # renderer_v2.py:331) and feed it to the existing body-temperature
+            # gauge / card as the OBSERVED value. It is deliberately NOT in
+            # `known_sensors` / `pod_map`, so it gets no exteroception pod.
+            bt_obs = float(obs[ptr])
+            bt_true = float(true_obs[t_ptr]) if true_obs is not None else bt_obs
+            ptr += dim; t_ptr += dim
+            viz.append({'name': 'Body Temperature', 'value': bt_obs,
+                        'true_value': bt_true, 'type': 'temperature'})
+
         elif sensor_name in ("Satiation", "Nutrition", "Injury", "Interoceptive Nociception"):
             s_obs = float(obs[ptr])
             s_true = float(true_obs[t_ptr]) if true_obs is not None else s_obs

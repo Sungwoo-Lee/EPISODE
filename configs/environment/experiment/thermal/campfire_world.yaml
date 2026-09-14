@@ -351,6 +351,17 @@ thermal:
   # --- sensor (read from Stage 3 onward) ---
   grid_range: 1             # validated >= 0
   relative: true            # report field - body_temp
+  # Does the agent receive its OWN body temperature as an observation?
+  # true  -> one extra observation dim, RAW DEGREES, placed immediately after
+  #          Satiation (the directly-delivered body levels).
+  # false -> body temperature stays latent: the thermoceptor's `field - body_temp`
+  #          readings are differences, so the agent can only infer it by
+  #          integrating over time.
+  # Read ONLY when `enabled` is true, like every key in this block.
+  # The flag-OFF arm of the ablation ships as its own standalone sibling,
+  # campfire_world_body_temp_hidden.yaml, so the switch is flipped by CHOOSING a
+  # config rather than by editing this one.
+  body_temp_observable: true
 
 visualization:
   local_view_size: 5
@@ -392,7 +403,7 @@ behavior_measures:
 
 perceptual_noise:
   enabled: false
-  # Key order here is the single source of truth for noise array indices (0-10).
+  # Key order here is the single source of truth for noise array indices (0-11).
   # config_loader.py reads this order; sensor.py consumes it via params.noise_modality_order.
   modalities:
     injury:          # index 0
@@ -413,19 +424,39 @@ perceptual_noise:
       injury_noise_scale: 1.5
       clip_min: 0.0
       clip_max: 1.0
-    interoceptive_nociception:  # index 3 — interoceptive (new)
+    body_temperature:  # index 3 (new) — interoceptive; slots between satiation
+                       # and interoceptive nociception, matching the observation
+                       # order assembled in sensor.py::get_observation.
+      mode: "state_dependent"
+      # sigma is deliberately 0.0, for the same reason as thermoception: no
+      # noise magnitude has been calibrated on the DEGREES scale, and copying an
+      # interoceptive 0.1 (calibrated for a [0,1] channel) would add nothing
+      # while looking like it added noise.
+      sigma: 0.0
+      injury_noise_scale: 1.5
+      # Explicit and wide, like thermoception's. apply_perceptual_noise clips
+      # EVERY modality whenever perceptual_noise.enabled is true — including
+      # mode "none" — so a default that binds would silently rescale the signal
+      # with no test catching it (every thermal test runs noise OFF).
+      # Derivation: the survivable band is [min_temperature, max_temperature] =
+      # [-15, +15], and a terminal overshoot adds at most one step of the
+      # recurrence, k_exchange * |T_field - T| ~ 0.04 * 167 ~ 6.7. ±100 is
+      # therefore >5x headroom and can never bind on a plausible config.
+      clip_min: -100.0
+      clip_max: 100.0
+    interoceptive_nociception:  # index 4 (was 3) — interoceptive
       mode: "state_dependent"
       sigma: 0.1
       injury_noise_scale: 1.5
       clip_min: 0.0
       clip_max: 1.0
-    extero_nociception: # index 4 (was 3) — exteroceptive
+    extero_nociception: # index 5 (was 4, was 3) — exteroceptive
       mode: "state_dependent"
       sigma: 0.1
       injury_noise_scale: 1.5
       clip_min: 0.0
       clip_max: 100.0     # Unbounded (pain intensity)
-    thermoception:   # index 5 (new) — exteroceptive; slots between extero
+    thermoception:   # index 6 (was 5) — exteroceptive; slots between extero
                      # nociception and olfaction, matching the observation order
                      # assembled in sensor.py::get_observation.
       mode: "state_dependent"
@@ -453,31 +484,31 @@ perceptual_noise:
       # rescale the signal.
       clip_min: -100.0
       clip_max: 400.0
-    olfaction:       # index 6 (was 5, was 4)
+    olfaction:       # index 7 (was 6, was 5, was 4)
       mode: "state_dependent"
       sigma: 0.2
       injury_noise_scale: 1.5
       clip_min: 0.0
       clip_max: 100.0     # Unbounded (aggregated chemical gradient)
-    collision:       # index 7 (was 6, was 5)
+    collision:       # index 8 (was 7, was 6, was 5)
       mode: "constant"
       sigma: 0.01
       injury_noise_scale: 0.0
       clip_min: 0.0
       clip_max: 1.0
-    proprioception:  # index 8 (was 7, was 6)
+    proprioception:  # index 9 (was 8, was 7, was 6)
       mode: "constant"
       sigma: 0.05
       injury_noise_scale: 0.0
       clip_min: 0.0
       clip_max: 1.0
-    visual:          # index 9 (was 8, was 7)
+    visual:          # index 10 (was 9, was 8, was 7)
       mode: "state_dependent"
       sigma: 0.2
       injury_noise_scale: 1.5
       clip_min: 0.0
       clip_max: 100.0     # Unbounded (one-hot counts)
-    location:        # index 10 (was 9, was 8)
+    location:        # index 11 (was 10, was 9, was 8)
       mode: "constant"
       sigma: 0.01
       injury_noise_scale: 0.0

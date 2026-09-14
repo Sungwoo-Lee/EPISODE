@@ -66,21 +66,22 @@ perceptual_noise:
 
 **YAML key order is the single source of truth for noise array indices.** `config_loader.py:963–967` builds `noise_modality_order` by iterating `modalities_cfg` in YAML declaration order. Any reordering of YAML keys changes the array indices stored in `EnvParams` — see the Critical Invariant section below.
 
-**All 11 modalities** (values from `configs/environment/default.yaml`):
+**All 12 modalities** (values from `configs/environment/default.yaml`):
 
 | YAML key | Sensor name in code | Array index (default YAML order) | Mode | σ_base | α | clip |
 |----------|--------------------|---------------------------------|------|--------|---|------|
 | `injury` | `Injury` | 0 | `state_dependent` | 0.0 | 1.5 | [0, 1] |
 | `nutrition` | `Nutrition` | 1 | `state_dependent` | 0.0 | 1.5 | [0, 1] |
 | `satiation` | `Satiation` | 2 | `state_dependent` | 0.1 | 1.5 | [0, 1] |
-| `interoceptive_nociception` | `Interoceptive Nociception` | 3 | `state_dependent` | 0.1 | 1.5 | [0, 1] |
-| `extero_nociception` | `Extero Nociception` | 4 | `state_dependent` | 0.1 | 1.5 | [0, 100] |
-| `thermoception` | `Thermoception` | 5 | `state_dependent` | 0.0 | 1.5 | [-100, 400] |
-| `olfaction` | `Olfaction` | 6 | `state_dependent` | 0.2 | 1.5 | [0, 100] |
-| `collision` | `Collision` | 7 | `constant` | 0.01 | 0.0 | [0, 1] |
-| `proprioception` | `Proprioception` | 8 | `constant` | 0.05 | 0.0 | [0, 1] |
-| `visual` | `Visual` | 9 | `state_dependent` | 0.2 | 1.5 | [0, 100] |
-| `location` | `Location` | 10 | `constant` | 0.01 | 0.0 | [-1, 1] |
+| `body_temperature` | `Body Temperature` | 3 | `state_dependent` | 0.0 | 1.5 | [-100, 100] |
+| `interoceptive_nociception` | `Interoceptive Nociception` | 4 | `state_dependent` | 0.1 | 1.5 | [0, 1] |
+| `extero_nociception` | `Extero Nociception` | 5 | `state_dependent` | 0.1 | 1.5 | [0, 100] |
+| `thermoception` | `Thermoception` | 6 | `state_dependent` | 0.0 | 1.5 | [-100, 400] |
+| `olfaction` | `Olfaction` | 7 | `state_dependent` | 0.2 | 1.5 | [0, 100] |
+| `collision` | `Collision` | 8 | `constant` | 0.01 | 0.0 | [0, 1] |
+| `proprioception` | `Proprioception` | 9 | `constant` | 0.05 | 0.0 | [0, 1] |
+| `visual` | `Visual` | 10 | `state_dependent` | 0.2 | 1.5 | [0, 100] |
+| `location` | `Location` | 11 | `constant` | 0.01 | 0.0 | [-1, 1] |
 
 **Notes on the default values:**
 - `injury` and `nutrition` have `σ_base = 0.0` — noise is declared but silenced. Mode is `state_dependent` so it activates immediately if `sigma` is raised in a derived config without changing `mode`.
@@ -101,6 +102,16 @@ perceptual_noise:
   headroom. Its `σ_base` is `0.0` because no thermal-noise magnitude has been calibrated;
   copying olfaction's 0.2 onto a signal that spans ~200 units would look like noise while
   doing nothing.
+- `body_temperature` declares its clips explicitly for the same reason `thermoception` does,
+  and the same reason applies with the same force: the clip is applied whenever
+  `perceptual_noise.enabled` is true, including in mode `none`, and this channel carries
+  **raw degrees** rather than a `[0, 1]` fraction. `[-100, +100]` can never bind on a
+  plausible config — the survivable band is `[min_temperature, max_temperature]` = `[-15,
+  +15]`, and a terminal overshoot adds at most one step of the recurrence,
+  `k_exchange · |T_field − T| ≈ 0.04 × 167 ≈ 6.7`, so the bounds carry better than 5×
+  headroom. Its `σ_base` is `0.0` because **no noise magnitude has been calibrated on a
+  degrees scale**; copying its interoceptive neighbours' `0.1` (calibrated for a `[0, 1]`
+  channel) would add nothing while looking like it added noise.
 - **A new modality needs two edits that block each other.** The YAML block alone raises
   `Strict Config: unknown perceptual-noise modality key(s)` (the `_YAML_KEY_TO_SENSOR_NAME`
   whitelist), and the whitelist entry alone leaves `apply_perceptual_noise` raising a bare
@@ -141,7 +152,7 @@ def _parse_noise_config(config: Config):
         for k in modalities_cfg
         if k in _YAML_KEY_TO_SENSOR_NAME
     )
-    pad = max(0, 13 - len(noise_modality_order))
+    pad = max(0, _NOISE_SLOTS - len(noise_modality_order))   # _NOISE_SLOTS = 13
 
     noise_modes = jnp.pad(jnp.array([
         _parse_mode(modalities_cfg[k].get('mode', 'none'))
@@ -329,9 +340,9 @@ def apply_perceptual_noise(obs: jnp.ndarray, state: EnvState, params: EnvParams,
 
 ## Array Layout
 
-**Why 13, not 10**: the pad-to-13 (`config_loader.py:968`) keeps array shapes static across configs with fewer modalities. Adding or removing modalities from the YAML changes `noise_modality_order` length (a static tuple field — triggers recompilation) but keeps the five noise arrays at shape `[13]`, avoiding GPU memory reallocations. The 3 extra slots are zero-padded and never accessed at runtime.
+**Why 13, not 12**: the pad to `_NOISE_SLOTS` (`config_loader.py`) keeps array shapes static across configs with fewer modalities. Adding or removing modalities from the YAML changes `noise_modality_order` length (a static tuple field — triggers recompilation) but keeps the five noise arrays at shape `[13]`, avoiding GPU memory reallocations. The 3 extra slots are zero-padded and never accessed at runtime.
 
-**Index assignment**: indices 0–9 correspond to YAML keys in their declaration order in the config file. With the default config (`configs/environment/default.yaml`):
+**Index assignment**: indices 0–11 correspond to YAML keys in their declaration order in the config file. With the default config (`configs/environment/default.yaml`):
 
 | Array index | YAML key | Sensor name |
 |-------------|----------|-------------|
@@ -394,6 +405,28 @@ All state-dependent modalities share the same injury driver: `norm_injury = stat
 
 ---
 
+## Changing the modality count moves the noise on EVERY channel
+
+`apply_perceptual_noise` draws **one** normal vector for the whole observation —
+`jax.random.normal(key, obs.shape)` — so the draw is indexed by position across the entire
+vector. Adding or removing any modality changes `obs.shape`, which changes that single draw, so
+**every other channel gets a different noise realisation too**, not just the one that moved.
+
+Measured 2026-09-14 when `body_temperature` was added: from the same state and the same key, the
+other 32 channels differ by up to **0.40** between the flag-on and flag-off arms.
+
+This is inherent to the one-vector draw and is not caused by any particular modality. It matters
+for exactly one thing, and it is easy to miss:
+
+> **An A/B comparison that differs in modality count is NOT a paired comparison when noise is on.**
+> The two arms do not see "the same world plus one extra reading" — they see different noise
+> everywhere. Seeding both arms identically does not fix it.
+
+Every shipped thermal config has `perceptual_noise.enabled: false`, so nothing today is affected.
+If a paired noise-on comparison is ever needed, the fix is to draw per-modality from `fold_in`
+sub-keys instead of one vector — a change to `sensor.py` that would shift every existing noise-on
+fixture, so it needs a plan, not a patch.
+
 ## Clarifications / FAQ
 
 **Q: What's the lookup failure mode — KeyError or silent skip?**
@@ -439,7 +472,7 @@ A: One vector draw from N(0,1) sized to the observation (`sensor.py:266`), one e
 A: A readable salt constant to create an independent noise PRNG branch without consuming a key split. Any integer constant would work; 999 was chosen for readability. Documented in doc 09.
 
 **Q: Can I add an eleventh modality?**
-A: Yes, if it corresponds to a real sensor. Steps: (1) add the YAML key to `_YAML_KEY_TO_SENSOR_NAME` (`config_loader.py:944`); (2) add the sensor name to `get_observation_breakdown` (`sensor.py:328`); (3) add the YAML entry to all relevant configs; (4) if active modalities will exceed 13, increase the pad constant in `config_loader.py:968`.
+A: Yes, if it corresponds to a real sensor. Steps: (1) add the YAML key to `_YAML_KEY_TO_SENSOR_NAME` (`config_loader.py:944`); (2) add the sensor name to `get_observation_breakdown` (`sensor.py:328`); (3) add the YAML entry to all relevant configs; (4) if active modalities will exceed `_NOISE_SLOTS` (13, of which 12 are used as of 2026-09-14), widen that constant — the loader now raises a named error telling you both places to change, rather than silently producing a wider array — in `config_loader.py:968`.
 
 **Q: Do `noise_modality_order` and `get_observation_breakdown` have to declare modalities in the same order?**
 A: No. Lookup is by name (`modality_map[sensor_name]`). YAML order determines array *indices*; names determine runtime *lookup*. Order inconsistency is safe but confusing — convention is to keep YAML declaration order aligned with observation assembly order for readability.

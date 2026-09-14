@@ -28,14 +28,22 @@ Sensors appear in the vector in the exact order listed below. Sensors toggled of
 | 1 | Injury | `injury_observable` | 1 | `[0, 1]` | `injury_level / max_injury` |
 | 2 | Nutrition | `nutrition_observable` | 1 | `[0, 1]` | `nutrition / max_nutrition` |
 | 3 | Satiation | Always on | 1 | `[0, 1]` | `satiation / max_satiation` |
-| 4 | Interoceptive Nociception | `interoceptive_nociception_enabled` | 1 | `[0, 1]` | Convolved (delayed) injury trace, or direct `injury/max_injury` in passthrough mode |
-| 5 | Extero Nociception | `nociception_enabled` | 1 | `[0, 1]` | Max intensity among current painful contacts |
-| 6 | Thermoception | `thermal_enabled` | `2r²+2r+1` (`r = thermal_grid_range`) | `(-∞, ∞)` | `thermal_field[cell] − body_temp` over a Manhattan diamond; OOB cells **clamp** |
-| 7 | Olfaction | `olfactory_enabled` | `vector_size` (typically 5) | `[0, ∞)` | Σ property·decay(dist)·active over **3** entity pools: resources + unified animals + obstacles |
-| 8 | Collision | Always on | `2r²+2r+1` | `{0, 1}` | Binary Manhattan diamond (OOB or blocking obstacle) |
-| 9 | Proprioception | `proprioception_enabled` | `action_dim` | `{0, 1}` | One-hot of last action taken |
-| 10 | Visual | `visual_sensor_enabled` | `(2r²+2r+1)×8` | `{0, 1}` | 8-channel Manhattan diamond (terrain + entity type) |
-| 11 | Location | `location_sensor_enabled` | 2 | `[-1, 1]` | Normalised (row, col) |
+| 4 | Body Temperature | `thermal_enabled` AND `thermal_body_temp_observable` | 1 | `[min_temperature, max_temperature]` in **raw degrees** — the one row not normalised to a fixed interval | `body_temp` |
+| 5 | Interoceptive Nociception | `interoceptive_nociception_enabled` | 1 | `[0, 1]` | Convolved (delayed) injury trace, or direct `injury/max_injury` in passthrough mode |
+| 6 | Extero Nociception | `nociception_enabled` | 1 | `[0, 1]` | Max intensity among current painful contacts |
+| 7 | Thermoception | `thermal_enabled` | `2r²+2r+1` (`r = thermal_grid_range`) | `(-∞, ∞)` | `thermal_field[cell] − body_temp` over a Manhattan diamond; OOB cells **clamp** |
+| 8 | Olfaction | `olfactory_enabled` | `vector_size` (typically 5) | `[0, ∞)` | Σ property·decay(dist)·active over **3** entity pools: resources + unified animals + obstacles |
+| 9 | Collision | Always on | `2r²+2r+1` | `{0, 1}` | Binary Manhattan diamond (OOB or blocking obstacle) |
+| 10 | Proprioception | `proprioception_enabled` | `action_dim` | `{0, 1}` | One-hot of last action taken |
+| 11 | Visual | `visual_sensor_enabled` | `(2r²+2r+1)×8` | `{0, 1}` | 8-channel Manhattan diamond (terrain + entity type) |
+| 12 | Location | `location_sensor_enabled` | 2 | `[-1, 1]` | Normalised (row, col) |
+
+Row 4 keeps the **directly-delivered body levels** (Injury, Nutrition, Satiation, Body
+Temperature) contiguous and puts the *percept* (Interoceptive Nociception) after them. It is
+also the reason `get_observation` now compares its block order against
+`get_observation_breakdown` by **name** and raises on a mismatch: rows 4 and 5 are both
+width 1, so a swap is invisible to any count-or-width check while every name-keyed consumer
+downstream silently mislabels its columns.
 
 With `sensor_range=1`, the collision diamond has 5 cells: `{center, up, right, down, left}`.
 With `visual_sensor_range=0`, the visual diamond has 1 cell (agent's own cell): `1×8=8` dims.
@@ -46,6 +54,26 @@ With `visual_sensor_range=1`, it has `5×8=40` dims.
 **Neither Olfaction nor Thermoception is bounded.** Thermoception is a temperature difference in the field's own units, so it is signed and routinely leaves `[-1, 1]`: on the shipped campfire config it spans roughly −43 (deep cold, warm body) to about +170 (standing on a fire). Anything that clips observations — the perceptual-noise clips in particular — has to be told so explicitly; see [10_perceptual_noise.md](10_perceptual_noise.md).
 
 **Olfaction is NOT bounded** — it is a weighted sum of `property × decay × mask`, so values can exceed 1.0 when multiple entities are present or the agent overlaps a source (decay = 2.0 at zero distance). Every other sensor is bounded as shown above.
+
+### What a modality flag costs the network
+
+Turning any modality on or off changes more than the width of the observation when the agent uses
+**hierarchical** encoding (`encoding_mode: hierarchical`, which `recurrent_ppo_M.yaml` and its
+siblings use). `ObservationEncoder` builds **one grouped MLP per modality** and sizes the fusion hub
+at `len(names) * hidden_size` (`src/models/recurrent_ppo_network.py:158-171`). So the cost of a flag
+is **per modality, not per dimension**: a one-value channel adds a whole group and a whole
+`hidden_size` slice of the hub, the same as an eight-value one. In flat mode the cost is the honest
+one dimension.
+
+Two consequences worth knowing before flipping a flag:
+
+- A one-dimension channel is not a one-dimension change to the parameter count.
+- A checkpoint cannot be restored across the flag. The shapes differ, and both restore paths guard
+  on structure, so it **fails loudly** rather than silently loading a mismatched model
+  (`src/utils/checkpoint_restore.py`, `src/utils/trajectory_store.py`).
+
+Recorded 2026-09-14, when `thermal.body_temp_observable` took the hierarchical encoder from 9
+groups to 10. The fact is general and applies to every modality gate.
 
 ### Hidden States & Gating
 
@@ -339,7 +367,7 @@ signal += entity_property[n] * decay * mask    # [vector_size] accumulation
 
 The `1e-10` in the denominator is a numerical safety guard; the `dist < 0.001` branch handles true zero-distance cases explicitly (returning 2.0) so the guard is never reached in practice.
 
-The final `obs_olfactory` is a `[vector_size]` vector placed at observation positions `[5 : 5+vector_size]` (0-indexed, assuming Injury + Nutrition + Satiation + InteroNoc + ExteroNoc all enabled and occupying indices 0–4).
+The final `obs_olfactory` is a `[vector_size]` vector. Its position is **config-dependent and must always be resolved from `get_observation_breakdown(params)`**, never hard-coded. The worked example: with Injury + Nutrition + Satiation + InteroNoc + ExteroNoc enabled and thermal off, those five occupy indices 0–4 and olfaction lands at `[5 : 5+vector_size]`. Switch thermal on and the offset moves by the thermoceptor's `2r²+2r+1` dims, and by one more again if `thermal.body_temp_observable` is true — so on the shipped campfire config olfaction starts at 11, not 5.
 
 #### Full implementation
 

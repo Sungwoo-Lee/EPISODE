@@ -193,20 +193,33 @@ def _thermal_rgba(value, clim):
 
 
 def draw_temperature_gauge(ax, x, y, w, h, body_temp, params, clim,
-                           transform=None, label_dy=0.02):
+                           transform=None, label_dy=0.02, obs_temp=None):
     """Body-temperature gauge, with the two death thresholds marked.
 
-    Not `draw_dual_capsule_bar`, and the reason is honesty rather than taste:
-    that widget's grammar is "translucent = reality, solid interior = what the
-    agent perceives", and body temperature is NOT observed — the thermoceptor
-    reports the world's temperature, never the body's. Drawing a perception bar
-    here would assert an observation channel that does not exist.
+    Not `draw_dual_capsule_bar`, and the reason is geometry rather than taste:
+    that widget wants two stacked text rows per bar, and the vitals stack has
+    five rows on a thermal config with no room for them.
+
+    Body temperature is observed only when `thermal.body_temp_observable` is
+    true. `obs_temp` is therefore OPTIONAL and carries what the agent actually
+    received (post-noise) when the channel is on:
+
+    * `obs_temp is None` — the channel is off (or the caller has no sensory
+      data). ONE number is drawn, the true one, and the widget is byte-for-byte
+      what it was before the channel existed.
+    * `obs_temp is not None` — a second, dimmer number is drawn beside it in the
+      project's "translucent = reality, solid = perceived" grammar: the solid
+      value is what the agent perceives, the label says `real ...` for the
+      world's own value.
 
     The bar spans `[min_temperature, max_temperature]`, the interval outside
     which the episode ends with termination reason 5, so the two ends of the
     trough ARE the death thresholds; they are marked, and so is the setpoint.
     The fill takes its colour from the same diverging scale as the field
-    underlay, so a cold body reads blue on a blue patch of world.
+    underlay, so a cold body reads blue on a blue patch of world. The bar
+    geometry is UNCHANGED when `obs_temp` is passed — the 5-bar vitals layout is
+    hand-tuned against the Run Context pod at y = 0.48 and a sixth row collides
+    with it.
     """
     t_min = float(params.min_temperature)
     t_max = float(params.max_temperature)
@@ -247,12 +260,26 @@ def draw_temperature_gauge(ax, x, y, w, h, body_temp, params, clim,
     # Right-aligned INSIDE the bar. Centring it put the number over the empty
     # trough whenever the body was cold, where it collided with the setpoint
     # tick; the right end is always clear.
-    ax.text(x + w - 0.015, y + h * 0.5, f"{float(body_temp):+.2f}",
-            color=COLORS['text_main'], fontsize=7, fontweight='bold',
-            ha='right', va='center', transform=transform, zorder=4,
-            fontfamily='monospace',
-            path_effects=[matplotlib.patheffects.withStroke(
-                linewidth=2.0, foreground='#FFFFFF')])
+    #
+    # With the channel observable the SOLID number is what the agent perceives
+    # and the true value follows it in the label colour, so the grammar matches
+    # every other vital: solid = perceived, dim = reality. No extra row, no
+    # geometry change.
+    if obs_temp is None:
+        ax.text(x + w - 0.015, y + h * 0.5, f"{float(body_temp):+.2f}",
+                color=COLORS['text_main'], fontsize=7, fontweight='bold',
+                ha='right', va='center', transform=transform, zorder=4,
+                fontfamily='monospace',
+                path_effects=[matplotlib.patheffects.withStroke(
+                    linewidth=2.0, foreground='#FFFFFF')])
+    else:
+        ax.text(x + w - 0.015, y + h * 0.5,
+                f"{float(obs_temp):+.2f}  real {float(body_temp):+.2f}",
+                color=COLORS['text_main'], fontsize=6, fontweight='bold',
+                ha='right', va='center', transform=transform, zorder=4,
+                fontfamily='monospace',
+                path_effects=[matplotlib.patheffects.withStroke(
+                    linewidth=2.0, foreground='#FFFFFF')])
 
 
 def draw_thermal_diamond(ax, x, y, w, h, values, sensor_range, clim,
@@ -882,9 +909,14 @@ def render_jax_state(state, params, episode=None, step=None, train_episode=None,
     # is the half that decides whether the episode ends.
     if thermal_on:
         body_temp = float(getattr(state, 'body_temp', params.temperature_setpoint))
+        # `.get('value')` and not `.get('intensity')`: build_sensory_viz keys the
+        # Body Temperature pod with `value` precisely because it is raw degrees
+        # and not a [0,1] fraction. None whenever the channel is off.
         draw_temperature_gauge(ax_left, 0.05, y_ptr, 0.9, bar_h, body_temp,
                                params, thermal_clim, transform=ax_left.transAxes,
-                               label_dy=label_dy)
+                               label_dy=label_dy,
+                               obs_temp=(sensor_map.get('Body Temperature')
+                                         or {}).get('value'))
         y_ptr -= bar_step
 
     draw_pod_frame(ax_left, 0.05, 0.32, 0.9, 0.16, "Run Context", transform=ax_left.transAxes)

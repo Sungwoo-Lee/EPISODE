@@ -257,10 +257,15 @@ def test_thermoception_costs_exactly_five_dims_and_sits_before_olfaction():
     """The width delta and the insertion point, both pinned.
 
     The two configs are identical apart from `thermal.enabled` and the campfire
-    obstacle, so the difference in observation width is the thermoceptor's.
+    obstacle — and `thermal.body_temp_observable`, which is switched OFF on BOTH
+    sides — so the difference in observation width is the thermoceptor's alone.
     """
+    # `body_temp_observable` is switched OFF on both sides so the width delta
+    # below is the thermoceptor's alone. The body-temperature channel's own +1
+    # is pinned in tests/env/test_body_temperature_observation.py.
     off = _params(THERMAL_CONFIG, lambda d: d["thermal"].update(enabled=False))
-    on = _params(THERMAL_CONFIG)
+    on = _params(THERMAL_CONFIG,
+                 lambda d: d["thermal"].update(body_temp_observable=False))
     b_off = get_observation_breakdown(off)
     b_on = get_observation_breakdown(on)
     assert sum(b_on.values()) - sum(b_off.values()) == 5
@@ -308,6 +313,11 @@ def test_sensory_viz_panels_are_not_shifted(path):
         elif "intensity" in pod:
             assert hi - lo == 1
             assert np.float32(pod["intensity"]) == obs[lo]
+        elif "value" in pod:
+            # Body Temperature: one raw-degrees number, deliberately not keyed
+            # `intensity` because it is not a [0,1] fraction.
+            assert hi - lo == 1
+            assert np.float32(pod["value"]) == obs[lo]
         elif "value_text" in pod:
             assert pod["value_text"] == f"({obs[lo]:.2f}, {obs[lo+1]:.2f})"
         else:

@@ -9,7 +9,7 @@ aliases: [body_temperature_observation]
 
 # Body Temperature as an Interoceptive Observation Channel
 
-> **Status**: PLANNED — nothing here is built.
+> **Status**: IMPLEMENTED 2026-09-14 — awaiting `senior-developer` verification. Working tree deliberately left dirty and uncommitted.
 > **Opened**: 2026-09-14
 > **Revised**: 2026-09-14 after `plan-reviewer` (verdict SOUND WITH CONCERNS; four named gaps, all closed below)
 > **Related**: [[thermal_implementation_plan]] (the temperature system this extends), [[thermal_handover]]
@@ -575,23 +575,39 @@ Zero behaviour change today. Included because this change consumes the second-to
 
 Verify **during** implementation, in order. Each names what makes it fail. `PY` below is `/home/vncuser/miniconda3/envs/grid_world_pain/bin/python`; never `conda run`, never system `python3`.
 
-- [ ] **1 — The key is mandatory, and only when thermal is on.**
+**All 11 verified 2026-09-14. One-line result each** (evidence in the Implementation Report below):
+
+| # | Result |
+|:-:|---|
+| 1 | Mandatory only under `thermal.enabled`; no fallback default. 3 tests pass. |
+| 2 | Channel is exactly 1 raw-degrees number after Satiation. New file: **15 passed**. |
+| 3 | Reorder assert fires on the equal-width swap; raised message quoted below. |
+| 4 | **72 passed**, 285 → 286 skipped (the new sibling config, no fixture → skipped, as predicted). |
+| 5 | `test_unified_parity` **34 passed**, `test_visual_parity` **8 passed**. |
+| 6 | 8-file thermal total **239 passed / 0 failed** — identical to the pre-change baseline. |
+| 7 | No regression attributable to this change; the delta is entirely a pre-existing stale-saved-config failure, proven on pre-change code. |
+| 8 | `Observation Dim: 33`, `Body Temperature ... 1` between Satiation and Interoceptive Nociception, read from the run's own `files/output.log`. |
+| 9 | Sibling config gives `Observation Dim: 32`, every other row identical. Nothing edited between the two runs. |
+| 10 | Both renderers drawn and looked at; gauge shows both readings, no exteroception pod, pods below unshifted. |
+| 11 | No slowdown: 1921 → 1975–2014 env-steps/s. |
+
+- [x] **1 — The key is mandatory, and only when thermal is on.**
   `JAX_PLATFORMS=cpu $PY -m pytest tests/env/test_body_temperature_observation.py -k "mandatory or not_read or fallback"`.
   Fails if the read escaped its guard, or if a fallback default crept in.
-- [ ] **2 — The channel is exactly one raw number in the right place.**
+- [x] **2 — The channel is exactly one raw number in the right place.**
   `JAX_PLATFORMS=cpu $PY -m pytest tests/env/test_body_temperature_observation.py`.
-- [ ] **3 — The order assert is not vacuous.** `test_order_assert_catches_a_reorder` swaps two **equal-width** blocks (Body Temperature ↔ Interoceptive Nociception) — the case a width-only check cannot see. Record the raised message in the Implementation Report. **An assert never seen to fail is not evidence**, and a demonstration that only moves a block past a *different-width* neighbour would not have tested the real hazard.
-- [ ] **4 — The 72 byte-parity fixtures are untouched, demonstrated by running them.**
+- [x] **3 — The order assert is not vacuous.** `test_order_assert_catches_a_reorder` swaps two **equal-width** blocks (Body Temperature ↔ Interoceptive Nociception) — the case a width-only check cannot see. Record the raised message in the Implementation Report. **An assert never seen to fail is not evidence**, and a demonstration that only moves a block past a *different-width* neighbour would not have tested the real hazard.
+- [x] **4 — The 72 byte-parity fixtures are untouched, demonstrated by running them.**
   `JAX_PLATFORMS=cpu $PY -m pytest tests/env/test_thermal_parity.py` → must report **72 passed**. Paste the summary line into the Implementation Report. A stated expectation is an assumption; the run is the evidence.
   **If any fixture goes red**: the discriminator (registry worked example `cc6353a`) is whether the failing set is *exactly* the configs touched, with zero unexplained residue — and the only fixtured config this change touches is `default.yaml`. Do **not** widen a tolerance, do **not** regenerate a fixture. Stop and diff.
   Known non-bug, do not re-escalate: env reset is not bit-identical across compilations on `animal_property_sampled`, ≤ 5.96e-08 (one float32 ULP, documented XLA fusion). Drift on any *other* column is real.
-- [ ] **5 — The other parity gates stay green.**
+- [x] **5 — The other parity gates stay green.**
   `JAX_PLATFORMS=cpu $PY -m pytest tests/env/test_unified_parity.py` and the same for `tests/env/test_visual_parity.py`, one file per process. Expect the documented 34 and 8.
-- [ ] **6 — The thermal suite.** Run all 8 thermal-related files **one per process**: `test_thermal_body.py`, `test_thermal_field.py`, `test_thermal_parity.py`, `test_thermal_rendering.py`, `test_thermal_reward_gate.py`, `test_thermal_validation.py`, `test_thermoception.py`, `test_metabolic_coupling.py`.
+- [x] **6 — The thermal suite.** Run all 8 thermal-related files **one per process**: `test_thermal_body.py`, `test_thermal_field.py`, `test_thermal_parity.py`, `test_thermal_rendering.py`, `test_thermal_reward_gate.py`, `test_thermal_validation.py`, `test_thermoception.py`, `test_metabolic_coupling.py`.
   **Expected arithmetic, corrected**: the baseline is 239 passed / 0 failed, and Change 17 **edits two of those tests** rather than leaving the baseline untouched. So the expectation is *still 239 in these 8 files* (no test added or removed there — both edits change assertions, not counts), **plus** the new file's count from Checkpoint 2. If the 8-file total is not 239, a third test broke and was not predicted — stop and name it.
   **Never run `pytest tests/env/` in one process — it core-dumps inside XLA on this machine.**
-- [ ] **7 — The rest of the suite.** `$PY -m pytest tests/ --ignore=tests/env` — **no** CPU pin (a repo-wide pin silently skips 7 GPU-path tests).
-- [ ] **8 — Real run output confirms the width change, read from the run's own log.** This is the only acceptable evidence for what 32 → 33 means to the network; a fresh config-loader reload is **not** — it re-derives what should happen instead of observing what did.
+- [x] **7 — The rest of the suite.** `$PY -m pytest tests/ --ignore=tests/env` — **no** CPU pin (a repo-wide pin silently skips 7 GPU-path tests).
+- [x] **8 — Real run output confirms the width change, read from the run's own log.** This is the only acceptable evidence for what 32 → 33 means to the network; a fresh config-loader reload is **not** — it re-derives what should happen instead of observing what did.
   - **Trainer**: rPPO (`train.py`), because its banner prints the full per-sensor breakdown.
   - **Agent config**: `configs/models/recurrent_ppo/recurrent_ppo_M.yaml` — a plain, non-modulator config, so the run tests the observation layout and nothing else. (The modulator's name-keyed slice under the new layout is covered by a unit test instead of a second launch: Change 18, `test_modulator_slice_resolves_under_the_new_layout`.)
   - **Env config**: `configs/environment/experiment/thermal/campfire_world.yaml`.
@@ -601,9 +617,9 @@ Verify **during** implementation, in order. Each names what makes it fail. `PY` 
   - **Read the banner from `wandb/run-<id>/files/output.log`**, one unshared file per run. Do **not** read the `run_command.py` log: `run_command.py:77-79` collapses several runs' logs into one and shreds exactly this banner, and this change is what makes the banner matter.
   - Record verbatim: the `Observation Dim: 33 (...)` line; the per-sensor breakdown showing `Body Temperature ... 1` between `Satiation` and `Interoceptive Nociception`; and the run's own saved config, confirming the flag the trainer actually resolved.
   - **What the width change implies, to be confirmed rather than assumed by this step**: the network input layer is sized from the probed observation at startup (`train.py:1123-1130`, `dreamer_srl_main.py:742-761`), so no model file needs editing; but a 32-wide checkpoint cannot be restored into a 33-wide run, and a curriculum mixing the two is rejected by the pre-flight `obs_dim` + fingerprint check. State in the report whether the run confirmed each, or whether one went untested.
-- [ ] **9 — The flip works as a flip.** Repeat Checkpoint 8 with **`configs/environment/experiment/thermal/campfire_world_body_temp_hidden.yaml`** (Change 4) — a different config file, not an edit of the first one. Confirm the banner reports **32**, with no `Body Temperature` row and every other row identical. Nothing in `src/`, `configs/` or `scripts/` is touched between the two runs, which is what makes "config flip, not code change" a demonstrated claim rather than a design intention.
-- [ ] **10 — Videos still render.** Render one episode from `campfire_world.yaml` and confirm the vitals panel draws the body-temperature gauge with both readings and that the exteroception pods below are not shifted. The terminal `raise` in `build_sensory_viz` catches a *missing* branch; only looking at a frame catches a *wrong* one. Confirm no empty `BODY TEMPERATURE` pod appears in the right panel — that would mean `known_sensors` was edited against the Design note.
-- [ ] **11 — Speed.** Same node, same GPU, same env + agent config, same seed, same step budget, long enough to clear warm-up and JIT compilation (a run short enough to be dominated by compilation measures nothing). Record steps/sec before and after and the hardware/config/seed all three. Expected delta ≈ 0: one extra scalar, static branches, a trace-time name check. **>5% slowdown warrants discussion; >15% blocks merge** unless explicitly accepted here — it is not.
+- [x] **9 — The flip works as a flip.** Repeat Checkpoint 8 with **`configs/environment/experiment/thermal/campfire_world_body_temp_hidden.yaml`** (Change 4) — a different config file, not an edit of the first one. Confirm the banner reports **32**, with no `Body Temperature` row and every other row identical. Nothing in `src/`, `configs/` or `scripts/` is touched between the two runs, which is what makes "config flip, not code change" a demonstrated claim rather than a design intention.
+- [x] **10 — Videos still render.** Render one episode from `campfire_world.yaml` and confirm the vitals panel draws the body-temperature gauge with both readings and that the exteroception pods below are not shifted. The terminal `raise` in `build_sensory_viz` catches a *missing* branch; only looking at a frame catches a *wrong* one. Confirm no empty `BODY TEMPERATURE` pod appears in the right panel — that would mean `known_sensors` was edited against the Design note.
+- [x] **11 — Speed.** Same node, same GPU, same env + agent config, same seed, same step budget, long enough to clear warm-up and JIT compilation (a run short enough to be dominated by compilation measures nothing). Record steps/sec before and after and the hardware/config/seed all three. Expected delta ≈ 0: one extra scalar, static branches, a trace-time name check. **>5% slowdown warrants discussion; >15% blocks merge** unless explicitly accepted here — it is not.
 
 ## Out of scope — recorded and handed off, not fixed here
 
@@ -620,27 +636,512 @@ Verify **during** implementation, in order. Each names what makes it fail. `PY` 
 
 ## Implementation Report
 
-> **Implemented by**: [agent/person]
-> **Date**: [date]
+> **Implemented by**: `developer`
+> **Date**: 2026-09-14
 
-<!-- Filled by `developer`. Must contain, verbatim:
-     - the `test_thermal_parity.py` summary line (Checkpoint 4);
-     - the message raised by the equal-width reorder test (Checkpoint 3);
-     - the 8-file thermal total and the new file's count (Checkpoint 6);
-     - the two startup banners, 33-wide and 32-wide, quoted from
-       wandb/run-*/files/output.log (Checkpoints 8 and 9);
-     - the before/after steps-per-second numbers and the hardware/config/seed
-       they were measured on (Checkpoint 11);
-     - whether the separable noise-slot guard was included.
-     Deviations from this plan, with reasons, go here — not silently in the diff. -->
+### What this says, in one paragraph
+
+The plan is implemented and every one of its eleven checkpoints passed. The agent can now be
+handed its own body temperature as one extra number in its observation, switched by a new
+config key `thermal.body_temp_observable`; a real training run reports **33** numbers with
+the key `true` and **32** with it `false`, and the two runs differ only in which config file
+was chosen. The change that mattered most — reading the new key *inside* the existing
+`if thermal_enabled:` guard rather than unconditionally — held: the 72-config byte-parity
+gate is **72 passed**, unchanged. The eight thermal test files still total **239 passed / 0
+failed**, the two tests the plan predicted would need editing were the only two that needed
+it, and training speed did not regress.
+
+### File-by-file
+
+| # | File | What landed |
+|:-:|---|---|
+| 1 | `configs/environment/default.yaml` | `thermal.body_temp_observable: true` after `relative:`, with the plan's comment block verbatim. |
+| 2 | `configs/environment/default.yaml` | `body_temperature:` noise-modality block inserted between `satiation:` and `interoceptive_nociception:` (`state_dependent`, σ 0.0, clips ±100). Trailing `# index N` comments renumbered `interoceptive_nociception`→4 … `location`→11, in the `# index N (was N-1, ...)` style Stage 3 used; header comment `(0-10)` → `(0-11)`. |
+| 3 | `configs/environment/experiment/thermal/campfire_world.yaml` | Both edits from (1) and (2), same positions, `body_temp_observable: true`. |
+| 4 | `configs/environment/experiment/thermal/campfire_world_body_temp_hidden.yaml` | **NEW.** Full standalone copy of its sibling, no `extends:`. `diff` of the two files below their header comments shows exactly one differing key. Header comment says what it is for. |
+| 5 | `src/environment/config_loader.py` | `_th_body_temp_observable = bool(config.get_mandatory('thermal.body_temp_observable'))` **inside** `if thermal_enabled:`, after `_th_relative`, with the plan's comment. No `.get(..., False)` anywhere. |
+| 6 | `src/environment/config_loader.py` | Inert `_th_body_temp_observable = False` in the `else:` branch. |
+| 7 | `src/environment/config_loader.py` | `thermal_body_temp_observable=_th_body_temp_observable` in the `EnvParams(...)` call. |
+| 8 | `src/environment/config_loader.py` | `"body_temperature": "Body Temperature"` in `_YAML_KEY_TO_SENSOR_NAME`, with the mutually-blocking comment. |
+| 9 | `src/environment/state.py` | `thermal_body_temp_observable: bool = struct.field(pytree_node=False)` after `thermal_relative`. |
+| 10 | `src/environment/sensor.py` | The new channel in `get_observation`, `jnp.array([state.body_temp])` (raw degrees), under `if params.thermal_enabled and params.thermal_body_temp_observable:`, between Satiation and Interoceptive Nociception. Matching `breakdown["Body Temperature"] = 1` at the identical position in `get_observation_breakdown`. |
+| 11 | `src/environment/sensor.py` | All 11 `obs_parts.append(x)` sites converted to `obs_parts.append((name, x))`; the concatenate is `jnp.concatenate([a for _, a in obs_parts])` over the same arrays in the same order. |
+| 12 | `src/environment/sensor.py` | The order check before the concatenate — compares **names** against `get_observation_breakdown`, raises `AssertionError` (not a bare `assert`, which `python -O` strips). |
+| 13 | `src/environment/sensor.py` | `build_sensory_viz` branch for `"Body Temperature"`, keyed `value` / `true_value` and `type: 'temperature'`. |
+| 14 | `src/environment/renderer.py`, `src/environment/renderer_v2.py` | `draw_temperature_gauge` and `draw_temperature_card` gain an optional `obs_temp=None`. With `None` the widget is what it was. With a value, v1 draws `-5.80  real -5.80` inside the same bar (no new row, no geometry change) and v2 makes the headline number the perceived one and adds a `real ... · Δ ...` footer line. Call sites pass `(sensor_map.get('Body Temperature') or {}).get('value')`. Both docstrings rewritten: body temperature is observed **when `thermal.body_temp_observable` is true**. |
+| 15 | `src/utils/evaluation_core.py` | `_sensor_stat_columns` branch → `obs_intero_body_temp`, named apart from the `intero_*` group. |
+| 16 | `train.py`, `src/algorithms/dreamer_srl/dreamer_srl_main.py` | `p.thermal_body_temp_observable` appended to both `_modality_fingerprint` tuples (26 → **27** fields). The two copies are still identical. |
+| 17 | `tests/env/test_thermoception.py` | The two pre-decided edits, exactly as written in the plan. **These were the only two existing tests that needed changing** — no third test broke. |
+| 18 | `tests/env/test_body_temperature_observation.py` | **NEW.** 12 test functions / **15 test cases** (one is parametrized 2 × 2). |
+| 19 | 6 docs | `CONFIG_GUIDE.md` §3.9 + §5, `02_config_schema.md`, `09_sensors_and_observation.md`, `10_perceptual_noise.md`, `CONFIG_CRITICAL_SETTINGS.md` (registry row **and** dated change-log entry), `IMPLEMENTATION_PLAN.md` (appended note under D6-3). |
+| — | `src/environment/config_loader.py` | **The separable item WAS included.** `_NOISE_SLOTS = 13` named-error guard before the `pad = ...` line. Zero behaviour change at 12 modalities; no reviewer had objected. Say so if it should come out. |
+
+`docs/environment/SCRIPTS_DEPENDENCY_MAP.md` was **not** touched: nothing under `scripts/` changed. (It shows as modified in `git status` — that is another session's work, not mine.)
+
+### Do the new tests actually test anything? Yes — checked on pre-change code
+
+The plan requires every test in the new file to fail before the change. Verified by
+extracting `HEAD` into a scratch tree (`git archive HEAD | tar -x -C tmp/...`, which touches
+neither the working tree nor the index), copying the new test file in, and running it there:
+
+```
+12 failed, 3 passed in 15.49s
+```
+
+The 3 that pass pre-change are the three *negative* arms of the parametrized
+`test_breakdown_and_observation_agree` — `(thermal off, observable true)`, `(off, false)`,
+`(on, false)` — i.e. exactly the cases where the channel is supposed to be absent. Its
+`(on, true)` arm fails pre-change, as do all 11 other tests. Scratch tree deleted.
+
+### Checkpoint 3 — the message the equal-width reorder raises, verbatim
+
+```
+get_observation assembles blocks in the order ['Satiation', 'Body Temperature',
+'Interoceptive Nociception', 'Extero Nociception', 'Thermoception', 'Olfaction',
+'Collision', 'Proprioception', 'Visual'], but get_observation_breakdown declares
+['Satiation', 'Interoceptive Nociception', 'Body Temperature', 'Extero Nociception',
+'Thermoception', 'Olfaction', 'Collision', 'Proprioception', 'Visual']. The two functions
+are the same layout stated twice and they have diverged; every name-keyed consumer
+downstream would mislabel columns silently.
+```
+
+The test asserts up front that the swapped breakdown has the **same total and the same set
+of names** as the real one, so the demonstration is of the case a count-and-width check
+cannot see. `get_observation.clear_cache()` is called before the call — without it a cached
+jit trace from an earlier test would skip the trace-time check and make the test vacuous.
+
+### Checkpoint 4 — the parity line, verbatim
+
+```
+72 passed, 286 skipped in 216.63s (0:03:36)
+```
+
+285 → **286** skipped is the one predicted change: `_collect_configs` picks up the new
+sibling config, which has no committed `.npz` and is therefore skipped, not adjudicated.
+**72 passed is unchanged**, so zero fixtures moved. No fixture was regenerated and no
+tolerance was widened.
+
+### Checkpoint 6 — the 8-file thermal total
+
+Measured **before** any edit and again on the final tree, one file per process,
+`JAX_PLATFORMS=cpu`:
+
+| File | Baseline | After |
+|---|---:|---:|
+| `test_thermal_body.py` | 5 | 5 |
+| `test_thermal_field.py` | 9 | 9 |
+| `test_thermal_parity.py` | 72 | 72 |
+| `test_thermal_rendering.py` | 16 | 16 |
+| `test_thermal_reward_gate.py` | 78 | 78 |
+| `test_thermal_validation.py` | 34 | 34 |
+| `test_thermoception.py` | 14 | 14 |
+| `test_metabolic_coupling.py` | 11 | 11 |
+| **total** | **239 passed / 0 failed** | **239 passed / 0 failed** |
+
+Plus the new file, **15 passed**. Grand total **254 passed / 0 failed**.
+`test_backward_compat_configs.py`: **74 passed, 284 skipped** — both shipped thermal configs
+load rather than falling into the stale-config skip branch.
+
+### Checkpoint 7 — the rest of the suite, and the one thing that needs saying
+
+`$PY -m pytest tests/ --ignore=tests/env` (no CPU pin) reports **51 failed, 580 passed, 2
+skipped, 8 errors**. That number is alarming until you look at it, so here is the check that
+was actually run rather than the reassurance.
+
+Every failure sits in **one** file, `tests/test_trajectory_collection.py`, and every one of
+them is the same error:
+
+```
+ValueError: Strict Config: Configuration key 'sensory.visual_value_mode' is required but missing.
+```
+
+Its `_base_cfg()` helper loads a **real saved training config** from a run of 2026-08-16
+(`results/JAX_RecurrentPPO/20260816-152742_rppo_restpremNH_a10_n112/models/config.yaml`),
+and `sensory.visual_value_mode` only became mandatory on 2026-08-26 — so a config saved ten
+days earlier cannot load. This is the pattern already recorded in the Known Bugs registry
+(*"Mandatory config keys keep landing without migrating the archive"*, which names
+`sensory.visual_value_mode` and the 13 configs failing on it). It is unrelated to anything
+here: the key is read at `config_loader.py:1401`, nowhere near this change, and this change
+adds no unconditionally-mandatory key.
+
+**Demonstrated rather than argued.** A naïve before/after comparison does not work, because
+a `git archive` scratch tree has no `results/` and the whole file is skipped at module level.
+So the single 11 KB saved config was copied into the pre-change tree, and the same tests were
+run **on pre-change code**:
+
+```
+FAILED tests/test_trajectory_collection.py::test_max_steps_beyond_int16_is_refused - ValueError: ... 'sensory.visual_value_mode' ...
+FAILED tests/test_trajectory_collection.py::test_c10_zero_slot_environment      - ValueError: ... 'sensory.visual_value_mode' ...
+ERROR  tests/test_trajectory_collection.py::test_v3_row_convention              - ValueError: ... 'sensory.visual_value_mode' ...
+2 failed, 1 error in 2.60s
+```
+
+Identical failures without this change. Comparing the two full runs' failing-test-ID sets,
+the 38 IDs present only in the "after" set are **all** in that one file (skipped wholesale in
+the scratch tree); outside it, the after-set is a subset of the before-set. Skip counts
+corroborate: 53 before vs 2 after, and that file alone accounts for 51 of them.
+**Conclusion: no regression attributable to this change.** One further note for the record:
+two consecutive post-change runs of this suite gave 52 and 51 failures, so one test in it is
+flaky independent of this change.
+
+### Checkpoints 8 and 9 — the two banners, from each run's own `files/output.log`
+
+Both runs: rPPO (`train.py`), `configs/models/recurrent_ppo/recurrent_ppo_M.yaml`, seed 0,
+`--quiet` absent, `WANDB_MODE=offline WANDB_CONSOLE=redirect`. Nothing in `src/`, `configs/`
+or `scripts/` was touched between them — only the `--config` path changed.
+
+**Checkpoint 8** — `configs/environment/experiment/thermal/campfire_world.yaml`:
+
+```
+--- RL API Specifications ---
+Action Dim: 6
+Observation Dim: 33 (Satiation=1, Body Temperature=1, Interoceptive Nociception=1, Extero Nociception=1, Thermoception=5, Olfaction=5, Collision=5, Proprioception=6, Visual=8)
+Dimension Breakdown:
+  Satiation........... 1
+  Body Temperature.... 1
+  Interoceptive Nociception 1
+  Extero Nociception.. 1
+  Thermoception....... 5
+  Olfaction........... 5
+  Collision........... 5
+  Proprioception...... 6
+  Visual.............. 8
+Hidden Size: 1024
+```
+
+and the run's **own saved config**, `<results>/models/config.yaml:233`:
+`  body_temp_observable: true` (under `relative: true` at :232).
+
+**Checkpoint 9** — `configs/environment/experiment/thermal/campfire_world_body_temp_hidden.yaml`:
+
+```
+--- RL API Specifications ---
+Action Dim: 6
+Observation Dim: 32 (Satiation=1, Interoceptive Nociception=1, Extero Nociception=1, Thermoception=5, Olfaction=5, Collision=5, Proprioception=6, Visual=8)
+Dimension Breakdown:
+  Satiation........... 1
+  Interoceptive Nociception 1
+  Extero Nociception.. 1
+  Thermoception....... 5
+  Olfaction........... 5
+  Collision........... 5
+  Proprioception...... 6
+  Visual.............. 8
+Hidden Size: 1024
+```
+
+and its saved config at the same line: `  body_temp_observable: false`. Every row other than
+`Body Temperature` is identical between the two banners.
+
+**What the width change implies — confirmed vs. untested.** *Confirmed:* the network input
+layer is sized from the probed observation at startup, so no model file needed editing —
+both runs trained to completion on the same unmodified `recurrent_ppo_M.yaml`. *Untested:*
+neither a 32-wide checkpoint restored into a 33-wide run nor a curriculum mixing the two was
+exercised by a launch. The rejection path is covered by unit tests only
+(`test_modulator_slice_resolves_under_the_new_layout` shows a name absent from the
+flag-false breakdown raises rather than silently re-indexing), and the fingerprint now
+carries the flag. Stated rather than assumed, as the checkpoint asks.
+
+### Checkpoint 10 — the frames, looked at
+
+One frame rendered through **both** renderers from `campfire_world.yaml` (body temperature
+drifted to −5.80 so the gauge is off its setpoint), and the same frame from the sibling
+config, and all four looked at:
+
+- v1 `render_jax_state`: the BODY TEMP bar reads `-5.80  real -5.80` — both readings, inside
+  the same bar, at the same geometry. On the flag-off frame it reads `-5.80` alone, and the
+  rest of the panel is pixel-identical.
+- v2 `render_jax_state_v2`: the BODY TEMP card's headline is the perceived value with
+  `real -5.80 · Δ +0.00` in the footer, above the existing `die/setpoint/die` line, inside
+  the existing card.
+- **No `BODY TEMPERATURE` pod appears in the right-hand EXTEROCEPTION panel** in either
+  renderer, and the pods below (Olfactory, Extero Nociception, Thermoception, Collision,
+  Visual) are in the same positions on the flag-on and flag-off frames. `known_sensors` /
+  `pod_map` were not edited, per the Design note.
+
+One pre-existing cosmetic defect was seen and **not** touched: in v1 the
+`EXTERO NOCICEPTION (OBS ONLY) / REAL: --` label overlaps the `THERMOCEPTION (OBS ONLY)`
+label below it. It is present identically on the flag-off frame, so it predates this change.
+
+### Checkpoint 11 — speed
+
+Same machine, **GPU 1 (RTX 4090, 24 GB)**, same agent config
+(`recurrent_ppo_M.yaml`), same seed (**0**), same step budget (**500,000 env-steps**,
+`--episodes 0 --total-timesteps 500000 --num-envs 32`), quiet machine, wall-clock of the
+whole process (so startup and JIT are included in all three and cancel):
+
+| Arm | Code | Config | Obs dim | Wall | env-steps/s | vs. before |
+|---|---|---|---:|---:|---:|---:|
+| before | `HEAD` (scratch tree) | `campfire_world.yaml` | 32 | 260.2 s | **1921.3** | — |
+| after, flag off | working tree | `campfire_world_body_temp_hidden.yaml` | 32 | 248.3 s | **2013.6** | **+4.8 %** |
+| after, flag on | working tree | `campfire_world.yaml` | 33 | 253.2 s | **1974.6** | **+2.8 %** |
+
+**No slowdown; both post-change arms are slightly faster than pre-change, which is
+run-to-run noise on a shared machine rather than a real speed-up.** The honest reading is
+"no measurable regression", well inside the plan's 5 % discussion threshold.
+
+Worth flagging even though it did not show up in the numbers: `recurrent_ppo_M.yaml` uses
+**hierarchical** encoding, which builds one grouped unimodal MLP *per modality*
+(`ObservationEncoder`, `src/models/recurrent_ppo_network.py:158-168`). Turning the channel on
+therefore takes that encoder from 9 groups to 10 and widens the multimodal hub's input by one
+`hidden_size` block — a real parameter and FLOP increase, not just one extra scalar. It is
+invisible at this scale (+2.8 % *faster*, i.e. inside noise), but a reviewer should know the
+cost is per-modality and not per-dimension.
+
+### Commands, for reproduction
+
+```bash
+PY=/home/vncuser/miniconda3/envs/grid_world_pain/bin/python
+# per-file only — tests/env/ in one process core-dumps inside XLA on this machine
+JAX_PLATFORMS=cpu $PY -m pytest tests/env/test_body_temperature_observation.py
+JAX_PLATFORMS=cpu $PY -m pytest tests/env/test_thermal_parity.py
+$PY -m pytest tests/ --ignore=tests/env          # no CPU pin
+
+CUDA_VISIBLE_DEVICES=1 WANDB_MODE=offline WANDB_CONSOLE=redirect WANDB_DIR=<scratch> \
+  $PY train.py --config configs/environment/experiment/thermal/campfire_world.yaml \
+    --agent_config configs/models/recurrent_ppo/recurrent_ppo_M.yaml \
+    --episodes 120 --num-envs 32 --seed 0 --results-dir <scratch>
+```
+
+Two notes on those commands, both deviations from the plan's letter — see below.
+
+### Deviations from the plan, with reasons
+
+1. **The smoke runs were local and offline, not launched on a lab node through
+   `training-runner` / `run_command.py`** (Checkpoint 8 says the node and GPU come from the
+   coordinator). Directed by the user for this job: `WANDB_MODE=offline`, short budget,
+   artefacts deleted afterwards. Both 4090s on this machine were idle and GPU 1 was used.
+2. **`WANDB_CONSOLE=redirect` had to be set to get `files/output.log` at all.** In offline
+   mode with the default console setting, wandb writes no `output.log` — the run directory
+   contains only `requirements.txt`. The first flag-on run was re-done with `redirect` set so
+   that both banners quoted above come from the run's own `files/output.log`, as the
+   checkpoint requires, rather than from the process's stdout. Worth knowing for any future
+   offline verification.
+3. **`--num-envs 32` instead of the config's 128.** At 128 the run needs a ~19.75 GiB single
+   allocation and dies with `RESOURCE_EXHAUSTED` on a 24 GB card under JAX's 75 %
+   pre-allocation. 32 is used identically in all four runs (both banners, both speed arms),
+   so nothing is compared across different settings.
+4. **The separable noise-slot guard was INCLUDED** (see the file table). The plan makes it
+   optional; no reviewer objected, and it is a zero-behaviour-change named error.
+5. **One assertion was added to `test_noise_map_and_config_block_are_paired` beyond the
+   plan's description of it**: it now also loads the config with
+   `perceptual_noise.enabled: true` and checks the body-temperature column survives the noise
+   path bit-exact. This is the half of the mutually-blocking pair that only shows with noise
+   ON — the bare `KeyError` inside a jit trace — and every other thermal test runs noise off,
+   so nothing else in the suite walks that path. Same test, same stated purpose; flagged
+   because it is an addition rather than a transcription.
+
+### Nothing was halted on
+
+Every file changed is named in the plan's File Changes section. No file outside it was
+touched. Nothing in the working tree belonging to another session was staged, stashed, or
+checked out; **nothing was committed**.
+
+Known Bugs registry was read directly (`grep` on
+`docs/develop/active/issues/KNOWN_BUGS.md`, since sub-agents cannot spawn `bug-curator`):
+the "mandatory config keys keep landing without migrating the archive" row is the prior art
+for the Checkpoint 7 failures and for the 68 deliberately-deferred configs this change does
+not migrate; the `animal_property_sampled` one-ULP row is the documented non-bug the parity
+checkpoint warns about and it did not fire. No row covers body temperature or the observation
+layout, and I found nothing the registry does not already record.
+
+### Follow-ups for `senior-developer`, none blocking
+
+- The registry row above is one more mandatory key's worth of deferral (68 stand-alone
+  configs still unmigrated). This change deliberately does not add to it — the conditional
+  shape means no config *becomes* unloadable — but the pattern is now the reason
+  `tests/test_trajectory_collection.py` is red in the non-env suite, which costs a reviewer
+  real time every time it is re-read.
+- `tests/test_trajectory_collection.py` loads a 2026-08-16 saved run config that no longer
+  loads. There is an uncommitted `docs/develop/active/refactors/SAVED_RUN_CONFIG_COMPAT.md`
+  in the tree from a parallel session that appears to be about exactly this; worth
+  cross-linking rather than re-diagnosing.
+- One test in the non-env suite is flaky (52 vs 51 failures across two consecutive runs).
+  Not identified; not this change's.
+
+**Implemented by: developer**
 
 ## Verification Report
 
-> **Verified by**: [agent/person]
-> **Date**: [date]
+> **Verified by**: `senior-developer`
+> **Date**: 2026-09-14
+> **Scope of this check**: plan adherence and scope only. JAX/Flax correctness is
+> `code-reviewer`'s; YAML soundness is `env-config-reviewer`'s; all three ran in parallel on
+> the same dirty tree. **Nothing was committed, staged, stashed or cleaned.**
 
-| File | Change | Status | Notes |
-|------|--------|:------:|-------|
-| | | | |
+### What this says, in one paragraph
 
-**Conclusion**: [one-line summary]
+The implementation does what the plan said it would do, and the two claims the plan leans on
+hardest were re-run here rather than taken on trust. The new config key
+`thermal.body_temp_observable` is read **inside** the existing `if thermal_enabled:` guard —
+the shape the whole safety argument rests on — with an inert `False` in the `else`, and there
+is no fallback default anywhere in the change. The 72-config byte-parity gate, re-run
+independently, reports **72 passed, 286 skipped**: no fixture moved, and the one extra skip is
+the new sibling config, exactly as predicted. The new test file was re-run against a fresh
+`git archive HEAD` scratch tree and gives **12 failed, 3 passed** — the same numbers the
+developer reported, so the tests are not vacuous. Every file touched is named in the plan;
+nothing outside it was touched. Four deviations were recorded rather than hidden, and all four
+are acceptable. Two non-blocking findings are listed below: one wrong number in a
+maintenance-contract doc, and one durable-recording gap about what a modality toggle costs
+under hierarchical encoding.
+
+**Verdict: APPROVED.** The two findings are documentation-only and do not block.
+
+### Per-file check against the plan's File Changes section
+
+| # | File | Plan change | Status | Notes |
+|:-:|---|---|:--:|---|
+| 1–2 | `configs/environment/default.yaml` | 1, 2 | ✅ | Key + comment block verbatim after `relative:`. `body_temperature:` noise block between `satiation:` and `interoceptive_nociception:`; trailing `# index N` comments renumbered 3→11 and the header `(0-10)`→`(0-11)`. +41/−9. |
+| 3 | `configs/.../thermal/campfire_world.yaml` | 3 | ✅ | Same two edits, `true`. +40/−9. |
+| 4 | `configs/.../thermal/campfire_world_body_temp_hidden.yaml` | 4 | ✅ | New, standalone, no `extends:`. **Semantic YAML deep-diff against its sibling returns exactly one difference**: `thermal.body_temp_observable True → False`. Verified by parsing both files, not by reading them. |
+| 5–8 | `src/environment/config_loader.py` | 5, 6, 7, 8 | ✅ | **The central check passes**: `get_mandatory('thermal.body_temp_observable')` sits inside `if thermal_enabled:` at the line after `_th_relative`, and the `else:` branch assigns `False`. It is **not** alongside `sensory.injury_observable`'s unconditional read. `_YAML_KEY_TO_SENSOR_NAME` now holds 12 entries (counted programmatically). |
+| — | `src/environment/config_loader.py` | separable item | ✅ | `_NOISE_SLOTS = 13` named-error guard included. The plan explicitly offered this as optional and required the developer to say which way they went; they did. **Not scope creep — compliance.** |
+| 9 | `src/environment/state.py` | 9 | ✅ | `thermal_body_temp_observable: bool = struct.field(pytree_node=False)` after `thermal_relative`. +8/−0. |
+| 10–13 | `src/environment/sensor.py` | 10, 11, 12, 13 | ✅ | Channel under `if params.thermal_enabled and params.thermal_body_temp_observable:` with `jnp.array([state.body_temp])` (raw, unnormalised). All 11 append sites named. Order check compares **names** against `get_observation_breakdown` and raises `AssertionError`, not a bare `assert`. `build_sensory_viz` branch keyed `value`/`true_value`. +76/−12 — proportionate to 4 changes, no unrelated deletion. |
+| 14 | `src/environment/renderer.py`, `renderer_v2.py` | 14 | ✅ | Optional `obs_temp=None` on both widgets; the `None` path is the pre-existing code verbatim. No bar-geometry change in v1; v2 adds text only. `known_sensors` (`renderer.py:942`) and `pod_map` are **untouched** — checked, the diff contains zero `known_sensors` lines, so the Design note's "no exteroception pod" choice held. |
+| 15 | `src/utils/evaluation_core.py` | 15 | ✅ | `obs_intero_body_temp`, branch placed before the `intero_*` group. +7/−0. |
+| 16 | `train.py`, `src/algorithms/dreamer_srl/dreamer_srl_main.py` | 16 | ✅ | **Both named in the plan (Change 16), so neither is out of scope.** Identical 5-line additions; the fingerprint goes 26 → 27 in both copies. |
+| 17 | `tests/env/test_thermoception.py` | 17 | ✅ | Exactly the two pre-decided edits. Re-run here: **14 passed**, unchanged from baseline. |
+| 18 | `tests/env/test_body_temperature_observation.py` | 18 | ✅ | 12 test functions / 15 cases, matching the plan's table. Re-run here: **15 passed**. |
+| 19 | 6 docs | 19 | ⚠️ | All six updated with real content, not merely touched — see the contract check below. One wrong number in `CONFIG_CRITICAL_SETTINGS.md`. |
+| — | `docs/diary/2026-09-14.md` | — | ✅ | The developer's own `implemented` row, per the diary protocol. Not a scope violation. |
+
+### Scope
+
+**No out-of-scope file was touched.** The working tree carries 93 changed paths, but every one
+outside the table above belongs to a parallel session — the renderer-layout-redesign figures
+and page, the house-style assets, the sensor-ladder SVGs, `docs/reviews/design_episode_dashboard.md`,
+`docs/develop/active/refactors/SAVED_RUN_CONFIG_COMPAT.md`, `docs/develop/active/meta/artifact_format_bugs.md`,
+and the auto-generated `docs/develop/INDEX.md` (regenerated at 17:40, before this work began).
+Two of those are **staged** by another session (`INDEX.md`, `SAVED_RUN_CONFIG_COMPAT.md`);
+neither was disturbed. `tests/env/fixtures/` is byte-untouched — no fixture was regenerated.
+
+Specifically on the question of whether `train.py` and `dreamer_srl_main.py` should have
+triggered a halt: **no.** Plan Change 16 names both files by path and line, requires the two
+`_modality_fingerprint` copies to stay identical, and states the 26 → 27 count. The diff is
+that change and nothing else.
+
+### Claims re-run independently
+
+| Claim | Re-run result | Status |
+|---|---|:--:|
+| `test_thermal_parity.py` → 72 passed, 286 skipped | **72 passed, 286 skipped in 196.6 s** | ✅ reproduced |
+| New tests are not vacuous (12 failed / 3 passed on pre-change code) | `git archive HEAD` → scratch tree → **12 failed, 3 passed in 19.3 s**, same three passers (the negative arms of the parametrized breakdown test) | ✅ reproduced |
+| New test file → 15 passed | **15 passed** | ✅ reproduced |
+| `test_thermoception.py` → 14 passed | **14 passed** | ✅ reproduced |
+| 8-file thermal baseline 239/0, unchanged after | Both logs survive in `tmp/` and sum to 5+9+72+16+78+34+14+11 = **239** on each side | ✅ corroborated |
+| No `.get(..., default)` fallback | Grepped every added line across `src/`, `train.py`, `configs/`, `tests/`. The only `.get(` hits are `sensor_map.get('Body Temperature')` — a dict lookup in the renderer call sites the plan itself prescribes — and two comment lines. **No config fallback.** | ✅ |
+
+### Evidence quality on the 32 → 33 claim
+
+The requirement was a real run's own output, never a config-loader reload. **Met.** The run
+directories were deleted, but the two smoke runs' captured process output survives at
+`tmp/20260914_smoke_on.stdout` and `tmp/20260914_smoke_off.stdout`, and I read both directly:
+line 411 of each carries `Observation Dim: 33 (… Body Temperature=1 …)` and
+`Observation Dim: 32 (… no Body Temperature …)` respectively, with every other row identical.
+These match the archived `tmp/20260914_banners.txt` verbatim in substance. `tmp/20260914_speed.log`
+independently carries its own per-arm banner line, so the three speed arms are self-labelling.
+
+Two honest caveats, neither fatal: the archived banner file is a lightly-cleaned transcription
+(the off-run stdout has a tqdm line interleaved mid-banner that the archive does not), and with
+`WANDB_CONSOLE=redirect` the process stdout and `files/output.log` are the same captured stream
+rather than two independent sources. The requirement — *a real run's own output, not a
+re-derivation* — is satisfied either way.
+
+### Deviations — judged
+
+| # | Deviation | Verdict |
+|:-:|---|---|
+| a | Smoke runs local + offline instead of `training-runner` / `run_command.py` (overrides Checkpoint 8) | **Accepted.** This was the user's instruction for this job. The reason Checkpoint 8 routed through the coordinator was the shared-log shredding in `run_command.py:77-79`; running locally avoids that hazard entirely rather than working around it. Both banners still came from the run's own output. |
+| b | `WANDB_CONSOLE=redirect` required | **Accepted, and worth keeping.** Offline wandb writes no `output.log` without it, which would have made the checkpoint silently unverifiable. This is a real environment gotcha that cost the developer a re-run; it belongs in durable memory (follow-up 3 below). |
+| c | `--num-envs 32` instead of the config's 128 | **Accepted.** 128 needs a ~19.75 GiB single allocation and dies `RESOURCE_EXHAUSTED` on a 24 GB card. Used identically in all four runs, so nothing is compared across settings, and the banner is independent of batch size. One caveat recorded, not a blocker: the hierarchical encoder's extra FLOPs scale with batch, so a 128-env run could show a slightly larger relative cost than the 32-env arms measured. Both post-change arms came out *faster* than pre-change, so there is no sign of a real cost to find. |
+| d1 | The plan's **optional** separable noise-slot guard was included | **Not scope creep — compliance.** The plan's own words are "drop it if a reviewer objects; say which you did". No reviewer objected, the developer included it and said so explicitly. Zero behaviour change at 12 modalities. |
+| d2 | An assertion added to the existing `test_noise_map_and_config_block_are_paired` (now also runs with `perceptual_noise.enabled: true`) | **Honest completion of the mutually-blocking pair, not scope creep.** Analysis §6 defines the hazard precisely as "without the config block `apply_perceptual_noise` raises a bare `KeyError` **inside a jit trace**" — a path only reachable with noise ON, and, as the developer notes, every other thermal test runs noise OFF. The plan's test-table row described only the map half and the `noise_modality_order` membership, so as written the test would never have walked the failure it exists to guard. The addition is inside the same test, serves the same stated purpose, adds no production code, and closes a gap the plan itself named. Correct call, and correctly flagged rather than slipped in. |
+
+### Maintenance contracts — do the docs say what the code now does?
+
+Checked by reading the resulting text, not by confirming the file was modified.
+
+| Doc | Status | Check |
+|---|:--:|---|
+| `CONFIG_GUIDE.md` | ✅ | §3.9 example block carries `body_temp_observable: true`; the conditional-key note at :334 states it is conditional-mandatory **and** the one key in the block that changes `obs_dim`, with the checkpoint/curriculum consequence spelled out. §5 (:476) carries the worked example of choosing the conditional shape to avoid a 72-file migration, including the "never soften the deferral with a fallback default" warning. |
+| `02_config_schema.md` | ✅ | Fingerprint count updated 26 → **27** at :48 with the new field named; `thermal:` key table gains the row at :80; the observation description at :117-132 describes the channel, its position and the name-based order check. |
+| `09_sensors_and_observation.md` | ✅ | Observation-order table gains row **4** (Body Temperature, `thermal_enabled AND thermal_body_temp_observable`, dim 1, raw degrees, flagged as the one row not normalised) and renumbers 5–12. The stale olfaction worked example at :350 was extended, not left: it now says olfaction starts at 11 on the shipped campfire config, not 5. |
+| `10_perceptual_noise.md` | ✅ | Header says "All **12** modalities"; `body_temperature` sits at index 3 with `[-100, 100]`, and `interoceptive_nociception`…`location` are renumbered 4…11 — matching the YAML byte for byte. A "Notes on the default values" bullet explains the explicit clips and the σ = 0.0 choice. |
+| `CONFIG_CRITICAL_SETTINGS.md` | ⚠️ | Registry row present and substantive; dated **2026-09-14** change-log entry present in the same change, following the 2026-09-09 Stage 3 template, and it does state the 32 → 33 width and the zero-thermal-ON-runs sweep. **One wrong number** — see Finding 1. |
+| `IMPLEMENTATION_PLAN.md` D6-3 | ✅ | Appended as a blockquote under D6-3, not rewritten; says what is superseded and what still stands. |
+| `SCRIPTS_DEPENDENCY_MAP.md` | ✅ | Correctly **not** updated — nothing under `scripts/` was added, moved, renamed, deleted, or had a caller changed. (It shows modified in `git status`; that is a parallel session's work.) |
+
+### Findings
+
+**Finding 1 — ⚠️ wrong number in a maintenance-contract doc.** The 2026-09-14 change-log entry
+in `docs/environment/CONFIG_CRITICAL_SETTINGS.md:34` says the parity suite "reports 72 passed,
+**285** skipped, unchanged". The measured result is **286** skipped, and the skip count is the
+one thing that *did* change — the new sibling config has no committed fixture, so it is skipped
+rather than adjudicated. The plan's own Checkpoint 4 states this correctly (285 → 286); the
+registry entry appears to have copied the pre-change figure. The passed count (72) is right and
+the safety claim is unaffected, but this is the doc future config work is told to trust, and it
+currently under-reports by one and mislabels a changed number as unchanged. **Fix: change
+`285 skipped, unchanged` to `286 skipped (285 → 286: the new flag-OFF sibling config has no
+committed fixture and is skipped, not adjudicated); 72 passed unchanged`.** Doc-only; hand to
+`developer`.
+
+**Finding 2 — ⚠️ the hierarchical-encoder cost has no durable home.** The developer's own
+finding, which the plan did not anticipate, is correct and I verified it in the source:
+`ObservationEncoder` in `encoding_mode: hierarchical` builds `GroupedMLP(len(names), …)` — one
+grouped unimodal MLP **per modality** — and sizes the multimodal hub at
+`len(names) * hidden_size` (`src/models/recurrent_ppo_network.py:158-171`). `recurrent_ppo_M.yaml`
+sets `encoding_mode: "hierarchical"` with `hidden_size: 1024`, so turning this channel on takes
+that encoder from 9 groups to 10 and widens the hub's input by a full 1024-wide block. The cost
+of a modality toggle is therefore **per modality, not per dimension** — one extra scalar in the
+observation is not one extra scalar in the network. It was invisible at this scale (both
+post-change arms measured faster than pre-change), which is precisely why it will be forgotten.
+
+**It does need recording somewhere durable, and right now it is not.** It lives only in this
+plan's Implementation Report. The active docs a future agent consults before flipping a modality
+flag — `CONFIG_CRITICAL_SETTINGS.md` and `09_sensors_and_observation.md` — say nothing about it,
+and every doc in the repo that mentions `encoding_mode` is archived. Note the fact is **general**,
+not specific to body temperature: it applies to `sensory.injury_observable`,
+`nutrition_observable`, `location_sensor_enabled` and every other modality gate. **Recommended:
+one or two sentences in `docs/environment/09_sensors_and_observation.md`, next to the
+observation-order table, saying that under `encoding_mode: hierarchical` each enabled modality
+costs one grouped unimodal MLP plus one `hidden_size` block on the multimodal hub — so the
+parameter cost of a toggle is per-modality — with a pointer to
+`src/models/recurrent_ppo_network.py::ObservationEncoder`.** Doc-only, non-blocking; hand to
+`developer` as a small follow-up rather than reopening this change.
+
+### Speed-change review
+
+**✅ no regression.** Same machine, same GPU (RTX 4090, GPU 1), same agent config
+(`recurrent_ppo_M.yaml`), same seed (0), same budget (500,000 env-steps), same `--num-envs 32`
+in all three arms; wall-clock of the whole process, so startup and JIT are included in each and
+cancel. Pre-change 1921.3 env-steps/s, post-change flag-off 2013.6 (+4.8 %), post-change flag-on
+1974.6 (+2.8 %). Both post-change arms are *faster*, which is run-to-run noise rather than a
+speed-up; the honest reading is no measurable change, comfortably inside the plan's 5 %
+discussion threshold. 500 k steps over ~250 s is long enough that compilation does not dominate.
+`tmp/20260914_speed.log` survives and carries each arm's own observation-dim banner, so the arms
+are self-labelling. One caveat recorded above under deviation (c): measured at 32 envs, not the
+config's 128.
+
+### Out of scope, confirmed not chased
+
+The ~51 failures under `pytest tests/ --ignore=tests/env` were left alone as instructed. For the
+record, the developer's proof is the right shape: the failures were reproduced **on pre-change
+code** by copying the 2026-08-16 saved config into a `git archive` tree, so they are not a
+re-derivation on the suspect path. Cross-links to
+`docs/develop/active/refactors/SAVED_RUN_CONFIG_COMPAT.md` (a parallel session's uncommitted
+work on exactly this) are worth adding once that doc lands.
+
+### Follow-ups, none blocking
+
+1. Fix the `285` → `286` skip count in `CONFIG_CRITICAL_SETTINGS.md:34` (Finding 1). → `developer`
+2. Record the per-modality hierarchical-encoder cost in `09_sensors_and_observation.md` (Finding 2). → `developer`
+3. Capture the offline-wandb gotcha durably — without `WANDB_CONSOLE=redirect`, an offline run writes no `files/output.log` at all, so any verification that reads the banner from it silently has nothing to read. → `/wiki-write` or auto-memory
+4. Cross-link this plan and `SAVED_RUN_CONFIG_COMPAT.md` in both directions once that doc is committed. → whoever lands it
+
+**Conclusion**: ✅ **APPROVED** — every plan change landed as specified, the conditional-read
+safety argument holds, the parity gate and the test-vacuity check were both reproduced
+independently, no file outside the plan was touched, and there is no speed regression; two
+documentation-only findings are recorded as non-blocking follow-ups.
+
+**Verified by: senior-developer**

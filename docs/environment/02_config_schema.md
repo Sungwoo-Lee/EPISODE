@@ -43,8 +43,9 @@ Measured share of live entities hidden, obstacles-only blocking: **5° → 31%, 
 
 `olfactory_grid_range`, `visual_blur_enabled`, `visual_value_mode`,
 `visual_occlusion_enabled` and the three per-entity mask/blocks arrays are part of the
-26-field modality fingerprint (`train.py`, `dreamer_srl_main.py`) — as are
-`thermal_enabled`, `thermal_grid_range` and `thermal_relative` — they change what an
+27-field modality fingerprint (`train.py`, `dreamer_srl_main.py`) — as are
+`thermal_enabled`, `thermal_grid_range`, `thermal_relative` and
+`thermal_body_temp_observable` — they change what an
 observation *means* at an identical width, which the `obs_dim` check cannot catch. The
 continuous blur and cone knobs are deliberately **out**: fingerprinting floats would
 forbid legitimate schedules.
@@ -76,6 +77,7 @@ thermoceptor. Temperature is not in the reward yet (Stage 4). Plan:
 | `food_min_fire_distance` | `thermal_food_min_fire_distance` | **yes** | `>= 0` | Manhattan; `0` disables |
 | `grid_range` | `thermal_grid_range` | **yes** | `>= 0` | thermoceptor **radius**; contributes `2r²+2r+1` observation dims |
 | `relative` | `thermal_relative` | **yes** | — | `true` reports `field − body_temp`; `false` reports the raw field |
+| `body_temp_observable` | `thermal_body_temp_observable` | **yes** | — | `true` hands the agent its OWN body temperature as **1** observation dim, in raw degrees, immediately after Satiation; `false` leaves it latent. Conditional-mandatory under `enabled`, like every key in this block |
 
 `thermal_kernel_radius` is derived, not configured: `ceil(3 * sigma)`, static because it
 fixes the number of unrolled shifts in the blur.
@@ -111,6 +113,25 @@ With `relative: true` each value is `field[cell] − body_temp`: "how much warme
 that cell", which is the quantity the agent can act on. The modality is inserted after
 Extero Nociception and before Olfaction, in `get_observation` and
 `get_observation_breakdown` alike, and is absent entirely when `thermal.enabled` is false.
+
+### The body-temperature channel (`body_temp_observable`)
+
+Every thermoceptor reading is a *difference*, including the centre cell, so the agent's own
+body temperature cannot be read off any of them. `thermal.body_temp_observable: true` adds
+it as a separate, **interoceptive** modality named `"Body Temperature"`, width **1**,
+carrying `state.body_temp` in **raw degrees** — deliberately not normalised, so that
+`Thermoception[centre] + BodyTemperature == thermal_field[own cell]` under the shipped
+`relative: true`. Its position is immediately **after Satiation and before Interoceptive
+Nociception**, which keeps the directly-delivered body levels (Injury, Nutrition, Satiation,
+Body Temperature) contiguous and puts the *percept* after them. With it false the quantity
+stays latent: recoverable only by integrating the recurrence over the whole episode.
+
+It changes `obs_dim` by one, so it participates in the modality fingerprint and in
+checkpoint/curriculum compatibility: a 32-wide checkpoint cannot be restored into a 33-wide
+run. `get_observation` now raises `AssertionError` if its block order disagrees with
+`get_observation_breakdown` — comparing **names**, not widths, because Body Temperature and
+Interoceptive Nociception are both width 1 and a count-and-width check cannot see them
+swapped.
 
 **Out-of-bounds cells CLAMP; they do not read zero.** This is a deliberate departure from
 the convention `sense_olfaction_cells` and `sense_visual` follow, and it must not be
@@ -1479,7 +1500,7 @@ YAML key → sensor name mapping (`config_loader.py:944–955`):
 | `visual` | `"Visual"` | 8 |
 | `location` | `"Location"` | 9 |
 
-10 modalities defined (+ 3 spare slots = 13 total). `sensor.py` builds `modality_map = {name: i for i, name in enumerate(params.noise_modality_order)}` at observation-assembly time.
+12 modalities defined (+ 1 spare slot = 13 total). `sensor.py` builds `modality_map = {name: i for i, name in enumerate(params.noise_modality_order)}` at observation-assembly time.
 
 Per-modality optional keys (defaults apply when absent):
 

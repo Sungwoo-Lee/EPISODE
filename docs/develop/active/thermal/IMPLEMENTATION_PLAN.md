@@ -2016,6 +2016,18 @@ perceives", and body temperature is **not observed** — the thermoceptor report
 temperature, never the body's. Reusing it would assert an observation channel that does not
 exist, and it cannot mark the ±15 thresholds the plan asks for.
 
+> **Superseded in part, 2026-09-14.** D6-3's premise — "body temperature is **not
+> observed**" — was a fact about the code at Stage 6a, not a decision that had been taken:
+> Stage 2 added the body and Stage 3 added a *world* sensor, and nobody ever chose to hide
+> the body's own temperature. [[body_temperature_observation]] adds
+> `thermal.body_temp_observable`, which delivers body temperature to the agent as one raw-
+> degrees observation dim. The rest of D6-3 stands: `draw_temperature_gauge` is still its own
+> helper rather than a fifth `draw_dual_capsule_bar`, now for the geometric reason (the
+> vitals stack has five rows and no room for a second text line per bar). It gained an
+> OPTIONAL `obs_temp` parameter and is byte-identical when that is `None`, which is every
+> thermal-ON-but-not-observable frame. Appended, not rewritten — this document is a signed
+> record.
+
 **D6-4 — corrected a formula the Stage 2 docs had already stated in its special-case form.**
 `CONFIG_GUIDE.md` said `T* = k_exchange·T_field/(k_exchange + k_loss)` flatly. That is the
 setpoint-zero case. Replaced with the general form and a note that the shorter one holds

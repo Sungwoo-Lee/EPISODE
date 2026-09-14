@@ -839,6 +839,11 @@ def main() -> None:
             p.thermal_enabled,
             p.thermal_grid_range,
             p.thermal_relative,
+            # Changes obs_dim by 1, so the dim check above already catches a
+            # mismatched curriculum -- included as defence in depth, the same
+            # reasoning that puts injury_observable / nutrition_observable in
+            # this tuple.
+            p.thermal_body_temp_observable,
             # NOT fingerprinted, deliberately: visual_blur_radial_scale /
             # _anisotropy / _sigma_floor are continuous, and fingerprinting floats
             # would forbid legitimate schedules. Same pre-existing choice applies

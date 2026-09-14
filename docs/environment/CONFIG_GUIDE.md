@@ -252,6 +252,7 @@ thermal:
   k_metabolic: 0.0          # constant heat produced per step
   grid_range: 1             # thermoceptor RADIUS; 1 -> 5 cells (+5 obs dims)
   relative: true            # report `field - body_temp`, not the raw field
+  body_temp_observable: true  # hand the agent its OWN temperature (+1 obs dim)
 
 environment:
   obstacles:
@@ -330,7 +331,13 @@ true as well. The body sub-keys validate at the point they are read: `min_temper
 max_temperature`, `temperature_setpoint` inside that band, `k_exchange` and `k_loss` each
 `>= 0` and summing to `<= 1`, and `grid_range >= 0`. `metabolic_coupling` is read too,
 and `metabolic_coupling_rate` is conditional-mandatory one level deeper — read only when
-`metabolic_coupling` is true, and validated `>= 0` there.
+`metabolic_coupling` is true, and validated `>= 0` there. `body_temp_observable` is
+conditional-mandatory in the same way, and is the one key in the block that **changes
+`obs_dim`**: with it true the agent receives its own body temperature as one extra
+observation number, in RAW DEGREES, immediately after Satiation. A 32-wide checkpoint
+cannot be restored into a 33-wide run, and a curriculum that mixes the two is rejected by
+the pre-flight `obs_dim` + modality-fingerprint check — so flipping it is a new run, not a
+resume.
 
 **A mis-tuned thermal config fails at load, and the message tells you how to retune it.**
 Beyond the per-key validation above, a thermal config with a real fire in it gets its
@@ -466,6 +473,7 @@ The project rule is **no fallback defaults**: critical keys are read with `confi
 2. **Read it in `config_loader.py`** via `config.get_mandatory(...)` (or, for a conditional key, gate the `get_mandatory` behind its enabling flag — see the initial-state range keys for the pattern). If it is shape-determining, store it on `EnvParams` as a static field (`struct.field(pytree_node=False)`); otherwise as a traced leaf.
    - **The gating flag of a conditional block is itself unconditionally mandatory, and never gets a fallback default.** `thermal.enabled` is the worked example: `config.get('thermal.enabled', False)` would let a config with a misspelled `thermal:` block load clean and train as if the feature were off. The fallback is also what would make deferring a config migration unsafe — a deferred config is only safe because `get_mandatory` fails loudly and names the missing key.
    - **`Config` does not resolve `extends:`.** `load_env_config` in `train.py` does; `Config.load_yaml` is `cls(yaml.safe_load(f))` and nothing more. So the fixture generators and the parity tests, which build params straight from a raw `Config`, cannot inherit a new gate from `default.yaml` — **every full config** (one with no `extends:`) has to carry the key itself, as do the test modules with inline YAML bases. Budget for that migration in the same change; commit `0e8a4ef8` (`visual_blur_enabled`) and the 2026-09-08 thermal change are the two precedents.
+   - **Or choose the conditional shape specifically so there is no migration to budget for.** `thermal.body_temp_observable` (2026-09-14) is the worked example. It could have been read unconditionally, next to `sensory.injury_observable`; instead it is read inside the existing `if thermal_enabled:` block. The reason is arithmetic, not taste: **72** stand-alone configs carry a committed byte-parity fixture, every one of them ships `thermal.enabled: false`, and an unconditional `get_mandatory` would have raised on all 72 at load — turning the project's main regression gate red before it compared a single byte, and requiring a 72-file inline migration plus ~20 test modules with inline YAML bases. Under the conditional shape **zero** fixture configs changed and the suite stayed at 72 passed. Put a new key under an existing gate when one fits; take the migration only when the key genuinely has to be read on every config. **And never soften the deferral with a fallback default** — the 68 configs left unmigrated are safe *only* because `get_mandatory` fails loudly and names the key, which is what `tests/env/test_backward_compat_configs.py` keys its skip on.
 3. **Document it here** (in the quick-reference if it is a feature surface) **and in [02_config_schema.md](02_config_schema.md)** (the deep key list). Both move in the same change.
 4. **Add or extend a test** that proves the key is read and that a missing/invalid value raises. For a regression-class change, the test must fail before the code change and pass after.
 5. **For sensory / noise keys, keep observation↔noise width in sync.** Observation width is computed in one place, `get_observation_breakdown`; the per-modality noise block auto-resizes from it. A new sensor or a width change must keep the noise modality list aligned — route through `env-config-reviewer`.

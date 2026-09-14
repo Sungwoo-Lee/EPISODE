@@ -109,13 +109,19 @@ def draw_vital_card(ax, label, real_pct, obs_pct,
             color=COLORS['text_label'], fontsize=6, va='bottom')
 
 
-def draw_temperature_card(ax, body_temp, params, clim):
+def draw_temperature_card(ax, body_temp, params, clim, obs_temp=None):
     """Body-temperature vital card — the v2 mirror of `draw_temperature_gauge`.
 
-    Body temperature is NOT observed (the thermoceptor reports the world's
-    temperature, never the body's), so this card carries no OBS/REAL split: one
-    value, one bar spanning the survivable interval, and the two death
-    thresholds marked at its ends.
+    Body temperature is observed only when `thermal.body_temp_observable` is
+    true, so `obs_temp` is OPTIONAL:
+
+    * `obs_temp is None` — the channel is off. One value, one bar spanning the
+      survivable interval, the two death thresholds marked at its ends: the card
+      is byte-for-byte what it was before the channel existed.
+    * `obs_temp is not None` — the big number becomes what the AGENT perceives
+      and a `real ... · Δ ...` line is added in the footer, matching the OBS/REAL
+      grammar `draw_vital_card` uses for every other vital. The bar geometry is
+      untouched; only text is added.
     """
     t_min = float(params.min_temperature)
     t_max = float(params.max_temperature)
@@ -126,7 +132,9 @@ def draw_temperature_card(ax, body_temp, params, clim):
     _style_card(ax)
     ax.text(0.05, 0.93, 'BODY TEMP', transform=ax.transAxes,
             color=COLORS['text_label'], fontsize=7, fontweight='bold', va='top')
-    ax.text(0.95, 0.93, f'{float(body_temp):+.2f}', transform=ax.transAxes,
+    # Solid = perceived when the channel is on; otherwise the one true value.
+    _headline = float(body_temp) if obs_temp is None else float(obs_temp)
+    ax.text(0.95, 0.93, f'{_headline:+.2f}', transform=ax.transAxes,
             color=COLORS['temperature'], fontsize=14, fontweight='bold',
             ha='right', va='top')
 
@@ -144,9 +152,20 @@ def draw_temperature_card(ax, body_temp, params, clim):
     for edge in (0.05, 0.95):
         ax.plot([edge, edge], [0.34, 0.72], color=COLORS['injury'],
                 linewidth=1.2, transform=ax.transAxes, zorder=3)
-    ax.text(0.05, 0.08, f'die {t_min:+.0f}  ·  setpoint {t_set:+.0f}  ·  die {t_max:+.0f}',
-            transform=ax.transAxes, color=COLORS['text_label'],
-            fontsize=6, va='bottom')
+    if obs_temp is None:
+        ax.text(0.05, 0.08, f'die {t_min:+.0f}  ·  setpoint {t_set:+.0f}  ·  die {t_max:+.0f}',
+                transform=ax.transAxes, color=COLORS['text_label'],
+                fontsize=6, va='bottom')
+    else:
+        _delta = float(obs_temp) - float(body_temp)
+        _sign = '+' if _delta >= 0 else ''
+        ax.text(0.05, 0.20, f'die {t_min:+.0f}  ·  setpoint {t_set:+.0f}  ·  die {t_max:+.0f}',
+                transform=ax.transAxes, color=COLORS['text_label'],
+                fontsize=6, va='bottom')
+        ax.text(0.05, 0.08,
+                f'real {float(body_temp):+.2f}  ·  Δ {_sign}{_delta:.2f}',
+                transform=ax.transAxes, color=COLORS['text_label'],
+                fontsize=6, va='bottom')
 
 
 def draw_offline_card(ax, label):
@@ -365,10 +384,15 @@ def render_jax_state_v2(state, params,
                     f'{inj_real:.2f}', f'{inj_obs:.2f}', COLORS['injury'])
 
     if thermal_on:
+        # `.get('value')`, not `.get('intensity')`: build_sensory_viz keys the
+        # Body Temperature pod with `value` because it is raw degrees, not a
+        # [0,1] fraction. None whenever the channel is off.
         draw_temperature_card(left_axes['temperature'],
                               float(getattr(state, 'body_temp',
                                             params.temperature_setpoint)),
-                              params, thermal_clim)
+                              params, thermal_clim,
+                              obs_temp=(sensor_map.get('Body Temperature')
+                                        or {}).get('value'))
 
     # ── Centre panel: arena ────────────────────────────────────────────
     ax_arena = center_axes['arena']

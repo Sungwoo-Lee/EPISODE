@@ -1,4 +1,27 @@
-# Default Configuration for GridWorld Interoceptive AI
+# Thermal example — the campfire world, with body temperature HIDDEN.
+#
+# The flag-OFF arm of the "given vs. inferred body temperature" pair. Byte-for-
+# byte campfire_world.yaml except for ONE key:
+#   thermal.body_temp_observable: false
+# so the agent is NOT told its own body temperature and must infer it from the
+# thermoceptor's differences (`field - body_temp`) integrated over time. The
+# observation is 32 numbers here and 33 in the sibling; nothing else differs.
+#
+# It exists as a separate FILE, not as an edit of its sibling, so the ablation is
+# a choice of config rather than an edit-run-edit-run cycle on a shipped file —
+# which is both a parallel-session hazard and a weaker claim.
+#
+# A FULL config (no `extends:`) so the parity harness and the thermal tests,
+# which build params straight from `Config(yaml.safe_load(f))`, can load it.
+# Otherwise identical to configs/environment/default.yaml except for the two
+# changes the temperature system needs:
+#   1. `thermal.enabled: true`
+#   2. one `campfire` obstacle entry in environment.obstacles
+#
+# The campfire entry deliberately lives HERE and not in default.yaml:
+# `Config.merge` replaces lists wholesale, so an obstacle entry in the base file
+# would silently give a fire to every layered config that does not declare its
+# own `obstacles:` block (IMPLEMENTATION_PLAN.md, F8).
 
 environment:
   height: 10
@@ -105,6 +128,24 @@ environment:
       area: [[0, 0], [0, 0]]
 
   obstacles:
+    - name: "campfire"
+      count_low: 1     # per-episode lower bound
+      count_high: 3    # per-episode upper bound; allocation size
+      area: [[1, 1], [10, 10]]
+      edge_margin: 2              # inset applied to `area` at LOAD time (F4)
+      temperature_ratio: [11, 13] # fire = ratio x |default_temp|, sampled per fire
+      blocking: false
+      blocks_sight: false
+      damage: [0.0, 0.0]
+      nociception_intensity: 0.0
+      properties: [0.0, 0.0, 0.0, 0.0, 0.0]
+      properties_std: [0.0, 0.0, 0.0, 0.0, 0.0]
+      # Shares obstacle visual channel 6 with rock and bush (D1): thermoception
+      # is the only way to tell a fire from a rock, which is the point of the
+      # sense. A fire on its own visual channel would let a vision-equipped
+      # agent solve the thermal task without ever using the thermoceptor.
+      visual_properties: [0,0,0,0,0,0,1,0]
+      visual_properties_std: [0,0,0,0,0,0,0,0]
     - name: "rock"
       count_low: 6    # per-episode lower bound; was 12 fixed (3 per quadrant)
       count_high: 12  # per-episode upper bound; allocation size
@@ -281,7 +322,7 @@ sensory:
 # config that does not declare its own `obstacles:` block. The campfire lives in
 # the example config under configs/environment/experiment/thermal/ instead.
 thermal:
-  enabled: false            # gate; every key below is read ONLY when true
+  enabled: true             # gate; every key below is read ONLY when true
 
   # --- field ---
   sigma: 0.7                # blur width in cells; tight band 0.6-0.8; validated > 0
@@ -327,12 +368,11 @@ thermal:
   # false -> body temperature stays latent: the thermoceptor's `field - body_temp`
   #          readings are differences, so the agent can only infer it by
   #          integrating over time.
-  # Read ONLY when `enabled` is true, like every key in this block. It IS read on
-  # this file in tests that flip `enabled` on a copy of it
-  # (tests/env/test_thermal_validation.py:213-215) — not decoration, do not delete.
-  # This is the switch the "inferred vs. given" ablation flips; the two sides ship
-  # as two configs under experiment/thermal/, so no file is edited between runs.
-  body_temp_observable: true
+  # Read ONLY when `enabled` is true, like every key in this block.
+  # This file IS the flag-OFF arm; its sibling campfire_world.yaml carries
+  # `true`. The two are otherwise identical, so the switch is flipped by
+  # CHOOSING a config rather than by editing one.
+  body_temp_observable: false
 
 visualization:
   local_view_size: 5
