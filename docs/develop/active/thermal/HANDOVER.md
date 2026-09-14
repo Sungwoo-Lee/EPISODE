@@ -19,6 +19,10 @@ Read this first, then [[IMPLEMENTATION_PLAN]] for the detail. The design it was 
 from is [[temperature_system_plan]] (`index.html` in that folder; read
 `page_template.html` instead — `index.html` is 1.9 MB of embedded images).
 
+**Follow-on work planned since**: [[body_temperature_observation]] — adds the missing
+interoceptive channel that hands the agent its own body temperature (the thermoceptor
+only ever reported the *world's*).
+
 ## Why a handover at all
 
 The implementing session ran with its working directory at `/home/vncuser`, **not**
