@@ -9,7 +9,7 @@ supersedes: UI_REDESIGN_PROPOSAL.md
 
 # Episode-video renderer redesign: panels that cannot overlap, a faster frame, and a step-scrubbing viewer
 
-> **Status**: PLANNED. Revised three times after `plan-reviewer` (first and second pass NOT READY; third pass SOUND WITH CONCERNS, applied in Revision 3). Revision 4 adds extended-range senses (user scope, 2026-09-14); fourth pass SOUND WITH CONCERNS, applied in Revision 5. Plan only; awaiting re-review, then user approval. No code written.
+> **Status**: PLANNED. Revised three times after `plan-reviewer` (first and second pass NOT READY; third pass SOUND WITH CONCERNS, applied in Revision 3). Revision 4 adds extended-range senses (user scope, 2026-09-14); fourth pass SOUND WITH CONCERNS, applied in Revision 5. Revision 6 records user decisions (2026-09-14). Plan only; awaiting re-review, then user approval. No code written.
 > **Opened**: 2026-09-14
 > **Related**: [[UI_REDESIGN_PROPOSAL]] (the April plan this one replaces) · [[12_renderer]] (renderer reference doc) · [thermal IMPLEMENTATION_PLAN](../thermal/IMPLEMENTATION_PLAN.md) (§"Rendering: what the rewrite's state turned out to be") · [[BODY_TEMPERATURE_OBSERVATION]] (thermal; **untracked work-in-progress in another session, read as unstable input only**) · [[ASYNC_CHECKPOINT_VIDEO_RENDER]] · [[SAVED_RUN_CONFIG_COMPAT]] · review: [`docs/reviews/plan_renderer_layout_redesign.md`](../../../reviews/plan_renderer_layout_redesign.md) · evidence frames + measuring script: [`renderer_layout_redesign/`](renderer_layout_redesign/) · web research note `tmp/20260914_renderer_layout_web_research.md`
 
@@ -131,6 +131,27 @@ The second pass confirmed findings #1–#15 resolved in the body and returned **
 
 ---
 
+## Revision 6 2026-09-14 (user decisions)
+
+| # | Decision | Where applied |
+|---|---|---|
+| 1 | **Q13 → option A**: small diamond map per channel (smell 5; vision 1 terrain map + one map per object channel), per-sense colour scale fixed per episode. The user chose it from Figure 5, which draws smell at **range 1** as maps. The plan previously kept per-cell bars at range 1, so this revision **applies A from range 1** (range 0 smell stays a spectrum; range 0 vision stays single-cell bars). **One-line confirmation for the user:** "Option A from range 1, as in Figure 5; bars only at range 0." | §D7.2, registry rows, Decided questions |
+| 2 | **Q10 → show hidden internal states.** Every internal-state row shows **both** what the agent observes (or `not observed`) **and** the true value, for satiation, nutrition, injury, interoceptive nociception and body temperature. A hidden value is never captioned as observed. | §D1.1 rule, CP2.5 |
+| 3 | **Grid view prints no temperature numbers.** The thermal underlay is colour only. | §D5.2 rule 10 |
+| 4 | **Temperature colour scale fixed from params only**, identical for every episode of a config; never derived from the field | §D4.3, thermal test ports |
+| 5 | **Q12 → a new asset file `assets/campfire.png`.** The shared icon mapping has no `campfire` key and V1's `_load_icons` loads only mapped keys (verified by the user's session), so adding the file leaves V1 videos unchanged. The mapping file stays frozen; the new renderer maps `campfire` internally. **V1 freeze intact.** | §D1.4, §D6, File Changes, retirement gate |
+| 6 | CP0.1a said "nine frozen files"; the hashed set is ten | CP0.1a |
+| 7 | **Design quality:** a `visual-design-reviewer` design spec is applied and its review passed before retirement | CP-D, retirement gate |
+
+**Known gap surfaced by decision 2.**
+- **The problem:** recordings do not store the true interoceptive-nociception value. `_snapshot_state` in the frozen `eval_recording.py` carries satiation, nutrition, injury and body temperature, but no nociception field.
+- **Observed worlds:** the true value comes from the recorded noise-free observation when present.
+- **Unobserved worlds, or no true observations recorded:** the true column reads `true not recorded`, and the value is never recomputed from injury history.
+- **The fix:** add the field to the snapshot as a retirement-gate item, because the recorder is frozen until then.
+- **Blueprint:** the ASCII blueprints predate decision 2. Their vitals rows are superseded by §D1.1 (both values on every row) and are not redrawn here.
+
+---
+
 ## Analysis
 
 ### A1. What runs today (verified 2026-09-14; line numbers as of HEAD `75757dfc`, working tree dirty, see revision note)
@@ -235,7 +256,13 @@ class PanelSpec:
 
 **The observed-vs-hidden rule** (review finding 2):
 - **Observed rows.** An observed row (`vital_row`, `temp_row` with an observed value, `intensity`, …) is present **iff** one of its `breakdown_names` is in `get_observation_breakdown(params)`. Only observed rows may print `OBS` / `REAL` text or a REAL tick.
-- **Hidden rows.** A `hidden_state` row shows a true state value the agent does **not** observe. Its caption is `<LABEL>  <value>  not observed` in muted text, with a plain bar and no OBS/REAL text or tick. It is present iff the state field exists in the snapshot **and** the corresponding modality is absent from the breakdown **and** Q10 is answered "show". If Q10 is "omit", `hidden_state` rows are never present.
+- **Internal-state rows (decided 2026-09-14, Q10 = show).** Satiation, nutrition, injury, interoceptive nociception and body temperature each get a row **whenever the state exists** (body temperature: thermal on). Each row has two value columns:
+  - **observed:** the observed value if the modality is in the breakdown, else the muted text `not observed`;
+  - **true:** from the snapshot state, normalised as V1 does. For interoceptive nociception, which the snapshot does not store, the value comes from `true_obs` when observed and recorded, else `true not recorded`.
+  
+  **Bar.** Solid fill = observed value with a tick at the true value when observed. When not observed, a hatched muted fill = true value and no tick. The observed column never shows a value for an unobserved modality.
+  
+  **Noise rule.** §D4.2's REAL-availability rule does **not** apply to internal-state rows: the true column is always present, so the vitals layout is fixed per config. `hidden_state` survives only as the painter style of an unobserved row.
 - **Body temperature.** The temperature gauge is an observed `temp_row` iff **`Body Temperature`** is in the breakdown. In that case its OBS value is the viz entry's `value` key, its REAL value is the snapshot's `body_temp`, and REAL follows §D4.2. Otherwise it is `hidden_state`-captioned ("not observed"), keeping its die-threshold and setpoint marks. As the working tree stands on 2026-09-14, the other session's uncommitted `build_sensory_viz` emits `Body Temperature` (keyed `value`), and the campfire config sets `body_temp_observable: true`. So M4 takes the observed path; CP0.2 confirms which path each cell takes.
 
 | key | group | kind | owns breakdown name(s) | present when | min size driver |
@@ -249,11 +276,11 @@ class PanelSpec:
 | location | world | text_row | `Location` | name in breakdown | one text line |
 | arena | arena | arena | – | always | square, ≥ `ARENA_CELL_MIN_PX` = 32 px/view cell (§D7.7); + scale strip when thermal on |
 | action_badge | arena | action_badge | – | action recorded | pill text in arena title strip |
-| olfactory | extero, or sensor band (§D7.1) | `grid_kind(olfactory_grid_range, 5)`: spectrum (r=0) / dir_grid (r=1) / `GRID_ENCODING` (r≥2) | `Olfaction` | name in breakdown | per kind (§D7.2) |
+| olfactory | extero, or sensor band (§D7.1) | `grid_kind(olfactory_grid_range, 5)`: spectrum (r=0) / `channel_maps` (r≥1, decided) | `Olfaction` | name in breakdown | per kind (§D7.2) |
 | extero_nociception | extero | intensity | `Extero Nociception` | name in breakdown | text row + bar |
 | thermoception | extero | thermal_diamond | `Thermoception` | name in breakdown | `2r²+2r+1` numeric cells |
 | collision | extero | cross_bars (r=1) / dir_grid | `Collision` | name in breakdown | 8 pt legend above bars |
-| visual | extero, or sensor band (§D7.1) | `grid_kind(visual_sensor_range, visual_vector_size)`: dir_grid (r≤1) / `GRID_ENCODING` (r≥2) | `Visual` | name in breakdown | per kind (§D7.2); 8 pt legend |
+| visual | extero, or sensor band (§D7.1) | `grid_kind(visual_sensor_range, visual_vector_size)`: single-cell bars (r=0) / `channel_maps` (r≥1, decided) | `Visual` | name in breakdown | per kind (§D7.2); 8 pt legend |
 | proprioception | extero | Q5 | `Proprioception` | name in breakdown | Q5 |
 
 **Completeness rule.** At episode setup, every breakdown name must be owned by exactly one present entry, or be on an explicit "recorded, not displayed" list (only if Q5 chooses that). Otherwise setup raises `ValueError` naming the orphan. A future modality that reuses a kind is a registry entry only. A new kind adds a painter. Neither touches layout.
@@ -315,7 +342,7 @@ Stretchable/Taffy stays a possible later drop-in behind `Box`; it isn't needed f
 - **`frame(t)`.** `extract`, update artists (`set_width`, `fit_text` updates, `set_data`, `set_visible`, `set_offsets`), then `canvas.draw()`, then copy of `buffer_rgba()[..., :3]`.
 - **`close()`.** `plt.close(fig)`.
 - **`layout_signature()`.** Hash of the panel keys, kinds, boxes and REAL-slot flags, used by the concat check in §D4.2.
-- **Iconless entities (review finding 11).** For any obstacle, resource or animal whose icon key is missing from `icon_config` or whose file is absent, the arena draws a **deterministic glyph**: a filled rounded square in the entity's category colour, plus a centred 1–3 letter code derived from its name (e.g. `CF` for campfire). The mapping lives in a small table in the painter module, with its own test that codes are unique across `params.obstacle_names`. This path is always needed because archived `icon_config` pickles lack keys added later. A real `campfire.png` is **deferred to the retirement gate** (Q12): adding its `icons:` mapping would change V1 production videos, since evaluation reads `visualization.icons` into `icon_config`.
+- **Iconless entities (review finding 11).** For any obstacle, resource or animal whose icon key is missing from `icon_config` or whose file is absent, the arena draws a **deterministic glyph**: a filled rounded square in the entity's category colour, plus a centred 1–3 letter code derived from its name (e.g. `CF` for campfire). The mapping lives in a small table in the painter module, with its own test that codes are unique across `params.obstacle_names`. This path is always needed because archived `icon_config` pickles lack keys added later. **Decided 2026-09-14 (Q12): a new asset `assets/campfire.png` is created.** The shared icon mapping (`configs/visualization/default.yaml`) has no `campfire` key and V1's `_load_icons` loads only mapped keys, so adding the file does not change V1 videos. The mapping stays frozen. The new renderer resolves `campfire` → `assets/campfire.png` through its own internal icon table. The glyph fallback remains for any other iconless entity and for a missing file.
 - **Single-frame wrapper.** `render_dashboard_frame(...)` builds a one-frame `EpisodeRenderer` for the demo, dream-visualiser and benchmark callers.
 
 ### D2. Stack comparison and recommendation
@@ -389,9 +416,20 @@ Speed figures are **estimates** unless marked measured. The Phase 0 gate (§D5.3
 
 #### D4.3 Thermal colour limits
 
-- `thermal_color_limits(snapshot0.thermal_field, params)` is computed once in setup, with `set_clim` once, and the scale strip prints the limits.
-- Port `test_a_cooling_world_does_not_rescale_its_colours`, `test_render_honours_an_explicitly_pinned_clim` and `test_a_recording_without_thermal_fields_still_renders`.
-- Mutation M1 (per-frame recompute) must turn them red.
+**Decided 2026-09-14: the scale comes from params only, never from the field, and is identical for every episode of a config.**
+
+- **Where it lives.** A new `dashboard_thermal_limits(params)` in `src/environment/dashboard/`. V1's `thermal_color_limits` is frozen and keeps deriving from the field, so V1 and the new renderer may colour the same world differently; that is intended.
+- **How it is computed.** `setpoint = params.temperature_setpoint`, and `span = max |x − setpoint|` over every temperature the config can place in the field: `thermal_default_temp_low`, `thermal_default_temp_high`, every `obs_temperature` and `res_temperature` stamp (already absolute at load), plus `min_temperature` / `max_temperature` so the body gauge shares the scale. Limits are `(setpoint − span, setpoint + span)`.
+- **Missing params.** Absent params on archived recordings are read via `_recording_flag`. A thermal recording missing any of these raises at setup, naming the field.
+- **Setup check, not clipping.** If any recorded `thermal_field` value lies outside the limits, setup raises `ValueError` naming the config and the extreme value. Silent clipping would hide a config the formula does not cover. The field-construction formula is confirmed at CP0.2 against `thermal/IMPLEMENTATION_PLAN.md`.
+- **Tests (ported and changed).**
+  - `test_a_cooling_world_does_not_rescale_its_colours` still requires a byte-identical arena crop.
+  - New `test_limits_identical_across_episodes`: two seeds of one config with different layouts give equal limits.
+  - New `test_limits_ignore_field_extremes`: a doctored field with a narrower range does not change the limits.
+  - `test_a_recording_without_thermal_fields_still_renders` ported.
+  - `test_render_honours_an_explicitly_pinned_clim` is **dropped**: there is no per-call clim argument.
+  - Mutation M1 (derive limits from the field) must turn the two new tests red.
+- **Grid view.** The underlay is colour only, with no numbers in cells (§D5.2 rule 10). Thermoception's own pod still prints its relative readings, because that pod is not the grid view.
 
 ### D5. Verification that detects failure
 
@@ -444,6 +482,7 @@ M8/M9 do not depend on archived configs loading. If M2/M3 cannot be generated, M
 7. **Observed-caption rule (ground truth = breakdown).** Any rendered text beginning `OBS` or `REAL`, or containing "obs only", must belong to a panel whose title maps to a breakdown name that is present. Any `hidden_state` row's text must contain "not observed".
 8. **Vocabulary rule (V2 frames).** No rendered text matches `\bpain\b` (case-insensitive), and no legend contains `DNG`. V1 frames are exempt, because V1 is frozen and still shows `DNG`.
 9. **Canvas.** No foreground ink in the outer 4 px margin; dimensions equal the declared canvas.
+10. **No numbers in the grid view (decided 2026-09-14).** No `Text` element's ink lies inside the arena grid's extent (the title strip, legend chips and scale strip sit outside it). This is checked on every thermal cell.
 
 **Positive controls** (known defects; if any is missed, the audit is broken, so stop):
 - V1 M4 frame: **D1**, **D2**, **D3** (text on the Run Context border), and **D10** (`OBS` under Nutrition/Injury while the breakdown lacks them).
@@ -527,7 +566,7 @@ M8/M9 do not depend on archived configs loading. If M2/M3 cannot be generated, M
 
 **No new config keys, and no config key or default changes of any kind before the retirement gate.**
 - Which renderer runs is decided by which script is invoked: `render_recordings.py` = V1 (unchanged, used by training and eval); `render_recordings_v2.py` = V2 (manual only). Canvas and font floors are module constants.
-- No `campfire` entry is added to `configs/visualization/default.yaml` `icons:` during Phases 0–4. Evaluation reads that mapping into `icon_config`, so the entry would change V1 production videos. The asset is deferred to the retirement gate unless the user grants an explicit exception (Q12).
+- No `campfire` entry is added to `configs/visualization/default.yaml` `icons:` during Phases 0–4 (file frozen and hashed). The new asset `assets/campfire.png` is added and mapped inside the new renderer only (Q12, decided); V1 does not load unmapped files.
 
 ### D7. Extended-range senses (Revision 4)
 
@@ -546,8 +585,8 @@ M8/M9 do not depend on archived configs loading. If M2/M3 cannot be generated, M
 
 **Registry.** The `olfactory` and `visual` entries get their `kind` from `grid_kind(range, channels)`:
 - range 0 (smell only): `spectrum`;
-- range 1: `dir_grid` (per-cell bars, as today);
-- range ≥ 2: the single module constant `GRID_ENCODING`.
+- range 0 vision: single-cell bars;
+- range ≥ 1: the single module constant `GRID_ENCODING`, **decided = `channel_maps` (option A), 2026-09-14**, applied from range 1 as in the user's chosen Figure 5 (pending one-line confirmation, Q14). B and C remain implemented behind the same interface only if the developer needs them for the Figure 5 comparison page; otherwise they are dropped from Phase 2.
 
 `GRID_ENCODING` is one of three painter kinds with the same `build`/`update`/`min_size` interface, so the Q13 choice changes one constant and touches no layout code. It is a module constant, not a config key (§D6). Terrain/entity channel split, labels, the V = 1 case, B's behaviour under blur and cell order are defined in §D7.7 and override the table below where they differ.
 
@@ -662,7 +701,8 @@ M8/M9 do not depend on archived configs loading. If M2/M3 cannot be generated, M
 | `src/environment/dashboard/painters.py` (new) | One painter per kind with `build`/`update`, card outlines as separate artists, `gid`s, iconless-entity glyph table. Imports drawing helpers from `renderer.py` read-only (`thermal_color_limits`, `_load_icons`, and others that take `ax` + coordinates). Any helper needing a change is **copied** into the package; **`renderer.py` is not edited** (frozen). |
 | `src/environment/dashboard/episode.py` (new) | `EpisodeRenderer` (setup / `frame` / `close` / `layout_signature`), wrapper `render_dashboard_frame`. |
 | `tests/env/test_dashboard_frames.py` (new, `integration` marker) | Audit clean on all cells' checked frames + stress variant. Mutations M-A..M-D fail as expected. Value-to-pixel, obstacle-ink (CP2.6), observed-caption (CP2.5) and vocabulary (CP2.4) checks. Glyph-code uniqueness. |
-| `tests/env/test_dashboard_thermal.py` (new) | Thermal ports (§D4.3). |
+| `tests/env/test_dashboard_thermal.py` (new) | Thermal tests per §D4.3 as changed by Revision 6: params-only limits identical across episodes, field-extreme independence, out-of-range field raises, cooling-world crop, pre-thermal recording, mutation M1. |
+| `assets/campfire.png` (new asset, decided Q12) | Campfire icon, RGBA PNG at the same pixel size as existing obstacle icons. Mapped only inside `src/environment/dashboard/`. Test: a V1 frame of M4 is byte-identical before and after the file is added (CP-G frames cover this). |
 | `src/environment/dashboard/painters.py` (Revision 4 addition) | `grid_kind(range, channels)`, the `GRID_ENCODING` constant, the three grid painter kinds `channel_maps` / `dominant_channel` / `bars_then_table` with one interface, noise-error map, footprint outlines, per-episode sense scales, sensor subtitle. |
 | `src/environment/dashboard/layout.py` (Revision 4 addition) | Side-column vs sensor-band layout selection (§D7.1); chosen layout in `layout_signature`. |
 | `tests/env/test_dashboard_extended_range.py` (new, `integration` marker) | For each encoding kind:<br>• E1–E9 render audit-clean;<br>• largest fitting r measured, and r+1 raises naming sense and range;<br>• switching `GRID_ENCODING` changes no box outside the grid panels (layout-invariance);<br>• footprint outline ink on the expected boundary;<br>• scale maximum ≥ the episode maximum (a 1.40 smell value is not clipped);<br>• subtitle text matches params for E2–E6;<br>• noise-error map present iff `real_available`;<br>• grid view `W` rule and clipping caption;<br>• Revision 5 additions:<br>&nbsp;&nbsp;– layout-input signature check and two-episode box identity;<br>&nbsp;&nbsp;– fallback-order step recorded;<br>&nbsp;&nbsp;– rendered and audited r_max with machine/font record;<br>&nbsp;&nbsp;– forced-side-column raise;<br>&nbsp;&nbsp;– E2n both variants;<br>&nbsp;&nbsp;– terrain split from `visual_background_property`;<br>&nbsp;&nbsp;– V = 1 rendering for A/B/C;<br>&nbsp;&nbsp;– E6 label not `GRS`;<br>&nbsp;&nbsp;– zero-maximum caption;<br>&nbsp;&nbsp;– B-under-blur legend text;<br>&nbsp;&nbsp;– offset order matches the env function;<br>&nbsp;&nbsp;– legend chips and clip caption raise rather than ellipsise. |
@@ -714,6 +754,7 @@ Until the user explicitly decides to move training/eval videos to V2, **no froze
 
 Preconditions for even proposing the switch:
 - Phases 0–4 verified with CP-G passing after each.
+- CP-D passed (the `visual-design-reviewer` spec is applied and the second design review passes).
 - The user has looked at `render_recordings_v2.py` output for one real training run's recordings.
 - The speed gate is met.
 
@@ -723,7 +764,7 @@ The switch itself gets its own plan section and review. Expected steps:
 3. Port the demo, dream-visualiser and benchmark callers.
 4. Move shared helpers into the package with re-exports.
 5. Delete V1's layout body. Rename `DNG` → `HPR` in `sensor.py` and the V1 default label list, now allowed.
-6. Delete the stale `grid_world.py` render copy **only after a grep confirms no importer and the user OKs it**. Delete the dormant `src/environment/renderer_v2.py` only after the thermal session has been told and its uncommitted edits to that file have landed or been abandoned by that session; confirm with `git status` on the file. Add the `campfire` icon asset and mapping if Q12 chose to defer it here.
+6. Delete the stale `grid_world.py` render copy **only after a grep confirms no importer and the user OKs it**. Delete the dormant `src/environment/renderer_v2.py` only after the thermal session has been told and its uncommitted edits to that file have landed or been abandoned by that session; confirm with `git status` on the file. Add the `campfire` key to the shared icon mapping (the asset already exists from Phase 2), and add the interoceptive-nociception value to the recording snapshot (Revision 6 known gap).
 7. Retarget `test_thermal_rendering.py` and `test_eval_recording.py` to V2.
 8. Update docs.
 
@@ -765,7 +806,7 @@ Thermal-on, all sensors observed, noise on (1440 × 896 px). ASCII compresses ro
 Reading guide:
 - **INOC** is interoceptive nociception.
 - **TEMP**'s bar has die thresholds at both ends (`|`) and the setpoint at `╎`. In a world where body temperature is not part of the observation, this row reads `TEMP +4.19  not observed`, with no OBS/REAL.
-- **CF** is the campfire's generated glyph, the only campfire rendering in the new renderer until the retirement gate (Q12).
+- **CF** marks where the campfire sits. Per Q12 (decided), the new renderer draws the new `assets/campfire.png` there, falling back to the glyph only if the file is missing.
 - **HPR** is hiding predator.
 - The old RUN CONTEXT box is folded into the header, and the action badge sits in the arena card's title strip.
 - **Campfire world as actually configured (M4):** its observation has no Nutrition or Injury. Those rows either disappear or, if Q10 = show, appear as `NUT  0.75  not observed` / `INJ  0.71  not observed` with plain bars and no `(real)` or tick. In the 2026-09-14 working tree its body temperature **is** observed (`Body Temperature` in the breakdown), so `TEMP` shows OBS (with REAL per the noise rule).
@@ -808,7 +849,7 @@ Collapse rules:
 
 Each checkpoint states what would show it failed.
 
-- [ ] **CP0.1a: File baseline first.** `v1_path_guard.py record-files` is run as the very first Phase 0 action. `baseline.json` (plan-start commit, nine frozen files' working-tree sha256 and HEAD blobs, empty `plan_sessions`) and `frozen_files_at_baseline.diff` are committed under `renderer_layout_redesign/v1_guard/`. `add-session` is recorded for the developer session. *Fails if:* any other Phase 0 file predates the baseline commit, or the diff file is missing.
+- [ ] **CP0.1a: File baseline first.** `v1_path_guard.py record-files` is run as the very first Phase 0 action. `baseline.json` (plan-start commit, ten frozen files' working-tree sha256 and HEAD blobs, empty `plan_sessions`) and `frozen_files_at_baseline.diff` are committed under `renderer_layout_redesign/v1_guard/`. `add-session` is recorded for the developer session. *Fails if:* any other Phase 0 file predates the baseline commit, or the diff file is missing.
 - [ ] **CP0.1b: Frame baseline right after fixtures.** After the generator lands and writes M1/M2/M4, `record-frames` adds fixture hashes and 8 raw-frame hashes per cell for M1, M2, M4 and M7, from two separate processes; committed. `tests/env/test_v1_path_guard.py` green (all three states and FIXTURE CHANGED exercised). *Fails if:* the processes disagree (then switch to a pixel-diff tolerance and record it), any renderer code predates this commit, or the guard test passes a case it should flag.
 - [ ] **CP-G: V1 pipeline untouched (after every phase, 0 through 4).** `v1_path_guard.py check` exits 0. The report pastes the diff stat, the trailer-annotated `git log`, and each frozen file's state. ATTRIBUTED re-records cite the foreign commits. *Fails if:* any file or frame is UNATTRIBUTABLE (only the user clears it, via `accept` for that exact content), a phase commit touches a frozen file, or a `renderer_v2` package/module is created.
 - [ ] **CP0.2: Matrix recordings.** M1–M6b are written, including M4b (M4b's breakdown must lack `Body Temperature`, and its temperature row renders "not observed"); M7–M9 load; V1 renders step 0 of each. Per cell, print the snapshot keys, `true_obs is None`, the breakdown names, and the breakdown ↔ noise-order mapping. Also print each cell's `synthetic` flag and `overrides`, its `config_sha256`, the diamond-offset function name (§D7.7 item 8), and whether `Body Temperature` is in its breakdown, plus that viz entry's keys. *Fails if:* M4 lacks `thermal_field`; M4's breakdown contains Nutrition/Injury (the D10 premise is then wrong, so re-check); M4's `Body Temperature` entry lacks a `value` key, or the registry has no owner for a breakdown name; M3/M9 have `true_obs == obs` everywhere; M5's Olfactory is not `visual_grid`; M6b has `true_obs` present; an archive config won't load (substitute M8/M9 and note); or a mapping is unresolved.
@@ -819,7 +860,7 @@ Each checkpoint states what would show it failed.
 - [ ] **CP2.2: Mutations.** M-A, M-B, M-C and M-D each make the audit fail. *Fails if:* any mutation passes.
 - [ ] **CP2.3: Values match pixels.** Bar ratio and tick x within 2 px; thermal ports green; per-frame clim mutation turns the cooling test red. *Fails if:* a tolerance is exceeded or the mutation stays green.
 - [ ] **CP2.4: Vocabulary.** `grep -rniw 'pain' src/environment/dashboard/` shows zero hits (comments included; keep them clean too), and the audit's vocabulary rule is clean on all frames. *Fails if:* any hit.
-- [ ] **CP2.5: Observed-caption.** On M4, no rendered text starting `OBS`/`REAL` belongs to a panel whose name is absent from the breakdown. With Q10 = show, the Nutrition/Injury rows read "not observed". *Fails if:* either condition is violated.
+- [ ] **CP2.5: Observed-caption and true values (Revision 6).** On M4 every internal-state row (satiation, nutrition, injury, interoceptive nociception, body temperature) shows a true value or `true not recorded`, and Nutrition/Injury show `not observed` in the observed column. *Fails if:* a row lacks the true column, or an unobserved row prints a number in the observed column. On M4, no rendered text starting `OBS`/`REAL` belongs to a panel whose name is absent from the breakdown. With Q10 = show, the Nutrition/Injury rows read "not observed". *Fails if:* either condition is violated.
 - [ ] **CP2.6: Entities drawn.** On M4, a step with the campfire in view shows non-empty foreground ink in its cell, and glyph codes are unique across `obstacle_names`. *Fails if:* the cell is empty or grey-square-only (no glyph ink), or codes collide.
 - [ ] **CP2.7: Extended-range senses.** Blocked until Q5 (Proprioception) is answered, because every E cell and M5 observes it. `test_dashboard_extended_range.py` green for all three encoding kinds, including:
   - E2n with and without true observations;
@@ -830,9 +871,19 @@ Each checkpoint states what would show it failed.
 - [ ] **CP3: Separate V2 entry point.** `render_recordings_v2.py --concat` writes playable MP4s (frame count = steps) for all cells including M7–M9, only under `videos_v2/`. The concat signature assertion holds on real runs and trips on the doctored dir. `test_render_recordings_v2.py` is green (V1 MP4 bytes unchanged after a V2 render of the same dir). CP-G passes. *Fails if:* any file appears or changes under `videos/`, the assertion trips on a real single-run dir, or CP-G fails.
 - [ ] **CP4: Speed.** Same node as CP0.4: V2 median ≤ V1 median on every cell and ≤ 0.5 × on M4; RSS growth < 50 MB over 10 episodes; FDs reported. *Fails if:* any gate is missed.
 - [ ] **CP5: Viewer.** `test_episode_viewer.py` is green; `check_artifact_layout.py` is clean at 500/834/1440; screenshots and the contact sheet are **looked at**, with findings in the report. *Fails if:* arrays differ, the checker flags a defect, or nobody looked.
+- [ ] **CP-D: Design quality (Revision 6; before retirement).** `visual-design-reviewer` looks at rendered frames from M1, M4, E2 and E8 plus viewer screenshots, at full size. It writes its design spec and verdict to `docs/reviews/design_renderer_layout_redesign.md`. The developer applies the spec: typography, colour system, hierarchy, spacing, iconography, all against the house style sheet. The Implementation Report lists each spec item as applied or rejected-with-reason. A second `visual-design-reviewer` pass on re-rendered frames then passes the "big-tech presentation" bar. *Fails if:* no spec file exists, a spec item is unaccounted for, or the second pass does not pass. Any layout change the spec forces must still pass CP2.1–CP2.7 and CP-G.
 - [ ] **CP6: Docs.** `12_renderer.md` (with the V2 disambiguation sentence), `ENVIRONMENT_SUMMARY.md` and `SCRIPTS_DEPENDENCY_MAP.md` are updated in the same commits as the code. *Fails if:* a script-adding commit lacks the map.
 
 ---
+
+## Decided questions
+
+Numbers are kept so earlier references stay valid.
+
+- **Q10 (decided 2026-09-14): show.** Every internal-state row shows the observed value (or `not observed`) and the true value; a hidden value is never captioned observed (§D1.1).
+- **Q12 (decided 2026-09-14): new asset `assets/campfire.png`.** The new renderer maps `campfire` internally; the shared icon mapping stays frozen, so V1 videos are unchanged (§D1.4).
+- **Q13 (decided 2026-09-14): option A**, per-channel diamond maps with per-sense colour scales fixed per episode, applied **from range 1** as in Figure 5 (§D7.2). *Awaiting one-line user confirmation of "from range 1".*
+- **Also decided 2026-09-14:** no temperature numbers in the grid view; temperature colour scale fixed from params (§D4.3).
 
 ## Open questions for the user
 
@@ -847,15 +898,8 @@ Each checkpoint states what would show it failed.
 7. **Viewer delivery.** Local server only, or also a static single-episode HTML export (~30 MB per 500 steps, est.) for sharing?
 8. **Retirement gate (for later, not now).** Per your 2026-09-14 constraint, nothing in training or eval moves to V2 during development. When you do decide to switch, do you want that as its own plan with review? It would be the first edit to the frozen V1 files. And do you approve, at that point, deleting the stale `grid_world.py` render copy and the dormant `renderer_v2.py` (the latter after the thermal session is told and its edits have landed)?
 9. **Speed gate.** Is "the new renderer's median frame time ≤ half of V1's, same lab node, campfire world" the right Phase 0 threshold, with "not slower than V1" on every other world?
-10. **Unobserved body state.** When the agent cannot observe a body variable (e.g. Nutrition and Injury in the campfire world), should the dashboard still show its true value as a row captioned "not observed", or omit the row entirely?
 11. **Hiding-predator label.** Is `HPR` the right 3-letter abbreviation for the new renderer's Visual legend (e.g. `HID` / `HPD` instead)? V1 videos keep the legacy `DNG` until the retirement gate, because the sensor adapter is frozen.
-12. **Campfire icon.** Adding a `campfire` icon mapping would change today's production (V1) videos too, because evaluation reads the shared icon mapping, and your freeze forbids that. Proposed: the new renderer uses the generated glyph (`CF`) only, and the real asset is deferred to the retirement gate. Alternative: add the asset now as an explicit exception to the freeze, knowing V1 videos will start showing the icon.
-13. **Encoding for smell and vision at radius 2 and above** (decide after seeing the examples on the artifact page).
-    - **(A) Per-channel maps:** a small diamond map per channel. Smell gets 5; vision gets 1 terrain map + 5 entity maps. Each sense has a colour scale fixed for the episode.
-    - **(B) Dominant channel:** one diamond, where cell colour = strongest channel and brightness = its value. With blur on, entity values spread into neighbouring cells, so terrain colour is rarely visible.
-    - **(C) Bars, then table:** per-cell bars up to radius 1; above that a cells × channels heat table.
-    
-    Whichever you pick is one constant in the new renderer and does not change the layout.
+14. **Option A from range 1 (one-line confirmation).** Figure 5 drew range-1 smell as maps, so per-channel maps now start at range 1 and bars remain only at range 0. Confirm?
 
 ---
 
