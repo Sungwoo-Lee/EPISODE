@@ -42,8 +42,9 @@ BUSH, BUSH_HI = "#4F8A34", "#65A044"
 TREE, TREE_HI, TRUNK = "#2F7A45", "#3E9357", "#7A5634"
 FIRE_OUT, FIRE_MID, FIRE_CORE = "#F97316", "#FB9A3C", "#FDE68A"
 LOG_BACK, LOG_FRONT, GLOW = "#7C4A2D", "#935C38", "#FDBA74"
-# minimap marks: one colour per entity name, taken from its glyph
-MINIMAP_COLOUR = {"rock": ROCK, "bush": BUSH, "tree": TREE, "campfire": FIRE_OUT,
+# minimap marks: one colour per entity name, taken from its glyph. The campfire mark is log brown with a
+# FIRE_CORE dot: orange means nociception in the frame, and flame colours live only inside the glyph
+MINIMAP_COLOUR = {"rock": ROCK, "bush": BUSH, "tree": TREE, "campfire": LOG_BACK,
                   "food": FOOD, "hiding_predator": HIDE_BODY, "predator": PRED, "neutral": NEUT}
 
 # sequential ramps, per sense (zero is TRACK, never the ramp's first stop)

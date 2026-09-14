@@ -399,6 +399,8 @@ class Dashboard:
         centre = lambda p: (ox + (p[1] + 0.5) * cell, oy + (p[0] + 0.5) * cell)  # noqa: E731
         obs = [ds.rrect(ax, 0, 0, cell * 0.56, cell * 0.56, 2, ds.MINIMAP_COLOUR[m["obstacle_names"][t]], z=3)
                for t in m["obs_type"]]
+        cores = [ax.add_patch(Circle((0, 0), cell * 0.12, fc=ds.FIRE_CORE, lw=0, zorder=3.5))
+                 if m["obstacle_names"][t] == "campfire" else None for t in m["obs_type"]]
         res = [ax.add_patch(Circle((0, 0), cell * 0.24, fc=ds.MINIMAP_COLOUR[RES_NAMES[t]], ec="#FFFFFF",
                                    lw=1.2 * ds.PT, zorder=4)) for t in m["res_type"]]
         ani = [ax.add_patch(Circle((0, 0), cell * 0.26, fc=ds.MINIMAP_COLOUR[k], ec="#FFFFFF", lw=1.2 * ds.PT, zorder=4))
@@ -411,9 +413,12 @@ class Dashboard:
         view = ds.rrect(ax, 0, 0, n * cell + 2, n * cell + 2, 6, "none", ds.IRIS, 2.2, z=7)
 
         def upd(st):
-            for p, pos in zip(obs, st["obs_pos"]):
+            for p, core, pos in zip(obs, cores, st["obs_pos"]):
                 p.set_visible(inside(pos))
                 cx, cy = centre(pos)
+                if core is not None:
+                    core.set_visible(inside(pos))
+                    core.set_center((cx, cy))
                 p.set_x(cx - cell * 0.28)
                 p.set_y(cy - cell * 0.28)
             for p, pip, pos, act in zip(res, pips, st["res_pos"], st["res_active"]):

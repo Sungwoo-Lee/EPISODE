@@ -45,21 +45,22 @@ code { font-family:var(--f-mono); font-size:.84em; background:var(--surface); pa
 hr { border:0; border-top:1px solid var(--line); margin:0; width:100%; }
 .foot { font-size:14px; color:var(--ink-3); display:flex; flex-direction:column; gap:8px; max-width:88ch; }
 .callout { background:var(--surface); border-left:3px solid var(--accent); padding:20px 24px; display:flex; flex-direction:column; gap:10px; max-width:88ch; }
-.callout.warn { border-left-color:var(--warn); }
-.callout.pick { border-left-color:var(--ok); background:var(--pick); }
+/* On this page orange means nociception and green/teal mean vegetation/smell inside the figures (Figures 3-8),
+   so the callouts take the accent border instead of --warn / --ok (register F11 amendment). */
+.callout.warn { border-left-color:var(--accent); }
+.callout.pick { border-left-color:var(--accent); background:var(--pick); }
 .callout .eyebrow { color:var(--ink-2); }
 .scroll { overflow-x:auto; }
 table { border-collapse:collapse; font-size:14.5px; width:100%; font-variant-numeric:tabular-nums; }
 th,td { padding:9px 14px; text-align:left; border-bottom:1px solid var(--line); vertical-align:top; }
 td.n, th.n { text-align:right; font-family:var(--f-mono); font-size:13px; }
 td.n { white-space:nowrap; }
-/* the toolkit table: five prose columns; a floor from its content so values never clip mid-token (F34) */
-/* five prose columns: a floor that leaves each one >= ~170px; still fits the 1084px desktop column unscrolled */
+/* the toolkit table: five prose columns; a floor that leaves each one >= ~170px and still fits the
+   1084px desktop column unscrolled, so values never clip mid-token (F34) */
 table.toolkit { min-width:1040px; }
 table.toolkit th:nth-child(4), table.toolkit td:nth-child(4) { min-width:170px; }
-/* data-used tables: a prose "why" column needs room; below it the table scrolls behind a measured cue (F24 amendment) */
 /* data-used tables: numbers on one row, the reason on a full-width row beneath it, so no prose column is squeezed */
-table.samples { min-width:360px; }
+table.samples { min-width:350px; }   /* narrowest supported box = 390 - 2*16 = 358px; a floor above it fires the cue for nothing (F52) */
 table.samples tr.num td { border-bottom:0; padding-bottom:2px; }
 table.samples tr.why td { color:var(--ink-3); font-size:13px; padding-top:0; }
 .cue { font-family:var(--f-mono); font-size:12px; color:var(--ink-3); margin:0; }
@@ -325,8 +326,8 @@ figure img:focus-visible { outline:2px solid var(--accent); outline-offset:-3px;
     interoception card shows every internal state twice &mdash; what the agent observes and its true value
     &mdash; so nutrition, injury and body temperature, which this agent does not observe, read "not observed"
     beside their true values. Smell and vision are one small map per channel in the band under the grid
-    view (option A). The episode ends when body temperature falls past the survivable limit
-    ({{FACT:final_temp}} at step {{FACT:last_step}}, against a limit of {{FACT:die_low}}).</p>
+    view (option A). The episode ends as body temperature crosses the survivable limit of {{FACT:die_low}}; the last
+    recorded step, {{FACT:last_step}}, reads {{FACT:final_temp}}.</p>
     <p><b>Axes.</b> None &mdash; a dashboard frame of 1440 &times; 896 pixels, where position is layout.
     The grid view shows 5 &times; 5 grid cells centred on the agent; each cell's colour is its temperature
     on one scale fixed for this world configuration, running from &minus;28 (mid-blue) through the setpoint
@@ -506,9 +507,10 @@ figure img:focus-visible { outline:2px solid var(--accent); outline-offset:-3px;
     picture is gone and the table grows quickly with range.</p>
     <p><b>Axes.</b> In each table the vertical axis lists the diamond's cells by their offset from the agent
     (rows down, columns right, the agent's own cell first) and the horizontal axis lists channels; colour
-    is the reading, from pale at 0 to dark at the largest reading of that sense in that row, except
-    vision's three terrain columns, which use a grey scale of their own (dark where terrain is present)
-    so they do not wash out the object channels. The bar
+    is the reading &mdash; teal for smell, slate for vision &mdash; from pale at 0 to dark at the largest
+    reading of that sense in that row, except vision's three terrain columns (grass, sand, plain), which use
+    light tints of their own so they do not wash out the object channels; the agent's own row is outlined in
+    indigo. The bar
     diamonds have no axes: each cell sits at its offset from the agent, and each bar's height is one
     channel's reading on the same 0-to-largest scale.</p>
     {{SAMPLES:fig07_option_c_bars_or_table}}

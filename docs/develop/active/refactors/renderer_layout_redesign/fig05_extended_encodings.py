@@ -5,7 +5,7 @@ range. The dashboard's per-cell bars stop being legible at range 2. Which drawin
 renderer use instead? The user chooses after seeing each option on the same data.
 
 WHAT IT IS NOT. Not the renderer. It draws only the two senses, not a full dashboard frame, and it
-imports nothing from src/. Sizes and colours are illustrative.
+imports nothing from src/.
 
 HOW IT IS COMPUTED. Reads data/extended.json (export_extended.py): one real state of the
 sensory-ladder world with vision range 2 and blur on, read through the production observation code at
@@ -15,6 +15,8 @@ cells x channels in get_visual_offsets order.
                spec (docs/reviews/design_episode_dashboard.md) via dashboard_style.py.
     Figure 6, option B: one diamond per sense, colour = strongest channel, strength = its reading.
     Figure 7, option C: per-cell bars while the range is 0-1, a cells x channels table beyond.
+All three are styled per the same spec (canvas and cards, Dashboard Sans Tab, full channel names, agent
+cell outlined in iris); Figure 6's channel hues avoid every data colour that means something else.
 Colour scales run from 0 to the largest reading of that sense in that row, because summed readings can
 exceed 1.
 
@@ -39,9 +41,8 @@ import matplotlib  # noqa: E402
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt  # noqa: E402
 import numpy as np  # noqa: E402
-from matplotlib.cm import ScalarMappable  # noqa: E402
-from matplotlib.colors import Normalize, to_rgb  # noqa: E402
-from matplotlib.patches import Patch, Rectangle  # noqa: E402
+from matplotlib.colors import to_rgb  # noqa: E402
+from matplotlib.patches import Rectangle  # noqa: E402
 
 import house  # noqa: E402
 import dashboard_style as ds  # noqa: E402
@@ -53,16 +54,13 @@ VIS_LABELS = ["GRS", "SND", "PLN", "FOD", "HPR", "PRD", "RCK", "NEU"]   # HPR = 
 # AN-A / AN-B: shared animal-odour components, named by their leaning (never "Predator" / "Neutral")
 OLF_FULL = ["Food", ("Odour A", "predator-leaning"), ("Odour B", "neutral-leaning"), "Bush", "Tree"]
 VIS_FULL = ["Food", "Hiding predator", "Predator", "Obstacle", "Neutral"]
-SEQ = matplotlib.colormaps["magma_r"]
-GREYS = matplotlib.colormaps["Greys"]
-PAPER = np.array(to_rgb(house.PAPER))
-# colour -> meaning for option B, fixed once for these three figures
-# No grey among the channel colours: an empty cell is an outlined blank, and a grey channel read as "empty".
-# No hue inside the magma ramp either (yellow-orange-red-pink-violet-black): in Figures 5 and 7 those
-# hues mean "reading strength", so here they would read as strength rather than identity (register F11).
-FOOD_C, TEAL, CYAN, OCHRE, SLATE = "#65a30d", "#0d9488", "#0891b2", "#a16207", "#475569"
-OLF_COL = [FOOD_C, TEAL, CYAN, OCHRE, SLATE]          # FOOD AN-A AN-B BUSH TREE
-ENT_COL = [FOOD_C, OCHRE, TEAL, SLATE, CYAN]          # FOD HPR PRD RCK NEU
+VIS_TABLE = ["Grass", "Sand", "Plain"] + VIS_FULL
+# Figure 6 channel hues. None reuses a data colour with another meaning in these pages: no orange
+# (nociception), no blue or red (temperature), no iris (agent), no teal (smell ramp). Object icon colours
+# where free; the two odour components get plum and brown so they differ from each other and from teal.
+OLF_HUE = ["#1E9E5A", "#A23B72", "#7A5634", "#8FA832", "#2F7A45"]   # food, odour A, odour B, bush, tree
+VIS_HUE = ["#1E9E5A", "#33503A", "#1F2733", "#6B7380", "#0E7490"]   # food, hiding predator, predator, obstacle, neutral
+FW, OUT, PADX, DIV = 1440, 24, 16, 48
 
 
 def table(sense):
@@ -70,26 +68,64 @@ def table(sense):
     return np.asarray(sense["vector"], float).reshape(-1, n)
 
 
-def frame(ax, R):
-    ax.set_xlim(-R - 0.6, R + 0.6)
-    ax.set_ylim(R + 0.6, -R - 0.6)
-    ax.set_aspect("equal")
+class Probe:
+    """Measures rendered text widths before a figure's height is known."""
+
+    def __init__(self):
+        self.fig = plt.figure(figsize=(FW / ds.DPI, 1), dpi=ds.DPI)
+        self.r = self.fig.canvas.get_renderer()
+
+    def w(self, s, role):
+        t = ds.text(self.fig, 0, 0, s, role)
+        v = t.get_window_extent(self.r).width
+        t.remove()
+        return v
+
+    def close(self):
+        plt.close(self.fig)
+
+
+def lines_of(label):
+    return list(zip(label, ["map_label", "caption"])) if isinstance(label, tuple) else [(label, "map_label")]
+
+
+def canvas(FH):
+    fig = plt.figure(figsize=(FW / ds.DPI, FH / ds.DPI), dpi=ds.DPI)
+    ax = fig.add_axes([0, 0, 1, 1])
+    ax.set_xlim(0, FW)
+    ax.set_ylim(FH, 0)
+    ax.set_autoscale_on(False)
     ax.axis("off")
+    ax.add_patch(Rectangle((0, 0), FW, FH, fc=ds.CANVAS, lw=0, zorder=0))
+    return fig, ax
 
 
-def agent_mark(ax):
-    ax.add_patch(Rectangle((-0.5, -0.5), 1, 1, fill=False, edgecolor=house.INK, linewidth=1.4, zorder=5))
+def put(fig, ax, x, y, s, role, **kw):
+    """Draw a text and return its rendered width."""
+    t = ds.text(ax, x, y, s, role, **kw)
+    fig.canvas.draw()
+    return t.get_window_extent().width
 
 
-def diamond(ax, offsets, colours, R):
-    frame(ax, R)
-    for (dr, dc), col in zip(offsets, colours):
-        if col is None:     # read nothing: outlined blank, so it cannot be mistaken for a colour
-            ax.add_patch(Rectangle((dc - 0.43, dr - 0.43), 0.86, 0.86, facecolor=house.PAPER,
-                                   edgecolor=house.RULE, linewidth=0.8))
-        else:
-            ax.add_patch(Rectangle((dc - 0.46, dr - 0.46), 0.92, 0.92, facecolor=col, edgecolor="none"))
-    agent_mark(ax)
+def row_card(fig, ax, y0, h, var):
+    ds.rrect(ax, OUT + 0.5, y0 + 0.5, FW - 2 * OUT - 1, h - 1, ds.CARD_RADIUS, ds.CARD, ds.LINE, 1, z=0.5)
+    tw = put(fig, ax, OUT + PADX, y0 + 30, var["label"], "card_title")
+    put(fig, ax, OUT + PADX + tw + 12, y0 + 30, f"observation width {var['obs_dim']}", "card_sub")
+
+
+def group_head(fig, ax, x, hy, title, R, note, cmap=None, vmax=None):
+    tw = put(fig, ax, x, hy, title, "card_title")
+    rw = put(fig, ax, x + tw + 8, hy, f"range {R}", "card_sub")
+    if cmap is not None:
+        zx = x + tw + 8 + rw + 16
+        sx = zx + put(fig, ax, zx, hy, "0", "caption") + 6
+        im = ax.imshow(cmap(np.linspace(0, 1, 128))[None, :, :3], extent=(sx, sx + 96, hy, hy - 8),
+                       aspect="auto", interpolation="bilinear", zorder=2)
+        im.set_clip_path(ds.rrect(ax, sx, hy - 8, 96, 8, 4, "none", z=2))
+        put(fig, ax, sx + 102, hy, f"{vmax:.2f}", "caption")
+        ax.set_xlim(0, FW)
+        ax.set_ylim(ax.get_ylim()[0], 0)
+    put(fig, ax, x, hy + 20, note, "caption")
 
 
 def option_a(ext):
@@ -239,81 +275,146 @@ def option_a(ext):
 
 
 def option_b(ext):
+    """Option B restyled to the dashboard spec: one diamond per sense, hue = strongest channel, paler = weaker,
+    outlined blank = nothing read, agent cell outlined in iris."""
+    ds.register_fonts()
     V = ext["variants"]
-    fig = plt.figure(figsize=(11, 4.6 * len(V)), layout="constrained")
-    for sf, var in zip(fig.subfigures(len(V), 1), V):
-        sf.suptitle(f"{var['label']} · observation width {var['obs_dim']}", fontsize=house.FS_BODY, x=0.01, ha="left")
+    cs = 26
+    pr = Probe()
+    rows = []
+    for var in V:
         R = max(var["olf_range"], var["vis_range"])
-        axes = sf.subplots(1, 2)
-        for ax, tab, cols, labels, title, offs in (
-                (axes[0], table(var["olf"]), OLF_COL, OLF_LABELS, f"smell, range {var['olf_range']}: strongest channel", var["offsets_olf"]),
-                (axes[1], table(var["vis"])[:, 3:], ENT_COL, VIS_LABELS[3:], f"vision, range {var['vis_range']}: strongest object channel", var["offsets_vis"])):
+        legend_h = max(sum(14 + 20 * len(lines_of(l)) for l in labels) + 34 for labels in (OLF_FULL, VIS_FULL))
+        rows.append((var, R, 104 + max((2 * R + 1) * cs, legend_h) + 20))
+    legend_w = max(pr.w(li, ro) for l in OLF_FULL + VIS_FULL for li, ro in lines_of(l)) + 24
+    pr.close()
+    FH = OUT + sum(h for _, _, h in rows) + ds.GAP * (len(rows) - 1) + OUT
+    fig, ax = canvas(FH)
+    y0 = OUT
+    for var, R, h in rows:
+        row_card(fig, ax, y0, h, var)
+        box = (2 * R + 1) * cs
+        x = OUT + PADX
+        for gi, (title, tab, hues, labels, offs, r, note) in enumerate((
+                ("Olfaction", table(var["olf"]), OLF_HUE, OLF_FULL, var["offsets_olf"], var["olf_range"],
+                 "hue = strongest channel; paler = weaker"),
+                ("Vision", table(var["vis"])[:, 3:], VIS_HUE, VIS_FULL, var["offsets_vis"], var["vis_range"],
+                 "hue = strongest object channel; paler = weaker"))):
+            if gi:
+                ax.plot([x - DIV / 2] * 2, [y0 + 48, y0 + h - 16], color=ds.LINE, lw=1 * ds.PT, zorder=1)
+            group_head(fig, ax, x, y0 + 64, title, r, note)
+            top = y0 + 104
             vmax = max(tab.max(), 1e-9)
-            colours = []
-            for row in tab:
+            for (dr, dc), row in zip(offs, tab):
                 k = int(np.argmax(row))
-                s = row[k] / vmax
-                if s < 0.02:
-                    colours.append(None)
+                st = row[k] / vmax
+                cx, cy = x + (dc + R) * cs, top + (dr + R) * cs
+                if st < 0.02:
+                    ds.rrect(ax, cx + 2, cy + 2, cs - 4, cs - 4, 4, ds.OFF_WORLD, ds.OUTLINE, 1, z=2)
                 else:
-                    a = 0.25 + 0.75 * s
-                    colours.append(tuple(np.array(to_rgb(cols[k])) * a + PAPER * (1 - a)))
-            diamond(ax, offs, colours, R)
-            ax.set_title(title, fontsize=house.FS_LABEL)
-            ax.legend(handles=[Patch(facecolor=c, label=l) for c, l in zip(cols, labels)]
-                      + [Patch(facecolor=house.PAPER, edgecolor=house.RULE, label="none")],
-                      loc="upper center", bbox_to_anchor=(0.5, -0.02), ncol=3, frameon=False, fontsize=house.FS_LABEL)
+                    a_ = 0.25 + 0.75 * st
+                    fc = tuple(np.array(to_rgb(hues[k])) * a_ + (1 - a_))
+                    ds.rrect(ax, cx + 1.5, cy + 1.5, cs - 3, cs - 3, 4, fc, z=2)
+            ds.rrect(ax, x + R * cs + 0.5, top + R * cs + 0.5, cs - 1, cs - 1, 4, "none", ds.IRIS, 2, z=3)
+            lx, ly = x + box + 24, top
+            for hue, label in list(zip(hues, labels)) + [(None, "none")]:
+                if hue is None:
+                    ds.rrect(ax, lx, ly, 14, 14, 3, ds.OFF_WORLD, ds.OUTLINE, 1, z=2)
+                else:
+                    ds.rrect(ax, lx, ly, 14, 14, 3, hue, z=2)
+                for i, (li, ro) in enumerate(lines_of(label)):
+                    ds.text(ax, lx + 22, ly + 12 + 16 * i, li, ro)
+                ly += 14 + 20 * len(lines_of(label))
+            x += box + 24 + legend_w + DIV
+        y0 += h + ds.GAP
+    ax.set_xlim(0, FW)
+    ax.set_ylim(FH, 0)
     return fig
 
 
-def bars_diamond(ax, offsets, tab, R, vmax, color):
-    frame(ax, R)
-    n = tab.shape[1]
-    for (dr, dc), row in zip(offsets, tab):
-        ax.add_patch(Rectangle((dc - 0.46, dr - 0.46), 0.92, 0.92, facecolor=house.BG_SOFT, edgecolor="none"))
-        w = 0.8 / n
-        for k, x in enumerate(row):
-            h = 0.8 * min(1.0, x / vmax)
-            ax.add_patch(Rectangle((dc - 0.4 + k * w + w * 0.1, dr + 0.4 - h), w * 0.8, h, facecolor=color, edgecolor="none"))
-    agent_mark(ax)
-
-
-def heat_table(ax, offsets, tab, labels, vmax, terrain_cols=0):
-    """Terrain columns (always ~1 inside the world) get a grey scale of their own; letting them set the
-    colour scale washed every object channel out to pale."""
-    rgb = np.zeros(tab.shape + (3,))
-    for j in range(tab.shape[1]):
-        if j < terrain_cols:
-            rgb[:, j] = [GREYS(0.15 + 0.6 * min(1.0, x))[:3] for x in tab[:, j]]
-        else:
-            rgb[:, j] = [SEQ(min(1.0, x / vmax))[:3] for x in tab[:, j]]
-    ax.imshow(rgb, aspect="auto", interpolation="nearest")
-    ax.set_yticks(range(len(offsets)), [f"({dr:+d},{dc:+d})" for dr, dc in offsets], fontsize=house.FS_LABEL)
-    ax.set_xticks(range(len(labels)), labels, fontsize=house.FS_LABEL)
-    ax.xaxis.tick_top()
-    ax.grid(False)
-
-
 def option_c(ext):
+    """Option C restyled to the dashboard spec: at range 0-1 a diamond of cells with one state-ink bar per
+    channel; beyond, a table with one row per cell (teal smell / slate vision ramps, terrain columns in the
+    light terrain tints, zero = track), the agent's cell outlined in iris."""
+    ds.register_fonts()
     V = ext["variants"]
-    heights = [max(len(v["offsets_vis"]), 8) * 0.24 + 1.4 for v in V]
-    fig = plt.figure(figsize=(11, sum(heights)), layout="constrained")
-    for sf, var in zip(fig.subfigures(len(V), 1, height_ratios=heights), V):
-        sf.suptitle(f"{var['label']} · observation width {var['obs_dim']}", fontsize=house.FS_BODY, x=0.01, ha="left")
-        axes = sf.subplots(1, 2, width_ratios=[5, 8])
-        for ax, key, labels, rng_key, offs_key, color in ((axes[0], "olf", OLF_LABELS, "olf_range", "offsets_olf", house.INK_2),
-                                                          (axes[1], "vis", VIS_LABELS, "vis_range", "offsets_vis", house.INK_2)):
-            tab, r = table(var[key]), var[rng_key]
-            terrain_cols = 3 if key == "vis" else 0
-            vmax = max(tab[:, terrain_cols:].max(), 1e-9)
-            name = "smell" if key == "olf" else "vision"
-            if r <= 1:
-                bars_diamond(ax, var[offs_key], tab, r, vmax, color)
-                ax.set_title(f"{name}, range {r}: bars per cell ({' '.join(labels)})", fontsize=house.FS_LABEL)
+    pr = Probe()
+    PITCH, ROW_H, LABEL_W, HEAD_H = 64, 16, 72, 36
+
+    def plan(tab, R, labels):
+        if R <= 1:
+            box = (2 * R + 1) * PITCH
+            return dict(kind="bars", w=max(box, 300), h=box + 44)
+        cols = [max(44, max(pr.w(li, ro) for li, ro in lines_of(l)) + 12) for l in labels]
+        return dict(kind="table", cols=cols, w=LABEL_W + sum(cols), h=HEAD_H + len(tab) * ROW_H)
+
+    rows = []
+    for var in V:
+        olf, vis = table(var["olf"]), table(var["vis"])
+        gs = [dict(title="Olfaction", tab=olf, R=var["olf_range"], offs=var["offsets_olf"], labels=OLF_FULL,
+                   cmap=ds.OLF_CMAP, vmax=max(olf.max(), 1e-9), terrain=0),
+              dict(title="Vision", tab=vis, R=var["vis_range"], offs=var["offsets_vis"], labels=VIS_TABLE,
+                   cmap=ds.VIS_CMAP, vmax=max(vis[:, 3:].max(), 1e-9), terrain=3)]
+        for g in gs:
+            g.update(plan(g["tab"], g["R"], g["labels"]))
+            g["w"] = max(g["w"], 380)
+        rows.append((var, gs, 104 + max(g["h"] for g in gs) + 20))
+    pr.close()
+    FH = OUT + sum(h for _, _, h in rows) + ds.GAP * (len(rows) - 1) + OUT
+    fig, ax = canvas(FH)
+    y0 = OUT
+    for var, gs, h in rows:
+        row_card(fig, ax, y0, h, var)
+        x = OUT + PADX
+        for gi, g in enumerate(gs):
+            if gi:
+                ax.plot([x - DIV / 2] * 2, [y0 + 48, y0 + h - 16], color=ds.LINE, lw=1 * ds.PT, zorder=1)
+            top = y0 + 104
+            tab, R, n = g["tab"], g["R"], g["tab"].shape[1]
+            if g["kind"] == "bars":
+                vmax = max(tab.max(), 1e-9)
+                group_head(fig, ax, x, y0 + 64, g["title"], R, "bars per cell, one per channel")
+                for (dr, dc), row in zip(g["offs"], tab):
+                    cx, cy = x + (dc + R) * PITCH, top + (dr + R) * PITCH
+                    ds.rrect(ax, cx + 2, cy + 2, PITCH - 4, PITCH - 4, 6, ds.TRACK, z=2)
+                    bw = (PITCH - 16) / n
+                    for k, v in enumerate(row):
+                        bh = (PITCH - 16) * min(1.0, v / vmax)
+                        if bh > 0.5:
+                            ax.add_patch(Rectangle((cx + 8 + k * bw + bw * 0.15, cy + PITCH - 8 - bh), bw * 0.7, bh,
+                                                   fc=ds.STATE, lw=0, zorder=3))
+                ds.rrect(ax, x + R * PITCH + 1, top + R * PITCH + 1, PITCH - 2, PITCH - 2, 6, "none", ds.IRIS, 2, z=4)
+                names = ", ".join((l[0] if isinstance(l, tuple) else l) for l in g["labels"])
+                ds.text(ax, x, top + (2 * R + 1) * PITCH + 20, f"Bars, left to right: {names}", "caption")
+                ds.text(ax, x, top + (2 * R + 1) * PITCH + 36, f"Bar height: 0 to {vmax:.2f}", "caption")
             else:
-                heat_table(ax, var[offs_key], tab, labels, vmax, terrain_cols)
-                ax.set_title(f"{name}, range {r}: table, one row per cell", fontsize=house.FS_LABEL)
-                ax.set_ylabel("cell offset (rows down, columns right)", fontsize=house.FS_LABEL)
+                group_head(fig, ax, x, y0 + 64, g["title"], R, "table, one row per cell (rows down, columns right)",
+                           g["cmap"], g["vmax"])
+                cx = x + LABEL_W
+                for j, (cw, label) in enumerate(zip(g["cols"], g["labels"])):
+                    for i, (li, ro) in enumerate(lines_of(label)):
+                        ds.text(ax, cx + cw / 2, top + 13 + 15 * i, li, ro, ha="center")
+                    for ri, v in enumerate(tab[:, j]):
+                        yy = top + HEAD_H + ri * ROW_H
+                        if v <= 1e-6:
+                            fc = ds.TRACK
+                        elif j < g["terrain"]:
+                            a_ = 0.35 + 0.65 * min(1.0, v)
+                            fc = tuple(np.array(to_rgb(ds.TERRAIN[j])) * a_ + (1 - a_))
+                        else:
+                            fc = g["cmap"](min(1.0, v / g["vmax"]))
+                        ds.rrect(ax, cx + 1, yy + 1, cw - 2, ROW_H - 2, 2, fc, z=2)
+                    cx += cw
+                for ri, (dr, dc) in enumerate(g["offs"]):
+                    lab = f"({dr:+d}, {dc:+d})".replace("-", "−")
+                    ds.text(ax, x + LABEL_W - 8, top + HEAD_H + ri * ROW_H + 12, lab, "caption", ha="right")
+                    if (dr, dc) == (0, 0):
+                        ds.rrect(ax, x + LABEL_W, top + HEAD_H + ri * ROW_H, cx - x - LABEL_W, ROW_H, 3,
+                                 "none", ds.IRIS, 2, z=3)
+            x += g["w"] + DIV
+        y0 += h + ds.GAP
+    ax.set_xlim(0, FW)
+    ax.set_ylim(FH, 0)
     return fig
 
 
