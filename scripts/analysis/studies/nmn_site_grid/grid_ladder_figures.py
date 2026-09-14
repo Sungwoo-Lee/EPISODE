@@ -19,7 +19,7 @@ INPUT   results/analysis/nmn_site_grid/ladderstyle/<cell>.json   (+ <cell>_episo
 OUTPUT  docs/experiments/active/nmn_input_site_grid/figures/g0[3-7]_*.png
 """
 from __future__ import annotations
-import json, os, sys
+import glob, json, os, sys
 
 import numpy as np
 import matplotlib
@@ -40,7 +40,17 @@ FIG = os.environ.get("NMN_FIG_ROOT", "docs/experiments/active/nmn_input_site_gri
 
 SITES  = ["t2enc", "t3rnn", "t4act", "t5crt", "t16quad"]
 SLICES = ["I", "X", "ALL"]
-CTRL   = [f"baseline_s{s}" for s in (42, 43, 44, 45, 46)]
+# DISCOVERED, not hardcoded. The range-0 grids were each compared against five unmodulated
+# reference runs, and the figures below were built around that band. The extended-olfaction grids
+# have no such runs: the cmp10m seeds are trained at olfactory range 0 on a different environment,
+# so against those grids they are not a control band but a different experiment. Their only
+# unmodulated reference is the in-grid `t1none` cell - one seed.
+#
+# So the band is drawn when the cohort HAS one and omitted when it does not, rather than being
+# faked from one run. A one-member band is a zero-width box, and the annotation that labels it
+# would have read "the five unmodulated controls span this box" over a cohort with one.
+CTRL   = sorted(os.path.splitext(os.path.basename(q))[0]
+                for q in glob.glob(f"{IN}/baseline_s*.json"))
 SITE_NAME = {"t2enc": "encoder", "t3rnn": "memory", "t4act": "actor", "t5crt": "critic",
              "t16quad": "all four"}
 SLICE_NAME = {"I": "body only", "X": "world only", "ALL": "everything"}
@@ -56,6 +66,12 @@ MARK = {"t2enc": "o", "t3rnn": "s", "t4act": "^", "t5crt": "D", "t16quad": "v"}
 
 CELLS = [f"{s}_{sl}" for s in SITES for sl in SLICES]
 ORDER = CELLS + ["t1none"] + CTRL
+
+
+# The count is spelled, not printed as a digit: this page writes small numbers as words, and
+# swapping "five" for "5" in a legend would change a published figure for no reason.
+WORD = {0: "no", 1: "one", 2: "two", 3: "three", 4: "four", 5: "five",
+        6: "six", 7: "seven", 8: "eight", 9: "nine", 10: "ten"}
 
 
 def load(name):
@@ -136,9 +152,10 @@ def fig3(D):
     hbars(ax[1], names, hide, "bush hiding (% of steps in a bush)",
           "How much of its life it spends hidden", "{:.1f}")
     ax[1].set_yticks(np.arange(len(names))); ax[1].set_yticklabels([])
-    for a, vals in ((ax[0], surv), (ax[1], hide)):
-        lo, hi = band([v for n, v in zip(names, vals) if n in CTRL])
-        a.axvspan(lo, hi, color=C["ctrl"], alpha=.16, lw=0, zorder=0)
+    if CTRL:
+        for a, vals in ((ax[0], surv), (ax[1], hide)):
+            lo, hi = band([v for n, v in zip(names, vals) if n in CTRL])
+            a.axvspan(lo, hi, color=C["ctrl"], alpha=.16, lw=0, zorder=0)
     fig.subplots_adjust(wspace=.04)
     finish(fig, "g03_survival_and_hiding")
     return {n: (s, h) for n, s, h in zip(names, surv, hide)}
@@ -192,9 +209,10 @@ def fig5(D):
                            gridspec_kw={"hspace": .30})
     for i, (bk, tk, who) in enumerate([("pd_bush", "pd_tot", "predator"),
                                        ("rd_bush", "rd_tot", "rabbit")]):
-        M = np.array([L.dist_curve(D[n]["grids"][bk], D[n]["grids"][tk]) for n in CTRL])
-        ax[i].fill_between(x, np.nanmin(M, 0), np.nanmax(M, 0), color=C["ctrl"], alpha=.25, lw=0,
-                           label="controls (range)")
+        if CTRL:
+            M = np.array([L.dist_curve(D[n]["grids"][bk], D[n]["grids"][tk]) for n in CTRL])
+            ax[i].fill_between(x, np.nanmin(M, 0), np.nanmax(M, 0), color=C["ctrl"], alpha=.25,
+                               lw=0, label="controls (range)")
         for n in CELLS:
             ax[i].plot(x, L.dist_curve(D[n]["grids"][bk], D[n]["grids"][tk]),
                        color=colour(n), lw=1.1, alpha=.5)
@@ -224,8 +242,10 @@ def fig6(D):
     for n in CELLS:
         ax.scatter(pe[n], re_[n], s=140, color=colour(n), marker=MARK[n.split("_")[0]],
                    edgecolor="white", lw=1.0, zorder=4)
-    ax.scatter([pe[n] for n in CTRL], [re_[n] for n in CTRL], s=150, facecolor="none",
-               edgecolor=C["ctrl"], lw=2.0, zorder=3, label="five unmodulated controls")
+    if CTRL:
+        ax.scatter([pe[n] for n in CTRL], [re_[n] for n in CTRL], s=150, facecolor="none",
+                   edgecolor=C["ctrl"], lw=2.0, zorder=3,
+                   label=f"{WORD.get(len(CTRL), len(CTRL))} unmodulated controls")
     ax.scatter(pe["t1none"], re_["t1none"], s=230, color=C["none"], marker="*", zorder=6,
                label="t1none (in-grid control)")
     # An equal-aspect square with the y=x line puts every point in one corner and spends four
@@ -235,12 +255,17 @@ def fig6(D):
     px, rx = (P.min(), P.max()), (R.min(), R.max())
     ax.set_xlim(px[0] - 1.4, px[1] + 1.4)
     ax.set_ylim(max(0.0, rx[0] - .6), rx[1] + 1.5)
-    cp = [pe[n] for n in CTRL]; cr = [re_[n] for n in CTRL]
-    ax.add_patch(plt.Rectangle((min(cp), min(cr)), max(cp) - min(cp), max(cr) - min(cr),
-                               facecolor=C["ctrl"], alpha=.16, edgecolor=C["ctrl"], lw=1.2,
-                               ls="--", zorder=0))
-    ax.annotate("the five unmodulated controls\nspan this box", xy=(np.mean(cp), max(cr) + .30),
-                ha="center", fontsize=13, color=ANNO)
+    if len(CTRL) > 1:
+        cp = [pe[n] for n in CTRL]; cr = [re_[n] for n in CTRL]
+        ax.add_patch(plt.Rectangle((min(cp), min(cr)), max(cp) - min(cp), max(cr) - min(cr),
+                                   facecolor=C["ctrl"], alpha=.16, edgecolor=C["ctrl"], lw=1.2,
+                                   ls="--", zorder=0))
+        ax.annotate(f"the {WORD.get(len(CTRL), len(CTRL))} unmodulated controls\nspan this box",
+                    xy=(np.mean(cp), max(cr) + .30), ha="center", fontsize=13, color=ANNO)
+    else:
+        ax.annotate("this grid has ONE unmodulated run, not a band:\nevery comparison here is one "
+                    "run against one run", xy=(0.5, 0.02), xycoords="axes fraction",
+                    ha="center", fontsize=13, color=ANNO)
     ax.annotate(f"every run answers a predator about {P.mean()/R.mean():.0f}x more strongly than a\n"
                 f"rabbit. The equal-response line is far above this view.",
                 xy=(.02, .04), xycoords="axes fraction", fontsize=14, color=ANNO,
@@ -306,9 +331,14 @@ def main():
     print(f"\n{'cell':26}{'survival':>10}{'hiding':>9}{'pred':>8}{'rab':>8}")
     for n in ORDER:
         print(f"{n:26}{sh[n][0]:>10.1f}{sh[n][1]:>8.1f}%{pe[n]:>+8.1f}{re_[n]:>+8.1f}")
-    cs = [sh[n][0] for n in CTRL]; ch = [sh[n][1] for n in CTRL]
-    print(f"\ncontrols: survival {np.mean(cs):.1f} +- {np.std(cs, ddof=1):.1f} "
-          f"({min(cs):.1f}..{max(cs):.1f});  hiding {np.mean(ch):.2f} +- {np.std(ch, ddof=1):.2f}")
+    if len(CTRL) > 1:
+        cs = [sh[n][0] for n in CTRL]; ch = [sh[n][1] for n in CTRL]
+        print(f"\ncontrols: survival {np.mean(cs):.1f} +- {np.std(cs, ddof=1):.1f} "
+              f"({min(cs):.1f}..{max(cs):.1f});  hiding {np.mean(ch):.2f} +- "
+              f"{np.std(ch, ddof=1):.2f}")
+    else:
+        print(f"\ncontrols: {len(CTRL)} unmodulated reference run(s) - no band; t1none is the "
+              f"only unmodulated comparison and carries no spread")
     print(f"price of hiding: {m:+.1f} steps per point, r = {r:+.2f}")
 
 
