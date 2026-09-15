@@ -520,7 +520,35 @@ The project rule is **no fallback defaults**: critical keys are read with `confi
    - **Or choose the conditional shape specifically so there is no migration to budget for.** `thermal.body_temp_observable` (2026-09-14) is the worked example. It could have been read unconditionally, next to `sensory.injury_observable`; instead it is read inside the existing `if thermal_enabled:` block. The reason is arithmetic, not taste: **72** stand-alone configs carry a committed byte-parity fixture, every one of them ships `thermal.enabled: false`, and an unconditional `get_mandatory` would have raised on all 72 at load — turning the project's main regression gate red before it compared a single byte, and requiring a 72-file inline migration plus ~20 test modules with inline YAML bases. Under the conditional shape **zero** fixture configs changed and the suite stayed at 72 passed. Put a new key under an existing gate when one fits; take the migration only when the key genuinely has to be read on every config. **And never soften the deferral with a fallback default** — the 68 configs left unmigrated are safe *only* because `get_mandatory` fails loudly and names the key, which is what `tests/env/test_backward_compat_configs.py` keys its skip on.
 3. **Document it here** (in the quick-reference if it is a feature surface) **and in [02_config_schema.md](02_config_schema.md)** (the deep key list). Both move in the same change.
 4. **Add or extend a test** that proves the key is read and that a missing/invalid value raises. For a regression-class change, the test must fail before the code change and pass after.
-5. **For sensory / noise keys, keep observation↔noise width in sync.** Observation width is computed in one place, `get_observation_breakdown`; the per-modality noise block auto-resizes from it. A new sensor or a width change must keep the noise modality list aligned — route through `env-config-reviewer`.
+5. **A key whose OFF value must be bit-inert should be a STATIC field behind a trace-time `if`, not a `jnp.where`.** `body.recovery_in_bush_multiplier` (2026-09-15) is the worked example, following `calculate_drive`'s thermal-off path and the Stage 5 metabolic drain. Stored as `struct.field(pytree_node=False)`, it can be tested with an ordinary Python `if` at trace time, so at the inert value the feature's branch contributes **no operation to the compiled graph** and the surrounding lines are character-for-character the pre-feature code. Bit-parity with every run predating the key is then a property of the source rather than a number somebody measured once. Two consequences to budget for: the field participates in JAX's trace-cache key, so **coerce the read with `float()`** (YAML's `1` and `1.0` would otherwise be two cache entries for the same inert value), and a *changed* value recompiles — which is fine for anything fixed for the life of a run, and wrong for anything a curriculum varies per stage.
+6. **For sensory / noise keys, keep observation↔noise width in sync.** Observation width is computed in one place, `get_observation_breakdown`; the per-modality noise block auto-resizes from it. A new sensor or a width change must keep the noise modality list aligned — route through `env-config-reviewer`.
+
+### Recovery path — a config that fails to load on a key made mandatory later
+
+This is the standing lookup for the most common way an older file stops working. If a repo
+config, **or a saved run config under `results/<run>/models/config.yaml`**, fails to load with
+
+```
+ValueError: Strict Config: Configuration key 'body.recovery_in_bush_multiplier' is required but missing.
+```
+
+then the behaviour-preserving value is **`1.0`** — the value every world in the tree ships, and
+the one at which the feature emits no operation at all.
+
+- For a **repo** config (anything under `configs/`), add the line `recovery_in_bush_multiplier: 1.0`
+  to its `body:` block. That is the whole fix, and it changes no behaviour.
+- A **saved run config must not be edited.** It is the historical record of what that run actually
+  trained with, and editing it to make a tool work falsifies that record. Supply the value through
+  the read-only compatibility path instead.
+
+`body.recovery_in_bush_multiplier` is the **sixth** key to land this way, after
+`sensory.visual_blur_enabled`, `sensory.olfactory_grid_range`, `sensory.visual_value_mode`,
+`sensory.visual_occlusion_enabled` and `thermal.enabled`. **This note does not fix the saved-run
+population** — [[SAVED_RUN_CONFIG_COMPAT]] measured that of **493** frozen run-configs on disk only
+**33** rebuild at current code, and a note in a guide restores none of them. It is a lookup for a
+human who has already hit the wall, not a migration. When the compatibility layer lands, this key
+should join its table and its era-representative fixtures, so the *seventh* key is a red test
+rather than a failed analysis.
 
 If the key is experiment-facing, the schema/loader work is `senior-developer` + `developer`'s job first; only then does `experiment-designer` author configs that use it.
 

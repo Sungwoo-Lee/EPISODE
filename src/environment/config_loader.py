@@ -2144,6 +2144,30 @@ def load_env_params(config: Config) -> EnvParams:
         start_injury_low  = 0.0
         start_injury_high = _max_inj / 2.0
 
+    # ── Location premium on recovery (body.recovery_in_bush_multiplier) ───────
+    # Unconditionally mandatory: it changes how fast a resting agent heals, and a
+    # world that does not say whether resting in cover is worth more than resting
+    # in the open cannot be reproduced from its own file. `1.0` is the inert value.
+    #
+    # The `float()` is load-bearing rather than cosmetic. The field is
+    # `struct.field(pytree_node=False)` — see `state.py` — so it participates in
+    # JAX's trace-cache key, and YAML parses a bare `1` as an `int`. Without the
+    # coercion a curriculum whose stages spell the same inert value `1` and `1.0`
+    # would recompile the environment between them for no behavioural reason.
+    #
+    # Validated at the point of read, in the style of the thermal rate constants
+    # above: a zero multiplier would make resting in cover heal nothing and a
+    # negative one would make it inflict injury. Neither is a setting of this
+    # feature; both are a different feature nobody asked for.
+    _recovery_in_bush_mult = float(
+        config.get_mandatory('body.recovery_in_bush_multiplier'))
+    if _recovery_in_bush_mult <= 0.0:
+        raise ValueError(
+            f"body.recovery_in_bush_multiplier must be > 0 (it multiplies the "
+            f"injury recovered on a rest step taken on a concealing obstacle; "
+            f"1.0 means 'no difference from resting in the open'), got "
+            f"{_recovery_in_bush_mult}.")
+
     return EnvParams(
         height=height,
         width=width,
@@ -2248,6 +2272,7 @@ def load_env_params(config: Config) -> EnvParams:
         nutrition_to_satiation_scaling_factor=config.get_mandatory('body.nutrition_to_satiation_scaling_factor'),
         recovery_base_rate=config.get_mandatory('body.recovery_base_rate'),
         recovery_accel_rate=config.get_mandatory('body.recovery_accel_rate'),
+        recovery_in_bush_multiplier=_recovery_in_bush_mult,
         smoothing_duration=config.get_mandatory('body.injury_smoothing_duration'),
         death_penalty=config.get_mandatory('body.death_penalty'),
         overeating_death=config.get_mandatory('body.overeating_death'),

@@ -177,9 +177,19 @@ body:
   satiation_setpoint: 100
   start_satiation: 100
   start_nutrition: 100
-  # Recovery: Recovery = base * (1 + accel)^(rest_streak - 1)
+  # Recovery: Recovery = base * (1 + accel)^(rest_streak - 1) * [in_bush ? in_bush_mult : 1]
   recovery_base_rate: 0.1
   recovery_accel_rate: 0.5
+  # Location premium: recovery is multiplied by this while the agent rests ON a
+  # concealing bush (an obstacle with `hides_agent: true`). 1.0 = inert, and at
+  # exactly 1.0 the gate is not traced at all (static Python guard in
+  # core.py::update_body), so the computation graph is identical to the
+  # pre-feature one. The rest streak is NOT location-dependent — a streak banked
+  # resting in the open is still worth what it was worth (see D2 in
+  # docs/develop/active/refactors/BUSH_REFUGE_AND_LOCATION_DEPENDENT_RECOVERY.md).
+  # Mandatory everywhere: no fallback default, so a world must say which
+  # experiment it is. Must be > 0.
+  recovery_in_bush_multiplier: 1.0
   # Injury: Damage is spread over duration steps (applied_dam = total_dam / duration)
   injury_smoothing_duration: 3
   # Reward: if use_homeostatic_reward, Reward = prev_drive - curr_drive

@@ -247,6 +247,13 @@ body:
   start_nutrition: 100
   recovery_base_rate: 0.1
   recovery_accel_rate: 0.5
+  # ADDED 2026-09-15 (commit B2). NOT a migration of the archive — this file is a
+  # pinned test INPUT for tests/env/test_unified_parity.py, which loads it from a raw
+  # Config and pytest.fail()s on a load error. `recovery_in_bush_multiplier` became
+  # mandatory in B2, so without this line the pre-unified-animal-refactor evidence
+  # this fixture pins would go red at config load. 1.0 is the inert value and the
+  # fixture proves it: the committed .npz still matches byte-for-byte.
+  recovery_in_bush_multiplier: 1.0
   injury_smoothing_duration: 3
   use_homeostatic_reward: true
   death_penalty: 100

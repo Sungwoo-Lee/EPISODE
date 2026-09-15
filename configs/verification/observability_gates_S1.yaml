@@ -249,6 +249,10 @@ body:
   # Recovery: Recovery = base * (1 + accel)^(rest_streak - 1)
   recovery_base_rate: 0.1
   recovery_accel_rate: 0.5
+  # Location premium on resting IN a concealing bush; 1.0 = inert (no difference
+  # from resting in the open). Mandatory, no fallback; must be > 0. See
+  # docs/environment/05_body_homeostasis.md.
+  recovery_in_bush_multiplier: 1.0
   # Injury: Damage is spread over duration steps (applied_dam = total_dam / duration)
   injury_smoothing_duration: 3
   # Reward: if use_homeostatic_reward, Reward = prev_drive - curr_drive

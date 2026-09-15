@@ -72,6 +72,7 @@ body:
   nutrition_to_satiation_scaling_factor: 0.5
   recovery_base_rate: 0.5
   recovery_accel_rate: 0.5
+  recovery_in_bush_multiplier: 1.0   # inert; mandatory key, no fallback default
   injury_smoothing_duration: 3
   death_penalty: 10.0
   overeating_death: false

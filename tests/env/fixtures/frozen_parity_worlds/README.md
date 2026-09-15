@@ -60,14 +60,36 @@ git show f02e76b9:configs/environment/experiment/basic/01-slow_predator_5x5.yaml
 git show f02e76b9:configs/environment/experiment/basic/02-predator_and_rabbit_10x10.yaml
 ```
 
-`environment__default.yaml` is **identical apart from the prepended header comment, and resolves to an identical `EnvParams`** — the file carries a
-48-line explanatory header prepended by this freeze, and everything after it is byte-for-byte
-the original (it is standalone, so no `extends:` resolution was needed). Verify with:
+`environment__default.yaml` carries a 48-line explanatory header prepended by this freeze;
+everything after it was byte-for-byte the original (it is standalone, so no `extends:`
+resolution was needed) **until 2026-09-15**, when one mandatory key had to be added — see
+"Mandatory keys added after the freeze" below. Verify with:
 
 ```bash
 diff <(git show f02e76b9:configs/environment/default.yaml) \
      <(tail -n +49 tests/env/fixtures/frozen_parity_worlds/environment__default.yaml)
 ```
+
+which must show **only** the `body.recovery_in_bush_multiplier` block and nothing else.
+
+## Mandatory keys added after the freeze
+
+**Adding a key here is allowed only when the key is mandatory and its value is provably inert.
+Everything else about these files stays frozen.** A frozen world that no longer *loads* does
+not preserve any evidence — the gates it feeds die on a config error before they compare a
+single byte — so keeping them loadable is part of keeping them frozen, not a departure from it.
+The safety condition is that the added value must not change the world, and the gate itself is
+the proof: these files still reproduce their pinned pre-change fixtures byte-for-byte or the
+tests fail.
+
+| Date | Key | Value | Why it is inert |
+|---|---|---|---|
+| 2026-09-15 | `body.recovery_in_bush_multiplier` | `1.0` | Gates a **trace-time Python `if`** in `core.py::update_body` (the field is `struct.field(pytree_node=False)`), so at `1.0` the branch emits no operation and the graph is character-for-character the pre-feature one. Pinned by `tests/env/test_recovery_in_bush.py::test_multiplier_one_is_graph_identical`. Commit B2 of [[BUSH_REFUGE_AND_LOCATION_DEPENDENT_RECOVERY]]. |
+
+**What is still forbidden**: changing any value that already exists in these files, re-syncing
+them to the live tree, or regenerating their fixtures. If a future mandatory key is *not*
+provably inert, do not add it here — that is a decision for the plan owner, because it means the
+gate can no longer read the world it was captured under.
 
 The other two are **pre-resolved**: the originals carry `extends: environment/default`, and
 `extends:` targets resolve **only** under `configs/` (`config_loader.py::_resolve_extends`). A byte

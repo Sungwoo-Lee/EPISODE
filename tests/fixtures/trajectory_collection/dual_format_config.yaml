@@ -283,6 +283,7 @@ body:
   random_start_nutrition: false
   random_start_satiation: false
   recovery_accel_rate: 0.5
+  recovery_in_bush_multiplier: 1.0   # inert; mandatory key, no fallback default
   recovery_base_rate: 0.1
   satiation_setpoint: 100
   start_nutrition: 100

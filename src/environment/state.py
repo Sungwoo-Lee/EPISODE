@@ -248,6 +248,15 @@ class EnvParams:
     nutrition_to_satiation_scaling_factor: float
     recovery_base_rate: float
     recovery_accel_rate: float
+    # STATIC on purpose, unlike its two `recovery_*` siblings above. It gates a
+    # trace-time Python `if` in `update_body`, so at the shipped 1.0 the location
+    # premium contributes no operation to the traced graph at all and bit-parity
+    # with every run that predates this key is a property of the SOURCE rather
+    # than a measurement. The cost is a recompile when the value changes, which is
+    # irrelevant: it is fixed for the life of a run. `config_loader` coerces with
+    # `float()` because a static field participates in the trace-cache key and
+    # YAML's `1` and `1.0` would otherwise be two different cache entries.
+    recovery_in_bush_multiplier: float = struct.field(pytree_node=False)
     smoothing_duration: int = struct.field(pytree_node=False)
     death_penalty: float
     overeating_death: bool = struct.field(pytree_node=False)

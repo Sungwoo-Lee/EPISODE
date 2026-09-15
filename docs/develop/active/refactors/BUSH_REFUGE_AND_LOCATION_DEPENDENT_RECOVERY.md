@@ -610,7 +610,7 @@ Each check has a stated expected value the change could plausibly violate. "It p
 ## Checkpoints
 
 - [x] CP0 — **P1 holds**: `git status --short configs/environment/default.yaml` was **empty** at the start of A1; no parallel session's work in that file. ✅
-- [ ] CP1 — D2 is answered before B2's source is written.
+- [x] CP1 — **D2 is answered: NO reset.** `rest_streak` stays location-independent, for the plan's own reasons (a location term would move `new_rest_streak` — and survival — for every config *including* those at multiplier `1.0`, making an inert setting non-inert; `05_body_homeostasis.md:200` documents the streak as a function of the action alone; and banking a streak means resting in the open, which is where predators are). Pinned by `tests/env/test_recovery_in_bush.py::test_streak_not_location_dependent` and recorded in `05_body_homeostasis.md` under "Streak reset rule". ✅
 - [x] CP2 — A1: **met, after the instrument was corrected.** For `thermal_parity/` the prediction held exactly (1 modified, 0 added, 71 untouched). Three OTHER byte-parity families the plan never enumerated also went red; that was escalated rather than worked around, the user decided **freeze the worlds, not the fixtures**, and all four families are now green at their pre-A1 baselines (8 / 34 / 27 / 72) with **no fixture re-baselined**. F6 rewritten to count all four. ✅
 - [x] CP3 — A2: **met, and it is what caught three plan errors.** The sweep ran before any `git mv`; artefact `tmp/20260915_012443_a2_premove_reference_sweep.txt` (five sections), triaged live-vs-prose. Re-deriving the triage rather than trusting F5 is what surfaced the 124 broken `extends:` edges, the ten joined-component callers and the two hard-coded generator `OUT` paths. Post-move sweep: zero stale references outside two deliberately-frozen comment lines. ✅
 - [x] CP4 — A2: **met.** `--configs-dir` was section [3] of the sweep (150 hits). Two curricula are affected and both are named in the report: `configs/continual/basic_01_02_03_dreamer.yaml` (comment → `archive/curriculum_basic_01_02_03/`) and `configs/continual/basic_curriculum_schedule_longL4.yaml` (launched in practice with `--configs-dir …/experiment/basic_curriculum`, per `train_command-agent.sh:738–815`). Both repointed; nothing was red either way, which is the point. ✅
@@ -620,10 +620,10 @@ Each check has a stated expected value the change could plausibly violate. "It p
   is empty. All four byte-parity families measured separately, before **and** after, at
   12 / 34 / 8 / 27 — unmoved. Speed 0% on an interleaved A/B against a worktree at `f3161dcc`
   (a naive sequential before/after said −6.3% and was machine drift; both numbers reported). ✅
-- [ ] CP7 — B2: the three new tests are demonstrated **red** on the pre-change tree before the source edit is made permanent.
+- [x] CP7 — B2: **met, and the log is pasted.** The whole test module was written and run on the untouched tree first: **5 failed, 2 passed** (`tmp/20260915_b2_tests_PRECHANGE.log`), covering all three the plan names plus two additions. `test_premium_applies_in_bush` failed at ACTUAL `0.099998` vs DESIRED `0.299995`, i.e. it was measuring the multiplier and not something incidental. No `git stash` was used; the pre-change comparator throughout B2 was a throwaway `git worktree` at `a8986c42`. Post-change: **7 passed**. ✅
 - [x] CP8 (A1 portion) — Every count in the A1 Implementation Report below is re-derived from a command whose output is pasted. None is copied from this plan.
 - [x] CP8 (A2 portion) — Every count in A2's Implementation Report is re-derived from a command whose output is pasted or saved under `tmp/`. Two of the plan's own numbers were **contradicted** by that re-derivation (three collectors → four; two `trajectory_collection` files → three) and one prediction was confirmed to the file (the 60-fixture delete set). ✅
-- [ ] CP8 — Every count in the Implementation Report is re-derived, never copied from this plan. **One exception**: B2's migration list is captured at the pre-change tree and held fixed (B2.3) — re-deriving it after the key is mandatory silently drops every config that now fails to load, turning the check into a tautology.
+- [x] CP8 (B2 portion) — **met.** Every count in B2's report comes from a pasted command output; the migration list was captured at the pre-change tree and held fixed as B2.3 requires. Re-derivation contradicted the plan in one place and extended it in another: the rollout enumerator returned **exactly** the predicted 12, but the *archived* population the key breaks was measured at **29 live CI inputs + 36 genuinely-lost configs**, which F7 does not mention at all. The speed number was also re-derived after the first measurement disagreed with the source argument — the 3-rep figure said −6.63%, the 6-rep alternating-order figure says −0.35%, and the whole-`jax_step` jaxpr is byte-identical. ✅
 
 ---
 
@@ -1993,6 +1993,434 @@ instead of using `git checkout`. Worth a glance before the next git operation.
 
 **Implemented by: `developer`**
 
+
+### Commit B2 — `body.recovery_in_bush_multiplier` (no behaviour change at 1.0)
+
+> **Implemented by**: `developer`
+> **Date**: 2026-09-15
+> **Status: IMPLEMENTED.** Tree left dirty, nothing staged, nothing committed. All four
+> byte-parity families are at their post-A2 baselines (12 / 34 / 8 / 27) and **no `.npz` fixture
+> moved**. **Read Deviation D-B2.1 first** — the mandatory key broke 29 archived configs that
+> turn out to be live CI inputs, and the fix for that is the one thing in this commit that sits
+> in tension with the "archived configs are NOT migrated" instruction.
+
+#### Plain-language summary
+
+A bush already hides the agent from a hunting predator and, since commit A1, physically blocks
+animals from entering. This adds a third property: a setting that makes **resting inside a bush
+heal injury faster than resting in the open**. It ships at `1.0` — "no difference" — so nothing
+any agent does today changes. The point of shipping it inert is that the switch now exists and
+can be turned on as a deliberate experiment.
+
+The hard part was not the feature; it is four lines of code. The hard part is that the setting is
+**mandatory** — every world file has to say what its value is, with no silent default — so every
+configuration file the project loads directly had to gain one line, and every file that did not
+gain one stopped loading. Most of that was planned. What was not planned is that a few dozen
+files the project had already retired into an `archive/` folder turn out to be **loaded by the
+test suite itself**, so retiring them was not the same as being able to break them.
+
+#### What was implemented, file by file
+
+| Group | Files | Change |
+|---|---:|---|
+| `src/environment/state.py` | 1 | `recovery_in_bush_multiplier: float = struct.field(pytree_node=False)` beside `recovery_accel_rate`, with a comment stating why it is static while its two siblings are traced. |
+| `src/environment/config_loader.py` | 1 | `float(config.get_mandatory('body.recovery_in_bush_multiplier'))` read into a local above the `EnvParams(...)` call, validated `> 0` in the style of the thermal rate constants, then passed to the constructor. |
+| `src/environment/core.py` | 1 | The gate inside `update_body`, immediately after `recovery_amount` is computed: a **trace-time** `if params.recovery_in_bush_multiplier != 1.0:` calling B1's `agent_in_hiding_obstacle(new_agent_pos, state.obs_pos, params.obs_hides_agent, state.obs_active)`. **26 insertions, 0 deletions** — the diff is purely additive. |
+| `configs/environment/default.yaml` | 1 | `recovery_in_bush_multiplier: 1.0` after `recovery_accel_rate`, with the plan's comment block (inert, trace-time guard, D2 pointer, mandatory, `> 0`). |
+| Rollout — the 11 maintained standalone configs | 11 | One inert line + 3 comment lines each: 5 `continual/nmn_double_return_stages/*`, 6 `configs/verification/*`. **Enumerated programmatically at the pre-change tree**, never hard-coded. |
+| Inline-YAML test bases | 20 | 19 `.py` modules + `tests/fixtures/trajectory_collection/dual_format_config.yaml`. `test_visual_properties.py` carries **three** inline `body:` blocks, all three updated. |
+| Frozen pre-A1 worlds | 3 + README | `tests/env/fixtures/frozen_parity_worlds/*.yaml` — 1 inert line each behind a 9-line comment explaining why a "do not update" file is being updated; README gains a "Mandatory keys added after the freeze" section with the rule and its one entry. |
+| **Archived configs that are live CI inputs** | **29** | See **Deviation D-B2.1**. |
+| New test | 1 | `tests/env/test_recovery_in_bush.py` — 7 tests. |
+| Docs | 4 | `05_body_homeostasis.md`, `02_config_schema.md`, `CONFIG_GUIDE.md`, `CONFIG_CRITICAL_SETTINGS.md`. |
+
+```
+$ git diff --stat -- src/ tests/ configs/ docs/environment/
+ 72 files changed, 482 insertions(+), 16 deletions(-)
+
+$ git diff --numstat -- src/
+25  0  src/environment/config_loader.py
+26  0  src/environment/core.py
+ 9  0  src/environment/state.py
+```
+
+No deletion anywhere in `src/`. The three lines the plan requires to survive verbatim
+(`can_recover`, the `jnp.where` on `new_injury`, the clip) are untouched, and the blank line above
+them keeps its original trailing whitespace so the diff is provably additive rather than
+"additive apart from a reformat".
+
+#### ⚠️ Deviation D-B2.1 — the mandatory key breaks 29 archived configs that the test suite loads. I gave them the inert line. This contradicts one line of the brief and I did not want to decide it silently.
+
+**The brief says two things that collide here:**
+
+1. *"Archived configs are explicitly NOT migrated."*
+2. *"`test_unified_parity.py::_collect_configs` was deliberately left un-narrowed at 34. If any of
+   those 34 are archived configs, a mandatory key will make them fail to load. Find out
+   empirically, report what you find, and if it bites, say so rather than narrowing that collector
+   on your own initiative."*
+
+**It bites, and it bites harder than the brief anticipated.** Measured, in three stages:
+
+| Stage | What was measured | Result |
+|---|---|---|
+| a | How many of `parity/`'s 34 fixtures are configs under `experiment/archive/` | **22** — and `test_unified_parity.py:153` `pytest.fail`s on a load error rather than skipping |
+| b | `pytest tests/env/test_unified_parity.py` with the key mandatory | **22 failed, 12 passed, 324 skipped** |
+| c | `pytest tests/env/test_visual_parity.py` | **2 failed, 6 passed** — `archive/hypervigilance/08-singlePredRabbit_disengage.yaml`, used both as a byte-parity fixture and by `test_visual_channel_layout` |
+| d | The first full CPU-pinned `pytest tests/env/` | **73 failed, 326 passed, 374 skipped, 14 errors** — *every* failure a `body.recovery_in_bush_multiplier' is required but missing` load error |
+
+Stage (d) is the part neither the plan nor the brief saw. It traces to **six further archived
+files that A2 deliberately repointed live callers at one commit earlier**:
+
+| Archived file | Loaded by |
+|---|---|
+| `archive/thermal/campfire_world.yaml` | `test_thermal_field`, `test_thermal_body`, `test_thermal_rendering`, `test_thermal_reward_gate`, `test_thermal_validation`, `test_thermoception`, `test_body_temperature_observation`, `test_metabolic_coupling`, `scripts/fixtures/generate_metabolic_coupling_fixture.py` |
+| `archive/thermal/campfire_world_body_temp_hidden.yaml` | `test_body_temperature_observation` |
+| `archive/v2_smoke/02-entities-distributional.yaml` | `test_distributional_yaml`, `test_per_episode_logging` |
+| `archive/2X2_area.yaml` | `test_config_layer_silent_failures_20260723` |
+| `archive/basic/00-5X5_NoPred.yaml` | `test_extends_layering` |
+| `archive/dreamer_curriculum/01_food_only.yaml` | six modules under `tests/algorithms/dreamer_srl/` + `bench_sps.py` |
+
+**Three options, and why I picked the third.**
+
+- **Narrow `_collect_configs`** — explicitly forbidden by the brief, and it would delete 22 of 34
+  fixtures' worth of evidence about a past refactor.
+- **Ship it red** — faithful to both instructions and useless: 73 red tests and two dead gates.
+- **Give those 29 files the inert line.** This is what I did.
+
+**The argument, which is the frozen-worlds argument.** A gate that dies at *config load* preserves
+no evidence at all; keeping a pinned test input loadable is part of keeping it frozen, not a
+departure from it. The safety condition is that the added value must be provably inert, and here
+it is proven three ways: the static guard means it emits no operation at `1.0`, the whole
+`jax_step` jaxpr is byte-identical (below), and the fixtures themselves still match byte-for-byte
+or the tests fail. Every one of the 29 files carries a comment saying **"NOT a migration of the
+archive"** and naming the loader that needs the line.
+
+**What it is NOT.** It is not a migration sweep. **The genuine, policy-conformant cost was measured
+on both sides** by resolving all **326** configs under `experiment/archive/` through
+`load_env_config` → `load_env_params`, in a throwaway worktree at `a8986c42` for the "before":
+
+```
+PRE  (worktree a8986c42) : 326 configs: 265 OK, 61 FAIL
+POST (live tree)         : 326 configs: 229 OK, 97 FAIL
+```
+
+**36 archived configs become unloadable** — all 14 `sensory_ladder`, all 10 `sensory_directional`,
+11 older `hypervigilance`, and `v2_smoke/01-entities-smoke.yaml`. **None is referenced by live
+code**; the only hits in a basename sweep are one comment line in three
+`configs/trajectory_collection/` files, and a **pre-existing** stale path at
+`tests/env/test_entities_schema.py:45` that names `configs/experiment/v2_smoke/…` with
+`environment/` missing and has therefore never resolved (guarded, so not red — flagged to
+`bug-curator` below). The two sensory families are already the "regenerate from the generator, do
+not resurrect the stale YAML" set (F11), so this costs nothing that was not already written off.
+
+**Revert instruction, if you disagree**: `git checkout -- $(git status --short -- configs/environment/experiment/archive/ | awk '{print $2}')`.
+That restores all 29 files and returns the suite to 73 red in `tests/env/` plus 22 + 2 red across
+two parity families. Nothing else in this commit depends on them.
+
+#### Other deviations
+
+**D-B2.2 — `SAVED_RUN_CONFIG_COMPAT.md` was NOT touched, deliberately.** The plan's B2 doc list
+says to append one line to its key table. The brief forbids staging that file (a parallel session
+has it **modified and staged**), and the brief's own "Docs that ride in this commit" list omits
+it. Editing a file another session has staged would put my line under their commit. **Left alone;
+named as a follow-up.** The same applies to `docs/develop/INDEX.md`, so
+`scripts/claude/regen_dev_index.py` was **not** run even though this plan doc's
+`last_updated` moves.
+
+**D-B2.3 — two tests beyond the plan's five.** The plan specifies 5 tests; the file has 7. The
+additions are `test_shipped_value_is_inert_and_a_float` (pins the `float()` coercion the plan
+itself calls "load-bearing" but gives no test for — it asserts a YAML `1` and a YAML `1.0` produce
+the *same* Python float, which is the whole point of the coercion) and
+`test_non_positive_multiplier_raises` (pins the `> 0` validation the plan asks for in the loader).
+Both are additive; the plan's five are present unchanged.
+
+#### The inertness proof, measured two ways
+
+**1 — source-level, which is the standard the plan asks for.** The gate is
+`if params.recovery_in_bush_multiplier != 1.0:` on a `pytree_node=False` field, i.e. an ordinary
+Python branch evaluated once at trace time. At `1.0` its body is never executed, so nothing it
+would emit exists.
+
+**2 — measured at the whole-`jax_step` graph, against a worktree.** `configs/environment/default.yaml`
+traced end to end in the pre-change worktree and in the live tree:
+
+```
+PRE  (worktree a8986c42, key ABSENT) : sha1 2b5d57e7c82e
+POST (live tree, multiplier 1.0)     : sha1 2b5d57e7c82e
+diff -q /tmp/b2_jaxpr_pre.txt /tmp/b2_jaxpr_post.txt  ->  JAXPRS BYTE-IDENTICAL
+```
+
+The emitted program is literally the same text. Nothing downstream of it can differ.
+
+#### Verification — B2.1 to B2.8, every number re-derived
+
+**B2.1 — all four byte-parity families, and no fixture moved.** Measured separately, before the
+source change and again at the final tree:
+
+| Family | Test module | Before (pre-B2) | After (final tree) | Δ |
+|---|---|---|---|:--:|
+| `thermal_parity/` | `test_thermal_parity.py` | 12 passed, 20 skipped | **12 passed, 20 skipped** | — |
+| `parity/` | `test_unified_parity.py` | 34 passed, 324 skipped | **34 passed, 324 skipped** | — |
+| `visual_parity/` | `test_visual_parity.py` | 8 passed | **8 passed** | — |
+| `directional_sensors/` | `test_directional_sensors.py` | 27 passed | **27 passed** | — |
+
+All four match the required post-A2 sizes exactly.
+
+```
+$ git status --short tests/env/fixtures/
+ M tests/env/fixtures/frozen_parity_worlds/README.md
+ M tests/env/fixtures/frozen_parity_worlds/environment__default.yaml
+ M tests/env/fixtures/frozen_parity_worlds/environment__experiment__basic__01-slow_predator_5x5.yaml
+ M tests/env/fixtures/frozen_parity_worlds/environment__experiment__basic__02-predator_and_rabbit_10x10.yaml
+```
+
+**Zero `.npz` touched** — none modified, none added, none deleted. The four entries above are the
+frozen-world YAML *inputs* and their README, changed deliberately; the `diff` against
+`git show f02e76b9:configs/environment/default.yaml` shows **only** the 10-line block and nothing
+else, and the README's verification command was updated to say so.
+
+**B2.2 — the new tests, red before and green after.** Written first and run on the untouched tree
+(`tmp/20260915_b2_tests_PRECHANGE.log`):
+
+```
+PRE-CHANGE : 5 failed, 2 passed
+  FAILED test_missing_key_raises                  - default.yaml does not ship the key at all
+  FAILED test_shipped_value_is_inert_and_a_float  - 'EnvParams' object has no attribute ...
+  FAILED test_non_positive_multiplier_raises      - DID NOT RAISE <class 'ValueError'>
+  FAILED test_multiplier_one_is_graph_identical   - 'EnvParams' object has no attribute ...
+  FAILED test_premium_applies_in_bush             - ACTUAL 0.099998 / DESIRED 0.299995
+  (passed: test_premium_requires_rest_and_no_damage, test_streak_not_location_dependent)
+
+POST-CHANGE: 7 passed in 11.47s
+```
+
+The plan requires the first three to be red pre-change; **all three are**, and so are my two
+additions. The two that pass pre-change are the two the plan does not list among them, and they
+pass for the right reason: with no gate in the source there is no premium to leak outside the rest
+condition, and `rest_streak` was already action-only.
+
+`test_premium_applies_in_bush` failing at exactly **0.0999 vs the required 0.2999** is the useful
+part of that log — the pre-change tree heals `recovery_base_rate` and nothing more, so the test is
+measuring the multiplier and not something incidental.
+
+**A note on `test_premium_requires_rest_and_no_damage`, because it was wrong on the first pass.**
+Its "in the bush but not resting" branch originally used a one-cell bush, and **every** move
+action leaves a one-cell bush — so the test failed with "no move action left the agent on a bush
+cell" and would have proved nothing. Fixed by giving that branch a **two-cell** bush patch, so a
+sideways step stays inside cover and the branch actually isolates "not resting" from "not in a
+bush". Recorded because a test that fails for a bookkeeping reason looks identical, in a summary
+line, to one that fails for the right reason.
+
+**B2.3 — migration completeness, captured at the pre-change tree so it cannot be a tautology.**
+
+```
+(a) pre-change enumerator -> tmp/20260915_b2_target_configs.txt : 11 files + default.yaml = 12
+(b) every path in that SAVED list now carries the key           : b_fail=0  (n=12)
+(c) enumerator re-run after the change, diffed against (a)      : IDENTICAL (12 files)
+```
+
+(c) is the half that can actually fail: fewer entries would mean a config that used to load no
+longer does, which (b) alone is blind to.
+
+**B2.4 — the 7 `basic/*` files are untouched and inherit anyway.**
+
+```
+$ git diff --name-only -- configs/environment/experiment/basic/
+(empty)
+```
+```
+     1.0 float  configs/environment/default.yaml
+     1.0 float  .../basic/00-static_predator_5x5.yaml
+     1.0 float  .../basic/01-slow_predator_5x5.yaml
+     1.0 float  .../basic/02-predator_and_rabbit_10x10.yaml
+     1.0 float  .../basic/03-random_init_10x10.yaml
+     1.0 float  .../basic/03-random_init_10x10_ckpt1k.yaml
+     1.0 float  .../basic/04-jump_attack_10x10.yaml
+     1.0 float  .../basic/05-sensory_noise_10x10.yaml
+```
+
+8/8 resolve through `load_env_config` → `load_env_params` to `1.0`, **as a Python `float`** — the
+type is checked, not assumed, because that is what the trace-cache-key coercion is for.
+
+**B2.5 — `test_no_recompile.py` → 3 passed.** A constant multiplier introduces no recompilation.
+(A *changed* multiplier recompiling is intended and is what the static field buys.)
+
+**B2.6 — `CONFIG_CRITICAL_SETTINGS.md`** carries a registry row and a dated 2026-09-15 change-log
+entry. The entry states the sixth-key fact plainly and says the guide note **does not** fix the
+saved-run population, rather than implying it does; it also carries the D-B2.1 measurements
+(22 / 2 / 73 red, the 29 files, the 265→229 loadability delta) so the cost is on the record with
+its numbers.
+
+**B2.7 — the F10 pre-B2 snapshot exists.**
+`scripts/analysis/hiding_drivers.py --run results/JAX_RecurrentPPO/20260810-185749_rppo_restprem_a01_n106`,
+output at **`tmp/20260915_b2_hiding_drivers_preB2/`** (`univariate.csv`, `multivariate.csv`,
+`summary.json`, `aggregate.npz`), log at `tmp/20260915_b2_hiding_drivers_preB2.log`. Worth one
+clarifying note for whoever uses it: that script reads the *saved trajectory store* and the run's
+saved config YAML directly and never builds `EnvParams`, so B2 cannot change its output for
+already-collected data at all. The snapshot's value is as a reference for **future** runs trained
+at a non-`1.0` multiplier, which is the confound F10 actually describes.
+
+**B2.8 — speed. Two measurements, and the first one was wrong in exactly the way B1 warned about.**
+Node 102 (this container), RTX 4090 GPU 0, `CUDA_VISIBLE_DEVICES=0`, project harness
+`scripts/verification/bench_sensor_sps.py::sps_for` (128 envs × 200 steps under a jitted
+`lax.scan`, best of 7, `PRNGKey(0)`), same config, same seed, same budget. "Pre" is a throwaway
+`git worktree` at `a8986c42`; the live tree was never stashed or checked out.
+
+*First attempt — 3 reps, always pre-then-post:*
+
+| case | median pre | median post | Δ |
+|---|---:|---:|---:|
+| baseline | 1,613,987 | 1,576,313 | **−2.33%** |
+| BOTH | 1,480,548 | 1,382,333 | **−6.63%** |
+
+−6.63% is past the plan's 5% discussion threshold, so it was not accepted. It cannot be real: the
+whole-`jax_step` jaxpr is **byte-identical** (sha1 `2b5d57e7c82e` both sides), so there is no
+instruction for a regression to live in. The tell is inside the numbers — the "pre" column alone
+spans 1.381M–1.510M, a 9% spread with no code change at all, and a fixed pre-then-post order lets
+any drift inside a rep land entirely on "post".
+
+*Second attempt — 6 reps with the order alternating per rep:*
+
+| case | pre (min / median / max) | post (min / median / max) | **Δ median** |
+|---|---|---|---:|
+| baseline | 1,568,514 / **1,577,023** / 1,593,020 | 1,570,678 / **1,591,883** / 1,693,757 | **+0.94%** |
+| BOTH | 1,384,652 / **1,389,585** / 1,498,092 | 1,380,380 / **1,384,692** / 1,392,954 | **−0.35%** |
+
+**Verdict: 0% within noise**, and the noise floor is visible in the table — a 1.69M outlier on the
+*post* side and a 1.50M outlier on the *pre* side, i.e. ±7% excursions in both directions with
+identical emitted code. Nothing to escalate. Raw numbers kept at `tmp/20260915_b2_speed_ab.json`
+and `tmp/20260915_b2_speed_ab_6reps.json`; both attempts are reported rather than only the one
+that agrees with the source argument.
+
+#### Both documented passes
+
+**Pass 1 — `JAX_PLATFORMS=cpu pytest tests/env/ -q`:**
+
+```
+413 passed, 374 skipped, 1 warning in 630.63s (0:10:30)      exit 0
+```
+
+**Green, and the delta is exactly the new file.** B1 recorded **406 passed, 374 skipped** on the
+same invocation; `tests/env/test_recovery_in_bush.py` adds 7. No pre-existing test changed state.
+(The intermittent whole-directory abort recorded for A1 did not fire.)
+
+**Pass 2 — `pytest tests/ --ignore=tests/env -q`** (no pin, as documented):
+
+```
+54 failed, 577 passed, 2 skipped, 1019 warnings, 8 errors in 3639.59s (1:00:39)
+```
+
+B1's figure on the same invocation was 53 failed / 578 passed / 8 errors. **Not one of the 62
+failing node IDs is caused by B2**, and that is measured rather than asserted:
+
+1. **The direct check.** `grep -c 'recovery_in_bush_multiplier'` over the pass-2 log → **0**.
+   Every config error in the run is the *other* key: `grep -o "Configuration key '[^']*'"` returns
+   **81 × `sensory.visual_value_mode`** and nothing else. That is the saved-run-config wall, which
+   has two rows in `KNOWN_BUGS.md` and was reported at the same size (41 node IDs in
+   `tests/test_trajectory_collection.py`) in both the A1 and B1 reports.
+2. **Like-for-like subset, pre vs post, `-p no:randomly`**, over the nine modules that hold all 62:
+
+   ```
+   post : 38 failed, 188 passed,  8 errors in 951s
+   pre  : 15 failed, 168 passed, 51 skipped in 457s
+   ```
+
+   **The pre side is not a valid comparator for one module, and saying so is part of the result.**
+   A `git worktree` does **not** carry gitignored data, so `/tmp/b2_pre_worktree/results/` does not
+   exist — and `tests/test_trajectory_collection.py::_base_cfg()` loads a saved run config from
+   `results/`. In the worktree that module **skips** (51 skipped); in the live tree it fails at
+   `visual_value_mode`. The 38-node-ID gap is entirely that module. This is a real limitation of
+   the worktree A/B technique and worth remembering: it is a clean instrument for `src/` and a
+   blind one for anything that reads gitignored data.
+3. **The remaining differences are the two order/flake effects B1 already documented.** Eight
+   `tests/models/test_modulation_*` golden tests fail **pre** and pass **post** (they execute no
+   environment code at all), and `tests/test_provenance.py::test_write_provenance_writes_complete_valid_json`
+   fails **post** only — the recorded NAS/`git`-timeout flake where `git_dirty()`
+   (`src/utils/provenance.py:82`) returns the string `"unknown"` past `_GIT_TIMEOUT_S = 10` and the
+   test asserts a `bool`.
+
+#### Known-bugs prior-art check — run, not skipped
+
+`grep -in 'recovery\|mandatory\|rest_streak\|bush\|in_bush\|static field\|recompil' docs/develop/active/issues/KNOWN_BUGS.md`.
+
+| What I touched / hit | Registry row |
+|---|---|
+| A new mandatory key widening the saved-run wall | **Recorded, OPEN** — "A finished run's own saved config stops loading once a new key becomes mandatory". It **already names `body.recovery_in_bush_multiplier` by name** as the sixth key, from the planning pass. No new row needed; the row's own count (493 frozen configs, 33 rebuild) is what the `CONFIG_GUIDE.md` note cites. |
+| Tree configs left unmigrated by a mandatory key | **Recorded, OPEN** — "Mandatory config keys keep landing without migrating the archive — 68 stand-alone configs no longer load". This change moves that population; the measured delta (265 → 229 loadable of 326 archived) belongs to that row and is recorded in the registry change log here. **`bug-curator` may want to refresh the row's count.** |
+| A recovery change confounding `hiding_drivers.py`'s contemporaneous injury binning | **Recorded, OPEN** — the row says in as many words *"a planned location-dependent recovery change … shifts the per-step injury trajectory"*. This is that change. Snapshot taken (B2.7); nothing fixed, per scope. |
+| `test_provenance` NAS/git-timeout flake, `tests/models/` order dependence | Raised by B1 as unrecorded, owner `bug-curator`; **still unrecorded**, and both reproduced here. |
+| The `bush_dwell` → `bush_hiding` rename leaving one Dreamer eval assertion red | **Recorded, OPEN, diagnosed.** Present in pass 2, pre-existing, not mine. |
+
+**Believed unrecorded — I name `bug-curator` as owner** (I cannot spawn it):
+
+- **`tests/env/test_entities_schema.py:45` points at `configs/experiment/v2_smoke/01-entities-smoke.yaml`** —
+  a path with `environment/` missing that has never existed. The test guards on `os.path.isfile`
+  and therefore reports green while asserting nothing about the file it names. Pre-existing and
+  unrelated to B2; found while sweeping for live references to the 36 newly-unloadable configs.
+  Same class as the recorded `test_extero_noc_parity` incident ("reported 3 skipped — green — for
+  three months while testing nothing").
+- **A `git worktree` is a blind instrument for any test that reads gitignored data.** Not a code
+  defect, but it silently changes a test's *outcome class* (skip vs. fail) rather than erroring,
+  and both B1 and B2 used worktree A/B as the project's standard differential technique. Worth a
+  line somewhere a future implementer will read.
+
+#### Plan errors found (three)
+
+1. **F7's rollout is complete for the tree but blind to the archive's CI role.** "The 227 archived
+   configs are out of scope by policy" is true of the *policy* and false of the *test suite*:
+   **29** archived configs are loaded by `tests/` or by a fixture generator, and the mandatory key
+   made **97** tests red across three gates before they were migrated. F7 reasons from
+   `test_thermal_parity.py`'s collector (which A2 narrowed) and never asks which *other* collectors
+   and hard-coded paths reach into `archive/`. The general form of the lesson is A2's own Plan
+   error 2, one level up: **sweep for who LOADS a config, not for which directory it lives in.**
+2. **The B2 doc list asks for an edit to `SAVED_RUN_CONFIG_COMPAT.md`, which the brief forbids
+   touching.** See D-B2.2. The brief's own doc list already omits it, so the two are reconcilable
+   — but the plan text still says to edit it, and a later reader following the plan alone would.
+3. **The plan's B2 File Changes never mentions `tests/env/fixtures/frozen_parity_worlds/`.** That
+   is not the plan's fault chronologically — the directory was created by A1's blocker resolution,
+   after B2 was written — but it is now a **fourth** category of file that every future mandatory
+   key must migrate, alongside standalone configs, inline-YAML test bases, and (per error 1)
+   archived CI inputs. `CONFIG_GUIDE.md` §5 step 2 lists only the first two; the new §5 item 5 added
+   here covers the static-field pattern but not the frozen-worlds category. **Named for
+   `senior-developer`** rather than edited, because amending the guide's migration checklist is a
+   contract change, not an implementation detail.
+
+#### Blockers / follow-ups
+
+- **D-B2.1 needs your ruling.** The 29 archived files either keep the inert line (suite green,
+  gates alive) or lose it (suite red, `parity/` 34 → 12 in practice). Revert command is in D-B2.1.
+- **`SAVED_RUN_CONFIG_COMPAT.md`** still needs its one-line table entry for this key, plus, when
+  the compatibility layer lands, an era-representative fixture — so the *seventh* mandatory key is
+  a red test rather than a failed analysis. Owner: whoever owns that plan; the file is currently
+  staged by a parallel session.
+- **`docs/develop/INDEX.md` not regenerated.** `scripts/claude/regen_dev_index.py` was not run
+  because the index is modified **and staged** by a parallel session.
+- **`bug-curator`**: the stale `test_entities_schema.py:45` path, the worktree/gitignored-data
+  blind spot, and (still open from B1) the `test_provenance` flake, `tests/models/` order
+  dependence, and `avoidance_stats_heatmap.py`'s slot-0 bush predicate.
+- **`experiment-analyzer`**: do not compare `hiding_drivers.py` output across this commit for any
+  agent trained at a non-`1.0` multiplier. The two published pages
+  (`a01_hiding_drivers.html`, `hiding_factor_atlas.html`) are **not** invalidated — they report
+  agents trained before this, and at `1.0` nothing about those agents changes.
+- Throwaway `git worktree` at `/tmp/b2_pre_worktree` **removed** after the measurements; the live
+  tree was never stashed, checked out, or cleaned.
+- Scratch artefacts under `tmp/`: `20260915_b2_target_configs.txt`, `..._archived_fixtured_configs.txt`,
+  `..._still_missing.txt`, `..._prechange_parity.log`, `..._postchange_parity.log`,
+  `..._final_families.log`, `..._tests_PRECHANGE.log`, `..._pass1_tests_env.log`,
+  `..._pass2_tests_rest.log`, `..._subset_POST.log`, `..._speed_ab.json`, `..._speed_ab_6reps.json`,
+  `..._hiding_drivers_preB2/`.
+
+#### Working-tree state at hand-off
+
+Dirty and **uncommitted**. **Nothing staged by me.** 72 tracked files modified + 1 new
+(`tests/env/test_recovery_in_bush.py`). Files belonging to parallel sessions — untouched, and two
+of them **staged by that session**: `docs/develop/INDEX.md` (staged),
+`docs/develop/active/refactors/SAVED_RUN_CONFIG_COMPAT.md` (staged),
+`docs/develop/active/meta/artifact_format_bugs.md`, `docs/diary/2026-09-14.md`,
+`docs/diary/2026-09-15.md` (untracked), and the `docs/experiments/active/sensor_ladder/figures/*.svg`.
+Commit B2 with an **explicit pathspec** over its own 73 files.
+
+**Implemented by: `developer`**
 
 ## Verification Report
 

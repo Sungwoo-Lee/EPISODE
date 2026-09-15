@@ -174,6 +174,13 @@ new_rest_streak = prev_rest_streak + 1   if info['rested']
 recovery_mult   = (1 + recovery_accel_rate) ^ (max(new_rest_streak, 1) - 1)
 recovery_amount = recovery_base_rate * recovery_mult
 
+# 2b. LOCATION PREMIUM (body.recovery_in_bush_multiplier). STATIC Python guard:
+#     at the shipped 1.0 these two lines are not traced at all and the graph is
+#     the pre-feature one. `agent_in_bush` is the shared predicate
+#     core.py::agent_in_hiding_obstacle evaluated at the POST-move cell.
+if recovery_in_bush_multiplier != 1.0:              # trace-time, not jnp.where
+    recovery_amount = recovery_amount * (recovery_in_bush_multiplier if agent_in_bush else 1.0)
+
 # 3. Apply recovery only if resting AND no damage being absorbed this step
 can_recover = info['rested'] AND (applied_inc <= 0)
 new_injury  = new_injury - recovery_amount    if can_recover
@@ -187,17 +194,41 @@ new_injury = clip(new_injury, 0.0, max_injury)
 
 Note: `new_rest_streak` (already incremented) is used when computing `recovery_mult`, not `prev_rest_streak`. This means the very first resting step uses streak=1 → multiplier=1.0 (base rate).
 
-**Default recovery table** (`recovery_base_rate=0.1`, `recovery_accel_rate=0.5`):
+**Default recovery table** (`recovery_base_rate=0.1`, `recovery_accel_rate=0.5`). The
+right-hand column shows what the same step would recover **while standing on a concealing
+bush** if `recovery_in_bush_multiplier` were set to `3.0`; at the shipped `1.0` the two
+columns are identical and the bush makes no difference to healing:
 
-| Consecutive rest streak | `recovery_mult` | Recovery per step |
-|------------------------|-----------------|------------------|
-| 1 | 1.0 | 0.1 |
-| 2 | 1.5 | 0.15 |
-| 3 | 2.25 | 0.225 |
-| 4 | 3.375 | 0.3375 |
-| 10 | ~57.7 | ~5.77 |
+| Consecutive rest streak | `recovery_mult` | Recovery per step (open) | Recovery per step (in bush, multiplier 3.0) |
+|------------------------|-----------------|------------------|------------------|
+| 1 | 1.0 | 0.1 | 0.3 |
+| 2 | 1.5 | 0.15 | 0.45 |
+| 3 | 2.25 | 0.225 | 0.675 |
+| 4 | 3.375 | 0.3375 | 1.0125 |
+| 10 | ~57.7 | ~5.77 | ~17.3 |
+
+**Location premium** (`body.recovery_in_bush_multiplier`, mandatory, ships at `1.0`): recovery
+is multiplied by this value on any step the agent rests **on a cell occupied by an active
+obstacle marked `hides_agent: true`** — a bush. The multiplier is applied to
+`recovery_amount`, i.e. *inside* the existing rest-and-no-damage condition, so a premium is
+only ever collected on a step that would have recovered something anyway. It must be `> 0`;
+`1.0` means "resting in cover is worth exactly what resting in the open is worth", and at
+exactly `1.0` the branch is a trace-time Python `if` that emits no operation, so the
+environment's computation graph is identical to the pre-feature one.
 
 **Streak reset rule**: `new_rest_streak = prev + 1 if rested else 0` (`core.py:84`). The streak depends only on the *action*, not on damage. A step where the agent rests **and** takes damage extends the streak by 1 but skips recovery (because `applied_inc > 0`). On the next undamaged rest step, full streak-multiplied recovery resumes.
+
+**Streak reset rule — and location (decision D2, 2026-09-15)**: the streak depends only on the
+*action*. It does **not** reset when the agent leaves cover, and it does not restart when the
+agent enters it. This was decided rather than inherited: a location term would change
+`new_rest_streak` — and through it survival — for **every** config, including those that set
+`recovery_in_bush_multiplier: 1.0` and thereby opted out of the premium entirely, which would
+make an inert setting non-inert. The accepted trade-off is that at a high `recovery_accel_rate`
+an agent can bank a long streak resting in the open and cash the location premium on the step it
+enters a bush; that exploit is self-limiting, because resting in the open is exactly where a
+predator can reach it. A study using both knobs should report them together. Pinned by
+`tests/env/test_recovery_in_bush.py::test_streak_not_location_dependent`; see D2 in
+`docs/develop/active/refactors/BUSH_REFUGE_AND_LOCATION_DEPENDENT_RECOVERY.md`.
 
 **No cap on `recovery_mult`**: the exponential grows without bound. At `recovery_accel_rate=0.5` and streak 20, recovery ≈ 222 per step — the injury clamp at 0 prevents over-subtraction, but very long streaks make injury vanish nearly instantaneously. Tune `recovery_accel_rate` for the desired recovery timescale.
 

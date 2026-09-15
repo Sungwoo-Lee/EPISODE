@@ -233,6 +233,32 @@ def update_body(state: EnvState, info: dict, params: EnvParams, new_agent_pos: j
         recovery_mult = jnp.power(1.0 + params.recovery_accel_rate, (jnp.maximum(new_rest_streak, 1) - 1).astype(jnp.float32))
         recovery_amount = params.recovery_base_rate * recovery_mult
         
+        # --- Location premium (body.recovery_in_bush_multiplier) ---------------
+        # STATIC Python guard on a trace-time constant. At the shipped 1.0 this
+        # branch does not exist in the traced graph and the three lines below are
+        # character-for-character the pre-feature code, so bit-parity with every
+        # run that predates this key is a property of the source rather than a
+        # thing to be measured (same discipline as calculate_drive's thermal-off
+        # path and the Stage 5 metabolic drain). The predicate is the shared
+        # helper, NOT a third copy; it is evaluated here rather than read from
+        # `info['agent_in_bush']` because update_body runs from jax_step BEFORE
+        # that key is written -- and it is legitimate to evaluate it early because
+        # obstacle positions are constant within an episode.
+        #
+        # The gate multiplies `recovery_amount`, so it INHERITS the existing
+        # rest-and-no-damage condition below rather than replacing it: a premium
+        # is only collected on a step the agent both rests and takes no net
+        # damage. Putting it on `can_recover` would be a different feature.
+        #
+        # `rest_streak` is deliberately NOT location-dependent -- see D2 in
+        # docs/develop/active/refactors/BUSH_REFUGE_AND_LOCATION_DEPENDENT_RECOVERY.md
+        # and the "Streak reset rule" note in docs/environment/05_body_homeostasis.md.
+        if params.recovery_in_bush_multiplier != 1.0:
+            _in_bush = agent_in_hiding_obstacle(
+                new_agent_pos, state.obs_pos, params.obs_hides_agent, state.obs_active)
+            recovery_amount = recovery_amount * jnp.where(
+                _in_bush, params.recovery_in_bush_multiplier, 1.0)
+
         # Recovery only applies if resting and not currently taking net damage
         can_recover = jnp.logical_and(info['rested'], applied_inc <= 0)
         new_injury = jnp.where(can_recover, new_injury - recovery_amount, new_injury)

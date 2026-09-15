@@ -338,6 +338,16 @@ body:
   start_nutrition: 100
   recovery_base_rate: 0.1
   recovery_accel_rate: 0.5
+  # --- ADDED 2026-09-15, AFTER the freeze, and deliberately -------------------
+  # `body.recovery_in_bush_multiplier` became MANDATORY in commit B2 of
+  # BUSH_REFUGE_AND_LOCATION_DEPENDENT_RECOVERY, so without this line these
+  # frozen worlds no longer LOAD and the gates they feed die with a config
+  # error rather than a parity verdict. This is not a re-sync to the live tree:
+  # 1.0 is the inert value, the gate behind it is a trace-time `if` that does
+  # not emit an operation at 1.0, and the proof that the world is unchanged is
+  # the gate itself -- these files still reproduce their pinned pre-change
+  # fixtures byte-for-byte, or the tests fail. Nothing else here may change.
+  recovery_in_bush_multiplier: 1.0
   injury_smoothing_duration: 3
   use_homeostatic_reward: true
   death_penalty: 100

@@ -311,7 +311,7 @@ body:
   metabolic_cost, food_nutrition_gain, eating_nutrition_cost, eating_reward_penalty
   nutrition_to_satiation_scaling_factor, satiation_setpoint
   start_satiation, start_nutrition
-  recovery_base_rate, recovery_accel_rate, injury_smoothing_duration
+  recovery_base_rate, recovery_accel_rate, recovery_in_bush_multiplier, injury_smoothing_duration
   use_homeostatic_reward, death_penalty, overeating_death
   with_satiation, with_nutrition, with_injury
   random_start_satiation, random_start_nutrition, random_start_injury
@@ -1244,6 +1244,7 @@ body.satiation_setpoint                body.start_satiation
 body.start_nutrition                   body.metabolic_cost
 body.nutrition_to_satiation_scaling_factor
 body.recovery_base_rate                body.recovery_accel_rate
+body.recovery_in_bush_multiplier
 body.injury_smoothing_duration         body.death_penalty
 body.overeating_death                  body.use_homeostatic_reward
 body.with_satiation                    body.with_nutrition
@@ -1478,9 +1479,21 @@ def load_behavior_measure_cfg(config) -> "BehaviorMeasureCfg | None":
 | Animal metadata | `animal_classes`, `animal_behaviours`, `animal_tags`, `hunt_idx`, `wander_idx`, `static_idx`, `predator_indices`, `neutral_indices`, `has_attack_feature` | `animal_property [N,V]`, `animal_property_std [N,V]`, `animal_nociception [N]`, `animal_move_int [N]`, `animal_damage [N,2]`, `animal_attack_delay [N]`, `animal_spawn_area [N,4]`, `animal_patrol [N,4]`, all ten `animal_*_low/high` arrays, `animal_attack_range_low [N]`, `animal_attack_range_high [N]`, `animal_attack_success_rate [N]` (jump/pounce feature — see [PREDATOR_JUMP_MECHANISM.md](../develop/active/env_entities/PREDATOR_JUMP_MECHANISM.md)), `animal_classes_int [N]`, `animal_behaviours_int [N]`, `animal_is_damaging [N]`, `animal_visual_channel [N]` |
 | Obstacles | `obstacle_names` | `obs_blocking [N]`, `obs_hides_agent [N]`, `obs_blocks_animals [N]`, `obs_spawn_area [N,4]`, `obs_damage [N,2]`, `obs_property [N,V]`, `obs_property_std [N,V]`, `obs_nociception [N]`, `obs_type [N]` |
 | Placement | `max_per_type`, `num_types`, `num_entities`, `placement_mode` | `type_areas [T,4]`, `type_counts [T]`, `type_entity_map [T,max_per_type]` |
-| Body flags | `smoothing_duration`, `overeating_death`, `use_homeostatic_reward`, `with_satiation`, `with_nutrition`, `with_injury`, `random_start_satiation`, `random_start_nutrition`, `random_start_injury`, `random_start_pos`, `rest_action_enabled`, `eat_action_enabled` | `max_satiation`, `max_nutrition`, `max_injury`, `food_nutrition_gain`, `setpoint`, `start_satiation`, `start_nutrition`, `metabolic_cost`, `nutrition_to_satiation_scaling_factor`, `recovery_base_rate`, `recovery_accel_rate`, `death_penalty`, `eating_nutrition_cost`, `eating_reward_penalty`, `start_pos [2]` |
+| Body flags | `recovery_in_bush_multiplier` (**see note below**), `smoothing_duration`, `overeating_death`, `use_homeostatic_reward`, `with_satiation`, `with_nutrition`, `with_injury`, `random_start_satiation`, `random_start_nutrition`, `random_start_injury`, `random_start_pos`, `rest_action_enabled`, `eat_action_enabled` | `max_satiation`, `max_nutrition`, `max_injury`, `food_nutrition_gain`, `setpoint`, `start_satiation`, `start_nutrition`, `metabolic_cost`, `nutrition_to_satiation_scaling_factor`, `recovery_base_rate`, `recovery_accel_rate`, `death_penalty`, `eating_nutrition_cost`, `eating_reward_penalty`, `start_pos [2]` |
 | Sensory flags | `sensor_range`, `visual_sensor_enabled`, `visual_sensor_range`, `local_view_size`, `olfactory_enabled`, `nociception_enabled`, `location_sensor_enabled`, `injury_observable`, `nutrition_observable`, `interoceptive_nociception_enabled`, `interoceptive_convolution_enabled`, `interoceptive_kernel_length`, `proprioception_enabled`, `action_dim`, `olfactory_vector_size`, `nociception_size` | `sensor_radius`, `sensor_decay`, `interoceptive_kernel [K]` |
 | Noise | `perceptual_noise_enabled`, `noise_modality_order` | `noise_modes [13]`, `noise_sigmas [13]`, `noise_injury_scales [13]`, `noise_clip_min [13]`, `noise_clip_max [13]` |
+
+> **Why `recovery_in_bush_multiplier` is static while its two `recovery_*` siblings are not.**
+> `recovery_base_rate` and `recovery_accel_rate` are traced floats: changing either changes a
+> number inside an unchanged graph, so a curriculum can vary them without recompiling.
+> `recovery_in_bush_multiplier` is deliberately the opposite. It gates a **trace-time Python
+> `if`** in `core.py::update_body`, so at the shipped `1.0` the location-premium branch emits no
+> operation at all and the environment's graph is character-for-character the pre-feature one.
+> That turns bit-parity with every run predating the key from a measurement into a property of
+> the source. The price is a recompile when the value changes, which does not matter: it is
+> fixed for the life of a run. `config_loader` coerces the read with `float()` for the same
+> reason — a static field participates in JAX's trace-cache key, and YAML's `1` and `1.0` would
+> otherwise be two different cache entries for the same inert setting.
 
 ---
 
@@ -1910,6 +1923,10 @@ def load_env_params(config: Config) -> EnvParams:
         nutrition_to_satiation_scaling_factor=config.get_mandatory('body.nutrition_to_satiation_scaling_factor'),
         recovery_base_rate=config.get_mandatory('body.recovery_base_rate'),
         recovery_accel_rate=config.get_mandatory('body.recovery_accel_rate'),
+        # STATIC field — read + validated (> 0) above the constructor and
+        # coerced with float(), because a static field is part of the trace-cache
+        # key and YAML's `1` and `1.0` would otherwise be two cache entries.
+        recovery_in_bush_multiplier=_recovery_in_bush_mult,
         smoothing_duration=config.get_mandatory('body.injury_smoothing_duration'),
         death_penalty=config.get_mandatory('body.death_penalty'),
         overeating_death=config.get_mandatory('body.overeating_death'),
@@ -2076,6 +2093,7 @@ body:
   start_nutrition: 100
   recovery_base_rate: 0.1
   recovery_accel_rate: 0.5
+  recovery_in_bush_multiplier: 1.0
   injury_smoothing_duration: 3
   use_homeostatic_reward: true
   death_penalty: 100

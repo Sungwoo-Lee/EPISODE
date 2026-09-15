@@ -204,6 +204,14 @@ body:
   # Recovery: Recovery = base * (1 + accel)^(rest_streak - 1)
   recovery_base_rate: 0.1
   recovery_accel_rate: 0.5
+  # ADDED 2026-09-15 (commit B2). NOT a migration of the archive — these two campfire
+  # worlds are LIVE test inputs: eight modules under tests/env/ (thermal_field,
+  # thermal_body, thermal_rendering, thermal_reward_gate, thermal_validation,
+  # thermoception, body_temperature_observation, metabolic_coupling) load them from a
+  # raw Config, as does scripts/fixtures/generate_metabolic_coupling_fixture.py.
+  # `recovery_in_bush_multiplier` became mandatory in B2; without this line 73 tests
+  # die at config load. 1.0 is the inert value.
+  recovery_in_bush_multiplier: 1.0
   # Injury: Damage is spread over duration steps (applied_dam = total_dam / duration)
   injury_smoothing_duration: 3
   # Reward: if use_homeostatic_reward, Reward = prev_drive - curr_drive
