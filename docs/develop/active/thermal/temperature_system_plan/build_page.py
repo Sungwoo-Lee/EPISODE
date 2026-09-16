@@ -17,7 +17,7 @@ FIG = {k: b64(v) for k, v in {
     'pipeline': 'figA_pipeline.png', 'fig_sigma': 'figB_sigma.png', 'body': 'figC_body.png',
     'render': 'figD_render.png', 'tether': 'figE_tether.png', 'modes': 'figF_modes.png', 'fig_kloss': 'figG_kloss.png', 'ranges': 'figH_ranges.png', 'pain': 'figI_pain.png',
     'nbhd': 'fig1_geometry.png', 'acc': 'fig3_accuracy.png',
-    'obs': 'figJ_obs.png', 'budget': 'figK_budget.png'}.items()}
+    'obs': 'figJ_obs.png', 'budget': 'figK_budget.png', 'harsh': 'figL_harshness.png'}.items()}
 
 DEFAULT, SIGMA, K_EX, K_LOSS, DEATH = -25.0, 0.7, 0.04, 0.01, 15.0
 A_FIRE = 300.0
@@ -164,6 +164,29 @@ N.update(
     ob_sum40=f'{_walk[40][0] + _walk[40][1]:+.2f}',
     ob_thdiff=f'{abs(_walk[12][1] - _walk[40][1]):.2f}',
 )
+
+# ---- section 15 numbers: read from figL_harshness.py's own output, never typed ----
+_L = json.load(open('figL_numbers.json'))
+_lev = {round(r['scale'], 2): r for r in _L['lever']}
+N.update(
+    hs_heal=str(_L['heal_full']), hs_walk=str(_L['walk']), hs_trip=str(_L['hide_heal_trip']),
+    hs_trip2=str(2*_L['hide_heal_trip']),
+    hs_valid=str(_L['n_valid']), hs_cells=str(_L['n_cells']),
+    hs_warmest=f"{_L['warmest_valid_world']:.0f}",
+    hs_warmest_abs=f"{abs(_L['warmest_valid_world']):.0f}",
+    hs_ring=f"{_lev[1.0]['ring']:+.2f}", hs_fire=f"{_lev[1.0]['fire']:+.1f}",
+    hs_cycle=str(_lev[1.0]['away'] + _lev[1.0]['rewarm']),
+    hs_pinned=f"{100*_lev[1.0]['rewarm']/(_lev[1.0]['away']+_lev[1.0]['rewarm']):.0f}",
+)
+for _s, _tag in ((1.0, '100'), (0.75, '75'), (0.65, '65'), (0.5, '50'), (0.33, '33')):
+    _r = _lev[_s]
+    N.update({f'hs_away{_tag}': str(_r['away']), f'hs_rew{_tag}': str(_r['rewarm']),
+              f'hs_burn{_tag}': str(_r['burn']), f'hs_kex{_tag}': f"{_r['k_ex']:g}",
+              f'hs_kl{_tag}': f"{_r['k_loss']:g}",
+              f'hs_slack{_tag}': str(_r['away'] - _L['hide_heal_trip'])})
+_sl = {round(d['world'], 1): d for d in _L['slice']}
+N.update(hs_w21=str(_sl[-21.0]['away']), hs_w20=str(_sl[-20.0]['away']),
+         hs_edge_abs=f"{abs(min(d['world'] for d in _L['slice'] if not d['ok'] and d['world'] > -30)):.0f}")
 
 clash = set(FIG) & set(N)
 assert not clash, f'token name collision between figures and numbers: {clash}'

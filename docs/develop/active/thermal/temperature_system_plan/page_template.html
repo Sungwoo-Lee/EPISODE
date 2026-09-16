@@ -1023,6 +1023,13 @@ T &larr; T + <span class="k">k_exchange</span>&middot;(T_field &minus; T) + <spa
 
 <section class="col">
   <h3>The clock is not the problem. The groceries are next door.</h3>
+  <div class="callout warn">
+    <p><strong>Correction (2026-09-16) &mdash; this headline is only half right; see &sect;15.</strong>
+    It measured the thermal clock against <em>foraging alone</em>. Foraging is cheap, so the clock
+    looked generous. But the agent must also heal, and healing needs a long <em>uninterrupted</em>
+    rest &mdash; which the clock competes with directly when the agent rests hidden out in the cold.
+    Counted against that, 34 steps is tight. The food-placement finding below still holds.</p>
+  </div>
   <p>I set out to check the fear that the thermal clock is too tight to leave room for foraging.
   Measured against the live config, it is the opposite &mdash; there is roughly <strong>twice as
   much thermal headroom as foraging actually demands</strong>:</p>
@@ -1097,10 +1104,129 @@ T &larr; T + <span class="k">k_exchange</span>&middot;(T_field &minus; T) + <spa
 <hr>
 
 <section class="col">
+  <h2><span class="num">15</span> How harsh should the cold be?</h2>
+  <p>&sect;14 asked whether the thermal clock leaves room to eat, and found that it does. That was
+  the easy obligation. The hard one is <strong>healing</strong>: recovery only accrues while the
+  agent stays still, starting slow and compounding, so healing a serious injury is a sustained stay,
+  not a moment. This section sweeps both temperatures &mdash; the world's baseline and the fire's
+  strength &mdash; against that obligation, and finds a third setting that turns out to be the real
+  dial.</p>
+</section>
+
+<section class="col">
+  <h3>What the clock has to make room for</h3>
+  <div class="scroll"><table class="steps narrow">
+    <thead><tr><th>Obligation</th><th class="n">Steps</th><th>Where it comes from</th></tr></thead>
+    <tbody>
+      <tr><td>Heal from full injury</td><td class="n">@@hs_heal@@</td>
+        <td>uninterrupted rest; recovery 0.1 per step compounding 1.5&times;, from the live config</td></tr>
+      <tr><td>Walk from safety to a bush or food</td><td class="n">~@@hs_walk@@</td>
+        <td>typical distance to the nearest safe cell (&sect;14)</td></tr>
+      <tr class="pick"><td><strong>One hide-and-heal trip</strong></td><td class="n">@@hs_trip@@</td>
+        <td>walk out, heal hidden in the cold, walk back</td></tr>
+      <tr><td>Predator strike delay</td><td class="n">1&ndash;3</td><td>level 04 pouncing predators</td></tr>
+    </tbody>
+  </table></div>
+  <p>At the shipped settings the agent can be away <strong>@@hs_away100@@ steps</strong>, which fits
+  one hide-and-heal trip with <strong>@@hs_slack100@@ steps to spare</strong> &mdash; and only if it
+  set off fully rewarmed, which itself takes @@hs_rew100@@ steps at the fire. A full cycle is
+  @@hs_cycle@@ steps, of which about @@hs_pinned@@% is spent pinned to the fire. That is the case for
+  calling it too harsh: the clock does not leave room for a second thing to go wrong.</p>
+</section>
+
+<figure>
+  <img src="data:image/png;base64,@@harsh@@" alt="Four panels. A: a map of world baseline temperature against
+  fire strength, coloured by whether the environment's own load-time check accepts the configuration, with the
+  shipped setting marked. B: the same axes coloured by how many steps the agent can spend away from the fire,
+  with contour lines at one, two and three hide-and-heal trips. C: steps away from the fire against world
+  temperature at the shipped fire strength, rising steeply until a band the loader refuses. D: steps away,
+  rewarming steps and fire-pain steps against a time-scale factor that multiplies both heat-transfer rates.">
+  <figcaption><b>Figure L &mdash; how harsh the cold is, and which settings change it.</b>
+  <b>Axes.</b> A and B: horizontal axis is world baseline temperature in degrees (&minus;40 to &minus;14,
+  colder to the left); vertical axis is fire strength as a multiple of the world's coldness (4&ndash;20).
+  B's colour is steps away from the fire before cold death, capped at 150. C: horizontal axis is world
+  baseline temperature in degrees with fire strength held at the shipped 12&times;; vertical axis is steps
+  away before cold death. D: horizontal axis is a time-scale factor (1.0 = shipped, decreasing to the
+  right) that multiplies <em>both</em> <code>k_exchange</code> and <code>k_loss</code>; vertical axis is
+  steps. Green reference lines are hide-and-heal trips of @@hs_trip@@ steps.
+  <b>What it shows.</b> Most of this plane is not a valid design: only @@hs_valid@@ of @@hs_cells@@
+  combinations pass the loader's check (A). Within the valid region the budget is set mostly by the
+  world and only a little by the fire (B). Warming the world buys time steeply and then falls off a cliff
+  &mdash; at &minus;21 the budget is @@hs_w21@@ steps, at &minus;20 it is @@hs_w20@@, and from
+  &minus;@@hs_edge_abs@@ upward, at this fire strength, the loader refuses because the cold no longer kills (C). Slowing both rates
+  together instead stretches every duration while leaving the map untouched (D).
+  <b>Data.</b> Computed, not sampled. Every validity verdict and every radial temperature comes from the
+  environment's own load-time functions, <code>_thermal_radial_equilibria</code> and
+  <code>_thermal_structure_verdict</code>, so a config marked invalid is one the loader would actually
+  refuse. All @@hs_cells@@ grid combinations were evaluated (100%); durations are the body recurrence
+  run from the comfort-ring equilibrium.</figcaption>
+</figure>
+
+<section class="col">
+  <h3>Why warming the world is the wrong dial</h3>
+  <p>The obvious way to make the cold less harsh is to make the world warmer. Figure L shows why that
+  fails. The budget is flat across most of the range and then climbs steeply in the last few degrees
+  before the loader refuses the config &mdash; because the far field stops being lethal at all, and a
+  world where the cold never kills has no reason to return to the fire. There is no comfortable middle
+  setting; there is a knife edge next to a wall. Fire strength is worse still as a dial: it barely
+  moves the budget, and pushing it up quickly destroys the survivable ring instead.</p>
+</section>
+
+<section class="col">
+  <h3>The dial that works: slow both rates together</h3>
+  <p><code>k_exchange</code> sets how fast the world gets into the body and <code>k_loss</code> sets how
+  hard the body fights back. Where the body settles depends only on their <em>ratio</em>; how fast it
+  gets there depends on their <em>size</em>. So multiplying both by the same factor leaves every
+  equilibrium in the world exactly where it was &mdash; the ring still settles at @@hs_ring@@, the fire
+  cell still at @@hs_fire@@, and the loader still accepts it &mdash; while stretching every duration.
+  It is a harshness control that does not redraw the map.</p>
+  <p class="cue" hidden>Wider than the screen &mdash; scroll the table sideways; the right-hand columns are cut off.</p>
+  <div class="scroll"><table class="steps">
+    <thead><tr><th>Time scale</th><th class="n">k_exchange / k_loss</th><th class="n">Away</th>
+      <th class="n">Rewarm</th><th class="n">Fire pain</th><th class="n">Spare after one trip</th></tr></thead>
+    <tbody>
+      <tr><td>1.0 &mdash; shipped</td><td class="n">@@hs_kex100@@ / @@hs_kl100@@</td><td class="n">@@hs_away100@@</td>
+        <td class="n">@@hs_rew100@@</td><td class="n">@@hs_burn100@@</td><td class="n">@@hs_slack100@@</td></tr>
+      <tr><td>0.75</td><td class="n">@@hs_kex75@@ / @@hs_kl75@@</td><td class="n">@@hs_away75@@</td>
+        <td class="n">@@hs_rew75@@</td><td class="n">@@hs_burn75@@</td><td class="n">@@hs_slack75@@</td></tr>
+      <tr class="pick"><td>0.65</td><td class="n">@@hs_kex65@@ / @@hs_kl65@@</td><td class="n">@@hs_away65@@</td>
+        <td class="n">@@hs_rew65@@</td><td class="n">@@hs_burn65@@</td><td class="n">@@hs_slack65@@</td></tr>
+      <tr class="pick"><td>0.5</td><td class="n">@@hs_kex50@@ / @@hs_kl50@@</td><td class="n">@@hs_away50@@</td>
+        <td class="n">@@hs_rew50@@</td><td class="n">@@hs_burn50@@</td><td class="n">@@hs_slack50@@</td></tr>
+      <tr><td>0.33</td><td class="n">@@hs_kex33@@ / @@hs_kl33@@</td><td class="n">@@hs_away33@@</td>
+        <td class="n">@@hs_rew33@@</td><td class="n">@@hs_burn33@@</td><td class="n">@@hs_slack33@@</td></tr>
+    </tbody>
+  </table></div>
+  <p>All figures in steps. &ldquo;Away&rdquo; is from the comfort ring to cold death; &ldquo;rewarm&rdquo;
+  is from one degree above cold death back to comfortable; &ldquo;fire pain&rdquo; is how long the agent
+  can stand on the fire cell before heat death; &ldquo;spare&rdquo; is away time left after one
+  @@hs_trip@@-step hide-and-heal trip.</p>
+  <div class="callout warn">
+    <p><strong>What slowing the rates costs.</strong> Two things stretch that you may not want stretched.
+    <strong>Fire pain slows</strong> &mdash; from @@hs_burn100@@ steps to @@hs_burn50@@ at a half time
+    scale. &sect;04 asked for the fire to hurt in the same register as a predator strike, which is 1&ndash;3
+    steps, so every step of slowing weakens that. And <strong>rewarming slows by the same factor</strong>,
+    so the <em>share</em> of time the agent spends pinned to the fire does not improve at all &mdash; it
+    stays near @@hs_pinned@@% at every scale. What the dial buys is not freedom from the fire; it is room
+    to fit a fixed-length obligation, like healing, inside one excursion.</p>
+  </div>
+  <div class="callout pick">
+    <p><strong>Recommendation, for you to decide: a time scale between 0.65 and 0.5.</strong> At 0.65 the
+    agent can be away @@hs_away65@@ steps &mdash; one hide-and-heal trip with @@hs_slack65@@ to spare &mdash;
+    and fire pain stays at @@hs_burn65@@ steps. At 0.5 it gets @@hs_away50@@ steps, enough for
+    <em>two</em> trips (@@hs_trip2@@), at the cost of fire pain slowing to @@hs_burn50@@. Leave the world
+    and fire temperatures where they are: the shipped point sits safely inside the valid region, and
+    both of those dials are either flat or a cliff.</p>
+  </div>
+</section>
+
+<hr>
+
+<section class="col">
   <h4>Provenance</h4>
   <p class="foot">Every number on this page is computed at build time from the sandbox in this
   folder &mdash; <code>sim.py</code> (field construction and body dynamics),
-  <code>nbhd_compare.py</code> (neighbourhood accuracy), <code>figs.py</code> (figures A&ndash;I), <code>figJ_obs.py</code> (figure J), <code>figK_budget.py</code> (figure K). Rebuild
+  <code>nbhd_compare.py</code> (neighbourhood accuracy), <code>figs.py</code> (figures A&ndash;I), <code>figJ_obs.py</code> (figure J), <code>figK_budget.py</code> (figure K), <code>figL_harshness.py</code> (figure L). Rebuild
   with <code>build_page.py</code>. The sandbox is pure numpy and deliberately independent of
   <code>src/</code>, so parameters can be swept without touching the environment. Source review:
   EVAAA at <code>vendor/evaaa/evaaa_unity</code> &mdash; <code>ThermoGridSpawner.cs</code>,
