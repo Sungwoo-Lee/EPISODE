@@ -167,6 +167,107 @@ THE OTHER RULES (ground truth = the observation breakdown, not the renderer)
                     `--renderer v2 --arena-axes arena` runs it against a real frame.
 
 ────────────────────────────────────────────────────────────────────────────────────────
+CO-OCCUPANCY: DOES A SQUARE SHOW EVERY OCCUPANT IT HOLDS?  (`cell_overdraw`, §D5.2 item 11,
+specified in §R19.1 and re-scoped by §R20.1–§R20.8)
+
+The redesign exists because a square holding two animals was drawn as one animal. That is
+only checkable if "how many occupants can a viewer actually see here" is MEASURED, and the
+measurement has to survive a painter that draws the right thing in the right place and
+then paints something over it. So this rule measures THREE things per square, not one:
+
+  isolated ink       what each element lays down alone (`FrameProbe.ink`) — the original
+                     check, and what catches a painter that draws two occupants
+                     concentrically (one component where the snapshot says two).
+  visible token ink  the pixels at which NO element drawn afterwards has ink. A token
+                     drawn correctly and then covered keeps all of its isolated ink, so
+                     an isolated-ink rule alone passes the exact defect this exists for.
+  survival floor     per component, `|surviving| / |isolated| >= SURVIVAL_MIN`. A token
+                     95 % hidden still leaves one component and would pass any pure
+                     component count. A correct composition measures 1.000.
+
+Ground truth is the snapshot's set of DISTINCT NON-TERRAIN KINDS at that square — kinds,
+never instances (§R17.5 item 1): two predators in one square are one predator token by
+design, and an instance count would report a failure that is not one.
+
+Excluded from the token union, BY MEASUREMENT and never by a painter's tag:
+  * an element whose ink covers >= CELL_FLOOR_FRACTION (40 %) of the square is the bed or
+    the ground — the floor the occupants stand on, not an occupant;
+  * an element whose ink sits on the perimeter of ITS OWN bounding box (`_ink_is_outline`)
+    is a square outline or a seam. The agent's 2 px iris outline is the case that matters:
+    left in, it runs around the rim and bridges two tokens into one component, failing a
+    CORRECT painter. It stays in the OCCLUDER set — only the assertion narrows.
+    Guard, in the failing direction (§R20.7 item 1): an outline-classified element whose
+    bbox spans under OUTLINE_SPAN_MIN (80 %) of the square is reported as
+    `outline_like_token` and FAILS rather than quietly leaving the count — a ring-shaped
+    token part drawn as its own artist is exactly that shape.
+
+THE NARROWING RULE, which is the invariant this section must not break (§R20 head). A fix
+here may narrow WHICH ELEMENTS AND PIXELS THE RULE ASSERTS THINGS ABOUT. It may never
+narrow WHICH ELEMENTS ARE CAPABLE OF COVERING A TOKEN: the occluder set stays "every
+element in the figure". Every precondition below is therefore scoped to `L(p)` — the
+last-drawn element with ink at token pixel `p` — and `L(p)` is COMPUTED FROM THE FULL
+OCCLUDER SET, so the narrowing consumes that set rather than editing it. A painter-set
+property (alpha, face colour, outline shape) may be read ONLY where reading it can make
+the rule FAIL; nothing may ever be read to EXEMPT ink from the count. That is finding #3's
+discipline — the audit never lets the painter under test declare which of its own ink is
+off-limits — carried into this rule. The shortcut this forbids (stop counting translucent
+things, or outlines, as able to cover anything) would silence a false alarm and SILENTLY
+re-open the draw-order hole the rule exists to close.
+
+Three preconditions, which FAIL rather than skip, because "what was drawn last" is only a
+valid proxy for "what the viewer sees" under them:
+
+  (a′) opacity where it decides   If `L(p)` is not a token element of that square it must
+       be fully opaque (artist alpha None/1.0, no RGBA face or edge alpha below 1). A
+       translucent element above a token is not an occlusion a viewer can see through, so
+       the rule would be wrong in both directions. Scoped to `L(p)`, NOT arena-global: the
+       agent's own halo (alpha 0.16) and shadow (0.12) are token elements of their own
+       square, and an arena-global demand fails every frame that has an agent in it.
+  (b′) one Axes where it decides  `L(p)` must belong to the named arena Axes.
+       `_is_painted_over` returns False across two Axes, so token ink drawn into a foreign
+       Axes would be silently un-orderable and would pass. Scoped to `L(p)`, NOT
+       arena-global: the page's background rectangle lies under the whole arena in its own
+       Axes and is never `L(p)`, so an arena-global demand fails every frame.
+  (c′) probe visibility           An element whose every declared paint lies within
+       INK_DELTA (8/255) of the FIGURE FACECOLOR has no isolated ink at all — so it can
+       never be `L(p)` and cannot occlude anything as far as this instrument is concerned.
+       That is the one genuinely silent case in the pass, and it is not hypothetical: the
+       arena's neutral ground `TRACK #ECEEEA` is 5–6/255 from the page colour
+       `CANVAS #F2F3F0`, so a renderer that set `fig.set_facecolor(CANVAS)` — a natural
+       thing to do — would make "the ground was painted over the animals" UNDETECTABLE.
+       Mutation M-F1g is that exact frame, and without (c′) it passes silently.
+
+The composition comparator is extended to rank ACROSS Axes as `(axes rank, zorder, child
+index)` — matplotlib's own composition rule, not a new invention — because `L(p)` cannot
+be found at all with a comparator that refuses to order two Axes. The derivation is pinned
+by a rendered two-Axes control rather than trusted. The rank is built ONCE per frame as
+`dict[id(artist) -> rank]`; the previous per-pair `_draw_index` scan is O(N) per
+comparison, which a 100-square arena cannot afford.
+
+The only permitted exclusion from the WORK (never from the occluder set) is an element
+whose REACH_PAD_PX-padded bbox cannot meet a square: the padded bbox bounds the element's
+ink, so `L(p)` is unchanged by construction, and a control asserts both ways give
+identical findings.
+
+The MINIMAP variant is measured on the COMPOSITE, not by isolation — isolation would call
+a split dot correct even when one half is painted over the other, which is the exact
+defect §R17.4 exists to prevent. Its ground truth is the distinct palette colours the
+KINDS present map to (two predators are one colour, not two movers), and its area
+denominator is the SAME census run on the isolated wedge, so edge blends are excluded from
+numerator and denominator alike and a correct dot measures ~1.000. A geometric wedge would
+be unreachable on a correct ~13 px dot, a third to a half of whose pixels are blends.
+
+Tolerances added by this rule, all argued above:
+  SURVIVAL_MIN         = 0.98   per-component surviving fraction (swept at CP0.3b)
+  CELL_FLOOR_FRACTION  = 0.40   ink area share at which an element IS the floor
+  OUTLINE_SPAN_MIN     = 0.80   bbox span below which an "outline" is a suspect token
+  REACH_PAD_PX         = 2      bbox padding for the work-only reach test
+  MINIMAP_DELTA        = 12     per-channel distance for the minimap colour census
+
+Tolerance between components is ZERO shared pixels, with NO dilation: the 1 px dilation in
+the text rules exists for glyph anti-aliasing and is wrong here.
+
+────────────────────────────────────────────────────────────────────────────────────────
 CALIBRATION — the reason this file exists at all
 
 An instrument nobody has calibrated is worthless, so the audit ships with POSITIVE
@@ -433,6 +534,53 @@ def _ink_is_outline(mask: np.ndarray, bbox, height: int) -> bool:
     return bool(int((mask & core).sum()) / total < 0.02)
 
 
+def _collection_extent(art):
+    """Display-coordinate extent of a Collection, taken from its OWN paths.
+
+    `Collection.get_window_extent` returns an EMPTY bbox — `(inf, inf, -inf, -inf)` —
+    for a collection whose data limits were never computed, and `enumerate_elements`
+    filters a degenerate bbox out. The result was that EVERY Collection silently left the
+    element list, on every frame.
+
+    That is not a cosmetic gap in a list. An artist that is not an Element is never hidden
+    by `FrameProbe._draw`, so it is drawn into every isolated render INCLUDING the bare
+    background, and it eats the ink of whatever it covers. Measured on a two-token square:
+    the page rectangle's isolated ink came out 665 px short, which is exactly the area of
+    the two tokens sitting on top of it.
+
+    It matters twice over here. The redesign draws every bed and every token as one
+    `PatchCollection` (§R20.8 requires a bed to be exactly one artist), so without this
+    fallback the co-occupancy rule would measure an arena in which nothing is standing.
+    And the frozen V1 and dormant-V2 frames carry 17 visible `LineCollection`s each, whose
+    ink has been contaminating every isolation measurement taken on them.
+
+    The bbox is used as a BOUND on ink (the reach test), so the stroke width is added:
+    a stroke is centred on its path and reaches half a width beyond it either side.
+    """
+    try:
+        paths, trans = art.get_paths(), art.get_transform()
+    except Exception:
+        return None
+    exts = []
+    for p in paths:
+        try:
+            e = p.get_extents(trans)
+        except Exception:
+            continue
+        if np.all(np.isfinite([e.x0, e.y0, e.x1, e.y1])):
+            exts.append(e)
+    if not exts:
+        return None
+    try:
+        lw_pt = float(np.max(np.atleast_1d(np.asarray(art.get_linewidth(), dtype=float))))
+    except Exception:
+        lw_pt = 0.0
+    dpi = float(getattr(getattr(art, "figure", None), "dpi", 72.0) or 72.0)
+    pad = max(lw_pt * dpi / 72.0, 0.0)
+    return (min(e.x0 for e in exts) - pad, min(e.y0 for e in exts) - pad,
+            max(e.x1 for e in exts) + pad, max(e.y1 for e in exts) + pad)
+
+
 def _draw_index(art) -> int | None:
     """Where this artist sits in its Axes' child list — matplotlib's insertion order."""
     ax = getattr(art, "axes", None)
@@ -541,8 +689,19 @@ def enumerate_elements(fig: Figure, renderer) -> list[Element]:
             bb = art.get_window_extent(renderer=renderer)
             bbox = (float(bb.x0), float(bb.y0), float(bb.x1), float(bb.y1))
         except Exception:
-            continue
-        if not np.all(np.isfinite(bbox)) or bbox[2] <= bbox[0] or bbox[3] <= bbox[1]:
+            bbox = None
+
+        def _degenerate(b):
+            return (b is None or not np.all(np.isfinite(b))
+                    or b[2] <= b[0] or b[3] <= b[1])
+
+        # A Collection reports an EMPTY window extent, so every one of them used to drop
+        # out of this list — and an artist that is not an Element is never hidden by
+        # `FrameProbe._draw`, which corrupts every ink measurement it overlaps. See
+        # `_collection_extent`.
+        if _degenerate(bbox) and isinstance(art, Collection):
+            bbox = _collection_extent(art)
+        if _degenerate(bbox):
             continue
 
         if isinstance(art, Text):
@@ -653,6 +812,602 @@ class Finding:
 
     def as_dict(self):
         return dataclasses.asdict(self)
+
+
+# ------------------------------------------------ co-occupancy (§R19.1 / §R20.1–§R20.8)
+#
+# Everything below measures ONE question: does a square show every occupant it holds? The
+# module docstring argues each constant and each precondition; this is the implementation.
+
+#: Per-component surviving fraction. A correct composition measures exactly 1.000, so any
+#: floor below 1 is pure tolerance for a single anti-aliased seam. SWEPT on both sides at
+#: CP0.3b (§R20.3) — the minimum over every negative control against the maximum over the
+#: M-F2 family — and the value moves only in the plan text, with its evidence, NEVER in a
+#: test to turn a red checkpoint green.
+SURVIVAL_MIN = 0.98
+
+#: Ink area share of a square at which an element IS the floor (the bed or the ground)
+#: rather than an occupant. Measured area, never a painter's say-so — which is why §R20.8
+#: requires a bed to be exactly ONE artist, so this test measures it whole.
+CELL_FLOOR_FRACTION = 0.40
+
+#: An outline-classified element must span at least this much of the square in BOTH
+#: dimensions to be excluded quietly; below it, it is a suspect token and FAILS (§R20.7).
+OUTLINE_SPAN_MIN = 0.80
+
+#: Padding for the work-only reach test. The padded bbox bounds an element's ink, so an
+#: element that cannot meet a square cannot put ink in it and `L(p)` is unchanged.
+REACH_PAD_PX = 2
+
+#: Per-channel distance (0–255) for the minimap's composite colour census. Deliberately
+#: strict: a blend between two occupant colours, the white ring or the terrain tint must
+#: classify as NEITHER, so it is excluded from numerator and denominator alike.
+MINIMAP_DELTA = 12
+
+#: Share of colour-bearing map squares that may come up completely blank before the rule
+#: stops believing its own grid. A real draw-order defect hits the FEW squares that are
+#: shared; a grid derived from the wrong rectangle misses MOST squares at once, so the two
+#: are told apart by how wholesale the failure is rather than by a tag.
+MINIMAP_ALIGN_MAX_BLANK = 0.5
+
+#: Fallback floor for the minimap, used ONLY when a wedge cannot be isolated as its own
+#: artist and the denominator falls back to geometry (§R20.4). It is never `SURVIVAL_MIN`
+#: reused: it measures a different thing and is swept on the minimap's own controls.
+MINIMAP_AREA_MIN = 0.55
+
+#: The audit's OWN copy of the entity -> map colour table. It is a copy, and not an import,
+#: because the audit may not import the package it audits (§D5.2, pinned by
+#: `test_audit_imports_neither_layout_nor_registry`). A test compares the two tables so the
+#: copy cannot drift — the test may import the package, the instrument may not.
+MINIMAP_PALETTE = {
+    "rock": "#6B7380", "bush": "#4F8A34", "tree": "#2F7A45", "campfire": "#7C4A2D",
+    "food": "#E03151", "hiding_predator": "#2B3442", "predator": "#1F2733",
+    "neutral": "#A8A29A", "agent": "#5B4BDB",
+}
+
+#: Terrain is the FLOOR, not an occupant, so it never counts toward a square's kinds.
+TERRAIN_KINDS = frozenset({"rock", "bush", "tree", "campfire"})
+
+#: The caption the World map must carry on any frame holding a shared square (§R17.4).
+SHARED_CAPTION = "shared square"
+
+
+class DrawOrder:
+    """Figure-wide composition order, built ONCE per frame.
+
+    `_is_painted_over` deliberately refuses to order two artists in different Axes, which
+    is right for the text rules and useless here: with precondition (b′) scoped to `L(p)`,
+    the rule must be able to find the last-drawn element at a pixel ACROSS the whole
+    figure or it cannot evaluate its own precondition.
+
+    The order is matplotlib's own, not a new invention: a Figure composes its Axes sorted
+    by zorder (stable, so insertion order breaks ties), and an Axes composes its children
+    the same way. Hence the triple `(axes rank, artist zorder, child index)`.
+
+    An artist in no Axes ranks LAST-RESORT — if it is ever `L(p)` the rule fails (b′),
+    which is the fail-closed direction. §R20.1 requires this derivation to be PINNED by a
+    rendered two-Axes control rather than trusted: a derived order the pixels contradict
+    is a broken instrument.
+    """
+
+    def __init__(self, fig: Figure):
+        axes = list(fig.axes)
+        order = sorted(range(len(axes)), key=lambda i: float(axes[i].get_zorder()))
+        ax_rank = {id(axes[i]): k for k, i in enumerate(order)}
+        self._n_axes = len(axes)
+        self._rank: dict[int, tuple] = {}
+        for ax in axes:
+            for i, child in enumerate(ax.get_children()):
+                self._rank[id(child)] = (ax_rank[id(ax)], float(child.get_zorder()), i)
+
+    def of(self, art) -> tuple:
+        r = self._rank.get(id(art))
+        if r is not None:
+            return r
+        return (self._n_axes, float(art.get_zorder()), 0)
+
+    def in_an_axes(self, art) -> bool:
+        return id(art) in self._rank
+
+
+def _paints(art) -> list:
+    """Every colour this artist declares it will PAINT with, as RGBA rows.
+
+    A face at alpha 0 or `'none'` paints nothing and is not a paint; an edge is a paint
+    only where the line width is above zero. Read in the failing direction only — by
+    (a′), which fails on a translucent paint, and by (c′), which fails on a paint the
+    probe cannot see. Nothing here can exempt ink from the count.
+    """
+    from matplotlib.colors import to_rgba
+
+    out = []
+    if isinstance(art, Text):
+        return [np.asarray(to_rgba(art.get_color()), dtype=float)]
+    if isinstance(art, Line2D):
+        if float(art.get_linewidth()) > 0:
+            return [np.asarray(to_rgba(art.get_color()), dtype=float)]
+        return []
+
+    def add(colours, widths=None):
+        try:
+            arr = np.atleast_2d(np.asarray(colours, dtype=float))
+        except Exception:
+            return
+        if arr.ndim != 2 or arr.shape[-1] != 4:
+            return
+        for i, row in enumerate(arr):
+            if row[3] <= 0.0:
+                continue
+            if widths is not None:
+                if not len(widths) or float(widths[i % len(widths)]) <= 0:
+                    continue
+            out.append(row)
+
+    try:
+        add(art.get_facecolor())
+    except Exception:
+        pass
+    try:
+        lw = np.atleast_1d(np.asarray(art.get_linewidth(), dtype=float))
+        add(art.get_edgecolor(), lw)
+    except Exception:
+        pass
+    return out
+
+
+def _is_fully_opaque(art) -> bool:
+    """(a′): artist alpha None or 1.0, and no RGBA face or edge alpha below 1."""
+    a = art.get_alpha()
+    if a is not None and float(a) < 1.0:
+        return False
+    return all(float(row[3]) >= 1.0 for row in _paints(art))
+
+
+def _probe_blind_distance(art, fig_fc) -> float | None:
+    """(c′): the worst per-channel distance, when EVERY paint is within INK_DELTA.
+
+    Returns None when the element has at least one paint the probe can see. An element
+    all of whose paints match the figure facecolor lays down no isolated ink, so it can
+    never be `L(p)` and can never be counted as an occluder — the one genuinely silent
+    case, which this converts into a failure.
+    """
+    paints = _paints(art)
+    if not paints:
+        return None
+    worst = max(float(np.max(np.abs(row[:3] - fig_fc[:3])) * 255.0) for row in paints)
+    return worst if worst <= INK_DELTA else None
+
+
+def _components(mask: np.ndarray):
+    """Connected components at 8-connectivity: a diagonal touch IS a touch.
+
+    Tolerance is zero shared pixels with no dilation (§R19.1 item 8), so the component
+    count IS the touch test — two tokens that touch anywhere are one component and the
+    count falls short.
+    """
+    from scipy import ndimage
+
+    lab, n = ndimage.label(mask, structure=np.ones((3, 3), dtype=int))
+    return lab, int(n)
+
+
+def _bbox_meets(b, rect, pad: float) -> bool:
+    return not (b[2] + pad < rect[0] or rect[2] + pad < b[0]
+                or b[3] + pad < rect[1] or rect[3] + pad < b[1])
+
+
+def _named_axes(fig: Figure, name: str):
+    for ax in fig.axes:
+        if (ax.get_label() or "") == name:
+            return ax
+    raise AuditError(
+        f"no Axes labelled {name!r} in this figure (labels: "
+        f"{sorted((a.get_label() or '') for a in fig.axes)}). The arena can only be "
+        f"NAMED, never guessed, so the rule refuses to run rather than invent a grid.")
+
+
+def square_rects(ax, world_h: int, world_w: int) -> dict:
+    """Display-coordinate rect per world square, from the AXES EXTENT and the world size.
+
+    Derived from the named arena axes and the recording's world size — never from the
+    layout module, which this file may not import. Row 0 is the TOP row, so display y
+    (which grows upward) is flipped.
+    """
+    bb = ax.get_window_extent()
+    sw = (bb.x1 - bb.x0) / float(world_w)
+    sh = (bb.y1 - bb.y0) / float(world_h)
+    out = {}
+    for r in range(world_h):
+        for c in range(world_w):
+            out[(r, c)] = (bb.x0 + c * sw, bb.y1 - (r + 1) * sh,
+                           bb.x0 + (c + 1) * sw, bb.y1 - r * sh)
+    return out
+
+
+def occupancy_from_state(state, params) -> dict:
+    """Which entity KINDS are in which square — the rule's ground truth.
+
+    Kinds, never instances (§R17.5 item 1): two predators in one square are one predator
+    token by design, so an instance count would report a failure that is not one.
+    Inactive entity slots are parked off the grid each step, so an out-of-bounds position
+    is skipped rather than counted (environment rule R5).
+    """
+    from src.environment.state import select_by_class
+
+    h, w = int(params.height), int(params.width)
+    out: dict[tuple[int, int], set] = {}
+
+    def put(r, c, name):
+        if 0 <= r < h and 0 <= c < w:
+            out.setdefault((r, c), set()).add(name)
+
+    names = list(params.obstacle_names)
+    obs_type = np.asarray(params.obs_type)
+    for i, pos in enumerate(np.asarray(getattr(state, "obs_pos"))):
+        put(int(pos[0]), int(pos[1]), names[int(obs_type[i])])
+
+    res_type = np.asarray(params.res_type)
+    res_active = np.asarray(getattr(state, "res_active"))
+    for i, pos in enumerate(np.asarray(getattr(state, "res_pos"))):
+        if bool(res_active[i]):
+            put(int(pos[0]), int(pos[1]),
+                "food" if int(res_type[i]) == 0 else "hiding_predator")
+
+    pred = np.asarray(select_by_class(params, "predator"))
+    animal = np.asarray(getattr(state, "animal_pos"))
+    for i in range(animal.shape[0]):
+        put(int(animal[i, 0]), int(animal[i, 1]),
+            "predator" if bool(pred[i]) else "neutral")
+
+    a = np.asarray(getattr(state, "agent_pos"))
+    put(int(a[0]), int(a[1]), "agent")
+    return {k: tuple(sorted(v)) for k, v in out.items()}
+
+
+def cell_overdraw(probe: "FrameProbe", arena_axes: str, occupancy: dict,
+                  world_h: int, world_w: int, *, restrict_work: bool = True,
+                  floor_fraction: float = CELL_FLOOR_FRACTION,
+                  survival_min: float = SURVIVAL_MIN):
+    """Does every square show every occupant it holds? Returns (findings, measurements).
+
+    `occupancy` maps `(row, col)` to the KINDS at that square (terrain included; it is
+    filtered out here, because terrain is the floor). `restrict_work=False` disables the
+    padded-bbox reach optimisation and probes every element for every square — the two
+    must produce identical findings, which a control asserts.
+    """
+    ax = _named_axes(probe.fig, arena_axes)
+    order = DrawOrder(probe.fig)
+    rects = square_rects(ax, world_h, world_w)
+    fig_fc = np.asarray(probe.fig.get_facecolor(), dtype=float)
+    els = probe.elements
+    findings: list[Finding] = []
+    measured: list[dict] = []
+
+    for (r, c), rect in rects.items():
+        kinds = tuple(k for k in occupancy.get((r, c), ()) if k not in TERRAIN_KINDS)
+        n_kinds = len(set(kinds))
+        square = _rect_mask(probe.h, probe.w, *rect)
+        area = float(square.sum())
+        if area <= 0:
+            continue
+        where = f"square ({r},{c})"
+
+        # The occluder set is every element in the figure. The ONLY exclusion is from the
+        # WORK: an element whose padded bbox cannot meet this square cannot put ink in it.
+        cands = [e for e in els
+                 if (not restrict_work) or _bbox_meets(e.bbox, rect, REACH_PAD_PX)]
+        if not cands:
+            continue
+
+        # (c') probe visibility, over the arena's own elements — the colours this rule
+        # depends on being able to see (ground, bed bases, outline, keyline).
+        for e in cands:
+            if e.axes_name != arena_axes:
+                continue
+            d = _probe_blind_distance(e.artist, fig_fc)
+            if d is not None:
+                findings.append(Finding(
+                    "cell_probe_blind",
+                    f"every declared paint of this element is within {d:.1f}/255 of the "
+                    f"figure facecolor (threshold {INK_DELTA}), so it lays down NO "
+                    f"isolated ink and can never be seen to occlude anything",
+                    e.label, where, 0, _mask_bbox(square)))
+
+        # BOTH masks are kept: the square-restricted one is what the square's own counts
+        # are made of, and the FULL one is what the containment test below needs — an
+        # element's ink pre-clipped to the square trivially has nothing outside it.
+        ink_full = {id(e.artist): probe.ink(e) for e in cands}
+        ink = {k: (v & square) for k, v in ink_full.items()}
+
+        # Classify the arena's elements: floor, outline, or token — by MEASUREMENT.
+        tokens, floors = [], []
+        for e in cands:
+            if e.axes_name != arena_axes:
+                continue
+            m = ink[id(e.artist)]
+            n = int(m.sum())
+            if n == 0:
+                continue
+            # An occupant belongs to exactly ONE square: slots are computed inside the
+            # square and the keyline is inset so a token never reaches the square's edge.
+            # An element with ink on BOTH sides of the boundary is therefore an overlay
+            # passing through — a sense's footprint diamond spans three squares — and it
+            # is not an occupant of this one. It stays in the OCCLUDER set, so raising it
+            # above the tokens still fires the survival floor: only the assertion narrows.
+            # Without this the footprint edge of §R20.2's own negative control is counted
+            # as token ink and splits a correct two-mover square into six components.
+            if int((ink_full[id(e.artist)] & ~square).sum()) > MIN_OVERLAP_PX:
+                continue
+            if n / area >= floor_fraction:
+                floors.append((e, n / area))
+                continue
+            if _ink_is_outline(m, e.bbox, probe.h):
+                span_x = (e.bbox[2] - e.bbox[0]) / (rect[2] - rect[0])
+                span_y = (e.bbox[3] - e.bbox[1]) / (rect[3] - rect[1])
+                if min(span_x, span_y) < OUTLINE_SPAN_MIN:
+                    findings.append(Finding(
+                        "outline_like_token",
+                        f"ink sits on the perimeter of its own bbox, but the bbox spans "
+                        f"only {min(span_x, span_y):.0%} of the square (floor "
+                        f"{OUTLINE_SPAN_MIN:.0%}) — a ring-shaped TOKEN part drawn as its "
+                        f"own artist, which must not disappear from the count",
+                        e.label, where, n, _mask_bbox(m)))
+                continue
+            tokens.append(e)
+
+        token_ids = {id(e.artist) for e in tokens}
+        token_ink = np.zeros_like(square)
+        for e in tokens:
+            token_ink |= ink[id(e.artist)]
+        n_token_px = int(token_ink.sum())
+
+        # Two token elements may not share a pixel — §R19.1 item 3's "pairwise touching in
+        # 0 px", asserted on the ELEMENTS and not only on the merged components. It has to
+        # be said of the elements as well, because the component count cannot see this at
+        # |K| = 1: an occluder that is itself counted as a token MERGES with the token it
+        # covers, and one component over one kind then passes a frame in which an occupant
+        # has been painted out. That is exactly how the M-F2 family escapes at the 0.10
+        # inset, where the shrunken bed falls under the floor test and is read as a token.
+        for i, e in enumerate(tokens):
+            for o in tokens[i + 1:]:
+                both = int((ink[id(e.artist)] & ink[id(o.artist)]).sum())
+                if both:
+                    findings.append(Finding(
+                        "cell_overdraw",
+                        f"two occupant drawings of this square share {both}px; occupants "
+                        f"are laid out in disjoint slots, so overlapping ink means one is "
+                        f"drawn over the other (tolerance is ZERO shared pixels)",
+                        f"{e.label} x {o.label}", where, both,
+                        _mask_bbox(ink[id(e.artist)] & ink[id(o.artist)])))
+
+        if n_kinds == 0 and n_token_px == 0:
+            continue
+        if n_kinds == 0:
+            findings.append(Finding(
+                "cell_overdraw",
+                "the snapshot places no non-terrain kind here, but the square carries "
+                f"{n_token_px}px of token ink — something is drawn that nothing holds",
+                where, ", ".join(e.label for e in tokens[:3]), n_token_px,
+                _mask_bbox(token_ink)))
+            continue
+
+        # L(p): the last-drawn element with ink at each pixel, over the FULL occluder set.
+        # Painting each candidate's id in ascending rank order leaves the LAST writer.
+        last = np.full(square.shape, -1, dtype=np.int32)
+        for idx, e in sorted(enumerate(cands), key=lambda t: order.of(t[1].artist)):
+            m = ink[id(e.artist)]
+            if m.any():
+                last[m] = idx
+
+        # (a') and (b'), scoped to L(p) — asserted only where reading them can FAIL.
+        for idx in np.unique(last[token_ink]):
+            if idx < 0:
+                continue
+            e = cands[int(idx)]
+            if id(e.artist) in token_ids:
+                continue                      # a token of this square: (a′) exempts it
+            hit = token_ink & (last == idx)
+            if not _is_fully_opaque(e.artist):
+                findings.append(Finding(
+                    "cell_opacity",
+                    "the last-drawn element at these token pixels is TRANSLUCENT, so "
+                    "'drawn after' is not a valid proxy for what the viewer sees: this "
+                    "is an occlusion a viewer can partly see through",
+                    e.label, where, int(hit.sum()), _mask_bbox(hit)))
+            if e.axes_name != arena_axes or not order.in_an_axes(e.artist):
+                findings.append(Finding(
+                    "cell_foreign_axes",
+                    f"the last-drawn element at these token pixels belongs to "
+                    f"{e.axes_name!r}, not to the named arena axes {arena_axes!r}; token "
+                    f"ink under a foreign Axes cannot be ordered and must not pass",
+                    e.label, where, int(hit.sum()), _mask_bbox(hit)))
+
+        # A pixel of a token survives exactly when the LAST element to write it is a token
+        # of this square — which is the same statement as "no element drawn after it has
+        # ink there", and is why a token's own parts never eat into its own denominator.
+        visible = np.zeros_like(square)
+        for idx in np.unique(last[token_ink]):
+            if idx >= 0 and id(cands[int(idx)].artist) in token_ids:
+                visible |= token_ink & (last == idx)
+
+        _lab_i, n_iso = _components(token_ink)
+        _lab_v, n_vis = _components(visible)
+        lab_i = _lab_i
+
+        ratios = []
+        for k in range(1, n_iso + 1):
+            comp = lab_i == k
+            tot = int(comp.sum())
+            ratios.append(float(int((comp & visible).sum()) / tot) if tot else 0.0)
+
+        measured.append({
+            "square": [r, c], "kinds": sorted(set(kinds)), "n_kinds": n_kinds,
+            "components_isolated": n_iso, "components_visible": n_vis,
+            "survival": ratios, "min_survival": min(ratios) if ratios else None,
+            "token_px": n_token_px,
+            "floor_fraction": [round(f, 4) for _e, f in floors],
+        })
+
+        if n_iso != n_kinds:
+            findings.append(Finding(
+                "cell_overdraw",
+                f"the square holds {n_kinds} kind(s) {sorted(set(kinds))} but its token "
+                f"ink forms {n_iso} connected component(s) — occupants drawn on one "
+                f"centre merge into one, which is the defect this rule exists for",
+                where, f"{n_iso} component(s)", n_token_px, _mask_bbox(token_ink)))
+        if n_vis != n_kinds:
+            findings.append(Finding(
+                "cell_overdraw",
+                f"the square holds {n_kinds} kind(s) {sorted(set(kinds))} but only "
+                f"{n_vis} survive(s) the painting — an occupant is drawn and then covered "
+                f"by something painted after it, so the viewer never sees it",
+                where, f"{n_vis} visible component(s)", int(visible.sum()),
+                _mask_bbox(visible)))
+        for k, ratio in enumerate(ratios, start=1):
+            if ratio < survival_min:
+                comp = lab_i == k
+                findings.append(Finding(
+                    "cell_overdraw",
+                    f"an occupant keeps only {ratio:.1%} of its own ink (floor "
+                    f"{survival_min:.0%}); a correct composition measures 100.0%. A "
+                    f"component count alone cannot see this — a token 95% hidden is "
+                    f"still one component",
+                    where, f"component {k} of {n_iso}",
+                    int((comp & ~visible).sum()), _mask_bbox(comp & ~visible)))
+
+    return findings, measured
+
+
+def _classify_census(img: np.ndarray, mask: np.ndarray, colours: dict) -> dict:
+    """Count pixels inside `mask` that match each named colour within MINIMAP_DELTA.
+
+    A blend — between two occupant colours, the white ring, the 0.8 px split line or the
+    terrain tint — matches NEITHER, and is therefore excluded from the numerator and from
+    the denominator alike. That is what makes a correct split dot measure ~1.000 against a
+    census-measured denominator, where it could never reach 0.98 of a GEOMETRIC wedge.
+    """
+    from matplotlib.colors import to_rgb
+
+    out = {}
+    px = img[mask].astype(np.int16)
+    for name, hexc in colours.items():
+        want = np.asarray([round(v * 255) for v in to_rgb(hexc)], dtype=np.int16)
+        out[name] = int((np.abs(px - want).max(axis=1) <= MINIMAP_DELTA).sum())
+    return out
+
+
+def minimap_overdraw(probe: "FrameProbe", minimap_axes: str, occupancy: dict,
+                     world_h: int, world_w: int):
+    """The World map, measured on the COMPOSITE — plus the shared-square caption.
+
+    Isolation would report a split dot as correct even when one half is painted over the
+    other, which is the exact defect §R17.4 exists to prevent, so this rule classifies the
+    pixels of the FINISHED image against the palette table. Ground truth is the distinct
+    palette colours the KINDS present map to (§R20.4): two predators are one colour and
+    one kind, and the withdrawn "at least as many colours as movers" wording failed that
+    correct square.
+    """
+    ax = _named_axes(probe.fig, minimap_axes)
+    rects = square_rects(ax, world_h, world_w)
+    findings: list[Finding] = []
+    pending: list[Finding] = []
+    img = probe.baseline
+    shared_anywhere = False
+    n_expected = n_blank = 0
+
+    # One solo render per element, reused across every square. The denominator is the
+    # same census run on the isolated artist (§R20.4), and rendering per (square, colour)
+    # instead would be thousands of renders on a 100-square map.
+    solo_cache: dict[int, np.ndarray] = {}
+
+    def solo(el):
+        key = id(el.artist)
+        if key not in solo_cache:
+            solo_cache[key] = probe._draw({key})
+        return solo_cache[key]
+
+    for (r, c), rect in rects.items():
+        kinds = [k for k in occupancy.get((r, c), ()) if k not in TERRAIN_KINDS]
+        if len(set(kinds)) >= 2:
+            shared_anywhere = True
+        want = {}
+        for k in set(kinds):
+            if k in MINIMAP_PALETTE:
+                want[k] = MINIMAP_PALETTE[k]
+        if not want:
+            continue
+        square = _rect_mask(probe.h, probe.w, *rect)
+        census = _classify_census(img, square, want)
+        seen = {k for k, n in census.items() if n > 0}
+        n_expected += 1
+        n_blank += 0 if seen else 1
+        distinct_want = {MINIMAP_PALETTE[k] for k in want}
+        distinct_seen = {MINIMAP_PALETTE[k] for k in seen}
+        where = f"map square ({r},{c})"
+        if len(distinct_seen) != len(distinct_want):
+            pending.append(Finding(
+                "minimap_overdraw",
+                f"the snapshot's kinds {sorted(want)} map to {len(distinct_want)} "
+                f"distinct palette colour(s), but the composed map shows "
+                f"{len(distinct_seen)} — a dot painted over its neighbour shows one "
+                f"colour where the square holds two kinds",
+                where, f"seen {sorted(seen)}", int(sum(census.values())),
+                _mask_bbox(square)))
+            continue
+        # Denominator by the SAME census on the isolated artist, never geometry (§R20.4).
+        for k, n in census.items():
+            den, path = 0, "isolated-wedge"
+            for e in probe.elements:
+                if e.axes_name != minimap_axes:
+                    continue
+                if not _bbox_meets(e.bbox, rect, REACH_PAD_PX):
+                    continue
+                den = max(den, _classify_census(solo(e), square, {k: want[k]})[k])
+            floor = SURVIVAL_MIN
+            if den == 0:
+                den, path, floor = int(square.sum()) or 1, "geometric", MINIMAP_AREA_MIN
+            ratio = n / float(den)
+            if ratio < floor:
+                pending.append(Finding(
+                    "minimap_overdraw",
+                    f"{k}'s colour covers {ratio:.1%} of what it covers when drawn alone "
+                    f"(floor {floor:.0%}, denominator measured by the {path} path)",
+                    where, k, n, _mask_bbox(square)))
+
+    # ALIGNMENT, asserted before any per-square verdict is believed. `square_rects`
+    # divides the NAMED AXES into world squares, which is exact for the arena — whose
+    # axes IS the grid — and wrong for a World map drawn as an inset grid inside a whole
+    # card, where the map is offset by its title and its caption. A misaligned grid looks
+    # exactly like "every dot has been painted over": the census samples the card's
+    # background and finds no occupant colour anywhere. Reporting that as N separate
+    # overdraw defects would be a confident wrong answer, so the rule says THE GRID IS
+    # WRONG once, and reports nothing else.
+    if n_expected and (n_blank / n_expected) > MINIMAP_ALIGN_MAX_BLANK:
+        findings.append(Finding(
+            "minimap_grid_unaligned",
+            f"{n_blank} of {n_expected} map square(s) that should carry an occupant "
+            f"colour contain NONE of it. The square grid is derived by dividing the "
+            f"named axes {minimap_axes!r} into {world_h}x{world_w}, so a figure this "
+            f"wholesale means that axes is not the map grid itself — a card with a title "
+            f"and a caption around an INSET grid will do exactly this. A real draw-order "
+            f"defect hits the few squares that are shared; a misaligned grid misses most "
+            f"squares at once, which is what separates the two. No per-square verdict is "
+            f"trustworthy here, so none is reported",
+            minimap_axes, f"{world_h}x{world_w} grid", 0, None))
+    else:
+        findings.extend(pending)
+
+    if shared_anywhere:
+        caption = [e for e in probe.elements
+                   if e.kind == "text" and SHARED_CAPTION in (e.text or "").lower()]
+        if not caption:
+            findings.append(Finding(
+                "minimap_caption",
+                "the snapshot holds a shared square, so the World map encodes two "
+                "occupants as one split dot — and the card must SAY so in words, because "
+                "at this square size colour is a code the viewer cannot infer (§R17.4)",
+                "World map", f"no text containing {SHARED_CAPTION!r}", 0, None))
+    return findings
 
 
 def _normalise_title(s: str) -> str:
@@ -772,7 +1527,8 @@ def _title_strips(els: list[Element], titles, probe):
 
 
 def audit_frame(fi: FrameInputs, renderer: str, text_floor_px: float = DEFAULT_TEXT_FLOOR_PX,
-                arena_axes: str | None = None, verbose: bool = False):
+                arena_axes: str | None = None, verbose: bool = False,
+                cell_axes: str | None = None, minimap_axes: str | None = None):
     """Render one frame and return (findings, probe, info)."""
     frame, fig = render_capture(renderer, fi)
     probe = FrameProbe(fig, frame)
@@ -928,11 +1684,32 @@ def audit_frame(fi: FrameInputs, renderer: str, text_floor_px: float = DEFAULT_T
                                             "numeric text drawn inside the arena grid",
                                             t.label, "arena", 0, _mask_bbox(probe.ink(t))))
 
+    # --- co-occupancy: does a square show every occupant it holds? -------------------
+    #
+    # Enabled by its OWN flag rather than by `--arena-axes`, deliberately. The two rules
+    # want different axes: `numeric_in_arena` is legitimately pointed at any axes that
+    # should carry no numbers (a test points it at `thermoception`), while this rule
+    # divides the axes it is given into world squares — pointed at a pod it would invent
+    # a grid over a card and report nonsense. Keeping them separate is also what leaves
+    # every frozen V1 and dormant-V2 count UNCHANGED (#62), which CP0.3b asserts.
+    cells_measured: list[dict] = []
+    occ = None
+    if cell_axes or minimap_axes:
+        occ = occupancy_from_state(fi.state, fi.params)
+    if cell_axes:
+        cell_findings, cells_measured = cell_overdraw(
+            probe, cell_axes, occ, int(fi.params.height), int(fi.params.width))
+        findings.extend(cell_findings)
+    if minimap_axes:
+        findings.extend(minimap_overdraw(
+            probe, minimap_axes, occ, int(fi.params.height), int(fi.params.width)))
+
     info = {
         "renderer": renderer, "cell_dir": str(fi.rec_dir), "step": fi.step,
         "n_steps": fi.n_steps, "frame": [int(probe.w), int(probe.h)],
         "elements": len(els), "foreground": len(fg), "texts": len(texts),
         "breakdown": fi.breakdown, "panels_drawn": sorted(drawn),
+        "cells": cells_measured,
     }
     return findings, probe, info
 
@@ -1104,6 +1881,14 @@ def main(argv=None) -> int:
                     help="name of the arena Axes, which ENABLES the numeric_in_arena rule "
                          "(V1's arena Axes is unlabelled, so the rule cannot run on V1; "
                          "the dormant V2 labels its axes, e.g. --arena-axes arena)")
+    ap.add_argument("--cell-axes", default=None,
+                    help="name of the arena grid Axes, which ENABLES the cell_overdraw "
+                         "co-occupancy rule. Separate from --arena-axes on purpose: this "
+                         "rule divides the named axes into world squares, so pointing it "
+                         "at a pod would invent a grid over a card")
+    ap.add_argument("--minimap-axes", default=None,
+                    help="name of the World-map Axes, which ENABLES the minimap colour "
+                         "census and the shared-square caption check")
     ap.add_argument("--controls", action="store_true",
                     help="run the CP0.3 positive controls and exit non-zero if any misses")
     ap.add_argument("--out", default=None, help="report directory")
@@ -1139,7 +1924,9 @@ def main(argv=None) -> int:
             fi = load_inputs(rec_dir, step)
             findings, probe, info = audit_frame(fi, args.renderer,
                                                 text_floor_px=args.text_floor_px,
-                                                arena_axes=args.arena_axes)
+                                                arena_axes=args.arena_axes,
+                                                cell_axes=args.cell_axes,
+                                                minimap_axes=args.minimap_axes)
             probe.close()
             counts = summarise(findings)
             entries.append({"info": info, "counts": counts,

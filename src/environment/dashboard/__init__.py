@@ -14,12 +14,19 @@ inside an Axes is invisible to it, which is the root cause of the overlapping
 dashboard text this package replaces. Placement is therefore never delegated
 back to it.
 
-WHAT IS HERE AT PHASE 1. The registry, the packer and the channel-label table
-only. **Nothing in this package imports Matplotlib**, and there are no painters
-yet -- a Phase-1 import must not cause any drawing. ``EpisodeRenderer`` and
-``render_dashboard_frame`` arrive with ``episode.py`` in Phase 2, at which point
-they join the exports below (the plan's File Changes row for this file names
-them; they cannot be exported before the module that defines them exists).
+WHAT IS HERE. The registry, the packer and the channel-label table (Phase 1),
+and from Phase 2 the painters, the square composition and the episode renderer.
+
+WHY THE TWO PHASE-2 NAMES ARE EXPORTED LAZILY. ``EpisodeRenderer`` and
+``render_dashboard_frame`` are importable from this package -- ``from
+src.environment.dashboard import EpisodeRenderer`` works -- but they are resolved
+on **first use** through a module-level ``__getattr__`` rather than imported at
+the top of this file. The reason is a property Phase 1 pinned with a test: a bare
+``import src.environment.dashboard`` must not drag in Matplotlib, because layout
+runs once per episode before any figure exists and nothing on the training path
+should pay for a drawing library to ask a panel how tall it is. Importing
+``episode`` here eagerly would import ``painters``, which imports Matplotlib, and
+that test would go red for a reason that has nothing to do with what it protects.
 
 NAMING. "V2" in documents written before 2026-09-14 means the dormant April 2026
 subfigures renderer in ``src/environment/renderer_v2.py``, which is frozen and
@@ -47,8 +54,33 @@ from .panels import (
     real_available,
 )
 
+_LAZY = {
+    "EpisodeRenderer": ".episode",
+    "render_dashboard_frame": ".episode",
+    "occupancy_of": ".episode",
+}
+
+
+def __getattr__(name):
+    """Resolve the drawing-side exports on first use (see the module docstring)."""
+    if name in _LAZY:
+        import importlib
+
+        mod = importlib.import_module(_LAZY[name], __name__)
+        value = getattr(mod, name)
+        globals()[name] = value
+        return value
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
+
+
+def __dir__():
+    return sorted(set(globals()) | set(_LAZY))
+
+
 __all__ = [
     "ABSENT",
+    "EpisodeRenderer",
+    "render_dashboard_frame",
     "ARENA_CELL_MIN_PX",
     "ARENA_CELL_PX",
     "Box",

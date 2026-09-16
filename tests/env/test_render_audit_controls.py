@@ -660,3 +660,498 @@ def test_an_ink_that_flags_everything_breaks_the_calibrated_counts(monkeypatch):
         "with all-True ink every text reaches the canvas edge; `clipped` staying silent "
         "would mean the silent rules are not measuring anything")
     assert counts.get("out_of_canvas", 0) > 0
+
+
+# ==================================================== Phase 0d: the audit sees squares
+#
+# CP0.3b. Every control here is a FIGURE THIS FILE BUILDS: `cell_overdraw` needs its own
+# axes name, and V1 draws its arena into an unlabelled Axes, so the rule cannot run on any
+# frozen frame at all (§R19.4 item 6). The forms are the REAL ones from `cells.py` — a
+# control drawn with stand-in shapes would calibrate the instrument against a painter
+# nobody ships.
+#
+# The negative controls are the half that matters. A rule that fired on everything would
+# "catch" all five mutations, so what separates this instrument from that one is the nine
+# correct squares it must stay silent on, and the exact 1.000 each of them measures.
+
+import matplotlib  # noqa: E402
+matplotlib.use("Agg")
+import matplotlib.pyplot as plt  # noqa: E402
+from matplotlib.collections import PatchCollection  # noqa: E402
+from matplotlib.patches import (FancyBboxPatch, Polygon,  # noqa: E402
+                                Rectangle, Wedge)
+
+from src.environment.dashboard import cells as C  # noqa: E402
+from src.environment.dashboard import palette as P  # noqa: E402
+
+CELL = 50.0
+_PT = 72 / 100.0
+
+
+def _coll(ax, shapes, z):
+    """One compound form as ONE artist — the §R20.8 rule the painter also obeys."""
+    coll = PatchCollection([s.patch for s in shapes], match_original=False, zorder=z)
+    coll.set_facecolor([s.fc for s in shapes])
+    coll.set_edgecolor([s.ec for s in shapes])
+    coll.set_linewidth([s.lw * _PT for s in shapes])
+    ax.add_collection(coll)
+    coll.set_transform(ax.transData)
+    return coll
+
+
+def _arena_figure(squares, *, rows=1, cols=1, mutation=None, inset=0.0,
+                  fig_facecolor=P.FIGURE_FACECOLOR, footprint=None, action="UP"):
+    """A small arena composed exactly as `painters.build_arena` composes one.
+
+    It carries a PAGE rectangle in its own Axes like the real dashboard, so precondition
+    (b′) is exercised against a real second Axes instead of being assumed away.
+    """
+    w_px, h_px = cols * CELL, rows * CELL
+    fig = plt.figure(figsize=((w_px + 40) / 100.0, (h_px + 40) / 100.0), dpi=100)
+    fig.set_layout_engine("none")
+    fig.set_facecolor(fig_facecolor)
+
+    bg = fig.add_axes([0, 0, 1, 1], label="page")
+    bg.axis("off")
+    bg.add_patch(Rectangle((0, 0), 1, 1, transform=bg.transAxes, fc=P.CANVAS, lw=0,
+                           zorder=0))
+
+    ax = fig.add_axes([20 / (w_px + 40), 20 / (h_px + 40),
+                       w_px / (w_px + 40), h_px / (h_px + 40)], label="arena")
+    ax.set_autoscale_on(False)
+    ax.axis("off")
+    ax.patch.set_visible(False)
+    ax.set_xlim(0, w_px)
+    ax.set_ylim(h_px, 0)
+
+    ground_z = C.TOKEN_Z + 1 if mutation == "M-F1g" else C.GROUND_Z
+    bed_z = C.TOKEN_Z + 1 if mutation in ("M-F1", "M-F2") else C.BED_Z
+
+    for r in range(rows):
+        for c in range(cols):
+            cx, cy = (c + 0.5) * CELL, (r + 0.5) * CELL
+            names = list(squares.get((r, c), ()))
+            ax.add_patch(FancyBboxPatch(
+                (cx - CELL / 2 + 1, cy - CELL / 2 + 1), CELL - 2, CELL - 2,
+                boxstyle="round,pad=0,rounding_size=8", fc=P.TRACK, ec="none", lw=0,
+                zorder=ground_z))
+            terrain = [n for n in names if n in C.TERRAIN_NAMES]
+            rest = [n for n in names if n not in C.TERRAIN_NAMES]
+            if terrain:
+                size = CELL * (1 - 2 * inset) if mutation == "M-F2" else CELL
+                _coll(ax, C.bed(terrain[0], cx, cy, size), bed_z)
+            if rest:
+                _bed, drawn = C.compose(names, cx, cy, CELL, action=action)
+                if mutation == "M-E":
+                    h = C.slot_h(len(rest), CELL)
+                    drawn = [(nm, C.token(nm, cx, cy, h, action=action, shared=True))
+                             for nm in C.by_priority(rest)]
+                for i, (_nm, shapes) in enumerate(drawn):
+                    _coll(ax, shapes, C.TOKEN_Z + i * 0.01)
+            if "agent" in rest:
+                ax.add_patch(FancyBboxPatch(
+                    (cx - CELL / 2 + 2, cy - CELL / 2 + 2), CELL - 4, CELL - 4,
+                    boxstyle="round,pad=0,rounding_size=7", fc="none", ec=P.IRIS,
+                    lw=2 * _PT, zorder=C.OUTLINE_Z))
+    if footprint is not None:
+        fr, fc_ = footprint
+        cx, cy = (fc_ + 0.5) * CELL, (fr + 0.5) * CELL
+        ax.add_patch(Polygon([(cx, cy - CELL), (cx + CELL, cy), (cx, cy + CELL),
+                              (cx - CELL, cy)], closed=True, fc="none", ec=P.IRIS,
+                             lw=1.5 * _PT, zorder=C.FOOTPRINT_Z))
+
+    fig.canvas.draw()
+    frame = np.asarray(fig.canvas.buffer_rgba())[..., :3].copy()
+    return fig, frame
+
+
+def _run_cells(squares, *, rows=1, cols=1, restrict_work=True,
+               floor=audit.CELL_FLOOR_FRACTION, **kw):
+    fig, frame = _arena_figure(squares, rows=rows, cols=cols, **kw)
+    probe = audit.FrameProbe(fig, frame)
+    try:
+        return audit.cell_overdraw(probe, "arena", {k: tuple(v) for k, v in
+                                                    squares.items()},
+                                   rows, cols, restrict_work=restrict_work,
+                                   floor_fraction=floor)
+    finally:
+        probe.close()
+
+
+# The nine correct squares. Each must produce ZERO findings and measure exactly 1.000.
+NEGATIVE_CELLS = {
+    "empty square": (dict(), {}),
+    "campfire bed + one token": (dict(), {(0, 0): ["campfire", "neutral"]}),
+    "bush bed + agent": (dict(), {(0, 0): ["bush", "agent"]}),
+    "two movers with the agent": (dict(), {(0, 0): ["agent", "predator"]}),
+    "three-way with the agent": (dict(), {(0, 0): ["agent", "predator", "food"]}),
+    "four-way with the agent": (
+        dict(), {(0, 0): ["agent", "predator", "food", "neutral"]}),
+    "footprint edge through an occupied square": (
+        dict(rows=3, cols=3, footprint=(1, 1)), {(1, 1): ["agent", "predator"]}),
+    "adjacent slots at 50px": (
+        dict(rows=1, cols=2),
+        {(0, 0): ["agent", "predator"], (0, 1): ["food", "neutral"]}),
+}
+
+
+@pytest.mark.parametrize("name", sorted(NEGATIVE_CELLS))
+def test_cell_overdraw_is_silent_on_every_negative_control(name):
+    """A correct square produces NOTHING. This is the half a mutation cannot measure."""
+    kw, squares = NEGATIVE_CELLS[name]
+    findings, _measured = _run_cells(squares, **kw)
+    assert findings == [], (
+        f"{name}: a CORRECT square produced {len(findings)} finding(s): "
+        f"{[(f.rule, f.detail) for f in findings]}. Do not loosen a constant to silence "
+        f"this — a false alarm here means the classifier is wrong, and the forbidden fix "
+        f"is to stop counting something as able to occlude (§R20's narrowing rule).")
+
+
+@pytest.mark.xfail(strict=True, reason=(
+    "MEASURED PLAN DEFECT, decision belongs to senior-developer. A lone agent on bare "
+    "ground keeps its halo (1.32x its own radius), and that token's ink measures 43.76% "
+    "of its square — above §R19.1 step 2's 40% 'this element IS the floor' line — so a "
+    "CORRECT occupant is excluded as scenery and the square reports 0 components against "
+    "1 kind. Measured populations: largest correct token 0.4376, smallest bed 0.5168, "
+    "bed floor by construction 0.5184 (pinned in test_dashboard_cells.py). A floor of "
+    "0.48 sits 53.5% of the way up that gap and makes this control pass. The constant is "
+    "NOT moved here: §R20.3's discipline is that a constant moves in the plan text with "
+    "its evidence, never in a test to turn a checkpoint green."))
+def test_a_lone_agent_on_bare_ground_is_not_scenery():
+    findings, _m = _run_cells({(0, 0): ["agent"]})
+    assert findings == [], [(f.rule, f.detail) for f in findings]
+
+
+def test_the_lone_agent_collision_is_a_constant_choice_and_both_sides_are_measured():
+    """Pin the two populations the floor constant has to separate.
+
+    The xfail above says a correct lone agent is misclassified; this says WHY, in numbers,
+    so the decision to move the constant is made against measurement rather than argument.
+    """
+    def _largest_collection_fraction(squares):
+        fig, frame = _arena_figure(squares)
+        probe = audit.FrameProbe(fig, frame)
+        try:
+            ax = audit._named_axes(fig, "arena")
+            rect = audit.square_rects(ax, 1, 1)[(0, 0)]
+            square = audit._rect_mask(probe.h, probe.w, *rect)
+            area = float(square.sum())
+            return max(int((probe.ink(e) & square).sum()) / area
+                       for e in probe.elements
+                       if e.axes_name == "arena" and e.kind == "collection")
+        finally:
+            probe.close()
+
+    token = _largest_collection_fraction({(0, 0): ["agent"]})
+    bed = min(_largest_collection_fraction({(0, 0): [t, "neutral"]})
+              for t in ("rock", "bush", "tree", "campfire"))
+    assert token == pytest.approx(0.4376, abs=0.005), token
+    assert bed == pytest.approx(0.5168, abs=0.005), bed
+    assert token > audit.CELL_FLOOR_FRACTION, (
+        "the shipped floor no longer misclassifies a lone agent — if the constant has "
+        "been moved in the plan, remove the xfail above rather than this assertion")
+    assert bed >= C.bed_plate_fraction(CELL) - 0.005, (
+        "a bed must stay at or above its constructed plate fraction, which is what makes "
+        "the bed side of this gap a pinned number rather than a measurement that drifts")
+
+
+# The five mutations CP0.3b gates on, each with the rule that must catch it.
+MUTATION_CELLS = {
+    "M-E": (dict(mutation="M-E"), {(0, 0): ["agent", "predator"]}, "cell_overdraw"),
+    "M-F1": (dict(mutation="M-F1"), {(0, 0): ["bush", "agent"]}, "cell_overdraw"),
+    "M-F1g": (dict(mutation="M-F1g", fig_facecolor=P.CANVAS),
+              {(0, 0): ["agent", "predator"]}, "cell_probe_blind"),
+    "M-F2@0.02": (dict(mutation="M-F2", inset=0.02),
+                  {(0, 0): ["bush", "agent", "predator"]}, "cell_overdraw"),
+    "M-F2@0.05": (dict(mutation="M-F2", inset=0.05),
+                  {(0, 0): ["bush", "agent", "predator"]}, "cell_overdraw"),
+    "M-F2@0.10": (dict(mutation="M-F2", inset=0.10),
+                  {(0, 0): ["bush", "agent", "predator"]}, "cell_overdraw"),
+}
+
+
+@pytest.mark.parametrize("name", sorted(MUTATION_CELLS))
+def test_cell_overdraw_fires_on_every_mutation(name):
+    kw, squares, rule = MUTATION_CELLS[name]
+    findings, _measured = _run_cells(squares, **kw)
+    assert findings, (
+        f"{name} PASSED the audit. The instrument is not sensitive enough to be trusted; "
+        f"do not weaken the mutation to make this green.")
+    assert any(f.rule == rule for f in findings), (
+        f"{name} fired, but not via {rule!r}: {sorted({f.rule for f in findings})}. A "
+        f"control that fires for the wrong reason counts as not firing.")
+
+
+def test_a_pure_isolated_ink_rule_would_pass_the_occlusion_mutations():
+    """M-F1 is the demonstration that Revision 19 was needed at all.
+
+    The bed is drawn AFTER the token, so the token keeps every pixel of its isolated ink
+    and an isolated-ink component count sees a perfectly good square. Only the surviving
+    ink and the floor can tell that the viewer is looking at a bed.
+    """
+    kw, squares, _rule = MUTATION_CELLS["M-F1"]
+    findings, measured = _run_cells(squares, **kw)
+    m = measured[0]
+    assert m["components_isolated"] == m["n_kinds"] == 1, (
+        "the isolated-ink count must still look CORRECT here, or this mutation is not "
+        "demonstrating the blind spot it was written for")
+    assert m["components_visible"] == 0
+    assert m["survival"] == [0.0]
+    assert any("keeps only" in f.detail for f in findings)
+
+
+def test_correct_shared_squares_measure_exactly_one_point_zero():
+    """§R19.1 step 5: a correct composition measures 1.000, not 'about 1'.
+
+    Includes the four-way WITH the agent — §R20.2's tightest case, where the square
+    outline's inner fringe sits 0.1-1.1px from a token edge. It measures 1.000 because
+    `cells.py` pins the outline BELOW the tokens; drawn above, this is what would fire.
+    """
+    for name in ("bush bed + agent", "two movers with the agent",
+                 "four-way with the agent", "adjacent slots at 50px"):
+        kw, squares = NEGATIVE_CELLS[name]
+        _f, measured = _run_cells(squares, **kw)
+        for m in measured:
+            assert m["survival"], f"{name} measured no survival ratio at all"
+            for s in m["survival"]:
+                assert s == 1.0, f"{name}: survival {s} is below 1.000 — §R20.3 requires "
+        assert measured
+
+
+def test_the_survival_floor_sits_in_a_gap_and_not_on_a_cliff():
+    """§R20.3's pre-registered gap table, asserted.
+
+    One side is the minimum over the correct controls, the other the maximum over the
+    M-F2 family. A member whose bed has been inset under the floor test is EXCLUDED from
+    that maximum with its reason: it stops being a bed, is read as a token, overlaps its
+    neighbour and is caught by the disjointness rule instead — still a failure, but its
+    survival ratio is 1.0 and it never measured the floor.
+    """
+    correct = []
+    for name in ("bush bed + agent", "two movers with the agent",
+                 "three-way with the agent", "four-way with the agent",
+                 "campfire bed + one token", "adjacent slots at 50px",
+                 "footprint edge through an occupied square"):
+        kw, squares = NEGATIVE_CELLS[name]
+        _f, measured = _run_cells(squares, **kw)
+        correct += [s for m in measured for s in m["survival"]]
+
+    defect = []
+    for name in ("M-F2@0.02", "M-F2@0.05", "M-F2@0.10"):
+        kw, squares, _rule = MUTATION_CELLS[name]
+        findings, measured = _run_cells(squares, **kw)
+        if any("keeps only" in f.detail for f in findings):
+            defect += [s for m in measured for s in m["survival"]]
+
+    lo, hi = min(correct), max(defect)
+    assert lo == 1.0, f"the correct side is not 1.000: {sorted(set(correct))}"
+    assert hi < 0.5, f"the M-F2 family did not drive survival well below the floor: {hi}"
+    assert hi < audit.SURVIVAL_MIN <= lo, (
+        f"SURVIVAL_MIN={audit.SURVIVAL_MIN} does not sit in the measured gap "
+        f"({hi:.4f}, {lo:.4f}]")
+    assert lo - hi > 0.5, (
+        f"the gap collapsed to {lo - hi:.4f}; the floor would then be a cliff, and the "
+        f"honest response is to report that, never to move the constant to open it")
+
+
+def test_cross_axes_composition_order_agrees_with_the_pixels():
+    """§R20.1: the figure-wide rank is PINNED by a render, not trusted.
+
+    `_is_painted_over` refuses to order two Axes, so `L(p)` needs a rank across the whole
+    figure. A derived order the pixels contradict is a broken instrument, and this is the
+    cheapest possible place to find that out — so the control renders both orders and
+    asks the composite what actually won.
+    """
+    for z_a, z_b in ((1.0, 2.0), (2.0, 1.0)):
+        fig = plt.figure(figsize=(0.6, 0.6), dpi=100)
+        fig.set_facecolor("#FFFFFF")
+        red, blue = "#E03151", "#5B4BDB"
+        ax_a = fig.add_axes([0, 0, 1, 1], label="A", zorder=z_a)
+        ax_b = fig.add_axes([0, 0, 1, 1], label="B", zorder=z_b)
+        for ax, colour in ((ax_a, red), (ax_b, blue)):
+            ax.axis("off")
+            ax.patch.set_visible(False)
+            ax.set_xlim(0, 1)
+            ax.set_ylim(0, 1)
+            ax.add_patch(Rectangle((0.2, 0.2), 0.6, 0.6, fc=colour, lw=0))
+        fig.canvas.draw()
+        img = np.asarray(fig.canvas.buffer_rgba())[..., :3].copy()
+
+        order = audit.DrawOrder(fig)
+        pa = [c for c in ax_a.get_children() if isinstance(c, Rectangle)][0]
+        pb = [c for c in ax_b.get_children() if isinstance(c, Rectangle)][0]
+        last = pa if order.of(pa) > order.of(pb) else pb
+        expect = red if last is pa else blue
+        from matplotlib.colors import to_rgb
+        want = np.asarray([round(v * 255) for v in to_rgb(expect)])
+        got = img[30, 30].astype(int)
+        assert np.abs(got - want).max() <= 2, (
+            f"zorders ({z_a}, {z_b}): the comparator says {expect} is composed last, but "
+            f"the pixel is {got}. The derived draw order contradicts the render.")
+        plt.close(fig)
+
+
+def test_probing_only_what_can_reach_a_square_changes_no_finding():
+    """§R20.7 item 4: the ONLY permitted exclusion is from the work, never the occluders.
+
+    An element whose padded bbox cannot meet a square cannot put ink in it, so skipping it
+    must be undetectable in the output. Asserted by running one control both ways.
+    """
+    kw, squares = NEGATIVE_CELLS["footprint edge through an occupied square"]
+    fast, m_fast = _run_cells(squares, restrict_work=True, **kw)
+    full, m_full = _run_cells(squares, restrict_work=False, **kw)
+    assert [f.as_dict() for f in fast] == [f.as_dict() for f in full]
+    assert m_fast == m_full
+
+
+def test_adjacent_slot_tokens_share_zero_pixels_at_fifty_px():
+    """§R19.4 item 2: the 0px figure came from a 40px mock; pin it at the real 50px.
+
+    If this ever reads non-zero the fix is the KEYLINE GEOMETRY — inset the stroke so its
+    outer edge lies at h — and never a loosened tolerance.
+    """
+    fig, frame = _arena_figure({(0, 0): ["agent", "predator"]})
+    probe = audit.FrameProbe(fig, frame)
+    try:
+        toks = [e for e in probe.elements
+                if e.axes_name == "arena" and e.kind == "collection"]
+        assert len(toks) == 2
+        shared = int((probe.ink(toks[0]) & probe.ink(toks[1])).sum())
+        assert shared == 0, (
+            f"two adjacent-slot tokens share {shared}px at a 50px square")
+    finally:
+        probe.close()
+
+
+def test_an_outline_shaped_token_part_fails_rather_than_leaving_the_count():
+    """§R20.7 item 1's failing-direction guard.
+
+    An element whose ink sits on the perimeter of its own bbox is normally a square
+    outline or a seam and is excluded. A RING-SHAPED TOKEN PART drawn as its own artist is
+    that same shape, and must not be able to vanish from the count — so an outline whose
+    bbox spans under 80% of the square is reported instead of excluded.
+    """
+    fig, frame = _arena_figure({(0, 0): ["agent"]})
+    ax = audit._named_axes(fig, "arena")
+    from matplotlib.patches import Circle
+    ax.add_patch(Circle((25, 25), 8, fc="none", ec=P.NOCI, lw=2 * _PT,
+                        zorder=C.TOKEN_Z + 2))
+    fig.canvas.draw()
+    frame = np.asarray(fig.canvas.buffer_rgba())[..., :3].copy()
+    probe = audit.FrameProbe(fig, frame)
+    try:
+        findings, _m = audit.cell_overdraw(probe, "arena", {(0, 0): ("agent",)}, 1, 1)
+    finally:
+        probe.close()
+    assert any(f.rule == "outline_like_token" for f in findings), (
+        f"a ring-shaped part spanning ~32% of the square left the token count silently: "
+        f"{sorted({f.rule for f in findings})}")
+
+
+def test_collection_artists_are_enumerated_at_all():
+    """Regression: every Collection used to drop out of the element list.
+
+    `Collection.get_window_extent` reports an EMPTY bbox, which the enumerator filtered
+    out — and an artist that is not an Element is never hidden by `FrameProbe._draw`, so
+    it was drawn into every isolated render and ate the ink of whatever it covered. The
+    redesign draws every bed and token as one PatchCollection, so without this the
+    co-occupancy rule measures an arena with nothing standing in it.
+    """
+    fig, frame = _arena_figure({(0, 0): ["bush", "agent"]})
+    probe = audit.FrameProbe(fig, frame)
+    try:
+        colls = [e for e in probe.elements if e.kind == "collection"]
+        assert len(colls) == 2, f"expected the bed and the token: {colls}"
+        for e in colls:
+            assert probe.ink(e).any(), f"{e.label} enumerated but measures no ink"
+        # ... and the page rectangle underneath must now measure its FULL ink, because
+        # the tokens are hidden during its isolated render.
+        page = [e for e in probe.elements if e.axes_name == "page" and e.kind == "patch"]
+        assert page and int(probe.ink(page[0]).sum()) == probe.h * probe.w, (
+            "the page rectangle's isolated ink is short, so something that is not an "
+            "Element is still being painted over it")
+    finally:
+        probe.close()
+
+
+# ------------------------------------------------------------------- the World map
+def _minimap_figure(occupants, *, mutation=None, caption=True):
+    """A one-square World map with the real palette colours and the real encoding."""
+    fig = plt.figure(figsize=(1.2, 1.6), dpi=100)
+    fig.set_layout_engine("none")
+    fig.set_facecolor(P.FIGURE_FACECOLOR)
+    ax = fig.add_axes([0.1, 0.4, 0.8, 0.5], label="minimap")
+    ax.axis("off")
+    ax.patch.set_visible(False)
+    ax.set_xlim(0, 1)
+    ax.set_ylim(1, 0)
+    ax.add_patch(Rectangle((0, 0), 1, 1, fc=P.TRACK, lw=0, zorder=1))
+
+    order = C.by_priority([n for n in occupants if n not in C.TERRAIN_NAMES])
+    if len(order) == 1:
+        from matplotlib.patches import Circle
+        ax.add_patch(Circle((0.5, 0.5), 0.30, fc=P.MINIMAP_COLOUR[order[0]],
+                            ec=P.WHITE, lw=1.2 * _PT, zorder=6))
+    else:
+        for i, nm in enumerate(order[:2]):
+            ax.add_patch(Wedge((0.5, 0.5), 0.30, 90 + i * 180, 90 + (i + 1) * 180,
+                               fc=P.MINIMAP_COLOUR[nm], ec=P.WHITE, lw=0.8 * _PT,
+                               zorder=6 + i * 0.1))
+        if mutation == "M-F3":
+            from matplotlib.patches import Circle
+            ax.add_patch(Circle((0.5, 0.5), 0.30, fc=P.MINIMAP_COLOUR["agent"],
+                                ec=P.WHITE, lw=1.2 * _PT, zorder=9))
+    if caption:
+        cap = fig.add_axes([0.05, 0.05, 0.9, 0.25], label="caption")
+        cap.axis("off")
+        cap.text(0, 0.5, "Shared squares: two occupants split the dot", fontsize=5)
+    fig.canvas.draw()
+    frame = np.asarray(fig.canvas.buffer_rgba())[..., :3].copy()
+    return fig, frame
+
+
+def _run_minimap(occupants, **kw):
+    fig, frame = _minimap_figure(occupants, **kw)
+    probe = audit.FrameProbe(fig, frame)
+    try:
+        return audit.minimap_overdraw(probe, "minimap", {(0, 0): tuple(occupants)}, 1, 1)
+    finally:
+        probe.close()
+
+
+def test_minimap_is_silent_on_a_correct_split_dot():
+    assert _run_minimap(["agent", "neutral"]) == []
+
+
+def test_minimap_m_f3_catches_a_dot_painted_over_the_split_wedge():
+    """M-F3: the agent's dot above the split wedge.
+
+    Measured on the COMPOSITE, because isolation would report the covered wedge as
+    perfectly correct — which is the exact defect §R17.4 exists to prevent.
+    """
+    findings = _run_minimap(["agent", "neutral"], mutation="M-F3")
+    assert any(f.rule == "minimap_overdraw" for f in findings), findings
+
+
+def test_minimap_ground_truth_is_kinds_not_movers():
+    """§R20.4: two predators are two movers but ONE kind and one colour.
+
+    The withdrawn "at least as many colours as movers" wording reported a defect on this
+    correct square.
+    """
+    assert _run_minimap(["predator", "predator"]) == []
+
+
+def test_minimap_requires_the_shared_square_caption():
+    findings = _run_minimap(["agent", "neutral"], caption=False)
+    assert any(f.rule == "minimap_caption" for f in findings), findings
+
+
+def test_the_audits_minimap_palette_matches_the_package():
+    """The audit carries a COPY of the colour table, and a copy can drift.
+
+    The audit may not import the package it audits, so the table is duplicated — and this
+    test, which may import both, is what stops the duplicate becoming a different design.
+    """
+    assert audit.MINIMAP_PALETTE == P.MINIMAP_COLOUR
+    assert set(audit.TERRAIN_KINDS) == set(C.TERRAIN_NAMES)

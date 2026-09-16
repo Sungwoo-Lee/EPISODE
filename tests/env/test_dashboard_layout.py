@@ -636,3 +636,55 @@ def test_a_recording_missing_a_flag_reads_as_absent_not_as_false():
     assert P._recording_flag(Old(), "thermal_enabled") is P.ABSENT
     assert not P._recording_flag(Old(), "thermal_enabled")
     assert P.real_available(Old()) == {}
+
+
+def test_the_campfire_worlds_right_column_budget_is_pinned():
+    """The tightest real budget in the project, named so a failure explains itself.
+
+    WHY THIS TEST EXISTS (plan section D1.1, added after the CP1 verification).
+    Two maintained worlds -- the campfire thermal world and the sensory-noise
+    world -- have a temperature system AND both sense ranges at 0, so neither
+    sense moves into a band and the right column must carry **five** pods at
+    once. It fits with **16 px to spare** out of 816. Two of those five heights
+    (the range-0 smell pod and the range-0 vision pod) are the only numbers in
+    this layout that the canonical design sketch never draws, so they are the
+    ones most likely to move when a painter measures real text.
+
+    The `compact` fallback deliberately does not shrink right-column pods -- a
+    thermoception diamond compacted is a thermoception diamond nobody can read --
+    so if that pair ever grows past its 268 px joint budget, `pack()` raises on a
+    REAL maintained world and the campfire video simply stops rendering. This
+    test makes that arrive as "the budget is 268 px and you asked for 269"
+    instead of as an unexplained LayoutOverflowError months later.
+    """
+    ctx = _ctx(M4)
+    cards = [c for c in P.present_cards(ctx) if c.region == "right"]
+    assert {c.key for c in cards} == {
+        "proprioception", "olfactory", "extero_nociception", "collision",
+        "thermoception", "visual"}, "the campfire world's five right-hand rows"
+
+    rows = []
+    for card in sorted(cards, key=lambda c: c.order):
+        if rows and card.row is not None and rows[-1][0].row == card.row:
+            rows[-1].append(card)
+        else:
+            rows.append([card])
+    need = sum(max(c.min_h for c in r) for r in rows) + L.GAP * (len(rows) - 1)
+
+    lay = pack(ctx)
+    avail = lay.regions["right"].h
+    assert avail == 816, "no band, so the right column runs the full card height"
+    assert need == 800, (
+        f"the campfire world's right column needs {need}px, not the pinned 800px. "
+        f"If a painter measured real text and this grew, that is the recorded "
+        f"stop-and-report case: report both numbers and the proposed remedy "
+        f"rather than raising a constant here."
+    )
+    assert avail - need == 16, f"the recorded margin is 16px; this run has {avail - need}px"
+
+    joint = P.OLF_SPECTRUM_H + P.VISUAL_BARS_H
+    assert joint == 252, "the two pods the design sketch never draws"
+    assert joint <= 268, (
+        f"the smell and vision pods jointly have 268px of budget in the campfire "
+        f"world and now want {joint}px"
+    )

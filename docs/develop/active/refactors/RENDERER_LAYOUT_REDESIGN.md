@@ -3,7 +3,7 @@ title: "Episode-video renderer redesign: panels that cannot overlap, a faster fr
 topic: refactors
 status: active
 created: 2026-09-14
-last_updated: 2026-09-16
+last_updated: 2026-09-17
 supersedes: UI_REDESIGN_PROPOSAL.md
 ---
 
@@ -483,7 +483,7 @@ Terminology, fixed here so painter, test and audit use one vocabulary: **ground*
 7. **The white keyline, not a white platter.** A shared token is separated from the bed by a white keyline at radius **exactly `h`** — not 1.06 h. *(Corrected Revision 19, #55: the mock strokes it **centred** on `h` at `lw = max(0.8, h/8) pt` — 1.29 px at the two-mover size — not as "1 px inside `h`". Centred, it puts half the stroke outside `h`, leaving a ~0.5 px geometric gap between adjacent slots that lies inside the anti-aliasing fringe. **The painter's constant is the stroke width `h/8` with the stroke **inset** so its outer edge lies at `h`**, and §R19.4 item 2's Phase 0d control measures at 50 px what the audit then reads there. If it reads non-zero, the fix is this geometry — never a looser tolerance.)* At 1.06 h the keylines of two adjacent slots touch, and that invisible white-on-white kiss was the whole of the bed family's residual measured "glyph overlap". Keeping the keyline inside `h` is what makes the 0 px measurement mean what it says, and it is also what keeps §R17.7's connected-component rule honest.
 8. **The agent's indigo outline and last-action chevron.**
    - The **square outline** (2 px iris rounded rectangle on the *square*) is unchanged and is unaffected by sharing. **Revision 20 (#64): it is pinned BELOW token zorder.** Tokens never reach it, so this is no visual change — the outline still reads as the square's border — but drawn above, its inner fringe sits 0.1–1.1 px from a four-way token's edge and costs that token 1–2 % of its pixels, right at the survival floor. It stays in the occluder set: raise it above the tokens later and the floor fires, which is exactly what the rule is for. It, not the token's size, is what says which square the agent is in — which is why the token may shrink without the agent becoming hard to find.
-   - The **halo is dropped whenever the square is shared** (`n ≥ 2`). At full size the agent marker carries a 16 % iris halo at `1.32 × r`; in a shared square that halo is ink that spills past `h` onto the neighbour, and it was the entirety of H's measured overlap before it was removed. Concretely: at `h = 0.30 × cell` the halo reaches `0.396 × cell` from the centre, while the whole bush glyph reaches only `0.261 × cell` — the halo is wider than the drawing it is supposed to sit beside, which is the mechanism behind "agent-in-bush renders as agent alone".
+   - The **halo is dropped whenever the square holds anything else at all — any occupant *or a bed*.** *(**Corrected in Revision 21, 2026-09-17.** This clause originally read "whenever the square is shared (`n ≥ 2`)", and since terrain deliberately does not count towards `n`, a lone agent standing on a bush was `n = 1` and **kept** its halo. Measured on a rendered frame in Phase 2: that halo reaches `0.396 × cell` from the square's centre while the bed beneath it spans only `0.36 × cell` from the centre — the halo is wider than the entire floor it stands on, so "agent in a bush" still rendered as an agent alone. That is the original defect in a new form, inside this plan's own rule text. The painter implements the corrected rule; the bare-ground case is unchanged, where the halo covers only empty ground and makes the agent easy to find.)* At full size the agent marker carries a 16 % iris halo at `1.32 × r`; in a shared square that halo is ink that spills past `h` onto the neighbour, and it was the entirety of H's measured overlap before it was removed. Concretely: at `h = 0.30 × cell` the halo reaches `0.396 × cell` from the centre, while the whole bush glyph reaches only `0.261 × cell` — the halo is wider than the drawing it is supposed to sit beside, which is the mechanism behind "agent-in-bush renders as agent alone".
    - The **white ring** stays at every size (`lw = max(0.9, h / 8) pt`), and the **chevron** stays inside the token at `0.62 × h` in the last action's direction, with the dot for Rest/Eat. At 48 px the chevron is 6.1 px long when two occupants share and 6.0 px with four — on the 6 px legibility line; **at Revision 18's 50 px square it is 6.42 px and 6.27 px**, clearing it with room. **The floor is on the chevron, not on `h` (clarified Revision 19, #60): `0.62 × h ≥ 6 px`**, equivalently `h ≥ 9.68 px` — which is what the 6.42 / 6.27 px figures above are being compared against, and which the four-way case clears by 0.44 px. Below it the chevron is not legible and the painter raises rather than drawing an unreadable one; the floor joins the values `test_dashboard_cells.py` recomputes.
    - The action pill in the card's title row is unchanged (Q4).
 
@@ -647,7 +647,7 @@ The other two blocking findings: two sections of this plan describe the centre p
 
 1. **Ground truth is unchanged.** The set of **distinct non-terrain kinds** the snapshot places at that square (never instance counts — §R17.5 item 1). Call it `K`.
 2. **Exclusions, measured and not declared** (as before, plus one addition):
-   - an element whose isolated ink covers **≥ 40 %** of the square's area is the **bed** or the **ground**, and is excluded;
+   - an element whose isolated ink covers **≥ 48 %** of the square's area is the **bed** or the **ground**, and is excluded; *(**the constant moved 0.40 → 0.48 in Revision 21, 2026-09-17, with its evidence: at 0.40 a *correct* lone agent on bare ground measures 0.4376 of its square and is thrown out as scenery — the mirror of §R20.8. Measured populations: largest correct token **0.4376**, smallest bed **0.5168**, bed floor by construction **0.5184**; 0.48 sits 53.5 % up that gap and every negative control passes. See Revision 21 §R21.2.)*
    - an element whose ink sits on the **perimeter of its own bounding box** is a square outline or a seam, and is excluded. *(Wording corrected in Revision 20 §R20.7 item 1: the helper `_ink_is_outline` (`render_layout_audit.py:414-433`) tests the element's **own** bbox, not the square's box, and Revision 20 adds the failing-direction guard that an outline-classified element whose bbox spans under 80 % of the square is reported rather than silently excluded.)* The agent's 2 px iris square outline is the case that matters, and leaving it in would let it bridge two token components around the square's rim and break the count.
    - *(Revision 20 §R20.8: a bed must be **one artist**, so the ≥ 40 % test measures it whole; a bed split into parts leaks its small parts into the token count and fires on a correct painter.)*
    - Everything else inside the square is a **token element**. No painter tag is consulted, per finding #3's discipline.
@@ -713,7 +713,7 @@ The other two blocking findings: two sections of this plan describe the centre p
 
 ### R19.4 The smaller findings, folded in (#55, #58–#62)
 
-1. **Token medium is vector, and CP2.6 is rewritten (#58).** The plan said two incompatible things: §D1.4 and CP2.6 described raster icons from `assets/dashboard_icons/` (CP2.6 asserted the campfire's ink belongs to an `AxesImage`), while §R17.3 and the `cells.py` row describe vector forms with parametric mark fractions — and `test_dashboard_cells.py` recomputes `MIN_MARK × h` as a number, which a PNG cannot supply. **Decided here: beds, tokens and companion forms are vector primitives drawn in `cells.py`.** `assets/dashboard_icons/` keeps only what is drawn at a fixed size and never recomputed — legend chips and minimap glyphs — and the developer records in the Implementation Report whether those too are drawn from the same vector forms, in which case the folder is dropped. CP2.6's `AxesImage` clause is replaced by an area-classified bed check. Q12's `assets/campfire.png` is unaffected as a **legend/map** glyph; the arena's campfire is a drawn bed, so that asset is no longer what CP2.6 measures.
+1. **Token medium is vector, and CP2.6 is rewritten (#58).** The plan said two incompatible things: §D1.4 and CP2.6 described raster icons from `assets/dashboard_icons/` (CP2.6 asserted the campfire's ink belongs to an `AxesImage`), while §R17.3 and the `cells.py` row describe vector forms with parametric mark fractions — and `test_dashboard_cells.py` recomputes `MIN_MARK × h` as a number, which a PNG cannot supply. **Decided here: beds, tokens and companion forms are vector primitives drawn in `cells.py`.** `assets/dashboard_icons/` keeps only what is drawn at a fixed size and never recomputed — legend chips and minimap glyphs — and the developer records in the Implementation Report whether those too are drawn from the same vector forms, in which case the folder is dropped. *(**Condition met, and the drop is scheduled — Revision 21 §R21.4 item 2.** Phase 2 reports every form in the frame, including the World map's marks and the legend chips, is vector; verified that nothing under `src/`, `scripts/` or `tests/` reads the folder, and that the frozen V1 renderer loads its icons from the **`assets/` root** instead, so V1 is unaffected. **Drop the nine PNGs and the `v1_path_guard.py:145` row together at CP-D**, not before — CP-D is the last point at which `visual-design-reviewer` could ask for a raster texture.)* CP2.6's `AxesImage` clause is replaced by an area-classified bed check. Q12's `assets/campfire.png` is unaffected as a **legend/map** glyph; the arena's campfire is a drawn bed, so that asset is no longer what CP2.6 measures.
 2. **The 0 px tolerance is pinned by measurement, not by inheritance (#55).** The "glyph-on-glyph ink is 0 px" figure came from the round-2 mock at a **40 px** cell, on a transparent canvas under an alpha > 24/255 mask — not at 50 px and not under the audit's per-channel > 8/255 difference over a coloured ground. At 50 px two adjacent slots are 22.5 px apart with disc radius 10.35 px and a keyline stroke **centred** on `h` at `lw = max(0.8, h/8)` = 1.29 px, leaving a ~0.5 px geometric gap that lies inside the anti-aliasing fringe. **Phase 0d adds a negative control** that draws two adjacent-slot tokens at 50 px with the real forms and measures with `FrameProbe.ink`, and pins what it reads. If it is non-zero, the fix is the **keyline geometry** — inset the stroke so its outer edge lies at `h` — and **never** a loosened tolerance. §R17.3 item 7's "1 px white keyline" is corrected to the measured stroke width and its placement is stated.
 3. **Phase 1's 564 / 476 / 236 clause is asserted on a synthetic `LayoutContext` (#59).** No matrix cell produces that geometry: every maintained config has both sense ranges at 0 (`default.yaml:222,232`; no `basic/` file carries a `sensory:` block at all), so **no M-cell has a sensor band**; the thermal cells have the thermoception card and no band, the E-cells a band and no thermal card. Thermal-plus-band exists only in Figure 3's sketch, where the ranges were overridden for the drawing. The Phase 1 test therefore constructs a `LayoutContext` with thermal on and one sense at r ≥ 1 and says so; a developer asserting it on M4 would find no band.
 4. **The chevron floor is on the chevron (#60).** `0.62 × h ≥ 6 px` — the drawn chevron length, which is what the 6.42 px and 6.27 px figures in §R18.3 are. Equivalently `h ≥ 9.68 px`; the four-way case clears it by 0.44 px. It joins the floors `test_dashboard_cells.py` recomputes.
@@ -813,7 +813,7 @@ All three are negative controls: they must produce **zero findings**, and their 
 | Side | What is measured | Requirement |
 |---|---|---|
 | Correct painter (the floor must be **below** this) | The **minimum** survival ratio over **every** negative control: single occupant; empty square; bed + one token (campfire bed, §R20.8); correct two-mover **with the agent**; correct four-way **with the agent**; footprint edge through an occupied square | Each ≥ 0.98, and any value below **1.000** is investigated and its cause written down before it is accepted |
-| Defect (the floor must be **above** this) | The **maximum** survival ratio over an **M-F2 family** — the bed drawn after the tokens at three insets, `0.02 / 0.05 / 0.10 × cell` | Every member fails the floor |
+| Defect (the floor must be **above** this) | The **maximum** survival ratio over an **M-F2 family** — the bed drawn after the tokens at three insets, `0.005 / 0.010 / 0.020 × cell` *(re-registered from `0.02 / 0.05 / 0.10` in Revision 21 §R21.2 — insetting a bed shrinks its ink share below the floor test, at which point it stops being read as a bed and is caught by the disjointness rule instead, so the member stops measuring the thing it was registered to measure. Measured survival at the three new insets: 0.091 / 0.095 / 0.101 and 0.132 / 0.136 / 0.144, all firing the survival floor at **both** 0.40 and 0.48.)* | Every member fails the floor, **via the survival floor and not via another rule** |
 
 *Fails if:* the two columns do not straddle 0.98 with margin, **or** the developer moves the constant to make them straddle it. If the measured gap does not contain 0.98, the developer reports both numbers, the proposed value **and its evidence**, and the value is changed only in this plan text — never in a test to make a red checkpoint green. The three-member family exists so the floor is exercised near a rim-survives case rather than only at the easy end.
 
@@ -881,9 +881,94 @@ This is the same shape as #63 and #64 — an over-scoped classification producin
 
 - **Each bed is exactly one artist.** `cells.py` composes every bed form as a single artist — a compound path, or a `PatchCollection` carrying per-subpath face colours where a bed needs more than one colour (the campfire does: glow, logs, flame core). Its ink then covers ≥ 40 % of the square as a whole and the existing area test excludes it whole. This is a constraint on Phase 2, stated now so it is a design input rather than a surprise.
 - **The bed-plus-token negative control uses the campfire bed**, not a plain rectangle — the campfire is the bed with the most parts and the only one whose largest part is under the 40 % line. With it, a multi-part bed is caught at **Phase 0d**, loudly, on a control built for the purpose, instead of at Phase 2 as a mystery failure on a real frame.
-- **No change to the occluder set, and none to the ≥ 40 % test itself.** The number stays a measurement of ink area; what changes is that the painter must present a bed as one thing to be measured.
+- **No change to the occluder set, and none to the area test itself.** The number stays a measurement of ink area; what changes is that the painter must present a bed as one thing to be measured. *(**Revision 21 §R21.2 moved the number itself, 0.40 → 0.48**, for the mirror-image reason: the classifier was also wrong from the *token* side, where a correct lone agent measured 0.4376 and was read as floor. The shape of the test is untouched.)*
 
 **Verification note (senior-developer, 2026-09-16).** Revision 20 was written in a session that died mid-edit, so it was verified clause-by-clause against the seventh pass before Phase 1 builds from it. Findings #63–#72 and §R20.8 are all resolved, and the narrowing rule holds everywhere — no fix removes anything from the occluder set. **One edit was genuinely lost and has been completed during verification:** §D5.2's *mutation and negative-control list* — the paragraph an implementer actually builds Phase 0d from — had not been updated, while §D5.2 item 11's rule paragraph, CP0.3b and the Phase 0d File Changes rows all had. It still named **three** M-F variants (no `M-F1g`), still carried the pre-Revision-20 negative partners (no campfire bed, no agent in the shared squares, no footprint edge), asserted a bare `1.000` that contradicts §R20.3's investigate-below-1.000 rule, and repeated the uncorrected "perimeter of the square's own box" wording that §R20.7 item 1 fixed in §R19.1. All four are now aligned with §R20.1–§R20.8, and **CP2.8's *Fails if:* clause**, which enumerated `M-E / M-F1 / M-F2 / M-F3`, now includes `M-F1g` so the gate covers the mutation its own body requires. This was the §R19.2 (#56) failure mode — two sections of one plan disagreeing, with Phase 0d reading the stale one.
+
+---
+
+## Revision 21 2026-09-17 (after verifying Phase 2 and Phase 0d together: the speed target is accepted as met in substance, the floor constant moves, and this plan's own halo rule is corrected)
+
+**What this revision is about, in plain words.** Two pieces of work were checked at once. The first (Phase 2) wrote the code that actually draws the new dashboard, and ended with a complete picture of the campfire world rendered from a real recording. The second (Phase 0d) built the *measuring instrument* for the one claim this whole redesign exists to make good: that a square of the world holding two things is drawn showing **both** of them, rather than one covering the other. The instrument agrees with the picture — on the rendered frames every occupant keeps 100 % of itself — and the frames were looked at, at full size, by the verifier: the square holding the agent and a bush shows a green bush plate with the agent standing on it, and a later frame shows the agent and a piece of food side by side in one square. That is the defect fixed, seen and measured.
+
+Three things are decided here, and they are decisions rather than findings.
+
+1. **The speed target is accepted as met in substance (question Q22 is closed by the user).** The new renderer draws a frame in 187 ms against the current renderer's 333 ms — **1.78× faster** — but the target written down earlier was "at most half the time", i.e. 167 ms, so it misses by about 21 ms. The measurement that matters is the breakdown: the big world-grid panel, which is the thing that grew four-fold and the reason the target was ever questioned, costs only **11 of those 187 ms (about 6 %)**. The rest is the text-heavy cards. Blocking on 21 ms, or re-writing every painter in a second drawing toolkit to attack the wrong 6 %, would both be spending real effort on a number that is not the problem. The user chose to treat the target as met and to record why.
+2. **The "this is scenery, not an occupant" threshold in the audit is wrong and moves from 40 % to 48 % of a square.** The audit decides whether a drawing is the *floor* of a square (a bush, a rock) or an *occupant* (an animal) by how much of the square it covers. At 40 % a **correct** picture fails: a lone agent on bare ground keeps its soft halo, and that halo makes the agent cover 43.8 % of its square — so a real occupant is classified as scenery and the square reports "nothing is standing here". The two populations the threshold has to separate were measured, not argued: the largest correct occupant covers 0.4376 of its square, the smallest floor covers 0.5168. 48 % sits about halfway between them.
+3. **This plan's own rule for the agent's halo is corrected.** It said the halo is dropped when a square is "shared", and defined sharing as two or more *occupants* — with terrain deliberately not counting. A lone agent on a bush therefore kept a halo wider than the entire bush beneath it, and rendered as an agent alone: the original defect, in a new form, written into the fix. The rule is now "dropped whenever the square holds any other occupant **or a bed**".
+
+### R21.1 Q22 is answered: the gate counts as met, and the number is recorded so it is defensible later
+
+**The user's decision: accept 1.78× and close Q22.** Q9's `≤ 0.5 ×` is **superseded by the measured result**, not renegotiated in the abstract, and no option from Q22's table is adopted: not option 1 (hold the number and risk pivoting to Pillow over 21 ms), not option 2 (a synthetic like-for-like arm), not option 3 (re-scoring against the non-arena part), not option 4 (re-architecting the per-square artist pool).
+
+**The evidence, kept here so the number does not have to be re-argued:**
+
+| Arm (same recording, same process, 40 frames, first 5 excluded, in-container) | Median |
+|---|---|
+| V1, the renderer training uses today | **333.0 ms** |
+| V2, this renderer (arm 1, full frame) | **187.3 ms** |
+| V2 with the arena Axes hidden (arm 3, the true non-arena number) | **176.1 ms** |
+
+- **Ratio 0.563** against a `≤ 0.500` gate — missed by 0.063, i.e. **~21 ms**.
+- **Arena cost = arm 1 − arm 3 = 11.2 ms of 187 ms ≈ 6 %** of the frame, drawn with **178 of the frame's 1045 visible artists**.
+- The hard floor — never slower than the production renderer — holds with a **1.78×** margin, and that is the part protecting training-time rendering.
+
+**Why accepting is the right call rather than the convenient one.** Q9's half-the-time number was explicitly a *proxy for the architecture paying off* (V1 rebuilds its whole figure every frame; V2 builds once and updates). The architecture did pay off: 1.78×. The proxy was written before the panel grew from 25 squares to 100, and the split now shows the growth is not what costs the time — so a miss of 21 ms carries none of the information the gate was set up to carry. Blocking would licence exactly the response §R19.3 warned about: "pivoting to Pillow … the most expensive move available in this plan, for a reason that is not the toolkit's fault."
+
+**What would re-open it, stated so the acceptance is not open-ended.** CP4 still re-measures on a lab node, in a pool worker, over ≥ 200 frames. The acceptance is of **this** ratio on that measurement; it is re-opened if CP4 shows V2 **slower than V1 on any cell** (the hard floor, untouched), or if the arena's share of the frame rises above ~25 %, which would mean the arena *has* become the cost and the original Q22 premise has become true after all.
+
+**CP0.4 itself remains formally unrun** — lab node, pool worker, ≥ 200 frames, node and CPU model recorded — and it is **not** waived by this decision. What is decided is the *response to the band it landed in*: the pre-registered "report and stop" has been reported, asked and answered, so Phase 2 is no longer gated on it.
+
+### R21.2 The 40 % floor is wrong in the plan text, and moves to 48 %
+
+**The defect, in one sentence.** §R19.1 step 2 excludes "an element whose isolated ink covers ≥ 40 % of the square" as the bed or the ground — and a *correct* lone agent covers **43.76 %**, so the rule throws the occupant away as scenery and reports 0 components where the snapshot says 1. It is the exact mirror of §R20.8, which found the same classifier wrong from the bed side.
+
+**The measured populations, which make this arithmetic and not argument:**
+
+| Quantity | Value | Where it comes from |
+|---|---|---|
+| Largest **correct token** ink share | **0.4376** | a lone agent with its halo, measured by the audit's own probe |
+| Smallest **bed** ink share | **0.5168** | the smallest of rock / bush / tree / campfire, measured |
+| Bed plate fraction **by construction** | **0.5184** | `(1 − 2 × BED_MARGIN)² = 0.72²`, pinned in `test_dashboard_cells.py` |
+| **New floor** | **0.48** | `(0.48 − 0.4376) / (0.5168 − 0.4376) = 53.5 %` of the way up the gap |
+
+**Verified independently during this verification, not taken from the report:** at a 0.48 floor the lone-agent control and the campfire-bed, bush-bed and four-way controls all produce **zero findings**; the developer's 43.76 % / 51.68 % figures reproduce; and the whole control suite is **66 passed, 1 xfailed**.
+
+**The alternative was considered and is rejected: do not drop the halo on every square.** The halo is not decoration — it is what makes the agent findable at a glance in a 100-square grid, and a lone agent on bare ground is precisely the case where nothing else needs the room. More importantly, a token covering 43.76 % of its square **is an occupant**; a classifier that calls it floor is wrong about the world, and shrinking the picture until the classifier's mistake stops showing is fixing the evidence rather than the instrument. The constant is what is wrong, and §R20.3's procedure — move it in the plan, with its evidence, never in a test — is what is followed here.
+
+**One consequence the move has, found while verifying and fixed here rather than left to surface in Phase 0d.** The defect side of §R20.3's gap table is an **M-F2 family** — the bed drawn over the tokens, inset so a rim survives — pre-registered at insets `0.02 / 0.05 / 0.10 × cell`. Insetting a bed shrinks its ink share (`(0.72(1 − 2i))²` → 47.8 % / 42.0 % / 33.2 %), and once it falls under the floor test it stops being classified as a bed, is read as a token, and is caught by the **disjointness** rule instead. At the shipped 0.40 floor only the 0.10 member had fallen out; **at 0.48 the 0.05 member falls out too**, leaving the survival floor with a single positive control. Measured here across both floors:
+
+| Inset | Fires the **survival floor** at 0.40? | at 0.48? | Survival ratios |
+|---|---|---|---|
+| 0.020 | yes | **yes** | 0.101 / 0.144 |
+| 0.050 | yes | **no** (read as a token) | — |
+| 0.100 | no | no | — |
+| **0.005** | yes | **yes** | 0.091 / 0.132 |
+| **0.010** | yes | **yes** | 0.095 / 0.136 |
+
+**The family is therefore re-registered at `0.005 / 0.010 / 0.020 × cell`**, which exercises the floor at both constants and keeps three members rather than one. The developer's exclusion of the 0.10 member from the gap maximum, with its reason, is judged **honest**: a member that fires through a different rule has a survival ratio of 1.0 and would have *raised* the recorded maximum toward the floor — i.e. the convenient move would have been to keep it and claim a wider margin, not to drop it. Dropping it is the conservative direction.
+
+**What the developer must change, and where (this is the plan's instruction, not a code edit made here):**
+
+| Site | Change |
+|---|---|
+| `scripts/eval/render_layout_audit.py:832` | `CELL_FLOOR_FRACTION = 0.40` → `0.48`, with the two measured populations named in the comment |
+| `scripts/eval/render_layout_audit.py:193, 262` | the module docstring's two statements of the constant |
+| `tests/env/test_render_audit_controls.py:810-822` | remove the `strict` xfail; the lone-agent control joins `NEGATIVE_CELLS` as a plain negative control |
+| `tests/env/test_render_audit_controls.py:850` | `assert token > audit.CELL_FLOOR_FRACTION` inverts to `token < audit.CELL_FLOOR_FRACTION < bed`, which is the property that actually has to hold |
+| `tests/env/test_render_audit_controls.py:864-869` | the `M-F2` insets become `0.005 / 0.010 / 0.020`, and the gap-table test asserts **three** floor-firing members rather than "whatever is left" |
+
+*Fails if:* the constant is moved anywhere other than alongside this evidence; the lone-agent control is made to pass by shrinking the halo instead; or the gap table is left with fewer than three members that fire the **survival floor** specifically.
+
+### R21.3 §R17.3 item 8 is corrected: the halo goes when a bed is present too
+
+Recorded in full at §R17.3 item 8. In short: `n ≥ 2` was the wrong condition because terrain does not count towards `n`, so the literal rule kept a halo reaching `0.396 × cell` over a bed spanning `0.36 × cell` — wider than the floor beneath it — and "agent in a bush" still rendered as an agent alone. Phase 2 caught this **on a rendered frame**, deviated deliberately, and reported it; the deviation is **accepted** and the plan text now says what the painter does. Nothing is filed in the Known Bugs registry: this was a defect in a plan's rule text, caught before the behaviour ever shipped.
+
+### R21.4 Three carried items, judged
+
+1. **Beds are full-bleed plates, not the design mock's silhouettes — and that deviation is right.** The mock's rock and tree cover roughly 28–36 % of a square. Ported as-is they would fall under the floor test and be classified as *occupants*, so `cell_overdraw` would fire on a correct painter — the §R20.8 failure mode arriving from the other side. The plan's own words for a bed are already "drawn full-bleed, inset by `BED_MARGIN` on every side" (§R17.3 item 2), which is what shipped: `0.72² = 51.84 %` by construction, 53.4 % and 51.7 % measured on the real frame. The visual cost is real and is not hidden — a bush now reads as a green plate rather than as a bush silhouette — and **CP-D is the right place to judge that**, with `visual-design-reviewer` looking at a rendered frame. The classification is not the reason to keep it: a silhouette bed could also have been kept by giving beds their own measured rule. The reason to keep it is that variant H *is* "terrain is the floor", and a floor that covers a third of its square is not a floor.
+2. **`assets/dashboard_icons/` is unused, and should be dropped — but not yet.** Confirmed: nothing under `src/`, `scripts/` or `tests/` reads it. The frozen V1 renderer loads its icons from the **`assets/` root** (`renderer.py::_load_icons`, filenames like `agent.png`), so dropping the subfolder cannot touch V1. The only reference anywhere is `v1_path_guard.py:145`, which lists it as **plan-owned**, not frozen. §R19.4 item 1 set the condition for dropping it — "every form including the map marks is vector" — and Phase 2 reports that condition met. **Decision: drop it, at CP-D, not now.** CP-D is the checkpoint at which `visual-design-reviewer` may still ask for a raster texture somewhere in the frame, and deleting nine committed PNGs a week before the only checkpoint that could want them buys nothing. The deletion carries the `v1_path_guard.py` row with it in the same commit.
+3. **The CP1 band-card hoist has never been exercised by a real world, and will not be until the sensor-band painter exists.** No maintained config has a sense at range ≥ 1, so every maintained world takes the no-band path and the "more than one band card" refusal is unreachable there. Its only coverage is the **synthetic** thermal-plus-band contexts in the Phase 1 suite (§R19.4 item 3 pre-registered exactly this). That is adequate for now and is **recorded as a known coverage gap**: the band painter, when it is written, is where the hoist is first exercised for real, and Phase 2's report saying so is the behaviour wanted, not a defect.
 
 ---
 
@@ -1304,7 +1389,7 @@ M8/M9 do not depend on archived **configs** loading — but, per Revision 13, th
 8. **Vocabulary rule (V2 frames).** No rendered text matches `\bpain\b` (case-insensitive), and no legend contains `DNG`. V1 frames are exempt, because V1 is frozen and still shows `DNG`.
 9. **Canvas.** No foreground ink in the outer 4 px margin; dimensions equal the declared canvas.
 10. **No numbers in the grid view (decided 2026-09-14; narrowed in Revision 7).** No `Text` element whose string contains a digit or a sign character has ink inside the arena grid's extent. The title strip, legend chips and scale strip sit outside it. The iconless-entity code is drawn as a vector path (`TextPath` → `PathPatch`), not a `Text` artist, so this rule and the glyph cannot collide. Checked on every thermal cell.
-11. **Cell co-occupancy (`cell_overdraw`, added Revision 17, **rewritten in Revision 19 §R19.1**, built in Phase 0d).** Ground truth is the snapshot's set of **distinct non-terrain kinds** per arena square (never instance counts — §R17.5 item 1). Excluded from token ink, by measurement and never by painter tag: elements whose isolated ink covers ≥ 40 % of a square's area (bed/ground — and per Revision 20 §R20.8 **a bed must be one artist**, so that test measures it whole rather than letting a multi-part bed's small parts leak into the token count), and elements whose ink sits on the perimeter of **their own bounding box** (`_ink_is_outline` — the agent's square outline, seams; wording corrected in Revision 20 §R20.7 item 1, which also adds the failing-direction guard that an outline-classified element whose bbox spans **under 80 %** of the square is reported as `outline_like_token` and **fails** rather than quietly leaving the token union). Then **three** conditions, not one: the connected components of the square's **token ink** (isolated) number exactly `|kinds|`, pairwise touching in 0 px, no dilation; the components of its **visible token ink** — the pixels at which no element drawn *after* the token has ink, using the existing composition order `_is_painted_over` / `_draw_index` — **also** number exactly `|kinds|`; and each token-ink component's surviving fraction is ≥ `SURVIVAL_MIN` (0.98; a correct composition measures 1.000). Preconditions the rule asserts and **fails** on rather than skipping — **re-scoped in Revision 20 §R20.1 and §R20.6**, because as first written they fail on a correct painter. Let `L(p)` be the last-drawn element with ink at a token pixel `p`, computed over **every element in the figure**: (a′) if `L(p)` is not a token element of that square it must be fully opaque; (b′) `L(p)` must belong to the named arena Axes; (c′) the ground, every bed base, the square-outline and the keyline colours must differ from the figure facecolor by more than `INK_DELTA`, or the rule cannot see them at all. The composition comparator is extended to rank across Axes as `(axes rank, zorder, child index)` and that derivation is pinned by a rendered two-Axes control. The minimap variant is measured on the **composite** (a colour census against the palette table), not by isolation, together with the presence of the shared-square caption; its ground truth is the distinct palette colours of the **kinds** present and its denominator is the same census on the isolated wedge (§R20.4), never the mover count and never a geometric wedge. Every painter-set property this rule reads — alpha, face colour, outline shape — is read **only where reading it can make the rule fail**; nothing may be read to exempt ink from the count (finding #3's discipline). The square grid is derived from the named arena axes' extent and the recording's world/window size; the audit still imports neither the layout module nor the registry. Connected-component labelling may use `scipy.ndimage.label` (scipy is already a project dependency and is used under `src/` and `scripts/`) or a stdlib flood fill — no new dependency either way.
+11. **Cell co-occupancy (`cell_overdraw`, added Revision 17, **rewritten in Revision 19 §R19.1**, built in Phase 0d).** Ground truth is the snapshot's set of **distinct non-terrain kinds** per arena square (never instance counts — §R17.5 item 1). Excluded from token ink, by measurement and never by painter tag: elements whose isolated ink covers ≥ **48 %** of a square's area (bed/ground; **0.40 until Revision 21 §R21.2 moved it with its evidence** — and per Revision 20 §R20.8 **a bed must be one artist**, so that test measures it whole rather than letting a multi-part bed's small parts leak into the token count), and elements whose ink sits on the perimeter of **their own bounding box** (`_ink_is_outline` — the agent's square outline, seams; wording corrected in Revision 20 §R20.7 item 1, which also adds the failing-direction guard that an outline-classified element whose bbox spans **under 80 %** of the square is reported as `outline_like_token` and **fails** rather than quietly leaving the token union). Then **three** conditions, not one: the connected components of the square's **token ink** (isolated) number exactly `|kinds|`, pairwise touching in 0 px, no dilation; the components of its **visible token ink** — the pixels at which no element drawn *after* the token has ink, using the existing composition order `_is_painted_over` / `_draw_index` — **also** number exactly `|kinds|`; and each token-ink component's surviving fraction is ≥ `SURVIVAL_MIN` (0.98; a correct composition measures 1.000). Preconditions the rule asserts and **fails** on rather than skipping — **re-scoped in Revision 20 §R20.1 and §R20.6**, because as first written they fail on a correct painter. Let `L(p)` be the last-drawn element with ink at a token pixel `p`, computed over **every element in the figure**: (a′) if `L(p)` is not a token element of that square it must be fully opaque; (b′) `L(p)` must belong to the named arena Axes; (c′) the ground, every bed base, the square-outline and the keyline colours must differ from the figure facecolor by more than `INK_DELTA`, or the rule cannot see them at all. The composition comparator is extended to rank across Axes as `(axes rank, zorder, child index)` and that derivation is pinned by a rendered two-Axes control. The minimap variant is measured on the **composite** (a colour census against the palette table), not by isolation, together with the presence of the shared-square caption; its ground truth is the distinct palette colours of the **kinds** present and its denominator is the same census on the isolated wedge (§R20.4), never the mover count and never a geometric wedge. Every painter-set property this rule reads — alpha, face colour, outline shape — is read **only where reading it can make the rule fail**; nothing may be read to exempt ink from the count (finding #3's discipline). The square grid is derived from the named arena axes' extent and the recording's world/window size; the audit still imports neither the layout module nor the registry. Connected-component labelling may use `scipy.ndimage.label` (scipy is already a project dependency and is used under `src/` and `scripts/`) or a stdlib flood fill — no new dependency either way.
 
 **Positive controls** (known defects; if any is missed, the audit is broken, so stop):
 - V1 M4 frame: **D1**, **D2**, **D3** (text on the Run Context border), and **D10** (`OBS` under Nutrition/Injury while the breakdown lacks them).
@@ -1317,7 +1402,7 @@ M8/M9 do not depend on archived **configs** loading — but, per Revision 13, th
 - **M-D:** swap a `hidden_state` caption to `OBS`; the observed-caption rule must fail.
 - **M-E (Revision 17):** force every occupant of a shared square to the square's centre (the sketch painter's concentric behaviour); `cell_overdraw` must fail. Its negative partners are the shared list below.
 - **M-F (Revision 19, extended to four variants by Revision 20 — the mutation set that pins §R19.1):** **M-F1** draws the terrain bed *after* the tokens (full occlusion — the isolated-ink rule alone passes it); **M-F2** draws the bed after the tokens inset a further `0.10 × cell`, so a rim of each token survives and only the survival floor can fire; **M-F3** draws the minimap's agent dot above the split wedge; **M-F1g** (Revision 20 §R20.6) draws the **ground**, not the bed, after the tokens, run with the figure facecolor set to `CANVAS` — only precondition (c′) catches it, and without (c′) it passes silently. All four must fail the audit, and with M-E that is the **five** mutations CP0.3b gates on.
-- **Negative partners (Revision 20 §R20.2, §R20.8) — each must produce zero findings and is recorded with its measured survival ratio:** a single-occupant square; an empty square; a bed plus one token, using **the campfire bed specifically** (the bed with the most parts, and the only one whose largest part falls under the 40 % line); a correct two-mover square **containing the agent**, so its square outline is present; a correct four-way square **containing the agent**, the tightest clearance in the design; and an E-cell footprint edge crossing an occupied square. A correct composition measures **1.000**; per §R20.3 any control reading below 1.000 is **investigated and its cause recorded before it is accepted**, never absorbed by loosening the constant. These ratios form one side of §R20.3's pre-registered gap table, whose other side is the **M-F2 family** at insets `0.02 / 0.05 / 0.10 × cell`.
+- **Negative partners (Revision 20 §R20.2, §R20.8) — each must produce zero findings and is recorded with its measured survival ratio:** a single-occupant square; an empty square; a bed plus one token, using **the campfire bed specifically** (the bed with the most parts, and the only one whose largest part falls under the floor); a correct two-mover square **containing the agent**, so its square outline is present; a correct four-way square **containing the agent**, the tightest clearance in the design; an E-cell footprint edge crossing an occupied square; and — **added by Revision 21 §R21.2, because it is the control the shipped constant failed** — a **lone agent on bare ground**, which keeps its halo. A correct composition measures **1.000**; per §R20.3 any control reading below 1.000 is **investigated and its cause recorded before it is accepted**, never absorbed by loosening the constant. These ratios form one side of §R20.3's pre-registered gap table, whose other side is the **M-F2 family** at insets `0.005 / 0.010 / 0.020 × cell` (re-registered in Revision 21 §R21.2).
 
 **Value-to-pixel checks:**
 - Bar-fill ink width at 0.0 / 0.5 / 1.0 in ratio 0 : 0.5 : 1 within 2 px.
@@ -1702,6 +1787,7 @@ Each checkpoint states what would show it failed.
   - *2026-09-16 developer, review fix pass:* **frame baseline re-recorded, and the re-record is provably innocuous.** Adding the bush-rule `provenance` field to `run_meta` moved every cell's `run_meta.pkl` hash, so the fixtures were regenerated and `record-frames --force --note` re-run. Old versus new baseline: **all 24 frame hashes identical, all episode payload hashes identical, `frozen_files` unchanged** — only the three `run_meta_sha256` values and a new `frames_note` differ. `check` afterwards: 10 PASS + `FRAMES PASS` ×3, exit 0. Separately, a missing fixture now **fails** this checkpoint's gate (exit 2) instead of passing it silently; see the Phase 0b review fix pass report.
   - *2026-09-16 developer, demonstration-loosening re-record:* **frame baseline re-recorded again, and the control behaved exactly as a control should.** The recording world was loosened in memory (see the Implementation Report "Demonstration loosening"), so `record-frames --force --note` was re-run. **M1 and M2 — whose world did not change — are byte-identical on all 8 frames, all payloads and their `run_meta`; M4, whose world genuinely changed, moved on all 8** (`3da423ec…` → `fd92f8c3…`). `frozen_files`, `user_accepted` and `plan_start_commit` are untouched. `check` afterwards: 10 PASS + `FRAMES PASS` ×3, exit 0.
 - [ ] **CP-G: V1 pipeline untouched (after every phase, 0 through 4).** `v1_path_guard.py check` exits 0. The report pastes the diff stat, the trailer-annotated `git log`, and each frozen file's state. ATTRIBUTED re-records cite the foreign commits. *Fails if:* any file or frame is UNATTRIBUTABLE (only the user clears it, via `accept` for that exact content), a phase commit touches a frozen file, or a `renderer_v2` package/module is created.
+  - *2026-09-16 developer (Phase 2):* **PASS, before and after.** `PASS=10, ACCEPTED=0, ATTRIBUTED=0, UNATTRIBUTABLE=0`, `FRAMES PASS` on M1/M2/M4, `RESULT: OK`, **exit 0**. No frozen file was touched and no `renderer_v2` package exists — now pinned by a test (`test_dashboard_v1_imports.py`) rather than only by the guard, which hashes the *file* and would stay green beside a shadowing package. The new package also never **imports** the frozen renderer, checked in a subprocess with a blindness control, so the frozen renderer's process-global icon cache cannot be primed by a V2 render.
 - [ ] **CP0.2: Matrix recordings.** (Revision 10 check first.)
   - Every generated cell's `config_path` is `configs/environment/default.yaml` or under `configs/environment/experiment/basic/`, and every override value that reproduces an archived world matches the cited archived YAML text.
   - **Loadability is re-tested here, not assumed — through the resolving loader (Revision 12).** `load_env_params(load_env_config(path))` is run on every config the matrix intends to load and the result printed per file. **Raw `yaml.safe_load` is forbidden for this check**: it does not resolve `extends:` and reports inherited mandatory keys as missing (the retracted Revision 11 §2; KNOWN_BUGS "Config inheritance ignored", `22c73bac`). *Fails if:* the check is performed with a non-resolving read. Measured 2026-09-16: `default.yaml` and all seven `basic/*.yaml` load; archived `thermal/campfire_world.yaml` loads; archived `sensory_ladder/V2_blur20.yaml` does not (stand-alone, no `extends:`, missing `body.recovery_in_bush_multiplier`) — which is harmless, as no cell loads it.
@@ -1717,10 +1803,14 @@ Each checkpoint states what would show it failed.
   - *2026-09-16 senior-developer, fix-pass verification:* **MET, and the mutation claim reproduces independently.** The verifier re-ran the flag-everything mutation with its own construction (a pytest plugin patching `FrameProbe.ink` at class level to return `ones_like` of the real mask, rather than the in-suite `monkeypatch`): **10 failed, 28 passed**, the same ten test names the developer reported. The complementary mutation — an `ink()` that sees *nothing* — fails **17**, including the four pixel positive controls, which shows the controls are falsifiable from the other side. The new defect is numbered **D13** in §A2, re-derived from the frozen source's own constants and confirmed in the composite pixels. Full report in the Verification Report below.
 - [ ] **CP0.3b: The audit sees squares (added Revision 17; rewritten Revision 19 §R19.1; controls and floor extended Revision 20).** `cell_overdraw` fires on **five** synthetic mutations — concentric drawing (**M-E**), the bed drawn above the tokens (**M-F1**), the bed drawn above the tokens but inset so a rim survives (**M-F2**, which only the survival floor can catch), the minimap's agent dot above the split wedge (**M-F3**), and the **ground** drawn above the tokens with the figure facecolor set to `CANVAS` (**M-F1g**, Revision 20 §R20.6, which only precondition (c′) can catch) — and is silent on **every** negative control. The per-rule finding counts on the frozen M1 and M4 frames are re-pinned and every rule's count is **unchanged** — `cell_overdraw` cannot run on a frozen V1 frame at all (V1's arena axes is unlabelled), so every control here is a figure the test builds, and this clause asserts the new rule disturbs nothing existing (#62).
   - **Negative controls (Revision 20 §R20.2, §R20.8):** single occupant; empty square; **campfire** bed plus one token (the bed with the most parts, and the only one whose largest part is under the 40 % line); a correct two-mover square **containing the agent**, so its square outline is present; a correct four-way square **containing the agent**, the tightest clearance in the design; and an E-cell footprint edge crossing an occupied square. Each produces **zero findings** and its measured survival ratio is recorded.
-  - **The survival floor is swept, not asserted (Revision 20 §R20.3).** The report carries a **gap table**: the **minimum** survival ratio over every negative control above, and the **maximum** over an **M-F2 family** at insets `0.02 / 0.05 / 0.10 × cell`. `SURVIVAL_MIN = 0.98` must lie between them with margin. Any negative control below **1.000** is investigated and its cause written down before it is accepted.
+  - **The survival floor is swept, not asserted (Revision 20 §R20.3).** The report carries a **gap table**: the **minimum** survival ratio over every negative control above, and the **maximum** over an **M-F2 family** at insets `0.005 / 0.010 / 0.020 × cell` (re-registered from `0.02 / 0.05 / 0.10` in Revision 21 §R21.2, because at the larger insets the shrunken bed stops being classified as a bed and the member stops measuring the floor). `SURVIVAL_MIN = 0.98` must lie between them with margin. Any negative control below **1.000** is investigated and its cause written down before it is accepted.
   - **The cross-Axes order comparator is pinned by pixels (Revision 20 §R20.1).** A two-element figure in two Axes of known zorder is rendered, and the composite colour at the shared pixel must agree with the comparator's verdict in **both** orders.
   - **The bbox-padding optimisation is proved equivalent, not assumed (Revision 20 §R20.7 item 4).** One control is run both with and without the "padded bbox cannot reach this square" skip, and the findings must be identical.
+  - *2026-09-17 developer:* **BUILT AND CALIBRATED, but NOT TICKED — one negative control fails at the constant the plan specifies, and the constant is the plan's to move, not mine.** All **five** mutations fire, each via the rule named for it: **M-E** and **M-F1** and the three-member **M-F2** family via `cell_overdraw`, **M-F1g** via precondition (c′) alone. **Eight of the nine** negative controls are silent at the shipped `CELL_FLOOR_FRACTION = 0.40`; **all nine** are silent at `0.48`. The one that fails is **a lone agent on bare ground**, and it is a defect in §R19.1 step 2 rather than in the painter: the agent keeps its halo on an unshared square (1.32 × its own radius, §R17.3 item 8), so that **correct** token's ink measures **43.76 %** of its square — above the 40 % "this element IS the floor" line — and the occupant is excluded as scenery, leaving 0 components against 1 kind. This is the exact mirror of §R20.8, which fixed the same classifier from the bed side. **Both populations are measured, so the choice is evidence and not argument:** largest correct token **0.4376**, smallest bed **0.5168**, bed floor by construction **0.5184** (already pinned by `test_dashboard_cells.py`). A floor of **0.48** sits **53.5 %** of the way up that gap. The constant is **not** moved here — §R20.3's discipline is that a constant moves in this plan text with its evidence, never in a test to turn a checkpoint green — so the control ships as a `strict` xfail naming the measurement, and **`senior-developer` owns the decision**. The two candidates are: move the floor to 0.48 in §R19.1 step 2, or drop the halo on every square (the painter already drops it whenever the square is shared, Phase 2 deviation 1).
+  - *2026-09-17 developer, the rest of the clause:* **met.** Frozen per-rule counts on V1 M1, V1 M4 and dormant V2 M4 are **unchanged** — the pre-existing pinned-count tests pass untouched, which is what this clause asks (#62). Suite **38 → 66 passed + 1 xfailed**. **Gap table (§R20.3):** minimum over the negative controls **1.000000** (every correct square measures exactly 1.000, including the four-way with the agent, §R20.2's tightest case, which measures 1.000 because `cells.py` pins the outline below the tokens); maximum over the M-F2 family **0.198444**; `SURVIVAL_MIN = 0.98` lies between them. A floor sweep from 0.50 to 1.000 flips **no** verdict on **any** control, so 0.98 is not near a cliff — the nearest boundaries are 0.198 below and 1.000 above. **Two M-F2 members do not measure the floor and are excluded from that maximum with their reason:** insetting the bed shrinks it under the floor test, so it stops being a bed, is read as a token and is caught by the disjointness rule instead — still a failure, but its survival is 1.0 and would poison a table it never measured. **The pre-registered family of three insets is therefore not all reachable as specified** (bed ink share is `(0.72(1−2i))²`: 47.8 % / 42.0 % / 33.2 %), which is a finding about the plan's own numbers. Cross-Axes comparator control: **passes in both orders**, the composite pixel agreeing with the derived rank. Padded-bbox equivalence: **identical findings** both ways. Adjacent slots at 50 px with the real forms: **0 shared pixels**, so §R19.4 item 2's figure holds at the decided square and no keyline change is needed.
+  - *2026-09-17 developer, a defect in the instrument itself, found by these controls:* **every `Collection` artist was silently dropped from the audit's element list, on every frame.** `Collection.get_window_extent` returns an empty bbox `(inf, inf, −inf, −inf)`, which `enumerate_elements` filtered out — and an artist that is not an Element is **never hidden by `FrameProbe._draw`**, so it was painted into every isolated render *including the bare background* and ate the ink of whatever it covered. Measured: the page rectangle's isolated ink came out **665 px short**, exactly the area of the two tokens sitting on it. It matters twice — the redesign draws every bed and token as one `PatchCollection` (§R20.8), so the rule would have measured an arena with nothing standing in it; and the **frozen V1 and dormant-V2 frames carry 17 visible `LineCollection`s each**, whose ink has been contaminating every isolation measurement taken on them since Phase 0c. Fixed with a path-extent fallback; **the frozen counts did not move**, which is the evidence that no existing verdict rested on it. **Not in the Known Bugs registry** (grepped 2026-09-17; rows 117–119 are the renderer's D1–D13 and row 179 is the import-isolation test) — **`bug-curator` owns filing it.**
   - The adjacent-slot control of §R19.4 item 2 is measured at 50 px and its reading pinned.
+  - *2026-09-17 senior-developer, verification:* **everything built in Phase 0d verifies, and the one blocker is now decided — CP0.3b needs one more developer pass before it can be ticked.** Re-derived independently rather than read: **M-F1g is silent with precondition (c′) disabled** (2 kinds → 2 isolated → 2 visible components, survival 1.000/1.000, **zero findings**) and fires via `cell_probe_blind` with it enabled — so the rule's hardest clause is load-bearing and alive, exactly as §R20.6 predicted. The **Collection-enumeration fix is confirmed and so is the claim that nothing moved**: the frozen V1 M4 and M1 frames each carry **17 visible `Collection`s**, the element list goes 305 → 322 (M4) and 204 → 221 (M1), and **every per-rule count is byte-identical before and after** on both frames (checked by neutering the new path-extent fallback and re-running the audit) — so no earlier calibration in this plan rested on the bug. Control suite reproduces at **66 passed, 1 xfailed**. **What remains before the tick:** (a) the floor constant moves to **0.48** per Revision 21 §R21.2 and the `strict` xfail is replaced by a plain negative control; (b) the **M-F2 family is re-registered at insets `0.005 / 0.010 / 0.020`**, because at 0.48 the 0.05 member stops measuring the floor and the gap table would otherwise rest on a single member; (c) the gap table is re-run and re-recorded at the new constant. Nothing else in CP0.3b is outstanding. The Collection defect is **`bug-curator`'s to file** and is not yet in the registry.
   - *Fails if:* the rule fires on any negative control, stays silent on any of the five mutations, the gap table does not straddle 0.98, `SURVIVAL_MIN` is changed in a test rather than in this plan with evidence, the comparator disagrees with the rendered pixels, the padded-bbox skip changes any finding, a correct control measures below 1.000 without an investigation recorded, or any existing rule's count moves. **Stop; the instrument cannot see the defect the redesign exists to prevent.**
 - [ ] **CP0.4: Spike and decision gate (re-specified Revision 19 §R19.3).** A minimal A-style `EpisodeRenderer` versus V1 on M4, ≥ 200 frames (first 5 excluded), pool worker, same lab node (node + CPU model recorded).
   - **Order.** Phase 1 (`layout.py`, `panels.py`, `labels.py` — no Matplotlib) **may be built before this checkpoint**; CP0.4 **must be met or escalated-and-answered before Phase 2** writes a painter. §R18.2 item 8's "Phase 1 must measure the arena painter" is withdrawn — Phase 1 has no painter.
@@ -1731,11 +1821,14 @@ Each checkpoint states what would show it failed.
     - **Arm 3** the arena **Axes** hidden (`set_visible(False)`) — arm 1 − arm 3 is the arena's **update + draw** cost, and arm 3 is the true **non-arena** number. Labelled a synthetic reference: it composes a frame no viewer sees. **If Q22 is ever asked, its option 3 is scored against arm 3**, never arm 2.
   - **The spike's cell code is scratch (Revision 20 §R20.7 item 3).** It lives under `tmp/`, is imported by nothing in `src/`, and does not become `cells.py`. What carries forward is the measurement: the report names which forms the spike drew and the per-square and total artist counts, so Phase 2 can reproduce the cost.
   - **One failure path, pre-registered.** median ≤ 0.5 × V1 → gate met, Q9 untouched, Phase 2 proceeds, **no user question asked**. 0.5× < median ≤ 1.0× → report the split, the counts and **Q22**'s four options to the user and **stop**. median > 1.0× → the hard floor is breached; same report and question, with the Pillow option named as live. *Fails if:* the developer changes the gate, the square size or the stack without the user's answer, or the split and artist counts are not reported.
+  - *2026-09-16 developer:* **still unrun as specified, and Phase 2 was written anyway on the user's explicit instruction — flagged, not absorbed.** An indicative in-container measurement (40 frames, first 5 excluded, same recording, same process — **not** a lab node and **not** a pool worker) gives V1 median **333.0 ms**, V2 median **187.3 ms**, **ratio 0.563**. That is inside the pre-registered `0.5× < median ≤ 1.0×` band, so the response is **report and stop**: nothing was tuned — not the gate, not the square size, not the stack. The three-arm split is the informative part: arena Axes hidden gives 176.1 ms, so the arena is **11.2 ms of a 187 ms frame** (~6 %), with 1045 visible artists of which **178** are the arena's. **The four-fold arena growth Q22 was opened about is not what is costing the time** — the text-heavy cards are — which bears directly on Q22 option 3.
+  - *2026-09-17 user decision, recorded by senior-developer:* **Q22 is answered — the gate is treated as MET IN SUBSTANCE at 0.563×, and Q9's `≤ 0.5 ×` is superseded by this measurement.** The reasoning and the numbers that make it defensible are in **Revision 21 §R21.1**: 1.78× faster than the renderer training uses, the miss is ~21 ms, and the arena — the thing that grew four-fold and the reason the gate was ever questioned — is **11.2 ms of 187 ms (~6 %)**. No option from Q22's table is adopted; nothing was tuned, re-authored or re-stacked. **CP0.4 is NOT waived**: the lab-node, pool-worker, ≥ 200-frame measurement is still owed and is folded into CP4. What this decision settles is the *response to the band*, so Phase 2 is no longer gated on it. Re-opened if CP4 shows V2 slower than V1 on any cell, or the arena's share rises above ~25 % of frame time.
 - [x] **CP1: Registry and packer.** `test_dashboard_layout.py` is green. *Fails if:* boxes intersect; a disabled modality's height isn't freed; an unregistered name doesn't raise; M4 yields observed Nutrition/Injury rows; `real_available` differs between episodes of one run.
   - *2026-09-16 developer:* **MET — 98 tests pass.** Each of the three named failure conditions was shown to be detectable rather than assumed: a packer mutated to overlap its columns **and** to skip its own overlap check turns **16 tests red** (`test_no_two_cards_share_a_pixel` on all 8 contexts, `test_every_maintained_config_packs_and_is_complete` on all 8 configs), because those tests recompute the pairwise overlap themselves instead of trusting `pack()`. CP-G re-run after implementation: 10/10 PASS + FRAMES PASS ×3, exit 0. **Two things for `senior-developer`:** the heights of the spectrum-smell and range-0 vision pods are pinned nowhere in this plan, and the maintained campfire world (M4) is the binding case that decides them; and `tests/env/test_dashboard_v1_imports.py`, listed in the Phase 1 File Changes rows, is deferred to Phase 2 with a reason. See the Phase 1 Implementation Report.
   - *2026-09-16 senior-developer:* **MET on its own five failure conditions, with one blocker outside them.** All three named conditions were re-shown catchable by the verifier's own mutations (16 / 8 / 4 tests red respectively), the 98 tests reproduce, the pod budget and the band rule were re-derived independently, and CP-G re-run is 10/10 PASS + FRAMES PASS ×3, exit 0. **Blocking the Phase 1 commit, not CP1 itself:** the full `tests/env` run is **red** — Phase 1's new package makes the Phase 0 test `test_render_audit_controls.py::test_audit_imports_neither_layout_nor_registry` fail whenever `test_dashboard_layout.py` runs first in the same process. Fix belongs to the Phase 0 test. §D1.1 and §D7.1 corrected. Full report below.
   - *2026-09-16 developer (CP1 fix-up):* **Blocker cleared; the suite is green.** The Phase 0 leak check now runs in a **subprocess** — the assertion itself is unchanged and still demands an empty list, and it was shown to still bite by making the audit really import the package (test goes red, then green again on a byte-identical revert). Full `tests/env`: **546 passed, 0 failed** (`-m "not integration"`; was 1 failed / 540 passed) and **572 passed, 0 failed** unfiltered. The two minor findings landed with it: the box-equality exemption is **removed** from `_validate` and from the test helper rather than re-keyed, and `03-random_init_10x10_ckpt1k.yaml` joins `MAINTAINED` (**nine** configs now pack). CP-G re-run: 10/10 PASS + FRAMES PASS ×3, exit 0. See the CP1 Fix-Up Report below.
 - [ ] **CP2.1: Audit clean.** All cells' checked frames: 0 collisions (text-on-border included), 0 clipped text, legibility met, presence met. The stress variant renders clean or raises; no ellipsised number. *Fails if:* any count is non-zero, or "…" appears in a numeric element.
+  - *2026-09-16 developer:* **partially demonstrated — two frames of one cell, not the matrix.** On M4 (steps 0 and 32, real fixture recording): `text_over_text` **0**, `text_over_border` **0**, `clipped` **0**, `out_of_card` **0**, `out_of_canvas` **0**, `panel_absent` **0**, `observed_caption` **0**, `numeric_in_arena` **0**. The only non-zero rule is `text_over_fill` (16 / 15), every instance a label inside **its own** widget — the class the audit's docstring calls legible by design and the Correction Report leaves to CP0.3b. The audit found two defects the eye missed (a pod titled "Vision" that the title table cannot map, and a column head beginning `OBS`); both fixed, the second by renaming the head — see Phase 2 Implementation Report deviation 4. The audit was driven through a scratch harness because `render_capture` cannot name this renderer; **no audit file was edited**. 45.2 s per audited frame at ~710 elements.
 - [ ] **CP2.2: Mutations.** M-A, M-B, M-C and M-D each make the audit fail. *Fails if:* any mutation passes.
 - [ ] **CP2.3: Values match pixels.** Bar ratio and tick x within 2 px; thermal ports green; per-frame clim mutation turns the cooling test red. *Fails if:* a tolerance is exceeded or the mutation stays green.
 - [ ] **CP2.4: Vocabulary.** `grep -rniw 'pain' src/environment/dashboard/` shows zero hits (comments included; keep them clean too), and the audit's vocabulary rule is clean on all frames. *Fails if:* any hit.
@@ -1747,7 +1840,7 @@ Each checkpoint states what would show it failed.
     - M6b (noise on, no true observations): `true not recorded`;
     - M1 (disabled): no row.
   - **Label:** the column is labelled `noise-free` on that row, never `true`. *Fails if:* a row lacks the true column, or an unobserved row prints a number in the observed column. On M4, no rendered text starting `OBS`/`REAL` belongs to a panel whose name is absent from the breakdown. With Q10 = show, the Nutrition/Injury rows read "not observed". *Fails if:* either condition is violated.
-- [ ] **CP2.6: Entities drawn.** On M4, a step with the campfire in view shows non-empty foreground ink in its square, and glyph codes are unique across `obstacle_names`. **Revision 19 (#58):** the campfire is a **drawn bed**, not a raster icon, so the clause "that ink belongs to an `AxesImage`" is withdrawn and replaced by: the campfire's ink is present, is classified as a **bed** by the ≥ 40 % square-area test, and is not the `CF` glyph fallback. *Fails if:* the square is empty, the ink classifies as a token rather than a bed, the glyph fallback was used for a terrain that has a bed form, or codes collide. **Revision 17:** a *shared* square must additionally show ink for every distinct kind its snapshot places there — the campfire's bed and any token standing on it are both checked, and per §R19.1 the token's ink must **survive** the bed.
+- [ ] **CP2.6: Entities drawn.** On M4, a step with the campfire in view shows non-empty foreground ink in its square, and glyph codes are unique across `obstacle_names`. **Revision 19 (#58):** the campfire is a **drawn bed**, not a raster icon, so the clause "that ink belongs to an `AxesImage`" is withdrawn and replaced by: the campfire's ink is present, is classified as a **bed** by the square-area test (**≥ 48 % since Revision 21 §R21.2**; 40 % as first written), and is not the `CF` glyph fallback. *Fails if:* the square is empty, the ink classifies as a token rather than a bed, the glyph fallback was used for a terrain that has a bed form, or codes collide. **Revision 17:** a *shared* square must additionally show ink for every distinct kind its snapshot places there — the campfire's bed and any token standing on it are both checked, and per §R19.1 the token's ink must **survive** the bed.
 - [ ] **CP2.7: Extended-range senses.** (Unblocked 2026-09-14: Q5 answered, so Proprioception is drawn as `action_chips`.) `test_dashboard_extended_range.py` green for the decided encoding, A `channel_maps` (r ≥ 1), including:
   - E2n with and without true observations;
   - identical boxes across two episodes with different maxima;
@@ -1755,6 +1848,10 @@ Each checkpoint states what would show it failed.
   - E6's channel label not `GRS`;
   - r_max recorded only after a rendered, audited override, with machine and fonts named. Largest fitting radius per kind recorded in the report and in `12_renderer.md`. E2–E6 take the sensor-band layout if and only if the side column fails its min size. *Fails if:* any in-use cell (E1–E6) raises; any synthetic cell renders past the recorded largest radius instead of raising; a value above 1 is clipped by the scale; or a concatenated video switches layout.
 - [ ] **CP2.8: Shared squares render every occupant (added Revision 17).** On every matrix cell, each checked frame containing a shared square passes `cell_overdraw` (0 findings). All five archetypes — agent on terrain, two movers, three-way, four-way, resource on terrain — are rendered and **looked at** at full size, each either found in a real episode or drawn from a labelled synthetic snapshot. Mutations **M-E** (all occupants forced to the square's centre) and **M-F1 / M-F1g / M-F2 / M-F3** (bed drawn above the tokens; **ground** drawn above the tokens with the figure facecolor set to `CANVAS`, Revision 20 §R20.6; the bed inset so only a rim survives; the minimap's agent dot above the split wedge) each fail the audit on the **real** painter, not only on the Phase 0d synthetic figure. **Sample size (Revision 20 §R20.7 item 4):** `cell_overdraw` runs on **at most two frames per matrix cell** — one archetype-rich frame plus step 0 — because isolation is N+1 renders and a 100-square arena carries several hundred visible elements; archetype coverage is carried by the Phase 0d synthetic controls. The test carries the `integration` marker and the report states the measured wall-clock per audited frame with the machine. The minimap's shared-square caption is present on every frame whose snapshot contains a shared square, and the occupancy rim pip shares no pixel with the hiding-predator identity pip. *Fails if:* an archetype is neither found nor synthesised-and-labelled, any finding count is non-zero, any of M-E / M-F1 / **M-F1g** / M-F2 / M-F3 passes, the caption is missing, or nobody looked.
+  - *2026-09-17 developer (Phase 0d):* **the instrument now exists, and on the two real frames it reports ZERO `cell_overdraw` findings — but CP2.8 as written is still NOT met.** What is now measured, by the instrument rather than by hand, on `M4` episode 1 steps 0 and 32: **0 cell findings at both the shipped floor (0.40) and the candidate (0.48)**; every occupant measures **1.0000**; the two-occupant square **(5,1) `agent + food`** measures **2 kinds → 2 isolated components → 2 visible components → 1.0000 / 1.0000**; `(3,5) `neutral + rock`` and `(4,3) `agent + bush`` each measure **1.0000** over a bed. **It reproduces Phase 2's hand measurement exactly and independently, and there is NO disagreement:** bed ink **53.44 %** (bush) and **51.68 %** (rock) against the hand-measured 53.4 % and 51.7 %, and token survival 100.0 % against 100.0 %. The audit derives its occupancy from the recorded snapshot itself, and that ground truth was checked against the renderer's own `occupancy_of` — **they agree on every square of both frames**, which is what makes this an independent reproduction rather than the same computation run twice. `text_over_fill` reads **16 / 15**, matching Phase 2's report. **Cost: 46.5 s and 46.3 s per audited frame at 735 / 737 elements** on this container (Phase 2 measured 45.2 s at 708–710), so adding the rule did not change the per-frame cost materially — the number CP2.8 asks to be stated for sizing its sample.
+  - *2026-09-17 developer, why CP2.8 still does not close.* Four of its clauses are untouched by this phase, and none of them is the instrument's fault: (1) **the mutations were not run against the real painter** — M-E / M-F1 / M-F1g / M-F2 / M-F3 all fail on the Phase 0d synthetic figures, but CP2.8 requires them to fail "on the **real** painter, not only on the Phase 0d synthetic figure"; (2) **two archetypes of five** appear in these frames (agent on terrain, two movers) — the three-way and four-way were not reached and were not synthesised; (3) **one matrix cell**, not every cell; (4) **nobody looked** at the frames at full size in this phase. **And the minimap clause cannot be assessed at all yet:** the rule divides the *named axes* into world squares, which is exact for the arena — whose axes **is** the grid — and wrong for the World map, whose axes is the **whole card** with the grid inset below its title and above its caption. Pointed at it, the census samples card background and finds nothing in **9 of 9** colour-bearing squares; rather than emit nine confident wrong "this dot was painted over" verdicts it emits **one** `minimap_grid_unaligned` and reports nothing else. **The cheap fix is a painter change that mirrors what the arena already does** — give the map grid its own labelled Axes inside the card, exactly as `arena_card` / `arena` are split — and it is `senior-developer`'s call. The **shared-square caption check does work** and is silent on step 32, which holds a shared square.
+  - *2026-09-16 developer:* **CANNOT BE MET TODAY — the instrument does not exist.** `scripts/eval/render_layout_audit.py` contains no `cell_overdraw` and no `SURVIVAL_MIN`; **CP0.3b is unticked** and Phase 0d was never built. No partial version of the rule was written, deliberately: a half-built instrument that passes is worse than none. The substance was instead **measured by hand in scratch**, by §R19.1's own method (isolated ink per artist, then the pixels no later-drawn artist covers), on the real M4 frames: square (4,3) `agent + bush` — bed ink 53.4 % of the square, bed survives 55.1 %, **agent token survives 100.0 %**; (3,5) `neutral + rock` — 51.7 %, 60.5 %, **100.0 %**; (5,1) `agent + food` — **100.0 % / 100.0 %**. Every bed clears the 40 % line that classifies it as floor, and every occupant measures the 1.000 a correct composition must. Three of the five archetypes (agent on terrain, two movers, resource-adjacent) were found in real episodes; the three- and four-way were not reached and were not synthesised. **This is evidence, not the instrument, and it does not close CP2.8.**
+  - *2026-09-17 senior-developer, verification:* **the developer's list of what is still missing is complete, not generous to itself — and one item is added.** Confirmed against the checkpoint's own clauses: the five mutations ran only on the Phase 0d synthetic figures and **not on the real painter**; **two archetypes of five** are covered (agent on terrain, two movers) with the three-way and four-way neither found nor synthesised-and-labelled; **one matrix cell** (M4) of nine; and the World map's clause cannot be assessed because the rule divides the *named axes* into squares and the map's axes is the whole card. **The "nobody looked" item is now discharged for these two frames** — the verifier looked at `M4_ep1_step000.png` and `M4_ep1_step032.png` at full size: square (4,3) shows a green bush plate with the agent standing on it inside its indigo square outline; (5,1) shows the agent and a piece of food **side by side** in one square; (3,5) shows the rabbit on a grey rock plate. That is the redesign's whole claim, visible rather than inferred. **Added to the list:** the **occupancy rim pip vs. hiding-predator identity pip** clause has no coverage at all, because the minimap painter has not reached rim pips. **So CP2.8 still needs:** the five mutations against the real painter; the three-way and four-way archetypes rendered and looked at (synthesised and labelled if no episode reaches them); the remaining eight matrix cells at ≤ 2 frames each; a **grid-only Axes for the World map** (a painter change mirroring the existing `arena_card` / `arena` split — approved here as the fix, and it is small); and the two-pip disjointness check once rim pips exist. At **46 s per audited frame**, the full matrix is ~14 minutes of audit — cheap enough that the sample size is not the obstacle.
 - [ ] **CP3: Separate V2 entry point.** `render_recordings_v2.py --concat` writes playable MP4s (frame count = steps) for all cells including M7–M9, only under `videos_v2/`. The concat signature assertion holds on real runs and trips on the doctored dir. `test_render_recordings_v2.py` is green (V1 MP4 bytes unchanged after a V2 render of the same dir). CP-G passes. *Fails if:* any file appears or changes under `videos/`, the assertion trips on a real single-run dir, or CP-G fails.
 - [ ] **CP4: Speed.** Same node as CP0.4: V2 median ≤ V1 median on every cell and ≤ 0.5 × on M4; RSS growth < 50 MB over 10 episodes; FDs reported. *Fails if:* any gate is missed.
 - [ ] **CP5: Viewer.** `test_episode_viewer.py` is green; `check_artifact_layout.py` is clean at 500/834/1440; screenshots and the contact sheet are **looked at**, with findings in the report. *Fails if:* arrays differ, the checker flags a defect, or nobody looked.
@@ -1785,7 +1882,7 @@ Numbers are kept so earlier references stay valid.
 - **Q3 (decided 2026-09-14): canvas 1440 × 896 px.**
 - **Q5 (decided 2026-09-14): draw a Proprioception panel**, six chips with the previous action highlighted in the agent colour; unblocks the E cells and M5.
 - **Q7 (decided 2026-09-14): local server viewer only**; no static export.
-- **Q9 (decided 2026-09-14): speed gate.** Median frame time on the campfire world ≤ half of V1's, and not slower than V1 on any other world; same lab node, frames and worker type.
+- **Q9 (decided 2026-09-14; the `≤ 0.5 ×` half SUPERSEDED 2026-09-17 by the measured result, see Q22 and Revision 21 §R21.1): speed gate.** Median frame time on the campfire world ≤ half of V1's, and not slower than V1 on any other world; same lab node, frames and worker type. **The `≤ 0.5 ×` clause is retired**: measured at **0.563 ×** (V1 333.0 ms, V2 187.3 ms — 1.78× faster), with the arena that the gate was written to guard against costing only 11.2 ms of 187 ms (~6 %). The user accepted the gate as met in substance. **The "never slower than V1 anywhere" clause is NOT retired** — it is the absolute floor protecting training-time rendering, and CP4 still measures it on every cell.
 - **Q11 (closed 2026-09-14, moot):** "Hiding predator" is written in full.
 - **Q13 range confirmation = Q14 (decided 2026-09-14):** option A maps from range 1; bars only at range 0.
 - **Q15 (decided 2026-09-14): clamp and outline** for any temperature outside the episode range; no raise.
@@ -1804,6 +1901,8 @@ Numbers are kept so earlier references stay valid.
 - **Q19 (decided 2026-09-16; ~~48 px~~ → superseded by Q20's answer, Revision 18): the arena square.** Originally recorded as **48 px**, with an accepted 1–2 px shortfall against variant H's measured legibility floors. **Superseded 2026-09-16 by Revision 18: the square is 50 px** (`ARENA_CELL_PX = ARENA_CELL_MIN_PX = 50`), which clears both floors (49 px for two movers, 50 px for the four-way), so the accepted cost no longer exists (§R18.3, §R18.4). The "up from today's 28 px" comparison in the original wording was wrong: 28 px is the *World map*'s square, not the grid view's, which is 96 px today — my error, corrected to the user before they answered Q20.
 - **Q20 (decided 2026-09-16, Revision 18): the grid view shows the WHOLE world, at a 50 px square.** Asked because "a 48 px grid cell, up from today's 28 px" named two different panels' numbers. Given the corrected picture — the grid view's square is 96 px today, the World map's is ~28 px — the user chose: **the grid view draws the entire 10 × 10 world with 50 px squares** (centre card 564 × 564 px, right column 476 px against its 440 px minimum, sensor band 236 px against its 200 px minimum). There is **no 5×5 window**, so nothing pans and nothing centres on the agent. The World map keeps its ~23–29 px squares and the coded encoding of §R17.4. Arithmetic re-derived from Figure 3's own code in §R18.1; the consequences of removing the window are in §R18.2. Not re-opened.
 
+- **Q22 (opened 2026-09-16 Revision 19; DECIDED by the user 2026-09-17): the speed gate counts as met in substance at 0.563 ×, and none of the four options is adopted.** The new renderer draws a frame in **187.3 ms** against the production renderer's **333.0 ms** — **1.78× faster** — while the pre-registered target was half the time (≈167 ms), so it misses by about **21 ms**. The three-arm split shows the big world-grid panel, whose four-fold growth was the entire reason Q22 was opened, costs **11.2 ms of 187 ms (~6 %)**; the text-heavy cards are the rest. The user chose to record that rather than block on 21 ms or re-author every painter in a second toolkit against the wrong 6 %. Q9's `≤ 0.5 ×` clause is superseded by this measurement; Q9's "never slower than V1" floor stands untouched. **CP0.4's lab-node measurement is still owed** and is folded into CP4, and the acceptance re-opens if CP4 shows V2 slower than V1 on any cell or the arena's share of the frame rises above ~25 %. Full reasoning and the arm table: Revision 21 §R21.1. Not re-opened.
+
 ## Open questions for the user
 
 **Q21 (opened 2026-09-16, Revision 18): now that the grid view shows the whole world, does the small World map still earn its place in the left column?** The World map exists to give global context while the grid view shows a local patch. With the grid view drawing the entire world, the two panels show **the same extent** — the World map becomes a smaller, colour-coded copy of a picture already on screen, and §R17.4's split dots and rim pips exist to make that copy readable at ~24–29 px per square.
@@ -1813,7 +1912,9 @@ Numbers are kept so earlier references stay valid.
 - **Recommendation, if one is wanted:** keep it for now and look at a rendered frame at Phase 2's CP-D, where "does this read as a duplicate?" is a question a picture answers and arithmetic does not.
 - **Phase 1's working assumption, recorded (Revision 19, #61): keep the World map, `LEFT_W = 320`.** Every pinned number in §R18.1 — the 564 px card, the 476 px right column, the 236 px band — rests on it. Deferring Q21 is safe only while that is written down, because "drop it and narrow the column" would move all three and would waste Phase 0d's minimap control and Phase 2's split-dot work. **Q21 must be answered before Phase 2 starts the minimap**, not before Phase 1.
 
-**Q22 (opened 2026-09-16, Revision 19; CONDITIONAL — asked only if CP0.4 misses): how should the speed target be read now that the grid panel draws four times as much?** Q9 set the target at "median frame time on the campfire world ≤ half of V1's, and never slower than V1 anywhere". That was agreed when the panel drew a 5×5 window — 25 plain squares. The decided panel draws **100** squares, each with a ground, possibly a terrain bed, and up to four drawn tokens. The half-the-time target was a proxy for the *architecture* paying off (V1 rebuilds its whole figure every frame; the new one builds once and updates), and with four times the content on one side of the comparison and not the other, a miss no longer tells us whether the architecture failed or whether we are simply drawing more. **This question is not asked at all if CP0.4 meets 0.5×.** If it misses, the four options:
+> **Q22 is CLOSED (user decision, 2026-09-17): the gate is met in substance at 0.563 ×, and no option below is adopted.** It was asked, because the measurement landed in the `0.5× < median ≤ 1.0×` band. The decision and its evidence are in the **Decided questions** list above and in **Revision 21 §R21.1**; the table below is kept for the reasoning that produced the answer.
+
+**Q22 (opened 2026-09-16, Revision 19; CONDITIONAL — asked only if CP0.4 misses; ~~open~~ **ANSWERED 2026-09-17**): how should the speed target be read now that the grid panel draws four times as much?** Q9 set the target at "median frame time on the campfire world ≤ half of V1's, and never slower than V1 anywhere". That was agreed when the panel drew a 5×5 window — 25 plain squares. The decided panel draws **100** squares, each with a ground, possibly a terrain bed, and up to four drawn tokens. The half-the-time target was a proxy for the *architecture* paying off (V1 rebuilds its whole figure every frame; the new one builds once and updates), and with four times the content on one side of the comparison and not the other, a miss no longer tells us whether the architecture failed or whether we are simply drawing more. **This question is not asked at all if CP0.4 meets 0.5×.** If it misses, the four options:
 
 | | Option | What it costs |
 |---|---|---|
@@ -3374,3 +3475,591 @@ the class is worth recording, `bug-curator` owns that call.
   budget (16 px spare in the two binding worlds) carries into Phase 2 per §D1.1.
 
 Implemented by: developer
+
+---
+
+## Implementation Report — Phase 2 (first complete frame): the painters, the square composition and the episode renderer (2026-09-16)
+
+> **Implemented by**: developer
+
+### What this is, in plain words
+
+The dashboard now draws. Phase 1 built the part that decides *where* each panel
+goes; this phase builds the part that puts ink in those boxes, and it ends with a
+complete 1440 × 896 frame of the campfire world rendered from a real recording.
+
+The defect it exists to remove is specific. A square of the world can hold more
+than one thing at once, and the old renderer drew every occupant on the same
+centre point, so one covered the other: **an agent standing in a bush rendered as
+an agent alone**. The fix the user chose (variant H) stops treating terrain as a
+picture in the middle of the square and makes it the square's **floor** — a bush,
+rock, tree or campfire is ground cover filling the square, and the occupants
+stand on it. Because the floor costs the occupants no room, a lone agent on a
+bush is drawn at exactly the size it would be on empty ground, and two occupants
+stand side by side in a band across the middle.
+
+That is not asserted here, it is measured. On the rendered campfire frame, the
+square holding the agent **and** a bush now shows both: the bush keeps 55 % of
+its own ink and the agent keeps **100 %** of its own. On a later step, a square
+holding the agent and a piece of food shows two separate drawings, each keeping
+**100 %**, and a rabbit standing on a rock keeps 100 % while the rock keeps 60 %.
+
+### Files changed
+
+| File | What it does |
+|---|---|
+| `src/environment/dashboard/cells.py` (new) | The composition of one square: `CELL_PRIORITY`, `BED_MARGIN`, the slot packer, the bed forms, the companion token forms, the identifying-mark fractions, the chevron floor, and the pinned depths (bed < token, square outline < token, footprint < token). All vector primitives; no raster. |
+| `src/environment/dashboard/painters.py` (new) | One painter per visual **kind** — header, the merged vitals card, the World map, the arena, the action pill, action chips, a spectrum, an intensity pod, cross bars, channel bars, the thermoception diamond with the frame's one shared temperature legend, a text row. Each builds its artists once and returns an update callable. |
+| `src/environment/dashboard/episode.py` (new) | `EpisodeRenderer` (setup / `frame` / `close` / `layout_signature`), `render_dashboard_frame`, the recording→frame adapter, and `occupancy_of` (which square holds which **kinds**). |
+| `src/environment/dashboard/palette.py` (new) | The named colour tokens and the colour → meaning map CP-C will read. Pins `FIGURE_FACECOLOR` white, deliberately **not** `CANVAS` (§R20.6). |
+| `src/environment/dashboard/thermal.py` (new) | The episode-anchored temperature scale (Q17), **copied** from the approved sketch rather than imported from the frozen renderer, whose scale is a different design. |
+| `src/environment/dashboard/style.py` (new) | Type roles, the vendored font loader, and the two drawing primitives. The px→pt conversion lives here once. |
+| `src/environment/dashboard/text_fit.py` (new) | `fit_text`: numeric text raises at the legibility floor, free text (the header only) ellipsises and logs. |
+| `src/environment/dashboard/__init__.py` | The two drawing-side names are exported **lazily** (see deviation 6). |
+| `tests/env/test_dashboard_cells.py` (new) | 20 tests: the pinned slot geometry, both square floors re-derived, the tables, the depth pins, the one-artist bed rule. |
+| `tests/env/test_dashboard_v1_imports.py` (new) | 7 tests: the frozen helpers' signatures, the diamond-offset order, and — in a subprocess, with a blindness check — that this package never imports the frozen renderer. |
+| `tests/env/test_dashboard_layout.py` | +1 test pinning the campfire world's right-column budget (800 of 816 px), which §D1.1 requires of Phase 2. |
+
+### The frame, and what is in it
+
+`M4` (the maintained campfire thermal world), episode 2, rendered from the real
+fixture recording. Layout: `step=whole_world`, 10 × 10 squares at **50 px**, so
+the arena's drawing box is exactly 500 × 500 inside a 564 × 564 card — the
+geometry Phase 1 pinned, reached by a real config rather than a synthetic one.
+
+Two frames were rendered and **looked at** at full size:
+
+* **step 0** — contains the archetype this design exists for: square (4,3) holds
+  `agent + bush`.
+* **step 32** — contains two shared squares: (5,1) `agent + food` (two occupants
+  in slots) and (3,5) `neutral + rock` (a token standing on a bed).
+
+Written to `tmp/20260916_dashboard_frames/`. They are scratch, not committed.
+
+### Test results
+
+| Command | Result |
+|---|---|
+| `pytest tests/env/test_dashboard_cells.py -q` | **20 passed** |
+| `pytest tests/env/test_dashboard_v1_imports.py -q` | **7 passed** |
+| `pytest tests/env/test_dashboard_layout.py -q` | **104 passed** (was 103; +1 budget test) |
+| `pytest tests/env -m "not integration" -q` | **574 passed**, 377 skipped, 26 deselected (was 546 — exactly +28, the new tests) |
+| `pytest tests/env -q` | **600 passed**, 377 skipped (was 572 — the same +28) |
+| `scripts/eval/v1_path_guard.py check` | **PASS=10**, ACCEPTED=0, ATTRIBUTED=0, UNATTRIBUTABLE=0, **FRAMES PASS ×3** (M1/M2/M4), `RESULT: OK`, **exit 0** — run before and after |
+
+One pin earned its keep immediately: `test_sensor_helpers_keep_their_signatures`
+failed on first run because I had typed `get_observation_breakdown`'s signature
+from memory instead of measuring it (it carries a type annotation). That is the
+test doing its job on its author.
+
+### The audit, run on the rendered frames
+
+The audit cannot name this renderer — `render_capture` knows `v1` and the dormant
+`v2` only — so a scratch harness hands it the frame already rendered and lets
+**every rule run unchanged**. The audit file itself was not edited: it is a
+plan-owned Phase 0 artefact whose isolation from the renderer package is under
+test, and a `--renderer dashboard` arm is a change `senior-developer` should
+schedule, not one to slip in here.
+
+| Rule | step 0 | step 32 |
+|---|---|---|
+| `text_over_text` | **0** | **0** |
+| `text_over_border` | **0** | **0** |
+| `clipped` | **0** | **0** |
+| `out_of_card` | **0** | **0** |
+| `out_of_canvas` | **0** | **0** |
+| `panel_absent` | **0** | **0** |
+| `observed_caption` | **0** | **0** |
+| `numeric_in_arena` | **0** | **0** |
+| `text_over_fill` | 16 | 15 |
+
+Every `text_over_fill` is a label drawn inside **its own** widget — an action
+chip, a collision letter, a thermoception cell's number, the action pill — which
+is the class the audit's own docstring describes as legible by design and
+explicitly not one of its calibrated controls. Per the Correction Report's
+recorded position, that class belongs to **CP0.3b** and is not tightened here.
+
+**The audit found two defects I had not seen by eye**, which is the argument for
+running it rather than looking:
+
+1. `panel_absent: Visual` — I had titled the vision pod "Vision". The audit reads
+   panel titles against a fixed table of breakdown names, so a synonym makes a
+   panel that is plainly on screen report as missing. Fixed by titling it
+   `Visual`, the breakdown's own word.
+2. `observed_caption` on the word **"Observed"** — the vitals column head begins
+   with `OBS`, and the rule requires any such text to belong to a panel whose
+   modality is in the observation. A column head spanning five rows belongs to no
+   single modality, so it can never satisfy that rule. See deviation 4.
+
+It also caught both defects I *had* seen (the arena title printing through the
+action pill, and the World map's caption crossing its own card edge), at the
+pixel, with coordinates.
+
+**Cost:** 45.2 s per audited frame at 708–710 elements, on this container. That
+is the number CP2.8 asks to be stated for sizing its sample.
+
+### Speed check — measured, and it lands in the plan's report-and-stop band
+
+Same recording, same process, 40 frames with the first 5 excluded, on this
+container (not a lab node, not a pool worker).
+
+| | median | p95 |
+|---|---|---|
+| **V1** (production renderer) | **333.0 ms** | 505.8 ms |
+| **V2** (this renderer) | **187.3 ms** | 202.1 ms |
+| V2, arena Axes hidden (arm 3) | 176.1 ms | — |
+
+**Ratio V2/V1 = 0.563.** Command:
+`python tmp/20260916_2345_render_m4.py bench --cell M4 --episode 1 --frames 35`.
+
+Three things follow, and none of them is mine to act on:
+
+* The **hard floor holds comfortably** — the new renderer is 1.78× faster than
+  the one training uses, so nothing regresses.
+* The **0.5× gate on M4 is missed**, at 0.563×. §R19.3 pre-registers exactly this
+  band (`0.5× < median ≤ 1.0×`): *report the split and the artist counts, ask
+  **Q22**, and stop.* I have changed nothing — not the gate, not the square size,
+  not the stack.
+* The **split says the arena is not the cost.** Arm 1 − arm 3 = **11.2 ms** of a
+  187 ms frame. With 1045 visible artists of which **178** are the arena's, the
+  100-square arena is ~6 % of the frame; the remainder is the text-heavy cards.
+  That matters for Q22, because option 3 ("hold 0.5× against the non-arena part")
+  would be scored against a number that is almost the whole frame — the four-fold
+  arena growth Q22 was opened about is **not** what is costing the time here.
+
+**This is not CP0.4.** CP0.4 requires a lab node, a `ProcessPoolExecutor` worker,
+≥ 200 frames, and the node and CPU model recorded. This is an indicative
+in-container measurement. CP0.4 remains unrun — see Gates below.
+
+### Deviations from the plan — none silent
+
+1. **The agent's halo is dropped whenever the square holds anything else,
+   including a bed — not only when `n ≥ 2` (§R17.3 item 8).** This is the one
+   change that decides whether the phase's own goal is met. Measured: a lone
+   agent's halo reaches `0.396 × cell` from the centre while the bed spans
+   `0.72 × cell`, i.e. `0.36 × cell` from the centre. The halo is therefore
+   **wider than the entire floor beneath it**, so under the literal rule (`n = 1`,
+   because terrain does not count as an occupant) "agent in a bush" still
+   rendered as an agent alone — the defect, not the fix. I verified this on a
+   rendered frame before changing it. On a genuinely empty square the halo is
+   kept: there it covers only bare ground and it makes the agent easy to find.
+   **§R17.3 item 8 should be amended to "shared with any occupant or a bed".**
+2. **Beds are a full-bleed plate with the terrain's texture on it, not the design
+   mock's silhouettes.** §R20.8 requires a bed to be **one artist** whose ink the
+   audit's ≥ 40 %-of-square test classifies as floor. The mock's bed forms are
+   partial silhouettes: measured on the plate geometry they cover roughly 28–36 %
+   for rock and tree, i.e. **under the line**, so ported as-is they would be
+   counted as *occupants* and `cell_overdraw` would fire on a correct painter.
+   The plan's own words for a bed are "drawn full-bleed, inset by `BED_MARGIN` on
+   every side" (§R17.3 item 2), and that is what is implemented: `0.72²` = 51.8 %
+   by construction. Measured on the real frame: **53.4 %** (bush) and **51.7 %**
+   (rock) of the square. A test pins the plate fraction above 0.40.
+3. **A bed is one artist and so is a token — and the token's keyline travels
+   inside it.** Beds for §R20.8. Tokens because §R20.7 item 1 adds a failing
+   guard for ink sitting on the perimeter of its own bounding box: a white
+   keyline drawn as its own artist is exactly that shape, and would either be
+   excluded from the count or reported as `outline_like_token`. Carried inside
+   its token's compound form, it cannot be either. It also cuts the artist count:
+   178 arena artists rather than the ~4,500 Figure 3's per-name glyph pool implies.
+4. **The vitals column head reads "Sensed", not "Observed".** The audit rules
+   that any rendered text beginning `OBS` must belong to a panel whose modality
+   is in the observation — a rule that exists to catch a *value* captioned as
+   observed when it is not (the live defect D10). A column head spanning five
+   rows belongs to no single modality and can never satisfy it. The word is not
+   load-bearing here: what carries the meaning is the per-row **"not observed"**
+   text, which is unchanged and which the rule requires. **For
+   `senior-developer`:** either §D5.2 item 7 should be scoped to value captions,
+   or the head keeps a different word. I took the second, reversibly.
+5. **The arena is two Axes** — the card's chrome (title, action pill) and the
+   grid itself, labelled `arena`. The "no numbers inside the grid view" rule
+   measures against the named Axes' extent, and the card's title legitimately
+   reads "whole 10 × 10 world"; with one Axes that title would be a violation of
+   a rule it does not break.
+6. **`__init__.py` exports `EpisodeRenderer` and `render_dashboard_frame`
+   lazily.** The Phase 1 File Changes row asks for them to be exported; a Phase 1
+   test pins that a bare `import src.environment.dashboard` pulls in no
+   Matplotlib. Both hold: a module-level `__getattr__` resolves the two names on
+   first use.
+7. **Painters are built in the closure style of Figure 3** (`build_*` draws once
+   and returns an update callable) rather than as painter classes with
+   `build`/`update` methods. Figure 3 is the canonical reference and this is its
+   own shape; the interface obligation — build once, update per step — is met.
+8. **The World map's square is 19.6 px, below the ~23–29 px §R17.2 quotes.** The
+   shared-square caption §R17.4 requires is reserved out of the map's own size
+   rather than drawn wherever it lands, because a caption falling off its card is
+   a layout defect (the audit caught exactly that on my first frame). Two lines
+   at 12 px cost the map ~4 px per square. Worth a look at CP-D, and it bears on
+   **Q21**.
+9. **The registry still calls the range-0 vision pod `cross_bars`** while a
+   distinct painter (`build_channel_bars`) draws it. §D1.1 asks Phase 2 either to
+   give it its own kind string or to record why one painter serves both. I did
+   **neither in the registry**, deliberately: the kind strings are asserted by
+   Phase 1 tests, so changing one is an act that should ride with its own test
+   update rather than be folded into a first-frame pass. Recorded as a follow-up.
+
+### What is deliberately NOT built yet
+
+Stated so the frame is not mistaken for a finished renderer: no sensor-band
+painter and no `channel_maps` (no maintained config has a sense at range ≥ 1, so
+neither can be exercised on a real world); no footprint outlines for the same
+reason; no `icons.py`; the ellipsis path of `fit_text` is reachable only from the
+header. **`assets/dashboard_icons/` is not used at all** — every form in the
+frame, including the World map's marks and the legend chips, is drawn from the
+vector tables in `cells.py` and `palette.py`. Per §R19.4 item 1 that is the
+recorded condition for **dropping that folder**, and I recommend dropping it.
+
+### Gates — two standing ones are crossed, and I am flagging both rather than absorbing them
+
+1. **CP0.4 has never been run, and it is a stated precondition for Phase 2
+   writing a painter.** I wrote painters because the task instructed it
+   explicitly. The indicative measurement above is what CP0.4 would have asked
+   for in miniature, and it lands in the band where the plan says *stop and ask
+   Q22*. **Nothing was tuned in response.**
+2. **Phase 0d does not exist**, so `cell_overdraw` — the rule CP2.8 is defined in
+   terms of — cannot be run. `scripts/eval/render_layout_audit.py` contains no
+   `cell_overdraw`, no `SURVIVAL_MIN`, and CP0.3b is unticked. CP2.8 therefore
+   **cannot be met today**, and I did not build a partial version of the rule: a
+   half-built instrument that passes is worse than none.
+
+   What I did instead is measure the substance by hand, in scratch, using §R19.1's
+   own method (isolated ink per artist, then the pixels no later-drawn artist
+   covers). On the campfire frames:
+
+   | square | occupants | bed ink (share of square) | bed survives | token survives |
+   |---|---|---|---|---|
+   | (4,3) step 0 | agent + bush | 53.4 % | 55.1 % | **100.0 %** |
+   | (3,5) step 32 | neutral + rock | 51.7 % | 60.5 % | **100.0 %** |
+   | (5,1) step 32 | agent + food | — | — | **100.0 % / 100.0 %** |
+
+   Every occupant measures the 1.000 §R19.1 says a correct composition must, and
+   every bed clears the 40 % line that classifies it as floor rather than as an
+   occupant. **This is evidence, not the instrument**, and it does not close
+   CP2.8.
+
+3. **Q21 is unanswered.** Built to the plan's recorded working assumption — keep
+   the World map, `LEFT_W = 320` — and flagged rather than decided. Deviation 8
+   is new information for that decision.
+
+### On the CP1 band-card refusal (asked for specifically)
+
+The fix-up hoisted the "more than one band card" refusal above box assignment in
+`_pack_once`. **Nothing looks wrong with it, and I must be honest that my
+painters did not exercise it.** No maintained world has a sensor band — every one
+has both sense ranges at 0 — so every pack in this phase, including M4's, takes
+the no-band path where `band_cards` is empty and the refusal is never reached.
+What does exercise it is the synthetic thermal-plus-band contexts in the Phase 1
+suite, and those pass (104 tests). Reading it against this phase's use: the hoist
+is sound and is what lets `_validate` run with no exemption at all, because the
+only way two cards could have shared a box was two band cards receiving the same
+`band_box`. The band painter, when it is written, is where it will first be
+exercised for real.
+
+### Prior art
+
+Checked `docs/develop/active/issues/KNOWN_BUGS.md` directly (sub-agents cannot
+spawn `bug-curator`). Rows 117–119 record this dashboard's defects D1–D13, the
+`OBS` mis-captioning D10 and the frozen renderer's housekeeping hazards, and all
+three already point at this plan. Row 91 ("chasing rabbit stays glued to the
+agent") is useful archetype context rather than a defect. **Nothing new to file:**
+the halo-versus-bed finding (deviation 1) is a defect in *this plan's own rule
+text*, caught before any code shipped, so it belongs in this plan and not in the
+registry. If `senior-developer` disagrees, `bug-curator` owns that call.
+
+### Blockers and follow-ups
+
+- **For the user (via `senior-developer`): Q22.** The 0.5× gate is missed at
+  0.563×, and the split shows the arena is 6 % of the frame — so the premise Q22
+  was opened on (four times the arena content) is not what the measurement blames.
+- **For `senior-developer`:** amend §R17.3 item 8 (deviation 1); rule on the
+  `OBS` column-head question (deviation 4); schedule Phase 0d, without which
+  CP2.8 cannot be met; decide whether the audit gains a `--renderer dashboard`
+  arm or whether a harness stays the route; and answer **Q21** before the minimap
+  work goes further.
+- **Not done and not hidden:** CP2.1 is demonstrated on **two frames of one
+  matrix cell**, not on every cell's checked frames; CP2.2–CP2.7 are untouched.
+
+Implemented by: developer
+
+---
+
+## Implementation Report — Phase 0d / CP0.3b (2026-09-17)
+
+### What this phase built, in plain words
+
+The redesign exists because a square of the world holding two animals was drawn as
+**one** animal. Phase 2 wrote painters that fix it, but nobody could *prove* it: the
+measuring instrument for that specific claim had never been built, so checkpoint CP2.8 —
+"squares render as many occupants as they hold" — could not be met. This phase built the
+instrument. It is a new rule in the pixel audit called `cell_overdraw`, and for every
+square of the grid it now measures three things rather than one:
+
+1. **what was drawn** — the connected blobs of ink each occupant lays down on its own;
+2. **what survives the painting** — the pixels where nothing drawn afterwards covers them;
+3. **how much of each occupant survives** — because an animal that is 95 % hidden behind a
+   bush still leaves one blob, and would sail through any test that only counts blobs.
+
+The third is the one that matters most and is the cheapest to get wrong. A correct picture
+scores exactly **100 %** on it, and everything below is tolerance.
+
+**The headline result: the instrument agrees with Phase 2, exactly.** Run against the real
+campfire-world frames, every occupant keeps **100.0 %** of itself, and the bushes and rocks
+they stand on measure **53.44 %** and **51.68 %** of their square against the 53.4 % and
+51.7 % Phase 2 measured by hand. There is **no disagreement to report**. Since one of the
+two would have to be wrong if they differed, this is the outcome that matters.
+
+**But CP0.3b is not ticked, and CP2.8 is not closed**, for reasons given in full below. The
+short version: one *correct* picture — a lone agent standing on bare ground — is
+misclassified by a constant the plan itself specifies, and moving that constant is the
+plan's decision to make, not mine.
+
+### File-by-file
+
+| File | What changed |
+|---|---|
+| `scripts/eval/render_layout_audit.py` | The rule `cell_overdraw` (ground truth from the snapshot's distinct **kinds**; bed/ground excluded by measured area; outlines by `_ink_is_outline` with §R20.7's failing-direction guard; component counts on isolated **and** surviving ink; the per-component floor `SURVIVAL_MIN = 0.98`). All three preconditions, each **failing** rather than skipping and each scoped to `L(p)`, the last-drawn element with ink at a token pixel: **(a′)** a non-token `L(p)` must be opaque, **(b′)** it must belong to the arena Axes, **(c′)** no element of the arena may have all its declared paints within `INK_DELTA` of the figure facecolor. New `DrawOrder` class building the figure-wide rank `(axes rank, zorder, child index)` **once per frame**. `minimap_overdraw` (composite colour census, kinds-not-movers ground truth, denominator measured on the isolated wedge, shared-square caption). `occupancy_from_state`, `square_rects`, `_paints`, `_is_fully_opaque`, `_probe_blind_distance`, `_components`. New CLI flags `--cell-axes` and `--minimap-axes`. **Plus one fix to existing code** — see "a defect in the instrument itself". |
+| `tests/env/test_render_audit_controls.py` | +29 tests: 8 negative controls, 6 mutation cases, the exact-1.000 assertion, the §R20.3 gap table, the cross-Axes comparator control pinned by pixels, the padded-bbox equivalence run, the 50 px adjacent-slot control, the `outline_like_token` guard, the Collection-enumeration regression, 4 minimap controls, and the palette-drift guard. One `strict` xfail (the lone agent). |
+
+**No file outside the plan's Phase 0d File Changes list was touched.** In particular
+`src/environment/dashboard/` was **not** edited — several findings below are painter
+suggestions, and none of them was acted on. `SCRIPTS_DEPENDENCY_MAP.md` is unchanged, which
+is what the plan's Phase 0d row specifies and what its Maintenance Contract requires (no
+script added, moved, renamed or deleted; no caller changed). Its prose description of the
+audit is now slightly under-complete — it does not mention the new rule or flags — which I
+flag rather than fix, since the contract's trigger did not fire.
+
+### The mutation table
+
+A mutation is "before" and the same figure unmutated is "after": the audit must **fire** on
+the mutation and be **silent** on the correct picture. Both directions were run, because a
+rule that fired on everything would pass the left column alone.
+
+| Mutation | Fires? | Via which rule | Same figure, unmutated |
+|---|---|---|---|
+| **M-E** all occupants forced to the square's centre | **YES** (3 findings) | `cell_overdraw` — 2 kinds, 1 component, plus overlapping token ink | silent |
+| **M-F1** bed drawn after the tokens | **YES** (2) | `cell_overdraw` — 1 visible component where there is 1 kind, survival **0.000** | silent |
+| **M-F1g** ground drawn after the tokens, facecolor `CANVAS` | **YES** (1) | `cell_probe_blind` **only** — precondition (c′) | silent |
+| **M-F2** bed after tokens, inset 0.02 × cell | **YES** (2) | `cell_overdraw` survival floor — 0.101 / 0.144 | silent |
+| **M-F2** inset 0.05 × cell | **YES** (2) | `cell_overdraw` survival floor — 0.143 / 0.198 | silent |
+| **M-F2** inset 0.10 × cell | **YES** (4) | `cell_overdraw` disjointness (see note) | silent |
+| **M-F3** minimap agent dot above the split wedge | **YES** | `minimap_overdraw` composite census | silent |
+
+**M-F1g is the one that earns precondition (c′).** It is caught by nothing else: with the
+figure facecolor set to `CANVAS`, the ground square's colour is 6/255 away from it, so the
+ground lays down **no isolated ink at all** and can never be seen to occlude anything.
+Without (c′) this mutation passes silently — which is exactly what §R20.6 predicted.
+
+**Note on M-F2 at the 0.10 inset, which is a finding about the plan's own numbers.**
+Insetting a bed shrinks it, and a bed's ink share is `(0.72(1−2i))²` → **47.8 % / 42.0 % /
+33.2 %** at the three pre-registered insets. At 0.10 (and, at a 0.48 floor, also at 0.05)
+the bed falls **under the floor test**, stops being classified as a bed, is read as a
+token, and is caught by the disjointness rule instead of the survival floor. It still
+fails — the mutation does not escape — but it no longer measures the thing it was
+pre-registered to measure, so it is **excluded from the gap table's maximum with its
+reason** rather than contributing a meaningless 1.0.
+
+**One addition I made to the rule, and why it is not the forbidden shortcut.** Two token
+elements of one square may not share a pixel. §R19.1 item 3 already states "pairwise
+touching in 0 px" of the *components*; asserting it of the *elements* as well is what
+closes a hole the component count cannot see at `|K| = 1`: an occluder that is itself
+counted as a token **merges** with the token it covers, and one component over one kind
+then passes a frame in which an occupant has been painted out. This only ever adds
+failures, and nothing is removed from the occluder set.
+
+### The `SURVIVAL_MIN = 0.98` gap table, and my verdict
+
+| Side | Measured | Which control |
+|---|---|---|
+| Correct painter (floor must be **below**) | **1.000000** | minimum over **every** negative control — single occupant, empty, campfire bed + token, two movers **with the agent**, three-way, four-way **with the agent**, footprint edge through an occupied square, adjacent slots at 50 px |
+| Defect (floor must be **above**) | **0.198444** | maximum over the M-F2 members that actually exercise the floor |
+
+`SURVIVAL_MIN = 0.98` lies between them. **My verdict: it does not sit on a cliff, and I am
+not moving it.** A sweep of the floor from **0.50 to 1.000** flips **no verdict on any
+control** — every correct square stays silent and every occluded one keeps firing across
+that entire range. The nearest boundary below is 0.198 and the nearest above is 1.000, so
+0.98 sits inside a band 0.80 wide in which the instrument's answers are constant.
+
+The one honest qualification: the margin on the **correct** side is only 0.02, and that is
+**structural rather than worrying** — §R19.1's own argument is that a correct composition
+measures exactly 1.000, so any floor below 1 is pure tolerance and *must* sit just under
+it. Every negative control measured **exactly 1.000000**, including the four-way with the
+agent, which §R20.2 flagged as the tightest case (0.1–1.1 px outline clearance, "right at
+the floor"). It measures 1.000 because `cells.py` pins the square outline **below** the
+tokens — §R20.2's painter fix, working as designed and now measured rather than reasoned
+about.
+
+### CP2.8 on the real frames
+
+Run against the Phase 2 frames (`M4` episode 1, steps 0 and 32) through a scratch harness,
+because `render_capture` still knows only `v1` and the dormant `v2`. **The audit file was
+not edited to accommodate the new renderer.**
+
+| | step 0 | step 32 |
+|---|---|---|
+| `cell_overdraw` findings | **0** | **0** |
+| squares measured | 9 | 8 |
+| occupancy ground truths agree | **yes** | **yes** |
+| shared square | (4,3) `agent + bush` | (5,1) `agent + food`, (3,5) `neutral + rock` |
+| every occupant's survival | **1.0000** | **1.0000** |
+| `text_over_fill` | 16 | 15 |
+| wall-clock per audited frame | 46.5 s (735 elements) | 46.3 s (737) |
+
+The two-occupant square **(5,1)** measures **2 kinds → 2 isolated components → 2 visible
+components → 1.0000 / 1.0000**, which is the whole claim of variant H, measured.
+
+**Agreement with Phase 2's hand measurement: exact, with no disagreement.** Bed ink 53.44 %
+(bush) and 51.68 % (rock) against 53.4 % and 51.7 %; token survival 100.0 % against
+100.0 %. The audit derives occupancy from the recorded snapshot **itself**, and that ground
+truth was checked square-by-square against the renderer's own `occupancy_of` — they agree
+on every square of both frames, which is what makes this an independent reproduction rather
+than the same computation run twice.
+
+**CP2.8 still does not close**, for four reasons that are not the instrument's fault and
+one that is a painter gap — all itemised in the CP2.8 checkpoint note above.
+
+### A defect in the instrument itself, found by these controls
+
+**Every `Collection` artist was silently dropped from the audit's element list, on every
+frame, since Phase 0c.** `Collection.get_window_extent` returns an empty bbox
+`(inf, inf, −inf, −inf)`, which `enumerate_elements` filtered out — and an artist that is
+not an Element is **never hidden by `FrameProbe._draw`**, so it was painted into every
+isolated render *including the bare background* and ate the ink of whatever it covered.
+Measured: the page rectangle's isolated ink came out **665 px short**, exactly the area of
+the two tokens sitting on top of it.
+
+It matters twice. The redesign draws every bed and every token as **one** `PatchCollection`
+(§R20.8 requires it), so `cell_overdraw` would have measured an arena with nothing standing
+in it — which is precisely how I found it. And the **frozen V1 and dormant-V2 frames carry
+17 visible `LineCollection`s each**, whose ink has been contaminating every isolation
+measurement taken on them.
+
+Fixed with a path-extent fallback. **The frozen per-rule counts did not move**, which is
+the evidence that no existing verdict rested on the bug. **Not in the Known Bugs registry**
+— I grepped it directly (sub-agents cannot spawn `bug-curator`); rows 117–119 are the
+renderer's D1–D13 and row 179 is the audit's import-isolation test. **`bug-curator` owns
+filing it.**
+
+### Deviations from the plan, and decisions I did not take
+
+1. **`CELL_FLOOR_FRACTION` stays at the plan's 0.40, and one negative control therefore
+   fails.** A lone agent on bare ground keeps its halo, and that **correct** token measures
+   **43.76 %** of its square — above the 40 % "this is the floor" line — so the occupant is
+   excluded as scenery. Both populations are measured: largest correct token **0.4376**,
+   smallest bed **0.5168**, bed floor by construction **0.5184**; a floor of **0.48** sits
+   **53.5 %** of the way up that gap and makes every control pass. I did **not** move it —
+   §R20.3's discipline is that a constant moves in the plan text with its evidence, never
+   in a test to turn a checkpoint green. It ships as a `strict` xfail naming the numbers.
+   **Two candidate fixes for `senior-developer`:** move the floor to 0.48 in §R19.1 step 2,
+   or drop the halo on every square (the painter already drops it whenever the square is
+   shared).
+2. **An element with ink outside the square is not a token of that square.** Needed for
+   §R20.2's own footprint control, which otherwise splits a correct two-mover square into
+   six components: a diamond footprint spans three squares and is not an occupant of the
+   middle one. It stays in the **occluder set**, so raising it above the tokens still fires
+   the floor — only the assertion narrows, which is what §R20's narrowing rule permits.
+3. **`cell_overdraw` has its own flag (`--cell-axes`), not `--arena-axes`.** The two rules
+   want different axes: `numeric_in_arena` is legitimately pointed at any axes that should
+   carry no numbers (an existing test points it at `thermoception`), while this rule divides
+   the axes it is given into world squares. Sharing a flag would have made that test invent
+   a grid over a card. This is also what keeps every frozen count unchanged.
+4. **The audit carries its own copy of the minimap palette**, because it may not import the
+   package it audits. A test that *may* import both asserts the copy has not drifted.
+5. **`minimap_overdraw` requires the named axes to BE the grid**, and Phase 2's World map
+   axes is the whole card. Rather than emit nine confident wrong verdicts it emits one
+   `minimap_grid_unaligned`. The fix is a painter change mirroring `arena_card` / `arena`.
+
+### Speed check
+
+**Skipped for the training hot path, and the reason is structural:** every file changed is
+an offline analysis instrument or a test. `scripts/eval/render_layout_audit.py` is imported
+by nothing under `src/`, by no training entry point and by no renderer — it *imports* the
+frozen renderer read-only, never the reverse. No environment step, model forward/backward,
+vmap/jit boundary, observation pipeline or loss computation is touched.
+
+The instrument's **own** cost is the number that moved, and it did not move much, despite
+the Collection fix enumerating more artists per frame (V1 M4: 305 → 322 elements):
+
+| Measurement | Before | After |
+|---|---|---|
+| Control suite, same 38 tests | 119.51 s | 118.57 s |
+| Control suite, 67 tests | — | 123.60 s |
+| Real dashboard frame, audited | 45.2 s @ 708–710 elements (Phase 2) | **46.5 s @ 735 elements** |
+
+### Tests
+
+| Command | Result |
+|---|---|
+| `pytest tests/env/test_render_audit_controls.py -q` | **66 passed, 1 xfailed** (was 38 passed) |
+| `pytest tests/env -m "not integration" -q` | **602 passed, 377 skipped, 26 deselected, 1 xfailed** (was 574 / 377 / 26 — exactly +28 +1 xfail, the new tests, no regressions) |
+| `scripts/eval/v1_path_guard.py check` | **PASS=10**, ACCEPTED=0, ATTRIBUTED=0, UNATTRIBUTABLE=0, **FRAMES PASS ×3**, `RESULT: OK`, **exit 0** — run before and after |
+
+`render_layout_audit.py` was confirmed against the guard's own `PLAN_OWNED_PATHS` list
+before editing: it is plan-owned, not one of the ten frozen V1-path files. No frozen file
+was touched.
+
+### Blockers and follow-ups
+
+- **For `senior-developer`, blocking CP0.3b:** the `CELL_FLOOR_FRACTION` decision
+  (deviation 1). Everything else in CP0.3b is met.
+- **For `senior-developer`:** the M-F2 family's third inset is unreachable as
+  pre-registered (§R20.3); the World map needs a grid-only Axes before its clause of CP2.8
+  can be assessed; and `SCRIPTS_DEPENDENCY_MAP.md`'s prose for this script is now
+  under-complete though its contract did not trigger.
+- **For `bug-curator`:** the Collection-enumeration defect, which is not in the registry.
+- **Not done and not hidden:** the five mutations were **not** run against the real
+  painter, only against the Phase 0d synthetic figures; three of the five archetypes are
+  still neither found nor synthesised; only matrix cell M4 was audited; and nobody looked
+  at a frame at full size in this phase.
+
+Implemented by: developer
+
+---
+
+## Verification Report — Phase 2 (the painters) and Phase 0d / CP0.3b (the `cell_overdraw` rule), verified together (2026-09-17)
+
+### What was checked, in plain words
+
+Two phases were verified in one pass, because their claims are the same claim seen twice. Phase 2 wrote the code that draws the new dashboard and reported, by hand, that a square of the world holding two things now shows **both**. Phase 0d built the instrument that measures exactly that, and reported the same numbers. Two reports agreeing is worth very little if they are the same computation run twice, so the verification did three things rather than read them: it **re-derived** the load-bearing measurements itself, it **looked at the rendered pictures**, and it checked that the instrument's own recently-found defect had not quietly moved any earlier number in this plan.
+
+**Verdict: VERIFIED WITH ISSUES.** Nothing is wrong with what was built. Both checkpoints are held open by decisions this plan owed them — now recorded in **Revision 21** — plus work the developer named itself and did not hide.
+
+### The headline claim, attacked rather than read
+
+| Claim | How it was checked here | Result |
+|---|---|---|
+| The overdraw defect is fixed: a shared square shows every occupant | **Looked at both rendered frames at full size.** Square (4,3) at step 0 shows a green bush plate with the agent standing on it inside its indigo outline; (5,1) at step 32 shows the agent and a piece of food **side by side**; (3,5) shows the rabbit on a grey rock plate | ✅ visible, not inferred |
+| The instrument reproduces Phase 2's hand measurement **independently** | Read both measurement paths. They share the *method* (§R19.1) and the 8/255 ink threshold, and **no code**: Phase 2's scratch harness toggles artist visibility itself, builds its own bare-background baseline, ranks only the arena's own children, and does its own survival arithmetic; the audit uses `FrameProbe`, a figure-wide `DrawOrder` and `occupancy_from_state`. The occupancy ground truths are two ports over **different input objects** (the audit reads the recorded `state`, the renderer reads the snapshot dict) and were compared square-by-square | ✅ two implementations, one method — which is what "independent reproduction" honestly means here, and is stated that way rather than overclaimed |
+| **M-F1g** (the ground drawn over the tokens, figure facecolor `CANVAS`) is caught by precondition (c′) **alone** | **Re-derived.** With `(c′)` disabled the frame measures 2 kinds → 2 isolated → 2 visible components, survival **1.000 / 1.000**, and produces **zero findings** — it passes silently. With it enabled, one `cell_probe_blind` finding | ✅ the rule's hardest clause is alive, exactly as §R20.6 predicted |
+| The instrument's own defect (every `Collection` dropped from the element list) is fixed, **and the frozen counts did not move** | **Re-derived by neutering the new path-extent fallback and re-running the audit on the frozen frames.** V1 M4: 322 elements shipped vs **305** pre-fix, 17 visible `Collection`s, 17 in the element list vs **0**; V1 M1: 221 vs 204, same 17. **Every per-rule count is identical in both states, on both frames** | ✅ no earlier calibration in this plan rested on the bug |
+| The M-F2 exclusion at inset 0.10 is honest, not convenient | Re-measured the whole family at both floors. A member that stops being read as a bed has survival **1.0**, so keeping it would have *raised* the recorded defect maximum toward the floor and made the margin look wider. Dropping it is the conservative direction | ✅ honest — and see the issue below, which the exclusion led to |
+| The control suite | `pytest tests/env/test_render_audit_controls.py` re-run | ✅ **66 passed, 1 xfailed** — reproduces exactly |
+
+### Issues
+
+1. **⚠️ Moving the floor to 0.48 would have left the survival floor with one positive control, and this was not visible in the report.** Found while verifying, measured, and fixed in the plan rather than left for Phase 0d to hit: at a 0.48 floor the M-F2 member at inset **0.05** also stops being classified as a bed, so the gap table's defect side would rest on the single 0.02 member. The family is **re-registered at `0.005 / 0.010 / 0.020`**, all three of which fire the survival floor at both 0.40 and 0.48 (survival 0.091–0.144). Recorded in Revision 21 §R21.2 with the measurements. The developer's own note flagged the 0.05 member as at risk; it did not follow through to what that does to the table.
+2. **⚠️ CP0.3b and CP2.8 remain open**, with their remaining work now enumerated at the checkpoints themselves. CP0.3b needs one small developer pass (the constant, the xfail, the re-registered insets, a re-run gap table). CP2.8 needs real-painter mutations, three more archetypes, eight more matrix cells, a grid-only Axes for the World map, and the rim-pip/identity-pip check once rim pips exist — one item (**the pip disjointness clause**) the developer's list did not mention; the rest of that list is complete.
+3. **ℹ️ The Collection-enumeration defect is not in the Known Bugs registry.** It is `bug-curator`'s to file, and filing it is not this verification's to do.
+4. **ℹ️ `SCRIPTS_DEPENDENCY_MAP.md`'s prose for `render_layout_audit.py` is now under-complete** (no mention of the new rule or the two new flags). Its Maintenance Contract did **not** trigger — no script was added, moved, renamed or deleted, and no caller changed — so this is a nice-to-have, correctly flagged rather than silently fixed.
+
+### File-by-file
+
+| File | Verdict |
+|---|---|
+| `scripts/eval/render_layout_audit.py` (+795) | ✅ in scope. The new rule, `DrawOrder`, `occupancy_from_state`, `square_rects`, the minimap census, two new CLI flags, and the `Collection` extent fallback. The three hunks outside the new block are a widened `audit_frame` signature, the two `argparse` rows and the call that passes them through — all required by the flags |
+| `tests/env/test_render_audit_controls.py` (+495, **0 deletions**) | ✅ in scope. Purely additive: no existing control was edited or weakened, which is the property that makes the unchanged frozen counts mean something |
+| `src/environment/dashboard/{cells,painters,episode,palette,style,text_fit,thermal}.py` (new) | ✅ in scope, Phase 2's own File Changes rows |
+| `src/environment/dashboard/__init__.py` (+44 / −6) | ✅ in scope — the lazy export of the two Phase-2 names, which is what keeps Phase 1's "a bare import pulls in no Matplotlib" test true |
+| `tests/env/test_dashboard_cells.py`, `tests/env/test_dashboard_v1_imports.py` (new) | ✅ in scope |
+| `tests/env/test_dashboard_layout.py` (+52) | ✅ in scope — the single right-column budget test §D1.1 asks Phase 2 for |
+| Everything else in the working tree | ⛔ **not this plan's** — olfaction figures and their scripts, the imperativism manifest, `artifact_format_bugs.md`, `INDEX.md`, `SAVED_RUN_CONFIG_COMPAT.md` and the diary files belong to parallel sessions and must not be staged with this work |
+
+### Speed check — ✅ no regression
+
+- **Training hot path: structurally untouched.** Nothing changed here is imported by any training entry point; the audit is offline and imports the frozen renderer read-only, never the reverse. The new `dashboard` package is not yet wired into any renderer entry point, and its `__init__` was verified to keep Matplotlib out of a bare import.
+- **The renderer itself is faster than what production uses** — 187.3 ms against 333.0 ms, a **1.78×** improvement, which is the direction that matters for training-time rendering. The `≤ 0.5 ×` target is missed at 0.563 ×, and that is a **user decision recorded at Q22 / Revision 21 §R21.1**, not an absorbed regression.
+- **The instrument's own cost moved +2.9 %** (45.2 s → 46.5 s per audited frame) while enumerating 17 more artists per frame. Well inside the 5 % discussion threshold, and it is an offline analysis tool.
+
+### Conclusion
+
+**VERIFIED WITH ISSUES.** Phase 2's painters and Phase 0d's rule both do what their reports say, and the two load-bearing claims — "a shared square shows both occupants" and "precondition (c′) is what catches the invisible-occluder case" — were re-derived here rather than taken on trust, with the pictures looked at. The three decisions the phases were waiting on are recorded in **Revision 21**: Q22 accepted at 1.78×, the floor constant moved to 0.48 with its evidence and the M-F2 family re-registered, and §R17.3 item 8 corrected. **CP0.3b needs one developer pass; CP2.8 needs the work enumerated at its checkpoint.** Neither is blocked on anything undecided.
+
+Verified by: senior-developer
