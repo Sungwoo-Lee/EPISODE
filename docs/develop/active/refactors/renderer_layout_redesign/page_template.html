@@ -61,7 +61,7 @@ td.n { white-space:nowrap; }
 table.toolkit { min-width:1040px; }
 table.toolkit th:nth-child(4), table.toolkit td:nth-child(4) { min-width:170px; }
 /* data-used tables: numbers on one row, the reason on a full-width row beneath it, so no prose column is squeezed */
-table.samples { min-width:350px; }   /* narrowest supported box = 390 - 2*16 = 358px; a floor above it fires the cue for nothing (F52) */
+table.samples { min-width:350px; }   /* narrowest supported box = 390 - 2*16 = 358px; a floor above it fires the cue for nothing (F32) */
 table.samples tr.num td { border-bottom:0; padding-bottom:2px; }
 table.samples tr.why td { color:var(--ink-3); font-size:13px; padding-top:0; }
 .cue { font-family:var(--f-mono); font-size:12px; color:var(--ink-3); margin:0; }
@@ -483,7 +483,7 @@ figure img:focus-visible { outline:2px solid var(--accent); outline-offset:-3px;
     colour. It shows where things are and what dominates each cell, but a weaker signal sharing a cell with
     a stronger one disappears.</p>
     <p><b>Axes.</b> None &mdash; each map is a diamond of grid cells centred on the agent, agent's cell
-    outlined in black, north at the top. A cell's hue names its strongest channel (legend below each map);
+    outlined in indigo, north at the top. A cell's hue names its strongest channel (legend below each map);
     its strength runs from nearly paper-white for a faint reading to full colour at the largest reading of
     that sense in the row. Outlined blank cells read nothing above 2% of that maximum.</p>
     {{SAMPLES:fig06_option_b_dominant_channel}}
@@ -621,7 +621,13 @@ figure img:focus-visible { outline:2px solid var(--accent); outline-offset:-3px;
   (Figures 1&ndash;2), <code>export_episode.py</code>, <code>fig03_proposed_dashboard.py</code> (Figures 3&ndash;4),
   <code>make_dashboard_assets.py</code> (font, flat icons, <code>assets/campfire.png</code>),
   <code>fig08_icon_set.py</code> (Figure 8), <code>export_extended.py</code>, <code>fig05_extended_encodings.py</code>
-  (Figures 5&ndash;7), then <code>build_page.py</code>; <code>dashboard_style.py</code> holds the shared design tokens. The figures on this page were generated from the last commit, because
+  (Figures 5&ndash;7), then <code>build_page.py</code>; <strong>note:</strong> <code>fig05_extended_encodings.py</code>
+  redraws Figures 5&ndash;7 from the saved export <code>data/extended.json</code> and reproduces them exactly
+  &mdash; verified by re-running it and comparing the output byte for byte. What can no longer be re-run is
+  the export step itself, <code>export_extended.py</code>: the world it read was archived on 2026-09-15, so a
+  fresh export would need an equivalent world rebuilt from <code>default.yaml</code>. (An earlier version of
+  this note said the three figures could not be regenerated at all; that was wrong, and this corrects it.)
+  <code>dashboard_style.py</code> holds the shared design tokens. The figures on this page were generated from the last commit, because
   another session had uncommitted configuration changes in progress.</p>
 </footer>
 

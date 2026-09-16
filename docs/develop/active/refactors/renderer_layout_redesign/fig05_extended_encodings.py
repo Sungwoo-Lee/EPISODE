@@ -16,7 +16,9 @@ cells x channels in get_visual_offsets order.
     Figure 6, option B: one diamond per sense, colour = strongest channel, strength = its reading.
     Figure 7, option C: per-cell bars while the range is 0-1, a cells x channels table beyond.
 All three are styled per the same spec (canvas and cards, Dashboard Sans Tab, full channel names, agent
-cell outlined in iris); Figure 6's channel hues avoid every data colour that means something else.
+cell outlined in iris); Figure 6's channel hues are imported from the icon palette in dashboard_style.py, so
+its key stays in step with the icons drawn elsewhere on the page, and avoid every data colour that means
+something else.
 Colour scales run from 0 to the largest reading of that sense in that row, because summed readings can
 exceed 1.
 
@@ -55,12 +57,24 @@ VIS_LABELS = ["GRS", "SND", "PLN", "FOD", "HPR", "PRD", "RCK", "NEU"]   # HPR = 
 OLF_FULL = ["Food", ("Odour A", "predator-leaning"), ("Odour B", "neutral-leaning"), "Bush", "Tree"]
 VIS_FULL = ["Food", "Hiding predator", "Predator", "Obstacle", "Neutral"]
 VIS_TABLE = ["Grass", "Sand", "Plain"] + VIS_FULL
-# Figure 6 channel hues. None reuses a data colour with another meaning in these pages: no orange
-# (nociception), no blue or red (temperature), no iris (agent), no teal (smell ramp). Object icon colours
-# where free; the two odour components get plum and brown so they differ from each other and from teal.
-# odour B: dark gold, a hue no icon, minimap marker or temperature stop uses (was the tree-trunk brown; F11)
-OLF_HUE = ["#1E9E5A", "#A23B72", "#B8860B", "#8FA832", "#2F7A45"]   # food, odour A, odour B, bush, tree
-VIS_HUE = ["#1E9E5A", "#33503A", "#1F2733", "#6B7380", "#0E7490"]   # food, hiding predator, predator, obstacle, neutral
+# Figure 6 channel hues. A swatch that means "the colour of X" TAKES X's colour from dashboard_style; it never
+# restates it as a literal, because a literal survives the repaint that changes X. That is format defect F53:
+# this key still read food = green, hiding predator = dark green, neutral = teal long after the icons became a
+# rose apple, a charcoal thorn cluster and a grey rabbit.
+# Two channels cannot use their own glyph's dominant colour, and each says why:
+#   Hiding predator -- its glyph is a charcoal mound with amber tips, and that charcoal (ds.HIDE_BODY) is one
+#       step off the predator's (ds.PRED): as 14 px swatches, and at every cell strength, the two are one
+#       colour. The two threat glyphs share a charcoal/amber pair, so the legend splits it one each -- the
+#       predator keeps the charcoal, the trap takes the amber that is most of what its own silhouette shows.
+#   Bush -- ds.BUSH and ds.TREE are both mid greens and both are drawn in the same diamond. The bush takes the
+#       lit side of its own glyph (ds.BUSH_HI), which preserves the icons' lighter-bush / darker-tree order.
+# The two odour components are the only literals here, by construction rather than by oversight: an odour has
+# no glyph, so there is no icon colour to import and nothing that can repaint underneath them. They keep clear
+# of every data colour with another meaning on these pages -- no teal (smell ramp), no orange (nociception), no
+# blue or red (temperature), no iris (agent); odour B is dark gold, and was the tree-trunk brown (F11).
+ODOUR_A, ODOUR_B = "#A23B72", "#B8860B"                             # predator-leaning plum, neutral-leaning gold
+OLF_HUE = [ds.FOOD, ODOUR_A, ODOUR_B, ds.BUSH_HI, ds.TREE]          # food, odour A, odour B, bush, tree
+VIS_HUE = [ds.FOOD, ds.HIDE_EYE, ds.PRED, ds.ROCK, ds.NEUT]         # food, hiding predator, predator, obstacle, neutral
 FW, OUT, PADX, DIV = 1440, 24, 16, 48
 
 
