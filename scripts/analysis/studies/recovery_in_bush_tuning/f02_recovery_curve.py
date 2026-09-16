@@ -41,7 +41,7 @@ def main():
         (R.SHIPPED["base"], R.SHIPPED["accel"], 1.0, K.C_SHIPPED, K.OPEN_STYLE,
          f"shipped default, in the open  (base {R.SHIPPED['base']:g}, accel {R.SHIPPED['accel']:g})"),
         (R.A01["base"], R.A01["accel"], 1.0, K.C_A01, K.OPEN_STYLE,
-         f"rest-premium arm a01, in the open  (base {R.A01['base']:g}, accel {R.A01['accel']:g})"),
+         f"a01 comparison setting, in the open  (base {R.A01['base']:g}, accel {R.A01['accel']:g})"),
         (rec["base"], rec["accel"], 1.0, K.C_REC, K.OPEN_STYLE,
          f"recommended, in the open  (base {rec['base']:g}, accel {rec['accel']:g})"),
         (rec["base"], rec["accel"], rec["mult"], K.C_REC, K.BUSH_STYLE,

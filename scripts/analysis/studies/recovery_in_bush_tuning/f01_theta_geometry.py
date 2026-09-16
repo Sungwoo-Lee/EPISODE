@@ -67,7 +67,7 @@ def panel_a(ax):
     ax.plot(n, rec["base"] * n, color=K.C_REC, linewidth=2.2, zorder=5,
             label=f"recommended, in the open  (base {rec['base']:g} per rest step)")
     ax.plot(n, R.A01["base"] * n, color=K.C_A01, linewidth=2.2, zorder=5,
-            label=f"rest-premium arm a01, in the open  (base {R.A01['base']:g} per rest step)")
+            label=f"a01 comparison setting, in the open  (base {R.A01['base']:g} per rest step)")
 
     ax.text(10.0, R.THETA + 1.2, f"θ = {R.THETA:g} points", ha="left", va="bottom",
             fontsize=house.FS_LABEL, color=K.C_RULE)
@@ -166,7 +166,7 @@ def main():
         f"sampled or omitted. &theta; = {R.THETA:g} points and the {R.BUDGET:g}-step budget come from "
         f"<code>recovery_math</code>, which derives the budget from "
         f"<code>configs/environment/default.yaml</code>; the two plotted base rates are the "
-        f"recommendation and the shipped rest-premium arm a01, the same settings f02 draws. "
+        f"recommendation and the a01 comparison setting, the same two f02 draws. "
         f"No run, episode or seed is summarised; f06 is the one figure here that touches the "
         f"environment."))
 

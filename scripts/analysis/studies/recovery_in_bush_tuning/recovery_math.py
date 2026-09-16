@@ -96,7 +96,7 @@ SHIPPED = dict(base=float(_need(_D, "body", "recovery_base_rate")),
 A01 = dict(base=float(_need(_A, "body", "recovery_base_rate")),
            accel=float(_need(_A, "body", "recovery_accel_rate")),
            mult=float(_need(_D, "body", "recovery_in_bush_multiplier")),
-           label="rest-premium arm a01")
+           label="a01 comparison setting")
 
 # Start-nutrition regimes, both real and both read from a shipped file. The rest budget follows.
 START_NUTRITION_FIXED = float(_need(_D, "body", "start_nutrition"))

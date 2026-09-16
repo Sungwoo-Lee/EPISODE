@@ -109,8 +109,11 @@ tbody tr.pick td:first-child { color:var(--accent-text); font-weight:600; }
 dl { margin:0; display:grid; grid-template-columns:max-content 1fr; gap:10px 22px; align-items:baseline; }
 dt { font-family:var(--f-mono); font-size:13px; color:var(--accent-text); }
 dd { margin:0; font-size:15.5px; color:var(--ink-2); }
-/* widest term 'Interoceptive Nociception' 195px + 40ch dd (9.23px) + 22 gap + 56 gutter = 642 (F48) */
-@media (max-width:642px) { dl { grid-template-columns:1fr; gap:2px 0; } dd { margin-bottom:10px; } }
+/* Recomputed for THIS page 2026-09-16: the widest term here is 'the formula (a "closed form")'
+   at 226px, not the 195px 'Interoceptive Nociception' the inherited 642 was derived from, so the
+   dd column fell under the 40ch floor between 643 and 675. 226 + 40ch dd (369) + 22 gap + 56
+   gutter = 673 (F48, F32 amendment). */
+@media (max-width:673px) { dl { grid-template-columns:1fr; gap:2px 0; } dd { margin-bottom:10px; } }
 
 /* ---------- ordered steps and open questions ---------- */
 .col.stages, .qs { display:flex; flex-direction:column; gap:0; }
@@ -190,7 +193,7 @@ figure img:focus-visible { outline:2px solid var(--accent); outline-offset:-3px;
 /* ---------------------------------------------------------------------------
    PAGE-LOCAL DEPARTURE FROM THE HOUSE STYLE, stated because an unstated one is a defect.
    This page's figures spend all four house hues on DATA categories: blue is the shipped
-   default setting, orange the rest-premium arm a01, green the recommendation, red a fourth
+   default setting, orange the a01 comparison setting, green the recommendation, red a fourth
    comparison. Format register F11 therefore forbids the page chrome from using any of them,
    so section numbers, links, glossary terms and box borders below are set in ink and grey.
    Nothing else about the sheet is changed.
@@ -219,8 +222,8 @@ figure img:focus-visible { outline:2px solid var(--accent); outline-offset:-3px;
 <section class="col">
   <h2><span class="num">PURPOSE</span></h2>
   <p>In this simulation an animal walks a grid, eats, gets hurt, and heals only by choosing the
-  <strong>Rest</strong> action. Injury is a number from 0 to {{VAL:max_injury}}; at
-  {{VAL:max_injury}} the animal dies. Some grid squares hold a <strong>bush</strong>, which hides
+  <strong>Rest</strong> action. How hurt it is is measured on a scale from 0 to {{VAL:max_injury}}; one point on that
+  scale is an <strong>injury point</strong>, and at {{VAL:max_injury}} the animal dies. Some grid squares hold a <strong>bush</strong>, which hides
   the animal from a hunting predator and which predators cannot walk into. A setting called
   <code>body.recovery_in_bush_multiplier</code> can make resting inside a bush heal faster than
   resting on open ground. It ships at {{VAL:shipped_mult}}, meaning &ldquo;no difference at
@@ -231,21 +234,54 @@ figure img:focus-visible { outline:2px solid var(--accent); outline-offset:-3px;
   making cover the only place to heal is to see whether an animal that is hurt starts using cover,
   which is a behaviour this project wants to be able to study.</p>
   <p><strong>The answer.</strong> Set the open-ground healing rate to
-  <code>recovery_base_rate: {{VAL:rec_base}}</code>, switch the compounding off with
-  <code>recovery_accel_rate: {{VAL:rec_accel}}</code>, and set
-  <code>recovery_in_bush_multiplier: {{VAL:rec_mult}}</code>. An animal that rests in the open for
-  every step it can afford clears {{VAL:rec_open_budget}} injury points; the same animal resting in
-  a bush closes a bad {{VAL:wound}}-point wound in {{VAL:rec_cover_steps}} rest steps. Both shipped
-  settings fail badly: each of them clears the <em>entire</em> {{VAL:max_injury}}-point injury
-  scale out in the open, one in {{VAL:shipped_steps_full}} rest steps.</p>
+  <code>recovery_base_rate:&nbsp;{{VAL:rec_base}}</code>, switch the compounding off with
+  <code>recovery_accel_rate:&nbsp;{{VAL:rec_accel}}</code>, and set
+  <code>recovery_in_bush_multiplier:&nbsp;{{VAL:rec_mult}}</code>. Resting earns no food while hunger keeps
+  draining, so an animal can only keep resting until its food runs out &mdash; about
+  {{VAL:budget}} steps from a typical start. Spend every one of those steps resting out in the
+  open and the recommendation heals away just {{VAL:rec_open_budget}} injury points. Spend them on
+  a bush instead and a bad {{VAL:wound}}-point wound closes in {{VAL:rec_cover_steps}} steps. Both of the settings that ship today fail
+  badly: each heals away the <em>entire</em> {{VAL:max_injury}}-point scale out in the open, one of
+  them in {{VAL:shipped_steps_full}} rest steps.</p>
 </section>
 
 <hr>
 
 <section class="col">
   <h2><span class="num">01</span> What a reader needs before the figures</h2>
-  <p>Everything below refers to one simulation. A short inventory, because none of it is guessable
-  from the figures.</p>
+  <p>Everything below refers to one simulation. Two short lists, because none of it is guessable
+  from the figures: first the ordinary words this page leans on, then the settings it tunes.</p>
+  <h3>Words this page keeps using</h3>
+  <dl>
+    <dt>injury point</dt><dd>One unit on the 0&ndash;{{VAL:max_injury}} injury scale. For a sense
+    of size: a bad wound is about {{VAL:wound}} points, and the lightest blow a predator lands is
+    about 15.</dd>
+    <dt>cover, and the open</dt><dd><strong>Cover</strong> means a square with a bush on it.
+    <strong>The open</strong> means every other square. Whether healing should differ between the
+    two is the entire question on this page.</dd>
+    <dt>rest budget</dt><dd>How many steps in a row an animal can afford to spend resting. A
+    resting animal eats nothing while its hunger keeps draining, so this is set by food, not by
+    injury: about {{VAL:budget}} steps from a typical start, {{VAL:budget_fixed}} from a full
+    stomach. It is an upper bound, and a fatal one &mdash; an animal that really spends all of it
+    resting starves at the end.</dd>
+    <dt>heal away</dt><dd>To reduce injury by resting. &ldquo;Heals away 10 points&rdquo; means the
+    injury number goes down by 10.</dd>
+    <dt>streak</dt><dd>A run of rest steps with nothing in between. Any step on which the animal
+    does something other than Rest sets the count back to zero, which matters because one of the
+    settings heals faster the longer the streak gets.</dd>
+    <dt>the formula (a &ldquo;closed form&rdquo;)</dt><dd>A single expression that gives the
+    total healing after any number of rest steps directly, instead of adding the steps up one at a
+    time. Five of the six figures are drawn from it; Figure 6 exists to check it against the
+    simulation itself.</dd>
+    <dt>compounding</dt><dd>Healing that speeds up the longer the animal rests without
+    interruption, rather than staying at a flat rate. One of the two settings that ship today
+    compounds; the other does not.</dd>
+    <dt>a01</dt><dd>A nickname for one particular set of values from an earlier round of training
+    runs, which raised the healing rate and switched compounding off. This page keeps it on the
+    charts as a comparison, because it is the only setting already in the repository that does not
+    compound.</dd>
+  </dl>
+  <h3>The settings this page tunes, and the machinery around them</h3>
   <dl>
     <dt>step</dt><dd>One environment timestep. An episode runs at most {{VAL:max_steps}} steps. In
     every figure the <code>t = 0</code> row is the <em>initial state</em>, not a step.</dd>
@@ -259,12 +295,13 @@ figure img:focus-visible { outline:2px solid var(--accent); outline-offset:-3px;
     <dt>bush</dt><dd>An obstacle carrying <code>hides_agent: true</code>. It conceals the agent
     from a hunting predator, and since 2026-09-14 also blocks animals from entering the cell. It is
     the &ldquo;cover&rdquo; this page keeps referring to.</dd>
-    <dt>recovery_base_rate</dt><dd>Injury points healed on the first rest step of a streak.</dd>
+    <dt>recovery_base_rate</dt><dd>Injury points healed on the first rest step of an
+    uninterrupted run of them. The prose below calls it the <strong>base rate</strong>.</dd>
     <dt>recovery_accel_rate</dt><dd>How much more each <em>consecutive</em> rest step heals than
     the one before it, as a fraction. At 0 the healing rate is flat; at {{VAL:shipped_accel}} each
     step heals 1.5&times; the last.</dd>
-    <dt>recovery_in_bush_multiplier</dt><dd>What the healing is multiplied by on a step the agent
-    rests while standing on a bush. Must be greater than 0. At exactly 1.0 the whole mechanism is
+    <dt>recovery_in_bush_multiplier</dt><dd>What the healing is multiplied by on a step the
+    agent rests while standing on a bush &mdash; the <strong>multiplier</strong> below. Must be greater than 0. At exactly 1.0 the whole mechanism is
     not even compiled into the simulation.</dd>
     <dt>nociception</dt><dd>The signal the agent receives about its injury. This page does not use
     it &mdash; the study is about the body variable, not about what the agent can feel.</dd>
@@ -279,7 +316,7 @@ figure img:focus-visible { outline:2px solid var(--accent); outline-offset:-3px;
   </div>
   <div class="legendkey">
     <span><i style="border-top-color:#2a78d6"></i> the shipped default setting</span>
-    <span><i style="border-top-color:#eb6834"></i> the rest-premium arm a01</span>
+    <span><i style="border-top-color:#eb6834"></i> the a01 comparison setting</span>
     <span><i style="border-top-color:#0f7a55"></i> the recommendation</span>
     <span><i style="border-top-color:#b02b2b"></i> a fourth comparison setting</span>
     <span><i style="border-top-color:#16181d"></i> solid = in the open</span>
@@ -300,34 +337,41 @@ figure img:focus-visible { outline:2px solid var(--accent); outline-offset:-3px;
   <h2><span class="num">02</span> The definition the study turns on</h2>
   <div class="callout pick">
     <p class="eyebrow">Definition</p>
-    <p style="font-size:18px;line-height:1.5"><strong>Resting outside cover is &ldquo;not
-    meaningfully recoverable&rdquo; when an agent that rests continuously in the open for its
-    entire affordable rest budget cannot clear more than &theta; of the injury scale.</strong></p>
-    <p>The <strong>affordable rest budget</strong> is <code>nutrition / metabolic_cost</code>,
-    because a resting agent eats nothing, so nutrition &mdash; not injury &mdash; is what bounds
-    how long it can go on resting.</p>
+    <p style="font-size:18px;line-height:1.5"><strong>Resting out in the open counts as
+    pointless when an animal that rests without stopping, for as long as its food lets it, still
+    cannot heal away more than a set number of injury points.</strong></p>
+    <p>That set number is the <strong>healing allowance</strong>. It gets a symbol, <strong>&theta;</strong>
+    (the Greek letter theta), because it turns up in nearly every line of arithmetic below and a
+    symbol is shorter than the phrase. Wherever you see &theta;, read &ldquo;the healing
+    allowance&rdquo;.</p>
   </div>
-  <p>This page uses <strong>&theta; = {{VAL:theta}} injury points of {{VAL:max_injury}}</strong>
-  and a <strong>{{VAL:budget}}-step budget</strong> as the primary setting.
-  <strong>Both are choices, not facts.</strong> &sect;10 shows what moves if either changes, and
-  &sect;11 records where those choices turned out to need qualifying.</p>
-  <p>Two sentences on why those numbers and not others. {{VAL:theta}} points is a quarter of the
-  scale and is roughly the smallest single hit a predator can land on the jump-attack world, whose
-  per-hit damage is drawn from 15 to 120 &mdash; so &ldquo;cannot clear &theta;&rdquo; means
-  &ldquo;cannot undo even a glancing blow&rdquo;. {{VAL:budget}} steps is the median of a start
-  nutrition drawn uniformly from 0 to {{VAL:max_nutrition}} at a
-  <code>metabolic_cost</code> of {{VAL:metabolic_cost}}, which is the draw the random-init worlds
-  use.</p>
+  <p>Two numbers turn that sentence into something testable. This page sets the healing
+  allowance at <strong>{{VAL:theta}} injury points</strong> out of {{VAL:max_injury}}, and the rest
+  budget at <strong>{{VAL:budget}} steps</strong>. <strong>Neither number was measured. Both were
+  chosen</strong>, and a different choice would give a different answer &mdash; &sect;10 works out
+  how much different, and &sect;11 lists the two places where these choices turned out to be
+  rougher than they look.</p>
+  <p><strong>Why {{VAL:theta}} points.</strong> A predator's blow takes somewhere between 15 and
+  120 injury points. So an animal that cannot heal away {{VAL:theta}} points cannot undo even the
+  lightest hit it is likely to take &mdash; which is the plainest thing
+  &ldquo;pointless&rdquo; could reasonably mean.</p>
+  <p><strong>Why {{VAL:budget}} steps.</strong> An animal starts each episode with a random amount
+  of food, anywhere between empty and full, and burns one unit of it every step whatever it does.
+  Half full is the typical start, and half a stomach buys {{VAL:budget}} steps of resting before
+  starvation. An animal that began full would get {{VAL:budget_fixed}}; the page checks both.</p>
   <div class="callout">
     <p class="eyebrow">The complementary requirement</p>
-    <p>A world in which nobody can heal is not the goal. So a second condition has to hold at the
-    same time: <strong>cover must be usable</strong> &mdash; an agent resting in a bush should
-    clear a typical {{VAL:wound}}-point wound within about {{VAL:cover_steps}} rest steps. The two
-    conditions pull in opposite directions, and the whole tuning problem is the gap between
-    them.</p>
+    <p>A world in which nobody can heal anywhere is not the goal. So a second requirement has to
+    hold at the same time: <strong>cover has to actually work</strong> &mdash; an animal resting on
+    a bush should get a bad {{VAL:wound}}-point wound closed inside roughly {{VAL:cover_steps}}
+    rest steps. Pushing healing down until the open is useless also pushes it down inside the bush,
+    so the two requirements pull against each other, and the whole tuning problem is finding the
+    gap between them.</p>
   </div>
-  <p>Throughout, <strong>condition A</strong> means the first (the open must not heal) and
-  <strong>condition B</strong> the second (cover must heal).</p>
+  <p>The rest of the page needs to refer to these two constantly, so they get short names:
+  <strong>condition A</strong> is the first one &mdash; <em>the open must not heal</em> &mdash; and
+  <strong>condition B</strong> is the second &mdash; <em>cover must heal</em>. A setting is only
+  any good if both hold at once.</p>
 </section>
 
 <figure>
@@ -343,7 +387,7 @@ figure img:focus-visible { outline:2px solid var(--accent); outline-offset:-3px;
     In panel (a) the shaded rectangle is {{VAL:theta}} points tall and {{VAL:budget}} steps wide,
     the thick dashed line is its diagonal, and the two solid lines are the two base rates this page
     argues about, in the hues the page gives them throughout &mdash; green the recommendation,
-    orange the shipped rest-premium arm a01.</span>
+    orange the a01 comparison setting.</span>
     <span>What to take from it: condition A is not a claim about &theta; or about the budget, but
     about the single rate &theta;&nbsp;/&nbsp;budget, which is {{VAL:ratio}} injury points per rest
     step here. Panel (b) is the consequence &mdash; halve &theta; or double the budget and you get
@@ -384,13 +428,13 @@ figure img:focus-visible { outline:2px solid var(--accent); outline-offset:-3px;
 <pre><span class="c"># streak counts CONSECUTIVE rest steps; any non-rest step resets it to 0</span>
 streak(t)       = rested ? streak(t-1) + 1 : 0
 recovery_amount = <span class="k">recovery_base_rate</span> * (1 + <span class="k">recovery_accel_rate</span>) ** (max(streak,1) - 1)
-<span class="c"># the location premium multiplies the AMOUNT, so it inherits the two conditions below</span>
+<span class="c"># the in-bush multiplier multiplies the AMOUNT, so it inherits the two conditions below</span>
 if <span class="k">recovery_in_bush_multiplier</span> != 1.0 and in_bush:  recovery_amount *= multiplier
 can_recover     = rested AND applied_inc &lt;= 0
 new_injury      = clip(injury + applied_inc - recovery_amount * can_recover, 0, <span class="k">max_injury</span>)</pre>
   <p>Two consequences do all the work. Because the streak is 1 on the first rest step and the
   exponent is <code>streak - 1</code>, the heal on the <em>n</em>-th consecutive rest step is
-  <code>base &times; (1 + accel)^(n-1)</code>. The cumulative heal over <em>n</em> steps is
+  <code>base&nbsp;&times;&nbsp;(1&nbsp;+&nbsp;accel)^(n-1)</code>. The cumulative heal over <em>n</em> steps is
   therefore a geometric sum:</p>
   <p class="deriv">cumulative(n) = base &times; n &nbsp;&nbsp;when accel = 0,
   &nbsp;&nbsp;and&nbsp;&nbsp; base &times; ((1 + accel)<sup>n</sup> &minus; 1) / accel
@@ -676,11 +720,11 @@ new_injury      = clip(injury + applied_inc - recovery_amount * can_recover, 0, 
     would be between two zeros. The agent is then placed on the bush cell, or on an
     obstacle-free cell, and issued the Rest action {{VAL:f06_steps}} times. Every step is checked
     before anything is plotted: that the agent really rested, that it took no damage, that its bush
-    membership is what this rollout assumes, and that its rest streak equals the step number. A
-    failure raises an exception rather than drawing a figure, so a contaminated rollout cannot
+    membership is what this test run assumes, and that its rest streak equals the step number. A
+    failure raises an exception rather than drawing a figure, so a contaminated run cannot
     reach the page. The prediction is the same closed form the other five figures use, clipped to
-    the injury range. Its weakness is coverage: this is two rollouts of one setting under one
-    random seed, so it validates the shape of the recurrence and the location premium, not every
+    the injury range. Its weakness is coverage: this is two test runs of one setting under one random seed, so it confirms the shape of
+    the step-by-step rule and the fact that cover heals faster, not every
     value a configuration might take.</p>
   </div>
 </figure>
@@ -692,16 +736,16 @@ new_injury      = clip(injury + applied_inc - recovery_amount * can_recover, 0, 
     between the simulation and the closed form is <strong>{{VAL:f06_worst}} injury
     points</strong>, which is single-precision rounding accumulated over
     {{VAL:f06_steps}} steps &mdash; the smallest representable gap near injury
-    {{VAL:f06_start_injury}} is {{VAL:f06_eps}}. In cover the agreement is <em>exact</em>: every
-    one of the bush rollout's residuals is {{VAL:f06_worst_bush}}. After
+    {{VAL:f06_start_injury}} is {{VAL:f06_eps}}. In cover the agreement is <em>exact</em>: on the bush the
+    simulation and the formula differ by exactly {{VAL:f06_worst_bush}}, on every step. After
     {{VAL:f06_steps}} rest steps the open-ground agent's injury measured
     {{VAL:f06_open_final}} against a predicted {{VAL:f06_open_pred}}; the bush agent reached zero
     injury on step {{VAL:f06_bush_zero}} and stayed there.</p>
     <p>The rest budget was measured in the same run rather than assumed: nutrition fell by exactly
     {{VAL:f06_nut_drop}} per rest step against a <code>metabolic_cost</code> of
-    {{VAL:metabolic_cost}}, with a worst per-step deviation of {{VAL:f06_nut_dev}}. The claim that
-    a resting agent eats nothing, and therefore that its rest budget is
-    <code>nutrition / metabolic_cost</code>, is confirmed rather than argued.</p>
+    {{VAL:metabolic_cost}}, with a worst per-step deviation of {{VAL:f06_nut_dev}}. So the claim this page's rest
+    budget rests on &mdash; that an animal gets no food back while it rests, and therefore runs out
+    after a fixed number of steps &mdash; is measured here rather than argued.</p>
   </div>
 </section>
 
@@ -709,8 +753,8 @@ new_injury      = clip(injury + applied_inc - recovery_amount * can_recover, 0, 
 
 <section class="col">
   <h2><span class="num">09</span> The recommendation, and the rule that produced it</h2>
-  <p>The feasible region of Figure 4 has room in it, so a point inside it has to be chosen rather
-  than found. The rule is stated here because a point picked by eye is not reproducible.</p>
+  <p>The region of Figure 4 where both conditions hold has room in it, so a point inside it
+  has to be chosen rather than found. The rule is stated here because a point picked by eye is not reproducible.</p>
 </section>
 
 <section class="col stages">
@@ -720,19 +764,19 @@ new_injury      = clip(injury + applied_inc - recovery_amount * can_recover, 0, 
     positive <code>recovery_accel_rate</code> pushes the open past &theta; inside the budget.</div></div></div>
   <div class="stage"><div class="s">CLAUSE 2</div><div class="b">
     <div class="t">Anchor the healing rate inside cover to an experiment that already ran</div>
-    <div class="d">The rest-premium sweep was calibrated so that a {{VAL:wound}}-point wound closes
+    <div class="d">The a01 round of runs was calibrated so that a {{VAL:wound}}-point wound closes
     in about {{VAL:a01_steps_wound}} rest steps, at a flat {{VAL:a01_base}} points per step. Making
     the in-cover rate equal to that keeps the injured window comparable with those runs
     &mdash; base &times; multiplier = {{VAL:rec_cover_rate}}.</div></div></div>
   <div class="stage"><div class="s">CLAUSE 3</div><div class="b">
     <div class="t">Both conditions must hold at both budgets, strictly</div>
     <div class="d">Not only the {{VAL:budget}}-step median budget but the
-    {{VAL:budget_fixed}}-step budget of a world that starts at full nutrition &mdash; and with
-    strict inequality, so the recommendation does not sit on its own boundary.</div></div></div>
+    {{VAL:budget_fixed}}-step budget of a world that starts at full nutrition &mdash; and with room to spare rather than exactly on the line, so the recommendation does not
+    sit on its own edge.</div></div></div>
   <div class="stage"><div class="s">CLAUSE 4</div><div class="b">
     <div class="t">Take the weakest intervention that survives</div>
     <div class="d">Among the {{VAL:rec_candidates}} round-number pairs that pass, take the largest
-    base rate, which is the smallest multiplier. A smaller premium is a smaller change to the
+    base rate, which is the smallest multiplier. A smaller multiplier is a smaller change to the
     world.</div></div></div>
 </section>
 
@@ -746,14 +790,14 @@ new_injury      = clip(injury + applied_inc - recovery_amount * can_recover, 0, 
   </div>
   <p>In the table below, the second and third columns are <strong>injury points healed</strong>, on
   the 0&ndash;{{VAL:max_injury}} scale; the fourth and fifth are <strong>consecutive rest
-  steps</strong>. A dash means the setting has no in-cover premium, so there is no separate
+  steps</strong>. A dash means the setting heals no faster in cover than out of it, so there is no separate
   in-cover number to give.</p>
   <p class="cue" hidden>&larr; the table is wider than the screen &mdash; scroll it sideways</p>
   <div class="scroll"><table class="wide">
     <thead><tr><th>Setting</th><th class="n">open, {{VAL:budget}} steps</th><th class="n">open, {{VAL:budget_fixed}} steps</th><th class="n">steps to <span class="sym">&theta;</span>, open</th><th class="n">steps to heal {{VAL:wound}}, cover</th></tr></thead>
     <tbody>
-      <tr><td>shipped default &mdash; base {{VAL:shipped_base}}, accel {{VAL:shipped_accel}}, no premium</td><td class="n">{{VAL:shipped_open}}</td><td class="n">{{VAL:shipped_open}}</td><td class="n">{{VAL:shipped_steps_theta}}</td><td class="n">&mdash;</td></tr>
-      <tr><td>rest-premium arm a01 &mdash; base {{VAL:a01_base}}, accel {{VAL:a01_accel}}, no premium</td><td class="n">{{VAL:a01_open}}</td><td class="n">{{VAL:a01_open}}</td><td class="n">{{VAL:a01_steps_theta}}</td><td class="n">{{VAL:a01_steps_wound}}</td></tr>
+      <tr><td>shipped default &mdash; base {{VAL:shipped_base}}, accel {{VAL:shipped_accel}}, no in-cover bonus</td><td class="n">{{VAL:shipped_open}}</td><td class="n">{{VAL:shipped_open}}</td><td class="n">{{VAL:shipped_steps_theta}}</td><td class="n">&mdash;</td></tr>
+      <tr><td>a01 comparison setting &mdash; base {{VAL:a01_base}}, accel {{VAL:a01_accel}}, no in-cover bonus</td><td class="n">{{VAL:a01_open}}</td><td class="n">{{VAL:a01_open}}</td><td class="n">{{VAL:a01_steps_theta}}</td><td class="n">{{VAL:a01_steps_wound}}</td></tr>
       <tr class="pick"><td>recommended &mdash; base {{VAL:rec_base}}, accel {{VAL:rec_accel}}, {{VAL:rec_mult}}&times; in cover</td><td class="n">{{VAL:rec_open_budget}}</td><td class="n">{{VAL:rec_open_budget_fixed}}</td><td class="n">{{VAL:rec_open_steps_theta}}</td><td class="n">{{VAL:rec_cover_steps}}</td></tr>
     </tbody>
   </table></div>
@@ -822,12 +866,13 @@ new_injury      = clip(injury + applied_inc - recovery_amount * can_recover, 0, 
   that switch randomised starting nutrition on. The shipped base configuration does not: it starts
   every episode at full nutrition, giving a {{VAL:budget_fixed}}-step budget, which is twice as
   strict. Every figure and table on this page now carries both.</div></div>
-  <div class="q"><div class="h">2. The quoted recurrence dropped a term</div><div class="d">The
+  <div class="q"><div class="h">2. The step-by-step rule quoted in the brief dropped a term</div><div class="d">The
   brief wrote the injury update as <code>clip(injury - recovery, 0, max_injury)</code>. The
   simulation writes <code>clip(injury + applied_inc - recovery, 0, max_injury)</code>, where
   <code>applied_inc</code> is this step's slice of any damage still being spread over
-  {{VAL:smoothing}} steps. It makes no difference to the undamaged case this study is about, but it
-  hides a real asymmetry: the rest streak keeps climbing during those {{VAL:smoothing}} steps while
+  {{VAL:smoothing}} steps. (That line is the step-by-step rule the simulation applies
+  once per step, and the single formula this page uses is derived from it.) It makes no difference
+  to the undamaged case this study is about, but it hides a real asymmetry: the rest streak keeps climbing during those {{VAL:smoothing}} steps while
   healing is blocked, so a compounding setting comes out of a hit <em>faster</em> than the clean
   curve suggests. The conclusion about acceleration is therefore conservative, and the direction of
   the error is worth knowing.</div></div>
@@ -868,11 +913,12 @@ new_injury      = clip(injury + applied_inc - recovery_amount * can_recover, 0, 
     <p><strong>No agent was trained.</strong> This is a tuning study of the environment's
     arithmetic. Whether an injured agent actually learns to walk to a bush under these settings is
     the experiment this page exists to make worth running, and it has not been run.</p>
-    <p><strong>The validation is narrow.</strong> Figure 6 is two rollouts of one setting under one
-    seed. It validates the shape of the recurrence and the location premium; a defect that only
+    <p><strong>The validation is narrow.</strong> Figure 6 is two runs of a single setting, under one random seed. It confirms the shape of
+    the step-by-step rule and the fact that cover heals faster; a defect that only
     appears at some other <code>recovery_accel_rate</code> would not be caught.</p>
-    <p><strong>Adopting the recommendation leaves the inert regime.</strong> At exactly 1.0 the
-    in-bush premium is not compiled into the simulation at all, which is what makes today's runs
+    <p><strong>Adopting the recommendation switches on a piece of the simulation that is currently
+    switched off.</strong> At exactly 1.0 the in-bush multiplier is not compiled into the
+    simulation at all, which is what makes today's runs
     bit-identical to runs that predate the setting. A multiplier of {{VAL:rec_mult}} switches that
     branch on. That is intended, but it means any world adopting these values is a new experiment
     rather than a continuation of an old one.</p>
@@ -888,7 +934,7 @@ new_injury      = clip(injury + applied_inc - recovery_amount * can_recover, 0, 
   <p class="foot">Every figure on this page is written by a Python script under
   <code>scripts/analysis/studies/recovery_in_bush_tuning/</code> and embedded as a file; no chart is
   drawn in the page. Every number in the prose is substituted at build time from
-  <code>recovery_math.py</code> or from the JSON the Figure 6 rollout wrote &mdash; none is typed
+  <code>recovery_math.py</code> or from the JSON the Figure 6 test run wrote &mdash; none is typed
   into the markup. The page is assembled by <code>build_page.py</code>, which refuses to build on a
   missing script, figure file, data statement, axes sentence or method block.</p>
 </section>
