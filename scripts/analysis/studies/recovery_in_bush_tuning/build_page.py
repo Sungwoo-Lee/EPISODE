@@ -53,6 +53,12 @@ def _g(x, nd=None):
     return f"{x:.{nd}f}" if nd is not None else f"{x:g}"
 
 
+def _whole(x):
+    """A step count rounded UP. The simulation has no fractional step, so an animal whose injury
+    crosses zero partway through step 16 is healed ON step 16, not after 15.1 of them."""
+    return _g(math.ceil(float(x) - 1e-9))
+
+
 def _steps(x):
     """A step count: one decimal where the answer really is fractional, none where it is not.
 
@@ -99,8 +105,8 @@ def page_numbers() -> dict:
         "shipped_open": _g(float(R.open_healable(R.SHIPPED["base"], R.SHIPPED["accel"]))),
         "shipped_steps_theta": _steps(float(R.steps_to_heal(R.THETA, R.SHIPPED["base"],
                                                             R.SHIPPED["accel"]))),
-        "shipped_steps_full": _steps(float(R.steps_to_heal(R.MAX_INJURY, R.SHIPPED["base"],
-                                                           R.SHIPPED["accel"]))),
+        "shipped_steps_full": _whole(
+            R.steps_to_heal(R.MAX_INJURY, R.SHIPPED["base"], R.SHIPPED["accel"])),
         "a01_open": _g(float(R.open_healable(R.A01["base"], R.A01["accel"]))),
         "a01_steps_theta": _steps(float(R.steps_to_heal(R.THETA, R.A01["base"], R.A01["accel"]))),
         "a01_steps_wound": _steps(float(R.steps_to_heal(R.WOUND, R.A01["base"], R.A01["accel"]))),
@@ -157,15 +163,25 @@ def page_numbers() -> dict:
     # The worked example of 2: one animal, badly hurt, half a stomach, resting in the open until
     # it starves. Every number derived, so the story cannot drift from the arithmetic behind it.
     _EX = 90.0
-    # Whole steps, rounded UP: the simulation has no fractional step, so an animal whose injury
-    # crosses zero partway through step 16 is healed ON step 16, not after 15.1 of them.
-    _whole = lambda x: _g(math.ceil(float(x) - 1e-9))
     v["ex_injury"] = _g(_EX)
     v["ex_shipped_steps"] = _whole(R.steps_to_heal(_EX, R.SHIPPED["base"], R.SHIPPED["accel"]))
     v["ex_a01_steps"] = _whole(R.steps_to_heal(_EX, R.A01["base"], R.A01["accel"]))
     v["ex_rec_end"] = _g(_EX - float(R.healable(R.BUDGET, rec["base"], rec["accel"])))
     v["ex_rec_full_steps"] = _whole(R.steps_to_heal(_EX, rec["base"], rec["accel"]))
     v["ex_rec_cover_steps"] = _whole(R.steps_to_heal(_EX, rec["base"], rec["accel"], rec["mult"]))
+    v["ex_rec_vs_budget"] = _g(
+        math.ceil(float(R.steps_to_heal(_EX, rec["base"], rec["accel"])) - 1e-9) / R.BUDGET)
+    v["ex_afford"] = _g(R.BUDGET)
+    # the compounding reading f01 annotates: steps to undo the lightest hit vs a fatal one, under
+    # the shipped default. Five steps apart for six times the damage.
+    v["comp_lo"] = _g(math.ceil(float(
+        R.steps_to_heal(15.0, R.SHIPPED["base"], R.SHIPPED["accel"])) - 1e-9))
+    v["comp_hi"] = _g(math.ceil(float(
+        R.steps_to_heal(R.MAX_INJURY, R.SHIPPED["base"], R.SHIPPED["accel"])) - 1e-9))
+    # the headline comparison, in steps: one typical wound, in the open and in cover
+    v["rec_open_steps_wound"] = _whole(R.steps_to_heal(R.WOUND, rec["base"], rec["accel"]))
+    v["shipped_steps_wound"] = _whole(
+        R.steps_to_heal(R.WOUND, R.SHIPPED["base"], R.SHIPPED["accel"]))
 
     # the largest accel each base rate tolerates, solved rather than read off f05
     for base in (0.05, 0.1, 0.2):

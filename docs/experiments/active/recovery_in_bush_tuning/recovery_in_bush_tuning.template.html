@@ -222,7 +222,7 @@ figure img:focus-visible { outline:2px solid var(--accent); outline-offset:-3px;
 <section class="col">
   <h2><span class="num">PURPOSE</span></h2>
   <p>In this simulation an animal walks a grid, eats, gets hurt, and heals only by choosing the
-  <strong>Rest</strong> action. How hurt it is is measured on a scale from 0 to {{VAL:max_injury}}; one point on that
+  <strong>Rest</strong> action. Injury is measured on a scale from 0 to {{VAL:max_injury}}; one point on that
   scale is an <strong>injury point</strong>, and at {{VAL:max_injury}} the animal dies. Some grid squares hold a <strong>bush</strong>, which hides
   the animal from a hunting predator and which predators cannot walk into. A setting called
   <code>body.recovery_in_bush_multiplier</code> can make resting inside a bush heal faster than
@@ -236,13 +236,15 @@ figure img:focus-visible { outline:2px solid var(--accent); outline-offset:-3px;
   <p><strong>The answer.</strong> Set the open-ground healing rate to
   <code>recovery_base_rate:&nbsp;{{VAL:rec_base}}</code>, switch the compounding off with
   <code>recovery_accel_rate:&nbsp;{{VAL:rec_accel}}</code>, and set
-  <code>recovery_in_bush_multiplier:&nbsp;{{VAL:rec_mult}}</code>. Resting earns no food while hunger keeps
-  draining, so an animal can only keep resting until its food runs out &mdash; about
-  {{VAL:budget}} steps from a typical start. Spend every one of those steps resting out in the
-  open and the recommendation heals away just {{VAL:rec_open_budget}} injury points. Spend them on
-  a bush instead and a bad {{VAL:wound}}-point wound closes in {{VAL:rec_cover_steps}} steps. Both of the settings that ship today fail
-  badly: each heals away the <em>entire</em> {{VAL:max_injury}}-point scale out in the open, one of
-  them in {{VAL:shipped_steps_full}} rest steps.</p>
+  <code>recovery_in_bush_multiplier:&nbsp;{{VAL:rec_mult}}</code>. Under those values, undoing a bad
+  {{VAL:wound}}-point wound takes <strong>{{VAL:rec_cover_steps}} rest steps on a bush and
+  {{VAL:rec_open_steps_wound}} out in the open</strong>. And an animal can afford only about
+  {{VAL:budget}} consecutive rest steps before it starves &mdash; resting earns no food while
+  hunger keeps draining. So out in the open, recovery is not slow. It is out of reach.</p>
+  <p>Both of the settings that ship today close that same wound in under twenty rest steps out in
+  the open &mdash; {{VAL:shipped_steps_wound}} for the default, {{VAL:a01_steps_wound}} for a01
+  &mdash; comfortably inside what the animal can pay for. Under either of them a bush is worth
+  nothing to an injured animal, which is the problem this page exists to fix.</p>
 </section>
 
 <hr>
@@ -339,132 +341,141 @@ figure img:focus-visible { outline:2px solid var(--accent); outline-offset:-3px;
 <hr>
 
 <section class="col">
-  <h2><span class="num">02</span> The definition the study turns on</h2>
-  <h3>One animal, three settings, in numbers</h3>
-  <p>The definition below is easier to read after seeing it happen once. So: take an animal that is
-  badly hurt &mdash; injury <strong>{{VAL:ex_injury}}</strong> of {{VAL:max_injury}} &mdash; with
-  half a stomach of food. It sits down out in the open and rests, and keeps resting until the food
-  runs out. Half a stomach buys {{VAL:budget}} steps of that. Here is where it ends up under each
-  of the three settings this page compares.</p>
+  <h2><span class="num">02</span> How long does recovery take?</h2>
+  <h3>Why this question first</h3>
+  <p>Recovery has one plain property that owes nothing to food, to thresholds, or to what the
+  animal is rewarded for: <strong>given the healing settings, how many rest steps does undoing a
+  wound actually take?</strong> That is a fact about the recovery parameters and nothing else, and
+  it is the only thing this section asks. Everything the page goes on to argue is built on top of
+  it, so it is worth having on its own before anything is layered over it.</p>
+  <p>A worked case first. Take an animal that is badly hurt &mdash; injury
+  <strong>{{VAL:ex_injury}}</strong> of {{VAL:max_injury}} &mdash; and ask only how long it would
+  have to sit still to undo that, under each of the settings this page compares.</p>
   <div class="callout pick">
-    <p><strong>Under the shipped default</strong> its injury is back to <strong>0</strong> after
-    {{VAL:ex_shipped_steps}} of those {{VAL:budget}} steps &mdash; fully healed, out in the open,
-    with most of its food still untouched.</p>
-    <p><strong>Under a01</strong> the same: <strong>0</strong> after {{VAL:ex_a01_steps}} steps.
-    Standing in the open, an animal heals completely and has food to spare.</p>
-    <p><strong>Under the recommendation</strong> it spends every one of the {{VAL:budget}} steps
-    resting and gets down to <strong>{{VAL:ex_rec_end}}</strong>. It healed
-    {{VAL:rec_open_budget}} points, it is still badly hurt, and it is now out of food. Healing all
-    {{VAL:ex_injury}} points out there would have taken {{VAL:ex_rec_full_steps}} steps, which it
-    does not have and never will.</p>
-    <p><strong>Under the recommendation, on a bush</strong>, that same animal is back to
-    <strong>0</strong> in {{VAL:ex_rec_cover_steps}} rest steps.</p>
+    <p><strong>Shipped default, in the open: {{VAL:ex_shipped_steps}} rest steps.</strong></p>
+    <p><strong>a01, in the open: {{VAL:ex_a01_steps}} rest steps.</strong></p>
+    <p><strong>The recommendation, in the open: {{VAL:ex_rec_full_steps}} rest steps.</strong></p>
+    <p><strong>The recommendation, on a bush: {{VAL:ex_rec_cover_steps}} rest steps.</strong></p>
   </div>
-  <p>That is the whole page in one example: two settings where the open is as good as a bush, and
-  one where it is not. Everything below is that comparison made general, so it can be checked over
-  every setting rather than this one animal.</p>
-  <h3>Said in general</h3>
-  <div class="callout pick">
-    <p class="eyebrow">Definition</p>
-    <p style="font-size:18px;line-height:1.5"><strong>Resting out in the open counts as
-    pointless when an animal that rests without stopping, for as long as its food lets it, still cannot bring its injury number <em>down</em> by more than a set amount.</strong></p>
-    <p>That set number is the <strong>healing allowance</strong>. It gets a symbol, <strong>&theta;</strong>
-    (the Greek letter theta), because it turns up in nearly every line of arithmetic below and a
-    symbol is shorter than the phrase. Wherever you see &theta;, read &ldquo;the healing
-    allowance&rdquo;.</p>
-  </div>
-  <p>Two numbers turn that sentence into something testable. This page sets the healing allowance at <strong>{{VAL:theta}} points of healing</strong>, and
-  the rest budget at <strong>{{VAL:budget}} steps</strong>. <strong>Neither number was measured. Both were
-  chosen</strong>, and a different choice would give a different answer &mdash; &sect;10 works out
-  how much different, and &sect;11 lists the two places where these choices turned out to be
-  rougher than they look.</p>
-  <p><strong>Why {{VAL:theta}} points.</strong> A predator's blow takes somewhere between 15 and
-  120 injury points. So an animal that cannot heal away {{VAL:theta}} points cannot undo even the
-  lightest hit it is likely to take &mdash; which is the plainest thing
-  &ldquo;pointless&rdquo; could reasonably mean.</p>
-  <p><strong>Why {{VAL:budget}} steps.</strong> An animal starts each episode with a random amount
-  of food, anywhere between empty and full, and burns one unit of it every step whatever it does.
-  Half full is the typical start, and half a stomach buys {{VAL:budget}} steps of resting before
-  starvation. An animal that began full would get {{VAL:budget_fixed}}; the page checks both.</p>
-  <div class="callout warn">
-    <p class="eyebrow">Two things these numbers are not</p>
-    <p><strong>{{VAL:theta}} is not an injury level.</strong> It is a <em>distance travelled</em>,
-    not a place on the scale &mdash; how far the injury number falls, not what it falls to. An
-    animal that starts at 90 and rests all {{VAL:budget}} steps in the open under the recommended
-    setting ends at 80: it healed {{VAL:rec_open_budget}} points, comfortably inside the
-    {{VAL:theta}}-point allowance. Where it started never enters the test, and nothing here says
-    anything about an animal whose injury happens to be {{VAL:theta}}.</p>
-    <p><strong>{{VAL:budget}} steps is not how long healing takes.</strong> It has nothing to do
-    with injury at all. It is how long the animal can keep resting <em>before it starves</em>, set
-    by food alone &mdash; the same {{VAL:budget}} steps whether it is barely scratched or nearly
-    dead. The two numbers meet only in the question the page asks: <em>given the most resting it
-    could possibly do, how far down can it get its injury?</em> Under the recommended setting,
-    falling {{VAL:theta}} points out in the open would need {{VAL:rec_open_steps_theta}}
-    consecutive rest steps &mdash; {{VAL:rec_theta_vs_budget}} times the food it has. That gap is
-    the whole result.</p>
-  </div>
-  <div class="callout">
-    <p class="eyebrow">The complementary requirement</p>
-    <p>A world in which nobody can heal anywhere is not the goal. So a second requirement has to
-    hold at the same time: <strong>cover has to actually work</strong> &mdash; an animal resting on
-    a bush should get a bad {{VAL:wound}}-point wound closed inside roughly {{VAL:cover_steps}}
-    rest steps. Pushing healing down until the open is useless also pushes it down inside the bush,
-    so the two requirements pull against each other, and the whole tuning problem is finding the
-    gap between them.</p>
-  </div>
-  <p>The rest of the page needs to refer to these two constantly, so they get short names:
-  <strong>condition A</strong> is the first one &mdash; <em>the open must not heal</em> &mdash; and
-  <strong>condition B</strong> is the second &mdash; <em>cover must heal</em>. A setting is only
-  any good if both hold at once.</p>
+  <p>Two settings where standing in the open heals an animal in under twenty steps, and one where
+  it takes four hundred and fifty. That gap is the whole design, and it is stated in nothing but
+  steps &mdash; no threshold, no food, no reward. The figure below is that same comparison across
+  every wound the world can deal rather than at this one animal.</p>
 </section>
 
 <figure>
-  <img data-fig="f01_theta_geometry" alt="Two line charts side by side, both over consecutive rest steps horizontally and cumulative injury healed vertically. Panel a shades a rectangle 25 points tall and 50 steps wide and draws its diagonal as a thick dashed line; a shallow green line stays inside the rectangle and is marked passes A, while a steep orange line crosses the top of the rectangle after five steps and is marked fails A. Panel b draws two solid rectangles anchored at the origin, 12.5 by 50 and 25 by 100, whose top-right corners both sit on a single thick dashed diagonal, plus a faint dotted diagonal of steeper slope ending in a marked corner at 50 by 25.">
+  <img data-fig="f01_recovery_time" alt="Four curves on a log vertical scale, of rest steps needed against the size of the wound to undo. The shipped default curve is almost flat near ten to sixteen steps across the whole range. The a01 curve and the recommended-in-cover curve lie exactly on top of one another, rising from three steps to about twenty. The recommended-in-the-open curve is far above the others, rising from about seventy-five steps to about five hundred, with a double-headed arrow marking the twenty-five-fold gap between it and the in-cover curve.">
   <p class="zoomhint">Click the figure to view it full size &mdash; or Tab to it and press Enter; Esc closes it</p>
   <figcaption>
-    <span><b>Figure 1 &mdash; &theta; is a height, the rest budget is a width, and condition A only
-    ever asks about the slope between them.</b> <b>Axes.</b> Both panels: horizontal is consecutive
-    rest steps taken in the open, in whole environment steps &mdash; 0 to 62 in panel (a), 0 to 114
-    in panel (b); vertical is cumulative injury healed, in points of the
-    0&ndash;{{VAL:max_injury}} injury scale &mdash; 0 to 100 in panel (a) and 0 to 47.5 in panel
-    (b), so (b) is a magnified view of the bottom of the same scale, not a different measurement.
-    In panel (a) the shaded rectangle is {{VAL:theta}} points tall and {{VAL:budget}} steps wide,
-    the thick dashed line is its diagonal, and the two solid lines are the two base rates this page
-    argues about, in the hues the page gives them throughout &mdash; green the recommendation,
-    orange the a01 comparison setting.</span>
-    <span>What to take from it: condition A is not a claim about &theta; or about the budget, but
-    about the single rate &theta;&nbsp;/&nbsp;budget, which is {{VAL:ratio}} injury points per rest
-    step here. Panel (b) is the consequence &mdash; halve &theta; or double the budget and you get
-    the same {{VAL:ratio_half}}-point-per-step ceiling, from two boxes that look nothing
-    alike.</span>
-    <span><b>Data.</b> {{DATA:f01_theta_geometry}}</span>
+    <span><b>Figure 1 &mdash; recovery time, on its own terms.</b> <b>Axes.</b> Horizontal: the
+    size of the wound to be undone, in injury points, from 15 (the lightest hit the world deals) to
+    {{VAL:max_injury}} (the whole scale). Vertical: consecutive rest steps needed to undo it, on a
+    logarithmic scale from 2 to 900 steps, logarithmic because the settings differ by more than a
+    factor of a hundred and a linear axis would flatten three of the four curves onto the floor.
+    Colour names the setting and line style names where the animal is resting &mdash; solid in the
+    open, dashed on a bush.</span>
+    <span>Three things to take from it. <strong>Compounding almost erases wound size:</strong>
+    under the shipped default a scratch takes {{VAL:comp_lo}} steps and a fatal wound
+    {{VAL:comp_hi}}, five steps apart for six times the damage. <strong>Flat healing scales
+    honestly</strong>, in proportion to the wound. And <strong>the multiplier is the vertical gap
+    between the two green curves</strong> &mdash; the same base rate, {{VAL:rec_mult}} times apart,
+    which in this view is a difference in time rather than in rate.</span>
+    <span><b>Data.</b> {{DATA:f01_recovery_time}}</span>
   </figcaption>
-  <p class="prov">Reproduce: <code>python scripts/analysis/studies/recovery_in_bush_tuning/f01_theta_geometry.py</code>
-  &rarr; <code>docs/experiments/active/recovery_in_bush_tuning/figures/f01_theta_geometry.{svg,pdf,png,data.txt}</code></p>
+  <p class="prov">Reproduce: <code>python scripts/analysis/studies/recovery_in_bush_tuning/f01_recovery_time.py</code>
+  &rarr; <code>docs/experiments/active/recovery_in_bush_tuning/figures/f01_recovery_time.{svg,pdf,png,data.txt}</code></p>
   <div class="howto">
     <p class="eyebrow">How it is computed</p>
-    <p>Nothing here is measured and nothing is swept. Panel (a) draws two straight lines,
-    <code>base &times; n</code>, at the two base rates the page argues about, over 400 step counts,
-    together with the rectangle whose height is &theta; and whose width is the affordable rest
-    budget. Both settings come from the same module every other figure reads, so neither is typed
-    here. The rectangle is an exact
-    picture of condition A only because <code>recovery_accel_rate</code> is zero for both lines: a
-    straight line through the origin is inside the rectangle at the right-hand edge exactly when its
-    slope is no greater than the rectangle's diagonal, which turns condition A from a statement about two numbers into one about a single rate. With a positive
-    acceleration the healing curve bends upward and the equivalence fails &mdash; it can pass under
-    the diagonal early and still cross the top later &mdash; which is the subject of Figure&nbsp;5,
-    not of this one. Panel (b) draws no data at all: it is two rectangles, two diagonals and one
-    marked corner, constructed so that halving &theta; and doubling the budget are visibly the same move. One word
-    in panel (a) needs care. The <em>budget</em> is an upper bound on resting, not a plan: an agent
-    that really rested for all of it would have spent its entire nutrition and would die at the end,
-    so a real agent has strictly fewer rest steps available than the box is wide.</p>
+    <p>Each curve inverts the healing formula: instead of asking how much an animal heals in a
+    given number of steps, it asks how many steps a given amount of healing needs. With compounding
+    switched off that is simply the wound divided by the per-step rate. With compounding on it is a
+    logarithm, because each consecutive rest step heals a fixed fraction more than the one before,
+    so the total grows geometrically and the step count grows only with the logarithm of the wound
+    &mdash; which is exactly why the shipped default's curve is nearly flat, and why that flatness
+    is a property of the setting rather than an artefact of the axis. Both settings that ship are
+    read from their configuration files when the figure is drawn, so editing either file moves the
+    figure. Two conventions are worth stating because they would otherwise surprise. Consecutive is
+    strict: any step on which the animal does something other than Rest sets the streak back to
+    zero, so a curve describes one uninterrupted stretch of resting rather than a total across an
+    episode. And the curves assume no new damage arrives, which is the case the tuning question is
+    about. What the figure deliberately does not show is whether the animal can afford the steps it
+    names; that is the next section, and keeping the two apart is the point of this one.</p>
   </div>
 </figure>
 
 <hr>
 
 <section class="col">
-  <h2><span class="num">03</span> The arithmetic, as the simulation actually computes it</h2>
+  <h2><span class="num">03</span> Can the animal afford that?</h2>
+  <h3>Why this analysis</h3>
+  <p>Figure 1 says how long recovery takes. It says nothing about whether the animal has that long,
+  and the answer is that it very often does not. Resting earns no food while hunger keeps draining
+  at a fixed rate every step, so there is a hard ceiling on how many steps in a row an animal can
+  spend resting before it starves: <strong>{{VAL:budget}} steps</strong> from the typical half-full
+  start, <strong>{{VAL:budget_fixed}}</strong> from a full stomach. That ceiling is the
+  <strong>rest budget</strong>, and it is set by food alone &mdash; it is the same number whether
+  the animal is barely scratched or nearly dead.</p>
+  <p>So hunger decides <em>how long</em>, and the recovery settings decide <em>how much</em>. They
+  meet in exactly one place, which is the comparison this figure draws. Take the worked animal
+  again: under the recommendation it needs {{VAL:ex_rec_full_steps}} rest steps to heal in the
+  open, and it can afford {{VAL:ex_afford}}. Needing {{VAL:ex_rec_vs_budget}} times the food you
+  have is not slow recovery. It is no recovery.</p>
+  <div class="callout">
+    <p class="eyebrow">Why this page stops at hunger</p>
+    <p>Hunger is the only competing demand measured in the same currency &mdash; steps &mdash; that
+    this page has numbers for. Body temperature is a second one, and it is being tuned in a
+    separate piece of work; when that lands it adds another line to this figure and changes nothing
+    in Figure 1, because Figure 1 is a fact about recovery alone. That is the reason for building
+    the page in this order rather than defining everything at once.</p>
+  </div>
+</section>
+
+<figure>
+  <img data-fig="f02_against_hunger" alt="The same four curves as the previous figure, with two dotted horizontal rules across them at fifty and one hundred rest steps and the region above fifty shaded. The recommended-in-the-open curve lies entirely inside the shaded region across the whole wound range; the other three curves lie well below both rules.">
+  <p class="zoomhint">Click the figure to view it full size &mdash; or Tab to it and press Enter; Esc closes it</p>
+  <figcaption>
+    <span><b>Figure 2 &mdash; the same curves, against what a stomach can pay for.</b>
+    <b>Axes.</b> Identical to Figure 1: horizontal is the size of the wound to be undone, in injury
+    points, 15 to {{VAL:max_injury}}; vertical is consecutive rest steps needed, on a logarithmic
+    scale from 2 to 900. The two dotted rules are on that same vertical scale and are rest budgets,
+    not healing: {{VAL:budget}} steps is what a half-full stomach pays for and
+    {{VAL:budget_fixed}} what a full one does. The shaded band is everything above the tighter of
+    the two.</span>
+    <span>The verdict is the position of one curve. The recommendation in the open sits inside the
+    shaded band at every wound size, including the lightest hit the world deals &mdash; there is no
+    wound it can heal out there before starving. Every other curve, the two shipped settings and
+    the recommendation on a bush, sits below both rules by a wide margin.</span>
+    <span><b>Data.</b> {{DATA:f02_against_hunger}}</span>
+  </figcaption>
+  <p class="prov">Reproduce: <code>python scripts/analysis/studies/recovery_in_bush_tuning/f02_against_hunger.py</code>
+  &rarr; <code>docs/experiments/active/recovery_in_bush_tuning/figures/f02_against_hunger.{svg,pdf,png,data.txt}</code></p>
+  <div class="howto">
+    <p class="eyebrow">How it is computed</p>
+    <p>The curves are exactly the ones from Figure 1 &mdash; the figure imports them rather than
+    recomputing them, so the two cannot drift apart. The only new content is the two horizontal
+    rules, and both are derived rather than chosen. A resting animal takes no food while its
+    nutrition falls by the metabolic cost on every step, so it can rest for its nutrition divided
+    by that cost and no longer. The shipped base world starts every episode at full nutrition,
+    which gives the {{VAL:budget_fixed}}-step rule; worlds that randomise the starting nutrition
+    draw it uniformly between empty and full, whose median gives the {{VAL:budget}}-step rule. Both
+    numbers are read from configuration files at draw time. The important weakness is that both
+    rules are upper bounds in the strongest sense: an animal that really spends its entire
+    nutrition resting starves on the final step of it, so a curve sitting just beneath a rule is
+    not in fact survivable. That bias runs in one direction only &mdash; it is generous to the open
+    &mdash; which means a setting this figure shows failing, fails with room to spare. What the
+    figure still does not show is whether an animal would choose to rest at all.</p>
+  </div>
+</figure>
+
+<hr>
+
+<section class="col">
+  <h2><span class="num">04</span> The same comparison, stated formally</h2>
+  <p>Sections 2 and 3 answered the question in steps, for one wound at a time. To check it over
+  <em>every</em> setting rather than the four on those charts, the comparison has to be written as
+  arithmetic. This section does that, and introduces the two pieces of shorthand the rest of the
+  page uses.</p>
+  <h3>The arithmetic, as the simulation actually computes it</h3>
   <p>Five lines, transcribed from <code>{{VAL:source_file}}</code> lines {{VAL:source_lines}}.
   Everything on this page is derived from them in code; no cumulative total anywhere is typed by
   hand.</p>
@@ -476,101 +487,54 @@ recovery_amount = <span class="k">recovery_base_rate</span> * (1 + <span class="
 if <span class="k">recovery_in_bush_multiplier</span> != 1.0 and in_bush:  recovery_amount *= multiplier
 can_recover     = rested AND applied_inc &lt;= 0
 new_injury      = clip(injury + applied_inc - recovery_amount * can_recover, 0, <span class="k">max_injury</span>)</pre>
-  <p>Two consequences do all the work. Because the streak is 1 on the first rest step and the
-  exponent is <code>streak - 1</code>, the heal on the <em>n</em>-th consecutive rest step is
-  <code>base&nbsp;&times;&nbsp;(1&nbsp;+&nbsp;accel)^(n-1)</code>. The cumulative heal over <em>n</em> steps is
-  therefore a geometric sum:</p>
-  <p class="deriv">cumulative(n) = base &times; n &nbsp;&nbsp;when accel = 0,
-  &nbsp;&nbsp;and&nbsp;&nbsp; base &times; ((1 + accel)<sup>n</sup> &minus; 1) / accel
-  &nbsp;&nbsp;otherwise &nbsp;&mdash;&nbsp; times the multiplier, in cover.</p>
-  <p>Rearranged, the two conditions become almost embarrassingly simple at
-  <code>recovery_accel_rate</code> = 0. Condition A is <strong>base &le; &theta; / budget</strong>,
-  which is {{VAL:ratio}} at the primary setting. Condition B is
-  <strong>base &times; multiplier &ge; wound / cover steps</strong>, which is
-  {{VAL:cover_rate_min}} injury points per rest step.</p>
-  <p><strong>What &theta; is doing in that first inequality.</strong> &theta; is a number of injury
-  points and the budget is a number of rest steps, so &theta;&nbsp;/&nbsp;budget is neither &mdash;
-  it is a <em>rate</em>, in injury points per rest step, and condition A says the open&rsquo;s
-  healing rate must not exceed it. Figure&nbsp;1 draws that rate as the thing it actually is: a
-  slope. &theta; is the <em>height</em> of a box and the budget is its <em>width</em>; a healing
-  line satisfies condition A exactly when it is still inside that box at the moment the budget runs
-  out, and fails exactly when it leaves through the top instead. For a straight line &mdash; which
-  is what <code>recovery_accel_rate</code>&nbsp;=&nbsp;0 gives &mdash; &ldquo;still inside at the right-hand
-  edge&rdquo; is the same statement as &ldquo;no steeper than the box&rsquo;s diagonal&rdquo;. The
-  diagonal <em>is</em> the ceiling, and its slope is &theta;&nbsp;/&nbsp;budget.</p>
-  <p>Seeing it as a slope also settles a question the page would otherwise have to answer twice.
-  Only the <em>ratio</em> of the two numbers ever appears, so &theta; and the budget never have to
-  be argued about separately: halving &theta; &mdash; a stricter claim about what counts as
-  meaningful healing &mdash; and doubling the budget &mdash; a more generous claim about how long an
-  agent can afford to rest &mdash; land on exactly the same ceiling, {{VAL:ratio_half}} points per
-  rest step either way. Panel (b) of Figure&nbsp;1 is that fact drawn: two differently shaped boxes,
-  one diagonal. It is also why a single set of lines in Figure&nbsp;4 carries both sensitivities at
-  once rather than needing a grid of four.</p>
-</section>
-
-<hr>
-
-<section class="col">
-  <h2><span class="num">04</span> Two shipped settings, two different problems</h2>
-  <h3>Why this analysis</h3>
-  <p>Two recovery settings exist in the repository and it is tempting to treat them as two points
-  on one dial. They are not. One compounds and one does not, and the difference decides whether
-  &ldquo;how much can the open heal?&rdquo; even has a bounded answer. An informative figure here
-  would show the compounding curve leaving the flat one behind fast enough that no single base rate
-  can stand in for both.</p>
-</section>
-
-<figure>
-  <img data-fig="f02_recovery_curve" alt="Four curves of cumulative injury healed against consecutive rest steps. The shipped default curve is flat at first then rises almost vertically, reaching the top of the injury scale near step 16. The a01 curve is a straight line reaching the top near step 20, with the recommended in-bush curve drawn exactly on top of it. The recommended in-the-open curve is a shallow straight line reaching only about 11 points by step 55.">
-  <p class="zoomhint">Click the figure to view it full size &mdash; or Tab to it and press Enter; Esc closes it</p>
-  <figcaption>
-    <span><b>Figure 2 &mdash; healing adds up very differently under the two shipped
-    settings.</b> <b>Axes.</b> Horizontal: consecutive rest steps, counted in whole environment
-    steps, from 0 to 55; the <code>t = 0</code> point is the initial state and not a step.
-    Vertical: cumulative injury healed, in points of the 0&ndash;{{VAL:max_injury}} injury scale,
-    from 0 to {{VAL:max_injury}}. Both dotted reference lines are on those same axes: the
-    horizontal one is &theta; = {{VAL:theta}} points, the vertical one the
-    {{VAL:budget}}-step rest budget. All four curves share one scale and are directly
-    comparable.</span>
-    <span>The orange line and the green dashed line lie on top of one another on purpose: the
-    recommendation's healing rate <em>inside cover</em> is set to a01's flat
-    {{VAL:rec_cover_rate}} points per rest step, so a wound closes in the same number of steps that
-    already-run sweep was calibrated to.</span>
-    <span><b>Data.</b> {{DATA:f02_recovery_curve}}</span>
-  </figcaption>
-  <p class="prov">Reproduce: <code>python scripts/analysis/studies/recovery_in_bush_tuning/f02_recovery_curve.py</code>
-  &rarr; <code>docs/experiments/active/recovery_in_bush_tuning/figures/f02_recovery_curve.{svg,pdf,png,data.txt}</code></p>
-  <div class="howto">
-    <p class="eyebrow">How it is computed</p>
-    <p>Each curve is the closed-form cumulative heal from &sect;3, evaluated at whole step counts 0
-    to 55 and then clipped at {{VAL:max_injury}}. The clip is not cosmetic: the simulation clamps
-    injury to the range 0 to {{VAL:max_injury}} on every step, so an agent can never heal more than
-    the scale it is measured on, and the flat tops are that clamp rather than a drawing choice. The
-    two shipped settings are read out of their YAML files at run time rather than transcribed, so
-    if somebody edits either file this figure moves with it. No simulation is run here &mdash;
-    Figure 6 is the one that does that, and it exists precisely because these four curves are
-    algebra and algebra can be wrong. Two conventions are worth stating because they would
-    otherwise surprise. First, &ldquo;consecutive&rdquo; is strict: any step on which the agent does
-    something other than Rest sets the streak back to zero, so a curve describes an uninterrupted
-    stretch and not a total across an episode. Second, these curves assume the agent takes no new
-    damage. A fresh hit suspends healing for the three steps over which the simulation spreads that
-    damage, while the streak keeps climbing underneath &mdash; so after a hit the compounding curve
-    is steeper than drawn, not shallower. What the figure does not show is whether an agent would
-    <em>choose</em> to rest this long; that is &sect;9.</p>
+  <p>Because the streak is 1 on the first rest step and the exponent is <code>streak - 1</code>,
+  the heal on the <em>n</em>-th consecutive rest step is
+  <code>base&nbsp;&times;&nbsp;(1&nbsp;+&nbsp;accel)^(n-1)</code>, and the total over <em>n</em>
+  steps is a geometric sum:</p>
+  <p class="deriv">cumulative(n) = base &times; n<br>
+  cumulative(n) = base &times; ((1 + accel)<sup>n</sup> &minus; 1) / accel</p>
+  <p>The first line is the case with compounding switched off, the second the case with it on; in
+  cover, both are multiplied by the in-bush multiplier. Figures 1 and 2 are this same expression
+  solved the other way round, for <em>n</em> &mdash; which is why they can be drawn in steps.</p>
+  <h3>The two requirements, and their short names</h3>
+  <p>The page needs to refer to two things constantly, so they get names.
+  <strong>Condition A</strong> is the one Figures 1 and 2 have been testing: <em>the open must not
+  heal</em>. <strong>Condition B</strong> is its necessary partner: <em>cover must heal</em>
+  &mdash; a world in which nobody can recover anywhere is not the goal. An animal resting on a bush
+  should get a bad {{VAL:wound}}-point wound closed inside roughly {{VAL:cover_steps}} rest steps.
+  Pushing healing down until the open is useless also pushes it down inside the bush, so the two
+  pull against each other, and the tuning problem is the gap between them.</p>
+  <p>Written out at <code>recovery_accel_rate</code>&nbsp;=&nbsp;0, both become one line each.
+  Condition B is <strong>base &times; multiplier &ge; wound / cover steps</strong>, which is
+  {{VAL:cover_rate_min}} injury points per rest step. Condition A needs one more number before it
+  can be written down, and that number is the only genuinely arbitrary thing on this page.</p>
+  <div class="callout warn">
+    <p class="eyebrow">The one chosen number, and what it is for</p>
+    <p>&ldquo;The open must not heal&rdquo; is not yet testable, because the open always heals a
+    little. A line has to be drawn, and this page draws it at
+    <strong>&theta;&nbsp;=&nbsp;{{VAL:theta}} injury points</strong>: resting in the open for the
+    whole rest budget must not undo more than that. Written out, condition A is
+    <strong>base &le; &theta;&nbsp;/&nbsp;budget</strong> &mdash; {{VAL:ratio}} injury points per
+    rest step at the primary setting.</p>
+    <p>&theta; is a <em>quantity of healing</em>, not an injury level, and it exists only so the
+    later figures have a boundary to draw. In Figures 1 and 2 no such number was needed: comparing
+    steps against steps settles the question on its own. Note too that &theta; and the budget only
+    ever appear as the ratio between them, so halving &theta; and doubling the budget are the same
+    move &mdash; which is why &sect;10 needs one table rather than a grid.</p>
   </div>
-</figure>
+</section>
 
 <hr>
 
 <section class="col">
   <h2><span class="num">05</span> Where the open is already unrecoverable</h2>
   <h3>Why this analysis</h3>
-  <p>Condition A is a statement about a single number: how much injury a continuously-resting agent
-  can clear outside cover before it starves. The &theta; contour below is the same line
-  Figure&nbsp;1 drew as the diagonal of a box, now traced across a whole plane of settings instead
-  of at one of them. Figure 2 evaluates that number at three points;
-  this figure evaluates it everywhere in the plane that any shipped configuration occupies, and
-  draws the line where it equals &theta;. An informative answer tells us whether the workable
+  <p>Figures 1 and 2 answered condition A for four settings. This figure answers it for every
+  setting in the plane that any shipped configuration occupies. Doing it over a whole plane forces
+  a change of view: a step count needs a wound size to be a step count, and a plane of settings
+  does not have one. So from here on the page uses the formal version from &sect;4 &mdash; how much
+  injury the open can clear inside the rest budget, against the &theta; line &mdash; which is the
+  same comparison with the wound divided out of it. An informative answer tells us whether the workable
   region is a large comfortable area or a sliver &mdash; and therefore whether the recommendation
   is robust or delicately balanced.</p>
 </section>
@@ -944,7 +908,7 @@ new_injury      = clip(injury + applied_inc - recovery_amount * can_recover, 0, 
   <div class="d">The brief asked for the two shipped settings to be drawn throughout. Figure 4 is a
   plane at <code>recovery_accel_rate</code> = 0, and only one of the two shipped settings lives
   there. Plotting the other one on it would have placed a point at coordinates the setting does not
-  have. It appears in Figures 2, 3 and 5, and its absence from Figure 4 is stated in that figure's
+  have. It appears in Figures 1, 2, 3 and 5, and its absence from Figure 4 is stated in that figure's
   caption.</div></div>
 </section>
 
