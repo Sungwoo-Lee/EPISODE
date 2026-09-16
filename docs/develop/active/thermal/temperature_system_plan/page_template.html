@@ -66,6 +66,9 @@ table { border-collapse:collapse; font-size:14px; min-width:560px; width:100%;
 th,td { padding:9px 14px; text-align:left; border-bottom:1px solid var(--line);
   vertical-align:top; }
 td.n, th.n { text-align:right; font-family:"IBM Plex Mono",monospace; font-size:13px; }
+/* F35: a numeric cell that wraps splits one value across two lines. th.n is left to
+   wrap — headers are prose and wrapping them is what keeps the column narrow. */
+td.n { white-space:nowrap; }
 thead th { color:var(--ink-3); font-weight:600; font-size:11.5px; letter-spacing:.07em;
   text-transform:uppercase; border-bottom:1px solid var(--rule);
   font-family:"IBM Plex Sans Condensed",sans-serif; }
@@ -85,10 +88,10 @@ table.narrow { min-width:0; }
 /* Stop a hidden prose column from stretching every row on a phone. */
 table.steps td:last-child { min-width:170px; }
 .cue { font-size:13px; color:var(--ink-3); margin:0; }
-/* F32: a cue that is always on lies wherever nothing actually scrolls. The steps
-   table's measured max-content is 673px; the .scroll box is the 70ch text column,
-   so it stops scrolling once the viewport reaches 673 + 2*28 (.wrap padding) = 729. */
-@media (min-width:729px) { .cue { display:none; } }
+/* F32 amendment: N scroll boxes styled by one class are N different floors, so a single
+   breakpoint tells the truth for at most one of them. Each cue is bound to its own box's
+   measurement instead. Cues ship hidden and are revealed only when that box overflows, so
+   with JS disabled the page claims nothing rather than claiming something false. */
 dt { font-family:"IBM Plex Mono",monospace; font-size:13px; color:var(--cold); }
 dd { margin:0; font-size:15.5px; color:var(--ink-2); }
 hr { border:0; border-top:1px solid var(--line); margin:0; width:100%; }
@@ -158,6 +161,7 @@ hr { border:0; border-top:1px solid var(--line); margin:0; width:100%; }
         default</td><td>Keeps the nutrition loop unchanged until we choose to test it</td></tr>
     </tbody>
   </table></div>
+
 </section>
 
 <hr>
@@ -893,7 +897,7 @@ T &larr; T + <span class="k">k_exchange</span>&middot;(T_field &minus; T) + <spa
   <p>The thermoceptor reports <code>field &minus; body_temp</code>. Add the proposed channel back
   and the agent's own cell temperature falls out exactly &mdash; which is the argument for keeping
   the channel in raw degrees rather than normalising it.</p>
-  <p class="cue">Wider than a narrow screen &mdash; scroll the table sideways; the right-hand column is cut off.</p>
+  <p class="cue" hidden>Wider than the screen &mdash; scroll the table sideways; the right-hand column is cut off.</p>
   <div class="scroll"><table class="steps">
     <thead><tr><th>Step</th><th class="n">Body Temperature<br><span style="font-weight:400">the new channel</span></th>
       <th class="n">Thermoception, centre<br><span style="font-weight:400">field &minus; body</span></th>
@@ -979,10 +983,124 @@ T &larr; T + <span class="k">k_exchange</span>&middot;(T_field &minus; T) + <spa
 <hr>
 
 <section class="col">
+  <h2><span class="num">14</span> Is the clock long enough to live on?</h2>
+  <p>Every setting above imposes a <strong>clock</strong>: how long the agent can be away from
+  warmth before it dies. A clock that is too short makes the world unplayable &mdash; the agent
+  never gets far enough to eat, hide or heal, and temperature stops being a trade-off and becomes
+  the only thing that matters. This section measures that clock against the other demands the
+  environment already makes, and asks which settings actually move it.</p>
+  <p>The headline is not what I expected when I started measuring, and it points at a different
+  parameter than the thermal ones.</p>
+</section>
+
+<figure>
+  <img src="data:image/png;base64,@@budget@@" alt="Four panels. A: three horizontal bars comparing
+  episode length, the hunger clock and the thermal clock. B: thermal budget against world baseline
+  temperature for three fire strengths, with the hunger clock marked. C: paired bars of survivable
+  map share and mean walk home against number of campfires. D: thermal budget against k_exchange
+  for three values of k_loss.">
+  <figcaption><b>Figure K &mdash; what each setting does to the survival clock.</b>
+  <b>Axes.</b> A: horizontal axis is steps (0&ndash;585); the three bars are the three clocks, no
+  vertical scale. B: horizontal axis is world baseline temperature in degrees (colder to the left,
+  &minus;40 to &minus;13); vertical axis is the thermal budget in steps &mdash; how long the agent
+  survives in the coldest cell having started from safety. C: horizontal axis is number of campfires
+  (1&ndash;5); <em>left</em> vertical axis, green bars, is the survivable share of the map in percent;
+  <em>right</em> vertical axis, blue bars, is the mean number of steps from any cell to the nearest
+  survivable one. The two axes are different quantities &mdash; compare each colour against its own
+  axis, not against the other. D: horizontal axis is <code>k_exchange</code> (per step, dimensionless);
+  vertical axis is the thermal budget in steps.
+  <b>What it shows.</b> The thermal clock is <strong>34 steps</strong> against a hunger clock of
+  <strong>100</strong> and an episode of <strong>500</strong>, so temperature is three times more
+  urgent than hunger. World coldness sets that clock and fire strength barely moves it (B); more
+  fires buy a shorter walk home rather than a longer clock (C); and the clock is really set by the
+  two rate constants, not by any of the scenery (D).
+  <b>Data.</b> Computed, not sampled: every point is the first-order body recurrence from
+  <code>sim.py</code> run over fields built exactly as <code>jax_reset</code> builds them, averaged
+  over 24 random fire placements per point that respect the shipped minimum separation. The clock
+  figures are exact rather than estimated. The food distances quoted below are separate, and are
+  measured over 3,000 real resets of the live config (100% of those sampled).</figcaption>
+</figure>
+
+<section class="col">
+  <h3>The clock is not the problem. The groceries are next door.</h3>
+  <p>I set out to check the fear that the thermal clock is too tight to leave room for foraging.
+  Measured against the live config, it is the opposite &mdash; there is roughly <strong>twice as
+  much thermal headroom as foraging actually demands</strong>:</p>
+  <p class="cue" hidden>Wider than the screen &mdash; scroll the table sideways; the right-hand column is cut off.</p>
+  <div class="scroll"><table class="steps">
+    <thead><tr><th>Quantity</th><th class="n">Steps</th><th>How it was obtained</th></tr></thead>
+    <tbody>
+      <tr><td>Thermal window &mdash; safety to death in the cold</td><td class="n">30&ndash;34</td>
+        <td>body recurrence from the ring equilibrium</td></tr>
+      <tr class="pick"><td>Distance from safety to the nearest food</td><td class="n">1.6 mean, <strong>1 median</strong></td>
+        <td>3,000 real resets of the live config</td></tr>
+      <tr class="pick"><td>Cost of one there-and-back meal</td><td class="n">~3.2</td><td>twice the above</td></tr>
+      <tr><td>Meals that fit inside one thermal window</td><td class="n">~9</td><td>window ÷ round trip</td></tr>
+      <tr><td>Meals actually needed to hold nutrition level</td><td class="n">5</td>
+        <td>each food is worth 6 steps of nutrition</td></tr>
+    </tbody>
+  </table></div>
+  <div class="callout warn">
+    <p><strong>Food lands a median of one step from a survivable cell.</strong> The agent barely has
+    to leave. It can fit about nine meals into a window where five would keep it level, so the
+    thermal clock never becomes the binding constraint &mdash; and the warmth-versus-food trade-off
+    this whole system exists to create mostly does not occur.</p>
+    <p>That is the same finding as the food-placement measurement reached from the other direction,
+    and it is a <em>placement</em> problem, not a thermal one. Loosening the thermal parameters
+    would not help; it would make a slack constraint slacker.</p>
+  </div>
+</section>
+
+<section class="col">
+  <h3>Which settings actually move the clock</h3>
+  <dl>
+    <dt>k_exchange, k_loss</dt>
+    <dd>The real dials. The clock is a property of the body, not of the scenery &mdash; halving
+    <code>k_exchange</code> roughly doubles the budget (panel D). Below about 0.02 the cold stops
+    killing at all.</dd>
+    <dt>world baseline</dt>
+    <dd>Second strongest. Colder shortens the clock steeply; warmer than about &minus;20 and the
+    whole map becomes survivable, which removes the task rather than easing it (panel B).</dd>
+    <dt>fire ratio</dt>
+    <dd>Barely matters for survival time. It sets how <em>hot</em> the fire cell is and how wide the
+    ring is, not how long you last away from it.</dd>
+    <dt>number of fires</dt>
+    <dd>Changes the <em>geography</em>, not the clock: 1 fire leaves 8% of the map survivable with a
+    3.8-step walk home; 5 fires leave 31.5% with a 1.2-step walk. More fires mean more safety, not
+    more time.</dd>
+  </dl>
+</section>
+
+<section class="col">
+  <h3>One strategy the numbers imply, which is worth knowing before training</h3>
+  <p>The agent can choose <em>where</em> to wait. The most comfortable survivable cell and the
+  warmest one are not the same cell, and the difference is a real decision:</p>
+  <p class="cue" hidden>Wider than the screen &mdash; scroll the table sideways; the right-hand column is cut off.</p>
+  <div class="scroll"><table class="steps">
+    <thead><tr><th>Waiting spot</th><th class="n">Body settles at</th><th class="n">Runway when it leaves</th>
+      <th>Trade</th></tr></thead>
+    <tbody>
+      <tr><td>Most comfortable survivable cell</td><td class="n">0.0</td><td class="n">27 steps</td>
+        <td>best reward now</td></tr>
+      <tr class="pick"><td>Warmest survivable cell</td><td class="n">+10.2</td><td class="n">36 steps</td>
+        <td>worse reward now, <strong>a third more runway</strong></td></tr>
+    </tbody>
+  </table></div>
+  <p>Figures are for a five-fire world, where the gap is widest; it exists at every fire count.
+  <strong>Deliberately overheating before a long trip banks time</strong> &mdash; paying drive now to
+  buy runway later. Whether that is worth it depends on how hungry the agent is, which is to say it
+  is a decision that can only be made from internal state. It is the clearest example this
+  environment currently offers of the behaviour the modulator is supposed to be good at, and it
+  costs nothing to add &mdash; it is already there in the physics.</p>
+</section>
+
+<hr>
+
+<section class="col">
   <h4>Provenance</h4>
   <p class="foot">Every number on this page is computed at build time from the sandbox in this
   folder &mdash; <code>sim.py</code> (field construction and body dynamics),
-  <code>nbhd_compare.py</code> (neighbourhood accuracy), <code>figs.py</code> (figures A&ndash;I), <code>figJ_obs.py</code> (figure J). Rebuild
+  <code>nbhd_compare.py</code> (neighbourhood accuracy), <code>figs.py</code> (figures A&ndash;I), <code>figJ_obs.py</code> (figure J), <code>figK_budget.py</code> (figure K). Rebuild
   with <code>build_page.py</code>. The sandbox is pure numpy and deliberately independent of
   <code>src/</code>, so parameters can be swept without touching the environment. Source review:
   EVAAA at <code>vendor/evaaa/evaaa_unity</code> &mdash; <code>ThermoGridSpawner.cs</code>,
@@ -992,3 +1110,23 @@ T &larr; T + <span class="k">k_exchange</span>&middot;(T_field &minus; T) + <spa
 </section>
 
 </div>
+
+<script>
+/* Reveal each scroll cue only when its own box actually overflows (F32 amendment).
+   The three .scroll boxes on this page have three different content floors, so a single
+   media query would tell the truth for at most one of them. Cues ship hidden, so with
+   scripting off the page claims nothing rather than claiming something false.
+   This runs at the END of the document: at line 165 it bound only the first cue,
+   because the other two tables did not exist yet. */
+(function () {
+  var pairs = [].map.call(document.querySelectorAll('p.cue'), function (cue) {
+    return [cue, cue.nextElementSibling];
+  }).filter(function (p) { return p[1] && p[1].classList.contains('scroll'); });
+  function sync() {
+    pairs.forEach(function (p) { p[0].hidden = p[1].scrollWidth <= p[1].clientWidth; });
+  }
+  sync();
+  addEventListener('resize', sync);
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(sync);
+})();
+</script>

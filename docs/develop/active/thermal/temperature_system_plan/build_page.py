@@ -17,7 +17,7 @@ FIG = {k: b64(v) for k, v in {
     'pipeline': 'figA_pipeline.png', 'fig_sigma': 'figB_sigma.png', 'body': 'figC_body.png',
     'render': 'figD_render.png', 'tether': 'figE_tether.png', 'modes': 'figF_modes.png', 'fig_kloss': 'figG_kloss.png', 'ranges': 'figH_ranges.png', 'pain': 'figI_pain.png',
     'nbhd': 'fig1_geometry.png', 'acc': 'fig3_accuracy.png',
-    'obs': 'figJ_obs.png'}.items()}
+    'obs': 'figJ_obs.png', 'budget': 'figK_budget.png'}.items()}
 
 DEFAULT, SIGMA, K_EX, K_LOSS, DEATH = -25.0, 0.7, 0.04, 0.01, 15.0
 A_FIRE = 300.0
