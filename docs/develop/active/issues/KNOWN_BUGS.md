@@ -3,7 +3,7 @@ title: "Known Bugs"
 topic: issues
 status: active
 created: 2026-07-04
-last_updated: 2026-09-16
+last_updated: 2026-09-17
 ---
 
 # Known Bugs
@@ -24,7 +24,9 @@ need a decision) come first, because those are the ones that can bite a new plan
 **archived-stack subsection** follows them: the in-house DreamerV3-NNX Dreamer was archived
 2026-07-10 (the live Dreamer is `dreamer_srl`), so its formerly-open rows are kept visible
 but are moot unless that stack is revived. **Fixed**
-items follow — split into the *test-gate hygiene* fixes (2026-09-09 and 2026-09-16 — three
+items follow — split into the *measuring instrument that could not hide what it could not
+list* fix (2026-09-17 — the renderer audit's element enumeration silently dropped a whole
+class of drawn object), the *test-gate hygiene* fixes (2026-09-09 and 2026-09-16 — three
 tests whose pass-or-fail depended on state shared across the whole test session rather than
 on the code they were measuring), the
 *sensor-ladder dose-response binning* fix (2026-09-01, a
@@ -141,6 +143,33 @@ archaeology but are **not actionable** unless the stack is revived.
 | **Environment reset is not bit-identical across compilations — one last-digit float difference on the sampled animal-property column** (2026-08-20) | Running the same environment-reset code twice can give results that differ in the very last binary digit of a float (at most 5.96e-08, one float32 "unit in the last place"), and **only** on `animal_property_sampled`. Every integer and boolean field is always exact, and the five other property columns produced by the same sampling helper are exact too. Cause: the compiler (XLA) may fuse `mean + std * noise` into a single multiply-add or keep it as two operations, and which it picks depends on how the surrounding code lowers — `animal_property_sampled` is the one column sitting next to the scatter write at `src/environment/core.py:1128-1140`, whose neighbourhood flips that decision. | **NOT A BUG — documented compiler behaviour** (do not re-escalate). Three independent lines rule out a logic error: (1) the random-key parity guard passes, so both paths feed the generator identical bits — the divergence is downstream, in float arithmetic; (2) a real logic error (wrong key, wrong index, duplicate-index scatter) would move essentially every element of a Gaussian draw by an order-one amount, not 242 of 5120 elements by ≤1 last digit; (3) **decisive** — it was first blamed on batching (`vmap`), but `senior-developer` reproduced the same column and the same magnitude (≤5.867e-08) with the project's shipped fixture generator, which uses **unbatched `jax_reset` and no `vmap` at all**, so the effect is compilation-level fusion, not batching. **Consequences recorded:** results are lowering-dependent, so one trajectory store must never mix CPU-collected and GPU-collected blocks (`device` is now in `MANIFEST_GUARDED_FIELDS`, `src/utils/trajectory_store.py:443`); seed-pairing across runs is exact only per-device **and** per-lowering; the bound is pinned by a regression test that also asserts no other column joins it. | env reset / trajectory collection | `docs/develop/active/behavior/TRAJECTORY_COLLECTION_PIPELINE.md` §4.4 (+ §D15, R6) · `tests/test_trajectory_collection.py::test_v1_animal_property_divergence_is_one_float32_ulp` |
 
 ---
+
+## Fixed — a measuring instrument that could not hide what it could not list (2026-09-17)
+
+**The pattern, which is the reason this has a row.** An **enumeration that silently omits a
+class of object, where the omission also disables the mechanism that would have revealed it.**
+The renderer's pixel-overlap audit measures each drawn element by rendering it alone over the
+bare background, which means listing the figure's artists and hiding all but one. Anything
+missing from that list is therefore also never *hidden* — so it stays painted in every
+"isolated" render and quietly eats the ink of whatever it covers. The two failure modes are
+the same omission seen twice, and the second one is what stops the first from being noticed.
+**The failure direction is the dangerous one:** the instrument under-reports overlap, i.e. it
+errs toward a clean bill of health.
+
+**The generalisable check, not yet built (hand-off: `senior-developer`).** After any change to
+artist enumeration, assert that the enumerated set **accounts for the full canvas ink** — then
+a dropped class shows up as unexplained pixels instead of as a quietly smaller number. No such
+assertion exists in the audit or its control suite today (checked 2026-09-17); the current
+guard is a regression test that only asserts collections appear in the list at all.
+
+**Deliberately filed apart from the process-global test-gate cluster below.** Same failure
+direction — an instrument reporting clean without having measured — but a different mechanism:
+nothing here depends on state shared across the test session, so folding it into that class
+would dilute what that class names. Cross-linked both ways instead.
+
+| Bug | What happened | Status | Severity | Area | Fix + detail |
+|-----|---------------|--------|----------|------|--------------|
+| **The pixel-overlap audit never saw a whole class of drawn object — and so could not hide it while measuring everything else** | The audit enumerated artists by asking each for its **window extent**; a Matplotlib `Collection` returns an empty box, so the degenerate-bbox filter dropped **every** `Collection` from the element list, on every frame, since Phase 0c. Because an artist that is not in the list is never hidden during isolation, each dropped one was painted into every isolated render **including the bare background**, absorbing the ink of whatever sat under it. **Measured:** on a two-token square the page rectangle's isolated ink came out **665 px short** — exactly the area of the two tokens it was swallowing. The frozen V1 and dormant-V2 reference frames carry **17 such artists each**, so every isolation measurement taken on them was contaminated. It would also have broken the redesign's co-occupancy rule outright, since that work draws every bed and token as one `PatchCollection` — the rule would have measured an arena with nothing standing in it, which is how it was found. **Fixed** by bounding a `Collection` from its own paths (plus stroke width) when its window extent is empty. **The frozen per-rule counts did not move after the fix** — that is the load-bearing part: no calibration this audit has performed rested on the defect. | **FIXED — in the working tree, not yet committed** (lands with the Phase 1 audit-controls change; no product code touched — the audit imports the frozen renderer read-only and is imported by nothing under `src/`) | Med as an instrument defect; **zero** measured impact (frozen counts unchanged) | renderer-layout audit (`scripts/eval/render_layout_audit.py`, `_collection_extent` + `enumerate_elements`) | regression test `tests/env/test_render_audit_controls.py::test_collection_artists_are_enumerated_at_all` · [[RENDERER_LAYOUT_REDESIGN]] § "A defect in the instrument itself, found by these controls" · sibling instrument row `d83c8b22` (the same audit's import-isolation check, process-global cluster below) |
 
 ## Fixed — test-gate hygiene: test verdicts that depended on process-global state (2026-09-09, 2026-09-16)
 
