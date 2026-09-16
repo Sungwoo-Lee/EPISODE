@@ -1,9 +1,12 @@
 """Build the imperativism field-history data files from the reviewed corpus.
 
+Canonical location: docs/project/references/imperativism/field_history_data/.
+Revised 2026-09-17 after professor-pain-modeling and plan-reviewer gates.
+
 Every value below was transcribed from the per-batch reviews in
 docs/project/references/imperativism/ (Parts A-I). Section references use
 Part letter + entry number (e.g. "D §2" = Price 2000 in Part D).
-Run: /home/vncuser/miniconda3/envs/grid_world_pain/bin/python <this file>
+Run: /home/vncuser/miniconda3/envs/grid_world_pain/bin/python build_field_history_data.py
 """
 import csv
 import os
@@ -19,47 +22,64 @@ ERAS = [
      "Pain stops being a fixed line from receptor to brain; surgery and lesion cases show pain can persist without bothering the patient."),
     ("e2_dimensions", "Mapping the dimensions", 1990, 2006,
      "Imaging, opioid PET and rodent place-avoidance assays look for separate homes for intensity and unpleasantness; fear-avoidance model consolidates."),
-    ("e3_badness", "Pain's badness as a philosophical and motivational problem", 2007, 2013,
+    ("e3_badness", "Pain's badness and pull on behaviour become explicit problems", 2007, 2013,
      "Imperativism and evaluativism are founded; neuroscience recasts pain as a motivator; fear-avoidance turns to goals; cingulate linked to action."),
     ("e4_elaboration", "Elaboration, formal models and the turn to valence", 2014, 2019,
      "Books and formal models; the painkiller question; debate widens to all feelings; RL framing of pain; circuit silencing; a critical systematic review."),
-    ("e5_valence", "Valence across all affect and contested dissociations", 2020, 2026,
+    ("e5_valence", "Revised IASP definition, all-affect valence and graded dissociations", 2020, 2026,
      "Metasemantic dispute over learning and decision science; asymbolia reframed as taxonomy; graded human dissociations; conflicting avoidance-learning results."),
 ]
 
 DEBATES = [
+    # id, title, question, status, status_reason, status_direction, status_scope
     ("dimensions", "How many components, and can they be moved separately?",
      "Is pain one experience or separable parts (how strong vs how bad), and can one part be changed without the other?",
      "open",
-     "Same asymmetry read as seriality (price2000) or near-unitary (talbot2019); 2023-24 studies call it graded; no E1-E2 primary study moves intensity alone."),
+     "Same asymmetry read as seriality (price2000) or near-unitary (talbot2019); 2023-24 studies call it graded; no E1-E2 primary study moves intensity alone.",
+     "",
+     "Talbot's review covered cognitive manipulations only; drug and lesion evidence enters through a few small separate studies."),
     ("valence-nature", "What is the non-sensory component: evaluation, command, or something else?",
      "What makes pain (and other feelings) bad: a perception of badness, a command, a desire, or something else?",
      "open",
-     "Latest exchange (mb2026 reply to carruthers2023) has no counter-reply in the corpus; imperativists also split among themselves (kauppinen2021 vs bh2019)."),
+     "Latest exchange (mb2026 reply to carruthers2023) has no counter-reply in the corpus; imperativists also split among themselves (kauppinen2021 vs bh2019).",
+     "",
+     "Seed survey favoured imperativism: imperativist authors wrote 14 reviewed works, evaluativists 7; several evaluativist replies are not held."),
     ("relief-seeking", "Why take painkillers? The direction of pain's motivation",
      "Does unpleasantness itself push us to get rid of the feeling, or only to protect the body, with relief-seeking coming from elsewhere?",
      "open",
-     "Four rival accounts persist (martinez2015, bain2019, loopy2019, kauppinen2021) and carruthers2023 presses a hedonism charge; no side concedes in the corpus."),
+     "Four rival accounts persist (martinez2015, bain2019, loopy2019, kauppinen2021) and carruthers2023 presses a hedonism charge; no side concedes in the corpus.",
+     "",
+     "Replies directly on this question (Cutter & Tye 2014, Jacobson 2019) are not held."),
     ("asymbolia", "Is asymbolic pain pain, and what does it show?",
      "When patients say a pinprick hurts but do not mind it, are they in pain, and does this show pain has separable parts?",
      "stalled",
-     "Exchange active 2023-25, but all three papers agree the clinical record is small, old and ambiguous and no new clinical data enter the corpus after 1999."),
+     "No clinical evidence newer than 1999 enters the record; the active 2023-25 exchange moves only by reinterpretation of old case reports.",
+     "",
+     "Case reports are known only second-hand; Grahek 2007 and Bain 2014, central to the exchange, are not held."),
     ("unpleasantness-vs-avoidance", "Is felt unpleasantness separable from avoidance and motivation?",
      "Is how bad pain feels the same thing as the push to avoid or escape it, or can the two be measured and moved apart?",
      "open",
-     "Behaviour moved without ratings (claes2015, flury2025) but across phases or probe trials; no reviewed study rates own unpleasantness and avoidance per trial."),
+     "Behaviour moved without ratings (claes2015, flury2025) but across phases or probe trials; no reviewed study rates own unpleasantness and avoidance per trial.",
+     "",
+     "Placebo and desire-for-relief work that rated desire beside pain is largely outside the corpus (vase2003, vase2005 named-only)."),
     ("cingulate-action", "Where does pain meet action in cortex?",
      "Is cingulate activity during pain about feeling bad, about general control, or about preparing an action?",
      "open",
-     "Integration (shackman2011) and action-dependence (perini2013, koppel2022) readings coexist unadjudicated; the one lesion study did not measure pain."),
-    ("learning-signal", "Is pain a learning signal, and how is learning from pain structured?",
-     "Does pain work as a teaching signal for learning what to avoid, and do people learn more from pain received or pain avoided?",
-     "leaning",
-     "Papers addressing it treat pain as a teaching signal, but learning asymmetry conflicts (jepma2022 vs le2024) and value vs command readings differ."),
+     "Integration (shackman2011) and action-dependence (perini2013, koppel2022) readings coexist unadjudicated; the one lesion study did not measure pain.",
+     "",
+     "The action-dependence line is mostly one lab's studies; counter-evidence such as Kragel 2018 is cited but not held."),
+    ("learning-signal", "Is pain's felt badness the learning signal, and how is learning from pain structured?",
+     "Nociceptive input supports aversive learning; is pain's felt badness itself that teaching signal, and do people learn more from pain received or avoided?",
+     "open",
+     "Identity claims (seymour2019; johansen2004 one-circuit) are untested against felt badness; learning asymmetry conflicts (jepma2022 vs le2024).",
+     "",
+     "The reviewed computational papers were selected for this framing; that nociceptive input drives aversive learning is treated as uncontested background."),
     ("avoidance-drivers", "What drives pain-related avoidance and disability?",
      "Do people avoid painful activity because of fear, because of pain itself, or because avoiding pain wins out over other goals?",
      "leaning",
-     "The model's own originators moved from fear-driven to goal-competition framing (crombez2012, vlaeyen2016), but causal tests remain few (leeuw2006, claes2015)."),
+     "The originators' 2016 model keeps the fear loop and adds a goal-priority fork (crombez2012, vlaeyen2016); causal tests remain few (leeuw2006, claes2015).",
+     "toward fear plus goal competition",
+     "Only the fear-avoidance originators' programme is reviewed; rival clinical models (e.g. endurance responses, hasenbring2010) are named-only."),
 ]
 
 # key: (short_label, year, year_print, community, era, role, debates)
@@ -90,7 +110,7 @@ W = {
  "loopy2019": ("Barlassina & Hayward 2019 (Loopy)", 2019, 2020, "philosophy", "World-directed theories fail (moods, experts, rat liking/wanting); relief-seeking intrinsic to reflexive commands", "valence-nature;relief-seeking;unpleasantness-vs-avoidance"),
  # ---------- Part B3 ----------
  "kauppinen2021": ("Kauppinen 2021", 2021, 2021, "philosophy", "Relational imperativism: indicative content plus background concern plus command; denies reflexive motivation", "valence-nature;relief-seeking;asymbolia"),
- "barlassina_reflection": ("Barlassina c. 2020 (essay)", 2020, "unknown", "philosophy", "Short essay for reflexive imperativism citing rat salt liking/wanting dissociation; function of valence unexplained", "valence-nature;relief-seeking;unpleasantness-vs-avoidance"),
+ "barlassina_reflection": ("Barlassina c. 2020 (essay)", 2020, "", "philosophy", "Short essay for reflexive imperativism citing rat salt liking/wanting dissociation; function of valence unexplained", "valence-nature;relief-seeking;unpleasantness-vs-avoidance"),
  "mb2026": ("Martínez & Barlassina 2026", 2026, 2026, "philosophy", "Reply to Carruthers 2023: valence informs more about behaviour than world, so imperative (accepted 2023)", "valence-nature;learning-signal"),
  # ---------- Part C ----------
  "foltz1962": ("Foltz & White 1962", 1962, 1962, "neurology-neurosurgery", "Not reviewed. Cingulumotomy reports cited as background by rainville1997, kulkarni2005, johansen2001", "cingulate-action;dimensions"),
@@ -151,7 +171,7 @@ W = {
  "le2024": ("Le et al. 2024", 2024, 2024, "computational", "Faster learning after avoided shock (opposite to jepma2022); avoidance parameters had cingulate correlates", "learning-signal"),
  # ---------- Part H ----------
  "vase2003": ("Vase et al. 2003", 2003, 2003, "unknown", "Not reviewed and not cited by the reviewed Part H papers; title names desire in placebo effects", "unpleasantness-vs-avoidance"),
- "vase2005": ("Vase et al. 2005", 2005, 2005, "unknown", "Not reviewed and not cited by the reviewed Part H papers", "none"),
+ "vase2005": ("Vase et al. 2005", 2005, 2005, "unknown", "Not reviewed and not cited by the reviewed Part H papers", ""),
  "lee2024": ("Lee et al. 2024", 2024, 2024, "human-neuroscience", "Signed valence and unsigned affective intensity decoded from largely distinct voxels; no action measure", "dimensions;unpleasantness-vs-avoidance"),
  "flury2025": ("Flury et al. 2025", 2025, 2026, "clinical-psychology", "Reward improved pain avoidance without changing intensity or unpleasantness ratings; no differential claim", "unpleasantness-vs-avoidance;dimensions"),
  # ---------- Part I ----------
@@ -171,7 +191,8 @@ W = {
 
 POSITIONS = [
  ("dimensions", "dim-serial", "Separable and serially ordered", "price2000;rainville1997", "Intensity causes unpleasantness, which feeds secondary suffering; ACC tracks unpleasantness (partial segregation)"),
- ("dimensions", "dim-lateral-medial", "Distinct lateral (sensory) and medial (affective) systems", "kulkarni2005;tiemann2014;zidda2024;craig2003", "Manipulations or anatomy separate a sensory route from an affective/motivational one"),
+ ("dimensions", "dim-lateral-medial", "Distinct lateral (sensory) and medial (affective) systems", "kulkarni2005;zidda2024;craig2003", "Attention, primes or anatomy separate a sensory route from an affective/motivational one"),
+ ("dimensions", "dim-affect-selective", "Manipulation shifts unpleasantness, intensity not significantly", "tiemann2014;hayen2017", "Drug manipulations moved unpleasantness without a significant intensity change; hayen2017 is breathlessness, a non-pain analogue"),
  ("dimensions", "dim-graded", "Relative specialisation or graded difference", "hofbauer2001;zubieta2001;stankewitz2023;singh2020", "Regions lean toward one dimension, but ratings co-move and streams integrate; no simple dichotomy"),
  ("dimensions", "dim-unitary", "Evidence favours one unitary experience", "talbot2019", "Intensity not selectively modifiable; unpleasantness maybe, tentatively and slightly; dissociations vulnerable to demand"),
  ("dimensions", "dim-valence-intensity", "Signed valence vs unsigned affective intensity", "lee2024;leknestracey2008", "Recasts the axis: pain shares valence and intensity codes with pleasure rather than a sensory/affective split"),
@@ -201,21 +222,21 @@ POSITIONS = [
  ("unpleasantness-vs-avoidance", "uva-behaviour-moves", "Behaviour moves while ratings do not", "claes2015;flury2025;becker2018", "Competing rewards change avoidance choices or performance without changing fear, intensity or unpleasantness ratings"),
  ("unpleasantness-vs-avoidance", "uva-behaviour-primary", "Control behaviour as the ultimate measure", "seymour2019", "Pain is a control signal, so behaviour rather than self-report should measure it"),
  ("unpleasantness-vs-avoidance", "uva-liking-wanting", "Liking and wanting come apart", "loopy2019;barlassina_reflection;carruthers2023", "Both camps accept dissociations of pleasure from motivation; they disagree what they show about valence"),
- ("unpleasantness-vs-avoidance", "uva-urge", "Urge to withdraw tied to insula-cingulate coupling", "perini2013;perini2020", "Urge-to-move ratings track action circuitry but, where tested, did not dissociate from intensity"),
+ ("unpleasantness-vs-avoidance", "uva-urge", "Urge to withdraw rated beside action", "perini2013;perini2020", "Urge did not dissociate from intensity (perini2013); insula-cingulate coupling tracked urge in controls (perini2020 only)"),
  ("cingulate-action", "ca-affect", "Cingulate as the seat of unpleasantness", "rainville1997;price2000;johansen2001;craig2003", "ACC activity tracks or is needed for pain's unpleasantness or motivational drive"),
  ("cingulate-action", "ca-integration", "Adaptive control integration", "shackman2011;misra2014;tolomeo2016", "One aMCC region integrates pain, negative affect and control to choose actions under uncertainty"),
  ("cingulate-action", "ca-action-dependence", "Pain response depends on action", "perini2013;perini2020;koppel2022;lee2022", "Midcingulate responses follow action requirements or consequences; ACC output is sensorimotor, not sensory"),
  ("cingulate-action", "ca-observed", "Observed pain: meaning and vigour", "budell2015;han2017", "Others' pain engages cingulate when meaning is attended and makes instructed actions more forceful"),
  ("cingulate-action", "ca-motor-maps", "Effector-specific action maps (not pain studies)", "procyk2014;gordon2023", "Cingulate and motor cortex organise feedback and whole-body action planning in motor maps"),
- ("learning-signal", "ls-teaching", "ACC as aversive teaching signal", "johansen2004", "Rostral ACC activity is necessary and sufficient to teach avoidance of a context"),
- ("learning-signal", "ls-rl-control", "Pain as reinforcement and control signal", "seymour2019;wiech2013", "Pain teaches and controls behaviour in a hierarchy of reflex, Pavlovian, habit and planning controllers"),
+ ("learning-signal", "ls-teaching", "ACC as aversive teaching signal", "johansen2004", "Rostral ACC activity necessary and sufficient to teach avoidance (one dose; authors: not conclusive); same circuit as unpleasantness"),
+ ("learning-signal", "ls-rl-control", "Pain is the reinforcement and control signal", "seymour2019;wiech2013", "Pain is the internal reinforcement signal in a controller hierarchy (seymour2019 identity claim); wiech2013 frames it as a motivator"),
  ("learning-signal", "ls-arbitration", "Planning and habit systems for pain avoidance", "wang2018", "Pain avoidance draws on model-based and model-free control with reliability-based switching"),
  ("learning-signal", "ls-received", "Learn more from pain received", "jepma2022", "Learning rate higher after received than avoided pain; separate threat and safety systems"),
  ("learning-signal", "ls-avoided", "Learn more from pain avoided", "le2024", "Learning rate higher after avoided shock in a go/no-go task mixing money and shock"),
  ("learning-signal", "ls-value", "Learning describable as value updating", "carruthers2023", "Prediction-error learning of stored values needs no commands"),
  ("learning-signal", "ls-command", "Learning function supports commands", "bh2019;mb2026", "Affect evolved as reward/punishment for trial-and-error learning; learning models favour imperative content"),
  ("learning-signal", "ls-vigour", "Avoidance vigour adapts to failure", "gandhi2021", "Failing to avoid lowers next-trial vigour, more with helplessness; parietal attention not PAG"),
- ("avoidance-drivers", "ad-fear", "Fear drives avoidance", "vlaeyen2000", "Catastrophic interpretation leads to fear, avoidance, disuse and disability; fear matters more than intensity"),
+ ("avoidance-drivers", "ad-fear", "Fear drives avoidance", "vlaeyen2000;vlaeyen2016", "Catastrophizing leads to fear, avoidance and disability; the 2016 diagram keeps this fear loop as its core"),
  ("avoidance-drivers", "ad-intensity", "Intense pain is itself threatening", "leeuw2006", "High pain intensity itself drives escape and avoidance; model underplayed it"),
  ("avoidance-drivers", "ad-goals", "Goal competition", "crombez2012;claes2015;vlaeyen2016;becker2018", "Avoiding pain is one goal among many; protective behaviour yields when another goal is valued more"),
  ("avoidance-drivers", "ad-homeostatic", "Homeostatic drive", "craig2003", "Pain is a feeling plus behavioural drive like hunger or thermal discomfort"),
@@ -410,33 +431,36 @@ EDGES = [
 ]
 
 NM = "not-measured"
+CONTRASTS = {"manipulation", "stimulus-class", "pre-task", "attention-condition", "none-correlational"}
+# Rows kept although fewer than two own-pain outcomes are coded (explained in caveats).
+DISS_KEEP_BELOW_TWO = {"budell2015"}
 DISS = [
- # key, species, n, design, intensity, unpleasantness, avoidance, desire, reflex, neural, direction_note, caveats
- ("rainville1997","human","8","Hypnotic suggestion for more vs less unpleasantness of constant hot water","unchanged","changed",NM,NM,NM,"H2(15)O PET","Unpleasantness 81 vs 45; ACC activity moved, S1 did not","Selected for the effect; intensity 78 vs 71 n.s., not equivalence; fixed state order"),
- ("hofbauer2001","human","10","Hypnotic suggestion for stronger vs weaker pain","changed","changed",NM,NM,NM,"H2(15)O PET","Both ratings moved (r=0.81); S1 moved with suggestion, ACC did not","Double dissociation only across two samples; selected sample; fixed state order"),
- ("zubieta2001","human","20","Sustained jaw pain vs placebo; opioid release correlated with scores across people","correlational","correlational",NM,NM,NM,"[11C]carfentanil PET","Different but overlapping regions correlated with sensory vs affective questionnaire scores","Intensity held at 40-60 VAS; 'affect' is MPQ subscale, not unpleasantness rating"),
- ("kulkarni2005","human","17","Attend to location vs unpleasantness of identical laser pulses","unchanged","correlational",NM,NM,NM,"H2(15)O PET","Location: S1 and parietal; unpleasantness: pACC, OFC, amygdala, hypothalamus, M1","Attention not percept manipulated; S1 effect P=0.05 corrected; men only"),
- ("tiemann2014","human","22","Dopamine-precursor depletion vs balanced amino-acid drink","unchanged","changed",NM,NM,NM,"EEG evoked potentials and oscillations","Unpleasantness 5.6 vs 4.7 (p=.048), scaling with tyrosine depletion; EEG unchanged","One post-task unpleasantness rating; men only; no neural correlate of the change"),
- ("hayen2017","human","19","Remifentanil vs saline during resistive-load breathlessness","unchanged","changed",NM,NM,NM,"3T fMRI and arterial spin labelling","Breathlessness unpleasantness 61 to 49 (p=.03); intensity 71 to 68 (p=.21)","Breathlessness, not pain; one-tailed tests; no interaction test; changes correlated r=0.59"),
- ("singh2020","rat","5 rats (units); 6-19 per group (behaviour)","Optogenetic activation or inhibition of S1->ACC terminals paired with pinprick",NM,NM,"changed",NM,NM,"in vivo electrophysiology with optogenetics","Activation increased and inhibition decreased pinprick place aversion","No sensory or reflex test under manipulation; key controls in absent supplement"),
- ("stankewitz2023","human","20","No manipulation; both ratings on every trial of prolonged cold pain","correlational","correlational",NM,NM,NM,"7T fMRI activity and connectivity","Signals tracked unpleasantness slightly more than intensity; ratings r=0.86","Graded difference by authors' account; intensity always rated first; conditions pooled"),
- ("zidda2024","human","19","Negative, neutral or positive picture primes before electric shock","unchanged","changed",NM,NM,NM,"64-channel EEG (N2, P2)","Unpleasantness negative > neutral > positive; only P2 change predicted it","Intensity quadratic trend p=.04, partial eta2 .12; intensity rated first; picture ERPs overlap"),
- ("claes2015","human","57","Lottery reward added to a painful joystick movement (within-subject)","unchanged","unchanged","changed",NM,NM,"none","Choice of the painful movement rose sharply; fear rating also unchanged","Ratings from 50%-reinforced phases, choices from 100% phase; self-selected goal groups; manuscript"),
- ("johansen2001","rat","8 lesion, 10 sham (rostral)","Rostral vs caudal ACC excitotoxic lesion; formalin place conditioning",NM,NM,"changed",NM,"unchanged","excitotoxic lesion","Rostral lesion abolished place avoidance; acute formalin paw behaviour not reduced","No thresholds measured; one time bin higher in lesioned rats; affect inferred from avoidance"),
- ("johansen2004","rat","7-11 per group","ACC glutamate blockade during training; agonist without noxious input; post-training lesion",NM,NM,"changed",NM,"unchanged","intracerebral microinjection; lesion","Blockade prevented avoidance learning with acute behaviour unchanged; agonist alone produced avoidance","One dose; acute behaviour not measured under agonist; authors call evidence not conclusive"),
- ("corder2019","mouse","9 imaging; 14 per group silencing","Chemogenetic silencing of an amygdala nociceptive ensemble",NM,NM,"changed",NM,"unchanged","miniscope calcium imaging; activity-tagged chemogenetics","Attending, escape and thermal avoidance reduced; thresholds and withdrawal unchanged","'Unpleasantness' inferred from behaviour; methods and statistics in absent supplement"),
- ("lee2022","mouse","9-10 per group (avoidance task)","Optogenetic activation or inhibition of ACC->dl/lPAG terminals",NM,NM,"changed",NM,"changed","optogenetics; 15.2T optogenetic fMRI; tracing","Activation increased shock-zone distance and heat sensitivity together","Only activation tested in avoidance task (necessity untested); shock-zone entries unchanged"),
- ("gandhi2021","human","32","Reaction-time pain-avoidance task: after failure vs success; migraine vs controls",NM,NM,"changed",NM,NM,"3T fMRI","Avoidance vigour dropped after failure, more with helplessness; parietal, not PAG, tracked it","Pain rated only for calibration on one merged scale; helplessness effects n=15; manuscript"),
- ("jepma2022","human","83 (74 fMRI)","Pain-avoidance choice learning under levodopa, naltrexone or placebo","unchanged",NM,"changed",NM,NM,"3T fMRI","Both drugs raised learning from avoided pain only; placebo learned more from received pain","Intensity from a separate pre-task session; no ratings during learning; effects in model parameters"),
- ("le2024","human","82","Go/no-go learning to avoid shock or win money",NM,NM,"correlational",NM,NM,"3T fMRI","Individual avoidance learning rate tracked by dorsal and mid cingulate activity","Half of shock feedback without shock; accepted manuscript; asymmetry opposite to jepma2022"),
- ("lee2024","human","58 (+62 test)","Oral capsaicin vs chocolate vs water with continuous pleasant-unpleasant rating",NM,"correlational",NM,NM,NM,"3T fMRI multivariate decoding and connectivity","Signed valence and unsigned affective intensity decoded from largely distinct voxels","'Intensity' is affective, not sensory; small effects; no action or avoidance measure"),
- ("flury2025","human","58","Contingent vs yoked monetary reward for avoiding or discriminating heat","unchanged","unchanged","changed",NM,NM,"none","Reward improved avoidance speed and success; ratings unchanged","Probe-trial ratings on mild stimuli; task-compliance confound; authors decline differential claim"),
- ("perini2013","human","18 fMRI; 15 ratings","Button press vs no press crossed with painful and non-painful heat and cold","changed",NM,NM,"changed",NM,"3T fMRI and ALE meta-analysis","Urge and intensity both steeper for pain (r=0.53-0.83); midcingulate followed pressing","Ratings from separate group outside scanner; no unpleasantness; press is not escape"),
- ("misra2014","human","15","Grip force, painful heat, and both combined","unchanged",NM,NM,NM,NM,"3T fMRI","Adding force did not change pain rating; aMCC overlap of force and pain","One scale mixing sensation and pain; dual-task attention not excluded"),
- ("budell2015","human","23","Observing and reproducing pain faces: express meaning vs imitate movements","correlational",NM,NM,NM,NM,"3T fMRI with facial action coding","Cingulate pain responses in meaning task, not imitation task","Observed pain only; rating is of actors' pain, not own"),
- ("han2017","human","30 behaviour; 33 fMRI","Watching painful vs non-painful clips while pressing a force sensor","changed","changed",NM,"changed",NM,"3T fMRI","Press force rose with observer unpleasantness; pressing reduced responses to observed pain","Observed pain; desire is willingness to help, not urge to escape; press instructed (vigour)"),
- ("perini2020","human","12 carriers; 12 controls","Natural manipulation: reduced C-fibre density (R221W carriers) vs matched controls","unchanged",NM,NM,"changed",NM,"3T fMRI with connectivity; resting state","Thresholds normal, urge to withdraw weaker; insula-MCC coupling tracked urge in controls","Fixed-effects group model; urge rated after scan; sensitivity difference only a trend"),
- ("koppel2022","human","30","Cue predicts pain; a timed press could or could not shorten it",NM,NM,"changed",NM,NM,"3T fMRI (preregistered and exploratory)","Responses faster when press mattered; cingulate and insula tracked predicted, not current, pain","No pain ratings; press required every trial; preregistered action tests null"),
+ # key, species, n_analysed, n_primary, design, contrast_of, intensity, unpleasantness, avoidance, desire, reflex_or_nocifensive, neural, direction_note, caveats
+ ("rainville1997","human","8",8,"Hypnotic suggestion for more vs less unpleasantness of constant hot water","manipulation","unchanged","changed",NM,NM,NM,"H2(15)O PET","Unpleasantness 81 vs 45; ACC activity moved, S1 did not","Selected for the effect; intensity 78 vs 71 n.s., equivalence not tested; fixed state order"),
+ ("hofbauer2001","human","10",10,"Hypnotic suggestion for stronger vs weaker pain","manipulation","changed","changed",NM,NM,NM,"H2(15)O PET","Both ratings moved (r=0.81); S1 moved with suggestion, ACC did not","Double dissociation only across two samples; selected sample; fixed state order"),
+ ("zubieta2001","human","20",20,"Sustained jaw pain vs placebo; opioid release correlated with scores across people","none-correlational","correlational","correlational",NM,NM,NM,"[11C]carfentanil PET","Different but overlapping regions correlated with sensory vs affective questionnaire scores","Codes are between-person correlations; intensity held at 40-60 VAS; affect is MPQ subscale, not unpleasantness rating"),
+ ("kulkarni2005","human","17",17,"Attend to location vs unpleasantness of identical laser pulses","attention-condition","unchanged","correlational",NM,NM,NM,"H2(15)O PET","Location: S1 and parietal; unpleasantness: perigenual ACC, OFC, amygdala, hypothalamus, M1","Intensity = % painful across tasks; unpleasantness rated in one task only, vs rCBF; S1 P=0.05 corrected; men only"),
+ ("tiemann2014","human","22",22,"Dopamine-precursor depletion vs balanced amino-acid drink","manipulation","unchanged","changed",NM,NM,NM,"EEG evoked potentials and oscillations","Unpleasantness 5.6 vs 4.7 (p=.048), scaling with tyrosine depletion; EEG unchanged","Intensity null far better powered (75 single-trial ratings) than affect effect (one post-task rating); men only"),
+ ("hayen2017","human","19",19,"Remifentanil vs saline during resistive-load breathlessness","manipulation","unchanged","changed",NM,NM,NM,"3T fMRI and arterial spin labelling","Breathlessness unpleasantness 61 to 49 (p=.03); intensity 71 to 68 (p=.21)","Breathlessness, a non-pain analogue; one-tailed; no interaction test; changes correlated r=0.59"),
+ ("singh2020","rat","5 rats (units); 6-19 per group (behaviour)","","Optogenetic activation or inhibition of S1->ACC terminals paired with pinprick","manipulation",NM,NM,"changed",NM,NM,"in vivo electrophysiology with optogenetics","Activation increased and inhibition decreased pinprick place aversion","No sensory or reflex test under manipulation; key controls in absent supplement"),
+ ("stankewitz2023","human","20",20,"No manipulation; both ratings on every trial of prolonged cold pain","none-correlational","correlational","correlational",NM,NM,NM,"7T fMRI activity and connectivity","Signals tracked unpleasantness slightly more than intensity; ratings r=0.86","Graded difference by authors' account; intensity always rated first; conditions pooled"),
+ ("zidda2024","human","19",19,"Negative, neutral or positive picture primes before electric shock","manipulation","unchanged","changed",NM,NM,NM,"64-channel EEG (N2, P2)","Unpleasantness negative > neutral > positive; only P2 change predicted it","Intensity main effect n.s. but quadratic trend p=.04, partial eta2 .12; intensity rated first; picture ERPs overlap"),
+ ("claes2015","human","57",57,"Lottery reward added to a painful joystick movement (within-subject)","manipulation","unchanged","unchanged","changed",NM,NM,"none","Choice of the painful movement rose sharply; fear rating also unchanged","Unpleasantness p=.133, no equivalence test; ratings from 50% phases, choices from 100% phase; self-selected groups"),
+ ("johansen2001","rat","8 lesion, 10 sham (rostral)","","Rostral vs caudal ACC excitotoxic lesion; formalin place conditioning","manipulation",NM,NM,"changed",NM,"unchanged","excitotoxic lesion","Rostral lesion abolished place avoidance; acute formalin paw behaviour not reduced","Spared measure is nocifensive formalin licking/lifting/flinching, which corder2019 counts as affective; no thresholds; one bin higher"),
+ ("johansen2004","rat","7-11 per group","","ACC glutamate blockade during training; agonist without noxious input; post-training lesion","manipulation",NM,NM,"changed",NM,"unchanged","intracerebral microinjection; lesion","Blockade prevented avoidance learning with acute behaviour unchanged; agonist alone produced avoidance","Spared measure is nocifensive formalin behaviour (corder2019 counts it affective); agonist one dose; authors: not conclusive"),
+ ("corder2019","mouse","9 imaging; 14 per group silencing","","Chemogenetic silencing of an amygdala nociceptive ensemble","manipulation",NM,NM,"changed",NM,"unchanged","miniscope calcium imaging; activity-tagged chemogenetics","Attending, escape and thermal avoidance reduced; thresholds and withdrawal unchanged","Spared measures are reflexes (von Frey, withdrawal); attending/licking counted affective, unlike johansen2001; supplement absent"),
+ ("lee2022","mouse","9-10 per group (avoidance task)","","Optogenetic activation or inhibition of ACC->dl/lPAG terminals","manipulation",NM,NM,"changed",NM,"changed","optogenetics; 15.2T optogenetic fMRI; tracing","Activation increased shock-zone distance and heat sensitivity together","Reflex = heat withdrawal latency; only activation tested in avoidance task (necessity untested); shock-zone entries unchanged"),
+ ("gandhi2021","human","32",32,"Reaction-time pain-avoidance task: after failure vs success; migraine vs controls","manipulation",NM,NM,"changed",NM,NM,"3T fMRI","Avoidance vigour dropped after failure, more with helplessness; parietal, not PAG, tracked it","Pain rated only for calibration on one merged scale; helplessness effects n=15; accepted manuscript"),
+ ("jepma2022","human","83 (74 fMRI)",83,"Pain-avoidance choice learning under levodopa, naltrexone or placebo","manipulation","unchanged",NM,"changed",NM,NM,"3T fMRI","Both drugs raised learning from avoided pain only; placebo learned more from received pain","Intensity 'unchanged' = no drug effect on pre-task ratings only; no ratings during learning; drug effects in model parameters"),
+ ("le2024","human","82",82,"Go/no-go learning to avoid shock or win money","none-correlational",NM,NM,"correlational",NM,NM,"3T fMRI","Individual avoidance learning rate tracked by dorsal and mid cingulate activity","Half of shock feedback without shock; accepted manuscript; asymmetry opposite to jepma2022"),
+ ("lee2024","human","58 (+62 test)",58,"Oral capsaicin vs chocolate vs water with continuous pleasant-unpleasant rating","none-correlational",NM,"correlational",NM,NM,NM,"3T fMRI multivariate decoding and connectivity","Signed valence and unsigned affective intensity decoded from largely distinct voxels","'Intensity' in paper is affective, not sensory; small effects; no action or avoidance measure"),
+ ("flury2025","human","58",58,"Contingent vs yoked monetary reward for avoiding or discriminating heat","manipulation","unchanged","unchanged","changed",NM,NM,"none","Reward improved avoidance speed and success; ratings unchanged","Contingency main effect on unpleasantness p=.027 across both phases; mild probe stimuli; compliance confound; no differential claim"),
+ ("perini2013","human","18 fMRI; 15 ratings","","Button press vs no press crossed with painful and non-painful heat and cold","stimulus-class","changed",NM,NM,"changed",NM,"3T fMRI and ALE meta-analysis","Urge and intensity both steeper for pain (r=0.53-0.83); midcingulate followed pressing","Rating codes compare pain vs non-pain, not press; ratings from separate group; no unpleasantness; press is not escape"),
+ ("misra2014","human","15",15,"Grip force, painful heat, and both combined","manipulation","unchanged",NM,NM,NM,NM,"3T fMRI","Adding force did not change pain rating; aMCC overlap of force and pain","One scale mixing sensation and pain; dual-task attention not excluded"),
+ ("budell2015","human","23",23,"Observing and reproducing pain faces: express meaning vs imitate movements","manipulation",NM,NM,NM,NM,NM,"3T fMRI with facial action coding","Cingulate pain responses in meaning task, not imitation task","Observer rating of another's pain, coded not-measured; kept for visibility, no own-pain outcome measured"),
+ ("han2017","human","30 behaviour; 33 fMRI","","Watching painful vs non-painful clips while pressing a force sensor","stimulus-class",NM,NM,NM,"changed",NM,"3T fMRI","Press force and willingness to help rose for painful clips; pressing reduced responses to observed pain","Observer rating of another's pain (and own unpleasantness at viewing) coded not-measured; desire = willingness to help"),
+ ("perini2020","human","12 carriers; 12 controls","","Natural manipulation: reduced C-fibre density (R221W carriers) vs matched controls","manipulation","unchanged",NM,NM,"changed",NM,"3T fMRI with connectivity; resting state","Thresholds normal, urge to withdraw weaker; insula-MCC coupling tracked urge in controls","Fixed-effects group model; urge rated after scan; sensitivity difference only a trend"),
+ ("koppel2022","human","30",30,"Cue predicts pain; a timed press could or could not shorten it","manipulation",NM,NM,"changed",NM,NM,"3T fMRI (preregistered and exploratory)","Responses faster when press mattered; cingulate and insula tracked predicted, not current, pain","No pain ratings; press required every trial; preregistered action tests null"),
 ]
 
 DIM_MODELS = [
@@ -458,11 +482,44 @@ DIM_MODELS = [
  ("seymour2019",2019,"RL control architecture","nociceptive sensing;internal reinforcement signal","Discriminative information preserved while affective components suppressed (G2 §4)"),
  ("talbot2019",2019,"Unitary lean","unitary sensory-unpleasant experience","Tested sensory-discriminative vs affective-motivational; concludes evidence favours unitary (D §4)"),
  ("corder2019",2019,"Reflexive vs affective-motivational behaviour","reflexive;affective-motivational","Operational split in mice; valence and motivation language mixed (G1 §3)"),
- ("raja2020",2020,"Revised IASP definition","sensory;affective","Named-only; zidda2024 reads it as implying separable dimensions (E2 §4)"),
+ ("raja2020",2020,"Revised IASP definition","sensory;emotional (definition wording)","Named-only; zidda2024 reads it as implying separable dimensions (E2 §4)"),
  ("kauppinen2021",2021,"Relational imperativism","indicative content;background concern;imperative","Valence needs all three ingredients (B3 §1)"),
  ("stankewitz2023",2023,"Graded dimensions","intensity;unpleasantness","Highly correlated ratings; authors do not assume distinct processes (E2 §3)"),
  ("lee2024",2024,"Valence and affective intensity","signed valence;unsigned affective intensity","Shared by pain and pleasure; 'intensity' is not sensory intensity (H §1)"),
- ("flury2025",2025,"Tripartite components (tested)","sensory-discriminative;emotional-motivational","Behavioural surrogates; authors decline a differential-modulation conclusion (H §2)"),
+ ("flury2025",2025,"Two of Melzack & Casey's three, as behavioural surrogates","sensory-discriminative;emotional-motivational","Discrimination and avoidance tasks stand in for the components; authors decline a differential conclusion (H §2)"),
+]
+
+# label, year, community, why_relevant, cited_by (manifest keys; empty if no reviewed paper cites it)
+NOT_HELD = [
+ ("Cutter & Tye 2014, Pains and reasons: why it is rational to kill the messenger", 2014, "philosophy", "Evaluativist reply to jacobson2013 on relief-seeking (anti-unpleasantness desires)", "bain2017;bain2019;kauppinen2021"),
+ ("Bain 2014, Pains that don't hurt", 2014, "philosophy", "Evaluativist account of asymbolia (lost care removes the evaluative layer); answers an early klein2015asym draft", "bain2017;klein2015asym;griffithkind2023;duvalklein2025;kauppinen2021"),
+ ("Jacobson 2019, Not only a messenger", 2019, "philosophy", "Further argument against evaluativism after jacobson2013", "barlassina2020;kauppinen2021"),
+ ("Martínez 2022, Imperative transparency", 2022, "philosophy", "Later statement of first-order imperativism", "mb2026"),
+ ("Cochrane 2019", 2019, "philosophy", "Evaluativist ally cited on attention and on the Ploner case", "carruthers2023"),
+ ("Grahek 2007, Feeling Pain and Being in Pain", 2007, "philosophy", "Source of the standard 'pain without painfulness' reading of asymbolia", "bain2013;klein2015asym;griffithkind2023;duvalklein2025;corder2019"),
+ ("Hardcastle 1997, 1999", 1997, "philosophy", "Explicit double-dissociation reading of asymbolia and pain affect", "klein2015asym;duvalklein2025"),
+ ("Klein & Duval 2023", 2023, "philosophy", "History of German vs French clinical traditions behind the asymbolia taxonomy dispute", "duvalklein2025"),
+ ("Aydede 2006; Aydede & Fulkerson", 2006, "philosophy", "Critics of evaluativism: badness not trackable; the normative (messenger) objection", "cuttertye2011;bain2017;bain2019"),
+ ("Pautz 2010", 2010, "philosophy", "'Mild and Severe' intensity challenge to tracking representationalism", "cuttertye2011;km2018;kauppinen2021"),
+ ("Schilder & Stengel 1928, 1931", 1928, "neurology-neurosurgery", "First clinical descriptions of pain asymbolia; pre-1962 origin", "klein2015asym;griffithkind2023;duvalklein2025"),
+ ("Sherrington, 'imperative protective reflex'", "", "unknown", "Pre-1962 command vocabulary for pain, quoted and rejected by melzackwall1965; year not given in reviews", "melzackwall1965"),
+ ("Beecher 1956/1959 (wounded soldiers)", 1959, "unknown", "Pre-1962 origin: pain shaped by meaning; reaction component as precursor of the affective dimension", "melzackwall1965;bain2013;bain2017;vlaeyen2000"),
+ ("Rainville et al. 1999", 1999, "human-neuroscience", "Hypnosis direction-of-causation experiments behind Price's serial model", "price2000;martinez2011;talbot2019;flury2025"),
+ ("Price et al. 1985", 1985, "human-neuroscience", "Low-dose opioids act differently on unpleasantness than intensity (pain precedent for hayen2017)", "hayen2017"),
+ ("Berridge & Valenstein 1991; Flynn et al. 1991; Galaverna et al. 1993", 1991, "animal-circuits", "Rat liking/wanting dissociations used as evidence by reflexive imperativists", "loopy2019;barlassina_reflection"),
+ ("Mower 1976", 1976, "unknown", "Thermal pleasantness depends on body state; key evidence of the metasemantic argument", "mb2026"),
+ ("Kragel et al. 2018", 2018, "human-neuroscience", "Pain-specific yet generalizable MCC patterns; counter-evidence to action-dependence", "perini2020;lee2022"),
+ ("Seymour et al. 2004, 2005", 2004, "computational", "Early prediction-error studies with pain", "wiech2013;seymour2019;jepma2022"),
+ ("Roy et al. 2014", 2014, "human-neuroscience", "Aversive prediction-error work and dataset reanalysed by jepma2022", "jepma2022;lee2022;le2024"),
+ ("Fields 2018", 2018, "unknown", "Updated motivation-decision model (fields2006 named-only); ancestor of the RL strand", "seymour2019"),
+ ("Lethem et al. 1983", 1983, "clinical-psychology", "Origin of the term fear-avoidance for pain", "vlaeyen2000;flury2025"),
+ ("Crombez et al. 1998", 1998, "clinical-psychology", "Fear-side evidence: task performance tracked fear, not pain intensity", "vlaeyen2000"),
+ ("de Jong et al. 2005", 2005, "clinical-psychology", "Fear-side evidence: exposure changed measured behaviour where education did not", "leeuw2006"),
+ ("Asmundson et al. 2004", 2004, "clinical-psychology", "Fear-anxiety-avoidance model merged into the leeuw2006 diagram", "leeuw2006;crombez2012"),
+ ("Strand: placebo, expectation and desire for relief (Price; Vase; Wager; Atlas; Büchel)", "", "human-neuroscience", "Omitted strand that rated desire for relief beside pain; vase2003 and vase2005 are named-only", "seymour2019;zidda2024;koppel2022"),
+ ("Strand: IASP definition history (Merskey 1979 to Raja 2020)", "", "unknown", "Omitted strand; source of the pain vs nociception distinction; raja2020 named-only", "talbot2019;becker2018;zidda2024"),
+ ("Strand: chronic-pain affective shift (Apkarian/Baliki; Hashmi 2013; Borsook)", "", "human-neuroscience", "Omitted strand present in the corpus only through becker2018 and citations", "corder2019;stankewitz2023;becker2018;flury2025"),
+ ("Strand: attention and interruption (Eccleston & Crombez 1999) and motivation-decision (Fields 2006)", "", "unknown", "Ancestors of the RL strand; both only named-only in the manifest", "leeuw2006;crombez2012;seymour2019;leknestracey2008"),
 ]
 
 SURVEY = [
@@ -521,7 +578,7 @@ def main():
     errs = []
     if set(manifest) != set(W):
         errs.append(f"key mismatch: manifest-only={set(manifest)-set(W)} works-only={set(W)-set(manifest)}")
-    debate_ids = {d[0] for d in DEBATES}
+    debate_ids = [d[0] for d in DEBATES]
 
     def era_of(y):
         for eid, _, s, e, _ in ERAS:
@@ -535,47 +592,59 @@ def main():
             return "named-only"
         return "reviewed-full" if m["tier"] == "full" else "reviewed-short"
 
+    # positions.csv is authoritative for debate membership; works.debates is derived from it.
+    years = {k: W[k][1] for k in W}
+    pos_rows = []
+    deb_keys = {d: set() for d in debate_ids}
+    key_debates = {k: [] for k in W}
+    seen_pos = set()
+    for d, pid, lab, keys, summ in POSITIONS:
+        if d not in deb_keys:
+            errs.append(f"position {pid}: unknown debate {d}")
+            continue
+        if pid in seen_pos:
+            errs.append(f"dup position {pid}")
+        seen_pos.add(pid)
+        for kk in keys.split(";"):
+            if kk not in W:
+                errs.append(f"position {pid}: unknown key {kk}")
+                continue
+            deb_keys[d].add(kk)
+            if d not in key_debates[kk]:
+                key_debates[kk].append(d)
+        if len(summ) > 160:
+            errs.append(f"position {pid} summary too long {len(summ)}")
+        pos_rows.append([d, pid, lab, keys, summ])
+
     rows = []
     for k in manifest:  # manifest order
-        label, y, yp, comm, role, deb = W[k]
+        label, y, yp, comm, role, _unused = W[k]
         if comm not in COMMUNITIES:
             errs.append(f"{k}: community {comm}")
-        for d in deb.split(";"):
-            if d != "none" and d not in debate_ids:
-                errs.append(f"{k}: debate {d}")
         st = status(k)
         if st == "named-only" and not role.startswith("Not reviewed"):
             errs.append(f"{k}: named-only role must say Not reviewed")
         if len(role) > 160:
             errs.append(f"{k}: role too long ({len(role)})")
-        rows.append([k, label, y, yp, comm, era_of(y), st, role, deb])
+        ordered = [d for d in debate_ids if d in key_debates[k]]
+        rows.append([k, label, y, yp, comm, era_of(y), st, role, ";".join(ordered)])
     write("works.csv", ["key", "short_label", "year", "year_print", "community", "era", "status", "role", "debates"], rows)
-
     write("eras.csv", ["era_id", "label", "start_year", "end_year", "summary"], [list(e) for e in ERAS])
-
-    years = {k: W[k][1] for k in W}
-    pos_rows = []
-    deb_keys = {d: set() for d in debate_ids}
-    for d, pid, lab, keys, summ in POSITIONS:
-        for kk in keys.split(";"):
-            if kk not in W:
-                errs.append(f"position {pid}: unknown key {kk}")
-            deb_keys[d].add(kk)
-            if d not in W[kk][5].split(";"):
-                errs.append(f"position {pid}: {kk} works.debates lacks {d}")
-        if len(summ) > 160:
-            errs.append(f"position {pid} summary too long {len(summ)}")
-        pos_rows.append([d, pid, lab, keys, summ])
     write("positions.csv", ["debate_id", "position_id", "position_label", "keys", "summary"], pos_rows)
 
+    statuses = {"settled", "leaning", "open", "stalled", "untested"}
     drows = []
-    for did, title, q, st, reason in DEBATES:
-        ks = deb_keys[did]
-        ys = [years[k] for k in ks]
-        if len(reason) > 160 or len(q) > 160:
-            errs.append(f"debate {did} text too long {len(reason)} {len(q)}")
-        drows.append([did, title, q, st, reason, min(ys), max(ys)])
-    write("debates.csv", ["debate_id", "title", "question", "status", "status_reason", "first_year", "latest_year"], drows)
+    for did, title, q, st, reason, direction, scope in DEBATES:
+        ys = [years[k] for k in deb_keys[did]]
+        if st not in statuses:
+            errs.append(f"debate {did} status {st}")
+        if (st == "leaning") != bool(direction):
+            errs.append(f"debate {did}: status_direction must be set iff leaning")
+        for txt in (q, reason, scope):
+            if len(txt) > 160:
+                errs.append(f"debate {did} text too long {len(txt)}")
+        drows.append([did, title, q, st, reason, direction, scope, min(ys), max(ys)])
+    write("debates.csv", ["debate_id", "title", "question", "status", "status_reason", "status_direction", "status_scope", "first_year", "latest_year"], drows)
 
     rel_ok = {"builds-on", "critiques", "replies-to", "reinterprets", "uses-as-evidence"}
     seen = set()
@@ -597,20 +666,28 @@ def main():
     vals = {"changed", "unchanged", "not-measured", "correlational"}
     drows2 = []
     for row in DISS:
-        k = row[0]
+        k, n_primary, contrast = row[0], row[3], row[5]
         if manifest[k]["status"] != "pdf":
             errs.append(f"diss {k} not reviewed")
-        for v in row[4:9]:
+        if contrast not in CONTRASTS:
+            errs.append(f"diss {k} contrast {contrast}")
+        if n_primary != "" and not isinstance(n_primary, int):
+            errs.append(f"diss {k} n_primary not int")
+        outcomes = row[6:11]
+        for v in outcomes:
             if v not in vals:
                 errs.append(f"diss {k} bad value {v}")
-        measured = sum(v != NM for v in row[4:9]) + (row[9] != "none")
-        if measured < 2:
+        coded = [v for v in outcomes if v != NM]
+        if contrast == "none-correlational" and any(v in ("changed", "unchanged") for v in coded):
+            errs.append(f"diss {k}: none-correlational row has changed/unchanged codes")
+        measured = len(coded) + (row[11] != "none")
+        if measured < 2 and k not in DISS_KEEP_BELOW_TWO:
             errs.append(f"diss {k} measures <2")
-        for c in row[10:]:
+        for c in row[12:]:
             if len(c) > 160:
                 errs.append(f"diss {k} cell too long {len(c)}")
         drows2.append(list(row))
-    write("dissociation_evidence.csv", ["key", "species", "n_analysed", "manipulation_or_design", "intensity", "unpleasantness", "avoidance_behaviour", "desire_or_urge", "reflex_or_nocifensive", "neural", "direction_note", "caveats"], drows2)
+    write("dissociation_evidence.csv", ["key", "species", "n_analysed", "n_primary", "manipulation_or_design", "contrast_of", "intensity", "unpleasantness", "avoidance_behaviour", "desire_or_urge", "reflex_or_nocifensive", "neural", "direction_note", "caveats"], drows2)
 
     mrows = []
     for k, y, lab, comps, note in DIM_MODELS:
@@ -620,6 +697,18 @@ def main():
             errs.append(f"dim model year {k} {y} vs {W[k][1]}")
         mrows.append([k, y, lab, comps, note])
     write("dimension_models.csv", ["key", "year", "model_label", "components", "note"], mrows)
+
+    nrows = []
+    for lab, y, comm, why, cited in NOT_HELD:
+        if comm not in COMMUNITIES:
+            errs.append(f"not_held {lab}: community {comm}")
+        for kk in [c for c in cited.split(";") if c]:
+            if kk not in W or manifest[kk]["status"] != "pdf":
+                errs.append(f"not_held {lab}: cited_by {kk} not a reviewed key")
+        if len(why) > 160:
+            errs.append(f"not_held {lab}: why too long {len(why)}")
+        nrows.append([lab, y, comm, why, cited])
+    write("not_held.csv", ["label", "year", "community", "why_relevant", "cited_by"], nrows)
 
     srows = []
     sv = {"holds", "partly", "does-not-hold", "misattributed", "n.a."}
@@ -639,7 +728,8 @@ def main():
         print("\n".join(errs))
         sys.exit(1)
     print("rows: works", len(rows), "eras", len(ERAS), "debates", len(drows), "positions", len(pos_rows),
-          "edges", len(erows), "dissociation", len(drows2), "dim_models", len(mrows), "survey", len(srows))
+          "edges", len(erows), "dissociation", len(drows2), "dim_models", len(mrows), "not_held", len(nrows),
+          "survey", len(srows))
 
 
 def write(name, header, rows):

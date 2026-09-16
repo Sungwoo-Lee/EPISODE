@@ -15,7 +15,7 @@ The **synthesis** ties the parts together. It sets out the eras of the field, ei
 ## Start here
 
 - **Synthesis:** [[imperativism_field_history_synthesis]]. A neutral history of the field, with eras, debates, evidence ledger and survey corrections.
-- **Diagram data:** `field_history_data/`. Eight CSV files: works, eras, debates, positions, citation edges, dissociation evidence, dimension models, survey corrections.
+- **Diagram data:** `field_history_data/`. Nine CSV files: works, eras, debates, positions, citation edges, dissociation evidence, dimension models, survey corrections, and known works not held. The generator `build_field_history_data.py` sits beside them.
 - **Corpus list:** `references_manifest.csv`, with all 89 references. Source PDFs are in `sources/`.
 
 ## Counts
@@ -50,5 +50,5 @@ The **synthesis** ties the parts together. It sets out the eras of the field, ei
 
 ## Notes
 
-- **Year labels.** Some key years differ from first publication. `gandhi2021` was published in 2022. `misra2014` and `procyk2014` are the 2015 and 2016 print papers, first online in 2014. Details are in synthesis §10.
+- **Year labels.** Some key years differ from first publication. `gandhi2021` was published in 2022. `misra2014` and `procyk2014` are the 2015 and 2016 print papers, first online in 2014. Details are in synthesis §11.
 - **Other material in this folder.** The `intro_page/` folder holds the introductory web page built from Part A. It is not part of this index's counts.

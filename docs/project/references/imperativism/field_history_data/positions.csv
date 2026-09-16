@@ -1,6 +1,7 @@
 debate_id,position_id,position_label,keys,summary
 dimensions,dim-serial,Separable and serially ordered,price2000;rainville1997,"Intensity causes unpleasantness, which feeds secondary suffering; ACC tracks unpleasantness (partial segregation)"
-dimensions,dim-lateral-medial,Distinct lateral (sensory) and medial (affective) systems,kulkarni2005;tiemann2014;zidda2024;craig2003,Manipulations or anatomy separate a sensory route from an affective/motivational one
+dimensions,dim-lateral-medial,Distinct lateral (sensory) and medial (affective) systems,kulkarni2005;zidda2024;craig2003,"Attention, primes or anatomy separate a sensory route from an affective/motivational one"
+dimensions,dim-affect-selective,"Manipulation shifts unpleasantness, intensity not significantly",tiemann2014;hayen2017,"Drug manipulations moved unpleasantness without a significant intensity change; hayen2017 is breathlessness, a non-pain analogue"
 dimensions,dim-graded,Relative specialisation or graded difference,hofbauer2001;zubieta2001;stankewitz2023;singh2020,"Regions lean toward one dimension, but ratings co-move and streams integrate; no simple dichotomy"
 dimensions,dim-unitary,Evidence favours one unitary experience,talbot2019,"Intensity not selectively modifiable; unpleasantness maybe, tentatively and slightly; dissociations vulnerable to demand"
 dimensions,dim-valence-intensity,Signed valence vs unsigned affective intensity,lee2024;leknestracey2008,Recasts the axis: pain shares valence and intensity codes with pleasure rather than a sensory/affective split
@@ -30,21 +31,21 @@ unpleasantness-vs-avoidance,uva-hard-to-separate,Hedonic and motivational hard t
 unpleasantness-vs-avoidance,uva-behaviour-moves,Behaviour moves while ratings do not,claes2015;flury2025;becker2018,"Competing rewards change avoidance choices or performance without changing fear, intensity or unpleasantness ratings"
 unpleasantness-vs-avoidance,uva-behaviour-primary,Control behaviour as the ultimate measure,seymour2019,"Pain is a control signal, so behaviour rather than self-report should measure it"
 unpleasantness-vs-avoidance,uva-liking-wanting,Liking and wanting come apart,loopy2019;barlassina_reflection;carruthers2023,Both camps accept dissociations of pleasure from motivation; they disagree what they show about valence
-unpleasantness-vs-avoidance,uva-urge,Urge to withdraw tied to insula-cingulate coupling,perini2013;perini2020,"Urge-to-move ratings track action circuitry but, where tested, did not dissociate from intensity"
+unpleasantness-vs-avoidance,uva-urge,Urge to withdraw rated beside action,perini2013;perini2020,Urge did not dissociate from intensity (perini2013); insula-cingulate coupling tracked urge in controls (perini2020 only)
 cingulate-action,ca-affect,Cingulate as the seat of unpleasantness,rainville1997;price2000;johansen2001;craig2003,ACC activity tracks or is needed for pain's unpleasantness or motivational drive
 cingulate-action,ca-integration,Adaptive control integration,shackman2011;misra2014;tolomeo2016,"One aMCC region integrates pain, negative affect and control to choose actions under uncertainty"
 cingulate-action,ca-action-dependence,Pain response depends on action,perini2013;perini2020;koppel2022;lee2022,"Midcingulate responses follow action requirements or consequences; ACC output is sensorimotor, not sensory"
 cingulate-action,ca-observed,Observed pain: meaning and vigour,budell2015;han2017,Others' pain engages cingulate when meaning is attended and makes instructed actions more forceful
 cingulate-action,ca-motor-maps,Effector-specific action maps (not pain studies),procyk2014;gordon2023,Cingulate and motor cortex organise feedback and whole-body action planning in motor maps
-learning-signal,ls-teaching,ACC as aversive teaching signal,johansen2004,Rostral ACC activity is necessary and sufficient to teach avoidance of a context
-learning-signal,ls-rl-control,Pain as reinforcement and control signal,seymour2019;wiech2013,"Pain teaches and controls behaviour in a hierarchy of reflex, Pavlovian, habit and planning controllers"
+learning-signal,ls-teaching,ACC as aversive teaching signal,johansen2004,Rostral ACC activity necessary and sufficient to teach avoidance (one dose; authors: not conclusive); same circuit as unpleasantness
+learning-signal,ls-rl-control,Pain is the reinforcement and control signal,seymour2019;wiech2013,Pain is the internal reinforcement signal in a controller hierarchy (seymour2019 identity claim); wiech2013 frames it as a motivator
 learning-signal,ls-arbitration,Planning and habit systems for pain avoidance,wang2018,Pain avoidance draws on model-based and model-free control with reliability-based switching
 learning-signal,ls-received,Learn more from pain received,jepma2022,Learning rate higher after received than avoided pain; separate threat and safety systems
 learning-signal,ls-avoided,Learn more from pain avoided,le2024,Learning rate higher after avoided shock in a go/no-go task mixing money and shock
 learning-signal,ls-value,Learning describable as value updating,carruthers2023,Prediction-error learning of stored values needs no commands
 learning-signal,ls-command,Learning function supports commands,bh2019;mb2026,Affect evolved as reward/punishment for trial-and-error learning; learning models favour imperative content
 learning-signal,ls-vigour,Avoidance vigour adapts to failure,gandhi2021,"Failing to avoid lowers next-trial vigour, more with helplessness; parietal attention not PAG"
-avoidance-drivers,ad-fear,Fear drives avoidance,vlaeyen2000,"Catastrophic interpretation leads to fear, avoidance, disuse and disability; fear matters more than intensity"
+avoidance-drivers,ad-fear,Fear drives avoidance,vlaeyen2000;vlaeyen2016,"Catastrophizing leads to fear, avoidance and disability; the 2016 diagram keeps this fear loop as its core"
 avoidance-drivers,ad-intensity,Intense pain is itself threatening,leeuw2006,High pain intensity itself drives escape and avoidance; model underplayed it
 avoidance-drivers,ad-goals,Goal competition,crombez2012;claes2015;vlaeyen2016;becker2018,Avoiding pain is one goal among many; protective behaviour yields when another goal is valued more
 avoidance-drivers,ad-homeostatic,Homeostatic drive,craig2003,Pain is a feeling plus behavioural drive like hunger or thermal discomfort

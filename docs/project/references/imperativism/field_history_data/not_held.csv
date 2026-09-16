@@ -1,0 +1,30 @@
+label,year,community,why_relevant,cited_by
+"Cutter & Tye 2014, Pains and reasons: why it is rational to kill the messenger",2014,philosophy,Evaluativist reply to jacobson2013 on relief-seeking (anti-unpleasantness desires),bain2017;bain2019;kauppinen2021
+"Bain 2014, Pains that don't hurt",2014,philosophy,Evaluativist account of asymbolia (lost care removes the evaluative layer); answers an early klein2015asym draft,bain2017;klein2015asym;griffithkind2023;duvalklein2025;kauppinen2021
+"Jacobson 2019, Not only a messenger",2019,philosophy,Further argument against evaluativism after jacobson2013,barlassina2020;kauppinen2021
+"Martínez 2022, Imperative transparency",2022,philosophy,Later statement of first-order imperativism,mb2026
+Cochrane 2019,2019,philosophy,Evaluativist ally cited on attention and on the Ploner case,carruthers2023
+"Grahek 2007, Feeling Pain and Being in Pain",2007,philosophy,Source of the standard 'pain without painfulness' reading of asymbolia,bain2013;klein2015asym;griffithkind2023;duvalklein2025;corder2019
+"Hardcastle 1997, 1999",1997,philosophy,Explicit double-dissociation reading of asymbolia and pain affect,klein2015asym;duvalklein2025
+Klein & Duval 2023,2023,philosophy,History of German vs French clinical traditions behind the asymbolia taxonomy dispute,duvalklein2025
+Aydede 2006; Aydede & Fulkerson,2006,philosophy,Critics of evaluativism: badness not trackable; the normative (messenger) objection,cuttertye2011;bain2017;bain2019
+Pautz 2010,2010,philosophy,'Mild and Severe' intensity challenge to tracking representationalism,cuttertye2011;km2018;kauppinen2021
+"Schilder & Stengel 1928, 1931",1928,neurology-neurosurgery,First clinical descriptions of pain asymbolia; pre-1962 origin,klein2015asym;griffithkind2023;duvalklein2025
+"Sherrington, 'imperative protective reflex'",,unknown,"Pre-1962 command vocabulary for pain, quoted and rejected by melzackwall1965; year not given in reviews",melzackwall1965
+Beecher 1956/1959 (wounded soldiers),1959,unknown,Pre-1962 origin: pain shaped by meaning; reaction component as precursor of the affective dimension,melzackwall1965;bain2013;bain2017;vlaeyen2000
+Rainville et al. 1999,1999,human-neuroscience,Hypnosis direction-of-causation experiments behind Price's serial model,price2000;martinez2011;talbot2019;flury2025
+Price et al. 1985,1985,human-neuroscience,Low-dose opioids act differently on unpleasantness than intensity (pain precedent for hayen2017),hayen2017
+Berridge & Valenstein 1991; Flynn et al. 1991; Galaverna et al. 1993,1991,animal-circuits,Rat liking/wanting dissociations used as evidence by reflexive imperativists,loopy2019;barlassina_reflection
+Mower 1976,1976,unknown,Thermal pleasantness depends on body state; key evidence of the metasemantic argument,mb2026
+Kragel et al. 2018,2018,human-neuroscience,Pain-specific yet generalizable MCC patterns; counter-evidence to action-dependence,perini2020;lee2022
+"Seymour et al. 2004, 2005",2004,computational,Early prediction-error studies with pain,wiech2013;seymour2019;jepma2022
+Roy et al. 2014,2014,human-neuroscience,Aversive prediction-error work and dataset reanalysed by jepma2022,jepma2022;lee2022;le2024
+Fields 2018,2018,unknown,Updated motivation-decision model (fields2006 named-only); ancestor of the RL strand,seymour2019
+Lethem et al. 1983,1983,clinical-psychology,Origin of the term fear-avoidance for pain,vlaeyen2000;flury2025
+Crombez et al. 1998,1998,clinical-psychology,"Fear-side evidence: task performance tracked fear, not pain intensity",vlaeyen2000
+de Jong et al. 2005,2005,clinical-psychology,Fear-side evidence: exposure changed measured behaviour where education did not,leeuw2006
+Asmundson et al. 2004,2004,clinical-psychology,Fear-anxiety-avoidance model merged into the leeuw2006 diagram,leeuw2006;crombez2012
+"Strand: placebo, expectation and desire for relief (Price; Vase; Wager; Atlas; Büchel)",,human-neuroscience,Omitted strand that rated desire for relief beside pain; vase2003 and vase2005 are named-only,seymour2019;zidda2024;koppel2022
+Strand: IASP definition history (Merskey 1979 to Raja 2020),,unknown,Omitted strand; source of the pain vs nociception distinction; raja2020 named-only,talbot2019;becker2018;zidda2024
+Strand: chronic-pain affective shift (Apkarian/Baliki; Hashmi 2013; Borsook),,human-neuroscience,Omitted strand present in the corpus only through becker2018 and citations,corder2019;stankewitz2023;becker2018;flury2025
+Strand: attention and interruption (Eccleston & Crombez 1999) and motivation-decision (Fields 2006),,unknown,Ancestors of the RL strand; both only named-only in the manifest,leeuw2006;crombez2012;seymour2019;leknestracey2008
