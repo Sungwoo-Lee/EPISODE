@@ -35,8 +35,16 @@ INK, INK2, INK3 = "#15171C", "#4A515C", "#6F7682"
 IRIS, IRIS_SOFT = "#5B4BDB", "#ECE9FB"     # agent only
 STATE = "#2F3744"
 NOCI = "#E8590C"                           # nociception only
-FOOD, PRED, NEUT = "#1E9E5A", "#1F2733", "#0E7490"
-HIDE_BODY, HIDE_EYE = "#33503A", "#F59E0B"
+# Food is rose, not green: green belongs to the bush and the tree, and a green apple collided with both.
+# The leaf stays green because it is the one mark no temperature cell and no nociception bar can carry.
+FOOD, PRED, NEUT = "#E03151", "#1F2733", "#A8A29A"
+FOOD_LEAF, FOOD_STEM = "#1E9E5A", "#6B4A2B"
+# The rabbit is grey with a pink inner ear: teal is the olfaction ramp's. Its grey is warm (R > G > B)
+# where the rock's is cool (B > R), and the pink ear is the mark the rock can never have.
+NEUT_INNER, EYE_DARK = "#F0A9B4", "#2A241F"
+# The hiding predator is a STATIC contact hazard -- it never moves and has no odour -- so it is drawn as a
+# thorn cluster, not a lurking animal. Threat charcoal one step lighter than the predator's, amber tips.
+HIDE_BODY, HIDE_EYE = "#2B3442", "#F59E0B"
 ROCK, ROCK_HI = "#6B7380", "#A1A8B1"
 BUSH, BUSH_HI = "#4F8A34", "#65A044"
 TREE, TREE_HI, TRUNK = "#2F7A45", "#3E9357", "#7A5634"
@@ -221,12 +229,15 @@ def _teardrop(ax, cx, cy, w, h, fc, z):
 
 
 def g_food(ax, cx, cy, s, z=7):
+    """Two-lobed apple in rose, with a green leaf and a brown stem. The leaf is load-bearing and is kept at
+    every size: it is the one mark a temperature cell or a nociception bar can never have, so it is what
+    separates the food token from every other red in the frame."""
     out = token(ax, cx, cy, s * 0.34, z - 1)
     r = s * 0.15
     out += [ax.add_patch(Circle((cx - r * 0.45, cy + r * 0.15), r, fc=FOOD, lw=0, zorder=z)),
             ax.add_patch(Circle((cx + r * 0.45, cy + r * 0.15), r, fc=FOOD, lw=0, zorder=z)),
-            ax.add_patch(Rectangle((cx - s * 0.008, cy - r * 1.35), s * 0.016, r * 0.6, fc="#6B4A2B", lw=0, zorder=z)),
-            ax.add_patch(Ellipse((cx + r * 0.45, cy - r * 1.15), r * 0.9, r * 0.42, angle=-30, fc="#14683D", lw=0, zorder=z))]
+            ax.add_patch(Rectangle((cx - s * 0.008, cy - r * 1.35), s * 0.016, r * 0.6, fc=FOOD_STEM, lw=0, zorder=z)),
+            ax.add_patch(Ellipse((cx + r * 0.45, cy - r * 1.15), r * 0.9, r * 0.42, angle=-30, fc=FOOD_LEAF, lw=0, zorder=z))]
     return out
 
 
@@ -242,24 +253,41 @@ def g_predator(ax, cx, cy, s, z=7):
 
 
 def g_neutral(ax, cx, cy, s, z=7):
+    """Rabbit head: two long ears with a pink lining, a round head, two dark eyes. The pink lining is what
+    keeps it apart from the rock at small sizes -- the rock is a cool grey mound with no warm mark anywhere
+    -- so the ears are drawn tall and kept separated, and the lining runs most of the ear's length."""
     out = token(ax, cx, cy, s * 0.34, z - 1)
     k = s * 0.19
     for sx in (-1, 1):
-        out.append(ax.add_patch(Ellipse((cx + sx * 0.32 * k, cy - 0.55 * k), 0.36 * k, 1.05 * k, angle=sx * 10,
+        out.append(ax.add_patch(Ellipse((cx + sx * 0.34 * k, cy - 0.58 * k), 0.38 * k, 1.12 * k, angle=sx * 10,
                                         fc=NEUT, lw=0, zorder=z)))
+        out.append(ax.add_patch(Ellipse((cx + sx * 0.34 * k, cy - 0.58 * k), 0.21 * k, 0.78 * k, angle=sx * 10,
+                                        fc=NEUT_INNER, lw=0, zorder=z + 0.05)))
     out.append(ax.add_patch(Circle((cx, cy + 0.32 * k), 0.62 * k, fc=NEUT, lw=0, zorder=z)))
     for sx in (-1, 1):
-        out.append(ax.add_patch(Circle((cx + sx * 0.24 * k, cy + 0.22 * k), 0.09 * k, fc="#FFFFFF", lw=0, zorder=z + 0.1)))
+        out.append(ax.add_patch(Circle((cx + sx * 0.24 * k, cy + 0.22 * k), 0.10 * k, fc=EYE_DARK, lw=0, zorder=z + 0.1)))
     return out
 
 
 def g_hiding_predator(ax, cx, cy, s, z=7):
+    """Thorn / spine cluster: three spikes of unequal height on a low mound, each tipped amber.
+
+    The entity is a stationary trap tile -- it never moves, carries no odour, and damages on contact -- so the
+    glyph must read as a static hazard, not as a creature that could emerge. It keeps the predator's threat
+    pair (charcoal body, amber accent) so the two read as siblings, but shares no shape with it, and shares
+    neither shape nor green with the bush, which is the agent's refuge. The amber tip is the top 44 % of each
+    spike, which is what survives a 28 px grid cell."""
     out = token(ax, cx, cy, s * 0.34, z - 1)
     k = s * 0.19
-    for dx, dy, r in ((-0.5, 0.25, 0.5), (0.5, 0.25, 0.5), (0, -0.2, 0.6), (-0.15, 0.45, 0.5), (0.3, 0.5, 0.45)):
-        out.append(ax.add_patch(Circle((cx + dx * k, cy + dy * k), r * k, fc=HIDE_BODY, lw=0, zorder=z)))
-    for sx in (-1, 1):
-        out.append(ax.add_patch(Circle((cx + sx * 0.25 * k, cy + 0.05 * k), 0.12 * k, fc=HIDE_EYE, lw=0, zorder=z + 0.1)))
+    out.append(ax.add_patch(Ellipse((cx, cy + 0.62 * k), 1.85 * k, 0.48 * k, fc=HIDE_BODY, lw=0, zorder=z)))
+    for xo, h, w in ((-0.56, 0.52, 0.26), (0.0, 0.98, 0.30), (0.56, 0.60, 0.26)):
+        ytip, ybase = cy - h * k, cy + 0.62 * k
+        out.append(ax.add_patch(Polygon([(cx + xo * k, ytip), (cx + (xo - w) * k, ybase), (cx + (xo + w) * k, ybase)],
+                                        closed=True, fc=HIDE_BODY, lw=0, zorder=z + 0.1)))
+        t = 0.44                                   # amber tip = top 44 % of the spike (survives 28 px)
+        ycut, wcut = ytip + t * (ybase - ytip), w * t
+        out.append(ax.add_patch(Polygon([(cx + xo * k, ytip), (cx + (xo - wcut) * k, ycut), (cx + (xo + wcut) * k, ycut)],
+                                        closed=True, fc=HIDE_EYE, lw=0, zorder=z + 0.2)))
     return out
 
 
