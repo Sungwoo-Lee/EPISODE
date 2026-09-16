@@ -1038,6 +1038,14 @@ cd /media/nas01/projects/Interoceptive-AI/grid_world_pain
 # Pack-node-first: 106 (00,01), 108 (02,03), 109 (04,05); node 110 left free;
 # node 107 EXCLUDED (no NAS mount).
 # CIFS-bypass: launched via /tmp scripts — this file is the audit record.
+#
+# PATH WARNING (added 2026-09-16, commit 0425367e): the basic ladder was
+# re-chained and levels 05/06 SWAPPED. `basic/05-*` is now the CAMPFIRE
+# THERMAL world; the sensory-noise world moved to
+# `basic/06-sensory_noise_10x10.yaml`. The commands below are the historical
+# record and are deliberately left exactly as launched — do NOT copy-paste a
+# `05-sensory_noise` line, because that path now resolves to a different world
+# than the run it is recorded against actually used.
 # ---------------------------------------------------------------------------
 # Run 00: rppo_basic00_static_n106 — node 106, cuda:0
 /home/vncuser/miniconda3/envs/grid_world_pain/bin/python train.py \
@@ -1139,6 +1147,11 @@ cd /media/nas01/projects/Interoceptive-AI/grid_world_pain
 # GPU-compile pre-flight (jax 0.9.0.1, matmul+block_until_ready) passed on all
 # 4 nodes; nvidia-smi confirmed all 8 target GPUs free immediately pre-launch.
 # CIFS-bypass: launched via /tmp scripts — this file is the audit record.
+#
+# PATH WARNING (added 2026-09-16, commit 0425367e): levels 05/06 were SWAPPED.
+# `basic/05-*` is now the CAMPFIRE THERMAL world; the sensory-noise world moved
+# to `basic/06-sensory_noise_10x10.yaml`. Below is the historical record, left
+# exactly as launched — do NOT copy-paste the `05-sensory_noise` line.
 # ---------------------------------------------------------------------------
 # Run 00: rppo_basic00_static_128env_n109 — node 109, cuda:0
 # /home/vncuser/miniconda3/envs/grid_world_pain/bin/python train.py \
@@ -1210,6 +1223,11 @@ cd /media/nas01/projects/Interoceptive-AI/grid_world_pain
 # immediately pre-launch (0% util); JAX GPU-compile check (jax 0.9.0.1,
 # matmul + block_until_ready) passed on both nodes.
 # CIFS-bypass: launched via /tmp scripts — this file is the audit record.
+#
+# PATH WARNING (added 2026-09-16, commit 0425367e): levels 05/06 were SWAPPED.
+# `basic/05-*` is now the CAMPFIRE THERMAL world; the sensory-noise world moved
+# to `basic/06-sensory_noise_10x10.yaml`. Below is the historical record, left
+# exactly as launched — do NOT copy-paste the `05-sensory_noise` line.
 # ---------------------------------------------------------------------------
 # Run 03 resume: rppo_basic03_randinit_128env_100M_n106 — node 106, cuda:0
 # /home/vncuser/miniconda3/envs/grid_world_pain/bin/python train.py \
