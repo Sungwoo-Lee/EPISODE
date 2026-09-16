@@ -14,7 +14,7 @@ last_updated: 2026-09-16
 [`publish-page`](../../../../.claude/skills/publish-page/SKILL.md) **skill**, never the `Artifact`
 tool directly. From a session that did not publish it, read the URL first and pass it as `url` —
 publishing without it makes a second artifact instead of a new version of this one.
-**Rebuild:** run the five figure scripts under `scripts/analysis/studies/recovery_in_bush_tuning/`,
+**Rebuild:** run the six figure scripts under `scripts/analysis/studies/recovery_in_bush_tuning/`,
 then `python scripts/analysis/studies/recovery_in_bush_tuning/build_page.py`.
 
 ---
@@ -84,11 +84,12 @@ the script.
 
 | Figure | What it shows | **Axes** |
 |---|---|---|
-| `f01_recovery_curve` | Cumulative injury healed under the two shipped settings and the recommendation, in and out of cover. The point: `recovery_accel_rate` = 0 is linear and `> 0` compounds, and those are different problems. | **Axes.** Horizontal: consecutive rest steps, whole environment steps, 0–55. Vertical: cumulative injury healed, points of the 0–100 injury scale, 0–100. |
-| `f02_open_ceiling` | Heat map of what the open can clear inside the rest budget, with the θ contour. Almost the whole shipped range is saturated. | **Axes.** Horizontal: `recovery_base_rate` in injury points per rest step, log 0.01–5. Vertical: `recovery_accel_rate`, linear 0–0.5 in panel (a) and 0–0.06 in panel (b). Colour (shared scale): injury points healable in the open within the 50-step budget, 0–100. |
-| `f03_feasible_window` | The answer figure: the region satisfying both conditions, at accel 0, with the recommendation marked. | **Axes.** Horizontal: `recovery_base_rate`, log 0.02–6. Vertical: `recovery_in_bush_multiplier`, log 0.8×–60×. Shading is categorical, not a quantity. |
-| `f04_accel_spoiler` | Rest steps to cross θ in the open against `recovery_accel_rate`, for four base rates, with each one's tolerance solved by bisection. | **Axes.** Horizontal: `recovery_accel_rate`, linear 0–0.12. Vertical: consecutive rest steps in the open to clear 25 injury points, log 3–1200. |
-| `f05_env_validation` | **Not analytic.** The real environment under a scripted always-Rest policy, on a bush and off it, against the closed-form prediction. | **Axes.** (a) Horizontal: rest steps taken, 0–50. Vertical: `injury_level`, points of the 0–100 scale. (b) Horizontal: the same steps. Vertical: absolute difference between measurement and prediction, injury points, log 1e-6–3. |
+| `f01_theta_geometry` | What θ is: the height of a box whose width is the rest budget and whose diagonal is the largest healing rate condition A allows. Panel (b) shows why only the ratio θ / budget is ever used. | **Axes.** Both panels horizontal: consecutive rest steps in the open, whole environment steps, 0–62 in (a) and 0–114 in (b). Vertical: cumulative injury healed, points of the 0–100 injury scale, 0–100 in (a) and 0–47.5 in (b). |
+| `f02_recovery_curve` | Cumulative injury healed under the two shipped settings and the recommendation, in and out of cover. The point: `recovery_accel_rate` = 0 is linear and `> 0` compounds, and those are different problems. | **Axes.** Horizontal: consecutive rest steps, whole environment steps, 0–55. Vertical: cumulative injury healed, points of the 0–100 injury scale, 0–100. |
+| `f03_open_ceiling` | Heat map of what the open can clear inside the rest budget, with the θ contour. Almost the whole shipped range is saturated. | **Axes.** Horizontal: `recovery_base_rate` in injury points per rest step, log 0.01–5. Vertical: `recovery_accel_rate`, linear 0–0.5 in panel (a) and 0–0.06 in panel (b). Colour (shared scale): injury points healable in the open within the 50-step budget, 0–100. |
+| `f04_feasible_window` | The answer figure: the region satisfying both conditions, at accel 0, with the recommendation marked. | **Axes.** Horizontal: `recovery_base_rate`, log 0.02–6. Vertical: `recovery_in_bush_multiplier`, log 0.8×–60×. Shading is categorical, not a quantity. |
+| `f05_accel_spoiler` | Rest steps to cross θ in the open against `recovery_accel_rate`, for four base rates, with each one's tolerance solved by bisection. | **Axes.** Horizontal: `recovery_accel_rate`, linear 0–0.12. Vertical: consecutive rest steps in the open to clear 25 injury points, log 3–1200. |
+| `f06_env_validation` | **Not analytic.** The real environment under a scripted always-Rest policy, on a bush and off it, against the closed-form prediction. | **Axes.** (a) Horizontal: rest steps taken, 0–50. Vertical: `injury_level`, points of the 0–100 scale. (b) Horizontal: the same steps. Vertical: absolute difference between measurement and prediction, injury points, log 1e-6–3. |
 
 ---
 
@@ -111,7 +112,7 @@ small one: at the recommended base rate the largest workable value is **0.033** 
 budget and **0.004** on the 100-step budget. The shipped 0.5 is one to two orders of magnitude
 above every one of those.
 
-**Validation (f05).** **Agreement.** Over 102 compared values the largest disagreement between the
+**Validation (f06).** **Agreement.** Over 102 compared values the largest disagreement between the
 simulation and the closed form is **1.53 × 10⁻⁴ injury points**, which is single-precision rounding
 accumulated over 50 steps (the smallest representable gap near injury 95 is 7.6 × 10⁻⁶). In cover
 the agreement is exact — every residual is zero. The same run measured nutrition falling by exactly
@@ -140,7 +141,7 @@ Six items, recorded in full in §11 of the page. In brief:
 5. **The definition is about possibility, not choice.** Under the homeostatic reward the
    recommended setting makes an open-ground rest step *negative* at a typical mid-episode state
    (−0.42 against +3.40 in cover), which is a stronger result and a different claim.
-6. **f03 cannot show both shipped settings.** It is a plane at `recovery_accel_rate` = 0 and the
+6. **f04 cannot show both shipped settings.** It is a plane at `recovery_accel_rate` = 0 and the
    shipped default has 0.5; plotting it there would place a point at coordinates the setting does
    not have.
 

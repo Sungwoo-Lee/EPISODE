@@ -31,7 +31,7 @@ WHAT IT DELIBERATELY DOES NOT MODEL. Damage. `can_recover` requires `applied_inc
 smoothing spreads a hit over `injury_smoothing_duration` steps, so the first few rest steps after a
 hit heal nothing while the streak keeps climbing. Everything here describes an agent that is
 already hurt and is taking no new damage, which is the case the study's definition is about and the
-case f05 measures in the real environment.
+case f06 measures in the real environment.
 """
 from __future__ import annotations
 
@@ -215,7 +215,7 @@ def cover_is_usable(base, accel, mult, wound: float = None, steps: float = None)
 
 
 def feasible(base, accel, mult, budget: float = None):
-    """Both conditions at once - the shaded region of f03."""
+    """Both conditions at once - the shaded region of f04."""
     return np.logical_and(open_is_unrecoverable(base, accel, budget),
                           cover_is_usable(base, accel, mult))
 
@@ -235,7 +235,7 @@ def recommend():
 
     THE RULE, in four clauses, applied in order:
 
-      1. `accel = 0`. f04 is the evidence: a positive accel makes the open's healing compound, and
+      1. `accel = 0`. f05 is the evidence: a positive accel makes the open's healing compound, and
          at any base large enough to be useful in cover it crosses θ inside the budget.
       2. The healing rate INSIDE cover equals `ANCHOR_COVER_RATE` (the a01 arm's flat 5.0 per
          step), so a 70-point wound closes in the same ~14 rest steps that sweep was solved to.

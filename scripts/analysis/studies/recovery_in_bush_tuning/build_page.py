@@ -7,7 +7,7 @@ classes of drift are structurally impossible here rather than merely discouraged
   * a FIGURE that is shown but has no generating script, or no PNG / SVG / PDF on disk, or no
     data-used statement written by that script, fails the build (artifact guide 2.7, 5, 11b);
   * a NUMBER on the page is written as a `{{VAL:key}}` token and substituted from
-    `recovery_math.py` and from the JSON f05 wrote, so no headline figure is ever typed into markup
+    `recovery_math.py` and from the JSON f06 wrote, so no headline figure is ever typed into markup
     (guide 9: recompute every headline number at publish time). An unknown key fails by NAME;
   * a CAPTION with no `<b>Axes.</b>` sentence, or a figure with no "How it is computed" block, or
     such a block outside 150-250 words, fails the build (guide 11a, 11c).
@@ -38,7 +38,7 @@ TEMPLATE = f"{STUDY}/recovery_in_bush_tuning.template.html"
 OUT = f"{STUDY}/recovery_in_bush_tuning.html"
 FIGS = f"{STUDY}/figures"
 FONTS = "assets/fonts/pretendard/subset"
-F05_RESULTS = f"{FIGS}/f05_env_validation.results.json"
+F05_RESULTS = f"{FIGS}/f06_env_validation.results.json"
 
 WORDS_MIN, WORDS_MAX = 150, 250
 
@@ -66,13 +66,13 @@ def _steps(x):
 def page_numbers() -> dict:
     """Every number the prose quotes, derived here from the same module the figures use.
 
-    Nothing in this dict is a literal read off a figure. `f05` is the exception that proves the
+    Nothing in this dict is a literal read off a figure. `f06` is the exception that proves the
     rule: its numbers are MEASURED, so they are read from the JSON that rollout wrote, and the
     build fails if that file is absent rather than falling back to a remembered value.
     """
     if not os.path.exists(F05_RESULTS):
         fail(f"no measured results at {F05_RESULTS} -- run "
-             f"python scripts/analysis/studies/recovery_in_bush_tuning/f05_env_validation.py")
+             f"python scripts/analysis/studies/recovery_in_bush_tuning/f06_env_validation.py")
     m = json.load(open(F05_RESULTS))
     rec = R.recommend()
 
@@ -91,6 +91,7 @@ def page_numbers() -> dict:
         "cover_floor": _g(R.COVER_STEPS_FLOOR),
         "theta_pct": _g(100.0 * R.THETA / R.MAX_INJURY),
         "ratio": _g(R.THETA / R.BUDGET),
+        "ratio_half": _g(R.THETA / (2.0 * R.BUDGET)),
         "ratio_fixed": _g(R.THETA / R.BUDGET_FIXED_START),
         "cover_rate_min": _g(R.WOUND / R.COVER_STEPS),
         # what the two shipped settings do in the open, inside the budget
@@ -116,17 +117,17 @@ def page_numbers() -> dict:
         "rw_injury": _g(R.WOUND), "rw_nutrition": _g(50.0),
         "rw_open": _g(R.rest_step_reward(R.WOUND, 50.0, rec["base"], 0.0, 1.0), 2),
         "rw_cover": _g(R.rest_step_reward(R.WOUND, 50.0, rec["base"], 0.0, rec["mult"]), 2),
-        # f05, measured
-        "f05_worst": f"{m['worst_residual']:.2e}",
-        "f05_worst_bush": f"{m['worst_residual_bush']:.0f}",
-        "f05_eps": f"{m['float32_resolution']:.1e}",
-        "f05_n": _g(m["n_compared"]), "f05_steps": _g(m["n_steps"]), "f05_seed": _g(m["seed"]),
-        "f05_start_injury": _g(m["start_injury"]),
-        "f05_open_final": _g(m["final_injury_open"], 4),
-        "f05_open_pred": _g(m["final_injury_open_pred"], 4),
-        "f05_bush_zero": _g(m["steps_to_zero_bush"]),
-        "f05_nut_drop": _g(m["nutrition_drop_per_step"], 4),
-        "f05_nut_dev": f"{m['nutrition_drop_worst_deviation']:.0e}",
+        # f06, measured
+        "f06_worst": f"{m['worst_residual']:.2e}",
+        "f06_worst_bush": f"{m['worst_residual_bush']:.0f}",
+        "f06_eps": f"{m['float32_resolution']:.1e}",
+        "f06_n": _g(m["n_compared"]), "f06_steps": _g(m["n_steps"]), "f06_seed": _g(m["seed"]),
+        "f06_start_injury": _g(m["start_injury"]),
+        "f06_open_final": _g(m["final_injury_open"], 4),
+        "f06_open_pred": _g(m["final_injury_open_pred"], 4),
+        "f06_bush_zero": _g(m["steps_to_zero_bush"]),
+        "f06_nut_drop": _g(m["nutrition_drop_per_step"], 4),
+        "f06_nut_dev": f"{m['nutrition_drop_worst_deviation']:.0e}",
     }
     # The sensitivity table of section 10. Its rows are (theta, budget) pairs; for each, the
     # largest base rate condition A allows is theta/budget, and the smallest multiplier that then
@@ -151,7 +152,7 @@ def page_numbers() -> dict:
     v["rec_theta_vs_episode"] = _g(100.0 * rec["open_steps_to_theta"] / R.MAX_STEPS)
     v["rec_theta_vs_budget_fixed"] = _g(rec["open_steps_to_theta"] / R.BUDGET_FIXED_START, 2)
 
-    # the largest accel each base rate tolerates, solved rather than read off f04
+    # the largest accel each base rate tolerates, solved rather than read off f05
     for base in (0.05, 0.1, 0.2):
         for budget, tag in ((R.BUDGET, "b50"), (R.BUDGET_FIXED_START, "b100")):
             key = f"amax_{str(base).replace('.', '')}_{tag}"

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""f03 - the answer figure: which (base rate, in-bush multiplier) pairs satisfy BOTH conditions.
+"""f04 - the answer figure: which (base rate, in-bush multiplier) pairs satisfy BOTH conditions.
 
 QUESTION IT ANSWERS. The study asks for settings that make resting outside cover not meaningfully
 recoverable WITHOUT making the world one where nobody can heal. Those are two conditions pulling in
@@ -7,7 +7,7 @@ opposite directions, and this is the plane where they are both visible: the base
 the open heals, and the multiplier sets how much better cover is. The shaded region is where both
 hold; the marked point is the recommendation.
 
-WHY accel = 0 HERE. f02 and f04 are the evidence: with any appreciable `recovery_accel_rate` the
+WHY accel = 0 HERE. f03 and f05 are the evidence: with any appreciable `recovery_accel_rate` the
 open's healing compounds past theta inside the budget, so the accel = 0 plane is the one that has a
 feasible region worth drawing. The rest-premium arm a01 is a real shipped config on this plane; the
 shipped default is NOT (its accel is 0.5) and is deliberately not plotted.
@@ -37,7 +37,7 @@ from matplotlib.patches import Patch  # noqa: E402
 import house                   # noqa: E402
 import recovery_math as R      # noqa: E402
 
-STEM = "f03_feasible_window"
+STEM = "f04_feasible_window"
 BASE_LO, BASE_HI, NB = 0.02, 6.0, 321
 MULT_LO, MULT_HI, NM = 0.8, 60.0, 321
 
@@ -94,7 +94,7 @@ def main():
                 fontsize=house.FS_LABEL, color=house.INK)
 
     # advisory ceiling, NOT part of the definition
-    # NOT red: red is this page's fourth data category (f04's base 0.05 curve), and an advisory
+    # NOT red: red is this page's fourth data category (f05's base 0.05 curve), and an advisory
     # annotation is chrome, not a category (register F11). Neutral ink, dashed.
     ax.plot(xs, (R.WOUND / R.COVER_STEPS_FLOOR) / xs, color=K.C_FAINT_INK, linestyle=(0, (5, 3)),
             linewidth=1.4)

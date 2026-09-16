@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""f05 - the only figure here that runs the real environment, and the check the rest depend on.
+"""f06 - the only figure here that runs the real environment, and the check the rest depend on.
 
 QUESTION IT ANSWERS. Every other figure on this page is algebra: a closed form for the recurrence
 in `src/environment/core.py::update_body`, written out by hand in `recovery_math.py`. If that
@@ -51,7 +51,7 @@ from src.utils.config import Config                    # noqa: E402
 from src.environment.config_loader import load_env_params  # noqa: E402
 from src.environment.core import jax_reset, jax_step   # noqa: E402
 
-STEM = "f05_env_validation"
+STEM = "f06_env_validation"
 REST = 4                    # jax_step: rested = rest_action_enabled AND action == 4
 N_STEPS = 50
 START_INJURY = 95.0         # below max_injury, so step 1 cannot trip the injury-death test

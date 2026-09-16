@@ -330,6 +330,49 @@ figure img:focus-visible { outline:2px solid var(--accent); outline-offset:-3px;
   <strong>condition B</strong> the second (cover must heal).</p>
 </section>
 
+<figure>
+  <img data-fig="f01_theta_geometry" alt="Two line charts side by side, both over consecutive rest steps horizontally and cumulative injury healed vertically. Panel a shades a rectangle 25 points tall and 50 steps wide and draws its diagonal as a thick dashed line; a shallow green line stays inside the rectangle and is marked passes A, while a steep orange line crosses the top of the rectangle after five steps and is marked fails A. Panel b draws two solid rectangles anchored at the origin, 12.5 by 50 and 25 by 100, whose top-right corners both sit on a single thick dashed diagonal, plus a faint dotted diagonal of steeper slope ending in a marked corner at 50 by 25.">
+  <p class="zoomhint">Click the figure to view it full size &mdash; or Tab to it and press Enter; Esc closes it</p>
+  <figcaption>
+    <span><b>Figure 1 &mdash; &theta; is a height, the rest budget is a width, and condition A only
+    ever asks about the slope between them.</b> <b>Axes.</b> Both panels: horizontal is consecutive
+    rest steps taken in the open, in whole environment steps &mdash; 0 to 62 in panel (a), 0 to 114
+    in panel (b); vertical is cumulative injury healed, in points of the
+    0&ndash;{{VAL:max_injury}} injury scale &mdash; 0 to 100 in panel (a) and 0 to 47.5 in panel
+    (b), so (b) is a magnified view of the bottom of the same scale, not a different measurement.
+    In panel (a) the shaded rectangle is {{VAL:theta}} points tall and {{VAL:budget}} steps wide,
+    the thick dashed line is its diagonal, and the two solid lines are the two base rates this page
+    argues about, in the hues the page gives them throughout &mdash; green the recommendation,
+    orange the shipped rest-premium arm a01.</span>
+    <span>What to take from it: condition A is not a claim about &theta; or about the budget, but
+    about the single rate &theta;&nbsp;/&nbsp;budget, which is {{VAL:ratio}} injury points per rest
+    step here. Panel (b) is the consequence &mdash; halve &theta; or double the budget and you get
+    the same {{VAL:ratio_half}}-point-per-step ceiling, from two boxes that look nothing
+    alike.</span>
+    <span><b>Data.</b> {{DATA:f01_theta_geometry}}</span>
+  </figcaption>
+  <p class="prov">Reproduce: <code>python scripts/analysis/studies/recovery_in_bush_tuning/f01_theta_geometry.py</code>
+  &rarr; <code>docs/experiments/active/recovery_in_bush_tuning/figures/f01_theta_geometry.{svg,pdf,png,data.txt}</code></p>
+  <div class="howto">
+    <p class="eyebrow">How it is computed</p>
+    <p>Nothing here is measured and nothing is swept. Panel (a) draws two straight lines,
+    <code>base &times; n</code>, at the two base rates the page argues about, over 400 step counts,
+    together with the rectangle whose height is &theta; and whose width is the affordable rest
+    budget. Both settings come from the same module every other figure reads, so neither is typed
+    here. The rectangle is an exact
+    picture of condition A only because <code>recovery_accel_rate</code> is zero for both lines: a
+    straight line through the origin is inside the rectangle at the right-hand edge exactly when its
+    slope is no greater than the rectangle's diagonal, which turns condition A from a statement about two numbers into one about a single rate. With a positive
+    acceleration the healing curve bends upward and the equivalence fails &mdash; it can pass under
+    the diagonal early and still cross the top later &mdash; which is the subject of Figure&nbsp;5,
+    not of this one. Panel (b) draws no data at all: it is two rectangles, two diagonals and one
+    marked corner, constructed so that halving &theta; and doubling the budget are visibly the same move. One word
+    in panel (a) needs care. The <em>budget</em> is an upper bound on resting, not a plan: an agent
+    that really rested for all of it would have spent its entire nutrition and would die at the end,
+    so a real agent has strictly fewer rest steps available than the box is wide.</p>
+  </div>
+</figure>
+
 <hr>
 
 <section class="col">
@@ -356,9 +399,25 @@ new_injury      = clip(injury + applied_inc - recovery_amount * can_recover, 0, 
   <code>recovery_accel_rate</code> = 0. Condition A is <strong>base &le; &theta; / budget</strong>,
   which is {{VAL:ratio}} at the primary setting. Condition B is
   <strong>base &times; multiplier &ge; wound / cover steps</strong>, which is
-  {{VAL:cover_rate_min}} injury points per rest step. Notice that A depends on &theta; and the
-  budget <em>only through their ratio</em> &mdash; halving the threshold and doubling the budget
-  are the same move, which is why one set of lines in Figure&nbsp;3 carries both sensitivities.</p>
+  {{VAL:cover_rate_min}} injury points per rest step.</p>
+  <p><strong>What &theta; is doing in that first inequality.</strong> &theta; is a number of injury
+  points and the budget is a number of rest steps, so &theta;&nbsp;/&nbsp;budget is neither &mdash;
+  it is a <em>rate</em>, in injury points per rest step, and condition A says the open&rsquo;s
+  healing rate must not exceed it. Figure&nbsp;1 draws that rate as the thing it actually is: a
+  slope. &theta; is the <em>height</em> of a box and the budget is its <em>width</em>; a healing
+  line satisfies condition A exactly when it is still inside that box at the moment the budget runs
+  out, and fails exactly when it leaves through the top instead. For a straight line &mdash; which
+  is what <code>recovery_accel_rate</code>&nbsp;=&nbsp;0 gives &mdash; &ldquo;still inside at the right-hand
+  edge&rdquo; is the same statement as &ldquo;no steeper than the box&rsquo;s diagonal&rdquo;. The
+  diagonal <em>is</em> the ceiling, and its slope is &theta;&nbsp;/&nbsp;budget.</p>
+  <p>Seeing it as a slope also settles a question the page would otherwise have to answer twice.
+  Only the <em>ratio</em> of the two numbers ever appears, so &theta; and the budget never have to
+  be argued about separately: halving &theta; &mdash; a stricter claim about what counts as
+  meaningful healing &mdash; and doubling the budget &mdash; a more generous claim about how long an
+  agent can afford to rest &mdash; land on exactly the same ceiling, {{VAL:ratio_half}} points per
+  rest step either way. Panel (b) of Figure&nbsp;1 is that fact drawn: two differently shaped boxes,
+  one diagonal. It is also why a single set of lines in Figure&nbsp;4 carries both sensitivities at
+  once rather than needing a grid of four.</p>
 </section>
 
 <hr>
@@ -374,10 +433,10 @@ new_injury      = clip(injury + applied_inc - recovery_amount * can_recover, 0, 
 </section>
 
 <figure>
-  <img data-fig="f01_recovery_curve" alt="Four curves of cumulative injury healed against consecutive rest steps. The shipped default curve is flat at first then rises almost vertically, reaching the top of the injury scale near step 16. The a01 curve is a straight line reaching the top near step 20, with the recommended in-bush curve drawn exactly on top of it. The recommended in-the-open curve is a shallow straight line reaching only about 11 points by step 55.">
+  <img data-fig="f02_recovery_curve" alt="Four curves of cumulative injury healed against consecutive rest steps. The shipped default curve is flat at first then rises almost vertically, reaching the top of the injury scale near step 16. The a01 curve is a straight line reaching the top near step 20, with the recommended in-bush curve drawn exactly on top of it. The recommended in-the-open curve is a shallow straight line reaching only about 11 points by step 55.">
   <p class="zoomhint">Click the figure to view it full size &mdash; or Tab to it and press Enter; Esc closes it</p>
   <figcaption>
-    <span><b>Figure 1 &mdash; healing adds up very differently under the two shipped
+    <span><b>Figure 2 &mdash; healing adds up very differently under the two shipped
     settings.</b> <b>Axes.</b> Horizontal: consecutive rest steps, counted in whole environment
     steps, from 0 to 55; the <code>t = 0</code> point is the initial state and not a step.
     Vertical: cumulative injury healed, in points of the 0&ndash;{{VAL:max_injury}} injury scale,
@@ -389,10 +448,10 @@ new_injury      = clip(injury + applied_inc - recovery_amount * can_recover, 0, 
     recommendation's healing rate <em>inside cover</em> is set to a01's flat
     {{VAL:rec_cover_rate}} points per rest step, so a wound closes in the same number of steps that
     already-run sweep was calibrated to.</span>
-    <span><b>Data.</b> {{DATA:f01_recovery_curve}}</span>
+    <span><b>Data.</b> {{DATA:f02_recovery_curve}}</span>
   </figcaption>
-  <p class="prov">Reproduce: <code>python scripts/analysis/studies/recovery_in_bush_tuning/f01_recovery_curve.py</code>
-  &rarr; <code>docs/experiments/active/recovery_in_bush_tuning/figures/f01_recovery_curve.{svg,pdf,png,data.txt}</code></p>
+  <p class="prov">Reproduce: <code>python scripts/analysis/studies/recovery_in_bush_tuning/f02_recovery_curve.py</code>
+  &rarr; <code>docs/experiments/active/recovery_in_bush_tuning/figures/f02_recovery_curve.{svg,pdf,png,data.txt}</code></p>
   <div class="howto">
     <p class="eyebrow">How it is computed</p>
     <p>Each curve is the closed-form cumulative heal from &sect;3, evaluated at whole step counts 0
@@ -401,7 +460,7 @@ new_injury      = clip(injury + applied_inc - recovery_amount * can_recover, 0, 
     the scale it is measured on, and the flat tops are that clamp rather than a drawing choice. The
     two shipped settings are read out of their YAML files at run time rather than transcribed, so
     if somebody edits either file this figure moves with it. No simulation is run here &mdash;
-    Figure 5 is the one that does that, and it exists precisely because these four curves are
+    Figure 6 is the one that does that, and it exists precisely because these four curves are
     algebra and algebra can be wrong. Two conventions are worth stating because they would
     otherwise surprise. First, &ldquo;consecutive&rdquo; is strict: any step on which the agent does
     something other than Rest sets the streak back to zero, so a curve describes an uninterrupted
@@ -419,7 +478,9 @@ new_injury      = clip(injury + applied_inc - recovery_amount * can_recover, 0, 
   <h2><span class="num">05</span> Where the open is already unrecoverable</h2>
   <h3>Why this analysis</h3>
   <p>Condition A is a statement about a single number: how much injury a continuously-resting agent
-  can clear outside cover before it starves. Figure 1 evaluates that number at three points;
+  can clear outside cover before it starves. The &theta; contour below is the same line
+  Figure&nbsp;1 drew as the diagonal of a box, now traced across a whole plane of settings instead
+  of at one of them. Figure 2 evaluates that number at three points;
   this figure evaluates it everywhere in the plane that any shipped configuration occupies, and
   draws the line where it equals &theta;. An informative answer tells us whether the workable
   region is a large comfortable area or a sliver &mdash; and therefore whether the recommendation
@@ -427,10 +488,10 @@ new_injury      = clip(injury + applied_inc - recovery_amount * can_recover, 0, 
 </section>
 
 <figure>
-  <img data-fig="f02_open_ceiling" alt="Two heat maps side by side over base rate on a log horizontal axis and acceleration rate on a linear vertical axis. Panel a covers acceleration 0 to 0.5 and is almost entirely the darkest colour, meaning the full injury scale is healable, with a pale wedge only in the bottom left corner. Panel b is the same map over acceleration 0 to 0.06 and is mostly pale, with a dark band on the right. A contour marked 25 points runs through both.">
+  <img data-fig="f03_open_ceiling" alt="Two heat maps side by side over base rate on a log horizontal axis and acceleration rate on a linear vertical axis. Panel a covers acceleration 0 to 0.5 and is almost entirely the darkest colour, meaning the full injury scale is healable, with a pale wedge only in the bottom left corner. Panel b is the same map over acceleration 0 to 0.06 and is mostly pale, with a dark band on the right. A contour marked 25 points runs through both.">
   <p class="zoomhint">Click the figure to view it full size &mdash; or Tab to it and press Enter; Esc closes it</p>
   <figcaption>
-    <span><b>Figure 2 &mdash; almost every setting in the shipped range makes the open fully
+    <span><b>Figure 3 &mdash; almost every setting in the shipped range makes the open fully
     recoverable.</b> <b>Axes.</b> Both panels: horizontal is <code>recovery_base_rate</code> in
     injury points healed per rest step, on a logarithmic scale from 0.01 to 5; vertical is
     <code>recovery_accel_rate</code>, the fractional extra healing per consecutive rest step, on a
@@ -441,10 +502,10 @@ new_injury      = clip(injury + applied_inc - recovery_amount * can_recover, 0, 
     everything to its lower left satisfies condition A.</span>
     <span>Panels (a) and (b) share one colour scale, so a colour means the same number in each;
     (b) is an enlargement of the bottom strip of (a), not a different measurement.</span>
-    <span><b>Data.</b> {{DATA:f02_open_ceiling}}</span>
+    <span><b>Data.</b> {{DATA:f03_open_ceiling}}</span>
   </figcaption>
-  <p class="prov">Reproduce: <code>python scripts/analysis/studies/recovery_in_bush_tuning/f02_open_ceiling.py</code>
-  &rarr; <code>docs/experiments/active/recovery_in_bush_tuning/figures/f02_open_ceiling.{svg,pdf,png,data.txt}</code></p>
+  <p class="prov">Reproduce: <code>python scripts/analysis/studies/recovery_in_bush_tuning/f03_open_ceiling.py</code>
+  &rarr; <code>docs/experiments/active/recovery_in_bush_tuning/figures/f03_open_ceiling.{svg,pdf,png,data.txt}</code></p>
   <div class="howto">
     <p class="eyebrow">How it is computed</p>
     <p>Every cell of the grid is one evaluation of the closed-form cumulative heal at
@@ -460,7 +521,7 @@ new_injury      = clip(injury + applied_inc - recovery_amount * can_recover, 0, 
     that really spends its whole nutrition resting is dead at the end of it, so a real agent has
     strictly fewer rest steps than this map grants. That biases the map towards
     <em>overstating</em> what the open can heal, which means a setting that fails condition A here
-    fails it conservatively. The map also says nothing about cover; that is Figure 3.</p>
+    fails it conservatively. The map also says nothing about cover; that is Figure 4.</p>
   </div>
 </figure>
 
@@ -478,10 +539,10 @@ new_injury      = clip(injury + applied_inc - recovery_amount * can_recover, 0, 
 </section>
 
 <figure>
-  <img data-fig="f03_feasible_window" alt="A region map over base rate on a log horizontal axis and in-bush multiplier on a log vertical axis. A pale green wedge in the upper middle marks where both conditions hold, bounded on the right by a vertical line and below by a falling diagonal line. Grey fills the rest. A green dot marks the recommendation at base 0.2 and multiplier 25; an orange dot marks the a01 setting at base 5 and multiplier 1, far outside the wedge.">
+  <img data-fig="f04_feasible_window" alt="A region map over base rate on a log horizontal axis and in-bush multiplier on a log vertical axis. A pale green wedge in the upper middle marks where both conditions hold, bounded on the right by a vertical line and below by a falling diagonal line. Grey fills the rest. A green dot marks the recommendation at base 0.2 and multiplier 25; an orange dot marks the a01 setting at base 5 and multiplier 1, far outside the wedge.">
   <p class="zoomhint">Click the figure to view it full size &mdash; or Tab to it and press Enter; Esc closes it</p>
   <figcaption>
-    <span><b>Figure 3 &mdash; the feasible window, and the point chosen inside it.</b>
+    <span><b>Figure 4 &mdash; the feasible window, and the point chosen inside it.</b>
     <b>Axes.</b> Horizontal: <code>recovery_base_rate</code>, in injury points healed per rest step
     in the open, on a logarithmic scale from 0.02 to 6. Vertical:
     <code>recovery_in_bush_multiplier</code>, the factor healing is multiplied by while resting on
@@ -494,10 +555,10 @@ new_injury      = clip(injury + applied_inc - recovery_amount * can_recover, 0, 
     <code>recovery_accel_rate</code> = {{VAL:a01_accel}} and is marked; the shipped default has
     {{VAL:shipped_accel}} and is therefore <em>deliberately absent</em> &mdash; it does not live on
     an accel = 0 plane, and drawing it here would be a mistake.</span>
-    <span><b>Data.</b> {{DATA:f03_feasible_window}}</span>
+    <span><b>Data.</b> {{DATA:f04_feasible_window}}</span>
   </figcaption>
-  <p class="prov">Reproduce: <code>python scripts/analysis/studies/recovery_in_bush_tuning/f03_feasible_window.py</code>
-  &rarr; <code>docs/experiments/active/recovery_in_bush_tuning/figures/f03_feasible_window.{svg,pdf,png,data.txt}</code></p>
+  <p class="prov">Reproduce: <code>python scripts/analysis/studies/recovery_in_bush_tuning/f04_feasible_window.py</code>
+  &rarr; <code>docs/experiments/active/recovery_in_bush_tuning/figures/f04_feasible_window.{svg,pdf,png,data.txt}</code></p>
   <div class="howto">
     <p class="eyebrow">How it is computed</p>
     <p>Each of the 321 by 321 cells is tested against both conditions and coloured by the outcome.
@@ -514,7 +575,7 @@ new_injury      = clip(injury + applied_inc - recovery_amount * can_recover, 0, 
     has stopped being somewhere to convalesce and become a heal button. It is named in the legend
     rather than on the plot, where it collided with everything. <strong>What the figure does not
     show:</strong> any dependence on <code>recovery_accel_rate</code>, fixed at zero across the
-    whole plane &mdash; Figure 4 tests that assumption &mdash; and whether an agent would choose to
+    whole plane &mdash; Figure 5 tests that assumption &mdash; and whether an agent would choose to
     take the rest steps either condition grants.</p>
   </div>
 </figure>
@@ -524,7 +585,7 @@ new_injury      = clip(injury + applied_inc - recovery_amount * can_recover, 0, 
 <section class="col">
   <h2><span class="num">07</span> Does any compounding at all survive?</h2>
   <h3>Why this analysis</h3>
-  <p>Figure 3 fixes <code>recovery_accel_rate</code> at zero, and a fixed parameter is an
+  <p>Figure 4 fixes <code>recovery_accel_rate</code> at zero, and a fixed parameter is an
   assumption until something tests it. The worry is specific: compounding is exactly the mechanism
   that lets a tiny base rate clear a large wound if the agent simply keeps resting, so a small
   positive acceleration might quietly undo condition A. An informative answer is a number &mdash;
@@ -532,10 +593,10 @@ new_injury      = clip(injury + applied_inc - recovery_amount * can_recover, 0, 
 </section>
 
 <figure>
-  <img data-fig="f04_accel_spoiler" alt="Four falling curves of rest steps needed to clear 25 injury points against acceleration rate from 0 to 0.12, on a logarithmic vertical axis. Three curves start high and fall through a horizontal rule at 50 steps, with the crossing marked on each: 0.033, 0.055 and 0.076. A fourth curve for base 5 sits flat near 5 steps, far below both rules.">
+  <img data-fig="f05_accel_spoiler" alt="Four falling curves of rest steps needed to clear 25 injury points against acceleration rate from 0 to 0.12, on a logarithmic vertical axis. Three curves start high and fall through a horizontal rule at 50 steps, with the crossing marked on each: 0.033, 0.055 and 0.076. A fourth curve for base 5 sits flat near 5 steps, far below both rules.">
   <p class="zoomhint">Click the figure to view it full size &mdash; or Tab to it and press Enter; Esc closes it</p>
   <figcaption>
-    <span><b>Figure 4 &mdash; a positive acceleration is tolerable, but only a very small
+    <span><b>Figure 5 &mdash; a positive acceleration is tolerable, but only a very small
     one.</b> <b>Axes.</b> Horizontal: <code>recovery_accel_rate</code>, the fractional extra
     healing on each consecutive rest step, linear from 0 to 0.12. Vertical: the number of
     consecutive rest steps an agent needs <strong>in the open</strong> before it has cleared
@@ -547,11 +608,11 @@ new_injury      = clip(injury + applied_inc - recovery_amount * can_recover, 0, 
     the acceleration at which it happens.</span>
     <span>The horizontal axis stops at 0.12 because every curve has already collapsed by then. The
     shipped default's acceleration is {{VAL:shipped_accel}}, far beyond the right edge &mdash;
-    see Figure 2 for where it lands.</span>
-    <span><b>Data.</b> {{DATA:f04_accel_spoiler}}</span>
+    see Figure 3 for where it lands.</span>
+    <span><b>Data.</b> {{DATA:f05_accel_spoiler}}</span>
   </figcaption>
-  <p class="prov">Reproduce: <code>python scripts/analysis/studies/recovery_in_bush_tuning/f04_accel_spoiler.py</code>
-  &rarr; <code>docs/experiments/active/recovery_in_bush_tuning/figures/f04_accel_spoiler.{svg,pdf,png,data.txt}</code></p>
+  <p class="prov">Reproduce: <code>python scripts/analysis/studies/recovery_in_bush_tuning/f05_accel_spoiler.py</code>
+  &rarr; <code>docs/experiments/active/recovery_in_bush_tuning/figures/f05_accel_spoiler.{svg,pdf,png,data.txt}</code></p>
   <div class="howto">
     <p class="eyebrow">How it is computed</p>
     <p>Each curve inverts the cumulative-heal formula: how many consecutive rest steps until the
@@ -576,8 +637,8 @@ new_injury      = clip(injury + applied_inc - recovery_amount * can_recover, 0, 
 <section class="col">
   <h2><span class="num">08</span> The check that the algebra is the simulation</h2>
   <h3>Why this analysis</h3>
-  <p>Figures 1 to 4 are all the same closed form, transcribed by hand from the simulation's source.
-  If that transcription is wrong, four figures are confidently wrong <em>together</em> and nothing
+  <p>Figures 1 to 5 are all the same closed form, transcribed by hand from the simulation's source.
+  If that transcription is wrong, five figures are confidently wrong <em>together</em> and nothing
   else on this page would show it. So this figure drives the real environment with a scripted
   always-Rest policy, once with the agent standing on a bush and once on bare ground, and plots
   what the simulation actually did against what the formula predicted. Agreement validates the
@@ -586,12 +647,12 @@ new_injury      = clip(injury + applied_inc - recovery_amount * can_recover, 0, 
 </section>
 
 <figure>
-  <img data-fig="f05_env_validation" alt="Two panels. The left panel plots injury level against rest steps: a shallow falling line for the open and a steep falling line for the bush that reaches zero near step 19, with measured markers sitting exactly on both predicted lines. The right panel plots the absolute difference between measurement and prediction on a logarithmic scale; the open series rises to about one ten-thousandth of a point and the bush series sits on the axis floor.">
+  <img data-fig="f06_env_validation" alt="Two panels. The left panel plots injury level against rest steps: a shallow falling line for the open and a steep falling line for the bush that reaches zero near step 19, with measured markers sitting exactly on both predicted lines. The right panel plots the absolute difference between measurement and prediction on a logarithmic scale; the open series rises to about one ten-thousandth of a point and the bush series sits on the axis floor.">
   <p class="zoomhint">Click the figure to view it full size &mdash; or Tab to it and press Enter; Esc closes it</p>
   <figcaption>
-    <span><b>Figure 5 &mdash; the simulation and the closed form agree to
-    {{VAL:f05_worst}} injury points.</b> <b>Axes.</b> Panel (a): horizontal is rest steps taken, in
-    whole environment steps, 0 to {{VAL:f05_steps}}; vertical is the agent's
+    <span><b>Figure 6 &mdash; the simulation and the closed form agree to
+    {{VAL:f06_worst}} injury points.</b> <b>Axes.</b> Panel (a): horizontal is rest steps taken, in
+    whole environment steps, 0 to {{VAL:f06_steps}}; vertical is the agent's
     <code>injury_level</code> in points of the 0&ndash;{{VAL:max_injury}} scale. Lines are the
     closed-form prediction &mdash; solid for the open, dashed for the bush &mdash; and the black
     markers are what the simulation measured, open circles for the open and filled squares for the
@@ -600,24 +661,24 @@ new_injury      = clip(injury + applied_inc - recovery_amount * can_recover, 0, 
     prediction, in injury points, on a logarithmic scale from a millionth of a point to 3.</span>
     <span>The bush series in panel (b) is <strong>exactly zero at every step</strong> and is drawn
     on the floor of the log axis, which cannot show a zero.</span>
-    <span><b>Data.</b> {{DATA:f05_env_validation}}</span>
+    <span><b>Data.</b> {{DATA:f06_env_validation}}</span>
   </figcaption>
-  <p class="prov">Reproduce: <code>python scripts/analysis/studies/recovery_in_bush_tuning/f05_env_validation.py</code>
-  &rarr; <code>docs/experiments/active/recovery_in_bush_tuning/figures/f05_env_validation.{svg,pdf,png,data.txt,results.json}</code></p>
+  <p class="prov">Reproduce: <code>python scripts/analysis/studies/recovery_in_bush_tuning/f06_env_validation.py</code>
+  &rarr; <code>docs/experiments/active/recovery_in_bush_tuning/figures/f06_env_validation.{svg,pdf,png,data.txt,results.json}</code></p>
   <div class="howto">
     <p class="eyebrow">How it is computed</p>
     <p>A world is built from the shipped defaults with three deliberate changes: all animals are
     removed, because a predator would both move the agent and deal damage; only the food resource
     is kept, because the ambush resource injures anything that touches it; and exactly one bush is
     pinned to a known cell, so &ldquo;on the bush&rdquo; is an address rather than a search. Injury
-    starts at {{VAL:f05_start_injury}}, just below the fatal ceiling, because healing is
+    starts at {{VAL:f06_start_injury}}, just below the fatal ceiling, because healing is
     subtractive and clipped at zero &mdash; a healthy agent would heal nothing and the comparison
     would be between two zeros. The agent is then placed on the bush cell, or on an
-    obstacle-free cell, and issued the Rest action {{VAL:f05_steps}} times. Every step is checked
+    obstacle-free cell, and issued the Rest action {{VAL:f06_steps}} times. Every step is checked
     before anything is plotted: that the agent really rested, that it took no damage, that its bush
     membership is what this rollout assumes, and that its rest streak equals the step number. A
     failure raises an exception rather than drawing a figure, so a contaminated rollout cannot
-    reach the page. The prediction is the same closed form the other four figures use, clipped to
+    reach the page. The prediction is the same closed form the other five figures use, clipped to
     the injury range. Its weakness is coverage: this is two rollouts of one setting under one
     random seed, so it validates the shape of the recurrence and the location premium, not every
     value a configuration might take.</p>
@@ -627,18 +688,18 @@ new_injury      = clip(injury + applied_inc - recovery_amount * can_recover, 0, 
 <section class="col">
   <div class="callout pick">
     <p class="eyebrow">Validation result</p>
-    <p><strong>Agreement.</strong> Over {{VAL:f05_n}} compared values the largest disagreement
-    between the simulation and the closed form is <strong>{{VAL:f05_worst}} injury
+    <p><strong>Agreement.</strong> Over {{VAL:f06_n}} compared values the largest disagreement
+    between the simulation and the closed form is <strong>{{VAL:f06_worst}} injury
     points</strong>, which is single-precision rounding accumulated over
-    {{VAL:f05_steps}} steps &mdash; the smallest representable gap near injury
-    {{VAL:f05_start_injury}} is {{VAL:f05_eps}}. In cover the agreement is <em>exact</em>: every
-    one of the bush rollout's residuals is {{VAL:f05_worst_bush}}. After
-    {{VAL:f05_steps}} rest steps the open-ground agent's injury measured
-    {{VAL:f05_open_final}} against a predicted {{VAL:f05_open_pred}}; the bush agent reached zero
-    injury on step {{VAL:f05_bush_zero}} and stayed there.</p>
+    {{VAL:f06_steps}} steps &mdash; the smallest representable gap near injury
+    {{VAL:f06_start_injury}} is {{VAL:f06_eps}}. In cover the agreement is <em>exact</em>: every
+    one of the bush rollout's residuals is {{VAL:f06_worst_bush}}. After
+    {{VAL:f06_steps}} rest steps the open-ground agent's injury measured
+    {{VAL:f06_open_final}} against a predicted {{VAL:f06_open_pred}}; the bush agent reached zero
+    injury on step {{VAL:f06_bush_zero}} and stayed there.</p>
     <p>The rest budget was measured in the same run rather than assumed: nutrition fell by exactly
-    {{VAL:f05_nut_drop}} per rest step against a <code>metabolic_cost</code> of
-    {{VAL:metabolic_cost}}, with a worst per-step deviation of {{VAL:f05_nut_dev}}. The claim that
+    {{VAL:f06_nut_drop}} per rest step against a <code>metabolic_cost</code> of
+    {{VAL:metabolic_cost}}, with a worst per-step deviation of {{VAL:f06_nut_dev}}. The claim that
     a resting agent eats nothing, and therefore that its rest budget is
     <code>nutrition / metabolic_cost</code>, is confirmed rather than argued.</p>
   </div>
@@ -648,14 +709,14 @@ new_injury      = clip(injury + applied_inc - recovery_amount * can_recover, 0, 
 
 <section class="col">
   <h2><span class="num">09</span> The recommendation, and the rule that produced it</h2>
-  <p>The feasible region of Figure 3 has room in it, so a point inside it has to be chosen rather
+  <p>The feasible region of Figure 4 has room in it, so a point inside it has to be chosen rather
   than found. The rule is stated here because a point picked by eye is not reproducible.</p>
 </section>
 
 <section class="col stages">
   <div class="stage"><div class="s">CLAUSE 1</div><div class="b">
     <div class="t">Switch the compounding off</div>
-    <div class="d">Figure 4 is the evidence. At any base rate large enough to be useful in cover, a
+    <div class="d">Figure 5 is the evidence. At any base rate large enough to be useful in cover, a
     positive <code>recovery_accel_rate</code> pushes the open past &theta; inside the budget.</div></div></div>
   <div class="stage"><div class="s">CLAUSE 2</div><div class="b">
     <div class="t">Anchor the healing rate inside cover to an experiment that already ran</div>
@@ -790,11 +851,11 @@ new_injury      = clip(injury + applied_inc - recovery_amount * can_recover, 0, 
   <em>negative</em> at a typical mid-episode state (&sect;9), which is a stronger result than the
   definition claims &mdash; and a different one. The two are kept apart on this page rather than
   merged.</div></div>
-  <div class="q"><div class="h">6. Figure 3 cannot show both shipped settings</div>
-  <div class="d">The brief asked for the two shipped settings to be drawn throughout. Figure 3 is a
+  <div class="q"><div class="h">6. Figure 4 cannot show both shipped settings</div>
+  <div class="d">The brief asked for the two shipped settings to be drawn throughout. Figure 4 is a
   plane at <code>recovery_accel_rate</code> = 0, and only one of the two shipped settings lives
   there. Plotting the other one on it would have placed a point at coordinates the setting does not
-  have. It appears in Figures 1, 2 and 4, and its absence from Figure 3 is stated in that figure's
+  have. It appears in Figures 2, 3 and 5, and its absence from Figure 4 is stated in that figure's
   caption.</div></div>
 </section>
 
@@ -807,7 +868,7 @@ new_injury      = clip(injury + applied_inc - recovery_amount * can_recover, 0, 
     <p><strong>No agent was trained.</strong> This is a tuning study of the environment's
     arithmetic. Whether an injured agent actually learns to walk to a bush under these settings is
     the experiment this page exists to make worth running, and it has not been run.</p>
-    <p><strong>The validation is narrow.</strong> Figure 5 is two rollouts of one setting under one
+    <p><strong>The validation is narrow.</strong> Figure 6 is two rollouts of one setting under one
     seed. It validates the shape of the recurrence and the location premium; a defect that only
     appears at some other <code>recovery_accel_rate</code> would not be caught.</p>
     <p><strong>Adopting the recommendation leaves the inert regime.</strong> At exactly 1.0 the
@@ -827,7 +888,7 @@ new_injury      = clip(injury + applied_inc - recovery_amount * can_recover, 0, 
   <p class="foot">Every figure on this page is written by a Python script under
   <code>scripts/analysis/studies/recovery_in_bush_tuning/</code> and embedded as a file; no chart is
   drawn in the page. Every number in the prose is substituted at build time from
-  <code>recovery_math.py</code> or from the JSON the Figure 5 rollout wrote &mdash; none is typed
+  <code>recovery_math.py</code> or from the JSON the Figure 6 rollout wrote &mdash; none is typed
   into the markup. The page is assembled by <code>build_page.py</code>, which refuses to build on a
   missing script, figure file, data statement, axes sentence or method block.</p>
 </section>

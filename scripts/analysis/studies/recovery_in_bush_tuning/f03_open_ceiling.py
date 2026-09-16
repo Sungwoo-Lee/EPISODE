@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""f02 - how much injury the OPEN can clear inside one rest budget, over the (base, accel) plane.
+"""f03 - how much injury the OPEN can clear inside one rest budget, over the (base, accel) plane.
 
 QUESTION IT ANSWERS. The study's condition A is a statement about one number: the injury a
 continuously-resting agent can clear outside cover before it starves. This figure computes that
@@ -14,7 +14,7 @@ Both panels share ONE colour scale, so a colour means the same number in each.
 
 HOW IT IS COMPUTED. `recovery_math.open_healable`, which is the geometric sum of the per-step heal
 `base * (1 + accel)**(n-1)` over n = 1..budget, clipped at `max_injury` because injury is clipped
-to [0, max_injury] every step. Nothing is measured; f05 is the figure that touches the environment.
+to [0, max_injury] every step. Nothing is measured; f06 is the figure that touches the environment.
 
 KNOWN LIMITATION. The budget is an UPPER bound and a fatal one - an agent that really spends its
 whole nutrition resting starves at the end of it. So the map OVERSTATES what the open can heal, and
@@ -31,7 +31,7 @@ import matplotlib.pyplot as plt  # noqa: E402
 import house                   # noqa: E402
 import recovery_math as R      # noqa: E402
 
-STEM = "f02_open_ceiling"
+STEM = "f03_open_ceiling"
 BASE_LO, BASE_HI, NB = 0.01, 5.0, 241
 ACCEL_HI_A, ACCEL_HI_B, NA = 0.5, 0.06, 241
 

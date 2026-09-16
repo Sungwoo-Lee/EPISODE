@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""f01 - cumulative injury healed against consecutive rest steps, for four settings.
+"""f02 - cumulative injury healed against consecutive rest steps, for four settings.
 
 QUESTION IT ANSWERS. Two settings ship in this repository and they are not variations of one
 another - they are qualitatively different problems. `recovery_accel_rate: 0.5` (the default)
@@ -11,7 +11,7 @@ in cover, so the reader can see the gap the multiplier opens.
 
 HOW IT IS COMPUTED. Closed form only - `recovery_math.cumulative`, evaluated at whole step counts
 0..55, then clipped at `max_injury` because injury is clipped to [0, max_injury] every step and an
-agent cannot heal more than the scale it is measured on. No environment is run here; f05 does that.
+agent cannot heal more than the scale it is measured on. No environment is run here; f06 does that.
 
 KNOWN LIMITATION. The curves describe an agent that rests on every step and takes no damage. A hit
 suspends recovery for the `injury_smoothing_duration` steps over which it lands, while the rest
@@ -28,7 +28,7 @@ import matplotlib.pyplot as plt  # noqa: E402
 import house                   # noqa: E402
 import recovery_math as R      # noqa: E402
 
-STEM = "f01_recovery_curve"
+STEM = "f02_recovery_curve"
 NMAX = 55
 
 
@@ -94,7 +94,7 @@ def main():
         f"from <code>configs/environment/default.yaml</code> and "
         f"<code>configs/environment/experiment/archive/basic_bushrefuge_restpremium/"
         f"04-restprem_a01.yaml</code> rather than typed. No run, episode or seed is summarised; "
-        f"the one figure on this page that touches the environment is f05."))
+        f"the one figure on this page that touches the environment is f06."))
 
 
 if __name__ == "__main__":

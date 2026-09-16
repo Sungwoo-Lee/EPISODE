@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
-"""f04 - does any non-zero recovery_accel_rate survive the design?
+"""f05 - does any non-zero recovery_accel_rate survive the design?
 
-QUESTION IT ANSWERS. f03 draws its feasible region at `recovery_accel_rate = 0`, which is a choice
+QUESTION IT ANSWERS. f04 draws its feasible region at `recovery_accel_rate = 0`, which is a choice
 that has to be defended rather than assumed. The worry is concrete: the shipped default sets accel
 to 0.5, and compounding is exactly the thing that lets a small base rate clear a large wound if the
 agent simply keeps resting. So the question is whether the design survives ANY positive accel, and
@@ -32,7 +32,7 @@ import matplotlib.pyplot as plt  # noqa: E402
 import house                   # noqa: E402
 import recovery_math as R      # noqa: E402
 
-STEM = "f04_accel_spoiler"
+STEM = "f05_accel_spoiler"
 ACCEL_HI = 0.12
 
 
