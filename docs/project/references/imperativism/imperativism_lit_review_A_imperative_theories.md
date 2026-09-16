@@ -777,3 +777,17 @@ Relevant but **not reviewed** (not read by this reviewer; do not cite this docum
 - **Bain, D. (2013). "What makes pains unpleasant?"** *Philosophical Studies* 166: 69–89. An evaluativist critique of imperativism about pain, arguing that imperatives cannot supply pain's reason-giving force. The PDF could not be retrieved because the site served a bot check.
 - **Martínez, M. & Klein, C. (2016). "Pain signals are predominantly imperative."** *Biology & Philosophy*.
 - Also cited within the corpus but not reviewed: Klein (2015) *What the Body Commands* (MIT Press), whose reading is disputed between B&H 2019 and Carruthers 2023; Barlassina & Hayward (2019) "Loopy Regulations" (*Philosophical Topics* 47), the source of several objections Carruthers 2023 answers; Martínez (2011, 2015a, 2015b); Bain (2019) "Why take painkillers?" (*Noûs*); Cochrane (2019); Cutter & Tye (2011, 2014).
+
+---
+
+## Feedback from literature-curator — 2026-09-17
+
+**Correction to the §5 citation-key warning, recorded from batch B2.** The warning above says four objections that Carruthers (2023) answers are attributed to Barlassina & Hayward's "Loopy Regulations" (his "[2019a]") and could not be checked, because that paper was not yet in the corpus. It has since been reviewed in [[imperativism_lit_review_B2_imperativism_evaluativism_maturity]] (§8, "Attribution check: what Carruthers (2023) credits to this paper"). The check against the PDF found:
+
+- **Three of the four points are in "Loopy Regulations":**
+  - the pure-mood objection (its §3.1.1);
+  - the novice vs expert doctor viewing an injury (its §3.1.2; "trainee" is Carruthers's paraphrase);
+  - liking/wanting dissociations (its §3.2.3). Loopy's evidence is different from Carruthers's: salt in amygdala-lesioned rats and feeding under lateral hypothalamus stimulation. The sugar example and the Berridge & Kringelbach / Pool et al. citations are Carruthers's own.
+- **The fourth, the affective-forecasting point, is not in "Loopy Regulations".** This is the point that prospection research describes choice in terms of anticipated experiences (Gilbert & Wilson; Miloyan & Suddendorf). It appears in Barlassina & Hayward's *Mind* paper (§3 above) and at length in Barlassina 2020 §5 (§4 above). This is most likely a citation-key error in Carruthers 2023.
+
+Consequence for the text above: where the §5 citation-key warning and §5 Argument 4 ("affective forecasting language") follow Carruthers in crediting this point to "Loopy Regulations", read the source as Barlassina & Hayward 2019 (*Mind*) and Barlassina 2020. The Argument 7 table and the §6 reply ledger already credit Barlassina 2020. The Part A text itself is left unchanged. The field-wide synthesis is [[imperativism_field_history_synthesis]].
