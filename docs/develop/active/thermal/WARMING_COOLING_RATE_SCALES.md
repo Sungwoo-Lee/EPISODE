@@ -1000,3 +1000,62 @@ T13 boundary 2.0 alone             -> AttributeError: 'EnvParams' object has no 
 - **Diff scope confirmed surgical:** D20, the T12/T13 rows, their two CP2 entries, the Revision 2 section. No reference value, loader/state/config/generator section, or other test row changed.
 
 Reviewed by: plan-reviewer
+
+---
+
+## Follow-up — target search with the new speed settings (2026-09-17, after commit `d4c30a2a`)
+
+**Plain-language summary.** With the two new settings in place, the user's three targets can be met,
+but only if the world stops varying as much from episode to episode as it does now. The settings
+themselves were never the whole answer; the per-episode randomness in world temperature and fire
+strength is what blocks a robust result. **No config was changed.** These are candidates for the
+user to choose from.
+
+**Method.** Every candidate was checked at the four corners of the sampled ranges and at their centre,
+never the midpoint alone (D19). Radial temperatures come from the loader's own blur
+(`_thermal_single_fire_field`) and validity from `_thermal_structure_verdict`. Durations come from the
+discrete recurrence, which `math-reviewer` verified equals the closed form and which the committed
+code implements (T04-T09). Grid: warming 1-15, cooling 0.1-1.0, `k_loss` 0.005 / 0.01 / 0.02,
+`k_exchange` 0.04, sigma 0.7, stability `scale*(k_exchange + k_loss) <= 1` enforced. The scripts are
+`tmp/20260917_target_search_scales.py` and `tmp/20260917_target_search_ring.py`. **Not yet run through
+the live environment**: a candidate the user picks should get a short thermal-on rollout before training.
+
+**Correction to the confirmed pain definition.** The pain target was confirmed as "starting from
+comfortable (0)". An agent almost never enters the fire from 0: it steps on from the ring next to
+the fire, already near +8. Every robust candidate under the confirmed definition **killed on step 1
+when entered from the ring**. The search below therefore requires pain from **both** entries, which
+is what the user's rule ("the first step must be survivable") actually means.
+
+| Finding | Result |
+|---|---|
+| Shipped sampled ranges (world -28..-22, fire ratio 11..13) | **0** robust configs |
+| Why the world range alone blocks it | at any fixed cooling speed, away time differs 1.72x between world -28 and -22; the target band 80-110 is only 1.375x wide |
+| Fire ratio kept at 11..13, any world width > 0 | **0** robust configs |
+| Fire ratio fixed at 12, world +/-1 | **14** robust configs |
+| Fire ratio fixed at 12, world +/-0.5 | **49** robust configs |
+
+**Why fire-ratio variation is fatal.** Fast rewarm and a survivable first step from the ring pull the
+**same** warming speed in opposite directions. At the shipped centre: warming 1 -> rewarm 20 steps, step
+1 from the ring +10.6; warming 2 -> rewarm 10, step 1 +13.1; warming 3 -> rewarm 7, step 1 **+15.6
+(dead)**. The usable window is roughly warming 2-2.5. A hotter fire (ratio 13) pushes the first step
+past +15 inside that window, so a per-fire ratio range cannot be tolerated.
+
+**Candidates for the user (none applied):**
+
+| World range | Fire ratio | `k_loss` | Warming | Cooling | Away | Rewarm | Pain from 0 / from ring |
+|---|---|---|---|---|---|---|---|
+| -31..-29 | 12 fixed | 0.02 | 2 | 0.25 | 86-99 | <=9 | <=3 / <=2 |
+| -35.5..-34.5 | 12 fixed | 0.02 | 1.5 | 0.2 | 84-88 | <=10 | <=3 / <=2 |
+
+**Costs the user should weigh before choosing:**
+- **Both candidates double `k_loss`** (0.01 -> 0.02). That moves every settling temperature, which
+  changes the map's geography: the ring's temperature, how much of the map is survivable, and the
+  radial profile the design page was tuned on. The speed settings alone left the map untouched; this
+  does not.
+- **Both need a colder world** (-30 or -35 against today's -25) and a **much narrower** per-episode
+  range (+/-1 or +/-0.5 against +/-3), plus a fixed fire strength. That removes most of the
+  episode-to-episode variation in the thermal world.
+- **Warming 1.5-2 against cooling 0.2-0.25 is a 6-10x asymmetry**, beyond the 4-6x estimated earlier
+  and further past the commonly reported physiological range. Worth `research-postdoc`'s literature
+  check before a paper claim.
+- These are feasible points on a coarse grid, not optima.
