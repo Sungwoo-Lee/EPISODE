@@ -3,7 +3,7 @@ title: "Open-Work Handoff — carried-over work items"
 topic: issues
 status: active
 created: 2026-07-04
-last_updated: 2026-09-09
+last_updated: 2026-09-17
 ---
 
 # Open-Work Handoff — carried-over work items
@@ -85,6 +85,7 @@ the shipped settings; both are traps for whoever changes those settings next.
   The loader today checks only `min < max` and `min <= setpoint <= max`
   (`config_loader.py:1530-1540`). Shipped values (`0 / −15 / +15`) are symmetric, so
   **nothing is wrong at today's settings**. Ref: [[thermal_handover]] Task 3.
+  - 2026-09-17: [[warming_cooling_rate_scales]] adds two speed multipliers to the thermal block (shipped 1.0/1.0). It does not resolve E1; note that the metabolic drain is deliberately left unscaled while the body moves at scale·rate (that plan's D3), which E1(a)'s calibration should take into account.
 - [ ] **E2 — Fold food-vs-fire separation into the entity-placement algorithm update.**
   The user intends to revise entity allocation generally, so this is a requirement for
   that work rather than a config tweak. Measured over 20,000 real resets of the campfire

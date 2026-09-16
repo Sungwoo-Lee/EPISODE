@@ -75,6 +75,8 @@ thermoceptor. Temperature is not in the reward yet (Stage 4). Plan:
 | `random_spots.temp` | `thermal_spot_temp` | no | — | stamp magnitude; sign is drawn per spot |
 | `min_fire_separation` | `thermal_min_fire_separation` | **yes** | `>= 0` | Manhattan; `0` disables |
 | `food_min_fire_distance` | `thermal_food_min_fire_distance` | **yes** | `>= 0` | Manhattan; `0` disables |
+| `warming_rate_scale` | `thermal_warming_rate_scale` | **yes** | `> 0`; `× (k_exchange + k_loss) <= 1` | multiplies the body's per-step temperature change when it is positive; 1.0 = single-rate. Conditional-mandatory under `enabled` |
+| `cooling_rate_scale` | `thermal_cooling_rate_scale` | **yes** | `> 0`; `× (k_exchange + k_loss) <= 1` | multiplies the body's per-step temperature change when it is zero or negative; 1.0 = single-rate. Conditional-mandatory under `enabled` |
 | `grid_range` | `thermal_grid_range` | **yes** | `>= 0` | thermoceptor **radius**; contributes `2r²+2r+1` observation dims |
 | `relative` | `thermal_relative` | **yes** | — | `true` reports `field − body_temp`; `false` reports the raw field |
 | `body_temp_observable` | `thermal_body_temp_observable` | **yes** | — | `true` hands the agent its OWN body temperature as **1** observation dim, in raw degrees, immediately after Satiation; `false` leaves it latent. Conditional-mandatory under `enabled`, like every key in this block |
@@ -207,7 +209,10 @@ quoted in the design sandbox is only correct when `temperature_setpoint` and `k_
 are both zero; both are config keys with non-zero-capable values, and with either set the
 special case will pass a lethal comfort ring or reject a perfectly good one. The approach to
 `T*` is monotone, so "equilibrium inside `[min_temperature, max_temperature]`" is exactly
-"survivable indefinitely" and "outside" is exactly "dies eventually".
+"survivable indefinitely" and "outside" is exactly "dies eventually". The two rate scales
+(`warming_rate_scale`, `cooling_rate_scale`) do not enter this check: they multiply the whole
+per-step change, so the fixed point is the same, and the per-scale `<= 1` bound keeps the
+approach monotone.
 
 Corners rather than a random draw is deliberate: the check must be **deterministic**, so a
 config either always loads or never does. One that passed on Monday and failed on Tuesday
@@ -1277,7 +1282,8 @@ thermal.temperature_setpoint           thermal.min_temperature
 thermal.max_temperature                thermal.k_exchange
 thermal.k_loss                         thermal.k_metabolic
 thermal.metabolic_coupling             thermal.grid_range
-thermal.relative
+thermal.relative                       thermal.warming_rate_scale
+thermal.cooling_rate_scale
 ```
 
 and, only when `thermal.use_random_spots` is true:
@@ -1308,11 +1314,13 @@ the key is read):
 | `thermal.max_temperature` | float | — (also the drive's thermal scale: the third homeostatic axis is `(T − temperature_setpoint) · max_satiation / max_temperature`, so this key sets the warmth-vs-hunger exchange rate as well as the survivable band — see CONFIG_GUIDE.md) |
 | `thermal.k_exchange` | float | `>= 0`, and `k_exchange + k_loss <= 1` |
 | `thermal.k_loss` | float | `>= 0`, and `k_exchange + k_loss <= 1` (above 1 the discrete update overshoots its own fixed point every step and body temperature oscillates instead of settling) |
+| `thermal.warming_rate_scale` | float | `> 0` (written `not (x > 0)`, so NaN is rejected), and `warming_rate_scale × (k_exchange + k_loss) <= 1`, checked per key with an error naming this key. Multiplies the body's whole per-step change when it is positive; 1.0 / 1.0 is the single-rate body |
+| `thermal.cooling_rate_scale` | float | `> 0` (NaN rejected), and `cooling_rate_scale × (k_exchange + k_loss) <= 1`, checked per key with an error naming this key. Multiplies the whole per-step change when it is zero or negative |
 | `thermal.k_metabolic` | float | — (may be any sign; still zero — the metabolic coupling below runs the other way, charging nutrition for defence rather than feeding heat back into the body) |
 | `thermal.metabolic_coupling` | bool | — (gate; when true, defending body temperature drains nutrition. **Static** — it gates a Python `if` in `update_body`, so with it false the drain contributes nothing to the traced graph) |
 | `thermal.metabolic_coupling_rate` | float | `>= 0`, read **only** when `metabolic_coupling` is true. Nutrition units drawn per degree-per-step of thermoregulatory defence: the per-step drain is `rate * \|k_loss * (body_temp − temperature_setpoint)\|`, charged inside the `with_nutrition` block after the linear decay and before the food refill and the single clip to `[0, max_nutrition]`. A negative rate would pay the agent for being cold |
 
-The first six drive the body-temperature recurrence documented in
+The first eight drive the body-temperature recurrence documented in
 [05_body_homeostasis.md](05_body_homeostasis.md#body-temperature-thermal), and leaving the
 band `[min_temperature, max_temperature]` ends the episode with **termination code 5**
 ([06_reward_and_termination.md](06_reward_and_termination.md)). From Stage 4 the first two also

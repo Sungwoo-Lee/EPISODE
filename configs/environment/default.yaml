@@ -326,6 +326,20 @@ thermal:
   k_exchange: 0.04
   k_loss: 0.01
   k_metabolic: 0.0
+  # Separate warming and cooling SPEEDS. Each step the body's temperature would
+  # change by  d = k_exchange*(T_field - T) + k_metabolic - k_loss*(T - temperature_setpoint);
+  # the change actually applied is  scale*d, with warming_rate_scale when d > 0
+  # (temperature rising this step) and cooling_rate_scale otherwise. Scaling the
+  # WHOLE step leaves every settling temperature exactly where it was; only how
+  # fast the body gets there changes. "Warming" follows the direction of the step,
+  # so a warming scale above 1 also makes the fire kill sooner.
+  # 1.0 / 1.0 is exactly the single-rate body (the scaled branch is not compiled).
+  # Equal values other than 1.0 are NOT today's behaviour: 0.5 / 0.5 halves both.
+  # Validated: each > 0, and each * (k_exchange + k_loss) <= 1 (else a step
+  # overshoots its settling point). A deliberate deviation from EVAAA, whose body
+  # uses one rate. Read ONLY when enabled is true.
+  warming_rate_scale: 1.0
+  cooling_rate_scale: 1.0
   metabolic_coupling: false
   # Read ONLY when metabolic_coupling is true. Nutrition units drawn per
   # degree-per-step of thermoregulatory defence, i.e. the per-step drain is

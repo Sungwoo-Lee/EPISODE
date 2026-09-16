@@ -1557,6 +1557,38 @@ def load_env_params(config: Config) -> EnvParams:
                 f"above 1 the discrete update overshoots its own fixed point every "
                 f"step and the body temperature oscillates instead of settling.")
 
+        # ── Warming / cooling speed ───────────────────────────────────────
+        # The body's per-step change  d = k_ex*(T_field - T) + k_met
+        # - k_loss*(T - setpoint)  is applied as  scale*d, with the warming scale
+        # when d > 0 and the cooling scale otherwise (d == 0 -> cooling; s*0 == 0
+        # either way). Scaling the whole step leaves every fixed point unchanged,
+        # which is why `_thermal_equilibrium` / `_thermal_structure_verdict` take
+        # no scale. Conditional-mandatory under `thermal.enabled`, no fallback.
+        # Plan: docs/develop/active/thermal/WARMING_COOLING_RATE_SCALES.md
+        #
+        # float() BEFORE the static gate in core.update_body compares against 1.0,
+        # so YAML `1` and `1.0` trace the same graph.
+        _th_warming_scale = float(config.get_mandatory('thermal.warming_rate_scale'))
+        _th_cooling_scale = float(config.get_mandatory('thermal.cooling_rate_scale'))
+        for _key, _scale, _direction in (
+                ('thermal.warming_rate_scale', _th_warming_scale, 'warming'),
+                ('thermal.cooling_rate_scale', _th_cooling_scale, 'cooling')):
+            # Written as `not (x > 0)` so a YAML .nan is refused too.
+            if not (_scale > 0.0):
+                raise ValueError(
+                    f"{_key} must be > 0 (it multiplies the body's per-step "
+                    f"temperature change while {_direction}; 0 would freeze the body "
+                    f"in that direction and a negative value would reverse it), "
+                    f"got {_scale}.")
+            if not (_scale * (_th_k_exchange + _th_k_loss) <= 1.0):
+                raise ValueError(
+                    f"{_key} * (thermal.k_exchange + thermal.k_loss) must be <= 1 "
+                    f"({_scale} * ({_th_k_exchange} + {_th_k_loss}) = "
+                    f"{_scale * (_th_k_exchange + _th_k_loss)}); above 1 a "
+                    f"{_direction} step overshoots the body's settling temperature "
+                    f"and the approach stops being monotone, which the load-time "
+                    f"structure check relies on.")
+
         # ── Metabolic coupling (Stage 5) ──────────────────────────────────
         # `metabolic_coupling` is conditional-mandatory under `thermal.enabled`;
         # `metabolic_coupling_rate` is conditional-mandatory one level deeper,
@@ -1628,6 +1660,11 @@ def load_env_params(config: Config) -> EnvParams:
         _th_setpoint = 0.0
         _th_min_temp, _th_max_temp = 0.0, 0.0
         _th_k_exchange, _th_k_loss, _th_k_metabolic = 0.0, 0.0, 0.0
+        # Warming / cooling speed, inert. 1.0 / 1.0 is the value at which
+        # `update_body`'s static gate traces the single-rate lines verbatim; it is
+        # never read on a thermal-off config anyway (the whole body block sits
+        # behind `if params.thermal_enabled:`).
+        _th_warming_scale, _th_cooling_scale = 1.0, 1.0
         # Metabolic coupling block (Stage 5), inert. `False` is the value that
         # makes the drain in `update_body` untraceable on a thermal-off config:
         # it gates a static Python `if`, so the nutrition update is the
@@ -2330,6 +2367,8 @@ def load_env_params(config: Config) -> EnvParams:
         thermal_k_exchange=_th_k_exchange,
         thermal_k_loss=_th_k_loss,
         thermal_k_metabolic=_th_k_metabolic,
+        thermal_warming_rate_scale=_th_warming_scale,
+        thermal_cooling_rate_scale=_th_cooling_scale,
         thermal_metabolic_coupling=_th_met_coupling,
         thermal_metabolic_coupling_rate=_th_met_coupling_rate,
         temperature_setpoint=_th_setpoint,

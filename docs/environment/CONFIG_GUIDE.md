@@ -294,6 +294,8 @@ thermal:
   k_exchange: 0.04          # per step, fraction of the gap to the cell's temperature
   k_loss: 0.01              # per step, fraction of the deviation from setpoint undone
   k_metabolic: 0.0          # constant heat produced per step
+  warming_rate_scale: 1.0   # multiplies the per-step change while the body warms
+  cooling_rate_scale: 1.0   # … while it cools; 1.0 / 1.0 = single-rate body
   grid_range: 1             # thermoceptor RADIUS; 1 -> 5 cells (+5 obs dims)
   relative: true            # report `field - body_temp`, not the raw field
   body_temp_observable: true  # hand the agent its OWN temperature (+1 obs dim)
@@ -309,7 +311,7 @@ environment:
       blocking: false
 ```
 
-Six things that bite:
+Seven things that bite:
 
 - **The campfire entry must NOT go into `default.yaml`.** `Config.merge` replaces lists
   wholesale (§1's list-replace footgun), so an obstacle entry in the base file silently
@@ -361,6 +363,26 @@ Six things that bite:
   It has a [critical-settings registry](CONFIG_CRITICAL_SETTINGS.md) row for this reason.
   Full recurrence and the tug-of-war reading:
   [05_body_homeostasis.md](05_body_homeostasis.md#body-temperature-thermal).
+- **`warming_rate_scale` / `cooling_rate_scale` change speed, never where the body
+  settles.** Each step the body's temperature would change by
+  `d = k_exchange·(T_field − T) + k_metabolic − k_loss·(T − temperature_setpoint)`; the
+  change actually applied is `scale·d`, with `warming_rate_scale` when `d > 0` and
+  `cooling_rate_scale` otherwise (`d == 0` counts as cooling, which moves nothing). Because
+  the **whole** step is scaled, every settling temperature `T*` above stays exactly where it
+  was and only the time to reach it changes: the gap shrinks by `1 − scale·(k_exchange +
+  k_loss)` per step. "Warming" means *this step's temperature is rising*, not "the body is
+  cold": a body at −2 in a −10 cell is cooling, and a body standing on the fire is warming —
+  **so a warming scale above 1 also makes the fire kill sooner**, and a cooling scale below 1
+  also slows recovery from overheating. At `1.0 / 1.0` the environment is byte-identical to
+  the single-rate body; the scaled branch is not even compiled (a static gate on the two
+  values). **Equal values other than 1.0 are not today's behaviour**: `0.5 / 0.5` is a
+  uniform slow-down. Each key must be `> 0` and satisfy `scale·(k_exchange + k_loss) <= 1`;
+  above that a step overshoots `T*`, and the monotone approach the load-time structure check
+  relies on is gone. The `metabolic_coupling` drain is **not** scaled (it is billed on the
+  pre-step temperature whatever the scales; the reason is in
+  [05_body_homeostasis.md](05_body_homeostasis.md#metabolic-coupling-thermal)). Two rates
+  are a deliberate departure from EVAAA, whose body uses one. Plan and derivation:
+  [WARMING_COOLING_RATE_SCALES.md](../develop/active/thermal/WARMING_COOLING_RATE_SCALES.md).
 - **`food_min_fire_distance` is a knob that is off, and turning it on is a research
   decision.** At `0` food spawns anywhere, exactly as today. The risk it exists to
   address: an episode whose food lands inside the comfort ring has **no thermal trade-off
@@ -373,7 +395,8 @@ All the sub-keys are **conditional-mandatory** (§5 pattern), read only when
 `thermal.enabled` is true, and the `random_spots.*` trio only when `use_random_spots` is
 true as well. The body sub-keys validate at the point they are read: `min_temperature <
 max_temperature`, `temperature_setpoint` inside that band, `k_exchange` and `k_loss` each
-`>= 0` and summing to `<= 1`, and `grid_range >= 0`. `metabolic_coupling` is read too,
+`>= 0` and summing to `<= 1`, `warming_rate_scale` and `cooling_rate_scale` each `> 0` with
+`scale · (k_exchange + k_loss) <= 1` per key, and `grid_range >= 0`. `metabolic_coupling` is read too,
 and `metabolic_coupling_rate` is conditional-mandatory one level deeper — read only when
 `metabolic_coupling` is true, and validated `>= 0` there. `body_temp_observable` is
 conditional-mandatory in the same way, and is the one key in the block that **changes

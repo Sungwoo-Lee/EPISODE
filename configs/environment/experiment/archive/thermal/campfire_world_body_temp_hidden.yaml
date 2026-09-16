@@ -359,6 +359,15 @@ thermal:
   k_exchange: 0.04
   k_loss: 0.01
   k_metabolic: 0.0
+  # NOT a migration of the archive. This world is thermal-ON and is loaded from a
+  # raw Config by tests/env/test_body_temperature_observation.py (its sibling
+  # campfire_world.yaml is the one the other thermal test modules and fixture
+  # generators load);
+  # `warming_rate_scale` / `cooling_rate_scale` are mandatory whenever thermal is on,
+  # so without these lines those modules die at config load. 1.0 / 1.0 is the
+  # single-rate body, byte-identical to before the keys existed.
+  warming_rate_scale: 1.0
+  cooling_rate_scale: 1.0
   metabolic_coupling: false
   # Read ONLY when metabolic_coupling is true. Nutrition units drawn per
   # degree-per-step of thermoregulatory defence, i.e. the per-step drain is

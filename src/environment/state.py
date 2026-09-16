@@ -393,6 +393,18 @@ class EnvParams:
     thermal_k_exchange: float
     thermal_k_loss: float
     thermal_k_metabolic: float
+    # Warming / cooling speed. The recurrence's per-step change d is applied as
+    # scale*d: `thermal_warming_rate_scale` when d > 0, `thermal_cooling_rate_scale`
+    # otherwise. STATIC (pytree_node=False), like `recovery_in_bush_multiplier`:
+    # `core.update_body` gates on `== 1.0` for both at trace time, so at 1.0 / 1.0
+    # the scaled branch contributes no operation to the graph and the body update
+    # is the single-rate lines verbatim. The gate is derived from the two values
+    # themselves (no separate bool), so a `.replace()` of either scale can never
+    # be silently ignored. Not part of the curriculum modality fingerprint: they
+    # change dynamics, not what an observation dimension means. Inert 1.0 when
+    # `thermal_enabled` is False.
+    thermal_warming_rate_scale: float = struct.field(pytree_node=False)
+    thermal_cooling_rate_scale: float = struct.field(pytree_node=False)
     temperature_setpoint: float
     min_temperature: float
     max_temperature: float

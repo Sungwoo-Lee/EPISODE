@@ -181,10 +181,30 @@ def update_body(state: EnvState, info: dict, params: EnvParams, new_agent_pos: j
         #
         # `state.body_temp` is the PRE-step temperature, which is exactly the `T`
         # that appears in this step's `k_loss` term further down. So the nutrition
-        # charged on step t pays for the defence performed on step t. Using the
+        # charged on step t pays for the defence performed on step t (exactly at
+        # 1.0 / 1.0; with other warming / cooling scales the applied defence is
+        # scale x that term, and the bill is a per-decision charge for the defence
+        # effort rather than for the temperature change it produced — see the D3
+        # note below). Using the
         # post-step temperature would charge a step early, and would also make
         # this block depend on the body update, forcing a reorder of the whole
         # function for no gain.
+        #
+        # NOT scaled by thermal.warming_rate_scale / cooling_rate_scale (plan D3).
+        # Those scales follow the SIGN of the body's net step d. The field is fixed
+        # within an episode, so a body settled in one cell recomputes the same d
+        # every step, and at the settled point the sign of d is set by float
+        # rounding: usually frozen at the direction the body arrived from,
+        # occasionally alternating. The defence term k_loss*(T - setpoint) is not
+        # zero there, so a bill scaled by that sign would be path-dependent or
+        # jittery: two settled bodies 1.6e-5 degrees apart could pay bills that
+        # differ by the full warming/cooling ratio, depending only on history.
+        # This bill is instead a continuous function of body state: a per-step
+        # (per-decision) cost, which equals a per-degree-moved cost only at
+        # 1.0 / 1.0. Defensible, not the only defensible choice: the alternatives
+        # (bill x scale, or a switch on the defence direction sign(setpoint - T))
+        # are recorded for OPEN_WORK_HANDOFF E1(a) in the plan.
+        # Pinned by tests/env/test_thermal_rate_scales.py.
         #
         # Symmetric by |.|: defending against heat costs the same as defending
         # against cold. The recurrence's k_loss term is signed (it pushes both
@@ -287,6 +307,7 @@ def update_body(state: EnvState, info: dict, params: EnvParams, new_agent_pos: j
     # --- Body Temperature Dynamics (design section 5) ---
     #   T <- T + k_exchange*(T_field[agent_cell] - T) + k_metabolic
     #          - k_loss*(T - temperature_setpoint)
+    #   (applied as scale*d with a warming / cooling scale — see below)
     #
     # The k_loss term is NOT decoration. Without it the body equilibrates at
     # exactly the cell temperature, so the survivable ambient window collapses to
@@ -298,12 +319,41 @@ def update_body(state: EnvState, info: dict, params: EnvParams, new_agent_pos: j
     # A STATIC Python branch: a thermal-off config traces none of this.
     if params.thermal_enabled:
         cell_temp = state.thermal_field[new_agent_pos[0], new_agent_pos[1]]
-        new_body_temp = (
-            state.body_temp
-            + params.thermal_k_exchange * (cell_temp - state.body_temp)
-            + params.thermal_k_metabolic
-            - params.thermal_k_loss * (state.body_temp - params.temperature_setpoint)
-        )
+        # Warming / cooling speed. STATIC gate on two static floats (cast with
+        # float() at load, so YAML `1` == 1.0). At 1.0 / 1.0 the four lines below
+        # are character-for-character the single-rate code and the scaled branch
+        # does not exist in the traced graph, so bit-parity with every run that
+        # predates the keys is a property of the source (same discipline as the
+        # Stage 5 drain and recovery_in_bush_multiplier). Equal values other than
+        # 1.0 take the scaled branch: 0.5 / 0.5 is a uniform slow-down.
+        # Bit-identity holds only when BOTH scales are 1.0; with a single side at
+        # 1.0 that side still takes the scaled branch and rounds differently in
+        # the last bits.
+        if (params.thermal_warming_rate_scale == 1.0
+                and params.thermal_cooling_rate_scale == 1.0):
+            new_body_temp = (
+                state.body_temp
+                + params.thermal_k_exchange * (cell_temp - state.body_temp)
+                + params.thermal_k_metabolic
+                - params.thermal_k_loss * (state.body_temp - params.temperature_setpoint)
+            )
+        else:
+            # Scale the WHOLE per-step change, never one term of it. d is linear
+            # in T with d == 0 exactly at the cell's fixed point T*, so scaling d
+            # leaves T* where it was: one settling temperature per cell, reached
+            # from above or below. Scaling k_exchange alone would move T* by the
+            # direction of arrival. The branch follows the sign of THIS step's
+            # change (d > 0 warming, else cooling; at d == 0, s*0 == 0 either way),
+            # not the body's position relative to the setpoint or the cell.
+            body_temp_change = (
+                params.thermal_k_exchange * (cell_temp - state.body_temp)
+                + params.thermal_k_metabolic
+                - params.thermal_k_loss * (state.body_temp - params.temperature_setpoint)
+            )
+            rate_scale = jnp.where(body_temp_change > 0.0,
+                                   params.thermal_warming_rate_scale,
+                                   params.thermal_cooling_rate_scale)
+            new_body_temp = state.body_temp + rate_scale * body_temp_change
         thermal_death = jnp.logical_or(new_body_temp < params.min_temperature,
                                        new_body_temp > params.max_temperature)
         # Folded into `done` HERE, inside update_body, so that `real_death` — which

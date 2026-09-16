@@ -9,7 +9,7 @@ aliases: [warming_cooling_rate_scales]
 
 # Separate Warming and Cooling Speeds for Body Temperature
 
-> **Status**: PLANNED, Revision 1 (2026-09-17) after `plan-reviewer` and `math-reviewer`. No code written. Awaiting a fresh `plan-reviewer` pass.
+> **Status**: IMPLEMENTED, verification pending (2026-09-17). Plan approved at Revision 2 (`plan-reviewer` SOUND). The pre-change fixture is committed (`068d791e`); the code, config, test and doc change is an uncommitted working tree under parallel review by `senior-developer`, `code-reviewer`, `math-reviewer` and `env-config-reviewer`. Commit 2 has not been made.
 > **Opened**: 2026-09-17
 > **Related**: [[thermal_implementation_plan]] (Stage 2, the body recurrence this changes) · [[thermal_handover]] · [OPEN_WORK_HANDOFF.md item E1](../issues/OPEN_WORK_HANDOFF.md) (reviewing every temperature setting together; this plan is **not** that review) · [[body_temperature_observation]] · [SAVED_RUN_CONFIG_COMPAT.md](../refactors/SAVED_RUN_CONFIG_COMPAT.md)
 
@@ -68,6 +68,21 @@ Nobody was available to ask, so each call below was settled conservatively. The 
 | **D18** | **(Revision 1, L3) `test_backward_compat_configs.py` and `test_maintained_worlds_bush_blocks_animals.py` are added to the pre-change test list.** | Both glob the maintained and archived worlds, including the thermal-on ones, and both are cheap. |
 | **D19** | **(Revision 1, math-reviewer) The target search's fire check must be done at the corners of the sampled ranges, and §A3 is amended to say so.** | At warming scale 2, the first step onto the fire is survivable at world −25 / ratio 12 (body 13.08), and barely so at −28 / 12 (14.64). It is lethal at −25 / 13 (15.83) and at −28 / 13 (17.73); all four values were re-computed here. The midpoint example in §A3 therefore misses the "first step survivable" target in part of the sampled world. This is not a defect of this plan, whose §A3 is illustrative, but the follow-up must not repeat it. |
 | **D20** | **(Revision 2) Sub-cases that expect `load_env_params` to raise call it directly (`load_env_params(Config(d))`), not through `_params`. This narrows D15's "every test except T01 loads through this helper" and the same sentence in the test-helper bullet: those two sentences now mean every *successful* load outside T01. Keys a test removes are removed with `pop(key, None)`, never `del`.** The rows D15 and the helper bullet were left unedited because revision round 2 is limited to the T12/T13 rows and their CP2 entries. **This decision governs where they differ.** | `pytest.raises(ValueError)` does not catch the `AttributeError` that the helper's field read raises on pre-change code, so a raise-expecting sub-case wrapped in `_params` fails with the wrong exception type and trips CP2's stop rule. On a load that must fail, the field check is meaningless anyway. `del` on a key that does not exist until Step 3 raises `KeyError` before any loader runs. Both defects, and both fixes, were reproduced by running the T12 and T13 bodies against the current, still pre-change tree (`tmp/20260917_rev2_trace_t12_t13.py`). |
+| **D21** | **(Implementation) The `SCRIPTS_DEPENDENCY_MAP.md` footer's dated "Last updated" line was extended** with the new generator, in addition to the planned row. | That file records every addition in its footer; skipping it would leave the footer claiming 2026-09-15. Same file, same commit as the row. |
+| **D22** | **(Implementation) T02 counts `select_n` / `gt` equations recursively, including nested sub-jaxprs, not over the top-level `jaxpr.jaxpr.eqns` only.** | Probed before writing the test (JAX 0.9.0.1): `jnp.where` traces as a nested `jit[name=_where]` equation whose body holds the `select_n`, so a top-level count would never see the new select and T02 would fail post-change for a reason unrelated to the gate. The recursive count is what "strictly more `select_n` equations" means. |
+| **D23** | **(Implementation, D16) A content hash of the dashboard code was recorded in addition to the diff hash.** | Between Step 0 and Step 1 the renderer session committed its dashboard edits (`fe341d7d`), so `git diff -- src/environment/dashboard \| sha1sum` moved from `12ee6249…` to `da39a3ee…` (empty diff) with no code change. The diff hash alone would have counted as "changed" for D16. `cat src/environment/dashboard/*.py \| sha1sum` = `316cd303…` was recorded before and after Step 6 and did not change. As it turned out, no test count changed, so D16 was never invoked. |
+| **D24** | **(Implementation) The fixture generator asserts that `src` was really imported from `--src-root`.** | The fixture is only evidence if its source is the pre-change tree; a stray `src` on `sys.path` would silently record the working tree instead. Cheap, and it fired no false alarm. |
+| **D25** | **(Implementation) Speed probe = `vmap(64)` × `lax.scan(500)` of `jax_step` on the archived campfire world, 7 repetitions after one warm-up; at Step 6 the (1.0, 1.0) and (3.0, 0.3) configurations alternate within each repetition.** | The plan fixed the world, repetitions and statistics but not the harness. Scanning keeps Python dispatch out of the measurement. Step 0 has no alternation partner, because pre-change code has no scale fields. Script: `tmp/20260917_014500_speed.py`. |
+| **D26** | **(Implementation) T07's all-three-terms case uses cell −10, `k_exchange` 0.04, `k_loss` 0.01, `k_metabolic` 0.3, setpoint 2.0, scales (2.0, 0.5), and starts −12 (warming) and +12 (cooling).** | The plan left the values open. These make all three terms non-zero and exercise both branches against the hand formula. |
+| **D27** | **(Implementation) T14 calls `jax.clear_caches()` before counting compiles (the `test_no_recompile.py` pattern), and T01 also asserts the fixture's exact key set, dtypes and shapes.** | Without clearing, "count is 1 after step 1" would depend on test order. The extra T01 checks stop a fixture with a missing or re-typed array from passing by comparing less. |
+| **D28** | **(Implementation) `_update_body_trace` carries only `body_temp` through `lax.scan`, not the whole state.** | `update_body`'s body-temperature output depends only on `body_temp`, the fixed field, the cell and params, so this is equivalent to `state.replace(body_temp=new_bt)` each step and far cheaper to trace. |
+| **D29** | **(Implementation) The registry change-log entry's "Commit" field names the fixture commit `068d791e` and says the code/config/doc change is the plan's second commit, made after review.** | Commit 2 is deliberately not made by the developer tonight; the reviewers see the dirty tree first. Whoever commits should replace that phrase with the SHA if wanted. |
+| **D30** | **(Fix round 1) The two archived worlds now carry different, per-file loader lists, not "nine modules and two generators" on both.** | Recounted with `git grep` plus the untracked new test. `campfire_world.yaml` is loaded from a raw `Config` by **nine** test modules (the original eight plus `test_thermal_rate_scales`) and **two** generators. `campfire_world_body_temp_hidden.yaml` is loaded **only** by `test_body_temperature_observation.py`; its "eight test modules" comment, copied from the plan's template at Step 3, was wrong from the start. Two further `git grep` hits load neither world: `scripts/eval/make_render_fixture_recordings.py` names it in a provenance string ("copied as text, never loaded"), and `test_dashboard_layout.py` only in a test-function name. Lists replace counts, so the next addition cannot make a number stale. |
+| **D31** | **(Fix round 1) The committed generator was not modified, and the provenance pin lives only in T01, as a module-level `PRE_CHANGE_SHA` constant.** | `code-reviewer` marked a generator-side pin optional; commit 1 stays as it is. A named constant makes the pinned commit visible at the top of the test file, next to the duplicated scenario table. |
+| **D32** | **(Fix round 1) YAML booleans are still accepted by `float()` for the two scales (`true` → 1.0).** | `code-reviewer` Low. The behaviour is inherited from every `thermal.k_*` read (plan-reviewer L2), so rejecting it in two keys only would make the block inconsistent. A whole-block concern for OPEN_WORK_HANDOFF E1. |
+| **D33** | **(Fix round 1) `test_backward_compat_configs.py` was not edited.** | `env-config-reviewer` found it skips every layered maintained world, including both live thermal-on worlds, on a pre-existing key. That blind spot predates this change; the coordinator routed it to `bug-curator`. |
+| **D34** | **(Fix round 1) In the `02_config_schema.md` "Body-block validation" table the two new rows go after `k_loss` and before `k_metabolic`, so the recurrence rows stay contiguous, and the sentence below says "The first eight".** | Counted rows 1–8: `temperature_setpoint`, `min_temperature`, `max_temperature`, `k_exchange`, `k_loss`, `warming_rate_scale`, `cooling_rate_scale`, `k_metabolic`. The coupling rows follow. **Noticed, not touched:** the next sentence, "From Stage 4 the first two also enter the reward", predates this change and is imprecise. The first two rows are `temperature_setpoint` and `min_temperature`, but the drive uses `temperature_setpoint` and `max_temperature`. It is left for the doc's owner. |
+| **D35** | **(Fix round 1) The absence of executable changes in `core.py` was shown against a reconstructed pre-round file, not against HEAD.** | `git diff -U0 HEAD -- core.py` necessarily includes the reviewed Step-5 gate code, so it cannot show *this round* is comment-only. The pre-round file was rebuilt by removing exactly the two inserted comment blocks; it differs from HEAD by 55 lines (= Step 5's 49 insertions + 6 deletions), and differs from the current file by comment lines only. |
 
 ---
 
@@ -652,17 +667,17 @@ At the end of the E1 bullet: `  - 2026-09-17: [[warming_cooling_rate_scales]] ad
 
 ## Checkpoints
 
-- [ ] **CP1: Step-0 baseline recorded.** Record the HEAD SHA; the dashboard foreign-diff hash (D16); the pre-change test table (per-file passed/failed/skipped/errors); Appendix B counts; the three jaxpr SHA-1s; and the `jax_step` timing on the campfire world at 1.0/1.0 (≥ 5 alternating repetitions of ≥ 500 steps after one warm-up; report the median and spread, per the `761f427f` lesson that 3 repetitions misled).
-- [ ] **CP2: new tests behave as predicted before the change.** The Step-2 outcomes **and exception types** match the per-test table in the non-vacuity requirement (Revision 1). **If T01 fails at Step 2, stop:** the fixture does not match the code it came from.
-- [ ] **CP3: config migration is load-neutral.** After Step 3 and again after Step 5, Appendix B gives the **same** standalone and layered load counts as Step 0, and the same 4 thermal-on configs. For each of the 4, `load_env_config(path).get('thermal.warming_rate_scale')` and `...cooling_rate_scale` equal `1.0` (resolved, through the trainer's loader). After Step 4, `load_env_params` gives `float` 1.0 for both fields on all 4.
-- [ ] **CP4: dtype.** After Step 5, on the campfire world at (3.0, 0.3), `jax_step`'s returned `state.body_temp.dtype == float32` and `weak_type` is unchanged from the input state.
-- [ ] **CP5: the graph at 1.0/1.0 is literally today's.** For each config, `hashlib.sha1(str(jax.make_jaxpr(jax_step)(state, 0, params)).encode()).hexdigest()` after Step 5 **equals** the Step-0 value. Pass `params` as an **argument**, not a closure, and take `state = jax_reset(params, PRNGKey(0))`. The configs: `default.yaml` (thermal-off), the archived `campfire_world.yaml` and `basic/05-campfire_thermal_10x10.yaml` (thermal-on, the latter through `load_env_config`). **Contrast case, on the two thermal-on configs only** (a thermal-off config traces no body block, so its hash cannot move): with `thermal_warming_rate_scale=3.0` via `params.replace`, the hash **differs**. Otherwise the probe proves nothing.
-- [ ] **CP6: byte-identity gates.** At Step 6, `test_metabolic_coupling.py`, `test_thermal_parity.py`, `test_unified_parity.py`, `test_visual_parity.py` and `test_extero_noc_parity.py` give pass/skip counts **identical** to Step 0, each run alone under `JAX_PLATFORMS=cpu`. No `.npz` other than the new one appears in `git status`.
-- [ ] **CP7: the whole pre-change list is unchanged.** Every file's Step-6 counts equal Step 0. A difference is a stop-and-report, never a fixture regeneration. **The one exception (D16):** if the only differences are in `test_thermal_rendering.py` and/or `test_dashboard_layout.py` **and** the dashboard foreign-diff hash changed between Step 0 and Step 6, record it as attributed to the renderer session and continue.
-- [ ] **CP8: the new test file is fully green.** 14 tests passed, 0 skipped. A skip counts as a failure here (the parity-gates lesson from the wiki).
-- [ ] **CP9: speed.** Timing at 1.0/1.0 is within noise of CP1. Given CP5's identical graph, any real delta means the measurement is broken, not the code. Report gate-on (3.0, 0.3) versus gate-off for information only.
-- [ ] **CP10: foreign edits.** Immediately before Step 4 (on `config_loader.py`, `state.py`, `core.py`; D16) and immediately before each commit, run `timeout 120 git diff -- <file>` for every file in File Changes and `timeout 120 git diff --cached --name-only`. Every hunk must be this plan's. Commit with `git commit -F msg -- <paths>`. Never `git add -A`.
-- [ ] **CP11: docs.** `CONFIG_CRITICAL_SETTINGS.md` has both the registry row and the dated change-log entry, **in the same commit as the `default.yaml` edit**. `CONFIG_GUIDE.md`, `02_config_schema.md`, `05_body_homeostasis.md` and `SCRIPTS_DEPENDENCY_MAP.md` are updated as specified.
+- [x] **CP1: Step-0 baseline recorded.** Record the HEAD SHA; the dashboard foreign-diff hash (D16); the pre-change test table (per-file passed/failed/skipped/errors); Appendix B counts; the three jaxpr SHA-1s; and the `jax_step` timing on the campfire world at 1.0/1.0 (≥ 5 alternating repetitions of ≥ 500 steps after one warm-up; report the median and spread, per the `761f427f` lesson that 3 repetitions misled). *Done: HEAD `1b5d1ed5`; dashboard diff `12ee6249…`; all 18 files green (table in the Implementation Report); 118/27 and 217/211; three SHA-1s; 30,126 SPS median.*
+- [x] **CP2: new tests behave as predicted before the change.** The Step-2 outcomes **and exception types** match the per-test table in the non-vacuity requirement (Revision 1). **If T01 fails at Step 2, stop:** the fixture does not match the code it came from. *Done: all 14 match, T01 PASS, T13 `DID NOT RAISE` at (1), the rest `AttributeError` from `_params` (T12 in part (a)).*
+- [x] **CP3: config migration is load-neutral.** After Step 3 and again after Step 5, Appendix B gives the **same** standalone and layered load counts as Step 0, and the same 4 thermal-on configs. For each of the 4, `load_env_config(path).get('thermal.warming_rate_scale')` and `...cooling_rate_scale` equal `1.0` (resolved, through the trainer's loader). After Step 4, `load_env_params` gives `float` 1.0 for both fields on all 4. *Done: identical per-file counts at Steps 3 and 5; all 4 resolve and load as float 1.0 / 1.0.*
+- [x] **CP4: dtype.** After Step 5, on the campfire world at (3.0, 0.3), `jax_step`'s returned `state.body_temp.dtype == float32` and `weak_type` is unchanged from the input state. *Done: float32, `weak_type` False in and out.*
+- [x] **CP5: the graph at 1.0/1.0 is literally today's.** For each config, `hashlib.sha1(str(jax.make_jaxpr(jax_step)(state, 0, params)).encode()).hexdigest()` after Step 5 **equals** the Step-0 value. Pass `params` as an **argument**, not a closure, and take `state = jax_reset(params, PRNGKey(0))`. The configs: `default.yaml` (thermal-off), the archived `campfire_world.yaml` and `basic/05-campfire_thermal_10x10.yaml` (thermal-on, the latter through `load_env_config`). **Contrast case, on the two thermal-on configs only** (a thermal-off config traces no body block, so its hash cannot move): with `thermal_warming_rate_scale=3.0` via `params.replace`, the hash **differs**. Otherwise the probe proves nothing. *Done: all three equal Step 0; the contrast differs on both thermal-on configs.*
+- [x] **CP6: byte-identity gates.** At Step 6, `test_metabolic_coupling.py`, `test_thermal_parity.py`, `test_unified_parity.py`, `test_visual_parity.py` and `test_extero_noc_parity.py` give pass/skip counts **identical** to Step 0, each run alone under `JAX_PLATFORMS=cpu`. No `.npz` other than the new one appears in `git status`. *Done: identical counts; `git status -- tests/env/fixtures/` clean (the new fixture is committed in `068d791e`).*
+- [x] **CP7: the whole pre-change list is unchanged.** Every file's Step-6 counts equal Step 0. A difference is a stop-and-report, never a fixture regeneration. **The one exception (D16):** if the only differences are in `test_thermal_rendering.py` and/or `test_dashboard_layout.py` **and** the dashboard foreign-diff hash changed between Step 0 and Step 6, record it as attributed to the renderer session and continue. *Done: all 18 files identical; D16 not invoked (see D23).*
+- [x] **CP8: the new test file is fully green.** 14 tests passed, 0 skipped. A skip counts as a failure here (the parity-gates lesson from the wiki). *Done: 14 passed, 0 skipped.*
+- [x] **CP9: speed.** Timing at 1.0/1.0 is within noise of CP1. Given CP5's identical graph, any real delta means the measurement is broken, not the code. Report gate-on (3.0, 0.3) versus gate-off for information only. *Done: 29,893 vs 30,126 SPS (−0.8%, inside the ~3% spread); gate-on 30,070.*
+- [ ] **CP10: foreign edits.** Immediately before Step 4 (on `config_loader.py`, `state.py`, `core.py`; D16) and immediately before each commit, run `timeout 120 git diff -- <file>` for every file in File Changes and `timeout 120 git diff --cached --name-only`. Every hunk must be this plan's. Commit with `git commit -F msg -- <paths>`. Never `git add -A`. *Partly done: checked before Step 4 and before commit 1 (clean). The pre-commit-2 check belongs to whoever makes commit 2.*
+- [ ] **CP11: docs.** `CONFIG_CRITICAL_SETTINGS.md` has both the registry row and the dated change-log entry, **in the same commit as the `default.yaml` edit**. `CONFIG_GUIDE.md`, `02_config_schema.md`, `05_body_homeostasis.md` and `SCRIPTS_DEPENDENCY_MAP.md` are updated as specified. *Docs done (row plus change-log entry written); "same commit as `default.yaml`" is pending commit 2.*
 
 ---
 
@@ -722,22 +737,168 @@ Planning-time result (HEAD `663cbd72`): 335 env configs. Standalone: 118, of whi
 
 ## Implementation Report
 
-> **Implemented by**:
-> **Date**:
+> **Implemented by**: developer
+> **Date**: 2026-09-17 (unattended overnight run)
 
-<!-- developer: Step-0 SHA; pre-change test table; CP2 table; Appendix B counts at Steps 0/3/5;
-     jaxpr SHA-1s pre/post plus the contrast case; speed numbers; commit SHAs; any deviation with its reason. -->
+**Status: Steps 0–7 done; commit 1 made (`068d791e`); Steps 2–7 left as a dirty, uncommitted tree for review (commit 2 not made, by instruction).** No stop condition fired. Working file: `tmp/20260917_thermal_rate_asymmetry_work.md`.
+
+#### What was implemented, file by file
+
+| File | Change |
+|---|---|
+| `scripts/fixtures/generate_thermal_rate_scale_fixture.py` (new, **commit 1**) | As specified, plus the import-origin assert (D24). |
+| `tests/env/fixtures/thermal_rate_scales/single_rate_rollouts.npz` (new, **commit 1**) | Captured from a worktree of `1b5d1ed5`. warm: −14 → +7.99; cool: +14 → −7.99; `*_on` nutrition 100 → 89.953. All non-vacuity asserts passed, including `ate_food` False on every step (no world change was needed). sha1 `22888b4d…`. |
+| `docs/environment/SCRIPTS_DEPENDENCY_MAP.md` (**commit 1**) | Row plus footer (D21). |
+| `tests/env/test_thermal_rate_scales.py` (new) | T01–T14 as specified; D20 applied; D22, D26–D28. |
+| `configs/environment/default.yaml`, both archived campfire worlds | Keys at 1.0 / 1.0 with the specified comments (D6). |
+| `src/environment/config_loader.py` | (a) read and validate, (b) inert 1.0 / 1.0, (c) pass to `EnvParams`: verbatim from File Changes. |
+| `src/environment/state.py` | Two static fields, verbatim. |
+| `src/environment/core.py` | Gate and scaled branch verbatim, the one-line formula note, and the D3 drain comment verbatim. |
+| `docs/environment/CONFIG_GUIDE.md`, `02_config_schema.md`, `05_body_homeostasis.md`, `CONFIG_CRITICAL_SETTINGS.md` | As specified (YAML example, bullet, "Seven things", validation clause; table rows, conditional-mandatory list, structure-check sentence; equation, table rows, tug-of-war, drain paragraph; registry row and change-log entry). |
+
+#### Step 0 / Step 6 test tables (one file per process, `JAX_PLATFORMS=cpu`)
+
+| File | Step 0 | Step 6 |
+|---|---|---|
+| test_thermal_body | 5 passed | 5 passed |
+| test_thermal_validation | 34 passed | 34 passed |
+| test_thermal_field | 9 passed | 9 passed |
+| test_thermoception | 14 passed | 14 passed |
+| test_thermal_reward_gate | 18 passed | 18 passed |
+| test_thermal_rendering | 16 passed | 16 passed |
+| test_body_temperature_observation | 15 passed | 15 passed |
+| test_metabolic_coupling | 11 passed | 11 passed |
+| test_thermal_parity | 12 passed, 21 skipped | 12 passed, 21 skipped |
+| test_unified_parity | 34 passed, 325 skipped | 34 passed, 325 skipped |
+| test_visual_parity | 8 passed | 8 passed |
+| test_extero_noc_parity | 3 passed | 3 passed |
+| test_recovery_in_bush | 7 passed | 7 passed |
+| test_no_recompile | 3 passed | 3 passed |
+| test_dashboard_layout | 104 passed | 104 passed |
+| test_config_layer_silent_failures_20260723 | 5 passed, 1 warning | 5 passed, 1 warning |
+| test_backward_compat_configs | 12 passed, 21 skipped | 12 passed, 21 skipped |
+| test_maintained_worlds_bush_blocks_animals | 11 passed | 11 passed |
+| **test_thermal_rate_scales (new)** | 1 passed, 13 failed (Step 2, pre-change) | **14 passed, 0 skipped** |
+
+No core dump in any run. Logs: `tmp/20260917_prechange_step{0,6}_*.log`, `tmp/20260917_step2_cp2.log`, `tmp/20260917_step6_newtests.log`.
+
+#### CP2: pre-change outcome vs prediction
+
+| Test | Predicted | Actual |
+|---|---|---|
+| T01 | PASS | PASS |
+| T02–T11, T14 | FAIL, `AttributeError` from `_params` | FAIL, `AttributeError: 'EnvParams' object has no attribute 'thermal_warming_rate_scale'` at `_params` |
+| T12 | FAIL, `AttributeError` from `_params` in (a) | same, at part (a) |
+| T13 | FAIL, `DID NOT RAISE` at sub-case (1) | same, at sub-case (1) |
+
+#### Appendix B load sweep (`tmp/20260917_012800_sweep_step{0,3,5}.json`)
+
+| | Step 0 | Step 3 | Step 5 |
+|---|---|---|---|
+| standalone (loads) | 118 (27) | 118 (27) | 118 (27) |
+| layered (loads) | 217 (211) | 217 (211) | 217 (211) |
+| thermal-on | 4, scales absent | 4, all 1.0 / 1.0 | 4, all 1.0 / 1.0 |
+
+Per-file load status was identical across all three sweeps. At Step 5, `load_env_params` gives `float` 1.0 for both fields on all 4 thermal-on configs, including 05 and 06 through `extends:`.
+
+#### CP5: `jax_step` jaxpr SHA-1 (params as argument, `PRNGKey(0)`; deterministic across two Step-0 processes)
+
+| Config | Step 0 | Step 5 | Contrast, warming 3.0 |
+|---|---|---|---|
+| `default.yaml` (thermal off) | `a3a2f04f596a52e65380079ed5c3614958609e7a` | identical | n/a |
+| archived `campfire_world.yaml` | `ef1b0a1f1be6d9fa6913a69044f6d84949bcbf84` | identical | `cc7b8cd8…` (differs) |
+| `basic/05-campfire_thermal_10x10.yaml` | `188186e9bbead1279f7f1cc68c80df7f6a1578d5` | identical | `5139bf41…` (differs) |
+
+#### Byte-identity fixtures
+
+T01 is byte-identical to the new pre-change fixture. `metabolic_coupling`, `thermal_parity`, `unified_parity`, `visual_parity` and `extero_noc_parity` all have counts identical to Step 0. `git status -- tests/env/fixtures/` is clean; the only new fixture is the one in `068d791e`, and no fixture was regenerated.
+
+#### Speed (CP9): `tmp/20260917_014500_speed.py`, vmap 64 × scan 500, 7 repetitions, CPU (D25)
+
+| | Median SPS | Min–max | Spread |
+|---|---|---|---|
+| Step 0 (pre-change) | 30,126 | 29,797–30,770 | 3.2% |
+| Step 6, 1.0 / 1.0 | 29,893 | 29,460–30,296 | 2.8% |
+| Step 6, 3.0 / 0.3 (gate on) | 30,070 | 29,720–30,725 | 3.3% |
+
+1.0 / 1.0 is −0.8% vs Step 0, inside the spread, and the graph is identical (CP5), so this is noise. Other sessions kept the load average at 2–7 throughout.
+
+#### Commits and HEAD movement
+
+- **Commit 1: `068d791e`** (generator, fixture, dependency-map row). A first attempt staged nothing, because zsh did not word-split a `$P` variable; it was retried with literal paths. The foreign staged files stayed staged and uncommitted.
+- HEAD moved three times during the run, all from other sessions, and none touched `update_body`, the loader, `state.py` or any config: `fe341d7d` (renderer: dashboard, render audit), `d0531a5e` (imperativism docs), and later `02a14322`.
+
+#### Deviations and notes for the verifier
+
+- No deviation from File Changes in code or configs. Test-construction choices are recorded as D22 and D26–D28.
+- `core.py`: D3 says the drain comment is "amended to say" that "charge on step t pays for the defence on step t" becomes approximate while moving. The File Changes comment text, used verbatim, carries this as "a per-step (per-decision) cost, which equals a per-degree-moved cost only at 1.0 / 1.0", and does not edit the older sentence above it. Flagged in case the verifier wants the older sentence qualified.
+- The plan's status banner (line 12) still reads "PLANNED, Revision 1"; the banner is `senior-developer`'s to update.
+- Not done here, by design: commit 2; the CP10 check before commit 2; `OPEN_WORK_HANDOFF.md` E1 line (senior-developer); `INDEX.md` regeneration (D10).
+
+#### Fix round 1 (2026-09-17, after verification: senior-developer PASS; no Critical/Moderate code findings)
+
+Comment, doc and test changes only. **No executable line in `src/` changed.** The tree is still uncommitted.
+
+| # | File | Change |
+|---|---|---|
+| 1 | `src/environment/core.py` (drain comment), `docs/environment/05_body_homeostasis.md` ("Which `T`") | "pays for the defence performed on step t" now says this holds exactly at 1.0 / 1.0. At other scales the applied defence is `scale × k_loss·(T − setpoint)`, and the bill is a per-decision charge for the defence effort; points to the D3 note. |
+| 2 | `docs/environment/02_config_schema.md` | Body-block validation table gains `warming_rate_scale` / `cooling_rate_scale` rows (`> 0`, NaN rejected; `scale × (k_exchange + k_loss) <= 1`, per key, error names the key). "The first six" → "The first eight" (rows counted, D34). |
+| 3 | both archived campfire worlds | Loader comments corrected to per-file lists (D30). |
+| 4 | `configs/environment/default.yaml` | "makes the fire burn faster" → "makes the fire kill sooner". |
+| 5 | `src/environment/core.py` (gate comment) | Added: bit-identity holds only when BOTH scales are 1.0; with only one side at 1.0, that side still takes the scaled branch and rounds differently in the last bits. |
+| 6 | `tests/env/test_thermal_rate_scales.py` | T01 asserts `_provenance_sha == PRE_CHANGE_SHA` (`1b5d1ed5…`), with a comment on why it is pinned. Checked that it fires: with the constant set to a wrong SHA, T01 raises `AssertionError` naming both SHAs. |
+
+Not done, as decisions: D31 (generator untouched), D32 (YAML booleans), D33 (backward-compat test).
+
+**Verification (actual output):**
+- **`core.py`, this round only (D35):** `diff -U0` pre-round → current shows two hunks. `@@ -184 +184,5 @@` rewrites one comment line into five comment lines; `@@ -324,0 +329,3 @@` adds three comment lines. Non-comment changed lines: **0**.
+- **Tests, one file per process, CPU:** `test_thermal_rate_scales` **14 passed** (T01 passing with the pin); `test_metabolic_coupling` **11 passed**; `test_thermal_body` **5 passed**; `test_thermal_validation` **34 passed**; `test_thermal_parity` **12 passed, 21 skipped**. Also `test_body_temperature_observation` **15 passed**, the only loader of the hidden world whose comment changed.
+- **`jax_step` jaxpr SHA-1 at 1.0 / 1.0**, Step-0 harness: `default` `a3a2f04f596a52e65380079ed5c3614958609e7a`, archived campfire `ef1b0a1f1be6d9fa6913a69044f6d84949bcbf84`, `basic/05` `188186e9bbead1279f7f1cc68c80df7f6a1578d5`. All identical to Step 0.
+- Both edited archived worlds and `default.yaml` still load through `load_env_params`, at float 1.0 / 1.0.
+- `git status -- tests/env/fixtures/`: clean.
 
 ## Verification Report
 
-> **Verified by**:
-> **Date**:
+> **Verified by**: senior-developer
+> **Date**: 2026-09-17 (unattended; uncommitted tree, nothing staged, committed or stashed by the verifier)
+
+**Verdict: PASS.** The built change matches the approved plan. At the shipped 1.0 / 1.0 the environment is provably unchanged, and this was re-derived independently rather than taken from the report. Nothing blocks commit 2. There are two conditions on how commit 2 is made (V1, V2), and one comment fix is recommended (V3).
 
 | File | Change | Status | Notes |
 |------|--------|:------:|-------|
-| | | | |
+| `src/environment/config_loader.py` | +39: read/validate, inert 1.0/1.0, `EnvParams` kwargs | ✅ | Matches File Changes (a)(b)(c) verbatim. There are three hunks only (≈1557, ≈1628, ≈2330). `_thermal_equilibrium`, `_thermal_radial_equilibria`, `_thermal_structure_verdict` and `_check_thermal_structure` have no hunk. |
+| `src/environment/state.py` | +12: two static fields | ✅ | Verbatim; placed after `thermal_k_metabolic`, no default values. |
+| `src/environment/core.py` | +55/−6: gate, scaled branch, formula note, D3 drain comment | ✅ | Verbatim. See V3 on the older drain sentence. |
+| `configs/environment/default.yaml` + 2 archived campfire worlds | +14 / +9 / +9 | ✅ | Verbatim. `basic/05` and `basic/06` untouched (D6). |
+| `tests/env/test_thermal_rate_scales.py` (untracked) | T01–T14 | ✅ | Rows match the plan, with D20 and D22/D26–D28 applied. T01 reads the committed `.npz` via `_params_raw`; T12/T13 raise-cases call the loader directly. |
+| `docs/environment/CONFIG_GUIDE.md`, `02_config_schema.md`, `05_body_homeostasis.md`, `CONFIG_CRITICAL_SETTINGS.md` | as specified | ✅ | Every hunk belongs to this plan. The registry has both the row and the dated change-log entry, which covers the EVAAA deviation, names the load-count population, and records 0 of 503 saved runs affected. Anchor `#metabolic-coupling-thermal` resolves. |
+| `docs/environment/SCRIPTS_DEPENDENCY_MAP.md` | row + footer (commit `068d791e`) | ✅ | Row at line 217, footer at line 279 (D21). |
+| `docs/diary/2026-09-17.md` | one developer row | ⚠️ | The developer's row is correct, but the file also carries **uncommitted rows from two other sessions** (`14318db1` renderer rows, `f431d3` progress report and notes). See V1. |
+| this plan doc | D21–D29, checkpoints, Implementation Report | ✅ | No foreign hunks. The verifier updated the status banner and wrote this report. |
+| `docs/develop/active/issues/OPEN_WORK_HANDOFF.md` | E1 cross-link line (verifier's own edit) | ✅ | The file had no foreign hunks and was not staged before the edit. The line was appended verbatim from File Changes and `last_updated` was bumped. |
+| Out of scope, not touched | renderer / dashboard, fixtures, `sim.py`, the vendored oracle, `INDEX.md` | ✅ | `git status -- tests/env/fixtures/ src/environment/dashboard/` is empty. Every other dirty path (the nmn figures and scripts, recovery_in_bush figures, `artifact_format_bugs.md`, the staged `INDEX.md` and `SAVED_RUN_CONFIG_COMPAT.md`, diaries 09-14 and 09-16) belongs to other sessions. |
 
-**Conclusion**:
+**Independent re-derivations (not taken from the Implementation Report).** Script: `tmp/20260917_verify_rate_scales_probe.py`.
+- **Fixture provenance, from the pre-change source itself.** `git archive 1b5d1ed5 src configs` was exported to `/tmp`, and the generator's own `rollouts()` was called in memory against that export, with nothing written to the repo. **All 20 arrays equal the committed `.npz` exactly** (dtype and `np.array_equal`), and `_provenance_sha` = `1b5d1ed5…`. So T01 compares against evidence of the pre-change code, not against something computed afterwards.
+- **jaxpr SHA-1 of `jax_step`, pre-change export vs live tree.** `default.yaml` gave `a3a2f04f…` on both; the archived campfire world `ef1b0a1f…` on both; `basic/05` `188186e9…` on both. The contrast at warming 3.0 gives `cc7b8cd8…` / `5139bf41…`, which differ. All six values equal the developer's CP5 table.
+- **The live levels through the trainer's loader** (`load_env_config` → `load_env_params`). Both `basic/05-campfire_thermal_10x10.yaml` and `basic/06-sensory_noise_10x10.yaml` are thermal-on and resolve to `warming=1.0 (float)`, `cooling=1.0 (float)`; so do `default.yaml` and the archived world.
+- **Tests, one file per process, `JAX_PLATFORMS=cpu`** (log `tmp/20260917_015409_verify_rate_scales_tests.log`, no EMFILE retries needed). `test_thermal_rate_scales` 14 passed; `test_metabolic_coupling` 11; `test_thermal_body` 5; `test_thermal_validation` 34; `test_thermal_parity` 12 passed / 21 skipped; `test_unified_parity` 34 / 325; `test_backward_compat_configs` 12 / 21. **All seven are identical to the Step-0 and Step-6 columns.**
+- **D16/D23 attribution.** `git diff 1b5d1ed5 fe341d7d -- src/environment/dashboard | sha1sum` = `12ee6249446786d0…`, exactly the Step-0 working-tree diff hash. The dashboard content the Step-0 tests ran against is therefore byte-for-byte what `fe341d7d` committed. No commit since then touches the dashboard, the current diff is empty (`da39a3ee…` is the SHA-1 of empty input), and the content hash is still `316cd303…`. The diff-hash move was a commit and not a code change, no test count changed, and D16 was never invoked, so nothing was misattributed.
+
+**Speed:** ✅ no regression. 1.0 / 1.0 ran 29,893 vs 30,126 SPS (−0.8%) against a 2.8–3.2% run-to-run spread, on the same harness, world and CPU, with 7 repetitions after warm-up. The graph is identical by jaxpr SHA-1, so no real delta is possible. Gate-on (3.0 / 0.3) ran at 30,070 SPS.
+
+**Blocking findings:** none.
+
+**Non-blocking findings / conditions on commit 2:**
+- **V1: leave the diary out of commit 2's pathspec.** `docs/diary/2026-09-17.md` holds other sessions' uncommitted rows. Committing it under this plan's message would sweep their work. Commit it separately, or let its owners do so.
+- **V2: CP10 and CP11 stay open until commit 2.** Re-run the foreign-edit check immediately before committing, because other sessions keep moving HEAD. The `CONFIG_CRITICAL_SETTINGS.md` change-log entry must land in the same commit as `default.yaml`. Suggested pathspec: the 3 source files, 3 configs, the new test, the 4 `docs/environment/` files, this plan doc and `OPEN_WORK_HANDOFF.md`. Do not include `INDEX.md` (D10) or any diary.
+- **V3: qualify one older sentence (recommended, `developer`).** D3 promised to amend the comment. File Changes gave no text for it, so the new paragraph qualifies the sentence only indirectly, 3 lines later. With unequal scales the defence actually applied on a step is `s·k_loss·(T − setpoint)`, not the billed `k_loss·(T − setpoint)`. The *timing* claim stays true; the *amount* claim does not.
+  - `src/environment/core.py` lines 183–184, drain comment. The sentence "So the nutrition charged on step t pays for the defence performed on step t." (it wraps across two comment lines) becomes "So the nutrition charged on step t is billed on the same T as the defence performed on step t; the amount equals that defence exactly only at warming/cooling scales 1.0 / 1.0 (see the D3 paragraph below)." Re-wrap the comment lines to fit.
+  - `docs/environment/05_body_homeostasis.md` lines 565–567, the "**Which `T`.**" paragraph directly above the new "Not scaled" paragraph. The clause "so the nutrition charged on step `t` pays for the defence performed on step `t`" gets the same qualifier.
+  - Comments and prose only: no jaxpr, fixture or test can move.
+- **V4 (informational).** D15 and the helper bullet still read "every test except T01". D20 governs; the test file's `_params` docstring already says "every SUCCESSFUL load". No action.
+
+**Conclusion**: PASS. The code, configs, tests and docs match the approved plan with no unplanned scope. Byte-identity at 1.0 / 1.0 was re-proven from the pre-change source: the fixture was regenerated from a `1b5d1ed5` export, and the jaxpr hashes match before and after. Commit 2 may proceed under V1 and V2; V3 is a one-line comment clarification best folded into the same commit.
 
 ---
 

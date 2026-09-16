@@ -501,11 +501,21 @@ $$
 T_{t+1} = T_t + k_{\text{exchange}}\,(T_{\text{field}}[\text{agent cell}] - T_t) + k_{\text{metabolic}} - k_{\text{loss}}\,(T_t - T_{\text{setpoint}})
 $$
 
+That is the single-rate body, and it is exactly what runs at the shipped warming and cooling speeds of 1.0 / 1.0. In general the step on the right-hand side, call it `d_t = k_exchange·(T_field − T_t) + k_metabolic − k_loss·(T_t − T_setpoint)`, is applied scaled by one of two speed multipliers: the warming scale when the temperature is rising this step (`d_t > 0`), the cooling scale otherwise.
+
+$$
+T_{t+1} = T_t + s\,d_t, \qquad s = \begin{cases} \text{warming\_rate\_scale} & d_t > 0 \\ \text{cooling\_rate\_scale} & d_t \le 0 \end{cases}
+$$
+
+At `1.0 / 1.0` a static gate traces the single-rate lines verbatim, so the scaled branch does not exist in the compiled graph. Equal values other than 1.0 are a uniform slow-down or speed-up, not today's behaviour. Two rates are a deliberate departure from EVAAA, whose body uses one. Plan: [WARMING_COOLING_RATE_SCALES.md](../develop/active/thermal/WARMING_COOLING_RATE_SCALES.md).
+
 | Constant | Config key | Default | What it does |
 |---|---|---|---|
 | `k_exchange` | `thermal.k_exchange` | 0.04 | Fraction of the gap to the cell's temperature the body closes each step — the world pulling on the body |
 | `k_loss` | `thermal.k_loss` | 0.01 | Fraction of the deviation from setpoint that physiology undoes each step — the body pulling back |
 | `k_metabolic` | `thermal.k_metabolic` | 0.0 | Constant heat the body produces per step. Still zero: the metabolic coupling added below runs the other way, charging nutrition for defence rather than feeding heat back into the body |
+| `warming_rate_scale` | `thermal.warming_rate_scale` | 1.0 | Multiplies the whole step `d_t` when it is positive. Validated `> 0` and `warming_rate_scale·(k_exchange + k_loss) <= 1` |
+| `cooling_rate_scale` | `thermal.cooling_rate_scale` | 1.0 | Multiplies the whole step `d_t` when it is zero or negative. Validated `> 0` and `cooling_rate_scale·(k_exchange + k_loss) <= 1` |
 | `temperature_setpoint` | `thermal.temperature_setpoint` | 0.0 | The temperature the body is trying to hold |
 | `min_temperature` / `max_temperature` | `thermal.min_temperature` / `.max_temperature` | −15 / +15 | Survivable band; leaving it ends the episode with code 5 |
 
@@ -519,11 +529,11 @@ $$
 T^{*} = \frac{k_{\text{exchange}}\,T_{\text{field}} + k_{\text{loss}}\,T_{\text{setpoint}} + k_{\text{metabolic}}}{k_{\text{exchange}} + k_{\text{loss}}}
 $$
 
-which at the defaults is `0.8 · T_field`. **Standing in a −25 cell settles the body at −20, not at −25**: physiology holds off 20% of the cold. That 20% is what creates a cold-but-survivable band — a world whose baseline is −25 does not kill an agent outright, so the agent can leave the fire and come back.
+which at the defaults is `0.8 · T_field`. **The warming and cooling scales do not appear in it**: they multiply the whole step, and a scaled step is zero exactly where the unscaled one is, so every cell has the same single settling temperature whichever direction the body arrives from. **Standing in a −25 cell settles the body at −20, not at −25**: physiology holds off 20% of the cold. That 20% is what creates a cold-but-survivable band — a world whose baseline is −25 does not kill an agent outright, so the agent can leave the fire and come back.
 
 Delete `k_loss` and the code still *looks* correct: the body still tracks the world and still freezes in a cold enough cell. But the fixed point becomes `T_field` exactly, the survivable-ambient window collapses to `[min_temperature, max_temperature]`, and the entire cold-but-survivable band disappears. This is the failure mode `tests/env/test_thermal_body.py::test_equilibrium_and_time_to_death` exists to catch.
 
-The gap to the fixed point shrinks by a factor `(1 − k_exchange − k_loss)` per step, i.e. a time constant of `1/(k_exchange + k_loss) = 20` steps against a 500-step episode.
+The gap to the fixed point shrinks by `(1 − s·(k_exchange + k_loss))` per step, with `s` the scale for the direction of travel; the time constant is `1/(s·(k_exchange + k_loss))`, 20 steps at 1.0, against a 500-step episode. Because each scale is validated so that `s·(k_exchange + k_loss) <= 1`, a step never overshoots the fixed point, the direction of travel never flips while the agent stays in one cell, and the approach stays monotone. "Warming" follows the direction of the step, not whether the body is cold: a body at −2 in a −10 cell (fixed point −8) is cooling, and a body standing on the fire is warming, **so a warming scale above 1 also makes the fire kill sooner**, and a cooling scale below 1 also slows recovery from overheating.
 
 `k_loss` is in the [critical-settings registry](CONFIG_CRITICAL_SETTINGS.md) for a reason: at roughly `k_loss = 0.036` the survivable ambient window widens past ±25, the world's own baseline can no longer kill anything, and the thermal task quietly disappears while still appearing to be configured.
 
@@ -554,7 +564,12 @@ it.
 
 **Which `T`.** The *pre*-step body temperature — exactly the `T` that appears in this
 step's `k_loss` term — so the nutrition charged on step `t` pays for the defence
-performed on step `t`.
+performed on step `t` (exactly at 1.0 / 1.0; with other warming / cooling scales the
+applied defence is `scale × k_loss·(T − setpoint)`, and the bill is a per-decision charge
+for the defence effort rather than for the temperature change it produced — see "Not
+scaled by the warming / cooling speeds" below).
+
+**Not scaled by the warming / cooling speeds.** The drain above is charged the same way whatever `warming_rate_scale` and `cooling_rate_scale` are. The obvious alternative, multiplying the bill by the scale for the direction the body moved this step, fails at rest. The temperature field does not change within an episode, so a body that has settled in one cell recomputes the same step every turn, and at that settled point whether the tiny leftover step counts as "warming" or "cooling" is decided by floating-point rounding: usually frozen at the direction the body arrived from, occasionally alternating. The defence term `k_loss·(T − setpoint)` is not zero there. A direction-scaled bill would therefore depend on history or jitter: two settled bodies 1.6e-5 degrees apart could pay bills that differ by the whole warming/cooling ratio. The unscaled bill is a continuous function of the body's state. It is a per-step (per-decision) cost, which equals a per-degree-moved cost only at 1.0 / 1.0. One consequence: with a warming scale above 1, a full rewarm takes fewer steps and so costs less total nutrition. This is defensible but not the only defensible choice. Two alternatives are deferred to the review of the whole thermal block (OPEN_WORK_HANDOFF E1(a)): a time-dilation reading (bill × scale) and a switch on the direction of the *defence* term, `sign(setpoint − T)`, which is zero at the setpoint and so has no path dependence. Pinned by `tests/env/test_thermal_rate_scales.py::test_metabolic_drain_is_not_scaled`.
 
 **Symmetric.** The `k_loss` term is signed (it pushes both ways); the energy bill is not,
 hence the absolute value. Defending against heat costs the same as defending against an
