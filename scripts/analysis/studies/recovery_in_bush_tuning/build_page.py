@@ -21,6 +21,7 @@ Run the five figure scripts first; this script refuses to invent anything they d
 from __future__ import annotations
 
 import base64
+import math
 import json
 import os
 import re
@@ -151,6 +152,20 @@ def page_numbers() -> dict:
     v["rec_margin"] = _g(R.THETA / rec["open_in_budget"], 1)
     v["rec_theta_vs_episode"] = _g(100.0 * rec["open_steps_to_theta"] / R.MAX_STEPS)
     v["rec_theta_vs_budget_fixed"] = _g(rec["open_steps_to_theta"] / R.BUDGET_FIXED_START, 2)
+    v["rec_theta_vs_budget"] = _g(rec["open_steps_to_theta"] / R.BUDGET)
+
+    # The worked example of 2: one animal, badly hurt, half a stomach, resting in the open until
+    # it starves. Every number derived, so the story cannot drift from the arithmetic behind it.
+    _EX = 90.0
+    # Whole steps, rounded UP: the simulation has no fractional step, so an animal whose injury
+    # crosses zero partway through step 16 is healed ON step 16, not after 15.1 of them.
+    _whole = lambda x: _g(math.ceil(float(x) - 1e-9))
+    v["ex_injury"] = _g(_EX)
+    v["ex_shipped_steps"] = _whole(R.steps_to_heal(_EX, R.SHIPPED["base"], R.SHIPPED["accel"]))
+    v["ex_a01_steps"] = _whole(R.steps_to_heal(_EX, R.A01["base"], R.A01["accel"]))
+    v["ex_rec_end"] = _g(_EX - float(R.healable(R.BUDGET, rec["base"], rec["accel"])))
+    v["ex_rec_full_steps"] = _whole(R.steps_to_heal(_EX, rec["base"], rec["accel"]))
+    v["ex_rec_cover_steps"] = _whole(R.steps_to_heal(_EX, rec["base"], rec["accel"], rec["mult"]))
 
     # the largest accel each base rate tolerates, solved rather than read off f05
     for base in (0.05, 0.1, 0.2):

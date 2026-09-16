@@ -253,9 +253,14 @@ figure img:focus-visible { outline:2px solid var(--accent); outline-offset:-3px;
   from the figures: first the ordinary words this page leans on, then the settings it tunes.</p>
   <h3>Words this page keeps using</h3>
   <dl>
-    <dt>injury point</dt><dd>One unit on the 0&ndash;{{VAL:max_injury}} injury scale. For a sense
-    of size: a bad wound is about {{VAL:wound}} points, and the lightest blow a predator lands is
-    about 15.</dd>
+    <dt>injury point</dt><dd><strong>One percent of the way from unhurt to dead.</strong> The
+    scale runs 0 = unhurt to {{VAL:max_injury}} = dead, and it is a single number the simulation
+    carries for the body &mdash; not tissue damage or blood loss. Only two things move it. It goes
+    <em>up</em> when a predator lands a hit, by an amount drawn between 15 and 120 points, so one
+    hit is anywhere from a seventh of the way to dead to instantly fatal. It goes <em>down</em>
+    only when the animal rests. And it does only two things in return: at {{VAL:max_injury}} the
+    animal dies, and it is the number the animal's nociception sense reports. It does not slow the
+    animal down or change what it can see.</dd>
     <dt>cover, and the open</dt><dd><strong>Cover</strong> means a square with a bush on it.
     <strong>The open</strong> means every other square. Whether healing should differ between the
     two is the entire question on this page.</dd>
@@ -335,19 +340,41 @@ figure img:focus-visible { outline:2px solid var(--accent); outline-offset:-3px;
 
 <section class="col">
   <h2><span class="num">02</span> The definition the study turns on</h2>
+  <h3>One animal, three settings, in numbers</h3>
+  <p>The definition below is easier to read after seeing it happen once. So: take an animal that is
+  badly hurt &mdash; injury <strong>{{VAL:ex_injury}}</strong> of {{VAL:max_injury}} &mdash; with
+  half a stomach of food. It sits down out in the open and rests, and keeps resting until the food
+  runs out. Half a stomach buys {{VAL:budget}} steps of that. Here is where it ends up under each
+  of the three settings this page compares.</p>
+  <div class="callout pick">
+    <p><strong>Under the shipped default</strong> its injury is back to <strong>0</strong> after
+    {{VAL:ex_shipped_steps}} of those {{VAL:budget}} steps &mdash; fully healed, out in the open,
+    with most of its food still untouched.</p>
+    <p><strong>Under a01</strong> the same: <strong>0</strong> after {{VAL:ex_a01_steps}} steps.
+    Standing in the open, an animal heals completely and has food to spare.</p>
+    <p><strong>Under the recommendation</strong> it spends every one of the {{VAL:budget}} steps
+    resting and gets down to <strong>{{VAL:ex_rec_end}}</strong>. It healed
+    {{VAL:rec_open_budget}} points, it is still badly hurt, and it is now out of food. Healing all
+    {{VAL:ex_injury}} points out there would have taken {{VAL:ex_rec_full_steps}} steps, which it
+    does not have and never will.</p>
+    <p><strong>Under the recommendation, on a bush</strong>, that same animal is back to
+    <strong>0</strong> in {{VAL:ex_rec_cover_steps}} rest steps.</p>
+  </div>
+  <p>That is the whole page in one example: two settings where the open is as good as a bush, and
+  one where it is not. Everything below is that comparison made general, so it can be checked over
+  every setting rather than this one animal.</p>
+  <h3>Said in general</h3>
   <div class="callout pick">
     <p class="eyebrow">Definition</p>
     <p style="font-size:18px;line-height:1.5"><strong>Resting out in the open counts as
-    pointless when an animal that rests without stopping, for as long as its food lets it, still
-    cannot heal away more than a set number of injury points.</strong></p>
+    pointless when an animal that rests without stopping, for as long as its food lets it, still cannot bring its injury number <em>down</em> by more than a set amount.</strong></p>
     <p>That set number is the <strong>healing allowance</strong>. It gets a symbol, <strong>&theta;</strong>
     (the Greek letter theta), because it turns up in nearly every line of arithmetic below and a
     symbol is shorter than the phrase. Wherever you see &theta;, read &ldquo;the healing
     allowance&rdquo;.</p>
   </div>
-  <p>Two numbers turn that sentence into something testable. This page sets the healing
-  allowance at <strong>{{VAL:theta}} injury points</strong> out of {{VAL:max_injury}}, and the rest
-  budget at <strong>{{VAL:budget}} steps</strong>. <strong>Neither number was measured. Both were
+  <p>Two numbers turn that sentence into something testable. This page sets the healing allowance at <strong>{{VAL:theta}} points of healing</strong>, and
+  the rest budget at <strong>{{VAL:budget}} steps</strong>. <strong>Neither number was measured. Both were
   chosen</strong>, and a different choice would give a different answer &mdash; &sect;10 works out
   how much different, and &sect;11 lists the two places where these choices turned out to be
   rougher than they look.</p>
@@ -359,6 +386,23 @@ figure img:focus-visible { outline:2px solid var(--accent); outline-offset:-3px;
   of food, anywhere between empty and full, and burns one unit of it every step whatever it does.
   Half full is the typical start, and half a stomach buys {{VAL:budget}} steps of resting before
   starvation. An animal that began full would get {{VAL:budget_fixed}}; the page checks both.</p>
+  <div class="callout warn">
+    <p class="eyebrow">Two things these numbers are not</p>
+    <p><strong>{{VAL:theta}} is not an injury level.</strong> It is a <em>distance travelled</em>,
+    not a place on the scale &mdash; how far the injury number falls, not what it falls to. An
+    animal that starts at 90 and rests all {{VAL:budget}} steps in the open under the recommended
+    setting ends at 80: it healed {{VAL:rec_open_budget}} points, comfortably inside the
+    {{VAL:theta}}-point allowance. Where it started never enters the test, and nothing here says
+    anything about an animal whose injury happens to be {{VAL:theta}}.</p>
+    <p><strong>{{VAL:budget}} steps is not how long healing takes.</strong> It has nothing to do
+    with injury at all. It is how long the animal can keep resting <em>before it starves</em>, set
+    by food alone &mdash; the same {{VAL:budget}} steps whether it is barely scratched or nearly
+    dead. The two numbers meet only in the question the page asks: <em>given the most resting it
+    could possibly do, how far down can it get its injury?</em> Under the recommended setting,
+    falling {{VAL:theta}} points out in the open would need {{VAL:rec_open_steps_theta}}
+    consecutive rest steps &mdash; {{VAL:rec_theta_vs_budget}} times the food it has. That gap is
+    the whole result.</p>
+  </div>
   <div class="callout">
     <p class="eyebrow">The complementary requirement</p>
     <p>A world in which nobody can heal anywhere is not the goal. So a second requirement has to
