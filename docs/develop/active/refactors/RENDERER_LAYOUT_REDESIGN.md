@@ -9,7 +9,7 @@ supersedes: UI_REDESIGN_PROPOSAL.md
 
 # Episode-video renderer redesign: panels that cannot overlap, a faster frame, and a step-scrubbing viewer
 
-> **Status**: PLANNED. Revised three times after `plan-reviewer` (first and second pass NOT READY; third pass SOUND WITH CONCERNS, applied in Revision 3). Revision 4 adds extended-range senses (user scope, 2026-09-14); fourth pass SOUND WITH CONCERNS, applied in Revision 5. Revision 6 records user decisions (2026-09-14); fifth pass SOUND WITH CONCERNS, applied in Revision 7. Revision 8 adopts the visual design spec (`docs/reviews/design_episode_dashboard.md`). Revision 9 records the user's answers (2026-09-14) and corrects the temperature scale to a per-episode range. Revision 10 moves every verification world onto maintained configs (new config-maintenance rule). Revision 11 (2026-09-16) re-points every config path after another session archived 227 worlds, names where the regenerated campfire world's values are copied from, and records two new environment behaviours (bushes block animals; faster healing when resting in a bush). **Revision 12 (2026-09-16) retracts Revision 11 §2** — the claim that the maintained `basic/` configs fail to load was produced by a non-resolving YAML read; all of them load, and the plan now requires every config check to go through the resolving loader. **Revision 13 (2026-09-16) corrects the verification matrix after Phase 0b was built and verified**: the three real trained-policy cells cannot be rendered at current code, cells M1 and M2 turned out to be the same world, and a new cell M1x was added. Phase 0a and Phase 0b are **implemented**; Phases 1–5 are plan only.
+> **Status**: PLANNED. Revised three times after `plan-reviewer` (first and second pass NOT READY; third pass SOUND WITH CONCERNS, applied in Revision 3). Revision 4 adds extended-range senses (user scope, 2026-09-14); fourth pass SOUND WITH CONCERNS, applied in Revision 5. Revision 6 records user decisions (2026-09-14); fifth pass SOUND WITH CONCERNS, applied in Revision 7. Revision 8 adopts the visual design spec (`docs/reviews/design_episode_dashboard.md`). Revision 9 records the user's answers (2026-09-14) and corrects the temperature scale to a per-episode range. Revision 10 moves every verification world onto maintained configs (new config-maintenance rule). Revision 11 (2026-09-16) re-points every config path after another session archived 227 worlds, names where the regenerated campfire world's values are copied from, and records two new environment behaviours (bushes block animals; faster healing when resting in a bush). **Revision 12 (2026-09-16) retracts Revision 11 §2** — the claim that the maintained `basic/` configs fail to load was produced by a non-resolving YAML read; all of them load, and the plan now requires every config check to go through the resolving loader. **Revision 13 (2026-09-16) corrects the verification matrix after Phase 0b was built and verified**: the three real trained-policy cells cannot be rendered at current code, cells M1 and M2 turned out to be the same world, and a new cell M1x was added. Phase 0a and Phase 0b are **implemented**; Phases 1–5 are plan only. **Revision 17 (2026-09-16) records two user design decisions** — terrain drawn as the square's ground cover with occupants in slots on top of it (variant H), and a 48 px arena square — works out what they cost the surrounding panels, specifies the minimap's admittedly coded encoding, records three cases the design does not solve, and adds a co-occupancy rule to the pixel audit. Phases 0a, 0b and 0c are implemented; Phase 0d and Phases 1–5 are plan only.
 > **Opened**: 2026-09-14
 > **Related**: [[UI_REDESIGN_PROPOSAL]] (the April plan this one replaces) · [[12_renderer]] (renderer reference doc) · [thermal IMPLEMENTATION_PLAN](../thermal/IMPLEMENTATION_PLAN.md) (§"Rendering: what the rewrite's state turned out to be") · [[BODY_TEMPERATURE_OBSERVATION]] (thermal; **untracked work-in-progress in another session, read as unstable input only**) · [[ASYNC_CHECKPOINT_VIDEO_RENDER]] · [[SAVED_RUN_CONFIG_COMPAT]] · review: [`docs/reviews/plan_renderer_layout_redesign.md`](../../../reviews/plan_renderer_layout_redesign.md) · evidence frames + measuring script: [`renderer_layout_redesign/`](renderer_layout_redesign/) · web research note `tmp/20260914_renderer_layout_web_research.md`
 
@@ -383,6 +383,168 @@ That is the expected and wanted result: the two cells whose config did not chang
 
 ---
 
+## Revision 15 2026-09-16 (after Phase 0c verification: defect D2 was misclassified, and the audit measures ink differently from the plan)
+
+**What this revision is about, in plain words.** Phase 0c built the measuring instrument this whole redesign depends on: a script that takes a real rendered video frame and reports, in pixels, where drawn content collides. Verifying it turned up three things the plan itself had wrong or had left unsaid, all found by measuring rather than by re-reading.
+
+1. **Defect D2 is not the kind of defect this plan says it is.** The plan's defect table calls it "text on top of other text" — the words `REAL: --` printed over the title of the extero-nociception panel. Measured in pixels, the two strings **never touch**: they sit 1.55 pixels apart and share no pixel at all, before or after this plan's 1-pixel tolerance. The real defect is different and, if anything, worse: the `REAL: --` readout is drawn **outside the panel it belongs to**, in the narrow strip above that panel which belongs to the title alone — so a viewer reads it as part of the title line rather than as the panel's own number. D2 is reclassified from *text-on-text* to an **escaped label** (content drawn outside its allotted box).
+
+   This is not an artefact of the campfire world having changed in Revision 14. The verifier re-derived it from the frozen renderer's own arithmetic: the readout is anchored at the bar's top edge plus its label offset, which works out to **exactly** the panel card's top edge for **any** value of the renderer's squeeze factor, and the panel title is anchored a constant 0.015 of the column height above that. The two can therefore never close the gap, in any world, at any squeeze. (`renderer.py` `draw_dual_capsule_bar` at `:328`, `draw_pod_frame` at `:378`, the pod loop at `:992`–`:1022`.)
+
+2. **Defect D5 reproduces on the default world today, with pixel evidence.** The plan recorded D5 — a vitals row's observed value colliding with the next row's true value — from a frame that was never kept. It is real and current: on the default world's fixture, three separate `OBS:` × `REAL:` collisions of 17, 17 and 16 pixels, in the left-hand vitals column. Found by the audit unprompted, then reproduced by the verifier.
+
+3. **The audit measures an element's ink by isolating it, not by hiding it**, which is the opposite of what §D5.2 said. The plan is what changes here, because isolation is the better measurement — see the §D5.2 item 2 note for the measured reason, which is narrower than the reason originally given for the change.
+
+**What changes in the plan.** §A2's D2 row and its class; §A2 gains a note that D5 is confirmed current; §D5.2 item 2 is rewritten to specify isolation and to record what the two methods actually measure. Nothing about the architecture, the layout, the checkpoints or any later phase changes.
+
+---
+
+## Revision 16 2026-09-16 (after the Phase 0c fix pass: the audit gains negative controls, and a thirteenth defect is numbered)
+
+**What this revision is about, in plain words.** The measuring instrument this whole redesign will be judged by — the script that takes a rendered video frame and reports, in pixels, where drawn content collides — could not previously be told apart from an instrument that flags *everything*. A code review found that if the function measuring "which pixels did this element put on the canvas" had simply answered "all of them", every one of its 18 tests would still have passed and all seven known defects would still have been "found", because a test that asks *did it find the defect* measures sensitivity and never discrimination. The fix pass added the tests a permanently-sounding alarm fails. While re-examining a class of finding the original pass had called harmless, it also found a real layout defect nobody had noticed. This revision gives that defect a number — **D13** — and records what the verification measured.
+
+**D13, in plain words.** Under the arena, the renderer draws a small colour bar showing the temperature scale, with the lowest and highest temperature printed at its two ends. The bar is painted over the leading corner of the high-end label, so the reader sees a clipped `+` sign. The cause is arithmetic rather than chance: the bar is drawn as 52 segments, each made slightly wider than its share so no hairline gaps show between them, and that extra width applies to the last segment too — carrying the bar past the point where the label begins. Both numbers are constants in the source, so this happens on **every thermal frame ever rendered**, in every world, at every squeeze factor. Measured on the campfire fixture frame: 2 of the label's 70 pixels of ink are replaced by the bar's colour exactly.
+
+**What changes in the plan.** §A2 gains a **D13** row, a root-cause bullet, and a note that `text_over_fill` is no longer reported as a uniformly benign class — it splits into 5 benign and 1 covered on the campfire frame. The CP0.3 checkpoint note records the number. Nothing about the architecture, the layout, the other checkpoints or any later phase changes. Hand-off: **`bug-curator`** extends the episode-video dashboard row in `KNOWN_BUGS.md`, which covers D1–D9, D11 and D12 but not this defect.
+
+---
+
+## Revision 17 2026-09-16 (user decisions: terrain as ground cover, and a 48 px grid cell)
+
+**What this revision is about, in plain words.** A square of the world can hold more than one thing at a time — the agent standing on a bush, a predator and a rabbit in the same square, a piece of food lying on a rock. The dashboard draws one picture per square, so it has to say "two things are here" somehow. The old renderer solved this with hand-drawn combination pictures (an "agent in a bush" image, an "agent caught by a predator" image), and when a combination had no picture, nothing was drawn. The redesign's new flat icon set has no combination pictures at all, and the sketch painter draws every occupant on top of the same centre point — so two white discs land exactly on each other and whichever name comes later in the alphabet wins, and the agent's soft halo is wider than the entire bush drawing, which is why an agent standing in a bush currently renders as an agent alone. The small world map in the left column is worse still: the agent's dot is drawn over the other animals' dots, so a predator sharing the agent's square disappears.
+
+Two rounds of design mock-ups explored the problem (the sheets and the generators live in `tmp/20260916_design_cell_cooccupancy/` and `tmp/20260916_design_cell_cooccupancy_r2/`). **The user has decided two things, and this revision records them as settled, not as proposals:**
+
+1. **Terrain becomes the floor of the square, not a picture in the middle of it** (variant **H**, "terrain bed + token"). A bush, a rock, a tree or a campfire is drawn as ground cover filling the square, leaving a margin of the square's own temperature colour showing all round. Because the ground cover is the floor, it costs the animals no room: a lone agent standing on a bush is drawn at exactly the size it would be on an empty square. A second and a third occupant stand side by side in the middle of the square. The user rejected every coded alternative — corner dots, folded corners, a rim legend — on an explicit principle: **a viewer should recognise both occupants by seeing them, not by decoding a legend.**
+2. **A 48-pixel square in the grid view**, up from the 28 px the design round measured as "today's cell". This was the round's central finding: at 28 px no literal (non-coded) variant works for any shared square, and 48 px is where the hard cases come within a pixel of legibility.
+
+Two things follow that the user must know, and the rest of this section works them out: whether the surrounding panels can pay for a 48 px square (they can in the grid view, and cannot in the small world map), and that 48 px is 1–2 px under variant H's own measured floor for the hardest squares.
+
+---
+
+### R17.1 What can actually share a square (measured, not assumed)
+
+The round-2 generator enumerated the reachable multi-occupant states by reading the environment rather than guessing: **64 distinct multi-occupant square states in the default world, 102 once the thermal world's campfire and tree are included** (re-derived independently while writing this revision: `count_reachable` in `tmp/20260916_design_cell_cooccupancy_r2/cooccupancy_r2.py`). Nobody hand-draws 102 pictures — which is what killed the "just draw more combination sprites" option — but the set is **not flat**. It is three independent layers, and a rule over three layers generates every state from nine drawings:
+
+```
+terrain (0 or 1 of rock / bush / tree / campfire)  ×  statics (food, trap)  ×  movers (agent, predator, rabbit)
+```
+
+The five reachability rules the generator read off `src/environment/core.py`, kept here because the painter and its audit both depend on them:
+
+| | Rule | Consequence for the painter |
+|---|---|---|
+| R1 | Reset places every non-agent entity on a **distinct** square (`resolve_overlaps_global`, scan order res → pred → obs → neutral) | **At most one terrain per square, ever.** No two statics at step 0. The "bed" layer is therefore single-valued and never has to compose two terrains |
+| R2 | The agent is placed **outside** that scan (`core.py:1460`) | Agent + anything is reachable at step 0, including agent + tree — a square the agent can never *walk* onto |
+| R3 | Animals move against `obs_blocking | obs_blocks_animals` (`core.py:609`) | Predator and rabbit can **never** stand on a bush or a tree. `agent + bush + predator` is unreachable |
+| R4 | Resources move only on respawn, and that path applies **no** overlap resolution (`core.py:703-712`) | food-on-bush, food-on-rock, food-on-trap are reachable but **rare** — respawn is their only route |
+| R5 | Inactive slots are re-parked off-grid at `(height, width)` each step (`core.py:682`) | No phantom sharing; the painter must skip inactive slots, as Figure 3's sketch already does |
+
+### R17.2 The layout consequence, with the arithmetic
+
+**Where the numbers come from.** Figure 3 is the canonical layout (Decided questions, 2026-09-14) and its geometry is in `renderer_layout_redesign/fig03_proposed_dashboard.py` with `dashboard_style.py`: outer gutter 24 px, gap between cards 16 px, card padding 16 px, header 64 px; left column 320 px wide; grid-view card `view × 96 + 64` = **544 px** wide for a 5×5 window; right column what remains, **496 px**, against a stated minimum of 440 px. Vertically: content runs 64 → 880 = 816 px; the grid card is 48 + 480 + 16 = **544 px** tall; the sensor band starts at 624 and is **256 px** tall against a stated minimum of 200. So the layout as approved carries **56 px of width slack** (right column) and **56 px of height slack** (sensor band) and no more.
+
+The left column holds two cards. Interoception is `76 × rows + 124`: **504 px** in the thermal world (five rows) and **428 px** in the default world (four). The World map card takes the remainder, capped at 350 px, so its map square is `min(320 − 32, h − 46 − 16)` = **234 px** in the thermal world and **288 px** in the default world — that is, **23.4 px and 28.8 px per world square**. This is the "~280 px" the decision compares against: it is the **small world map**, not the grid view.
+
+Now the three panels a 48 px square could refer to:
+
+| Panel | Today (Figure 3) | At a 48 px square | Verdict |
+|---|---|---|---|
+| **Grid view, 5×5 window** | 96 px per square, 480 px of drawing in a 544 px card | 5 × 48 = 240 px of drawing, a 304 px card | **Closes with 240 px to spare.** The floor is met twice over; the neighbours *gain* space rather than give any up |
+| **Grid view widened to the whole 10×10 world** | – | 10 × 48 = **480 px**, i.e. **exactly the drawing area the card already has**; card stays 544 × 544 | **Closes exactly, at zero cost to every neighbour.** The centre card's geometry is unchanged to the pixel; left, right and band boxes are untouched |
+| **World map (minimap), 10×10** | 23.4 px (thermal) / 28.8 px (default) per square | needs 480 + 32 = **512 px wide** and 480 + 46 + 16 = **542 px tall** | **Does not close** — see below |
+
+**Why the World map does not close, in numbers.** Width could just about be bought: the column would grow 320 → 512 (+192 px), the right column's entire 56 px of slack would be spent (pinning it at its 440 px minimum, with nothing left for the thermoception diamond and its shared scale), and the remaining 136 px would have to come out of the grid card, dropping it 544 → 408 px, i.e. 68.8 px per grid square — still above the 48 px floor. So width is expensive but survivable. **Height is not.** The left column has 816 px. Interoception measures 504 px in the thermal world, leaving 296 px for the World card after the 16 px gap; a 48 px map needs 542. That is **246 px short in the thermal world and 170 px short in the default world**, and there is nothing in that column to take it from — the only other card is Interoception, and shrinking a card below its measured content is precisely what §D1.2's fit-or-fail exists to forbid. **Stated plainly for the user: the small world map cannot be drawn at 48 px squares on a 1440 × 896 canvas without moving Interoception out of the left column, which would be a different layout from Figure 3.** This is consistent with — and is the measured reason for — the minimap rule in §R17.4, where show-don't-encode is given up deliberately.
+
+**One question this raises, and it is the user's to answer, not the developer's.** The decision says "a 48 px grid cell, up from today's 28 px", but the two numbers belong to two different panels: 28.8 px is today's **World map** square, while today's **grid view** square is 96 px. The 480 px figure in the decision is exactly a 10×10 world at 48 px — which fits the grid-view card to the pixel. The reading this plan adopts unless the user says otherwise is therefore: **48 px is the floor and the drawing size for the grid view's squares, and the grid view may show the whole world where the whole world fits at 48 px** (see §R17.6 for what that changes). The World map keeps its ~23–29 px squares and its coded encoding. If the user instead meant that the World map itself should grow, the numbers above say what would have to move.
+
+**Worlds that do not fit.** At 48 px the grid-view card holds at most 10 squares across (544 − 64 = 480). An 11×11 or larger world cannot be shown whole at 48 px, so the window rule (§D7.3) still applies above 10 — it does not become dead code, and the fallback order in §D7.7 item 3 still decides what happens. No maintained config has a world above 10×10 today (`configs/environment/default.yaml`: `height: 10`, `width: 10`).
+
+### R17.3 The H rule, specified to implement
+
+Terminology, fixed here so painter, test and audit use one vocabulary: **ground** = the square's own fill (temperature colour, or the neutral track when thermal is off); **bed** = the terrain ground cover; **token** = one occupant's drawing; **slot** = the box a token is drawn for; **h** = a token's ink half-extent in pixels, the single number that decides legibility.
+
+1. **Ground.** Unchanged from Figure 3: rounded square, radius 8, 2 px seam of card white between squares, no grid lines, no numbers (§D5.2 item 10 still holds).
+2. **Bed.** Terrain (rock, bush, tree, campfire; **at most one**, by R1) is drawn full-bleed, inset by `BED_MARGIN = 0.14 × cell` on every side, so a ring of the square's own temperature colour always shows. Drawn above the ground and below every token. A bed is *not* a glyph being covered — it is the floor the occupants stand on — so a token over a bed is not the occlusion the brief rules out, and the audit must not count it as one (measured bed-under-token ink at 48 px: 0–772 px per square, by design).
+3. **Tokens, by non-terrain occupant count `n`** (terrain never counts, because it is the floor):
+   - `n = 0` — bed only, or bare ground.
+   - `n = 1` — one centred token at `h = 0.30 × cell` (**14.4 px at a 48 px square**): identical to an unshared square. This is the property the whole variant was chosen for.
+   - `n = 2` — one row of two in a band of height `0.60 × cell` centred on the square, side margin `0.05 × cell`; column width `w = (cell − 2 × margin) / 2`; `h = min(w, band_height) / 2 × 0.92` → **9.9 px at 48 px**.
+   - `n = 3, 4` — **two rows of two** in a band of height `0.88 × cell`, the last row centred when it holds one, so three reads as 2-over-1 rather than as a gap; `h` → **9.7 px at 48 px**. This is the degeneration recorded in §R17.5: from the third occupant on, the tokens take almost the whole square and the bed shows only as its margin.
+   - A single row of three was tried and rejected by measurement: it collapses `h` to `0.135 × cell` and pushes the four-way minimum to 75 px — an artefact of the layout, not of the idea.
+4. **Order is explicit, never alphabetical.** `CELL_PRIORITY = ("agent", "predator", "hiding_predator", "food", "neutral")`, filled left-to-right then top-to-bottom. The observed overdraw bug is exactly what an alphabetical `sorted()` over entity names buys; the constant is module-level with a test that every entity name the matrix can place appears in it.
+5. **Slots are computed before anything is drawn.** The painter builds the slot list from `(bed?, occupants)` and then draws; it never draws concentrically and relies on z-order. Measured on the mock at 48 px, **glyph-on-glyph ink is 0 px in every reachable case** — that zero is what §R17.7's audit rule re-measures on the real painter.
+6. **Companion forms.** Each token has a reduced form drawn *for* a small box rather than scaled down into one, keeping exactly one named identifying mark whose short dimension never falls below a stated fraction of `h`: food 0.34 (green leaf), predator 0.30 (amber eye slit), rabbit 0.30 (ear gap), trap 0.32 (amber spike tip), agent 0.55 (white chevron). These fractions are constants in the painter, because they are what makes a minimum square size computable in a test rather than argued about.
+7. **The white keyline, not a white platter.** A shared token is separated from the bed by a 1 px white keyline at radius **exactly `h`** — not 1.06 h. At 1.06 h the keylines of two adjacent slots touch, and that invisible white-on-white kiss was the whole of the bed family's residual measured "glyph overlap". Keeping the keyline inside `h` is what makes the 0 px measurement mean what it says, and it is also what keeps §R17.7's connected-component rule honest.
+8. **The agent's indigo outline and last-action chevron.**
+   - The **square outline** (2 px iris rounded rectangle on the *square*) is unchanged and is unaffected by sharing. It, not the token's size, is what says which square the agent is in — which is why the token may shrink without the agent becoming hard to find.
+   - The **halo is dropped whenever the square is shared** (`n ≥ 2`). At full size the agent marker carries a 16 % iris halo at `1.32 × r`; in a shared square that halo is ink that spills past `h` onto the neighbour, and it was the entirety of H's measured overlap before it was removed. Concretely: at `h = 0.30 × cell` the halo reaches `0.396 × cell` from the centre, while the whole bush glyph reaches only `0.261 × cell` — the halo is wider than the drawing it is supposed to sit beside, which is the mechanism behind "agent-in-bush renders as agent alone".
+   - The **white ring** stays at every size (`lw = max(0.9, h / 8) pt`), and the **chevron** stays inside the token at `0.62 × h` in the last action's direction, with the dot for Rest/Eat. At 48 px the chevron is 6.1 px long when two occupants share and 6.0 px with four, so it survives every reachable case at the decided square size. Below `h = 6 px` the chevron is not legible; the painter raises rather than drawing an unreadable one, and the 48 px decision keeps every reachable case above that line.
+   - The action pill in the card's title row is unchanged (Q4).
+
+### R17.4 The minimap: where colour is a code, and the page says so
+
+At the World map's ~20–29 px square, a token's mark would be under 3 px and would not survive video compression. Show-don't-encode **cannot** survive here, and pretending otherwise would be the one dishonest part of this design. The map's job is therefore explicitly narrowed: **it answers *where*, and the grid view answers *what*.**
+
+- **Terrain tints the whole square** — the bed idea one scale down — over the temperature tint at the existing 75 % alpha.
+- **One mover:** a dot, as today (agent iris at 64 % of the square with a 2 px white ring; others 48–52 % with a 1.2 px ring).
+- **Two movers:** one dot **split into two half-discs** of the same diameter, each in its occupant's colour, divided by a 0.8 px white line.
+- **Three or more:** the third becomes a **rim pip** at the square's lower-right, 12 % of the square, outside the dot.
+- Statics (food, trap) count as occupants for the split; terrain does not, because it is the tint.
+- **Collision to resolve, named so it is not discovered late:** the adopted design review already spends a pip — an **amber pip at 34 % of dot diameter, centred inside the dot** — to tell the hiding predator from the predator (design review finding 3). The occupancy pip must be distinguishable from it: the identity pip is **inside** the dot, the occupancy pip sits **on the square's rim**, and a test asserts the two can appear on one square without sharing a pixel.
+- **It is stated on the page, not hidden.** The World card carries a caption in words — e.g. *"Shared squares: two occupants split the dot, a third is a corner pip. Colour identifies them here; the grid view shows what they are."* The audit checks the caption is present on any frame whose snapshot contains a shared square (§R17.7).
+
+### R17.5 Cases this design does not solve (recorded, not buried)
+
+1. **Multiplicity.** Two predators in one square render as **one** predator token. No variant in either round counts occupants, and the 64/102 reachable-state enumeration is over *kinds*, not instances. Counting would need a badge or a numeral — a legend, which the principle rules out — so it is not done. **Consequence for verification:** the audit's ground truth must be the number of *distinct kinds* in a square, never the number of entity instances, or it will report failures that are not failures.
+2. **H degenerates to equal tiles from three occupants up.** The "a lone occupant keeps full size" property holds for one occupant and the bed; with three or four, the tokens take the band and the bed survives only as its margin, and every occupant is the same size (no focal point). Measured minimum square sizes: **49 px** for the binding two-mover cases (agent + predator, predator + rabbit, agent + rock + predator) and **50 px** for the four-way. The decided 48 px square is therefore **1 px under the floor for two movers and 2 px under it for the four-way** — the binding marks are the predator's amber eye slit and the rabbit's ear gap at 0.30 × 9.9 = **2.97 px against a 3.0 px** chroma-survival floor. That floor is a JPEG 4:2:0 heuristic, not a cliff, so this is recorded as an **accepted cost, not a defect**. If rendered frames show the mark dying under compression, a 50 px square still fits the approved layout (10 × 50 + 64 = 564 px centre card, right column 476 px ≥ its 440 px minimum) and is the first remedy to try.
+3. **A resource stranded on a blocking tree.** By R4, respawn applies no overlap resolution, so food can land on a tree — a square the agent can never walk onto. The frame will show a tree bed with a food token on it, which is *truthful* but does not tell the viewer the food is unreachable. No marking is proposed, because any marking is a legend. Recorded here so nobody later "fixes" the picture by hiding the food.
+4. **Two statics on one square** (food + trap) is reachable only by respawn and is drawn by the same two-occupant rule; it has no special case and no special mark.
+
+### R17.6 What changes in the phases that are not built yet
+
+Phases 0a–0c are complete. The changes below land in the phases that follow, and every one of them is a *change to this plan*, not a new plan.
+
+- **Phase 0d (new, small): the audit learns to see squares.** `scripts/eval/render_layout_audit.py` gains the co-occupancy rule in §R17.7 with its own positive and negative controls, *before* Phase 1, so the instrument exists when the painter arrives. No other Phase-0 artefact changes; the V1 path guard and the frame baseline are untouched.
+- **Phase 1 (registry and packer).**
+  - `layout.py`: `ARENA_CELL_MIN_PX` **32 → 48**, and a new `ARENA_CELL_PX = 48` target. The fallback order of §D7.7 item 3 is unchanged in shape; its first question becomes whether the world fits whole at 48 px, then the local window.
+  - `panels.py`: the arena row's min size becomes `W × 48 px`; the minimap row's min size gains the height of the shared-square caption line.
+  - `test_dashboard_layout.py`: the arena box is exactly `W × 48` px; a 10×10 window fits the Figure-3 centre card with the neighbours' boxes unchanged; a world too large to show whole at 48 px takes the documented fallback rather than silently shrinking below the floor.
+- **Phase 2 (painters).**
+  - **New module `src/environment/dashboard/cells.py`** owning square composition: the bed table, the companion-form table, `CELL_PRIORITY`, the slot packer, `BED_MARGIN`, and the identifying-mark fractions. Kept out of `painters.py` so the arena painter stays a caller.
+  - **Assets.** Terrain now needs a **bed** form as well as its map/legend glyph; tokens need a **companion** form. The `assets/dashboard_icons/` test becomes: every entity the matrix can place has a bed form or a companion form as appropriate, or is on the glyph-fallback list.
+  - **Agent marker** per §R17.3 item 8 (halo dropped when shared; ring and chevron kept; square outline untouched).
+  - **Fixtures must contain shared squares.** `make_render_fixture_recordings.py` gains a report of which co-occupancy archetypes each cell's episodes actually contain (agent + terrain, two movers, three-way, four-way, food-on-terrain), because a seeded random policy is not guaranteed to produce them. An archetype the matrix never reaches is rendered from a **synthetic snapshot labelled as derived input**, the same precedent as the existing stress variant. *Fails if:* a checked archetype is neither found nor synthesised, or a synthetic one is not labelled.
+  - `test_dashboard_frames.py` gains the co-occupancy cases and the mutation below.
+- **Phase 3 (entry point).** `layout_signature()` gains the arena square size and the window rule, so a concatenated video cannot switch square size or window mid-video.
+- **Phase 4 (viewer).** `/api/values` gains the per-square occupant list, so the viewer can name what shares a square; the page's grid draws the same rule, and if its viewport forces squares under 48 px it **says so** rather than shrinking silently.
+- **Docs.** `docs/environment/12_renderer.md` gains the square-composition rule (bed / token / slot vocabulary), the minimap's coded encoding and its on-page statement, and the three unsolved cases. No config key changes; `CONFIG_CRITICAL_SETTINGS.md` unchanged; `SCRIPTS_DEPENDENCY_MAP.md` unchanged by this revision (no script is added, moved or renamed — Phase 0d edits an existing one).
+
+### R17.7 The audit's co-occupancy check (Phase 0d), and why it cannot be fooled
+
+The observed defect is that a painter can draw two occupants and a viewer sees one. The existing audit measures *text* collisions; it has no rule that fires when two graphics coincide, so it would pass the very frame this revision exists to prevent.
+
+**Rule `cell_overdraw`.** For each square of the named arena axes (`--arena-axes`, which already exists because the arena can only be named, never guessed), with the square grid derived from that axes' extent and the recording's world/window size — **not** from the layout module, which the audit still may not import:
+
+1. Ground truth is the **snapshot**: the set of distinct non-terrain kinds at that square (R5 — inactive slots skipped). Kinds, not instances (§R17.5 item 1).
+2. Ink is measured by the existing isolation probe (`FrameProbe.ink`). Elements whose ink covers ≥ 40 % of the square's area are the **bed** and the ground and are excluded; what remains is token ink.
+3. The token ink inside the square must form **exactly as many connected components as there are distinct kinds**, and no two components may touch. A painter that draws concentrically yields one component where the snapshot says two — the rule fires.
+4. Tolerance: **zero** shared pixels between components, no dilation. The 1 px dilation in the text rule exists for glyph anti-aliasing and is wrong here; the mock measures exactly 0 px precisely because the keyline is kept inside `h` (§R17.3 item 7), so a non-zero number is a real defect rather than a rounding artefact.
+5. **Bed-under-token ink is exempt by construction**, because the bed is excluded at step 2. This is the one place the rule needs the bed/token distinction, and it takes it from measured area, not from a painter tag — the same discipline mutation M-C already enforces.
+
+**Controls, because an instrument nobody calibrated is worthless (the CP0.3 lesson).**
+- **Positive:** a synthetic two-token figure drawn concentrically, built by the test itself, must fire; and a mutation of the real painter (**M-E**: force every occupant to the square's centre) must fail the audit at Phase 2.
+- **Negative:** a single-occupant square and an empty square must produce **zero** findings; a square holding a bed plus one token must produce zero (the bed exemption must not be a blanket "ignore large things" that silences real overlaps); and the exact per-square finding count on a frozen frame is pinned, as the existing negative controls are, so an `ink()` that answers "everything" fails it.
+- **Minimap:** the same ground truth applied at map scale — a square whose snapshot holds two movers must show two distinguishable colour areas, and the shared-square caption must be present on that frame.
+
+**New checkpoints.**
+- **CP0.3b: the audit sees squares.** `cell_overdraw` fires on the synthetic concentric figure and is silent on the three negative controls; the per-rule counts on the frozen M1 and M4 frames are re-pinned. *Fails if:* the rule fires on a single-occupant square, stays silent on the concentric one, or changes any existing rule's count on the frozen frames.
+- **CP2.8: squares render as many occupants as they hold.** On every matrix cell, every checked frame with a shared square passes `cell_overdraw`; the four archetypes (agent + terrain, two movers, three-way, four-way) are each rendered and **looked at**; mutation M-E fails the audit; the minimap caption is present wherever a split dot is drawn. *Fails if:* any archetype is missing without a labelled synthetic substitute, any check is non-zero, M-E passes, or the caption is absent.
+
+Existing checkpoints that gain a clause: **CP2.6** (entity ink) now also requires that a *shared* square shows ink for every kind the snapshot places there; **CP-C** (one meaning per colour) counts the shared-square token colours and the minimap split wedges against the same palette table; **CP-D** looks at shared squares at full size, since this is the change most likely to look crowded rather than measure crowded.
+
+---
+
 ## Analysis
 
 ### A1. What runs today (verified 2026-09-14; line numbers as of HEAD `75757dfc`, working tree dirty, see revision note)
@@ -408,10 +570,10 @@ Evidence: `docs/develop/active/refactors/renderer_layout_redesign/figures/v1_the
 | # | Renderer | Defect | Class |
 |---|---|---|---|
 | D1 | V1 | Extero-nociception readout "OBS: 0.00" overprints the THERMOCEPTION pod title | text-on-text |
-| D2 | V1 | "REAL: --" floats over the EXTERO NOCICEPTION pod title | text-on-text |
+| D2 | V1 | ~~"REAL: --" floats over the EXTERO NOCICEPTION pod title~~ → **corrected Revision 15**: the `REAL: --` readout is drawn **outside its own card**, in the strip above it that belongs to the EXTERO NOCICEPTION title, so it reads as part of the title line. The two strings are **1.55 px apart and share no pixel** (measured; 0 shared px raw and after the 1 px dilation), so this was never a text-on-text defect | ~~text-on-text~~ **escaped label** (content outside its box) |
 | D3 | V1 | "MINIMAP" label overlaps the Run Context box border | text-on-border |
 | D4 | V1 | ~15% dead whitespace top and bottom | space allocation |
-| D5 | V1 (default) | Vitals rows: one row's "OBS: 0.95" collides with the next row's "REAL: 0.95" | text-on-text |
+| D5 | V1 (default) | Vitals rows: one row's "OBS: 0.95" collides with the next row's "REAL: 0.95". **Confirmed reproducing on the default world 2026-09-16** (Revision 15): three collisions of **17, 17 and 16 px** on cell M1 step 0, in the left vitals column (x 317–364; y 274, 351, 428) | text-on-text |
 | D6 | dormant V2 | Collision title overprints its C U R D L labels | text-on-text |
 | D7 | dormant V2 | Minimap tiny (~125 px) | space allocation |
 | D8 | dormant V2 | Interoceptive-nociception and LOC panels missing | silent panel drop |
@@ -419,12 +581,17 @@ Evidence: `docs/develop/active/refactors/renderer_layout_redesign/figures/v1_the
 | D10 | V1 | Nutrition/Injury drawn from true state and captioned `OBS` in worlds whose observation lacks them (campfire) | false claim of sensory access |
 | D11 | V1 | Campfire obstacle drawn as a grey square (no icon) | missing entity rendering |
 | D12 | V1 | `Proprioception` emitted by the viz adapter, never drawn | silent panel drop |
+| D13 | V1 | **Added Revision 16.** The thermal scale's max-value label (e.g. `+84`) is painted over by the colour strip's last segment, so the reader sees a clipped `+`. Structural and world-independent: the strip's 52nd segment ends at axes-fraction **0.77220** (each segment is drawn `strip_w/51 + 0.002` wide, the bleed closing hairline gaps between segments) while the label is anchored at **0.77000** with `ha='left'`, and the segment's `zorder=5` beats the label's `zorder=3`. Inside `if thermal_on:`, so **every thermal frame**. Measured on M4 step 0 (verifier, independently): the label's box overlaps the strip by **1.22 px** of the host axes' 554.26 px width, costing **2 px of the label's 70 px of ink**, at which the final frame is `[103 0 31]` — the segment's colour exactly, 157 and 243 away from what the glyph alone would paint (`renderer.py:769-772` strip, `:777` label) | fill over text (label ink covered) |
+
+**On the `text_over_fill` class (Revision 16).** It is **not** uniformly benign, and §D5.2's audit no longer reports it as though it were. It splits by composition order into `text_over_fill` (the label is composed last, so the frame shows the glyph — legible by design) and `fill_over_text` (the partner is composed after the label and covers its raw ink — a defect whatever the intent). On the V1 campfire frame that is **5 benign + 1 covered** (the covered one is D13), replacing the original pass's blanket "6, all by design"; on the dormant V2 frame, 5 benign + 0.
 
 **Root causes.**
 - **D1–D7, D9.** No step gives each panel a box sized from its needs and keeps it inside. Constrained layout ignores in-card `ax.text`.
+  - **D2 specifically** (Revision 15) is the pure form of this: the readout's anchor is computed from the *bar's* geometry (`y_frame_bottom + 0.02·squeeze + 0.07·squeeze + 0.02·squeeze`) and the card's top edge from the *pod's* (`y_frame_bottom + 0.11·squeeze`). Those two expressions are algebraically equal at every squeeze factor, so the label lands exactly **on** the card edge and escapes it, by construction, in every world. Two independent coordinate systems for the same box, with nothing checking that one stays inside the other — which is precisely what §D1.3's paint-inside-the-box step removes.
 - **D8, D12.** A hard-coded panel list that skips unknown names.
 - **D10.** Presence and caption come from the renderer's own assumptions ("always drawn"), not from what the agent observes.
 - **D11.** No specified fallback for iconless entities.
+- **D13** (Revision 16). Two constants in the same block that were never checked against each other: a decorative bleed added to every strip segment to hide hairline gaps, and a label anchor placed at the strip's *nominal* end. Neither is wrong on its own; nothing in the renderer asks whether the drawn strip still ends where the label assumes it does. The same family as D1–D7 — a coordinate computed twice, from two different premises — and removed by §D1.3's paint-inside-the-box step, which gives the strip and its end labels one box and one owner.
 
 ### A3. Backward-compatibility facts (verified 2026-09-14)
 
@@ -508,9 +675,9 @@ class PanelSpec:
 | satiation_hidden / nutrition_hidden / injury_hidden | vitals | hidden_state | – | state field exists, name **not** in breakdown, Q10 = show | label + value + "not observed" + bar |
 | intero_nociception | vitals | vital_row | `Interoceptive Nociception` | name in breakdown | as vital_row |
 | body_temp | vitals | temp_row / hidden_state | `Body Temperature` (viz key `value`) | `body_temp` in snapshot; observed iff `Body Temperature` in breakdown, else hidden | label + value + threshold/setpoint marks |
-| minimap | world | minimap | – | always | ≥ 2 px/world cell, ≥ 180 px side |
+| minimap | world | minimap | – | always | ≥ 2 px/world cell, ≥ 180 px side, + one caption line for the shared-square note (Revision 17 §R17.4) |
 | location | world | text_row | `Location` | name in breakdown | one text line |
-| arena | arena | arena | – | always | square, ≥ `ARENA_CELL_MIN_PX` = 32 px/view cell (§D7.7); + scale strip when thermal on |
+| arena | arena | arena | – | always | square, `ARENA_CELL_PX` = 48 px/view cell and `ARENA_CELL_MIN_PX` = 48 px (**Revision 17**; was 32); + scale strip when thermal on. Square composition (bed / token / slot) per §R17.3 |
 | action_badge | arena | action_badge | – | action recorded | pill text in arena title strip |
 | olfactory | extero, or sensor band (§D7.1) | `grid_kind(olfactory_grid_range, 5)`: spectrum (r=0) / `channel_maps` (r≥1, decided) | `Olfaction` | name in breakdown | per kind (§D7.2) |
 | extero_nociception | extero | intensity | `Extero Nociception` | name in breakdown | text row + bar |
@@ -576,7 +743,8 @@ Stretchable/Taffy stays a possible later drop-in behind `Box`; it isn't needed f
 - **`layout_signature()`.** Hash of the panel keys, kinds, boxes and REAL-slot flags, used by the concat check in §D4.2.
 - **Icon set (Revision 8, supersedes the icon-file lookup below).**
   - **Source.** The new renderer draws every entity from its own flat icon set in `assets/dashboard_icons/`, drawn from primitives per the design spec §Icon style guide: creatures and food on white tokens, flat terrain. It does **not** load V1 icons or `icon_config` images.
-  - **Agent.** A composable marker drawn over whatever occupies the cell replaces V1's `agent_*` combination images.
+  - **Agent.** A composable marker replaces V1's `agent_*` combination images. **Revision 17:** it is *not* drawn over whatever occupies the cell — a shared cell lays its occupants out in slots (§R17.3), the agent's halo is dropped whenever the cell is shared, and the agent's identity is carried by the cell's iris outline rather than by the token's size.
+  - **Terrain (Revision 17).** Terrain is drawn as a **bed** — full-bleed ground cover inset by `BED_MARGIN = 0.14 × cell` — not as a centred glyph. Each terrain entity therefore needs a bed form in addition to its map/legend glyph, and each token entity a reduced companion form (§R17.3 items 2, 6).
   - **Campfire.** `assets/campfire.png` joins the set.
   - **Fallback.** The glyph described below remains only for an entity name with no `dashboard_icons` entry.
 - **Iconless entities (review finding 11).** For any obstacle, resource or animal whose icon key is missing from `icon_config` or whose file is absent, the arena draws a **deterministic glyph**: a filled rounded square in the entity's category colour, plus a centred 1–3 letter code derived from its name (e.g. `CF` for campfire), drawn as a vector path (`TextPath` → `PathPatch`) rather than a `Text` artist. The mapping lives in a small table in the painter module, with its own test that codes are unique across `params.obstacle_names`. This path is always needed because archived `icon_config` pickles lack keys added later. **Decided 2026-09-14 (Q12): a new asset `assets/campfire.png` is created.** The shared icon mapping (`configs/visualization/default.yaml`) has no `campfire` key and V1's `_load_icons` loads only mapped keys, so adding the file does not change V1 videos. The mapping stays frozen. The new renderer resolves `campfire` → `assets/campfire.png` through its own internal icon table. The glyph fallback remains for any other iconless entity and for a missing file.
@@ -752,7 +920,7 @@ Speed figures are **estimates** unless marked measured. The Phase 0 gate (§D5.3
 
 M8/M9 do not depend on archived **configs** loading — but, per Revision 13, they do not load at all at current code, so the fallback "if M2/M3 cannot be generated, M8/M9 cover those cells" is **withdrawn**: M2 and M3 generate cleanly and M8/M9 cannot substitute for anything. About 20 more trained recordings exist under `results/JAX_RecurrentPPO/*/recordings/`, and every one recorded before the thermal system has the same blocker.
 
-**Frames checked per cell:** step 0; last step; max injury; max extero nociception; min and max `body_temp` (M4); max REAL−OBS gap (M3/M9); and for M4 a step where the campfire is in view. A **stress variant** copies those snapshots with extreme values (body temp −14.99, noisy OBS outside [0,1], all visual channels 1.0), labelled "derived input, text-fit stress only". It must either render clean or raise `TextFitError`/`LayoutOverflowError`, never produce a frame with an ellipsised number.
+**Frames checked per cell:** step 0; last step; max injury; max extero nociception; min and max `body_temp` (M4); max REAL−OBS gap (M3/M9); and for M4 a step where the campfire is in view. **Added Revision 17:** one step per co-occupancy archetype — agent on terrain, two movers in one square, a three-way, a four-way, and a resource on terrain — with the generator **reporting which archetypes each cell's episodes actually contain**. An archetype no episode reaches is rendered from a synthetic snapshot labelled "derived input, co-occupancy only", the same precedent as the stress variant. A **stress variant** copies those snapshots with extreme values (body temp −14.99, noisy OBS outside [0,1], all visual channels 1.0), labelled "derived input, text-fit stress only". It must either render clean or raise `TextFitError`/`LayoutOverflowError`, never produce a frame with an ellipsised number.
 
 #### D5.2 Overlap/clip audit with a pixel ground truth
 
@@ -763,7 +931,11 @@ M8/M9 do not depend on archived **configs** loading — but, per Revision 13, th
    - **Background (demoted):** only filled patches ≥ 90% of their axes (card fills), `AxesImage`s ≥ 90% of their axes (the thermal underlay), and `Line2D`s spanning ≥ 90% of the arena extent (grid lines).
    - The audit **asserts this geometry itself**, measured via `get_window_extent`. Painter `gid`s are used only to name elements in the report.
    - V1 frames use the same classifier, so V1 and V2 are judged by one rule.
-2. **Ink masks.** One full render, plus one render per element with that element hidden. The element's ink = pixels that differ. This is N+1 renders per frame (~40 s for a V1 frame, est.).
+2. **Ink masks — by ISOLATION** (*changed in Revision 15, 2026-09-16; this item previously specified hide-and-diff*). One render of the bare background, plus one render per element with **only that element visible**. The element's ink = pixels that differ from the bare background. This is N+1 renders per frame (~22 s for a V1 frame, measured).
+
+   **Why not hide-and-diff** (render everything, then re-render with the element hidden, and call the difference its ink). Hide-and-diff measures *what an element contributes to the final picture*, not *what it draws* — so an element that is overdrawn by something opaque loses exactly the pixels that are in dispute, which are the only pixels a collision rule cares about. Isolation has no such dependence on paint order.
+
+   **What that is worth, measured rather than argued** (Phase 0c verification). Constructing the worst case — an opaque haloed label drawn on top of a card border, the same halo pattern `renderer.py` uses for the body-temperature readout — the collision measures **298 px under isolation and 8 px under hide-and-diff**, a 37× collapse, because 12% of the border's ink disappears under the halo. On the real frames the gap is smaller: across the **10 collisions** the audit reports on V1 M4, hide-and-diff would have detected **all 10**, at 70–100% of the isolation figure. So the honest statement is that hide-and-diff is *systematically under-sensitive by a large and unbounded factor*, not that it is blind: no control would have been missed by it today. Isolation is adopted because the margin of safety matters more than the 0 controls it currently buys, and because a rule whose sensitivity depends on z-order cannot be reasoned about as the renderer changes.
 3. **Collision rule.** A text element's ink, dilated 1 px, intersecting any other foreground ink **fails**, including card-border outlines (text-on-border forbidden). Text over background ink is allowed. Every pair is reported with both strings and a crop.
 4. **Clip rule.** A text element re-rendered with clipping off whose ink differs has been cut off, and fails.
 5. **Legibility floor (Revision 8).** Every playback text element's cap height corresponds to a font size ≥ 14 px, and every caption ≥ 12 px. Measured from a reference "0" rendered in the vendored font at those sizes, not from the painter's requested size. (V1 control frames are judged at the old 8 pt floor.)
@@ -772,6 +944,7 @@ M8/M9 do not depend on archived **configs** loading — but, per Revision 13, th
 8. **Vocabulary rule (V2 frames).** No rendered text matches `\bpain\b` (case-insensitive), and no legend contains `DNG`. V1 frames are exempt, because V1 is frozen and still shows `DNG`.
 9. **Canvas.** No foreground ink in the outer 4 px margin; dimensions equal the declared canvas.
 10. **No numbers in the grid view (decided 2026-09-14; narrowed in Revision 7).** No `Text` element whose string contains a digit or a sign character has ink inside the arena grid's extent. The title strip, legend chips and scale strip sit outside it. The iconless-entity code is drawn as a vector path (`TextPath` → `PathPatch`), not a `Text` artist, so this rule and the glyph cannot collide. Checked on every thermal cell.
+11. **Cell co-occupancy (`cell_overdraw`, added Revision 17, built in Phase 0d).** Ground truth is the snapshot's set of **distinct non-terrain kinds** per arena square (never instance counts — §R17.5 item 1). Elements whose isolated ink covers ≥ 40 % of a square's area are the bed/ground and are excluded; the remaining token ink inside the square must form exactly as many connected components as there are kinds, pairwise **touching in 0 px** (no dilation — §R17.7 item 4). The same ground truth is applied at minimap scale, together with the presence of the shared-square caption. The square grid is derived from the named arena axes' extent and the recording's world/window size; the audit still imports neither the layout module nor the registry.
 
 **Positive controls** (known defects; if any is missed, the audit is broken, so stop):
 - V1 M4 frame: **D1**, **D2**, **D3** (text on the Run Context border), and **D10** (`OBS` under Nutrition/Injury while the breakdown lacks them).
@@ -782,6 +955,7 @@ M8/M9 do not depend on archived **configs** loading — but, per Revision 13, th
 - **M-B:** set a vitals row's min height below its measured text and bypass fit-or-fail; the audit must fail.
 - **M-C:** retag a bar fill's `gid`/role as background in the painter and draw a label over it; the audit must still fail, since classification ignores tags.
 - **M-D:** swap a `hidden_state` caption to `OBS`; the observed-caption rule must fail.
+- **M-E (Revision 17):** force every occupant of a shared square to the square's centre (the sketch painter's concentric behaviour); `cell_overdraw` must fail. Its negative partner: a single-occupant square, an empty square and a bed-plus-one-token square must each produce zero findings.
 
 **Value-to-pixel checks:**
 - Bar-fill ink width at 0.0 / 0.5 / 1.0 in ratio 0 : 0.5 : 1 within 2 px.
@@ -888,7 +1062,7 @@ M8/M9 do not depend on archived **configs** loading — but, per Revision 13, th
 #### D7.3 Grid view window and sensor footprints
 
 - **Window.** The new renderer's grid view shows `W = max(params.local_view_size, 2·max_range + 1)` cells, where `max_range` is the largest diamond radius among the present senses. This is a rendering choice only; environment params are not changed. With `local_view_size = 5` (the in-use configs), vision r2 needs 5, so nothing changes. Synthetic r3/r4 widen the view to 7/9.
-- **Cell-size floor.** If `W` would push arena cells below `ARENA_CELL_MIN_PX` (32 px, the single floor in §D7.7), `W` is capped at the largest value keeping 32 px. The footprint outline is then clipped at the window edge, and the card caption says `footprint exceeds view (r=<r>)`. The audit checks that caption's presence whenever clipping occurs.
+- **Cell-size floor.** If `W` would push arena cells below `ARENA_CELL_MIN_PX` (**48 px since Revision 17**, the single floor in §D7.7), `W` is capped at the largest value keeping 48 px. At 48 px the Figure-3 centre card holds at most 10 squares across, which is exactly the maintained worlds' 10×10 (§R17.2). The footprint outline is then clipped at the window edge, and the card caption says `footprint exceeds view (r=<r>)`. The audit checks that caption's presence whenever clipping occurs.
 - **Footprint outline.** Each directional sense draws its diamond footprint on the grid view as a thin outline in its sense colour (smell, vision, thermoception, and collision when r > 1). The outlines are foreground artists, and a legend chip in the arena title strip names each outline. A frame test checks outline ink along the expected diamond boundary cells.
 
 #### D7.4 Colour and bar scales are not [0,1]
@@ -928,7 +1102,7 @@ M8/M9 do not depend on archived **configs** loading — but, per Revision 13, th
    - **Zero guard:** if a sense's episode maximum is 0, the scale is `[0, 1]` with the caption `no signal this episode`, which avoids a divide-by-zero.
    - The single-frame wrapper uses that frame and says so.
 3. **One arena cell floor and an explicit fallback order (34).**
-   - `ARENA_CELL_MIN_PX = 32` is the only arena floor; it replaces both the 48 px in §D1.1 and the 32 px in §D7.3.
+   - `ARENA_CELL_MIN_PX = 48` (**Revision 17**, user decision; was 32) is the only arena floor, and `ARENA_CELL_PX = 48` is the drawing size. The floor exists because no literal shared-square variant is legible below it (§R17.2, §R17.5 item 2).
    - The packer tries, in order, and records which step succeeded in `layout_signature()`:
      1. `W = max(local_view_size, 2·max_range + 1)`;
      2. layout (a) side column;
@@ -972,6 +1146,14 @@ M8/M9 do not depend on archived **configs** loading — but, per Revision 13, th
 | `docs/environment/SCRIPTS_DEPENDENCY_MAP.md` | Same change as the Phase 0 scripts:<br>• §3 rows for `v1_path_guard.py`, `make_render_fixture_recordings.py` and `render_layout_audit.py` (all hand-run, `scripts/eval/` root-depth note);<br>• §1c test-suite rows for `tests/env/test_render_audit_controls.py` (imports the audit and generator) and `tests/env/test_v1_path_guard.py` (imports the guard). |
 | `tmp/<timestamp>_renderer_spike.md` | Spike numbers (spike code stays uncommitted scratch). |
 
+**Phase 0d: the audit learns to see squares (added Revision 17)**
+
+| File | Change |
+|---|---|
+| `scripts/eval/render_layout_audit.py` | Adds rule `cell_overdraw` (§D5.2 item 11): snapshot-derived kinds per square, bed excluded by measured area, connected-component count of token ink, 0 px tolerance, minimap variant, shared-square caption check. Square grid derived from the named arena axes and the recording's world/window size; **no** import of the layout module or the registry (the existing import-isolation test still applies). |
+| `tests/env/test_render_audit_controls.py` | Positive control: a synthetic two-token figure drawn concentrically must fire. Negative controls: single-occupant, empty, and bed-plus-one-token squares produce zero findings; the exact per-rule counts on the frozen M1 and M4 frames are re-pinned, so an `ink()` that answers "everything" still fails. |
+| `docs/environment/SCRIPTS_DEPENDENCY_MAP.md` | **No change** — no script is added, moved, renamed or deleted; an existing row's file gains a rule. |
+
 **Phase 1: registry and packer**
 
 | File | Change |
@@ -980,7 +1162,7 @@ M8/M9 do not depend on archived **configs** loading — but, per Revision 13, th
 | `tests/env/test_dashboard_v1_imports.py` (new) | Pins the imported V1 signatures listed in §D1.3. Revision 7 cache-isolation check: in one process, render a new-renderer M4 frame, then V1 M4 raw frames. The V1 hashes must equal the guard baseline, proving no shared icon cache or other process-global state. Asserts no `renderer_v2` module or package was created by this plan: `src/environment/renderer_v2/` does not exist, and `import src.environment.renderer_v2` still resolves to the `.py` file. |
 | `src/environment/dashboard/panels.py` (new) | `PanelSpec`, `RenderContext`, `FrameInputs`, registry, completeness rule, observed-vs-hidden rule, `_recording_flag`, `real_available` from params. |
 | `src/environment/dashboard/labels.py` (new) | V2-owned channel label table (`HPR` etc.) overriding adapter labels (§D1.3). |
-| `src/environment/dashboard/layout.py` (new) | Column packer, `Box`, `LayoutOverflowError`, compact fallback; no Matplotlib import. |
+| `src/environment/dashboard/layout.py` (new) | Column packer, `Box`, `LayoutOverflowError`, compact fallback; no Matplotlib import. **Revision 17:** `ARENA_CELL_PX = 48` and `ARENA_CELL_MIN_PX = 48`; the fallback order first asks whether the world fits whole at 48 px, then the local window. |
 | `tests/env/test_dashboard_layout.py` (new) | Boxes disjoint/inside canvas for all cells. Toggling a modality frees its height. Overflow raises. Unregistered name raises. **M4 context has no observed Nutrition/Injury rows.** `real_available` identical for two episodes of one run. `_recording_flag` import confinement. |
 
 **Phase 2: painters and episode renderer**
@@ -989,7 +1171,9 @@ M8/M9 do not depend on archived **configs** loading — but, per Revision 13, th
 |---|---|
 | `src/environment/dashboard/text_fit.py` (new) | `fit_text` with the numeric-raise / free-text-ellipsis split, logging. |
 | `src/environment/dashboard/painters.py` (new) | One painter per kind with `build`/`update`, card outlines as separate artists, `gid`s, iconless-entity glyph table. Imports from `renderer.py` read-only only what §D1.3 still pins (`draw_boresight_diamond`, `save_jax_video`, `COLORS`). The icon loader (cache-free) and the thermal helpers (two-slope) are copied into `src/environment/dashboard/icons.py` and `thermal.py` (Revision 7). Any helper needing a change is **copied** into the package; **`renderer.py` is not edited** (frozen). |
-| `src/environment/dashboard/episode.py` (new) | `EpisodeRenderer` (setup / `frame` / `close` / `layout_signature`), wrapper `render_dashboard_frame`. |
+| `src/environment/dashboard/cells.py` (new, Revision 17) | Square composition: bed table (`bed_bush` / `bed_rock` / `bed_tree` / `bed_campfire`, `BED_MARGIN = 0.14`), companion-form table with the identifying-mark fractions as constants, `CELL_PRIORITY = ("agent", "predator", "hiding_predator", "food", "neutral")`, the slot packer (1 / 2 / two-row for 3–4), and the shared-cell agent rule (halo dropped, ring and chevron kept). Forms ported from the round-2 design mock with attribution. The arena painter is a caller. |
+| `tests/env/test_dashboard_cells.py` (new, Revision 17) | Slot geometry at 48 px (`h` = 14.4 / 9.9 / 9.7 px for 1 / 2 / 3–4 occupants); every entity name the matrix can place is in `CELL_PRIORITY`; every terrain has a bed form and every token a companion form; the keyline radius is exactly `h` (the adjacent-slot touch test); the minimum-square arithmetic is recomputed from the mark fractions and compared against the recorded 49 px / 50 px floors, so a change to a form that breaks legibility fails here rather than in a video. |
+| `src/environment/dashboard/episode.py` (new) | `EpisodeRenderer` (setup / `frame` / `close` / `layout_signature`), wrapper `render_dashboard_frame`. **Revision 17:** `layout_signature()` includes the arena square size and the window rule (whole world vs local window), so a concatenated video can never switch square size or window mid-video. |
 | `tests/env/test_dashboard_frames.py` (new, `integration` marker) | Audit clean on all cells' checked frames + stress variant. Mutations M-A..M-D fail as expected. Value-to-pixel, obstacle-ink (CP2.6), observed-caption (CP2.5) and vocabulary (CP2.4) checks. Glyph-code uniqueness. |
 | `tests/env/test_dashboard_thermal.py` (new) | Thermal tests per the **Revision 9** note item 8: episode-range pre-pass, neutral setpoint, concatenated union range, clamp-and-outline, cooling-world crop, pre-thermal recording, per-step-recompute mutation. The Revision 6–8 params-bound tests are withdrawn. |
 | `tests/env/test_dashboard_proprioception.py` (new, Revision 9) | E1 and M5 render a six-chip Proprioception panel. The highlighted chip equals the recorded previous action at a sample of steps, and highlight ink is the agent colour (CP-C). No chip is highlighted at step 0 if no previous action exists. |
@@ -1014,7 +1198,7 @@ M8/M9 do not depend on archived **configs** loading — but, per Revision 13, th
 
 | File | Change |
 |---|---|
-| `scripts/eval/episode_viewer.py` (new) | Server (§D3). |
+| `scripts/eval/episode_viewer.py` (new) | Server (§D3). **Revision 17:** `/api/values` also returns the per-square occupant list, so the page can name what shares a square; if the viewport forces squares below 48 px the page says so rather than shrinking silently. |
 | `scripts/eval/episode_viewer.html` (new) | Page; light mode. |
 | `tests/scripts/test_episode_viewer.py` (new) | Served PNG == in-process array; `/api/values` == `extract` including observed/hidden flags; out-of-range → 404. |
 | `docs/environment/SCRIPTS_DEPENDENCY_MAP.md` | §3 row for `episode_viewer.py` (hand-run server). A "**not a script**" row for `episode_viewer.html` (served by the viewer; precedent row `scripts/analysis/pipeline_layout.html`). §1c row for `tests/scripts/test_episode_viewer.py` (bare-imports the viewer; `parents[2]` depth). |
@@ -1027,7 +1211,7 @@ M8/M9 do not depend on archived **configs** loading — but, per Revision 13, th
 
 | File | Change |
 |---|---|
-| `docs/environment/12_renderer.md` | Replace the dormant-V2 sections with the registry / packer / episode-renderer design, the observed-vs-hidden rule, the separate `render_recordings_v2.py` entry point and `videos_v2/` folder (V1 remains what training and eval use), viewer, audit, and "add a modality = registry entry". **One disambiguating sentence:** "'V2' in documents before 2026-09-14 means the April 2026 subfigures renderer in `src/environment/renderer_v2.py` (dormant, to be removed at the retirement gate); from 2026-09-14 'V2' means the registry-based renderer in `src/environment/dashboard/`, run via `scripts/eval/render_recordings_v2.py`." Fix stale `render_recordings.py` line citations. |
+| `docs/environment/12_renderer.md` | Replace the dormant-V2 sections with the registry / packer / episode-renderer design, the observed-vs-hidden rule, the separate `render_recordings_v2.py` entry point and `videos_v2/` folder (V1 remains what training and eval use), viewer, audit, and "add a modality = registry entry". **One disambiguating sentence:** "'V2' in documents before 2026-09-14 means the April 2026 subfigures renderer in `src/environment/renderer_v2.py` (dormant, to be removed at the retirement gate); from 2026-09-14 'V2' means the registry-based renderer in `src/environment/dashboard/`, run via `scripts/eval/render_recordings_v2.py`." Fix stale `render_recordings.py` line citations. **Revision 17:** add the square-composition rule (bed / token / slot vocabulary, `CELL_PRIORITY`, the shared-cell agent rule), the minimap's coded encoding with its on-page statement, the 48 px square and its measured 49/50 px context, and the three unsolved cases (multiplicity, four-way degeneration, a resource stranded on a blocking tree). |
 | `docs/environment/ENVIRONMENT_SUMMARY.md` | Renderer row: V1 default, V2 status, viewer. |
 | `docs/environment/SCRIPTS_DEPENDENCY_MAP.md` | See the Phase 0 (three scripts, two test rows), Phase 3 (one script, one test row) and Phase 4 (viewer script, HTML "not a script" row, one test row) entries. Each lands in the same change as its files. |
 | `docs/environment/CONFIG_CRITICAL_SETTINGS.md` | No change. |
@@ -1103,6 +1287,7 @@ Reading guide:
 - **CF** marks where the campfire sits. Per Q12 (decided), the new renderer draws the new `assets/campfire.png` there, falling back to the glyph only if the file is missing.
 - **HPR** is hiding predator.
 - The old RUN CONTEXT box is folded into the header, and the action badge sits in the arena card's title strip.
+- **Revision 17:** arena squares are **48 px**, terrain is drawn as the square's ground cover (a "bed") rather than a centred glyph, and a shared square lays its occupants out in slots — one centred, two side by side, three or four in a two-row band. A square holding the agent and a bush shows both, at the agent's full size. The ASCII above cannot draw this; §R17.3 is the specification and Figure 3 plus the design review are the visual reference.
 - **Campfire world as actually configured (M4):** its observation has no Nutrition or Injury. Those rows either disappear or, if Q10 = show, appear as `NUT  0.75  not observed` / `INJ  0.71  not observed` with plain bars and no `(real)` or tick. In the 2026-09-14 working tree its body temperature **is** observed (`Body Temperature` in the breakdown), so `TEMP` shows OBS (with REAL per the noise rule).
 
 **Default world, noise off:** no interoceptive nociception, no temperature, no heat sense, spectrum smell, no location. It collapses to:
@@ -1157,7 +1342,11 @@ Each checkpoint states what would show it failed.
   - *Fails if:* a cell loads a config outside the maintained set, a cell or its `extends` chain touches `archive/`, a config the matrix intends to load raises at `load_env_params` with no recorded fallback to `default.yaml` + overrides, an override value differs from its cited source, or the regenerated campfire config has not passed `env-config-reviewer`.
   - **Revision 13 (2026-09-16), binding:** the clause "M7–M9 load; V1 renders step 0 of each" is **struck for Phases 0 and 1**. All three raise `AttributeError: 'EnvParams' object has no attribute 'thermal_enabled'` at `src/environment/sensor.py:577`, which no Phase-0 change may fix (the file is frozen). They re-enter at the **Phase 1 `_recording_flag` gate** defined in §D5.1. The generated set is **M1, M1x, M2, M3, M4, M4b, M5, M6, M6b** — nine cells, all present and reported. *Fails if:* any Phase 0 or Phase 1 checkpoint is treated as blocked on M7/M8/M9, or the generator crashes (rather than reporting BLOCKED) on one of them.
   - Then: M1–M6b are written, including M4b (M4b's breakdown must lack `Body Temperature`, and its temperature row renders "not observed"); ~~M7–M9 load; V1 renders step 0 of each~~. Per cell, print the snapshot keys, `true_obs is None`, the breakdown names, and the breakdown ↔ noise-order mapping. Also print each cell's `synthetic` flag and `overrides`, its `config_sha256`, the diamond-offset function name (§D7.7 item 8), and whether `Body Temperature` is in its breakdown, plus that viz entry's keys. *Fails if:* M4 lacks `thermal_field`; M4's breakdown contains Nutrition/Injury (the D10 premise is then wrong, so re-check); M4's `Body Temperature` entry lacks a `value` key, or the registry has no owner for a breakdown name; M3/M9 have `true_obs == obs` everywhere; M5's Olfactory is not `visual_grid`; M6b has `true_obs` present; or a mapping is unresolved. (Revision 11: the "an archive config won't load" clause is withdrawn — no cell loads an archived config. If M2/M3 still cannot be generated, the M8/M9 substitution applies and must be recorded as using a **pre-bush-change** world, per Revision 11 §4.)
-- [ ] **CP0.3: Audit positive controls.** V1 M4 reports D1, D2, D3 and D10. Dormant V2 M4 reports D6, and Interoceptive Nociception absent (plus Location/Proprioception if in the breakdown). *Fails if:* any control is missed. **Stop; the audit is broken.**
+- [x] **CP0.3: Audit positive controls.** V1 M4 reports D1, D2, D3 and D10. Dormant V2 M4 reports D6, and Interoceptive Nociception absent (plus Location/Proprioception if in the breakdown). *Fails if:* any control is missed. **Stop; the audit is broken.**
+  - *2026-09-16 developer:* **MET — 7/7 controls fired** (`render_layout_audit.py --controls`, exit 0): D1, D2, D3 on V1 M4; D6, D8 on dormant V2 M4; plus D10 and D12. Each is reported with both participants, the measured overlap in pixels and the coordinates, so a control cannot pass because something else was flagged in the same frame. **One plan correction (owner `senior-developer`): §A2 classes D2 as "text-on-text", and measured it is not** — `'REAL: --'` and the `EXTERO NOCICEPTION` title are a fixed 1.5 px apart and never share a pixel, in the current M4 fixture *and* in the archived world the evidence frame came from. D2 is real but is an **out-of-card** defect (the label is drawn in the card's title strip, outside the card whose bar it labels), and is detected as such. Details in the Phase 0c Implementation Report.
+  - *2026-09-16 developer, fix pass:* **still MET — 7/7 controls fire on the same rules, the same elements and the same coordinates**, and the checkpoint is now defended from the other side as well. The controls only ever measured *sensitivity*: an `ink()` that returned all-True — an instrument flagging every pixel of the canvas — passed all 18 original tests and fired all 7 controls. Negative controls were added (the exact absent-panel set, exact per-rule finding counts on two frozen frames, the rules that must stay silent, and the control coordinates), and under that mutation **10 tests now fail**. Suite 18 → 38 tests, all green unmutated. One new, previously unnumbered **real** defect found while re-examining the "benign" class: the thermal scale's `+84` end label is painted over by the colour strip's last segment. **Owner `senior-developer`** for a defect number. See the Phase 0c fix-pass report.
+  - *2026-09-16 senior-developer, fix-pass verification:* **MET, and the mutation claim reproduces independently.** The verifier re-ran the flag-everything mutation with its own construction (a pytest plugin patching `FrameProbe.ink` at class level to return `ones_like` of the real mask, rather than the in-suite `monkeypatch`): **10 failed, 28 passed**, the same ten test names the developer reported. The complementary mutation — an `ink()` that sees *nothing* — fails **17**, including the four pixel positive controls, which shows the controls are falsifiable from the other side. The new defect is numbered **D13** in §A2, re-derived from the frozen source's own constants and confirmed in the composite pixels. Full report in the Verification Report below.
+- [ ] **CP0.3b: The audit sees squares (added Revision 17).** `cell_overdraw` fires on a synthetic figure that draws two occupants concentrically, and is silent on all three negative controls (single occupant, empty square, bed plus one token). The per-rule finding counts on the frozen M1 and M4 frames are re-pinned and every other rule's count is unchanged. *Fails if:* the rule fires on a single-occupant square, stays silent on the concentric one, or moves any existing rule's count. **Stop; the instrument cannot see the defect the redesign exists to prevent.**
 - [ ] **CP0.4: Spike and decision gate.** A minimal A-style `EpisodeRenderer` (arena + vitals + one pod, figure built once) versus V1, on M4, ≥ 200 frames, pool worker, same lab node (node + CPU recorded). *Fails the gate if:* A median > 0.5 × V1 median. Report to the user with option B before Phase 1.
 - [ ] **CP1: Registry and packer.** `test_dashboard_layout.py` is green. *Fails if:* boxes intersect; a disabled modality's height isn't freed; an unregistered name doesn't raise; M4 yields observed Nutrition/Injury rows; `real_available` differs between episodes of one run.
 - [ ] **CP2.1: Audit clean.** All cells' checked frames: 0 collisions (text-on-border included), 0 clipped text, legibility met, presence met. The stress variant renders clean or raises; no ellipsised number. *Fails if:* any count is non-zero, or "…" appears in a numeric element.
@@ -1172,13 +1361,14 @@ Each checkpoint states what would show it failed.
     - M6b (noise on, no true observations): `true not recorded`;
     - M1 (disabled): no row.
   - **Label:** the column is labelled `noise-free` on that row, never `true`. *Fails if:* a row lacks the true column, or an unobserved row prints a number in the observed column. On M4, no rendered text starting `OBS`/`REAL` belongs to a panel whose name is absent from the breakdown. With Q10 = show, the Nutrition/Injury rows read "not observed". *Fails if:* either condition is violated.
-- [ ] **CP2.6: Entities drawn.** On M4, a step with the campfire in view shows non-empty foreground ink in its cell, and that ink belongs to an `AxesImage` (the `assets/campfire.png` icon, not the glyph fallback) (Revision 7), and glyph codes are unique across `obstacle_names`. *Fails if:* the cell is empty or grey-square-only (no glyph ink), or codes collide.
+- [ ] **CP2.6: Entities drawn.** On M4, a step with the campfire in view shows non-empty foreground ink in its cell, and that ink belongs to an `AxesImage` (the `assets/campfire.png` icon, not the glyph fallback) (Revision 7), and glyph codes are unique across `obstacle_names`. *Fails if:* the cell is empty or grey-square-only (no glyph ink), or codes collide. **Revision 17:** a *shared* square must additionally show ink for every distinct kind its snapshot places there — the campfire's bed and any token standing on it are both checked.
 - [ ] **CP2.7: Extended-range senses.** (Unblocked 2026-09-14: Q5 answered, so Proprioception is drawn as `action_chips`.) `test_dashboard_extended_range.py` green for the decided encoding, A `channel_maps` (r ≥ 1), including:
   - E2n with and without true observations;
   - identical boxes across two episodes with different maxima;
   - forced side column raising wherever the band was chosen;
   - E6's channel label not `GRS`;
   - r_max recorded only after a rendered, audited override, with machine and fonts named. Largest fitting radius per kind recorded in the report and in `12_renderer.md`. E2–E6 take the sensor-band layout if and only if the side column fails its min size. *Fails if:* any in-use cell (E1–E6) raises; any synthetic cell renders past the recorded largest radius instead of raising; a value above 1 is clipped by the scale; or a concatenated video switches layout.
+- [ ] **CP2.8: Shared squares render every occupant (added Revision 17).** On every matrix cell, each checked frame containing a shared square passes `cell_overdraw` (0 findings). All five archetypes — agent on terrain, two movers, three-way, four-way, resource on terrain — are rendered and **looked at** at full size, each either found in a real episode or drawn from a labelled synthetic snapshot. Mutation **M-E** (all occupants forced to the square's centre) fails the audit. The minimap's shared-square caption is present on every frame whose snapshot contains a shared square, and the occupancy rim pip shares no pixel with the hiding-predator identity pip. *Fails if:* an archetype is neither found nor synthesised-and-labelled, any finding count is non-zero, M-E passes, the caption is missing, or nobody looked.
 - [ ] **CP3: Separate V2 entry point.** `render_recordings_v2.py --concat` writes playable MP4s (frame count = steps) for all cells including M7–M9, only under `videos_v2/`. The concat signature assertion holds on real runs and trips on the doctored dir. `test_render_recordings_v2.py` is green (V1 MP4 bytes unchanged after a V2 render of the same dir). CP-G passes. *Fails if:* any file appears or changes under `videos/`, the assertion trips on a real single-run dir, or CP-G fails.
 - [ ] **CP4: Speed.** Same node as CP0.4: V2 median ≤ V1 median on every cell and ≤ 0.5 × on M4; RSS growth < 50 MB over 10 episodes; FDs reported. *Fails if:* any gate is missed.
 - [ ] **CP5: Viewer.** `test_episode_viewer.py` is green; `check_artifact_layout.py` is clean at 500/834/1440; screenshots and the contact sheet are **looked at**, with findings in the report. *Fails if:* arrays differ, the checker flags a defect, or nobody looked.
@@ -1190,6 +1380,7 @@ Each checkpoint states what would show it failed.
     - The blue↔red temperature ramp appears only in the arena underlay, the thermoception card and its shared legend, and the body-temperature row.
     - Teal appears only in smell panels; slate only in vision panels.
     - There is exactly one temperature legend per frame, and a global noise note is present.
+    - **Revision 17:** shared-square token colours and the minimap's split-dot wedges are classified against the same palette table — a split wedge may only carry its occupant's own token colour, and the occupancy rim pip may not use the amber reserved for the hiding-predator identity pip.
   - *Fails if:* any token is found outside its allowed panels above a small anti-aliasing tolerance (stated in the test), a second temperature legend exists, or the noise note is missing or disagrees with params.
 - [ ] **CP-D: Design quality (Revision 6; before retirement; judged against the adopted spec `docs/reviews/design_episode_dashboard.md` since Revision 8).** `visual-design-reviewer` looks at rendered frames from M1, M4, E2 and E8 plus viewer screenshots, at full size. It writes its design spec and verdict to `docs/reviews/design_renderer_layout_redesign.md`. The developer applies the spec: typography, colour system, hierarchy, spacing, iconography, all against the house style sheet. The Implementation Report lists each spec item as applied or rejected-with-reason. A second `visual-design-reviewer` pass on re-rendered frames then passes the "big-tech presentation" bar. *Fails if:* no spec file exists, a spec item is unaccounted for, or the second pass does not pass. Any layout change the spec forces must still pass CP2.1–CP2.7 and CP-G.
 - [ ] **CP6: Docs.** `12_renderer.md` (with the V2 disambiguation sentence), `ENVIRONMENT_SUMMARY.md` and `SCRIPTS_DEPENDENCY_MAP.md` are updated in the same commits as the code. *Fails if:* a script-adding commit lacks the map.
@@ -1223,10 +1414,17 @@ Numbers are kept so earlier references stay valid.
   - Layout choices are **not re-opened as user questions**. Implementation-level details are decided by the developer against Figure 3 and the design review.
   - Every deviation from Figure 3 is reported in the Implementation Report with its reason. CP-D compares rendered frames against Figure 3.
   - Where this plan's earlier ASCII blueprints or wording differ from Figure 3, Figure 3 wins; the plan's behavioural rules and checkpoints still apply.
+- **Q18 (decided 2026-09-16): variant H — terrain bed + token.** Terrain is the square's ground cover, not a centred glyph; occupants stand on it in slots; nothing is drawn concentrically; corner pips, terrain folds and every other coded scheme are rejected on the principle that a viewer should recognise both occupants **by seeing them, not by decoding a legend**. Full rule in Revision 17 §R17.3. Not re-opened.
+- **Q19 (decided 2026-09-16): a 48 px arena square**, up from the 28 px the design round measured as today's cell. `ARENA_CELL_PX = ARENA_CELL_MIN_PX = 48`. Recorded cost: 48 px is 1 px under variant H's measured floor for two-mover squares (49 px) and 2 px under it for the four-way (50 px) — accepted, with a 50 px square as the first remedy if compression kills the marks (§R17.5 item 2). Not re-opened.
 
 ## Open questions for the user
 
-No open user questions (all decided 2026-09-14). See **Decided questions** above; Figure 3 settles any remaining layout detail.
+**Q20 (opened 2026-09-16, Revision 17): which panel does the 48 px square size apply to, and does the grid view show the whole world?** The decision reads "a 48 px grid cell, up from today's 28 px", but those two numbers belong to two different panels: today's **grid-view** square is 96 px (Figure 3, 5×5 window), while ~28 px is today's **World map** square in the left column. The 480 px figure in the decision is exactly a 10×10 world at 48 px — which fits the grid-view card to the pixel, with no change to any neighbouring panel.
+
+- **The reading this plan adopts unless the user says otherwise:** 48 px is the grid view's square size and floor, and the grid view may show the **whole world** wherever the whole world fits at 48 px (a 10×10 world does, exactly); the World map keeps its ~23–29 px squares and the coded encoding of §R17.4.
+- **What the alternative would cost, measured:** drawing the *World map* at 48 px needs a 512 px-wide, 542 px-tall card. Width could be bought by spending the right column's entire 56 px of slack and taking 136 px from the grid card; **height cannot** — the left column is 246 px short in the thermal world and 170 px short in the default world, with no card left to take it from. That option therefore requires moving Interoception out of the left column, i.e. a different layout from Figure 3. Numbers in §R17.2.
+
+Everything else remains decided (see **Decided questions** above); Figure 3 settles any remaining layout detail.
 
 ---
 
@@ -1313,6 +1511,211 @@ No open user questions (all decided 2026-09-14). See **Decided questions** above
 5. **Nothing staged or committed**; the working tree is left dirty for verification. `docs/develop/INDEX.md` and `SAVED_RUN_CONFIG_COMPAT.md` remain staged by another session and were not touched.
 
 **Speed check:** skipped, and the skip is justified rather than assumed — every file in this pass is a hand-run tool off the training path (`v1_path_guard.py`, `make_render_fixture_recordings.py`, a test) plus one config used only by the fixture generator. No environment step, model, or observation-pipeline code was touched.
+
+*Implemented by: developer*
+
+### Phase 0c (CP0.3): the pixel-overlap audit, and its calibration
+
+> **Implemented by**: developer
+> **Date**: 2026-09-16
+> **Scope**: `scripts/eval/render_layout_audit.py` + `tests/env/test_render_audit_controls.py` + one `SCRIPTS_DEPENDENCY_MAP.md` row pair. No frozen file, no `src/`, no `configs/`.
+
+**What this phase is, in plain words.** The redesign's central promise is that panels will no longer be able to overlap — not "we nudged the labels until they stopped colliding", but "the layout makes collision impossible". Nobody can check that promise by looking at a picture and forming an opinion, so this phase builds the thing that measures it: a script that takes a real rendered video frame and reports, in pixels, where drawn content collides — text over text, text lying across a panel edge, a label drawn outside the panel it belongs to, content cut off at the edge of the image. The script is the instrument. An instrument nobody has calibrated is worthless, so it ships with **positive controls**: defects we already know are in today's videos, which it must find. If it cannot find a defect a human can point at, it is not sensitive enough to certify anything, and that is a stop-work condition rather than a reason to shorten the list of defects.
+
+**Result: 7 of 7 controls fired**, including all five the brief pins as ground truth. One of the five turned out to be described incorrectly in this plan; that is written up below rather than quietly accommodated.
+
+**Files.**
+
+| File | Change |
+|---|---|
+| `scripts/eval/render_layout_audit.py` (new, ~620 lines) | The audit (§D5.2). Loads a fixture recording, builds each step's inputs the way `render_recordings.py::_render_episode` does, renders with the **frozen** V1 or dormant V2 renderer read-only, measures every artist's ink, and reports findings in the families `text_over_text` / `text_over_border` / `text_over_fill` / `out_of_card` / `clipped` / `out_of_canvas` / `panel_absent` / `observed_caption` / `legibility` / `numeric_in_arena`. `--controls` runs the CP0.3 controls and exits non-zero if any required one misses. Writes `audit.json` + `index.html` under `--out`. |
+| `tests/env/test_render_audit_controls.py` (new, 18 tests) | Import-isolation test (the audit must not import the renderer package it audits); pure-helper unit tests; the five positive controls as `integration` cases that **skip with a reason** when the gitignored fixtures are absent; a check that V1 *does* draw the panel V2 drops (so D8 cannot pass because of a bug in the audit's own title table); and a **mutation control**. |
+| `docs/environment/SCRIPTS_DEPENDENCY_MAP.md` | §1c bare-import row for the test, §3 row for the script. **This file is MIXED** — see Blockers. |
+
+**Collision definition and tolerances** (full statement in the script's module docstring, which is the authority):
+
+- **Ink** is measured by **isolation**: `ink(E)` = pixels that change when *only* `E` is drawn over the bare background. A pixel counts at a per-channel difference **> 8/255**.
+- A **collision** is a Text's ink, **dilated by 1 px**, sharing **≥ 2 px** with another foreground element's ink. Foreground/background is decided by artist **type and geometry** (the plan's 90% rule), never by a painter's tag.
+- Sub-classes: partner is a Text → `text_over_text`; partner is an outline/hairline → `text_over_border` (forbidden outright); any other foreground → `text_over_fill` (reported separately, see false positives).
+- `out_of_card`: a Text with ink in a card's **title strip** — the band between the card's top edge and its own title, which is one text line tall and belongs to the title alone.
+- Canvas margin 4 px; legibility floor **off by default** (see Deviation 3).
+
+**Control results, one by one** (frame = cell M4, episode 1, step 0, the fixture written by `make_render_fixture_recordings.py`):
+
+| Control | Frame | Rule that fired | Elements | Measured |
+|---|---|---|---|---|
+| **D1** | V1 M4 | `text_over_text` | `'OBS:  0.00'` × `'THERMOCEPTION (OBS ONLY)'` | **59 px** at (1179, 357)–(1230, 359) |
+| **D2** | V1 M4 | `out_of_card` | `'REAL: --'` × the card titled `'EXTERO NOCICEPTION (OBS ONLY)'` | **169 px** at (1183, 279)–(1228, 286) |
+| **D3** | V1 M4 | `text_over_border` | `'MINIMAP'` × the Run Context card outline | **30 px** at (252, 644)–(295, 644) |
+| **D6** | V2 M4 | `text_over_text` | `'COLLISION  (OBS ONLY)'` × `'C'`, and × `'U'` | **17 px** at (1117, 453); **25 px** at (1179, 453) |
+| **D8** | V2 M4 | `panel_absent` | `Interoceptive Nociception` in the breakdown, no panel title with ink | — |
+| *D10* | V1 M4 | `observed_caption` | `'OBS:  0.13'` × panel `'Nutrition'` (absent from the breakdown) | 4 captions, Nutrition + Injury |
+| *D12* | V1 M4 | `panel_absent` | `Proprioception` emitted by the adapter, never drawn | — |
+
+Coordinates are image pixels from the top-left. Both participants are checked, not just the finding count: `_control_matches` rejects the right rule on the wrong elements, and a test asserts that.
+
+**What the plan got wrong about D2 — the one substantive correction.** §A2 classes D2 as **text-on-text** ("'REAL: --' floats over the EXTERO NOCICEPTION pod title"). Measured, it is not a text-on-text collision and never was:
+
+- `'REAL: --'` occupies y 711.3–721.3; the title occupies y 722.8–732.8. They overlap horizontally by 47 px and are separated vertically by **1.5 px**. They share no pixel.
+- This is **not** a consequence of cell M4's world changing (bush rule, Revision 14 re-level). I re-rendered the **archived campfire world** with the exact recipe that produced the original evidence frame (`figures/v1_thermal.png`: `PRNGKey(3)`, actions RIGHT DOWN RIGHT DOWN REST) and got **byte-identical bounding boxes** for both texts. The gap is structural: the label sits at `bar_y + bar_h + label_dy` and the title at `frame_bottom + pod_h + 0.015`, a constant 0.015 axes-fraction apart **independent of the squeeze factor**, so no world can close it.
+- The defect is nonetheless **real**: the label is drawn *outside the card* whose bar it labels, in that card's title strip, where it reads as part of the title line. That is the "content outside its allotted box" family, and it is what `out_of_card` detects.
+
+Consequence: §A2's D2 row and the Context bullet should be re-worded from "text-on-text" to an out-of-box/escaped-label defect. **Owner: `senior-developer`** — I did not edit the analysis section.
+
+**False-positive behaviour.** The honest answer first: **there is no defect-free V1 or V2 frame to measure a clean false-positive rate against.** V1's defects are systemic, so "a frame with no known defect" does not exist in this renderer. The measurement is therefore per class, on three frames:
+
+| Frame | Total | `text_over_text` | `text_over_border` | `out_of_card` | `text_over_fill` | `panel_absent` | `observed_caption` | `clipped` / `out_of_canvas` / `numeric_in_arena` |
+|---|---|---|---|---|---|---|---|---|
+| V1 M1 (default world) | 12 | 4 | 2 | 1 | 0 | 1 | 4 | 0 |
+| V1 M4 (campfire) | 16 | 1 | 3 | 1 | 6 | 1 | 4 | 0 |
+| V2 M4 (dormant) | 11 | 2 | 0 | 0 | 5 | 2 | 2 | 0 |
+
+- **Hard classes (`text_over_text`, `text_over_border`, `out_of_card`, `panel_absent`, `observed_caption`): every single finding traces to a numbered defect.** On M1 that is D5 (three separate `OBS:`/`REAL:` row collisions — the audit rediscovered D5 unprompted on the default world, which is exactly where §A2 says it lives), D3, D2, D12, D10 ×4, plus the extero `OBS:` readout lying on the Collision card's border, which is the same escape that produces D1 on M4. Zero unexplained hits in these classes across all three frames.
+- **`text_over_fill` is the one benign class**, and it is why it is reported separately and is not a control. All 11 instances are text drawn deliberately inside its own widget: the thermoception diamond prints each cell's reading inside that cell's coloured patch (8 of 11), the body-temperature gauge prints its value inside the bar with a white halo — `renderer.py` documents that choice explicitly — and a rotated `GRS` channel label sits over its own bar. Judging these "by design" is my reading of the frozen source, not a measurement.
+- **Nothing flags everywhere**: 11–16 findings per frame out of 54–103 text elements and 147–305 drawn elements, and three rules stayed silent on every frame.
+- One marginal hit worth naming: `'GRS'` × a card outline on V1 M4 at **4 px**, just over the 2 px floor. Real but minor, and previously unnumbered.
+
+**Tests.** `JAX_PLATFORMS=cpu pytest tests/env/test_render_audit_controls.py -q` → **18 passed in 71 s**, exit 0.
+
+The mutation control is the one that matters: with `MIN_OVERLAP_PX` raised to 10⁹, `text_over_text`, `text_over_border` and `out_of_card` must all disappear while `panel_absent` — which does not depend on pixel overlap — must survive. It does. That is what distinguishes a measurement from a constant that always says "yes".
+
+**Bugs found in the instrument by running it, and fixed** (each was caught by the control set or the full-frame reports, not by reading the code):
+
+1. **Border-vs-fill was decided from the declared face colour.** V1's cards are `Rectangle`s filled in the *background* colour, so an alpha test called them solid while the canvas shows only their edge. D3 was reported as `text_over_fill` instead of `text_over_border` — right frame, wrong collision, which counts as not firing. Now decided from measured ink: an element whose ink lies on the perimeter of its own bbox is an outline.
+2. **The title-strip rule invented a 65 px strip** in the left column, because a card whose own title is not in the title table (V1's "RUN CONTEXT") adopted the nearest matching text far above it — 4 false positives. Bounded to one title line.
+3. **`panel_absent: Body Temperature` on V1 M4 was wrong** — the gauge *is* drawn, labelled `BODY TEMP   DIE -15 / +15`. An exact-match title table reported a drawn panel as dropped, which is the one verdict this rule exists to give. Now longest-prefix matched.
+4. **Caption attribution used horizontal proximity**, so a vitals row's right-aligned value was blamed on another panel. Now attributed by column (the axes) and vertical order.
+5. **Text-text collisions were double-counted** (once from each side).
+
+**Deviations from the plan, and why.**
+
+1. **Ink is measured by ISOLATION, not by hiding the element** (§D5.2 item 2 says hide-and-diff). Hide-and-diff has a blind spot on exactly the case the audit exists to find: where text is drawn opaquely over a card border, hiding the border changes no pixel, so the border's "ink" excludes the overlapped region and the collision reports clean. The plan's intent (pixels, not tags) is preserved and strengthened. Cost: one render per element rather than per element, same order.
+2. **Added an `out_of_card` rule**, which the plan's ten rules do not contain. Needed because V1 draws a whole column into **one** Axes, so the plan's "content outside its allotted box" is vacuous at axes level — the *card* is the box. This is what detects D2. The new renderer, with one clipped axes per panel, will satisfy the axes-level form as well.
+3. **The legibility floor defaults to OFF.** The plan says V1 control frames are judged at the old 8 pt floor, but V1 draws most labels at 4–7 pt, so that floor emits ~40 findings per frame on a frozen renderer nobody will fix — noise that buries the defects. The rule is implemented and enabled with `--text-floor-px` (the redesign's floors are 14 px / 12 px).
+4. **Added D10 and D12 as controls.** CP0.3 names both; they were free calibration.
+5. **Not implemented in this phase** (all belong to later checkpoints, none is a CP0.3 gate): the vocabulary rule (§D5.2 item 8 — V1/V2 are exempt anyway), mutations M-A…M-D (CP2.2), the value-to-pixel checks (CP2.3), obstacle ink (CP2.6), per-finding crop images in the contact sheet (only `index.html` + `audit.json` are written), and the headless-Chrome pass (CP5).
+6. **Two rules are implemented but not exercised**, stated rather than left to be discovered: `numeric_in_arena` is not wired to the CLI (it needs a named arena axes, which V1 does not label and the new renderer will), and the clip-path half of the `clipped` rule never fires because neither V1 nor V2 sets a clip path on text — only the canvas-edge half is exercised.
+
+**Prior-art check (done, not skipped).** `grep -i` over `docs/develop/active/issues/KNOWN_BUGS.md`: the dashboard-collision family is already registered — one row covers **D1–D9, D11, D12**, a second covers **D10**, and a third covers the live renderer's shared icon cache / dead figure cache / `DNG` label. Nothing I measured contradicts those rows. Two items a curator may want: D2's class is wrong in this plan (a doc fact, not a new bug), and **D5 is confirmed reproducible on the default world today** with pixel evidence. **Owner: `bug-curator`** — sub-agents cannot spawn it.
+
+**Runtime** (container, i9-7900X, CPU): single V1 M4 frame audit **22 s**, single V2 M4 frame **13 s**, full 7-control run **33 s**. This is a phase-boundary cost on a hand-run tool, not a training cost.
+
+**Speed check: skipped, and the skip is justified rather than assumed.** Nothing in this phase is on the hot path or on any training path: two new files that are hand-run/test-only, plus two documentation rows. No environment step, model, loss, observation-pipeline or renderer code was touched. The strongest evidence is independent of my judgement — the guard's raw-frame hashes for M1, M2 and M4 are unchanged, so V1's rendered output is bit-identical to before this phase.
+
+**CP-G (V1 pipeline untouched).** `v1_path_guard.py check` run **before** and **after**: both `PASS=10, ACCEPTED=0, ATTRIBUTED=0, UNATTRIBUTABLE=0` with `FRAMES PASS` on M1, M2, M4 and `RESULT: OK`, exit 0. `git status` over the ten frozen paths is empty. `accept` was never run. The audit imports the frozen renderers and executes them read-only; it patches `matplotlib.pyplot.figure`/`close` for the duration of a render only, so the Figure survives the renderer's own `plt.close`, and it **proves the captured figure redraws byte-identically to the returned frame before taking any measurement** — if it did not, every finding would describe a different picture from the one under audit.
+
+**Blockers and follow-ups.**
+
+1. **`docs/environment/SCRIPTS_DEPENDENCY_MAP.md` is a MIXED FILE.** Its working-tree diff already carried another session's `recovery_in_bush_tuning` `f01…f05` → `f02…f06` renumbering before I touched it. I added my two rows and **staged and committed nothing**. Whoever commits must check hunks and use an explicit pathspec.
+2. **Plan correction owed** for D2's classification (owner `senior-developer`), per above.
+3. **Nothing staged, nothing committed**; working tree left dirty for verification. `docs/develop/INDEX.md` and `SAVED_RUN_CONFIG_COMPAT.md` remain staged by another session and were not touched.
+4. M7/M8/M9 remain blocked at current code (Revision 13); this phase neither depends on them nor changes that.
+
+*Implemented by: developer*
+
+### Phase 0c fix pass (2026-09-16), after the senior-developer verification and the code review
+
+**What this pass is, in plain words.** Phase 0c built the instrument this redesign will be judged by — a script that measures, in pixels, where a rendered video frame's content collides. Verification passed it, but a code review then found a hole that matters more than anything in the original report: **the test suite could not tell the instrument apart from one that flags everything.** If the function that measures "which pixels did this element put on the canvas" had simply answered "all of them", every one of the 18 tests would still have passed and all seven known defects would still have been "found" — because a test that asks *did it find the defect* can only ever measure sensitivity, never discrimination. A smoke alarm that is always sounding detects every fire. This pass adds the tests that a permanently-sounding alarm fails, fixes three bugs in the instrument that were fixed but never tested, corrects one class of finding that was wrongly described as harmless, and pins *where* in the frame each known defect is, not merely that it was reported.
+
+**Headline result.** The instrument is unchanged in what it reports on real frames — the same seven controls fire on the same rules, the same elements and the same coordinates as before. What changed is that it can now be *falsified*: under a deliberately broken measurement that claims every pixel for every element, **10 tests fail** where previously **none** did.
+
+**1. Negative controls — the important one.** Four kinds of "what must NOT be reported" are now pinned:
+
+- **The exact set of silently-dropped panels on V1 M4** is `{"Proprioception"}` — not "Proprioception is somewhere in the set". The test additionally asserts that Body Temperature, Interoceptive Nociception and Thermoception are in the world's observation breakdown *and* are not reported absent, which pins instrument bug 3 (below) at frame level rather than only at unit level.
+- **Exact per-rule finding counts on two frozen frames** (V1 M4 and V1 M1), as equality against a dict, not as lower bounds. They are exact on purpose: V1 is a frozen file and the fixtures are pinned by the guard's raw-frame hashes, so any movement is either a change to a frozen renderer or a change in the instrument, and both must be seen rather than absorbed.
+- **The rules that must stay SILENT** on those frames (`clipped`, `out_of_canvas`, `legibility`, `numeric_in_arena`, and `fill_over_text` on M1). An instrument that flags everything cannot keep any of them quiet.
+- **Coordinates** (item 4 below), which turn out to catch the flag-everything mutation too, since a whole-canvas overlap has a whole-canvas bounding box.
+
+**The proof, run rather than asserted.** `FrameProbe.ink()` was replaced with one returning an all-True mask (scratch pytest plugin, `tmp/20260916_173000_mutation/mutate_ink.py`) and the suite re-run. **10 failed, 28 passed** (against **0 failed** for the original suite):
+
+| Test that fails under a flag-everything `ink()` | What it catches |
+|---|---|
+| `test_positive_control_hits_at_the_pinned_coordinates[D1]` | overlap bbox becomes the whole canvas |
+| `test_positive_control_hits_at_the_pinned_coordinates[D2]` | 〃 |
+| `test_positive_control_hits_at_the_pinned_coordinates[D3]` | 〃 |
+| `test_positive_control_hits_at_the_pinned_coordinates[D6]` | 〃 |
+| `test_positive_control_hits_at_the_pinned_coordinates[D10]` | 〃 |
+| `test_v1_m4_finding_counts_are_pinned` | hard-class counts explode; `out_of_card` collapses to 0 (no element's ink is an outline any more, so no card is recognised) |
+| `test_v1_m1_finding_counts_are_pinned` | 〃 |
+| `test_v1_m1_reproduces_d5_in_the_vitals_column` | D5's three collisions stop being three, and stop being in the vitals column |
+| `test_v1_m4_out_of_card_flags_only_the_escaped_readout` | the single escaped-label finding disappears |
+| `test_fill_class_splits_the_thermal_scale_label_from_the_in_widget_labels` | the benign/covered split collapses |
+
+**Stated honestly, two things this mutation does *not* break.** `test_positive_control_fires` still passes for all seven — which is the point: controls measure sensitivity, and a flag-everything instrument is maximally sensitive. And `test_v1_m4_absent_panels_are_exactly_proprioception` also still passes, because `panel_absent` asks only whether a title has *any* ink and all-True gives every title ink; that test is a negative control against a **different** failure — a broken title table, i.e. instrument bug 3 — which is what it was asked for. An in-suite mutation test (`test_an_ink_that_flags_everything_breaks_the_calibrated_counts`) now encodes this permanently so the property is not re-lost.
+
+**2. The three untested instrument bugs now have regression tests.**
+
+| Bug | Was | Now covered by |
+|---|---|---|
+| **#2** the title-strip rule invented a 65 px band (a card whose own title is not in the title table adopted a distant one — 4 false findings) | fixed, untested | `test_title_strip_is_bounded_to_one_title_line` (unit, no render: a title 65 px above a card yields **no** strip; one line above yields a strip ≤ 4 rows tall) **and** `test_v1_m4_out_of_card_flags_only_the_escaped_readout` (frame level: exactly one finding, and never `RUN CONTEXT` / `MINIMAP` / `10x10`) |
+| **#4** caption attribution used horizontal proximity | fixed, exercised only by D10, which was **missing from the parametrised control list** | D10 added — the list is now parametrised over `list(audit.CONTROLS)`, so a control can never again be added and left untested — plus `test_owning_title_attributes_by_column_not_by_x_proximity` (unit: the caption's own title does not overlap it in x, a foreign column's does, and the own-column title must win) |
+| **#5** text-text collisions double-counted, once from each side | fixed, untested | `test_text_collisions_are_not_double_counted` on M1 (the frame with the most text-text collisions), plus the exact count pin (4, not 8) |
+| **#3** `BODY TEMP   DIE -15 / +15` reported as a dropped panel | pinned at unit level only; the integration test never asserted Body Temperature was present | now asserted in `test_v1_m4_absent_panels_are_exactly_proprioception` |
+
+**3. `'+84'` — the verdict: a real, previously unnumbered layout defect, not an artefact of the rule.** The verification found that five of the six `text_over_fill` instances on V1 M4 are text inside its own widget, but `'+84'` is text outside one, with 3 % ink overlap and the widget z-ordered above. Investigated properly:
+
+- `'+84'` is the **maximum-value label of the thermal scale strip** under the arena (`renderer.py:777`). Its partner is the **52nd and last segment of the colour strip** (`renderer.py:769-772`).
+- The cause is arithmetic, not chance. The strip is drawn as 52 segments each `strip_w/51 + 0.002` wide — the `+0.002` being a deliberate bleed so no hairline gap shows between segments. That bleed applies to the last segment too, so the strip ends at axes-fraction **0.77220** while the label is anchored at **0.77000** with `ha='left'`. The segment is `zorder=5`, the label `zorder=3`.
+- **It is therefore structural and world-independent**: both numbers are constants, so on every thermal frame ever rendered the first ~2 px column of the `+` glyph is painted over by the dark-red end of the colour bar. Confirmed in the composite: at both shared pixels the final frame is `[103 0 31]` — the segment's colour exactly, 157 and 243 away from what the glyph alone would show.
+- Small (2 px of a 70 px glyph) but real: the reader sees a clipped `+`. Same family as the `'GRS'` × card-outline 4 px hit named in the original report.
+
+**Recorded, not numbered: owner `senior-developer`.** It belongs in §A2 alongside D1–D12; the plan is yours, so I have not assigned it a number. **Prior art checked** (`grep -i` over `docs/develop/active/issues/KNOWN_BUGS.md`): nothing on the thermal scale strip, colour bar or this collision. The dashboard row covers D1–D9, D11, D12 and does not include it — **owner `bug-curator`** to extend that row once the defect has a number (sub-agents cannot spawn it).
+
+**And `text_over_fill` has stopped being reported as uniformly benign.** It is split into two measured classes: `text_over_fill` (the label is composed last, so the frame shows the glyph — legible by design) and **`fill_over_text`** (the partner is composed after the label and covers its raw ink — a defect whatever the intent). On V1 M4 that is **5 benign + 1 defect**, replacing the old blanket "6, all by design"; on V2 M4, 5 benign + 0.
+
+**How that split is decided, and the two candidates that were measured and rejected.** This mattered more than expected, because the obvious pixel tests are wrong:
+
+| Discriminator | body-temp readout | 4 thermoception readings | V2 `GRS` | `'+84'` | |
+|---|---|---|---|---|---|
+| (A) hide the text, call unchanged pixels "lost" | **DEFECT, 29 px** ✗ | benign | benign | DEFECT | false-positives on a white halo over a `#F3F4F6` card |
+| (B) solo render vs text+partner | benign | **DEFECT, 33-43 px** ✗ | **DEFECT** ✗ | DEFECT | false-positives on every anti-aliased glyph edge |
+| **(C) composition order + shared raw ink** | benign ✓ | benign ✓ | benign ✓ | **DEFECT** ✓ | kept |
+
+Anti-aliasing defeats (A) and (B): a glyph's fringe pixels are mostly background by construction, so any colour test on them measures the blend, not the occlusion. Containment fails too — V2's `GRS` label lies half outside its own bar (54 % of its ink on it) and is perfectly legible. (C) is not the classification-by-declaration that §D5.2 item 1 forbids: no painter is asked which of its own ink to ignore; this is the order matplotlib composed the image in, and it was checked against the pixels at the decisive solid-ink pixels of all eleven collisions. It is also the cheapest — it adds no extra render, where (A) and (B) each cost one per text.
+
+**4. Coordinates are pinned.** Every control hit is now asserted at its measured position: rule, both participants, overlap in pixels **and** bounding box, tolerance ±2 px on each coordinate and ±20 % on the pixel count. The frames are byte-pinned by the guard on this machine so the honest tolerance is zero; the couple of pixels are allowed only for freetype hinting on another machine, and are far tighter than any relocation (a collision that moved to a different element moves by tens to hundreds of pixels).
+
+**5. Small items.**
+
+- **D2's `text_over_border` alternative removed** — it was *unreachable*, not lenient: a border finding names its partner `patch Rectangle in axes@NNNN` (the axes' name), so `b_contains: "EXTERO NOCICEPTION"` could never match one. `text_over_text` stays, because that is the class the defect would take if the renderer's 1.55 px gap ever closed. A test pins both facts, and the stale comment claiming D2 "collides with a BORDER" is corrected to match Revision 15.
+- **The `clipped` docstring corrected rather than the rule implemented — decided by measurement.** Of 103 texts on V1 M4 and 54 on V2 M4, **zero** have a clip path or a clip box set (49 and 10 carry the `clip_on` flag, which here clips against nothing). The clip-path half would be an extra render per text to execute a branch no fixture can enter. The docstring now says so and says when it gets written: the phase that introduces painters which actually clip.
+- **`numeric_in_arena` is now reachable**, via `--arena-axes NAME`, and is *exercised* rather than merely wired: V1 draws its arena into an unlabelled Axes so the rule cannot run on V1 at all, but the dormant V2 names its axes, so a test points the rule at a V2 axes known to contain numeric text and asserts all 5 findings — and asserts it stays silent with no `--arena-axes`, since the arena cannot be guessed.
+- **`REQUIRED_CONTROLS` removed** along with the test that asserted it; a replacement test asserts the name is *gone* and that `CONTROLS` is the full set of seven. `main()` already failed on any miss, so the constant advertised D10/D12 as optional when CP0.3 names them too.
+
+**Final control table — unchanged by this pass, which is the point.**
+
+| Control | Frame | Rule | Elements | Measured |
+|---|---|---|---|---|
+| **D1** | V1 M4 | `text_over_text` | `'OBS:  0.00'` × `'THERMOCEPTION (OBS ONLY)'` | **59 px** at (1179, 357)–(1230, 359) |
+| **D2** | V1 M4 | `out_of_card` | `'REAL: --'` × card titled `'EXTERO NOCICEPTION (OBS ONLY)'` | **169 px** at (1183, 279)–(1228, 286) |
+| **D3** | V1 M4 | `text_over_border` | `'MINIMAP'` × the Run Context card outline | **30 px** at (252, 644)–(295, 644) |
+| **D6** | V2 M4 | `text_over_text` | `'COLLISION  (OBS ONLY)'` × `'C'`, and × `'U'` | **17 px** at (1117, 453); **25 px** at (1179, 453) |
+| **D8** | V2 M4 | `panel_absent` | `Interoceptive Nociception` | — |
+| **D10** | V1 M4 | `observed_caption` | `'OBS:  0.13'` × panel `'Nutrition'` | at (316, 292)–(365, 298) |
+| **D12** | V1 M4 | `panel_absent` | `Proprioception` | — |
+
+**Frame totals after the fill split** (the only change to the false-positive table): V1 M4 is now `text_over_border` 3, `text_over_fill` **5**, `fill_over_text` **1**, `text_over_text` 1, `out_of_card` 1, `panel_absent` 1, `observed_caption` 4 — 16 findings, as before. V1 M1 and V2 M4 are unchanged in total (12 and 11).
+
+**Tests.** `JAX_PLATFORMS=cpu pytest tests/env/test_render_audit_controls.py -q` → **38 passed in 110 s**, exit 0 (was 18 passed in 71 s). `render_layout_audit.py --controls` → **7/7 fired**, exit 0.
+
+**CP-G (V1 pipeline untouched).** `v1_path_guard.py check` after the pass: `PASS=10, ACCEPTED=0, ATTRIBUTED=0, UNATTRIBUTABLE=0`, `FRAMES PASS` on M1, M2 and M4, `RESULT: OK`, exit 0. `git status` over the ten frozen paths is empty. `accept` was never run.
+
+**Speed check: skipped, and the skip is corroborated rather than asserted.** Both files are hand-run/test-only and off every training path; no environment step, model, loss, observation-pipeline or renderer code was touched. The independent evidence is the guard's raw-frame hashes for M1, M2 and M4, which are unchanged — V1's rendered output is bit-identical to before this pass. Tool runtime is unchanged in kind (the kept fill discriminator adds no render); the suite grew 71 s → 110 s because it now renders two more frames (the M1 fixture and the V2 arena-rule case) and runs the ink mutation.
+
+**Files.**
+
+| File | Change |
+|---|---|
+| `scripts/eval/render_layout_audit.py` | `fill_over_text` class + `_is_painted_over` / `_draw_index`; D2's dead rule removed and its stale comment corrected; `REQUIRED_CONTROLS` removed; `--arena-axes` added and wired; docstring corrected on the fill classes, the `clipped` rule's scope and the arena rule, and gained the "sensitivity is only half of calibration" statement |
+| `tests/env/test_render_audit_controls.py` | 18 → 38 tests: negative controls, coordinate pins, regressions for instrument bugs 2/4/5 and 3-at-frame-level, the fill-split test, the arena-rule test, the flag-everything mutation |
+| `docs/environment/SCRIPTS_DEPENDENCY_MAP.md` | the §3 row's "any of the five required ones" corrected to any of the seven, and `--arena-axes` documented. Already listed in Phase 0c's File Changes; the file is otherwise clean of other sessions' work as of this pass |
+| `RENDERER_LAYOUT_REDESIGN.md` | this report + the CP0.3 checkpoint note |
+
+**Hand-offs.**
+
+1. **`senior-developer`** — give the `'+84'` collision a defect number in §A2 (structural, every thermal frame; evidence above), and note that §A2's D5/false-positive discussion now reads 5 benign + 1 covered rather than "all 11 by design".
+2. **`bug-curator`** — extend the dashboard row in `KNOWN_BUGS.md` once that number exists; nothing there covers it today.
+3. Nothing staged, nothing committed; working tree left dirty for verification.
 
 *Implemented by: developer*
 
@@ -1418,6 +1821,136 @@ No open user questions (all decided 2026-09-14). See **Decided questions** above
 
 **Phase 0b commit (explicit pathspec):**
 `configs/environment/experiment/basic/06-campfire_thermal_10x10.yaml`, `scripts/eval/make_render_fixture_recordings.py`, `scripts/eval/v1_path_guard.py`, `tests/env/test_v1_path_guard.py`, `docs/develop/active/refactors/renderer_layout_redesign/v1_guard/baseline.json`, `docs/environment/SCRIPTS_DEPENDENCY_MAP.md`, `docs/develop/active/refactors/RENDERER_LAYOUT_REDESIGN.md`, `docs/diary/2026-09-16.md`.
+
+### Phase 0c (CP0.3): the pixel-overlap audit, and its calibration
+
+> **Verified by**: senior-developer
+> **Date**: 2026-09-16
+> **Verdict**: **VERIFIED WITH ISSUES.** The instrument is calibrated and its key threshold is principled, not tuned. Every measurement the developer reported was independently reproduced, to the pixel. The issues are two overstated claims in the write-up and one small unexamined finding; none blocks the Phase 0c commit.
+
+**What was checked, in plain words.** This phase built the tool the whole redesign will be judged by: a script that takes a real rendered video frame and reports, in pixels, where drawn content collides — labels on top of each other, a label lying across a panel's edge, a label escaping the panel it belongs to, a panel silently missing. A tool like this is only worth anything if someone has checked that it can actually find defects a human can point at, and — just as important — that it is not finding them because a number was quietly chosen to make it do so. That second worry is the one this verification was built around, and it is the reason nothing below is taken from the developer's report: every figure was re-measured from the system's own output.
+
+**The headline: the threshold is principled, and the hard-stop condition does not apply.** The rule that catches defect D2 (a readout drawn outside its own panel, in the strip that belongs to the panel's title) needs to know how tall that strip is. The audit bounds it at "one title line", expressed as a factor of **2.0** times the title's own height. The developer stated this factor was chosen, and that it is the only reason D2 is detectable — which raises the obvious worry that 2.0 was picked *because* D2 would otherwise be missed. **Swept, it was not.** The panel that produces D2 has a physically measured strip-to-title-height ratio of **0.955**, so D2 fires at any factor at or above that. The next panel in the frame that could produce a *false* finding sits at ratio **7.820**, and the sweep confirms the first spurious findings appear only between factor 6 and 10. The clean band is therefore **0.955 ≤ factor < 7.820 — a range of 8.2×**, with 2.0 sitting near its centre (the geometric midpoint is 2.73). A factor anywhere from 1.0 to 7.8 gives byte-identical results on this frame. That is a wide, physically meaningful range, not a narrow window around a tuned value. Two further points in its favour: the bound is expressed in units of the title's own ink height, so it tracks the font rather than being a pixel count picked by hand; and the lower edge of the band is not a tolerance at all but the actual geometry of the defect.
+
+| factor | `out_of_card` findings | D2 fires | spurious findings |
+|---|---|---|---|
+| 0.50, 0.80 | 0 | no | — |
+| **1.00 … 6.00** (incl. the shipped **2.00**) | **1** | **YES** | **none** |
+| 10.00 | 3 | yes | `RUN CONTEXT`, `+0.00 real +0.00` |
+| unbounded | 7 | yes | 6, incl. `MINIMAP`, `10x10` |
+
+| File | Change | Status | Notes |
+|------|--------|:------:|-------|
+| `scripts/eval/render_layout_audit.py` | new, 1034 lines (untracked) | ✅ | Imports neither a layout module nor a registry. Classifies foreground/background by artist type and geometry, never by `gid` — verified by reading `enumerate_elements`. Border-vs-fill decided from measured ink, which is what makes D3 report as `text_over_border` rather than `text_over_fill`. Proves the captured figure redraws byte-identically to the returned frame **before** measuring (`FrameProbe.__init__`), and pins the layout engine to `none` so hiding an artist cannot re-solve the layout. |
+| `tests/env/test_render_audit_controls.py` | new, 183 lines (untracked) | ✅ | Re-run by the verifier: **18 passed in 74.7 s**, exit 0. The mutation control is real: with `MIN_OVERLAP_PX` at 10⁹ the three pixel rules go silent while `panel_absent` survives. |
+| `docs/environment/SCRIPTS_DEPENDENCY_MAP.md` | +2 / −0 | ✅ | §1c bare-import row and §3 row, both accurate. **The developer's "MIXED FILE" blocker has cleared** — the other session's figure renumbering has since been committed, and the working-tree diff is now exactly these two added rows and nothing else. Still commit with an explicit pathspec. |
+| `RENDERER_LAYOUT_REDESIGN.md` | Revision 15 + §A2 + §D5.2 + this report | ✅ | Written by the verifier, as the developer correctly flagged was owed. |
+
+**Independent evidence — every number below was re-measured, not read from the report.**
+
+| What was re-derived | Result |
+|---|---|
+| All seven controls, re-run by the verifier | **7/7 FIRED**, exit 0. Rules, element pairs, pixel counts and coordinates reproduce the developer's table **exactly**: D1 `text_over_text` 59 px at (1179, 357); D2 `out_of_card` 169 px at (1183, 279); D3 `text_over_border` 30 px at (252, 644); D6 `text_over_text` 17 px and 25 px at y 453; D8/D12 `panel_absent`; D10 `observed_caption`. |
+| "Each control fires on the right elements" | **Confirmed, and it is structural rather than incidental.** `run_controls` counts a control as fired only through `_control_matches`, which requires the rule *and* both named participants; a right-rule/wrong-element hit yields `fired: False`. `test_control_matcher_rejects_the_right_rule_on_the_wrong_elements` asserts both rejection paths. |
+| D2 is not text-on-text | **Confirmed.** `'REAL: --'` occupies y 711.27–721.27, the title y 722.82–732.82 — a **1.55 px** gap, **0 shared pixels** both raw and after the 1 px dilation. Independently, only one finding in the whole frame pairs `REAL:` with `EXTERO NOCICEPTION`, and it is `out_of_card`. |
+| That this is not an artefact of M4's world changing | **Confirmed by a stronger route than the developer's.** Rather than re-render the archived world, the verifier re-derived the geometry from the frozen source: the readout anchors at `y_frame_bottom + (0.02+0.07+0.02)·squeeze` and the card top at `y_frame_bottom + 0.11·squeeze` — **algebraically equal at every squeeze factor** — with the title a constant 0.015 above. No world and no squeeze can close the gap or move the label inside the card. |
+| D5 on the default world | **Confirmed.** Cell M1 step 0: three `OBS:` × `REAL:` collisions at **17, 17 and 16 px**, x 317–364, y 274 / 351 / 428 — the left vitals column, exactly where §A2 places D5. |
+| The three-frame false-positive table | **Reproduced exactly**: V1 M1 12 findings (4/2/1/0/1/4), V1 M4 16 (1/3/1/6/1/4), V2 M4 11 (2/0/0/5/2/2). |
+| `v1_path_guard.py check`, run by the verifier | `PASS=10, ACCEPTED=0, ATTRIBUTED=0, UNATTRIBUTABLE=0`; `FRAMES PASS` on M1, M2, M4; **exit 0**. `git status` over the ten frozen paths is empty; frozen-file diff stat against plan start is empty; no commit since plan start touches a frozen file. |
+| Commit state | Both new files **untracked**; nothing from Phase 0c staged or committed. The only staged paths are `docs/develop/INDEX.md` and `SAVED_RUN_CONFIG_COMPAT.md`, both another session's. |
+
+**Issues (none blocks the commit).**
+
+1. **The §D5.2 deviation is right, but its stated reason overstates what was measured.** The report and the script's module docstring both claim hide-and-diff is *blind* to text drawn opaquely on a border — that "the collision reports clean". Tested directly: across the **10 collisions** the audit reports on V1 M4, hide-and-diff would have detected **all 10**, at 70–100% of the isolation figure; **no control would have been missed**. Constructing the worst case deliberately (an opaque haloed label over a border, the halo pattern `renderer.py` itself uses) the collision falls from **298 px to 8 px** — a 37× collapse that still clears the 2 px floor. So the true finding is that hide-and-diff is *systematically under-sensitive by a large factor whose size depends on paint order*, not that it produces a false pass. **The deviation is nonetheless justified and the plan is what should change** — a rule whose sensitivity depends on z-order cannot be reasoned about as the renderer changes. §D5.2 item 2 has been rewritten accordingly, with the measured numbers rather than the original argument.
+2. **One of the `text_over_fill` findings is not benign, and the blanket characterisation is wrong for it.** The developer judged all 11 instances "text drawn deliberately inside its own widget", flagging honestly that this was a reading of the source rather than a measurement. Measured: **5 of the 6 on V1 M4 are confirmed benign** — text bounding box fully inside the widget's, 100% of the text's ink on it, same axes (the four thermoception cell readings and the body-temperature value). **The sixth is not**: `'+84'` × a `Rectangle` in the arena axes, 6 px, where the text box is **outside** the widget, only **3%** of the text's ink lies on it, and the widget's z-order (5) is **above** the text's (3) — a neighbouring patch painted over the corner of a label. Small, but the same family as the `'GRS'` 4 px hit the developer did name, and previously unnumbered. Worth a defect number when the register is next touched; not a CP0.3 gate.
+3. **No test pins the coordinates.** Element identity is enforced in the firing criterion, but the pixel counts and positions are only printed. A future change that moved a defect elsewhere in the frame would still pass. Cheap to add when CP2.2's mutations land.
+4. **`REQUIRED_CONTROLS` is dead in `main()`.** `main()` fails on *any* missed control, which is stricter than the constant advertises; the constant is used only by a test. Harmless, but it reads as though D10/D12 were optional when they are not.
+5. **Not re-verified, and correctly declared out of scope by the developer**: the two rules that are implemented but unexercised (`numeric_in_arena` is not wired to the CLI; the clip-path half of `clipped` never fires because neither renderer sets a clip path on text). Both are stated in the Implementation Report rather than left to be discovered, which is the right handling.
+
+**Speed:** ✅ not applicable, and the skip is independently corroborated rather than accepted on judgement — the guard's raw-frame hashes for M1, M2 and M4 are unchanged, so V1's rendered output is bit-identical to before this phase. Both new files are hand-run/test-only and off every training path. Audit runtime (a phase-boundary cost, not a training cost): V1 M4 frame 22 s, V2 M4 frame 13 s, full 7-control run 33 s, container i9-7900X CPU.
+
+**Not run, deliberately:** `scripts/claude/regen_dev_index.py`. This doc's frontmatter is unchanged by Revision 15, so the index entry is unchanged — and the regenerator stamps `datetime.now()` into its output, so running it would write a spurious diff onto `docs/develop/INDEX.md`, which currently carries another session's staged changes.
+
+**Conclusion.** CP0.3 is **met**. The audit finds all seven known defects on the right elements at the right coordinates, its one chosen threshold survives an 8.2× sweep without changing any verdict, its mutation control demonstrates the findings are decided by measured pixels rather than by a constant, and it found a real defect (D5 on the default world) and a real plan error (D2's class) that nobody prompted it to look for. No frozen file was touched, `accept` was never run, and nothing was committed.
+
+**Phase 0c commit (explicit pathspec):**
+`scripts/eval/render_layout_audit.py`, `tests/env/test_render_audit_controls.py`, `docs/environment/SCRIPTS_DEPENDENCY_MAP.md`, `docs/develop/active/refactors/RENDERER_LAYOUT_REDESIGN.md`.
+Exclude `docs/develop/INDEX.md` and `docs/develop/active/refactors/SAVED_RUN_CONFIG_COMPAT.md` (staged by another session), and the untracked `docs/experiments/active/sensor_ladder/figures/` tree and `docs/diary/`, `docs/develop/active/meta/artifact_format_bugs.md`, `docs/experiments/active/recovery_in_bush_tuning/` (all other sessions' work).
+
+*Verified by: senior-developer*
+
+### Phase 0c fix pass (2026-09-16): negative controls, and the thirteenth defect
+
+> **Verified by**: senior-developer
+> **Date**: 2026-09-16
+> **Verdict**: **VERIFIED.** Every claim in the fix-pass report was re-derived rather than read. The mutation result reproduces exactly under an independently written mutation; the `'+84'` finding is confirmed from the frozen source's own constants and from the composite pixels, and is numbered **D13**; the fill-split holds against a pixel check of all eleven collisions. Three small notes below, none blocking.
+
+**What was checked, in plain words.** The previous verification passed this instrument, and then a code review found the hole that mattered most: the test suite could not tell a working instrument from one that flags every pixel of the canvas. This pass was supposed to close that. Checking it means doing the same thing to the tests that the tests do to the instrument — breaking the measurement deliberately and confirming the suite notices. Nothing below is taken from the developer's report; where a number appears, the verifier produced it.
+
+**The mutation, re-run with a different construction.** The developer's proof used pytest's `monkeypatch` inside the suite. The verifier instead patched `FrameProbe.ink` at class level from a pytest **plugin** loaded before collection, returning `ones_like` of the real mask — same semantics, independent wiring, and it also proves the shape of the mutated mask is the shape the real measurement produces.
+
+| Run | Result |
+|---|---|
+| Suite, unmutated (verifier's own run) | **38 passed in 110.39 s**, exit 0 |
+| `ink()` → all-True (flag everything) | **10 failed, 28 passed** — `test_positive_control_hits_at_the_pinned_coordinates[D1/D2/D3/D6/D10]`, `test_v1_m4_finding_counts_are_pinned`, `test_v1_m1_finding_counts_are_pinned`, `test_v1_m1_reproduces_d5_in_the_vitals_column`, `test_v1_m4_out_of_card_flags_only_the_escaped_readout`, `test_fill_class_splits_the_thermal_scale_label_from_the_in_widget_labels` |
+| `ink()` → all-False (see nothing), the complementary mutation, run by the verifier | **17 failed, 21 passed** |
+
+The ten failing names are **exactly** the developer's table, in the same set. The claim stands as written.
+
+**Are the two stated caveats honest, or is there a hole? Answered by measuring the opposite mutation.**
+
+- **`test_positive_control_fires` surviving flag-everything is correct, not a gap.** A positive control measures sensitivity; a maximally sensitive instrument passes it by construction. The question worth asking is whether *anything* can falsify it — and the blind mutation does: D1, D2, D3 and D6 all fail under it. The controls are therefore two-sided overall (coordinates catch over-reporting, blindness catches under-reporting), which is what the pair of mutations demonstrates.
+- **`test_v1_m4_absent_panels_are_exactly_proprioception` surviving flag-everything is also correct.** `panel_absent` asks whether a title has ink; Proprioception has no title element at all, so it stays absent whatever `ink()` claims. And that test is a genuine negative control against its own failure mode — under blind ink it **fails**, because every title loses its ink and every panel is then reported dropped.
+- **The residual hole, stated precisely (note 1).** `panel_absent` is decided by the title table and the observation breakdown, not by pixels, so the D8 and D12 controls fire under **both** mutations. On the V1 campfire frame the exact-absent-set test covers the over-reporting direction. On the **V2** frame nothing does: there is no exact-count pin and no exact-absent-set pin for V2, so a `panel_absent` rule that started over-reporting on V2 would pass the whole suite. Narrow and non-blocking — the natural home is CP2.2's mutations.
+
+**`'+84'` — confirmed, and numbered D13.** Re-derived from the frozen source before looking at any pixel, then confirmed against the composite.
+
+| Claim | Verifier's measurement |
+|---|---|
+| Strip's 52nd segment ends at axes-fraction 0.77220 | `0.76 + (0.52/51 + 0.002)` = **0.7721961** ✅ |
+| Label anchored 0.77000, `ha='left'` | `0.24 + 0.52 + 0.01` = **0.77** ✅ (`renderer.py:777`) |
+| Segment `zorder=5` over label `zorder=3` | ✅ same Axes, read off the live artists |
+| Every thermal frame | ✅ the block is inside `if thermal_on:`; both numbers are literals |
+| The `+` loses ~2 px | **2 px of the label's 70 px of raw ink**, in a single pixel column (867, rows 802–803). Predicted overlap from the constants alone: 0.00220 × 554.26 px = **1.22 px** of axes width |
+| The frame shows the segment, not the glyph | ✅ composite `[103 0 31]` at both pixels = the segment exactly (distance 0); the glyph alone would paint `[152 157 167]` and `[242 243 244]` — **157 and 243** away |
+
+Numbered **D13** in §A2 with a root-cause bullet. Two precision notes: the developer's phrase "the first ~2 px column" is one column 1.22 px wide (their "2 px of a 70 px glyph" is exact); and the label is formatted `{vmax:+.0f}`, so the *geometric* overlap is world-independent while whether ink is lost depends on the left side bearing of the sign glyph — measured for `+`. Hand-off to `bug-curator` issued and completed.
+
+**The `text_over_fill` / `fill_over_text` split — checked against pixels on all eleven collisions, not accepted as reasoning.** For each collision the verifier asked the frame directly: at the shared **raw** ink, does the composite match the glyph drawn alone or the partner drawn alone?
+
+| Collisions | Pixel verdict vs. assigned class |
+|---|---|
+| 5 benign on V1 M4 (`+0.00 real +0.00`, `+10`, `-13`, `-14`, `-12`) | composite matches the **glyph exactly** at **100 % of solid-ink pixels** (90/90, 12/16, 11/15, 13/16, 10/15), partner at 0 % — **agrees** |
+| `'+84'` on V1 M4 | composite matches the **partner exactly** at 100 %, glyph at 0 % — **agrees** |
+| 4 benign on V2 M4 (thermoception readings) | glyph exact at all solid pixels, partner at none — **agrees** |
+| `'GRS'` on V2 M4 | **undecidable by pixels** — see below |
+
+`GRS` is the interesting one, and it vindicates the developer's argument rather than undermining it. A first pass with discriminator (B) (solo-vs-pair) called it "partner on top" — the exact false positive the report says (B) produces on that exact element. Refining to solid-ink pixels shows why: `GRS` is drawn **semi-transparently** (peak deviation from the bare canvas **99**/255, against 218–224 for every opaque label), so the composite is a true blend and matches **neither** solo render at **any** of its 20 shared pixels. No pure-pixel test can attribute a blended glyph; composition order (text `zorder=3` above the bar's `2`, same Axes) is the only sound answer, and it says the label is composed last. So the split is a measurement, not a convenient relabelling — **note 2**: the dominant cause of (B)'s failure on `GRS` is alpha, with anti-aliasing secondary, which is slightly narrower than the report's "anti-aliased fringes"; and **note 3**: the class docstring's "what the frame shows at the shared pixels is the glyph" is strictly a blend for an alpha-drawn label — legible, but worth a word when §D1.3's painters land.
+
+**Everything else confirmed.**
+
+| Check | Result |
+|---|---|
+| `--controls` | **7/7 fired**, exit 0 — same rules, same elements, same coordinates as the earlier verification: D1 `text_over_text` 59 px (1179, 357); D2 `out_of_card` 169 px (1183, 279); D3 `text_over_border` 30 px (252, 644); D6 17 px and 25 px at y 453; D8/D12 `panel_absent`; D10 `observed_caption` (316, 292) |
+| `v1_path_guard.py check` | `PASS=10, ACCEPTED=0, ATTRIBUTED=0, UNATTRIBUTABLE=0`; `FRAMES PASS` on M1, M2, M4; `RESULT: OK`, **exit 0** |
+| No frozen file touched | `git status` over `src/`, `configs/` and the frozen `scripts/eval/` files is **empty** |
+| `accept` never run | `baseline.json` has `user_accepted: []` and is **git-clean**; last three commits touching it are Phase 0a, 0b and the ladder re-record |
+| Nothing staged | `git diff --cached` names only `docs/develop/INDEX.md` and `SAVED_RUN_CONFIG_COMPAT.md`, both another session's |
+| `SCRIPTS_DEPENDENCY_MAP.md` | **+2 / −0**, no other hunk: the §1c bare-import row and the §3 row, both Phase 0c's own. The "five required" wording the fix pass mentions never existed as a separate hunk — the §3 row is new and already says seven |
+| Claimed removals/additions | `REQUIRED_CONTROLS` **gone** from the script (a test asserts its absence); `--arena-axes` wired at 4 sites; D2's control rules are `("out_of_card", "text_over_text")` with the unreachable `text_over_border` removed |
+| Scope proportionality | audit 1034 → 1164 lines (+130: the fill split, `_is_painted_over`/`_draw_index`, the arena flag, docstring); tests 183 → 595 (+412 for 18 → 38 tests, mostly coordinate tables and fixtures); plan +293; map +2. Nothing outside the reported scope |
+
+**Speed:** ✅ not applicable, corroborated rather than asserted — the guard's raw-frame hashes for M1, M2 and M4 are unchanged, so V1's output is bit-identical; both files are hand-run/test-only and off every training path. Suite runtime 71 s → 110 s is the two extra rendered frames plus the in-suite mutation, a phase-boundary cost.
+
+**Not run, deliberately:** `scripts/claude/regen_dev_index.py`. This doc's frontmatter is unchanged (`last_updated` was already 2026-09-16), so the index entry would not move — and the regenerator stamps `datetime.now()`, which would write a spurious diff onto `docs/develop/INDEX.md`, a file another session currently has both staged and modified.
+
+**Conclusion.** The fix pass does what it claims. The instrument is now falsifiable in both directions, the seven controls are unchanged on real frames, and the one finding the original pass mislabelled as harmless is a real defect, now **D13**. Phase 0c is ready to commit.
+
+**Phase 0c commit (explicit pathspec, unchanged from the earlier verification):**
+`scripts/eval/render_layout_audit.py`, `tests/env/test_render_audit_controls.py`, `docs/environment/SCRIPTS_DEPENDENCY_MAP.md`, `docs/develop/active/refactors/RENDERER_LAYOUT_REDESIGN.md`.
+`docs/develop/active/issues/KNOWN_BUGS.md` (the D13 row, written by `bug-curator`) is a **separate** commit — different concern, different owner. Exclude everything else in the working tree: `docs/develop/INDEX.md` and `SAVED_RUN_CONFIG_COMPAT.md` (staged by another session), the untracked `docs/experiments/active/sensor_ladder/figures/` tree, `docs/diary/`, `artifact_format_bugs.md`, and `docs/experiments/active/recovery_in_bush_tuning/`.
+
+*Verified by: senior-developer*
 
 ## Feedback from plan-reviewer
 
