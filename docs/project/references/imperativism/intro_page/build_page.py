@@ -35,51 +35,41 @@ ROOT = os.path.abspath(os.path.join(HERE, "..", "..", "..", "..", ".."))
 os.chdir(ROOT)
 
 TEMPLATE = f"{HERE}/page_template.html"
-OUT = f"{HERE}/imperativism_intro.html"
+OUT = f"{HERE}/imperativism_intro.html"   # same path as the first publish, so the URL is kept
 FIGS = f"{HERE}/figures"
 HOUSE = "docs/develop/active/meta/house_style_sheet.template.html"
 FONTS = "assets/fonts/pretendard/subset"
 
-READ = "Reviewed in full for this page"
-NOT_READ = "Not read: named here only as it is described by the papers above"
-# key -> (who, title, venue, url or None, provenance)  - guide 12d: say what is first-hand
-REFS = {
-    "klein2007": ("Klein, C.", "An Imperative Theory of Pain",
-                  "The Journal of Philosophy 104(10): 517–532, 2007",
-                  "https://doi.org/10.5840/jphil2007104104",
-                  f"{READ}, from the author's own copy (manuscript pages differ from the journal's)."),
-    "carruthers2018": ("Carruthers, P.", "Valence and Value",
-                       "Philosophy and Phenomenological Research 97(3): 658–680, 2018",
-                       "https://doi.org/10.1111/phpr.12395",
-                       f"{READ}, from the published version."),
-    "bh2019": ("Barlassina, L. and Hayward, M. K.",
-               "More of me! Less of me!: Reflexive Imperativism about Affective Phenomenal Character",
-               "Mind 128(512): 1013–1044, 2019", "https://doi.org/10.1093/mind/fzz035",
-               f"{READ}, from the typeset advance-access copy with journal page numbers."),
-    "barlassina2020": ("Barlassina, L.",
-                       "Beyond good and bad: Reflexive imperativism, not evaluativism, explains valence",
-                       "Thought: A Journal of Philosophy 9(4): 274–284, 2020",
-                       "https://doi.org/10.1002/tht3.471",
-                       f"{READ}, from the published version. The paper this page is built around."),
-    "carruthers2023": ("Carruthers, P.", "On Valence: Imperative or Representation of Value?",
-                       "The British Journal for the Philosophy of Science 74(3): 533–553, 2023",
-                       "https://doi.org/10.1086/714985",
-                       f"{READ}, from the author's own copy (manuscript pages differ from the journal's)."),
-    "bain2013": ("Bain, D.", "What makes pains unpleasant?",
-                 "Philosophical Studies 166: 69–89, 2013",
-                 "https://doi.org/10.1007/s11098-012-0049-7",
-                 "Not read: only its abstract, on the author's website, was seen. The PDF was behind a publisher bot check."),
-    "klein2015": ("Klein, C.", "What the Body Commands: The Imperative Theory of Pain",
-                  "MIT Press, 2015", "https://doi.org/10.7551/mitpress/10480.001.0001",
-                  f"{NOT_READ}. Barlassina & Hayward and Carruthers read this book differently."),
-    "loopy2019": ("Barlassina, L. and Hayward, M. K.",
-                  "Loopy Regulations: The Motivational Profile of Affective Phenomenology",
-                  "Philosophical Topics 47: 233–261, 2019", None,
-                  f"{NOT_READ}. Several objections Carruthers 2023 answers are credited to it."),
-    "mk2016": ("Martínez, M. and Klein, C.", "Pain signals are predominantly imperative",
-               "Biology & Philosophy 31, 2016", "https://doi.org/10.1007/s10539-015-9514-y",
-               f"{NOT_READ}. Suggested as the next paper to read."),
-}
+DATA = f"{HERE}/../field_history_data"
+MANIFEST = f"{HERE}/../references_manifest.csv"
+
+# Provenance is read from disk, never typed (guide 12d): works.csv says how deeply each work was read,
+# the manifest gives the DOI and the file stem. The reference list IS the corpus - every one of its works
+# is listed whether or not the page cites it, because the page's counts and diagrams are computed over
+# the whole corpus (guide 12c, second invariant). A citation to a key outside the corpus fails the build.
+TAG = {"reviewed-full": ("read", "reviewed in full"),
+       "reviewed-short": ("short", "short summary from the PDF"),
+       "named-only": ("unread", "named only - not read")}
+
+
+def load_refs():
+    import csv
+    works = {r["key"]: r for r in csv.DictReader(open(f"{DATA}/works.csv", encoding="utf-8"))}
+    man = {r["key"]: r for r in csv.DictReader(open(MANIFEST, encoding="utf-8"))}
+    if set(works) != set(man):
+        fail(f"works.csv and the manifest disagree: {sorted(set(works) ^ set(man))}")
+    refs = {}
+    for k, w in works.items():
+        m = man[k]
+        stem = m["file_stem"]
+        who, _, title = stem.partition(" - ")
+        if not re.search(r"\d{4}", who):          # an undated stem still prints the plotting year
+            who = f"{who} c. {w['year']}"
+        title = re.sub(r"\s*\((author copy|publisher preview|preprint|accepted manuscript)\)\s*$", "", title)
+        refs[k] = {"label": w["short_label"], "who_year": who, "title": title.replace(" - ", ": "),
+                   "doi": m["doi"], "status": w["status"], "community": w["community"], "year": w["year"],
+                   "version": re.search(r"\((author copy|publisher preview|preprint|accepted manuscript)\)", stem)}
+    return refs
 
 
 def fail(msg: str):
@@ -167,39 +157,62 @@ def main():
     if unused:
         fail(f"figures on disk that the page never shows: {sorted(unused)}")
 
-    # ---- citations, numbered in order of first appearance ----------------------------------------
-    # A chip must never start a line or strand the sentence's punctuation (register F50): move a
-    # following . , ; : in front of the chip(s), delete the space before each chip, and put a
-    # WORD JOINER in front of it.
+    # ---- citations: resolved against the whole corpus; the list is the corpus, in first-citation order
+    REFS = load_refs()
     page = re.sub(r"((?:\s*\{\{CITE:[a-z0-9_]+\}\})+)([.,;:])", r"\2\1", page)
-    page = re.sub(r"\s*(\{\{CITE:)", "⁠\\1", page)
+    page = re.sub(r"\s*(\{\{CITE:)", "\u2060\\1", page)
     order = []
     for key in re.findall(r"\{\{CITE:([a-z0-9_]+)\}\}", page):
         if key not in REFS:
-            fail(f"citation to unknown source '{key}'")
+            fail(f"citation to a source outside the corpus: '{key}'")
         if key not in order:
             order.append(key)
-    uncited = set(REFS) - set(order)
-    if uncited:
-        fail(f"reference list carries sources the page never cites: {sorted(uncited)}")
-    for i, key in enumerate(order, 1):
-        page = page.replace(f"{{{{CITE:{key}}}}}", f'<a class="cite" href="#ref-{key}">{i}</a>')
+    uncited = sorted((k for k in REFS if k not in order), key=lambda k: (int(REFS[k]["year"]), k))
+    full_order = order + uncited
+    num = {k: i for i, k in enumerate(full_order, 1)}
+    for key in order:
+        page = page.replace(f"{{{{CITE:{key}}}}}", f'<a class="cite" href="#ref-{key}">{num[key]}</a>')
     items = []
-    n_read = 0
-    for i, key in enumerate(order, 1):
-        who, title, where, url, how = REFS[key]
-        n_read += how.startswith(READ)
-        link = f' &middot; <a href="{url}">{html.escape(url)}</a>' if url else ""
-        tag = ('<span class="rtag read">reviewed</span>' if how.startswith(READ)
-               else '<span class="rtag unread">not read</span>')
+    for k in full_order:
+        r = REFS[k]
+        cls, txt = TAG[r["status"]]
+        link = f' &middot; <a href="https://doi.org/{r["doi"]}">doi.org/{html.escape(r["doi"])}</a>' if r["doi"] else ""
+        ver = f' &middot; PDF held is the {r["version"].group(1)}' if r["version"] and r["status"] != "named-only" else ""
         items.append(
-            f'<li id="ref-{key}"><span class="rnum">{i}</span><span class="rbody">'
-            f'<span>{html.escape(who)} &mdash; <strong>{html.escape(title)}</strong>&nbsp;{tag}</span>'
-            f'<span class="rmeta">{html.escape(where)}{link}</span>'
-            f'<span class="rprov">{html.escape(how)}</span></span></li>')
+            f'<li id="ref-{k}"><span class="rnum">{num[k]}</span><span class="rbody">'
+            f'<span>{html.escape(r["who_year"])} &mdash; <strong>{html.escape(r["title"])}</strong>&nbsp;'
+            f'<span class="rtag {cls}">{txt}</span></span>'
+            f'<span class="rmeta">{html.escape(r["community"].replace("-", " "))}{link}{ver}</span></span></li>')
     page = page.replace("{{REFS}}", '<ol class="refs">\n' + "\n".join(items) + "\n</ol>")
-    page = page.replace("{{N_REFS}}", str(len(order))).replace("{{N_READ}}", str(n_read)) \
-               .replace("{{N_UNREAD}}", str(len(order) - n_read))
+    counts = {s: sum(1 for r in REFS.values() if r["status"] == s) for s in TAG}
+    page = (page.replace("{{N_REFS}}", str(len(REFS))).replace("{{N_CITED}}", str(len(order)))
+                .replace("{{N_FULL}}", str(counts["reviewed-full"])).replace("{{N_SHORT}}", str(counts["reviewed-short"]))
+                .replace("{{N_NAMED}}", str(counts["named-only"]))
+                .replace("{{N_READ}}", str(counts["reviewed-full"] + counts["reviewed-short"])))
+
+    # ---- works the reviews point to that are not in the collection (not_held.csv), rendered, never typed
+    import csv as _csv
+    W = {r["key"]: r for r in _csv.DictReader(open(f"{DATA}/works.csv", encoding="utf-8"))}
+    rows = list(_csv.DictReader(open(f"{DATA}/not_held.csv", encoding="utf-8")))
+    trs = []
+    for r in rows:
+        cited = [W[k.strip()]["short_label"] for k in r["cited_by"].split(";") if k.strip()]
+        for k in r["cited_by"].split(";"):
+            if k.strip() and k.strip() not in W:
+                fail(f"not_held.csv cites unknown key {k!r}")
+        # a data cell must not print a raw key such as jacobson2013 (register F39 family): map keys to labels
+        why = re.sub(r"\b([a-z_]+\d{4}[a-z]*)\b", lambda mm: W[mm.group(1)]["short_label"] if mm.group(1) in W else mm.group(1),
+                     r["why_relevant"])
+        if re.search(r"\b[a-z]+_?[a-z]*\d{4}[a-z]*\b", why):
+            fail(f"not_held.csv row {r['label']!r} still prints a raw key: {why!r}")
+        trs.append(f"<tr><td>{html.escape(r['label'])}</td><td class=\"n\">{html.escape(r['year'] or '—')}</td>"
+                   f"<td>{html.escape(why)}</td><td>{html.escape(', '.join(cited) or '—')}</td></tr>")
+    if "{{NOT_HELD}}" not in page:
+        fail("template has no {{NOT_HELD}} token")
+    page = page.replace("{{NOT_HELD}}",
+        '<p class="cue" hidden>&larr; the table is wider than the screen &mdash; scroll it sideways</p>'
+        '<div class="scroll"><table class="wide"><thead><tr><th>Work or strand</th><th class="n">Year</th>'
+        '<th>Why it matters</th><th>Named by</th></tr></thead><tbody>' + "".join(trs) + "</tbody></table></div>")
 
     # ---- fonts -------------------------------------------------------------------------------
     for weight in set(re.findall(r"\{\{FONT:([A-Za-z]+)\}\}", page)):
@@ -221,7 +234,7 @@ def main():
 
     open(OUT, "w").write(page)
     print(f"  built {os.path.relpath(OUT, ROOT)}  ({len(page):,} chars; {len(stems)} figure, "
-          f"{len(order)} references, {n_read} reviewed)")
+          f"{len(full_order)} references, {len(order)} cited in text)")
 
 
 if __name__ == "__main__":

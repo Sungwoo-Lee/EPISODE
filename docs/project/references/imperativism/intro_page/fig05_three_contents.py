@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""FIGURE 1 - three answers to "what makes a toothache unpleasant?", drawn as where the content points.
+"""FIGURE 7 - three answers to "what makes a toothache unpleasant?", drawn as where the content points.
 
 QUESTION IT ANSWERS. The three theories in this corpus all say unpleasantness is a matter of an
 experience's content. They differ on two things: whether that content DESCRIBES/EVALUATES or
@@ -31,7 +31,7 @@ from matplotlib.patches import FancyBboxPatch, FancyArrowPatch  # noqa: E402
 import house                                                  # noqa: E402
 
 OUT = os.path.join(HERE, "figures")
-STEM = "fig01_three_contents"
+STEM = "fig05_three_contents"
 
 GREY = house.TEXT_LIGHT
 EVAL = house.SERIES[1]      # orange: evaluative content
@@ -39,7 +39,7 @@ IMP = house.SERIES[0]       # blue: imperative content
 
 PANELS = [
     # name, citation, gloss, colour, content label, object label, sensory arrow?, reflexive?
-    ("Imperativism", "Klein 2007",
+    ("Body-directed imperativism", "Klein 2007",
      "unpleasant because it forbids\nan action involving the body",
      IMP, "\u201cDon\u2019t bite with it!\u201d", "biting with\nthat tooth", False, False),
     ("Evaluativism", "Carruthers 2018, 2023",

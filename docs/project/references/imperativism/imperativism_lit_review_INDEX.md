@@ -14,6 +14,7 @@ The **synthesis** ties the parts together. It sets out the eras of the field, ei
 
 ## Start here
 
+- **Web page:** [Pain Beyond Sensation](https://claude.ai/artifact/77YdiWcVTAg1iiqRHu9qrB), the diagram-heavy field review built from the synthesis and data files; source and figure scripts in `intro_page/` (`build_page.py`).
 - **Synthesis:** [[imperativism_field_history_synthesis]]. A neutral history of the field, with eras, debates, evidence ledger and survey corrections.
 - **Diagram data:** `field_history_data/`. Nine CSV files: works, eras, debates, positions, citation edges, dissociation evidence, dimension models, survey corrections, and known works not held. The generator `build_field_history_data.py` sits beside them.
 - **Corpus list:** `references_manifest.csv`, with all 89 references. Source PDFs are in `sources/`.

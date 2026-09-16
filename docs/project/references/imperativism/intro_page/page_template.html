@@ -1,36 +1,31 @@
-<title>The Imperativism Debate</title>
+<title>Pain Beyond Sensation</title>
 {{HOUSE_STYLE}}
 <style>
 /* ---- page-specific additions to the House Style Sheet ----
-   DEPARTURE, stated on the page (guide 0a; register F11 amendment): Figure 1 spends blue on
-   "imperative content" and orange on "evaluative content", so page chrome must not reuse those
-   hues. Section numbers, glossary terms, links and box borders take the ink colours instead, and the
-   page uses no orange (.warn) box. */
+   DEPARTURES, stated on the page (guide 0a; register F11 amendment):
+   * Figure 5 spends blue on "command content" and orange on "evaluative content";
+   * every community figure spends six further hues on research communities (purple, green, brown, teal,
+     red, slate) plus grey for "community not recorded".
+   So page chrome uses no hue at all: section numbers, glossary terms, links, box borders and reference
+   badges take the ink greys, and the page uses no .warn / .pick / .danger box (their hues are data here). */
 :root { --accent: var(--ink-2); --accent-text: var(--ink); }
 .callout ul { margin:0; padding-left:1.2em; }
 .callout li + li { margin-top:6px; }
-/* the three theories side by side as a stacked list - three columns do not fit a phone */
-.theory { display:grid; grid-template-columns:minmax(0,11em) minmax(0,1fr); gap:6px 22px;
-  padding:16px 0; border-bottom:1px solid var(--line); align-items:baseline; }
-.theory:last-child { border-bottom:0; }
-.theory .who { font-family:var(--f-head); font-weight:700; font-size:17px; line-height:1.3; }
-.theory .who small { display:block; font-family:var(--f-body); font-weight:400; font-size:14px;
-  color:var(--ink-3); }
-.theory .what { display:flex; flex-direction:column; gap:6px; font-size:15.5px; }
-.theory .slogan { font-weight:600; }
-@media (max-width:560px) { .theory { grid-template-columns:minmax(0,1fr); } }
-/* one test case: story, then each side's move */
-.case { padding:18px 0; border-bottom:1px solid var(--line); display:flex; flex-direction:column; gap:8px; }
-.case:last-child { border-bottom:0; }
-.case .title { font-family:var(--f-head); font-weight:700; font-size:18px; }
-.case .story { color:var(--ink-2); }
-.case dl { margin-top:4px; }
-/* citations and reference list - guide 12b, rendered number, never the list marker */
+/* era and debate cards: stacked rows, so nothing depends on a column fitting a phone */
+.debate { padding:18px 0; border-bottom:1px solid var(--line); display:flex; flex-direction:column; gap:8px; }
+.debate:last-child { border-bottom:0; }
+.debate .dq { font-family:var(--f-head); font-weight:700; font-size:18.5px; line-height:1.3; }
+.debate .ds { font-family:var(--f-mono); font-size:12.5px; color:var(--ink); background:var(--sunk);
+  padding:2px 8px; border-radius:3px; align-self:flex-start; }
+.debate .dd { color:var(--ink-2); font-size:15.5px; }
+.debate .dlimit { color:var(--ink-2); font-size:14.5px; border-left:2px solid var(--rule); padding-left:10px; }
+.eraband { display:flex; flex-direction:column; gap:6px; }
+/* reference list - guide 12b, rendered number, never the list marker */
 a.cite{font-family:var(--f-mono);font-size:.72em;line-height:0;vertical-align:super;
   text-decoration:none;color:var(--ink);background:var(--surface);
   padding:.18em .34em;border-radius:3px;white-space:nowrap;margin-left:.15em}
 a.cite::before{content:"["} a.cite::after{content:"]"}
-ol.refs{list-style:none;padding-left:0;margin:0;display:flex;flex-direction:column;gap:14px}
+ol.refs{list-style:none;padding-left:0;margin:0;display:flex;flex-direction:column;gap:12px}
 ol.refs li{display:grid;grid-template-columns:2.9em 1fr;gap:0 8px;align-items:start;min-width:0;
   scroll-margin-top:24px}
 ol.refs .rnum{font-family:var(--f-mono);font-size:12px;color:var(--ink);background:var(--surface);
@@ -39,11 +34,11 @@ ol.refs .rnum::before{content:"["} ol.refs .rnum::after{content:"]"}
 ol.refs .rbody{display:flex;flex-direction:column;gap:2px;min-width:0;font-size:15px}
 ol.refs .rmeta{color:var(--ink-2);font-size:14px}
 ol.refs .rmeta a{overflow-wrap:anywhere}
-ol.refs .rprov{color:var(--ink-2);font-size:13.5px}
 ol.refs .rtag{font-family:var(--f-mono);font-size:11px;padding:1px 6px;border-radius:3px;
   white-space:nowrap;vertical-align:1px}
-ol.refs .rtag.read{background:var(--surface);color:var(--ok)}
-ol.refs .rtag.unread{background:var(--sunk);color:var(--ink-2)}
+ol.refs .rtag.read{background:var(--ink);color:var(--ground)}
+ol.refs .rtag.short{background:var(--rule);color:var(--ink)}
+ol.refs .rtag.unread{background:var(--surface);color:var(--ink-2);border:1px solid var(--line)}
 ol.refs li:target{background:var(--sunk);border-radius:4px;box-shadow:0 0 0 6px var(--sunk)}
 ol.refs li:target .rnum{background:var(--ink);color:var(--ground)}
 </style>
@@ -51,444 +46,775 @@ ol.refs li:target .rnum{background:var(--ink);color:var(--ground)}
 <div class="wrap">
 
 <header class="col">
-  <p class="eyebrow">grid_world_pain &middot; reference topic &middot; philosophy of pain and valence</p>
-  <h1>The Imperativism Debate</h1>
-  <p class="lede">Why does pain feel bad? One answer says a feeling is a command. The other says it
-  is a perception of value. This page introduces the debate through five papers.</p>
+  <p class="eyebrow">grid_world_pain &middot; reference topic &middot; field review</p>
+  <h1>Pain Beyond Sensation</h1>
+  <p class="lede">How six research communities have tried to explain why pain feels bad and pushes us to act:
+  how the ideas developed, what was argued over, and where each question stands now.</p>
 </header>
 
 <section class="col">
   <h2><span class="num">PURPOSE</span></h2>
-  <p>A stubbed toe does two things at once. It tells you something about your body, and it
-  <strong>hurts</strong>. Philosophers call that second, good-or-bad quality of an experience its
-  <strong>valence</strong>. Pain has it, and so do pleasure, fear, pride, desire and gloom. What
-  valence actually <em>is</em> remains an open question.</p>
-  <p>This page introduces one live dispute about it. <strong>Imperativism</strong> says an unpleasant
-  experience is, at bottom, a <em>command</em>: &ldquo;don&rsquo;t put weight on that ankle&rdquo;, or, in
-  its newer form, &ldquo;less of this very experience!&rdquo;. <strong>Evaluativism</strong> says it is a
-  <em>perception of value</em>: the thing seems bad to you, the way a tomato seems red.</p>
-  <p>The page is built around Barlassina&rsquo;s 2020 paper, which argues that the command view wins
-  {{CITE:barlassina2020}}. It sets that paper beside the founding statement of imperativism about pain,
-  the evaluativist view it attacks, the fuller theory behind it, and the evaluativist reply. <strong>The
-  debate is not settled in these papers</strong>. Each side has a strong argument the other has not
-  fully answered, and &sect;6 names them.</p>
-  <p>The project cares because it studies pain-like behaviour in learning agents, and each theory says
-  something different about what an agent&rsquo;s internal damage signal would have to do to count as
-  valence (&sect;7).</p>
+  <p>Pain tells you where and how strongly something hurts. It also <strong>feels bad</strong>, and it
+  <strong>pushes</strong> you to do something about it: pull away, protect the injury, take a painkiller.
+  This page is a history of research on that second side of pain. It follows philosophers, brain-imaging
+  researchers, animal-circuit neuroscientists, clinical psychologists, neurologists and computational
+  modellers from the 1960s to 2026.</p>
+  <p>It is a <strong>review of a field, not an argument for a theory</strong>. It is built from
+  {{N_REFS}} works, {{N_READ}} of them read from the PDF, and it sets each debate's positions side by side
+  at their strongest. The headline is that <strong>most of the questions are still open</strong>.
+  Philosophers still disagree whether pain's badness is a command ("less of this!") or a perception of
+  value ("this is bad for me"). In small human experiments, most rated at high or unclear risk of bias
+  by a 2019 systematic review, how unpleasant pain feels has shifted more easily than how strong it feels, but the two ratings stay closely linked. And <strong>none of the {{N_READ}}
+  studies read here measured how unpleasant a person's own pain felt and how much they avoided it on the same
+  trials</strong>.</p>
+  <p>The page began with one paper on imperativism, the view that feelings are commands
+  {{CITE:barlassina2020}}, and grew from the reference list of a survey written for a specific study design.
+  That origin tilts the collection towards imperativism, and the page says where.</p>
 </section>
 
 <section class="col">
   <div class="howto">
     <p class="eyebrow">How to read this page</p>
-    <p>&sect;1&ndash;&sect;3 are the introduction: the question, the three theories, and how the exchange
-    unfolded. &sect;4 and &sect;5 give the anchor paper and the reply in more detail. &sect;6 sums up where
-    things stand. Words in <strong>bold</strong> on first use are defined in the glossary (&sect;8).
-    Bracketed numbers are citations. Each links to the reference list, which says which papers were read
-    in full and which are only named.</p>
-    <p>One departure from the house style: blue and orange are used only in Figure 1, for commands
-    and evaluations, so headings and links on this page are in ink colours.</p>
+    <p>&sect;1&ndash;&sect;2 give the whole field at a glance and its five eras. &sect;3 shows how pain has
+    been divided into parts. &sect;4 maps the eight debates. &sect;5&ndash;&sect;6 say what the evidence can
+    and cannot show and how the communities connect. &sect;7 is the current status on one screen. The last
+    sections check the survey the collection started from, list what is missing, and give the reference
+    list. Click any figure to open it full size.</p>
+    <p><strong>Colour.</strong> On the figures, colour and marker shape mean <em>research community</em>, and
+    a filled mark means the work was read, an open mark that it is only named. Figure 5 alone uses blue for
+    commands and orange for evaluations. Because hues carry data, nothing else on the page is coloured.</p>
+    <p><strong>Scope.</strong> Every count, status and "no study" statement describes <em>this collection of
+    {{N_REFS}} works</em>, not the whole literature.</p>
   </div>
 </section>
 
 <hr>
 
 <section class="col">
-  <h2><span class="num">01</span> The question: what makes a feeling good or bad?</h2>
-  <p>A pain has two sides. One is <strong>sensory</strong>: where it is, how intense, whether it throbs or
-  stabs. The other is <strong>affective</strong>: it is unpleasant, and you want it gone. The two can come
-  apart. Patients on morphine, or after certain frontal-lobe surgery, sometimes say the pain is
-  still there but they no longer mind it {{CITE:klein2007}}. In <strong>pain asymbolia</strong>, people
-  recognise a stimulus as painful but are not distressed by it and make no move to withdraw from it
-  {{CITE:bh2019}}. The opposite may also happen. A stroke patient whose somatosensory cortex (the region
-  that maps bodily sensation) was damaged reported a &ldquo;clearly unpleasant&rdquo; feeling he wanted to
-  avoid, while rejecting every word offered for it, from &ldquo;warm&rdquo; to &ldquo;intense pain&rdquo;
-  {{CITE:bh2019}}. Whether this is unpleasantness with no sensation at all is contested: he still placed
-  the feeling vaguely in his arm {{CITE:carruthers2023}}.</p>
-  <p>So what is the unpleasant part? Both sides in this debate agree on a lot. Valence is <strong>one kind
-  of thing</strong> across pain, pleasure, emotion and desire. It runs on a shared brain network, and
-  acetaminophen (paracetamol) dulls both physical and social pain. It also acts as a <strong>common
-  currency</strong> that lets you compare a film with a meal {{CITE:carruthers2018}}. Their disagreement is
-  about what kind of content a feeling carries when it feels bad.</p>
-  <div class="callout">
-    <p class="eyebrow">The one distinction everything turns on</p>
-    <p>A mental state can <strong>describe</strong> (&ldquo;there is damage here&rdquo;, which can be true or
-    false) or <strong>command</strong> (&ldquo;stop doing that&rdquo;, which can be obeyed or not). It can also
-    be about the <strong>world or body</strong>, or about <strong>the experience itself</strong>. The three
-    theories take different positions on these two choices.</p>
-  </div>
-</section>
-
-<section class="col">
-  <h2><span class="num">02</span> Three answers</h2>
-  <p>All three answers say the unpleasantness is a matter of what the experience says, not an extra
-  raw feeling. They differ on what it says, and about what.</p>
+  <h2><span class="num">01</span> The field at a glance</h2>
+  <p>Before the details, the shape. The earliest work in the collection is a 1962 neurosurgery report and the
+  latest a 2026 philosophy paper. Philosophy enters the collection late, in 2007, and then becomes one of the
+  densest lanes. Animal-circuit and computational work are thin here, which reflects how the collection was built
+  as much as the size of those literatures.</p>
 </section>
 
 <figure>
-  <img data-fig="fig01_three_contents" alt="Three panels, each showing a rounded box labelled toothache experience and a square box. Left, Imperativism, Klein 2007: a single blue arrow to a box labelled biting with that tooth, with the label Don't bite with it!, and the gloss unpleasant because it forbids an action involving the body. Middle, Evaluativism, Carruthers 2018 and 2023: a grey arrow labelled reports it and an orange arrow labelled this is bad, both to a box labelled the throbbing tooth-state; gloss unpleasant because it represents the felt bodily state as bad. Right, Reflexive imperativism, Barlassina and Hayward 2019: a grey arrow labelled reports it to the tooth-state box, and a blue arrow that loops from the experience back onto itself, labelled Less of me!; gloss unpleasant because it commands less of this very experience.">
+  <img data-fig="fig01_timeline" alt="Timeline from 1960 to 2027 with seven horizontal lanes: philosophy, clinical psychology, neurology and neurosurgery, human neuroscience, animal circuits, computational, and community not recorded. Five alternating grey bands mark eras 1962 to 1989, 1990 to 2006, 2007 to 2013, 2014 to 2019 and 2020 to 2026. Philosophy marks start in 2007 and cluster from 2010 to 2026. Human neuroscience marks spread from 1965 to 2024, clinical psychology from 1992 to 2025, animal circuits from 2001 to 2022, computational from 2018 to 2024. Most early marks are open, meaning named only.">
   <p class="zoomhint">Click the figure to view it full size</p>
   <figcaption>
-    <span><b>Figure 1 &mdash; The same toothache, three ways.</b> Blue arrows are commands and orange
-    arrows are evaluations; grey arrows are plain sensory reports, which carry no valence by
-    themselves. On the left the command is about what you do with your body. In the middle the felt
-    state is represented as bad. On the right the command loops back onto the experience that
-    issues it.</span>
-    <span><b>Axes.</b> None: this is a diagram, not a chart. Neither horizontal nor vertical position
-    encodes a quantity, and box and arrow lengths are set only so the labels fit. An arrow means
-    &ldquo;has content about&rdquo;.</span>
-    <span><b>Data.</b> {{DATA:fig01_three_contents}}</span>
+    <span><b>Figure 1 &mdash; Every work in the collection, by community and era.</b> Each mark is one work.
+    Filled marks were reviewed from the PDF; open marks are only named. Grey bands are the five eras of
+    &sect;2. Figure 3 names every mark.</span>
+    <span><b>Axes.</b> Horizontal: the year the work first appeared, from 1960 to 2027, using the online year
+    where it came out before print. Vertical: research community, one lane each; the number after the
+    community is its count of works. Vertical position inside a lane only separates works from the same
+    year and carries no value.</span>
+    <span><b>Data.</b> {{DATA:fig01_timeline}}</span>
   </figcaption>
-  <p class="prov">Reproduce: <code>python docs/project/references/imperativism/intro_page/fig01_three_contents.py</code></p>
+  <p class="prov">Reproduce: <code>python docs/project/references/imperativism/intro_page/fig01_timeline.py</code></p>
   <div class="howto">
     <p class="eyebrow">How it is drawn</p>
-    <p>The script draws three identical panels on a fixed ten-by-ten grid of plot units. Every
-    coordinate is a position, not a value, and nothing is computed from data. Each panel has one
-    rounded box for the experience and one square box for what a content is about. The difference
-    between the theories lies entirely in the arrows. That is the point the figure is built to make:
-    all three theories explain unpleasantness by an experience&rsquo;s content, and they disagree
-    about the kind of content and its target. The labels follow the reviewed papers. Klein&rsquo;s
-    panel has no grey arrow, because he holds that a pain&rsquo;s content is exhausted by a prohibition
-    on some use of the body {{CITE:klein2007}}. In Carruthers&rsquo;s account of pain, what is represented
-    as bad is the felt bodily state, not the tooth as an object out in the world {{CITE:carruthers2018}}.
-    Barlassina and Hayward keep an ordinary sensory report and add a command aimed at the experience
-    itself {{CITE:bh2019}}. The toothache was chosen because Barlassina&rsquo;s 2020 paper uses it. What the
-    figure leaves out: Klein&rsquo;s theory covers pain only, while the other two cover every kind of
-    feeling, and the figure cannot show how strong a command or an evaluation is.</p>
+    <p>The script reads <code>works.csv</code>, one row per work, which gives each work's plotting year, its
+    community and how deeply it was read. Those three fields came from the per-paper reviews: each reviewer
+    recorded the year and community of the paper in a fixed block at the end of its entry, and the
+    synthesis gathered them. Where a paper appeared online a year before its printed issue, the online
+    year is used, so a few marks sit one year before the date people usually cite. A work belongs to one
+    lane; a handful are close calls. Craig 2003, for example, argues from cat and monkey anatomy with human
+    imaging as support, and its reviewer placed it in animal circuits. Seven named-only works have no
+    community recorded in any review and get their own lane rather than a guess. Marks in the same lane and
+    year are stacked slightly so none hides another. What the figure does not show: how large each
+    community's literature really is. The collection is one survey's reference list plus history anchors,
+    so a thin lane can mean thin coverage here, not a small field.</p>
   </div>
 </figure>
 
-<section class="col stages">
-  <div class="theory">
-    <div class="who">Imperativism<small>Klein 2007{{CITE:klein2007}}</small></div>
-    <div class="what">
-      <p class="slogan">&ldquo;Pain is there to stop us.&rdquo;</p>
-      <p>A pain does not report tissue damage; it forbids a use of the body. Klein points to the telling
-      phrase &ldquo;it hurts <em>when I</em> do this&rdquo;. How intense a pain is equals how strong the
-      command is. Morphine does not refute the view. The drug removes the worry and the urge to act, and
-      a prohibition with nothing to prohibit is &ldquo;a stop sign in a ghost town&rdquo;. <strong>Scope:
-      pain only.</strong></p>
-    </div>
+<figure>
+  <img data-fig="fig02_corpus_composition" alt="Stacked horizontal bars, one per era. Era 1, 1962 to 1989: 1 short summary and 5 named only. Era 2, 1990 to 2006: 7 reviewed in full, 3 short, 9 named only. Era 3, 2007 to 2013: 6 full, 4 short, 8 named only. Era 4, 2014 to 2019: 16 full, 9 short, 1 named only. Era 5, 2020 to 2026: 17 full, 2 short, 1 named only.">
+  <p class="zoomhint">Click the figure to view it full size</p>
+  <figcaption>
+    <span><b>Figure 2 &mdash; How much of each era was actually read.</b> The early eras rest mostly on works
+    that are only named, so statements about them lean on how later papers describe them.</span>
+    <span><b>Axes.</b> Horizontal: number of works in the collection, 0 to 30. Vertical: the five eras,
+    oldest at the top. Each bar is split into works reviewed in full (black), reviewed as a short summary
+    (dark grey) and named only (light grey).</span>
+    <span><b>Data.</b> {{DATA:fig02_corpus_composition}}</span>
+  </figcaption>
+  <p class="prov">Reproduce: <code>python docs/project/references/imperativism/intro_page/fig02_corpus_composition.py</code></p>
+  <div class="howto">
+    <p class="eyebrow">How it is drawn</p>
+    <p>The script counts works in <code>works.csv</code> by era and by reading depth, then draws one stacked
+    bar per era. There are three depths. "Reviewed in full" means a reviewer read the PDF and wrote a plain
+    overview, a detailed reconstruction of the method or argument, and a section-by-section summary.
+    "Short summary" means the PDF was read and summarised in a fixed structure: claim, method, key result,
+    place in the history, relevance. That depth was used for reviews and background papers. "Named only"
+    means no PDF could be obtained, mostly papers in the journal Pain and old book chapters. Nothing
+    about those works was reviewed, and the page never rests a claim on them alone. Era boundaries come
+    from the synthesis, which placed them where the questions being asked changed; they are approximate.
+    The figure is here so a reader can weigh era-level statements. Era 1 holds one read paper, the 1965
+    gate-control theory, and five named ones, so what this page says about the 1960s to 1980s is mostly
+    second-hand. It does not show which of those named works matter most.</p>
   </div>
-  <div class="theory">
-    <div class="who">Evaluativism<small>Carruthers 2018{{CITE:carruthers2018}} and 2023{{CITE:carruthers2023}}</small></div>
-    <div class="what">
-      <p class="slogan">Feeling bad is something seeming bad.</p>
-      <p>Valence is a perception-like representation of value that needs no concept of &ldquo;bad&rdquo;,
-      the way seeing roughly thirty dots needs no concept of thirty. When you fear a bear, the bear
-      looks bad. In pain, it is the felt bodily state that is
-      represented as bad. By 2023 the content is spelled out as <strong>adaptive value</strong>: how good
-      or bad something is for survival and reproduction, or has been learned to predict. <strong>Scope:
-      all feelings.</strong></p>
-    </div>
-  </div>
-  <div class="theory">
-    <div class="who">Reflexive imperativism<small>Barlassina &amp; Hayward 2019{{CITE:bh2019}}</small></div>
-    <div class="what">
-      <p class="slogan">&ldquo;Get more of me! Get less of me!&rdquo;</p>
-      <p>Commands are the right idea, but Klein-style commands aim at the wrong target. A command about the
-      body cannot explain why you take a painkiller, or why a gloom with no object feels bad. So an
-      unpleasant experience commands <strong>less of itself</strong>, and a pleasant one more of itself.
-      How to comply is left open: fix the tooth, take the painkiller, or change how you walk. <strong>Scope:
-      all feelings.</strong></p>
-    </div>
-  </div>
-</section>
+</figure>
 
 <section class="col">
-  <h2><span class="num">03</span> How the exchange unfolded</h2>
-  <p>This is not a neat back-and-forth. The early papers argue with other opponents, and the two sides
-  meet head-on only in the last two papers.</p>
+  <h2><span class="num">02</span> Five eras</h2>
+  <p>The synthesis divides the history where the questions being asked changed. The boundaries are
+  approximate, and each era is labelled by its most distinctive new question, which makes the 2007 and
+  2020 labels lean philosophical even though most papers in those eras come from other communities.</p>
 </section>
 
 <section class="col stages">
-  <div class="stage"><div class="s">2007</div><div class="b">
-    <div class="t">Klein founds imperativism about pain</div>
-    <div class="d">Against the view that pain reports damage. A report would invite flexible,
-    context-dependent responses, but for pain there is usually only one right response: stop
-    {{CITE:klein2007}}.</div></div></div>
-  <div class="stage"><div class="s">2013</div><div class="b">
-    <div class="t">Bain&rsquo;s evaluativist critique (not read here)</div>
-    <div class="d">Going by its abstract only, Bain argues that command-based accounts cannot explain
-    why an unpleasant pain gives you a reason to act, and that pain&rsquo;s content must be evaluative
-    instead {{CITE:bain2013}}.</div></div></div>
-  <div class="stage"><div class="s">2018</div><div class="b">
-    <div class="t">Carruthers states evaluativism for all feelings</div>
-    <div class="d">Aimed at a different rival, the view that valence is a raw good or bad feel. It never
-    mentions imperativism. It argues that choices are about the world, not about feelings:
-    &ldquo;evolution couldn&rsquo;t care less about how one feels&rdquo; {{CITE:carruthers2018}}.</div></div></div>
-  <div class="stage"><div class="s">2019</div><div class="b">
-    <div class="t">Barlassina &amp; Hayward turn the command inward</div>
-    <div class="d">Aimed at other imperativists, including Klein&rsquo;s 2015 book {{CITE:klein2015}}, with
-    one short passage against evaluativism. It also sets out the evolutionary story: feelings are a
-    reward-and-punishment system for creatures that must learn by trial and error
-    {{CITE:bh2019}}.</div></div></div>
-  <div class="stage"><div class="s">2020</div><div class="b">
-    <div class="t">Barlassina takes on Carruthers directly</div>
-    <div class="d">The anchor paper. It judges both theories by Carruthers&rsquo;s own two tests, what
-    feelings feel like and how we decide by imagining options, and argues that imperativism passes both
-    better (&sect;4) {{CITE:barlassina2020}}.</div></div></div>
-  <div class="stage"><div class="s">2023</div><div class="b">
-    <div class="t">Carruthers replies</div>
-    <div class="d">Valence signals track value, so they represent value. The science of learning,
-    choice and attention has no need for commands, and in two places, where valence sits in the brain
-    and why people stare at horrors, it contradicts them. The paper also answers most of the test cases
-    (&sect;5) {{CITE:carruthers2023}}.</div></div></div>
+  <div class="stage"><div class="s">1962&ndash;<br>1989</div><div class="b">
+    <div class="t">Clinical dissociations and the gate</div>
+    <div class="d">Pain stops being a fixed line from receptor to brain. The gate-control theory proposes that
+    signals are modulated in the spinal cord and from the brain, and speaks of pain's "sensory and affective
+    components" {{CITE:melzackwall1965}}. Surgery reports describe patients who still feel pain but are
+    no longer bothered by it {{CITE:melzackwall1965}}. Cingulotomy and asymbolia reports, known here only through
+    later papers, become the template for evidence that pain's parts come apart {{CITE:foltz1962}}{{CITE:berthier1988}}. The roots go further back, to Sherrington's "imperative protective
+    reflex" and Beecher's wounded soldiers of the 1950s, which sit outside the collection.</div></div></div>
+  <div class="stage"><div class="s">1990&ndash;<br>2006</div><div class="b">
+    <div class="t">Mapping the dimensions</div>
+    <div class="d">Brain imaging looks for separate homes for how strong pain is and how bad it feels.
+    Hypnotic suggestion changes unpleasantness and anterior cingulate activity while the body-map cortex does
+    not follow {{CITE:rainville1997}}; the reverse experiment is messier {{CITE:hofbauer2001}}. A review
+    turns this into a serial model {{CITE:price2000}}. In rats, lesions of the front of the cingulate abolish learned
+    avoidance of a place where pain happened {{CITE:johansen2001}}. The clinical fear-avoidance model says fear, not pain
+    intensity, predicts disability {{CITE:vlaeyen2000}}.</div></div></div>
+  <div class="stage"><div class="s">2007&ndash;<br>2013</div><div class="b">
+    <div class="t">Pain's badness and pull on behaviour become explicit problems</div>
+    <div class="d">Philosophy founds two camps. Imperativism says pain commands {{CITE:klein2007}}{{CITE:martinez2011}};
+    evaluativism, named in 2013, says pain represents something as bad {{CITE:cuttertye2011}}{{CITE:bain2013}}.
+    Each side argues the other cannot explain why we take painkillers {{CITE:bain2013}}{{CITE:jacobson2013}}. Neuroscience puts
+    pain beside pleasure {{CITE:leknestracey2008}} and finds midcingulate pain responses tied to control and
+    action {{CITE:shackman2011}}{{CITE:perini2013}}. Clinical psychology recasts avoidance as a conflict of
+    goals {{CITE:crombez2012}}.</div></div></div>
+  <div class="stage"><div class="s">2014&ndash;<br>2019</div><div class="b">
+    <div class="t">Elaboration, formal models and the turn to valence</div>
+    <div class="d">The densest era. Imperativism gets books and formal models {{CITE:klein2015}}{{CITE:mk2016}};
+    the philosophical question widens from pain to all good and bad feelings
+    {{CITE:carruthers2018}}{{CITE:bh2019}}. Pain is framed as a reinforcement signal {{CITE:seymour2019}}.
+    One experiment moves avoidance choices without significantly changing ratings
+    {{CITE:claes2015}}, and silencing an amygdala cell group in mice
+    reduced protective and escape behaviour but not reflexes, which its authors read as pain's unpleasantness
+    {{CITE:corder2019}}. A systematic review audits the human evidence for
+    separable dimensions and leans towards pain as one experience {{CITE:talbot2019}}.</div></div></div>
+  <div class="stage"><div class="s">2020&ndash;<br>2026</div><div class="b">
+    <div class="t">Revised definition, valence across all feelings, graded dissociations</div>
+    <div class="d">The revised definition of pain appears in 2020 (known here only by name). Philosophers argue over how to read learning and
+    decision science {{CITE:carruthers2023}}{{CITE:mb2026}}, and over whether asymbolia is pain at all
+    {{CITE:griffithkind2023}}{{CITE:duvalklein2025}}. One human imaging study reports a graded, not clean,
+    difference between intensity and unpleasantness {{CITE:stankewitz2023}}. Two learning studies disagree on whether
+    people learn more from pain received or pain avoided {{CITE:jepma2022}}{{CITE:le2024}}.</div></div></div>
 </section>
 
-<hr>
+<figure>
+  <img data-fig="fig03_who_when" alt="A tall timeline listing all 89 works by name, grouped under seven community headings and sorted by year within each group, from 1960 to 2027, over five grey era bands. Philosophy runs from Klein 2007 to Martínez and Barlassina 2026. Clinical psychology from Fernandez and Turk 1992 to Flury 2025. Neurology and neurosurgery from Foltz and White 1962 to Tolomeo 2016. Human neuroscience from Melzack and Wall 1965 to Zidda 2024. Animal circuits from Johansen 2001 to Lee 2022. Computational from Wang 2018 to Le 2024. Community not recorded from Wall 1979 to Raja 2020. Named-only works carry an open mark and the words named only.">
+  <p class="zoomhint">Click the figure to view it full size</p>
+  <figcaption>
+    <span><b>Figure 3 &mdash; Who wrote what, when.</b> The same timeline as Figure 1, with every work named on
+    its own row so nothing overlaps.</span>
+    <span><b>Axes.</b> Horizontal: the year the work first appeared, from 1960 to 2027 (online year where it
+    came out before print). Vertical: one row per work, grouped by community and sorted by year inside each
+    group; row order carries no value beyond that sort.</span>
+    <span><b>Data.</b> {{DATA:fig03_who_when}}</span>
+  </figcaption>
+  <p class="prov">Reproduce: <code>python docs/project/references/imperativism/intro_page/fig03_who_when.py</code></p>
+  <div class="howto">
+    <p class="eyebrow">How it is drawn</p>
+    <p>The script reads <code>works.csv</code> and groups works by community in a fixed order: philosophy,
+    clinical psychology, neurology and neurosurgery, human neuroscience, animal circuits, computational, and
+    community not recorded. Inside each group it sorts by year, then gives every work a row of its own, so
+    no two names can collide however close their years are. The mark sits at the work's year, and the name
+    is printed beside it: to the right for works before 2000, to the left from 2000 on, so no name runs off
+    the edge. Names use the familiar citation year, which is why a few names differ by a year or two from
+    the position of their mark, for example Carruthers 2018, online in 2017, and Procyk 2016, online in 2014. Works that could not
+    be obtained keep an open mark and the words "named only". The grey bands are the eras of &sect;2. Use
+    this figure to find a specific paper; use Figure 1 for the overall shape. The figure is tall, so it reads
+    best opened full size. It does not show which works engage each other; Figure 11 does that.</p>
+  </div>
+</figure>
 
 <section class="col">
-  <h2><span class="num">04</span> The anchor paper: four cases and a pizza</h2>
-  <p>Barlassina accepts Carruthers&rsquo;s own standard: a theory of valence should explain what valence
-  feels like and what it does when we decide by imagining the options {{CITE:barlassina2020}}. His
-  first strategy is to find cases where <em>feeling bad</em> and <em>something seeming bad</em> come apart.
-  Evaluativism treats the two as the same thing, so every such case is trouble for it.</p>
+  <h2><span class="num">03</span> How pain has been divided</h2>
+  <p>Almost every account splits pain into parts, but the parts keep changing. The 1968 model, as later papers
+  describe it, named three: a sensory, a motivational-affective and a cognitive-evaluative part. Later imaging work mostly measured two,
+  intensity and unpleasantness. Philosophy re-cut the non-sensory part as a command or an evaluation, and a
+  2024 study recast it as signed valence shared with pleasure {{CITE:lee2024}}. A 2019 review questioned whether the parts can be
+  separated at all {{CITE:talbot2019}}.</p>
 </section>
+
+<figure>
+  <img data-fig="fig04_dimension_models" alt="Twenty-three rows, oldest first. Each row names a work and its model on the left and shows one outlined box per component on the right. Examples: Melzack and Wall 1965, gate control, boxes sensory and affective. Melzack and Casey 1968, dashed boxes sensory-discriminative, motivational-affective, cognitive-evaluative. Price 2000, sensation intensity, unpleasantness, secondary affect. Klein 2007, negative imperative (primary affect), secondary affect. Barlassina and Hayward 2019, sensory indicator, reflexive command. Talbot 2019, one box, unitary sensory-unpleasant experience. Lee 2024, signed valence and unsigned affective intensity. Flury 2025, sensory-discriminative and emotional-motivational.">
+  <p class="zoomhint">Click the figure to view it full size</p>
+  <figcaption>
+    <span><b>Figure 4 &mdash; The parts of pain, model by model.</b> The count of boxes is the number of
+    components a work names. Box outlines take the work's community colour; a dashed outline means the work
+    is only named, so its components are as later papers describe them.</span>
+    <span><b>Axes.</b> None: this is a diagram, not a chart. Rows run from oldest (top) to newest (bottom);
+    box width only fits the component's name and carries no value, and horizontal position is the order in
+    which the model lists its components.</span>
+    <span><b>Data.</b> {{DATA:fig04_dimension_models}}</span>
+  </figcaption>
+  <p class="prov">Reproduce: <code>python docs/project/references/imperativism/intro_page/fig04_dimension_models.py</code></p>
+  <div class="howto">
+    <p class="eyebrow">How it is drawn</p>
+    <p>The script reads <code>dimension_models.csv</code>, which lists every work in the collection that
+    proposes or tests a model of pain's components: 23 works, from philosophy, imaging, clinical psychology,
+    animal circuits and computational modelling. For each it gives a model label and the components in the
+    order the work names them. The synthesis transcribed these from the reviews, keeping each work's own
+    wording, so the same idea can appear under different names: "affective", "unpleasantness",
+    "motivational-affective" and "hedonic" are not forced into one label. That is deliberate, because how
+    the words shifted is part of the history. Mixing theories with experimental measures is also
+    deliberate: a philosophical model and an experiment's two rating scales both commit to a number of
+    parts. Rows are sorted by the work's first-appearance year. Each component is a box sized to fit its
+    text. What the figure does not show is whether any split is correct, or how strongly the evidence
+    supports it; &sect;4 and &sect;5 take that up.</p>
+  </div>
+</figure>
+
+<figure>
+  <img data-fig="fig05_three_contents" alt="Three panels, each with a rounded box labelled toothache experience. Left, Body-directed imperativism, Klein 2007: one blue arrow to a box labelled biting with that tooth, content Don't bite with it, gloss unpleasant because it forbids an action involving the body. Middle, Evaluativism, Carruthers 2018 and 2023: a grey arrow labelled reports it and an orange arrow labelled this is bad, both to a box labelled the throbbing tooth-state; gloss unpleasant because it represents the felt bodily state as bad. Right, Reflexive imperativism, Barlassina and Hayward 2019: a grey arrow to the tooth-state box and a blue arrow looping back onto the experience, labelled Less of me; gloss unpleasant because it commands less of this very experience.">
+  <p class="zoomhint">Click the figure to view it full size</p>
+  <figcaption>
+    <span><b>Figure 5 &mdash; Three philosophical accounts of the same toothache.</b> Blue arrows are
+    commands, orange arrows evaluations, grey arrows plain sensory reports that carry no valence on their
+    own. The left command is about what you do with your body; the middle represents the felt state as bad;
+    the right command loops back onto the experience itself. These are three of the positions in the debate
+    in &sect;4; relational imperativism and desire views are not drawn.</span>
+    <span><b>Axes.</b> None: this is a diagram, not a chart. Position and arrow length encode no quantity;
+    an arrow means "has content about".</span>
+    <span><b>Data.</b> {{DATA:fig05_three_contents}}</span>
+  </figcaption>
+  <p class="prov">Reproduce: <code>python docs/project/references/imperativism/intro_page/fig05_three_contents.py</code></p>
+  <div class="howto">
+    <p class="eyebrow">How it is drawn</p>
+    <p>The script draws three identical panels on a fixed grid, and only the arrows differ, because that is
+    where the theories differ. All three explain pain's badness by what the experience is <em>about</em>
+    rather than by an extra raw feeling. Klein's 2007 panel has no grey arrow: he held that a pain's content is
+    exhausted by a prohibition on some use of the body {{CITE:klein2007}}. His 2015 work revised this into
+    commands to protect the body {{CITE:klein2015asym}}, which the panel does not show. In Carruthers's
+    account the thing represented as bad is the felt bodily state, not the tooth as an object in the world
+    {{CITE:carruthers2018}}. Barlassina and Hayward keep an ordinary sensory report and add a command aimed
+    at the experience itself {{CITE:bh2019}}. The toothache follows the paper this topic started from
+    {{CITE:barlassina2020}}. The figure leaves out that Klein's theory covers pain only while the other two
+    cover every kind of feeling, and it cannot show how strong a command or an evaluation is. It shows three
+    positions among eight in the debate; it is not a verdict among them.</p>
+  </div>
+</figure>
+
+<section class="col">
+  <h2><span class="num">04</span> Eight debates</h2>
+  <p>Eight questions cut across the eras and communities. Each status uses one scale and describes this
+  collection. <strong>Open</strong>: positions still in dispute and new work still arriving.
+  <strong>Leaning</strong>: papers converge in a named direction, with dissent or missing causal tests.
+  <strong>Stalled</strong>: no new evidence arriving; the debate moves only by reinterpreting old evidence.
+  <strong>Settled</strong>: reviewed papers on all sides accept the claim. <strong>Not yet tested</strong>:
+  the question is posed, but no reviewed study measures what would decide it. No debate here has either of
+  those two.</p>
+</section>
+
+<figure>
+  <img data-fig="fig06_debate_status" alt="Eight rows, one per debate, over a year axis from 1994 to 2029. Each row has a grey line from its first to its latest work, with community marks along it, and a status word at the right. How many components: 1997 to 2024, open. Evaluation, command or something else: 2007 to 2026, all philosophy marks, open. Why take painkillers: 2012 to 2023, philosophy, open. Is asymbolic pain pain: 2000 to 2025, stalled. Is felt unpleasantness separable from avoidance: 2000 to 2025, mixed communities, open. Where pain meets action in cortex: 1997 to 2023, open. Is felt badness the learning signal: 2004 to 2026, open. What drives avoidance: 2000 to 2022, leaning toward fear plus goal competition.">
+  <p class="zoomhint">Click the figure to view it full size</p>
+  <figcaption>
+    <span><b>Figure 6 &mdash; The eight debates at a glance.</b> Seven are open or stalled; one leans, and its
+    direction is written under its status. Two debates are carried almost entirely by philosophy, and the
+    rest mix communities.</span>
+    <span><b>Axes.</b> Horizontal: the year the work first appeared, from 1994 to 2029. Vertical: one row per
+    debate; marks on a row are the works that hold a position in that debate, stacked when they share a
+    year. The status column at the right is text, not a scale.</span>
+    <span><b>Data.</b> {{DATA:fig06_debate_status}}</span>
+  </figcaption>
+  <p class="prov">Reproduce: <code>python docs/project/references/imperativism/intro_page/fig06_debate_status.py</code></p>
+  <div class="howto">
+    <p class="eyebrow">How it is drawn</p>
+    <p>The script reads <code>debates.csv</code> for each debate's title, status and, where the status is
+    "leaning", its direction. It reads <code>positions.csv</code> for the works that hold a position in the
+    debate, and <code>works.csv</code> for each work's year and community. A work counts once per debate even
+    if it holds two positions there. The grey line runs from the earliest to the latest such work. The
+    statuses come from the synthesis and were checked by two reviewers, a pain-science reviewer and an
+    evidence reviewer, before this page was built. Both asked for the same thing: that a status describe
+    this collection, not the field. So each debate below carries a one-line corpus limit. Status is written
+    out in words rather than coloured, because a colour scale would suggest a ranking the page does not
+    make. The figure does not show how strong any position is or who is winning; "open" means the reviewed
+    papers still disagree.</p>
+  </div>
+</figure>
+
+<section class="col">
+  <h3>What pain's badness is</h3>
+  <p>Three debates are mostly philosophical, though they lean on clinical cases. The map below shows each
+  debate's positions as rows and who critiqued or replied to whom as arrows.</p>
+</section>
+
+<figure>
+  <img data-fig="fig07_debates_badness" alt="Three stacked panels over a year axis from 1994 to 2030. Top panel, What is the non-sensory component, status open: eight position rows from body-protection imperativism to evaluative representation cannot be the whole story, with philosophy works from Klein 2007 to Martínez and Barlassina 2026 and many solid critique arrows and dashed reply arrows between them. Middle panel, Why take painkillers, status open: seven position rows with works from Bain 2013 to Carruthers 2023 and arrows mostly pointing back to Bain 2013. Bottom panel, Is asymbolic pain pain, status stalled: five position rows from pain without painfulness to probably still pain, with Price 2000 at the left and a reply chain from Klein 2015 to Griffith and Kind 2023 to Duval and Klein 2025.">
+  <p class="zoomhint">Click the figure to view it full size</p>
+  <figcaption>
+    <span><b>Figure 7 &mdash; Debates about what pain's badness is.</b> Each row is a position; each mark is a
+    work holding it; solid arrows point from a critic to the work it critiques, dashed arrows from a reply to
+    what it answers. Supportive links are not drawn: a shared row already shows agreement.</span>
+    <span><b>Axes.</b> Horizontal, in each panel: the year the work first appeared, from 1994 to 2030.
+    Vertical: the debate's positions, one row each; within a row, works published within two years of each
+    other are fanned slightly up and down so their marks do not overlap, and that offset carries no value.</span>
+    <span><b>Data.</b> {{DATA:fig07_debates_badness}}</span>
+  </figcaption>
+  <p class="prov">Reproduce: <code>python docs/project/references/imperativism/intro_page/fig07_debates_badness.py</code></p>
+  <div class="howto">
+    <p class="eyebrow">How it is drawn</p>
+    <p>For each debate, the script lays out the positions from <code>positions.csv</code> as rows and places
+    every work that holds a position at its year. A work holding two positions appears in both rows. It then
+    reads <code>edges.csv</code>, the list of engagements the reviewers recorded: one paper building on,
+    critiquing, replying to, reinterpreting or using another as evidence. Only critiques and replies are
+    drawn, and only when both works sit in the same panel. An earlier draft drew every link, and the busiest
+    panel became an unreadable tangle. Names are placed by a routine that tries positions around each mark
+    and refuses to overprint another name or sit beside another mark; a thin grey line without an arrowhead
+    joins a name that had to move farther away to its own mark. Two cautions. First, arrows exist only where a reviewer noted an
+    engagement, and papers reviewed in full had more links recorded than short summaries, so a missing arrow
+    is not proof of silence. Second, this collection holds about twice as many imperativist as evaluativist
+    philosophy papers, and several evaluativist replies are known only by name (&sect;9). The last word in a
+    panel is chronology, not a verdict.</p>
+  </div>
+</figure>
 
 <section class="col"><div>
-  <div class="case">
-    <div class="title">The cake</div>
-    <p class="story">Olivia is hungry and has left her wallet at home. The cake in the window looks
-    wonderful, but her desire for it feels <strong>unpleasant</strong> and she would like to be rid of it.
-    A guitarist on her way to a concert has an unfulfilled desire too, and hers feels wonderful.</p>
-    <dl>
-      <dt>Evaluativism</dt><dd>If desires represent their objects as good, every desire should feel pleasant.
-      If an unfulfilled desire represents <em>not having</em> the thing as bad, every one should feel
-      unpleasant. Neither fits both women.</dd>
-      <dt>Imperativism</dt><dd>What the desire is about does not fix its valence. Olivia&rsquo;s desire says
-      &ldquo;less of me!&rdquo;, and the guitarist&rsquo;s says &ldquo;more of me!&rdquo;.</dd>
-      <dt>2023 reply</dt><dd>The cake still seems good. What seems bad is the <em>situation</em>, that she
-      will not get it, which is felt as frustration {{CITE:carruthers2023}}.</dd>
-    </dl>
+  <div class="debate">
+    <div class="dq">What is the non-sensory component: evaluation, command, or something else?</div>
+    <span class="ds">open</span>
+    <p class="dd">When pain feels bad, is that feeling a command ("don't use that", "less of me"), a perception
+    that something is bad, a desire, or something else? Imperativists split into body-directed
+    {{CITE:klein2007}}, bodily-state {{CITE:martinez2011}}, reflexive {{CITE:bh2019}} and relational
+    {{CITE:kauppinen2021}} versions. Evaluativists hold that pain represents bodily badness
+    {{CITE:cuttertye2011}}{{CITE:bain2017}}, or, for every feeling, adaptive value {{CITE:carruthers2023}}.
+    The latest exchange in the collection is a 2026 reply to Carruthers {{CITE:mb2026}}, which leaves his
+    attention and hedonism arguments unanswered. All of this evidence is second-hand: none of these papers
+    collects data.</p>
+    <p class="dlimit">Corpus limit: imperativist authors wrote twice as many reviewed papers as evaluativists,
+    and evaluativist replies such as Cutter &amp; Tye 2014, Bain 2014 and Jacobson 2019 are only known by name.</p>
   </div>
-  <div class="case">
-    <div class="title">The general and the saint</div>
-    <p class="story">Both saved the village and both are proud, so their pride presents their deeds as
-    good. The general&rsquo;s pride feels pleasant. The saint&rsquo;s feels unpleasant, because she believes
-    she should stay humble.</p>
-    <dl>
-      <dt>Evaluativism</dt><dd>Even if a second state judges her pride as bad, her deeds still seem good. The
-      theory should then predict mixed feelings, but &ldquo;she is not feeling any pleasure at all&rdquo;.</dd>
-      <dt>Imperativism</dt><dd>Same evaluation, opposite commands: the saint&rsquo;s pride says &ldquo;less of
-      me!&rdquo;.</dd>
-      <dt>2023 reply</dt><dd>She also appraises her pride as a betrayal of her values, and that appraisal is
-      strongly negative. The reply does not take up the point about mixed feelings
-      {{CITE:carruthers2023}}.</dd>
-    </dl>
+  <div class="debate">
+    <div class="dq">Why take painkillers? The direction of pain's motivation</div>
+    <span class="ds">open</span>
+    <p class="dd">A painkiller removes the feeling but not the injury. Commands seem unable to explain that
+    {{CITE:bain2013}}; evaluations seem to make it "killing the messenger" {{CITE:jacobson2013}}. Answers
+    include relief-seeking as avoiding "spammy" requests {{CITE:martinez2015}}, separate desires for relief
+    {{CITE:bain2019}}, relief-seeking as built into the feeling {{CITE:loopy2019}}, and a separate displeasure
+    at feeling bad {{CITE:kauppinen2021}}. Carruthers charges that experience-directed views make every
+    choice about one's own experiences {{CITE:carruthers2023}}.</p>
+    <p class="dlimit">Corpus limit: the replies written directly on this question, Cutter &amp; Tye 2014 and
+    Jacobson 2019, are not in the collection.</p>
   </div>
-  <div class="case">
-    <div class="title">The dentist</div>
-    <p class="story">Heavily anaesthetised, Barlassina sees his wrecked mouth in the mirror. It looks bad,
-    yet the experience feels neither pleasant nor unpleasant.</p>
-    <dl>
-      <dt>Evaluativism</dt><dd>The experience represents the mouth as bad, so evaluativism predicts it
-      should feel bad.</dd>
-      <dt>Imperativism</dt><dd>The drug stops the experience from acquiring any &ldquo;more / less of
-      me&rdquo; command.</dd>
-      <dt>2023 reply</dt><dd>Seeing damage is recognising it, a matter of concepts, or at most seeing
-      something that implies damage. Neither is the concept-free sense of value that evaluativism
-      identifies with valence {{CITE:carruthers2023}}.</dd>
-    </dl>
-  </div>
-  <div class="case">
-    <div class="title">Bonjour tristesse</div>
-    <p class="story">Jean-Paul wakes up miserable. Nothing in particular seems bad to him, yet the misery is
-    unpleasant and he wants it gone.</p>
-    <dl>
-      <dt>Evaluativism</dt><dd>There is no object for the misery to represent as bad.</dd>
-      <dt>Imperativism</dt><dd>&ldquo;Less of me!&rdquo; with nothing else attached is pure misery.</dd>
-      <dt>2023 reply</dt><dd>Moods lack an identifiable <em>cause</em>, not an object: the world looks flat,
-      and &ldquo;the fact that nothing seems good seems bad&rdquo;. The reply is made about pure moods in
-      general. Jean-Paul is not named {{CITE:carruthers2023}}.</dd>
-    </dl>
+  <div class="debate">
+    <div class="dq">Is asymbolic pain pain, and what does it show?</div>
+    <span class="ds">stalled</span>
+    <p class="dd">Some brain-lesion patients recognise a pinprick as painful yet show no distress and make no
+    move to withdraw. The standard reading is pain without painfulness. Klein argued instead that they lost the
+    capacity to care about their body {{CITE:klein2015asym}}; Griffith and Kind that the record does not show
+    it is pain {{CITE:griffithkind2023}}; Duval and Klein replied that it is probably still pain and the real
+    question is how to classify it {{CITE:duvalklein2025}}. All three agree the clinical record is small, old
+    and confounded by language problems.</p>
+    <p class="dlimit">Why "stalled": the philosophical exchange was active in 2023&ndash;2025, but no clinical
+    data newer than 1999 enter the collection. Grahek 2007 and Bain 2014, central to the exchange, are only
+    known by name.</p>
   </div>
 </div></section>
 
 <section class="col">
-  <h3>Deciding by imagining: tasting pizza, or pizza?</h3>
-  <p>Both theories agree on the outline. To choose between pizza and pasta you imagine each, each image
-  gives off some pleasantness, and you pick the more pleasant one. They disagree about <em>what</em> you
-  imagine. Barlassina says you imagine <strong>tasting</strong> pizza, an experience. Carruthers says you
-  imagine the pizza, a worldly outcome.</p>
-  <p>Barlassina offers three lines of evidence for the experience reading {{CITE:barlassina2020}}.
-  Forecasting how things will feel uses the brain&rsquo;s default network, which also supports memory and
-  imagining experiences. The main value-comparison region is recruited when people imagine things from their own
-  point of view. And <strong>projection bias</strong>: current hunger changes what people choose to eat later,
-  which is what you would expect if imagining a taste re-uses the real tasting system.</p>
-  <p>Carruthers replies that everyone agrees imagining uses sensory imagery. What gets appraised is what
-  the image shows, not the imagining as an experience {{CITE:carruthers2023}}. He does not address the
-  projection-bias evidence, or the two turned-around objections below.</p>
-  <p>He then turns Carruthers&rsquo;s two objections around. Why would anyone die for a cause if choices
-  aim at experiences? Because people who make that sacrifice typically feel <strong>fused</strong> with
-  their group, so they can imagine going on through it. Why would evolution care about feelings? Because
-  evolution tinkers with what exists, and human future-thinking already works by simulating experiences.
-  Neither of these two replies is answered in the 2023 paper.</p>
+  <h3>Whether pain's parts can be separated</h3>
+  <p>Three debates are mostly empirical and cross human imaging, animal circuits and clinical work.</p>
 </section>
+
+<figure>
+  <img data-fig="fig08_debates_separation" alt="Three stacked panels over a year axis from 1994 to 2030. Top, How many components and can they be moved separately, status open: six position rows including separable and serially ordered, distinct lateral and medial systems, manipulation shifts unpleasantness, relative specialisation, unitary lean, and signed valence, with human-neuroscience works from Rainville 1997 to Lee 2024 and a few critique arrows. Middle, Is felt unpleasantness separable from avoidance and motivation, status open: seven rows with works from Price 2000 to Flury 2025 across clinical, animal, human and philosophy communities. Bottom, Where does pain meet action in cortex, status open: five rows from cingulate as the seat of unpleasantness to effector-specific action maps, with works from Rainville 1997 to Gordon 2023 and no arrows.">
+  <p class="zoomhint">Click the figure to view it full size</p>
+  <figcaption>
+    <span><b>Figure 8 &mdash; Debates about separating pain's parts.</b> Drawn exactly as Figure 7. These
+    panels have few arrows because experimental papers in the collection rarely critique each other by name;
+    most of their links are "builds on", which is not drawn.</span>
+    <span><b>Axes.</b> Horizontal, in each panel: the year the work first appeared, from 1994 to 2030.
+    Vertical: the debate's positions, one row each; the small up-and-down offset inside a row only separates
+    nearby years and carries no value.</span>
+    <span><b>Data.</b> {{DATA:fig08_debates_separation}}</span>
+  </figcaption>
+  <p class="prov">Reproduce: <code>python docs/project/references/imperativism/intro_page/fig08_debates_separation.py</code></p>
+  <div class="howto">
+    <p class="eyebrow">How it is drawn</p>
+    <p>The same drawing routine as Figure 7, applied to three different debates, so the panels can be read the
+    same way. Positions come from <code>positions.csv</code>, marks from <code>works.csv</code>, arrows from
+    <code>edges.csv</code> filtered to critiques and replies between works in the same panel. The sparseness
+    of arrows here is itself informative, with a caveat. Empirical papers engage earlier work mostly by building
+    on it or using it as evidence, and those links are recorded but not drawn. So an empty panel means no
+    recorded critique between works on this page, not that the studies agree. Some works sit in positions
+    that are not their main claim: Hayen 2017, for example, is placed with the studies where a manipulation
+    shifted unpleasantness, but it studied breathlessness, not pain, and is kept only as a non-pain analogue.
+    Tolomeo 2016 sits in the cingulate panel although it measured emotion recognition and not pain. The
+    figure cannot show the quality of each study; Figure 10 and &sect;5 do that.</p>
+  </div>
+</figure>
+
+<section class="col"><div>
+  <div class="debate">
+    <div class="dq">How many components does pain have, and can they be moved separately?</div>
+    <span class="ds">open</span>
+    <p class="dd">Are "how strong" and "how bad" two parts of pain or two descriptions of one experience?
+    Hypnosis moved unpleasantness while intensity did not change significantly {{CITE:rainville1997}}; a
+    review read that as a serial chain, intensity then unpleasantness {{CITE:price2000}}. The reverse
+    experiment moved both {{CITE:hofbauer2001}}. A 2019 systematic review read the same asymmetry as intensity
+    not being movable on its own, and leaned toward one experience {{CITE:talbot2019}}. A 2023 imaging study,
+    without any manipulation, found a graded difference and wrote "we can not assume distinct processes"
+    {{CITE:stankewitz2023}}.</p>
+    <p class="dlimit">Corpus limit: the 2019 review covered psychological manipulations only; drug and lesion
+    evidence enters through a few small separate studies.</p>
+  </div>
+  <div class="debate">
+    <div class="dq">Is felt unpleasantness separable from avoidance and motivation?</div>
+    <span class="ds">open</span>
+    <p class="dd">Is how bad pain feels the same thing as the urge to get away from it? Animal studies infer
+    unpleasantness from avoidance and never measure it separately {{CITE:johansen2001}}{{CITE:corder2019}}.
+    Two human experiments raised avoidance with a reward while the pain ratings they collected did not track
+    the behaviour {{CITE:claes2015}}{{CITE:flury2025}}, but ratings came from other phases or occasional probe trials on
+    mild heat, and the 2025 authors decline to conclude the two were separately modulated. A pathway study
+    moved reflex and avoidance together {{CITE:lee2022}}.</p>
+    <p class="dlimit">In the 2025 study reward did shift unpleasantness slightly across both phases (p = .027),
+    which its authors do not read as separate modulation. Corpus limit: placebo and desire-for-relief research, which did rate desire beside pain,
+    is largely outside the collection.</p>
+  </div>
+  <div class="debate">
+    <div class="dq">Where does pain meet action in cortex?</div>
+    <span class="ds">open</span>
+    <p class="dd">When pain activates the cingulate cortex, is that the feeling of badness, general control,
+    or getting ready to move? One reading makes it the seat of unpleasantness {{CITE:rainville1997}}; another
+    an integration hub for pain, negative feeling and control {{CITE:shackman2011}}; a third finds midcingulate
+    pain responses only when an action is made {{CITE:perini2013}}, extended to people with fewer pain fibres
+    {{CITE:perini2020}}. A preregistered test
+    of action effects came out null, with support only from exploratory contrasts {{CITE:koppel2022}}.</p>
+    <p class="dlimit">Corpus limit: the action-dependence line is mostly one lab's studies, and counter-evidence
+    such as Kragel et al. 2018 is known here only by name. "ACC" also names different subregions across papers.</p>
+  </div>
+</div></section>
 
 <section class="col">
-  <h2><span class="num">05</span> The reply: value is enough</h2>
-  <p>Carruthers&rsquo;s 2023 paper does more than defend. Its main move shifts the burden of proof onto
-  imperativism {{CITE:carruthers2023}}.</p>
+  <h3>Pain, learning and avoidance</h3>
+  <p>That painful events teach animals and people what to avoid is textbook conditioning and is not disputed
+  here. The two debates are about what exactly does the teaching, and what drives avoidance in chronic pain.</p>
 </section>
 
-<section class="col"><div class="qs">
-  <div class="q"><div class="h">Valence carries information about value, so it represents value.</div>
-    <div class="d">Pleasure and pain are triggered by things that were good or bad for survival, such as
-    food when hungry or actual or threatened tissue damage, and by things learned to predict them. After food poisoning, chicken
-    becomes disgusting. Valence does its jobs <em>because</em> it carries that information. On standard
-    theories of mental content, that makes it a representation of value. At most, imperativists can add a
-    command on top, a <strong>pushmi-pullyu</strong> state that both describes and directs. They owe an
-    argument that the command part is needed: &ldquo;Otherwise evaluativism gets to win by
-    default.&rdquo;</div></div>
-  <div class="q"><div class="h">The science does not use commands.</div>
-    <div class="d">Learning from surprise can be told entirely as updating stored values. Economic models
-    of choice weigh value, probability and effort. Imperativists can re-describe all of this in terms of
-    command strength, but nothing requires them to.</div></div>
-  <div class="q"><div class="h">Commands would sit in the wrong part of the brain.</div>
-    <div class="d">A command to act should live near motor planning. Valence signals are found in value
-    areas, including the striatum, amygdala, insula and orbitofrontal cortex, separate from the networks
-    that plan and hold goals.</div></div>
-  <div class="q"><div class="h">We stare at horrible things.</div>
-    <div class="d">&ldquo;I couldn&rsquo;t help looking, it was so horrible.&rdquo; If seeing a gruesome
-    accident commanded &ldquo;less of this experience!&rdquo;, people would look away. Evaluativism predicts
-    that bad things grab attention because they matter.</div></div>
-  <div class="q"><div class="h">The view slides into hedonism.</div>
-    <div class="d">If valence drives every choice and valence is about one&rsquo;s own experiences, then every
-    choice aims at getting experiences for oneself. That is <strong>motivational hedonism</strong>, which
-    the 2018 paper argued against.</div></div>
+<figure>
+  <img data-fig="fig09_debates_learning" alt="Two stacked panels over a year axis from 1994 to 2030. Top, Is pain's felt badness the learning signal, status open: eight position rows from ACC aversive teaching signal to avoidance vigour adapts to failure, with works from Johansen and Fields 2004 to Martínez and Barlassina 2026 and a few reply arrows among the philosophy works. Bottom, What drives pain-related avoidance and disability, status leaning: six position rows from fear drives avoidance to active-defence circuit, with clinical psychology works from Vlaeyen and Linton 2000 to Becker 2018 and computational and animal works to 2022.">
+  <p class="zoomhint">Click the figure to view it full size</p>
+  <figcaption>
+    <span><b>Figure 9 &mdash; Debates about pain, learning and avoidance.</b> Drawn exactly as Figure 7.</span>
+    <span><b>Axes.</b> Horizontal, in each panel: the year the work first appeared, from 1994 to 2030.
+    Vertical: the debate's positions, one row each; the small offset inside a row only separates nearby years
+    and carries no value.</span>
+    <span><b>Data.</b> {{DATA:fig09_debates_learning}}</span>
+  </figcaption>
+  <p class="prov">Reproduce: <code>python docs/project/references/imperativism/intro_page/fig09_debates_learning.py</code></p>
+  <div class="howto">
+    <p class="eyebrow">How it is drawn</p>
+    <p>The same routine as Figures 7 and 8. The top debate was narrowed during review. A first draft asked
+    whether pain is a learning signal and called that "leaning", since every paper that addressed it agreed.
+    The pain-science reviewer pointed out that this part is uncontested background, and the evidence reviewer
+    that the computational papers in the collection had been chosen for exactly that framing, so their
+    agreement says little. The debate now asks the contested questions only: is pain's <em>felt badness</em>
+    the teaching signal, and do people learn more from pain received or pain avoided. Its status is open. The
+    bottom debate is the one "leaning" status on the page. The originators of the fear-avoidance model moved
+    from fear alone to fear plus competing goals, and their 2016 model keeps the fear loop, so the lean is
+    toward that combination, not away from fear. Only that research programme is reviewed here; a rival
+    endurance model is known only by name. The figure does not show effect sizes or sample sizes.</p>
+  </div>
+</figure>
+
+<section class="col"><div>
+  <div class="debate">
+    <div class="dq">Is pain's felt badness the learning signal, and how is learning from pain structured?</div>
+    <span class="ds">open</span>
+    <p class="dd">Stimulating the rat anterior cingulate taught avoidance, and its authors called it an "aversive
+    teaching signal", while calling the evidence "not conclusive" {{CITE:johansen2004}}. A theoretical review
+    argues pain is a reinforcement and control signal and that behaviour should be its ultimate measure
+    {{CITE:seymour2019}}. One study found people learn faster from pain received {{CITE:jepma2022}}; another
+    faster from pain avoided {{CITE:le2024}}; neither discusses the other result. Philosophers read the same
+    learning models as value updating {{CITE:carruthers2023}} or as commands {{CITE:mb2026}}.</p>
+    <p class="dlimit">Corpus limit: the reviewed computational papers were selected for this framing, and none of
+    their experiments rated pain during avoidance.</p>
+  </div>
+  <div class="debate">
+    <div class="dq">What drives pain-related avoidance and disability: fear, pain itself, or competing goals?</div>
+    <span class="ds">leaning &middot; toward fear plus goal competition</span>
+    <p class="dd">The fear-avoidance model held that fear, not pain intensity, predicts disability
+    {{CITE:vlaeyen2000}}. An evidence audit found intense pain is itself threatening and the causal claims
+    untested {{CITE:leeuw2006}}. The model was then recast as a conflict between avoiding pain and pursuing
+    other goals {{CITE:crombez2012}}, tested in one lab experiment with self-selected goal groups
+    {{CITE:claes2015}}, and redrawn with a goal-priority fork that keeps the fear loop {{CITE:vlaeyen2016}}.</p>
+    <p class="dlimit">Corpus limit: only the originators' research programme is reviewed; rival clinical models
+    such as endurance responses are only named.</p>
+  </div>
 </div></section>
 
 <hr>
 
 <section class="col">
-  <h2><span class="num">06</span> Where it stands</h2>
-  <p>Within these five papers the debate is open. The table sets the strongest objection to each view,
-  as the review of the corpus judges it, beside what remains unanswered.</p>
+  <h2><span class="num">05</span> What the evidence can and cannot show</h2>
+  <p>Many claims in these debates rest on experiments that measured two things and found one moved. The
+  matrix shows, for every experiment here that measured at least two outcomes, which it measured and what
+  changed. Its main lesson is how rarely the key outcomes were measured together.</p>
+</section>
+
+<figure>
+  <img data-fig="fig10_dissociation_matrix" alt="A grid of 25 studies by five outcome columns: intensity, unpleasantness, avoidance or escape, desire or urge, reflex or nocifensive, followed by species and N and what the codes compare. Filled circles mean changed, open circles no significant change, half-filled correlational, dashes not measured. Human rating studies such as Rainville 1997, Tiemann 2014 and Zidda 2024 show intensity open and unpleasantness filled. Claes 2015 and Flury 2025 show both ratings open and avoidance filled. Animal studies Johansen 2001, Johansen and Fields 2004 and Corder 2019 show avoidance filled and reflex or nocifensive open; Lee 2022 shows both filled. No row has both unpleasantness and avoidance filled, and the desire column is filled only for Perini 2013, Perini 2020 and Han 2017.">
+  <p class="zoomhint">Click the figure to view it full size</p>
+  <figcaption>
+    <span><b>Figure 10 &mdash; What each experiment measured, and what moved.</b> An open circle means no
+    significant change was reported, <em>not</em> that the change was shown to be zero: no study here ran the
+    equivalence test that would show that. No row has a person's own unpleasantness rating and their avoidance
+    both measured and both changing. Hayen 2017 studied breathlessness, and Budell 2015 and Han 2017 rated
+    someone else's pain, so their rows are not evidence about one's own pain.</span>
+    <span><b>Axes.</b> None: this is a table drawn as a grid, not a chart. Rows are studies grouped by
+    community and ordered by year; the five glyph columns are outcomes; the text columns give species with
+    the main number analysed, and what the coded cells compare.</span>
+    <span><b>Data.</b> {{DATA:fig10_dissociation_matrix}}</span>
+  </figcaption>
+  <p class="prov">Reproduce: <code>python docs/project/references/imperativism/intro_page/fig10_dissociation_matrix.py</code></p>
+  <div class="howto">
+    <p class="eyebrow">How it is drawn</p>
+    <p>The script reads <code>dissociation_evidence.csv</code>, one row per reviewed experiment that measured
+    at least two of five outcomes (Budell 2015 is kept as an empty row because its only ratings were of
+    another person's pain): a rating of pain intensity, a rating of unpleasantness, avoidance or escape
+    behaviour, a rating of desire or urge, and a reflex or nocifensive measure. Each cell is coded from the
+    review as changed, no significant change, correlational only, or not measured. "Changed" refers to the
+    comparison named in the last column. Usually that is the study's manipulation, such as hypnosis or a drug.
+    For Perini 2013 and Han 2017 it is painful against non-painful stimuli, which is why their intensity and
+    urge cells can read "changed" without the manipulation moving them. "Correlational only" marks a
+    relation found without any manipulation. Reflex and nocifensive are one column for space, but they are not
+    the same: a reflex is a fast spinal withdrawal, while nocifensive behaviour such as licking is organised in
+    the brain. The papers also disagree about what licking is evidence of: the Johansen studies report it as the
+    spared sensory-side measure, while Corder 2019 counts it as affective-motivational. Species and the main
+    analysed number come from the reviews; "multi-group" marks designs with no single N. The grid does not
+    show effect sizes or study quality.</p>
+  </div>
+</figure>
+
+<section class="col">
+  <h3>Findings that recur, and their limits</h3>
   <p class="cue" hidden>&larr; the table is wider than the screen &mdash; scroll it sideways</p>
   <div class="scroll"><table class="wide">
-    <thead><tr><th>View</th><th>Strongest objection it faces</th><th>Still unanswered in the corpus</th></tr></thead>
+    <thead><tr><th>Finding</th><th>Where it recurs</th><th>Limit</th></tr></thead>
     <tbody>
-      <tr><td>Klein&rsquo;s imperativism</td><td>Feelings with no action to forbid: headache, deep visceral
-      pain (Klein flags these himself), objectless misery. Extended beyond pain, a body-directed command also cannot say which commands feel bad
-      and which good, an objection Barlassina &amp; Hayward press against a related first-order view.</td><td>Whether it can extend beyond pain at all.</td></tr>
-      <tr><td>Reflexive imperativism</td><td>Value is enough (&sect;5). The signal already represents value,
-      so a command must earn its place. Add the staring-at-horror problem and the hedonism charge.</td>
-      <td>How it answers the brain-location and attention arguments.</td></tr>
-      <tr><td>Evaluativism</td><td>Feeling and evaluation come apart: the saint, objectless misery. Each case
-      needs its own extra appraisal, which costs the unity the view claims. A version on which the damage is what seems bad
-      also struggles to say why we take painkillers rather than only tending the wound. Carruthers&rsquo;s
-      version, on which the felt sensation itself seems bad, largely escapes this.</td><td>The replies on identity fusion and evolution
-      as tinkerer, and the projection-bias evidence.</td></tr>
+      <tr><td>Manipulations shift unpleasantness more readily than intensity</td><td>Hypnosis, dopamine depletion,
+      emotional pictures {{CITE:rainville1997}}{{CITE:tiemann2014}}{{CITE:zidda2024}}</td><td>Intensity "nulls" are
+      non-significant, not shown equivalent; the 2019 review rated every included study at high or unclear risk
+      of bias {{CITE:talbot2019}}. Breathlessness is a non-pain analogue and not counted {{CITE:hayen2017}}</td></tr>
+      <tr><td>No human study here moves intensity alone</td><td>Suggesting less intensity also lowered unpleasantness
+      {{CITE:hofbauer2001}}</td><td>Two very-high-bias studies in the 2019 review claimed otherwise</td></tr>
+      <tr><td>The two ratings are tightly linked</td><td>r = 0.81 and r = 0.86 in two studies
+      {{CITE:hofbauer2001}}{{CITE:stankewitz2023}}</td><td>Measured in different ways</td></tr>
+      <tr><td>Rodent manipulations reduce avoidance while sparing a sensory-side measure</td><td>Rat and mouse lesion and silencing studies {{CITE:johansen2001}}{{CITE:johansen2004}}{{CITE:corder2019}}</td>
+      <td>The spared measure differs: what the Johansen studies count as sensory, Corder counts as affective.
+      Not uniform: one pathway moved reflex and avoidance together {{CITE:lee2022}}</td></tr>
+      <tr><td>Behaviour can change without ratings changing</td><td>Two reward experiments {{CITE:claes2015}}{{CITE:flury2025}}</td>
+      <td>Ratings from other phases or sparse probe trials; mild heat; the 2025 authors decline the conclusion; in 2025 a small reward effect on unpleasantness did reach significance</td></tr>
+      <tr><td>Midcingulate "pain" responses depend on action</td><td>Two imaging studies from one lab {{CITE:perini2013}}{{CITE:perini2020}}</td>
+      <td>Correlational imaging, 12 people per group in 2020; a preregistered test was null {{CITE:koppel2022}}</td></tr>
+    </tbody>
+  </table></div>
+  <h3>Gaps that recur</h3>
+  <ul>
+    <li><strong>Own unpleasantness and avoidance on the same trials</strong>: not measured in any of the
+    {{N_READ}} papers read.</li>
+    <li><strong>Desire for relief beside unpleasantness</strong>: not measured in the papers read, but this is a
+    gap in the collection, not in the field. Placebo research did rate desire for relief {{CITE:vase2003}},
+    and that strand is only named here.</li>
+    <li><strong>Rating order</strong>: intensity was always rated before unpleasantness where the order is
+    stated, and no study discusses order effects.</li>
+    <li><strong>Animal unpleasantness</strong> is never measured apart from avoidance or protective behaviour.</li>
+    <li><strong>Small samples</strong>: 8 and 10 people in the founding hypnosis studies; 15 in a
+    pain-avoidance learning study {{CITE:wang2018}}.</li>
+  </ul>
+</section>
+
+<section class="col">
+  <h2><span class="num">06</span> How the communities connect</h2>
+  <p>The communities ask versions of the same questions, but in this collection they rarely engage each other.
+  Most recorded links stay inside one community, and among the 31 non-philosophy papers read that appeared
+  after philosophy entered the collection in 2007, none is recorded engaging a philosophy paper. A few bridges exist: animal
+  work motivated by the clinical fear-avoidance model {{CITE:lee2022}}, and the 1997 hypnosis study as a
+  shared anchor for human and animal research {{CITE:rainville1997}}.</p>
+</section>
+
+<figure>
+  <img data-fig="fig11_community_links" alt="A seven by seven grid in shades of grey. Rows are the citing community, columns the community being engaged. The diagonal holds the largest counts: philosophy to philosophy 69, human neuroscience to human neuroscience 36, clinical psychology to clinical psychology 19. Off the diagonal: philosophy to neurology and neurosurgery 8, animal circuits to human neuroscience 12, clinical psychology to human neuroscience 6, human neuroscience to neurology 6, and small counts elsewhere. The philosophy column is empty except for philosophy itself. The not-recorded row is empty.">
+  <p class="zoomhint">Click the figure to view it full size</p>
+  <figcaption>
+    <span><b>Figure 11 &mdash; Who engages whom, as recorded by the reviewers.</b> Darker cells hold more links.
+    The philosophy column is empty below its own row: no recorded link from another community into philosophy.
+    This is a record of what reviewers noted, not a citation census.</span>
+    <span><b>Axes.</b> Vertical (rows): the community of the citing work. Horizontal (columns): the community of
+    the work it engages. Each cell is a count of recorded engagements, 0 to 69; a dot means zero recorded.</span>
+    <span><b>Data.</b> {{DATA:fig11_community_links}}</span>
+  </figcaption>
+  <p class="prov">Reproduce: <code>python docs/project/references/imperativism/intro_page/fig11_community_links.py</code></p>
+  <div class="howto">
+    <p class="eyebrow">How it is drawn</p>
+    <p>The script reads <code>edges.csv</code>, the 182 engagements the reviewers recorded between works in the
+    collection, and looks up the community of each end in <code>works.csv</code>. It counts engagements for
+    every pair of communities and shades each cell on a logarithmic grey scale, so small counts stay visible
+    beside the large diagonal. Three things inflate or deflate these counts, and the evidence reviewer asked
+    for all three to be stated. First, reviewers recorded only engagements with works inside the collection,
+    so a neuroscience paper citing a philosophy book that is not in it leaves no trace. Second, papers
+    reviewed in full had about 1.8 times as many links recorded as short summaries, and nearly all philosophy
+    papers were reviewed in full, which makes philosophy look more self-contained. Third, works that are only
+    named cannot cite anything, so their rows are empty by construction. The figure supports "rarely engage
+    each other in this collection". It does not support "never read each other".</p>
+  </div>
+</figure>
+
+<section class="col">
+  <h2><span class="num">07</span> Where things stand</h2>
+  <p class="cue" hidden>&larr; the table is wider than the screen &mdash; scroll it sideways</p>
+  <div class="scroll"><table class="wide">
+    <thead><tr><th>Debate</th><th>Status</th><th>Why, in one line</th></tr></thead>
+    <tbody>
+      <tr><td>How many components; can they be moved separately?</td><td>open</td><td>The same asymmetry is read as a
+      serial chain or as one experience; recent studies call the differences graded</td></tr>
+      <tr><td>Evaluation, command or something else?</td><td>open</td><td>The 2026 reply to Carruthers is unanswered in
+      the collection; imperativists disagree among themselves</td></tr>
+      <tr><td>Why take painkillers?</td><td>open</td><td>Four rival accounts plus a hedonism charge; no side concedes</td></tr>
+      <tr><td>Is asymbolic pain pain?</td><td>stalled</td><td>No clinical data newer than 1999; the dispute moved to how
+      to classify it</td></tr>
+      <tr><td>Unpleasantness vs avoidance</td><td>open</td><td>Behaviour moved without ratings, but never on the same
+      trials</td></tr>
+      <tr><td>Where pain meets action in cortex</td><td>open</td><td>Integration and action-dependence readings
+      coexist; no causal human test on pain</td></tr>
+      <tr><td>Is felt badness the learning signal?</td><td>open</td><td>Identity claims untested; learning asymmetry
+      conflicts; value vs command readings</td></tr>
+      <tr><td>What drives avoidance</td><td>leaning, toward fear plus goal competition</td><td>The model's originators
+      added goals and kept fear; few causal tests</td></tr>
     </tbody>
   </table></div>
 </section>
 
-<section class="col"><div class="qs">
-  <div class="q"><div class="h">Is the disagreement partly about which theory of content to use?</div>
-    <div class="d">Both sides fix content by what a signal is <em>for</em>. Carruthers says valence is for
-    carrying information about value. Barlassina and Hayward say it is for regulating one&rsquo;s own
-    experience. Neither paper settles which role explains why the signal exists.</div></div>
-  <div class="q"><div class="h">Two sources the corpus leans on were not read.</div>
-    <div class="d">Several objections Carruthers answers come from a Barlassina &amp; Hayward paper outside
-    this set {{CITE:loopy2019}}, so his versions of them could not be checked. The two sides also read
-    Klein&rsquo;s 2015 book differently: as a theory of pain&rsquo;s badness, or only of its sensory side
-    {{CITE:klein2015}}.</div></div>
-  <div class="q"><div class="h">What to read next.</div>
-    <div class="d">Bain&rsquo;s evaluativist critique of pain imperativism {{CITE:bain2013}}, and Martínez
-    &amp; Klein&rsquo;s argument that pain signals are mostly imperative, framed in terms of how biological
-    signals work {{CITE:mk2016}}.</div></div>
-</div></section>
+<hr>
 
 <section class="col">
-  <h2><span class="num">07</span> Why it matters for this project</h2>
-  <div class="callout danger">
-    <p class="eyebrow">Interpretive, not a finding</p>
-    <p>These papers are about conscious experience. Nothing here shows that an artificial agent has
-    valence. For the project&rsquo;s agents, the observation channel that reports injury is called
-    <strong>nociception</strong>.
-    &ldquo;Pain&rdquo; is what the project is trying to explain, and it is never used as a name for the
-    agent&rsquo;s signal.</p>
+  <h2><span class="num">08</span> Checking the survey this collection started from</h2>
+  <p>Most references came from a survey written in another working session for a specific study design. It was
+  never treated as a source. Each of its claims about a paper held here was checked against that paper.</p>
+</section>
+
+<figure>
+  <img data-fig="fig12_survey_corrections" alt="Horizontal bar chart of 47 checked survey claims: holds as stated 22, partly holds 19, does not hold 3, misattributed (not about pain) 2, not checkable 1.">
+  <p class="zoomhint">Click the figure to view it full size</p>
+  <figcaption>
+    <span><b>Figure 12 &mdash; How the survey's claims held up.</b> Fewer than half held as stated; most of
+    the rest were right in part but overstated.</span>
+    <span><b>Axes.</b> Horizontal: number of survey claims checked against the paper they cite, 0 to about 26.
+    Vertical: the verdict, one bar each.</span>
+    <span><b>Data.</b> {{DATA:fig12_survey_corrections}}</span>
+  </figcaption>
+  <p class="prov">Reproduce: <code>python docs/project/references/imperativism/intro_page/fig12_survey_corrections.py</code></p>
+  <div class="howto">
+    <p class="eyebrow">How it is drawn</p>
+    <p>Each reviewer was given, for every paper in their batch, the survey's sentence about that paper, and wrote
+    a verdict with a short page-cited quotation at the end of the entry. The synthesis gathered those verdicts into
+    <code>survey_corrections.csv</code> and the script counts them. "Holds" means the paper says what the survey
+    says. "Partly" means the gist is right but something is overstated or wrong in detail, for example the wrong
+    species, or a claim that a pathway is "required" when only switching it on was tested. "Does not hold" means
+    the paper says something different or the opposite. "Misattributed" means the finding exists but is not about
+    pain: one study concerned breathlessness and one emotion recognition. The synthesis changed three reviewer
+    verdicts and records why. One claim named a finding without citing any paper and is counted as not checkable;
+    claims about papers that could not be obtained were not checked at all. The bars are grey, not coloured, because verdicts are not a scale of good to bad sources.</p>
   </div>
-  <p>The project trains reinforcement-learning agents (agents that learn by trial and error from
-  reward and penalty) in a grid world where they can be injured and
-  receive a nociception signal. It studies behaviour that looks pain-like, such as staying hidden after
-  an injury. Read functionally, each theory gives a different answer to <em>what that signal would have to
-  do to count as valence</em>:</p>
-  <dl>
-    <dt>Klein</dt><dd>A signal that forbids particular actions. It grows while the action continues,
-    fades when the agent backs off, and shows no effect when the agent is not trying to act. A number that
-    merely stands for how much damage there is would not be enough. The project&rsquo;s nociception
-    channel is such a number, so on Klein&rsquo;s view it is a report, not a pain-like command. Anything
-    command-like would have to show up in how the agent&rsquo;s actions are restricted, not in the channel
-    itself.</dd>
-    <dt>Reflexive</dt><dd>A second component, distinct from the damage read-out, whose job is to reduce
-    the whole state it belongs to, leaving the method to learning. The nociception channel on its own
-    would be only the read-out half. The signature would be an agent drawn to lower that read-out even
-    when doing so does not repair the damage, the analogue of taking a painkiller. There is a caution. In an engineered agent, what the signal is
-    &ldquo;for&rdquo; is whatever the designer chose to reward, so meeting the letter of the theory proves
-    little.</dd>
-    <dt>Evaluativism</dt><dd>A graded estimate of how good or bad a state of body or world is for survival,
-    part built in and part learned, used to compare options and updated by surprise. The nearest analogue
-    is a fixed cost for damage plus a learned value estimate over states that predict it, with the caveat
-    that an agent&rsquo;s value estimate tracks whatever reward its designer chose, not survival as
-    such. On this reading, staying
-    hidden after injury would be a learned re-valuation of dangerous states.</dd>
-  </dl>
-  <p>One warning from the corpus: the same learning machinery can be described either as updating values
-  or as updating commands {{CITE:carruthers2023}}. A standard learning agent therefore favours neither theory
-  by itself. The theories come apart only on dissociations, and each one separates a different pair.
-  Signal without valence, as in asymbolia, and lowering the signal rather than the damage, as with
-  painkillers, tell against Klein&rsquo;s body-directed command but fit both of the other two. Valence
-  with no object, as in objectless misery, is contested between them. Only the last, whether strongly
-  bad states pull attention in or push it away, sets reflexive imperativism and evaluativism directly
-  against each other.</p>
-  <p>The project has touched this question once already. An earlier analysis of bush hiding asked whether
-  the nociception signal behaves like a description or a Klein-style command. It found evidence pointing both ways and
-  did not treat either strand as decisive. That discussion is in
-  <code>docs/experiments/active/trajectory_factors/a01_hiding_drivers.html</code>. Whether any of these
-  dissociations can be tested here, and whether a positive result would license the word
-  &ldquo;pain-like&rdquo;, is a question of construct validity (does the measurement capture the concept
-  it is named for) for the project&rsquo;s pain-science reviewer, and of priority for its research
-  triage. This page does not settle it.</p>
+</figure>
+
+<section class="col">
+  <p class="cue" hidden>&larr; the table is wider than the screen &mdash; scroll it sideways</p>
+  <div class="scroll"><table class="wide">
+    <thead><tr><th>Paper</th><th>What the survey said</th><th>What the paper shows</th></tr></thead>
+    <tbody>
+      <tr><td>Hayen et al. 2017 {{CITE:hayen2017}}</td><td>Opioids lower pain unpleasantness, not intensity</td><td>The sensation was induced breathlessness, not pain</td></tr>
+      <tr><td>Budell et al. 2015 {{CITE:budell2015}}</td><td>Facial pain expressions drive motor mirroring in midcingulate cortex</td><td>The reverse: responses appeared with attention to what the expression means, not to imitation</td></tr>
+      <tr><td>Gandhi et al. 2022 {{CITE:gandhi2021}}</td><td>Pain avoidance has neural correlates distinct from pain report</td><td>No comparison with pain report was made; pain was rated only for calibration</td></tr>
+      <tr><td>Lee et al. 2022 {{CITE:lee2022}}</td><td>A cingulate-to-midbrain pathway is required for avoidance; a command line, not an evaluation</td><td>Only switching the pathway on was tested for avoidance; the command/evaluation contrast is not the paper's</td></tr>
+      <tr><td>Flury et al. 2025 {{CITE:flury2025}}</td><td>The cleanest demonstration that avoidance is separate from both ratings, N = 62</td><td>58 analysed; the authors say the pattern does not allow that conclusion</td></tr>
+      <tr><td>Tolomeo et al. 2016 {{CITE:tolomeo2016}}</td><td>Causal cingulotomy evidence for pain and action</td><td>Lesions predicted emotion-recognition and Stroop errors; pain was never measured</td></tr>
+      <tr><td>Price 2000 {{CITE:price2000}}</td><td>Uses affective and motivational interchangeably</td><td>Never uses "motivational"; the explicit fusion is in the 2019 review</td></tr>
+    </tbody>
+  </table></div>
 </section>
 
 <section class="col">
-  <h2><span class="num">08</span> Glossary</h2>
+  <h2><span class="num">09</span> What this collection does not contain</h2>
+  <p>A history built from one survey's reference list has holes. These are the important works and research
+  strands the reviewed papers point to but that are not in the collection. None of them carries a claim on this
+  page; they are listed so their absence is visible. Several are evaluativist replies, which is part of why
+  the collection tilts towards imperativism.</p>
+  {{NOT_HELD}}
+</section>
+
+<section class="col">
+  <h2><span class="num">10</span> Why it matters for this project</h2>
+  <div class="callout">
+    <p class="eyebrow">Interpretive, not a finding</p>
+    <p>Nothing in these papers shows that an artificial agent has pain or valence. For the project's agents, the
+    observation channel that reports injury is called <strong>nociception</strong>, and pain is what the project
+    is trying to explain. Turning any point below into an experiment is a question for the project's
+    pain-science reviewer and its research triage.</p>
+  </div>
+  <p>The project trains reinforcement-learning agents (agents that learn by trial and error from reward and
+  penalty) that receive a nociception signal, and studies behaviour that looks pain-like, such as what the
+  project calls hypervigilance after injury. That label names a behaviour pattern, not the clinical attention
+  construct. The history bears on how such behaviour can be described in four ways.</p>
+  <ul>
+    <li><strong>The agent is in the animal's position.</strong> In animals, "unpleasantness" is often avoidance under
+    another name, and behaviour alone cannot tell a command reading from a value reading or plain learned avoidance.
+    The one affect-specific animal readout, avoidance with a spared reflex, has no agent analogue unless the agent
+    has something like a reflex.</li>
+    <li><strong>Theories come apart on dissociations</strong>: signal without concern (asymbolia), lowering the signal
+    instead of repairing the damage (painkillers), avoidance changing while ratings do not, and reflex against learned
+    avoidance.</li>
+    <li><strong>There is no single human benchmark</strong> for learning from damage received versus avoided: the two
+    human studies disagree {{CITE:jepma2022}}{{CITE:le2024}}.</li>
+    <li><strong>"Behaviour should measure pain"</strong> {{CITE:seymour2019}} is a position in an open debate, not a
+    settled method.</li>
+  </ul>
+</section>
+
+<section class="col">
+  <h2><span class="num">11</span> Glossary</h2>
   <dl>
-    <dt>valence</dt><dd>The pleasant-or-unpleasant quality of an experience. Barlassina &amp; Hayward call it
-    affective phenomenal character.</dd>
-    <dt>sensory / affective</dt><dd>The two sides of a pain: what and where it is, and how bad it feels.</dd>
-    <dt>content</dt><dd>What a mental state says or is about.</dd>
-    <dt>describe / command</dt><dd>Content that can be true or false (indicative) versus content that can be
-    obeyed or not (imperative).</dd>
-    <dt>imperativism</dt><dd>Valence is imperative content. Klein&rsquo;s version: commands about using the
-    body.</dd>
-    <dt>reflexive imperativism</dt><dd>The command is about the experience itself: &ldquo;more / less of
-    me!&rdquo;. In the 2020 paper &ldquo;me&rdquo; means that <em>type</em> of experience, so future
-    experiences of the same kind can satisfy it.</dd>
-    <dt>evaluativism</dt><dd>Valence is a concept-free representation of good or bad. For Carruthers in 2023, of
-    adaptive value.</dd>
-    <dt>adaptive value</dt><dd>How beneficial or harmful something is for survival and reproduction, or has
-    been learned to predict.</dd>
-    <dt>pain asymbolia</dt><dd>A condition in which people recognise a stimulus as painful but are not
-    distressed by it and make no move to withdraw.</dd>
-    <dt>pushmi-pullyu</dt><dd>A state that describes and directs at once, a term from Millikan.</dd>
-    <dt>projection bias</dt><dd>Letting how you feel now, for example hungry, colour predictions of how you
-    will feel later.</dd>
-    <dt>identity fusion</dt><dd>A felt oneness with a group strong enough that its survival feels like one&rsquo;s
-    own.</dd>
-    <dt>motivational hedonism</dt><dd>The view that every choice ultimately aims at one&rsquo;s own pleasant
-    experiences.</dd>
-    <dt>nociception</dt><dd>In this project, the observation channel that reports the agent&rsquo;s injury
-    to it. In pain science the term means the nervous system&rsquo;s encoding of actually or potentially
-    damaging stimuli; the project&rsquo;s use is looser. Never called &ldquo;pain&rdquo;.</dd>
+    <dt>sensory-discriminative</dt><dd>Where pain is, what it is like and how strong; usually an intensity rating.</dd>
+    <dt>affective</dt><dd>How bad or unpleasant pain feels; usually an unpleasantness rating.</dd>
+    <dt>motivational</dt><dd>The drive to act: escape, avoid, protect. Often fused with "affective" in the label
+    "affective-motivational".</dd>
+    <dt>valence</dt><dd>The good-or-bad quality shared by pains, pleasures, emotions and moods.</dd>
+    <dt>nociception</dt><dd>The nervous system's encoding of damaging or potentially damaging stimuli, which is not the
+    same as pain. In this project, the agent's injury-reporting channel.</dd>
+    <dt>imperativism</dt><dd>The view that pain's badness is a command. Versions differ on the command's target:
+    the body, a bodily state, the experience itself, or the experience in relation to what one cares about.</dd>
+    <dt>evaluativism</dt><dd>The view that pain's unpleasantness represents something as bad for the subject.</dd>
+    <dt>pain asymbolia</dt><dd>A rare lesion condition: a stimulus is recognised as painful but causes no distress and
+    no withdrawal.</dd>
+    <dt>reflex / nocifensive</dt><dd>A reflex is a fast spinal withdrawal; nocifensive behaviour, such as licking or
+    guarding, is organised in the brain.</dd>
+    <dt>conditioned place avoidance</dt><dd>An animal learns to avoid a place where it was hurt; the standard rodent
+    readout of pain's affective side.</dd>
+    <dt>ACC / aMCC</dt><dd>Anterior cingulate cortex; anterior midcingulate cortex. The same labels cover different
+    subregions across papers.</dd>
+    <dt>S1</dt><dd>Primary somatosensory cortex, the brain's body map.</dd>
+    <dt>PAG</dt><dd>Periaqueductal gray, a midbrain hub for defence and pain modulation.</dd>
+    <dt>fear-avoidance model</dt><dd>Clinical model in which catastrophic thoughts about pain lead to fear, avoidance
+    and disability.</dd>
+    <dt>equivalence test</dt><dd>A test that can show an effect is too small to matter, which a non-significant
+    result alone cannot.</dd>
+    <dt>named only</dt><dd>On this page: a work whose PDF could not be obtained, so it was not reviewed.</dd>
   </dl>
 </section>
 
 <section class="col">
-  <h2><span class="num">09</span> References</h2>
-  <p>{{N_REFS}} sources are cited. {{N_READ}} were read in full and reviewed for this page. The other
-  {{N_UNREAD}} are named only as the reviewed papers describe them, and are marked <em>not read</em>.</p>
+  <h2><span class="num">12</span> References</h2>
+  <p>The list is the whole collection: {{N_REFS}} works, {{N_CITED}} of them cited in the text above and listed first
+  in order of citation, the rest after them by year. {{N_FULL}} were reviewed in full, {{N_SHORT}} as short summaries
+  from the PDF, and {{N_NAMED}} are named only and were not read. Each entry says which.</p>
   {{REFS}}
 </section>
 
@@ -496,14 +822,15 @@ ol.refs li:target .rnum{background:var(--ink);color:var(--ground)}
 
 <section class="col">
   <h4>Provenance</h4>
-  <p class="foot">Built by <code>python docs/project/references/imperativism/intro_page/build_page.py</code>
-  from <code>page_template.html</code> in the same folder, with the House Style Sheet&rsquo;s style block and
-  figure viewer taken from <code>docs/develop/active/meta/house_style_sheet.template.html</code>. Figure 1 is
-  drawn by <code>fig01_three_contents.py</code>. The content summarises the reference review
-  <code>docs/project/references/imperativism/imperativism_lit_review.md</code>, which gives the argument
-  reconstructions, page citations and a table of who answers whom. The five PDFs are in
-  <code>docs/project/references/imperativism/sources/</code>. Quotations are from that review&rsquo;s page-cited
-  extracts. Page numbers for the two author copies follow the manuscript, not the journal.</p>
+  <p class="foot">Built by <code>python docs/project/references/imperativism/intro_page/build_page.py</code> from
+  <code>page_template.html</code>, with the House Style Sheet taken from
+  <code>docs/develop/active/meta/house_style_sheet.template.html</code>. Every figure is drawn by its own script in the
+  same folder from the data files in <code>docs/project/references/imperativism/field_history_data/</code>, which are
+  generated from the per-paper reviews by <code>build_field_history_data.py</code>. The prose follows
+  <code>imperativism_field_history_synthesis.md</code>, which was checked by a pain-science reviewer and an evidence
+  reviewer before this page was built. The per-paper reviews are indexed in
+  <code>imperativism_lit_review_INDEX.md</code>, and the PDFs are in <code>sources/</code>. An earlier version of this
+  page introduced only the imperativism debate from five papers; this version replaces it with the field review.</p>
 </section>
 
 </div>

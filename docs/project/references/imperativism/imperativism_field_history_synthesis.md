@@ -3,7 +3,7 @@
 **Topic folder:** `docs/project/references/imperativism/`
 **Built from:** the per-paper reviews in Parts A–I (65 papers reviewed from PDF, 24 more known only by name), 2026-09-17.
 **Curator:** literature-curator
-**Master index:** [[imperativism_lit_review_INDEX]] · **Data for diagrams:** `field_history_data/` (9 CSV files; see [§9](#9-data-files-for-diagrams))
+**Web page:** [Pain Beyond Sensation](https://claude.ai/artifact/77YdiWcVTAg1iiqRHu9qrB) · **Master index:** [[imperativism_lit_review_INDEX]] · **Data for diagrams:** `field_history_data/` (9 CSV files; see [§9](#9-data-files-for-diagrams))
 
 ## What this document is about (plain-language entry point)
 

@@ -1,0 +1,1 @@
+All 47 checked survey claims are counted (100% of survey_corrections.csv); one of them named a finding without citing any paper and is counted as not checkable. Claims about named-only papers were not checked and are not in the file.

@@ -1,0 +1,1 @@
+All 89 of 89 works are drawn and named (100%): 65 reviewed from the PDF, 24 named-only. Years are plotting years from works.csv; where a work appeared online before print, its label keeps the familiar citation year, so a few labels differ from the position of their mark by a year or two (Procyk 2016 appeared online in 2014).

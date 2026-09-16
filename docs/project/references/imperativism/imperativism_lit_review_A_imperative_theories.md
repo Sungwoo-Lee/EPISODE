@@ -3,7 +3,7 @@
 **Topic folder:** `docs/project/references/imperativism/`
 **Corpus:** 5 papers (philosophy of mind), reviewed one at a time in the order of the debate, 2026-09-16.
 **Reviewer:** literature-reviewer
-**Introductory page:** [The Imperativism Debate](https://claude.ai/artifact/77YdiWcVTAg1iiqRHu9qrB) — a plain-language web page built from this review; source in `intro_page/` (`build_page.py`).
+**Web page:** [Pain Beyond Sensation](https://claude.ai/artifact/77YdiWcVTAg1iiqRHu9qrB) — the field review built from all parts A–I and the synthesis (it replaced the earlier five-paper introduction at the same link); source in `intro_page/`.
 
 ## What this review is about (plain-language entry point)
 
