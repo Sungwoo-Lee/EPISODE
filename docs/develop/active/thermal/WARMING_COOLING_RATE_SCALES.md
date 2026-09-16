@@ -1,0 +1,696 @@
+---
+title: "Separate Warming and Cooling Speeds for Body Temperature"
+topic: sensors
+status: active
+created: 2026-09-17
+last_updated: 2026-09-17
+aliases: [warming_cooling_rate_scales]
+---
+
+# Separate Warming and Cooling Speeds for Body Temperature
+
+> **Status**: PLANNED. No code written.
+> **Opened**: 2026-09-17
+> **Related**: [[thermal_implementation_plan]] (Stage 2, the body recurrence this changes) · [[thermal_handover]] · [OPEN_WORK_HANDOFF.md item E1](../issues/OPEN_WORK_HANDOFF.md) (reviewing every temperature setting together; this plan is **not** that review) · [[body_temperature_observation]] · [SAVED_RUN_CONFIG_COMPAT.md](../refactors/SAVED_RUN_CONFIG_COMPAT.md)
+
+---
+
+## Context
+
+In the campfire world the agent has a body temperature. Each step it drifts toward the temperature of the cell it stands on, physiology pulls it partly back toward a comfortable 0°, and it dies if it leaves the band from −15 to +15. **The body warms and cools at the same speed.** The user set behavioural targets from what the agent has to do:
+
+- **Away from a fire, about 80–110 steps.** Starting comfortable and standing in the far cold, the body should take that long to fall to −15. That matches the 100-step hunger clock, so a trip to forage, dodge predators and heal is possible.
+- **Rewarming from near-death in 10 steps or fewer.** Predators strike within 1–3 steps of arriving, so a slow rewarm next to the fire leaves the agent a sitting target.
+- **The fire cell itself kills by step 2–3, and the first step on it is survivable.** Anything slower is warming, not pain.
+
+A search of about 120,000 combinations of the settings that exist today found **no** setting that meets the "away" and "rewarm" targets together. One speed cannot be slow for cooling and fast for warming at once.
+
+**This plan adds two settings: a warming speed and a cooling speed.** Each multiplies the body's whole per-step temperature change: the warming one when the temperature is rising, the cooling one when it is falling. Where the body finally settles in any cell does not move, and neither does the load-time check built on those settling points. Both settings ship at 1.0, which reproduces today's environment exactly. Choosing values that meet the targets is a separate follow-up.
+
+Warming faster than cooling is documented in real animals (see §A4), but the ratio the targets probably need is a deliberate modelling choice. It is also a documented departure from EVAAA, the reference environment this one was adapted from, which uses a single rate.
+
+---
+
+## Approval
+
+The user pre-approved this plan before sleeping (2026-09-17) and asked that the development pipeline run to completion. A clean, independent `plan-reviewer` pass stands in for the approval gate.
+
+- `plan-reviewer` verdict:
+- `math-reviewer` verdict:
+- Approved for implementation by:
+
+---
+
+## Decisions made unattended
+
+Nobody was available to ask, so each call below was settled conservatively. The reasoning is recorded so the user can overturn any of them on waking.
+
+| # | Decision | Why |
+|---|---|---|
+| **D1** | **Key names: `thermal.warming_rate_scale` and `thermal.cooling_rate_scale`.** `EnvParams` fields are `thermal_warming_rate_scale` and `thermal_cooling_rate_scale`. | `_rate` already marks per-step quantities in this block (`metabolic_coupling_rate`). `_scale` says the value is a dimensionless multiplier, not a new coefficient; a `k_` prefix would wrongly suggest a new physical term. A bare `thermal.warming_scale` was rejected because the block already has a different "scale" in play (the thermal drive-axis scale in E1(b)), and a bare name could be read as scaling the drive or the field. |
+| **D2** | **Both scales are static `EnvParams` fields (`pytree_node=False`). The gate is computed inline from the two values: `if params.thermal_warming_rate_scale == 1.0 and params.thermal_cooling_rate_scale == 1.0:`.** No separate stored boolean. | This follows `body.recovery_in_bush_multiplier` (static float, inline `!= 1.0` gate, commit `761f427f`). A separate traced value plus a stored boolean gate could get out of sync: a `params.replace(thermal_warming_rate_scale=3.0)` that forgot the boolean would be silently ignored. Deriving the gate from the values makes that impossible. The loader applies `float()`, so YAML `1` and `1.0` both compare equal to `1.0`. Static fields add no graph inputs, so the 1.0/1.0 graph keeps exactly today's inputs. **Cost:** changing a scale recompiles, and one batch cannot mix scale values across environments. Both hold already for every static field, and the scales are per-config constants. |
+| **D3** | **The metabolic-coupling drain is NOT scaled.** It stays `rate * abs(k_loss * (T - temperature_setpoint))` using the pre-step temperature. The code comments and `05_body_homeostasis.md` are updated to say so. | The scale is picked by the **sign** of the net per-step change `d`. At a settled equilibrium `d` is zero up to float rounding, so its sign is noise. But the defence term `k_loss*(T - setpoint)` is **not** zero there: a body settled at −8 in a −10 cell is still defending every step. If the drain were scaled, a settled body's energy bill would jump by the full warming/cooling ratio, probably 4–6×, from step to step on rounding alone. The unscaled drain is a continuous function of body state and has no such discontinuity. Two further reasons: the feature is off in every live config, and E1(a) already queues the drain's calibration for the whole-block review, so this change should not alter its meaning. **Known cost:** with unequal scales the claim "the charge on step t pays for exactly the defence performed on step t" becomes approximate while the body is moving. The comment is amended to say so. A test pins this decision (T11). |
+| **D4** | **Scales must be strictly > 0, written `if not (scale > 0.0): raise`.** Warming covers `d > 0`; **cooling covers `d <= 0`, including `d == 0`.** | A scale of 0 freezes the body in that direction forever: at `cooling_rate_scale: 0` a warmed body never cools, and the equilibrium is never reached from above. A negative scale reverses the direction and diverges. The negated comparison also rejects a YAML `.nan`, which a plain `scale <= 0.0` would let through. At `d == 0` the branch makes no numerical difference to temperature, because `s * 0 == 0`; T09 pins that. Under D3 it makes no difference to the drain either. |
+| **D5** | **The existing check `k_exchange + k_loss <= 1` stays exactly as it is. A per-scale check is added next to it:** `if not (scale * (k_exchange + k_loss) <= 1.0): raise`, run once per key, each naming its own key. | The unscaled check keeps `k_exchange` and `k_loss` meaning "fraction of the gap closed per step", which is their documented meaning. Relaxing it would be a separate scope decision. The per-scale bound is the one that actually prevents overshoot (§A2). `k_exchange` is one global scalar, not per-cell (§A5.1), so no maximum over cells is needed. **Consequence for the follow-up search:** its space is `k_exchange + k_loss <= 1` and `scale * (k_exchange + k_loss) <= 1` for each scale. |
+| **D6** | **Configs: the keys are written inline at `1.0 / 1.0` in `configs/environment/default.yaml` and in the two archived thermal-on standalone worlds. They are NOT written into `basic/05-campfire_thermal_10x10.yaml` or `basic/06-sensory_noise_10x10.yaml`.** | Level 05's own `thermal:` block contains only `enabled: true`; it takes every body constant (`k_exchange`, `k_loss`, …) from `default.yaml`, and level 06 extends level 05. Writing the two scales only into 05 would make them the lone body constants spelled out there. They resolve to 1.0/1.0 through the trainer's loader, and Checkpoint CP3 verifies that on the resolved config. `default.yaml` needs the keys anyway, because `tests/env/test_thermal_validation.py` switches `enabled` on inside `default.yaml`'s own dictionary. The two archived worlds need them because eight test modules and one fixture generator load them as raw, thermal-on configs (§A5.3). The ~70 archived **thermal-off** configs with a `thermal:` block are not touched, because a conditional key is never read when `enabled` is false. |
+| **D7** | **`docs/develop/active/thermal/temperature_system_plan/sim.py` and its vendored copy `tests/env/thermal_sandbox_oracle.py` are not modified.** The new tests carry their own two-rate NumPy oracle. | `sim.py` is the design record for the single-rate body, and the vendored oracle is meant to mirror it verbatim. Adding scales there would change a historical artefact and couple the existing Stage 2 tests to this change. The follow-up target search will need its own two-rate recurrence; §F1 gives it. |
+| **D8** | **A new byte-identity fixture is added, captured from the pre-change code.** A new generator script under `scripts/fixtures/` produces it, so `SCRIPTS_DEPENDENCY_MAP.md` gets a row. | Measured: the only existing thermal-on fixture, `thermal_on_coupling_off.npz`, has **0 warming steps** in 300 (273 cooling, 27 flat; the agent dies around step 16 and freezes). It therefore **cannot detect a mistake in the warming half of the gate**. The new fixture holds four rollouts: warming, cooling, and each again with coupling on. Following the `761f427f` precedent, a pre/post jaxpr hash of the whole `jax_step` is also required (CP5). |
+| **D9** | **The scales are not added to the curriculum modality fingerprint** (`_modality_fingerprint` in `train.py` / `dreamer_srl_main.py`). | That fingerprint guards what observation dimensions *mean*. The scales change dynamics, not observations, and the fingerprint already skips continuous floats on purpose (see `dreamer_srl_main.py:838-848`). |
+| **D10** | **`scripts/claude/regen_dev_index.py` was not run.** `docs/develop/INDEX.md` currently holds another session's staged, uncommitted work. The frontmatter `topic` is `sensors`, matching the sibling docs in `thermal/`; `thermal` is not in `VALID_TOPICS`. | Regenerating the index now would rewrite a file another session is mid-way through committing. Whoever commits `INDEX.md` next picks this doc up. |
+| **D11** | **The comment deriving the Body Temperature noise clip in `default.yaml` (`clip_min/max: ±100`) is not edited.** | Checked: under the D5 bound one step can never pass the equilibrium (§A2), so the worst terminal overshoot jumps to at most `T*`. On the calibrated fire `T*` is +51 to +65 (world −22 to −28), which is under 100. The clip cannot bind at shipped geometry for any legal scale. The comment's one-step formula is written for scale 1.0 and is flagged for the follow-up (§F2) instead of edited here. |
+| **D12** | **`docs/environment/05_body_homeostasis.md` is updated**, although it is not one of the three Maintenance-Contract docs. | It is the doc that states the recurrence, the time constant and the drain formula. All three would go stale. |
+| **D13** | **Two commits.** (1) The generator, the pre-change fixture and the dependency-map row. (2) Everything else, so the registry change-log entry lands in the same commit as the `default.yaml` key, as the registry protocol requires. | A separate first commit makes it visible in history that the evidence came before the change. |
+| **D14** | **Stop condition checked, and none found.** All six settled requirements were checked against the code, and none is factually false. One finding (§A3) bears on the **follow-up**, not on this plan: at today's other settings, the "away" time still depends strongly on the per-episode world temperature, whatever cooling scale is chosen. | Recorded so the follow-up search does not assume the two keys alone are enough. |
+
+---
+
+## Analysis
+
+### A1. What exists today
+
+`src/environment/core.py::update_body` (lines 286–317 at HEAD `663cbd72`), inside a static `if params.thermal_enabled:`:
+
+```python
+cell_temp = state.thermal_field[new_agent_pos[0], new_agent_pos[1]]
+new_body_temp = (
+    state.body_temp
+    + params.thermal_k_exchange * (cell_temp - state.body_temp)
+    + params.thermal_k_metabolic
+    - params.thermal_k_loss * (state.body_temp - params.temperature_setpoint)
+)
+```
+
+`k_exchange`, `k_loss` and `k_metabolic` are **traced** scalar `EnvParams` fields (`state.py:393-395`). The metabolic-coupling drain sits earlier in the same function (`core.py:192-196`), behind the **static** field `thermal_metabolic_coupling` (`state.py:411`, `pytree_node=False`). It reads the pre-step `state.body_temp`.
+
+The stability check is at `config_loader.py:1553-1558`: `if _th_k_exchange + _th_k_loss > 1.0: raise ValueError(...)`. It is inside `if _thermal_on:`, with each rate validated `>= 0` just above.
+
+### A2. The change, and why every settling point survives it
+
+Write `K = k_exchange + k_loss` and let `T*` be the body's settling temperature in the current cell:
+
+$$
+T^{*} = \frac{k_{ex}\,T_{field} + k_{loss}\,T_{set} + k_{met}}{K}
+$$
+
+The per-step change is linear in `T`:
+
+$$
+d(T) = k_{ex}(T_{field} - T) + k_{met} - k_{loss}(T - T_{set}) = K\,(T^{*} - T)
+$$
+
+The new update is `T ← T + s·d`, with `s = warming_rate_scale` if `d > 0` and `cooling_rate_scale` otherwise.
+
+- **Fixed points are unchanged.** `s·d = 0` exactly when `d = 0`, because `s > 0` (D4), and `d = 0` exactly when `T = T*`, because `K > 0`. So there is one settling temperature per cell, with no dependence on the path taken, and it is today's `T*`.
+- **With `s·K <= 1` the approach cannot overshoot.** Let the error be `e = T − T*`. The update gives `e_next = (1 − s·K)·e`, and `0 <= 1 − s·K < 1`. The sign of `e` therefore never flips while the agent stays in one cell, so the same scale applies on every step. **The path is exactly today's single-rate recurrence with rate `s·K` in place of `K`.** This is why D5's bound matters beyond "no oscillation". The loader's structure check (`02_config_schema.md` §"load-time structure check") relies on "the approach to `T*` is monotone", and that stays true. Between `s·K = 1` and `s·K = 2` the body would cross `T*` and flip scale on each step. It would still converge, but the monotone claim would be false.
+- **Time to reach a threshold** `T_th` from `T0`, in a fixed cell, is the first `n` with `(1 − s·K)^n <= (T_th − T*)/(T0 − T*)`. Only `s·K` enters it, which is why one key per direction is enough to set speed.
+- **`K = 0` (both rates zero)** has no fixed point today: the body drifts by `k_met` per step. After the change it drifts by `s·k_met`. The structure check already skips this case (`config_loader.py:650`), and nothing new is needed.
+
+**What "warming" means, stated plainly for the docs.** The scale follows the direction of *this step's* change, not whether the body is above or below the setpoint or colder than its cell. A body at −2 in a −10 cell has `T* = −8` and is cooling, even though it is below the comfortable 0°. A body at +12 standing on the fire is warming, **so a warming scale above 1 also makes the fire kill faster**. Likewise, a body overheated to +14 that steps back to the ring (`T* = +8.09`) cools at the cooling speed. The follow-up search must account for both effects.
+
+**`_thermal_equilibrium`, `_thermal_radial_equilibria` and `_thermal_structure_verdict` (`config_loader.py:428-527`) stay unmodified.** They compute fixed points only, and fixed points are unchanged. Measured at HEAD at the calibrated midpoint (world −25, fire ratio 12, sigma 0.7, 10×10), the settling temperatures are **+57.93 on the fire, +8.09 on the ring, −19.68 three cells out**. None of these depends on either scale. The plan tests this property (T04, T05) rather than asserting it.
+
+### A3. Why two keys are needed, and a caveat for the follow-up (illustrative, not a tuning)
+
+The following computations use today's `K = 0.05` and the loader's own `_thermal_radial_equilibria`. "Far cold" means a uniform cell at the world baseline, `T* = 0.8 × world`.
+
+| World baseline | Rewarm −14 → 0 on the ring, s=1 | s=2 | Away 0 → −15 in far cold, s=1 | s=0.3 | s=0.2 | Fire kill from ring, s=1 | s=2 |
+|---|---|---|---|---|---|---|---|
+| −22 | 22 steps | 11 | 38 | 127 | 191 | step 4 | step 2 |
+| −25 | 20 | **10** | 28 | **92** | 138 | step 3 | step 2 |
+| −28 | 19 | 9 | 22 | 74 | 111 | step 3 | step 2 |
+
+At world −25 a warming scale near 2 and a cooling scale near 0.3 meet all three targets, a ratio of about 6. That fits the user's "probably around 4–6×".
+
+**Caveat, for the follow-up and not this plan (D14).** At any fixed cooling scale the away time still varies by about 1.7× across the −28 to −22 range the environment samples per episode (127 vs 74 steps at s=0.3). The target band 80–110 is only 1.375× wide. The cause is the gap between far-field `T*` and the −15 death line: only 2.6° at world −22. A cooling scale stretches time but cannot fix that sensitivity. The follow-up search will likely have to move `k_loss` or the world baseline as well. The two keys are necessary but may not be sufficient.
+
+Working file: this was computed inline during planning. The numbers above are reproducible from `_thermal_radial_equilibria(12*abs(w), w, 0.7, 3, 10, 10, 0.04, 0.01, 0.0, 0.0)` together with the recurrence `T ← T + s·K·(T* − T)`.
+
+### A4. Ecology, and the deviation from EVAAA
+
+**Plausible in kind.** Heating faster than cooling is well documented in ectotherms: reptiles use cardiovascular control (heart-rate and blood-flow changes) to heat faster than they cool. In endotherms, vasodilation versus vasoconstriction and insulation make heat gain and heat loss asymmetric. **The ratio the targets probably need, about 4–6×, is at or beyond the commonly reported range, so it is a deliberate model choice and not a biological measurement.** The user asked whether the asymmetry is ecologically reasonable and accepted this reading.
+
+**The literature figures in this paragraph have NOT been verified.** They are the user's and the session's recollection. `research-postdoc` should check them against primary sources before any paper claim relies on them.
+
+**Deviation from EVAAA, checked in the vendored source.** EVAAA updates body temperature with one coefficient on the summed relative surround temperature: `resourceLevels[2] += changeBody_0 * surroundTemp * Time.fixedDeltaTime + …` (`vendor/evaaa/evaaa_unity/Assets/Scripts/Agent/InteroceptiveAgent.cs:860-878`). There is no sign-dependent rate. This change is a deliberate departure, and the registry change-log entry records it (File Changes, `CONFIG_CRITICAL_SETTINGS.md`).
+
+### A5. Re-verification of the repo, and how each item was checked
+
+**A5.1 Code shape.**
+- `update_body`, the drain and the recurrence were read at `core.py:124-317`. Its only caller is `jax_step` at `core.py:878`, found by `git grep "update_body("` over `src/ tests/ scripts/`; `tests/env/test_recovery_in_bush.py:208` traces it directly.
+- The stability check was read at `config_loader.py:1553`: the form is `k_exchange + k_loss > 1.0 → raise`, so the allowed region is `<= 1`. **The check has no test**: `git grep` over `tests/` for its message text and for `<= 1` found nothing thermal. T13 therefore also covers the existing check.
+- The `thermal_metabolic_coupling` gate is a **static `EnvParams` field**, not a closure (`state.py:411`), used as a Python `if` at `core.py:192`.
+- The conditional-mandatory pattern from `feaa3f1b` was read at `config_loader.py:1593-1606`: `get_mandatory` inside `if _thermal_on:`, with inert sentinels in the `else:` branch (`1616-1651`).
+- **`k_exchange` is one global scalar.** `EnvParams.thermal_k_exchange: float` (`state.py:393`). `git grep thermal_k_exchange` over `src/` finds one reader, `core.py:303`, and no per-cell array exists.
+- **The loader does not reject unknown keys.** Checked in three ways. `Config` (`src/utils/config.py:25-100`) is a plain dict wrapper with `get`/`get_mandatory` and no schema. `load_env_config` (`config_loader.py:78`) only resolves `extends:`. `git grep -i -E "unknown key|unrecognized|unexpected key|allowed_keys|KNOWN_KEYS|extra key"` over `src/` found no key whitelist. **So configs can gain the keys before the loader reads them without breaking any load** (edit order, Step 3).
+- There is **one `EnvParams(` constructor**, `config_loader.py:2171` (`git grep "EnvParams("`), so no other code builds `EnvParams` and would break on new required fields.
+
+**A5.2 Every thermal-on config, by sweep.** Two independent methods:
+1. **Text grep**: `git grep -A3 -E "^thermal:" -- configs/ | grep "enabled: *true"` found 3 files: `archive/thermal/campfire_world.yaml`, `archive/thermal/campfire_world_body_temp_hidden.yaml`, `basic/05-campfire_thermal_10x10.yaml`.
+2. **Trainer loader sweep**: every tracked `configs/environment/**/*.yaml` (335 files, from `git ls-files`) went through `load_env_config` (resolves `extends:`) and then `load_env_params`. Script: Appendix B. It found **4 thermal-on configs**: the three above plus **`basic/06-sensory_noise_10x10.yaml`**, which is thermal-on only through `extends:` and which the text grep cannot see. A second run over the 24 files in `configs/continual/` and `configs/verification/` found **none**.
+
+| Config | Kind | Loads at HEAD | Migration |
+|---|---|---|---|
+| `configs/environment/experiment/archive/thermal/campfire_world.yaml` | standalone | yes | keys inline (D6) |
+| `configs/environment/experiment/archive/thermal/campfire_world_body_temp_hidden.yaml` | standalone | yes | keys inline (D6) |
+| `configs/environment/experiment/basic/05-campfire_thermal_10x10.yaml` | layered (→ 04 → … → `default`) | yes | inherits from `default.yaml` (D6); resolved value checked in CP3 |
+| `configs/environment/experiment/basic/06-sensory_noise_10x10.yaml` | layered (→ 05) | yes | inherits from `default.yaml` (D6); resolved value checked in CP3 |
+| `configs/environment/default.yaml` | standalone, **thermal-off** | yes | keys inline, because tests switch `enabled` on in its dict (`test_thermal_validation.py:217-219`) |
+
+**Load counts at HEAD, 2026-09-17** (Appendix B; "standalone" = no `extends:` key):
+- tracked env configs: 335;
+- standalone: 118, of which **27 load**;
+- layered: 217, of which **211 load**.
+
+These differ from the 2026-09-16 registry figures (265 standalone with 38 loading; 217 layered with 210 loading). The population definition is not the same: that count is not reproducible from `git ls-files configs/environment` with a no-`extends:` split. **The before/after comparison must use Appendix B on both sides.** Expected delta: **zero**.
+
+**A5.3 The archived-config trap from `761f427f`.** The new keys are conditional, so only **thermal-on** configs can fail to load. The trap still bites here, because the archived campfire world is thermal-on and these modules load it from a raw `Config`, found by `git grep "campfire_world"` over `tests/ scripts/ src/`:
+- `test_body_temperature_observation.py` (both archived worlds)
+- `test_metabolic_coupling.py`
+- `test_thermal_body.py`
+- `test_thermal_field.py`
+- `test_thermal_rendering.py`
+- `test_thermal_reward_gate.py`
+- `test_thermal_validation.py`
+- `test_thermoception.py`
+- `scripts/fixtures/generate_metabolic_coupling_fixture.py`
+
+That is 8 test modules and 1 script. Without D6's two archived edits, every one of them would die at load. The parity collectors (`test_unified_parity.py`, `test_thermal_parity.py`, `test_thermal_reward_gate.py`) glob all of `configs/environment/experiment/**`. **No** parity fixture belongs to a thermal-on config (all 34 + 12 + 12 fixture slugs listed by `git ls-files tests/env/fixtures/`), so thermal-off archived configs are unaffected.
+
+**A5.4 Every other reader of the thermal keys.** `git grep -n -E "k_exchange|k_loss"` over `src/ scripts/ tests/ configs/` gave 112 lines (`tmp/20260917_thermal_rates_grep.txt`).
+- **Outside configs:** `config_loader.py` (read, validate, fixed-point helpers), `core.py` (recurrence, drain), `state.py` (fields).
+- **Tests:** `test_metabolic_coupling.py`, `test_thermal_body.py` and `test_thermal_validation.py` (closed forms at scale 1.0, still valid), and `thermal_sandbox_oracle.py` (vendored single-rate oracle, D7).
+- **`scripts/`:** none.
+- **Design-doc copies of the recurrence:** `temperature_system_plan/sim.py`, `build_page.py` and `figK_budget.py`. These are design artefacts and are not modified (D7).
+- **Test helpers building thermal dicts inline:** `test_thermal_validation.py::_MUST_LOAD` and `test_thermal_body.py::_uniform_field_config`. Both start from `default.yaml` or the archived campfire world, so they gain the keys from D6's edits.
+- **Other `EnvParams` thermal readers** (`git grep` for `temperature_setpoint` etc.): the renderer and dashboard read `temperature_setpoint` only. **No renderer file is touched.**
+
+**A5.5 Every byte-identity fixture.** From `git ls-files tests/env/fixtures/`:
+
+| Fixture family | Files | Thermal | Checked by |
+|---|---|---|---|
+| `metabolic_coupling/thermal_on_coupling_off.npz` | 1 | **ON**, coupling off, **0 warming steps** (measured) | `test_metabolic_coupling.py::test_off_by_default_is_a_provable_noop` |
+| `metabolic_coupling/` coupling-**on** fixtures | **0: none exist** | — | — |
+| `thermal_parity/*.npz` | 12 | off | `test_thermal_parity.py` |
+| `parity/*.npz` | 34 | off | `test_unified_parity.py` |
+| `visual_parity/*.npz` + `visual_parity_ref.npz` | 12 + 1 | off | `test_visual_parity.py` |
+| `extero_noc_parity_ref.npz` | 1 | off | `test_extero_noc_parity.py` |
+| **new** `thermal_rate_scales/single_rate_rollouts.npz` | 1 | **ON**, warming and cooling, coupling on and off | new `test_thermal_rate_scales.py` (D8) |
+
+**All of them were captured on CPU.** `tests/env/conftest.py` pins `JAX_PLATFORMS=cpu` and raises if JAX came up on another backend. Every run in this plan therefore goes **one file per process** under `JAX_PLATFORMS=cpu`, which also avoids the XLA core dump on whole-directory runs.
+
+**A5.6 Foreign edits.** Commands: `git status --porcelain --` over every path in File Changes, plus `git diff --cached --name-only`, each wrapped in `timeout` with retries. **None of the files this plan changes carries another session's edits.** Unrelated files that are dirty: `docs/develop/INDEX.md` (staged), `docs/develop/active/refactors/SAVED_RUN_CONFIG_COMPAT.md` (staged) and `docs/develop/active/meta/artifact_format_bugs.md` (unstaged). HEAD moved from `976c0024` to `663cbd72` during planning, so other sessions are committing. **The developer repeats this check immediately before each commit** (CP10).
+
+### A6. Known-context rows (from `bug-curator`)
+
+- **No registry row covers `update_body`, `body_temp`, static `EnvParams` fields or coupling accounting.** This is new ground, so the tests carry the burden: fixture identity (T01), jaxpr identity (CP5) and gate structure (T02).
+- **Reset is not bit-identical across compilations.** That row is scoped to `animal_property_sampled` at reset, one float32 ULP. This plan's static gate keeps the 1.0/1.0 graph literally unchanged, so no new divergence can come from here. `jax_reset` is not edited. The new fixture compares `body_temp` and `nutrition`, not sampled animal properties, and the uniform-field worlds contain no animals.
+- **OPEN_WORK_HANDOFF E1** (review the whole `thermal:` block together). **This change does not resolve E1.** Interaction: E1(a)'s drain calibration now also has to consider D3, the drain being unscaled while the body moves at `s·K`. Neither the scale values nor anything E1 lists is tuned here.
+- **Mandatory-key migration drift** (open, deliberately deferred). The keys are conditional, so thermal-off loads cannot change. Before/after counts are recorded with Appendix B (A5.2, CP3).
+- **Saved run configs stop loading once a key becomes mandatory** (open, remedy in `SAVED_RUN_CONFIG_COMPAT`). Checked 2026-09-17: `results/*/*/models/config.yaml` = **503 files, 0 with `thermal.enabled: true`**, 0 read errors (`tmp/20260917_saved_cfg_thermal.py`). The 77 saved configs using `extends:` date from June–July, before thermal existed. **No saved run is affected.** Trajectory-store fingerprints are also unaffected: `collect_trajectories.py:704` hashes the run's *frozen* config, not the live `default.yaml`.
+
+### A7. Checked and ruled out
+
+- **Curriculum modality fingerprint:** not affected (D9).
+- **Body Temperature observation clip ±100:** cannot bind at calibrated geometry (D11).
+- **Trajectory-store `env_fp`:** frozen-config hash (A6).
+- **Parameter stacking across environments:** `git grep` for stacking `EnvParams` over `src/` found none. Static fields already include `thermal_metabolic_coupling` and `recovery_in_bush_multiplier`, so this adds no new constraint.
+- **Dtype drift:** `jnp.where(pred, py_float, py_float)` yields a weak float32, and multiplied by the float32 change it stays float32. If it widened, `jax_step` would retrace on the next step; T14 catches that.
+
+---
+
+## Implementation Plan
+
+### Design
+
+1. Two conditional-mandatory keys under `thermal:`, read with `get_mandatory` **inside** `if _thermal_on:`, cast with `float()`, validated `> 0` and `scale * (k_exchange + k_loss) <= 1` per key. The inert value when thermal is off is `1.0` / `1.0`.
+2. Two static `EnvParams` fields.
+3. In `update_body`, a static Python gate. At 1.0/1.0 the four existing lines are kept **character for character**. Otherwise the per-step change `d` is computed once and scaled by `jnp.where(d > 0.0, warming, cooling)`.
+4. The drain is unchanged in code and gains a comment (D3).
+5. Configs at 1.0/1.0 (D6), tests, and docs.
+
+### Edit order (the tree is shared; live configs must load between steps)
+
+| Step | What | Loads in between? |
+|---|---|---|
+| **0** | **Read-only baseline.** Record the HEAD SHA. Run the pre-change test list (below). Run Appendix B and record counts. Record `jax_step` jaxpr SHA-1s (CP5) for `default.yaml`, the archived `campfire_world.yaml` and `basic/05-campfire_thermal_10x10.yaml`. Time `jax_step` on the campfire world (speed baseline). | untouched |
+| **1** | Write `scripts/fixtures/generate_thermal_rate_scale_fixture.py`. `git worktree add --detach /tmp/gwp_prescale_baseline <Step-0 SHA>`. Run the generator with `--src-root /tmp/gwp_prescale_baseline`. `git worktree remove /tmp/gwp_prescale_baseline`. Add the `SCRIPTS_DEPENDENCY_MAP.md` row. **Commit 1.** | untouched (new files only) |
+| **2** | Write `tests/env/test_thermal_rate_scales.py`. Run it against the unchanged code and record per-test pass/fail (CP2). Do not commit. | untouched |
+| **3** | Add the keys to `default.yaml` and the two archived thermal-on worlds. Re-run Appendix B: counts must be identical to Step 0. | **yes**: the loader ignores unknown keys (A5.1) |
+| **4** | Apply the `config_loader.py` edit and then the `state.py` edit **back-to-back, with nothing run in between**. | A process that *starts* in the seconds between the two edits fails loudly with a `TypeError` on `EnvParams(...)`. No silent wrong behaviour is possible, and a restart fixes it. There is no zero-window order without adding a default value, which the no-fallback rule forbids. |
+| **5** | Edit `core.py`. Re-take the CP5 jaxpr SHA-1s: they must equal Step 0. Run T01 and the pre-change test list. | yes |
+| **6** | Run the new test file (all pass) and the pre-change list (identical to Step 0). Take the speed measurement. | yes |
+| **7** | Docs: `CONFIG_GUIDE.md`, `02_config_schema.md`, `CONFIG_CRITICAL_SETTINGS.md`, `05_body_homeostasis.md`. Update this doc's Implementation Report. | yes |
+| **8** | Foreign-edit check (CP10), then **commit 2** with an explicit pathspec. | yes |
+
+### Pre-change test list (Step 0; recorded again at Step 6)
+
+Run each in its own process, and record `passed / failed / skipped / errors` for each:
+
+```bash
+cd /media/nas01/projects/Interoceptive-AI/grid_world_pain
+for f in test_thermal_body test_thermal_validation test_thermal_field test_thermoception \
+         test_thermal_reward_gate test_thermal_rendering test_body_temperature_observation \
+         test_metabolic_coupling test_thermal_parity test_unified_parity test_visual_parity \
+         test_extero_noc_parity test_recovery_in_bush test_no_recompile test_dashboard_layout \
+         test_config_layer_silent_failures_20260723; do
+  echo "== $f"
+  JAX_PLATFORMS=cpu timeout 3600 /home/vncuser/miniconda3/envs/grid_world_pain/bin/python \
+      -m pytest "tests/env/$f.py" -q -p no:cacheprovider 2>&1 | tail -3
+done
+```
+
+Why these files:
+- **Thermal suite and archived-world loaders:** the first 8.
+- **Every byte-identity gate:** `metabolic_coupling`, `thermal_parity`, `unified_parity`, `visual_parity`, `extero_noc_parity`.
+- **The other static-gate graph test on `update_body`:** `recovery_in_bush`.
+- **Recompile behaviour:** `no_recompile`.
+- **Loaders of level 05:** `dashboard_layout`, `config_layer_silent_failures`.
+
+`test_thermal_rendering.py` is *run* only. Renderer files are not edited.
+
+**Retry rule (EMFILE).** If a run dies with `OSError: [Errno 24] Too many open files`, or a git command fails the same way, wait 5 s and retry, up to 5 times, before calling it broken. Wrap git in `timeout 120`. Never kill the `bfs` processes, and never delete `.git/index.lock`.
+
+### File Changes
+
+#### `scripts/fixtures/generate_thermal_rate_scale_fixture.py` (new)
+
+Model it on `scripts/fixtures/generate_metabolic_coupling_fixture.py`: CPU pin before any JAX import, the `--src-root` import mechanism and `_provenance_sha` stamping. Differences from that script:
+- **`--src-root` is required** (argparse `required=True`, no default), so re-baselining from the working tree takes a deliberate act.
+- It builds four uniform-field worlds from `<src-root>/configs/environment/experiment/archive/thermal/campfire_world.yaml`. The transformation is copied verbatim from `tests/env/test_thermal_body.py::_uniform_field_config` (lines 58–87): `use_object_sources=False`, `use_random_spots=False`, `default_temp=[c, c]`, `entities=[]`, only campfire obstacles, only food resources, `max_steps=500`, `body.metabolic_cost=0.0`.
+
+| Scenario | Cell temp | Start body temp | Coupling | What it exercises |
+|---|---|---|---|---|
+| `warm_off` | +10.0 | −14.0 | off | warming only (`T* = +8`) |
+| `cool_off` | −10.0 | +14.0 | off | cooling only (`T* = −8`) |
+| `warm_on` | +10.0 | −14.0 | `metabolic_coupling: true`, `metabolic_coupling_rate: 1.0` | warming, drain changes sign when crossing 0 |
+| `cool_on` | −10.0 | +14.0 | same | cooling, drain changes sign when crossing 0 |
+
+For each scenario:
+1. `state = jax_reset(params, PRNGKey(0))`, then `state = state.replace(body_temp=jnp.asarray(T0, dtype=state.body_temp.dtype))`.
+2. Take 150 steps of action `4` (REST) through `jax_step`.
+3. Record `"<name>.body_temp"` `[151]`, `"<name>.nutrition"` `[151]`, `"<name>.done"` `[150]`, `"<name>.termination_reason"` `[150]` and `"<name>.ate_food"` `[150]`.
+4. Record `_provenance_sha`, the `git rev-parse HEAD` of `--src-root`.
+
+**Non-vacuity asserts in the generator:**
+- `warm_*` has ≥ 100 strictly positive `np.diff(body_temp)`.
+- `cool_*` has ≥ 100 strictly negative diffs.
+- No `done` in any scenario.
+- `ate_food` is False on every step of every scenario. If the uniform world lets a resting agent eat (food kept by the copied transformation), change the scenario world **before capture**, in both the generator and the test, so the agent cannot touch food. Settle this at Step 1; after capture the fixture is frozen.
+- `nutrition[-1]` of each `*_on` is lower than its `*_off` twin by > 1.0.
+
+The scenario table, `SEED = 0`, `N_STEPS = 150` and `REST = 4` are duplicated in the test, and each file's docstring says so (the `generate_metabolic_coupling_fixture.py` precedent).
+
+Output: `tests/env/fixtures/thermal_rate_scales/single_rate_rollouts.npz`.
+
+#### `docs/environment/SCRIPTS_DEPENDENCY_MAP.md` (around line 216)
+
+Add a row directly below `generate_metabolic_coupling_fixture.py`, in the same style:
+- Caller: "named in the docstring of `tests/env/test_thermal_rate_scales.py` only (not invoked)."
+- Added 2026-09-17 by [[warming_cooling_rate_scales]]. Hand-run once with `--src-root` (required) pointed at a worktree of the pre-change tip.
+- Writes `tests/env/fixtures/thermal_rate_scales/single_rate_rollouts.npz`.
+- Its scenario table, SEED, N_STEPS and REST are duplicated in the test: change one, change the other.
+- Imports `src/utils/config.py`, `src/environment/config_loader.py` and `src/environment/core.py` (`jax_reset`, `jax_step`).
+- Kind: HAND. Depth: already at `scripts/fixtures/` depth.
+
+#### `configs/environment/default.yaml` (thermal block, between `k_metabolic: 0.0` at line 328 and `metabolic_coupling: false` at line 329)
+
+```yaml
+  k_metabolic: 0.0
+  # Separate warming and cooling SPEEDS. Each step the body's temperature would
+  # change by  d = k_exchange*(T_field - T) + k_metabolic - k_loss*(T - temperature_setpoint);
+  # the change actually applied is  scale*d, with warming_rate_scale when d > 0
+  # (temperature rising this step) and cooling_rate_scale otherwise. Scaling the
+  # WHOLE step leaves every settling temperature exactly where it was; only how
+  # fast the body gets there changes. "Warming" follows the direction of the step,
+  # so a warming scale above 1 also makes the fire burn faster.
+  # 1.0 / 1.0 is exactly the single-rate body (the scaled branch is not compiled).
+  # Equal values other than 1.0 are NOT today's behaviour: 0.5 / 0.5 halves both.
+  # Validated: each > 0, and each * (k_exchange + k_loss) <= 1 (else a step
+  # overshoots its settling point). A deliberate deviation from EVAAA, whose body
+  # uses one rate. Read ONLY when enabled is true.
+  warming_rate_scale: 1.0
+  cooling_rate_scale: 1.0
+  metabolic_coupling: false
+```
+
+#### `configs/environment/experiment/archive/thermal/campfire_world.yaml` (after `k_metabolic: 0.0`, line 350)
+#### `configs/environment/experiment/archive/thermal/campfire_world_body_temp_hidden.yaml` (after `k_metabolic: 0.0`, line 361)
+
+Both files get the same two lines, preceded by this comment (the `761f427f` convention):
+
+```yaml
+  # NOT a migration of the archive. This world is thermal-ON and is loaded from a
+  # raw Config by eight test modules (thermal_body, thermal_field, thermal_rendering,
+  # thermal_reward_gate, thermal_validation, thermoception, body_temperature_observation,
+  # metabolic_coupling) and by scripts/fixtures/generate_metabolic_coupling_fixture.py;
+  # `warming_rate_scale` / `cooling_rate_scale` are mandatory whenever thermal is on,
+  # so without these lines those modules die at config load. 1.0 / 1.0 is the
+  # single-rate body, byte-identical to before the keys existed.
+  warming_rate_scale: 1.0
+  cooling_rate_scale: 1.0
+```
+
+#### `src/environment/config_loader.py`
+
+**(a) Read and validate.** Insert after the stability check (line 1558) and before `# ── Metabolic coupling (Stage 5)` (line 1560):
+
+```python
+        # ── Warming / cooling speed ───────────────────────────────────────
+        # The body's per-step change  d = k_ex*(T_field - T) + k_met
+        # - k_loss*(T - setpoint)  is applied as  scale*d, with the warming scale
+        # when d > 0 and the cooling scale otherwise (d == 0 -> cooling; s*0 == 0
+        # either way). Scaling the whole step leaves every fixed point unchanged,
+        # which is why `_thermal_equilibrium` / `_thermal_structure_verdict` take
+        # no scale. Conditional-mandatory under `thermal.enabled`, no fallback.
+        # Plan: docs/develop/active/thermal/WARMING_COOLING_RATE_SCALES.md
+        #
+        # float() BEFORE the static gate in core.update_body compares against 1.0,
+        # so YAML `1` and `1.0` trace the same graph.
+        _th_warming_scale = float(config.get_mandatory('thermal.warming_rate_scale'))
+        _th_cooling_scale = float(config.get_mandatory('thermal.cooling_rate_scale'))
+        for _key, _scale, _direction in (
+                ('thermal.warming_rate_scale', _th_warming_scale, 'warming'),
+                ('thermal.cooling_rate_scale', _th_cooling_scale, 'cooling')):
+            # Written as `not (x > 0)` so a YAML .nan is refused too.
+            if not (_scale > 0.0):
+                raise ValueError(
+                    f"{_key} must be > 0 (it multiplies the body's per-step "
+                    f"temperature change while {_direction}; 0 would freeze the body "
+                    f"in that direction and a negative value would reverse it), "
+                    f"got {_scale}.")
+            if not (_scale * (_th_k_exchange + _th_k_loss) <= 1.0):
+                raise ValueError(
+                    f"{_key} * (thermal.k_exchange + thermal.k_loss) must be <= 1 "
+                    f"({_scale} * ({_th_k_exchange} + {_th_k_loss}) = "
+                    f"{_scale * (_th_k_exchange + _th_k_loss)}); above 1 a "
+                    f"{_direction} step overshoots the body's settling temperature "
+                    f"and the approach stops being monotone, which the load-time "
+                    f"structure check relies on.")
+```
+
+**(b) Inert values when thermal is off.** In the `else:` branch, directly after `_th_k_exchange, _th_k_loss, _th_k_metabolic = 0.0, 0.0, 0.0` (line 1630):
+
+```python
+        # Warming / cooling speed, inert. 1.0 / 1.0 is the value at which
+        # `update_body`'s static gate traces the single-rate lines verbatim; it is
+        # never read on a thermal-off config anyway (the whole body block sits
+        # behind `if params.thermal_enabled:`).
+        _th_warming_scale, _th_cooling_scale = 1.0, 1.0
+```
+
+**(c) Pass to `EnvParams`.** Directly after `thermal_k_metabolic=_th_k_metabolic,` (line 2332):
+
+```python
+        thermal_warming_rate_scale=_th_warming_scale,
+        thermal_cooling_rate_scale=_th_cooling_scale,
+```
+
+No other loader change. `_thermal_equilibrium`, `_thermal_single_fire_field`, `_thermal_radial_equilibria`, `_thermal_structure_verdict` and `_check_thermal_structure` (`config_loader.py:428-707`) and their call at line ~2059 **stay unmodified** (§A2).
+
+#### `src/environment/state.py` (after `thermal_k_metabolic: float`, line 395)
+
+```python
+    # Warming / cooling speed. The recurrence's per-step change d is applied as
+    # scale*d: `thermal_warming_rate_scale` when d > 0, `thermal_cooling_rate_scale`
+    # otherwise. STATIC (pytree_node=False), like `recovery_in_bush_multiplier`:
+    # `core.update_body` gates on `== 1.0` for both at trace time, so at 1.0 / 1.0
+    # the scaled branch contributes no operation to the graph and the body update
+    # is the single-rate lines verbatim. The gate is derived from the two values
+    # themselves (no separate bool), so a `.replace()` of either scale can never
+    # be silently ignored. Not part of the curriculum modality fingerprint: they
+    # change dynamics, not what an observation dimension means. Inert 1.0 when
+    # `thermal_enabled` is False.
+    thermal_warming_rate_scale: float = struct.field(pytree_node=False)
+    thermal_cooling_rate_scale: float = struct.field(pytree_node=False)
+```
+
+Before inserting, confirm that the neighbouring field block has no default values. Fields without defaults may not follow fields with them, and the thermal block has none today (`state.py:353-431`).
+
+#### `src/environment/core.py`
+
+**(a) Body recurrence** (`core.py:299-306`).
+
+BEFORE:
+```python
+    if params.thermal_enabled:
+        cell_temp = state.thermal_field[new_agent_pos[0], new_agent_pos[1]]
+        new_body_temp = (
+            state.body_temp
+            + params.thermal_k_exchange * (cell_temp - state.body_temp)
+            + params.thermal_k_metabolic
+            - params.thermal_k_loss * (state.body_temp - params.temperature_setpoint)
+        )
+```
+
+AFTER:
+```python
+    if params.thermal_enabled:
+        cell_temp = state.thermal_field[new_agent_pos[0], new_agent_pos[1]]
+        # Warming / cooling speed. STATIC gate on two static floats (cast with
+        # float() at load, so YAML `1` == 1.0). At 1.0 / 1.0 the four lines below
+        # are character-for-character the single-rate code and the scaled branch
+        # does not exist in the traced graph, so bit-parity with every run that
+        # predates the keys is a property of the source (same discipline as the
+        # Stage 5 drain and recovery_in_bush_multiplier). Equal values other than
+        # 1.0 take the scaled branch: 0.5 / 0.5 is a uniform slow-down.
+        if (params.thermal_warming_rate_scale == 1.0
+                and params.thermal_cooling_rate_scale == 1.0):
+            new_body_temp = (
+                state.body_temp
+                + params.thermal_k_exchange * (cell_temp - state.body_temp)
+                + params.thermal_k_metabolic
+                - params.thermal_k_loss * (state.body_temp - params.temperature_setpoint)
+            )
+        else:
+            # Scale the WHOLE per-step change, never one term of it. d is linear
+            # in T with d == 0 exactly at the cell's fixed point T*, so scaling d
+            # leaves T* where it was: one settling temperature per cell, reached
+            # from above or below. Scaling k_exchange alone would move T* by the
+            # direction of arrival. The branch follows the sign of THIS step's
+            # change (d > 0 warming, else cooling; at d == 0, s*0 == 0 either way),
+            # not the body's position relative to the setpoint or the cell.
+            body_temp_change = (
+                params.thermal_k_exchange * (cell_temp - state.body_temp)
+                + params.thermal_k_metabolic
+                - params.thermal_k_loss * (state.body_temp - params.temperature_setpoint)
+            )
+            rate_scale = jnp.where(body_temp_change > 0.0,
+                                   params.thermal_warming_rate_scale,
+                                   params.thermal_cooling_rate_scale)
+            new_body_temp = state.body_temp + rate_scale * body_temp_change
+```
+
+The rest of the block (the `thermal_death` computation and the `done` fold) is unchanged. Also add, directly after the existing formula comment at `core.py:287-289`, one line: `#   (applied as scale*d with a warming / cooling scale — see below)`.
+
+**(b) Drain comment** (`core.py:182-186`). The code does not change. Extend the "`state.body_temp` is the PRE-step temperature" paragraph with:
+
+```python
+        # NOT scaled by thermal.warming_rate_scale / cooling_rate_scale (plan D3).
+        # Those scales are chosen by the SIGN of the body's net step, which at a
+        # settled equilibrium is float noise, while the defence term
+        # k_loss*(T - setpoint) there is not zero. Scaling this bill would make a
+        # settled body's charge jump by the full warming/cooling ratio on rounding.
+        # So the charge is the defence the body STATE demands — continuous in T —
+        # and with unequal scales "pays for exactly this step's defence" holds only
+        # at 1.0 / 1.0. Pinned by tests/env/test_thermal_rate_scales.py.
+```
+
+#### `tests/env/fixtures/thermal_rate_scales/single_rate_rollouts.npz` (new; produced by Step 1, never regenerated from the working tree)
+
+#### `tests/env/test_thermal_rate_scales.py` (new)
+
+Header:
+- Module docstring: plain-language purpose, the generator's name, and the "do not regenerate from the working tree" warning.
+- `import os; os.environ.setdefault("JAX_PLATFORMS", "cpu")`, belt-and-braces with the conftest.
+- `jax.config.update("jax_log_compiles", True)`, needed by T14 and harmless alone in its process.
+
+Helpers:
+- `_campfire_dict()`, which loads the live archived world.
+- `_uniform(cell, **thermal_overrides)`, the same transformation as the generator plus overrides.
+- `_params(d) = load_env_params(Config(d))`.
+- `_rest_rollout(params, T0, n)`, which mirrors the generator.
+- `_update_body_trace(params, T0, cell_pos, n)`, which iterates `update_body` directly: `state = state.replace(body_temp=new_bt)`, info `{"ate_food": False, "damage": 0.0, "rested": True}` as in `test_recovery_in_bush.py:213-221`, jitted over a `lax.scan`. This isolates the recurrence from episode termination, so equilibria past the death line (the fire) can be reached.
+- `_oracle(cell, T0, k_ex, k_loss, k_met, setpoint, ws, cs, n)`: **a two-rate NumPy float64 recurrence written from this plan's equation, importing nothing from `src/`.** `d = k_ex*(cell - T) + k_met - k_loss*(T - setpoint)`; `T = T + (ws if d > 0 else cs) * d`.
+- `_closed_form_T_star(...) = (k_ex*Tf + k_loss*set + k_met) / (k_ex + k_loss)`, written inline, **not** imported from `config_loader`.
+
+Tests. Each reference is independent of the code under test.
+
+| ID | Name | Requirement covered | Reference and assertion |
+|---|---|---|---|
+| **T01** | `test_single_rate_is_byte_identical_to_pre_change_fixture` | every fixture byte-identical at 1.0/1.0 | Rebuild the four scenarios from the live configs, which now carry 1.0/1.0, and compare with `np.array_equal` on every array in the pre-change `.npz`. No tolerance. On failure, report max \|diff\| and `_provenance_sha`. Also assert the fixture is non-vacuous (the same asserts as the generator), so the gate cannot pass by comparing nothing. |
+| **T02** | `test_gate_is_off_at_one_and_on_just_above_one` | gate off at 1.0/1.0, on at 1.0/1.0000001 | `jax.make_jaxpr(lambda p: update_body(state, info, p, pos))(params)` on the campfire world at (1.0, 1.0), at YAML ints (1, 1), and at (1.0, 1.0000001), (1.0000001, 1.0) and (0.5, 0.5). Assert: `str(jaxpr)` at (1.0, 1.0) **equals** that at (1, 1). Each of the other three **differs** from it and has strictly more `select_n` equations and at least as many `gt` equations (counted over `jaxpr.jaxpr.eqns` by `eqn.primitive.name`). The loaded params' `thermal_warming_rate_scale` has type `float` in every case. |
+| **T03** | `test_equal_non_unit_scales_are_not_todays_behaviour` | 0.5/0.5 differs | The `warm_off` and `cool_off` scenarios at (0.5, 0.5). Assert the trajectory differs from the fixture by > 1e-2 at some step, and matches `_oracle(..., 0.5, 0.5)` with `atol=2e-4` (the Stage 2 precedent tolerance). |
+| **T04** | `test_equilibrium_unchanged_from_above_and_below_ring_and_fire` | equilibria unchanged, from above and below, ring and fire | Use the campfire world at `PRNGKey(0)`. Fire cell = `argmax(state.thermal_field)`. Ring cell = an in-bounds Manhattan-1 neighbour. For scale pairs (1.0, 1.0), (3.0, 0.3), (0.3, 3.0), and body starts above and below (ring: `T*−22` / `T*+14`; fire: `T*−40` / `T*+15`), run `_update_body_trace` for 4000 steps. Assert: final value within 2e-3 of `_closed_form_T_star(field value at that cell)`; above-start and below-start finals agree within 2e-3; each scaled final agrees with the (1.0, 1.0) final within 2e-3; **no step crosses `T*`** (the sign of `T_t − T*` is constant until \|e\| < 2e-3). Log the four `T*` values; at `PRNGKey(0)` they need not equal the midpoint-corner numbers +57.93 / +8.09. |
+| **T05** | `test_equilibrium_unchanged_at_extreme_ratio_and_general_fixed_point` | extreme ratio; nonzero `k_metabolic` and setpoint | Uniform cell −10 with `k_metabolic: 0.3`, `temperature_setpoint: 5.0` (inside [−15, 15]) and scales (20.0, 0.2), then (0.2, 20.0). That is ratio 100, with `20*0.05 = 1.0` on the stability boundary, so the fast side converges in one step. Starts at `T*±12`, 4000 steps. The same four assertions as T04. **Float32 note for the developer:** the slow side at `s·K = 0.01` stalls within about 2e-4 of `T*` from rounding, which is why the tolerance is 2e-3. Do not pick 0.05 for the slow side: at `s·K = 0.0025` the stall (~8e-4) reaches the tolerance. |
+| **T06** | `test_whole_step_scaled_with_zero_exchange` | whole step scaled, `k_exchange = 0` | Uniform cell −10, `k_exchange: 0.0`, `k_loss: 0.05`, setpoint 0, scales (1.0, 0.5), `T0 = +10`, one `update_body` step. Expect **9.75**, which is `10 + 0.5*(−0.5)`. Assert it is not 9.5, the value if only `k_exchange` were scaled, which is also today's value. |
+| **T07** | `test_whole_step_scaled_with_metabolic_heat` | whole step scaled, `k_metabolic` nonzero | Uniform cell 0, `k_exchange: 0.0`, `k_loss: 0.05`, `k_metabolic: 0.3`, setpoint 0, scales (2.0, 1.0), `T0 = 0`. One step gives **0.6**, not 0.3. Also run a case with all three terms non-zero against the hand formula, `atol=1e-5`. |
+| **T08** | `test_scale_is_chosen_by_sign_of_the_step` | correct scale by sign | Uniform cell −10 (`T* = −8`), scales (3.0, 0.5). `T0 = −14` (below `T*`, warming): expect **−13.1**, and the wrong branch would give −13.85. `T0 = −2` (**below the setpoint and above the cell, yet cooling** because it is above `T*`): expect **−2.15**, and the wrong branch would give −2.9. `T0 = +14` (cooling): hand value. Each at `atol=1e-5`. |
+| **T09** | `test_zero_step_stays_put` | `d == 0` branch stated | Uniform cell −8, `k_exchange: 0.5`, `k_loss: 0.5`, setpoint 0, scales (1.0, 0.5), `T0 = −4`. Here `d = −2 + 2 = 0` exactly in float32, so the next value is **exactly** −4.0. |
+| **T10** | `test_scaled_rollouts_match_two_rate_oracle` | whole-trajectory reference | All four fixture scenarios at (3.0, 0.3): `body_temp` matches `_oracle` at `atol=2e-4`. Assert it differs from the fixture (non-vacuous). |
+| **T11** | `test_metabolic_drain_is_not_scaled` | pins D3 | The `warm_on` and `cool_on` scenarios at (3.0, 0.3). From the **recorded** `body_temp[t]`, compute `expected_nutrition[t+1] = clip(nutrition[t] − rate·abs(k_loss·(body_temp[t] − setpoint)), 0, max_nutrition)`, with `metabolic_cost = 0`. First assert `info["ate_food"]` is False on every step, so the formula applies. Then assert a match at `atol=1e-4`. **Discrimination:** also compute the scaled-drain alternative and assert the recorded series is > 1e-2 away from it at some step. |
+| **T12** | `test_conditional_mandatory` | thermal-off loads without keys; thermal-on missing either raises | (a) `default.yaml` dict with both keys deleted and `enabled: false` loads, and the loaded fields are `1.0`. (b) The campfire dict with `warming_rate_scale` deleted raises `ValueError` whose message contains `thermal.warming_rate_scale`. (c) The same for `cooling_rate_scale`. (d) YAML `1` (int) loads as `float` `1.0`. |
+| **T13** | `test_stability_and_positivity_checks_fire_per_key` | stability check per scale; also covers the untested existing check | On a uniform cell (the structure check is skipped there) with `k_exchange: 0.25`, `k_loss: 0.25`, so `K = 0.5` exactly: warming 2.0 loads, since `2.0*0.5 == 1.0` is on the boundary. Warming 2.001 with cooling 1.0 raises, and the message names `thermal.warming_rate_scale` and not `cooling`. The mirror case holds for cooling. For each key, 0.0, −1.0 and `float('nan')` raise with that key named. The existing check: `k_exchange: 0.6`, `k_loss: 0.6` raises with `thermal.k_exchange + thermal.k_loss must be <= 1`, even at scales (0.5, 0.5). That confirms D5 kept it. |
+| **T14** | `test_jitted_episode_unequal_scales_no_nan_no_recompile` | jitted episode runs, no NaN, no per-step recompile | The archived campfire world at (3.0, 0.3), `PRNGKey(0)`, and the `ACTIONS` sequence from `test_metabolic_coupling.py` (300 steps) through `jax_step`, inside the log-capture counter pattern of `tests/env/test_no_recompile.py:199-230` (copy the class; do not import from another test module). Assert: count is 1 after step 1 and still 1 after step 300; every `state.body_temp` is finite and float32; `thermal_field` is finite. |
+
+**Non-vacuity requirement (CP2).** At Step 2, against the pre-change code, every test except T01 must **fail**. Most will fail with `AttributeError` on the new fields, T12(b)(c) and T13 because nothing raises, and T03, T06–T11 because the behaviour is absent. T01 must **pass**, because the fixture *is* the pre-change code. Record the table in the Implementation Report. Any other outcome is a stop-and-report.
+
+#### `docs/environment/CONFIG_GUIDE.md` §3.9
+
+- **YAML example** (lines 283–300): after `k_metabolic: 0.0`, add `warming_rate_scale: 1.0   # multiplies the per-step change while the body warms` and `cooling_rate_scale: 1.0   # … while it cools; 1.0 / 1.0 = single-rate body`.
+- **New bullet** after the `k_loss` bullet (which ends at line ~363): **"`warming_rate_scale` / `cooling_rate_scale` change speed, never where the body settles."** Content:
+  - the `scale·d` rule and the sign semantics, including "warming also speeds the fire";
+  - that 1.0/1.0 is byte-identical and not even compiled;
+  - that equal non-1.0 values are a uniform slow-down, not today's behaviour;
+  - the per-scale `<= 1` bound and why (monotone approach, which the structure check relies on);
+  - that the drain is not scaled (D3);
+  - the EVAAA deviation;
+  - a link to this plan.
+- Change "Six things that bite" to "Seven things that bite".
+- **Validation paragraph** (line ~372): after "`k_exchange` and `k_loss` each `>= 0` and summing to `<= 1`", add ", `warming_rate_scale` and `cooling_rate_scale` each `> 0` with `scale · (k_exchange + k_loss) <= 1` per key".
+
+#### `docs/environment/02_config_schema.md`
+
+- **`thermal:` keys table** (lines 66–80): add two rows after `food_min_fire_distance`:
+  - `` `warming_rate_scale` `` \| `thermal_warming_rate_scale` \| **yes** \| `> 0`; `× (k_exchange + k_loss) <= 1` \| multiplies the body's per-step temperature change when it is positive; 1.0 = single-rate. Conditional-mandatory under `enabled`
+  - the mirror row for `cooling_rate_scale` ("… when it is zero or negative").
+- **Conditional-mandatory list** (lines 1275–1279): add `thermal.warming_rate_scale` and `thermal.cooling_rate_scale`.
+- **Structure-check section** (after the `T*` formula paragraph, line ~209): add one sentence. "The two rate scales do not enter this check: they multiply the whole per-step change, so the fixed point is the same, and the per-scale `<= 1` bound keeps the approach monotone."
+
+#### `docs/environment/CONFIG_CRITICAL_SETTINGS.md`
+
+- **Registry row** (after the `thermal.k_loss` row, line 22):
+  - Setting: `` `thermal.warming_rate_scale` / `thermal.cooling_rate_scale` ``
+  - Value: **1.0 / 1.0**
+  - Set in: `default.yaml`
+  - Meaning:
+    - Separate warming and cooling speeds. Each multiplies the body's whole per-step change `d` (warming when `d > 0`, cooling otherwise), so every settling temperature is unchanged and only the time to reach it moves.
+    - **1.0 / 1.0 is byte-identical to the single-rate body.** Equal values other than 1.0 are a uniform slow-down and **not** today's behaviour.
+    - "Warming" follows the step's direction, so a warming scale above 1 also makes the fire kill sooner.
+    - Validated `> 0` and `scale·(k_exchange + k_loss) <= 1` per key.
+    - A documented deviation from EVAAA (single rate).
+    - The ecological literature figures are unverified; `research-postdoc` should check them before any paper claim.
+    - Read only when `thermal.enabled`.
+- **Change-log entry** (the newest entry, inserted above the current first entry at line 36). Title: **2026-09-17 — new conditional-mandatory keys `thermal.warming_rate_scale` and `thermal.cooling_rate_scale`, shipped at 1.0 / 1.0 (separate warming and cooling speeds)**. Body:
+  - **Reason:** the user's targets (away 80–110 steps, rewarm ≤10, fire death by step 2–3) were infeasible together across ~120,000 single-rate configs.
+  - **Design:** scaling the whole step (not `k_exchange`) keeps every equilibrium. The static gate makes 1.0/1.0 graph-identical: jaxpr SHA-1s before/after, and the pre-change fixture byte-identical.
+  - **EVAAA deviation**, citing `InteroceptiveAgent.cs:860-878`.
+  - **Ecology:** plausible in kind; the ratio is a model choice; literature unverified.
+  - **Migration:** `default.yaml` plus two archived thermal-on worlds; 05/06 inherit.
+  - **Before/after load counts** from Appendix B.
+  - **Saved runs affected:** 0 of 503.
+  - **Drain not scaled** (D3).
+  - **Commit** and **blast radius:** none at shipped values.
+
+#### `docs/environment/05_body_homeostasis.md` ("Body Temperature (thermal)", lines ~494–565)
+
+- **After the recurrence equation:** a short paragraph and a display equation, `T_{t+1} = T_t + s \, d_t`, with `s` = warming scale if `d_t > 0` else cooling scale. Then add both keys to the constants table.
+- **"Tug-of-war" section:**
+  - one sentence that the fixed point is unchanged by the scales;
+  - replace "The gap to the fixed point shrinks by a factor `(1 − k_exchange − k_loss)` per step" with "… by `(1 − s·(k_exchange + k_loss))` per step, with `s` the scale for the direction of travel; the time constant is `1/(s·(k_exchange + k_loss))`, 20 steps at 1.0";
+  - the "warming also speeds the fire" sentence.
+- **"Metabolic coupling" section, after "Which `T`.":** a D3 paragraph ("Not scaled by the warming / cooling speeds, and why").
+
+#### `docs/develop/active/issues/OPEN_WORK_HANDOFF.md` (E1, append one line; cross-link in the other direction)
+
+At the end of the E1 bullet: `  - 2026-09-17: [[warming_cooling_rate_scales]] adds two speed multipliers to the thermal block (shipped 1.0/1.0). It does not resolve E1; note that the metabolic drain is deliberately left unscaled while the body moves at scale·rate (that plan's D3), which E1(a)'s calibration should take into account.`
+
+**The senior-developer adds this line when the plan is approved, not the developer.** It is listed here only so the verifier checks it.
+
+**Not changed:**
+- `docs/develop/INDEX.md` (D10).
+- Renderer / dashboard files.
+- `basic/05-*`, `basic/06-*` (D6).
+- `sim.py` and `thermal_sandbox_oracle.py` (D7).
+- `test_metabolic_coupling.py`, `test_thermal_body.py` and `test_thermal_validation.py`: they are unchanged and must pass unchanged.
+- `config_loader.py:428-707`, the fixed-point helpers (§A2).
+
+---
+
+## Checkpoints
+
+- [ ] **CP1: Step-0 baseline recorded.** Record the HEAD SHA; the pre-change test table (per-file passed/failed/skipped/errors); Appendix B counts; the three jaxpr SHA-1s; and the `jax_step` timing on the campfire world at 1.0/1.0 (≥ 5 alternating repetitions of ≥ 500 steps after one warm-up; report the median and spread, per the `761f427f` lesson that 3 repetitions misled).
+- [ ] **CP2: new tests fail before the change.** The Step-2 table matches the non-vacuity requirement above. T01 passes; all others fail. **If T01 fails at Step 2, stop:** the fixture does not match the code it came from.
+- [ ] **CP3: config migration is load-neutral.** After Step 3 and again after Step 5, Appendix B gives the **same** standalone and layered load counts as Step 0, and the same 4 thermal-on configs. For each of the 4, `load_env_config(path).get('thermal.warming_rate_scale')` and `...cooling_rate_scale` equal `1.0` (resolved, through the trainer's loader). After Step 4, `load_env_params` gives `float` 1.0 for both fields on all 4.
+- [ ] **CP4: dtype.** After Step 5, on the campfire world at (3.0, 0.3), `jax_step`'s returned `state.body_temp.dtype == float32` and `weak_type` is unchanged from the input state.
+- [ ] **CP5: the graph at 1.0/1.0 is literally today's.** For each config, `hashlib.sha1(str(jax.make_jaxpr(jax_step)(state, 0, params)).encode()).hexdigest()` after Step 5 **equals** the Step-0 value. Pass `params` as an **argument**, not a closure, and take `state = jax_reset(params, PRNGKey(0))`. The configs: `default.yaml` (thermal-off), the archived `campfire_world.yaml` and `basic/05-campfire_thermal_10x10.yaml` (thermal-on, the latter through `load_env_config`). **Contrast case, on the two thermal-on configs only** (a thermal-off config traces no body block, so its hash cannot move): with `thermal_warming_rate_scale=3.0` via `params.replace`, the hash **differs**. Otherwise the probe proves nothing.
+- [ ] **CP6: byte-identity gates.** At Step 6, `test_metabolic_coupling.py`, `test_thermal_parity.py`, `test_unified_parity.py`, `test_visual_parity.py` and `test_extero_noc_parity.py` give pass/skip counts **identical** to Step 0, each run alone under `JAX_PLATFORMS=cpu`. No `.npz` other than the new one appears in `git status`.
+- [ ] **CP7: the whole pre-change list is unchanged.** Every file's Step-6 counts equal Step 0. A difference is a stop-and-report, never a fixture regeneration.
+- [ ] **CP8: the new test file is fully green.** 14 tests passed, 0 skipped. A skip counts as a failure here (the parity-gates lesson from the wiki).
+- [ ] **CP9: speed.** Timing at 1.0/1.0 is within noise of CP1. Given CP5's identical graph, any real delta means the measurement is broken, not the code. Report gate-on (3.0, 0.3) versus gate-off for information only.
+- [ ] **CP10: foreign edits.** Immediately before each commit, run `timeout 120 git diff -- <file>` for every file in File Changes and `timeout 120 git diff --cached --name-only`. Every hunk must be this plan's. Commit with `git commit -F msg -- <paths>`. Never `git add -A`.
+- [ ] **CP11: docs.** `CONFIG_CRITICAL_SETTINGS.md` has both the registry row and the dated change-log entry, **in the same commit as the `default.yaml` edit**. `CONFIG_GUIDE.md`, `02_config_schema.md`, `05_body_homeostasis.md` and `SCRIPTS_DEPENDENCY_MAP.md` are updated as specified.
+
+---
+
+## Follow-ups (not stages of this plan)
+
+- **F1: target re-search with the new keys.** The user runs this after this lands, without editing configs. The two-rate recurrence to use is `d = k_ex*(Tf − T) + k_met − k_loss*(T − set)`, `T ← T + (ws if d > 0 else cs)·d`, with the legal region `k_ex + k_loss <= 1` and `ws·K <= 1`, `cs·K <= 1` (D5). **Read §A3 first:** at today's other settings the away time varies about 1.7× across the sampled world range at any fixed cooling scale, so the search will likely also need `k_loss` or the world baseline to move. Remember that the warming scale also speeds fire death, and the cooling scale also slows recovery from overheating.
+- **F2:** after F1 picks values, re-check the Body Temperature noise clip derivation comment in `default.yaml` (D11) against the chosen fire geometry.
+- **F3: `research-postdoc`** should verify the ecological rate-asymmetry figures (§A4) before any paper claim.
+- **F4: E1** (whole-block review) should account for the unscaled drain (D3).
+- *(Noticed, not touched:)* `CONFIG_GUIDE.md` §3.9 still says to put campfire worlds under `configs/environment/experiment/thermal/`, a path that `f3161dcc` archived. Doc drift for whoever next edits that section.
+
+---
+
+## Appendix B: config load sweep (run at Step 0, Step 3 and Step 5)
+
+Save as `tmp/<YYYYMMDD_HHMMSS>_thermal_sweep.py` and run with the conda interpreter. The planning run is `tmp/20260917_thermal_sweep.py`, with output `tmp/20260917_thermal_sweep.json`. The file list comes from `git ls-files 'configs/*.yaml' > tmp/<ts>_all_config_yamls.txt`.
+
+```python
+import os, sys, json, time, yaml
+os.environ["CUDA_VISIBLE_DEVICES"] = ""; os.environ["JAX_PLATFORMS"] = "cpu"
+ROOT = "/media/nas01/projects/Interoceptive-AI/grid_world_pain"
+sys.path.insert(0, ROOT); os.chdir(ROOT)
+from src.environment.config_loader import load_env_config, load_env_params
+LIST = sys.argv[1]                                  # the git ls-files output
+paths = [l.strip() for l in open(LIST) if l.strip().startswith("configs/environment/")]
+out = []
+for p in paths:
+    rec = {"path": p}
+    for _ in range(5):                              # EMFILE retry
+        try: raw = yaml.safe_load(open(p)) or {}; break
+        except OSError: time.sleep(2)
+    rec["layered"] = isinstance(raw, dict) and "extends" in raw
+    try:
+        cfg = load_env_config(p)                    # the TRAINER's loader, resolves extends:
+        rec["thermal_enabled"] = bool(cfg.get("thermal.enabled"))
+        rec["warming"] = cfg.get("thermal.warming_rate_scale")
+        rec["cooling"] = cfg.get("thermal.cooling_rate_scale")
+    except Exception as e:
+        rec["resolve_err"] = repr(e)[:200]; out.append(rec); continue
+    try:
+        load_env_params(cfg); rec["params_ok"] = True
+    except Exception as e:
+        rec["params_ok"] = False; rec["params_err"] = repr(e)[:300]
+    out.append(rec)
+json.dump(out, open(sys.argv[2], "w"), indent=1)
+for kind, flag in (("standalone", False), ("layered", True)):
+    sub = [r for r in out if r["layered"] is flag]
+    print(kind, len(sub), "load OK", sum(r.get("params_ok", False) for r in sub))
+for r in out:
+    if r.get("thermal_enabled"):
+        print("THERMAL-ON", r["path"], r.get("warming"), r.get("cooling"), r.get("params_ok"))
+```
+
+Planning-time result (HEAD `663cbd72`): 335 env configs. Standalone: 118, of which 27 load. Layered: 217, of which 211 load. Thermal-on: the 4 listed in §A5.2, all loading.
+
+---
+
+## Implementation Report
+
+> **Implemented by**:
+> **Date**:
+
+<!-- developer: Step-0 SHA; pre-change test table; CP2 table; Appendix B counts at Steps 0/3/5;
+     jaxpr SHA-1s pre/post plus the contrast case; speed numbers; commit SHAs; any deviation with its reason. -->
+
+## Verification Report
+
+> **Verified by**:
+> **Date**:
+
+| File | Change | Status | Notes |
+|------|--------|:------:|-------|
+| | | | |
+
+**Conclusion**:
