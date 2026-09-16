@@ -67,6 +67,19 @@ pre .k { color:var(--accent-text); font-weight:500; }
 hr { border:0; border-top:1px solid var(--line); margin:0; width:100%; }
 .foot { font-size:14px; color:var(--ink-3); }
 
+/* ---------- three rules added 2026-09-16, from the recovery_in_bush_tuning format gate ---------- */
+/* F26: a UA-default <sup>/<sub> widens the line box it sits in. `line-height:0` is the
+   load-bearing part - it stops the raised box contributing to the line box at all. */
+sup,sub { font-size:.72em; line-height:0; vertical-align:baseline; position:relative; }
+sup { top:-.5em; } sub { top:.25em; }
+/* F45 family: `thead th{text-transform:uppercase}` case-maps a symbol - theta became Theta in a
+   header while the prose beside it said theta. Anything inside a header that is a SYMBOL, an
+   identifier or a piece of code keeps its own case. Wrap a symbol as <span class="sym">. */
+th em, th code, th .sym, thead th em, thead th code, thead th .sym { text-transform:none; }
+/* F51: a heading emitted mid-container under a uniform flex gap is equidistant from the paragraph
+   above and the one below, so it reads as a caption to the wrong paragraph. */
+.col > h3:not(:first-child) { margin-top:24px; }
+
 /* ---------- boxes ---------- */
 .callout { background:var(--surface); border-left:3px solid var(--accent);
   padding:20px 24px; display:flex; flex-direction:column; gap:10px; }

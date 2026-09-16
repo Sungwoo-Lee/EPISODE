@@ -115,7 +115,17 @@ def label(ax, x, y, text, ha="center", va="center", colour=None, size=None, weig
 
 
 def save(fig, stem: str, data_statement: str):
-    """Write SVG/PDF/PNG through the house checks, then the data-used line the page shows (11b)."""
-    house.save(fig, f"{OUT}/{stem}")
+    """Write SVG/PDF/PNG through the house checks, then the data-used line the page shows (11b).
+
+    `check_text=False` is the documented opt-out from `house.save`'s text-inside-axes guard (added
+    2026-09-16, register F18 amendment), and it applies to this whole family for one reason: these
+    are DIAGRAMS. `canvas()` makes an axes that fills the entire figure with `axis("off")`, so the
+    axes rectangle IS the canvas and there is no axis title underneath for a label to print
+    through - which is the defect the guard exists to catch. A label sitting a couple of points
+    past the rim of a borderless diagram is a drawing choice, not an escape. (It fires in practice:
+    `lg02_prompting_vs_loop`'s "passes" label overhangs by 7 rendered pixels, about 2 px at display
+    width.) Real plots must NOT use this opt-out.
+    """
+    house.save(fig, f"{OUT}/{stem}", check_text=False)
     with open(f"{OUT}/{stem}.data.txt", "w") as fh:
         fh.write(data_statement.strip() + "\n")

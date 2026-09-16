@@ -1,0 +1,923 @@
+<title>Which recovery settings make resting outside cover pointless?</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans+Condensed:wght@600;700&display=swap">
+<style>
+/* ============================================================================
+   HOUSE STYLE SHEET - the default look for every artifact page in this project.
+   Built by scripts/analysis/style/build_style_page.py; never edit the built file.
+
+   Palette, heading face, numbering and components: the Thermoregulation design
+   page (docs/develop/active/thermal/temperature_system_plan/page_template.html).
+   Body face: Pretendard, vendored under SIL OFL 1.1 and inlined below as a
+   subset (Latin, Greek, arrows, maths), because the Artifact CSP admits no
+   font host but Google Fonts and Pretendard is not on it.
+   Light theme only, by project preference; every colour is painted explicitly.
+   ========================================================================== */
+@font-face{font-family:'Pretendard';font-style:normal;font-weight:400;font-display:swap;
+  src:url(data:font/woff;base64,{{FONT:Regular}}) format('woff')}
+@font-face{font-family:'Pretendard';font-style:normal;font-weight:600;font-display:swap;
+  src:url(data:font/woff;base64,{{FONT:SemiBold}}) format('woff')}
+:root {
+  color-scheme: light;
+  /* neutrals - a faint green bias, not pure grey */
+  --ground:#fbfbfa; --surface:#f1f2f0; --sunk:#e9ebe8; --line:#dcdedb; --rule:#c9cdc9;
+  --ink:#16181d; --ink-2:#4e545e; --ink-3:#6e747e;
+  /* CHROME roles - numbering, glossary terms, box borders, links */
+  --accent:#2a78d6; --warn:#eb6834; --ok:#0f7a55; --danger:#b02b2b; --pick:#e8f0fc;
+  /* the accent as TEXT: #2a78d6 is 4.26:1 on the ground, so text takes one step darker (register F43) */
+  --accent-text:#1f62b4;
+  /* DATA roles - figure series. Same values as the chrome roles by default; a page whose
+     figure spends a hue on a category overrides the matching chrome token (register F11). */
+  --series-1:#2a78d6; --series-2:#eb6834; --series-3:#0f7a55; --series-4:#b02b2b;
+  /* faces */
+  --f-body:'Pretendard',system-ui,-apple-system,"Segoe UI",sans-serif;
+  --f-head:"IBM Plex Sans Condensed","Arial Narrow",system-ui,sans-serif;
+  --f-mono:"IBM Plex Mono",ui-monospace,"SF Mono",Menlo,monospace;
+}
+* { box-sizing:border-box; }
+[hidden] { display:none !important; }   /* the page's own, so no author display rule can defeat it (F14) */
+body { background:var(--ground); color:var(--ink); margin:0;
+  font-family:var(--f-body); font-size:16.5px; line-height:1.68; }
+.wrap { max-width:1140px; margin:0 auto; padding:56px 28px 110px;
+  display:flex; flex-direction:column; gap:52px; }
+.col { max-width:70ch; display:flex; flex-direction:column; gap:18px; }
+h1,h2,h3,h4,.eyebrow,.num { font-family:var(--f-head); }
+h1 { font-size:clamp(36px,5.2vw,54px); line-height:1.04; font-weight:700; margin:0;
+  letter-spacing:-.018em; text-wrap:balance; }
+h2 { font-size:28px; font-weight:700; margin:0; letter-spacing:-.012em; text-wrap:balance; line-height:1.2; }
+/* inline, not flex: a title holding <code> or <em> would tear into flex columns (F1 amendment) */
+h2 .num { display:inline-block; margin-right:14px; font-size:15px; font-weight:600; color:var(--accent-text);
+  letter-spacing:.06em; font-variant-numeric:tabular-nums; }
+h3 { font-size:19px; font-weight:600; margin:0; line-height:1.3; }
+h4 { font-size:14px; font-weight:600; margin:0; color:var(--ink-3);
+  letter-spacing:.1em; text-transform:uppercase; }
+p { margin:0; }
+a { color:var(--accent-text); text-underline-offset:2px; }
+a:focus-visible, button:focus-visible, select:focus-visible, [tabindex]:focus-visible {
+  outline:2px solid var(--accent); outline-offset:-2px; }
+.eyebrow { font-size:12px; font-weight:600; letter-spacing:.14em; text-transform:uppercase;
+  color:var(--ink-3); margin:0; }
+.lede { font-size:20px; line-height:1.55; color:var(--ink-2); }
+strong { font-weight:600; }
+code { font-family:var(--f-mono); font-size:.84em; background:var(--surface);
+  padding:1px 5px; border-radius:2px; overflow-wrap:anywhere; }
+pre { margin:0; background:var(--sunk); border-left:3px solid var(--line); padding:18px 20px;
+  overflow-x:auto; font-family:var(--f-mono); font-size:13px; line-height:1.62; }
+pre .c { color:var(--ink-2); }
+pre .k { color:var(--accent-text); font-weight:500; }
+hr { border:0; border-top:1px solid var(--line); margin:0; width:100%; }
+.foot { font-size:14px; color:var(--ink-3); }
+
+/* ---------- three rules added 2026-09-16, from the recovery_in_bush_tuning format gate ---------- */
+/* F26: a UA-default <sup>/<sub> widens the line box it sits in. `line-height:0` is the
+   load-bearing part - it stops the raised box contributing to the line box at all. */
+sup,sub { font-size:.72em; line-height:0; vertical-align:baseline; position:relative; }
+sup { top:-.5em; } sub { top:.25em; }
+/* F45 family: `thead th{text-transform:uppercase}` case-maps a symbol - theta became Theta in a
+   header while the prose beside it said theta. Anything inside a header that is a SYMBOL, an
+   identifier or a piece of code keeps its own case. Wrap a symbol as <span class="sym">. */
+th em, th code, th .sym, thead th em, thead th code, thead th .sym { text-transform:none; }
+/* F51: a heading emitted mid-container under a uniform flex gap is equidistant from the paragraph
+   above and the one below, so it reads as a caption to the wrong paragraph. */
+.col > h3:not(:first-child) { margin-top:24px; }
+
+/* ---------- boxes ---------- */
+.callout { background:var(--surface); border-left:3px solid var(--accent);
+  padding:20px 24px; display:flex; flex-direction:column; gap:10px; }
+.callout.warn { border-left-color:var(--warn); }
+.callout.pick { border-left-color:var(--ok); background:var(--pick); }
+.callout.danger { border-left-color:var(--danger); }
+.callout .eyebrow, .howto .eyebrow { color:var(--ink-2); }
+
+/* ---------- tables ---------- */
+.scroll { overflow-x:auto; }
+table { border-collapse:collapse; font-size:14.5px; width:100%;
+  font-variant-numeric:tabular-nums; }
+th,td { padding:9px 14px; text-align:left; border-bottom:1px solid var(--line); vertical-align:top; }
+td.n, th.n { text-align:right; font-family:var(--f-mono); font-size:13px; }
+td.n { white-space:nowrap; }
+/* a floor only where prose columns would otherwise be squeezed: the 5-column type table (F34) */
+table.wide { min-width:560px; }   /* td only: a header may wrap, a value may not (F35 amendment) */
+thead th { color:var(--ink-3); font-weight:600; font-size:11.5px; letter-spacing:.07em;
+  text-transform:uppercase; border-bottom:1px solid var(--rule); font-family:var(--f-head); }
+tbody tr.pick { background:var(--pick); }
+tbody tr.pick td:first-child { color:var(--accent-text); font-weight:600; }
+.cue { font-family:var(--f-mono); font-size:12px; color:var(--ink-3); }
+/* A .cue is shown by the script only while the element right after it really overflows - measured,
+   not keyed to a viewport breakpoint (F31, F32). Tables carry no min-width floor (F34). */
+
+/* ---------- glossary ---------- */
+dl { margin:0; display:grid; grid-template-columns:max-content 1fr; gap:10px 22px; align-items:baseline; }
+dt { font-family:var(--f-mono); font-size:13px; color:var(--accent-text); }
+dd { margin:0; font-size:15.5px; color:var(--ink-2); }
+/* widest term 'Interoceptive Nociception' 195px + 40ch dd (9.23px) + 22 gap + 56 gutter = 642 (F48) */
+@media (max-width:642px) { dl { grid-template-columns:1fr; gap:2px 0; } dd { margin-bottom:10px; } }
+
+/* ---------- ordered steps and open questions ---------- */
+.col.stages, .qs { display:flex; flex-direction:column; gap:0; }
+.stage { display:grid; grid-template-columns:64px 1fr; gap:20px; padding:16px 0;
+  border-bottom:1px solid var(--line); align-items:baseline; }
+.stage:last-child { border-bottom:0; }
+.stage .s { font-family:var(--f-head); font-size:13px; font-weight:700; color:var(--ink-3); letter-spacing:.07em; }
+.stage .b, .q { display:flex; flex-direction:column; gap:6px; }
+.stage .t, .q .h { font-weight:600; }
+.stage .d, .q .d { font-size:15px; color:var(--ink-2); }
+.q { padding:15px 0; border-bottom:1px solid var(--line); }
+.q:last-child { border-bottom:0; }
+
+/* ---------- tabs (new: not on the Thermoregulation page) ---------- */
+.tabs { display:flex; flex-direction:column; }
+.tablist { display:flex; flex-wrap:wrap; gap:4px 0; }
+/* each tab carries its own base rule, so a wrapped row keeps its underline under it */
+.tab { font-family:var(--f-head); font-size:13px; font-weight:600; letter-spacing:.08em;
+  text-transform:uppercase; color:var(--ink-3); background:none; border:0; cursor:pointer;
+  padding:10px 13px 8px; border-bottom:2px solid var(--line); }
+.tab:hover { color:var(--ink); }
+.tab[aria-selected="true"] { color:var(--ink); border-bottom-color:var(--accent); }
+.tabpanel { padding:16px 4px 0; display:flex; flex-direction:column; gap:12px; }
+
+/* ---------- colour swatches ---------- */
+.swatches { display:grid; grid-template-columns:repeat(auto-fill,minmax(160px,1fr)); gap:12px; }
+.sw { border:1px solid var(--line); background:var(--ground); }
+.sw .chip { height:44px; }
+.sw .meta { padding:8px 10px; font-family:var(--f-mono); font-size:12px; line-height:1.45;
+  display:flex; flex-direction:column; }
+.sw .meta b { color:var(--ink); font-weight:600; }
+.sw .meta span { color:var(--ink-2); }
+
+/* ---------- type specimens ---------- */
+.spec { border-top:1px solid var(--line); padding:14px 0 0; display:flex; flex-direction:column; gap:6px; }
+
+/* ---------- figures ---------- */
+figure { margin:0; display:flex; flex-direction:column; gap:12px; max-width:880px; }
+figcaption { font-size:14.5px; color:var(--ink-2); max-width:88ch; display:flex; flex-direction:column; gap:8px; }
+figcaption b { color:var(--ink); font-weight:600; }
+/* Figures are files written by a Python script and embedded by the builder - never drawn here. */
+figure img { width:100%; height:auto; display:block; background:var(--ground);
+  border:1px solid var(--line); cursor:zoom-in; }
+figure img:focus-visible { outline:2px solid var(--accent); outline-offset:-3px; }   /* inward: F38 */
+.zoomhint { font-family:var(--f-mono); font-size:12px; color:var(--ink-2); margin:0; }
+.prov { font-family:var(--f-mono); font-size:12px; color:var(--ink-2); line-height:1.55; }
+.prov code { background:none; padding:0; }
+
+/* ---------- full-size figure viewer (guide 2.6; copied from sensor_ladder.html, tokens adapted) ---------- */
+.lb { position:fixed; inset:0; z-index:99; background:rgba(12,12,14,.93); display:flex; flex-direction:column; }
+.lb[hidden] { display:none !important; }
+.lb-bar { display:flex; align-items:center; gap:16px; padding:12px 18px; flex:0 0 auto;
+  border-bottom:1px solid rgba(255,255,255,.13); color:#e9e6e1; font-size:13.5px; }
+.lb-bar .t { flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-family:var(--f-body); }
+.lb-bar .px { font-family:var(--f-mono); font-size:11.5px; color:#b3aea6; flex:0 0 auto; }
+.lb-bar button { font:inherit; font-size:12.5px; background:rgba(255,255,255,.1); color:#e9e6e1;
+  border:1px solid rgba(255,255,255,.2); border-radius:4px; padding:5px 12px; cursor:pointer; flex:0 0 auto; }
+.lb-bar button:hover { background:rgba(255,255,255,.18); }
+.lb-bar button:focus-visible { outline:2px solid #8fbcf0; outline-offset:2px; }
+/* flex, not grid place-items: a % max-height on a grid item never constrains (F37) */
+.lb-scroll { flex:1 1 auto; overflow:auto; display:flex; align-items:center; justify-content:center; padding:18px; }
+.lb-scroll img { flex:0 0 auto; display:block; background:#fbfbfa; border-radius:3px; }
+.lb.fit .lb-scroll img { max-width:100%; max-height:100%; width:auto; height:auto; cursor:zoom-in; }
+.lb.actual .lb-scroll { align-items:flex-start; justify-content:flex-start; }
+.lb.actual .lb-scroll img { max-width:none; max-height:none; cursor:zoom-out; }
+@media (max-width:639px) {
+  .lb-bar { flex-wrap:wrap; gap:8px 12px; }
+  .lb-bar .t { flex:1 0 100%; white-space:normal; display:-webkit-box; -webkit-line-clamp:2;
+    -webkit-box-orient:vertical; overflow:hidden; line-height:1.35; }
+}
+@media (prefers-reduced-motion:no-preference) { .lb { animation:lbin .14s ease-out; } }
+@keyframes lbin { from { opacity:0; } to { opacity:1; } }
+.howto { background:var(--surface); padding:16px 20px; display:flex; flex-direction:column; gap:8px;
+  font-size:15px; color:var(--ink-2); }
+</style>
+<style>
+/* ---------------------------------------------------------------------------
+   PAGE-LOCAL DEPARTURE FROM THE HOUSE STYLE, stated because an unstated one is a defect.
+   This page's figures spend all four house hues on DATA categories: blue is the shipped
+   default setting, orange the rest-premium arm a01, green the recommendation, red a fourth
+   comparison. Format register F11 therefore forbids the page chrome from using any of them,
+   so section numbers, links, glossary terms and box borders below are set in ink and grey.
+   Nothing else about the sheet is changed.
+   --------------------------------------------------------------------------- */
+:root { --accent:#4e545e; --accent-text:#2f343c; --ok:#4e545e; --warn:#4e545e; --danger:#16181d;
+        --pick:#eef0ed; }
+.callout.pick { border-left-color:#16181d; }
+.legendkey { display:flex; flex-wrap:wrap; gap:8px 22px; font-size:14px; color:var(--ink-2); }
+/* inline-block, NOT flex: each span holds a swatch element followed by BARE TEXT, and making a
+   text-bearing element a flex container is the F1-amendment pattern exactly - the text becomes an
+   anonymous flex item. It renders correctly today; that is not a reason to keep the shape. */
+.legendkey span { display:inline-block; }
+.legendkey i { display:inline-block; width:26px; height:0; border-top-width:3px;
+  border-top-style:solid; vertical-align:middle; margin-right:8px; }
+.deriv { font-family:var(--f-mono); font-size:13.5px; }
+</style>
+<div class="wrap">
+
+<header class="col">
+  <p class="eyebrow">grid_world_pain &middot; simulation study &middot; recovery tuning</p>
+  <h1>Making rest in the open not worth taking</h1>
+  <p class="lede">Which healing settings leave an injured agent unable to recover anywhere except
+  inside a bush &mdash; and why the two settings that ship today do the opposite.</p>
+</header>
+
+<section class="col">
+  <h2><span class="num">PURPOSE</span></h2>
+  <p>In this simulation an animal walks a grid, eats, gets hurt, and heals only by choosing the
+  <strong>Rest</strong> action. Injury is a number from 0 to {{VAL:max_injury}}; at
+  {{VAL:max_injury}} the animal dies. Some grid squares hold a <strong>bush</strong>, which hides
+  the animal from a hunting predator and which predators cannot walk into. A setting called
+  <code>body.recovery_in_bush_multiplier</code> can make resting inside a bush heal faster than
+  resting on open ground. It ships at {{VAL:shipped_mult}}, meaning &ldquo;no difference at
+  all&rdquo;.</p>
+  <p>This page asks a tuning question: <strong>what values of the healing settings would make
+  resting out in the open not worth doing at all</strong>, so that an injured animal has to travel
+  to cover to get better? That is a design goal, not a fact about the world &mdash; the point of
+  making cover the only place to heal is to see whether an animal that is hurt starts using cover,
+  which is a behaviour this project wants to be able to study.</p>
+  <p><strong>The answer.</strong> Set the open-ground healing rate to
+  <code>recovery_base_rate: {{VAL:rec_base}}</code>, switch the compounding off with
+  <code>recovery_accel_rate: {{VAL:rec_accel}}</code>, and set
+  <code>recovery_in_bush_multiplier: {{VAL:rec_mult}}</code>. An animal that rests in the open for
+  every step it can afford clears {{VAL:rec_open_budget}} injury points; the same animal resting in
+  a bush closes a bad {{VAL:wound}}-point wound in {{VAL:rec_cover_steps}} rest steps. Both shipped
+  settings fail badly: each of them clears the <em>entire</em> {{VAL:max_injury}}-point injury
+  scale out in the open, one in {{VAL:shipped_steps_full}} rest steps.</p>
+</section>
+
+<hr>
+
+<section class="col">
+  <h2><span class="num">01</span> What a reader needs before the figures</h2>
+  <p>Everything below refers to one simulation. A short inventory, because none of it is guessable
+  from the figures.</p>
+  <dl>
+    <dt>step</dt><dd>One environment timestep. An episode runs at most {{VAL:max_steps}} steps. In
+    every figure the <code>t = 0</code> row is the <em>initial state</em>, not a step.</dd>
+    <dt>injury_level</dt><dd>The body variable this study is about, on a 0&ndash;{{VAL:max_injury}}
+    scale. Reaching {{VAL:max_injury}} ends the episode.</dd>
+    <dt>Rest</dt><dd>One of the agent's actions. It is the <strong>only</strong> way injury ever
+    goes down. A resting agent does not move and does not eat.</dd>
+    <dt>nutrition</dt><dd>The hunger variable, also 0&ndash;{{VAL:max_nutrition}}. It falls by
+    <code>metabolic_cost</code> = {{VAL:metabolic_cost}} every single step; reaching 0 ends the
+    episode by starvation.</dd>
+    <dt>bush</dt><dd>An obstacle carrying <code>hides_agent: true</code>. It conceals the agent
+    from a hunting predator, and since 2026-09-14 also blocks animals from entering the cell. It is
+    the &ldquo;cover&rdquo; this page keeps referring to.</dd>
+    <dt>recovery_base_rate</dt><dd>Injury points healed on the first rest step of a streak.</dd>
+    <dt>recovery_accel_rate</dt><dd>How much more each <em>consecutive</em> rest step heals than
+    the one before it, as a fraction. At 0 the healing rate is flat; at {{VAL:shipped_accel}} each
+    step heals 1.5&times; the last.</dd>
+    <dt>recovery_in_bush_multiplier</dt><dd>What the healing is multiplied by on a step the agent
+    rests while standing on a bush. Must be greater than 0. At exactly 1.0 the whole mechanism is
+    not even compiled into the simulation.</dd>
+    <dt>nociception</dt><dd>The signal the agent receives about its injury. This page does not use
+    it &mdash; the study is about the body variable, not about what the agent can feel.</dd>
+  </dl>
+  <div class="callout">
+    <p class="eyebrow">How to read this page</p>
+    <p>Each figure carries three things. <strong>Why this analysis</strong> comes first &mdash; the
+    question that prompted the figure and what would have counted as an informative answer.
+    <strong>The figure</strong> itself is clickable and opens at full size. <strong>How it is
+    computed</strong> comes after, written for a colleague who was not in the room, and states the
+    known weaknesses of that particular number rather than only its strengths.</p>
+  </div>
+  <div class="legendkey">
+    <span><i style="border-top-color:#2a78d6"></i> the shipped default setting</span>
+    <span><i style="border-top-color:#eb6834"></i> the rest-premium arm a01</span>
+    <span><i style="border-top-color:#0f7a55"></i> the recommendation</span>
+    <span><i style="border-top-color:#b02b2b"></i> a fourth comparison setting</span>
+    <span><i style="border-top-color:#16181d"></i> solid = in the open</span>
+    <span><i style="border-top-color:#16181d;border-top-style:dashed"></i> dashed = on a bush</span>
+  </div>
+  <p class="foot"><strong>One departure from the project's House Style Sheet, stated because an
+  unstated one is a defect.</strong> That sheet gives every page four accent colours and uses them
+  for chrome as well &mdash; section numbers, links, box borders. This page's figures spend all four
+  on the data categories listed just above, so nothing else here is allowed to use them: the section
+  numbers, links and box borders are set in ink and grey instead. The one heat map also uses a
+  <em>grey</em> colour ramp rather than the house blue one, because blue on this page means
+  &ldquo;the shipped default&rdquo; and a blue marker on blue ground is not a marker.</p>
+</section>
+
+<hr>
+
+<section class="col">
+  <h2><span class="num">02</span> The definition the study turns on</h2>
+  <div class="callout pick">
+    <p class="eyebrow">Definition</p>
+    <p style="font-size:18px;line-height:1.5"><strong>Resting outside cover is &ldquo;not
+    meaningfully recoverable&rdquo; when an agent that rests continuously in the open for its
+    entire affordable rest budget cannot clear more than &theta; of the injury scale.</strong></p>
+    <p>The <strong>affordable rest budget</strong> is <code>nutrition / metabolic_cost</code>,
+    because a resting agent eats nothing, so nutrition &mdash; not injury &mdash; is what bounds
+    how long it can go on resting.</p>
+  </div>
+  <p>This page uses <strong>&theta; = {{VAL:theta}} injury points of {{VAL:max_injury}}</strong>
+  and a <strong>{{VAL:budget}}-step budget</strong> as the primary setting.
+  <strong>Both are choices, not facts.</strong> &sect;10 shows what moves if either changes, and
+  &sect;11 records where those choices turned out to need qualifying.</p>
+  <p>Two sentences on why those numbers and not others. {{VAL:theta}} points is a quarter of the
+  scale and is roughly the smallest single hit a predator can land on the jump-attack world, whose
+  per-hit damage is drawn from 15 to 120 &mdash; so &ldquo;cannot clear &theta;&rdquo; means
+  &ldquo;cannot undo even a glancing blow&rdquo;. {{VAL:budget}} steps is the median of a start
+  nutrition drawn uniformly from 0 to {{VAL:max_nutrition}} at a
+  <code>metabolic_cost</code> of {{VAL:metabolic_cost}}, which is the draw the random-init worlds
+  use.</p>
+  <div class="callout">
+    <p class="eyebrow">The complementary requirement</p>
+    <p>A world in which nobody can heal is not the goal. So a second condition has to hold at the
+    same time: <strong>cover must be usable</strong> &mdash; an agent resting in a bush should
+    clear a typical {{VAL:wound}}-point wound within about {{VAL:cover_steps}} rest steps. The two
+    conditions pull in opposite directions, and the whole tuning problem is the gap between
+    them.</p>
+  </div>
+  <p>Throughout, <strong>condition A</strong> means the first (the open must not heal) and
+  <strong>condition B</strong> the second (cover must heal).</p>
+</section>
+
+<hr>
+
+<section class="col">
+  <h2><span class="num">03</span> The arithmetic, as the simulation actually computes it</h2>
+  <p>Five lines, transcribed from <code>{{VAL:source_file}}</code> lines {{VAL:source_lines}}.
+  Everything on this page is derived from them in code; no cumulative total anywhere is typed by
+  hand.</p>
+  <p class="cue" hidden>&larr; the code is wider than the box &mdash; scroll it sideways</p>
+<pre><span class="c"># streak counts CONSECUTIVE rest steps; any non-rest step resets it to 0</span>
+streak(t)       = rested ? streak(t-1) + 1 : 0
+recovery_amount = <span class="k">recovery_base_rate</span> * (1 + <span class="k">recovery_accel_rate</span>) ** (max(streak,1) - 1)
+<span class="c"># the location premium multiplies the AMOUNT, so it inherits the two conditions below</span>
+if <span class="k">recovery_in_bush_multiplier</span> != 1.0 and in_bush:  recovery_amount *= multiplier
+can_recover     = rested AND applied_inc &lt;= 0
+new_injury      = clip(injury + applied_inc - recovery_amount * can_recover, 0, <span class="k">max_injury</span>)</pre>
+  <p>Two consequences do all the work. Because the streak is 1 on the first rest step and the
+  exponent is <code>streak - 1</code>, the heal on the <em>n</em>-th consecutive rest step is
+  <code>base &times; (1 + accel)^(n-1)</code>. The cumulative heal over <em>n</em> steps is
+  therefore a geometric sum:</p>
+  <p class="deriv">cumulative(n) = base &times; n &nbsp;&nbsp;when accel = 0,
+  &nbsp;&nbsp;and&nbsp;&nbsp; base &times; ((1 + accel)<sup>n</sup> &minus; 1) / accel
+  &nbsp;&nbsp;otherwise &nbsp;&mdash;&nbsp; times the multiplier, in cover.</p>
+  <p>Rearranged, the two conditions become almost embarrassingly simple at
+  <code>recovery_accel_rate</code> = 0. Condition A is <strong>base &le; &theta; / budget</strong>,
+  which is {{VAL:ratio}} at the primary setting. Condition B is
+  <strong>base &times; multiplier &ge; wound / cover steps</strong>, which is
+  {{VAL:cover_rate_min}} injury points per rest step. Notice that A depends on &theta; and the
+  budget <em>only through their ratio</em> &mdash; halving the threshold and doubling the budget
+  are the same move, which is why one set of lines in Figure&nbsp;3 carries both sensitivities.</p>
+</section>
+
+<hr>
+
+<section class="col">
+  <h2><span class="num">04</span> Two shipped settings, two different problems</h2>
+  <h3>Why this analysis</h3>
+  <p>Two recovery settings exist in the repository and it is tempting to treat them as two points
+  on one dial. They are not. One compounds and one does not, and the difference decides whether
+  &ldquo;how much can the open heal?&rdquo; even has a bounded answer. An informative figure here
+  would show the compounding curve leaving the flat one behind fast enough that no single base rate
+  can stand in for both.</p>
+</section>
+
+<figure>
+  <img data-fig="f01_recovery_curve" alt="Four curves of cumulative injury healed against consecutive rest steps. The shipped default curve is flat at first then rises almost vertically, reaching the top of the injury scale near step 16. The a01 curve is a straight line reaching the top near step 20, with the recommended in-bush curve drawn exactly on top of it. The recommended in-the-open curve is a shallow straight line reaching only about 11 points by step 55.">
+  <p class="zoomhint">Click the figure to view it full size &mdash; or Tab to it and press Enter; Esc closes it</p>
+  <figcaption>
+    <span><b>Figure 1 &mdash; healing adds up very differently under the two shipped
+    settings.</b> <b>Axes.</b> Horizontal: consecutive rest steps, counted in whole environment
+    steps, from 0 to 55; the <code>t = 0</code> point is the initial state and not a step.
+    Vertical: cumulative injury healed, in points of the 0&ndash;{{VAL:max_injury}} injury scale,
+    from 0 to {{VAL:max_injury}}. Both dotted reference lines are on those same axes: the
+    horizontal one is &theta; = {{VAL:theta}} points, the vertical one the
+    {{VAL:budget}}-step rest budget. All four curves share one scale and are directly
+    comparable.</span>
+    <span>The orange line and the green dashed line lie on top of one another on purpose: the
+    recommendation's healing rate <em>inside cover</em> is set to a01's flat
+    {{VAL:rec_cover_rate}} points per rest step, so a wound closes in the same number of steps that
+    already-run sweep was calibrated to.</span>
+    <span><b>Data.</b> {{DATA:f01_recovery_curve}}</span>
+  </figcaption>
+  <p class="prov">Reproduce: <code>python scripts/analysis/studies/recovery_in_bush_tuning/f01_recovery_curve.py</code>
+  &rarr; <code>docs/experiments/active/recovery_in_bush_tuning/figures/f01_recovery_curve.{svg,pdf,png,data.txt}</code></p>
+  <div class="howto">
+    <p class="eyebrow">How it is computed</p>
+    <p>Each curve is the closed-form cumulative heal from &sect;3, evaluated at whole step counts 0
+    to 55 and then clipped at {{VAL:max_injury}}. The clip is not cosmetic: the simulation clamps
+    injury to the range 0 to {{VAL:max_injury}} on every step, so an agent can never heal more than
+    the scale it is measured on, and the flat tops are that clamp rather than a drawing choice. The
+    two shipped settings are read out of their YAML files at run time rather than transcribed, so
+    if somebody edits either file this figure moves with it. No simulation is run here &mdash;
+    Figure 5 is the one that does that, and it exists precisely because these four curves are
+    algebra and algebra can be wrong. Two conventions are worth stating because they would
+    otherwise surprise. First, &ldquo;consecutive&rdquo; is strict: any step on which the agent does
+    something other than Rest sets the streak back to zero, so a curve describes an uninterrupted
+    stretch and not a total across an episode. Second, these curves assume the agent takes no new
+    damage. A fresh hit suspends healing for the three steps over which the simulation spreads that
+    damage, while the streak keeps climbing underneath &mdash; so after a hit the compounding curve
+    is steeper than drawn, not shallower. What the figure does not show is whether an agent would
+    <em>choose</em> to rest this long; that is &sect;9.</p>
+  </div>
+</figure>
+
+<hr>
+
+<section class="col">
+  <h2><span class="num">05</span> Where the open is already unrecoverable</h2>
+  <h3>Why this analysis</h3>
+  <p>Condition A is a statement about a single number: how much injury a continuously-resting agent
+  can clear outside cover before it starves. Figure 1 evaluates that number at three points;
+  this figure evaluates it everywhere in the plane that any shipped configuration occupies, and
+  draws the line where it equals &theta;. An informative answer tells us whether the workable
+  region is a large comfortable area or a sliver &mdash; and therefore whether the recommendation
+  is robust or delicately balanced.</p>
+</section>
+
+<figure>
+  <img data-fig="f02_open_ceiling" alt="Two heat maps side by side over base rate on a log horizontal axis and acceleration rate on a linear vertical axis. Panel a covers acceleration 0 to 0.5 and is almost entirely the darkest colour, meaning the full injury scale is healable, with a pale wedge only in the bottom left corner. Panel b is the same map over acceleration 0 to 0.06 and is mostly pale, with a dark band on the right. A contour marked 25 points runs through both.">
+  <p class="zoomhint">Click the figure to view it full size &mdash; or Tab to it and press Enter; Esc closes it</p>
+  <figcaption>
+    <span><b>Figure 2 &mdash; almost every setting in the shipped range makes the open fully
+    recoverable.</b> <b>Axes.</b> Both panels: horizontal is <code>recovery_base_rate</code> in
+    injury points healed per rest step, on a logarithmic scale from 0.01 to 5; vertical is
+    <code>recovery_accel_rate</code>, the fractional extra healing per consecutive rest step, on a
+    linear scale &mdash; 0 to 0.5 in panel (a) and 0 to 0.06 in panel (b). Colour in both panels is
+    the same quantity on the same scale: injury points a continuously-resting agent can clear
+    <em>in the open</em> within the {{VAL:budget}}-step rest budget, from 0 (palest) to
+    {{VAL:max_injury}} (darkest). The black line is the &theta; = {{VAL:theta}}-point contour;
+    everything to its lower left satisfies condition A.</span>
+    <span>Panels (a) and (b) share one colour scale, so a colour means the same number in each;
+    (b) is an enlargement of the bottom strip of (a), not a different measurement.</span>
+    <span><b>Data.</b> {{DATA:f02_open_ceiling}}</span>
+  </figcaption>
+  <p class="prov">Reproduce: <code>python scripts/analysis/studies/recovery_in_bush_tuning/f02_open_ceiling.py</code>
+  &rarr; <code>docs/experiments/active/recovery_in_bush_tuning/figures/f02_open_ceiling.{svg,pdf,png,data.txt}</code></p>
+  <div class="howto">
+    <p class="eyebrow">How it is computed</p>
+    <p>Every cell of the grid is one evaluation of the closed-form cumulative heal at
+    <em>n</em> = {{VAL:budget}} rest steps, with the in-bush multiplier set to 1 because this is the
+    open-ground quantity, then clipped at {{VAL:max_injury}}. The grid is 241 by 241 per panel, the
+    base rate spaced logarithmically because the two shipped values are a factor of fifty apart.
+    The contour is drawn by the plotting library from the same array the colour comes from, so the
+    line and the shading cannot disagree. A word on what the colour saturation means: a cell at the
+    darkest value is not &ldquo;heals {{VAL:max_injury}}&rdquo; but &ldquo;heals at least
+    {{VAL:max_injury}}&rdquo;, because the clip discards the surplus &mdash; at the shipped default
+    the uncapped sum after {{VAL:budget}} steps is astronomically larger than the scale. The
+    important weakness is in the budget itself. It is an upper bound, and a fatal one: an agent
+    that really spends its whole nutrition resting is dead at the end of it, so a real agent has
+    strictly fewer rest steps than this map grants. That biases the map towards
+    <em>overstating</em> what the open can heal, which means a setting that fails condition A here
+    fails it conservatively. The map also says nothing about cover; that is Figure 3.</p>
+  </div>
+</figure>
+
+<hr>
+
+<section class="col">
+  <h2><span class="num">06</span> The answer figure: where both conditions hold</h2>
+  <h3>Why this analysis</h3>
+  <p>This is the figure the study exists to produce. Condition A caps the base rate; condition B
+  puts a floor under the base rate times the multiplier. Plotted against each other, the settings
+  that satisfy both form a region, and the tuning question becomes &ldquo;which point in that
+  region?&rdquo; rather than &ldquo;does one exist?&rdquo;. An informative answer would show a
+  region with room in it &mdash; a single feasible point would mean the design was balanced on a
+  knife edge and would break the first time somebody edited a threshold.</p>
+</section>
+
+<figure>
+  <img data-fig="f03_feasible_window" alt="A region map over base rate on a log horizontal axis and in-bush multiplier on a log vertical axis. A pale green wedge in the upper middle marks where both conditions hold, bounded on the right by a vertical line and below by a falling diagonal line. Grey fills the rest. A green dot marks the recommendation at base 0.2 and multiplier 25; an orange dot marks the a01 setting at base 5 and multiplier 1, far outside the wedge.">
+  <p class="zoomhint">Click the figure to view it full size &mdash; or Tab to it and press Enter; Esc closes it</p>
+  <figcaption>
+    <span><b>Figure 3 &mdash; the feasible window, and the point chosen inside it.</b>
+    <b>Axes.</b> Horizontal: <code>recovery_base_rate</code>, in injury points healed per rest step
+    in the open, on a logarithmic scale from 0.02 to 6. Vertical:
+    <code>recovery_in_bush_multiplier</code>, the factor healing is multiplied by while resting on
+    a bush, on a logarithmic scale from 0.8&times; to 60&times;. The whole plane is at
+    <code>recovery_accel_rate</code> = 0. Shading is categorical, not a quantity: green where both
+    conditions hold, and two greys for the two ways of failing. The three vertical lines are
+    condition A at three threshold-to-budget ratios; the black diagonal is condition B; the red
+    dashed diagonal is an advisory ceiling that is not part of the definition.</span>
+    <span>Only one of the two shipped settings can appear on this plane at all. The a01 arm has
+    <code>recovery_accel_rate</code> = {{VAL:a01_accel}} and is marked; the shipped default has
+    {{VAL:shipped_accel}} and is therefore <em>deliberately absent</em> &mdash; it does not live on
+    an accel = 0 plane, and drawing it here would be a mistake.</span>
+    <span><b>Data.</b> {{DATA:f03_feasible_window}}</span>
+  </figcaption>
+  <p class="prov">Reproduce: <code>python scripts/analysis/studies/recovery_in_bush_tuning/f03_feasible_window.py</code>
+  &rarr; <code>docs/experiments/active/recovery_in_bush_tuning/figures/f03_feasible_window.{svg,pdf,png,data.txt}</code></p>
+  <div class="howto">
+    <p class="eyebrow">How it is computed</p>
+    <p>Each of the 321 by 321 cells is tested against both conditions and coloured by the outcome.
+    A cell that fails both is coloured for condition A, and the legend says so, because a reader who
+    assumes the two greys are exclusive will misread the lower right corner. The boundaries are
+    drawn from the algebra rather than traced from the shading: at zero acceleration condition A is
+    exactly <code>base &le; &theta;/budget</code>, a vertical line, and condition B is exactly
+    <code>base &times; multiplier &ge; wound/steps</code>, a straight line on these log axes. The
+    three vertical lines are the primary ratio, halved and doubled &mdash; and because A depends
+    only on that ratio, the dashed one at {{VAL:ratio_fixed}} is simultaneously &ldquo;half the
+    threshold&rdquo; and &ldquo;twice the budget&rdquo;, so one figure carries both sensitivities.
+    The remaining dashed line is an addition to the definition, not part of it: above it a
+    {{VAL:wound}}-point wound closes in under {{VAL:cover_floor}} rest steps, at which point cover
+    has stopped being somewhere to convalesce and become a heal button. It is named in the legend
+    rather than on the plot, where it collided with everything. <strong>What the figure does not
+    show:</strong> any dependence on <code>recovery_accel_rate</code>, fixed at zero across the
+    whole plane &mdash; Figure 4 tests that assumption &mdash; and whether an agent would choose to
+    take the rest steps either condition grants.</p>
+  </div>
+</figure>
+
+<hr>
+
+<section class="col">
+  <h2><span class="num">07</span> Does any compounding at all survive?</h2>
+  <h3>Why this analysis</h3>
+  <p>Figure 3 fixes <code>recovery_accel_rate</code> at zero, and a fixed parameter is an
+  assumption until something tests it. The worry is specific: compounding is exactly the mechanism
+  that lets a tiny base rate clear a large wound if the agent simply keeps resting, so a small
+  positive acceleration might quietly undo condition A. An informative answer is a number &mdash;
+  the largest acceleration each base rate can tolerate &mdash; not a yes or a no.</p>
+</section>
+
+<figure>
+  <img data-fig="f04_accel_spoiler" alt="Four falling curves of rest steps needed to clear 25 injury points against acceleration rate from 0 to 0.12, on a logarithmic vertical axis. Three curves start high and fall through a horizontal rule at 50 steps, with the crossing marked on each: 0.033, 0.055 and 0.076. A fourth curve for base 5 sits flat near 5 steps, far below both rules.">
+  <p class="zoomhint">Click the figure to view it full size &mdash; or Tab to it and press Enter; Esc closes it</p>
+  <figcaption>
+    <span><b>Figure 4 &mdash; a positive acceleration is tolerable, but only a very small
+    one.</b> <b>Axes.</b> Horizontal: <code>recovery_accel_rate</code>, the fractional extra
+    healing on each consecutive rest step, linear from 0 to 0.12. Vertical: the number of
+    consecutive rest steps an agent needs <strong>in the open</strong> before it has cleared
+    &theta; = {{VAL:theta}} injury points, on a logarithmic scale from 3 to 1200 steps. The solid
+    grey rule is the {{VAL:budget}}-step rest budget and the dashed grey rule the
+    {{VAL:budget_fixed}}-step budget of a world that starts at full nutrition; a curve
+    <em>below</em> a rule means the open clears &theta; inside that budget and condition A has
+    failed. The dot on each curve is its crossing of the {{VAL:budget}}-step rule, labelled with
+    the acceleration at which it happens.</span>
+    <span>The horizontal axis stops at 0.12 because every curve has already collapsed by then. The
+    shipped default's acceleration is {{VAL:shipped_accel}}, far beyond the right edge &mdash;
+    see Figure 2 for where it lands.</span>
+    <span><b>Data.</b> {{DATA:f04_accel_spoiler}}</span>
+  </figcaption>
+  <p class="prov">Reproduce: <code>python scripts/analysis/studies/recovery_in_bush_tuning/f04_accel_spoiler.py</code>
+  &rarr; <code>docs/experiments/active/recovery_in_bush_tuning/figures/f04_accel_spoiler.{svg,pdf,png,data.txt}</code></p>
+  <div class="howto">
+    <p class="eyebrow">How it is computed</p>
+    <p>Each curve inverts the cumulative-heal formula: how many consecutive rest steps until the
+    total reaches &theta;. With no acceleration that is simply &theta; divided by the base rate;
+    with acceleration it is a logarithm, because the totals grow geometrically. The result is a
+    fractional step count, so a curve sitting at 47.3 should be read as &ldquo;48 rest steps&rdquo;
+    &mdash; the simulation only takes whole ones. The marked crossings are not read off the plot;
+    they are solved separately by bisection on the same function and printed into the figure's data
+    statement, so the label and the curve cannot drift apart. Two cautions. The curves ignore
+    damage, and a fresh hit keeps the streak climbing while suppressing the healing itself, which
+    makes real compounding <em>faster</em> to bite than drawn. And the vertical scale is
+    logarithmic, so equal vertical distances are equal ratios rather than equal step counts: the
+    gap between 5 and 10 steps occupies as much height as the gap between 500 and 1000. What the
+    figure does not show is condition B, which acceleration only ever helps &mdash; compounding
+    makes cover heal faster too. That is why condition A is the binding constraint on
+    acceleration and is the only one plotted.</p>
+  </div>
+</figure>
+
+<hr>
+
+<section class="col">
+  <h2><span class="num">08</span> The check that the algebra is the simulation</h2>
+  <h3>Why this analysis</h3>
+  <p>Figures 1 to 4 are all the same closed form, transcribed by hand from the simulation's source.
+  If that transcription is wrong, four figures are confidently wrong <em>together</em> and nothing
+  else on this page would show it. So this figure drives the real environment with a scripted
+  always-Rest policy, once with the agent standing on a bush and once on bare ground, and plots
+  what the simulation actually did against what the formula predicted. Agreement validates the
+  algebra. Disagreement would mean the algebra is wrong, and the honest response would be to say so
+  rather than adjust the plot.</p>
+</section>
+
+<figure>
+  <img data-fig="f05_env_validation" alt="Two panels. The left panel plots injury level against rest steps: a shallow falling line for the open and a steep falling line for the bush that reaches zero near step 19, with measured markers sitting exactly on both predicted lines. The right panel plots the absolute difference between measurement and prediction on a logarithmic scale; the open series rises to about one ten-thousandth of a point and the bush series sits on the axis floor.">
+  <p class="zoomhint">Click the figure to view it full size &mdash; or Tab to it and press Enter; Esc closes it</p>
+  <figcaption>
+    <span><b>Figure 5 &mdash; the simulation and the closed form agree to
+    {{VAL:f05_worst}} injury points.</b> <b>Axes.</b> Panel (a): horizontal is rest steps taken, in
+    whole environment steps, 0 to {{VAL:f05_steps}}; vertical is the agent's
+    <code>injury_level</code> in points of the 0&ndash;{{VAL:max_injury}} scale. Lines are the
+    closed-form prediction &mdash; solid for the open, dashed for the bush &mdash; and the black
+    markers are what the simulation measured, open circles for the open and filled squares for the
+    bush, plotted every third step so the lines stay visible underneath. Panel (b): horizontal is
+    the same rest-step axis; vertical is the absolute difference between measurement and
+    prediction, in injury points, on a logarithmic scale from a millionth of a point to 3.</span>
+    <span>The bush series in panel (b) is <strong>exactly zero at every step</strong> and is drawn
+    on the floor of the log axis, which cannot show a zero.</span>
+    <span><b>Data.</b> {{DATA:f05_env_validation}}</span>
+  </figcaption>
+  <p class="prov">Reproduce: <code>python scripts/analysis/studies/recovery_in_bush_tuning/f05_env_validation.py</code>
+  &rarr; <code>docs/experiments/active/recovery_in_bush_tuning/figures/f05_env_validation.{svg,pdf,png,data.txt,results.json}</code></p>
+  <div class="howto">
+    <p class="eyebrow">How it is computed</p>
+    <p>A world is built from the shipped defaults with three deliberate changes: all animals are
+    removed, because a predator would both move the agent and deal damage; only the food resource
+    is kept, because the ambush resource injures anything that touches it; and exactly one bush is
+    pinned to a known cell, so &ldquo;on the bush&rdquo; is an address rather than a search. Injury
+    starts at {{VAL:f05_start_injury}}, just below the fatal ceiling, because healing is
+    subtractive and clipped at zero &mdash; a healthy agent would heal nothing and the comparison
+    would be between two zeros. The agent is then placed on the bush cell, or on an
+    obstacle-free cell, and issued the Rest action {{VAL:f05_steps}} times. Every step is checked
+    before anything is plotted: that the agent really rested, that it took no damage, that its bush
+    membership is what this rollout assumes, and that its rest streak equals the step number. A
+    failure raises an exception rather than drawing a figure, so a contaminated rollout cannot
+    reach the page. The prediction is the same closed form the other four figures use, clipped to
+    the injury range. Its weakness is coverage: this is two rollouts of one setting under one
+    random seed, so it validates the shape of the recurrence and the location premium, not every
+    value a configuration might take.</p>
+  </div>
+</figure>
+
+<section class="col">
+  <div class="callout pick">
+    <p class="eyebrow">Validation result</p>
+    <p><strong>Agreement.</strong> Over {{VAL:f05_n}} compared values the largest disagreement
+    between the simulation and the closed form is <strong>{{VAL:f05_worst}} injury
+    points</strong>, which is single-precision rounding accumulated over
+    {{VAL:f05_steps}} steps &mdash; the smallest representable gap near injury
+    {{VAL:f05_start_injury}} is {{VAL:f05_eps}}. In cover the agreement is <em>exact</em>: every
+    one of the bush rollout's residuals is {{VAL:f05_worst_bush}}. After
+    {{VAL:f05_steps}} rest steps the open-ground agent's injury measured
+    {{VAL:f05_open_final}} against a predicted {{VAL:f05_open_pred}}; the bush agent reached zero
+    injury on step {{VAL:f05_bush_zero}} and stayed there.</p>
+    <p>The rest budget was measured in the same run rather than assumed: nutrition fell by exactly
+    {{VAL:f05_nut_drop}} per rest step against a <code>metabolic_cost</code> of
+    {{VAL:metabolic_cost}}, with a worst per-step deviation of {{VAL:f05_nut_dev}}. The claim that
+    a resting agent eats nothing, and therefore that its rest budget is
+    <code>nutrition / metabolic_cost</code>, is confirmed rather than argued.</p>
+  </div>
+</section>
+
+<hr>
+
+<section class="col">
+  <h2><span class="num">09</span> The recommendation, and the rule that produced it</h2>
+  <p>The feasible region of Figure 3 has room in it, so a point inside it has to be chosen rather
+  than found. The rule is stated here because a point picked by eye is not reproducible.</p>
+</section>
+
+<section class="col stages">
+  <div class="stage"><div class="s">CLAUSE 1</div><div class="b">
+    <div class="t">Switch the compounding off</div>
+    <div class="d">Figure 4 is the evidence. At any base rate large enough to be useful in cover, a
+    positive <code>recovery_accel_rate</code> pushes the open past &theta; inside the budget.</div></div></div>
+  <div class="stage"><div class="s">CLAUSE 2</div><div class="b">
+    <div class="t">Anchor the healing rate inside cover to an experiment that already ran</div>
+    <div class="d">The rest-premium sweep was calibrated so that a {{VAL:wound}}-point wound closes
+    in about {{VAL:a01_steps_wound}} rest steps, at a flat {{VAL:a01_base}} points per step. Making
+    the in-cover rate equal to that keeps the injured window comparable with those runs
+    &mdash; base &times; multiplier = {{VAL:rec_cover_rate}}.</div></div></div>
+  <div class="stage"><div class="s">CLAUSE 3</div><div class="b">
+    <div class="t">Both conditions must hold at both budgets, strictly</div>
+    <div class="d">Not only the {{VAL:budget}}-step median budget but the
+    {{VAL:budget_fixed}}-step budget of a world that starts at full nutrition &mdash; and with
+    strict inequality, so the recommendation does not sit on its own boundary.</div></div></div>
+  <div class="stage"><div class="s">CLAUSE 4</div><div class="b">
+    <div class="t">Take the weakest intervention that survives</div>
+    <div class="d">Among the {{VAL:rec_candidates}} round-number pairs that pass, take the largest
+    base rate, which is the smallest multiplier. A smaller premium is a smaller change to the
+    world.</div></div></div>
+</section>
+
+<section class="col">
+  <div class="callout pick">
+    <p class="eyebrow">Recommended setting</p>
+    <p class="deriv" style="font-size:16px">body:<br>
+    &nbsp;&nbsp;recovery_base_rate: {{VAL:rec_base}}<br>
+    &nbsp;&nbsp;recovery_accel_rate: {{VAL:rec_accel}}<br>
+    &nbsp;&nbsp;recovery_in_bush_multiplier: {{VAL:rec_mult}}</p>
+  </div>
+  <p>In the table below, the second and third columns are <strong>injury points healed</strong>, on
+  the 0&ndash;{{VAL:max_injury}} scale; the fourth and fifth are <strong>consecutive rest
+  steps</strong>. A dash means the setting has no in-cover premium, so there is no separate
+  in-cover number to give.</p>
+  <p class="cue" hidden>&larr; the table is wider than the screen &mdash; scroll it sideways</p>
+  <div class="scroll"><table class="wide">
+    <thead><tr><th>Setting</th><th class="n">open, {{VAL:budget}} steps</th><th class="n">open, {{VAL:budget_fixed}} steps</th><th class="n">steps to <span class="sym">&theta;</span>, open</th><th class="n">steps to heal {{VAL:wound}}, cover</th></tr></thead>
+    <tbody>
+      <tr><td>shipped default &mdash; base {{VAL:shipped_base}}, accel {{VAL:shipped_accel}}, no premium</td><td class="n">{{VAL:shipped_open}}</td><td class="n">{{VAL:shipped_open}}</td><td class="n">{{VAL:shipped_steps_theta}}</td><td class="n">&mdash;</td></tr>
+      <tr><td>rest-premium arm a01 &mdash; base {{VAL:a01_base}}, accel {{VAL:a01_accel}}, no premium</td><td class="n">{{VAL:a01_open}}</td><td class="n">{{VAL:a01_open}}</td><td class="n">{{VAL:a01_steps_theta}}</td><td class="n">{{VAL:a01_steps_wound}}</td></tr>
+      <tr class="pick"><td>recommended &mdash; base {{VAL:rec_base}}, accel {{VAL:rec_accel}}, {{VAL:rec_mult}}&times; in cover</td><td class="n">{{VAL:rec_open_budget}}</td><td class="n">{{VAL:rec_open_budget_fixed}}</td><td class="n">{{VAL:rec_open_steps_theta}}</td><td class="n">{{VAL:rec_cover_steps}}</td></tr>
+    </tbody>
+  </table></div>
+  <p>Read the shipped rows first. Both clear the entire {{VAL:max_injury}}-point scale in the open
+  inside either budget, so both fail condition A by the largest margin the scale allows. The
+  recommended row clears {{VAL:rec_open_budget}} points in the open on the median budget and
+  {{VAL:rec_open_budget_fixed}} on the full-nutrition budget, against a threshold of
+  {{VAL:theta}} &mdash; and to clear &theta; out in the open it would have to rest for
+  {{VAL:rec_open_steps_theta}} consecutive steps, which is {{VAL:rec_theta_vs_budget_fixed}} times the
+  longest budget any shipped world grants and {{VAL:rec_theta_vs_episode}}% of the whole
+  {{VAL:max_steps}}-step episode.</p>
+  <h3>An independent check the design did not ask for</h3>
+  <p>Everything above is about what is <em>possible</em>, not about what an agent would
+  <em>choose</em>. The agent's reward is the reduction in homeostatic drive, the distance of its
+  body state from its setpoints &mdash; and resting costs a unit of nutrition, which pushes that
+  distance back up. Taking a typical mid-episode state, injury {{VAL:rw_injury}} and nutrition
+  {{VAL:rw_nutrition}}, one rest step under the recommended setting is worth
+  <strong>{{VAL:rw_open}}</strong> in the open and <strong>+{{VAL:rw_cover}}</strong> on a bush.
+  The open-ground rest step is not merely futile, it is <em>punished</em>: the hunger it costs
+  outweighs the injury it clears. That is a separate argument from the definition and it lands in
+  the same place, which is the most reassuring thing on this page.</p>
+</section>
+
+<hr>
+
+<section class="col">
+  <h2><span class="num">10</span> What moves if the thresholds move</h2>
+  <p>&theta; and the budget are choices. Because condition A depends on them only through their
+  ratio, one table covers both sensitivities: the ratio &theta;&nbsp;/&nbsp;budget <em>is</em> the
+  largest base rate condition A allows.</p>
+  <p class="cue" hidden>&larr; the table is wider than the screen &mdash; scroll it sideways</p>
+  <div class="scroll"><table class="wide">
+    <thead><tr><th><span class="sym">&theta;</span> (points)</th><th class="n">budget (steps)</th><th class="n">largest base rate A allows</th><th class="n">smallest multiplier B needs</th><th>verdict for the recommended base {{VAL:rec_base}}</th></tr></thead>
+    <tbody>
+      <tr class="pick"><td>{{VAL:s1_theta}} &mdash; primary</td><td class="n">{{VAL:s1_budget}}</td><td class="n">{{VAL:s1_base}}</td><td class="n">{{VAL:s1_mult}}&times;</td><td>{{VAL:s1_verdict}}, with a {{VAL:rec_margin}}&times; margin</td></tr>
+      <tr><td>{{VAL:s2_theta}}</td><td class="n">{{VAL:s2_budget}}</td><td class="n">{{VAL:s2_base}}</td><td class="n">{{VAL:s2_mult}}&times;</td><td>{{VAL:s2_verdict}}</td></tr>
+      <tr><td>{{VAL:s3_theta}} &mdash; half the threshold</td><td class="n">{{VAL:s3_budget}}</td><td class="n">{{VAL:s3_base}}</td><td class="n">{{VAL:s3_mult}}&times;</td><td>{{VAL:s3_verdict}} &mdash; identical to the row above, because only the ratio matters</td></tr>
+      <tr><td>{{VAL:s4_theta}} &mdash; double the threshold</td><td class="n">{{VAL:s4_budget}}</td><td class="n">{{VAL:s4_base}}</td><td class="n">{{VAL:s4_mult}}&times;</td><td>{{VAL:s4_verdict}} easily</td></tr>
+      <tr><td>{{VAL:s5_theta}} &mdash; half the threshold</td><td class="n">{{VAL:s5_budget}}</td><td class="n">{{VAL:s5_base}}</td><td class="n">{{VAL:s5_mult}}&times;</td><td><strong>{{VAL:s5_verdict}}</strong> &mdash; the base rate would have to drop to {{VAL:fallback_base}} and the multiplier rise to {{VAL:fallback_mult}}&times;</td></tr>
+    </tbody>
+  </table></div>
+  <p>The one row that fails is the strictest corner of the space &mdash; half the threshold
+  <em>and</em> twice the budget at once. Everywhere else the recommendation holds, and the failure
+  mode is graceful: halve the base rate, double the multiplier, and the in-cover rate is unchanged.
+  On acceleration the tolerance is much tighter and worth stating as numbers: at the recommended
+  base rate the largest workable <code>recovery_accel_rate</code> is
+  <strong>{{VAL:amax_02_b50}}</strong> on the median budget and <strong>{{VAL:amax_02_b100}}</strong>
+  on the full-nutrition budget. At base {{VAL:shipped_base}} those become {{VAL:amax_01_b50}} and
+  {{VAL:amax_01_b100}}; at base 0.05, {{VAL:amax_005_b50}} and {{VAL:amax_005_b100}}. All of them
+  are between one and two orders of magnitude below the shipped {{VAL:shipped_accel}}.</p>
+</section>
+
+<hr>
+
+<section class="col">
+  <h2><span class="num">11</span> Where the analysis design needed correcting</h2>
+  <p>The study was specified before it was run. Six things in that specification turned out to be
+  wrong, incomplete, or true only under a condition that was not stated. They are recorded here
+  rather than quietly fixed, so a reader who remembers the original brief can see what moved.</p>
+</section>
+
+<section class="col qs">
+  <div class="q"><div class="h">1. The {{VAL:budget}}-step budget is not the budget of the shipped
+  default world</div><div class="d">The brief derived {{VAL:budget}} steps as the median of a start
+  nutrition drawn uniformly from 0 to {{VAL:max_nutrition}}. That draw is real, but only in worlds
+  that switch randomised starting nutrition on. The shipped base configuration does not: it starts
+  every episode at full nutrition, giving a {{VAL:budget_fixed}}-step budget, which is twice as
+  strict. Every figure and table on this page now carries both.</div></div>
+  <div class="q"><div class="h">2. The quoted recurrence dropped a term</div><div class="d">The
+  brief wrote the injury update as <code>clip(injury - recovery, 0, max_injury)</code>. The
+  simulation writes <code>clip(injury + applied_inc - recovery, 0, max_injury)</code>, where
+  <code>applied_inc</code> is this step's slice of any damage still being spread over
+  {{VAL:smoothing}} steps. It makes no difference to the undamaged case this study is about, but it
+  hides a real asymmetry: the rest streak keeps climbing during those {{VAL:smoothing}} steps while
+  healing is blocked, so a compounding setting comes out of a hit <em>faster</em> than the clean
+  curve suggests. The conclusion about acceleration is therefore conservative, and the direction of
+  the error is worth knowing.</div></div>
+  <div class="q"><div class="h">3. &ldquo;A resting agent eats nothing&rdquo; is true only while
+  eating is an action</div><div class="d">It holds on every maintained world, because eating is its
+  own action there and resting is a different one. But the simulation also supports worlds where
+  eating happens automatically on contact with food, and in those the flag is a function of the
+  agent's <em>position</em> alone, not of what it chose to do. An agent resting on a food cell in
+  such a world eats every step, and its rest budget is no longer bounded by nutrition at all. The
+  definition should name that assumption.</div></div>
+  <div class="q"><div class="h">4. The budget is a fatal bound, which makes the test conservative
+  rather than merely approximate</div><div class="d">An agent that really spends
+  <code>nutrition / metabolic_cost</code> steps resting starves on the last one. So the definition
+  grants the open strictly more rest than any surviving agent could take, which means it
+  <em>overstates</em> what the open can heal. A setting that fails condition A under this
+  definition fails it with room to spare. That is a strength of the definition and it was not
+  stated.</div></div>
+  <div class="q"><div class="h">5. The definition is about possibility, not about choice</div>
+  <div class="d">Nothing in it asks whether an agent would take the rest steps it is granted. Under
+  the homeostatic reward the recommended setting makes an open-ground rest step actively
+  <em>negative</em> at a typical mid-episode state (&sect;9), which is a stronger result than the
+  definition claims &mdash; and a different one. The two are kept apart on this page rather than
+  merged.</div></div>
+  <div class="q"><div class="h">6. Figure 3 cannot show both shipped settings</div>
+  <div class="d">The brief asked for the two shipped settings to be drawn throughout. Figure 3 is a
+  plane at <code>recovery_accel_rate</code> = 0, and only one of the two shipped settings lives
+  there. Plotting the other one on it would have placed a point at coordinates the setting does not
+  have. It appears in Figures 1, 2 and 4, and its absence from Figure 3 is stated in that figure's
+  caption.</div></div>
+</section>
+
+<hr>
+
+<section class="col">
+  <h2><span class="num">12</span> What this page does not show</h2>
+  <div class="callout warn">
+    <p class="eyebrow">Limitations, stated rather than implied</p>
+    <p><strong>No agent was trained.</strong> This is a tuning study of the environment's
+    arithmetic. Whether an injured agent actually learns to walk to a bush under these settings is
+    the experiment this page exists to make worth running, and it has not been run.</p>
+    <p><strong>The validation is narrow.</strong> Figure 5 is two rollouts of one setting under one
+    seed. It validates the shape of the recurrence and the location premium; a defect that only
+    appears at some other <code>recovery_accel_rate</code> would not be caught.</p>
+    <p><strong>Adopting the recommendation leaves the inert regime.</strong> At exactly 1.0 the
+    in-bush premium is not compiled into the simulation at all, which is what makes today's runs
+    bit-identical to runs that predate the setting. A multiplier of {{VAL:rec_mult}} switches that
+    branch on. That is intended, but it means any world adopting these values is a new experiment
+    rather than a continuation of an old one.</p>
+    <p><strong>The wound and the cover-step count are borrowed.</strong> {{VAL:wound}} points in
+    {{VAL:cover_steps}} rest steps comes from the calibration of an earlier sweep, not from a
+    measurement of what wounds agents actually carry. A measured distribution of injury at the
+    moment agents choose to rest would be a better anchor, and does not exist yet.</p>
+  </div>
+</section>
+
+<section class="col">
+  <hr>
+  <p class="foot">Every figure on this page is written by a Python script under
+  <code>scripts/analysis/studies/recovery_in_bush_tuning/</code> and embedded as a file; no chart is
+  drawn in the page. Every number in the prose is substituted at build time from
+  <code>recovery_math.py</code> or from the JSON the Figure 5 rollout wrote &mdash; none is typed
+  into the markup. The page is assembled by <code>build_page.py</code>, which refuses to build on a
+  missing script, figure file, data statement, axes sentence or method block.</p>
+</section>
+
+</div>
+<div class="lb fit" id="lb" hidden role="dialog" aria-modal="true" aria-label="Full-size figure">
+  <div class="lb-bar">
+    <span class="t" id="lb-t"></span>
+    <span class="px" id="lb-px"></span>
+    <button type="button" id="lb-zoom">Actual size</button>
+    <button type="button" id="lb-x">Close &nbsp;Esc</button>
+  </div>
+  <div class="lb-scroll" id="lb-s"><img id="lb-img" alt=""></div>
+</div>
+
+<script>
+(function () {
+  // full-size figure viewer - guide 2.6, from sensor_ladder.html
+  var lb = document.getElementById('lb'), img = document.getElementById('lb-img'),
+      ttl = document.getElementById('lb-t'), px = document.getElementById('lb-px'),
+      zoom = document.getElementById('lb-zoom'), shut = document.getElementById('lb-x'),
+      scroll = document.getElementById('lb-s'), opener = null;
+  function setMode(actual) {
+    lb.classList.toggle('actual', actual); lb.classList.toggle('fit', !actual);
+    zoom.textContent = actual ? 'Fit to window' : 'Actual size';
+    if (actual) { scroll.scrollLeft = (scroll.scrollWidth - scroll.clientWidth) / 2; }
+  }
+  function open(src, caption, el) {
+    opener = el; img.src = src; img.alt = el.alt || ''; ttl.textContent = caption;
+    px.textContent = el.naturalWidth ? el.naturalWidth + ' x ' + el.naturalHeight + ' px' : '';
+    setMode(false); lb.hidden = false; document.body.style.overflow = 'hidden'; shut.focus();
+  }
+  function close() {
+    lb.hidden = true; img.removeAttribute('src'); document.body.style.overflow = '';
+    if (opener) { opener.focus(); opener = null; }
+  }
+  Array.prototype.forEach.call(document.querySelectorAll('figure img'), function (el) {
+    var fig = el.closest('figure'), cap = fig ? fig.querySelector('figcaption b') : null;
+    var label = cap ? cap.textContent.trim().replace(/\s+/g, ' ') : 'Figure';
+    el.tabIndex = 0; el.setAttribute('role', 'button');
+    el.setAttribute('aria-label', 'Open full size: ' + label.slice(0, 90));
+    el.addEventListener('click', function () { open(el.src, label, el); });
+    el.addEventListener('keydown', function (e) {
+      if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); open(el.src, label, el); }
+    });
+  });
+  zoom.addEventListener('click', function () { setMode(!lb.classList.contains('actual')); });
+  img.addEventListener('click', function () { setMode(!lb.classList.contains('actual')); });
+  shut.addEventListener('click', close);
+  lb.addEventListener('click', function (e) { if (e.target === lb || e.target === scroll) close(); });
+  document.addEventListener('keydown', function (e) {
+    if (lb.hidden) return;
+    if (e.key === 'Escape') close();
+    if (e.key === 'Tab') {
+      var f = [zoom, shut], i = f.indexOf(document.activeElement);
+      e.preventDefault(); f[(i + (e.shiftKey ? f.length - 1 : 1)) % f.length].focus();
+    }
+  });
+})();
+function updateCues() {
+  document.querySelectorAll('.cue').forEach(function (cue) {
+    var box = cue.nextElementSibling;
+    cue.hidden = !(box && box.scrollWidth > box.clientWidth + 1);
+  });
+}
+window.addEventListener('load', updateCues);
+window.addEventListener('resize', updateCues);
+if (document.fonts && document.fonts.ready) document.fonts.ready.then(updateCues);
+document.querySelectorAll('[data-tabs]').forEach(function (root) {
+  var tabs = Array.prototype.slice.call(root.querySelectorAll('[role="tab"]'));
+  function select(t, focus) {
+    tabs.forEach(function (x) {
+      var on = x === t;
+      x.setAttribute('aria-selected', on ? 'true' : 'false');
+      x.tabIndex = on ? 0 : -1;
+      document.getElementById(x.getAttribute('aria-controls')).hidden = !on;
+    });
+    updateCues();
+    if (focus) t.focus();
+  }
+  tabs.forEach(function (t, i) {
+    t.addEventListener('click', function () { select(t, false); });
+    t.addEventListener('keydown', function (e) {
+      var j = null;
+      if (e.key === 'ArrowRight') j = (i + 1) % tabs.length;
+      else if (e.key === 'ArrowLeft') j = (i - 1 + tabs.length) % tabs.length;
+      else if (e.key === 'Home') j = 0;
+      else if (e.key === 'End') j = tabs.length - 1;
+      if (j !== null) { e.preventDefault(); select(tabs[j], true); }
+    });
+  });
+});
+</script>

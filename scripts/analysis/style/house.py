@@ -153,6 +153,81 @@ def legend_below(ax, ncol: int = 2, **kw):
     return leg
 
 
+def assert_text_inside_axes(axes, slack_px: float = 1.0):
+    """Refuse a figure whose hand-placed text has left the axes it was anchored to.
+
+    WHY THIS IS SEPARATE FROM THE LADDER'S `assert_labels_fit`. That one
+    (`scripts/analysis/ladder/_plot.py`) measures the xlabel and the title against the width of
+    their own panel, which catches a label too long for its column. It does NOT look at
+    `ax.texts` / `ax.annotate`, and an annotation is anchored in DATA coordinates with a pixel
+    offset, so a rotated one near the bottom of the axes leaves the panel entirely and prints
+    THROUGH the axis title underneath. `bbox_inches="tight"` then grows the canvas to include it,
+    so `save()`'s margin-ink guard sees nothing wrong and the figure ships with two strings on top
+    of one another (register F18 amendment, 2026-09-16).
+
+    Ticks, axis labels and titles are deliberately excluded: they are SUPPOSED to sit outside the
+    axes rectangle. What is checked is exactly the text an author placed by hand.
+    """
+    import numpy as np
+    axes = np.atleast_1d(axes).ravel()
+    fig = axes[0].get_figure()
+    fig.canvas.draw()
+    r = fig.canvas.get_renderer()
+    bad = []
+    for ax in axes:
+        box = ax.get_window_extent(renderer=r)
+        for t in ax.texts:
+            if not t.get_text().strip():
+                continue
+            if not t.get_clip_on() and t.get_clip_box() is None:
+                pass    # still checked: escaping unclipped is exactly the defect
+            e = t.get_window_extent(renderer=r)
+            out = max(box.x0 - e.x0, e.x1 - box.x1, box.y0 - e.y0, e.y1 - box.y1)
+            if out > slack_px:
+                bad.append(f"{t.get_text().splitlines()[0][:52]!r} leaves the axes by "
+                           f"{out:.0f}px (rotation {t.get_rotation():g})")
+    if bad:
+        raise SystemExit(
+            "house style: hand-placed text has left its axes -\n  " + "\n  ".join(bad) +
+            "\nRe-anchor it inside the panel (va='top' at the top edge is the usual fix), or "
+            "shorten it. Text outside the axes prints through the axis title.")
+
+
+def halo(colour=None, width: float = 2.6):
+    """A `path_effects` list that outlines text in the page ground, so it survives ANY background.
+
+    An `--ink-2` annotation is 8:1 on the page ground and about 1.5:1 on the dark end of a colour
+    ramp. The token is not the problem; the ground under it is. Rather than choose a colour per
+    region, draw the same ink with a paper-coloured outline behind it (register F52, 2026-09-16).
+    Use it for every text drawn over a heat map, an image, or a data line.
+    """
+    import matplotlib.patheffects as pe
+    return [pe.withStroke(linewidth=width, foreground=colour or PAPER)]
+
+
+def sequential(stops=None, name="house_seq"):
+    """A sequential colormap built from the house neutrals and one house hue.
+
+    WHY IT IS HERE rather than in the figure that needed it. A heat map has to choose a colour
+    ramp, and matplotlib's own ramps (viridis, magma) carry their own hues, which would put a
+    colour on the page that the style sheet never chose - and a second figure would then pick a
+    different one. This is the ramp, once. It runs from the page ground through the soft surface to
+    BLUE, so an unfilled cell and the page behind it are the same colour and only the data has ink.
+
+    Pass `stops` to build the same ramp on a different house hue (ORANGE, GREEN, RED) when a page
+    needs two heat maps that must not be confused.
+    """
+    from matplotlib.colors import LinearSegmentedColormap
+    return LinearSegmentedColormap.from_list(
+        name, stops or [PAPER, "#cfe0f5", "#7fb0e6", BLUE, "#123f77"])
+
+
+def categorical(colors, name="house_cat"):
+    """A discrete colormap over an explicit list of house colours, for a region/class map."""
+    from matplotlib.colors import ListedColormap
+    return ListedColormap(colors, name=name)
+
+
 def check_floor(fig, column_px: int = 730, floor_px: float = 9.0) -> float:
     """Assert the smallest text still clears the artifact guide's legibility floor.
 
@@ -170,16 +245,30 @@ def check_floor(fig, column_px: int = 730, floor_px: float = 9.0) -> float:
     return px
 
 
-def save(fig, stem: str, formats=("svg", "pdf", "png"), column_px: int = 730):
-    """Write the figure once per format, vector first, and verify two things before returning.
+def save(fig, stem: str, formats=("svg", "pdf", "png"), column_px: int = 730,
+         check_text: bool = True):
+    """Write the figure once per format, vector first, and verify three things before returning.
 
     Vector is the default because a figure that exists only as a raster cannot go into a
     manuscript, and redrawing it later from a screenshot is how a paper figure stops matching the
     numbers behind it.
+
+    THE THIRD CHECK IS HERE RATHER THAN IN THE FIGURE SCRIPTS, and that placement is the fix rather
+    than a convenience. `assert_text_inside_axes` was added on 2026-09-16 and wired into five
+    scripts by hand; one of those five lost its call to a later edit and kept only the comment
+    naming it, so the figure shipped unguarded while the report said it was guarded. A guard
+    "called from all N scripts" is a guard only where the call site exists. Putting it on the one
+    path every figure must take makes forgetting it impossible, and makes a new figure inherit it.
+
+    `check_text=False` is the documented opt-out for a figure that places text outside its axes on
+    purpose (a diagram whose axes are only a coordinate system). Use it with a reason in the
+    calling script, never to silence a real escape.
     """
     import os
     import numpy as np
     px = check_floor(fig, column_px)
+    if check_text and fig.axes:
+        assert_text_inside_axes(fig.axes)
     os.makedirs(os.path.dirname(stem) or ".", exist_ok=True)
     out = []
     for f in formats:
