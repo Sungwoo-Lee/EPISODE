@@ -29,7 +29,21 @@ from src.environment.config_loader import load_env_config, load_env_params
 from src.environment import core
 
 # basic ladder re-level (b093023): 06-sensory_noise -> 05-sensory_noise (content unchanged).
-CFG = "configs/environment/experiment/basic/05-sensory_noise_10x10.yaml"
+#
+# Ladder inheritance fix (2026-09-16): the sensory-noise world became 06 and was re-parented
+# onto the new 05-campfire_thermal world, which turns the BODY-TEMPERATURE system on and
+# makes the world baseline cold. That breaks this test's second case: driving one direction
+# forever, the agent now FREEZES before it starves (`termination_reason` 5, "frozen or
+# overheated", instead of 2, "starved"), so the starvation leg asserted on a cause of death
+# the world no longer reaches first. Measured, not assumed — the test failed exactly that
+# way on the re-parented world.
+#
+# So this test now pins level 04, the highest rung WITHOUT the thermal system. That is the
+# same dynamics it has been exercising all along: the old 05-sensory_noise world was level
+# 04 plus perceptual noise, and perceptual noise perturbs the OBSERVATION only — it changes
+# no transition, no body update and no termination rule — so 04 reproduces the pre-change
+# behaviour of this test exactly, rather than approximating it. Nothing here is about noise.
+CFG = "configs/environment/experiment/basic/04-jump_attack_10x10.yaml"
 
 
 def _load_params():

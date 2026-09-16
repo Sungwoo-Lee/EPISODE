@@ -346,7 +346,7 @@ def test_mixed_commit_frozen_and_plan_owned_path(repo, capsys):
 
 
 def test_mixed_commit_with_campfire_test_world_config(repo, capsys):
-    cfg = "configs/environment/experiment/basic/06-campfire_thermal_10x10.yaml"
+    cfg = "configs/environment/experiment/basic/05-campfire_thermal_10x10.yaml"
     _write(repo, FROZEN[0], "a = 9\n")
     _write(repo, cfg, "x: 1\n")
     _commit(repo, _trailer(S2), FROZEN[0], cfg)

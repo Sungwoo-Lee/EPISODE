@@ -67,8 +67,14 @@ BASIC_PREFIX = "configs/environment/experiment/basic/"
 DEFAULT_OUT = "results/render_audit/recordings"
 
 # The campfire temperature world regenerated for this plan (Revision 10, cell M4).
-CAMPFIRE = BASIC_PREFIX + "06-campfire_thermal_10x10.yaml"
-NOISE_WORLD = BASIC_PREFIX + "05-sensory_noise_10x10.yaml"
+# Re-leveled 2026-09-16 (Revision 14): the ladder's rungs now inherit one another, so the
+# campfire world is level 05 (extending 04-jump_attack) and the noise world is level 06
+# (extending 05-campfire_thermal). Both worlds' CONTENT changed with the re-parenting —
+# the campfire world gained random body init and pouncing predators, the noise world gained
+# campfires and body temperature — so fixtures recorded before that date are a different
+# world, not a different name for the same one.
+CAMPFIRE = BASIC_PREFIX + "05-campfire_thermal_10x10.yaml"
+NOISE_WORLD = BASIC_PREFIX + "06-sensory_noise_10x10.yaml"
 
 # Where override values that reproduce an archived world were copied from, AS TEXT.
 _LADDER = "configs/environment/experiment/archive/sensory_ladder/"
@@ -77,14 +83,22 @@ _LADDER = "configs/environment/experiment/archive/sensory_ladder/"
 # rule, so their recorded behaviour is not the archived world's. Carried in run_meta so a
 # later reader comparing these recordings with pre-2026-09-14 ones cannot miss it.
 _CAMPFIRE_PROVENANCE = (
-    "Reproduces the archived campfire world "
-    "(configs/environment/experiment/archive/thermal/campfire_world.yaml) ON THE CURRENT "
-    "BUSH RULE: bushes block animals (obs_blocks_animals True), where the archived world's "
-    "bushes did not. That is the only differing field of 190, and the 33-dim observation is "
-    "identical, but src/environment/core.py:609 feeds the flag into the animal movement "
-    "mask, so animal trajectories and rewards diverge from the archived world at step one. "
-    "These recordings are POST-BUSH-CHANGE (rule canonical since 2026-09-14) and are NOT "
-    "frame-comparable with anything recorded before it."
+    "Takes its campfire/thermal VALUES from the archived campfire world "
+    "(configs/environment/experiment/archive/thermal/campfire_world.yaml, copied as text, "
+    "never loaded) but is NOT that world. Two deliberate divergences, in order of when they "
+    "happened. (1) BUSH RULE, since 2026-09-14: bushes here block animals "
+    "(obs_blocks_animals True), where the archived world's did not; "
+    "src/environment/core.py:609 feeds that flag into the animal movement mask, so animal "
+    "trajectories and rewards diverge from step one. (2) LADDER RE-LEVEL, 2026-09-16: this "
+    "config was renamed 06-campfire_thermal -> 05-campfire_thermal and re-parented from "
+    "`extends: environment/default` onto `extends: basic/04-jump_attack_10x10`, so it now "
+    "also carries level 03's RANDOM START NUTRITION AND INJURY and scene counts (food 1-4, "
+    "hiding_predator 2-12, predator/rabbit 0-2) and level 04's POUNCING PREDATORS "
+    "(attack_range {2,3}, attack_success_rate 0.5). Measured through the resolving loader: "
+    "38 of 190 resolved EnvParams fields now differ from the archived world, where before "
+    "the re-level exactly 1 did. The 33-dim observation LAYOUT is unchanged by both "
+    "divergences. These recordings are POST-BUSH-CHANGE and POST-RE-LEVEL, and are NOT "
+    "frame-comparable with anything recorded before 2026-09-16."
 )
 
 

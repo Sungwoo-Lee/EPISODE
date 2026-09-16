@@ -86,10 +86,10 @@
     },
     "M4": {
       "recordings_dir": "results/render_audit/recordings/M4/M4",
-      "run_meta_sha256": "acb8cd7ca5bf6ad0a5dbfc8ab585d5dc4f794d0e8819c94e8f8b93d6cdf3dea5",
+      "run_meta_sha256": "e63f642470cb4374f24ece958296c3d5fc8b54e3d95f4b695375b99919e93d56",
       "episodes": {
-        "episode_000001.rec.gz": "4c1964b632261b038e606ce774a78fbcbfe08e342c5ce5a9341f7a77658da31c",
-        "episode_000002.rec.gz": "521c1eadbcf5f97db92ad358b08f9428e50d5d1b76ab55983334e72d1e5068a4"
+        "episode_000001.rec.gz": "5e54601792845956202bfb058f38f3857e72faaef38ead76805182a1b3ccd6ca",
+        "episode_000002.rec.gz": "33e09a7af4810bc02a1c918807c5a687fdc8a1b60ac3cfee2dbd7839cefb13dd"
       }
     }
   },
@@ -126,17 +126,17 @@
       "episode": "episode_000001.rec.gz",
       "steps": 8,
       "sha256": [
-        "994ae6a82981c91cfee6c72c4c2bf6694c37aed03c36cc83f4a6b87861a065b5",
-        "8641f0333765ae00c79075025c45847a292e059852168f8b3164068ae3ffd99f",
-        "e0f0e9509dcd6b17adf6dfeab821753400256dd429996af8628258f5c7d075f2",
-        "5121e119f4b73a7fab86999a72fed1a96807a9863a01e05ffd9285344d049a55",
-        "f0ab6306e05f32fe332972938c311d9856dc609dcf2d4e4dafcb153dd7b39fc1",
-        "5f96488b43e4310e498389c5abc5a8fb03c8a49b668610c1a15aa1d562b2a7e7",
-        "d6a869ec92cd01c8d6061b96de2f04e6ef896a6b655f6e9a8de2d04bd00f0854",
-        "caf849dd0d1cb098d35dec52d781de31d6cc92c47722444f367ee152a7a892d0"
+        "3da423ec314b4e61bfa11c63433916b3ff8f2dc98abadc05eb349b7a5f3db123",
+        "b48d184d02ebeeaff52ad52cd3a2e1e3c964fc8960e9c861c57e9c1f032b3f0e",
+        "978e70bbfb12000ba05151d7947bd3d466a3997985a8d73f2fe518af9287a8a4",
+        "729c96c4c3dd619431a0c507a259778895292f17b462fc845e58adb879910107",
+        "25a5a83b5f51cb9e0d8234b71d36670362b1385ae1e855840a89a1168dd80a9d",
+        "854970b05dcfc9fe27acc2372327062f5f5df011c69fef820d088d2af813883d",
+        "2c30c6c726d3cc28ed125d65725c31022d704c1a9fbfa43ab7279dac987e3c74",
+        "a8cfe9aaf600ed986e8e04ebd6bdd4daf60cdc802fd6bc03c58241be55ee3912"
       ]
     }
   },
-  "frames_recorded_at": "2026-09-16T14:23:38+09:00",
-  "frames_note": "Fixtures regenerated 2026-09-16 by the Phase 0b review fix pass: run_meta extras gained a 'provenance' field recording that cells M4/M4b reproduce the archived campfire world under the CURRENT bush rule (bushes block animals), so run_meta.pkl hashes moved for every cell. No frozen file changed (check: PASS=10 before and after) and the episode payloads are unchanged; only the fixture meta hashes are re-pinned."
+  "frames_recorded_at": "2026-09-16T14:50:51+09:00",
+  "frames_note": "Ladder inheritance fix 2026-09-16 (RENDERER_LAYOUT_REDESIGN Revision 14). basic/06-campfire_thermal -> 05-campfire_thermal, re-parented from environment/default onto basic/04-jump_attack_10x10; basic/05-sensory_noise -> 06-sensory_noise, re-parented onto 05-campfire_thermal. Cell M4's WORLD CHANGED CONTENT (gained level-03 random start nutrition/injury and scene counts, and level-04 pouncing predators; 37 of 190 resolved EnvParams fields differ), so M4's eight frames are EXPECTED to differ. M1/M2 load default.yaml and must not move. Fixtures regenerated after correcting the campfire config header and the generator's provenance string, whose 'only 1 of 190 fields differs from the archived world' claim held only on the old parent (now 38)."
 }

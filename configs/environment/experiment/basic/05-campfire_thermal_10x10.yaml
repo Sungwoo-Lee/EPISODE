@@ -1,6 +1,17 @@
-# Basic curriculum — 06-campfire_thermal_10x10
+# Basic curriculum — 05-campfire_thermal_10x10
 # ---------------------------------------------------------------------------
-# PURPOSE (plain language): the 10x10 world of level 02/03 with the BODY-TEMPERATURE
+# RE-LEVELED 2026-09-16: this file was `06-campfire_thermal_10x10.yaml` and extended
+# `environment/default` directly. It is now level 05 and extends level 04 (the jump/pounce
+# world), so that each rung of the ladder inherits the rung below it. THE WORLD CHANGED —
+# it is not the same scene under a new number. Re-parenting onto 04 gives it, for the first
+# time: RANDOM START NUTRITION AND INJURY (level 03's `body:` block — episodes now begin
+# hungry and/or injured), POUNCING PREDATORS (level 04's attack_range {2,3} at
+# attack_success_rate 0.5), `random_start_pos: true`, and level 03's scene counts
+# (food 1-4 instead of default.yaml's 2-6; hiding_predator 2-12 instead of 2-4; predator
+# and rabbit 0-2 instead of default.yaml's predator 1-2). Anything recorded or trained
+# under the old `06-campfire_thermal` name is a DIFFERENT world from this file.
+#
+# PURPOSE (plain language): the 10x10 world of levels 02/03/04 with the BODY-TEMPERATURE
 # system switched on and one to three CAMPFIRES burning in it. The world's baseline is
 # cold (about -28..-22 degrees), so the agent slowly chills unless it sits near a fire;
 # a fire cell itself is lethally hot, and the survivable spot is the ring one cell out.
@@ -13,15 +24,22 @@
 # and whose arena contains an obstacle with no icon — the two things the new episode-video
 # renderer has to draw and the old one gets wrong.
 #
-# NOT A REPLAY OF THE ARCHIVED CAMPFIRE WORLD — it reproduces that world ON THE CURRENT
-# BUSH RULE. Bushes here block animals (`blocks_animals: true`, default.yaml's canonical
-# value since 2026-09-14); the archived world's bushes did not. Across the 190 resolved
-# `EnvParams` fields that is the ONLY difference, and the 33-number observation is
-# identical — but `src/environment/core.py:609` feeds `obs_blocks_animals` into the animal
-# movement mask, so animal trajectories, and through them the reward series, diverge from
-# the archived world from the first step. Recordings made in this world are therefore
-# POST-BUSH-CHANGE and are NOT frame-comparable with anything recorded before 2026-09-14.
-# Detail in item 2 of "TWO DELIBERATE DIFFERENCES" below.
+# NOT A REPLAY OF THE ARCHIVED CAMPFIRE WORLD — it takes that world's campfire and thermal
+# VALUES, on the current schema and the current ladder. It now diverges from it in two ways:
+#   (a) BUSH RULE (since 2026-09-14): bushes here block animals (`blocks_animals: true`,
+#       default.yaml's canonical value); the archived world's bushes did not.
+#       `src/environment/core.py:609` feeds `obs_blocks_animals` into the animal movement
+#       mask, so animal trajectories, and through them the reward series, diverge from the
+#       first step. Detail in item 2 of "TWO DELIBERATE DIFFERENCES" below.
+#   (b) LADDER RE-LEVEL (2026-09-16, the header note above): the random body init, the
+#       level-03 scene counts and the level-04 pounce, all inherited through the new parent.
+# MEASURED, through the resolving loader: 38 of the 190 resolved `EnvParams` fields now
+# differ from the archived world. Until the re-level exactly 1 did (`obs_blocks_animals`) —
+# that one-field claim was true only while this file extended `environment/default`, and it
+# is recorded here superseded rather than deleted. The 33-number observation LAYOUT is
+# unchanged by both divergences. Recordings made in this world are therefore
+# POST-BUSH-CHANGE and POST-RE-LEVEL, and are NOT frame-comparable with anything recorded
+# before 2026-09-16.
 #
 # WHERE THE VALUES COME FROM: the campfire obstacle entry (counts, area, edge_margin,
 # temperature_ratio, blocking, damage, nociception, property vectors) and `thermal.enabled`
@@ -29,12 +47,17 @@
 #   configs/environment/experiment/archive/thermal/campfire_world.yaml
 # (archived by commit f3161dcc on 2026-09-15). That archived file is NOT a runtime
 # dependency of this one: nothing here loads it, and per project policy archived configs
-# are deliberately not kept loadable. Everything else is inherited from the CURRENT
-# configs/environment/default.yaml through `extends:`, so this world tracks the live
-# schema instead of a 2026-09 snapshot of it.
+# are deliberately not kept loadable. Everything else is inherited through the LADDER —
+# `extends:` 04-jump_attack -> 03-random_init -> configs/environment/default.yaml — so this
+# world tracks the live schema instead of a 2026-09 snapshot of it. Note what that means
+# for the scene: the counts and the body-init above come from level 03, NOT from
+# default.yaml, and the predator's jump knobs come from level 04. The archived campfire
+# world had neither: it was a fixed-start, non-pouncing scene on default.yaml's counts.
 #
 # TWO DELIBERATE DIFFERENCES FROM THE ARCHIVED WORLD, both current-schema choices:
-#   1. `extends: environment/default` instead of a full standalone copy. The archived file
+#   1. `extends: environment/experiment/basic/04-jump_attack_10x10` instead of a full
+#      standalone copy (and, since 2026-09-16, instead of extending `environment/default`
+#      directly — the ladder now chains at levels 04-06). The archived file
 #      is standalone because eight thermal test modules load it from a RAW `Config`
 #      (which does not resolve `extends:`); nothing loads THIS file that way — it is read
 #      through `load_env_config` by scripts/eval/make_render_fixture_recordings.py — and
@@ -51,13 +74,18 @@
 # world only (the registry's canonical default stays false in default.yaml), which is what
 # every thermal world does and is not a change to the registry itself.
 #
-# Composition: food 2-6 | hiding_predator 2-4 | predator 1-2 | rabbit 1-2 |
-#              campfire 1-3 | rock 6-12 | bush 4-10 | tree 0 | grid 10x10, thermal ON
-extends: environment/default
+# Composition: food 1-4 | hiding_predator 2-12 | predator 0-2 | rabbit 0-2 |
+#              campfire 1-3 | rock 6-12 | bush 4-10 | tree 0 | grid 10x10, thermal ON,
+#              jump/pounce ON (attack_range {2,3}, success 0.5), random start position,
+#              random start nutrition [0,100] and injury [0,100]
+extends: environment/experiment/basic/04-jump_attack_10x10
 
 environment:
   # The whole obstacle list is restated because `Config.merge` replaces lists wholesale.
-  # rock / tree / bush are default.yaml's entries verbatim (see the note above on bush).
+  # It replaces the list inherited from level 03 (bush + rock only). `rock` and `bush` are
+  # level 03's entries verbatim, which are themselves default.yaml's values (see the note
+  # above on bush); `tree` (count 0, and therefore inert) is default.yaml's entry, which
+  # level 03 drops and this file puts back.
   obstacles:
     - name: "campfire"
       count_low: 1     # per-episode lower bound
