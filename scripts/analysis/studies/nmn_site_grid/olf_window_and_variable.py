@@ -31,15 +31,16 @@ from __future__ import annotations
 import glob, json, os, sys
 
 import numpy as np
-import matplotlib
-matplotlib.use("Agg")
-import matplotlib.pyplot as plt
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.abspath(os.path.join(HERE, "..", "..", "..", ".."))
 sys.path.insert(0, os.path.join(ROOT, "scripts", "analysis", "ladder"))
+sys.path.insert(0, os.path.join(ROOT, "scripts", "analysis", "style"))
 os.chdir(ROOT)
-import _ladder as L                                                     # noqa: E402
+
+import matplotlib.pyplot as plt                                          # noqa: E402
+import house                                                             # noqa: E402
+import _ladder as L                                                      # noqa: E402
 
 FIG = os.environ.get("NMN_FIG_ROOT", "docs/experiments/active/nmn_input_site_grid/figures")
 GRIDS = [
@@ -50,16 +51,15 @@ GRIDS = [
 ]
 SITES  = ["t2enc", "t3rnn", "t4act", "t5crt", "t16quad"]
 CELLS  = [f"{s}_{sl}" for s in SITES for sl in ("I", "X", "ALL")]
-PANELS = [("early",    "A.  ASSIGNED injury, first 25 steps\nthe honest window"),
-          ("inj",      "B.  ASSIGNED injury, whole episode\nsame cause, diluted window"),
-          ("carried",  "C.  CARRIED injury, whole episode\ndifferent variable - a consequence")]
-COL = {"range 0 · MC": "#2f6f9f", "range 0 · GAE": "#7fb3d5",
-       "range 1 · MC": "#a8442a", "range 1 · GAE": "#d98b73"}
-CTRL_C, PAPER, ANNO = "#1b1b1d", "#f8f7f5", "#3d3c3a"
-plt.rcParams.update({"font.size": 15, "axes.titlesize": 16, "axes.labelsize": 15,
-                     "xtick.labelsize": 13, "ytick.labelsize": 13, "legend.fontsize": 12,
-                     "figure.facecolor": PAPER, "savefig.facecolor": PAPER,
-                     "axes.facecolor": "#ffffff", "axes.axisbelow": True})
+PANELS = [("early",   "A.  Assigned injury, first 25 steps"),
+          ("inj",     "B.  Assigned injury, whole episode"),
+          ("carried", "C.  Carried injury, whole episode")]
+# One hue per olfactory range, the lighter member of each pair being the GAE_NORM twin. This is a
+# stated departure from the house series palette, for the same reason as the companion figure: the
+# four categories are two PAIRS and the pairing is what the figure is about. It goes through
+# house.apply's own `series` argument rather than around it.
+PALETTE = [None, None, None, None]        # filled in main(), after house is imported
+COL = {}
 
 
 def slope(d, key):
@@ -70,6 +70,9 @@ def slope(d, key):
 
 
 def main():
+    PALETTE[:] = [house.BLUE, "#7fb0e4", house.RED, "#d98b73"]
+    COL.update(dict(zip([g for g, _ in GRIDS], PALETTE)))
+    house.apply(series=PALETTE)
     data, samples = {}, []
     for name, root in GRIDS:
         cells = {}
@@ -91,8 +94,8 @@ def main():
             note=f"{n_mod} modulated cells + t1none + {len(ctrl)} unmodulated reference run(s); "
                  f"every episode is read three times, once per panel"))
 
-    fig, ax = plt.subplots(1, 3, figsize=(21.0, 7.6), sharey=True,
-                           gridspec_kw={"wspace": .10})
+    fig, ax = plt.subplots(3, 1, figsize=(7.8, 11.4), sharey=True,
+                           gridspec_kw={"hspace": .55})
     for j, (key, title) in enumerate(PANELS):
         ypos, labels, seen = [], [], 0
         for name, _root in GRIDS:
@@ -103,11 +106,11 @@ def main():
                            edgecolor="none", zorder=3)
             ctl = slope(cells["t1none"], key)
             ax[j].plot([ctl, ctl], [seen - .6, seen + len(mod) - .4],
-                       color=CTRL_C, lw=2.2, zorder=5)
+                       color=house.INK, lw=2.2, zorder=5)
             if len(ctrl) > 1:
                 cs = [slope(d, key) for d in ctrl.values()]
                 ax[j].add_patch(plt.Rectangle((min(cs), seen - .6), max(cs) - min(cs),
-                                              len(mod) + .2, facecolor=CTRL_C, alpha=.10,
+                                              len(mod) + .2, facecolor=house.INK, alpha=.09,
                                               lw=0, zorder=1))
             ypos.append(seen + (len(mod) - 1) / 2); labels.append(name)
             seen += len(mod) + 2.2
@@ -121,21 +124,23 @@ def main():
             lo, hi = min(min(vals), 0.0), max(max(vals), 0.0)
             pad = max((hi - lo) * 0.08, 0.05)
             ax[j].set_xlim(lo - pad, hi + pad)
-        ax[j].axvline(0, color=ANNO, lw=1.4, zorder=4)
-        ax[j].set_title(title, loc="left", pad=10)
+        ax[j].axvline(0, color=house.INK, lw=1.1, zorder=4)
+        ax[j].set_title(title)
         ax[j].grid(axis="y", visible=False)
-        if j == 0:
-            ax[j].set_yticks(ypos); ax[j].set_yticklabels(labels); ax[j].invert_yaxis()
+        ax[j].set_yticks(ypos); ax[j].set_yticklabels(labels)
+        ax[j].invert_yaxis()
+        ax[j].grid(axis="x", visible=True)
 
-    ax[1].set_xlabel("a DIFFERENCE, in percentage points: bush hiding in the highest "
-                     "injury quarter MINUS the lowest\n"
-                     "left of zero = hides LESS when injured      right of zero = hides MORE")
-    os.makedirs(FIG, exist_ok=True)
-    out = f"{FIG}/n02_window_and_variable.png"
-    fig.savefig(out, dpi=150, bbox_inches="tight", facecolor=PAPER)
-    plt.close(fig)
-    L.record_samples("n02_window_and_variable", samples)
-    print(f"wrote {out}\n")
+    ax[2].set_xlabel("hiding, highest injury quarter minus lowest\n"
+                     "(percentage points; left of zero = hides less)")
+    house.save(fig, f"{FIG}/n02_window_and_variable")
+    used = sum(s["used"] for s in samples); avail = sum(s["total"] for s in samples)
+    with open(f"{FIG}/n02_window_and_variable.data.txt", "w") as fh:
+        fh.write(f"{used:,} of {avail:,} episodes ({100*used/avail:.1f}%) across 4 grids. "
+                 f"Every episode is read three times, once per panel: over its first 25 steps, "
+                 f"over the whole episode, and again binned by the injury carried rather than "
+                 f"the injury assigned.\n")
+    print()
 
     print("%-16s%12s%12s%12s   %s" % ("grid", "A early", "B whole", "C carried", "sign of A / B / C"))
     for name, _root in GRIDS:

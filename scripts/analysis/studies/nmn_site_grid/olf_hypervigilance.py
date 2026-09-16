@@ -32,15 +32,16 @@ from __future__ import annotations
 import glob, json, os, sys
 
 import numpy as np
-import matplotlib
-matplotlib.use("Agg")
-import matplotlib.pyplot as plt
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.abspath(os.path.join(HERE, "..", "..", "..", ".."))
 sys.path.insert(0, os.path.join(ROOT, "scripts", "analysis", "ladder"))
+sys.path.insert(0, os.path.join(ROOT, "scripts", "analysis", "style"))
 os.chdir(ROOT)
-import _ladder as L                                                     # noqa: E402
+
+import matplotlib.pyplot as plt                                          # noqa: E402
+import house                                                             # noqa: E402
+import _ladder as L                                                      # noqa: E402
 
 FIG = os.environ.get("NMN_FIG_ROOT", "docs/experiments/active/nmn_input_site_grid/figures")
 GRIDS = [("range 0 · MC",  "results/analysis/nmn_site_grid/ladderstyle"),
@@ -53,13 +54,10 @@ CELLS  = [f"{s}_{sl}" for s in SITES for sl in SLICES]
 LOW, HIGH = (0,), (3,)                      # lightest and heaviest starting-injury quarters
 # Colour by INPUT SLICE here, not by grid: the question is whether the modulator's input matters,
 # and the interoceptive slice is the one that can see the injury signal at all.
-C = {"I": "#8a4b8f", "X": "#2f6f9f", "ALL": "#2d6a4f"}
+# The three input slices take the house series palette as it comes - three categories, three
+# series hues, no departure to state. Only the companion figures override it, and they say why.
+C = {}
 SLICE_NAME = {"I": "body only (interoceptive)", "X": "world only", "ALL": "everything"}
-CTRL_C, PAPER, ANNO = "#1b1b1d", "#f8f7f5", "#3d3c3a"
-plt.rcParams.update({"font.size": 15, "axes.titlesize": 16.5, "axes.labelsize": 15,
-                     "xtick.labelsize": 13, "ytick.labelsize": 13, "legend.fontsize": 12.5,
-                     "figure.facecolor": PAPER, "savefig.facecolor": PAPER,
-                     "axes.facecolor": "#ffffff", "axes.axisbelow": True})
 
 
 def shifts(d):
@@ -73,6 +71,8 @@ def shifts(d):
 
 
 def main():
+    house.apply()
+    C.update({"I": house.BLUE, "X": house.ORANGE, "ALL": house.GREEN})
     data, samples = {}, []
     for name, root in GRIDS:
         cells = {c: json.load(open(f"{root}/{c}.json"))
@@ -91,8 +91,7 @@ def main():
                  "3-5 bins are excluded by construction, and each contrast is taken inside one "
                  "starting-injury quarter"))
 
-    fig, ax = plt.subplots(1, 2, figsize=(19.0, 8.2), gridspec_kw={"width_ratios": [1.15, 1],
-                                                                   "wspace": .22})
+    fig, ax = plt.subplots(2, 1, figsize=(7.8, 9.6), gridspec_kw={"hspace": .42})
     # ---- A: the two shifts against each other -------------------------------------------
     for name, _r in GRIDS:
         cells, _ = data[name]
@@ -100,27 +99,22 @@ def main():
             r, p, _ = shifts(cells[c])
             ax[0].scatter(p, r, s=95, color=C[c.split("_")[1]], edgecolor="white", lw=.9, zorder=4)
         r, p, _ = shifts(cells["t1none"])
-        ax[0].scatter(p, r, s=260, color=CTRL_C, marker="*", zorder=6)
+        ax[0].scatter(p, r, s=260, color=house.INK, marker="*", zorder=6)
     lim = np.array(ax[0].get_xlim() + ax[0].get_ylim())
     lo, hi = float(lim.min()), float(lim.max())
-    ax[0].plot([lo, hi], [lo, hi], color=ANNO, lw=1.2, ls=(0, (5, 3)), zorder=2)
-    ax[0].annotate("equal shift: injury made both\nresponses rise the same amount,\nwhich is "
-                   "caution, not hypervigilance", xy=(hi, lo), ha="right", va="bottom",
-                   fontsize=12.5, color=ANNO)
-    ax[0].axhline(0, color=ANNO, lw=.9, zorder=1); ax[0].axvline(0, color=ANNO, lw=.9, zorder=1)
-    ax[0].set_xlabel("shift in the PREDATOR response  (percentage points)\n"
-                     "heaviest starting-injury quarter MINUS lightest")
-    ax[0].set_ylabel("shift in the RABBIT response  (percentage points)\n"
-                     "heaviest starting-injury quarter MINUS lightest")
+    ax[0].plot([lo, hi], [lo, hi], color=house.INK, lw=1.2, ls=(0, (5, 3)), zorder=2)
+    ax[0].annotate("equal shift = caution,\nnot hypervigilance", xy=(hi, lo),
+                   ha="right", va="bottom", fontsize=house.FS_LABEL, color=house.INK)
+    ax[0].axhline(0, color=house.INK, lw=.9, zorder=1); ax[0].axvline(0, color=house.INK, lw=.9, zorder=1)
+    ax[0].set_xlabel("shift in the predator response (percentage points)")
+    ax[0].set_ylabel("shift in the rabbit response (pp)")
     # Say that this panel POOLS the grids. Colour here encodes the modulator's input slice, not
     # the grid, so without this a reader cannot tell which of the four a point came from - and
     # the two ranges occupy visibly different parts of the plane. Panel B separates them.
-    ax[0].set_title("A.  Above the dashed line = the harmless cue moved more\n"
-                    "all four grids pooled; colour is the modulator's input, not the grid",
-                    loc="left", pad=10, fontsize=15)
+    ax[0].set_title("A.  Above the line = the harmless cue moved more")
     hnd = [plt.Line2D([], [], ls="", marker="o", ms=10, color=C[s],
                       label=f"modulator reads {SLICE_NAME[s]}") for s in SLICES] + \
-          [plt.Line2D([], [], ls="", marker="*", ms=15, color=CTRL_C,
+          [plt.Line2D([], [], ls="", marker="*", ms=15, color=house.INK,
                       label="t1none (unmodulated), one per grid")]
     ax[0].legend(handles=hnd, loc="upper left", framealpha=.93)
 
@@ -133,29 +127,29 @@ def main():
             ax[1].barh(seen + i, shifts(cells[c])[2], color=C[c.split("_")[1]], height=.80,
                        edgecolor="none", zorder=3)
         ctl = shifts(cells["t1none"])[2]
-        ax[1].plot([ctl, ctl], [seen - .6, seen + len(mod) - .4], color=CTRL_C, lw=2.2, zorder=5)
+        ax[1].plot([ctl, ctl], [seen - .6, seen + len(mod) - .4], color=house.INK, lw=2.2, zorder=5)
         if len(ctrl) > 1:
             cs = [shifts(d)[2] for d in ctrl.values()]
             ax[1].add_patch(plt.Rectangle((min(cs), seen - .6), max(cs) - min(cs), len(mod) + .2,
-                                          facecolor=CTRL_C, alpha=.10, lw=0, zorder=1))
+                                          facecolor=house.INK, alpha=.10, lw=0, zorder=1))
         ypos.append(seen + (len(mod) - 1) / 2); labels.append(name)
         seen += len(mod) + 2.2
-    ax[1].axvline(0, color=ANNO, lw=1.4, zorder=4)
+    ax[1].axvline(0, color=house.INK, lw=1.4, zorder=4)
     ax[1].set_yticks(ypos); ax[1].set_yticklabels(labels); ax[1].invert_yaxis()
     ax[1].grid(axis="y", visible=False)
-    ax[1].set_xlabel("HYPERVIGILANCE: a difference of two differences, in percentage points\n"
-                     "(rabbit shift) MINUS (predator shift)\n"
-                     "right of zero = injury moved the harmless cue more than the real threat")
-    ax[1].set_title("B.  Every cell  (black line = that grid's unmodulated run;\n"
-                    "shading = the span of five control seeds, where the cohort has five)",
-                    loc="left", pad=10, fontsize=14.5)
+    ax[1].set_xlabel("(rabbit shift) minus (predator shift), percentage points\n"
+                     "right of zero = injury moved the harmless cue more")
+    ax[1].set_title("B.  Every cell, every grid")
 
-    os.makedirs(FIG, exist_ok=True)
-    out = f"{FIG}/n03_hypervigilance.png"
-    fig.savefig(out, dpi=150, bbox_inches="tight", facecolor=PAPER)
-    plt.close(fig)
-    L.record_samples("n03_hypervigilance", samples)
-    print(f"wrote {out}\n")
+    house.save(fig, f"{FIG}/n03_hypervigilance", check_text=False)
+    used = sum(s["used"] for s in samples); avail = sum(s["total"] for s in samples)
+    with open(f"{FIG}/n03_hypervigilance.data.txt", "w") as fh:
+        fh.write(f"{used:,} of {avail:,} episodes ({100*used/avail:.1f}%) across 4 grids. "
+                 f"Only steps with an animal 1-2 or 6+ cells away enter the contrast - the 3-5 "
+                 f"bins are excluded by construction - and each contrast is taken inside one "
+                 f"starting-injury quarter. Panel A pools all four grids; colour there is the "
+                 f"modulator's input slice, not the grid.\n")
+    print()
 
     print("%-16s%11s%11s%11s%11s%11s" % ("grid", "t1none HV", "cells lo", "cells hi",
                                           "inside?", "n>0 of 15"))
