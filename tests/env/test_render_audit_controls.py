@@ -24,7 +24,10 @@ found.
 Fixtures live under gitignored `results/`, so the integration tests SKIP with an explicit
 reason when they are absent rather than passing vacuously.
 """
+import json
+import subprocess
 import sys
+import textwrap
 from pathlib import Path
 
 import numpy as np
@@ -113,9 +116,59 @@ def _px_close(got, want):
 
 
 def test_audit_imports_neither_layout_nor_registry():
-    """§D5.2: the audit must not import the thing it audits."""
-    leaked = [m for m in sys.modules if "environment.dashboard" in m]
-    assert leaked == [], f"audit pulled in the renderer package under test: {leaked}"
+    """§D5.2: the audit must not import the thing it audits.
+
+    THE LEAK CHECK RUNS IN A SUBPROCESS, and that is the point of it. `sys.modules`
+    is process-global, so measuring it in-process measures what the WHOLE pytest
+    session imported, not what the audit imported. That was a valid proxy only
+    while no renderer package existed: once Phase 1 added
+    `src/environment/dashboard/`, `test_dashboard_layout.py` — which sorts before
+    this file — imported it and left it there, and this test went red on a
+    full-directory run while still passing when run alone. The failure was in the
+    *measurement*, not in the audit, whose real isolation never changed.
+
+    A subprocess restores the property the assertion needs — that the only thing
+    which could have imported the package is the audit itself — and it does so
+    WITHOUT weakening what is asserted, which stays "not one module of it, by
+    exact list". The assertion is what keeps the instrument from sharing code with
+    the thing it measures, so an allow-list or a substring exemption that made the
+    red go away would be worse than the red. The same subprocess pattern is used
+    by `test_dashboard_layout.py::test_the_package_imports_without_matplotlib`.
+
+    The probe is checked for BLINDNESS in the same subprocess: after taking the
+    measurement it imports the package on purpose and measures again. A probe that
+    cannot see the package even when handed it would report "no leak" forever —
+    if the package were renamed, moved, or became unimportable — and an empty
+    result from a blind probe is evidence of nothing.
+    """
+    probe = textwrap.dedent(
+        """
+        import json, os, sys
+        root = os.getcwd()
+        sys.path.insert(0, os.path.join(root, "scripts", "eval"))
+
+        def leaked():
+            return sorted(m for m in sys.modules if "environment.dashboard" in m)
+
+        import render_layout_audit  # noqa: F401
+        after_audit = leaked()
+        sys.path.insert(0, root)
+        import src.environment.dashboard  # noqa: F401
+        print(json.dumps({"after_audit": after_audit, "after_forced": leaked()}))
+        """
+    )
+    out = subprocess.run(
+        [sys.executable, "-c", probe], cwd=_REPO, capture_output=True, text=True
+    )
+    assert out.returncode == 0, out.stderr
+    got = json.loads(out.stdout.strip().splitlines()[-1])
+    assert got["after_audit"] == [], (
+        f"audit pulled in the renderer package under test: {got['after_audit']}")
+    assert got["after_forced"], (
+        "the leak probe reported nothing even after the renderer package was "
+        "imported on purpose, so it cannot detect a leak at all and the empty "
+        "measurement above means nothing")
+
     src = (_REPO / "scripts" / "eval" / "render_layout_audit.py").read_text()
     for banned in ("from src.environment.dashboard", "import src.environment.dashboard"):
         assert banned not in src

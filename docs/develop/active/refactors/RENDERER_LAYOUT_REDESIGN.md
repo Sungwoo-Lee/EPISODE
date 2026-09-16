@@ -1028,6 +1028,22 @@ class PanelSpec:
 | visual | extero, or sensor band (§D7.1) | `grid_kind(visual_sensor_range, visual_vector_size)`: single-cell bars (r=0) / `channel_maps` (r≥1, decided) | `Visual` | name in breakdown | per kind (§D7.2); 8 pt legend |
 | proprioception | extero | `action_chips` (decided Q5, 2026-09-14): six chips, previous action highlighted in the agent colour | `Proprioception` | name in breakdown | six measured chips at the 14 px floor |
 
+**The three heights Figure 3 never draws (pinned 2026-09-16, after Phase 1 was verified).** Figure 3 always has a sensor band, so it never draws a spectrum smell pod, a range-0 vision pod or the location row, and the rows above give only qualitative drivers for them. Phase 1 had to choose numbers, and they are **not free** — the binding case is a real maintained world, not a hypothetical. Recorded here so nobody re-derives them and so the budget is visible:
+
+| Panel | Height | Column it is charged to |
+|---|---|---|
+| `olfactory` at range 0 (spectrum) | **118 px** = title 46 + label row + 5 bars + pad 16 | right |
+| `visual` at range 0 (bars) | **134 px** = title 46 + legend + channel bars + pad 16 | right |
+| `location` | **46 px** = one text line + padding | **left** (§D1.1's `world` group), so it does **not** consume the right-column budget below |
+
+**The budget, measured.** Two maintained worlds — the campfire thermal world and the sensory-noise world — have thermal on and **both** sense ranges at 0, so neither sense goes to a band and the right column must hold five pods at once. With no band the right column is 816 px, of which Figure 3's own pinned pods already claim `104 + 150 + 230 + 4 × 16 = 548`, leaving **268 px** for the smell and vision pods together. `118 + 134 = 252`, so both worlds pack with **16 px spare** — verified by packing all nine maintained configs, not by arithmetic alone; every other maintained world lacks the thermoception card and has 262 px spare.
+
+**Status: provisional, and the failure mode is a hard one.** These are the numbers most likely to move when Phase 2 measures real text, and the `compact` fallback deliberately does **not** shrink right-column pods (a thermoception diamond cannot be compacted and stay legible). So if Phase 2's measurement pushes the pair past 268 px, `pack()` **raises on a real maintained config** rather than degrading. Two requirements follow, both on Phase 2:
+- `tests/env/test_dashboard_layout.py` gains a test that pins the campfire world's right-column need against its 816 px, so a Phase-2 change that eats the margin fails **naming the budget** instead of surfacing as an unexplained `LayoutOverflowError`;
+- if the measured pods exceed 268 px, the developer reports both numbers and the proposed remedy and **stops** — re-cutting the split, or letting `compact` reduce pod chrome, is a plan change recorded here, never a constant quietly raised in the source.
+
+**One naming point for Phase 2.** The registry gives the range-0 vision pod the kind string `cross_bars`, which is also collision's kind, while this section's table calls it "single-cell bars". They are different pictures with different content (8 channels versus 5 directions) and they carry different heights (134 versus 150). Phase 2 either gives the range-0 vision pod its own kind string or records here why one painter serves both.
+
 **Completeness rule.** At episode setup, every breakdown name must be owned by exactly one present entry, or be on an explicit "recorded, not displayed" list (only if Q5 chooses that). Otherwise setup raises `ValueError` naming the orphan. A future modality that reuses a kind is a registry entry only. A new kind adds a painter. Neither touches layout.
 
 #### D1.2 Layout: a column packer, computed once per episode
@@ -1386,8 +1402,9 @@ M8/M9 do not depend on archived **configs** loading — but, per Revision 13, th
 - The packer evaluates two layouts, **once per config**, before any frame:
   - **(a) side-column:** the current blueprint;
   - **(b) sensor-band:** grid-view card on top of the centre+right area, a full-width band below it spanning the centre and right columns (`1440 − 24 − (24 + 320 + 16)` = **1056 px** wide, on Figure 3's constants; the earlier "≈ 1440 − 300 − 16 ≈ 1124" used the withdrawn 300 px left column — corrected Revision 19, §R19.2), and the non-grid right pods (extero nociception, thermoception, collision, location) in a narrowed right strip beside the grid view.
-- Layout (a) is used iff every grid-kind sense meets its `min_size` there; otherwise (b). The canvas stays 1440 × 896.
-- If (b) also fails, `LayoutOverflowError` names the sense, its range and channel count, and the encoding. No squeezing.
+- ~~Layout (a) is used iff every grid-kind sense meets its `min_size` there; otherwise (b).~~ **Corrected 2026-09-16, after Phase 1 verification — the two-step evaluation is withdrawn.** The band is **not** a fallback that (a) gets first refusal on: **a grid-kind sense (smell or vision at range ≥ 1) goes in the band, and everything else goes in the side column**, full stop. That is Figure 3's own rule (`fig03_proposed_dashboard.py:172`, `band = bool(self.olf_range or self.vis_range)`), and Figure 3 is the canonical layout reference. The canvas stays 1440 × 896.
+  - **Why the withdrawn wording was wrong, measured rather than argued.** Under the two-step reading, the synthetic 5×5 world with thermal *and* a range-1 sense would try (a) first and **find a side column that fits** — a 726 × 816 px right column against the 624 px those pods need — so it would pack happily and **would not raise**. That directly contradicts §R19.2, which pins that case as the guard that must raise `LayoutOverflowError` naming the right column. Verified by forcing both layouts on that context: band → raises ("right column needs 516px, has 314px"), forced side column → packs. The two-step rule would also put a range-1 smell map in the narrow side column of every 10×10 world, which is the opposite of what §D7 exists to do.
+- If the band layout does not fit, `LayoutOverflowError` names the sense, its range and channel count, and the encoding. No squeezing, and no silent fallback to a side column that happens to fit.
 - `layout_signature()` includes which layout was chosen, so a concatenated video can never switch mid-video.
 
 #### D7.2 Encoding for range ≥ 2: one swappable painter kind (open, Q13)
@@ -1714,7 +1731,10 @@ Each checkpoint states what would show it failed.
     - **Arm 3** the arena **Axes** hidden (`set_visible(False)`) — arm 1 − arm 3 is the arena's **update + draw** cost, and arm 3 is the true **non-arena** number. Labelled a synthetic reference: it composes a frame no viewer sees. **If Q22 is ever asked, its option 3 is scored against arm 3**, never arm 2.
   - **The spike's cell code is scratch (Revision 20 §R20.7 item 3).** It lives under `tmp/`, is imported by nothing in `src/`, and does not become `cells.py`. What carries forward is the measurement: the report names which forms the spike drew and the per-square and total artist counts, so Phase 2 can reproduce the cost.
   - **One failure path, pre-registered.** median ≤ 0.5 × V1 → gate met, Q9 untouched, Phase 2 proceeds, **no user question asked**. 0.5× < median ≤ 1.0× → report the split, the counts and **Q22**'s four options to the user and **stop**. median > 1.0× → the hard floor is breached; same report and question, with the Pillow option named as live. *Fails if:* the developer changes the gate, the square size or the stack without the user's answer, or the split and artist counts are not reported.
-- [ ] **CP1: Registry and packer.** `test_dashboard_layout.py` is green. *Fails if:* boxes intersect; a disabled modality's height isn't freed; an unregistered name doesn't raise; M4 yields observed Nutrition/Injury rows; `real_available` differs between episodes of one run.
+- [x] **CP1: Registry and packer.** `test_dashboard_layout.py` is green. *Fails if:* boxes intersect; a disabled modality's height isn't freed; an unregistered name doesn't raise; M4 yields observed Nutrition/Injury rows; `real_available` differs between episodes of one run.
+  - *2026-09-16 developer:* **MET — 98 tests pass.** Each of the three named failure conditions was shown to be detectable rather than assumed: a packer mutated to overlap its columns **and** to skip its own overlap check turns **16 tests red** (`test_no_two_cards_share_a_pixel` on all 8 contexts, `test_every_maintained_config_packs_and_is_complete` on all 8 configs), because those tests recompute the pairwise overlap themselves instead of trusting `pack()`. CP-G re-run after implementation: 10/10 PASS + FRAMES PASS ×3, exit 0. **Two things for `senior-developer`:** the heights of the spectrum-smell and range-0 vision pods are pinned nowhere in this plan, and the maintained campfire world (M4) is the binding case that decides them; and `tests/env/test_dashboard_v1_imports.py`, listed in the Phase 1 File Changes rows, is deferred to Phase 2 with a reason. See the Phase 1 Implementation Report.
+  - *2026-09-16 senior-developer:* **MET on its own five failure conditions, with one blocker outside them.** All three named conditions were re-shown catchable by the verifier's own mutations (16 / 8 / 4 tests red respectively), the 98 tests reproduce, the pod budget and the band rule were re-derived independently, and CP-G re-run is 10/10 PASS + FRAMES PASS ×3, exit 0. **Blocking the Phase 1 commit, not CP1 itself:** the full `tests/env` run is **red** — Phase 1's new package makes the Phase 0 test `test_render_audit_controls.py::test_audit_imports_neither_layout_nor_registry` fail whenever `test_dashboard_layout.py` runs first in the same process. Fix belongs to the Phase 0 test. §D1.1 and §D7.1 corrected. Full report below.
+  - *2026-09-16 developer (CP1 fix-up):* **Blocker cleared; the suite is green.** The Phase 0 leak check now runs in a **subprocess** — the assertion itself is unchanged and still demands an empty list, and it was shown to still bite by making the audit really import the package (test goes red, then green again on a byte-identical revert). Full `tests/env`: **546 passed, 0 failed** (`-m "not integration"`; was 1 failed / 540 passed) and **572 passed, 0 failed** unfiltered. The two minor findings landed with it: the box-equality exemption is **removed** from `_validate` and from the test helper rather than re-keyed, and `03-random_init_10x10_ckpt1k.yaml` joins `MAINTAINED` (**nine** configs now pack). CP-G re-run: 10/10 PASS + FRAMES PASS ×3, exit 0. See the CP1 Fix-Up Report below.
 - [ ] **CP2.1: Audit clean.** All cells' checked frames: 0 collisions (text-on-border included), 0 clipped text, legibility met, presence met. The stress variant renders clean or raises; no ellipsised number. *Fails if:* any count is non-zero, or "…" appears in a numeric element.
 - [ ] **CP2.2: Mutations.** M-A, M-B, M-C and M-D each make the audit fail. *Fails if:* any mutation passes.
 - [ ] **CP2.3: Values match pixels.** Bar ratio and tick x within 2 px; thermal ports green; per-frame clim mutation turns the cooling test red. *Fails if:* a tolerance is exceeded or the mutation stays green.
@@ -2854,3 +2874,503 @@ Severity legend: 🔴 Critical = fix before going further · 🟡 Moderate = lik
 **Cost of being wrong**: no data loss, no training run. #63, #64 and #66 as written fail Phase 0d's own negative controls on a correct painter — loud, hours — and the danger is the shortcut fix (drop outlines or translucent elements from the occluder set) that re-opens #54 silently. #67 could settle Q22 on a number that still contains the arena's draw. #68 is the one silent case, and it turns on a facecolor choice nobody has made yet.
 
 Reviewed by: plan-reviewer
+
+---
+
+## Implementation Report — Phase 1 (CP1): the panel registry and the layout packer (2026-09-16)
+
+> **Implemented by**: developer
+
+### What this is, in plain words
+
+The episode-video dashboard is being rebuilt because its panels currently print
+on top of each other. This phase builds the two pieces that are supposed to make
+that impossible rather than merely unlikely. Every panel now **declares** what it
+needs — whether it is on screen for a given world, and the smallest box it can be
+drawn in — and a **packer** turns those declarations into actual rectangles on the
+1440 × 896 canvas. If the declarations cannot all fit, the packer raises
+`LayoutOverflowError` before a single frame is drawn, instead of quietly
+shrinking a panel or letting two boxes share pixels. Nothing is drawn yet: this
+phase has no painters and does not import Matplotlib at all.
+
+### Files changed (all new; nothing existing was edited)
+
+| File | What it does |
+|---|---|
+| `src/environment/dashboard/__init__.py` | Package entry point. Exports the Phase 1 surface. |
+| `src/environment/dashboard/layout.py` | `Box`, `Size`, `CardDemand`, `Layout`, `LayoutOverflowError`, `pack()`, the fallback ladder, and the structural validation pass. Figure 3's constants (`LEFT_W = 320`, `MIN_RIGHT_W = 440`, outer 24 / gap 16 / pad 16 / header 64, `ARENA_CELL_PX = ARENA_CELL_MIN_PX = 50`). No Matplotlib import. |
+| `src/environment/dashboard/panels.py` | `PanelSpec`, `LayoutContext` (+ `from_params`), `FontMetrics`, the 19-entry registry, the completeness rule, the observed-vs-hidden rule, `_recording_flag`, `real_available`, and `present_cards()` which turns present panels into the packer's card demands. |
+| `src/environment/dashboard/labels.py` | The V2-owned channel label table that overrides the frozen adapter's `DNG` with `HPR`, with positional `C0…C{V-1}` fallback off the standard 8-channel vector. |
+| `tests/env/test_dashboard_layout.py` | 98 tests (see below). |
+
+### How the registry declares a panel
+
+A `PanelSpec` carries its identity (`key`, `group`, `order`, `kind`), the
+observation names it is responsible for drawing (`breakdown_names`), and two
+predicates: `present(ctx)` and `min_size(ctx)`. Per Revision 5 (§D7.7 item 1)
+both take **only** a `LayoutContext`, which is built from environment params and
+never from a recorded episode — so two episodes of one run pack identically. A
+test inspects the signatures to keep it that way.
+
+The observed-vs-hidden rule is encoded **structurally** rather than by a runtime
+branch: an observed row and its hidden twin (`nutrition` / `nutrition_hidden`)
+are two registry entries with mutually exclusive `present` predicates, so a
+modality the agent cannot sense **cannot** produce a row captioned `OBS`. That is
+the live defect D10 this replaces.
+
+### The packer's algorithm
+
+Three columns under a header. The left column is fixed at 320 px; the arena card
+sits in the middle and is a **fixed** box of `view × 50 px` of drawing plus its
+chrome, never a grow panel; the right column is whatever is left,
+`right_w = 1040 − card_w`, which must clear 440 px. Each column stacks its cards
+in declared order, and leftover height goes only to the two grow panels (the
+minimap, capped at 350 px, and the thermoception card). When a sensor band is
+present it runs from below the arena to the bottom margin, and the right column
+is then measured against the **arena's bottom edge**.
+
+Candidates are tried in the plan's fallback order — whole world at 50 px, local
+window, shrink by 2 toward `local_view_size`, `compact` minimums, then raise — and
+**every candidate is validated by the same code**, so the right column is checked
+against whatever arena height that candidate chose. That single check subsumes
+§R18.2 item 9 and covers all three routes to an arena height.
+
+Output is split into `cards` (placed units, pairwise disjoint) and `panels`
+(leaf boxes actually painted into, each inside its card and disjoint from its
+siblings). The split is what lets the arena expose a drawing box of exactly
+`view × 50` while the card that frames it is `view × 50 + 64`.
+
+### Test results
+
+`JAX_PLATFORMS=cpu pytest tests/env/test_dashboard_layout.py -q` → **98 passed** (9.9 s).
+
+Pinned geometry, all asserted to the pixel and all reproducing the plan:
+
+| | 10×10 (synthetic, thermal + band) | 5×5 (real maintained configs) |
+|---|---|---|
+| arena card | 564 × 564 | 314 × 314 |
+| arena drawing box | 500 × 500 | 250 × 250 |
+| right column width | 476 (min 440) | 726 |
+| sensor band | 236 px, starting y = 644, 1056 wide | — (no band) |
+| right column height | 564, against the 516 a thermal column needs | 816 |
+
+The thermal-plus-band case is asserted on a **synthetic `LayoutContext`** and the
+test says so, per finding #59. This was verified independently rather than taken
+from the plan: all eight maintained configs were loaded through
+`load_env_params(load_env_config(path))` and **every one has both sense ranges at
+0**, so none has a sensor band. `test_no_maintained_config_has_a_sensor_band`
+records that as an assertion, because the synthetic tests depend on it.
+
+### Mutation result — the overlap check is shown to bite
+
+CP1 fails if boxes intersect, so the suite must be able to detect an overlap. The
+packer was mutated in two ways at once: columns advance by **less** than the gap
+(so consecutive cards overlap by 32 px), **and** the packer's own overlap check
+is disabled — i.e. a packer that permits an overlap and does not complain.
+
+**Result: 16 failed, 82 passed.** The tests that catch it are
+`test_no_two_cards_share_a_pixel` (all 8 contexts) and
+`test_every_maintained_config_packs_and_is_complete` (all 8 maintained configs).
+They catch it because they recompute the pairwise overlap themselves rather than
+asking `pack()` whether it was happy. Restored afterwards: 98 passed.
+
+**Disclosure, because a silent near-miss here would be worthless:** my *first*
+mutation attempt reported "1 failed, 97 passed" and I nearly recorded it. It was
+invalid — the `sed` pattern carried the wrong indentation, so the overlap was
+never introduced and only the disabled-check half applied. The numbers above are
+from the corrected run, with both mutations verified present in the file before
+the suite ran.
+
+### CP-G (standing gate)
+
+`scripts/eval/v1_path_guard.py check`, run **before** and **after** implementation,
+both times: `PASS=10, ACCEPTED=0, ATTRIBUTED=0, UNATTRIBUTABLE=0`, plus
+`FRAMES PASS` on M1, M2 and M4, `RESULT: OK`, **exit 0**. No frozen file was
+edited, and no `renderer_v2` package or module was created.
+
+### Speed check — skipped, with reason
+
+Skipped. Phase 1 is pure Python with no Matplotlib import, runs **once per
+episode** before any frame exists, and is imported by nothing on the training or
+eval path — no `src/` module, script or test outside this phase references the
+package. There is no hot path it can touch. The renderer's speed gate is CP0.4,
+which is a Phase 2 precondition and is unaffected by this phase.
+
+### Deviations and underspecifications — none silent
+
+1. **The two pod heights the plan never pins, and why they are not free (please review).**
+   §D1.1 gives only qualitative min-size drivers for the spectrum-smell pod, the
+   range-0 vision pod and the location row, and Figure 3 never draws any of them
+   because it always has a sensor band. My first values (138 / 158 / 62) made the
+   **real maintained campfire config M4 overflow its right column by 28 px** — a
+   genuine finding, not a typo. With no band the right column has 816 px, of
+   which Figure 3's own pinned pods already claim 548 (prop 104 + extero/collision
+   row 150 + thermoception 230 + 4 gaps), leaving **268 px for the smell and
+   vision pods together**. I set them to 118 and 134 (252, so 16 px spare) and
+   location to 46, documenting the derivation in the source. These are the
+   numbers most likely to move when Phase 2 measures real text, and the budget is
+   tight enough that `senior-developer` should confirm the split.
+2. **Band selection follows Figure 3, not §D7.1's two-step evaluation.** §D7.1 says
+   layout (a) is used iff every grid-kind sense meets its `min_size` there,
+   otherwise (b). Figure 3's own `registry()` instead makes the band
+   unconditional on a grid-kind sense being present. I implemented Figure 3's
+   rule, because it is the canonical reference **and** because the two-step
+   reading breaks one of this plan's own pinned tests: with a fallback to the
+   side column, the synthetic 5×5 thermal-plus-band case would find a side column
+   that fits and therefore would **not** raise, contradicting §R19.2. The fallback
+   ladder still records which step succeeded.
+3. **`__init__.py` cannot yet export `EpisodeRenderer` / `render_dashboard_frame`.**
+   The Phase 1 File Changes row names them, but they are defined in `episode.py`,
+   which is Phase 2. Exporting them now would make the package unimportable. The
+   docstring records that they join the exports in Phase 2.
+4. **`tests/env/test_dashboard_v1_imports.py` is deferred to Phase 2** (listed in
+   the Phase 1 rows). Its substance is Phase-2-dependent: it pins the signatures
+   of V1 helpers that only the Phase 2 painters import, and its cache-isolation
+   check requires *rendering a new-renderer M4 frame*, which is impossible with
+   no painters. Its one Phase-1-checkable clause — that no `renderer_v2` package
+   was created — is already covered by CP-G, which passes. Flagged rather than
+   silently skipped; `senior-developer` to confirm the deferral. *(Verifier: deferral accepted with one correction — see the Phase 1 Verification Report. The clause is **not** covered by CP-G; it is true today and was confirmed directly.)*
+5. **`min_size` takes only `LayoutContext`**, per Revision 5 §D7.7 item 1, which
+   supersedes §D1.1's `(RenderContext, FontMetrics)` signature. `FontMetrics`
+   exists as a type so Phase 2 can supply measurements without a signature change.
+   Phase 1 measures no text — every pinned height is a Figure 3 constant.
+6. **One completeness-rule exemption, which the plan implies but does not state.**
+   A panel drawn as observed must have its name in the breakdown — except the
+   hidden-state kinds. The body-temperature row exists whenever the world has a
+   body temperature and reads "not observed" when the agent cannot sense it
+   (cell M4b), so it legitimately owns a name that is absent from the breakdown.
+   Without the exemption the rule rejects M4b.
+7. **Cards versus leaves.** The plan says `pack()` returns `dict[key -> Box]`. I
+   return both, because the arena needs a drawing box of exactly `W × 50` inside a
+   card of `W × 50 + 64`; a single flat dict cannot express both without one
+   containing the other and tripping the disjointness check.
+8. **`PanelSpec.extract` is declared but `None` everywhere.** It is part of a
+   panel's identity per §D1.1, and Phase 2 fills it; nothing calls it yet.
+
+### Prior art
+
+Checked `docs/develop/active/issues/KNOWN_BUGS.md` directly (sub-agents cannot
+spawn `bug-curator`). Rows 116–118 already record this dashboard's defects
+(D1–D13, the "observed" mis-captioning D10, and the renderer housekeeping
+hazards) and all three already point at this plan. Nothing new was found and no
+row needs updating for this phase.
+
+### Blockers and follow-ups
+
+- **Nothing blocks Phase 2's layout work.** Two gates the plan already sets still
+  stand: **CP0.4** must be met or escalated-and-answered before Phase 2 writes a
+  painter, and **Q21** (does the World map still earn its place?) must be answered
+  before Phase 2 starts the minimap. Phase 1's pinned numbers rest on keeping it
+  at `LEFT_W = 320`.
+- **For `senior-developer`:** items 1 and 4 above are the two that want a decision
+  rather than just a read.
+
+---
+
+## Verification Report — Phase 1 (CP1): the panel registry and the layout packer (2026-09-16)
+
+> **Verified by**: senior-developer
+
+### What was checked, in plain words
+
+Phase 1 is the first actual code of the new episode-video renderer, and its entire purpose is one claim: that two dashboard panels printing on top of each other becomes **impossible by construction**, not merely unlikely. Panels declare the room they need, a packer turns those declarations into rectangles, and a budget that cannot close raises an error before any frame is drawn. A claim like that cannot be verified by reading the code and agreeing with it — a packer whose tests ask the packer whether it overlapped would pass every review and protect nothing. So the claim was attacked: the packer was deliberately broken in three different ways and the suite was required to notice each time. It did. Separately, the one number in this phase that a real world nearly broke — how much height the smell and vision pods may take — was re-derived from the configs rather than taken from the report, and one disagreement between two sections of this plan was settled by measurement rather than by reading.
+
+**Verdict: VERIFIED WITH ISSUES.** CP1's own five failure conditions are met and are each demonstrably catchable. One issue blocks the **commit** rather than the checkpoint: running the whole `tests/env` suite is now red, because Phase 1's new package trips a Phase 0 test that assumed no such package existed.
+
+### The central claim, attacked three ways
+
+Each mutation was applied to `layout.py` by script, **proved live by a probe before the suite ran** (the developer's own first attempt was a no-op `sed`, so a mutation that is merely believed to be present is worth nothing), then reverted with a sha256 check that the file returned to its original bytes.
+
+| Mutation | What was broken | Probe that proved it live | Suite result |
+|---|---|---|---|
+| **A — overlap** | columns advance by `h − 32` instead of `h + GAP` (32 px of overlap) **and** `_validate`'s card-intersect check disabled | 6 overlapping card pairs computed independently on the default world, e.g. `minimap`/`vitals` sharing 320 × 32 px | **16 failed, 82 passed** — `test_no_two_cards_share_a_pixel` (8 contexts) + `test_every_maintained_config_packs_and_is_complete` (8 configs) |
+| **B — a declared panel never placed** | `stack` flow drops its last child **and** `_validate`'s missing-panel check disabled | `intero_nociception` declared present but absent from the placed panels | **8 failed, 90 passed** — `test_every_present_panel_gets_a_box` (8 contexts) |
+| **C — overflow does not raise** | all three overflow raises (`rw < MIN_RIGHT_W`, `need > avail`, band height) **and the entire `_validate` pass** disabled | the synthetic 5×5 thermal-plus-band world packs **silently**, no exception | **4 failed, 94 passed** — the four tests that require a raise |
+
+The developer's reported 16 / 82 for mutation A **reproduces exactly**, including which tests fire. They fire because they recompute the pairwise overlap themselves rather than asking `pack()` whether it was happy — the property that makes the suite worth having.
+
+**One honest detail about mutation C.** A first, weaker version — the three overflow raises disabled but `_validate` left in — still raised, from a *different* guard (`panel … escapes its card`), and two tests still went red because the message no longer names the right column. The packer's refusal is therefore **over-determined**: several independent guards catch the same bad budget. That is a strength, but it means "overflow raises" can only be falsified by disabling the validation pass as well, which is what version C does. Both runs are recorded so the margin is visible rather than implied.
+
+### The pod-height budget (Implementation Report deviation 1) — confirmed, re-derived, and tightened
+
+Re-derived by packing **all nine** maintained configs, not by repeating the arithmetic:
+
+- The binding worlds are the campfire thermal world **and** the sensory-noise world — the report names only the first. Both have thermal on and both sense ranges at 0, so the right column carries five pods: need **800 px** against **816 px** available, **16 px spare**. Every other maintained world lacks the thermoception card and has 262 px spare.
+- **The `location` row is not part of this budget.** It is a `world`-group panel and is charged to the **left** column (which has 76 px spare in the binding worlds), and no maintained config observes `Location` at all. The report's "118 / 134 / 46" framing implies all three compete for the same 268 px; two of them do.
+- Sensitivity, measured: holding vision at 134, the smell pod overflows the campfire world at **135 px** — a **+17 px** margin on a single panel.
+
+**Is 16 px enough? No, not as a standing margin — but the values are accepted as provisional.** 16 px is about 2 % of the column and these are the two numbers in the phase least anchored in Figure 3 (which never draws either pod). What makes this worth acting on rather than noting is the **failure mode**: `compact` deliberately does not shrink right-column pods, so a Phase-2 measurement that pushes the pair past 268 px makes `pack()` raise on a **real maintained world** — the renderer refuses to draw the campfire video — rather than degrading. The split is **not** re-cut now, because re-cutting it before Phase 2 measures real text would be swapping one unmeasured number for another. Instead §D1.1 now pins all three heights, states the 268 px joint budget and the 16 px margin, and places two requirements on Phase 2: a test that pins the budget so it fails *naming the budget*, and a stop-and-report rule if the measurement exceeds it. One naming point is recorded there too: the range-0 vision pod is given collision's kind string `cross_bars` while §D1.1's table calls it "single-cell bars".
+
+### The band-selection deviation (Implementation Report deviation 2) — the implementation is right; §D7.1 was wrong
+
+Settled by forcing both layouts on the disputed context rather than by reading:
+
+- forced **band**: raises `right column needs 516px, has 314px` — the behaviour §R19.2 pins;
+- forced **side column**: **packs** (right column 726 × 816 px against the 624 px those pods need).
+
+So §D7.1's two-step reading ("layout (a) unless a grid-kind sense misses its `min_size`") would have made this plan's own pinned 5×5 guard **fail to raise**. The implementation follows Figure 3 (`fig03_proposed_dashboard.py:172`), which is the canonical reference, and Figure 3's rule is also the only one consistent with §D7's purpose — a two-step rule would put a range-1 smell map in the narrow side column of every 10×10 world. **§D7.1 is corrected**, with the measurement recorded.
+
+### The deferral (Implementation Report deviation 4) — accepted, with one claim corrected
+
+Deferring `tests/env/test_dashboard_v1_imports.py` to Phase 2 is **sound**: its cache-isolation check requires rendering a V2 frame, which cannot exist without painters, and the V1 helpers it pins (`draw_boresight_diamond`, `save_jax_video`, `COLORS`, the thermal helpers) are imported by nobody until Phase 2. Two corrections:
+
+1. **"Its one Phase-1-checkable clause is already covered by CP-G" is not accurate.** The guard hashes the **file** `src/environment/renderer_v2.py`; it has no assertion that a `renderer_v2/` **package** was not created alongside it, and such a package would leave the guard green. The clause is nonetheless **true today** — verified directly: `src/environment/` contains `renderer_v2.py` and no `renderer_v2/` directory.
+2. **One pinned V1 signature is already imported at Phase 1**, not Phase 2: `panels.py` imports `get_observation_breakdown` from the frozen `sensor.py`. It is exercised de facto (the suite loads nine real configs through `LayoutContext.from_params`), but it is not *pinned*. Phase 2's `test_dashboard_v1_imports.py` must cover it.
+
+### The confirmations requested
+
+| Claim | Result |
+|---|---|
+| No Matplotlib in the package | ✅ asserted in a subprocess, and `import matplotlib` appears nowhere in the four files |
+| `present` / `min_size` take only a `LayoutContext` | ✅ pinned by signature inspection; the observed-vs-hidden split is two registry entries with mutually exclusive predicates, so it is structural, not a runtime branch |
+| All maintained configs pack | ⚠️ **eight of nine.** `03-random_init_10x10_ckpt1k.yaml` is absent from the test's `MAINTAINED` list. It packs identically to `03-random_init_10x10.yaml` (verified), so this is a coverage gap, not a defect |
+| Synthetic thermal-plus-band context used **and labelled** (#59) | ✅ every such test says SYNTHETIC in its name or docstring and says why no config produces it; `test_no_maintained_config_has_a_sensor_band` pins the premise |
+| `v1_path_guard.py check` | ✅ `PASS=10, ACCEPTED=0, ATTRIBUTED=0, UNATTRIBUTABLE=0`, `FRAMES PASS` ×3, `RESULT: OK`, **exit 0** — re-run independently |
+| Nothing staged | ✅ the Phase 1 files are untracked and unstaged. *(Note: `docs/develop/INDEX.md` and `SAVED_RUN_CONFIG_COMPAT.md` are staged by a **parallel session** — do not sweep them into the Phase 1 commit; use an explicit pathspec.)* |
+| No frozen file touched | ✅ all ten clean in the working tree; no `renderer_v2` package |
+| Vocabulary (`pain`) | ✅ zero hits in the package, comments included |
+
+### ❗ Issue 1 (must fix before the Phase 1 commit): the full test suite is red
+
+`pytest tests/env -m "not integration"` → **1 failed, 540 passed, 377 skipped**.
+
+```
+FAILED tests/env/test_render_audit_controls.py::test_audit_imports_neither_layout_nor_registry
+AssertionError: audit pulled in the renderer package under test:
+  ['src.environment.dashboard.labels', 'src.environment.dashboard.layout',
+   'src.environment.dashboard.panels', 'src.environment.dashboard']
+```
+
+**Not a false alarm and not the audit's fault.** That Phase 0 test asserts `sys.modules` contains nothing matching `environment.dashboard`, which was a valid proxy for "the audit did not import the package" only while **no such package existed**. `tests/env/test_dashboard_layout.py` sorts before `test_render_audit_controls.py`, imports the package, and leaves it in `sys.modules` for the rest of the process. Reproduced minimally with just those two files; the audit-controls file **passes alone** (12 passed). The static half of the same test — that `render_layout_audit.py` contains no `import src.environment.dashboard` — still passes, so the audit's real isolation is intact.
+
+**Fix (for `developer`, one file, Phase 0 test):** make the leak check process-local — run the audit import in a subprocess and inspect *its* `sys.modules`, the pattern `test_dashboard_layout.py::test_the_package_imports_without_matplotlib` already uses — or snapshot and restore `sys.modules` around the check. Do **not** weaken the assertion to a substring allow-list; the check is what keeps the audit independent of the thing it audits.
+
+### File-by-file
+
+| File | State |
+|---|---|
+| `src/environment/dashboard/__init__.py` | ✅ exports the Phase 1 surface; the `EpisodeRenderer` / `render_dashboard_frame` row of the File Changes table is correctly deferred with the reason in the docstring |
+| `src/environment/dashboard/layout.py` | ✅ Figure 3's constants, arena a fixed `W × 50` box, one validation pass over finished boxes. ⚠️ minor: `_validate`'s docstring says cards sharing a box "are compared by identity of their region", but the code exempts any two cards whose **boxes are equal** — a geometric exemption, not a structural one. Unreachable today (a second band card raises), but it means two cards sharing *every* pixel would pass both the packer and the test helper, which copies the same exemption. Tighten to `card.region == "band"` in Phase 2 |
+| `src/environment/dashboard/panels.py` | ✅ registry, completeness rule, observed-vs-hidden as mutually exclusive entries, `_recording_flag` confined to the package (pinned by an AST test, not a grep). ⚠️ the two pod heights, handled above |
+| `src/environment/dashboard/labels.py` | ✅ `DNG` → `HPR` override with the off-standard positional fallback; `sensor.py` untouched, so V1 keeps `DNG` and the byte-identity guard stays meaningful |
+| `tests/env/test_dashboard_layout.py` | ✅ 98 pass, reproduced; the three CP1 conditions are each independently catchable. ⚠️ one maintained config missing from `MAINTAINED` |
+| `docs/.../RENDERER_LAYOUT_REDESIGN.md` | ✅ Implementation Report appended; +192 lines, no deletions beyond the CP1 checkbox |
+| `tests/env/test_render_audit_controls.py` | ❌ unmodified but now **failing in a full-suite run** — Issue 1 |
+
+### Speed check — skip accepted (✅ no regression possible)
+
+Not measured, and correctly so. The package imports no Matplotlib, runs once per episode before any frame exists, and is imported by **nothing** outside itself and its own test — verified by grep across `src/`, `scripts/` and `tests/` (the only other mentions are the guard's path list and two Phase 0 tests naming the path as a *string*). There is no hot path it can touch. The renderer's speed gate remains **CP0.4**, a Phase 2 precondition.
+
+### Out-of-scope changes
+
+None. Every changed or added file is named in the Phase 1 File Changes rows, apart from the deferred `test_dashboard_v1_imports.py`. No script was added under `scripts/`, so `SCRIPTS_DEPENDENCY_MAP.md` correctly needs no row. No config key was added or changed, so `CONFIG_CRITICAL_SETTINGS.md` correctly needs no change-log entry.
+
+### Conclusion
+
+**VERIFIED WITH ISSUES.** The phase does what it claims: overlap is structurally prevented, and that is shown by breaking the packer three ways and watching the suite go red each time rather than by trusting the packer's own report. CP1 stands. Before the Phase 1 commit, Issue 1 must be fixed (one Phase 0 test), and the two ⚠️ coverage items — the missing maintained config and the box-equality exemption — should be folded in at the same time. §D1.1 and §D7.1 have been corrected in this plan; Phase 2 carries the pod-budget requirements recorded in §D1.1.
+
+**Verified by: senior-developer**
+
+---
+
+## Implementation Report — CP1 fix-up: the blocker and the two coverage findings (2026-09-16)
+
+> **Implemented by**: developer
+
+### What this is, in plain words
+
+The CP1 verification passed the work but stopped it from being committed, for one
+reason and with two smaller notes attached. The reason: running the whole
+`tests/env` folder in one go turned one test red, even though every file passed
+when run on its own. The test in question is part of the *measuring instrument*
+built in an earlier phase — a pixel audit whose job is to check the new dashboard
+from the outside — and it asserts that the audit never loads the dashboard code
+it is supposed to be measuring. That assertion was checking a list Python keeps of
+"every module loaded anywhere in this program". While the dashboard package did
+not exist, that list was a fair stand-in for "the audit did not load it". Once
+Phase 1 created the package, a *different* test file — which runs earlier in the
+alphabet — loaded it perfectly legitimately and left it in that shared list, so
+the audit was blamed for an import it never made.
+
+This change makes the check ask the question in a place where only the audit can
+answer it: a **fresh separate Python process** that imports nothing but the audit.
+Nothing about what is demanded was relaxed — the answer must still be an empty
+list. The two smaller notes were an exemption in the packer that let two panels
+occupying *exactly* the same rectangle slip past the overlap check, and one of the
+project's nine maintained world configs missing from the test list.
+
+### The blocker: the leak check is subprocessed, never loosened
+
+The constraint here was explicit and it shaped the fix: that assertion is what
+stops the instrument from sharing code with the thing it measures, so a version
+that goes green because it was weakened would be worse than the red. **No
+allow-list, no substring exemption, no `sys.modules` snapshot-and-restore.** The
+check now spawns a subprocess that puts only `scripts/eval/` on its path, imports
+`render_layout_audit`, and reports the leaked module list as JSON. The parent
+asserts that list is **empty, exactly** — the same demand as before, asked where
+the answer is not contaminated by whatever else the pytest session imported.
+
+The pattern is the one Phase 0c already established for the Matplotlib-free
+check in `test_dashboard_layout.py::test_the_package_imports_without_matplotlib`,
+which the Phase 1 developer wrote as a subprocess for exactly this reason.
+
+**The probe is also checked for blindness, in the same subprocess.** After taking
+the measurement it imports the dashboard package *on purpose* and measures again,
+and the test asserts that second list is non-empty. Without this, a probe that had
+gone blind — the package renamed, moved, or made unimportable — would report "no
+leak" forever, and an empty result from a blind probe is evidence of nothing. This
+is the same discipline the audit-controls file already applies to itself: a
+control set measures sensitivity, so discrimination has to be pinned separately.
+
+The **static half** of the test (that the audit's source contains no
+`import src.environment.dashboard`) is untouched and still runs.
+
+#### Proof that the repaired check still bites
+
+A check that passes is worthless until it has been shown capable of failing. The
+audit was mutated to genuinely import the package — via
+`importlib.import_module("src.environment.dashboard")`, a form the *static* half
+cannot see, so that only the repaired dynamic half could be what fires.
+
+| Step | Result |
+|---|---|
+| **A. Mutation proved live before the suite ran** | the probe subprocess returned `['src.environment.dashboard', '…labels', '…layout', '…panels']` — 4 modules |
+| **B. Static half stays silent** | `grep -c` for both banned substrings = **0**, so the failure is attributable to the subprocess check alone |
+| **C. The test under mutation** | **FAILED**: `audit pulled in the renderer package under test: [...4 modules]` |
+| **D. Revert** | sha256 `cfa84cc3faf9f0b4…` **identical** before and after; `git status` on the file is clean |
+| **E. The test after revert** | **1 passed** |
+
+`scripts/eval/render_layout_audit.py` is plan-owned, **not** one of the ten frozen
+V1-path files (confirmed against the guard's own list before touching it), and it
+is byte-identical now.
+
+### Finding 2: the equal-box exemption is a hole, and it is removed
+
+**Decision: removed outright, not re-keyed.** The verification suggested tightening
+it to `card.region == "band"`; I did not, because on inspection there is **no
+legitimate case for it to serve**, and a structural key would preserve an
+exemption for a situation that cannot arise:
+
+1. The exemption's stated purpose was "the band's single card". A **single** card
+   cannot pair with itself — the check is a pairwise loop over distinct keys — so
+   the case it was written for could never reach it.
+2. Two band cards *would* have shared a box, because every band card was assigned
+   the same `band_box`. But the packer already refuses a second band card. The
+   refusal simply happened **after** the boxes were handed out, which is what made
+   the exemption look necessary. I moved that raise **above** the assignment loop,
+   so "no two cards share a box" is now true by construction rather than patched
+   up afterwards.
+3. As written the exemption was keyed on the boxes' **coordinates** matching, so it
+   exempted *any* two cards that happened to coincide, whatever they were — and two
+   cards occupying exactly the same rectangle is the most complete overlap
+   possible, not a special case.
+
+**The test helper no longer mirrors the implementation.** `_overlapping_pairs` had
+copied the same `if boxes[a] == boxes[b]: continue`, which is the failure mode the
+verification flagged: a helper that agrees with the packer by construction cannot
+catch a mistake in the packer's rule. It now reports identical boxes as
+overlapping, and three new tests pin the whole business independently:
+
+- `test_the_overlap_helper_itself_flags_two_identical_boxes` — the check on the
+  checker. If the helper still had the exemption, every geometry test in the file
+  would pass against a packer that stacked two cards on one rectangle.
+- `test_two_cards_with_the_same_box_are_rejected_rather_than_exempted` — asserts
+  `_validate` raises, on a **hand-built** `Layout` rather than a packed one,
+  precisely because no real context can reach this state; a test that only packs
+  real configs could never see the hole.
+- `test_a_second_band_card_is_refused_before_a_box_is_assigned` — pins the refusal
+  that makes the exemption unnecessary.
+
+### Finding 3: the ninth maintained config
+
+`configs/environment/experiment/basic/03-random_init_10x10_ckpt1k.yaml` is added to
+`MAINTAINED`, so the two parametrised suites now cover **nine of nine**. It is a
+thin training-only override (checkpoint frequency and retention) that `extends:`
+`03-random_init_10x10`, resolved through the trainer's loader exactly as the other
+eight are. **Confirmed to pack**, identically to its parent:
+`arena Box(x=360, y=64, w=564, h=564)`, 9 cards, `step=whole_world`, no sensor band.
+
+### Test results — every count
+
+Run with `JAX_PLATFORMS=cpu`. Full log: `tmp/20260916_223523_cp1_fixups.log`.
+
+| Run | Before this change | After |
+|---|---|---|
+| **The reproducer** — `test_dashboard_layout.py` + `test_render_audit_controls.py` together | **1 failed**, 109 passed, 26 deselected | **141 passed**, 0 failed |
+| `tests/env/test_dashboard_layout.py` | 98 passed | **103 passed** |
+| `tests/env/test_render_audit_controls.py` | 38 passed | **38 passed** |
+| `tests/env/test_v1_path_guard.py` | 71 passed | **71 passed** |
+| **whole `tests/env`**, `-m "not integration"` | **1 failed**, 540 passed, 377 skipped | **546 passed**, 0 failed, 377 skipped, 26 deselected |
+| **whole `tests/env`**, no marker filter | — | **572 passed**, 0 failed, 377 skipped |
+| `scripts/eval/v1_path_guard.py check` | 10/10 PASS | **PASS=10**, ACCEPTED=0, ATTRIBUTED=0, UNATTRIBUTABLE=0, **FRAMES PASS ×3** (M1/M2/M4), `RESULT: OK`, **exit 0** |
+
+The blocker was **reproduced first with just the two files** (1 failed / 109
+passed), before anything was changed, so the failure was in hand rather than
+inferred.
+
+**Where the +5 tests come from**, so the number is not mysterious: 98 → 103 is the
+3 new tests above, plus 2 parametrised instances from the ninth maintained config
+(`test_every_maintained_config_packs_and_is_complete` and
+`test_no_maintained_config_has_a_sensor_band`). The full-directory count rises by
+6: those 5, plus the 1 test that was failing and now passes.
+
+The guard was run **twice** — once before the doc edits and once after the audit
+mutation was reverted — green both times.
+
+### Speed check — skipped, with reason
+
+Skipped, and it provably cannot matter. Two of the three files are tests. The one
+`src/` change is inside `layout.py`, which imports no Matplotlib, runs **once per
+episode** before any frame exists, and is imported by nothing on the training or
+eval path — a property the CP1 verification confirmed independently by grep across
+`src/`, `scripts/` and `tests/`. The change itself removes two lines of work from a
+validation pass and hoists one existing guard earlier; no training step,
+environment step, model, or training-consumed config is touched. The renderer's
+speed gate remains **CP0.4**, a Phase 2 precondition.
+
+### Deviations from the brief — one, stated
+
+**Finding 2 was resolved by deletion rather than by the re-keying the verification
+proposed.** The brief allowed either ("say precisely what the case is, and make the
+exemption structural … or it is a hole and should go"); I concluded it is a hole,
+for the three reasons above, and the packer change that makes deletion safe — the
+band-card refusal moved ahead of box assignment — is a **source** change in
+`_pack_once` beyond the literal `_validate` edit. It is three lines moved, no
+behaviour added, and it is what lets the overlap check run with **no exemption at
+all**. Flagged because `senior-developer` proposed the other option.
+
+### Scope
+
+Three files, all already owned by this plan: `src/environment/dashboard/layout.py`
+and `tests/env/test_dashboard_layout.py` (Phase 1 File Changes rows) and
+`tests/env/test_render_audit_controls.py` (the Phase 0 test the verification names
+as the fix site). No new file, no config key, no change under `scripts/` — so
+`SCRIPTS_DEPENDENCY_MAP.md` and `CONFIG_CRITICAL_SETTINGS.md` correctly need no
+entry. Frontmatter is unchanged (`last_updated` was already 2026-09-16), so
+`INDEX.md` needs no regeneration — deliberately, since a parallel session has it
+staged. **Nothing is staged or committed**; the only staged paths in the repo are
+that parallel session's `docs/develop/INDEX.md` and `SAVED_RUN_CONFIG_COMPAT.md`,
+untouched. None of the ten frozen V1-path files was modified and the guard's
+`accept` was never run.
+
+### Prior art
+
+Checked `docs/develop/active/issues/KNOWN_BUGS.md` directly (sub-agents cannot
+spawn `bug-curator`), grepping for the dashboard, `sys.modules` and import-order
+hazards. Row 116 records this dashboard's defects (D1–D13) and already points at
+this plan; nothing there covers test-order pollution. **One judgement call for
+`senior-developer`:** the hazard class — a test asserting on process-global
+`sys.modules` silently becoming order-dependent when a new package appears — is
+not recorded anywhere, and it will recur in Phase 2 when the package grows. I did
+not add a row, since the instance is fixed in this same change, but if you think
+the class is worth recording, `bug-curator` owns that call.
+
+### Blockers and follow-ups
+
+- **None blocking.** The Phase 1 commit is unblocked: the full `tests/env`
+  directory is green and CP-G passes.
+- Unchanged from the CP1 report: **CP0.4** must be met or escalated before Phase 2
+  writes a painter, and **Q21** must be answered before the minimap work. The pod
+  budget (16 px spare in the two binding worlds) carries into Phase 2 per §D1.1.
+
+Implemented by: developer
