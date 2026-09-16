@@ -1,0 +1,511 @@
+<title>The Imperativism Debate</title>
+{{HOUSE_STYLE}}
+<style>
+/* ---- page-specific additions to the House Style Sheet ----
+   DEPARTURE, stated on the page (guide 0a; register F11 amendment): Figure 1 spends blue on
+   "imperative content" and orange on "evaluative content", so page chrome must not reuse those
+   hues. Section numbers, glossary terms, links and box borders take the ink colours instead, and the
+   page uses no orange (.warn) box. */
+:root { --accent: var(--ink-2); --accent-text: var(--ink); }
+.callout ul { margin:0; padding-left:1.2em; }
+.callout li + li { margin-top:6px; }
+/* the three theories side by side as a stacked list - three columns do not fit a phone */
+.theory { display:grid; grid-template-columns:minmax(0,11em) minmax(0,1fr); gap:6px 22px;
+  padding:16px 0; border-bottom:1px solid var(--line); align-items:baseline; }
+.theory:last-child { border-bottom:0; }
+.theory .who { font-family:var(--f-head); font-weight:700; font-size:17px; line-height:1.3; }
+.theory .who small { display:block; font-family:var(--f-body); font-weight:400; font-size:14px;
+  color:var(--ink-3); }
+.theory .what { display:flex; flex-direction:column; gap:6px; font-size:15.5px; }
+.theory .slogan { font-weight:600; }
+@media (max-width:560px) { .theory { grid-template-columns:minmax(0,1fr); } }
+/* one test case: story, then each side's move */
+.case { padding:18px 0; border-bottom:1px solid var(--line); display:flex; flex-direction:column; gap:8px; }
+.case:last-child { border-bottom:0; }
+.case .title { font-family:var(--f-head); font-weight:700; font-size:18px; }
+.case .story { color:var(--ink-2); }
+.case dl { margin-top:4px; }
+/* citations and reference list - guide 12b, rendered number, never the list marker */
+a.cite{font-family:var(--f-mono);font-size:.72em;line-height:0;vertical-align:super;
+  text-decoration:none;color:var(--ink);background:var(--surface);
+  padding:.18em .34em;border-radius:3px;white-space:nowrap;margin-left:.15em}
+a.cite::before{content:"["} a.cite::after{content:"]"}
+ol.refs{list-style:none;padding-left:0;margin:0;display:flex;flex-direction:column;gap:14px}
+ol.refs li{display:grid;grid-template-columns:2.9em 1fr;gap:0 8px;align-items:start;min-width:0;
+  scroll-margin-top:24px}
+ol.refs .rnum{font-family:var(--f-mono);font-size:12px;color:var(--ink);background:var(--surface);
+  border-radius:3px;text-align:center;font-variant-numeric:tabular-nums;line-height:1.9}
+ol.refs .rnum::before{content:"["} ol.refs .rnum::after{content:"]"}
+ol.refs .rbody{display:flex;flex-direction:column;gap:2px;min-width:0;font-size:15px}
+ol.refs .rmeta{color:var(--ink-2);font-size:14px}
+ol.refs .rmeta a{overflow-wrap:anywhere}
+ol.refs .rprov{color:var(--ink-2);font-size:13.5px}
+ol.refs .rtag{font-family:var(--f-mono);font-size:11px;padding:1px 6px;border-radius:3px;
+  white-space:nowrap;vertical-align:1px}
+ol.refs .rtag.read{background:var(--surface);color:var(--ok)}
+ol.refs .rtag.unread{background:var(--sunk);color:var(--ink-2)}
+ol.refs li:target{background:var(--sunk);border-radius:4px;box-shadow:0 0 0 6px var(--sunk)}
+ol.refs li:target .rnum{background:var(--ink);color:var(--ground)}
+</style>
+
+<div class="wrap">
+
+<header class="col">
+  <p class="eyebrow">grid_world_pain &middot; reference topic &middot; philosophy of pain and valence</p>
+  <h1>The Imperativism Debate</h1>
+  <p class="lede">Why does pain feel bad? One answer says a feeling is a command. The other says it
+  is a perception of value. This page introduces the debate through five papers.</p>
+</header>
+
+<section class="col">
+  <h2><span class="num">PURPOSE</span></h2>
+  <p>A stubbed toe does two things at once. It tells you something about your body, and it
+  <strong>hurts</strong>. Philosophers call that second, good-or-bad quality of an experience its
+  <strong>valence</strong>. Pain has it, and so do pleasure, fear, pride, desire and gloom. What
+  valence actually <em>is</em> remains an open question.</p>
+  <p>This page introduces one live dispute about it. <strong>Imperativism</strong> says an unpleasant
+  experience is, at bottom, a <em>command</em>: &ldquo;don&rsquo;t put weight on that ankle&rdquo;, or, in
+  its newer form, &ldquo;less of this very experience!&rdquo;. <strong>Evaluativism</strong> says it is a
+  <em>perception of value</em>: the thing seems bad to you, the way a tomato seems red.</p>
+  <p>The page is built around Barlassina&rsquo;s 2020 paper, which argues that the command view wins
+  {{CITE:barlassina2020}}. It sets that paper beside the founding statement of imperativism about pain,
+  the evaluativist view it attacks, the fuller theory behind it, and the evaluativist reply. <strong>The
+  debate is not settled in these papers</strong>. Each side has a strong argument the other has not
+  fully answered, and &sect;6 names them.</p>
+  <p>The project cares because it studies pain-like behaviour in learning agents, and each theory says
+  something different about what an agent&rsquo;s internal damage signal would have to do to count as
+  valence (&sect;7).</p>
+</section>
+
+<section class="col">
+  <div class="howto">
+    <p class="eyebrow">How to read this page</p>
+    <p>&sect;1&ndash;&sect;3 are the introduction: the question, the three theories, and how the exchange
+    unfolded. &sect;4 and &sect;5 give the anchor paper and the reply in more detail. &sect;6 sums up where
+    things stand. Words in <strong>bold</strong> on first use are defined in the glossary (&sect;8).
+    Bracketed numbers are citations. Each links to the reference list, which says which papers were read
+    in full and which are only named.</p>
+    <p>One departure from the house style: blue and orange are used only in Figure 1, for commands
+    and evaluations, so headings and links on this page are in ink colours.</p>
+  </div>
+</section>
+
+<hr>
+
+<section class="col">
+  <h2><span class="num">01</span> The question: what makes a feeling good or bad?</h2>
+  <p>A pain has two sides. One is <strong>sensory</strong>: where it is, how intense, whether it throbs or
+  stabs. The other is <strong>affective</strong>: it is unpleasant, and you want it gone. The two can come
+  apart. Patients on morphine, or after certain frontal-lobe surgery, sometimes say the pain is
+  still there but they no longer mind it {{CITE:klein2007}}. In <strong>pain asymbolia</strong>, people
+  recognise a stimulus as painful but are not distressed by it and make no move to withdraw from it
+  {{CITE:bh2019}}. The opposite may also happen. A stroke patient whose somatosensory cortex (the region
+  that maps bodily sensation) was damaged reported a &ldquo;clearly unpleasant&rdquo; feeling he wanted to
+  avoid, while rejecting every word offered for it, from &ldquo;warm&rdquo; to &ldquo;intense pain&rdquo;
+  {{CITE:bh2019}}. Whether this is unpleasantness with no sensation at all is contested: he still placed
+  the feeling vaguely in his arm {{CITE:carruthers2023}}.</p>
+  <p>So what is the unpleasant part? Both sides in this debate agree on a lot. Valence is <strong>one kind
+  of thing</strong> across pain, pleasure, emotion and desire. It runs on a shared brain network, and
+  acetaminophen (paracetamol) dulls both physical and social pain. It also acts as a <strong>common
+  currency</strong> that lets you compare a film with a meal {{CITE:carruthers2018}}. Their disagreement is
+  about what kind of content a feeling carries when it feels bad.</p>
+  <div class="callout">
+    <p class="eyebrow">The one distinction everything turns on</p>
+    <p>A mental state can <strong>describe</strong> (&ldquo;there is damage here&rdquo;, which can be true or
+    false) or <strong>command</strong> (&ldquo;stop doing that&rdquo;, which can be obeyed or not). It can also
+    be about the <strong>world or body</strong>, or about <strong>the experience itself</strong>. The three
+    theories take different positions on these two choices.</p>
+  </div>
+</section>
+
+<section class="col">
+  <h2><span class="num">02</span> Three answers</h2>
+  <p>All three answers say the unpleasantness is a matter of what the experience says, not an extra
+  raw feeling. They differ on what it says, and about what.</p>
+</section>
+
+<figure>
+  <img data-fig="fig01_three_contents" alt="Three panels, each showing a rounded box labelled toothache experience and a square box. Left, Imperativism, Klein 2007: a single blue arrow to a box labelled biting with that tooth, with the label Don't bite with it!, and the gloss unpleasant because it forbids an action involving the body. Middle, Evaluativism, Carruthers 2018 and 2023: a grey arrow labelled reports it and an orange arrow labelled this is bad, both to a box labelled the throbbing tooth-state; gloss unpleasant because it represents the felt bodily state as bad. Right, Reflexive imperativism, Barlassina and Hayward 2019: a grey arrow labelled reports it to the tooth-state box, and a blue arrow that loops from the experience back onto itself, labelled Less of me!; gloss unpleasant because it commands less of this very experience.">
+  <p class="zoomhint">Click the figure to view it full size</p>
+  <figcaption>
+    <span><b>Figure 1 &mdash; The same toothache, three ways.</b> Blue arrows are commands and orange
+    arrows are evaluations; grey arrows are plain sensory reports, which carry no valence by
+    themselves. On the left the command is about what you do with your body. In the middle the felt
+    state is represented as bad. On the right the command loops back onto the experience that
+    issues it.</span>
+    <span><b>Axes.</b> None: this is a diagram, not a chart. Neither horizontal nor vertical position
+    encodes a quantity, and box and arrow lengths are set only so the labels fit. An arrow means
+    &ldquo;has content about&rdquo;.</span>
+    <span><b>Data.</b> {{DATA:fig01_three_contents}}</span>
+  </figcaption>
+  <p class="prov">Reproduce: <code>python docs/project/references/imperativism/intro_page/fig01_three_contents.py</code></p>
+  <div class="howto">
+    <p class="eyebrow">How it is drawn</p>
+    <p>The script draws three identical panels on a fixed ten-by-ten grid of plot units. Every
+    coordinate is a position, not a value, and nothing is computed from data. Each panel has one
+    rounded box for the experience and one square box for what a content is about. The difference
+    between the theories lies entirely in the arrows. That is the point the figure is built to make:
+    all three theories explain unpleasantness by an experience&rsquo;s content, and they disagree
+    about the kind of content and its target. The labels follow the reviewed papers. Klein&rsquo;s
+    panel has no grey arrow, because he holds that a pain&rsquo;s content is exhausted by a prohibition
+    on some use of the body {{CITE:klein2007}}. In Carruthers&rsquo;s account of pain, what is represented
+    as bad is the felt bodily state, not the tooth as an object out in the world {{CITE:carruthers2018}}.
+    Barlassina and Hayward keep an ordinary sensory report and add a command aimed at the experience
+    itself {{CITE:bh2019}}. The toothache was chosen because Barlassina&rsquo;s 2020 paper uses it. What the
+    figure leaves out: Klein&rsquo;s theory covers pain only, while the other two cover every kind of
+    feeling, and the figure cannot show how strong a command or an evaluation is.</p>
+  </div>
+</figure>
+
+<section class="col stages">
+  <div class="theory">
+    <div class="who">Imperativism<small>Klein 2007{{CITE:klein2007}}</small></div>
+    <div class="what">
+      <p class="slogan">&ldquo;Pain is there to stop us.&rdquo;</p>
+      <p>A pain does not report tissue damage; it forbids a use of the body. Klein points to the telling
+      phrase &ldquo;it hurts <em>when I</em> do this&rdquo;. How intense a pain is equals how strong the
+      command is. Morphine does not refute the view. The drug removes the worry and the urge to act, and
+      a prohibition with nothing to prohibit is &ldquo;a stop sign in a ghost town&rdquo;. <strong>Scope:
+      pain only.</strong></p>
+    </div>
+  </div>
+  <div class="theory">
+    <div class="who">Evaluativism<small>Carruthers 2018{{CITE:carruthers2018}} and 2023{{CITE:carruthers2023}}</small></div>
+    <div class="what">
+      <p class="slogan">Feeling bad is something seeming bad.</p>
+      <p>Valence is a perception-like representation of value that needs no concept of &ldquo;bad&rdquo;,
+      the way seeing roughly thirty dots needs no concept of thirty. When you fear a bear, the bear
+      looks bad. In pain, it is the felt bodily state that is
+      represented as bad. By 2023 the content is spelled out as <strong>adaptive value</strong>: how good
+      or bad something is for survival and reproduction, or has been learned to predict. <strong>Scope:
+      all feelings.</strong></p>
+    </div>
+  </div>
+  <div class="theory">
+    <div class="who">Reflexive imperativism<small>Barlassina &amp; Hayward 2019{{CITE:bh2019}}</small></div>
+    <div class="what">
+      <p class="slogan">&ldquo;Get more of me! Get less of me!&rdquo;</p>
+      <p>Commands are the right idea, but Klein-style commands aim at the wrong target. A command about the
+      body cannot explain why you take a painkiller, or why a gloom with no object feels bad. So an
+      unpleasant experience commands <strong>less of itself</strong>, and a pleasant one more of itself.
+      How to comply is left open: fix the tooth, take the painkiller, or change how you walk. <strong>Scope:
+      all feelings.</strong></p>
+    </div>
+  </div>
+</section>
+
+<section class="col">
+  <h2><span class="num">03</span> How the exchange unfolded</h2>
+  <p>This is not a neat back-and-forth. The early papers argue with other opponents, and the two sides
+  meet head-on only in the last two papers.</p>
+</section>
+
+<section class="col stages">
+  <div class="stage"><div class="s">2007</div><div class="b">
+    <div class="t">Klein founds imperativism about pain</div>
+    <div class="d">Against the view that pain reports damage. A report would invite flexible,
+    context-dependent responses, but for pain there is usually only one right response: stop
+    {{CITE:klein2007}}.</div></div></div>
+  <div class="stage"><div class="s">2013</div><div class="b">
+    <div class="t">Bain&rsquo;s evaluativist critique (not read here)</div>
+    <div class="d">Going by its abstract only, Bain argues that command-based accounts cannot explain
+    why an unpleasant pain gives you a reason to act, and that pain&rsquo;s content must be evaluative
+    instead {{CITE:bain2013}}.</div></div></div>
+  <div class="stage"><div class="s">2018</div><div class="b">
+    <div class="t">Carruthers states evaluativism for all feelings</div>
+    <div class="d">Aimed at a different rival, the view that valence is a raw good or bad feel. It never
+    mentions imperativism. It argues that choices are about the world, not about feelings:
+    &ldquo;evolution couldn&rsquo;t care less about how one feels&rdquo; {{CITE:carruthers2018}}.</div></div></div>
+  <div class="stage"><div class="s">2019</div><div class="b">
+    <div class="t">Barlassina &amp; Hayward turn the command inward</div>
+    <div class="d">Aimed at other imperativists, including Klein&rsquo;s 2015 book {{CITE:klein2015}}, with
+    one short passage against evaluativism. It also sets out the evolutionary story: feelings are a
+    reward-and-punishment system for creatures that must learn by trial and error
+    {{CITE:bh2019}}.</div></div></div>
+  <div class="stage"><div class="s">2020</div><div class="b">
+    <div class="t">Barlassina takes on Carruthers directly</div>
+    <div class="d">The anchor paper. It judges both theories by Carruthers&rsquo;s own two tests, what
+    feelings feel like and how we decide by imagining options, and argues that imperativism passes both
+    better (&sect;4) {{CITE:barlassina2020}}.</div></div></div>
+  <div class="stage"><div class="s">2023</div><div class="b">
+    <div class="t">Carruthers replies</div>
+    <div class="d">Valence signals track value, so they represent value. The science of learning,
+    choice and attention has no need for commands, and in two places, where valence sits in the brain
+    and why people stare at horrors, it contradicts them. The paper also answers most of the test cases
+    (&sect;5) {{CITE:carruthers2023}}.</div></div></div>
+</section>
+
+<hr>
+
+<section class="col">
+  <h2><span class="num">04</span> The anchor paper: four cases and a pizza</h2>
+  <p>Barlassina accepts Carruthers&rsquo;s own standard: a theory of valence should explain what valence
+  feels like and what it does when we decide by imagining the options {{CITE:barlassina2020}}. His
+  first strategy is to find cases where <em>feeling bad</em> and <em>something seeming bad</em> come apart.
+  Evaluativism treats the two as the same thing, so every such case is trouble for it.</p>
+</section>
+
+<section class="col"><div>
+  <div class="case">
+    <div class="title">The cake</div>
+    <p class="story">Olivia is hungry and has left her wallet at home. The cake in the window looks
+    wonderful, but her desire for it feels <strong>unpleasant</strong> and she would like to be rid of it.
+    A guitarist on her way to a concert has an unfulfilled desire too, and hers feels wonderful.</p>
+    <dl>
+      <dt>Evaluativism</dt><dd>If desires represent their objects as good, every desire should feel pleasant.
+      If an unfulfilled desire represents <em>not having</em> the thing as bad, every one should feel
+      unpleasant. Neither fits both women.</dd>
+      <dt>Imperativism</dt><dd>What the desire is about does not fix its valence. Olivia&rsquo;s desire says
+      &ldquo;less of me!&rdquo;, and the guitarist&rsquo;s says &ldquo;more of me!&rdquo;.</dd>
+      <dt>2023 reply</dt><dd>The cake still seems good. What seems bad is the <em>situation</em>, that she
+      will not get it, which is felt as frustration {{CITE:carruthers2023}}.</dd>
+    </dl>
+  </div>
+  <div class="case">
+    <div class="title">The general and the saint</div>
+    <p class="story">Both saved the village and both are proud, so their pride presents their deeds as
+    good. The general&rsquo;s pride feels pleasant. The saint&rsquo;s feels unpleasant, because she believes
+    she should stay humble.</p>
+    <dl>
+      <dt>Evaluativism</dt><dd>Even if a second state judges her pride as bad, her deeds still seem good. The
+      theory should then predict mixed feelings, but &ldquo;she is not feeling any pleasure at all&rdquo;.</dd>
+      <dt>Imperativism</dt><dd>Same evaluation, opposite commands: the saint&rsquo;s pride says &ldquo;less of
+      me!&rdquo;.</dd>
+      <dt>2023 reply</dt><dd>She also appraises her pride as a betrayal of her values, and that appraisal is
+      strongly negative. The reply does not take up the point about mixed feelings
+      {{CITE:carruthers2023}}.</dd>
+    </dl>
+  </div>
+  <div class="case">
+    <div class="title">The dentist</div>
+    <p class="story">Heavily anaesthetised, Barlassina sees his wrecked mouth in the mirror. It looks bad,
+    yet the experience feels neither pleasant nor unpleasant.</p>
+    <dl>
+      <dt>Evaluativism</dt><dd>The experience represents the mouth as bad, so evaluativism predicts it
+      should feel bad.</dd>
+      <dt>Imperativism</dt><dd>The drug stops the experience from acquiring any &ldquo;more / less of
+      me&rdquo; command.</dd>
+      <dt>2023 reply</dt><dd>Seeing damage is recognising it, a matter of concepts, or at most seeing
+      something that implies damage. Neither is the concept-free sense of value that evaluativism
+      identifies with valence {{CITE:carruthers2023}}.</dd>
+    </dl>
+  </div>
+  <div class="case">
+    <div class="title">Bonjour tristesse</div>
+    <p class="story">Jean-Paul wakes up miserable. Nothing in particular seems bad to him, yet the misery is
+    unpleasant and he wants it gone.</p>
+    <dl>
+      <dt>Evaluativism</dt><dd>There is no object for the misery to represent as bad.</dd>
+      <dt>Imperativism</dt><dd>&ldquo;Less of me!&rdquo; with nothing else attached is pure misery.</dd>
+      <dt>2023 reply</dt><dd>Moods lack an identifiable <em>cause</em>, not an object: the world looks flat,
+      and &ldquo;the fact that nothing seems good seems bad&rdquo;. The reply is made about pure moods in
+      general. Jean-Paul is not named {{CITE:carruthers2023}}.</dd>
+    </dl>
+  </div>
+</div></section>
+
+<section class="col">
+  <h3>Deciding by imagining: tasting pizza, or pizza?</h3>
+  <p>Both theories agree on the outline. To choose between pizza and pasta you imagine each, each image
+  gives off some pleasantness, and you pick the more pleasant one. They disagree about <em>what</em> you
+  imagine. Barlassina says you imagine <strong>tasting</strong> pizza, an experience. Carruthers says you
+  imagine the pizza, a worldly outcome.</p>
+  <p>Barlassina offers three lines of evidence for the experience reading {{CITE:barlassina2020}}.
+  Forecasting how things will feel uses the brain&rsquo;s default network, which also supports memory and
+  imagining experiences. The main value-comparison region is recruited when people imagine things from their own
+  point of view. And <strong>projection bias</strong>: current hunger changes what people choose to eat later,
+  which is what you would expect if imagining a taste re-uses the real tasting system.</p>
+  <p>Carruthers replies that everyone agrees imagining uses sensory imagery. What gets appraised is what
+  the image shows, not the imagining as an experience {{CITE:carruthers2023}}. He does not address the
+  projection-bias evidence, or the two turned-around objections below.</p>
+  <p>He then turns Carruthers&rsquo;s two objections around. Why would anyone die for a cause if choices
+  aim at experiences? Because people who make that sacrifice typically feel <strong>fused</strong> with
+  their group, so they can imagine going on through it. Why would evolution care about feelings? Because
+  evolution tinkers with what exists, and human future-thinking already works by simulating experiences.
+  Neither of these two replies is answered in the 2023 paper.</p>
+</section>
+
+<section class="col">
+  <h2><span class="num">05</span> The reply: value is enough</h2>
+  <p>Carruthers&rsquo;s 2023 paper does more than defend. Its main move shifts the burden of proof onto
+  imperativism {{CITE:carruthers2023}}.</p>
+</section>
+
+<section class="col"><div class="qs">
+  <div class="q"><div class="h">Valence carries information about value, so it represents value.</div>
+    <div class="d">Pleasure and pain are triggered by things that were good or bad for survival, such as
+    food when hungry or actual or threatened tissue damage, and by things learned to predict them. After food poisoning, chicken
+    becomes disgusting. Valence does its jobs <em>because</em> it carries that information. On standard
+    theories of mental content, that makes it a representation of value. At most, imperativists can add a
+    command on top, a <strong>pushmi-pullyu</strong> state that both describes and directs. They owe an
+    argument that the command part is needed: &ldquo;Otherwise evaluativism gets to win by
+    default.&rdquo;</div></div>
+  <div class="q"><div class="h">The science does not use commands.</div>
+    <div class="d">Learning from surprise can be told entirely as updating stored values. Economic models
+    of choice weigh value, probability and effort. Imperativists can re-describe all of this in terms of
+    command strength, but nothing requires them to.</div></div>
+  <div class="q"><div class="h">Commands would sit in the wrong part of the brain.</div>
+    <div class="d">A command to act should live near motor planning. Valence signals are found in value
+    areas, including the striatum, amygdala, insula and orbitofrontal cortex, separate from the networks
+    that plan and hold goals.</div></div>
+  <div class="q"><div class="h">We stare at horrible things.</div>
+    <div class="d">&ldquo;I couldn&rsquo;t help looking, it was so horrible.&rdquo; If seeing a gruesome
+    accident commanded &ldquo;less of this experience!&rdquo;, people would look away. Evaluativism predicts
+    that bad things grab attention because they matter.</div></div>
+  <div class="q"><div class="h">The view slides into hedonism.</div>
+    <div class="d">If valence drives every choice and valence is about one&rsquo;s own experiences, then every
+    choice aims at getting experiences for oneself. That is <strong>motivational hedonism</strong>, which
+    the 2018 paper argued against.</div></div>
+</div></section>
+
+<hr>
+
+<section class="col">
+  <h2><span class="num">06</span> Where it stands</h2>
+  <p>Within these five papers the debate is open. The table sets the strongest objection to each view,
+  as the review of the corpus judges it, beside what remains unanswered.</p>
+  <p class="cue" hidden>&larr; the table is wider than the screen &mdash; scroll it sideways</p>
+  <div class="scroll"><table class="wide">
+    <thead><tr><th>View</th><th>Strongest objection it faces</th><th>Still unanswered in the corpus</th></tr></thead>
+    <tbody>
+      <tr><td>Klein&rsquo;s imperativism</td><td>Feelings with no action to forbid: headache, deep visceral
+      pain (Klein flags these himself), objectless misery. Extended beyond pain, a body-directed command also cannot say which commands feel bad
+      and which good, an objection Barlassina &amp; Hayward press against a related first-order view.</td><td>Whether it can extend beyond pain at all.</td></tr>
+      <tr><td>Reflexive imperativism</td><td>Value is enough (&sect;5). The signal already represents value,
+      so a command must earn its place. Add the staring-at-horror problem and the hedonism charge.</td>
+      <td>How it answers the brain-location and attention arguments.</td></tr>
+      <tr><td>Evaluativism</td><td>Feeling and evaluation come apart: the saint, objectless misery. Each case
+      needs its own extra appraisal, which costs the unity the view claims. A version on which the damage is what seems bad
+      also struggles to say why we take painkillers rather than only tending the wound. Carruthers&rsquo;s
+      version, on which the felt sensation itself seems bad, largely escapes this.</td><td>The replies on identity fusion and evolution
+      as tinkerer, and the projection-bias evidence.</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<section class="col"><div class="qs">
+  <div class="q"><div class="h">Is the disagreement partly about which theory of content to use?</div>
+    <div class="d">Both sides fix content by what a signal is <em>for</em>. Carruthers says valence is for
+    carrying information about value. Barlassina and Hayward say it is for regulating one&rsquo;s own
+    experience. Neither paper settles which role explains why the signal exists.</div></div>
+  <div class="q"><div class="h">Two sources the corpus leans on were not read.</div>
+    <div class="d">Several objections Carruthers answers come from a Barlassina &amp; Hayward paper outside
+    this set {{CITE:loopy2019}}, so his versions of them could not be checked. The two sides also read
+    Klein&rsquo;s 2015 book differently: as a theory of pain&rsquo;s badness, or only of its sensory side
+    {{CITE:klein2015}}.</div></div>
+  <div class="q"><div class="h">What to read next.</div>
+    <div class="d">Bain&rsquo;s evaluativist critique of pain imperativism {{CITE:bain2013}}, and Martínez
+    &amp; Klein&rsquo;s argument that pain signals are mostly imperative, framed in terms of how biological
+    signals work {{CITE:mk2016}}.</div></div>
+</div></section>
+
+<section class="col">
+  <h2><span class="num">07</span> Why it matters for this project</h2>
+  <div class="callout danger">
+    <p class="eyebrow">Interpretive, not a finding</p>
+    <p>These papers are about conscious experience. Nothing here shows that an artificial agent has
+    valence. For the project&rsquo;s agents, the observation channel that reports injury is called
+    <strong>nociception</strong>.
+    &ldquo;Pain&rdquo; is what the project is trying to explain, and it is never used as a name for the
+    agent&rsquo;s signal.</p>
+  </div>
+  <p>The project trains reinforcement-learning agents (agents that learn by trial and error from
+  reward and penalty) in a grid world where they can be injured and
+  receive a nociception signal. It studies behaviour that looks pain-like, such as staying hidden after
+  an injury. Read functionally, each theory gives a different answer to <em>what that signal would have to
+  do to count as valence</em>:</p>
+  <dl>
+    <dt>Klein</dt><dd>A signal that forbids particular actions. It grows while the action continues,
+    fades when the agent backs off, and shows no effect when the agent is not trying to act. A number that
+    merely stands for how much damage there is would not be enough. The project&rsquo;s nociception
+    channel is such a number, so on Klein&rsquo;s view it is a report, not a pain-like command. Anything
+    command-like would have to show up in how the agent&rsquo;s actions are restricted, not in the channel
+    itself.</dd>
+    <dt>Reflexive</dt><dd>A second component, distinct from the damage read-out, whose job is to reduce
+    the whole state it belongs to, leaving the method to learning. The nociception channel on its own
+    would be only the read-out half. The signature would be an agent drawn to lower that read-out even
+    when doing so does not repair the damage, the analogue of taking a painkiller. There is a caution. In an engineered agent, what the signal is
+    &ldquo;for&rdquo; is whatever the designer chose to reward, so meeting the letter of the theory proves
+    little.</dd>
+    <dt>Evaluativism</dt><dd>A graded estimate of how good or bad a state of body or world is for survival,
+    part built in and part learned, used to compare options and updated by surprise. The nearest analogue
+    is a fixed cost for damage plus a learned value estimate over states that predict it, with the caveat
+    that an agent&rsquo;s value estimate tracks whatever reward its designer chose, not survival as
+    such. On this reading, staying
+    hidden after injury would be a learned re-valuation of dangerous states.</dd>
+  </dl>
+  <p>One warning from the corpus: the same learning machinery can be described either as updating values
+  or as updating commands {{CITE:carruthers2023}}. A standard learning agent therefore favours neither theory
+  by itself. The theories come apart only on dissociations, and each one separates a different pair.
+  Signal without valence, as in asymbolia, and lowering the signal rather than the damage, as with
+  painkillers, tell against Klein&rsquo;s body-directed command but fit both of the other two. Valence
+  with no object, as in objectless misery, is contested between them. Only the last, whether strongly
+  bad states pull attention in or push it away, sets reflexive imperativism and evaluativism directly
+  against each other.</p>
+  <p>The project has touched this question once already. An earlier analysis of bush hiding asked whether
+  the nociception signal behaves like a description or a Klein-style command. It found evidence pointing both ways and
+  did not treat either strand as decisive. That discussion is in
+  <code>docs/experiments/active/trajectory_factors/a01_hiding_drivers.html</code>. Whether any of these
+  dissociations can be tested here, and whether a positive result would license the word
+  &ldquo;pain-like&rdquo;, is a question of construct validity (does the measurement capture the concept
+  it is named for) for the project&rsquo;s pain-science reviewer, and of priority for its research
+  triage. This page does not settle it.</p>
+</section>
+
+<section class="col">
+  <h2><span class="num">08</span> Glossary</h2>
+  <dl>
+    <dt>valence</dt><dd>The pleasant-or-unpleasant quality of an experience. Barlassina &amp; Hayward call it
+    affective phenomenal character.</dd>
+    <dt>sensory / affective</dt><dd>The two sides of a pain: what and where it is, and how bad it feels.</dd>
+    <dt>content</dt><dd>What a mental state says or is about.</dd>
+    <dt>describe / command</dt><dd>Content that can be true or false (indicative) versus content that can be
+    obeyed or not (imperative).</dd>
+    <dt>imperativism</dt><dd>Valence is imperative content. Klein&rsquo;s version: commands about using the
+    body.</dd>
+    <dt>reflexive imperativism</dt><dd>The command is about the experience itself: &ldquo;more / less of
+    me!&rdquo;. In the 2020 paper &ldquo;me&rdquo; means that <em>type</em> of experience, so future
+    experiences of the same kind can satisfy it.</dd>
+    <dt>evaluativism</dt><dd>Valence is a concept-free representation of good or bad. For Carruthers in 2023, of
+    adaptive value.</dd>
+    <dt>adaptive value</dt><dd>How beneficial or harmful something is for survival and reproduction, or has
+    been learned to predict.</dd>
+    <dt>pain asymbolia</dt><dd>A condition in which people recognise a stimulus as painful but are not
+    distressed by it and make no move to withdraw.</dd>
+    <dt>pushmi-pullyu</dt><dd>A state that describes and directs at once, a term from Millikan.</dd>
+    <dt>projection bias</dt><dd>Letting how you feel now, for example hungry, colour predictions of how you
+    will feel later.</dd>
+    <dt>identity fusion</dt><dd>A felt oneness with a group strong enough that its survival feels like one&rsquo;s
+    own.</dd>
+    <dt>motivational hedonism</dt><dd>The view that every choice ultimately aims at one&rsquo;s own pleasant
+    experiences.</dd>
+    <dt>nociception</dt><dd>In this project, the observation channel that reports the agent&rsquo;s injury
+    to it. In pain science the term means the nervous system&rsquo;s encoding of actually or potentially
+    damaging stimuli; the project&rsquo;s use is looser. Never called &ldquo;pain&rdquo;.</dd>
+  </dl>
+</section>
+
+<section class="col">
+  <h2><span class="num">09</span> References</h2>
+  <p>{{N_REFS}} sources are cited. {{N_READ}} were read in full and reviewed for this page. The other
+  {{N_UNREAD}} are named only as the reviewed papers describe them, and are marked <em>not read</em>.</p>
+  {{REFS}}
+</section>
+
+<hr>
+
+<section class="col">
+  <h4>Provenance</h4>
+  <p class="foot">Built by <code>python docs/project/references/imperativism/intro_page/build_page.py</code>
+  from <code>page_template.html</code> in the same folder, with the House Style Sheet&rsquo;s style block and
+  figure viewer taken from <code>docs/develop/active/meta/house_style_sheet.template.html</code>. Figure 1 is
+  drawn by <code>fig01_three_contents.py</code>. The content summarises the reference review
+  <code>docs/project/references/imperativism/imperativism_lit_review.md</code>, which gives the argument
+  reconstructions, page citations and a table of who answers whom. The five PDFs are in
+  <code>docs/project/references/imperativism/sources/</code>. Quotations are from that review&rsquo;s page-cited
+  extracts. Page numbers for the two author copies follow the manuscript, not the journal.</p>
+</section>
+
+</div>
+
+{{HOUSE_VIEWER}}
