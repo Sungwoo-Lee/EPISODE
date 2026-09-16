@@ -34,8 +34,9 @@ PLAN_OWNED_PATHS, so an out-of-date baseline cannot narrow the mixed-commit rule
 Exit codes: 0 = no UNATTRIBUTABLE file; 1 = at least one UNATTRIBUTABLE file;
 2 = the guard could not do its job (missing/corrupt baseline, zero files compared,
 frozen set mismatch, --repo-root not the git toplevel, plan start not an ancestor of
-HEAD, a frame baseline present but not checkable yet, refused re-record/accept, or any
-unexpected exception). A guard that compared nothing must never look green.
+HEAD, a frame baseline present but not checkable yet, a pinned fixture missing from disk,
+refused re-record/accept, or any unexpected exception). A guard that compared nothing
+must never look green.
 
 SUBCOMMANDS
     record-files            write baseline.json + frozen_files_at_baseline.diff.
@@ -48,9 +49,44 @@ SUBCOMMANDS
                             clears a file they have looked at. The sha256 must equal the
                             file's current content. It never changes worktree_sha256 or
                             any frame baseline.
-    record-frames           Phase 0b (CP0.1b); not implemented yet, refuses to run.
+    record-frames           Phase 0b (CP0.1b). Records, per fixture cell, the sha256 of
+                            each recording's DECOMPRESSED payload and of run_meta.pkl,
+                            plus the sha256 of the first 8 RAW frames V1 renders from it.
+                            Frame hashes are computed in two separate processes, which
+                            must agree, else the guard refuses (the plan's fallback is a
+                            pixel-diff tolerance, to be recorded by hand).
+    frame-worker            Internal. One process's frame hashes, as JSON on stdout.
 
-Stdlib only. Git is called read-only (`--no-optional-locks`, no index writes).
+FRAMES AT `check` TIME (plan section D5.4 item 4).
+    fixture hash differs         -> FIXTURE CHANGED: the fixture was regenerated, so the
+                                    frames are not comparable. Reported, frames skipped.
+                                    Not a failure — fixtures live under gitignored
+                                    results/ and may legitimately be regenerated or
+                                    cleaned; re-record frames after confirming the
+                                    generator commit.
+    fixture missing              -> FIXTURE MISSING: a STRUCTURAL failure (exit 2), not a
+                                    pass. The frame baseline pins something that is no
+                                    longer on disk, so the frame half of the guard is
+                                    comparing nothing — the "gate reports green at exactly
+                                    the moment it stops working" shape recorded in
+                                    KNOWN_BUGS.md (the extero-nociception byte-parity gate,
+                                    which skipped for three months on a missing fixture).
+                                    `--allow-missing-fixtures` tolerates it (exit 0) for
+                                    the one legitimate case: the fixtures have not been
+                                    generated yet, or gitignored results/ was cleaned and
+                                    the caller knowingly wants the file-only verdict. The
+                                    flag never masks a fixture that is PRESENT and
+                                    disagrees.
+    fixtures equal, frames equal -> FRAMES PASS.
+    fixtures equal, frames differ-> UNATTRIBUTABLE when every frozen file is PASS
+                                    (something outside the frozen set changed V1 output:
+                                    an asset, a config, a library). When the frozen files
+                                    that moved are ATTRIBUTED, the frames follow them and
+                                    are reported ATTRIBUTED.
+
+Stdlib only on the `check`/`record-files` path. Frame hashing runs V1 in a SUBPROCESS, so
+matplotlib and numpy are imported only there, never into the guard itself. Git is called
+read-only (`--no-optional-locks`, no index writes).
 """
 from __future__ import annotations
 
@@ -112,8 +148,36 @@ PLAN_OWNED_PATHS = (
     "docs/develop/active/refactors/RENDERER_LAYOUT_REDESIGN.md",
 )
 
+# ---- frame baseline (CP0.1b) ------------------------------------------------------
+# The fixture cells whose V1 output is pinned. All three are written by
+# scripts/eval/make_render_fixture_recordings.py and live under gitignored `results/`, so
+# they can be cleaned away. `check` treats that as a STRUCTURAL failure (exit 2): a frame
+# baseline that pins a fixture nobody can find is a gate that compares nothing while
+# printing a verdict. Regenerate the fixtures, or pass --allow-missing-fixtures to ask
+# deliberately for the file-only verdict.
+#
+# M7 is deliberately ABSENT, although CP0.1b names it. M7 is the real pre-thermal
+# trained-policy recording at
+#   results/eval/noPredator_chasingRabbit/models/9520028/recordings/9520028
+# and V1 cannot render it at current code: its pickled `EnvParams` predates the thermal
+# system, while the FROZEN `src/environment/sensor.py::get_observation_breakdown` reads
+# `params.thermal_enabled` unconditionally, so `render_recordings._render_episode` dies
+# with `AttributeError: 'EnvParams' object has no attribute 'thermal_enabled'` (measured
+# 2026-09-16 through `_worker_init` + `_render_episode`, the production path). There is no
+# V1 frame to baseline. The plan's own answer is `_recording_flag` (section D4.1), which is
+# Phase 1 code, and the frozen file may not be edited to make this cell pinnable.
+DEFAULT_FRAME_CELLS = {
+    "M1": "results/render_audit/recordings/M1/M1",
+    "M2": "results/render_audit/recordings/M2/M2",
+    "M4": "results/render_audit/recordings/M4/M4",
+}
+FRAME_STEPS = 8
+
 PASS, ACCEPTED, ATTRIBUTED, UNATTRIBUTABLE = (
     "PASS", "ACCEPTED", "ATTRIBUTED", "UNATTRIBUTABLE",
+)
+FIXTURE_CHANGED, FIXTURE_MISSING, FRAMES_PASS = (
+    "FIXTURE CHANGED", "FIXTURE MISSING", "FRAMES PASS",
 )
 
 EXIT_OK, EXIT_UNATTRIBUTABLE, EXIT_GUARD_ERROR = 0, 1, 2
@@ -239,6 +303,23 @@ def _load_baseline(path: Path) -> dict:
                  and isinstance(a.get("sha256"), str)
                  and bool(_SHA256_RE.match(a["sha256"])),
                  path, f"user_accepted entry {a!r} lacks a path or valid sha256")
+    for key in ("fixtures", "frames"):
+        if key in data:
+            _require(isinstance(data[key], dict), path, f"{key} is not an object")
+    for name, entry in data.get("fixtures", {}).items():
+        _require(isinstance(entry, dict) and isinstance(entry.get("recordings_dir"), str)
+                 and isinstance(entry.get("run_meta_sha256"), str)
+                 and bool(_SHA256_RE.match(entry["run_meta_sha256"]))
+                 and isinstance(entry.get("episodes"), dict) and entry["episodes"],
+                 path, f"fixtures entry {name!r} is malformed")
+    for name, entry in data.get("frames", {}).items():
+        _require(isinstance(entry, dict) and isinstance(entry.get("episode"), str)
+                 and isinstance(entry.get("sha256"), list) and bool(entry["sha256"])
+                 and all(isinstance(s, str) and bool(_SHA256_RE.match(s))
+                         for s in entry["sha256"]),
+                 path, f"frames entry {name!r} is malformed")
+    _require(set(data.get("frames", {})) <= set(data.get("fixtures", {})), path,
+             "a frames entry has no matching fixtures entry, so it could never be checked")
     return data
 
 
@@ -336,6 +417,192 @@ def _require_ancestor(repo: Path, plan_start: str) -> None:
 
 def _owned_union(data: dict) -> list[str]:
     return sorted(set(data["plan_owned_paths"]) | set(PLAN_OWNED_PATHS))
+
+
+# ------------------------------------------------------------------ fixtures and frames
+
+
+def _gzip_payload_sha256(path: Path) -> str:
+    """sha256 of a `.rec.gz`'s DECOMPRESSED bytes.
+
+    gzip headers embed the write time, so hashing the file itself would report every
+    regeneration as a change even when the recording is byte-identical (review finding 30).
+    """
+    import gzip
+    h = hashlib.sha256()
+    with gzip.open(path, "rb") as fh:
+        for chunk in iter(lambda: fh.read(1 << 20), b""):
+            h.update(chunk)
+    return h.hexdigest()
+
+
+def fixture_hashes(rec_dir: Path) -> dict:
+    """`{'run_meta_sha256':…, 'episodes': {name: sha256}}` for one recordings directory."""
+    if not rec_dir.is_dir():
+        raise FileNotFoundError(f"recordings directory not found: {rec_dir}")
+    meta = rec_dir / "run_meta.pkl"
+    if not meta.is_file():
+        raise FileNotFoundError(f"run_meta.pkl not found in {rec_dir}")
+    episodes = sorted(rec_dir.glob("episode_*.rec.gz"))
+    if not episodes:
+        raise FileNotFoundError(f"no episode_*.rec.gz in {rec_dir}")
+    return {"run_meta_sha256": sha256_file(meta),
+            "episodes": {p.name: _gzip_payload_sha256(p) for p in episodes}}
+
+
+def _frame_worker_hashes(repo: Path, rec_dir: Path, episode: str, steps: int) -> list:
+    """Hash the first `steps` RAW frames V1 renders. Runs inside the frame-worker process.
+
+    It drives the FROZEN offline renderer exactly as production does — `_worker_init` to
+    fill `_WORKER_STATE` and warm the icon cache, then `_render_episode` — and captures the
+    frames by monkeypatching `src.environment.renderer.save_jax_video`, the name
+    `_render_episode` imports at call time. No MP4 is written and no frozen file is edited.
+
+    The episode is first TRUNCATED to `steps` snapshots in a temp copy. Each frame depends
+    only on that step's snapshot / obs / true_obs / action plus params, icon_config and the
+    episode-wide `thermal_clim`, which is taken from snapshot 0 and therefore survives
+    truncation; so the truncated frames are byte-identical to the full episode's first
+    `steps` frames. Without truncation a 121-step fixture would render 121 frames per cell
+    per process at every phase boundary.
+    """
+    import gzip as _gz
+    import pickle
+    import tempfile
+    import numpy as np
+
+    sys.path.insert(0, str(repo / "scripts" / "eval"))
+    import render_recordings as rr
+    import src.environment.renderer as renderer
+
+    with _gz.open(rec_dir / episode, "rb") as fh:
+        payload = pickle.load(fh)
+    n = min(int(steps), len(payload["snapshots"]))
+    cut = dict(payload)
+    cut["snapshots"] = payload["snapshots"][:n]
+    for key in ("obs", "actions", "rewards"):
+        cut[key] = payload[key][:n]
+    cut["true_obs"] = None if payload["true_obs"] is None else payload["true_obs"][:n]
+
+    captured = {}
+
+    def _capture(frames, output_path, fps=5, quiet=False):
+        captured["frames"] = list(frames)
+
+    original = renderer.save_jax_video
+    with tempfile.TemporaryDirectory() as td:
+        trunc = Path(td) / episode
+        with _gz.open(trunc, "wb") as fh:
+            pickle.dump(cut, fh, protocol=pickle.HIGHEST_PROTOCOL)
+        rr._worker_init(str(rec_dir / "run_meta.pkl"))
+        renderer.save_jax_video = _capture
+        try:
+            rr._render_episode(str(trunc), str(Path(td) / "unused.mp4"), 5)
+        finally:
+            renderer.save_jax_video = original
+    return [hashlib.sha256(np.ascontiguousarray(f).tobytes()).hexdigest()
+            for f in captured["frames"][:n]]
+
+
+def _cell_frame_hashes(repo: Path, rec_dir: Path, episode: str, steps: int,
+                       processes: int = 1) -> list:
+    """Frame hashes from `processes` separate subprocesses, which must agree.
+
+    Kept as one small seam so the guard's own tests can substitute it without rendering.
+    """
+    results = []
+    for _ in range(max(1, int(processes))):
+        proc = subprocess.run(
+            [sys.executable, str(Path(__file__).resolve()), "--repo-root", str(repo),
+             "frame-worker", str(rec_dir), episode, str(steps)],
+            capture_output=True, text=True,
+        )
+        if proc.returncode != 0:
+            raise GuardError(
+                f"frame worker failed for {rec_dir}/{episode} "
+                f"(exit {proc.returncode}):\n{proc.stderr.strip()}"
+            )
+        results.append(json.loads(proc.stdout.strip().splitlines()[-1]))
+    for other in results[1:]:
+        if other != results[0]:
+            raise GuardError(
+                f"two processes disagree on the raw frames of {rec_dir}/{episode}. Agg "
+                f"output is not byte-stable across processes on this machine, so a hash "
+                f"baseline cannot be trusted; the plan's fallback is a pixel-diff "
+                f"tolerance, to be measured and recorded by hand (CP0.1b)."
+            )
+    return results[0]
+
+
+def _parse_cells(items) -> dict:
+    if not items:
+        return {}
+    out = {}
+    for item in items:
+        if "=" not in item:
+            raise GuardError(f"--cells entry {item!r} must be NAME=repo/relative/dir")
+        name, rel = item.split("=", 1)
+        out[name] = rel
+    return out
+
+
+def check_frames(repo: Path, data: dict, states: dict,
+                 allow_missing: bool = False) -> bool:
+    """Print every cell's fixture/frame verdict. True if any is UNATTRIBUTABLE.
+
+    Raises GuardError (exit 2) if a pinned fixture is missing from disk, unless
+    `allow_missing` — see the FIXTURE MISSING note in the module docstring.
+    """
+    fixtures, frames = data.get("fixtures"), data.get("frames")
+    if not fixtures or not frames:
+        print("== frames: NOT compared (no frame baseline yet; run record-frames — CP0.1b)")
+        return False
+    files_all_pass = all(s == PASS for s in states.values())
+    moved = sorted(k for k, v in states.items() if v != PASS)
+    bad = False
+    missing = []
+    print("== fixture + frame states")
+    for name in sorted(frames):
+        entry = frames[name]
+        fx = fixtures.get(name, {})
+        rel = fx.get("recordings_dir", "")
+        rec_dir = repo / rel
+        try:
+            current = fixture_hashes(rec_dir)
+        except FileNotFoundError as exc:
+            tolerated = " (tolerated by --allow-missing-fixtures)" if allow_missing else ""
+            print(f"  {FIXTURE_MISSING:<15} {name}  {exc}; frames NOT compared{tolerated}")
+            missing.append(f"{name}: {exc}")
+            continue
+        if (current["run_meta_sha256"] != fx.get("run_meta_sha256")
+                or current["episodes"] != fx.get("episodes")):
+            print(f"  {FIXTURE_CHANGED:<15} {name}  the fixture was regenerated; frames "
+                  f"NOT compared (re-record only after confirming the generator commit)")
+            continue
+        got = _cell_frame_hashes(repo, rec_dir, entry["episode"],
+                                 entry.get("steps", FRAME_STEPS))
+        if got == entry["sha256"]:
+            print(f"  {FRAMES_PASS:<15} {name}  {len(got)} raw frames identical")
+            continue
+        differing = [i for i, (a, b) in enumerate(zip(got, entry["sha256"])) if a != b]
+        if len(got) != len(entry["sha256"]):
+            differing.append(f"count {len(got)} != {len(entry['sha256'])}")
+        if files_all_pass:
+            print(f"  {UNATTRIBUTABLE:<15} {name}  frames differ at {differing} while every "
+                  f"frozen file is PASS — something OUTSIDE the frozen set changed V1 "
+                  f"output (an asset, a config, or a library)")
+            bad = True
+        else:
+            print(f"  {ATTRIBUTED:<15} {name}  frames differ at {differing}; follows the "
+                  f"moved frozen file(s) {moved}")
+    if missing and not allow_missing:
+        raise GuardError(
+            "the frame baseline pins fixture(s) that are not on disk, so the frame gate "
+            "compared nothing:\n  " + "\n  ".join(missing) +
+            "\nRegenerate them with scripts/eval/make_render_fixture_recordings.py, or "
+            "pass --allow-missing-fixtures to ask for the frozen-file verdict alone "
+            "(only legitimate when the fixtures have not been generated yet)."
+        )
+    return bad
 
 
 # --------------------------------------------------------------------------- commands
@@ -463,10 +730,53 @@ def cmd_accept(args) -> int:
 
 
 def cmd_record_frames(args) -> int:
-    raise GuardError(
-        "record-frames belongs to Phase 0b (CP0.1b) and is not implemented yet; it runs "
-        "after make_render_fixture_recordings.py lands."
-    )
+    repo = _repo(args)
+    baseline_path = _resolve_baseline(repo, args.baseline)
+    data = _load_baseline(baseline_path)
+    cells = _parse_cells(args.cells) or dict(DEFAULT_FRAME_CELLS)
+    if "frames" in data or "fixtures" in data:
+        if not args.force:
+            raise GuardError(
+                f"{baseline_path} already carries a frame baseline. Re-recording frames is "
+                f"exactly how a real V1 output change would be hidden, so it takes --force "
+                f"and a --note citing why."
+            )
+        if not (args.note or "").strip():
+            raise GuardError(
+                f"{baseline_path} already carries a frame baseline and --force was given "
+                f"without --note. Both are required, exactly as the refusal above says: "
+                f"the reason for a re-record is recorded in the baseline (frames_note) or "
+                f"it is not a re-record anyone can audit."
+            )
+    fixtures, frames = {}, {}
+    for name, rel in cells.items():
+        rec_dir = repo / rel
+        try:
+            fx = fixture_hashes(rec_dir)
+        except FileNotFoundError as exc:
+            raise GuardError(f"cell {name}: {exc}") from exc
+        episode = sorted(fx["episodes"])[0]
+        hashes = _cell_frame_hashes(repo, rec_dir, episode, args.steps, processes=2)
+        fixtures[name] = {"recordings_dir": rel, **fx}
+        frames[name] = {"episode": episode, "steps": len(hashes), "sha256": hashes}
+        print(f"  {name}: {len(fx['episodes'])} episode(s); {len(hashes)} raw frames from "
+              f"{episode}; two processes agree (first {hashes[0][:12]})")
+    data["fixtures"] = fixtures
+    data["frames"] = frames
+    data["frames_recorded_at"] = _now()
+    if args.note:
+        data["frames_note"] = args.note
+    _write_baseline(baseline_path, data)
+    print(f"frame baseline written: {baseline_path}")
+    return EXIT_OK
+
+
+def cmd_frame_worker(args) -> int:
+    """Internal: one process's raw-frame hashes, as JSON on stdout."""
+    hashes = _frame_worker_hashes(Path(args.repo_root).resolve(), Path(args.rec_dir),
+                                  args.episode, args.steps)
+    print(json.dumps(hashes))
+    return EXIT_OK
 
 
 def cmd_check(args) -> int:
@@ -480,12 +790,6 @@ def cmd_check(args) -> int:
             f"baseline frozen set does not match the guard's frozen set.\n"
             f"  only in baseline: {sorted(set(recorded) - set(expected))}\n"
             f"  only in guard:    {sorted(set(expected) - set(recorded))}"
-        )
-    if "frames" in data or "fixtures" in data:
-        raise GuardError(
-            "baseline carries a frame/fixture baseline, but frame checking is not "
-            "implemented in this version of the guard (Phase 0b). Refusing to report "
-            "files only while frames go uncompared."
         )
     plan_start = data["plan_start_commit"]
     _require_ancestor(repo, plan_start)
@@ -519,8 +823,9 @@ def cmd_check(args) -> int:
               for s in (PASS, ACCEPTED, ATTRIBUTED, UNATTRIBUTABLE)}
     print(f"== compared {compared} file(s): " +
           ", ".join(f"{k}={v}" for k, v in counts.items()))
-    print("== frames: NOT compared (no frame baseline yet; record-frames is Phase 0b)")
-    if counts[UNATTRIBUTABLE]:
+    frames_bad = check_frames(repo, data, states,
+                              allow_missing=args.allow_missing_fixtures)
+    if counts[UNATTRIBUTABLE] or frames_bad:
         print("RESULT: FAIL (UNATTRIBUTABLE; only the user clears this)")
         return EXIT_UNATTRIBUTABLE
     print("RESULT: OK")
@@ -555,6 +860,11 @@ def build_parser() -> argparse.ArgumentParser:
     c = sub.add_parser("check", help="assign each frozen file a state")
     c.add_argument("--frozen", nargs="+", default=None,
                    help="override the expected frozen set (tests only)")
+    c.add_argument("--allow-missing-fixtures", action="store_true",
+                   help="exit 0 on a pinned fixture that is not on disk, reporting the "
+                        "frozen-file verdict alone, instead of failing with exit 2. Only "
+                        "legitimate when the fixtures have not been generated yet; it "
+                        "never tolerates a fixture that is present and disagrees.")
     c.set_defaults(func=cmd_check)
 
     a = sub.add_parser("accept", help="USER ONLY: accept exact current content of a "
@@ -564,8 +874,24 @@ def build_parser() -> argparse.ArgumentParser:
     a.add_argument("--note", default=None)
     a.set_defaults(func=cmd_accept)
 
-    f = sub.add_parser("record-frames", help="Phase 0b; not implemented yet")
+    f = sub.add_parser("record-frames",
+                       help="Phase 0b: record the fixture + raw-frame baseline (CP0.1b)")
+    f.add_argument("--cells", nargs="+", default=None,
+                   help="NAME=repo/relative/recordings/dir entries "
+                        f"(default: {sorted(DEFAULT_FRAME_CELLS)})")
+    f.add_argument("--steps", type=int, default=FRAME_STEPS,
+                   help="how many leading frames to hash per cell")
+    f.add_argument("--force", action="store_true",
+                   help="overwrite an existing frame baseline (needs --note)")
+    f.add_argument("--note", default=None)
     f.set_defaults(func=cmd_record_frames)
+
+    w = sub.add_parser("frame-worker",
+                       help="internal: print one process's raw-frame hashes as JSON")
+    w.add_argument("rec_dir")
+    w.add_argument("episode")
+    w.add_argument("steps", type=int)
+    w.set_defaults(func=cmd_frame_worker)
     return p
 
 

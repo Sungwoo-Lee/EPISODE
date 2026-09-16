@@ -66,5 +66,77 @@
     "docs/develop/active/refactors/renderer_layout_redesign/",
     "docs/develop/active/refactors/RENDERER_LAYOUT_REDESIGN.md"
   ],
-  "user_accepted": []
+  "user_accepted": [],
+  "fixtures": {
+    "M1": {
+      "recordings_dir": "results/render_audit/recordings/M1/M1",
+      "run_meta_sha256": "d5a2842acde15acf71a636fd51bfa5914ab371ec32841c670a99f78ab0677738",
+      "episodes": {
+        "episode_000001.rec.gz": "89e340944d5d44412340208b2971880b5cf48151aff69b395aabad5fe7af9275",
+        "episode_000002.rec.gz": "e7eb7e814bbd4258d6c5c19dbacaba62bd0f364d75ae504ecc0caa9102eb1b03"
+      }
+    },
+    "M2": {
+      "recordings_dir": "results/render_audit/recordings/M2/M2",
+      "run_meta_sha256": "1e8f5841ec5ea628efbb595e1d2c847c9211bbf7339be377f232d47a7728f308",
+      "episodes": {
+        "episode_000001.rec.gz": "89e340944d5d44412340208b2971880b5cf48151aff69b395aabad5fe7af9275",
+        "episode_000002.rec.gz": "e7eb7e814bbd4258d6c5c19dbacaba62bd0f364d75ae504ecc0caa9102eb1b03"
+      }
+    },
+    "M4": {
+      "recordings_dir": "results/render_audit/recordings/M4/M4",
+      "run_meta_sha256": "acb8cd7ca5bf6ad0a5dbfc8ab585d5dc4f794d0e8819c94e8f8b93d6cdf3dea5",
+      "episodes": {
+        "episode_000001.rec.gz": "4c1964b632261b038e606ce774a78fbcbfe08e342c5ce5a9341f7a77658da31c",
+        "episode_000002.rec.gz": "521c1eadbcf5f97db92ad358b08f9428e50d5d1b76ab55983334e72d1e5068a4"
+      }
+    }
+  },
+  "frames": {
+    "M1": {
+      "episode": "episode_000001.rec.gz",
+      "steps": 8,
+      "sha256": [
+        "20a67f21f567b981050c968cd74548240c4a35e93237fcef24379ba575a67734",
+        "76b02bde78de1328061703339bde9c8d2f9243d938b50d592b3b57f68b50a2ca",
+        "4f57c4bd0049fa395b6b7bb2e1d256e41d9fe1ea0e4e9c085a057e50e89ea795",
+        "a6e80192c3bdaadcb4f65c49dde1b028786485d91409c28d6db510ad07fdd4ec",
+        "ca166b7cee28bcd47ffc097865d814a25447e27befa6fa270f7ae856bf98e726",
+        "dc7e6c09c84e3cded2f2844d04e6a849abb8da83da741f86d012d2de799ce92c",
+        "d973cae128f77ce4994f3b62f0b69fee2a8d770dd43dd861cc6462eb5765da9c",
+        "35f6e4002536a17948581345f7a4e5a565bd1422bbd655a76a1c825babf22bcc"
+      ]
+    },
+    "M2": {
+      "episode": "episode_000001.rec.gz",
+      "steps": 8,
+      "sha256": [
+        "20a67f21f567b981050c968cd74548240c4a35e93237fcef24379ba575a67734",
+        "76b02bde78de1328061703339bde9c8d2f9243d938b50d592b3b57f68b50a2ca",
+        "4f57c4bd0049fa395b6b7bb2e1d256e41d9fe1ea0e4e9c085a057e50e89ea795",
+        "a6e80192c3bdaadcb4f65c49dde1b028786485d91409c28d6db510ad07fdd4ec",
+        "ca166b7cee28bcd47ffc097865d814a25447e27befa6fa270f7ae856bf98e726",
+        "dc7e6c09c84e3cded2f2844d04e6a849abb8da83da741f86d012d2de799ce92c",
+        "d973cae128f77ce4994f3b62f0b69fee2a8d770dd43dd861cc6462eb5765da9c",
+        "35f6e4002536a17948581345f7a4e5a565bd1422bbd655a76a1c825babf22bcc"
+      ]
+    },
+    "M4": {
+      "episode": "episode_000001.rec.gz",
+      "steps": 8,
+      "sha256": [
+        "994ae6a82981c91cfee6c72c4c2bf6694c37aed03c36cc83f4a6b87861a065b5",
+        "8641f0333765ae00c79075025c45847a292e059852168f8b3164068ae3ffd99f",
+        "e0f0e9509dcd6b17adf6dfeab821753400256dd429996af8628258f5c7d075f2",
+        "5121e119f4b73a7fab86999a72fed1a96807a9863a01e05ffd9285344d049a55",
+        "f0ab6306e05f32fe332972938c311d9856dc609dcf2d4e4dafcb153dd7b39fc1",
+        "5f96488b43e4310e498389c5abc5a8fb03c8a49b668610c1a15aa1d562b2a7e7",
+        "d6a869ec92cd01c8d6061b96de2f04e6ef896a6b655f6e9a8de2d04bd00f0854",
+        "caf849dd0d1cb098d35dec52d781de31d6cc92c47722444f367ee152a7a892d0"
+      ]
+    }
+  },
+  "frames_recorded_at": "2026-09-16T14:23:38+09:00",
+  "frames_note": "Fixtures regenerated 2026-09-16 by the Phase 0b review fix pass: run_meta extras gained a 'provenance' field recording that cells M4/M4b reproduce the archived campfire world under the CURRENT bush rule (bushes block animals), so run_meta.pkl hashes moved for every cell. No frozen file changed (check: PASS=10 before and after) and the episode payloads are unchanged; only the fixture meta hashes are re-pinned."
 }
