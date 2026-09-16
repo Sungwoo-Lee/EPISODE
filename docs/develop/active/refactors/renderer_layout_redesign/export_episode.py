@@ -1,7 +1,7 @@
 """Export one real campfire-world episode to JSON, for the example view on the renderer-redesign page.
 
 What it does
-    Loads configs/environment/experiment/thermal/campfire_world.yaml with two in-memory overrides
+    Loads configs/environment/experiment/archive/thermal/campfire_world.yaml with two in-memory overrides
     (olfactory_grid_range 1, visual_sensor_range 2 -- the ranges trained with today; recorded in meta as
     `overrides`, `synthetic: true`), steps the REAL environment
     (jax_reset / jax_step) with a seeded random policy that RESTs every third step, and keeps the
@@ -9,6 +9,11 @@ What it does
     snapshot fields the renderer reads plus the build_sensory_viz() output -- the same dicts
     scripts/eval/render_recordings.py hands to render_jax_state. Step t holds the state AFTER the
     action stored with it (step 0: initial state, action -1), matching EpisodeRecorder.
+
+    NOTE (2026-09-16): commit f3161dcc archived 227 experiment worlds; this config now lives under
+    experiment/archive/, which the project deliberately does not keep loadable. This script is a
+    sketch generator for the artifact page, not a verification input: if the archived config stops
+    loading, regenerate an equivalent world from default.yaml rather than migrating the archive.
 
     No trained policy is involved: the page shows what the dashboard draws, not what an agent does.
 
@@ -40,7 +45,7 @@ from src.environment.renderer import thermal_color_limits  # noqa: E402
 from src.environment.sensor import build_sensory_viz, get_observation, get_observation_breakdown  # noqa: E402
 from src.utils.config import Config  # noqa: E402
 
-CONFIG = "configs/environment/experiment/thermal/campfire_world.yaml"
+CONFIG = "configs/environment/experiment/archive/thermal/campfire_world.yaml"
 SEEDS = range(12)
 MAX_STEPS = 80
 

@@ -1,7 +1,7 @@
 """Export one real world state read through extended-range senses, for the page's encoding options (Figures 5-7).
 
 What it does
-    Loads configs/environment/experiment/sensory_ladder/V2_blur20.yaml (olfaction range 1, vision range 2,
+    Loads configs/environment/experiment/archive/sensory_ladder/V2_blur20.yaml (olfaction range 1, vision range 2,
     anisotropic blur on) and steps the REAL environment with the same seeded random policy as
     export_episode.py (REST every third step), keeping the longest-surviving of seeds 0-11. Within that
     episode it picks the step whose vision diamond holds the most non-terrain signal, so the drawings
@@ -13,6 +13,11 @@ What it does
     The world state is identical in all three; only how far the agent senses changes. Rows 2-3 are
     derived stress inputs, not configs anyone trains. Readings come from build_sensory_viz, exactly as
     the video path builds them.
+
+    NOTE (2026-09-16): commit f3161dcc archived 227 experiment worlds; this config now lives under
+    experiment/archive/, which the project deliberately does not keep loadable. This script is a
+    sketch generator for the artifact page, not a verification input: if the archived config stops
+    loading, regenerate an equivalent world from default.yaml rather than migrating the archive.
 
 Output
     data/extended.json next to this file.
@@ -41,7 +46,7 @@ from src.environment.core import jax_reset, jax_step  # noqa: E402
 from src.environment.sensor import build_sensory_viz, get_observation, get_visual_offsets  # noqa: E402
 from src.utils.config import Config  # noqa: E402
 
-CONFIG = "configs/environment/experiment/sensory_ladder/V2_blur20.yaml"
+CONFIG = "configs/environment/experiment/archive/sensory_ladder/V2_blur20.yaml"
 SEEDS = range(12)
 MAX_STEPS = 80
 VARIANTS = [("As configured: olfaction range 1, vision range 2", 1, 2, False),

@@ -1,13 +1,18 @@
 """Render one frame with each existing renderer, for the renderer-redesign page.
 
 What it does
-    For the campfire temperature world (configs/environment/experiment/thermal/campfire_world.yaml)
+    For the campfire temperature world (configs/environment/experiment/archive/thermal/campfire_world.yaml)
     and the default world (configs/environment/default.yaml): reset with PRNGKey(3), take the fixed
     actions RIGHT, DOWN, RIGHT, DOWN, REST, then render the resulting state with the production
     renderer (src/environment/renderer.py::render_jax_state, "V1") and the dormant one
     (src/environment/renderer_v2.py::render_jax_state_v2, "V2"). The sensory panels get
     build_sensory_viz() output built from the noisy and the noise-free observation, exactly as
     scripts/eval/render_recordings.py does; V1 also gets the fixed thermal colour limits.
+
+    NOTE (2026-09-16): commit f3161dcc archived 227 experiment worlds; this config now lives under
+    experiment/archive/, which the project deliberately does not keep loadable. This script is a
+    sketch generator for the artifact page, not a verification input: if the archived config stops
+    loading, regenerate an equivalent world from default.yaml rather than migrating the archive.
 
 Output
     figures/{v1,v2}_{thermal,default}.png and figures/frames_meta.json (frame sizes, render seconds,
@@ -41,7 +46,7 @@ from src.environment.renderer_v2 import render_jax_state_v2  # noqa: E402
 from src.environment.sensor import build_sensory_viz, get_observation  # noqa: E402
 from src.utils.config import Config  # noqa: E402
 
-WORLDS = (("configs/environment/experiment/thermal/campfire_world.yaml", "thermal"),
+WORLDS = (("configs/environment/experiment/archive/thermal/campfire_world.yaml", "thermal"),
           ("configs/environment/default.yaml", "default"))
 ACTIONS = [1, 2, 1, 2, 4]
 OUT = os.path.join(HERE, "figures")
