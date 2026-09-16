@@ -35,9 +35,10 @@ Warming faster than cooling is documented in real animals (see §A4), but the ra
 
 The user pre-approved this plan before sleeping (2026-09-17) and asked that the development pipeline run to completion. A clean, independent `plan-reviewer` pass stands in for the approval gate.
 
-- `plan-reviewer` verdict:
-- `math-reviewer` verdict:
-- Approved for implementation by:
+- `plan-reviewer` verdict: **SOUND**, on the Revision 2 pass (2026-09-17), after SOUND WITH CONCERNS on the original draft and on Revision 1. Each concern was confirmed resolved by a fresh `plan-reviewer` pass against the plan text, never by the author. Signed results are appended below under the three `Feedback from plan-reviewer` headings.
+- `math-reviewer` verdict: **no Critical finding**. All seven claims VERIFIED by derivation and numerics, and all 21 quoted durations reproduced exactly. Its two 🟡 items (the D3 rationale, and evaluating the fire target at range corners) were folded into Revision 1 as M2 and D19. The equations did not change across revisions, so no re-run was needed.
+- Approved for implementation by: the user's overnight pre-approval, with the clean `plan-reviewer` pass standing in for the approval gate, recorded by top-level Claude.
+- Documentation correction after approval: the helper bullet's "every test except T01 loads through this helper" was narrowed to match D20. `plan-reviewer` ruled this a wording fix that changes no test or prediction and does not reopen the plan.
 
 ---
 
@@ -526,7 +527,7 @@ Header:
 Helpers:
 - `_campfire_dict()`, which loads the live archived world.
 - `_uniform(cell, **thermal_overrides)`, the same transformation as the generator plus overrides.
-- `_params(d)`: `p = load_env_params(Config(d))`. **Read `w, c = p.thermal_warming_rate_scale, p.thermal_cooling_rate_scale` first**, before touching the dict, so pre-change the failure is the predicted `AttributeError` and not a `KeyError` from a dict that has no keys yet. Then, if `d["thermal"]["enabled"]`, assert `p.thermal_warming_rate_scale == float(d["thermal"]["warming_rate_scale"])` and the same for cooling; otherwise assert both are `1.0`. Also assert both are `float`. Return `p`. **Every test except T01 loads through this helper** (D15). T01 uses `_params_raw(d) = load_env_params(Config(d))`, whose docstring says why.
+- `_params(d)`: `p = load_env_params(Config(d))`. **Read `w, c = p.thermal_warming_rate_scale, p.thermal_cooling_rate_scale` first**, before touching the dict, so pre-change the failure is the predicted `AttributeError` and not a `KeyError` from a dict that has no keys yet. Then, if `d["thermal"]["enabled"]`, assert `p.thermal_warming_rate_scale == float(d["thermal"]["warming_rate_scale"])` and the same for cooling; otherwise assert both are `1.0`. Also assert both are `float`. Return `p`. **Every successful load outside T01 goes through this helper** (D15); sub-cases that expect a load to raise call `load_env_params(Config(d))` directly (D20). T01 uses `_params_raw(d) = load_env_params(Config(d))`, whose docstring says why.
 - `_rest_rollout(params, T0, n)`, which mirrors the generator.
 - `_update_body_trace(params, T0, cell_pos, n)`, which iterates `update_body` directly: `state = state.replace(body_temp=new_bt)`, info `{"ate_food": False, "damage": 0.0, "rested": True}` as in `test_recovery_in_bush.py:213-221`, jitted over a `lax.scan`. This isolates the recurrence from episode termination, so equilibria past the death line (the fire) can be reached.
 - `_oracle(cell, T0, k_ex, k_loss, k_met, setpoint, ws, cs, n)`: **a two-rate NumPy float64 recurrence written from this plan's equation, importing nothing from `src/`.** `d = k_ex*(cell - T) + k_met - k_loss*(T - setpoint)`; `T = T + (ws if d > 0 else cs) * d`.
@@ -823,3 +824,18 @@ T13 boundary 2.0 alone             -> AttributeError: 'EnvParams' object has no 
 - T13(5): `2.0 * 0.5 == 1.0` passes the `<= 1` check.
 
 **Known wording inconsistency, deliberately not edited:** D15 and the test-helper bullet still say "every test except T01 loads through this helper". **D20 governs:** raise-expecting sub-cases call the loader directly.
+
+---
+
+## Feedback from plan-reviewer — Revision 2 pass
+
+**Verdict: SOUND** (2026-09-17, fresh independent pass on `b6375c53`; standing in for the approval gate). Implementation may start.
+
+- **R1 (T13) resolved in the text.** Sub-cases (1)–(4) call `load_env_params(Config(d))` directly inside `pytest.raises(ValueError)`; the boundary "2.0 loads" case (5) is the only one through `_params` and is last. Predicted first pre-change failure `DID NOT RAISE` is correct: the pre-change loader has no scale reads, the uniform dict passes its existing checks (`K = 0.5`, structure check skipped), and nothing reads a new field before that point.
+- **R2 (T12) resolved in the text.** (a)–(c) use `pop(key, None)`; (b) and (c) call the loader directly; order (a)–(d) is stated. Predicted first pre-change failure `AttributeError` from `_params` in (a) is correct.
+- **The trace is real evidence, not a look-alike.** `tmp/20260917_rev2_trace_t12_t13.py` defines `_params` exactly as the plan does (both fields read first), `_uniform` as the plan's transformation, runs T12(a) and T13(1)–(2) as specified, and imports the working copy, which is still the pre-change code (no scale reads in `config_loader.py`, no scale keys under `configs/`). Its output matches the CP2 table line for line, and the two old wordings reproduce the two defects (`KeyError`, `AttributeError`). Post-change behaviour of the same bodies is read, not run; CP8 covers that after Step 5.
+- **The stale D15 / helper-bullet sentence is not misleading and is non-blocking.** The developer implements from the T12/T13 rows, which state the exception in-line and cite D20; D20 declares precedence; and a mis-implementation would surface at Step 2 as a CP2 mismatch (stop-and-report), never silently. Recommend the one-line edit ("every *successful* load outside T01") as a documentation correction — it changes no test or prediction, so it does not reopen the plan.
+- **Both earlier blocks unaltered:** first block sha1 `1ef134fa0ba3810072ceca524000d76927f065e9`; the Revision 1 pass block appears in the `e5a0d0ac..b6375c53` diff verbatim.
+- **Diff scope confirmed surgical:** D20, the T12/T13 rows, their two CP2 entries, the Revision 2 section. No reference value, loader/state/config/generator section, or other test row changed.
+
+Reviewed by: plan-reviewer
