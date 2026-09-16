@@ -190,7 +190,7 @@ never instances (§R17.5 item 1): two predators in one square are one predator t
 design, and an instance count would report a failure that is not one.
 
 Excluded from the token union, BY MEASUREMENT and never by a painter's tag:
-  * an element whose ink covers >= CELL_FLOOR_FRACTION (40 %) of the square is the bed or
+  * an element whose ink covers >= CELL_FLOOR_FRACTION (48 %) of the square is the bed or
     the ground — the floor the occupants stand on, not an occupant;
   * an element whose ink sits on the perimeter of ITS OWN bounding box (`_ink_is_outline`)
     is a square outline or a seam. The agent's 2 px iris outline is the case that matters:
@@ -259,7 +259,7 @@ be unreachable on a correct ~13 px dot, a third to a half of whose pixels are bl
 
 Tolerances added by this rule, all argued above:
   SURVIVAL_MIN         = 0.98   per-component surviving fraction (swept at CP0.3b)
-  CELL_FLOOR_FRACTION  = 0.40   ink area share at which an element IS the floor
+  CELL_FLOOR_FRACTION  = 0.48   ink area share at which an element IS the floor
   OUTLINE_SPAN_MIN     = 0.80   bbox span below which an "outline" is a suspect token
   REACH_PAD_PX         = 2      bbox padding for the work-only reach test
   MINIMAP_DELTA        = 12     per-channel distance for the minimap colour census
@@ -829,7 +829,17 @@ SURVIVAL_MIN = 0.98
 #: Ink area share of a square at which an element IS the floor (the bed or the ground)
 #: rather than an occupant. Measured area, never a painter's say-so — which is why §R20.8
 #: requires a bed to be exactly ONE artist, so this test measures it whole.
-CELL_FLOOR_FRACTION = 0.40
+#:
+#: MOVED 0.40 -> 0.48 by Revision 21 §R21.2, and the move is arithmetic rather than
+#: argument: the two populations this number has to separate were MEASURED. Largest
+#: CORRECT token ink share **0.4376** (a lone agent on bare ground, which keeps its halo
+#: because nothing else needs the room); smallest BED ink share **0.5168**; bed plate
+#: fraction by construction **0.5184** = (1 - 2 x BED_MARGIN)^2, pinned in
+#: `test_dashboard_cells.py`. 0.48 sits 53.5 % of the way up that gap. At 0.40 a correct
+#: occupant was thrown out as scenery and its square reported 0 components against 1 kind
+#: — the exact mirror of §R20.8, which found the same classifier wrong from the bed side.
+#: The value moves HERE only because the plan moved it there first, with its evidence.
+CELL_FLOOR_FRACTION = 0.48
 
 #: An outline-classified element must span at least this much of the square in BOTH
 #: dimensions to be excluded quietly; below it, it is a suspect token and FAILS (§R20.7).

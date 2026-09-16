@@ -1811,6 +1811,7 @@ Each checkpoint states what would show it failed.
   - *2026-09-17 developer, a defect in the instrument itself, found by these controls:* **every `Collection` artist was silently dropped from the audit's element list, on every frame.** `Collection.get_window_extent` returns an empty bbox `(inf, inf, −inf, −inf)`, which `enumerate_elements` filtered out — and an artist that is not an Element is **never hidden by `FrameProbe._draw`**, so it was painted into every isolated render *including the bare background* and ate the ink of whatever it covered. Measured: the page rectangle's isolated ink came out **665 px short**, exactly the area of the two tokens sitting on it. It matters twice — the redesign draws every bed and token as one `PatchCollection` (§R20.8), so the rule would have measured an arena with nothing standing in it; and the **frozen V1 and dormant-V2 frames carry 17 visible `LineCollection`s each**, whose ink has been contaminating every isolation measurement taken on them since Phase 0c. Fixed with a path-extent fallback; **the frozen counts did not move**, which is the evidence that no existing verdict rested on it. **Not in the Known Bugs registry** (grepped 2026-09-17; rows 117–119 are the renderer's D1–D13 and row 179 is the import-isolation test) — **`bug-curator` owns filing it.**
   - The adjacent-slot control of §R19.4 item 2 is measured at 50 px and its reading pinned.
   - *2026-09-17 senior-developer, verification:* **everything built in Phase 0d verifies, and the one blocker is now decided — CP0.3b needs one more developer pass before it can be ticked.** Re-derived independently rather than read: **M-F1g is silent with precondition (c′) disabled** (2 kinds → 2 isolated → 2 visible components, survival 1.000/1.000, **zero findings**) and fires via `cell_probe_blind` with it enabled — so the rule's hardest clause is load-bearing and alive, exactly as §R20.6 predicted. The **Collection-enumeration fix is confirmed and so is the claim that nothing moved**: the frozen V1 M4 and M1 frames each carry **17 visible `Collection`s**, the element list goes 305 → 322 (M4) and 204 → 221 (M1), and **every per-rule count is byte-identical before and after** on both frames (checked by neutering the new path-extent fallback and re-running the audit) — so no earlier calibration in this plan rested on the bug. Control suite reproduces at **66 passed, 1 xfailed**. **What remains before the tick:** (a) the floor constant moves to **0.48** per Revision 21 §R21.2 and the `strict` xfail is replaced by a plain negative control; (b) the **M-F2 family is re-registered at insets `0.005 / 0.010 / 0.020`**, because at 0.48 the 0.05 member stops measuring the floor and the gap table would otherwise rest on a single member; (c) the gap table is re-run and re-recorded at the new constant. Nothing else in CP0.3b is outstanding. The Collection defect is **`bug-curator`'s to file** and is not yet in the registry.
+  - *2026-09-17 developer, the remaining pass — **CP0.3b is now MET**.* The three items the verification left are done, at the five sites Revision 21 §R21.2 names and nowhere else: `CELL_FLOOR_FRACTION` **0.40 → 0.48** with both measured populations in the constant's comment; the `strict` xfail **removed**, the lone agent on bare ground joining `NEGATIVE_CELLS` as a plain negative control; the inverted assertion **`token < CELL_FLOOR_FRACTION < bed`**, which fails in both directions (below the token the classifier calls an occupant the floor, above the bed it calls the floor an occupant); and the **M-F2 family re-registered at `0.005 / 0.010 / 0.020`** with a new assertion that **all three fire the survival floor specifically** — a member caught by another rule has survival 1.0 and never measured the floor. Suite **67 passed, 0 xfailed** (was 66 + 1 xfailed); full `tests/env` **603 passed, 0 failed**. The gap table re-run on the real painter is in the CP2.8 note below: the correct side measures **1.000** and the re-registered family measures **0.0921 / 0.0954 / 0.102** (and `0.1323 / 0.1362 / 0.144` for the second occupant), reproducing §R21.2's pre-registered figures, so `SURVIVAL_MIN = 0.98` still lies in the gap with margin. **The constant was moved only because the plan moved it first, with its evidence.**
   - *Fails if:* the rule fires on any negative control, stays silent on any of the five mutations, the gap table does not straddle 0.98, `SURVIVAL_MIN` is changed in a test rather than in this plan with evidence, the comparator disagrees with the rendered pixels, the padded-bbox skip changes any finding, a correct control measures below 1.000 without an investigation recorded, or any existing rule's count moves. **Stop; the instrument cannot see the defect the redesign exists to prevent.**
 - [ ] **CP0.4: Spike and decision gate (re-specified Revision 19 §R19.3).** A minimal A-style `EpisodeRenderer` versus V1 on M4, ≥ 200 frames (first 5 excluded), pool worker, same lab node (node + CPU model recorded).
   - **Order.** Phase 1 (`layout.py`, `panels.py`, `labels.py` — no Matplotlib) **may be built before this checkpoint**; CP0.4 **must be met or escalated-and-answered before Phase 2** writes a painter. §R18.2 item 8's "Phase 1 must measure the arena painter" is withdrawn — Phase 1 has no painter.
@@ -1851,6 +1852,8 @@ Each checkpoint states what would show it failed.
   - *2026-09-17 developer (Phase 0d):* **the instrument now exists, and on the two real frames it reports ZERO `cell_overdraw` findings — but CP2.8 as written is still NOT met.** What is now measured, by the instrument rather than by hand, on `M4` episode 1 steps 0 and 32: **0 cell findings at both the shipped floor (0.40) and the candidate (0.48)**; every occupant measures **1.0000**; the two-occupant square **(5,1) `agent + food`** measures **2 kinds → 2 isolated components → 2 visible components → 1.0000 / 1.0000**; `(3,5) `neutral + rock`` and `(4,3) `agent + bush`` each measure **1.0000** over a bed. **It reproduces Phase 2's hand measurement exactly and independently, and there is NO disagreement:** bed ink **53.44 %** (bush) and **51.68 %** (rock) against the hand-measured 53.4 % and 51.7 %, and token survival 100.0 % against 100.0 %. The audit derives its occupancy from the recorded snapshot itself, and that ground truth was checked against the renderer's own `occupancy_of` — **they agree on every square of both frames**, which is what makes this an independent reproduction rather than the same computation run twice. `text_over_fill` reads **16 / 15**, matching Phase 2's report. **Cost: 46.5 s and 46.3 s per audited frame at 735 / 737 elements** on this container (Phase 2 measured 45.2 s at 708–710), so adding the rule did not change the per-frame cost materially — the number CP2.8 asks to be stated for sizing its sample.
   - *2026-09-17 developer, why CP2.8 still does not close.* Four of its clauses are untouched by this phase, and none of them is the instrument's fault: (1) **the mutations were not run against the real painter** — M-E / M-F1 / M-F1g / M-F2 / M-F3 all fail on the Phase 0d synthetic figures, but CP2.8 requires them to fail "on the **real** painter, not only on the Phase 0d synthetic figure"; (2) **two archetypes of five** appear in these frames (agent on terrain, two movers) — the three-way and four-way were not reached and were not synthesised; (3) **one matrix cell**, not every cell; (4) **nobody looked** at the frames at full size in this phase. **And the minimap clause cannot be assessed at all yet:** the rule divides the *named axes* into world squares, which is exact for the arena — whose axes **is** the grid — and wrong for the World map, whose axes is the **whole card** with the grid inset below its title and above its caption. Pointed at it, the census samples card background and finds nothing in **9 of 9** colour-bearing squares; rather than emit nine confident wrong "this dot was painted over" verdicts it emits **one** `minimap_grid_unaligned` and reports nothing else. **The cheap fix is a painter change that mirrors what the arena already does** — give the map grid its own labelled Axes inside the card, exactly as `arena_card` / `arena` are split — and it is `senior-developer`'s call. The **shared-square caption check does work** and is silent on step 32, which holds a shared square.
   - *2026-09-16 developer:* **CANNOT BE MET TODAY — the instrument does not exist.** `scripts/eval/render_layout_audit.py` contains no `cell_overdraw` and no `SURVIVAL_MIN`; **CP0.3b is unticked** and Phase 0d was never built. No partial version of the rule was written, deliberately: a half-built instrument that passes is worse than none. The substance was instead **measured by hand in scratch**, by §R19.1's own method (isolated ink per artist, then the pixels no later-drawn artist covers), on the real M4 frames: square (4,3) `agent + bush` — bed ink 53.4 % of the square, bed survives 55.1 %, **agent token survives 100.0 %**; (3,5) `neutral + rock` — 51.7 %, 60.5 %, **100.0 %**; (5,1) `agent + food` — **100.0 % / 100.0 %**. Every bed clears the 40 % line that classifies it as floor, and every occupant measures the 1.000 a correct composition must. Three of the five archetypes (agent on terrain, two movers, resource-adjacent) were found in real episodes; the three- and four-way were not reached and were not synthesised. **This is evidence, not the instrument, and it does not close CP2.8.**
+  - *2026-09-17 developer, the real-painter pass:* **the arena rule is clean on every matrix cell, all five mutations fail on the real painter, every archetype is rendered and looked at, and the rim-pip clause finally has a number — but CP2.8 still does NOT close, on the minimap side and on the test-home side.** Full detail in the Implementation Report "CP0.3b's remaining pass, and CP2.8 against the real painter". In brief. **Matrix: 18 frames, all nine cells, 2 frames each — ZERO findings** from `cell_overdraw`, `cell_opacity`, `cell_foreign_axes`, `cell_probe_blind` and `outline_like_token`; survival is `[1.0]` ×154, `[1.0, 1.0]` ×4, `[1.0, 1.0, 1.0]` ×5, with **no value below 1.000 anywhere**. **Mutations, on one real frame (`M4` f1 s32, chosen because it carries BOTH `(5,1) agent + food` and `(3,5) neutral + rock`):** control silent; **M-E** 3 findings (2 kinds → 1 component + 235 px shared token ink); **M-F1** 2 (survival 0.000); **M-F1g** 17 (nine squares at 0.000 — and on the *neutral* world it is caught by precondition (c′) alone, 784 `cell_probe_blind`, because there the ground is `TRACK`, within `INK_DELTA` of `CANVAS`); **M-F2** ×3 each 2; **M-F3** fires at exactly the target square, `seen ['agent']` where the snapshot has two kinds, with no finding there unmutated. **Two vacuity findings, recorded rather than corrected away:** M-F1 and all three M-F2 members were first run on `M1` f0 s34 and were silent — *bed-under-token squares = `{}`* on that frame, so they were **structurally incapable of firing**; and M-E is vacuous on `M4` s0, whose only shared square is `agent + bush` (one non-terrain kind). **M-F2's mechanism is shape-dependent, which is a result:** on a solo-token square the bed covers the token whole (`h = 15 px` inside a `± 18 px` plate) so it fires via the component count, never the floor; only a square with **two or more** occupants leaves the rim the floor measures. **Measured: zero real squares in the matrix hold terrain plus two or more kinds** (rule R3 — animals cannot stand on a bush or tree), so the family was also run on a **synthetic** `bush + agent + predator` square against the real painter, where all three members fire the **survival floor** at `[0.0921, 0.1323] / [0.0954, 0.1362] / [0.102, 0.144]` — reproducing §R21.2's pre-registered figures. **Archetypes:** agent-on-terrain, two-movers and the **three-way** (`(8,6) agent + hiding_predator + predator`, `M1/M1x/M2/M5/M6` f0 s34) are **real**; **four-way and resource-on-terrain occur in NO episode of any cell** and are **synthetic, labelled in the frame's own header** — a four-way measuring 1.000 is evidence about the **painter** and none about the **worlds**. All looked at at full size: the four-way renders as four equal tiles 2-over-2 inside the agent's outline, the degeneration §R17.5 item 2 predicted and nobody had seen. **Rim pip vs. identity pip: 0 shared pixels** (21 px / 17 px), on a synthetic square because the one real three-way puts the hiding predator on the rim; this needed a painter change, since the identity pip was drawn only for a *lone* hiding predator and the two could never coexist. **Cost: 44.2–53.3 s per frame at 687–755 elements, 31 frames, Intel i9-7900X, `docker-102`.** Guard 10/10 + FRAMES PASS ×3, exit 0, before and after.
+  - *2026-09-17 developer, what blocks CP2.8:* **(1) `minimap_overdraw` fires on CORRECT frames** — 2–4 per frame on all 18, now that the grid-only Axes lets the census run at all. Three causes, decomposed by hiding each artist class and re-measuring, not guessed: **(A)** the amber identity pip covers ~**21 %** of its own occupant's dot (solo hiding-predator squares census **92/87/88 px**, and **116/113/115 px** with the pip hidden) against a 0.98 floor; **(B)** the rim pip is drawn at radius `0.12 × cell` centred `0.3677 × cell` out, so its inner edge at `0.248 × cell` lies **inside** the dot's `0.30 × cell` and eats the neighbouring wedge — while §R17.4's own words are "a rim pip … **outside the dot**"; **(C)** a four-way square encodes only three occupants, so the fourth kind has **no colour area at all** (measured 1 px). None is caused by this pass's pip change — (A)'s findings are all *solo* squares where the pip was already drawn, and (B)/(C) involve no identity pip. All three are contradictions between §R17.4's encoding and §R19.1 step 9 / §R20.4's ground truth, and **choosing between moving the minimap floor, redrawing the pips, or extending the encoding past three is `senior-developer`'s call** — nothing was loosened here, per §R20's narrowing rule. **(2) No committed test carries this evidence:** CP2.8 requires the `integration` marker and §R17.6 gives it the home `tests/env/test_dashboard_frames.py`, which **does not exist** (Phase 2 deferred it), so today's numbers are reproducible by hand through a `tmp/` harness but not by CI. **Separately, not a CP2.8 item:** `M5` reports `panel_absent: Olfaction` on both frames — it is the only maintained cell with `olfactory_range: 1`, so it takes the **sensor-band** layout and has no `olfactory` card, and the band painter is deliberately unbuilt. That is a true positive belonging to **CP2.7**.
   - *2026-09-17 senior-developer, verification:* **the developer's list of what is still missing is complete, not generous to itself — and one item is added.** Confirmed against the checkpoint's own clauses: the five mutations ran only on the Phase 0d synthetic figures and **not on the real painter**; **two archetypes of five** are covered (agent on terrain, two movers) with the three-way and four-way neither found nor synthesised-and-labelled; **one matrix cell** (M4) of nine; and the World map's clause cannot be assessed because the rule divides the *named axes* into squares and the map's axes is the whole card. **The "nobody looked" item is now discharged for these two frames** — the verifier looked at `M4_ep1_step000.png` and `M4_ep1_step032.png` at full size: square (4,3) shows a green bush plate with the agent standing on it inside its indigo square outline; (5,1) shows the agent and a piece of food **side by side** in one square; (3,5) shows the rabbit on a grey rock plate. That is the redesign's whole claim, visible rather than inferred. **Added to the list:** the **occupancy rim pip vs. hiding-predator identity pip** clause has no coverage at all, because the minimap painter has not reached rim pips. **So CP2.8 still needs:** the five mutations against the real painter; the three-way and four-way archetypes rendered and looked at (synthesised and labelled if no episode reaches them); the remaining eight matrix cells at ≤ 2 frames each; a **grid-only Axes for the World map** (a painter change mirroring the existing `arena_card` / `arena` split — approved here as the fix, and it is small); and the two-pip disjointness check once rim pips exist. At **46 s per audited frame**, the full matrix is ~14 minutes of audit — cheap enough that the sample size is not the obstacle.
 - [ ] **CP3: Separate V2 entry point.** `render_recordings_v2.py --concat` writes playable MP4s (frame count = steps) for all cells including M7–M9, only under `videos_v2/`. The concat signature assertion holds on real runs and trips on the doctored dir. `test_render_recordings_v2.py` is green (V1 MP4 bytes unchanged after a V2 render of the same dir). CP-G passes. *Fails if:* any file appears or changes under `videos/`, the assertion trips on a real single-run dir, or CP-G fails.
 - [ ] **CP4: Speed.** Same node as CP0.4: V2 median ≤ V1 median on every cell and ≤ 0.5 × on M4; RSS growth < 50 MB over 10 episodes; FDs reported. *Fails if:* any gate is missed.
@@ -4061,5 +4064,297 @@ Two phases were verified in one pass, because their claims are the same claim se
 ### Conclusion
 
 **VERIFIED WITH ISSUES.** Phase 2's painters and Phase 0d's rule both do what their reports say, and the two load-bearing claims — "a shared square shows both occupants" and "precondition (c′) is what catches the invisible-occluder case" — were re-derived here rather than taken on trust, with the pictures looked at. The three decisions the phases were waiting on are recorded in **Revision 21**: Q22 accepted at 1.78×, the floor constant moved to 0.48 with its evidence and the M-F2 family re-registered, and §R17.3 item 8 corrected. **CP0.3b needs one developer pass; CP2.8 needs the work enumerated at its checkpoint.** Neither is blocked on anything undecided.
+
+---
+
+## Implementation Report — CP0.3b's remaining pass, and CP2.8 against the real painter (2026-09-17)
+
+### What this is, in plain words
+
+The redesign exists because a square of the world holding two things was drawn showing
+only one. Checkpoint **CP2.8** is the one that certifies the fix: it asks that every
+occupant of a shared square actually be **visible in a rendered frame**, that the
+measuring instrument be shown to *catch* the defect when the defect is put back
+deliberately (a "mutation"), and that somebody **look** at the pictures. This pass did
+four things. It applied the constant change Revision 21 §R21.2 had already decided in the
+plan text. It gave the small World map its own drawing area so its colour census can run
+at all. It ran the five mutations against **the painter that actually ships**, rather than
+against small figures a test builds. And it audited **every** matrix cell.
+
+**The headline: the arena rule is clean everywhere.** Across **18 audited frames — all
+nine matrix cells, two frames each — the co-occupancy rule reports ZERO findings**, and
+every occupant of every square keeps **100 %** of itself (154 single-occupant squares,
+4 two-occupant, 5 three-occupant, all measuring exactly 1.000). All five mutations fail
+the audit on the real painter. The rim-pip clause, which had no coverage at all, now
+measures **0 shared pixels**.
+
+**CP2.8 does not close.** Two things block it, neither of them the arena painter and
+neither fixable by adjusting a number — they are named in full at the end, and nothing was
+tightened, re-scoped or re-framed to reach a tick.
+
+### Part 1 — CP0.3b's remaining pass (the constant, the xfail, the re-registered family)
+
+Revision 21 §R21.2 decided this in the plan text with its evidence; this pass carried it
+into the code, at the five sites the revision names and nowhere else.
+
+| Site | Change |
+|---|---|
+| `render_layout_audit.py:832` | `CELL_FLOOR_FRACTION` **0.40 → 0.48**, with both measured populations written into the constant's comment (largest correct token **0.4376**, smallest bed **0.5168**, plate fraction by construction **0.5184**) |
+| `render_layout_audit.py:193, 262` | the module docstring's two statements of the constant |
+| `test_render_audit_controls.py` | the `strict` xfail is **removed**; the lone agent on bare ground joins `NEGATIVE_CELLS` as a plain negative control |
+| `test_render_audit_controls.py` | `assert token > CELL_FLOOR_FRACTION` inverts to **`token < CELL_FLOOR_FRACTION < bed`** — the property that actually has to hold, failing in both directions |
+| `test_render_audit_controls.py` | the M-F2 family re-registered at **0.005 / 0.010 / 0.020**, with a new assertion that **all three** fire the **survival floor specifically** |
+
+Control suite: **67 passed, 0 xfailed** (was 66 passed + 1 xfailed — exactly the xfail
+becoming a pass). Full `tests/env`: **603 passed, 377 skipped, 26 deselected, 0 failed**
+(was 602 + 1 xfailed).
+
+### Part 2 — the painter changes
+
+| File | Change | Why |
+|---|---|---|
+| `episode.py` | new `grid_axes()` helper; the World map card becomes `minimap_card` with a **grid-only `minimap` Axes** inside it | The census divides the *named axes* into world squares, which is exact only when that axes **is** the grid. Pointed at the whole card — title above, two-line caption below — it sampled card background and could only answer `minimap_grid_unaligned`. Approved as the fix in the Phase 2 / Phase 0d verification. Measured after: the grid Axes is **184 × 184 px on a 10 × 10 world = exactly 18.40 px per square**, so the derived grid aligns by construction |
+| `painters.py` | `build_minimap` draws grounds, tints and the dot pool into the grid Axes in its own coordinates | same |
+| `painters.py` | the amber **identity pip** is now drawn whenever the hiding predator is one of the occupants **the dot carries** (`occ[:2]`), not only when it is alone | §R17.4 requires the occupancy rim pip and the identity pip to be able to appear on **one square** with a test asserting they share no pixel. As written they were mutually exclusive, so that clause was structurally untestable — which is why the verification found it had no coverage |
+
+`v1_path_guard.py` was consulted before editing: `src/environment/dashboard/` and
+`scripts/eval/render_layout_audit.py` are **plan-owned**. No frozen file was touched.
+
+### Part 3 — the mutation table, against the REAL painter
+
+Driven through a scratch harness (`tmp/20260917_1230_cp28_real_painter.py`) that renders
+the real dashboard and hands the audit a frame it has already drawn, so **every audit rule
+runs unchanged and no audit file was edited to accommodate the renderer**. Each mutation
+is applied to `src/environment/dashboard/` at runtime — a z-order constant, the slot
+function, the bed builder — never to the instrument.
+
+**The definitive table is on ONE real frame: `M4` episode file 1, step 32.** That frame was
+chosen by measurement, not convenience: it is one of nine real frames carrying **both**
+structures the family needs — `(5,1) agent + food` (two non-terrain kinds, so concentric
+drawing has something to merge) and `(3,5) neutral + rock` (a bed under a token, so a bed
+drawn late has something to cover).
+
+| Mutation | Fires? | `cell_overdraw` | What the rule measured |
+|---|---|---|---|
+| *(none — control)* | **silent** | **0** | `(5,1)` 2 kinds → 2 isolated → 2 visible, survival `[1.0, 1.0]` |
+| **M-E** every occupant forced to the square's centre | **YES** | 3 | `(5,1)` 2 kinds → **1** isolated, **1** visible; plus 235 px of shared token ink between two occupant drawings |
+| **M-F1** bed drawn after the tokens | **YES** | 2 | `(3,5)` 1 kind → 1 isolated, **0 visible**, survival **0.000** over 510 px |
+| **M-F1g** ground drawn after the tokens, figure facecolor `CANVAS` | **YES** | 17 | 9 squares fully covered, including `(5,1)` at survival `[0.0, 0.0]` |
+| **M-F2** bed after tokens, inset `0.005 × cell` | **YES** | 2 | `(3,5)` survival **0.000** |
+| **M-F2** inset `0.010 × cell` | **YES** | 2 | `(3,5)` survival **0.000** |
+| **M-F2** inset `0.020 × cell` | **YES** | 2 | `(3,5)` survival **0.000** |
+| **M-F3** the agent's dot above the split wedge | **YES** | — (`minimap_overdraw`) | `(5,1)` reads `seen ['agent']`: 2 kinds, **1** distinct colour. The unmutated frame has **no** finding at `(5,1)`, so this one is the mutation's own |
+
+**M-F1g is caught by different clauses in different worlds, and both are failures.** On the
+neutral world (`M1`) it fires **784 `cell_probe_blind`** findings — precondition (c′)
+alone — because that world's ground is `TRACK`, 5–6/255 from `CANVAS` and therefore
+invisible to the ink probe. On the thermal world (`M4`) the grounds are temperature-tinted
+and remain visible, so the ordinary composition check catches it instead (17–18
+`cell_overdraw`). The mutation escapes in neither.
+
+#### The M1 vacuity — recorded, not quietly corrected
+
+The first mutation run was on `M1` episode file 0, step 34. **M-F1 and all three M-F2
+members produced zero `cell_overdraw` findings there, and that was not evidence of
+anything**: that frame's only multi-occupant square is `(8,6) agent + hiding_predator +
+predator`, which holds **no terrain**. Measured directly: *bed-under-token squares =* `{}`
+on that frame, against `{(4,3): ('agent','bush')}` on `M4` step 0. A bed drawn after the
+tokens had **no bed over any token to draw**, so those mutations were structurally
+incapable of firing, and recording them as passes would have been exactly the failure this
+phase exists to prevent. The rows were moved to a frame carrying the structure they
+attack. The same shape in reverse: **M-E is vacuous on `M4` step 0**, whose only shared
+square is `agent + bush` — one non-terrain kind, so there is nothing to merge.
+
+#### M-F2's mechanism depends on the square's SHAPE — a result, not a quirk of one frame
+
+On every **real** frame the M-F2 family fires through the **component count**, never
+through the survival floor it is registered to sweep. The reason is geometric and
+general: a solo token is centred with `h = 0.30 × cell = 15 px` inside a bed plate
+spanning `± 18 px`, so a bed inset by 0.005–0.020 × cell (0.25–1.0 px) still covers it
+**whole** → survival 0.000. Only a square with **two or more** occupants puts tokens in
+slots reaching 21.4 px from the centre, permanently protruding past the 18 px plate, so a
+rim survives and the floor is what catches it.
+
+And **no real square in the matrix has that shape**: measured across all nine cells and
+both episode files, squares holding terrain **plus two or more** non-terrain kinds number
+**0**. (Environment rule R3 is why — animals can never stand on a bush or a tree.)
+
+So the family was additionally run against a **synthetic** `bush + agent + predator` square
+— the same composition Phase 0d's own control uses — on the **real painter**:
+
+| Inset | `cell_overdraw` | Components | Survival | Fires via |
+|---|---|---|---|---|
+| *(control)* | **0** | 2 kinds → 2 → 2 | `[1.0, 1.0]` | — silent |
+| `0.005 × cell` | 2 | 2 kinds → 2 → **2** | **`[0.0921, 0.1323]`** | **survival floor** |
+| `0.010 × cell` | 2 | 2 kinds → 2 → **2** | **`[0.0954, 0.1362]`** | **survival floor** |
+| `0.020 × cell` | 2 | 2 kinds → 2 → **2** | **`[0.102, 0.144]`** | **survival floor** |
+
+Those reproduce Revision 21 §R21.2's pre-registered `0.091 / 0.132`, `0.095 / 0.136`,
+`0.101 / 0.144` **on the shipping painter**, with the component count still correctly 2 —
+which is the property that makes the floor the only thing that can fire.
+
+> **For whoever next picks a frame for this family:** it needs a square holding **terrain
+> plus two or more occupants**. On a solo-token square the constant goes unswept while the
+> mutation still "fails", which looks like success and measures nothing. This is the M1
+> vacuity one level up — a sweep family that quietly stops testing what it claims.
+
+### Part 4 — archetype and cell coverage
+
+| Archetype | Where | Source | Result |
+|---|---|---|---|
+| agent on terrain | `M3/M4/M4b/M6b` step 0 — `(4,3) agent + bush` | **real episode** | 0 findings, survival 1.000 |
+| two movers / two occupants | `M4` f1 s32 `(5,1) agent + food`; `M1` f0 s34 `agent + hiding_predator` | **real episode** | 0 findings, `[1.0, 1.0]` |
+| **three-way** | `M1/M1x/M2/M5/M6` file 0, step 34 — `(8,6) agent + hiding_predator + predator` | **real episode** | 0 findings, `[1.0, 1.0, 1.0]` |
+| **four-way** | `(1,1) agent + food + neutral + predator` | **SYNTHETIC — derived input** | 0 findings, `[1.0, 1.0, 1.0, 1.0]` |
+| **resource on terrain** | `(3,3) bush + food` | **SYNTHETIC — derived input** | 0 findings, survival 1.000 |
+| *(three-way carrying both pips)* | `(6,6) food + hiding_predator + neutral` | **SYNTHETIC — derived input** | 0 findings, `[1.0, 1.0, 1.0]` |
+
+**The synthetic frames are labelled in the frame itself** — the header reads `SYNTHETIC
+derived input · M4` — and in the filename. **What they are and are not evidence for,
+stated plainly: a four-way square measuring 1.000 survival is real evidence about the
+PAINTER and no evidence at all about the WORLDS.** Four-way and resource-on-terrain occur
+in **no episode of any of the nine cells** (measured: 0 hits each, over every step of both
+episode files), so nothing here says a trained agent will ever see one. It says that if
+one arrives, it draws correctly. Everything not marked synthetic came from a real episode.
+
+**Every matrix cell, ≤ 2 frames each (CP2.8's own sample rule), 18 frames:**
+
+| Cells | Frames audited | `cell_*` findings | Archetypes in those frames |
+|---|---|---|---|
+| `M1`, `M1x`, `M2`, `M5`, `M6` | f1 s0 + f0 s34 | **0** | three-way, two occupants |
+| `M3`, `M4`, `M4b`, `M6b` | f1 s0 + f1 s32 | **0** | agent on terrain, two occupants |
+
+**Total across all 18 frames: 0 findings from `cell_overdraw`, `cell_opacity`,
+`cell_foreign_axes`, `cell_probe_blind` and `outline_like_token`.** Survival values seen
+anywhere: `[1.0]` ×154, `[1.0, 1.0]` ×4, `[1.0, 1.0, 1.0]` ×5 — no value below 1.000
+anywhere in the matrix.
+
+### Part 5 — the rim pip, and the minimap census now that it can run
+
+**Rim pip vs. hiding-predator identity pip: 0 shared pixels** (identity pip 21 px, rim pip
+17 px), measured on the rendered synthetic square `(6,6) food + hiding_predator +
+neutral`, where `by_priority` puts the hiding predator in the dot and the neutral on the
+rim. This clause had **no coverage at all** before, and could not have had any: the
+identity pip was drawn only for a *lone* hiding predator, so the two pips could never
+coexist. A real frame cannot supply this square today — the one real three-way puts the
+hiding predator third, on the rim — so the measurement is on a labelled synthetic frame.
+
+**The census runs now, and it fires on CORRECT frames.** With the grid-only Axes the rule
+no longer refuses; it returns per-square verdicts, and 2–4 of them per frame are against a
+painter doing what the plan told it to do. The causes were decomposed by measurement, not
+guessed — hiding each artist class and re-running:
+
+| Cause | Evidence | Findings it accounts for |
+|---|---|---|
+| **(A) the identity pip covers its own occupant's dot** | solo hiding-predator squares census **92 / 87 / 88 px**; with the identity pip hidden, **116 / 113 / 115 px** — the pip removes ~**21 %** of the colour area the rule requires the occupant to keep (floor 0.98) | 3 of 4 on `M1` s34; hiding it removes exactly those 3 |
+| **(B) the rim pip overlaps the dot** | drawn at radius `0.12 × cell` centred `0.3677 × cell` out, so its inner edge sits at `0.248 × cell` — **inside** the dot's `0.30 × cell`, eating the neighbouring wedge. §R17.4's own words are "a rim pip … **outside the dot**" | the 4th finding (`(8,6) predator`); hiding the rim pip removes exactly it |
+| **(C) a four-way square can only encode three occupants** | on the synthetic four-way, `neutral` — the 4th by priority — measures **1 px**: it is not drawn on the map at all. §R17.4's encoding stops at "the third becomes a rim pip" | the `neutral` finding on the synthetic frame |
+
+**None of the three is caused by this pass's identity-pip change** — (A)'s three findings
+are all *solo* squares, where the identity pip was already drawn before; (B) and (C)
+involve no identity pip. All three are contradictions between §R17.4's encoding (pips
+deliberately drawn over the colours they annotate; three-occupant ceiling) and §R19.1 step
+9 / §R20.4's ground truth (one distinct palette colour per kind, each keeping ≥ 98 % of
+its isolated colour area). **Nothing was loosened**: per §R20's narrowing rule the fix for
+a false alarm is never a wider threshold or a smaller occluder set, and choosing between
+"move the floor", "draw the pips differently" and "extend the encoding past three" is a
+plan decision, not a developer's. **Owner: `senior-developer`.**
+
+The **shared-square caption** clause passes: no `minimap_caption` finding on any of the 18
+frames, including every frame holding a shared square.
+
+### Part 6 — one finding outside CP2.8, not hidden
+
+`M5` reports **`panel_absent: Olfaction`** on both its audited frames. Diagnosed rather
+than filed: `M5` is the only maintained cell with `olfactory_range: 1`, which routes it
+down the **sensor-band** layout — its cards are `[… 'band' …]` with **no `olfactory`
+card**, where `M4` (range 0) has one titled "Olfaction". The band painter is deliberately
+unbuilt (Phase 2 "what is NOT built yet"; Revision 21 §R21.4 item 3 records the band as
+never exercised by a real world). So a modality in the observation has a box reserved and
+**nothing drawn in it** — the audit is right, and this belongs to **CP2.7**, not CP2.8. It
+is not a co-occupancy defect and not a regression from this pass.
+
+### Test results
+
+| Command | Result |
+|---|---|
+| `pytest tests/env/test_render_audit_controls.py -q` | **67 passed, 0 xfailed** (was 66 + 1 xfailed) |
+| `pytest tests/env/test_dashboard_{cells,layout,v1_imports}.py -q` | **131 passed** |
+| `pytest tests/env -m "not integration" -q` | **603 passed, 377 skipped, 26 deselected, 0 failed** |
+| `scripts/eval/v1_path_guard.py check` (before **and** after) | **PASS=10**, ACCEPTED=0, ATTRIBUTED=0, UNATTRIBUTABLE=0, **FRAMES PASS ×3**, `RESULT: OK`, **exit 0** |
+
+### Speed check
+
+**Training hot path: structurally untouched.** `render_layout_audit.py` is an offline
+instrument imported by nothing under `src/`. The two painter files are in the dashboard
+package, which is **not yet wired into any renderer entry point** and is imported by no
+training path; the changes are one added child Axes and one visibility condition, both
+outside any environment step, model forward/backward, vmap/jit boundary or loss.
+
+**The instrument's own cost, which is what CP2.8 asks be stated for sizing a sample:**
+**44.2 – 53.3 s per audited frame at 687 – 755 elements**, over **31 audited frames**, on
+**Intel i9-7900X @ 3.30 GHz, 20 threads, container `docker-102`**. Phase 0d measured 46.5 s
+at 735 elements; the wider spread here is deliberate CPU contention — up to four audit
+batches ran concurrently. **Sample chosen: 18 matrix frames (2 per cell, CP2.8's own cap)
++ 8 mutation frames + 4 synthetic-M-F2 frames + 1 synthetic-archetype frame ≈ 24 minutes
+of audit**, run as concurrent batches rather than sequentially.
+
+Frames enumerate as expected — the `PatchCollection` sanity check the brief asked for:
+each audited frame reports 655–755 elements, and the arena's beds and tokens appear in the
+element list as `collection PatchCollection in arena` (they are named as such in the M-E
+findings above). The class silently dropped until `4a1a6dd9` is being counted.
+
+### Deviations from the plan — none silent
+
+1. **Two painter changes beyond the constant pass**, both above: the grid-only World-map
+   Axes (approved as the fix in the Phase 2 / Phase 0d verification) and the identity-pip
+   visibility condition (required by §R17.4's own "the two can appear on one square"
+   clause, without which CP2.8's pip check is untestable). Both are in files the plan's
+   Phase 2 File Changes rows already list.
+2. **The mutation table spans two frames plus a synthetic square**, with the reason
+   measured in each case (above). A single real frame carries all five mutations
+   (`M4` f1 s32); only the M-F2 **floor mechanism** needs a square shape the worlds never
+   produce.
+3. **No test file was added.** CP2.8's evidence is produced by a scratch harness under
+   `tmp/`, not by the committed suite — see blocker 2.
+
+### Prior art
+
+Grepped `docs/develop/active/issues/KNOWN_BUGS.md` directly (sub-agents cannot spawn
+`bug-curator`): no row matches `minimap`, `world map`, `rim pip`, `identity pip` or
+`grid-only`. The three minimap causes are **not** in the registry. Following Revision 21
+§R21.3's precedent — a defect in a plan's own rule text, caught before the behaviour ever
+shipped, is not filed — they are reported here for `senior-developer` rather than filed.
+If that judgement is wrong, **`bug-curator` owns it**. The `Collection`-enumeration row
+(175) and the import-isolation row (211) are present and unrelated to this pass.
+
+### Does CP2.8 close? **No — and here is exactly what blocks it**
+
+Clause by clause: every matrix cell's checked frames pass `cell_overdraw` with **0**
+findings ✅; all five archetypes rendered, two of them synthesised **and labelled** ✅;
+looked at, at full size ✅ (the four-way renders as four equal tiles 2-over-2 inside the
+agent's indigo outline — the degeneration §R17.5 item 2 predicted and nobody had seen; the
+real three-way shows agent, predator and hiding predator side by side; `(3,3)` shows a red
+apple standing on a green bush plate); all five mutations fail on the **real** painter ✅;
+the caption is present ✅; the rim pip and identity pip share **0 pixels** ✅; the sample
+is ≤ 2 frames per cell with its wall-clock and machine stated ✅.
+
+**Blocker 1 — `minimap_overdraw` fires on correct frames (2–4 per frame, all 18).** Causes
+(A), (B) and (C) in Part 5, each measured. CP2.8's *Fails if:* clause says "any finding
+count is non-zero"; on the strictest reading of that clause the checkpoint fails, and I am
+reporting it that way rather than arguing the clause covers only the arena rule. Resolving
+it means choosing between moving the minimap floor, changing where the pips are drawn, or
+extending the encoding past three occupants — **all plan decisions, `senior-developer`'s
+to make**. Nothing was adjusted here to make the count zero.
+
+**Blocker 2 — no committed test carries this evidence.** CP2.8 says "the test carries the
+`integration` marker", and §R17.6 gives it a home: `tests/env/test_dashboard_frames.py`,
+which **does not exist** — Phase 2 deferred it. Today's numbers come from a scratch
+harness under `tmp/`, so they are reproducible by hand but not by CI. Until that file
+exists, the checkpoint's own instrument is not in the suite.
+
+Everything else CP2.8 asks for is measured and recorded above.
+
+Implemented by: developer
 
 Verified by: senior-developer

@@ -781,6 +781,12 @@ def _run_cells(squares, *, rows=1, cols=1, restrict_work=True,
 # The nine correct squares. Each must produce ZERO findings and measure exactly 1.000.
 NEGATIVE_CELLS = {
     "empty square": (dict(), {}),
+    # Was a `strict` xfail: at the shipped 0.40 floor this CORRECT square reported 0
+    # components against 1 kind, because a lone agent keeps its halo (nothing else needs
+    # the room) and that pushes its ink to 43.76 % of the square, over the "this element
+    # IS the floor" line. The constant moved to 0.48 in the plan (Revision 21 §R21.2) with
+    # both populations measured, so this is now a plain negative control.
+    "lone agent on bare ground": (dict(), {(0, 0): ["agent"]}),
     "campfire bed + one token": (dict(), {(0, 0): ["campfire", "neutral"]}),
     "bush bed + agent": (dict(), {(0, 0): ["bush", "agent"]}),
     "two movers with the agent": (dict(), {(0, 0): ["agent", "predator"]}),
@@ -807,26 +813,12 @@ def test_cell_overdraw_is_silent_on_every_negative_control(name):
         f"is to stop counting something as able to occlude (§R20's narrowing rule).")
 
 
-@pytest.mark.xfail(strict=True, reason=(
-    "MEASURED PLAN DEFECT, decision belongs to senior-developer. A lone agent on bare "
-    "ground keeps its halo (1.32x its own radius), and that token's ink measures 43.76% "
-    "of its square — above §R19.1 step 2's 40% 'this element IS the floor' line — so a "
-    "CORRECT occupant is excluded as scenery and the square reports 0 components against "
-    "1 kind. Measured populations: largest correct token 0.4376, smallest bed 0.5168, "
-    "bed floor by construction 0.5184 (pinned in test_dashboard_cells.py). A floor of "
-    "0.48 sits 53.5% of the way up that gap and makes this control pass. The constant is "
-    "NOT moved here: §R20.3's discipline is that a constant moves in the plan text with "
-    "its evidence, never in a test to turn a checkpoint green."))
-def test_a_lone_agent_on_bare_ground_is_not_scenery():
-    findings, _m = _run_cells({(0, 0): ["agent"]})
-    assert findings == [], [(f.rule, f.detail) for f in findings]
-
-
 def test_the_lone_agent_collision_is_a_constant_choice_and_both_sides_are_measured():
     """Pin the two populations the floor constant has to separate.
 
-    The xfail above says a correct lone agent is misclassified; this says WHY, in numbers,
-    so the decision to move the constant is made against measurement rather than argument.
+    This is the evidence Revision 21 §R21.2 moved the constant on, kept as a measurement
+    so the choice stays defensible: the floor must sit strictly BETWEEN the largest
+    correct token and the smallest bed. Both sides are measured here, not argued.
     """
     def _largest_collection_fraction(squares):
         fig, frame = _arena_figure(squares)
@@ -847,9 +839,13 @@ def test_the_lone_agent_collision_is_a_constant_choice_and_both_sides_are_measur
               for t in ("rock", "bush", "tree", "campfire"))
     assert token == pytest.approx(0.4376, abs=0.005), token
     assert bed == pytest.approx(0.5168, abs=0.005), bed
-    assert token > audit.CELL_FLOOR_FRACTION, (
-        "the shipped floor no longer misclassifies a lone agent — if the constant has "
-        "been moved in the plan, remove the xfail above rather than this assertion")
+    assert token < audit.CELL_FLOOR_FRACTION < bed, (
+        f"the floor {audit.CELL_FLOOR_FRACTION} does not separate the two populations it "
+        f"exists to separate: largest correct token {token:.4f}, smallest bed {bed:.4f}. "
+        f"Below the token the classifier calls an OCCUPANT the floor (the square then "
+        f"reports no one standing in it); above the bed it calls the FLOOR an occupant "
+        f"(§R20.8). The response is to move the constant IN THE PLAN with both numbers, "
+        f"never to shrink the halo until the classifier's mistake stops showing")
     assert bed >= C.bed_plate_fraction(CELL) - 0.005, (
         "a bed must stay at or above its constructed plate fraction, which is what makes "
         "the bed side of this gap a pinned number rather than a measurement that drifts")
@@ -861,13 +857,28 @@ MUTATION_CELLS = {
     "M-F1": (dict(mutation="M-F1"), {(0, 0): ["bush", "agent"]}, "cell_overdraw"),
     "M-F1g": (dict(mutation="M-F1g", fig_facecolor=P.CANVAS),
               {(0, 0): ["agent", "predator"]}, "cell_probe_blind"),
-    "M-F2@0.02": (dict(mutation="M-F2", inset=0.02),
-                  {(0, 0): ["bush", "agent", "predator"]}, "cell_overdraw"),
-    "M-F2@0.05": (dict(mutation="M-F2", inset=0.05),
-                  {(0, 0): ["bush", "agent", "predator"]}, "cell_overdraw"),
-    "M-F2@0.10": (dict(mutation="M-F2", inset=0.10),
-                  {(0, 0): ["bush", "agent", "predator"]}, "cell_overdraw"),
+    # RE-REGISTERED at 0.005 / 0.010 / 0.020 by Revision 21 §R21.2. The family was
+    # 0.02 / 0.05 / 0.10, and insetting a bed shrinks its ink share — (0.72(1-2i))^2 =
+    # 47.8 % / 42.0 % / 33.2 % — so above a certain inset the bed falls UNDER the floor
+    # test, stops being read as a bed, is counted as a token and is caught by the
+    # disjointness rule instead. It still fails, but it no longer measures the SURVIVAL
+    # FLOOR, which is the only thing this family was registered to exercise. At the 0.48
+    # floor both the 0.05 and 0.10 members had fallen out, leaving the gap table resting
+    # on one member. A sweep family that quietly stops testing what it claims is exactly
+    # the failure this re-registration removes.
+    "M-F2@0.005": (dict(mutation="M-F2", inset=0.005),
+                   {(0, 0): ["bush", "agent", "predator"]}, "cell_overdraw"),
+    "M-F2@0.010": (dict(mutation="M-F2", inset=0.010),
+                   {(0, 0): ["bush", "agent", "predator"]}, "cell_overdraw"),
+    "M-F2@0.020": (dict(mutation="M-F2", inset=0.020),
+                   {(0, 0): ["bush", "agent", "predator"]}, "cell_overdraw"),
 }
+
+#: The M-F2 members the gap table's DEFECT side is made of. All three must fire the
+#: survival floor specifically — a member caught by another rule has survival 1.0 and
+#: would raise the recorded maximum toward the floor, making the margin look wider than
+#: it is (§R20.3 *Fails if:* fewer than three members fire the survival floor).
+MF2_FAMILY = ("M-F2@0.005", "M-F2@0.010", "M-F2@0.020")
 
 
 @pytest.mark.parametrize("name", sorted(MUTATION_CELLS))
@@ -928,7 +939,8 @@ def test_the_survival_floor_sits_in_a_gap_and_not_on_a_cliff():
     survival ratio is 1.0 and it never measured the floor.
     """
     correct = []
-    for name in ("bush bed + agent", "two movers with the agent",
+    for name in ("lone agent on bare ground", "bush bed + agent",
+                 "two movers with the agent",
                  "three-way with the agent", "four-way with the agent",
                  "campfire bed + one token", "adjacent slots at 50px",
                  "footprint edge through an occupied square"):
@@ -936,12 +948,20 @@ def test_the_survival_floor_sits_in_a_gap_and_not_on_a_cliff():
         _f, measured = _run_cells(squares, **kw)
         correct += [s for m in measured for s in m["survival"]]
 
-    defect = []
-    for name in ("M-F2@0.02", "M-F2@0.05", "M-F2@0.10"):
+    defect, fired = [], 0
+    for name in MF2_FAMILY:
         kw, squares, _rule = MUTATION_CELLS[name]
         findings, measured = _run_cells(squares, **kw)
         if any("keeps only" in f.detail for f in findings):
+            fired += 1
             defect += [s for m in measured for s in m["survival"]]
+
+    assert fired == len(MF2_FAMILY), (
+        f"only {fired} of {len(MF2_FAMILY)} M-F2 members fired the SURVIVAL FLOOR. The "
+        f"family is re-registered at insets small enough that the bed stays a bed "
+        f"(Revision 21 §R21.2); a member caught by another rule has survival 1.0 and "
+        f"never measured this floor, so the table would rest on fewer members than it "
+        f"claims. Report that — do not move an inset to make the count come out")
 
     lo, hi = min(correct), max(defect)
     assert lo == 1.0, f"the correct side is not 1.000: {sorted(set(correct))}"

@@ -280,15 +280,24 @@ def build_minimap(dash, ax, w, h):
     cell = s / max(hh, ww)
     ox, oy = (w - cell * ww) / 2, 46
 
+    # The map grid gets an Axes of its OWN, inside the card -- the same split the
+    # arena already uses (`arena_card` / `arena`). A composite colour census can
+    # only be taken per world square if the axes it is pointed at IS the grid;
+    # pointed at the whole card it samples the title strip and the caption, and
+    # the audit can then only report that its grid is unaligned. Everything below
+    # is drawn in the grid's own coordinates, so square (r, c) is at
+    # (c * cell, r * cell) with no offset to keep in step.
+    gax = dash.grid_axes(ax, ox, oy, cell * ww, cell * hh, "minimap")
+
     grounds = {}
     for r in range(hh):
         for c in range(ww):
-            grounds[(r, c)] = rrect(ax, ox + c * cell + 1, oy + r * cell + 1,
+            grounds[(r, c)] = rrect(gax, c * cell + 1, r * cell + 1,
                                     cell - 2, cell - 2, 3, P.TRACK, z=1)
     tints = {}
     for r in range(hh):
         for c in range(ww):
-            t = rrect(ax, ox + c * cell + 1, oy + r * cell + 1, cell - 2, cell - 2, 3,
+            t = rrect(gax, c * cell + 1, r * cell + 1, cell - 2, cell - 2, 3,
                       P.TRACK, z=2, alpha=0.75)
             t.set_visible(False)
             tints[(r, c)] = t
@@ -297,24 +306,24 @@ def build_minimap(dash, ax, w, h):
     pool = {}
     for r in range(hh):
         for c in range(ww):
-            cx, cy = ox + (c + 0.5) * cell, oy + (r + 0.5) * cell
-            wedges = [ax.add_patch(Wedge((cx, cy), cell * 0.30, 90 + i * 180,
-                                         90 + (i + 1) * 180, fc=P.TRACK, ec=P.WHITE,
-                                         lw=0.8 * PT, zorder=6 + i * 0.1))
+            cx, cy = (c + 0.5) * cell, (r + 0.5) * cell
+            wedges = [gax.add_patch(Wedge((cx, cy), cell * 0.30, 90 + i * 180,
+                                          90 + (i + 1) * 180, fc=P.TRACK, ec=P.WHITE,
+                                          lw=0.8 * PT, zorder=6 + i * 0.1))
                       for i in range(2)]
-            dot = ax.add_patch(Circle((cx, cy), cell * 0.30, fc=P.TRACK, ec=P.WHITE,
-                                      lw=1.2 * PT, zorder=6))
-            pip = ax.add_patch(Circle((cx + 0.26 * cell, cy - 0.26 * cell), cell * 0.12,
-                                      fc=P.TRACK, ec=P.WHITE, lw=0.8 * PT, zorder=7))
-            ident = ax.add_patch(Circle((cx, cy), cell * 0.30 * 0.34, fc=P.HIDE_EYE,
-                                        lw=0, zorder=6.6))
+            dot = gax.add_patch(Circle((cx, cy), cell * 0.30, fc=P.TRACK, ec=P.WHITE,
+                                       lw=1.2 * PT, zorder=6))
+            pip = gax.add_patch(Circle((cx + 0.26 * cell, cy - 0.26 * cell), cell * 0.12,
+                                       fc=P.TRACK, ec=P.WHITE, lw=0.8 * PT, zorder=7))
+            ident = gax.add_patch(Circle((cx, cy), cell * 0.30 * 0.34, fc=P.HIDE_EYE,
+                                         lw=0, zorder=6.6))
             for a in (*wedges, dot, pip, ident):
                 a.set_visible(False)
             pool[(r, c)] = (wedges, dot, pip, ident)
 
-    dash.fit(ax, PAD, 46 + s + CAPTION_LINE, "caption", w - 2 * PAD,
+    dash.fit(ax, PAD, oy + cell * hh + CAPTION_LINE, "caption", w - 2 * PAD,
              numeric=False).set("Shared squares: two occupants split the dot, a third")
-    dash.fit(ax, PAD, 46 + s + 2 * CAPTION_LINE, "caption", w - 2 * PAD,
+    dash.fit(ax, PAD, oy + cell * hh + 2 * CAPTION_LINE, "caption", w - 2 * PAD,
              numeric=False).set("is a rim pip. The grid view shows what they are.")
 
     def upd(v):
@@ -336,8 +345,6 @@ def build_minimap(dash, ax, w, h):
             if len(occ) == 1:
                 dot.set_visible(True)
                 dot.set_facecolor(P.MINIMAP_COLOUR[occ[0]])
-                if occ[0] == "hiding_predator":
-                    ident.set_visible(True)
             else:
                 for wg, nm in zip(wedges, occ[:2]):
                     wg.set_visible(True)
@@ -345,6 +352,20 @@ def build_minimap(dash, ax, w, h):
                 if len(occ) > 2:
                     pip.set_visible(True)
                     pip.set_facecolor(P.MINIMAP_COLOUR[occ[2]])
+            # The amber identity pip tells a hiding predator from a predator,
+            # which share a body colour. It marks the occupant of the DOT, so it
+            # is drawn whenever the hiding predator is one of the occupants the
+            # dot (or its two wedges) carries -- not only when it is alone, which
+            # is how it was first written. That restriction made the two pips
+            # mutually exclusive, and the plan (section R17.4) requires exactly
+            # the opposite: the occupancy rim pip and the identity pip must be
+            # able to appear on ONE square and share no pixel, with a test that
+            # says so. They cannot collide by construction -- the identity pip
+            # ends 0.102 x cell from the centre and the rim pip begins
+            # 0.248 x cell from it -- and CP2.8 measures that on a rendered frame
+            # rather than trusting the arithmetic.
+            if "hiding_predator" in occ[:2]:
+                ident.set_visible(True)
     dash.updates.append(upd)
 
 

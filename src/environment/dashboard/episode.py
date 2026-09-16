@@ -272,6 +272,36 @@ class EpisodeRenderer:
         self.axes[label or key] = ax
         return ax, box
 
+    def grid_axes(self, card_ax, x, y, w, h, label):
+        """A child Axes covering EXACTLY one panel's grid, inside a card.
+
+        The arena is already built this way, and the World map needs it for the
+        same reason. The pixel audit's co-occupancy rules derive their square
+        grid by dividing the NAMED axes into ``height x width`` squares, which is
+        exact only when that axes IS the grid. Pointed at a whole card -- with a
+        title above the map and a two-line caption below it -- the derived grid
+        is offset from the real one, every square samples card background, and
+        the rule can only say "the grid is wrong" instead of answering the
+        question it was asked. Giving the map its own axes costs one artist and
+        makes the map auditable.
+
+        ``x``/``y``/``w``/``h`` are in the CARD's pixel coordinates (y downward);
+        the returned axes carries the same convention over its own extent.
+        """
+        pos = card_ax.get_position()
+        fx = pos.x0 + (x / card_ax._px_w) * pos.width
+        fy = pos.y1 - ((y + h) / card_ax._px_h) * pos.height
+        ax = self.fig.add_axes([fx, fy, (w / card_ax._px_w) * pos.width,
+                                (h / card_ax._px_h) * pos.height], label=label)
+        ax._px_w, ax._px_h = w, h
+        ax.set_autoscale_on(False)
+        ax.axis("off")
+        ax.patch.set_visible(False)
+        ax.set_xlim(0, w)
+        ax.set_ylim(h, 0)
+        self.axes[label] = ax
+        return ax
+
     def _vitals_rows(self):
         """One row per body state, with its two columns decided by the breakdown.
 
@@ -332,8 +362,12 @@ class EpisodeRenderer:
             ax, box = self._card("vitals")
             PN.card_frame(ax, box)
             PN.build_vitals(self, ax, box.w, box.h, self._vitals_rows())
+        # The World map is TWO axes for the same reason the arena is: the card
+        # carries the title and the shared-square caption, and the map GRID gets
+        # an axes of its own so a census can be taken against the grid's own
+        # extent. See `grid_axes`.
         if "minimap" in cards:
-            ax, box = self._card("minimap")
+            ax, box = self._card("minimap", label="minimap_card")
             PN.card_frame(ax, box)
             PN.build_minimap(self, ax, box.w, box.h)
 
