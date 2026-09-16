@@ -9,7 +9,7 @@ supersedes: UI_REDESIGN_PROPOSAL.md
 
 # Episode-video renderer redesign: panels that cannot overlap, a faster frame, and a step-scrubbing viewer
 
-> **Status**: PLANNED. Revised three times after `plan-reviewer` (first and second pass NOT READY; third pass SOUND WITH CONCERNS, applied in Revision 3). Revision 4 adds extended-range senses (user scope, 2026-09-14); fourth pass SOUND WITH CONCERNS, applied in Revision 5. Revision 6 records user decisions (2026-09-14); fifth pass SOUND WITH CONCERNS, applied in Revision 7. Revision 8 adopts the visual design spec (`docs/reviews/design_episode_dashboard.md`). Revision 9 records the user's answers (2026-09-14) and corrects the temperature scale to a per-episode range. Revision 10 moves every verification world onto maintained configs (new config-maintenance rule). Revision 11 (2026-09-16) re-points every config path after another session archived 227 worlds, names where the regenerated campfire world's values are copied from, and records two new environment behaviours (bushes block animals; faster healing when resting in a bush). **Revision 12 (2026-09-16) retracts Revision 11 §2** — the claim that the maintained `basic/` configs fail to load was produced by a non-resolving YAML read; all of them load, and the plan now requires every config check to go through the resolving loader. **Revision 13 (2026-09-16) corrects the verification matrix after Phase 0b was built and verified**: the three real trained-policy cells cannot be rendered at current code, cells M1 and M2 turned out to be the same world, and a new cell M1x was added. Phase 0a and Phase 0b are **implemented**; Phases 1–5 are plan only. **Revision 17 (2026-09-16) records two user design decisions** — terrain drawn as the square's ground cover with occupants in slots on top of it (variant H), and a 48 px arena square — works out what they cost the surrounding panels, specifies the minimap's admittedly coded encoding, records three cases the design does not solve, and adds a co-occupancy rule to the pixel audit. Phases 0a, 0b and 0c are implemented; Phase 0d and Phases 1–5 are plan only.
+> **Status**: PLANNED. Revised three times after `plan-reviewer` (first and second pass NOT READY; third pass SOUND WITH CONCERNS, applied in Revision 3). Revision 4 adds extended-range senses (user scope, 2026-09-14); fourth pass SOUND WITH CONCERNS, applied in Revision 5. Revision 6 records user decisions (2026-09-14); fifth pass SOUND WITH CONCERNS, applied in Revision 7. Revision 8 adopts the visual design spec (`docs/reviews/design_episode_dashboard.md`). Revision 9 records the user's answers (2026-09-14) and corrects the temperature scale to a per-episode range. Revision 10 moves every verification world onto maintained configs (new config-maintenance rule). Revision 11 (2026-09-16) re-points every config path after another session archived 227 worlds, names where the regenerated campfire world's values are copied from, and records two new environment behaviours (bushes block animals; faster healing when resting in a bush). **Revision 12 (2026-09-16) retracts Revision 11 §2** — the claim that the maintained `basic/` configs fail to load was produced by a non-resolving YAML read; all of them load, and the plan now requires every config check to go through the resolving loader. **Revision 13 (2026-09-16) corrects the verification matrix after Phase 0b was built and verified**: the three real trained-policy cells cannot be rendered at current code, cells M1 and M2 turned out to be the same world, and a new cell M1x was added. Phase 0a and Phase 0b are **implemented**; Phases 1–5 are plan only. **Revision 17 (2026-09-16) records two user design decisions** — terrain drawn as the square's ground cover with occupants in slots on top of it (variant H), and a 48 px arena square — works out what they cost the surrounding panels, specifies the minimap's admittedly coded encoding, records three cases the design does not solve, and adds a co-occupancy rule to the pixel audit. **Revision 18 (2026-09-16) supersedes Revision 17's square size and window** — the user, given a corrected picture of which panel the numbers belonged to, decided that the grid view shows the **whole 10 × 10 world at a 50 px square** (`ARENA_CELL_PX = ARENA_CELL_MIN_PX = 50`, centre card 564 × 564 px); the 5×5 window is removed, Revision 17's "accepted cost" of a 1–2 px shortfall is retired because 50 px clears both measured floors, and the slot geometry is recomputed. Phases 0a, 0b and 0c are implemented; Phase 0d and Phases 1–5 are plan only.
 > **Opened**: 2026-09-14
 > **Related**: [[UI_REDESIGN_PROPOSAL]] (the April plan this one replaces) · [[12_renderer]] (renderer reference doc) · [thermal IMPLEMENTATION_PLAN](../thermal/IMPLEMENTATION_PLAN.md) (§"Rendering: what the rewrite's state turned out to be") · [[BODY_TEMPERATURE_OBSERVATION]] (thermal; **untracked work-in-progress in another session, read as unstable input only**) · [[ASYNC_CHECKPOINT_VIDEO_RENDER]] · [[SAVED_RUN_CONFIG_COMPAT]] · review: [`docs/reviews/plan_renderer_layout_redesign.md`](../../../reviews/plan_renderer_layout_redesign.md) · evidence frames + measuring script: [`renderer_layout_redesign/`](renderer_layout_redesign/) · web research note `tmp/20260914_renderer_layout_web_research.md`
 
@@ -446,6 +446,8 @@ The five reachability rules the generator read off `src/environment/core.py`, ke
 
 The left column holds two cards. Interoception is `76 × rows + 124`: **504 px** in the thermal world (five rows) and **428 px** in the default world (four). The World map card takes the remainder, capped at 350 px, so its map square is `min(320 − 32, h − 46 − 16)` = **234 px** in the thermal world and **288 px** in the default world — that is, **23.4 px and 28.8 px per world square**. This is the "~280 px" the decision compares against: it is the **small world map**, not the grid view.
 
+> **Read §R17.2 as history.** Its question — which panel the 48 px belongs to — was answered by the user in **Revision 18**: the grid view shows the **whole world at a 50 px square**, and the World map keeps its ~23–29 px squares. The measured facts below (what each panel costs, why the World map cannot grow) are unchanged and still load-bearing; only the chosen square size moved, 48 → 50 px, and the final layout arithmetic is re-derived in §R18.1.
+
 Now the three panels a 48 px square could refer to:
 
 | Panel | Today (Figure 3) | At a 48 px square | Verdict |
@@ -458,19 +460,22 @@ Now the three panels a 48 px square could refer to:
 
 **One question this raises, and it is the user's to answer, not the developer's.** The decision says "a 48 px grid cell, up from today's 28 px", but the two numbers belong to two different panels: 28.8 px is today's **World map** square, while today's **grid view** square is 96 px. The 480 px figure in the decision is exactly a 10×10 world at 48 px — which fits the grid-view card to the pixel. The reading this plan adopts unless the user says otherwise is therefore: **48 px is the floor and the drawing size for the grid view's squares, and the grid view may show the whole world where the whole world fits at 48 px** (see §R17.6 for what that changes). The World map keeps its ~23–29 px squares and its coded encoding. If the user instead meant that the World map itself should grow, the numbers above say what would have to move.
 
-**Worlds that do not fit.** At 48 px the grid-view card holds at most 10 squares across (544 − 64 = 480). An 11×11 or larger world cannot be shown whole at 48 px, so the window rule (§D7.3) still applies above 10 — it does not become dead code, and the fallback order in §D7.7 item 3 still decides what happens. No maintained config has a world above 10×10 today (`configs/environment/default.yaml`: `height: 10`, `width: 10`).
+> **Answered, Revision 18 (2026-09-16).** The user was asked (Q20) and chose the whole world in the grid view, at **50 px** rather than 48 px. The World map keeps its ~23–29 px squares and the coded encoding of §R17.4. The 48 px reading in the paragraph above is superseded; §R18.1 carries the layout arithmetic at 50 px.
+
+**Worlds that do not fit.** At 48 px the grid-view card holds at most 10 squares across (544 − 64 = 480). An 11×11 or larger world cannot be shown whole at 48 px, so the window rule (§D7.3) still applies above 10 — it does not become dead code, and the fallback order in §D7.7 item 3 still decides what happens. No maintained config has a world above 10×10 today (`configs/environment/default.yaml`: `height: 10`, `width: 10`). **At Revision 18's 50 px the ceiling is the same 10 squares** (the binding constraint becomes the sensor band's 200 px minimum, which caps a whole-world square at 53 px), so the fallback's scope is unchanged — but see §R18.2 item 9 for a defect in the fallback's shrink step that must be fixed in Phase 1.
 
 ### R17.3 The H rule, specified to implement
 
 Terminology, fixed here so painter, test and audit use one vocabulary: **ground** = the square's own fill (temperature colour, or the neutral track when thermal is off); **bed** = the terrain ground cover; **token** = one occupant's drawing; **slot** = the box a token is drawn for; **h** = a token's ink half-extent in pixels, the single number that decides legibility.
 
 1. **Ground.** Unchanged from Figure 3: rounded square, radius 8, 2 px seam of card white between squares, no grid lines, no numbers (§D5.2 item 10 still holds).
-2. **Bed.** Terrain (rock, bush, tree, campfire; **at most one**, by R1) is drawn full-bleed, inset by `BED_MARGIN = 0.14 × cell` on every side, so a ring of the square's own temperature colour always shows. Drawn above the ground and below every token. A bed is *not* a glyph being covered — it is the floor the occupants stand on — so a token over a bed is not the occlusion the brief rules out, and the audit must not count it as one (measured bed-under-token ink at 48 px: 0–772 px per square, by design).
+2. **Bed.** Terrain (rock, bush, tree, campfire; **at most one**, by R1) is drawn full-bleed, inset by `BED_MARGIN = 0.14 × cell` on every side, so a ring of the square's own temperature colour always shows. Drawn above the ground and below every token. A bed is *not* a glyph being covered — it is the floor the occupants stand on — so a token over a bed is not the occlusion the brief rules out, and the audit must not count it as one (measured bed-under-token ink at 48 px: 0–772 px per square, by design; at Revision 18's 50 px square the same geometry scales to roughly 0–840 px, an illustrative range rather than a pinned assertion).
 3. **Tokens, by non-terrain occupant count `n`** (terrain never counts, because it is the floor):
    - `n = 0` — bed only, or bare ground.
-   - `n = 1` — one centred token at `h = 0.30 × cell` (**14.4 px at a 48 px square**): identical to an unshared square. This is the property the whole variant was chosen for.
-   - `n = 2` — one row of two in a band of height `0.60 × cell` centred on the square, side margin `0.05 × cell`; column width `w = (cell − 2 × margin) / 2`; `h = min(w, band_height) / 2 × 0.92` → **9.9 px at 48 px**.
-   - `n = 3, 4` — **two rows of two** in a band of height `0.88 × cell`, the last row centred when it holds one, so three reads as 2-over-1 rather than as a gap; `h` → **9.7 px at 48 px**. This is the degeneration recorded in §R17.5: from the third occupant on, the tokens take almost the whole square and the bed shows only as its margin.
+   - *(Pixel values in this item are quoted at the 48 px square of Revision 17. **Revision 18's decided square is 50 px**; the formulas are unchanged and §R18.3 carries the recomputed values — `h` = 15.00 / 10.35 / 10.12 px.)*
+   - `n = 1` — one centred token at `h = 0.30 × cell` (**14.4 px at a 48 px square; 15.00 px at 50 px**): identical to an unshared square. This is the property the whole variant was chosen for.
+   - `n = 2` — one row of two in a band of height `0.60 × cell` centred on the square, side margin `0.05 × cell`; column width `w = (cell − 2 × margin) / 2`; `h = min(w, band_height) / 2 × 0.92` → **9.9 px at 48 px; 10.35 px at 50 px**.
+   - `n = 3, 4` — **two rows of two** in a band of height `0.88 × cell`, the last row centred when it holds one, so three reads as 2-over-1 rather than as a gap; `h` → **9.7 px at 48 px; 10.12 px at 50 px**. This is the degeneration recorded in §R17.5: from the third occupant on, the tokens take almost the whole square and the bed shows only as its margin.
    - A single row of three was tried and rejected by measurement: it collapses `h` to `0.135 × cell` and pushes the four-way minimum to 75 px — an artefact of the layout, not of the idea.
 4. **Order is explicit, never alphabetical.** `CELL_PRIORITY = ("agent", "predator", "hiding_predator", "food", "neutral")`, filled left-to-right then top-to-bottom. The observed overdraw bug is exactly what an alphabetical `sorted()` over entity names buys; the constant is module-level with a test that every entity name the matrix can place appears in it.
 5. **Slots are computed before anything is drawn.** The painter builds the slot list from `(bed?, occupants)` and then draws; it never draws concentrically and relies on z-order. Measured on the mock at 48 px, **glyph-on-glyph ink is 0 px in every reachable case** — that zero is what §R17.7's audit rule re-measures on the real painter.
@@ -479,7 +484,7 @@ Terminology, fixed here so painter, test and audit use one vocabulary: **ground*
 8. **The agent's indigo outline and last-action chevron.**
    - The **square outline** (2 px iris rounded rectangle on the *square*) is unchanged and is unaffected by sharing. It, not the token's size, is what says which square the agent is in — which is why the token may shrink without the agent becoming hard to find.
    - The **halo is dropped whenever the square is shared** (`n ≥ 2`). At full size the agent marker carries a 16 % iris halo at `1.32 × r`; in a shared square that halo is ink that spills past `h` onto the neighbour, and it was the entirety of H's measured overlap before it was removed. Concretely: at `h = 0.30 × cell` the halo reaches `0.396 × cell` from the centre, while the whole bush glyph reaches only `0.261 × cell` — the halo is wider than the drawing it is supposed to sit beside, which is the mechanism behind "agent-in-bush renders as agent alone".
-   - The **white ring** stays at every size (`lw = max(0.9, h / 8) pt`), and the **chevron** stays inside the token at `0.62 × h` in the last action's direction, with the dot for Rest/Eat. At 48 px the chevron is 6.1 px long when two occupants share and 6.0 px with four, so it survives every reachable case at the decided square size. Below `h = 6 px` the chevron is not legible; the painter raises rather than drawing an unreadable one, and the 48 px decision keeps every reachable case above that line.
+   - The **white ring** stays at every size (`lw = max(0.9, h / 8) pt`), and the **chevron** stays inside the token at `0.62 × h` in the last action's direction, with the dot for Rest/Eat. At 48 px the chevron is 6.1 px long when two occupants share and 6.0 px with four — on the 6 px legibility line; **at Revision 18's 50 px square it is 6.42 px and 6.27 px**, clearing it with room. Below `h = 6 px` the chevron is not legible; the painter raises rather than drawing an unreadable one.
    - The action pill in the card's title row is unchanged (Q4).
 
 ### R17.4 The minimap: where colour is a code, and the page says so
@@ -497,7 +502,9 @@ At the World map's ~20–29 px square, a token's mark would be under 3 px and wo
 ### R17.5 Cases this design does not solve (recorded, not buried)
 
 1. **Multiplicity.** Two predators in one square render as **one** predator token. No variant in either round counts occupants, and the 64/102 reachable-state enumeration is over *kinds*, not instances. Counting would need a badge or a numeral — a legend, which the principle rules out — so it is not done. **Consequence for verification:** the audit's ground truth must be the number of *distinct kinds* in a square, never the number of entity instances, or it will report failures that are not failures.
-2. **H degenerates to equal tiles from three occupants up.** The "a lone occupant keeps full size" property holds for one occupant and the bed; with three or four, the tokens take the band and the bed survives only as its margin, and every occupant is the same size (no focal point). Measured minimum square sizes: **49 px** for the binding two-mover cases (agent + predator, predator + rabbit, agent + rock + predator) and **50 px** for the four-way. The decided 48 px square is therefore **1 px under the floor for two movers and 2 px under it for the four-way** — the binding marks are the predator's amber eye slit and the rabbit's ear gap at 0.30 × 9.9 = **2.97 px against a 3.0 px** chroma-survival floor. That floor is a JPEG 4:2:0 heuristic, not a cliff, so this is recorded as an **accepted cost, not a defect**. If rendered frames show the mark dying under compression, a 50 px square still fits the approved layout (10 × 50 + 64 = 564 px centre card, right column 476 px ≥ its 440 px minimum) and is the first remedy to try.
+2. **H degenerates to equal tiles from three occupants up.** The "a lone occupant keeps full size" property holds for one occupant and the bed; with three or four, the tokens take the band and the bed survives only as its margin, and every occupant is the same size (no focal point). Measured minimum square sizes: **49 px** for the binding two-mover cases (agent + predator, predator + rabbit, agent + rock + predator) and **50 px** for the four-way.
+
+> **Retired by Revision 18 (2026-09-16).** The rest of this item as originally written recorded an *accepted cost*: at the then-decided 48 px square the binding marks (the predator's amber eye slit, the rabbit's ear gap) measured 2.97 px against a 3.0 px chroma-survival heuristic, 1 px under the two-mover floor and 2 px under the four-way one, with "a 50 px square" named as the first remedy. **The user has since decided the 50 px square** (Revision 18), which clears both floors — the marks measure 3.105 px and 3.036 px — so there is no longer any accepted cost here and the paragraph is not carried forward. What remains true is the sentence above it: variant H degenerates to equal tiles from the third occupant up, and a three- or four-way square has no focal point. That is a property of the design and is **not** retired.
 3. **A resource stranded on a blocking tree.** By R4, respawn applies no overlap resolution, so food can land on a tree — a square the agent can never walk onto. The frame will show a tree bed with a food token on it, which is *truthful* but does not tell the viewer the food is unreachable. No marking is proposed, because any marking is a legend. Recorded here so nobody later "fixes" the picture by hiding the food.
 4. **Two statics on one square** (food + trap) is reachable only by respawn and is drawn by the same two-occupant rule; it has no special case and no special mark.
 
@@ -507,6 +514,7 @@ Phases 0a–0c are complete. The changes below land in the phases that follow, a
 
 - **Phase 0d (new, small): the audit learns to see squares.** `scripts/eval/render_layout_audit.py` gains the co-occupancy rule in §R17.7 with its own positive and negative controls, *before* Phase 1, so the instrument exists when the painter arrives. No other Phase-0 artefact changes; the V1 path guard and the frame baseline are untouched.
 - **Phase 1 (registry and packer).**
+  - *(Superseded by Revision 18 §R18.5: the square is **50 px**, not 48, and the grid view shows the whole world rather than a window. Implement from §R18.5.)*
   - `layout.py`: `ARENA_CELL_MIN_PX` **32 → 48**, and a new `ARENA_CELL_PX = 48` target. The fallback order of §D7.7 item 3 is unchanged in shape; its first question becomes whether the world fits whole at 48 px, then the local window.
   - `panels.py`: the arena row's min size becomes `W × 48 px`; the minimap row's min size gains the height of the shared-square caption line.
   - `test_dashboard_layout.py`: the arena box is exactly `W × 48` px; a 10×10 window fits the Figure-3 centre card with the neighbours' boxes unchanged; a world too large to show whole at 48 px takes the documented fallback rather than silently shrinking below the floor.
@@ -517,7 +525,7 @@ Phases 0a–0c are complete. The changes below land in the phases that follow, a
   - **Fixtures must contain shared squares.** `make_render_fixture_recordings.py` gains a report of which co-occupancy archetypes each cell's episodes actually contain (agent + terrain, two movers, three-way, four-way, food-on-terrain), because a seeded random policy is not guaranteed to produce them. An archetype the matrix never reaches is rendered from a **synthetic snapshot labelled as derived input**, the same precedent as the existing stress variant. *Fails if:* a checked archetype is neither found nor synthesised, or a synthetic one is not labelled.
   - `test_dashboard_frames.py` gains the co-occupancy cases and the mutation below.
 - **Phase 3 (entry point).** `layout_signature()` gains the arena square size and the window rule, so a concatenated video cannot switch square size or window mid-video.
-- **Phase 4 (viewer).** `/api/values` gains the per-square occupant list, so the viewer can name what shares a square; the page's grid draws the same rule, and if its viewport forces squares under 48 px it **says so** rather than shrinking silently.
+- **Phase 4 (viewer).** `/api/values` gains the per-square occupant list, so the viewer can name what shares a square; the page's grid draws the same rule, and if its viewport forces squares under 48 px (**50 px since Revision 18**) it **says so** rather than shrinking silently.
 - **Docs.** `docs/environment/12_renderer.md` gains the square-composition rule (bed / token / slot vocabulary), the minimap's coded encoding and its on-page statement, and the three unsolved cases. No config key changes; `CONFIG_CRITICAL_SETTINGS.md` unchanged; `SCRIPTS_DEPENDENCY_MAP.md` unchanged by this revision (no script is added, moved or renamed — Phase 0d edits an existing one).
 
 ### R17.7 The audit's co-occupancy check (Phase 0d), and why it cannot be fooled
@@ -542,6 +550,72 @@ The observed defect is that a painter can draw two occupants and a viewer sees o
 - **CP2.8: squares render as many occupants as they hold.** On every matrix cell, every checked frame with a shared square passes `cell_overdraw`; the four archetypes (agent + terrain, two movers, three-way, four-way) are each rendered and **looked at**; mutation M-E fails the audit; the minimap caption is present wherever a split dot is drawn. *Fails if:* any archetype is missing without a labelled synthetic substitute, any check is non-zero, M-E passes, or the caption is absent.
 
 Existing checkpoints that gain a clause: **CP2.6** (entity ink) now also requires that a *shared* square shows ink for every kind the snapshot places there; **CP-C** (one meaning per colour) counts the shared-square token colours and the minimap split wedges against the same palette table; **CP-D** looks at shared squares at full size, since this is the change most likely to look crowded rather than measure crowded.
+
+---
+
+## Revision 18 2026-09-16 (user decision: the grid view shows the WHOLE world at a 50 px square — supersedes Revision 17's 48 px and its 5×5 window)
+
+**What this revision is about, in plain words.** The dashboard's big centre panel is the one that draws the world the agent is walking through. Until now the plan had it showing only a 5×5 patch of that world around the agent, and Revision 17 recorded a decision to draw each square of the patch 48 pixels wide. The picture the user was given when they made that call contained an error of mine: I told them today's square is 28 pixels, but **28 px is the square of the small *World map* in the left column, not of the big grid panel** — today's grid panel draws its squares at 96 px. With that corrected, the user chose something simpler than a window: **the grid panel shows the whole 10 × 10 world, and each square is 50 pixels across.** Two things follow. There is no 5×5 viewport any more — nothing pans, nothing centres on the agent, and the panel's frame is the world's edge. And the square is 50 px rather than 48 px, which matters because 48 px was one to two pixels *under* the size at which two animals sharing one square stay tellable apart — a shortfall Revision 17 recorded as an accepted cost. At 50 px that shortfall is gone, so the paragraph recording it is retired below rather than left for a later reader to trip over.
+
+**What is superseded, precisely.** Revision 17's square size (48 px) and the assumption that the grid panel draws a local window. **Everything else in Revision 17 stands unchanged**: variant H (terrain as the square's ground cover with occupants in slots on top of it), `CELL_PRIORITY`, the shared-cell agent rule, the minimap's deliberately coded encoding (§R17.4), the three unsolved cases (§R17.5 items 1, 3, 4), and the `cell_overdraw` audit rule (§R17.7).
+
+### R18.1 The arithmetic, re-derived from Figure 3's own code
+
+**How this was checked.** Not by trusting the numbers quoted in the brief or in Revision 17: the canvas, gutter, gap, padding, header, left-column width and right-column minimum were read straight out of `renderer_layout_redesign/dashboard_style.py` and `fig03_proposed_dashboard.py` (`W=1440, H=896, OUTER=24, GAP=16, PAD=16, HEAD=64, LEFT_W=320, MIN_RIGHT_W=440`), the packer's arithmetic was replicated from `fig03_proposed_dashboard.pack()`, and the replication was validated by reproducing Figure 3's own approved layout to the pixel before any new number was computed.
+
+| | Figure 3 as approved (5 × 96 px) | Revision 17's reading (10 × 48 px) | **Revision 18 (10 × 50 px)** |
+|---|---|---|---|
+| Centre (grid) card | 544 × 544 px | 544 × 544 px | **564 × 564 px** |
+| Right column width | 496 px (min 440) | 496 px | **476 px** — 36 px of slack |
+| Sensor band | starts y = 624, 256 px tall (min 200) | same | **starts y = 644, 236 px tall** — 36 px of slack |
+| Right column height available / needed | 544 / 516 px | 544 / 516 | **564 / 516 px** — 48 px of slack |
+| Left column (Interoception 504 + World map 220 + gap) | 740 of 816 px | unchanged | **unchanged — the left column is not touched at all** |
+
+**The 564 px card closes, and here is what it costs.** The centre card grows 20 px in both directions. Horizontally that comes out of the right column, 496 → 476 px, still 36 px above the 440 px the thermoception diamond and its shared scale need — and `fig03_proposed_dashboard.pack()` raises `LayoutOverflowError` if it ever is not, so this is a guarded number, not a hoped-for one. Vertically it comes out of the sensor band, 256 → 236 px, still 36 px above its 200 px minimum. The right column's *available height* actually **grows** (it is measured against the arena's bottom edge), so every right-hand card gains room. **The layout's spare width and spare height both drop from 56 px to 36 px** — that is the whole price, and nothing is pushed below a stated minimum.
+
+**The ceiling, so nobody has to re-derive it.** On this canvas, with the sensor band present, the largest whole-world square is **53 px** (at 54 px the band falls to 196 px and the right column to 436 px — both under their minima). 50 px therefore sits 3 px below the ceiling, not against it.
+
+### R18.2 The grid view is no longer a window — what that changes
+
+1. **View size.** The drawn view is the world, `W = params.width` (and height), not `max(local_view_size, 2·max_range + 1)`. §D7.3's window rule survives only as the fallback for worlds larger than the card can hold whole (above 10 squares at 50 px), which no maintained config has today.
+2. **No centring, no panning.** The old windowed view implied a viewport that follows the agent; there is none. The world's origin maps to the card's corner and stays there for the whole episode, and the agent moves *inside* a fixed frame instead of the world sliding underneath a fixed agent. This is a visible change in how the video reads and is called out here so it is not discovered in review.
+3. **No off-world cells, no edge padding.** A window near a wall used to contain cells outside the world, drawn in `OFF_WORLD` white. Showing the world whole, every square is a real square; the off-world path becomes reachable only through the over-10 fallback, and any frame test asserting off-world ink must be moved onto that path rather than onto a maintained world.
+4. **The minimap's viewport rectangle is dropped.** §D7.7 item 3 had the World map outline the `W × W` window actually drawn. With the whole world drawn, that outline is a rectangle around the entire map — pure noise. It is removed, and a test that asserted its presence must assert its absence for whole-world frames.
+5. **The `footprint exceeds view (r=…)` caption** (§D7.3) can no longer fire on a 10×10 world: a sense's diamond can now only be clipped by the world's own edge, which is truthful rather than a rendering limitation. The caption survives for the over-10 fallback.
+6. **`layout_signature()` still carries the window rule**, because the fallback still exists; it now records "whole world" for every maintained config.
+7. **`/api/values` returns 100 squares, not 25.** The viewer's per-square occupant list (§R17.6 Phase 4) grows fourfold; the page's table needs to stay readable at that size.
+8. **The arena painter's work grows about fourfold** — 100 squares per frame instead of 25, each with a ground, possibly a bed, and up to four tokens. **This bears directly on the Q9 speed gate** ("median frame time on the campfire world ≤ half of V1's"), which was agreed before this decision. Phase 1 must measure the arena painter against that gate with the whole world drawn; if it misses, the decision to reconsider is the gate or the painter's per-square cost, not the square size.
+9. **A defect found while checking the fallback, recorded rather than left.** §D7.7 item 3's step 4 shrinks `W` by 2 toward `local_view_size`. In the thermal world that is unsound at either square size: a 9-square view gives a centre card 514 px tall (496 px at 48 px squares), while the right column's three cards need 516 px — so the shrink step makes the right column overflow, because the right column's height is measured against the arena's bottom edge. The Phase 1 packer test must assert the right column still fits at whatever `W` the fallback lands on, and the fallback must reject a `W` that does not clear it.
+
+### R18.3 Slot geometry at 50 px (the numbers `tests/env/test_dashboard_cells.py` asserts)
+
+Recomputed from §R17.3's own formulas — `h(1) = 0.30 × cell`; for `n = 2`, `w = (cell − 2 × 0.05 × cell)/2` and `h = min(w, 0.60 × cell)/2 × 0.92`; for `n = 3, 4`, two rows in a band of `0.88 × cell`, `h = min(w, band/2)/2 × 0.92`. The formulas were validated by reproducing Revision 17's recorded 48 px values (14.40 / 9.936 / 9.715) before being applied at 50 px.
+
+| Occupants in the square | `h` (token ink half-extent) at 48 px | **at 50 px** | Chevron `0.62 × h` at 50 px | Smallest identifying mark `0.30 × h` at 50 px |
+|---|---|---|---|---|
+| 1 (or 1 + terrain bed) | 14.40 px | **15.00 px** | – | – |
+| 2 | 9.936 px | **10.35 px** | 6.42 px | **3.105 px** |
+| 3 or 4 | 9.715 px | **10.12 px** | 6.27 px | **3.036 px** |
+
+Also at 50 px: `BED_MARGIN = 0.14 × cell` = **7.00 px** (was 6.72); the white keyline radius stays **exactly `h`** (§R17.3 item 7); the chevron clears its 6 px legibility floor in every reachable case with room to spare (it was 6.16 / 6.02 px at 48 px, i.e. on the line).
+
+**The floors are cleared, and the derivation is reproducible.** The binding constraint is the predator's amber eye slit and the rabbit's ear gap at `0.30 × h`, against a 3.0 px chroma-survival heuristic. Solving it: two movers need `0.207 × cell ≥ 10.0` → `cell ≥ 48.31` → **49 px**; the four-way needs `0.2024 × cell ≥ 10.0` → `cell ≥ 49.41` → **50 px**. Those are exactly the 49 px and 50 px floors Revision 17 recorded, re-derived here independently. At 50 px both are met — the four-way by construction meets it exactly (10.12 px of half-extent against the 10.0 px the mark needs), so 50 px is the smallest square that clears every reachable case, not a comfortable margin above it. **`test_dashboard_cells.py` therefore asserts `h` = 15.00 / 10.35 / 10.12 px, and recomputes both floors from the mark fractions and compares them against 49 and 50.**
+
+### R18.4 Revision 17 §R17.5 item 2's "accepted cost" is retired
+
+Revision 17 recorded that 48 px was 1 px under the two-mover floor and 2 px under the four-way floor, and accepted it on the grounds that the 3.0 px chroma floor is a JPEG heuristic rather than a cliff, with "a 50 px square" named as the first remedy. **That remedy is now the decision, so there is no accepted cost left to carry.** §R17.5 item 2 is amended in place to say so. What remains true in it, and is kept: variant H still degenerates to equal tiles from the third occupant up, and the frame still gives no focal point in a three- or four-way square. That is a property of the design, not a pixel shortfall, and it is not retired.
+
+### R18.5 Deltas to Revision 17 §R17.6 (the phases not yet built)
+
+- **Phase 1.** `layout.py`: `ARENA_CELL_PX = ARENA_CELL_MIN_PX = 50`. The fallback order's first question is whether the **world** fits whole at 50 px (it does at 10×10); the local-window steps are the fallback for larger worlds only, and must additionally clear the right column's 516 px (§R18.2 item 9). `panels.py`: the arena row's min size is `W × 50 px` where `W` is the world size; the minimap loses its viewport rectangle and keeps its shared-square caption line. `test_dashboard_layout.py`: the arena box is exactly `W × 50` px; a whole 10×10 world yields a 564 × 564 centre card with the right column at 476 px and the sensor band at 236 px, both above their minima; a world too large to draw whole at 50 px takes the documented fallback, and the fallback's chosen `W` still fits the right column.
+- **Phase 2.** Cell composition is unchanged in rule; only the constants move (§R18.3). One new consequence: co-occupancy archetypes are now hunted over 100 squares per frame rather than 25, which makes it *more* likely a real episode contains them and correspondingly less likely a synthetic snapshot is needed.
+- **Phase 3.** `layout_signature()` records square size 50 and window rule "whole world" for maintained configs.
+- **Phase 4.** `/api/values` covers every world square; the page says so if its viewport forces squares below 50 px.
+- **Docs.** `docs/environment/12_renderer.md` records the 50 px square, the whole-world rule, and the removal of the viewport rectangle. No config key changes; `CONFIG_CRITICAL_SETTINGS.md` and `SCRIPTS_DEPENDENCY_MAP.md` are unaffected by this revision.
+
+### R18.6 One consequence the user should decide (Q21)
+
+The World map in the left column exists to give global context while the grid panel shows a local patch. **With the grid panel showing the whole world, the two panels now show the same extent** — the World map becomes a smaller, coded copy of the picture already on screen, and §R17.4's split dots and rim pips exist to serve exactly that copy. This plan does **not** decide it either way; it is opened as Q21 with the arithmetic of what dropping it would buy, because deleting a panel the user asked for is not a developer's call.
 
 ---
 
@@ -677,7 +751,7 @@ class PanelSpec:
 | body_temp | vitals | temp_row / hidden_state | `Body Temperature` (viz key `value`) | `body_temp` in snapshot; observed iff `Body Temperature` in breakdown, else hidden | label + value + threshold/setpoint marks |
 | minimap | world | minimap | – | always | ≥ 2 px/world cell, ≥ 180 px side, + one caption line for the shared-square note (Revision 17 §R17.4) |
 | location | world | text_row | `Location` | name in breakdown | one text line |
-| arena | arena | arena | – | always | square, `ARENA_CELL_PX` = 48 px/view cell and `ARENA_CELL_MIN_PX` = 48 px (**Revision 17**; was 32); + scale strip when thermal on. Square composition (bed / token / slot) per §R17.3 |
+| arena | arena | arena | – | always | square, `ARENA_CELL_PX` = `ARENA_CELL_MIN_PX` = **50 px per world cell** (**Revision 18**; was 48 at Revision 17, 32 before that), and the view is the **whole world** where it fits at 50 px; + scale strip when thermal on. Square composition (bed / token / slot) per §R17.3, at the 50 px values in §R18.3 |
 | action_badge | arena | action_badge | – | action recorded | pill text in arena title strip |
 | olfactory | extero, or sensor band (§D7.1) | `grid_kind(olfactory_grid_range, 5)`: spectrum (r=0) / `channel_maps` (r≥1, decided) | `Olfaction` | name in breakdown | per kind (§D7.2) |
 | extero_nociception | extero | intensity | `Extero Nociception` | name in breakdown | text row + bar |
@@ -1061,8 +1135,9 @@ M8/M9 do not depend on archived **configs** loading — but, per Revision 13, th
 
 #### D7.3 Grid view window and sensor footprints
 
-- **Window.** The new renderer's grid view shows `W = max(params.local_view_size, 2·max_range + 1)` cells, where `max_range` is the largest diamond radius among the present senses. This is a rendering choice only; environment params are not changed. With `local_view_size = 5` (the in-use configs), vision r2 needs 5, so nothing changes. Synthetic r3/r4 widen the view to 7/9.
-- **Cell-size floor.** If `W` would push arena cells below `ARENA_CELL_MIN_PX` (**48 px since Revision 17**, the single floor in §D7.7), `W` is capped at the largest value keeping 48 px. At 48 px the Figure-3 centre card holds at most 10 squares across, which is exactly the maintained worlds' 10×10 (§R17.2). The footprint outline is then clipped at the window edge, and the card caption says `footprint exceeds view (r=<r>)`. The audit checks that caption's presence whenever clipping occurs.
+- **View (rewritten by Revision 18).** The grid view shows the **whole world** — `W = params.width` — wherever the world fits at the 50 px square, which every maintained config does (10×10). There is no local window, no centring on the agent and no panning; the panel's frame is the world's edge (§R18.2). The windowed rule below survives **only** as the fallback for worlds too large to draw whole.
+- **Window (fallback only).** For a world above 10 squares across, the renderer falls back to `W = max(params.local_view_size, 2·max_range + 1)` cells, where `max_range` is the largest diamond radius among the present senses. This is a rendering choice only; environment params are not changed. No maintained config reaches it today.
+- **Cell-size floor.** If `W` would push arena cells below `ARENA_CELL_MIN_PX` (**50 px since Revision 18**, the single floor in §D7.7), `W` is capped at the largest value keeping 50 px. At 50 px the centre card holds at most 10 squares across, which is exactly the maintained worlds' 10×10 (§R18.1). The footprint outline is then clipped at the window edge, and the card caption says `footprint exceeds view (r=<r>)` — reachable only on the fallback path, since a whole-world view clips a sense's diamond at the world's own edge, which is truthful rather than a rendering limit. The audit checks that caption's presence whenever clipping occurs.
 - **Footprint outline.** Each directional sense draws its diamond footprint on the grid view as a thin outline in its sense colour (smell, vision, thermoception, and collision when r > 1). The outlines are foreground artists, and a legend chip in the arena title strip names each outline. A frame test checks outline ink along the expected diamond boundary cells.
 
 #### D7.4 Colour and bar scales are not [0,1]
@@ -1102,15 +1177,16 @@ M8/M9 do not depend on archived **configs** loading — but, per Revision 13, th
    - **Zero guard:** if a sense's episode maximum is 0, the scale is `[0, 1]` with the caption `no signal this episode`, which avoids a divide-by-zero.
    - The single-frame wrapper uses that frame and says so.
 3. **One arena cell floor and an explicit fallback order (34).**
-   - `ARENA_CELL_MIN_PX = 48` (**Revision 17**, user decision; was 32) is the only arena floor, and `ARENA_CELL_PX = 48` is the drawing size. The floor exists because no literal shared-square variant is legible below it (§R17.2, §R17.5 item 2).
+   - `ARENA_CELL_MIN_PX = 50` (**Revision 18**, user decision; was 48 at Revision 17 and 32 before that) is the only arena floor, and `ARENA_CELL_PX = 50` is the drawing size. The floor exists because no literal shared-square variant is legible below it — 50 px is the smallest square meeting every measured floor (§R18.3).
    - The packer tries, in order, and records which step succeeded in `layout_signature()`:
+     0. **the whole world at 50 px** (Revision 18) — the only step any maintained config reaches;
      1. `W = max(local_view_size, 2·max_range + 1)`;
      2. layout (a) side column;
      3. layout (b) sensor band;
      4. shrink `W` by 2 per step toward `local_view_size` (never below), with the `footprint exceeds view (r=…)` caption;
      5. `compact` min sizes;
      6. raise `LayoutOverflowError`.
-   - The minimap's viewport rectangle outlines the `W × W` window actually drawn.
+   - ~~The minimap's viewport rectangle outlines the `W × W` window actually drawn.~~ **Removed by Revision 18:** with the whole world drawn, the rectangle would outline the entire minimap. It is drawn only when the fallback actually windows the view (§R18.2 item 4). **Revision 18 §R18.2 item 9 also records a defect in step 4 below**: shrinking `W` shortens the centre card, and at 9 squares the right column no longer fits in the thermal world — the fallback must check it.
 4. **Recording the largest radius (35).**
    - A candidate r_max from the packer is **rendered**: a synthetic override at r_max, per encoding, for smell + vision together and each alone. It passes the full §D5.2 audit before being recorded, and r_max + 1 raises.
    - Recorded with it: hostname, CPU model, Matplotlib version, FreeType version, and the resolved font family and font file path.
@@ -1162,7 +1238,7 @@ M8/M9 do not depend on archived **configs** loading — but, per Revision 13, th
 | `tests/env/test_dashboard_v1_imports.py` (new) | Pins the imported V1 signatures listed in §D1.3. Revision 7 cache-isolation check: in one process, render a new-renderer M4 frame, then V1 M4 raw frames. The V1 hashes must equal the guard baseline, proving no shared icon cache or other process-global state. Asserts no `renderer_v2` module or package was created by this plan: `src/environment/renderer_v2/` does not exist, and `import src.environment.renderer_v2` still resolves to the `.py` file. |
 | `src/environment/dashboard/panels.py` (new) | `PanelSpec`, `RenderContext`, `FrameInputs`, registry, completeness rule, observed-vs-hidden rule, `_recording_flag`, `real_available` from params. |
 | `src/environment/dashboard/labels.py` (new) | V2-owned channel label table (`HPR` etc.) overriding adapter labels (§D1.3). |
-| `src/environment/dashboard/layout.py` (new) | Column packer, `Box`, `LayoutOverflowError`, compact fallback; no Matplotlib import. **Revision 17:** `ARENA_CELL_PX = 48` and `ARENA_CELL_MIN_PX = 48`; the fallback order first asks whether the world fits whole at 48 px, then the local window. |
+| `src/environment/dashboard/layout.py` (new) | Column packer, `Box`, `LayoutOverflowError`, compact fallback; no Matplotlib import. **Revision 18:** `ARENA_CELL_PX = ARENA_CELL_MIN_PX = 50` (was 48 at Revision 17); the fallback order first asks whether the world fits whole at 50 px — the only step a maintained config reaches — then the local window, whose shrink step must additionally clear the right column's 516 px (§R18.2 item 9). |
 | `tests/env/test_dashboard_layout.py` (new) | Boxes disjoint/inside canvas for all cells. Toggling a modality frees its height. Overflow raises. Unregistered name raises. **M4 context has no observed Nutrition/Injury rows.** `real_available` identical for two episodes of one run. `_recording_flag` import confinement. |
 
 **Phase 2: painters and episode renderer**
@@ -1172,7 +1248,7 @@ M8/M9 do not depend on archived **configs** loading — but, per Revision 13, th
 | `src/environment/dashboard/text_fit.py` (new) | `fit_text` with the numeric-raise / free-text-ellipsis split, logging. |
 | `src/environment/dashboard/painters.py` (new) | One painter per kind with `build`/`update`, card outlines as separate artists, `gid`s, iconless-entity glyph table. Imports from `renderer.py` read-only only what §D1.3 still pins (`draw_boresight_diamond`, `save_jax_video`, `COLORS`). The icon loader (cache-free) and the thermal helpers (two-slope) are copied into `src/environment/dashboard/icons.py` and `thermal.py` (Revision 7). Any helper needing a change is **copied** into the package; **`renderer.py` is not edited** (frozen). |
 | `src/environment/dashboard/cells.py` (new, Revision 17) | Square composition: bed table (`bed_bush` / `bed_rock` / `bed_tree` / `bed_campfire`, `BED_MARGIN = 0.14`), companion-form table with the identifying-mark fractions as constants, `CELL_PRIORITY = ("agent", "predator", "hiding_predator", "food", "neutral")`, the slot packer (1 / 2 / two-row for 3–4), and the shared-cell agent rule (halo dropped, ring and chevron kept). Forms ported from the round-2 design mock with attribution. The arena painter is a caller. |
-| `tests/env/test_dashboard_cells.py` (new, Revision 17) | Slot geometry at 48 px (`h` = 14.4 / 9.9 / 9.7 px for 1 / 2 / 3–4 occupants); every entity name the matrix can place is in `CELL_PRIORITY`; every terrain has a bed form and every token a companion form; the keyline radius is exactly `h` (the adjacent-slot touch test); the minimum-square arithmetic is recomputed from the mark fractions and compared against the recorded 49 px / 50 px floors, so a change to a form that breaks legibility fails here rather than in a video. |
+| `tests/env/test_dashboard_cells.py` (new, Revision 17; numbers updated Revision 18) | Slot geometry at **50 px** (`h` = **15.00 / 10.35 / 10.12 px** for 1 / 2 / 3–4 occupants — the 48 px values 14.4 / 9.9 / 9.7 are superseded, §R18.3); every entity name the matrix can place is in `CELL_PRIORITY`; every terrain has a bed form and every token a companion form; the keyline radius is exactly `h` (the adjacent-slot touch test); the minimum-square arithmetic is recomputed from the mark fractions and compared against the recorded 49 px / 50 px floors, so a change to a form that breaks legibility fails here rather than in a video. |
 | `src/environment/dashboard/episode.py` (new) | `EpisodeRenderer` (setup / `frame` / `close` / `layout_signature`), wrapper `render_dashboard_frame`. **Revision 17:** `layout_signature()` includes the arena square size and the window rule (whole world vs local window), so a concatenated video can never switch square size or window mid-video. |
 | `tests/env/test_dashboard_frames.py` (new, `integration` marker) | Audit clean on all cells' checked frames + stress variant. Mutations M-A..M-D fail as expected. Value-to-pixel, obstacle-ink (CP2.6), observed-caption (CP2.5) and vocabulary (CP2.4) checks. Glyph-code uniqueness. |
 | `tests/env/test_dashboard_thermal.py` (new) | Thermal tests per the **Revision 9** note item 8: episode-range pre-pass, neutral setpoint, concatenated union range, clamp-and-outline, cooling-world crop, pre-thermal recording, per-step-recompute mutation. The Revision 6–8 params-bound tests are withdrawn. |
@@ -1198,7 +1274,7 @@ M8/M9 do not depend on archived **configs** loading — but, per Revision 13, th
 
 | File | Change |
 |---|---|
-| `scripts/eval/episode_viewer.py` (new) | Server (§D3). **Revision 17:** `/api/values` also returns the per-square occupant list, so the page can name what shares a square; if the viewport forces squares below 48 px the page says so rather than shrinking silently. |
+| `scripts/eval/episode_viewer.py` (new) | Server (§D3). **Revision 17:** `/api/values` also returns the per-square occupant list, so the page can name what shares a square; if the viewport forces squares below **50 px** (Revision 18) the page says so rather than shrinking silently. **Revision 18:** the list now covers every square of the world (100 for a 10×10), not the 25 of a 5×5 window. |
 | `scripts/eval/episode_viewer.html` (new) | Page; light mode. |
 | `tests/scripts/test_episode_viewer.py` (new) | Served PNG == in-process array; `/api/values` == `extract` including observed/hidden flags; out-of-range → 404. |
 | `docs/environment/SCRIPTS_DEPENDENCY_MAP.md` | §3 row for `episode_viewer.py` (hand-run server). A "**not a script**" row for `episode_viewer.html` (served by the viewer; precedent row `scripts/analysis/pipeline_layout.html`). §1c row for `tests/scripts/test_episode_viewer.py` (bare-imports the viewer; `parents[2]` depth). |
@@ -1211,7 +1287,7 @@ M8/M9 do not depend on archived **configs** loading — but, per Revision 13, th
 
 | File | Change |
 |---|---|
-| `docs/environment/12_renderer.md` | Replace the dormant-V2 sections with the registry / packer / episode-renderer design, the observed-vs-hidden rule, the separate `render_recordings_v2.py` entry point and `videos_v2/` folder (V1 remains what training and eval use), viewer, audit, and "add a modality = registry entry". **One disambiguating sentence:** "'V2' in documents before 2026-09-14 means the April 2026 subfigures renderer in `src/environment/renderer_v2.py` (dormant, to be removed at the retirement gate); from 2026-09-14 'V2' means the registry-based renderer in `src/environment/dashboard/`, run via `scripts/eval/render_recordings_v2.py`." Fix stale `render_recordings.py` line citations. **Revision 17:** add the square-composition rule (bed / token / slot vocabulary, `CELL_PRIORITY`, the shared-cell agent rule), the minimap's coded encoding with its on-page statement, the 48 px square and its measured 49/50 px context, and the three unsolved cases (multiplicity, four-way degeneration, a resource stranded on a blocking tree). |
+| `docs/environment/12_renderer.md` | Replace the dormant-V2 sections with the registry / packer / episode-renderer design, the observed-vs-hidden rule, the separate `render_recordings_v2.py` entry point and `videos_v2/` folder (V1 remains what training and eval use), viewer, audit, and "add a modality = registry entry". **One disambiguating sentence:** "'V2' in documents before 2026-09-14 means the April 2026 subfigures renderer in `src/environment/renderer_v2.py` (dormant, to be removed at the retirement gate); from 2026-09-14 'V2' means the registry-based renderer in `src/environment/dashboard/`, run via `scripts/eval/render_recordings_v2.py`." Fix stale `render_recordings.py` line citations. **Revision 17:** add the square-composition rule (bed / token / slot vocabulary, `CELL_PRIORITY`, the shared-cell agent rule), the minimap's coded encoding with its on-page statement, and the three unsolved cases (multiplicity, four-way degeneration, a resource stranded on a blocking tree). **Revision 18:** the **50 px** square, the **whole-world** grid view (no window, no panning, no viewport rectangle on the minimap), and the measured 49/50 px legibility floors it clears. |
 | `docs/environment/ENVIRONMENT_SUMMARY.md` | Renderer row: V1 default, V2 status, viewer. |
 | `docs/environment/SCRIPTS_DEPENDENCY_MAP.md` | See the Phase 0 (three scripts, two test rows), Phase 3 (one script, one test row) and Phase 4 (viewer script, HTML "not a script" row, one test row) entries. Each lands in the same change as its files. |
 | `docs/environment/CONFIG_CRITICAL_SETTINGS.md` | No change. |
@@ -1287,7 +1363,8 @@ Reading guide:
 - **CF** marks where the campfire sits. Per Q12 (decided), the new renderer draws the new `assets/campfire.png` there, falling back to the glyph only if the file is missing.
 - **HPR** is hiding predator.
 - The old RUN CONTEXT box is folded into the header, and the action badge sits in the arena card's title strip.
-- **Revision 17:** arena squares are **48 px**, terrain is drawn as the square's ground cover (a "bed") rather than a centred glyph, and a shared square lays its occupants out in slots — one centred, two side by side, three or four in a two-row band. A square holding the agent and a bush shows both, at the agent's full size. The ASCII above cannot draw this; §R17.3 is the specification and Figure 3 plus the design review are the visual reference.
+- **Revision 18:** the grid view shows the **whole 10 × 10 world**, not the `LOCAL VIEW 5×5` the ASCII above draws, and its squares are **50 px** (the centre card is 564 × 564 px). Nothing pans and nothing centres on the agent.
+- **Revision 17** (square size superseded by Revision 18): arena squares are **48 px**, terrain is drawn as the square's ground cover (a "bed") rather than a centred glyph, and a shared square lays its occupants out in slots — one centred, two side by side, three or four in a two-row band. A square holding the agent and a bush shows both, at the agent's full size. The ASCII above cannot draw this; §R17.3 is the specification and Figure 3 plus the design review are the visual reference.
 - **Campfire world as actually configured (M4):** its observation has no Nutrition or Injury. Those rows either disappear or, if Q10 = show, appear as `NUT  0.75  not observed` / `INJ  0.71  not observed` with plain bars and no `(real)` or tick. In the 2026-09-14 working tree its body temperature **is** observed (`Body Temperature` in the breakdown), so `TEMP` shows OBS (with REAL per the noise rule).
 
 **Default world, noise off:** no interoceptive nociception, no temperature, no heat sense, spectrum smell, no location. It collapses to:
@@ -1317,6 +1394,7 @@ Reading guide:
 ```
 
 Collapse rules:
+- **Revision 18:** as in the thermal block above, the `ARENA · LOCAL VIEW 5×5` title the ASCII draws is superseded — the grid view shows the **whole 10 × 10 world** at 50 px squares, so the title reads `ARENA · WORLD 10×10` and the panel does not pan or centre on the agent. The "no thermal underlay, so the arena takes the full column height" note still holds; the arena is still square and still width-limited.
 - **Presence:** rows follow the observation breakdown. Absent vitals rows and absent extero pods release their min height to the grow panel.
 - **Thermal off:** removes the underlay and scale strip.
 - **Noise off:** removes every REAL slot and tick for the whole run, with a "no noise" caption. Noise on with no recorded true observations keeps the slot, captioned "true obs not recorded".
@@ -1333,6 +1411,7 @@ Each checkpoint states what would show it failed.
 - [x] **CP0.1b: Frame baseline right after fixtures.** After the generator lands and writes M1/M2/M4, `record-frames` adds fixture hashes and 8 raw-frame hashes per cell for M1, M2, M4 and M7, from two separate processes; committed. `tests/env/test_v1_path_guard.py` green (all three states and FIXTURE CHANGED exercised). *Fails if:* the processes disagree (then switch to a pixel-diff tolerance and record it), any renderer code predates this commit, or the guard test passes a case it should flag.
   - *2026-09-16 developer, verified by senior-developer:* **MET for M1, M2, M4; M7 dropped, see Revision 13.** The two processes agreed on every frame, so no pixel-diff tolerance was needed. Verifier's independent `check`: 10/10 files PASS plus `FRAMES PASS` on all three cells, exit 0. Tests: **65 passed** (11 new frame/fixture cases plus 2 rewritten). **Caveat recorded, not waived:** M1 and M2 pin *identical* frame hashes because they are the same world (Revision 13), so the baseline covers **two** distinct worlds, not three.
   - *2026-09-16 developer, review fix pass:* **frame baseline re-recorded, and the re-record is provably innocuous.** Adding the bush-rule `provenance` field to `run_meta` moved every cell's `run_meta.pkl` hash, so the fixtures were regenerated and `record-frames --force --note` re-run. Old versus new baseline: **all 24 frame hashes identical, all episode payload hashes identical, `frozen_files` unchanged** — only the three `run_meta_sha256` values and a new `frames_note` differ. `check` afterwards: 10 PASS + `FRAMES PASS` ×3, exit 0. Separately, a missing fixture now **fails** this checkpoint's gate (exit 2) instead of passing it silently; see the Phase 0b review fix pass report.
+  - *2026-09-16 developer, demonstration-loosening re-record:* **frame baseline re-recorded again, and the control behaved exactly as a control should.** The recording world was loosened in memory (see the Implementation Report "Demonstration loosening"), so `record-frames --force --note` was re-run. **M1 and M2 — whose world did not change — are byte-identical on all 8 frames, all payloads and their `run_meta`; M4, whose world genuinely changed, moved on all 8** (`3da423ec…` → `fd92f8c3…`). `frozen_files`, `user_accepted` and `plan_start_commit` are untouched. `check` afterwards: 10 PASS + `FRAMES PASS` ×3, exit 0.
 - [ ] **CP-G: V1 pipeline untouched (after every phase, 0 through 4).** `v1_path_guard.py check` exits 0. The report pastes the diff stat, the trailer-annotated `git log`, and each frozen file's state. ATTRIBUTED re-records cite the foreign commits. *Fails if:* any file or frame is UNATTRIBUTABLE (only the user clears it, via `accept` for that exact content), a phase commit touches a frozen file, or a `renderer_v2` package/module is created.
 - [ ] **CP0.2: Matrix recordings.** (Revision 10 check first.)
   - Every generated cell's `config_path` is `configs/environment/default.yaml` or under `configs/environment/experiment/basic/`, and every override value that reproduces an archived world matches the cited archived YAML text.
@@ -1342,6 +1421,7 @@ Each checkpoint states what would show it failed.
   - *Fails if:* a cell loads a config outside the maintained set, a cell or its `extends` chain touches `archive/`, a config the matrix intends to load raises at `load_env_params` with no recorded fallback to `default.yaml` + overrides, an override value differs from its cited source, or the regenerated campfire config has not passed `env-config-reviewer`.
   - **Revision 13 (2026-09-16), binding:** the clause "M7–M9 load; V1 renders step 0 of each" is **struck for Phases 0 and 1**. All three raise `AttributeError: 'EnvParams' object has no attribute 'thermal_enabled'` at `src/environment/sensor.py:577`, which no Phase-0 change may fix (the file is frozen). They re-enter at the **Phase 1 `_recording_flag` gate** defined in §D5.1. The generated set is **M1, M1x, M2, M3, M4, M4b, M5, M6, M6b** — nine cells, all present and reported. *Fails if:* any Phase 0 or Phase 1 checkpoint is treated as blocked on M7/M8/M9, or the generator crashes (rather than reporting BLOCKED) on one of them.
   - Then: M1–M6b are written, including M4b (M4b's breakdown must lack `Body Temperature`, and its temperature row renders "not observed"); ~~M7–M9 load; V1 renders step 0 of each~~. Per cell, print the snapshot keys, `true_obs is None`, the breakdown names, and the breakdown ↔ noise-order mapping. Also print each cell's `synthetic` flag and `overrides`, its `config_sha256`, the diamond-offset function name (§D7.7 item 8), and whether `Body Temperature` is in its breakdown, plus that viz entry's keys. *Fails if:* M4 lacks `thermal_field`; M4's breakdown contains Nutrition/Injury (the D10 premise is then wrong, so re-check); M4's `Body Temperature` entry lacks a `value` key, or the registry has no owner for a breakdown name; M3/M9 have `true_obs == obs` everywhere; M5's Olfactory is not `visual_grid`; M6b has `true_obs` present; or a mapping is unresolved. (Revision 11: the "an archive config won't load" clause is withdrawn — no cell loads an archived config. If M2/M3 still cannot be generated, the M8/M9 substitution applies and must be recorded as using a **pre-bush-change** world, per Revision 11 §4.)
+  - *2026-09-16 developer, demonstration loosening:* **all nine cells regenerated; no CP0.2 failure condition fires.** The four thermal cells (M3, M4, M4b, M6b) are now `synthetic: True` and carry the loosening in `overrides` plus a plain-language `provenance` note, so a reader can see the world was loosened and by how much; the five non-thermal cells are unchanged. Re-checked per cell: M4 has `thermal_field` ✅, its breakdown still has no Nutrition/Injury ✅ (33 dims, unchanged), `Body Temperature` still carries a `value` key ✅, M4b still lacks `Body Temperature` (32 dims) ✅, M6b is still the only cell with `true_obs is None` ✅, M3's largest OBS-vs-noise-free gap is **1.27345** (non-zero, so the "`true_obs == obs` everywhere" failure does not fire) ✅, and no breakdown↔noise mapping is unresolved ✅. **No config file was edited, so CP0.2's `env-config-reviewer` gate is not re-opened by this change.**
 - [x] **CP0.3: Audit positive controls.** V1 M4 reports D1, D2, D3 and D10. Dormant V2 M4 reports D6, and Interoceptive Nociception absent (plus Location/Proprioception if in the breakdown). *Fails if:* any control is missed. **Stop; the audit is broken.**
   - *2026-09-16 developer:* **MET — 7/7 controls fired** (`render_layout_audit.py --controls`, exit 0): D1, D2, D3 on V1 M4; D6, D8 on dormant V2 M4; plus D10 and D12. Each is reported with both participants, the measured overlap in pixels and the coordinates, so a control cannot pass because something else was flagged in the same frame. **One plan correction (owner `senior-developer`): §A2 classes D2 as "text-on-text", and measured it is not** — `'REAL: --'` and the `EXTERO NOCICEPTION` title are a fixed 1.5 px apart and never share a pixel, in the current M4 fixture *and* in the archived world the evidence frame came from. D2 is real but is an **out-of-card** defect (the label is drawn in the card's title strip, outside the card whose bar it labels), and is detected as such. Details in the Phase 0c Implementation Report.
   - *2026-09-16 developer, fix pass:* **still MET — 7/7 controls fire on the same rules, the same elements and the same coordinates**, and the checkpoint is now defended from the other side as well. The controls only ever measured *sensitivity*: an `ink()` that returned all-True — an instrument flagging every pixel of the canvas — passed all 18 original tests and fired all 7 controls. Negative controls were added (the exact absent-panel set, exact per-rule finding counts on two frozen frames, the rules that must stay silent, and the control coordinates), and under that mutation **10 tests now fail**. Suite 18 → 38 tests, all green unmutated. One new, previously unnumbered **real** defect found while re-examining the "benign" class: the thermal scale's `+84` end label is painted over by the colour strip's last segment. **Owner `senior-developer`** for a defect number. See the Phase 0c fix-pass report.
@@ -1415,16 +1495,18 @@ Numbers are kept so earlier references stay valid.
   - Every deviation from Figure 3 is reported in the Implementation Report with its reason. CP-D compares rendered frames against Figure 3.
   - Where this plan's earlier ASCII blueprints or wording differ from Figure 3, Figure 3 wins; the plan's behavioural rules and checkpoints still apply.
 - **Q18 (decided 2026-09-16): variant H — terrain bed + token.** Terrain is the square's ground cover, not a centred glyph; occupants stand on it in slots; nothing is drawn concentrically; corner pips, terrain folds and every other coded scheme are rejected on the principle that a viewer should recognise both occupants **by seeing them, not by decoding a legend**. Full rule in Revision 17 §R17.3. Not re-opened.
-- **Q19 (decided 2026-09-16): a 48 px arena square**, up from the 28 px the design round measured as today's cell. `ARENA_CELL_PX = ARENA_CELL_MIN_PX = 48`. Recorded cost: 48 px is 1 px under variant H's measured floor for two-mover squares (49 px) and 2 px under it for the four-way (50 px) — accepted, with a 50 px square as the first remedy if compression kills the marks (§R17.5 item 2). Not re-opened.
+- **Q19 (decided 2026-09-16; ~~48 px~~ → superseded by Q20's answer, Revision 18): the arena square.** Originally recorded as **48 px**, with an accepted 1–2 px shortfall against variant H's measured legibility floors. **Superseded 2026-09-16 by Revision 18: the square is 50 px** (`ARENA_CELL_PX = ARENA_CELL_MIN_PX = 50`), which clears both floors (49 px for two movers, 50 px for the four-way), so the accepted cost no longer exists (§R18.3, §R18.4). The "up from today's 28 px" comparison in the original wording was wrong: 28 px is the *World map*'s square, not the grid view's, which is 96 px today — my error, corrected to the user before they answered Q20.
+- **Q20 (decided 2026-09-16, Revision 18): the grid view shows the WHOLE world, at a 50 px square.** Asked because "a 48 px grid cell, up from today's 28 px" named two different panels' numbers. Given the corrected picture — the grid view's square is 96 px today, the World map's is ~28 px — the user chose: **the grid view draws the entire 10 × 10 world with 50 px squares** (centre card 564 × 564 px, right column 476 px against its 440 px minimum, sensor band 236 px against its 200 px minimum). There is **no 5×5 window**, so nothing pans and nothing centres on the agent. The World map keeps its ~23–29 px squares and the coded encoding of §R17.4. Arithmetic re-derived from Figure 3's own code in §R18.1; the consequences of removing the window are in §R18.2. Not re-opened.
 
 ## Open questions for the user
 
-**Q20 (opened 2026-09-16, Revision 17): which panel does the 48 px square size apply to, and does the grid view show the whole world?** The decision reads "a 48 px grid cell, up from today's 28 px", but those two numbers belong to two different panels: today's **grid-view** square is 96 px (Figure 3, 5×5 window), while ~28 px is today's **World map** square in the left column. The 480 px figure in the decision is exactly a 10×10 world at 48 px — which fits the grid-view card to the pixel, with no change to any neighbouring panel.
+**Q21 (opened 2026-09-16, Revision 18): now that the grid view shows the whole world, does the small World map still earn its place in the left column?** The World map exists to give global context while the grid view shows a local patch. With the grid view drawing the entire world, the two panels show **the same extent** — the World map becomes a smaller, colour-coded copy of a picture already on screen, and §R17.4's split dots and rim pips exist to make that copy readable at ~24–29 px per square.
 
-- **The reading this plan adopts unless the user says otherwise:** 48 px is the grid view's square size and floor, and the grid view may show the **whole world** wherever the whole world fits at 48 px (a 10×10 world does, exactly); the World map keeps its ~23–29 px squares and the coded encoding of §R17.4.
-- **What the alternative would cost, measured:** drawing the *World map* at 48 px needs a 512 px-wide, 542 px-tall card. Width could be bought by spending the right column's entire 56 px of slack and taking 136 px from the grid card; **height cannot** — the left column is 246 px short in the thermal world and 170 px short in the default world, with no card left to take it from. That option therefore requires moving Interoception out of the left column, i.e. a different layout from Figure 3. Numbers in §R17.2.
+- **Keeping it** costs nothing that is not already spent: the left column is untouched by Revision 18 (Interoception 504 px + World map 220 px in 816 px available). It still differs from the grid view in one way — it is a compact, always-same-size picture, where the grid view carries the thermal field, the footprint outlines and the action badge.
+- **Dropping it** frees ~236 px of left-column height, and would allow the left column to narrow, which is the only way to grow the grid square further. **The ceiling is 53 px per square regardless** (at 54 px the sensor band falls below its 200 px minimum), so the gain is at most 3 px per square — narrow the left column and the *band*, not the width, becomes binding. Stated so the option is not oversold.
+- **Recommendation, if one is wanted:** keep it for now and look at a rendered frame at Phase 2's CP-D, where "does this read as a duplicate?" is a question a picture answers and arithmetic does not.
 
-Everything else remains decided (see **Decided questions** above); Figure 3 settles any remaining layout detail.
+Everything else remains decided (see **Decided questions** above); Figure 3 settles any remaining layout detail, at the square size and view rule of Revision 18.
 
 ---
 
@@ -2109,3 +2191,298 @@ Severity legend: 🔴 Critical = fix before going further · 🟡 Moderate = lik
 **Cost of being wrong**: no data loss and no training run at stake. #46 stops CP2.3 on day one (loud, hours). #50 puts a false "true not recorded" caption on the project's central interoceptive signal in every noise-off video and CP2.5 would pass it — a wrong claim about sensory access, reversible by re-render but only once someone notices. #48 makes V1 byte-identity depend on test order and can hide a missing campfire icon behind a green CP2.6. #47 leaves the cold world near-white until the design review catches it.
 
 Reviewed by: plan-reviewer
+
+---
+
+## Implementation Report — the demonstration loosening of the recording world (2026-09-16)
+
+> **Implemented by**: developer · **Date**: 2026-09-16 · **Scope**: make the render-audit *recording* world survivable enough to produce usable demonstration footage, then re-record the CP0.2 fixtures and the V1 frame baseline.
+
+### What this is, in plain words
+
+The dashboard redesign is demonstrated and audited on a handful of saved episodes called *fixtures* — one per kind of world the new video has to draw. The most important of them is the **campfire world**: the only maintained world where the agent has a body temperature, feels heat, and shares its arena with fires. The problem was that this world killed the agent almost immediately, so every fixture was a few-second clip of something dying — a poor demonstration of panels whose entire job is to show a body changing over time.
+
+The user's instruction was to loosen the world **for recording purposes only**, and explicitly **not** to edit the two curriculum config files (`05-campfire_thermal_10x10.yaml`, `06-sensory_noise_10x10.yaml`), whose difficulty is theirs to set and which another session is tuning right now. So the loosening lives entirely **inside the fixture generator** as an in-memory override, and is stamped into every affected recording so nobody can mistake a loosened recording for the curriculum level it names.
+
+**The headline, and it corrects the brief.** The brief's premise was that the world kills the agent *by freezing*. Measured across twelve seeds rather than the single exported episode that prompted it, **freezing is not the main killer** — it accounts for 2 of 12 deaths. **Predation does** (6 of 12, all recorded as "injury"), with starvation third (4 of 12). Warming the world therefore fixes a real problem but a smaller one than expected, and the report below says plainly what it did and did not buy.
+
+### Files changed
+
+| File | Change |
+|---|---|
+| `scripts/eval/make_render_fixture_recordings.py` | New `_DEMO_LOOSENING` override dict and `_DEMO_LOOSENING_NOTE` provenance string, both heavily commented with the measurements that chose them. Applied to the four cells whose world carries the thermal system: **M3, M4, M4b, M6b**. No behaviour change for M1, M1x, M2, M5, M6. |
+| `docs/.../v1_guard/baseline.json` | Re-recorded fixture + frame baseline (`record-frames --force --note`, the note citing the loosening and its measured consequences). |
+| `tests/env/test_render_audit_controls.py` | **Three pinned literals re-pinned** — see "Deviations" item 3. Not named in the brief; flagged rather than done silently. |
+| *(none)* | **No config file was edited.** `configs/environment/experiment/basic/05-campfire_thermal_10x10.yaml` and `06-sensory_noise_10x10.yaml` are untouched, as required. |
+
+### The loosening, and how it was chosen
+
+```
+thermal.default_temp     -28..-22  ->  -20.5..-19.5     (the world baseline)
+body.start_injury_high        100  ->  40               (level 03's random-start range)
+body.start_nutrition_low        0  ->  60               (level 03's random-start range)
+```
+
+**The coupling was measured, not assumed.** A fire's heat is defined as a *ratio* of the baseline's magnitude (`temperature_ratio: [11, 13]` × `|default_temp|`), so warming the world **also cools every campfire** — by about 19% here. The question "is the fire still a meaningful, visibly hot feature" was answered from the field the environment actually builds, not from arithmetic on the config.
+
+**Candidates for the ambient, all measured on twelve seeds (7–18) against an 80-step cap.** "body eq" is the temperature the body settles at in that cell, which is what the survivable band `[-15, +15]` is defined on.
+
+| Candidate | `default_temp` | Episode lengths | Cold deaths | Fire cell → body eq | Ring 1 out → body eq | Coldest → body eq | Arena span | Verdict |
+|---|---|---|---|---|---|---|---|---|
+| C0 | −28..−22 *(baseline)* | 2,3,4,5,8,8,14,16,30,30,33,34 | **2/12** | +72.6 → **+58.1** | +10.6 → +8.5 | −24.5 → −19.6 | 97.1° | the world as it was |
+| C1 | −24..−21 | …,33,34,38,38 | 2/12 | +66.0 → +52.8 | +9.7 → +7.7 | −22.2 → −17.8 | 88.2° | rejected: cold still kills |
+| C2 | −22..−20 | …,33,34,47,47 | 2/12 | +61.8 → +49.4 | +9.0 → +7.2 | −20.8 → −16.7 | 82.6° | rejected: cold still kills |
+| C3 | −21..−20 | …,33,34,50,50 | 2/12 | +60.5 → +48.4 | +8.9 → +7.1 | −20.4 → −16.3 | 80.9° | rejected: cold still kills |
+| **C4** | **−20.5..−19.5** | …,33,34,50,50 | **0/12** | **+59.0 → +47.2** | **+8.6 → +6.9** | **−19.9 → −15.9** | **78.9°** | **CHOSEN** |
+| C5 | −20..−19.2 | identical to C4 | 0/12 | +57.9 → +46.3 | +8.5 → +6.8 | −19.5 → −15.6 | 77.4° | rejected: no gain over C4, less margin |
+| C6 | −19.6..−19.2 | identical to C4 | 0/12 | +57.4 → +45.9 | +8.4 → +6.7 | −19.4 → −15.5 | 76.8° | rejected: sits on the refusal edge |
+| C7 | −19.2..−19.0 | — | — | — | — | — | — | **REFUSED AT LOAD** |
+| C8 | −19..−18.5 | — | — | — | — | — | — | **REFUSED AT LOAD** |
+| C9 | −18..−16 | — | — | — | — | — | — | **REFUSED AT LOAD** |
+
+> **Read the "Cold deaths" column as warm-only (clarified 2026-09-16).** This sweep varies the **ambient temperature alone**, with the two start-condition keys left at their config values. So C4's **0/12** is the cold-death count for `default_temp` −20.5..−19.5 *by itself*, and it is **not** the figure for the override that shipped, which also sets `start_injury_high` and `start_nutrition_low` and measures **1/12**. Carrying this column across to describe the combined override is exactly the error the verification report's Issue 1 caught; the column is correct for what it measured, and is labelled here so it is not borrowed again.
+
+**There is a hard ceiling, and it is the environment's own.** `config_loader._check_thermal_structure` refuses to load a thermal world that has lost the task. Past roughly −19.2 it raises *"the cold is not a clock: three cells out settles at −14.98, inside the survivable band, so the agent never has to return to the fire."* That is the load-time gate deciding the upper bound, not a judgement call — and it is why C4 was preferred over the marginally warmer C5/C6: it keeps ~0.3–0.5° of margin to a boundary that is measured, not estimated.
+
+**The other lever — lowering the lethal floor — fails, and here is why.** Dropping `thermal.min_temperature` widens the survivable band from *both* ends, so the "three cells out must be lethal" condition breaks immediately:
+
+| Lever | Result |
+|---|---|
+| `min_temperature` −15 → −25 | **REFUSED**: three cells out settles at −22.07, inside `[-25, 15]` |
+| `min_temperature` −15 → −20 | **REFUSED**: three cells out settles at −17.34, inside `[-20, 15]` |
+| `min_temperature` −20 *with* ambient −24..−21 | **REFUSED**: three cells out settles at −18.92, inside `[-20, 15]` |
+
+So warming the ambient is the only lever of the two that the environment will certify. Recorded here so nobody re-tries the floor.
+
+**Why the two start-condition keys were needed as well.** Warming the ambient does **nothing** for the two episodes the fixtures actually record (seeds 7 and 8), because both end in starvation, not cold: nutrition falls 1.0 per step, so an episode that begins at nutrition 13 is over in 13 steps whatever the weather. Measured, warm-only versus warm-plus-start-conditions:
+
+| Variant | Lengths (12 seeds) | Median | ≥60 steps | Seed 8 (fixture episode 2) |
+|---|---|---|---|---|
+| Neither lever | 2,3,4,5,8,8,14,16,30,30,33,34 | 11.0 | 0/12 | 34 steps |
+| Warm only | 2,3,4,5,8,8,14,16,33,34,50,50 | 11.0 | 0/12 | **34 steps — unchanged** |
+| Warm + start conditions | 3,4,6,9,9,9,18,23,51,57,73,74 | 13.5 | 2/12 | **74 steps** |
+
+### What this does NOT fix — stated rather than omitted
+
+**The binding cause of short episodes in this world is predation, not cold.** Under a seeded *random* policy against level 03's 2–12 ambush predators and level 04's pounce, **6 of 12 seeds still end inside 10 steps by injury**, several from a near-healthy start (seed 10 starts at injury 1 and is dead at step 3). No thermal or start-condition value changes that. Reaching "most episodes at the 80-step cap" would need either a **predator-pressure override** — which would gut the threat/olfaction demonstration exactly as removing fires would gut the thermal one — or a **trained policy** instead of a random one. Both are decisions for the user, so neither was done. The generator's override mechanism is also dotted-scalar only, so a predator-count override would need new machinery.
+
+**Target achieved, honestly stated:** death by cold is **halved, not gone** — **2/12 → 1/12** under the override that actually ships (all three keys together). *Corrected 2026-09-16 after the verification report's Issue 1: the earlier "0/12" here was the **warm-only** result, carried across to describe the combined override. Warming alone does remove freezing, but the fuller starting stomach buys longer episodes, and seed 11 then survives to freeze at step 57 — longer episodes buy back the cold. Re-measured independently (`tmp/20260916_2100_remeasure_shipped_override.py`), classifying each death twice — once from `termination_reason`, once from the final body state — and the two agree seed for seed: injury 9, starvation 2, freezing 1. The developer's own `tmp/20260916_191500_campfire_two_levers.log` row A6 agrees.* The recorded footage roughly doubles in length (fixture episodes **14 and 34 steps → 23 and 74 steps**), with one episode now effectively at the 80-step cap. A *majority* of episodes at the cap was **not** achieved, for the reason above.
+
+### The fixtures and the frame baseline
+
+All nine CP0.2 cells regenerated (`--episodes 2 --max-steps 120 --seed 7`, the defaults). Snapshot counts: thermal cells **[15, 35] → [24, 75]**; every non-thermal cell unchanged at **[36, 9]**.
+
+| Cell | World | `run_meta` | Episode payloads | 8 pinned V1 frames |
+|---|---|---|---|---|
+| M1 | `default.yaml` — untouched | SAME | SAME | **all 8 identical** (`20a67f21…`) |
+| M2 | `default.yaml` — untouched | SAME | SAME | **all 8 identical** (`20a67f21…`) |
+| M4 | campfire world — **loosened** | CHANGED | CHANGED | **all 8 moved** (`3da423ec…` → `fd92f8c3…`, last `a8cfe9aa…` → `6d272fbc…`) |
+
+**This is exactly the wanted result**: the only cell that moved is the one whose world genuinely changed, and the two cells on the untouched config did not move a single pixel — which is what rules out an accidental change to the frozen V1 path. `frozen_files`, `user_accepted` (still 0 entries) and `plan_start_commit` are unchanged in the baseline.
+
+### Test results
+
+| Check | Before | After | Notes |
+|---|---|---|---|
+| `v1_path_guard.py check` | 10 PASS, `FRAMES PASS` ×3, **exit 0** | 10 PASS, `FRAMES PASS` ×3, **exit 0** | all ten frozen files `PASS`; `accept` never run |
+| `tests/env/test_v1_path_guard.py` | — | **71 passed** | |
+| `tests/env/test_render_audit_controls.py` | **38 passed** | 3 failed / 35 passed → **38 passed** after re-pin | see Deviations item 3 |
+| CP0.2 matrix report | — | 9/9 cells, **no failure condition fires**, exit 0 | evidence in the CP0.2 checkpoint note above |
+
+### Speed check
+
+**Skipped, and here is why it provably cannot matter:** every file changed is off the training path. `make_render_fixture_recordings.py` is a hand-run fixture generator, `test_render_audit_controls.py` is a test, and `baseline.json` is data. No `src/` module, no environment step, no model code and no config consumed by training was touched — the ten frozen V1 files are byte-identical and the two curriculum configs were not opened for writing.
+
+### Deviations from the brief — none silent
+
+1. **The loosening is not only thermal.** The brief said "temp"; the measurement showed temperature alone does nothing for the two episodes actually recorded (table above), so two of level 03's random-start ranges were loosened as well. Both are in the same in-memory override, both are stamped in `run_meta`, and reverting them is a two-line change. **Flagged for `senior-developer` to accept or reverse.**
+2. **Applied to M3 and M6b as well as M4/M4b.** Level 06 (the noise world) inherits level 05's campfires and cold baseline, so it froze identically; leaving it out would have left half the demonstration footage short. These two cells are not in the frame baseline, so the guard is unaffected by the choice.
+3. **`tests/env/test_render_audit_controls.py` was edited, and it was not named in the brief.** Three *literals* in it encode numbers the frame draws — the thermoception tick labels, the thermal scale's max-value label (`'+84'` → `'+63'`), and D10's nutrition token (`OBS: 0.13` → `OBS: 0.65`) — so all three moved when the world did. What did **not** move is the part that matters: `V1_M4_COUNTS` and `V1_M1_COUNTS` are unchanged, all seven positive controls still fire, and D13's bbox `(866, 801, 867, 804)` and 6 px overlap and D10's bbox are **identical to the old pins**. In other words the renderer and the instrument are unchanged and only the world's numbers moved, which is the reading the re-pin records in a dated comment beside each literal. The alternative — leaving three red tests — is the "undiagnosed red gate" pattern `KNOWN_BUGS.md` warns about, so it was rejected.
+
+### Prior art
+
+Checked `docs/develop/active/issues/KNOWN_BUGS.md` directly (sub-agents cannot spawn `bug-curator`): **no row records the recording world being too harsh for demonstration footage**, and nothing here contradicts an existing row. The adjacent rows — the episode-video dashboard row (D1–D13) and the "stale fixtures" note — are consistent with this work. **No new bug row is owed**; this was a deliberate world change, not a defect.
+
+### Blockers / follow-ups for `senior-developer`
+
+- **Decide on Deviation 1 and 2** (the non-thermal keys, and extending the loosening to M3/M6b).
+- **Decide on the predation ceiling.** If demonstration footage really must run to the 80-step cap, someone must choose between a predator-pressure override (new machinery in the generator, and a weaker threat demonstration) and recording from a trained policy.
+- **Out of scope and deliberately not done**, per the brief: the artifact page's example episode and its figures were not regenerated, since the grid is about to change to a 48 px cell with a new shared-cell rule.
+- **Nothing was staged or committed.** The working tree carries this plan doc (which also holds another session's Revisions 15/16), `make_render_fixture_recordings.py`, `test_render_audit_controls.py` and `baseline.json`. `docs/develop/INDEX.md` and `SAVED_RUN_CONFIG_COMPAT.md` are **staged by another session** and must not be swept in — commit with an explicit pathspec.
+
+Implemented by: developer
+
+---
+
+## Verification Report — the demonstration loosening of the recording world (2026-09-16)
+
+> **Verdict**: ✅ **VERIFIED WITH ISSUES**. The change does what it claims and the frozen V1 path is provably untouched — but one number that is **stamped into four recordings and into the guard baseline** is wrong, and must be corrected before this is committed.
+
+### What was checked, in plain words
+
+The developer loosened the world used to *record* demonstration footage — warmer air, a gentler starting injury, a fuller starting stomach — so the saved episodes last long enough to demonstrate panels whose job is to show a body changing. Nothing about the loosening lives in a config file; it is applied in memory inside the fixture generator and stamped into each recording so nobody can mistake a loosened recording for the curriculum level it names. The question this report answers is whether the *world* moved and the *renderer and its measuring instrument* stayed still — because three pinned test values were changed to match new output, and re-pinning a test to match new output is the classic way a real regression gets absorbed. **Everything was re-derived from the environment and the loader rather than read out of the developer's report or re-run through the developer's own sweep script.**
+
+### The corrected premise — independently confirmed
+
+The brief's premise (mine) was that this world "kills the agent by freezing while otherwise healthy". **It does not.** Stepping the shipped campfire world over the same twelve seeds (7–18) against an 80-step cap, with the fixture generator's own seeded random policy re-implemented from `generate_cell`, and classifying each death **twice** — once from the environment's `termination_reason` code and once, independently, from the final body state (nutrition ≤ 0 / injury ≥ max / body temperature outside `[−15, +15]`) — the two classifiers agree seed for seed:
+
+| Cause | Deaths in 12 seeds |
+|---|---|
+| Injury, i.e. predation | **6** |
+| Starvation | **4** |
+| Freezing | **2** (seeds 9 and 11, both at 30 steps) |
+
+So freezing is the *smallest* of the three killers, exactly as the developer reported. **The record now says what is true, and my brief was wrong.**
+
+### File-by-file
+
+| File | Verdict | Finding |
+|---|---|---|
+| `scripts/eval/make_render_fixture_recordings.py` | ✅ | +100/−12 lines, all of it the `_DEMO_LOOSENING` dict, its provenance string, and the four cell entries that take it. The override is applied through the existing in-memory path (`build_params`, which already raises on an override key that names nothing), so no new machinery. Verified on disk: cells **M3, M4, M4b, M6b** carry `synthetic=True` and the exact three (M4b: four) override keys in `run_meta`; **M1, M2, M5, M6 are untouched**. One incidental correction rides along and is right: M3's description said "level-05 basic world", which Revision 14 had already made wrong — the noise world is level 06. |
+| `docs/.../v1_guard/baseline.json` | ✅ | 13 lines changed, and **only** the ones that should be: M4's `run_meta_sha256`, its two episode hashes, its eight frame hashes, and the two note lines. `frozen_files` (10 entries), `user_accepted` (still `[]`) and `plan_start_commit` (`73d466d8…`) are byte-identical. M1's and M2's fixture and frame hashes do not appear in the diff at all. |
+| `tests/env/test_render_audit_controls.py` | ⚠️ | The high-risk item. Re-pin judged **sound** — see the next section. Marked ⚠️ only because the benign-set assertion is now weaker than it was (four distinct strings where there were five), which is a real, explained consequence rather than a defect. |
+| `RENDERER_LAYOUT_REDESIGN.md` (Implementation Report) | ⚠️ | Accurate and unusually candid, except for the "0/12" freezing claim — see Issue 1. |
+| `configs/**` | ✅ | **Nothing modified.** `git status --porcelain -- configs/` is empty; so is `-- src/`. The two curriculum configs the user reserved are untouched. |
+
+### The three re-pinned test literals: why this is the world moving, not the instrument
+
+The claim is that only numbers the frame *draws* changed. Checked four ways, and all four agree:
+
+1. **What did not move.** `V1_M4_COUNTS` and `V1_M1_COUNTS` do not appear in the diff. Neither does D13's bbox `(866, 801, 867, 804)` nor its 6 px overlap, nor D10's bbox `(316, 292, 365, 298)`. The `numeric_in_arena` hit count is still pinned at 5 and the `text_over_fill` count still at 5 via `V1_M4_COUNTS`. A renderer or audit change would have moved at least one of these; none moved.
+2. **The numbers that did move, moved by exactly the world's own scale factor.** A campfire's heat is `temperature_ratio × |default_temp|`, so warming the baseline from −28 to −20.5 scales every temperature the frame prints by ≈ **0.732**. Measured against the re-pins: the thermal scale's max label `+84 → +63` is a factor of **0.750**; the arena's hottest thermoception reading `+75 → +56` is **0.747**; the tick labels `+10 → +8`, `−13 → −10`, `−12 → −9` are the same ratio within rounding. That is a world uniformly cooler by the factor the config change implies — not an arbitrary redraw.
+3. **D10's nutrition token** `OBS: 0.13 → OBS: 0.65` is the direct consequence of `body.start_nutrition_low 0 → 60`, at an unchanged bbox — the same string box, a different number in it.
+4. **The whole suite is green:** `tests/env/test_render_audit_controls.py` + `tests/env/test_v1_path_guard.py` = **109 passed** (38 + 71), re-run by the verifier, which includes all seven positive controls and both "the instrument is broken" negative controls.
+
+**One consequence worth naming for a later reader:** the benign `text_over_fill` set now holds four strings for five collisions (two thermoception cells read the same temperature on this frame), where before it held five for five. The set assertion is therefore one element weaker than it was; the count is still pinned separately at 5, so nothing is unguarded — but a future world where three cells coincide would weaken it again, and the count is what should be trusted.
+
+### The load-bearing ceiling claim: verified against the loader, not against the report
+
+Every candidate was re-run through the real `load_env_config` → `load_env_params` path. `config_loader._check_thermal_structure` does refuse a warmer world, in the exact terms quoted, and it refuses the alternative lever too:
+
+| Tried | Loader's answer |
+|---|---|
+| Ambient −20.5..−19.5 (**the chosen value**) | **LOADS** |
+| Ambient −19.6..−19.2 | LOADS (the last one that does) |
+| Ambient −19.2..−19.0 | **REFUSED** — "the cold is not a clock: three cells out settles at **−14.98**, inside the survivable band [−15.0, 15.0], so the agent never has to return to the fire" |
+| Ambient −19.0..−18.5 / −18..−16 | **REFUSED**, same rule |
+| `min_temperature` −15 → −25 | **REFUSED** — three cells out settles at **−22.07**, inside [−25, 15] |
+| `min_temperature` −15 → −20 | **REFUSED** — settles at **−17.34**, inside [−20, 15] |
+| `min_temperature` −20 **with** ambient −24..−21 | **REFUSED** — settles at **−18.92**, inside [−20, 15] |
+
+The developer had not mis-read an error: the ceiling is the environment's own load-time gate, the chosen value sits just under it with margin, and the floor lever genuinely widens the band from both ends. **The lever chosen is the only one the environment will certify.**
+
+### The frame baseline split, and the guard
+
+`v1_path_guard.py check`: **10 frozen files PASS**, `ACCEPTED=0`, `UNATTRIBUTABLE=0`, **FRAMES PASS on M1, M2 and M4**, `RESULT: OK`, **exit 0**. `accept` was never run (`user_accepted` is still empty). M1 and M2 — both on the untouched `default.yaml` — are byte-identical across all eight pinned frames; M4, the loosened world, moved on all eight. That split is the evidence the frozen V1 path did not drift, and it holds.
+
+### ❗ Issue 1 (must fix before commit): the "freezing is gone, 2/12 → 0/12" claim is false for the override that actually shipped
+
+Re-measuring the **combined** override — warm air *and* the two start-condition keys, i.e. exactly what `_DEMO_LOOSENING` applies — over the same twelve seeds:
+
+| | Freezing | Predation (injury) | Starvation |
+|---|---|---|---|
+| Developer's claim, everywhere it is written | **0 / 12** | – | – |
+| Measured by the verifier (episode lengths 3, 4, 6, 9, 9, 9, 18, 23, 51, 57, 73, 74) | **1 / 12** (seed 11, at step 57) | 9 / 12 | 2 / 12 |
+
+The developer's **own** log agrees with the verifier: `tmp/20260916_191500_campfire_two_levers.log`, row **A6** — the shipped combination — records `terminators {'injury': 9, 'starvation': 2, 'THERMAL': 1}`. The `0/12` figure is the **warm-only** result (row A1, and the C4 row of the candidate sweep), and it was carried across to describe the combined override. The mechanism is easy to see and worth stating: warming the world removes the two 30-step freezes, but the fuller starting stomach then lets seed 11 survive to step 57 — long enough to freeze anyway. **Longer episodes buy back the cold.**
+
+This matters more than a typo because the sentence is **durable and duplicated**: it is stamped into the `run_meta` of four recordings (M3, M4, M4b, M6b) via `_DEMO_LOOSENING_NOTE`, written into `baseline.json`'s `frames_note`, and repeated in the source comment and the Implementation Report. A later reader comparing worlds will read "freezing 2/12 → 0/12" off the recording itself.
+
+**Required fix, and its cost.** Correct the claim in all four places to "**freezing as a cause of death 2/12 → 1/12** (the two 30-step freezes are removed; one episode now survives long enough to freeze at step 57)", and correct the report's "death by cold is gone" to "death by cold is halved". Because the note text lives in `run_meta`, changing it changes M4's `run_meta_sha256` — so the fixtures must be regenerated and `record-frames --force` re-run. **The eight frame hashes will not change** (the note does not touch the world), only the fixture hashes, which is itself a useful confirmation when it happens.
+
+### The two scope deviations, judged
+
+**(a) The override is not purely thermal — it also sets start injury and start nutrition. → ACCEPTED.** The brief said "temp", and the developer measured that temperature alone does nothing for the two episodes actually recorded (seed 8 stays at 34 steps under warm-only, and goes to 74 with the start keys). Nutrition falls 1.0 per step, so the starting value is a hard cap on episode length no matter the weather — warming a world cannot save an agent that begins with 13 nutrition. The keys are level-03 random-start *ranges*, they change no observation layout and no thermal structure, they are in-memory only, they are stamped in `run_meta`, and reverting them is a two-line change. One cost to record rather than discover later: the fixtures now never start with a near-fatal injury, so the vitals panels' extreme-value rendering is no longer exercised by a recorded episode — that case is already covered by §D5.3's labelled stress variant, and Phase 2 must not quietly drop it.
+
+**(b) Applied to M3 and M6b as well as M4/M4b. → ACCEPTED.** Since Revision 14 the noise world (level 06) inherits the campfire world (level 05), so it carries the same fires and the same cold and froze identically; loosening one and not the other would have left half the demonstration footage short and the two worlds incomparable. Verified: neither cell is in the frame baseline (`frames` holds only M1, M2, M4), so the guard is untouched by the choice, and both cells carry the provenance note in `run_meta`. Both now record 24 and 75 snapshots, matching M4.
+
+### Speed check
+
+**⚠️ Skipped by the developer, and the skip is accepted.** The rule of thumb (discuss above 5 %, block above 15 %) presumes the change can affect runtime. This one cannot: `git status --porcelain` is empty for both `src/` and `configs/`, the ten frozen V1 files all report `PASS` against their baseline hashes, and the three changed files are a hand-run fixture generator, a test file and a JSON data file. No training step, environment step, model or training-consumed config was touched. Verdict: **✅ no regression possible**.
+
+### Out-of-scope changes
+
+**None.** Every changed file is named in the brief. `docs/develop/INDEX.md` and `SAVED_RUN_CONFIG_COMPAT.md` are staged by a different session and were correctly left alone.
+
+### Conclusion
+
+The world change is measured, justified, reversible, stamped into every artefact it affects, and demonstrably did not move the renderer or the audit. The re-pin is sound and is the right call over leaving three red tests. **One number is wrong in four places and must be corrected, with a fixture regeneration, before this is committed.**
+
+Verified by: senior-developer
+
+---
+
+## Correction Report — Issue 1 fixed: freezing is halved, not removed (2026-09-16)
+
+### What this is, in plain words
+
+The verification report above found that one sentence in my Implementation Report was wrong, and that the wrong sentence had been **stamped into four saved recordings and into the guard's baseline file** — so anyone later opening one of those recordings to ask "what world did this come from?" would have been told something false about it. The sentence claimed that warming the recording world removed death-by-freezing entirely. It does not. That "gone" figure describes **warming the air on its own**; the override that actually ships also fills the agent's stomach and softens its starting injury, and those longer episodes give the cold more time to work. This report records the re-measurement, the four corrections, and the check proving nothing but the text changed.
+
+### The re-measured figure, and the evidence for it
+
+**Freezing as a cause of death under the shipped override: 1 of 12 seeds, not 0 of 12.** The one death is seed 11, which freezes at **step 57**.
+
+I re-measured rather than trusting either the brief or the verifier. The script is `tmp/20260916_2100_remeasure_shipped_override.py`; it reads the override dict **out of the generator itself** (asserting `CELLS["M4"].overrides` equals `_DEMO_LOOSENING`, so a retyped value cannot drift from the shipped one), steps the real environment over the same twelve seeds (7–18) against an 80-step cap, and classifies each death **twice** — once from the environment's `termination_reason`, once independently from the final body state (nutrition ≤ 0 / injury ≥ `max_injury` / body temperature outside the loaded `[−15, +15]` band). **The two classifiers agree on all twelve seeds:**
+
+| Cause | Deaths in 12 seeds |
+|---|---|
+| Injury (predation) | 9 |
+| Starvation | 2 |
+| **Freezing** | **1** (seed 11, step 57) |
+
+This matches the developer log's row A6 — the shipped combination — which records `{'injury': 9, 'starvation': 2, 'THERMAL': 1}`, and it matches the verifier's independent count. **The user's stated figure of 1/12 is confirmed, and the measurement is what was used.**
+
+**Why the error happened, stated so it is not repeated:** warming the air alone (log row A1) genuinely gives 0/12 — it removes both 30-step freezes. Adding the two start-condition keys then lets seed 11 survive to step 57, long enough to freeze anyway. **Longer episodes buy back the cold.** The 0/12 was a true number about a *different* override, borrowed to describe the shipped one.
+
+### The four places corrected
+
+| # | Place | What it now says |
+|---|---|---|
+| 1 | `_DEMO_LOOSENING_NOTE` in `scripts/eval/make_render_fixture_recordings.py` — the string written into the `run_meta` of **M3, M4, M4b, M6b** | "Measured on the **COMBINED** override, i.e. exactly the three values above and not on any one of them alone: freezing as a cause of death **2/12 seeds → 1/12, HALVED rather than removed**", followed by the mechanism and the note that warming alone would give 0/12 |
+| 2 | `baseline.json` `frames_note` | Rewritten through `record-frames --force --note` (**never hand-edited**), carrying the same corrected figure, an explicit note that the earlier 0/12 in that field was the warm-only result carried across by mistake, and the expected hash split for this re-record |
+| 3 | The source comment above `_DEMO_LOOSENING` | Now says warming **alone** gives 0/12 and adds "BE PRECISE ABOUT WHICH OVERRIDE THAT DESCRIBES", the combined 1/12, and the buy-back mechanism |
+| 4 | Implementation Report, "Target achieved, honestly stated" | "death by cold is **halved, not gone** — **2/12 → 1/12** under the override that actually ships", with a dated note on what the old number was and where it came from |
+
+**A fifth place, clarified rather than changed.** The candidate-sweep table's "Cold deaths" column (C0–C6) measures the **ambient lever alone**, so its `0/12` for C4 is correct for what it measured; changing it would have made it wrong. A note under the table now labels the whole column warm-only and states it is not the figure for the shipped override — since borrowing that column is precisely how this error occurred.
+
+### The regeneration used as a check: frame hashes vs fixture hashes
+
+The note is **metadata**: it must move the fixture hashes and leave every pinned pixel alone. `baseline.json` was snapshotted before anything was touched, then compared field by field.
+
+| Hash set | Expected | Measured |
+|---|---|---|
+| **8 pinned frame hashes, M1** | identical | ✅ **all 8 identical** |
+| **8 pinned frame hashes, M2** | identical | ✅ **all 8 identical** |
+| **8 pinned frame hashes, M4** (the loosened, regenerated cell) | identical | ✅ **all 8 identical** — first `fd92f8c38200…`, last `6d272fbcf6e6…`, unchanged |
+| **M4 `run_meta_sha256`** (carries the note) | changes | ✅ **`8b11d9872f20c714…` → `a52d2e838f7e211c…`** |
+| M4 episode payloads | — | **byte-identical** (both episodes) |
+| M1/M2 fixture hashes | unchanged | ✅ unchanged (not regenerated; the control) |
+
+**No frame hash moved, so no investigation was owed.** The result is sharper than predicted: the only hash that moved in the entire baseline is the one `run_meta` carrying the text, and even the episode payloads are byte-identical — the world, the trajectories and every drawn pixel are provably untouched, and the change is confined to the provenance string. `frozen_files` (10), `user_accepted` (still **0 entries** — `accept` was never run), `plan_start_commit`, `plan_owned_paths` and `plan_sessions` are all unchanged.
+
+### Test results
+
+| Check | Result |
+|---|---|
+| `scripts/eval/v1_path_guard.py check` | **10/10 frozen files PASS**; ACCEPTED=0, ATTRIBUTED=0, UNATTRIBUTABLE=0; **FRAMES PASS ×3** (M1, M2, M4 "8 raw frames identical"); `RESULT: OK`, **exit 0** |
+| `tests/env/test_render_audit_controls.py` | **38 passed**, exit 0 |
+| `tests/env/test_v1_path_guard.py` | **71 passed**, exit 0 |
+| Fixture regeneration (`--cells M3 M4 M4b M6b`) | exit 0; corrected note confirmed present in `run_meta` |
+
+All four expected outcomes met: 38 + 71 passing, 10/10 PASS + FRAMES PASS, exit 0.
+
+### Speed check
+
+**Skipped, and it provably cannot matter.** The only code change is the text of a comment and of a provenance string in a hand-run fixture generator; `git status --porcelain` is **empty for both `src/` and `configs/`**, and the guard reports all ten frozen V1 files byte-identical. No training step, environment step, model, or training-consumed config was touched.
+
+### On the benign `text_over_fill` set (the verification's open question) — recommendation, not a silent change
+
+**It was not changed either way.** The assertion at `tests/env/test_render_audit_controls.py:524` pins four distinct strings for five collisions, because two thermoception cells happen to read the same temperature on this frame.
+
+**Recommendation: leave it to CP0.3b, which owns it — do not tighten it now.** (1) **CP0.3 is closed** (`[x]`) but **CP0.3b is open** (`[ ]`), and its text already commits to re-pinning "the per-rule finding counts on the frozen M1 and M4 frames" with "every other rule's count unchanged" — this assertion sits squarely inside that scope, so tightening it now would do CP0.3b's work under a note-correction change and outside its gate. (2) Nothing is currently unguarded: the **count is pinned separately at 5** via `V1_M4_COUNTS`, so a collision appearing or disappearing still fails the suite; only the weaker *identity* check has degraded. (3) The right fix is a **multiset/`Counter`** over the collision strings rather than a `set`, restoring five-for-five and immune to future coincidences — but that changes the audit's own assertion shape, exactly the kind of instrument change CP0.3b exists to gate and re-pin deliberately. Doing it here would mean re-pinning an instrument in the same change that re-recorded a baseline, the pattern this plan is careful to avoid. **Flagged for `senior-developer` to schedule into CP0.3b.**
+
+### Deviations and scope
+
+**None.** Every file changed is one of the four the brief names. No config file was opened for writing (`05-campfire_thermal_10x10.yaml` and `06-sensory_noise_10x10.yaml` untouched), none of the ten frozen V1-path files changed, `accept` was never run, and **nothing was staged or committed** — the parallel session's staged files were left untouched and the index was never written.
+
+Implemented by: developer

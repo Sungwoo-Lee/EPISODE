@@ -102,6 +102,89 @@ _CAMPFIRE_PROVENANCE = (
 )
 
 
+# --- The demonstration loosening (2026-09-16) ----------------------------------------
+# WHAT AND WHY, in plain words. Levels 05 and 06 are CURRICULUM rungs: they are meant to
+# be hard, and their difficulty is the user's to set (they are being tuned in a separate
+# session). But these fixtures are not a curriculum — they are the footage the dashboard
+# redesign is demonstrated and audited on, and a world that kills the agent in a handful
+# of steps is a poor demonstration of panels whose whole job is to show a body changing
+# over time. The user's instruction: "if you think the current temp is too harsh to record
+# the trajectories for the video, then just make it loose for the video recording purpose."
+#
+# So the loosening lives HERE, as an in-memory override, and NEVER in the config files.
+# It is stamped into every affected recording's `run_meta` (`synthetic`, `overrides`, and
+# the note below), so a reader can see that the world was loosened and by exactly how much.
+#
+# MEASURED, not estimated (twelve seeds 7..18, an 80-step cap, this script's own seeded
+# random policy; tmp/20260916_190000_campfire_loosening_sweep.py and
+# tmp/20260916_191500_campfire_two_levers.py):
+#
+#   thermal.default_temp  -28..-22 -> -20.5..-19.5
+#     The world baseline. Warming it ALONE removes freezing as a cause of death entirely
+#     (2 of 12 seeds -> 0 of 12) and roughly doubles the episodes the cold used to end
+#     (30, 30 steps -> 50, 50). BE PRECISE ABOUT WHICH OVERRIDE THAT DESCRIBES: 0/12 is
+#     the WARM-ONLY result, and it does NOT hold for the combination actually shipped
+#     below. Under all three keys together, freezing is HALVED, not removed: 2/12 -> 1/12
+#     (re-measured 2026-09-16; tmp/20260916_2100_remeasure_shipped_override.py, and the
+#     two-levers log's row A6 agrees: {'injury': 9, 'starvation': 2, 'THERMAL': 1}). The
+#     mechanism is worth stating because it is not obvious: warming removes the two
+#     30-step freezes, but the fuller starting stomach then buys longer episodes, and
+#     seed 11 survives to step 57 - long enough to freeze anyway. Longer episodes buy
+#     back the cold. THE COUPLING IS REAL AND WAS CHECKED: a fire's heat is
+#     `temperature_ratio x |default_temp|`, so warming the ambient also COOLS every
+#     campfire. Measured on the field the environment actually builds, the fire is still
+#     overwhelmingly hot and the ring one cell out is still the survivable spot — fire
+#     cell +59.0 deg (the body settles at +47.2, lethal above +15), ring one cell out
+#     +8.6 deg (settles at +6.9, inside the survivable band), coldest cell -19.9 deg
+#     (settles at -15.9, still lethal), and the arena still spans 78.9 degrees
+#     hottest-to-coldest. The fire remains a feature the agent has reason to walk to.
+#     THE CEILING IS NOT A PREFERENCE. `config_loader._check_thermal_structure` refuses a
+#     thermal world that has lost the task, and a baseline warmer than about -19.2 is
+#     REFUSED for "the cold is not a clock" (three cells out becomes survivable, so the
+#     agent never has to return to the fire). -19.5 is chosen with margin to that edge;
+#     -19.0 is measured refused.
+#
+#   body.start_injury_high     100 -> 40   (start_injury_low stays 0)
+#   body.start_nutrition_low     0 -> 60   (start_nutrition_high stays 100)
+#     Level 03's random-start ranges, inherited down the ladder. They matter MORE than the
+#     temperature for the footage actually recorded: nutrition falls 1.0 per step, so an
+#     episode beginning at nutrition 13 is over in 13 steps whatever the weather. Seed 8 —
+#     the second episode of every thermal cell — goes from 34 steps to 74 under this pair.
+#
+# WHAT THIS DOES **NOT** FIX, measured and reported rather than quietly left out: the
+# binding cause of short episodes here is PREDATION, not cold. Under a random policy
+# against level 03's 2-12 ambush predators and level 04's pounce, 6 of 12 seeds still end
+# inside 10 steps by injury, several from a near-healthy start. No thermal or
+# start-condition value changes that; it would take a predator-pressure override, which is
+# a far larger change to what these fixtures demonstrate and is the user's call.
+_DEMO_LOOSENING = {
+    "thermal.default_temp": [-20.5, -19.5],
+    "body.start_injury_high": 40,
+    "body.start_nutrition_low": 60,
+}
+
+_DEMO_LOOSENING_NOTE = (
+    "DEMONSTRATION LOOSENING (2026-09-16): this recording's world is NOT the curriculum "
+    "level its config_path names. Three values were loosened IN MEMORY, for recording "
+    "footage only, and no config file was edited: thermal.default_temp -28..-22 -> "
+    "-20.5..-19.5 (the world baseline), body.start_injury_high 100 -> 40, and "
+    "body.start_nutrition_low 0 -> 60 (level 03's random-start ranges; nutrition falls "
+    "1.0/step, so the start value caps the episode). Measured on the COMBINED override, "
+    "i.e. exactly the three values above and not on any one of them alone: freezing as a "
+    "cause of death 2/12 seeds -> 1/12, HALVED rather than removed. Warming the baseline "
+    "on its own would remove it (0/12), but the fuller starting stomach buys longer "
+    "episodes and seed 11 then survives to step 57 - long enough to freeze anyway; longer "
+    "episodes buy back the cold. Measured consequences for the thermal task, which "
+    "SURVIVES the "
+    "change: fire cell +59.0 deg (body equilibrium +47.2, lethal above +15), ring one cell "
+    "out +8.6 deg (equilibrium +6.9, survivable), coldest cell -19.9 deg (equilibrium "
+    "-15.9, still lethal), arena span 78.9 deg. Because a fire's heat is a RATIO of the "
+    "baseline's magnitude, warming the ambient also COOLED every fire by about 19 percent. "
+    "Any comparison against a recording made before this date compares two different "
+    "worlds."
+)
+
+
 @dataclasses.dataclass(frozen=True)
 class Cell:
     """One matrix cell: a maintained config plus an in-memory override."""
@@ -135,24 +218,32 @@ CELLS: dict[str, Cell] = {
                "interoceptive nociception observed, noise off. Revision 10 re-sources this "
                "to default.yaml, which already ships nociception on and noise off, so M2's "
                "world is identical to M1's by construction"),
-    "M3": Cell(NOISE_WORLD, {},
-               "same, with injury-gated perceptual noise on (level-05 basic world; "
-               "interoceptive nociception is already on via inheritance, so no override)"),
-    "M4": Cell(CAMPFIRE, {},
+    "M3": Cell(NOISE_WORLD, dict(_DEMO_LOOSENING),
+               "same, with injury-gated perceptual noise on (the level-06 basic world; "
+               "interoceptive nociception is already on via inheritance). Carries the "
+               "demonstration loosening: level 06 inherits level 05's campfires and cold "
+               "baseline, so it froze the agent in exactly the same way",
+               provenance=_DEMO_LOOSENING_NOTE),
+    "M4": Cell(CAMPFIRE, dict(_DEMO_LOOSENING),
                "campfire temperature world: observation lacks Nutrition/Injury and includes "
-               "Body Temperature and Thermoception",
-               provenance=_CAMPFIRE_PROVENANCE),
-    "M4b": Cell(CAMPFIRE, {"thermal.body_temp_observable": False},
+               "Body Temperature and Thermoception. Recorded under the demonstration "
+               "loosening",
+               provenance=_CAMPFIRE_PROVENANCE + " " + _DEMO_LOOSENING_NOTE),
+    "M4b": Cell(CAMPFIRE,
+                dict(_DEMO_LOOSENING, **{"thermal.body_temp_observable": False}),
                 "M4 with body temperature removed from the observation, so the temperature "
-                "row takes the 'not observed' path",
-                provenance=_CAMPFIRE_PROVENANCE),
+                "row takes the 'not observed' path. Recorded under the demonstration "
+                "loosening",
+                provenance=_CAMPFIRE_PROVENANCE + " " + _DEMO_LOOSENING_NOTE),
     "M5": Cell(DEFAULT_CONFIG, {"sensory.olfactory_grid_range": 1},
                "olfaction as a directional grid (radius 1)"),
     "M6": Cell(DEFAULT_CONFIG, {"sensory.location_sensor": True},
                "location sensor on"),
-    "M6b": Cell(NOISE_WORLD, {},
+    "M6b": Cell(NOISE_WORLD, dict(_DEMO_LOOSENING),
                 "M3's world recorded WITHOUT true observations, exercising the "
-                "'true obs not recorded' caption",
+                "'true obs not recorded' caption. Carries the demonstration loosening, "
+                "like M3 whose world it shares",
+                provenance=_DEMO_LOOSENING_NOTE,
                 no_true_obs=True),
 
     # ---- E cells: extended-range senses (Phase 2 / CP2.7; defined here, not run at CP0.2)

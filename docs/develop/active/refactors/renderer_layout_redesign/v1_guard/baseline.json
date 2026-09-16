@@ -86,10 +86,10 @@
     },
     "M4": {
       "recordings_dir": "results/render_audit/recordings/M4/M4",
-      "run_meta_sha256": "e63f642470cb4374f24ece958296c3d5fc8b54e3d95f4b695375b99919e93d56",
+      "run_meta_sha256": "a52d2e838f7e211cd0cd63d1461432aca7188cb3eda94e24b66b1d7349c1d6c7",
       "episodes": {
-        "episode_000001.rec.gz": "5e54601792845956202bfb058f38f3857e72faaef38ead76805182a1b3ccd6ca",
-        "episode_000002.rec.gz": "33e09a7af4810bc02a1c918807c5a687fdc8a1b60ac3cfee2dbd7839cefb13dd"
+        "episode_000001.rec.gz": "b046b4e1e554391e0bc503aa5ec99ca577b1a117c74c19d52bef3d5cb4a8a8b8",
+        "episode_000002.rec.gz": "b9f8e700d366f53f8475f94c9147545d135cb7074afe9d49e6b29b3ba9250643"
       }
     }
   },
@@ -126,17 +126,17 @@
       "episode": "episode_000001.rec.gz",
       "steps": 8,
       "sha256": [
-        "3da423ec314b4e61bfa11c63433916b3ff8f2dc98abadc05eb349b7a5f3db123",
-        "b48d184d02ebeeaff52ad52cd3a2e1e3c964fc8960e9c861c57e9c1f032b3f0e",
-        "978e70bbfb12000ba05151d7947bd3d466a3997985a8d73f2fe518af9287a8a4",
-        "729c96c4c3dd619431a0c507a259778895292f17b462fc845e58adb879910107",
-        "25a5a83b5f51cb9e0d8234b71d36670362b1385ae1e855840a89a1168dd80a9d",
-        "854970b05dcfc9fe27acc2372327062f5f5df011c69fef820d088d2af813883d",
-        "2c30c6c726d3cc28ed125d65725c31022d704c1a9fbfa43ab7279dac987e3c74",
-        "a8cfe9aaf600ed986e8e04ebd6bdd4daf60cdc802fd6bc03c58241be55ee3912"
+        "fd92f8c38200d0ad4b1888cd088fcc0d07e180970972a426e9636effaffaf884",
+        "c5add3f59003c4c5442b48729a81e84aa2cc3a6e3d45ca3bba42dab2e3dba079",
+        "fadbd6f72ef71f65a599e5a24f7318303bbbdfe7b5f0dbebb85893f64d6c6db1",
+        "f0c9d34a77cabc1be2116057e627282512e9e71dc557287fd9f2e70da9ec1e73",
+        "f5083a36ac0755e7c1501f4e5ae051a024bf10acb3b65ec4e49d20cf995c4dca",
+        "d47273070b3d0c6f0caa88d06835718a036608900c27669a09bc18eed30bf121",
+        "d1e3aa3c9387d874cfffd0022f99de4f35bf191c9029c698e109c50d9e3a568a",
+        "6d272fbcf6e60388b36b700ce50c301fd21be487e9bd69498247160d9340ea39"
       ]
     }
   },
-  "frames_recorded_at": "2026-09-16T14:50:51+09:00",
-  "frames_note": "Ladder inheritance fix 2026-09-16 (RENDERER_LAYOUT_REDESIGN Revision 14). basic/06-campfire_thermal -> 05-campfire_thermal, re-parented from environment/default onto basic/04-jump_attack_10x10; basic/05-sensory_noise -> 06-sensory_noise, re-parented onto 05-campfire_thermal. Cell M4's WORLD CHANGED CONTENT (gained level-03 random start nutrition/injury and scene counts, and level-04 pouncing predators; 37 of 190 resolved EnvParams fields differ), so M4's eight frames are EXPECTED to differ. M1/M2 load default.yaml and must not move. Fixtures regenerated after correcting the campfire config header and the generator's provenance string, whose 'only 1 of 190 fields differs from the archived world' claim held only on the old parent (now 38)."
+  "frames_recorded_at": "2026-09-16T20:26:15+09:00",
+  "frames_note": "Note-text correction only (2026-09-16, verification report Issue 1). The world, the override and the generator's behaviour are UNCHANGED since the 19:39 frame baseline; the only thing that changed is the provenance TEXT stamped into run_meta, so cells M3/M4/M4b/M6b were regenerated to carry the corrected wording. Demonstration loosening 2026-09-16: the render-audit RECORDING world was too harsh to produce usable demonstration footage, so cells M3/M4/M4b/M6b are recorded under an in-memory loosening applied inside scripts/eval/make_render_fixture_recordings.py (_DEMO_LOOSENING). No config file was edited: thermal.default_temp -28..-22 -> -20.5..-19.5, body.start_injury_high 100 -> 40, body.start_nutrition_low 0 -> 60. Measured on the COMBINED override, i.e. all three keys together: freezing as a cause of death 2/12 seeds -> 1/12, HALVED rather than removed (CORRECTED from an earlier 0/12 in this field, which was the WARM-ONLY result carried across by mistake; warming alone does give 0/12, but the fuller starting stomach buys longer episodes and seed 11 then survives to freeze at step 57). The thermal task survives (fire cell +59.0 deg / body equilibrium +47.2, lethal; ring one cell out +8.6 deg / equilibrium +6.9, survivable; coldest cell equilibrium -15.9, still lethal; arena span 78.9 deg). EXPECTED HASH SPLIT for this re-record, and it is the check: M4's FIXTURE hashes move (run_meta carries the corrected note text), while all eight pinned FRAME hashes must come back byte-identical, because note text is metadata and touches no pixel. M1 and M2 load configs/environment/default.yaml, were not regenerated, and are unchanged throughout - that is the control."
 }

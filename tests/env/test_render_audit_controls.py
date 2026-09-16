@@ -90,7 +90,11 @@ CONTROL_COORDS = {
     "D3": [("text_over_border", "MINIMAP", None, 30, (252, 644, 295, 644))],
     "D6": [("text_over_text", "COLLISION", "'C'", 17, (1117, 453, 1122, 457)),
            ("text_over_text", "COLLISION", "'U'", 25, (1179, 453, 1184, 457))],
-    "D10": [("observed_caption", "OBS:  0.13", "Nutrition", 0, (316, 292, 365, 298))],
+    # The token carries the VALUE drawn on the frame, so it moves when the fixture world
+    # does. Re-pinned 2026-09-16 (0.13 -> 0.65) for the demonstration loosening applied in
+    # make_render_fixture_recordings.py (_DEMO_LOOSENING), which raises the episode's start
+    # nutrition. The bbox is unchanged, which is the part that says the defect has not moved.
+    "D10": [("observed_caption", "OBS:  0.65", "Nutrition", 0, (316, 292, 365, 298))],
 }
 BBOX_TOL_PX = 2
 PX_TOL_FRAC = 0.2
@@ -497,7 +501,9 @@ def test_fill_class_splits_the_thermal_scale_label_from_the_in_widget_labels(v1_
     """`text_over_fill` is NOT a uniformly benign class, and this pins which is which.
 
     Five of the six fill collisions on this frame are labels composed after the widget
-    they sit on — legible by design. The sixth is not: the thermal scale's `+84` end label
+    they sit on — legible by design. The sixth is not: the thermal scale's max-value end
+    label (`+63` on the current fixture — the number is the world's hottest temperature,
+    so it moves whenever the world does, while the geometry below does not)
     is anchored at axes-fraction 0.77000 while the colour strip's last segment runs to
     0.77220 (each segment is drawn 0.002 wider than its share to close the hairline gaps),
     and the segment is composed after the label, so it paints over the tip of the `+`.
@@ -509,11 +515,17 @@ def test_fill_class_splits_the_thermal_scale_label_from_the_in_widget_labels(v1_
     benign = {f.a for f in findings if f.rule == "text_over_fill"}
     covered = [f for f in findings if f.rule == "fill_over_text"]
 
-    assert benign == {"text '+0.00  real +0.00'", "text '+10'", "text '-13'",
-                      "text '-14'", "text '-12'"}, sorted(benign)
+    # Re-pinned 2026-09-16 for the demonstration loosening (_DEMO_LOOSENING in
+    # make_render_fixture_recordings.py): every literal here is a TEMPERATURE the world
+    # draws, so all of them moved, while the count (5, see V1_M4_COUNTS) and the covered
+    # label's bbox and overlap below did NOT — which is what says the world changed and
+    # the renderer did not. Four distinct strings for five collisions: two thermoception
+    # cells read the same temperature on this frame.
+    assert benign == {"text '+0.00  real +0.00'", "text '+8'", "text '-10'",
+                      "text '-9'"}, sorted(benign)
     assert len(covered) == 1, covered
     f = covered[0]
-    assert "'+84'" in f.a and "Rectangle" in f.b
+    assert "'+63'" in f.a and "Rectangle" in f.b
     assert _bbox_close(f.bbox, (866, 801, 867, 804)), f.bbox
     assert _px_close(f.overlap_px, 6), f.overlap_px
 
@@ -534,8 +546,10 @@ def test_numeric_in_arena_is_reachable_and_fires():
     probe.close()
     hits = [f for f in findings if f.rule == "numeric_in_arena"]
     assert len(hits) == 5, hits
-    assert {"text '+10'", "text '-13'", "text '-14'", "text '-12'", "text '+75'"} == \
-        {h.a for h in hits}
+    # Re-pinned 2026-09-16 for the demonstration loosening: these are the thermoception
+    # readings the frame draws, so they move with the world while the hit COUNT does not.
+    # Five hits, four distinct strings — two cells read the same temperature here.
+    assert {"text '+56'", "text '+8'", "text '-10'", "text '-9'"} == {h.a for h in hits}
 
     quiet, probe2, _i = audit.audit_frame(fi, "v2", arena_axes=None)
     probe2.close()
