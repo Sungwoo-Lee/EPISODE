@@ -204,21 +204,39 @@ def _map_geometry(r, square):
     return gax, cell, (square[1] + 0.5) * cell, (square[0] + 0.5) * cell
 
 
-def _mutate(r, name, square):
-    """Break the MAP on purpose, on the artists the real painter drew."""
+def _mutate(r, name, square, amount=None):
+    """Break the MAP on purpose, on the artists the real painter drew.
+
+    GRADED, since Revision 23 §R23.2. `amount` makes the same defect progressively
+    shallower, which is what turns a single defect POINT into a population the ratio floor
+    can be swept against:
+
+      * `M-F3` — the overpainting disc's radius as a fraction of the dot's. 1.0 (the
+        default) is the original full-dot mutation, which removes a neighbour's colour
+        entirely and is caught by the DISTINCTNESS check, never reaching the floor.
+      * `M-F4` — how far the identity pip is dragged from its own wedge towards the
+        square's centre. 1.0 (the default) is the centre itself, i.e. the painter as it
+        stood before Revision 22; 0.8 is a shallow crossing that eats two pixels.
+
+    The pip's radius is set to the pre-Revision-22 value for every M-F4 member, so the only
+    thing that varies across the family is how far it crosses — otherwise the family would
+    be sweeping two things at once and its gap table would mean nothing.
+    """
     from matplotlib.patches import Circle, Wedge
 
     gax, cell, cx, cy = _map_geometry(r, square)
+    frac = 1.0 if amount is None else float(amount)
     here = [a for a in gax.get_children()
             if isinstance(a, (Circle, Wedge)) and a.get_visible()
             and abs(a.center[0] - cx) < cell / 2 and abs(a.center[1] - cy) < cell / 2]
     if name == "M-F3":
-        gax.add_patch(Circle((cx, cy), cell * 0.30, fc=P.MINIMAP_COLOUR["agent"],
+        gax.add_patch(Circle((cx, cy), cell * 0.30 * frac, fc=P.MINIMAP_COLOUR["agent"],
                              ec=P.WHITE, lw=1.2, zorder=9))
     elif name == "M-F4":
         pips = [a for a in here if isinstance(a, Circle) and a.get_radius() < cell * 0.2]
         assert pips, "no identity pip on that square to move back to the centre"
-        pips[0].set_center((cx, cy))
+        px, py = pips[0].get_center()
+        pips[0].set_center((px + frac * (cx - px), py + frac * (cy - py)))
         pips[0].set_radius(cell * 0.30 * PN.IDENT_FRAC)
     elif name == "M-F5":
         wedges = [a for a in here if isinstance(a, Wedge)]
@@ -247,11 +265,11 @@ def _census(frame, probe, r, occ, square):
     return out
 
 
-def _run_map(squares, mutation=None, at=None, **kw):
+def _run_map(squares, mutation=None, at=None, amount=None, **kw):
     """Findings + per-square ratios for the World map of one rendered frame."""
     with _frame(squares, **kw) as (r, frame, occ, params):
         if mutation:
-            frame = _mutate(r, mutation, at)
+            frame = _mutate(r, mutation, at, amount)
         probe = audit.FrameProbe(r.fig, frame)
         try:
             findings = audit.minimap_overdraw(probe, "minimap", occ,
@@ -371,27 +389,29 @@ def test_m_f5_amber_painted_by_anything_but_the_identity_pip_is_caught():
 @needs_fixtures
 @pytest.mark.integration
 def test_a_correct_three_way_loses_exactly_one_pixel_to_the_shared_split_line():
-    """An OPEN finding, pinned as a number so it cannot be forgotten or absorbed.
+    """A pinned PROPERTY of the drawing, and the tightest correct case the floor must pass.
 
     On a correct three-way dot the first-drawn wedge measures 16 classified pixels against
-    17 when its own artist is drawn alone — 94.1 % against a 98 % floor — and the rule
-    fires on a picture that is correct. The cause was measured, not guessed: the white
+    17 when its own artist is drawn alone. The cause was measured, not guessed: the white
     0.8 px line that divides two wedges is stroked by BOTH of them, and compositing the
     same partially-covered pixel twice leaves it whiter than either pass alone (~9 % white
     against ~5 %), which carries that one pixel from 7/255 to 13/255 away from its
     colour — just past `MINIMAP_DELTA`'s 12.
 
-    WHY NOTHING WAS CHANGED HERE. Under Revision 22 §R22.4's own test this is the case
-    where "a picture correct as drawn is misclassified by the number", and the number in
-    question is `SURVIVAL_MIN = 0.98` — swept on the grid panel's ~330 px² tokens, where a
-    one-pixel seam is 0.3 %, and reused unswept on a 17 px map wedge where it is 6 %.
-    Moving a constant is a plan decision made in the plan text with its evidence, never in
-    a test, so this is reported rather than fixed. The gap it would have to sit in is
-    measured and real: worst correct control 0.941, best mutation 0.833.
+    THE SEAM IS NOT A DEFECT AND IS NOT REPAIRED (§R23.3). Three repairs were measured and
+    rejected: round joins changed nothing; folding a square's wedges into one artist would
+    force 1.000 by construction while hiding the draw-order defect M-F3 exists to catch;
+    and drawing the wedges EDGELESS removes the one-pixel loss but yields ratios ABOVE
+    1.000 (23/22, 26/25), because with no white line the two wedge colours meet directly
+    and their blend is credited to one of them — error in the direction that CONCEALS
+    occlusion. The white split line is what makes a blend classify as neither colour.
 
-    This test pins the measurement. The companion below asserts the rule still fires, with
-    a STRICT xfail, so the day the floor question is settled this file goes red and the
-    plan note has to be updated rather than quietly drifting out of date.
+    WHAT CHANGED IS THE NUMBER, AND ONLY FOR THIS PANEL (§R23.1). This case used to fire,
+    because the map's census path had inherited the grid panel's `SURVIVAL_MIN = 0.98` —
+    swept on ~330 px² arena tokens where one seam pixel is 0.3 %, applied to a 17 px wedge
+    where it is 6 %, and unreachable there at all below 50 classified pixels. The map now
+    has its own floor and 16/17 clears it with room to spare, which is asserted here so
+    that the margin is a measured number rather than a claim in a comment.
     """
     _findings, ratios = _run_map({(4, 4): ["agent", "predator", "neutral"]})
     num, den, ratio = ratios[(4, 4)]["agent"]
@@ -399,19 +419,191 @@ def test_a_correct_three_way_loses_exactly_one_pixel_to_the_shared_split_line():
     assert ratio == pytest.approx(16 / 17, abs=1e-6)
     assert ratios[(4, 4)]["predator"][2] == pytest.approx(1.0)
     assert ratios[(4, 4)]["neutral"][2] == pytest.approx(1.0)
+    assert ratio - audit.MINIMAP_SURVIVAL_MIN == pytest.approx(0.0112, abs=5e-4), (
+        f"16/17 = {ratio:.4f} against a floor of {audit.MINIMAP_SURVIVAL_MIN}; the margin "
+        f"§R23.1 recorded was 0.0112")
 
 
 @needs_fixtures
 @pytest.mark.integration
-@pytest.mark.xfail(strict=True,
-                   reason="OPEN: the minimap reuses SURVIVAL_MIN (0.98), swept on 330 px² "
-                          "arena tokens, against a 17 px map wedge where one anti-aliased "
-                          "pixel is 6 %. A correct three-way therefore fires at 94.1 %. "
-                          "Moving the floor is a plan decision (§R20.3, §R22.4) and is "
-                          "senior-developer's; when it is taken, this xfail turns red.")
 def test_a_correct_three_way_is_silent():
+    """The former strict xfail, retired by Revision 23 — this is the day it turned.
+
+    It was registered to fail while the map measured against the arena's floor, precisely
+    so that settling the constant would make the suite go red rather than let a stale plan
+    note drift. `MINIMAP_SURVIVAL_MIN` settles it, so the picture that was always correct
+    is now also silent. It must NEVER be made silent by any other means: shrinking a wedge,
+    widening `MINIMAP_DELTA` or folding the wedges into one artist all turn this green
+    while destroying what the rule measures (§R23.1 *Fails if:*).
+    """
     findings, ratios = _run_map({(4, 4): ["agent", "predator", "neutral"]})
     assert findings == [], (findings, ratios)
+
+
+# ===========================================================================
+# the map's own survival floor: the re-registered family and the gap table
+# ===========================================================================
+#: §R23.2's re-registered family: FOUR members, each of which must fire through the RATIO
+#: FLOOR rather than through the distinctness check.
+#:
+#: WHY IT WAS RE-REGISTERED. The three mutations §R22.6 pre-registered do not all test this
+#: floor. Measured: M-F3 at full dot radius removes a neighbour's colour ENTIRELY and M-F5
+#: recolours a whole wedge, so both are caught by distinctness — the composite shows fewer
+#: palette colours than the square holds kinds — and the ratio is never consulted. Only
+#: M-F4 reached the floor, so the defect side of the gap was one POINT rather than a
+#: population, and "best mutation 0.833" said nothing about how shallow a defect this rule
+#: can still see. The arena hit the same problem at §R20.3 and answered it with a graded
+#: three-member family; the map never inherited that discipline until Revision 23.
+#:
+#: Each row is (name, occupants, mutation, amount, measured ratio at 18.40 px).
+MAP_FLOOR_FAMILY = (
+    ("M-F4a", ["hiding_predator", "neutral"], "M-F4", 1.00, 0.8333),   # pip at the centre
+    ("M-F4b", ["hiding_predator", "neutral"], "M-F4", 0.80, 0.9167),   # shallow crossing
+    ("M-F3a", ["predator", "neutral"], "M-F3", 0.35, 0.5833),
+    ("M-F3b", ["predator", "neutral"], "M-F3", 0.25, 0.7500),          # shallowest seen
+)
+
+#: The negative partners, measured and kept rather than quietly dropped. At 60 % and 40 %
+#: of the way to the centre the pip costs the neighbour NO classified pixel, so the rule is
+#: silent and correctly so. That is this instrument's resolution limit, measured rather
+#: than assumed — one classified pixel — and it is why the family stops at 0.80.
+MAP_FLOOR_SILENT_PARTNERS = (
+    ("M-F4 @0.60", ["hiding_predator", "neutral"], "M-F4", 0.60),
+    ("M-F4 @0.40", ["hiding_predator", "neutral"], "M-F4", 0.40),
+)
+
+#: The correct side of the gap table, at the real square size. Every one of these is a
+#: picture drawn exactly as specified, and the floor must sit BELOW all of them.
+MAP_CORRECT_CONTROLS = (
+    ("n=1 agent", ["agent"]),
+    ("n=1 hiding predator (two-paint mark)", ["hiding_predator"]),
+    ("two predators — two movers, ONE kind", ["predator", "predator"]),
+    ("n=2 hiding predator + neutral", ["hiding_predator", "neutral"]),
+    ("n=2 predator + neutral", ["predator", "neutral"]),
+    ("n=3 agent + predator + neutral", ["agent", "predator", "neutral"]),
+    ("n=3 agent + predator + hiding predator", ["agent", "predator", "hiding_predator"]),
+    ("n=4 agent + predator + food + neutral", ["agent", "predator", "food", "neutral"]),
+    ("n=4 with a hiding predator", ["agent", "hiding_predator", "food", "neutral"]),
+)
+
+
+def _floor_fired(findings):
+    """The kinds reported by the RATIO FLOOR specifically, not by distinctness.
+
+    The two halves of `minimap_overdraw` produce differently worded findings on purpose:
+    the floor says a kind's colour "covers X % of what it covers when drawn alone", while
+    distinctness says the square's kinds map to N palette colours and the composite shows
+    fewer. A family member caught by the second has no ratio at all and must never be
+    counted towards the floor's gap — that is precisely the mistake §R23.2 corrects.
+    """
+    return {f.b for f in findings
+            if f.rule == "minimap_overdraw" and "covers" in f.detail}
+
+
+@needs_fixtures
+@pytest.mark.integration
+def test_the_minimap_floor_sits_in_a_gap_and_not_on_a_cliff():
+    """§R23.1's gap table, asserted — the map's mirror of the arena's at §R20.3.
+
+    One side is the minimum over correct controls, the other the maximum over the members
+    of §R23.2's family that fire THROUGH THE RATIO FLOOR. Both are measured here at the
+    real 18.40 px square size, because that is the whole point: the floor this replaces was
+    swept on ~330 px² arena tokens and reused on a 6–32 px map wedge, where 0.98 is not
+    merely strict but arithmetically unreachable below 50 classified pixels.
+
+    MEASURED, at square (2, 2) unless stated:
+
+      correct   n=1 agent 60/60 · n=1 hiding predator 48/48 · two predators 48/48 ·
+                n=2 hp+neutral 16/16 and 24/24 · n=2 predator+neutral 24/24 ·
+                n=3 predator 15/16 = 0.9375 · n=4 8/8 ×4 · n=4 with a hiding predator 6/6
+      defect    M-F4a 20/24 = 0.8333 · M-F4b 22/24 = 0.9167 ·
+                M-F3a 14/24 = 0.5833 · M-F3b 18/24 = 0.7500
+
+    so the gap is (0.9167, 0.9375] and 0.93 sits 64 % up it. NOTE THE CORRECT SIDE: §R23.1
+    recorded 0.9412 (16/17, square (4, 4)) as the worst correct case, and sweeping a second
+    square finds 0.9375 (15/16) — the SAME one-pixel seam on a wedge one pixel smaller, and
+    exactly the resolution limit §R23.1 states in advance (a 15–24 px wedge may lose one
+    pixel and stay silent; 14 or fewer may lose none). The floor is not moved for it.
+
+    IF THIS GAP EVER COLLAPSES the answer is to report it in the plan with both populations
+    and, if they overlap, to state a detection limit — never to nudge the constant until
+    today's frames pass. A ratio floor on a 13 px wedge is near its resolution limit by
+    construction, and saying so is the honest response (§R17.5's pattern).
+    """
+    correct = {}
+    for name, occupants in MAP_CORRECT_CONTROLS:
+        findings, ratios = _run_map({(2, 2): occupants})
+        assert findings == [], (name, findings, ratios)
+        correct[name] = min(r for _n, _d, r in ratios[(2, 2)].values())
+
+    defect, fired = {}, 0
+    for name, occupants, mutation, amount, expect in MAP_FLOOR_FAMILY:
+        findings, ratios = _run_map({(2, 2): occupants}, mutation=mutation,
+                                    at=(2, 2), amount=amount)
+        kinds = _floor_fired(findings)
+        assert kinds, (
+            f"{name} did not fire through the RATIO FLOOR: "
+            f"{[(f.rule, f.detail) for f in findings]}. A member caught only by the "
+            f"distinctness check has no ratio and must not be counted towards this gap — "
+            f"report it and re-register the member, never count it anyway (§R23.2)")
+        fired += 1
+        worst = max(ratios[(2, 2)][k][2] for k in kinds)
+        defect[name] = worst
+        assert worst == pytest.approx(expect, abs=1e-3), (
+            f"{name} measured {worst:.4f} against the {expect} recorded in §R23.2")
+
+    assert fired == len(MAP_FLOOR_FAMILY), (defect, fired)
+
+    for name, occupants, mutation, amount in MAP_FLOOR_SILENT_PARTNERS:
+        findings, ratios = _run_map({(2, 2): occupants}, mutation=mutation,
+                                    at=(2, 2), amount=amount)
+        assert findings == [], (
+            f"{name} was pre-registered as SILENT — the pip costs the neighbour no "
+            f"classified pixel there — and it fired: {findings}, {ratios}")
+
+    lo, hi = min(correct.values()), max(defect.values())
+    assert hi < audit.MINIMAP_SURVIVAL_MIN <= lo, (
+        f"MINIMAP_SURVIVAL_MIN={audit.MINIMAP_SURVIVAL_MIN} does not sit in the measured "
+        f"gap ({hi:.4f}, {lo:.4f}]. correct={correct} defect={defect}")
+    assert lo - hi > 0.015, (
+        f"the gap collapsed to {lo - hi:.4f} ({hi:.4f}, {lo:.4f}]; the floor would then be "
+        f"a cliff, and the honest response is to REPORT that with both populations, never "
+        f"to move the constant to open it")
+
+
+def test_the_map_never_measures_against_the_grid_panels_floor():
+    """§R20.4's ruling, made structural instead of remembered (§R23.1).
+
+    The plan said in Revision 20 that the map "gets its own ground truth and its own floor
+    … never `SURVIVAL_MIN` reused". That was honoured on the geometric path, which got
+    `MINIMAP_AREA_MIN` — and then the census path added in Revision 22 took the arena's
+    0.98 anyway, by nothing more sinister than assigning it beside a branch. The reuse was
+    the defect, so the fix REMOVES it rather than relocating it: the rule looks its floor up
+    from the path it took, which means a path added later and left unregistered raises here
+    rather than silently inheriting a number swept for a panel eighteen times the size.
+
+    No fixtures, no rendering — this is arithmetic and a source read.
+    """
+    import inspect
+    import re
+
+    src = inspect.getsource(audit.minimap_overdraw)
+    assert "SURVIVAL_MIN" not in re.sub(r"MINIMAP_SURVIVAL_MIN", "", src), (
+        "the minimap rule mentions the grid panel's floor again; the map has its own")
+
+    assert set(audit.MINIMAP_FLOORS) == {"isolated-wedge", "own-artists", "geometric"}
+    assert audit.SURVIVAL_MIN not in set(audit.MINIMAP_FLOORS.values())
+    assert audit.MINIMAP_FLOORS["geometric"] == audit.MINIMAP_AREA_MIN
+    assert audit.MINIMAP_FLOORS["isolated-wedge"] == audit.MINIMAP_SURVIVAL_MIN
+    assert audit.MINIMAP_FLOORS["own-artists"] == audit.MINIMAP_SURVIVAL_MIN
+    with pytest.raises(KeyError):
+        audit.MINIMAP_FLOORS["a-path-somebody-adds-next-year"]
+
+    # the two instruments stay apart, and the arena's number is untouched
+    assert audit.SURVIVAL_MIN == 0.98
+    assert audit.MINIMAP_SURVIVAL_MIN == 0.93
+    assert audit.MINIMAP_AREA_MIN == 0.55
+    assert audit.MINIMAP_DELTA == 12
 
 
 @needs_fixtures

@@ -261,8 +261,22 @@ correct ~13 px dot, a third to a half of whose pixels are blends. Ownership is m
 an artist belongs to a kind only if its isolated ink carries one of that kind's colours —
 so an accent painted over a NEIGHBOUR's mark is still an occlusion and still fires.
 
+THE MAP MEASURES AGAINST ITS OWN FLOORS, on every path, and never the grid panel's
+(§R20.4, completed by §R23.1). The census path uses MINIMAP_SURVIVAL_MIN = 0.93, swept on
+map-sized wedges; the geometric fallback keeps MINIMAP_AREA_MIN = 0.55. Which floor a path
+uses is a LOOKUP in MINIMAP_FLOORS rather than an assignment beside each branch, because
+the defect §R23.1 fixes was precisely a path inheriting the arena's number by omission.
+Its RESOLUTION LIMIT, stated because a ratio hides it: at 0.93 a wedge of 15–24 classified
+pixels may lose exactly ONE pixel and stay silent, and a wedge of 14 or fewer may lose
+none — so the census path catches an occlusion removing ≥ 2 pixels from a large wedge and
+≥ 1 from a small one, while TOTAL occlusion of a kind is caught by the distinctness check
+at any size, which has no floor at all.
+
 Tolerances added by this rule, all argued above:
-  SURVIVAL_MIN         = 0.98   per-component surviving fraction (swept at CP0.3b)
+  SURVIVAL_MIN         = 0.98   per-component surviving fraction, GRID PANEL only
+                                (swept at CP0.3b)
+  MINIMAP_SURVIVAL_MIN = 0.93   the same fraction for the MAP's census path, swept on
+                                map-sized wedges (§R23.1)
   CELL_FLOOR_FRACTION  = 0.48   ink area share at which an element IS the floor
   OUTLINE_SPAN_MIN     = 0.80   bbox span below which an "outline" is a suspect token
   REACH_PAD_PX         = 2      bbox padding for the work-only reach test
@@ -828,6 +842,13 @@ class Finding:
 #: CP0.3b (§R20.3) — the minimum over every negative control against the maximum over the
 #: M-F2 family — and the value moves only in the plan text, with its evidence, NEVER in a
 #: test to turn a red checkpoint green.
+#:
+#: THIS IS THE GRID PANEL'S FLOOR, AND ONLY THE GRID PANEL'S (§R23.1). It was swept on
+#: ~330 px² arena tokens, where one anti-aliased seam pixel is 0.3 %. The World map has its
+#: own floors — `MINIMAP_SURVIVAL_MIN` on the census path, `MINIMAP_AREA_MIN` on the
+#: geometric one — because a map wedge is 6–32 px, where one pixel is 3–17 % and 0.98 is
+#: arithmetically unreachable below 50 classified pixels. Reusing this number on a third
+#: instrument is the defect §R23.1 removed; measure the new instrument and give it its own.
 SURVIVAL_MIN = 0.98
 
 #: Ink area share of a square at which an element IS the floor (the bed or the ground)
@@ -868,6 +889,44 @@ MINIMAP_ALIGN_MAX_BLANK = 0.5
 #: artist and the denominator falls back to geometry (§R20.4). It is never `SURVIVAL_MIN`
 #: reused: it measures a different thing and is swept on the minimap's own controls.
 MINIMAP_AREA_MIN = 0.55
+
+#: Surviving fraction for the minimap's CENSUS path — the map's own `SURVIVAL_MIN`, swept
+#: on map-sized wedges at Revision 23 §R23.1 rather than inherited from the grid panel.
+#:
+#: The move is arithmetic, not argument, and both populations were MEASURED at the real
+#: 18.40–23.80 px square size against the real painter:
+#:   * worst CORRECT control **0.9412** — a correct three-way's first wedge, 16 / 17. The
+#:     0.8 px white line dividing two wedges is stroked by BOTH of them, and a pixel
+#:     composited white twice ends whiter than either pass alone, carrying it just past
+#:     `MINIMAP_DELTA`. The picture is correct; the pixel is lost to the seam.
+#:   * best floor-firing DEFECT **0.9167** — the identity pip pushed 80 % of the way from
+#:     its own wedge to the square's centre, eating the neighbour's colour (22 / 24).
+#: gap = (0.9167, 0.9412]; 0.93 sits **54.4 %** up it, the same placement discipline (and
+#: nearly the same fraction, 53.5 %) as §R21.2's `CELL_FLOOR_FRACTION` move.
+#:
+#: WHY IT IS A NEW CONSTANT AND NOT A MOVED ONE. 0.98 is unreachable here at all — it needs
+#: ≥ 50 classified pixels per wedge and the largest wedge on a shared map square is 24 —
+#: while dropping the ARENA to 0.93 would let ~23 px of plainly visible occlusion pass on a
+#: 330 px² token. One number serving two instruments an order of magnitude apart in size
+#: IS the defect; removing the reuse is the fix, so the arena's number is untouched.
+#:
+#: RESOLUTION LIMIT, measured: at 0.93 a wedge of 15–24 px may lose exactly one pixel and
+#: stay silent; a wedge of 14 or fewer may lose none. Pre-registered branch (§R23.1): if a
+#: CORRECT four-way ever measures 12 / 13 = 0.923, the response is NOT 0.92 — it is to
+#: record the new populations in the plan and, if they overlap, state a detection limit.
+MINIMAP_SURVIVAL_MIN = 0.93
+
+#: Which floor each minimap denominator path is measured against. A LOOKUP, deliberately,
+#: rather than a value assigned beside each branch: the bug §R23.1 fixes was a path that
+#: inherited another instrument's number BY OMISSION — §R20.4 ruled the map must never
+#: reuse `SURVIVAL_MIN`, the geometric path honoured that, and the census path added by
+#: §R22.1 silently took the arena's 0.98 anyway. A path added later and not registered here
+#: raises `KeyError` on its first square instead of quietly measuring against 0.98.
+MINIMAP_FLOORS: dict[str, float] = {
+    "isolated-wedge": MINIMAP_SURVIVAL_MIN,
+    "own-artists": MINIMAP_SURVIVAL_MIN,
+    "geometric": MINIMAP_AREA_MIN,
+}
 
 #: The audit's OWN copy of the entity -> map MARK colours. It is a copy, and not an import,
 #: because the audit may not import the package it audits (§D5.2, pinned by
@@ -1430,12 +1489,18 @@ def minimap_overdraw(probe: "FrameProbe", minimap_axes: str, occupancy: dict,
                 if got:
                     own.append(id(e.artist))
                     best = max(best, got)
-            den, path, floor = best, "isolated-wedge", SURVIVAL_MIN
+            den, path = best, "isolated-wedge"
             if len(own) > 1:
                 den = _classify_census(drawn(own), square, {k: want[k]})[k]
                 path = "own-artists"
             if den == 0:
-                den, path, floor = int(square.sum()) or 1, "geometric", MINIMAP_AREA_MIN
+                den, path = int(square.sum()) or 1, "geometric"
+            # The floor is LOOKED UP from the path, never assigned beside a branch: that is
+            # how this line came to hold the GRID PANEL's floor (§R23.1). An unregistered
+            # path raises here rather than inheriting a number swept for another panel.
+            # The grid panel's constant is deliberately not even NAMED in this function —
+            # a test asserts that, so the reuse cannot creep back as a default.
+            floor = MINIMAP_FLOORS[path]
             ratio = n / float(den)
             if ratio < floor:
                 pending.append(Finding(

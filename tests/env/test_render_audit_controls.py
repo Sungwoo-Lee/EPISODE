@@ -1095,7 +1095,7 @@ def test_collection_artists_are_enumerated_at_all():
 
 
 # ------------------------------------------------------------------- the World map
-def _minimap_figure(occupants, *, mutation=None, caption=True):
+def _minimap_figure(occupants, *, mutation=None, amount=None, caption=True):
     """A one-square World map drawn by the PAINTER'S OWN geometry helpers.
 
     The wedge angles and the identity pip's placement come from
@@ -1134,16 +1134,22 @@ def _minimap_figure(occupants, *, mutation=None, caption=True):
             ax.add_patch(Wedge((0.5, 0.5), r_dot, *PN._wedge_angles(n, i),
                                fc=P.MINIMAP_COLOUR[nm], ec=P.WHITE, lw=0.8 * _PT,
                                zorder=6 + i * 0.1))
+    frac = 1.0 if amount is None else float(amount)
     if "hiding_predator" in order:
         i = order.index("hiding_predator")
         dx, dy, r_p = PN._pip_place(n, i, r_dot)
         if mutation == "M-F4":
             # today's painter before Revision 22: the pip fixed at the square's CENTRE,
-            # where on a shared square it straddles a FOREIGN wedge
-            dx, dy, r_p = 0.0, 0.0, r_dot * PN.IDENT_FRAC
+            # where on a shared square it straddles a FOREIGN wedge. GRADED by `amount`
+            # (§R23.2): the fraction of the way from its own wedge to the centre, so the
+            # same defect can be made shallower and the floor swept against a population.
+            dx, dy, r_p = dx * (1 - frac), dy * (1 - frac), r_dot * PN.IDENT_FRAC
         ax.add_patch(Circle((0.5 + dx, 0.5 + dy), r_p, fc=P.HIDE_EYE, lw=0, zorder=6.6))
     if mutation == "M-F3":
-        ax.add_patch(Circle((0.5, 0.5), r_dot, fc=P.MINIMAP_COLOUR["agent"],
+        # GRADED by `amount` (§R23.2): the overpainting disc's radius as a fraction of the
+        # dot's. At 1.0 the neighbour's colour vanishes and DISTINCTNESS catches it without
+        # the ratio floor ever being consulted — which is why the shallow members exist.
+        ax.add_patch(Circle((0.5, 0.5), r_dot * frac, fc=P.MINIMAP_COLOUR["agent"],
                             ec=P.WHITE, lw=1.2 * _PT, zorder=9))
     if mutation == "M-F5":
         # amber painted by something that is NOT a hiding predator's identity pip
@@ -1317,6 +1323,56 @@ def test_minimap_m_f5_catches_amber_painted_by_anything_else():
         "an amber artist with no hiding predator to own it went unreported"
     assert _amber_not_owned(["agent", "neutral"]) == []
     assert _amber_not_owned(["hiding_predator", "neutral"]) == []
+
+
+#: §R23.2's graded family at the ~28 px MOCK scale: (name, occupants, mutation, amount).
+#: The same four members `test_dashboard_frames.py` sweeps at the real 18.40 px square, run
+#: here so the cheap controls exercise the floor too. The RATIOS DIFFER BY SCALE and that
+#: is the point of running both — measured here: M-F4a 0.8781, M-F4b 0.9211, M-F3a 0.8525,
+#: M-F3b 0.9221 (against 0.8333 / 0.9167 / 0.5833 / 0.7500 at the real size). A control
+#: that only ever ran on this mock would be blind to the seam that matters at 18 px, and
+#: one that only ran at 18 px would cost a fixture; neither stands in for the other.
+MAP_FLOOR_FAMILY_MOCK = (
+    ("M-F4a", ["hiding_predator", "neutral"], "M-F4", 1.00),
+    ("M-F4b", ["hiding_predator", "neutral"], "M-F4", 0.80),
+    ("M-F3a", ["predator", "neutral"], "M-F3", 0.35),
+    ("M-F3b", ["predator", "neutral"], "M-F3", 0.25),
+)
+
+
+@pytest.mark.parametrize("name,occupants,mutation,amount", MAP_FLOOR_FAMILY_MOCK)
+def test_every_graded_map_mutation_fires_through_the_ratio_floor(name, occupants,
+                                                                 mutation, amount):
+    """§R23.2: four members, each firing through the FLOOR rather than distinctness.
+
+    A mutation that removes a neighbour's colour entirely is caught by the distinctness
+    check and never consults a ratio — which is what M-F3 at full dot radius and M-F5 do,
+    and why the floor's defect side used to rest on a single point. These four are graded
+    shallow enough that the kind survives with FEWER PIXELS, which is the only condition
+    under which the ratio floor is the thing being tested.
+    """
+    findings = _run_minimap(occupants, mutation=mutation, amount=amount)
+    floor = [f for f in findings
+             if f.rule == "minimap_overdraw" and "covers" in f.detail]
+    assert floor, (
+        f"{name} did not fire through the ratio floor: "
+        f"{[(f.rule, f.detail) for f in findings]}")
+    ratios = _minimap_ratios(occupants, mutation=mutation, amount=amount)
+    worst = min(r for _n, _d, r in ratios.values())
+    assert worst < audit.MINIMAP_SURVIVAL_MIN, (name, ratios)
+
+
+@pytest.mark.parametrize("amount", [0.60, 0.40])
+def test_a_pip_that_costs_the_neighbour_no_pixel_is_silent(amount):
+    """The family's negative partners, kept rather than dropped (§R23.2).
+
+    Pushing the identity pip only 60 % or 40 % of the way back towards the square's centre
+    costs the neighbour no classified pixel at this scale, so the rule says nothing — the
+    honest boundary of what a ratio floor can promise, recorded as a test rather than as a
+    remark so that a future change which makes these fire is noticed.
+    """
+    assert _run_minimap(["hiding_predator", "neutral"],
+                        mutation="M-F4", amount=amount) == []
 
 
 def test_minimap_ground_truth_is_kinds_not_movers():

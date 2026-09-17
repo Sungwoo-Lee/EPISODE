@@ -2162,7 +2162,7 @@ Each checkpoint states what would show it failed.
   - E6's channel label not `GRS`;
   - r_max recorded only after a rendered, audited override, with machine and fonts named. Largest fitting radius per kind recorded in the report and in `12_renderer.md`. E2–E6 take the sensor-band layout if and only if the side column fails its min size. *Fails if:* any in-use cell (E1–E6) raises; any synthetic cell renders past the recorded largest radius instead of raising; a value above 1 is clipped by the scale; or a concatenated video switches layout.
   - **A modality in the breakdown must have something DRAWN in its box (added Revision 22 §R22.9, from a finding surfaced by the CP2.8 real-painter pass).** No maintained matrix cell may report `panel_absent` for a modality that is present in its own `get_observation_breakdown(params)`. **`M5` is named as the case that must go green:** it is the only maintained cell with `olfactory_range: 1`, so it takes the **sensor-band** layout and has no `olfactory` card, and the band painter is deliberately unbuilt — so olfaction is in its observation with a box reserved and **nothing drawn in it**. The audit is right and this is unbuilt scope, not a defect and not a Known Bugs row; it is gated here so it cannot be rediscovered later as one. This is also the checkpoint where the CP1 band-card hoist is first exercised by a real world (§R21.4 item 3). *Fails if:* CP2.7 is ticked while any maintained cell still reports `panel_absent` for a modality in its breakdown.
-- [ ] **CP2.8: Shared squares render every occupant (added Revision 17).** On every matrix cell, each checked frame containing a shared square passes `cell_overdraw` (0 findings). All five archetypes — agent on terrain, two movers, three-way, four-way, resource on terrain — are rendered and **looked at** at full size, each either found in a real episode or drawn from a labelled synthetic snapshot. Mutations **M-E** (all occupants forced to the square's centre) and **M-F1 / M-F1g / M-F2 / M-F3** (bed drawn above the tokens; **ground** drawn above the tokens with the figure facecolor set to `CANVAS`, Revision 20 §R20.6; the bed inset so only a rim survives; the minimap's agent dot above the split wedge) each fail the audit on the **real** painter, not only on the Phase 0d synthetic figure. **Sample size (Revision 20 §R20.7 item 4):** `cell_overdraw` runs on **at most two frames per matrix cell** — one archetype-rich frame plus step 0 — because isolation is N+1 renders and a 100-square arena carries several hundred visible elements; archetype coverage is carried by the Phase 0d synthetic controls. The test carries the `integration` marker and the report states the measured wall-clock per audited frame with the machine. The minimap's shared-square caption is present on every frame whose snapshot contains a shared square, and the occupancy rim pip shares no pixel with the hiding-predator identity pip. *Fails if:* an archetype is neither found nor synthesised-and-labelled, any finding count is non-zero, any of M-E / M-F1 / **M-F1g** / M-F2 / M-F3 — or, from Revision 22 §R22.6, **M-F4** (the identity pip over a foreign wedge) or **M-F5** (amber painted by anything but a hiding predator's identity pip) — passes, the caption is missing, the caption still describes an encoding the painter no longer draws, or nobody looked.
+- [x] **CP2.8: Shared squares render every occupant (added Revision 17).** On every matrix cell, each checked frame containing a shared square passes `cell_overdraw` (0 findings). All five archetypes — agent on terrain, two movers, three-way, four-way, resource on terrain — are rendered and **looked at** at full size, each either found in a real episode or drawn from a labelled synthetic snapshot. Mutations **M-E** (all occupants forced to the square's centre) and **M-F1 / M-F1g / M-F2 / M-F3** (bed drawn above the tokens; **ground** drawn above the tokens with the figure facecolor set to `CANVAS`, Revision 20 §R20.6; the bed inset so only a rim survives; the minimap's agent dot above the split wedge) each fail the audit on the **real** painter, not only on the Phase 0d synthetic figure. **Sample size (Revision 20 §R20.7 item 4):** `cell_overdraw` runs on **at most two frames per matrix cell** — one archetype-rich frame plus step 0 — because isolation is N+1 renders and a 100-square arena carries several hundred visible elements; archetype coverage is carried by the Phase 0d synthetic controls. The test carries the `integration` marker and the report states the measured wall-clock per audited frame with the machine. The minimap's shared-square caption is present on every frame whose snapshot contains a shared square, and the occupancy rim pip shares no pixel with the hiding-predator identity pip. *Fails if:* an archetype is neither found nor synthesised-and-labelled, any finding count is non-zero, any of M-E / M-F1 / **M-F1g** / M-F2 / M-F3 — or, from Revision 22 §R22.6, **M-F4** (the identity pip over a foreign wedge) or **M-F5** (amber painted by anything but a hiding predator's identity pip) — passes, the caption is missing, the caption still describes an encoding the painter no longer draws, or nobody looked.
   - *2026-09-17 developer (Phase 0d):* **the instrument now exists, and on the two real frames it reports ZERO `cell_overdraw` findings — but CP2.8 as written is still NOT met.** What is now measured, by the instrument rather than by hand, on `M4` episode 1 steps 0 and 32: **0 cell findings at both the shipped floor (0.40) and the candidate (0.48)**; every occupant measures **1.0000**; the two-occupant square **(5,1) `agent + food`** measures **2 kinds → 2 isolated components → 2 visible components → 1.0000 / 1.0000**; `(3,5) `neutral + rock`` and `(4,3) `agent + bush`` each measure **1.0000** over a bed. **It reproduces Phase 2's hand measurement exactly and independently, and there is NO disagreement:** bed ink **53.44 %** (bush) and **51.68 %** (rock) against the hand-measured 53.4 % and 51.7 %, and token survival 100.0 % against 100.0 %. The audit derives its occupancy from the recorded snapshot itself, and that ground truth was checked against the renderer's own `occupancy_of` — **they agree on every square of both frames**, which is what makes this an independent reproduction rather than the same computation run twice. `text_over_fill` reads **16 / 15**, matching Phase 2's report. **Cost: 46.5 s and 46.3 s per audited frame at 735 / 737 elements** on this container (Phase 2 measured 45.2 s at 708–710), so adding the rule did not change the per-frame cost materially — the number CP2.8 asks to be stated for sizing its sample.
   - *2026-09-17 developer, why CP2.8 still does not close.* Four of its clauses are untouched by this phase, and none of them is the instrument's fault: (1) **the mutations were not run against the real painter** — M-E / M-F1 / M-F1g / M-F2 / M-F3 all fail on the Phase 0d synthetic figures, but CP2.8 requires them to fail "on the **real** painter, not only on the Phase 0d synthetic figure"; (2) **two archetypes of five** appear in these frames (agent on terrain, two movers) — the three-way and four-way were not reached and were not synthesised; (3) **one matrix cell**, not every cell; (4) **nobody looked** at the frames at full size in this phase. **And the minimap clause cannot be assessed at all yet:** the rule divides the *named axes* into world squares, which is exact for the arena — whose axes **is** the grid — and wrong for the World map, whose axes is the **whole card** with the grid inset below its title and above its caption. Pointed at it, the census samples card background and finds nothing in **9 of 9** colour-bearing squares; rather than emit nine confident wrong "this dot was painted over" verdicts it emits **one** `minimap_grid_unaligned` and reports nothing else. **The cheap fix is a painter change that mirrors what the arena already does** — give the map grid its own labelled Axes inside the card, exactly as `arena_card` / `arena` are split — and it is `senior-developer`'s call. The **shared-square caption check does work** and is silent on step 32, which holds a shared square.
   - *2026-09-16 developer:* **CANNOT BE MET TODAY — the instrument does not exist.** `scripts/eval/render_layout_audit.py` contains no `cell_overdraw` and no `SURVIVAL_MIN`; **CP0.3b is unticked** and Phase 0d was never built. No partial version of the rule was written, deliberately: a half-built instrument that passes is worse than none. The substance was instead **measured by hand in scratch**, by §R19.1's own method (isolated ink per artist, then the pixels no later-drawn artist covers), on the real M4 frames: square (4,3) `agent + bush` — bed ink 53.4 % of the square, bed survives 55.1 %, **agent token survives 100.0 %**; (3,5) `neutral + rock` — 51.7 %, 60.5 %, **100.0 %**; (5,1) `agent + food` — **100.0 % / 100.0 %**. Every bed clears the 40 % line that classifies it as floor, and every occupant measures the 1.000 a correct composition must. Three of the five archetypes (agent on terrain, two movers, resource-adjacent) were found in real episodes; the three- and four-way were not reached and were not synthesised. **This is evidence, not the instrument, and it does not close CP2.8.**
@@ -2174,6 +2174,7 @@ Each checkpoint states what would show it failed.
   - *2026-09-17 developer, §R22.7 implemented — **items (1), (3) and (4) are done; the blocker is now ONE cause on ONE square**.* Full detail in the Implementation Report "§R22.7: the World map's wedges, and CP2.8's committed home". **Q21 was answered (keep the map), so the whole "keep it" branch was built:** the rim pip is retired, the dot divides into `n = 1…4` wedges, the identity pip moved into its owner's wedge, the census's ground truth became a colour **set** per kind with the denominator measured over that kind's **own artists rendered together**, and the caption was rewritten to describe what is drawn. **No threshold moved.** **Matrix, same 18 frames, like-for-like:** grid-panel rules still **0 findings**; the World map goes from **2–4 findings on every frame** to **0 on 13 of 18**. **Controls:** (A)'s false alarm 73.3 % → **1.000**; correct `n = 1/2/4` all **1.000** (62/62, 48/48, 16/16, 24/24, 13/13 ×4, and a two-paint mark 6/6); **M-F3, M-F4 and M-F5 all FIRE** — M-F4 at **83.3 %, naming the foreign kind**, which is the control proving the union fix is not an amnesty; restoring the single-colour table makes the same correct figure fire again. **The four-way census is 13 px per wedge, ratio 1.000 — non-zero, so §R22.3's first branch is taken and the ceiling stands at four**, not lowered to three. **CP2.8's evidence is now in `tests/env/test_dashboard_frames.py`** under the `integration` marker (12 passed + 1 strict xfail), including one full-audit frame at **49.1 s**. Guard 10/10 + FRAMES PASS ×3, exit 0, before and after; `tests/env` **642 passed, 0 failed**.
   - *2026-09-17 developer, **finding D — the only thing still blocking CP2.8, and it is a constant question**.* The 9 remaining findings are all the matrix's **one real three-way square** `(8,6)`, on the 5 frames that hold it. Measured: a correct three-way loses **exactly one classified pixel** — `M1` agent **31/32** and predator **31/32** (0.9688), `M6` agent **17/18** (0.9444), synthetic **16/17** (0.9412) — while the hiding predator's two-paint mark measures **23/23 = 1.000**, so §R22.1's fix is working. **Cause, measured at the pixel:** the 0.8 px white line dividing two wedges is stroked by **both**, and compositing the same partially-covered pixel twice leaves it whiter than either pass alone — (104, 90, 221) composited against (98, 83, 220) isolated — carrying one pixel from 7/255 to 13/255 from its colour, just past `MINIMAP_DELTA`'s 12. **Under §R22.4's own test this is the Revision 21 case, not the (A)/(B)/(C) case:** a picture correct as drawn, misclassified by a number — and the number is `SURVIVAL_MIN = 0.98`, swept on ~330 px² arena tokens and reused **unswept** on a 13–32 px map wedge. **A 0.98 floor is only reachable at ≥ 50 classified pixels per wedge; no map wedge has that.** The gap is real and measured: **worst correct control 0.941, best mutation 0.833**. `MINIMAP_AREA_MIN` already exists because this map needs its own floor rather than `SURVIVAL_MIN` reused, but it is applied only on the geometric path. **Nothing was moved; the decision is `senior-developer`'s.** Two repairs were tried and rejected on measurement — round joins (changed nothing, reverted) and folding a square's wedges into one artist (would force 1.000 by construction, but would hide a draw-order defect *between* wedges, which is what M-F3 exists to catch). Pinned in CI as the measured 16/17 **plus a strict xfail**, so settling the floor turns the suite red rather than letting this note drift.
   - *2026-09-17 senior-developer, **finding D is DECIDED — the map gets its own floor, and the arena's is untouched** (Revision 23).* The reported gap was re-measured before being used, and measuring it properly changed it: **two of the three pre-registered minimap mutations (M-F3, M-F5) fire through the DISTINCTNESS check and never reach the ratio floor**, so "best mutation 0.833" was one point rather than a population. A **graded** family — the same defects made progressively shallower — brings the defect side up to **0.9167** (the identity pip pushed 80 % of the way to the square's centre, neutral 22/24), against a worst correct control of **0.9412** (16/17). **The real gap is (0.9167, 0.9412], 2.45 points wide, not 10.8.** `MINIMAP_SURVIVAL_MIN = 0.93` is placed **54.4 %** of the way up it — the same discipline and nearly the same fraction as §R21.2's 53.5 %. **It is a NEW constant, not a moved one:** §R20.4 already ruled the map must never reuse `SURVIVAL_MIN`, and that ruling had been applied to the geometric fallback (`MINIMAP_AREA_MIN`) while the census path silently inherited the arena's number — the reuse *is* the defect, so `SURVIVAL_MIN` stays at 0.98 and `MINIMAP_AREA_MIN` at 0.55. **The seam is not fixed in the painter, and that verdict is measured:** drawing the wedges edgeless removes the one-pixel loss but produces ratios **above 1.000** (23/22, 26/25) — a kind credited with pixels its own artist never drew, in the direction that conceals occlusion — because the white split line is what makes a blend classify as neither colour. **What CP2.8 still needs is §R23.1's seven code rows, §R23.2's re-registered four-member family, and the 18-frame matrix re-run**, which is predicted in advance to report **0 minimap findings on 18 of 18** (every remaining finding is `(n−1)/n` for `n` in 17–32, i.e. 0.941–0.969, all clearing 0.93); if any frame still fires, report the number rather than moving the floor again.
+  - *2026-09-17 developer, **§R23.1 + §R23.2 implemented — CP2.8 CLOSES***. Full detail in the Implementation Report "§R23.1 / §R23.2: the World map's own survival floor, and CP2.8's last clause". **The pre-registered prediction held exactly: 0 findings on 18 of 18 frames** — `grep` finds no `minimap_*` and no `cell_*` finding anywhere in the re-run log, against 9 minimap findings on 5 frames before. What remains on those frames is `text_over_fill` (9–15/frame, pre-existing, a different rule) and `panel_absent: Olfaction` ×1 on M5's two frames, which §R22.9 assigns to **CP2.7**. **The floor was not moved a second time**, per §R23.1's *Fails if:*. **The reuse was removed rather than relocated:** the census path reads `MINIMAP_SURVIVAL_MIN = 0.93`, `SURVIVAL_MIN` stays **0.98** and `MINIMAP_AREA_MIN` **0.55**, and which floor a path uses is now a **lookup in `MINIMAP_FLOORS`** — so a path added later and left unregistered raises `KeyError` instead of silently inheriting the arena's number, with a test asserting the grid panel's constant is not so much as *named* inside `minimap_overdraw`. **The family is re-registered at four members, every one firing through the RATIO FLOOR** (M-F4a 20/24 = 0.8333, M-F4b 22/24 = **0.9167**, M-F3a 14/24 = 0.5833, M-F3b 18/24 = 0.7500), with the silent partners kept and measured (pip at 60 % / 40 % costs the neighbour **no** pixel). **One number in §R23.1's table did not reproduce, and it is reported rather than absorbed:** sweeping a second map square finds a worst correct control of **0.9375** (15/16) rather than 0.9412 (16/17) — the same one-pixel seam on a wedge one pixel smaller, and exactly the resolution limit §R23.1 states in advance. The gap is therefore **(0.9167, 0.9375]**, 2.08 points wide, with 0.93 sitting **64.0 %** up it rather than 54.4 %. Still a gap, every correct control silent, **constant unchanged**. **Cost, which CP2.8 asks be stated: 43.58 s mean per audited frame** (18 frames, 38.3–46.6 s, 656–755 elements, **uncontended**; the previous pass's same 18 frames averaged 45.02 s). Machine: container `docker-102`, Intel i9-7900X, 20 threads. **Tests:** `tests/env` **689 passed, 377 skipped, 0 failed**, and **no xfail remains** — the strict xfail that was registered to turn red on this day was deleted and its test now passes plainly. Guard **10/10 PASS + FRAMES PASS ×3, exit 0**, before and after.
 - [ ] **CP3: Separate V2 entry point.** `render_recordings_v2.py --concat` writes playable MP4s (frame count = steps) for all cells including M7–M9, only under `videos_v2/`. The concat signature assertion holds on real runs and trips on the doctored dir. `test_render_recordings_v2.py` is green (V1 MP4 bytes unchanged after a V2 render of the same dir). CP-G passes. *Fails if:* any file appears or changes under `videos/`, the assertion trips on a real single-run dir, or CP-G fails.
 - [ ] **CP4: Speed.** Same node as CP0.4: V2 median ≤ V1 median on every cell and ≤ 0.5 × on M4; RSS growth < 50 MB over 10 episodes; FDs reported. *Fails if:* any gate is missed.
 - [ ] **CP5: Viewer.** `test_episode_viewer.py` is green; `check_artifact_layout.py` is clean at 500/834/1440; screenshots and the contact sheet are **looked at**, with findings in the report. *Fails if:* arrays differ, the checker flags a defect, or nobody looked.
@@ -4982,5 +4983,167 @@ anti-aliased pixel is 3–8 %. On CP2.8's strictest reading — "any finding cou
 checkpoint does not close, and that is how it is reported rather than arguing the clause covers
 only the arena. **Nothing was loosened to reach a tick.** The decision is a constant, the
 evidence and the gap are above, and it belongs to `senior-developer`.
+
+Implemented by: developer
+
+---
+
+## Implementation Report — §R23.1 / §R23.2: the World map's own survival floor, and CP2.8's last clause (2026-09-17)
+
+### What this is, in plain words
+
+The dashboard draws the world twice — a big grid panel at 50 pixels a square, and a small **World map** at about 18 pixels a square. An automatic check asks of every occupant of a shared square: *does it still show, once everything else has been painted on top of it?* It answers by comparing how much of an occupant's colour survives in the finished picture against how much that occupant covers when drawn alone, and complains when the surviving share falls below a floor.
+
+That floor was **98 %**, chosen by measurement on the **big** panel, where an occupant is ~330 pixels and one lost pixel costs 0.3 %. It had never been re-measured for the small map, where an occupant is 6–32 pixels and one lost pixel costs 3–17 %. The consequence was that the **one square in the whole verification matrix where three animals really do stand together** was reported as broken on all five frames that contain it — nine complaints about a picture that is correct, because the thin white line dividing two wedges is painted by both of them and a pixel painted white twice ends up whiter than a pixel painted white once.
+
+This pass did what Revision 23 decided: **the map got its own floor** (93 %), the big panel kept its 98 %, and the map's geometric fallback kept its 55 %. The nine complaints are gone and **no frame reports anything at all** from either co-occupancy rule. Nothing was loosened to get there: the same deliberate sabotages must still be caught, and they are — re-registered as **four** graded defects instead of one, because two of the three that existed turned out to be caught by a *different* check and never tested this floor at all.
+
+### The regression evidence: the strict xfail, before and after
+
+The plan pre-registered its own failing test rather than a note. `test_a_correct_three_way_is_silent` carried a **strict** xfail whose stated purpose was to turn the suite red the day the floor question was settled.
+
+| | State |
+|---|---|
+| **Before the fix** (verbatim, this session, pre-edit) | `XFAIL tests/env/test_dashboard_frames.py::test_a_correct_three_way_is_silent` — *"OPEN: the minimap reuses SURVIVAL_MIN (0.98) … A correct three-way therefore fires at 94.1 %"*. 22 passed, 1 xfailed |
+| **After the fix** | the xfail marker is **deleted**; the test passes plainly. The whole `tests/env` run reports **no xfail and no xpass** |
+
+The test that proves the fix is therefore one that **failed before and passes after**, and it was written by the plan before the code was touched, not by me afterwards.
+
+### File-by-file — exactly the three files §R23.1 names, and no others
+
+**`scripts/eval/render_layout_audit.py`** (4 of §R23.1's rows)
+
+1. **New constant** beside `MINIMAP_AREA_MIN`: `MINIMAP_SURVIVAL_MIN = 0.93`, with both measured populations, the gap, the 54 %-placement precedent and the **one-pixel resolution limit** in its comment, plus §R23.1's pre-registered branch for the day a correct four-way measures 12/13.
+2. **The call site** (`:1433` as it stood): `den, path, floor = best, "isolated-wedge", SURVIVAL_MIN` → the floor is no longer assigned beside a branch at all. Path and denominator are decided first, then `floor = MINIMAP_FLOORS[path]`.
+3. **`SURVIVAL_MIN`'s comment** gains the sentence that makes the next reader stop: it is the **grid panel's** floor and only that; the map has its own; reusing it on a third instrument is the defect that was just removed.
+4. **The module docstring** — the tolerance list gains `MINIMAP_SURVIVAL_MIN = 0.93` and marks `SURVIVAL_MIN` as *GRID PANEL only*; the minimap paragraph states that every map path measures against a map floor, that the choice is a lookup, and what the rule can and cannot see at this size.
+
+**`tests/env/test_dashboard_frames.py`** (3 rows + the new table)
+
+5. **The strict xfail is deleted** and `test_a_correct_three_way_is_silent` becomes a plain test, with a docstring naming the three ways it must **never** be made green (shrink a wedge, widen `MINIMAP_DELTA`, fold the wedges into one artist).
+6. **The 16/17 measurement stays**, rewritten from "an OPEN finding" into a pinned property, and now also asserts the **margin**: 0.9412 − 0.93 = 0.0112.
+7. **`_mutate` is graded** — `M-F4` by how far the identity pip is dragged toward the square's centre, `M-F3` by the overpainting disc's radius — with the pip's *radius* held fixed across the M-F4 family so the sweep varies one thing only.
+8. **The minimap gap table** (`test_the_minimap_floor_sits_in_a_gap_and_not_on_a_cliff`), mirroring the arena's at `test_render_audit_controls.py`, plus `test_the_map_never_measures_against_the_grid_panels_floor`.
+
+**`tests/env/test_render_audit_controls.py`** (1 row)
+
+9. `_minimap_figure` gains the same graded mutations at the ~28 px mock scale, with two new tests: every graded member fires through the ratio floor, and the two shallow partners stay silent.
+
+### Part 1 — the reuse is removed, not relocated
+
+The brief's sharpest instruction was that it must not be possible for a future path to inherit the arena's floor by omission. A constant renamed at one call site would not have achieved that — the next path added would simply not set `floor` and would pick up whatever was assigned above it, which is **precisely how this bug happened**: §R20.4 ruled in Revision 20 that the map must never reuse `SURVIVAL_MIN`, the geometric path honoured it, and the census path added in §R22.1 quietly took the arena's number anyway.
+
+So the floor is now **looked up from the path that was taken**:
+
+```python
+MINIMAP_FLOORS = {"isolated-wedge": MINIMAP_SURVIVAL_MIN,
+                  "own-artists":    MINIMAP_SURVIVAL_MIN,
+                  "geometric":      MINIMAP_AREA_MIN}
+```
+
+An unregistered path raises `KeyError` on its first square rather than measuring against a number swept for a panel eighteen times the size. A test asserts the grid panel's constant is **not even named** inside `minimap_overdraw`, that the three paths are exactly the registered ones, that none maps to `SURVIVAL_MIN`, and that an invented path raises.
+
+**That guard bit immediately, on me.** My first version of the explanatory comment at the call site contained the words "the arena's `SURVIVAL_MIN`", and the test failed on it. The comment was reworded rather than the test weakened — a guard that fires on prose is a guard that will fire on the real thing.
+
+### Part 2 — the re-registered family (§R23.2), measured at the real square size
+
+Every ratio §R23.2 pre-registered reproduced **exactly**, at 18.40 px per square, against the real painter:
+
+| Member | What it is | num / den | ratio | fires via |
+|---|---|---|---|---|
+| **M-F4a** | identity pip at the square's centre (the painter before Revision 22) | neutral 20 / 24 | **0.8333** | ratio floor |
+| **M-F4b** | identity pip **80 %** of the way to the centre — a shallow crossing | neutral 22 / 24 | **0.9167** | ratio floor |
+| **M-F3a** | agent disc at **0.35 ×** dot radius | 14 / 24 | **0.5833** | ratio floor |
+| **M-F3b** | agent disc at **0.25 ×** dot radius — shallowest that still costs pixels | 18 / 24 | **0.7500** | ratio floor |
+
+**4 of 4 fire through the floor**, none through distinctness — which is the whole point of the re-registration, since the previously registered M-F3 (full radius) and M-F5 are caught by the distinctness check and never consult a ratio. Both are **kept unchanged** as distinctness controls and still fire.
+
+**The negative partners, measured and kept:** the pip at **60 %** and **40 %** of the way to the centre costs the neighbour **no classified pixel** (24/24) and the rule is correctly silent. That is this instrument's resolution limit — **one classified pixel** — measured rather than assumed, and it is why the family stops at 0.80. Two further gradations were measured and recorded: M-F3 at 0.50 × fires at 6/24 = 0.2500, and at 0.70 × the neighbour's colour vanishes entirely (0/24) and **distinctness** catches it, `seen []`.
+
+**The minimap gap table:**
+
+| Side | Value | Source |
+|---|---|---|
+| min over **correct** controls | **0.9375** | predator 15/16 on a three-way at square (2,2) |
+| max over **floor-firing defects** | **0.9167** | M-F4b, neutral 22/24 |
+| **gap** | **(0.9167, 0.9375]**, width 0.0208 | |
+| **`MINIMAP_SURVIVAL_MIN`** | **0.93**, sitting **64.0 %** up the gap | unchanged from the plan |
+
+All nine correct controls report **zero findings**. The same four members at the ~28 px mock scale measure 0.8781 / 0.9211 / 0.8525 / 0.9221 and all fire through the floor there too, with the 60 %/40 % partners silent at 0.9580 / 0.9887 — the scale difference is the reason both harnesses exist and neither stands in for the other.
+
+### Part 3 — the 18-frame matrix against the pre-registered prediction
+
+Re-run in full (all nine cells × 2 frames, CP2.8's own cap, same sample rule as the previous pass so the comparison is like-for-like).
+
+| | Before (previous pass) | **After** |
+|---|---|---|
+| World map (`minimap_overdraw`) | 9 findings on 5 frames, 0 on 13 | **0 on 18 of 18** |
+| grid panel (`cell_*`, `outline_like_token`) | 0 across 18 | **0 across 18** |
+| `minimap_caption`, `minimap_grid_unaligned` | 0 | **0** |
+| `text_over_fill` | 9–15 / frame | 9–15 / frame (unchanged; pre-existing, a different rule) |
+| `panel_absent: Olfaction` on M5 | 1 / frame | unchanged — **CP2.7's**, per §R22.9 |
+
+**The prediction was stated in advance and is met exactly: 0 findings on 18 of 18.** A `grep` for `minimap` or `cell_` over the whole re-run log returns **zero** matches. No frame fired, so the instruction "if any frame still fires, report the number and stop" was not reached and **the floor was not touched a second time**.
+
+### Part 4 — one number in the plan's table did not reproduce, and it is reported rather than absorbed
+
+§R23.1 records the worst correct control as **0.9412** (16/17). Sweeping a **second** map square finds **0.9375** (15/16, the predator's wedge on a three-way at square (2,2)) — the same one-pixel seam on a wedge one pixel smaller. Sub-pixel rasterisation differs by square: the same three-way composition measures agent 16/17 at (4,4) and predator 15/16 at (2,2).
+
+**Consequences, stated plainly:** the gap narrows from 2.45 points to **2.08**, and 0.93 sits **64.0 %** up it rather than 54.4 %. It remains a real gap, every correct control remains silent, and **0.9375 > 0.93**. This is also exactly what §R23.1 pre-registered: *"a wedge of 15–24 classified pixels may lose exactly one pixel and stay silent; a wedge of 14 or fewer may lose none"* — 15/16 is that case, and 13/14 = 0.9286 would not be. **The constant was not moved for it**, per the plan's own *Fails if:*. `senior-developer` may wish to correct §R23.1's table to 0.9375.
+
+### Part 5 — a **correct** control measuring ABOVE 1.000, on the shipped painter
+
+Not predicted by the plan, found by this sweep, **not fixed**: on the three-way at square (2,2) the neutral wedge measures **16 / 15 = 1.0667** — 16 classified pixels in the finished picture against 15 when its own artist is drawn alone.
+
+This is the same mechanism §R23.3 measured for *edgeless* wedges (23/22, 26/25) — a blend between two colours landing close enough to one of them to be credited to it — appearing at ~1 px on the painter that ships. It causes no finding (a ratio above the floor never fires) and it is **weaker** than the edgeless case, so §R23.3's verdict stands. But it does show the "credit in the direction that conceals occlusion" effect is not *absent* today, merely small, and the white split line bounds its magnitude rather than eliminating it. Recorded so the next person to reason about the seam has the number. `senior-developer`'s call whether §R23.3 wants a sentence.
+
+### Part 6 — the variant §R23.3 named as unmeasured: **measured, and both arms fail**
+
+Reported separately, as asked, and it changed no shipped file — the treatment is applied to artists the real painter drew, exactly as a mutation is. §R23.3's bar, quoted: *adopted only if every correct control measures ≤ 1.000 and the re-registered family still fires on every member.*
+
+| Arm | Correct controls | Family | Verdict |
+|---|---|---|---|
+| **A** edgeless + one divider per boundary, as its own artist | **2 of 4 measure ABOVE 1.000** (neutral 34/30 = 1.1333; 13/11 = 1.1818) | **only 2 of 4 fire** — M-F4a and M-F4b both go to 1.0000 / 1.0667 | **REJECTED** |
+| **B** the same, with the dot's outer ring restored as its own artist | all ≤ 1.000, **but every correct control FIRES** (2/3/3/4 findings; ratios collapse to 0.64–0.85) | 4 of 4 fire | **REJECTED** |
+
+Arm A fails both halves: it does not remove the above-1.000 credit, and it makes the instrument **blind to the identity-pip defect entirely** — the mutation the census's amber exemption depends on. Arm B trades that for a **systematic 15–35 % loss on every correct mark**, which is precisely the failure §R23.3 predicted by reasoning (*"the boundary pixels would then leave every wedge's own isolated ink while still being painted over the composite — which points toward a systematic loss"*). That reasoning now has a measurement behind it.
+
+**One honest note about my own tooling:** the scratch harness printed `ADOPTABLE` for Arm B, because its pass criterion tested only "≤ 1.000" and never tested "the correct controls stay silent". The printed verdict is a bug in the harness, not a result; the numbers in the same output refute it. **Neither arm is proposed. The seam stays, per §R23.3.**
+
+### Test results
+
+| Command | Result |
+|---|---|
+| `pytest tests/env -q --durations=15 -rxX` | **689 passed, 377 skipped, 0 failed**, 752.95 s — **no xfail, no xpass** |
+| `pytest tests/env/test_render_audit_controls.py -q` | **80 passed**, 112 s |
+| `pytest tests/env/test_dashboard_frames.py -q` (pre-fix, for the record) | 22 passed, **1 xfailed** (the strict xfail, on current code) |
+| `scripts/eval/v1_path_guard.py check` | **10/10 PASS, FRAMES PASS ×3, RESULT OK, exit 0** — run **before and after** |
+| matrix re-run, 18 frames | **0 co-occupancy findings**, 13.1 min |
+
+New-test cost: the gap table is **79.2 s** (13 rendered frames) and the full-audit frame is **48.0 s**; both carry the `integration` marker.
+
+### Speed check — skipped, with the reason stated
+
+**No file on any training or rendering hot path was touched.** `git status` over `src/` and `configs/` is **empty**: the change is one offline audit instrument (`scripts/eval/render_layout_audit.py`) and two test files. Training speed cannot be affected, so a before/after SPS measurement would compare two identical code paths.
+
+**The instrument's own cost was measured anyway**, like-for-like on the same 18 frames: **45.02 s → 43.58 s** mean per audited frame (−3.2 %; before 39.7–50.6 s, after 38.3–46.6 s). The change is a dict lookup per square and cannot plausibly account for it — both runs are within each other's spread, and the earlier one shared the machine with two pytest sessions while this one did not. **No regression.** Machine: container `docker-102`, Intel i9-7900X, 20 threads.
+
+### Deviations from the plan — three, none silent
+
+1. **`MINIMAP_FLOORS` and its guard test are more than §R23.1's literal seven rows.** The plan says to change the constant at one call site; I made the floor a **lookup keyed by path** and added a test that the arena's constant is not named inside the rule. Reason: the brief required that a future path must not be able to inherit the arena's floor *by omission*, and a renamed assignment does not give that — it is the exact shape of the original defect. No behaviour changes for the three existing paths.
+2. **The correct side of the gap table measures 0.9375, not the plan's 0.9412** (Part 4). Reported, constant unchanged.
+3. **The optional variant was run** (Part 6), because the required work finished with capacity to spare. It shipped nothing.
+
+**No file outside §R23.1's own table was modified.** `docs/develop/INDEX.md`, `SAVED_RUN_CONFIG_COMPAT.md` and the diary files belong to parallel sessions and were left alone — they are staged in the shared index by another session and **nothing was staged or committed by me**. The plan's frontmatter `last_updated` already reads `2026-09-17`, so no change was needed there and **`regen_dev_index.py` was deliberately not run**, which would have rewritten the index another session is holding.
+
+### Prior art
+
+Grepped `docs/develop/active/issues/KNOWN_BUGS.md` directly (sub-agents cannot spawn `bug-curator`): **no row matches** `render_layout_audit`, `SURVIVAL_MIN`, `minimap`, `wedge`, or the audit's constants. The only nearby row is the **fixed** `Collection`-enumeration defect and its still-open follow-up (assert the enumerated artist set accounts for the full canvas ink), which §R23.6 item 1 already carries and which this change does not touch — it alters a constant and a call site, not enumeration. §R23.6 item 2 records `senior-developer`'s recommendation of **no row** for finding D; nothing measured here changes that, and **Part 5's above-1.000 observation is new and unrecorded** — if anyone thinks it earns a row, `bug-curator` owns that call.
+
+### Does CP2.8 close? **Yes**
+
+Against the checkpoint's own clauses: every matrix cell, every checked frame, **0 findings** from `cell_overdraw` and from `minimap_overdraw` alike (18/18); the five archetypes rendered and looked at, and the mutations failing on the **real** painter, were discharged by the §R22.7 pass and are unaffected by a change to one constant; M-F4 and M-F5 fire; the caption is present on every frame holding a shared square (0 `minimap_caption`); the rim-pip/identity-pip clause is **discharged** by §R22.3's retirement of the rim pip; the evidence lives in `tests/env/test_dashboard_frames.py` under the `integration` marker; and the wall-clock per audited frame is stated with the machine. §R23.4's four remaining items — the seven rows, the four-member family and gap table, the re-run, the cost — are all done.
+
+The only clause-adjacent finding left on these frames is `panel_absent: Olfaction` on M5, which §R22.9 assigns to **CP2.7** and explicitly not here.
 
 Implemented by: developer
