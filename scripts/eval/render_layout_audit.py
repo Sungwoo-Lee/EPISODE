@@ -905,7 +905,8 @@ REACH_PAD_PX = 2
 #: question fell to the map.
 #:
 #: The approved design puts a WINDOW in the grid view at a 96 px square and draws
-#: the map as one mark per entity (plan Revision 27). The grid view answers "what"
+#: the map as one mark per entity (plan §R27, as corrected by §R28.4 -- §R27 as
+#: first written said "one mark per occupied square", which is false). The grid view answers "what"
 #: now, and the map answers "where" -- including where the window is looking. Two
 #: entities on one map square are two marks at one point, and the later-drawn one
 #: covers the earlier: that is the approved design's own picture, not a defect the

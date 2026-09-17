@@ -374,10 +374,10 @@ figure img:focus-visible { outline:2px solid var(--accent); outline-offset:-3px;
     world holds two shared squares &mdash; the agent with food, and a rabbit on a rock &mdash; and the
     window shows the first; the rabbit and its rock lie outside the part of the world on screen. The
     small World map on the left answers <em>where</em> rather than <em>what</em>: it draws one mark per
-    <strong>occupied square</strong> across the whole world, each mark in its entity's own icon colour &mdash;
-    the same indigo, red, green and grey the grid view uses. Every square holding something gets a mark, but a
-    square holding two things shows only the <strong>last occupant drawn</strong>, so two occupants of the same
-    shape read there as a single mark. An outlined <strong>viewport rectangle</strong> marks the squares
+    <strong>entity</strong>, at that entity's own square, across the whole world, each mark in its entity's own
+    icon colour &mdash; the same indigo, red, green and grey the grid view uses. Every square holding something
+    gets a mark, but two entities on one square are two marks at the same point, so the one drawn later covers
+    the one drawn earlier and two occupants of the same shape read there as a single mark. An outlined <strong>viewport rectangle</strong> marks the squares
     the grid view is showing. Under the grid runs the <strong>sensory band</strong>, full width: this world reads smell
     and sight at the agent's own square only, so each sense is a list of named channels with its reading
     beside it &mdash; "Odour A, predator-leaning, 0.01" rather than a swatch labelled with a code. Section
@@ -774,7 +774,7 @@ figure img:focus-visible { outline:2px solid var(--accent); outline-offset:-3px;
       <li><strong>Layout and look:</strong> Figure 3 is the direction. Frame size 1440 &times; 896; World map under Interoception; last action as a title-row badge plus a chevron on the agent.</li>
       <li><strong>The grid view shows a window of the world</strong> &mdash; <code>visualization.local_view_size</code> squares centred on the agent, 5 &times; 5 in every maintained world &mdash; inside an arena box of fixed size, so the square size follows the window: 96 pixels at 5 wide, 48 at 10 wide. This restores the approved design and supersedes a whole-world grid at a 50-pixel square.</li>
       <li><strong>Terrain is an occupant like any other</strong>, drawn as a centred glyph at its own size rather than as the square's floor. A shared square gives each occupant its own slot, up to four, in a fixed draw order.</li>
-      <li><strong>The World map draws one mark per occupied square</strong> over the whole world, in that square's occupant's own icon colour, plus a viewport rectangle showing where the grid view is looking. The wedge encoding it carried while the grid drew the whole world is retired with it &mdash; so a square holding two occupants now shows only the last one drawn, and two occupants of the same shape cannot be told apart on the map.</li>
+      <li><strong>The World map draws one mark per entity</strong> over the whole world, each at its own square and in that entity's own icon colour, plus a viewport rectangle showing where the grid view is looking. The wedge encoding it carried while the grid drew the whole world is retired with it &mdash; the map answers <em>where</em>, not <em>what</em>, so two entities on one square are two marks at one point, the later drawn covering the earlier, and two occupants of the same shape cannot be told apart there.</li>
       <li><strong>Internal states:</strong> every state shown twice, sensed and true, including states the agent does not sense.</li>
       <li><strong>Senses that read further:</strong> option A, a small map per channel, from range 1; placed in a band under the grid view when they outgrow the side column.</li>
       <li><strong>Temperature colours:</strong> one range per episode, shared by all its steps; the setpoint near-white and the survivable body band pale, colour deepening only beyond it. No numbers in grid squares.</li>
