@@ -107,6 +107,12 @@ figure img:focus-visible { outline:2px solid var(--accent); outline-offset:-3px;
 .values div { display:flex; justify-content:space-between; gap:12px; padding:5px 0; border-bottom:1px solid var(--line); min-width:0; }
 .values span:first-child { color:var(--ink-2); }
 .values span:last-child { font-family:var(--f-mono); font-size:12.5px; text-align:right; overflow-wrap:anywhere; min-width:0; }
+/* A value that is a LIST of names must not break inside the list: "agent + food, rabbit + rock"
+   wrapping after the comma left a lone "rock" right-aligned on a second line, reading as a value of
+   its own. `nowrap` keeps the list whole; `flex-wrap` on the row lets the whole value drop under its
+   label at a width too narrow to hold both, instead of pushing the row wider than its column. */
+.values .nobreak { flex-wrap:wrap; }
+.values .nobreak span:last-child { white-space:nowrap; overflow-wrap:normal; margin-left:auto; }
 
 /* ---------- full-size figure viewer (copied from sensor_ladder.html, tokens adapted) ---------- */
 .lb{position:fixed;inset:0;z-index:99;background:rgba(12,12,14,.93);display:flex;flex-direction:column}
@@ -736,7 +742,7 @@ figure img:focus-visible { outline:2px solid var(--accent); outline-offset:-3px;
         pr = sensor(st, 'Proprioception'), vi = sensor(st, 'Visual'), bt = sensor(st, 'Body Temperature'),
         lo = sensor(st, 'Location');
     rows.push(['Action shown on this frame', an || 'none (initial state)'], ['Agent square (row, column)', st.agent.join(', ')]);
-    if (st.shared && st.shared.length) rows.push(['Shared squares in this frame', st.shared.map(function (o) { return o.join(' + '); }).join(', ')]);
+    if (st.shared && st.shared.length) rows.push(['Shared squares in this frame', st.shared.map(function (o) { return o.join(' + '); }).join(', '), 'nobreak']);
     if (sat) rows.push(['Satiation, sensed', sat.intensity.toFixed(2)]);
     rows.push(['Satiation, true', (st.satiation / M.max_satiation).toFixed(2)], ['Nutrition, true (not observed)', (st.nutrition / M.max_nutrition).toFixed(2)], ['Injury, true (not observed)', (st.injury / M.max_injury).toFixed(2)]);
     if (noc) rows.push(['Interoceptive nociception', noc.intensity.toFixed(2)]);
@@ -749,7 +755,7 @@ figure img:focus-visible { outline:2px solid var(--accent); outline-offset:-3px;
     if (pr) { var mx = Math.max.apply(null, pr.vector); rows.push(['Proprioception', mx > 0 ? M.action_names[pr.vector.indexOf(mx)] : 'none']); }
     if (vi) rows.push(['Visual, agent square', list(vi.vector.slice(0, 8), 2)]);
     if (lo) rows.push(['Location', list(lo.vector, 2)]);
-    values.innerHTML = rows.map(function (r) { return '<div><span>' + esc(r[0]) + '</span><span>' + esc(r[1]) + '</span></div>'; }).join('');
+    values.innerHTML = rows.map(function (r) { return '<div' + (r[2] ? ' class="' + esc(r[2]) + '"' : '') + '><span>' + esc(r[0]) + '</span><span>' + esc(r[1]) + '</span></div>'; }).join('');
   }
   function go(t) { slider.value = Math.max(0, Math.min(S.length - 1, t)); show(); }
   function stop() { if (timer) { clearInterval(timer); timer = null; playBtn.textContent = 'Play'; } }

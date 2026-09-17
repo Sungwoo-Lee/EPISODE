@@ -59,6 +59,7 @@ import numpy as np  # noqa: E402
 from PIL import Image  # noqa: E402
 
 from src.environment.dashboard import EpisodeRenderer  # noqa: E402
+from src.environment.dashboard import cells as C  # noqa: E402
 from src.utils.eval_recording import load_episode, load_run_meta  # noqa: E402
 
 FIGS = os.path.join(HERE, "figures")
@@ -174,7 +175,14 @@ def example_view():
             t=t, action=a, agent=plain(np.asarray(v.state.agent_pos)),
             satiation=float(v.state.satiation), nutrition=float(v.state.nutrition),
             injury=float(v.state.injury_level), body_temp=float(v.body_temp),
-            shared=sorted(list(occ) for sq, occ in v.occupancy.items() if len(occ) > 1),
+            # The READER'S names, not the code's tokens. The renderer's occupancy
+            # census is keyed by token -- and one token, ``neutral``, is the rabbit
+            # that Figure 8 labels "Rabbit" and the caption above calls "a rabbit".
+            # Serialising the token here printed "neutral + rock" in the numbers
+            # table beside a caption saying "a rabbit and a rock", with nothing on
+            # the page to tell a reader they are the same animal (register F57).
+            shared=[[C.display(n) for n in occ]
+                    for occ in sorted(list(o) for _, o in v.occupancy.items() if len(o) > 1)],
             sensors=[{k: plain(val) for k, val in entry.items()}
                      for entry in v.viz.values()]))
     if REP_STEP >= r.n_steps:

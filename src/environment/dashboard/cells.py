@@ -474,6 +474,57 @@ def bed(name: str, cx: float, cy: float, cell: float) -> list[Shape]:
 
 
 # --------------------------------------------------------------------------
+# What a READER calls each of these
+#
+# WHY A SECOND SET OF NAMES EXISTS. The keys above are the code's tokens, and
+# one of them is not the English for the thing it draws: ``neutral`` is a
+# rabbit. Every hand-written surface says "rabbit" -- the figure that labels the
+# forms, the caption that describes a shared square, this module's own docstring
+# -- while anything that *serialises* the token says "neutral", and a reader has
+# no way to learn they are one animal. A reader reads "neutral" as an English
+# adjective, not as an identifier, so the mismatch survives prose review.
+#
+# THE RULE THIS TABLE MAKES POSSIBLE. Any exporter that emits one of these names
+# into something a reader will see routes it through :func:`display`, so the
+# page's vocabulary and the painter's vocabulary cannot drift apart.
+# --------------------------------------------------------------------------
+DISPLAY_NAME: dict[str, str] = {
+    "agent": "agent",
+    "predator": "predator",
+    "hiding_predator": "hiding predator",
+    "food": "food",
+    "neutral": "rabbit",
+    "rock": "rock",
+    "bush": "bush",
+    "tree": "tree",
+    "campfire": "campfire",
+}
+
+# Asserted at import, not trusted: a form added to COMPANION or BED without a
+# reader's name for it would otherwise reach a page as a bare token, which is the
+# exact defect this table was added to remove.
+if set(DISPLAY_NAME) != set(COMPANION) | set(BED):
+    _known = set(COMPANION) | set(BED)
+    raise RuntimeError(
+        f"DISPLAY_NAME does not cover the forms this module draws: missing "
+        f"{sorted(_known - set(DISPLAY_NAME))}, unknown {sorted(set(DISPLAY_NAME) - _known)}"
+    )
+
+
+def display(name: str) -> str:
+    """The name a reader sees for one occupant or terrain token.
+
+    Raises rather than falling back to the token: a silently passed-through
+    ``neutral`` on a page is the failure this function exists to make loud.
+    """
+    if name not in DISPLAY_NAME:
+        raise KeyError(
+            f"no reader's name for {name!r}; known tokens are {sorted(DISPLAY_NAME)}"
+        )
+    return DISPLAY_NAME[name]
+
+
+# --------------------------------------------------------------------------
 # The composition of one square
 # --------------------------------------------------------------------------
 def compose(occupants, cx: float, cy: float, cell: float, action=None):

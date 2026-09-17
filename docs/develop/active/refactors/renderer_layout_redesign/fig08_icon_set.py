@@ -67,30 +67,46 @@ ROW_GAP = 26
 NCOL = 5
 SCALE = 2.8            # the whole sheet is magnified by this, uniformly
 
-#: Each row: a heading, then (occupants, label). ``occupants`` is handed to the
-#: renderer's own ``compose()`` exactly as the arena hands it a square's census.
+#: Each row: a heading, then (occupants, label template). ``occupants`` is handed
+#: to the renderer's own ``compose()`` exactly as the arena hands it a square's
+#: census. The template's ``{0}``, ``{1}`` ... are filled with the READER'S names
+#: for those occupants, taken from ``cells.DISPLAY_NAME`` rather than typed here:
+#: the code's token for the rabbit is ``neutral``, and a label that restated the
+#: reader's name by hand is free to disagree with every other surface that prints
+#: it (register F57). A template with no placeholder is a count, not a name.
 ROWS = [
     ("One occupant, alone in a square", [
-        (("agent",), "Agent"),
-        (("food",), "Food"),
-        (("predator",), "Predator"),
-        (("hiding_predator",), "Hiding\npredator"),
-        (("neutral",), "Rabbit"),
+        (("agent",), "{0}"),
+        (("food",), "{0}"),
+        (("predator",), "{0}"),
+        (("hiding_predator",), "{0}"),
+        (("neutral",), "{0}"),
     ]),
     ("Terrain is the floor, not a picture in the middle", [
-        (("bush",), "Bush"),
-        (("rock",), "Rock"),
-        (("tree",), "Tree"),
-        (("campfire",), "Campfire"),
+        (("bush",), "{0}"),
+        (("rock",), "{0}"),
+        (("tree",), "{0}"),
+        (("campfire",), "{0}"),
     ]),
     ("A shared square keeps every occupant", [
-        (("agent", "bush"), "Agent\non bush"),
-        (("agent", "food"), "Agent\n+ food"),
-        (("neutral", "rock"), "Rabbit\non rock"),
+        (("agent", "bush"), "{0}\non {1}"),
+        (("agent", "food"), "{0}\n+ {1}"),
+        (("neutral", "rock"), "{0}\non {1}"),
         (("agent", "hiding_predator", "predator"), "Three\noccupants"),
         (("agent", "predator", "food", "neutral"), "Four\n(synthetic)"),
     ]),
 ]
+
+
+def tile_label(occupants, template):
+    """One tile's caption, built from the renderer's own reader-facing names.
+
+    The leading name opens the label, so it is capitalised and, if it is two
+    words, broken over the tile's two lines; the rest read as ordinary prose
+    inside the template ("Agent / on bush").
+    """
+    lead = C.display(occupants[0]).capitalize().replace(" ", "\n")
+    return template.format(lead, *[C.display(n) for n in occupants[1:]])
 
 ACTION = "RIGHT"       # so the agent's chevron shows which way it last moved
 
@@ -144,10 +160,11 @@ def main():
     y = PAD
     for heading, tiles in ROWS:
         text(ax, PAD, y, heading, 12, "semibold", P.INK2)
-        for i, (occ, label) in enumerate(tiles):
+        for i, (occ, template) in enumerate(tiles):
             cx = PAD + i * PITCH + CELL / 2
             draw_square(ax, occ, cx, y + HEAD + CELL / 2)
-            text(ax, cx, y + HEAD + CELL + 8, label, 10, "medium", P.INK, ha="center")
+            text(ax, cx, y + HEAD + CELL + 8, tile_label(occ, template), 10, "medium",
+                 P.INK, ha="center")
         y += row_h + ROW_GAP
 
     text(ax, PAD, h - PAD - 22,
