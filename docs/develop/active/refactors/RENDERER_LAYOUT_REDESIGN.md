@@ -2268,7 +2268,8 @@ Each checkpoint states what would show it failed.
   - *Fails if:* any file appears or changes under `videos/`; the signature assertion trips on a real single-run dir; an unrenderable recording aborts the batch, is skipped silently, or lets the process exit zero; a frame count is taken from the writer rather than decoded from the file; a compatibility shim for M7–M9 is added to `src/environment/dashboard/` before the retirement gate; or CP-G fails.
   - *2026-09-17 developer:* **every clause met EXCEPT "including M7–M9", which is deliberately left unticked rather than waived.** Full detail in the Implementation Report "Phase 3 (CP3)". **Met:** M4 renders end to end and the videos play — `episode_000002.mp4` decodes to **75 frames for 75 recorded steps**, `episode_000001.mp4` to **24 for 24**, and `eval_M4.mp4` to **99 = 24 + 75**, each count read back by `ffprobe` **decoding the finished file** rather than taken from the writer. Output is **only** under `videos_v2/`; no `videos/` directory exists anywhere under `results/render_audit/`, and the test asserts V1's MP4 bytes are unchanged after a V2 render of the same directory (hash-for-hash, plus no file added or removed). **Determinism verified, not assumed:** the same recording rendered twice gives byte-identical MP4s, per episode *and* concatenated (`0468efdf…`, `4f3bd535…`, `31e676c6…` both times). `tests/scripts/test_render_recordings_v2.py` **8 passed**. CP-G **10/10 PASS + FRAMES PASS ×3, exit 0**, before and after. **Not met, and not mine to clear: M7/M8/M9 still cannot be rendered**, and the plan's own re-entry mechanism cannot clear them — the `AttributeError` is raised *inside* the frozen `sensor.py:577`, which `panels.py:184` calls, so `_recording_flag` (§D4.1) never gets the chance to apply. They now **fail loudly per recording** (full traceback, batch continues, exit 1) instead of aborting. **For `senior-developer`:** decide the mechanism (a params proxy at the package boundary, or a frozen-file edit deferred to the retirement gate) — see the report's deviation 1.
   - *2026-09-17 senior-developer, **ruled: deferral, and the clause is rewritten rather than waived** (Revision 24).* **The developer was right not to waive the clause, and right that `_recording_flag` cannot meet it** — Revision 13's expectation is retracted at its source. The mechanism question is answered **deferral**, on one measurement that neither prior pass had taken: **V1 cannot read M7–M9 either** — `build_sensory_viz` raises the identical `AttributeError` at the identical `sensor.py:577`. §D4.1's bar is "V2 renders every recording V1 renders", so **V2 already meets it**, and the clause was asking the new renderer to exceed the frozen one on recordings the frozen one has never read. **The proxy is rejected on measurements, not taste:** it would clear **one** of the three cells (M8/M9 stop at `animal_classes` and the entity-schema fields behind it — 91 missing fields, a scene to reconstruct rather than a flag to supply); it would have to survive **three** frozen `sensor.py` entry points, not one; and one of its four attributes (`visual_vector_size`) is a scene quantity rather than an era switch. **Re-recording is rejected too, and deserves the straight answer it was owed:** M1/M2/M4 are *generated* fixtures whose job is to be current, while M7–M9 are *found* fixtures whose job is **to be old** — re-recording them destroys the very evidence they exist to provide, and yields three more current-era recordings. It is also unavailable: M8/M9 fail to rebuild on `environment.predator_enabled` (removed in v2.0) even with all five era keys, and M7's checkpoint no longer exists on disk. **The one-line guard belongs at `sensor.py:577` at the retirement gate, where it clears M7 for both renderers.** CP3's clause is rewritten above; **nothing further is required of the developer for CP3**, and CP4 remains unrun.
-- [ ] **CP4: Speed.** Same node as CP0.4: V2 median ≤ V1 median on every cell and ≤ 0.5 × on M4; RSS growth < 50 MB over 10 episodes; FDs reported. *Fails if:* any gate is missed.
+- [x] **CP4: Speed.** Same node as CP0.4: V2 median ≤ V1 median on every cell and ≤ 0.5 × on M4; RSS growth < 50 MB over 10 episodes; FDs reported. *Fails if:* any gate is missed.
+  - *2026-09-17 developer, **CP4 CLOSES against the decided target***. Full detail in the Implementation Report "CP4: the speed gate on a lab node". Measured on **node 111** (`docker-111`, Intel i9-10980XE, 36 threads, load 0.02 at start, nothing else running), in a `ProcessPoolExecutor` worker, **≥ 200 frames per cell** (n = 211–217, first 5 excluded), V1 and V2 timed back-to-back in the same process on the same recordings. **The hard floor holds on all nine cells — V2 is faster than V1 everywhere**, worst ratio **0.5748** (M4b, 1.74× faster), best **0.4903** (M5, 2.04×). **M4 = 0.5689**, reproducing the Phase 0c spike's 0.563 on different hardware, which is the number the user accepted at Q22. **The `≤ 0.5 × on M4` clause is NOT met and is not a failure** — it was retired by the user's 2026-09-17 decision (Q9, Q22, §R21.1); it is recorded here rather than quietly dropped. **Neither re-open condition fires:** no cell is slower than V1, and the **arena's share is 5.71–8.65 %** (M4 7.65 %, 12.40 ms of 162.01 ms) against the ~25 % trigger — so the arena is still not the cost, and Q22's premise has not become true. Arena artists **787** of 2597–2787 total, **identical across arms on all nine cells** (a differing count would void the arm measurement, §R20.5). **RSS growth 47.2 MB over 10 episodes** against the < 50 MB gate — and the trajectory is a **plateau, not a leak**: per-episode deltas `116.3, 27.7, 14.9, 0.7, 2.6, 1.3, 0.0, 0.0, 0.0, 0.0`, i.e. matplotlib/font warm-up front-loaded into the first three episodes and **exactly zero growth over the last four**. **FDs reported: 24** during the benchmark, **21** in the RSS batch. Setup **1.65–2.09 s** per episode. Guard **10/10 PASS + FRAMES PASS ×3, exit 0**, before and after.
 - [ ] **CP5: Viewer.** `test_episode_viewer.py` is green; `check_artifact_layout.py` is clean at 500/834/1440; screenshots and the contact sheet are **looked at**, with findings in the report. *Fails if:* arrays differ, the checker flags a defect, or nobody looked.
 - [ ] **CP-C: One meaning per colour (Revision 8).**
   - **What is counted.** On checked frames from M1, M3, M4, E2 and E2n, a pixel census classifies each foreground pixel to the nearest palette token (ΔE threshold from the spec) and attributes it to the panel whose box contains it.
@@ -5463,3 +5464,361 @@ registry — if `senior-developer` disagrees, `bug-curator` owns that call.
   (the viewer) are untouched. No file was staged and nothing was committed.
 
 Implemented by: developer
+
+## Implementation Report — the artifact page is regenerated from the real renderer (2026-09-17)
+
+> **Implemented by**: developer
+
+### What this is, in plain words
+
+The page at `docs/develop/active/refactors/renderer_layout_redesign/` was built while
+this redesign was still a proposal, and it had gone stale in a specific way: its
+dashboard figures were drawn by **`fig03_proposed_dashboard.py`, a mock** that
+imitated the proposed layout, because when the page was written no renderer
+existed. One does now. A mock's picture of a shipped design is a second
+implementation of that design, free to drift from it — which is finding #56's
+failure mode, two parts of one system disagreeing with the reader building from
+the stale one.
+
+**The mock is deleted.** The page's example view is now produced by
+`src/environment/dashboard/` itself, from a real recording, so the page shows
+what the code does rather than what someone drew.
+
+### The choice, and why
+
+The brief offered two routes: rework the figure script to call the real renderer,
+or replace it with a thin exporter. **I replaced it.** Reworking would have kept a
+45 KB figure script whose entire body was drawing code the renderer now owns; what
+is actually needed is ~200 lines that open a recording, ask the renderer for
+frames, and write files. `render_examples.py` is that.
+
+One property is worth naming because it was free and removes a whole defect class:
+**the frames and the numbers beside them come out of one run of one renderer.**
+`data/episode.json` is written from the same `EpisodeRenderer` that drew the
+frames, through its own public `values(t)`, so the numbers shown for a step and
+the picture of that step cannot disagree. The old arrangement had a separate
+exporter step the environment again — a second computation free to diverge from
+the first, on a page whose whole subject is that class of divergence.
+
+### Files changed
+
+| File | What happened |
+|---|---|
+| `render_examples.py` (**new**) | Opens `results/render_audit/recordings/<cell>/<cell>/`, builds an `EpisodeRenderer`, writes one PNG per **drawn** step (`STRIDE = 2`, with step 0, the last step and the still's step all guaranteed present), the representative still, `data/episode.json`, and both `.data.txt` files. `[both\|example\|worlds]` argument so the render-heavy half is not repeated while iterating. |
+| `fig03_proposed_dashboard.py` (**deleted**) | The mock. 45 KB of drawing code the renderer now owns. |
+| `export_episode.py` (**deleted**) | Stepped the environment to produce the numbers; superseded — the numbers now come from the renderer that drew the frames. |
+| `data/icons.json` (**deleted**) | Orphan of the mock; nothing read it. |
+| `fig08_icon_set.py` | Rewritten to call `src/environment/dashboard/cells.py::compose()` — the same function the grid view calls for every square — instead of the sketch's `dashboard_style.GLYPHS`. Draws at the real `cell = 50`, magnified 2.8×. Stops if the names it draws disagree with the renderer's own form tables. |
+| `build_page.py` | Stems remapped; vector-sibling requirement narrowed to house-style figures (Figures 5–8) since 3–4 are now the renderer's own raster output, exactly like Figures 1–2; `REP_STEP` **read from the export** instead of duplicated as a constant; new `final_nutrition` / `coldest_body` / `shared_steps` facts; and step **numbers** separated from frame **indices** (`last_step` / `rep_step` vs `last_index` / `rep_index`) so a subsampled scrubber cannot misnumber the episode. |
+| `page_template.html` | Rewritten body (CSS and page script unchanged except the numbers table). |
+| `review.html` | Said "Nothing is built yet", dated 2026-09-14. |
+| `dashboard_style.py`, `export_extended.py` | Docstring references to the two deleted files. |
+| `figures/`, `data/episode.json` | Regenerated. |
+
+### What was stale, beyond the list I was given
+
+- **Figure 3's senses were described wrongly for its own world.** The caption said smell and vision were drawn as "one small map per channel in the band under the grid view (option A)" at ranges 1 and 2 "set in memory". The recorded world reads **both at range 0**, so there is no sensor band at all and the two cards are single rows of channel swatches. Rewritten, with a sentence in section 04 connecting the two.
+- **The episode-ending sentence was false for the new episode.** The old text said the episode ends as body temperature crosses the survivable limit. This one **ends by starvation**: at the last step nutrition is 0.00 while body temperature is −11.3°, inside the ±15 band, and it never left it (range −11.97 to +0.52). The caption now says so, using facts computed by the builder rather than typed.
+- **`review.html` claimed nothing was built**, three phases after it was.
+- **Section 05's toolkit table still carried estimates** ("est. 30–100 ms", "target: half of V1") though the measurement existed. Now 182 ms against V1's 313 ms, ratio 0.58.
+- **Section 06 was entirely in future tense**, though five of its six checks had run.
+- **Section 07 recorded none of the Revision 17/18/22/23 decisions** — whole world at 50 px, terrain as floor, the wedge encoding. Four bullets added.
+
+### Dangling references I created and did NOT fix — `senior-developer`'s call
+
+Deleting the mock leaves three pointers to it **outside the page folder**. They are
+not mine to edit under the File Changes contract, and one set is in `src/`:
+
+1. `src/environment/dashboard/panels.py:57` and `layout.py:21` both cite
+   `renderer_layout_redesign/fig03_proposed_dashboard.py` as where their constants
+   "are not re-chosen" from. The file is gone. This is a docstring-only fix but it
+   is a source change, so I stopped.
+2. `docs/reviews/design_episode_dashboard.md:51` lists `fig04_repacking.png`.
+3. This plan's own **Decided questions** (line ~2311) says Figure 3's frames "are
+   produced by `fig03_proposed_dashboard.py` with `dashboard_style.py`". The
+   Revision 17–19 arithmetic passages that cite the mock are historical records of
+   what was measured at the time and should **not** be rewritten; the Decided-questions
+   line is a present-tense claim and is now wrong.
+
+### Results now on the page (judged to belong, and why)
+
+The brief asked whether the real results belong here or would bloat the page.
+**They belong, because section 06 already existed and was written in future
+tense** — turning "how we will know it works" into "what has been checked, and
+what it found" is a correction, not an addition. Five stages now carry numbers
+(guard 10/10 after every phase; 7/7 known defects rediscovered and the
+flag-everything mutation failing 10 tests; **18 frames, zero findings**; the
+overlap defect reproduced by two independent routes; 0.58 of V1's frame time),
+and one short callout carries the video (75 decoded frames against 75 recorded
+steps, byte-identical across two runs). The sixth stage is honestly marked **TO DO**.
+
+### Verification
+
+| Check | Result |
+|---|---|
+| `scripts/eval/v1_path_guard.py check` — **before** | **10/10 PASS**, ACCEPTED=0, ATTRIBUTED=0, UNATTRIBUTABLE=0, **FRAMES PASS ×3**, `RESULT: OK`, **exit 0** |
+| `scripts/eval/v1_path_guard.py check` — **after** | **identical — 10/10 PASS + FRAMES PASS ×3, exit 0** |
+| `build_page.py` | **exit 0**, `wrote index.html (11.54 MB), 38 steps, seed 8` — every build-time gate green (both axes in words, script-emitted data-used rows, 150–250-word method blocks, no drawing in the HTML, vocabulary, every script named) |
+| Ten frozen V1-path files | untouched; `git status src` shows no modification from this work |
+| `Artifact` tool | **not called**, per the brief |
+| Staged / committed | **nothing**; working tree left dirty |
+
+**Figures looked at, not just built** (a green gate is necessary, not sufficient):
+the still and the icon sheet were opened and read. The still shows the whole
+10 × 10 world at 50 px with two genuinely shared squares at step 32 — agent + food,
+rabbit + rock — and the World card's wedge caption. The icon sheet shows the
+current forms: red food with its green leaf, the charcoal thorn cluster, the grey
+rabbit with the pink inner ear, terrain as floors. Figure 4's three frames differ
+exactly as configuration predicts: M4 has the body-temperature row and
+Thermoception card, M1x drops both plus the nociception row, M6 adds a Location card.
+
+### Speed check — skipped, with the reason
+
+**No hot-path code was touched.** Every change is under
+`docs/develop/active/refactors/renderer_layout_redesign/`; nothing in `src/`,
+`configs/` or `scripts/` changed, and the guard's frozen-file comparison and raw
+frame hashes prove it independently of my say-so. A training-speed measurement
+here could not differ from noise. Rendering cost, which this work does exercise,
+is reported above from the existing `--benchmark` figures rather than re-measured.
+
+### Fitting the 16 MB ceiling — what was spent, and what it cost
+
+The platform rejects an artifact over 16 MB. At full frame rate the page built to
+**19.65 MB** and could not publish. Three levers were measured before one was
+chosen, because the cheapest-looking one turns out to corrupt data.
+
+| Option | Built page | What it costs |
+|---|---|---|
+| All 75 frames, unchanged | 19.65 MB | **over the ceiling — cannot publish** |
+| Downscale the frames | — | **Rejected without measuring.** The viewer advertises "actual size" and the caption states 1440 × 896, so smaller pixels would make the page lie about itself. |
+| Palette-quantise (256 colours) | **9.29 MB** | **Rejected on measurement.** 4.45 MB of frames, mean error 0.085 — but **max error 80/255, and the worst region is *inside the arena grid*** (measured: worst 220 × 70 window at x=380, y=360), where a square's colour *is* its temperature. A magnified before/after crop shows the campfire's flame gradient visibly posterising. It buys bytes by altering data, on a page whose subject is rendering fidelity. |
+| **Subsample the scrubber (chosen)** | **11.54 MB** | 38 frames of 75, one step in two. **Every remaining pixel is exact.** |
+
+**What was spent: temporal resolution. What it cost: the odd-numbered steps.**
+Nothing else. The episode is still the 75-step one, the frames are still
+1440 × 896, the scrubber still spans step 0 to step **74**, and step **32** — the
+frame carrying both shared squares, `agent + food` and `neutral + rock` — is still
+the still the page opens on. The readout gives the episode's own step number, so
+it advances in twos rather than renumbering step 64 as step 32.
+
+**It is stated on the page rather than hidden**: Figure 3's data-used table reads
+*38 of 75 environment steps*, with the reason emitted by the script itself, and
+both the section text and the caption say the scrubber carries one step in two.
+
+One correctness trap this opened and closed: subsampling makes a frame's **index**
+stop equalling the episode's **step number**. `build_page.py` now separates the
+two (`last_step` / `rep_step` for prose, `last_index` / `rep_index` for the
+slider); conflating them would have captioned a 74-step episode as ending at step
+37 and opened the slider on the wrong frame.
+
+### Checkpoints
+
+No checkpoint is ticked by this work — it regenerates an artifact page and closes
+no CP. CP4 and CP5 remain unrun.
+
+---
+
+## Implementation Report — CP4: the speed gate on a lab node (2026-09-17)
+
+### What this was, in plain words
+
+The redesigned episode renderer ("V2") had never been timed on a lab machine.
+Every speed number in this plan so far came from inside the dev container, and
+the gate was written to be measured somewhere quieter and more standard. This
+run does that: it renders the same recorded episodes with **both** renderers —
+the one training uses today ("V1") and the new one — on the **same idle
+machine**, back to back, and compares them.
+
+**The result: the new renderer is faster than the old one on every single test
+world**, by between 1.74× and 2.04×. Nothing regressed, so the checkpoint
+closes.
+
+**What this run was NOT asked to do.** The original gate demanded the new
+renderer be *at least twice* as fast on the campfire world. It came in at 1.76×
+there. That target was **retired by the user on 2026-09-17** (Decided questions,
+Q9 and Q22, with the reasoning in §R21.1): the four-fold growth of the big
+world-grid panel was the thing the target was written to guard against, and the
+measurement showed that panel costs only ~6 % of a frame, so the miss carried
+none of the information the gate was set up to carry. CP4's job today is
+therefore to confirm the shipped renderer is comfortably faster than V1 and to
+record the real numbers — **not** to chase 0.5×.
+
+### Conditions, because a ratio measured across machines is not a ratio
+
+| | |
+|---|---|
+| Node | **111** (`docker-111`), chosen as an idle mid-tier box |
+| CPU | **Intel i9-10980XE @ 3.00 GHz**, 36 threads, 1 socket |
+| GPU | 2 × RTX 3090 — **incidental**; the render path is CPU-bound and pinned `JAX_PLATFORMS=cpu`, `CUDA_VISIBLE_DEVICES=""` |
+| Machine load | **0.02 at start**, 0.96 during (one busy core = the single pool worker). Nothing else was running: `pgrep` showed only this job, and no other session had claimed 111 in today's diary |
+| NAS mount | verified live before starting (`//192.168.0.250/cocoanlab01` on `/media/nas01`) |
+| Worker | one `ProcessPoolExecutor` worker, cells run **sequentially** so no two cells contend |
+| Frames | **≥ 200 per cell per renderer** (n = 211–217), first 5 excluded |
+| Both renderers | same process, same recordings, same worker, timed back to back |
+
+### Per-cell result — the hard floor, which is the clause that still binds
+
+V2 median vs V1 median. "Ratio" is V2 ÷ V1, so **lower is better and anything
+≥ 1.000 would be a failure**.
+
+| Cell | V2 median | V1 median | **Ratio** | Speed-up | V2 p95 | V1 p95 | n |
+|---|---|---|---|---|---|---|---|
+| M1 | 119.26 ms | 220.35 ms | **0.5412** | 1.85× | 129.8 | 389.3 | 211 |
+| M1x | 115.31 ms | 210.81 ms | **0.5470** | 1.83× | 125.0 | 392.8 | 211 |
+| M2 | 122.04 ms | 220.40 ms | **0.5537** | 1.81× | 132.1 | 397.2 | 211 |
+| M3 | 166.46 ms | 298.67 ms | **0.5573** | 1.79× | 181.3 | 474.6 | 217 |
+| **M4** | **166.55 ms** | **292.75 ms** | **0.5689** | **1.76×** | 180.8 | 465.6 | 217 |
+| M4b | 167.22 ms | 290.92 ms | **0.5748** | 1.74× | 177.7 | 463.4 | 217 |
+| M5 | 112.33 ms | 229.13 ms | **0.4903** | 2.04× | 124.3 | 425.2 | 211 |
+| M6 | 123.13 ms | 219.10 ms | **0.5620** | 1.78× | 135.3 | 395.1 | 211 |
+| M6b | 165.46 ms | 291.90 ms | **0.5668** | 1.76× | 176.9 | 467.2 | 217 |
+
+- **No cell is slower than V1.** Worst case **M4b at 0.5748** (1.74×). The
+  floor that protects training-time rendering holds with margin everywhere.
+- **M5 is the fastest at 0.4903**, and that is a coherent result rather than
+  noise: M5 is the one maintained cell with `olfactory_range: 1`, so it takes
+  the sensor-band layout and has **no olfaction card**. Fewer of the text-heavy
+  cards is exactly what §R21.1 identified as the real cost, so the cheapest cell
+  being the one with a card removed corroborates that diagnosis.
+- **V2 is also far more consistent.** V1's p95 runs 389–475 ms against a 211–299 ms
+  median (a long tail from rebuilding the whole figure each frame); V2's p95 sits
+  ~10 % above its median. That is the build-once-update-after architecture showing
+  up in the spread, not just the average.
+
+### The arena's share — the other re-open condition
+
+Q22's acceptance re-opens if the arena's share of a frame rises above ~25 %.
+Measured with §R20.5's arms on the same figure: **arm 1** (full frame) against
+**arm 3** (arena Axes hidden).
+
+| Cell | Arm 1 | Arm 3 | Arena | **Share** | Arena artists / total | Counts stable |
+|---|---|---|---|---|---|---|
+| M1 | 116.79 | 108.55 | 8.24 ms | 7.06 % | 787 / 2691 | yes |
+| M1x | 113.90 | 104.25 | 9.65 ms | 8.47 % | 787 / 2678 | yes |
+| M2 | 117.84 | 108.39 | 9.46 ms | 8.03 % | 787 / 2691 | yes |
+| M3 | 163.21 | 153.80 | 9.42 ms | 5.77 % | 787 / 2787 | yes |
+| **M4** | 162.01 | 149.61 | **12.40 ms** | **7.65 %** | 787 / 2787 | yes |
+| M4b | 162.59 | 152.15 | 10.44 ms | 6.42 % | 787 / 2785 | yes |
+| M5 | 111.42 | 101.78 | 9.64 ms | **8.65 %** (max) | 787 / 2597 | yes |
+| M6 | 120.81 | 111.24 | 9.57 ms | 7.92 % | 787 / 2763 | yes |
+| M6b | 162.11 | 152.86 | 9.25 ms | 5.71 % | 787 / 2783 | yes |
+
+- **Maximum share 8.65 %**, a third of the ~25 % trigger. The arena is still not
+  what costs the time, so Q22's premise has **not** become true and the
+  acceptance stands.
+- **M4's arena = 12.40 ms**, against the Phase 0c spike's **11.2 ms** on
+  different hardware. The figure the whole Q22 decision rested on reproduces.
+- **Artist counts are identical across arms on every cell** (787 arena artists
+  throughout). §R20.5 requires this: a differing count would mean an arm changed
+  the figure rather than what was drawn from it, which would void the
+  measurement.
+
+### Memory — measured across a batch, not asserted
+
+Each V2 worker holds a whole figure (~755 MB peak measured at Phase 3), which is
+why Phase 3 capped workers at `min(tasks, cpu_count − 1)`. CP4 asks for RSS
+growth < 50 MB over 10 episodes. Ten episodes were built, rendered and closed in
+**one** worker, sampling `VmRSS` after each close:
+
+```
+408.3, 524.6, 552.3, 567.2, 567.9, 570.5, 571.8, 571.8, 571.8, 571.8, 571.8  MB
+deltas:  116.3, 27.7, 14.9, 0.7, 2.6, 1.3, 0.0, 0.0, 0.0, 0.0
+```
+
+- **Growth episode 1 → episode 10 = 47.2 MB**, inside the < 50 MB gate.
+- **It is a plateau, not a leak, and that distinction matters.** 47.2 of a 50 MB
+  budget reads alarming; the trajectory shows why it is not. The growth is
+  front-loaded matplotlib/font warm-up in the first three episodes, after which
+  it flattens — **the last four episodes add exactly 0.0 MB**. A linear leak at
+  this rate would mean ~470 MB over 100 episodes; the measured shape predicts it
+  stays at ~572 MB. I am reporting the number *and* its shape rather than the
+  number alone, because the gate's pass/fail is the same either way but the
+  meaning is not.
+- **File descriptors: 24** during the benchmark, **21** in the RSS batch — far
+  under the 8192 soft limit the script raises at startup.
+
+### Deviations from the plan, none silent
+
+1. **No fixture is long enough for the "≥ 200 frames" clause.** The matrix cells
+   carry 45 frames (M1/M1x/M2/M5/M6) or 99 (M3/M4/M4b/M6b) across two episodes.
+   Rather than regenerate the fixtures — which would disturb the **pinned V1
+   frame baselines** that `v1_path_guard.py` compares against, for a timing run —
+   the episode list is **repeated** until 200 frames are timed (n = 211–217).
+   That is more samples of identical work, at the cost of re-paying setup per
+   repeat, which is measured separately and excluded from the frame medians.
+2. **The shipped `--benchmark` flag runs in-process; CP4 wants a pool worker.**
+   The measurement therefore calls the **shipped** `render_recordings_v2.py::_benchmark`
+   unchanged, from inside a `ProcessPoolExecutor` worker, via a throwaway harness
+   in `tmp/`. No shipped file was modified.
+3. **Arm 3 hides the arena Axes but its update callbacks still run**, so
+   `arm 1 − arm 3` is the arena's **draw** cost and the reported share is a
+   **lower bound** on its total cost. That is the conservative direction for the
+   "is the arena above 25 %?" question, and at 8.65 % maximum there is no margin
+   concern.
+4. **The `≤ 0.5 × on M4` clause is not met (0.5689).** Recorded, not dropped.
+   It was superseded by the user's decision at Q9/Q22 on 2026-09-17; this run
+   reproduces the accepted 0.563 as **0.5689** on a lab node.
+
+### How today's numbers compare with the two already on record
+
+The task asked that differences be explained rather than the flattering number
+picked, so all three are here:
+
+| Measurement | Machine | V1 median | V2 median | Ratio |
+|---|---|---|---|---|
+| Phase 0c spike (40 frames) | container `docker-102`, i9-7900X | 333.0 ms | 187.3 ms | 0.563 |
+| Phase 3 (75-step episode) | container `docker-102`, i9-7900X | — | **223.6 ms** | — |
+| **CP4 (this run, 217 frames)** | **node 111, i9-10980XE** | **292.8 ms** | **166.6 ms** | **0.5689** |
+
+- **Both renderers are faster here than in the container**, which is expected:
+  the i9-10980XE is a newer, higher-clocked part than the container's i9-7900X.
+  V1 moves 333.0 → 292.8 ms and V2 187.3 → 166.6 ms — they move *together*,
+  which is why the plan specified a **same-machine ratio**. The ratio itself is
+  stable across two different CPUs: **0.563 → 0.5689**.
+- **The spike's 187.3 ms and Phase 3's 223.6 ms are both in-container on M4, and
+  I cannot fully reconcile them from here.** They were taken at different moments
+  against different painters — the spike timed a scratch `tmp/` painter drawing
+  §R17.3's composition, while Phase 3 timed the **shipped** painter after Phase 2,
+  which carries more artists. That is the likely cause and it is the honest
+  answer; today's 166.6 ms is on different hardware and so is not evidence either
+  way between them. What today's run establishes is the **ratio**, which is what
+  the gate is written in.
+- **Setup is 1.65–2.09 s per episode here against Phase 3's 3.3 s**, same
+  faster-CPU explanation.
+
+### Verification
+
+- **`v1_path_guard.py check` run before and after the measurement: 10/10 PASS,
+  FRAMES PASS ×3 (M1, M2, M4), `RESULT: OK`, exit 0.** Identical both times —
+  the ten frozen V1-path files are untouched and V1's pinned frames still render
+  byte-identically.
+- **Nothing was staged and nothing was committed**, per the task's instruction.
+- **No file under `src/`, `scripts/` or `configs/` was modified.** The only
+  tracked change is this report plus the CP4 checkpoint line in this document.
+  The harness lives in `tmp/` (gitignored at `.gitignore:24`).
+- `src/environment/dashboard/` was never staged as a directory, and the files
+  parallel sessions have staged (`docs/develop/INDEX.md`,
+  `SAVED_RUN_CONFIG_COMPAT.md`) were not touched. The frontmatter here already
+  read `last_updated: 2026-09-17`, so `regen_dev_index.py` was deliberately
+  **not** run and `INDEX.md` is undisturbed.
+
+### One process note worth recording
+
+`run_command.py` **auto-tails the remote log with `ssh … tail -f`, which never
+returns**, so an invocation piped into `tail` appears to hang and produces no
+output even though the remote job ran fine. Two attempts were lost to this, and
+one was misdiagnosed as "the job never started" because `pgrep` found nothing —
+the job had in fact already *finished*. The reliable pattern is **`--no-tail`
+plus reading `<repo>/logs/<timestamp>.log` directly**, which is on the NAS and
+readable locally. Recorded because the next person to drive a lab node from a
+sub-agent will hit it.
+
+### Checkpoints
+
+- **CP4 — CLOSES.** V2 median ≤ V1 median on **all nine cells** (worst 0.5748);
+  RSS growth 47.2 MB < 50 MB over 10 episodes, and plateauing; FDs reported
+  (24 / 21). The retired `≤ 0.5 ×` clause is recorded as not met, per the user's
+  Q9/Q22 decision. Neither Q22 re-open condition fires.
+- CP5 (viewer), CP-C, CP-D and CP6 remain unrun.
+
+*Implemented by: developer*
