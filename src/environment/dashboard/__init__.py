@@ -36,12 +36,14 @@ untouched by this package.
 from .labels import channel_labels, olfactory_labels, visual_labels
 from .layout import (
     ARENA_CELL_MIN_PX,
-    ARENA_CELL_PX,
+    ARENA_PX,
     Box,
     Layout,
     LayoutOverflowError,
     Size,
+    arena_cell_px,
     pack,
+    window_cells,
 )
 from .panels import (
     ABSENT,
@@ -82,8 +84,10 @@ __all__ = [
     "EpisodeRenderer",
     "render_dashboard_frame",
     "ARENA_CELL_MIN_PX",
-    "ARENA_CELL_PX",
+    "ARENA_PX",
     "Box",
+    "arena_cell_px",
+    "window_cells",
     "FontMetrics",
     "Layout",
     "LayoutContext",

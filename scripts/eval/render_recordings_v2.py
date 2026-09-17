@@ -159,14 +159,21 @@ def _assert_single_layout(sig_by_episode: dict) -> str:
 # ---------------------------------------------------------------------- worker
 
 
-def _worker_init(run_meta_path: str):
+def _worker_init(run_meta_path: str, local_view_size=None, title=None):
     """Runs once per worker: matplotlib backend + the run's metadata.
 
     Deliberately does NOT call the frozen renderer's `_load_icons`. That cache is
     process-global and ignores its argument after the first call, so priming it
     from a V2 worker is how "V1 is unaffected" would quietly stop being true
-    (plan finding #48). The V2 renderer draws its own vector forms and needs no
-    icon cache at all.
+    (plan finding #48). The V2 renderer reads its own artwork and needs no icon
+    cache at all.
+
+    `local_view_size` overrides the recording's own
+    `visualization.local_view_size` -- how many world squares the grid view draws
+    across. It is a RENDERING choice and nothing else: the recording is not
+    re-stepped, no environment is built, and the saved params are copied rather
+    than mutated, so two renders of one recording at different window sizes are
+    the same episode seen at two zoom levels.
     """
     import matplotlib
     matplotlib.use("Agg")
@@ -174,10 +181,20 @@ def _worker_init(run_meta_path: str):
 
     _raise_fd_limit()  # also done in the parent; cheap and safe to repeat
     meta = load_run_meta(Path(run_meta_path).parent)
-    _WORKER_STATE["params"] = meta["params"]
+    params = meta["params"]
+    if local_view_size is not None:
+        # Set the ONE field on this worker's freshly-unpickled copy rather than
+        # rebuilding the object. `dataclasses.replace` (and flax's `.replace`,
+        # which calls it) reads back every field the CURRENT EnvParams class
+        # declares, and an archived recording predates some of them — measured on
+        # the render-audit fixtures, which have no `thermal_warming_rate_scale` —
+        # so rebuilding raises on a field nobody asked to change. Nothing is
+        # written back to the recording.
+        object.__setattr__(params, "local_view_size", int(local_view_size))
+    _WORKER_STATE["params"] = params
     _WORKER_STATE["icon_config"] = meta["icon_config"]
     _WORKER_STATE["action_map"] = meta.get("action_map")
-    _WORKER_STATE["title"] = Path(run_meta_path).parent.name
+    _WORKER_STATE["title"] = title or Path(run_meta_path).parent.name
 
 
 def _render_episode(episode_path_str: str, out_video_path_str: str, fps: int) -> dict:
@@ -344,6 +361,15 @@ def main():
     ap.add_argument("--output-dir", default=None,
                     help="Override the per-episode output folder. Default: "
                          "<run_root>/videos_v2/<recordings_dir name>/.")
+    ap.add_argument("--local-view-size", type=int, default=None,
+                    help="Override how many world squares the grid view draws across "
+                         "(the recording's visualization.local_view_size). The arena "
+                         "panel is a fixed size, so this is a ZOOM: a smaller number is "
+                         "a closer view with larger squares. The output filename carries "
+                         "it, so three window sizes of one episode cannot overwrite each "
+                         "other.")
+    ap.add_argument("--title", default=None,
+                    help="Frame title. Default: the recordings directory's name.")
     ap.add_argument("--benchmark", action="store_true",
                     help="Time V2 against V1 on these recordings and exit. Writes no video.")
     ap.add_argument("--benchmark-frames", type=int, default=200,
@@ -389,7 +415,11 @@ def main():
                  else run_root / "videos_v2" / rec_dir.name)
     video_dir.mkdir(parents=True, exist_ok=True)
 
-    planned = [(ep, video_dir / (ep.stem.replace(".rec", "") + ".mp4"))
+    # The window size goes in the FILENAME. Rendering one episode at three window
+    # sizes is the way the window rule is demonstrated, and without this the
+    # second render would silently overwrite the first.
+    view_tag = "" if args.local_view_size is None else f"_view{args.local_view_size}"
+    planned = [(ep, video_dir / (ep.stem.replace(".rec", "") + view_tag + ".mp4"))
                for ep in episode_files]
     tasks = [(str(ep), str(mp4)) for ep, mp4 in planned
              if not (args.skip_existing and mp4.exists())]
@@ -402,8 +432,9 @@ def main():
     if tasks:
         print(f"Rendering {len(tasks)} episode(s) with {workers} worker(s) "
               f"(fps={args.fps}) → {video_dir}")
-        with ProcessPoolExecutor(max_workers=workers, initializer=_worker_init,
-                                 initargs=(str(run_meta_path),)) as pool:
+        with ProcessPoolExecutor(
+                max_workers=workers, initializer=_worker_init,
+                initargs=(str(run_meta_path), args.local_view_size, args.title)) as pool:
             futures = [pool.submit(_render_episode, ep, out, args.fps) for ep, out in tasks]
             for fut in as_completed(futures):
                 r = fut.result()

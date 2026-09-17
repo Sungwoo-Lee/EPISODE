@@ -235,6 +235,32 @@ CELLS: dict[str, Cell] = {
                 "row takes the 'not observed' path. Recorded under the demonstration "
                 "loosening",
                 provenance=_CAMPFIRE_PROVENANCE + " " + _DEMO_LOOSENING_NOTE),
+    # The world the approved design sketch draws. The sketch overrode its own
+    # sensor ranges ("sensor ranges overridden for this sketch", its header says)
+    # so that BOTH senses reach past the agent's own square, which is what makes
+    # its sensor band a row of per-channel diamond maps rather than named rows.
+    # Every maintained config reads both senses at range 0, so reproducing that
+    # frame needs this cell: the campfire world plus the sketch's two ranges.
+    "M4r": Cell(CAMPFIRE, dict(_DEMO_LOOSENING, **{
+        "sensory.olfactory_grid_range": 1,
+        "sensory.visual_sensor_enabled": True,
+        "sensory.visual_sensor_range": 2,
+        "sensory.visual_blur_enabled": False,
+        "sensory.visual_occlusion_enabled": False,
+    }), "the campfire temperature world with smell at radius 1 and sight at radius 2 "
+        "-- the sense set the approved design sketch draws, and the only world in "
+        "which the sensor band holds diamond maps for BOTH senses",
+        overrides_source="the approved sketch's own overrides "
+                         "(fig03_proposed_dashboard.py: 'sensor ranges overridden "
+                         "for this sketch'), applied to the maintained campfire world",
+        provenance=_CAMPFIRE_PROVENANCE + " " + _DEMO_LOOSENING_NOTE),
+    # A world MUCH larger than the window, for the one panel whose density really
+    # does follow the world's size: the World map. The grid view's cost is now
+    # constant (it always draws `local_view_size` squares in a fixed 480 px box),
+    # so this cell exists to check the map at 20 x 20 rather than the arena.
+    "W20": Cell(DEFAULT_CONFIG, {"environment.width": 20, "environment.height": 20},
+                "the default world at 20 x 20 -- four times the area, and the only "
+                "cell where the World map's squares are under 10 px"),
     "M5": Cell(DEFAULT_CONFIG, {"sensory.olfactory_grid_range": 1},
                "olfaction as a directional grid (radius 1)"),
     "M6": Cell(DEFAULT_CONFIG, {"sensory.location_sensor": True},

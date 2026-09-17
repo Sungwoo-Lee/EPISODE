@@ -190,8 +190,10 @@ never instances (§R17.5 item 1): two predators in one square are one predator t
 design, and an instance count would report a failure that is not one.
 
 Excluded from the token union, BY MEASUREMENT and never by a painter's tag:
-  * an element whose ink covers >= CELL_FLOOR_FRACTION (48 %) of the square is the bed or
-    the ground — the floor the occupants stand on, not an occupant;
+  * an element whose ink covers >= CELL_FLOOR_FRACTION (74 %) of the square is the square's
+    own GROUND FILL — the floor the occupants stand on, not an occupant. (Until 2026-09-17
+    it could also be a terrain BED; terrain is a centred glyph again, so the only thing
+    above the tokens is the ground.)
   * an element whose ink sits on the perimeter of ITS OWN bounding box (`_ink_is_outline`)
     is a square outline or a seam. The agent's 2 px iris outline is the case that matters:
     left in, it runs around the rim and bridges two tokens into one component, failing a
@@ -249,38 +251,19 @@ whose REACH_PAD_PX-padded bbox cannot meet a square: the padded bbox bounds the 
 ink, so `L(p)` is unchanged by construction, and a control asserts both ways give
 identical findings.
 
-The MINIMAP variant is measured on the COMPOSITE, not by isolation — isolation would call
-a split dot correct even when one half is painted over the other, which is the exact
-defect §R17.4 exists to prevent. Its ground truth is the distinct palette colour SETS the
-KINDS present map to (two predators are one colour, not two movers; a hiding predator is
-its body colour PLUS the amber accent that tells it from a predator, §R22.1), and its area
-denominator is the SAME census run on that kind's OWN ARTISTS RENDERED TOGETHER, so edge
-blends are excluded from numerator and denominator alike and a correct mark measures
-~1.000 however many paints it is drawn in. A geometric wedge would be unreachable on a
-correct ~13 px dot, a third to a half of whose pixels are blends. Ownership is measured —
-an artist belongs to a kind only if its isolated ink carries one of that kind's colours —
-so an accent painted over a NEIGHBOUR's mark is still an occlusion and still fires.
-
-THE MAP MEASURES AGAINST ITS OWN FLOORS, on every path, and never the grid panel's
-(§R20.4, completed by §R23.1). The census path uses MINIMAP_SURVIVAL_MIN = 0.93, swept on
-map-sized wedges; the geometric fallback keeps MINIMAP_AREA_MIN = 0.55. Which floor a path
-uses is a LOOKUP in MINIMAP_FLOORS rather than an assignment beside each branch, because
-the defect §R23.1 fixes was precisely a path inheriting the arena's number by omission.
-Its RESOLUTION LIMIT, stated because a ratio hides it: at 0.93 a wedge of 15–24 classified
-pixels may lose exactly ONE pixel and stay silent, and a wedge of 14 or fewer may lose
-none — so the census path catches an occlusion removing ≥ 2 pixels from a large wedge and
-≥ 1 from a small one, while TOTAL occlusion of a kind is caught by the distinctness check
-at any size, which has no floor at all.
+THE WORLD MAP HAD ITS OWN VARIANT OF THIS RULE AND NO LONGER DOES (2026-09-17).
+It measured a map square's dot split into wedges, one per occupant; the approved
+design draws one mark per entity instead, and the grid view -- a window, at a
+96 px square -- is where "which occupants are in this square" is now both drawn
+and checked. The rule, its four tolerances and its palette table were deleted
+rather than relaxed, because the picture they measured is not drawn any more. See
+the note where the constants were, and plan Revision 27.
 
 Tolerances added by this rule, all argued above:
-  SURVIVAL_MIN         = 0.98   per-component surviving fraction, GRID PANEL only
-                                (swept at CP0.3b)
-  MINIMAP_SURVIVAL_MIN = 0.93   the same fraction for the MAP's census path, swept on
-                                map-sized wedges (§R23.1)
-  CELL_FLOOR_FRACTION  = 0.48   ink area share at which an element IS the floor
+  SURVIVAL_MIN         = 0.98   per-component surviving fraction (swept at CP0.3b)
+  CELL_FLOOR_FRACTION  = 0.74   ink area share at which an element IS the ground
   OUTLINE_SPAN_MIN     = 0.80   bbox span below which an "outline" is a suspect token
   REACH_PAD_PX         = 2      bbox padding for the work-only reach test
-  MINIMAP_DELTA        = 12     per-channel distance for the minimap colour census
 
 Tolerance between components is ZERO shared pixels, with NO dilation: the 1 px dilation in
 the text rules exists for glyph anti-aliasing and is wrong here.
@@ -381,6 +364,10 @@ TITLE_TABLE = {
     "OLFACTION": "Olfaction",
     "COLLISION": "Collision",
     "VISUAL": "Visual",
+    # The approved design titles the panel with the READER's word. The breakdown
+    # name behind it is still "Visual", so the table translates rather than the
+    # painter renaming the modality.
+    "VISION": "Visual",
     "LOC": "Location",
     "LOCATION": "Location",
     "PROPRIOCEPTION": "Proprioception",
@@ -420,6 +407,10 @@ class FrameInputs:
     episode_index: int
     thermal_clim: object
     breakdown: dict
+    #: The `.rec.gz` the step was read from. The step-scoped renderers do not need
+    #: it -- they are handed one step's inputs -- but the episode-scoped dashboard
+    #: renderer builds from the whole payload, so it has to be able to find it.
+    episode_path: object = None
 
 
 def load_inputs(rec_dir: Path, step: int, episode: int = 0) -> FrameInputs:
@@ -449,7 +440,8 @@ def load_inputs(rec_dir: Path, step: int, episode: int = 0) -> FrameInputs:
     clim = thermal_color_limits(ep["snapshots"][0].get("thermal_field"), params)
     return FrameInputs(rec_dir, params, meta["icon_config"], state, sensory, action,
                        step, n, ep["episode_index"], clim,
-                       dict(get_observation_breakdown(params)))
+                       dict(get_observation_breakdown(params)),
+                       episode_path=eps[episode])
 
 
 def render_capture(renderer: str, fi: FrameInputs):
@@ -482,7 +474,19 @@ def render_capture(renderer: str, fi: FrameInputs):
                 train_episode=None, action=fi.action, sensory_data=fi.sensory_data,
                 info=None, icon_config=fi.icon_config)
         else:
-            raise AuditError(f"unknown renderer {renderer!r} (expected 'v1' or 'v2')")
+            # THE NEW RENDERER IS DELIBERATELY NOT A BRANCH HERE, and the reason is the
+            # rule this whole file is built on: the audit must not import the thing it
+            # audits (§D5.2). Importing `src.environment.dashboard` to draw a frame pulls
+            # in the PACKER and the PANEL REGISTRY with it, and an instrument that shares
+            # code with its subject can agree with it about a frame neither is describing.
+            # A caller that wants the new renderer measured builds the frame itself and
+            # substitutes `render_capture` for the call -- `tests/env/test_dashboard_
+            # frames.py` does exactly that, and it may import both because it is a test.
+            raise AuditError(
+                f"unknown renderer {renderer!r} (expected 'v1' or 'v2'). The dashboard "
+                f"renderer is measured by handing this module a frame, never by importing "
+                f"it here."
+            )
     finally:
         plt.figure, plt.close = orig_figure, orig_close
     if not created:
@@ -566,9 +570,9 @@ def _collection_extent(art):
     the page rectangle's isolated ink came out 665 px short, which is exactly the area of
     the two tokens sitting on top of it.
 
-    It matters twice over here. The redesign draws every bed and every token as one
-    `PatchCollection` (§R20.8 requires a bed to be exactly one artist), so without this
-    fallback the co-occupancy rule would measure an arena in which nothing is standing.
+    It matters twice over here. The redesign draws every occupant of a square as exactly
+    ONE artist (§R20.8), so without this fallback the co-occupancy rule would measure an
+    arena in which nothing is standing.
     And the frozen V1 and dormant-V2 frames carry 17 visible `LineCollection`s each, whose
     ink has been contaminating every isolation measurement taken on them.
 
@@ -851,20 +855,34 @@ class Finding:
 #: instrument is the defect §R23.1 removed; measure the new instrument and give it its own.
 SURVIVAL_MIN = 0.98
 
-#: Ink area share of a square at which an element IS the floor (the bed or the ground)
-#: rather than an occupant. Measured area, never a painter's say-so — which is why §R20.8
-#: requires a bed to be exactly ONE artist, so this test measures it whole.
+#: Ink area share of a square at which an element IS the floor — the square's own ground
+#: fill — rather than something standing on it. Measured area, never a painter's say-so.
 #:
-#: MOVED 0.40 -> 0.48 by Revision 21 §R21.2, and the move is arithmetic rather than
-#: argument: the two populations this number has to separate were MEASURED. Largest
-#: CORRECT token ink share **0.4376** (a lone agent on bare ground, which keeps its halo
-#: because nothing else needs the room); smallest BED ink share **0.5168**; bed plate
-#: fraction by construction **0.5184** = (1 - 2 x BED_MARGIN)^2, pinned in
-#: `test_dashboard_cells.py`. 0.48 sits 53.5 % of the way up that gap. At 0.40 a correct
-#: occupant was thrown out as scenery and its square reported 0 components against 1 kind
-#: — the exact mirror of §R20.8, which found the same classifier wrong from the bed side.
-#: The value moves HERE only because the plan moved it there first, with its evidence.
-CELL_FLOOR_FRACTION = 0.48
+#: MOVED 0.48 -> 0.74 on 2026-09-17 (plan Revision 27), and the move is arithmetic rather
+#: than argument: BOTH populations were re-measured, at both ends of the window range, and
+#: the UPPER one is a different object than it used to be.
+#:
+#:   largest CORRECT token   **0.5013** at a 96 px square, **0.5369** at 48 px
+#:                           — a lone agent, whose translucent halo is ink and whose solo
+#:                             size the approved design sets at 0.396 x cell
+#:   smallest GROUND fill    **0.9366** at 96 px, **0.9080** at 48 px
+#:   gap                     (0.5369, 0.9080];  0.74 sits 54.7 % up it
+#:
+#: WHY THE GAP MOVED, which is the part that must not be read as a loosening. Until today
+#: terrain was drawn as a BED — a full-bleed floor covering 51.68 % of its square — so the
+#: upper population was the bed and the whole gap was (0.4376, 0.5168], a 7-point window
+#: that 0.48 sat inside. The approved design draws terrain as a centred GLYPH, so there is
+#: no bed: the only thing above the tokens is the square's own ground fill at 0.91–0.94,
+#: and the gap is now 37 points wide. The constant follows the gap; the rule it encodes is
+#: unchanged, and so is its failing direction.
+#:
+#: WHAT IT COST TO FIND OUT, recorded because the symptom looked like a painter bug: at
+#: 0.48 the lone agent (0.5013) classified as the FLOOR, so its square reported "0
+#: components against 1 kind" — a correct frame failing, which is the exact mirror of the
+#: 0.40 -> 0.48 move and the third time this classifier has been wrong from one side while
+#: looking right from the other. Measured on a real frame: M4 episode 0 step 12, square
+#: (8,8), where the agent stands alone.
+CELL_FLOOR_FRACTION = 0.74
 
 #: An outline-classified element must span at least this much of the square in BOTH
 #: dimensions to be excluded quietly; below it, it is a suspect token and FAILS (§R20.7).
@@ -874,90 +892,33 @@ OUTLINE_SPAN_MIN = 0.80
 #: element that cannot meet a square cannot put ink in it and `L(p)` is unchanged.
 REACH_PAD_PX = 2
 
-#: Per-channel distance (0–255) for the minimap's composite colour census. Deliberately
-#: strict: a blend between two occupant colours, the white ring or the terrain tint must
-#: classify as NEITHER, so it is excluded from numerator and denominator alike.
-MINIMAP_DELTA = 12
-
-#: Share of colour-bearing map squares that may come up completely blank before the rule
-#: stops believing its own grid. A real draw-order defect hits the FEW squares that are
-#: shared; a grid derived from the wrong rectangle misses MOST squares at once, so the two
-#: are told apart by how wholesale the failure is rather than by a tag.
-MINIMAP_ALIGN_MAX_BLANK = 0.5
-
-#: Fallback floor for the minimap, used ONLY when a wedge cannot be isolated as its own
-#: artist and the denominator falls back to geometry (§R20.4). It is never `SURVIVAL_MIN`
-#: reused: it measures a different thing and is swept on the minimap's own controls.
-MINIMAP_AREA_MIN = 0.55
-
-#: Surviving fraction for the minimap's CENSUS path — the map's own `SURVIVAL_MIN`, swept
-#: on map-sized wedges at Revision 23 §R23.1 rather than inherited from the grid panel.
+#: THE WORLD MAP'S OWN RULE WAS RETIRED HERE ON 2026-09-17, and this note is left
+#: in its place so a later reader does not go looking for it in the git history.
 #:
-#: The move is arithmetic, not argument, and both populations were MEASURED at the real
-#: 18.40–23.80 px square size against the real painter:
-#:   * worst CORRECT control **0.9412** — a correct three-way's first wedge, 16 / 17. The
-#:     0.8 px white line dividing two wedges is stroked by BOTH of them, and a pixel
-#:     composited white twice ends whiter than either pass alone, carrying it just past
-#:     `MINIMAP_DELTA`. The picture is correct; the pixel is lost to the seam.
-#:   * best floor-firing DEFECT **0.9167** — the identity pip pushed 80 % of the way from
-#:     its own wedge to the square's centre, eating the neighbour's colour (22 / 24).
-#: gap = (0.9167, 0.9412]; 0.93 sits **54.4 %** up it, the same placement discipline (and
-#: nearly the same fraction, 53.5 %) as §R21.2's `CELL_FLOOR_FRACTION` move.
+#: `minimap_overdraw`, `_classify_census`, `MINIMAP_PALETTE`, `MINIMAP_DELTA`,
+#: `MINIMAP_SURVIVAL_MIN` (0.93), `MINIMAP_AREA_MIN` (0.55), `MINIMAP_FLOORS`,
+#: `MINIMAP_ALIGN_MAX_BLANK` and `SHARED_CAPTION` measured ONE encoding: a map
+#: square's dot divided into wedges, one per occupant, with an amber pip telling a
+#: hiding predator from a predator. That encoding was the map's answer to "WHAT is
+#: in this square?", and it was needed because the grid view beside it drew the
+#: whole world at a 50 px square -- too small to tell two animals apart, so the
+#: question fell to the map.
 #:
-#: WHY IT IS A NEW CONSTANT AND NOT A MOVED ONE. 0.98 is unreachable here at all — it needs
-#: ≥ 50 classified pixels per wedge and the largest wedge on a shared map square is 24 —
-#: while dropping the ARENA to 0.93 would let ~23 px of plainly visible occlusion pass on a
-#: 330 px² token. One number serving two instruments an order of magnitude apart in size
-#: IS the defect; removing the reuse is the fix, so the arena's number is untouched.
+#: The approved design puts a WINDOW in the grid view at a 96 px square and draws
+#: the map as one mark per entity (plan Revision 27). The grid view answers "what"
+#: now, and the map answers "where" -- including where the window is looking. Two
+#: entities on one map square are two marks at one point, and the later-drawn one
+#: covers the earlier: that is the approved design's own picture, not a defect the
+#: map is hiding, because nothing about identity is being claimed there any more.
 #:
-#: RESOLUTION LIMIT, measured: at 0.93 a wedge of 15–24 px may lose exactly one pixel and
-#: stay silent; a wedge of 14 or fewer may lose none. Pre-registered branch (§R23.1): if a
-#: CORRECT four-way ever measures 12 / 13 = 0.923, the response is NOT 0.92 — it is to
-#: record the new populations in the plan and, if they overlap, state a detection limit.
-MINIMAP_SURVIVAL_MIN = 0.93
-
-#: Which floor each minimap denominator path is measured against. A LOOKUP, deliberately,
-#: rather than a value assigned beside each branch: the bug §R23.1 fixes was a path that
-#: inherited another instrument's number BY OMISSION — §R20.4 ruled the map must never
-#: reuse `SURVIVAL_MIN`, the geometric path honoured that, and the census path added by
-#: §R22.1 silently took the arena's 0.98 anyway. A path added later and not registered here
-#: raises `KeyError` on its first square instead of quietly measuring against 0.98.
-MINIMAP_FLOORS: dict[str, float] = {
-    "isolated-wedge": MINIMAP_SURVIVAL_MIN,
-    "own-artists": MINIMAP_SURVIVAL_MIN,
-    "geometric": MINIMAP_AREA_MIN,
-}
-
-#: The audit's OWN copy of the entity -> map MARK colours. It is a copy, and not an import,
-#: because the audit may not import the package it audits (§D5.2, pinned by
-#: `test_audit_imports_neither_layout_nor_registry`). A test compares the two tables so the
-#: copy cannot drift — the test may import the package, the instrument may not.
+#: THE INVARIANT DID NOT GO ANYWHERE. "Every occupant of a shared square must be
+#: visible" is still asserted, on the panel that now claims it, by `cell_overdraw`
+#: -- over MORE entities than before, since terrain counts as an occupant since
+#: the same revision. What was deleted is a second instrument pointed at a picture
+#: that is no longer drawn; no threshold was moved to make anything pass.
 #:
-#: A kind maps to the SET of palette colours its own map mark is drawn in (§R22.1), not to
-#: one colour. Every kind is a singleton except `hiding_predator`, whose mark is
-#: deliberately TWO paints: the body `#2B3442` plus the amber accent `#F59E0B` that tells
-#: it from an ordinary predator (`#1F2733`, 15/255 away — a distinction this census can
-#: just barely make and a viewer at an 18 px square cannot make at all). With one colour
-#: per kind the census read a correct mark's own accent as ~21 % of the mark missing and
-#: fired on a correct frame. Two kinds collide only if their SETS are equal, so the hiding
-#: predator and the predator stay distinct.
-MINIMAP_PALETTE: dict[str, frozenset] = {
-    "rock": frozenset({"#6B7380"}),
-    "bush": frozenset({"#4F8A34"}),
-    "tree": frozenset({"#2F7A45"}),
-    "campfire": frozenset({"#7C4A2D"}),
-    "food": frozenset({"#E03151"}),
-    "hiding_predator": frozenset({"#2B3442", "#F59E0B"}),
-    "predator": frozenset({"#1F2733"}),
-    "neutral": frozenset({"#A8A29A"}),
-    "agent": frozenset({"#5B4BDB"}),
-}
-
-#: Terrain is the FLOOR, not an occupant, so it never counts toward a square's kinds.
-TERRAIN_KINDS = frozenset({"rock", "bush", "tree", "campfire"})
-
-#: The caption the World map must carry on any frame holding a shared square (§R17.4).
-SHARED_CAPTION = "shared square"
+#: `TERRAIN_KINDS` went with them: it existed to EXCLUDE terrain from a square's
+#: occupants, which is the claim Revision 27 reverses.
 
 
 class DrawOrder:
@@ -1094,22 +1055,72 @@ def _named_axes(fig: Figure, name: str):
         f"NAMED, never guessed, so the rule refuses to run rather than invent a grid.")
 
 
-def square_rects(ax, world_h: int, world_w: int) -> dict:
-    """Display-coordinate rect per world square, from the AXES EXTENT and the world size.
+def square_rects(ax, world_h: int, world_w: int, view=None) -> dict:
+    """Display-coordinate rect per world square, from the AXES EXTENT and the grid size.
 
-    Derived from the named arena axes and the recording's world size — never from the
+    Derived from the named axes and the recording's world size — never from the
     layout module, which this file may not import. Row 0 is the TOP row, so display y
     (which grows upward) is flipped.
+
+    ``view`` is ``(r0, c0, rows, cols)`` when the axes draws a WINDOW of the world
+    rather than the whole of it (the arena, since the window was restored). The keys
+    are world squares either way, so everything downstream — the occupancy ground
+    truth above all — is unchanged; what moves is which squares exist in this panel
+    and how large each one is. A square outside the window simply has no rect and is
+    not measured here, which is correct: it is not drawn.
     """
+    r0, c0, rows, cols = (0, 0, world_h, world_w) if view is None else view
     bb = ax.get_window_extent()
-    sw = (bb.x1 - bb.x0) / float(world_w)
-    sh = (bb.y1 - bb.y0) / float(world_h)
+    sw = (bb.x1 - bb.x0) / float(cols)
+    sh = (bb.y1 - bb.y0) / float(rows)
     out = {}
-    for r in range(world_h):
-        for c in range(world_w):
-            out[(r, c)] = (bb.x0 + c * sw, bb.y1 - (r + 1) * sh,
-                           bb.x0 + (c + 1) * sw, bb.y1 - r * sh)
+    for i in range(rows):
+        for j in range(cols):
+            out[(r0 + i, c0 + j)] = (bb.x0 + j * sw, bb.y1 - (i + 1) * sh,
+                                     bb.x0 + (j + 1) * sw, bb.y1 - i * sh)
     return out
+
+
+def arena_view(ax, world_h: int, world_w: int, agent=None):
+    """Which world squares the arena axes is showing: ``(r0, c0, rows, cols)``.
+
+    WHERE THIS COMES FROM, AND WHY THAT IS NOT CIRCULAR. The renderer stamps the
+    window it drew onto the grid's own axes (``painters.build_arena`` sets
+    ``ax._world_view`` each frame). The audit reads that declaration rather than
+    re-deriving the window rule, because re-deriving it would put a second copy of
+    the rule in the instrument, and the two copies would agree with each other
+    exactly when both were wrong.
+
+    What keeps it honest is that the declaration is CHECKED against something the
+    renderer does not control: the window must lie inside the world, and it must
+    contain the agent — which is what "centred on the agent" means and the one
+    thing a wrong origin cannot satisfy. A panel with no declaration is read as
+    showing the whole world, which is what every earlier frame did.
+    """
+    view = getattr(ax, "_world_view", None)
+    if view is None:
+        return (0, 0, world_h, world_w)
+    r0, c0, rows, cols = (int(x) for x in view)
+    if rows < 1 or cols < 1 or r0 < 0 or c0 < 0 \
+            or r0 + rows > world_h or c0 + cols > world_w:
+        raise AuditError(
+            f"the arena declares it is showing rows {r0}..{r0 + rows - 1} and columns "
+            f"{c0}..{c0 + cols - 1} of a {world_h}x{world_w} world, which is not inside "
+            f"that world. The window is drawn from the agent's position and clamped to "
+            f"the world's edges, so this is a renderer bug, not a measurement to work "
+            f"around."
+        )
+    if agent is not None:
+        ar, ac = int(agent[0]), int(agent[1])
+        if not (r0 <= ar < r0 + rows and c0 <= ac < c0 + cols):
+            raise AuditError(
+                f"the arena declares the window at ({r0},{c0}) {rows}x{cols}, which does "
+                f"not contain the agent at ({ar},{ac}). The grid view is centred on the "
+                f"agent by construction; a window without the agent in it means the "
+                f"declaration and the drawing disagree, and every per-square verdict "
+                f"below would be measured against the wrong squares."
+            )
+    return (r0, c0, rows, cols)
 
 
 def occupancy_from_state(state, params) -> dict:
@@ -1155,24 +1166,38 @@ def occupancy_from_state(state, params) -> dict:
 def cell_overdraw(probe: "FrameProbe", arena_axes: str, occupancy: dict,
                   world_h: int, world_w: int, *, restrict_work: bool = True,
                   floor_fraction: float = CELL_FLOOR_FRACTION,
-                  survival_min: float = SURVIVAL_MIN):
+                  survival_min: float = SURVIVAL_MIN, view=None):
     """Does every square show every occupant it holds? Returns (findings, measurements).
 
-    `occupancy` maps `(row, col)` to the KINDS at that square (terrain included; it is
-    filtered out here, because terrain is the floor). `restrict_work=False` disables the
-    padded-bbox reach optimisation and probes every element for every square — the two
-    must produce identical findings, which a control asserts.
+    `occupancy` maps `(row, col)` to the KINDS at that square. `restrict_work=False`
+    disables the padded-bbox reach optimisation and probes every element for every
+    square — the two must produce identical findings, which a control asserts.
+
+    `view` is `(r0, c0, rows, cols)` when the panel draws a window of the world; the
+    caller gets it from :func:`arena_view`.
+
+    TERRAIN IS AN OCCUPANT HERE, SINCE 2026-09-17, and that is the biggest change this
+    rule has had. Under "variant H" a rock was drawn as the square's FLOOR, so it was
+    deliberately excluded from the square's kinds and identified by area instead — an
+    element covering ≥ `CELL_FLOOR_FRACTION` of the square was "the floor" and dropped
+    from the count. The approved design draws a rock as a rock: a centred glyph, the
+    same kind of thing as an apple. So terrain counts, and a square holding a bush and
+    an agent must show BOTH of them — which is the original defect this whole rule
+    exists for, now asserted over the four entities it used to exempt. The area test
+    stays, and what it now identifies is the square's GROUND FILL rather than a bed.
     """
     ax = _named_axes(probe.fig, arena_axes)
     order = DrawOrder(probe.fig)
-    rects = square_rects(ax, world_h, world_w)
+    rects = square_rects(ax, world_h, world_w, view=view)
     fig_fc = np.asarray(probe.fig.get_facecolor(), dtype=float)
     els = probe.elements
     findings: list[Finding] = []
     measured: list[dict] = []
 
     for (r, c), rect in rects.items():
-        kinds = tuple(k for k in occupancy.get((r, c), ()) if k not in TERRAIN_KINDS)
+        # EVERY occupant, terrain included (see the docstring): a rock is a thing
+        # standing in a square now, not the floor under one.
+        kinds = tuple(occupancy.get((r, c), ()))
         n_kinds = len(set(kinds))
         square = _rect_mask(probe.h, probe.w, *rect)
         area = float(square.sum())
@@ -1188,7 +1213,8 @@ def cell_overdraw(probe: "FrameProbe", arena_axes: str, occupancy: dict,
             continue
 
         # (c') probe visibility, over the arena's own elements — the colours this rule
-        # depends on being able to see (ground, bed bases, outline, keyline).
+        # depends on being able to see (the square's ground fill, each token's own ink,
+        # and any overlay drawn across it).
         for e in cands:
             if e.axes_name != arena_axes:
                 continue
@@ -1254,8 +1280,11 @@ def cell_overdraw(probe: "FrameProbe", arena_axes: str, occupancy: dict,
         # be said of the elements as well, because the component count cannot see this at
         # |K| = 1: an occluder that is itself counted as a token MERGES with the token it
         # covers, and one component over one kind then passes a frame in which an occupant
-        # has been painted out. That is exactly how the M-F2 family escapes at the 0.10
-        # inset, where the shrunken bed falls under the floor test and is read as a token.
+        # has been painted out. That is exactly what happens to an occluder drawn wholly
+        # INSIDE one square: it falls under the floor test, is read as a token of that
+        # square, and merges with the token it covers. The graded cover family in
+        # `test_render_audit_controls.py` is drawn ACROSS the square's boundary for this
+        # reason — that is what keeps it an occluder and lets it reach the survival floor.
         for i, e in enumerate(tokens):
             for o in tokens[i + 1:]:
                 both = int((ink[id(e.artist)] & ink[id(o.artist)]).sum())
@@ -1365,184 +1394,6 @@ def cell_overdraw(probe: "FrameProbe", arena_axes: str, occupancy: dict,
 
     return findings, measured
 
-
-def _classify_census(img: np.ndarray, mask: np.ndarray, colours: dict) -> dict:
-    """Count pixels inside `mask` matching ANY colour of each kind, within MINIMAP_DELTA.
-
-    `colours` maps a kind to the SET of palette colours its own mark is drawn in (§R22.1),
-    and the count is the UNION over that set — a pixel carrying the hiding predator's
-    amber accent counts towards the hiding predator, exactly as the grid panel's survival
-    floor counts a token's own eye over its own body (§R19.1 step 5). The union is taken
-    on the mask, never summed, so a pixel can never be counted twice.
-
-    A blend — between two occupant colours, the white ring, the 0.8 px split line or the
-    terrain tint — matches NEITHER, and is therefore excluded from the numerator and from
-    the denominator alike. That is what makes a correct split dot measure ~1.000 against a
-    census-measured denominator, where it could never reach 0.98 of a GEOMETRIC wedge.
-    """
-    from matplotlib.colors import to_rgb
-
-    out = {}
-    px = img[mask].astype(np.int16)
-    for name, hexes in colours.items():
-        hit = np.zeros(px.shape[0], dtype=bool)
-        for hexc in sorted(hexes):
-            want = np.asarray([round(v * 255) for v in to_rgb(hexc)], dtype=np.int16)
-            hit |= np.abs(px - want).max(axis=1) <= MINIMAP_DELTA
-        out[name] = int(hit.sum())
-    return out
-
-
-def minimap_overdraw(probe: "FrameProbe", minimap_axes: str, occupancy: dict,
-                     world_h: int, world_w: int):
-    """The World map, measured on the COMPOSITE — plus the shared-square caption.
-
-    Isolation would report a split dot as correct even when one half is painted over the
-    other, which is the exact defect §R17.4 exists to prevent, so this rule classifies the
-    pixels of the FINISHED image against the palette table. Ground truth is the distinct
-    palette colour SETS the KINDS present map to (§R20.4, §R22.1): two predators are one
-    colour and one kind — the withdrawn "at least as many colours as movers" wording
-    failed that correct square — and a hiding predator is one kind drawn in TWO colours,
-    which a one-colour-per-kind ground truth read as a fifth of itself missing.
-    """
-    ax = _named_axes(probe.fig, minimap_axes)
-    rects = square_rects(ax, world_h, world_w)
-    findings: list[Finding] = []
-    pending: list[Finding] = []
-    img = probe.baseline
-    shared_anywhere = False
-    n_expected = n_blank = 0
-
-    # One render per artist SET, reused across every square. The denominator is the same
-    # census run on the kind's own artists (§R20.4 as corrected by §R22.1), and rendering
-    # per (square, colour) instead would be thousands of renders on a 100-square map. A
-    # kind drawn by ONE artist — every kind but the hiding predator today — costs exactly
-    # the solo render it always cost; only a multi-paint mark pays one render more.
-    render_cache: dict[frozenset, np.ndarray] = {}
-
-    def drawn(ids):
-        key = frozenset(ids)
-        if key not in render_cache:
-            render_cache[key] = probe._draw(set(key))
-        return render_cache[key]
-
-    def solo(el):
-        return drawn({id(el.artist)})
-
-    for (r, c), rect in rects.items():
-        kinds = [k for k in occupancy.get((r, c), ()) if k not in TERRAIN_KINDS]
-        if len(set(kinds)) >= 2:
-            shared_anywhere = True
-        want = {}
-        for k in set(kinds):
-            if k in MINIMAP_PALETTE:
-                want[k] = MINIMAP_PALETTE[k]
-        if not want:
-            continue
-        square = _rect_mask(probe.h, probe.w, *rect)
-        census = _classify_census(img, square, want)
-        seen = {k for k, n in census.items() if n > 0}
-        n_expected += 1
-        n_blank += 0 if seen else 1
-        # Distinctness compares colour SETS, not single colours (§R22.1 item 4): two kinds
-        # collide only if the palette cannot tell their marks apart at all. The hiding
-        # predator and the predator have different sets, so they stay two.
-        distinct_want = {MINIMAP_PALETTE[k] for k in want}
-        distinct_seen = {MINIMAP_PALETTE[k] for k in seen}
-        where = f"map square ({r},{c})"
-        if len(distinct_seen) != len(distinct_want):
-            pending.append(Finding(
-                "minimap_overdraw",
-                f"the snapshot's kinds {sorted(want)} map to {len(distinct_want)} "
-                f"distinct palette colour(s), but the composed map shows "
-                f"{len(distinct_seen)} — a dot painted over its neighbour shows one "
-                f"colour where the square holds two kinds",
-                where, f"seen {sorted(seen)}", int(sum(census.values())),
-                _mask_bbox(square)))
-            continue
-        # Denominator by the SAME census on the kind's OWN ARTISTS RENDERED TOGETHER,
-        # never geometry while any of them can be isolated (§R20.4, corrected by §R22.1).
-        #
-        # WHY THIS IS NOT THE PER-ELEMENT MAXIMUM IT SHIPPED WITH. A kind's mark may be
-        # drawn in more than one artist and more than one colour — the hiding predator is
-        # a wedge plus its amber identity pip — and `max` over single artists takes the
-        # bigger half and calls the rest missing. Measured: 92/87/88 px of body colour on
-        # solo hiding-predator squares against 116/113/115 px with the accent hidden, so
-        # a CORRECT mark read as 21 % occluded against a 0.98 floor. Rendering the mark's
-        # own parts together puts them in the numerator and the denominator alike, which
-        # is precisely §R19.1 step 5's union-of-a-token's-own-parts rule that the grid
-        # panel already had and this variant never inherited.
-        #
-        # WHY IT IS NOT AN AMNESTY. Ownership is measured, not declared: an artist belongs
-        # to kind `k` only if its ISOLATED ink carries one of `k`'s own colours. An amber
-        # pip drawn at the square's centre is the hiding predator's artist and NOT the
-        # neighbour's, so the neighbour's denominator stays its whole wedge while its
-        # numerator loses the pixels the pip ate — mutation M-F4, which must fire.
-        for k, n in census.items():
-            own, best = [], 0
-            for e in probe.elements:
-                if e.axes_name != minimap_axes:
-                    continue
-                if not _bbox_meets(e.bbox, rect, REACH_PAD_PX):
-                    continue
-                got = _classify_census(solo(e), square, {k: want[k]})[k]
-                if got:
-                    own.append(id(e.artist))
-                    best = max(best, got)
-            den, path = best, "isolated-wedge"
-            if len(own) > 1:
-                den = _classify_census(drawn(own), square, {k: want[k]})[k]
-                path = "own-artists"
-            if den == 0:
-                den, path = int(square.sum()) or 1, "geometric"
-            # The floor is LOOKED UP from the path, never assigned beside a branch: that is
-            # how this line came to hold the GRID PANEL's floor (§R23.1). An unregistered
-            # path raises here rather than inheriting a number swept for another panel.
-            # The grid panel's constant is deliberately not even NAMED in this function —
-            # a test asserts that, so the reuse cannot creep back as a default.
-            floor = MINIMAP_FLOORS[path]
-            ratio = n / float(den)
-            if ratio < floor:
-                pending.append(Finding(
-                    "minimap_overdraw",
-                    f"{k}'s colour covers {ratio:.1%} of what it covers when drawn alone "
-                    f"(floor {floor:.0%}, denominator measured by the {path} path)",
-                    where, k, n, _mask_bbox(square)))
-
-    # ALIGNMENT, asserted before any per-square verdict is believed. `square_rects`
-    # divides the NAMED AXES into world squares, which is exact for the arena — whose
-    # axes IS the grid — and wrong for a World map drawn as an inset grid inside a whole
-    # card, where the map is offset by its title and its caption. A misaligned grid looks
-    # exactly like "every dot has been painted over": the census samples the card's
-    # background and finds no occupant colour anywhere. Reporting that as N separate
-    # overdraw defects would be a confident wrong answer, so the rule says THE GRID IS
-    # WRONG once, and reports nothing else.
-    if n_expected and (n_blank / n_expected) > MINIMAP_ALIGN_MAX_BLANK:
-        findings.append(Finding(
-            "minimap_grid_unaligned",
-            f"{n_blank} of {n_expected} map square(s) that should carry an occupant "
-            f"colour contain NONE of it. The square grid is derived by dividing the "
-            f"named axes {minimap_axes!r} into {world_h}x{world_w}, so a figure this "
-            f"wholesale means that axes is not the map grid itself — a card with a title "
-            f"and a caption around an INSET grid will do exactly this. A real draw-order "
-            f"defect hits the few squares that are shared; a misaligned grid misses most "
-            f"squares at once, which is what separates the two. No per-square verdict is "
-            f"trustworthy here, so none is reported",
-            minimap_axes, f"{world_h}x{world_w} grid", 0, None))
-    else:
-        findings.extend(pending)
-
-    if shared_anywhere:
-        caption = [e for e in probe.elements
-                   if e.kind == "text" and SHARED_CAPTION in (e.text or "").lower()]
-        if not caption:
-            findings.append(Finding(
-                "minimap_caption",
-                "the snapshot holds a shared square, so the World map encodes two "
-                "occupants as one split dot — and the card must SAY so in words, because "
-                "at this square size colour is a code the viewer cannot infer (§R17.4)",
-                "World map", f"no text containing {SHARED_CAPTION!r}", 0, None))
-    return findings
 
 
 def _normalise_title(s: str) -> str:
@@ -1663,7 +1514,7 @@ def _title_strips(els: list[Element], titles, probe):
 
 def audit_frame(fi: FrameInputs, renderer: str, text_floor_px: float = DEFAULT_TEXT_FLOOR_PX,
                 arena_axes: str | None = None, verbose: bool = False,
-                cell_axes: str | None = None, minimap_axes: str | None = None):
+                cell_axes: str | None = None):
     """Render one frame and return (findings, probe, info)."""
     frame, fig = render_capture(renderer, fi)
     probe = FrameProbe(fig, frame)
@@ -1788,6 +1639,18 @@ def audit_frame(fi: FrameInputs, renderer: str, text_floor_px: float = DEFAULT_T
         up = s.upper()
         if not (up.startswith("OBS") or up.startswith("REAL") or "OBS ONLY" in up):
             continue
+        # IT MUST CAPTION A VALUE. The defect this rule exists for is a NUMBER
+        # presented as observed when the agent cannot observe it (D10 prints
+        # "OBS:  0.65" for a body state that is not in the breakdown), and the
+        # thing that makes it a defect is the number. A bare column head --
+        # "Observed", above a column of five different rows -- captions no value
+        # and belongs to no single modality, so it could never satisfy the test
+        # below however the frame was drawn. Narrowed 2026-09-17, after the head
+        # had been renamed to "Sensed" to get around this rule rather than the
+        # rule being scoped to what it measures. "OBS ONLY" stays in scope: it is
+        # a panel-title suffix that claims a whole panel is observation-only.
+        if not (any(ch.isdigit() for ch in s) or "OBS ONLY" in up):
+            continue
         own = _owning_title(t, titles)
         if own is None:
             findings.append(Finding("observed_caption",
@@ -1829,15 +1692,14 @@ def audit_frame(fi: FrameInputs, renderer: str, text_floor_px: float = DEFAULT_T
     # every frozen V1 and dormant-V2 count UNCHANGED (#62), which CP0.3b asserts.
     cells_measured: list[dict] = []
     occ = None
-    if cell_axes or minimap_axes:
-        occ = occupancy_from_state(fi.state, fi.params)
     if cell_axes:
+        occ = occupancy_from_state(fi.state, fi.params)
+        h, w = int(fi.params.height), int(fi.params.width)
+        cax = _named_axes(probe.fig, cell_axes)
         cell_findings, cells_measured = cell_overdraw(
-            probe, cell_axes, occ, int(fi.params.height), int(fi.params.width))
+            probe, cell_axes, occ, h, w,
+            view=arena_view(cax, h, w, agent=np.asarray(fi.state.agent_pos)))
         findings.extend(cell_findings)
-    if minimap_axes:
-        findings.extend(minimap_overdraw(
-            probe, minimap_axes, occ, int(fi.params.height), int(fi.params.width)))
 
     info = {
         "renderer": renderer, "cell_dir": str(fi.rec_dir), "step": fi.step,
@@ -2021,9 +1883,6 @@ def main(argv=None) -> int:
                          "co-occupancy rule. Separate from --arena-axes on purpose: this "
                          "rule divides the named axes into world squares, so pointing it "
                          "at a pod would invent a grid over a card")
-    ap.add_argument("--minimap-axes", default=None,
-                    help="name of the World-map Axes, which ENABLES the minimap colour "
-                         "census and the shared-square caption check")
     ap.add_argument("--controls", action="store_true",
                     help="run the CP0.3 positive controls and exit non-zero if any misses")
     ap.add_argument("--out", default=None, help="report directory")
@@ -2060,8 +1919,7 @@ def main(argv=None) -> int:
             findings, probe, info = audit_frame(fi, args.renderer,
                                                 text_floor_px=args.text_floor_px,
                                                 arena_axes=args.arena_axes,
-                                                cell_axes=args.cell_axes,
-                                                minimap_axes=args.minimap_axes)
+                                                cell_axes=args.cell_axes)
             probe.close()
             counts = summarise(findings)
             entries.append({"info": info, "counts": counts,
