@@ -6611,3 +6611,64 @@ reverting the change, and I would rather say so than imply I did.
   `visual-design-reviewer` pass CP-D requires.
 
 *Implemented by: developer*
+
+---
+
+## R27 The World map cannot tell two same-shape occupants of one square apart (2026-09-17)
+
+### What this is, in plain words
+
+The World map is the small whole-world map in the dashboard's left column — the one that answers
+*where things are* while the grid view in the middle answers *what they are*. This note records a
+gap in it that a pixel census found: **when one square holds two things, the map shows only one of
+them**, and when those two things happen to be drawn as the same shape, the map shows no sign that
+the square is shared at all. This is a **renderer gap, not a caption mistake** — the caption was
+corrected on the page the same day, but correcting the words does not give the map back the ability
+it lost.
+
+### What was measured
+
+The page's own artifact frames were counted pixel by pixel, at the map's cell for each shared square
+the episode records:
+
+- **Step 32** (the frame the page opens on) records two shared squares, `agent + food` and
+  `rabbit + rock`. The map cell at world position **(5, 1)** — the agent-and-food square — contains
+  **zero food-red pixels**. Only the agent's indigo dot is there.
+- **Step 0** (`agent + bush`), **step 38** and **step 60** (both `food + rabbit`) read the same way:
+  one occupant's colour is present, the other's is absent entirely.
+- **`rabbit + rock` is the one pairing that does read**, and it reads *by accident of shape*: the
+  rabbit is drawn as a dot and the rock fills its square, so a dot laid on a filled square leaves the
+  square's corners showing. Nothing in the painter arranged that.
+
+### Why the replacement does not cover this
+
+The map used to carry a **wedge encoding** — the cell's dot divided into wedges, one per occupant —
+and that encoding existed **precisely to make a shared square legible**. It was retired in the design
+restoration together with the whole-world grid it belonged to (§R22.3 registered the wedges; the
+Implementation Report of 2026-09-17, "The World map's rule was retired, not relaxed", retired them).
+What replaced it draws **one mark per square**, in the icon colour of whichever occupant is painted
+last. Co-occupancy therefore survives **only when the two occupants differ in shape**, which is a
+property of the particular pair, not of the encoding. The map's own audit rule was retired in the same
+move, so no instrument is currently asserting anything about this.
+
+To be exact about the scope of the gap, in both directions: the map **does** still mark every square
+that holds something. What it has lost is the ability to say **how many** things a square holds, and
+**which**.
+
+### Status: undecided, and deliberately left so
+
+Fixing this properly is a **renderer change that nobody has decided**. The two candidates on the
+table, neither costed:
+
+1. **Offset half-size marks** — two occupants drawn at half size in opposite corners of the map cell.
+   Cheap to state, but the map's cells are small (7.4 px a square in the 20 × 20 world measured in the
+   restoration report), and a half-size mark there may fall below the ink floor the survival rule
+   measures.
+2. **Ring the shared cell** — keep the single mark, add an outline that means "this square holds more
+   than one thing". Survives at small cell sizes, but spends an outline the map does not currently use
+   and says nothing about *what* the second occupant is.
+
+Both are changes to the shipped painter, so both need a decision and a plan of their own before any
+code moves. **No code was changed for this note**; the only 2026-09-17 change is to the page's wording
+(Figure 3's caption and Decisions ledger item 4 now say "one mark per occupied square … only the last
+occupant drawn", and name the icon-colour rule the page had never stated).

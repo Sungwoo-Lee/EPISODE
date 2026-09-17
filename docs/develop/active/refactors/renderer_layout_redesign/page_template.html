@@ -107,12 +107,16 @@ figure img:focus-visible { outline:2px solid var(--accent); outline-offset:-3px;
 .values div { display:flex; justify-content:space-between; gap:12px; padding:5px 0; border-bottom:1px solid var(--line); min-width:0; }
 .values span:first-child { color:var(--ink-2); }
 .values span:last-child { font-family:var(--f-mono); font-size:12.5px; text-align:right; overflow-wrap:anywhere; min-width:0; }
-/* A value that is a LIST of names must not break inside the list: "agent + food, rabbit + rock"
-   wrapping after the comma left a lone "rock" right-aligned on a second line, reading as a value of
-   its own. `nowrap` keeps the list whole; `flex-wrap` on the row lets the whole value drop under its
-   label at a width too narrow to hold both, instead of pushing the row wider than its column. */
-.values .nobreak { flex-wrap:wrap; }
-.values .nobreak span:last-child { white-space:nowrap; overflow-wrap:normal; margin-left:auto; }
+/* A value that is a LIST of atoms -- "agent + food, rabbit + rock", or eight visual channel numbers --
+   must not break INSIDE an atom: a break after the "+" left a lone "food" right-aligned on a second
+   line, reading as a value of its own. Each pairing is joined with NON-BREAKING spaces in the script,
+   so the only break opportunities left are the space after a comma and the spaces between numbers, and
+   the value wraps BETWEEN atoms while staying beside its label. `white-space:nowrap` was the previous
+   attempt and is what made these two rows double height: an unbreakable value cannot share a 343px
+   column with its label, so `flex-wrap` dropped the whole value underneath it. A full-width
+   `grid-column:1/-1` does fit both on one line, but measured 3 extra empty cells at 1440 and 2 at 834
+   -- the same hole that got spanning rejected before (layout probe, 2026-09-17). */
+.values .listval span:last-child { overflow-wrap:normal; }
 
 /* ---------- full-size figure viewer (copied from sensor_ladder.html, tokens adapted) ---------- */
 .lb{position:fixed;inset:0;z-index:99;background:rgba(12,12,14,.93);display:flex;flex-direction:column}
@@ -348,7 +352,10 @@ figure img:focus-visible { outline:2px solid var(--accent); outline-offset:-3px;
     world holds two shared squares &mdash; the agent with food, and a rabbit on a rock &mdash; and the
     window shows the first; the rabbit and its rock lie outside the part of the world on screen. The
     small World map on the left answers <em>where</em> rather than <em>what</em>: it draws one mark per
-    entity across the whole world, with an outlined <strong>viewport rectangle</strong> marking the squares
+    <strong>occupied square</strong> across the whole world, each mark in its entity's own icon colour &mdash;
+    the same indigo, red, green and grey the grid view uses. Every square holding something gets a mark, but a
+    square holding two things shows only the <strong>last occupant drawn</strong>, so two occupants of the same
+    shape read there as a single mark. An outlined <strong>viewport rectangle</strong> marks the squares
     the grid view is showing. Under the grid runs the <strong>sensory band</strong>, full width: this world reads smell
     and sight at the agent's own square only, so each sense is a list of named channels with its reading
     beside it &mdash; "Odour A, predator-leaning, 0.01" rather than a swatch labelled with a code. Section
@@ -694,8 +701,10 @@ figure img:focus-visible { outline:2px solid var(--accent); outline-offset:-3px;
     the encoding it measured, rather than relaxed.</span></div></div>
   <div class="stage"><span class="s">PASSED</span><div class="b"><span class="t">The overlap defect is fixed, measured two independent ways</span>
     <span class="d">The automated instrument reproduced an earlier hand measurement exactly, on the design it was
-    made against &mdash; floor ink 53.44% and 51.68% against 53.4% and 51.7% by hand, occupant survival 100% against
-    100%. Terrain is no longer a floor, so that particular split has gone; what carries over is the half that matters,
+    made against &mdash; floor ink (the share of a square still showing the earlier design's full-square terrain
+    floor) 53.44% and 51.68% against 53.4% and 51.7% by hand, occupant survival 100% against
+    100%. Terrain is no longer drawn as a floor under its square, so that measurement went with the design it
+    measured; what carries over is the half that matters,
     occupant survival, still measured at a full 1.000 and now covering terrain as well. The two measurements are
     independent because the instrument derives which occupants a square holds from the <em>recorded snapshot</em>,
     while the renderer derives it from its own code, and the two agree on every square.</span></div></div>
@@ -743,7 +752,7 @@ figure img:focus-visible { outline:2px solid var(--accent); outline-offset:-3px;
       <li><strong>Layout and look:</strong> Figure 3 is the direction. Frame size 1440 &times; 896; World map under Interoception; last action as a title-row badge plus a chevron on the agent.</li>
       <li><strong>The grid view shows a window of the world</strong> &mdash; <code>visualization.local_view_size</code> squares centred on the agent, 5 &times; 5 in every maintained world &mdash; inside an arena box of fixed size, so the square size follows the window: 96 pixels at 5 wide, 48 at 10 wide. This restores the approved design and supersedes a whole-world grid at a 50-pixel square.</li>
       <li><strong>Terrain is an occupant like any other</strong>, drawn as a centred glyph at its own size rather than as the square's floor. A shared square gives each occupant its own slot, up to four, in a fixed draw order.</li>
-      <li><strong>The World map draws one mark per entity</strong> over the whole world, plus a viewport rectangle showing where the grid view is looking. The wedge encoding it carried while the grid drew the whole world is retired with it.</li>
+      <li><strong>The World map draws one mark per occupied square</strong> over the whole world, in that square's occupant's own icon colour, plus a viewport rectangle showing where the grid view is looking. The wedge encoding it carried while the grid drew the whole world is retired with it &mdash; so a square holding two occupants now shows only the last one drawn, and two occupants of the same shape cannot be told apart on the map.</li>
       <li><strong>Internal states:</strong> every state shown twice, sensed and true, including states the agent does not sense.</li>
       <li><strong>Senses that read further:</strong> option A, a small map per channel, from range 1; placed in a band under the grid view when they outgrow the side column.</li>
       <li><strong>Temperature colours:</strong> one range per episode, shared by all its steps; the setpoint near-white and the survivable body band pale, colour deepening only beyond it. No numbers in grid squares.</li>
@@ -823,7 +832,9 @@ figure img:focus-visible { outline:2px solid var(--accent); outline-offset:-3px;
         pr = sensor(st, 'Proprioception'), vi = sensor(st, 'Visual'), bt = sensor(st, 'Body Temperature'),
         lo = sensor(st, 'Location');
     rows.push(['Action shown on this frame', an || 'none (initial state)'], ['Agent square (row, column)', st.agent.join(', ')]);
-    if (st.shared && st.shared.length) rows.push(['Shared squares in this frame', st.shared.map(function (o) { return o.join(' + '); }).join(', '), 'nobreak']);
+    /* Non-breaking spaces inside a pairing, an ordinary space after each comma: the list may wrap
+       BETWEEN pairings but never inside one, so "food" can never end up alone on a second line. */
+    if (st.shared && st.shared.length) rows.push(['Shared squares in this frame', st.shared.map(function (o) { return o.join(' + '); }).join(', '), 'listval']);
     if (sat) rows.push(['Satiation, sensed', sat.intensity.toFixed(2)]);
     rows.push(['Satiation, true', (st.satiation / M.max_satiation).toFixed(2)], ['Nutrition, true (not observed)', (st.nutrition / M.max_nutrition).toFixed(2)], ['Injury, true (not observed)', (st.injury / M.max_injury).toFixed(2)]);
     if (noc) rows.push(['Interoceptive nociception', noc.intensity.toFixed(2)]);
@@ -834,7 +845,7 @@ figure img:focus-visible { outline:2px solid var(--accent); outline-offset:-3px;
     if (olf) rows.push(['Olfaction', list(olf.vector, 2)]);
     if (co) rows.push(['Collision, C U R D L', co.vector.map(function (v) { return v > 0.5 ? '1' : '0'; }).join(' ')]);
     if (pr) { var mx = Math.max.apply(null, pr.vector); rows.push(['Proprioception', mx > 0 ? M.action_names[pr.vector.indexOf(mx)] : 'none']); }
-    if (vi) rows.push(['Visual, agent square', list(vi.vector.slice(0, 8), 2)]);
+    if (vi) rows.push(['Visual, agent square', list(vi.vector.slice(0, 8), 2), 'listval']);
     if (lo) rows.push(['Location', list(lo.vector, 2)]);
     values.innerHTML = rows.map(function (r) { return '<div' + (r[2] ? ' class="' + esc(r[2]) + '"' : '') + '><span>' + esc(r[0]) + '</span><span>' + esc(r[1]) + '</span></div>'; }).join('');
   }
