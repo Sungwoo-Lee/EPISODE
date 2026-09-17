@@ -2176,6 +2176,7 @@ Each checkpoint states what would show it failed.
   - *2026-09-17 senior-developer, **finding D is DECIDED — the map gets its own floor, and the arena's is untouched** (Revision 23).* The reported gap was re-measured before being used, and measuring it properly changed it: **two of the three pre-registered minimap mutations (M-F3, M-F5) fire through the DISTINCTNESS check and never reach the ratio floor**, so "best mutation 0.833" was one point rather than a population. A **graded** family — the same defects made progressively shallower — brings the defect side up to **0.9167** (the identity pip pushed 80 % of the way to the square's centre, neutral 22/24), against a worst correct control of **0.9412** (16/17). **The real gap is (0.9167, 0.9412], 2.45 points wide, not 10.8.** `MINIMAP_SURVIVAL_MIN = 0.93` is placed **54.4 %** of the way up it — the same discipline and nearly the same fraction as §R21.2's 53.5 %. **It is a NEW constant, not a moved one:** §R20.4 already ruled the map must never reuse `SURVIVAL_MIN`, and that ruling had been applied to the geometric fallback (`MINIMAP_AREA_MIN`) while the census path silently inherited the arena's number — the reuse *is* the defect, so `SURVIVAL_MIN` stays at 0.98 and `MINIMAP_AREA_MIN` at 0.55. **The seam is not fixed in the painter, and that verdict is measured:** drawing the wedges edgeless removes the one-pixel loss but produces ratios **above 1.000** (23/22, 26/25) — a kind credited with pixels its own artist never drew, in the direction that conceals occlusion — because the white split line is what makes a blend classify as neither colour. **What CP2.8 still needs is §R23.1's seven code rows, §R23.2's re-registered four-member family, and the 18-frame matrix re-run**, which is predicted in advance to report **0 minimap findings on 18 of 18** (every remaining finding is `(n−1)/n` for `n` in 17–32, i.e. 0.941–0.969, all clearing 0.93); if any frame still fires, report the number rather than moving the floor again.
   - *2026-09-17 developer, **§R23.1 + §R23.2 implemented — CP2.8 CLOSES***. Full detail in the Implementation Report "§R23.1 / §R23.2: the World map's own survival floor, and CP2.8's last clause". **The pre-registered prediction held exactly: 0 findings on 18 of 18 frames** — `grep` finds no `minimap_*` and no `cell_*` finding anywhere in the re-run log, against 9 minimap findings on 5 frames before. What remains on those frames is `text_over_fill` (9–15/frame, pre-existing, a different rule) and `panel_absent: Olfaction` ×1 on M5's two frames, which §R22.9 assigns to **CP2.7**. **The floor was not moved a second time**, per §R23.1's *Fails if:*. **The reuse was removed rather than relocated:** the census path reads `MINIMAP_SURVIVAL_MIN = 0.93`, `SURVIVAL_MIN` stays **0.98** and `MINIMAP_AREA_MIN` **0.55**, and which floor a path uses is now a **lookup in `MINIMAP_FLOORS`** — so a path added later and left unregistered raises `KeyError` instead of silently inheriting the arena's number, with a test asserting the grid panel's constant is not so much as *named* inside `minimap_overdraw`. **The family is re-registered at four members, every one firing through the RATIO FLOOR** (M-F4a 20/24 = 0.8333, M-F4b 22/24 = **0.9167**, M-F3a 14/24 = 0.5833, M-F3b 18/24 = 0.7500), with the silent partners kept and measured (pip at 60 % / 40 % costs the neighbour **no** pixel). **One number in §R23.1's table did not reproduce, and it is reported rather than absorbed:** sweeping a second map square finds a worst correct control of **0.9375** (15/16) rather than 0.9412 (16/17) — the same one-pixel seam on a wedge one pixel smaller, and exactly the resolution limit §R23.1 states in advance. The gap is therefore **(0.9167, 0.9375]**, 2.08 points wide, with 0.93 sitting **64.0 %** up it rather than 54.4 %. Still a gap, every correct control silent, **constant unchanged**. **Cost, which CP2.8 asks be stated: 43.58 s mean per audited frame** (18 frames, 38.3–46.6 s, 656–755 elements, **uncontended**; the previous pass's same 18 frames averaged 45.02 s). Machine: container `docker-102`, Intel i9-7900X, 20 threads. **Tests:** `tests/env` **689 passed, 377 skipped, 0 failed**, and **no xfail remains** — the strict xfail that was registered to turn red on this day was deleted and its test now passes plainly. Guard **10/10 PASS + FRAMES PASS ×3, exit 0**, before and after.
 - [ ] **CP3: Separate V2 entry point.** `render_recordings_v2.py --concat` writes playable MP4s (frame count = steps) for all cells including M7–M9, only under `videos_v2/`. The concat signature assertion holds on real runs and trips on the doctored dir. `test_render_recordings_v2.py` is green (V1 MP4 bytes unchanged after a V2 render of the same dir). CP-G passes. *Fails if:* any file appears or changes under `videos/`, the assertion trips on a real single-run dir, or CP-G fails.
+  - *2026-09-17 developer:* **every clause met EXCEPT "including M7–M9", which is deliberately left unticked rather than waived.** Full detail in the Implementation Report "Phase 3 (CP3)". **Met:** M4 renders end to end and the videos play — `episode_000002.mp4` decodes to **75 frames for 75 recorded steps**, `episode_000001.mp4` to **24 for 24**, and `eval_M4.mp4` to **99 = 24 + 75**, each count read back by `ffprobe` **decoding the finished file** rather than taken from the writer. Output is **only** under `videos_v2/`; no `videos/` directory exists anywhere under `results/render_audit/`, and the test asserts V1's MP4 bytes are unchanged after a V2 render of the same directory (hash-for-hash, plus no file added or removed). **Determinism verified, not assumed:** the same recording rendered twice gives byte-identical MP4s, per episode *and* concatenated (`0468efdf…`, `4f3bd535…`, `31e676c6…` both times). `tests/scripts/test_render_recordings_v2.py` **8 passed**. CP-G **10/10 PASS + FRAMES PASS ×3, exit 0**, before and after. **Not met, and not mine to clear: M7/M8/M9 still cannot be rendered**, and the plan's own re-entry mechanism cannot clear them — the `AttributeError` is raised *inside* the frozen `sensor.py:577`, which `panels.py:184` calls, so `_recording_flag` (§D4.1) never gets the chance to apply. They now **fail loudly per recording** (full traceback, batch continues, exit 1) instead of aborting. **For `senior-developer`:** decide the mechanism (a params proxy at the package boundary, or a frozen-file edit deferred to the retirement gate) — see the report's deviation 1.
 - [ ] **CP4: Speed.** Same node as CP0.4: V2 median ≤ V1 median on every cell and ≤ 0.5 × on M4; RSS growth < 50 MB over 10 episodes; FDs reported. *Fails if:* any gate is missed.
 - [ ] **CP5: Viewer.** `test_episode_viewer.py` is green; `check_artifact_layout.py` is clean at 500/834/1440; screenshots and the contact sheet are **looked at**, with findings in the report. *Fails if:* arrays differ, the checker flags a defect, or nobody looked.
 - [ ] **CP-C: One meaning per colour (Revision 8).**
@@ -5145,5 +5146,229 @@ Grepped `docs/develop/active/issues/KNOWN_BUGS.md` directly (sub-agents cannot s
 Against the checkpoint's own clauses: every matrix cell, every checked frame, **0 findings** from `cell_overdraw` and from `minimap_overdraw` alike (18/18); the five archetypes rendered and looked at, and the mutations failing on the **real** painter, were discharged by the §R22.7 pass and are unaffected by a change to one constant; M-F4 and M-F5 fire; the caption is present on every frame holding a shared square (0 `minimap_caption`); the rim-pip/identity-pip clause is **discharged** by §R22.3's retirement of the rim pip; the evidence lives in `tests/env/test_dashboard_frames.py` under the `integration` marker; and the wall-clock per audited frame is stated with the machine. §R23.4's four remaining items — the seven rows, the four-member family and gap table, the re-run, the cost — are all done.
 
 The only clause-adjacent finding left on these frames is `panel_absent: Olfaction` on M5, which §R22.9 assigns to **CP2.7** and explicitly not here.
+
+Implemented by: developer
+
+---
+
+## Implementation Report — Phase 3 (CP3): the V2 entry point that writes videos (2026-09-17)
+
+> **Implemented by**: developer
+
+### What this is, in plain words
+
+Everything built so far could draw **one picture** of one recorded moment. Nothing
+turned those pictures into a **video you can watch**. This phase adds the one
+missing piece: a script that takes a folder of recorded episodes and writes MP4s.
+
+It is a **separate script on purpose**. The renderer training and evaluation
+actually use is frozen for the duration of this work — that was the user's
+condition — so the new one is a second entry point that writes to a different
+folder (`videos_v2/`, never `videos/`), is called by nothing automatically, and
+has no flag that could delete anything. Which renderer you get is decided by
+which of the two scripts you run, and by nothing else.
+
+**The deliverable is a real video**: a full episode of the campfire world,
+75 steps, 15 seconds, 1440 × 896 — path and numbers below.
+
+### Files changed
+
+| File | What it does |
+|---|---|
+| `scripts/eval/render_recordings_v2.py` (new) | The entry point. Pool, one task per episode: build an `EpisodeRenderer`, loop `frame(t)`, `close()`, write the MP4 through `save_jax_video` imported read-only from the frozen renderer. Probes every written file's frame count. `--workers`, `--fps`, `--concat`, `--skip-existing`, `--max-episodes`, `--stride`, `--output-dir`, `--benchmark`. **No** `--cleanup-per-episode`. |
+| `tests/scripts/test_render_recordings_v2.py` (new) | 8 tests: V1's MP4 bytes byte-identical after a V2 render of the same directory; V2's output only under `videos_v2/`; decoded frame count == recorded step count; `--skip-existing` ignores `videos/`; the concat refusal fires and is actionable; a real run shares one signature; an unrenderable recording fails loudly and alone; no deleting code path. |
+| `docs/environment/SCRIPTS_DEPENDENCY_MAP.md` | §1c row (test's bare import + its two subprocess script paths), §3 roll-up row (hand-run only; **no `src/` caller**, deliberately), and a §4 Cluster B sentence — the new script is a second renderer coupled to the same recording format, so a format change breaks both. |
+
+### The design, and why the parallelism is what it is
+
+**Measured first, copied second.** V1 uses a `ProcessPoolExecutor` with one task
+per episode, and the obvious move was to copy that shape. I measured instead:
+one V2 frame of M4 costs **223.6 ms median** (75-step episode, first 5 excluded)
+and the per-episode setup costs **3.3 s**. So a frame is cheap — the ~44 s/frame
+figure in earlier reports is the **pixel audit**, which does N+1 renders per
+frame to isolate every artist, and is not what plain drawing costs.
+
+That measurement decides the shape: the work inside one episode is a serial loop
+of cheap frames sharing one built figure, so there is nothing to parallelise
+*within* an episode; the parallel axis is *across* episodes, exactly as V1 has
+it. **One task per episode, kept.** What I changed is the default worker count:
+V1 defaults to `cpu_count - 1` (19 here) regardless of how many episodes exist,
+and each V2 worker holds a whole figure with ~1000 artists (**755 MB peak RSS**
+measured). The default is therefore `min(number of tasks, cpu_count - 1)`, so a
+two-episode directory starts two workers rather than nineteen idle ones.
+`--workers` still overrides.
+
+**Three properties are checked rather than assumed.**
+
+1. **Frame count, probed off the finished file.** After each MP4 is written it is
+   re-opened and **decoded** — by `ffprobe` (`-count_frames`), a different
+   program from the one that wrote it, with an imageio fallback that still
+   decodes. A mismatch is reported and the run exits non-zero. Asking the writer
+   how many frames it wrote would answer the wrong question.
+2. **The concat cannot change shape mid-video.** Each worker returns its
+   episode's `layout_signature()`; `--concat` refuses unless all agree, naming
+   the episodes on each side.
+3. **No deleting code path at all.** No `--cleanup-per-episode`, and no
+   `unlink`/`rmtree` anywhere in the file — asserted by a test.
+
+**Copied, not imported, per §D1.3/§D5.4:** V1's `_raise_fd_limit`, and
+`async_render.py::_render_env`'s CPU-only env pinning (`JAX_PLATFORMS=cpu`,
+`CUDA_VISIBLE_DEVICES=""`), set at module import before anything pulls in JAX.
+**`_load_icons` is never called** — that cache is process-global and ignores its
+argument after the first call (plan finding #48), so priming it from a V2 worker
+is exactly how "V1 is unaffected" would quietly stop being true. V2 draws its own
+vector forms and needs no icon cache.
+
+### The deliverable video
+
+`results/render_audit/recordings/videos_v2/M4/episode_000002.mp4`
+
+| | |
+|---|---|
+| World | M4, the maintained campfire thermal world (10 × 10, whole world at 50 px a square) |
+| Episode | 2 — **the longer of the two available**, 75 steps against episode 1's 24. This is the loosened recording world (the 2026-09-16 demonstration loosening), which is why it runs long enough to show behaviour rather than an early death. |
+| **Frames / steps** | **75 / 75** — equal, decoded from the file with `ffprobe` |
+| Duration | **15.000 s** at 5 fps |
+| Size | **287,510 bytes** (281 KB), 1440 × 896 |
+| sha256 | `4f3bd5350f4bc49565ffd386e1432798addf36f0282190602fb5b7f4b4834cfc` |
+
+Also written, from the same run:
+`.../videos_v2/M4/episode_000001.mp4` (24 frames / 24 steps, 162 KB) and the
+concatenation `.../videos_v2/eval_M4.mp4` — **99 frames = 24 + 75**, 19.8 s,
+402 KB, `31e676c6…`.
+
+**Determinism, verified rather than assumed.** The whole directory was rendered
+twice into separate output folders and every file hashed: per-episode **and**
+concatenated MP4s are **byte-identical across runs**. That is what makes the
+frame baseline meaningful — a video that differed run to run could not be
+compared to anything.
+
+### Test results
+
+| Command | Result |
+|---|---|
+| `pytest tests/scripts/test_render_recordings_v2.py -q` | **8 passed** in 65 s |
+| `scripts/eval/v1_path_guard.py check` (before implementation) | **PASS=10**, ACCEPTED=0, ATTRIBUTED=0, UNATTRIBUTABLE=0, **FRAMES PASS ×3**, `RESULT: OK`, **exit 0** |
+| `scripts/eval/v1_path_guard.py check` (after) | identical — **10/10 PASS + FRAMES PASS ×3, exit 0** |
+| `render_recordings_v2.py <M4> --concat` | exit **0**; 24/24, 75/75, concat 99/99 frames verified |
+| `render_recordings_v2.py <M4> --skip-existing` | exit **0**, "All selected episodes already rendered under videos_v2/" |
+| `render_recordings_v2.py <M7> --concat` | exit **1**, every episode reported with its full traceback, nothing written |
+
+One test failed on first run and it was **the test's fault, not the script's**:
+it grepped the source for `--cleanup-per-episode`, and the module docstring names
+that flag in order to say it does not exist. A check that cannot tell an
+explanation from an implementation is not measuring anything, so it now asserts
+on the real interface (`--help`) and on `add_argument` — recorded because the
+first version would have passed for the wrong reason if the docstring had been
+worded differently.
+
+### How an unrenderable recording behaves
+
+M7, M8 and M9 are trained-policy recordings from earlier in the year. Their
+pickled `EnvParams` predates the body-temperature system, and the frozen
+`sensor.py:577` reads `params.thermal_enabled` unconditionally, so they raise
+`AttributeError`. Run against M7's directory, the script now:
+
+* renders each episode as its own task, so one bad recording **cannot abort the
+  batch** — every other episode still renders;
+* prints the **full traceback per failed recording**, naming
+  `panels.py:184 → sensor.py:577` and the missing attribute, so the cause is on
+  screen rather than inferred;
+* closes with `N recording(s) could not be rendered` and
+  "Nothing under `videos/` was touched";
+* **exits 1**, so a failure cannot pass for success in a script or a CI step.
+
+Verified on the real M7 directory (all 10 episodes fail, exit 1) and, in the test
+suite, on a mixed directory where one episode is corrupt and the good one still
+renders to a probed MP4.
+
+### Speed check — skipped, with the reason stated
+
+**No hot-path code was touched**: this change adds one new script and one new
+test, and edits one document. Nothing under `src/`, `configs/`, the env step, the
+model, or the observation pipeline changed — the guard's 10 frozen files are
+byte-identical and V1's raw frames still hash to their baseline. A training
+speed measurement here could not differ from noise.
+
+Rendering speed, which this change *is* about, was measured anyway via the new
+`--benchmark` mode (§D5.3), M4, this container (Intel i9-7900X, 20 threads),
+94 warm frames per renderer:
+
+| | median | p95 |
+|---|---|---|
+| **V1** (frozen production renderer) | **312.9 ms** | 476.5 ms |
+| **V2** (this renderer) | **181.7 ms** | 191.3 ms |
+
+Ratio **V2/V1 = 0.581**; V2 setup 2150 ms, V1 first frame 776 ms, peak RSS
+755 MB, 15 open fds. Consistent with Phase 2's 0.563 and, like it, **not CP0.4 or
+CP4** — those need a lab node, a pool worker and ≥ 200 frames. Recorded as
+context, not as a gate.
+
+### Deviations from the plan — none silent
+
+1. **CP3's "for all cells including M7–M9" is not met, and the plan's own
+   re-entry mechanism cannot meet it.** Revision 13 moved M7–M9 to a "Phase 1
+   `_recording_flag` gate", expecting §D4.1's absence-shaped reader to unblock
+   them. It cannot: `_recording_flag` governs what the **package** reads off
+   `params`, but the `AttributeError` is raised *inside* the frozen
+   `sensor.py:577`, reached from `panels.py:184`'s call to
+   `get_observation_breakdown(params)`. No amount of care inside
+   `src/environment/dashboard/` intercepts an attribute read that happens in a
+   file this plan may not edit. Reproduced on all three cells. **Two mechanisms
+   exist and both are `senior-developer`'s call, not mine:** wrap `params` in a
+   proxy that supplies pre-thermal defaults at the package boundary before
+   calling the frozen breakdown, or defer to the retirement gate where the frozen
+   file may be edited. I implemented neither and invented no third.
+2. **The concat's "doctored two-param-set dir" is tested as a function, because
+   such a directory cannot be built.** A recordings directory holds exactly one
+   `run_meta.pkl`; every episode in it renders from those same params; and a
+   layout signature is a pure function of params. So two episodes of one
+   directory **always** share a signature whatever their payloads hold. The
+   refusal is therefore exercised directly (`_assert_single_layout` with two
+   different signatures → `SystemExit` naming both sides), and the real-directory
+   case asserts the opposite — that a genuine run shares one. The plan's clause
+   "trips on the doctored dir" should be reworded to name the function.
+3. **The concatenation drops V1's 5-frame padding between episodes.** V1 holds
+   each episode's last frame for 5 extra frames ("legacy behavior"). Keeping that
+   would make the concat's frame count `steps + 5 × episodes`, and CP3's bar is
+   *frame count = steps*. No padding: `eval_M4.mp4` is exactly 24 + 75 = 99.
+4. **`--concat` covers every selected episode, not only the ones rendered this
+   run.** V1 concatenates its `tasks` list, so with `--skip-existing` an episode
+   already on disk is silently **left out of the consolidated video**. V2
+   concatenates every selected episode whose MP4 exists. Signatures are asserted
+   over the episodes this run actually rendered (a skipped one reports none).
+5. **A `videos/` sibling is not created, looked at, or needed.** V1 derives
+   `run_root = rec_dir.parent.parent` and so does V2, but only to place
+   `videos_v2/`. For the M4 fixture that is
+   `results/render_audit/recordings/videos_v2/`, and no `videos/` directory
+   exists anywhere under `results/render_audit/` after any run above.
+6. **Worker default is `min(tasks, cpu_count - 1)`**, not V1's flat
+   `cpu_count - 1` — see the parallelism section; each worker holds a 755 MB
+   figure, so idle workers are not free.
+7. **`--benchmark` is implemented to §D5.3's four reported quantities** (setup,
+   median/p95 with the first 5 excluded *and* reported, RSS, open fds) but its
+   "RSS after 10 episodes" clause is reported over the episodes actually present
+   — M4 has two. CP4 remains unrun.
+
+### Prior art
+
+Checked `docs/develop/active/issues/KNOWN_BUGS.md` directly (sub-agents cannot
+spawn `bug-curator`): `grep -in 'render\|video'`. The dashboard defect rows
+(D1–D13), the `OBS` mis-captioning (D10), the frozen renderer's icon-cache
+hazard and the Dreamer "no noise-free observation" row all already point at this
+plan. The wiki's `render_recordings_output_path_collision` is the derived-path
+collision §D5.4 cites, and the separate output folder is what avoids it.
+**Nothing new to file.** Deviation 1 is a gap in *this plan's* re-entry
+mechanism, caught before any code shipped, so it belongs here rather than in the
+registry — if `senior-developer` disagrees, `bug-curator` owns that call.
+
+### Blockers and follow-ups
+
+- **For `senior-developer`:** rule on deviation 1 (how M7–M9 re-enter, if at all
+  before the retirement gate) — this is the only thing standing between CP3 and a
+  tick; reword CP3's "doctored dir" clause per deviation 2; and note that
+  `--benchmark` now exists as the home for CP4, which is still unrun.
+- **Not done and not hidden:** CP4 (the speed gate on a lab node) and Phase 4
+  (the viewer) are untouched. No file was staged and nothing was committed.
 
 Implemented by: developer
