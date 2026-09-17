@@ -1,2 +1,2 @@
-entity forms drawn	9	9	every form src/environment/dashboard/cells.py can draw - 5 occupant tokens and 4 terrain floors; the script stops if the two lists disagree
+entity forms drawn	9	9	every entity src/environment/dashboard/cells.py can draw - five movers and four terrain glyphs, all nine from the chosen artwork; the script stops if the sheet and the renderer's own table disagree
 occupant counts shown	4	4	one, two, three and four occupants in a square - four is the ceiling the draw-order table enforces. The four-way occurs in no recorded episode and is built here on purpose, so it is evidence about the painter and none about the worlds

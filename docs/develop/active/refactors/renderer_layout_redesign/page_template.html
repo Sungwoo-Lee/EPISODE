@@ -281,9 +281,9 @@ figure img:focus-visible { outline:2px solid var(--accent); outline-offset:-3px;
   <div class="stage"><span class="s">STEP 4</span><div class="b"><span class="t">Build the figure once, update it per step</span>
     <span class="d">Today every step rebuilds the whole figure. The new renderer creates every bar, label and
     token once per episode and only changes their values per step. Measured against V1 on the same recording,
-    a frame takes <strong>70%</strong> of V1's time &mdash; it was 58% before the approved design was
-    restored, and drawing your own artwork plus the two sensory-band panels is what the difference
-    bought.</span></div></div>
+    a frame takes <strong>57%</strong> of V1's time &mdash; your artwork and the two sensory-band panels
+    made it slower, and drawing a window of 25 squares instead of the whole world's 100 more than paid
+    that back.</span></div></div>
   <div class="stage"><span class="s">STEP 5</span><div class="b"><span class="t">Two outputs from one drawing</span>
     <span class="d">MP4 videos written by the new renderer's own script into <code>videos_v2/</code> &mdash; built
     and working &mdash; and a step-scrubbing viewer that asks the same renderer for each frame and lists the
@@ -338,14 +338,18 @@ figure img:focus-visible { outline:2px solid var(--accent); outline-offset:-3px;
     &larr; / &rarr; (Shift for ten frames). The scrubber holds every second recorded step, first to last,
     each at its full 1440 &times; 896; the readout gives the episode's own step number, so it advances in
     twos. Frames were dropped rather than shrunk or recoloured, because this page is about what the
-    renderer draws. The grid view in the middle shows the <strong>whole
-    10 &times; 10 world</strong> at 50 pixels a square &mdash; there is no window and no panning, so the
-    agent moves inside a fixed frame. <strong>Terrain is the floor a square wears</strong>, not a picture in
-    the middle of it, which is why a square holding both a bush and an agent draws both; at the opening
-    step {{FACT:rep_step}} two squares are shared, one by the agent and food, one by a rabbit and a rock. The
-    small World map on the left answers <em>where</em> rather than <em>what</em>: at that size no shape
-    survives, so each square's occupants divide one coloured dot into up to four wedges, and the card says
-    so in words. Under the grid runs the <strong>sensory band</strong>, full width: this world reads smell
+    renderer draws. The grid view in the middle shows a <strong>5 &times; 5 window of the
+    10 &times; 10 world</strong>, centred on the agent, at 96 pixels a square. How many squares the window
+    holds is the world's own <code>visualization.local_view_size</code> setting; the square size then
+    follows from an arena box that is always 480 pixels across, so asking for a wider window zooms out
+    rather than growing the panel. <strong>Every occupant of a square gets its own room</strong>: one
+    occupant is a centred glyph at its own size, and two or more take disjoint quarter-square slots, which
+    is why the square holding the agent and food draws both. At the opening step {{FACT:rep_step}} the
+    world holds two shared squares &mdash; the agent with food, and a rabbit on a rock &mdash; and the
+    window shows the first; the rabbit and its rock lie outside the part of the world on screen. The
+    small World map on the left answers <em>where</em> rather than <em>what</em>: it draws one mark per
+    entity across the whole world, with an outlined <strong>viewport rectangle</strong> marking the squares
+    the grid view is showing. Under the grid runs the <strong>sensory band</strong>, full width: this world reads smell
     and sight at the agent's own square only, so each sense is a list of named channels with its reading
     beside it &mdash; "Odour A, predator-leaning, 0.01" rather than a swatch labelled with a code. Section
     04 shows what the same band draws for a world that senses further. The Interoception card shows every
@@ -356,7 +360,8 @@ figure img:focus-visible { outline:2px solid var(--accent); outline-offset:-3px;
     of {{FACT:die_low}} to +15.</p>
     <p><b>Axes.</b> None &mdash; a dashboard frame of 1440 &times; 896 pixels, where horizontal and vertical
     position is page layout rather than a data scale. Inside the grid view the horizontal axis is the world's
-    column (west to east) and the vertical axis is its row (north to south), one square per world square;
+    column (west to east) and the vertical axis is its row (north to south), one square per world square,
+    covering the 5 &times; 5 window of the world that is on screen rather than the whole world;
     a square's colour is its temperature on one scale shared by every step of this episode, running from the
     episode's coldest square ({{FACT:temp_min}}, pale blue) through the setpoint 0 (near-white) to its
     hottest ({{FACT:temp_max}}, red), in the environment's temperature units. The survivable body range
@@ -405,7 +410,8 @@ figure img:focus-visible { outline:2px solid var(--accent); outline-offset:-3px;
     <p><b>Axes.</b> None &mdash; three dashboard frames of 1440 &times; 896 pixels stacked vertically with a
     white gap, where horizontal and vertical position is page layout rather than a data scale. Within each
     frame the scales are those of Figure 3: in the grid view the horizontal axis is the world's column and
-    the vertical axis its row, one square per world square, coloured by temperature on that episode's own
+    the vertical axis its row, one square per world square, for the 5 &times; 5 window each frame shows,
+    coloured by temperature on that episode's own
     scale in the top frame and neutral grey in the lower two, where the world has no temperature; bars run
     from 0 to each state's maximum.</p>
     {{SAMPLES:fig04_three_worlds}}
@@ -432,33 +438,33 @@ figure img:focus-visible { outline:2px solid var(--accent); outline-offset:-3px;
     <p><b>Figure 8. What the renderer draws inside a world square.</b> Top row: the five things that can
     occupy a square, each alone &mdash; and each one is the <strong>artwork you chose</strong> off the icon
     contact sheets, drawn as an image, not a shape redrawn from a description of it. Middle row: the four
-    kinds of terrain, which <em>are</em> drawn shapes, because the terrain pictures are centred glyphs and
-    a floor has to fill its square: they are the <strong>floor</strong>
-    the square wears rather than a picture in the middle of it, inset so a ring of the square's own
-    temperature colour always shows. Bottom row: shared squares. Because the floor costs the occupants no
-    room, a lone agent on a bush is drawn at exactly the size it would be on empty ground; a second and
-    third occupant stand side by side in a band across the square. Four is the ceiling, and the draw order
+    kinds of terrain, which are <strong>occupants like any other</strong> since the approved design was
+    restored &mdash; a rock is drawn as a rock, centred in its square at its own size, rather than as a
+    carpet filling it. Each keeps its own proportions, so the wide rock and the tall tree are not squashed
+    into a square box. Bottom row: shared squares. One occupant is centred; two or more take disjoint
+    quarter-square slots, so an agent on a bush and an agent sharing with three others are each drawn whole
+    and none is painted over. Four is the ceiling, and the draw order
     is fixed rather than alphabetical &mdash; the old renderer sorted by name and let the later name win,
     which is how an agent standing in a bush came to render as an agent alone.</p>
     <p><b>Axes.</b> None &mdash; a sheet of world squares drawn at equal size; horizontal and vertical
     position group the squares into three labelled rows and carry no data meaning.</p>
     {{SAMPLES:fig08_icon_set}}
     <div class="howto"><p class="eyebrow">How it is computed</p>
-    <p>The sheet calls the renderer's own drawing code rather than a copy of it. For each square the script
-    hands a list of occupants to the composition function in
+    <p>The sheet calls the renderer's own drawing code rather than a copy of it. For each square it hands a
+    list of occupants to the composition function in
     <code>src/environment/dashboard/cells.py</code> &mdash; the same one the grid view calls for every
-    square of every frame &mdash; and draws what it returns: a ground square, at most one terrain floor, and
-    one artist per occupant. Because that function decides the arrangement, the sheet inherits the real
-    rules instead of restating them: the fixed draw order, the soft halo that is dropped whenever a square
-    holds anything else, and the refusal to draw at all when a square is too crowded to stay legible. That
-    rule is measured on the artwork: a token must stay at least 20 pixels across and keep 40 square pixels
-    of its own body colour, the quantities that survive video compression. Every
-    square is built at the renderer's real size of 50 pixels, and the whole sheet is
-    then magnified 2.8 times, so what is enlarged is the picture rather than the geometry. The script also
-    checks itself: it compares the names it draws against the renderer's own tables of occupant forms and
-    terrain floors and stops if the two disagree, so a form added to the package and forgotten here cannot
-    ship as a quietly incomplete sheet. The four-occupant square at the end occurs in no recorded episode
-    and is constructed deliberately; it is evidence about the drawing code and none about the worlds.</p></div>
+    square of every frame &mdash; and paints what comes back through the arena painter's own fill routine:
+    a ground square, then one image artist per occupant. Because that function decides the arrangement, the
+    sheet inherits the real rules rather than restating them: the fixed draw order, the quarter-square
+    slots a shared square divides into, and the refusal to draw a square too small to stay legible. That
+    refusal is measured on the artwork &mdash; a token must stay 20 pixels across and keep 40 square pixels
+    of its own body colour, the quantities that survive video compression. Every square is built at the
+    renderer's real square size, derived as the renderer derives it: a fixed 480-pixel arena divided by a
+    5-wide window gives 96 pixels. The sheet is then magnified 1.8 times, so what is enlarged is the
+    picture rather than the geometry. The script also checks itself against the renderer's own table of
+    entities and stops if the two disagree, so an entity added to the package and forgotten here cannot
+    ship as an incomplete sheet. The four-occupant square occurs in no recorded episode and is built
+    deliberately: evidence about the drawing code, none about the worlds.</p></div>
   </figcaption>
 </figure>
 
@@ -608,7 +614,8 @@ figure img:focus-visible { outline:2px solid var(--accent); outline-offset:-3px;
     (north to south), one square per world square, placed at its offset from the agent; colour is the
     reading, in teal, from the pale grey track at exactly zero through pale to dark at the largest smell
     reading of this episode, on one scale shared by every step. In the grid view above, the horizontal axis
-    is again the world's column and the vertical axis its row, one square per world square, in neutral grey
+    is again the world's column and the vertical axis its row, one square per world square for the
+    5 &times; 5 window on screen, in neutral grey
     because this world has no temperature to colour them by.</p>
     {{SAMPLES:fig09_range1_maps}}
     <div class="howto"><p class="eyebrow">How it is computed</p>
@@ -641,7 +648,7 @@ figure img:focus-visible { outline:2px solid var(--accent); outline-offset:-3px;
 <div class="scroll"><table class="toolkit">
   <thead><tr><th>Toolkit</th><th>Overlap guarantee</th><th>Time per frame</th><th>Porting work</th><th>New requirements</th></tr></thead>
   <tbody>
-    <tr class="pick"><td>A. Matplotlib, own layout (chosen)</td><td>Boxes cannot overlap; every panel clipped to its box; text measured to fit; checked on the finished pixels</td><td class="n">measured 215 ms<br>vs V1's 308 ms</td><td>Low to medium: existing drawing code carries over</td><td>None; tests stay byte-exact</td></tr>
+    <tr class="pick"><td>A. Matplotlib, own layout (chosen)</td><td>Boxes cannot overlap; every panel clipped to its box; text measured to fit; checked on the finished pixels</td><td class="n">measured 177 ms<br>vs V1's 308 ms</td><td>Low to medium: existing drawing code carries over</td><td>None; tests stay byte-exact</td></tr>
     <tr><td>B. Pillow, same layout (fallback)</td><td>Same as A</td><td class="n">est. 5&ndash;20 ms</td><td>High: every panel redrawn in basic shapes</td><td>None</td></tr>
     <tr><td>C. Web page in headless Chrome</td><td>Strongest by default (the browser's own box layout)</td><td class="n">est. 20&ndash;60 ms</td><td>Highest: every panel rewritten as HTML</td><td>A new Python dependency to drive the browser; Chrome is present on the lab nodes checked (101, 106, 114); a browser (150&ndash;300 MB) per worker inside a render process that can already be orphaned; screenshot tests not byte-exact across nodes</td></tr>
   </tbody>
@@ -651,12 +658,14 @@ figure img:focus-visible { outline:2px solid var(--accent); outline-offset:-3px;
   <p><strong>Chosen: A, and it met its target.</strong> It fixes every defect class through the registry,
   packer and pixel check, none of which depend on the toolkit; it removes the largest cost (rebuilding the
   figure every step) without installing anything; and its viewer shares the video's drawing code. The
-  fallback to Pillow was never needed: measured on the same recording in the same process, a median frame
-  costs 215 ms against V1's 308 ms &mdash; a ratio of 0.70, against a target of at most 0.5 that the plan
-  accepted as met in substance. That ratio was 0.58 until the approved design was restored on 2026-09-17;
-  drawing the chosen artwork and the two sensory-band panels costs about 20% more per frame, which is
-  recorded here rather than absorbed, and the requirement that matters for training-time rendering &mdash;
-  never slower than V1 &mdash; still holds. C was not chosen: its static shareable viewer with hover inspection was not
+  fallback to Pillow was never needed: measured on the same recording, a median frame costs 177 ms against
+  V1's 308 ms &mdash; a ratio of 0.57, against a target of at most 0.5 that the plan accepted as met in
+  substance. That number moved twice on 2026-09-17, and both moves are recorded rather than absorbed:
+  drawing your own artwork and the two sensory-band panels made a frame slower, and then restoring the
+  window made it faster again, because the grid view draws 25 squares where it used to draw 100. V1's
+  figure is its own measurement on the same recording and machine; V1 is a frozen file and the guard
+  re-checks that it has not changed. The requirement that matters for training-time rendering &mdash;
+  never slower than V1 &mdash; holds with room to spare. C was not chosen: its static shareable viewer with hover inspection was not
   worth a browser in every render worker.</p>
 </section>
 
@@ -678,19 +687,23 @@ figure img:focus-visible { outline:2px solid var(--accent); outline-offset:-3px;
     one that flags everything &mdash; an always-sounding alarm fails <strong>10</strong> of its tests.</span></div></div>
   <div class="stage"><span class="s">PASSED</span><div class="b"><span class="t">Real recordings, across worlds</span>
     <span class="d">Nine recorded worlds, two frames each &mdash; <strong>18 frames, zero findings</strong> from the
-    grid-panel rules, with every occupant of every shared square measuring a full 1.000 of its own ink. The World map's
-    rules reached zero on 18 of 18 only after the encoding was repaired; before that they fired on every frame.</span></div></div>
+    grid-panel rules, with every occupant of every shared square measuring a full 1.000 of its own ink. That matrix
+    was measured before the approved design was restored; since the restoration the same rule has been re-run on a
+    real windowed frame, again with zero findings, and it now covers terrain too &mdash; the case the redesign
+    started from, which the older rule exempted by construction. The World map's own rule was retired together with
+    the encoding it measured, rather than relaxed.</span></div></div>
   <div class="stage"><span class="s">PASSED</span><div class="b"><span class="t">The overlap defect is fixed, measured two independent ways</span>
-    <span class="d">The automated instrument reproduced an earlier hand measurement exactly &mdash; floor ink 53.44% and
-    51.68% against 53.4% and 51.7% by hand, occupant survival 100% against 100%. The two are independent because the
-    instrument derives which occupants a square holds from the <em>recorded snapshot</em>, while the renderer derives it
-    from its own code, and the two agree on every square of both frames.</span></div></div>
+    <span class="d">The automated instrument reproduced an earlier hand measurement exactly, on the design it was
+    made against &mdash; floor ink 53.44% and 51.68% against 53.4% and 51.7% by hand, occupant survival 100% against
+    100%. Terrain is no longer a floor, so that particular split has gone; what carries over is the half that matters,
+    occupant survival, still measured at a full 1.000 and now covering terrain as well. The two measurements are
+    independent because the instrument derives which occupants a square holds from the <em>recorded snapshot</em>,
+    while the renderer derives it from its own code, and the two agree on every square.</span></div></div>
   <div class="stage"><span class="s">PASSED</span><div class="b"><span class="t">Faster than V1, on the same frames</span>
-    <span class="d">Median 215 ms a frame against V1's 308 ms on the same recording (ratio 0.70). It was 182 ms
-    against 313 ms &mdash; ratio 0.58 &mdash; before the approved design was restored; the artwork and the two
-    sensory-band panels cost about 20% more per frame, and the requirement, never slower than V1, still holds
-    with the smaller margin stated rather than smoothed. Not yet the final
-    speed gate, which needs a lab node, a pool worker and at least 200 frames.</span></div></div>
+    <span class="d">Median 177 ms a frame against V1's 308 ms on the same recording (ratio 0.57). Both of
+    2026-09-17's changes are in that number: your artwork and the two sensory-band panels cost about 20% more
+    per frame, and the restored window won more than that back by drawing 25 squares instead of 100. Not yet
+    the final speed gate, which needs a lab node, a pool worker and at least 200 frames.</span></div></div>
   <div class="stage"><span class="s">TO DO</span><div class="b"><span class="t">Somebody looks, at everything</span>
     <span class="d">A contact sheet of every checked frame and screenshots of the viewer, opened and read. Partly done
     &mdash; every archetype frame has been looked at &mdash; and completed in the remaining phases. A green automated
@@ -719,7 +732,7 @@ figure img:focus-visible { outline:2px solid var(--accent); outline-offset:-3px;
       <li><strong>Build it beside V1, keep V1.</strong> V1 stays the default for every video.</li>
       <li><strong>Today's pipeline is frozen</strong> during development. Switching any video to the new renderer gets its own reviewed plan later; deleting the unused <code>grid_world.py</code> renderer copy and <code>renderer_v2.py</code> is not approved.</li>
       <li><strong>Toolkit:</strong> Matplotlib with our own layout, figure built once per episode; Pillow as the fallback if the first phase missed the speed target. It did not, so the fallback was not used.</li>
-      <li><strong>Speed target:</strong> median frame time at most half of V1's on the campfire world, and never slower than V1 on any other world. Measured at 0.58 of V1 and accepted as met in substance; 0.70 of V1 since the approved design was restored, which still meets the "never slower than V1" half.</li>
+      <li><strong>Speed target:</strong> median frame time at most half of V1's on the campfire world, and never slower than V1 on any other world. Measured at 0.58 of V1 and accepted as met in substance; 0.57 of V1 now that the approved design and its window are both restored, which still meets the "never slower than V1" half.</li>
       <li><strong>Outputs:</strong> MP4 videos plus a step viewer served from the same drawing code; no static HTML export.</li>
       <li><strong>Package name:</strong> <code>src/environment/dashboard/</code>, with <code>render_recordings_v2.py</code> writing to <code>videos_v2/</code>.</li>
     </ol>
@@ -728,9 +741,9 @@ figure img:focus-visible { outline:2px solid var(--accent); outline-offset:-3px;
     <h4>Decided &mdash; what the frame shows (2026-09-14 to 09-17)</h4>
     <ol>
       <li><strong>Layout and look:</strong> Figure 3 is the direction. Frame size 1440 &times; 896; World map under Interoception; last action as a title-row badge plus a chevron on the agent.</li>
-      <li><strong>The grid view shows the whole world</strong> at a 50-pixel square, superseding an earlier 5 &times; 5 window centred on the agent. No window, no panning.</li>
-      <li><strong>Terrain is the square's floor</strong>, with occupants standing on top of it, so a shared square shows every occupant. Up to four, in a fixed draw order.</li>
-      <li><strong>The World map encodes occupants as wedges</strong> of one dot, up to four. An earlier mark outside the dot was retired: it could not fit where it was specified to go.</li>
+      <li><strong>The grid view shows a window of the world</strong> &mdash; <code>visualization.local_view_size</code> squares centred on the agent, 5 &times; 5 in every maintained world &mdash; inside an arena box of fixed size, so the square size follows the window: 96 pixels at 5 wide, 48 at 10 wide. This restores the approved design and supersedes a whole-world grid at a 50-pixel square.</li>
+      <li><strong>Terrain is an occupant like any other</strong>, drawn as a centred glyph at its own size rather than as the square's floor. A shared square gives each occupant its own slot, up to four, in a fixed draw order.</li>
+      <li><strong>The World map draws one mark per entity</strong> over the whole world, plus a viewport rectangle showing where the grid view is looking. The wedge encoding it carried while the grid drew the whole world is retired with it.</li>
       <li><strong>Internal states:</strong> every state shown twice, sensed and true, including states the agent does not sense.</li>
       <li><strong>Senses that read further:</strong> option A, a small map per channel, from range 1; placed in a band under the grid view when they outgrow the side column.</li>
       <li><strong>Temperature colours:</strong> one range per episode, shared by all its steps; the setpoint near-white and the survivable body band pale, colour deepening only beyond it. No numbers in grid squares.</li>
@@ -752,11 +765,11 @@ figure img:focus-visible { outline:2px solid var(--accent); outline-offset:-3px;
   <code>data/episode.json</code> &mdash; it imports the renderer and asks it for frames, so there is no
   figure script drawing a dashboard any more), <code>make_dashboard_assets.py</code> (the fixed-width-digit
   font the renderer draws with, and the nine 1000 &times; 1000 icon PNGs in
-  <code>assets/dashboard_icons/</code>, five of which the renderer now draws as its occupant tokens &mdash;
-  that folder is a live input to the frame rather than an unused export),
+  <code>assets/dashboard_icons/</code>, all nine of which the renderer now draws as the occupants of a
+  square &mdash; that folder is a live input to the frame rather than an unused export),
   <code>fig08_icon_set.py</code> (Figure 8, which calls the renderer's own square-composition code),
   <code>export_extended.py</code>, <code>fig05_extended_encodings.py</code> (Figures 5&ndash;7), then
-  <code>build_page.py</code>. Figures 3, 4 and 8 need the recorded worlds under
+  <code>build_page.py</code>. Figures 3, 4 and 9 need the recorded worlds under
   <code>results/render_audit/recordings/</code>, regenerated by
   <code>scripts/eval/make_render_fixture_recordings.py</code>. <strong>Note:</strong>
   <code>fig05_extended_encodings.py</code> redraws Figures 5&ndash;7 from the saved export
