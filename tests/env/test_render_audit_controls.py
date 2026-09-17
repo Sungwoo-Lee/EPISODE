@@ -1096,7 +1096,23 @@ def test_collection_artists_are_enumerated_at_all():
 
 # ------------------------------------------------------------------- the World map
 def _minimap_figure(occupants, *, mutation=None, caption=True):
-    """A one-square World map with the real palette colours and the real encoding."""
+    """A one-square World map drawn by the PAINTER'S OWN geometry helpers.
+
+    The wedge angles and the identity pip's placement come from
+    `painters._wedge_angles` / `painters._pip_place` rather than being re-derived here, so
+    this control cannot quietly describe a different encoding from the one that ships —
+    which is how the previous version of this figure went on drawing two half-discs and a
+    rim pip after the painter had four wedges and none.
+
+    SCALE, STATED BECAUSE IT MATTERS. The dot here is ~28 px across against the real map's
+    11 px, so a one-pixel seam is ~0.1 % here and ~6 % there. This figure measures the
+    ENCODING; the real square size is measured in `test_dashboard_frames.py`, and neither
+    stands in for the other.
+    """
+    from matplotlib.patches import Circle
+
+    from src.environment.dashboard import painters as PN
+
     fig = plt.figure(figsize=(1.2, 1.6), dpi=100)
     fig.set_layout_engine("none")
     fig.set_facecolor(P.FIGURE_FACECOLOR)
@@ -1107,24 +1123,35 @@ def _minimap_figure(occupants, *, mutation=None, caption=True):
     ax.set_ylim(1, 0)
     ax.add_patch(Rectangle((0, 0), 1, 1, fc=P.TRACK, lw=0, zorder=1))
 
-    order = C.by_priority([n for n in occupants if n not in C.TERRAIN_NAMES])
-    if len(order) == 1:
-        from matplotlib.patches import Circle
-        ax.add_patch(Circle((0.5, 0.5), 0.30, fc=P.MINIMAP_COLOUR[order[0]],
+    r_dot = 0.30
+    order = C.by_priority([n for n in occupants if n not in C.TERRAIN_NAMES])[:4]
+    n = len(order)
+    if n == 1:
+        ax.add_patch(Circle((0.5, 0.5), r_dot, fc=P.MINIMAP_COLOUR[order[0]],
                             ec=P.WHITE, lw=1.2 * _PT, zorder=6))
     else:
-        for i, nm in enumerate(order[:2]):
-            ax.add_patch(Wedge((0.5, 0.5), 0.30, 90 + i * 180, 90 + (i + 1) * 180,
+        for i, nm in enumerate(order):
+            ax.add_patch(Wedge((0.5, 0.5), r_dot, *PN._wedge_angles(n, i),
                                fc=P.MINIMAP_COLOUR[nm], ec=P.WHITE, lw=0.8 * _PT,
                                zorder=6 + i * 0.1))
-        if mutation == "M-F3":
-            from matplotlib.patches import Circle
-            ax.add_patch(Circle((0.5, 0.5), 0.30, fc=P.MINIMAP_COLOUR["agent"],
-                                ec=P.WHITE, lw=1.2 * _PT, zorder=9))
+    if "hiding_predator" in order:
+        i = order.index("hiding_predator")
+        dx, dy, r_p = PN._pip_place(n, i, r_dot)
+        if mutation == "M-F4":
+            # today's painter before Revision 22: the pip fixed at the square's CENTRE,
+            # where on a shared square it straddles a FOREIGN wedge
+            dx, dy, r_p = 0.0, 0.0, r_dot * PN.IDENT_FRAC
+        ax.add_patch(Circle((0.5 + dx, 0.5 + dy), r_p, fc=P.HIDE_EYE, lw=0, zorder=6.6))
+    if mutation == "M-F3":
+        ax.add_patch(Circle((0.5, 0.5), r_dot, fc=P.MINIMAP_COLOUR["agent"],
+                            ec=P.WHITE, lw=1.2 * _PT, zorder=9))
+    if mutation == "M-F5":
+        # amber painted by something that is NOT a hiding predator's identity pip
+        ax.add_patch(Circle((0.5, 0.5), r_dot * 0.5, fc=P.HIDE_EYE, lw=0, zorder=8))
     if caption:
         cap = fig.add_axes([0.05, 0.05, 0.9, 0.25], label="caption")
         cap.axis("off")
-        cap.text(0, 0.5, "Shared squares: two occupants split the dot", fontsize=5)
+        cap.text(0, 0.5, PN.MINIMAP_CAPTION[0], fontsize=5)
     fig.canvas.draw()
     frame = np.asarray(fig.canvas.buffer_rgba())[..., :3].copy()
     return fig, frame
@@ -1139,8 +1166,115 @@ def _run_minimap(occupants, **kw):
         probe.close()
 
 
-def test_minimap_is_silent_on_a_correct_split_dot():
-    assert _run_minimap(["agent", "neutral"]) == []
+def _minimap_ratios(occupants, **kw):
+    """Every kind's measured numerator / denominator on one map square."""
+    fig, frame = _minimap_figure(occupants, **kw)
+    probe = audit.FrameProbe(fig, frame)
+    try:
+        ax = audit._named_axes(fig, "minimap")
+        rect = audit.square_rects(ax, 1, 1)[(0, 0)]
+        mask = audit._rect_mask(probe.h, probe.w, *rect)
+        out = {}
+        for k in {n for n in occupants if n in audit.MINIMAP_PALETTE}:
+            want = {k: audit.MINIMAP_PALETTE[k]}
+            num = audit._classify_census(frame, mask, want)[k]
+            own = [id(e.artist) for e in probe.elements
+                   if e.axes_name == "minimap"
+                   and audit._bbox_meets(e.bbox, rect, audit.REACH_PAD_PX)
+                   and audit._classify_census(probe._draw({id(e.artist)}), mask, want)[k]]
+            den = audit._classify_census(probe._draw(set(own)), mask, want)[k] if own else 0
+            out[k] = (num, den, (num / den) if den else float("nan"))
+        return out
+    finally:
+        probe.close()
+
+
+def _amber_not_owned(occupants, **kw):
+    """Which map artists paint HIDE_EYE without a hiding predator to own them (M-F5).
+
+    The census lets amber count towards `hiding_predator` (§R22.1), and that exemption is
+    only honest while nothing ELSE on the map is amber. Today nothing is — which is a fact
+    about the painter, not a law, so it is asserted in the failing direction here.
+    """
+    fig, frame = _minimap_figure(occupants, **kw)
+    probe = audit.FrameProbe(fig, frame)
+    try:
+        amber = {"hide_eye": frozenset({P.HIDE_EYE})}
+        owner = "hiding_predator" in occupants
+        bad = []
+        for e in probe.elements:
+            if e.axes_name != "minimap":
+                continue
+            ink = probe.ink(e)
+            if not ink.any():
+                continue
+            n = audit._classify_census(probe._draw({id(e.artist)}), ink, amber)["hide_eye"]
+            if not n:
+                continue
+            # the ONE artist a hiding predator is allowed: its own identity pip, which is
+            # the only amber-bearing artist on a square that holds one
+            bad.append((e.label, n))
+        if owner and len(bad) == 1:
+            return []
+        return bad
+    finally:
+        probe.close()
+
+
+@pytest.mark.parametrize("occupants", [
+    ["agent"],
+    ["hiding_predator"],
+    ["agent", "neutral"],
+    ["hiding_predator", "neutral"],
+    ["agent", "predator", "neutral"],
+    ["agent", "predator", "food", "neutral"],
+    ["agent", "hiding_predator", "food", "neutral"],
+])
+def test_minimap_is_silent_on_every_correct_encoding(occupants):
+    """n = 1..4, with and without the identity pip: the rule must say nothing.
+
+    This is the negative half of §R22.6. The four-occupant cases are the ones Revision 22
+    added — before it, a fourth kind was not drawn at all and measured 1 px.
+    """
+    assert _run_minimap(occupants) == []
+
+
+@pytest.mark.parametrize("occupants", [
+    ["hiding_predator"],
+    ["hiding_predator", "neutral"],
+    ["agent", "hiding_predator", "food", "neutral"],
+])
+def test_a_two_paint_mark_measures_one_point_zero_against_its_own_parts(occupants):
+    """§R22.1: the hiding predator's mark is body + amber, and BOTH are its own.
+
+    With the single-colour ground truth the rule shipped with, the amber accent read as
+    ~21 % of the body missing and fired on a correct frame. The denominator is now the
+    same census over the mark's own artists rendered together, so a correct mark measures
+    exactly 1.000 however many paints it is drawn in.
+    """
+    ratios = _minimap_ratios(occupants)
+    num, den, ratio = ratios["hiding_predator"]
+    assert den > 0 and ratio == pytest.approx(1.0, abs=1e-9), ratios
+
+
+def test_the_union_ground_truth_is_what_makes_the_two_paint_mark_pass():
+    """The fix is shown to be load-bearing by removing it, not by asserting it.
+
+    Restore the one-colour-per-kind table the rule shipped with and the SAME correct
+    figure fires — which is what says the union is doing the work rather than some other
+    change made at the same time.
+    """
+    single = {k: frozenset({"#2B3442"}) if k == "hiding_predator" else v
+              for k, v in audit.MINIMAP_PALETTE.items()}
+    saved = audit.MINIMAP_PALETTE
+    audit.MINIMAP_PALETTE = single
+    try:
+        findings = _run_minimap(["hiding_predator"])
+    finally:
+        audit.MINIMAP_PALETTE = saved
+    assert any(f.rule == "minimap_overdraw" and f.b == "hiding_predator"
+               for f in findings), findings
+    assert _run_minimap(["hiding_predator"]) == []
 
 
 def test_minimap_m_f3_catches_a_dot_painted_over_the_split_wedge():
@@ -1153,6 +1287,38 @@ def test_minimap_m_f3_catches_a_dot_painted_over_the_split_wedge():
     assert any(f.rule == "minimap_overdraw" for f in findings), findings
 
 
+def test_minimap_m_f4_catches_the_identity_pip_over_a_foreign_wedge():
+    """M-F4 — and it is not hypothetical, it is the painter as it stood this morning.
+
+    The amber pip was a Circle fixed at the square's CENTRE, drawn whenever the hiding
+    predator was one of the two occupants the dot carried. On a shared square that
+    straddles both half-discs and eats the NEIGHBOUR's colour. Every finding behind the
+    census's old false alarm came from SOLO squares, where this cannot show.
+
+    This is the control that stops §R22.1's union fix becoming a blanket amnesty: amber
+    counts towards the hiding predator, so the proof that it is not simply ignored is that
+    amber over a FOREIGN mark still fires, naming the kind that was eaten.
+    """
+    findings = _run_minimap(["hiding_predator", "neutral"], mutation="M-F4")
+    assert any(f.rule == "minimap_overdraw" and f.b == "neutral" for f in findings), \
+        findings
+    # the correct partner must be silent, or the mutation proves nothing
+    assert _run_minimap(["hiding_predator", "neutral"]) == []
+
+
+def test_minimap_m_f5_catches_amber_painted_by_anything_else():
+    """M-F5: the guard on the amber exemption (§R22.6).
+
+    Nothing but a hiding predator's identity pip may paint `HIDE_EYE` on this map. That is
+    true of today's painter and is asserted here so it stays true as the painter changes —
+    otherwise some other amber mark could paint over a hiding predator undetected.
+    """
+    assert _amber_not_owned(["agent", "neutral"], mutation="M-F5"), \
+        "an amber artist with no hiding predator to own it went unreported"
+    assert _amber_not_owned(["agent", "neutral"]) == []
+    assert _amber_not_owned(["hiding_predator", "neutral"]) == []
+
+
 def test_minimap_ground_truth_is_kinds_not_movers():
     """§R20.4: two predators are two movers but ONE kind and one colour.
 
@@ -1160,6 +1326,16 @@ def test_minimap_ground_truth_is_kinds_not_movers():
     correct square.
     """
     assert _run_minimap(["predator", "predator"]) == []
+
+
+def test_the_hiding_predator_and_the_predator_stay_two_distinct_kinds():
+    """The union must not merge the two kinds the accent exists to tell apart.
+
+    Their body colours are 15/255 apart — inside a human's tolerance at 18 px, outside the
+    census's `MINIMAP_DELTA` of 12 — so the accent is the distinction, and the sets differ.
+    """
+    assert audit.MINIMAP_PALETTE["hiding_predator"] != audit.MINIMAP_PALETTE["predator"]
+    assert _run_minimap(["hiding_predator", "predator"]) == []
 
 
 def test_minimap_requires_the_shared_square_caption():
@@ -1172,6 +1348,16 @@ def test_the_audits_minimap_palette_matches_the_package():
 
     The audit may not import the package it audits, so the table is duplicated — and this
     test, which may import both, is what stops the duplicate becoming a different design.
+
+    The table is a kind -> SET of the colours that kind's own map mark is drawn in
+    (§R22.1). Both halves are pinned: the sets match the package's, and every kind's set
+    still contains the body colour the single-colour table names, so the two tables cannot
+    drift apart in either direction.
     """
-    assert audit.MINIMAP_PALETTE == P.MINIMAP_COLOUR
+    assert audit.MINIMAP_PALETTE == P.MINIMAP_MARK_COLOURS
+    for name, body in P.MINIMAP_COLOUR.items():
+        assert body in audit.MINIMAP_PALETTE[name], name
+    assert audit.MINIMAP_PALETTE["hiding_predator"] == frozenset({P.HIDE_BODY, P.HIDE_EYE})
+    assert all(len(v) == 1 for k, v in audit.MINIMAP_PALETTE.items()
+               if k != "hiding_predator"), audit.MINIMAP_PALETTE
     assert set(audit.TERRAIN_KINDS) == set(C.TERRAIN_NAMES)

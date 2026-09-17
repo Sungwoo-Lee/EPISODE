@@ -220,6 +220,57 @@ def test_a_token_is_one_compound_form_including_its_keyline():
     assert shapes[0] is rings[0], "the keyline is drawn first, beneath its own token"
 
 
+def test_the_world_map_caption_fits_its_card_and_describes_what_is_drawn():
+    """The World card's caption is load-bearing text, and it is checked as such.
+
+    TWO THINGS CAN GO WRONG WITH IT, and both have. It can stop being TRUE: the map used
+    to draw a third occupant as a pip on the square's rim, that pip was retired (plan
+    section R22.3) and a caption still naming it would leave the picture encoding one
+    thing and the page stating another -- the failure mode finding #56 logged. And it can
+    stop FITTING: the caption role is already at its 12 px legibility floor, so the text
+    fitter cannot shrink it and RAISES instead, which would take the whole renderer down.
+
+    The card is 320 px wide with 16 px padding, so the slot is 288 px. Measured here in
+    the vendored font rather than estimated from character counts.
+    """
+    import matplotlib.pyplot as plt
+
+    from src.environment.dashboard import painters as PN
+    from src.environment.dashboard.layout import LEFT_W
+    from src.environment.dashboard.style import register_fonts, text
+
+    # The vendored faces, or this measures DejaVu and means nothing: the same line is
+    # 299.6 px in the fallback font against 264.0 px in the real one, so a test without
+    # this call fails on text that fits perfectly well.
+    register_fonts()
+    budget = LEFT_W - 2 * PN.PAD
+    fig = plt.figure(figsize=(LEFT_W / 100, 1.0), dpi=100)
+    try:
+        ax = fig.add_axes([0, 0, 1, 1])
+        ax.axis("off")
+        ax.set_xlim(0, LEFT_W)
+        ax.set_ylim(100, 0)
+        fig.canvas.draw()
+        rend = fig.canvas.get_renderer()
+        for line in PN.MINIMAP_CAPTION:
+            w = text(ax, 0, 50, line, "caption").get_window_extent(rend).width
+            assert w <= budget, (
+                f"the World map caption line {line!r} measures {w:.1f} px against a "
+                f"{budget} px slot; the caption role is at its legibility floor, so the "
+                f"fitter raises rather than shrinking and the renderer would not build")
+    finally:
+        plt.close(fig)
+
+    whole = " ".join(PN.MINIMAP_CAPTION).lower()
+    # The audit keys on this substring (`SHARED_CAPTION`) to decide the card SAYS in words
+    # that colour is a code here -- the honesty condition R17.4's exemption rests on.
+    assert "shared square" in whole
+    assert "colour is the code" in whole
+    assert "grid view" in whole
+    assert "up to four" in whole, "the caption must state the encoding's ceiling"
+    assert "pip" not in whole, "the rim pip is retired; a caption naming it is stale"
+
+
 def test_the_keyline_is_inset_so_its_outer_edge_lies_at_h():
     h = 10.35
     ring = C.token("food", 25, 25, h)[0]

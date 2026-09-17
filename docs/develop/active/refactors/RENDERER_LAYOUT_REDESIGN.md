@@ -9,7 +9,7 @@ supersedes: UI_REDESIGN_PROPOSAL.md
 
 # Episode-video renderer redesign: panels that cannot overlap, a faster frame, and a step-scrubbing viewer
 
-> **Status**: PLANNED. Revised three times after `plan-reviewer` (first and second pass NOT READY; third pass SOUND WITH CONCERNS, applied in Revision 3). Revision 4 adds extended-range senses (user scope, 2026-09-14); fourth pass SOUND WITH CONCERNS, applied in Revision 5. Revision 6 records user decisions (2026-09-14); fifth pass SOUND WITH CONCERNS, applied in Revision 7. Revision 8 adopts the visual design spec (`docs/reviews/design_episode_dashboard.md`). Revision 9 records the user's answers (2026-09-14) and corrects the temperature scale to a per-episode range. Revision 10 moves every verification world onto maintained configs (new config-maintenance rule). Revision 11 (2026-09-16) re-points every config path after another session archived 227 worlds, names where the regenerated campfire world's values are copied from, and records two new environment behaviours (bushes block animals; faster healing when resting in a bush). **Revision 12 (2026-09-16) retracts Revision 11 §2** — the claim that the maintained `basic/` configs fail to load was produced by a non-resolving YAML read; all of them load, and the plan now requires every config check to go through the resolving loader. **Revision 13 (2026-09-16) corrects the verification matrix after Phase 0b was built and verified**: the three real trained-policy cells cannot be rendered at current code, cells M1 and M2 turned out to be the same world, and a new cell M1x was added. Phase 0a and Phase 0b are **implemented**; Phases 1–5 are plan only. **Revision 17 (2026-09-16) records two user design decisions** — terrain drawn as the square's ground cover with occupants in slots on top of it (variant H), and a 48 px arena square — works out what they cost the surrounding panels, specifies the minimap's admittedly coded encoding, records three cases the design does not solve, and adds a co-occupancy rule to the pixel audit. **Revision 18 (2026-09-16) supersedes Revision 17's square size and window** — the user, given a corrected picture of which panel the numbers belonged to, decided that the grid view shows the **whole 10 × 10 world at a 50 px square** (`ARENA_CELL_PX = ARENA_CELL_MIN_PX = 50`, centre card 564 × 564 px); the 5×5 window is removed, Revision 17's "accepted cost" of a 1–2 px shortfall is retired because 50 px clears both measured floors, and the slot geometry is recomputed. **Revision 19 (2026-09-16) answers the sixth `plan-reviewer` pass (NOT READY)**: the co-occupancy audit rule is rewritten to measure the ink that **survives the painting order** rather than what each artist draws alone (so a token painted *underneath* the bed can no longer pass), §D1.2's arena is reconciled with Revision 18 and covers the two maintained 5×5 worlds, and the Phase-0 speed gate is re-specified for a 100-square arena with one pre-registered failure path and a conditional user question (Q22). **Revision 20 (2026-09-16) answers the seventh `plan-reviewer` pass (SOUND WITH CONCERNS)**: no verdict flip was needed, so it is spec tightening — the co-occupancy rule's two self-asserted preconditions were over-scoped and would have failed a **correct** painter (the agent's own translucent halo, the page's background rectangle), the agent's square outline and the sense-footprint outlines had no painting depth pinned relative to the animals, the survival floor was an unswept number, the minimap's floor had been copied onto an instrument that measures something else, the speed spike's split measured update cost rather than draw cost, and one occluder class (a near-canvas-coloured ground) was invisible to the probe. Every fix narrows **which elements the rule asserts things about**, never **which elements can cover something** — stated explicitly, because the tempting shortcut would silently re-open the draw-order hole Revision 19 closed. **Revision 21 (2026-09-17)** records three decisions taken after Phase 2 and Phase 0d were verified together: the speed gate is accepted as met in substance at 1.78× (Q22 closed by the user), the "this is scenery" floor moves 40 % → 48 % with its measured populations, and this plan's own agent-halo rule is corrected. **Revision 22 (2026-09-17) decides the three contradictions the World map's colour census reported once it could run at all** — it fires 2–4 times per frame on *correct* frames — and decides them **without moving any threshold**: the hiding predator's identity pip is a second paint of its own mark that the census did not know about (an instrument gap, §R22.1); the rim pip's "outside the dot" was geometrically unachievable at the pip size the painter chose, so spec and painter are **both** wrong and the rim pip is retired (§R22.2); and the encoding is extended from three occupants to four by dividing the dot into wedges (§R22.3). §R22.4 states the test that separates "move the constant" from "fix the drawing", §R22.5 records that **dropping or repurposing the map (open question Q21) dissolves all three**, and §R22.9 confirms the M5 `panel_absent` finding belongs to CP2.7. Phases 0a, 0b, 0c, 0d, 1 and 2 are implemented; Phases 3–5 are plan only.
+> **Status**: PLANNED. Revised three times after `plan-reviewer` (first and second pass NOT READY; third pass SOUND WITH CONCERNS, applied in Revision 3). Revision 4 adds extended-range senses (user scope, 2026-09-14); fourth pass SOUND WITH CONCERNS, applied in Revision 5. Revision 6 records user decisions (2026-09-14); fifth pass SOUND WITH CONCERNS, applied in Revision 7. Revision 8 adopts the visual design spec (`docs/reviews/design_episode_dashboard.md`). Revision 9 records the user's answers (2026-09-14) and corrects the temperature scale to a per-episode range. Revision 10 moves every verification world onto maintained configs (new config-maintenance rule). Revision 11 (2026-09-16) re-points every config path after another session archived 227 worlds, names where the regenerated campfire world's values are copied from, and records two new environment behaviours (bushes block animals; faster healing when resting in a bush). **Revision 12 (2026-09-16) retracts Revision 11 §2** — the claim that the maintained `basic/` configs fail to load was produced by a non-resolving YAML read; all of them load, and the plan now requires every config check to go through the resolving loader. **Revision 13 (2026-09-16) corrects the verification matrix after Phase 0b was built and verified**: the three real trained-policy cells cannot be rendered at current code, cells M1 and M2 turned out to be the same world, and a new cell M1x was added. Phase 0a and Phase 0b are **implemented**; Phases 1–5 are plan only. **Revision 17 (2026-09-16) records two user design decisions** — terrain drawn as the square's ground cover with occupants in slots on top of it (variant H), and a 48 px arena square — works out what they cost the surrounding panels, specifies the minimap's admittedly coded encoding, records three cases the design does not solve, and adds a co-occupancy rule to the pixel audit. **Revision 18 (2026-09-16) supersedes Revision 17's square size and window** — the user, given a corrected picture of which panel the numbers belonged to, decided that the grid view shows the **whole 10 × 10 world at a 50 px square** (`ARENA_CELL_PX = ARENA_CELL_MIN_PX = 50`, centre card 564 × 564 px); the 5×5 window is removed, Revision 17's "accepted cost" of a 1–2 px shortfall is retired because 50 px clears both measured floors, and the slot geometry is recomputed. **Revision 19 (2026-09-16) answers the sixth `plan-reviewer` pass (NOT READY)**: the co-occupancy audit rule is rewritten to measure the ink that **survives the painting order** rather than what each artist draws alone (so a token painted *underneath* the bed can no longer pass), §D1.2's arena is reconciled with Revision 18 and covers the two maintained 5×5 worlds, and the Phase-0 speed gate is re-specified for a 100-square arena with one pre-registered failure path and a conditional user question (Q22). **Revision 20 (2026-09-16) answers the seventh `plan-reviewer` pass (SOUND WITH CONCERNS)**: no verdict flip was needed, so it is spec tightening — the co-occupancy rule's two self-asserted preconditions were over-scoped and would have failed a **correct** painter (the agent's own translucent halo, the page's background rectangle), the agent's square outline and the sense-footprint outlines had no painting depth pinned relative to the animals, the survival floor was an unswept number, the minimap's floor had been copied onto an instrument that measures something else, the speed spike's split measured update cost rather than draw cost, and one occluder class (a near-canvas-coloured ground) was invisible to the probe. Every fix narrows **which elements the rule asserts things about**, never **which elements can cover something** — stated explicitly, because the tempting shortcut would silently re-open the draw-order hole Revision 19 closed. **Revision 21 (2026-09-17)** records three decisions taken after Phase 2 and Phase 0d were verified together: the speed gate is accepted as met in substance at 1.78× (Q22 closed by the user), the "this is scenery" floor moves 40 % → 48 % with its measured populations, and this plan's own agent-halo rule is corrected. **Revision 22 (2026-09-17) decides the three contradictions the World map's colour census reported once it could run at all** — it fires 2–4 times per frame on *correct* frames — and decides them **without moving any threshold**: the hiding predator's identity pip is a second paint of its own mark that the census did not know about (an instrument gap, §R22.1); the rim pip's "outside the dot" was geometrically unachievable at the pip size the painter chose, so spec and painter are **both** wrong and the rim pip is retired (§R22.2); and the encoding is extended from three occupants to four by dividing the dot into wedges (§R22.3). §R22.4 states the test that separates "move the constant" from "fix the drawing", §R22.5 records that dropping or repurposing the map would have dissolved all three — **the branch the user weighed and DECLINED: Q21 is answered, the World map stays as a minimap (2026-09-17), and §R22.7's repair is the accepted cost of keeping it** — and §R22.9 confirms the M5 `panel_absent` finding belongs to CP2.7. **§R22.7 was implemented on 2026-09-17**; one finding remains open and it is a constant question, not a painter defect (see the Implementation Report "§R22.7: the World map's wedges, and CP2.8's committed home"). Phases 0a, 0b, 0c, 0d, 1 and 2 are implemented; Phases 3–5 are plan only.
 > **Opened**: 2026-09-14
 > **Related**: [[UI_REDESIGN_PROPOSAL]] (the April plan this one replaces) · [[12_renderer]] (renderer reference doc) · [thermal IMPLEMENTATION_PLAN](../thermal/IMPLEMENTATION_PLAN.md) (§"Rendering: what the rewrite's state turned out to be") · [[BODY_TEMPERATURE_OBSERVATION]] (thermal; **untracked work-in-progress in another session, read as unstable input only**) · [[ASYNC_CHECKPOINT_VIDEO_RENDER]] · [[SAVED_RUN_CONFIG_COMPAT]] · review: [`docs/reviews/plan_renderer_layout_redesign.md`](../../../reviews/plan_renderer_layout_redesign.md) · evidence frames + measuring script: [`renderer_layout_redesign/`](renderer_layout_redesign/) · web research note `tmp/20260914_renderer_layout_web_research.md`
 
@@ -619,7 +619,7 @@ Revision 17 recorded that 48 px was 1 px under the two-mover floor and 2 px unde
 
 ### R18.6 One consequence the user should decide (Q21)
 
-The World map in the left column exists to give global context while the grid panel shows a local patch. **With the grid panel showing the whole world, the two panels now show the same extent** — the World map becomes a smaller, coded copy of the picture already on screen, and §R17.4's split dots and rim pips exist to serve exactly that copy. This plan does **not** decide it either way; it is opened as Q21 with the arithmetic of what dropping it would buy, because deleting a panel the user asked for is not a developer's call.
+The World map in the left column exists to give global context while the grid panel shows a local patch. **With the grid panel showing the whole world, the two panels now show the same extent** — the World map becomes a smaller, coded copy of the picture already on screen, and §R17.4's split dots and rim pips exist to serve exactly that copy. This plan does **not** decide it either way; it is opened as Q21 with the arithmetic of what dropping it would buy, because deleting a panel the user asked for is not a developer's call. *(**Answered 2026-09-17: the map is KEPT, as a minimap.** See Decided questions; the encoding it keeps is Revision 22 §R22.3's, not the split-dot-and-rim-pip scheme described here.)*
 
 ---
 
@@ -719,7 +719,7 @@ The other two blocking findings: two sections of this plan describe the centre p
 2. **The 0 px tolerance is pinned by measurement, not by inheritance (#55).** The "glyph-on-glyph ink is 0 px" figure came from the round-2 mock at a **40 px** cell, on a transparent canvas under an alpha > 24/255 mask — not at 50 px and not under the audit's per-channel > 8/255 difference over a coloured ground. At 50 px two adjacent slots are 22.5 px apart with disc radius 10.35 px and a keyline stroke **centred** on `h` at `lw = max(0.8, h/8)` = 1.29 px, leaving a ~0.5 px geometric gap that lies inside the anti-aliasing fringe. **Phase 0d adds a negative control** that draws two adjacent-slot tokens at 50 px with the real forms and measures with `FrameProbe.ink`, and pins what it reads. If it is non-zero, the fix is the **keyline geometry** — inset the stroke so its outer edge lies at `h` — and **never** a loosened tolerance. §R17.3 item 7's "1 px white keyline" is corrected to the measured stroke width and its placement is stated.
 3. **Phase 1's 564 / 476 / 236 clause is asserted on a synthetic `LayoutContext` (#59).** No matrix cell produces that geometry: every maintained config has both sense ranges at 0 (`default.yaml:222,232`; no `basic/` file carries a `sensory:` block at all), so **no M-cell has a sensor band**; the thermal cells have the thermoception card and no band, the E-cells a band and no thermal card. Thermal-plus-band exists only in Figure 3's sketch, where the ranges were overridden for the drawing. The Phase 1 test therefore constructs a `LayoutContext` with thermal on and one sense at r ≥ 1 and says so; a developer asserting it on M4 would find no band.
 4. **The chevron floor is on the chevron (#60).** `0.62 × h ≥ 6 px` — the drawn chevron length, which is what the 6.42 px and 6.27 px figures in §R18.3 are. Equivalently `h ≥ 9.68 px`; the four-way case clears it by 0.44 px. It joins the floors `test_dashboard_cells.py` recomputes.
-5. **Q21's working assumption is recorded (#61).** Phase 1's pinned numbers rest on **keeping** the World map with `LEFT_W = 320`. Deferring Q21 is safe only while that is written down, because "drop it and narrow the column" would move 564 / 476 / 236 and would waste Phase 0d's minimap control and Phase 2's split-dot work. **Q21 must be answered before Phase 2 starts the minimap**, not before Phase 1.
+5. **Q21's working assumption is recorded (#61).** Phase 1's pinned numbers rest on **keeping** the World map with `LEFT_W = 320`. Deferring Q21 is safe only while that is written down, because "drop it and narrow the column" would move 564 / 476 / 236 and would waste Phase 0d's minimap control and Phase 2's split-dot work. ~~**Q21 must be answered before Phase 2 starts the minimap**, not before Phase 1.~~ **The gate is discharged: Q21 was answered on 2026-09-17 and the answer is KEEP the map** (Decided questions). The working assumption was the right one, every pinned number stands unchanged, and there is no longer a question here for a later phase to re-open.
 6. **Phase 0d's controls are synthetic, and CP0.3b's re-pin is a no-change assertion (#62).** *(Extended by Revision 20 §R20.3 and §R20.7: the control list gains an agent, a footprint edge, a campfire bed and a cross-Axes order control, and the sample is sized for the audit's cost.)* `cell_overdraw` needs `--arena-axes`, and V1's arena axes is unlabelled, so the rule **cannot run on any frozen V1 frame**. CP0.3b's "re-pin the per-rule counts on the frozen M1 and M4 frames" therefore asserts that the new rule changes **nothing** on those frames — still worth running, since it is what catches a new rule that accidentally reclassifies elements — and every Phase 0d positive and negative control is a figure the test builds, until Phase 2 supplies a real painter. `/api/values` returns **kinds with a count** per square: a number in a table is not a legend on a picture, so it does not cut against Q18's show-don't-encode principle, which is about the drawn frame. **Prior art worth using:** the open Known Bugs row "Chasing rabbit stays glued to the agent after contact" (`core.py:629`) makes agent + rabbit a *frequent* two-mover square in rabbit worlds — a cheap place for CP2.8 to find a real two-mover archetype rather than synthesising one. It is not itself a rendering defect.
 
 ---
@@ -988,7 +988,7 @@ Until this week the check that measures the small map could not run at all, beca
 
 **Nothing here moves a threshold.** Revision 21 moved one constant (the 40 % "this is scenery" line) and that was right, because a *correct picture* genuinely failed it. None of (A), (B), (C) is that shape: each is a drawing overlapping a drawing, or an occupant with nowhere to be drawn. Moving the map's floor to absorb them would be fitting the instrument to the defect — the exact move §R20's narrowing rule exists to forbid. §R22.4 states the test that separates the two cases, so the distinction is reusable rather than asserted.
 
-**All three are contingent on an open user question.** **Q21** — whether the small World map still earns its place now that the big grid panel shows the whole world — has been put to the user and is unanswered. §R22.5 works out exactly which of (A), (B), (C) survive each possible answer, because the honest version of asking Q21 is asking it with that cost attached.
+**~~All three are contingent on an open user question.~~ Q21 is ANSWERED (user, 2026-09-17): the World map stays, as a minimap.** The question — whether the small map still earns its place now that the big grid panel shows the whole world — was put to the user with the cost of keeping it attached, and the user chose to keep it knowing that choice buys the painter change and the instrument change below. **All three repairs are therefore live**, and §R22.5's dissolution table is kept only as the record of what was weighed. The decision is recorded in **Decided questions** and is not re-opened — not here, not at CP-D.
 
 ### R22.1 (A) The identity pip is not an occluder — the census is missing the idea of a mark drawn in two colours
 
@@ -1068,9 +1068,11 @@ Applied:
 
 Only the first is a threshold question. For (A), (B) and (C) a lower floor would make the instrument agree with a picture that is wrong — and would do it *silently*, since the same loosened floor would also stop catching the draw-order defect the whole redesign exists to prevent. `SURVIVAL_MIN` (0.98), `MINIMAP_AREA_MIN` (0.55), `MINIMAP_DELTA` (12) and `MINIMAP_ALIGN_MAX_BLANK` (0.5) are **unchanged by this revision**, and the *Fails if:* clauses below say so.
 
-### R22.5 What Q21 dissolves — stated before the user is asked again
+### R22.5 What Q21 would have dissolved — the branch that was NOT taken
 
-**Q21 is unanswered**, and the recorded working assumption is "keep the World map, `LEFT_W = 320`" (§R19.4 item 5). §R19.4 item 5 and the Q21 entry both say **Q21 must be answered before Phase 2 starts the minimap** — and Phase 2 *has* now built the minimap, so that gate was crossed. That is recorded here as a fact rather than a reproach: it is why three decisions are being taken on a panel whose existence is undecided, and it is the reason to put the cost in front of the user now.
+> **CLOSED 2026-09-17 (user decision): the World map is KEPT, as a minimap.** This section is retained because the reasoning is worth preserving — it is the record of what keeping the map was weighed against — but it is **not a standing option**. The "drop" and "repurpose" rows below are decided against and must not be re-proposed; the §R22.7 repair is the agreed cost of the answer the user gave. See **Decided questions**.
+
+**Q21 was unanswered when this revision was drafted**, with the recorded working assumption "keep the World map, `LEFT_W = 320`" (§R19.4 item 5). §R19.4 item 5 and the Q21 entry both said **Q21 must be answered before Phase 2 starts the minimap** — and Phase 2 *had* already built it, so that gate was crossed. That is recorded as a fact rather than a reproach: it is why three decisions were taken on a panel whose existence was formally undecided, and it is why the cost was put in front of the user before the work was implemented. **The user answered: keep it.**
 
 | Answer to Q21 | (A) identity pip | (B) rim pip | (C) fourth occupant | Also dissolved |
 |---|---|---|---|---|
@@ -1078,7 +1080,7 @@ Only the first is a threshold question. For (A), (B) and (C) a lower floor would
 | **Drop the map** | **Dissolves** | **Dissolves** | **Dissolves** | `minimap_overdraw`, `minimap_caption` and `minimap_grid_unaligned` become dead rules; CP2.8's minimap clauses, CP-C's split-wedge clause and the §R17.4 on-page statement are all struck; ~236 px of left-column height is freed (Q21 already records that the grid square gains **at most 3 px** from it) |
 | **Repurpose it as a "where is the agent" map** — one dot per square, no per-kind colour | **Dissolves** (no identity pip) | **Dissolves** (no rim pip) | **Dissolves** (nothing to rank) | The whole coded encoding of §R17.4 goes, and with it the show-don't-encode exception this plan had to argue for |
 
-**The consequence for how Q21 is asked:** "keep it" is no longer the free option it was when Q21 was written. Q21's own text says keeping it *"costs nothing that is not already spent"* — that was true of **layout** and is no longer true of **work**: keeping it now buys the painter change and the instrument change in this revision, plus their controls. **That sentence in the Q21 entry is corrected below rather than left to mislead.** Dropping or repurposing the map removes all three defects at a stroke and makes this entire revision moot — which is a real argument, and the user should have it in hand.
+**The consequence for how Q21 was asked, and how it was answered:** "keep it" was no longer the free option it was when Q21 was written. Q21's own text said keeping it *"costs nothing that is not already spent"* — true of **layout**, not of **work**: keeping it buys the painter change and the instrument change in this revision, plus their controls. **The user was given that cost explicitly and chose to keep the map anyway.** The cheap branch was available — dropping or repurposing the map would have dissolved (A), (B) and (C) in one edit and made this revision moot — and it was declined. That is the decision; the repair is the price of it.
 
 **What this revision does *not* do:** it does not assume an answer. Every change specified here is scoped to the "keep it" branch and is listed in one place (§R22.7) so it can be struck in one edit if the user drops or repurposes the map.
 
@@ -1096,7 +1098,7 @@ Pre-registered, in the style CP0.3b already uses — each must be a **figure the
 
 ### R22.7 What the developer must change, and where (the "keep the map" branch only)
 
-This is the plan's instruction, not a code edit made here. **If Q21 answers "drop" or "repurpose", every row below is struck instead.**
+This is the plan's instruction, not a code edit made here. ~~If Q21 answers "drop" or "repurpose", every row below is struck instead.~~ **Q21 is answered — the map is kept — so every row below stands and was implemented on 2026-09-17** (see the Implementation Report "§R22.7: the World map's wedges, and CP2.8's committed home").
 
 | Site | Change |
 |---|---|
@@ -2014,6 +2016,8 @@ Each checkpoint states what would show it failed.
   - *2026-09-17 senior-developer, verification:* **the developer's list of what is still missing is complete, not generous to itself — and one item is added.** Confirmed against the checkpoint's own clauses: the five mutations ran only on the Phase 0d synthetic figures and **not on the real painter**; **two archetypes of five** are covered (agent on terrain, two movers) with the three-way and four-way neither found nor synthesised-and-labelled; **one matrix cell** (M4) of nine; and the World map's clause cannot be assessed because the rule divides the *named axes* into squares and the map's axes is the whole card. **The "nobody looked" item is now discharged for these two frames** — the verifier looked at `M4_ep1_step000.png` and `M4_ep1_step032.png` at full size: square (4,3) shows a green bush plate with the agent standing on it inside its indigo square outline; (5,1) shows the agent and a piece of food **side by side** in one square; (3,5) shows the rabbit on a grey rock plate. That is the redesign's whole claim, visible rather than inferred. **Added to the list:** the **occupancy rim pip vs. hiding-predator identity pip** clause has no coverage at all, because the minimap painter has not reached rim pips. **So CP2.8 still needs:** the five mutations against the real painter; the three-way and four-way archetypes rendered and looked at (synthesised and labelled if no episode reaches them); the remaining eight matrix cells at ≤ 2 frames each; a **grid-only Axes for the World map** (a painter change mirroring the existing `arena_card` / `arena` split — approved here as the fix, and it is small); and the two-pip disjointness check once rim pips exist. At **46 s per audited frame**, the full matrix is ~14 minutes of audit — cheap enough that the sample size is not the obstacle.
   - *2026-09-17 senior-developer, the three minimap causes are DECIDED — see Revision 22.* The developer's decomposition is accepted as measurement rather than conjecture, and **none of the three is answered by moving the minimap floor** (§R22.4 states the test that separates this case from Revision 21's legitimate constant move). **(A)** is a defect in the **instrument**: a kind's mark may be drawn in more than one palette colour — the hiding predator's is body **plus** amber accent — so the census's one-colour-per-kind ground truth read a correct mark's own accent as 21 % of itself missing. The fix is §R19.1 step 5's union-of-own-parts rule, which the grid panel already had and the minimap variant never inherited (§R22.1). **(B)** is a contradiction in which **both** documents are wrong: a rim pip must satisfy `r_p ≤ 0.1016 × cell` to sit outside the `0.30 × cell` dot *and* inside the square, so the painter's `0.12 × cell` is infeasible **by construction**, and a compliant pip's 4–7 px colour core is below what the census or video compression can hold — §R17.4's "outside the dot" was never achievable here (§R22.2). **(C)** is a limit of the encoding, and it is **extended rather than excused**, because unlike §R17.5's multiplicity case the fourth occupant is representable with the mechanism already in use. **The decision for (B) and (C) is one change:** the rim pip is retired and the dot is divided into `n` wedges for `n = 1…4`, with the identity pip moved into its owner's wedge. **One case the developer's evidence could not contain, found while deciding:** the identity pip is fixed at the square's **centre** and is drawn whenever the hiding predator is one of the two occupants the dot carries, so on a **shared** square it straddles both half-discs and eats the *neighbouring* kind's colour — every (A) finding came from **solo** squares, so (A) is larger than measured. Mutation **M-F4** is exactly that behaviour and must fire, which is what stops (A)'s fix becoming a blanket amnesty.
   - *2026-09-17 senior-developer, what CP2.8 still needs after this decision.* **(1)** §R22.7's painter and instrument changes implemented, with §R22.6's controls — but **only on the "keep the map" branch of Q21**, which is why (2) comes first. **(2) Q21 answered.** Dropping or repurposing the World map dissolves (A), (B) and (C) together and strikes CP2.8's minimap clauses entirely (§R22.5); the gate §R19.4 item 5 set — *answer Q21 before Phase 2 starts the minimap* — has already been crossed, so this is now the binding order-of-work item, not a formality. **(3)** `tests/env/test_dashboard_frames.py` created, so this checkpoint's evidence is carried by the committed suite under the `integration` marker instead of a `tmp/` harness (the developer's blocker 2, unchanged by this revision). **(4)** the four-way census count recorded as a number and §R22.3's pre-registered branch taken on it. **Not outstanding:** the arena side — `cell_overdraw` reports **0 findings on all 18 matrix frames**, all five mutations fail on the real painter, all five archetypes are rendered and looked at, the caption is present, and the rim-pip/identity-pip disjointness clause is **discharged** by §R22.3 rather than met, since retiring the rim pip removes the collision it guarded against.
+  - *2026-09-17 developer, §R22.7 implemented — **items (1), (3) and (4) are done; the blocker is now ONE cause on ONE square**.* Full detail in the Implementation Report "§R22.7: the World map's wedges, and CP2.8's committed home". **Q21 was answered (keep the map), so the whole "keep it" branch was built:** the rim pip is retired, the dot divides into `n = 1…4` wedges, the identity pip moved into its owner's wedge, the census's ground truth became a colour **set** per kind with the denominator measured over that kind's **own artists rendered together**, and the caption was rewritten to describe what is drawn. **No threshold moved.** **Matrix, same 18 frames, like-for-like:** grid-panel rules still **0 findings**; the World map goes from **2–4 findings on every frame** to **0 on 13 of 18**. **Controls:** (A)'s false alarm 73.3 % → **1.000**; correct `n = 1/2/4` all **1.000** (62/62, 48/48, 16/16, 24/24, 13/13 ×4, and a two-paint mark 6/6); **M-F3, M-F4 and M-F5 all FIRE** — M-F4 at **83.3 %, naming the foreign kind**, which is the control proving the union fix is not an amnesty; restoring the single-colour table makes the same correct figure fire again. **The four-way census is 13 px per wedge, ratio 1.000 — non-zero, so §R22.3's first branch is taken and the ceiling stands at four**, not lowered to three. **CP2.8's evidence is now in `tests/env/test_dashboard_frames.py`** under the `integration` marker (12 passed + 1 strict xfail), including one full-audit frame at **49.1 s**. Guard 10/10 + FRAMES PASS ×3, exit 0, before and after; `tests/env` **642 passed, 0 failed**.
+  - *2026-09-17 developer, **finding D — the only thing still blocking CP2.8, and it is a constant question**.* The 9 remaining findings are all the matrix's **one real three-way square** `(8,6)`, on the 5 frames that hold it. Measured: a correct three-way loses **exactly one classified pixel** — `M1` agent **31/32** and predator **31/32** (0.9688), `M6` agent **17/18** (0.9444), synthetic **16/17** (0.9412) — while the hiding predator's two-paint mark measures **23/23 = 1.000**, so §R22.1's fix is working. **Cause, measured at the pixel:** the 0.8 px white line dividing two wedges is stroked by **both**, and compositing the same partially-covered pixel twice leaves it whiter than either pass alone — (104, 90, 221) composited against (98, 83, 220) isolated — carrying one pixel from 7/255 to 13/255 from its colour, just past `MINIMAP_DELTA`'s 12. **Under §R22.4's own test this is the Revision 21 case, not the (A)/(B)/(C) case:** a picture correct as drawn, misclassified by a number — and the number is `SURVIVAL_MIN = 0.98`, swept on ~330 px² arena tokens and reused **unswept** on a 13–32 px map wedge. **A 0.98 floor is only reachable at ≥ 50 classified pixels per wedge; no map wedge has that.** The gap is real and measured: **worst correct control 0.941, best mutation 0.833**. `MINIMAP_AREA_MIN` already exists because this map needs its own floor rather than `SURVIVAL_MIN` reused, but it is applied only on the geometric path. **Nothing was moved; the decision is `senior-developer`'s.** Two repairs were tried and rejected on measurement — round joins (changed nothing, reverted) and folding a square's wedges into one artist (would force 1.000 by construction, but would hide a draw-order defect *between* wedges, which is what M-F3 exists to catch). Pinned in CI as the measured 16/17 **plus a strict xfail**, so settling the floor turns the suite red rather than letting this note drift.
 - [ ] **CP3: Separate V2 entry point.** `render_recordings_v2.py --concat` writes playable MP4s (frame count = steps) for all cells including M7–M9, only under `videos_v2/`. The concat signature assertion holds on real runs and trips on the doctored dir. `test_render_recordings_v2.py` is green (V1 MP4 bytes unchanged after a V2 render of the same dir). CP-G passes. *Fails if:* any file appears or changes under `videos/`, the assertion trips on a real single-run dir, or CP-G fails.
 - [ ] **CP4: Speed.** Same node as CP0.4: V2 median ≤ V1 median on every cell and ≤ 0.5 × on M4; RSS growth < 50 MB over 10 episodes; FDs reported. *Fails if:* any gate is missed.
 - [ ] **CP5: Viewer.** `test_episode_viewer.py` is green; `check_artifact_layout.py` is clean at 500/834/1440; screenshots and the contact sheet are **looked at**, with findings in the report. *Fails if:* arrays differ, the checker flags a defect, or nobody looked.
@@ -2065,15 +2069,19 @@ Numbers are kept so earlier references stay valid.
 
 - **Q22 (opened 2026-09-16 Revision 19; DECIDED by the user 2026-09-17): the speed gate counts as met in substance at 0.563 ×, and none of the four options is adopted.** The new renderer draws a frame in **187.3 ms** against the production renderer's **333.0 ms** — **1.78× faster** — while the pre-registered target was half the time (≈167 ms), so it misses by about **21 ms**. The three-arm split shows the big world-grid panel, whose four-fold growth was the entire reason Q22 was opened, costs **11.2 ms of 187 ms (~6 %)**; the text-heavy cards are the rest. The user chose to record that rather than block on 21 ms or re-author every painter in a second toolkit against the wrong 6 %. Q9's `≤ 0.5 ×` clause is superseded by this measurement; Q9's "never slower than V1" floor stands untouched. **CP0.4's lab-node measurement is still owed** and is folded into CP4, and the acceptance re-opens if CP4 shows V2 slower than V1 on any cell or the arena's share of the frame rises above ~25 %. Full reasoning and the arm table: Revision 21 §R21.1. Not re-opened.
 
+- **Q21 (opened 2026-09-16 Revision 18; DECIDED by the user 2026-09-17): the World map STAYS, as a minimap.** Asked because the grid view now draws the whole world, so the small map shows the same extent as the panel beside it and its colour-coded encoding exists only to make that small copy readable at 18.40 px a square. **The user has confirmed it twice and asked that it stop being raised.** It is kept, at `LEFT_W = 320`, with the encoding of Revision 22 §R22.3 — one dot per square divided between up to four occupants. **The cost was stated before the answer and is accepted as part of it:** keeping the map bought the painter repair and the instrument repair of §R22.7 (the rim pip retired, the dot divided into `n` wedges, the identity pip moved into its owner's wedge, and the census's ground truth widened from one colour per kind to the set of colours a kind's own mark is drawn in), plus their controls. Dropping or repurposing the map would have dissolved all three defects in one edit — that branch is recorded in §R22.5 as **weighed and declined**, not as a standing option. **Not re-opened — not at CP-D, not anywhere.** Implemented 2026-09-17.
+
 ## Open questions for the user
 
-**Q21 (opened 2026-09-16, Revision 18): now that the grid view shows the whole world, does the small World map still earn its place in the left column?** The World map exists to give global context while the grid view shows a local patch. With the grid view drawing the entire world, the two panels show **the same extent** — the World map becomes a smaller, colour-coded copy of a picture already on screen, and §R17.4's coded encoding exists only to make that copy readable at ~18–29 px per square. *(Updated 2026-09-17: "split dots and rim pips" — the rim pip has since been retired and the dot is divided into up to four wedges, Revision 22 §R22.3. The measured square is **18.40 px**, at the low end of the range originally estimated.)*
+> **Q21 is CLOSED (user decision, 2026-09-17): the World map stays, as a minimap.** It has moved to **Decided questions** above. What follows is the record of what was weighed, kept because the arithmetic is worth preserving — **it is not a live question, and the "drop"/"repurpose" branches are decided against.** Do not re-propose them.
+
+**~~Q21 (opened 2026-09-16, Revision 18)~~: now that the grid view shows the whole world, does the small World map still earn its place in the left column?** The World map exists to give global context while the grid view shows a local patch. With the grid view drawing the entire world, the two panels show **the same extent** — the World map becomes a smaller, colour-coded copy of a picture already on screen, and §R17.4's coded encoding exists only to make that copy readable at ~18–29 px per square. *(Updated 2026-09-17: "split dots and rim pips" — the rim pip has since been retired and the dot is divided into up to four wedges, Revision 22 §R22.3. The measured square is **18.40 px**, at the low end of the range originally estimated.)*
 
 - **Keeping it** ~~costs nothing that is not already spent~~ — **corrected 2026-09-17, Revision 22 §R22.5: that is true of LAYOUT and is no longer true of WORK.** The left column is still untouched by Revision 18 (Interoception 504 px + World map 220 px in 816 px available), but the map's coded encoding has since been built and measured, and it reports **2–4 defects per frame on frames that are correct**, from three separate causes. Keeping the map now buys a painter change (the rim pip retired, the dot divided into up to four wedges, the identity pip moved into its owner's wedge) and an instrument change (a kind's ground truth becomes a **set** of colours), plus their controls. **Dropping or repurposing the map dissolves all three defects at a stroke** and makes Revision 22 moot — the dissolution table is in §R22.5. It still differs from the grid view in one way — it is a compact, always-same-size picture, where the grid view carries the thermal field, the footprint outlines and the action badge.
 - **Dropping it** frees ~236 px of left-column height, and would allow the left column to narrow, which is the only way to grow the grid square further. **The ceiling is 53 px per square regardless** (at 54 px the sensor band falls below its 200 px minimum), so the gain is at most 3 px per square — narrow the left column and the *band*, not the width, becomes binding. Stated so the option is not oversold.
-- **Recommendation, if one is wanted:** keep it for now and look at a rendered frame at Phase 2's CP-D, where "does this read as a duplicate?" is a question a picture answers and arithmetic does not.
-- **Phase 1's working assumption, recorded (Revision 19, #61): keep the World map, `LEFT_W = 320`.** Every pinned number in §R18.1 — the 564 px card, the 476 px right column, the 236 px band — rests on it. Deferring Q21 is safe only while that is written down, because "drop it and narrow the column" would move all three and would waste Phase 0d's minimap control and Phase 2's split-dot work. **Q21 must be answered before Phase 2 starts the minimap**, not before Phase 1.
-- **That gate has now been crossed, recorded rather than glossed (Revision 22 §R22.5, 2026-09-17).** Phase 2 built the minimap and the CP2.8 real-painter pass measured it, all while Q21 was open. Nothing is broken by that — the working assumption held and every pinned layout number still stands — but it is why three encoding decisions (§R22.1–§R22.3) are now specified for a panel whose existence is undecided, and it is the reason to answer Q21 **before** that work is implemented rather than after. Every change §R22.7 lists is scoped to the "keep it" branch and struck in one edit if the answer is "drop" or "repurpose".
+- ~~**Recommendation, if one is wanted:** keep it for now and look at a rendered frame at Phase 2's CP-D, where "does this read as a duplicate?" is a question a picture answers and arithmetic does not.~~ **Superseded by the user's decision (2026-09-17): the map is kept, full stop.** This bullet is struck specifically because it deferred the question to CP-D, and the decision is not contingent on what a later reviewer thinks of the picture. CP-D may still say the map should *look* different; it may not re-ask whether it exists.
+- **Phase 1's working assumption, recorded (Revision 19, #61): keep the World map, `LEFT_W = 320`.** Every pinned number in §R18.1 — the 564 px card, the 476 px right column, the 236 px band — rests on it. **The assumption turned out to be the decision:** the user answered *keep*, so all three numbers stand unchanged and nothing that was built on them has to move.
+- **The gate was crossed before the answer arrived, and that is recorded rather than glossed (Revision 22 §R22.5).** Phase 2 built the minimap and the CP2.8 real-painter pass measured it while Q21 was still open. Nothing was broken by it — the working assumption held — and the answer has now closed the gap in the right direction: §R22.7's changes were implemented on 2026-09-17, on the branch the user chose. **There is no remaining conditionality here for a later phase to act on.**
 
 > **Q22 is CLOSED (user decision, 2026-09-17): the gate is met in substance at 0.563 ×, and no option below is adopted.** It was asked, because the measurement landed in the `0.5× < median ≤ 1.0×` band. The decision and its evidence are in the **Decided questions** list above and in **Revision 21 §R21.1**; the table below is kept for the reasoning that produced the answer.
 
@@ -4518,3 +4526,304 @@ Everything else CP2.8 asks for is measured and recorded above.
 Implemented by: developer
 
 Verified by: senior-developer
+
+---
+
+## Implementation Report — §R22.7: the World map's wedges, and CP2.8's committed home (2026-09-17)
+
+### What this is, in plain words
+
+The dashboard draws the world twice: a big grid panel at 50 px a square, and a small **World
+map** at **18.40 px** a square. At that size no shape survives, so the small map gives up
+drawing *what* things are and encodes them as **colour** — which the card has to admit in
+words, because a viewer cannot infer a code.
+
+The check that measures that small map had been reporting **two to four defects per frame on
+frames that are correct**. Revision 22 decomposed that into three causes and decided each one
+separately, and this pass implements those decisions. **The user answered Q21 first: the map
+stays, as a minimap** — the cheap branch (drop it, and all three defects dissolve at once) was
+on the table with its cost attached and was declined, so this is the repair, not the shortcut.
+
+Three different kinds of fix, because they were three different kinds of defect:
+
+1. **The instrument was wrong** about what a hiding predator's mark *is*. The map marks it with
+   its body colour **plus** an amber dot — the only thing that tells it from an ordinary
+   predator, whose colour differs by 15 parts in 255 and is indistinguishable at 18 px. The
+   check assumed one colour per kind, so it read the mark's own amber as **21 % of the mark
+   missing**. A kind's ground truth is now the **set** of colours its own mark is drawn in.
+2. **The drawing was wrong**, and so was the plan's own rule. A third occupant used to become a
+   pip on the square's rim, which the plan said sat *outside* the central dot. Measured, no pip
+   of that size can be both outside the dot and inside the square. **The rim pip is retired**
+   and the dot is simply divided between its occupants — a whole dot, halves, thirds, quarters.
+3. **The encoding stopped at three.** A fourth occupant was not drawn at all. It is now the
+   fourth quarter of the dot, matching the grid panel's own four-slot ceiling.
+
+**No threshold moved.** `SURVIVAL_MIN`, `MINIMAP_AREA_MIN`, `MINIMAP_DELTA` and
+`MINIMAP_ALIGN_MAX_BLANK` are untouched, and the one new thing this pass found that *would*
+need a constant to move is **reported, not fixed** (finding D below).
+
+**Headline numbers.** Across the same 18 matrix frames as the previous pass: `cell_overdraw`
+and every other grid-panel rule still report **0 findings**, and the World map goes from
+**2–4 findings on all 18 frames** to **0 findings on 13 of 18**. The 9 that remain are all one
+square — the single real three-way in the matrix — from a single measured cause that is a
+constant question, not a painter defect. CP2.8's evidence now lives in
+`tests/env/test_dashboard_frames.py` under the `integration` marker instead of a `tmp/` script.
+
+### Part 1 — the painter (`src/environment/dashboard/painters.py`)
+
+| Change | What and why |
+|---|---|
+| `_wedge_angles(n, i)` (new) | Wedge `i` of `n`, from 12 o'clock. `n = 2` reproduces the shipped half-discs **exactly** (90..270, 270..450), so the encoding the controls already cover is unchanged by the generalisation |
+| `_pip_place(n, i, r_dot)` (new) | The identity pip's centre and radius **inside its owner's wedge**: the sector centroid `(2/3)·R·sin α / α` at the sector's mid-angle, with the radius clipped to clear both bounding radii and the dot's rim. The clip never binds at the pip's existing 0.34 × dot radius (tightest is `n = 4`, which allows 0.36) — it is **computed rather than asserted** so the pip cannot silently become infeasible the way the rim pip did |
+| `IDENT_FRAC = 0.34` | The factor the painter already drew the pip at, named rather than inlined. **Not a new constant and not a new size** |
+| the per-square pool | **Four** wedges + the whole dot + the identity pip. **The rim pip artist is deleted.** Nothing is drawn outside the dot any more |
+| `upd` | `n = 1` whole dot, `n = 2..4` wedges at 180/120/90°, `CELL_PRIORITY` order unchanged, ceiling of four; the pip is placed at its owner's wedge centroid for `n ≥ 2` and at the centre for `n = 1` |
+| `MINIMAP_CAPTION` (new constant) | The card's two caption lines, rewritten to describe the encoding that actually ships |
+
+**The caption, and why it is a constant with a test.** §R17.4 makes the on-page statement the
+honesty condition the whole coded encoding rests on, and §R22.8 requires it to describe what the
+painter draws — the old text said *"a third is a rim pip"*, and a caption naming a mark that no
+longer exists is finding #56's failure mode. It now reads:
+
+> Shared squares: the dot splits between up to four
+> occupants. Colour is the code; grid view shows what.
+
+It keeps the substring the audit keys on (`shared square`), says **in words** that colour is the
+code and that the grid view is where occupants are identified, and states the ceiling. It is
+**measured**, not estimated: the slot is 288 px and the two lines are **264.0 px** and
+**283.6 px** in the vendored font. That matters because the caption role is already at its 12 px
+legibility floor, so the text fitter **raises** rather than shrinking — an overlong caption would
+take the whole renderer down. `test_dashboard_cells.py` now pins both the widths and the wording.
+
+### Part 2 — the instrument (`scripts/eval/render_layout_audit.py`, + `palette.py`)
+
+| Site | Change |
+|---|---|
+| `MINIMAP_PALETTE` | kind → **`frozenset` of its own mark's colours**; `hiding_predator` → `{HIDE_BODY, HIDE_EYE}`, every other kind a singleton |
+| `palette.MINIMAP_MARK_COLOURS` (new) | the package-side table the audit's copy is checked against, so the anti-drift test survives the type change and pins **both** directions (sets equal, and every kind's set still contains its single-colour body value) |
+| `_classify_census` | counts the **union** over a kind's colour set, taken on the mask so a pixel can never be counted twice |
+| `minimap_overdraw` denominator | the same census over **that kind's own artists rendered together**, replacing the per-element `max`. Ownership is **measured, not declared**: an artist belongs to kind `k` only if its *isolated* ink carries one of `k`'s colours |
+| `minimap_overdraw` distinctness | compares colour **sets**, so `hiding_predator` and `predator` stay two kinds |
+| module docstring + rule docstring | restated for the set ground truth and the own-artists denominator |
+
+**Cost of the denominator change: one extra render per (square, kind) that is drawn in more than
+one artist** — which today is only the hiding predator. Every other kind still costs exactly the
+solo render it always cost, and the render cache is now keyed by artist *set* rather than by
+single artist id.
+
+### Part 3 — the controls, and the one that matters most
+
+Measured on the real painter at the real 18.40 px square (harness
+`tmp/20260917_1700_r22_minimap.py`, which runs `minimap_overdraw` alone — a few renders rather
+than the 45–53 s full audit — so the encoding could be iterated at all), and then committed as
+tests.
+
+| Control | Result |
+|---|---|
+| **(A) before the fix** — solo hiding predator, one-colour-per-kind ground truth restored | **fires at 73.3 %** |
+| **(A) after the fix** — the same frame, same painter | **0 findings**, ratio **1.000** |
+| correct `n = 1` (agent; hiding predator) | silent, **62/62** and **48/48** = 1.000 |
+| correct `n = 2` (hiding predator + neutral) | silent, **16/16** and **24/24** = 1.000 |
+| correct `n = 4` (agent + predator + food + neutral) | silent, **13/13** ×4 = 1.000 |
+| correct `n = 4` **with** a hiding predator | silent, its two-paint mark **6/6** = 1.000 |
+| two predators (one kind, two movers — §R20.4's case) | silent |
+| **M-F3** agent's dot over the split wedge | **FIRES** |
+| **M-F4** identity pip back at the square's centre, shared square | **FIRES, naming the foreign kind**: `neutral` at **83.3 %** (20 px against its own 24) |
+| **M-F5** amber painted by something other than the identity pip | **FIRES twice** — the artist-level ownership guard names the offending artist, and the census independently reports the kind whose colour vanished |
+
+**M-F4 is the load-bearing one and it is not hypothetical — it is this morning's painter.** The
+risk in letting amber count towards the hiding predator is that amber could then paint over
+anything undetected. Putting the pip back at the square's centre, where it straddles both halves
+of a shared dot, is exactly that, and the rule catches it and names the kind that was eaten. The
+correct partner (pip in its own wedge) is silent on the same square. **The union fix is
+therefore not an amnesty**, which is what §R22.1 required be demonstrated rather than argued.
+
+A second control proves the fix is load-bearing in the other direction: restoring the
+single-colour table makes the **same correct figure** fire again
+(`test_the_union_ground_truth_is_what_makes_the_two_paint_mark_pass`).
+
+### Part 4 — the four-way census: the number, and the pre-registered branch taken
+
+§R22.3 wrote the branch down before the measurement: if the smallest wedge of a correct four-way
+classifies at a **non-zero** count the ratio test is scale-free and the design holds at four; if
+it classifies at **zero** the answer is a **stated ceiling of three**, never a lowered floor or a
+widened `MINIMAP_DELTA`.
+
+**Measured: 13 classified pixels per wedge, all four wedges, ratio 1.000 each, denominator by the
+`isolated-wedge` path.** With a hiding predator in the fourth position its two-paint mark measures
+**6 px against its own 6**. The count is non-zero, so **the first branch is taken: the design
+holds, and the ceiling is four.** Nothing was retuned to reach it. The number is pinned in
+`test_the_four_way_census_is_a_number_and_the_ratio_is_scale_free`, whose failure message names
+the other branch, so a future shrink that drives it to zero is read as the plan already decided
+rather than re-argued.
+
+### Part 5 — the matrix, re-audited: 18 frames
+
+Same sample rule as before (≤ 2 frames per matrix cell: step 0 plus the archetype-richest frame),
+same nine cells, so the before/after is like-for-like.
+
+| | Before this pass | After |
+|---|---|---|
+| grid panel (`cell_overdraw`, `cell_opacity`, `cell_foreign_axes`, `cell_probe_blind`, `outline_like_token`) | **0** across 18 | **0** across 18 |
+| World map (`minimap_overdraw`) | **2–4 on every one of the 18** | **0 on 13 of 18**; **9 findings total**, all on **one square** |
+| `minimap_caption` | 0 | 0 |
+| `minimap_grid_unaligned` | 0 | 0 |
+| `text_over_fill` | 9–16 per frame | 9–15 per frame (unchanged; pre-existing, not a co-occupancy rule) |
+| `panel_absent: Olfaction` on `M5` | 1 per frame | unchanged — **CP2.7's**, per §R22.9, not touched here |
+
+The 9 remaining findings are the five frames that contain the matrix's **only real three-way
+square**, `(8,6) agent + hiding_predator + predator` (`M1`, `M1x`, `M2`, `M5`, `M6` file 0 step
+34). Finding D below is what they are.
+
+**Frames audited, and why that number.** **18** through the full audit (all nine cells × 2 frames
+— CP2.8's own cap, re-run in full because the three-way square that turned out to matter lives in
+five different cells and a subset would have found it in one); **13** more through the committed
+integration tests, one of which is a full-audit frame; and **~14** through the minimap-only
+harness while iterating. The full audit costs **49.1 s per frame** (measured by `pytest
+--durations` on the committed test, ~700 elements, Intel i9-7900X, container `docker-102`), which
+is why the minimap work was done on a rule-only harness and only the final evidence paid the full
+price. The 18-frame matrix took **~21 minutes** wall clock, run concurrently with two pytest
+sessions, so that figure carries deliberate CPU contention.
+
+### Part 6 — finding **D**, new, measured, and NOT fixed here
+
+**What it is.** On a **correct** three-way dot, one wedge measures **one classified pixel short**
+of what it measures when its own artist is drawn alone:
+
+| Frame | map square | kind | numerator / denominator | ratio |
+|---|---|---|---|---|
+| `M1` f0 s34 (23.80 px cell) | (8,6) | agent | **31 / 32** | 0.9688 |
+| `M1` f0 s34 | (8,6) | predator | **31 / 32** | 0.9688 |
+| `M1` f0 s34 | (8,6) | **hiding_predator** (two-paint mark) | **23 / 23** | **1.0000** |
+| `M6` f0 s34 (19.80 px cell) | (8,6) | agent | **17 / 18** | 0.9444 |
+| synthetic three-way on `M4` (18.40 px cell) | (4,4) | agent | **16 / 17** | 0.9412 |
+
+**The cause, measured rather than reasoned.** The 0.8 px white line that divides two wedges is
+stroked by **both** of them. Compositing the same partially-covered pixel twice leaves it whiter
+than either pass alone — measured at the offending pixel: **(104, 90, 221) composited against
+(98, 83, 220) isolated**, against the agent's `#5B4BDB` = (91, 75, 219). That carries exactly one
+pixel from 7/255 to 13/255 away from its colour, just past `MINIMAP_DELTA`'s 12. It is always
+**one** pixel; the ratio only varies because the wedge does.
+
+**Why it is not fixed here.** Under §R22.4's own test this is the *other* category — a picture
+correct as drawn, misclassified by a number — and the number is `SURVIVAL_MIN = 0.98`, swept on
+the grid panel's ~330 px² tokens where one pixel is 0.3 %, and reused **unswept** on a 13–32 px
+map wedge where it is 3–8 %. Arithmetically, **a 0.98 floor is only reachable at ≥ 50 classified
+pixels per wedge**, and no map wedge has that. Moving a constant is a plan decision taken in the
+plan text with its evidence, never in a test (§R20.3), so this is reported. **The gap it would
+have to sit in is measured and real: worst correct control 0.941, best mutation 0.833.** The plan
+already has the right-shaped instrument for it — `MINIMAP_AREA_MIN` exists precisely because the
+map needs its own floor rather than `SURVIVAL_MIN` reused — but it is applied only on the
+geometric path today. **Owner: `senior-developer`.**
+
+Two repairs were tried and rejected on measurement rather than taste, recorded so they are not
+re-tried: **round joins** on the wedges (the miter-spike theory — implemented, measured,
+*changed nothing at all*, reverted) and **folding a square's wedges into one artist** (would make
+the ratio 1.000 by construction, and was rejected because it would also hide a draw-order defect
+*between* the wedges of one dot, which is exactly what M-F3 exists to catch).
+
+It is pinned in CI two ways: a test that asserts the measured 16/17, and a **strict xfail** on
+"a correct three-way is silent", so the day the floor question is settled the suite goes **red**
+and forces this note to be updated rather than drifting out of date.
+
+### Part 7 — CP2.8's committed home, and Q21's closure
+
+**`tests/env/test_dashboard_frames.py` (new, 12 passed + 1 strict xfail).** §R17.6's named home
+for this evidence. It deliberately does **not** re-derive the arena side — that was clean across
+18 frames before this pass and the arena painter is untouched by this diff (every hunk in
+`painters.py` falls inside `build_minimap`; `build_arena` and `build_arena_chrome` are
+byte-identical, so the previous pass's M-E / M-F1 / M-F1g / M-F2 table stands). It carries
+instead: the encoding as arithmetic (wedges partition the dot; the pip clears both bounding radii
+and stays inside the dot for every `n`; §R22.2's `r_p ≤ 0.1016` bound recomputed; the ceiling of
+four with the agent never dropped; amber reserved to the identity pip), the **real-square-size**
+minimap controls and mutations, the four-way census number, the caption, and **one** full-audit
+frame (`M4` f1 s32, 49.1 s) as the frame-level proof that every occupant of every shared square
+survives.
+
+**Q21 is closed in the question register**, at the coordinator's instruction and per the user's
+decision: moved to **Decided questions** with today's date; §R22.5's dissolution table marked
+**weighed and declined** rather than left as a standing option; §R19.4 item 5's gate, §R18.6, the
+Revision 22 preamble, §R22.7's conditional header and the CP-D deferral bullet all rewritten so
+nothing reads as contingent. Historical Implementation and Verification Reports that mention Q21
+were **left alone** — they are signed records of what was true when written, and editing them
+would falsify the history rather than update the plan.
+
+### Test results
+
+| Command | Result |
+|---|---|
+| `pytest tests/env/test_render_audit_controls.py -q` | **80 passed** (was 67; +13 new minimap controls) |
+| `pytest tests/env/test_dashboard_frames.py -q -m integration` | **12 passed, 1 xfailed** (the strict xfail of finding D), 131 s |
+| `pytest tests/env/test_dashboard_{cells,frames}.py -q -m "not integration"` | **32 passed** |
+| `pytest tests/env -m "not integration" -q` | **642 passed, 377 skipped, 39 deselected, 0 failed** (was 603 passed / 26 deselected) |
+| `scripts/eval/v1_path_guard.py check` (before **and** after) | **PASS=10**, ACCEPTED=0, ATTRIBUTED=0, UNATTRIBUTABLE=0, **FRAMES PASS ×3**, `RESULT: OK`, **exit 0** |
+
+### Somebody looked
+
+At full size, on the rendered maps: the real three-way `(8,6)` on `M1` and `M6` shows **three
+120° wedges — indigo agent, dark predator, dark hiding predator with its amber dot in its own
+third**; solo hiding predators elsewhere on the same frames show the amber dot centred in a whole
+dark dot; a two-occupant square shows half dark with the amber inside *its* half and half grey.
+The synthetic four-way renders as four clean quarters (indigo, red, dark, grey), and the
+four-way-with-hiding-predator carries the amber dot inside one quarter without touching its
+neighbours. **M-F4's frame is visibly wrong in the way the numbers say**: the amber dot sits on
+the dividing line and eats into the grey neighbour. Crops under `tmp/20260917_r22_frames/`.
+
+### Speed check
+
+**Training hot path: structurally untouched, and the skip is stated rather than assumed.**
+`render_layout_audit.py` is an offline instrument imported by nothing under `src/`. The dashboard
+package is **not wired into any renderer entry point** and is imported by no training path; this
+diff touches one painter function, a colour table and a test. No environment step, model
+forward/backward, vmap/jit boundary, observation pipeline or loss is on any changed line.
+
+**The instrument's own cost, which is what CP2.8 asks be stated:** **49.1 s** for one full audited
+frame at ~700 elements (Intel i9-7900X @ 3.30 GHz, container `docker-102`), against the previous
+pass's 44.2–53.3 s — unchanged within its own spread, as expected: the denominator change adds at
+most one render per multi-paint mark per square, and only the hiding predator has one.
+
+### Deviations from the plan — none silent
+
+1. **`docs/environment/12_renderer.md` was NOT updated**, though §R22.7 lists it. Checked rather
+   than assumed: that document currently describes only renderer **V1** and **V2**; it has no
+   dashboard section and no minimap-encoding paragraph to correct. Writing one would mean
+   authoring the whole Phase-5 "Docs" deliverable, which §R17.6 assigns to that phase. The
+   encoding is fully documented in the painter's own docstring and in this report. **Flagged for
+   `senior-developer`** as the one §R22.7 row not carried out.
+2. **One new constant was named, not introduced:** `IDENT_FRAC = 0.34` is the factor already in
+   the painter's expression `cell * 0.30 * 0.34`. `MINIMAP_CAPTION` is likewise the caption text
+   moved out of two inline calls so a test can pin it. No tolerance, floor or delta changed.
+3. **`palette.MINIMAP_MARK_COLOURS` is a new package-side table**, not named in §R22.7. It exists
+   so the audit's copy keeps an anti-drift partner after becoming set-valued, which §R22.7's own
+   row requires ("keep the anti-drift test"). Derived from `MINIMAP_COLOUR`, so it cannot drift.
+4. **The round-join experiment** (Part 6) was written, measured and reverted. Recorded because a
+   reader of the diff would otherwise not know the miter-spike hypothesis had been tested.
+
+### Prior art
+
+Grepped `docs/develop/active/issues/KNOWN_BUGS.md` directly (sub-agents cannot spawn
+`bug-curator`): no row matches `minimap`, `world map`, `rim pip`, `identity pip`, `wedge` or
+`census`. Finding D is **not** in the registry. Following §R21.3's precedent — a defect in a
+plan's own rule text, caught before the behaviour ever shipped, is not filed — it is reported
+here for `senior-developer` rather than filed. **If that judgement is wrong, `bug-curator` owns
+it.**
+
+### Does CP2.8 close? **Not quite — one clause, one cause, and it is not the painter**
+
+Closed by this pass: the World map's encoding is implemented for `n = 1…4` ✅; the rim pip is
+retired and with it §R17.4's two-pip collision clause, which is **discharged rather than met**
+✅; the identity pip annotates its own mark and **M-F4 proves it** ✅; **M-F5** guards the amber
+exemption ✅; the four-way census is recorded as a **number** and the pre-registered branch taken
+✅; the caption describes the encoding the painter actually draws ✅; CP2.8's evidence is in the
+committed suite under the `integration` marker, in its named file ✅; the grid panel is still
+**0 findings across all 18 matrix frames** ✅; somebody looked ✅.
+
+**Still open — finding D.** `minimap_overdraw` fires on the matrix's one real three-way square
+(9 findings across the 5 frames that contain it; the other 13 frames are clean), because a 0.98
+survival floor swept on 330 px² arena tokens is unreachable on a 17–32 px map wedge where one
+anti-aliased pixel is 3–8 %. On CP2.8's strictest reading — "any finding count is non-zero" — the
+checkpoint does not close, and that is how it is reported rather than arguing the clause covers
+only the arena. **Nothing was loosened to reach a tick.** The decision is a constant, the
+evidence and the gap are above, and it belongs to `senior-developer`.
+
+Implemented by: developer

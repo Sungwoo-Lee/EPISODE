@@ -257,14 +257,87 @@ def temperature_gauge(dash, ax, x, y, w):
 # --------------------------------------------------------------------------
 # the World map
 # --------------------------------------------------------------------------
+#: The World card's two caption lines. They are not decoration and they are not
+#: free text: plan section R17.4 makes the on-page statement the honesty
+#: condition this map's whole coded encoding rests on, so the caption must say
+#: IN WORDS that colour is the code here and that the grid view is where the
+#: occupants are identified. Two hard conditions on any rewording -- it must
+#: still contain the substring the audit keys on (``shared square``,
+#: ``SHARED_CAPTION``), and it must describe the encoding the painter ACTUALLY
+#: draws. The previous text said "a third is a rim pip" and the rim pip has been
+#: retired; a caption naming a mark that no longer exists is the failure mode
+#: plan finding #56 logged, where two parts of one system disagree and the
+#: reader builds from the stale one.
+#:
+#: MEASURED, because a caption that does not fit raises rather than shrinking (the caption
+#: role is already at its 12 px legibility floor): the card is 320 px wide, the text slot
+#: is 288 px, and these two lines measure 264.0 px and 283.6 px in the vendored font.
+#: `test_dashboard_cells.py` pins that, so a reworded caption cannot silently overflow.
+MINIMAP_CAPTION = (
+    "Shared squares: the dot splits between up to four",
+    "occupants. Colour is the code; grid view shows what.",
+)
+
+#: The identity pip's radius, as a share of the DOT's radius. Not a new mark and
+#: not a new size -- it is the factor the painter already drew the pip at
+#: (0.30 x cell x 0.34), named here because :func:`_pip_place` now has to check
+#: it still fits inside one wedge rather than assume the whole dot.
+IDENT_FRAC = 0.34
+
+
+def _wedge_angles(n, i):
+    """Wedge ``i`` of ``n``, in degrees, starting at 12 o'clock.
+
+    ``n = 2`` reproduces the half-discs that shipped (90..270, 270..450) exactly,
+    so the two-occupant encoding -- the one the controls already cover -- is
+    unchanged by the generalisation to ``n = 1..4``.
+    """
+    step = 360.0 / n
+    return 90.0 + i * step, 90.0 + (i + 1) * step
+
+
+def _pip_place(n, i, r_dot):
+    """Where the amber identity pip goes INSIDE its owner's wedge, and how big.
+
+    At the square's centre the pip straddles every wedge, so on a shared square
+    it eats the NEIGHBOUR's colour rather than annotating its own occupant --
+    the latent defect plan section R22.1 found and mutation M-F4 reproduces. It
+    is therefore placed at the centroid of its own circular sector,
+    ``(2/3) R sin(a) / a`` from the centre at the sector's mid-angle, and its
+    radius is clipped so it clears both bounding radii and the dot's rim. The
+    clip never binds at :data:`IDENT_FRAC` = 0.34 for n = 1..4 (the tightest is
+    n = 4, which allows 0.36); it is computed rather than asserted so the pip
+    cannot silently become infeasible the way the retired rim pip did.
+    """
+    if n <= 1:
+        return 0.0, 0.0, r_dot * IDENT_FRAC
+    half = np.pi / n
+    d = (2.0 / 3.0) * r_dot * np.sin(half) / half
+    mid = np.radians(sum(_wedge_angles(n, i)) / 2.0)
+    r = min(r_dot * IDENT_FRAC, 0.9 * d * np.sin(half), 0.9 * (r_dot - d))
+    return d * np.cos(mid), d * np.sin(mid), r
+
+
 def build_minimap(dash, ax, w, h):
     """The small world map: it answers WHERE, and the grid view answers WHAT.
 
-    At this square size (about 24-29 px) no shape survives, so colour IS a code
-    here -- and the card says so in words rather than leaving a viewer to infer
-    it (plan section R17.4). Two occupants split one dot into halves; a third
-    becomes a pip on the square's rim, kept outside the dot so it can never be
-    confused with the amber identity pip that marks a hiding predator.
+    At this square size (18.4 px, measured) no shape survives, so colour IS a
+    code here -- and the card says so in words rather than leaving a viewer to
+    infer it (plan section R17.4). That exemption is earned by measurement
+    rather than asserted: a mark big enough to be a SHAPE cannot be fitted
+    beside the dot (R22.2's bound r_p <= 0.1016 x cell, whose colour core is
+    4-7 px), and the two predator kinds' body colours differ by 15/255, which
+    only an added colour accent can carry.
+
+    THE ENCODING, as decided by plan section R22.3. One dot per square, divided
+    between its occupants: one whole dot, two half-discs, three wedges at 120
+    degrees, four at 90. The retired rim pip is gone -- it was infeasible by
+    construction, since a pip outside the 0.30 x cell dot and inside the square
+    must have r_p <= 0.1016 x cell while the painter drew 0.12, so it overlapped
+    the dot it was specified to clear. Nothing is drawn outside the dot now, and
+    the amber identity pip that tells a hiding predator from a predator sits in
+    its OWN wedge. The ceiling is four kinds, matching the grid panel's four
+    slots; CELL_PRIORITY decides, so the agent is never the one dropped.
     """
     from matplotlib.patches import Circle, Wedge
 
@@ -302,29 +375,29 @@ def build_minimap(dash, ax, w, h):
             t.set_visible(False)
             tints[(r, c)] = t
 
-    # A fixed pool per square: two half-discs, one whole dot, one rim pip.
+    # A fixed pool per square: FOUR wedges (used as 2, 3 or 4), one whole dot and
+    # one identity pip. There is no rim pip -- retired by plan section R22.3, and
+    # nothing is drawn outside the dot any more.
     pool = {}
     for r in range(hh):
         for c in range(ww):
             cx, cy = (c + 0.5) * cell, (r + 0.5) * cell
-            wedges = [gax.add_patch(Wedge((cx, cy), cell * 0.30, 90 + i * 180,
-                                          90 + (i + 1) * 180, fc=P.TRACK, ec=P.WHITE,
-                                          lw=0.8 * PT, zorder=6 + i * 0.1))
-                      for i in range(2)]
+            wedges = [gax.add_patch(Wedge((cx, cy), cell * 0.30, *_wedge_angles(2, i),
+                                          fc=P.TRACK, ec=P.WHITE, lw=0.8 * PT,
+                                          zorder=6 + i * 0.1))
+                      for i in range(4)]
             dot = gax.add_patch(Circle((cx, cy), cell * 0.30, fc=P.TRACK, ec=P.WHITE,
                                        lw=1.2 * PT, zorder=6))
-            pip = gax.add_patch(Circle((cx + 0.26 * cell, cy - 0.26 * cell), cell * 0.12,
-                                       fc=P.TRACK, ec=P.WHITE, lw=0.8 * PT, zorder=7))
-            ident = gax.add_patch(Circle((cx, cy), cell * 0.30 * 0.34, fc=P.HIDE_EYE,
-                                         lw=0, zorder=6.6))
-            for a in (*wedges, dot, pip, ident):
+            ident = gax.add_patch(Circle((cx, cy), cell * 0.30 * IDENT_FRAC,
+                                         fc=P.HIDE_EYE, lw=0, zorder=6.6))
+            for a in (*wedges, dot, ident):
                 a.set_visible(False)
-            pool[(r, c)] = (wedges, dot, pip, ident)
+            pool[(r, c)] = (wedges, dot, ident)
 
     dash.fit(ax, PAD, oy + cell * hh + CAPTION_LINE, "caption", w - 2 * PAD,
-             numeric=False).set("Shared squares: two occupants split the dot, a third")
+             numeric=False).set(MINIMAP_CAPTION[0])
     dash.fit(ax, PAD, oy + cell * hh + 2 * CAPTION_LINE, "caption", w - 2 * PAD,
-             numeric=False).set("is a rim pip. The grid view shows what they are.")
+             numeric=False).set(MINIMAP_CAPTION[1])
 
     def upd(v):
         for (r, c), g in grounds.items():
@@ -335,36 +408,43 @@ def build_minimap(dash, ax, w, h):
             t.set_visible(bool(ter))
             if ter:
                 t.set_facecolor(P.MINIMAP_COLOUR[ter[0]])
-        for key, (wedges, dot, pip, ident) in pool.items():
+        for key, (wedges, dot, ident) in pool.items():
             occ = [n for n in v.occupancy.get(key, ()) if n not in C.TERRAIN_NAMES]
             occ = C.by_priority(occ)
-            for a in (*wedges, dot, pip, ident):
+            for a in (*wedges, dot, ident):
                 a.set_visible(False)
             if not occ:
                 continue
-            if len(occ) == 1:
+            # The ceiling is FOUR kinds, matching the grid panel's four slots
+            # (plan section R22.3 item 6). CELL_PRIORITY orders them and the
+            # agent is first, so a fifth kind -- which no episode of any matrix
+            # cell produces -- drops the last by priority, never the agent.
+            shown = occ[:4]
+            n = len(shown)
+            cy, cx = (key[0] + 0.5) * cell, (key[1] + 0.5) * cell
+            if n == 1:
                 dot.set_visible(True)
-                dot.set_facecolor(P.MINIMAP_COLOUR[occ[0]])
+                dot.set_facecolor(P.MINIMAP_COLOUR[shown[0]])
             else:
-                for wg, nm in zip(wedges, occ[:2]):
-                    wg.set_visible(True)
+                for i, (wg, nm) in enumerate(zip(wedges, shown)):
+                    t1, t2 = _wedge_angles(n, i)
+                    wg.set_theta1(t1)
+                    wg.set_theta2(t2)
                     wg.set_facecolor(P.MINIMAP_COLOUR[nm])
-                if len(occ) > 2:
-                    pip.set_visible(True)
-                    pip.set_facecolor(P.MINIMAP_COLOUR[occ[2]])
-            # The amber identity pip tells a hiding predator from a predator,
-            # which share a body colour. It marks the occupant of the DOT, so it
-            # is drawn whenever the hiding predator is one of the occupants the
-            # dot (or its two wedges) carries -- not only when it is alone, which
-            # is how it was first written. That restriction made the two pips
-            # mutually exclusive, and the plan (section R17.4) requires exactly
-            # the opposite: the occupancy rim pip and the identity pip must be
-            # able to appear on ONE square and share no pixel, with a test that
-            # says so. They cannot collide by construction -- the identity pip
-            # ends 0.102 x cell from the centre and the rim pip begins
-            # 0.248 x cell from it -- and CP2.8 measures that on a rendered frame
-            # rather than trusting the arithmetic.
-            if "hiding_predator" in occ[:2]:
+                    wg.set_visible(True)
+            # The amber identity pip tells a hiding predator from an ordinary
+            # predator, whose body colours differ by 15/255 -- a distinction the
+            # census can just barely make and a viewer at 18 px cannot make at
+            # all. It annotates ONE mark, so it is drawn inside that mark: the
+            # whole dot when the hiding predator is alone, its own wedge when the
+            # square is shared. At the square's CENTRE, where it was first
+            # written, it straddles every wedge and eats the neighbouring kind's
+            # colour -- that is mutation M-F4, and it must fail the audit.
+            if "hiding_predator" in shown:
+                dx, dy, r_p = _pip_place(n, shown.index("hiding_predator"),
+                                         cell * 0.30)
+                ident.set_center((cx + dx, cy + dy))
+                ident.set_radius(r_p)
                 ident.set_visible(True)
     dash.updates.append(upd)
 

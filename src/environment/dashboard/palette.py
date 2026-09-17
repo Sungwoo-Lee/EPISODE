@@ -70,6 +70,29 @@ MINIMAP_COLOUR: dict[str, str] = {
     "neutral": NEUT, "agent": IRIS,
 }
 
+#: Every palette colour a kind's OWN map mark is drawn in -- the table above's
+#: body colour, plus any accent that belongs to the same mark.
+#:
+#: WHY A SECOND TABLE EXISTS. The pixel audit measures a map mark by counting the
+#: pixels that still carry its colour in the finished image, against the pixels
+#: it carries when drawn alone. With one colour per kind, a mark drawn in TWO
+#: paints reads as partly missing: the hiding predator's amber identity pip --
+#: the thing that tells it from an ordinary predator, whose body colour is only
+#: 15/255 away -- covered about 21 % of its own body colour, and a correct frame
+#: was reported as an occlusion. This is the union-of-a-token's-own-parts rule
+#: the grid panel already had (plan section R19.1 step 5) arriving on the panel
+#: that never inherited it (section R22.1).
+#:
+#: THE GUARD THAT KEEPS IT HONEST. Letting amber count towards `hiding_predator`
+#: would be an amnesty if anything else on the map were amber. Nothing is --
+#: `MINIMAP_COLOUR` contains no amber and `HIDE_EYE` is drawn only for a hiding
+#: predator's identity pip -- and because that is a fact about today's painter
+#: rather than a law, mutation M-F5 asserts it in the failing direction.
+MINIMAP_MARK_COLOURS: dict[str, frozenset[str]] = {
+    name: frozenset({colour} | ({HIDE_EYE} if name == "hiding_predator" else set()))
+    for name, colour in MINIMAP_COLOUR.items()
+}
+
 # -- sense ramps ------------------------------------------------------------
 OLF_STOPS = ("#EDF7F5", "#7CCBBD", "#14907F", "#0B4F47")     # teal: smell only
 VIS_STOPS = ("#EFF1F4", "#A3ACBA", "#556072", "#1C2330")     # slate: vision only

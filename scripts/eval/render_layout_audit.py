@@ -251,11 +251,15 @@ identical findings.
 
 The MINIMAP variant is measured on the COMPOSITE, not by isolation — isolation would call
 a split dot correct even when one half is painted over the other, which is the exact
-defect §R17.4 exists to prevent. Its ground truth is the distinct palette colours the
-KINDS present map to (two predators are one colour, not two movers), and its area
-denominator is the SAME census run on the isolated wedge, so edge blends are excluded from
-numerator and denominator alike and a correct dot measures ~1.000. A geometric wedge would
-be unreachable on a correct ~13 px dot, a third to a half of whose pixels are blends.
+defect §R17.4 exists to prevent. Its ground truth is the distinct palette colour SETS the
+KINDS present map to (two predators are one colour, not two movers; a hiding predator is
+its body colour PLUS the amber accent that tells it from a predator, §R22.1), and its area
+denominator is the SAME census run on that kind's OWN ARTISTS RENDERED TOGETHER, so edge
+blends are excluded from numerator and denominator alike and a correct mark measures
+~1.000 however many paints it is drawn in. A geometric wedge would be unreachable on a
+correct ~13 px dot, a third to a half of whose pixels are blends. Ownership is measured —
+an artist belongs to a kind only if its isolated ink carries one of that kind's colours —
+so an accent painted over a NEIGHBOUR's mark is still an occlusion and still fires.
 
 Tolerances added by this rule, all argued above:
   SURVIVAL_MIN         = 0.98   per-component surviving fraction (swept at CP0.3b)
@@ -865,14 +869,29 @@ MINIMAP_ALIGN_MAX_BLANK = 0.5
 #: reused: it measures a different thing and is swept on the minimap's own controls.
 MINIMAP_AREA_MIN = 0.55
 
-#: The audit's OWN copy of the entity -> map colour table. It is a copy, and not an import,
+#: The audit's OWN copy of the entity -> map MARK colours. It is a copy, and not an import,
 #: because the audit may not import the package it audits (§D5.2, pinned by
 #: `test_audit_imports_neither_layout_nor_registry`). A test compares the two tables so the
 #: copy cannot drift — the test may import the package, the instrument may not.
-MINIMAP_PALETTE = {
-    "rock": "#6B7380", "bush": "#4F8A34", "tree": "#2F7A45", "campfire": "#7C4A2D",
-    "food": "#E03151", "hiding_predator": "#2B3442", "predator": "#1F2733",
-    "neutral": "#A8A29A", "agent": "#5B4BDB",
+#:
+#: A kind maps to the SET of palette colours its own map mark is drawn in (§R22.1), not to
+#: one colour. Every kind is a singleton except `hiding_predator`, whose mark is
+#: deliberately TWO paints: the body `#2B3442` plus the amber accent `#F59E0B` that tells
+#: it from an ordinary predator (`#1F2733`, 15/255 away — a distinction this census can
+#: just barely make and a viewer at an 18 px square cannot make at all). With one colour
+#: per kind the census read a correct mark's own accent as ~21 % of the mark missing and
+#: fired on a correct frame. Two kinds collide only if their SETS are equal, so the hiding
+#: predator and the predator stay distinct.
+MINIMAP_PALETTE: dict[str, frozenset] = {
+    "rock": frozenset({"#6B7380"}),
+    "bush": frozenset({"#4F8A34"}),
+    "tree": frozenset({"#2F7A45"}),
+    "campfire": frozenset({"#7C4A2D"}),
+    "food": frozenset({"#E03151"}),
+    "hiding_predator": frozenset({"#2B3442", "#F59E0B"}),
+    "predator": frozenset({"#1F2733"}),
+    "neutral": frozenset({"#A8A29A"}),
+    "agent": frozenset({"#5B4BDB"}),
 }
 
 #: Terrain is the FLOOR, not an occupant, so it never counts toward a square's kinds.
@@ -1289,7 +1308,13 @@ def cell_overdraw(probe: "FrameProbe", arena_axes: str, occupancy: dict,
 
 
 def _classify_census(img: np.ndarray, mask: np.ndarray, colours: dict) -> dict:
-    """Count pixels inside `mask` that match each named colour within MINIMAP_DELTA.
+    """Count pixels inside `mask` matching ANY colour of each kind, within MINIMAP_DELTA.
+
+    `colours` maps a kind to the SET of palette colours its own mark is drawn in (§R22.1),
+    and the count is the UNION over that set — a pixel carrying the hiding predator's
+    amber accent counts towards the hiding predator, exactly as the grid panel's survival
+    floor counts a token's own eye over its own body (§R19.1 step 5). The union is taken
+    on the mask, never summed, so a pixel can never be counted twice.
 
     A blend — between two occupant colours, the white ring, the 0.8 px split line or the
     terrain tint — matches NEITHER, and is therefore excluded from the numerator and from
@@ -1300,9 +1325,12 @@ def _classify_census(img: np.ndarray, mask: np.ndarray, colours: dict) -> dict:
 
     out = {}
     px = img[mask].astype(np.int16)
-    for name, hexc in colours.items():
-        want = np.asarray([round(v * 255) for v in to_rgb(hexc)], dtype=np.int16)
-        out[name] = int((np.abs(px - want).max(axis=1) <= MINIMAP_DELTA).sum())
+    for name, hexes in colours.items():
+        hit = np.zeros(px.shape[0], dtype=bool)
+        for hexc in sorted(hexes):
+            want = np.asarray([round(v * 255) for v in to_rgb(hexc)], dtype=np.int16)
+            hit |= np.abs(px - want).max(axis=1) <= MINIMAP_DELTA
+        out[name] = int(hit.sum())
     return out
 
 
@@ -1313,9 +1341,10 @@ def minimap_overdraw(probe: "FrameProbe", minimap_axes: str, occupancy: dict,
     Isolation would report a split dot as correct even when one half is painted over the
     other, which is the exact defect §R17.4 exists to prevent, so this rule classifies the
     pixels of the FINISHED image against the palette table. Ground truth is the distinct
-    palette colours the KINDS present map to (§R20.4): two predators are one colour and
-    one kind, and the withdrawn "at least as many colours as movers" wording failed that
-    correct square.
+    palette colour SETS the KINDS present map to (§R20.4, §R22.1): two predators are one
+    colour and one kind — the withdrawn "at least as many colours as movers" wording
+    failed that correct square — and a hiding predator is one kind drawn in TWO colours,
+    which a one-colour-per-kind ground truth read as a fifth of itself missing.
     """
     ax = _named_axes(probe.fig, minimap_axes)
     rects = square_rects(ax, world_h, world_w)
@@ -1325,16 +1354,21 @@ def minimap_overdraw(probe: "FrameProbe", minimap_axes: str, occupancy: dict,
     shared_anywhere = False
     n_expected = n_blank = 0
 
-    # One solo render per element, reused across every square. The denominator is the
-    # same census run on the isolated artist (§R20.4), and rendering per (square, colour)
-    # instead would be thousands of renders on a 100-square map.
-    solo_cache: dict[int, np.ndarray] = {}
+    # One render per artist SET, reused across every square. The denominator is the same
+    # census run on the kind's own artists (§R20.4 as corrected by §R22.1), and rendering
+    # per (square, colour) instead would be thousands of renders on a 100-square map. A
+    # kind drawn by ONE artist — every kind but the hiding predator today — costs exactly
+    # the solo render it always cost; only a multi-paint mark pays one render more.
+    render_cache: dict[frozenset, np.ndarray] = {}
+
+    def drawn(ids):
+        key = frozenset(ids)
+        if key not in render_cache:
+            render_cache[key] = probe._draw(set(key))
+        return render_cache[key]
 
     def solo(el):
-        key = id(el.artist)
-        if key not in solo_cache:
-            solo_cache[key] = probe._draw({key})
-        return solo_cache[key]
+        return drawn({id(el.artist)})
 
     for (r, c), rect in rects.items():
         kinds = [k for k in occupancy.get((r, c), ()) if k not in TERRAIN_KINDS]
@@ -1351,6 +1385,9 @@ def minimap_overdraw(probe: "FrameProbe", minimap_axes: str, occupancy: dict,
         seen = {k for k, n in census.items() if n > 0}
         n_expected += 1
         n_blank += 0 if seen else 1
+        # Distinctness compares colour SETS, not single colours (§R22.1 item 4): two kinds
+        # collide only if the palette cannot tell their marks apart at all. The hiding
+        # predator and the predator have different sets, so they stay two.
         distinct_want = {MINIMAP_PALETTE[k] for k in want}
         distinct_seen = {MINIMAP_PALETTE[k] for k in seen}
         where = f"map square ({r},{c})"
@@ -1364,16 +1401,39 @@ def minimap_overdraw(probe: "FrameProbe", minimap_axes: str, occupancy: dict,
                 where, f"seen {sorted(seen)}", int(sum(census.values())),
                 _mask_bbox(square)))
             continue
-        # Denominator by the SAME census on the isolated artist, never geometry (§R20.4).
+        # Denominator by the SAME census on the kind's OWN ARTISTS RENDERED TOGETHER,
+        # never geometry while any of them can be isolated (§R20.4, corrected by §R22.1).
+        #
+        # WHY THIS IS NOT THE PER-ELEMENT MAXIMUM IT SHIPPED WITH. A kind's mark may be
+        # drawn in more than one artist and more than one colour — the hiding predator is
+        # a wedge plus its amber identity pip — and `max` over single artists takes the
+        # bigger half and calls the rest missing. Measured: 92/87/88 px of body colour on
+        # solo hiding-predator squares against 116/113/115 px with the accent hidden, so
+        # a CORRECT mark read as 21 % occluded against a 0.98 floor. Rendering the mark's
+        # own parts together puts them in the numerator and the denominator alike, which
+        # is precisely §R19.1 step 5's union-of-a-token's-own-parts rule that the grid
+        # panel already had and this variant never inherited.
+        #
+        # WHY IT IS NOT AN AMNESTY. Ownership is measured, not declared: an artist belongs
+        # to kind `k` only if its ISOLATED ink carries one of `k`'s own colours. An amber
+        # pip drawn at the square's centre is the hiding predator's artist and NOT the
+        # neighbour's, so the neighbour's denominator stays its whole wedge while its
+        # numerator loses the pixels the pip ate — mutation M-F4, which must fire.
         for k, n in census.items():
-            den, path = 0, "isolated-wedge"
+            own, best = [], 0
             for e in probe.elements:
                 if e.axes_name != minimap_axes:
                     continue
                 if not _bbox_meets(e.bbox, rect, REACH_PAD_PX):
                     continue
-                den = max(den, _classify_census(solo(e), square, {k: want[k]})[k])
-            floor = SURVIVAL_MIN
+                got = _classify_census(solo(e), square, {k: want[k]})[k]
+                if got:
+                    own.append(id(e.artist))
+                    best = max(best, got)
+            den, path, floor = best, "isolated-wedge", SURVIVAL_MIN
+            if len(own) > 1:
+                den = _classify_census(drawn(own), square, {k: want[k]})[k]
+                path = "own-artists"
             if den == 0:
                 den, path, floor = int(square.sum()) or 1, "geometric", MINIMAP_AREA_MIN
             ratio = n / float(den)
