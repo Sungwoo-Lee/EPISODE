@@ -53,14 +53,28 @@ from .layout import (
 # --------------------------------------------------------------------------
 # Minimum sizes.
 #
-# The heights marked (fig3) are read out of the approved design sketch
-# `renderer_layout_redesign/fig03_proposed_dashboard.py` and are not re-chosen
-# here. The ones marked (chosen) are for panels the sketch does not draw -- the
-# sketch always has a sensor band, so it never draws a spectrum smell pod, a
-# range-0 vision pod or the location row. Those three are built from the
-# sketch's own unit heights (a 46 px title strip, a 76 px labelled-bar block, a
-# 20 px legend, 16 px padding) rather than invented from nothing, and they are
-# the numbers most likely to move when Phase 2 measures real text.
+# WHERE THESE NUMBERS CAME FROM, AND WHAT HOLDS THEM NOW. The heights marked
+# (fig3) were measured off the approved design sketch -- the Figure 3 mock that
+# used to live at `renderer_layout_redesign/fig03_proposed_dashboard.py`. That
+# file was DELETED on 2026-09-17, when this redesign's page moved to showing the
+# real renderer's own output instead of a drawing of it. The citation is kept
+# here as history rather than as a pointer: these heights are NOT re-derivable
+# from anything in the repository today, and saying so is the honest answer to
+# "why is this panel 220 px tall?".
+#
+# What holds them now is `tests/env/test_dashboard_layout.py`, which pins the
+# geometry they produce -- a 10x10 world packs to a 564 x 564 arena card, a
+# 476 px right column and a 236 px sensor band -- together with the arithmetic
+# re-derived in the plan's Revision 18 (section R18.1). Move one of these and a
+# test goes red carrying the worked numbers in its message. That, not the
+# deleted mock, is what a reader should follow.
+#
+# The ones marked (chosen) are for panels the sketch did not draw -- it always
+# has a sensor band, so it never draws a spectrum smell pod, a range-0 vision
+# pod or the location row. Those three are built from the sketch's own unit
+# heights (a 46 px title strip, a 76 px labelled-bar block, a 20 px legend,
+# 16 px padding) rather than invented from nothing, and they are the numbers
+# most likely to move when a design pass measures real text.
 # --------------------------------------------------------------------------
 VITAL_ROW_H: int = 76                 # (fig3) one labelled bar row
 VITAL_ROW_H_COMPACT: int = 64         # the compact fallback's row

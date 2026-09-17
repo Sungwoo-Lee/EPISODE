@@ -17,12 +17,22 @@ panel's ``min_size`` accept only a :class:`~.panels.LayoutContext`, which is bui
 from environment params. Two episodes of one run therefore always pack to
 identical boxes -- a property a test pins by inspecting the signatures.
 
-THE GEOMETRY, AND WHERE THE NUMBERS COME FROM. The constants below are read out
-of the approved design sketch -- ``renderer_layout_redesign/fig03_proposed_dashboard.py``
-and ``dashboard_style.py`` -- and this packer replicates that sketch's own
-``pack()`` arithmetic. They are not re-chosen here. Three columns sit under a
-header: a fixed-width left column, the arena card in the middle, and whatever
-width is left over on the right.
+THE GEOMETRY, AND WHERE THE NUMBERS COME FROM. ``OUTER``, ``GAP``, ``PAD`` and
+``HEAD`` are read out of the design sketch's surviving style module,
+``renderer_layout_redesign/dashboard_style.py``, which still carries them as its
+own ``OUTER, GAP, PAD, HEAD = 24, 16, 16, 64``. The rest -- the 1440 x 896
+canvas, ``LEFT_W`` and ``MIN_RIGHT_W`` -- came from that sketch's companion
+drawing script, which was DELETED on 2026-09-17 when this redesign's page moved
+to showing the real renderer's output rather than a mock of it. Their
+justification today is the plan itself: the canvas size is user decision Q3,
+``LEFT_W = 320`` is the World map's column kept by user decision Q21, and
+``MIN_RIGHT_W = 440`` is the thermoception diamond's own stated demand (see
+``panels.THERMO_MIN_W``, which is where that number is reasoned about). The
+packing arithmetic they produce is re-derived and pinned in the plan's
+Revision 18 (section R18.1), and ``test_dashboard_layout.py`` fails with the
+worked numbers if one moves. None of them is re-chosen here. Three columns sit
+under a header: a fixed-width left column, the arena card in the middle, and
+whatever width is left over on the right.
 
     right_w = 1440 - 24 - (24 + 320 + 16 + card_w + 16) = 1040 - card_w
 
