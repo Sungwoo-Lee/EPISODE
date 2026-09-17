@@ -1,0 +1,4 @@
+steps drawn	1	36	the one step of this 36-step episode whose smell reading, summed over the whole diamond and all 5 channels, is the largest (14.75 against a 8.16 episode mean), so the maps are shown carrying signal rather than at a step that happens to be nearly empty
+episodes of this recording drawn	1	2	the longer of the 2 (36 steps)
+smell channels mapped	5	5	every channel the observation carries, each drawn as its own 5-square diamond; the panel draws one map per channel and hides none
+recorded worlds with smell past the agent's square	1	9	of the nine recorded matrix cells this is the only one configured with olfaction range 1; the other eight read both senses at range 0 and take the named-rows band

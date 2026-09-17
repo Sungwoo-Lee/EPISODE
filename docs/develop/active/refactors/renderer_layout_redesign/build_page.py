@@ -48,6 +48,7 @@ SCRIPT_OF = {"fig03_rendered_dashboard": "render_examples.py", "fig04_three_worl
              "fig06_option_b_dominant_channel": "fig05_extended_encodings.py",
              "fig07_option_c_bars_or_table": "fig05_extended_encodings.py",
              "fig08_icon_set": "fig08_icon_set.py",
+             "fig09_range1_maps": "render_examples.py",
              "v1_thermal": "render_current_frames.py", "v2_thermal": "render_current_frames.py"}
 #: The figures drawn in the house style, which must carry vector siblings. Figures 3-4 are the
 #: renderer's own PNG output and are deliberately not in this set (see the module docstring).

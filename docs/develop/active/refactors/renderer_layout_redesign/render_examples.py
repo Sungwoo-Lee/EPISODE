@@ -16,6 +16,8 @@ WHAT IT WRITES (all under this folder)
     figures/fig03_frames/step_NNN.png        one PNG per recorded step (the scrubber)
     figures/fig04_three_worlds.png           one frame from each of three worlds, stacked
     figures/fig04_three_worlds.data.txt      its used/available/percentage rows
+    figures/fig09_range1_maps.png            the one world whose smell reaches past its own square
+    figures/fig09_range1_maps.data.txt       its used/available/percentage rows
     data/episode.json                        the numbers table beside the scrubber
 
 WHY THE NUMBERS AND THE FRAMES COME OUT OF ONE RUN. ``data/episode.json`` is
@@ -60,6 +62,7 @@ from PIL import Image  # noqa: E402
 
 from src.environment.dashboard import EpisodeRenderer  # noqa: E402
 from src.environment.dashboard import cells as C  # noqa: E402
+from src.environment.dashboard import labels as L  # noqa: E402
 from src.utils.eval_recording import load_episode, load_run_meta  # noqa: E402
 
 FIGS = os.path.join(HERE, "figures")
@@ -99,6 +102,56 @@ WORLDS = [
     ("M1x", None, "Default world, no interoceptive nociception · cell M1x"),
     ("M6", None, "Default world with the location sensor · cell M6"),
 ]
+
+#: Figure 9's world. Cell M5 is the ONLY maintained world whose smell reaches
+#: past the agent's own square (olfaction range 1), so it is the only recording
+#: in which the band under the grid holds the per-channel DIAMOND MAPS rather
+#: than named rows -- option A, as the renderer now draws it. Every other cell,
+#: Figure 3's campfire world included, reads both senses at range 0.
+RANGE1 = ("M5", None, "Range-1 smell world · cell M5")
+
+#: The viz key a sense is stored under, against the breakdown name the label
+#: table is keyed by. Two namespaces exist in the package already (``labels``
+#: names sensor channels, ``cells`` names things in a square); this is only the
+#: viz-key-to-breakdown-name bridge, and it lives here rather than growing a
+#: third table anywhere.
+SENSE_OF_VIZ = {"Olfactory": "Olfaction", "Visual": "Visual"}
+
+
+def reader_labels(entry):
+    """A sense entry's channel labels as a READER's names.
+
+    Plan section R25.4: the short codes (``AN-A``, ``GRS``, ``HPR``) are an
+    internal index and had stopped reaching rendered frames, but they still
+    reached this page's ``data/episode.json``. They are translated at the
+    exporter -- through the package's own ``display_channel``, which RAISES on
+    an unknown code, so a new channel cannot leak a code here either.
+
+    THE CODES ARE TAKEN FROM THE PACKAGE, NOT FROM THE ENTRY. The frozen
+    adapter labels the hiding predator's visual channel ``DNG``, a name the
+    renderer refuses to inherit (``labels.SUPERSEDED_VISUAL_LABELS``), so it
+    rebuilds the code list from its own table and so must this exporter --
+    translating the adapter's list directly raises on ``DNG``, which is how
+    this was found.
+    """
+    sense = SENSE_OF_VIZ.get(entry.get("name"))
+    if sense is None or "labels" not in entry:
+        return None
+    codes = L.channel_labels(sense, len(entry["labels"]))
+    out = []
+    for code in codes:
+        name, qualifier = L.display_channel(sense, str(code))
+        out.append(f"{name} ({qualifier})" if qualifier else name)
+    return out
+
+
+def export_sensor(entry):
+    """One sense's per-step payload, JSON-safe and with reader-facing labels."""
+    out = {k: plain(val) for k, val in entry.items()}
+    named = reader_labels(entry)
+    if named is not None:
+        out["labels"] = named
+    return out
 
 
 def plain(x):
@@ -183,8 +236,7 @@ def example_view():
             # the page to tell a reader they are the same animal (register F57).
             shared=[[C.display(n) for n in occ]
                     for occ in sorted(list(o) for _, o in v.occupancy.items() if len(o) > 1)],
-            sensors=[{k: plain(val) for k, val in entry.items()}
-                     for entry in v.viz.values()]))
+            sensors=[export_sensor(entry) for entry in v.viz.values()]))
     if REP_STEP >= r.n_steps:
         raise SystemExit(f"REP_STEP {REP_STEP} is past the episode's last step {r.n_steps - 1}")
 
@@ -266,13 +318,67 @@ def three_worlds():
     print("three worlds: " + ", ".join(notes))
 
 
+# ------------------------------------------------------- the range-1 smell world
+def range1_world():
+    """One frame of the world whose smell reaches past the agent's own square.
+
+    WHY THIS FIGURE EXISTS. Section 04 of the page chose option A -- one small
+    diamond map per channel -- from three MOCKED options, at a time when the
+    renderer had no builder for that panel at all. It has one now
+    (``painters.build_channel_maps``), and this is the only recorded world that
+    exercises it, so the figure turns a chosen option into shipped output.
+
+    WHICH STEP. The step whose smell reading, summed over the whole diamond and
+    all five channels, is the largest in the episode -- so the maps are shown
+    with something in them rather than at an arbitrary step that might be
+    nearly empty. Stated in the figure's own data-used table.
+    """
+    cell, episode, title = RANGE1
+    r, payload, _ = open_cell(cell, episode, title)
+    n_eps = len(sorted(f for f in os.listdir(os.path.join(RECORDINGS, cell, cell))
+                       if f.endswith(".rec.gz")))
+    entry = r.values(0).viz.get("Olfactory")
+    if entry is None or int(entry.get("range", 0)) < 1:
+        raise SystemExit(
+            f"{cell} does not read smell past the agent's own square, so it has no "
+            f"channel maps to show; Figure 9 needs a world with olfactory_range >= 1"
+        )
+    rng, n_ch = int(entry["range"]), int(entry["num_features"])
+    totals = [float(np.asarray(r.values(t).viz["Olfactory"]["vector"], dtype=float).sum())
+              for t in range(r.n_steps)]
+    step = int(np.argmax(totals))
+    Image.fromarray(r.frame(step)).save(os.path.join(FIGS, "fig09_range1_maps.png"),
+                                        optimize=True)
+    n_cells = 2 * rng * rng + 2 * rng + 1
+    write_data("fig09_range1_maps", [
+        ("steps drawn", 1, r.n_steps,
+         f"the one step of this {r.n_steps}-step episode whose smell reading, summed over the "
+         f"whole diamond and all {n_ch} channels, is the largest ({max(totals):.2f} against a "
+         f"{sum(totals) / len(totals):.2f} episode mean), so the maps are shown carrying signal "
+         f"rather than at a step that happens to be nearly empty"),
+        ("episodes of this recording drawn", 1, n_eps,
+         f"the longer of the {n_eps} ({r.n_steps} steps)"),
+        ("smell channels mapped", n_ch, n_ch,
+         f"every channel the observation carries, each drawn as its own {n_cells}-square diamond; "
+         f"the panel draws one map per channel and hides none"),
+        ("recorded worlds with smell past the agent's square", 1, 9,
+         "of the nine recorded matrix cells this is the only one configured with olfaction "
+         "range 1; the other eight read both senses at range 0 and take the named-rows band"),
+    ])
+    r.close()
+    print(f"range-1 world: {cell} step {step}/{r.n_steps - 1}, olfaction range {rng} "
+          f"({n_cells} squares) x {n_ch} channels, diamond sum {max(totals):.2f}")
+
+
 if __name__ == "__main__":
-    # "example" and "worlds" run one half each -- the example view is 75 renders and
-    # there is no reason to repeat it while iterating on the other figure.
+    # "example", "worlds" and "range1" run one part each -- the example view is 38
+    # renders and there is no reason to repeat it while iterating on another figure.
     what = sys.argv[1] if len(sys.argv) > 1 else "both"
-    if what not in ("both", "example", "worlds"):
-        raise SystemExit(f"usage: {os.path.basename(__file__)} [both|example|worlds]")
+    if what not in ("both", "example", "worlds", "range1"):
+        raise SystemExit(f"usage: {os.path.basename(__file__)} [both|example|worlds|range1]")
     if what in ("both", "example"):
         example_view()
     if what in ("both", "worlds"):
         three_worlds()
+    if what in ("both", "range1"):
+        range1_world()

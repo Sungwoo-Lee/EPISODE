@@ -715,7 +715,7 @@ The other two blocking findings: two sections of this plan describe the centre p
 
 ### R19.4 The smaller findings, folded in (#55, #58–#62)
 
-1. **Token medium is vector, and CP2.6 is rewritten (#58).** The plan said two incompatible things: §D1.4 and CP2.6 described raster icons from `assets/dashboard_icons/` (CP2.6 asserted the campfire's ink belongs to an `AxesImage`), while §R17.3 and the `cells.py` row describe vector forms with parametric mark fractions — and `test_dashboard_cells.py` recomputes `MIN_MARK × h` as a number, which a PNG cannot supply. **Decided here: beds, tokens and companion forms are vector primitives drawn in `cells.py`.** `assets/dashboard_icons/` keeps only what is drawn at a fixed size and never recomputed — legend chips and minimap glyphs — and the developer records in the Implementation Report whether those too are drawn from the same vector forms, in which case the folder is dropped. *(**Condition met, and the drop is scheduled — Revision 21 §R21.4 item 2.** Phase 2 reports every form in the frame, including the World map's marks and the legend chips, is vector; verified that nothing under `src/`, `scripts/` or `tests/` reads the folder, and that the frozen V1 renderer loads its icons from the **`assets/` root** instead, so V1 is unaffected. **Drop the nine PNGs and the `v1_path_guard.py:145` row together at CP-D**, not before — CP-D is the last point at which `visual-design-reviewer` could ask for a raster texture.)* CP2.6's `AxesImage` clause is replaced by an area-classified bed check. Q12's `assets/campfire.png` is unaffected as a **legend/map** glyph; the arena's campfire is a drawn bed, so that asset is no longer what CP2.6 measures.
+1. **Token medium is vector, and CP2.6 is rewritten (#58).** The plan said two incompatible things: §D1.4 and CP2.6 described raster icons from `assets/dashboard_icons/` (CP2.6 asserted the campfire's ink belongs to an `AxesImage`), while §R17.3 and the `cells.py` row describe vector forms with parametric mark fractions — and `test_dashboard_cells.py` recomputes `MIN_MARK × h` as a number, which a PNG cannot supply. **Decided here: beds, tokens and companion forms are vector primitives drawn in `cells.py`.** `assets/dashboard_icons/` keeps only what is drawn at a fixed size and never recomputed — legend chips and minimap glyphs — and the developer records in the Implementation Report whether those too are drawn from the same vector forms, in which case the folder is dropped. *(**Condition met, and the drop is scheduled — Revision 21 §R21.4 item 2.** Phase 2 reports every form in the frame, including the World map's marks and the legend chips, is vector; verified that nothing under `src/`, `scripts/` or `tests/` reads the folder, and that the frozen V1 renderer loads its icons from the **`assets/` root** instead, so V1 is unaffected. ~~**Drop the nine PNGs and the `v1_path_guard.py:145` row together at CP-D**, not before — CP-D is the last point at which `visual-design-reviewer` could ask for a raster texture.~~ **CANCELLED 2026-09-17 — the condition that would have triggered the drop is the condition that fired the other way.** The reviewer did ask for a raster texture, and the design restoration put four of the nine PNGs (`food`, `predator`, `hiding_predator`, `neutral`) plus `agent.png` into `cells.py` as the movers' actual artwork. The folder is a **live input to every frame**, `v1_path_guard.py:145` stays, and nothing is deleted at CP-D. Full record: §R26.2.)* CP2.6's `AxesImage` clause is replaced by an area-classified bed check. Q12's `assets/campfire.png` is unaffected as a **legend/map** glyph; the arena's campfire is a drawn bed, so that asset is no longer what CP2.6 measures.
 2. **The 0 px tolerance is pinned by measurement, not by inheritance (#55).** The "glyph-on-glyph ink is 0 px" figure came from the round-2 mock at a **40 px** cell, on a transparent canvas under an alpha > 24/255 mask — not at 50 px and not under the audit's per-channel > 8/255 difference over a coloured ground. At 50 px two adjacent slots are 22.5 px apart with disc radius 10.35 px and a keyline stroke **centred** on `h` at `lw = max(0.8, h/8)` = 1.29 px, leaving a ~0.5 px geometric gap that lies inside the anti-aliasing fringe. **Phase 0d adds a negative control** that draws two adjacent-slot tokens at 50 px with the real forms and measures with `FrameProbe.ink`, and pins what it reads. If it is non-zero, the fix is the **keyline geometry** — inset the stroke so its outer edge lies at `h` — and **never** a loosened tolerance. §R17.3 item 7's "1 px white keyline" is corrected to the measured stroke width and its placement is stated.
 3. **Phase 1's 564 / 476 / 236 clause is asserted on a synthetic `LayoutContext` (#59).** No matrix cell produces that geometry: every maintained config has both sense ranges at 0 (`default.yaml:222,232`; no `basic/` file carries a `sensory:` block at all), so **no M-cell has a sensor band**; the thermal cells have the thermoception card and no band, the E-cells a band and no thermal card. Thermal-plus-band exists only in Figure 3's sketch, where the ranges were overridden for the drawing. The Phase 1 test therefore constructs a `LayoutContext` with thermal on and one sense at r ≥ 1 and says so; a developer asserting it on M4 would find no band.
 4. **The chevron floor is on the chevron (#60).** `0.62 × h ≥ 6 px` — the drawn chevron length, which is what the 6.42 px and 6.27 px figures in §R18.3 are. Equivalently `h ≥ 9.68 px`; the four-way case clears it by 0.44 px. It joins the floors `test_dashboard_cells.py` recomputes.
@@ -969,7 +969,7 @@ Recorded in full at §R17.3 item 8. In short: `n ≥ 2` was the wrong condition 
 ### R21.4 Three carried items, judged
 
 1. **Beds are full-bleed plates, not the design mock's silhouettes — and that deviation is right.** The mock's rock and tree cover roughly 28–36 % of a square. Ported as-is they would fall under the floor test and be classified as *occupants*, so `cell_overdraw` would fire on a correct painter — the §R20.8 failure mode arriving from the other side. The plan's own words for a bed are already "drawn full-bleed, inset by `BED_MARGIN` on every side" (§R17.3 item 2), which is what shipped: `0.72² = 51.84 %` by construction, 53.4 % and 51.7 % measured on the real frame. The visual cost is real and is not hidden — a bush now reads as a green plate rather than as a bush silhouette — and **CP-D is the right place to judge that**, with `visual-design-reviewer` looking at a rendered frame. The classification is not the reason to keep it: a silhouette bed could also have been kept by giving beds their own measured rule. The reason to keep it is that variant H *is* "terrain is the floor", and a floor that covers a third of its square is not a floor.
-2. **`assets/dashboard_icons/` is unused, and should be dropped — but not yet.** Confirmed: nothing under `src/`, `scripts/` or `tests/` reads it. The frozen V1 renderer loads its icons from the **`assets/` root** (`renderer.py::_load_icons`, filenames like `agent.png`), so dropping the subfolder cannot touch V1. The only reference anywhere is `v1_path_guard.py:145`, which lists it as **plan-owned**, not frozen. §R19.4 item 1 set the condition for dropping it — "every form including the map marks is vector" — and Phase 2 reports that condition met. **Decision: drop it, at CP-D, not now.** CP-D is the checkpoint at which `visual-design-reviewer` may still ask for a raster texture somewhere in the frame, and deleting nine committed PNGs a week before the only checkpoint that could want them buys nothing. The deletion carries the `v1_path_guard.py` row with it in the same commit.
+2. ~~**`assets/dashboard_icons/` is unused, and should be dropped — but not yet.**~~ **OVERTAKEN 2026-09-17: the folder is in use and the deletion is cancelled — see §R26.2.** Everything below was true when it was written and is kept for the record; what changed is the premise, not the reasoning. Confirmed *at the time*: nothing under `src/`, `scripts/` or `tests/` read it. The frozen V1 renderer loads its icons from the **`assets/` root** (`renderer.py::_load_icons`, filenames like `agent.png`), so dropping the subfolder cannot touch V1. The only reference anywhere is `v1_path_guard.py:145`, which lists it as **plan-owned**, not frozen. §R19.4 item 1 set the condition for dropping it — "every form including the map marks is vector" — and Phase 2 reports that condition met. ~~**Decision: drop it, at CP-D, not now.** CP-D is the checkpoint at which `visual-design-reviewer` may still ask for a raster texture somewhere in the frame, and deleting nine committed PNGs a week before the only checkpoint that could want them buys nothing. The deletion carries the `v1_path_guard.py` row with it in the same commit.~~ **Cancelled 2026-09-17 (§R26.2).** The stated reason for waiting is exactly what happened: a raster texture *was* asked for, and five of the nine PNGs are now what the renderer draws its movers from. Neither the folder nor the `v1_path_guard.py:145` row is deleted, at CP-D or later.
 3. **The CP1 band-card hoist has never been exercised by a real world, and will not be until the sensor-band painter exists.** No maintained config has a sense at range ≥ 1, so every maintained world takes the no-band path and the "more than one band card" refusal is unreachable there. Its only coverage is the **synthetic** thermal-plus-band contexts in the Phase 1 suite (§R19.4 item 3 pre-registered exactly this). That is adequate for now and is **recorded as a known coverage gap**: the band painter, when it is written, is where the hoist is first exercised for real, and Phase 2's report saying so is the behaviour wanted, not a defect.
 
 ---
@@ -1474,7 +1474,7 @@ This is cheap — `FrameProbe.__init__` already takes exactly that render and st
 | **CP2.1, 2.2, 2.4, 2.5, 2.6** | **Unstarted (not in the task's list, but they gate CP-D)** | CP2.1 is *partially* demonstrated — two frames of one cell, clean except the by-design label-inside-its-own-widget class. These five share CP2.3's home and driver, so they are **one batch of work, not five**. CP2.4 is a grep and a rule; CP2.6 was already rewritten to an area-classified bed check and is largely evidenced by the CP2.8 pass |
 | **CP-C** one meaning per colour | **BLOCKED — on decisions, not on code** | The three preconditions in §R25.5: flame colours named in `MEANING`; panel-first classification (global-nearest cannot separate a 4/255 pair already in the table); and a tolerance chosen by sweep. Once those are settled it is a census rule beside the ones that already exist. **Do not start the implementation before the table is fixed** — it would be calibrated against a ground truth known to be incomplete, which is the §R22.1 mistake repeated |
 | **CP5** viewer | **Unstarted, not blocked; largest by volume** | The whole of Phase 4 is unwritten: `scripts/eval/episode_viewer.py`, its HTML, `tests/scripts/test_episode_viewer.py`, and **three** `SCRIPTS_DEPENDENCY_MAP.md` rows (script, "not a script" HTML, bare-import test) in the same change. Then the checkpoint itself: served-PNG-equals-in-process-array, the layout checker clean at 500 / 834 / 1440, and somebody looking at the screenshots. No unknowns, just volume |
-| **CP-D** design quality | **Unstarted, not blocked — but it is the schedule risk** | `docs/reviews/design_renderer_layout_redesign.md` does not exist yet. Needs `visual-design-reviewer` on rendered frames, the developer applying the spec item by item, then a second pass. **Two things make it expensive out of proportion to its own work:** any layout change it forces re-runs CP2.1–CP2.7 and the V1 guard, and it is the gate at which the nine icon PNGs and their guard row are dropped (§R21.4 item 2). It is also a stated precondition of the retirement gate. **Schedule it after CP2.x and before CP5's polish**, so a forced layout change cannot invalidate viewer screenshots too |
+| **CP-D** design quality | **Unstarted, not blocked — but it is the schedule risk** | `docs/reviews/design_renderer_layout_redesign.md` does not exist yet. Needs `visual-design-reviewer` on rendered frames, the developer applying the spec item by item, then a second pass. **What makes it expensive out of proportion to its own work:** any layout change it forces re-runs CP2.1–CP2.7 and the V1 guard. ~~It is also the gate at which the nine icon PNGs and their guard row are dropped (§R21.4 item 2).~~ **That second item is gone — the drop is cancelled (§R26.2): the PNGs are live inputs to every frame and the `v1_path_guard.py:145` row stays.** It is also a stated precondition of the retirement gate. **Schedule it after CP2.x and before CP5's polish**, so a forced layout change cannot invalidate viewer screenshots too |
 | **CP6** docs | **Unstarted, cheapest** | Fully itemised by §R23.5 — five named items plus the "V2"/"minimap" disambiguation sentence. Its only constraint is that it lands in the same change as the code it describes, so it trails CP5 rather than leading it |
 | **Retirement of the dormant April renderer** | **Not in this plan, and not schedulable from it** | Deleting `src/environment/renderer_v2.py` is **explicitly not approved** — user decision Q8 (2026-09-14) says the switch-over plan must ask again, and Phase 5 item 6 repeats it. Phase 5 as a whole is not authorised by approving this plan. Its preconditions are Phases 0–4 verified with the guard green, **CP-D passed**, the user having looked at real output, and the speed gate met (**now met**). Two other items park there: the one-line guard at the frozen sensor's line 577 that lifts the three archived recordings for *both* renderers (§R24.2), and the channel-label rename at source (§R25.4) |
 
@@ -6180,5 +6180,177 @@ an image artist for the 100 bed slots that can never use one.
 - **CP-D** is the checkpoint this work belongs to and it is **not** closed here:
   this is a restoration against the adopted spec, not the second
   `visual-design-reviewer` pass CP-D requires.
+
+---
+
+## R26 Two consequences of the design restoration, recorded rather than left implicit (2026-09-17)
+
+### What this section is, in plain words
+
+On 2026-09-17 the approved dashboard design was restored into the renderer: the
+five moving things in a world square — the agent, food, the predator, the hiding
+predator and the rabbit — are now drawn from the nine picture files the user
+chose by hand (`assets/dashboard_icons/*.png`), instead of being re-invented as
+shapes drawn in code. That one change contradicts **two earlier decisions in this
+plan**, and both contradictions have to be written down where a later reader will
+meet them, because in both cases the tempting summary is the wrong one.
+
+The first: this plan set a **minimum size for the small detail that tells one
+animal from another** — a rabbit's inner ear, a predator's eye slit — of three
+screen pixels. The user's artwork draws those details thinner than that. The
+floor was **not** lowered to let the artwork through. It was left standing, still
+enforced where it always applied, and the artwork is gated by **two different
+measurements** instead. A reader who takes away "the 3-pixel rule got relaxed"
+has taken away the opposite of what happened. §R26.1.
+
+The second: this plan twice scheduled the folder holding those nine pictures for
+**deletion**, on the grounds that nothing read it — with one stated escape
+clause, "unless the design reviewer asks for a raster texture". The design
+reviewer asked. The folder is now an input to every frame the renderer draws, so
+the deletion is **cancelled**, and so is the `scripts/eval/v1_path_guard.py` line
+that was to be removed alongside it. §R26.2.
+
+### R26.1 A threshold was SUBSTITUTED, and must be read as a substitution
+
+**What was supposed to happen.** `cells.MARK_FLOOR_PX = 3.0` is this plan's
+legibility rule for a token's identifying mark: at the decided 50 px square, the
+mark that distinguishes one mover from another must be at least 3 rendered pixels
+across. It was swept and pinned on the **vector** forms (§R18.3, §R19.4 item 4),
+and the restoration brief's instruction was to keep it exactly where it was.
+
+**What the measurement said.** Measured from the chosen PNG masters, converted to
+rendered pixels at a 50 px square with one occupant in it:
+
+| Mover | Identifying mark | Mark at solo size | Clears the 3.0 px floor? |
+|---|---|---|---|
+| Food | green leaf | **4.16 px** | yes |
+| Hiding predator | spike tip | **2.45 px** | **no** |
+| Rabbit (`neutral`) | pink inner ear | **2.30 px** | **no** |
+| Predator | eye slit | **2.16 px** | **no** |
+
+Three of the four fail at **solo** size, which is the most generous case there
+is. Enforcing `MARK_FLOOR_PX` against the artwork therefore does not degrade a
+frame — it **renders no frame at all**, because `check_legible` raises.
+
+A second measurement, recorded because it reframes the first: the 3 px floor was
+**already unachievable at shared size for any 50 px square**, and always had
+been. At `slot_h(2, 50) = 10.35` even the *vector* rabbit's `0.30 × h` ear gap is
+3.1 px and the four-way case is 3.0 px — on the line. The vector forms passed
+that floor only because they drew their marks **2.2–2.4× thicker than the art
+they were imitating**. So the floor was not a property of the design; it was a
+property of a thickened copy of the design.
+
+**What was done instead.** `MARK_FLOOR_PX` is **untouched at 3.0** and still
+enforced, through `cells.min_cell_for`, for the vector forms it was swept on.
+Raster movers are gated by a different pair, in `cells.check_legible`, which
+applies whichever rule matches how a token is actually drawn rather than applying
+both to everything:
+
+| Constant | Value | What it measures |
+|---|---|---|
+| `RASTER_MIN_DIAMETER_PX` | **20.0 px** | the token is big enough to carry a silhouette |
+| `RASTER_MIN_BODY_AREA_PX2` | **40.0 px²** | enough of the token's own body colour survives to tell it from another |
+
+**On what evidence.** The design round composited all five masters at these exact
+token sizes on a real ground square and pushed them through the video path's own
+degradation — 4:2:0 chroma subsampling plus JPEG q42. All five stayed
+identifiable solo and separable when sharing a square, and identity moved from
+the fine mark to **silhouette and body colour** at that size. The two constants
+measure that. They are **not a loosened mark floor** — they measure a different
+quantity, which is precisely why the mark floor is left standing rather than
+edited down to fit. The agent's chevron is still vector and still answers to its
+own `CHEVRON_FLOOR_PX = 6.0`.
+
+**One definitional choice inside the body-area number**, stated so it cannot be
+mistaken for a floor fitted to the artwork: body-colour area is the **union of a
+token's own colours**. The hiding predator's charcoal alone measures 39.41 px² at
+shared size against the 40 px² floor — it is a cluster of thin spikes, so most of
+it is edge — and **45.80 px²** counting its own amber tips. The union is this
+project's existing rule (`palette.MINIMAP_MARK_COLOURS`, §R19.1 step 5 / §R22.1),
+adopted here rather than invented here, and both numbers are in the code and in
+the test.
+
+**How a later reader re-opens this.** If a reviewer wants the 3 px mark floor
+enforced on the rasters, the answer is **redraw the artwork thicker**, not move a
+constant. The marks are re-measured from the PNGs by the test suite, so that
+decision is checkable rather than argued.
+
+#### R26.1b The restoration spec's own figure for the hiding predator did not reproduce
+
+The brief handed to the implementer carried a `RASTER_MARK` table — each mover's
+mark as a fraction of `h`. Every entry was **re-measured from the masters** rather
+than typed in, and one did not reproduce:
+
+| Mover | Briefed | Measured | Verdict |
+|---|---|---|---|
+| Predator | 0.132 | **0.127** | agrees |
+| Rabbit | 0.138 | **0.135** | agrees |
+| Food | 0.176 | **0.245** | a visible gap, in the artwork's favour |
+| **Hiding predator** | **0.376** | **0.144** | **does not reproduce — a factor of 2.6** |
+
+The measurement's definition is stated so the disagreement is adjudicable rather
+than a difference of opinion: **the largest connected run of the mark's own
+colour, short dimension, divided by the token disc's radius**
+(`cells.measure_raster_mark`, disc radius `TOKEN_DISC_FRAC = 0.347` of the
+master's canvas, itself measured and identical across the four non-agent
+masters). The frozen table in `cells.RASTER_MARK` carries the **measured**
+numbers, and `tests/env/test_dashboard_cells.py` **re-measures them from the PNG**
+rather than comparing two constants — so swapping in weaker artwork fails the
+suite, which a typed constant could never notice. Where the brief and the file
+disagree, the file wins and the disagreement is here.
+
+### R26.2 The scheduled deletion of `assets/dashboard_icons/` is CANCELLED
+
+**What was scheduled.** §R19.4 item 1 and §R21.4 item 2 both scheduled the nine
+PNGs in `assets/dashboard_icons/` for deletion at **CP-D**, together with the
+`assets/dashboard_icons/` row at `scripts/eval/v1_path_guard.py:145`. The
+reasoning was sound at the time and is preserved struck through in both places:
+nothing under `src/`, `scripts/` or `tests/` read the folder, the frozen V1
+renderer loads its icons from the `assets/` **root** instead, and so the folder
+was dead weight. Both entries named the same escape clause — wait until CP-D,
+**because CP-D is the last point at which `visual-design-reviewer` could ask for a
+raster texture**.
+
+**What happened.** It asked, and the answer went further than a texture: the
+design restoration makes the PNGs the movers themselves. `src/environment/dashboard/cells.py`
+resolves `ICON_DIR` to that folder (`cells.py:89`) and draws **five** of the nine
+as its occupant tokens — `agent.png`, `food.png`, `predator.png`,
+`hiding_predator.png`, `neutral.png`. (The restoration brief said *four*; the
+count is five, because `agent.png` is also drawn, with the agent's chevron
+composited into its own image so a token stays one artist. Recorded rather than
+rounded.) The four terrain files — `bush`, `rock`, `tree`, `campfire` — are
+**not** read: they are centred glyphs from before variant H and cannot serve as
+the full-bleed floors this design draws, so beds stay vector.
+
+**The decision.** The deletion is **cancelled**, not deferred:
+
+1. The nine PNGs stay. Five are load-bearing inputs to every rendered frame; the
+   other four are the artwork the user chose for entities whose form later
+   changed, and deleting a chosen asset because today's painter happens not to
+   read it is the same mistake in a smaller size.
+2. **`v1_path_guard.py:145` stays.** The row lists the folder as *plan-owned*
+   rather than frozen, which is what it should be now more than before: the
+   folder is an input the plan's own renderer reads, and a guard row for it is
+   how a change to it stays visible.
+3. `tests/env/test_dashboard_cells.py:252` already re-measures the masters from
+   this folder, so the folder is **covered by the suite** as well as read by the
+   renderer. Deleting it would fail the tests, which is the state that should
+   have been reached before the deletion was ever schedulable.
+
+**Three places in this plan still read as though the folder were unused**, and
+they are flagged rather than silently rewritten, because they are `senior-developer`'s
+text and two of them are historical records:
+
+- §D1.4's "Medium (decided Revision 19, #58)" paragraph and the **File Changes**
+  row for `assets/dashboard_icons/` both still say everything drawn inside an
+  arena square is a vector primitive and the folder holds only legend/minimap
+  artwork. That is now false for the five mover PNGs. **Owner: `senior-developer`,
+  as a Revision edit.**
+- The `src/environment/dashboard/cells.py` File Changes row carries the same
+  "never a raster image" clause.
+- The Phase 2 Implementation Report's "`assets/dashboard_icons/` is not used at
+  all" is a **report of what was true then** and is correctly left alone.
+
+*Recorded by: developer*
 
 *Implemented by: developer*

@@ -281,7 +281,9 @@ figure img:focus-visible { outline:2px solid var(--accent); outline-offset:-3px;
   <div class="stage"><span class="s">STEP 4</span><div class="b"><span class="t">Build the figure once, update it per step</span>
     <span class="d">Today every step rebuilds the whole figure. The new renderer creates every bar, label and
     token once per episode and only changes their values per step. Measured against V1 on the same recording,
-    a frame takes <strong>58%</strong> of V1's time.</span></div></div>
+    a frame takes <strong>70%</strong> of V1's time &mdash; it was 58% before the approved design was
+    restored, and drawing your own artwork plus the two sensory-band panels is what the difference
+    bought.</span></div></div>
   <div class="stage"><span class="s">STEP 5</span><div class="b"><span class="t">Two outputs from one drawing</span>
     <span class="d">MP4 videos written by the new renderer's own script into <code>videos_v2/</code> &mdash; built
     and working &mdash; and a step-scrubbing viewer that asks the same renderer for each frame and lists the
@@ -343,7 +345,11 @@ figure img:focus-visible { outline:2px solid var(--accent); outline-offset:-3px;
     step {{FACT:rep_step}} two squares are shared, one by the agent and food, one by a rabbit and a rock. The
     small World map on the left answers <em>where</em> rather than <em>what</em>: at that size no shape
     survives, so each square's occupants divide one coloured dot into up to four wedges, and the card says
-    so in words. The Interoception card shows every internal state twice, sensed and true, so nutrition and
+    so in words. Under the grid runs the <strong>sensory band</strong>, full width: this world reads smell
+    and sight at the agent's own square only, so each sense is a list of named channels with its reading
+    beside it &mdash; "Odour A, predator-leaning, 0.01" rather than a swatch labelled with a code. Section
+    04 shows what the same band draws for a world that senses further. The Interoception card shows every
+    internal state twice, sensed and true, so nutrition and
     injury &mdash; which this agent does not sense &mdash; read "not observed" beside their true values.
     This episode ends by starvation, not by cold: at the last recorded step, {{FACT:last_step}}, nutrition
     reads {{FACT:final_nutrition}} while body temperature is {{FACT:final_temp}}, inside the survivable band
@@ -424,7 +430,10 @@ figure img:focus-visible { outline:2px solid var(--accent); outline-offset:-3px;
   <img data-fig="fig08_icon_set" src="{{FIG:fig08_icon_set}}" alt="The forms the renderer draws in a world square, including shared squares">
   <figcaption>
     <p><b>Figure 8. What the renderer draws inside a world square.</b> Top row: the five things that can
-    occupy a square, each alone. Middle row: the four kinds of terrain, drawn as the <strong>floor</strong>
+    occupy a square, each alone &mdash; and each one is the <strong>artwork you chose</strong> off the icon
+    contact sheets, drawn as an image, not a shape redrawn from a description of it. Middle row: the four
+    kinds of terrain, which <em>are</em> drawn shapes, because the terrain pictures are centred glyphs and
+    a floor has to fill its square: they are the <strong>floor</strong>
     the square wears rather than a picture in the middle of it, inset so a ring of the square's own
     temperature colour always shows. Bottom row: shared squares. Because the floor costs the occupants no
     room, a lone agent on a bush is drawn at exactly the size it would be on empty ground; a second and
@@ -441,8 +450,10 @@ figure img:focus-visible { outline:2px solid var(--accent); outline-offset:-3px;
     square of every frame &mdash; and draws what it returns: a ground square, at most one terrain floor, and
     one artist per occupant. Because that function decides the arrangement, the sheet inherits the real
     rules instead of restating them: the fixed draw order, the soft halo that is dropped whenever a square
-    holds anything else, and the refusal to draw at all if an identifying mark would fall below its
-    legibility floor. Every square is built at the renderer's real size of 50 pixels, and the whole sheet is
+    holds anything else, and the refusal to draw at all when a square is too crowded to stay legible. That
+    rule is measured on the artwork: a token must stay at least 20 pixels across and keep 40 square pixels
+    of its own body colour, the quantities that survive video compression. Every
+    square is built at the renderer's real size of 50 pixels, and the whole sheet is
     then magnified 2.8 times, so what is enlarged is the picture rather than the geometry. The script also
     checks itself: it compares the names it draws against the renderer's own tables of occupant forms and
     terrain floors and stops if the two disagree, so a form added to the package and forgotten here cannot
@@ -458,12 +469,16 @@ figure img:focus-visible { outline:2px solid var(--accent); outline-offset:-3px;
   <p>Olfaction and vision no longer read only the agent's own cell. Since the directional-sensors change,
   each can read a diamond of cells around the agent, and the range has no upper limit: a diamond of range
   <em>r</em> holds 2<em>r</em>&sup2;+2<em>r</em>+1 cells. The world in Figure 3 reads both at range 0
-  &mdash; the agent's own square only &mdash; which is why its Olfaction and Visual cards are a single row
-  of channel swatches and no sensor band appears under the grid view. Other worlds train at olfaction
-  range 1 (5 cells &times; 5 smell channels) and vision range 2 (13 cells &times; 8 channels, 104 numbers).
-  In a 306-pixel side panel that leaves 61 pixels per cell at range 2 and 34 at range 4 &mdash; not enough
-  for a bar per channel. The three figures below draw the same real world state three ways, at the
-  configured ranges and at two stress ranges. You chose option A.</p>
+  &mdash; the agent's own square only &mdash; so its two sense panels, in the band under the grid view, are
+  named rows with a number each: there is nowhere for that world's smell to be, other than where the agent
+  stands. Other worlds train at olfaction range 1 (5 cells &times; 5 smell channels) and vision range 2
+  (13 cells &times; 8 channels, 104 numbers). In a 306-pixel side panel that leaves 61 pixels per cell at
+  range 2 and 34 at range 4 &mdash; not enough for a bar per channel, which is why these senses move into
+  the full-width band. The three figures below draw the same real world state three ways, at the configured
+  ranges and at two stress ranges. You chose option A &mdash; and <strong>option A is now built</strong>:
+  the renderer had no code for a channel map until 2026-09-17, which is exactly why the one recorded world
+  that smells past its own square used to report its smell panel as missing. Figure 9 is that world's
+  frame, drawn by the shipped renderer.</p>
 </section>
 
 <div class="callout pick">
@@ -567,6 +582,51 @@ figure img:focus-visible { outline:2px solid var(--accent); outline-offset:-3px;
   </figcaption>
 </figure>
 
+<section class="col">
+  <h3>Option A, now that it exists</h3>
+  <p>Figures 5 to 7 were drawn by a figure script from saved sensor readings, at a time when nothing in the
+  renderer could draw any of them. The chosen one is now in the renderer, so the last figure of this section
+  is not an option: it is a frame.</p>
+</section>
+
+<figure class="wide">
+  <img data-fig="fig09_range1_maps" src="{{FIG:fig09_range1_maps}}" alt="A dashboard frame of the world whose smell reaches one square past the agent, with five diamond channel maps in the band">
+  <figcaption>
+    <p><b>Figure 9. Option A as the renderer now draws it &mdash; the world that smells past its own
+    square.</b> This is cell M5, the only one of the nine recorded worlds whose smell reaches a square
+    beyond the agent. Its Olfaction panel fills the left half of the band with <strong>five small
+    diamonds</strong>, one per smell channel &mdash; Food, Odour A, Odour B, Bush, Tree &mdash; each drawn as
+    the five squares the sense actually reads, the agent's own square outlined in indigo at the centre. The
+    same frame carries the other kind of band panel beside it: this world's <em>sight</em> still reads only
+    the square the agent stands on, so Visual stays a list of named channels with a number each. One frame,
+    both kinds, chosen by the configuration rather than by a switch. Until 2026-09-17 no frame like this
+    existed &mdash; the layout reserved the box and no code drew into it, so the automated check reported
+    this world's smell panel as <em>absent</em>.</p>
+    <p><b>Axes.</b> None for the frame as a whole &mdash; a dashboard frame of {{DIM:fig09_range1_maps}}
+    pixels, where horizontal and vertical position is page layout rather than a data scale. Inside each small
+    smell map the horizontal axis is the world's column (west to east) and the vertical axis is its row
+    (north to south), one square per world square, placed at its offset from the agent; colour is the
+    reading, in teal, from the pale grey track at exactly zero through pale to dark at the largest smell
+    reading of this episode, on one scale shared by every step. In the grid view above, the horizontal axis
+    is again the world's column and the vertical axis its row, one square per world square, in neutral grey
+    because this world has no temperature to colour them by.</p>
+    {{SAMPLES:fig09_range1_maps}}
+    <div class="howto"><p class="eyebrow">How it is computed</p>
+    <p>The frame is the renderer's own output rather than a drawing of it. The same exporter that writes
+    Figure 3 opens a second saved recording &mdash; cell M5, the one maintained world configured to smell one
+    square beyond its own &mdash; hands it to the renderer in <code>src/environment/dashboard/</code> and
+    saves one returned frame as a PNG. Which step to show is a measured choice rather than a taste one. The
+    exporter asks the renderer for the smell reading at every step of the episode, adds up all twenty-five
+    numbers that sense returns at each one (five squares by five channels), and draws the step where that
+    total is largest, so the maps are shown carrying signal instead of at a step that happens to be nearly
+    empty; the table above states that winning total beside the episode's average, so a reader can see how
+    unusual the chosen step is. Nothing else about the picture is picked: the colour scale is fixed once for
+    the whole episode by the renderer itself, before any frame is drawn, because a scale recomputed each step
+    would draw a fading smell as a constant one. The panel itself is the one the layout had always reserved
+    space for and nothing could fill until the channel-map drawing code was written.</p></div>
+  </figcaption>
+</figure>
+
 <hr>
 
 <section class="col">
@@ -581,7 +641,7 @@ figure img:focus-visible { outline:2px solid var(--accent); outline-offset:-3px;
 <div class="scroll"><table class="toolkit">
   <thead><tr><th>Toolkit</th><th>Overlap guarantee</th><th>Time per frame</th><th>Porting work</th><th>New requirements</th></tr></thead>
   <tbody>
-    <tr class="pick"><td>A. Matplotlib, own layout (chosen)</td><td>Boxes cannot overlap; every panel clipped to its box; text measured to fit; checked on the finished pixels</td><td class="n">measured 182 ms<br>vs V1's 313 ms</td><td>Low to medium: existing drawing code carries over</td><td>None; tests stay byte-exact</td></tr>
+    <tr class="pick"><td>A. Matplotlib, own layout (chosen)</td><td>Boxes cannot overlap; every panel clipped to its box; text measured to fit; checked on the finished pixels</td><td class="n">measured 215 ms<br>vs V1's 308 ms</td><td>Low to medium: existing drawing code carries over</td><td>None; tests stay byte-exact</td></tr>
     <tr><td>B. Pillow, same layout (fallback)</td><td>Same as A</td><td class="n">est. 5&ndash;20 ms</td><td>High: every panel redrawn in basic shapes</td><td>None</td></tr>
     <tr><td>C. Web page in headless Chrome</td><td>Strongest by default (the browser's own box layout)</td><td class="n">est. 20&ndash;60 ms</td><td>Highest: every panel rewritten as HTML</td><td>A new Python dependency to drive the browser; Chrome is present on the lab nodes checked (101, 106, 114); a browser (150&ndash;300 MB) per worker inside a render process that can already be orphaned; screenshot tests not byte-exact across nodes</td></tr>
   </tbody>
@@ -592,8 +652,11 @@ figure img:focus-visible { outline:2px solid var(--accent); outline-offset:-3px;
   packer and pixel check, none of which depend on the toolkit; it removes the largest cost (rebuilding the
   figure every step) without installing anything; and its viewer shares the video's drawing code. The
   fallback to Pillow was never needed: measured on the same recording in the same process, a median frame
-  costs 182 ms against V1's 313 ms &mdash; a ratio of 0.58, against a target of at most 0.5 that the plan
-  accepted as met in substance. C was not chosen: its static shareable viewer with hover inspection was not
+  costs 215 ms against V1's 308 ms &mdash; a ratio of 0.70, against a target of at most 0.5 that the plan
+  accepted as met in substance. That ratio was 0.58 until the approved design was restored on 2026-09-17;
+  drawing the chosen artwork and the two sensory-band panels costs about 20% more per frame, which is
+  recorded here rather than absorbed, and the requirement that matters for training-time rendering &mdash;
+  never slower than V1 &mdash; still holds. C was not chosen: its static shareable viewer with hover inspection was not
   worth a browser in every render worker.</p>
 </section>
 
@@ -623,7 +686,10 @@ figure img:focus-visible { outline:2px solid var(--accent); outline-offset:-3px;
     instrument derives which occupants a square holds from the <em>recorded snapshot</em>, while the renderer derives it
     from its own code, and the two agree on every square of both frames.</span></div></div>
   <div class="stage"><span class="s">PASSED</span><div class="b"><span class="t">Faster than V1, on the same frames</span>
-    <span class="d">Median 182 ms a frame against V1's 313 ms on the same recording (ratio 0.58). Not yet the final
+    <span class="d">Median 215 ms a frame against V1's 308 ms on the same recording (ratio 0.70). It was 182 ms
+    against 313 ms &mdash; ratio 0.58 &mdash; before the approved design was restored; the artwork and the two
+    sensory-band panels cost about 20% more per frame, and the requirement, never slower than V1, still holds
+    with the smaller margin stated rather than smoothed. Not yet the final
     speed gate, which needs a lab node, a pool worker and at least 200 frames.</span></div></div>
   <div class="stage"><span class="s">TO DO</span><div class="b"><span class="t">Somebody looks, at everything</span>
     <span class="d">A contact sheet of every checked frame and screenshots of the viewer, opened and read. Partly done
@@ -653,7 +719,7 @@ figure img:focus-visible { outline:2px solid var(--accent); outline-offset:-3px;
       <li><strong>Build it beside V1, keep V1.</strong> V1 stays the default for every video.</li>
       <li><strong>Today's pipeline is frozen</strong> during development. Switching any video to the new renderer gets its own reviewed plan later; deleting the unused <code>grid_world.py</code> renderer copy and <code>renderer_v2.py</code> is not approved.</li>
       <li><strong>Toolkit:</strong> Matplotlib with our own layout, figure built once per episode; Pillow as the fallback if the first phase missed the speed target. It did not, so the fallback was not used.</li>
-      <li><strong>Speed target:</strong> median frame time at most half of V1's on the campfire world, and never slower than V1 on any other world. Measured at 0.58 of V1 and accepted as met in substance.</li>
+      <li><strong>Speed target:</strong> median frame time at most half of V1's on the campfire world, and never slower than V1 on any other world. Measured at 0.58 of V1 and accepted as met in substance; 0.70 of V1 since the approved design was restored, which still meets the "never slower than V1" half.</li>
       <li><strong>Outputs:</strong> MP4 videos plus a step viewer served from the same drawing code; no static HTML export.</li>
       <li><strong>Package name:</strong> <code>src/environment/dashboard/</code>, with <code>render_recordings_v2.py</code> writing to <code>videos_v2/</code>.</li>
     </ol>
@@ -682,10 +748,12 @@ figure img:focus-visible { outline:2px solid var(--accent); outline-offset:-3px;
   <p><strong>Regenerate.</strong> From the repo root, with the project's Python
   (<code>/home/vncuser/miniconda3/envs/grid_world_pain/bin/python</code>), run in
   <code>docs/develop/active/refactors/renderer_layout_redesign/</code>: <code>render_current_frames.py</code>
-  (Figures 1&ndash;2), <code>render_examples.py</code> (Figures 3&ndash;4, the step scrubber and
+  (Figures 1&ndash;2), <code>render_examples.py</code> (Figures 3, 4 and 9, the step scrubber and
   <code>data/episode.json</code> &mdash; it imports the renderer and asks it for frames, so there is no
   figure script drawing a dashboard any more), <code>make_dashboard_assets.py</code> (the fixed-width-digit
-  font the renderer draws with, plus the older sketch icon exports the renderer does not read),
+  font the renderer draws with, and the nine 1000 &times; 1000 icon PNGs in
+  <code>assets/dashboard_icons/</code>, five of which the renderer now draws as its occupant tokens &mdash;
+  that folder is a live input to the frame rather than an unused export),
   <code>fig08_icon_set.py</code> (Figure 8, which calls the renderer's own square-composition code),
   <code>export_extended.py</code>, <code>fig05_extended_encodings.py</code> (Figures 5&ndash;7), then
   <code>build_page.py</code>. Figures 3, 4 and 8 need the recorded worlds under
