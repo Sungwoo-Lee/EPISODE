@@ -1,3 +1,0 @@
-recorded steps drawn (step scrubber)	35	35	every step of the exported episode; each frame passed the text audit
-observed senses given a panel	8	8	the completeness rule refuses to draw if an observed sense has no panel
-thermal field cells setting the temperature colour range	100	100	episode min -22.5 to max +60.5 over the one field recorded for the episode; every step uses this range, and readings beyond it are clamped and outlined

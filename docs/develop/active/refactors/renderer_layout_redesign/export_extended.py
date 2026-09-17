@@ -2,8 +2,8 @@
 
 What it does
     Loads configs/environment/experiment/archive/sensory_ladder/V2_blur20.yaml (olfaction range 1, vision range 2,
-    anisotropic blur on) and steps the REAL environment with the same seeded random policy as
-    export_episode.py (REST every third step), keeping the longest-surviving of seeds 0-11. Within that
+    anisotropic blur on) and steps the REAL environment with a seeded random policy
+    (REST every third step), keeping the longest-surviving of seeds 0-11. Within that
     episode it picks the step whose vision diamond holds the most non-terrain signal, so the drawings
     have content. At that state it reads olfaction and vision through the production observation code
     three times:

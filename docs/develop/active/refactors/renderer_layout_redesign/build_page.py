@@ -10,12 +10,19 @@ substitutes every {{TOKEN}}:
     {{FRAMES:fig03_frames}}     JSON list of the per-step PNGs as data URIs (the step scrubber)
     {{DATA:episode}}            data/episode.json (numbers table beside the scrubber)
     {{FACT:<name>}}             numbers computed from data/episode.json
+
+Figures 3 and 4 are the RENDERER'S OWN raster output, written by render_examples.py from a real
+recording, and are therefore checked like Figures 1-2 (png + a data-used statement) rather than like a
+house-style figure: they carry no svg/pdf, because a vector redraw of a video frame would be a picture
+of something other than what the renderer produces. Figures 5-8 ARE drawn in the house style and must
+carry the full png/svg/pdf/data.txt set.
     {{REVIEW}}                  review.html next to this file (plan-review status)
 
 Refuses to write the page (non-zero exit) when:
     - any token is unresolved or any input file is missing;
     - a <figure> draws in the page (inline <svg> or <canvas>) (§2.7);
-    - a house-style figure (fig03_*, fig04_*) lacks its generating script or any of png/svg/pdf/data.txt (§2.7);
+    - a figure lacks its generating script, its png or its data.txt, or a house-style figure
+      (fig05_* .. fig08_*) lacks its svg or pdf (§2.7);
     - the scrubber frame count differs from the episode's step count;
     - a <figure> lacks an <b>Axes.</b> sentence, a data-used table, or a 150-250 word
       "How it is computed" block (§11);
@@ -36,12 +43,15 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.abspath(os.path.join(HERE, "..", "..", "..", "..", ".."))
 FIGS = os.path.join(HERE, "figures")
 FONTS = os.path.join(ROOT, "assets", "fonts", "pretendard", "subset")
-SCRIPT_OF = {"fig03_proposed_dashboard": "fig03_proposed_dashboard.py", "fig04_repacking": "fig03_proposed_dashboard.py",
+SCRIPT_OF = {"fig03_rendered_dashboard": "render_examples.py", "fig04_three_worlds": "render_examples.py",
              "fig05_option_a_channel_maps": "fig05_extended_encodings.py",
              "fig06_option_b_dominant_channel": "fig05_extended_encodings.py",
              "fig07_option_c_bars_or_table": "fig05_extended_encodings.py",
              "fig08_icon_set": "fig08_icon_set.py",
              "v1_thermal": "render_current_frames.py", "v2_thermal": "render_current_frames.py"}
+#: The figures drawn in the house style, which must carry vector siblings. Figures 3-4 are the
+#: renderer's own PNG output and are deliberately not in this set (see the module docstring).
+HOUSE_STYLE = ("fig05", "fig06", "fig07", "fig08")
 errors = []
 
 
@@ -93,16 +103,34 @@ episode_raw = read(os.path.join(HERE, "data", "episode.json"))
 episode = json.loads(episode_raw or '{"meta":{},"steps":[]}')
 review = read(os.path.join(HERE, "review.html"))
 meta, steps = episode["meta"], episode["steps"]
-REP_STEP = 15   # the still shown before the scrubber loads; matches fig03_proposed_dashboard.py
+# The still shown before the scrubber loads. READ from the export rather than repeated here: the
+# renderer picks the step, writes the PNG for it and records it in meta, so this cannot drift out of
+# step with the image on the page the way a second copy of the number could.
+REP_STEP = int(meta.get("rep_step", 0))
 
 
 def fact(name):
     if name == "final_temp":
         return f"{steps[-1]['body_temp']:+.1f}".replace("-", "−")
+    if name in ("final_nutrition", "final_satiation"):
+        field = name.split("_")[1]
+        return f"{steps[-1][field] / meta['max_' + field]:.2f}"
+    if name == "coldest_body":
+        return f"{min(s['body_temp'] for s in steps):+.1f}".replace("-", "−")
+    if name == "shared_steps":
+        return str(sum(1 for s in steps if s.get("shared")))
+    # last_step / rep_step are the EPISODE'S OWN step numbers, for prose. last_index /
+    # rep_index are positions in the frame list, for the slider. They diverge as soon as the
+    # scrubber subsamples (meta.frame_stride), and confusing the two would caption a 74-step
+    # episode as ending at step 37.
     if name == "last_step":
+        return str(steps[-1]["t"])
+    if name == "last_index":
         return str(len(steps) - 1)
     if name == "rep_step":
         return str(REP_STEP)
+    if name == "rep_index":
+        return str(int(meta.get("rep_index", 0)))
     if name == "die_low":
         return f"{meta['min_temperature']:+.0f}".replace("-", "−")
     if name in ("temp_min", "temp_max"):
@@ -119,7 +147,7 @@ def frames(stem):
     d = os.path.join(FIGS, stem)
     files = sorted(f for f in os.listdir(d) if f.endswith(".png")) if os.path.isdir(d) else []
     if len(files) != len(steps):
-        errors.append(f"{stem}: {len(files)} frames on disk but the episode has {len(steps)} steps -- rerun fig03_proposed_dashboard.py")
+        errors.append(f"{stem}: {len(files)} frames on disk but data/episode.json lists {len(steps)} drawn steps -- rerun render_examples.py")
     return json.dumps([b64png(os.path.join(d, f)) for f in files])
 
 
@@ -131,8 +159,9 @@ def substitute(m):
         script = SCRIPT_OF.get(arg)
         if not script or not os.path.exists(os.path.join(HERE, script)):
             errors.append(f"{arg}: shown on the page but no generating script")
-        if arg.startswith(("fig03", "fig04", "fig05", "fig06", "fig07", "fig08")):
-            for ext in ("svg", "pdf", "data.txt"):
+        if arg.startswith("fig"):
+            exts = ("data.txt",) + (("svg", "pdf") if arg.startswith(HOUSE_STYLE) else ())
+            for ext in exts:
                 if not os.path.exists(os.path.join(FIGS, f"{arg}.{ext}")):
                     errors.append(f"{arg}: no {ext} -- run {script}")
         return b64png(os.path.join(FIGS, f"{arg}.png"))
@@ -181,7 +210,7 @@ for i, fig in enumerate(re.findall(r"<figure\b.*?</figure>", page, flags=re.S), 
 visible = re.sub(r"<script\b.*?</script>|<style\b.*?</style>|<[^>]+>", " ", page, flags=re.S)
 
 # every generating script is named on the page, so a reader can regenerate every figure (register F15 family)
-for script in sorted(set(SCRIPT_OF.values()) | {"export_episode.py", "export_extended.py", "make_dashboard_assets.py", "dashboard_style.py", "build_page.py"}):
+for script in sorted(set(SCRIPT_OF.values()) | {"export_extended.py", "make_dashboard_assets.py", "dashboard_style.py", "build_page.py"}):
     if script not in visible:
         errors.append(f"generating script {script} is not named anywhere on the page (add it to the Regenerate paragraph)")
 # whole words only: "paints" is not the explanandum, and the repository name is allowed

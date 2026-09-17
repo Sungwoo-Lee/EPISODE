@@ -101,7 +101,7 @@ figure img:focus-visible { outline:2px solid var(--accent); outline-offset:-3px;
 .controls button { font-family:var(--f-mono); font-size:13px; background:var(--ground); color:var(--ink); border:1px solid var(--rule); border-radius:3px; padding:4px 10px; cursor:pointer; }
 .controls button:hover { background:var(--sunk); }
 .controls input[type=range] { flex:1 1 180px; min-width:120px; accent-color:var(--accent); }
-/* width reserved for the longest readout ("step 34 / 34 · RIGHT") so the bar never re-wraps between steps */
+/* width reserved for the longest readout ("step 74 / 74 · RIGHT") so the bar never re-wraps between steps */
 .controls .readout { font-family:var(--f-mono); font-size:13px; color:var(--ink-2); font-variant-numeric:tabular-nums; white-space:nowrap; min-width:21ch; }
 .values { display:grid; grid-template-columns:repeat(auto-fill,minmax(300px,1fr)); gap:0 28px; font-size:13.5px; }
 .values div { display:flex; justify-content:space-between; gap:12px; padding:5px 0; border-bottom:1px solid var(--line); min-width:0; }
@@ -135,24 +135,28 @@ figure img:focus-visible { outline:2px solid var(--accent); outline-offset:-3px;
 <header class="col">
   <p class="eyebrow">grid_world_pain &middot; development plan &middot; episode videos</p>
   <h1>Episode Dashboard Redesign</h1>
-  <p class="lede">A plan to rebuild the frame drawn for every step of an evaluation video, so that no
-  panel or label can ever land on top of another, frames render faster, and the same drawing can be
-  scrubbed step by step in a viewer &mdash; built beside today's video pipeline, which stays exactly as it is.</p>
+  <p class="lede">Rebuilding the frame drawn for every step of an evaluation video, so that no panel or
+  label can ever land on top of another, frames render faster, and the same drawing can be scrubbed step
+  by step &mdash; built beside today's video pipeline, which stays exactly as it is. The renderer now
+  exists: every dashboard on this page is its output on a real recorded episode.</p>
 </header>
 
 <section class="col">
   <h2><span class="num">PURPOSE</span></h2>
   <p>Every evaluation episode this project records can be turned into a video. Each frame is a
   dashboard: the agent's internal readings on the left (satiation, interoceptive nociception, body
-  temperature), a close-up of the grid around the agent in the middle, and its outside-world senses
-  on the right (olfaction, extero nociception, thermoception, collision, vision). These videos are how
-  people check what an agent actually did.</p>
+  temperature), a view of the grid world in the middle, and its outside-world senses on the right
+  (olfaction, extero nociception, thermoception, collision, vision). These videos are how people check
+  what an agent actually did.</p>
   <p><strong>The frames drawn today have text printed on top of other text</strong>, most visibly since
   the temperature system added two panels. An April redesign was half built and never used, and it has
   its own collisions. The cause is structural: the drawing library's automatic layout cannot see text
   placed inside a panel, so moving numbers around only moves the collisions.</p>
-  <p>This page shows the problem in real frames, the proposed system, a sketch of the new dashboard
-  drawn from a real recorded episode, the choice of drawing toolkit, and the decisions taken (section 07). The plan itself is <code>docs/develop/active/refactors/RENDERER_LAYOUT_REDESIGN.md</code>.</p>
+  <p>This page shows the problem in real frames (section 01), the system that replaces it (02), the new
+  renderer's own output on a recorded episode (03), the encodings for senses that read beyond the agent's
+  own square (04), the choice of drawing toolkit (05), what has been measured so far (06) and the
+  decisions taken (07). The plan itself is
+  <code>docs/develop/active/refactors/RENDERER_LAYOUT_REDESIGN.md</code>.</p>
 </section>
 
 <div class="callout pick">
@@ -161,9 +165,10 @@ figure img:focus-visible { outline:2px solid var(--accent); outline-offset:-3px;
   production renderer, the script that turns recordings into videos, the in-training render dispatch,
   the evaluation loop, the recorder and the sense adapter are all frozen. The new renderer gets its own
   script and writes to its own <code>videos_v2/</code> folder, so it cannot overwrite a production video.
-  A guard records the frozen files' contents and fingerprints of production frames before work starts,
-  and must pass after every phase. Moving any training or evaluation video to the new renderer is a
-  later decision of yours, with no setting or default changed before then.</p>
+  A guard records the frozen files' contents and fingerprints of production frames, and it has been
+  re-run after every phase &mdash; 10 files out of 10 unchanged, production frames identical, every time.
+  Moving any training or evaluation video to the new renderer is a later decision of yours, with no
+  setting or default changed before then.</p>
 </div>
 
 {{REVIEW}}
@@ -246,42 +251,43 @@ figure img:focus-visible { outline:2px solid var(--accent); outline-offset:-3px;
 <hr>
 
 <section class="col">
-  <h2><span class="num">02</span> The proposed system</h2>
-  <p>The new renderer is built alongside V1, which stays the default for every video. It works in five
-  steps, of which the first three happen once per episode rather than once per frame.</p>
+  <h2><span class="num">02</span> The system that replaces it</h2>
+  <p>The new renderer lives at <code>src/environment/dashboard/</code> and is built alongside V1, which
+  stays the default for every video. It works in five steps, of which the first three happen once per
+  episode rather than once per frame.</p>
 </section>
 
 <div class="col stages">
   <div class="stage"><span class="s">STEP 1</span><div class="b"><span class="t">Read the recording</span>
     <span class="d">The same files the video path reads today: one <code>.rec.gz</code> per episode plus the run's
-    saved environment settings. Read-only, no new file format, and recordings made before the temperature
-    system keep working.</span></div></div>
+    saved environment settings. Read-only, and no new file format.</span></div></div>
   <div class="stage"><span class="s">STEP 2</span><div class="b"><span class="t">Ask each sense what it needs</span>
     <span class="d">A registry holds one entry per sense: whether it is present in this world, the smallest box
     it can be drawn in, and which numbers it shows. Every sense in the observation must have an entry, or the
     renderer refuses to start and names the missing one &mdash; so a sense can never be silently dropped, the
-    way proprioception is today. A value appears as "observed" only if the agent observes it. Adding a future
+    way proprioception is today. A value appears as "sensed" only if the agent senses it. Adding a future
     sense means adding an entry, never touching layout code.</span></div></div>
   <div class="stage"><span class="s">STEP 3</span><div class="b"><span class="t">Give every panel its own box</span>
     <span class="d">A small packer stacks the present panels in three columns and hands the spare height to the
-    minimap and the grid view. Boxes cannot overlap by construction. If the panels do not fit, it stops with an
+    World map and the thermoception card. Boxes cannot overlap by construction. If the panels do not fit, it stops with an
     error listing what asked for how much space, before a single frame is drawn &mdash; a colliding frame is
     never produced. All text is measured and shrunk to fit its box down to a floor; a number is never cut off.</span></div></div>
   <div class="stage"><span class="s">STEP 4</span><div class="b"><span class="t">Build the figure once, update it per step</span>
     <span class="d">Today every step rebuilds the whole figure. The new renderer creates every bar, label and
-    icon slot once per episode and only changes their values per step. Its speed target is half V1's time per
-    frame, measured on the same lab node.</span></div></div>
+    token once per episode and only changes their values per step. Measured against V1 on the same recording,
+    a frame takes <strong>58%</strong> of V1's time.</span></div></div>
   <div class="stage"><span class="s">STEP 5</span><div class="b"><span class="t">Two outputs from one drawing</span>
-    <span class="d">MP4 videos written by the new renderer's own script into <code>videos_v2/</code>, and a local
-    step-scrubbing viewer that asks the same renderer for each frame and lists the exact numbers that frame
-    shows. The viewer cannot disagree with the video, because it is the video's own drawing code.</span></div></div>
+    <span class="d">MP4 videos written by the new renderer's own script into <code>videos_v2/</code> &mdash; built
+    and working &mdash; and a step-scrubbing viewer that asks the same renderer for each frame and lists the
+    exact numbers that frame shows. The viewer cannot disagree with the video, because it is the video's own
+    drawing code; the scrubber in section 03 is that arrangement, exported to a page.</span></div></div>
 </div>
 
 <div class="callout">
   <p class="eyebrow">Carried over from the April plan (your 2026-09-14 answers)</p>
   <ul>
-    <li>One <strong>vitals card</strong> holding every observed internal reading as a row, freeing space for a larger minimap.</li>
-    <li><strong>True value beside the observed value</strong> when perceptual noise is on, with a tick on the bar; no difference (Δ) text anywhere.</li>
+    <li>One <strong>Interoception card</strong> holding every internal reading as a row, freeing space for a larger World map.</li>
+    <li><strong>True value beside the sensed value</strong> when perceptual noise is on, with a tick on the bar; no difference (&Delta;) text anywhere.</li>
     <li>The <strong>last action as a badge</strong> in the grid view's title strip instead of its own panel.</li>
     <li><strong>Horizontal legends</strong> above bars, replacing tiny rotated labels.</li>
   </ul>
@@ -290,20 +296,21 @@ figure img:focus-visible { outline:2px solid var(--accent); outline-offset:-3px;
 <hr>
 
 <section class="col">
-  <h2><span class="num">03</span> A sketch on real data</h2>
-  <p>A design sketch of the proposed dashboard, drawn by a Python script in the plan's recommended
-  toolkit from a real 35-step episode of the campfire temperature world. Step through it below; every
-  frame was checked for text collisions after drawing. Figure 4 shows the layout re-packing when senses
-  are switched off.</p>
+  <h2><span class="num">03</span> The renderer's own output</h2>
+  <p>A real recorded episode of the campfire temperature world, 75 steps, drawn frame by frame by
+  <code>src/environment/dashboard/</code>. Step through it below &mdash; the scrubber carries
+  <strong>one step in two</strong>, first to last, at full size. Figure 4 shows the same renderer on two
+  further worlds, where a different set of senses makes it re-pack the frame.</p>
   <div class="callout warn">
     <p class="eyebrow">What this is, and is not</p>
-    <p>It is a sketch that exercises the plan's layout idea &mdash; registry, packer, figure built once,
-    measured text &mdash; on real recorded numbers, drawn in the visual design the design review specified
-    for the video frame (<code>docs/reviews/design_episode_dashboard.md</code>). That design is a stated
-    departure from this page's house style: white cards on a darker canvas and no monospace face, chosen
-    for video compression and for slides. It is not the planned renderer: it imports nothing from the
-    renderer code and touches no pipeline file. Smell and vision are read at the ranges trained with today
-    (1 and 2), set in memory on the campfire world.</p>
+    <p>These are <strong>not sketches</strong>. Until 2026-09-17 this section showed frames drawn by a mock
+    that imitated the proposed layout, because the renderer did not exist yet. It does now, so the figures
+    are the renderer's own frames, produced by a script that imports it and asks it for one frame per
+    recorded step. What is <em>not</em> shown is a trained agent: the recording was made by the production
+    recorder under a seeded random policy, because the question here is what the drawing code does with a
+    valid state, not what an agent learned. The frame follows the visual design the design review specified
+    (<code>docs/reviews/design_episode_dashboard.md</code>), a stated departure from this page's house
+    style: white cards on a darker canvas and no monospace face, chosen for video compression and slides.</p>
   </div>
 </section>
 
@@ -314,45 +321,55 @@ figure img:focus-visible { outline:2px solid var(--accent); outline-offset:-3px;
     <button type="button" id="dv-play">Play</button>
     <button type="button" id="dv-next" aria-label="Next step">&gt;</button>
     <button type="button" id="dv-last" aria-label="Last step">&gt;|</button>
-    <input type="range" id="dv-step" min="0" max="{{FACT:last_step}}" value="{{FACT:rep_step}}" aria-label="Step">
+    <input type="range" id="dv-step" min="0" max="{{FACT:last_index}}" value="{{FACT:rep_index}}" aria-label="Step">
     <span class="readout" id="dv-readout">step {{FACT:rep_step}}</span>
   </div>
-  <img id="dv-img" data-fig="fig03_proposed_dashboard" src="{{FIG:fig03_proposed_dashboard}}" alt="Sketch of the proposed dashboard for one step of the campfire episode">
+  <img id="dv-img" data-fig="fig03_rendered_dashboard" src="{{FIG:fig03_rendered_dashboard}}" alt="The dashboard renderer's frame for one step of a recorded campfire episode">
   <figcaption>
-    <p><b>Figure 3. The proposed dashboard, step by step.</b> Use the controls, or focus the frame and
-    press &larr; / &rarr; (Shift for ten steps). It is drawn in the design the video frame will use: white
-    cards, one typeface with fixed-width digits, one meaning per colour (indigo is the agent, orange is
-    nociception, blue to red is temperature, teal is smell, slate is vision) and flat icons. The
-    interoception card shows every internal state twice &mdash; what the agent observes and its true value
-    &mdash; so nutrition, injury and body temperature, which this agent does not observe, read "not observed"
-    beside their true values. Smell and vision are one small map per channel in the band under the grid
-    view (option A). The episode ends as body temperature crosses the survivable limit of {{FACT:die_low}}; the last
-    recorded step, {{FACT:last_step}}, reads {{FACT:final_temp}}.</p>
-    <p><b>Axes.</b> None &mdash; a dashboard frame of 1440 &times; 896 pixels, where position is layout.
-    The grid view shows 5 &times; 5 grid cells centred on the agent; each cell's colour is its temperature
-    on one scale shared by every step of this episode, running from the episode's coldest cell
-    ({{FACT:temp_min}}, pale blue) through the setpoint 0 (near-white) to its hottest ({{FACT:temp_max}}, red);
-    the survivable body range &minus;15 to +15 stays pale, and colour deepens only beyond it. The legend
-    strip is not linear: the survivable band is stretched so it stays readable, and each tick sits at its true value. The anchors are
-    ticked on the legend in the thermoception card.
-    The body-temperature gauge uses the same absolute scale; the thermoception cells use the same colours
-    for a different quantity, cell temperature minus body temperature. Grid cells carry no numbers. Bars run from 0 at the left to the state's maximum at the right. Each smell
-    and vision map is a diamond of cells around the agent, with the agent's cell outlined in indigo, shaded
-    from pale at 0 to dark at that sense's largest reading in the episode.</p>
-    {{SAMPLES:fig03_proposed_dashboard}}
+    <p><b>Figure 3. The dashboard, every second step.</b> Use the controls, or focus the frame and press
+    &larr; / &rarr; (Shift for ten frames). The scrubber holds every second recorded step, first to last,
+    each at its full 1440 &times; 896; the readout gives the episode's own step number, so it advances in
+    twos. Frames were dropped rather than shrunk or recoloured, because this page is about what the
+    renderer draws. The grid view in the middle shows the <strong>whole
+    10 &times; 10 world</strong> at 50 pixels a square &mdash; there is no window and no panning, so the
+    agent moves inside a fixed frame. <strong>Terrain is the floor a square wears</strong>, not a picture in
+    the middle of it, which is why a square holding both a bush and an agent draws both; at the opening
+    step {{FACT:rep_step}} two squares are shared, one by the agent and food, one by a rabbit and a rock. The
+    small World map on the left answers <em>where</em> rather than <em>what</em>: at that size no shape
+    survives, so each square's occupants divide one coloured dot into up to four wedges, and the card says
+    so in words. The Interoception card shows every internal state twice, sensed and true, so nutrition and
+    injury &mdash; which this agent does not sense &mdash; read "not observed" beside their true values.
+    This episode ends by starvation, not by cold: at the last recorded step, {{FACT:last_step}}, nutrition
+    reads {{FACT:final_nutrition}} while body temperature is {{FACT:final_temp}}, inside the survivable band
+    of {{FACT:die_low}} to +15.</p>
+    <p><b>Axes.</b> None &mdash; a dashboard frame of 1440 &times; 896 pixels, where horizontal and vertical
+    position is page layout rather than a data scale. Inside the grid view the horizontal axis is the world's
+    column (west to east) and the vertical axis is its row (north to south), one square per world square;
+    a square's colour is its temperature on one scale shared by every step of this episode, running from the
+    episode's coldest square ({{FACT:temp_min}}, pale blue) through the setpoint 0 (near-white) to its
+    hottest ({{FACT:temp_max}}, red), in the environment's temperature units. The survivable body range
+    {{FACT:die_low}} to +15 stays pale and colour deepens only beyond it; the legend strip is not linear,
+    because the survivable band is stretched to stay readable, and each tick sits at its true value. Grid
+    squares carry no numbers. In the Interoception card each bar runs from 0 at the left to that state's
+    maximum at the right; the body-temperature gauge uses the absolute temperature scale, while the
+    thermoception squares use the same colours for a different quantity, square temperature minus body
+    temperature.</p>
+    {{SAMPLES:fig03_rendered_dashboard}}
     <div class="howto"><p class="eyebrow">How it is computed</p>
-    <p>A script steps the real campfire world once per random seed, twelve seeds in all, with a simple
-    policy that rests every third step and otherwise acts at random, and keeps the longest-surviving
-    episode. It reads that world through the senses the project trains with today &mdash; smell at range 1
-    and vision at range 2 &mdash; set in memory, because the campfire configuration itself ships with both
-    at 0. Senses change what the agent observes, never what happens, so the episode is unchanged. For every
-    step it saves what the production recorder saves plus the per-sense readings. A second script draws the
-    frames. It lists the panels this world needs, scans the episode once for its coldest and hottest cells
-    and for each sense's largest reading, so every colour scale stays the same for the whole video, packs the
-    cards, builds every element once and then only updates values per step. Each
-    finished frame is audited: no two texts may overlap, none may leave its card, and no number may sit in
-    the grid view. Perceptual noise is off, so observed and true values are equal wherever both exist. The
-    policy is not a trained agent, so the episode shows the dashboard, not a learned strategy.</p></div>
+    <p>The frames are not drawn by this page and not drawn by a figure script. A short exporter,
+    <code>render_examples.py</code>, opens one saved recording &mdash; the same <code>run_meta.pkl</code>
+    plus <code>episode_*.rec.gz</code> pair the video pipeline reads &mdash; hands it to the renderer in
+    <code>src/environment/dashboard/</code>, and asks that renderer for one frame per recorded step, saving
+    each as a PNG. The numbers listed under the frame come out of the same renderer in the same run, through
+    its own per-step values call, so the picture for a step and the numbers for that step cannot disagree.
+    Before the first frame the renderer scans the whole episode once to fix its colour scales: a temperature
+    range recomputed per frame would draw a steadily cooling world as a world of constant appearance. It
+    then works out which panels this world has, gives each one a rectangle from a packer that raises an
+    error rather than shrink a panel, and builds every bar, label and token once; a later step only sets
+    values on artists that already exist. The recording itself came from the maintained campfire
+    configuration, stepped by a seeded random policy that rests every third step. Perceptual noise is off in
+    this world, so each sensed value equals its noise-free counterpart, which is what the card's footnote
+    says.</p></div>
   </figcaption>
 </figure>
 
@@ -362,57 +379,69 @@ figure img:focus-visible { outline:2px solid var(--accent); outline-offset:-3px;
 <div class="values" id="dv-values" aria-live="polite"></div>
 
 <figure class="wide">
-  <img data-fig="fig04_repacking" src="{{FIG:fig04_repacking}}" alt="The same step drawn under three sets of senses">
+  <img data-fig="fig04_three_worlds" src="{{FIG:fig04_three_worlds}}" alt="One frame from each of three recorded worlds, stacked vertically">
   <figcaption>
-    <p><b>Figure 4. The same step, re-packed for three sets of senses.</b> Top: every sense this world
-    observes. Middle: temperature system and proprioception switched off &mdash; the body-temperature row,
-    the temperature colours, the thermoception card and the proprioception card disappear. Bottom: only
-    satiation, extero nociception, collision and vision. The interoception card keeps nutrition and injury
-    in every version, because true internal states are shown whether or not the agent observes them. No
-    layout code differs between the three; space a removed card leaves stays empty rather than stretching
-    another card.</p>
-    <p><b>Axes.</b> None &mdash; three dashboard frames of 1440 &times; 896 pixels stacked vertically, where
-    position is layout. Within each frame the scales are those of Figure 3: grid cells coloured on the fixed
-    episode temperature scale (top frame only; plain grey where the temperature system is off), bars from 0 to each
-    state's maximum, and sense maps shaded from 0 to that sense's largest reading in the episode.</p>
-    {{SAMPLES:fig04_repacking}}
+    <p><b>Figure 4. The same renderer, three recorded worlds, three different frames.</b> Top: the campfire
+    temperature world of Figure 3 &mdash; a body-temperature row in the Interoception card, a Thermoception
+    card on the right, and grid squares carrying the world's temperature. Middle: the default world with
+    interoceptive nociception switched off &mdash; the temperature row, the Thermoception card <em>and</em>
+    the nociception row are all gone, and the grid squares fall back to plain neutral ground because the
+    world has no temperature to show. Bottom: the default world with the location sensor on &mdash;
+    nociception is back, and a new Location card appears under the World map reading the agent's position as
+    two numbers. No layout code differs between the three: the space a removed card leaves stays empty
+    rather than stretching its neighbour.</p>
+    <p><b>Axes.</b> None &mdash; three dashboard frames of 1440 &times; 896 pixels stacked vertically with a
+    white gap, where horizontal and vertical position is page layout rather than a data scale. Within each
+    frame the scales are those of Figure 3: in the grid view the horizontal axis is the world's column and
+    the vertical axis its row, one square per world square, coloured by temperature on that episode's own
+    scale in the top frame and neutral grey in the lower two, where the world has no temperature; bars run
+    from 0 to each state's maximum.</p>
+    {{SAMPLES:fig04_three_worlds}}
     <div class="howto"><p class="eyebrow">How it is computed</p>
-    <p>The same drawing script as Figure 3 takes step 15 of the same recorded episode and draws it three
-    times, each time telling the registry that a different set of senses is present. The switched-off senses
-    are declared as switched off on purpose; otherwise the completeness rule would refuse to draw, because
-    the recording still contains their values. The recorded numbers are identical in all three frames
-    &mdash; nothing is re-simulated &mdash; so any difference between them is layout alone. The packer
-    recomputes the boxes for each sense set from the configuration and measured text only, and each frame
-    passed the same text audit as Figure 3. Unlike the earlier sketch, spare height is not shared out among
-    the remaining cards, because a stretched card holding one number read as unfinished; the space stays as
-    canvas. What this does not show is a world whose observation genuinely lacks a sense from the start, or
-    vision at range 3 or 4 inside the full frame; those are cells of the plan's verification matrix, drawn
-    from real recordings of those worlds.</p></div>
+    <p>Three separate recordings, three separate renderers, one script. For each of the three worlds the
+    exporter opens that world's recording directory, picks the longest of its recorded episodes, builds a
+    renderer for it and asks for a single step &mdash; the same step number the example view above opens on,
+    or the episode's last step where it is shorter. The three returned frames are stacked vertically and
+    written as one PNG; nothing is redrawn, relabelled or retouched between the renderer and the file, which
+    is why each panel still carries its own title strip naming the world and its own step counter. The
+    worlds differ only in their saved configuration: these recordings were generated by the plan's fixture
+    script from maintained configurations with the per-world overrides it records, so "the temperature
+    system is off here" is a property of the recording rather than an instruction handed to the renderer at
+    drawing time. That distinction is what makes the figure worth showing. The renderer is never told which
+    panels to draw: it reads the observation breakdown out of the saved settings, refuses to start if the
+    observation carries a sense with no panel, and packs whatever is present. What differs between these
+    three frames is therefore layout arising from configuration, not three layouts.</p></div>
   </figcaption>
 </figure>
 
 <figure class="wide">
-  <img data-fig="fig08_icon_set" src="{{FIG:fig08_icon_set}}" alt="The flat icon set used by the dashboard sketch, including the new campfire">
+  <img data-fig="fig08_icon_set" src="{{FIG:fig08_icon_set}}" alt="The forms the renderer draws in a world square, including shared squares">
   <figcaption>
-    <p><b>Figure 8. The flat icon set, including the new campfire.</b> Creatures and food sit on white
-    tokens so they stay readable on any cell temperature; terrain &mdash; rock, bush, tree and campfire
-    &mdash; is drawn flat on the cell. The agent is one indigo marker whose chevron shows the last action,
-    replacing the separate agent-in-bush and agent-with-food pictures. The campfire is also saved as
-    <code>assets/campfire.png</code>. None of these files replaces a production icon: they live in
-    <code>assets/dashboard_icons/</code>, which today's renderer never reads.</p>
-    <p><b>Axes.</b> None &mdash; a sheet of icons drawn at equal size; position has no meaning.</p>
+    <p><b>Figure 8. What the renderer draws inside a world square.</b> Top row: the five things that can
+    occupy a square, each alone. Middle row: the four kinds of terrain, drawn as the <strong>floor</strong>
+    the square wears rather than a picture in the middle of it, inset so a ring of the square's own
+    temperature colour always shows. Bottom row: shared squares. Because the floor costs the occupants no
+    room, a lone agent on a bush is drawn at exactly the size it would be on empty ground; a second and
+    third occupant stand side by side in a band across the square. Four is the ceiling, and the draw order
+    is fixed rather than alphabetical &mdash; the old renderer sorted by name and let the later name win,
+    which is how an agent standing in a bush came to render as an agent alone.</p>
+    <p><b>Axes.</b> None &mdash; a sheet of world squares drawn at equal size; horizontal and vertical
+    position group the squares into three labelled rows and carry no data meaning.</p>
     {{SAMPLES:fig08_icon_set}}
     <div class="howto"><p class="eyebrow">How it is computed</p>
-    <p>A script draws every icon from simple shapes &mdash; circles, rounded rectangles, polygons and
-    teardrop curves &mdash; in two or three flat colours each, following the icon rules in the design review,
-    and a second script exports each one as a 1000-pixel transparent image. The dashboard sketch calls the
-    same drawing functions directly, so the icons in Figures 3 and 4 are these shapes, not pictures scaled
-    down. The campfire follows the review's specification: a soft glow circle, two crossed logs and three
-    nested flames, with no token, because it is terrain. Before writing, the export script records the size
-    and timestamp of every existing file under <code>assets/</code> and afterwards confirms that none
-    changed, so the production renderer's icons are untouched. The sheet is drawn on the frame's canvas
-    colour with names in the dashboard typeface. It does not show how each icon reads at video scale;
-    Figures 3 and 4 do, at 96 pixels per grid cell.</p></div>
+    <p>The sheet calls the renderer's own drawing code rather than a copy of it. For each square the script
+    hands a list of occupants to the composition function in
+    <code>src/environment/dashboard/cells.py</code> &mdash; the same one the grid view calls for every
+    square of every frame &mdash; and draws what it returns: a ground square, at most one terrain floor, and
+    one artist per occupant. Because that function decides the arrangement, the sheet inherits the real
+    rules instead of restating them: the fixed draw order, the soft halo that is dropped whenever a square
+    holds anything else, and the refusal to draw at all if an identifying mark would fall below its
+    legibility floor. Every square is built at the renderer's real size of 50 pixels, and the whole sheet is
+    then magnified 2.8 times, so what is enlarged is the picture rather than the geometry. The script also
+    checks itself: it compares the names it draws against the renderer's own tables of occupant forms and
+    terrain floors and stops if the two disagree, so a form added to the package and forgotten here cannot
+    ship as a quietly incomplete sheet. The four-occupant square at the end occurs in no recorded episode
+    and is constructed deliberately; it is evidence about the drawing code and none about the worlds.</p></div>
   </figcaption>
 </figure>
 
@@ -422,11 +451,13 @@ figure img:focus-visible { outline:2px solid var(--accent); outline-offset:-3px;
   <h2><span class="num">04</span> Senses that read further</h2>
   <p>Olfaction and vision no longer read only the agent's own cell. Since the directional-sensors change,
   each can read a diamond of cells around the agent, and the range has no upper limit: a diamond of range
-  <em>r</em> holds 2<em>r</em>&sup2;+2<em>r</em>+1 cells. The worlds trained on today use olfaction range 1
-  (5 cells &times; 5 smell channels) and vision range 2 (13 cells &times; 8 channels, 104 numbers). In a
-  306-pixel side panel that leaves 61 pixels per cell at range 2 and 34 at range 4 &mdash; not enough for a
-  bar per channel. The three figures below draw the same real world state three ways, at the configured
-  ranges and at two stress ranges. You chose option A.</p>
+  <em>r</em> holds 2<em>r</em>&sup2;+2<em>r</em>+1 cells. The world in Figure 3 reads both at range 0
+  &mdash; the agent's own square only &mdash; which is why its Olfaction and Visual cards are a single row
+  of channel swatches and no sensor band appears under the grid view. Other worlds train at olfaction
+  range 1 (5 cells &times; 5 smell channels) and vision range 2 (13 cells &times; 8 channels, 104 numbers).
+  In a 306-pixel side panel that leaves 61 pixels per cell at range 2 and 34 at range 4 &mdash; not enough
+  for a bar per channel. The three figures below draw the same real world state three ways, at the
+  configured ranges and at two stress ranges. You chose option A.</p>
 </section>
 
 <div class="callout pick">
@@ -450,8 +481,7 @@ figure img:focus-visible { outline:2px solid var(--accent); outline-offset:-3px;
     lies is read straight off the map. Channel six of vision is labelled "Obstacle", because rocks, bushes
     and the campfire all register on it. Odour A and odour B are two shared animal odours rather than one
     per animal: predators give off mostly A and neutral animals mostly B, with enough spread that the two
-    overlap, so the labels say "predator-leaning" and "neutral-leaning". Figure 3 shows the same encoding
-    inside the full frame.</p>
+    overlap, so the labels say "predator-leaning" and "neutral-leaning".</p>
     <p><b>Axes.</b> None &mdash; each small map is a diamond of grid cells centred on the agent, with the
     agent's own cell outlined in indigo, north at the top and east to the right. Within a row every cell is
     drawn the same size, so smell and vision footprints can be compared. Colour is the reading: teal for
@@ -461,7 +491,7 @@ figure img:focus-visible { outline:2px solid var(--accent); outline-offset:-3px;
     {{SAMPLES:fig05_option_a_channel_maps}}
     <div class="howto"><p class="eyebrow">How it is computed</p>
     <p>A script loads the sensory-ladder world with vision range 2, blur switched on and olfaction range 1,
-    steps it with the same simple random policy used for Figure 3, keeps the longest-surviving of twelve
+    steps it with a simple seeded random policy that rests every third step, keeps the longest-surviving of twelve
     seeds, and picks the step at which the vision diamond holds the most object signal, so the maps have
     something to show. At that step it asks the production observation code for the olfaction and vision
     readings, then asks twice more with both ranges overridden in memory to 3 and to 4. The world state is
@@ -471,7 +501,7 @@ figure img:focus-visible { outline:2px solid var(--accent); outline-offset:-3px;
     the dashboard's design. Colour is scaled to the largest reading of that sense in the row rather than to
     1, because summed readings can exceed 1; a video fixes the scale for the whole episode instead. What
     this does not show is cost in a frame: eleven maps per row must share the sensor band with everything
-    else, which Figure 3 shows at the ranges in use.</p></div>
+    else that world's frame carries.</p></div>
   </figcaption>
 </figure>
 
@@ -489,7 +519,7 @@ figure img:focus-visible { outline:2px solid var(--accent); outline-offset:-3px;
     {{SAMPLES:fig06_option_b_dominant_channel}}
     <div class="howto"><p class="eyebrow">How it is computed</p>
     <p>Same world state, same three sensor ranges and same readings as Figure 5. For each diamond cell the
-    script finds the channel with the largest reading and paints the cell in that channel's colour. The
+    script finds the channel with the largest reading and fills the cell in that channel's colour. The
     colour's strength follows the reading: nearly paper-white for a faint signal, full colour at the
     largest reading of that sense in the row. Cells whose strongest reading is below 2% of that maximum are
     drawn as outlined blanks. For vision the three terrain channels are left out, because terrain is present in every
@@ -537,45 +567,72 @@ figure img:focus-visible { outline:2px solid var(--accent); outline-offset:-3px;
   <h2><span class="num">05</span> Choosing the drawing toolkit</h2>
   <p>The registry, packer and checks are the same whichever toolkit draws the panels. What differs is
   speed, how much existing drawing code carries over, and what runs where videos are rendered. Speeds
-  marked "est." are estimates from the research note; the plan's first phase measures toolkit A before
-  any panel is written.</p>
+  marked "est." were estimates from the research note; toolkit A's row now carries the measured number
+  instead.</p>
 </section>
 
 <p class="cue" hidden>&larr; wider than the screen &mdash; scroll sideways; the right-hand columns are cut off</p>
 <div class="scroll"><table class="toolkit">
   <thead><tr><th>Toolkit</th><th>Overlap guarantee</th><th>Time per frame</th><th>Porting work</th><th>New requirements</th></tr></thead>
   <tbody>
-    <tr class="pick"><td>A. Matplotlib, own layout (chosen)</td><td>Boxes cannot overlap; every panel clipped to its box; text measured to fit; checked on the finished pixels</td><td class="n">est. 30&ndash;100 ms<br>target: half of V1</td><td>Low to medium: existing drawing code carries over</td><td>None; tests stay byte-exact</td></tr>
+    <tr class="pick"><td>A. Matplotlib, own layout (chosen)</td><td>Boxes cannot overlap; every panel clipped to its box; text measured to fit; checked on the finished pixels</td><td class="n">measured 182 ms<br>vs V1's 313 ms</td><td>Low to medium: existing drawing code carries over</td><td>None; tests stay byte-exact</td></tr>
     <tr><td>B. Pillow, same layout (fallback)</td><td>Same as A</td><td class="n">est. 5&ndash;20 ms</td><td>High: every panel redrawn in basic shapes</td><td>None</td></tr>
     <tr><td>C. Web page in headless Chrome</td><td>Strongest by default (the browser's own box layout)</td><td class="n">est. 20&ndash;60 ms</td><td>Highest: every panel rewritten as HTML</td><td>A new Python dependency to drive the browser; Chrome is present on the lab nodes checked (101, 106, 114); a browser (150&ndash;300 MB) per worker inside a render process that can already be orphaned; screenshot tests not byte-exact across nodes</td></tr>
   </tbody>
 </table></div>
 
 <section class="col">
-  <p><strong>Chosen: A.</strong> It fixes every defect class through the registry, packer and
-  pixel check, none of which depend on the toolkit; it removes the largest cost (rebuilding the figure every
-  step) without installing anything; and its viewer shares the video's drawing code. If the first phase
-  measures A slower than half of V1's frame time, the plan falls back to B, drawing with Pillow behind the
-  same layout. C was not chosen: its static shareable viewer with hover inspection was not worth a browser in
-  every render worker.</p>
+  <p><strong>Chosen: A, and it met its target.</strong> It fixes every defect class through the registry,
+  packer and pixel check, none of which depend on the toolkit; it removes the largest cost (rebuilding the
+  figure every step) without installing anything; and its viewer shares the video's drawing code. The
+  fallback to Pillow was never needed: measured on the same recording in the same process, a median frame
+  costs 182 ms against V1's 313 ms &mdash; a ratio of 0.58, against a target of at most 0.5 that the plan
+  accepted as met in substance. C was not chosen: its static shareable viewer with hover inspection was not
+  worth a browser in every render worker.</p>
 </section>
 
 <hr>
 
 <section class="col">
-  <h2><span class="num">06</span> How we will know it works</h2>
+  <h2><span class="num">06</span> What has been checked, and what it found</h2>
+  <p>The checks below were specified before the renderer was written, so that passing them would mean
+  something. Five of them have now run.</p>
 </section>
 <div class="col stages">
-  <div class="stage"><span class="s">CHECK</span><div class="b"><span class="t">Today's pipeline did not move</span>
-    <span class="d">The frozen files' recorded contents and fingerprints of production frames for four worlds are re-checked after every phase. Any difference stops the work.</span></div></div>
-  <div class="stage"><span class="s">CHECK</span><div class="b"><span class="t">Real recordings, across worlds</span>
-    <span class="d">Recordings made through the production recorder for the default world, interoceptive nociception with and without noise, the campfire world, directional olfaction and a location sensor, plus real recordings from trained agents, including one made before the temperature system existed.</span></div></div>
-  <div class="stage"><span class="s">CHECK</span><div class="b"><span class="t">Collisions found from pixels, not from the layout</span>
-    <span class="d">Each label is rendered alone and with everything else, and the check flags any label whose ink touches another element's ink, a card border, or is cut off. It sorts what it sees itself rather than trusting the renderer's own labels. <strong>It must first find the collisions in Figures 1 and 2, and the missing panels in Figure 2</strong>; if it reports none, the check is broken.</span></div></div>
-  <div class="stage"><span class="s">CHECK</span><div class="b"><span class="t">Faster than V1, on the same frames</span>
-    <span class="d">Timed in the same kind of worker process that renders videos in production, on the same lab node, with memory checked to stay flat over ten episodes.</span></div></div>
-  <div class="stage"><span class="s">CHECK</span><div class="b"><span class="t">Somebody looks</span>
-    <span class="d">A contact sheet of every checked frame and screenshots of the viewer are opened and read. A green automated check is necessary, not sufficient.</span></div></div>
+  <div class="stage"><span class="s">PASSED</span><div class="b"><span class="t">Today's pipeline did not move</span>
+    <span class="d">The ten frozen files' recorded contents and fingerprints of production frames for three worlds are
+    re-checked after every phase: <strong>10 of 10 unchanged, frames identical</strong>, every time.</span></div></div>
+  <div class="stage"><span class="s">PASSED</span><div class="b"><span class="t">The instrument finds the known defects first</span>
+    <span class="d">The pixel check must rediscover the collisions in Figures 1 and 2, and Figure 2's missing panels,
+    before it is trusted to report none: <strong>7 of 7 fired</strong>, at the same rules, elements and pixel
+    coordinates when re-run independently. It was then mutated to see whether it could tell a real instrument from
+    one that flags everything &mdash; an always-sounding alarm fails <strong>10</strong> of its tests.</span></div></div>
+  <div class="stage"><span class="s">PASSED</span><div class="b"><span class="t">Real recordings, across worlds</span>
+    <span class="d">Nine recorded worlds, two frames each &mdash; <strong>18 frames, zero findings</strong> from the
+    grid-panel rules, with every occupant of every shared square measuring a full 1.000 of its own ink. The World map's
+    rules reached zero on 18 of 18 only after the encoding was repaired; before that they fired on every frame.</span></div></div>
+  <div class="stage"><span class="s">PASSED</span><div class="b"><span class="t">The overlap defect is fixed, measured two independent ways</span>
+    <span class="d">The automated instrument reproduced an earlier hand measurement exactly &mdash; floor ink 53.44% and
+    51.68% against 53.4% and 51.7% by hand, occupant survival 100% against 100%. The two are independent because the
+    instrument derives which occupants a square holds from the <em>recorded snapshot</em>, while the renderer derives it
+    from its own code, and the two agree on every square of both frames.</span></div></div>
+  <div class="stage"><span class="s">PASSED</span><div class="b"><span class="t">Faster than V1, on the same frames</span>
+    <span class="d">Median 182 ms a frame against V1's 313 ms on the same recording (ratio 0.58). Not yet the final
+    speed gate, which needs a lab node, a pool worker and at least 200 frames.</span></div></div>
+  <div class="stage"><span class="s">TO DO</span><div class="b"><span class="t">Somebody looks, at everything</span>
+    <span class="d">A contact sheet of every checked frame and screenshots of the viewer, opened and read. Partly done
+    &mdash; every archetype frame has been looked at &mdash; and completed in the remaining phases. A green automated
+    check is necessary, not sufficient.</span></div></div>
+</div>
+
+<div class="callout">
+  <p class="eyebrow">It writes real videos</p>
+  <p>The new renderer's own entry point turns a folder of recorded episodes into MP4s. The first full one is a
+  75-step campfire episode at 1440 &times; 896, 15.0 seconds at 5 frames a second. Its frame count is not taken
+  on trust from the writer: the finished file is re-opened and decoded, and <strong>75 decoded frames against 75
+  recorded steps</strong> is what the check compares. Rendering the same folder twice produces byte-identical
+  files, so the video can be compared against a later one. It writes only into <code>videos_v2/</code>, is called
+  by nothing automatically, and has no code path that deletes a file.</p>
 </div>
 
 <hr>
@@ -589,21 +646,22 @@ figure img:focus-visible { outline:2px solid var(--accent); outline-offset:-3px;
     <ol>
       <li><strong>Build it beside V1, keep V1.</strong> V1 stays the default for every video.</li>
       <li><strong>Today's pipeline is frozen</strong> during development. Switching any video to the new renderer gets its own reviewed plan later; deleting the unused <code>grid_world.py</code> renderer copy and <code>renderer_v2.py</code> is not approved.</li>
-      <li><strong>Toolkit:</strong> Matplotlib with our own layout, figure built once per episode; Pillow as the fallback if the first phase misses the speed target.</li>
-      <li><strong>Speed target:</strong> median frame time at most half of V1's on the campfire world, and never slower than V1 on any other world, measured on the same lab node.</li>
-      <li><strong>Outputs:</strong> MP4 videos plus a local step viewer served from the same drawing code; no static HTML export.</li>
+      <li><strong>Toolkit:</strong> Matplotlib with our own layout, figure built once per episode; Pillow as the fallback if the first phase missed the speed target. It did not, so the fallback was not used.</li>
+      <li><strong>Speed target:</strong> median frame time at most half of V1's on the campfire world, and never slower than V1 on any other world. Measured at 0.58 of V1 and accepted as met in substance.</li>
+      <li><strong>Outputs:</strong> MP4 videos plus a step viewer served from the same drawing code; no static HTML export.</li>
       <li><strong>Package name:</strong> <code>src/environment/dashboard/</code>, with <code>render_recordings_v2.py</code> writing to <code>videos_v2/</code>.</li>
     </ol>
   </section>
   <section>
-    <h4>Decided &mdash; what the frame shows (2026-09-14)</h4>
+    <h4>Decided &mdash; what the frame shows (2026-09-14 to 09-17)</h4>
     <ol>
-      <li><strong>Layout and look:</strong> Figure 3 is the direction &mdash; no further layout questions. Frame size 1440 &times; 896; minimap under Interoception; last action as a title-row badge plus a chevron on the agent.</li>
-      <li><strong>Internal states:</strong> every state shown twice, observed and true, including states the agent does not observe.</li>
-      <li><strong>Proprioception:</strong> its own panel of six action chips.</li>
-      <li><strong>Senses that read further:</strong> option A, a small map per channel, from range 1; placed in a band under the grid view when they outgrow the side column; tested at the ranges in use plus stress ranges 3 and 4.</li>
-      <li><strong>Temperature colours:</strong> one range per episode, shared by all its steps; the setpoint near-white and the survivable body band pale, colour deepening only beyond it; anything outside the range is clamped and outlined. No numbers in grid cells.</li>
-      <li><strong>Campfire:</strong> a new image file, used only by the new renderer, as part of a flat icon set.</li>
+      <li><strong>Layout and look:</strong> Figure 3 is the direction. Frame size 1440 &times; 896; World map under Interoception; last action as a title-row badge plus a chevron on the agent.</li>
+      <li><strong>The grid view shows the whole world</strong> at a 50-pixel square, superseding an earlier 5 &times; 5 window centred on the agent. No window, no panning.</li>
+      <li><strong>Terrain is the square's floor</strong>, with occupants standing on top of it, so a shared square shows every occupant. Up to four, in a fixed draw order.</li>
+      <li><strong>The World map encodes occupants as wedges</strong> of one dot, up to four. An earlier mark outside the dot was retired: it could not fit where it was specified to go.</li>
+      <li><strong>Internal states:</strong> every state shown twice, sensed and true, including states the agent does not sense.</li>
+      <li><strong>Senses that read further:</strong> option A, a small map per channel, from range 1; placed in a band under the grid view when they outgrow the side column.</li>
+      <li><strong>Temperature colours:</strong> one range per episode, shared by all its steps; the setpoint near-white and the survivable body band pale, colour deepening only beyond it. No numbers in grid squares.</li>
     </ol>
   </section>
 </div>
@@ -618,17 +676,21 @@ figure img:focus-visible { outline:2px solid var(--accent); outline-offset:-3px;
   <p><strong>Regenerate.</strong> From the repo root, with the project's Python
   (<code>/home/vncuser/miniconda3/envs/grid_world_pain/bin/python</code>), run in
   <code>docs/develop/active/refactors/renderer_layout_redesign/</code>: <code>render_current_frames.py</code>
-  (Figures 1&ndash;2), <code>export_episode.py</code>, <code>fig03_proposed_dashboard.py</code> (Figures 3&ndash;4),
-  <code>make_dashboard_assets.py</code> (font, flat icons, <code>assets/campfire.png</code>),
-  <code>fig08_icon_set.py</code> (Figure 8), <code>export_extended.py</code>, <code>fig05_extended_encodings.py</code>
-  (Figures 5&ndash;7), then <code>build_page.py</code>; <strong>note:</strong> <code>fig05_extended_encodings.py</code>
-  redraws Figures 5&ndash;7 from the saved export <code>data/extended.json</code> and reproduces them exactly
-  &mdash; verified by re-running it and comparing the output byte for byte. What can no longer be re-run is
-  the export step itself, <code>export_extended.py</code>: the world it read was archived on 2026-09-15, so a
-  fresh export would need an equivalent world rebuilt from <code>default.yaml</code>. (An earlier version of
-  this note said the three figures could not be regenerated at all; that was wrong, and this corrects it.)
-  <code>dashboard_style.py</code> holds the shared design tokens. The figures on this page were generated from the last commit, because
-  another session had uncommitted configuration changes in progress.</p>
+  (Figures 1&ndash;2), <code>render_examples.py</code> (Figures 3&ndash;4, the step scrubber and
+  <code>data/episode.json</code> &mdash; it imports the renderer and asks it for frames, so there is no
+  figure script drawing a dashboard any more), <code>make_dashboard_assets.py</code> (the fixed-width-digit
+  font the renderer draws with, plus the older sketch icon exports the renderer does not read),
+  <code>fig08_icon_set.py</code> (Figure 8, which calls the renderer's own square-composition code),
+  <code>export_extended.py</code>, <code>fig05_extended_encodings.py</code> (Figures 5&ndash;7), then
+  <code>build_page.py</code>. Figures 3, 4 and 8 need the recorded worlds under
+  <code>results/render_audit/recordings/</code>, regenerated by
+  <code>scripts/eval/make_render_fixture_recordings.py</code>. <strong>Note:</strong>
+  <code>fig05_extended_encodings.py</code> redraws Figures 5&ndash;7 from the saved export
+  <code>data/extended.json</code> and reproduces them exactly &mdash; verified by re-running it and comparing
+  the output byte for byte. What can no longer be re-run is the export step itself,
+  <code>export_extended.py</code>: the world it read was archived on 2026-09-15, so a fresh export would need
+  an equivalent world rebuilt from <code>default.yaml</code>. <code>dashboard_style.py</code> holds the design
+  tokens Figures 5&ndash;7 share with the renderer's own palette.</p>
 </footer>
 
 </div>
@@ -648,7 +710,7 @@ figure img:focus-visible { outline:2px solid var(--accent); outline-offset:-3px;
 
 <script>
 (function () {
-  /* Step scrubber: swaps between frames the figure script rendered. It draws nothing itself. */
+  /* Step scrubber: swaps between frames the renderer produced. It draws nothing itself. */
   var EP = JSON.parse(document.getElementById('episode-data').textContent);
   var FRAMES = JSON.parse(document.getElementById('frame-data').textContent);
   var S = EP.steps, M = EP.meta;
@@ -666,21 +728,27 @@ figure img:focus-visible { outline:2px solid var(--accent); outline-offset:-3px;
     var t = +slider.value, st = S[t], rows = [];
     img.src = FRAMES[t];
     var an = st.action >= 0 ? M.action_names[st.action] : null;
-    readout.textContent = 'step ' + t + ' / ' + (S.length - 1) + (an ? ' · ' + an : '');
+    /* The readout names the EPISODE's step, not the frame's index: the scrubber may hold
+       one step in two, and a readout counting frames would rename step 64 as step 32. */
+    readout.textContent = 'step ' + st.t + ' / ' + ((M.total_steps || S.length) - 1) + (an ? ' · ' + an : '');
     var sat = sensor(st, 'Satiation'), noc = sensor(st, 'Intero Nociception'), ex = sensor(st, 'Extero Nociception'),
         th = sensor(st, 'Thermoception'), olf = sensor(st, 'Olfactory'), co = sensor(st, 'Collision'),
-        pr = sensor(st, 'Proprioception'), vi = sensor(st, 'Visual');
-    rows.push(['Last action', an || 'none (initial state)'], ['Agent cell (row, column)', st.agent.join(', ')]);
-    if (sat) rows.push(['Satiation, observed', sat.intensity.toFixed(2)]);
+        pr = sensor(st, 'Proprioception'), vi = sensor(st, 'Visual'), bt = sensor(st, 'Body Temperature'),
+        lo = sensor(st, 'Location');
+    rows.push(['Action shown on this frame', an || 'none (initial state)'], ['Agent square (row, column)', st.agent.join(', ')]);
+    if (st.shared && st.shared.length) rows.push(['Shared squares in this frame', st.shared.map(function (o) { return o.join(' + '); }).join(', ')]);
+    if (sat) rows.push(['Satiation, sensed', sat.intensity.toFixed(2)]);
     rows.push(['Satiation, true', (st.satiation / M.max_satiation).toFixed(2)], ['Nutrition, true (not observed)', (st.nutrition / M.max_nutrition).toFixed(2)], ['Injury, true (not observed)', (st.injury / M.max_injury).toFixed(2)]);
     if (noc) rows.push(['Interoceptive nociception', noc.intensity.toFixed(2)]);
-    rows.push(['Body temperature, true (not observed)', signed(st.body_temp, 1)]);
+    if (bt) rows.push(['Body temperature, sensed', signed(bt.value, 1) + '°']);
+    rows.push(['Body temperature, true', signed(st.body_temp, 1) + '°']);
     if (ex) rows.push(['Extero nociception', ex.intensity.toFixed(2)]);
     if (th) rows.push(['Thermoception, C U R D L', th.vector.map(function (v) { return signed(v); }).join(' ')]);
     if (olf) rows.push(['Olfaction', list(olf.vector, 2)]);
     if (co) rows.push(['Collision, C U R D L', co.vector.map(function (v) { return v > 0.5 ? '1' : '0'; }).join(' ')]);
     if (pr) { var mx = Math.max.apply(null, pr.vector); rows.push(['Proprioception', mx > 0 ? M.action_names[pr.vector.indexOf(mx)] : 'none']); }
-    if (vi) rows.push(['Visual, agent cell', list(vi.vector.slice(0, 8), 2)]);
+    if (vi) rows.push(['Visual, agent square', list(vi.vector.slice(0, 8), 2)]);
+    if (lo) rows.push(['Location', list(lo.vector, 2)]);
     values.innerHTML = rows.map(function (r) { return '<div><span>' + esc(r[0]) + '</span><span>' + esc(r[1]) + '</span></div>'; }).join('');
   }
   function go(t) { slider.value = Math.max(0, Math.min(S.length - 1, t)); show(); }
@@ -743,8 +811,8 @@ figure img:focus-visible { outline:2px solid var(--accent); outline-offset:-3px;
     var fig = el.closest('figure'), cap = fig ? fig.querySelector('figcaption') : null;
     var label = cap ? (cap.querySelector('p b') || cap).textContent.trim().replace(/\s+/g, ' ') : 'Figure';
     el.tabIndex = 0; el.setAttribute('role', 'button'); el.setAttribute('aria-label', 'Open full size: ' + label.slice(0, 90));
-    el.addEventListener('click', function () { open(el, el.id === 'dv-img' ? label + ' (step ' + slider.value + ')' : label); });
-    el.addEventListener('keydown', function (e) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); open(el, el.id === 'dv-img' ? label + ' (step ' + slider.value + ')' : label); } });
+    el.addEventListener('click', function () { open(el, el.id === 'dv-img' ? label + ' (step ' + S[+slider.value].t + ')' : label); });
+    el.addEventListener('keydown', function (e) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); open(el, el.id === 'dv-img' ? label + ' (step ' + S[+slider.value].t + ')' : label); } });
     if (cap && fig.classList.contains('wide')) {
       var hint = document.createElement('p'); hint.className = 'zoomhint';
       hint.textContent = 'Click the figure to view it full size'; fig.insertBefore(hint, cap);

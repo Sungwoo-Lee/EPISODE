@@ -2,7 +2,7 @@
 
 WHAT THIS IS. The tokens, type roles, temperature scale and flat glyphs specified in
 docs/reviews/design_episode_dashboard.md, in one importable module, so the sketch figures
-(fig03_proposed_dashboard.py, fig05_extended_encodings.py) and the asset exporter
+(fig05_extended_encodings.py) and the asset exporter
 (make_dashboard_assets.py) cannot drift apart. It is a sketch-side module: nothing under src/ imports
 it, and it imports nothing from src/.
 
