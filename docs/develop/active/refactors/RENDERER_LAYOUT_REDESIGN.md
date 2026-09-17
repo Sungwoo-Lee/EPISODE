@@ -6354,3 +6354,260 @@ text and two of them are historical records:
 *Recorded by: developer*
 
 *Implemented by: developer*
+
+---
+
+## Implementation Report — the approved mock restored in full: the window, the glyphs, and a fixed arena (2026-09-17)
+
+### What this is, in plain words
+
+The user looked at the dashboard the renderer was producing and said it was not the design
+they had approved. This change makes the renderer draw **the approved mock**
+(`fig03_proposed_dashboard.png`, recovered from `9704cbc4^`) rather than the several things
+this plan had since decided instead of it.
+
+Three of those decisions were the user's own, recorded here as answers to questions I am
+told were badly framed when they were put — the user's words, relayed by the session that
+briefed me, were that *"any answer that I gave to you was not fully understood your
+questions"*. So where this plan and the mock disagree, **the mock wins, including where the
+plan records a user decision**. Every reversal is named below rather than quietly dropped.
+
+The four changes, in the order a viewer notices them:
+
+1. **The grid view shows a window again** — `visualization.local_view_size` squares centred
+   on the agent, at 96 px a square — instead of the whole world at 50 px. The small World
+   map beside it draws the whole world with a **box around the part the grid view is
+   showing**, which is the reason that panel earns its place.
+2. **The arena panel is a fixed size, and the window is a zoom inside it.** The card is
+   544 x 544 px for every world and every window; the square size follows
+   (`480 / view_cells` -> 96 px at 5 wide, 48 px at 10 wide). Nothing else on the frame
+   moves when the world's size or the window changes.
+3. **Terrain is a centred glyph again** — the user's own rock, bush, tree and campfire
+   artwork — not the full-bleed "floor" of variant H. All nine chosen PNGs are now drawn.
+4. The vitals column head reads **"Observed"** (the mock's word), the frame title is the
+   **world's name alone**, and the sensor band is **one card with a divider** holding the
+   mock's labelled diamond maps.
+
+### What this supersedes, and why
+
+| Superseded | Where it was recorded | Why it is reversed |
+|---|---|---|
+| **The grid view shows the whole world at a 50 px square** (user decisions Q19/Q20) | Revision 18, SS R18.2, SS D7.3 | The mock draws a 5 x 5 window at 96 px. Q20 was also put to the user on a wrong frame — they were told the current square was 28 px when the grid panel's was 96 px — and the consequence never surfaced: sizing the card from the world made every other panel reflow with the world and stop fitting at 11 x 11. |
+| **Variant H: terrain drawn as the square's floor** (user decision Q18) | Revision 17 SS R17.3 item 2, SS R20.8 | The mock draws a rock as a rock, centred. Variant H solved the overdraw problem by removing the picture the user wanted. |
+| **The World map's wedge encoding** (SS R22.3) and its own survival floor (SS R23.1) | Revisions 22-24 | Built so the MAP could answer "what is in this square?" while the grid drew 100 squares at 50 px. The grid view answers that now, at 96 px. |
+| **"Sensed" as the vitals column head** | the 2026-09-17 restoration report | The word had been changed to get around an audit rule; the rule was over-scoped and is now scoped to what it measures (below). |
+| **The C/U/R/D/L gloss under the collision diamond** | the 2026-09-17 restoration report | The mock has no gloss and a 30 px diamond; the gloss had cost the diamond 8 px a cell. **Flagged**: this restores a bare code to the frame. |
+
+**The fallback ladder is also gone** (SS D7.7 item 3). It existed to shrink an arena that
+could not fit; the arena cannot fail to fit any more. What is left is the `compact` vitals
+fallback and one new refusal, below.
+
+### The square-size rule, stated
+
+```
+ARENA_PX  = 480                      # fixed drawing area: the mock's 5 x 96
+cell      = ARENA_PX / view_cells    # 96.0 at 5x5, 68.571 at 7x7, 48.0 at 10x10
+card      = ARENA_PX + 64 = 544      # constant, every world, every window
+```
+
+`view_cells = min(max(local_view_size, 2 * max_sense_range + 1), world)`. The sense range
+is a **floor**: a grid view that cannot show what the agent just smelled is lying by
+omission. A world no larger than the window is drawn whole — the special case, not the
+rule. The non-integer square at 7 wide is deliberate and harmless: every square is inset
+1 px a side, so neighbours never share an edge and no seam can appear.
+
+**The widest usable window is 11 x 11 (43.6 px a square), and 12 is refused** with a message
+naming `local_view_size`. That bound is derived, not chosen:
+`RASTER_MIN_DIAMETER_PX / (2 * SHARED_FRAC) = 42.55 px`. `layout.ARENA_CELL_MIN_PX = 43`
+restates it, and `test_dashboard_cells.py` re-derives it from `cells.py` and fails if the
+two ever drift.
+
+### How a shared square is drawn — the one place the mock is departed from
+
+The mock never shows a square holding two things, and centred glyphs re-open the defect this
+redesign exists for. So: **one occupant is the mock's own picture, centred at its own size;
+two or more stand side by side** in disjoint quarter-square slots. At 96 px a slot is 45 px
+across. Terrain takes a slot like anything else and is last by priority, so the fifth thing
+in a square is the one that drops and the agent never is.
+
+| | fraction of the square | where it comes from |
+|---|---|---|
+| agent, alone | 0.396 | `ds.agent_marker`: halo at 1.32 x 0.30 x s |
+| mover, alone | 0.34 | `ds.token`: the white disc |
+| terrain, alone | 0.27 | the sketch's glyphs span 0.261-0.285 |
+| anything, shared | 0.235 | a quarter-square slot, less a 6 % margin |
+
+Token aspect ratios are **preserved**, which the old code never had to care about: measured
+on their own alpha boxes the terrain masters are rock 1.52, bush 1.27, tree 0.72, campfire
+1.00. Drawing them into a square box gives a squashed rock and a stretched tree.
+
+### Files changed
+
+| File | What changed |
+|---|---|
+| `src/environment/dashboard/layout.py` | `ARENA_PX = 480` fixed; `arena_cell_px(view)`; `window_cells(ctx)`; `ARENA_CELL_MIN_PX` as the widest-window refusal. The candidate ladder collapses to one view + `compact`. |
+| `src/environment/dashboard/cells.py` | Variant H removed (beds, `BED_MARGIN`, `bed_plate_fraction`, `BED_Z`). Terrain is an occupant; all nine PNGs drawn; `SOLO_FRAC` / `SHARED_FRAC`; aspect-preserving `fit_box` and a two-axis `Raster`; `min_cell_legible()`; terrain added to the body-colour gate. |
+| `src/environment/dashboard/painters.py` | Arena draws a window and stamps `ax._world_view`; World map rewritten to the mock (per-entity marks + viewport box, no wedges); band is one card with a divider; `_map_plan` composites vision's three terrain channels into the mock's single "Terrain" map; map labels wrap; collision back to 30 px; "Observed". |
+| `src/environment/dashboard/episode.py` | `view_origin()` (centred on the agent, clamped); header meta states the window; band drawn as one card. |
+| `src/environment/dashboard/__init__.py` | Exports follow (`ARENA_PX`, `arena_cell_px`, `window_cells`). |
+| `scripts/eval/render_layout_audit.py` | View-aware `square_rects` + `arena_view` (reads the renderer's declaration and **checks it contains the agent**); terrain counts as a kind; `CELL_FLOOR_FRACTION` re-derived; `observed_caption` scoped to captions carrying a value; the World map's rule **retired** (258 lines). |
+| `scripts/eval/render_recordings_v2.py` | `--local-view-size` (a render-time zoom applied to the loaded params copy) and `--title`; the window size goes in the output filename. |
+| `scripts/eval/make_render_fixture_recordings.py` | Two cells: **M4r** (campfire + smell r1 + sight r2, the sketch's own sense set) and **W20** (the default world at 20 x 20). |
+| `tests/env/test_dashboard_layout.py`, `test_dashboard_cells.py`, `test_dashboard_frames.py`, `test_render_audit_controls.py` | Rewritten for the above. |
+
+### Every calibrated number that moved
+
+| Number | Before | After | Why |
+|---|---|---|---|
+| arena card | 564 x 564 (10x10) / 314 (5x5) | **544 x 544, always** | fixed arena |
+| right column | 476 / 726 | **496, always** | follows |
+| sensor band | 236 / 486 | **256, always** | follows |
+| right-column margin (campfire) | 48 px | **28 px** | the card shrank 564 -> 544 |
+| square drawn | 50 px | **96 / 68.57 / 48** | `480 / view` |
+| `SOLO_H` -> `SOLO_FRAC` | 0.34 for all | **0.396 / 0.34 / 0.27** | the mock's own glyph sizes |
+| shared-slot half-extent | 0.207 x cell | **0.235 x cell** | quarter-square slots; a *larger* token |
+| `CELL_FLOOR_FRACTION` | 0.48 | **0.74** | the upper population changed identity (below) |
+| `ARENA_CELL_MIN_PX` | 50 (the drawn size) | **43** (a derived floor) | the square is derived now |
+
+**Unmoved, deliberately**: `SURVIVAL_MIN = 0.98`, `RASTER_MIN_DIAMETER_PX = 20`,
+`RASTER_MIN_BODY_AREA_PX2 = 40`, `MARK_FLOOR_PX = 3.0`, `CHEVRON_FLOOR_PX = 6.0`,
+`OUTLINE_SPAN_MIN`, `REACH_PAD_PX`, `MIN_OVERLAP_PX`.
+
+**Two things got HARDER and are reported rather than absorbed:**
+
+1. **`CELL_FLOOR_FRACTION` had to move, and a CORRECT frame failing is what found it.** The
+   rule tells a square's floor from the things standing on it by ink area. At the mock's
+   solo size the lone agent's ink (its halo is ink) covers **0.5013** of its square at 96 px
+   and **0.5369** at 48 px — above the old 0.48 — so a correct lone agent was classified as
+   the floor and its square reported "0 components against 1 kind". Measured on a real
+   frame: M4 episode 0 step 12, square (8,8). The upper population also changed identity: it
+   used to be a terrain bed at 0.5168, and with no beds the only thing above the tokens is
+   the ground fill at **0.9366 / 0.9080**. New gap (0.5369, 0.9080]; 0.74 sits 54.7 % up it,
+   the same placement discipline as the 0.40 -> 0.48 move. **A re-derivation, not a
+   loosening**: the gap moved as a whole and got wider.
+2. **The survival floor's defect family had to be re-registered**, because the old one
+   (shrink a terrain bed until it stops being read as the floor) describes a painter that no
+   longer exists. The new family is a graded opaque strip laid across a token. Measured:
+
+   | | ratio | fires |
+   |---|---|---|
+   | 8 correct controls | **1.0000** each | silent |
+   | M-C@0.06 | 0.9694 | `cell_overdraw`, through the floor |
+   | M-C@0.12 | 0.9200 | ditto |
+   | M-C@0.25 | 0.7894 | ditto |
+
+   Gap **(0.9694, 1.0000]**, with 0.98 inside it. **Narrower than the old table** (the bed
+   family drove survival below 0.5), because a thin strip is a shallower defect by
+   construction — stated rather than hidden. The strip is drawn **across the square's
+   boundary**: drawn inside it, it was classified as a third occupant and the family fired
+   through the component count while never consulting the floor it was registered to sweep.
+
+**One number got easier, and it reopens a recorded decision.** SS R26.1 substituted two
+raster floors for the per-mark 3 px floor because at 50 px three of the four marks measured
+2.16-2.45 px. At the mock's 96 px square the same marks measure **4.15 / 4.41 / 4.70 /
+8.00 px** and clear `MARK_FLOOR_PX` outright; at a 10-wide window (48 px) they measure
+2.07-4.00 px and do not. The substitution is still load-bearing — it is what lets the window
+widen — but no longer at the design's own window. `senior-developer` may want that recorded
+in SS R26.1.
+
+### The World map's rule was retired, not relaxed
+
+`minimap_overdraw` and its eight constants (`MINIMAP_SURVIVAL_MIN`, `MINIMAP_AREA_MIN`,
+`MINIMAP_FLOORS`, `MINIMAP_DELTA`, `MINIMAP_ALIGN_MAX_BLANK`, `MINIMAP_PALETTE`,
+`SHARED_CAPTION`, `TERRAIN_KINDS`) are deleted, with a note left where they were. They
+measured one encoding — a dot split into wedges — and that encoding was the map's answer to
+"what is in this square?", needed only while the grid beside it drew 100 squares at 50 px.
+The approved design draws one mark per entity; two entities on one map square are two marks
+at one point and the later covers the earlier, which is the approved picture rather than a
+defect being hidden, because the map no longer claims identity.
+
+**The invariant did not go anywhere**: "every occupant of a shared square is visible" is
+still asserted by `cell_overdraw`, on the panel that now claims it, over **more** entities
+than before — terrain used to be exempt by construction, so `agent + rock`, the archetype
+this redesign started from, was the one case the rule could not see. It is a negative
+control now.
+
+### Findings flagged rather than absorbed
+
+1. **`docs/.../renderer_layout_redesign/fig08_icon_set.py:120` is broken by this change.** It
+   calls `cells.bed(...)`, removed today. It writes into `docs/`, which is not mine to edit.
+   **Owner: the page owner / `senior-developer`.** The vector forms it draws are kept in
+   `cells.py` precisely so it can be repaired rather than rewritten.
+2. **The `observed_caption` audit rule was over-scoped and is now narrowed.** It fired on any
+   text starting "OBS", including a bare column head belonging to no modality — which is why
+   the head had been renamed "Sensed" rather than the rule fixed. It now requires the caption
+   to carry a **value** (a digit) or to say "OBS ONLY". Control **D10 still fires** (its
+   caption reads `OBS:  0.65`): 7/7.
+3. **Saved fixtures predate a current `EnvParams` field.** `dataclasses.replace` (and flax's
+   `.replace`, which calls it) rebuilds by reading every field the *current* class declares,
+   and these recordings have no `thermal_warming_rate_scale`, so it raises on a field nobody
+   asked to change. `--local-view-size` sets the one field on the unpickled copy instead.
+   Same family as the M7/M8/M9 problem in SS R24.
+4. **The collision gloss is gone** (the mock has none), so `C/U/R/D/L` reach the reader with
+   no key on the frame. Reinstating it needs a taller card.
+5. **"noise-free" in the extero-nociception card** is kept although the mock has none: it
+   appears only when true observations were recorded, so it is data rather than design.
+
+### Test results
+
+- `tests/env/test_dashboard_layout.py` — **126 passed**
+- `tests/env/test_dashboard_cells.py` — **45 passed**
+- `tests/env/test_dashboard_frames.py` + `test_render_audit_controls.py` — **84 passed**
+- `scripts/eval/render_layout_audit.py --controls` — **7/7 FIRED, none missed**, exit 0
+- Full audit on a **real windowed frame** (M4 step 12, through the renderer):
+  `cell_overdraw` **0**, `text_over_fill` 17 (labels composed over their own chips — the
+  class the audit counts and does not calibrate on). Before the floor re-derivation the same
+  frame reported 2 `cell_overdraw` findings, both false.
+- `scripts/eval/v1_path_guard.py check` — **10/10 PASS, FRAMES PASS x3, exit 0**, before and
+  after.
+- **`tests/env` whole suite — **707 passed, 377 skipped, 0 failed**, exit 0 (12:25). The previous session recorded 692 / 377 / 0 at HEAD, so the suite gained 15 tests and lost none. The two import tests that failed in my contaminated pre-run (`test_the_package_imports_without_matplotlib`, `test_the_package_does_not_import_the_frozen_renderer`) both pass here, which is what settles them as the contamination rather than a regression**
+
+**On the "before" baseline, honestly.** I launched the pre-change `tests/env` run
+concurrently with my first edits, so its 690 passed / 2 failed is contaminated and is **not**
+a baseline — the two failures are import tests that a half-edited package would produce. The
+trustworthy pre-change figure is the previous session's, recorded in this plan at HEAD:
+**692 passed, 377 skipped, 0 failed**. Reported rather than presented as mine.
+
+### Speed check
+
+Same machine, same recording (M4 episode 1, 75 frames, first 5 excluded), same harness
+(`tmp/20260917_restore_dashboard/bench.py`), CPU-only.
+
+| | Before (this plan's last report) | After |
+|---|---|---|
+| Median frame | 212.7 ms | **180.5 ms** (-15.1 %) |
+| p95 frame | 227.4 ms | **196.6 ms** |
+| Setup | 2598 ms | **2011 ms** |
+
+The gain has an obvious cause and it is the change's own arithmetic: the grid view draws **25
+squares instead of 100**. The "before" column is the previous session's recorded figure on the
+same script and machine rather than one I re-measured — I could not re-measure it without
+reverting the change, and I would rather say so than imply I did.
+
+### Deliverables
+
+- **`tmp/20260917_mock_restore/side_by_side.png`** — the approved mock above, the restored
+  renderer below, both at 1440 x 896, unretouched (M4r episode 2 step 15).
+- **Three window sizes of one episode**, in
+  `results/render_audit/recordings/videos_v2/M4r/`: `episode_000002_view5.mp4`,
+  `_view7.mp4`, `_view10.mp4` (and the 24-step episode 1 at each). **Verified with
+  `ffprobe -count_frames`**, independently of the writer: 75 frames each at 1440 x 896
+  (episode 1: 24). They differ only in how much world is visible and how large the squares
+  are.
+- **A world larger than the window**: `tmp/20260917_mock_restore/w20_view5.png` and
+  `w20_view10.png` — the 20 x 20 world, grid footprint identical, the World map's squares at
+  7.4 px with the viewport box visibly smaller relative to the world.
+- Working frames: `m4_view5.png`, `m4_view7.png`, `m4_view10.png`, `m4r_view5.png`.
+
+### Checkpoints
+
+- **CP2.8** — its claim is re-asserted on the panel that now carries it, over terrain as
+  well, with a re-registered graded family and a measured gap. The map half is retired with
+  the encoding it measured.
+- **CP4** — not re-run on a lab node; the local measurement above is 15 % faster than the
+  figure this plan last recorded, so the gate is not at risk, but the node-level number is
+  `senior-developer`'s to re-take if CP4 is to be re-signed.
+- **CP-D** — this is a restoration against the approved mock, not the second
+  `visual-design-reviewer` pass CP-D requires.
+
+*Implemented by: developer*

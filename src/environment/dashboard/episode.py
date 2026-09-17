@@ -10,10 +10,17 @@ them". The production renderer rebuilds its entire figure every frame; this one
 does not, and that is the architectural claim the plan's speed gate measures.
 
 WHAT A FRAME IS MADE OF. Three columns under a header: body states and the small
-World map on the left, the arena in the middle drawing the **whole world** at 50
-pixels a square, and the exteroceptive pods on the right. No panel is placed by
-hand and no panel is shrunk to make room -- if the budget cannot close, the
+World map on the left, the arena in the middle drawing a **window** of the world
+centred on the agent, and the exteroceptive pods on the right. No panel is placed
+by hand and no panel is shrunk to make room -- if the budget cannot close, the
 packer raises before a single frame exists.
+
+THE WINDOW IS THE CONFIG'S DECISION, AND THE PANEL HOLDING IT IS A FIXED SIZE
+(plan Revision 27). ``visualization.local_view_size`` says how many world squares
+the grid draws across; the arena's box is always 480 px, so the square size
+follows from the window (96 px at 5x5, 48 px at 10x10) and every other panel on
+the frame is identical whatever the world. The World map beside it draws the
+whole world with a box around the part the grid view is showing.
 
 TWO THINGS THAT LOOK LIKE DETAILS AND ARE LOAD-BEARING.
 
@@ -173,9 +180,9 @@ class EpisodeRenderer:
             "title": title,
             "width": int(params.width), "height": int(params.height),
             "meta": (f"seed {int(payload.get('seed', 0))}  ·  episode "
-                     f"{int(payload.get('episode_index', 0))}  ·  whole "
-                     f"{int(params.width)} × {int(params.height)} world at "
-                     f"{self.cell_px} px a square"),
+                     f"{int(payload.get('episode_index', 0))}  ·  "
+                     f"{self.layout.view_cells} × {self.layout.view_cells} view of a "
+                     f"{int(params.width)} × {int(params.height)} world"),
             "noise_note": ("Noise off in this episode, so observed = noise-free."
                            if not bool(getattr(params, "perceptual_noise_enabled", False))
                            else "Noise on: the observed and noise-free values differ."),
@@ -223,6 +230,23 @@ class EpisodeRenderer:
         if self.thermal_field is None:
             return P.TRACK
         return self.scale.colour(float(self.thermal_field[r, c]))
+
+    def view_origin(self, v) -> tuple[int, int]:
+        """The world square at the grid view's top-left corner, this step.
+
+        The window is centred on the agent and CLAMPED to the world's edges, so
+        it never shows squares outside the world while any real square is
+        available -- the agent walks toward the edge of a stationary frame rather
+        than the frame walking off the world. Both the arena and the World map's
+        viewport box read this one function, so the box can never disagree with
+        what the grid is drawing.
+        """
+        n = int(self.layout.view_cells)
+        a = np.asarray(v.state.agent_pos)
+        hh, ww = int(self.params.height), int(self.params.width)
+        r0 = max(0, min(hh - n, int(a[0]) - n // 2))
+        c0 = max(0, min(ww - n, int(a[1]) - n // 2))
+        return r0, c0
 
     # -- setup -------------------------------------------------------------
     def _sense_maxima(self) -> dict:
@@ -430,25 +454,36 @@ class EpisodeRenderer:
         # modality drawn?" by reading the rendered panel title against a fixed
         # table of breakdown names, so a prettier synonym makes a panel that is
         # plainly on the screen report as missing.
-        for key in [k for k in ("olfactory", "visual")
-                    if self.layout.parent.get(k) == "band"]:
-            ax, box = self._panel_card(key)
+        band_keys = [k for k in ("olfactory", "visual")
+                     if self.layout.parent.get(k) == "band"]
+        if band_keys:
+            ax, box = self._card("band")
             PN.card_frame(ax, box)
-            if key == "olfactory":
-                sense = title = "Olfaction"
-                codes = olfactory_labels(int(self.ctx.olfactory_channels))
-                rng, stops = int(self.ctx.olfactory_range), P.OLF_STOPS
-            else:
-                sense = title = "Visual"
-                codes = visual_labels(int(self.ctx.visual_vector_size))
-                rng, stops = int(self.ctx.visual_range), P.VIS_STOPS
-            if rng >= 1:
-                offs = [tuple(o) for o in get_visual_offsets(rng)]
-                PN.build_channel_maps(self, ax, box.w, box.h, sense, title, codes,
-                                      stops, offs, rng)
-            else:
-                PN.build_channel_rows(self, ax, box.w, box.h, sense, title, codes,
-                                      stops)
+            for key in band_keys:
+                child = self.layout.panels[key]
+                x0 = child.x - box.x + PN.PAD
+                cw = child.w - 2 * PN.PAD
+                if key == "olfactory":
+                    sense, title = "Olfaction", "Olfaction"
+                    codes = olfactory_labels(int(self.ctx.olfactory_channels))
+                    rng, stops = int(self.ctx.olfactory_range), P.OLF_STOPS
+                else:
+                    # "Vision" is the reader's word and the approved design's;
+                    # "Visual" is the observation breakdown's key and stays the
+                    # `sense` the values are looked up under.
+                    sense, title = "Visual", "Vision"
+                    codes = visual_labels(int(self.ctx.visual_vector_size))
+                    rng, stops = int(self.ctx.visual_range), P.VIS_STOPS
+                if rng >= 1:
+                    offs = [tuple(o) for o in get_visual_offsets(rng)]
+                    PN.build_channel_maps(self, ax, x0, cw, box.h, sense, title,
+                                          codes, stops, offs, rng)
+                else:
+                    PN.build_channel_rows(self, ax, x0, cw, box.h, sense, title,
+                                          codes, stops)
+            if len(band_keys) == 2:
+                second = self.layout.panels[band_keys[1]]
+                PN.band_divider(ax, second.x - box.x - PN.GAP / 2, box.h)
 
     # -- per step ----------------------------------------------------------
     def values(self, t: int) -> FrameValues:

@@ -12,24 +12,31 @@ declared panel is never placed, or if an impossible budget fails to raise. Each
 of those is a test below, and each is written to do its **own** geometry check
 rather than trusting the packer's internal assertion -- a suite that merely calls
 ``pack()`` and believes it would still pass a packer whose overlap check had been
-deleted. This plan has already been bitten by exactly that: an earlier phase's
-audit suite passed all 18 of its tests when the ink measurement was mutated to
-flag every pixel on the canvas.
+deleted.
 
-SYNTHETIC VERSUS REAL CONTEXTS. Some geometry the plan pins cannot be reached by
-any config this project maintains. Every maintained world reads both senses at
-range 0, so none of them produces the **diamond-map** band that the pinned
-564 / 476 / 236 geometry is measured on, and that case exists only as a synthetic
-``LayoutContext``. Tests that use one say so in their name and docstring, so a
-later reader does not go hunting for the config that produces it.
+WHAT CHANGED ON 2026-09-17, because these tests asserted something quite
+different until then (plan Revision 27). The arena used to be sized from the
+WORLD -- ``world_w * 50 + 64`` -- so a 5x5 world packed to a 314 px card and a
+10x10 world to a 564 px one, and every other panel on the frame reflowed with it:
+the right column, the sensor band and the minimap's grow budget all moved when
+the world's size changed, and the layout stopped fitting at 11x11 altogether.
 
-WHAT CHANGED ON 2026-09-17, because these tests asserted the opposite until then.
-The band used to exist only for a sense reading past the agent's own square, so
-every maintained world had NO band and its two sense panels were pushed into the
-right-hand column. That left a 564 x 269 px hole under the arena in the shipped
-frame and is not what the approved design shows. The band now exists whenever a
-sense is observed **at any range**; what the range decides is what is drawn in it
-(diamond maps at range >= 1, named channel rows at range 0).
+The arena is now a **fixed 480 px box**, and ``visualization.local_view_size``
+decides how many world squares are drawn inside it. So the whole frame is a
+constant -- a 544 px arena card, a 496 px right column, a 256 px band -- for every
+world and every window, and the square size is what moves (96 px at a 5-wide
+window, 48 px at a 10-wide one). Most of the geometry pinned below is therefore
+pinned ONCE rather than per world, and two properties this file used to assert
+are gone on purpose:
+
+  * "a smaller world gives the right column less height" -- there is no coupling
+    left to state; the arena's height no longer depends on the world at all.
+  * "a world too large to draw whole falls down a ladder" -- a world larger than
+    the window is the ORDINARY case now (the grid view draws a window of it), not
+    a fallback.
+
+Both are replaced below by the property that superseded them: the packed boxes
+are identical for worlds and windows of every size.
 """
 
 import os
@@ -104,10 +111,9 @@ def _synthetic(
 ):
     """A LayoutContext for a world no maintained config produces.
 
-    The default is the geometry the plan pins for Phase 1: a 10x10 world with a
-    thermoception card *and* a sensor band. No maintained config has both -- the
-    thermal worlds have the card and no band, and a band needs a sense at range
-    1 or more, which no maintained config has.
+    The default is a 10x10 world with a thermoception card *and* a sensor band
+    holding diamond maps. No maintained config has both -- the thermal worlds read
+    both senses at range 0, so their band holds named rows instead.
     """
     bd = {"Satiation": 1}
     if thermal:
@@ -176,6 +182,8 @@ ALL_CONTEXTS = [
     ("synthetic_no_thermal", lambda: _synthetic(10, thermal=False)),
     ("synthetic_location", lambda: _synthetic(10, location=True)),
     ("synthetic_no_action", lambda: _synthetic(10, action=False)),
+    ("synthetic_wide_world", lambda: _synthetic(20)),
+    ("synthetic_wide_window", lambda: _synthetic(20, local_view=10)),
 ]
 
 
@@ -211,21 +219,17 @@ def test_two_cards_with_the_same_box_are_rejected_rather_than_exempted():
 
     ``_validate`` used to skip its overlap check for any two cards whose boxes
     were EQUAL -- an exemption keyed on coordinates happening to match rather than
-    on what the cards are. The case it was written for (the band) cannot arise: a
-    single card never pairs with itself, and a second band card is now refused in
-    ``_pack_once`` before any box is handed out.
-
-    Asserted against ``_validate`` on a hand-built Layout rather than on a packed
-    one, precisely because no context can reach this state -- a test that only
-    packs real configs could never see the hole.
+    on what the cards are. Asserted against ``_validate`` on a hand-built Layout
+    rather than on a packed one, precisely because no context can reach this state
+    -- a test that only packs real configs could never see the hole.
     """
     shared = Box(100, 100, 200, 200)
     lay = L.Layout(
         cards={"a": shared, "b": shared},
         panels={},
         parent={},
-        view_cells=10,
-        cell_px=L.ARENA_CELL_PX,
+        view_cells=5,
+        cell_px=L.arena_cell_px(5),
         band=False,
         step="test",
         compact=False,
@@ -246,7 +250,7 @@ def test_a_second_band_card_is_refused_before_a_box_is_assigned():
     assert len(band) == 1, "the synthetic band context should declare exactly one band card"
     twin = L.CardDemand(**{**band[0].__dict__, "key": band[0].key + "_twin"})
     with pytest.raises(LayoutOverflowError, match="more than one band card"):
-        L._pack_once(ctx, 10, True, False, "test", cards + [twin])
+        L._pack_once(ctx, 5, True, False, "test", cards + [twin])
 
 
 @pytest.mark.parametrize("name,make", ALL_CONTEXTS, ids=[n for n, _ in ALL_CONTEXTS])
@@ -318,145 +322,158 @@ def test_an_impossible_budget_raises_rather_than_shrinking():
         for c in cards
     ]
     with pytest.raises(LayoutOverflowError) as exc:
-        L._pack_once(ctx, 10, True, False, "test", fat)
+        L._pack_once(ctx, 5, True, False, "test", fat)
     assert "right" in str(exc.value)
 
 
-def test_a_5x5_world_with_thermal_and_a_band_raises_naming_the_right_column():
-    """SYNTHETIC context -- no maintained config reaches this.
+def test_a_window_too_wide_to_draw_legibly_is_refused_naming_the_config_key():
+    """The one arena-side refusal left, and the reason it is the LAST resort.
 
-    The coupling: when a sensor band is present the right column is measured
-    against the arena's bottom edge, so a SMALLER world gives the right column
-    LESS height. A 5x5 world leaves it 314 px against the 516 px a thermal right
-    column needs (proprioception 104 + the extero/collision row 150 +
-    thermoception 230 + two 16 px gaps).
+    The arena is a fixed 480 px box, so a wider window buys more world at a
+    smaller square -- and below `ARENA_CELL_MIN_PX` two occupants sharing a square
+    stop being separable in the finished video. The packer refuses rather than
+    drawing it, and the message names `local_view_size`, because the fix is the
+    config's and never "grow the card".
     """
     with pytest.raises(LayoutOverflowError) as exc:
-        pack(_synthetic(5, local_view=5))
-    assert "right" in str(exc.value).lower()
+        pack(_synthetic(30, local_view=14))
+    msg = str(exc.value)
+    assert "local_view_size" in msg and "fixed size" in msg
 
 
-def test_a_world_too_large_to_draw_whole_still_checks_the_right_column():
-    """The fallback must not land on a window that starves the right column."""
-    with pytest.raises(LayoutOverflowError) as exc:
-        pack(_synthetic(14, local_view=5))
-    assert "right" in str(exc.value).lower()
+def test_the_widest_usable_window_is_eleven_and_it_is_derived_not_declared():
+    """11 x 11 packs, 12 x 12 does not, and the boundary is arithmetic.
+
+    `480 / 43 = 11.2`, so eleven squares across is the widest window whose square
+    still clears the artwork's own legibility floor. It is asserted here as a
+    BOUNDARY rather than a constant so that moving either number moves this test.
+    """
+    widest = int(L.ARENA_PX // L.ARENA_CELL_MIN_PX)
+    assert widest == 11
+    lay = pack(_synthetic(30, local_view=widest))
+    assert lay.view_cells == widest
+    assert lay.cell_px >= L.ARENA_CELL_MIN_PX
+    with pytest.raises(LayoutOverflowError):
+        pack(_synthetic(30, local_view=widest + 1))
 
 
 # --------------------------------------------------------------------------
-# The arena is a FIXED box, not a grow panel
+# The arena is a FIXED BOX and the window is a zoom inside it
 # --------------------------------------------------------------------------
 @pytest.mark.parametrize("name,make", ALL_CONTEXTS, ids=[n for n, _ in ALL_CONTEXTS])
-def test_the_arena_draws_exactly_fifty_pixels_per_world_square(name, make):
-    """The arena never absorbs leftover height and never grows to fill a column."""
+def test_the_arena_is_always_the_same_size(name, make):
+    """The claim Revision 27 rests on: the panel does not move, the zoom does."""
     lay = pack(make())
-    grid = lay.arena_grid
-    expected = lay.view_cells * L.ARENA_CELL_PX
-    assert grid.w == expected, f"{name}: arena width {grid.w} != {expected}"
-    assert grid.h == expected, f"{name}: arena height {grid.h} != {expected}"
-    assert lay.cell_px == 50
-
-
-@pytest.mark.parametrize("name,make", ALL_CONTEXTS, ids=[n for n, _ in ALL_CONTEXTS])
-def test_the_arena_is_square_and_shows_the_whole_world(name, make):
-    ctx = make()
-    lay = pack(ctx)
     card = lay.cards["arena"]
-    assert card.w == card.h, f"{name}: arena card is not square: {card}"
-    if ctx.world_w <= 10:
-        assert lay.view_cells == ctx.world_w, (
-            f"{name}: a world that fits whole at 50px must be drawn whole"
-        )
-        assert lay.step == "whole_world"
+    assert (card.w, card.h) == (544, 544), f"{name}: arena card {card}"
+    grid = lay.arena_grid
+    assert (grid.w, grid.h) == (L.ARENA_PX, L.ARENA_PX), f"{name}: arena grid {grid}"
+    assert lay.cell_px == pytest.approx(L.ARENA_PX / lay.view_cells)
+
+
+@pytest.mark.parametrize("world", [5, 10, 20, 50])
+@pytest.mark.parametrize("view", [5, 7, 10])
+def test_every_world_and_every_window_packs_to_identical_boxes(world, view):
+    """The property that replaced "a smaller world gives less height".
+
+    A 5x5 world and a 50x50 world, a 5-wide window and a 10-wide one: the same
+    frame, to the pixel. Only `view_cells` and `cell_px` differ, which is the
+    whole of what the window is allowed to change.
+    """
+    base = pack(_synthetic(10, local_view=5))
+    lay = pack(_synthetic(world, local_view=view))
+    assert lay.cards == base.cards
+    assert lay.panels == base.panels
+    assert lay.regions == base.regions
+    assert lay.view_cells == min(view, world)
+    assert lay.cell_px == pytest.approx(L.ARENA_PX / min(view, world))
+
+
+def test_the_window_is_the_config_s_and_the_sense_range_is_its_floor():
+    """`local_view_size` decides, except that the view must cover what is sensed.
+
+    A sense reaching two squares forces a 5-wide window even if the config asks
+    for 3, because a grid view that cannot show what the agent just smelled is
+    lying about the episode by omission.
+    """
+    assert L.window_cells(_synthetic(10, local_view=7)) == 7
+    assert L.window_cells(_synthetic(10, local_view=3, olf_range=2)) == 5
+    assert L.window_cells(_synthetic(10, local_view=9, olf_range=2)) == 9
+    # ...and a world smaller than the window is drawn whole, which is the SPECIAL
+    # case rather than the first choice.
+    assert L.window_cells(_synthetic(4, local_view=7)) == 4
+
+
+@pytest.mark.parametrize("path", MAINTAINED)
+def test_every_maintained_world_draws_a_five_square_window(path):
+    """Every maintained config sets `local_view_size: 5` and senses at range <= 1.
+
+    So every one of them draws a 5 x 5 window at a 96 px square -- the approved
+    design's own frame -- and the two 5x5 worlds reach that window by being
+    smaller than it rather than by a different rule.
+    """
+    ctx = _ctx(path)
+    lay = pack(ctx)
+    assert lay.view_cells == 5
+    assert lay.cell_px == 96.0
+    assert lay.step == ("whole_world" if ctx.world_w <= 5 else "local_window")
 
 
 def test_leftover_height_never_reaches_the_arena():
     """Two worlds of the same size but different panel loads get the same arena."""
     a = pack(_synthetic(10))
     b = pack(_synthetic(10, location=True))
-    assert a.arena_grid.w == b.arena_grid.w == 500
+    assert a.arena_grid.w == b.arena_grid.w == L.ARENA_PX
     assert a.cards["arena"] == b.cards["arena"]
 
 
 # --------------------------------------------------------------------------
-# The geometry the plan pins, to the pixel
+# The geometry the plan pins, to the pixel -- now once, not per world
 # --------------------------------------------------------------------------
-def test_a_10x10_world_gives_the_pinned_geometry():
-    """SYNTHETIC context (thermal card + sensor band): 564 / 476 / 236.
-
-    No maintained config produces this -- every maintained world has both sense
-    ranges at 0, so none has a band. Asserted on a synthetic LayoutContext with
-    thermal on and one sense at range 1.
-    """
+def test_the_pinned_geometry_is_544_496_256():
+    """Revision 27's worked numbers, which no world and no window may move."""
     lay = pack(_synthetic(10))
     card = lay.cards["arena"]
-    assert (card.w, card.h) == (564, 564)
-    assert lay.regions["right"].w == 476
+    assert (card.x, card.y, card.w, card.h) == (360, 64, 544, 544)
+    assert lay.regions["right"].w == 496
     assert lay.regions["right"].w >= L.MIN_RIGHT_W
-    assert lay.regions["band"].h == 236
+    assert lay.regions["band"].h == 256
     assert lay.regions["band"].h >= L.MIN_BAND_H
-    assert lay.regions["band"].y == 644
+    assert lay.regions["band"].y == 624
     assert lay.regions["band"].w == 1056
-    # With a band, the right column is measured against the arena's bottom edge.
-    assert lay.regions["right"].h == 564
+    # With a band, the right column is measured against the arena's bottom edge --
+    # which is now a constant rather than something the world's size moves.
+    assert lay.regions["right"].h == 544
 
 
-def test_the_10x10_right_column_clears_what_a_thermal_column_needs():
+def test_the_right_column_clears_what_a_thermal_column_needs():
     lay = pack(_synthetic(10))
     need = P.PROP_H + P.EXTERO_NOC_H + P.THERMO_H + 2 * L.GAP
     assert need == 516
-    assert lay.regions["right"].h - need == 48
+    assert lay.regions["right"].h - need == 28
 
 
 @pytest.mark.parametrize("path", FIVE_BY_FIVE)
-def test_a_5x5_maintained_world_gives_a_314_card_and_a_726_right_column(path):
-    lay = pack(_ctx(path))
-    card = lay.cards["arena"]
-    assert (card.w, card.h) == (314, 314)
-    assert lay.arena_grid.w == 250
-    assert lay.regions["right"].w == 726
-    # These worlds read both senses, so they have a band, and the right column is
-    # therefore measured against the arena's bottom edge rather than the canvas.
-    assert lay.band is True
-    assert lay.regions["right"].h == 314
-    assert lay.regions["band"].y == 394 and lay.regions["band"].h == 486
-    # It still fits, because a 5x5 world has no temperature system: the column
-    # carries proprioception plus the extero/collision row, not five pods.
-    assert P.PROP_H + P.EXTERO_NOC_H + L.GAP == 270 <= 314
+def test_a_5x5_maintained_world_gets_the_same_frame_as_every_other(path):
+    """The case that used to be special, and is not any more.
 
-
-def test_a_smaller_world_gives_the_right_column_less_height_when_a_band_exists():
-    """The coupling stated as a property, not as one worked example."""
-    ten = pack(_synthetic(10))
-    assert ten.band is True
-    assert ten.regions["right"].h == ten.cards["arena"].h
-    # The 5x5 version of the same context cannot pack at all, which is the point.
-    with pytest.raises(LayoutOverflowError):
-        pack(_synthetic(5))
-
-
-@pytest.mark.parametrize("world", [5, 8, 10, 12, 14])
-def test_one_check_covers_every_route_to_an_arena_height(world):
-    """Whatever chooses the arena height, the right column is checked against it.
-
-    The three routes are the world's own size, the whole-world rule, and the
-    fallback's shrink step. Either the pack succeeds and the right column really
-    does hold its panels, or it raises.
+    These worlds packed to a 314 px arena card and a 726 px right column while a
+    10x10 world packed to 564 / 476. Both now pack to 544 / 496: the world is
+    smaller than the window, so it is drawn whole, at the same square size as
+    everything else.
     """
-    ctx = _synthetic(world, local_view=5)
-    try:
-        lay = pack(ctx)
-    except LayoutOverflowError:
-        return
-    right = lay.regions["right"]
-    used = [
-        (k, b) for k, b in lay.cards.items()
-        if b.x >= right.x and b.x + b.w <= right.x + right.w and k != "header"
-    ]
-    for key, box in used:
-        assert box.y + box.h <= right.y + right.h + L.GAP, (
-            f"world {world}: right-column card {key} {box} runs past its region {right}"
-        )
+    lay = pack(_ctx(path))
+    assert (lay.cards["arena"].w, lay.cards["arena"].h) == (544, 544)
+    assert lay.arena_grid.w == L.ARENA_PX
+    assert lay.view_cells == 5 and lay.cell_px == 96.0
+    assert lay.step == "whole_world"
+    assert lay.regions["right"].w == 496
+    assert lay.band is True
+    assert lay.regions["right"].h == 544
+    assert lay.regions["band"].y == 624 and lay.regions["band"].h == 256
+    # It fits, because a 5x5 world has no temperature system: the column carries
+    # proprioception plus the extero/collision row, not five pods.
+    assert P.PROP_H + P.EXTERO_NOC_H + L.GAP == 270 <= 544
 
 
 # --------------------------------------------------------------------------
@@ -521,8 +538,7 @@ def test_every_maintained_config_has_a_sensor_band(path):
     Both halves are asserted, because the distinction is the whole change: every
     maintained world DOES have a band (it observes smell and sight), and none of
     them has a GRID sense (both ranges are 0), so each draws named channel rows
-    rather than diamond maps. That second half is also why the pinned
-    564/476/236 geometry still has to be measured on a synthetic context.
+    rather than diamond maps.
     """
     ctx = _ctx(path)
     assert ctx.band_senses == ("olfactory", "visual")
@@ -589,6 +605,22 @@ def test_min_size_signatures_take_only_a_layout_context():
     ]
 
 
+def test_the_window_is_decided_from_params_and_never_from_episode_data():
+    """The window follows the AGENT per frame, but its SIZE is fixed per episode.
+
+    That split is what keeps a concatenated video honest: `window_cells` takes a
+    LayoutContext (built from params) and nothing else, so two episodes of one run
+    cannot draw different-sized windows, while `EpisodeRenderer.view_origin` --
+    which does read the agent's position -- only ever moves the window, never
+    resizes it.
+    """
+    import inspect
+
+    assert list(inspect.signature(L.window_cells).parameters) == ["ctx"]
+    a = _synthetic(10, local_view=7)
+    assert pack(a).view_cells == pack(a).view_cells == 7
+
+
 def test_the_package_imports_without_matplotlib():
     """Phase 1 has no painters; importing it must not pull in a drawing stack."""
     code = (
@@ -610,9 +642,8 @@ def test_recording_flag_is_confined_to_the_dashboard_package():
     and wrong for a live config, where a missing key must raise.
 
     This reads the AST rather than grepping the text, because several Phase 0
-    scripts legitimately mention the name in a comment or an error message
-    ("Needs _recording_flag (plan section D4.1, Phase 1)"). A prose mention is
-    not a use, and a text grep cannot tell the two apart.
+    scripts legitimately mention the name in a comment or an error message. A
+    prose mention is not a use, and a text grep cannot tell the two apart.
     """
     import ast
 
@@ -660,22 +691,16 @@ def test_a_recording_missing_a_flag_reads_as_absent_not_as_false():
 def test_the_campfire_worlds_columns_are_pinned():
     """The tightest real budget in the project, named so a failure explains itself.
 
-    WHY THIS TEST EXISTS (plan section D1.1, added after the CP1 verification).
     The campfire thermal world and the sensory-noise world have a temperature
     system AND both senses, so they are what any change to the sense panels is
-    felt by first.
-
-    WHAT IT USED TO PIN, AND WHY THAT IS GONE. Until 2026-09-17 both senses were
-    pods in the RIGHT COLUMN, which therefore carried five pods needing 800 px of
-    its 816 -- a 16 px margin, the tightest in the project, and the reason the two
-    range-0 pod heights were the most dangerous numbers in the layout. Moving both
-    senses into the band removes that budget rather than loosening it: the right
-    column now carries three pods, and the pressure moves to the band, which is
-    pinned below.
+    felt by first. The margin is 28 px rather than the 48 px this test recorded
+    before Revision 27, and the reason is worth stating: the arena card grew from
+    the 564 px a 10x10 world used to produce to a constant 544 px, so the right
+    column -- measured against the arena's bottom edge -- lost 20 px. It gained
+    the property that it can never move again.
     """
     ctx = _ctx(M4)
-    # `band=True` is what `pack()` selects for this world (see `_candidates`);
-    # the default is False, which is the arrangement this world no longer uses.
+    # `band=True` is what `pack()` selects for this world (see `_candidates`).
     right = [c for c in P.present_cards(ctx, band=True) if c.region == "right"]
     assert {c.key for c in right} == {
         "proprioception", "extero_nociception", "collision", "thermoception"}, (
@@ -685,23 +710,23 @@ def test_the_campfire_worlds_columns_are_pinned():
     lay = pack(ctx)
     avail = lay.regions["right"].h
     assert need == 516
-    assert avail == 564, "with a band, the right column stops at the arena's bottom"
-    assert avail - need == 48, (
-        f"the recorded margin is 48px; this run has {avail - need}px")
+    assert avail == 544, "with a band, the right column stops at the arena's bottom"
+    assert avail - need == 28, (
+        f"the recorded margin is 28px; this run has {avail - need}px")
 
     # The thermoception card is the column's only grower, so the slack lands
-    # there and the column bottom-aligns with the arena at y = 628.
-    assert lay.cards["thermoception"].h == P.THERMO_H + 48 == 278
-    assert lay.cards["thermoception"].bottom == lay.cards["arena"].bottom == 628
+    # there and the column bottom-aligns with the arena at y = 608.
+    assert lay.cards["thermoception"].h == P.THERMO_H + 28 == 258
+    assert lay.cards["thermoception"].bottom == lay.cards["arena"].bottom == 608
 
     # The band, which is where the pressure moved to.
     band = lay.regions["band"]
-    assert (band.x, band.y, band.w, band.h) == (360, 644, 1056, 236)
+    assert (band.x, band.y, band.w, band.h) == (360, 624, 1056, 256)
     olf, vis = lay.panels["olfactory"], lay.panels["visual"]
-    assert (olf.x, olf.y, olf.w, olf.h) == (360, 644, 520, 236)
-    assert (vis.x, vis.y, vis.w, vis.h) == (896, 644, 520, 236)
+    assert (olf.x, olf.y, olf.w, olf.h) == (360, 624, 520, 256)
+    assert (vis.x, vis.y, vis.w, vis.h) == (896, 624, 520, 256)
     assert max(P.OLF_ROWS_H, P.VISUAL_ROWS_H) == 232 <= band.h, (
-        "the taller channel-row panel must fit the band a 10x10 world leaves")
+        "the taller channel-row panel must fit the band")
 
 
 def test_the_channel_row_heights_agree_with_the_painter_that_draws_them():
@@ -711,7 +736,7 @@ def test_the_channel_row_heights_agree_with_the_painter_that_draws_them():
     module, which makes them exactly the kind of number that drifts from the
     thing it describes. So the arithmetic is redone here from the painter's own
     constants: a 64 px title strip, the taller column's rows at that sense's
-    pitch, and a 16 px footer for the caption naming the scale.
+    pitch, and a 16 px footer.
     """
     from src.environment.dashboard import painters as PN
 

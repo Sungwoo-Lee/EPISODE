@@ -20,44 +20,50 @@ identical boxes -- a property a test pins by inspecting the signatures.
 THE GEOMETRY, AND WHERE THE NUMBERS COME FROM. ``OUTER``, ``GAP``, ``PAD`` and
 ``HEAD`` are read out of the design sketch's surviving style module,
 ``renderer_layout_redesign/dashboard_style.py``, which still carries them as its
-own ``OUTER, GAP, PAD, HEAD = 24, 16, 16, 64``. The rest -- the 1440 x 896
-canvas, ``LEFT_W`` and ``MIN_RIGHT_W`` -- came from that sketch's companion
-drawing script, which was DELETED on 2026-09-17 when this redesign's page moved
-to showing the real renderer's output rather than a mock of it. Their
-justification today is the plan itself: the canvas size is user decision Q3,
-``LEFT_W = 320`` is the World map's column kept by user decision Q21, and
-``MIN_RIGHT_W = 440`` is the thermoception diamond's own stated demand (see
-``panels.THERMO_MIN_W``, which is where that number is reasoned about). The
-packing arithmetic they produce is re-derived and pinned in the plan's
-Revision 18 (section R18.1), and ``test_dashboard_layout.py`` fails with the
-worked numbers if one moves. None of them is re-chosen here. Three columns sit
-under a header: a fixed-width left column, the arena card in the middle, and
-whatever width is left over on the right.
+own ``OUTER, GAP, PAD, HEAD = 24, 16, 16, 64``. ``LEFT_W = 320`` is the World
+map's column and ``MIN_RIGHT_W = 440`` is the thermoception diamond's own stated
+demand (see ``panels.THERMO_MIN_W``). Three columns sit under a header: a
+fixed-width left column, the arena card in the middle, and whatever width is left
+over on the right.
 
     right_w = 1440 - 24 - (24 + 320 + 16 + card_w + 16) = 1040 - card_w
 
-THE ARENA IS A FIXED BOX, NOT A GROW PANEL. The arena draws the whole world at
-exactly ``ARENA_CELL_PX`` pixels per world square. It never absorbs leftover
-height and never grows to fill its column. Leftover height goes only to the
-minimap and to the thermoception card. Worked numbers, both pinned by tests:
+THE ARENA IS A FIXED BOX OF FIXED SIZE, AND THE WINDOW IS A ZOOM INSIDE IT
+(user decision 2026-09-17; plan Revision 27, which supersedes Revision 18's
+whole-world arena). The arena's drawing area is **always** :data:`ARENA_PX`
+square. What ``visualization.local_view_size`` decides is how many world squares
+are drawn inside that fixed area -- i.e. how far the view is zoomed out:
 
-    10x10 world -> arena card 564 x 564, right column 476 px, band 236 px
-     5x5  world -> arena card 314 x 314, right column 726 px, band 486 px
+    cell = ARENA_PX / view_cells      96 px at 5x5, 68.57 at 7x7, 48 at 10x10
 
-ONE COUPLING THAT IS EASY TO MISS. When a sensor band is present, the right
-column is measured against the *arena's bottom edge*, so a **smaller** world
-gives the right column **less** height, not more. A 5x5 world with a band leaves
-the right column 314 px against the 516 px a thermal right column needs. No
-maintained config reaches that today, but the packer must check it, and it
-checks it in exactly one place: :func:`_validate_region` runs against whatever
-arena height was selected, whichever of the three routes chose it (the world's
-own size, the whole-world rule, or the fallback's shrink step).
+So every world and every window packs to the same frame:
+
+    arena card 544 x 544   right column 496 px   sensor band 256 px
+
+That invariance is the point. The arrangement this replaces sized the card from
+the WORLD (``view * 50 + 64``), so the left column, the right column and the band
+all reflowed when the world's size changed, and the layout stopped fitting at
+11x11 -- a 20x20 world silently changed the dashboard's shape instead of simply
+showing more world at a smaller square. Nothing reflows now: a 5x5 world and a
+50x50 world produce identical panel boxes, and only the grid's own square size
+moves.
+
+``ARENA_PX = 480`` is not chosen here. It is the approved design sketch's own
+arena -- a 5x5 window at a 96 px square (plan section R18.1, the "Figure 3 as
+approved" column) -- so this reproduces the approved frame exactly rather than
+approximating it.
+
+WHAT THE PACKER STILL REFUSES. The arena can no longer overflow, so the fallback
+ladder exists only for genuinely impossible panel sets (a right column whose pods
+do not fit the 544 px the arena leaves it). The one arena-side refusal left is a
+window so wide that the square falls below :data:`ARENA_CELL_MIN_PX`, the size at
+which the movers' artwork stops being legible when a square is shared.
 """
 
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Iterable, Iterator, Mapping, Sequence
+from typing import Iterator, Mapping, Sequence
 
 # --------------------------------------------------------------------------
 # Canvas and column constants, read from the approved design sketch.
@@ -75,36 +81,55 @@ LEFT_W: int = 320        # left column width (fixed)
 MIN_RIGHT_W: int = 440   # the thermoception diamond plus its shared scale
 MIN_BAND_H: int = 200    # a sensor band below this is unreadable
 
-#: Pixels per world square in the arena. Decided at Revision 18 (was 48 at
-#: Revision 17, 32 before that). 50 px is the *smallest* square that clears
-#: every measured legibility floor for two animals sharing one square (49 px)
-#: and for a four-way square (50 px) -- it is a floor that is met exactly, not
-#: a comfortable margin. Drawing size and minimum are deliberately the same
-#: number: there is one arena floor, not two.
-ARENA_CELL_PX: int = 50
-ARENA_CELL_MIN_PX: int = 50
+#: The arena's drawing area, in pixels, square -- FIXED, whatever the world size
+#: and whatever the window. 480 = the approved sketch's 5 x 96 px arena.
+ARENA_PX: int = 480
+
+#: The smallest square this renderer will draw, and therefore the widest window.
+#:
+#: It is NOT a taste decision and it is not chosen here: it is
+#: ``cells.RASTER_MIN_DIAMETER_PX / (2 * cells.SHARED_FRAC)`` rounded up -- the
+#: square at which two occupants sharing one square are drawn exactly at the
+#: diameter below which the artwork's silhouette stops surviving the video path's
+#: chroma subsampling. It is restated here rather than imported because this
+#: module must not import a drawing library, and
+#: ``tests/env/test_dashboard_cells.py`` re-derives it from ``cells`` and fails if
+#: the two ever disagree.
+#:
+#: At ARENA_PX = 480 it puts the widest usable window at **11 x 11** (43.6 px a
+#: square); a 12-wide window would draw 40 px squares and is refused.
+ARENA_CELL_MIN_PX: float = 43.0
 
 # Arena card chrome. The card is square by construction:
-#   w = view * 50 + 2 * 32      h = 48 + view * 50 + 16
+#   w = ARENA_PX + 2 * 32      h = 48 + ARENA_PX + 16
 ARENA_TITLE_H: int = 48
 ARENA_BOTTOM_PAD: int = 16
 ARENA_SIDE_PAD: int = 32
 
+#: The arena card's outer size, constant: 480 + 64 = 544 on both axes.
+ARENA_CARD_W: int = ARENA_PX + 2 * ARENA_SIDE_PAD
+ARENA_CARD_H: int = ARENA_TITLE_H + ARENA_PX + ARENA_BOTTOM_PAD
+
 #: Card title strip height, used as the default top chrome of a single-panel card.
 CARD_TITLE_H: int = 46
 
-#: The action pill in the arena card's title strip (plan Q4). Its size is not
-#: pinned anywhere in the plan -- the design sketch draws the pill but never
-#: states a box -- so these are developer-chosen and are refined in Phase 2 when
-#: the text can actually be measured. Nothing else depends on them: the badge
-#: sits in chrome the arena already reserves.
+#: The action pill in the arena card's title strip (plan Q4).
 BADGE_W: int = 120
 BADGE_H: int = 28
 
-#: On this canvas the largest whole-world square is 53 px: at 54 px the sensor
-#: band falls to 196 px and the right column to 436 px, both under their minima.
-#: Recorded so nobody has to re-derive it; 50 px sits 3 px below the ceiling.
-ARENA_CELL_CEILING_PX: int = 53
+
+def arena_cell_px(view_cells: int) -> float:
+    """Pixels per world square for a ``view_cells``-wide window.
+
+    The arena is a fixed box, so this is a division rather than a table: the
+    window zooms, the panel does not move. A non-integer result (68.571 px at a
+    7-wide window) is deliberate and harmless -- every square is drawn inset by
+    1 px on each side, so neighbouring squares never share an edge and no seam
+    can appear between two rounded fills.
+    """
+    if view_cells < 1:
+        raise LayoutOverflowError(f"a window of {view_cells} squares cannot be drawn")
+    return ARENA_PX / float(view_cells)
 
 
 class LayoutOverflowError(ValueError):
@@ -198,15 +223,18 @@ class Layout:
     ``cards`` are the placed units and are pairwise disjoint. ``panels`` are the
     leaf boxes actually painted into; each lies inside its card, and leaves
     sharing a card are pairwise disjoint. Splitting the two is what lets the
-    arena expose its drawing area (exactly ``view x view`` squares of 50 px)
-    separately from the card that frames it.
+    arena expose its drawing area (always ``ARENA_PX`` square) separately from
+    the card that frames it.
+
+    ``view_cells`` is how many world squares the grid draws across, and
+    ``cell_px`` is ``ARENA_PX / view_cells``.
     """
 
     cards: Mapping[str, Box]
     panels: Mapping[str, Box]
     parent: Mapping[str, str]
     view_cells: int
-    cell_px: int
+    cell_px: float
     band: bool
     step: str
     compact: bool
@@ -214,34 +242,37 @@ class Layout:
 
     @property
     def arena_grid(self) -> Box:
-        """The arena's drawing area: exactly ``view_cells * cell_px`` square."""
+        """The arena's drawing area: ``ARENA_PX`` square, always."""
         return self.panels["arena"]
 
 
 # --------------------------------------------------------------------------
 # Packing
 # --------------------------------------------------------------------------
+def window_cells(ctx) -> int:
+    """How many world squares the grid view draws across.
+
+    THE CONFIG DECIDES WHAT IS DRAWN, and the floor is the one thing it may not
+    undercut: the view must at least cover what the agent can sense, so a sense
+    reaching ``r`` squares forces a ``2r + 1`` window however small
+    ``local_view_size`` is set. A world no larger than that window is drawn
+    whole -- the whole world is the SPECIAL CASE of a window wider than the
+    world, not the first choice.
+    """
+    window = max(int(ctx.local_view_size), 2 * int(ctx.max_sense_range) + 1)
+    return max(1, min(window, int(max(ctx.world_w, ctx.world_h))))
+
+
 def pack(ctx, cards: Sequence[CardDemand] | None = None) -> Layout:
     """Place every present panel, or raise :class:`LayoutOverflowError`.
 
     ``cards`` is normally derived from the registry; passing it explicitly is how
     a test packs a demand set that no real config produces.
 
-    The fallback ladder is tried in the order the plan fixes (section D7.7 item
-    3), and the step that succeeded is recorded on the returned
-    :class:`Layout` so a concatenated video can assert it never changed:
-
-      0. the whole world at 50 px  -- the only step a maintained config reaches
-      1. a local window, ``max(local_view_size, 2 * max_range + 1)``
-      2. the side-column layout
-      3. the sensor-band layout
-      4. shrink the window by 2 toward ``local_view_size``
-      5. ``compact`` minimum sizes
-      6. raise
-
-    Every candidate is validated by the same code, so the right column is
-    checked against whatever arena height that candidate chose. That single
-    check covers all three routes to an arena height.
+    The ladder is two steps long now, and that is a consequence of the arena
+    becoming a fixed box (Revision 27): the arena cannot overflow, so the only
+    thing left to try is the ``compact`` vitals rows, and the only thing that can
+    still fail is a right column whose own pods do not fit.
     """
     last: LayoutOverflowError | None = None
     for view, band, compact, step in _candidates(ctx):
@@ -254,34 +285,17 @@ def pack(ctx, cards: Sequence[CardDemand] | None = None) -> Layout:
 
 
 def _candidates(ctx) -> Iterator[tuple[int, bool, bool, str]]:
-    """Yield ``(view_cells, band, compact, step_name)`` in the plan's order."""
-    world = int(ctx.world_w)
+    """Yield ``(view_cells, band, compact, step_name)``.
+
+    The view is decided by the CONFIG (:func:`window_cells`) and never by whether
+    the packer finds it convenient, so there is exactly one view here and the
+    remaining candidate is the compact fallback for the left column's text rows.
+    """
+    view = window_cells(ctx)
     natural_band = bool(ctx.band_senses)
-    window = max(int(ctx.local_view_size), 2 * int(ctx.max_sense_range) + 1)
-
-    yield world, natural_band, False, "whole_world"
-    if window != world:
-        yield window, natural_band, False, "local_window"
-
-    # Steps 2 and 3 of the plan's ladder -- "side column" then "sensor band" --
-    # are not a free choice here. The approved design sketch settles the
-    # selection: a grid-kind sense (smell or vision at range >= 1) goes in the
-    # band, and everything else goes in the side column. So the two steps are
-    # determined by the config rather than tried in turn, and there is nothing
-    # to move into a band when no grid-kind sense exists. This is also what
-    # makes the 5x5-with-a-band case raise rather than quietly falling back to a
-    # side column that happens to fit.
-
-    # Step 4: shrink the window by 2 per step, never below local_view_size.
-    # This is the step that can *shorten* the arena and so take height away from
-    # a right column measured against the arena's bottom edge -- which is why it
-    # is validated like every other candidate rather than trusted.
-    view = min(window, world) - 2
-    while view >= int(ctx.local_view_size) and view >= 1:
-        yield view, natural_band, False, f"shrink_{view}"
-        view -= 2
-
-    yield world, natural_band, True, "compact"
+    whole = view >= int(max(ctx.world_w, ctx.world_h))
+    yield view, natural_band, False, ("whole_world" if whole else "local_window")
+    yield view, natural_band, True, "compact"
 
 
 def _pack_once(
@@ -299,21 +313,31 @@ def _pack_once(
 
         cards = _panels.present_cards(ctx, band=band, compact=compact)
 
+    cell_px = arena_cell_px(view)
+    if cell_px < ARENA_CELL_MIN_PX:
+        raise LayoutOverflowError(
+            f"a {view}x{view} window draws {cell_px:.1f}px squares in the arena's "
+            f"fixed {ARENA_PX}px box, below the {ARENA_CELL_MIN_PX:.0f}px at which two "
+            f"occupants sharing one square stop being separable in the finished video. "
+            f"Lower visualization.local_view_size (the widest window this renderer "
+            f"draws is {int(ARENA_PX // ARENA_CELL_MIN_PX)}x"
+            f"{int(ARENA_PX // ARENA_CELL_MIN_PX)}); the arena card is a fixed size and "
+            f"is never grown to accommodate a wider window."
+        )
+
     top = HEAD
     bottom = CANVAS_H - GAP
     lx = OUTER
     cx = lx + LEFT_W + GAP
 
-    grid_px = view * ARENA_CELL_PX
-    card_w = grid_px + 2 * ARENA_SIDE_PAD
-    card_h = ARENA_TITLE_H + grid_px + ARENA_BOTTOM_PAD
+    card_w, card_h = ARENA_CARD_W, ARENA_CARD_H
 
     rx = cx + card_w + GAP
     rw = CANVAS_W - OUTER - rx
     if rw < MIN_RIGHT_W:
         raise LayoutOverflowError(
             f"right column is {rw}px wide; needs {MIN_RIGHT_W}px "
-            f"(arena view {view}x{view} at {ARENA_CELL_PX}px makes a {card_w}px card)"
+            f"(the arena card is {card_w}px)"
         )
 
     card_boxes: dict[str, Box] = {}
@@ -357,8 +381,7 @@ def _pack_once(
         need = max(c.min_h for c in band_cards)
         if band_h < max(MIN_BAND_H, need):
             raise LayoutOverflowError(
-                f"sensor band needs {max(MIN_BAND_H, need)}px, has {band_h}px "
-                f"(arena view {view}x{view} pushes the band down to y={band_y})"
+                f"sensor band needs {max(MIN_BAND_H, need)}px, has {band_h}px"
             )
         band_w = CANVAS_W - OUTER - cx
         band_box = Box(cx, band_y, band_w, band_h)
@@ -366,8 +389,9 @@ def _pack_once(
         card_boxes[band_cards[0].key] = band_box
 
     # The right column is measured against the arena's bottom edge whenever a
-    # band is present. This is the coupling that makes a SMALLER world give the
-    # right column LESS height.
+    # band is present. With a fixed arena this is a CONSTANT 544 px rather than
+    # something the world's size moves, which is what removed the coupling that
+    # made a smaller world starve the right column (Revision 27).
     right_bottom = (top + card_h) if band_cards else bottom
     regions["left"] = Box(lx, top, LEFT_W, bottom - top)
     regions["right"] = Box(rx, top, rw, right_bottom - top)
@@ -385,7 +409,7 @@ def _pack_once(
         panels=panels,
         parent=parent,
         view_cells=view,
-        cell_px=ARENA_CELL_PX,
+        cell_px=cell_px,
         band=bool(band_cards),
         step=step,
         compact=compact,
@@ -543,12 +567,7 @@ def _validate(layout: Layout, cards: Sequence[CardDemand]) -> None:
 
     # NO EXEMPTION FOR COINCIDENT BOXES. Two cards with equal boxes share every
     # pixel of both -- the most complete overlap there is -- so equality is caught
-    # by the ordinary intersects() test rather than skipped before it. The
-    # exemption this replaces was keyed on the boxes' COORDINATES matching, which
-    # let through any two cards that happened to coincide, whatever they were; the
-    # case it was written for (the band) cannot arise, because one card never pairs
-    # with itself and a second band card is refused in _pack_once before a box is
-    # assigned.
+    # by the ordinary intersects() test rather than skipped before it.
     for i, a in enumerate(keys):
         for b in keys[i + 1:]:
             if layout.cards[a].intersects(layout.cards[b]):

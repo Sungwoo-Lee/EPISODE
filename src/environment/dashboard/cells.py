@@ -1,77 +1,52 @@
-"""One square of the world: the floor it stands on, and who is standing on it.
+"""One square of the world: who is standing on it, and how they are drawn.
 
 PLAIN-LANGUAGE SUMMARY. A square of the world can hold more than one thing at
 once -- the agent standing in a bush, a predator and a rabbit in the same square,
 food lying on a rock. The old renderer drew every occupant on the *same centre
 point*, so two drawings landed on top of each other and whichever name sorted
 later in the alphabet won: an agent standing in a bush rendered as an agent
-alone. This module is the fix the user chose (**variant H**, decided question
-Q18), and its rule is one sentence:
+alone. This module is where that is fixed, and since 2026-09-17 it is fixed the
+way the approved design draws it (plan Revision 27):
 
-    **Terrain is the floor, not a picture in the middle of the square.**
+    **One occupant is a centred glyph. Two or more stand side by side.**
 
-A bush, rock, tree or campfire is drawn as ground cover filling the square --
-inset by :data:`BED_MARGIN` on every side, so a ring of the square's own
-temperature colour always shows -- and the occupants stand *on* it. Because the
-floor costs the occupants no room, a lone agent on a bush is drawn at exactly the
-size it would be on an empty square. A second and a third occupant stand side by
-side in a band across the middle of the square. From three occupants up the
-square degenerates to equal tiles with no focal point: that is a **property** of
-the design, recorded rather than hidden (plan section R17.5 item 2).
+A square holding ONE thing -- a rock, a campfire, an apple, the agent -- is drawn
+exactly as the approved mock draws it: the entity's own artwork, centred, at that
+entity's own size. That is the overwhelmingly common case and it is pixel-for-
+pixel the design the user chose. Only when a square holds two or more does the
+composition depart from the mock, and then it departs in the one direction that
+cannot lose information: the occupants are laid out in disjoint slots -- two side
+by side, three or four in quadrants -- so every one of them is visible. At the
+arena's 96 px square (a 5-wide window) a slot is 45 px across, which is larger
+than the whole square was in some earlier drafts.
 
-THE MOVERS ARE THE USER'S OWN ARTWORK (2026-09-17). Each of the five occupant
-tokens is the PNG the user personally chose from the icon contact sheets --
-``assets/dashboard_icons/*.png``, the rose apple with its green leaf, the
-charcoal thorn cluster, the grey rabbit with the pink inner ear -- drawn as one
-pre-resized image per slot. **The terrain beds stay vector**, because the terrain
-PNGs are centred glyphs from before variant H and cannot serve as the full-bleed
-floors this module draws.
+WHAT THIS REPLACES, AND WHY. Between 2026-09-16 and today terrain was drawn as
+"variant H": a full-bleed FLOOR filling the square, with the movers standing on
+top of it. That solved the same overdraw problem and the user has since said it
+is not what they want -- the approved mock draws a rock as a rock, centred, not
+as a carpet. Variant H is therefore withdrawn together with its bed forms, its
+``BED_MARGIN``, and the audit's floor-versus-occupant area split. Terrain is now
+an occupant like any other: it takes a slot when the square is shared, and it is
+counted by the pixel audit as a thing that must be visible.
 
-This reverses the claim that stood here until today, and the reversal is the
-point rather than an exception: "a raster icon cannot supply ``MIN_MARK x h``,
-so a raster icon cannot be checked" is false. A mark is measured ONCE from the
-asset and frozen, exactly as the vector fractions were frozen -- see
-:data:`RASTER_MARK` and :func:`measure_raster_mark` -- and the test re-measures
-it FROM THE PNG, so replacing an asset with weaker artwork fails the suite. That
-is a stronger guard than a typed constant, because a typed constant cannot
-notice that the file under it changed.
+THE ARTWORK IS THE USER'S OWN. All NINE entities are the PNGs the user chose by
+hand from the icon contact sheets -- ``assets/dashboard_icons/*.png``: the rose
+apple with its green leaf, the charcoal thorn cluster, the grey rabbit with the
+pink inner ear, and the four terrain glyphs (rock, bush, tree, campfire) that
+variant H had stopped reading. Nothing in a world square is drawn in code any
+more.
 
-WHAT THE MEASUREMENT THEN SAID, WHICH IS NOT WHAT THE VECTOR FORMS SAID. The
-chosen artwork draws its identifying marks **2.2-2.4x thinner** than the vector
-imitations of it did, so at a 50 px square three of the four raster marks do NOT
-clear the 3 px floor those imitations were built to clear (measured at solo size:
-food leaf 4.16 px, but hiding-predator spike tip 2.45, rabbit inner ear 2.30,
-predator eye slit 2.16). The floor is therefore NOT silently lowered and NOT
-silently kept: rasters are judged by :data:`RASTER_MIN_DIAMETER_PX` and
-:data:`RASTER_MIN_MARK_AREA_PX2` -- the pair validated by the design round's own
-4:2:0 + JPEG compression test -- and :data:`MARK_FLOOR_PX` stays exactly where it
-was, still enforced, for the vector forms it was swept on. The substitution is
-recorded in the plan and in the Implementation Report, never here alone.
-
-TWO CONSTRAINTS THAT LOOK LIKE STYLE AND ARE NOT.
-
-1. **Each bed is exactly one artist**, and its ink covers at least 40 % of the
-   square (plan section R20.8). The pixel audit separates "floor" from
-   "occupant" by *measured area*, never by a painter's say-so, so a bed split
-   into six little artists would have its flames and logs counted as an occupant
-   and would fail a correct frame. One artist, measured whole.
-2. **Depth is pinned, not incidental** (sections R20.1, R20.2): bed **below**
-   token, the agent's square outline **below** token, a sense's footprint
-   outline **below** token. Drawn above, a 1.5 px footprint edge crossing a
-   20 px occupant deletes ~7 % of it and the audit's survival floor fires on a
-   picture that is actually correct. Below, the occupant is the subject and the
-   annotation passes behind it -- which is also the better picture.
+ASPECT RATIO IS PRESERVED, AND THAT IS NOT A DETAIL. The four terrain masters are
+not square -- measured on their own alpha bounding boxes, rock is 1.52 wide for 1
+tall, the tree 0.72 -- so mapping a master into a square box would draw a
+squashed rock and a stretched tree. Each token is fitted INSIDE its slot's box at
+its own aspect instead.
 
 VOCABULARY, fixed here so painter, test and audit use one set of words:
 **ground** = the square's own fill (its temperature colour, or the neutral track
-when the world has no temperature); **bed** = the terrain ground cover;
-**token** = one occupant's drawing; **slot** = the box a token is drawn for;
-**h** = a token's ink half-extent in pixels, the one number that decides
-legibility.
-
-Forms are ported from the round-2 design mock
-``tmp/20260916_design_cell_cooccupancy_r2/cooccupancy_r2.py``, with the bed forms
-rebuilt full-bleed per the constraint above.
+when the world has no temperature); **token** = one occupant's drawing; **slot** =
+the box a token is drawn for; **h** = a token's ink half-extent in pixels, the one
+number that decides legibility.
 """
 
 from __future__ import annotations
@@ -92,40 +67,60 @@ ICON_DIR = os.path.abspath(os.path.join(
 # The rule's constants
 # --------------------------------------------------------------------------
 
+#: Terrain. At most one per square, ever (environment rule R1: reset places every
+#: non-agent entity on a distinct square).
+TERRAIN_NAMES: frozenset[str] = frozenset({"rock", "bush", "tree", "campfire"})
+
 #: Draw order, explicit and never alphabetical. The observed overdraw bug is
 #: exactly what a ``sorted()`` over entity names buys. Slots are filled left to
 #: right, then top to bottom, in this order.
+#:
+#: TERRAIN COMES LAST, and that is the ordering decision the ceiling rests on: a
+#: square can show four things, so when a fifth would be needed the one dropped
+#: is the one that moves least and matters least to a viewer watching an animal
+#: being chased. The agent is first and is never the one dropped.
 CELL_PRIORITY: tuple[str, ...] = (
     "agent", "predator", "hiding_predator", "food", "neutral",
+    "rock", "bush", "tree", "campfire",
 )
 
-#: Terrain is the floor. At most one per square, ever (environment rule R1:
-#: reset places every non-agent entity on a distinct square).
-TERRAIN_NAMES: frozenset[str] = frozenset({"rock", "bush", "tree", "campfire"})
+#: How many occupants one square can show. Four slots, four occupants.
+MAX_SLOTS = 4
 
-#: Share of the square left showing the ground on every side, so a square's
-#: temperature is never completely painted over by its terrain.
-BED_MARGIN = 0.14
-
-#: A lone occupant's ink half-extent, as a share of the square.
+#: A LONE occupant's ink half-extent, as a share of the square. These are the
+#: approved sketch's own glyph sizes, measured off its drawing code
+#: (``renderer_layout_redesign/dashboard_style.py``) rather than re-chosen:
 #:
-#: 0.30 -> 0.34 on 2026-09-17. The adopted spec says the white token is
-#: "0.34 x cell" and always did; the renderer had been drawing every mover at
-#: 0.30, a shrink nobody decided and which the plan deferred to this checkpoint.
-#: It costs the arena nothing -- the tokens sit in slots that were already wider
-#: than this -- and lifts every identifying mark by 13 %.
-SOLO_H = 0.34
+#:   * a mover's white token disc is ``0.34 * s``          (``ds.token``)
+#:   * the agent's outer halo is ``1.32 * 0.30 * s`` = 0.396  (``ds.agent_marker``)
+#:   * a terrain glyph spans ``0.26..0.285 * s`` depending on which one it is
+#:     (bush 0.261, rock 0.270, campfire 0.285), so terrain takes the middle of
+#:     that range and each glyph keeps its own aspect inside it.
+#:
+#: The agent is bigger than a mover because its halo is ink that reaches past the
+#: disc, and the mock draws it that way.
+SOLO_FRAC: dict[str, float] = {
+    "agent": 0.396,
+    "food": 0.34, "predator": 0.34, "hiding_predator": 0.34, "neutral": 0.34,
+    "rock": 0.27, "bush": 0.27, "tree": 0.27, "campfire": 0.27,
+}
 
-#: The band a shared square lays its occupants out in, as a share of the square,
-#: and the side margin left round that band.
-BAND_TWO = 0.60
-BAND_MANY = 0.88
-SLOT_MARGIN = 0.05
-SLOT_FILL = 0.92        # a token fills this much of the slot it was given
+#: A SHARED square's slot: every occupant gets a quarter of the square (two
+#: occupants take the left and right halves, three or four take quadrants), and
+#: the token fills that quarter with a small margin so two neighbours cannot
+#: touch. ``0.235`` is ``0.25 * 0.94``: the slot's own half-width, minus 6 %.
+#:
+#: MEASURED CONSEQUENCE, since this is the number that decides how wide a window
+#: can be: adjacent slot centres are ``cell / 2`` apart and a token is
+#: ``0.47 * cell`` wide, so two neighbours are separated by ``0.03 * cell``
+#: whatever the square size -- 2.9 px at a 5-wide window, 1.4 px at a 10-wide
+#: one. The floor this hits first is :data:`RASTER_MIN_DIAMETER_PX`.
+SHARED_FRAC = 0.235
 
 #: Each token's one identifying mark, and that mark's SHORT dimension as a share
-#: of ``h``. These are constants rather than opinions because they are what makes
-#: a minimum square size computable in a test instead of argued about.
+#: of ``h``, for the VECTOR forms at the bottom of this module. Kept because it
+#: is what :func:`min_cell_for` computes from, and because the vector forms are
+#: the artwork's provenance.
 MIN_MARK: dict[str, float] = {
     "food": 0.34, "predator": 0.30, "neutral": 0.30, "hiding_predator": 0.32,
     "agent": 0.55,
@@ -140,41 +135,30 @@ KEY_MARK: dict[str, str] = {
 #:
 #: UNCHANGED, DELIBERATELY. It is swept on, and still enforced for, the VECTOR
 #: forms below. The raster movers are judged by the pair beneath it instead --
-#: see the module docstring, and :func:`check_legible`, which applies whichever
-#: rule matches how the token is actually drawn rather than applying both to
-#: everything.
+#: see :func:`check_legible`, which applies whichever rule matches how the token
+#: is actually drawn rather than applying both to everything.
 MARK_FLOOR_PX = 3.0
 
 #: The raster substitution, and the two numbers that replace the mark floor for
-#: an artwork token.
+#: an artwork token. See the 2026-09-17 Implementation Report (§R26.1): the
+#: per-mark 3 px floor is unachievable at SHARED size for any square this
+#: renderer draws and the chosen artwork misses it even SOLO, so the gate is the
+#: pair the design round's own 4:2:0 + JPEG q42 compression test validated -- a
+#: token big enough to carry a silhouette, and enough surviving body colour to
+#: tell one from another.
 #:
-#: WHY A SUBSTITUTION EXISTS AT ALL. The per-mark 3 px floor is unachievable at
-#: SHARED size for ANY 50 px square and always was: at ``slot_h(2, 50) = 10.35``
-#: even the vector rabbit's 0.30 x h ear gap is 3.1 px and the four-way is 3.0,
-#: i.e. the vector forms passed only because they drew their marks 2.2-2.4x
-#: thicker than the art they were imitating. Against the real artwork the floor
-#: rejects three of four movers at SOLO size, so keeping it would mean rendering
-#: no frame at all rather than rendering a legible one. The mark is still
-#: MEASURED (:func:`raster_mark_area_px2`, :data:`RASTER_MARK`) and still
-#: reported; what changed is that it is no longer the gate.
-#:
-#: WHAT REPLACES IT, AND ON WHAT EVIDENCE. The design round composited all five
-#: masters at these exact token sizes on a real ground square and pushed them
-#: through 4:2:0 chroma subsampling plus JPEG q42 -- the video path's own
-#: degradation. All five stayed identifiable at solo size and separable at shared
-#: size, where identity moves from the fine mark to SILHOUETTE and BODY COLOUR.
-#: These two numbers are what that evidence actually supports: a token big enough
-#: to carry a silhouette, and enough surviving body colour to tell one from
-#: another. They are not a loosened version of the mark floor; they measure a
-#: different thing, which is why the mark floor is left standing rather than
-#: edited down to fit.
+#: THESE TWO ARE NOW WHAT LIMITS THE WINDOW. With a fixed 480 px arena the square
+#: shrinks as the window widens, so the diameter floor is what says how far out
+#: the view may zoom: ``2 * SHARED_FRAC * cell >= 20`` puts the smallest square
+#: at 42.6 px and the widest window at 11 x 11. ``layout.ARENA_CELL_MIN_PX``
+#: restates that and a test re-derives it from here.
 RASTER_MIN_DIAMETER_PX = 20.0
 RASTER_MIN_BODY_AREA_PX2 = 40.0
 
-#: The white token disc's radius in every mover master, as a fraction of the
+#: The white token disc's radius in every MOVER master, as a fraction of the
 #: 1000 px canvas -- measured, and identical across all four non-agent masters
-#: (alpha bbox 0.153..0.847). It is the number that converts a mark measured on
-#: the master into a fraction of ``h``.
+#: (alpha bbox 0.153..0.847). It converts a mark measured on the master into a
+#: fraction of ``h``.
 TOKEN_DISC_FRAC = 0.347
 
 #: Each mover's identifying mark and the palette colour it is painted in, so the
@@ -186,26 +170,30 @@ RASTER_MARK_COLOUR: dict[str, str] = {
     "hiding_predator": P.HIDE_EYE,
 }
 
-#: Each mover's BODY colour -- the large flat field that carries its silhouette.
-#: This, not the mark, is what :func:`check_legible` gates on at shared size:
-#: the compression test found identity moving to silhouette and body colour once
-#: the fine mark stops surviving, so the body is the thing that has to be there.
+#: Each entity's BODY colour -- the large flat field that carries its silhouette.
+#: This, not the mark, is what :func:`check_legible` gates on at shared size.
+#:
+#: THE FOUR TERRAIN GLYPHS ARE IN THIS TABLE SINCE 2026-09-17, and that is a
+#: strengthening rather than bookkeeping: under variant H a bed was "the floor"
+#: and had no legibility gate at all, so nothing measured whether a rock stayed a
+#: rock. Terrain is an occupant now, so it answers to the same floor as everyone
+#: else.
 RASTER_BODY_COLOUR: dict[str, str] = {
     "food": P.FOOD,
     "predator": P.PRED,
     "neutral": P.NEUT,
     "hiding_predator": P.HIDE_BODY,
     "agent": P.IRIS,
+    "rock": P.ROCK,
+    "bush": P.BUSH,
+    "tree": P.TREE,
+    "campfire": P.LOG_BACK,
 }
 
-#: The frozen measurement: each mark's SHORT DIMENSION on its own master, as a
-#: fraction of ``h``. Frozen so the arithmetic is readable without opening a PNG,
-#: and RE-MEASURED from the PNG by ``test_dashboard_cells.py`` so swapping in
+#: The frozen measurement: each mover's mark's SHORT DIMENSION on its own master,
+#: as a fraction of ``h``. Frozen so the arithmetic is readable without opening a
+#: PNG, and RE-MEASURED from the PNG by ``test_dashboard_cells.py`` so swapping in
 #: weaker artwork fails rather than silently shipping.
-#:
-#: At the decided 50 px square these are 4.16 / 2.45 / 2.30 / 2.16 rendered px
-#: solo. Recorded here because the numbers, not an adjective, are what a later
-#: reader needs to re-open this decision.
 RASTER_MARK: dict[str, float] = {
     "food": 0.245,
     "hiding_predator": 0.144,
@@ -220,8 +208,7 @@ CHEVRON_FLOOR_PX = 6.0
 
 #: Depth, pinned. Strictly increasing, and every arena overlay is below tokens.
 GROUND_Z = 1.0
-BED_Z = 2.0
-OUTLINE_Z = 3.0         # the agent's square outline
+OUTLINE_Z = 3.0         # an overlay on a square (no longer drawn by the arena)
 FOOTPRINT_Z = 3.5       # a sense's diamond footprint
 TOKEN_Z = 5.0
 
@@ -232,7 +219,7 @@ ARROW_TEXT = {"UP": "↑", "RIGHT": "→", "DOWN": "↓", "LEFT": "←"}
 class CellLegibilityError(ValueError):
     """A square is too small to draw its occupants legibly.
 
-    Raised instead of drawing a chevron or an identifying mark below its floor.
+    Raised instead of drawing a token below its measured floor.
     """
 
 
@@ -240,8 +227,9 @@ class CellLegibilityError(ValueError):
 class Shape:
     """One filled path of a compound form, with its own colours.
 
-    A bed or a token is a LIST of these, which the painter hands to a single
-    Matplotlib artist -- see the module docstring, constraint 1.
+    The VECTOR forms at the bottom of this module are lists of these. They are no
+    longer the drawing path -- the artwork is -- but they are kept because they
+    are the artwork's provenance and because the icon contact sheet draws them.
     """
 
     patch: object
@@ -254,8 +242,10 @@ class Shape:
 class Raster:
     """One occupant drawn as the user's own artwork, in its own image artist.
 
-    ``px`` is the INTEGER edge length the master is resampled to, once, at build
-    time. Matplotlib's own on-the-fly resampling is mushy at 20 px, so the image
+    ``hw`` / ``hh`` are the token's half-width and half-height in pixels: the
+    master's own aspect ratio, fitted inside the slot's ``2h`` box. ``px_w`` /
+    ``px_h`` are the INTEGER pixel size the master is resampled to, once, at build
+    time -- Matplotlib's on-the-fly resampling is mushy at 20 px, so the image
     handed to the canvas is already exactly the size it will occupy and is drawn
     with ``interpolation="none"``.
     """
@@ -263,15 +253,17 @@ class Raster:
     name: str
     cx: float
     cy: float
-    h: float
-    px: int
+    hw: float
+    hh: float
+    px_w: int
+    px_h: int
     action: str | None = None
 
     @property
     def extent(self):
         """``(left, right, bottom, top)`` in the arena's y-DOWN pixel space."""
-        return (self.cx - self.h, self.cx + self.h,
-                self.cy + self.h, self.cy - self.h)
+        return (self.cx - self.hw, self.cx + self.hw,
+                self.cy + self.hh, self.cy - self.hh)
 
 
 @dataclass(frozen=True)
@@ -291,13 +283,12 @@ class Slot:
 def _master(name: str):
     """One icon master as an RGBA float array, cropped to its own ink.
 
-    Cropping to the ALPHA BOUNDING BOX is what makes every token the same size
-    as every other: the masters pad their glyphs differently (the agent's halo
-    reaches 0.104..0.896 of its canvas, a mover's token disc 0.153..0.847), so
-    mapping the canvas would draw the agent smaller than the rabbit standing
-    beside it. The bbox is mapped to the slot's ``2h`` box instead, which also
-    keeps every token's ink inside ``h`` -- the property the slot geometry and
-    the pixel audit both assume.
+    Cropping to the ALPHA BOUNDING BOX is what makes every token the size it was
+    asked for: the masters pad their glyphs differently (the agent's halo reaches
+    0.104..0.896 of its canvas, a mover's token disc 0.153..0.847, the rock only
+    0.245..0.769 across and 0.320..0.664 down), so mapping the canvas would draw
+    the agent smaller than the rabbit beside it and leave the rock floating in
+    empty pixels.
     """
     import numpy as np
     from PIL import Image
@@ -305,9 +296,9 @@ def _master(name: str):
     path = os.path.join(ICON_DIR, f"{name}.png")
     if not os.path.exists(path):
         raise FileNotFoundError(
-            f"no artwork for {name!r} at {path}. The movers are drawn from the "
-            f"user's chosen icon set; this package does not fall back to a "
-            f"vector imitation of it, because a frame drawn in the wrong forms "
+            f"no artwork for {name!r} at {path}. Every entity in a world square is "
+            f"drawn from the user's chosen icon set; this package does not fall back "
+            f"to a vector imitation of it, because a frame drawn in the wrong forms "
             f"is the defect this restoration removed."
         )
     im = np.asarray(Image.open(path).convert("RGBA"))
@@ -316,57 +307,78 @@ def _master(name: str):
 
 
 @functools.lru_cache(maxsize=None)
-def icon_array(name: str, px: int, action: str | None = None):
-    """The artwork for ``name``, resampled ONCE to ``px`` x ``px``.
+def master_aspect(name: str) -> float:
+    """The master's own width / height, measured on its alpha bounding box.
 
-    Lanczos, because this is a downsample of about 50:1 and the marks that carry
-    identity are two pixels wide at the far end of it.
+    Measured, not declared: the terrain glyphs are visibly non-square (rock 1.52,
+    bush 1.27, tree 0.72, campfire 1.00) and drawing them into a square box is
+    the difference between a rock and a squashed rock.
+    """
+    m = _master(name)
+    return float(m.shape[1]) / float(m.shape[0])
+
+
+def fit_box(name: str, h: float) -> tuple[float, float]:
+    """``(half_width, half_height)`` for ``name`` drawn inside a ``2h`` box.
+
+    The token keeps its own proportions and touches the box on its longer axis,
+    so ``h`` is always the token's larger half-extent.
+    """
+    ar = master_aspect(name)
+    return (h, h / ar) if ar >= 1.0 else (h * ar, h)
+
+
+@functools.lru_cache(maxsize=None)
+def icon_array(name: str, px_w: int, px_h: int, action: str | None = None):
+    """The artwork for ``name``, resampled ONCE to ``px_w`` x ``px_h``.
+
+    Lanczos, because this is a downsample of roughly 15:1 to 50:1 and the marks
+    that carry identity are two pixels wide at the far end of it.
 
     THE AGENT'S CHEVRON IS COMPOSITED IN HERE, NOT DRAWN OVER THE TOP, and the
-    reason is the audit rather than tidiness. The co-occupancy rule forbids two
-    of a square's occupant artists from sharing a single pixel -- that is how it
+    reason is the audit rather than tidiness. The co-occupancy rule forbids two of
+    a square's occupant artists from sharing a single pixel -- that is how it
     catches one token painted over another -- so a chevron in its own patch
     artist, lying by construction on top of the agent's own disc, would report
-    every agent in every frame as an occupant drawn over an occupant. One token
-    is one artist; the chevron therefore goes into the token's own pixels.
+    every agent in every frame as an occupant drawn over an occupant. One token is
+    one artist; the chevron therefore goes into the token's own pixels.
 
-    It is supersampled 4x and box-filtered down, so the diagonal edges are as
-    smooth as the vector one was at the sizes this actually draws at (17 px and
-    10 px half-extents).
+    It is supersampled 4x and box-filtered down, so the diagonal edges stay smooth
+    at the sizes this actually draws at.
     """
     import numpy as np
     from PIL import Image, ImageDraw
 
-    if px < 1:
-        raise ValueError(f"{name}: an icon cannot be drawn at {px}px")
+    if px_w < 1 or px_h < 1:
+        raise ValueError(f"{name}: an icon cannot be drawn at {px_w}x{px_h}px")
     if action is not None and name != "agent":
         raise ValueError(
             f"{name!r} has no action mark; only the agent carries one "
             f"(asked for {action!r})"
         )
     ss = 4
-    src = Image.fromarray(_master(name)).resize((int(px) * ss, int(px) * ss),
+    src = Image.fromarray(_master(name)).resize((int(px_w) * ss, int(px_h) * ss),
                                                 Image.LANCZOS)
     if name == "agent":
-        big = int(px) * ss
-        c = big / 2.0
-        a = (big / 2.0) * CHEVRON_FRACTION
-        layer = Image.new("RGBA", (big, big), (0, 0, 0, 0))
+        bw, bh = int(px_w) * ss, int(px_h) * ss
+        cxx, cyy = bw / 2.0, bh / 2.0
+        a = (min(bw, bh) / 2.0) * CHEVRON_FRACTION
+        layer = Image.new("RGBA", (bw, bh), (0, 0, 0, 0))
         pen = ImageDraw.Draw(layer)
         if action in ARROW_VEC:
             dx, dy = ARROW_VEC[action]
             nx, ny = -dy, dx
             pen.polygon([
-                (c + dx * a, c + dy * a),
-                (c - dx * a * 0.3 + nx * a * 0.62, c - dy * a * 0.3 + ny * a * 0.62),
-                (c, c),
-                (c - dx * a * 0.3 - nx * a * 0.62, c - dy * a * 0.3 - ny * a * 0.62),
+                (cxx + dx * a, cyy + dy * a),
+                (cxx - dx * a * 0.3 + nx * a * 0.62, cyy - dy * a * 0.3 + ny * a * 0.62),
+                (cxx, cyy),
+                (cxx - dx * a * 0.3 - nx * a * 0.62, cyy - dy * a * 0.3 - ny * a * 0.62),
             ], fill=(255, 255, 255, 255))
         else:
-            r = (big / 2.0) * 0.30
-            pen.ellipse([c - r, c - r, c + r, c + r], fill=(255, 255, 255, 255))
+            r = (min(bw, bh) / 2.0) * 0.30
+            pen.ellipse([cxx - r, cyy - r, cxx + r, cyy + r], fill=(255, 255, 255, 255))
         src = Image.alpha_composite(src, layer)
-    return np.asarray(src.resize((int(px), int(px)), Image.BOX),
+    return np.asarray(src.resize((int(px_w), int(px_h)), Image.BOX),
                       dtype=float) / 255.0
 
 
@@ -419,8 +431,7 @@ def _colour_share(name: str, colour: str) -> float:
     with numpy, and :func:`check_legible` asks for it on every occupied square of
     every frame. Uncached it measured **2.08 s of every 3.62 s** of a five-frame
     render -- 57 % of the renderer's time spent re-measuring an asset that cannot
-    change while the process lives. A property of a PNG on disk belongs in a
-    cache keyed by that PNG, not in the per-frame hot path.
+    change while the process lives.
     """
     import numpy as np
     from matplotlib.colors import to_rgb
@@ -435,9 +446,11 @@ def _colour_area_px2(name: str, colour: str, h: float) -> float:
     """How much of ``colour`` this artwork carries at half-extent ``h``, in px^2.
 
     The share is a property of the artwork; only the multiplication by the
-    token's drawn size depends on the frame.
+    token's drawn size depends on the frame. The drawn area is the token's own
+    fitted box, so a non-square glyph is not credited with area it never covers.
     """
-    return _colour_share(name, colour) * (2.0 * h) ** 2
+    hw, hh = fit_box(name, h)
+    return _colour_share(name, colour) * (2.0 * hw) * (2.0 * hh)
 
 
 def raster_body_area_px2(name: str, h: float) -> float:
@@ -450,13 +463,6 @@ def raster_body_area_px2(name: str, h: float) -> float:
     amber accent that tells it from an ordinary predator, and the pixel audit
     counts a token's own eye towards its own body for the same reason (plan
     sections R19.1 step 5 and R22.1).
-
-    IT IS LOAD-BEARING FOR EXACTLY ONE MOVER, and the numbers are recorded so
-    nobody has to wonder whether the rule was chosen to fit them. At shared size
-    (``h`` = 10.35) the hiding predator's charcoal alone measures **39.41 px²**
-    against the 40 px² floor -- it is a cluster of thin spikes, so its body is
-    mostly edge -- and with its own amber tips counted, as the audit counts them,
-    **45.80 px²**. Every other mover clears the floor on body colour alone.
     """
     colours = {RASTER_BODY_COLOUR[name]}
     if name in RASTER_MARK_COLOUR:
@@ -467,9 +473,7 @@ def raster_body_area_px2(name: str, h: float) -> float:
 def raster_mark_area_px2(name: str, h: float) -> float:
     """The identifying mark's painted AREA at half-extent ``h``, in px^2.
 
-    Reported rather than gated on -- see :func:`check_legible`. At a shared 50 px
-    square these are single-digit numbers for every mover, which is the measured
-    fact behind the substitution the module docstring records.
+    Reported rather than gated on -- see :func:`check_legible`.
     """
     return _colour_area_px2(name, RASTER_MARK_COLOUR[name], h)
 
@@ -490,88 +494,112 @@ def by_priority(names) -> list[str]:
     return sorted(out, key=CELL_PRIORITY.index)
 
 
-def slot_h(n: int, cell: float) -> float:
+def solo_h(name: str, cell: float) -> float:
+    """The ink half-extent of a LONE occupant -- the approved mock's own size."""
+    if name not in SOLO_FRAC:
+        raise KeyError(f"no solo size for {name!r}; known entities are {sorted(SOLO_FRAC)}")
+    return SOLO_FRAC[name] * cell
+
+
+def shared_h(cell: float) -> float:
+    """The ink half-extent of one occupant of a SHARED square."""
+    return SHARED_FRAC * cell
+
+
+def slot_h(n: int, cell: float, name: str = "food") -> float:
     """The ink half-extent for ``n`` occupants sharing a square of ``cell`` px.
 
-    At the decided 50 px square this is **15.00 / 10.35 / 10.12 px** for one,
-    two, and three-or-four occupants (plan section R18.3).
+    ``name`` is consulted only for ``n == 1``, where the size is the entity's own
+    (a terrain glyph is drawn smaller than a mover's token disc, exactly as the
+    mock draws it).
     """
     if n <= 0:
         raise ValueError("a square with no occupants has no slot")
-    if n == 1:
-        return SOLO_H * cell
-    cols = 2
-    rows = 1 if n == 2 else 2
-    band = BAND_TWO if n == 2 else BAND_MANY
-    w = (cell - 2 * SLOT_MARGIN * cell) / cols
-    return min(w, band * cell / rows) / 2 * SLOT_FILL
+    return solo_h(name, cell) if n == 1 else shared_h(cell)
 
 
 def slots(names, cx: float, cy: float, cell: float) -> list[Slot]:
-    """Lay the non-terrain occupants of one square out in their slots.
+    """Lay the occupants of one square out in their slots.
 
-    One centred token for one occupant; a row of two; **two rows** from three up,
-    with the last row centred so three reads as 2-over-1 rather than as a gap. A
-    single row of three was tried in the design round and rejected by
-    measurement: it collapses ``h`` to 0.135 x cell and pushes the four-way
-    minimum square to 75 px -- an artefact of the layout, not of the idea.
+    One centred token for one occupant; the left and right halves for two;
+    quadrants for three or four, with the third centred on the bottom row so
+    three reads as 2-over-1 rather than as a gap.
     """
-    order = by_priority(names)
+    order = by_priority(names)[:MAX_SLOTS]
     n = len(order)
     if n == 0:
         return []
-    h = slot_h(n, cell)
     if n == 1:
-        return [Slot(order[0], cx, cy, h)]
+        return [Slot(order[0], cx, cy, solo_h(order[0], cell))]
 
-    cols = 2
-    rows = 1 if n == 2 else 2
-    band = (BAND_TWO if n == 2 else BAND_MANY) * cell
-    w = (cell - 2 * SLOT_MARGIN * cell) / cols
-    bh = band / rows
-    top = cy - band / 2
-    out: list[Slot] = []
-    for r in range(rows):
-        chunk = order[r * cols:(r + 1) * cols]
-        for c, nm in enumerate(chunk):
-            out.append(Slot(nm, cx - len(chunk) * w / 2 + (c + 0.5) * w,
-                            top + (r + 0.5) * bh, h))
-    return out
+    h = shared_h(cell)
+    q = cell / 4.0
+    if n == 2:
+        centres = [(cx - q, cy), (cx + q, cy)]
+    elif n == 3:
+        centres = [(cx - q, cy - q), (cx + q, cy - q), (cx, cy + q)]
+    else:
+        centres = [(cx - q, cy - q), (cx + q, cy - q),
+                   (cx - q, cy + q), (cx + q, cy + q)]
+    return [Slot(nm, x, y, h) for nm, (x, y) in zip(order, centres)]
 
 
 def min_cell_for(n: int, name: str) -> float:
-    """The smallest square at which ``name``'s identifying mark still survives.
+    """The smallest square at which ``name``'s VECTOR mark still survives.
 
-    Recomputed from the mark fraction rather than quoted: the mark's short
-    dimension is ``MIN_MARK[name] x h``, ``h`` follows :func:`slot_h`, and the
-    mark must clear :data:`MARK_FLOOR_PX`. At the decided constants this returns
-    **49 px** for the binding two-occupant cases and **50 px** for the four-way,
-    which are the two floors the plan records.
+    Recomputed from the mark fraction rather than quoted. It describes the vector
+    forms at the bottom of this module, which are the artwork's provenance and
+    not the drawing path -- the shipped gate is :func:`check_legible`.
     """
-    frac = MIN_MARK[name] * slot_h(n, 1.0)
+    frac = MIN_MARK[name] * (SOLO_FRAC[name] if n == 1 else SHARED_FRAC)
     return MARK_FLOOR_PX / frac
 
 
 def min_cell_for_chevron(n: int) -> float:
     """The smallest square at which the agent's chevron is still legible."""
-    return CHEVRON_FLOOR_PX / (CHEVRON_FRACTION * slot_h(n, 1.0))
+    frac = SOLO_FRAC["agent"] if n == 1 else SHARED_FRAC
+    return CHEVRON_FLOOR_PX / (CHEVRON_FRACTION * frac)
+
+
+def min_cell_legible() -> float:
+    """The smallest square at which a SHARED square can be drawn at all.
+
+    The binding floor across every gate in :func:`check_legible`, computed rather
+    than quoted, because it is what decides how wide a window the renderer will
+    accept. ``layout.ARENA_CELL_MIN_PX`` restates it and a test pins the two
+    together.
+    """
+    need = [RASTER_MIN_DIAMETER_PX / (2.0 * SHARED_FRAC),
+            min_cell_for_chevron(2)]
+    for name in RASTER_BODY_COLOUR:
+        # area scales with h^2, so the cell that puts it exactly on the floor is
+        # found from one measurement at a reference size.
+        ref = 10.0
+        area = raster_body_area_px2(name, ref)
+        need.append(ref * (RASTER_MIN_BODY_AREA_PX2 / area) ** 0.5 / SHARED_FRAC)
+    return max(need)
 
 
 def check_legible(n: int, names, cell: float) -> None:
     """Raise when a square cannot show what it is being asked to show.
 
-    The movers are ARTWORK, so they are judged by the pair the compression test
-    validated -- the token's diameter, and how much of its identifying mark's
+    Every entity is ARTWORK, so all of them are judged by the pair the
+    compression test validated -- the token's size, and how much of its own body
     colour survives -- rather than by :data:`MARK_FLOOR_PX`, which measures a
     property of the vector imitations and is applied to them in
-    :func:`min_cell_for`. The reasoning, and the measured numbers that forced the
-    split, are in the module docstring; this function must not be read as the
-    place the decision was made.
+    :func:`min_cell_for`.
+
+    The diameter is measured on the token's LONGER axis, which is the size the
+    slot actually asked for; a terrain glyph is legitimately thinner than that on
+    its other axis (a rock is 1.5 times as wide as it is tall) and gating on its
+    short side would reject artwork that is drawn exactly as designed. What
+    protects the short side is the body-colour area below, which is measured on
+    the token's real drawn box.
 
     The agent's chevron is still vector, so it still answers to its own floor.
     """
-    h = slot_h(n, cell)
     for nm in names:
+        h = slot_h(n, cell, nm)
         if nm == "agent" and CHEVRON_FRACTION * h < CHEVRON_FLOOR_PX - 1e-9:
             raise CellLegibilityError(
                 f"the agent's chevron would be {CHEVRON_FRACTION * h:.2f}px in a "
@@ -580,37 +608,131 @@ def check_legible(n: int, names, cell: float) -> None:
             )
         if 2.0 * h < RASTER_MIN_DIAMETER_PX - 1e-9:
             raise CellLegibilityError(
-                f"the {nm} token would be {2 * h:.2f}px across in a {cell:.0f}px "
+                f"the {nm} token would be {2 * h:.2f}px across in a {cell:.1f}px "
                 f"square shared by {n}; the floor is {RASTER_MIN_DIAMETER_PX}px, "
                 f"below which the artwork's silhouette stops being separable under "
-                f"the video path's chroma subsampling"
+                f"the video path's chroma subsampling. The arena is a fixed box, so "
+                f"this is a window that has been zoomed too far out: lower "
+                f"visualization.local_view_size."
             )
         if nm in RASTER_BODY_COLOUR:
             area = raster_body_area_px2(nm, h)
             if area < RASTER_MIN_BODY_AREA_PX2 - 1e-9:
                 raise CellLegibilityError(
                     f"the {nm} would keep {area:.1f}px² of its own body colour in a "
-                    f"{cell:.0f}px square shared by {n}; the floor is "
+                    f"{cell:.1f}px square shared by {n}; the floor is "
                     f"{RASTER_MIN_BODY_AREA_PX2}px², below which the silhouette that "
                     f"carries its identity at this size stops being separable"
                 )
 
 
-# --------------------------------------------------------------------------
-# Token forms (companions)
-#
-# Each is drawn FOR a small box rather than scaled down into one, and keeps
-# exactly one identifying mark at the fraction of `h` recorded in MIN_MARK.
-# --------------------------------------------------------------------------
-def _keyline(cx, cy, h) -> Shape:
-    """The white keyline that separates a token from the bed it stands on.
+def token(name: str, cx: float, cy: float, h: float, action=None,
+          shared: bool = True) -> list:
+    """One occupant's drawing: its artwork, as ONE image, fitted to its slot.
 
-    Radius is exactly ``h``: the stroke is **inset** so its OUTER edge lies at
-    ``h`` (plan section R17.3 item 7, as corrected in Revision 19). A keyline
-    centred on ``h`` puts half its width outside, and the keylines of two
-    adjacent slots then kiss -- white on white, invisible to the eye, and the
-    whole of this design's residual measured "glyph overlap".
+    ``shared`` is accepted and ignored: the vector agent needed its halo dropped
+    on a shared square because the halo reached 1.32 x h, wider than anything
+    beneath it. ``agent.png`` carries its halo INSIDE its own alpha bbox, which is
+    mapped to exactly the slot's box, so no part of the artwork can reach a
+    neighbour and there is nothing to drop.
     """
+    if name not in SOLO_FRAC:
+        raise KeyError(f"no artwork for {name!r}; known entities are {sorted(SOLO_FRAC)}")
+    hw, hh = fit_box(name, h)
+    return [Raster(name, cx, cy, hw, hh,
+                   max(1, int(round(2 * hw))), max(1, int(round(2 * hh))),
+                   action if name == "agent" else None)]
+
+
+# --------------------------------------------------------------------------
+# The composition of one square
+# --------------------------------------------------------------------------
+def compose(occupants, cx: float, cy: float, cell: float, action=None):
+    """Turn "who is in this square" into what to draw, before anything is drawn.
+
+    Returns ``[(name, [Raster]), ...]``. Slots are computed first and the drawing
+    follows them: the painter never draws concentrically and then relies on
+    z-order to sort it out, which is the defect this module replaces.
+
+    A square with ONE occupant returns that occupant centred at its own size,
+    which is the approved mock's own picture; only two or more depart from it.
+    """
+    names = list(occupants)
+    terrain = [n for n in names if n in TERRAIN_NAMES]
+    if len(terrain) > 1:
+        raise ValueError(
+            f"square at ({cx:.0f},{cy:.0f}) has two terrains {terrain}; the environment "
+            f"places at most one per square (reset resolves overlaps), so a square never "
+            f"has to compose two"
+        )
+    order = by_priority(names)[:MAX_SLOTS]
+    if order:
+        check_legible(len(order), order, cell)
+    return [(sl.name, token(sl.name, sl.cx, sl.cy, sl.h, action=action,
+                            shared=len(order) > 1))
+            for sl in slots(names, cx, cy, cell)]
+
+
+# --------------------------------------------------------------------------
+# What a READER calls each of these
+# --------------------------------------------------------------------------
+DISPLAY_NAME: dict[str, str] = {
+    "agent": "agent",
+    "predator": "predator",
+    "hiding_predator": "hiding predator",
+    "food": "food",
+    "neutral": "rabbit",
+    "rock": "rock",
+    "bush": "bush",
+    "tree": "tree",
+    "campfire": "campfire",
+}
+
+# Asserted at import, not trusted: an entity the renderer can draw but cannot
+# NAME would reach a page as a bare token, which is the defect this table was
+# added to remove.
+if set(DISPLAY_NAME) != set(SOLO_FRAC):
+    raise RuntimeError(
+        f"DISPLAY_NAME does not cover the entities this module draws: missing "
+        f"{sorted(set(SOLO_FRAC) - set(DISPLAY_NAME))}, "
+        f"unknown {sorted(set(DISPLAY_NAME) - set(SOLO_FRAC))}"
+    )
+if set(CELL_PRIORITY) != set(SOLO_FRAC):
+    raise RuntimeError(
+        f"CELL_PRIORITY and SOLO_FRAC disagree about which entities exist: "
+        f"{sorted(set(CELL_PRIORITY) ^ set(SOLO_FRAC))}"
+    )
+
+
+def display(name: str) -> str:
+    """The name a reader sees for one occupant.
+
+    Raises rather than falling back to the token: a silently passed-through
+    ``neutral`` on a page is the failure this function exists to make loud.
+    """
+    if name not in DISPLAY_NAME:
+        raise KeyError(
+            f"no reader's name for {name!r}; known tokens are {sorted(DISPLAY_NAME)}"
+        )
+    return DISPLAY_NAME[name]
+
+
+# --------------------------------------------------------------------------
+# The VECTOR forms
+#
+# As of 2026-09-17 these are the artwork's PROVENANCE rather than the drawing
+# path: the PNGs in `assets/dashboard_icons/` were generated from these functions
+# and then chosen, by eye, from contact sheets. `token()` draws the PNGs. They are
+# kept because the icon contact sheet draws them and because `MIN_MARK` (which
+# `min_cell_for` computes from) describes them.
+# --------------------------------------------------------------------------
+def _rgb(c):
+    from matplotlib.colors import to_rgb
+    return to_rgb(c)
+
+
+def _keyline(cx, cy, h) -> Shape:
+    """The white keyline that separates a token from what it stands on."""
     lw = max(0.8, h / 8)
     return Shape(Circle((cx, cy), h - lw / 2), "none", P.WHITE, lw)
 
@@ -639,9 +761,7 @@ def cf_predator(cx, cy, h, action=None) -> list[Shape]:
 
 
 def cf_neutral(cx, cy, h, action=None) -> list[Shape]:
-    """The rabbit. Its identifying mark is the EAR GAP -- two tall, separated
-    ears in warm grey -- because the pink ear lining is only ~0.2 h and cannot
-    survive a shared square. The lining is painted only where there is room."""
+    """The rabbit."""
     out = [_keyline(cx, cy, h)]
     for sx in (-1, 1):
         out.append(Shape(Ellipse((cx + sx * 0.40 * h, cy - 0.46 * h), 0.44 * h,
@@ -658,9 +778,7 @@ def cf_neutral(cx, cy, h, action=None) -> list[Shape]:
 
 
 def cf_hiding_predator(cx, cy, h, action=None) -> list[Shape]:
-    """A thorn cluster, not a lurking animal: the entity never moves and has no
-    odour, so the form reads as a static hazard. It keeps the predator's threat
-    pair (charcoal body, amber accent) so the two read as siblings."""
+    """A thorn cluster, not a lurking animal."""
     out = [_keyline(cx, cy, h),
            Shape(Ellipse((cx, cy + 0.66 * h), 1.90 * h, 0.52 * h), P.HIDE_BODY)]
     for xo, ht, w in ((-0.58, 0.50, 0.30), (0.0, 0.98, 0.34), (0.58, 0.58, 0.30)):
@@ -675,21 +793,7 @@ def cf_hiding_predator(cx, cy, h, action=None) -> list[Shape]:
 
 
 def cf_agent(cx, cy, h, action=None, *, shared: bool = True) -> list[Shape]:
-    """The agent.
-
-    **The halo is dropped whenever the square is shared** (plan R17.3 item 8). At
-    full size the marker carries a 16 % iris halo at 1.32 r; in a shared square
-    that halo is ink spilling past ``h`` onto the neighbour, and it was the
-    entirety of this variant's measured overlap before it was removed. Concretely
-    the halo reaches 0.396 x cell from the centre while a whole bush glyph
-    reached only 0.261 x cell -- the halo was wider than the drawing it was
-    supposed to sit beside, which is the mechanism behind "agent in a bush
-    renders as agent alone".
-
-    The white ring stays at every size, and so does the chevron pointing in the
-    last action's direction (a dot for Rest and Eat). Which square the agent is
-    in is said by the square's own iris outline, not by the token's size.
-    """
+    """The agent: iris disc, white ring, halo, and one mark per last action."""
     out: list[Shape] = []
     if not shared:
         out.append(Shape(Circle((cx, cy), h * 1.32), (*_rgb(P.IRIS), 0.16)))
@@ -710,227 +814,7 @@ def cf_agent(cx, cy, h, action=None, *, shared: bool = True) -> list[Shape]:
     return out
 
 
-#: The vector mover forms, which as of 2026-09-17 are the artwork's PROVENANCE
-#: rather than the drawing path: the PNGs in ``assets/dashboard_icons/`` were
-#: generated from these functions and then chosen, by eye, from contact sheets.
-#: :func:`token` draws the PNGs. The table is kept -- and kept correct -- because
-#: it is still what says WHICH movers exist: ``DISPLAY_NAME`` is asserted against
-#: it at import, ``check_legible`` and the icon sheet read it, and a mover added
-#: to the renderer with no form here would be an entity nothing can draw.
 COMPANION = {
     "food": cf_food, "predator": cf_predator, "neutral": cf_neutral,
     "hiding_predator": cf_hiding_predator, "agent": cf_agent,
 }
-
-
-def token(name: str, cx: float, cy: float, h: float, action=None,
-          shared: bool = True) -> list:
-    """One occupant's drawing: its artwork, as ONE image, in its slot.
-
-    ``shared`` is accepted and ignored on the artwork path, and that is a real
-    simplification rather than an oversight: the vector agent needed its halo
-    dropped on a shared square because the halo reached 1.32 x h, WIDER than the
-    bed beneath it. ``agent.png`` carries its halo INSIDE its own alpha bbox,
-    which is mapped to exactly ``2h``, so no part of the artwork can reach a
-    neighbour and there is nothing to drop. The parameter stays because the
-    vector forms below keep their signature -- they are the artwork's provenance
-    now, not the drawing path.
-    """
-    if name not in COMPANION:
-        raise KeyError(f"no form for {name!r}; known movers are {sorted(COMPANION)}")
-    return [Raster(name, cx, cy, h, max(1, int(round(2 * h))),
-                   action if name == "agent" else None)]
-
-
-# --------------------------------------------------------------------------
-# Bed forms
-#
-# ONE ARTIST EACH, AND FULL-BLEED. The plan's own words are "drawn full-bleed,
-# inset by BED_MARGIN on every side" (R17.3 item 2), and the audit classifies a
-# bed by measuring that its ink covers >= 40 % of the square (R19.1 step 2). A
-# full-bleed inset square is 0.72^2 = 51.8 % of the square, which clears that
-# line by construction; the design mock's partial silhouettes (a rock sitting on
-# the lower two thirds) cover only ~28-36 % and would be counted as OCCUPANTS by
-# the audit -- a false failure on a correct painter. So each bed here is a base
-# plate at the inset, with that terrain's own texture drawn on top of it.
-# --------------------------------------------------------------------------
-def _rgb(c):
-    from matplotlib.colors import to_rgb
-    return to_rgb(c)
-
-
-def _plate(cx, cy, s, colour, alpha=None) -> Shape:
-    m = BED_MARGIN * s
-    side = s - 2 * m
-    fc = colour if alpha is None else (*_rgb(colour), alpha)
-    return Shape(FancyBboxPatch((cx - side / 2, cy - side / 2), side, side,
-                                boxstyle=f"round,pad=0,rounding_size={0.10 * s}"), fc)
-
-
-def bed_bush(cx, cy, s) -> list[Shape]:
-    m = BED_MARGIN * s
-    x0, x1 = cx - s / 2 + m, cx + s / 2 - m
-    w = x1 - x0
-    out = [_plate(cx, cy, s, P.BUSH)]
-    for i in range(4):
-        fx = x0 + (i + 0.5) * w / 4
-        out.append(Shape(Circle((fx, cy - 0.16 * s), w / 7.0 * 1.30),
-                         P.BUSH_HI if i % 2 else P.BUSH))
-    out.append(Shape(Circle((cx - w * 0.16, cy + 0.02 * s), w / 7.0), P.BUSH_HI))
-    out.append(Shape(Circle((cx + w * 0.22, cy + 0.18 * s), w / 8.0), P.BUSH_HI))
-    return out
-
-
-def bed_rock(cx, cy, s) -> list[Shape]:
-    m = BED_MARGIN * s
-    x0, x1 = cx - s / 2 + m, cx + s / 2 - m
-    top, bot = cy - s / 2 + m, cy + s / 2 - m
-    w = x1 - x0
-    out = [_plate(cx, cy, s, P.ROCK)]
-    out.append(Shape(Polygon([(x0 + 0.10 * w, bot), (x0 + 0.22 * w, top + 0.34 * w),
-                              (x0 + 0.52 * w, top + 0.10 * w), (x1 - 0.10 * w, top + 0.40 * w),
-                              (x1 - 0.06 * w, bot)], closed=True), P.ROCK_HI))
-    out.append(Shape(Polygon([(x0 + 0.22 * w, top + 0.34 * w), (x0 + 0.52 * w, top + 0.10 * w),
-                              (x0 + 0.60 * w, top + 0.44 * w), (x0 + 0.26 * w, top + 0.58 * w)],
-                             closed=True), P.ROCK))
-    return out
-
-
-def bed_tree(cx, cy, s) -> list[Shape]:
-    m = BED_MARGIN * s
-    x0, x1 = cx - s / 2 + m, cx + s / 2 - m
-    top, bot = cy - s / 2 + m, cy + s / 2 - m
-    w = x1 - x0
-    out = [_plate(cx, cy, s, P.TREE)]
-    out.append(Shape(Rectangle((cx - 0.055 * s, cy + 0.06 * s), 0.11 * s, bot - cy - 0.06 * s),
-                     P.TRUNK))
-    out.append(Shape(Circle((cx - w * 0.18, top + 0.30 * w), 0.16 * w), P.TREE_HI))
-    out.append(Shape(Circle((cx + w * 0.20, top + 0.22 * w), 0.12 * w), P.TREE_HI))
-    return out
-
-
-def bed_campfire(cx, cy, s) -> list[Shape]:
-    m = BED_MARGIN * s
-    x0, x1 = cx - s / 2 + m, cx + s / 2 - m
-    bot = cy + s / 2 - m
-    w = x1 - x0
-    out = [_plate(cx, cy, s, P.GLOW, alpha=0.42)]
-    for xo, col in ((-0.06, P.LOG_BACK), (0.06, P.LOG_FRONT)):
-        e = Ellipse((cx + xo * s, bot - s * 0.08), w * 0.92, s * 0.12, angle=xo * 260)
-        out.append(Shape(e, col))
-    out.append(Shape(Ellipse((cx, bot - s * 0.24), s * 0.32, s * 0.44), P.FIRE_OUT))
-    out.append(Shape(Ellipse((cx, bot - s * 0.22), s * 0.18, s * 0.28), P.FIRE_MID))
-    out.append(Shape(Ellipse((cx, bot - s * 0.20), s * 0.09, s * 0.16), P.FIRE_CORE))
-    return out
-
-
-BED = {"bush": bed_bush, "rock": bed_rock, "tree": bed_tree, "campfire": bed_campfire}
-
-
-def bed(name: str, cx: float, cy: float, cell: float) -> list[Shape]:
-    """The terrain floor of one square, as a list of paths for ONE artist."""
-    return BED[name](cx, cy, cell)
-
-
-# --------------------------------------------------------------------------
-# What a READER calls each of these
-#
-# WHY A SECOND SET OF NAMES EXISTS. The keys above are the code's tokens, and
-# one of them is not the English for the thing it draws: ``neutral`` is a
-# rabbit. Every hand-written surface says "rabbit" -- the figure that labels the
-# forms, the caption that describes a shared square, this module's own docstring
-# -- while anything that *serialises* the token says "neutral", and a reader has
-# no way to learn they are one animal. A reader reads "neutral" as an English
-# adjective, not as an identifier, so the mismatch survives prose review.
-#
-# THE RULE THIS TABLE MAKES POSSIBLE. Any exporter that emits one of these names
-# into something a reader will see routes it through :func:`display`, so the
-# page's vocabulary and the painter's vocabulary cannot drift apart.
-# --------------------------------------------------------------------------
-DISPLAY_NAME: dict[str, str] = {
-    "agent": "agent",
-    "predator": "predator",
-    "hiding_predator": "hiding predator",
-    "food": "food",
-    "neutral": "rabbit",
-    "rock": "rock",
-    "bush": "bush",
-    "tree": "tree",
-    "campfire": "campfire",
-}
-
-# Asserted at import, not trusted: a form added to COMPANION or BED without a
-# reader's name for it would otherwise reach a page as a bare token, which is the
-# exact defect this table was added to remove.
-if set(DISPLAY_NAME) != set(COMPANION) | set(BED):
-    _known = set(COMPANION) | set(BED)
-    raise RuntimeError(
-        f"DISPLAY_NAME does not cover the forms this module draws: missing "
-        f"{sorted(_known - set(DISPLAY_NAME))}, unknown {sorted(set(DISPLAY_NAME) - _known)}"
-    )
-
-
-def display(name: str) -> str:
-    """The name a reader sees for one occupant or terrain token.
-
-    Raises rather than falling back to the token: a silently passed-through
-    ``neutral`` on a page is the failure this function exists to make loud.
-    """
-    if name not in DISPLAY_NAME:
-        raise KeyError(
-            f"no reader's name for {name!r}; known tokens are {sorted(DISPLAY_NAME)}"
-        )
-    return DISPLAY_NAME[name]
-
-
-# --------------------------------------------------------------------------
-# The composition of one square
-# --------------------------------------------------------------------------
-def compose(occupants, cx: float, cy: float, cell: float, action=None):
-    """Turn "who is in this square" into what to draw, before anything is drawn.
-
-    Returns ``(bed_name_or_None, [(name, [Shape, ...]), ...])``. Slots are
-    computed first and the drawing follows them: the painter never draws
-    concentrically and then relies on z-order to sort it out, which is the
-    defect this module replaces.
-    """
-    names = list(occupants)
-    terrain = [n for n in names if n in TERRAIN_NAMES]
-    if len(terrain) > 1:
-        raise ValueError(
-            f"square at ({cx:.0f},{cy:.0f}) has two terrains {terrain}; the environment "
-            f"places at most one per square (reset resolves overlaps), so the bed layer "
-            f"never has to compose two"
-        )
-    rest = [n for n in names if n not in TERRAIN_NAMES]
-    n = len(rest)
-    if n:
-        check_legible(n, rest, cell)
-    # THE HALO IS DROPPED WHENEVER THE SQUARE HAS ANYTHING ELSE IN IT -- another
-    # occupant OR a bed. The plan (R17.3 item 8) says "n >= 2", which is right
-    # for occupant-on-occupant and WRONG for the archetype the variant was
-    # chosen for. Measured: a lone agent's halo reaches 0.396 x cell from the
-    # centre while the bed spans 0.72 x cell, i.e. 0.36 x cell from the centre --
-    # so the halo is wider than the entire floor beneath it and "agent in a bush"
-    # renders as an agent alone, which is the defect, not the fix. On a genuinely
-    # empty square the halo covers only bare ground and is kept, because there it
-    # costs nothing and makes the agent easy to find.
-    shared = n >= 2 or bool(terrain)
-    out = []
-    for sl in slots(rest, cx, cy, cell):
-        out.append((sl.name, token(sl.name, sl.cx, sl.cy, sl.h, action=action,
-                                   shared=shared)))
-    return (terrain[0] if terrain else None), out
-
-
-def bed_plate_fraction(cell: float = 50.0) -> float:
-    """The share of a square a bed's base plate covers, ignoring its texture.
-
-    Every bed is built on the same full-bleed plate, so this number does not
-    depend on which terrain it is. The audit's floor-versus-occupant split is a
-    >= 40 % area test, so this is what decides whether a bed is classified as
-    the floor, and it is a LOWER bound: the texture drawn on top of the plate
-    can only add ink, never remove it.
-    """
-    side = cell - 2 * BED_MARGIN * cell
-    return float(side * side) / float(cell * cell)
