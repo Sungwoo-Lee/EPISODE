@@ -61,10 +61,10 @@ training:
   # Render the MP4 only every Nth checkpoint (1 = every checkpoint, today's cadence).
   # Applies to the ASYNC path only; recordings + checkpoints are still written at EVERY
   # checkpoint regardless (a skipped MP4 is offline-recoverable from its recordings via
-  # scripts/eval/render_recordings.py).
+  # scripts/eval/render_recordings_v2.py).
   render_every_n_checkpoints: 1
   # --workers for the render subprocess. null = renderer's own default (cpu_count - 1).
-  # NOTE: render_recordings.py parallelises per EPISODE (one task per .rec.gz), so with
+  # NOTE: render_recordings_v2.py parallelises per EPISODE (one task per .rec.gz), so with
   # eval_video_episodes: 3 at most 3 workers ever do work — this knob is a cap, not a
   # contention lever. Read via .get (null is a legitimate declared value).
   render_workers: null

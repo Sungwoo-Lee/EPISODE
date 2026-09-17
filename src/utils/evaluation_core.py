@@ -272,7 +272,10 @@ def evaluate_jax_checkpoint(model, params, config, num_episodes, seed, results_d
     key = jax.random.PRNGKey(seed)
     
     # Video output setup
-    video_dir = os.path.join(results_dir, "videos")
+    # videos_v2/ — where scripts/eval/render_recordings_v2.py writes. This value
+    # is used ONLY to build the consolidated MP4 path below; the two eval helpers
+    # it is passed to accept it and never read it (verified: no other use).
+    video_dir = os.path.join(results_dir, "videos_v2")
     recordings_dir = os.path.join(results_dir, "recordings", str(checkpoint_pct))
     icon_config = config.get('visualization.icons', None)
     breakdown = get_observation_breakdown(params)
@@ -374,15 +377,15 @@ def evaluate_jax_checkpoint(model, params, config, num_episodes, seed, results_d
             # does not pass async_render_state (standalone eval, kill-switch).
             import subprocess, sys as _sys
             project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-            render_script = os.path.join(project_root, "scripts", "eval", "render_recordings.py")
+            render_script = os.path.join(project_root, "scripts", "eval", "render_recordings_v2.py")
             consolidated_mp4 = os.path.join(video_dir, f"eval_{checkpoint_pct}.mp4")
             fps = config.get('visualization.fps', 5)
+            # No --cleanup-per-episode: render_recordings_v2.py has no such flag.
             cmd = [
                 _sys.executable, render_script,
                 recordings_dir,
                 "--concat",
                 "--skip-existing",
-                "--cleanup-per-episode",
                 "--fps", str(fps),
             ]
             child_env = dict(os.environ)
@@ -407,7 +410,7 @@ def evaluate_jax_checkpoint(model, params, config, num_episodes, seed, results_d
     elif render_video:
         if not quiet:
             print(f"  --- Recordings written to {recordings_dir}. "
-                  f"Auto-render disabled. Render with: python scripts/eval/render_recordings.py {recordings_dir} ---", flush=True)
+                  f"Auto-render disabled. Render with: python scripts/eval/render_recordings_v2.py {recordings_dir} ---", flush=True)
 
     mean_reward = float(np.mean(episode_rewards)) if episode_rewards else 0.0
     mean_length = float(np.mean(episode_lengths)) if episode_lengths else 0.0

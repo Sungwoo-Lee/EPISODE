@@ -3,7 +3,7 @@
 Runs dreamer_srl_main.py for a short duration with eval enabled and verifies:
   1. At least 1 Orbax checkpoint dir created under checkpoints/.
   2. At least 1 recordings/<N>/episode_000001.rec.gz exists.
-  3. At least 1 videos/eval_<N>.mp4 file exists and is > 1KB.
+  3. At least 1 videos_v2/eval_<N>.mp4 file exists and is > 1KB.
   4. run_meta.pkl in the recordings dir is loadable.
 
 This test is marked @pytest.mark.slow since it runs a real training loop
@@ -136,9 +136,9 @@ def test_e2e_smoke_checkpoints_and_recordings():
             meta = pickle.load(fh)
         assert 'params' in meta, "run_meta.pkl missing 'params' key"
 
-        # 3. At least 1 MP4 in videos/
-        videos_dir = results_path / 'videos'
-        assert videos_dir.is_dir(), 'videos/ dir not created'
+        # 3. At least 1 MP4 in videos_v2/
+        videos_dir = results_path / 'videos_v2'
+        assert videos_dir.is_dir(), 'videos_v2/ dir not created'
         mp4_files = list(videos_dir.glob('eval_*.mp4'))
         assert len(mp4_files) >= 1, \
             f'Expected >=1 eval_*.mp4 in {videos_dir}, got {len(mp4_files)}'

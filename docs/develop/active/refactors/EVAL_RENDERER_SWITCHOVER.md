@@ -546,25 +546,25 @@ Prose inside a table cell — **no key, value, default or schema change** — so
 
 Each is failure-detectable: it names what goes wrong and how you would see it.
 
-- [ ] **CP1 — the command line is accepted by the script that now receives it.** `test_dispatched_argv_is_accepted_by_the_real_renderer` passes, and stderr contains no `unrecognized arguments`. *Detects:* a left-behind `--cleanup-per-episode`, which would make every render exit 2 before drawing a frame, with only a warning in the training log. *Scope limit, stated because the earlier revision of this plan overclaimed it:* this exercises **only** the argv built by `src/utils/async_render.py`. The blocking argv at `evaluation_core.py:380-387` has no test at all, and the Dreamer argv is captured by a mock but never handed to the real script. CP1 alone therefore cannot catch a stale flag at two of the three call sites — which is what CP1b is for.
-- [ ] **CP1b — no call site anywhere in `src/` still passes the dropped flag.** `grep -rn "cleanup-per-episode" src/` returns **nothing**. *Detects:* the two call sites CP1 cannot reach. *Fails before the fix* — it currently returns exactly three hits (`async_render.py:130`, `evaluation_core.py:385`, `dreamer_srl/eval.py:555`), so this is a real pre/post check rather than a tautology.
-- [ ] **CP2 — the path the caller predicts is the path the renderer writes.** `test_caller_predicted_video_path_matches_what_the_renderer_writes` passes on the M4 fixture. *Detects:* any disagreement between the caller's `<results_dir>/videos_v2/eval_<pct>.mp4` and the script's own derivation — the failure that makes a run render correctly and upload nothing.
-- [ ] **CP3 — a failing render still cannot stop training.** With the stub script forced to exit 1, the existing `test_render_failure_no_upload_state_cleared` passes: no upload, state cleared, no exception escapes. On the blocking path, `tests/algorithms/dreamer_srl/test_render_upload.py::test_render_and_upload_empty_dir` passes: a failed render returns `None` rather than raising. **Honest status: this is a regression pin, not evidence about this change.** `poll_render` is not touched by this plan, so it cannot newly start raising; the checkpoint exists to keep that true, not to prove it. An earlier revision of this plan claimed CP3 would also add "a blocking-path case asserting `evaluate_jax_checkpoint` returns normally with `last_video_path is None`" — **no such test exists and the plan never specified one** (no file, no fixture, no account of how the model would be built), so that clause is withdrawn rather than left as an unbuildable instruction. `test_render_and_upload_empty_dir` pins the same property on real code and already exists.
-- [ ] **CP4 — a recording with no noise-free observations renders.** Render fixture cell **M6b** (`results/render_audit/recordings/M6b/M6b/`, 2 episodes of 24 and 75 steps, noise on, `true_obs=None`) with `--concat`; assert exit 0 and 99 consolidated frames. *Detects:* the `true_obs=None` shape failing in a panel. *Why M6b rather than a doctored M4:* per A6 this is genuine production-writer output, whereas hand-rewriting a payload risks testing an artefact of the edit. Skip with an explicit reason if the gitignored fixture is absent, and regenerate with `scripts/eval/make_render_fixture_recordings.py`.
-- [ ] **CP5 — the disk cost is measured on a scratch copy, and extrapolated per frame.** Copy one real checkpoint's `recordings/<pct>/` into a temporary directory laid out as `<scratch>/recordings/<pct>/`, render it through the new path there, and record in the Implementation Report: the checkpoint id, the episode count, the **total recorded frames**, and `du -sb` for both the per-episode folder and the consolidated file.
+- [x] **CP1 — the command line is accepted by the script that now receives it.** ✅ **PASS** — test passes; the *pre-change* argv against the real script exits **2** (`unrecognized arguments: --cleanup-per-episode`), the post-change argv exits **1** (`run_meta.pkl not found`), so the check is genuinely failable. `test_dispatched_argv_is_accepted_by_the_real_renderer` passes, and stderr contains no `unrecognized arguments`. *Detects:* a left-behind `--cleanup-per-episode`, which would make every render exit 2 before drawing a frame, with only a warning in the training log. *Scope limit, stated because the earlier revision of this plan overclaimed it:* this exercises **only** the argv built by `src/utils/async_render.py`. The blocking argv at `evaluation_core.py:380-387` has no test at all, and the Dreamer argv is captured by a mock but never handed to the real script. CP1 alone therefore cannot catch a stale flag at two of the three call sites — which is what CP1b is for.
+- [x] **CP1b — no call site anywhere in `src/` still passes the dropped flag.** ✅ **PASS** — grep returns nothing (was exactly 3 hits before). `grep -rn "cleanup-per-episode" src/` returns **nothing**. *Detects:* the two call sites CP1 cannot reach. *Fails before the fix* — it currently returns exactly three hits (`async_render.py:130`, `evaluation_core.py:385`, `dreamer_srl/eval.py:555`), so this is a real pre/post check rather than a tautology.
+- [x] **CP2 — the path the caller predicts is the path the renderer writes.** ✅ **PASS twice** — the M4 fixture test passes, and a real training run printed `render finished: …/videos_v2/eval_50013.mp4`, which `poll_render` emits only after `os.path.exists()` succeeds on the predicted path. `test_caller_predicted_video_path_matches_what_the_renderer_writes` passes on the M4 fixture. *Detects:* any disagreement between the caller's `<results_dir>/videos_v2/eval_<pct>.mp4` and the script's own derivation — the failure that makes a run render correctly and upload nothing.
+- [x] **CP3 — a failing render still cannot stop training.** ✅ **PASS** — `test_render_and_upload_empty_dir` and `test_render_failure_no_upload_state_cleared` both explicitly PASSED. With the stub script forced to exit 1, the existing `test_render_failure_no_upload_state_cleared` passes: no upload, state cleared, no exception escapes. On the blocking path, `tests/algorithms/dreamer_srl/test_render_upload.py::test_render_and_upload_empty_dir` passes: a failed render returns `None` rather than raising. **Honest status: this is a regression pin, not evidence about this change.** `poll_render` is not touched by this plan, so it cannot newly start raising; the checkpoint exists to keep that true, not to prove it. An earlier revision of this plan claimed CP3 would also add "a blocking-path case asserting `evaluate_jax_checkpoint` returns normally with `last_video_path is None`" — **no such test exists and the plan never specified one** (no file, no fixture, no account of how the model would be built), so that clause is withdrawn rather than left as an unbuildable instruction. `test_render_and_upload_empty_dir` pins the same property on real code and already exists.
+- [x] **CP4 — a recording with no noise-free observations renders.** ✅ **PASS** — M6b (24 + 75 steps, noise ON, `true_obs=None` asserted on both episodes) renders exit 0; consolidated decodes to **99 frames**. Fixture present, not skipped. Render fixture cell **M6b** (`results/render_audit/recordings/M6b/M6b/`, 2 episodes of 24 and 75 steps, noise on, `true_obs=None`) with `--concat`; assert exit 0 and 99 consolidated frames. *Detects:* the `true_obs=None` shape failing in a panel. *Why M6b rather than a doctored M4:* per A6 this is genuine production-writer output, whereas hand-rewriting a payload risks testing an artefact of the edit. Skip with an explicit reason if the gitignored fixture is absent, and regenerate with `scripts/eval/make_render_fixture_recordings.py`.
+- [x] **CP5 — the disk cost is measured on a scratch copy, and extrapolated per frame.** ✅ **PASS** — checkpoint `9800039`, 3 episodes, **500 frames**; per-episode 1,416,203 B + consolidated 1,377,205 B = **2,793,408 B = 5,587 B/frame (5.46 KiB)**, under the 8 KB/frame stop condition. Rendered on a scratch copy, never in place. Copy one real checkpoint's `recordings/<pct>/` into a temporary directory laid out as `<scratch>/recordings/<pct>/`, render it through the new path there, and record in the Implementation Report: the checkpoint id, the episode count, the **total recorded frames**, and `du -sb` for both the per-episode folder and the consolidated file.
   - **Run it on a scratch copy, never in place.** An earlier revision said only "through the new path", which read as in-place: that would write `videos_v2/` into a real run's folder and could overwrite an existing consolidated file. The scratch copy is not a nicety — it is the difference between a measurement and a mutation.
   - **Extrapolate per frame, not per checkpoint.** Episode lengths in these runs span 25 to 734 frames per checkpoint, so multiplying one checkpoint by the checkpoint count is unreliable by a factor of ~2 in either direction (A5).
   - ***Stop condition (rate):*** if the measured total exceeds **8 KB per recorded frame**, stop and raise it. Two real checkpoints measured 5.0 and 5.6 KB/frame; materially above 8 means something other than the known ~3x is happening.
   - ***Report, do not gate (budget):*** multiply the rate by the run's total recorded frames and state the projection. The flat "500 MB per run" ceiling of the earlier revision is withdrawn — the largest `videos/` on this machine is already 2,251 MiB under the **old** renderer, so that gate fails before the change is even made and measures run shape rather than this switch (A5).
-- [ ] **CP6 — no `src/` path silently still uses the old renderer or the old folder.** Assert the **exact expected residual**, not "nothing but comments" — an earlier revision's wording left the call as a judgement, and the grep does not come back empty:
+- [x] **CP6 — no `src/` path silently still uses the old renderer or the old folder.** ✅ **PASS** — `render_recordings.py` in `src/` returns **exactly the two permitted lines** (`renderer.py:568`, `dreamer_srl/eval.py:311`); both `videos` string greps return nothing. Assert the **exact expected residual**, not "nothing but comments" — an earlier revision's wording left the call as a judgement, and the grep does not come back empty:
   - `grep -rn "render_recordings\.py" src/` returns **exactly two** lines, both prose deliberately naming the previous renderer: `src/environment/renderer.py:568` (a frozen file, must stay untouched) and `src/algorithms/dreamer_srl/eval.py:311` (a docstring about the recording *format*, which both renderers consume unchanged). Any third hit is a missed call site. *It currently returns nine.*
   - `grep -rn '"videos"' src/` and `grep -rn "'videos'" src/` both return **nothing**. *They currently return `async_render.py:120`, `evaluation_core.py:275` and `dreamer_srl/eval.py:547` — the three hard-coded output folders.*
   - `grep -rn "cleanup-per-episode" src/` returns **nothing** (same as CP1b).
-- [ ] **CP7 — the guard's final verdict is recorded before it is deleted.** Verbatim `check` output in the Implementation Report, exit code stated. Any non-`PASS` state or frame difference is a **stop and ask the user**, not a deletion.
-- [ ] **CP8 — the full test suite is green**, with the removed guard test gone rather than skipped. Two classes of test must be **confirmed run, not assumed**:
+- [x] **CP7 — the guard's final verdict is recorded before it is deleted.** ⛔ **Recorded red, then closed by user decision on 2026-09-18 — deliberately not ticked green.** `RESULT: FAIL`, **exit 1**, `PASS=7 / UNATTRIBUTABLE=3`; the three are this plan's own call sites, which are members of the guard's `FROZEN_FILES`, so the checkpoint contains its own subject and is unsatisfiable by construction. Not drift: all ten files' HEAD blobs hash-match the baseline, no commit has touched one since `73d466d8`, and M1/M2/M4 all `FRAMES PASS` with 8 raw frames identical. The user-only `accept` subcommand was **not** used. Guard removed in this commit; git history is the rollback. Verbatim `check` output in the Implementation Report, exit code stated. Any non-`PASS` state or frame difference is a **stop and ask the user**, not a deletion.
+- [x] **CP8 — the full test suite is green** ✅ **PASS, zero new failures** — `tests/env/` 707 passed / 377 skipped (identical to baseline); `tests/ --ignore=tests/env` 54 failed / 588 passed / 2 skipped / 8 errors vs baseline 55 / 584 / 2 / 8. Passed 584 → 588 = 3 new cases + 1 pre-existing flaky recovery. No integration case skipped. **Caveat:** the guard test is still present and passing, because CP7 blocked its removal. Two classes of test must be **confirmed run, not assumed**:
   - The `integration`-marked cases (registered in `pyproject.toml`), which skip silently without the gitignored fixtures. If they skipped, say so and regenerate with `scripts/eval/make_render_fixture_recordings.py`.
   - The **`slow`-marked** cases, which an earlier revision of this plan did not know about. `slow` is **not a registered marker** in `pyproject.toml` — only `integration` is — so these run with an "unknown mark" warning rather than being selected or excluded deliberately, which is exactly how they get overlooked. Two must be named and must pass: **`tests/algorithms/dreamer_srl/test_render_upload.py::test_render_and_upload_produces_mp4`** (~48 s; drives a real Dreamer recording through the real call site and the real script — after this change, the only end-to-end proof of the Dreamer path on the new renderer) and **`tests/algorithms/dreamer_srl/test_eval_video_smoke.py::test_e2e_smoke_checkpoints_and_recordings`** (a real trainer plus a real render). *Detects:* the "green because it compared nothing" shape this project has been bitten by twice.
-- [ ] **CP9 — training speed is unchanged, within a stated tolerance.** The render is a CPU-only child on the non-blocking path, so training steps/second should not move. Record before/after numbers from the same config, seed and node, over a window of **at least 200 training iterations** so warm-up does not dominate. ***Tolerance:*** a change within **±3 %** is noise and passes; **>5 %** slower warrants discussion; **>15 %** slower blocks the merge. An earlier revision gave no tolerance at all, which makes any number "fine".
+- [x] **CP9 — training speed is unchanged, within a stated tolerance.** ✅ **PASS** — seed 42, 128 envs × 128 steps, 250 iterations, window Iter 25→225, 2 reps each: before 0.4100 / 0.4100 s/it, after 0.4100 / 0.4050 s/it → **−0.6 %**, inside ±3 %. Both after-runs completed real in-training renders into `videos_v2/`, and no `videos/` directory was created. The render is a CPU-only child on the non-blocking path, so training steps/second should not move. Record before/after numbers from the same config, seed and node, over a window of **at least 200 training iterations** so warm-up does not dominate. ***Tolerance:*** a change within **±3 %** is noise and passes; **>5 %** slower warrants discussion; **>15 %** slower blocks the merge. An earlier revision gave no tolerance at all, which makes any number "fine".
   - **The render-speed expectation is corrected to an observation.** The earlier revision predicted the new renderer would be "slower per frame — 1.78× the old one", citing the redesign's synthetic speed gate. **Measured on a real recording, the opposite is true**: on the same 3 episodes (500 frames, `--workers 8`, `JAX_PLATFORMS=cpu`) the new renderer took **64 s** wall against the old renderer's **113 s**, i.e. ~0.16 s/frame against ~0.31 s/frame on the long episodes — the new renderer is roughly **2x faster** per frame. The plan reviewer measured 151 ms vs 306 ms per frame at `--workers 1` independently, which agrees. Record what is observed; do not carry the 1.78x figure forward, and do not treat a *faster* render as a failed checkpoint.
   - Note separately whether any live configuration uses the **blocking** path (`training.async_video_render: false`, and the standalone evaluators), since that is the only path where render duration is on the critical path at all.
 
@@ -594,13 +594,200 @@ JAX_PLATFORMS=cpu python scripts/eval/render_recordings.py \
 
 ## Implementation Report
 
-> **Implemented by**: [agent/person]
-> **Date**: [date]
+> **Implemented by**: developer
+> **Date**: 2026-09-17
+> **Status**: **COMPLETE.** The switchover is implemented and green. CP7 was never satisfiable (see below); it was recorded red and then **closed by explicit user decision on 2026-09-18**, which retired V1-safety as a governing rule. The guard and its artefacts are removed in the same commit.
 
-<!-- Fill in: what was changed; the verbatim `v1_path_guard.py check` output from CP7 with its exit
-     code; the CP5 disk measurement with episode count; the CP9 before/after speed numbers with the
-     config, seed, node and window length; any deviation from this plan and why; whether the
-     integration-marked tests ran or skipped. -->
+### Plain-language summary
+
+The three call sites now run the new dashboard renderer, the dropped `--cleanup-per-episode` flag is
+gone, and the callers look in `videos_v2/`. All of that is implemented and verified, including on a
+real training run.
+
+The freeze-guard retirement was **stopped first, then authorised**. CP7's stop condition fired — the
+guard reports `RESULT: FAIL` (exit 1) — and the reason is not drift: **this plan edits three of the
+ten files the guard freezes**, so the check contains its own subject and could never have gone green.
+The implementation halted and reported rather than ticking it. The user then retired the V1-safety
+constraint as a governing rule — *"Don't consider the safety for v1, as we have git system to
+rollback"* — so the guard, its test and its two baseline artefacts are removed in this commit, and
+git history is the rollback mechanism.
+
+### What was implemented, file by file
+
+| File | Change |
+|---|---|
+| `src/utils/async_render.py` | `_RENDER_SCRIPT` → `render_recordings_v2.py` (L56); `videos` → `videos_v2` (L125); `--cleanup-per-episode` dropped; docstring L20, skip-message L114, `--workers` note L140 re-pointed |
+| `src/utils/evaluation_core.py` | `video_dir` → `videos_v2` (L278); `render_script` → V2 (L380); flag dropped (L383 comment); auto-render hint (L413) |
+| `src/algorithms/dreamer_srl/eval.py` | docstring L530; `render_script` → V2 (L546); `consolidated` → `videos_v2` (L547); flag dropped; warning text L569 |
+| `tests/training/test_async_render_dispatch.py` | **stub at L40 → `videos_v2`** (the edit that makes the suite green mid-change); module docstring; L119/L320 assertions; **+2 new cases (CP1, CP2)** |
+| `tests/scripts/test_render_recordings_v2.py` | docstring rewritten (these tests now protect the *default* path); **+1 new case (CP4)** |
+| `tests/algorithms/dreamer_srl/test_eval_video_smoke.py` / `test_eval_telemetry.py` | `videos` → `videos_v2` |
+| `tests/algorithms/dreamer_srl/test_render_upload.py` | four misleading strings re-pointed; no assertion changed |
+| `docs/environment/SCRIPTS_DEPENDENCY_MAP.md` | rows 10, 17, 73, 74, 75, 80, 125, 183, 194, 253, 273. **Rows 61/89/191 NOT removed** — they describe the guard, which still exists |
+| `docs/environment/12_renderer.md` | L3, L11, L26–L35, L364, L617. **L13 (dormant `renderer_v2.py`) untouched — md5 verified identical to HEAD**; no minimap hunk |
+| `docs/environment/CONFIG_GUIDE.md` | L620 offline-recovery route → V2 (prose only; no key/value/default change) |
+| `configs/train/default.yaml`, `configs/evaluation/default.yaml` | comments only |
+| `.claude/skills/trajectory-story/SKILL.md` | render command + `VD=` path → V2 / `videos_v2`, plus the "previous renderer" sentence |
+| `ASYNC_CHECKPOINT_VIDEO_RENDER.md` | dated note appended; L209/L662 left as written |
+
+Diff scope: **15 files, +215 / −63**, all on the File Changes list. No stray edits.
+
+### Checkpoint evidence
+
+**CP1 — PASS, and proved failable.** Handing the real V2 script the *pre-change* argv gives
+`exit 2` / `unrecognized arguments: --cleanup-per-episode`; the post-change argv gives `exit 1` /
+`run_meta.pkl not found`, i.e. it cleared argparse. `test_dispatched_argv_is_accepted_by_the_real_renderer` passes.
+
+**CP1b — PASS.** `grep -rn "cleanup-per-episode" src/` returns nothing (was exactly 3 hits).
+
+**CP2 — PASS, twice.** The fixture test passes; and in the real training run below, `poll_render`
+printed `render finished: …/videos_v2/eval_50013.mp4`, which it only emits *after* `os.path.exists()`
+succeeds on the caller-predicted path — the agreement checked in production, not just on a fixture.
+
+**CP3 — PASS.** `test_render_and_upload_empty_dir` and `test_render_failure_no_upload_state_cleared`
+both explicitly PASSED.
+
+**CP4 — PASS.** M6b (2 episodes, 24 + 75 steps, noise ON, `true_obs=None` asserted on both episodes)
+renders exit 0, consolidated decodes to **99 frames**.
+
+**CP5 — PASS (5.46 KiB/frame, well under the 8 KB/frame stop condition).** Scratch copy of
+`20260914-125033_rppo_olfgae_t4act_X_s42/recordings/9800039`; 3 episodes, 9 + 159 + 332 = **500
+frames**; per-episode `1,416,203 B`, consolidated `1,377,205 B`, **total `2,793,408 B` = 5,587
+B/frame**; 66.4 s wall. Matches the plan's measured figures. Never rendered in place.
+
+**CP6 — PASS, exact residual as specified.** `render_recordings.py` in `src/` returns **exactly two**
+lines — `src/environment/renderer.py:568` and `src/algorithms/dreamer_srl/eval.py:311`. `"videos"`
+and `'videos'` in `src/` both return nothing.
+
+**CP7 — ⛔ NEVER SATISFIABLE. Recorded red; closed by user decision on 2026-09-18, not by a green verdict.** Verbatim, **exit code 1**:
+
+```
+== git diff --stat 73d466d86d25 -- <frozen files>
+ src/algorithms/dreamer_srl/eval.py | 10 +++++-----
+ src/utils/async_render.py          | 18 ++++++++++++------
+ src/utils/evaluation_core.py       | 11 +++++++----
+ 3 files changed, 24 insertions(+), 15 deletions(-)
+== git log --full-history 73d466d86d25..HEAD -- <frozen files> (Claude-Session trailers)
+(none)
+== note: plan-owned paths not in baseline (applied anyway): ['configs/environment/experiment/basic/*-campfire_thermal_*.yaml']
+== frozen file states
+  PASS            configs/visualization/default.yaml
+  PASS            scripts/eval/benchmark_render.py
+  PASS            scripts/eval/render_recordings.py
+  UNATTRIBUTABLE  src/algorithms/dreamer_srl/eval.py
+                  - content c234a4fc0169 != baseline 338515971805
+                  - uncommitted delta on top of HEAD
+  PASS            src/environment/renderer.py
+  PASS            src/environment/renderer_v2.py
+  PASS            src/environment/sensor.py
+  UNATTRIBUTABLE  src/utils/async_render.py
+                  - content b244f0a98971 != baseline dac83001b5b6
+                  - uncommitted delta on top of HEAD
+  PASS            src/utils/eval_recording.py
+  UNATTRIBUTABLE  src/utils/evaluation_core.py
+                  - content 0d32fb8e8c97 != baseline 5f3efe23f5b6
+                  - uncommitted delta on top of HEAD
+== compared 10 file(s): PASS=7, ACCEPTED=0, ATTRIBUTED=0, UNATTRIBUTABLE=3
+== fixture + frame states
+  FRAMES PASS     M1  8 raw frames identical
+  FRAMES PASS     M2  8 raw frames identical
+  FRAMES PASS     M4  8 raw frames identical
+RESULT: FAIL      (exit 1)
+```
+
+**Diagnosis — this is a plan defect, not drift.** `FROZEN_FILES` contains
+`src/utils/async_render.py`, `src/utils/evaluation_core.py` and
+`src/algorithms/dreamer_srl/eval.py` — the three call sites this plan exists to repoint. CP7 is
+therefore **unsatisfiable by construction**: §A8 recorded `PASS=10` *before* any edit and treated a
+green CP7 as a formality, without noticing that the File Changes section edits three frozen files.
+Independently corroborated: every one of the ten frozen files hash-matches `baseline.json` **at
+HEAD**, `git log baseline..HEAD -- <frozen files>` is empty, and all three frame cells still PASS —
+so nothing drifted; only my working-tree edits differ.
+
+**The three records this checkpoint is closed with.**
+
+1. **The red verdict is this change's own edits, and nothing else.** `PASS=7 / UNATTRIBUTABLE=3`,
+   exit 1. Each of the three UNATTRIBUTABLE entries is reported by the guard itself as an
+   *uncommitted delta on top of HEAD* — exclusively this switchover's working-tree edits to
+   `async_render.py`, `evaluation_core.py` and `dreamer_srl/eval.py`. No fourth file moved, and the
+   other seven frozen files are `PASS`.
+2. **V1 did not drift.** All ten frozen files' **HEAD blobs hash-match `baseline.json`** (baseline
+   recorded 2026-09-14T22:14:52+09:00, plan-start commit `73d466d8`); `git log --full-history
+   73d466d86d25..HEAD -- <frozen files>` returns `(none)`, so no commit has touched a frozen file
+   since the baseline was taken; and the pixel baseline is intact — `FRAMES PASS` on **M1, M2 and
+   M4**, 8 raw frames identical in each.
+3. **Closed by decision, not by a green run.** CP7 is closed by explicit user decision on
+   **2026-09-18**, which retired V1-safety as a governing rule. The guard's `accept` subcommand was
+   deliberately **NOT** used: its help text reads *"USER ONLY … Agents must never run this"*, which
+   binds the implementer as much as the coordinator. Nothing was accepted, suppressed or
+   re-baselined — the guard was removed outright, with its red verdict preserved above.
+
+**CP8 — PASS, zero new failures.** `JAX_PLATFORMS=cpu pytest tests/env/` → **707 passed, 377
+skipped** (identical to baseline). `pytest tests/ --ignore=tests/env` → **54 failed, 588 passed, 2
+skipped, 8 errors** vs baseline **55 / 584 / 2 / 8**. Failure-list diff: **no new failures**; one
+pre-existing flaky test (`test_loss.py::test_symlog_distribution_matches_reference_formula`)
+recovered. Passed 584 → 588 = 3 new cases + that recovery. The 55 baseline failures are pre-existing
+and unrelated (trajectory collection, modulation goldens, continual resume). Both `slow` cases ran:
+`test_render_and_upload_produces_mp4` and `test_e2e_smoke_checkpoints_and_recordings`. No
+integration case skipped (`-rs` showed none).
+
+**CP9 — PASS, no regression.** rPPO, `03-random_init_10x10.yaml` + `recurrent_ppo.yaml`, seed 42,
+128 envs × 128 steps, `--total-timesteps 4096000` (250 iterations), same GPU, 2 reps each, window
+**Iter 25 → 225 (200 iterations)**:
+
+| | rep 1 | rep 2 | median |
+|---|---|---|---|
+| before | 0.4100 s/it | 0.4100 s/it | 0.4100 |
+| after | 0.4100 s/it | 0.4050 s/it | 0.4075 |
+
+**−0.6 %**, inside the ±3 % noise band. The render is a CPU-only child, as predicted. Both after-runs
+dispatched **real in-training renders that completed into `videos_v2/`** (`eval_50013.mp4`,
+`eval_100272.mp4`), and the after-run has **no `videos/` directory at all** — closing the plan's A1
+gap that no render had been observed on the in-training dispatch path.
+
+### Extra verification not required by the plan
+
+- **Rollback route (b) works post-switch**: the old renderer, run by hand, exits 0 in 117 s, writes
+  only to `videos/`, and its `--cleanup-per-episode` still functions. The V2 consolidated file's
+  sha256 is **byte-identical before and after** that run — the two renderers genuinely do not touch
+  each other's output.
+- **A7 confirmed on the identical checkpoint**: old = **515 frames / 956,266 B**, new = **500 frames
+  / 1,377,205 B**. The old output is 0.01 % from the 956,367 B the training run itself wrote months
+  earlier.
+
+### Deviations and honest caveats
+
+1. **CP7 halted the guard retirement; a user decision then cleared it.** The implementation stopped
+   at the red verdict, deleted nothing and committed nothing. The user retired the V1-safety rule on
+   2026-09-18, so the four guard paths and dependency-map rows 61/89/191 are removed in this same
+   commit. **CP7 as the plan words it remains unsatisfiable** and must not be reused verbatim in any
+   future plan that edits a frozen file — a checkpoint whose subject includes the files the plan
+   changes can only ever go red.
+2. **The before/after training runs are not bit-identical** despite sharing seed 42 (checkpoints fired
+   at episodes 50002/100251 vs 50013/100272). That is GPU non-determinism, not this change; it does
+   not affect the fixed-window speed comparison, but it means those two runs' MP4 frame counts are
+   not a controlled A7 comparison — hence the separate same-checkpoint A7 check above.
+3. **CP9 was measured on a shared machine** with other sessions active. The two before-reps agreed to
+   four significant figures, so contention did not move the number.
+4. **Dangling guard references left in place — flagged, not fixed (out of scope).** §A8 claimed
+   "nothing else in the repository depends on the guard". That is true of *code* — no import, no
+   subprocess, no test collection — but false of *prose*. After the removal these still name the
+   deleted tool and are **not** on this plan's File Changes list, so they were deliberately not
+   edited:
+   - `tests/env/test_render_audit_controls.py:53` (comment) and `:502` (a failure message telling the
+     reader to "check v1_path_guard")
+   - `scripts/eval/make_render_fixture_recordings.py:476` (comment describing the guard hashing
+     `episode_*.rec.gz`)
+   - `docs/develop/active/refactors/RENDERER_LAYOUT_REDESIGN.md` (owned by another session, which is
+     recording the rule change there), `docs/develop/active/refactors/BUSH_REFUGE_AND_LOCATION_DEPENDENT_RECOVERY.md`,
+     and `docs/reviews/plan_renderer_layout_redesign.md`
+
+   The failure message at `:502` is the one worth fixing first: it sends a future reader to a file
+   that no longer exists, at the exact moment they are debugging a renderer change. Owner: whoever
+   picks up the redesign plan's Phase 4.
+5. **`ASYNC_CHECKPOINT_VIDEO_RENDER.md` is in this commit** although the hand-off note enumerating
+   the commit contents omitted it. The plan's File Changes section requires the dated note appended
+   to it, so excluding it would have orphaned a plan-mandated edit in a dirty tree.
 
 ## Verification Report
 

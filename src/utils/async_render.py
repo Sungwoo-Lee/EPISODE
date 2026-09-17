@@ -17,7 +17,7 @@ Invariants / policies (all inherited from the source idiom):
   * At most ONE concurrent render child; if the previous render is still
     running when the next checkpoint fires, that checkpoint's video is SKIPPED
     (never queued). The `.rec.gz` recordings are already on disk, so a skipped
-    video is offline-recoverable via `scripts/eval/render_recordings.py
+    video is offline-recoverable via `scripts/eval/render_recordings_v2.py
     <recordings_dir>` — never a data-loss event. Skips are counted and surfaced
     on WandB as `Eval/video/render_skipped_total` (plan-reviewer finding 4).
   * `dispatch_render` POLLS BEFORE touching pending state (plan-reviewer
@@ -53,7 +53,7 @@ RENDER_DRAIN_TIMEOUT_S_INTERRUPTED = 10
 
 _PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 # Module-level so tests can monkeypatch it with a stub script.
-_RENDER_SCRIPT = os.path.join(_PROJECT_ROOT, "scripts", "eval", "render_recordings.py")
+_RENDER_SCRIPT = os.path.join(_PROJECT_ROOT, "scripts", "eval", "render_recordings_v2.py")
 
 
 def new_render_state():
@@ -111,27 +111,33 @@ def dispatch_render(state, recordings_dir, results_dir, checkpoint_pct, fps,
             print(f"[render] checkpoint {checkpoint_pct}: previous render "
                   f"(pid={proc.pid}) still running -- skipping this checkpoint's "
                   f"video (recordings preserved at {recordings_dir}; backfill "
-                  f"offline with `python scripts/eval/render_recordings.py "
+                  f"offline with `python scripts/eval/render_recordings_v2.py "
                   f"{recordings_dir}` -- delete any partial episode_*.mp4 there "
                   f"first, or --skip-existing would keep a truncated file).")
         return False
     state["proc"] = None
 
-    videos_dir = os.path.join(results_dir, "videos")
+    # videos_v2/ is where render_recordings_v2.py writes. The caller predicts the
+    # consolidated path here; the script derives it from the recordings dir as
+    # `rec_dir.parent.parent / "videos_v2" / f"eval_{rec_dir.name}.mp4"`. With
+    # recordings_dir = <results_dir>/recordings/<pct> the two agree — pinned by
+    # tests/training/test_async_render_dispatch.py (CP2), not assumed here.
+    videos_dir = os.path.join(results_dir, "videos_v2")
     os.makedirs(videos_dir, exist_ok=True)
     consolidated_mp4 = os.path.join(videos_dir, f"eval_{checkpoint_pct}.mp4")
     # Exact command the blocking path builds (evaluation_core.py /
     # dreamer_srl/eval.py::_render_and_upload), plus optional --workers.
+    # NOTE: no --cleanup-per-episode. render_recordings_v2.py has no such flag
+    # and no code path that deletes a file; passing it is an argparse error 2.
     cmd = [
         sys.executable, _RENDER_SCRIPT,
         str(recordings_dir),
         "--concat",
         "--skip-existing",
-        "--cleanup-per-episode",
         "--fps", str(fps),
     ]
     if workers is not None:
-        # NOTE: render_recordings.py parallelises per EPISODE (one task per
+        # NOTE: render_recordings_v2.py parallelises per EPISODE (one task per
         # .rec.gz), so with eval_video_episodes=3 at most 3 workers ever run —
         # this is a cap, not a contention lever (plan-reviewer finding 5).
         cmd += ["--workers", str(workers)]

@@ -661,3 +661,7 @@ stdout logs; no process on any lab node was touched.
    `recordings/<ckpt>/run_meta.pkl` (rollout start) → newest
    `recordings/<ckpt>/*.rec.gz` (rollout end) → `videos/eval_<ckpt>.mp4` (render
    end).
+
+---
+
+> **2026-09-17 —** the render child is now `scripts/eval/render_recordings_v2.py` and its outputs, including `render_<ckpt>.log`, live under `<results_dir>/videos_v2/`. The dispatch/poll/drain design is unchanged. See [[EVAL_RENDERER_SWITCHOVER]].

@@ -1,15 +1,15 @@
 """The V2 render entry point writes videos WITHOUT disturbing the V1 pipeline.
 
 WHAT THIS FILE PROTECTS, IN PLAIN WORDS. The project has two episode-video
-renderers. The old one (`scripts/eval/render_recordings.py`) is what training and
-evaluation call, it is a frozen file, and it writes into a folder called
-`videos/`. The new one (`scripts/eval/render_recordings_v2.py`) is a separate
-script nothing calls automatically, and it writes into `videos_v2/`. The user's
-condition for the whole redesign was that the old path keeps working untouched
-while the new one is built, so these tests render the SAME recordings directory
-with BOTH scripts and check that the old one's output files are byte-for-byte
-what they were before the new one ran, and that the new one put nothing
-whatsoever inside `videos/`.
+renderers. The new one (`scripts/eval/render_recordings_v2.py`) is what training
+and evaluation call, and it writes into a folder called `videos_v2/` — so as of
+2026-09-17 these tests protect the DEFAULT render path, not a side experiment.
+The previous one (`scripts/eval/render_recordings.py`) is a frozen file that
+remains runnable by hand and still writes into `videos/`. The user's condition
+for the whole redesign was that the old path keeps working untouched, so these
+tests render the SAME recordings directory with BOTH scripts and check that the
+old one's output files are byte-for-byte what they were before the new one ran,
+and that the new one put nothing whatsoever inside `videos/`.
 
 THE OTHER TWO PROPERTIES. A written MP4 must decode to exactly as many frames as
 the recording has steps -- a video that silently drops a frame is the failure the
@@ -249,3 +249,44 @@ def test_an_unrenderable_recording_fails_loudly_and_alone(tmp_path, run_dir):
             / EPISODE.replace(".rec.gz", ".mp4"))
     assert good.exists()
     assert rrv2.probe_frame_count(good) > 0
+
+
+@pytest.mark.integration
+def test_a_recording_with_no_true_observations_renders(tmp_path):
+    """CP4 — the `true_obs=None` shape renders, and its frame count is exact.
+
+    This is the ORDINARY recording shape rather than an exotic one: dreamer-srl
+    never records noise-free observations at all, and recurrent PPO omits them on
+    any video-only evaluation of a world without perceptual noise. Cell M6b is
+    the demanding version — perceptual noise is ON while the noise-free
+    comparison is ABSENT, the combination that drives the "not recorded" caption.
+
+    M6b is genuine production-writer output (`make_render_fixture_recordings.py`
+    with `no_true_obs=True`). A hand-doctored payload was deliberately rejected:
+    it would risk testing an artefact of the edit rather than the real shape.
+    """
+    from src.utils.eval_recording import load_episode
+
+    cell = _REPO / "results" / "render_audit" / "recordings" / "M6b" / "M6b"
+    if not (cell / "run_meta.pkl").exists():
+        pytest.skip(f"render-audit fixture M6b not on disk ({cell}); regenerate "
+                    f"with scripts/eval/make_render_fixture_recordings.py")
+
+    rec = tmp_path / "run" / "recordings" / "M6b"
+    rec.mkdir(parents=True)
+    shutil.copy2(cell / "run_meta.pkl", rec / "run_meta.pkl")
+    for ep in sorted(cell.glob("episode_*.rec.gz")):
+        shutil.copy2(ep, rec / ep.name)
+
+    # The shape under test really is the one this test claims to cover.
+    steps = 0
+    for ep in sorted(rec.glob("episode_*.rec.gz")):
+        payload = load_episode(ep)
+        assert payload.get("true_obs") is None, f"{ep.name} carries true_obs"
+        steps += len(payload["snapshots"])
+
+    out = _run(V2_SCRIPT, rec, "--workers", 1, "--concat")
+    assert out.returncode == 0, out.stderr[-3000:]
+
+    consolidated = tmp_path / "run" / "videos_v2" / "eval_M6b.mp4"
+    assert rrv2.probe_frame_count(consolidated) == steps

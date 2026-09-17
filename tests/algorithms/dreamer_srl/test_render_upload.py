@@ -3,10 +3,10 @@
 Verifies that _render_and_upload():
   1. Is importable from src.algorithms.dreamer_srl.eval.
   2. Returns None gracefully when given a recordings_dir with no .rec.gz files
-     (render_recordings.py will error out; we verify the None path).
+     (render_recordings_v2.py will error out; we verify the None path).
   3. Returns the MP4 path (str) when render succeeds on a real 1-episode recording.
 
-Test 3 runs render_recordings.py in a subprocess (JAX_PLATFORMS=cpu) on
+Test 3 runs render_recordings_v2.py in a subprocess (JAX_PLATFORMS=cpu) on
 a real recording written by dreamer_srl_eval_rollout. It is slow (~30s) but
 required to confirm the subprocess→MP4 flow end-to-end.
 
@@ -43,7 +43,7 @@ def test_render_and_upload_empty_dir(tmp_path):
         policy_step=0,
         quiet=True,
     )
-    # render_recordings.py should fail (no episodes) → returns None
+    # render_recordings_v2.py should fail (no episodes) → returns None
     assert result is None
 
 
@@ -90,8 +90,8 @@ def test_render_and_upload_produces_mp4(tmp_path):
         quiet=True,
     )
     assert mp4_path is not None, (
-        "render_and_upload returned None — render_recordings.py subprocess likely failed. "
-        "Check that JAX_PLATFORMS=cpu works and scripts/render_recordings.py is on PATH."
+        "render_and_upload returned None — render_recordings_v2.py subprocess likely failed. "
+        "Check that JAX_PLATFORMS=cpu works and scripts/eval/render_recordings_v2.py is on PATH."
     )
     assert Path(mp4_path).exists(), f"MP4 not found at {mp4_path}"
     assert Path(mp4_path).stat().st_size > 1024, f"MP4 suspiciously small: {Path(mp4_path).stat().st_size} bytes"

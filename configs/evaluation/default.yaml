@@ -5,7 +5,7 @@ testing:
   render_video: true
   record_stats: true
   record_true_observations: true
-  auto_render_after_eval: true   # post-eval: run render_recordings.py + upload to WandB
+  auto_render_after_eval: true   # post-eval: run render_recordings_v2.py + upload to WandB
 
 # The behavior-probe experiment: evaluate a checkpoint on the avoidance probes -> 11 measures.
 # Runs OFFLINE (scripts/eval/dwell_sweep) OR automatically DURING training (during_training.enabled).

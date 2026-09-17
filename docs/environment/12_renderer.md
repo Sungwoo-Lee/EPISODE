@@ -1,6 +1,6 @@
 # 12 — Renderer & Visualization
 
-> **Sources**: `src/environment/renderer.py` (V1, current production default) · `src/environment/renderer_v2.py` (V2, newer declarative layout) | **Back to hub**: [ENVIRONMENT_SUMMARY](ENVIRONMENT_SUMMARY.md)
+> **Sources**: `src/environment/renderer.py` (V1, the previous renderer — still runnable by hand) · `src/environment/renderer_v2.py` (V2, newer declarative layout) | **Back to hub**: [ENVIRONMENT_SUMMARY](ENVIRONMENT_SUMMARY.md)
 
 ---
 
@@ -8,7 +8,7 @@
 
 The GridWorld Pain environment has two renderers. Both convert a single `EnvState` + `EnvParams` snapshot into an RGB image that can be assembled into an MP4 video. The image is a multi-panel telemetry dashboard — a research figure that shows the agent's ground-truth internal state (satiation, nutrition, injury) on the left, a zoomed-in map of the arena in the centre, and the agent's noisy sensory readings on the right. When noise is active, most panels show both the clean "true" reading and the agent's noised "observed" reading side by side, so you can directly see the gap introduced by perceptual noise.
 
-**Renderer V1** (`src/environment/renderer.py`, entry point `render_jax_state`) is the current production default. It is the version called by every production eval and demo script.
+**Renderer V1** (`src/environment/renderer.py`, entry point `render_jax_state`) was the production default until 2026-09-17, when evaluation video rendering switched to the dashboard renderer `scripts/eval/render_recordings_v2.py` (which draws through `src/environment/dashboard/`, not through `render_jax_state`). V1 is still imported by the demo, benchmark and snapshot scripts, and `scripts/eval/render_recordings.py` remains runnable by hand, writing to `videos/`. See [[EVAL_RENDERER_SWITCHOVER]].
 
 **Renderer V2** (`src/environment/renderer_v2.py`, entry point `render_jax_state_v2`) is a newer refactor. It produces a very similar dashboard but uses a declarative layout engine (`subfigures` + `subplot_mosaic`) that makes panel sizing more predictable and eliminates the manual y-cursor bookkeeping of V1. V2 is a drop-in replacement (identical public signature) but is not yet the default in production eval — it is available for experiments and will become the default after passing the full frame inspection checklist.
 
@@ -23,16 +23,18 @@ Both renderers are pure Python (NumPy + Matplotlib, Agg backend) and run on CPU.
 
 ## Which renderer is the current default?
 
-`render_jax_state` from `src/environment/renderer.py` (V1) is the current production default. It is imported by:
+The production offline render path is **`scripts/eval/render_recordings_v2.py`**, which draws through `src/environment/dashboard/` rather than through `render_jax_state`, and writes to `videos_v2/`. All three `src/` call sites invoke it: `src/utils/async_render.py` (the non-blocking in-training default), `src/utils/evaluation_core.py` (blocking fallback + standalone eval) and `src/algorithms/dreamer_srl/eval.py` (the Dreamer kill-switch path).
 
-- `scripts/eval/render_recordings.py` (offline post-hoc video export, called automatically by eval) — `renderer.py:45`
+`render_jax_state` from `src/environment/renderer.py` (V1) is still imported by:
+
+- `scripts/eval/render_recordings.py` (the previous renderer — hand-run only since 2026-09-17; writes to `videos/`) — `renderer.py:45`
 - `scripts/media/record_env_demo.py` — `renderer.py:15`
 - `scripts/eval/benchmark_render.py` — `renderer.py:39`
 - `save_snapshot.py` — `renderer.py:14`
 
-`render_jax_state_v2` from `src/environment/renderer_v2.py` is available and used in `test_c4.py` but not yet wired into the eval pipeline.
+`render_jax_state_v2` from `src/environment/renderer_v2.py` is available and used in `test_c4.py` but is not wired into the eval pipeline.
 
-To swap the entire pipeline to V2, change the imports in `scripts/eval/render_recordings.py` lines 31 and 45 (see "Swapping the Active Renderer" section below).
+Swapping the imports in `scripts/eval/render_recordings.py` no longer decides anything for the evaluation path: that path runs `render_recordings_v2.py`, which does not import `render_jax_state` at all (see "Swapping the Active Renderer" section below).
 
 ---
 
@@ -361,7 +363,7 @@ for step in range(max_steps):
 save_jax_video(frames, "output/episode.mp4", fps=5)
 ```
 
-The offline recording pipeline (`scripts/render_recordings.py`) uses multiprocessing workers, each calling `render_jax_state` + `save_jax_video` to produce one MP4 per episode, then optionally concatenating them.
+The previous offline recording pipeline (`scripts/eval/render_recordings.py`) uses multiprocessing workers, each calling `render_jax_state` + `save_jax_video` to produce one MP4 per episode, then optionally concatenating them. The current production pipeline (`scripts/eval/render_recordings_v2.py`) has the same per-episode multiprocessing shape but draws each frame through `src/environment/dashboard/`.
 
 ---
 
@@ -614,7 +616,7 @@ Happens in V2 when a `subplot_mosaic` row is given a very small `height_ratio` (
 
 ### Swapping the Active Renderer in Production
 
-The production offline render pipeline imports the renderer in two places in `scripts/render_recordings.py`:
+The *previous* offline render pipeline imports the renderer in two places in `scripts/eval/render_recordings.py`. Since 2026-09-17 this swap no longer affects the evaluation path, which runs `scripts/eval/render_recordings_v2.py` instead:
 
 ```python
 # Line 31 (worker init):

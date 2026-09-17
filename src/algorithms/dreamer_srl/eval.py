@@ -527,7 +527,7 @@ def _render_and_upload(
 
     Args:
         recordings_dir: path to <results_dir>/recordings/<checkpoint_pct>/.
-        results_dir: root results dir (videos written to results_dir/videos/).
+        results_dir: root results dir (videos written to results_dir/videos_v2/).
         checkpoint_pct: episode label for the video filename AND the
             `eval/checkpoint_episode` payload (episode count, NOT the WandB
             step axis).
@@ -543,16 +543,16 @@ def _render_and_upload(
         Path to the consolidated MP4, or None if render failed.
     """
     _project_root = '/media/nas01/projects/Interoceptive-AI/grid_world_pain'
-    render_script = os.path.join(_project_root, 'scripts', 'eval', 'render_recordings.py')
-    consolidated = os.path.join(results_dir, 'videos', f'eval_{checkpoint_pct}.mp4')
+    render_script = os.path.join(_project_root, 'scripts', 'eval', 'render_recordings_v2.py')
+    consolidated = os.path.join(results_dir, 'videos_v2', f'eval_{checkpoint_pct}.mp4')
 
+    # No --cleanup-per-episode: render_recordings_v2.py has no such flag.
     cmd = [
         sys.executable,
         render_script,
         str(recordings_dir),
         '--concat',
         '--skip-existing',
-        '--cleanup-per-episode',
         '--fps', str(fps),
     ]
     # Renderer must run on CPU only (matplotlib; avoids GPU OOM with training process)
@@ -566,7 +566,7 @@ def _render_and_upload(
         text=True,
     )
     if result.returncode != 0:
-        print(f'[eval] Warning: render_recordings.py failed '
+        print(f'[eval] Warning: render_recordings_v2.py failed '
               f'(rc={result.returncode}). stderr: '
               f'{(result.stderr or "")[:500]}')
         return None

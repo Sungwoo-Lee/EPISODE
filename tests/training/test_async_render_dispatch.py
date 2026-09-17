@@ -7,7 +7,7 @@ finding 2 — dispatch must poll before overwriting pending state so a render
 finishing between the last poll and the next dispatch is not silently lost).
 
 The render script is monkeypatched to a stub (writes the same
-<results>/videos/eval_<ckpt>.mp4 the real renderer writes, after an optional
+<results>/videos_v2/eval_<ckpt>.mp4 the real renderer writes, after an optional
 env-controlled sleep), so no matplotlib/ffmpeg runs. WandB upload is mocked at
 src.utils.wandb_utils.upload_video (the exact attribute poll_render resolves
 lazily at call time).
@@ -37,7 +37,7 @@ rc = int(os.environ.get("RENDER_STUB_RC", "0"))
 if rc == 0:
     results_dir = os.path.dirname(os.path.dirname(os.path.abspath(recordings_dir)))
     ckpt = os.path.basename(os.path.normpath(recordings_dir))
-    videos = os.path.join(results_dir, "videos")
+    videos = os.path.join(results_dir, "videos_v2")
     os.makedirs(videos, exist_ok=True)
     with open(os.path.join(videos, "eval_%s.mp4" % ckpt), "w") as f:
         f.write("stub-mp4")
@@ -116,7 +116,7 @@ def test_dispatch_nonblocking_poll_detects_completion_uploads_once(rig):
         poll_render(state, wandb_enabled=True, step=1234)
         assert len(rig.uploads) == 1
         path, kw = rig.uploads[0]
-        assert path.endswith(os.path.join("videos", "eval_100.mp4"))
+        assert path.endswith(os.path.join("videos_v2", "eval_100.mp4"))
         assert os.path.exists(path)
         assert kw["episode"] == 100
         assert kw["step"] == 1234  # Dreamer mode: CURRENT policy_step at poll time
@@ -317,7 +317,7 @@ def test_dreamer_blocking_fallback_uses_subprocess_run(monkeypatch, tmp_path):
     )
     assert result is None  # rc=1 -> None (legacy behavior)
     assert len(calls) == 1
-    assert calls[0][1].endswith(os.path.join("scripts", "eval", "render_recordings.py"))
+    assert calls[0][1].endswith(os.path.join("scripts", "eval", "render_recordings_v2.py"))
     assert "--concat" in calls[0] and "--skip-existing" in calls[0]
 
 
@@ -329,3 +329,97 @@ def test_render_child_env_is_gpu_isolated():
     env = _render_env()
     assert env["JAX_PLATFORMS"] == "cpu"
     assert env["CUDA_VISIBLE_DEVICES"] == ""
+
+
+# ---------------------------------------------------------------------------
+# EVAL_RENDERER_SWITCHOVER CP1 / CP2 — the blind spot of every case above.
+# They all monkeypatch _RENDER_SCRIPT to a stub, so neither a flag the real
+# renderer rejects nor a wrong predicted output path can be seen by any of them.
+# These two cases deliberately use the REAL script.
+# ---------------------------------------------------------------------------
+
+
+def test_dispatched_argv_is_accepted_by_the_real_renderer(tmp_path):
+    """CP1 — the argv dispatch_render builds must survive the REAL script's argparse.
+
+    No stub here: this spawns the real scripts/eval/render_recordings_v2.py
+    against an EMPTY recordings directory, so it costs one process start and
+    renders nothing. The script must get PAST argparse and fail on the missing
+    run_meta.pkl.
+
+    Fails before the switchover: --cleanup-per-episode is not a V2 flag, so
+    argparse exits 2 with "unrecognized arguments" before a frame is drawn — and
+    because a failed render only warns, training would run to completion with no
+    videos and one unread line in a log.
+    """
+    state = new_render_state()
+    results_dir = os.path.join(str(tmp_path), "results")
+    rec = os.path.join(results_dir, "recordings", "7")
+    os.makedirs(rec)
+    try:
+        assert dispatch_render(
+            state, recordings_dir=rec, results_dir=results_dir,
+            checkpoint_pct=7, fps=5, quiet=True, wandb_enabled=False,
+            step=0, upload_step_mode="checkpoint_pct",
+        ) is True
+        log_path = state["pending"]["log_path"]
+        proc = state["proc"]
+        proc.wait(timeout=180)
+        with open(log_path) as fh:
+            log = fh.read()
+        assert "unrecognized arguments" not in log, (
+            "the dispatched argv carries a flag the real renderer rejects:\n"
+            + log[-2000:])
+        assert "run_meta.pkl not found" in log, (
+            "expected the real renderer to clear argparse and fail on the empty "
+            "recordings dir; got:\n" + log[-2000:])
+        assert proc.returncode != 0
+    finally:
+        _kill(state)
+
+
+@pytest.mark.integration
+def test_caller_predicted_video_path_matches_what_the_renderer_writes(tmp_path):
+    """CP2 — the path the dispatcher predicts is the path the renderer writes.
+
+    The caller builds `<results_dir>/videos_v2/eval_<pct>.mp4`; the script
+    derives `rec_dir.parent.parent/videos_v2/eval_<rec_dir.name>.mp4`. Those
+    agree only by a structural coincidence between two files, so this asserts the
+    agreement against a real render rather than by reading both expressions.
+    A disagreement is the failure that renders correctly and uploads nothing.
+    """
+    import shutil
+
+    fixture = os.path.join(async_render._PROJECT_ROOT, "results", "render_audit",
+                           "recordings", "M4", "M4")
+    if not os.path.exists(os.path.join(fixture, "run_meta.pkl")):
+        pytest.skip(f"render-audit fixture not on disk ({fixture}); regenerate "
+                    f"with scripts/eval/make_render_fixture_recordings.py")
+
+    results_dir = os.path.join(str(tmp_path), "run")
+    rec = os.path.join(results_dir, "recordings", "M4")
+    os.makedirs(rec)
+    shutil.copy2(os.path.join(fixture, "run_meta.pkl"),
+                 os.path.join(rec, "run_meta.pkl"))
+    shutil.copy2(os.path.join(fixture, "episode_000001.rec.gz"),
+                 os.path.join(rec, "episode_000001.rec.gz"))
+
+    state = new_render_state()
+    try:
+        assert dispatch_render(
+            state, recordings_dir=rec, results_dir=results_dir,
+            checkpoint_pct="M4", fps=5, workers=1, quiet=True,
+            wandb_enabled=False, step=0, upload_step_mode="checkpoint_pct",
+        ) is True
+        predicted = state["pending"]["mp4_path"]
+        log_path = state["pending"]["log_path"]
+        proc = state["proc"]
+        proc.wait(timeout=900)
+        with open(log_path) as fh:
+            log = fh.read()
+        assert proc.returncode == 0, log[-3000:]
+        assert os.path.exists(predicted), (
+            f"the dispatcher predicted {predicted}, which the renderer did not "
+            f"write. Render log:\n{log[-3000:]}")
+    finally:
+        _kill(state)

@@ -47,7 +47,7 @@ def test_video_upload_uses_policy_step_clock(tmp_path, monkeypatch):
     # Fake a consolidated MP4 so the post-subprocess `os.path.exists` check passes.
     recordings_dir = tmp_path / 'recordings' / '10000'
     recordings_dir.mkdir(parents=True)
-    videos_dir = tmp_path / 'videos'
+    videos_dir = tmp_path / 'videos_v2'
     videos_dir.mkdir(parents=True)
     consolidated = videos_dir / 'eval_10000.mp4'
     consolidated.write_bytes(b'\x00' * 2048)

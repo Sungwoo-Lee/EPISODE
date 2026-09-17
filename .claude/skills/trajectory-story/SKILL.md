@@ -57,12 +57,14 @@ which `scripts/eval/eval_rollout.py --record` writes). It is animal-layout-agnos
 python scripts/eval/eval_rollout.py --config <cfg> --agent_config configs/models/recurrent_ppo/recurrent_ppo.yaml \
   --checkpoint <ckpt-dir> --output-root results/eval/<name> --eval-n-episodes 20 --record --record-n-episodes 20 --device gpu
 # 2) render
-python scripts/eval/render_recordings.py results/eval/<name>/models/<ckpt>/recordings/<pct>/ --workers 8 --fps 5 --concat
+python scripts/eval/render_recordings_v2.py results/eval/<name>/models/<ckpt>/recordings/<pct>/ --workers 8 --fps 5 --concat
 # 3) the consolidated eval_*.mp4 can be ~17 min for 20 episodes and may not open — make a short first-5 clip (stream-copy, instant):
-VD=results/eval/<name>/models/<ckpt>/videos
+VD=results/eval/<name>/models/<ckpt>/videos_v2
 printf "file '%s'\n" "$PWD/$VD/<pct>/episode_00000"{0,1,2,3,4}".mp4" > /tmp/c.txt
 ffmpeg -y -f concat -safe 0 -i /tmp/c.txt -c copy "$VD/eval_first5.mp4"
 ```
+
+The previous renderer remains available as `scripts/eval/render_recordings.py`, writing to `videos/`.
 
 ## References
 
