@@ -8,12 +8,16 @@ the occupants on it, side by side. Whether that is *legible* is not a matter of
 opinion -- it reduces to a few numbers, and this file is where those numbers are
 checked:
 
-* a token's ink half-extent ``h`` is **15.00 / 10.35 / 10.12 px** for one, two,
+* a token's ink half-extent ``h`` is **17.00 / 10.35 / 10.12 px** for one, two,
   and three-or-four occupants in a 50 px square;
-* the smallest identifying mark on each form (the predator's amber eye slit, the
-  rabbit's ear gap) must clear about 3 rendered pixels, which is what makes the
-  square's minimum size **49 px** for two occupants and **50 px** for a four-way;
-* the agent's chevron must clear 6 px.
+* the smallest identifying mark on each VECTOR form (the predator's amber eye
+  slit, the rabbit's ear gap) must clear about 3 rendered pixels, which is what
+  makes the square's minimum size **49 px** for two occupants and **50 px** for a
+  four-way;
+* the agent's chevron must clear 6 px;
+* and, since the movers are now drawn from the user's own artwork rather than
+  from vector imitations of it, each icon's identifying mark is RE-MEASURED from
+  its PNG, so swapping in weaker artwork fails here rather than shipping.
 
 They are recomputed here from the form constants rather than quoted, so a change
 to a form that breaks legibility fails **here**, in a second, instead of in a
@@ -48,7 +52,7 @@ CELL = 50.0
 # --------------------------------------------------------------------------
 # slot geometry
 # --------------------------------------------------------------------------
-@pytest.mark.parametrize("n,expected", [(1, 15.00), (2, 10.35), (3, 10.12), (4, 10.12)])
+@pytest.mark.parametrize("n,expected", [(1, 17.00), (2, 10.35), (3, 10.12), (4, 10.12)])
 def test_slot_half_extent_at_the_decided_square(n, expected):
     """The three pinned numbers of plan section R18.3, to two decimals."""
     assert C.slot_h(n, CELL) == pytest.approx(expected, abs=0.005)
@@ -67,7 +71,7 @@ def test_a_lone_occupant_is_the_same_size_with_and_without_a_bed():
     assert bare[0] is None and on_bush[0] == "bush"
     lone = C.slots(["agent"], 25, 25, CELL)[0]
     shared = C.slots(["agent"], 25, 25, CELL)[0]
-    assert lone.h == shared.h == pytest.approx(15.0)
+    assert lone.h == shared.h == pytest.approx(17.0)
     assert len(on_bush[1]) == 1 and on_bush[1][0][0] == "agent"
 
 
@@ -191,33 +195,95 @@ def test_a_bed_plate_covers_more_than_forty_percent_of_its_square():
     assert C.bed_plate_fraction(CELL) == pytest.approx(0.5184, abs=1e-4)
 
 
-def test_the_agent_drops_its_halo_when_the_square_is_shared():
-    """The halo is wider than a whole bush glyph, so in a shared square it is
-    ink landing on the neighbour -- the mechanism behind 'agent in a bush
-    renders as agent alone'."""
-    solo = C.token("agent", 25, 25, C.slot_h(1, CELL), action="UP", shared=False)
-    shared = C.token("agent", 25, 25, C.slot_h(2, CELL), action="UP", shared=True)
-    assert len(solo) == len(shared) + 2, "solo keeps a halo and a shadow; shared keeps neither"
+def test_no_token_can_put_ink_outside_its_own_slot():
+    """The property the vector agent needed a special rule to obtain.
 
-    def radius(shapes):
-        return max(s.patch.get_extents().width / 2 for s in shapes)
-
-    assert radius(solo) > C.slot_h(1, CELL), "the solo halo reaches past h"
-    assert radius(shared) <= C.slot_h(2, CELL) + 0.51, "no shared ink may pass h"
-
-
-def test_a_token_is_one_compound_form_including_its_keyline():
-    """The keyline travels WITH its token, as part of the same compound form.
-
-    Drawn as its own artist it would be ink sitting on the perimeter of its own
-    bounding box -- which is exactly how the audit recognises an outline -- and a
-    ring-shaped part that classifies as an outline silently leaves the count of
-    what is in the square.
+    The vector agent carried a halo at 1.32 x h -- wider than the bed beneath it
+    -- so it had to be dropped whenever the square was shared, or it painted over
+    the neighbour. That was the mechanism behind 'agent in a bush renders as
+    agent alone'. The artwork makes the rule unnecessary instead of enforcing it:
+    ``agent.png`` holds its halo INSIDE its own alpha bounding box, which is
+    mapped to exactly ``2h``, so no mover's ink can leave its slot whatever else
+    is in the square. Asserted for every mover, shared and solo.
     """
-    shapes = C.token("predator", 25, 25, 10.35)
-    rings = [s for s in shapes if s.fc == "none"]
-    assert len(rings) == 1 and rings[0].lw > 0
-    assert shapes[0] is rings[0], "the keyline is drawn first, beneath its own token"
+    for name in C.CELL_PRIORITY:
+        for n, shared in ((1, False), (2, True)):
+            h = C.slot_h(n, CELL)
+            (r,) = C.token(name, 25, 25, h, action="UP", shared=shared)
+            left, right, bottom, top = r.extent
+            assert (right - left) == pytest.approx(2 * h)
+            assert (bottom - top) == pytest.approx(2 * h)
+            assert left == pytest.approx(25 - h) and top == pytest.approx(25 - h)
+
+
+def test_a_token_is_exactly_one_artist():
+    """One occupant is one drawn thing, including the agent's action chevron.
+
+    The audit's co-occupancy rule forbids two of a square's occupant artists from
+    sharing a pixel -- that is how it catches one token painted over another -- so
+    an agent whose chevron were its own patch artist, lying by construction on
+    top of its own disc, would report EVERY agent in EVERY frame as an occupant
+    drawn over an occupant. The chevron is therefore composited into the agent's
+    own pixels, and a token is one image and nothing else.
+    """
+    for name in C.CELL_PRIORITY:
+        drawn = C.token(name, 25, 25, 10.35, action="RIGHT")
+        assert len(drawn) == 1, f"{name} draws {len(drawn)} things"
+        assert isinstance(drawn[0], C.Raster)
+    # and the chevron really does travel inside the agent's own image
+    import numpy as np
+    turned = {a: C.icon_array("agent", 34, a) for a in ("UP", "RIGHT", None)}
+    assert not np.array_equal(turned["UP"], turned["RIGHT"]), (
+        "the agent's image must change with its action, or the chevron is not in it")
+    assert not np.array_equal(turned["UP"], turned[None])
+
+
+def test_the_marks_are_re_measured_from_the_artwork_not_taken_on_trust():
+    """Replacing an asset with weaker artwork must fail HERE, not in a video.
+
+    This is what makes a frozen raster measurement a stronger guard than a typed
+    vector fraction: the constant cannot notice that the file under it changed,
+    and this does.
+    """
+    for name, frozen in C.RASTER_MARK.items():
+        measured = C.measure_raster_mark(name)
+        assert measured == pytest.approx(frozen, abs=0.005), (
+            f"{name}'s {C.KEY_MARK[name]} measures {measured:.3f} x h in "
+            f"assets/dashboard_icons/{name}.png against the frozen "
+            f"{frozen:.3f}. If the artwork was deliberately replaced, re-measure "
+            f"and move RASTER_MARK with the new numbers recorded; never relax "
+            f"this tolerance to accommodate a weaker icon.")
+
+
+def test_the_artwork_meets_the_floors_that_replaced_the_mark_floor():
+    """The substitution's own two numbers, at both sizes a 50 px square uses.
+
+    Recorded here because the numbers, not an adjective, are what a later reader
+    needs: the per-mark 3 px floor is NOT met by this artwork (measured 2.16-4.16
+    px solo), and the pair below is what the design round's compression test
+    actually validated in its place.
+    """
+    for n in (1, 2, 3, 4):
+        h = C.slot_h(n, CELL)
+        assert 2 * h >= C.RASTER_MIN_DIAMETER_PX
+        for name in C.CELL_PRIORITY:
+            assert C.raster_body_area_px2(name, h) >= C.RASTER_MIN_BODY_AREA_PX2
+        C.check_legible(n, list(C.CELL_PRIORITY)[:n], CELL)
+
+    # The one mover the floor actually binds on, with both numbers, so that the
+    # union rule cannot be mistaken for a threshold chosen to fit the artwork.
+    tight = C.slot_h(2, CELL)
+    assert C._colour_area_px2("hiding_predator", C.RASTER_BODY_COLOUR[
+        "hiding_predator"], tight) == pytest.approx(39.41, abs=0.05)
+    assert C.raster_body_area_px2("hiding_predator", tight) == pytest.approx(
+        45.80, abs=0.1)
+
+    solo = {n: C.RASTER_MARK[n] * C.slot_h(1, CELL) for n in C.RASTER_MARK}
+    assert solo["food"] == pytest.approx(4.16, abs=0.05)
+    assert min(solo.values()) == pytest.approx(2.16, abs=0.05), solo
+    assert min(solo.values()) < C.MARK_FLOOR_PX, (
+        "if the artwork ever clears the 3px mark floor at solo size, say so in "
+        "the plan and reconsider the substitution -- do not leave this comment")
 
 
 def test_the_world_map_caption_fits_its_card_and_describes_what_is_drawn():
@@ -271,8 +337,13 @@ def test_the_world_map_caption_fits_its_card_and_describes_what_is_drawn():
     assert "pip" not in whole, "the rim pip is retired; a caption naming it is stale"
 
 
-def test_the_keyline_is_inset_so_its_outer_edge_lies_at_h():
+def test_an_icon_is_resampled_once_to_an_integer_pixel_size():
+    """Matplotlib's on-the-fly resampling is mushy at 20 px, so the image handed
+    to the canvas is already exactly the size it will occupy."""
     h = 10.35
-    ring = C.token("food", 25, 25, h)[0]
-    r = ring.patch.get_extents().width / 2
-    assert r + ring.lw / 2 == pytest.approx(h, abs=1e-6)
+    (r,) = C.token("food", 25, 25, h)
+    assert r.px == round(2 * h) == 21
+    arr = C.icon_array(r.name, r.px, r.action)
+    assert arr.shape == (21, 21, 4)
+    assert arr.max() <= 1.0, "RGBA is handed over in 0..1, as Matplotlib wants it"
+    assert C.icon_array(r.name, r.px, r.action) is arr, "resampling must be cached"

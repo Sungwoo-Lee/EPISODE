@@ -17,11 +17,19 @@ audit suite passed all 18 of its tests when the ink measurement was mutated to
 flag every pixel on the canvas.
 
 SYNTHETIC VERSUS REAL CONTEXTS. Some geometry the plan pins cannot be reached by
-any config this project maintains. Every maintained world has both sense ranges
-at 0, so **no maintained config has a sensor band**, and the thermal-plus-band
-case therefore exists only as a synthetic ``LayoutContext``. Tests that use one
-say so in their name and docstring, so a later reader does not go hunting for the
-config that produces it.
+any config this project maintains. Every maintained world reads both senses at
+range 0, so none of them produces the **diamond-map** band that the pinned
+564 / 476 / 236 geometry is measured on, and that case exists only as a synthetic
+``LayoutContext``. Tests that use one say so in their name and docstring, so a
+later reader does not go hunting for the config that produces it.
+
+WHAT CHANGED ON 2026-09-17, because these tests asserted the opposite until then.
+The band used to exist only for a sense reading past the agent's own square, so
+every maintained world had NO band and its two sense panels were pushed into the
+right-hand column. That left a 564 x 269 px hole under the arena in the shipped
+frame and is not what the approved design shows. The band now exists whenever a
+sense is observed **at any range**; what the range decides is what is drawn in it
+(diamond maps at range >= 1, named channel rows at range 0).
 """
 
 import os
@@ -407,9 +415,14 @@ def test_a_5x5_maintained_world_gives_a_314_card_and_a_726_right_column(path):
     assert (card.w, card.h) == (314, 314)
     assert lay.arena_grid.w == 250
     assert lay.regions["right"].w == 726
-    # No maintained 5x5 world has a band, so the right column runs to the bottom.
-    assert lay.band is False
-    assert lay.regions["right"].h == 816
+    # These worlds read both senses, so they have a band, and the right column is
+    # therefore measured against the arena's bottom edge rather than the canvas.
+    assert lay.band is True
+    assert lay.regions["right"].h == 314
+    assert lay.regions["band"].y == 394 and lay.regions["band"].h == 486
+    # It still fits, because a 5x5 world has no temperature system: the column
+    # carries proprioception plus the extero/collision row, not five pods.
+    assert P.PROP_H + P.EXTERO_NOC_H + L.GAP == 270 <= 314
 
 
 def test_a_smaller_world_gives_the_right_column_less_height_when_a_band_exists():
@@ -502,15 +515,21 @@ def test_every_maintained_config_packs_and_is_complete(path):
 
 
 @pytest.mark.parametrize("path", MAINTAINED)
-def test_no_maintained_config_has_a_sensor_band(path):
-    """Recorded as an assertion, because the Phase 1 tests depend on it.
+def test_every_maintained_config_has_a_sensor_band(path):
+    """The band is not a feature of long-range senses; it is where senses live.
 
-    Every maintained world has both sense ranges at 0, which is why the pinned
-    564/476/236 geometry has to be asserted on a synthetic context.
+    Both halves are asserted, because the distinction is the whole change: every
+    maintained world DOES have a band (it observes smell and sight), and none of
+    them has a GRID sense (both ranges are 0), so each draws named channel rows
+    rather than diamond maps. That second half is also why the pinned
+    564/476/236 geometry still has to be measured on a synthetic context.
     """
     ctx = _ctx(path)
+    assert ctx.band_senses == ("olfactory", "visual")
     assert ctx.has_grid_sense is False
-    assert pack(ctx).band is False
+    lay = pack(ctx)
+    assert lay.band is True
+    assert lay.parent["olfactory"] == "band" and lay.parent["visual"] == "band"
 
 
 def test_toggling_a_modality_frees_exactly_its_height():
@@ -638,53 +657,69 @@ def test_a_recording_missing_a_flag_reads_as_absent_not_as_false():
     assert P.real_available(Old()) == {}
 
 
-def test_the_campfire_worlds_right_column_budget_is_pinned():
+def test_the_campfire_worlds_columns_are_pinned():
     """The tightest real budget in the project, named so a failure explains itself.
 
     WHY THIS TEST EXISTS (plan section D1.1, added after the CP1 verification).
-    Two maintained worlds -- the campfire thermal world and the sensory-noise
-    world -- have a temperature system AND both sense ranges at 0, so neither
-    sense moves into a band and the right column must carry **five** pods at
-    once. It fits with **16 px to spare** out of 816. Two of those five heights
-    (the range-0 smell pod and the range-0 vision pod) are the only numbers in
-    this layout that the canonical design sketch never draws, so they are the
-    ones most likely to move when a painter measures real text.
+    The campfire thermal world and the sensory-noise world have a temperature
+    system AND both senses, so they are what any change to the sense panels is
+    felt by first.
 
-    The `compact` fallback deliberately does not shrink right-column pods -- a
-    thermoception diamond compacted is a thermoception diamond nobody can read --
-    so if that pair ever grows past its 268 px joint budget, `pack()` raises on a
-    REAL maintained world and the campfire video simply stops rendering. This
-    test makes that arrive as "the budget is 268 px and you asked for 269"
-    instead of as an unexplained LayoutOverflowError months later.
+    WHAT IT USED TO PIN, AND WHY THAT IS GONE. Until 2026-09-17 both senses were
+    pods in the RIGHT COLUMN, which therefore carried five pods needing 800 px of
+    its 816 -- a 16 px margin, the tightest in the project, and the reason the two
+    range-0 pod heights were the most dangerous numbers in the layout. Moving both
+    senses into the band removes that budget rather than loosening it: the right
+    column now carries three pods, and the pressure moves to the band, which is
+    pinned below.
     """
     ctx = _ctx(M4)
-    cards = [c for c in P.present_cards(ctx) if c.region == "right"]
-    assert {c.key for c in cards} == {
-        "proprioception", "olfactory", "extero_nociception", "collision",
-        "thermoception", "visual"}, "the campfire world's five right-hand rows"
+    # `band=True` is what `pack()` selects for this world (see `_candidates`);
+    # the default is False, which is the arrangement this world no longer uses.
+    right = [c for c in P.present_cards(ctx, band=True) if c.region == "right"]
+    assert {c.key for c in right} == {
+        "proprioception", "extero_nociception", "collision", "thermoception"}, (
+        "the campfire world's right column after the senses moved to the band")
 
-    rows = []
-    for card in sorted(cards, key=lambda c: c.order):
-        if rows and card.row is not None and rows[-1][0].row == card.row:
-            rows[-1].append(card)
-        else:
-            rows.append([card])
-    need = sum(max(c.min_h for c in r) for r in rows) + L.GAP * (len(rows) - 1)
-
+    need = P.PROP_H + P.EXTERO_NOC_H + P.THERMO_H + 2 * L.GAP
     lay = pack(ctx)
     avail = lay.regions["right"].h
-    assert avail == 816, "no band, so the right column runs the full card height"
-    assert need == 800, (
-        f"the campfire world's right column needs {need}px, not the pinned 800px. "
-        f"If a painter measured real text and this grew, that is the recorded "
-        f"stop-and-report case: report both numbers and the proposed remedy "
-        f"rather than raising a constant here."
-    )
-    assert avail - need == 16, f"the recorded margin is 16px; this run has {avail - need}px"
+    assert need == 516
+    assert avail == 564, "with a band, the right column stops at the arena's bottom"
+    assert avail - need == 48, (
+        f"the recorded margin is 48px; this run has {avail - need}px")
 
-    joint = P.OLF_SPECTRUM_H + P.VISUAL_BARS_H
-    assert joint == 252, "the two pods the design sketch never draws"
-    assert joint <= 268, (
-        f"the smell and vision pods jointly have 268px of budget in the campfire "
-        f"world and now want {joint}px"
-    )
+    # The thermoception card is the column's only grower, so the slack lands
+    # there and the column bottom-aligns with the arena at y = 628.
+    assert lay.cards["thermoception"].h == P.THERMO_H + 48 == 278
+    assert lay.cards["thermoception"].bottom == lay.cards["arena"].bottom == 628
+
+    # The band, which is where the pressure moved to.
+    band = lay.regions["band"]
+    assert (band.x, band.y, band.w, band.h) == (360, 644, 1056, 236)
+    olf, vis = lay.panels["olfactory"], lay.panels["visual"]
+    assert (olf.x, olf.y, olf.w, olf.h) == (360, 644, 520, 236)
+    assert (vis.x, vis.y, vis.w, vis.h) == (896, 644, 520, 236)
+    assert max(P.OLF_ROWS_H, P.VISUAL_ROWS_H) == 232 <= band.h, (
+        "the taller channel-row panel must fit the band a 10x10 world leaves")
+
+
+def test_the_channel_row_heights_agree_with_the_painter_that_draws_them():
+    """Layout's two height constants are arithmetic ON the painter's pitches.
+
+    They are declared in `panels.py` because layout may not import a drawing
+    module, which makes them exactly the kind of number that drifts from the
+    thing it describes. So the arithmetic is redone here from the painter's own
+    constants: a 64 px title strip, the taller column's rows at that sense's
+    pitch, and a 16 px footer for the caption naming the scale.
+    """
+    from src.environment.dashboard import painters as PN
+
+    for sense, key, n_channels, pinned in (
+        ("Olfaction", "olfactory", 5, P.OLF_ROWS_H),
+        ("Visual", "visual", 8, P.VISUAL_ROWS_H),
+    ):
+        per_col = (n_channels + 1) // 2
+        assert 64 + per_col * PN.CHANNEL_ROW_PITCH[sense] + 16 == pinned, (
+            f"{key}: {per_col} rows at {PN.CHANNEL_ROW_PITCH[sense]}px no longer "
+            f"makes the pinned {pinned}px")

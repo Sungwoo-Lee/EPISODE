@@ -37,9 +37,41 @@ CANVAS_TRACK = "#D9DCD5"    # a track drawn ON the canvas, where TRACK would van
 OUTLINE = "#CDD1CB"         # an outlined empty track: "no signal", not "zero"
 WHITE = "#FFFFFF"
 
-#: The figure's own background. Deliberately NOT ``CANVAS`` -- see the module
-#: docstring; this is what keeps the arena's ground visible to the pixel audit.
-FIGURE_FACECOLOR = "#FFFFFF"
+#: The figure's own background: a colour NOTHING in this frame ever paints.
+#:
+#: Deliberately not ``CANVAS`` (see the module docstring) and, since 2026-09-17,
+#: deliberately not ``WHITE`` either. The reasoning is the same one applied
+#: twice, and the second application is the one that was missed.
+#:
+#: THE INSTRUMENT MEASURES INK BY ISOLATION: a pixel counts as ink when drawing
+#: one element alone moves it more than 8/255 away from the figure with
+#: everything hidden -- i.e. away from THIS colour. So an element painted in this
+#: colour lays down no measurable ink and is invisible to every rule. That is
+#: why it was moved off ``CANVAS``; but it was moved ONTO white, and white is not
+#: an unused colour in this frame. It is the movers' token disc, the keyline, the
+#: active chip's label, the World map's ring.
+#:
+#: WHAT IT COST, MEASURED. With the movers drawn as the user's artwork -- a
+#: coloured glyph on a white token disc -- the disc was invisible to the probe,
+#: so each token's measurable ink was its glyph PLUS its drop shadow with the
+#: disc between them missing: two disconnected components for one animal. The
+#: co-occupancy rule compares a square's component count with the number of kinds
+#: standing there, so it reported 16 findings on a correct campfire frame and 18
+#: on a correct M5 frame, every one of them with a survival ratio of **1.000** --
+#: the picture was right and the instrument could not see it.
+#:
+#: THE FIX IS A GAIN IN SENSITIVITY, NOT A RELAXATION. On a colour no element
+#: paints, every element's ink is measurable, including white ink that was
+#: previously unmeasurable anywhere in the frame. Measured on the campfire frame:
+#: `cell_overdraw` 16 -> **0**, squares whose component count disagrees with their
+#: kind count 8 -> **0**, and one MORE `text_over_fill` is now reported (14 -> 15)
+#: because white label ink became visible. No threshold moved.
+#:
+#: IT CHANGES NO RENDERED PIXEL, and that is checked rather than assumed: the page
+#: colour is painted as a rectangle covering the whole figure, so the facecolor is
+#: never on screen. The campfire frame rendered on white and on this colour is
+#: byte-identical (max per-channel difference 0).
+FIGURE_FACECOLOR = "#FF00FF"
 
 # -- ink --------------------------------------------------------------------
 INK, INK2, INK3 = "#15171C", "#4A515C", "#6F7682"
@@ -108,6 +140,17 @@ TEMP_WARM, TEMP_HOT_MID, TEMP_HOT = "#F7DCCB", "#E6806A", "#B8323A"
 #: ``None`` for the panel list means "anywhere" (neutral chrome). CP-C reads this
 #: table, classifies every foreground pixel of a frame to its nearest token, and
 #: fails if a token is found outside its allowed panels.
+#:
+#: WHAT THE TABLE OMITTED, AND WHY THAT MATTERED (2026-09-17). It listed the
+#: campfire's LOG colour but none of its three FLAME colours, and neither sense
+#: ramp. Those are the two places in the frame where the one-meaning-per-colour
+#: rule is under actual pressure -- the flames are the frame's only other orange
+#: beside the nociception bars, which is a collision this plan recorded in prose
+#: and then could not see, because the instrument was not given the colours to
+#: look for. A census that cannot name a colour cannot report it in the wrong
+#: panel, so the omission made the rule quietly weaker than it reads. Both are
+#: added here WITH panel scopes, which is what keeps the flame orange legal in
+#: the arena and illegal everywhere a nociception bar lives.
 MEANING: dict[str, tuple[str, tuple[str, ...] | None]] = {
     IRIS: ("the agent", ("arena", "minimap", "proprioception", "header", "action_badge")),
     IRIS_SOFT: ("the agent, softened", ("arena", "action_badge")),
@@ -124,8 +167,31 @@ MEANING: dict[str, tuple[str, tuple[str, ...] | None]] = {
     BUSH: ("bush", ("arena", "minimap")),
     TREE: ("tree", ("arena", "minimap")),
     LOG_BACK: ("campfire", ("arena", "minimap")),
+    # The flame, scoped to the one panel that draws a campfire. This is the
+    # frame's only orange besides NOCI, and the two are 21/255 apart at their
+    # closest (FIRE_OUT vs NOCI), so the scope is what carries the distinction:
+    # orange inside the arena is fire, orange anywhere a bar lives is pain.
+    FIRE_OUT: ("a campfire's flame", ("arena",)),
+    FIRE_MID: ("a campfire's flame, mid", ("arena",)),
+    FIRE_CORE: ("a campfire's flame core", ("arena",)),
+    GLOW: ("a campfire's heat glow", ("arena",)),
+    LOG_FRONT: ("campfire, front log", ("arena",)),
     TEMP_COLD: ("temperature, cold end", ("arena", "thermoception", "body_temp")),
     TEMP_HOT: ("temperature, hot end", ("arena", "thermoception", "body_temp")),
+    # The two sense ramps. Each is listed by its THREE SATURATED stops only; the
+    # palest stop of each is deliberately absent, and the reason is arithmetic
+    # rather than taste. OLF_STOPS[0] `#EDF7F5` is 11/255 from TRACK `#ECEEEA`,
+    # inside the census's own 12/255 tolerance, so registering it would make
+    # every empty track in the frame classify as a smell reading -- the census
+    # would report the panel's background as signal. The painter draws a zero
+    # reading as TRACK for exactly the same reason, so the palest ramp stop is
+    # very nearly unreachable ink in the first place.
+    OLF_STOPS[1]: ("a smell reading", ("olfactory",)),
+    OLF_STOPS[2]: ("a smell reading", ("olfactory",)),
+    OLF_STOPS[3]: ("a smell reading", ("olfactory",)),
+    VIS_STOPS[1]: ("a vision reading", ("visual",)),
+    VIS_STOPS[2]: ("a vision reading", ("visual",)),
+    VIS_STOPS[3]: ("a vision reading", ("visual",)),
     TRACK: ("an empty track, or bare ground", None),
     CARD: ("a card", None),
     CANVAS: ("the page", None),

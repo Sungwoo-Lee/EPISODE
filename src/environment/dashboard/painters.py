@@ -29,7 +29,8 @@ from matplotlib.collections import PatchCollection
 
 from . import cells as C
 from . import palette as P
-from .labels import channel_labels
+from .labels import display_channel as channel_display
+from .layout import LayoutOverflowError
 from .style import PT, TITLE_BASE, rrect, signed, text
 from .text_fit import CAPTION_FLOOR_PX, PLAYBACK_FLOOR_PX, fit_text
 
@@ -115,31 +116,60 @@ def gradient(ax, x, y, w, h, colours, z=2):
     return im
 
 
-def _collection(ax, z):
-    """An empty artist that will carry one compound form (a bed or a token).
+class _Form:
+    """The artists one drawn form owns: a patch collection and an image.
+
+    A form is EITHER vector or raster -- a terrain bed is patches, a mover is its
+    artwork -- so exactly one of the two is ever visible at a time. Both are
+    created up front because this renderer builds every artist once per episode
+    and only updates them afterwards, and a square cannot know in advance which
+    kind of thing will stand on it.
 
     ONE artist per form is a requirement, not a tidiness choice: the pixel audit
-    separates the square's floor from its occupants by measuring ink AREA, so a
-    bed split across six artists would have its small parts counted as an
-    occupant (plan section R20.8).
+    separates a square's floor from its occupants by measuring ink AREA, so a bed
+    split across six artists would have its small parts counted as an occupant
+    (plan section R20.8) -- and two artists for one occupant would be read as two
+    occupants sharing pixels, which is the very defect the rule hunts for.
     """
-    coll = PatchCollection([], match_original=False, zorder=z)
-    ax.add_collection(coll)
-    coll.set_transform(ax.transData)
-    coll.set_visible(False)
-    return coll
+
+    __slots__ = ("coll", "im")
+
+    def __init__(self, ax, z):
+        self.coll = PatchCollection([], match_original=False, zorder=z)
+        ax.add_collection(self.coll)
+        self.coll.set_transform(ax.transData)
+        self.coll.set_visible(False)
+        self.im = ax.imshow(np.zeros((1, 1, 4)), extent=(0, 1, 1, 0), zorder=z,
+                            interpolation="none", aspect="auto")
+        self.im.set_visible(False)
 
 
-def _fill(coll, shapes):
-    """Put a compound form into its artist, or hide it when there is none."""
-    if not shapes:
-        coll.set_visible(False)
-        return
-    coll.set_paths([s.patch for s in shapes])
-    coll.set_facecolor([s.fc for s in shapes])
-    coll.set_edgecolor([s.ec for s in shapes])
-    coll.set_linewidth([s.lw * PT for s in shapes])
-    coll.set_visible(True)
+def _collection(ax, z):
+    """An empty form artist. Named for the vector case it started as."""
+    return _Form(ax, z)
+
+
+def _fill(form, shapes):
+    """Put a compound form into its artists, or hide it when there is none."""
+    coll, im = form.coll, form.im
+    patches = [s for s in shapes if isinstance(s, C.Shape)]
+    rasters = [s for s in shapes if isinstance(s, C.Raster)]
+    if len(rasters) > 1:
+        raise ValueError(
+            f"a form may carry at most one image; got {len(rasters)} "
+            f"({[r.name for r in rasters]})"
+        )
+    if patches:
+        coll.set_paths([s.patch for s in patches])
+        coll.set_facecolor([s.fc for s in patches])
+        coll.set_edgecolor([s.ec for s in patches])
+        coll.set_linewidth([s.lw * PT for s in patches])
+    coll.set_visible(bool(patches))
+    if rasters:
+        r = rasters[0]
+        im.set_data(C.icon_array(r.name, r.px, r.action))
+        im.set_extent(r.extent)
+    im.set_visible(bool(rasters))
 
 
 # --------------------------------------------------------------------------
@@ -566,68 +596,169 @@ def build_intensity(dash, ax, w, h, title, sense, colour, real):
     dash.updates.append(upd)
 
 
-def build_spectrum(dash, ax, w, h, sense, names, colour_stops):
-    """Smell at range 0: one bar per odour component."""
+#: Baseline-to-baseline pitch of a named channel row, per sense. Olfaction has
+#: five channels and vision eight, so vision's rows are a little tighter; both
+#: are two columns.
+CHANNEL_ROW_PITCH = {"Olfaction": 40, "Visual": 38}
+CHANNEL_BAR_H = 6
+
+
+def _ramp(stops, label="ramp"):
     from matplotlib.colors import LinearSegmentedColormap
-    cmap = LinearSegmentedColormap.from_list("s", list(colour_stops))
-    card_title(dash, ax, w, "Olfaction", "range 0")
+    return LinearSegmentedColormap.from_list(label, list(stops))
+
+
+def build_channel_rows(dash, ax, w, h, sense, title, codes, colour_stops):
+    """A sense read at range 0: one NAMED row per channel, with its number.
+
+    WHAT THIS REPLACES, AND WHY IT IS NOT A RESTYLE. The shipped panel drew one
+    coloured swatch per channel under a four-letter code -- ``FOOD AN-A AN-B BUSH
+    TREE`` -- so the reader was given a shade, a code and no value: three of the
+    five channels were indistinguishable pale blocks, and no number appeared
+    anywhere. A row carries the channel's real name, the qualifier that makes the
+    two shared animal odours mean anything, and the reading itself. The bar
+    stays, because a column of numbers alone is hard to compare at video speed.
+
+    Range 0 means the sense reads exactly one square -- the one the agent is
+    standing in -- so the card says that in words instead of printing
+    ``range 0``, which is an index a viewer has no way to interpret.
+    """
+    cmap = _ramp(colour_stops, sense)
+    card_title(dash, ax, w, title, "the agent's own square")
+    names = [channel_display(sense, c) for c in codes]
+
     n = len(names)
-    gap = 10
-    cw = (w - 2 * PAD - gap * (n - 1)) / n
+    cols = 2
+    per_col = (n + cols - 1) // cols
+    pitch = CHANNEL_ROW_PITCH[sense]
+    gap = 24
+    cw = (w - 2 * PAD - gap * (cols - 1)) / cols
+    top = 64
+
     setters = []
-    for i, nm in enumerate(names):
-        x = PAD + i * (cw + gap)
-        dash.fit(ax, x + cw / 2, h - 16, "map_label", cw, ha="center").set(nm)
-        track_h = h - 60 - 26
-        rrect(ax, x, 60, cw, track_h, 4, P.TRACK, z=2)
-        fill = rrect(ax, x, 60 + track_h, cw, 1, 4, cmap(0.75), z=3)
-        setters.append((fill, track_h))
+    for i, (name, qualifier) in enumerate(names):
+        col, row = divmod(i, per_col)
+        x = PAD + col * (cw + gap)
+        y = top + row * pitch
+        # The value is measured first and its width reserved, so a long channel
+        # name is shrunk into what is left rather than colliding with its number.
+        val = dash.fit(ax, x + cw, y, "value", cw * 0.32, ha="right")
+        used = dash.width("0.00", "value") + 10
+        name_w = dash.fit(ax, x, y, "row_label", cw - used).set(name)
+        if qualifier:
+            dash.fit(ax, x + name_w + 8, y, "caption",
+                     max(8.0, cw - used - name_w - 8)).set(qualifier)
+        rrect(ax, x, y + 8, cw, CHANNEL_BAR_H, CHANNEL_BAR_H / 2, P.TRACK, z=2)
+        fill = rrect(ax, x, y + 8, CHANNEL_BAR_H, CHANNEL_BAR_H,
+                     CHANNEL_BAR_H / 2, cmap(0.75), z=3)
+        setters.append((val, fill, cw))
+
+    foot = top + per_col * pitch + 4
+    if foot + 14 <= h - 8:
+        dash.fit(ax, PAD, foot + 12, "caption", w - 2 * PAD, numeric=False).set(
+            "Scale 0 … episode maximum, shared by every step of this episode")
 
     def upd(v):
         vec = np.asarray(v.sense(sense, "vector"), dtype=float)
-        vmax = max(float(dash.sense_max.get(sense, 1.0)), 1e-6)
-        for (fill, track_h), q in zip(setters, vec):
-            frac = min(1.0, max(0.0, float(q) / vmax))
-            fill.set_height(max(1.0, track_h * frac))
-            fill.set_y(60 + track_h - max(1.0, track_h * frac))
-            fill.set_facecolor(P.TRACK if frac <= 1e-6 else cmap(0.25 + 0.75 * frac))
+        vmax = max(float(dash.sense_max.get(dash.viz_name(sense), 1.0)), 1e-6)
+        for (val, fill, bar_w), q in zip(setters, vec):
+            q = float(q)
+            val.set(f"{q:.2f}")
+            frac = min(1.0, max(0.0, q / vmax))
+            # A non-zero reading is never thinner than the bar is tall, so a
+            # small value stays visible as a dot instead of vanishing.
+            fill.set_visible(frac > 1e-6)
+            fill.set_width(max(CHANNEL_BAR_H, bar_w * frac))
+            fill.set_facecolor(cmap(0.25 + 0.75 * frac))
     dash.updates.append(upd)
 
 
-def build_channel_bars(dash, ax, w, h, sense, title, vector_size, colour_stops):
-    """Vision at range 0: one bar per property channel, with its short label."""
-    from matplotlib.colors import LinearSegmentedColormap
-    cmap = LinearSegmentedColormap.from_list("v", list(colour_stops))
-    names = channel_labels("Visual", vector_size)
-    card_title(dash, ax, w, title, "range 0")
+def build_channel_maps(dash, ax, w, h, sense, title, codes, colour_stops,
+                       offsets, sensor_range):
+    """A sense read over a diamond of squares: one small map per channel.
+
+    THE PANEL THE SHIPPED RENDERER HAD NO BUILDER FOR AT ALL. A world whose smell
+    or sight reaches past its own square declares a ``channel_maps`` panel, the
+    registry places a box for it, and nothing drew into it -- which is why the
+    one verification world with smell at range 1 reported its Olfaction panel as
+    missing. This is that builder.
+
+    Each channel gets the Manhattan diamond the sensor actually reads, in the
+    sensor's own offset order, with the agent's own square outlined in the agent
+    colour and the channel's reader-facing name under it.
+    """
+    cmap = _ramp(colour_stops, sense)
+    names = [channel_display(sense, c) for c in codes]
+    k = 2 * int(sensor_range) + 1
+
+    # Header: the sense, how far it reaches in words, and the ramp it is read on.
+    tw = dash.fit(ax, PAD, TITLE_BASE, "card_title", w / 2).set(title)
+    reach = ("the agent's own square and its four neighbours" if sensor_range == 1
+             else f"{k} × {k} diamond around the agent")
+    dash.fit(ax, PAD + tw + 10, TITLE_BASE, "card_sub", w - PAD - tw - 10).set(reach)
+
     n = len(names)
     gap = 8
-    cw = (w - 2 * PAD - gap * (n - 1)) / n
-    setters = []
-    for i, nm in enumerate(names):
-        x = PAD + i * (cw + gap)
-        dash.fit(ax, x + cw / 2, h - 16, "map_label", cw + gap, ha="center").set(nm)
-        track_h = h - 58 - 26
-        rrect(ax, x, 58, cw, track_h, 4, P.TRACK, z=2)
-        fill = rrect(ax, x, 58 + track_h, cw, 1, 4, cmap(0.75), z=3)
-        setters.append((fill, track_h))
+    slot = (w - 2 * PAD - gap * (n - 1)) / n
+    box = min(slot, h - 58 - 34)
+    cs = box / k
+    if cs < 10:
+        raise LayoutOverflowError(
+            f"{title} at range {sensor_range}: its map squares would be {cs:.1f}px "
+            f"across (floor 10px). The panel refuses to draw an unreadable map "
+            f"rather than shrinking one."
+        )
+    top = 58
+    cells = []
+    for i, (name, qualifier) in enumerate(names):
+        x0 = PAD + i * (slot + gap) + (slot - box) / 2
+        mine = []
+        for dr, dc in offsets:
+            cx = x0 + (dc + sensor_range) * cs
+            cy = top + (dr + sensor_range) * cs
+            mine.append(rrect(ax, cx + 1.5, cy + 1.5, cs - 3, cs - 3, 3, P.TRACK, z=2))
+        # the agent's own square, outlined in the agent's colour
+        rrect(ax, x0 + sensor_range * cs + 0.5, top + sensor_range * cs + 0.5,
+              cs - 1, cs - 1, 3, "none", P.IRIS, 2, z=3)
+        label_y = top + box + 18
+        dash.fit(ax, x0 + box / 2, label_y, "map_label", slot + gap,
+                 ha="center").set(name)
+        if qualifier:
+            dash.fit(ax, x0 + box / 2, label_y + 15, "caption", slot + gap,
+                     ha="center").set(qualifier)
+        cells.append(mine)
 
     def upd(v):
-        vec = np.asarray(v.sense(sense, "vector"), dtype=float)
-        vmax = max(float(dash.sense_max.get(sense, 1.0)), 1e-6)
-        for (fill, track_h), q in zip(setters, vec):
-            frac = min(1.0, max(0.0, float(q) / vmax))
-            fill.set_height(max(1.0, track_h * frac))
-            fill.set_y(58 + track_h - max(1.0, track_h * frac))
-            fill.set_facecolor(P.TRACK if frac <= 1e-6 else cmap(0.25 + 0.75 * frac))
+        vec = np.asarray(v.sense(sense, "vector"), dtype=float).reshape(-1, n)
+        vmax = max(float(dash.sense_max.get(dash.viz_name(sense), 1.0)), 1e-6)
+        for i, mine in enumerate(cells):
+            for patch, q in zip(mine, vec[:, i]):
+                frac = min(1.0, max(0.0, float(q) / vmax))
+                patch.set_facecolor(P.TRACK if frac <= 1e-6
+                                    else cmap(0.25 + 0.75 * frac))
     dash.updates.append(upd)
 
 
 def build_cross_bars(dash, ax, w, h, sense, title, offsets, letters):
-    """Collision at range 1: the five squares the agent can touch."""
+    """Collision at range 1: the five squares the agent can touch.
+
+    THE ONE PLACE SHORT CODES SURVIVE. C/U/R/D/L name POSITIONS rather than
+    entities, they have to fit inside a 30 px square, and the diamond they are
+    arranged in already shows what each one means. They are glossed in the card's
+    own subtitle so the frame carries its own key -- which is exactly what the
+    sense panels' four-letter channel codes did not.
+    """
     card_title(dash, ax, w, title)
-    c, g = 30, 4
-    ccx, ccy = w / 2, h - PAD - 1.5 * c - g
+    # 22 px cells, not the 30 this card used to draw. The gloss below needs a
+    # line of its own, and the card is 150 px tall, so the diamond has to give
+    # the room up. MEASURED, twice: at 30 px the title strip and the diamond
+    # leave 6 px, which is not a caption; at 26 px the caption's cap-height
+    # crossed the bottom cell by ~7 px, which the frame shows as a line struck
+    # through the word "right" whenever that cell is a hit. At 22 px the diamond
+    # is 3 x 22 + 2 x 4 = 74 px, its bottom cell ends at 126, and the caption's
+    # tallest glyph starts at 131.
+    c, g = 22, 4
+    ccx, ccy = w / 2, 52 + 1.5 * c + g
     cellsx = []
     for (dr, dc), lab in zip(offsets, letters):
         x, y = ccx + dc * (c + g) - c / 2, ccy + dr * (c + g) - c / 2
@@ -636,6 +767,8 @@ def build_cross_bars(dash, ax, w, h, sense, title, offsets, letters):
                      ha="center", va="center")
         t.set(lab)
         cellsx.append((rect, t.t))
+    dash.fit(ax, w / 2, h - 10, "caption", w - 2 * PAD, ha="center",
+             numeric=False).set("centre, up, right, down, left")
 
     def upd(v):
         for (rect, t), q in zip(cellsx, np.asarray(v.sense(sense, "vector"), dtype=float)):

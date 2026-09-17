@@ -5966,3 +5966,219 @@ sub-agent will hit it.
 - CP5 (viewer), CP-C, CP-D and CP6 remain unrun.
 
 *Implemented by: developer*
+
+---
+
+## Implementation Report — the approved design, restored into the real renderer (2026-09-17)
+
+### What this is, in plain words
+
+The user looked at the shipped video frame beside the design they had approved and
+said they wanted the approved one back. This is that restoration. It is not a
+redesign and it settles no open design question: where the shipped renderer and
+the approved mock disagreed about how the dashboard should *look*, the mock won.
+
+Four things were wrong, and all four are fixed. **The user's own icons were not
+being used at all** — they had personally chosen nine pieces of artwork (the rose
+apple with its green leaf, the charcoal thorn cluster, the grey rabbit with the
+pink inner ear), the files sat in `assets/dashboard_icons/`, and the renderer
+never opened them; every animal was re-invented as vector shapes. The frame now
+draws the artwork. **The two sense panels had lost their maps and their numbers**
+— smell and sight were narrow strips of coloured swatches in the right-hand
+column, leaving a 564 × 269 px hole under the grid where the approved design has
+a full-width band. The band is back, and the panel that draws a *diamond map* per
+channel — a builder the shipped renderer never had at all, which is why the one
+test world that smells past its own square reported its smell panel as missing —
+now exists. **Identifier codes were reaching the reader**: the frame printed
+`AN-A`, `GRS`, `FOD`, `HPR`, `RCK`, `NEU` at a viewer who has no key to them. It
+now prints "Odour A / predator-leaning", "Hiding predator", "Obstacle". And the
+**step-progress bar** the design draws under the step number had been invisible
+on every frame ever rendered, because the header's box was 32 px tall and the bar
+is drawn at y = 48, so it fell outside its own Axes and was clipped away.
+
+Three things the user decided separately are deliberately **kept**, not restored
+away: the whole 10 × 10 world at a 50 px square, terrain drawn as the floor a
+mover stands on (variant H), and the World map's wedge encoding.
+
+**The deliverable** is `tmp/20260917_restore_dashboard/side_by_side.png` — the
+approved mock above, the real renderer's output below.
+
+### Files changed
+
+| File | What changed |
+|---|---|
+| `src/environment/dashboard/cells.py` | Movers are the user's PNGs, one pre-resized image per slot (`Raster`, `icon_array`, `_master`). `SOLO_H` 0.30 → **0.34** (the adopted spec's own token size; the shrink was never decided). The agent's chevron is composited **into** its own image so a token stays one artist. `RASTER_MARK` frozen from measurement, with `measure_raster_mark` re-measuring it from the PNG. Legibility gate reworked (below). Vector forms kept as the artwork's provenance. |
+| `src/environment/dashboard/painters.py` | `_Form` replaces the bare patch collection so a form can be vector **or** raster; `_fill` splits on type. Two new builders: **`build_channel_rows`** (a sense read at range 0 — named rows with values) and **`build_channel_maps`** (range ≥ 1 — the per-channel diamond maps, the builder that did not exist). Channel names come from `labels.display_channel`. Collision keeps C/U/R/D/L but glosses them, and its diamond shrank 30 → 22 px to make room for that line. |
+| `src/environment/dashboard/palette.py` | `MEANING` gains the flame colours and both sense ramps with explicit panel scopes. `FIGURE_FACECOLOR` white → a colour nothing paints (below). |
+| `src/environment/dashboard/labels.py` | `display_channel()` — the only way a channel name reaches a frame; raises rather than passing a code through. `OLFACTORY_PARTS` splits name from qualifier. |
+| `src/environment/dashboard/panels.py` | `band_senses`: the band exists whenever a sense is observed **at any range**; the range decides what is drawn in it, not whether it exists. Range-0 heights `OLF_ROWS_H = 200` / `VISUAL_ROWS_H = 232` replace the two right-column pod heights. The band declares no chrome — its children are the cards. |
+| `src/environment/dashboard/layout.py` | The header's box is the whole 64 px band (the clipped progress bar). Band candidates keyed on `band_senses`. |
+| `src/environment/dashboard/episode.py` | Dispatches the two band panels, draws one card frame per band child, adds `viz_name`. |
+| `tests/env/test_dashboard_cells.py`, `test_dashboard_layout.py`, `test_render_audit_controls.py` | Updated for the above; three new tests (below). |
+
+**Files outside the four the brief named** — `labels.py`, `panels.py`,
+`layout.py`, `episode.py` and three test files. Flagged rather than assumed: the
+band cannot be restored from the painters alone (it is a layout and registry
+decision), and the clipped progress bar was a layout box, not a painter bug.
+
+### The geometry now matches the spec that was handed to me
+
+Measured from the packer on the campfire world: Olfaction `x360 y644 w520`,
+Visual `x896 y644 w520`, Thermoception bottom-aligned with the arena at
+**y = 628**, header the full `1440 × 64`. The band is **236 px** tall, not the
+228 px the spec stated — the band runs to the canvas's own bottom gutter
+(`CANVAS_H - GAP`), and 228 would leave an 8 px strip belonging to nothing. Said
+here rather than silently absorbed.
+
+### Three findings I am flagging rather than absorbing
+
+**1. The artwork does not meet the 3 px mark floor, and I did not lower it.**
+The instruction was to keep `MARK_FLOOR_PX = 3.0` at solo size. Measured from the
+PNGs, three of the four marks do not clear it at a 50 px square: food leaf
+**4.16 px**, hiding-predator spike tip **2.45**, rabbit inner ear **2.30**,
+predator eye slit **2.16**. Keeping the floor as the gate would render **no frame
+at all**. So `MARK_FLOOR_PX` is left exactly where it was and still governs the
+vector forms it was swept on, and the rasters are gated by the pair the design
+round's own compression test validated — token diameter ≥ 20 px, body-colour area
+≥ 40 px². The substitution is recorded in `cells.py`'s docstring with its
+numbers. **It is a threshold substitution and should be read as one.**
+
+**2. One number in the brief's `RASTER_MARK` table does not reproduce.** I
+re-measured every mark from the masters rather than typing the table in. Three
+agree closely (predator 0.127 vs 0.132, rabbit 0.135 vs 0.138, food 0.245 vs
+0.176 — the last already a visible gap); the hiding predator measures **0.144 ×
+h against the briefed 0.376**, a factor of 2.6. My definition is the largest
+connected run of the mark's own colour, short dimension, over the token disc's
+radius. The frozen table carries my measurements, and the test re-measures from
+the PNG so a weaker asset fails.
+
+**3. The pixel audit could not see white ink, and the fix is in the renderer.**
+With the artwork in place, `cell_overdraw` fired 16 times on a *correct* campfire
+frame and 18 on a correct M5 frame — every one with a survival ratio of
+**1.000**, i.e. the picture was right and the instrument was wrong. Cause: the
+audit measures ink by isolation against the figure's own background, which was
+**white**, and the movers' token disc is white — so each token's measurable ink
+was its glyph plus its drop shadow with the disc between them missing: two
+disconnected components for one animal. `FIGURE_FACECOLOR` is now a colour
+nothing paints. This is the same reasoning that had already moved it off
+`CANVAS`, applied a second time. **It is a gain in sensitivity, not a
+relaxation** — `cell_overdraw` 16 → **0**, and one *more* `text_over_fill` is now
+reported (14 → 15) because white label ink became visible. **No threshold moved,
+and no rendered pixel changed**: the page colour is painted as a rectangle over
+the whole figure, and the campfire frame rendered on white and on the new colour
+is byte-identical (max per-channel difference **0**).
+
+**A related instrument gap, reported and not fixed** (the audit is outside my
+scope): `render_layout_audit._paints()` returns nothing for an image artist, so
+precondition (c′) — "this element's paints are invisible to the probe" — cannot
+fire for an image at all. The white-disc blindness would therefore have gone
+unreported even by the check written to catch exactly that class. Owner:
+`senior-developer`.
+
+### CP2.7's blocker is closed
+
+M5 — the only maintained cell that smells past its own square — now draws its
+Olfaction panel as five labelled diamond maps. Audited: `panel_absent: **NONE**`,
+against the `panel_absent: Olfaction` §R22.9 assigned here. Frame:
+`tmp/20260917_restore_dashboard/frame_M5_range1.png`. CP2.7 itself does **not**
+close on this alone — it still wants `test_dashboard_extended_range.py`, the
+E-cell fixtures and the largest-fitting-radius measurement, none of which is in
+this change.
+
+### Test results
+
+- `tests/env/test_dashboard_cells.py` + `test_dashboard_layout.py` — **128 passed**.
+- `tests/env/test_dashboard_frames.py` (CP2.8, `integration`) — **26 passed**.
+  It failed (25 passed / 1 failed) before the facecolor fix, on finding 3 above.
+- `tests/env/test_render_audit_controls.py` — **86 passed**. It failed **22** mid-way
+  through this work: the file kept its **own copy** of the painter's draw path
+  (`[s.patch for s in shapes]`), which a raster token has no attribute for. The
+  copy is deleted rather than patched — `_coll` now calls the shipped
+  `painters._fill`, so a control can no longer be drawn by a painter nobody ships.
+- `scripts/eval/render_layout_audit.py --controls` — **7/7 FIRED, none MISSED**, exit 0.
+- `scripts/eval/v1_path_guard.py check` — **10/10 PASS, FRAMES PASS ×3**, exit 0,
+  before and after.
+- **`tests/env` whole suite — 692 passed, 377 skipped, 0 failed**, exit 0
+  (baseline before this work: 689 passed, 377 skipped). The three added are the
+  raster-mark re-measurement, the substituted floors, and the channel-row height
+  arithmetic; nothing was removed and nothing is xfailed.
+
+**One pinned measurement legitimately moved**: the largest correct token's ink
+share, `0.4376 → **0.3712**`. The vector agent carried a halo out to 1.32 × h —
+ink outside its own slot — and that halo was most of what pushed a lone agent to
+43.76 % of its square; `agent.png` holds its halo inside its own box. The gap
+`CELL_FLOOR_FRACTION = 0.48` sits in therefore got **wider** on the token side
+(0.3712 < 0.48 < 0.5168) and **the constant did not move**.
+
+### Speed check
+
+Same machine, same recording (M4 episode 1, 75 frames, first 5 excluded), CPU-only.
+
+| | Before (HEAD) | After |
+|---|---|---|
+| Median frame | **176.9 ms** | **212.7 ms** (+20.2 %) |
+| p95 frame | 184.6 ms | 227.4 ms |
+| Setup | 2264 ms | 2598 ms |
+
+**This is a regression and I am flagging it.** An intermediate state was far
+worse — **615.4 ms, 3.5×** — and profiling (not guesswork) found the cause in my
+own code: `check_legible` called a colour-area measurement that rescanned a
+700 × 700 PNG master on every occupied square of every frame, **2.08 s of every
+3.62 s**. That measurement is a property of a file on disk and is now cached, at
+which point the cost fell to the +20.2 % above. What remains is the real cost of
+the change: ~500 additional image artists and the two new band panels.
+
+**The CP4 gate still holds, measured rather than inferred**: V2 **214.6 ms**
+against V1 **307.6 ms** on the same recording, uncontended — **ratio 0.697**,
+against CP4's requirement that V2 ≤ V1. The margin is narrower than the 0.5748
+CP4 recorded on a lab node (different hardware, not directly comparable). If
+`senior-developer` judges 0.697 too close, the obvious next cut is not creating
+an image artist for the 100 bed slots that can never use one.
+
+### Deviations from the brief
+
+1. **The cold-end temperature change was not applied.** The reviewer's
+   `mock_cold_end.png` proposes a lighter ground (`#C6D8F0`, "excursion-scaled")
+   against the shipped `#9FBCE6`. No hex or rule for it reached me in the decided
+   items, and — more to the point — it is a **new design change that disagrees
+   with the approved frame**, which is the thing this task exists to restore. Not
+   applied, flagged for reconciliation.
+2. **Band 236 px, not 228** (reason above).
+3. **Body-colour area, measured as the union of a token's own colours.** The
+   hiding predator's charcoal alone is **39.41 px²** at shared size against the
+   40 px² floor — it is a cluster of thin spikes, so its body is mostly edge —
+   and **45.80 px²** counting its own amber tips. The union is this project's
+   existing rule (`palette.MINIMAP_MARK_COLOURS`, plan §R19.1 step 5 / §R22.1),
+   not a convenience adopted here, and both numbers are in the code and the test
+   so the choice cannot be mistaken for a threshold fitted to the artwork.
+
+### Blockers and follow-ups
+
+- **`docs/.../renderer_layout_redesign/fig08_icon_set.py`** draws the icon sheet
+  through `painters._collection` / `_fill`, whose signatures were kept
+  deliberately compatible, so it should still run — but it writes into `docs/`
+  and I did not execute it. Someone should regenerate that sheet: it will now
+  show the real artwork instead of the vector imitations. Owner: the page owner.
+- The **audit's image blindness** in (c′), above. Owner: `senior-developer`.
+- The **Known Bugs registry** was checked for prior art on these paths
+  (`grep -i` over `KNOWN_BUGS.md` for dashboard / renderer / olfaction /
+  `panel_absent`): the open rows found — D1–D13, D10's hidden-state captioning,
+  the live renderer's icon cache — are all the **frozen V1** renderer's, which
+  this change does not touch. No row covers the white-ink blindness or the
+  channel-code leak; both are recorded here rather than filed, since neither
+  exists in a shipped video yet. If `bug-curator` judges the audit's (c′) image
+  gap worth a row, it is the one candidate.
+
+### Checkpoints
+
+- **CP2.7 — its named blocker closes**: no maintained cell reports `panel_absent`
+  for a modality in its own breakdown; M5 is green. The checkpoint's remaining
+  clauses (its own test file, E-cell fixtures, r_max) are untouched.
+- **CP2.8 — still green** after the change: 26/26, every co-occupancy control and
+  mutation intact, on an instrument that now sees strictly more.
+- **CP4 — still met** at ratio 0.697, with less margin than before.
+- **CP-D** is the checkpoint this work belongs to and it is **not** closed here:
+  this is a restoration against the adopted spec, not the second
+  `visual-design-reviewer` pass CP-D requires.
+
+*Implemented by: developer*

@@ -97,21 +97,36 @@ THERMO_H: int = 230                   # (fig3)
 THERMO_MIN_W: int = 440
 
 LOCATION_H: int = 46                  # (chosen) one text line plus padding
-OLF_SPECTRUM_H: int = 118             # (chosen) title 46 + label row + 5 bars + pad 16
-VISUAL_BARS_H: int = 134              # (chosen) title 46 + legend + channel bars + pad 16
-# WHY THESE TWO ARE NOT FREE, AND WHERE THE BUDGET COMES FROM. The binding case
-# is the maintained campfire world (matrix cell M4): thermal on, and BOTH senses
-# at range 0, so neither goes to a sensor band and the right column must hold
-# five pods at once. With no band the right column has 816 px, of which the
-# design sketch's own pinned pods already claim
-#     proprioception 104 + extero/collision row 150 + thermoception 230
-#     + 4 gaps of 16                                              = 548 px
-# leaving 268 px for the smell and vision pods together. 118 + 134 = 252 fits
-# with 16 px to spare. The design sketch never draws either pod -- it always has
-# a band -- so there is no pinned number to copy, and this combination is a real
-# maintained config rather than a hypothetical. Flagged for senior-developer.
 
-HEADER_H: int = 32                    # the header band less its own gutters
+# A sense read at range 0, drawn as NAMED ROWS in the band rather than as coded
+# swatches in the right column (see `LayoutContext.band_senses`). Two columns of
+# rows, so the height is set by the taller column: a 64 px title strip, the rows,
+# and a footer caption naming the scale.
+#     olfaction  5 channels -> 3 rows at 40 px  = 64 + 120 + 16 = 200
+#     vision     8 channels -> 4 rows at 38 px  = 64 + 152 + 16 = 232
+# Both fit the 236 px the band gets under a 10x10 world's arena.
+#
+# WHAT THIS REPLACES. `OLF_SPECTRUM_H = 118` and `VISUAL_BARS_H = 134`, which
+# sized the two pods for the RIGHT COLUMN, where they were the binding constraint
+# in the whole layout: the campfire world put five pods in one column and fitted
+# with 16 px to spare out of 816. Moving both senses into the band removes that
+# budget entirely -- the right column now carries three pods needing 516 px of
+# the 564 it has -- and it is what closes the 564 x 269 px hole the shipped frame
+# left under the arena. The row pitches belong to the painter that draws them
+# (`painters.CHANNEL_ROW_PITCH`); these two numbers are what LAYOUT needs, and the
+# layout tests assert the two agree.
+OLF_ROWS_H: int = 200
+VISUAL_ROWS_H: int = 232
+
+# The header's demand. The packer gives the header the WHOLE 64 px band rather
+# than this, because the band's Axes has to contain the step-progress bar the
+# design draws at y = 48; see `layout._pack_once`. The constant remains the
+# registry's declared minimum, which is what makes the header a panel like any
+# other rather than a special case in the packer.
+HEADER_H: int = 32
+#: Kept for reference: the band itself now declares no chrome, because its
+#: CHILDREN are the cards (see `present_cards`). Each child carries the title
+#: strip and padding these two once described.
 BAND_CHROME_TOP: int = CARD_TITLE_H
 BAND_CHROME_BOTTOM: int = PAD
 
@@ -245,6 +260,28 @@ class LayoutContext:
         return bool(self.grid_senses)
 
     @property
+    def band_senses(self) -> tuple[str, ...]:
+        """Present senses drawn in the band under the arena -- at ANY range.
+
+        WHY THIS IS NOT ``grid_senses`` (changed 2026-09-17). The band used to
+        exist only for a sense that reaches past the agent's own square, so the
+        two maintained worlds that read smell AND sight at range 0 -- the
+        campfire world among them -- got no band at all and their two sense
+        panels were pushed into the right-hand column as narrow code swatches,
+        leaving a 564 x 269 px hole under the arena. The approved design puts
+        both senses in a full-width band beneath the grid whatever their range;
+        what the range decides is the KIND drawn there (``grid_senses`` still
+        answers that -- diamond maps at range >= 1, named rows at range 0), not
+        whether the band exists.
+        """
+        out = []
+        if self.observed("Olfaction"):
+            out.append("olfactory")
+        if self.observed("Visual"):
+            out.append("visual")
+        return tuple(out)
+
+    @property
     def max_sense_range(self) -> int:
         return max(
             self.olfactory_range,
@@ -326,16 +363,15 @@ def _olf_min_size(ctx: LayoutContext) -> Size:
         n = ctx.olfactory_channels
         span = _span(n, ctx.olfactory_range)
         return Size(span, CARD_TITLE_H + _map_h(ctx.olfactory_range) + PAD)
-    return Size(0, OLF_SPECTRUM_H)
+    return Size(0, OLF_ROWS_H)
 
 
 def _visual_min_size(ctx: LayoutContext) -> Size:
     if ctx.visual_range >= 1:
-        # One categorical terrain map plus one map per entity channel.
-        n = 1 + max(1, ctx.visual_vector_size - 3)
+        n = ctx.visual_vector_size
         span = _span(n, ctx.visual_range)
         return Size(span, CARD_TITLE_H + _map_h(ctx.visual_range) + PAD)
-    return Size(0, VISUAL_BARS_H)
+    return Size(0, VISUAL_ROWS_H)
 
 
 def _span(n_maps: int, r: int) -> int:
@@ -600,7 +636,7 @@ def present_cards(
         )
     )
 
-    band_keys = [k for k in ctx.grid_senses if k in keys] if band else []
+    band_keys = [k for k in ctx.band_senses if k in keys] if band else []
 
     for key, order, row in (
         ("proprioception", 100, None),
@@ -629,7 +665,15 @@ def present_cards(
                 key="band", region="band", order=200,
                 # each sense's min_size already includes its own chrome
                 min_h=max(s.h for s in sizes),
-                chrome_top=BAND_CHROME_TOP, chrome_bottom=BAND_CHROME_BOTTOM,
+                # NO CHROME OF ITS OWN. The band is a placement region, not a
+                # drawn card: the approved design shows the two senses as two
+                # separate white cards side by side, each with its own title and
+                # its own hairline, rather than one wide card with a divider.
+                # Giving the band padding here would inset both of them and put
+                # their edges 16 px inside the columns everything else lines up
+                # with. The CHILDREN carry the cards; `episode.py` draws one
+                # frame per child.
+                chrome_top=0, chrome_bottom=0, chrome_side=0,
                 flow="row", children=tuple(band_keys),
                 child_min_w=tuple(s.w for s in sizes),
             )

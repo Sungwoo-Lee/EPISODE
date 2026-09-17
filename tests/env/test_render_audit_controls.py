@@ -682,6 +682,7 @@ from matplotlib.patches import (FancyBboxPatch, Polygon,  # noqa: E402
                                 Rectangle, Wedge)
 
 from src.environment.dashboard import cells as C  # noqa: E402
+from src.environment.dashboard import painters as PN  # noqa: E402
 from src.environment.dashboard import palette as P  # noqa: E402
 
 CELL = 50.0
@@ -689,14 +690,21 @@ _PT = 72 / 100.0
 
 
 def _coll(ax, shapes, z):
-    """One compound form as ONE artist — the §R20.8 rule the painter also obeys."""
-    coll = PatchCollection([s.patch for s in shapes], match_original=False, zorder=z)
-    coll.set_facecolor([s.fc for s in shapes])
-    coll.set_edgecolor([s.ec for s in shapes])
-    coll.set_linewidth([s.lw * _PT for s in shapes])
-    ax.add_collection(coll)
-    coll.set_transform(ax.transData)
-    return coll
+    """One compound form as ONE artist — the §R20.8 rule the painter also obeys.
+
+    IT CALLS THE PAINTER'S OWN FILL, and that is the point rather than a
+    shortcut. This helper used to be a second copy of `painters._fill`, written
+    when every form was a patch; when the movers became the user's artwork the
+    shipped painter learned to draw an image and this copy did not, so every
+    control in this section died on `'Raster' object has no attribute 'patch'`.
+    A control drawn by a private copy of the draw path calibrates the instrument
+    against a painter nobody ships — which is the failure mode the section
+    header already warns about for the FORMS, and it applies just as much to the
+    ARTISTS those forms are put into.
+    """
+    form = PN._collection(ax, z)
+    PN._fill(form, shapes)
+    return form
 
 
 def _arena_figure(squares, *, rows=1, cols=1, mutation=None, inset=0.0,
@@ -782,10 +790,13 @@ def _run_cells(squares, *, rows=1, cols=1, restrict_work=True,
 NEGATIVE_CELLS = {
     "empty square": (dict(), {}),
     # Was a `strict` xfail: at the shipped 0.40 floor this CORRECT square reported 0
-    # components against 1 kind, because a lone agent keeps its halo (nothing else needs
-    # the room) and that pushes its ink to 43.76 % of the square, over the "this element
-    # IS the floor" line. The constant moved to 0.48 in the plan (Revision 21 §R21.2) with
-    # both populations measured, so this is now a plain negative control.
+    # components against 1 kind, because the VECTOR agent kept a halo reaching 1.32 x h
+    # (nothing else needed the room), which pushed its ink to 43.76 % of the square, over
+    # the "this element IS the floor" line. The constant moved to 0.48 in the plan
+    # (Revision 21 §R21.2) with both populations measured. Since the movers became the
+    # user's artwork the same square measures 37.12 %, because the artwork's halo lives
+    # inside the token's own 2h box — so this control clears the floor by more than it
+    # used to, on an unchanged constant.
     "lone agent on bare ground": (dict(), {(0, 0): ["agent"]}),
     "campfire bed + one token": (dict(), {(0, 0): ["campfire", "neutral"]}),
     "bush bed + agent": (dict(), {(0, 0): ["bush", "agent"]}),
@@ -828,16 +839,31 @@ def test_the_lone_agent_collision_is_a_constant_choice_and_both_sides_are_measur
             rect = audit.square_rects(ax, 1, 1)[(0, 0)]
             square = audit._rect_mask(probe.h, probe.w, *rect)
             area = float(square.sum())
+            # A bed is a `collection` and a mover is now an `image` -- the
+            # movers are the user's artwork, drawn as one pre-resized image per
+            # slot. Both are "one compound form, one artist", which is what this
+            # measurement is about, so both kinds count. Filtering on
+            # `collection` alone would silently measure the BED on a square that
+            # has one, and raise on a lone agent, which has none.
             return max(int((probe.ink(e) & square).sum()) / area
                        for e in probe.elements
-                       if e.axes_name == "arena" and e.kind == "collection")
+                       if e.axes_name == "arena"
+                       and e.kind in ("collection", "image"))
         finally:
             probe.close()
 
     token = _largest_collection_fraction({(0, 0): ["agent"]})
     bed = min(_largest_collection_fraction({(0, 0): [t, "neutral"]})
               for t in ("rock", "bush", "tree", "campfire"))
-    assert token == pytest.approx(0.4376, abs=0.005), token
+    # 0.4376 -> 0.3712 on 2026-09-17, when the movers became the user's artwork.
+    # The number moved for a reason worth keeping: the vector agent carried a
+    # halo out to 1.32 x h, i.e. ink OUTSIDE its own slot, and that halo was most
+    # of what pushed a correct lone agent to 43.76 % of its square. `agent.png`
+    # holds its halo inside its own alpha bbox, which is mapped to exactly 2h, so
+    # the largest correct token now covers 37.12 %. The gap this constant has to
+    # sit in therefore got WIDER on the token side (0.3712 < 0.48 < 0.5168), and
+    # `CELL_FLOOR_FRACTION` is left exactly where Revision 21 put it.
+    assert token == pytest.approx(0.3712, abs=0.005), token
     assert bed == pytest.approx(0.5168, abs=0.005), bed
     assert token < audit.CELL_FLOOR_FRACTION < bed, (
         f"the floor {audit.CELL_FLOOR_FRACTION} does not separate the two populations it "
@@ -1033,8 +1059,12 @@ def test_adjacent_slot_tokens_share_zero_pixels_at_fifty_px():
     fig, frame = _arena_figure({(0, 0): ["agent", "predator"]})
     probe = audit.FrameProbe(fig, frame)
     try:
+        # A mover is an `image` now -- one pre-resized piece of the user's
+        # artwork per slot -- so the two tokens of this square are the two image
+        # elements. The claim being pinned is unchanged: adjacent slots share no
+        # pixel at a 50 px square.
         toks = [e for e in probe.elements
-                if e.axes_name == "arena" and e.kind == "collection"]
+                if e.axes_name == "arena" and e.kind == "image"]
         assert len(toks) == 2
         shared = int((probe.ink(toks[0]) & probe.ink(toks[1])).sum())
         assert shared == 0, (
@@ -1074,15 +1104,24 @@ def test_collection_artists_are_enumerated_at_all():
     `Collection.get_window_extent` reports an EMPTY bbox, which the enumerator filtered
     out — and an artist that is not an Element is never hidden by `FrameProbe._draw`, so
     it was drawn into every isolated render and ate the ink of whatever it covered. The
-    redesign draws every bed and token as one PatchCollection, so without this the
-    co-occupancy rule measures an arena with nothing standing in it.
+    redesign draws every bed as one PatchCollection, so without this the co-occupancy
+    rule measures an arena with nothing standing in it.
+
+    Since 2026-09-17 a square holding a bed and a mover carries ONE collection (the
+    terrain floor, still vector) and ONE image (the mover, now the user's artwork). Both
+    must be enumerated and both must measure ink — the Collection because of the bug this
+    test is named for, and the image because an un-enumerated image would be the same bug
+    wearing a different artist class.
     """
     fig, frame = _arena_figure({(0, 0): ["bush", "agent"]})
     probe = audit.FrameProbe(fig, frame)
     try:
-        colls = [e for e in probe.elements if e.kind == "collection"]
-        assert len(colls) == 2, f"expected the bed and the token: {colls}"
-        for e in colls:
+        arena = [e for e in probe.elements if e.axes_name == "arena"]
+        colls = [e for e in arena if e.kind == "collection"]
+        images = [e for e in arena if e.kind == "image"]
+        assert len(colls) == 1, f"expected the bush bed: {colls}"
+        assert len(images) == 1, f"expected the agent's artwork: {images}"
+        for e in colls + images:
             assert probe.ink(e).any(), f"{e.label} enumerated but measures no ink"
         # ... and the page rectangle underneath must now measure its FULL ink, because
         # the tokens are hidden during its isolated render.

@@ -256,7 +256,7 @@ def pack(ctx, cards: Sequence[CardDemand] | None = None) -> Layout:
 def _candidates(ctx) -> Iterator[tuple[int, bool, bool, str]]:
     """Yield ``(view_cells, band, compact, step_name)`` in the plan's order."""
     world = int(ctx.world_w)
-    natural_band = bool(ctx.has_grid_sense)
+    natural_band = bool(ctx.band_senses)
     window = max(int(ctx.local_view_size), 2 * int(ctx.max_sense_range) + 1)
 
     yield world, natural_band, False, "whole_world"
@@ -327,9 +327,17 @@ def _pack_once(
     regions["centre"] = Box(cx, top, card_w, card_h)
 
     # Header sits above every column, in the band the columns start below.
+    #
+    # ITS BOX IS THE WHOLE BAND, not the band inset by the gutter, and the
+    # difference is not cosmetic: the header's Axes CLIPS the patches drawn into
+    # it. Inset to `HEAD - 2 * GAP` = 32 px tall, the 4 px step-progress bar the
+    # approved design draws at y = 48 fell outside its own Axes and was clipped
+    # away on every frame ever rendered -- the title and step number survived
+    # only because Matplotlib does not clip Text by default. The painter places
+    # its own content against the gutter, so the box is the band.
     header = by_key.get("header")
     if header is not None:
-        card_boxes["header"] = Box(OUTER, GAP, CANVAS_W - 2 * OUTER, HEAD - 2 * GAP)
+        card_boxes["header"] = Box(0, 0, CANVAS_W, HEAD)
         regions["header"] = card_boxes["header"]
 
     band_cards = [c for c in cards if c.region == "band"]

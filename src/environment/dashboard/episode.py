@@ -40,7 +40,7 @@ import numpy as np
 from . import cells as C
 from . import painters as PN
 from . import palette as P
-from .labels import olfactory_labels
+from .labels import olfactory_labels, visual_labels
 from .layout import Box, Layout, pack
 from .panels import LayoutContext, check_completeness, present_panels
 from .style import DPI, TYPE, register_fonts
@@ -212,6 +212,10 @@ class EpisodeRenderer:
     def type_of(self, role):
         return TYPE[role]
 
+    def viz_name(self, name) -> str:
+        """The adapter's own key for a breakdown name (Olfaction -> Olfactory)."""
+        return VIZ_NAME.get(name, name)
+
     def has(self, name) -> bool:
         return name in self.breakdown
 
@@ -259,8 +263,17 @@ class EpisodeRenderer:
             self.viz_cache[t] = {e["name"]: e for e in entries}
         return self.viz_cache[t]
 
-    def _card(self, key, label=None):
-        box: Box = self.layout.cards[key]
+    def _panel_card(self, key, label=None):
+        """An Axes over one PANEL's box, for a child that is itself a card.
+
+        The sensor band is the only case: it is a placement region holding one
+        card per sense rather than one card with a divider, so its children get
+        their own surfaces and their own hairlines.
+        """
+        return self._card(key, label=label, box=self.layout.panels[key])
+
+    def _card(self, key, label=None, box=None):
+        box: Box = self.layout.cards[key] if box is None else box
         ax = self.fig.add_axes([box.x / CANVAS_W, 1 - (box.y + box.h) / CANVAS_H,
                                 box.w / CANVAS_W, box.h / CANVAS_H],
                                label=label or key)
@@ -388,20 +401,14 @@ class EpisodeRenderer:
         self.axes["arena"] = gax
         PN.build_arena(self, gax, grid.w, grid.h)
 
-        for key, ax_box in (("proprioception", None), ("olfactory", None),
-                            ("extero_nociception", None), ("collision", None),
-                            ("thermoception", None), ("visual", None),
-                            ("location", None)):
+        for key in ("proprioception", "extero_nociception", "collision",
+                    "thermoception", "location"):
             if key not in cards:
                 continue
             ax, box = self._card(key)
             PN.card_frame(ax, box)
             if key == "proprioception":
                 PN.build_proprioception(self, ax, box.w, box.h, self.action_names)
-            elif key == "olfactory":
-                PN.build_spectrum(self, ax, box.w, box.h, "Olfaction",
-                                  olfactory_labels(self.ctx.olfactory_channels),
-                                  P.OLF_STOPS)
             elif key == "extero_nociception":
                 PN.build_intensity(self, ax, box.w, box.h, "Extero nociception",
                                    "Extero Nociception", P.NOCI,
@@ -413,16 +420,35 @@ class EpisodeRenderer:
             elif key == "thermoception":
                 offs = [tuple(o) for o in get_visual_offsets(int(self.ctx.thermal_range))]
                 PN.build_thermoception(self, ax, box.w, box.h, offs)
-            elif key == "visual":
-                # Titled "Visual", the breakdown's own name for this modality --
-                # NOT "Vision". The pixel audit decides "is this modality drawn?"
-                # by reading the rendered panel title against a fixed table of
-                # breakdown names, so a prettier synonym makes a panel that is
-                # plainly on the screen report as missing.
-                PN.build_channel_bars(self, ax, box.w, box.h, "Visual", "Visual",
-                                      int(self.ctx.visual_vector_size), P.VIS_STOPS)
             elif key == "location":
                 PN.build_text_row(self, ax, box.w, box.h, "Location", "Location")
+
+        # -- the sensor band: one card per sense, side by side under the arena --
+        #
+        # Both senses are titled with the breakdown's OWN name -- "Olfaction",
+        # "Visual", never "Smell" or "Vision". The pixel audit decides "is this
+        # modality drawn?" by reading the rendered panel title against a fixed
+        # table of breakdown names, so a prettier synonym makes a panel that is
+        # plainly on the screen report as missing.
+        for key in [k for k in ("olfactory", "visual")
+                    if self.layout.parent.get(k) == "band"]:
+            ax, box = self._panel_card(key)
+            PN.card_frame(ax, box)
+            if key == "olfactory":
+                sense = title = "Olfaction"
+                codes = olfactory_labels(int(self.ctx.olfactory_channels))
+                rng, stops = int(self.ctx.olfactory_range), P.OLF_STOPS
+            else:
+                sense = title = "Visual"
+                codes = visual_labels(int(self.ctx.visual_vector_size))
+                rng, stops = int(self.ctx.visual_range), P.VIS_STOPS
+            if rng >= 1:
+                offs = [tuple(o) for o in get_visual_offsets(rng)]
+                PN.build_channel_maps(self, ax, box.w, box.h, sense, title, codes,
+                                      stops, offs, rng)
+            else:
+                PN.build_channel_rows(self, ax, box.w, box.h, sense, title, codes,
+                                      stops)
 
     # -- per step ----------------------------------------------------------
     def values(self, t: int) -> FrameValues:
