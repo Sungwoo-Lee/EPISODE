@@ -164,3 +164,44 @@ def display_channel(sense: str, code: str) -> tuple[str, str]:
         f"{sorted(table)}. A channel code must never reach a rendered frame: the "
         f"frame carries no key to it."
     )
+
+
+#: The three visual channels that are one thing seen three ways. A square is
+#: grass OR sand OR plain, never two, so the approved design draws them as a
+#: single "Terrain" map in three flat colours instead of three maps that are
+#: empty wherever the other two are not.
+TERRAIN_CHANNELS = ("GRS", "SND", "PLN")
+
+
+def map_plan(sense: str, codes) -> list[tuple[str, str, str, int | None]]:
+    """Which maps a sense draws: ``[(name, qualifier, kind, channel), ...]``.
+
+    One map per channel, except that vision's three terrain channels become a
+    single categorical map (the sketch's own arrangement). The composite applies
+    only when the vector really is the standard 8 channels in the standard order;
+    any other width gets one map per channel, because a composite keyed by index
+    is a lie as soon as the layout changes -- the same scope rule
+    :func:`visual_labels` already follows.
+
+    WHY THIS LIVES IN `labels` RATHER THAN IN THE PAINTER THAT DRAWS FROM IT
+    (moved 2026-09-18). Two modules need this answer and they must never give
+    different ones: the painter draws the maps, and the layout registry
+    (`panels._span`) has to declare how much room they need BEFORE any of them
+    is drawn. While the count lived in the painter, the registry could not ask
+    for it -- `panels` must stay importable without Matplotlib, which a test
+    pins -- so it counted CHANNELS instead and declared a vision panel a third
+    wider than the painter has ever needed, and the packer refused to lay out a
+    frame that draws. This module is the one both can import: it already owns
+    what a channel IS, it has no dependencies of its own, and the length of what
+    it returns is now the single answer to "how many maps".
+    """
+    out = []
+    composite = sense == "Visual" and tuple(codes[:3]) == TERRAIN_CHANNELS
+    if composite:
+        out.append(("Terrain", "", "terrain", None))
+    for i, code in enumerate(codes):
+        if composite and i < 3:
+            continue
+        name, qualifier = display_channel(sense, code)
+        out.append((name, qualifier, "seq", i))
+    return out

@@ -30,7 +30,16 @@ from matplotlib.collections import PatchCollection
 from . import cells as C
 from . import palette as P
 from .labels import display_channel as channel_display
+from .labels import map_plan
 from .layout import LayoutOverflowError
+# THE GAP BETWEEN TWO CHANNEL MAPS, TAKEN FROM THE REGISTRY RATHER THAN
+# DECLARED HERE. The layout registry has to promise the packer how wide a sense
+# panel needs to be before this module draws a pixel of it, so the two must read
+# the same number. They did not until 2026-09-18 -- 6 here, 8 there -- and the
+# packer refused frames this painter draws. `panels` imports nothing from this
+# module (it must stay importable without Matplotlib, which a test pins), so the
+# dependency runs this way round and cannot become a cycle.
+from .panels import MAP_GAP_PX as MAP_GAP
 from .style import PT, TITLE_BASE, rrect, signed, text
 from .text_fit import CAPTION_FLOOR_PX, PLAYBACK_FLOOR_PX, fit_text
 
@@ -535,9 +544,10 @@ CHANNEL_ROW_PITCH = {"Olfaction": 40, "Visual": 38}
 CHANNEL_BAR_H = 6
 
 #: The sensor band's own spacing, from the approved sketch's `b_band`: the gap
-#: between two maps, the gap between the two senses, and the width of the ramp
-#: drawn beside a sense's title.
-MAP_GAP = 6
+#: between the two senses, and the width of the ramp drawn beside a sense's
+#: title. The third of them -- the gap between two maps -- is `MAP_GAP`,
+#: imported at the top of this module from the layout registry that has to
+#: declare room for it.
 BAND_DIVIDER = 32
 RAMP_W = 96
 
@@ -624,33 +634,10 @@ def build_channel_rows(dash, ax, x0, w, h, sense, title, codes, colour_stops):
     dash.updates.append(upd)
 
 
-#: The three visual channels that are one thing seen three ways. A square is
-#: grass OR sand OR plain, never two, so the approved design draws them as a
-#: single "Terrain" map in three flat colours instead of three maps that are
-#: empty wherever the other two are not.
-TERRAIN_CHANNELS = ("GRS", "SND", "PLN")
-
-
-def _map_plan(sense, codes):
-    """Which maps a sense draws: ``[(name, qualifier, kind, channel), ...]``.
-
-    One map per channel, except that vision's three terrain channels become a
-    single categorical map (the sketch's own arrangement). The composite applies
-    only when the vector really is the standard 8 channels in the standard order;
-    any other width gets one map per channel, because a composite keyed by index
-    is a lie as soon as the layout changes -- the same scope rule
-    ``labels.visual_labels`` already follows.
-    """
-    out = []
-    composite = sense == "Visual" and tuple(codes[:3]) == TERRAIN_CHANNELS
-    if composite:
-        out.append(("Terrain", "", "terrain", None))
-    for i, code in enumerate(codes):
-        if composite and i < 3:
-            continue
-        name, qualifier = channel_display(sense, code)
-        out.append((name, qualifier, "seq", i))
-    return out
+#: Which maps a sense draws -- `labels.map_plan`, imported at the top of this
+#: module. It moved there on 2026-09-18 so the layout registry can COUNT the
+#: maps it has to declare room for without importing this Matplotlib module;
+#: see that function's own note.
 
 
 def build_channel_maps(dash, ax, x0, w, h, sense, title, codes, colour_stops,
@@ -667,7 +654,7 @@ def build_channel_maps(dash, ax, x0, w, h, sense, title, codes, colour_stops,
     band_head(dash, ax, x0, w, {"reach": f"range {sensor_range}"}, title, cmap, vmax)
 
     n_ch = len(codes)
-    maps = _map_plan(sense, codes)
+    maps = map_plan(sense, codes)
     k = 2 * int(sensor_range) + 1
     n = len(maps)
     slot = (w - MAP_GAP * (n - 1)) / n

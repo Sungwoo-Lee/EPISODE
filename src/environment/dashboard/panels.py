@@ -42,6 +42,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Callable, Mapping
 
+from .labels import channel_labels, map_plan
 from .layout import (
     CARD_TITLE_H,
     LEFT_W,
@@ -132,7 +133,12 @@ BAND_CHROME_BOTTOM: int = PAD
 
 #: Smallest legible cell in a per-channel diamond map (plan section D7.2).
 MAP_CELL_MIN_PX: int = 10
-MAP_GAP_PX: int = 8
+#: The gap between two adjacent channel maps. THE PAINTER READS THIS ONE --
+#: `painters.py` imports it as its `MAP_GAP` rather than declaring its own, so
+#: the width a panel ASKS FOR and the width it is DRAWN AT cannot disagree.
+#: It said 8 here and 6 there until 2026-09-18, which is one of the three counts
+#: that made the packer refuse a vision panel the painter draws perfectly well.
+MAP_GAP_PX: int = 6
 
 #: Sentinel returned by :func:`_recording_flag` when an archived recording's
 #: params simply do not have the attribute.
@@ -360,26 +366,66 @@ def _vital_row_size(ctx: LayoutContext) -> Size:
 
 def _olf_min_size(ctx: LayoutContext) -> Size:
     if ctx.olfactory_range >= 1:
-        n = ctx.olfactory_channels
-        span = _span(n, ctx.olfactory_range)
+        span = _span("Olfaction", ctx.olfactory_channels, ctx.olfactory_range)
         return Size(span, CARD_TITLE_H + _map_h(ctx.olfactory_range) + PAD)
     return Size(0, OLF_ROWS_H)
 
 
 def _visual_min_size(ctx: LayoutContext) -> Size:
     if ctx.visual_range >= 1:
-        n = ctx.visual_vector_size
-        span = _span(n, ctx.visual_range)
+        span = _span("Visual", ctx.visual_vector_size, ctx.visual_range)
         return Size(span, CARD_TITLE_H + _map_h(ctx.visual_range) + PAD)
     return Size(0, VISUAL_ROWS_H)
 
 
-def _span(n_maps: int, r: int) -> int:
+def _span(sense: str, n_channels: int, r: int) -> int:
+    """The PANEL width a sense drawn as diamond maps needs, in pixels.
+
+    WHAT THIS HAS TO AGREE WITH, because it did not until 2026-09-18. This
+    number is a promise made to the packer, and the packer keeps it absolutely:
+    ask for more than the painter needs and it REFUSES a frame that would have
+    drawn (vision at range 3 declared 616 px against a real 482 px, so the whole
+    video failed to render); ask for less and it hands the painter a panel the
+    painter then refuses (olfaction at range 1 declared 182 px against a real
+    206 px, which was 8.4 px map squares under a 10 px floor). Three counts have
+    to match `painters.build_channel_maps`:
+
+      * HOW MANY MAPS -- not how many channels. Vision's eight channels draw six
+        maps, because grass / sand / plain are one categorical map. Asked of
+        `labels.map_plan`, the same function the painter draws from, rather than
+        hardcoded: an off-standard vector width gets one map per channel, and
+        this follows it wherever it goes.
+      * THE GAP -- `MAP_GAP_PX`, which the painter imports from here.
+      * THE CARD'S PADDING -- `episode.py` hands the painter `panel.w - 2 * PAD`
+        (episode.py:465), so what the PANEL needs is the painter's requirement
+        plus that padding. This term was simply missing.
+
+    The height is a separate declaration and is NOT fixed here; see the note on
+    `_map_h`.
+    """
+    n_maps = len(map_plan(sense, channel_labels(sense, n_channels)))
     cells = 2 * r + 1
-    return n_maps * cells * MAP_CELL_MIN_PX + MAP_GAP_PX * (n_maps - 1)
+    return (n_maps * cells * MAP_CELL_MIN_PX
+            + MAP_GAP_PX * (n_maps - 1)
+            + 2 * PAD)
 
 
 def _map_h(r: int) -> int:
+    """The HEIGHT a sense's maps need, by the same floor as their width.
+
+    KNOWN TO UNDER-STATE THE PAINTER'S REAL DEMAND, and left alone deliberately
+    on 2026-09-18 rather than quietly corrected alongside the width. The painter
+    fits its maps into ``h - 58 - 40`` -- 58 px of title strip above and 40 px of
+    channel captions below -- so its real need at range `r` is
+    ``98 + (2r+1) * 10``, which is 36 px more than this declares at every range.
+    It has never bitten, because the band's own floor (``layout.MIN_BAND_H`` =
+    200 px) exceeds the painter's height demand everywhere the two senses are
+    actually drawn (168 px at range 3), and the band gets 236-256 px in practice.
+    It would first bite at range 5. Recorded here so the next reader finds a
+    measured note rather than rediscovers it; fixing it is a separate change with
+    its own render proof, because the band's height is shared between the two
+    senses and moving it reflows the frame.
+    """
     return (2 * r + 1) * MAP_CELL_MIN_PX
 
 

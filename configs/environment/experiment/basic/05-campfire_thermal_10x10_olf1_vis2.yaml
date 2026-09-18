@@ -1,0 +1,25 @@
+# Basic level 05 (campfire thermal) with BOTH extended senses widened.
+#
+# WHY THIS EXISTS. Level 05 gives the agent a temperature world, but it reads
+# smell and sight at its own square only (both ranges 0), so the episode
+# dashboard draws plain sense rows. This thin override widens both sensors so
+# the dashboard draws the diamond channel maps -- one small map per channel --
+# which is the layout the extended-sense path exists to show.
+#
+# WHAT IT CHANGES, and nothing else:
+#   sensory.olfactory_grid_range: 0 -> 1   radius, Manhattan diamond =  5 cells
+#   sensory.visual_sensor_range:  0 -> 2   radius, Manhattan diamond = 13 cells
+#
+# NOTE the nesting: both keys live under the top-level `sensory:` block in
+# environment/default.yaml, NOT under `environment:`. An override placed under
+# `environment:` layers cleanly and silently changes nothing -- verified the
+# hard way, so it is written down here.
+#
+# Both sensors are already enabled by default; only their sampling radius
+# changes. Blur and occlusion stay off (defaults), so readings remain exact
+# cell matches rather than spread ones.
+extends: environment/experiment/basic/05-campfire_thermal_10x10
+
+sensory:
+  olfactory_grid_range: 1
+  visual_sensor_range: 2
