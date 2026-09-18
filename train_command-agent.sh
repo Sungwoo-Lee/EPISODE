@@ -3757,3 +3757,241 @@ cd /media/nas01/projects/Interoceptive-AI/grid_world_pain
 # before these two launches. Those two cells are therefore ALSO dead and are not
 # covered by this relaunch. Surfaced to the user rather than relaunched unasked.
 # ---------------------------------------------------------------------------
+
+# ===========================================================================
+# RENDER CHECK: does WandB receive the checkpoint video from the V2 dashboard
+# renderer? -- 2026-09-18, node 113 GPU 0
+# ---------------------------------------------------------------------------
+# NOT a science run. This is an INSTRUMENT CHECK of commit 891d2057 ("the
+# dashboard renderer becomes the default for evaluation videos"), which
+# repointed the three src/ eval call sites from scripts/eval/render_recordings.py
+# to scripts/eval/render_recordings_v2.py. The run is launched only far enough
+# to produce its FIRST checkpoint video, verified, and then killed -- it is not
+# meant to reach its 10M-episode budget.
+#
+# WHAT THE CHECK LOOKS FOR (all three, or the switchover did not take effect):
+#   1. recordings/<ckpt>/episode_*.rec.gz written at the checkpoint;
+#   2. videos_v2/eval_<ckpt>.mp4 exists and is non-trivial. V1 wrote to
+#      videos/ and V2 is deliberately NOT taught to write there, so a videos/
+#      directory appearing instead is the failure signature;
+#   3. videos_v2/render_<ckpt>.log contains "frames verified" -- a phrase that
+#      exists ONLY in render_recordings_v2.py (lines 444 / 489), so it is direct
+#      evidence of WHICH renderer ran, not an inference from the output path.
+# The WandB side is the actual deliverable: async_render.poll_render() hands the
+# finished MP4 to wandb_utils, which logs it under the key "eval/video".
+#
+# PROVENANCE: settings are COPIED from the 2026-09-14 relaunch block directly
+# above (cell 10, t4act_X), NOT reconstructed -- with exactly TWO deliberate,
+# user-approved substitutions:
+#
+#   (a) --config swapped. The original pointed at
+#       configs/environment/experiment/archive/sensory_ladder/B_olf_only.yaml,
+#       which NO LONGER LOADS: it raises
+#         ValueError: Strict Config: Configuration key
+#         'body.recovery_in_bush_multiplier' is required but missing
+#       (the sixth mandatory key, added 2026-09-15). Archived configs are
+#       deliberately NOT migrated per the settings-tree policy, so the user chose
+#       the maintained ladder world configs/environment/experiment/basic/
+#       04-jump_attack_10x10.yaml instead. NOTE this changes the observation
+#       width 47 -> 27; the agent config's own generated header already describes
+#       its slice as "19 of the 27 observation numbers", i.e. 27 dims is the
+#       width that file was generated against.
+#   (b) --tag / --wandb-name changed to rppo_rendercheck_t4act_X_s42 and
+#       --wandb-job-type to "render_check", so this instrument run can never be
+#       confused with the science pilot rppo_olfgae_t4act_X_s42 in WandB or in
+#       results/JAX_RecurrentPPO/. --wandb-group is kept as given.
+#
+# Everything else is byte-identical to the 2026-09-14 launch.
+#
+# PRE-FLIGHT (2026-09-18, node 113 -- node:GPU supplied by the caller, not picked here):
+#   - Caller verified: gpu_status.py both 113 GPUs FREE (3 MiB, 0% util); no diary
+#     claim on 113 today or yesterday; no training processes on the node.
+#   - Independently re-confirmed here: 113:0 and 113:1 both 3 MiB / 0% util,
+#     `pgrep -af train.py` empty, NAS mounted (//192.168.0.250/cocoanlab01, 28T free).
+#   - REAL JAX GPU compile (4x4 matmul + block_until_ready) OK: jax 0.9.0.1 with
+#     flax / optax / orbax / chex all importable -- version-matched to the cluster.
+#
+# REGISTRY CHECK vs docs/environment/CONFIG_CRITICAL_SETTINGS.md: basic/04 inherits
+# default.yaml, so sensory.decay_power = 1.0, sensory.olfactory_grid_range = 0 and
+# thermal.enabled = false all sit at their CANONICAL values. Unlike the archived
+# B_olf_only arm this run carries NO registry deviation.
+#
+# WandB IS ON (no --no-wandb). That is the entire point of the run.
+#
+# CHECKPOINT CADENCE -- CORRECTING THE BRIEF: checkpoint_frequency for RecurrentPPO is
+# 200000 episodes (configs/train/recurrent_ppo.yaml, merged above configs/train/
+# default.yaml, whose 10000 is only the DQN/DRQN/PPO fallback). So the first
+# checkpoint lands at ~200k episodes, NOT the ~10k / "nine or ten iterations" the
+# brief assumed. No --checkpoint-frequency is passed: it stays config-owned, which
+# keeps the render path under test identical to a real run's.
+# --seed / --num-envs are likewise NOT passed (config-owned: seed 42, num_envs 128).
+# --episodes IS passed explicitly (10,000,000) as the convention requires, even
+# though the run is killed long before it.
+#
+# Staged to a unique /tmp/train_cmd_<epoch>_<rand>.sh on node 113 (CIFS-bypass) and
+# launched with `run_command.py --no-tail`.
+# ===========================================================================
+# /home/vncuser/miniconda3/envs/grid_world_pain/bin/python train.py \
+#   --config configs/environment/experiment/basic/04-jump_attack_10x10.yaml \
+#   --agent_config configs/models/recurrent_ppo/nmn_input_site_grid_gaenorm/nmngaenorm_t4act_X.yaml \
+#   --episodes 10000000 --device cuda:0 --log-interval 10 \
+#   --tag "rppo_rendercheck_t4act_X_s42" --wandb-name "rppo_rendercheck_t4act_X_s42" \
+#   --wandb-group "nmn_site_grid_olf_gaenorm" --wandb-job-type "render_check"
+
+# LAUNCH RECORD -- VERDICT: THE V2 SWITCHOVER WORKS END-TO-END. 2026-09-18
+#
+# Launched 11:34:54 via run_command.py --no-tail, node 113 GPU 0, PID 1067380 (exactly
+# one PID for the tag; the raw `pgrep -f | wc -l` reported 2, which was the SSH remote
+# shell matching its OWN pattern string -- resolved with `ps | grep "[t]rain\.py"`, which
+# cannot self-match. NOT a duplicate launch).
+#   NAS log : logs/20260918_113454.log
+#   Results : results/JAX_RecurrentPPO/20260918-113456_rppo_rendercheck_t4act_X_s42
+#   WandB   : 1tnkacym -- https://wandb.ai/sungwoolee/grid_world_pain/runs/1tnkacym
+#
+# ENVIRONMENT CONFIRMED from the startup banner: "Observation Dim: 27 (Satiation=1,
+# Interoceptive Nociception=1, Extero Nociception=1, Olfaction=5, Collision=5,
+# Proprioception=6, Visual=8)" -- i.e. basic/04, the substituted world, NOT the
+# 47-dim archived B_olf_only. Neuromodulation ENABLED (FiLM, sites=[actor],
+# input_sensors=[Extero Nociception,Olfaction,Collision,Visual]), Return Mode GAE_NORM.
+#
+# TIME TO FIRST CHECKPOINT: ~3m38s. Checkpoint fired at episode 200176 (as predicted by
+# the rPPO config-owned checkpoint_frequency of 200000, NOT the 10000 fallback) --
+# recordings/ appeared 11:38:34, videos_v2/ 11:38:49, consolidated MP4 complete 11:38:54
+# (~3m58s after start). Throughput ~995 it/s at the checkpoint.
+#
+# ALL THREE ON-DISK CHECKS PASS:
+#   1. recordings/200176/episode_00000{1,2,3}.rec.gz written (1093 / 1473 / 1063 B)
+#      + run_meta.pkl.
+#   2. videos_v2/eval_200176.mp4 = 182,663 B, ISO Media MP4, 1440x896, 34 frames, 6.8s.
+#      NO videos/ directory was ever created -- the run dir holds exactly
+#      models/ recordings/ videos_v2/. This is the V1-vs-V2 discriminator.
+#   3. videos_v2/render_200176.log carries the V2-only phrase, verbatim:
+#        "  34 frames verified (expected 34)"
+#      and per episode e.g. "  ep    2: 17 steps, 17 frames verified, 3.4s".
+#
+# WANDB RECEIVED THE VIDEO -- the actual deliverable, confirmed against the CLOUD via
+# the public API, not just the local staging dir:
+#   run summary key `eval/video` ->
+#     {'path': 'media/videos/eval/video_60_49bafff9c33f176aa01d.mp4', 'size': 182663,
+#      '_type': 'video-file', 'caption': 'Episode 200176'}
+#   and md5 of that staged file == md5 of videos_v2/eval_200176.mp4
+#   (a06eb578268eaed87295eedfe4214e0c) -- byte-identical, so the artifact WandB holds
+#   is this render and not a stale or re-encoded file.
+#
+# NON-DEFECT, recorded so it is not re-diagnosed later: render_200176.log opens with a
+# JAX traceback "cuInit(0) failed: CUDA_ERROR_NO_DEVICE". That is EXPECTED and harmless
+# -- async_render deliberately runs the renderer CPU-only (it must not contend with the
+# training process for the GPU). The render still exited 0 and verified every frame.
+#
+# STOPPED ON PURPOSE at 11:41 by user instruction, once the video was confirmed, rather
+# than hold a 4090 for a 10M-episode budget: terminate_command.py 113 <tag> --yes
+# (SIGINT, graceful). Verified afterwards: 0 PIDs for the tag, both 113 GPUs back to
+# 3 MiB / 0% util, no compute apps. WandB closed the run cleanly -- state "finished",
+# runtime 301 s, with eval/video still present in the finished run's summary.
+# The run reached ~208k of 10,000,000 episodes; that is by design, NOT a crash, and this
+# run must never be read as a science result.
+# ---------------------------------------------------------------------------
+
+# ---------------------------------------------------------------------------
+# VISION-RANGE-3 RENDER CHECK — 2026-09-18 — node 113, cuda:1
+# ---------------------------------------------------------------------------
+# Second render-check of the V2 switchover, at a LARGER SENSOR FOOTPRINT than the
+# 11:34 run on 113:0 (which used basic/04, a 27-dim observation, and PASSED).
+# World: 05-campfire_thermal_10x10_olf1_vis3 — olfactory_grid_range 1,
+# visual_sensor_range 3, thermal enabled, 10x10, max_steps 500, perceptual noise OFF.
+# Observation is ~245 numbers (visual 200 + olfaction 25 + the rest), so throughput
+# is expected to be MATERIALLY LOWER than the 995 it/s of the 27-dim run — the time
+# to first checkpoint is to be measured, not compared against that run's 3m38s.
+# The arena widens to a 7x7 view here via max(local_view_size, 2*max_sense_range+1);
+# that is expected, not a fault.
+#
+# WHY THIS RUN EXISTS: this world FAILED TO RENDER until commit 4b6f7196, which fixed
+# the band's width declaration (olfaction now declares 206 px, vision 482 px, 704 px
+# total against a 1056 px band). A CPU smoke run and a direct render already produce
+# video at these ranges (results/render_audit/olf1_vis3_spanfix/videos_v2/eval_71.mp4,
+# 33 frames verified). This run confirms the checkpoint video reaches WandB from a
+# real GPU training run.
+#
+# CONFIG-OWNED: --checkpoint-frequency deliberately NOT passed. RecurrentPPO takes
+# 200000 from configs/train/recurrent_ppo.yaml (NOT the 10000 in train/default.yaml,
+# which is only the DQN/PPO fallback), so the code path under test is a real run's.
+# --num-envs and --seed likewise left config-owned. WandB deliberately ON (--no-wandb
+# NOT passed) — the cloud upload is the entire point; auth via ~/.netrc on the node.
+#
+# PRE-FLIGHT at 12:0x: 113 GPUs 0 and 1 both 3 MiB / 0% util, no train.py process on
+# the node, nas01 mounted, JAX GPU-compile check passed (jax 0.9.0.1, both CudaDevices
+# visible). Today's only 113 diary row is the 11:41 run on 113:0, already done.
+# CIFS-bypass: launched via a unique /tmp script — this file is the audit record.
+# ---------------------------------------------------------------------------
+/home/vncuser/miniconda3/envs/grid_world_pain/bin/python train.py \
+  --config configs/environment/experiment/basic/05-campfire_thermal_10x10_olf1_vis3.yaml \
+  --agent_config configs/models/recurrent_ppo/nmn_input_site_grid_gaenorm/nmngaenorm_t4act_X.yaml \
+  --episodes 10000000 --device cuda:1 --log-interval 10 \
+  --tag "rppo_vis3_rendercheck_s42" --wandb-name "rppo_vis3_rendercheck_s42" \
+  --wandb-group "nmn_site_grid_olf_gaenorm" --wandb-job-type "render_check"
+
+# LAUNCH RECORD -- VERDICT: VISION RANGE 3 RENDERS AND REACHES WANDB. 2026-09-18
+#
+# Launched 21:12:25 via run_command.py --no-tail, node 113 GPU 1, PID 1072403 -- exactly
+# ONE pid for the tag, checked with `ps -eo pid,cmd | grep "[t]rain\.py"` (the bracket
+# form cannot self-match; a bare `pgrep -f` reports a phantom second hit because the SSH
+# remote shell's own cmdline contains the pattern).
+#   NAS log : logs/20260918_211225.log
+#   Results : results/JAX_RecurrentPPO/20260918-211228_rppo_vis3_rendercheck_s42
+#   WandB   : ytjaq3wc -- https://wandb.ai/sungwoolee/grid_world_pain/runs/ytjaq3wc
+#
+# WORLD CONFIRMED from the startup banner -- this is the wide-sensor world, not a
+# substitute: "Observation Dim: 245 (Satiation=1, Body Temperature=1, Interoceptive
+# Nociception=1, Extero Nociception=1, Thermoception=5, Olfaction=25, Collision=5,
+# Proprioception=6, Visual=200)". Visual=200 is vision range 3; Olfaction=25 is
+# olfactory grid range 1; Body Temperature + Thermoception confirm thermal enabled.
+# Neuromodulation ENABLED (FiLM, sites=[actor], input_sensors=[Extero Nociception,
+# Olfaction,Collision,Visual]), Return Mode GAE_NORM.
+#
+# TIME TO FIRST CHECKPOINT: 3m32s (21:12:25 -> recordings/200224/ at 21:15:57); the
+# consolidated MP4 completed 21:16:06, i.e. 3m41s end-to-end. Throughput ~1088 it/s at
+# the checkpoint. NOTE FOR THE RECORD: the 245-number observation did NOT cost the
+# expected slowdown -- this is on par with the 27-dim run's ~995 it/s. The early tqdm
+# figures (24 -> 700 it/s) are a cumulative average recovering from a ~44 s JIT compile
+# and must not be read as steady-state throughput.
+#
+# CHECKPOINT CADENCE WAS CONFIG-OWNED, as intended: --checkpoint-frequency was NOT
+# passed, the log banner reads "checkpoint_frequency : 200000" (from
+# configs/train/recurrent_ppo.yaml, NOT the 10000 DQN/PPO fallback in
+# configs/train/default.yaml), and the checkpoint fired at episode 200224.
+#
+# ALL ON-DISK CHECKS PASS:
+#   1. recordings/200224/episode_00000{1,2,3}.rec.gz (2188 / 4537 / 1987 B) + run_meta.pkl.
+#   2. videos_v2/eval_200224.mp4 = 295,463 B, ISO Media MP4 Base Media v1.
+#      NO videos/ directory was ever created -- the run dir holds exactly
+#      models/ recordings/ videos_v2/. This is the V1-vs-V2 discriminator.
+#   3. videos_v2/render_200224.log carries the V2-only phrase, verbatim:
+#        "  48 frames verified (expected 48)"
+#      with per-episode "ep 1: 9 steps, 9 frames verified", "ep 2: 32 steps, 32 frames
+#      verified", "ep 3: 7 steps, 7 frames verified".
+#   4. No LayoutOverflowError and no TextFitError anywhere in the render log -- i.e. the
+#      band-width fix in commit 4b6f7196 holds at olfaction 206 px + vision 482 px = 704 px
+#      against the 1056 px band, under a real GPU training run and not just a smoke test.
+#
+# WANDB RECEIVED THE VIDEO -- confirmed against the CLOUD, and more strongly than by
+# reading the local staging dir: the run summary key `eval/video` ->
+#   {'path': 'media/videos/eval/video_60_b079c77c740959ba8230.mp4', 'size': 295463,
+#    '_type': 'video-file', 'caption': 'Episode 200224'}
+# and the file DOWNLOADED BACK from the cloud via the public API md5s to
+#   3b33279bfa751af2c833645053b24a6c == md5(videos_v2/eval_200224.mp4)
+# so the artifact WandB holds is byte-identical to this render, not a stale or
+# re-encoded file.
+#
+# NON-DEFECT, recorded so it is not re-diagnosed later: render_200224.log opens with a
+# JAX traceback "cuInit(0) failed: CUDA_ERROR_NO_DEVICE" (8 occurrences). EXPECTED and
+# harmless -- async_render deliberately runs the renderer CPU-only so it does not contend
+# with training for the GPU. Every frame still verified and the render exited 0.
+#
+# STOPPED ON PURPOSE at 21:17 once the cloud upload was confirmed, rather than hold a
+# 4090 for a 10M-episode budget: terminate_command.py 113 <tag> --yes (SIGINT, graceful).
+# Verified afterwards: 0 PIDs for the tag, both 113 GPUs back to 3 MiB / 0% util with no
+# compute apps, and WandB closed the run cleanly -- state "finished", runtime 274 s, with
+# eval/video still present in the finished run's summary.
+# The run reached ~250k of 10,000,000 episodes; that is BY DESIGN, NOT a crash, and this
+# run must never be read as a science result.
+# ---------------------------------------------------------------------------
