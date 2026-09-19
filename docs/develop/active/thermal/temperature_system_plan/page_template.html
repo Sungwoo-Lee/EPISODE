@@ -87,6 +87,9 @@ dl { margin:0; display:grid; grid-template-columns:max-content 1fr; gap:10px 22p
 table.narrow { min-width:0; }
 /* Stop a hidden prose column from stretching every row on a phone. */
 table.steps td:last-child { min-width:170px; }
+/* The verdict column is four characters; the floor belongs to the prose column. */
+table.steps.verdict td:last-child { min-width:0; }
+table.steps.verdict td:nth-child(2) { min-width:190px; }
 .cue { font-size:13px; color:var(--ink-3); margin:0; }
 /* F32 amendment: N scroll boxes styled by one class are N different floors, so a single
    breakpoint tells the truth for at most one of them. Each cue is bound to its own box's
@@ -984,6 +987,14 @@ T &larr; T + <span class="k">k_exchange</span>&middot;(T_field &minus; T) + <spa
 
 <section class="col">
   <h2><span class="num">14</span> Is the clock long enough to live on?</h2>
+  <div class="callout warn">
+    <p><strong>Superseded (2026-09-19) &mdash; the numbers in this section describe the world as it
+    was, not as it ships.</strong> The settings were retuned after this was written, so the
+    <strong>34-step</strong> clock below is now <strong>@@sh_away_lo@@&ndash;@@sh_away_hi@@ steps</strong>
+    and the comfort ring settles at <strong>@@sh_ring_new@@</strong> rather than @@sh_ring_old@@. The
+    <em>reasoning</em> here still holds &mdash; it is what motivated the change &mdash; but read
+    &sect;16 for the figures that match the shipped environment.</p>
+  </div>
   <p>Every setting above imposes a <strong>clock</strong>: how long the agent can be away from
   warmth before it dies. A clock that is too short makes the world unplayable &mdash; the agent
   never gets far enough to eat, hide or heal, and temperature stops being a trade-off and becomes
@@ -1105,6 +1116,14 @@ T &larr; T + <span class="k">k_exchange</span>&middot;(T_field &minus; T) + <spa
 
 <section class="col">
   <h2><span class="num">15</span> How harsh should the cold be?</h2>
+  <div class="callout warn">
+    <p><strong>Superseded (2026-09-19) &mdash; this section asked the question; &sect;16 records the
+    answer that shipped.</strong> Its sweep covered only the settings that existed at the time. Two
+    keys for separate warming and cooling speeds have since been added, and the world retuned around
+    them. The <em>structural</em> findings here stand: warming the world is a knife edge, fire
+    strength barely moves the clock, and slowing both rates together keeps the map. The candidate
+    values in the table below were superseded by measurement.</p>
+  </div>
   <p>&sect;14 asked whether the thermal clock leaves room to eat, and found that it does. That was
   the easy obligation. The hard one is <strong>healing</strong>: recovery only accrues while the
   agent stays still, starting slow and compounding, so healing a serious injury is a sustained stay,
@@ -1223,10 +1242,99 @@ T &larr; T + <span class="k">k_exchange</span>&middot;(T_field &minus; T) + <spa
 <hr>
 
 <section class="col">
+  <h2><span class="num">16</span> What actually shipped</h2>
+  <p>Sections 14 and 15 were written while the design was still being argued about. This one records
+  the environment as it now stands, measured from the real configuration through the real reset path
+  rather than from a formula. Two things changed since those sections: the body gained
+  <strong>separate warming and cooling speeds</strong>, and the world was retuned around them to meet
+  three targets the user set from what the agent actually has to do &mdash; forage, avoid predators,
+  and heal.</p>
+  <p class="cue" hidden>Wider than the screen &mdash; scroll the table sideways; the right-hand columns are cut off.</p>
+  <div class="scroll"><table class="steps narrow">
+    <thead><tr><th>Setting</th><th class="n">As published here</th><th class="n">As shipped</th><th>Why</th></tr></thead>
+    <tbody>
+      <tr><td>world baseline</td><td class="n">&minus;28..&minus;22</td><td class="n">@@sh_wlo@@..@@sh_whi@@</td>
+        <td>a 6-degree range made survival time differ 1.72&times; between episodes, wider than the whole target band</td></tr>
+      <tr><td>fire strength</td><td class="n">11&ndash;13&times;</td><td class="n">11&times; fixed</td>
+        <td>a hotter fire pushed the first step onto it past the death threshold</td></tr>
+      <tr><td><code>k_loss</code></td><td class="n">0.01</td><td class="n">@@sh_kloss@@</td>
+        <td>sets how hard the body defends itself; needed for the away and rewarm targets together</td></tr>
+      <tr class="pick"><td>warming speed</td><td class="n">&mdash;</td><td class="n">@@sh_warm@@&times;</td>
+        <td rowspan="2">new keys: the body gains heat fast and loses it slowly, which one rate cannot do</td></tr>
+      <tr class="pick"><td>cooling speed</td><td class="n">&mdash;</td><td class="n">@@sh_cool@@&times;</td></tr>
+      <tr><td>minimum fire separation</td><td class="n">3</td><td class="n">@@sh_sep@@</td>
+        <td>two fires three cells apart merged; stepping in from the ring then killed on the first step</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<figure>
+  <img src="data:image/png;base64,@@ship@@" alt="Four panels. A: body temperature settled at each distance
+  from the fire, comparing the published settings with the shipped ones, against heat- and cold-death lines.
+  B: horizontal bars comparing episode length, the hunger clock and the thermal clock before and after the
+  retune. C: one full cycle, rewarming beside the fire and then cooling out in the cold. D: per-episode
+  measurements of steps away, steps to rewarm, and body temperature after one step onto the fire, against
+  the targets.">
+  <figcaption><b>Figure M &mdash; the world as it now ships.</b>
+  <b>Axes.</b> A: horizontal axis is distance from the fire in cells (Manhattan, 0&ndash;3); vertical axis is
+  the body temperature the agent settles at in degrees, where 0 is comfortable and &plusmn;15 is death.
+  B: horizontal axis is steps (0&ndash;585); the three pairs of bars are the three clocks, grey for the
+  published value and colour for the shipped one; no vertical scale. C: horizontal axis is step within the
+  episode (one environment step per unit); vertical axis is body temperature in degrees. D: horizontal axis
+  is the three measured quantities; the vertical axis carries <em>steps</em> for the first two and
+  <em>degrees</em> for the third, so compare each column against its own dashed target lines and not
+  against the others.
+  <b>What it shows.</b> Doubling <code>k_loss</code> moved every settling temperature: the comfort ring
+  went from @@sh_ring_old@@ to @@sh_ring_new@@ and the fire cell from @@sh_fire_old@@ to @@sh_fire_new@@ (A).
+  The thermal clock went from 34 steps to @@sh_away_lo@@&ndash;@@sh_away_hi@@, so it now sits alongside the
+  100-step hunger clock instead of dominating it (B). A full cycle is @@sh_cyc_up@@ steps rewarming and
+  @@sh_cyc_out@@ out in the cold (C). All three targets are met in every sampled episode (D).
+  <b>Data.</b> @@sh_n@@ episodes, all of them, reset through the live environment from the shipped
+  configuration; no episode was filtered. Durations use the body recurrence exactly as <code>core.py</code>
+  applies it, including the new speeds. The radial profile in A comes from the loader's own blur.</figcaption>
+</figure>
+
+<section class="col">
+  <h3>Measured against the targets</h3>
+  <p class="cue" hidden>Wider than the screen &mdash; scroll the table sideways; the right-hand columns are cut off.</p>
+  <div class="scroll"><table class="steps verdict">
+    <thead><tr><th>Target</th><th>What was asked for</th><th class="n">Measured</th><th class="n">Verdict</th></tr></thead>
+    <tbody>
+      <tr><td>Time away from a fire</td><td>80&ndash;110 steps, to match the 100-step hunger clock</td>
+        <td class="n">@@sh_away_lo@@&ndash;@@sh_away_hi@@</td><td class="n">pass</td></tr>
+      <tr><td>Rewarming from near-death</td><td>&le;&nbsp;10 steps, because a predator strikes within 1&ndash;3</td>
+        <td class="n">@@sh_rew_lo@@&ndash;@@sh_rew_hi@@</td><td class="n">pass</td></tr>
+      <tr><td>First step onto the fire</td><td>must be survivable</td>
+        <td class="n">@@sh_t1_lo@@..@@sh_t1_hi@@</td><td class="n">pass</td></tr>
+      <tr><td>Death on the fire</td><td>by step 2&ndash;3</td><td class="n">step @@sh_burn@@</td><td class="n">pass</td></tr>
+    </tbody>
+  </table></div>
+  <p>Also measured over the same @@sh_n@@ episodes: <strong>@@sh_none@@</strong> episodes had no survivable
+  cell at all, there were <strong>@@sh_safe@@</strong> survivable cells per episode on average, and no fire
+  was silently misplaced &mdash; worth checking, because a wider separation leaves fewer legal spots and
+  this environment parks an entity at the corner when its area fills up.</p>
+  <div class="callout warn">
+    <p><strong>What the retune cost.</strong> Two things, both deliberate. <strong>Doubling
+    <code>k_loss</code> moved every settling temperature</strong> &mdash; the warming and cooling speeds
+    on their own do not, which is why they were designed that way. And <strong>the thermal world is now
+    close to identical from episode to episode</strong>: a narrow temperature range and a fixed fire
+    strength. That is a real loss of scene variety, and it is the price of meeting the targets in every
+    episode rather than on average.</p>
+  </div>
+  <p>The warming speed is @@sh_warm@@&times; against a cooling speed of @@sh_cool@@&times;, an eight-fold
+  asymmetry. Faster heating than cooling is well documented &mdash; cardiovascular control of heating and
+  cooling rates in reptiles, vasoconstriction against vasodilation in endotherms &mdash; but eight-fold is
+  past the range usually reported, so it stands as a deliberate model choice rather than a physiological
+  claim, and the literature figures are still unverified.</p>
+</section>
+
+<hr>
+
+<section class="col">
   <h4>Provenance</h4>
   <p class="foot">Every number on this page is computed at build time from the sandbox in this
   folder &mdash; <code>sim.py</code> (field construction and body dynamics),
-  <code>nbhd_compare.py</code> (neighbourhood accuracy), <code>figs.py</code> (figures A&ndash;I), <code>figJ_obs.py</code> (figure J), <code>figK_budget.py</code> (figure K), <code>figL_harshness.py</code> (figure L). Rebuild
+  <code>nbhd_compare.py</code> (neighbourhood accuracy), <code>figs.py</code> (figures A&ndash;I), <code>figJ_obs.py</code> (figure J), <code>figK_budget.py</code> (figure K), <code>figL_harshness.py</code> (figure L), <code>figM_shipped.py</code> (figure M, from the live environment). Rebuild
   with <code>build_page.py</code>. The sandbox is pure numpy and deliberately independent of
   <code>src/</code>, so parameters can be swept without touching the environment. Source review:
   EVAAA at <code>vendor/evaaa/evaaa_unity</code> &mdash; <code>ThermoGridSpawner.cs</code>,

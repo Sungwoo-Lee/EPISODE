@@ -17,7 +17,7 @@ FIG = {k: b64(v) for k, v in {
     'pipeline': 'figA_pipeline.png', 'fig_sigma': 'figB_sigma.png', 'body': 'figC_body.png',
     'render': 'figD_render.png', 'tether': 'figE_tether.png', 'modes': 'figF_modes.png', 'fig_kloss': 'figG_kloss.png', 'ranges': 'figH_ranges.png', 'pain': 'figI_pain.png',
     'nbhd': 'fig1_geometry.png', 'acc': 'fig3_accuracy.png',
-    'obs': 'figJ_obs.png', 'budget': 'figK_budget.png', 'harsh': 'figL_harshness.png'}.items()}
+    'obs': 'figJ_obs.png', 'budget': 'figK_budget.png', 'harsh': 'figL_harshness.png', 'ship': 'figM_shipped.png'}.items()}
 
 DEFAULT, SIGMA, K_EX, K_LOSS, DEATH = -25.0, 0.7, 0.04, 0.01, 15.0
 A_FIRE = 300.0
@@ -187,6 +187,22 @@ for _s, _tag in ((1.0, '100'), (0.75, '75'), (0.65, '65'), (0.5, '50'), (0.33, '
 _sl = {round(d['world'], 1): d for d in _L['slice']}
 N.update(hs_w21=str(_sl[-21.0]['away']), hs_w20=str(_sl[-20.0]['away']),
          hs_edge_abs=f"{abs(min(d['world'] for d in _L['slice'] if not d['ok'] and d['world'] > -30)):.0f}")
+
+# ---- section 16 numbers: emitted by figM_shipped.py from the live environment ----
+_M = json.load(open('figM_numbers.json'))
+N.update(
+    sh_n=str(_M['n']),
+    sh_away_lo=str(_M['away'][0]), sh_away_hi=str(_M['away'][1]), sh_away_med=str(_M['away'][2]),
+    sh_rew_lo=str(_M['rew'][0]), sh_rew_hi=str(_M['rew'][1]),
+    sh_t1_lo=f"{_M['t1'][0]:+.1f}", sh_t1_hi=f"{_M['t1'][1]:+.1f}",
+    sh_burn=str(_M['burn'][0]),
+    sh_ring_new=f"{_M['ring_new']:+.1f}", sh_fire_new=f"{_M['fire_new']:+.1f}",
+    sh_ring_old=f"{_M['ring_old']:+.1f}", sh_fire_old=f"{_M['fire_old']:+.1f}",
+    sh_safe=f"{_M['safe_cells']:.1f}", sh_none=str(_M['none_safe']),
+    sh_wlo=f"{_M['world'][0]:.0f}", sh_whi=f"{_M['world'][1]:.0f}",
+    sh_kloss=f"{_M['k_loss']:g}", sh_warm=f"{_M['warm']:g}", sh_cool=f"{_M['cool']:g}",
+    sh_sep=str(_M['sep']), sh_cyc_up=str(_M['cycle'][0]), sh_cyc_out=str(_M['cycle'][1]),
+)
 
 clash = set(FIG) & set(N)
 assert not clash, f'token name collision between figures and numbers: {clash}'
