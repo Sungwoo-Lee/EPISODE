@@ -92,7 +92,11 @@ environment:
       count_high: 3    # per-episode upper bound; allocation size
       area: [[1, 1], [10, 10]]
       edge_margin: 2              # inset applied to `area` at LOAD time
-      temperature_ratio: [11, 13] # fire = ratio x |default_temp|, sampled per fire
+      temperature_ratio: [11, 11] # fire = ratio x |default_temp|. FIXED, not a range: a hotter
+                                  # fire pushes the first step onto the fire past the death
+                                  # threshold, and the warming scale that rewarms fast enough
+                                  # leaves no headroom for that. A per-fire range cannot meet
+                                  # the 'first step survivable' target in every episode.
       blocking: false
       blocks_sight: false
       damage: [0.0, 0.0]

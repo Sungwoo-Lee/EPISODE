@@ -301,7 +301,11 @@ thermal:
 
   # --- field ---
   sigma: 0.7                # blur width in cells; tight band 0.6-0.8; validated > 0
-  default_temp: [-28, -22]  # world baseline, sampled uniformly once per episode
+  default_temp: [-31, -29]  # world baseline, sampled uniformly once per episode. NARROW ON
+                            # PURPOSE: at a fixed cooling scale the time the agent survives away
+                            # from a fire differs 1.72x between -28 and -22, wider than the whole
+                            # 80-110 step target band, so a wide range cannot meet the target in
+                            # every episode. See the follow-up in WARMING_COOLING_RATE_SCALES.md.
   use_random_spots: false
   use_object_sources: true
   random_spots:             # read only when use_random_spots
@@ -314,7 +318,10 @@ thermal:
   # their stamps and the merged field is lethal exactly where the agent would
   # have to stand, so such an episode has no survivable position near the fire
   # at all. 3 is the measured threshold. 0 = disabled (accepts merged fires).
-  min_fire_separation: 3
+  min_fire_separation: 4   # RAISED from 3: with up to three fires, two fires three cells
+                           # apart merge enough that stepping onto the fire from the ring
+                           # beside it crosses the heat-death threshold on the FIRST step.
+                           # Measured over real resets; 4 clears it. See WARMING_COOLING_RATE_SCALES.md.
   # Minimum Manhattan distance from food to any fire. 0 = no constraint, which
   # is today's behaviour; a non-zero value costs a second placement pass.
   food_min_fire_distance: 0
@@ -324,7 +331,7 @@ thermal:
   min_temperature: -15.0    # validated min < max
   max_temperature: 15.0
   k_exchange: 0.04
-  k_loss: 0.01
+  k_loss: 0.02
   k_metabolic: 0.0
   # Separate warming and cooling SPEEDS. Each step the body's temperature would
   # change by  d = k_exchange*(T_field - T) + k_metabolic - k_loss*(T - temperature_setpoint);
@@ -338,8 +345,8 @@ thermal:
   # Validated: each > 0, and each * (k_exchange + k_loss) <= 1 (else a step
   # overshoots its settling point). A deliberate deviation from EVAAA, whose body
   # uses one rate. Read ONLY when enabled is true.
-  warming_rate_scale: 1.0
-  cooling_rate_scale: 1.0
+  warming_rate_scale: 2.0
+  cooling_rate_scale: 0.25
   metabolic_coupling: false
   # Read ONLY when metabolic_coupling is true. Nutrition units drawn per
   # degree-per-step of thermoregulatory defence, i.e. the per-step drain is
