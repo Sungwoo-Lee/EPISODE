@@ -4,9 +4,9 @@
 >
 > Read this file before classifying a new insight. Folder definitions here are the matching surface — if a new insight does not match any definition verbatim, the new-folder justification protocol applies (see CLAUDE.md, "Fragmentation safeguards").
 
-**Last updated**: 2026-09-09
-**Active folders**: 10
-**Total insights**: 220
+**Last updated**: 2026-09-19
+**Active folders**: 11
+**Total insights**: 223
 **Last audit**: (none)
 
 ---
@@ -25,6 +25,7 @@
 | `config_system` | Config loader/layering/schema | 11 | 2026-08-18 | [config, design, decision, meta, learned_lesson] |
 | `curriculum_learning` | Curriculum/continual training | 3 | 2026-06-24 | [learned_lesson, decision, refutation] |
 | `behavior_measures` | Behavior-measure platform & probes | 21 | 2026-09-09 | [design, decision, meta, learned_lesson, hypervigilance, refutation, noise, dreamer] |
+| `episode_renderer` | Episode video renderer | 3 | 2026-09-19 | [learned_lesson, design, decision, testing, meta, wandb] |
 
 ---
 
@@ -55,6 +56,8 @@ Surface a merge proposal to the user when:
 ---
 
 ## Change history
+
+- 2026-09-19: Captured 3 insights into the new `episode_renderer` folder from the eval-renderer switchover session: `20260919_1315_eval_videos_moved_to_v2_renderer`, `20260919_1316_two_modules_one_geometry_drift`, `20260919_1317_checks_that_cannot_fail` (no new tags; all reused from the active dictionary).
 - 2026-09-09: Captured 3 insights from the hiding-artifact inventory + Hiding Factor Atlas session: `env_entities/env_parameter_surface_and_degenerate_traits` (the grid world has 65 settings and only 15 have been tested as drivers of bush hiding; three of the five per-episode predator traits - stamina_recovery_rate, hunt_stamina_threshold, lose_interest_multiplier - are declared distributional but written degenerate `[x,x]` in every live config, with real ranges only in three archived hypervigilance configs; spatial arrangement and per-event damage are the two large untested seams and both are free from the existing million-episode store), `behavior_measures/one_python_figure_pipeline_not_split` (user rejected splitting figures into a Python half that computes numbers and a JavaScript half that draws them - two artifacts that must agree with nothing forcing it, and a browser-drawn figure cannot go into the paper; separately, a01's one-script-per-figure refactor stalled at 6 of 19 scripts and its merge output `all_figures.json` is read by nothing), and `wiki_system_design/diary_incomplete_artifact_index` (the diary is a status board, not a complete index of what has been published - two of four hiding pages left no row and one publication day has no diary file at all). All tags reused; no new tags, no new folders.
 - 2026-09-09: Captured 3 insights from the temperature-system handover follow-up: `env_entities/parity_gates_green_without_comparing` (two byte-identity gates reported green while comparing nothing - one skipped for three months after commit `4e975fb8` moved its config, the other compared GPU floats against CPU-captured fixtures; a replay proved no regression slipped through either), `cluster_ops/cpu_pin_directory_conftest_not_repo_wide` (pin the CPU backend with a directory conftest, never repo-wide - a repo-wide pin makes `test_gpu_buffer.py` silently skip its 7 GPU tests with a false "No CUDA device available", and a pytest marker cannot work because markers resolve after module import), and `subagent_engineering/verify_handover_claims_against_code` (a handover written by the session that did the work was wrong in 3 of 6 bug claims and in both headline diagnoses - each directionally right, each wrong in the detail that picks the fix). One new tag: `testing`. No new folders.
 - 2026-09-01: Captured 5 insights from the FiLM-in-RL corpus + modulation-site refactor session: 4 into `nmn_diagnosis` (`reward_is_function_of_injury_licenses_critic_mod` - corrects a false claim that had propagated into a refactor plan; `mc_bootstrap_units_measured_sigma_25` - measured sigma 23-25, H4 delivers ~4%; `lr_critic_dead_across_all_rppo_per_file_migration` - widens the dead-key finding to all rPPO and records the ppo.yaml migration trap; `film_literature_verdict_grouping_and_self_conditioning` - grouping unsupported, self-conditioning now actively negative), 1 into `env_entities` (`interoceptive_channel_is_two_dims_by_design` - injury and nutrition hidden by design, felt channel is 2 dims via a 3-step alpha kernel). All tags reused (nmn, film, rl, config, design, decision, learned_lesson, refutation); no new tags, no new folders.
