@@ -8,17 +8,15 @@ last_updated: 2026-09-19
 
 # Sensor channel names come from config, and sense panels get a fixed size
 
-> **Status**: PLANNED — not implemented. **One question is open and blocks nothing else:**
-> §D4c — for vision, the accepted "silent overflow" turns out to mean the extra channels
-> **disappear** rather than visibly spill over, which is not what was agreed to. It is with
-> the user; CP5b renders both cases so the call is made against pictures.
+> **Status**: PLANNED — not implemented. **No open questions.**
 >
-> Carries four user decisions taken 2026-09-19: no recording-format version bump (§Q1); no
+> Carries six user decisions taken 2026-09-19: no recording-format version bump (§Q1); no
 > channel ceiling; extra maps overflow the panel rather than being refused, now with a
 > warning that names both numbers (§D4b); pre-change checkpoints cannot be re-recorded until
 > the saved-config compatibility work lands, with no fallback default (§D7); and legacy
 > recordings at vision range ≥ 3 are declared unrenderable with a message that points at
-> re-recording (§D5b).
+> re-recording (§D5b); and **this change lands before the parallel vision-dim ladder rollout**
+> (§9b).
 >
 > Two `plan-reviewer` passes, both **NOT READY**. Findings and their disposition are tabled in
 > "Review disposition" below. Note that the first pass reviewed a draft that still had a
@@ -238,7 +236,7 @@ than inheriting the numbers above.
   scope growth on the exact functions whose disagreement broke every video last week.
 - **`RECORDING_FORMAT_VERSION` is read nowhere** (`eval_recording.py:20`, written at `:85`
   and `:102`, no reader repo-wide). Do not expect the stamp to reject stale meta — see the
-  open question in §Q1.
+  decision recorded in §Q1.
 - **`tests/env/test_backward_compat_configs.py` cannot detect a missing new key** in any
   maintained world: it skips any config whose load error says "is required but missing", and
   all eight `basic/` worlds use `extends:`. It will stay green regardless; it is **not** a
@@ -427,11 +425,13 @@ was not asked for.
 
 #### D4c. What the overflow ACTUALLY looks like — and why the two senses fail oppositely
 
-> **Disposition pending the user.** §D4b's cost was accepted on the understanding that
-> overflow means *visible spillover*. For one of the two senses it does not: it means the
-> extra channels **vanish**. The consequence has been put to the user and **their answer
-> governs**; until it arrives, CP5b renders both cases so the decision is made against a
-> picture rather than a description. (`plan-reviewer` C6.)
+> **Settled, 2026-09-19 — this is a recorded consequence, not an open question.** The user's
+> governing reasoning, in their terms: today's channel counts **are** the conventional
+> maximum, so exceeding them is off the normal path by construction, and no shipped world
+> does it. The behaviour therefore stands exactly as decided in §D4b — no limit, warn at
+> load naming both numbers, still draw — and what follows is written down so that a future
+> reader who meets such a frame **finds the explanation instead of filing a bug**. Do not
+> reopen it. (Measured under `plan-reviewer` C6.)
 
 **Verified mechanism.** Map tiles are drawn with `rrect` → `ax.add_patch(FancyBboxPatch(...))`
 (`dashboard/style.py:100-105`). Nothing in the dashboard package ever sets `clip_on`,
@@ -447,11 +447,13 @@ rule:
 | **Olfaction** (left child) | inside the band Axes, on top of the vision panel | a genuine overlap | **reports it** — a true finding |
 | **Vision** (right child) | past the band Axes' right edge → **clipped away** | six maps and some **floating labels** with no tiles under them; no sign that channels 7–8 exist | **nothing to report** — there is no ink |
 
-**Why this is worse than what was agreed.** For vision — the sense the whole vision-dim study
-varies — an over-slot config produces a frame that is not obviously broken. It silently
-*under-reports the agent's observation*, which is the exact class of defect this plan exists
-to remove ("I'm worry about any potential quiet mistake"). An overlapping frame is ugly and
-self-evident; a frame missing two channels looks fine and is wrong.
+**What that means in practice, for whoever meets such a frame.** For vision, an over-slot
+config produces a frame that is not obviously broken: it shows six maps and some labels with
+no tiles under them, and it *under-reports the agent's observation* without the audit seeing
+anything. That is a strange thing to encounter cold, which is the whole reason it is written
+down here. **It is reachable only off the conventional path** — every shipped world is at or
+below the slot count — and the warning at load (§D4b) is what points a reader from the frame
+back to the config that caused it.
 
 **The carve-out's bound is `maps > slots`, not `channels > conventional`.** The two differ
 whenever grouping changes: 8 channels with the Terrain group are 6 maps (fits), and the same
@@ -815,22 +817,48 @@ inheritance reason in §10's how-to block. This does not break training — the 
 run — so it would surface only when someone later tries to record a video, which is the worst
 time to find it.
 
-**This plan does not edit those files** (they belong to the other session). The ordering that
-avoids a broken ladder:
+**This plan does not edit those files** (they belong to the other session).
+
+**User decision, 2026-09-19: this change lands FIRST.** The alternatives were letting the
+ladder rollout land first, and making the two display keys optional per config. The second was
+rejected for the same reason the code tables are being deleted — an optional key with an
+inherited value *is* a fallback default, and it would let a dim-1 world silently render
+another world's channel names.
+
+The ordering that follows from it:
 
 1. This change lands `default.yaml`'s four keys **first**. Every ladder config that has not
    yet changed its channel count keeps inheriting a correct 8-entry list and is unaffected.
 2. The other session adds the two display keys **in the same edit** that sets
    `visual_vector_size: 1`, so no intermediate commit has a size that disagrees with its
-   names.
-3. If their rollout has already landed when this change starts, the developer **reports it
-   and stops** rather than editing their files: the fix is one line per config, but it is
+   names. §10's how-to block is the instruction they follow, and is written for that use.
+3. If their rollout has already landed when implementation starts, the developer **reports it
+   and stops** rather than editing their files: the fix is two lines per config, but it is
    theirs to make, and a config edited by two sessions at once is how the staged-deletion
    confusion in §A6 happened.
 
-**Detection, so this cannot be missed:** CP6 records, for every maintained config under
-`configs/environment/`, whether `channel_display_from_config` succeeds. That sweep is the
-gate — not a grep, because the failure is a length comparison after inheritance resolves.
+**Where the failure surfaces, stated precisely — because "fails at load" is not available.**
+The natural request is that a ladder config with a mismatched names list fail at config load,
+naming the file and both keys. **It cannot fail in `load_env_params`**: a new key there is
+read by the parity gates, which load ~38 standalone configs raw with no `extends:` resolution
+(§A3), and that is the exact breakage the `run_meta` carriage exists to avoid. Putting the
+check there would trade a display bug for a red gate on 38 configs the project does not
+maintain.
+
+So the failure is loud in the two places it can be:
+
+- **At record time** — `channel_display_from_config` raises, naming the config, the declared
+  channel count, and the names-list length. This is the real gate: it is impossible to write
+  a recording whose names disagree with its channels.
+- **In CI, permanently** — a test sweeps every maintained config under
+  `configs/environment/` through `channel_display_from_config` and fails **naming the file and
+  both keys** (§11). This is what catches a ladder config the moment it lands, rather than
+  when somebody later tries to make a video. It must be a committed test, not only CP6's
+  one-off sweep, because the configs it guards are still being written.
+
+The honest cost of this arrangement: a mismatched config **loads and trains perfectly well**
+and fails only at evaluation or in the sweep test. That is stated in the how-to block too, so
+nobody is surprised by it.
 
 #### 10. `configs/environment/default.yaml` — the four keys and their how-to block
 
@@ -886,9 +914,15 @@ its own right**, matching the density and tone of the existing `olfactory_grid_r
   # FILE. A config that sets `visual_vector_size: 1` and says nothing else still
   # INHERITS this 8-entry list and the 3-channel Terrain group below, because a
   # child config replaces a list wholesale or not at all -- it cannot shorten one.
-  # The mismatch is caught when a recording is written (8 names against 1 channel),
-  # so the config loads and trains perfectly well and only fails later, at eval.
-  # A 1-channel vision config needs BOTH of these, beside its size:
+  # The mismatch is caught when a recording is written (8 names against 1 channel)
+  # and by a test that sweeps every maintained config, which names the offending
+  # file and both keys. It is NOT caught at config load -- so a mismatched config
+  # loads and trains perfectly well, and only fails later, at eval. Know that
+  # before you edit: a training run can get all the way to its first video.
+  #
+  # A 1-channel vision config needs BOTH of these, beside its size, in the SAME
+  # file that sets the size:
+  #     visual_vector_size: 1
   #     visual_channel_names:  [{name: "Visible", qualifier: ""}]
   #     visual_channel_groups: []     # no terrain merge: there is no channel 1 or 2
   # The same applies to the smell keys and `vector_size`.
@@ -958,6 +992,7 @@ its own right**, matching the density and tone of the existing `olfactory_grid_r
 | `tests/env/test_dashboard_channel_display.py` (missing-key cases) | **one test per new key**: delete the key from a resolved config and assert `ValueError` **naming that key**. Required by CONFIG_GUIDE Maintenance Contract item 3, which the length/index/duplicate tests do not satisfy (`plan-reviewer` M6) |
 | `tests/scripts/test_render_recordings_v2.py`, `tests/env/test_dashboard_frames.py` | construct via `meta.get("channel_display")`; must still pass on pre-change fixtures (legacy path). **Name the fixture that stays un-regenerated** (CP7) — otherwise this assertion goes vacuous the moment every cell is re-recorded (`plan-reviewer` M4) |
 | `tests/env/test_dashboard_v1_imports.py` | unchanged, but **must stay green**: it pins `write_run_meta`'s signature prefix (§6, L3) |
+| `tests/env/test_channel_names_match_configs.py` (new) | **The standing guard for the parallel ladder rollout (§9b).** Sweep **every maintained config** under `configs/environment/` — `default.yaml` plus `experiment/basic/` — through the resolving loader and then `channel_display_from_config`. A config whose `visual_vector_size` / `vector_size` disagrees with its names list, or whose merge group names a channel it does not have, must fail **naming the file and both keys**. This is a committed test rather than only CP6's one-off sweep, because those configs are being written by another session right now and the mismatch cannot be caught at env-config load (§9b explains why not). Parametrise per config file so the failure names the offender rather than the sweep |
 
 **Every one of these must be run against unmodified source first and its failure
 recorded.** A test that passes before the change proves nothing. The Implementation Report
@@ -1057,9 +1092,11 @@ end to end.
       cell was never generated before, so nothing is lost.
 
 - [ ] **CP5b — Render ABOVE the slot count, BOTH ways, and look at what actually happens.**
-      This is the evidence §D4c's pending decision is made against, so it must exist as
-      pictures, not description. Build throwaway cells at **vision range 2** and render step 0
-      of each to PNG, **and run `render_layout_audit.py` on each beside a normal cell**:
+      **This documents §D4c; it does not gate the design.** The overflow behaviour is decided
+      and this checkpoint cannot overturn it — its purpose is that a future reader meeting an
+      off-path frame finds a picture of it here rather than filing a bug. Build throwaway
+      cells at **vision range 2** and render step 0 of each to PNG, **and run
+      `render_layout_audit.py` on each beside a normal cell**:
       (a) **group kept, over-slot by count** — 12 vision channels, Terrain group present → 10
       maps into 6 slots;
       (b) **group deleted** — 8 channels, `visual_channel_groups: []` → 8 maps into 6 slots.
@@ -1073,9 +1110,10 @@ end to end.
       raises** and the **warning is emitted naming both numbers**, confirming §D4b's mechanism
       rather than assuming it; (c) which audit rules fire — recorded verbatim, including the
       expected result that the vision case produces **fewer** findings than a correct frame.
-      *Report, do not fix.* If the vision case drops channels silently, that is §D4c's
-      finding: put the frames in front of the user and let them decide. Do not loosen the
-      audit, do not add a limit, and do not quietly change the sizing rule.
+      *Record, do not fix, do not re-ask.* The clipped-vision outcome is the expected result,
+      not a defect to escalate: attach the frames to the Implementation Report as §D4c's
+      worked example. Do not loosen the audit, do not add a limit, and do not change the
+      sizing rule.
       *Rollback*: delete the throwaway cells; they touch nothing else.
 
 - [ ] **CP6 — Full suites, deliberate breaks, and the config sweep.** Run the three dashboard
@@ -1165,7 +1203,7 @@ against the code rather than accepting it.
 | C3 | Production video path bypasses `from_recording` | **Applied** — new §4b covers all three sites; CP4 now renders **through** `render_recordings_v2.py`. Second exit condition checked and closed: `render_recordings.py` is the V1 path and never imports the dashboard package |
 | C4 | Legacy rule reintroduces the width refusal | **Applied** — §D5b declares legacy vision range ≥ 3 unrenderable with a teaching message. Reviewer's path corrected: the recordings are at `results/render_audit/olf1_vis3_*/recordings/<pct>/`, **not** `results/render_audit/recordings/olf1_vis3_*`, which does not exist. Also corrected §D5's false "keeps exactly today's sizing" |
 | C5 | No maps-vs-slots validation | **Withdrawn by the reviewer** after the user removed the ceiling. Superseded by the §D4b warning |
-| C6 | Overflow is disappearance, not spillover (vision) | **Mechanism verified and documented** in §D4c — patches default to `clip_on=True`, `ax.text` to `False`, and one band Axes spans both senses. **Disposition pending the user**; CP5b renders both senses and both trigger paths |
+| C6 | Overflow is disappearance, not spillover (vision) | **Mechanism verified; topic closed by the user 2026-09-19.** §D4c documents it as a known consequence of an off-path config — today's counts *are* the conventional maximum, so exceeding them is off the normal path by construction and no shipped world does it. Behaviour unchanged (no limit, warn, still draw). CP5b is kept as documentation, not as a gate |
 | M1 | CP3/CP4 ran on range-0 cells | **Applied** — CP3 uses real legacy diamond-map recordings, CP4 a range-2 cell; both keep an `M1` render for the rows path |
 | M2 | "Before" frame never captured | **Applied** — captured at CP2, with the reason pixel comparison is unsound recorded (worlds were retuned after those cells) |
 | M3 | CP7's audit check cannot fail rightly | **Applied** — the audit refuses the dashboard renderer by design; CP7's real check is a render through the production script, audit kept only as a no-new-findings regression |
