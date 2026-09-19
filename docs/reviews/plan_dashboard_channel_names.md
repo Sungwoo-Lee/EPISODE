@@ -26,7 +26,7 @@ The plan is **not ready** because it would ship in a state where the feature is 
 2. **There are four recorder call sites, not three.** `scripts/eval/eval_rollout.py:1238` is missing. Because the plan makes the new argument *required* (a good choice), the omission is a crash on every `eval_rollout.py --record`.
 3. **The recorder does meet un-layered configs.** The plan's safety argument for using `get_mandatory` in the writer is that it "runs only in real evaluation, where the config has been resolved". But the *common* evaluation path (`eval_rollout.py --config <run>/models/config.yaml`, per that script's own comments) loads a run's **frozen saved config**, which has no `extends:` and cannot contain keys invented after the run finished. Every pre-change checkpoint would fail at `write_run_meta` when recorded. The compatibility layer the plan cites for this is itself still unimplemented.
 4. **The legacy-recording rule reintroduces the width refusal.** For recordings without names the plan draws one map per channel and sizes the panel to fit. Measured with the real packer: a pre-change recording with vision at range 3 needs 634 px and is granted 520 px — the `LayoutOverflowError` that `4b6f7196` fixed. Three such recordings exist on disk. The user's decision was "positional names, not a refusal"; this is a refusal.
-5. **Nothing stops a configured recording drawing more maps than the panel has slots.** The validation list checks *channels* against the ceiling (8) but not *maps* against the slots (6). Eight vision channels with `visual_channel_groups: []` — an edit the how-to block invites — pass validation and draw maps 7 and 8 past the panel's right edge, silently. This is the "quiet mistake" the user named as the reason for the whole change.
+5. **The newly sanctioned silent overflow has no gate, and for vision it is not overlap but disappearance.** Mid-review the user removed the channel ceiling and chose "extra maps draw past the panel edge" over refusing. The plan references a checkpoint (`CP5b`) that renders such a frame for a human to look at, but the checkpoint is not in the list. And because map tiles are clipped to the band card while their labels are not, an over-slot *vision* run does not overlap its neighbour — its extra channels simply vanish from the picture, labels floating outside the card, with nothing in the frame or the audit to say so. (An earlier item here asked for a maps ≤ slots validation; that is withdrawn — it is now the accepted cost. See "Revision after the mid-review design change" below.)
 
 What would flip the verdict is listed per finding below. None of the fixes is large; all of them are cheaper now than after CP7 has re-recorded the fixtures.
 
@@ -73,6 +73,110 @@ What would flip the verdict is listed per finding below. None of the fixes is la
 - ❓ **O3** — Git index at review time shows `D` (staged **deletion**) for both `05-…olf1_vis{2,3}.yaml`, not an addition as §A6 says. If they leave the tree, `test_dashboard_band_span.py`'s two config cases **skip** — "the quiet way a gate stops gating" per `4b6f7196` — and the CP0 baseline changes shape. Re-measure before CP0.
 - ❓ **O4** — `Config.set("environment.entities", [...])` replaces a whole list cleanly (asserted in §A5, not demonstrated).
 - ❓ **O5** — The `E6bin` cell, once it builds, packs and paints at vision range 2 with one map (should, but CP5 is the first time it is ever tried).
+
+## Revision after the mid-review design change (same day)
+
+Two user decisions landed while this review was in progress and the author revised the working
+copy (uncommitted at review time; snapshot md5 `93d53725…`): **the channel ceiling is removed**
+(no config is rejected for its channel count) and **maps beyond the panel's slot count draw
+past the panel edge silently** — chosen over shrinking slots and over refusing. The slot count
+(smell 5, vision 6) stays as the fixed panel width. `RECORDING_FORMAT_VERSION` stays unbumped.
+
+**What this changes in the findings above.** C1, C2, C3 and every Moderate/Low finding are
+untouched. **C5 is withdrawn** — the missing maps ≤ slots check is now the accepted behaviour,
+not a gap. **C4 stands** but its option set moves (below). Two findings are added.
+
+### Does the plan contain the inverted safety property, or weaken it more broadly?
+
+Contained on the code path: the painter's only refusal (`if cs < 10`) sizes squares from the
+**slot count**, so it still fires whenever the panel is too narrow for six maps, and the
+packer's checks are unchanged. Not contained in the *statement* of the bound, in two places:
+
+- §D4b says the carve-out "is bounded to configs that declare more channels than the
+  conventional size — no shipped world does today". That is the wrong boundary. The overflow
+  engages on **maps > slots**, which (a) the plan's own Consequence 2 shows is reached at the
+  *shipped* channel count by deleting the Terrain group — an edit the how-to block invites —
+  and (b) is the state of **every pre-change recording** (8 positional maps into 6 slots),
+  which §D5 routes to a *different* rule (grow, not overflow). One arithmetic situation, two
+  behaviours, and the bound sentence names neither. State the bound as "maps > slots", and say
+  that legacy and configured recordings resolve it differently.
+- §D4b line ~340 says "no instrument reports it" and then, twenty lines later, tabulates the
+  audit rules that will. Both cannot be right; see the audit note below for which is.
+
+### Which checks lose their teeth
+
+| Check | Before | After |
+|---|---|---|
+| D3 "channel count > conventional maximum raises" | loud | removed — no CP tested it, so no CP changes |
+| CP6 deliberate break (group names channel 9) | loud | **still loud** — D3's correctness checks stay |
+| `test_dashboard_band_span` equality (declared == painter's need) and "refuses one pixel less" | implied *every map is drawn* | holds trivially for maps > slots: declared and divisor are both the fixed slot count, so the test is **green on a frame that hides channels**. The property no longer means what its docstring says; the docstring must say so. |
+| Packer `LayoutOverflowError` on band width | fired at 8 maps × range 3 | never fires for configured recordings (width fixed); **still fires for legacy** under §D5's grow rule — C4 |
+| **CP5b** (the rendered over-maximum frame, looked at by a human) | — | **referenced twice in §D4b, not present in the Checkpoints list** (snapshot lines 706–767: CP0–CP8 only). The only gate on the newly sanctioned silent behaviour does not exist. |
+
+### The overflow is not the overflow the plan describes — 🔴 C6
+
+§D4b says extra maps land "over the neighbouring sense panel, or off the card" and the audit
+"will correctly report it". Which one happens depends on the sense, and the vision case — the
+one the vision-dim knob makes likely — is worse than overlap:
+
+- Both senses draw on **one band-card axes** (`episode.py:459-478`), olfaction left, vision
+  right. Map tiles go through `style.rrect` → `ax.add_patch` (`style.py:102`), which Matplotlib
+  **clips to the axes**; channel labels are `Text` artists, which it does **not** clip.
+- **Vision over slots** → tiles 7 and 8 fall past the card's right edge and are **clipped
+  away**; their labels float outside the card. A reader sees six maps and has no way to know
+  the run had eight channels. No ink → nothing for the audit's fill rules to see; only the
+  floating text can trip `text_over_border` / `out_of_canvas`.
+- **Olfaction over slots** → tiles land **inside** the vision panel: real overlap, and the
+  audit does report it.
+
+So "silently" here means, for vision, *channels vanish from the picture without trace*. That is
+a stronger form of the misleading-frame cost than the plan states, and it is exactly what CP5b
+must show a human. **Exit**: write CP5b into the Checkpoints as a rendered frame at
+**vision** channels > 6 with the Terrain group (and, separately, 8 channels with the group
+removed), looked at and described in the Implementation Report; record what the audit says on
+each beside a normal cell, as §D4b promises. Whether a non-refusing marker ("+2 channels not
+shown") is wanted is the user's call — the reviewer only notes that the decision was taken
+without seeing this frame.
+
+### Audit scope statement
+
+§D4b supplies one (compare the recording's map count to `PANEL_MAP_SLOTS[sense]`; maps > slots
+⇒ band findings are expected). It needs one correction: for vision the rule runs the other
+way — over-slot vision produces *fewer* findings, not more, because clipped tiles lay down no
+ink. "Maps > slots and **no** band finding" therefore does not mean the frame is fine. Say so.
+
+### C4 under the new decision
+
+Legacy recordings still follow §D5's `max(slots, drawn)` — the grow rule the user rejected for
+configured recordings — so a legacy range-3 vision recording still needs 634 px against 520 px
+and **refuses**. The options are now sharper: (a) keep grow for legacy → range-3 legacy
+recordings refuse (contradicts "not a refusal"); (b) apply the user's overflow rule to legacy
+too → they render, with tiles 7–8 clipped and labels floating, on **every** pre-change
+recording at range ≥ 1, not just range 3 (8 maps > 6 slots always). Either way the plan must
+say which, and CP3 must render a legacy *diamond-map* recording (`olf1_vis3_spanfix`), not `M4`.
+
+### Stale text the revision left behind — 🟡 M8
+
+The snapshot still carries the ceiling in four places that would be implemented as written:
+`__init__` exports `CONVENTIONAL_MAX_CHANNELS` (line ~527; an `ImportError` once deleted);
+`panel_map_slots`'s docstring "the conventional maximum" (~477); the **config how-to block**
+(~648) tells the user "a config declaring MORE channels than the conventional maximum fails
+loudly; raising the maximum is a one-line change" — the opposite of the decided behaviour, in
+the deliverable the user reads instead of code; and the test table (~676) asserts
+`PANEL_MAP_SLOTS[s]` against `CONVENTIONAL_MAX_CHANNELS[s]`. The how-to line is the one that
+matters: fix it to say what §D4b says.
+
+### New consequence for CP5 and for the parallel vision-dim session — 🟡 M9
+
+`E6bin` overrides `visual_vector_size: 1` but inherits `default.yaml`'s **8-entry**
+`visual_channel_names` and the `[0, 1, 2]` Terrain group. Under §D3 the write-time validation
+raises (length 1 ≠ 8; group index out of range), so CP5 cannot generate the cell as written —
+the override dict must also set a length-1 names list and `visual_channel_groups: []`. The same
+applies to **every** config that changes `visual_vector_size`, including the other session's
+vision-dim configs under `basic/` (§D6 says this plan does not touch them): the day this lands,
+recording from any of them fails at `write_run_meta` until they redeclare both keys. The how-to
+block must state that rule ("if you change `visual_vector_size`, you must redeclare both keys"),
+and the diary should warn the owning session.
 
 ## Passes skipped
 
