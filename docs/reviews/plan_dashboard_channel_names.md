@@ -8,8 +8,8 @@ last_updated: 2026-09-19
 
 # Plan review: sensor channel names from config + fixed-size sense panels
 
-> **Reviewed**: [[DASHBOARD_CHANNEL_NAMES_FROM_CONFIG]] at commit `fcd6faf2`, before any code was written.
-> **Verdict**: **NOT READY** — five Critical findings, each with a stated exit condition.
+> **Reviewed**: [[DASHBOARD_CHANNEL_NAMES_FROM_CONFIG]] — three passes: `fcd6faf2` (first), an uncommitted mid-revision working copy (second), and `0dac47c1` (third, current).
+> **Current verdict (third pass, at `0dac47c1`)**: **NOT READY** — two Critical findings remain, both new; every earlier Critical is applied. See "Third pass" at the end of this file.
 > **Reviewed by**: plan-reviewer
 
 Severity legend: 🔴 Critical = fix before going further · 🟡 Moderate = likely costs a re-run · 🟢 Low = cosmetic · ❓ Open = an assumption nobody has verified yet.
@@ -184,3 +184,118 @@ and the diary should warn the owning session.
 - Pass 7 (empirical-claim soundness) — not an analysis verdict.
 
 Prior-art pass done by grepping the Known Bugs registry directly: rows on the height twin (open), `RECORDING_FORMAT_VERSION` read nowhere, mandatory-key rollout (rows ~114–120) all match the plan's §A7; **C2 is a new instance of row 119's class** and should be recorded there by `bug-curator` once the user decides how to handle it.
+
+---
+
+## Third pass — re-review at `0dac47c1` (2026-09-19)
+
+Severity legend: 🔴 Critical = fix before going further · 🟡 Moderate = likely costs a re-run · 🟢 Low = cosmetic · ❓ Open = an assumption nobody has verified yet.
+
+### Verdict, in plain language
+
+**NOT READY**, on two findings that are new — not on anything from the first two passes. Every
+earlier Critical (the production video script, the fourth writer, the frozen saved configs, the
+legacy range-3 refusal) is applied in the committed text and its checkpoint can now genuinely
+fail. The overflow decision, the rollout order, the no-version-bump, and the accepted
+unrecordability of pre-change checkpoints are all respected here and none is re-raised.
+
+What still blocks implementation:
+
+1. **The plan promises a stronger guarantee than its mechanism delivers, in three places a
+   future implementer will read.** The entry-point section says a bad merge group "must fail
+   when the config loads"; the design section says every run trained after this change
+   "records normally"; the how-to block says a sweep test catches mismatches. The mechanism is:
+   nothing fails at config load; a run whose config has no `extends:` line inherits nothing
+   and fails at its first recorded evaluation; and the sweep as specified looks only in one
+   directory. Eleven such standalone configs exist today outside that directory, all inside the
+   trees the parity gates sweep, five of them continual stage configs that the recording script
+   resolves on its own (`scripts/eval/eval_rollout.py:677-724, :956`). This is the same
+   overstatement the diary already corrected once (`939899be` → the 16:30 correction), now in
+   the plan itself.
+2. **The Terrain merge "becomes data" in the config and the layout, but the painter still
+   hardcodes it.** `painters.py:706-709` reads channels `row[:3]` and a three-entry colour
+   table whatever the group says. A group declared at channels `[1, 2, 3]` — which the plan's
+   own validation permits — would draw the argmax of channels 0–2 under the label "Terrain".
+   That is a quietly wrong picture, which is the exact failure class this plan exists to
+   remove, and it sits on the step the author names as the riskiest.
+
+Both have a short exit condition (below). Nothing else found is Critical.
+
+### The disputed account of the second pass — settled on evidence
+
+| # | Author's claim | What the record shows | Who is right |
+|---|---|---|---|
+| 1 | C4, C1, C3 "were already applied in `b0ab1fe3` … before your second pass reported them outstanding" | The second pass was committed at **16:15:33** (`3e563115`); `b0ab1fe3` at **16:22:49**. `b0ab1fe3` could not have preceded it. The second pass reviewed an **uncommitted working copy** (md5 `93d53725…`, stated in the report) whose checkpoint list ended at line ~767; in `b0ab1fe3` CP5b sits at line 1059, so the snapshot was ~300 lines shorter — mid-revision, as the report said. The snapshot blob is not recoverable (no stash, zero dangling blobs), so neither side can prove what it contained. At `b0ab1fe3` all three are applied: §D5b (line 531), §4b (701), §8 "Four writer call sites" (772). | **Author right on substance** (all three applied at the commit), **wrong on ordering**. The reviewer's error was reviewing a moving working copy and writing "C1, C2, C3 … untouched" — meant "unaffected by the design change", readable as "unaddressed". **From now on this reviewer reviews committed SHAs only.** |
+| 2 | "CP5b cited twice and does not exist" came from a mid-revision snapshot | `fcd6faf2` has no CP5b at all; `b0ab1fe3` has it in the checkpoint list (line 1059) and cites it at 14, 421, 433. The second-pass report cites the snapshot's own line range (706–767, CP0–CP8 only). | **Both right**: true of the snapshot, moot at the commit. |
+| 3 | M8 was two stale references, not four; the `__init__` export and docstring were already fixed; the surviving "FAILS when the recording is written" is group validation and true | At `fcd6faf2` there were four (lines 381, 431, 552, 580). At `b0ab1fe3` none survive; the only "fails" lines are the length rule (867) and the group rule (946), both correct and neither flagged. Whether two were already gone at the snapshot cannot be shown either way. | **Moot at the commit; the author's reading of the survivor is correct.** |
+
+### Findings
+
+| Sev | Location | Issue | Exit condition | Owner |
+|---|---|---|---|---|
+| 🔴 C7 | Plan §Context line 61; §D7 "What does not break"; §9b + §11 sweep scope; how-to block line 918 | **The guarantee is overstated.** (a) Line 61: *"A group naming a channel that does not exist must fail when the config loads, not quietly change the picture when the video renders"* — nothing in the plan fails at config load; §D3/§9b place every check at record time. (b) §D7: *"Every run trained after this change inherits the keys from `default.yaml` and records normally"* — false for any config with no `extends:` line. Measured today: **12 files outside `configs/environment/` declare `sensory:`**, 11 of them set `vector_size`, **none has `extends:`** (5 × `configs/continual/nmn_double_return_stages/`, 6 × `configs/verification/`, 1 × `configs/models/q_learning/`). They inherit nothing, so `channel_display_from_config` raises the D7 missing-key error for them **after** the change too. The five continual stage configs are exactly what `eval_rollout.py --record` resolves for a continual run (`:677-724, :956`). (c) §11's sweep is "default.yaml plus experiment/basic/" — a **directory** boundary; those 12 files are outside it, and `CLAUDE.md` names them as the rollout population for a new mandatory key ("`default.yaml` plus the handful of stand-alone configs outside `configs/environment/`"). §D6 confines the plan to `default.yaml`, which contradicts that rule. (d) The same 11 files are inside the parity gates' glob (`test_unified_parity.py:49-51`) — the constraint that forbids load-time validation and the population the sweep cannot see have one cause; say so. | (1) Rewrite line 61 to "fail when the recording is written". (2) Rewrite §D7's claim as: runs whose config **extends** `default.yaml` inherit the keys; **standalone** configs do not and must declare all four. (3) **User decision**: either add the four keys to the 12 standalone files (the `CLAUDE.md` rollout rule; ~2 keys × 12 files, olfaction names of length matching each file's `vector_size`, vision the 8-entry default) **or** declare them unrecordable in §D7 and the diary. No fallback either way. (4) The standing test sweeps **by content** — every `*.yaml` under `configs/**` declaring a top-level `sensory:` block — with the `archive/` path exclusion `test_backward_compat_configs.py:27-34` already uses (14 files guarded, 143 excluded), **and asserts a floor on the number of files collected** so an empty sweep cannot pass green. (5) Every sentence about the sweep is written as a commitment ("a test will…"), since the test does not exist; §9b currently reads as if it does. | user (3); senior-developer (1, 2, 4, 5) |
+| 🔴 C8 | Plan §1 `map_plan` signature (`int \| None` channel), §3 `build_channel_maps`; `painters.py:706-709` | **The merge is data on the way in and a constant on the way out.** `map_plan` returns `(name, qualifier, kind, channel)` with `channel=None` for the terrain map; the painter's per-step update reads `np.max(row[:3])` / `np.argmax(row[:3])` and indexes `P.TERRAIN_FILL` (three colours). The plan permits a group anywhere contiguous with ≥ 2 channels (§D3) — so `{name: Terrain, channels: [1, 2, 3]}` validates, draws its map at the run's first position, and colours it from channels **0–2**. A group of 2 or 4 channels indexes a 3-colour table. Nothing raises; the label is right and the picture is wrong — the "quiet mistake" the plan is named for, on the step the author calls the riskiest. The discipline the plan relies on (`panel_map_slots` from one function; equality test both regimes; constant anchored to the shipped world) covers the **count** and is sound for that; it does not cover **which channels** the merged map reads. | `map_plan` carries the group's channel tuple in the map entry (e.g. `channel: int \| tuple[int, ...]`); the painter reads `row[list(chs)]` for a group and never a literal slice; `TERRAIN_FILL` length vs. group length is either validated at write time (`len(channels) ≤ len(P.TERRAIN_FILL)`, naming both) or the palette is generalised — author's choice, stated. CP6 gains a deliberate break: a group at `[1, 2, 3]` rendered **and looked at**, confirming the merged map follows the config. §11's new test asserts the terrain update reads the configured channels (build a frame with a shifted group and check which channels change the tile). | senior-developer |
+| 🟡 M10 | `tests/env/test_dashboard_band_span.py:257-282`; plan §11 row 2, CP0 | Two problems, one test. (a) `pytest.skip` at `:266` when the config is absent — both configs it names are **staged for deletion** (`git status`: `D`), so after that lands the wide-sense cases skip forever; the plan records this (CP0) but does not fix it. (b) After this change `LayoutContext.from_params(...)` with no payload is the **legacy** regime, so the `olf1_vis3` case — if its config survives — asserts that a legacy range-3 context packs, which §D5b now says must **refuse**. The case is wrong on both branches. | Rewrite the case to build its context from `default.yaml` plus range overrides (`olfactory_grid_range: 1`, `visual_sensor_range: 2` and `3`) with a **configured** display via `channel_display_from_config` — no dependency on a config file another session owns, no skip. Add the mirror: a **legacy** range-3 context refuses with §D5b's message (CP3(b) as a unit test). | senior-developer |
+| 🟡 M11 | Plan §9b residual ("fails only at evaluation") | The peer's proposal — fail when the recorder is **configured** rather than at the first checkpoint video — is achievable without touching `load_env_params`: call `channel_display_from_config(config, params)` once at trainer start whenever video recording is enabled (the trainer holds both objects; the parity gates never run it). It turns "hours in on a GPU" into "first seconds". It is a **backstop, not a guard**: it fires only in a run that records, gives zero commit-time coverage, and does not reach the verification configs (which never record). It is worth having **after** the content sweep and worthless **instead of** it. | Adopt or decline explicitly in §9b; if adopted, label it "backstop" in those words and add the trainer-start call site to File Changes and a CP that runs a mismatched config and records where it stopped. | senior-developer → user |
+| 🟢 L4 | §D4b/§D4c "warn at load" (lines 455, 469); §1 vs §D4c warning site | "At load" here means "when the renderer builds the display" — in a plan whose central residual is "**not** caught at config load", the word must not be reused. Also `panel_map_slots` is called from `_span` (twice, via both min-size functions) and from the painter, so one renderer build logs the warning ~3×, ×30 episodes in a batch. §1 puts the warning in `panel_map_slots`, §D4c in `ChannelDisplay` — two sites named. | Say "when the display is built"; pick one site; warn once per `(sense, drawn, slots)`. | developer |
+
+### The author's substitution (record-time failure + standing test) — judged
+
+**Sound in direction, incomplete in coverage.** The reason load-time failure is unavailable is
+verified (`test_unified_parity.py:49-51, :151` and `test_thermal_parity.py:247` load raw with no
+`extends:`; 38 standalone configs load today; a new `get_mandatory` in `load_env_params` turns
+them red). Record-time failure is real and cannot be bypassed — a recording with mismatched names
+cannot be written. The residual (loads, trains, fails at first checkpoint video) **is stated where
+a config author reads it** (how-to block, lines 913-921) — that requirement is met.
+
+**Can the test fail?** For the population it sweeps, yes: it goes through the resolving loader
+into `channel_display_from_config`, so a `basic/` config that sets `visual_vector_size: 1` and
+inherits the 8-entry list fails on length; and a config **added later to `basic/`** is caught
+**only if the test globs the directory** rather than listing files — §11 says "sweep every
+maintained config" without saying which; the parity gates' `_collect_configs` (glob) is the
+pattern to copy, plus a collected-count floor. As specified it **cannot** fail for the 12
+standalone files outside `configs/environment/`, which is C7.
+
+### Are the earlier checkpoint fixes genuine, not reworded?
+
+| CP | Earlier defect | Now | Verified |
+|---|---|---|---|
+| CP3 | ran on `M4` (range 0, rows path) | `olf1_vis2_spanfix/recordings/77` (range 2, must draw 8 positional maps) and `olf1_vis3_spanfix/recordings/71` (range 3, must refuse with §D5b's message); `M1` kept for the rows path | both directories exist on disk with `run_meta.pkl` + episodes; they are diamond-map recordings |
+| CP4 | `M1` (range 0), scratch renderer | regenerated `E2`/`E3` (both built on `_E2`, vision range 2, fixture script lines 283/291) rendered **through** `scripts/eval/render_recordings_v2.py` | the three construction sites in §4b match the code: `_init_worker` state at `:195-198`, `_render_episode` at `:223`, `_benchmark` at `:288`; `render_recordings.py` is V1 (`render_jax_state`, `:93, :131`), no dashboard import — §4b's second claim holds |
+| CP7 | gated on the audit, which refuses the dashboard renderer | render one regenerated cell through `render_recordings_v2.py` and look; audit demoted to no-new-findings regression; `M4` and the six `olf1_vis*` runs left as legacy subjects | genuine |
+| CP2b(b) | — | pre-change subject `results/render_audit/olf1_vis3_spanfix/models/config.yaml` exists, carries `visual_vector_size: 8`, no `extends:`, none of the new keys | genuine |
+
+### The riskiest step — does the discipline hold?
+
+For the **count**, yes: both `panels._span` and `painters.build_channel_maps` are required to
+ask `panel_map_slots(sense, display)` and never recompute; the legacy `max(slots, drawn)` and
+configured `slots` regimes live in that one function; the band-span equality property is
+parametrised over both; and `PANEL_MAP_SLOTS` is pinned to a measurement of the shipped world.
+That is the `4b6f7196` lesson, applied. For **which channels** the merged map reads, no — C8.
+
+### Assumptions the plan depends on
+
+- ❓ **O6** — `Config.set("environment.entities", [...])` replaces a whole list cleanly (§A5; still asserted, not demonstrated — CP5 is the first attempt).
+- ❓ **O7** — `TERRAIN_FILL`'s three colours are the only group palette wanted; a non-terrain group (e.g. two smell channels) has no colour rule in the plan.
+- ❓ **O8** — no script calls `evaluate_jax_checkpoint` with a saved (frozen) config post-hoc; a repo grep finds **no** direct caller by name in `src/` or `scripts/`, so the training-time writer's config source could not be traced this pass.
+
+### Cost of being wrong
+
+If C7 ships as written, the first continual run someone records after this lands dies at
+`write_run_meta` with a message the plan promised could not occur, and the doc that future
+sessions implement against says the opposite of what the code does — the third time this
+guarantee has been overstated in this plan's life. If C8 ships, a config that moves or resizes
+the Terrain group produces a correctly-labelled, wrongly-coloured map with no error anywhere,
+which is the precise defect the user commissioned this plan to make impossible. Neither loses
+data; both cost a rerun of the fixture regeneration and, if figures are published in between, a
+wrong panel in a paper figure.
+
+### Passes skipped
+
+Pass 6 (experiment-plan specifics) and pass 7 (empirical-claim soundness) — not applicable to an
+engineering plan. Prior-art pass: Known Bugs rows 115 (mandatory-key rollout), 119 (saved run
+configs), 120 (`test_backward_compat_configs` blind on `extends:` worlds) and 173 (the fixed
+width bug) all re-read; C7 is a new instance of row 115's rollout rule and should be recorded
+there by `bug-curator` once the user decides item (3).
+
+*Reviewed by: plan-reviewer*

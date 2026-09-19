@@ -1259,4 +1259,50 @@ Post-revision additions: **M8** — four stale ceiling references survive the re
 
 Moderate: CP3/CP4 both run on range-0 cells (`M1`, `M4`) and never touch `_span`/`build_channel_maps`; CP4's "before" frame is never captured (and the campfire world was retuned yesterday, `2bfe158e`); CP7's audit check cannot fail for the right reason (the audit refuses the dashboard renderer by design); after CP7 no legacy fixture remains on disk; the band-span test's off-standard-width case becomes false on the configured path; the CONFIG_GUIDE contract's missing-key test is absent. Open: the git index shows `D` for both `olf1_vis{2,3}` configs — if they leave the tree, the band-span config cases skip and the CP0 baseline changes shape.
 
+### Third pass — reviewed at `0dac47c1` (2026-09-19)
+
+**Verdict: NOT READY**, on two **new** findings only. Every Critical from the first two passes is
+applied in the committed text, and CP3 / CP4 / CP7 / CP2b can now genuinely fail (subjects verified
+on disk; the three `render_recordings_v2.py` sites in §4b match the code). The closed decisions —
+overflow, rollout order, no version bump, C2, C4 — are respected and not re-raised. Full detail,
+the settlement of the disputed second-pass account, and the judgement of the record-time
+substitution: [[plan_dashboard_channel_names]] §"Third pass".
+
+**On the dispute:** the second pass was committed at 16:15:33, `b0ab1fe3` at 16:22:49 — the
+commit could not have preceded the pass, but the pass reviewed an uncommitted working copy, which
+was the reviewer's error. All three of C1/C3/C4 are applied at `b0ab1fe3`; CP5b was absent from
+the snapshot and present at the commit; M8's four references are all gone at the commit and the
+survivor the author names is group validation and correct. This reviewer reviews committed SHAs
+only from here on.
+
+1. **C7 — the guarantee is overstated in three places** (§Context line 61 "must fail when the
+   config loads"; §D7 "every run trained after this change … records normally"; §11's sweep
+   scoped to one directory). Nothing fails at config load. A config with **no `extends:`** inherits
+   nothing and fails at its first recorded evaluation after the change too — 12 such files
+   declare `sensory:` outside `configs/environment/` today (5 continual stage configs, which
+   `eval_rollout.py --record` resolves at `:677-724, :956`; 6 verification; 1 q-learning), all
+   inside the parity gates' glob and all invisible to a `basic/`-only sweep. `CLAUDE.md` names
+   exactly this population as a new mandatory key's rollout; §D6 confines the plan to
+   `default.yaml`. *Exit*: fix the three sentences; **user decides** whether the 12 standalone
+   files get the four keys or are declared unrecordable (no fallback either way); the standing
+   test sweeps **by content** (`sensory:` present) over `configs/**` with the `archive/` exclusion
+   `test_backward_compat_configs.py:27-34` uses, and asserts a floor on files collected; §9b's
+   sweep sentences are written as commitments, not as if the test existed.
+2. **C8 — the Terrain merge becomes data in config and layout but stays a constant in the
+   painter.** `painters.py:706-709` reads `row[:3]` and a 3-colour table whatever the group
+   says; §D3 permits a group at `[1, 2, 3]` or of 2–4 channels, which would draw a
+   correctly-labelled, wrongly-coloured map with no error — on the step the plan names as the
+   riskiest. *Exit*: `map_plan` carries the group's channel tuple; the painter reads those
+   channels; group length vs. palette is validated or the palette generalised (author's choice);
+   CP6 adds a shifted-group render that is looked at.
+
+Moderate: **M10** — `test_dashboard_band_span.py:266` `pytest.skip`s when its two configs are
+absent (both staged for deletion), and after the change its `olf1_vis3` case asserts a *legacy*
+range-3 context packs, which §D5b says must refuse — rebuild the case from `default.yaml` +
+range overrides with a configured display, no skip, plus the legacy-refusal mirror. **M11** —
+the "fail when the recorder is configured" idea is achievable without `load_env_params` (one
+`channel_display_from_config` call at trainer start when recording is on) and is a **backstop,
+not a guard**: adopt or decline in §9b, and if adopted say "backstop" in those words. Low:
+"warn at load" must read "when the display is built"; one warning site, once per case.
+
 *Reviewed by: plan-reviewer*
