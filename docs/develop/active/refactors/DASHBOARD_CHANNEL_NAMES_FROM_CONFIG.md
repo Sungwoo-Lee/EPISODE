@@ -712,3 +712,22 @@ present-or-absent either way, so the bump would remove no code.
 | | | | |
 
 **Conclusion**:
+
+---
+
+## Feedback from plan-reviewer
+
+**Verdict: NOT READY** (2026-09-19, reviewed at `fcd6faf2`). Full report with the probe and
+per-finding exit conditions: [[plan_dashboard_channel_names]]
+(`docs/reviews/plan_dashboard_channel_names.md`). The user's fixed decisions are respected;
+none is re-litigated. Five Critical findings, in cost order:
+
+1. **C3 — the production video script never receives the names.** `scripts/eval/render_recordings_v2.py:183-197, 223, 288` constructs `EpisodeRenderer` directly, not via `from_recording`, and is absent from File Changes. Every video would render positional names and 8 unmerged maps while CP4/CP5 go green through a different entry point. *Exit*: add the file (all three sites); CP4 renders **through** `render_recordings_v2.py`.
+2. **C1 — four writer call sites, not three.** `scripts/eval/eval_rollout.py:1238` is missing; with the parameter required, `--record` crashes. *Exit*: add it to §8 and to a CP.
+3. **C2 — the writer does meet un-layered configs.** `eval_rollout.py`'s common path (`--config <run>/models/config.yaml`, `:692, :959`) loads a frozen saved config with no `extends:` and no new keys, so `get_mandatory` raises for every pre-change checkpoint. [[SAVED_RUN_CONFIG_COMPAT]] is unimplemented. *Exit*: state the blast radius; sequence/register with the compat plan or record that pre-change checkpoints cannot be re-recorded until it lands; no fallback default.
+4. **C4 — D5 reintroduces the width refusal.** Measured with the real packer: a legacy recording at vision range 3 draws 8 maps and needs 634 px against 520 px granted — `LayoutOverflowError`, on three on-disk recordings. D5's "keeps exactly today's sizing" is also false (today: 6 maps). *Exit*: user chooses the legacy rule for range ≥3; CP3 renders a legacy **diamond-map** recording (`olf1_vis3_spanfix`), not `M4` (range 0).
+5. **C5 — no check that maps drawn ≤ `PANEL_MAP_SLOTS`.** 8 channels + `visual_channel_groups: []` pass D3 and draw maps 7–8 past the panel edge silently. *Exit*: validate at write time; `panel_map_slots` raises on the non-legacy path.
+
+Moderate: CP3/CP4 both run on range-0 cells (`M1`, `M4`) and never touch `_span`/`build_channel_maps`; CP4's "before" frame is never captured (and the campfire world was retuned yesterday, `2bfe158e`); CP7's audit check cannot fail for the right reason (the audit refuses the dashboard renderer by design); after CP7 no legacy fixture remains on disk; the band-span test's off-standard-width case becomes false on the configured path; the CONFIG_GUIDE contract's missing-key test is absent. Open: the git index shows `D` for both `olf1_vis{2,3}` configs — if they leave the tree, the band-span config cases skip and the CP0 baseline changes shape.
+
+*Reviewed by: plan-reviewer*
