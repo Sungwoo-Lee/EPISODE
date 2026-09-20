@@ -10,18 +10,25 @@ last_updated: 2026-09-19
 
 > **Status**: PLANNED — not implemented. **No open questions.**
 >
-> Carries six user decisions taken 2026-09-19: no recording-format version bump (§Q1); no
-> channel ceiling; extra maps overflow the panel rather than being refused, now with a
-> warning that names both numbers (§D4b); pre-change checkpoints cannot be re-recorded until
-> the saved-config compatibility work lands, with no fallback default (§D7); and legacy
-> recordings at vision range ≥ 3 are declared unrenderable with a message that points at
-> re-recording (§D5b); and **this change lands before the parallel vision-dim ladder rollout**
-> (§9b).
+> **Read §A8 first.** The parallel vision-dim rollout landed in the working tree on 2026-09-20,
+> mid-revision: the base config is now at **one** vision channel, not eight. Four parts of this
+> plan were written against the old file and are corrected, and the agreed ordering in §9b has
+> been overtaken — the developer reports and stops rather than editing those files.
 >
-> Two `plan-reviewer` passes, both **NOT READY**. Findings and their disposition are tabled in
-> "Review disposition" below. Note that the first pass reviewed a draft that still had a
-> channel ceiling, and parts of the second pass reviewed a snapshot taken mid-revision — read
-> both in that light rather than as descriptions of the current text.
+> Carries seven user decisions: no recording-format version bump (§Q1); no channel ceiling;
+> extra maps overflow the panel rather than being refused, with a warning naming both numbers
+> when the display is built (§D4b); pre-change checkpoints cannot be re-recorded until the
+> saved-config compatibility work lands, with no fallback default (§D7); legacy recordings at
+> vision range ≥ 3 are declared unrenderable with a message pointing at re-recording (§D5b);
+> the eleven standalone configs get the keys directly (§7b); and a trainer-start **backstop**
+> — explicitly not a guard — fails a bad config in seconds rather than hours (§7c).
+>
+> Three `plan-reviewer` passes, all **NOT READY**; findings and disposition are tabled in
+> "Review disposition" below. The most serious is mine rather than the user's: **§D8** — the
+> terrain merge became data in the config and in the layout but stayed a **constant in the
+> painter**, so a group declaring channels `[1,2,3]` would have validated, drawn in the right
+> place, and coloured itself from channels 0–2 with no error at all. Read the first two passes
+> in the light of a design that still had a channel ceiling.
 > **Opened**: 2026-09-19
 > **Related**: [[RENDERER_LAYOUT_REDESIGN]] (the renderer this changes), [[EVAL_RENDERER_SWITCHOVER]] (which made it production), [[SAVED_RUN_CONFIG_COMPAT]] (why new mandatory keys are expensive)
 
@@ -58,7 +65,9 @@ sides:
    is exactly one of the three. Which channels merge, and what the merged map is called, is
    currently hardcoded. It becomes a **named group of channel indices** in the config
    (name "Terrain", channels [0, 1, 2]). A group naming a channel that does not exist must
-   fail when the config loads, not quietly change the picture when the video renders.
+   fail **when a recording is written** — loudly, and long before anything is drawn — rather
+   than quietly changing the picture when the video renders. (It cannot fail at *config* load;
+   §9b explains why, and an earlier draft of this sentence overstated it.)
 
 Recordings made **before** this change carry no names, and will render with positional
 names — "Channel 0", "Channel 1" — rather than falling back to a built-in table or refusing
@@ -241,6 +250,51 @@ than inheriting the numbers above.
   maintained world: it skips any config whose load error says "is required but missing", and
   all eight `basic/` worlds use `extends:`. It will stay green regardless; it is **not** a
   valid gate for this work.
+
+### A8. THE DIM-1 ROLLOUT HAS ALREADY LANDED — read this before implementing
+
+**Measured 2026-09-20, in the working tree, uncommitted.** The parallel session's vision-dim
+rollout is no longer forthcoming; it is here. `git status` shows ` M` (modified, unstaged) on
+`configs/environment/default.yaml` **and on all seven `basic/` configs**, the two
+`05-campfire_thermal_10x10_olf1_vis{2,3}.yaml` worlds staged for deletion, and a new untracked
+`configs/environment/experiment/archive/basic_vec8/` holding the archived 8-channel variants.
+
+What the shipped base config now says:
+
+| | Before (2026-09-19) | Now |
+|---|---|---|
+| `sensory.visual_vector_size` | 8 | **1** |
+| `sensory.visual_background_properties` | 3×8 one-hot | **3×1, all `0.0`** — "at visual_vector_size 1 the visual sensor reports ENTITIES, not ground" (its own comment) |
+| every entity's `visual_properties` | 8-wide one-hot | **`[1.0]`** — all seven entities write the same single channel |
+| olfaction (`vector_size`, entity `properties`) | 5 | **5, untouched** |
+
+**Four things in this plan were written against the old file and are corrected accordingly:**
+
+1. **§10's vision how-to block** prescribed an 8-entry names list and `{Terrain, [0,1,2]}`.
+   At one channel there is no terrain channel at all, so the shipped declaration is a
+   **1-entry list and `visual_channel_groups: []`**. The block now shows both.
+2. **The anchoring test** was specified as "`PANEL_MAP_SLOTS` equals the map count the shipped
+   `default.yaml` draws". That is now **1**, not 6, so the test would fail by construction.
+   Re-anchored in §11 to an explicit 8-channel reference display.
+3. **CP4's "vision dim 8, unchanged from today"** no longer describes today. It must build an
+   explicit 8-channel display rather than leaning on the base config.
+4. **CP5's dim-1 case gets easier, not harder** — the base config *is* dim 1 now, so §A5's
+   override gymnastics are only needed if the `E6` fixture cells are used.
+
+**The slot constant does not move, and this is the moment it earns its keep.** `PANEL_MAP_SLOTS`
+stays at `{Olfaction: 5, Visual: 6}`. A panel that shrank to the live channel count would now
+draw vision as a single map across a one-map-wide panel, and a later return to 8 channels would
+reshape it again — the exact instability the fixed size exists to remove. At one channel the
+vision panel draws one map and leaves five slots blank, which is what the user asked for
+("no care about black area").
+
+**Consequence for the agreed ordering (§9b).** The user's decision that *this* change lands
+first was taken when the rollout was still being written. It is now in the tree ahead of this
+plan. **Nothing is broken by that** — their edit is inert for recording, because the keys it
+would need do not exist yet — but the clean sequencing is gone, and the developer must treat
+§9b step 3 as live: **report and stop rather than editing those files.** The two display keys
+still have to be added to `default.yaml` by *this* change, and at one channel that means a
+1-entry list, not the 8-entry list this plan originally drafted.
 
 ---
 
@@ -428,8 +482,9 @@ was not asked for.
 > **Settled, 2026-09-19 — this is a recorded consequence, not an open question.** The user's
 > governing reasoning, in their terms: today's channel counts **are** the conventional
 > maximum, so exceeding them is off the normal path by construction, and no shipped world
-> does it. The behaviour therefore stands exactly as decided in §D4b — no limit, warn at
-> load naming both numbers, still draw — and what follows is written down so that a future
+> does it. The behaviour therefore stands exactly as decided in §D4b — no limit, a warning
+> naming both numbers when the display is built, still draw — and what follows is written
+> down so that a future
 > reader who meets such a frame **finds the explanation instead of filing a bug**. Do not
 > reopen it. (Measured under `plan-reviewer` C6.)
 
@@ -466,7 +521,10 @@ recording **grows** its panel (§D5) and therefore never reaches this state; a c
 *every* pre-change recording at vision range ≥ 1 — every fixture on disk — which is why §D5
 exists.
 
-**Refinement, 2026-09-19: warn at load, still draw.** The decision above stands unchanged —
+**Refinement, 2026-09-19: warn when the display is built, still draw.** ("Load" is the word
+this plan's whole residual turns on — §D7 and §9b both hinge on what does and does not happen
+at *config* load — so it is not reused here. The warning fires when the `ChannelDisplay` is
+constructed, **once per sense per run**, not per frame.) The decision above stands unchanged —
 nothing is rejected, nothing raises, the frame draws exactly as decided. What goes is the
 **silence**. A warning is emitted when the display is built, naming **both numbers**: how many
 maps this sense will draw, and how many slots the panel has.
@@ -577,8 +635,11 @@ before this change fails at `write_run_meta`**. Verified on a real saved config 
 `results/render_audit/olf1_vis3_spanfix/models/config.yaml` carries `visual_vector_size: 8`
 and none of the four new keys.
 
-**What does not break.** Every run trained after this change inherits the keys from
-`default.yaml` and records normally. Rendering **already-recorded** episodes is unaffected —
+**What does not break.** Runs whose config reaches the keys record normally — that means every
+config that resolves them through `extends:`, **plus** the standalone configs this change edits
+directly (§7b). It is **not** "every run trained after this change": a standalone config
+inherits nothing, which is exactly why §7b exists, and an earlier draft of this sentence
+overstated the guarantee. Rendering **already-recorded** episodes is unaffected either way —
 that path reads `run_meta.pkl` and never re-reads a config (§D5 covers it).
 
 **No fallback default.** The user explicitly rejected that option. A default here would mean a
@@ -599,6 +660,57 @@ that row once implemented.
 **The error must teach.** `channel_display_from_config` names the missing key, says that the
 config predates channel names, and points at the remedy (re-record at current code, or wait
 for the compatibility layer) rather than raising a bare "key required but missing".
+
+#### D8. The merged map must read the channels its group NAMES — the defect this plan nearly shipped
+
+**This is the finding that matters most, and it is mine, not the user's.** My design moved
+*how many maps* into data and left *which channels the merged map reads* as a constant in the
+painter. Verified at `painters.py:701-711`:
+
+```python
+if kind == "terrain":
+    off = float(np.max(row[:3])) <= 0
+    patch.set_facecolor(P.OFF_WORLD if off
+                        else P.TERRAIN_FILL[int(np.argmax(row[:3]))])
+```
+
+`row[:3]` is a **literal slice** and `P.TERRAIN_FILL` (`palette.py:131`) is a hardcoded
+three-colour tuple. So a config declaring `{name: Terrain, channels: [1, 2, 3]}` passes every
+validation in §D3, is placed by `map_plan` at the run's first position — and then **colours
+itself from channels 0–2**. No error. Wrong picture. A group of length 2 or 4 is equally
+silent: the painter reads three channels regardless.
+
+**That is precisely the quiet-mistake class the user commissioned this plan to make
+impossible** ("I'm worry about any potential quiet mistake"), sitting on the step I had myself
+named the riskiest. Count discipline — one `panel_map_slots` call shared by registry and
+painter — guarantees the two agree on *how many* maps. It says nothing about *which channels*
+one of them reads. The invariant was unstated, so it was unprotected.
+
+**The fix, in three parts:**
+
+1. **`map_plan` carries the group's channels.** Its tuple becomes
+   `(name, qualifier, kind, channel_or_channels)` — for a group, the declared index tuple; for
+   a plain channel, its index as today. The painter then has the answer rather than assuming
+   it.
+2. **The painter never writes a literal slice.** `row[:3]` becomes `row[list(channels)]`, and
+   the colour index is the position *within the group*, not within the vector. A channel
+   index may never again be spelled as a constant in `painters.py`.
+3. **Group length versus palette arity is validated**, at write time, naming both numbers —
+   `P.TERRAIN_FILL` has three colours, so a 4-channel group has no fourth colour and must be
+   refused rather than silently reusing one. (Generalising the palette instead is the larger
+   alternative; it is not needed while the only shipped group is terrain, and a refusal that
+   names the limit is honest where a wrapped colour is not.)
+
+**Note this is a refusal, and deliberately so** — it does not contradict §D4b's no-limit
+decision. That decision was about *how many channels a sense may declare*. This is a group
+naming more members than the palette can colour, which is a malformed declaration in the same
+family as a group naming a channel that does not exist, not a request to draw more than fits.
+
+**Gate: CP6 gains a shifted-group render that a human looks at.** A unit test asserting the
+painter reads the right indices would be written by the same reasoning that produced the bug.
+The check is a frame from a config declaring `{Terrain, [1,2,3]}` on an 8-channel display: the
+merged map must show the colours of channels 1–3, and a reader must be able to see that it
+differs from the `[0,1,2]` frame.
 
 ---
 
@@ -634,10 +746,17 @@ class ChannelDisplay:
             return cls(tuple((f"Channel {i}", "") for i in range(n_channels)), (), True)
         ...  # validate length/indices, raise ValueError naming both numbers
 
-def map_plan(sense, display: ChannelDisplay) -> list[tuple[str, str, str, int | None]]:
-    """Which maps a sense draws: [(name, qualifier, kind, channel), ...].
+def map_plan(sense, display: ChannelDisplay) -> list[tuple[str, str, str, object]]:
+    """Which maps a sense draws: [(name, qualifier, kind, channels), ...].
+
     A grouped run of channels becomes ONE map of kind "terrain"; every other
-    channel is its own "seq" map at its own index."""
+    channel is its own "seq" map at its own index.
+
+    The last element CARRIES THE GROUP'S OWN CHANNEL TUPLE -- an int for a plain
+    channel, the declared tuple for a group. The painter must read exactly these
+    and never a literal slice: a group is data now, so `row[:3]` would colour
+    {Terrain, [1,2,3]} from channels 0-2 with no error at all (see D8).
+    """
 
 def panel_map_slots(sense, display: ChannelDisplay) -> int:
     """How many slots the panel is sized for -- the fixed conventional size,
@@ -688,6 +807,13 @@ recompute. `labels.py` must stay Matplotlib-free (a test pins this).
   **`n = panel_map_slots(sense, display)`** for the slot divisor while iterating only over
   `maps`. Drawn maps occupy the first slots; the remainder stay blank. This is the line that
   makes blank space appear instead of one stretched map.
+- **The terrain branch (`:701-711`) must stop reading a literal slice — §D8.** `row[:3]`
+  becomes `row[list(channels)]`, where `channels` is the group's declared tuple carried on the
+  map plan, and `P.TERRAIN_FILL` is indexed by position **within the group**. Today's
+  `{Terrain, [0,1,2]}` must render byte-identically after this change; `{Terrain, [1,2,3]}`
+  must render *differently*, which is what CP6's shifted-group frame checks. **No channel
+  index may be spelled as a constant anywhere in this file** — that is the invariant D8 exists
+  to establish, and it is the one a future edit is most likely to break.
 - `build_channel_rows` (581): takes `display` and reads `display.names` directly instead of
   calling `channel_display(sense, code)`. Layout logic unchanged (§D6).
 
@@ -771,6 +897,62 @@ It reads the four keys with `get_mandatory`, validates per §D3 against
   same warning `panel_map_slots` emits, issued here too so that a config problem is reported
   when the recording is *written* rather than only when it is later drawn.
 
+#### 7b. The eleven standalone configs — they inherit nothing (C7)
+
+**User decision, 2026-09-19: add the four keys to the standalone configs**, chosen over
+declaring them unrecordable and over a split rule. Each declares its own `sensory:` block with
+**no `extends:`**, so it inherits nothing from `default.yaml` and would otherwise raise at
+`write_run_meta` the first time anyone recorded from it.
+
+**Verified present, `extends`-free, and carrying their own channel counts (2026-09-20):**
+
+```
+configs/continual/nmn_double_return_stages/0{1,3,5}_active_predator.yaml
+configs/continual/nmn_double_return_stages/0{2,4}_passive_predator.yaml
+configs/verification/observability_gates_S{1,2,3,4}.yaml
+configs/verification/olfaction_parity_{neutral,predator}.yaml
+```
+
+All eleven resolve to `olfactory_vector_size = 5`, `visual_vector_size = 8`, so each takes the
+**8-entry** vision list and `{Terrain, [0,1,2]}` — note this differs from `default.yaml`, which
+is now at one channel (§A8). Do not copy one into the other.
+
+**`configs/models/q_learning/q_learning.yaml` is EXCLUDED — the twelfth path does not belong.**
+It is an *agent* config (it sits with `ppo.yaml` / `dqn.yaml` under `configs/models/`, and the
+only references to it in the repo are docs listing agent configs). Its `sensory:` block sets
+`using_sensory: false` and declares **no `vector_size` and no `visual_vector_size` at all**,
+so there is no channel count for a names list to match and `channel_display_from_config`
+validates against `params.olfactory_vector_size`, which this file cannot supply. Adding five
+olfaction names there would declare names for a sense that is switched off. **Reported rather
+than implemented**, per the instruction to verify before editing.
+
+**Why this is safe for the byte-parity gates — checked, not assumed.** The gates run an episode
+and compare it against a stored fixture; neither `test_unified_parity.py` nor
+`test_thermal_parity.py` contains `sha256`, `hashlib` or `md5`, so no config is hashed. The four
+keys are never read by `load_env_params` — they are read at recording-write time by
+`channel_display_from_config` — so the traced environment, the episode, and therefore every
+fixture are untouched. **This is the whole reason the carriage is `run_meta.pkl`**; if adding an
+inert key to these files moved a fixture, the carriage decision itself would be wrong and the
+developer must stop and report rather than regenerate fixtures.
+
+#### 7c. A trainer-start BACKSTOP — not a guard (M11)
+
+**Approved by the user**, and named precisely: at trainer start, when checkpoint recording is
+enabled, resolve the display once and let it raise. It turns "fails hours into a GPU run, at
+the first checkpoint video" into "fails in the first seconds".
+
+**Call site:** `train.py`, before the training loop — the recording branch that calls
+`evaluate_jax_checkpoint(..., render_video=True, ...)` is at `train.py:2555` (its stats-only
+twin at `:2575`). Resolve `channel_display_from_config(config, params)` during setup, after the
+env config resolves, and discard the value; it exists to raise early.
+
+**It is a backstop, not a guard, and the plan says so in those words.** It gives **zero
+commit-time coverage** — nothing fails until somebody launches a run — and it **never reaches
+the verification configs** in §7b, which are never trained. The peer who proposed it tested it
+against exactly this case and retracted the stronger claim themselves. The real coverage for
+the standalone class is §7b's edit plus the committed sweep test in §11; this only shortens the
+feedback loop for the configs that *are* trained.
+
 #### 8. Four writer call sites — not three
 
 | File | Line | Change |
@@ -850,11 +1032,27 @@ So the failure is loud in the two places it can be:
 - **At record time** — `channel_display_from_config` raises, naming the config, the declared
   channel count, and the names-list length. This is the real gate: it is impossible to write
   a recording whose names disagree with its channels.
-- **In CI, permanently** — a test sweeps every maintained config under
-  `configs/environment/` through `channel_display_from_config` and fails **naming the file and
-  both keys** (§11). This is what catches a ladder config the moment it lands, rather than
-  when somebody later tries to make a video. It must be a committed test, not only CP6's
-  one-off sweep, because the configs it guards are still being written.
+- **In CI, permanently** — this change **commits a new test** (it does not exist yet) that
+  sweeps the maintained env-config roots through `channel_display_from_config` and fails
+  **naming the file and both keys** (§11). This is what catches a ladder config the moment it
+  lands, rather than when somebody later tries to make a video, and it must be committed
+  rather than left as CP6's one-off sweep because the configs it guards are still being
+  written.
+
+  **Scope, measured 2026-09-20 rather than asserted.** Copy the collector in
+  `tests/env/test_backward_compat_configs.py:24-42` — it globs `configs/environment/experiment/**`
+  (with the `archive/` exclusion whose docstring quotes the maintenance policy),
+  `configs/continual/**`, `configs/verification/**`, plus `configs/environment/default.yaml`.
+  Glob, never a hand-written list. That collects **32** files today, of which **19 resolve to
+  `EnvParams`** and are validated; the other 13 are curriculum *schedules* under
+  `configs/continual/` that are not env configs at all and fail on an unrelated missing key.
+  **Assert a floor on both numbers** (collected ≥ 32, validated ≥ 19) so the sweep cannot
+  silently stop covering files — a skip-on-error sweep with no floor is the "quiet way a gate
+  stops gating" this plan has already met once (§A6).
+  **`configs/models/**` is deliberately outside those roots**: `q_learning.yaml` carries a
+  stray `sensory:` block with `using_sensory: false` and no channel counts at all, so a
+  content-based `^sensory:` sweep over `configs/**` would collect an *agent* config and demand
+  channel names for a sense that is switched off.
 
 The honest cost of this arrangement: a mismatched config **loads and trains perfectly well**
 and fails only at evaluation or in the sweep test. That is stated in the how-to block too, so
@@ -908,7 +1106,10 @@ its own right**, matching the density and tone of the existing `olfactory_grid_r
 ```yaml
   # ── HOW TO NAME THE VISION CHANNELS ─────────────────────────────────────────
   # Same rules as the smell block above: display only, two fields per channel, and
-  # exactly `visual_vector_size` entries (8 here).
+  # exactly `visual_vector_size` entries -- ONE here, because this world now runs
+  # single-channel vision. The 8-channel table further down is kept as the
+  # reference for configs that set a wider vision, since the dimension is an
+  # experimental knob and moves between studies.
   #
   # ►► IF YOU CHANGE visual_vector_size, YOU MUST REDECLARE BOTH KEYS IN THE SAME
   # FILE. A config that sets `visual_vector_size: 1` and says nothing else still
@@ -927,9 +1128,19 @@ its own right**, matching the density and tone of the existing `olfactory_grid_r
   #     visual_channel_groups: []     # no terrain merge: there is no channel 1 or 2
   # The same applies to the smell keys and `vector_size`.
   #
-  # WHICH CHANNEL IS WHICH. Entities carry `visual_properties:` (one-hot here), and
-  # channels 0-2 come from `visual_background_properties` below, whose three rows
-  # are grass / sand / plain in that order:
+  # WHICH CHANNEL IS WHICH -- AS THIS FILE STANDS (one channel).
+  # Every entity below carries `visual_properties: [1.0]`, so they ALL write the
+  # same single channel, and `visual_background_properties` is three rows of 0.0 --
+  # the ground contributes nothing. So channel 0 does not mean "grass" or "food";
+  # it means "something is here". Name it for what it reports:
+  #   channel 0  every entity writes 1.0; ground writes nothing  -> "Visible"
+  # There is no terrain channel to merge, which is why the group list is empty.
+  #
+  # WHICH CHANNEL IS WHICH -- AT THE 8-CHANNEL WIDTH (the reference layout).
+  # Kept because the vision dimension is varied between studies and a wider config
+  # needs to know the column order. Entities carry a one-hot `visual_properties:`,
+  # and channels 0-2 come from `visual_background_properties`, whose three rows are
+  # grass / sand / plain in that order:
   #   channel 0  grass      visual_background_properties row 0   -> "Grass"
   #   channel 1  sand       row 1                                -> "Sand"
   #   channel 2  plain      row 2                                -> "Plain"
@@ -938,6 +1149,8 @@ its own right**, matching the density and tone of the existing `olfactory_grid_r
   #   channel 5  predator                                        -> "Predator"
   #   channel 6  rock AND tree AND bush all write here           -> "Obstacle"
   #   channel 7  rabbit (class neutral)                          -> "Neutral"
+  # At that width the declaration is the 8-entry list plus
+  #     visual_channel_groups: [{name: "Terrain", channels: [0, 1, 2]}]
   #
   # CHANNEL 6 IS THE ONE TO BE CAREFUL WITH: three different obstacles share it, so
   # it is "Obstacle" and not "Rock". Check the column before renaming.
@@ -962,14 +1175,7 @@ its own right**, matching the density and tone of the existing `olfactory_grid_r
   # vision from 6 maps to 8 and overflows the panel, because the three terrain
   # channels stop sharing a map. That is the likeliest accidental way to get here.
   visual_channel_names:
-    - {name: "Grass",           qualifier: ""}
-    - {name: "Sand",            qualifier: ""}
-    - {name: "Plain",           qualifier: ""}
-    - {name: "Food",            qualifier: ""}
-    - {name: "Hiding predator", qualifier: ""}
-    - {name: "Predator",        qualifier: ""}
-    - {name: "Obstacle",        qualifier: ""}
-    - {name: "Neutral",         qualifier: ""}
+    - {name: "Visible", qualifier: ""}   # one channel: "something is here"
   # ── MERGING CHANNELS INTO ONE MAP ───────────────────────────────────────────
   # A group draws several channels as a SINGLE map instead of one map each. Terrain
   # is grouped because a square is grass OR sand OR plain and never two at once, so
@@ -979,16 +1185,22 @@ its own right**, matching the density and tone of the existing `olfactory_grid_r
   #             index must exist, and no channel may appear in two groups
   # A group naming a channel that does not exist FAILS when the recording is
   # written. It cannot silently change how many maps the video draws.
-  visual_channel_groups:
-    - {name: "Terrain", channels: [0, 1, 2]}
+  # Empty HERE because single-channel vision has no terrain channels to merge.
+  # At the 8-channel width this reads:
+  #     - {name: "Terrain", channels: [0, 1, 2]}
+  # The channels a group names are the channels the merged map READS -- declaring
+  # [1, 2, 3] draws a map coloured from channels 1-3, not 0-2.
+  visual_channel_groups: []
 ```
 
 #### 11. Tests
 
 | Path | What it must assert |
 |---|---|
-| `tests/env/test_dashboard_channel_display.py` (new) | length mismatch raises naming both numbers; out-of-range / duplicate / non-contiguous group raises; absent payload gives positional names and no groups; `PANEL_MAP_SLOTS[s]` equals the map count the **shipped `default.yaml`** actually draws, loaded through the resolving loader (anchors the constant to a measurement, not to a second constant); **`_span` returns the same width at 1, 8 and 12 channels**; an over-slot channel count **does not raise** (§D4b — the absence of a refusal is the decision, so it is asserted explicitly); a legacy payload with 8 maps is sized to 8, not 6 (§D5) |
-| `tests/env/test_dashboard_band_span.py` | update the `channel_labels` import (54) and `_painter_map_count` (98) / `_ctx` (~78) to the new API. **The equality property must be parametrised over BOTH sizing regimes** — configured (`slots`) and legacy (`max(slots, drawn)`) — since post-change they are different functions (`plan-reviewer` M5). **`test_an_off_standard_vision_width_is_declared_one_map_per_channel` (213) must be REWRITTEN, not updated**: "4 channels ⇒ 4 maps" becomes **false** on the configured path (4 configured channels ⇒ 6 slots; 4 legacy channels ⇒ `max(6,4)` = 6). Also confirm whether its two config cases at `test_a_world_that_reads_both_senses_wide_packs_and_paints` (262) still run — §A6 |
+| `tests/env/test_dashboard_channel_display.py` (new) | length mismatch raises naming both numbers; out-of-range / duplicate / non-contiguous group raises; absent payload gives positional names and no groups; **`_span` returns the same width at 1, 8 and 12 channels**; an over-slot channel count **does not raise** (§D4b — the absence of a refusal is the decision, so it is asserted explicitly); a legacy payload with 8 maps is sized to 8, not 6 (§D5). **Anchor `PANEL_MAP_SLOTS` to an explicit 8-channel reference display with `{Terrain,[0,1,2]}`, NOT to `default.yaml`** — the base config now runs one vision channel and draws **1** map (§A8), so the original "equals what the shipped config draws" formulation would fail by construction |
+| `tests/env/test_dashboard_channel_display.py` (group-channel cases, §D8) | **The invariant the plan nearly shipped without.** `map_plan` returns the group's declared channel tuple, not a position; a group of a length the palette cannot colour is **refused at write time naming both numbers**; and — the one that would have caught the bug — a display with `{Terrain,[1,2,3]}` produces a map plan whose merged entry reads channels 1–3. Assert against the returned channels, never against `row[:3]`-shaped reasoning, since that is the assumption under test |
+| `tests/env/test_dashboard_band_span.py` | update the `channel_labels` import (54) and `_painter_map_count` (98) / `_ctx` (~78) to the new API. **The equality property must be parametrised over BOTH sizing regimes** — configured (`slots`) and legacy (`max(slots, drawn)`) — since post-change they are different functions (`plan-reviewer` M5). **`test_an_off_standard_vision_width_is_declared_one_map_per_channel` (213) must be REWRITTEN, not updated**: "4 channels ⇒ 4 maps" becomes **false** on the configured path (4 configured channels ⇒ 6 slots; 4 legacy channels ⇒ `max(6,4)` = 6) |
+| `tests/env/test_dashboard_band_span.py` (the wide-sense case, M10) | **Rebuild `test_a_world_that_reads_both_senses_wide_packs_and_paints` (262) so it has no config-file dependency and therefore cannot skip**: construct from `default.yaml` plus in-memory range overrides with an explicitly **configured** display. Its two named config cases are exactly the files the parallel session deleted (§A6), so as written it would skip silently. **And it is currently wrong on both branches**: post-change, `LayoutContext.from_params(...)` with no payload is the **legacy** regime, so the existing case asserts that a legacy range-3 context *packs* while §D5b says it must be **refused**. Add the legacy range-3 refusal as its mirror — the same world, the other regime, the opposite expectation |
 | `tests/env/test_dashboard_channel_display.py` (missing-key cases) | **one test per new key**: delete the key from a resolved config and assert `ValueError` **naming that key**. Required by CONFIG_GUIDE Maintenance Contract item 3, which the length/index/duplicate tests do not satisfy (`plan-reviewer` M6) |
 | `tests/scripts/test_render_recordings_v2.py`, `tests/env/test_dashboard_frames.py` | construct via `meta.get("channel_display")`; must still pass on pre-change fixtures (legacy path). **Name the fixture that stays un-regenerated** (CP7) — otherwise this assertion goes vacuous the moment every cell is re-recorded (`plan-reviewer` M4) |
 | `tests/env/test_dashboard_v1_imports.py` | unchanged, but **must stay green**: it pins `write_run_meta`'s signature prefix (§6, L3) |
@@ -1080,16 +1292,25 @@ end to end.
       scratch script. That script bypasses `from_recording` entirely (§4b), so a checkpoint
       that avoids it is the exact blind spot that would let this ship invisible on the only
       path that makes real videos (`plan-reviewer` C3).
+      **Build the 8-channel world explicitly** — do not lean on the base config, which now
+      runs one vision channel (§A8). Use a fixture cell that overrides
+      `sensory.visual_vector_size: 8` with the 8-entry names list and `{Terrain,[0,1,2]}`,
+      or the archived `basic_vec8/` variants the other session set aside.
       *Detects*: configured names on the frame (not "Channel 0"), **six** vision maps with
       terrain merged, unchanged widths versus CP2's before-frame and identical
-      `layout_signature()`. Any difference at dim 8 is a regression, not an improvement.
-      Also render `M1` through the same script for the rows path. *Rollback*: as CP3.
+      `layout_signature()`. Any difference at 8 channels is a regression, not an improvement.
+      Also render a range-0 cell through the same script for the rows path.
+      *Rollback*: as CP3.
 
-- [ ] **CP5 — Render at vision dim 1 and look at it.** Fix cells `E6sum`/`E6bin` (§A5),
-      generate `E6bin`, render step 0 to PNG. *Detects*: **one map at normal size** (the same
-      map-square pixel size as dim 8, not enlarged), **blank space beside it**, labelled with
-      the configured name — not "Channel 0". *Rollback*: revert the fixture-script edit; the
-      cell was never generated before, so nothing is lost.
+- [ ] **CP5 — Render at vision dim 1 and look at it.** **Easier than when this plan was
+      written**: the base config is now single-channel vision (§A8), so a cell built on it at
+      `visual_sensor_range: 2` exercises this directly and the §A5 override work is needed
+      only if the `E6sum`/`E6bin` fixture cells are used (they do not currently build).
+      *Detects*: **one map at normal size** — the same map-square pixel size as the 8-channel
+      frame, **not enlarged to fill the panel** — with **blank space beside it**, labelled
+      "Visible" from the config, not "Channel 0". The map size is the real assertion here; a
+      stretched single map is the defect this whole change removes.
+      *Rollback*: revert the fixture-script edit; nothing on disk is replaced.
 
 - [ ] **CP5b — Render ABOVE the slot count, BOTH ways, and look at what actually happens.**
       **This documents §D4c; it does not gate the design.** The overflow behaviour is decided
@@ -1123,7 +1344,15 @@ end to end.
       (a) a group naming **channel 9** → the write must **fail**, naming the bad index;
       (b) a names list one entry short → **fail**, naming both numbers;
       (c) `visual_channel_groups: []` at 8 channels → must **warn, not fail**, naming 8 maps
-      against 6 slots (§D4b). A failure here would mean a limit crept back in.
+      against 6 slots (§D4b). A failure here would mean a limit crept back in;
+      (d) a group longer than the terrain palette can colour → must **fail**, naming the group
+      length and the palette arity (§D8).
+      **Plus the shifted-group render, which is a frame a human looks at, not an assertion:**
+      declare `{Terrain, channels: [1,2,3]}` on an 8-channel display and render it beside the
+      `[0,1,2]` frame. The merged map must be coloured from channels 1–3, and **the two frames
+      must visibly differ**. If they look identical, the painter is still reading a literal
+      slice and §D8's defect is live — a unit test alone cannot catch this, because it would be
+      written from the same wrong assumption that produced the bug.
       Then **sweep every maintained config under `configs/environment/`** through
       `channel_display_from_config` and record pass/fail per file.
       *Detects*: the validation is real rather than assumed, the warning fires where a
@@ -1217,6 +1446,12 @@ against the code rather than accepting it.
 | L3 | Signature prefix is pinned | **Applied** — §6 requires the new parameter come after the existing positional ones |
 | O3 | Configs staged for **deletion**, not addition | **Verified and corrected** — §A6; CP0 re-measures and records whether the wide-sense cases skip |
 | O5 | `E6bin` never built | **Verified** — no `E6*` directory exists and the cells fail to build; §9 fixes them, CP5 is the first real attempt |
+| C7 | Standalone configs inherit nothing | **Applied, with one exclusion.** §7b adds the keys to the **eleven** verified `extends`-free env configs. **`configs/models/q_learning/q_learning.yaml` is not one of them** — it is an *agent* config with `using_sensory: false` and no channel counts at all, so a names list there would describe a sense that is switched off. Reported rather than edited, per the instruction to verify first. Parity safety confirmed independently: neither gate hashes a config, and `load_env_params` never reads these keys |
+| C8 | Terrain merge is data in config but a constant in the painter | **Applied — §D8.** Verified at `painters.py:701-711`: `row[:3]` is a literal slice and `P.TERRAIN_FILL` a hardcoded 3-tuple, so `{Terrain,[1,2,3]}` would validate, place correctly and colour from channels 0–2 with no error. `map_plan` now carries the group's channel tuple, the painter reads those channels, group length is validated against palette arity, and **CP6 gains a shifted-group render a human looks at**. This was mine to catch and I did not — count discipline covers *how many* maps, not *which channels* one reads |
+| M10 | Band-span wide case skips, and is wrong on both branches | **Applied** — §11 rebuilds it from `default.yaml` plus range overrides with a configured display (no config-file dependency, no skip), and adds the legacy range-3 refusal as its mirror, since `from_params(...)` with no payload is the legacy regime |
+| M11 | Trainer-start check | **Adopted and labelled** — §7c, called a **backstop, not a guard**, in those words: zero commit-time coverage, never reaches the verification configs. Call site `train.py` (recording branch at `:2555`) is in File Changes |
+| L4 | "warn at load" reuses the load-bearing word | **Applied** — reworded to "when the display is built", one warning site, once per sense per run |
+| — | **Premise change: the dim-1 rollout landed mid-revision** | **§A8.** Not a review finding — found while verifying C7. The base config moved from 8 vision channels to 1 in the working tree, invalidating §10's worked example, the `PANEL_MAP_SLOTS` anchor, and CP4's "unchanged from today". All three corrected; §9b's agreed ordering is overtaken and the developer reports rather than edits |
 
 ## Implementation Report
 
