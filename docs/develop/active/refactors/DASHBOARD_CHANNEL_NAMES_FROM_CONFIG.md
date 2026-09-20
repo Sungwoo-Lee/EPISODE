@@ -1540,4 +1540,54 @@ the "fail when the recorder is configured" idea is achievable without `load_env_
 not a guard**: adopt or decline in §9b, and if adopted say "backstop" in those words. Low:
 "warn at load" must read "when the display is built"; one warning site, once per case.
 
+### Fourth pass — reviewed at `b2804376` (2026-09-20)
+
+**Verdict: NOT READY**, on two **new** findings, both caused by the vision-dim rollout landing
+under the plan rather than by anything the third pass asked for. C7, C8, M10, M11 and L4 are all
+applied at the commit; the closed decisions are respected and none is reopened. Full detail, the
+answers to the questions this pass was asked, and the assumption list:
+[[plan_dashboard_channel_names]] §"Fourth pass".
+
+1. **C9 — §7b rests on a false measurement, and there is no rule for a disabled sense.** None of
+   the eleven standalone configs declares `visual_vector_size`, `visual_background_properties`,
+   or any entity `visual_properties`; their eight vision channels are the loader's `.get(..., 8)`
+   fallback (`config_loader.py:1687-1688`) and its auto-generated one-hot table. The two
+   olfaction-parity files have `visual_sensor_enabled: false` and no entities, so §7b would give
+   them eight vision names for a sense that is off — the plan's own reason for excluding
+   `q_learning.yaml`. *Exit*: rewrite the "verified" sentence; **user decides** the disabled-sense
+   rule (recommended: a sense's keys are read only when that sense is enabled in `params`, which
+   makes the `q_learning` exclusion structural); the nine vision-enabled files are checked against
+   the resolved params' per-entity `argmax`, not the how-to; the how-to says its 8-channel table
+   documents the loader's default layout.
+2. **C10 — no recordable 8-channel world exists for CP2's before-frame, CP4, CP5b or CP6's
+   shifted-group render.** Overriding width 8 on the 1-channel base fails on every entity's
+   `visual_properties: [1.0]`, and the assignment is no longer in the config; the archived
+   `basic_vec8/` route is refused by `_require_maintained`
+   (`make_render_fixture_recordings.py:368-377`), lacks the four keys (so the override guard at
+   `:437-446` refuses to add them), and `basic_vec8/05` extends the *live* `basic/04`. *Exit*:
+   §9's helper works in both directions and, for width 8, strips `visual_properties[_std]` and
+   the background table so the loader's own V=8 auto-generation supplies the layout (one source);
+   the two display keys ride in the same override; CP2's before-frame is the same 8-channel cell
+   CP4 renders; the archived route is deleted from CP4.
+
+Moderate: **M12** — the M10 mirror is now a 1-channel legacy context at range 3, which fits
+(102 px) and refuses nothing; §D5b's predicate must be need-versus-grant, not `range ≥ 3`, and
+the mirror builds its legacy context in-memory at width 8 as `_ctx` already does. **M13** — four
+stale premises: no `basic/` config redeclares `visual_vector_size` (all seven inherit 1), so
+§9b's reconciliation is empty and "report and stop" halts the developer on a non-event;
+`E6sum`/`E6bin` now build; §A8's table omits `visual_blur_enabled` and `visual_value_mode`; §A2
+item 3's "most maintained worlds draw rows" is false — every maintained world now draws diamond
+maps. **M14** — `M1` is the base with no overrides and no longer draws the rows path; CP3(c) and
+CP4's rows render need an explicit range-0 cell. **M15** — the sweep's floor catches removals,
+not a new maintained file that fails to load and is skipped; skip only top-level
+`configs/continual/` schedules, fail on everything else. Low: line drift (`default.yaml:256`,
+`train.py:2552-2560`), `last_updated`; an optional source-grep test pinning "no `row[:` in
+`painters.py`" would make the C8 invariant structural, as `test_dashboard_band_span.py:224-238`
+does for `MAP_GAP`.
+
+Verified this pass: the sweep's 32 collected / 19 resolving; C8's forbidden-constant rule covers
+every channel-reading branch that exists (terrain `:707/:709` is the only literal; seq `:713`
+and the rows path `:625` are data-driven or positional); the how-to's smell table matches the
+working-tree columns exactly; the M10 configured branch is right (487 px of 520 at range 3).
+
 *Reviewed by: plan-reviewer*
