@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""FIGURE 12 - claims commonly made about these works, checked against the works.
+"""FIGURE 13 - claims commonly made about these works, checked against the works.
 
 QUESTION IT ANSWERS. When a claim routinely attributed to one of these papers is checked against
 what the paper actually says, how often does it survive - and which papers are most often
@@ -18,7 +18,7 @@ import matplotlib.pyplot as plt
 import _cffig as _cf
 from _cffig import house
 
-STEM = "fig12_corrections"
+STEM = "fig13_corrections"
 ORDER = [("does-not-hold", "does not hold", house.INK),
          ("partly", "partly holds", house.INK_2),
          ("misattributed", "misattributed", house.TEXT_LIGHT),

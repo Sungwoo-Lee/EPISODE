@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""FIGURE 13 - one verdict, four routes, no shared premise.
+"""FIGURE 12 - one verdict, four routes, no shared premise.
 
 QUESTION IT ANSWERS. Four reviewed works conclude that a detailed computer simulation of a brain
 would not be conscious. Is that a consensus?
@@ -22,7 +22,7 @@ from matplotlib.patches import FancyBboxPatch, FancyArrowPatch
 import _cffig as _cf
 from _cffig import house
 
-STEM = "fig13_four_routes"
+STEM = "fig12_four_routes"
 
 ROUTES = [   # key, the route in one line, the review's locus
     ("tononi2015", "A simulation is virtual; consciousness is real intrinsic cause-effect power. "
