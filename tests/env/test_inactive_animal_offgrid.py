@@ -301,23 +301,48 @@ def test_allactive_config_no_offgrid_parking():
     up at (height, width) during normal stepping (the predator starts in-bounds
     and stays in-bounds due to grid boundary clipping).
 
-    Uses configs/environment/experiment/archive/basic_curriculum/04-far_sight_predator_10x10.yaml
-    (the basic-ladder re-level b093023 archived the old basic/ copy; the curriculum
-    copy is identical) — all entity groups use fixed 'count: N', no count-range feature.
+    WHICH WORLD, and why it moved. This case used to load an ARCHIVED config,
+    configs/environment/experiment/archive/basic_curriculum/04-far_sight_predator_10x10.yaml.
+    Archived configs are deliberately not kept loadable (CLAUDE.md, "Config
+    maintenance scope"): when a schema change breaks one it is left broken, and a
+    test pinned to one is therefore guaranteed to fail on every schema move
+    through no fault of the code it guards. It duly did — commit 47b1b8c3
+    narrowed the visual vector to one channel and the archived world's length-8
+    `visual_properties` stopped loading, reddening a regression test about animal
+    parking for a reason that has nothing to do with animals.
+
+    It now loads a MAINTAINED world, level 02, which satisfies the one property
+    this case needs: every entity group declares a fixed `count: N` rather than a
+    `count_low`/`count_high` range, so every allocated animal slot is active and
+    the fix under test has to be a strict no-op. Both halves of that are asserted
+    below rather than assumed — that there are animal slots at all (a world with
+    none would pass this test while checking nothing) and that all of them are
+    active (a world that drifted onto count ranges would pass by accident, since
+    an inactive slot parked off-grid is the CORRECT behaviour this case is
+    supposed to prove absent).
     """
     from src.environment.config_loader import _resolve_extends
 
     config_path = os.path.join(
-        _ROOT, "configs", "environment", "experiment", "archive", "basic_curriculum",
-        "04-far_sight_predator_10x10.yaml"
+        _ROOT, "configs", "environment", "experiment", "basic",
+        "02-predator_and_rabbit_10x10.yaml"
     )
     config = _resolve_extends(config_path, frozenset())
     params = load_env_params(config)
 
-    # All animals must be active for a fixed-count config
     state = jax_reset(params, jax.random.PRNGKey(0))
+    n_slots = int(state.animal_pos.shape[0])
+    assert n_slots > 0, (
+        f"{os.path.relpath(config_path, _ROOT)} allocates no animal slots, so the "
+        f"per-slot loop below would assert nothing. Repoint this case at a "
+        f"maintained world that has animals AND uses fixed 'count: N' throughout."
+    )
+    # All animals must be active for a fixed-count config
     assert jnp.all(state.animal_active), (
-        "Expected all animal slots active for a fixed-count config"
+        f"Expected all {n_slots} animal slots active for a fixed-count config. If "
+        f"{os.path.relpath(config_path, _ROOT)} has moved onto count_low/count_high, "
+        f"this case no longer tests the all-active no-op — repoint it, do not "
+        f"relax the assertion."
     )
 
     off_grid = (params.height, params.width)
