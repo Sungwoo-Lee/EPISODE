@@ -9,7 +9,8 @@ of any work holding a position in it (positions.csv joined to works.csv); each m
 one such work, shaped and coloured by community as in figure 1, open if the work is named-only. The
 status on the right is the synthesis's label, written out in words - no colour encodes status,
 because a colour would imply a ranking the page does not make. Each status carries a corpus-limit
-note, which is printed in the status board beside this figure rather than crammed onto the chart.
+note and, where it leans, a direction; both are printed in the status cards above this figure
+rather than crammed onto the chart.
 """
 import textwrap
 import matplotlib.pyplot as plt
@@ -51,11 +52,11 @@ def main():
                        facecolor=_cf.COLOUR[c] if read else house.PAPER, edgecolor=_cf.COLOUR[c],
                        linewidth=1.1, zorder=3)
             total_marks += 1
-        ax.text(2034.0, y + (0.16 if d["status_direction"] else 0), d["status"], ha="left", va="center",
+        # only the status word is drawn here. The direction a "leaning" debate leans in runs to several
+        # lines, and setting it beside a row overprinted the row below; it is rendered in the status
+        # cards above the figure, next to the same status word, where it has room.
+        ax.text(2034.0, y, d["status"], ha="left", va="center",
                 fontsize=house.FS_BODY, fontweight="semibold", color=house.INK, clip_on=False)
-        if d["status_direction"]:
-            ax.text(2034.0, y - 0.12, "\n".join(textwrap.wrap(d["status_direction"], 24)), ha="left", va="top",
-                    fontsize=house.FS_LABEL, color=house.INK_2, clip_on=False, linespacing=1.05)
     ax.set_xlim(1968, 2030)
     ax.set_ylim(-0.7, n - 0.2)
     ax.set_yticks([n - 1 - i for i in range(n)])
@@ -85,7 +86,8 @@ def main():
         f"All {n} debates in debates.csv are drawn (100%), with {total_marks} work-in-debate marks - a work counts "
         "once per debate however many positions it holds there. Spans are computed from positions.csv and checked "
         "against the first_year and latest_year columns of debates.csv; the build fails if they disagree. No "
-        "debate in this corpus is settled, and the three `leaning` labels carry the direction printed beside them. "
+        "debate in this corpus is settled; the direction of each `leaning` label is given in the status cards "
+        "above the figure, because it runs to several lines. "
         "The statuses describe the 36 reviewed works, not the field."))
 
 
