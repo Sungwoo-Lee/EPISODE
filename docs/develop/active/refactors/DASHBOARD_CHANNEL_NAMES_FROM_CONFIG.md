@@ -23,7 +23,13 @@ last_updated: 2026-09-21
 > the eleven standalone configs get the keys directly (§7b); and a trainer-start **backstop**
 > — explicitly not a guard — fails a bad config in seconds rather than hours (§7c).
 >
-> Four `plan-reviewer` passes, all **NOT READY**; findings and disposition are tabled in
+> **Five `plan-reviewer` passes.** The fifth was NOT READY on a single Critical that was a
+> **git-safety hazard rather than a design defect** — CP2's rollback would have destroyed the
+> other session's uncommitted rollout — and that hazard is **gone**: the rollout committed as
+> `47b1b8c3` and `configs/` is clean, verified. The fifth pass re-derived both of the fourth
+> pass's fixes independently and they hold in full.
+>
+> Findings and disposition are tabled in
 > "Review disposition" below. The most serious is mine rather than the user's: **§D8** — the
 > terrain merge became data in the config and in the layout but stayed a **constant in the
 > painter**, so a group declaring channels `[1,2,3]` would have validated, drawn in the right
@@ -236,15 +242,27 @@ session has staged that file's move** out of `basic/` into
 and **must not be fixed by it** — the owning session must update that list. The developer
 records the same three failures before and after; any *fourth* failure is theirs.
 
-**Correction (2026-09-19, `plan-reviewer` O3).** An earlier draft of this section said the
-same session had staged "two new `05-campfire_thermal_10x10_olf1_vis{2,3}.yaml` worlds". That
-was wrong and inverted: the git index shows **`D` — staged deletions** for both, and neither
-file is on disk. The consequence is not cosmetic. `tests/env/test_dashboard_band_span.py`
-ends with `test_a_world_that_reads_both_senses_wide_packs_and_paints`, parametrised over
-config paths; if those two worlds leave the tree, **its wide-sense cases skip rather than
-fail** — the quiet way a gate stops gating, which is the exact failure mode `4b6f7196` was
-about. **CP0 must re-measure the baseline and record whether those cases run or skip**, rather
-than inheriting the numbers above.
+**Correction, twice over.** An earlier draft said the other session had staged "two new
+`05-campfire_thermal_10x10_olf1_vis{2,3}.yaml` worlds". That was inverted — they were
+**deletions** — and as of `47b1b8c3` those deletions are **committed**, not staged. Neither
+file exists.
+
+**The consequence is measured, not predicted.** `tests/env/test_dashboard_band_span.py`
+parametrises its wide-sense case over those two config paths and does a bare `pytest.skip`
+at `:266` when a file is absent. Run today:
+
+```
+16 passed, 2 skipped
+SKIPPED [1] tests/env/test_dashboard_band_span.py:266: …05-campfire_thermal_10x10_olf1_vis2.yaml not on disk
+SKIPPED [1] tests/env/test_dashboard_band_span.py:266: …05-campfire_thermal_10x10_olf1_vis3.yaml not on disk
+```
+
+**The only two cases that exercised a non-zero vision channel count are silently skipping right
+now.** This is the second demonstration in this plan of a gate stopping gating because a file
+moved — the first was the same test's own history in `4b6f7196`. It is the argument for M10's
+rebuild being **in memory with no config-file dependency and no skip path at all**: a test that
+names a file on disk is one commit away from this, and absence of a subject must be a
+**failure**, never a skip (§11).
 
 ### A7. Known-bug collisions (from `bug-curator`)
 
@@ -263,11 +281,14 @@ than inheriting the numbers above.
 
 ### A8. THE DIM-1 ROLLOUT HAS ALREADY LANDED — read this before implementing
 
-**Measured 2026-09-20, in the working tree, uncommitted.** The parallel session's vision-dim
-rollout is no longer forthcoming; it is here. `git status` shows ` M` (modified, unstaged) on
-`configs/environment/default.yaml` **and on all seven `basic/` configs**, the two
-`05-campfire_thermal_10x10_olf1_vis{2,3}.yaml` worlds staged for deletion, and a new untracked
-`configs/environment/experiment/archive/basic_vec8/` holding the archived 8-channel variants.
+**Committed as `47b1b8c3`** — *"default sensory becomes the ladder's Q2 arm (olf 1 / vis 2 /
+vec 1 / clamp)"*. First seen 2026-09-20 as uncommitted working-tree work; **landed 2026-09-21,
+and `configs/` is now clean** (no modified, staged or untracked files under it). That closes
+the review's O11 — the rollout can no longer be amended out from under this plan without a
+commit of its own — and it means the numbers below are a committed state rather than a
+snapshot of somebody's editor. The same commit also **deleted** the two
+`05-campfire_thermal_10x10_olf1_vis{2,3}.yaml` worlds and archived the 8-channel variants under
+`configs/environment/experiment/archive/basic_vec8/`.
 
 What the shipped base config now says:
 
@@ -431,10 +452,48 @@ because three of them merge. Sizing in channels would make the vision panel a th
 than anything drawn into it — which is the precise miscount that broke every video in
 `4b6f7196`.
 
-**How the constant is anchored.** A test loads the shipped `configs/environment/default.yaml`
-through the resolving loader, builds the display, and asserts the map count it actually draws
-equals `PANEL_MAP_SLOTS[sense]`. The number is therefore pinned to a measurement of the real
-shipped world rather than to a second hand-maintained constant that could drift.
+**How the constant is anchored.** A test builds an explicit 8-channel reference display with
+`{Terrain,[0,1,2]}` and asserts the map count it draws equals `PANEL_MAP_SLOTS[sense]` (§11 —
+**not** anchored to `default.yaml`, which now draws one map).
+
+#### D4d. An oversized sensor range overflows INSIDE the panel — and range 4 is the boundary
+
+**User instruction, 2026-09-21, in their words:** *"if the visual sensor range is too large,
+let them oversized within the panel not the outside."* So an oversized **range** is contained:
+the maps shrink to fit the width the panel already has, rather than the frame being refused or
+spilling onto the neighbouring sense.
+
+**This is coherent with §D4b rather than a new policy**, and it repairs the part of §D4c that
+was worst. §D4b already says *draw, do not reject*. §D4c found that over-slot **vision** tiles
+are clipped **off the card** with their labels left floating, so channels vanish with no ink
+for the audit to report. "Inside the panel, never outside" is exactly the fix for that:
+**containment instead of disappearance.** It also bounds the blast radius — nothing reaches a
+neighbouring panel, so the audit's overlap findings stay meaningful and §D4b's scope statement
+needs no further exception.
+
+**Where it stops working, measured with the real packer** (`MAP_CELL_MIN_PX = 10`,
+`MAP_GAP_PX = 6`, `PAD = 16`, six slots, 520 px granted):
+
+| Vision range | Need at 6 slots | Contained cell size | Verdict |
+|---|---|---|---|
+| 2 | 362 px | 15.3 px | draws |
+| 3 | 482 px | 10.9 px | draws |
+| **4** | **602 px** | **8.5 px** | **below the painter's 10 px floor** |
+
+At range 4 the panel is granted 520 px against a 602 px need, and containing the maps inside
+it drives each map square to 8.5 px — under `painters.py`'s `if cs < 10: raise`, which exists
+because a map square below 10 px is unreadable. **So at range 4 "inside the panel" and "always
+draws" genuinely conflict, and the painter refuses**
+(`LayoutOverflowError: visual needs 602px of width in the band; 2 children share 1056px,
+giving it 520px` — measured, not predicted).
+
+**This is a documented boundary, not a feature to build now.** The user said they will ask for
+a fix if the setting is ever needed. Recorded plainly so it is not met as a surprise: **fixed
+panel size caps renderable vision range at 3 under the current band split**, for configured and
+legacy recordings alike, where today's live-count sizing would render a 1-channel range-4 world
+in 122 px. The fixture script's `E8` cell (range 4) is exactly such a world. Lifting the cap
+means the need-proportional band split the user declined earlier, and that is its own change
+with its own render proof — the open height-twin bug lives next door (§A7).
 
 #### D4b. No channel ceiling, and extra maps overflow silently — an ACCEPTED COST
 
@@ -621,10 +680,15 @@ it is refused exactly when that exceeds what the band grants it.
 
 **Why range is the wrong key, measured.** At **8** maps and range 3 the need is
 `8×7×10 + 6×7 + 32 = 634` px against the 520 px granted — refused, and that is the case this
-section was written for. But at **1** map and range 3 the need is `1×7×10 + 0 + 32 = 102` px,
-which fits comfortably. Since the rollout, a 1-channel legacy recording at range 3 is an
-ordinary thing to have — the `E7` cell recorded from today's tree before this lands is exactly
-one — and a `range ≥ 3` rule would refuse a recording that renders perfectly well. **State the
+section was written for. A **1-channel** legacy recording at range 3 is sized by §D5's
+`maps = max(slots, drawn) = max(6, 1) = 6`, so it needs `6×7×10 + 6×5 + 32 = **482** px` — it
+fits, and it renders. (An earlier draft of this paragraph said 102 px, computing one map
+instead of six and contradicting §D5 one paragraph above; the conclusion is unchanged, the
+arithmetic is corrected — `plan-reviewer` M19.) Since the rollout, a 1-channel legacy recording at range 3 is an
+ordinary thing to have — the `E7` cell recorded from today's tree before this lands **would be**
+one (no such recording exists on disk today: `results/render_audit/` holds only the `M*` cells,
+`W20` and the six `olf1_vis*` runs) — and a `range ≥ 3` rule would refuse a recording that
+renders perfectly well. **State the
 rule as need-versus-grant and the range drops out of it.**
 
 **User decision, 2026-09-19: declare the ones that genuinely do not fit unrenderable,
@@ -778,9 +842,25 @@ class ChannelDisplay:
     legacy: bool                                 # True -> positional names, no groups
 
     @classmethod
-    def from_meta(cls, sense: str, n_channels: int, payload: dict | None) -> "ChannelDisplay":
-        if payload is None:
+    def from_meta(cls, sense, n_channels, meta_entry, *, key_present: bool):
+        """`key_present` is whether run_meta carried a top-level `channel_display`
+        AT ALL -- NOT whether this sense has an entry in it. The two stopped being
+        the same thing when names became required only for ENABLED senses (7b): a
+        perfectly good configured recording legitimately has no `Visual` entry.
+
+        Keying legacy off the per-sense entry would hand positional names to three
+        unlike cases -- a pre-change recording, a disabled sense, and a forgotten
+        or hand-edited entry -- and the third silently ships "Channel 0" on an
+        enabled sense, which is the one name this module promises can never reach
+        a frame (M20).
+        """
+        if not key_present:                      # genuinely pre-change: legacy
             return cls(tuple((f"Channel {i}", "") for i in range(n_channels)), (), True)
+        if meta_entry is None:                   # configured, but this sense missing
+            raise KeyError(
+                f"run_meta carries channel_display but has no entry for {sense!r}, "
+                f"which is enabled on this recording. A configured recording must "
+                f"name every sense it draws.")
         ...  # validate length/indices, raise ValueError naming both numbers
 
 def map_plan(sense, display: ChannelDisplay) -> list[tuple[str, str, str, object]]:
@@ -976,11 +1056,10 @@ sense that is off. Three consequences:
 - `olfaction_parity_{neutral,predator}.yaml` take **olfaction names only**. Under the previous
   instruction they would have been given eight vision names for a sense that is switched off —
   which is the quiet mistake this section exists to prevent.
-- **The `q_learning.yaml` exclusion becomes structural rather than remembered.** It sets
-  `using_sensory: false`, so the same rule excludes it; no hand-maintained exception list. This
-  is a better justification than the one it replaces, and the reviewer was right that the old
-  distinction ("declares no count") did not separate it from the other eleven — none of them
-  declares a vision count either. The nine vision-enabled files still need both lists.
+- **The `q_learning.yaml` exclusion is structural rather than remembered — but NOT because of
+  `using_sensory`.** That key is read by no code (`plan-reviewer` M16); the exclusion rests on
+  the two reasons given below, both structural: it is outside §9b's sweep roots, and it cannot
+  resolve to `EnvParams` at all. The nine vision-enabled files still need both lists.
 - **The sweep must check a sense only when that sense resolves enabled** (§11). Demanding
   vision names from the two parity files would fail on correct files; skipping them silently
   would hide a real omission later. Enablement is the discriminator, and it is read from
@@ -1008,16 +1087,22 @@ auto-generation. The developer **confirms each file against its resolved params'
 default, not a specification, and this plan has already been bitten once by treating an
 apparent declaration as evidence.
 
-**`configs/models/q_learning/q_learning.yaml` is EXCLUDED — and now by the rule, not by fiat.**
-It sets `using_sensory: false`, so the enabled-sense rule above excludes it with no exception
-list to maintain. It is also an *agent* config rather than an environment one (it sits with
-`ppo.yaml` / `dqn.yaml` under `configs/models/`, and the only references to it in the repo are
-docs listing agent configs), so §11's collector roots exclude it structurally as well.
+**`configs/models/q_learning/q_learning.yaml` is EXCLUDED, for two structural reasons — and
+`using_sensory` is NOT one of them.** It is an *agent* config rather than an environment one
+(it sits with `ppo.yaml` / `dqn.yaml` under `configs/models/`, and the only references to it in
+the repo are docs listing agent configs), so **§9b's sweep roots exclude it by construction**;
+and it **cannot resolve to `EnvParams` at all** — it fails `load_env_params` on
+`sensory.visual_sensor_range`, so it never reaches the enabled-sense rule in the first place.
 
-The justification this replaces — "it declares no channel count" — **did not survive
-measurement**: none of the eleven declares a vision count either, so that distinction never
-separated the cases. An exclusion that falls out of a rule is worth more than one that has to
-be remembered, and this one now does.
+**An earlier draft justified this by `using_sensory: false`. That was wrong: no code reads
+`using_sensory`** — it appears only in test-fixture YAML strings, and the loader keys
+enablement on `sensory.olfactory_enabled` / `sensory.visual_sensor_enabled`
+(`plan-reviewer` M16). Justifying an exclusion by a key nothing consults is the same mistake
+this thread keeps finding, so it is named rather than quietly replaced.
+
+The justification before *that* — "it declares no channel count" — also did not survive
+measurement: none of the eleven declares a vision count either. Three attempts, and the two
+that hold are both structural.
 
 **Why this is safe for the byte-parity gates — checked, not assumed.** The gates run an episode
 and compare it against a stored fixture; neither `test_unified_parity.py` nor
@@ -1046,6 +1131,12 @@ the verification configs** in §7b, which are never trained. The peer who propos
 against exactly this case and retracted the stronger claim themselves. The real coverage for
 the standalone class is §7b's edit plus the committed sweep test in §11; this only shortens the
 feedback loop for the configs that *are* trained.
+
+**Optional, and cheap if taken**: as specified the backstop resolves **stage 0 only**, so a
+curriculum whose later stage changes a sense width would still fail at that stage's first
+video. `train.py:869` already loads every stage's params, so resolving the display for each
+stage at start costs nothing extra (`plan-reviewer` L7). Left optional because it widens a
+backstop rather than closing a gap in the real coverage.
 
 #### 8. Four writer call sites — not three
 
@@ -1112,32 +1203,32 @@ site that meets frozen saved configs (§D7).
 
 #### 9b. Coordination with the parallel vision-dim rollout — time-critical
 
-Another session is currently setting `visual_vector_size: 1` across the `basic/` ladder
-configs (§Context). **Those configs will fail at recording-write time** unless each also
-redeclares `visual_channel_names` (1 entry) and `visual_channel_groups: []`, for the
-inheritance reason in §10's how-to block. This does not break training — the configs load and
-run — so it would surface only when someone later tries to record a video, which is the worst
-time to find it.
+**This section is now history plus one live rule** (`plan-reviewer` M18 — its previous text
+survived the §A8 correction and contradicted it). The rollout **has landed**, as `47b1b8c3`:
+`visual_vector_size: 1` is set **once, in `default.yaml`**, and **no `basic/` file sets it at
+all** — all seven inherit. So there is no per-file list for anyone to add, nothing to
+reconcile, and the ordering question is moot.
+
+**The live rule is the one that outlives the rollout**: a config that sets its own sense width
+must declare that sense's names in the same file, because a child replaces a list wholesale or
+not at all and cannot shorten an inherited one. That failure surfaces at recording-write time,
+not at config load — so a mismatched config trains perfectly well and fails at its first video,
+which is the worst time to find it. §11's sweep is what catches it at commit time instead.
 
 **This plan does not edit those files** (they belong to the other session).
 
-**User decision, 2026-09-19: this change lands FIRST.** The alternatives were letting the
-ladder rollout land first, and making the two display keys optional per config. The second was
-rejected for the same reason the code tables are being deleted — an optional key with an
-inherited value *is* a fallback default, and it would let a dim-1 world silently render
-another world's channel names.
+**The ordering decision is closed by events.** The user chose "this change lands first" over
+letting the ladder rollout land first and over making the display keys optional per config —
+the last rejected for the same reason the code tables are being deleted: an optional key with
+an inherited value *is* a fallback default, and it would let a dim-1 world silently render
+another world's channel names. That rejection still stands. The sequencing does not: **their
+rollout landed first, in `47b1b8c3`.**
 
-The ordering that follows from it:
-
-1. This change lands `default.yaml`'s four keys **first**. Every ladder config that has not
-   yet changed its channel count keeps inheriting a correct 8-entry list and is unaffected.
-2. The other session adds the two display keys **in the same edit** that sets
-   `visual_vector_size: 1`, so no intermediate commit has a size that disagrees with its
-   names. §10's how-to block is the instruction they follow, and is written for that use.
-3. If their rollout has already landed when implementation starts, the developer **reports it
-   and stops** rather than editing their files: the fix is two lines per config, but it is
-   theirs to make, and a config edited by two sessions at once is how the staged-deletion
-   confusion in §A6 happened.
+**What the developer does now: proceed.** The earlier instruction to *report and stop* is
+**withdrawn** — it would halt the work on a non-event, since there is nothing left to
+reconcile. Add the four keys to `default.yaml` once; the ladder inherits them exactly as it
+inherits the width. §11's sweep is the proof, and it is what catches any future ladder file
+that gives itself its own width.
 
 **Where the failure surfaces, stated precisely — because "fails at load" is not available.**
 The natural request is that a ladder config with a mismatched names list fail at config load,
@@ -1184,9 +1275,10 @@ So the failure is loud in the two places it can be:
     condition the test exists to detect.
   - Keep both floors (collected ≥ 32, validated ≥ 19) on top of the location rule.
   **`configs/models/**` is deliberately outside those roots**: `q_learning.yaml` carries a
-  stray `sensory:` block with `using_sensory: false` and no channel counts at all, so a
-  content-based `^sensory:` sweep over `configs/**` would collect an *agent* config and demand
-  channel names for a sense that is switched off.
+  stray `sensory:` block and no channel counts at all, so a content-based `^sensory:` sweep
+  over `configs/**` would collect an *agent* config — one that cannot resolve to `EnvParams`
+  in the first place (it fails on `sensory.visual_sensor_range`) and so would fail the sweep
+  for a reason having nothing to do with channel names.
 
 The honest cost of this arrangement: a mismatched config **loads and trains perfectly well**
 and fails only at evaluation or in the sweep test. That is stated in the how-to block too, so
@@ -1335,12 +1427,12 @@ its own right**, matching the density and tone of the existing `olfactory_grid_r
 | `tests/env/test_dashboard_channel_display.py` (new) | length mismatch raises naming both numbers; out-of-range / duplicate / non-contiguous group raises; absent payload gives positional names and no groups; **`_span` returns the same width at 1, 8 and 12 channels**; an over-slot channel count **does not raise** (§D4b — the absence of a refusal is the decision, so it is asserted explicitly); a legacy payload with 8 maps is sized to 8, not 6 (§D5). **Anchor `PANEL_MAP_SLOTS` to an explicit 8-channel reference display with `{Terrain,[0,1,2]}`, NOT to `default.yaml`** — the base config now runs one vision channel and draws **1** map (§A8), so the original "equals what the shipped config draws" formulation would fail by construction |
 | `tests/env/test_dashboard_channel_display.py` (group-channel cases, §D8) | **The invariant the plan nearly shipped without.** `map_plan` returns the group's declared channel tuple, not a position; a group of a length the palette cannot colour is **refused at write time naming both numbers**; and — the one that would have caught the bug — a display with `{Terrain,[1,2,3]}` produces a map plan whose merged entry reads channels 1–3. Assert against the returned channels, never against `row[:3]`-shaped reasoning, since that is the assumption under test |
 | `tests/env/test_dashboard_band_span.py` | update the `channel_labels` import (54) and `_painter_map_count` (98) / `_ctx` (~78) to the new API. **The equality property must be parametrised over BOTH sizing regimes** — configured (`slots`) and legacy (`max(slots, drawn)`) — since post-change they are different functions (`plan-reviewer` M5). **`test_an_off_standard_vision_width_is_declared_one_map_per_channel` (213) must be REWRITTEN, not updated**: "4 channels ⇒ 4 maps" becomes **false** on the configured path (4 configured channels ⇒ 6 slots; 4 legacy channels ⇒ `max(6,4)` = 6) |
-| `tests/env/test_dashboard_band_span.py` (the wide-sense case, M10 + M12) | **Rebuild `test_a_world_that_reads_both_senses_wide_packs_and_paints` (262) so it has no config-file dependency and therefore cannot skip**: construct from `default.yaml` plus in-memory range overrides with an explicitly **configured** display (at vision range 3 that declares six slots = 487 px against the 520 px grant, packs, and paints). Its two named config cases are exactly the files the parallel session deleted (§A6), so as written it would skip silently. **The legacy mirror must be built in memory at width 8** — `_ctx` (`:76-86`) already does this — because "the same world, the other regime" is now a **1-channel** legacy context, which at range 3 needs only 102 px and does **not** refuse (`plan-reviewer` M12). Three cases, not two: configured range-3 **packs**; 8-channel legacy range-3 is **refused** (634 px > grant); **1-channel legacy range-3 renders**. That third case is what stops the refusal being keyed on range |
+| `tests/env/test_dashboard_band_span.py` (the wide-sense case, M10 + M12) | **Rebuild `test_a_world_that_reads_both_senses_wide_packs_and_paints` (262) entirely in memory — `default.yaml` plus range *and* width overrides, with an explicitly configured display — so it has NO config-file dependency and NO skip path.** Its two named config cases were deleted by `47b1b8c3` and it is skipping **right now**, measured, not argued (§A6): that is the second time this same test has stopped gating because a file moved. **Absence of a subject must be a failure, never a `pytest.skip`** — delete the `:266` skip, do not re-point it at other files, because any file named on disk is one commit away from repeating this. Three cases, all in-memory: configured range-3 declares six slots = **482 px** against the 520 px grant and packs; **8-channel legacy** range-3 is **refused** (634 px > 520); **1-channel legacy** range-3 **renders** — it is sized by `max(6,1) = 6` maps = 482 px, not the 102 px an earlier draft of this row claimed (`plan-reviewer` M12, M19). The third case is what stops the refusal being keyed on range. Build the legacy mirror at width 8 in memory; `_ctx` (`:76-86`) already does this |
 | `tests/env/test_dashboard_channel_display.py` (source invariant, L6) | One assertion making §D8's rule structural instead of prose: **`"row[:" does not appear in `painters.py`'s source**. The project already uses this pattern — `test_dashboard_band_span.py:224-238` pins `MAP_GAP` by reading the painter's source. Cheap, and it is the only thing that stops the *next* literal channel index |
 | `tests/env/test_dashboard_channel_display.py` (missing-key cases) | **one test per new key**: delete the key from a resolved config and assert `ValueError` **naming that key**. Required by CONFIG_GUIDE Maintenance Contract item 3, which the length/index/duplicate tests do not satisfy (`plan-reviewer` M6) |
 | `tests/scripts/test_render_recordings_v2.py`, `tests/env/test_dashboard_frames.py` | construct via `meta.get("channel_display")`; must still pass on pre-change fixtures (legacy path). **Name the fixture that stays un-regenerated** (CP7) — otherwise this assertion goes vacuous the moment every cell is re-recorded (`plan-reviewer` M4) |
 | `tests/env/test_dashboard_v1_imports.py` | unchanged, but **must stay green**: it pins `write_run_meta`'s signature prefix (§6, L3) |
-| `tests/env/test_channel_names_match_configs.py` (new) | **The standing guard for the parallel ladder rollout (§9b).** Sweep **every maintained config** under `configs/environment/` — `default.yaml` plus `experiment/basic/` — through the resolving loader and then `channel_display_from_config`. A config whose `visual_vector_size` / `vector_size` disagrees with its names list, or whose merge group names a channel it does not have, must fail **naming the file and both keys**. This is a committed test rather than only CP6's one-off sweep, because those configs are being written by another session right now and the mismatch cannot be caught at env-config load (§9b explains why not). Parametrise per config file so the failure names the offender rather than the sweep |
+| `tests/env/test_channel_names_match_configs.py` (new) | **The standing guard.** Sweep **§9b's roots verbatim** — `configs/environment/**`, `configs/verification/**`, `configs/continual/nmn_double_return_stages/`, plus `configs/environment/default.yaml`; skip permitted **only** for files directly under `configs/continual/` — through the **resolving** loader and then `channel_display_from_config`. Not "`default.yaml` plus `experiment/basic/`": that was the pre-C7 directory scope and it survived into this row by mistake (`plan-reviewer` M17). A config whose resolved widths disagree with its names list, or whose merge group names a channel it does not have, must fail **naming the file and both keys**, parametrised per file so the failure names the offender. **The enabled-sense rule applies here too**: a sense's keys are checked only when that sense resolves enabled, so the two olfaction-parity configs must **pass with olfaction names alone**. Display keys present for a *disabled* sense are **ignored, not refused** — the sense is off, so there is no resolved width to validate a length against, and refusing would punish a harmless leftover |
 
 **Every one of these must be run against unmodified source first and its failure
 recorded.** A test that passes before the change proves nothing. The Implementation Report
@@ -1370,12 +1462,17 @@ evidence, because a change on 2026-09-18 passed 18 new unit tests while breaking
 end to end.
 
 - [ ] **CP0 — Re-measure the baseline, including its red.** Run the three dashboard test
-      files and `tests/env/test_unified_parity.py`; record counts. Measured 2026-09-19:
-      **3 failed, 184 passed, 2 skipped** on the dashboard files (§A6) and **72 passed,
-      350 skipped** on parity. **Do not inherit those numbers** — a parallel session has
-      staged config deletions that change the shape of this baseline, so re-run and record
-      what you actually get, including **whether `test_a_world_that_reads_both_senses_wide_packs_and_paints`
-      runs or skips** (§A6; a skipped case is a gate that stopped gating).
+      files and `tests/env/test_unified_parity.py`; record counts. **Do not inherit any number
+      printed in this plan** — re-run and record what you actually get, including whether the
+      band-span wide-sense cases run or **skip** (measured 2026-09-21: `16 passed, 2 skipped`,
+      both skipping on configs deleted by `47b1b8c3` — §A6).
+      **Also record the resolved base**, because every width and slot number in this plan keys
+      off it: `(olfactory_vector_size, visual_vector_size, olfactory_grid_range,
+      visual_sensor_range)` from `default.yaml` through the resolving loader. Committed state
+      at `47b1b8c3` is `(5, 1, 1, 2)`. If it differs, §10's declaration and CP5's subject both
+      move (M21) — stop and re-derive rather than editing to match a stale number.
+      **And record `git status --short configs/`**, which must be clean: it is today, and the
+      one sentence in CP2's rollback explains why that matters.
       *Detects*: any later count that differs by anything other than the intended tests.
       *Rollback*: none (read-only).
 
@@ -1399,6 +1496,14 @@ end to end.
       **unchanged** (proves no key leaked into `load_env_params`); a deliberately wrong names
       length raises naming both numbers.
       *Rollback*: `git checkout` the affected files; regenerated cells are re-made by CP7.
+      **Why that is safe now, and was not two days ago** (`plan-reviewer` C11): this step edits
+      `configs/environment/default.yaml`, which until `47b1b8c3` carried another session's
+      **uncommitted** rollout. A `git checkout` then would have destroyed work with no reflog
+      to recover it, and a `git add` would have swept their hunks under this plan's commit.
+      `configs/` is clean now — verified at CP0 — so an ordinary edit and an ordinary rollback
+      are correct. **Keep this sentence**: if a rollback step ever again shares a file with
+      another session's uncommitted work, `git checkout` is the wrong instrument and the
+      snapshot-and-reverse-apply route is the right one.
 
 - [ ] **CP2b — The two writer paths that are not the fixture script (C1, C2).**
       (a) Run `scripts/eval/eval_rollout.py --record` on a **post-change** config: it must
@@ -1449,9 +1554,12 @@ end to end.
       *Rollback*: as CP3.
 
 - [ ] **CP5 — Render at vision dim 1 and look at it.** **Easier than when this plan was
-      written**: the base config is now single-channel vision (§A8), so a cell built on it at
-      `visual_sensor_range: 2` exercises this directly and the §A5 override work is needed
-      only if the `E6sum`/`E6bin` fixture cells are used (they do not currently build).
+      written**: the base config is single-channel vision at `47b1b8c3` and already reads
+      vision at range 2, so a cell built on it exercises this directly, and `E6sum`/`E6bin`
+      now build (verified — §9).
+      **If CP0 finds the base is NOT one-channel**, this checkpoint has no subject as written:
+      use §9's **shrink** helper to build a 1-channel cell rather than improvising one
+      (`plan-reviewer` M21).
       *Detects*: **one map at normal size** — the same map-square pixel size as the 8-channel
       frame, **not enlarged to fill the panel** — with **blank space beside it**, labelled
       "Visible" from the config, not "Channel 0". The map size is the real assertion here; a
@@ -1501,8 +1609,14 @@ end to end.
       must visibly differ**. If they look identical, the painter is still reading a literal
       slice and §D8's defect is live — a unit test alone cannot catch this, because it would be
       written from the same wrong assumption that produced the bug.
-      Then **sweep every maintained config under `configs/environment/`** through
-      `channel_display_from_config` and record pass/fail per file.
+      Then **sweep §9b's roots** (`configs/environment/**`, `configs/verification/**`,
+      `configs/continual/nmn_double_return_stages/`, plus `default.yaml`; skip only files
+      directly under `configs/continual/`) through `channel_display_from_config` and record
+      pass/fail per file — **not** the narrower `configs/environment/` scope an earlier draft
+      of this line carried (`plan-reviewer` M17).
+      **Include a vision-off subject**: the fixture script's `E9` cell (vision disabled) must
+      record with olfaction names alone and render with no vision panel at all. Without it the
+      enabled-sense rule is never exercised end to end.
       *Detects*: the validation is real rather than assumed, the warning fires where a
       refusal must not, and no maintained config — including any the parallel session has
       landed — is left unrecordable (§9b). *Rollback*: as CP3.
@@ -1594,7 +1708,7 @@ against the code rather than accepting it.
 | L3 | Signature prefix is pinned | **Applied** — §6 requires the new parameter come after the existing positional ones |
 | O3 | Configs staged for **deletion**, not addition | **Verified and corrected** — §A6; CP0 re-measures and records whether the wide-sense cases skip |
 | O5 | `E6bin` never built | **Verified** — no `E6*` directory exists and the cells fail to build; §9 fixes them, CP5 is the first real attempt |
-| C7 | Standalone configs inherit nothing | **Applied, with one exclusion.** §7b adds the keys to the **eleven** verified `extends`-free env configs. **`configs/models/q_learning/q_learning.yaml` is not one of them** — it is an *agent* config with `using_sensory: false` and no channel counts at all, so a names list there would describe a sense that is switched off. Reported rather than edited, per the instruction to verify first. Parity safety confirmed independently: neither gate hashes a config, and `load_env_params` never reads these keys |
+| C7 | Standalone configs inherit nothing | **Applied, with one exclusion.** §7b adds the keys to the **eleven** verified `extends`-free env configs. **`configs/models/q_learning/q_learning.yaml` is not one of them** — it is an *agent* config, outside the sweep roots, and it cannot resolve to `EnvParams` at all (it fails on `sensory.visual_sensor_range`). Reported rather than edited, per the instruction to verify first. **Its justification was corrected twice more afterwards** — "declares no channel count" did not separate it from the other eleven (C9), and `using_sensory: false` rests on a key no code reads (M16). Parity safety confirmed independently: neither gate hashes a config, and `load_env_params` never reads these keys |
 | C8 | Terrain merge is data in config but a constant in the painter | **Applied — §D8.** Verified at `painters.py:701-711`: `row[:3]` is a literal slice and `P.TERRAIN_FILL` a hardcoded 3-tuple, so `{Terrain,[1,2,3]}` would validate, place correctly and colour from channels 0–2 with no error. `map_plan` now carries the group's channel tuple, the painter reads those channels, group length is validated against palette arity, and **CP6 gains a shifted-group render a human looks at**. This was mine to catch and I did not — count discipline covers *how many* maps, not *which channels* one reads |
 | M10 | Band-span wide case skips, and is wrong on both branches | **Applied** — §11 rebuilds it from `default.yaml` plus range overrides with a configured display (no config-file dependency, no skip), and adds the legacy range-3 refusal as its mirror, since `from_params(...)` with no payload is the legacy regime |
 | M11 | Trainer-start check | **Adopted and labelled** — §7c, called a **backstop, not a guard**, in those words: zero commit-time coverage, never reaches the verification configs. Call site `train.py` (recording branch at `:2555`) is in File Changes |
@@ -1608,6 +1722,14 @@ against the code rather than accepting it.
 | M15 | Floor catches removals, not skipped additions | **Applied** — §9b's sweep is now scoped by **location**: skip only files directly under `configs/continual/`; everything under `environment/**`, `verification/**` and `continual/nmn_double_return_stages/` must resolve or fail naming the file; a `channel_display_from_config` raise is never a skip; copy the glob, not the raw loader; both floors kept |
 | L5 | Line drift | **Applied** — `visual_vector_size` at `:256`, the trainer branch located by `if eval_v_flag:` rather than a line number, frontmatter re-dated |
 | L6 | Prose invariant with no structural check | **Applied** — §11 adds a source-grep assertion that `"row[:"` does not appear in `painters.py`, following the project's own `MAP_GAP` precedent |
+| C11 | CP2's rollback would destroy another session's uncommitted work | **Resolved by events, and verified before relying on it.** The rollout committed as `47b1b8c3` and `git status --short configs/` is now clean, so the user's "wait for them to commit first" is satisfied and an ordinary edit with an ordinary `git checkout` rollback is correct. CP0 records the clean state; CP2 keeps **one sentence** on why the ordering mattered, so nobody reintroduces a `git checkout` into a rollback step that shares a file with another session's uncommitted work |
+| M16 | `using_sensory` justification | **Applied** — that key is read by **no code** (only test-fixture YAML strings); the loader keys enablement on `olfactory_enabled` / `visual_sensor_enabled`. §7b now gives the two reasons that hold: `q_learning.yaml` is outside §9b's sweep roots and cannot resolve to `EnvParams` at all (it fails on `sensory.visual_sensor_range`). Third attempt at this justification, and the first two are named rather than quietly dropped |
+| M17 | Sweep spec carried the pre-C7 scope and never stated the enabled-sense rule | **Applied** — §11's row and CP6 now cite §9b's roots verbatim, state that a sense is checked only when it resolves enabled (so the parity pair passes with olfaction names alone), and settle the open question: keys for a **disabled** sense are **ignored, not refused**, since there is no resolved width to validate against. CP6 gains the vision-off `E9` cell as a subject |
+| M18 | M13's fix reached §A8 but not §9b | **Applied** — §9b rewritten: the rollout landed as `47b1b8c3`, `visual_vector_size` is set once in `default.yaml` and by no `basic/` file, the reconciliation is empty, "report and stop" is withdrawn there too, and what remains is the live rule (a config setting its own width must name that sense in the same file) |
+| M19 | 102 px contradicts §D5's own rule, and the range cap was unstated | **Applied, and it carries a user design instruction.** 102 → **482** corrected (`max(6,1) = 6` maps). New §D4d records the user's rule — an oversized range overflows **inside** the panel, never outside — which is coherent with §D4b (draw, do not reject) and repairs §D4c's worst case by containing rather than disappearing. **The boundary is measured and stated plainly**: contained in 520 px, range 2 → 15.3 px cells, range 3 → 10.9 px, **range 4 → 8.5 px, under the painter's 10 px floor**, so range 4 refuses (`visual needs 602px … giving it 520px`). Fixed panel size caps renderable vision range at 3; the user said they will ask for a fix if the setting is ever needed |
+| M20 | The legacy signal became ambiguous | **Applied** — `from_meta` is keyed off whether `run_meta` carried the **top-level** `channel_display` at all, not off a per-sense entry. A configured recording missing an entry for an **enabled** sense now raises naming the sense, instead of silently shipping "Channel 0" — the one name §1 promises the drawing path can never produce |
+| M21 | The plan never actually said "re-measure at CP0" | **Applied** — CP0 now records the resolved base `(olf, vis, olf_range, vis_range)` (committed state `(5, 1, 1, 2)`) and `git status --short configs/`, and instructs the developer to inherit **no** number printed in this plan. CP5 falls back to §9's shrink helper if the base is not one-channel |
+| L7 | Stale bundle | **Applied** — CP5's "they do not currently build" corrected (they do), §D5b's `E7` recording marked as hypothetical (none exists on disk), and §7c's single-stage limitation recorded with the optional multi-stage fix |
 
 ## Implementation Report
 
