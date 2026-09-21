@@ -1747,3 +1747,46 @@ and the rows path `:625` are data-driven or positional); the how-to's smell tabl
 working-tree columns exactly; the M10 configured branch is right (487 px of 520 at range 3).
 
 *Reviewed by: plan-reviewer*
+
+### Fifth pass — reviewed at `d3d61bf5` (2026-09-21)
+
+**Verdict: NOT READY**, on **one** Critical that is a git-safety hazard in a checkpoint, not a
+design defect. Both fourth-pass fixes were re-derived and **hold**: the eleven standalone configs
+resolve `olf=5 vis=8` with the loader's own assignment (nine vision-enabled files
+`res=[3…,4…] anim=[5,7,7] obs=[6]`; the parity pair `visual_sensor_enabled: false`), and the
+strip-and-grow route builds an 8-channel world through the fixture script's own `build_params`
+with food→3, hiding_predator→4, predator→5, rabbit→7, obstacles→6, background 0/1/2 (O9, O10
+closed). The design is implementable as written. Full detail, the five questions answered, and
+two reviewer disclosures: [[plan_dashboard_channel_names]] §"Fifth pass".
+
+1. **C11 — CP2's rollback would revert the parallel session's uncommitted rollout.** "`git
+   checkout` the affected files" includes `configs/environment/default.yaml`, which carries their
+   unstaged 8→1 change; working-tree edits have no reflog, and the seven `basic/` files (entity
+   `visual_properties: [1.0]`) would then extend an 8-channel base and the whole ladder stops
+   loading. The same file cannot be committed whole without sweeping their hunks (`CLAUDE.md`;
+   `git add -p` is unavailable here). *Exit*: CP0 snapshots `git diff HEAD -- configs/environment/`
+   to a patch plus `cp -a`; CP2's rollback for `default.yaml` is "reverse-apply this plan's own
+   hunks", never `git checkout`; the plan states how `default.yaml` is committed (after the rollout
+   session commits — recommended — or via a filtered `git apply --cached`); user picks.
+
+Moderate: **M16** — `using_sensory` is read by no code, so §7b's "structural" `q_learning`
+exclusion rests on a dead key (the file fails `load_env_params` on `visual_sensor_range` and sits
+outside the sweep roots — say that instead). **M17** — the §11 test row and CP6 still say "under
+`configs/environment/`", the scope C7 rejected, and never state the enabled-sense rule (both
+sentences predate the fourth pass — missed then); also say whether keys for a disabled sense are
+ignored or refused, and add `E9` (vision off) as a CP subject. **M18** — §9b's intro and steps
+1–3 are M13-stale: "report and stop" is withdrawn in §A8 and live here. **M19** — §D5b's "102 px"
+contradicts §D5's own `max(slots, drawn)` (a 1-channel legacy at range 3 needs 482 px, still
+fits); and the same rule **refuses at range 4** (602 > 520, measured) for configured and legacy
+alike — fixed size caps renderable vision range at 3, which the plan never states and the user
+has not been told (fixture cell `E8` is such a world). **M20** — after the enabled-sense rule,
+`from_meta(payload=None)` cannot tell pre-change / disabled / forgotten apart and gives an
+*enabled* sense on a configured recording positional names silently; key legacy on the
+top-level key and raise for a missing enabled sense. **M21** — the plan does not say "re-measure
+at CP0"; §10's declaration is gated by the sweep, CP5's one-channel subject is not. Low (**L7**):
+CP5 "(they do not currently build)"; no `E7` recording exists on disk; §7c could resolve every
+continual stage at start for free.
+
+Disclosure: my first slot-to-entity read of the loader output was misaligned (entries expand to
+`count_high` slots) and briefly showed hiding_predator→3 / rabbit→5; re-run by slot, the author's
+numbers are exactly right.
