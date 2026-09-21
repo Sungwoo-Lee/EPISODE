@@ -99,6 +99,40 @@ _PARITY_CONFIGS = [
     ("08-singlePredRabbit_disengage", os.path.join(_ROOT, "configs", "environment", "experiment", "archive", "hypervigilance", "08-singlePredRabbit_disengage.yaml")),
 ]
 
+# ── Declared observation widths — the re-blinding tripwire ───────────────────
+# The total width of the observation vector each case's config produces, WRITTEN DOWN
+# rather than read from the golden. This is deliberately redundant with the byte-parity
+# assertion, and the redundancy is the point.
+#
+# Byte-parity alone cannot tell you WHY it failed: a golden captured from a stale or
+# frozen input and a genuine sensor regression both surface as a wall of differing
+# floats. It also cannot fail at all when the golden was regenerated from the same wrong
+# input it is compared against — the exact hole that made this gate half-blind until
+# 2026-09-21. A width declared HERE is independent of both the config and the golden, so
+# a case whose world drifts fails with one legible line naming the number it expected.
+#
+# Ground truth, not measurement: 44 / 52 / 58 for basic levels 00-01 / 02-04 / 05-06 were
+# verified independently by the user by constructing the agent against each level through
+# train.py's own config merge order. This gate's own loader reproduces them (see the
+# commit that re-baselined the goldens).
+#
+# If one of these numbers must change, that is a sensory change: change it deliberately,
+# in the same commit as the config, and re-baseline the golden with --gen-fixtures.
+_EXPECTED_OBS_WIDTH = {
+    "default":                       52,   # olf r1 (25) + vis r2 (13) + 14 scalar/other
+    "00-static_predator_5x5":        44,   # vision pinned to r1 on the 5x5 levels -> 5
+    "01-slow_predator_5x5":          44,
+    "02-predator_and_rabbit_10x10":  52,
+    "03-random_init_10x10":          52,
+    "04-jump_attack_10x10":          52,
+    # Self-contained archived world, unaffected by 47b1b8c3: still the pre-change 27
+    # (olfaction r0 -> 5, vision r0 x 8 channels -> 8). Its golden was NOT re-baselined,
+    # and this number going to 44/52 would mean it had started inheriting the live
+    # default — i.e. that the last pre-DIRECTIONAL_SENSORS evidence in this module had
+    # quietly been overwritten. Measured here, not user-verified like the three above.
+    "08-singlePredRabbit_disengage": 27,
+}
+
 # Legacy single-config parity (the original fixture used by pre-v3.0 test)
 _LEGACY_PARITY_CFG = os.path.join(
     _ROOT, "configs", "experiment", "hypervigilance",
@@ -197,6 +231,21 @@ def test_visual_parity_byte_equal(label, cfg_path, request):
 
     params = _load_params(cfg_path)
     fp = _fixture_path(cfg_path)
+
+    # Width check FIRST, and before any generate: it is the one assertion that still
+    # bites when the golden is regenerated in the same run, so it must not sit behind
+    # a comparison the generate branch makes vacuous.
+    width = int(sum(get_observation_breakdown(params).values()))
+    assert width == _EXPECTED_OBS_WIDTH[label], (
+        f"[{label}] Observation width is {width}, but this test declares "
+        f"{_EXPECTED_OBS_WIDTH[label]}.\n"
+        f"Config read: {cfg_path}\n"
+        f"Either the world this case loads has changed (check the sensory block: "
+        f"olfactory_grid_range, visual_sensor_range, visual_vector_size), or the case "
+        f"is reading a stale/frozen copy of its config instead of the live one. "
+        f"Do NOT regenerate the golden to make this pass — fix the input, or change "
+        f"this number deliberately in the same commit as the config change."
+    )
 
     gen = request.config.getoption("--gen-fixtures", default=False)
     if gen:

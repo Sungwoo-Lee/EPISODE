@@ -225,6 +225,26 @@ def _olfaction_tolerance(params, fixture, got, n_cells, n_channels):
     return np.tile(per_channel, n_cells)
 
 
+# ── Declared observation widths — the re-blinding tripwire ───────────────────
+# Written down here, NOT read from the golden. Every assertion below compares the live
+# world against the fixture, so if a golden is ever regenerated from a stale or frozen
+# input the whole file agrees with itself and reports green. A number declared in the
+# TEST is outside that loop: it fails with one legible line naming what it expected.
+#
+# Ground truth: 52 for `configs/environment/default.yaml` after commit 47b1b8c3
+# (olfactory_grid_range 0 -> 1 = 25, visual_sensor_range 0 -> 2 with a width-1 vector
+# = 13, plus 14 scalar/other), verified independently by the user by constructing the
+# agent through train.py's own config merge order, and reproduced by this gate's loader.
+#
+# Only slugs listed here are checked — this is a tripwire on the worlds whose width is
+# known ground truth, not a new coverage claim about the other adjudicated configs.
+# Adding an entry is cheap and always an improvement; changing one is a sensory change
+# and belongs in the same commit as the config.
+_EXPECTED_OBS_WIDTH = {
+    "configs__environment__default": 52,
+}
+
+
 # ── Collect test cases ────────────────────────────────────────────────────────
 
 _test_params = []
@@ -257,6 +277,18 @@ def test_thermal_parity(config_path, slug, has_fixture):
 
     # ── Exact: the observation's own shape contract ───────────────────────────
     breakdown_total = int(sum(get_observation_breakdown(params).values()))
+    if slug in _EXPECTED_OBS_WIDTH:
+        # Checked against a number written in this file, before the fixture is consulted:
+        # a golden re-baselined from the wrong input cannot satisfy both.
+        assert breakdown_total == _EXPECTED_OBS_WIDTH[slug], (
+            f"{slug}: observation width is {breakdown_total}, but this test declares "
+            f"{_EXPECTED_OBS_WIDTH[slug]}.\n"
+            f"Config read: {config_path}\n"
+            f"Either this world's sensory block changed (olfactory_grid_range, "
+            f"visual_sensor_range, visual_vector_size), or this case is reading a "
+            f"stale/frozen copy instead of the live config. Do NOT regenerate the "
+            f"golden to make this pass."
+        )
     assert breakdown_total == int(fixture["obs_breakdown_total"]), (
         f"{slug}: sum(get_observation_breakdown(params).values()) changed "
         f"{int(fixture['obs_breakdown_total'])} -> {breakdown_total}"
