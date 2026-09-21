@@ -1,18 +1,23 @@
 """Visual-obs byte-parity gate (CP0/CP1 — v3.0 configurable visual properties).
 
-Parametrized over 7 configs:
+Parametrized over 7 configs, every one of them read from the LIVE config tree:
   - configs/environment/default.yaml
-  - configs/environment/experiment/basic/{00-forage,01-slowPred,02-fastPred,03-multiPred,04-keenPred}.yaml
+  - configs/environment/experiment/basic/{00-static_predator_5x5,01-slow_predator_5x5,
+    02-predator_and_rabbit_10x10,03-random_init_10x10,04-jump_attack_10x10}.yaml
   - configs/environment/experiment/archive/hypervigilance/08-singlePredRabbit_disengage.yaml
 
 For each config: reset from seed 0, run 1000 steps, extract the Visual slice via
-get_observation_breakdown, assert BYTE-IDENTICAL to the pinned pre-change fixture at
+get_observation_breakdown, assert BYTE-IDENTICAL to the pinned fixture at
 tests/env/fixtures/visual_parity/<slug>.npz.
 
-Fixtures were captured on the PRE-CHANGE commit (before any code change in this plan),
-so byte-equality proves that the refactored sensor produces the same visual observations
-as the old hard-coded one-hot implementation. These fixtures must NOT be regenerated
-after the refactor.
+2026-09-21 — WHAT THIS GATE PINS CHANGED. Until today three of the seven cases loaded
+pre-resolved frozen copies of their config so the module could keep pinning a PAST
+refactor (the pre-DIRECTIONAL_SENSORS visual sensor). Commit 47b1b8c3 showed what that
+cost: it changed the default sensory settings, and those three cases stayed GREEN while
+the live ones went red — a half-blind gate that reads as coverage. See the de-blinding
+note below the imports. Every case now reads the live tree, and the goldens are a
+CURRENT-world baseline: going red on an intended sensory change is the loudness function,
+and a deliberate re-baseline (with its cause recorded) is the response.
 
 Legacy test (kept): test_visual_channel_layout — asserts predator default row is one_hot(5),
 neutral default row is one_hot(7). This still holds because the defaults are the one-hots
@@ -25,7 +30,6 @@ Usage:
   # Regenerate fixtures on the pre-change commit ONLY (before any code change):
   pytest tests/env/test_visual_parity.py --gen-fixtures
 """
-import glob
 import os
 import re
 import sys
@@ -48,109 +52,50 @@ from src.environment.sensor import get_observation, get_observation_breakdown
 
 _FIXTURE_DIR = os.path.join(_ROOT, "tests", "env", "fixtures", "visual_parity")
 
-# ── Frozen (pinned pre-change) worlds ─────────────────────────────────────────
-# THIS GATE PINS A PAST REFACTOR, NOT THE CURRENT WORLD.
+# ── Live-world sourcing (de-blinded 2026-09-21) ───────────────────────────────
+# EVERY case below reads the LIVE config tree. There are no exceptions, and reintroducing
+# one is the bug this comment exists to prevent.
 #
-# The fixtures in tests/env/fixtures/visual_parity/ were captured before the
-# DIRECTIONAL_SENSORS sensor rewrite; this module's docstring says in so many words
-# that they "must NOT be regenerated after the refactor". They are evidence about
-# code that shipped months ago.
+# The exception used to be deliberate, so here is why it was right and why it stopped
+# being right. From 2026-09-15 to 2026-09-21 three cases (`default`, `basic/01`,
+# `basic/02`) loaded PRE-RESOLVED copies under tests/env/fixtures/frozen_parity_worlds/.
+# This module pinned a PAST refactor — the DIRECTIONAL_SENSORS visual-sensor rewrite — so
+# when `blocks_animals: true` changed the live world on 2026-09-14, freezing the WORLD
+# preserved that evidence where re-baselining the fixtures would have destroyed it.
 #
-# On 2026-09-14 the bush gained `blocks_animals: true` (A1 of
-# BUSH_REFUGE_AND_LOCATION_DEPENDENT_RECOVERY), a deliberate change to the LIVE
-# world: an animal can no longer enter a bush, so animal trajectories — and every
-# observation downstream of them — moved. Three configs here went red.
+# On 2026-09-21 commit 47b1b8c3 changed the DEFAULT sensory settings themselves
+# (olfactory_grid_range 0 -> 1, visual_sensor_range 0 -> 2, visual_vector_size 8 -> 1,
+# visual_value_mode sum -> clamp, blur off -> on). The three live cases went red. The three
+# frozen ones stayed GREEN — still asserting byte-parity for a world that exists nowhere in
+# the tree, because the pre-resolved copies had the old sensory block baked in. A gate that
+# is green on half its cases purely by config provenance is worse than an absent one: it
+# reads as coverage. Recorded in KNOWN_BUGS (test-gate-hygiene family).
 #
-# Re-baselining would have destroyed the refactor evidence, so the WORLD is frozen
-# instead of the fixture: these three configs are read from pinned pre-change copies
-# under tests/env/fixtures/frozen_parity_worlds/ (see its README). Every OTHER config
-# in the list below still reads the live tree, deliberately.
+# Resolution (user decision, 2026-09-21): source every case from the live tree, so all six
+# maintained worlds track the real one. What this gate pins therefore CHANGES — it becomes
+# a CURRENT-world gate like tests/env/test_thermal_parity.py, where going red on an
+# intended sensory change is the loudness function rather than a defect.
 #
-# CONTRAST — do not "harmonise" these: tests/env/fixtures/thermal_parity/ reads the
-# LIVE configs on purpose, because it tracks the CURRENT world and going red on an
-# intended behaviour change is its loudness function. Four fixture families, two
-# jobs. A1 regenerated thermal_parity's affected fixture AND froze these worlds;
-# both were correct.
-_FROZEN_DIR = os.path.join(_ROOT, "tests", "env", "fixtures", "frozen_parity_worlds")
-_FROZEN = {
-    "configs/environment/default.yaml":
-        os.path.join(_FROZEN_DIR, "environment__default.yaml"),
-    "configs/environment/experiment/basic/01-slow_predator_5x5.yaml":
-        os.path.join(_FROZEN_DIR, "environment__experiment__basic__01-slow_predator_5x5.yaml"),
-    "configs/environment/experiment/basic/02-predator_and_rabbit_10x10.yaml":
-        os.path.join(_FROZEN_DIR, "environment__experiment__basic__02-predator_and_rabbit_10x10.yaml"),
-}
-# The fixture filename is derived from the config PATH, so repointing a config at its
-# frozen copy would change its slug, make `_fixture_path` miss, and send the test down
-# the `not os.path.exists(fp)` branch — which GENERATES a fixture. That would silently
-# re-baseline the very thing the freeze exists to protect. This map pins each frozen
-# config back to its ORIGINAL slug so the existing fixture is still the one compared.
-_SLUG_OVERRIDE = {v: "configs__" + k[len("configs/"):].replace("/", "__")[:-len(".yaml")]
-                  for k, v in _FROZEN.items()}
-
-
-def _assert_frozen_map_is_sound():
-    """Fail at IMPORT if the frozen-world wiring is wrong, in either direction.
-
-    The keys of `_FROZEN` are free strings that nothing checks against the filesystem —
-    they exist only to derive the slug. So a typo in a KEY (`defualt` for `default`)
-    would silently produce a slug with no fixture behind it. Paired with a
-    generate-on-missing branch that is a SILENT RE-BASELINE reported as green: the gate
-    would manufacture a new "pre-change" artefact from post-change code and pass.
-
-    KNOWN_BUGS row 156 records exactly this hazard, fixed once in
-    `test_extero_noc_parity.py` and naming THIS module as the unfixed sibling. Both
-    halves of the recipe are applied: the generate branch below is now gated on
-    `--gen-fixtures` alone, and this function closes the typo path that fed it.
-
-    Two directions, because each catches what the other cannot:
-      1. every override VALUE maps to a fixture that exists -> a bad key is caught;
-      2. every config under _FROZEN_DIR has an override      -> a frozen world added
-         to the directory but never wired into `_FROZEN` is caught, which would
-         otherwise sit unused while its live counterpart was still being tested.
-    """
-    for frozen_path, slug in _SLUG_OVERRIDE.items():
-        fp = os.path.join(_FIXTURE_DIR, f"{slug}.npz")
-        if not os.path.exists(fp):
-            raise AssertionError(
-                f"Frozen-world wiring is broken: {os.path.basename(frozen_path)} maps to "
-                f"slug {slug!r}, but no fixture exists at {fp}.\n"
-                f"The _FROZEN key that derives this slug is almost certainly misspelt — it "
-                f"must be the ORIGINAL repo-relative config path, e.g. "
-                f"'configs/environment/default.yaml'. Fix the key; do NOT generate a "
-                f"fixture to match it."
-            )
-        if not os.path.exists(frozen_path):
-            raise AssertionError(
-                f"Frozen-world wiring is broken: _FROZEN points at {frozen_path}, "
-                f"which does not exist."
-            )
-    _wired = {os.path.abspath(v) for v in _FROZEN.values()}
-    for f in sorted(glob.glob(os.path.join(_FROZEN_DIR, "*.yaml"))):
-        if os.path.abspath(f) not in _wired:
-            raise AssertionError(
-                f"Frozen world {os.path.basename(f)} exists under {_FROZEN_DIR} but is not "
-                f"wired into _FROZEN, so its live counterpart is still being tested and the "
-                f"freeze is not in effect for it. Add it to _FROZEN or delete the file."
-            )
-
-
-_assert_frozen_map_is_sound()
+# Slugs need no override any more: the live path of each de-blinded case derives exactly
+# the slug its existing fixture already carries, so the comparison target is unchanged.
 
 # Multi-config parametrize list: (slug_label, config_path)
+# 2026-08-26: the five `basic/` entries here previously named `00-forage_5x5`,
+# `01-slowPred_5x5`, `02-fastPred_8x8`, `03-multiPred_10x10`, `04-keenPred_10x10` — files
+# that no longer exist under any name. The `basic/` curriculum was replaced, and because
+# the gate then skipped a missing path rather than failing, FIVE OF SEVEN configs were
+# silently not being checked. Repointed at the live curriculum.
+_BASIC = os.path.join(_ROOT, "configs", "environment", "experiment", "basic")
 _PARITY_CONFIGS = [
-    ("default",         _FROZEN["configs/environment/default.yaml"]),
-    # 2026-08-26: the five entries here previously named `00-forage_5x5`,
-    # `01-slowPred_5x5`, `02-fastPred_8x8`, `03-multiPred_10x10`,
-    # `04-keenPred_10x10` — files that no longer exist under any name. The
-    # `basic/` curriculum was replaced, and because the gate below skips a
-    # missing path rather than failing, FIVE OF SEVEN configs were silently not
-    # being checked. Repointed at the live curriculum.
-    ("00-static_predator_5x5", os.path.join(_ROOT, "configs", "environment", "experiment", "basic", "00-static_predator_5x5.yaml")),
-    ("01-slow_predator_5x5",   _FROZEN["configs/environment/experiment/basic/01-slow_predator_5x5.yaml"]),
-    ("02-predator_and_rabbit_10x10", _FROZEN["configs/environment/experiment/basic/02-predator_and_rabbit_10x10.yaml"]),
-    ("03-random_init_10x10",   os.path.join(_ROOT, "configs", "environment", "experiment", "basic", "03-random_init_10x10.yaml")),
-    ("04-jump_attack_10x10",   os.path.join(_ROOT, "configs", "environment", "experiment", "basic", "04-jump_attack_10x10.yaml")),
+    ("default",                      os.path.join(_ROOT, "configs", "environment", "default.yaml")),
+    ("00-static_predator_5x5",       os.path.join(_BASIC, "00-static_predator_5x5.yaml")),
+    ("01-slow_predator_5x5",         os.path.join(_BASIC, "01-slow_predator_5x5.yaml")),
+    ("02-predator_and_rabbit_10x10", os.path.join(_BASIC, "02-predator_and_rabbit_10x10.yaml")),
+    ("03-random_init_10x10",         os.path.join(_BASIC, "03-random_init_10x10.yaml")),
+    ("04-jump_attack_10x10",         os.path.join(_BASIC, "04-jump_attack_10x10.yaml")),
+    # Self-contained archived world: it carries its OWN `sensory:` block (range 0, sum,
+    # 8-wide vector) and no `extends:`, so 47b1b8c3 did not touch it and its fixture is
+    # still the original pre-DIRECTIONAL_SENSORS artefact. Live path, not a frozen copy.
     ("08-singlePredRabbit_disengage", os.path.join(_ROOT, "configs", "environment", "experiment", "archive", "hypervigilance", "08-singlePredRabbit_disengage.yaml")),
 ]
 
@@ -207,14 +152,11 @@ def _run_episode(params, seed: int = 0) -> np.ndarray:
 
 
 def _fixture_path(config_path: str) -> str:
-    # A frozen config keeps its ORIGINAL slug — see _SLUG_OVERRIDE above. Without
-    # this, repointing at a frozen copy would look like "fixture missing" and the
-    # gate would quietly generate a new one instead of comparing against the pinned
-    # pre-change artefact.
-    # `.get(...) or ...` would DEGRADE a missed override to a path-derived slug; the
-    # import-time check above is what makes a miss impossible rather than silent.
-    slug = _SLUG_OVERRIDE[config_path] if config_path in _SLUG_OVERRIDE else _config_slug(config_path)
-    return os.path.join(_FIXTURE_DIR, f"{slug}.npz")
+    # One rule, no exceptions: the slug is derived from the config's own live path.
+    # The override table that used to sit here existed only to keep a frozen COPY
+    # pointing at the original's fixture; with the copies gone there is nothing to
+    # override, and nothing that can silently point a case at the wrong artefact.
+    return os.path.join(_FIXTURE_DIR, f"{_config_slug(config_path)}.npz")
 
 
 def _generate_fixture(config_path: str, params) -> np.ndarray:

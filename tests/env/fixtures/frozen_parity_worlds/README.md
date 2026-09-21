@@ -4,15 +4,19 @@
 
 ## What this directory is
 
-Three environment configs, frozen at commit `f02e76b9` (**2026-09-15**), used as **test inputs** by
-three byte-parity gates. They are copies of the world as it was *before* the bush became
-impassable to animals.
+**One** environment config, frozen at commit `f02e76b9` (**2026-09-15**), used as a **test input**
+by two consumers. It is a copy of the world as it was *before* the bush became impassable to
+animals.
 
-| Frozen file | Copy of | Read by |
+| Frozen file | Copy of | Read by (verified by grep, 2026-09-21) |
 |---|---|---|
-| `environment__default.yaml` | `configs/environment/default.yaml` | `test_unified_parity.py`, `test_visual_parity.py`, `test_directional_sensors.py` |
-| `environment__experiment__basic__01-slow_predator_5x5.yaml` | `configs/environment/experiment/basic/01-slow_predator_5x5.yaml` | `test_visual_parity.py` |
-| `environment__experiment__basic__02-predator_and_rabbit_10x10.yaml` | `configs/environment/experiment/basic/02-predator_and_rabbit_10x10.yaml` | `test_visual_parity.py` |
+| `environment__default.yaml` | `configs/environment/default.yaml` | `tests/env/test_unified_parity.py` (`_FROZEN_LOAD_PATH`), `scripts/verification/capture_sensor_baseline.py` (`PARITY_WORLD`) |
+
+**It held three until 2026-09-21** — see "The 2026-09-21 removal" below for why two of them were
+deleted and why this one stayed. The earlier version of this table also listed
+`test_directional_sensors.py` as a reader of `environment__default.yaml`; that was **not** true of
+the code as committed — that module reads `configs/environment/default.yaml` live (its `DEFAULT`
+constant). Corrected here rather than left standing.
 
 ## Why they exist
 
@@ -21,14 +25,17 @@ so the agent gets a real refuge. That is a **deliberate** change to the live wor
 [[BUSH_REFUGE_AND_LOCATION_DEPENDENT_RECOVERY]]). It moves animal trajectories, and through them
 the PRNG stream and every observation downstream.
 
-Three test suites went red on it. But those three do **not** ask *"is today's world still
-correct?"* — they ask *"did a **past refactor** change the observations it promised to preserve?"*:
+Three test suites went red on it. Those three did **not** ask *"is today's world still
+correct?"* — they asked *"did a **past refactor** change the observations it promised to
+preserve?"*:
 
-- `test_visual_parity.py` pins the pre-`DIRECTIONAL_SENSORS` visual sensor. Its own module
-  docstring says the fixtures **"must NOT be regenerated after the refactor."**
+- `test_unified_parity.py` pins the pre-unified-animal-refactor environment. **Still true today,
+  and the reason this directory still exists.**
 - `test_directional_sensors.py::test_observation_is_bit_identical_to_stored_pre_change_fixture`
-  pins the same era.
-- `test_unified_parity.py` pins the pre-unified-animal-refactor environment.
+  pins the pre-`DIRECTIONAL_SENSORS` era. (It reads the **live** default, not this directory —
+  see the correction above.)
+- `test_visual_parity.py` pinned the same era. **No longer — as of 2026-09-21 it reads live
+  configs and tracks the current world**; see "The 2026-09-21 removal" below.
 
 Their fixtures are **evidence about code that shipped months ago**. Re-baselining them against the
 post-A1 world would quietly convert that evidence into a snapshot of today, and no future reader
@@ -41,14 +48,16 @@ inconsistency is intentional:
 
 | Family | Reads | Purpose | On an intended behaviour change |
 |---|---|---|---|
-| `thermal_parity/` (72) | **live** configs | tracks the **current** world | **regenerate** — going red is its loudness function |
-| `parity/` (34) | frozen (default only) | pins the unified-animal refactor | **freeze the world**, keep the fixture |
-| `visual_parity/` (12) | frozen (3 configs) | pins the visual-sensor refactor | **freeze the world**, keep the fixture |
-| `directional_sensors/` (1) | frozen (default) | pins the visual-sensor refactor | **freeze the world**, keep the fixture |
+| `thermal_parity/` | **live** configs | tracks the **current** world | **regenerate** — going red is its loudness function |
+| `parity/` (34) | frozen (`default` only) | pins the unified-animal refactor | **freeze the world**, keep the fixture |
+| `visual_parity/` | **live** configs since 2026-09-21 (was: frozen, 3 configs) | tracks the **current** world | **regenerate**, with the cause recorded |
+| `directional_sensors/` (1) | live default | pins the visual-sensor refactor | — |
 
-A1 regenerated exactly one `thermal_parity/` fixture (`configs__environment__default.npz`) and
-froze the worlds for the other three. **Do not "harmonise" these four into one policy** — they
-answer different questions.
+A1 (2026-09-14) regenerated exactly one `thermal_parity/` fixture
+(`configs__environment__default.npz`) and froze the worlds for the other three. **Do not
+"harmonise" the remaining families into one policy** — they still answer different questions; the
+2026-09-21 change moved `visual_parity/` from the second row's policy to the first's *deliberately*
+and for a reason recorded below, not because the distinction was dropped.
 
 ## Provenance
 
@@ -56,6 +65,7 @@ Taken from git, never from a working copy:
 
 ```bash
 git show f02e76b9:configs/environment/default.yaml
+# the two deleted on 2026-09-21 came from the same commit:
 git show f02e76b9:configs/environment/experiment/basic/01-slow_predator_5x5.yaml
 git show f02e76b9:configs/environment/experiment/basic/02-predator_and_rabbit_10x10.yaml
 ```
@@ -91,7 +101,8 @@ them to the live tree, or regenerating their fixtures. If a future mandatory key
 provably inert, do not add it here — that is a decision for the plan owner, because it means the
 gate can no longer read the world it was captured under.
 
-The other two are **pre-resolved**: the originals carry `extends: environment/default`, and
+The other two (deleted 2026-09-21) were **pre-resolved**: the originals carry
+`extends: environment/default`, and
 `extends:` targets resolve **only** under `configs/` (`config_loader.py::_resolve_extends`). A byte
 copy would therefore still have read the **live** base, so freezing the file alone would not have
 frozen its world — a later edit to the live `default.yaml` would leak in and redden the gate again.
@@ -99,14 +110,17 @@ The chain was resolved at the frozen commit and inlined, in the loader's own mer
 `extends:` key stripped. Equivalence is not asserted in a comment; it is **proven by the gates** —
 these worlds reproduce the pinned pre-change fixtures byte-for-byte, or the tests fail.
 
-## What is NOT frozen, and why — `basic/03` and `basic/04`
+## What was NOT frozen, and why — `basic/03` and `basic/04` (historical, and one live defect)
+
+**Moot as of 2026-09-21** — nothing in `test_visual_parity.py` is frozen any more. Kept because its
+second half records a defect in that gate which is **still open**.
 
 **The freeze was scoped by which configs went red, not by which worlds A1 changed.** Those are not
-the same set, and a reader should not conclude the freeze is complete.
+the same set, and a reader should not conclude the freeze was complete.
 
 A1 edited `configs/environment/experiment/basic/03-random_init_10x10.yaml`, and
 `04-jump_attack_10x10.yaml` inherits from it. Both are in `test_visual_parity.py`'s config list,
-and both still read the **live** tree. They stayed green anyway.
+and both read the **live** tree. They stayed green anyway.
 
 **They stayed green because the check is vacuous for them**, not because A1 left them alone: their
 visual slice is **constant** — one distinct row across all 1000 steps — so it cannot register any
@@ -124,6 +138,49 @@ defines what they verify) and `configs/continual/nmn_double_return_stages/0{1..5
 curriculum tied to a specific study). See the 2026-09-14 entry in
 `docs/environment/CONFIG_CRITICAL_SETTINGS.md` for that decision and its consequence for
 evaluation.
+
+## The 2026-09-21 removal — two frozen worlds deleted, one kept
+
+**What happened.** Commit `47b1b8c3` (2026-09-21) changed the *default sensory settings*
+(`olfactory_grid_range` 0 → 1, `visual_sensor_range` 0 → 2, `visual_vector_size` 8 → 1,
+`visual_value_mode` `sum` → `clamp`, blur off → on) — the sensor ladder's `Q2_presence_binary` arm.
+`tests/env/test_visual_parity.py` then failed for its three **live** cases and **passed** for its
+three **frozen** ones, because the pre-resolved copies still carried the *old* sensory block. Those
+three were asserting byte-parity for a world that existed nowhere in the tree.
+
+**Why that is worse than a red gate.** A skipped or missing case is visible; a passing one is not.
+Half this gate detected a change to the agent's senses and half did not, purely by where each case
+sourced its config — and every future sensory change would have split the same way.
+
+**The decision (the user's, taken deliberately).** `test_visual_parity.py` now reads the **live**
+tree for all seven cases and its goldens were re-baselined against `47b1b8c3`. That changes what
+the gate pins: it is now a **current-world** gate like `thermal_parity/`, not refactor evidence.
+The two frozen worlds it was the sole reader of —
+`environment__experiment__basic__01-slow_predator_5x5.yaml` and
+`environment__experiment__basic__02-predator_and_rabbit_10x10.yaml` — were **deleted** rather than
+left behind: an unread frozen input is exactly the thing that invites this bug a third time.
+
+**What preserves the evidence the freeze existed to protect** (it is not lost, it is relocated, and
+each of these is checked by a test that runs today):
+
+1. `tests/env/test_unified_parity.py` still reads `environment__default.yaml` and still pins the
+   **unified-animal refactor** across 34 fixtures. Unchanged, and the reason this directory stays.
+2. `scripts/verification/capture_sensor_baseline.py` still reads it for the same reason.
+3. The **pre-`DIRECTIONAL_SENSORS` visual-sensor** claim specifically survives inside
+   `test_visual_parity.py` itself: its `08-singlePredRabbit_disengage` case is a **self-contained
+   archived world** with its own `sensory:` block (`visual_sensor_range: 0`, `visual_value_mode:
+   sum`, 8-wide vector) and no `extends:`, so `47b1b8c3` did not reach it. It compares against its
+   **original, never-regenerated** fixture and passed throughout this change.
+4. The retired goldens remain in git. The pre-`47b1b8c3` artefacts are recoverable with
+   `git show 47b1b8c3~1:tests/env/fixtures/visual_parity/<slug>.npz`, and the re-baseline records
+   its cause in `tests/env/fixtures/visual_parity/README.md`.
+
+**Why pre-resolution existed at all, for anyone tempted to reintroduce it.** It was never about
+speed or insulation from config churn. `extends:` resolves against `configs/` by literal path
+(`config_loader.py::_resolve_extends`), so a byte copy of `basic/01` would still have read the
+**live** `default.yaml` — freezing the file alone would not have frozen the world. Pre-resolution
+was the mechanism that made a freeze real. With the freeze gone, so is the need for it; the gate
+calls `_resolve_extends` on the live path like every other case.
 
 ## If one of these gates goes red in future
 
