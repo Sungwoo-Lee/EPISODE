@@ -49,7 +49,6 @@ def draw(ax, debate, positions, W, edges, x_min=1994, x_max=2030):
                        edgecolor=_imp.COLOUR[c], linewidth=1.2, zorder=4)
             drawn += 1
             where.setdefault(k, (yr, yy))
-            drawn += 1
     items = [(x, y, W[k]["short_label"].replace(" et al.", ""), house.INK_2) for k, (x, y) in where.items()]
     dropped = _imp.label_positions(ax, ax.get_figure(), items, fontsize=house.FS_LABEL,
                                    tries=[(0, 7), (0, -7), (7, 0), (-7, 0), (6, 7), (-6, 7), (6, -7), (-6, -7),
