@@ -134,7 +134,7 @@ def main():
                      "(percentage points; left of zero = hides less)")
     ax[1].set_title("B.  Every cell, every grid")
     fig.subplots_adjust(bottom=0.30, top=0.90)
-    house.save(fig, f"{FIG}/n01_injury_dose_response_by_range")
+    house.save(fig, f"{FIG}/n01_injury_dose_response_by_range", column_px=688)
 
     absent = sorted(c for v in missing.values() for c in v)
     with open(f"{FIG}/n01_injury_dose_response_by_range.data.txt", "w") as fh:

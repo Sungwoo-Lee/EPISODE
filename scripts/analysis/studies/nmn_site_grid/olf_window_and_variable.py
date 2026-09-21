@@ -94,6 +94,7 @@ def main():
             note=f"{n_mod} modulated cells + t1none + {len(ctrl)} unmodulated reference run(s); "
                  f"every episode is read three times, once per panel"))
 
+    span = {}
     fig, ax = plt.subplots(3, 1, figsize=(7.8, 11.4), sharey=True,
                            gridspec_kw={"hspace": .55})
     for j, (key, title) in enumerate(PANELS):
@@ -119,11 +120,16 @@ def main():
         # the "left of zero / right of zero" instruction had nothing to point at. The three
         # panels keep their own scales - their magnitudes differ by 30x and forcing one scale
         # would flatten A and B into nothing - but each is padded to show zero.
+        # Panels A and B SHARE a scale: they are the same quantity, in the same units, over the
+        # same episodes, and the page's point is that B is the diluted reading of A. On separate
+        # scales B looks as spread as A, which is the opposite of what the figure says. Panel C
+        # is a different variable on a thirtyfold larger range and keeps its own.
         vals = [b.get_width() for b in ax[j].patches if hasattr(b, "get_width")]
         if vals:
             lo, hi = min(min(vals), 0.0), max(max(vals), 0.0)
             pad = max((hi - lo) * 0.08, 0.05)
-            ax[j].set_xlim(lo - pad, hi + pad)
+            span[j] = (lo - pad, hi + pad)
+            ax[j].set_xlim(*span[j])
         ax[j].axvline(0, color=house.INK, lw=1.1, zorder=4)
         ax[j].set_title(title)
         ax[j].grid(axis="y", visible=False)
@@ -131,9 +137,11 @@ def main():
         ax[j].invert_yaxis()
         ax[j].grid(axis="x", visible=True)
 
+    ab = (min(span[0][0], span[1][0]), max(span[0][1], span[1][1]))
+    ax[0].set_xlim(*ab); ax[1].set_xlim(*ab)
     ax[2].set_xlabel("hiding, highest injury quarter minus lowest\n"
                      "(percentage points; left of zero = hides less)")
-    house.save(fig, f"{FIG}/n02_window_and_variable")
+    house.save(fig, f"{FIG}/n02_window_and_variable", column_px=688)
     used = sum(s["used"] for s in samples); avail = sum(s["total"] for s in samples)
     with open(f"{FIG}/n02_window_and_variable.data.txt", "w") as fh:
         fh.write(f"{used:,} of {avail:,} episodes ({100*used/avail:.1f}%) across 4 grids. "

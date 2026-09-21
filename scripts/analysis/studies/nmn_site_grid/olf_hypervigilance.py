@@ -54,8 +54,11 @@ CELLS  = [f"{s}_{sl}" for s in SITES for sl in SLICES]
 LOW, HIGH = (0,), (3,)                      # lightest and heaviest starting-injury quarters
 # Colour by INPUT SLICE here, not by grid: the question is whether the modulator's input matters,
 # and the interoceptive slice is the one that can see the injury signal at all.
-# The three input slices take the house series palette as it comes - three categories, three
-# series hues, no departure to state. Only the companion figures override it, and they say why.
+# A STATED DEPARTURE, and not the one the first draft made. Taking the house series palette as it
+# comes put this figure's blue on "reads body only" while the three companion figures spend the
+# same blue on "range 0 MC", and the page chrome spent it again on section numbers and links: one
+# hue, three meanings, which is register defect F11. These three hues appear in no other figure on
+# the page and in no chrome token.
 C = {}
 SLICE_NAME = {"I": "body only (interoceptive)", "X": "world only", "ALL": "everything"}
 
@@ -71,8 +74,8 @@ def shifts(d):
 
 
 def main():
-    house.apply()
-    C.update({"I": house.BLUE, "X": house.ORANGE, "ALL": house.GREEN})
+    house.apply(series=["#6b4d9b", "#17807a", "#a83f6f"])
+    C.update({"I": "#6b4d9b", "X": "#17807a", "ALL": "#a83f6f"})
     data, samples = {}, []
     for name, root in GRIDS:
         cells = {c: json.load(open(f"{root}/{c}.json"))
@@ -116,7 +119,11 @@ def main():
                       label=f"modulator reads {SLICE_NAME[s]}") for s in SLICES] + \
           [plt.Line2D([], [], ls="", marker="*", ms=15, color=house.INK,
                       label="t1none (unmodulated), one per grid")]
-    ax[0].legend(handles=hnd, loc="upper left", framealpha=.93)
+    # frameon=True explicitly. `framealpha` alone is inert here: house.apply sets
+    # legend.frameon:False, so the alpha had nothing to apply to and the x=0 reference line ran
+    # straight through the legend text.
+    ax[0].legend(handles=hnd, loc="upper left", frameon=True, facecolor=house.PAPER,
+                 edgecolor="none", framealpha=1.0)
 
     # ---- B: hypervigilance per cell, grid by grid -----------------------------------------
     ypos, labels, seen = [], [], 0
@@ -141,11 +148,11 @@ def main():
                      "right of zero = injury moved the harmless cue more")
     ax[1].set_title("B.  Every cell, every grid")
 
-    house.save(fig, f"{FIG}/n03_hypervigilance", check_text=False)
+    house.save(fig, f"{FIG}/n03_hypervigilance", check_text=False, column_px=688)
     used = sum(s["used"] for s in samples); avail = sum(s["total"] for s in samples)
     with open(f"{FIG}/n03_hypervigilance.data.txt", "w") as fh:
         fh.write(f"{used:,} of {avail:,} episodes ({100*used/avail:.1f}%) across 4 grids. "
-                 f"Only steps with an animal 1-2 or 6+ cells away enter the contrast - the 3-5 "
+                 f"Only steps with an animal 1-2 or 6+ cells away enter the contrast \u2014 the 3\u20135 "
                  f"bins are excluded by construction - and each contrast is taken inside one "
                  f"starting-injury quarter. Panel A pools all four grids; colour there is the "
                  f"modulator's input slice, not the grid.\n")

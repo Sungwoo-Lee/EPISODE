@@ -1,0 +1,643 @@
+<title>A Modulator That Barely Varies</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans+Condensed:wght@600;700&display=swap">
+<style>
+/* ============================================================================
+   HOUSE STYLE SHEET - the default look for every artifact page in this project.
+   Built by scripts/analysis/style/build_style_page.py; never edit the built file.
+
+   Palette, heading face, numbering and components: the Thermoregulation design
+   page (docs/develop/active/thermal/temperature_system_plan/page_template.html).
+   Body face: Pretendard, vendored under SIL OFL 1.1 and inlined below as a
+   subset (Latin, Greek, arrows, maths), because the Artifact CSP admits no
+   font host but Google Fonts and Pretendard is not on it.
+   Light theme only, by project preference; every colour is painted explicitly.
+   ========================================================================== */
+@font-face{font-family:'Pretendard';font-style:normal;font-weight:400;font-display:swap;
+  src:url(data:font/woff;base64,{{FONT:Regular}}) format('woff')}
+@font-face{font-family:'Pretendard';font-style:normal;font-weight:600;font-display:swap;
+  src:url(data:font/woff;base64,{{FONT:SemiBold}}) format('woff')}
+:root {
+  color-scheme: light;
+  /* neutrals - a faint green bias, not pure grey */
+  --ground:#fbfbfa; --surface:#f1f2f0; --sunk:#e9ebe8; --line:#dcdedb; --rule:#c9cdc9;
+  --ink:#16181d; --ink-2:#4e545e; --ink-3:#6e747e;
+  /* CHROME roles - numbering, glossary terms, box borders, links */
+  --accent:#2a78d6; --warn:#eb6834; --ok:#0f7a55; --danger:#b02b2b; --pick:#e8f0fc;
+  /* the accent as TEXT: #2a78d6 is 4.26:1 on the ground, so text takes one step darker (register F43) */
+  --accent-text:#1f62b4;
+  /* DATA roles - figure series. Same values as the chrome roles by default; a page whose
+     figure spends a hue on a category overrides the matching chrome token (register F11). */
+  --series-1:#2a78d6; --series-2:#eb6834; --series-3:#0f7a55; --series-4:#b02b2b;
+  /* faces */
+  --f-body:'Pretendard',system-ui,-apple-system,"Segoe UI",sans-serif;
+  --f-head:"IBM Plex Sans Condensed","Arial Narrow",system-ui,sans-serif;
+  --f-mono:"IBM Plex Mono",ui-monospace,"SF Mono",Menlo,monospace;
+}
+* { box-sizing:border-box; }
+[hidden] { display:none !important; }   /* the page's own, so no author display rule can defeat it (F14) */
+body { background:var(--ground); color:var(--ink); margin:0;
+  font-family:var(--f-body); font-size:16.5px; line-height:1.68; }
+.wrap { max-width:1140px; margin:0 auto; padding:56px 28px 110px;
+  display:flex; flex-direction:column; gap:52px; }
+.col { max-width:70ch; display:flex; flex-direction:column; gap:18px; }
+h1,h2,h3,h4,.eyebrow,.num { font-family:var(--f-head); }
+h1 { font-size:clamp(36px,5.2vw,54px); line-height:1.04; font-weight:700; margin:0;
+  letter-spacing:-.018em; text-wrap:balance; }
+h2 { font-size:28px; font-weight:700; margin:0; letter-spacing:-.012em; text-wrap:balance; line-height:1.2; }
+/* inline, not flex: a title holding <code> or <em> would tear into flex columns (F1 amendment) */
+h2 .num { display:inline-block; margin-right:14px; font-size:15px; font-weight:600; color:var(--accent-text);
+  letter-spacing:.06em; font-variant-numeric:tabular-nums; }
+h3 { font-size:19px; font-weight:600; margin:0; line-height:1.3; }
+h4 { font-size:14px; font-weight:600; margin:0; color:var(--ink-3);
+  letter-spacing:.1em; text-transform:uppercase; }
+p { margin:0; }
+a { color:var(--accent-text); text-underline-offset:2px; }
+a:focus-visible, button:focus-visible, select:focus-visible, [tabindex]:focus-visible {
+  outline:2px solid var(--accent); outline-offset:-2px; }
+.eyebrow { font-size:12px; font-weight:600; letter-spacing:.14em; text-transform:uppercase;
+  color:var(--ink-3); margin:0; }
+.lede { font-size:20px; line-height:1.55; color:var(--ink-2); }
+strong { font-weight:600; }
+code { font-family:var(--f-mono); font-size:.84em; background:var(--surface);
+  padding:1px 5px; border-radius:2px; overflow-wrap:anywhere; }
+pre { margin:0; background:var(--sunk); border-left:3px solid var(--line); padding:18px 20px;
+  overflow-x:auto; font-family:var(--f-mono); font-size:13px; line-height:1.62; }
+pre .c { color:var(--ink-2); }
+pre .k { color:var(--accent-text); font-weight:500; }
+hr { border:0; border-top:1px solid var(--line); margin:0; width:100%; }
+.foot { font-size:14px; color:var(--ink-3); }
+
+/* ---------- three rules added 2026-09-16, from the recovery_in_bush_tuning format gate ---------- */
+/* F26: a UA-default <sup>/<sub> widens the line box it sits in. `line-height:0` is the
+   load-bearing part - it stops the raised box contributing to the line box at all. */
+sup,sub { font-size:.72em; line-height:0; vertical-align:baseline; position:relative; }
+sup { top:-.5em; } sub { top:.25em; }
+/* F45 family: `thead th{text-transform:uppercase}` case-maps a symbol - theta became Theta in a
+   header while the prose beside it said theta. Anything inside a header that is a SYMBOL, an
+   identifier or a piece of code keeps its own case. Wrap a symbol as <span class="sym">. */
+th em, th code, th .sym, thead th em, thead th code, thead th .sym { text-transform:none; }
+/* F51: a heading emitted mid-container under a uniform flex gap is equidistant from the paragraph
+   above and the one below, so it reads as a caption to the wrong paragraph. */
+.col > h3:not(:first-child) { margin-top:24px; }
+
+/* ---------- boxes ---------- */
+.callout { background:var(--surface); border-left:3px solid var(--accent);
+  padding:20px 24px; display:flex; flex-direction:column; gap:10px; }
+.callout.warn { border-left-color:var(--warn); }
+.callout.pick { border-left-color:var(--ok); background:var(--pick); }
+.callout.danger { border-left-color:var(--danger); }
+.callout .eyebrow, .howto .eyebrow { color:var(--ink-2); }
+
+/* ---------- tables ---------- */
+.scroll { overflow-x:auto; }
+table { border-collapse:collapse; font-size:14.5px; width:100%;
+  font-variant-numeric:tabular-nums; }
+th,td { padding:9px 14px; text-align:left; border-bottom:1px solid var(--line); vertical-align:top; }
+td.n, th.n { text-align:right; font-family:var(--f-mono); font-size:13px; }
+td.n { white-space:nowrap; }
+/* a floor only where prose columns would otherwise be squeezed: the 5-column type table (F34) */
+table.wide { min-width:560px; }   /* td only: a header may wrap, a value may not (F35 amendment) */
+thead th { color:var(--ink-3); font-weight:600; font-size:11.5px; letter-spacing:.07em;
+  text-transform:uppercase; border-bottom:1px solid var(--rule); font-family:var(--f-head); }
+tbody tr.pick { background:var(--pick); }
+tbody tr.pick td:first-child { color:var(--accent-text); font-weight:600; }
+.cue { font-family:var(--f-mono); font-size:12px; color:var(--ink-3); }
+/* A .cue is shown by the script only while the element right after it really overflows - measured,
+   not keyed to a viewport breakpoint (F31, F32). Tables carry no min-width floor (F34). */
+
+/* ---------- glossary ---------- */
+dl { margin:0; display:grid; grid-template-columns:max-content 1fr; gap:10px 22px; align-items:baseline; }
+dt { font-family:var(--f-mono); font-size:13px; color:var(--accent-text); }
+dd { margin:0; font-size:15.5px; color:var(--ink-2); }
+/* widest term 'Interoceptive Nociception' 195px + 40ch dd (9.23px) + 22 gap + 56 gutter = 642 (F48) */
+@media (max-width:642px) { dl { grid-template-columns:1fr; gap:2px 0; } dd { margin-bottom:10px; } }
+
+/* ---------- ordered steps and open questions ---------- */
+.col.stages, .qs { display:flex; flex-direction:column; gap:0; }
+.stage { display:grid; grid-template-columns:64px 1fr; gap:20px; padding:16px 0;
+  border-bottom:1px solid var(--line); align-items:baseline; }
+.stage:last-child { border-bottom:0; }
+.stage .s { font-family:var(--f-head); font-size:13px; font-weight:700; color:var(--ink-3); letter-spacing:.07em; }
+.stage .b, .q { display:flex; flex-direction:column; gap:6px; }
+.stage .t, .q .h { font-weight:600; }
+.stage .d, .q .d { font-size:15px; color:var(--ink-2); }
+.q { padding:15px 0; border-bottom:1px solid var(--line); }
+.q:last-child { border-bottom:0; }
+
+/* ---------- tabs (new: not on the Thermoregulation page) ---------- */
+.tabs { display:flex; flex-direction:column; }
+.tablist { display:flex; flex-wrap:wrap; gap:4px 0; }
+/* each tab carries its own base rule, so a wrapped row keeps its underline under it */
+.tab { font-family:var(--f-head); font-size:13px; font-weight:600; letter-spacing:.08em;
+  text-transform:uppercase; color:var(--ink-3); background:none; border:0; cursor:pointer;
+  padding:10px 13px 8px; border-bottom:2px solid var(--line); }
+.tab:hover { color:var(--ink); }
+.tab[aria-selected="true"] { color:var(--ink); border-bottom-color:var(--accent); }
+.tabpanel { padding:16px 4px 0; display:flex; flex-direction:column; gap:12px; }
+
+/* ---------- colour swatches ---------- */
+.swatches { display:grid; grid-template-columns:repeat(auto-fill,minmax(160px,1fr)); gap:12px; }
+.sw { border:1px solid var(--line); background:var(--ground); }
+.sw .chip { height:44px; }
+.sw .meta { padding:8px 10px; font-family:var(--f-mono); font-size:12px; line-height:1.45;
+  display:flex; flex-direction:column; }
+.sw .meta b { color:var(--ink); font-weight:600; }
+.sw .meta span { color:var(--ink-2); }
+
+/* ---------- type specimens ---------- */
+.spec { border-top:1px solid var(--line); padding:14px 0 0; display:flex; flex-direction:column; gap:6px; }
+
+/* ---------- figures ---------- */
+figure { margin:0; display:flex; flex-direction:column; gap:12px; max-width:880px; }
+figcaption { font-size:14.5px; color:var(--ink-2); max-width:88ch; display:flex; flex-direction:column; gap:8px; }
+figcaption b { color:var(--ink); font-weight:600; }
+/* Figures are files written by a Python script and embedded by the builder - never drawn here. */
+figure img { width:100%; height:auto; display:block; background:var(--ground);
+  border:1px solid var(--line); cursor:zoom-in; }
+figure img:focus-visible { outline:2px solid var(--accent); outline-offset:-3px; }   /* inward: F38 */
+.zoomhint { font-family:var(--f-mono); font-size:12px; color:var(--ink-2); margin:0; }
+.prov { font-family:var(--f-mono); font-size:12px; color:var(--ink-2); line-height:1.55; }
+.prov code { background:none; padding:0; }
+
+/* ---------- full-size figure viewer (guide 2.6; copied from sensor_ladder.html, tokens adapted) ---------- */
+.lb { position:fixed; inset:0; z-index:99; background:rgba(12,12,14,.93); display:flex; flex-direction:column; }
+.lb[hidden] { display:none !important; }
+.lb-bar { display:flex; align-items:center; gap:16px; padding:12px 18px; flex:0 0 auto;
+  border-bottom:1px solid rgba(255,255,255,.13); color:#e9e6e1; font-size:13.5px; }
+.lb-bar .t { flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-family:var(--f-body); }
+.lb-bar .px { font-family:var(--f-mono); font-size:11.5px; color:#b3aea6; flex:0 0 auto; }
+.lb-bar button { font:inherit; font-size:12.5px; background:rgba(255,255,255,.1); color:#e9e6e1;
+  border:1px solid rgba(255,255,255,.2); border-radius:4px; padding:5px 12px; cursor:pointer; flex:0 0 auto; }
+.lb-bar button:hover { background:rgba(255,255,255,.18); }
+.lb-bar button:focus-visible { outline:2px solid #8fbcf0; outline-offset:2px; }
+/* flex, not grid place-items: a % max-height on a grid item never constrains (F37) */
+.lb-scroll { flex:1 1 auto; overflow:auto; display:flex; align-items:center; justify-content:center; padding:18px; }
+.lb-scroll img { flex:0 0 auto; display:block; background:#fbfbfa; border-radius:3px; }
+.lb.fit .lb-scroll img { max-width:100%; max-height:100%; width:auto; height:auto; cursor:zoom-in; }
+.lb.actual .lb-scroll { align-items:flex-start; justify-content:flex-start; }
+.lb.actual .lb-scroll img { max-width:none; max-height:none; cursor:zoom-out; }
+@media (max-width:639px) {
+  .lb-bar { flex-wrap:wrap; gap:8px 12px; }
+  .lb-bar .t { flex:1 0 100%; white-space:normal; display:-webkit-box; -webkit-line-clamp:2;
+    -webkit-box-orient:vertical; overflow:hidden; line-height:1.35; }
+}
+@media (prefers-reduced-motion:no-preference) { .lb { animation:lbin .14s ease-out; } }
+@keyframes lbin { from { opacity:0; } to { opacity:1; } }
+.howto { background:var(--surface); padding:16px 20px; display:flex; flex-direction:column; gap:8px;
+  font-size:15px; color:var(--ink-2); }
+</style>
+<style>
+/* ---------------------------------------------------------------------------------------------
+   A STATED DEPARTURE FROM THE HOUSE SHEET, required by its own rule.
+   This page's figures spend --accent (blue) and --danger (red) on data categories: the four
+   training grids. The sheet says a hue a figure spends on a category may not also be chrome on
+   that page, so the chrome hues move to a slate that appears in no figure. The figure tokens
+   themselves are untouched.
+   --------------------------------------------------------------------------------------------- */
+:root {
+  --accent: #4c5a6a;
+  --accent-text: #3b4c60;
+}
+/* The house sheet styles dl/ol through its own components; this page uses a plain ordered list
+   for its limitations, which otherwise falls back to a browser default with no rhythm. */
+ol.caveats { margin:0; padding-left:0; list-style:none; counter-reset:cv; display:flex;
+             flex-direction:column; gap:0; }
+ol.caveats li { counter-increment:cv; position:relative; padding:14px 0 14px 40px;
+                border-top:1px solid var(--line); }
+ol.caveats li::before { content:counter(cv); position:absolute; left:0; top:15px;
+                        font-family:var(--f-head); font-size:13px; color:var(--ink-3); }
+/* The settled/open table is two prose columns. Below ~560px they become 3-word ribbons, so the
+   row stacks instead: each cell becomes a labelled block. A minimum width would only add a
+   horizontal scroll to prose that has no reason to scroll. */
+@media (max-width:560px) {
+  table.ledger, table.ledger tbody, table.ledger tr, table.ledger td { display:block; width:100%; }
+  table.ledger thead { display:none; }
+  table.ledger tr { border-top:1px solid var(--line); padding:6px 0; }
+  table.ledger td { border:0; padding:8px 0; }
+  table.ledger td::before { content:attr(data-label); display:block; font-family:var(--f-head);
+                            font-size:12px; letter-spacing:.06em; text-transform:uppercase;
+                            color:var(--ink-3); margin-bottom:4px; }
+}
+</style>
+
+<div class="wrap">
+
+<header class="col">
+  <p class="eyebrow">grid_world_pain &middot; neuromodulator study &middot; behaviour and mechanism</p>
+  <h1>A Modulator That Barely Varies</h1>
+  <p class="lede">Sixty-four agents, four grids, two sensory settings. Adding a neuromodulator
+  changes none of the ways this agent's behaviour depends on its internal state &mdash; and the
+  modulator's own output says why.</p>
+</header>
+
+<section class="col">
+  <h2><span class="num">PURPOSE</span></h2>
+  <p>The agent in this project lives in a 10&times;10 grid world. It must eat or starve, predators
+  hunt it, and it can hide in a bush. At the start of every episode the environment hands it an
+  <strong>injury</strong> drawn at random from 0 to 100 that it did nothing to earn. It has
+  <strong>no sensor for that number</strong> &mdash; only a delayed, smoothed trace of it on an
+  interoceptive channel. Because the injury is assigned before the agent acts, any behaviour that
+  tracks it is <em>caused</em> by it. That makes this world a clean place to ask how much of an
+  animal's behaviour depends on its own internal state.</p>
+
+  <p>A <strong>neuromodulator</strong> here is a small network that reads what the agent senses and
+  emits, at every step, a per-unit <em>gain</em> and <em>offset</em> applied to one of the main
+  network's layers &mdash; the FiLM arrangement. The hope behind it is that an agent with such a
+  mechanism will let its internal state shape its behaviour more than an agent without one.</p>
+
+  <p>This page tests that. It compares an <strong>unmodulated control</strong> against fifteen
+  modulated variants &mdash; five places the modulator can act, crossed with three things it can be
+  allowed to read &mdash; and it does so four times over, under two return estimators and at two
+  settings of the agent's sense of smell.</p>
+
+  <div class="callout">
+    <p class="eyebrow">What it finds</p>
+    <p><strong>The modulator moves nothing that was measured.</strong> Across three behaviour
+    measures and all four grids, the unmodulated control sits inside the spread of the fifteen
+    modulated cells every time &mdash; twelve comparisons, twelve times inside.</p>
+    <p><strong>And the modulator's own output explains that.</strong> Only 8&ndash;15% of its gain
+    varies with what the agent is sensing; the rest is a fixed per-unit rescaling that a plain
+    weight matrix could have absorbed during training. There was very little context-dependence in
+    the signal for a behaviour measure to find.</p>
+    <p><strong>What does move behaviour is the sense of smell.</strong> Widening the agent's
+    olfactory field reverses the sign of its injury response &mdash; in the window where the injury
+    is still largely intact.</p>
+  </div>
+</section>
+
+<section class="col">
+  <h2><span class="num">01</span>The four grids</h2>
+  <p>Every grid is the same sixteen cells. One is <code>t1none</code> &mdash; the unmodulated control. The
+  other fifteen are five <strong>sites</strong> &mdash; the encoder, the recurrent memory, the actor,
+  the critic, or all four at once &mdash; crossed with three <strong>input slices</strong>, which
+  control what the modulator is allowed to read:</p>
+  <dl class="glossary">
+    <dt>body only</dt><dd>satiation and the interoceptive nociception channel &mdash; two numbers.
+    This is the slice that can see the injury signal at all.</dd>
+    <dt>world only</dt><dd>exteroceptive nociception, olfaction, collision and vision.</dd>
+    <dt>everything</dt><dd>the whole observation.</dd>
+  </dl>
+  <p>That grid was then trained four times: under two return estimators (<strong>MC</strong>, plain
+  Monte-Carlo returns, and <strong>GAE</strong>, normalised generalised advantage estimation) at each
+  of two settings of the olfactory sensor:</p>
+  <dl class="glossary">
+    <dt>range 0</dt><dd>one omnidirectional sample. The agent smells everything on the grid but
+    cannot tell which direction any of it comes from. Observation width 27.</dd>
+    <dt>range 1</dt><dd>a five-cell diamond. Comparing those five readings is what turns a whiff
+    into a direction. Observation width 47.</dd>
+  </dl>
+  <p>Sixty-four runs in total. Each was then replayed over <strong>1,000,000 fresh worlds</strong>,
+  and &mdash; this is what makes the comparison a comparison &mdash; every run saw the
+  <em>same</em> million worlds, in the same order, from the same seed base. Episode <em>i</em>
+  presents the same food, the same predators and the same starting injury to every agent. That was
+  verified against the environment's own per-episode dice-rolls rather than assumed from matching
+  configuration.</p>
+</section>
+
+<section class="col">
+  <h2><span class="num">02</span>Does the modulator change how much an injury matters?</h2>
+  <p>The most direct question. Sort every episode by the injury the environment dealt at step zero,
+  into four equal quarters, and ask how much of its first 25 steps the agent spent hidden in a bush.
+  The <strong>slope</strong> is the heaviest quarter minus the lightest, in percentage points.</p>
+
+  <figure>
+    <img data-fig="n01_injury_dose_response_by_range" alt="Left: bush hiding against the initial injury level in four quarters, one line per run. The range-0 runs sit near 20 to 27 percent and slope downward; the range-1 runs sit near 30 to 40 percent and slope upward. Right: the slope for every cell, grouped into four blocks by grid; the top two blocks lie entirely left of zero and the bottom two entirely right of it, with each grid's unmodulated run drawn as a black line inside its own block.">
+    <p class="zoomhint">Click the figure to view it full size</p>
+    <figcaption>
+      <span><b>Figure 1 &mdash; the injury dose-response, in four grids.</b>
+      <b>Axes, panel A.</b> Horizontal: the initial injury level the environment dealt at step zero,
+      in four equal quarters of the 0&ndash;100 range. Vertical: bush hiding over the episode's first
+      25 steps, as a percentage of those steps. Each thick line with markers is one grid's
+      unmodulated control; the thin lines behind it are that grid's fifteen modulated cells.
+      <b>Axes, panel B.</b> Horizontal: the same quantity as a difference &mdash; hiding in the
+      highest injury quarter minus hiding in the lowest, in percentage points, so left of zero means
+      the agent hid <em>less</em> when injured. Vertical: the four grids, each block holding its own
+      fifteen modulated cells as bars, with its unmodulated control drawn as a black line across the
+      block and, where the cohort has five control seeds, their span shaded behind.
+      <b>What to conclude.</b> The sign is set by the sense of smell, not by the modulator: every run
+      at range 0 hides less when injured, every run at range 1 hides more. And in all four grids the
+      unmodulated control sits <em>inside</em> the spread of its own modulated cells.</span>
+      <span><b>Data.</b> {{DATA:n01_injury_dose_response_by_range}}</span>
+    </figcaption>
+    <p class="prov">Reproduce: <code>python scripts/analysis/studies/nmn_site_grid/olf_vs_base_dose_response.py</code></p>
+    <div class="howto">
+      <p class="eyebrow">How it is computed</p>
+      <p>Every step of every episode carries the injury the environment dealt at step zero. Episodes
+      are sorted by that number into four equal quarters of the 0&ndash;100 range, and within each
+      quarter the script counts how many of the episode's first 25 steps were spent standing in a
+      bush and divides by the number of steps in that window. Counts are pooled before the ratio is
+      taken, so an episode that ran longer contributes more steps &mdash; a pooled rate, not an
+      average of per-episode rates, which would weight a two-step episode as heavily as a
+      two-hundred-step one. The slope is then the rate in the heaviest quarter minus the rate in the
+      lightest, quoted in <strong>percentage points</strong>: the arithmetic difference between two
+      percentages, so a move from 20% to 24% is +4 points and not +20%. The step at <code>t=0</code>
+      is excluded, because the agent has not acted yet. Nothing here is a model fit; these are
+      pooled counts, so there is no coefficient, no p-value and no assumption about the shape of
+      anything.</p>
+    </div>
+  </figure>
+</section>
+
+<section class="col">
+  <h2><span class="num">03</span>Is that measurement trustworthy?</h2>
+  <p>The claim above is worth attacking, because this project has already been caught by this exact
+  measurement. The sensor-ladder study found that the same contrast changes its answer twice under
+  nothing but a change of <em>window</em> and <em>variable</em>. So the same three readings are taken
+  here, of all four grids.</p>
+
+  <figure>
+    <img data-fig="n02_window_and_variable" alt="Three stacked panels showing the same injury contrast read three ways. In the first, assigned injury over 25 steps, the two range-0 blocks are left of zero and the two range-1 blocks right of it. In the second, assigned injury over the whole episode, all four blocks are left of zero. In the third, carried injury over the whole episode, all four are far right of zero.">
+    <p class="zoomhint">Click the figure to view it full size</p>
+    <figcaption>
+      <span><b>Figure 2 &mdash; the same contrast, read three ways.</b>
+      <b>Axes.</b> Horizontal, in every panel: hiding in the highest injury quarter minus hiding in
+      the lowest, in percentage points, so left of zero means the agent hid less when injured. Panels A
+      and B share one horizontal scale &mdash; the same quantity, over the same episodes, so the
+      dilution in B is visible as a shorter bar rather than hidden by a rescale. Panel C keeps its
+      own, its magnitudes being roughly thirtyfold larger. Each is padded so zero stays visibly
+      inside it. Vertical: the four grids, each
+      block holding its fifteen modulated cells, its unmodulated control as a black line, and where
+      five control seeds exist their span shaded.
+      <b>What to conclude.</b> The sign flip of Figure 1 survives only the first reading. Widen the
+      window to the whole episode and all four grids go negative. Change the variable to the injury
+      the agent was <em>carrying</em> and every grid shows a large positive number that is not causal
+      at all. What survives all three, in all four grids, is the comparison this page is about: the
+      unmodulated control stays inside the modulated spread every time.</span>
+      <span><b>Data.</b> {{DATA:n02_window_and_variable}}</span>
+    </figcaption>
+    <p class="prov">Reproduce: <code>python scripts/analysis/studies/nmn_site_grid/olf_window_and_variable.py</code></p>
+    <div class="howto">
+      <p class="eyebrow">How it is computed</p>
+      <p>Panel A is Figure 1's measurement: episodes binned by the injury <em>assigned</em> at step
+      zero, hiding counted over the first 25 steps. Panel B changes exactly one thing &mdash; the
+      same bins, but hiding counted over the whole episode. Panel C changes the variable instead:
+      each step is filed under the injury the agent was <em>carrying</em> at that moment, over the
+      whole episode. Panel B is diluted rather than wrong: the injury heals by about step 28, so most
+      of a 200-step average is an uninjured agent, and the effect washes out. Panel C is worse than
+      diluted &mdash; it is not causal. An agent carries a large injury <em>because</em> it was out in
+      the open near a predator, which is also where hiding happens, so the arrow between cause and
+      effect runs both ways. Panel B is also exactly what a whole-episode regression sees, which is
+      why the generalised linear model fitted on these same runs reports injury coefficients an
+      order of magnitude below its nutrition ones. All three panels read the same episodes; only the
+      question changes.</p>
+    </div>
+  </figure>
+
+  <div class="callout warn">
+    <p class="eyebrow">A claim on this page was narrowed by this figure</p>
+    <p>An earlier draft of Figure 1's conclusion said the sense of smell sets the sign of the injury
+    response, full stop. Panel B shows that is true only in the window where the assigned injury is
+    still largely intact. Over a whole life, every grid is negative. The narrower statement is the
+    one this page makes.</p>
+  </div>
+</section>
+
+<section class="col">
+  <h2><span class="num">04</span>Does the modulator shift what counts as a threat?</h2>
+  <p>Hiding more when injured is ordinary caution, and Figure 1 already shows it.
+  <strong>Hypervigilance</strong> is a stronger and more specific claim: that being injured shifts
+  the agent's <em>criterion</em>, so an ambiguous, harmless cue starts driving the defence a real
+  threat does. A rabbit in this world cannot hurt the agent &mdash; hiding from one is a false alarm
+  by construction &mdash; so the test is whether an injury raises the rabbit response by
+  <em>more</em> than it raises the predator response. If both rise equally the agent has simply
+  become more careful, which is not the claim.</p>
+
+  <figure>
+    <img data-fig="n03_hypervigilance" alt="Top: a scatter of the shift in the rabbit response against the shift in the predator response, one point per cell, coloured by what the modulator reads, with the four unmodulated controls as stars. Every point lies below the dashed equal-shift diagonal. Bottom: the difference between the two shifts for every cell, with the two range-0 grids clearly negative and the two range-1 grids near zero.">
+    <p class="zoomhint">Click the figure to view it full size</p>
+    <figcaption>
+      <span><b>Figure 3 &mdash; the criterion test.</b>
+      <b>Axes, panel A.</b> Horizontal: how much more the agent hid from a nearby predator when it
+      woke up badly injured than when it woke up nearly unhurt, in percentage points. Vertical: the
+      same quantity for a nearby rabbit, in percentage points. The dashed diagonal is equal shift.
+      Colour is what the modulator reads &mdash; not which grid the point belongs to; all four grids
+      are pooled here, and panel B separates them. The stars are the four unmodulated controls.
+      <b>Axes, panel B.</b> Horizontal: the rabbit shift minus the predator shift, in percentage
+      points, so right of zero means the injury moved the harmless cue more than the real threat.
+      Vertical: the four grids, as in the earlier figures.
+      <b>What to conclude.</b> Every point sits below the diagonal: in no cell of any grid does an
+      injury move the harmless cue more than the real one. At range 0 the measure is negative in all
+      32 runs &mdash; an injured agent becomes <em>more</em> discriminating, not less. At range 1 it
+      turns weakly positive, but under one percentage point against two to five at range 0. And once
+      again the unmodulated control sits inside the modulated spread in all four grids.</span>
+      <span><b>Data.</b> {{DATA:n03_hypervigilance}}</span>
+    </figcaption>
+    <p class="prov">Reproduce: <code>python scripts/analysis/studies/nmn_site_grid/olf_hypervigilance.py</code></p>
+    <div class="howto">
+      <p class="eyebrow">How it is computed</p>
+      <p>For each animal class separately, the script measures a <strong>proximity effect</strong>:
+      the share of steps spent in a bush when the nearest animal of that class was one or two cells
+      away, minus the share when it was six or more cells away. Distance is chebyshev &mdash; the
+      number of moves a chess king would need &mdash; because the agent also moves diagonally. That
+      contrast is computed twice per run, once inside the lightest quarter of starting injury and
+      once inside the heaviest, and the <em>shift</em> is the difference between them. Hypervigilance
+      is then the rabbit shift minus the predator shift: a difference of two differences. The
+      starting injury is randomised before the agent acts and the agent has no sensor for it, so
+      splitting on it is causal. Distance is <em>not</em> randomised &mdash; the agent chose where to
+      walk &mdash; so the near-versus-far contrast on its own is descriptive; it is the injury split
+      taken across it that carries the causal reading. Steps with the nearest animal three to five
+      cells away are excluded by construction, and episodes containing no animal of that class have
+      no distance at all and are excluded too.</p>
+    </div>
+  </figure>
+</section>
+
+<section class="col">
+  <h2><span class="num">05</span>Why nothing moved: the modulator barely varies</h2>
+  <p>Three measures finding nothing invites an obvious objection &mdash; that the measures are too
+  blunt. This last figure answers it from the other side, by looking at what the modulator
+  <em>emits</em> rather than at what the agent does.</p>
+  <p>A FiLM modulator's gain varies in two ways at once. It varies <strong>across units</strong>
+  &mdash; unit 7 is always scaled differently from unit 40 &mdash; and it varies <strong>across time
+  within a unit</strong>, because the agent senses something different from one step to the next.
+  Only the second is modulation in any interesting sense. The first is a fixed reparameterisation
+  that a plain weight matrix could have absorbed during training. The variance splits cleanly
+  between the two, and the fraction belonging to the second is the <strong>contextual
+  fraction</strong>.</p>
+
+  <figure>
+    <img data-fig="n04_contextual_fraction" alt="Four rows of scattered points, one row per grid, showing the contextual fraction of each run and site. Every row clusters between about 0.02 and 0.2, with medians marked at 0.140, 0.148, 0.082 and 0.135, far from 1.">
+    <p class="zoomhint">Click the figure to view it full size</p>
+    <figcaption>
+      <span><b>Figure 4 &mdash; how much of the gain is actually contextual.</b>
+      <b>Axes.</b> Horizontal: the contextual fraction of the modulator's gain, a unitless number
+      between 0 and 1, where 0 means the gain never changes with what is sensed and 1 means all of
+      its spread does. Vertical: the four grids. Each point is one trained run at one modulation
+      site; the black bar is that grid's median, printed beside it.
+      <b>What to conclude.</b> Every grid's median lies between 0.08 and 0.15, so roughly
+      85&ndash;92% of the gain's spread is a fixed per-unit rescaling rather than a live response to
+      anything. There is very little context-dependence in the signal for the behaviour measures of
+      Figures 1&ndash;3 to have found. Widening the observation from 27 numbers to 47 did not help:
+      the extended-olfaction MC grid is the <em>least</em> contextual of the four.</span>
+      <span><b>Data.</b> {{DATA:n04_contextual_fraction}}</span>
+    </figcaption>
+    <p class="prov">Reproduce: <code>python scripts/analysis/studies/nmn_site_grid/olf_contextual_fraction.py</code></p>
+    <div class="howto">
+      <p class="eyebrow">How it is computed</p>
+      <p>Each trained agent is rebuilt from its own saved configuration and replayed greedily over
+      128 fixed episodes, keeping the gain the modulator emits at every step for every unit of every
+      site it drives. That gives a table of gains indexed by unit and by time. Its total variance
+      splits exactly into two parts: the variance <em>across units</em> of each unit's time-average,
+      and the average <em>across units</em> of each unit's variance over time. The contextual
+      fraction is the second divided by the total. A value near zero means the modulator has
+      collapsed into a constant rescaling wearing the shape of a modulator; a value near one means
+      its output is genuinely a live response to what is being sensed. Note the sample: 128 episodes,
+      not the million behind Figures 1&ndash;3. The modulator's output is not recorded in the
+      behaviour store at all &mdash; storing a gain and offset for every unit of every site at every
+      step would multiply that store's size by ten to forty &mdash; so the internals come from a
+      separate, much cheaper replay.</p>
+    </div>
+  </figure>
+</section>
+
+<section class="col">
+  <h2><span class="num">06</span>What is settled, and what is not</h2>
+  <div class="scroll">
+  <table class="ledger">
+    <thead><tr><th>Settled</th><th>Still open</th></tr></thead>
+    <tbody>
+      <tr>
+        <td data-label="Settled">The unmodulated control sits inside the modulated spread in all twelve grid &times;
+        measure combinations. No site, and no input slice, moves it out.</td>
+        <td data-label="Still open">Whether a modulator built differently &mdash; a different architecture, a different
+        loss, an explicit pressure toward context-dependence &mdash; would behave differently. This
+        page tests the modulator that was built, not the idea.</td>
+      </tr>
+      <tr>
+        <td data-label="Settled">The contextual fraction is 0.08&ndash;0.15 in every grid, which accounts for the three
+        behavioural nulls rather than merely sitting beside them.</td>
+        <td data-label="Still open">Why it is so low. Nothing here distinguishes a modulator that <em>could not</em> become
+        contextual from one that had no reason to.</td>
+      </tr>
+      <tr>
+        <td data-label="Settled">The sense of smell reverses the sign of the injury response in the first 25 steps, in
+        all 64 runs, under both return estimators.</td>
+        <td data-label="Still open">What that reversal <em>is</em>. This page measures it; it does not explain why a
+        directional nose should turn an injury from a reason to forage into a reason to hide.</td>
+      </tr>
+    </tbody>
+  </table>
+  </div>
+</section>
+
+<section class="col">
+  <h2><span class="num">07</span>Limitations</h2>
+  <ol class="caveats">
+    <li><strong>One seed per cell.</strong> Every modulated cell is a single training run. Two runs
+    of the same configuration with different seeds land in different places, so a single run
+    describes one agent, not a configuration. The two range-0 grids each carry five unmodulated
+    reference seeds, and those five span most of the range their fifteen modulated cells span
+    &mdash; which is the clearest evidence on this page that the modulated spread is largely seed
+    noise. <strong>The two range-1 grids have one control run each and no such band</strong>, so
+    every comparison there is one run against one run.</li>
+    <li><strong>Nothing here was pre-registered.</strong> The grid was built to ask whether the
+    modulator's input site matters. The comparisons on this page were chosen after seeing that it
+    did not.</li>
+    <li><strong>The behaviour measures and the mechanism measure use different episodes.</strong>
+    Figures 1&ndash;3 read 1,000,000 episodes per run from the trajectory store. Figure 4 reads 128
+    episodes from a separate replay, because the modulator's output is not in the store. They share
+    a seed base, but they are not the same sample.</li>
+    <li><strong>Two runs of the GAE range-1 grid were retrained.</strong> They died partway through
+    their first attempt on a node with another tenant, and were relaunched and retrained to the full
+    budget before being collected. Their superseded directories are kept, unused, under
+    <code>results/_superseded/</code> and are read by nothing on this page.</li>
+  </ol>
+</section>
+
+<section class="col"><p class="foot">Figures are drawn by the scripts named under each one and embedded as files;
+the page draws nothing itself. Aggregates come from
+<code>scripts/analysis/studies/sensor_ladder/collect_arm_data.py --manifest</code> run over each
+grid, and the modulator internals from
+<code>scripts/analysis/nmn/run_mod_distribution.py</code>
+Rebuild: <code>python scripts/analysis/studies/nmn_site_grid/build_olf_page.py</code></p></section>
+
+</div>
+
+<div class="lb fit" id="lb" hidden role="dialog" aria-modal="true" aria-label="Full-size figure">
+  <div class="lb-bar">
+    <span class="t" id="lb-t"></span>
+    <span class="px" id="lb-px"></span>
+    <button type="button" id="lb-zoom">Actual size</button>
+    <button type="button" id="lb-x">Close &nbsp;Esc</button>
+  </div>
+  <div class="lb-scroll" id="lb-s"><img id="lb-img" alt=""></div>
+</div>
+
+<script>
+(function () {
+  // full-size figure viewer - guide 2.6, from sensor_ladder.html
+  var lb = document.getElementById('lb'), img = document.getElementById('lb-img'),
+      ttl = document.getElementById('lb-t'), px = document.getElementById('lb-px'),
+      zoom = document.getElementById('lb-zoom'), shut = document.getElementById('lb-x'),
+      scroll = document.getElementById('lb-s'), opener = null;
+  function setMode(actual) {
+    lb.classList.toggle('actual', actual); lb.classList.toggle('fit', !actual);
+    zoom.textContent = actual ? 'Fit to window' : 'Actual size';
+    if (actual) { scroll.scrollLeft = (scroll.scrollWidth - scroll.clientWidth) / 2; }
+  }
+  function open(src, caption, el) {
+    opener = el; img.src = src; img.alt = el.alt || ''; ttl.textContent = caption;
+    px.textContent = el.naturalWidth ? el.naturalWidth + ' x ' + el.naturalHeight + ' px' : '';
+    setMode(false); lb.hidden = false; document.body.style.overflow = 'hidden'; shut.focus();
+  }
+  function close() {
+    lb.hidden = true; img.removeAttribute('src'); document.body.style.overflow = '';
+    if (opener) { opener.focus(); opener = null; }
+  }
+  Array.prototype.forEach.call(document.querySelectorAll('figure img'), function (el) {
+    var fig = el.closest('figure'), cap = fig ? fig.querySelector('figcaption b') : null;
+    var label = cap ? cap.textContent.trim().replace(/\s+/g, ' ') : 'Figure';
+    el.tabIndex = 0; el.setAttribute('role', 'button');
+    el.setAttribute('aria-label', 'Open full size: ' + label.slice(0, 90));
+    el.addEventListener('click', function () { open(el.src, label, el); });
+    el.addEventListener('keydown', function (e) {
+      if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); open(el.src, label, el); }
+    });
+  });
+  zoom.addEventListener('click', function () { setMode(!lb.classList.contains('actual')); });
+  img.addEventListener('click', function () { setMode(!lb.classList.contains('actual')); });
+  shut.addEventListener('click', close);
+  lb.addEventListener('click', function (e) { if (e.target === lb || e.target === scroll) close(); });
+  document.addEventListener('keydown', function (e) {
+    if (lb.hidden) return;
+    if (e.key === 'Escape') close();
+    if (e.key === 'Tab') {
+      var f = [zoom, shut], i = f.indexOf(document.activeElement);
+      e.preventDefault(); f[(i + (e.shiftKey ? f.length - 1 : 1)) % f.length].focus();
+    }
+  });
+})();
+function updateCues() {
+  document.querySelectorAll('.cue').forEach(function (cue) {
+    var box = cue.nextElementSibling;
+    cue.hidden = !(box && box.scrollWidth > box.clientWidth + 1);
+  });
+}
+window.addEventListener('load', updateCues);
+window.addEventListener('resize', updateCues);
+if (document.fonts && document.fonts.ready) document.fonts.ready.then(updateCues);
+document.querySelectorAll('[data-tabs]').forEach(function (root) {
+  var tabs = Array.prototype.slice.call(root.querySelectorAll('[role="tab"]'));
+  function select(t, focus) {
+    tabs.forEach(function (x) {
+      var on = x === t;
+      x.setAttribute('aria-selected', on ? 'true' : 'false');
+      x.tabIndex = on ? 0 : -1;
+      document.getElementById(x.getAttribute('aria-controls')).hidden = !on;
+    });
+    updateCues();
+    if (focus) t.focus();
+  }
+  tabs.forEach(function (t, i) {
+    t.addEventListener('click', function () { select(t, false); });
+    t.addEventListener('keydown', function (e) {
+      var j = null;
+      if (e.key === 'ArrowRight') j = (i + 1) % tabs.length;
+      else if (e.key === 'ArrowLeft') j = (i - 1 + tabs.length) % tabs.length;
+      else if (e.key === 'Home') j = 0;
+      else if (e.key === 'End') j = tabs.length - 1;
+      if (j !== null) { e.preventDefault(); select(tabs[j], true); }
+    });
+  });
+});
+</script>
