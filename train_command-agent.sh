@@ -3995,3 +3995,79 @@ cd /media/nas01/projects/Interoceptive-AI/grid_world_pain
 # The run reached ~250k of 10,000,000 episodes; that is BY DESIGN, NOT a crash, and this
 # run must never be read as a science result.
 # ---------------------------------------------------------------------------
+
+# ---------------------------------------------------------------------------
+# WAVE — basic_levels_q2_default — 2026-09-21
+# 14 recurrent_ppo runs: seven basic levels x two arms (control / modulated),
+# seed 42 (config-owned), 10,000,000 episodes, fresh init.
+# wandb-group: basic_levels_q2_default, job-type: pilot
+# Design doc: docs/experiments/active/basic_levels_q2_default/BASIC_LEVELS_Q2_DEFAULT.md
+#
+# ARMS (identical files except the `modulation` block — verified by diff):
+#   control   configs/models/recurrent_ppo/nmn_input_site_grid_gaenorm/nmngaenorm_t1none.yaml
+#   modulated configs/models/recurrent_ppo/nmn_input_site_grid_gaenorm/nmngaenorm_t16quad_ALL.yaml
+#             (FiLM, sites encoder+rnn+actor+critic, input_sensors "all", temperature off)
+#
+# CONFIG-OWNED VALUES NOT PASSED: --num-envs (128), --seed (42),
+# --checkpoint-frequency (200000, from configs/train/recurrent_ppo.yaml).
+# --episodes 10000000 passed explicitly per convention.
+# --log-interval 10 passed explicitly (deviation from the config's 500; requested
+# by the user in the launch spec for this wave, so short-horizon curves are dense).
+#
+# PRE-FLIGHT (all seven nodes 101/103/104/105/106/107/108):
+#   NAS mounted (df | grep -c nas01 = 1), both GPUs idle, no train.py running,
+#   jax 0.9.0.1 + flax/optax/orbax/chex import AND a real 4x4 GPU matmul JIT-compiled
+#   (block_until_ready) on every node — uniform versions, ptxas present.
+#   No level config resolves through configs/environment/experiment/archive/.
+#
+# OBSERVATION-WIDTH DISCRIMINATOR — the load-bearing check (default.yaml changed
+# in 47b1b8c3). Every banner verified from its own log; a banner of 27 would mean an
+# archived eight-channel config was loaded and the run void. ZERO runs printed 27:
+#   levels 00, 01 -> 44  (Sat 1, InteroNoci 1, ExteroNoci 1, Olf 25, Coll 5, Proprio 6, Vis 5)
+#   levels 02-04  -> 52  (same, Vis 13)
+#   levels 05, 06 -> 58  (adds Body Temperature 1 + Thermoception 5, Vis 13)
+# Modulator confirmed live on the modulated arms —
+#   "Neuromodulation: ENABLED (type=FiLM, mod_hidden=16, grouping=1, input_sensors=[all],
+#    sites=[encoder,rnn,actor,critic], rnn_mechanism=activation, temperature=off)"
+# and "Neuromodulation: DISABLED (baseline)" on every control.
+#
+# NOT A DEFECT: every log's banner reads "Device: gpu (cuda:0)" regardless of the
+# --device index, because train.py line 54 sets CUDA_VISIBLE_DEVICES to the requested
+# index, so in-process the card is always local 0. Physical placement was verified
+# against nvidia-smi instead: exactly two compute apps per node, one on GPU 0 and one
+# on GPU 1, both at 84-100% util.
+#
+# Launched via CIFS-bypass /tmp scripts (each staged file asserted non-empty,
+# 525-540 B, and asserted to contain its own --tag before invoking — the previous
+# wave's failure mode was a 0-byte staged script from `ssh -n`). This file is the
+# audit record; run_command.py --no-tail drove every launch.
+#
+# | #  | tag                            | node:GPU | PID     | WandB id | obs | log                      |
+# |----|--------------------------------|----------|---------|----------|-----|--------------------------|
+# | 1  | rppo_basicq2_lvl00_t1none_s42  | 101:0    | 816565  | jgtjv7qv | 44  | logs/20260921_114813.log |
+# | 2  | rppo_basicq2_lvl00_t16quad_s42 | 101:1    | 816762  | 4o1srir4 | 44  | logs/20260921_114817.log |
+# | 3  | rppo_basicq2_lvl01_t1none_s42  | 103:0    | 795990  | b39w8s4z | 44  | logs/20260921_114821.log |
+# | 4  | rppo_basicq2_lvl01_t16quad_s42 | 103:1    | 796181  | htbrkjnw | 44  | logs/20260921_114825.log |
+# | 5  | rppo_basicq2_lvl02_t1none_s42  | 104:0    | 819539  | 994j5bpc | 52  | logs/20260921_114829.log |
+# | 6  | rppo_basicq2_lvl02_t16quad_s42 | 104:1    | 819733  | pj6a2jse | 52  | logs/20260921_114833.log |
+# | 7  | rppo_basicq2_lvl03_t1none_s42  | 105:0    | 906180  | qc9bis74 | 52  | logs/20260921_114837.log |
+# | 8  | rppo_basicq2_lvl03_t16quad_s42 | 105:1    | 906372  | 9n91mhlc | 52  | logs/20260921_114841.log |
+# | 9  | rppo_basicq2_lvl04_t1none_s42  | 106:0    | 1077322 | 4pfljig3 | 52  | logs/20260921_114845.log |
+# | 10 | rppo_basicq2_lvl04_t16quad_s42 | 106:1    | 1077517 | rajw94o5 | 52  | logs/20260921_114849.log |
+# | 11 | rppo_basicq2_lvl05_t1none_s42  | 107:0    | 725956  | akr5536q | 58  | logs/20260921_114852.log |
+# | 12 | rppo_basicq2_lvl05_t16quad_s42 | 107:1    | 726169  | 8x0c6wkw | 58  | logs/20260921_114856.log |
+# | 13 | rppo_basicq2_lvl06_t1none_s42  | 108:0    | 633501  | k0kih5kt | 58  | logs/20260921_114900.log |
+# | 14 | rppo_basicq2_lvl06_t16quad_s42 | 108:1    | 633715  | 2160h4nc | 58  | logs/20260921_114904.log |
+#
+# PIDs are as seen by `pgrep` on the node; nvidia-smi reports host-namespace PIDs
+# and will not match. Exactly one PID per tag was confirmed 110 s after launch.
+#
+# Representative active command (run 14 — level 06, modulated arm, node 108 cuda:1).
+# The other thirteen differ only in --config, --agent_config, --device and the tag pair.
+# ---------------------------------------------------------------------------
+/home/vncuser/miniconda3/envs/grid_world_pain/bin/python train.py \
+  --config configs/environment/experiment/basic/06-sensory_noise_10x10.yaml \
+  --agent_config configs/models/recurrent_ppo/nmn_input_site_grid_gaenorm/nmngaenorm_t16quad_ALL.yaml \
+  --episodes 10000000 --device cuda:1 --log-interval 10 \
+  --tag "rppo_basicq2_lvl06_t16quad_s42" --wandb-name "rppo_basicq2_lvl06_t16quad_s42" \
+  --wandb-group "basic_levels_q2_default" --wandb-job-type "pilot"
