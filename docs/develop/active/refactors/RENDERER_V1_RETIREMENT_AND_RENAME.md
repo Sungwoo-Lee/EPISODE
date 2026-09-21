@@ -508,3 +508,14 @@ Two decisions remain open. (Four others were decided today and are recorded in �
 | | | | |
 
 **Conclusion**: —
+
+---
+
+## Feedback from plan-reviewer
+
+> **Reviewed at**: commit `78141d20` (Revision 2) · 2026-09-21 · **Verdict: SOUND WITH CONCERNS** (no Critical finding).
+> Full report: [`docs/reviews/plan_renderer_v1_retirement.md`](../../../reviews/plan_renderer_v1_retirement.md).
+
+The ordering is right and every claim in A10 re-verified. What is short is **Step 2's own scope**: its exit gate (CP2.7, "controls pass with both old renderers moved aside") cannot pass as written, because (1) the audit's `load_inputs` imports `thermal_color_limits` from V1 at `render_layout_audit.py:418` on every call — including on the substitution path Step 2 reuses — and the plan schedules that edit for Step 3; and (2) `run_controls` iterates `CONTROLS`, whose seven entries still render `"v1"`/`"v2"`, so the `CONTROLS` change the plan marks "only if" is mandatory, and the `--controls` CLI cannot survive Step 3 at all (the audit may not import the dashboard, so it cannot render a current frame itself) — which also fires the dependency-map contract on Step 2. Three more Moderates: `git stash` cannot move an unmodified tracked file aside and would sweep parallel sessions' uncommitted edits — specify `mv` out + `git checkout --` back; Step 2's "safe under live runs" is only true if the deliberate breaks are test-process monkeypatches and nothing under `src/environment/dashboard/` changes — say so or give Step 2 the Step 1 wait gate; and CP1.4's byte-identity assumes reproducible MP4 encoding, which [[EVAL_RENDERER_SWITCHOVER]] §Rollback (b)'s own 956,266 B vs 956,367 B record contradicts — establish twice-render determinism before Step 1 or fall back to decoded-frame equality. Two Opens decide Step 2's shape: nobody has yet looked at the current renderer's non-cell findings on M4/M1 (the only full-audit test asserts `cell_*` only), and pinning **non-zero** exact counts on a live renderer will break on every legitimate change — the stable pin is zero on every defect rule. Lows: `test_c4.py` (repo root) is a fourteenth dependent of the April file; CP3.2's grep will hit prose (`sensor.py:689`, `dashboard/__init__.py:32`); and `video.py`'s required docstring can trip `test_no_file_in_the_package_names_the_frozen_renderer_at_all` if one line carries both "renderer" and "import" without a quote character.
+
+*— plan-reviewer, 2026-09-21*
