@@ -1,0 +1,1 @@
+All 42 of 42 works are counted (100%): reviewed in full 22, short summary from the PDF 14, named only (no PDF held) 6. Era membership follows works.csv `year` (the first public year), so five works sit one era away from where their print year would put them.
