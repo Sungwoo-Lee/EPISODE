@@ -1,3 +1,9 @@
+# ARCHIVED 2026-09-19 — the 8-channel sensory world, exactly as it stood before the default moved
+# to the sensor ladder's Q2_presence_binary arm (olf 1 / vis 2 / vec 1 / clamp / blur on).
+#
+# Self-contained on purpose: every `extends` in this directory points INSIDE it, so loading any of
+# these files reproduces the old world regardless of what configs/environment/default.yaml becomes.
+# Do not repoint them at the live tree.
 # Basic curriculum — 04-jump_attack_10x10
 # ---------------------------------------------------------------------------
 # PURPOSE (plain language): the JUMP level. It takes level 03 (random-init, all-combined
@@ -21,7 +27,7 @@
 #   attack_delay [1,3], damage [15,120]). NO perceptual noise in this chain (that arrives at 06).
 # It only REDECLARES `entities` to add the two new jump knobs to the predator (list-replace
 # footgun: the whole entities list must be restated). Rabbit unchanged.
-extends: environment/experiment/basic/03-random_init_10x10
+extends: environment/experiment/archive/basic_vec8/03-random_init_10x10
 
 environment:
   entities:
@@ -32,8 +38,8 @@ environment:
       count_high: 2
       properties: [0.0, 0.7, 0.5, 0.0, 0.0]
       properties_std: [0.0, 0.3, 0.3, 0.0, 0.0]
-      visual_properties: [1.0]
-      visual_properties_std: [0.0]
+      visual_properties: [0, 0, 0, 0, 0, 1, 0, 0]
+      visual_properties_std: [0, 0, 0, 0, 0, 0, 0, 0]
       move_interval: [1, 1]
       damage: [15.0, 120.0]
       attack_delay: [1, 3]
@@ -54,8 +60,8 @@ environment:
       count_high: 2
       properties: [0.0, 0.5, 0.7, 0.0, 0.0]
       properties_std: [0.0, 0.3, 0.3, 0.0, 0.0]
-      visual_properties: [1.0]
-      visual_properties_std: [0.0]
+      visual_properties: [0, 0, 0, 0, 0, 0, 0, 1]
+      visual_properties_std: [0, 0, 0, 0, 0, 0, 0, 0]
       move_interval: [1, 1]
       damage: [0.0, 0.0]
       attack_delay: [0, 0]

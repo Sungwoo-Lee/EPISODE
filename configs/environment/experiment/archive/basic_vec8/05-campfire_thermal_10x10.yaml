@@ -1,3 +1,9 @@
+# ARCHIVED 2026-09-19 — the 8-channel sensory world, exactly as it stood before the default moved
+# to the sensor ladder's Q2_presence_binary arm (olf 1 / vis 2 / vec 1 / clamp / blur on).
+#
+# Self-contained on purpose: every `extends` in this directory points INSIDE it, so loading any of
+# these files reproduces the old world regardless of what configs/environment/default.yaml becomes.
+# Do not repoint them at the live tree.
 # Basic curriculum — 05-campfire_thermal_10x10
 # ---------------------------------------------------------------------------
 # RE-LEVELED 2026-09-16: this file was `06-campfire_thermal_10x10.yaml` and extended
@@ -55,7 +61,7 @@
 # world had neither: it was a fixed-start, non-pouncing scene on default.yaml's counts.
 #
 # TWO DELIBERATE DIFFERENCES FROM THE ARCHIVED WORLD, both current-schema choices:
-#   1. `extends: environment/experiment/basic/04-jump_attack_10x10` instead of a full
+#   1. `extends: environment/experiment/archive/basic_vec8/04-jump_attack_10x10` instead of a full
 #      standalone copy (and, since 2026-09-16, instead of extending `environment/default`
 #      directly — the ladder now chains at levels 04-06). The archived file
 #      is standalone because eight thermal test modules load it from a RAW `Config`
@@ -107,8 +113,8 @@ environment:
       # way to tell a fire from a rock, which is the point of the sense. A fire on its
       # own visual channel would let a vision-equipped agent solve the thermal task
       # without ever using the thermoceptor.
-      visual_properties: [1.0]
-      visual_properties_std: [0.0]
+      visual_properties: [0,0,0,0,0,0,1,0]
+      visual_properties_std: [0,0,0,0,0,0,0,0]
     - name: "rock"
       count_low: 6    # per-episode lower bound
       count_high: 12  # per-episode upper bound; allocation size
@@ -118,8 +124,8 @@ environment:
       nociception_intensity: 0.9
       properties: [0.0, 0.0, 0.0, 0.0, 0.0]
       properties_std: [0.0, 0.0, 0.0, 0.0, 0.0]
-      visual_properties: [1.0]
-      visual_properties_std: [0.0]
+      visual_properties: [0,0,0,0,0,0,1,0]
+      visual_properties_std: [0,0,0,0,0,0,0,0]
     - name: "tree"
       count: 0
       area: [[5, 15], [5, 15]]
@@ -128,8 +134,8 @@ environment:
       nociception_intensity: 0.1
       properties: [0.0, 0.0, 0.0, 0.0, 1.0]
       properties_std: [0.0, 0.0, 0.0, 0.0, 0.0]
-      visual_properties: [1.0]
-      visual_properties_std: [0.0]
+      visual_properties: [0,0,0,0,0,0,1,0]
+      visual_properties_std: [0,0,0,0,0,0,0,0]
     - name: "bush"
       count_low: 4    # per-episode lower bound
       count_high: 10  # per-episode upper bound; allocation size
@@ -141,8 +147,8 @@ environment:
       blocks_animals: true   # animals cannot enter; the agent still can (default.yaml's value)
       properties: [0.0, 0.0, 0.0, 1.0, 0.0]
       properties_std: [0.0, 0.0, 0.0, 0.0, 0.0]
-      visual_properties: [1.0]
-      visual_properties_std: [0.0]
+      visual_properties: [0,0,0,0,0,0,1,0]
+      visual_properties_std: [0,0,0,0,0,0,0,0]
 
 # The gate, and the ONLY thermal key this world changes. Every other key under `thermal:`
 # in default.yaml already carries the archived campfire world's value (sigma 0.7,

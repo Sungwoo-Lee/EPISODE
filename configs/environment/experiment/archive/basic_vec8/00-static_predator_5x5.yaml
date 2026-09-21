@@ -1,8 +1,14 @@
+# ARCHIVED 2026-09-19 — the 8-channel sensory world, exactly as it stood before the default moved
+# to the sensor ladder's Q2_presence_binary arm (olf 1 / vis 2 / vec 1 / clamp / blur on).
+#
+# Self-contained on purpose: every `extends` in this directory points INSIDE it, so loading any of
+# these files reproduces the old world regardless of what configs/environment/default.yaml becomes.
+# Do not repoint them at the live tree.
 # Basic curriculum — 00-static_predator_5x5
 # food + non-moving (static/hiding) predators only; no chaser, no cover.
 # Sparse override of configs/environment/default.yaml (extends:); body/sensory/noise/behavior_measures inherited.
 # Composition: hunt_predator=0 hiding_predator(static)=2 rabbit=0 food=2 bush=0 rock=0 | grid 5x5
-extends: environment/default
+extends: environment/experiment/archive/basic_vec8/default
 
 environment:
   height: 5
@@ -20,8 +26,8 @@ environment:
       spawn_area: [[1, 1], [5, 5]]
       properties: [1.0, 0.0, 0.0, 0.0, 0.0]
       properties_std: [0.0, 0.0, 0.0, 0.0, 0.0]
-      visual_properties: [1.0]
-      visual_properties_std: [0.0]
+      visual_properties: [0, 0, 0, 1, 0, 0, 0, 0]
+      visual_properties_std: [0, 0, 0, 0, 0, 0, 0, 0]
       max_consumption: 12
       regeneration_delay: 0
       damage: [0.0, 0.0]
@@ -32,18 +38,11 @@ environment:
       spawn_area: [[1, 1], [5, 5]]
       properties: [0.0, 0.0, 0.0, 0.0, 0.0]
       properties_std: [0.0, 0.0, 0.0, 0.0, 0.0]
-      visual_properties: [1.0]
-      visual_properties_std: [0.0]
+      visual_properties: [0, 0, 0, 0, 1, 0, 0, 0]
+      visual_properties_std: [0, 0, 0, 0, 0, 0, 0, 0]
       max_consumption: -1
       regeneration_delay: 20
       damage: [15.0, 45.0]
       nociception_intensity: 0.9
   entities: []
   obstacles: []
-
-# 2026-09-19: the default moved to visual_sensor_range 2, a 13-cell diamond of radius 2. On a
-# 5x5 map that is most of the world at once, so the visual sensor would stop being local and this
-# rung would stop being a staged step. Pinned to 1 (a 5-cell diamond) to keep sight local here;
-# 02 onward are 10x10 and take the default.
-sensory:
-  visual_sensor_range: 1

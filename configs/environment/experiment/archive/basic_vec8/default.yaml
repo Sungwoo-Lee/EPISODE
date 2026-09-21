@@ -1,3 +1,9 @@
+# ARCHIVED 2026-09-19 — the 8-channel sensory world, exactly as it stood before the default moved
+# to the sensor ladder's Q2_presence_binary arm (olf 1 / vis 2 / vec 1 / clamp / blur on).
+#
+# Self-contained on purpose: every `extends` in this directory points INSIDE it, so loading any of
+# these files reproduces the old world regardless of what configs/environment/default.yaml becomes.
+# Do not repoint them at the live tree.
 # Default Configuration for GridWorld Interoceptive AI
 
 environment:
@@ -29,8 +35,8 @@ environment:
       spawn_area: [[1, 1], [10, 10]]   # full grid (was 4 quadrant entries)
       properties: [1.0, 0.0, 0.0, 0.0, 0.0]
       properties_std: [0.0, 0.0, 0.0, 0.0, 0.0]
-      visual_properties: [1.0]
-      visual_properties_std: [0.0]
+      visual_properties: [0,0,0,1,0,0,0,0]
+      visual_properties_std: [0,0,0,0,0,0,0,0]
       max_consumption: 12
       regeneration_delay: 0
       damage: [0.0, 0.0]
@@ -43,8 +49,8 @@ environment:
       spawn_area: [[1, 1], [10, 10]]
       properties: [0.0, 0.0, 0.0, 0.0, 0.0]
       properties_std: [0.0, 0.0, 0.0, 0.0, 0.0]
-      visual_properties: [1.0]
-      visual_properties_std: [0.0]
+      visual_properties: [0,0,0,0,1,0,0,0]
+      visual_properties_std: [0,0,0,0,0,0,0,0]
       max_consumption: -1
       damage: [15.0, 45.0]
       regeneration_delay: 20
@@ -64,8 +70,8 @@ environment:
       count_high: 2  # occasionally 2 predators to prevent single-predator-position policy
       properties: [0.0, 0.7, 0.5, 0.0, 0.0]
       properties_std: [0.0, 0.4, 0.4, 0.0, 0.0]
-      visual_properties: [1.0]
-      visual_properties_std: [0.0]
+      visual_properties: [0,0,0,0,0,1,0,0]
+      visual_properties_std: [0,0,0,0,0,0,0,0]
       move_interval: 1
       damage: [15.0, 45.0]
       nociception_intensity: 0.9
@@ -89,8 +95,8 @@ environment:
       count_high: 2  # trimmed from 3→2 to recover ~half the hot-path step-SPS regression
       properties: [0.0, 0.5, 0.7, 0.0, 0.0]
       properties_std: [0.0, 0.4, 0.4, 0.0, 0.0]
-      visual_properties: [1.0]
-      visual_properties_std: [0.0]
+      visual_properties: [0,0,0,0,0,0,0,1]
+      visual_properties_std: [0,0,0,0,0,0,0,0]
       move_interval: 1
       nociception_intensity: 0.1
       damage: [0.0, 0.0]
@@ -114,8 +120,8 @@ environment:
       nociception_intensity: 0.9
       properties: [0.0, 0.0, 0.0, 0.0, 0.0]
       properties_std: [0.0, 0.0, 0.0, 0.0, 0.0]
-      visual_properties: [1.0]
-      visual_properties_std: [0.0]
+      visual_properties: [0,0,0,0,0,0,1,0]
+      visual_properties_std: [0,0,0,0,0,0,0,0]
     - name: "tree"
       count: 0
       area: [[5, 15], [5, 15]]
@@ -124,8 +130,8 @@ environment:
       nociception_intensity: 0.1
       properties: [0.0, 0.0, 0.0, 0.0, 1.0]
       properties_std: [0.0, 0.0, 0.0, 0.0, 0.0]
-      visual_properties: [1.0]
-      visual_properties_std: [0.0]
+      visual_properties: [0,0,0,0,0,0,1,0]
+      visual_properties_std: [0,0,0,0,0,0,0,0]
     - name: "bush"
       count_low: 4    # per-episode lower bound; was 10 fixed (5+5 across 2 quadrants)
       count_high: 10  # per-episode upper bound; allocation size
@@ -143,8 +149,8 @@ environment:
                              # CONFIG_CRITICAL_SETTINGS.md.
       properties: [0.0, 0.0, 0.0, 1.0, 0.0]
       properties_std: [0.0, 0.0, 0.0, 0.0, 0.0]
-      visual_properties: [1.0]
-      visual_properties_std: [0.0]
+      visual_properties: [0,0,0,0,0,0,1,0]
+      visual_properties_std: [0,0,0,0,0,0,0,0]
 
 body:
   # Body state
@@ -219,11 +225,7 @@ sensory:
   # diamond, so the readings carry a gradient and therefore a direction.
   # Out-of-bounds cells read zero, matching the visual sensor.
   # Dimensions = (2r^2 + 2r + 1) * vector_size.
-  # 2026-09-19: 0 -> 1. The sensor-ladder study measured this as the single most valuable
-  # sensory change in the whole ladder: +45.3 survival steps, larger than any change to sight.
-  # At 0 the agent smells everything within sensor_radius but cannot tell where any of it is;
-  # at 1 the five readings carry a gradient, so smell acquires a direction.
-  olfactory_grid_range: 1
+  olfactory_grid_range: 0
   #Collision sensor
   collision_sensor_range: 1
   #Location sensor
@@ -233,35 +235,13 @@ sensory:
   nociception_size: 1
   #Visual sensor
   visual_sensor_enabled: true
-  # 2026-09-19: 0 -> 2, a 13-cell Manhattan diamond. The agent now has a real visual field.
-  visual_sensor_range: 2
-  # 2026-09-19: 8 -> 1, WITH visual_value_mode: clamp below. This is the ladder's
-  # `Q2_presence_binary` arm, and the pair of settings is the point: at width 1 every entity
-  # collapses to the same number, so vision reports THAT something is at a cell and never WHAT.
-  #
-  # Identity does not disappear from the world - it moves to the nose. The two odour channels are
-  # [0, 0.7, 0.5, 0, 0] for a predator and [0, 0.5, 0.7, 0, 0] for a neutral: same total intensity,
-  # and the RATIO is what separates the classes. So the default agent has two modalities doing
-  # different jobs - vision says WHERE, olfaction says WHAT - and has to combine them.
-  #
-  # Chosen deliberately over the 8-channel arms. With width 8 vision answers both questions at
-  # once, olfaction becomes redundant, and every one of the ladder's nine 8-channel arms shows a
-  # NEGATIVE response to a harmless animal: they solved identity visually and stopped using smell.
-  # Q2 keeps both modalities live and still hides from rabbits (+5.96 pp), which is a specific,
-  # legible failure to fuse them rather than general incompetence.
-  #
-  # NOTE this changes the observation width for every config that does not override it: 27 -> 52
-  # (olfaction 5 -> 25, visual 8 -> 13). It is also fingerprinted by the curriculum modality
-  # check, so a run cannot resume across this change - which is the check working.
-  visual_vector_size: 1
+  visual_sensor_range: 0
+  visual_vector_size: 8   # width of per-entity visual property vectors (v3.0+); default 8 preserves byte-parity
   # DIRECTIONAL_SENSORS anisotropic point-spread blur. false = exact cell match, byte-identical
   # to pre-DIRECTIONAL_SENSORS. When true, each entity is written into cells with a gaussian
   # weight elongated ALONG the agent->entity ray, so distance becomes vague while
   # bearing stays sharp. Needs visual_sensor_range >= 1 to have anywhere to spread.
-  # 2026-09-19: false -> true, matching `Q2_presence_binary` exactly. Inherited by that arm from
-  # the V-family and never varied WITHIN the single-channel condition, so it is an untested
-  # inheritance rather than a measured optimum - a candidate for the first sweep.
-  visual_blur_enabled: true
+  visual_blur_enabled: false
   visual_blur_radial_scale: 0.5    # sigma_parallel = max(scale * distance, sigma_floor)
   visual_blur_anisotropy: 3.0      # rho = sigma_par / sigma_perp; 1.0 == isotropic
   # Half a cell is the grid's sampling limit. Required, not cosmetic: mass
@@ -277,12 +257,7 @@ sensory:
   #   sum   = weighted sum / count (pre-DIRECTIONAL_SENSORS behaviour; two rocks read 2.0)
   #   clamp = per-channel presence, capped at 1.0 (an RF-like "something is here")
   # Applies to the ENTITY contribution only; terrain keeps its own value.
-  # 2026-09-19: sum -> clamp. Under `sum` two rocks in a cell read 2.0, which leaks a weak count
-  # signal; `clamp` caps each channel at 1.0 and is a true presence sensor. With
-  # visual_vector_size: 1 this is the RF-style "something is here" return. The ladder separates
-  # the two: Q2 (clamp) shows a +5.96 pp response to a harmless animal against Q1 (sum) at +3.29,
-  # a gap larger than the ~1.4 pp spread five seeds of one config produce.
-  visual_value_mode: clamp
+  visual_value_mode: sum
   # DIRECTIONAL_SENSORS — line-of-sight occlusion. A nearer entity flagged `blocks_sight: true`
   # hides anything inside the shadow cone of the ray to it. The two sub-keys are
   # read ONLY when this is true (CONFIG_GUIDE.md §5 conditional-key pattern).
@@ -292,10 +267,11 @@ sensory:
   visual_occlusion_enabled: false
   # visual_occlusion_cone_deg: 10.0     # half-angle of the shadow cone
   # visual_occlusion_strength: 1.0      # 1.0 = fully hidden, <1.0 = attenuated
-  visual_background_properties:   # grass / sand / plain - all 0.0: at visual_vector_size 1 the visual sensor reports ENTITIES, not ground
-    - [0.0]
-    - [0.0]
-    - [0.0]  #Proprioception sensor
+  visual_background_properties:   # grass / sand / plain
+    - [1,0,0,0,0,0,0,0]
+    - [0,1,0,0,0,0,0,0]
+    - [0,0,1,0,0,0,0,0]
+  #Proprioception sensor
   proprioception_enabled: true
 
   # Hidden-state observability gates (default true = backward compatible)
