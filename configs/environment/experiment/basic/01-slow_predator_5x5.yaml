@@ -86,8 +86,11 @@ environment:
       visual_properties_std: [0.0]
 
 # 2026-09-19: the default moved to visual_sensor_range 2, a 13-cell diamond of radius 2. On a
-# 5x5 map that is most of the world at once, so the visual sensor would stop being local and this
-# rung would stop being a staged step. Pinned to 1 (a 5-cell diamond) to keep sight local here;
-# 02 onward are 10x10 and take the default.
+# 5x5 map that is most of the world at once, so the visual sensor would stop being a staged step
+# up from nothing. Pinned to 1 (a 5-cell diamond) here; 02 onward are 10x10 and take the default.
+# 2026-09-21: "keeps sight local" was the original wording and it overstates what the pin does.
+# visual_sensor_range limits the cells the sensor SAMPLES, not the entities that contribute to
+# them: _psf_weights applies no radius gate, so on a 5x5 map every entity still leaks attenuated
+# blur into the 5-cell diamond. The pin bounds the READOUT, not the reach.
 sensory:
   visual_sensor_range: 1

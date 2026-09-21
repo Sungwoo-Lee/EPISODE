@@ -117,6 +117,26 @@ across hardware. Nodes 102 and 109–114 are deliberately untouched.
 `--seed`, `--num-envs` and `--checkpoint-frequency` are config-owned and not passed.
 `--episodes 10000000` is passed explicitly, per the launch convention.
 
+## One caveat that does not block this wave but blocks a claim
+
+`env-config-reviewer` checked, at pre-flight, whether level 06's perceptual-noise profile
+still lines up with the new observation layout. Mechanically it does: the noise system
+slices **by modality name**, not by index range, so olfaction's jump from 5 to 25
+dimensions and vision's from 8 to 13 are covered automatically and nothing is left
+un-noised or noised at the wrong width.
+
+What has *not* been re-derived is the calibration's premise. Level 06's injury-gated
+noise was tuned when smell was a 5-dimension on-cell reading and vision was an 8-dimension
+on-contact identity channel. It now acts on a 25-dimension *gradient*, where the useful
+signal is the difference **between** neighbouring cells rather than the value in one, and
+on a 13-cell blurred field whose neighbour tails (~0.086) sit below one noise sigma (0.1)
+even at zero injury. The level still runs correctly; what is unverified is whether it still
+*means* what it was built to mean.
+
+Consequence: this wave may be read for survival steps on level 06. It may **not** be read
+for a hypervigilance claim on level 06 without first re-deriving that calibration — a job
+for `experiment-designer`.
+
 ## How it will be read
 
 Performance is **survival steps**, never cumulative reward (project rule). The comparison
@@ -129,3 +149,21 @@ any level shows a gap worth seeding properly*, not a measurement of the gap.
 - Default-config change and its evidence: `docs/environment/CONFIG_CRITICAL_SETTINGS.md`, entry dated 2026-09-21
 - The sensor-ladder study that produced `Q2_presence_binary`: `docs/experiments/active/sensor_ladder/sensor_ladder.md`
 - The two blind-agent neuromodulator grids: `docs/experiments/active/nmn_input_site_grid/NMN_INPUT_SITE_GRID.md` and `..._GAENORM.md`
+
+## Launched
+
+2026-09-21 11:48 KST, all 14 runs up, group `basic_levels_q2_default`, job-type `pilot`.
+Per-run node, PID, WandB id and log path are in the wave block of `train_command-agent.sh`
+(commit `662ba1e5`), and one `training-start` row per run is in `docs/diary/2026-09-21.md`.
+
+The discriminator passed 14 of 14 — every banner printed the width its level should
+resolve to (44 / 52 / 58), none printed 27, and no level's `extends:` chain reaches
+`experiment/archive/`. The modulator was confirmed live on the modulated arms at both
+width extremes (obs 44 and obs 58), logging `input_sensors=[all]` with all four sites, so
+it is resolving against each run's own width rather than a hardcoded one.
+
+Two recorded deviations, neither a defect: `--log-interval 10` overrides the config's 500,
+giving WandB 50x the usual row density; and every banner reads `Device: gpu (cuda:0)`
+because `train.py` sets `CUDA_VISIBLE_DEVICES` to the requested index, so the card is
+always local 0 inside the process — physical placement was verified against `nvidia-smi`
+instead (one compute app per GPU, two per node).

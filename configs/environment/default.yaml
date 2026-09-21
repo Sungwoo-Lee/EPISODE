@@ -274,14 +274,23 @@ sensory:
   # visual_blur_enabled and per-entity visual_mask ARE fingerprinted, because they
   # change observation semantics at an identical dimension count.
   # DIRECTIONAL_SENSORS — how per-cell entity contributions combine.
-  #   sum   = weighted sum / count (pre-DIRECTIONAL_SENSORS behaviour; two rocks read 2.0)
-  #   clamp = per-channel presence, capped at 1.0 (an RF-like "something is here")
+  #   sum   = weighted sum over entities (pre-DIRECTIONAL_SENSORS behaviour; two rocks read 2.0)
+  #   clamp = the same weighted sum, then capped at 1.0 per channel
   # Applies to the ENTITY contribution only; terrain keeps its own value.
-  # 2026-09-19: sum -> clamp. Under `sum` two rocks in a cell read 2.0, which leaks a weak count
-  # signal; `clamp` caps each channel at 1.0 and is a true presence sensor. With
-  # visual_vector_size: 1 this is the RF-style "something is here" return. The ladder separates
-  # the two: Q2 (clamp) shows a +5.96 pp response to a harmless animal against Q1 (sum) at +3.29,
-  # a gap larger than the ~1.4 pp spread five seeds of one config produce.
+  # 2026-09-19: sum -> clamp. The ladder separates the two: Q2 (clamp) shows a +5.96 pp response
+  # to a harmless animal against Q1 (sum) at +3.29, a gap larger than the ~1.4 pp spread five
+  # seeds of one config produce.
+  # 2026-09-21 CORRECTION — this comment used to call clamp "a true presence sensor" and that is
+  # wrong in a way worth spelling out, because the shorthand is so natural. BOTH modes sum over
+  # entities first (sensor.py:392-397); clamp only caps the total afterwards. With
+  # visual_blur_enabled: true a lone entity spreads to roughly 0.64 on its own cell and never
+  # reaches the cap at all, so the cap binds only when two or more entities share a cell, and a
+  # weak count signal survives below that. Nor is the reading local: _psf_weights has no radius
+  # gate, so an entity OUTSIDE visual_sensor_range still leaks attenuated mass inward —
+  # visual_sensor_range bounds the cells SAMPLED, not the entities SENSED. What the agent
+  # receives is a presence-capped blurred density. What IS true, and is the point of pairing this
+  # with visual_vector_size: 1, is that the value carries no identity: every entity contributes
+  # the same 1.0, so vision reports roughly how much is nearby and never WHAT it is.
   visual_value_mode: clamp
   # DIRECTIONAL_SENSORS — line-of-sight occlusion. A nearer entity flagged `blocks_sight: true`
   # hides anything inside the shadow cone of the ray to it. The two sub-keys are
