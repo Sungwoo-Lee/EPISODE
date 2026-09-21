@@ -47,9 +47,13 @@ import numpy as np
 from . import cells as C
 from . import painters as PN
 from . import palette as P
-from .labels import olfactory_labels, visual_labels
 from .layout import Box, Layout, pack
-from .panels import LayoutContext, check_completeness, present_panels
+from .panels import (
+    LayoutContext,
+    check_completeness,
+    pack_or_explain,
+    present_panels,
+)
 from .style import DPI, TYPE, register_fonts
 from .thermal import scale_from_params
 
@@ -146,7 +150,7 @@ class EpisodeRenderer:
     """
 
     def __init__(self, params, icon_config, payload, *, title="GridWorld",
-                 action_map=None, dpi=DPI):
+                 action_map=None, dpi=DPI, channel_display=None):
         import matplotlib
         matplotlib.use("Agg")
         import matplotlib.pyplot as plt
@@ -163,9 +167,13 @@ class EpisodeRenderer:
                                                       ["Up", "Right", "Down", "Left"])]
 
         # -- context, completeness, layout -- all before anything is drawn -----
-        self.ctx = LayoutContext.from_params(params)
+        # `channel_display` is the recording's own names payload, or None for a
+        # recording written before channel names existed -- which is the legacy
+        # signal the whole labelling path branches on.
+        self.channel_display = channel_display
+        self.ctx = LayoutContext.from_params(params, channel_display=channel_display)
         check_completeness(self.ctx)
-        self.layout: Layout = pack(self.ctx)
+        self.layout: Layout = pack_or_explain(self.ctx)
         self.cell_px = self.layout.cell_px
         self.breakdown = dict(self.ctx.breakdown)
 
@@ -465,22 +473,24 @@ class EpisodeRenderer:
                 cw = child.w - 2 * PN.PAD
                 if key == "olfactory":
                     sense, title = "Olfaction", "Olfaction"
-                    codes = olfactory_labels(int(self.ctx.olfactory_channels))
                     rng, stops = int(self.ctx.olfactory_range), P.OLF_STOPS
                 else:
                     # "Vision" is the reader's word and the approved design's;
                     # "Visual" is the observation breakdown's key and stays the
                     # `sense` the values are looked up under.
                     sense, title = "Visual", "Vision"
-                    codes = visual_labels(int(self.ctx.visual_vector_size))
                     rng, stops = int(self.ctx.visual_range), P.VIS_STOPS
+                # Built here rather than up front: only the senses actually drawn
+                # are ever asked for, so a configured recording with a sense
+                # switched off never needs an entry for it.
+                display = self.ctx.display_for(sense)
                 if rng >= 1:
                     offs = [tuple(o) for o in get_visual_offsets(rng)]
                     PN.build_channel_maps(self, ax, x0, cw, box.h, sense, title,
-                                          codes, stops, offs, rng)
+                                          display, stops, offs, rng)
                 else:
                     PN.build_channel_rows(self, ax, x0, cw, box.h, sense, title,
-                                          codes, stops)
+                                          display, stops)
             if len(band_keys) == 2:
                 second = self.layout.panels[band_keys[1]]
                 PN.band_divider(ax, second.x - box.x - PN.GAP / 2, box.h)
@@ -548,7 +558,8 @@ class EpisodeRenderer:
         payload = load_episode(eps[episode])
         return cls(meta["params"], meta["icon_config"], payload,
                    title=kw.pop("title", rec_dir.name),
-                   action_map=meta.get("action_map"), **kw)
+                   action_map=meta.get("action_map"),
+                   channel_display=meta.get("channel_display"), **kw)
 
 
 def render_dashboard_frame(params, icon_config, payload, step: int = 0, **kw):

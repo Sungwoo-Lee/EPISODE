@@ -42,13 +42,15 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Callable, Mapping
 
-from .labels import channel_labels, map_plan
+from .labels import ChannelDisplay, panel_map_slots
 from .layout import (
     CARD_TITLE_H,
     LEFT_W,
     PAD,
     CardDemand,
+    LayoutOverflowError,
     Size,
+    pack,
 )
 
 # --------------------------------------------------------------------------
@@ -204,9 +206,20 @@ class LayoutContext:
     real_available: Mapping[str, bool] = field(default_factory=dict)
     action_recorded: bool = True
     font: FontMetrics = FontMetrics()
+    #: The recording's raw ``run_meta['channel_display']`` payload, or ``None``
+    #: for a recording written before channel names existed. ``None`` is the
+    #: legacy signal and is keyed off this TOP-LEVEL value, never off a missing
+    #: per-sense entry -- see `ChannelDisplay.from_meta`.
+    channel_display: Mapping[str, object] | None = None
+    #: Built displays, per sense, built ON DEMAND. Deliberately lazy: an eager
+    #: per-sense build raises on a vision-off configured recording, whose payload
+    #: legitimately has no `Visual` entry. Only senses this world actually
+    #: observes are ever asked for.
+    _displays: dict = field(default_factory=dict, repr=False, compare=False)
 
     @classmethod
-    def from_params(cls, params, action_recorded: bool = True) -> "LayoutContext":
+    def from_params(cls, params, action_recorded: bool = True,
+                    channel_display=None) -> "LayoutContext":
         """Build a context from resolved environment params.
 
         ``params`` comes from ``load_env_params(load_env_config(path))`` -- the
@@ -239,11 +252,35 @@ class LayoutContext:
             olfactory_channels=olf_channels,
             real_available=real_available(params),
             action_recorded=action_recorded,
+            channel_display=channel_display,
         )
 
     # -- derived -----------------------------------------------------------
     def observed(self, name: str) -> bool:
         return name in self.breakdown
+
+    def channels_of(self, sense: str) -> int:
+        """How many channels this world's ``sense`` returns."""
+        return int(self.visual_vector_size if sense == "Visual"
+                   else self.olfactory_channels)
+
+    def display_for(self, sense: str) -> ChannelDisplay:
+        """This sense's names and groups, built once and cached.
+
+        Built lazily on purpose. A configured recording of a world with vision
+        switched off carries no ``Visual`` entry -- correctly, since names are
+        required only for senses that are ENABLED -- so building both senses up
+        front would raise on a perfectly good recording.
+        """
+        display = self._displays.get(sense)
+        if display is None:
+            entry = (None if self.channel_display is None
+                     else self.channel_display.get(sense))
+            display = ChannelDisplay.from_meta(
+                sense, self.channels_of(sense), entry,
+                key_present=self.channel_display is not None)
+            self._displays[sense] = display
+        return display
 
     def range_of(self, panel_key: str) -> int:
         return {
@@ -366,19 +403,19 @@ def _vital_row_size(ctx: LayoutContext) -> Size:
 
 def _olf_min_size(ctx: LayoutContext) -> Size:
     if ctx.olfactory_range >= 1:
-        span = _span("Olfaction", ctx.olfactory_channels, ctx.olfactory_range)
+        span = _span("Olfaction", ctx.display_for("Olfaction"), ctx.olfactory_range)
         return Size(span, CARD_TITLE_H + _map_h(ctx.olfactory_range) + PAD)
     return Size(0, OLF_ROWS_H)
 
 
 def _visual_min_size(ctx: LayoutContext) -> Size:
     if ctx.visual_range >= 1:
-        span = _span("Visual", ctx.visual_vector_size, ctx.visual_range)
+        span = _span("Visual", ctx.display_for("Visual"), ctx.visual_range)
         return Size(span, CARD_TITLE_H + _map_h(ctx.visual_range) + PAD)
     return Size(0, VISUAL_ROWS_H)
 
 
-def _span(sense: str, n_channels: int, r: int) -> int:
+def _span(sense: str, display: ChannelDisplay, r: int) -> int:
     """The PANEL width a sense drawn as diamond maps needs, in pixels.
 
     WHAT THIS HAS TO AGREE WITH, because it did not until 2026-09-18. This
@@ -390,11 +427,12 @@ def _span(sense: str, n_channels: int, r: int) -> int:
     206 px, which was 8.4 px map squares under a 10 px floor). Three counts have
     to match `painters.build_channel_maps`:
 
-      * HOW MANY MAPS -- not how many channels. Vision's eight channels draw six
-        maps, because grass / sand / plain are one categorical map. Asked of
-        `labels.map_plan`, the same function the painter draws from, rather than
-        hardcoded: an off-standard vector width gets one map per channel, and
-        this follows it wherever it goes.
+      * HOW MANY SLOTS -- not how many channels, and since 2026-09-21 not how
+        many maps either. The panel is a FIXED size: `labels.panel_map_slots`
+        answers this, and the painter divides the width it is granted by the
+        same number, so a run with fewer channels draws normal-sized maps and
+        leaves the rest of the panel blank instead of stretching one map across
+        it. Asked of the same function the painter divides by, never recomputed.
       * THE GAP -- `MAP_GAP_PX`, which the painter imports from here.
       * THE CARD'S PADDING -- `episode.py` hands the painter `panel.w - 2 * PAD`
         (episode.py:465), so what the PANEL needs is the painter's requirement
@@ -403,7 +441,7 @@ def _span(sense: str, n_channels: int, r: int) -> int:
     The height is a separate declaration and is NOT fixed here; see the note on
     `_map_h`.
     """
-    n_maps = len(map_plan(sense, channel_labels(sense, n_channels)))
+    n_maps = panel_map_slots(sense, display)
     cells = 2 * r + 1
     return (n_maps * cells * MAP_CELL_MIN_PX
             + MAP_GAP_PX * (n_maps - 1)
@@ -612,6 +650,53 @@ def check_completeness(ctx: LayoutContext) -> None:
                 f"panel {panel.key!r} is drawn as observed ({panel.kind_for(ctx)!r}) "
                 f"but this world does not observe {absent}"
             )
+
+
+def pack_or_explain(ctx: LayoutContext):
+    """Pack the frame, turning the one EXPECTED refusal into a message that teaches.
+
+    A recording made before channel names existed carries no merge group, so it
+    draws one map per channel -- eight for a standard vision vector, where a
+    configured recording draws six. At sensor range 3 those eight maps need more
+    width than the band can give any one sense, and the packer correctly refuses.
+
+    That refusal is right, but a bare `LayoutOverflowError` about pixels tells
+    the reader nothing about what to DO. Here it is re-raised naming the reason
+    (the recording predates channel names) and the remedy (re-record it, which
+    regenerates it with names and the terrain merge and brings it back inside the
+    panel).
+
+    THE PACKER'S OWN NUMBERS ARE QUOTED RATHER THAN RE-DERIVED. Working out what
+    the band would have granted requires repeating the packer's arithmetic
+    outside the packer -- a second copy of exactly the calculation whose
+    disagreement with the painter broke every video in `4b6f7196`. The original
+    exception already carries both the need and the grant, so it is attached
+    verbatim instead.
+    """
+    try:
+        return pack(ctx)
+    except LayoutOverflowError as exc:
+        stale = [s for s in ("Olfaction", "Visual")
+                 if ctx.observed(s) and ctx.display_for(s).legacy]
+        if not stale:
+            raise
+        drawn = {s: len(map_plan_len(ctx, s)) for s in stale}
+        raise LayoutOverflowError(
+            f"this recording was made BEFORE channel names existed, so it carries "
+            f"no terrain merge and draws one map per channel "
+            f"({', '.join(f'{s}: {n} maps' for s, n in drawn.items())}). At this "
+            f"sensor range that does not fit in the sensor band. Re-record it at "
+            f"current code: that regenerates it WITH channel names and the terrain "
+            f"merge, which brings the maps back inside the panel. "
+            f"The packer's own measurement: {exc}"
+        ) from exc
+
+
+def map_plan_len(ctx: LayoutContext, sense: str):
+    """The maps ``sense`` draws in ``ctx`` -- a thin accessor for diagnostics."""
+    from .labels import map_plan
+
+    return map_plan(sense, ctx.display_for(sense))
 
 
 def present_cards(

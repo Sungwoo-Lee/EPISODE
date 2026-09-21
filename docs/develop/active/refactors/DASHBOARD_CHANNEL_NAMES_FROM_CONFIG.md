@@ -1456,12 +1456,26 @@ must carry the pre-change failure output for each new test.
 
 ## Checkpoints
 
-Each step names its own **failure-detectable check** and its **rollback**. The gate for
+Each step names its own **failure-detectable check** and its **rollback**.
+
+> **Completed 2026-09-21.** One line each:
+>
+> - **CP0** — baseline re-measured, NOT inherited: tree clean, base `(5, 1, 1, 2)`, dashboard files **186 passed / 0 failed / 0 skipped** (the plan predicted 3 failed / 2 skipped -- the parallel session's repairs had landed), band-span 18 passed / 0 skipped, parity 46 passed / 353 skipped.
+> - **CP1** — all three new files failed against unmodified source (36 failed / 0 passed; 33 failed / 2 passed; collection ImportError). The D8 source-grep failed at `painters.py:707,709` exactly as required.
+> - **CP2** — four keys added, `channel_display_from_config` added, all four writers updated; parity **unchanged** at 46/353 and all eleven standalone configs resolve identically, so the carriage decision holds. BEFORE frame captured on the V8 cell with the renderer untouched.
+> - **CP2b** — (a) post-change config wrote a recording carrying `channel_display`; (b) the pre-change frozen saved config **failed** at `eval_rollout.py:1241` naming the key, the cause and the remedy, before any episode ran.
+> - **CP3** — (a) `olf1_vis2_spanfix/77` drew 8 positional maps in a grown panel and did not raise; (b) `olf1_vis3_spanfix/71` **refused** with the teaching message quoting the packer's own `634px ... giving it 520px`.
+> - **CP4** — V8 rendered **through `render_recordings_v2.py`** (36 frames verified); the after-frame's `layout_signature()` is **identical** to CP2's before-frame and the widths are unchanged. Rows path rendered from the new explicit range-0 cell `R0`.
+> - **CP5** — dim-1 cell draws **one map at the same square size** as the 8-channel frame with the rest of the panel blank, labelled `Visible` from config.
+> - **CP5b** — all three over-slot frames rendered and photographed; **nothing raised** and the warning fired naming both numbers. The audit could NOT be run: it structurally refuses the dashboard renderer (M3 confirmed in its source).
+> - **CP6** — four deliberate breaks behaved; vision-off `E9` records olfaction alone and draws no vision panel; full `tests/env` **724 passed / 396 skipped / 0 failed**; sweep 22 passed / 13 skipped (only the 13 curriculum schedules).
+> - **CP7** — regenerated the six cells that still build (M1 M1x M2 M5 M6 W20). **M3/M4/M4b/M4r/M6b are blocked by a pre-existing, unrelated breakage** -- see Deviations. `M4` and the six `olf1_vis*` runs stay un-regenerated as the legacy subjects.
+> - **CP8** — 173.7 -> 174.5 ms/frame median (+0.46%), p95 201.6 -> 206.4 ms, same host / cell / 200 frames. The gate for
 renderer work is a rendered frame someone looks at — a green unit suite is not sufficient
 evidence, because a change on 2026-09-18 passed 18 new unit tests while breaking the product
 end to end.
 
-- [ ] **CP0 — Re-measure the baseline, including its red.** Run the three dashboard test
+- [x] **CP0 — Re-measure the baseline, including its red.** Run the three dashboard test
       files and `tests/env/test_unified_parity.py`; record counts. **Do not inherit any number
       printed in this plan** — re-run and record what you actually get, including whether the
       band-span wide-sense cases run or **skip** (measured 2026-09-21: `16 passed, 2 skipped`,
@@ -1476,12 +1490,12 @@ end to end.
       *Detects*: any later count that differs by anything other than the intended tests.
       *Rollback*: none (read-only).
 
-- [ ] **CP1 — Write the new tests first, run them against unmodified source, record the
+- [x] **CP1 — Write the new tests first, run them against unmodified source, record the
       failures.** *Detects*: a test that would have passed anyway — if any new test passes
       here, it is not testing the change and must be rewritten. *Rollback*: delete the test
       file.
 
-- [ ] **CP2 — Config + writer only (no renderer change yet), and capture the BEFORE frame.**
+- [x] **CP2 — Config + writer only (no renderer change yet), and capture the BEFORE frame.**
       Add the four keys and the comment block; add `channel_display_from_config`; update
       **all four** writers (§8). **Before touching the renderer**, render step 0 of a
       **8-channel cell built by §9's grow helper** — the *same* cell CP4 will render — to PNG
@@ -1505,7 +1519,7 @@ end to end.
       another session's uncommitted work, `git checkout` is the wrong instrument and the
       snapshot-and-reverse-apply route is the right one.
 
-- [ ] **CP2b — The two writer paths that are not the fixture script (C1, C2).**
+- [x] **CP2b — The two writer paths that are not the fixture script (C1, C2).**
       (a) Run `scripts/eval/eval_rollout.py --record` on a **post-change** config: it must
       write a recording carrying `channel_display`. Without the fourth call site this is a
       `TypeError`, which is the point of keeping the parameter required.
@@ -1516,7 +1530,7 @@ end to end.
       output — it is the documentation of the accepted cost.
       *Rollback*: none (read-only invocations).
 
-- [ ] **CP3 — The legacy path, on recordings that actually draw diamond maps.** Implement
+- [x] **CP3 — The legacy path, on recordings that actually draw diamond maps.** Implement
       `labels.py`, `panels.py`, `painters.py`, `episode.py`, `__init__.py`. Render from
       **un-regenerated** recordings and **look at the frames**:
       (a) `results/render_audit/olf1_vis2_spanfix/recordings/77` (vision range 2) — must draw
@@ -1533,7 +1547,7 @@ end to end.
       Name it in the script and use it here and at CP4.
       *Rollback*: `git checkout` the five renderer files.
 
-- [ ] **CP4 — Vision dim 8, rendered THROUGH the production script, and looked at.**
+- [x] **CP4 — Vision dim 8, rendered THROUGH the production script, and looked at.**
       Regenerate a **vision-range-2** cell (`E2` or `E3`) and render it with
       **`scripts/eval/render_recordings_v2.py`** — not by constructing `EpisodeRenderer` in a
       scratch script. That script bypasses `from_recording` entirely (§4b), so a checkpoint
@@ -1553,7 +1567,7 @@ end to end.
       rows path — not `M1`, which no longer draws it (`plan-reviewer` M14).
       *Rollback*: as CP3.
 
-- [ ] **CP5 — Render at vision dim 1 and look at it.** **Easier than when this plan was
+- [x] **CP5 — Render at vision dim 1 and look at it.** **Easier than when this plan was
       written**: the base config is single-channel vision at `47b1b8c3` and already reads
       vision at range 2, so a cell built on it exercises this directly, and `E6sum`/`E6bin`
       now build (verified — §9).
@@ -1566,7 +1580,7 @@ end to end.
       stretched single map is the defect this whole change removes.
       *Rollback*: revert the fixture-script edit; nothing on disk is replaced.
 
-- [ ] **CP5b — Render ABOVE the slot count, BOTH ways, and look at what actually happens.**
+- [x] **CP5b — Render ABOVE the slot count, BOTH ways, and look at what actually happens.**
       **This documents §D4c; it does not gate the design.** The overflow behaviour is decided
       and this checkpoint cannot overturn it — its purpose is that a future reader meeting an
       off-path frame finds a picture of it here rather than filing a bug. Build throwaway
@@ -1593,7 +1607,7 @@ end to end.
       sizing rule.
       *Rollback*: delete the throwaway cells; they touch nothing else.
 
-- [ ] **CP6 — Full suites, deliberate breaks, and the config sweep.** Run the three dashboard
+- [x] **CP6 — Full suites, deliberate breaks, and the config sweep.** Run the three dashboard
       files, the parity gates, `tests/scripts/test_render_recordings_v2.py` and
       `tests/env/test_dashboard_v1_imports.py`. Then three deliberate breaks, each reverted
       after:
@@ -1621,7 +1635,7 @@ end to end.
       refusal must not, and no maintained config — including any the parallel session has
       landed — is left unrecordable (§9b). *Rollback*: as CP3.
 
-- [ ] **CP7 — Re-record the render-audit fixtures, keeping one legacy cell.** Regenerate the
+- [x] **CP7 — Re-record the render-audit fixtures, keeping one legacy cell.** Regenerate the
       CP0.2 cells (`M1 M1x M2 M3 M4b M5 M6 M6b`, plus `M4r`, `W20`).
       **Deliberately leave `M4` un-regenerated** and say so here, so the legacy branch keeps a
       real on-disk subject; otherwise every legacy assertion in
@@ -1639,7 +1653,7 @@ end to end.
       script — but **copy the directory aside first** (`cp -a results/render_audit /tmp/...`),
       per the git-safety rule, because they are not in version control.
 
-- [ ] **CP8 — Speed check.** Time `render_recordings_v2.py --benchmark` on one cell before
+- [x] **CP8 — Speed check.** Time `render_recordings_v2.py --benchmark` on one cell before
       and after, same host and cell. *Detects*: >5% slowdown warrants discussion, >15%
       blocks. Expected ≈0 — this moves table lookups to dict lookups at build time, not
       per frame.
@@ -1733,14 +1747,192 @@ against the code rather than accepting it.
 
 ## Implementation Report
 
-> **Implemented by**: _(unassigned)_
-> **Date**:
+> **Implemented by**: `developer`
+> **Date**: 2026-09-21
 
-<!-- Filled by the `developer` agent. Must include:
-     - the pre-change failure output for every new test (CP1)
-     - the four PNGs from CP3/CP4/CP5 and what was seen in each
-     - before/after speed numbers with host and cell (CP8)
-     - any deviation from this plan, and why -->
+### What was built, in plain words
+
+The episode video used to get its sensor-channel names — "Food", "Predator", "Terrain" — from a
+hardcoded table inside the renderer's own source. It now gets them from the environment config,
+carried along with each recording, and **the hardcoded tables are deleted** so a name has exactly
+one source. Two things travel with that change: each sense's panel is now a **fixed size** (five
+map slots for smell, six for vision) so a run with fewer channels draws normal-sized maps and
+leaves the rest blank instead of stretching one map across the panel; and the "Terrain" merge —
+vision's three ground channels drawn as one map — became **config data that the painter actually
+reads**, rather than a constant it assumed.
+
+The last of those is the one that mattered most. Before this change the painter read
+a hardcoded first-three-channels slice, so a config declaring a merge of channels 1–3 would have
+validated, drawn in the right place, and coloured itself from channels 0–2 **with no error at
+all**. That is now impossible, and a test reads the painter's own source to keep it impossible.
+
+### Evidence, per checkpoint
+
+**CP0 — baseline re-measured, nothing inherited from this plan.**
+`git status --short` clean for `tests/ configs/ src/ scripts/`. Resolved base
+`(olf 5, vis 1, olf_range 1, vis_range 2)` — matches `47b1b8c3`.
+
+| Suite | Baseline |
+|---|---|
+| the three dashboard files | **186 passed, 0 failed, 0 skipped** |
+| `test_dashboard_band_span.py` alone | **18 passed, 0 skipped** |
+| `test_unified_parity` + `test_thermal_parity` | **46 passed, 353 skipped** |
+| `v1_imports` + `frames` + `render_recordings_v2` | **29 passed** |
+
+**The plan's predicted red did not exist.** §A6 expected 3 failed / 2 skipped; the parallel
+session's repairs (`0997507e`, `b4fd22a0`, `53649b40`) had already landed. No number in this plan
+was inherited.
+
+**CP1 — every new test failed against unmodified source.**
+
+| File | Pre-fix |
+|---|---|
+| `test_dashboard_channel_display.py` | **36 failed, 0 passed** |
+| `test_channel_names_match_configs.py` | **33 failed, 2 passed** |
+| `test_dashboard_band_span.py` | **collection `ImportError`** on `ChannelDisplay` |
+
+The two that passed pre-change are the deliberate M15 floors (`collected >= 32`,
+`resolving >= 19`) — they guard the sweep's own scope, not the change, and are reported rather
+than dressed up as coverage. The D8 source-grep failed at `painters.py:707,709`, exactly the
+lines the plan named. Log: `tmp/20260921_143204_cp1_prechange.log`.
+
+**CP2 — config + writer, before the renderer was touched.** Parity **unchanged at 46 passed /
+353 skipped**, and all eleven standalone configs resolve to identical widths. §7b's stop-condition
+("if an inert key moves a fixture, the carriage decision is wrong") did **not** trigger.
+BEFORE frame: `tmp/frames/20260921_v8_BEFORE_step0.png` — 5 smell maps and **6** vision maps with
+Terrain merged, band `(360, 624, 1056, 256)`, each sense granted **520 px**, signature
+`f116030c0912b112…`.
+
+**CP2b — both writer paths.**
+(a) post-change config wrote a recording carrying `channel_display` with the 8 reference vision
+names. (b) The pre-change frozen saved config **failed** at `eval_rollout.py:1241` — the fourth
+call site C1 found — before any episode ran:
+
+```
+ValueError: Configuration key 'sensory.olfactory_channel_names' is required but missing. This
+config predates sensor channel names, or declares a sense width without redeclaring that sense's
+names in the same file. ... Remedy: re-record from a config resolved at current code, or add
+'sensory.olfactory_channel_names' and 'sensory.olfactory_channel_groups' to this file ...
+```
+
+**CP3 — legacy recordings, looked at.**
+(a) `results/render_audit/olf1_vis2_spanfix/recordings/77` →
+`tmp/frames/20260921_LEGACY_vis2_r2_step0.png`: positional **"Channel 0…7"**, **8** unmerged maps,
+panel grown to 8 slots, did not raise.
+(b) `olf1_vis3_spanfix/71` → **refused**, quoting the packer's own numbers rather than
+re-deriving them (M24):
+
+```
+this recording was made BEFORE channel names existed, so it carries no terrain merge and draws
+one map per channel (Olfaction: 5 maps, Visual: 8 maps). At this sensor range that does not fit
+in the sensor band. Re-record it at current code ... The packer's own measurement: visual needs
+634px of width in the band; 2 children share 1056px, giving it 520px
+```
+
+**CP4 — through the production script, and looked at.** `render_recordings_v2.py` rendered the V8
+cell to MP4 (36 frames verified). AFTER frame `tmp/frames/20260921_V8_AFTER_step0.png` is
+**visually identical** to the before-frame and its `layout_signature()` is
+`f116030c0912b112…` — **the same hash**. Configured names on the frame, six maps, terrain merged.
+Rows path: `tmp/frames/20260921_R0_rows_step0.png` from the new explicit range-0 cell (`M1` no
+longer draws it), showing named rows with values — Food 0.49, Bush 0.80, "Visible" 0.44.
+
+**CP5 — vision dim 1.** `tmp/frames/20260921_E2_dim1_step0.png`: **one** map, labelled
+**"Visible"** from config, at the **same map-square size** as the 8-channel frame, with the rest
+of the 520 px panel blank. Not stretched — which was the defect this change removes.
+
+**CP5b — over-slot, both senses, recorded not fixed.** Nothing raised; the warning fired at
+**write** time naming both numbers.
+
+| Frame | Maps/slots | What is actually seen |
+|---|---|---|
+| `20260921_V12_overslot_step0.png` | 10 / 6 | Terrain + Vis 3…7 draw; the rest are **clipped at the card edge**, leaving a truncated floating label |
+| `20260921_V8nogroup_step0.png` | 8 / 6 | Grass/Sand/Plain unmerged; the last two maps clipped away |
+| `20260921_OLF12_overslot_step0.png` | 12 / 5 | the extra maps **cross the divider and overlap the vision panel**, colliding with its map and label |
+
+Both predicted modes are now photographed: vision **disappears** (no ink, so the audit sees
+nothing), olfaction **overlaps** (true ink). `render_layout_audit.py` could not be run on them —
+it **structurally refuses** the dashboard renderer (`"The dashboard renderer is measured by
+handing this module a frame, never by importing it here."`), confirming M3.
+
+**CP6 — breaks, sweep, suites.**
+
+| Break | Result |
+|---|---|
+| (a) group names a channel that does not exist | **fails**, naming the bad index and the valid range |
+| (b) names list one entry short | **fails**, naming **7** and **8** |
+| (c) `visual_channel_groups: []` at 8 channels | **warns, does not fail** — naming 8 maps against 6 slots |
+| (d) 4-channel group vs a 3-colour palette | **fails**, naming **4** and **3** |
+
+Vision-off `E9` records **olfaction alone** (`payload keys = ['Olfaction']`) and draws **no vision
+panel**. Sweep: **22 passed, 13 skipped** — every skip a curriculum schedule directly under
+`configs/continual/`, none under `environment/**`, `verification/**` or `nmn_double_return_stages/`.
+Full `tests/env`: **724 passed, 396 skipped, 0 failed**. `tests/scripts/test_render_recordings_v2.py`:
+**9 passed**. Band-span went **18 → 33 passed**.
+
+**CP7 — fixtures.** `results/render_audit` copied aside first. Regenerated **M1 M1x M2 M5 M6 W20**.
+`M4` and the six `olf1_vis*` runs are deliberately left un-regenerated as the legacy subjects.
+
+**CP8 — speed.** Same host, same `M4` cell, same 200 frames:
+`python scripts/eval/render_recordings_v2.py results/render_audit/recordings/M4/M4 --benchmark --benchmark-frames 200`
+
+| | Before | After | Δ |
+|---|---|---|---|
+| V2 median per frame | 173.7 ms | 174.5 ms | **+0.46 %** |
+| V2 p95 | 201.6 ms | 206.4 ms | +2.4 % |
+
+Well inside the plan's 5 % discussion threshold. Expected: this moves table lookups to a
+build-time dict, not per frame.
+
+### Deviations, and why
+
+1. **CP0's baseline was green, not red.** §A6's three failures had already been fixed. Recorded,
+   not worked around.
+2. **CP7 is partially blocked by a pre-existing, unrelated breakage.** `M3, M4, M4b, M4r, M6b`
+   **cannot be built at all** today — `build_params` raises
+   `thermal structure check FAILED for heat source 'campfire' ... the cold is not a clock: three
+   cells out settles at -13.47, inside the survivable band`. Cause: the 2026-09-19 thermal retune
+   (`2bfe158e`) moved `thermal.default_temp`, and the fixture script's in-memory
+   `_DEMO_LOOSENING` override (`-20.5 .. -19.5`) is now refused by the loader's own structure
+   check. **Nothing to do with this plan**, and not fixed here. It is **not in the Known Bugs
+   registry** (grepped: no row for the thermal structure check, the loosening, or the fixture
+   script) — **`bug-curator` should record it.**
+3. **`tests/env/fixtures/dashboard_band_vis3.yaml` is REMOVED** (`git rm`). §11's in-memory
+   rebuild supersedes it; after the rewrite no code, test or config references it (grepped), so
+   leaving it would have left an unused tracked fixture. The band-span test passes without it.
+4. **`panels.py` gained `pack_or_explain` and `map_plan_len`.** M24 says not to re-derive the band
+   grant; the cleanest way was to catch and re-raise around `pack()`, quoting the packer's own
+   message. Both live in `panels.py`, which the File Changes section already covers, but they are
+   named here because they are new functions rather than edits.
+5. **§9's helper is two functions, `_set_vision_dim` and `_set_olf_dim`**, plus five new fixture
+   cells (`V8`, `R0`, `V12`, `V8nogroup`, `OLF12`) and a `vision_dim` / `olf_dim` field on `Cell`.
+   The olfaction one is needed for CP5b's olfaction frame, which the plan asks for without saying
+   how to build it.
+6. **CP5b's audit step could not be performed** — M3's finding is structural, not incidental.
+
+### Two mistakes of mine, both caught by the gates
+
+- **`_set_olf_dim` rewrote each entity's `properties` but not its `properties_std`**, so a 12-wide
+  mean met an inherited 5-wide std: `mul got incompatible shapes: (10, 5), (10, 12)`. Caught when
+  the `OLF12` cell failed to generate; fixed and regenerated.
+- **The D8 source-grep failed on my own comment**, which quoted the old slice literally. I
+  reworded the comment rather than teaching the test to ignore comments — the invariant stays at
+  maximum strictness.
+
+### Nothing in the plan was found to be wrong
+
+Every premise I checked held: the band grant really is 520 px; the 482 / 634 px arithmetic is
+exact; the loader's V=8 auto-assignment is food→3, hiding_predator→4, predator→5, rabbit→7,
+obstacles→6, background 0/1/2, confirmed from resolved params rather than copied from the
+reference table; `E9` resolves with no `Visual` in the breakdown; the eleven standalone configs
+declare olfaction's 5 and inherit vision's 8. The only correction is §A6's stale baseline (item 1).
+
+### Follow-ups for `senior-developer`
+
+- The campfire fixture breakage (item 2) — hand to `bug-curator`, then whoever owns thermal.
+- `M3/M4b/M4r/M6b` stay at their pre-change recordings until that is fixed, so their videos will
+  render through the **legacy** path. That is correct behaviour, not a defect.
+- Re-recording any pre-change checkpoint still needs [[SAVED_RUN_CONFIG_COMPAT]]; the four keys
+  should be registered in its table.
 
 ## Verification Report
 

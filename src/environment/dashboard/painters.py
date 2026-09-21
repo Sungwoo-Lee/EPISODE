@@ -29,8 +29,7 @@ from matplotlib.collections import PatchCollection
 
 from . import cells as C
 from . import palette as P
-from .labels import display_channel as channel_display
-from .labels import map_plan
+from .labels import map_plan, panel_map_slots
 from .layout import LayoutOverflowError
 # THE GAP BETWEEN TWO CHANNEL MAPS, TAKEN FROM THE REGISTRY RATHER THAN
 # DECLARED HERE. The layout registry has to promise the packer how wide a sense
@@ -578,7 +577,7 @@ def band_head(dash, ax, x0, w, sense, title, cmap, vmax):
     return sx + RAMP_W + 6 + mw - x0
 
 
-def build_channel_rows(dash, ax, x0, w, h, sense, title, codes, colour_stops):
+def build_channel_rows(dash, ax, x0, w, h, sense, title, display, colour_stops):
     """A sense read at range 0: one NAMED row per channel, with its number.
 
     THE ONE PANEL THE APPROVED MOCK DOES NOT SHOW, and it is drawn this way for a
@@ -592,7 +591,12 @@ def build_channel_rows(dash, ax, x0, w, h, sense, title, codes, colour_stops):
     cmap = _ramp(colour_stops, sense)
     vmax = max(float(dash.sense_max.get(dash.viz_name(sense), 1.0)), 1e-6)
     band_head(dash, ax, x0, w, {"reach": "the agent's own square"}, title, cmap, vmax)
-    names = [channel_display(sense, c) for c in codes]
+    # THIS PATH IGNORES CHANNEL GROUPS, DELIBERATELY -- do not "fix" it to merge
+    # them. A group is a MAP-layout concept: three terrain channels share one map
+    # because each would otherwise be blank wherever the other two are not. This
+    # path draws no maps at all, one labelled row per channel, and reads its
+    # values positionally, which stays correct.
+    names = list(display.names)
 
     n = len(names)
     cols = 2
@@ -640,7 +644,7 @@ def build_channel_rows(dash, ax, x0, w, h, sense, title, codes, colour_stops):
 #: see that function's own note.
 
 
-def build_channel_maps(dash, ax, x0, w, h, sense, title, codes, colour_stops,
+def build_channel_maps(dash, ax, x0, w, h, sense, title, display, colour_stops,
                        offsets, sensor_range):
     """A sense read over a diamond of squares: one small map per channel.
 
@@ -648,15 +652,22 @@ def build_channel_maps(dash, ax, x0, w, h, sense, title, codes, colour_stops,
     Manhattan diamond the sensor actually reads, in the sensor's own offset
     order, with the agent's own square outlined in the agent colour and the
     channel's reader-facing name under it.
+
+    THE WIDTH IS DIVIDED BY SLOTS, NOT BY MAPS, and that one word is the whole
+    fixed-panel change. The panel holds a conventional number of slots whatever
+    the run's channel count, so a one-channel run draws ONE normal-sized map and
+    leaves the remaining slots blank, instead of stretching a single map across
+    the entire panel. A run with MORE maps than slots draws the extra ones past
+    the panel edge -- allowed on purpose; see `labels.PANEL_MAP_SLOTS`.
     """
     cmap = _ramp(colour_stops, sense)
     vmax = max(float(dash.sense_max.get(dash.viz_name(sense), 1.0)), 1e-6)
     band_head(dash, ax, x0, w, {"reach": f"range {sensor_range}"}, title, cmap, vmax)
 
-    n_ch = len(codes)
-    maps = map_plan(sense, codes)
+    n_ch = len(display.names)
+    maps = map_plan(sense, display)
     k = 2 * int(sensor_range) + 1
-    n = len(maps)
+    n = panel_map_slots(sense, display)
     slot = (w - MAP_GAP * (n - 1)) / n
     box = min(slot, h - 58 - 40)
     cs = box / k
@@ -704,9 +715,21 @@ def build_channel_maps(dash, ax, x0, w, h, sense, title, codes, colour_stops,
                     # near-empty maps. A square reading zero on all three is
                     # outside the world, and is drawn as such rather than as a
                     # terrain the agent cannot see.
-                    off = float(np.max(row[:3])) <= 0
+                    #
+                    # THE CHANNELS COME FROM THE GROUP, NEVER FROM A LITERAL
+                    # SLICE. Which channels merge is config data now, so the
+                    # hardcoded first-three-channels slice this used to read
+                    # would have coloured a group declaring channels 1-3 from
+                    # channels 0-2 -- correctly labelled, correctly placed,
+                    # wrongly coloured, and completely silent.
+                    # The colour index is the position WITHIN the group, not
+                    # within the observation vector. No channel index may be
+                    # spelled as a constant in this file; a test reads this
+                    # source and fails if one is.
+                    vals = [float(row[c]) for c in ch]
+                    off = max(vals) <= 0
                     patch.set_facecolor(P.OFF_WORLD if off
-                                        else P.TERRAIN_FILL[int(np.argmax(row[:3]))])
+                                        else P.TERRAIN_FILL[int(np.argmax(vals))])
                     patch.set_edgecolor(P.OUTLINE if off else "none")
                     patch.set_linewidth(1 * PT)
                 else:

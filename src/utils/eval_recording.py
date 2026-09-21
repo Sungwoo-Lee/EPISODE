@@ -7,7 +7,16 @@ Each episode is serialized to ONE file per episode:
 Plus ONE shared metadata file per eval run:
 
     <results_dir>/recordings/<checkpoint_pct>/run_meta.pkl
-    (contains: params pytree, icon_config, action_map, config path, git sha)
+    (contains: params pytree, icon_config, action_map, config path, git sha,
+     channel_display)
+
+`channel_display` is the sensor-channel NAMES the episode video prints under each
+channel's map, taken from the environment config when the recording is written.
+It lives here, beside `icon_config` and `action_map`, because it is the same kind
+of thing they are: a fact about how to DRAW a run, not about how the environment
+behaves. A recording written before it existed simply has no such key, and the
+renderer falls back to positional names ("Channel 0") -- see
+`dashboard/labels.py`.
 
 Format: pickle-gzip (level 5) chosen based on Phase 0 benchmark.
 """
@@ -96,7 +105,98 @@ class EpisodeRecorder:
             pickle.dump(payload, fh, protocol=pickle.HIGHEST_PROTOCOL)
 
 
-def write_run_meta(out_dir: Path, params, icon_config, action_map, config_path: str, extras: Dict = None):
+#: Which config keys carry each sense's display, and which resolved `EnvParams`
+#: fields say whether that sense is on and how wide it is.
+_DISPLAY_KEYS = {
+    'Olfaction': ('sensory.olfactory_channel_names',
+                  'sensory.olfactory_channel_groups',
+                  'olfactory_enabled', 'olfactory_vector_size'),
+    'Visual': ('sensory.visual_channel_names',
+               'sensory.visual_channel_groups',
+               'visual_sensor_enabled', 'visual_vector_size'),
+}
+
+
+def channel_display_from_config(config, params) -> Dict:
+    """Build the `run_meta` channel_display payload from a RESOLVED config.
+
+    NOT reached by the byte-parity gates -- they never write a recording -- which
+    is why reading these keys strictly is safe here and would not be inside
+    `load_env_params`. A new mandatory key there is read by those gates, which
+    load ~38 standalone configs raw with no `extends:` resolution, most of them
+    archived worlds the project deliberately does not keep loadable.
+
+    IT IS, HOWEVER, REACHED WITH UN-LAYERED CONFIGS. The common evaluation
+    invocation `eval_rollout.py --config <run>/models/config.yaml` hands this a
+    run's FROZEN saved config -- a resolved snapshot that has no `extends:` to
+    inherit through and cannot contain keys invented after that run finished. So
+    every checkpoint trained before channel names existed raises here. That is
+    deliberate and is an accepted cost: a fallback default would mean a
+    pre-change run silently recording today's names as though it had declared
+    them, which is exactly the quiet mistake this whole change removes. The
+    message therefore names the remedy rather than just the missing key.
+
+    A SENSE'S KEYS ARE READ ONLY WHEN THAT SENSE IS ON. A world with vision
+    switched off has no vision channels to name, so demanding names for it would
+    fail a perfectly correct config -- and giving it names would describe a sense
+    the agent does not have. Display keys left behind for a disabled sense are
+    ignored rather than refused: there is no resolved width to validate them
+    against, and refusing would punish a harmless leftover.
+    """
+    from src.environment.dashboard.labels import (
+        ChannelDisplay, panel_map_slots, validate_entry)
+
+    out: Dict[str, Any] = {}
+    for sense, (names_key, groups_key, on_field, width_field) in _DISPLAY_KEYS.items():
+        if not bool(getattr(params, on_field)):
+            continue
+        width = int(getattr(params, width_field))
+        values = {}
+        for key in (names_key, groups_key):
+            value = config.get(key)
+            if value is None:
+                raise ValueError(
+                    f"Configuration key '{key}' is required but missing. This "
+                    f"config predates sensor channel names, or declares a sense "
+                    f"width without redeclaring that sense's names in the same "
+                    f"file. A recording cannot be written without it, and there "
+                    f"is deliberately no default -- a default here would record "
+                    f"some other world's channel names as though this run had "
+                    f"declared them. Remedy: re-record from a config resolved at "
+                    f"current code, or add '{names_key}' and '{groups_key}' to "
+                    f"this file (see configs/environment/default.yaml for the "
+                    f"worked example)."
+                )
+            values[key] = value
+
+        entry = {
+            'names': [dict(n) if isinstance(n, dict) else {'name': n, 'qualifier': ''}
+                      for n in values[names_key]],
+            'groups': [dict(g) for g in values[groups_key]],
+        }
+        # Validate exactly as the READER will, so a payload cannot be written
+        # that the renderer would later reject.
+        # Both keys are named in every message: a group error reported against
+        # the NAMES key alone sends the reader to the wrong line.
+        validate_entry(sense, width, entry, where=f"{names_key} / {groups_key}")
+        # Same over-slot warning the display build emits, issued here too so a
+        # config problem is reported when the recording is WRITTEN rather than
+        # only when someone later tries to draw it.
+        panel_map_slots(sense, ChannelDisplay.from_meta(
+            sense, width, entry, key_present=True))
+        out[sense] = entry
+    return out
+
+
+def write_run_meta(out_dir: Path, params, icon_config, action_map, config_path: str,
+                   channel_display: Dict, extras: Dict = None):
+    """Write the per-run metadata every recording in this directory shares.
+
+    `channel_display` is REQUIRED rather than defaulted: a writer that forgot it
+    would produce recordings whose videos silently fall back to positional
+    channel names, which is indistinguishable from a genuinely old recording.
+    Build it with :func:`channel_display_from_config`.
+    """
     out_dir.mkdir(parents=True, exist_ok=True)
     payload = {
         'version': RECORDING_FORMAT_VERSION,
@@ -104,6 +204,7 @@ def write_run_meta(out_dir: Path, params, icon_config, action_map, config_path: 
         'icon_config': icon_config,
         'action_map': list(action_map),
         'config_path': str(config_path),
+        'channel_display': dict(channel_display),
         'extras': dict(extras or {}),
     }
     with open(out_dir / 'run_meta.pkl', 'wb') as fh:

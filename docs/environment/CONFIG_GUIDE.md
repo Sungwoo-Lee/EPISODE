@@ -135,6 +135,30 @@ Default channels at V=8: predator→5, neutral→7, food→3, hiding_predator→
 
 At `visual_vector_size ≠ 8` the class→channel defaults are undefined, so **every** entity must declare an explicit `visual_properties`, and `sensory.visual_background_properties` (a 3×V table, rows = grass/sand/plain) becomes required.
 
+### 3.2b Channel display names (what the episode video calls each channel)
+
+Four keys under `sensory:` say what a viewer reads under each sensor channel's map in the episode video: `olfactory_channel_names`, `olfactory_channel_groups`, `visual_channel_names`, `visual_channel_groups`. Full field reference in [02_config_schema.md](02_config_schema.md).
+
+They are **display only**. Renaming a channel changes the video and nothing else — not the observation vector, not the agent's input, not training.
+
+```yaml
+sensory:
+  visual_vector_size: 8
+  visual_channel_names:
+    - {name: "Grass", qualifier: ""}
+    # ... one entry per channel, exactly visual_vector_size of them
+  visual_channel_groups:
+    - {name: "Terrain", channels: [0, 1, 2]}   # drawn as ONE map
+```
+
+Three rules worth knowing before you edit one:
+
+1. **The length rule.** Exactly one name per channel. A mismatch raises `ValueError` naming both numbers when a recording is written.
+2. **Changing a sense's width means redeclaring that sense's names in the same file.** A child config replaces a list wholesale or not at all — it cannot shorten an inherited one. A config that sets `visual_vector_size: 1` and says nothing else still inherits the base's 8-entry list.
+3. **Where the failure surfaces.** *Not* at config load — the check cannot live in `load_env_params` without reddening the byte-parity gates, which load ~38 standalone configs raw. So a mismatched config **loads and trains perfectly well** and fails at its first video. Two things catch it earlier: a trainer-start backstop (when checkpoint video is on), and the committed sweep `tests/env/test_channel_names_match_configs.py`, which fails naming the file and both keys.
+
+**No fallback defaults**, and a **standalone config inherits nothing** — the eleven `extends:`-free env configs under `configs/continual/nmn_double_return_stages/` and `configs/verification/` therefore carry these keys directly. A sense's keys are read **only when that sense is enabled**, so a vision-off config needs no vision names.
+
 ### 3.3 Per-episode visual sampling
 
 An optional `visual_properties_std` (same length V) makes appearance jitter per episode via Gaussian sampling. Default is **zeros → deterministic** (sampled value equals the mean exactly, byte-identical to no sampling). The visual sampler uses an **independent PRNG stream**, so turning it on does not perturb olfactory sampling.

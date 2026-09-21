@@ -308,6 +308,33 @@ sensory:
   olfactory_enabled: true
   sensor_radius: 20
   vector_size: 5
+  # Display-only channel names for the episode video (2026-09-21). This config
+  # is STANDALONE -- no `extends:` -- so it inherits nothing from
+  # configs/environment/default.yaml and must carry these itself, or it cannot
+  # write a recording. They change no observation and no agent behaviour.
+  olfactory_channel_names:
+    - {name: "Food",    qualifier: ""}
+    - {name: "Odour A", qualifier: "predator-leaning"}
+    - {name: "Odour B", qualifier: "neutral-leaning"}
+    - {name: "Bush",    qualifier: ""}
+    - {name: "Tree",    qualifier: ""}
+  olfactory_channel_groups: []
+  # This file declares NO visual_vector_size and no per-entity visual_properties,
+  # so its eight vision channels are the LOADER'S auto-generated one-hot table:
+  # background grass/sand/plain -> 0/1/2, food -> 3, hiding_predator -> 4,
+  # predator -> 5, every obstacle -> 6, neutral animal -> 7. Confirmed against
+  # this file's own resolved params, not copied from another config.
+  visual_channel_names:
+    - {name: "Grass",           qualifier: ""}
+    - {name: "Sand",            qualifier: ""}
+    - {name: "Plain",           qualifier: ""}
+    - {name: "Food",            qualifier: ""}
+    - {name: "Hiding predator", qualifier: ""}
+    - {name: "Predator",        qualifier: ""}
+    - {name: "Obstacle",        qualifier: ""}
+    - {name: "Neutral",         qualifier: ""}
+  visual_channel_groups:
+    - {name: "Terrain", channels: [0, 1, 2]}
   decay_power: 2.0
   # directional sensors — parity-preserving defaults (see
   # docs/develop/active/sensors/DIRECTIONAL_SENSORS_PLAN.md). Added by the DIRECTIONAL_SENSORS

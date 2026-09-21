@@ -205,6 +205,41 @@ sensory:
   olfactory_enabled: true
   sensor_radius: 20
   vector_size: 5
+  # ── HOW TO NAME THE SMELL CHANNELS ──────────────────────────────────────────
+  # These names are what a viewer reads under each map in the episode video.
+  # Renaming one changes the VIDEO ONLY: it does not touch the observation vector,
+  # the agent's input, or training. Nothing about a run changes except its picture.
+  #
+  # WHICH CHANNEL IS WHICH. Read the entity blocks above. Every entity carries a
+  # `properties:` vector of length vector_size, and the POSITION it writes into is
+  # the channel. Reading column by column in this file:
+  #   channel 0  food           properties: [1.0, 0, 0, 0, 0]      -> "Food"
+  #   channel 1  predator 0.7, rabbit 0.5                          -> shared
+  #   channel 2  predator 0.5, rabbit 0.7                          -> shared
+  #   channel 3  bush           properties: [0, 0, 0, 1.0, 0]      -> "Bush"
+  #   channel 4  tree           properties: [0, 0, 0, 0, 1.0]      -> "Tree"
+  #
+  # NOTE CHANNELS 1 AND 2 -- they are the reason to read the column and not guess
+  # from one entity. The predator and the rabbit BOTH write into both, with
+  # opposite weightings, so neither channel belongs to one animal. Naming channel 1
+  # "Predator" would claim a separation the signal does not have. Name a shared
+  # channel by its leaning, and put the leaning in the qualifier.
+  #
+  # NAME AND QUALIFIER ARE TWO FIELDS, never one string with brackets in it: the
+  # painter draws the qualifier in a smaller, lighter style beside the name, and it
+  # must never have to parse its own label text to find where one ends.
+  #
+  # LENGTH RULE: exactly `vector_size` entries (5 here). A mismatch fails when the
+  # recording is written, with a message naming both numbers.
+  olfactory_channel_names:
+    - {name: "Food",    qualifier: ""}
+    - {name: "Odour A", qualifier: "predator-leaning"}
+    - {name: "Odour B", qualifier: "neutral-leaning"}
+    - {name: "Bush",    qualifier: ""}
+    - {name: "Tree",    qualifier: ""}
+  # Channels drawn as ONE map instead of several (see the vision block below for
+  # what a group is for). Smell has none: two smells can be present at once.
+  olfactory_channel_groups: []
   decay_power: 1.0
   # NOTE — two different distances live in this block, do not confuse them:
   #   sensor_radius         = how FAR a smell carries (a property of the field;
@@ -254,6 +289,97 @@ sensory:
   # (olfaction 5 -> 25, visual 8 -> 13). It is also fingerprinted by the curriculum modality
   # check, so a run cannot resume across this change - which is the check working.
   visual_vector_size: 1
+  # ── HOW TO NAME THE VISION CHANNELS ─────────────────────────────────────────
+  # Same rules as the smell block above: display only, two fields per channel, and
+  # exactly `visual_vector_size` entries -- ONE here, because this world now runs
+  # single-channel vision. The 8-channel table further down is kept as the
+  # reference for configs that set a wider vision, since the dimension is an
+  # experimental knob and moves between studies.
+  #
+  # ►► IF YOU CHANGE visual_vector_size, YOU MUST REDECLARE BOTH KEYS IN THE SAME
+  # FILE. A config that sets `visual_vector_size: 1` and says nothing else still
+  # INHERITS this list and the group below, because a child config replaces a list
+  # wholesale or not at all -- it cannot shorten one. The mismatch is caught when a
+  # recording is written (N names against M channels) and by a test that sweeps
+  # every maintained config, which names the offending file and both keys. It is
+  # NOT caught at config load -- so a mismatched config loads and trains perfectly
+  # well, and only fails later, at eval. Know that before you edit: a training run
+  # can get all the way to its first video.
+  #
+  # A 1-channel vision config needs BOTH of these, beside its size, in the SAME
+  # file that sets the size:
+  #     visual_vector_size: 1
+  #     visual_channel_names:  [{name: "Visible", qualifier: ""}]
+  #     visual_channel_groups: []     # no terrain merge: there is no channel 1 or 2
+  # The same applies to the smell keys and `vector_size`.
+  #
+  # WHICH CHANNEL IS WHICH -- AS THIS FILE STANDS (one channel).
+  # Every entity below carries `visual_properties: [1.0]`, so they ALL write the
+  # same single channel, and `visual_background_properties` is three rows of 0.0 --
+  # the ground contributes nothing. So channel 0 does not mean "grass" or "food";
+  # it means "something is here". Name it for what it reports:
+  #   channel 0  every entity writes 1.0; ground writes nothing  -> "Visible"
+  # There is no terrain channel to merge, which is why the group list is empty.
+  #
+  # WHICH CHANNEL IS WHICH -- AT THE 8-CHANNEL WIDTH (the reference layout).
+  # Kept because the vision dimension is varied between studies and a wider config
+  # needs to know the column order. Entities carry a one-hot `visual_properties:`,
+  # and channels 0-2 come from `visual_background_properties`, whose three rows are
+  # grass / sand / plain in that order:
+  #   channel 0  grass      visual_background_properties row 0   -> "Grass"
+  #   channel 1  sand       row 1                                -> "Sand"
+  #   channel 2  plain      row 2                                -> "Plain"
+  #   channel 3  food       visual_properties: [0,0,0,1,0,0,0,0] -> "Food"
+  #   channel 4  hiding_predator                                 -> "Hiding predator"
+  #   channel 5  predator                                        -> "Predator"
+  #   channel 6  rock AND tree AND bush all write here           -> "Obstacle"
+  #   channel 7  rabbit (class neutral)                          -> "Neutral"
+  # At that width the declaration is the 8-entry list plus
+  #     visual_channel_groups: [{name: "Terrain", channels: [0, 1, 2]}]
+  # That table is a description of THE LOADER'S OWN DEFAULT one-hot assignment
+  # (config_loader.py), not a specification -- it applies to a config that declares
+  # no per-entity `visual_properties` at all. Confirm any wider config against its
+  # own resolved params rather than copying this block.
+  #
+  # CHANNEL 6 IS THE ONE TO BE CAREFUL WITH: three different obstacles share it, so
+  # it is "Obstacle" and not "Rock". Check the column before renaming.
+  #
+  # CHANNEL COUNT IS AN EXPERIMENTAL KNOB. visual_vector_size is deliberately varied
+  # between studies (a single-channel vision arm is a real experiment). The video's
+  # sense panels are a FIXED SIZE -- the same width for every run, whatever this
+  # number says -- so a run with fewer channels draws its maps at normal size and
+  # leaves the rest of the panel BLANK. That blank area is intended: it is not a
+  # layout bug, and it is what lets two runs' panels be compared side by side.
+  #
+  # THERE IS NO UPPER LIMIT. The vision panel holds 6 maps (8 channels, with 0-2
+  # merged into one Terrain map; see below). Declare more than fits and the extra
+  # maps are drawn straight past the panel edge, over the neighbouring sense --
+  # nothing refuses it and the video still renders. This was chosen deliberately
+  # on 2026-09-19 in preference to any limit. A WARNING is logged when it happens,
+  # naming how many maps will be drawn and how many slots exist, so it is
+  # discoverable; nothing fails. If a video ever looks overlapped here, THIS is
+  # why; the panel size is one line in src/environment/dashboard/labels.py.
+  #
+  # WATCH THIS ONE IF YOU EDIT THE GROUP BELOW: deleting the Terrain group takes
+  # vision from 6 maps to 8 and overflows the panel, because the three terrain
+  # channels stop sharing a map. That is the likeliest accidental way to get here.
+  visual_channel_names:
+    - {name: "Visible", qualifier: ""}   # one channel: "something is here"
+  # ── MERGING CHANNELS INTO ONE MAP ───────────────────────────────────────────
+  # A group draws several channels as a SINGLE map instead of one map each. Terrain
+  # is grouped because a square is grass OR sand OR plain and never two at once, so
+  # three separate maps would each be blank wherever the other two are not.
+  #   name:     what the merged map is called on screen
+  #   channels: which channel indices it covers -- must be a contiguous run, each
+  #             index must exist, and no channel may appear in two groups
+  # A group naming a channel that does not exist FAILS when the recording is
+  # written. It cannot silently change how many maps the video draws.
+  # Empty HERE because single-channel vision has no terrain channels to merge.
+  # At the 8-channel width this reads:
+  #     - {name: "Terrain", channels: [0, 1, 2]}
+  # The channels a group names are the channels the merged map READS -- declaring
+  # [1, 2, 3] draws a map coloured from channels 1-3, not 0-2.
+  visual_channel_groups: []
   # DIRECTIONAL_SENSORS anisotropic point-spread blur. false = exact cell match, byte-identical
   # to pre-DIRECTIONAL_SENSORS. When true, each entity is written into cells with a gaussian
   # weight elongated ALONG the agent->entity ray, so distance becomes vague while

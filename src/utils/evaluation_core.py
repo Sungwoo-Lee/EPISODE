@@ -282,7 +282,8 @@ def evaluate_jax_checkpoint(model, params, config, num_episodes, seed, results_d
     
     if render_video:
         os.makedirs(recordings_dir, exist_ok=True)
-        from src.utils.eval_recording import write_run_meta
+        from src.utils.eval_recording import (channel_display_from_config,
+                                              write_run_meta)
         from pathlib import Path
         _action_map = ["Up", "Right", "Down", "Left"]
         if params.rest_action_enabled: _action_map.append("Rest")
@@ -290,6 +291,7 @@ def evaluate_jax_checkpoint(model, params, config, num_episodes, seed, results_d
         write_run_meta(
             Path(recordings_dir), params, icon_config,
             _action_map, getattr(config, 'source_path', ''),
+            channel_display=channel_display_from_config(config, params),
             extras={'checkpoint_pct': checkpoint_pct, 'seed': seed},
         )
     

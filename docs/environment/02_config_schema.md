@@ -25,6 +25,12 @@ Full rationale: [[DIRECTIONAL_SENSORS_PLAN]], [[DIRECTIONAL_SENSORS_REPORT]].
 | `visual_occlusion_enabled` | bool, static | `false` | Line-of-sight occlusion. An entity is hidden when a nearer `blocks_sight` entity lies inside the shadow cone of the ray to it. |
 | `visual_occlusion_cone_deg` | float | *(conditional)* | Half-angle of the shadow cone, in `(0, 90)`. **Read only when occlusion is enabled** (CONFIG_GUIDE §5 conditional-key pattern). |
 | `visual_occlusion_strength` | float | *(conditional)* | `1.0` hides fully, lower values attenuate. Range `[0, 1]`. Conditional as above. |
+| `olfactory_channel_names` | list of `{name, qualifier}` | *(required when olfaction is enabled)* | Reader-facing name per smell channel, printed under that channel's map in the episode video. **Display only** — changes no observation, no agent input, no training. Exactly `vector_size` entries. `name` and `qualifier` are two fields, never one string: the painter sets the qualifier in a lighter style beside the name and must never parse its own label text. Read at **recording-write time**, not by `load_env_params`, so it never reaches the byte-parity gates. |
+| `olfactory_channel_groups` | list of `{name, channels}` | `[]` | Channels drawn as ONE map instead of one map each. Normally empty for smell — two smells can be present at once. |
+| `visual_channel_names` | list of `{name, qualifier}` | *(required when the visual sensor is enabled)* | As above, exactly `visual_vector_size` entries. **A config that sets its own `visual_vector_size` must redeclare this in the same file**: a child config replaces a list wholesale or not at all and cannot shorten an inherited one. |
+| `visual_channel_groups` | list of `{name, channels}` | `[]` at V=1; `[{name: Terrain, channels: [0,1,2]}]` at V=8 | Which channels merge into a single map. `channels` must be a contiguous run, every index must exist, no channel may appear in two groups, and a group may not exceed the merged map's palette (3 colours). **The channels a group names are the channels the merged map READS** — declaring `[1,2,3]` draws a map coloured from channels 1–3. |
+
+**Enabled-sense rule.** A sense's two display keys are read **only when that sense resolves enabled** (`olfactory_enabled` / `visual_sensor_enabled`). A vision-off config needs no vision names, and display keys left behind for a disabled sense are ignored rather than refused. **No fallback defaults**: a missing key on an enabled sense raises `ValueError` naming the key when a recording is written.
 
 ### Per-entity keys
 

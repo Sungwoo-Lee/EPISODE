@@ -33,7 +33,12 @@ subfigures renderer in ``src/environment/renderer_v2.py``, which is frozen and
 untouched by this package.
 """
 
-from .labels import channel_labels, olfactory_labels, visual_labels
+from .labels import (
+    PANEL_MAP_SLOTS,
+    ChannelDisplay,
+    map_plan,
+    panel_map_slots,
+)
 from .layout import (
     ARENA_CELL_MIN_PX,
     ARENA_PX,
@@ -86,6 +91,7 @@ __all__ = [
     "ARENA_CELL_MIN_PX",
     "ARENA_PX",
     "Box",
+    "ChannelDisplay",
     "arena_cell_px",
     "window_cells",
     "FontMetrics",
@@ -93,13 +99,13 @@ __all__ = [
     "LayoutContext",
     "LayoutOverflowError",
     "PANELS",
+    "PANEL_MAP_SLOTS",
     "PanelSpec",
     "Size",
-    "channel_labels",
     "check_completeness",
-    "olfactory_labels",
+    "map_plan",
     "pack",
+    "panel_map_slots",
     "present_panels",
     "real_available",
-    "visual_labels",
 ]

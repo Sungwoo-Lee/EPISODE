@@ -1228,7 +1228,8 @@ def main():
 
             # --- Recording metadata (written once before the loop) ---
             if args.record:
-                from src.utils.eval_recording import write_run_meta
+                from src.utils.eval_recording import (channel_display_from_config,
+                                                      write_run_meta)
                 _action_map = ["Up", "Right", "Down", "Left"]
                 if params_e.rest_action_enabled:
                     _action_map.append("Rest")
@@ -1237,6 +1238,7 @@ def main():
                 _icon_config = config.get("visualization.icons", None)
                 write_run_meta(
                     rec_dir, params_e, _icon_config, _action_map, entry["config_arg"],
+                    channel_display=channel_display_from_config(config, params_e),
                     extras={"checkpoint_pct": _pct_label},
                 )
                 if not args.quiet:

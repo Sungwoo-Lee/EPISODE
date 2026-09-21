@@ -1,207 +1,304 @@
-"""V2-owned channel label table.
+"""What a sense's channels are CALLED, and how many map slots its panel holds.
 
-WHY THIS EXISTS. ``src/environment/sensor.py::build_sensory_viz`` emits its own
-``labels`` field, and one of those labels is wrong for a reader: the hiding
-predator's visual channel is labelled ``DNG`` ("danger"), which names a judgement
-rather than the thing sensed. ``sensor.py`` is a frozen file for the whole of
-this plan (it is on the V1 video path), so the label is corrected *here*, in a
-table the new renderer owns and which overrides the adapter's labels. V1 frames
-keep ``DNG`` until the retirement gate, which is deliberate -- it keeps the V1
-byte-identity guard meaningful.
+PLAIN-LANGUAGE SUMMARY. The episode video draws one small map per sensor channel
+and prints that channel's name underneath it -- "Food", "Predator", "Terrain".
+This module answers two questions about that strip of maps: what each one is
+called, and how many of them the panel is sized for.
 
-SCOPE RULE (plan section D7.7 item 6). The named table applies **only** when the
-visual property vector is the standard 8 channels. Any other width gets
-positional ``C0 ... C{V-1}`` labels, because a name table keyed by index is a
-lie as soon as the channel layout changes.
+NAMES ARE DATA NOW, NOT A TABLE IN HERE. Until 2026-09-21 this module held the
+names themselves, keyed by channel index. It no longer does, and the tables are
+deleted rather than deprecated. A channel's name comes from the environment
+config, is validated against the run's real channel count when the recording is
+written, and travels with the recording in `run_meta.pkl`. So there is exactly
+ONE place a name can come from.
 
-TWO NAMESPACES, AND WHY THEY ARE BOTH RIGHT. This module names **sensor
-channels** (``FOD``, ``AN-A``, ``GRS``); ``cells.DISPLAY_NAME`` names **the
-things drawn in a world square** (``neutral`` -> "rabbit"). They are deliberately
-separate tables because they answer different questions, and the one place they
-appear to disagree is real rather than an oversight: the visual channel ``NEU``
-is "Neutral", because the channel is the *property axis* an observation carries,
-while the animal standing in a square is a "rabbit". Nothing may add a THIRD
-table -- a surface that shows a channel to a reader calls :func:`display_channel`
-here, and a surface that names an occupant calls ``cells.display`` there.
+WHY THAT MATTERED ENOUGH TO DELETE WORKING CODE. A name that exists in two
+places is a name that can disagree with itself, and this renderer lost precisely
+that bet: the panel-width bug of 2026-09-18 was two modules holding two different
+answers to one question -- how many maps vision draws -- and every video failed
+to render. That one was about a COUNT, so it crashed. A display NAME that
+silently disagrees with the channel it labels is worse, because nothing crashes:
+the video just tells its reader that a channel means something it does not.
 
-THE RULE THIS MODULE EXISTS TO ENFORCE, AS OF 2026-09-17. The short codes are an
-internal index, never a thing a viewer reads. The renderer used to print them
-straight onto the frame -- a smell panel labelled ``AN-A`` / ``BUSH`` and a
-vision panel labelled ``FOD`` / ``HPR`` / ``RCK`` -- so the dashboard asked its
-reader to learn an eight-entry abbreviation table that exists nowhere on the
-page. :func:`display_channel` is the only way a channel name reaches a frame,
-and it raises on an unknown code rather than passing it through, because a code
-that leaks to the page is exactly the defect being removed. The one deliberate
-exception is the collision diamond's C/U/R/D/L, which are positions rather than
-entities and are glossed in that card's own subtitle.
+THE PANEL IS A FIXED SIZE, AND THE BLANK SPACE IS INTENDED. `PANEL_MAP_SLOTS`
+below is a conventional SIZE, not a limit. How many channels a sense has is a
+deliberate experimental knob here -- one study runs vision at a single channel --
+and a panel that resized itself to the live count would draw a differently shaped
+video for every arm, which is exactly what makes two runs incomparable. So the
+panel keeps its width whatever the run declares, and a run with fewer channels
+leaves part of it blank. THAT BLANK AREA IS NOT A LAYOUT BUG. See `D4b` in
+`docs/develop/active/refactors/DASHBOARD_CHANNEL_NAMES_FROM_CONFIG.md` before
+"fixing" it.
+
+AND A RUN WITH MORE MAPS THAN SLOTS DRAWS PAST THE PANEL EDGE. That is a user
+decision taken on 2026-09-19, chosen over shrinking the slots to fit (which
+reintroduces the count-dependent sizing this design removes) and over refusing
+the config. Nothing raises; a warning naming both numbers is logged when the
+display is built, so an accidental edit -- deleting the Terrain group takes
+vision from 6 maps to 8 -- is discoverable instead of silent.
+
+NO MATPLOTLIB, DELIBERATELY. The layout registry imports this module and must
+stay importable without a drawing library (a test pins it), because layout runs
+once per episode before any figure exists. `palette` is imported for the terrain
+colours' ARITY only, and is itself nothing but colour strings.
 """
 
 from __future__ import annotations
 
-# Olfactory spectrum components. AN-A / AN-B are two *shared* animal-odour
-# components -- predators load mostly on A and neutral animals mostly on B, with
-# heavy overlap -- so they are named by their leaning and never "Predator" /
-# "Neutral", which would claim a separation the signal does not have.
-OLFACTORY_LABELS: tuple[str, ...] = ("FOOD", "AN-A", "AN-B", "BUSH", "TREE")
+import logging
+from dataclasses import dataclass
+from typing import Mapping
 
-OLFACTORY_LONG: dict[str, str] = {
-    "FOOD": "Food",
-    "AN-A": "Odour A (predator-leaning)",
-    "AN-B": "Odour B (neutral-leaning)",
-    "BUSH": "Bush",
-    "TREE": "Tree",
-}
+from .palette import TERRAIN_FILL
 
-#: The same five names, split into the part that identifies the channel and the
-#: part that qualifies it. The approved design sets the qualifier in a lighter,
-#: smaller style beside the name rather than in brackets after it, so the panel
-#: reads "Odour A  predator-leaning" -- and a painter cannot produce that from
-#: ``OLFACTORY_LONG``'s single string without parsing its own label text, which
-#: is how a display detail turns into a parser. Derived from the table above at
-#: import, so the two can never drift.
-OLFACTORY_PARTS: dict[str, tuple[str, str]] = {
-    code: (name.split(" (", 1)[0], name.split(" (", 1)[1].rstrip(")")
-           if " (" in name else "")
-    for code, name in OLFACTORY_LONG.items()
-}
+logger = logging.getLogger(__name__)
 
-# The standard 8-channel visual property vector: three terrain channels then
-# five entity channels. Channel 6 is shared by every obstacle (rock, bush,
-# campfire), so it is "Obstacle" and not "Rock".
-VISUAL_LABELS_V8: tuple[str, ...] = (
-    "GRS",
-    "SND",
-    "PLN",
-    "FOD",
-    "HPR",
-    "PRD",
-    "RCK",
-    "NEU",
-)
+#: The observation-breakdown names this module knows. These are the environment's
+#: own keys, not the reader-facing titles -- the band's vision card is titled
+#: "Vision" on screen while the sense it looks values up under stays "Visual".
+SENSES = ("Olfaction", "Visual")
 
-VISUAL_LONG: dict[str, str] = {
-    "GRS": "Grass",
-    "SND": "Sand",
-    "PLN": "Plain",
-    "FOD": "Food",
-    "HPR": "Hiding predator",
-    "PRD": "Predator",
-    "RCK": "Obstacle",
-    "NEU": "Neutral",
-}
+#: How many map slots a sense's panel is sized for, whatever the run's channel
+#: count. This is the number of maps the CONVENTIONAL world draws: smell's five
+#: channels are five maps, and vision's eight channels are six maps because the
+#: three terrain channels ship merged into one. It is a conventional SIZE and NOT
+#: a limit: the panel keeps this width whatever the run declares, so a run drawing
+#: more maps than there are slots draws them PAST THE PANEL EDGE rather than being
+#: refused or resized (user decision, 2026-09-19 -- see D4b before "fixing" an
+#: overlapping frame). Raising it is a one-line edit here.
+#:
+#: WHY THIS IS IN MAPS AND NOT IN CHANNELS. The panel is laid out in maps, and
+#: vision's eight channels draw six maps because three of them merge. Sizing in
+#: channels would make the vision panel a third wider than anything drawn into
+#: it -- which is the precise miscount that broke every video in `4b6f7196`.
+PANEL_MAP_SLOTS = {"Olfaction": 5, "Visual": 6}
 
-#: The label this package refuses to inherit from the frozen adapter, kept
-#: named so a test can assert the override actually happened.
-SUPERSEDED_VISUAL_LABELS: dict[str, str] = {"DNG": "HPR"}
-
-_STANDARD_VISUAL_WIDTH = 8
+#: How many channels a single merged map can colour. The merged map is drawn in
+#: flat per-channel colours from `palette.TERRAIN_FILL`, so a group with more
+#: members than there are colours has no colour for its last one. Read from the
+#: palette rather than written down again, so the two cannot drift.
+TERRAIN_PALETTE_ARITY = len(TERRAIN_FILL)
 
 
-def visual_labels(visual_vector_size: int) -> tuple[str, ...]:
-    """Short labels for the visual channels, or positional names off-standard."""
-    if visual_vector_size == _STANDARD_VISUAL_WIDTH:
-        return VISUAL_LABELS_V8
-    return tuple(f"C{i}" for i in range(visual_vector_size))
-
-
-def olfactory_labels(n_channels: int) -> tuple[str, ...]:
-    """Short labels for the olfactory components, or positional names off-standard."""
-    if n_channels == len(OLFACTORY_LABELS):
-        return OLFACTORY_LABELS
-    return tuple(f"C{i}" for i in range(n_channels))
-
-
-def channel_labels(sense: str, n_channels: int) -> tuple[str, ...]:
-    """Short labels for ``sense``'s channels.
-
-    ``sense`` is a breakdown name -- ``"Visual"`` or ``"Olfaction"``.
-
-    These are the INTERNAL codes. Nothing that a viewer reads may use them
-    directly -- see :func:`display_channel`.
-    """
-    if sense == "Visual":
-        return visual_labels(n_channels)
-    if sense == "Olfaction":
-        return olfactory_labels(n_channels)
-    raise KeyError(
-        f"no channel label table for sense {sense!r}; "
-        f"known senses are 'Visual' and 'Olfaction'"
-    )
-
-
-def display_channel(sense: str, code: str) -> tuple[str, str]:
-    """The ``(name, qualifier)`` a READER sees for one sensor channel.
-
-    ``qualifier`` is the empty string for every channel but the two shared
-    animal odours, whose leaning is the whole reason they are not called
-    "Predator" and "Neutral".
-
-    Raises rather than falling back to the code. A silently passed-through
-    ``AN-A`` on a rendered frame is the defect this function exists to make
-    loud: the frame is the only surface a viewer has, and it carries no key to
-    an abbreviation table.
-    """
-    if sense == "Olfaction":
-        table, parts = OLFACTORY_LONG, OLFACTORY_PARTS
-        if code in parts:
-            return parts[code]
-    elif sense == "Visual":
-        table = VISUAL_LONG
-        if code in table:
-            return (table[code], "")
-    else:
+def _check_sense(sense: str) -> None:
+    if sense not in PANEL_MAP_SLOTS:
         raise KeyError(
-            f"no channel label table for sense {sense!r}; "
-            f"known senses are 'Visual' and 'Olfaction'"
+            f"no channel display for sense {sense!r}; known senses are "
+            f"{list(PANEL_MAP_SLOTS)}"
         )
-    # A positional C0/C1/... code is produced on purpose when the vector width is
-    # off-standard (the SCOPE RULE above), and it is the one thing a reader may
-    # legitimately be shown without a name, because no name table applies.
-    if code.startswith("C") and code[1:].isdigit():
-        return (f"Channel {code[1:]}", "")
-    raise KeyError(
-        f"no reader's name for {sense} channel {code!r}; known codes are "
-        f"{sorted(table)}. A channel code must never reach a rendered frame: the "
-        f"frame carries no key to it."
-    )
 
 
-#: The three visual channels that are one thing seen three ways. A square is
-#: grass OR sand OR plain, never two, so the approved design draws them as a
-#: single "Terrain" map in three flat colours instead of three maps that are
-#: empty wherever the other two are not.
-TERRAIN_CHANNELS = ("GRS", "SND", "PLN")
+def validate_entry(sense: str, n_channels: int, entry: Mapping, *, where: str = ""):
+    """Validate one sense's ``{names, groups}`` payload; return it as tuples.
+
+    Shared by the READER (:meth:`ChannelDisplay.from_meta`, which sees a payload
+    unpickled from a recording) and the WRITER
+    (``eval_recording.channel_display_from_config``, which sees one just built
+    from a config), so the two can never enforce different rules.
+
+    Every failure raises ``ValueError`` naming BOTH numbers involved -- what was
+    declared and what the run actually has -- because "length mismatch" without
+    the numbers makes the reader go and measure them by hand.
+    """
+    _check_sense(sense)
+    at = f" ({where})" if where else ""
+
+    if not isinstance(entry, Mapping):
+        raise ValueError(
+            f"{sense} channel display{at} must be a mapping with 'names' and "
+            f"'groups'; got {type(entry).__name__}")
+
+    raw_names = entry.get("names")
+    if raw_names is None:
+        raise ValueError(f"{sense} channel display{at} carries no 'names' list")
+    raw_names = list(raw_names)
+
+    if len(raw_names) != int(n_channels):
+        raise ValueError(
+            f"{sense} declares {len(raw_names)} channel names{at} but this run has "
+            f"{int(n_channels)} {sense} channels. The names list must have exactly "
+            f"one entry per channel -- a config that sets its own sense width must "
+            f"redeclare that sense's names in the SAME file, because a child config "
+            f"replaces a list wholesale or not at all and cannot shorten an "
+            f"inherited one.")
+
+    names = []
+    for i, item in enumerate(raw_names):
+        if isinstance(item, Mapping):
+            name, qualifier = item.get("name"), item.get("qualifier", "")
+        else:
+            name, qualifier = item, ""
+        if not isinstance(name, str) or not name.strip():
+            raise ValueError(
+                f"{sense} channel {i}{at} has no usable name (got {name!r}). Every "
+                f"channel needs a non-empty name: the rendered frame is the only "
+                f"surface a viewer has, and it carries no key to an index.")
+        if qualifier is None:
+            qualifier = ""
+        if not isinstance(qualifier, str):
+            raise ValueError(
+                f"{sense} channel {i}{at}: qualifier must be a string, got "
+                f"{qualifier!r}. Name and qualifier are two FIELDS, never one "
+                f"string -- the painter must not have to parse its own label text.")
+        names.append((name, qualifier))
+
+    groups, claimed = [], {}
+    for g in list(entry.get("groups") or []):
+        if isinstance(g, Mapping):
+            gname, channels = g.get("name"), g.get("channels")
+        else:
+            gname, channels = g[0], g[1]
+        if not isinstance(gname, str) or not gname.strip():
+            raise ValueError(f"{sense} declares a channel group{at} with no name")
+        channels = tuple(int(c) for c in (channels or ()))
+
+        if len(channels) < 2:
+            raise ValueError(
+                f"{sense} group {gname!r}{at} covers {len(channels)} channel(s). A "
+                f"group draws several channels as ONE map, so it needs at least 2; "
+                f"a group of one is a plain channel wearing a group's name.")
+        if len(channels) > TERRAIN_PALETTE_ARITY:
+            raise ValueError(
+                f"{sense} group {gname!r}{at} covers {len(channels)} channels but "
+                f"the merged map has only {TERRAIN_PALETTE_ARITY} colours to draw "
+                f"them in. Refused rather than silently reusing a colour, which "
+                f"would make two different channels look identical on the frame.")
+        for c in channels:
+            if not 0 <= c < int(n_channels):
+                raise ValueError(
+                    f"{sense} group {gname!r}{at} names channel {c}, but this run "
+                    f"has {int(n_channels)} {sense} channels (valid: 0..."
+                    f"{int(n_channels) - 1}).")
+            if c in claimed:
+                raise ValueError(
+                    f"{sense} channel {c}{at} appears in two groups "
+                    f"({claimed[c]!r} and {gname!r}); a channel may be drawn on one "
+                    f"map only.")
+            claimed[c] = gname
+        if len(set(channels)) != len(channels):
+            raise ValueError(
+                f"{sense} group {gname!r}{at} repeats a channel: {channels}")
+        if tuple(sorted(channels)) != tuple(range(min(channels), max(channels) + 1)):
+            raise ValueError(
+                f"{sense} group {gname!r}{at} covers {channels}, which is not a "
+                f"contiguous run of channels. The merged map is drawn at the "
+                f"position of the group's first channel, so a gapped group has no "
+                f"well-defined place in the strip.")
+        groups.append((gname, tuple(channels)))
+
+    return tuple(names), tuple(groups)
 
 
-def map_plan(sense: str, codes) -> list[tuple[str, str, str, int | None]]:
-    """Which maps a sense draws: ``[(name, qualifier, kind, channel), ...]``.
+@dataclass(frozen=True)
+class ChannelDisplay:
+    """Everything the renderer needs to LABEL one sense.
 
-    One map per channel, except that vision's three terrain channels become a
-    single categorical map (the sketch's own arrangement). The composite applies
-    only when the vector really is the standard 8 channels in the standard order;
-    any other width gets one map per channel, because a composite keyed by index
-    is a lie as soon as the layout changes -- the same scope rule
-    :func:`visual_labels` already follows.
+    Built from a recording's ``run_meta['channel_display']``, or positionally
+    when the recording predates it.
+    """
+
+    names: tuple[tuple[str, str], ...]          # (name, qualifier) per channel
+    groups: tuple[tuple[str, tuple[int, ...]], ...]
+    legacy: bool                                 # True -> positional names, no groups
+
+    @classmethod
+    def from_meta(cls, sense: str, n_channels: int, meta_entry, *,
+                  key_present: bool) -> "ChannelDisplay":
+        """Build one sense's display from a recording's payload.
+
+        ``key_present`` is whether ``run_meta`` carried a top-level
+        ``channel_display`` AT ALL -- **not** whether this sense has an entry in
+        it. The two stopped being the same thing when names became required only
+        for ENABLED senses: a perfectly good configured recording legitimately
+        has no ``Visual`` entry, because that run had vision switched off.
+
+        Keying "legacy" off the per-sense entry instead would hand positional
+        names to three unlike cases -- a pre-change recording, a disabled sense,
+        and a forgotten or hand-edited entry -- and the third would silently ship
+        "Channel 0" on an ENABLED sense, which is the one name this module
+        promises can never reach a frame.
+        """
+        _check_sense(sense)
+        n = int(n_channels)
+        if not key_present:
+            # Genuinely pre-change: no names anywhere, so positional ones, and no
+            # groups -- the terrain merge is data this recording does not carry.
+            return cls(tuple((f"Channel {i}", "") for i in range(n)), (), True)
+        if meta_entry is None:
+            raise KeyError(
+                f"run_meta carries channel_display but has no entry for {sense!r}, "
+                f"which is enabled on this recording. A configured recording must "
+                f"name every sense it draws. Re-record it at current code.")
+        names, groups = validate_entry(sense, n, meta_entry, where="run_meta")
+        return cls(names, groups, False)
+
+
+def map_plan(sense: str, display: ChannelDisplay) -> list:
+    """Which maps a sense draws: ``[(name, qualifier, kind, channels), ...]``.
+
+    A grouped run of channels becomes ONE map of kind ``"terrain"``; every other
+    channel is its own ``"seq"`` map at its own index. A group is drawn at the
+    position of its first channel.
+
+    THE LAST ELEMENT CARRIES THE GROUP'S OWN CHANNEL TUPLE -- an int for a plain
+    channel, the declared tuple for a group. The painter must read exactly these
+    and never a literal slice: a group is DATA now, so a hardcoded ``row[:3]``
+    would colour ``{Terrain, [1,2,3]}`` from channels 0-2 with no error at all.
+    That defect would have validated, placed the map correctly, and drawn the
+    wrong picture in silence.
 
     WHY THIS LIVES IN `labels` RATHER THAN IN THE PAINTER THAT DRAWS FROM IT
     (moved 2026-09-18). Two modules need this answer and they must never give
     different ones: the painter draws the maps, and the layout registry
-    (`panels._span`) has to declare how much room they need BEFORE any of them
-    is drawn. While the count lived in the painter, the registry could not ask
-    for it -- `panels` must stay importable without Matplotlib, which a test
-    pins -- so it counted CHANNELS instead and declared a vision panel a third
-    wider than the painter has ever needed, and the packer refused to lay out a
-    frame that draws. This module is the one both can import: it already owns
-    what a channel IS, it has no dependencies of its own, and the length of what
-    it returns is now the single answer to "how many maps".
+    (`panels._span`) has to declare how much room they need BEFORE any of them is
+    drawn. While the count lived in the painter, the registry could not ask for
+    it -- `panels` must stay importable without Matplotlib -- so it counted
+    CHANNELS instead and declared a vision panel a third wider than the painter
+    has ever needed, and the packer refused to lay out a frame that draws.
     """
+    _check_sense(sense)
+    starts = {chans[0]: (name, chans) for name, chans in display.groups}
+    covered = {c for _, chans in display.groups for c in chans}
+
     out = []
-    composite = sense == "Visual" and tuple(codes[:3]) == TERRAIN_CHANNELS
-    if composite:
-        out.append(("Terrain", "", "terrain", None))
-    for i, code in enumerate(codes):
-        if composite and i < 3:
+    for i, (name, qualifier) in enumerate(display.names):
+        if i in starts:
+            gname, chans = starts[i]
+            out.append((gname, "", "terrain", tuple(chans)))
             continue
-        name, qualifier = display_channel(sense, code)
+        if i in covered:
+            continue
         out.append((name, qualifier, "seq", i))
     return out
+
+
+def panel_map_slots(sense: str, display: ChannelDisplay) -> int:
+    """How many slots the panel is sized for.
+
+    The fixed conventional size, EXCEPT that a legacy recording is sized to what
+    it actually draws. That asymmetry is deliberate and load-bearing: a legacy
+    8-channel recording carries no merge group, so it draws 8 maps, and forcing
+    it into the conventional 6 would overflow EVERY recording already on disk,
+    including all eleven render-audit fixture cells. The fixed width applies to
+    recordings written after channel names existed, where a config genuinely
+    declared the count. The obvious "simplification" -- using the constant
+    everywhere -- silently breaks every archived recording.
+
+    Deliberately does NOT raise when a configured run draws more maps than there
+    are slots: no limit is imposed (user decision). It WARNS, naming both
+    numbers, so an accidental edit -- deleting the Terrain group takes vision
+    from 6 maps to 8 -- is discoverable instead of silent.
+    """
+    _check_sense(sense)
+    drawn = len(map_plan(sense, display))
+    slots = PANEL_MAP_SLOTS[sense]
+    if display.legacy:
+        return max(slots, drawn)
+    if drawn > slots:
+        logger.warning(
+            "%s draws %d maps but its panel has %d slots; the extra maps will be "
+            "drawn past the panel edge. This is allowed and nothing is refused -- "
+            "if it was not intended, check sensory.%s_channel_groups.",
+            sense, drawn, slots,
+            "visual" if sense == "Visual" else "olfactory")
+    return slots

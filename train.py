@@ -889,6 +889,29 @@ def main():
             print(f"Continual mode: obs_dim={stage0_obs_dim}, action_dim={stage0_action_dim} "
                   f"validated consistent across {schedule.num_stages} stages.")
 
+    # --- Channel-name BACKSTOP, not a guard -----------------------------------------
+    # If this run will record checkpoint videos, resolve the sensor-channel display
+    # ONCE here and throw the result away. It exists only to raise: a config whose
+    # channel names disagree with its channel widths trains perfectly well and fails
+    # at its FIRST CHECKPOINT VIDEO, hours into a GPU run. This turns that into a
+    # failure in the first seconds.
+    #
+    # CALLED A BACKSTOP DELIBERATELY. It gives ZERO commit-time coverage -- nothing
+    # fails until somebody launches a run -- and it never reaches the verification
+    # configs, which are never trained. The real coverage is the committed sweep in
+    # tests/env/test_channel_names_match_configs.py; this only shortens the loop.
+    if config.get_mandatory('training.video_during_training'):
+        from src.utils.eval_recording import channel_display_from_config
+        channel_display_from_config(config, params)
+        if schedule is not None:
+            # Stage 0 alone would still let a LATER stage's width change fail at
+            # that stage's first video. Every stage's Config is already resolved
+            # by this point (`schedule.stage_configs` holds Config objects, not
+            # paths), so checking all of them costs nothing.
+            for _i in range(1, schedule.num_stages):
+                _cfg_i = schedule.stage_configs[_i]
+                channel_display_from_config(_cfg_i, load_env_params(_cfg_i))
+
     # 2. Setup Results Directory
     if args.debug: print(f"[DEBUG] Phase 2: Results Directory Setup...", flush=True)
     timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")

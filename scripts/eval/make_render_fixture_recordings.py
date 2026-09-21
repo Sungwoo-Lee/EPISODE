@@ -194,10 +194,17 @@ class Cell:
     overrides_source: str = ""      # where the override VALUES came from, as text
     provenance: str = ""            # which RULES this world was recorded under, as text
     no_true_obs: bool = False       # record `true_obs=None` (the "true obs not recorded" path)
+    #: Rewrite the world's SENSE WIDTH before the environment is built. A plain
+    #: override cannot do this: changing `visual_vector_size` alone is refused by
+    #: the loader, because every entity still carries a vector of the old length.
+    #: See `_set_vision_dim` / `_set_olf_dim`.
+    vision_dim: int | None = None
+    olf_dim: int | None = None
 
     @property
     def synthetic(self) -> bool:
-        return bool(self.overrides)
+        return bool(self.overrides) or (self.vision_dim is not None
+                                        or self.olf_dim is not None)
 
 
 # Vision radius 2, blur and occlusion off — the base every E-cell vision override builds on.
@@ -344,6 +351,46 @@ CELLS: dict[str, Cell] = {
     "E9": Cell(DEFAULT_CONFIG, {
         "sensory.olfactory_grid_range": 4, "sensory.visual_sensor_enabled": False,
     }, "synthetic stress: smell at radius 4 with vision off"),
+
+    # ---- Display cells: the channel-names change (2026-09-21) ------------------------
+    # The base config runs ONE vision channel since 47b1b8c3, so none of the cells
+    # above can show what the fixed-size panel does at the reference width. These
+    # build their widths explicitly through `_set_vision_dim` / `_set_olf_dim`.
+    "V8": Cell(DEFAULT_CONFIG, dict(_E2, **{"sensory.olfactory_grid_range": 1}),
+               "vision at the 8-CHANNEL REFERENCE width, radius 2: six maps with the "
+               "three terrain channels merged. This is the cell the fixed-panel change "
+               "is measured on, photographed before and after so the comparison is of "
+               "one world rather than two",
+               overrides_source="the loader's own V=8 one-hot auto-generation (entity "
+                                "visual vectors stripped), plus the reference names",
+               vision_dim=8),
+    "R0": Cell(DEFAULT_CONFIG, {"sensory.olfactory_grid_range": 0,
+                                "sensory.visual_sensor_range": 0},
+               "both senses at range 0 -- the NAMED-ROWS path, which draws one labelled "
+               "row per channel instead of diamond maps. Needed as an explicit cell "
+               "because the 2026-09-21 default moved smell to radius 1 and sight to "
+               "radius 2, so NO maintained world draws this path any more"),
+    "V12": Cell(DEFAULT_CONFIG, dict(_E2, **{"sensory.olfactory_grid_range": 1}),
+                "synthetic OVER-SLOT vision: 12 channels with the Terrain group kept, so "
+                "10 maps are drawn into a 6-slot panel. THE 12-CHANNEL ASSIGNMENT IS "
+                "SYNTHETIC AND ARBITRARY -- no loader default exists above 8, so the "
+                "entity-to-channel map here is invented for this test and means nothing "
+                "outside it",
+                vision_dim=12),
+    "V8nogroup": Cell(DEFAULT_CONFIG, dict(_E2, **{
+        "sensory.olfactory_grid_range": 1,
+        "sensory.visual_channel_groups": [],
+    }), "8-channel vision with the Terrain group DELETED: 8 maps into a 6-slot panel. "
+        "This is the ACCIDENTAL over-slot case -- the config's own how-to block "
+        "explains what the group does, and deleting it lands here",
+        vision_dim=8),
+    "OLF12": Cell(DEFAULT_CONFIG, dict(_E2, **{"sensory.olfactory_grid_range": 1}),
+                  "synthetic OVER-SLOT olfaction: 12 smell channels into a 5-slot panel. "
+                  "Recorded beside V12 because the two senses fail OPPOSITELY -- "
+                  "olfaction is the left child and its extra maps land ON the vision "
+                  "panel, while vision is the right child and its extras are clipped "
+                  "away -- so one frame cannot show both",
+                  olf_dim=12),
 }
 
 # The cells CP0.2 asks for. The E cells belong to CP2.7 (Phase 2) and are generated only
@@ -418,13 +465,125 @@ _CONDITIONAL_KEYS = frozenset({
 })
 
 
+#: The 8-channel vision layout, as a DESCRIPTION OF THE LOADER'S OWN DEFAULT
+#: rather than a specification. When no entity declares `visual_properties`, the
+#: loader auto-generates a one-hot table: background grass/sand/plain -> 0/1/2,
+#: food -> 3, hiding_predator -> 4, predator -> 5, every obstacle -> 6,
+#: neutral animal -> 7. Verified against resolved params, not copied from a doc.
+_VISION_NAMES_V8 = [
+    {"name": "Grass", "qualifier": ""},
+    {"name": "Sand", "qualifier": ""},
+    {"name": "Plain", "qualifier": ""},
+    {"name": "Food", "qualifier": ""},
+    {"name": "Hiding predator", "qualifier": ""},
+    {"name": "Predator", "qualifier": ""},
+    {"name": "Obstacle", "qualifier": ""},
+    {"name": "Neutral", "qualifier": ""},
+]
+
+#: The three entity lists a world's appearance vectors live on. Note it is
+#: `entities`, not `animals`.
+_ENTITY_LISTS = ("environment.resources", "environment.entities",
+                 "environment.obstacles")
+
+
+def _set_vision_dim(cfg, V: int) -> None:
+    """Rewrite the RESOLVED config's own entity lists to vision width ``V``.
+
+    WHY THIS IS NOT AN OVERRIDE. Setting `sensory.visual_vector_size` alone is
+    refused by the loader: every entity still carries a `visual_properties`
+    vector of the old length, and the two must agree. So the width, the entity
+    vectors, the background table and the two display keys all move together.
+
+    THE TWO BRANCHES ARE NOT "SHRINK" AND "GROW" -- they are ``V == 8`` and
+    ``V != 8``, because 8 is the one width the loader can fill in by itself:
+
+      * ``V == 8``  -- STRIP `visual_properties` / `visual_properties_std` from
+        every entity and leave `visual_background_properties` ABSENT, so the
+        loader's own auto-generated one-hot table supplies the layout. That keeps
+        one source of truth for which entity writes which channel; hand-copying
+        an entity list here would make this script a second copy of
+        `default.yaml`'s entities.
+      * ``V != 8``  -- the loader cannot guess, so every entity gets an explicit
+        vector and the 3xV background table is written out. The assignment is
+        round-robin and therefore ARBITRARY: it exists so the maps differ from
+        each other on screen, and means nothing outside this script.
+
+    This reads `cfg`'s own lists and replaces only the appearance fields.
+    """
+    if V == 8:
+        names, groups = list(_VISION_NAMES_V8), [{"name": "Terrain",
+                                                  "channels": [0, 1, 2]}]
+    else:
+        names = [{"name": f"Vis {i}", "qualifier": "synthetic"} for i in range(V)]
+        groups = [{"name": "Terrain", "channels": [0, 1, 2]}] if V > 3 else []
+
+    channel = 0
+    for list_key in _ENTITY_LISTS:
+        entries = cfg.get(list_key) or []
+        for entry in entries:
+            if V == 8:
+                entry.pop("visual_properties", None)
+                entry.pop("visual_properties_std", None)
+            else:
+                vec = [0.0] * V
+                vec[channel % V] = 1.0
+                entry["visual_properties"] = vec
+                entry["visual_properties_std"] = [0.0] * V
+            channel += 1
+        cfg.set(list_key, entries)
+
+    cfg.set("sensory.visual_vector_size", V)
+    # `None` means ABSENT to the loader's `config.get(...)`, which is exactly what
+    # the V=8 auto-generation branch requires.
+    cfg.set("sensory.visual_background_properties",
+            None if V == 8 else [[0.0] * V for _ in range(3)])
+    cfg.set("sensory.visual_channel_names", names)
+    cfg.set("sensory.visual_channel_groups", groups)
+
+
+def _set_olf_dim(cfg, N: int) -> None:
+    """Rewrite the resolved config's own entity lists to smell width ``N``.
+
+    Same discipline as `_set_vision_dim`, and the same warning: the
+    entity->channel assignment is round-robin and synthetic. Olfaction has no
+    loader-supplied default table to fall back on, so every width is explicit.
+    """
+    channel = 0
+    for list_key in _ENTITY_LISTS:
+        entries = cfg.get(list_key) or []
+        for entry in entries:
+            vec = [0.0] * N
+            vec[channel % N] = 1.0
+            entry["properties"] = vec
+            # The per-episode jitter vector must move WITH the mean: the two are
+            # multiplied together when an episode samples an appearance, so a
+            # 12-wide mean against an inherited 5-wide std is a broadcast error
+            # (`mul got incompatible shapes: (10, 5), (10, 12)`).
+            entry["properties_std"] = [0.0] * N
+            channel += 1
+        cfg.set(list_key, entries)
+    cfg.set("sensory.vector_size", N)
+    cfg.set("sensory.olfactory_channel_names",
+            [{"name": f"Odour {i}", "qualifier": "synthetic"} for i in range(N)])
+    cfg.set("sensory.olfactory_channel_groups", [])
+
+
 def build_params(cell: Cell):
     """Resolve a cell to (params, config, extras-fragment). Overrides are in memory only."""
     from src.environment.config_loader import load_env_config, load_env_params
 
     _require_maintained(cell.config)
     cfg = load_env_config(str(REPO_ROOT / cell.config))
+    # Width first, plain overrides second, so a cell can still override one of
+    # the keys the width helper wrote (V8nogroup deletes the Terrain group).
+    if cell.vision_dim is not None:
+        _set_vision_dim(cfg, int(cell.vision_dim))
+    if cell.olf_dim is not None:
+        _set_olf_dim(cfg, int(cell.olf_dim))
     meta = {
+        "vision_dim": cell.vision_dim,
+        "olf_dim": cell.olf_dim,
         "config_path": cell.config,
         "config_sha256": _resolved_sha256(cfg),
         "config_chain_sha256": _extends_chain(cell.config),
@@ -507,7 +666,9 @@ def generate_cell(name: str, cell: Cell, out_root: Path, episodes: int,
     import jax
     from src.environment.core import jax_reset, jax_step
     from src.environment.sensor import get_observation
-    from src.utils.eval_recording import EpisodeRecorder, write_run_meta
+    from src.utils.eval_recording import (EpisodeRecorder,
+                                          channel_display_from_config,
+                                          write_run_meta)
 
     params, _cfg, meta = build_params(cell)
     rec_dir = out_root / name / name
@@ -522,6 +683,9 @@ def generate_cell(name: str, cell: Cell, out_root: Path, episodes: int,
 
     write_run_meta(
         rec_dir, params, _icon_config(), _action_map(params), cell.config,
+        # Built from the cell's OWN resolved config, so a cell that rewrote its
+        # sense width carries the names that match that width.
+        channel_display=channel_display_from_config(_cfg, params),
         extras={"checkpoint_pct": checkpoint_pct, "seed": seed,
                 "generator": "scripts/eval/make_render_fixture_recordings.py",
                 "cell": name, "policy": "seeded random", **meta},

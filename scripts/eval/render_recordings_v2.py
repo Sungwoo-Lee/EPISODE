@@ -194,6 +194,9 @@ def _worker_init(run_meta_path: str, local_view_size=None, title=None):
     _WORKER_STATE["params"] = params
     _WORKER_STATE["icon_config"] = meta["icon_config"]
     _WORKER_STATE["action_map"] = meta.get("action_map")
+    # The recording's own sensor-channel names. Absent on any recording written
+    # before they existed, which is the signal the renderer falls back on.
+    _WORKER_STATE["channel_display"] = meta.get("channel_display")
     _WORKER_STATE["title"] = title or Path(run_meta_path).parent.name
 
 
@@ -223,6 +226,7 @@ def _render_episode(episode_path_str: str, out_video_path_str: str, fps: int) ->
         renderer = EpisodeRenderer(
             _WORKER_STATE["params"], _WORKER_STATE["icon_config"], payload,
             title=_WORKER_STATE["title"], action_map=_WORKER_STATE["action_map"],
+            channel_display=_WORKER_STATE["channel_display"],
         )
         try:
             steps = renderer.n_steps
@@ -286,7 +290,8 @@ def _benchmark(recordings_dir: str, episodes, min_frames: int) -> dict:
 
         t0 = time.perf_counter()
         renderer = EpisodeRenderer(params, icon_config, payload,
-                                   title=rec_dir.name, action_map=meta.get("action_map"))
+                                   title=rec_dir.name, action_map=meta.get("action_map"),
+                                   channel_display=meta.get("channel_display"))
         setup_ms = (time.perf_counter() - t0) * 1e3
         out["v2_setup_ms"] = setup_ms if out["v2_setup_ms"] is None else out["v2_setup_ms"]
         for t in range(n):

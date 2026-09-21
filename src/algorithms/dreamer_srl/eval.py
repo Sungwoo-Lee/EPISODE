@@ -65,7 +65,9 @@ def dreamer_srl_eval_rollout(
     """
     from src.environment.core import jax_reset, jax_step
     from src.environment.sensor import get_observation
-    from src.utils.eval_recording import EpisodeRecorder, write_run_meta
+    from src.utils.eval_recording import (EpisodeRecorder,
+                                          channel_display_from_config,
+                                          write_run_meta)
 
     # ------------------------------------------------------------------
     # Setup recordings dir + run_meta.pkl
@@ -86,6 +88,7 @@ def dreamer_srl_eval_rollout(
             icon_config,
             _action_map,
             getattr(config, 'source_path', ''),
+            channel_display=channel_display_from_config(config, env_params),
             extras={'checkpoint_pct': checkpoint_pct, 'seed': seed},
         )
 
@@ -357,7 +360,9 @@ def dreamer_srl_eval_rollout_batched(
     from types import SimpleNamespace
     from src.environment.core import jax_reset
     from src.environment.sensor import get_observation
-    from src.utils.eval_recording import EpisodeRecorder, write_run_meta, _snapshot_state
+    from src.utils.eval_recording import (EpisodeRecorder, write_run_meta,
+                                          channel_display_from_config,
+                                          _snapshot_state)
 
     N = int(num_episodes)
     max_steps = int(env_params.max_steps)
@@ -383,6 +388,7 @@ def dreamer_srl_eval_rollout_batched(
             icon_config,
             _action_map,
             getattr(config, 'source_path', ''),
+            channel_display=channel_display_from_config(config, env_params),
             extras={
                 'checkpoint_pct': checkpoint_pct,
                 'seed': seed,

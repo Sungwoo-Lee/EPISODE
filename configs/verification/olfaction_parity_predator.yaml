@@ -65,6 +65,19 @@ sensory:
   olfactory_enabled: true
   sensor_radius: 20
   vector_size: 5
+  # Display-only channel names for the episode video (2026-09-21). This config
+  # is STANDALONE -- no `extends:` -- so it inherits nothing from
+  # configs/environment/default.yaml and must carry these itself, or it cannot
+  # write a recording. They change no observation and no agent behaviour.
+  olfactory_channel_names:
+    - {name: "Food",    qualifier: ""}
+    - {name: "Odour A", qualifier: "predator-leaning"}
+    - {name: "Odour B", qualifier: "neutral-leaning"}
+    - {name: "Bush",    qualifier: ""}
+    - {name: "Tree",    qualifier: ""}
+  olfactory_channel_groups: []
+  # Vision is switched OFF in this file, so it declares no vision names: a
+  # sense's display keys are read only when that sense resolves enabled.
   decay_power: 2.0
   # directional sensors — parity-preserving defaults (see
   # docs/develop/active/sensors/DIRECTIONAL_SENSORS_PLAN.md). Added by the DIRECTIONAL_SENSORS
