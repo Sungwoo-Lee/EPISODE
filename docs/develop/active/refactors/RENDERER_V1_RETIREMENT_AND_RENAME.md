@@ -9,25 +9,25 @@ aliases: [renderer_v1_retirement]
 
 # Retiring the old episode-video renderer, and dropping "v2" from the new one's name
 
-> **Status**: PLANNED — nothing implemented. Four steps, two user decisions still open (§Questions). Awaiting `plan-reviewer`.
-> **Opened**: 2026-09-21 · **Revised**: 2026-09-21 (Revision 2 — adds Step 2, the audit-control replacement, and records four user decisions)
-> **Related**: [[RENDERER_LAYOUT_REDESIGN]] §R30 (the retirement condition this plan executes) · [[EVAL_RENDERER_SWITCHOVER]] (the 2026-09-17 switch this cleans up after; **this plan must edit its Rollback section — see §Obligations**) · [[ASYNC_CHECKPOINT_VIDEO_RENDER]] (the dispatch mechanism that makes timing load-bearing) · [`SCRIPTS_DEPENDENCY_MAP`](../../../environment/SCRIPTS_DEPENDENCY_MAP.md) (maintenance contract fires on Steps 1, 3 and 4)
+> **Status**: PLANNED — nothing implemented. Four steps. **No open user questions.** Reviewed `SOUND WITH CONCERNS`; all findings applied in Revision 3.
+> **Opened**: 2026-09-21 · **Revision 3** (2026-09-21) — applies the `plan-reviewer` findings, chiefly moving one audit fix into Step 2 and replacing an inoperable `git stash` instruction
+> **Related**: [[RENDERER_LAYOUT_REDESIGN]] §R30 (the retirement condition this executes) · [[EVAL_RENDERER_SWITCHOVER]] (the 2026-09-17 switch this cleans up after; **this plan must edit its Rollback section — §Obligations**) · [[ASYNC_CHECKPOINT_VIDEO_RENDER]] (the dispatch mechanism that makes timing load-bearing) · [`plan_renderer_v1_retirement`](../../../reviews/plan_renderer_v1_retirement.md) (the review) · [`SCRIPTS_DEPENDENCY_MAP`](../../../environment/SCRIPTS_DEPENDENCY_MAP.md) (contract fires on Steps 1, **2**, 3 and 4)
 
 ---
 
 ## Context
 
-The project draws a video of each evaluation episode — a dashboard showing the agent on its grid alongside its hunger, injury and sensory readouts. Until four days ago those videos came from the **original renderer** (`src/environment/renderer.py`, written early in the project). On 2026-09-17 a **replacement renderer** took over: a new package (`src/environment/dashboard/`) driven by a new script whose filename ends in `_v2`. The user has since watched checkpoint videos arrive correctly from the new path and asked for the cleanup.
+The project draws a video of each evaluation episode — a dashboard showing the agent on its grid alongside its hunger, injury and sensory readouts. Until four days ago those videos came from the **original renderer** (`src/environment/renderer.py`). On 2026-09-17 a **replacement** took over: a new package (`src/environment/dashboard/`) driven by a script whose filename ends in `_v2`. The user has since watched checkpoint videos arrive correctly from the new path and asked for the cleanup.
 
-They asked for three things, in their words: *"I don't want to make the current renderer to be dependent any v1 script. Let's make archiving v1 plan. And as we will not distinguish them through version, new version no need to use v2 as the name."* In plain terms — (1) stop the new renderer from borrowing code from the old one, (2) retire the old one, (3) rename the new one so it no longer carries a version number, because there is no longer a second renderer to distinguish it from. They also said: *"Since the trainings are still ongoing, let's make plan and feedback first."*
+They asked for three things: stop the new renderer borrowing code from the old one, retire the old one, and rename the new one so it no longer carries a version number — *"as we will not distinguish them through version, new version no need to use v2 as the name."* And: *"Since the trainings are still ongoing, let's make plan and feedback first."*
 
-**That last sentence is the governing constraint, and it is correct.** A live-cluster census found **fourteen training runs in flight**, launched at 11:52 today across seven lab machines, each budgeted for ten million episodes. Every one of them writes a video at each checkpoint by launching the render script *by filename*, and each memorised that filename when it started. **The user's decision is to wait for those runs before touching the render path at all.**
+**Fourteen training runs are in flight**, launched 11:52 today across seven machines at ten million episodes each. Each writes its videos by launching the render script *by filename*, and each memorised that filename at startup. **The user's decision is to wait for those runs before touching the render path at all.**
 
-**A fourth piece was discovered after the first draft, and it reorders everything.** The project has a *pixel audit* — an instrument that inspects a rendered frame and reports defects like text printed on top of other text, or a panel silently dropped. An instrument like that has to prove it actually works, and this one proves it with seven known defects it must catch. **Every one of those seven defects lives in an old renderer.** Five are in the renderer this plan retires; two are in a dormant April file. So the audit's entire self-proof depends on old renderers being kept alive *in order to stay broken* — and deleting them destroys the proof that the audit can detect anything at all.
+**A fourth piece surfaced after the first draft and reorders everything.** The project has a *pixel audit* — an instrument that inspects a rendered frame and reports defects like text printed over other text, or a panel silently dropped. Such an instrument is worthless unless it can be shown to actually *fire*, and this one proves itself with seven known defects it must catch. **Every one of those seven lives in an old renderer** — five in the one being retired, two in a dormant April file. So the audit's self-proof depends on old renderers being kept alive *in order to stay broken*, and deleting them destroys the evidence that the audit can detect anything at all. **The user's decision: replace all seven with deliberate breaks of the current renderer**, and fold that into this plan — which makes it a **precondition** of the archival, not a follow-up.
 
-**The user's decision: replace all seven with deliberate breaks of the current renderer**, so no old renderer needs to exist for the audit to prove itself — and fold that work into this plan, because archiving the old renderer is what breaks them. **This makes the replacement a precondition of the archival, not a follow-up.** The order is now: break the borrowed code → replace the audit's proofs → delete the old renderer → rename the new one.
+**Revision 3 applies an adversarial review.** The verdict was `SOUND WITH CONCERNS` with no critical finding: the ordering is right and every measurement re-verified. But the review found that **Step 2's own exit gate could not pass as written** — the audit reaches into the old renderer on a path Step 2 depends on, and the plan had scheduled that fix for Step 3 — and that one instruction in Step 2 (`git stash`) would have reverted a parallel session's uncommitted work. Both are fixed below, along with a byte-identity gate that assumed something the project's own record contradicts.
 
-**Two decisions remain the user's** (§Questions): what the script is renamed to, and whether a dead duplicate function elsewhere in the codebase is removed as a separate change.
+**Nothing is open.** The script becomes `render_episode_videos.py`; a dead duplicate elsewhere in the codebase is recorded as a named follow-up rather than folded in.
 
 ---
 
@@ -40,183 +40,166 @@ They asked for three things, in their words: *"I don't want to make the current 
 | Node | GPUs busy | Utilisation | Attributed to |
 |---|---|---|---|
 | 101, 103, 104, 105 | 0 and 1 (RTX 2080 Ti) | 89–95 % | 8 of the 14 runs in today's diary, launched 11:52 |
-| 106, 107, 108 | 0 and 1 (RTX 3090) | 80–100 % | the remaining 6 of those 14 runs |
+| 106, 107, 108 | 0 and 1 (RTX 3090) | 80–100 % | the remaining 6 of those 14 |
 | 113 | GPU 0 only (RTX 4090) | 40 %, 5061 MiB | **unattributed** — no diary row today |
-| 102, 109, 110, 111, 112, 114, 113:1 | — | idle | free |
+| 102, 109–112, 114, 113:1 | — | idle | free |
 
-The fourteen attributed runs are the `rppo_basicq2_lvl00..lvl06` × {unmodulated, neuromodulated} wave recorded in [`docs/diary/2026-09-21.md`](../../../diary/2026-09-21.md), design doc [`BASIC_LEVELS_Q2_DEFAULT`](../../../experiments/active/basic_levels_q2_default/BASIC_LEVELS_Q2_DEFAULT.md), seed 42, **10 M episodes each**. At that budget they will be running for days, not hours.
+The fourteen are the `rppo_basicq2_lvl00..lvl06` × {unmodulated, neuromodulated} wave ([`docs/diary/2026-09-21.md`](../../../diary/2026-09-21.md), design [`BASIC_LEVELS_Q2_DEFAULT`](../../../experiments/active/basic_levels_q2_default/BASIC_LEVELS_Q2_DEFAULT.md), seed 42, **10 M episodes each**). They will run for days.
 
-**Node 113's GPU 0 is busy and unattributed.** It carries a 5 GB process at 40 % utilisation with no diary row. This does not change the plan's conclusions — the fourteen attributed runs already settle it — but it should be identified before anyone treats that node as free.
-
-**Verdict: runs are in flight, and will be for days.** Per the user's decision, Step 1 waits for them.
+**Node 113:0 is busy and unattributed** — a 5 GB process at 40 % with no diary row. It must be identified before Step 4's census is trusted: the one thing it must not be is a fifteenth run rendering through the script.
 
 ### A2. What the render dispatch re-reads, and when — broader than "the rename"
 
-`src/utils/async_render.py:56` binds the script **path** into a module constant at import time, and `dispatch_render()` later runs `subprocess.Popen([sys.executable, _RENDER_SCRIPT, ...])`. The dependency map states the consequence: *"The script path is bound at IMPORT time, so an in-flight trainer keeps invoking whichever renderer it started with."*
+`async_render.py:56` binds the script **path** into a module constant at import time; `dispatch_render()` then runs `subprocess.Popen([sys.executable, _RENDER_SCRIPT, ...])`. The dependency map records the consequence: *"an in-flight trainer keeps invoking whichever renderer it started with."*
 
-**The important half is the half nobody says out loud.** The *path* is frozen in the trainer; the *file at that path* is not. The child is a brand-new Python process that reads the file — and everything the file imports — from disk at each dispatch:
+**The half nobody says out loud:** the *path* is frozen in the trainer; the *file at that path* is not. The child is a new process that reads the file — and everything it imports — from disk at each dispatch.
 
-| What we change | Does a live run see it? | What a mistake costs |
+| What we change | Does a live run see it? | Cost of a mistake |
 |---|---|---|
 | `async_render.py`, `evaluation_core.py`, `dreamer_srl/eval.py` | **No.** Already imported into the running trainer. | nothing, until restart |
-| `scripts/eval/render_recordings_v2.py` (**contents**) | **Yes, at the very next checkpoint.** | that checkpoint's video |
-| `src/environment/dashboard/**` (**contents**, including `__init__.py`) | **Yes** — the child imports the package fresh. | that checkpoint's video |
-| `scripts/eval/render_recordings_v2.py` (**filename**) | **Yes, and permanently** — the trainer's path never updates. | every remaining video of that run |
+| `scripts/eval/render_recordings_v2.py` (**contents**) | **Yes, next checkpoint.** | that checkpoint's video |
+| `src/environment/dashboard/**` (**contents**, incl. `__init__.py`) | **Yes** — imported fresh by the child. | that checkpoint's video |
+| `scripts/eval/render_recordings_v2.py` (**filename**) | **Yes, permanently** — the path never updates. | every remaining video of that run |
 
-**Correction to this plan's own first draft.** Revision 1 described Step 1's additive half as having "zero live exposure". That was wrong. Adding `video.py` is inert, but the accompanying line in `dashboard/__init__.py` **executes inside every render child**, because the child imports the package fresh per dispatch. The exposure is small — a broken import would fail loudly and immediately — but it is not zero, and the claim is corrected rather than left standing. The user's decision to wait for the fourteen runs makes this moot in practice; it is recorded so no future reader relies on a false "safe" label.
+**Correction carried from Revision 1.** That draft called Step 1's additive half "zero live exposure". Wrong: the line added to `dashboard/__init__.py` **executes inside every render child**. Small, but not zero. The wait decision makes it moot in practice; the claim is corrected rather than left standing — and row 3 is exactly why Step 2 must be monkeypatch-only (§A11.4).
 
-The first three rows are recoverable: `.rec.gz` recordings are written at every checkpoint regardless, and `async_render.py`'s docstring records that a skipped video is *"offline-recoverable … never a data-loss event."* The fourth row is recoverable in the same offline sense but not self-healing.
-
-### A3. What the new renderer still takes from the old one — and the one place it matters
-
-Three import sites in `scripts/eval/render_recordings_v2.py`, and they are **not equivalent**:
+### A3. What the new renderer still takes from the old one
 
 | Line | Imports | Reachable when | Production? |
 |---|---|---|---|
 | `:223` | `save_jax_video` | per-episode MP4 write | **yes** |
-| `:474` | `save_jax_video` | `--concat` consolidated write | **yes** — the training path passes `--concat` |
-| `:277` | `render_jax_state`, `thermal_color_limits` | inside `_benchmark()`, only under `--benchmark` | **no** |
+| `:474` | `save_jax_video` | `--concat` consolidated write | **yes** — training passes `--concat` |
+| `:277` | `render_jax_state`, `thermal_color_limits` | inside `_benchmark()`, `--benchmark` only | **no** |
 
-`:277` lives in a function whose docstring says *"Time V2 and V1 on the same recordings"* — a **measuring instrument whose subject is the old renderer**. It does not need porting; it retires with its subject. Treating all three as one problem would produce a pointless port of a comparison with nothing left to compare.
-
-So the whole production coupling is **one function**: `save_jax_video`, at `src/environment/renderer.py:1094`. `src/environment/dashboard/` defines nothing like it.
+`:277` is a **measuring instrument whose subject is the old renderer**. It retires with its subject rather than being ported. The whole production coupling is **one function**: `save_jax_video` at `renderer.py:1094`.
 
 ### A4. The duplicate in `grid_world.py` is not a drop-in replacement — measured
 
-A second `save_jax_video` sits at `src/environment/grid_world.py:701`. It is **not** the same function. The bodies diverge in one load-bearing line:
-
 ```python
-# src/environment/renderer.py:1094 — streaming
+# renderer.py:1094 — streaming
 with imageio.get_writer(output_path, fps=fps) as writer:
     for frame in frames:
         writer.append_data(frame)
 
-# src/environment/grid_world.py:701 — materialising
+# grid_world.py:701 — materialising
 imageio.mimsave(output_path, frames, fps=fps)
 ```
 
-Both production call sites pass **generators**, not lists (`render_recordings_v2.py:237` and `:491`). `imageio.mimsave` consumes its argument as a sequence, so substituting the `grid_world.py` variant would either fail or silently materialise an entire episode's frames in memory — defeating the reason the call sites are generators. **The copy that moves is the `renderer.py` one.**
+Both production call sites pass **generators** (`:237`, `:491`). `imageio.mimsave` consumes a sequence, so the duplicate would fail or silently materialise an episode in memory. **The copy that moves is `renderer.py`'s.** The duplicate has zero callers and is handled as a follow-up (§Follow-ups).
 
-`grid_world.py::save_jax_video` has **zero callers** repo-wide. It is dead code — but dead code the user has already been asked about and has not approved removing (Q8 of [[RENDERER_LAYOUT_REDESIGN]], reaffirmed in §R30.1). Per the project rule *"don't delete pre-existing dead code unless asked — mention it instead"*, this plan does not touch it. Re-raised as Question 2.
+### A5. The dependent inventory is larger than §R30.3 records
 
-### A5. The dependent inventory is larger than §R30.3 records — a correction
+§R30.3 lists **six**; a fresh sweep finds **thirteen** V1 dependents, three of them tests — plus a **fourteenth belonging to the April file**.
 
-§R30.3 lists **six** dependents, measured *"by grepping `src/`, `scripts/` and `tests/`"*. Re-running that sweep at `HEAD` finds **thirteen**. Three of the seven omitted are tests, so a deletion scoped to §R30.3's table would turn the suite red.
-
-| # | Dependent | Needs from V1 | In §R30.3? |
+| # | Dependent | Needs | In §R30.3? |
 |---|---|---|---|
-| 1 | `scripts/eval/render_recordings_v2.py` `:223 :277 :474` | `save_jax_video`; benchmark-arm helpers | yes |
-| 2 | `scripts/eval/render_recordings.py` `:78 :93 :113 :219` | the old script itself | (implied) |
+| 1 | `scripts/eval/render_recordings_v2.py` `:223 :277 :474` | `save_jax_video`; benchmark helpers | yes |
+| 2 | `scripts/eval/render_recordings.py` | the old script itself | (implied) |
 | 3 | `scripts/eval/benchmark_render.py` `:39` | `render_jax_state` — V1 is its subject | yes |
-| 4 | `scripts/eval/render_layout_audit.py` `:418 :465` | the V1 arm of the pixel audit | yes |
-| 5 | `scripts/eval/make_render_fixture_recordings.py` `:839` | draws fixture frames through V1 | yes |
+| 4 | `scripts/eval/render_layout_audit.py` **`:418`**, `:465` | **`thermal_color_limits` in `load_inputs` (§A11.1)**, plus the `v1` render arm | yes |
+| 5 | `scripts/eval/make_render_fixture_recordings.py` `:839` | draws fixtures through V1 | yes |
 | 6 | `scripts/dreamer/visualize_dream.py` `:159 :180` | draws imagined rollouts through V1 | yes |
 | 7 | `src/utils/eval_recording.py:34` | a **contract**, not an import (A6) | yes |
 | 8 | **`save_snapshot.py:14`** (repo root) | `render_jax_state` | **no** |
 | 9 | **`scripts/media/record_env_demo.py:14`** | `render_jax_state`, `save_jax_video` | **no** |
 | 10 | **`tests/env/test_thermal_rendering.py:47,:310`** | V1 drawing helpers | **no** |
 | 11 | **`tests/algorithms/dreamer_srl/test_eval_recording.py:118,:138`** | renders through V1 | **no** |
-| 12 | **`tests/env/test_dashboard_v1_imports.py:99,:121`** | asserts *by name* what the dashboard borrows from V1 | **no** |
-| 13 | **`docs/.../renderer_layout_redesign/render_current_frames.py:44`** | the redesign's own frame generator | **no** |
+| 12 | **`tests/env/test_dashboard_v1_imports.py:99,:121`** | asserts by name what the dashboard borrows | **no** |
+| 13 | **`docs/.../render_current_frames.py:44`** | the redesign's frame generator | **no** |
+| 14 | **`test_c4.py` (repo root) `:5,:21`** | `render_jax_state_v2` — **an April-file dependent, not a V1 one** | **no** |
 
-Items 8 and 9 are corroborated by [`12_renderer.md`](../../../environment/12_renderer.md) lines 31–33, so the reference doc was right and §R30.3's table is the undercount.
+Items 8–9 are corroborated by [`12_renderer.md`](../../../environment/12_renderer.md) lines 31–33. **Item 14 is why my thirteen-item sweep excluded it**: it imports `renderer_v2`, so it belongs to the April column and must be handled when that file goes.
 
-**Item 12 deserves its own sentence.** `test_dashboard_v1_imports.py` pins what the new renderer borrows from the old one, including a subprocess check that a bare `import src.environment.dashboard` loads Matplotlib-free. Step 1 removes the last borrow, so that test's subject partly dissolves — but its **Matplotlib-free assertion must survive**, because that property is about the training path's import cost and has nothing to do with V1.
+**Item 12 needs care.** `test_dashboard_v1_imports.py` pins what the new renderer borrows, including a subprocess check that a bare package import is Matplotlib-free. Step 1 removes the last borrow, so its subject partly dissolves — but the **Matplotlib-free assertion must survive**; that property is about the training path's import cost, not V1.
 
 ### A6. Archiving V1 rehomes a contract, not just a file
 
-`src/utils/eval_recording.py:34` carries no import. It carries a sentence:
-
-> *"Exactly the fields `render_jax_state` reads. Keep in lockstep with renderer.py."*
-
-That is the **definition of the recording file format** — every `.rec.gz` this project has written is specified by reference to a function in the old renderer. Delete V1 and the format's definition points at nothing. The same docstring goes on to justify not bumping `RECORDING_FORMAT_VERSION` because *"the branch lives in `renderer.py`"* — a second sentence that also stops being true. Rehoming this is **prose, not code**, and a reader who hits the dangling reference gets no error, just a format with no stated owner.
+`src/utils/eval_recording.py:34` carries no import — it carries a sentence: *"Exactly the fields `render_jax_state` reads. Keep in lockstep with renderer.py."* That is the **definition of the recording format**: every `.rec.gz` is specified by reference to a function in the old renderer. The same docstring justifies not bumping `RECORDING_FORMAT_VERSION` because *"the branch lives in `renderer.py`"* — also about to stop being true. Rehoming is **prose, not code**, and the dangling reference produces no error, just a format with no stated owner.
 
 ### A7. The rename surface, measured
 
 | Thing | Count | Where |
 |---|---|---|
-| `render_recordings_v2` references, all types | **139** | 24 in `.py`, 110 in `.md`, plus 2 configs, 1 shell script, 1 Claude skill |
-| `videos_v2` references in `.py` | **38** | 8 files: `async_render.py` (3), `evaluation_core.py` (2), `dreamer_srl/eval.py` (2), `render_recordings_v2.py` (10), four test modules (21) |
+| `render_recordings_v2` refs, all types | **139** | 24 `.py`, 110 `.md`, 2 configs, 1 shell script, 1 skill |
+| `videos_v2` refs in `.py` | **38** | 8 files |
 | `videos_v2/` directories **on disk** | **26** | under `results/` |
-| `videos/` directories on disk (V1's output) | **505** | under `results/` |
+| `videos/` directories on disk (V1's) | **505** | under `results/` |
 
-**The 505-vs-26 ratio is why `videos/` is not free for reuse**, and it is what the user's Decision 3 turns on (§Decisions).
+### A8. The retirement condition is already running
 
-### A8. The retirement condition is already running — and this plan can destroy its own evidence
+§R30.2: the old renderer retires once *"two or three real training runs have produced their checkpoint videos through the new script with no occasion on which anyone needed to fall back."* **The fourteen live runs are exactly that.** Step 3 needs them to finish cleanly, not a new experiment.
 
-§R30.2 states the user's condition: the old renderer retires once *"two or three real training runs have produced their checkpoint videos through the new script with no occasion on which anyone needed to fall back."*
+**The circularity, and its honest resolution.** Step 1 edits the path those runs render through; a fault there sends someone back to the old script and resets the streak Step 3 depends on. Adopted: **any fallback counts, including one we caused.** Rejected and recorded so nobody re-derives it: *"that one doesn't count, it was our own bug"* — self-serving, and it would let the condition be met by a path nobody trusted. **The wait decision dissolves this**: Step 1 lands after the runs finish, so it cannot contaminate their evidence.
 
-**The fourteen runs from the census are exactly that**, and they are producing those videos now. Step 3 does not need a new experiment; it needs those runs to finish cleanly.
+### A9. Why a green test suite is not the gate
 
-**Which produces a circularity worth naming.** Step 1 edits the code path those runs render through. A fault there means a missing video, someone hand-renders with the old script, and the fallback-free streak Step 3 depends on is broken **by the change whose purpose was to enable Step 3**. Two resolutions exist:
+A renderer change here once passed eighteen new unit tests while breaking the product. A unit test asserts about boxes and frame counts; a human looking at a frame notices the picture is wrong. **Every step below names a rendered artefact someone looks at.**
 
-- **Honest (adopted):** any fallback occasion counts, including one we caused. The count resets. That keeps §R30.2 meaning what the user meant.
-- **Dishonest (rejected, recorded so nobody re-derives it):** "that one doesn't count, it was our own bug." Self-serving, and it would let the condition be satisfied by a path nobody actually trusted.
+### A10. The pixel audit proves itself with defects in old renderers
 
-The user's decision to **wait for the fourteen runs** dissolves this almost entirely: if Step 1 lands after they finish, it cannot contaminate their evidence.
+Verified at `HEAD` by reading `CONTROLS` (`render_layout_audit.py:1732-1779`); the control tests genuinely run — I executed `tests/env/test_render_audit_controls.py`: **71 passed, 0 skipped, 125 s**.
 
-### A9. Why a green test suite is not the gate here
-
-This project has a recorded incident on exactly this code: a renderer change once passed eighteen new unit tests while breaking the product. A unit test asserts about panel boxes and frame counts; a human looking at a frame notices the picture is wrong. Every step below therefore names **a rendered artefact someone looks at**.
-
-Step 1 additionally gets a gate most renderer changes cannot have: it relocates an **unchanged** function, so its output must be **byte-identical**. Not "looks the same" — the same MP4 bytes. Any accidental behaviour change fails it.
-
-### A10. The pixel audit proves itself with defects in old renderers — the finding that reorders this plan
-
-**What the audit is, in plain words.** `scripts/eval/render_layout_audit.py` inspects a rendered frame and reports defects: text printed over other text, a label lying across a panel border, a label escaping its card, a panel that should be drawn and is not, a value captioned as "observed" that the agent cannot actually sense. An instrument like that is worthless unless it can be shown to *fire* — so it carries seven positive controls, real defects it must catch.
-
-**Every one of the seven is a defect in an old renderer.** Verified at `HEAD` by reading `CONTROLS` (`render_layout_audit.py:1732-1779`), and the control tests genuinely run — I executed `tests/env/test_render_audit_controls.py` myself: **71 passed, 0 skipped, 125 s**.
-
-| Control | Renderer | Rule(s) | The defect |
+| Control | Renderer | Rule(s) | Defect |
 |---|---|---|---|
-| `D1` | **v1** | `text_over_text` | extero-nociception `OBS:` readout overprints the THERMOCEPTION pod title |
+| `D1` | **v1** | `text_over_text` | `OBS:` readout overprints the THERMOCEPTION pod title |
 | `D2` | **v1** | `out_of_card`, `text_over_text` | `REAL: --` escapes its card into the EXTERO NOCICEPTION title strip |
-| `D3` | **v1** | `text_over_border` | `MINIMAP` label lies across the Run Context box border |
+| `D3` | **v1** | `text_over_border` | `MINIMAP` label lies across the Run Context border |
 | `D10` | **v1** | `observed_caption` | Nutrition/Injury captioned OBS/REAL though the world observes neither |
-| `D12` | **v1** | `panel_absent` | Proprioception emitted by the viz adapter and never drawn |
-| `D6` | **v2** (dormant April file) | `text_over_text` | COLLISION card title overprints its C/U/R/D/L labels |
-| `D8` | **v2** (dormant April file) | `panel_absent` | silently drops the interoceptive-nociception panel |
+| `D12` | **v1** | `panel_absent` | Proprioception emitted by the viz adapter, never drawn |
+| `D6` | **v2** (April) | `text_over_text` | COLLISION title overprints its C/U/R/D/L labels |
+| `D8` | **v2** (April) | `panel_absent` | silently drops the interoceptive-nociception panel |
 
-All seven use cell `M4`, step 0. **Five die with V1; the April file holds the other two.**
+**Seven controls, but only five distinct rules** — `text_over_text` (D1, D2, D6), `out_of_card` (D2), `text_over_border` (D3), `panel_absent` (D8, D12), `observed_caption` (D10). Stating this prevents two rules being quietly dropped.
 
-**Seven controls, but only five distinct rules.** The per-rule enumeration the replacement must satisfy is smaller than the control count suggests, and stating it prevents two rules being quietly dropped:
+**Two casualties beyond the seven.**
 
-| Rule | Proven today by | Renderer it needs |
-|---|---|---|
-| `text_over_text` | D1, D2, D6 | v1 **and** April |
-| `out_of_card` | D2 | v1 |
-| `text_over_border` | D3 | v1 |
-| `panel_absent` | D8, D12 | v1 **and** April |
-| `observed_caption` | D10 | v1 |
+1. **`numeric_in_arena` is proven only by the April file.** `test_numeric_in_arena_is_reachable_and_fires` (`:587`) renders `"v2"` with `--arena-axes thermoception`, asserting 5 hits. It cannot move to V1 — the audit's docstring: *"V1 draws its arena into an UNLABELLED Axes, so the rule cannot be pointed at V1's arena at all."* Deleting April costs a **third** proof. **So the replacement covers six rules, not five.**
+2. **The negative controls are pinned on V1 frames** — the half the audit's own docstring calls the one *"no positive control can make"*. `V1_M4_COUNTS` / `V1_M1_COUNTS` pin **exact** per-rule counts on two V1 frames; `SILENT_RULES` (`clipped`, `out_of_canvas`, `legibility`, `numeric_in_arena`, `fill_over_text`) are asserted silent on them; ~7 further tests bind the `v1_m4` / `v1_m1` fixtures, including `test_collision_controls_go_quiet_when_the_measurement_is_broken`, which proves the rules are decided by measured pixels rather than a constant.
 
-**Two casualties beyond the seven, both missed by the original framing.**
+**And the audit's own code breaks:** `render_capture`'s `v1` branch does `from src.environment.renderer import render_jax_state` (`:465`), so after deletion the controls could not be *expressed*, only deleted.
 
-1. **`numeric_in_arena` is proven only by the April file.** `test_numeric_in_arena_is_reachable_and_fires` (`:587`) renders `"v2"` with `--arena-axes thermoception` and asserts exactly 5 hits. The audit's own docstring explains why it cannot move to V1: *"V1 draws its arena into an UNLABELLED Axes, so the rule cannot be pointed at V1's arena at all."* So deleting the April file costs a **third** proof, not two.
+**What already breaks current code, and what that pattern cannot reach.** `M-E`, `M-T`, `M-C@{0.06,0.12,0.25}`, `M-G` (`test_render_audit_controls.py:921-940`) break today's renderer — but target only `cell_overdraw` and `cell_probe_blind`. **Nothing proves the six rules above by breaking current code.** And the harness does not extend: `_arena_figure` (`:722`) builds a **synthetic arena** (`plt.figure`, a `page` Axes, an `arena` Axes, squares via `cells.py`) with no cards, titles or panel registry, so it structurally cannot express a card-title collision or a dropped panel. **"Add seven entries to `MUTATION_CELLS`" badly understates the work.**
 
-2. **The negative controls are pinned on V1 frames, and they are the half that matters most.** The audit's docstring is explicit: *"SENSITIVITY IS ONLY HALF OF CALIBRATION. An instrument that flagged EVERYTHING would pass every positive control."* What rules that out is `V1_M4_COUNTS` and `V1_M1_COUNTS` — **exact** per-rule finding counts on two V1 frames — plus `SILENT_RULES` (`clipped`, `out_of_canvas`, `legibility`, `numeric_in_arena`, `fill_over_text`) asserted silent on those same frames. Around seven further tests bind to the `v1_m4` / `v1_m1` fixtures, including `test_v1_m4_absent_panels_are_exactly_proprioception`, `test_v1_m4_out_of_card_flags_only_the_escaped_readout`, and `test_collision_controls_go_quiet_when_the_measurement_is_broken` (which renders `"v1"` to prove the pixel rules are decided by measurement rather than a constant).
+**The good news that shrinks Step 2.** No new audit arm is needed. The audit deliberately has none for the current renderer — `--renderer` accepts only `("v1","v2")` and the else-branch raises, because *"the audit must not import the thing it audits."* Callers instead **hand it a frame by substituting `render_capture`**, and `tests/env/test_dashboard_frames.py:303-311` **already does this**, running the full audit over a real current-renderer frame (*"This runs EVERY rule"*). Step 2 reuses an exercised pattern; §D5.2's no-import rule is preserved.
 
-**So the real casualty list of deleting V1 and the April file is: 7 positive controls + the `numeric_in_arena` proof + the entire negative-control set.** "Five of seven proofs" understates it.
+### A11. What the plan review changed
 
-**Worse: the audit's own code breaks too.** `render_capture`'s `v1` branch does `from src.environment.renderer import render_jax_state` (`:465`). Deleting V1 makes `audit.audit_frame(fi, "v1")` raise — so the controls could not even be *expressed*, let alone pass.
+Verdict `SOUND WITH CONCERNS`, no critical finding; ordering confirmed, every A10 claim re-verified, no data-loss path. I re-verified each finding below against the code rather than accepting it.
 
-**What is already proven against the current renderer, and what that pattern can and cannot reach.** The existing mutations `M-E`, `M-T`, `M-C@{0.06,0.12,0.25}`, `M-G` (`test_render_audit_controls.py:921-940`) break **today's** code and are the model to follow — but they target only `cell_overdraw` and `cell_probe_blind`. **Nothing currently proves `text_over_text`, `out_of_card`, `text_over_border`, `panel_absent` or `observed_caption` by breaking current code.**
+**A11.1 — `load_inputs` reaches into V1 on every call, including the substitution path (blocking).** `render_layout_audit.py:418` opens with `from src.environment.renderer import thermal_color_limits`, unconditional, used at `clim = thermal_color_limits(...)`. And `test_dashboard_frames.py:299` calls `audit.load_inputs(...)` **before** substituting `render_capture`. So with V1 moved aside, every replacement control fails at load and **CP2.7 cannot pass**. Revision 2 scheduled this edit for Step 3. **It moves into Step 2.** Fix: push the call into `render_capture`'s `v1` branch — its only consumer — or drop the field.
 
-And the existing harness does **not** extend to them. `_arena_figure` (`:722`) builds a **synthetic arena** — `plt.figure`, a `page` Axes, an `arena` Axes, squares composed through `cells.py` painters. It has no cards, no titles, no panel registry, so it structurally cannot express a card-title collision or a dropped panel. **"Add seven entries to `MUTATION_CELLS`" badly understates the work**: the five rules need mutations of a *whole dashboard frame*, which is a different harness.
+**A11.2 — the `CONTROLS` edit is mandatory, and `--controls` cannot survive (blocking).** `run_controls` does `audit_frame(fi, ctl["renderer"])` for every entry, and all seven say `"v1"`/`"v2"`. Revision 2's "only if" was wrong. Separately, `--controls` as a **CLI mode** cannot survive Step 3: the audit may not import the dashboard, so it cannot render a current frame itself. Its fate, the USAGE docstring and dependency-map **row 190** are decided in the same commit — **so the map's maintenance contract fires on Step 2, not only Step 3.**
 
-**The good news, which materially shrinks Step 2.** The audit never needs a new arm. It deliberately has none for the current renderer — `--renderer` accepts only `("v1","v2")` and the else-branch raises, because *"the audit must not import the thing it audits … an instrument that shares code with its subject can agree with it about a frame neither is describing."* Instead, **a caller hands the audit a frame by substituting `render_capture`** — and `tests/env/test_dashboard_frames.py:303-311` **already does exactly this**, running the full audit over a real current-renderer frame (`audit.audit_frame(fi, "dashboard", arena_axes="arena", cell_axes="arena")`, docstring: *"This runs EVERY rule"*). Step 2 reuses an established, exercised pattern rather than inventing one, and §D5.2's no-import rule is preserved untouched.
+**A11.3 — `git stash` was inoperable and dangerous (my error, from Revision 2's CP2.7).** `git stash` saves *changes* and resets to HEAD; it cannot move an unmodified tracked file aside, and `rm` + stash puts the file **back**. Its natural failure mode is `git rm` + commit — precisely the deletion CP2.7 exists to avoid. Worse, in this repo a plain stash sweeps **parallel sessions' uncommitted work**: today a staged `SAVED_RUN_CONFIG_COMPAT.md` and a modified `artifact_format_bugs.md`, reverted under another session with no warning. **Replaced with `mv` out and `git checkout --` back. There is no `git stash` anywhere in this plan.**
+
+**A11.4 — Step 2 is only live-safe if it is monkeypatch-only.** If the mutation hook lands under `src/environment/dashboard/`, Step 2 is on the render path while fourteen runs are live — breaching the wait decision and repeating the Revision-1 error (A2, row 3). **Every deliberate break must be a test-process monkeypatch with no package line changed**, or Step 2 inherits Step 1's wait gate.
+
+**A11.5 — CP1.4's byte-identity assumed reproducible MP4 encoding; the record points the other way.** [[EVAL_RENDERER_SWITCHOVER]] records the **same renderer on the same recording** at **956,266 B vs 956,367 B** (lines 35, 587, 754-755) — 101 bytes apart. That was a re-render months later rather than a same-session repeat, so it is not conclusive, but it is real counter-evidence. **Settle it before Step 1** (CP1.0). A gate that fails for the wrong reason invites someone to weaken it.
+
+**A11.6 — nothing enforces the coverage table.** A hand-written table can silently omit a rule. **Derive the rule list from the audit and parametrise over it**, which is what makes the ordering enforceable rather than aspirational. This needs a canonical list, which **does not exist today**: rules are emitted in *three* shapes — `Finding("clipped", ...)` literals, `rule, detail = "text_over_text", ...` assignments, and bare positional strings on their own line inside multi-line calls (`out_of_card` `:1619`, `cell_probe_blind` `:1225`, `outline_like_token` `:1264`, `cell_overdraw` `:1294`). **My own two-form grep missed `out_of_card` entirely** — direct evidence the list cannot be hand-maintained. The full vocabulary is **14 rules**: `text_over_text`, `text_over_border`, `text_over_fill`, `fill_over_text`, `out_of_card`, `clipped`, `out_of_canvas`, `panel_absent`, `observed_caption`, `legibility`, `numeric_in_arena`, `cell_overdraw`, `cell_probe_blind`, `outline_like_token`.
+
+**A11.7 — pin zero per defect rule, not the old non-zero counts.** V1's exact counts worked because V1 was **frozen**. The dashboard is **live** and carries an open defect — the height twin of the width bug, `panels._map_h` declaring 36 px less than the painter needs at every range (Known Bugs, OPEN, latent, arms at sensor range ≥ 5). Non-zero pins on a live renderer break on every legitimate change and train people to edit the number. **The stable pin is zero on every defect rule.** And this must be **measured first**: no test today asserts the current renderer scores clean on the non-`cell_` rules — `test_a_real_frame_measures_every_square...` checks only `cell_*` and `outline_like_token`. Run the full audit on M4/M1 through the substitution path **before** writing any pin.
+
+**A11.8 — `panel_absent`'s mutation is intercepted before the audit sees it.** `EpisodeRenderer.__init__` calls `check_completeness(self.ctx)` *before anything is drawn* (`episode.py:175`), and it **raises `ValueError`** naming any breakdown name with no panel. So dropping a panel to create the defect raises instead of rendering. The mutation needs **two monkeypatches** — suppress the guard, drop the panel — **plus a paired assertion that the unpatched guard really does raise**, otherwise the bypass silently proves nothing about the guard.
+
+**A11.9 — lows, applied.** `test_c4.py` (repo root) is the fourteenth dependent, of the **April file** (A5). CP3.2's grep hits **prose**: `sensor.py:689` (a comment naming `renderer.py:800, renderer_v2.py:331`) and `dashboard/__init__.py:32` (the NAMING paragraph) — so it must be scoped to import statements. And `video.py`'s required docstring can trip `test_no_file_in_the_package_names_the_frozen_renderer_at_all`, which skips lines starting `#` **or containing a quote character**, then flags any line holding both `renderer` and `import` — note **"imported" contains "import"**, so a docstring line like *"copied from the old renderer rather than imported"* with no quote character on it would fail.
+
+**A11.10 — a risk the review surfaced and nothing can fix here.** The `M4`/`M1` fixture recordings Step 2's calibration depends on are **gitignored and cannot be regenerated** (Known Bugs: five of the eleven fixture worlds can no longer be built). A `results/` loss would take Step 2's calibration with it. This argues for doing Step 2 promptly once started, and for the standing snapshot habit before any non-trivial git operation.
 
 ---
 
 ## User decisions recorded (2026-09-21)
 
-| # | Decision | Effect on this plan |
+| # | Decision | Effect |
 |---|---|---|
-| 1 | **Replace all seven controls with deliberate breaks of the current renderer**, chosen over deleting both renderers and accepting fewer proofs, and over keeping the April file until a replacement exists. | Becomes **Step 2**. |
-| 2 | **Fold that work into this plan**, since archiving V1 is what breaks five of them. | Step 2 is a **precondition** of Step 3, not a follow-up. |
-| 3 | **Wait for the fourteen runs** before touching the render path. | Step 1 is gated on the census going quiet. Dissolves the A8 circularity. |
-| 4 | **New output-folder name; the 26 existing `videos_v2/` folders are left as-is.** | Step 4. The 26 become historical; nothing on disk is moved or deleted. |
-| 5 | **Delete V1 rather than move it** when the condition is met. | Step 3 is `git rm`; git history is the rollback, per the user's own §R29 ruling. |
-| 6 | **The April file stays untouched until Step 2 lands.** The removal agent stopped rather than improvising, and that judgement stands. | It is **not dead code** while `D6`, `D8` and the `numeric_in_arena` proof are live. |
+| 1 | **Replace all seven controls with deliberate breaks of the current renderer** — chosen over deleting both renderers and accepting fewer proofs, and over keeping the April file until a replacement exists. | Becomes **Step 2**. |
+| 2 | **Fold it into this plan**, since archiving V1 is what breaks five of them. | Step 2 is a **precondition** of Step 3. |
+| 3 | **Wait for the fourteen runs** before touching the render path. | Gates Step 1; dissolves the A8 circularity. |
+| 4 | **New output-folder name; the 26 existing `videos_v2/` folders left as-is.** | Step 4; nothing on disk moves or is deleted. |
+| 5 | **Delete V1 rather than move it.** | Step 3 is `git rm`; git history is the rollback, per §R29. |
+| 6 | **The April file stays untouched until Step 2 lands.** | It is **not dead code** while D6, D8 and the `numeric_in_arena` proof are live. |
+| 7 | **The script becomes `render_episode_videos.py`** — chosen over reusing `render_recordings.py` so one filename never means two renderers across git history. | Step 4. |
+| 8 | **`grid_world.py`'s dead duplicate is a separate change after this lands.** | §Follow-ups — deliberately not folded in. |
 
 ---
 
@@ -224,56 +207,55 @@ And the existing harness does **not** extend to them. `_arena_figure` (`:722`) b
 
 ### Design and sequencing
 
-Four steps, four commits, in this order. **The ordering is load-bearing and must not be rearranged.**
+Four steps, four commits. **The ordering is load-bearing and must not be rearranged.**
 
 ```
-Step 0  Live-run census                                   ← gate; re-run before Steps 1 and 4
+Step 0  Live-run census                                ← gate; re-run before Steps 1 and 4
    │
-   ├──── ⏸ WAIT for the 14 runs to finish        (user decision 3)
+   ├──── ⏸ WAIT for the 14 runs                        (decision 3)
    │
 Step 1  Move save_jax_video into the dashboard package
-   │    gate: byte-identical MP4s
+   │    gate: CP1.0 determinism probe, then byte-identity (or decoded-frame equality)
    │
-Step 2  Replace the audit's seven controls with breaks of the CURRENT renderer
-   │    ★ PRECONDITION OF STEP 3 — not a follow-up
+Step 2  Replace the audit's controls with breaks of the CURRENT renderer
+   │    ★ PRECONDITION OF STEP 3 — includes the load_inputs fix (A11.1) and the
+   │      CONTROLS / --controls decision (A11.2). Monkeypatch-only (A11.4).
    │
 Step 3  Delete V1 + the April file + rehome the recording contract
    │
-Step 4  Rename the script and the output folder
+Step 4  Rename to render_episode_videos.py + the new output folder
 ```
 
-**Why Step 2 must precede Step 3, stated in words so nobody re-orders it later.** Step 3 deletes the two files that contain every defect the pixel audit uses to prove it can detect anything. If Step 3 runs first, the audit does not merely lose coverage — **its controls cannot even be expressed**, because `render_capture`'s `v1` branch imports the deleted module and raises. Whoever hit that state would face a red suite with no way to distinguish "the audit broke" from "the audit's subject was removed", and the cheapest way out would be deleting the controls, which is exactly the outcome the user rejected. Step 2 first means the audit is already self-proving when its old subjects disappear, and Step 3 becomes a deletion that changes no verdict.
+**Why Step 2 must precede Step 3, in words so nobody re-orders it.** Step 3 deletes the two files holding every defect the audit uses to prove it detects anything. Run first, the audit does not merely lose coverage — **its controls cannot be expressed**, because `render_capture`'s `v1` branch imports the deleted module and raises. Whoever hit that state would face a red suite with no way to tell "the audit broke" from "its subject was removed", and the cheapest escape would be deleting the controls — the outcome the user rejected. Step 2 first means the audit is already self-proving when its old subjects disappear, and Step 3 changes no verdict.
 
-**Audit coverage at each state** — what the instrument can prove about itself, at every point:
+**Audit coverage at each state:**
 
-| State | `cell_overdraw`, `cell_probe_blind` | `text_over_text`, `out_of_card`, `text_over_border`, `panel_absent`, `observed_caption` | `numeric_in_arena` | Negative controls (the "doesn't flag everything" half) |
+| State | `cell_overdraw`, `cell_probe_blind` | the six defect rules | `numeric_in_arena` | Negative controls |
 |---|---|---|---|---|
-| **Today** | current renderer (M-E/M-T/M-C/M-G) | **old renderers only** (D1, D2, D3, D10, D12 on V1; D6, D8 on April) | **April only** | pinned on **V1** frames |
+| **Today** | current renderer | **old renderers only** | **April only** | pinned on **V1** frames |
 | **After Step 1** | unchanged | unchanged | unchanged | unchanged — Step 1 does not touch the audit |
-| **After Step 2** | current renderer | **current renderer** | **current renderer** | pinned on **current-renderer** frames |
-| **After Step 3** | current renderer | current renderer | current renderer | current renderer — deletion changes no verdict |
-| **⚠ If Step 3 ran before Step 2** | current renderer | **none — and inexpressible**; the `v1` arm raises on import | **none** | **none** |
+| **After Step 2** | current renderer | **current renderer** | **current renderer** | pinned (at zero) on **current-renderer** frames |
+| **After Step 3** | current renderer | current renderer | current renderer | unchanged — deletion changes no verdict |
+| **⚠ Step 3 before Step 2** | current renderer | **none — and inexpressible** (`v1` arm raises at import; `load_inputs` raises too) | **none** | **none** |
 
 ---
 
-### Step 0 — Live-run census (gate, not a code change)
+### Step 0 — Live-run census (gate)
 
 ```bash
 /home/vncuser/miniconda3/envs/grid_world_pain/bin/python scripts/lab/gpu_status.py
 ```
 
-Cross-check busy GPUs against the **Training runs** tables in today's and yesterday's `docs/diary/*.md`. Any busy GPU with no diary row must be identified before proceeding.
+Cross-check busy GPUs against the **Training runs** tables in today's and yesterday's diary.
 
 | Step | Runs in flight? | Rule |
 |---|---|---|
-| Step 1 | **yes** | **WAIT** (user decision 3). |
-| Step 1 | no | Proceed, byte-identity gated. |
-| Step 2 | any | **Proceed.** Touches only the audit and its tests — nothing on the render path. |
-| Step 3 | any | Proceed once §R30.2 is satisfied **and Step 2 has landed**. V1 is not on the live path. |
-| Step 4 | **yes** | **STOP and ask.** Renaming breaks every in-flight run's video output for the life of that run. |
-| Step 4 | no | Proceed. |
+| Step 1 | **yes** | **WAIT** (decision 3). |
+| Step 2 | any | **Proceed** — monkeypatch-only, nothing on the render path (A11.4). |
+| Step 3 | any | Proceed once §R30.2 is met **and Step 2 has landed**. |
+| Step 4 | **yes** | **STOP and ask.** |
 
-- [ ] **CP0.1** — census output pasted with a timestamp, every busy GPU attributed. An unattributable busy GPU is a **stop**, not a footnote.
+- [ ] **CP0.1** — census pasted with a timestamp, every busy GPU attributed. **Node 113:0 must be identified**; an unattributable busy GPU is a **stop**, not a footnote.
 
 **Rollback:** none needed.
 
@@ -281,15 +263,21 @@ Cross-check busy GPUs against the **Training runs** tables in today's and yester
 
 ### Step 1 — Break the new renderer's dependency on the old one
 
-**Precondition: the fourteen runs have finished** (user decision 3).
+**Precondition: the fourteen runs have finished.**
+
+- [ ] **CP1.0 — settle MP4 determinism BEFORE relying on it (A11.5).** Render fixture `M4` twice with the tree unchanged; `sha256sum` both.
+  - **Equal** → byte-identity is a valid gate; CP1.4 stands as written.
+  - **Unequal** → byte-identity is void. Fall back to: (a) feed a **fixed in-memory frame list** through old and new `save_jax_video` **in-process** and compare output bytes, and (b) assert **decoded-frame equality** (every decoded frame array equal) between a before and after render. Record which gate is in force and the measured evidence.
 
 ##### `src/environment/dashboard/video.py` — NEW FILE
 
-Copy the body of `src/environment/renderer.py:1094-1132` **verbatim**. Docstring, in the package's established style, must state: what it does in plain words; that it is a **copy** taken at commit `<sha>` because the old module is being deleted; that the **streaming** `get_writer`/`append_data` form is required because callers pass generators (naming `render_recordings_v2.py:237` and `:491`); and that the `imageio.mimsave` variant at `grid_world.py:701` is **not** the source and must not be substituted.
+Copy `renderer.py:1094-1132` **verbatim**. Docstring must state: what it does in plain words; that it is a **copy** taken at commit `<sha>`; that the **streaming** `get_writer`/`append_data` form is required because callers pass generators (`render_recordings_v2.py:237`, `:491`); and that `grid_world.py:701`'s `imageio.mimsave` variant is **not** the source.
+
+> **Docstring constraint (A11.9).** `test_no_file_in_the_package_names_the_frozen_renderer_at_all` skips lines that start with `#` **or contain a quote character**, then flags any line containing both `renderer` and `import`. **"imported" contains "import"** — so a line like *copied from the old renderer rather than imported* would fail the test. Keep the two words on separate lines, or include a quoted token (e.g. ``renderer.py``) on any line carrying both.
 
 ##### `src/environment/dashboard/__init__.py`
 
-Add `from .video import save_jax_video` and `"save_jax_video"` to `__all__`. **Not** through the lazy `_LAZY` / `__getattr__` mechanism — that exists for the two Matplotlib-importing names; `video.py` imports nothing at module scope.
+Add `from .video import save_jax_video` and `"save_jax_video"` to `__all__`. **Not** via the lazy `_LAZY` / `__getattr__` mechanism — that exists for the Matplotlib-importing names; `video.py` imports nothing at module scope.
 
 ##### `scripts/eval/render_recordings_v2.py` (lines 223, 474)
 
@@ -307,185 +295,178 @@ Add `from .video import save_jax_video` and `"save_jax_video"` to `__all__`. **N
         from src.environment.dashboard import save_jax_video
 ```
 
-The `# read-only, frozen` comment goes with the change — it described a constraint that no longer applies. **Leave `:277` alone**; it retires in Step 3 with its subject (A3). Update the module docstring's "never called by training" paragraph, which describes a state that ended on 2026-09-17.
+The `# read-only, frozen` comment goes with the change. **Leave `:277`** — it retires in Step 3 with its subject. Update the module docstring's "never called by training" paragraph.
 
 ##### `tests/env/test_dashboard_video.py` — NEW FILE
 
-Fails before, passes after: `save_jax_video` importable from the package; signature matches `renderer.py`'s (reuse the `inspect.signature` idiom); **a generator input produces a readable MP4 with the expected frame count** — the property the `grid_world.py` variant would break, asserted directly rather than assumed.
+Fails before, passes after: importable from the package; signature matches `renderer.py`'s; **a generator input produces a readable MP4 with the expected frame count** — the property the duplicate would break, asserted rather than assumed.
 
-##### `docs/environment/SCRIPTS_DEPENDENCY_MAP.md` (§3 row, line 191)
+##### `docs/environment/SCRIPTS_DEPENDENCY_MAP.md` (§3 row 191)
 
-Rewrite *"Imports `src/environment/renderer.py::save_jax_video` READ-ONLY"* to record that the production import now resolves inside `src/environment/dashboard/`, `--benchmark` being the sole surviving V1 import until Step 3. **Maintenance contract — same commit.**
+Record that the production import now resolves inside `src/environment/dashboard/`; `--benchmark` is the sole surviving V1 import until Step 3. **Contract — same commit.**
 
 **Checkpoints:**
-- [ ] **CP1.1** — `import src.environment.dashboard; dashboard.save_jax_video` resolves.
-- [ ] **CP1.2** — the **existing** `tests/env/test_dashboard_v1_imports.py` passes **unmodified**: a bare package import still loads no Matplotlib. Run isolated (`-p no:randomly`) — it is a question about a whole process.
-- [ ] **CP1.3** — `tests/env/test_dashboard_video.py` passes, generator case included.
-- [ ] **CP1.4 — THE GATE: byte-identity.** Render a recording before the change, keep the MP4; render the same recording after; `sha256sum` both. **They must match exactly.** Use fixture `M4` (`results/render_audit/recordings/M4/M4`) **and** one real checkpoint directory. A mismatch means the relocation was not pure — **stop**.
-- [ ] **CP1.5 — a human looks at a frame.** Extract frame 0 and a mid-episode frame to PNG and **look**. Byte-identity cannot fire if the *pre*-change render was already wrong.
+- [ ] **CP1.1** — `dashboard.save_jax_video` resolves.
+- [ ] **CP1.2** — existing `test_dashboard_v1_imports.py` passes **unmodified** (both the subprocess Matplotlib check and the static naming check). Run isolated (`-p no:randomly`).
+- [ ] **CP1.3** — `test_dashboard_video.py` passes, generator case included.
+- [ ] **CP1.4 — THE GATE**, in whichever form CP1.0 established: byte-identical MP4s, or in-process + decoded-frame equality. On fixture `M4` **and** one real checkpoint directory. A mismatch means the relocation was not pure — **stop**.
+- [ ] **CP1.5 — a human looks at a frame.** Frame 0 and a mid-episode frame to PNG, and **look**. The machine gate cannot fire if the *pre*-change render was already wrong.
 - [ ] **CP1.6** — `grep -n "environment.renderer" scripts/eval/render_recordings_v2.py` returns **exactly one** line: `:277`.
 - [ ] **CP1.7** — full suite green, once, at the end.
 
-**Rollback:** `git revert`. **Unusually good property:** because the render child re-reads the script from disk each dispatch, a revert takes effect at the **next checkpoint** with no trainer restart. (Moot if Step 1 lands while the cluster is quiet, but true regardless.)
+**Rollback:** `git revert`. Because the child re-reads the script per dispatch, a revert takes effect at the **next checkpoint** with no trainer restart.
 
 ---
 
-### Step 2 — Replace the audit's seven controls with breaks of the current renderer ★
+### Step 2 — Replace the audit's controls with breaks of the current renderer ★
 
-**This is the precondition of Step 3.** It touches only the audit's tests and (if needed) a mutation hook — **nothing on the render path** — so it is safe under live runs.
+**Precondition of Step 3.** Safe under live runs **only because it is monkeypatch-only** (A11.4).
 
-**What it must establish**, stated so "add mutations" cannot understate it:
+**Scope, which is wider than Revision 2 had it.** Three things must land together, because each blocks the others' verification:
 
-1. **Each of the five rules gets a deliberate break of the *current* renderer that makes the audit fire** — `text_over_text`, `out_of_card`, `text_over_border`, `panel_absent`, `observed_caption`.
-2. **Plus `numeric_in_arena`**, whose only proof today is the April file (A10). Six rules total, not five.
-3. **Each firing must be for the right reason** — the specific rule, on the specific participants, mirroring `_control_matches`'s `a_contains` / `b_contains` discipline. A control that fires via a different rule *counts as not firing*; this is already the project's stated standard.
-4. **The negative direction for every one of them**: the **unbroken** frame must **not** fire that rule. A mutation that fires on everything proves nothing — the audit's own docstring says so, and `test_cell_overdraw_is_silent_on_every_negative_control` is the pattern.
-5. **The negative-control set is rebuilt on current-renderer frames**: per-rule finding counts pinned exactly (the successor to `V1_M4_COUNTS` / `V1_M1_COUNTS`), plus the `SILENT_RULES` list asserted silent. These are what distinguish this instrument from one that flags everything.
-6. **Per-rule coverage is enumerated in the test module**, so a reader can see all six covered rather than four with two quietly dropped.
-7. **The successor to `test_collision_controls_go_quiet_when_the_measurement_is_broken`** — raise `MIN_OVERLAP_PX` out of reach and confirm the pixel rules stop firing while `panel_absent` survives. This is what proves the controls are decided by measured pixels rather than a constant, and it currently renders `"v1"`.
+**(a) The `load_inputs` V1 reach-through (A11.1, moved from Step 3).** `render_layout_audit.py:418` imports `thermal_color_limits` from V1 on every call. Push it into `render_capture`'s `v1` branch — its only consumer — or drop the field. **Without this, CP2.7 cannot pass**, and the replacement controls cannot even load their inputs.
 
-**How, concretely.** Reuse the established substitution at `tests/env/test_dashboard_frames.py:303-311`: build a frame with `EpisodeRenderer`, set `audit.render_capture = lambda _r, _fi: (frame, r.fig)`, call `audit.audit_frame(fi, "dashboard", ...)`, restore. **No new `--renderer` arm**, so §D5.2's rule that the audit never imports its subject is preserved. The mutations perturb the dashboard renderer's own drawing (e.g. forcing a card title to a colliding position for `text_over_text`; suppressing a registered panel for `panel_absent`) — a **frame-level** harness, distinct from `_arena_figure`'s synthetic arena, which cannot express card or panel defects (A10).
+**(b) The `CONTROLS` dict and `--controls` (A11.2).** The entries are rewritten, not optionally: `run_controls` renders `ctl["renderer"]` for all seven. Decide `--controls`' fate as a CLI mode — it cannot survive Step 3, since the audit may not import the dashboard and so cannot render a current frame itself; the natural home for the replacements is the test module, which may import both. **Update the USAGE docstring and `SCRIPTS_DEPENDENCY_MAP.md` row 190 in the same commit** — the maintenance contract fires on this step.
 
-**Files:** `tests/env/test_render_audit_controls.py` (the seven V1/April-bound positive controls and the V1-bound negative set are replaced), `tests/env/test_dashboard_frames.py` (may host the frame-mutation harness), and `scripts/eval/render_layout_audit.py`'s `CONTROLS` dict **only if** the replacements are expressed there rather than in the test module — a design choice for the implementer, to be stated in the Implementation Report either way.
+**(c) The replacement controls themselves.**
+
+**What they must establish:**
+
+1. **Each of the six rules gets a deliberate break of the current renderer that makes the audit fire** — `text_over_text`, `out_of_card`, `text_over_border`, `panel_absent`, `observed_caption`, **`numeric_in_arena`** (A10: its only proof today is the April file).
+2. **Each firing is for the right reason** — the named rule, on named participants, mirroring `_control_matches`'s `a_contains` / `b_contains` discipline. A control firing via another rule **counts as not firing**.
+3. **The negative direction for every one** — the **unbroken** frame must not fire that rule. A mutation that fires on everything proves nothing.
+4. **The negative-control set is rebuilt on current-renderer frames, pinned at ZERO per defect rule** (A11.7) — not the old non-zero counts, because the dashboard is live and carries an open height-twin defect. **Measure first**: run the full audit on M4/M1 through the substitution path and record what it actually reports, since no test asserts the current renderer scores clean on the non-`cell_` rules today. A non-zero finding is a **stop and report**, not a number to pin.
+5. **`panel_absent` needs the renderer's own guard handled** (A11.8): `check_completeness` raises in `EpisodeRenderer.__init__` before drawing. Two monkeypatches — suppress the guard, drop the panel — **plus a paired assertion that the unpatched guard does raise**, so the bypass does not silently retire a real safeguard.
+6. **Coverage is enforced, not asserted** (A11.6): add a canonical rule list to the audit (it has none — rules appear in three emission shapes, and a hand grep of two of them misses `out_of_card`), then **parametrise the coverage test over it** so a new rule with no control fails rather than passing unnoticed. Rules deliberately out of scope (e.g. `legibility`, `clipped`) are named with a reason rather than omitted.
+7. **The successor to `test_collision_controls_go_quiet_when_the_measurement_is_broken`** — raise `MIN_OVERLAP_PX` out of reach; the pixel rules go quiet while `panel_absent` survives. This proves the controls are decided by measured pixels, not a constant.
+
+**How.** Reuse `tests/env/test_dashboard_frames.py:303-311`: build a frame with `EpisodeRenderer`, set `audit.render_capture = lambda _r, _fi: (frame, r.fig)`, call `audit.audit_frame(fi, "dashboard", ...)`, restore. **No new `--renderer` arm**, so §D5.2's no-import rule is preserved. **Every break is a test-process monkeypatch; no line under `src/environment/dashboard/` changes** (A11.4) — if that proves impossible for any rule, Step 2 inherits Step 1's wait gate rather than quietly editing the package.
+
+**Files:** `scripts/eval/render_layout_audit.py` (the `load_inputs` fix, the rule-list constant, `CONTROLS`, USAGE), `tests/env/test_render_audit_controls.py`, `tests/env/test_dashboard_frames.py` (may host the frame-mutation harness), `docs/environment/SCRIPTS_DEPENDENCY_MAP.md` row 190.
 
 **Checkpoints:**
-- [ ] **CP2.1** — a **per-rule coverage table** in the test module: all six rules, each with its breaking mutation and its silent-on-correct counterpart. A rule with no entry is a **fail**, not an omission.
-- [ ] **CP2.2** — every mutation fires **via the named rule**, asserted on participants, not merely "some finding appeared".
-- [ ] **CP2.3** — every mutation's unbroken counterpart produces **zero** findings for that rule.
-- [ ] **CP2.4** — the rebuilt pinned counts are **exact** (not lower bounds) and `SILENT_RULES` is asserted silent on the new calibration frames.
-- [ ] **CP2.5** — the measurement-is-really-a-measurement test passes against the current renderer (raise `MIN_OVERLAP_PX`; pixel rules go quiet, `panel_absent` survives).
-- [ ] **CP2.6 — a human looks at each mutated frame.** Save one PNG per mutation and **look at them**: the point is that the break is the defect it claims to be, which no assertion can establish. A mutation that does not visibly show the defect is not a control.
-- [ ] **CP2.7 — prove independence from the old renderers, which is the whole point of the step.** With V1 and the April file **temporarily moved aside** (`git stash` / a scratch rename, not a deletion), the full audit-control suite still passes. This is the check that Step 3 is safe, and it is deliberately performed *before* anything is deleted.
-- [ ] **CP2.8** — `tests/env/test_render_audit_controls.py` passes with **0 skipped** — the current state is 71 passed / 0 skipped, and a replacement that silently skips for missing fixtures would hide exactly the regression this step exists to prevent.
+- [ ] **CP2.0 — measure before pinning (A11.7).** Full audit on M4 and M1 through the substitution path; record every finding per rule. Any non-`cell_` finding on a correct current frame is a **stop and report**.
+- [ ] **CP2.1 — coverage is derived and parametrised (A11.6)**, not a hand-written table. A rule with no control and no stated exemption **fails**.
+- [ ] **CP2.2** — every mutation fires **via its named rule**, on named participants.
+- [ ] **CP2.3** — every unbroken counterpart produces **zero** findings for that rule.
+- [ ] **CP2.4** — rebuilt pins are **zero** per defect rule; `SILENT_RULES` asserted silent.
+- [ ] **CP2.5** — the measurement-is-a-measurement test passes on the current renderer.
+- [ ] **CP2.6 — a human looks at every mutated frame.** One PNG per mutation. A mutation that does not visibly show the defect it claims is not a control.
+- [ ] **CP2.7 — prove independence from the old renderers.** **No `git stash` (A11.3).** Exactly:
+  ```bash
+  SCRATCH=/tmp/claude-1000/.../scratchpad
+  mv src/environment/renderer.py src/environment/renderer_v2.py "$SCRATCH"/
+  # run the full audit-control suite here
+  git checkout -- src/environment/renderer.py src/environment/renderer_v2.py
+  git status --short src/environment/     # MUST be empty
+  ```
+  The suite must pass with both files absent. Restore with `git checkout --`, then **assert `git status --short src/environment/` is clean**. Never `git rm`, never `git stash`.
+- [ ] **CP2.8** — the control suite passes with **0 skipped** (today: 71 passed / 0 skipped). A replacement that skips on missing fixtures would hide the exact regression this step prevents.
 
-**Rollback:** `git revert`. Nothing on the render or training path is touched, so a revert restores the previous calibration exactly.
+**Rollback:** `git revert`. Nothing on the render or training path is touched.
 
 ---
 
 ### Step 3 — Delete V1 and the April file
 
-**Preconditions, checked not assumed:**
-1. **Step 2 has landed and CP2.7 passed** — the audit no longer needs an old renderer to prove itself.
-2. **§R30.2 is satisfied** — a written tally naming each run, its checkpoints, and the absence of any hand-render. "It's been fine" is not a tally.
-3. **The dependent sweep of A5 is re-run** and reconciled: `grep -rn "environment.renderer" --include="*.py" .`
-
-**Scope: the thirteen dependents of A5, plus the April file.** Dispositions:
+**Preconditions:** Step 2 landed and **CP2.7 passed**; §R30.2 satisfied (a written tally naming each run and the absence of any hand-render); the A5 sweep re-run and reconciled.
 
 | Dependent | Disposition |
 |---|---|
-| `render_recordings_v2.py:277` + `--benchmark` / `--benchmark-frames` | **remove** — its subject is gone |
-| `scripts/eval/render_recordings.py` | **delete with V1** (§R30.1: they retire together) |
-| `scripts/eval/benchmark_render.py` | **delete or repoint** — V1 was its measurement subject |
-| `scripts/eval/render_layout_audit.py` | **remove the `v1` and `v2` arms** of `render_capture`; keep the audit and the `dashboard` substitution path |
-| `scripts/eval/make_render_fixture_recordings.py` | **repoint** to the dashboard package |
-| `scripts/dreamer/visualize_dream.py` | **repoint** (Phase 5 item 3 of the redesign plan) |
+| `render_recordings_v2.py:277` + `--benchmark` flags | **remove** — subject gone |
+| `scripts/eval/render_recordings.py` | **delete with V1** |
+| `scripts/eval/benchmark_render.py` | **delete or repoint** |
+| `scripts/eval/render_layout_audit.py` | **remove the `v1` and `v2` render arms**; keep the audit and the `dashboard` substitution path (`load_inputs` already fixed in Step 2) |
+| `scripts/eval/make_render_fixture_recordings.py` | **repoint** |
+| `scripts/dreamer/visualize_dream.py` | **repoint** |
 | `scripts/media/record_env_demo.py` | **repoint** |
 | `save_snapshot.py` (repo root) | **repoint or delete** |
-| `src/utils/eval_recording.py:34` | **rehome the contract** (A6) — restate against `EpisodeRenderer` |
+| `src/utils/eval_recording.py:34` | **rehome the contract** (A6) |
 | `tests/env/test_thermal_rendering.py` | **repoint or retire the V1 cases** |
 | `tests/algorithms/dreamer_srl/test_eval_recording.py` | **repoint** |
-| `tests/env/test_dashboard_v1_imports.py` | **rewrite; keep the Matplotlib-free assertion** (A5) |
+| `tests/env/test_dashboard_v1_imports.py` | **rewrite; keep the Matplotlib-free assertion** |
 | `docs/.../render_current_frames.py` | **archive with the plan folder** |
-| `src/environment/renderer_v2.py` (April) | **delete** — released by Step 2 (user decision 6) |
+| **`test_c4.py` (repo root)** | **delete or repoint — April-file dependent** (A5 item 14) |
+| `src/environment/renderer_v2.py` (April) | **delete** — released by Step 2 |
 
-**Also:** `docs/environment/12_renderer.md` (a rewrite, not a line edit — it documents V1 throughout and several citations are already stale: it cites `save_jax_video` at `renderer.py:734`, actually `:1094`); `SCRIPTS_DEPENDENCY_MAP.md` rows 17, 88, 89, 123, 181, 188–191, 250, 270 (**contract — same commit**); [[EVAL_RENDERER_SWITCHOVER]] Rollback route (b) (§Obligations); [[RENDERER_LAYOUT_REDESIGN]] §R30.
+**Also:** `docs/environment/12_renderer.md` (a rewrite — it documents V1 throughout and cites `save_jax_video` at `renderer.py:734`, actually `:1094`); `SCRIPTS_DEPENDENCY_MAP.md` rows 17, 88, 89, 123, 181, 188–191, 250, 270 (**contract**); [[EVAL_RENDERER_SWITCHOVER]] Rollback (b); [[RENDERER_LAYOUT_REDESIGN]] §R30.
 
 **Checkpoints:**
-- [ ] **CP3.1** — the §R30.2 tally is written and names specific runs.
-- [ ] **CP3.2** — `grep -rn "environment.renderer\|renderer_v2" --include="*.py" .` returns **zero** hits.
-- [ ] **CP3.3 — the audit still proves itself.** Full control suite green **after** the deletion, 0 skipped. Coverage must be identical to the post-Step-2 state; any rule that lost its proof means Step 2 was incomplete.
-- [ ] **CP3.4 — a rendered frame.** Re-render fixture `M4` and one real checkpoint, and **look at the frames**. V1 should not be on this path at all, so this checks nothing was reached for implicitly (e.g. the process-global icon cache V1 used to warm — a recorded bug in that module).
-- [ ] **CP3.5** — `eval_recording.py`'s docstring no longer names `render_jax_state` or `renderer.py`, and states an owner that exists.
-- [ ] **CP3.6** — the Known Bugs row *"Five of the eleven render-audit fixture worlds can no longer be built"* is re-checked; if still open, §R30.5's insurance argument is reported to the user **before** deleting.
+- [ ] **CP3.1** — the §R30.2 tally names specific runs.
+- [ ] **CP3.2** — no surviving V1/April **imports**. Scope the grep to import statements — a bare text search hits **prose** at `sensor.py:689` and `dashboard/__init__.py:32` (A11.9), which are comments and must not be "fixed".
+- [ ] **CP3.3 — the audit still proves itself.** Full control suite green after deletion, **0 skipped**, coverage identical to post-Step-2. Any rule that lost its proof means Step 2 was incomplete.
+- [ ] **CP3.4 — a rendered frame.** Re-render `M4` and one real checkpoint and **look**. V1 is not on this path, so this catches anything reached for implicitly (e.g. the process-global icon cache V1 warmed — a recorded bug).
+- [ ] **CP3.5** — `eval_recording.py`'s docstring names an owner that exists.
+- [ ] **CP3.6** — the unrebuildable-fixtures bug row re-checked; if still open, §R30.5's insurance argument is reported **before** deleting.
 - [ ] **CP3.7** — full suite green.
 
-**Rollback:** `git revert`, or `git checkout <sha> -- <paths>`. Since this is a **deletion** (user decision 5), **the pre-deletion SHA is recorded in the Implementation Report** rather than left to be found later.
+**Rollback:** `git revert`, or `git checkout <sha> -- <paths>`. Since this is a deletion, **the pre-deletion SHA is recorded in the Implementation Report**.
 
 ---
 
-### Step 4 — Drop "v2" from the name
+### Step 4 — Rename to `render_episode_videos.py`
 
-**Precondition: Step 0's census shows no runs in flight**, or the user explicitly accepts the cost. This is the one step care cannot make safe.
+**Precondition: no runs in flight** (census re-run immediately before), or explicit user acceptance.
 
-- `git mv scripts/eval/render_recordings_v2.py scripts/eval/<new-name>.py` (Question 1).
-- The **three** `src/` path bindings the dependency map itemises as the mandatory trio: `async_render.py:56`, `evaluation_core.py:382`, `dreamer_srl/eval.py:552`; plus the cosmetic hint at `evaluation_core.py:415`.
-- Tests naming the script: `tests/scripts/test_render_recordings_v2.py` (itself renamed), `tests/training/test_async_render_dispatch.py`, `tests/algorithms/dreamer_srl/test_render_upload.py`.
-- **Output folder** (user decision 4): a new neutral name, the **26 existing `videos_v2/` directories left exactly as they are**. The 38 `.py` occurrences across eight files change; **nothing on disk is moved, renamed or deleted.** The script's existing `--output-dir` flag means no new code is needed for a transition.
-- Config **comments** naming the path: `configs/train/default.yaml:64,67`, `configs/evaluation/default.yaml:8`. These are comments, not keys — **no schema change, no new mandatory key**, so the config guide's schema-change clause does not fire. Its line 644 does name the script and must be updated.
+- `git mv scripts/eval/render_recordings_v2.py scripts/eval/render_episode_videos.py` (decision 7).
+- The **three** `src/` bindings: `async_render.py:56`, `evaluation_core.py:382`, `dreamer_srl/eval.py:552`; plus the cosmetic hint at `evaluation_core.py:415`.
+- Tests: `tests/scripts/test_render_recordings_v2.py` (renamed), `tests/training/test_async_render_dispatch.py`, `tests/algorithms/dreamer_srl/test_render_upload.py`.
+- **Output folder** (decision 4): a new neutral name — `episode_videos/` pairs with the script — with the **26 existing `videos_v2/` directories left exactly as they are**. The 38 `.py` occurrences change; **nothing on disk is moved, renamed or deleted.** The existing `--output-dir` flag covers any transition without new code.
+- Config **comments**: `configs/train/default.yaml:64,67`, `configs/evaluation/default.yaml:8`. Comments, not keys — **no schema change, no new mandatory key**. `CONFIG_GUIDE.md:644` names the script and must be updated.
 - `.claude/skills/trajectory-story/SKILL.md:60`.
-- `SCRIPTS_DEPENDENCY_MAP.md` — **the contract fires hardest here** (a `scripts/` file renamed + three `src/` callers changed): §1b rows 72–74, the rule sentence at 79, §2 121–123, §3 191, §4 250, §5 270.
+- `SCRIPTS_DEPENDENCY_MAP.md` — **contract fires hardest here**: §1b rows 72–74, the rule sentence at 79, §2 121–123, §3 191, §4 250, §5 270.
 
-**Explicitly NOT rewritten:** the 110 `.md` occurrences that are **historical record** — diary entries, wiki entries, `train_command-agent.sh`'s comment block at 3766–3780 (a dated account of the 2026-09-17 verification), and prior revisions of the redesign plan. Rewriting history to match a later name makes the record lie about what was run.
+**Explicitly NOT rewritten:** the 110 `.md` occurrences that are **historical record** — diary and wiki entries, `train_command-agent.sh`'s comment block at 3766–3780, prior plan revisions. Rewriting history to match a later name makes the record lie about what was run.
 
 **Checkpoints:**
-- [ ] **CP4.1** — census re-run **immediately** before the rename and pasted in.
-- [ ] **CP4.2** — `grep -rn "render_recordings_v2" --include="*.py" --include="*.yaml" --include="*.sh" .` returns zero hits outside preserved historical comments.
-- [ ] **CP4.3 — a real dispatch, not a mocked one.** Run far enough to produce a checkpoint video and confirm its `render_<pct>.log` contains **`frames verified`** — a phrase that exists only in this script (lines 444/489), so it is direct evidence of *which* renderer ran rather than an inference from the output path. The tests mock `_RENDER_SCRIPT`; only a real dispatch proves the binding.
-- [ ] **CP4.4 — look at the video** the dispatch produced.
-- [ ] **CP4.5** — the 26 pre-existing `videos_v2/` directories are **untouched and present**. No `results/` directory is deleted or moved.
+- [ ] **CP4.1** — census re-run **immediately** before, pasted in.
+- [ ] **CP4.2** — no stale script references outside preserved history.
+- [ ] **CP4.3 — a real dispatch, not a mocked one.** Produce a checkpoint video and confirm its `render_<pct>.log` contains **`frames verified`** — a phrase only this script emits (lines 444/489), so it is direct evidence of *which* renderer ran. The tests mock `_RENDER_SCRIPT`; only a real dispatch proves the binding.
+- [ ] **CP4.4 — look at the video.**
+- [ ] **CP4.5** — the 26 `videos_v2/` directories **untouched and present**; no `results/` directory moved or deleted.
 - [ ] **CP4.6** — full suite green.
 
-**Rollback:** rename the file back (`git revert`). A trainer live across the rename recovers at its next dispatch once the old filename exists again — the path it holds is a string, and it resolves as soon as the file is there. Videos skipped during the window are re-renderable offline from their `.rec.gz`.
+**Rollback:** rename back (`git revert`). A trainer live across the rename recovers at its next dispatch once the old filename exists again — the path it holds is a string. Videos skipped in the window are re-renderable offline from their `.rec.gz`.
 
 ---
 
-## Obligations to other documents (recorded, deliberately not executed here)
+## Obligations to other documents (recorded, not executed here)
 
-This plan **does not edit** either document below; each edit belongs to the step that makes it true.
+1. **[[EVAL_RENDERER_SWITCHOVER]] — Rollback route (b), owed by Step 3.** It names hand-rendering with `render_recordings.py` as the recovery path, recorded as *verified rather than assumed*. Deleting V1 deletes that route. Step 3 must repoint it or state plainly that hand-rendering is now single-renderer. §R30.4 records the obligation; this plan discharges it.
+2. **[[RENDERER_LAYOUT_REDESIGN]] §R30 — owed by Steps 1 and 3.** §R30.3 loses its first row at Step 1 and is superseded at Step 3. **It also needs two corrections: six dependents listed against thirteen found (plus a fourteenth for the April file), and §R30.1's "no callers at all" for the April file — which has two live positive controls and the sole `numeric_in_arena` proof.**
+3. **`docs/environment/12_renderer.md`** — owed by Step 3; a rewrite, not a patch.
 
-1. **[[EVAL_RENDERER_SWITCHOVER]] — Rollback route (b), owed by Step 3.** It names hand-rendering with `scripts/eval/render_recordings.py` as the recovery path for a run with missing videos, recorded as *verified rather than assumed* (exit 0, output matching to within 0.01 %). Deleting V1 deletes that route. Step 3 must repoint it or state plainly that hand-rendering is now single-renderer and what that costs. §R30.4 records the obligation; this plan discharges it.
-2. **[[RENDERER_LAYOUT_REDESIGN]] §R30 — owed by Steps 1 and 3.** §R30.3's table loses its first row at Step 1 and is superseded at Step 3; §R30.2's condition gets its verdict recorded at Step 3. **It also needs the A5 correction (six dependents listed, thirteen found) and the A10 correction (§R30.1 calls the April file "no callers at all" — it has two live positive controls and the sole `numeric_in_arena` proof).**
-3. **`docs/environment/12_renderer.md`** — owed by Step 3; a rewrite rather than a patch.
+## Follow-ups (named, deliberately out of scope)
 
----
-
-## Questions for the user
-
-Two decisions remain open. (Four others were decided today and are recorded in §User decisions.)
-
-### Q1 — What is the script called?
-
-`scripts/eval/render_recordings_v2.py` → ?
-
-- **`render_recordings.py`** — the cleanest end state, and the name the codebase already uses in prose. Freed by Step 3. Downside: the same filename means two different renderers depending on which commit you stand on, making `git log` and every historical doc reference ambiguous.
-- **`render_episode_videos.py`** — unambiguous forever, matches the project's own phrase "episode videos", never collides with history.
-- **`render_dashboard_videos.py`** — names the package that draws them.
-- something else.
-
-*(Related and also needed: the new output-folder name. Decision 4 settled that it changes and that the 26 existing folders stay put, but not what it becomes — `episode_videos/` pairs naturally with the second option above.)*
-
-### Q2 — The dead duplicate in `grid_world.py` (Q8, still open)
-
-`src/environment/grid_world.py:701` holds a second `save_jax_video` with **zero callers**, and `:344` an older `render_jax_state` copy. §R30.1 states today's approval does **not** cover them and Q8 still stands. This plan leaves them untouched. **Remove them as a separate change?**
+- **`grid_world.py`'s dead render copies** — `save_jax_video` at `:701` (zero callers) and the older `render_jax_state` at `:344`. Q8 of [[RENDERER_LAYOUT_REDESIGN]] stands over them. **A separate change after this plan lands** (decision 8); folding a dead-code deletion into a renderer retirement would attribute any regression to the wrong change.
 
 ---
 
 ## Checkpoints (roll-up)
 
-- [ ] **CP0.1** — census pasted, every busy GPU attributed
-- [ ] **CP1.1–CP1.3** — `save_jax_video` resolves; Matplotlib-free test still green unmodified; generator case passes
-- [ ] **CP1.4** — **byte-identical MP4s** before/after, on fixture M4 *and* a real recording
+- [ ] **CP0.1** — census pasted; every busy GPU attributed, including node 113:0
+- [ ] **CP1.0** — MP4 determinism settled; the gate form recorded
+- [ ] **CP1.1–CP1.3** — import resolves; V1-imports test green **unmodified**; generator case passes
+- [ ] **CP1.4** — the established gate passes on fixture M4 *and* a real recording
 - [ ] **CP1.5** — a human looked at two frames
 - [ ] **CP1.6** — exactly one `environment.renderer` import left, at `:277`
 - [ ] **CP1.7** — full suite green
-- [ ] **CP2.1** — per-rule coverage table: all **six** rules
-- [ ] **CP2.2** — each mutation fires via its named rule, on named participants
-- [ ] **CP2.3** — each unbroken counterpart is silent
-- [ ] **CP2.4** — rebuilt pinned counts exact; `SILENT_RULES` silent
+- [ ] **CP2.0** — current renderer's findings on M4/M1 measured before any pin
+- [ ] **CP2.1** — coverage derived from the audit and parametrised
+- [ ] **CP2.2–CP2.3** — each mutation fires via its named rule; each correct counterpart silent
+- [ ] **CP2.4** — pins are **zero** per defect rule
 - [ ] **CP2.5** — measurement-is-a-measurement test passes on the current renderer
 - [ ] **CP2.6** — a human looked at every mutated frame
-- [ ] **CP2.7** — **controls pass with V1 and the April file moved aside** (before any deletion)
-- [ ] **CP2.8** — control suite green with **0 skipped**
-- [ ] **CP3.1** — §R30.2 tally names specific runs
-- [ ] **CP3.2** — zero `environment.renderer` / `renderer_v2` imports repo-wide
+- [ ] **CP2.7** — controls pass with both old renderers **`mv`'d aside**, restored by `git checkout --`, `git status` clean
+- [ ] **CP2.8** — control suite green, **0 skipped**
+- [ ] **CP3.1–CP3.2** — §R30.2 tally written; no surviving imports (grep scoped to imports, not prose)
 - [ ] **CP3.3** — audit still self-proving after deletion, coverage unchanged
 - [ ] **CP3.4** — a human looked at a post-deletion frame
 - [ ] **CP3.5** — recording-format contract names an owner that exists
 - [ ] **CP3.6** — fixture-worlds bug row re-checked and reported
 - [ ] **CP3.7** — full suite green
 - [ ] **CP4.1–CP4.2** — census immediately before; no stale references
-- [ ] **CP4.3** — a **real** dispatch produced a video (`frames verified` in its log)
-- [ ] **CP4.4** — a human opened that video
+- [ ] **CP4.3–CP4.4** — a **real** dispatch produced a video; a human opened it
 - [ ] **CP4.5** — the 26 existing directories untouched and present
 - [ ] **CP4.6** — full suite green
 
@@ -519,3 +500,7 @@ Two decisions remain open. (Four others were decided today and are recorded in �
 The ordering is right and every claim in A10 re-verified. What is short is **Step 2's own scope**: its exit gate (CP2.7, "controls pass with both old renderers moved aside") cannot pass as written, because (1) the audit's `load_inputs` imports `thermal_color_limits` from V1 at `render_layout_audit.py:418` on every call — including on the substitution path Step 2 reuses — and the plan schedules that edit for Step 3; and (2) `run_controls` iterates `CONTROLS`, whose seven entries still render `"v1"`/`"v2"`, so the `CONTROLS` change the plan marks "only if" is mandatory, and the `--controls` CLI cannot survive Step 3 at all (the audit may not import the dashboard, so it cannot render a current frame itself) — which also fires the dependency-map contract on Step 2. Three more Moderates: `git stash` cannot move an unmodified tracked file aside and would sweep parallel sessions' uncommitted edits — specify `mv` out + `git checkout --` back; Step 2's "safe under live runs" is only true if the deliberate breaks are test-process monkeypatches and nothing under `src/environment/dashboard/` changes — say so or give Step 2 the Step 1 wait gate; and CP1.4's byte-identity assumes reproducible MP4 encoding, which [[EVAL_RENDERER_SWITCHOVER]] §Rollback (b)'s own 956,266 B vs 956,367 B record contradicts — establish twice-render determinism before Step 1 or fall back to decoded-frame equality. Two Opens decide Step 2's shape: nobody has yet looked at the current renderer's non-cell findings on M4/M1 (the only full-audit test asserts `cell_*` only), and pinning **non-zero** exact counts on a live renderer will break on every legitimate change — the stable pin is zero on every defect rule. Lows: `test_c4.py` (repo root) is a fourteenth dependent of the April file; CP3.2's grep will hit prose (`sensor.py:689`, `dashboard/__init__.py:32`); and `video.py`'s required docstring can trip `test_no_file_in_the_package_names_the_frozen_renderer_at_all` if one line carries both "renderer" and "import" without a quote character.
 
 *— plan-reviewer, 2026-09-21*
+
+> **Response from senior-developer, 2026-09-21 (Revision 3).** All thirteen findings applied; each re-verified against the code rather than accepted on report. The two blocking ones are now **§A11.1** (the `load_inputs` reach-through moves into Step 2 as scope item (a)) and **§A11.2** (`CONTROLS` is mandatory, `--controls`' fate and dependency-map row 190 land in the same commit, so the maintenance contract fires on Step 2). The `git stash` instruction was **mine** and is replaced with `mv` out / `git checkout --` back plus a clean-tree assertion (**§A11.3**); no `git stash` appears anywhere in this plan. Step 2 is now explicitly monkeypatch-only (**§A11.4**), CP1.0 settles MP4 determinism before CP1.4 relies on it (**§A11.5**), coverage is derived and parametrised (**§A11.6**) — and while checking that, a hand grep of two of the audit's three rule-emission shapes **missed `out_of_card`**, which is the argument for deriving it; pins are zero per defect rule and measured first (**§A11.7**); `panel_absent` gets two monkeypatches plus a paired assertion the unpatched guard raises (**§A11.8**); and the lows are applied verbatim (**§A11.9**), including the `"imported" contains "import"` trap in the new docstring. One addition of my own: **§A11.10** records that the `M4`/`M1` fixtures Step 2 calibrates against are gitignored and unregenerable, so a `results/` loss would take the calibration with it.
+
+*— senior-developer, 2026-09-21*
