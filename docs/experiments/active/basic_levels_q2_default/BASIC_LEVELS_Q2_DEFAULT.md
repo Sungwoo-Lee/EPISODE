@@ -13,12 +13,20 @@ last_updated: 2026-09-21
 The agent's default senses were just rebuilt. Until now the default agent was **blind**
 (`visual_sensor_range: 0`) and had a single omnidirectional whiff of smell
 (`olfactory_grid_range: 0`). It now has a small visual field two cells across and a
-five-cell directional smell field — and, critically, its vision reports only **that**
-something occupies a cell, never **what** occupies it, because every entity's appearance
-collapsed to the same single number (`visual_vector_size: 1` with `visual_value_mode: clamp`).
-Identity did not leave the world; it moved to the nose, where a predator smells
-`[0, 0.7, 0.5, 0, 0]` and a harmless animal smells `[0, 0.5, 0.7, 0, 0]` and only the
-*ratio* tells them apart.
+five-cell directional smell field — and, critically, its vision no longer tells it **what**
+it is looking at, because every entity's appearance collapsed to the same single number
+(`visual_vector_size: 1` with `visual_value_mode: clamp`). Identity did not leave the world;
+it moved to the nose, where a predator smells `[0, 0.7, 0.5, 0, 0]` and a harmless animal
+smells `[0, 0.5, 0.7, 0, 0]` and only the *ratio* tells them apart.
+
+A precision worth stating, because the obvious shorthand for this is wrong: what vision
+delivers is **not** a binary "occupied / empty" flag. The sensor sums each entity's blurred
+contribution before capping the total at 1.0, so a lone entity reads about 0.64 on its own
+cell, two entities in one cell read more than one until the sum saturates, and an entity
+outside `visual_sensor_range` still leaks attenuated mass inward — `visual_sensor_range`
+bounds the cells *sampled*, not the entities *sensed*. The honest description is a
+presence-capped blurred density that is identity-free. The identity claim — the one this
+wave depends on — holds exactly.
 
 That combination is the sensor-ladder study's `Q2_presence_binary` arm, adopted as the
 project default in commit `47b1b8c3`. The reason for adopting it is that it is the only
