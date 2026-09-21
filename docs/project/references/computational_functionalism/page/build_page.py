@@ -229,14 +229,19 @@ def main():
                 fail(f"debates.csv {r['debate_id']} {cell} prints a raw manifest key: {r[cell]!r}")
         if r["status"] not in {"open", "leaning", "settled", "stalled", "untested"}:
             fail(f"debates.csv {r['debate_id']}: unknown status {r['status']!r}")
-        direction = f' &mdash; leaning toward {html.escape(r["status_direction"])}' if r["status_direction"] else ""
+        # the direction column already starts with "toward"; prefixing "leaning toward" doubled the word
+        d = r["status_direction"]
+        if d and not d.startswith("toward"):
+            fail(f"debates.csv {r['debate_id']}: status_direction should start with 'toward', got {d!r}")
+        lean = f'<p class="dd"><strong>Leaning {html.escape(d)}.</strong></p>' if d else ""
         cards.append(
             f'<div class="debate"><p class="dnum">Debate {i} of {len(drows)} &middot; '
             f'{html.escape(r["first_year"])}&ndash;{html.escape(r["latest_year"])} &middot; '
             f'{len(held[r["debate_id"]])} works</p>'
             f'<p class="dq">{html.escape(r["title"])}</p>'
             f'<p class="dd">{html.escape(r["question"])}</p>'
-            f'<p class="ds">status in this corpus: {html.escape(r["status"])}{direction}</p>'
+            f'<p class="ds">status in this corpus: {html.escape(r["status"])}</p>'
+            f'{lean}'
             f'<p class="dd">{html.escape(r["status_reason"])}</p>'
             f'<p class="dlimit"><strong>What this corpus cannot show.</strong> '
             f'{html.escape(r["status_scope"])}</p></div>')
