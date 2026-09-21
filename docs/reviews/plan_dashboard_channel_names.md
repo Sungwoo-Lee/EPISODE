@@ -616,3 +616,130 @@ The range-4 refusal (M19) sits beside row 125 (height twin, "first biting at ran
 173 (the width bug at range 3) and should be recorded by `bug-curator` once the user decides.
 
 *Reviewed by: plan-reviewer*
+
+---
+
+## Sixth pass — re-review at `261513e8` (2026-09-21)
+
+Severity legend: 🔴 Critical = fix before going further · 🟡 Moderate = likely costs a re-run · 🟢 Low = cosmetic · ❓ Open = an assumption nobody has verified yet.
+
+Reviewed at the committed SHA only. Measurements were taken on the working tree of 2026-09-21
+after `47b1b8c3`; `configs/` is clean (verified), and the base resolves to `(5, 1, 1, 2)` through
+the trainer's own loader (verified). Nothing was staged, edited or reverted by this review.
+
+### Verdict, in plain language
+
+**SOUND WITH CONCERNS — nothing found blocks implementation.** This pass was a gate, and the
+question it was asked was whether any remaining defect would reach a rendered frame or destroy
+work. None does. The newest mechanism — an oversized sensor range shrinks its maps *inside* the
+fixed panel rather than spilling out — was re-derived with the real packer and the author's
+table is exactly right: at six slots a 520 px grant leaves 15.3 px map squares at vision range
+2, 10.9 px at range 3, and 8.5 px at range 4, which is under the 10 px floor, so range 4 refuses
+with the quoted message. The in-memory rebuild of the wide-sense test is genuinely in memory
+(the existing `_ctx` helper builds a layout context from literals with no file at all), the
+legacy signal is keyed off the top-level key as asked, every checkpoint has a subject that
+exists on disk or can be built, and the trap cases (a vision-off recording, a 12-channel
+synthetic world) both resolve through the fixture script's own `build_params`.
+
+Three Moderates remain, and for each a developer can implement correctly *despite* it: one is
+a coordination hazard on a test file another session has edited but not committed, one is an
+ambiguity about *when* a sense's display is built that the plan's own E9 checkpoint would
+catch, and one is a wording that invites a second copy of the packer's arithmetic. Two Lows
+are wording. A seventh cycle is not justified by anything here; the fixes are sentences and can
+ride with the implementation.
+
+### The six questions this pass was asked
+
+**1. Does anything still block implementation?** No. See findings — each says "blocks: no" and
+why.
+
+**2. §D4d's containment table, re-derived.** Holds exactly. Real packer, base `(5,1,1,2)` with
+`visual_vector_size=8` (six maps) and `visual_range` ∈ {2,3,4}: `_span` = **362 / 482 / 602** px;
+range 2 and 3 are granted **520** px (`band_w = CANVAS_W − OUTER − cx`, two children), inner
+width 488, six-slot pitch 76.3 px, map squares **15.27 / 10.90** px; range 4 is refused with
+`visual needs 602px of width in the band; 2 children share 1056px, giving it 520px`. The
+1-channel column also holds (live `_span` 82 / 102 / 122 px today, so today's sizing does
+render a 1-channel range-4 world, and 8.48 px contained at range 4 after). The refusal is issued
+by the **layout registry's** band check, not by the painter's `cs < 10` the section names — the
+two floors are the same constant and the band-span equality test is what keeps them agreeing,
+so the verdict is identical (L8, wording). Through the real cells: `E7` (both senses at range 3)
+packs at 1 and 8 channels; `E8` (range 4) packs at 1 channel today and refuses at 8 — the
+boundary is where the plan says it is.
+
+**3. Can every checkpoint fail against `(5, 1, 1, 2)`?** Yes. CP1's source-grep case fails today
+(`painters.py:707,709`). CP2b(b)'s subject carries `visual_vector_size: 8` and none of the four
+keys (verified). CP3's subjects exist with `run_meta.pkl` (`olf1_vis2_spanfix/recordings/77`,
+`olf1_vis3_spanfix/recordings/71`); (a) needs 8 maps × 5 cells = 474 px ≤ 520 and draws, (b)
+needs 634 > 520 and refuses. CP4's before/after `layout_signature` is identical by construction
+(live 8-channel = 6 maps = 362 px; slots = 6 = 362 px). CP5's one map is 15.3 px either way, so
+"not enlarged" is a real assertion. CP5b(a)'s 12-channel world loads through the loader with
+explicit 12-wide lists (`Visual = 156` dims). CP6's `E9` resolves with `Visual` absent from the
+breakdown and packs as a single 1056 px band child.
+
+**4. M10's rebuilt cases.** In memory, yes: `test_dashboard_band_span.py:76` `_ctx` constructs
+`LayoutContext` from literals — no config read. The §11 row's "`default.yaml` plus range and
+width overrides" adds one benign dependency (the maintained base; its absence is a loader error,
+never a skip); all three cases can be built with `_ctx` alone and I would. No skip path: `:266`
+is the only `pytest.skip` in the file at HEAD and the row deletes it. Note the working-tree
+collision in M22 — the same function has already been rewritten, uncommitted, by another session.
+
+**5. M20's legacy keying.** Enabled sense with no entry raises: yes, `key_present and
+meta_entry is None → KeyError`. Disabled sense with no entry does not raise: **only if the
+display is built lazily** — the sketch has no enabled input, so an eager per-sense build in
+`LayoutContext.from_params` would raise on E9. The registry sizes only present panels
+(`panels.py:629` `present_panels` → `:708` band `min_size`) and `episode.py:455-459` draws only
+present band keys, so lazy is the natural wiring, but the plan should say it (M23).
+
+**6. The source-grep residual.** `"row[:"` catches slice literals only (`:707`, `:709` today) and
+would miss `row[0]`, `row[1:3]`, `vec[:, :3]`. A regex `\b(row|vec)\[[^\]]*\d` catches those
+three and nothing legitimate (`row[ch]`, `row[list(channels)]` have no digit). It is still not
+airtight against a renamed variable; the structural guarantee stays where the plan put it —
+`map_plan` carries the channels and CP6's shifted-group frame is looked at (L9).
+
+### Findings
+
+| Sev | Location | Issue | Exit condition | Blocks? | Owner |
+|---|---|---|---|---|---|
+| 🟡 M22 | §11 band-span row; CP0; working tree ` M tests/env/test_dashboard_band_span.py` (+63/−), ` M tests/env/test_dashboard_layout.py` (+67/−), `?? tests/env/fixtures/dashboard_band_vis3.yaml` | **Another session has already rewritten the same wide-sense test, uncommitted, the other way.** Their version asserts instead of skipping (good) but repoints the two cases at **files on disk** (`basic/05-campfire_thermal_10x10.yaml` and a new fixture YAML) — the dependency M10 forbids — and today's diary row says the case is "NOT being patched standalone". The fixture's own comment carries pre-plan arithmetic ("declares 102 px"). CP0 checks only `configs/` for foreign hunks; this is C11's shape on a different file, at staging rather than rollback. | CP0 also records `git status --short tests/env/`; if the band-span test is dirty, coordinate before editing it exactly as C11 required for `default.yaml`. State the resolution: §11's in-memory version **supersedes** the file-based one, and `dashboard_band_vis3.yaml` is removed by whoever lands second unless something else reads it. The layout-test edit is the other session's fix for §A6's three failures — CP0's "re-measure, inherit no number" already absorbs it. | **No.** No rollback step names the file; the `CLAUDE.md` staging rule ("confirm every hunk is yours") already governs the commit. | senior-developer; the owning session |
+| 🟡 M23 | §1 `ChannelDisplay.from_meta(sense, n_channels, meta_entry, *, key_present)`; §2 "build `ChannelDisplay` per sense" | **The sketch raises for any missing entry once the key is present, and has no enabled input.** Built eagerly for both senses, a configured vision-off recording (`E9`) raises `KeyError` at context construction — the false positive the docstring says it avoids. Built lazily — only for senses in the breakdown — it is correct, and that is how the registry and the band loop already work. | One sentence in §2: a sense's display is built only when `ctx.observed(sense)`; an unobserved sense never has one. Add the mirror case to §11 beside M20's: configured payload lacking `Visual` on a vision-**off** context builds and renders without raising. | **No.** CP6's `E9` render fails on an eager build, in seconds. | senior-developer |
+| 🟡 M24 | §D5b "The legacy path checks **before packing** and raises a message that …" | **The grant is known only inside `pack()`.** A pre-pack check must re-derive `CANVAS_W − OUTER − cx` and the two-child split — a second copy of the packer's arithmetic in another module, which is the `4b6f7196` shape the plan cites as its reason to exist. | Implement as catch-and-reraise around `pack()` on the legacy path (or expose the band grant from `layout` as the one function both call). CP3(b)'s check is unchanged. | **No.** CP3(b) and §11's 482/634 cases hold either way; this chooses between two implementations. | senior-developer → developer |
+| 🟢 L8 | §D4d "under `painters.py`'s `if cs < 10: raise`" + the quoted `visual needs 602px …` message; §9 "Shrinking (V < 8)" / "Growing to V = 8" | The message quoted is the registry's, which refuses first; both floors are 10 px. §9's branches are named by direction, but CP5b's 12-channel cell needs the explicit-list branch at V > 8 (verified it loads). | Say "the registry refuses first, on the same floor"; rename the branches "V ≠ 8 → explicit lists / V = 8 → strip". | No | senior-developer |
+| 🟢 L9 | §11 source-invariant row `"row[:"` | Catches slice literals only. | Use `\b(row|vec)\[[^\]]*\d`; keep the structural guarantee in `map_plan` + CP6. | No | senior-developer |
+
+### Author findings, verified this pass
+
+| # | Claim | Status |
+|---|---|---|
+| C11 | rollout committed as `47b1b8c3`; `configs/` clean | ✅ `git status --short configs/` empty; commit stat shows `default.yaml`, seven `basic/`, two deletions, `archive/basic_vec8/` |
+| M19 / §D4d | 362 / 482 / 602 px; 15.3 / 10.9 / 8.5 px; range 4 refuses | ✅ exactly, real packer (question 2) |
+| §D5b 482 px | 1-channel legacy r3 sized to six slots | ✅ 482 ≤ 520 packs |
+| M10 | wide cases skipping right now, `16 passed, 2 skipped` at `:266` | ✅ at HEAD; the working tree already carries a foreign rewrite (M22) |
+| M16 | `q_learning.yaml` outside sweep roots, fails on `visual_sensor_range` | ✅ carried from fifth pass; unchanged |
+| M20 | legacy keyed on top-level key | ✅ as sketched; lazy build needed (M23) |
+| CP0 base | `(5, 1, 1, 2)` | ✅ `olfactory_channels=5 visual_vector_size=1 olfactory_range=1 visual_range=2` |
+| E9 / E7 / E8 | vision-off resolves; range-3 packs; range-4 refuses at 8 ch | ✅ through `build_params` |
+
+### Assumptions the plan depends on (this pass)
+
+- ❓ **O12** (carried) — the parity fixtures are unaffected by an inert key. Gated by CP6.
+- ❓ **O13** (carried) — no production path records at vision range ≥ 4; `E8` is a fixture cell.
+- ❓ **O14** — the other session's band-span / layout test edits either land or are abandoned
+  before CP1; whichever, CP0 records the working-tree state it actually finds (M22).
+
+### Cost of being wrong
+
+If the three Moderates ship as written: M22 costs at worst another session's ~130-line test edit
+swept under this plan's commit or a merge on one function — no data, but the `CLAUDE.md` rule
+exists because of exactly this; M23 costs one CP6 iteration, caught in seconds; M24 leaves a
+second copy of the packer's arithmetic that can drift, confined to *when* a legacy recording's
+refusal message is issued. Nothing reaches a rendered frame of a configured recording, and
+nothing requires a rerun of anything expensive.
+
+### Passes skipped
+
+Pass 6 (experiment-plan specifics) and pass 7 (empirical-claim soundness) — engineering plan.
+Prior-art: Known Bugs rows 125 (height twin) and 173 (width fix) re-read; no new collision. The
+silent-skip of the band-span guard is in today's diary but not the registry — `bug-curator`
+should record it once the test lands, whichever version wins.
+
+*Reviewed by: plan-reviewer*

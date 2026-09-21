@@ -1912,3 +1912,34 @@ continual stage at start for free.
 Disclosure: my first slot-to-entity read of the loader output was misaligned (entries expand to
 `count_high` slots) and briefly showed hiding_predator→3 / rabbit→5; re-run by slot, the author's
 numbers are exactly right.
+
+### Sixth pass — reviewed at `261513e8` (2026-09-21)
+
+**Verdict: SOUND WITH CONCERNS — nothing blocks implementation.** §D4d's containment table was
+re-derived with the real packer and holds exactly (362 / 482 / 602 px; 15.3 / 10.9 / 8.5 px map
+squares; range 4 refused with the quoted message); every checkpoint has a subject that exists or
+builds against the committed base `(5, 1, 1, 2)`; the wide-sense rebuild is genuinely in memory
+(`_ctx` builds a context from literals); `E9` resolves with no `Visual` in the breakdown and
+packs; a 12-channel synthetic world loads. Full detail and the six questions answered:
+[[plan_dashboard_channel_names]] §"Sixth pass".
+
+Three Moderates, none blocking — a developer implements correctly despite each:
+
+- **M22** — another session has **already rewritten the same wide-sense test, uncommitted**,
+  pointing it at files on disk (`basic/05-campfire_thermal_10x10.yaml` and an untracked
+  `tests/env/fixtures/dashboard_band_vis3.yaml`), against M10's rule and today's diary. CP0 must
+  record `git status --short tests/env/` and coordinate as C11 did; §11's in-memory version
+  supersedes, and the fixture YAML goes with whoever lands second.
+- **M23** — `from_meta` raises for any missing entry once the key is present and has no enabled
+  input; built eagerly for both senses it raises on a vision-off configured recording. Say in §2
+  that a display is built only for senses in `ctx.observed`, and add the vision-off mirror case
+  to §11. CP6's `E9` catches an eager build.
+- **M24** — "checks before packing" (§D5b) requires re-deriving the band grant outside `pack()`,
+  a second copy of the packer's arithmetic. Catch-and-reraise around `pack()` on the legacy path
+  instead; CP3(b) unchanged.
+
+Low: the range-4 refusal is issued by the layout registry, not the painter (same 10 px floor);
+§9's helper branches are "V ≠ 8 / V = 8", not "shrink / grow"; the source-grep should be
+`\b(row|vec)\[[^\]]*\d` rather than `"row[:"`.
+
+*Reviewed by: plan-reviewer*
