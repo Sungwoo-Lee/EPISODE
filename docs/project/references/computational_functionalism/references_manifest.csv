@@ -6,7 +6,7 @@ block1978,A1,full,,Block 1978 - Troubles with functionalism,pdf,"author-revised 
 bechtelmundale1999,A1,full,10.1086/392683,Bechtel and Mundale 1999 - Multiple realizability revisited,named-only,
 chalmers1994cfc,A2,full,10.17791/jcs.2011.12.4.325,Chalmers 2011 - A computational foundation for the study of cognition (author web version),pdf,written 1993; JCS 2011
 chalmers1996rock,A2,full,10.1007/bf00413692,Chalmers 1996 - Does a rock implement every finite-state automaton,pdf,
-maudlin1989,A2,full,10.2307/2026650,Maudlin 1989 - Computation and consciousness,named-only,
+maudlin1989,F,full,10.2307/2026650,Maudlin 1989 - Computation and consciousness,pdf,"JSTOR scan of J Phil 86(8):407-432; the Olympia argument, flagged by Chalmers 1996 n.3 as unanswered"
 piccinini2010,A2,full,10.1111/j.1933-1592.2010.00356.x,Piccinini 2010 - The mind as neural software,pdf,
 piccinini2013,A2,full,10.1111/cogs.12012,Piccinini and Bahar 2013 - Neural computation and the computational theory of cognition,pdf,
 shagrir2006,A2,short,10.1007/s11229-006-9099-8,Shagrir 2006 - Why we view the brain as a computer,pdf,
@@ -38,3 +38,4 @@ birch2024,E,short,10.51291/2377-7478.1893,Birch 2025 - Precis of The edge of sen
 milliere2024,E,short,,Milliere and Buckner 2024 - A philosophical introduction to language models part I,pdf,arXiv 2401.03910
 mollo2023vector,E,full,10.33735/phimisci.2026.12307,Coelho Mollo and Milliere 2023 - The vector grounding problem,pdf,"published version, Philosophy and the Mind Sciences vol. 7 (2026); expanded beyond the 2023 preprint, incl. a reply to Grindrod 2024"
 shevlin2021,E,short,10.1111/mila.12338,Shevlin 2021 - Non-human consciousness and the specificity problem,pdf,
+klein_maudlin,F,short,,Klein - Computation consciousness and Computation and Consciousness (context piece),pdf,"retrospective on Maudlin's Olympia argument; author web version, venue and year to be recorded by the reviewer"
