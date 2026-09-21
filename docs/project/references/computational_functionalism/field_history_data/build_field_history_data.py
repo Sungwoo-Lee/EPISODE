@@ -16,6 +16,7 @@ mismatch. Edit this file and rerun; do not hand-edit the CSVs.
 """
 import csv
 import os
+import re
 import sys
 
 ROOT = "/media/nas01/projects/Interoceptive-AI/grid_world_pain/docs/project/references/computational_functionalism"
@@ -82,16 +83,16 @@ DEBATES = [
      "Is running the right computation sufficient for a mind?",
      "If a machine ran exactly the computation your brain runs, would it have a mind, and would it feel anything?",
      "open",
-     "Thirteen reviewed works support sufficiency, twelve restrict it, four reject it, four decline to take sides; no reviewed work concedes to another.",
+     "Of the {tally} works positioned in this debate, {supports} supporting, {restricts} restricting, {rejects} rejecting and {neutral} abstaining; no reviewed work concedes to another.",
      "",
      "The corpus was built to trace this thesis, so both camps are over-represented relative to authors who never address it."),
     ("triviality",
      "Does every ordinary object implement every computation?",
      "If a rock can be described as running your brain's program, then saying a mind is a program says nothing. Does that follow?",
      "leaning",
-     "Chalmers's counterfactual-supporting conditionals plus combinatorial-state automata are not contested by any reviewed work; Piccinini calls the Putnam-Searle problem 'not very serious' (p. 281).",
-     "toward the triviality objection failing once implementation conditions are stated modally",
-     "Putnam 1988 and Searle 1990/1992, the sources of the objection, are not held; the corpus contains only its critics' reconstructions."),
+     "No reviewed work contests that Putnam's construction reproduces only a trace; Sprevak contests whether a NON-SEMANTIC modal constraint suffices, holding that realization functions stay cheap.",
+     "toward Putnam's mapping construction failing and some modal constraint being required; whether a non-semantic modal constraint suffices is disputed (Sprevak: no)",
+     "Putnam 1988 and Searle 1990/1992, the sources, are not held, nor is any post-1996 triviality work (Godfrey-Smith 2009; Scheutz; Rescorla; Schweizer). More live in the field than here."),
     ("individuation",
      "Which computation is a given system running, and does meaning decide?",
      "One circuit can be called an AND gate or an OR gate depending on which voltage you call '1'. What fixes which computation a system is running?",
@@ -110,7 +111,7 @@ DEBATES = [
      "Does being alive matter, and in which of its three non-equivalent senses?",
      "Is a mind something only a living thing can have - and if so, is it metabolism, bodily self-regulation, or specific brain wiring that does the work?",
      "open",
-     "The biological works lower the thesis's plausibility without rejecting it; Chalmers calls the requirement 'biological chauvinism' while assigning it a one-in-three credence.",
+     "The biological works lower plausibility without rejecting; Chalmers calls the requirement 'biological chauvinism' while using a mainstream credence he says exceeds his own.",
      "",
      "Nobody in the reviewed biological batch rejects computational functionalism; Thompson 2007, the hub all three biological works cite, is not held."),
     ("testability",
@@ -124,7 +125,7 @@ DEBATES = [
      "Is what a system says or does evidence about whether it has a mind?",
      "A chatbot trained on human talk can say it feels things. Is that evidence, and if not, what is?",
      "leaning",
-     "Six reviewed works independently downgrade behaviour and upgrade architecture; Birch's gaming problem and Shevlin's gerrymandered robot give the general form.",
+     "Five reviewed works take this position and Schwitzgebel & Garza state a symmetric version; but two of the five share authors, so the agreement is not independent.",
      "toward architectural rather than behavioural evidence, at least for trained systems",
      "Long et al. share two authors (Chalmers, Birch) with works they cite for this, so the convergence is partly co-authorship rather than independent agreement."),
     ("llm",
@@ -262,6 +263,12 @@ W = {
     "mollo2023vector": ("Coelho Mollo & Milliere 2023/2026", 2023, 2026, "philosophy-of-mind",
                         "The Vector Grounding Problem: content needs causal-informational relations plus a selection history, so parameter-identical systems can differ in content.",
                         "conceptual analysis", "restricts"),
+    "dennett1988": ("Dennett 1988", 1988, 1988, "philosophy-of-mind",
+                    "Quining Qualia: the felt quality these debates argue about pulls apart under pressure into two incompatible things, so the question has no determinate answer.",
+                    "thought experiment", "supports"),
+    "block1995": ("Block 1995", 1995, 1995, "philosophy-of-mind",
+                  "Not reviewed (no PDF; the fetch failed). The access/phenomenal distinction that the later corpus uses whenever it separates global availability from experience.",
+                  "unknown", "unknown"),
     "shevlin2021": ("Shevlin 2021", 2021, 2021, "consciousness-science",
                     "Names the specificity problem: a substrate-neutral theory cannot be applied until its level of abstraction is fixed, and human experiments do not fix it.",
                     "conceptual analysis", "restricts"),
@@ -296,6 +303,9 @@ POSITIONS = [
     ("sufficiency", "suf-architecture", "Computationalism survives, but only as a claim about architectures and actual processes",
      "klein_maudlin",
      "Stated over input-output functions it collapses a conscious episode into one primitive step; stated over mechanisms, a simulated brain is not a candidate"),
+    ("sufficiency", "suf-deflate", "The question has no determinate answer, because its subject matter is not well defined",
+     "dennett1988",
+     "Supports functionalism defensively only, by removing a stumbling block: no argument that a program suffices, nothing on substrate, no verdict on the machine"),
     ("sufficiency", "suf-credence", "Neither settled; assign it a credence and proceed",
      "long2024welfare;birch2024;schwitzgebel2015;kleiner2021",
      "Treat the thesis as one uncertain term in a decision problem rather than as a premise to be established or refuted before acting"),
@@ -431,6 +441,9 @@ POSITIONS = [
     ("evidence", "ev-function", "Behavioural and neural signatures of the right computations do count",
      "dehaene2017;doerig2019;butlin2023",
      "Consciousness must be described in terms of what it does; the signatures of C1 and C2 are measurable in humans, animals and pre-verbal infants"),
+    ("evidence", "ev-introspect", "First-person report cannot settle even the subject's own case",
+     "dennett1988",
+     "About HUMAN introspection, not machine behaviour: rational, unimpaired subjects cannot tell whether their own qualia shifted. No reviewed work links the two"),
     ("evidence", "ev-claim", "What a machine says about its experience is a readout of its self-model's format",
      "graziano2017",
      "A system with a different internal architecture would build a different self-model and need not lay claim to consciousness in the sense humans understand"),
@@ -488,6 +501,42 @@ RELATIONS = {
     "flags-as-open",
 }
 
+# plan-reviewer MAJOR 5: an edge records a documented ENGAGEMENT, which is not the same
+# as a citation of the node's own document. `cites_held_document` says which:
+#   yes     - the citing work cites the held document itself
+#   sibling - it cites a different statement of the same theory or by the same author
+#   other   - it cites a different document entirely (named in `evidence`)
+#   unknown - the reviews do not record which document was cited
+# Default is "yes"; only departures are listed here.
+CITES = {
+    ("dehaene2017", "tononi2015"): "sibling",
+    ("graziano2017", "tononi2015"): "sibling",
+    ("graziano2017", "dehaene2017"): "sibling",
+    ("piccinini2013", "shagrir2006"): "sibling",
+    ("butlin2023", "dehaene2017"): "sibling",
+    ("shevlin2021", "dehaene2017"): "sibling",
+    ("shevlin2021", "graziano2017"): "sibling",
+    ("cleeremans2022", "block1978"): "sibling",
+    ("aru2023", "dehaene2017"): "sibling",
+    ("seth2025", "tononi2015"): "sibling",
+    ("seth2025", "piccinini2013"): "sibling",
+    ("chalmers2023llm", "tononi2015"): "sibling",
+    ("chalmers2023llm", "dehaene2017"): "sibling",
+    ("long2024welfare", "seth2025"): "sibling",
+    ("long2024welfare", "piccinini2010"): "sibling",
+    ("long2024welfare", "tononi2015"): "sibling",
+    ("doerig2019", "tononi2015"): "sibling",
+    ("kleiner2021", "tononi2015"): "sibling",
+    ("kleiner2021", "dehaene2017"): "sibling",
+    ("kleiner2021", "graziano2017"): "sibling",
+    ("klein_maudlin", "piccinini2010"): "sibling",
+    ("klein_maudlin", "chalmers1994cfc"): "sibling",
+    ("godfreysmith2016", "tononi2015"): "sibling",
+    ("klein_maudlin", "tononi2015"): "other",
+    ("milliere2024", "block1978"): "other",
+    ("schwitzgebel2015", "chalmers1995qualia"): "other",
+}
+
 EDGES = [
     # from, to, relation, evidence (review locus; notes where the cited work is a sibling, not this key)
     ("blockfodor1972", "putnam1967", "critiques", "A1 1: the machine-table version of functionalism is the paper's target"),
@@ -525,10 +574,11 @@ EDGES = [
     ("mollo2018", "shagrir2006", "replies-to", "A2 7 s. 7: grants that no non-semantic theory tells AND from OR, and denies this was ever about individuation"),
     ("mollo2018", "chalmers1994cfc", "builds-on", "A2 7 (PDF pp. 14-15): mechanism offered as the successor to causal topology, under tighter constraints"),
     ("maudlin1989", "searle1980", "critiques", "F 1 pp. 414-415: rejects Searle's Chinese Room inference, siding with the BBS commentators that a disjoint mentality could arise"),
-    ("maudlin1989", "block1978", "reinterprets", "F 1 p. 414: rejects the 'ploy of funny instantiation' - 'I cannot think of one reason to accord those intuitions any weight'"),
+    ("dennett1988", "block1978", "critiques", "G 1: quoted twice by name - the Louis Armstrong deflection (p. 281) as the exhibit of the presumption attacked, and 'immediate phenomenological qualities'"),
+    ("dennett1988", "blockfodor1972", "critiques", "G 1: quoted at p. 172 on verificationist counterarguments, as the rehabilitation of the inverted-spectrum hypothesis he attacks"),
     ("klein_maudlin", "maudlin1989", "replies-to", "F 2 (PDF pp. 6-16): 'I do not think Maudlin's argument succeeds', then relocates the dispute to architecture"),
     ("klein_maudlin", "chalmers1996rock", "critiques", "F 2 (PDF pp. 8, 15): the triviality family separated from Maudlin's argument; the isomorphism account departed from, naming Chalmers 2011"),
-    ("klein_maudlin", "chalmers1994cfc", "critiques", "F 2 (PDF p. 16): organizational invariants do not show a virtual machine is the same as a process with that architecture"),
+    ("klein_maudlin", "chalmers1994cfc", "critiques", "F 2 (PDF p. 16): organizational invariants do not show a virtual machine is the same as a process with that architecture; cites Chalmers 1996a, a sibling statement"),
     ("klein_maudlin", "block1978", "reinterprets", "F 2 (PDF pp. 8, 12): the Chinese Nation and the lookup-table objection both re-diagnosed as failures of computational structure"),
     ("klein_maudlin", "searle1980", "reinterprets", "F 2 (PDF pp. 8, 16): Searle's interpretation worry distinguished, then the simulation verdict conceded as 'suspiciously close'"),
     ("klein_maudlin", "tononi2015", "critiques", "F 2 (PDF p. 4): cites Fekete & Edelman 2011 against the view that inactive elements contribute to experience"),
@@ -541,7 +591,7 @@ EDGES = [
     ("kleiner2021", "doerig2019", "replies-to", "D 5 (PDF p. 2): self-described 'generalization and correction' of the unfolding argument"),
     ("kleiner2021", "tononi2015", "critiques", "D 5: the independence horn; cites Oizumi et al. 2014, Albantakis & Tononi 2019, Koch 2019"),
     ("kleiner2021", "dehaene2017", "critiques", "D 5 (PDF p. 14): global workspace listed under strict dependence; cites Baars 1997, Dehaene & Changeux 2004"),
-    ("kleiner2021", "graziano2017", "critiques", "D 5 (PDF p. 14): the attention schema listed among theories exposed to the strict-dependence horn"),
+    ("kleiner2021", "graziano2017", "critiques", "D 5 (PDF p. 14): the attention schema listed among theories exposed to the strict-dependence horn; cites the theory, not this 2017 paper"),
     ("albantakis2023", "tononi2015", "builds-on", "D 7: supersedes the earlier formulation; cited as ref. 19"),
     ("butlin2023", "tononi2015", "excludes", "D 6 s. 2.3 (p. 5, p. 33): excluded from the survey because incompatible with computational functionalism"),
     ("butlin2023", "graziano2017", "builds-on", "D 6 s. 2.4: AST-1 derived from the attention schema theory"),
@@ -558,7 +608,7 @@ EDGES = [
     ("schwitzgebel2015", "chalmers1995qualia", "reinterprets", "E 1 n. 5 (ms. p. 11): same distinction; cited there as 'Chalmers 1996'"),
     ("schwitzgebel2015", "bostrom2003", "uses-as-evidence", "E 1 s. 2.1 (ms. p. 5): simulated worlds cited as a case strengthening premise 2"),
     ("godfreysmith2016", "thompson2007", "builds-on", "C 1 n. 1: 'Thompson's book has influenced this paper'"),
-    ("godfreysmith2016", "tononi2015", "critiques", "C 1 s. 5 (PDF p. 13): the Tononi-Koch position characterised as near-panpsychist and set against biopsychism"),
+    ("godfreysmith2016", "tononi2015", "critiques", "C 1 s. 5 (PDF p. 13): characterised as near-panpsychist; the held PDF is the 2014 talk, so it cites an earlier Tononi-Koch statement, not this 2015 paper"),
     ("seth2018beast", "thompson2007", "builds-on", "C 2 (PDF p. 13): cited for strong continuity between life, mind and consciousness"),
     ("cleeremans2022", "seth2018beast", "builds-on", "C 3 s. 8 (pp. 7-8): cited for the visceral grounding of the experiencing subject"),
     ("cleeremans2022", "block1978", "critiques", "C 3 s. 2: the access/phenomenal distinction called fundamentally misleading; cites Block 1995, a sibling paper"),
@@ -570,7 +620,7 @@ EDGES = [
     ("seth2025", "searle1980", "builds-on", "C 5 s. 4.0: the term biological naturalism taken from Searle and redefined"),
     ("seth2025", "butlin2023", "critiques", "C 5 s. 3.1 (PDF p. 6): flags that the report's conclusions depend on an assumption it acknowledges"),
     ("seth2025", "chalmers1995qualia", "critiques", "C 5 s. 3.3 footnote: the plausibility objections extended to the dancing-qualia argument"),
-    ("seth2025", "tononi2015", "reinterprets", "C 5 s. 5.6: if IIT is right, conventional AI is off the path but nothing is special about life"),
+    ("seth2025", "tononi2015", "reinterprets", "C 5 s. 5.6: if IIT is right, conventional AI is off the path but nothing is special about life; cites Tononi et al. 2016, a sibling statement"),
     ("seth2025", "albantakis2023", "reinterprets", "C 5 s. 5.6: cited alongside Tononi et al. 2016 for IIT's sufficient conditions"),
     ("seth2025", "piccinini2013", "builds-on", "C 5 s. 3.4: neural computation as a broader notion; cites Piccinini 2018/2020/2023, sibling statements"),
     ("seth2025", "chalmers2023llm", "names-as-opponent", "C 5 references: cited among the works arguing that current systems are serious candidates"),
@@ -646,10 +696,10 @@ GRAIN = [
      "PDF p. 21 (Swamp LLM)", "meta",
      "Parameter-identical systems computing the same function differ in whether their states represent; an orthogonal constraint rather than a finer or coarser setting"),
     ("tononi2015", "A definite spatio-temporal grain - the one at which integrated information is maximal; for human experience roughly 100 ms",
-     "pp. 9-10", "unspecified",
+     "pp. 9-10", "derived",
      "The grain is derived from the exclusion postulate rather than chosen; a mechanism cannot have effects at a fine grain and additional effects at a coarser one"),
     ("albantakis2023", "The maximal substrate: the definite set of units and grain maximising system integrated information",
-     "p. 10", "unspecified",
+     "p. 10", "derived",
      "Many overlapping sets may have positive integrated information; only the maximum counts, which is stricter than the gloss used by some critics"),
     ("dehaene2017", "The level of information-processing computations: global availability (C1) and self-monitoring (C2)",
      "p. 486", "coarse",
@@ -667,10 +717,10 @@ GRAIN = [
      "PDF pp. 9-12", "fine",
      "The stated position is that consciousness may be implementable but at a specificity beyond present and perhaps future AI"),
     ("seth2025", "No bottom: 'the imperative to stay alive doesn't bottom out at any particular implementation level in our biology'",
-     "section 4.1", "meta",
+     "section 4.1", "no-bottom",
      "Proposes causal and informational closure measures to determine empirically how far neural dynamics can be abstracted from finer levels (section 3.5)"),
     ("godfreysmith2016", "Metabolic activity counted as part of a human agent's functional profile",
-     "PDF pp. 11-12", "fine",
+     "PDF pp. 11-12", "no-bottom",
      "Aimed at the thought experiment rather than the thesis: holding function fixed while removing life may be ill-formed"),
     ("seth2018beast", "Distinguishes being a model from having a model - whether a generative model must be explicitly encoded or only behaved as if",
      "Box 4, PDF p. 20", "meta",
@@ -691,7 +741,7 @@ GRAIN = [
      "PDF p. 7", "unspecified",
      "The grain is left open; the paper works instead through six architectural features and assigns each a credence"),
     ("schwitzgebel2015", "A small artificial component 'that contributes identically to the entity's psychology'",
-     "ms. p. 10", "fine",
+     "ms. p. 10", "assumed",
      "Assumed rather than argued: n. 5 distinguishes this from Cuda and Chalmers, who try to establish that consciousness survives replacement"),
     ("long2024welfare", "Assigns a credence to computational functionalism itself rather than naming a grain",
      "p. 15", "meta",
@@ -712,6 +762,21 @@ CORRECTIONS = [
     ("searle1980", "Searle concedes nothing to the replacement arguments",
      "Author's Response: 'if the stimulation of the causes is at a low enough level to reproduce the causes ... the simulation will reproduce the effects' (pp. 452-453) (B notes 4)",
      "does-not-hold"),
+    ("dennett1988", "Dennett denies that conscious experience exists",
+     "'Since I don't deny the reality of conscious experience, I grant that conscious experience has properties'; what is denied is that any property is ineffable, intrinsic, private or directly apprehensible (G 1)",
+     "does-not-hold"),
+    ("dennett1988", "Quining Qualia replies to the fading and dancing qualia arguments",
+     "It predates Chalmers 1995 by seven years and does not cite him; the two meet at one premise about introspection, stated independently in the opposite time order (G 1)",
+     "misattributed"),
+    ("dennett1988", "Quining Qualia answers the anti-functionalist literature generally",
+     "Block's liberalism/chauvinism dilemma and the input-output problem are untouched, and Searle 1980 is not in the bibliography at all; the target is one premise family (G notes 5)",
+     "does-not-hold"),
+    ("dennett1988", "Dennett concludes that a functional duplicate does have qualia",
+     "He does not claim the wine-tasting machine has qualia; the conclusion withholds the affirmative verdict as much as the negative, and 'no qualia at all' is flagged as tactical (G 1, endnote 2)",
+     "does-not-hold"),
+    ("dennett1988", "Dennett and the replacement arguments disagree about whether subjects are in error",
+     "His conclusion is that there is no determinate fact; Cuda's step 2 and Chalmers's Joe are built against a systematic-error hypothesis. Whether they reach the no-fact case is addressed by no reviewed work (G notes 3)",
+     "disputed"),
     ("aru2023", "Aru et al. deny that machines could be conscious",
      "Three explicit disclaimers: not only mammalian brains, not only living systems, not impossible in software; the claim is about present systems and specificity (C 4)",
      "does-not-hold"),
@@ -815,6 +880,18 @@ NOT_HELD = [
     ("Putnam 1967, Psychological Predicates (The Nature of Mental States)", 1967, "philosophy-of-mind",
      "Named-only in the manifest. The founding statement both Block papers target and every later work inherits; two paginations are in play and neither is canonical here",
      "blockfodor1972;block1978;piccinini2010;chalmers1994cfc;long2024welfare"),
+    ("Block 1995, On a confusion about a function of consciousness", 1995, "philosophy-of-mind",
+     "Named-only; the fetch failed. The access/phenomenal distinction the later corpus uses whenever it separates global availability from experience, and Block's later anti-computationalism",
+     "cleeremans2022;butlin2023;kleiner2021;chalmers2023llm;dennett1988"),
+    ("The Chinese Room reply literature: the Systems and Robot Replies in developed form; Churchland & Churchland 1990", 1990, "philosophy-of-mind",
+     "searle1980 is the most-engaged work here and the only reviewed reply is cuda1985, aimed at one paragraph. The 27 BBS commentaries were not reviewed, so the argument reads less answered than it is",
+     "searle1980;cuda1985;chalmers1996rock;schwitzgebel2015"),
+    ("The deflationary successors: Dennett 1991 Consciousness Explained; Frankish on illusionism", 2016, "philosophy-of-mind",
+     "The strand dennett1988 opens has no successor here, while every AI-minds work presupposes a determinate fact about whether a system is conscious. Nothing presses the deflationary line against them",
+     "dennett1988;cleeremans2022;graziano2017;birch2024"),
+    ("Post-1996 triviality literature: Godfrey-Smith 2009; Scheutz; Rescorla; Schweizer", 2009, "philosophy-of-computation",
+     "The triviality debate did not stop with Chalmers's reply. The corpus holds that reply and its critics and stops there, which makes the debate look more settled here than it is in the field",
+     "chalmers1996rock;sprevak2010;piccinini2010"),
     ("Bechtel & Mundale 1999, Multiple realizability revisited", 1999, "philosophy-of-mind",
      "Named-only in the manifest. The standard challenge to multiple realizability, which every reviewed work assumes; its absence leaves that premise unopposed in this corpus",
      "piccinini2010;seth2025"),
@@ -827,9 +904,12 @@ NOT_HELD = [
     ("Thompson 2007, Mind in Life", 2007, "philosophy-of-mind",
      "Named-only in the manifest. The hub cited by all three biological works for continuity between life and mind; the highest-value single addition to this corpus",
      "godfreysmith2016;seth2018beast;seth2025"),
-    ("Putnam 1988, Representation and Reality (appendix, pp. 120-25)", 1988, "philosophy-of-computation",
-     "The universal-realization argument itself. Reconstructed here only from Chalmers 1996 section 2; the corpus contains its critics, not the source",
+    ("Putnam 1988, Representation and Reality - the universal-realization appendix (pp. 120-25)", 1988, "philosophy-of-computation",
+     "The triviality argument itself, reconstructed here only from Chalmers 1996 section 2. The corpus holds its critics and not the source, which is why the triviality debate reads one-sided (section 3.2)",
      "chalmers1996rock;shagrir2006;piccinini2010;sprevak2010;mollo2018"),
+    ("Putnam 1988, Representation and Reality - the externalist abandonment of functionalism", 1988, "philosophy-of-mind",
+     "Also where functionalism's founder abandons it, on the ground that content is not fixed by internal functional organisation - a second challenge, bearing on individuation (3.3), untraced here",
+     "chalmers1996rock;piccinini2010"),
     ("Searle 1992, The Rediscovery of the Mind", 1992, "philosophy-of-mind",
      "Contains the fading-qualia passage (pp. 66-67) that Chalmers 1995 quotes and answers, and the observer-relativity claims Shagrir contests",
      "chalmers1995qualia;shagrir2006;chalmers1996rock"),
@@ -1007,8 +1087,26 @@ def main():
           pos_rows)
 
     statuses = {"settled", "leaning", "open", "stalled", "untested"}
+    # Per-debate stance tally over the works POSITIONED in that debate. This is not the
+    # corpus-wide stance column: a work can hold a stance and no position in a given debate.
+    deb_tally = {}
+    for did in debate_ids:
+        t = {"supports": 0, "restricts": 0, "rejects": 0, "neutral": 0, "unknown": 0}
+        for k in deb_keys[did]:
+            t[W[k][6]] += 1
+        t["tally"] = len(deb_keys[did])
+        deb_tally[did] = t
     drows = []
     for did, title, q, st, reason, direction, scope in DEBATES:
+        reason = reason.format(**deb_tally[did])
+        # Any count of the form "N supporting/restricting/rejecting/abstaining" stated in a
+        # status_reason must match the tally computed above from positions.csv + works.csv.
+        words = {"supporting": "supports", "restricting": "restricts",
+                 "rejecting": "rejects", "abstaining": "neutral"}
+        for m in re.finditer(r"(\d+)\s+(supporting|restricting|rejecting|abstaining)", reason):
+            if int(m.group(1)) != deb_tally[did][words[m.group(2)]]:
+                errs.append(f"debate {did}: status_reason says {m.group(0)}, tally says "
+                            f"{deb_tally[did][words[m.group(2)]]}")
         ys = [W[k][1] for k in deb_keys[did] if W[k][1] != ""]
         if st not in statuses:
             errs.append(f"debate {did}: status {st}")
@@ -1044,10 +1142,18 @@ def main():
                 and (f, t) not in FORWARD_OK):
             errs.append(f"edge {f}({W[f][1]})->{t}({W[t][1]}) points forward in time")
         seen.add((f, t, r))
-        erows.append([f, t, r, ev])
-    write("edges.csv", ["from_key", "to_key", "relation", "evidence"], erows)
+        cites = CITES.get((f, t), "yes")
+        if cites not in {"yes", "sibling", "other", "unknown"}:
+            errs.append(f"edge {f}->{t}: cites_held_document {cites}")
+        if cites == "sibling" and "sibling" not in ev and "cites" not in ev:
+            errs.append(f"edge {f}->{t}: marked sibling but evidence does not say which document")
+        erows.append([f, t, r, cites, ev])
+    for k in CITES:
+        if k not in {(e[0], e[1]) for e in EDGES}:
+            errs.append(f"CITES entry for non-existent edge {k}")
+    write("edges.csv", ["from_key", "to_key", "relation", "cites_held_document", "evidence"], erows)
 
-    directions = {"fine", "coarse", "unspecified", "meta"}
+    directions = {"fine", "coarse", "derived", "no-bottom", "assumed", "unspecified", "meta"}
     grows = []
     seen_g = set()
     for k, level, locus, direction, note in GRAIN:
