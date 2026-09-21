@@ -28,7 +28,8 @@ def draw(ax, debate, positions, W, edges, x_min=1994, x_max=2030):
     ax.set_yticks(range(n))
     ax.set_yticklabels(["\n".join(textwrap.wrap(p["position_label"], 34)) for p in reversed(lanes)],
                        fontsize=house.FS_LABEL, linespacing=1.1)
-    where = {}
+    where = {}        # one anchor per work, for the arrows
+    placements = []   # every drawn mark, so a work holding two positions is labelled twice
     drawn, skipped, empty = 0, 0, 0
     for i, p in enumerate(lanes):
         y = n - 1 - i
@@ -56,10 +57,11 @@ def draw(ax, debate, positions, W, edges, x_min=1994, x_max=2030):
             ax.scatter(yr, yy, s=42, marker=_cf.MARKER[c], facecolor=_cf.COLOUR[c] if read else house.PAPER,
                        edgecolor=_cf.COLOUR[c], linewidth=1.2, zorder=4)
             drawn += 1
+            placements.append((k, yr, yy))
             where.setdefault(k, (yr, yy))
     # a mark label has to be short: drop "et al." and any parenthetical version note
     items = [(x, y, re.sub(r"\s*\(.*?\)", "", W[k]["short_label"]).replace(" et al.", ""), house.INK_2)
-             for k, (x, y) in where.items()]
+             for k, x, y in placements]
     dropped = _cf.label_positions(ax, ax.get_figure(), items, fontsize=house.FS_LABEL,
                                    tries=[(0, 7), (0, -7), (7, 0), (-7, 0), (6, 7), (-6, 7), (6, -7), (-6, -7),
                                           (0, 15), (0, -15), (10, 12), (-10, 12), (10, -12), (-10, -12),
