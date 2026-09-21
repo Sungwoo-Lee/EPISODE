@@ -56,7 +56,7 @@ def draw(ax, debate, positions, W, edges, x_min=1994, x_max=2030):
                                    tries=[(0, 7), (0, -7), (7, 0), (-7, 0), (6, 7), (-6, 7), (6, -7), (-6, -7),
                                           (0, 15), (0, -15), (10, 12), (-10, 12), (10, -12), (-10, -12),
                                           (16, 0), (-16, 0), (24, 6), (-24, 6), (24, -6), (-24, -6)],
-                                   pad_px=8.0, halo=True)
+                                   pad_px=12.0, halo=True)
     arrows = 0
     for e in edges:
         a, b = e["from_key"], e["to_key"]

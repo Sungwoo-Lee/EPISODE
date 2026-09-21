@@ -13,7 +13,7 @@ def build(stem, debate_ids, x_min=1994):
     positions = _imp.read("positions.csv")
     edges = _imp.read("edges.csv")
     heights = [max(3, sum(p["debate_id"] == d for p in positions)) for d in debate_ids]
-    fig, axes = plt.subplots(len(debate_ids), 1, figsize=(11.6, 0.62 * sum(heights) + 0.9 * len(debate_ids) + 0.9),
+    fig, axes = plt.subplots(len(debate_ids), 1, figsize=(11.6, 1.00 * sum(heights) + 0.9 * len(debate_ids) + 0.9),
                              gridspec_kw={"height_ratios": heights})
     axes = [axes] if len(debate_ids) == 1 else list(axes)
     # fix the layout BEFORE placing labels: label placement measures pixels, and a later
