@@ -146,15 +146,19 @@ class _StubDash:
         return name
 
 
-def _paint(sense, r, panel_w, panel_h=400):
+def _paint(sense, r, panel_w, panel_h=400, n_channels=None):
     """Draw one sense panel at `panel_w`, the way `episode.py` would.
 
     Raises `LayoutOverflowError` exactly when the painter judges the panel too
-    narrow. `panel_h` is generous on purpose so WIDTH is what binds.
+    narrow. `panel_h` is generous on purpose so WIDTH is what binds. `n_channels`
+    defaults to the standard width for that sense; a caller working from a real
+    config passes that config's own channel count, because the map plan -- and so
+    the width the painter demands -- is built from it.
     """
     from src.environment.sensor import get_visual_offsets
 
-    codes = channel_labels(sense, SENSES[sense][1])
+    codes = channel_labels(sense, SENSES[sense][1] if n_channels is None
+                           else n_channels)
     stops = SENSES[sense][2]
     offsets = [tuple(o) for o in get_visual_offsets(r)]
     fig = plt.figure(figsize=(16, 4), dpi=100)
@@ -251,28 +255,61 @@ def test_the_painters_cell_floor_matches_the_registrys():
 # ---------------------------------------------------------------------------
 # the product: the two configs this fix exists for
 # ---------------------------------------------------------------------------
+#: `(config, expected olfactory radius, expected visual radius)`. The radii are
+#: spelled out rather than read off the config, and the test fails if they do not
+#: match, because the ID of each case names the condition it is supposed to
+#: exercise. THIS IS THE LESSON OF 2026-09-21: both cases used to name a config
+#: that a later commit deleted, and the body skipped on a missing file -- so this
+#: regression sat with ZERO live coverage while its two cases reported green.
+#: A condition that silently stops being tested is worse than one that was never
+#: tested, because the green tick is read as proof. Neither a missing file nor a
+#: config that has drifted off the condition may read as a pass here.
 WIDE_SENSE_CONFIGS = [
-    "configs/environment/experiment/basic/05-campfire_thermal_10x10_olf1_vis2.yaml",
-    "configs/environment/experiment/basic/05-campfire_thermal_10x10_olf1_vis3.yaml",
+    # Level 05, the campfire thermal world. It needs no override any more: the
+    # project default moved to olfaction 1 / vision 2 on 2026-09-19, which is
+    # exactly the condition the deleted `..._olf1_vis2.yaml` used to create.
+    ("configs/environment/experiment/basic/05-campfire_thermal_10x10.yaml", 1, 2),
+    # Vision at radius 3 -- the condition this whole fix exists for, and the
+    # widest sense panel the packer is ever asked to place. No maintained world
+    # reads sight that far, so the condition is held by a test fixture of our own
+    # rather than by a rung of the ladder, which is free to move again.
+    ("tests/env/fixtures/dashboard_band_vis3.yaml", 1, 3),
 ]
 
 
-@pytest.mark.parametrize("cfg", WIDE_SENSE_CONFIGS,
+@pytest.mark.parametrize("cfg,olf_r,vis_r", WIDE_SENSE_CONFIGS,
                          ids=["olf1_vis2", "olf1_vis3"])
-def test_a_world_that_reads_both_senses_wide_packs_and_paints(cfg):
+def test_a_world_that_reads_both_senses_wide_packs_and_paints(cfg, olf_r, vis_r):
     """Vision at range 3 is drawable; before this fix the packer refused it."""
     path = _ROOT / cfg
-    if not path.exists():
-        pytest.skip(f"{cfg} not on disk")
+    assert path.exists(), (
+        f"{cfg} is not on disk. This case is the only live coverage of the "
+        f"band-width fix at olfaction {olf_r} / vision {vis_r}; if the config "
+        f"moved, repoint the case at a world that reads both senses that far "
+        f"(or a fixture under tests/env/fixtures/). Do not delete the case, and "
+        f"do not skip on a missing file -- that is how this coverage was lost."
+    )
     from src.environment.config_loader import load_env_config, load_env_params
 
     ctx = P.LayoutContext.from_params(load_env_params(load_env_config(str(path))))
+    assert (ctx.olfactory_range, ctx.visual_range) == (olf_r, vis_r), (
+        f"{cfg} now reads olfaction {ctx.olfactory_range} / vision "
+        f"{ctx.visual_range}, not the {olf_r} / {vis_r} this case is named for. "
+        f"It would still pass, but it would no longer test the condition."
+    )
     lay = pack(ctx)
     for sense, (key, _n, _stops) in SENSES.items():
         box = lay.panels[key]
-        r = ctx.olfactory_range if key == "olfactory" else ctx.visual_range
-        assert box.w >= _painter_needs_w(sense, r), (
+        # The channel counts come from the CONFIG, not from `SENSES`: the map
+        # plan the painter builds -- and therefore the width it demands -- is
+        # built from however many channels this world's sensor actually returns.
+        if key == "olfactory":
+            r, n = ctx.olfactory_range, ctx.olfactory_channels
+        else:
+            r, n = ctx.visual_range, ctx.visual_vector_size
+        assert box.w >= _painter_needs_w(sense, r, n_channels=n), (
             f"{cfg}: {key} got {box.w}px, painter needs "
-            f"{_painter_needs_w(sense, r)}px at range {r}"
+            f"{_painter_needs_w(sense, r, n_channels=n)}px at range {r} "
+            f"with {n} channels"
         )
-        _paint(sense, r, box.w, panel_h=box.h)
+        _paint(sense, r, box.w, panel_h=box.h, n_channels=n)

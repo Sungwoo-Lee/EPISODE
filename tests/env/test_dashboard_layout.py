@@ -60,12 +60,6 @@ MAINTAINED = [
     "configs/environment/experiment/basic/01-slow_predator_5x5.yaml",
     "configs/environment/experiment/basic/02-predator_and_rabbit_10x10.yaml",
     "configs/environment/experiment/basic/03-random_init_10x10.yaml",
-    # A thin training-only override of the config above (checkpoint frequency and
-    # retention). It is listed because "every maintained config packs" must mean
-    # every one of the nine, not the eight anybody would think to type: an
-    # override that reaches the layout would do so through `extends:`, which is
-    # resolved here exactly as the trainer resolves it.
-    "configs/environment/experiment/basic/03-random_init_10x10_ckpt1k.yaml",
     "configs/environment/experiment/basic/04-jump_attack_10x10.yaml",
     "configs/environment/experiment/basic/05-campfire_thermal_10x10.yaml",
     "configs/environment/experiment/basic/06-sensory_noise_10x10.yaml",
@@ -111,9 +105,11 @@ def _synthetic(
 ):
     """A LayoutContext for a world no maintained config produces.
 
-    The default is a 10x10 world with a thermoception card *and* a sensor band
-    holding diamond maps. No maintained config has both -- the thermal worlds read
-    both senses at range 0, so their band holds named rows instead.
+    The default is a 10x10 world with a thermoception card, a sensor band holding
+    diamond maps, and NO visual panel at all. No maintained config is shaped like
+    that: the maintained thermal world reads BOTH senses past its own square
+    (since 2026-09-19), so its band carries two sets of diamond maps, and a band
+    holding smell alone exists only here.
     """
     bd = {"Satiation": 1}
     if thermal:
@@ -532,20 +528,57 @@ def test_every_maintained_config_packs_and_is_complete(path):
 
 
 @pytest.mark.parametrize("path", MAINTAINED)
-def test_every_maintained_config_has_a_sensor_band(path):
-    """The band is not a feature of long-range senses; it is where senses live.
+def test_every_maintained_config_has_a_sensor_band_of_diamond_maps(path):
+    """The band is where senses live, and every maintained world now fills it with maps.
 
-    Both halves are asserted, because the distinction is the whole change: every
-    maintained world DOES have a band (it observes smell and sight), and none of
-    them has a GRID sense (both ranges are 0), so each draws named channel rows
-    rather than diamond maps.
+    Both halves are asserted, because the distinction is the whole design: every
+    maintained world DOES have a band (it observes smell and sight), and since
+    2026-09-19 every one of them reads BOTH senses past the agent's own square,
+    so each sense is drawn as a row of per-channel diamond maps rather than as a
+    named channel row. Olfaction samples a radius-1 diamond everywhere; sight
+    samples radius 1 in the two 5x5 worlds and radius 2 in the 10x10 ones. The
+    range-0 case that drew named rows -- one omnidirectional whiff, one glance at
+    the square underfoot -- is gone from the maintained ladder, so a band of rows
+    is now the synthetic case rather than the ordinary one.
+
+    WHAT IS ASSERTED IS THE DRAWN FORM, not merely the `has_grid_sense` flag,
+    because the flag is only the switch and the form is the product. Each sense
+    panel's kind must be `channel_maps` (the value the switch selects, against
+    `spectrum` for smell and `cross_bars` for sight at range 0); its declared
+    minimum must be a real diamond span rather than the zero width a named-row
+    panel declares; and the box the packer actually hands it must hold that
+    minimum at THIS world's own range, which differs between the 5x5 and 10x10
+    groups. A packer that flipped the switch and went on placing row-shaped
+    boxes would still fail here.
     """
     ctx = _ctx(path)
     assert ctx.band_senses == ("olfactory", "visual")
-    assert ctx.has_grid_sense is False
+    assert ctx.grid_senses == ("olfactory", "visual")
+    assert ctx.olfactory_range >= 1 and ctx.visual_range >= 1
+
+    specs = {p.key: p for p in P.present_panels(ctx)}
     lay = pack(ctx)
     assert lay.band is True
     assert lay.parent["olfactory"] == "band" and lay.parent["visual"] == "band"
+
+    for key in ("olfactory", "visual"):
+        assert specs[key].kind_for(ctx) == "channel_maps", (
+            f"{path}: {key} reads range {ctx.range_of(key)} but is drawn as "
+            f"{specs[key].kind_for(ctx)!r}; a sense that samples past its own "
+            f"square must be drawn as diamond maps"
+        )
+        want = specs[key].min_size(ctx)
+        assert want.w > 0, (
+            f"{path}: {key} declared a zero-width minimum, which is the "
+            f"named-row declaration; diamond maps must declare the span they "
+            f"need or the packer has nothing to honour"
+        )
+        box = lay.panels[key]
+        assert box.w >= want.w and box.h >= want.h, (
+            f"{path}: {key} at range {ctx.range_of(key)} declared a "
+            f"{want.w}x{want.h}px diamond-map minimum but was placed in a "
+            f"{box.w}x{box.h}px box"
+        )
 
 
 def test_toggling_a_modality_frees_exactly_its_height():
