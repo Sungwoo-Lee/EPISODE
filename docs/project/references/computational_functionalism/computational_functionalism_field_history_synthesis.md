@@ -4,6 +4,7 @@
 **Built from:** the per-paper reviews in Parts A1, A2, B, C, D, E, F and G (36 works reviewed from PDF, 6 more known only by name), 2026-09-21.
 **Curator:** literature-curator
 **Data for diagrams:** `field_history_data/` (8 CSV files; see [§9](#9-data-files-for-diagrams))
+**Web page:** [Running the Right Program](https://claude.ai/artifact/YFbbuZWRXHCfNEfrXdDp2b) — the field review built from this document and those files; source in `page/`
 **Neutrality:** this document reports positions and states each at its strongest. It adjudicates nothing.
 
 ---

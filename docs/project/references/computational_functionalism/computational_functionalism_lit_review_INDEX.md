@@ -24,8 +24,9 @@ for the field as a whole; open a part for one paper.
 
 ## Start here
 
-- **Web page:** *Running the Right Program* — the diagram-heavy field review built from the
-  synthesis and the data files; source, template and figure scripts in `page/` (`build_page.py`).
+- **Web page:** [Running the Right Program](https://claude.ai/artifact/YFbbuZWRXHCfNEfrXdDp2b) — the
+  diagram-heavy field review built from the synthesis and the data files; source, template and figure
+  scripts in `page/` (`build_page.py`), which republishes to that same URL.
 - **Synthesis:** [[computational_functionalism_field_history_synthesis]]. A neutral history. It
   adjudicates nothing and states each position at its strongest.
 - **Diagram data:** `field_history_data/`. Eight CSV files: works, eras, debates, positions,
