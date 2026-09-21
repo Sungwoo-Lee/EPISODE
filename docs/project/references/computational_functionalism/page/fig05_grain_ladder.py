@@ -17,6 +17,7 @@ or comments on a level), with the community colours of figure 1.
 """
 import collections
 import re
+import textwrap
 import matplotlib.pyplot as plt
 from matplotlib.lines import Line2D
 import _cffig as _cf
@@ -30,12 +31,17 @@ OFF = [("meta", "the claim is ABOUT the dial,\nnot a setting of it"),
        ("derived", "the level falls out of the\ntheory's own postulate"),
        ("no-bottom", "denies there is a\nbottom level at all"),
        ("assumed", "commits without argument")]
-X0, X1 = 1968, 2034
+X0, X1 = 1966, 2040
 
 
 def short(label):
-    """First-author-and-year, with any parenthetical version note dropped: a mark label has to be short."""
-    return re.sub(r"\s*\(.*?\)", "", label).replace(" et al.", "")
+    """First-author-and-year, with any parenthetical version note dropped, and wrapped if it is long.
+
+    A one-line label of a three-author paper is wide enough that, near the right edge of a crowded
+    lane, no offset fits inside the axes and the label is dropped. Two lines are narrower and place.
+    """
+    lab = re.sub(r"\s*\(.*?\)", "", label).replace(" et al.", "")
+    return "\n".join(textwrap.wrap(lab, 20)) if len(lab) > 22 else lab
 
 
 def lane(ax, rows, lanes, W, title):
@@ -49,7 +55,7 @@ def lane(ax, rows, lanes, W, title):
         yr = int(r["year"])
         off = seen[(d, yr // 4)]
         seen[(d, yr // 4)] += 1
-        y = ypos[d] + (0.26 * ((off + 1) // 2) * (1 if off % 2 else -1) if off else 0.0)
+        y = ypos[d] + (0.30 * ((off + 1) // 2) * (1 if off % 2 else -1) if off else 0.0)
         c = W[r["key"]]["community"]
         ax.scatter(yr, y, s=48, marker=_cf.MARKER[c], facecolor=_cf.COLOUR[c],
                    edgecolor=_cf.COLOUR[c], linewidth=1.2, zorder=4)
@@ -60,7 +66,7 @@ def lane(ax, rows, lanes, W, title):
     n = collections.Counter(r["direction"] for r in rows)
     ax.set_yticklabels([f"{lab}  ({n[k]})" for k, lab in reversed(lanes)], fontsize=house.FS_LABEL,
                        linespacing=1.15)
-    ax.set_xticks(range(1970, 2031, 10))
+    ax.set_xticks(range(1970, 2041, 10))
     ax.grid(axis="y", visible=False)
     ax.grid(axis="x", visible=True, color=house.TICK_LINE, lw=0.8)
     ax.set_title(title, loc="left", fontsize=house.FS_BODY, fontweight="semibold", color=house.INK, pad=8)
@@ -78,11 +84,17 @@ def main():
     on = [r for r in rows if r["direction"] in {k for k, _ in ON}]
     off = [r for r in rows if r["direction"] not in {k for k, _ in ON}]
 
-    fig, axes = plt.subplots(2, 1, figsize=(11.6, 9.6), gridspec_kw={"height_ratios": [2, 5]})
+    fig, axes = plt.subplots(2, 1, figsize=(11.6, 12.4), gridspec_kw={"height_ratios": [2, 5]})
     fig.subplots_adjust(left=0.29, right=0.99, top=0.945, bottom=0.135, hspace=0.30)
     items_a = lane(axes[0], on, ON, W, f"On the scale — {len(on)} of {len(rows)} works set the dial")
     items_b = lane(axes[1], off, OFF, W, f"Off the scale — {len(off)} of {len(rows)} works do not")
     axes[1].set_xlabel("year the work first appeared (online year where it differs from print)")
+    # place the most hemmed-in labels first: a greedy placer that starts with the roomy ones spends
+    # the free space on labels that had alternatives and then has none left for the crowded cluster
+    def crowding(it, items):
+        return -sum(1 for o in items if abs(o[0] - it[0]) <= 3 and abs(o[1] - it[1]) <= 1.2)
+    items_a = sorted(items_a, key=lambda it: crowding(it, items_a))
+    items_b = sorted(items_b, key=lambda it: crowding(it, items_b))
     tries = [(0, 8), (0, -8), (9, 0), (-9, 0), (8, 8), (-8, 8), (8, -8), (-8, -8),
              (0, 16), (0, -16), (16, 8), (-16, 8), (16, -8), (-16, -8), (20, 0), (-20, 0),
              (0, 24), (0, -24), (24, 16), (-24, 16), (24, -16), (-24, -16), (28, 0), (-28, 0)]

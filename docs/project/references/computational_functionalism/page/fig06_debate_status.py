@@ -40,15 +40,18 @@ def main():
             raise SystemExit(f"{d['debate_id']}: span from positions.csv {min(years)}-{max(years)} disagrees "
                              f"with debates.csv {d['first_year']}-{d['latest_year']}")
         ax.plot([min(years), max(years)], [y, y], color=house.RULE, lw=2.2, zorder=1, solid_capstyle="round")
-        seen = {}
+        placed_years = []
         for k in keys:
             w = W[k]
             yr = int(w["year"])
-            off = seen.get(yr, 0)
-            seen[yr] = off + 1
+            # works within a year of each other still overlap at this scale, so the fan counts
+            # neighbours rather than exact ties, and alternates above and below the row
+            near = sum(1 for py in placed_years if abs(py - yr) <= 1)
+            placed_years.append(yr)
+            off = (0.19 * ((near + 1) // 2) * (1 if near % 2 else -1)) if near else 0.0
             c = w["community"]
             read = w["status"] != "named-only"
-            ax.scatter(yr, y + 0.14 * off, s=42, marker=_cf.MARKER[c],
+            ax.scatter(yr, y + off, s=42, marker=_cf.MARKER[c],
                        facecolor=_cf.COLOUR[c] if read else house.PAPER, edgecolor=_cf.COLOUR[c],
                        linewidth=1.1, zorder=3)
             total_marks += 1

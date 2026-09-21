@@ -106,7 +106,10 @@ def label_positions(ax, fig, items, fontsize, pad_px=2.0, tries=None, halo=False
     # second tier: farther positions joined to the mark by a thin leader line, which makes the pairing
     # explicit, so the "nearer to its own mark" rule is relaxed for them
     leader_tries = [(0, 26), (0, -26), (26, 18), (-26, 18), (26, -18), (-26, -18), (34, 0), (-34, 0),
-                    (0, 38), (0, -38), (40, 26), (-40, 26), (40, -26), (-40, -26)]
+                    (0, 38), (0, -38), (40, 26), (-40, 26), (40, -26), (-40, -26),
+                    # a last tier of longer leaders: tried only when everything nearer is taken, so it
+                    # can only turn a dropped label into a placed one
+                    (0, 52), (0, -52), (52, 34), (-52, 34), (52, -34), (-52, -34), (62, 0), (-62, 0)]
     for (x, y, text, colour), (px, py) in zip(items, pts):
         ok = False
         for dx, dy, leader in [(a, b_, False) for a, b_ in tries] + [(a, b_, True) for a, b_ in leader_tries]:
@@ -125,7 +128,10 @@ def label_positions(ax, fig, items, fontsize, pad_px=2.0, tries=None, halo=False
             inside = (b.x0 >= axbox.x0 and b.x1 <= axbox.x1 and b.y0 >= axbox.y0 and b.y1 <= axbox.y1)
             own = (px, py)
             foreign = [p for p in pts if abs(p[0] - px) > 0.5 or abs(p[1] - py) > 0.5]
-            seg = ((px, py), (px + dx, py + dy)) if leader else None
+            # the offsets are in POINTS (textcoords="offset points") and everything else here is in
+            # pixels: an unscaled segment is 72/dpi too short and misses the crossing it was added to catch
+            scale = fig.dpi / 72.0
+            seg = ((px, py), (px + dx * scale, py + dy * scale)) if leader else None
             clash = (any(b.overlaps(o) for o in placed)
                      or any(b.overlaps(pb) for pb, p in zip(point_boxes, pts) if p in foreign)
                      # a leader is ink: it must not be drawn through a label, in either order
