@@ -180,7 +180,7 @@ def main():
         ver = f' &middot; PDF held is the {r["version"].group(1)}' if r["version"] and r["status"] != "named-only" else ""
         items.append(
             f'<li id="ref-{k}"><span class="rnum">{num[k]}</span><span class="rbody">'
-            f'<span>{html.escape(r["who_year"])} &mdash; <strong>{html.escape(r["title"])}</strong>&nbsp;'
+            f'<span>{html.escape(r["who_year"])} &mdash; <strong>{html.escape(r["title"])}</strong> '
             f'<span class="rtag {cls}">{txt}</span></span>'
             f'<span class="rmeta">{html.escape(r["community"].replace("-", " "))}{link}{ver}</span></span></li>')
     page = page.replace("{{REFS}}", '<ol class="refs">\n' + "\n".join(items) + "\n</ol>")
@@ -211,7 +211,7 @@ def main():
         fail("template has no {{NOT_HELD}} token")
     page = page.replace("{{NOT_HELD}}",
         '<p class="cue" hidden>&larr; the table is wider than the screen &mdash; scroll it sideways</p>'
-        '<div class="scroll"><table class="wide"><thead><tr><th>Work or strand</th><th class="n">Year</th>'
+        '<div class="scroll"><table class="wide nh"><thead><tr><th>Work or strand</th><th class="n">Year</th>'
         '<th>Why it matters</th><th>Named by</th></tr></thead><tbody>' + "".join(trs) + "</tbody></table></div>")
 
     # ---- the debate status board, rendered from debates.csv so a status can never drift from the data.

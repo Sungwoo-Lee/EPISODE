@@ -20,6 +20,9 @@
 .debate .dd { color:var(--ink-2); font-size:15.5px; margin:0; }
 .debate .dlimit { color:var(--ink-2); font-size:14.5px; border-left:2px solid var(--rule); padding-left:10px;
   margin:0; }
+/* the not-held table has four prose columns, so it needs a wider floor than the shared one:
+   at 560px its "Named by" column fell to 136px and printed seven-line author lists */
+table.nh { min-width: 640px; }
 /* era rows */
 .era { padding:16px 0; border-bottom:1px solid var(--line); display:flex; flex-direction:column; gap:6px; }
 .era:last-child { border-bottom:0; }
