@@ -71,7 +71,29 @@ SENSES = ("Olfaction", "Visual")
 #: vision's eight channels draw six maps because three of them merge. Sizing in
 #: channels would make the vision panel a third wider than anything drawn into
 #: it -- which is the precise miscount that broke every video in `4b6f7196`.
-PANEL_MAP_SLOTS = {"Olfaction": 5, "Visual": 6}
+#: VISION LOWERED 6 -> 3 ON 2026-09-22 (user decision). Vision carries SPATIAL
+#: detail -- where a thing is -- so its squares have to be big enough to read a
+#: position off; olfaction's channels are read as per-channel intensities and do
+#: not need the same size. At six slots vision drew 15.3px squares in a panel
+#: whose height allowed 31.6px, wasting both the vertical room and ~400px of
+#: width on four slots nothing ever filled. Two slots make vision HEIGHT-bound
+#: instead of width-bound, which is what doubles the square.
+#:
+#: Chosen over sizing the panel to the LIVE map count, which produces an
+#: identical picture but reintroduces exactly the count-dependent sizing the
+#: paragraph above rejects -- two arms of one study would then draw
+#: differently-sized maps. This stays a fixed convention: every run with one or
+#: two vision maps draws identically, and a run with more draws past the panel
+#: edge, per the 2026-09-19 decision.
+#:
+#: WHY 3 AND NOT 1 OR 2. Measured, not reasoned: vision renders IDENTICALLY at
+#: 1, 2 and 3 slots, because `box = min(slot, room)` lands on the height (158px)
+#: at all three -- the slot is wider than the panel is tall in every case. The
+#: number therefore has no visible effect today and was chosen for what it does
+#: to OTHER configurations: at 3, a conventional 8-channel world (6 maps)
+#: overflows by three slots rather than four, and a legacy recording sized
+#: `max(slots, drawn)` degrades more gently.
+PANEL_MAP_SLOTS = {"Olfaction": 5, "Visual": 3}
 
 #: How many channels a single merged map can colour. The merged map is drawn in
 #: flat per-channel colours from `palette.TERRAIN_FILL`, so a group with more

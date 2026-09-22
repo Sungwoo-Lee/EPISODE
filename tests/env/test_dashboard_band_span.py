@@ -316,20 +316,23 @@ def test_an_off_standard_vision_width_gets_the_SAME_panel_not_one_map_per_channe
     is the whole point of the change -- so the case is rewritten rather than
     updated, in both regimes:
 
-      * CONFIGURED: 4 channels draw 4 maps into a panel still sized for SIX
-        slots. The two spare slots are blank BY DESIGN.
-      * LEGACY: 4 channels draw 4 maps and are sized `max(6, 4)` = 6 as well.
+      * CONFIGURED: 4 channels draw 4 maps into a panel sized for THREE slots
+        (lowered from six on 2026-09-22). The panel is still fixed; a run with
+        more maps than slots draws past the edge, per the 2026-09-19 decision.
+      * LEGACY: 4 channels draw 4 maps and are sized `max(3, 4)` = 4, because a
+        legacy recording carries no merge group and must not be squeezed.
 
-    A four-channel run and an eight-channel run therefore get identical panels,
-    which is the comparability the fixed size exists to provide.
+    The comparability claim lives on the CONFIGURED side and is asserted last: a
+    four-channel run and an eight-channel run declare the same panel, which is
+    what the fixed size exists to provide.
     """
     configured4 = _display("Visual", 4, groups=[])
     assert _painter_map_count("Visual", configured4) == 4
-    assert panel_map_slots("Visual", configured4) == PANEL_MAP_SLOTS["Visual"] == 6
+    assert panel_map_slots("Visual", configured4) == PANEL_MAP_SLOTS["Visual"] == 3
 
     legacy4 = _display("Visual", 4, regime="legacy")
     assert _painter_map_count("Visual", legacy4) == 4
-    assert panel_map_slots("Visual", legacy4) == 6
+    assert panel_map_slots("Visual", legacy4) == 4
 
     assert (_declared_w("Visual", 1, n_channels=4)
             == _declared_w("Visual", 1, n_channels=8))
@@ -340,7 +343,7 @@ def test_a_legacy_eight_channel_panel_is_WIDER_than_a_configured_one():
     legacy recording carries no merge group, so it draws 8 maps and is sized for
     8. Using the fixed six here would overflow every recording on disk."""
     assert panel_map_slots("Visual", _display("Visual", 8, regime="legacy")) == 8
-    assert panel_map_slots("Visual", _display("Visual", 8)) == 6
+    assert panel_map_slots("Visual", _display("Visual", 8)) == 3
     assert _declared_w("Visual", 2, regime="legacy") > _declared_w("Visual", 2)
 
 
@@ -405,20 +408,25 @@ def test_the_band_grants_each_of_two_senses_the_width_these_cases_assume():
 
 
 def test_a_configured_world_reading_both_senses_wide_packs_and_paints():
-    """CONFIGURED, vision at range 3. Six slots need 482 px of the 520 granted.
+    """CONFIGURED, vision at range 3. Three slots need 254 px of the 520 granted.
 
     Range 3 is the condition the band-width fix exists for and the widest sense
     panel the packer is ever asked to place. No maintained world reads sight that
     far, so the condition is held HERE, in memory, where no commit can delete it.
+
+    The numbers fell (482 -> 254) when vision's slot count went 6 -> 3 on
+    2026-09-22. The PROPERTY is unchanged and is what this case guards: whatever
+    the registry declares, the packer must grant at least that much, and the
+    painter must then draw into it without complaint.
     """
     ctx = _full_ctx(vis_channels=8, vis_range=3, channel_display=_payload(8))
     display = _display("Visual", 8)
-    assert panel_map_slots("Visual", display) == 6
-    assert _painter_needs_w("Visual", 3, display) == 482
+    assert panel_map_slots("Visual", display) == 3
+    assert _painter_needs_w("Visual", 3, display) == 254
 
     lay = pack(ctx)
     box = lay.panels["visual"]
-    assert box.w >= 482
+    assert box.w >= 254
     _paint("Visual", 3, box.w, panel_h=box.h, display=display)
 
     olf = _display("Olfaction", 5)
@@ -457,14 +465,18 @@ def test_an_eight_channel_LEGACY_world_at_range_three_is_refused_and_says_why():
 def test_a_ONE_channel_legacy_world_at_range_three_still_renders():
     """THE CASE THAT STOPS THE REFUSAL BEING KEYED ON RANGE.
 
-    A one-channel legacy recording at range 3 is sized `max(6, 1)` = 6 maps, so
-    it needs 482 px and fits comfortably. Since the default moved to
+    A one-channel legacy recording at range 3 is sized `max(3, 1)` = 3 maps, so
+    it needs 254 px and fits comfortably. Since the default moved to
     single-channel vision this is an ordinary thing to have, and a `range >= 3`
     rule would refuse a recording that renders perfectly well.
+
+    (Sized `max(6, 1)` = 6 for 482 px until vision's slots went 6 -> 3 on
+    2026-09-22. It fits more comfortably now, not less, so the case still makes
+    the point it was written for.)
     """
     display = _display("Visual", 1, regime="legacy")
-    assert panel_map_slots("Visual", display) == 6
-    assert _painter_needs_w("Visual", 3, display) == 482
+    assert panel_map_slots("Visual", display) == 3
+    assert _painter_needs_w("Visual", 3, display) == 254
 
     ctx = _full_ctx(vis_channels=1, vis_range=3, channel_display=None)
     lay = P.pack_or_explain(ctx)          # must NOT raise
