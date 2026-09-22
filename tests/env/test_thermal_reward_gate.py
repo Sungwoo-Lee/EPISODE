@@ -3,13 +3,35 @@
 Two claims, and they pull in opposite directions on purpose.
 
 **1. The gate.** With `thermal.enabled: false` the reward and the drive must be
-*bit-identical* to what they were before any thermal code existed. This is checked
-against the Stage 0 `.npz` fixtures — captured before `calculate_drive` was touched
-— so it is a comparison with pre-change ground truth, not a re-derivation through
-the edited function. The thermal-off branch of `calculate_drive` is the pre-thermal
-three lines verbatim under a static `if params.thermal_enabled:`, so this test
-should be provable by reading the source; it exists because "should be" is not the
-same as "is".
+*bit-identical* to the `.npz` fixtures under `tests/env/fixtures/thermal_parity/`. The
+thermal-off branch of `calculate_drive` is the pre-thermal three lines verbatim under a
+static `if params.thermal_enabled:`, so this test should be provable by reading the
+source; it exists because "should be" is not the same as "is".
+
+**WHICH FIXTURES ARE PRE-CHANGE GROUND TRUTH, AND WHICH ARE NOT.** This gate is stronger
+on some cases than on others, and the difference is not visible from the test IDs:
+
+  * The **11 standalone worlds** (`configs__continual__…`, `configs__verification__…`)
+    were captured on 2026-09-08 at `765c8769`, before `calculate_drive` was touched on
+    2026-09-09 (`c0c0a619`, Stage 4), and have never been regenerated. On these the
+    comparison really is against pre-change ground truth rather than a re-derivation
+    through the edited function. They are immune to default-world changes because each
+    carries its own `body:` block with no `extends:`.
+  * `configs__environment__default` is **NOT** such a reference and has not been one since
+    2026-09-15, when `02be34ae` ("the bush blocks animals") changed agent behaviour and its
+    `reward` / `drive` arrays were re-derived through the post-thermal function. On this
+    case the gate is a **commit-to-commit regression anchor** on the drive expression — it
+    still fails if the thermal-off branch is edited (verified by mutation on 2026-09-22),
+    but it cannot testify that today's answer equals the pre-thermal one.
+
+Do not upgrade that second bullet by re-freezing the file: a frozen copy would preserve a
+post-thermal re-derivation while presenting it as pre-change ground truth. Provenance table
+and the full reasoning: `tests/env/fixtures/thermal_parity/README.md`.
+
+Note also that these fixtures are **shared** with `tests/env/test_thermal_parity.py`, which
+deliberately tracks the live world. Pinning config values in this module to keep an old
+golden matching would therefore break that gate on the same file — the two cannot be
+satisfied separately.
 
 **2. The axis is actually wired in.** A gate test alone is satisfied perfectly by an
 implementation that computes the thermal axis and then never adds it to the norm —
@@ -126,7 +148,12 @@ def test_drive_bit_identical_when_thermal_off(config_path, slug):
     these fixtures (which is itself asserted there, exactly).
 
     If this goes red: diff the drive expression. Do NOT add a tolerance — the
-    whole value of the Stage 0 fixtures is that they predate the edit.
+    whole value of the 11 standalone fixtures is that they predate the edit.
+
+    An intended change to a *body* parameter of the default world (recovery rates,
+    metabolic cost) also lands here, because it moves the injury trajectory that
+    `calculate_drive` reads — that is a re-baseline of the golden with the cause
+    recorded in the fixture README, never a tolerance and never a weakened assertion.
     """
     with open(config_path) as f:
         params = load_env_params(Config(yaml.safe_load(f)))
@@ -152,8 +179,10 @@ def test_drive_bit_identical_when_thermal_off(config_path, slug):
     }
     for field, have in got.items():
         assert np.array_equal(have, fixture[field]), (
-            f"{slug}: '{field}' is not bit-identical to the pre-thermal Stage 0 "
-            f"fixture. max |diff| = "
+            f"{slug}: '{field}' is not bit-identical to its golden under "
+            f"tests/env/fixtures/thermal_parity/ (pre-thermal Stage 0 for the 11 "
+            f"standalone worlds; a regression anchor for configs__environment__default "
+            f"— see that directory's README). max |diff| = "
             f"{float(np.abs(have.astype(np.float64) - fixture[field].astype(np.float64)).max()):.3e}. "
             f"The thermal-off branch of calculate_drive must be the pre-thermal "
             f"expression — diff it, do not widen this."
