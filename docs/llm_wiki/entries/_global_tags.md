@@ -30,6 +30,7 @@
 | `wandb` | `20260723_1914_dreamer_noise_is_logging_granularity_artifact` | WandB logging cadence, run tracking, metric granularity |
 | `testing` | `20260909_1402_parity_gates_green_without_comparing` | Test suite / gate correctness — parity fixtures, backend pinning, tests that pass without testing |
 | `rl` | `20260723_1916_train_ratio_replay_ratio_conversion` | Reinforcement-learning algorithm decisions (replay/train ratio, UTD) |
+| `tradeoff` | `20260922_1600_vision_slots_legibility_over_anchor` | An explicit trade where the rejected side is named and its cost stated |
 
 ---
 
@@ -53,11 +54,11 @@ These are not yet active — they become active when first used in an insight. R
 | `precision` | Precision-weighting, noise sensitivity |
 | `rl` | Reinforcement learning algorithm decisions |
 | `wandb` | WandB logging, run tracking |
-| `tradeoff` | Explicit tradeoff between two approaches |
 
 ---
 
 ## Change history
+- 2026-09-22: 3 insights into `episode_renderer` (`20260922_1558_shadowed_guards_one_constant`, `20260922_1559_six_more_checks_that_cannot_fail`, `20260922_1600_vision_slots_legibility_over_anchor`) reused existing tags `learned_lesson`, `design`, `decision`, `testing`, `meta` and **promoted `tradeoff`** from starter-candidate to active (first use: the vision slot-count trade, where the rejected alternative and its cost are both named). Added `tradeoff` to episode_renderer top-tags.
 - 2026-08-20: 1 insight into `env_entities` (`20260820_1606_reset_ulp_divergence_is_compiler_fusion`) reused existing tags `learned_lesson`, `refutation`, `meta` — no new tags promoted. Added `refutation` to env_entities top-tags.
 - 2026-08-06: 3 insights from the dreamer-integration Gate-2 session (2 dreamer_diagnosis: 0304/0305; 1 cluster_ops: 0306) reused existing tags `dreamer`, `learned_lesson`, `decision`, `meta`, `design`, `training_runner` — no new tags promoted.
 - 2026-07-28: 5 insights from the agent-team maintenance session (4 subagent_engineering: 1643/1644/1645/1647; 1 cluster_ops: 1646) reused existing tags `subagent`, `meta`, `decision`, `design`, `learned_lesson` — no new tags promoted.
