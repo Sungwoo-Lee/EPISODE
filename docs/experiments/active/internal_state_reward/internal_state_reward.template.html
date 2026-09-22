@@ -6,6 +6,10 @@ __HOUSE_STYLE__
      world before the change". Chrome may therefore use neither. Section numbers, links and
      callout rules move to a violet and a plum that appear in none of the five figures. */
   :root { --accent: #6b4d9b; --accent-text: #5c4189; --warn: #8a4b6b; }
+  /* STATED ADDITION (noted in section 10): the house sets code{overflow-wrap:anywhere}, which is
+     right for prose but splits identifiers mid-word inside a narrow table cell. Inside a table the
+     chip breaks only where this page marks a <wbr>. */
+  td code { overflow-wrap: normal; word-break: keep-all; }
 </style>
 
 <div class="wrap">
@@ -51,7 +55,62 @@ worth nothing if it describes what its author believed.</p>
 </section>
 
 <section class="col">
-<h2><span class="num">02</span> The shape of the problem</h2>
+<h2><span class="num">02</span> How three unlike things are added up</h2>
+
+<p>The drive has to combine fullness points, injury points and degrees into one number. It does that
+the way you would combine the sides of a right-angled triangle — but first each axis is divided by
+its own scale, so that the three are measuring the same thing before they are added.</p>
+
+<p class="cue" hidden>&larr; the formula is wider than the screen &mdash; scroll it sideways</p>
+<pre class="prov"><code>drive  =  &radic;[  ((fullness &minus; target) / range_S)&sup2;
+          +  (injury / max_injury)&sup2;
+          +  ((temperature &minus; target) / max_temp)&sup2;  ]
+
+as implemented, multiplied through by range_S
+so that today&rsquo;s reward units survive:
+
+drive  =  &radic;[  (fullness &minus; target)&sup2;
+          +  injury&sup2;
+          +  ((temperature &minus; target) &times; range_S / max_temp)&sup2;  ]</code></pre>
+
+<p><strong>Each divisor is the distance at which that axis kills the agent.</strong> That is the
+whole trick, and it is why the three terms become comparable: a value of 1 on any axis means "as far
+from target as this axis lets me get before I die". Every constant comes from the configuration, so
+a world that moves a ceiling gets a correctly rescaled drive without anybody editing a formula.</p>
+
+__AXES_TABLE__
+
+<p>The one that is computed rather than read directly is fullness, and it is the one the
+2026-09-22 change was about. Its target sits <em>inside</em> its range now, so the distance to death
+is not the ceiling — it is the larger of the two distances to the two lethal ends,
+<code>max(target&nbsp;&minus;&nbsp;0,&nbsp;ceiling&nbsp;&minus;&nbsp;target)</code>. At the shipped numbers that is
+<b>__RANGE_S__</b>, while the ceiling is 200. Before the change the target sat exactly on the
+ceiling, so those two numbers were equal and the difference could not show.</p>
+
+<div class="callout">
+  <p class="eyebrow">Why the code does not look like the formula above</p>
+  <p>Written literally, that expression divides every reward in the project by __RANGE_S__ while the
+  penalty for dying stays at 100 — a hundredfold change in how much dying matters, on every world,
+  including the ones with no temperature system at all. So the implementation multiplies the whole
+  expression through by <code>range_S</code> &mdash; the second line above. It is algebraically
+  identical and leaves the first two axes in their existing units. Only the temperature term carries a visible factor, and that
+  factor is <code>range_S&nbsp;/&nbsp;max_temperature</code> = __RANGE_S__ / __MAX_TEMP__ =
+  <b>__THERMAL_FACTOR__</b> — one degree of cold costs the same drive as __THERMAL_FACTOR__ points of
+  fullness. Figure 4 is what happens if that factor is computed from the ceiling instead.</p>
+</div>
+
+<div class="callout warn">
+  <p class="eyebrow">Where this reasoning is not yet finished</p>
+  <p>Temperature is still divided by its <em>ceiling</em>, <code>max_temperature</code>, rather than
+  by a computed range. That equals the correct distance-to-death only because its target is 0 and its
+  survivable band is symmetric — precisely the assumption that was just removed from fullness. It is
+  exactly right at every value that ships today, and it would silently become wrong the first time a
+  world moves the temperature target or makes the band lopsided.</p>
+</div>
+</section>
+
+<section class="col">
+<h2><span class="num">03</span> The shape of the problem</h2>
 
 <figure>
   <img data-fig="f01_drive_vs_nutrition" alt="Homeostatic drive against fullness. A V-shaped blue line falls from 100 at fullness 0 to 0 at fullness 100 and rises back to 100 at fullness 200. A thick pale orange underlay follows the same left arm but stops at fullness 100. Red crosses mark death at both ends.">
@@ -93,7 +152,7 @@ worth nothing if it describes what its author believed.</p>
 </section>
 
 <section class="col">
-<h2><span class="num">03</span> What a single action is worth</h2>
+<h2><span class="num">04</span> What a single action is worth</h2>
 
 <figure>
   <img data-fig="f02_reward_per_action" alt="Reward for one action against fullness before the action. The eat curve sits at +4 below fullness 100 and drops to minus 4 above it. The rest curve sits at minus 1 below 100 and rises to plus 1 above it. Both flip sign at fullness 100.">
@@ -138,7 +197,7 @@ worth nothing if it describes what its author believed.</p>
 </section>
 
 <section class="col">
-<h2><span class="num">04</span> Do hunger, injury and cold weigh the same?</h2>
+<h2><span class="num">05</span> Do hunger, injury and cold weigh the same?</h2>
 
 <p>The drive adds three unlike things: fullness points, injury points, and degrees. For that sum to
 mean anything, being equally close to death on any one of them has to count equally. This is the
@@ -187,7 +246,7 @@ assuming.</p>
 </section>
 
 <section class="col">
-<h2><span class="num">05</span> The conversion that had to change with it</h2>
+<h2><span class="num">06</span> The conversion that had to change with it</h2>
 
 <figure>
   <img data-fig="f04_thermal_scale" alt="Grouped bar chart. For one degree from the temperature target, the shipped conversion costs 6.67 satiation units and the counterfactual using the ceiling costs 13.33. For ten degrees the values are 66.67 and 133.33.">
@@ -231,7 +290,7 @@ assuming.</p>
 </section>
 
 <section class="col">
-<h2><span class="num">06</span> What the agent actually receives</h2>
+<h2><span class="num">07</span> What the agent actually receives</h2>
 
 <p>The drive is computed in raw body units, but the agent never sees those. Each body channel is
 divided by its own ceiling before it reaches the network, so everything arrives between 0 and 1.
@@ -279,7 +338,7 @@ That rescaling is where the change does something that is easy to miss.</p>
 </section>
 
 <section class="col">
-<h2><span class="num">07</span> Where an episode ends</h2>
+<h2><span class="num">08</span> Where an episode ends</h2>
 
 <p>Four of these are body states; the fifth is the clock. The two in bold are what the change
 added — or rather, one is new and one had been written down for months without ever working.</p>
@@ -309,7 +368,7 @@ added — or rather, one is new and one had been written down for months without
 </section>
 
 <section class="col">
-<h2><span class="num">08</span> Settled, and still open</h2>
+<h2><span class="num">09</span> Settled, and still open</h2>
 
 <table>
   <thead><tr><th>Settled</th><th>Still open</th></tr></thead>
@@ -340,7 +399,7 @@ added — or rather, one is new and one had been written down for months without
 </section>
 
 <section class="col">
-<h2><span class="num">09</span> Where this came from</h2>
+<h2><span class="num">10</span> Where this came from</h2>
 <p class="foot">Every figure on this page is drawn by its own Python script under
 <code>scripts/analysis/studies/internal_state_reward/</code>, reading the live environment through
 the project's configuration loader. Regenerate them, then rebuild this page, with:</p>
@@ -350,6 +409,12 @@ the project's configuration loader. Regenerate them, then rebuild this page, wit
 done
 /home/vncuser/miniconda3/envs/grid_world_pain/bin/python \
   scripts/analysis/studies/internal_state_reward/build_page.py</code></pre>
+<p class="foot">This page follows the project's House Style Sheet. It makes one stated addition:
+inside a table cell, an inline code chip breaks only where the markup marks a break point, because
+the house rule that lets prose chips break anywhere splits identifiers like
+<code>satiation_setpoint</code> mid&#8209;word in a narrow column. Nothing else about the page's
+look departs from the sheet, except that the accent and warning hues are moved off the figure
+palette, which the sheet itself requires when a figure spends a colour on a category.</p>
 <p class="foot">The change this page documents is commit <code>379ec8fc</code> on branch
 <code>v4.0</code>, reviewed independently for mathematics and for implementation correctness before
 it landed; both returned no critical findings. The settings themselves, with their reasons, are in

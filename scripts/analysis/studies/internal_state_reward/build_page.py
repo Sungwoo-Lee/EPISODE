@@ -46,6 +46,43 @@ page = page.replace("__HOUSE_STYLE__", style.group(0))
 # died at load while four figures still advertised "click to view full size".
 page = page.replace("__HOUSE_SCRIPT__", viewer.group(0) + "\n" + script.group(0))
 
+# THE AXIS TABLE IS EMITTED, NEVER TYPED. Its numbers are the normalising constants the drive
+# divides by; typed into markup they would drift the first time a ceiling moved, which is the
+# F15 lesson and the reason guide 11b exists for figures. Same rule, same reason, for prose.
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import _common as C                                          # noqa: E402
+from src.environment.core import satiation_deviation_range   # noqa: E402
+
+_p = C.params_for("thermal")
+_rs = float(satiation_deviation_range(_p))
+_axis_rows = [
+    ("fullness (satiation)", f"{float(_p.setpoint):g}", f"{_rs:g}",
+     "<code>max(satiation_setpoint,<wbr> max_satiation<wbr> &minus; satiation_setpoint)</code>, "
+     "computed by the environment's own helper",
+     f"dies at 0 and at {float(_p.max_satiation):g}"),
+    ("injury", "0", f"{float(_p.max_injury):g}", "<code>body.<wbr>max_injury</code>",
+     f"dies at {float(_p.max_injury):g}"),
+    ("body temperature", f"{float(_p.temperature_setpoint):g}", f"{float(_p.max_temperature):g}",
+     "<code>thermal.<wbr>max_temperature</code> &mdash; the ceiling, not a computed range; see the "
+     "open item in section 09",
+     f"dies outside &plusmn;{float(_p.max_temperature):g}"),
+]
+_axis_table = ("<table><thead><tr><th>axis</th><th>target</th><th>range it is divided by</th>"
+               "<th>where that range comes from</th><th>lethal at</th></tr></thead><tbody>"
+               + "".join(f"<tr><td>{a}</td><td>{b}</td><td><b>{c}</b></td><td>{d}</td>"
+                         f"<td>{e}</td></tr>" for a, b, c, d, e in _axis_rows)
+               + "</tbody></table>")
+page = page.replace("__AXES_TABLE__",
+                    '<p class="cue" hidden>&larr; the table is wider than the screen '
+                    '&mdash; scroll it sideways</p><div class="scroll"><table class="wide">'
+                    + _axis_table.split("<table>", 1)[1].rsplit("</table>", 1)[0]
+                    + "</table></div>")
+page = page.replace("__RANGE_S__", f"{_rs:g}")
+page = page.replace("__MAX_INJURY__", f"{float(_p.max_injury):g}")
+page = page.replace("__MAX_TEMP__", f"{float(_p.max_temperature):g}")
+page = page.replace("__SETPOINT__", f"{float(_p.setpoint):g}")
+page = page.replace("__THERMAL_FACTOR__", f"{_rs / float(_p.max_temperature):.4g}")
+
 stems = re.findall(r'<img data-fig="([^"]+)"', page)
 if not stems:
     fail.append("no <img data-fig=...> in the template")
@@ -108,6 +145,36 @@ for m in re.finditer(r"<figure>.*?</figure>", page, re.S):
 for cue in re.findall(r'<p class="cue"[^>]*>(.*?)</p>', page, re.S):
     if not re.sub(r"<[^>]+>|&[a-z]+;|\s", "", cue):
         fail.append("an empty <p class=\"cue\">: emit the house text, not a blank shell")
+# A CUE THAT SHOWS ON A DESKTOP IS A LAYOUT ERROR, NOT A PHONE ACCOMMODATION. The cue machinery
+# correctly hides nothing when a box really does overflow, and the layout checker correctly
+# exempts scroll containers -- so a <pre> too wide for the widest column produces no failure
+# anywhere, and the only visible signal is a cue being visible at 1440. This page shipped a
+# formula cut at "/ max_te" on desktop that way.
+#
+# THE LIMIT IS DERIVED, NOT A MAGIC NUMBER, and the two things it assumes are named here so they
+# can be checked rather than inherited: the prose column at the widest supported width, and the
+# advance width of the house monospace at its rendered size. A bare character count would encode
+# that advance silently, which is the trap F35's measured floors document. Both are measurable in
+# a browser; a builder cannot measure them, so it states them.
+_COLUMN_PX = 685.0     # measured: .col inside .wrap at a 1440px viewport
+_MONO_ADV_PX = 7.2     # measured: IBM Plex Mono at the house pre size
+_PRE_PAD_PX = 40.0     # the <pre>'s own horizontal padding, both sides
+_MAX_CH = int((_COLUMN_PX - _PRE_PAD_PX) / _MONO_ADV_PX)
+_ENT = re.compile(r"&[a-zA-Z]+;|&#\d+;")
+for m in re.finditer(r"<pre[^>]*>(.*?)</pre>", page, re.S):
+    inner = re.sub(r"<[^>]+>", "", m.group(1))
+    for line in inner.split("\n"):
+        # Entities resolve to ONE glyph; counting their source characters is how a formula full of
+        # &minus; and &sup2; measures as twice its rendered width.
+        n = len(_ENT.sub("X", line))
+        if n > _MAX_CH:
+            fail.append(
+                f"a <pre> line is {n} rendered characters against the {_MAX_CH} that fit a "
+                f"{_COLUMN_PX:.0f}px column at {_MONO_ADV_PX}px/char - it would scroll on a "
+                f"DESKTOP, which is a layout error rather than a phone accommodation. If the "
+                f"column or the font changed, fix the constants above rather than the limit. "
+                f"Line: {line.strip()[:60]}...")
+
 # A cue measures its NEXT SIBLING, so that sibling must be the element that actually scrolls.
 # A <pre> has its own overflow-x from the house sheet, so wrapping one in .scroll gives the cue
 # a box that can never overflow while the <pre> inside it is visibly cut.
