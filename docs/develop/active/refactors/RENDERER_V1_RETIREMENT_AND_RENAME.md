@@ -3,13 +3,14 @@ title: "Retiring the old episode-video renderer, and dropping \"v2\" from the ne
 topic: refactors
 status: active
 created: 2026-09-21
-last_updated: 2026-09-21
+last_updated: 2026-09-22
 aliases: [renderer_v1_retirement]
 ---
 
 # Retiring the old episode-video renderer, and dropping "v2" from the new one's name
 
-> **Status**: PLANNED — nothing implemented. Four steps. **No open user questions.** Reviewed `SOUND WITH CONCERNS`; all findings applied in Revision 3.
+> **Status**: PLANNED — nothing implemented. Four steps. **No open user questions.** Reviewed `SOUND WITH CONCERNS`; all findings applied in Revision 3, which then gate-passed `SOUND — nothing blocks implementation`.
+> **As of 2026-09-22**: §R30.2's retirement condition is **met** and **Step 2 is available now**; Steps 1, 3 and 4 still wait — see [§Current state](#current-state-2026-09-22).
 > **Opened**: 2026-09-21 · **Revision 3** (2026-09-21) — applies the `plan-reviewer` findings, chiefly moving one audit fix into Step 2 and replacing an inoperable `git stash` instruction
 > **Related**: [[RENDERER_LAYOUT_REDESIGN]] §R30 (the retirement condition this executes) · [[EVAL_RENDERER_SWITCHOVER]] (the 2026-09-17 switch this cleans up after; **this plan must edit its Rollback section — §Obligations**) · [[ASYNC_CHECKPOINT_VIDEO_RENDER]] (the dispatch mechanism that makes timing load-bearing) · [`plan_renderer_v1_retirement`](../../../reviews/plan_renderer_v1_retirement.md) (the review) · [`SCRIPTS_DEPENDENCY_MAP`](../../../environment/SCRIPTS_DEPENDENCY_MAP.md) (contract fires on Steps 1, **2**, 3 and 4)
 
@@ -200,6 +201,43 @@ Verdict `SOUND WITH CONCERNS`, no critical finding; ordering confirmed, every A1
 | 6 | **The April file stays untouched until Step 2 lands.** | It is **not dead code** while D6, D8 and the `numeric_in_arena` proof are live. |
 | 7 | **The script becomes `render_episode_videos.py`** — chosen over reusing `render_recordings.py` so one filename never means two renderers across git history. | Step 4. |
 | 8 | **`grid_world.py`'s dead duplicate is a separate change after this lands.** | §Follow-ups — deliberately not folded in. |
+
+---
+
+## Current state (2026-09-22)
+
+**Two of the fourteen runs have finished, and they satisfy the retirement condition.**
+
+`rppo_basicq2_lvl05_t1none_s42` and `rppo_basicq2_lvl06_t1none_s42` both reached the full ten-million-episode budget. Their logs (`logs/20260921_114852.log`, `logs/20260921_114900.log`) end with `Training complete.`; each run holds **50 checkpoints**, the last at episode **10,000,058** and **10,000,060**. Through the logs' final stretch every `[CHECKPOINT] Saving model` line is followed by a matching `[render] … render finished` line pointing into `videos_v2/`, including the final checkpoint of each run.
+
+At a 2026-09-22 00:15 snapshot: **150 files in each of those two runs' `videos_v2/`**, **1,305 across all fourteen runs**, and **zero in any `videos/`**. Nobody fell back to the old renderer at any point. *(The 150 is a directory count, not a per-checkpoint derivation — the new renderer also keeps per-episode MP4s, and the exact breakdown was not measured.)*
+
+§R30.2 asks for *"two or three real training runs [that] have produced their checkpoint videos through the new script with no occasion on which anyone needed to fall back."* **That condition is met**, and met by production runs rather than a constructed test — which is what §A8 intended.
+
+### What this unblocks, and what it does not
+
+| Step | State as of 2026-09-22 | Why |
+|---|---|---|
+| **Step 1** | **still waits** | Twelve runs are rendering through that path right now (decision 3). |
+| **Step 2** | **available now** | Step 0's gate table admits it with runs in flight: monkeypatch-only, nothing under `src/environment/dashboard/` changes (§A11.4). |
+| **Step 3** | blocked on **Step 2 only** | Its other precondition, §R30.2, is now met. |
+| **Step 4** | **still waits** | Hard stop while any run is live. |
+
+**Step 2 is therefore the one piece of this plan that can be worked today.** Landing it means Step 3 can go as soon as the last run stops, rather than starting cold then.
+
+### CP0.1 cannot be ticked yet
+
+Census at 2026-09-22 00:30 — twelve busy GPUs attribute cleanly to the twelve surviving runs (101:0/1, 103:0/1, 104:0/1, 105:0/1, 106:0/1, 107:1, 108:1). **Node 114's four GPUs were busy and unattributed** at that moment: 100 % utilisation, ~13.7 GB each, and no diary row from 2026-09-14 onward claiming them. Per CP0.1 an unattributable busy GPU is a **stop, not a footnote**, so it was chased rather than noted.
+
+**Resolved: they stopped.** Asked directly, node 114 reports all four GPUs at **0 % utilisation and 4 MiB used**, with no compute applications — against 13,716–14,153 MiB at the census. GPU memory occupancy is reported by the device and does not depend on which PID namespace the query runs in, so the drop to 4 MiB is evidence the work ended, not evidence that a container hid it.
+
+> The first attempt at this proved nothing and is recorded so it is not repeated: `ps` on the PIDs `nvidia-smi` had printed returned an empty list, which looks like "the processes are gone" but is equally "the PIDs are not visible from this shell" — `gpu_status.py` prints `[Not Found]` for **every** PID on **every** node, including runs known to be alive. Device-reported memory was the discriminator; the process list was not.
+
+**CP0.1 is still not ticked, and should not be.** Nothing is attributable now because nothing is busy there — but the gate is a census taken **immediately before Steps 1 and 4** (§Step 0; CP4.1), not one taken days earlier. Whoever runs Step 1 re-runs it then. Node 114 is recorded here only so the next reader does not re-investigate four cards that have already gone quiet. None of this gates **Step 2**.
+
+> **A note on how the two completions were established**, since §A9 and §A10 are about checks that cannot fail. The first reading of these runs called the last checkpoint `9,800,010` and the runs ambiguous. That came from `ls -1 | tail -3`, which sorts **lexicographically**: as text `"9800010"` sorts after `"10000058"`, so the real final checkpoint sat earlier in the listing and was never looked at. `sort -n` and the log's own `Training complete.` line are what settled it. A freed GPU alone never distinguishes *finished* from *died* — two rPPO runs in this project have died mid-training — so the completion marker, not the idle card, is the evidence.
+
+*Recorded by top-level Claude, session `14318db1`.*
 
 ---
 
