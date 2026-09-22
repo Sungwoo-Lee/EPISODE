@@ -3,7 +3,7 @@ title: Which recovery settings make resting outside cover pointless
 topic: recovery_in_bush_tuning
 status: active
 created: 2026-09-16
-last_updated: 2026-09-16
+last_updated: 2026-09-22
 ---
 
 # Which recovery settings make resting outside cover pointless
@@ -157,6 +157,26 @@ Six items, recorded in full in §11 of the page. In brief:
   predate the key. A multiplier of 25 switches that branch on.
 - **The 70-point wound and the 25-step close are borrowed** from the rest-premium sweep's
   calibration, not measured from what wounds agents actually carry when they choose to rest.
+- **2026-09-22 — the rest-budget argument only covers a HUNGRY agent, and half the randomised
+  starts are no longer hungry.** The study prices a rest step as a trade: the step heals some
+  injury but burns one unit of nutrition, and those pull the homeostatic drive in *opposite*
+  directions, so a rest can be punished even while it is healing. That opposition is what the
+  whole budget argument (`rest budget = nutrition / metabolic_cost`) rests on — and it is only
+  true **below** the homeostatic setpoint. Nutrition became a two-sided axis on 2026-09-22:
+  it now runs 0–200 with the target at **100, the middle**, so above the target the metabolic
+  drain moves nutrition *toward* the target and the rest step **pays**. Measured on this
+  study's own `rest_step_reward` with the live config, injury 0 and no healing: **+1.0 per
+  rest step at nutrition 150, against −1.0 at nutrition 100 and −1.0 at 50** — the sign flips.
+  An overfed agent is therefore paid to sit still, which is the opposite of the pressure this
+  study assumed, and the four randomised worlds (`03-random_init_10x10.yaml` and the levels
+  04–06 that extend it) now draw starting nutrition across the full 0–200 span, so roughly
+  **half of all randomised episodes begin in that regime**. The study's arithmetic itself is
+  unaffected — `recovery_math.py::drive` always measured distance from `satiation_setpoint`
+  and reads the setpoint from the live config — but its *interpretation* of why an agent
+  would or would not rest does not carry above the setpoint. **The adopted recovery values
+  (`recovery_base_rate: 0.2`, `recovery_accel_rate: 0.0`, `recovery_in_bush_multiplier: 25.0`)
+  are NOT revised here and the study was not re-run**; this note records the narrowed scope.
+  Owner for any re-run: `experiment-designer` / `senior-developer`.
 
 ---
 

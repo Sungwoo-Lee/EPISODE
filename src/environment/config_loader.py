@@ -2156,6 +2156,33 @@ def load_env_params(config: Config) -> EnvParams:
     _max_nutr  = float(config.get_mandatory('body.max_nutrition'))
     _max_inj   = float(config.get_mandatory('body.max_injury'))
 
+    # ── The satiation axis must be a usable interval (2026-09-22) ────────────
+    # Since nutrition became two-sided, the homeostatic drive divides by
+    # `range_S = max(setpoint, max_satiation - setpoint)` (core.py
+    # ::satiation_deviation_range). Both degenerate shapes load silently and
+    # fail LATER, inside a jitted step where the error is unreadable:
+    #   * `max_satiation == 0` with `satiation_setpoint == 0` gives range_S == 0,
+    #     so `drive_hunger` is 0/0 -> NaN, which propagates into every reward.
+    #   * a setpoint ABOVE the ceiling is unreachable: satiation is clipped to
+    #     the ceiling, so the drive can never reach zero and the agent is
+    #     permanently punished for a state it cannot leave.
+    # Caught here, at load, in the same shape as the start-range checks below.
+    _max_sat = float(config.get_mandatory('body.max_satiation'))
+    _setpoint = float(config.get_mandatory('body.satiation_setpoint'))
+    if not (_max_sat > 0.0):
+        raise ValueError(
+            f"body.max_satiation must be > 0 (it is the satiation axis ceiling and "
+            f"the homeostatic drive divides by a range derived from it); got {_max_sat}")
+    if not (_max_nutr > 0.0):
+        raise ValueError(
+            f"body.max_nutrition must be > 0 (nutrition is clipped into "
+            f"[0, max_nutrition] and death fires at both ends); got {_max_nutr}")
+    if not (0.0 <= _setpoint <= _max_sat):
+        raise ValueError(
+            f"body.satiation_setpoint must satisfy 0 <= setpoint <= max_satiation "
+            f"({_max_sat}); got {_setpoint}. A setpoint outside the axis is "
+            f"unreachable, so the homeostatic drive could never reach zero.")
+
     if _rand_nutr:
         start_nutrition_low  = float(config.get_mandatory('body.start_nutrition_low'))
         start_nutrition_high = float(config.get_mandatory('body.start_nutrition_high'))

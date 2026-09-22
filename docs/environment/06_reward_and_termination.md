@@ -63,8 +63,10 @@ Both reward modes live in the same function and share the combined-reward tail; 
     reward_extrinsic = 0.0
     
     # Calculate components for analysis
-    # drive = (1 - satiation/100)^2 + (injury/100)^2
-    drive_hunger = jnp.power(1.0 - (new_satiation / params.max_satiation), 2)
+    # drive_hunger = ((satiation - setpoint)/range_S)^2 ; drive_injury = (injury/max_injury)^2
+    _range_S = satiation_deviation_range(params)
+    drive_hunger = jnp.power(
+        (new_satiation / _range_S) - (params.setpoint / _range_S), 2)
     drive_injury = jnp.power(new_injury / params.max_injury, 2)
     
     if params.use_homeostatic_reward:
@@ -131,17 +133,31 @@ reward = reward_homeostatic - (eating_reward_penalty  if ate_food else 0)
 
 **Sign convention**: `reward_homeostatic > 0` means drive decreased (agent moved toward homeostasis — less hungry, less injured). `reward_homeostatic < 0` means drive increased (more hungry, more injured, or terminal step).
 
-**Units**: drive is in the same units as `satiation` and `injury` (both range 0–`max_satiation`/`max_injury`, defaults 100). A typical satiation gain from eating might produce a drive-change of ~5–20; severe injury can produce a per-step penalty of 30+. The theoretical per-step maximum magnitude is `sqrt(max_satiation^2 + max_injury^2) ≈ 141` at default settings.
+**Units**: drive is in the same units as `satiation` and `injury` (satiation ranges 0–200 about a setpoint of 100; injury 0–100 about 0, with the shipped defaults). What bounds the drive is each axis's largest possible **deviation from its own target**, which is 100 on both, so the theoretical per-step maximum magnitude is `sqrt(100^2 + 100^2) ≈ 141` — unchanged by the 2026-09-22 ceiling move, because the setpoint moved to the middle at the same time. A typical satiation gain from eating might produce a drive-change of ~5–20; severe injury can produce a per-step penalty of 30+.
 
-**Residual drive**: `calculate_drive` measures distance from `[setpoint, 0]`, not from `[max_satiation, 0]`. If `setpoint < max_satiation` (the normal case), there is always a drive ≥ 0. If `setpoint > max_satiation`, even a fully fed agent has a nonzero residual drive and can never reach zero drive.
+**Zero drive is reachable, and reaching it is the job**: `calculate_drive` measures distance from `[setpoint, 0]`, not from `[max_satiation, 0]`. At `satiation == setpoint` and `injury == 0` the drive is **exactly 0** — the shipped world's `satiation_setpoint: 100` is an interior point of `[0, 200]`, reachable from either side, and an agent sitting on it is paid nothing further because there is nothing left to correct. (An earlier revision of this paragraph claimed a strictly positive residual drive whenever `setpoint < max_satiation`. That was wrong: what `setpoint < max_satiation` means is that a *completely full* agent is off-target, not that an *on-target* one is.)
+
+The genuinely pathological case is a setpoint **outside** the axis. If `setpoint > max_satiation`, satiation is clipped below the target and the drive can never reach zero — the agent is punished forever for a state it cannot leave. Since 2026-09-22 the loader refuses that at load time (`0 <= satiation_setpoint <= max_satiation`), along with a zero-width axis, which would make the deviation scale `range_S` zero and turn the logged `drive_hunger` into a NaN inside the jitted step.
 
 **Note on logged drive components** (`drive_hunger`, `drive_injury` in `info`): these are normalised squared terms computed separately for logging only — they are **not** used to compute `reward_homeostatic`:
 
 ```python
-# core.py:556–557  (info only, not part of reward)
-drive_hunger = (1.0 - new_satiation / params.max_satiation) ** 2
+# core.py  (info only, not part of reward)
+_range_S = satiation_deviation_range(params)          # max(setpoint, max_satiation - setpoint)
+drive_hunger = ((new_satiation / _range_S) - (params.setpoint / _range_S)) ** 2
 drive_injury = (new_injury / params.max_injury) ** 2
 ```
+
+`drive_hunger` is **two-sided about the setpoint** since 2026-09-22 and divides by `range_S`,
+the furthest satiation can get from its target — not by the ceiling. It previously read
+`(1 − satiation/max_satiation)²`, which is the same expression only while the setpoint *is*
+the ceiling; under the two-sided axis that old form would log **0.25** for a perfectly
+regulated agent instead of 0, and a *falling* hunger drive for an agent eating itself to
+death. It is written as a difference of two quotients rather than the tidier
+`((S − setpoint)/range_S)²` on purpose: dividing first makes `setpoint/range_S` exactly 1.0 at
+a ceiling setpoint, so the term is the exact IEEE negation of the old one and byte-identical
+after squaring. The tidier form is up to 2 ULP off on roughly half of all satiation values,
+which would cost `tests/env/test_metabolic_coupling.py`'s byte-parity fixture its meaning.
 
 When `thermal.enabled` is true a third one joins them, `drive_thermal`, on the **same**
 squared-normalised convention — `((body_temp - temperature_setpoint) / max_temperature) ** 2`
@@ -155,24 +171,42 @@ With `thermal.enabled: true` the drive gains a temperature axis and becomes
 
 ```
 drive = || ( satiation - setpoint,  injury,
-             (T - temperature_setpoint) * max_satiation / max_temperature ) ||
+             (T - temperature_setpoint) * range_S / max_temperature ) ||
+
+where  range_S = max(satiation_setpoint, max_satiation - satiation_setpoint)
 ```
 
 **Why the third axis is scaled up rather than the other two scaled down.** The design
 document writes the three-axis drive normalised per axis — each term divided by its own
-range. Written literally that is today's drive divided by `max_satiation` (100), so **every
-reward in the project** would shrink 100-fold while `death_penalty` stayed at 100: the
-death penalty would go from comparable-to-a-few-steps to overwhelming, on thermal-**off**
-configs as much as thermal-on ones. Multiplying the whole expression through by
-`max_satiation` gives the algebraically identical drive in today's units — the first two
-axes untouched, the temperature axis scaled by `max_satiation / max_temperature`. See the
-temperature plan's finding F1.
+range — the satiation axis by `range_S`, its own largest possible deviation from target.
+Written literally that is today's drive divided by `range_S` (100), so **every reward in the
+project** would shrink 100-fold while `death_penalty` stayed at 100: the death penalty would
+go from comparable-to-a-few-steps to overwhelming, on thermal-**off** configs as much as
+thermal-on ones. Multiplying the whole expression through by `range_S` gives the
+algebraically identical drive in today's units — the first two axes untouched, the
+temperature axis scaled by `range_S / max_temperature`. See the temperature plan's finding F1.
 
-At the shipped values (`max_satiation: 100`, `max_temperature: 15`) that factor is
+At the shipped values (`range_S = 100`, `max_temperature: 15`) that factor is
 **100/15 = 6.67**: one degree of body-temperature deviation costs the same drive as 6.67
 satiation units. `thermal.max_temperature` is therefore the warmth-vs-hunger exchange rate
 as well as the edge of the survivable band — see
 [CONFIG_CRITICAL_SETTINGS.md](CONFIG_CRITICAL_SETTINGS.md).
+
+**The numerator is `range_S`, not `max_satiation`, and the difference has teeth since
+2026-09-22.** The two are the same number only while the setpoint sits at the ceiling, which
+is how every config written before that date looked. The shipped world now has
+`max_satiation: 200` with `satiation_setpoint: 100`, so `range_S` is 100 while the ceiling is
+200: the old expression would have weighed one degree at **200/15 = 13.33** satiation units,
+doubling the value of staying warm relative to staying fed with no config key recording the
+change. Using `range_S` keeps the exchange factor at 6.67, the same number every thermal run
+to date has used, and is a bit-for-bit no-op for every pre-2026-09-22 config.
+
+**All three axes weigh the same at full scale, by construction of the shipped numbers.**
+Satiation is 100 from target at both of its lethal ends (`N=0` and `N=200`), injury is 100
+from target at `max_injury`, and temperature is 100 satiation-equivalent units from target at
+±15 °C because of the 6.67 factor. Each axis's full-scale deviation therefore equals
+`death_penalty` (100). Nothing enforces this in code — change any of `max_satiation`,
+`satiation_setpoint`, `max_injury`, `max_temperature` or `death_penalty` and it stops holding.
 
 Both call sites pass a temperature from the same state transition the satiation and injury
 arguments come from: `state.body_temp` for `prev_drive`, the post-step temperature for
@@ -191,7 +225,7 @@ def calculate_drive(satiation, injury, params, body_temp=None):
     """Calculates homeostatic drive (Euclidean distance to setpoint)."""
     if params.thermal_enabled:
         t_axis = (body_temp - params.temperature_setpoint) * (
-            params.max_satiation / params.max_temperature)
+            satiation_deviation_range(params) / params.max_temperature)
         target = jnp.array([params.setpoint, 0.0, 0.0])
         current = jnp.stack([satiation, injury, t_axis], axis=-1)
         return jnp.linalg.norm(current - target, axis=-1)
@@ -250,10 +284,23 @@ FAQ: Is the death penalty also applied on truncation? **Yes.** `done = done_from
 |------|------|-----------------|---------|-------|
 | 0 | Active | — (default) | No | Episode is running normally |
 | 1 | Truncated | `(state.current_step + 1) >= params.max_steps` | Yes | Standard episode length limit |
-| 2 | Starvation | `new_nutrition <= 0.0` | Yes (via `update_body`) | No `with_nutrition` guard in `jax_step` — see note below |
-| 3 | Overeating | `new_satiation >= params.max_satiation` | **No** | Only set if `params.overeating_death=True`; does NOT set `done=True` |
+| 2 | Starvation | `new_nutrition <= 0.0` | Yes (via `update_body`) | Guarded on `params.with_nutrition` in `jax_step` since `8334d89` (2026-07-23) — see note below |
+| 3 | Overeating | `new_nutrition >= params.max_nutrition` | Yes (via `update_body`) | Only set if `params.overeating_death=True`. **Changed 2026-09-22**: this used to be `new_satiation >= max_satiation` and set the label WITHOUT ever setting `done` — a no-op recorded as a latent bug from 2026-06-09. Both the label and `done` now read the same nutrition predicate under the same static gate, so a reason-3 label without a death is structurally impossible. |
 | 4 | Injury | `new_injury >= params.max_injury` | Yes (via `update_body`) | No `with_injury` guard in `jax_step` — see note below |
 | 5 | Thermal | `new_body_temp` outside `[params.min_temperature, params.max_temperature]` | Yes (via `update_body`) | Only set if `params.thermal_enabled=True`; the body-temperature recurrence is in [05_body_homeostasis.md](05_body_homeostasis.md) |
+
+**Nutrition is a two-sided axis (since 2026-09-22).** It runs 0–200 with the homeostatic
+setpoint at **100**, the middle, so BOTH ends are lethal and symmetric: code 2 at
+`new_nutrition <= 0` (starved) and code 3 at `new_nutrition >= max_nutrition` (overfed). The
+drive rises as the agent moves away from 100 in *either* direction, so eating while already at
+the setpoint is punished by the ordinary reward without any special case — measured at −4.0 for
+an eat that moves nutrition 100 → 104, against +4.0 for the same eat at 50.
+
+The old code-3 predicate was written against *satiation*, which is derived and clipped
+(`satiation = max_satiation · (nutrition/max_nutrition)^k`), so `satiation >= max_satiation`
+was true on every step where nutrition merely sat at its ceiling — routine after a feed. That
+is why the label appeared on ordinary non-terminal steps. Keying both the label and `done` to
+nutrition removes that.
 
 **Priority** (highest code wins): `5 > 4 > 3 > 2 > 1 > 0`. Codes are applied via sequential `jnp.where` — later checks overwrite earlier ones:
 
@@ -263,7 +310,7 @@ reason = jnp.array(0, dtype=jnp.int32)
 reason = jnp.where(truncated,                              1, reason)   # lowest priority
 reason = jnp.where(new_nutrition <= 0.0,                   2, reason)
 if params.overeating_death:
-    reason = jnp.where(new_satiation >= params.max_satiation, 3, reason)
+    reason = jnp.where(new_nutrition >= params.max_nutrition, 3, reason)
 reason = jnp.where(new_injury >= params.max_injury,        4, reason)
 if params.thermal_enabled:
     reason = jnp.where(thermal_death,                      5, reason)   # highest priority
@@ -286,9 +333,10 @@ The truncation check, priority-chain termination codes, `done` assembly, and whe
     # 0: active, 1: max_steps, 2: starvation, 3: overeating, 4: injury, 5: thermal
     reason = jnp.array(0, dtype=jnp.int32)
     reason = jnp.where(truncated, 1, reason)
-    reason = jnp.where(new_nutrition <= 0.0, 2, reason)
-    if params.overeating_death:
-        reason = jnp.where(new_satiation >= params.max_satiation, 3, reason)
+    if params.with_nutrition:
+        reason = jnp.where(new_nutrition <= 0.0, 2, reason)
+        if params.overeating_death:
+            reason = jnp.where(new_nutrition >= params.max_nutrition, 3, reason)
     reason = jnp.where(new_injury >= params.max_injury, 4, reason)
     if params.thermal_enabled:
         reason = jnp.where(thermal_death, 5, reason)
@@ -300,7 +348,7 @@ The truncation check, priority-chain termination codes, `done` assembly, and whe
 > **API notes**
 >
 > - **Priority chain via sequential `jnp.where`**: each `reason = jnp.where(cond, new_code, reason)` overwrites `reason` when `cond` is true. Later calls have higher priority because they can overwrite earlier ones. Code 5 (thermal) is last, so it wins any simultaneous multi-condition step; with the temperature system off, code 4 (injury) is last. This is the standard JAX idiom for priority selection without branching. See [primer: branchless](00_jax_primer.md#branchless).
-> - **`if params.overeating_death:`** — Python-level static branch. When `overeating_death=False`, the JIT-compiled graph contains no `jnp.where` for code 3 at all; the check is compiled out entirely. See [primer: static vs. dynamic](00_jax_primer.md#static-dynamic).
+> - **`if params.overeating_death:`** — Python-level static branch, and it now sits **inside** the `if params.with_nutrition:` guard, so a nutrition-disabled world cannot stamp a food-related death code. When `overeating_death=False` the JIT-compiled graph contains no `jnp.where` for code 3 at all, and `update_body`'s matching `done` branch emits nothing either — measured as exactly two fewer equations in `update_body`'s jaxpr, the `>=` and the `where` (`tests/env/test_two_sided_nutrition.py`). This is a claim about those two branches only: `satiation_deviation_range` runs on the drive and diagnostic paths for every config, so the step graph as a whole did grow on 2026-09-22 even where the numbers are bit-identical. See [primer: static vs. dynamic](00_jax_primer.md#static-dynamic).
 > - **`jnp.array(0, dtype=jnp.int32)`**: explicitly typed to `int32`. Without this, JAX defaults to `int32` on most platforms anyway, but the explicit dtype prevents a subtle shape-mismatch if `jnp.where` returns a different default integer type on a particular accelerator.
 > - **`done = jnp.logical_or(done, truncated)`**: `done` on the right-hand side is `done_from_body`, the boolean returned by `update_body`. `truncated` is a traced boolean from the step-count comparison. `logical_or` is branchless and vmap-safe. See [primer: masking](00_jax_primer.md#masking).
 > - **`params.max_steps`** is a static field. `truncated` is computed from `next_step >= params.max_steps`; the threshold is baked at compile time. See [primer: static vs. dynamic](00_jax_primer.md#static-dynamic).
@@ -316,7 +364,9 @@ The `done_from_body` value that feeds into the `logical_or` above is set inside 
     done = False
     if params.with_nutrition:
         done = jnp.where(new_nutrition <= 0.0, True, done)
-        
+        if params.overeating_death:
+            done = jnp.where(new_nutrition >= params.max_nutrition, True, done)
+
     if params.with_injury:
         done = jnp.where(new_injury >= params.max_injury, True, done)
     else:
@@ -331,13 +381,34 @@ The `done_from_body` value that feeds into the `logical_or` above is set inside 
 > - **`done = False`** starts as a Python bool. The first `jnp.where` that fires promotes it to a JAX boolean scalar. The `logical_or` in `jax_step` (line 548) then combines it with `truncated`, another JAX boolean. This promotion chain is standard JAX and safe.
 > - **Structural redundancy**: `done_from_body` is set by nutrition/injury thresholds inside `update_body`, but `reason` codes 2 and 4 are set by independent `jnp.where` checks in `jax_step` against the same thresholds. They are logically redundant but structurally independent — a change to one does not automatically update the other. This is the source of the `with_nutrition` / `with_injury` mismatch bugs documented below.
 
-### Code 3 / overeating: informational only
+### Code 3 / over-eating: a real death (since 2026-09-22)
 
-`reason=3` is **never** the direct cause of episode termination. The `done` flag comes from `update_body` (nutrition and injury only) and `truncated` — overeating does not contribute. Code 3 appears in `info['termination_reason']` for the triggering step, but the episode continues.
+`reason=3` **does** end the episode. `update_body` folds `new_nutrition >= max_nutrition` into
+`done` under the same static `overeating_death` gate and inside the same `with_nutrition`
+guard that the reason-3 label uses, so the label and the death are one predicate: a reason-3
+step is always a terminal step, and `real_death` — captured in `jax_step` *before* the
+truncation merge — picks it up, so the `death_penalty` fires exactly as it does for
+starvation.
+
+> **This section used to say "informational only", and that was accurate at the time.** Until
+> 2026-09-22 the reason-3 branch stamped a label from `new_satiation >= max_satiation` while
+> `done` had no over-eating branch at all. Because satiation is derived from nutrition and
+> clipped, that predicate was true on *every* step where nutrition merely sat at its ceiling
+> — routine after a feed — so live, surviving steps carried a "died of over-eating" label.
+> Recorded in KNOWN_BUGS as part of "Env doc-audit latent findings" (open 2026-06-09) and
+> pinned now by `tests/env/test_two_sided_nutrition.py`.
 
 ### `with_nutrition=False` and the starvation code
 
-The starvation check at `core.py:542` (`reason = jnp.where(new_nutrition <= 0.0, 2, reason)`) has **no guard for `with_nutrition`**. When `with_nutrition=False`, `update_body` keeps nutrition frozen at its reset value (`start_nutrition`) and never decays it. If `start_nutrition=0.0`, this check fires every step, setting `reason=2` each step even though `update_body` does not set `done=True` for starvation. The `done` flag is unaffected, but `termination_reason` reads `2` spuriously. See Suspected Code Bugs below.
+**Fixed 2026-07-23 (`8334d89`); this section records the defect and its repair.** The
+starvation check `reason = jnp.where(new_nutrition <= 0.0, 2, reason)` originally had **no
+guard for `with_nutrition`**. When `with_nutrition=False`, `update_body` keeps nutrition
+frozen at its reset value (`start_nutrition`) and never decays it, so a config with
+`start_nutrition = 0.0` stamped `reason=2` on every step even though `update_body` never set
+`done=True` for starvation — `done` was unaffected, but `termination_reason` read 2
+spuriously. Both food-axis codes now sit inside `if params.with_nutrition:` in `jax_step`
+(code 2, and code 3 nested under it since 2026-09-22), so a nutrition-disabled world cannot
+report a food-related death at all. The injury-side counterpart below is **not** fixed.
 
 ### `with_injury=False` and the injury code
 
@@ -370,17 +441,17 @@ There is no separate truncation boolean in the step output. To distinguish trunc
 | `new_injury >= params.max_injury` | No (body does; `jax_step` does not) | `update_body` line 112 | 4 |
 | `damage > 0` when `with_injury=False` | `with_injury=False` branch in `update_body` | `update_body` line 115 | 1 or 0 (not 4) |
 | `next_step >= params.max_steps` | — | `jax_step` (truncated) | 1 |
-| `new_satiation >= params.max_satiation` (overeating_death=True) | `params.overeating_death` | **none** (informational) | 3 |
+| `new_nutrition >= params.max_nutrition` (overeating_death=True) | `params.with_nutrition` **and** `params.overeating_death` | `update_body` (same predicate) | 3 |
 
 ---
 
 ## Clarifications / FAQ
 
 **Q: Does `overeating_death=True` actually terminate the episode?**
-A: **No.** The `reason=3` branch at `core.py:543–544` sets the reason code but does not set `done=True`. The `done` flag comes only from `update_body` (nutrition/injury) and `truncated`. Code 3 in telemetry is informational only.
+A: **Yes, since 2026-09-22**, and it is the shipped default. `update_body` sets `done=True` at `new_nutrition >= max_nutrition`, and `jax_step` stamps reason 3 from that same predicate, so the two cannot disagree. The death penalty fires. Before that date the answer was "no" — the label was set and `done` never was; see "Code 3 / over-eating" above.
 
 **Q: When multiple termination conditions fire in the same step, which code wins?**
-A: The highest-priority code by the `jnp.where` ordering: `4 > 3 > 2 > 1 > 0`. Example: starvation and truncation on the same step → `reason=2` (starvation overwrites truncation). Injury and starvation → `reason=4`.
+A: The highest-priority code by the `jnp.where` ordering: `5 > 4 > 3 > 2 > 1 > 0` (code 5, thermal, exists only when `thermal.enabled`). Example: starvation and truncation on the same step → `reason=2` (starvation overwrites truncation). Injury and starvation → `reason=4`.
 
 **Q: Is the death penalty applied on truncation?**
 A: Yes. `done = done_from_body OR truncated`, so truncation yields `done=True` and triggers the penalty in both reward modes. Set `death_penalty=0` for a truncation-neutral setup.
@@ -410,14 +481,14 @@ A: Yes. When `with_injury=False`, `new_injury` stays frozen at its reset value (
 A: Scalar (`[]`). Single float per step. `ParallelEnv` wraps it to shape `[num_envs]` via vmap.
 
 **Q: What's the bound on reward magnitude?**
-A: Not strictly bounded. In homeostatic mode, the per-step drive change is bounded by `sqrt(max_satiation^2 + max_injury^2) ≈ 141` with defaults. Terminal step adds `-death_penalty`. Practical range: `[-(death_penalty + 141), +141]`. Survival mode: `[-death_penalty, 1.0]` per step (minus `eating_reward_penalty`).
+A: Not strictly bounded. In homeostatic mode, the per-step drive change is bounded by the largest possible deviation on each axis, `sqrt(range_S^2 + max_injury^2) ≈ 141` with defaults (`range_S = 100`, `max_injury = 100`). Terminal step adds `-death_penalty`. Practical range: `[-(death_penalty + 141), +141]`. Survival mode: `[-death_penalty, 1.0]` per step (minus `eating_reward_penalty`).
 
 **Q: Is reward clipped inside the environment?**
 A: No. Apply clipping in the training loop if your algorithm requires it.
 
 **Q: Does `info['termination_reason']` reliably indicate the true episode-ending cause?**
 A: Mostly, with these caveats:
-- `overeating_death=True` → reason=3, but episode continues (not terminal).
+- `overeating_death=True` → reason=3 **and** a real termination (since 2026-09-22; before that the label appeared on surviving steps).
 - `with_injury=False` → damage-triggered death produces reason=0 or 1, not 4.
-- `with_nutrition=False` and `start_nutrition=0.0` → reason=2 every step (spurious).
+- `with_nutrition=False` and `start_nutrition=0.0` → reason=2 every step (spurious) — **fixed 2026-07-23**, both food codes are now guarded on `with_nutrition`.
 Prefer checking `done` for the actual termination signal; use `reason` for diagnostic labelling.

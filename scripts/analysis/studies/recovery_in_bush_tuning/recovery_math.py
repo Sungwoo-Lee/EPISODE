@@ -288,9 +288,19 @@ def rest_step_reward(injury, nutrition, base, accel, mult=1.0, streak=1):
 
     `use_homeostatic_reward` is true on the shipped default, satiation = max_satiation *
     (nutrition/max_nutrition)**1.0 at the shipped scaling factor of 1.0, so satiation and nutrition
-    are the same number here. The step heals some injury and loses one unit of nutrition, and the
-    two pull the drive in opposite directions - which is why a heal rate can be positive and the
-    step still be punished.
+    are the same number here. The step heals some injury and loses one unit of nutrition, and
+    BELOW THE SETPOINT the two pull the drive in opposite directions - which is why a heal rate
+    can be positive and the step still be punished.
+
+    2026-09-22 - THAT OPPOSITION ONLY HOLDS BELOW THE SETPOINT, and nutrition is now two-sided.
+    The axis runs 0..200 with the setpoint at 100, the middle, so above 100 the metabolic drain
+    moves nutrition TOWARD the setpoint and the drain pays instead of costing. Measured with
+    this function on the live config, injury 0 and no healing: +1.0 per rest step at nutrition
+    150, against -1.0 at 100 and -1.0 at 50. The arithmetic below is unaffected - `drive` has
+    always measured distance from SETPOINT and SETPOINT is read from the live config - but the
+    study's rest-budget argument, which assumes resting always costs drive, does not carry into
+    the overfed half of the axis. See the Limitations section of
+    docs/experiments/active/recovery_in_bush_tuning/recovery_in_bush_tuning.md.
     """
     healed = float(per_step(streak, base, accel, mult))
     return drive(nutrition, injury) - drive(nutrition - METABOLIC_COST,

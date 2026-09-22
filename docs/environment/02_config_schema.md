@@ -1310,14 +1310,25 @@ thermal.metabolic_coupling_rate
 gating key would let a config with a misspelled `thermal:` block train as if thermal were
 off. Every key in `default.yaml`'s `thermal:` block is now read.
 
-**Body-block validation** (all raise `ValueError` naming the offending key, at the point
+**Satiation / nutrition axis validation** (added 2026-09-22; raises `ValueError` naming the
+offending key, at load, in `config_loader.py` beside the existing start-range checks):
+
+| Key | Type | Validation |
+|---|---|---|
+| `body.max_satiation` | float | must be `> 0`. The homeostatic drive divides by `range_S = max(satiation_setpoint, max_satiation − satiation_setpoint)`; a zero-width axis makes that divisor 0, so the logged `drive_hunger` becomes `0/0 → NaN` **inside the jitted step**, with no traceback pointing at the config |
+| `body.max_nutrition` | float | must be `> 0`. Nutrition is clipped into `[0, max_nutrition]` and death fires at **both** ends of that interval |
+| `body.satiation_setpoint` | float | must satisfy `0 <= satiation_setpoint <= max_satiation`. A setpoint above the ceiling is unreachable — satiation is clipped below it — so the drive can never reach zero and the agent is punished forever for a state it cannot leave. All three loaded silently before this check existed |
+| `body.start_nutrition_low` / `_high` | float | conditional on `body.random_start_nutrition`; must satisfy `0 <= low <= high <= max_nutrition` |
+| `body.start_injury_low` / `_high` | float | conditional on `body.random_start_injury`; must satisfy `0 <= low <= high <= max_injury` |
+
+**Thermal-block validation** (all raise `ValueError` naming the offending key, at the point
 the key is read):
 
 | Key | Type | Validation |
 |---|---|---|
 | `thermal.temperature_setpoint` | float | must lie inside `[min_temperature, max_temperature]` — a setpoint outside the survivable band makes the body's own resting state lethal |
 | `thermal.min_temperature` | float | must be `< max_temperature` |
-| `thermal.max_temperature` | float | — (also the drive's thermal scale: the third homeostatic axis is `(T − temperature_setpoint) · max_satiation / max_temperature`, so this key sets the warmth-vs-hunger exchange rate as well as the survivable band — see CONFIG_GUIDE.md) |
+| `thermal.max_temperature` | float | — (also the drive's thermal scale: the third homeostatic axis is `(T − temperature_setpoint) · range_S / max_temperature`, where `range_S = max(satiation_setpoint, max_satiation − satiation_setpoint)` is the furthest satiation can get from its own target. So this key sets the warmth-vs-hunger exchange rate as well as the survivable band — **6.67 satiation units per degree** at the shipped `range_S = 100`. It reads `range_S` and not `max_satiation`, which matters since 2026-09-22: the ceiling doubled to 200 while the setpoint stayed at 100, so `max_satiation` would have silently doubled this factor. See CONFIG_GUIDE.md) |
 | `thermal.k_exchange` | float | `>= 0`, and `k_exchange + k_loss <= 1` |
 | `thermal.k_loss` | float | `>= 0`, and `k_exchange + k_loss <= 1` (above 1 the discrete update overshoots its own fixed point every step and body temperature oscillates instead of settling) |
 | `thermal.warming_rate_scale` | float | `> 0` (written `not (x > 0)`, so NaN is rejected), and `warming_rate_scale × (k_exchange + k_loss) <= 1`, checked per key with an error naming this key. Multiplies the body's whole per-step change when it is positive; 1.0 / 1.0 is the single-rate body |

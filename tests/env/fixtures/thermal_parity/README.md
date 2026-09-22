@@ -131,3 +131,39 @@ the previous artefact with
 the rest are **skipped, not passed**. That is the module's documented "honest coverage statement"
 (thermal plan, F6) and is unchanged by either re-baseline — read a green run as 12 worlds checked,
 not 32.
+
+## The 2026-09-22 re-baseline (second of the day) — `configs__environment__default.npz`
+
+**Cause.** Nutrition became a **two-sided** homeostatic axis: `body.max_nutrition` 100 → 200,
+`body.max_satiation` 100 → 200, `body.satiation_setpoint` staying at 100 so it is now the
+*middle* of the range rather than its ceiling, and `body.overeating_death` false → **true**.
+
+**Why this golden moved, and why nothing else did.** The observation channel is
+`state.satiation / params.max_satiation` (`src/environment/sensor.py:477`), so doubling the
+ceiling **halves** the reported Satiation value at any given nutrition. Measured field by
+field on the same 100-step rollout, before against after:
+
+| field | result |
+|---|---|
+| `obs_clean`, `obs_noisy` | **moved** — column **0 only** (Satiation), max abs diff exactly **0.5** |
+| `reward`, `drive`, `drive_before`, `drive_after` | bit-identical |
+| `done`, `termination_reason`, `n_steps` | bit-identical |
+| `key`, `seed` | bit-identical — no PRNG drift |
+| `obs_pos`, `res_pos`, `animal_pos` and all three `*_property_sampled` | bit-identical |
+| `obs_dim`, `obs_breakdown_total` | unchanged (52) |
+
+The reward being bit-identical is the load-bearing observation. At
+`nutrition_to_satiation_scaling_factor: 1.0` satiation equals nutrition on **both** sides of
+the change (`100·N/100` and `200·N/200`), so the body trajectory over this rollout is
+unchanged; only the *reported* fraction moved. The two worlds can first diverge once nutrition
+passes 100, which the old ceiling clipped and the new one does not — this rollout never does.
+
+**How it was regenerated.** `scripts/fixtures/generate_thermal_parity_fixtures.py::generate_fixture()`
+on this single config, CPU backend. `main()` was deliberately not run: it walks
+`collect_configs()` and would rewrite all twelve goldens and create roughly twenty more.
+
+**The other eleven goldens are untouched**, and that is the gate rather than a convenience:
+each is a standalone config with its own `body:` block and no `extends:`, so none of them
+inherits from `configs/environment/default.yaml` and none could move. If one ever does after a
+`default.yaml` edit, that edit has escaped its blast radius and the change is wrong.
+

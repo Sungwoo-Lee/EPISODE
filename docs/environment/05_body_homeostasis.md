@@ -6,7 +6,9 @@
 
 ## What this doc is about
 
-The agent has an internal body — a small physiological simulation that runs inside every step of the environment. Three numbers matter: **nutrition** (how much energy the agent has stored), **satiation** (a subjective sense of fullness derived from nutrition), and **injury level** (accumulated physical damage). The agent dies of starvation when nutrition hits zero, or of injury when accumulated damage reaches its maximum. In between, drive-reduction reward pushes the agent to keep its body close to a healthy setpoint.
+The agent has an internal body — a small physiological simulation that runs inside every step of the environment. Three numbers matter: **nutrition** (how much energy the agent has stored), **satiation** (a subjective sense of fullness derived from nutrition), and **injury level** (accumulated physical damage). The agent dies of starvation when nutrition hits zero, of over-eating when nutrition reaches its ceiling, or of injury when accumulated damage reaches its maximum. In between, drive-reduction reward pushes the agent to keep its body close to a healthy setpoint.
+
+**Food is a two-sided axis (since 2026-09-22).** Nutrition runs `0..200` with the healthy setpoint at **100 — the middle, not the top**. Too much food is punished exactly as much as too little, and both ends are lethal. Before that date the setpoint *was* the ceiling, so more food was always better and the only thing to regulate was not running out.
 
 A fourth number, **body temperature**, exists only when the temperature system is switched on (`thermal.enabled: true`). It drifts toward the temperature of the cell the agent is standing on while the agent's own physiology pulls it back toward a comfortable setpoint, and leaving its survivable band ends the episode with termination code 5. On every config that does not enable the temperature system it is a constant zero that nothing reads — see [Body Temperature](#body-temperature-thermal) below.
 
@@ -80,9 +82,11 @@ number, so an arbitrarily large drain lands on exactly `0.0` and dies of starvat
 
 **Starvation death**: triggered inside `update_body` at `core.py:108–110` when `new_nutrition <= 0.0` (termination reason code 2).
 
-**Starvation timeline with defaults** (`max_nutrition=100`, `metabolic_cost=1.0`, net eating gain=5): the agent starves in exactly 100 steps without eating; needs to eat at least once every 5 steps to maintain nutrition.
+**Starvation timeline with defaults** (`max_nutrition=200`, `start_nutrition=100` — the setpoint — `metabolic_cost=1.0`, net eating gain=5): from the shipped start the agent starves in exactly 100 steps without eating, and in 200 steps from a completely full body; it needs to eat at least once every 5 steps to hold its level. Eating *more* often than that is not free — it pushes nutrition above the setpoint, which costs drive and eventually kills.
 
-**Overeating death**: when `overeating_death=True`, the termination-reason code 3 is set in `jax_step` at `core.py:543–544` when `new_satiation >= max_satiation`. **However, this does not set `done=True`** — it is telemetry only. See FAQ.
+**Over-eating death**: when `overeating_death=True` (the shipped default since 2026-09-22), `update_body` sets `done=True` when `new_nutrition >= max_nutrition`, and `jax_step` stamps termination-reason code 3 on the same predicate. It is a **real death**: it is captured before the truncation merge, so the `death_penalty` fires exactly as it does for starvation. Both ends of the food axis are wired identically — starvation at `new_nutrition <= 0.0`, over-eating at `new_nutrition >= max_nutrition`.
+
+> Until 2026-09-22 this was telemetry only, and wrong telemetry at that: reason 3 was stamped from `new_satiation >= max_satiation` while `done` had no over-eating branch at all, so an agent that merely reached full satiation carried a "died of over-eating" label on steps it survived. Pinned now by `tests/env/test_two_sided_nutrition.py`.
 
 ---
 
@@ -302,15 +306,17 @@ def calculate_drive(satiation, injury, params):
 > - Both satiation and injury use their raw scales (0–100 by default). The two axes are *not* normalised before taking the norm, so injury and satiation contribute equally in absolute units. The maximum possible drive is `sqrt(100^2 + 100^2) ≈ 141.4`.
 
 ```
-target  = [params.setpoint, 0.0]          # ideal state: full satiation, zero injury
+target  = [params.setpoint, 0.0]          # ideal state: satiation AT setpoint, zero injury
 current = [satiation, injury]
 drive   = ||current - target||_2
         = sqrt((satiation - setpoint)^2 + injury^2)
 ```
 
-Euclidean distance in a 2D homeostatic space (satiation axis, injury axis). Both axes use raw values (0–100 range with defaults), so the maximum possible drive is approximately `sqrt(100^2 + 100^2) ≈ 141.4`.
+Euclidean distance in a 2D homeostatic space (satiation axis, injury axis). Both axes use raw values, and the largest deviation either can show is 100 (satiation `0..200` about a setpoint of 100; injury `0..100` about 0), so the maximum possible drive is approximately `sqrt(100^2 + 100^2) ≈ 141.4`.
 
-**Default setpoint**: `params.setpoint = 100 = max_satiation` (fully satiated, zero injury = optimal).
+**Default setpoint**: `params.setpoint = 100`, which since 2026-09-22 is the **middle** of `[0, max_satiation]` (`max_satiation = 200`), not the ceiling. Satiation 50 above the setpoint costs exactly what satiation 50 below it costs — the term is squared, so its sign does not survive.
+
+**Every axis is 100 drive units from its own death, and that is deliberate.** Satiation is 100 from the setpoint at both `N=0` (starvation) and `N=200` (over-eating); injury is 100 from zero at `max_injury`; body temperature is 100 satiation-equivalent units from the setpoint at ±15 °C, because of the exchange factor below. So all three axes weigh the same at full scale, and each one's full-scale deviation equals `death_penalty` (100). Nothing in the code enforces this — it is a property of the shipped numbers, and changing any of `max_satiation`, `satiation_setpoint`, `max_injury`, `max_temperature` or `death_penalty` breaks it.
 
 **Inputs to `calculate_drive`**: called twice per step in `jax_step` (`core.py:560–562`) — once with the **previous** state, once with the **new** state — to compute reward as drive reduction:
 
@@ -323,9 +329,18 @@ reward_homeostatic = prev_drive - curr_drive   # positive = moved toward homeost
 **Logging components**: `drive_hunger` and `drive_injury` (written to `info`) are squared, normalised sub-components computed separately in `jax_step` at `core.py:556–558`:
 
 ```
-drive_hunger = (1 - new_satiation / max_satiation)^2
+drive_hunger = ((new_satiation - setpoint) / range_S)^2
 drive_injury = (new_injury / max_injury)^2
 ```
+
+where `range_S = max(satiation_setpoint, max_satiation - satiation_setpoint)` — the furthest
+satiation can get from its own setpoint, **not** the ceiling. The two are the same number only
+while the setpoint sits at the ceiling, which is how every config before 2026-09-22 was
+written; at the shipped `max_satiation: 200` / `satiation_setpoint: 100` the ceiling is twice
+`range_S`. `drive_hunger` used to read `(1 - new_satiation / max_satiation)^2`, which is the
+same expression only in that old case — under the two-sided axis a perfectly regulated agent
+would have logged 0.25 rather than 0, and an agent eating itself to death would have logged a
+*falling* hunger drive.
 
 These are for analysis logging **only** — they are not used in the reward formula. The actual reward uses the raw Euclidean drive via `calculate_drive`.
 
@@ -336,19 +351,24 @@ satiation units the other two already use:
 
 ```
 drive = || ( satiation - setpoint,  injury,
-             (T - temperature_setpoint) * max_satiation / max_temperature ) ||
+             (T - temperature_setpoint) * range_S / max_temperature ) ||
 ```
 
 The split is a **static** Python branch on `params.thermal_enabled`, and the thermal-off
 side is the two-axis expression above unchanged — see
 [06_reward_and_termination.md](06_reward_and_termination.md#the-third-axis--body-temperature)
 for the full statement, including why the third axis is scaled *up* rather than the other
-two scaled down (it is what keeps `death_penalty` calibrated). `info` gains a matching
+two scaled down (it is what keeps `death_penalty` calibrated). The factor is
+`range_S / max_temperature`, which at the shipped numbers is **100 / 15 = 6.67** — one degree
+of body-temperature deviation costs the same drive as 6.67 satiation units. That number is
+unchanged by the two-sided axis, and that is the whole point of using `range_S` here: the
+ceiling doubled to 200, so `max_satiation / max_temperature` would have silently doubled the
+weight of temperature against hunger to 13.33 with no config saying so. `info` gains a matching
 `drive_thermal = ((T - temperature_setpoint) / max_temperature)^2` — the same
 squared-normalised logging convention as its two siblings, and likewise not part of the
 reward — emitted only when thermal is on.
 
-**Drive is not normalised**: raw values (0–100) are used. Both `drive_hunger` and `drive_injury` are dimensionless `[0, 1]` by construction, but the reward-driving `drive` value is in the same units as the body state variables. Reconfiguring `max_satiation` or `max_injury` changes the drive scale.
+**Drive is not normalised**: raw values are used (satiation `0–200`, injury `0–100` with the shipped config). Both `drive_hunger` and `drive_injury` are dimensionless `[0, 1]` by construction — `drive_hunger` because it divides by `range_S`, which is by definition the largest deviation the axis can reach — but the reward-driving `drive` value is in the same units as the body state variables. Reconfiguring `max_satiation`, `satiation_setpoint` or `max_injury` changes the drive scale.
 
 ---
 
@@ -610,7 +630,9 @@ All three flags are static (`pytree_node=False` in `EnvParams`), so changing the
 ## Clarifications / FAQ
 
 **Q: Does `overeating_death=True` actually kill the agent?**
-A: **No — this is a latent bug.** `core.py:543–544` only sets `reason=3` when `new_satiation >= max_satiation`, but **never sets `done=True`**. The only `done` triggers are nutrition ≤ 0, injury ≥ max_injury (via `update_body`), and truncation. An agent with `overeating_death=True` that reaches `satiation == max_satiation` will have `termination_reason=3` reported but the episode continues. Treat this as telemetry, not a real termination. To add actual overeating death, add `done = jnp.where(new_satiation >= params.max_satiation, True, done)` inside `update_body` before the return statement.
+A: **Yes, since 2026-09-22**, and it is the shipped default. `update_body` sets `done=True` when `new_nutrition >= max_nutrition`, under a static Python gate on the flag, and `jax_step` stamps `termination_reason=3` from the *same* predicate. Because `done` is captured before the truncation merge, the `death_penalty` fires — the episode ends exactly the way starvation ends it.
+
+> **This answer used to say "No — latent bug", and that was correct at the time.** The key set `reason=3` from `new_satiation >= max_satiation` and never touched `done`, so an agent at full satiation carried a "died of over-eating" label on live steps while the episode carried on. Both halves were fixed together: the label now reads the same nutrition predicate that ends the episode, so a reason-3 step is structurally always a terminal step. Regression tests in `tests/env/test_two_sided_nutrition.py`.
 
 **Q: What is `applied_inc` exactly and why does it gate recovery?**
 A: `applied_inc = temp_buffer[0]` is the front of the ring buffer **after** this step's damage has been added (`core.py:73–76`). If the agent took damage on this step, then `inc > 0` → `applied_inc > 0` → `can_recover=False`. The gate `applied_inc <= 0` prevents recovery from cancelling fresh pain — resting through a predator attack still leaves you hurt.
@@ -652,7 +674,7 @@ A: Yes. `calculate_drive` doesn't inspect the flags; it always takes `(satiation
 A: Yes at termination: `reward = drive_delta - death_penalty`. With `death_penalty=100` (default) the terminal step typically carries a large negative reward. The drive itself can jump up to ~141 on the death step, but the penalty dominates. Some algorithms (Dreamer-style) are sensitive to this spike — consider scaling `death_penalty` when reward variance matters.
 
 **Q: Setpoint defaults — is it always `max_satiation`?**
-A: Yes by convention (`configs/environment/default.yaml` has `satiation_setpoint: 100 == max_satiation`). Setting it lower models an agent whose "ideal" is partial fullness — rarely used.
+A: **No, not since 2026-09-22.** `configs/environment/default.yaml` ships `satiation_setpoint: 100` with `max_satiation: 200`, so the setpoint is the middle of the range and partial fullness *is* the ideal. It was the ceiling in every config written before that date, which is why so much of the code and these docs used `max_satiation` where they meant "the furthest satiation can be from target" — see `range_S` above. A setpoint at the ceiling is still a legal config and every such world behaves bit-for-bit as it did.
 
 **Q: Can `nutrition_to_satiation_scaling_factor = 0` work?**
 A: `fullness_ratio^0 = 1` for all positive fullness, so `new_satiation = max_satiation` always. Not useful. The formula is undefined for `k<0` when `nutrition=0` (0^negative), so keep `k > 0`.

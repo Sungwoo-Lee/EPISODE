@@ -46,6 +46,29 @@ def move_agent(pos: jnp.ndarray, action: int, obs_pos: jnp.ndarray, obs_blocking
     final_pos = jnp.where(is_collision, pos, new_pos)
     return final_pos, is_collision
 
+def satiation_deviation_range(params):
+    """`range_S` — the furthest satiation can get from its own setpoint.
+
+    Satiation lives on `[0, max_satiation]` and is pulled toward
+    `params.setpoint`, so the largest deviation the axis can ever show is
+    `max(setpoint - 0, max_satiation - setpoint)`. THIS, not `max_satiation`, is
+    the axis's deviation scale.
+
+    The distinction had no teeth until 2026-09-22 because every config shipped
+    `satiation_setpoint == max_satiation`, i.e. the setpoint WAS the ceiling, so
+    "the ceiling" and "the furthest satiation can be from target" were the same
+    number and `max_satiation` stood in for both. With the two-sided nutrition
+    axis (setpoint 100 in the middle of [0, 200]) they differ by a factor of two,
+    and anything that kept using the ceiling would silently count double.
+
+    At `setpoint == max_satiation` this returns `max_satiation` exactly
+    (`max(S, 0) == S`), so every config that predates the two-sided axis is
+    untouched — pinned by tests/env/test_two_sided_nutrition.py.
+    """
+    # `params.setpoint - 0.0` written as `params.setpoint`: satiation's floor is 0.
+    return jnp.maximum(params.setpoint, params.max_satiation - params.setpoint)
+
+
 def calculate_drive(satiation, injury, params, body_temp=None):
     """Calculates homeostatic drive (Euclidean distance to setpoint).
 
@@ -59,18 +82,26 @@ def calculate_drive(satiation, injury, params, body_temp=None):
     WHY THE THIRD AXIS IS SCALED UP RATHER THAN THE OTHER TWO SCALED DOWN. The
     design writes the three-axis drive normalised per axis:
 
-        ||( (S - S_set)/max_satiation, I/max_injury, (T - T_set)/max_temperature )||
+        ||( (S - S_set)/range_S, I/max_injury, (T - T_set)/max_temperature )||
 
-    Writing that literally would divide EVERY reward in the project by
-    `max_satiation` (= 100) while `death_penalty` (= 100) stayed put — a 100x
-    change in the relative weight of dying, firing on thermal-off configs too.
-    Multiplying that whole expression through by `max_satiation` gives the
+    Writing that literally would divide EVERY reward in the project by the
+    satiation deviation range (= 100) while `death_penalty` (= 100) stayed put —
+    a 100x change in the relative weight of dying, firing on thermal-off configs
+    too. Multiplying that whole expression through by that range gives the
     algebraically identical drive in today's units: axes one and two are left
     exactly as they are, and the temperature axis is scaled by
-    `max_satiation / max_temperature`. With the design's numbers that factor is
+    `range_S / max_temperature`. With the design's numbers that factor is
     100/15 = 6.67, i.e. one degree of body-temperature deviation costs the same
     drive as 6.67 satiation units. Equal FRACTIONAL deviation on any axis pulls
     equally, which is what the design asked for.
+
+    `range_S` is `satiation_deviation_range(params)`, NOT `max_satiation`. The
+    two coincide only while the setpoint sits at the ceiling; once the setpoint
+    is the middle of the range (the two-sided nutrition axis, 2026-09-22) the
+    ceiling is twice the reachable deviation and using it would double the
+    weight of temperature against hunger without any config saying so. See that
+    helper's docstring; the substitution is a no-op for every config whose
+    setpoint is its ceiling.
 
     `body_temp` is required when thermal is on and ignored when it is off.
     """
@@ -86,7 +117,7 @@ def calculate_drive(satiation, injury, params, body_temp=None):
                 "post-step body temperature at the call site."
             )
         t_axis = (body_temp - params.temperature_setpoint) * (
-            params.max_satiation / params.max_temperature)
+            satiation_deviation_range(params) / params.max_temperature)
         target = jnp.array([params.setpoint, 0.0, 0.0])
         current = jnp.stack([satiation, injury, t_axis], axis=-1)
         return jnp.linalg.norm(current - target, axis=-1)
@@ -139,6 +170,8 @@ def update_body(state: EnvState, info: dict, params: EnvParams, new_agent_pos: j
          rest_streak, body_temp, thermal_death, done)
 
         `done` is REAL DEATH only — starvation / over-eating / injury / thermal.
+        Over-eating became true here on 2026-09-22; before that the phrase was
+        aspirational, since `done` had no over-eating branch (see the block below).
         `thermal_death` is returned separately because `jax_step` needs the
         specific cause to emit termination reason 5; recomputing the same
         out-of-range predicate at the call site would be a second copy of it.
@@ -296,8 +329,28 @@ def update_body(state: EnvState, info: dict, params: EnvParams, new_agent_pos: j
     # Termination check (Based on Nutrition and Injury)
     done = False
     if params.with_nutrition:
+        # BOTH ENDS OF THE NUTRITION AXIS ARE LETHAL, and they are wired the same
+        # way on purpose. Starvation is `N <= 0`; over-eating is `N >= max_nutrition`
+        # under the `body.overeating_death` gate. Both are folded into `done` HERE,
+        # inside update_body, so that `real_death` — which jax_step captures from this
+        # return value BEFORE the truncation merge — picks either up and the
+        # death_penalty fires. The over-eating half was missing until 2026-09-22: the
+        # key set termination reason 3 in jax_step and nothing else, so the episode
+        # carried on with a "died of over-eating" label on ordinary live steps
+        # (KNOWN_BUGS, "Env doc-audit latent findings", open since 2026-06-09).
+        #
+        # The `>=` matches the ceiling the clip above lands on, exactly as the
+        # starvation test reads the clipped value at the 0.0 floor: `new_nutrition` is
+        # clipped into [0, max_nutrition], so an arbitrarily large over-feed lands on
+        # exactly max_nutrition and dies there rather than slipping past.
+        #
+        # STATIC Python gate on `params.overeating_death` (a non-pytree field): with it
+        # false this branch contributes no operation to the traced graph, so every
+        # config that predates the two-sided axis is graph-identical here.
         done = jnp.where(new_nutrition <= 0.0, True, done)
-        
+        if params.overeating_death:
+            done = jnp.where(new_nutrition >= params.max_nutrition, True, done)
+
     if params.with_injury:
         done = jnp.where(new_injury >= params.max_injury, True, done)
     else:
@@ -926,7 +979,7 @@ def jax_step(state: EnvState, action: int, params: EnvParams) -> tuple[EnvState,
     }
     
     new_satiation, new_nutrition, new_injury, next_injury_buffer, next_nociception_history, new_rest_streak, new_body_temp, thermal_death, done = update_body(state, info, params, new_agent_pos)
-    # `done` here is REAL DEATH only (starvation / over-eating / injury). update_body does not know
+    # `done` here is REAL DEATH only (starvation / over-eating / injury / thermal). update_body does not know
     # about the step clock, so it never fires on a timeout. Capture it BEFORE the truncation merge
     # below so the death_penalty can be gated on real death and NOT on surviving to the step limit.
     # Finding B — see docs/develop/active/diagnosis/v3_pipeline_correctness_diagnosis.md and
@@ -944,8 +997,15 @@ def jax_step(state: EnvState, action: int, params: EnvParams) -> tuple[EnvState,
     reason = jnp.where(truncated, 1, reason)
     if params.with_nutrition:
         reason = jnp.where(new_nutrition <= 0.0, 2, reason)
-    if params.overeating_death:
-        reason = jnp.where(new_satiation >= params.max_satiation, 3, reason)
+        # Reason 3 reads the SAME predicate `update_body` folds into `done`
+        # (`new_nutrition >= max_nutrition`, under the same static
+        # `overeating_death` gate, inside the same `with_nutrition` guard). It used
+        # to read `new_satiation >= max_satiation` while `done` had no over-eating
+        # branch at all, so a label could be stamped on a step the episode survived
+        # — and, with the setpoint at the ceiling, on most steps. Sharing one
+        # predicate is what makes that structurally impossible.
+        if params.overeating_death:
+            reason = jnp.where(new_nutrition >= params.max_nutrition, 3, reason)
     reason = jnp.where(new_injury >= params.max_injury, 4, reason)
     # AFTER the truncation line, deliberately: later assignments in this chain win,
     # so a thermal death landing on the final step reports 5 rather than 1 — the same
@@ -965,8 +1025,39 @@ def jax_step(state: EnvState, action: int, params: EnvParams) -> tuple[EnvState,
     reward_extrinsic = 0.0
     
     # Calculate components for analysis
-    # drive = (1 - satiation/100)^2 + (injury/100)^2
-    drive_hunger = jnp.power(1.0 - (new_satiation / params.max_satiation), 2)
+    # drive_hunger = ((satiation - setpoint)/range_S)^2 ; drive_injury = (injury/max_injury)^2
+    #
+    # TWO-SIDED against the SETPOINT, not distance from the ceiling. It read
+    # `(1 - satiation/max_satiation)^2` until 2026-09-22, which is the same thing
+    # only while the setpoint IS the ceiling. Once the setpoint is the middle of
+    # the range a perfectly regulated agent logged 0.25 instead of 0, and an agent
+    # eating itself to death logged a FALLING hunger drive.
+    #
+    # LOGGED DIAGNOSTIC ONLY. The reward goes through `calculate_drive`, which
+    # already reads `params.setpoint` and is already two-sided; nothing here feeds
+    # it. `range_S` is the same deviation scale that function uses, so the two stay
+    # in step. Note the sibling convention (see the `drive_thermal` comment below):
+    # all three keys are SQUARED NORMALISED deviations, which is a different
+    # quantity from the unsquared satiation-unit axes the drive norm consumes.
+    #
+    # WHY IT IS WRITTEN AS A DIFFERENCE OF TWO QUOTIENTS rather than the obvious
+    # `((S - setpoint) / range_S) ** 2`. This series is compared byte-for-byte
+    # against fixtures captured before the two-sided axis existed
+    # (tests/env/test_metabolic_coupling.py), and those worlds have
+    # `setpoint == max_satiation == range_S`, where the old expression was
+    # `1 - S/max_satiation`. Dividing first makes `setpoint / range_S` exactly 1.0
+    # there, so this term becomes `S/max_satiation - 1.0` — the exact IEEE
+    # negation of the old one, and identical after squaring. The algebraically
+    # equal `(S - setpoint) / range_S` is NOT: it rounds differently, and the
+    # disagreement is broad rather than one unlucky value. `math-reviewer` swept
+    # every float32 satiation on a 0.01 grid across 11 ceilings on 2026-09-22 and
+    # found 10,588-12,607 of the 22,001 values per ceiling — roughly HALF the
+    # axis — differing by up to 2 ULP. A diagnostic drifting by an ULP or two
+    # harms nothing, but it costs a byte-parity gate its meaning on half its
+    # inputs, so pay the extra division.
+    _range_S = satiation_deviation_range(params)
+    drive_hunger = jnp.power(
+        (new_satiation / _range_S) - (params.setpoint / _range_S), 2)
     drive_injury = jnp.power(new_injury / params.max_injury, 2)
     
     if params.use_homeostatic_reward:
@@ -980,7 +1071,10 @@ def jax_step(state: EnvState, action: int, params: EnvParams) -> tuple[EnvState,
         curr_drive = calculate_drive(new_satiation, new_injury, params,
                                      new_body_temp)
         reward_homeostatic = prev_drive - curr_drive
-        # Death penalty gated on REAL DEATH only (starvation / over-eating / injury), NOT on `done`.
+        # Death penalty gated on REAL DEATH only (starvation / over-eating / injury /
+        # thermal), NOT on `done`. Over-eating reaches this gate for the first time on
+        # 2026-09-22: until then the key stamped reason 3 without ever setting `done`,
+        # so the penalty it names could not fire.
         # Timeout / truncation (reason == 1) keeps just the normal homeostatic step value. Finding B.
         reward_homeostatic = jnp.where(real_death, reward_homeostatic - params.death_penalty, reward_homeostatic)
     else:

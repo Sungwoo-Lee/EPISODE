@@ -115,7 +115,14 @@ environment:
 body:
   random_start_nutrition: true
   start_nutrition_low: 0
-  start_nutrition_high: 100
+  # 2026-09-22: 100 -> 200, following nutrition becoming a TWO-SIDED axis in default.yaml
+  # (0-200 with the setpoint at 100, and death at both ends). This file pins its own value and
+  # levels 04, 05 and 06 extend it, so these four are the ONLY worlds that randomise nutrition
+  # at all -- leaving 100 here would have kept every randomised episode starting at or below
+  # the setpoint, so the overfed half of the axis would only ever be reached by the agent's own
+  # eating and the new overeating death would be close to unreachable early in training.
+  # The draw is now the full reachable span: an episode may begin starving OR overfed.
+  start_nutrition_high: 200
   random_start_injury: true
   start_injury_low: 0
   start_injury_high: 100

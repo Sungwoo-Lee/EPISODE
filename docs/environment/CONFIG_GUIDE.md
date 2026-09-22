@@ -176,13 +176,17 @@ When you randomize the agent's starting nutrition or injury, you can now set the
 body:
   random_start_nutrition: true
   start_nutrition_low: 0
-  start_nutrition_high: 100     # full range; the old code was locked to the upper half
+  start_nutrition_high: 200     # the FULL axis, so a start may be overfed as well as starving
   random_start_injury: true
   start_injury_low: 0
   start_injury_high: 100
 ```
 
-With the flag `false` the range keys are not read (and need not be present). `default.yaml` carries them explicitly with the flags off (inert).
+With the flag `false` the range keys are not read (and need not be present). `default.yaml` carries them explicitly with the flags off (inert). Validated at load: `0 <= low <= high <= max_nutrition` (and the injury counterpart against `max_injury`).
+
+**Why the nutrition range goes all the way to 200.** Since 2026-09-22 nutrition is a *two-sided* axis — it runs `0..max_nutrition` (200) with the homeostatic target `body.satiation_setpoint` at **100, the middle** — so too much food is punished exactly as much as too little and both ends are lethal. Capping the draw at the setpoint would mean every randomised episode began at-or-below target, so the over-eating half of the problem (and the over-eating death) would be nearly unreachable early in training. The only worlds that randomise nutrition are `experiment/basic/03-random_init_10x10.yaml` and the levels 04–06 that extend it, and all four draw the full span.
+
+**Three load-time checks on the axis itself** (added 2026-09-22, raising `ValueError` naming the key): `body.max_satiation > 0`, `body.max_nutrition > 0`, and `0 <= body.satiation_setpoint <= body.max_satiation`. The drive divides by `range_S = max(satiation_setpoint, max_satiation − satiation_setpoint)`, so a zero-width axis turns the logged hunger drive into a NaN **inside the jitted step**, where the error says nothing about the config; and a setpoint above the ceiling is unreachable, so the drive could never reach zero. Both configurations loaded silently before the check.
 
 ### 3.5 `eval_seeds` generator spec
 
@@ -477,20 +481,24 @@ task. Mechanism and the pinned update ordering:
 **`max_temperature` has a second job: it is the warmth-vs-hunger exchange rate.** From
 Stage 4 the homeostatic drive has three axes, and the third one is body temperature. The
 drive is the Euclidean norm in *satiation units* — the two existing axes are untouched and
-the thermal axis is scaled up by `max_satiation / max_temperature`:
+the thermal axis is scaled up by `range_S / max_temperature`:
 
 ```
 drive = || ( satiation - satiation_setpoint,  injury,
-             (T - temperature_setpoint) * max_satiation / max_temperature ) ||
+             (T - temperature_setpoint) * range_S / max_temperature ) ||
+
+where  range_S = max(satiation_setpoint, max_satiation - satiation_setpoint)
 ```
 
-That is the design's per-axis-normalised drive multiplied through by `max_satiation`, and
+`range_S` is the furthest satiation can get from its own target (`core.py::satiation_deviation_range`) — **not** the ceiling. The two are the same number only while the setpoint sits at the ceiling, which is how every config written before 2026-09-22 looked; the shipped world now has `max_satiation: 200` with `satiation_setpoint: 100`, so `range_S` is 100 while the ceiling is 200. Using the ceiling here would have doubled the exchange factor to 13.33 with no config key recording it.
+
+That is the design's per-axis-normalised drive multiplied through by `range_S`, and
 the multiplication is not cosmetic: writing the normalised form literally would divide
 **every reward in the project** by 100 while `death_penalty` stayed at 100, changing the
 relative weight of dying by two orders of magnitude on thermal-**off** configs too. With
-the shipped numbers (`max_satiation: 100`, `max_temperature: 15`) the factor is
+the shipped numbers (`range_S = 100`, `max_temperature: 15`) the factor is
 **100/15 = 6.67**, i.e. **one degree of body-temperature deviation costs the same drive as
-6.67 satiation units**. Nothing else in the config makes that exchange rate visible, so
+6.67 satiation units** — the same value every thermal run to date has used. Nothing else in the config makes that exchange rate visible, so
 halving `max_temperature` does not merely narrow the survivable band — it doubles how much
 the agent is paid to stay warm. On `thermal.enabled: false` the drive is the two-axis
 expression it has always been, character for character, behind a static Python branch
