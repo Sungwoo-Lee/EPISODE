@@ -76,9 +76,18 @@ def _payload(n, groups=(), prefix="Ch"):
 TERRAIN = {"name": "Terrain", "channels": [0, 1, 2]}
 
 #: The 8-channel reference display: the standard vision layout, with the three
-#: terrain channels merged. `PANEL_MAP_SLOTS` is anchored to THIS rather than to
-#: `default.yaml`, which now ships ONE vision channel and draws one map -- the
-#: "equals what the shipped config draws" formulation would fail by construction.
+#: terrain channels merged. It draws SIX maps.
+#:
+#: OLFACTION'S slot count is anchored to its reference (5 = 5). VISION'S IS NOT,
+#: since 2026-09-22: three slots against this reference's six maps, chosen by the
+#: user so vision's squares are large enough to read a position off. This display
+#: is therefore still the yardstick -- it is what the divergence is measured
+#: AGAINST -- but it is no longer what vision's constant equals. See
+#: `test_olfactions_slots_are_anchored_and_visions_are_a_deliberate_choice`.
+#:
+#: It is kept in preference to `default.yaml`, which ships ONE vision channel and
+#: draws one map, so an "equals what the shipped config draws" formulation would
+#: fail by construction for either sense.
 REFERENCE_V8 = _payload(8, groups=(TERRAIN,))
 
 
@@ -240,13 +249,39 @@ def test_no_channel_index_is_spelled_as_a_constant_in_the_painter():
 # ---------------------------------------------------------------------------
 # 4. the panel is a fixed size
 # ---------------------------------------------------------------------------
-def test_the_slot_constant_is_what_the_reference_display_actually_draws():
-    """`PANEL_MAP_SLOTS` is anchored to an explicit 8-channel reference display,
-    NOT to `default.yaml` -- the shipped base now runs ONE vision channel."""
-    vis = _display("Visual", 8, REFERENCE_V8)
-    assert len(LB.map_plan("Visual", vis)) == LB.PANEL_MAP_SLOTS["Visual"] == 6
+def test_olfactions_slots_are_anchored_and_visions_are_a_deliberate_choice():
+    """WHAT THIS CONSTANT MEANS CHANGED ON 2026-09-22, and the change is here.
+
+    It used to be ANCHORED for both senses: `PANEL_MAP_SLOTS[sense]` equalled the
+    map count the reference world draws. Olfaction still is -- five channels,
+    five maps, five slots.
+
+    Vision is now deliberately BELOW its reference count: three slots against the
+    six maps a full eight-channel world draws. Chosen by the user so vision's
+    squares are large enough to read a POSITION off -- at six slots they were
+    15 px across in a panel whose height allowed 32 px, because a slot is a sixth
+    of the half-strip and a map can never be wider than its slot.
+
+    THE COST IS REAL AND IS STATED RATHER THAN HIDDEN: a full eight-channel world
+    now draws three of its six maps past the panel edge. That is allowed (the
+    no-ceiling decision below) and warned about, but it is a bill that comes due
+    if the project returns to eight vision channels.
+
+    So the anchoring is asserted for olfaction and explicitly NOT for vision, and
+    the divergence is pinned with its direction so it cannot widen unnoticed.
+    """
     olf = _configured("Olfaction", 5)
     assert len(LB.map_plan("Olfaction", olf)) == LB.PANEL_MAP_SLOTS["Olfaction"] == 5
+
+    vis = _display("Visual", 8, REFERENCE_V8)
+    reference_maps = len(LB.map_plan("Visual", vis))
+    assert reference_maps == 6, "the reference world still draws six vision maps"
+    assert LB.PANEL_MAP_SLOTS["Visual"] == 3, (
+        "vision's slot count is a legibility choice, not the reference count")
+    assert LB.PANEL_MAP_SLOTS["Visual"] < reference_maps, (
+        "vision is deliberately sized BELOW its reference count; if this becomes "
+        ">= the reference again the trade has been undone and the docstring above "
+        "no longer describes the code")
 
 
 @pytest.mark.parametrize("n", [1, 8, 12])
@@ -264,29 +299,35 @@ def test_a_configured_run_drawing_more_maps_than_there_are_slots_does_NOT_raise(
     maps are drawn past the panel edge and nothing refuses the config. The
     ABSENCE of a refusal is the decision, so it is asserted explicitly -- if this
     test ever fails, a limit crept back in."""
-    over = _configured("Visual", 12, [TERRAIN])      # 1 + 9 = 10 maps into 6 slots
+    over = _configured("Visual", 12, [TERRAIN])      # 1 + 9 = 10 maps into 3 slots
     assert len(LB.map_plan("Visual", over)) == 10
-    assert LB.panel_map_slots("Visual", over) == 6   # must not raise
+    assert LB.panel_map_slots("Visual", over) == 3   # must not raise
 
 
 def test_an_over_slot_run_warns_naming_both_numbers(caplog):
     """Nothing is refused, but the silence goes. The warning names how many maps
     will be drawn and how many slots exist, so an accidental edit -- deleting the
-    Terrain group takes vision from 6 maps to 8 -- is discoverable."""
-    over = _configured("Visual", 8)                  # no group: 8 maps into 6 slots
+    Terrain group takes vision from 6 maps to 8 -- is discoverable.
+
+    SINCE 2026-09-22 VISION HAS THREE SLOTS, so this warning now fires for the
+    ordinary eight-channel world too, not only for an accident. That is the
+    stated cost of the smaller slot count, and this warning is the thing that
+    keeps it visible instead of silent."""
+    over = _configured("Visual", 8)                  # no group: 8 maps into 3 slots
     with caplog.at_level("WARNING"):
-        assert LB.panel_map_slots("Visual", over) == 6
+        assert LB.panel_map_slots("Visual", over) == 3
     text = caplog.text
-    assert "8" in text and "6" in text, (
+    assert "8" in text and "3" in text, (
         f"the warning must name both numbers. Got: {text!r}")
 
 
 def test_the_blank_space_at_one_channel_is_the_full_panel_minus_one_map():
-    """A one-channel run draws ONE map and leaves five slots blank. The panel is
-    six slots wide either way; what changes is how much of it is filled."""
+    """A one-channel run draws ONE map and leaves the rest of the panel blank.
+    The panel is a fixed number of slots wide either way; what changes is how
+    much of it is filled -- TWO blank slots since 2026-09-22, five before."""
     one = _configured("Visual", 1)
     assert len(LB.map_plan("Visual", one)) == 1
-    assert LB.panel_map_slots("Visual", one) == 6
+    assert LB.panel_map_slots("Visual", one) == 3
 
 
 # ---------------------------------------------------------------------------
@@ -311,8 +352,8 @@ def test_a_legacy_eight_channel_recording_is_sized_to_eight_not_six():
 
 def test_a_legacy_one_channel_recording_is_still_sized_to_the_full_panel():
     """`max(slots, drawn)` -- so a narrow legacy recording does not get a narrow
-    panel either."""
-    assert LB.panel_map_slots("Visual", _legacy("Visual", 1)) == 6
+    panel either. It gets the fixed slot count, which is 3 since 2026-09-22."""
+    assert LB.panel_map_slots("Visual", _legacy("Visual", 1)) == 3
 
 
 def test_legacy_is_keyed_on_the_top_level_key_not_on_a_missing_sense_entry():

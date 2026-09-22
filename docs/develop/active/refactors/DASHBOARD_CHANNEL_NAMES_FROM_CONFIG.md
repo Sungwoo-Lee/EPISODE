@@ -2135,3 +2135,44 @@ Low: the range-4 refusal is issued by the layout registry, not the painter (same
 `\b(row|vec)\[[^\]]*\d` rather than `"row[:"`.
 
 *Reviewed by: plan-reviewer*
+
+---
+
+## Amendment, 2026-09-22 — vision's slot count is no longer anchored to its reference
+
+**Appended rather than edited into the text above**, because that text records what was
+decided on 2026-09-19 with its reasons, and a later decision does not make the earlier one
+never have happened. Two passages above are now superseded for **vision only**:
+
+- *"The slot constant does not move… stays at `{Olfaction: 5, Visual: 6}`"*
+- *"How the constant is anchored"* — the test it specifies has been rewritten.
+
+**What changed.** `PANEL_MAP_SLOTS["Visual"]` is now **3**, not 6. Olfaction is untouched at
+5 and remains anchored to its reference (five channels, five maps, five slots).
+
+**Why.** A sense panel is half the sensor strip, divided into a fixed number of equal slots,
+and a map can never be wider than its slot. At six slots vision's map squares were **15 px**
+across inside a panel whose height allowed **32 px** — so vision, the sense that tells the
+reader *where* a thing is, was the least legible thing on the frame, while four of its six
+slots stayed permanently blank under the current one-channel configuration. Three slots make
+vision height-bound rather than width-bound, which doubles the square. Measured, not
+estimated: the rendered frame is identical at 1, 2 and 3 slots because `box = min(slot, room)`
+settles on the height in all three, so 3 was chosen as the most conservative value that
+achieves the effect.
+
+**What it costs, stated plainly.** The anchoring rule — *slots equal the map count the
+reference world draws* — no longer holds for vision. A full eight-channel world draws six
+maps into three slots, so **three of them are drawn past the panel edge**. That is permitted
+by the no-ceiling decision (§D4b, 2026-09-19) and the existing warning names both numbers, so
+it is visible rather than silent — but it is a real bill that falls due if the project
+returns to eight vision channels. The user was shown this trade against the alternatives
+(leave it small; or split the strip by demand instead of down the middle, which preserves the
+anchor but requires the band divider and sense headings to move with the panels) and chose
+this one.
+
+**Where it is pinned.** `tests/env/test_dashboard_channel_display.py::
+test_olfactions_slots_are_anchored_and_visions_are_a_deliberate_choice` asserts olfaction's
+anchor holds, vision's constant is 3, and vision's constant is **strictly below** its
+reference count — so the divergence cannot widen, or be quietly undone, without failing.
+
+*— top-level Claude, session `14318db1`*
