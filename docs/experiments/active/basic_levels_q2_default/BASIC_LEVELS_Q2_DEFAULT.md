@@ -3,7 +3,7 @@ title: "Basic levels under the new default senses: does a neuromodulator help?"
 topic: basic_levels_q2_default
 status: active
 created: 2026-09-21
-last_updated: 2026-09-21
+last_updated: 2026-09-22
 ---
 
 # Basic levels under the new default senses: does a neuromodulator help?
@@ -216,3 +216,46 @@ still constructs against each), so this changes the *problem*, not the *interfac
 One consequence worth stating plainly: at `1.0` the premium branch was never traced, which is what
 made runs bit-identical to runs predating the key. At `25.0` it is compiled in. Bit-parity with the
 pre-feature environment is gone, by choice.
+
+### Wave 2 launched
+
+2026-09-22 18:24 KST, all 14 runs up, group `basic_levels_q2_cover`, job-type `pilot`.
+Tags are `rppo_bq2cover_*` — deliberately distinct from Wave 1's `rppo_basicq2_*`, so the
+two waves can never be confused in WandB or on disk. Per-run node, GPU, PID, WandB id and
+log path are in the wave block of `train_command-agent.sh`, and one `training-start` row
+per run is in `docs/diary/2026-09-22.md`.
+
+| # | tag | node:GPU | WandB id | obs |
+|---|---|---|---|---|
+| 1 | `rppo_bq2cover_lvl00_t1none_s42` | 101:0 | `s78nhqql` | 44 |
+| 2 | `rppo_bq2cover_lvl00_t16quad_s42` | 101:1 | `buubzgb2` | 44 |
+| 3 | `rppo_bq2cover_lvl01_t1none_s42` | 103:0 | `39zzf48r` | 44 |
+| 4 | `rppo_bq2cover_lvl01_t16quad_s42` | 103:1 | `wusb4iu7` | 44 |
+| 5 | `rppo_bq2cover_lvl02_t1none_s42` | 104:0 | `m2xz2m12` | 52 |
+| 6 | `rppo_bq2cover_lvl02_t16quad_s42` | 104:1 | `jkrd3m2f` | 52 |
+| 7 | `rppo_bq2cover_lvl03_t1none_s42` | 105:0 | `usiopa5z` | 52 |
+| 8 | `rppo_bq2cover_lvl03_t16quad_s42` | 105:1 | `g193gcfn` | 52 |
+| 9 | `rppo_bq2cover_lvl04_t1none_s42` | 106:0 | `ks9ve5z0` | 52 |
+| 10 | `rppo_bq2cover_lvl04_t16quad_s42` | 106:1 | `b7n83tsb` | 52 |
+| 11 | `rppo_bq2cover_lvl05_t1none_s42` | 107:0 | `z2u1orlf` | 58 |
+| 12 | `rppo_bq2cover_lvl05_t16quad_s42` | 107:1 | `ihq3tt7f` | 58 |
+| 13 | `rppo_bq2cover_lvl06_t1none_s42` | 108:0 | `j0z4lm4b` | 58 |
+| 14 | `rppo_bq2cover_lvl06_t16quad_s42` | 108:1 | `6cmhr45f` | 58 |
+
+**The width discriminator passed 14 of 14** — every banner printed the width its level should
+resolve to (44 / 52 / 58), none printed 27, and no level's `extends:` chain reaches
+`experiment/archive/`. The modulator was confirmed live on the modulated arms at both width
+extremes (obs 44 and obs 58), logging `input_sensors=[all]` with all four sites, and
+`DISABLED (baseline)` on all seven controls.
+
+**The body-settings check — the one this relaunch exists for — passed against each run's own
+saved artefact, not a fresh reload of the source.** `models/config.yaml` was read for one run
+per width group (levels 00, 02, 05) and all seven values were correct in all three:
+`recovery_base_rate: 0.2`, `recovery_accel_rate: 0.0`, `recovery_in_bush_multiplier: 25.0`,
+`max_nutrition: 200`, `max_satiation: 200`, `satiation_setpoint: 100`, `overeating_death: true`.
+
+Two recorded deviations, neither a defect, both carried over from Wave 1: `--log-interval 10`
+overrides the config's 500, giving WandB 50x the usual row density; and every banner reads
+`Device: gpu (cuda:0)` because `train.py` sets `CUDA_VISIBLE_DEVICES` to the requested index,
+so the card is always local 0 inside the process — physical placement was verified against
+`nvidia-smi` instead (exactly two compute apps per node, one per GPU, 60–100% util).

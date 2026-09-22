@@ -4071,3 +4071,113 @@ cd /media/nas01/projects/Interoceptive-AI/grid_world_pain
   --episodes 10000000 --device cuda:1 --log-interval 10 \
   --tag "rppo_basicq2_lvl06_t16quad_s42" --wandb-name "rppo_basicq2_lvl06_t16quad_s42" \
   --wandb-group "basic_levels_q2_default" --wandb-job-type "pilot"
+
+# ---------------------------------------------------------------------------
+# WAVE — basic_levels_q2_cover — 2026-09-22
+# 14 recurrent_ppo runs: seven basic levels x two arms (control / modulated),
+# seed 42 (config-owned), 10,000,000 episodes, fresh init.
+# wandb-group: basic_levels_q2_cover, job-type: pilot
+# Design doc: docs/experiments/active/basic_levels_q2_default/BASIC_LEVELS_Q2_DEFAULT.md
+#
+# SUPERSEDES the 2026-09-21 `basic_levels_q2_default` wave recorded above.
+# That wave trained in a world where the two things this experiment depends on were
+# wrong, so its null would have been uninterpretable rather than informative:
+#   (a) COVER HAD NO HEALING ROLE. body.recovery_in_bush_multiplier shipped at 1.0
+#       (resting in a bush healed exactly as fast as resting in the open) while
+#       recovery_base_rate 0.1 + recovery_accel_rate 0.5 cleared the ENTIRE 100-point
+#       injury scale on open ground in ~12 rest steps. Bush hiding is this project's
+#       main behavioural readout for internal-state dependence, and an injured agent
+#       had no reason to travel to cover — measured at 86% of injured steps resting
+#       against 1-3% spent in a bush. Fixed in 81dbbeb0 to the tuning study's values
+#       (base 0.2 / accel 0.0 / multiplier 25.0).
+#   (b) NUTRITION WAS ONE-SIDED. The reward target sat at the ceiling of a 0-100 axis,
+#       so more food was always better and the only way to die was starving — there
+#       was nothing to REGULATE. Fixed in 379ec8fc: the axis is 0-200 with the
+#       setpoint at 100 (the middle) and overeating_death genuinely lethal, so
+#       over-eating costs exactly what equal under-eating costs.
+# Both commits are ancestors of HEAD (verified with `git merge-base --is-ancestor`).
+# Wave 1's tags (rppo_basicq2_*) are NOT reused; this wave is rppo_bq2cover_*.
+# Wave 1's runs are retained on disk as a pre-tuning baseline and are NOT comparable
+# with this wave.
+#
+# ARMS (identical files except the `modulation` block — verified by diff; the only
+# other difference is comment text):
+#   control   configs/models/recurrent_ppo/nmn_input_site_grid_gaenorm/nmngaenorm_t1none.yaml
+#   modulated configs/models/recurrent_ppo/nmn_input_site_grid_gaenorm/nmngaenorm_t16quad_ALL.yaml
+#             (FiLM, sites encoder+rnn+actor+critic, input_sensors "all", temperature off)
+#
+# CONFIG-OWNED VALUES NOT PASSED: --num-envs, --seed (42), --checkpoint-frequency.
+# --episodes 10000000 passed explicitly per convention.
+# --log-interval 10 passed explicitly (deviation from the config's 500; carried over
+# from the superseded wave so the two are directly comparable in curve density).
+#
+# PRE-FLIGHT (all seven nodes 101/103/104/105/106/107/108):
+#   NAS mounted on every node — including 107, whose mount is intermittent across days
+#   and was re-verified immediately before staging its two runs. All 14 GPUs idle at
+#   0-40 MiB with zero compute apps. jax 0.9.0.1 + flax 0.12.4 + optax/orbax/chex
+#   import AND a real 4x4 GPU matmul JIT-compiled (block_until_ready) on every node —
+#   uniform versions, ptxas present, 2 GPUs visible each.
+#   No level config resolves through configs/environment/experiment/archive/; all
+#   seven chain to configs/environment/default.yaml.
+#
+# BODY-SETTINGS DISCRIMINATOR — the check this relaunch exists for. All seven levels
+# resolve through the live loader to base 0.2 / accel 0.0 / bush 25.0 and
+# max_nutrition 200 / max_satiation 200 / setpoint 100 / overeating_death true, with
+# no level overriding any of them. That is a re-derivation, so it was CONFIRMED AGAINST
+# EACH RUN'S OWN SAVED ARTEFACT (models/config.yaml, not a fresh reload of the source)
+# for one run per width group — lvl00 (44), lvl02 (52), lvl05 (58) — all seven values
+# correct in all three.
+#
+# OBSERVATION-WIDTH DISCRIMINATOR — verified from every run's own banner. A banner of
+# 27 would mean an archived eight-channel config was loaded and the run void.
+# ZERO runs printed 27:
+#   levels 00, 01 -> 44 | levels 02-04 -> 52 | levels 05, 06 -> 58
+# Modulator confirmed live at BOTH width extremes (obs 44 and obs 58), identical line:
+#   "Neuromodulation: ENABLED (type=FiLM, mod_hidden=16, grouping=1, input_sensors=[all],
+#    sites=[encoder,rnn,actor,critic], rnn_mechanism=activation, temperature=off)"
+# and "Neuromodulation: DISABLED (baseline)" on all seven controls — so it resolves
+# against each run's own width rather than the generator's hardcoded 27.
+#
+# NOT A DEFECT: every banner reads "Device: gpu (cuda:0)" regardless of --device,
+# because train.py sets CUDA_VISIBLE_DEVICES to the requested index and the card is
+# always local 0 in-process. Physical placement verified against nvidia-smi instead:
+# exactly two compute apps per node, one on GPU 0 and one on GPU 1, 60-100% util,
+# 4.4-6.5 GiB each.
+#
+# Launched via CIFS-bypass /tmp scripts. Each staged file was asserted non-empty
+# (525-540 B) AND asserted to contain its own --tag before invoking — the earlier
+# failure mode was a 0-byte staged script. Verification used `ps -eo pid,args` and
+# never a bare `pgrep -f` on the tag, which matches its own launcher shell and has
+# produced false "already running" readings twice. run_command.py --no-tail drove
+# every launch, none wrapped in a local timeout. Exactly one PID per tag at +90 s.
+#
+# | #  | tag                             | node:GPU | PID     | WandB id | obs | log                      |
+# |----|---------------------------------|----------|---------|----------|-----|--------------------------|
+# | 1  | rppo_bq2cover_lvl00_t1none_s42  | 101:0    | 977501  | s78nhqql | 44  | logs/20260922_182443.log |
+# | 2  | rppo_bq2cover_lvl00_t16quad_s42 | 101:1    | 977614  | buubzgb2 | 44  | logs/20260922_182448.log |
+# | 3  | rppo_bq2cover_lvl01_t1none_s42  | 103:0    | 943209  | 39zzf48r | 44  | logs/20260922_182452.log |
+# | 4  | rppo_bq2cover_lvl01_t16quad_s42 | 103:1    | 943315  | wusb4iu7 | 44  | logs/20260922_182457.log |
+# | 5  | rppo_bq2cover_lvl02_t1none_s42  | 104:0    | 953147  | m2xz2m12 | 52  | logs/20260922_182501.log |
+# | 6  | rppo_bq2cover_lvl02_t16quad_s42 | 104:1    | 953257  | jkrd3m2f | 52  | logs/20260922_182506.log |
+# | 7  | rppo_bq2cover_lvl03_t1none_s42  | 105:0    | 1083396 | usiopa5z | 52  | logs/20260922_182510.log |
+# | 8  | rppo_bq2cover_lvl03_t16quad_s42 | 105:1    | 1083506 | g193gcfn | 52  | logs/20260922_182515.log |
+# | 9  | rppo_bq2cover_lvl04_t1none_s42  | 106:0    | 1266406 | ks9ve5z0 | 52  | logs/20260922_182519.log |
+# | 10 | rppo_bq2cover_lvl04_t16quad_s42 | 106:1    | 1266517 | b7n83tsb | 52  | logs/20260922_182524.log |
+# | 11 | rppo_bq2cover_lvl05_t1none_s42  | 107:0    | 912572  | z2u1orlf | 58  | logs/20260922_182529.log |
+# | 12 | rppo_bq2cover_lvl05_t16quad_s42 | 107:1    | 912710  | ihq3tt7f | 58  | logs/20260922_182534.log |
+# | 13 | rppo_bq2cover_lvl06_t1none_s42  | 108:0    | 822601  | j0z4lm4b | 58  | logs/20260922_182538.log |
+# | 14 | rppo_bq2cover_lvl06_t16quad_s42 | 108:1    | 822734  | 6cmhr45f | 58  | logs/20260922_182543.log |
+#
+# PIDs are as seen by `ps` on the node; nvidia-smi reports host-namespace PIDs and
+# will not match. Every run's WandB display name was cross-checked against its tag
+# from its own "Syncing run" line — 14 of 14 match.
+#
+# Representative active command (run 14 — level 06, modulated arm, node 108 cuda:1).
+# The other thirteen differ only in --config, --agent_config, --device and the tag pair.
+# ---------------------------------------------------------------------------
+/home/vncuser/miniconda3/envs/grid_world_pain/bin/python train.py \
+  --config configs/environment/experiment/basic/06-sensory_noise_10x10.yaml \
+  --agent_config configs/models/recurrent_ppo/nmn_input_site_grid_gaenorm/nmngaenorm_t16quad_ALL.yaml \
+  --episodes 10000000 --device cuda:1 --log-interval 10 \
+  --tag "rppo_bq2cover_lvl06_t16quad_s42" --wandb-name "rppo_bq2cover_lvl06_t16quad_s42" \
+  --wandb-group "basic_levels_q2_cover" --wandb-job-type "pilot"
