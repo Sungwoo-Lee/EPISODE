@@ -30,7 +30,6 @@ from matplotlib.collections import PatchCollection
 from . import cells as C
 from . import palette as P
 from .labels import map_plan, panel_map_slots
-from .layout import LayoutOverflowError
 # THE GAP BETWEEN TWO CHANNEL MAPS, TAKEN FROM THE REGISTRY RATHER THAN
 # DECLARED HERE. The layout registry has to promise the packer how wide a sense
 # panel needs to be before this module draws a pixel of it, so the two must read
@@ -271,10 +270,6 @@ def build_vitals(dash, ax, w, h, rows):
                     val.set(signed(q, 1) + "°")
                     set_v(q)
             dash.updates.append(upd)
-
-    foot = rows[-1]["y"] + 12 + 46 + 10
-    ax.plot([PAD, w - PAD], [foot, foot], color=P.LINE, lw=1 * PT)
-    dash.fit(ax, PAD, foot + 24, "caption", w - 2 * PAD, numeric=False).set(dash.meta["noise_note"])
 
 
 def temperature_gauge(dash, ax, x, y, w):
@@ -671,12 +666,6 @@ def build_channel_maps(dash, ax, x0, w, h, sense, title, display, colour_stops,
     slot = (w - MAP_GAP * (n - 1)) / n
     box = min(slot, h - 58 - 40)
     cs = box / k
-    if cs < 10:
-        raise LayoutOverflowError(
-            f"{title} at range {sensor_range}: its map squares would be {cs:.1f}px "
-            f"across (floor 10px). The panel refuses to draw an unreadable map "
-            f"rather than shrinking one."
-        )
     top = 58
     cells = []
     for i, (name, qualifier, kind, ch) in enumerate(maps):

@@ -81,11 +81,15 @@ SENSES = {
     "Visual": ("visual", 8, PAL.VIS_STOPS),
 }
 
-#: The painter's own floor, written as the literal it is at `painters.py`'s
-#: `if cs < 10: raise`. Deliberately NOT read from `panels.MAP_CELL_MIN_PX` --
-#: that constant is half of what this file is checking, and a test that takes its
-#: expected value from the thing under test asserts nothing. A test below pins
-#: the two together, so a change to either is still caught.
+#: The NOMINAL map square, 10 px. It used to be the painter's ENFORCED floor
+#: (`if cs < 10: raise`); that floor was removed on 2026-09-22 by user decision,
+#: so the painter now draws squares smaller than this rather than refusing to
+#: render. The number survives because it still governs what the REGISTRY
+#: declares a panel needs (`panels.MAP_CELL_MIN_PX`).
+#: Deliberately NOT read from `panels.MAP_CELL_MIN_PX` -- that constant is half
+#: of what this file is checking, and a test that takes its expected value from
+#: the thing under test asserts nothing. A test below pins the two together, so
+#: a change to either is still caught.
 PAINTER_CELL_FLOOR_PX = 10
 
 RANGES = (1, 2, 3)
@@ -179,7 +183,9 @@ def _painter_needs_w(sense, r, display):
 
     `episode.py` gives the painter `panel.w - 2 * PAD`, and the painter divides
     it into `panel_map_slots` slots of `2r+1` squares with `MAP_GAP` between
-    them, refusing any square under 10 px. Invert that. NOTE it is the SLOT
+    them. Invert that at the NOMINAL 10 px square. The painter no longer refuses
+    a smaller square (the floor was removed on 2026-09-22), so this is what the
+    REGISTRY declares, not a limit the painter enforces. NOTE it is the SLOT
     count, not the map count -- that is what makes blank space appear instead of
     one stretched map.
     """
@@ -226,8 +232,9 @@ class _StubDash:
 def _paint(sense, r, panel_w, panel_h=400, display=None):
     """Draw one sense panel at `panel_w`, the way `episode.py` would.
 
-    Raises `LayoutOverflowError` exactly when the painter judges the panel too
-    narrow. `panel_h` is generous on purpose so WIDTH is what binds.
+    Since the cell floor was removed (2026-09-22) this no longer raises for a
+    narrow panel -- the painter draws smaller squares instead. `panel_h` is
+    generous on purpose so WIDTH is what binds.
     """
     from src.environment.sensor import get_visual_offsets
 
@@ -275,14 +282,24 @@ def test_the_declared_minimum_is_exactly_what_the_painter_needs(sense, r, regime
 
 
 @pytest.mark.parametrize("sense,r,regime", CASES, ids=IDS)
-def test_the_painter_draws_at_the_declared_minimum_and_refuses_one_pixel_less(
+def test_the_painter_draws_at_the_declared_minimum_AND_below_it(
         sense, r, regime):
-    """The painter's own verdict, not arithmetic about it."""
+    """The painter's own verdict, not arithmetic about it.
+
+    INVERTED on 2026-09-22 rather than deleted. This case used to assert the
+    painter REFUSED one pixel below the declared minimum, because a map square
+    under 10 px raised `LayoutOverflowError`. The user removed that floor: an
+    oversized sensor range now draws small squares instead of failing to render.
+    Keeping the case and flipping its expectation means the suite still runs the
+    real painter at and below the declaration, and now FAILS if a refusal is
+    ever reintroduced by accident -- which is the regression that would silently
+    stop videos rendering.
+    """
     display = _display(sense, SENSES[sense][1], regime=regime)
     declared = _declared_w(sense, r, regime=regime)
-    _paint(sense, r, declared, display=display)  # must not raise
-    with pytest.raises(LayoutOverflowError):
-        _paint(sense, r, declared - 1, display=display)
+    _paint(sense, r, declared, display=display)                  # must not raise
+    _paint(sense, r, declared - 1, display=display)              # nor here
+    _paint(sense, r, declared * 3 // 4, display=display)         # nor well under it
 
 
 def test_vision_declares_six_maps_because_terrain_is_one_map():
@@ -344,13 +361,27 @@ def test_the_gap_between_two_maps_is_one_constant_not_two():
     )
 
 
-def test_the_painters_cell_floor_matches_the_registrys():
-    """The 10 px this file expects is the 10 px both sides actually use."""
+def test_the_painter_has_NO_cell_floor_and_the_registrys_nominal_still_matches():
+    """THE FLOOR WAS REMOVED (user decision, 2026-09-22).
+
+    `panels.MAP_CELL_MIN_PX` survives and this file's constant still mirrors it,
+    but its MEANING changed: it is the nominal square the registry sizes a
+    declaration with, not a limit anything enforces. The painter draws whatever
+    width it is handed, however small.
+
+    Asserted against the painter's SOURCE as well as behaviourally above,
+    because a floor reintroduced inside `build_channel_maps` would otherwise
+    surface only as videos that quietly stopped rendering.
+    """
     assert P.MAP_CELL_MIN_PX == PAINTER_CELL_FLOOR_PX
     src = Path(PN.__file__).read_text()
-    assert "if cs < 10:" in src, (
-        "the painter's map-square floor moved; this file's expected value and "
-        "`panels.MAP_CELL_MIN_PX` both have to move with it"
+    assert "if cs < 10:" not in src, (
+        "the painter's map-square floor is back; it was removed deliberately so "
+        "an oversized sensor range draws small instead of refusing to render"
+    )
+    assert "refuses to draw an unreadable map" not in src, (
+        "the painter refuses small maps again; the panel is meant to shrink its "
+        "squares instead"
     )
 
 

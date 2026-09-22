@@ -191,9 +191,6 @@ class EpisodeRenderer:
                      f"{int(payload.get('episode_index', 0))}  ·  "
                      f"{self.layout.view_cells} × {self.layout.view_cells} view of a "
                      f"{int(params.width)} × {int(params.height)} world"),
-            "noise_note": ("Noise off in this episode, so observed = noise-free."
-                           if not bool(getattr(params, "perceptual_noise_enabled", False))
-                           else "Noise on: the observed and noise-free values differ."),
         }
 
         # -- the figure ------------------------------------------------------
