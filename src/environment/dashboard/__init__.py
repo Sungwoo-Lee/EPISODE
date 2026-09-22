@@ -50,6 +50,7 @@ from .layout import (
     pack,
     window_cells,
 )
+from .video import save_jax_video
 from .panels import (
     ABSENT,
     PANELS,
@@ -108,4 +109,5 @@ __all__ = [
     "panel_map_slots",
     "present_panels",
     "real_available",
+    "save_jax_video",
 ]

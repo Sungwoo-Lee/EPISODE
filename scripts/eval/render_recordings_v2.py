@@ -218,9 +218,7 @@ def _render_episode(episode_path_str: str, out_video_path_str: str, fps: int) ->
     result = {"episode": ep_path.name, "out": str(out), "ok": False}
 
     try:
-        from src.environment.dashboard import EpisodeRenderer
-        # Imported read-only from the FROZEN V1 renderer, per plan section D1.3.
-        from src.environment.renderer import save_jax_video
+        from src.environment.dashboard import EpisodeRenderer, save_jax_video
 
         payload = load_episode(ep_path)
         renderer = EpisodeRenderer(
@@ -471,7 +469,7 @@ def main():
         if sigs:
             _assert_single_layout(sigs)
 
-        from src.environment.renderer import save_jax_video  # read-only, frozen
+        from src.environment.dashboard import save_jax_video
         import imageio.v2 as imageio
 
         expected = 0
