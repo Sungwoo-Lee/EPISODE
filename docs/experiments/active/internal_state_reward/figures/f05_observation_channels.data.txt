@@ -1,0 +1,2 @@
+fullness values evaluated, shipped world|201|201|100.0|every whole nutrition point over the reachable range 0-200, through the live sensor expression rather than a re-derivation of it
+fullness values evaluated, pre-change world|101|101|100.0|the same sweep over the old range 0-100, resolved by overriding the body keys
