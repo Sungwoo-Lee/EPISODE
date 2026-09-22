@@ -179,15 +179,21 @@ def _painter_map_count(sense, display):
 
 
 def _painter_needs_w(sense, r, display):
-    """The panel width the painter requires, built from the painter's own terms.
+    """The width the painter would need to draw NOMINAL-sized squares at range r.
 
-    `episode.py` gives the painter `panel.w - 2 * PAD`, and the painter divides
-    it into `panel_map_slots` slots of `2r+1` squares with `MAP_GAP` between
-    them. Invert that at the NOMINAL 10 px square. The painter no longer refuses
-    a smaller square (the floor was removed on 2026-09-22), so this is what the
-    REGISTRY declares, not a limit the painter enforces. NOTE it is the SLOT
-    count, not the map count -- that is what makes blank space appear instead of
-    one stretched map.
+    KEPT DELIBERATELY RANGE-DEPENDENT, and no longer compared for equality with
+    the registry's declaration. Since 2026-09-22 the registry declares a fixed
+    width and the painter shrinks its squares to fit whatever it is granted, so
+    the two are not the same quantity any more and asserting they match would pin
+    a relationship that stopped existing.
+
+    What it is still good for is stating, in one number, how much room a range
+    WOULD want at the nominal square -- which is what makes the shrinkage legible
+    in a failure message rather than mysterious. `episode.py` gives the painter
+    `panel.w - 2 * PAD`, and the painter divides that into `panel_map_slots`
+    slots of `2r+1` squares with `MAP_GAP` between them; this inverts that at the
+    nominal square. NOTE it is the SLOT count, not the map count -- that is what
+    makes blank space appear instead of one stretched map.
     """
     n = panel_map_slots(sense, display)
     cells = 2 * r + 1
@@ -265,19 +271,50 @@ def _paint(sense, r, panel_w, panel_h=400, display=None):
 # the property, in BOTH sizing regimes
 # ---------------------------------------------------------------------------
 @pytest.mark.parametrize("sense,r,regime", CASES, ids=IDS)
-def test_the_declared_minimum_is_exactly_what_the_painter_needs(sense, r, regime):
+def test_the_declaration_always_fits_inside_what_the_band_grants(sense, r, regime):
+    """RE-AIMED 2026-09-22, and the reason matters more than the assertion.
+
+    This case used to assert `declared == needed`: the registry's declaration
+    exactly equalled the width the painter required at that range. That equality
+    was the guard against a real outage -- the two disagreed once, the packer
+    refused a panel the painter draws perfectly well, and EVERY video failed to
+    render (`4b6f7196`).
+
+    The equality is no longer meaningful. Neither side depends on the sensor
+    range any more: the registry declares a FIXED width and the painter divides
+    whatever it is granted by however many squares the range needs, so a
+    disagreement can no longer produce a refusal -- nothing refuses at all.
+    Asserting the old equality would pin two numbers whose relationship stopped
+    carrying information, which is worse than useless: it would go red on a
+    change that broke nothing and stay green on one that did.
+
+    What still matters, and is asserted here in both directions:
+
+      * the declaration FITS -- it never exceeds what the band actually grants a
+        sense, at any range, so the packer can always satisfy it; and
+      * the declaration does not depend on the range, so no range can reintroduce
+        a refusal by inflating it.
+
+    The partner case below asserts the other half -- that the painter really does
+    draw at and below the declaration -- by running the painter, not by
+    arithmetic about it.
+    """
     n = SENSES[sense][1]
     display = _display(sense, n, regime=regime)
     declared = _declared_w(sense, r, regime=regime)
-    needed = _painter_needs_w(sense, r, display)
-    assert declared == needed, (
-        f"{sense} at range {r} ({regime}): the registry declares {declared}px but "
-        f"the painter needs {needed}px "
-        f"({panel_map_slots(sense, display)} slots of {2 * r + 1} squares, "
-        f"{PN.MAP_GAP}px gaps, {2 * PN.PAD}px card padding). "
-        f"A declaration above the requirement makes the packer refuse a frame "
-        f"the painter would draw; one below it hands the painter a panel it "
-        f"refuses."
+
+    assert declared <= EXPECTED_GRANT_PX, (
+        f"{sense} at range {r} ({regime}) declares {declared}px but the band "
+        f"grants each of two senses {EXPECTED_GRANT_PX}px. A declaration above "
+        f"the grant is exactly the refusal this whole design removed."
+    )
+
+    at_r1 = _declared_w(sense, 1, regime=regime)
+    assert declared == at_r1, (
+        f"{sense} ({regime}) declares {declared}px at range {r} but {at_r1}px at "
+        f"range 1. The declaration must not depend on the sensor range -- that "
+        f"dependency is what made the packer refuse wide ranges, and removing it "
+        f"is what lets an oversized range draw small squares instead of failing."
     )
 
 
@@ -435,31 +472,39 @@ def test_a_configured_world_reading_both_senses_wide_packs_and_paints():
     _paint("Olfaction", 1, obox.w, panel_h=obox.h, display=olf)
 
 
-def test_an_eight_channel_LEGACY_world_at_range_three_is_refused_and_says_why():
-    """The mirror, and the reason the refusal is stated as NEED versus GRANT.
+def test_an_eight_channel_LEGACY_world_at_range_three_DRAWS_and_warns_why(caplog):
+    """INVERTED ON 2026-09-22, and the inversion is the user's decision.
 
-    A legacy recording draws one map per channel, so eight channels at range 3
-    need 634 px against the 520 px the band grants. It genuinely does not fit.
-    The refusal must name the reason and the remedy -- re-record it, which
-    regenerates it with names and the terrain merge and brings it back inside
-    the panel -- rather than surfacing as a bare packer error.
+    This case used to assert a REFUSAL. A legacy recording draws one map per
+    channel, so eight channels at range 3 declared 634 px against the 520 px the
+    band grants, the packer refused, and `pack_or_explain` turned that refusal
+    into a message naming the remedy.
+
+    Nothing refuses any more. The width declaration no longer multiplies by the
+    sensor range, so the panel asks for a fixed size, the packer always grants
+    it, and the painter divides what it gets by however many squares the range
+    needs -- small squares instead of a failed render. The user asked for exactly
+    this, and asked that a WARNING replace the refusal rather than silence.
+
+    So the assertions flip: it must PACK, and it must warn naming both numbers
+    and the remedy. If a refusal ever comes back, the pack call raises and this
+    fails -- which is the regression that would silently stop videos rendering.
     """
     display = _display("Visual", 8, regime="legacy")
-    assert panel_map_slots("Visual", display) == 8
-    assert _painter_needs_w("Visual", 3, display) == 634
-    assert 634 > EXPECTED_GRANT_PX
+    with caplog.at_level("WARNING"):
+        assert panel_map_slots("Visual", display) == 8
+    text = caplog.text
+    assert "8" in text and "3" in text, (
+        f"the warning must name what it draws and what the panel is sized for. "
+        f"Got: {text!r}")
+    assert "re-record" in text.lower(), (
+        f"the warning must name the remedy, as the refusal used to. Got: {text!r}")
 
     ctx = _full_ctx(vis_channels=8, vis_range=3, channel_display=None)
-    with pytest.raises(LayoutOverflowError):
-        pack(ctx)
-
-    with pytest.raises(LayoutOverflowError) as exc:
-        P.pack_or_explain(ctx)
-    msg = str(exc.value).lower()
-    assert "re-record" in msg, f"the refusal must name the remedy. Got: {msg}"
-    assert "634" in str(exc.value) and "520" in str(exc.value), (
-        f"the refusal must name what it needed and what it was granted. "
-        f"Got: {exc.value}")
+    lay = pack(ctx)                       # must NOT raise
+    assert lay.panels["visual"].w == EXPECTED_GRANT_PX
+    lay2 = P.pack_or_explain(ctx)         # nor here
+    assert lay2.panels["visual"].w == EXPECTED_GRANT_PX
 
 
 def test_a_ONE_channel_legacy_world_at_range_three_still_renders():

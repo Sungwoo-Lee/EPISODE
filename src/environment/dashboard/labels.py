@@ -315,6 +315,32 @@ def panel_map_slots(sense: str, display: ChannelDisplay) -> int:
     drawn = len(map_plan(sense, display))
     slots = PANEL_MAP_SLOTS[sense]
     if display.legacy:
+        if drawn > slots:
+            # WARN, NEVER REFUSE (user decision, 2026-09-22).
+            #
+            # VOLUME, MEASURED RATHER THAN GUESSED: this function is called four
+            # times while a renderer is constructed and ZERO times per frame --
+            # the layout is computed once per episode. So a legacy recording logs
+            # this a couple of times per sense per episode, not once per frame,
+            # and needs no de-duplication. Worth keeping in mind before adding
+            # any per-call logging here.
+            #
+            # This used to be
+            # silent because the refusal happened later: the panel's width
+            # declaration grew with the sensor range, so a legacy recording at a
+            # wide range was refused by the PACKER and `pack_or_explain` turned
+            # that refusal into a message naming the remedy. Nothing refuses any
+            # more -- the declaration is range-independent and the painter draws
+            # whatever squares it is given -- so the only thing left that can
+            # tell the reader why an old recording looks cramped is this line.
+            logger.warning(
+                "%s is a recording made BEFORE channel names existed, so it "
+                "carries no terrain merge and draws one map per channel: %d maps "
+                "into a panel sized for %d. Nothing is refused and the frame will "
+                "render, but its map squares will be small. Re-record it at "
+                "current code to regenerate it WITH channel names and the terrain "
+                "merge, which brings it back to the panel's own size.",
+                sense, drawn, slots)
         return max(slots, drawn)
     if drawn > slots:
         logger.warning(

@@ -48,7 +48,6 @@ from .layout import (
     LEFT_W,
     PAD,
     CardDemand,
-    LayoutOverflowError,
     Size,
     pack,
 )
@@ -133,7 +132,16 @@ HEADER_H: int = 32
 BAND_CHROME_TOP: int = CARD_TITLE_H
 BAND_CHROME_BOTTOM: int = PAD
 
-#: Smallest legible cell in a per-channel diamond map (plan section D7.2).
+#: The NOMINAL map square, in pixels. It sizes what a sense panel ASKS the packer
+#: for; it is not a floor anything enforces.
+#:
+#: IT WAS A FLOOR UNTIL 2026-09-22 (plan section D7.2 called it "smallest legible
+#: cell"). Two guards enforced it -- the painter refused to draw a square under
+#: 10 px, and this declaration grew with the sensor range so the packer refused
+#: the panel first. The user removed both: an oversized sensor range now DRAWS,
+#: with squares as small as the range makes them, rather than failing to render.
+#: What survives is this number's other job -- giving the panel a sensible fixed
+#: width to ask for -- so it is no longer multiplied by the range.
 MAP_CELL_MIN_PX: int = 10
 #: The gap between two adjacent channel maps. THE PAINTER READS THIS ONE --
 #: `painters.py` imports it as its `MAP_GAP` rather than declaring its own, so
@@ -141,6 +149,12 @@ MAP_CELL_MIN_PX: int = 10
 #: It said 8 here and 6 there until 2026-09-18, which is one of the three counts
 #: that made the packer refuse a vision panel the painter draws perfectly well.
 MAP_GAP_PX: int = 6
+
+#: The fixed height a sense's map block asks for, replacing the range-dependent
+#: `(2r + 1) * MAP_CELL_MIN_PX` on 2026-09-22. Chosen as the old declaration's
+#: value at range 3 -- the widest range any maintained world reads -- so nothing
+#: that packed before packs differently now, while wider ranges stop refusing.
+MIN_MAP_BAND_H: int = 70
 
 #: Sentinel returned by :func:`_recording_flag` when an archived recording's
 #: params simply do not have the attribute.
@@ -438,18 +452,42 @@ def _span(sense: str, display: ChannelDisplay, r: int) -> int:
         (episode.py:465), so what the PANEL needs is the painter's requirement
         plus that padding. This term was simply missing.
 
+    THE SENSOR RANGE IS NO LONGER A TERM HERE (2026-09-22, user decision). It
+    used to multiply by `2r + 1`, so a wide range declared a panel wider than the
+    band could grant and the PACKER refused -- at range 4 under the conventional
+    slot counts. Removing the painter's own 10 px floor did not change that by
+    itself, because this declaration refused at exactly the same ranges; the two
+    guards were computed from the same number and shadowed each other.
+
+    The panel now asks for a FIXED width and the painter divides whatever it is
+    granted by however many squares the range needs. A wider range therefore
+    yields smaller squares instead of a refused frame, which is the behaviour
+    asked for. `r` is kept in the signature because callers pass it and a future
+    range-dependent term would belong here rather than anywhere else.
+
     The height is a separate declaration and is NOT fixed here; see the note on
     `_map_h`.
     """
     n_maps = panel_map_slots(sense, display)
-    cells = 2 * r + 1
-    return (n_maps * cells * MAP_CELL_MIN_PX
+    return (n_maps * MAP_CELL_MIN_PX
             + MAP_GAP_PX * (n_maps - 1)
             + 2 * PAD)
 
 
 def _map_h(r: int) -> int:
-    """The HEIGHT a sense's maps need, by the same floor as their width.
+    """The HEIGHT a sense's maps ask for. NOT range-dependent since 2026-09-22.
+
+    It used to return `(2r + 1) * MAP_CELL_MIN_PX`, which made the band refuse a
+    tall sensor range (first at range 10, behind the width refusal at range 4).
+    Both are gone by the same user decision: the band asks for a fixed height and
+    the painter fits its squares into whatever it gets.
+
+    The note below is kept because it records a MEASURED discrepancy between this
+    declaration and the painter's real demand, and that discrepancy is now
+    harmless for a new reason -- nothing refuses on it -- rather than for the old
+    one. Read it as history, not as a live hazard.
+
+    ---- the 2026-09-18 note, preserved ----
 
     KNOWN TO UNDER-STATE THE PAINTER'S REAL DEMAND, and left alone deliberately
     on 2026-09-18 rather than quietly corrected alongside the width. The painter
@@ -464,7 +502,7 @@ def _map_h(r: int) -> int:
     its own render proof, because the band's height is shared between the two
     senses and moving it reflows the frame.
     """
-    return (2 * r + 1) * MAP_CELL_MIN_PX
+    return MIN_MAP_BAND_H
 
 
 def _state_exists(ctx: LayoutContext) -> bool:
@@ -653,50 +691,32 @@ def check_completeness(ctx: LayoutContext) -> None:
 
 
 def pack_or_explain(ctx: LayoutContext):
-    """Pack the frame, turning the one EXPECTED refusal into a message that teaches.
+    """Pack the frame, explaining any refusal that names a legacy recording.
 
-    A recording made before channel names existed carries no merge group, so it
-    draws one map per channel -- eight for a standard vision vector, where a
-    configured recording draws six. At sensor range 3 those eight maps need more
-    width than the band can give any one sense, and the packer correctly refuses.
+    WHAT THIS DID, AND WHY IT NOW USUALLY DOES NOTHING (2026-09-22). A recording
+    made before channel names existed carries no merge group, so it draws one map
+    per channel -- eight for a standard vision vector, where a configured
+    recording draws six. Until today the panel's width declaration grew with the
+    sensor range, so at range 3 those eight maps declared more width than the
+    band could grant, the packer refused, and this function re-raised the refusal
+    naming the reason and the remedy.
 
-    That refusal is right, but a bare `LayoutOverflowError` about pixels tells
-    the reader nothing about what to DO. Here it is re-raised naming the reason
-    (the recording predates channel names) and the remedy (re-record it, which
-    regenerates it with names and the terrain merge and brings it back inside the
-    panel).
+    THE USER REMOVED EVERY SENSOR-RANGE REFUSAL. The declaration is now
+    range-independent, so that path no longer refuses at any range, and the
+    message this function used to produce has MOVED to where it can still fire:
+    `labels.panel_map_slots` warns, naming both numbers and the remedy, whenever
+    a legacy recording draws more maps than its panel is sized for. Measured
+    rather than assumed -- the legacy eight-map case at range 3 now packs, so an
+    `except` branch here would be unreachable code describing behaviour that no
+    longer exists.
 
-    THE PACKER'S OWN NUMBERS ARE QUOTED RATHER THAN RE-DERIVED. Working out what
-    the band would have granted requires repeating the packer's arithmetic
-    outside the packer -- a second copy of exactly the calculation whose
-    disagreement with the painter broke every video in `4b6f7196`. The original
-    exception already carries both the need and the grant, so it is attached
-    verbatim instead.
+    The function is KEPT rather than deleted for two reasons: `episode.py` calls
+    it, and the packer can still refuse for reasons that have nothing to do with
+    sensor range (a window too wide to draw legibly, a column that cannot fit its
+    cards). Those refusals are real and must not be swallowed, so they pass
+    straight through -- this is deliberately NOT a try/except that hides them.
     """
-    try:
-        return pack(ctx)
-    except LayoutOverflowError as exc:
-        stale = [s for s in ("Olfaction", "Visual")
-                 if ctx.observed(s) and ctx.display_for(s).legacy]
-        if not stale:
-            raise
-        drawn = {s: len(map_plan_len(ctx, s)) for s in stale}
-        raise LayoutOverflowError(
-            f"this recording was made BEFORE channel names existed, so it carries "
-            f"no terrain merge and draws one map per channel "
-            f"({', '.join(f'{s}: {n} maps' for s, n in drawn.items())}). At this "
-            f"sensor range that does not fit in the sensor band. Re-record it at "
-            f"current code: that regenerates it WITH channel names and the terrain "
-            f"merge, which brings the maps back inside the panel. "
-            f"The packer's own measurement: {exc}"
-        ) from exc
-
-
-def map_plan_len(ctx: LayoutContext, sense: str):
-    """The maps ``sense`` draws in ``ctx`` -- a thin accessor for diagnostics."""
-    from .labels import map_plan
-
-    return map_plan(sense, ctx.display_for(sense))
+    return pack(ctx)
 
 
 def present_cards(
