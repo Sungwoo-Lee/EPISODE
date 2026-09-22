@@ -178,8 +178,16 @@ body:
   start_satiation: 100
   start_nutrition: 100
   # Recovery: Recovery = base * (1 + accel)^(rest_streak - 1) * [in_bush ? in_bush_mult : 1]
-  recovery_base_rate: 0.1
-  recovery_accel_rate: 0.5
+  # 2026-09-22: base 0.1 -> 0.2, accel 0.5 -> 0.0, in_bush_mult 1.0 -> 25, adopting the
+  # recovery-tuning study's recommendation (docs/experiments/active/recovery_in_bush_tuning/).
+  # WHY: at the shipped values an agent clears the ENTIRE 100-point injury scale resting on
+  # open ground - in about 12 rest steps - so cover has no healing role and an injured agent
+  # freezes and heals wherever it stands (measured: resting on 86% of injured steps, standing
+  # in a bush on 1-3%). Compounding is switched OFF because no base rate survives accel 0.5;
+  # at base 0.2 the largest workable accel is 0.033 on a 50-step rest budget and 0.004 on a
+  # 100-step one, one to two orders of magnitude below the old 0.5.
+  recovery_base_rate: 0.2
+  recovery_accel_rate: 0.0
   # Location premium: recovery is multiplied by this while the agent rests ON a
   # concealing bush (an obstacle with `hides_agent: true`). 1.0 = inert, and at
   # exactly 1.0 the gate is not traced at all (static Python guard in
@@ -189,7 +197,13 @@ body:
   # docs/develop/active/refactors/BUSH_REFUGE_AND_LOCATION_DEPENDENT_RECOVERY.md).
   # Mandatory everywhere: no fallback default, so a world must say which
   # experiment it is. Must be > 0.
-  recovery_in_bush_multiplier: 1.0
+  # 2026-09-22: 1.0 -> 25. With base 0.2 this heals 5.0 per step in cover (closing a typical
+  # 70-point wound in 14 rest steps) against 0.2 in the open, where 50 steps clear only 10
+  # points and 100 clear 20 - both under the 25-point threshold the study set. NOTE this
+  # LEAVES THE INERT REGIME: at exactly 1.0 the branch was never traced, which is what made
+  # runs bit-identical to those predating the key. 25 switches that branch on, so the
+  # computation graph is no longer the pre-feature one.
+  recovery_in_bush_multiplier: 25.0
   # Injury: Damage is spread over duration steps (applied_dam = total_dam / duration)
   injury_smoothing_duration: 3
   # Reward: if use_homeostatic_reward, Reward = prev_drive - curr_drive

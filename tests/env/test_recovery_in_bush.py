@@ -148,24 +148,43 @@ def test_missing_key_raises():
         f"the error must name the missing key; got: {exc.value}")
 
 
-def test_shipped_value_is_inert_and_a_float():
-    """The base settings file ships `1.0`, and it arrives as a Python float.
+def test_shipped_value_is_live_and_a_float():
+    """The base settings file ships `25.0`, and it arrives as a Python float.
 
-    The `float()` on the read is not cosmetic. The field is
-    `struct.field(pytree_node=False)`, i.e. part of JAX's trace-cache key, and
-    YAML parses a bare `1` as an `int`. Without the coercion a curriculum whose
-    stages spell the same inert value `1` and `1.0` would recompile the whole
-    environment between them for no behavioural reason.
+    The value stopped being inert on 2026-09-22. At the previous `1.0` the
+    premium branch was never traced, which is what made runs bit-identical to
+    runs predating the key; `25.0` switches that branch on, so the environment's
+    computation graph is no longer the pre-feature one. The tuning study behind
+    the number is at docs/experiments/active/recovery_in_bush_tuning/ -- at the
+    old settings an agent cleared the whole 100-point injury scale resting on
+    open ground, so cover had no healing role at all.
+
+    The `float()` on the read is not cosmetic, and that half is unchanged. The
+    field is `struct.field(pytree_node=False)`, i.e. part of JAX's trace-cache
+    key, and YAML parses a bare `25` as an `int`. Without the coercion a
+    curriculum whose stages spell the same value `25` and `25.0` would recompile
+    the whole environment between them for no behavioural reason.
     """
     params = _load(_default_dict())
     assert isinstance(params.recovery_in_bush_multiplier, float)
-    assert params.recovery_in_bush_multiplier == 1.0
+    assert params.recovery_in_bush_multiplier == 25.0
     # An integer in the YAML must still arrive as a float, or the cache key splits.
     d = _default_dict()
-    d["body"][KEY.split(".", 1)[1]] = 1
+    d["body"][KEY.split(".", 1)[1]] = 25
     assert isinstance(_load(d).recovery_in_bush_multiplier, float)
     assert (_load(d).recovery_in_bush_multiplier
             == params.recovery_in_bush_multiplier)
+
+
+def test_the_inert_regime_is_still_reachable_by_an_explicit_override():
+    """`1.0` no longer ships, but a world may still ask for no premium at all.
+
+    Kept as its own case because the untraced branch at exactly 1.0 is what any
+    future bit-parity claim against a pre-2026-09-15 run would rest on.
+    """
+    d = _default_dict()
+    d["body"][KEY.split(".", 1)[1]] = 1.0
+    assert _load(d).recovery_in_bush_multiplier == 1.0
 
 
 def test_non_positive_multiplier_raises():

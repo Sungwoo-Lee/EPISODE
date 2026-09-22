@@ -167,3 +167,52 @@ giving WandB 50x the usual row density; and every banner reads `Device: gpu (cud
 because `train.py` sets `CUDA_VISIBLE_DEVICES` to the requested index, so the card is
 always local 0 inside the process — physical placement was verified against `nvidia-smi`
 instead (one compute app per GPU, two per node).
+
+---
+
+## Wave 1 was stopped and is superseded (2026-09-22)
+
+**What happened.** Wave 1 launched on 2026-09-21 into a world where **cover had no healing role**.
+`body.recovery_in_bush_multiplier` shipped at `1.0` — meaning resting inside a bush healed exactly
+as fast as resting in the open — and `recovery_base_rate: 0.1` with `recovery_accel_rate: 0.5` let
+an agent clear the **entire 100-point injury scale on open ground in about 12 rest steps**.
+
+That matters because bush hiding is this project's main behavioural readout for internal-state
+dependence. An injured agent had no reason to travel to cover, and measurement agreed: it rested on
+**86%** of its injured steps while standing in a bush on only **1–3%** of them. So the question this
+wave exists to ask — *does a neuromodulator change injury-driven cover use?* — was close to
+unanswerable in that world **for either arm**. A null result would have said nothing about the
+modulator.
+
+**Why the world was wrong.** The mechanism and the correct numbers were produced by the same session
+and never joined up. `body.recovery_in_bush_multiplier` landed on 2026-09-15 (`761f427f`)
+deliberately inert at `1.0` so the feature could ship without changing behaviour. The tuning study
+that was meant to supply the real value finished the next day and recommended
+`base 0.2 / accel 0.0 / multiplier 25` — and nothing ever wrote it into the config. Wave 1 was
+launched into the gap.
+
+**Disposition.** Eight of the fourteen runs had finished when this was caught; six were stopped
+between 59% and 96% complete. All fourteen are retained on disk and remain **valid as a baseline for
+the pre-tuning world** — each carries its own resolved `models/config.yaml`, so what it trained
+against is self-describing and unambiguous. They are **not** comparable with Wave 2.
+
+## Wave 2 — the same question in a world where cover is the only place healing works
+
+Identical in every respect except the three recovery settings, now at the tuning study's
+recommendation:
+
+| setting | Wave 1 | Wave 2 |
+|---|---|---|
+| `body.recovery_base_rate` | 0.1 | **0.2** |
+| `body.recovery_accel_rate` | 0.5 | **0.0** |
+| `body.recovery_in_bush_multiplier` | 1.0 (inert, untraced) | **25.0** |
+
+Resolved on all seven levels through the live loader: **10 injury points healed in 50 open-ground
+rest steps, 20 in 100** — both under the 25-point threshold the study set for "resting in the open
+is not worth doing" — against **5.0 per step in cover**, closing a typical 70-point wound in **14
+steps**. Observation widths are unchanged (44 / 52 / 58 re-verified, and the neuromodulated agent
+still constructs against each), so this changes the *problem*, not the *interface*.
+
+One consequence worth stating plainly: at `1.0` the premium branch was never traced, which is what
+made runs bit-identical to runs predating the key. At `25.0` it is compiled in. Bit-parity with the
+pre-feature environment is gone, by choice.
