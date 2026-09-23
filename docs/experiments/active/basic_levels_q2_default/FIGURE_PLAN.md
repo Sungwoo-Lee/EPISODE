@@ -331,3 +331,18 @@ it is the more useful thing to publish:
 
 Corrections stay ON the page rather than being quietly fixed, per the artifact guide. The occupancy
 table and the rover claim both appear, marked as superseded, with what replaced them.
+
+---
+
+## Feedback from plan-reviewer (2026-09-23, second-round gate on the null verdict)
+
+The six-cell F1/F2 table built from these figures was reviewed as an analysis verdict and returned
+**NOT SUPPORTED BY THE EVIDENCE SHOWN** for the claim as worded ("the modulator does not increase
+state-dependence, and vision does not rescue it"). Two Critical findings: F1's "flat ~21 pp across
+all six cells" is read from the *observed* panel, and under the randomised-start panel the same
+quantity doubles with vision (2.8–4.5 pp blind vs 8.1–8.2 pp sighted); and the "blindness excuse does
+not survive" clause rests on one level, one seed, a two-variable step (vision + `blocks_animals`),
+and a presence-only visual channel. The narrower "no modulator effect detected at n = 1" is
+consistent with the data, including the unreported B0 bush-entry measure this plan itself names as
+the headline. Full findings, exit conditions and owners:
+[[plan_context_dependence_null_verdict]] (`docs/reviews/plan_context_dependence_null_verdict.md`).
