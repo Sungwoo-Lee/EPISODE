@@ -1,0 +1,509 @@
+<title>Where Does the Modulator Matter?</title>
+__HOUSE_STYLE__
+<style>
+  /* REQUIRED OVERRIDE (House Style Sheet, F11 amendment): figures spend --series-1 blue on the
+     ordinary agent and --series-2 orange on the neuromodulated one; chrome uses neither. */
+  :root { --accent: #3f5b7a; --accent-text: #35506e; --warn: #7a5340; }
+  :root { --f-head: 'Pretendard', system-ui, -apple-system, "Segoe UI", sans-serif;
+          --f-mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace; }
+  figure, figcaption { min-width: 0; }
+  table.datatable { min-width: 640px; }
+  table.datatable td:first-child, table.datatable th:first-child { min-width: 170px; }
+  /* Column floors must SUM to less than the 688px text column, or the table scrolls on a desktop. */
+  table.wide { min-width: 585px; }
+  table.wide td:nth-child(1), table.wide th:nth-child(1) { min-width: 150px; }
+  table.cluetable { min-width: 760px; }
+  table.cluetable td:first-child { min-width: 190px; }
+  table.cluetable .tag { display: block; font-size: 12px; color: var(--ink-3); }
+  p.kind { display: inline-block; margin: 0 0 6px; padding: 2px 9px; border-radius: 3px;
+           font-size: 12.5px; letter-spacing: .02em; border: 1px solid var(--rule); color: var(--ink-2); }
+  p.kind-causal { border-color: var(--accent); color: var(--accent-text); }
+  h3.group { margin-top: 2.2em; font-size: 13px; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-3); }
+</style>
+
+<div class="wrap">
+
+<section class="col">
+  <h1>Where Does the Modulator Matter?</h1>
+  <p class="lede">A survey, not a verdict. The same analyses the project has used before, re-run on an
+  ordinary agent and a neuromodulated one across three versions of the world, to collect clues about
+  when, how and why the modulator makes a difference — and so where to look next.</p>
+</section>
+
+<section class="col">
+<h2><span class="num">01</span> What this page is</h2>
+
+<p>The project's goal is an agent whose behaviour genuinely depends on the state of its own body —
+how hurt, how hungry, how cold it is. One route there is a <strong>neuromodulator</strong>: a small
+network that reads those internal signals and rescales the signals flowing through the rest of the
+agent's brain (the FiLM style; a hypernetwork is the heavier alternative). Two agents were trained
+side by side in every world: an <strong>ordinary</strong> one, and one with the modulator acting at
+all four places it can act — the two sensory encoders, the memory, and the decision heads.</p>
+
+<p>This page does <em>not</em> ask whether the modulator works. With one training run per agent per
+world, it could not answer that. It asks where the two agents differ, where they do not, and what
+changes each time the world was changed — so the next experiment can be aimed. Every figure
+therefore leads with the <strong>gap</strong>: the neuromodulated agent's value minus the ordinary
+agent's.</p>
+
+<div class="callout">
+  <p class="eyebrow">How to read every figure</p>
+  <p>Blue is the ordinary agent, orange the neuromodulated one, black the gap between them. A badge
+  above each caption says what kind of evidence it is: <b>causal</b> (the agent's starting injury was
+  assigned at random, so behaviour that tracks it was caused by it), <b>observational</b> (what goes
+  together in the agent's own history), or a <b>controlled test scene</b>. Where a spread is drawn it
+  is how much ONE training run moves between its late checkpoints — never how much two runs differ,
+  which nothing here can measure.</p>
+</div>
+
+<p>The same analyses were published for the Sensor Ladder and for "What makes this agent hide?", and
+the page follows their order, then adds a look inside the modulator, controlled test scenes, and two
+threads specific to the thermal levels. It ends with every gap in one table and the leads it
+suggests.</p>
+</section>
+
+<section class="col">
+<h2><span class="num">02</span> The three worlds, and what cannot be measured</h2>
+
+<p>The worlds are three successive versions of the same small grid — food, bushes to hide in,
+predators that stalk and pounce — each built for a reason of its own:</p>
+
+<p class="cue" hidden>Scroll the table sideways to see every column.</p>
+<div class="scroll">
+<table class="wide">
+  <thead><tr><th>world</th><th>what it added</th><th>levels compared</th></tr></thead>
+  <tbody>
+    <tr><td><b>blind</b> (9 Sept)</td><td>smell only; no vision</td><td>one world, no curriculum levels</td></tr>
+    <tr><td><b>Wave 1</b> (21 Sept)</td><td>short-range vision reporting only that a square is occupied; and — between the two — a hiding bush that predators cannot enter</td><td>02–06; 02 and 03 compared at matched training length, because the two agents trained for different lengths</td></tr>
+    <tr><td><b>Wave 2</b> (22 Sept)</td><td>resting in cover heals 25× faster; fullness has a target in the middle of its range, so over-eating is harmful and can kill</td><td>04–06; 02 and 03 still training</td></tr>
+  </tbody>
+</table>
+</div>
+
+<p>Two curriculum levels matter especially here. <strong>Level 05</strong> adds body temperature:
+the world is cold, the body cools away from a fire, and the agent dies below −15°. <strong>Level
+06</strong> is level 05 plus a sense of smell that grows noisier as the agent is injured. Both were
+built so that behaviour <em>should</em> need to depend on internal state — so they are where a
+modulator effect ought to be most likely.</p>
+
+<p>Some cells are empty for reasons worth stating. Level 02 never hands out a random starting
+injury, so no causal injury measure exists there. Body temperature is never randomised either — every
+episode starts at the target — so every body-temperature result is observational. The blind world has
+no test scenes, and its saved configuration no longer loads under the current schema, so it has no
+late-checkpoint data. Wave 1's test scenes with animals in them predate a fix to the hiding bush and
+are not used.</p>
+</section>
+
+<section class="col">
+<h3 class="group">From the Sensor Ladder</h3>
+<h2><span class="num">03</span> Survival, and how episodes end</h2>
+
+<figure>
+  <img data-fig="a1_outcomes" alt="Two stacked panels across seven columns: blind, then Wave 1 levels 04 to 06, then Wave 2 levels 04 to 06. Top: mean survival for both agents, paired dots between about 180 and 290 steps that sit almost on top of each other in every column. Bottom: small coloured bars of the modulator's shift in the share of episodes ending by starvation, injury, cold or heat, and over-eating, all within a few percentage points of zero.">
+  <p class="zoomhint">Click the figure to open it full size.</p>
+  __KIND:a1_outcomes__
+  <figcaption>
+    <span><b>Figure 1 — the two agents survive equally long, and die of the same things.</b>
+    In every world and level the two agents' mean survival differs by a few steps out of 180–290, and
+    the modulator moves the mix of deaths by a few points at most, in no consistent direction. The
+    environment moves both far more: survival at level 04 rises from about 240 steps in Wave 1 to
+    about 290 in Wave 2, where cover heals. Over-eating, newly possible in Wave 2, essentially never
+    happens — both agents learned to stop.</span>
+    <span><b>Axes.</b> Horizontal, both panels: world and level. Vertical, top: mean survival in
+    steps, 0 to 520. Vertical, bottom: the neuromodulated agent's share of episodes ending each way
+    MINUS the ordinary agent's, in percentage points of episodes.</span>
+    __DATA:a1_outcomes__
+    <span><b>How it is computed.</b> Each agent's final saved checkpoint was replayed for one million
+    episodes in the world it trained in, with the same random seeds for both agents so they meet
+    identical worlds. Survival is the mean episode length in steps — the project's performance
+    measure, rather than reward. Each episode ends in one of five ways: it reaches the time limit, or
+    the agent starves, dies of injury (from predators or rocks), freezes or overheats, or over-eats. The
+    bottom panel takes, for each way, the share of the modulated agent's episodes that ended so and
+    subtracts the ordinary agent's share. A shift that trades one death for another — for example
+    fewer injury deaths but more starvation — would say the modulator hides at the cost of foraging.
+    <b>What this figure does not show:</b> any checkpoint but the final one, since this uses the full
+    million-episode sample; and Wave 1 levels 02 and 03, whose two agents trained for different lengths
+    and so cannot be compared at their final checkpoints.</span>
+  </figcaption>
+</figure>
+</section>
+
+<section class="col">
+<h2><span class="num">04</span> What a wound does, causally</h2>
+
+<figure>
+  <img data-fig="a2_injury_dose" alt="Three stacked panels across eight columns: blind, Wave 1 levels 03 to 06, Wave 2 levels 04 to 06. Each column has a black dot for the median modulated-minus-ordinary gap and a grey bar for its range across checkpoints. Most dots sit near zero, with grey bars crossing zero.">
+  <p class="zoomhint">Click the figure to open it full size.</p>
+  __KIND:a2_injury_dose__
+  <figcaption>
+    <span><b>Figure 2 — the modulator barely changes what a wound does to behaviour.</b>
+    On three causal measures of injury's effect the gap between the agents is small and mostly
+    straddles zero once its spread across checkpoints is drawn. This is the test the modulator was
+    most directly designed to pass — a state-dependent gain should make a wound move behaviour more
+    — and in these runs it does not, in any world. The clue it gives is negative but specific: if
+    the modulator's influence exists, it is not in how strongly injury alone steers hiding.</span>
+    <span><b>Axes.</b> Horizontal, all panels: world and level. Vertical: the neuromodulated agent's
+    value minus the ordinary agent's — top, the state span in percentage points; middle, the threat
+    trend in percentage points per injury band; bottom, the bush-entry change in percentage points.
+    Dots are medians over late checkpoints, grey bars their range.</span>
+    __DATA:a2_injury_dose__
+    <span><b>How it is computed.</b> At levels 03–06 the environment hands the agent a random starting
+    injury before it acts, which makes any behaviour that tracks it a consequence of it. On the first
+    25 steps of those episodes, three things are measured. The <em>state span</em> is how much more
+    of its time a badly hurt agent spends in a bush than an unhurt one, with nothing threatening
+    nearby. The <em>threat trend</em> is how the extra hiding a nearby predator causes changes from one
+    injury band to the next. The <em>bush-entry change</em> scores a decision rather than a place: of
+    the moments the agent is in the open and chooses to move, how often the move takes it into cover —
+    so an injured agent that simply stops where it stands cannot inflate it. Each is computed at five
+    late checkpoints per run, paired in order between the two agents. <b>What this figure does not
+    show:</b> how the two agents differ from a second training run of themselves, which one run per
+    agent cannot tell us; and level 02, which never randomises the starting injury.</span>
+  </figcaption>
+</figure>
+</section>
+
+<section class="col">
+<h2><span class="num">05</span> Does a wound make a harmless animal look dangerous?</h2>
+
+<figure>
+  <img data-fig="a4_hypervigilance" alt="Two panels with seven rows for blind and Wave 1 and Wave 2 levels 04 to 06. Left: for each agent, a filled dot for the wound's effect near a harmless rabbit and a hollow square for near a predator; the squares sit left of zero, between about minus 1 and minus 7. Right: black bars of the modulated-minus-ordinary difference in criterion shift, mostly within one point of zero, positive in Wave 1 and mixed in Wave 2.">
+  <p class="zoomhint">Click the figure to open it full size.</p>
+  __KIND:a4_hypervigilance__
+  <figcaption>
+    <span><b>Figure 3 — no sign that a wound makes the harmless animal count for more, in either
+    agent.</b> The project's working definition of hypervigilance is a wound that raises the response
+    to a harmless rabbit by more than the response to a predator. Here a wound does the opposite of
+    raising either: it <em>lowers</em> the extra hiding a nearby predator causes, in every cell — a hurt
+    agent is already in cover, so a predator's approach adds less. The criterion shift comes out
+    positive for that mechanical reason, not because the rabbit became alarming. The modulated agent's
+    shift is a little larger at all three Wave 1 levels and mixed in Wave 2.</span>
+    <span><b>Axes.</b> Vertical, both panels: world and level. Horizontal, left: the wound's shift in
+    proximity effect, in percentage points — near a rabbit (filled) and near a predator (hollow), for
+    each agent. Horizontal, right: the neuromodulated agent's criterion shift minus the ordinary agent's,
+    in percentage points.</span>
+    __DATA:a4_hypervigilance__
+    <span><b>How it is computed.</b> The proximity effect is the share of steps spent in a bush when
+    the nearest animal is one or two squares away, minus the share when it is six or more away. It is
+    computed separately for the least-injured and most-injured quarter of the randomly assigned starting
+    injury; the wound's shift is the difference. Doing this for the nearest rabbit and the nearest
+    predator separately and subtracting gives the criterion shift: positive means the wound raised the
+    response to the harmless animal more than to the dangerous one. Both animals move identically when
+    chasing, and the agent tells them apart only by smell. <b>What this figure does not show:</b> any
+    checkpoint but the last — this needs the full million-episode sample — and why a wound lowers the
+    predator response, which the mechanical reading above explains but no test here confirms.</span>
+  </figcaption>
+</figure>
+</section>
+
+<section class="col">
+<h2><span class="num">06</span> A wound says hide, hunger says forage</h2>
+
+<figure>
+  <img data-fig="a5_two_drives" alt="Three stacked panels across seven columns. Top: injury span for each agent, around 2 to 8 points in the blind world and Wave 1, negative at Wave 1 level 06, and about 7 to 27 points in Wave 2. Middle: hunger span, negative everywhere, about minus 14 to minus 25. Bottom: over-full span, present only in Wave 2, about 7 to 28 points. Blue and orange dots are close in almost every column.">
+  <p class="zoomhint">Click the figure to open it full size.</p>
+  __KIND:a5_two_drives__
+  <figcaption>
+    <span><b>Figure 4 — the world changed the balance of the drives; the modulator did not.</b>
+    In the blind world and Wave 1 hunger dominates: being far below the fullness target drives the
+    agent out of cover by 14–17 points, while a serious wound pulls it in by only about 2–8. In Wave 2,
+    where cover is the place wounds heal, the wound's pull roughly quadruples to 7–27 points — as
+    large as hunger's — and being over-full, newly possible, also sends the agent into cover. The two
+    agents sit close together throughout; the one consistent gap on the whole page's table is that the
+    modulated agent is slightly less pulled by hunger in six of seven cells.</span>
+    <span><b>Axes.</b> Horizontal, all panels: world and level. Vertical: change in hiding over the
+    first 25 steps, in percentage points — top, most-injured minus least-injured start; middle,
+    furthest below the fullness target minus at it; bottom, well above the target minus at it (Wave 2
+    only). Blue and orange dots are the two agents.</span>
+    __DATA:a5_two_drives__
+    <span><b>How it is computed.</b> At these levels both a starting injury and a starting fullness are
+    drawn at random for every episode, so each can be tested causally on the same footing. Hiding is
+    the share of the first 25 steps spent in a bush — early, while the assigned values are still
+    largely intact — pooled within groups of episodes. Fullness is measured as distance from each
+    run's <em>own</em> target, because the two waves put the target in different places: at the top of
+    a 0–100 range in Wave 1 and the blind world, in the middle of 0–200 in Wave 2. Fixed fullness bins
+    would have compared a nearly-full Wave-1 agent with a half-empty Wave-2 one. <b>What this figure
+    does not show:</b> any checkpoint but the last, and whether the two drives interact — the spans are
+    computed one drive at a time, pooling over the other.</span>
+  </figcaption>
+</figure>
+</section>
+
+<section class="col">
+<h3 class="group">From "What makes this agent hide?"</h3>
+<h2><span class="num">07</span> Which factors drive hiding, weighed together</h2>
+
+<figure>
+  <img data-fig="b1_hiding_model" alt="A grid of coloured cells, nine factor rows by seven world-and-level columns. Most cells are pale, with gaps within about half a point. The number-of-predators row has deep red cells of about plus 2.3 and plus 2.4 at level 04 of both waves. The predator-smells-predator-like row is pale red across nearly every column.">
+  <p class="zoomhint">Click the figure to open it full size.</p>
+  __KIND:b1_hiding_model__
+  <figcaption>
+    <span><b>Figure 5 — the modulated agent listens a little more to predator evidence.</b>
+    Adjusted for everything else, most factors move hiding about equally in the two agents. Two rows
+    stand out. How predator-like a predator smells raises the modulated agent's hiding more than the
+    ordinary agent's in six of seven cells — the most consistent modulator gap on this page — and at
+    level 04 in both waves the modulated agent's hiding rises more with the number of predators. Both
+    point the same way: the modulator may amplify evidence about threat identity rather than the
+    effect of the agent's own state.</span>
+    <span><b>Axes.</b> Horizontal: world and level. Vertical: the factors in the model — starting
+    injury and fullness, counts of predators, rabbits, bushes and food, starting distance to a bush,
+    and, below the line, how predator-like each animal smells. Each cell: the neuromodulated agent's
+    effect minus the ordinary agent's, in percentage points of hiding per standard deviation of the
+    factor, with both agents' own effects underneath.</span>
+    __DATA:b1_hiding_model__
+    <span><b>How it is computed.</b> For each agent and world, one regression over a million episodes
+    predicts the share of the episode spent in a bush from everything fixed at the episode's start.
+    Fitting the factors together means each effect is adjusted for the others, so an effect of injury
+    cannot be an effect of predators in disguise. Effects are expressed per standard deviation of the
+    factor so that factors on different scales can be compared. The smell rows come from the same model
+    fitted only on episodes with exactly one predator and one rabbit, where how predator-like each one
+    smells is defined. In Wave 2 fullness is fitted as a straight line although its target sits in the
+    middle of the range, so that row is unreliable there. <b>What this figure does not show:</b> the
+    uncertainty of each coefficient, and any checkpoint but the last.</span>
+  </figcaption>
+</figure>
+</section>
+
+<section class="col">
+<h3 class="group">Inside the modulator</h3>
+<h2><span class="num">08</span> How much of the modulator's output moves with the body?</h2>
+
+<figure>
+  <img data-fig="c1_gain_tracking" alt="A grey-shaded grid of five network sites by nine world-and-level columns, each cell giving a percentage and a range. Values run from about 8 to 31 percent. The actor and critic rows are darkest; the darkest cell is the actor at Wave 1 level 04, at 31 percent. Levels 05 and 06 are lighter than level 04 in both waves.">
+  <p class="zoomhint">Click the figure to open it full size.</p>
+  __KIND:c1_gain_tracking__
+  <figcaption>
+    <span><b>Figure 6 — most of what the modulator does never changes, and the thermal levels did not
+    change that.</b> Between 8% and 31% of the modulator's variation tracks the moment-to-moment state;
+    the rest is a fixed per-channel rescaling, in effect a learned weight. The tracking share is highest
+    at the decision heads — the actor and the critic — in every world. It peaks at Wave 1 level 04 and
+    is <em>lower</em> at levels 05 and 06, the levels built to need state dependence. Whatever the extra
+    need does, it does not make the modulator follow the body more.</span>
+    <span><b>Axes.</b> Horizontal: world and level, with Wave 1 levels 02 and 03 read at matched training
+    length. Vertical: the five places the modulator acts. Each cell: the share of that site's gain
+    variation that changes over time, in percent — the median over five late checkpoints, with their
+    range beneath (the blind cell: final checkpoint only).</span>
+    __DATA:c1_gain_tracking__
+    <span><b>How it is computed.</b> At each site the modulator emits one gain per channel — a number
+    that channel is multiplied by. Every modulated agent was replayed on one fixed set of 128 episodes
+    and every gain recorded. Their variation splits into two parts: variation <em>across channels</em>,
+    which is how much channels differ from one another on average, and variation <em>across time</em>,
+    which is how much one channel's own gain moves as the episode unfolds. The first is a constant the
+    agent could equally have learned as an ordinary weight; only the second can make behaviour depend
+    on internal state. The cell reports the second as a share of the total, read at the same five late
+    checkpoints as the behaviour. <b>What this figure does not show:</b> what the time-varying part
+    actually follows — injury, hunger, body temperature, or something external — which would be the
+    natural next measurement.</span>
+  </figcaption>
+</figure>
+</section>
+
+<section class="col">
+<h3 class="group">Controlled test scenes</h3>
+<h2><span class="num">09</span> Level 04, scene by scene</h2>
+
+<figure>
+  <img data-fig="d1_threat_ladder" alt="Two panels with five rows of test scenes from nothing to a predator. Left: black bars of the modulated-minus-ordinary gap, all negative, between about minus 18 and minus 30, with wide grey whiskers. Right: blue and orange dots for each agent's hiding; blue sits above orange in every scene, and both rise toward the predator.">
+  <p class="zoomhint">Click the figure to open it full size.</p>
+  __KIND:d1_threat_ladder__
+  <figcaption>
+    <span><b>Figure 7 — in a small fixed scene, the modulated agent hides less in every situation.</b>
+    Averaged over the last 20 checkpoints, the modulated agent spends 18–30 points less time in the bush
+    in all five scenes, including the one with nothing in it; both agents still hide most from a
+    predator. The extra hiding a predator adds over the empty scene is similar in both, so the gap is a
+    lower default rather than a weaker threat response. In the agents' own training world the two hide
+    alike (the overall-hiding row of the table in section 13), so this difference is elicited by the scene — a lead about what the
+    modulated agent does when it has nothing to do.</span>
+    <span><b>Axes.</b> Vertical, both panels: the five test scenes, from nothing to a hunting predator.
+    Horizontal, left: neuromodulated minus ordinary, in percentage points, with the standard deviation of
+    that gap across the 20 checkpoints. Horizontal, right: each agent's share of steps on the hiding bush,
+    in percent.</span>
+    __DATA:d1_threat_ladder__
+    <span><b>How it is computed.</b> A test scene is a small fixed world: the agent starts in the middle
+    with a full stomach and no injury, one bush sits three squares away, and either nothing or one animal
+    enters from the far side. Every one of each agent's 50 saved checkpoints is replayed there for 30
+    episodes with fixed seeds, and the share of steps on the bush is recorded. The value shown is the
+    average over the newest 20 checkpoints, and the whisker is the standard deviation of the gap across
+    them, pairing the two agents' checkpoints in order. Only Wave 2 is shown: Wave 1's animal scenes were
+    replayed while the test bush still let predators walk in. <b>What this figure does not show:</b>
+    other levels, and why the modulated agent's idle behaviour differs in this scene alone.</span>
+  </figcaption>
+</figure>
+</section>
+
+<section class="col">
+<h2><span class="num">10</span> The thermal levels, in four survivable versions</h2>
+
+<figure>
+  <img data-fig="d2_thermal_scenes" alt="Two panels with eight rows: four temperature fixes at levels 05 and 06. Left: black bars of the calm-hiding gap, all at or slightly below zero, mostly within a few points. Right: black bars of the threat-response gap, mostly slightly positive, with whiskers wider than the bars.">
+  <p class="zoomhint">Click the figure to open it full size.</p>
+  __KIND:d2_thermal_scenes__
+  <figcaption>
+    <span><b>Figure 8 — at the thermal levels the scene gap shrinks to almost nothing.</b>
+    The modulated agent's calm hiding is equal or slightly lower in all eight combinations of level and
+    temperature fix — the same direction as at level 04, but mostly a few points rather than twenty. Its
+    threat response is higher in six of eight, but inside its own checkpoint-to-checkpoint spread.
+    Because every survivable test scene is a world the thermal agents never trained in, the four versions
+    are a check on each other; a gap that held its sign across all four would deserve attention, and the
+    calm-hiding gap is the only one that does.</span>
+    <span><b>Axes.</b> Vertical, both panels: four versions of the test scene — warmed to the body's
+    target, warmed most of the way, the trained cold with a fire beside the bush, the trained cold with the
+    fire away from it — at levels 05 and 06. Horizontal: neuromodulated minus ordinary, in percentage
+    points; left, calm hiding (empty scene); right, threat response (predator scene minus empty scene).
+    Whiskers are the gap's standard deviation across the last 20 checkpoints.</span>
+    __DATA:d2_thermal_scenes__
+    <span><b>How it is computed.</b> The level-04 scenes freeze a thermal agent to death, because the
+    world is cold and they contain no fire. Four survivable versions were built instead and verified by
+    loading them and reading the actual temperature field: the whole world warmed to the body's target;
+    warmed most of the way, so the body settles five degrees below target; and the trained cold with a
+    campfire either one square from the bush or far from it. Each Wave-2 thermal agent was replayed in
+    each version at every checkpoint, 30 episodes apiece, with fixed seeds. Calm hiding is the share of
+    steps on the bush with no animal; the threat response is the predator scene minus that. Values
+    average the newest 20 checkpoints. <b>What this figure does not show:</b> Wave 1, whose agents
+    trained on a different fullness scale; and the noise-matched versions of the level-06 scenes.</span>
+  </figcaption>
+</figure>
+</section>
+
+<section class="col">
+<h3 class="group">The levels built to need state dependence</h3>
+<h2><span class="num">11</span> Behaviour and body temperature</h2>
+
+<figure>
+  <img data-fig="e1_body_temperature" alt="Eight small panels in two rows for Wave 1 and Wave 2 at levels 05 and 06. Top row: calm hiding falls steeply as the body warms, from about 45 to 60 percent below minus 10 degrees to about 10 to 18 percent at zero and above. Bottom row: threat response rises from about 10 to 20 points when cold to about 40 when warm. Blue and orange lines lie almost on top of each other in every panel.">
+  <p class="zoomhint">Click the figure to open it full size.</p>
+  __KIND:e1_body_temperature__
+  <figcaption>
+    <span><b>Figure 9 — behaviour tracks body temperature strongly, and identically in both agents.</b>
+    A cold agent, below −10°, sits in cover in half or more of its calm steps against about a tenth when
+    warm, and a nearby predator adds much less to its hiding. That is exactly the kind of state
+    dependence the modulator was meant to support — and the ordinary agent shows it just as strongly. The
+    clue is that this dependence does not need the modulator: the ordinary network, which also receives
+    its body temperature as an input, already produces it.</span>
+    <span><b>Axes.</b> Horizontal, all panels: the agent's body temperature at that step, in four bands
+    labelled by their lower edge — below −10, −10 to −5, −5 to 0, 0 and above — in degrees from the
+    target (death below −15). Vertical, top: share of calm steps spent in a bush, in percent. Vertical,
+    bottom: extra hiding with a predator within two squares, in percentage points.</span>
+    __DATA:e1_body_temperature__
+    <span><b>How it is computed.</b> Body temperature is not stored directly in the recordings, but the
+    agent observes it, so it is read from the recorded observation, after checking on every file that the
+    slot holding it is laid out as expected. Every step of one million replayed episodes per agent is
+    grouped by body temperature at that moment; within each group, calm hiding is the share of steps in a
+    bush with no predator within two squares, and the threat response is the share with one, minus that.
+    Groups with fewer than 20,000 steps are left out. This is associational only: every episode begins at
+    the target temperature, so a cold agent is one that has stayed away from a fire, which is itself a
+    behaviour. <b>What this figure does not show:</b> whether being cold <em>causes</em> the hiding —
+    that would need episodes that start at a random temperature, which the environment does not
+    provide.</span>
+  </figcaption>
+</figure>
+</section>
+
+<section class="col">
+<h2><span class="num">12</span> What the injury-gated smell noise does</h2>
+
+<figure>
+  <img data-fig="e3_noise_effect" alt="Two panels, Wave 1 and Wave 2, each with four rows of measures and a blue and orange bar per row. The injury-span row has long negative bars for both agents in both waves, between about minus 10 and minus 20, with the orange bar longer in both waves. The other rows have short bars near zero.">
+  <p class="zoomhint">Click the figure to open it full size.</p>
+  __KIND:e3_noise_effect__
+  <figcaption>
+    <span><b>Figure 10 — the noise weakens a wound's pull on hiding, and more so in the modulated
+    agent.</b> Level 06 was designed on the idea that an agent unable to trust its sense of smell when
+    hurt would fall back on caution. The opposite happens: moving from level 05 to level 06 cuts how
+    much a wound raises hiding, in both waves and both agents. The cut is larger in the modulated agent in
+    both waves. It is the one place where the modulated agent reacts more strongly than the ordinary one
+    to a change in what its internal state is worth — though in the opposite direction to the design's
+    expectation, and on one run per cell.</span>
+    <span><b>Axes.</b> Vertical, both panels: four causal injury measures — injury span, hunger span, the
+    wound's shift in response to a nearby predator, and the criterion shift. Horizontal: level 06's value
+    minus level 05's, in percentage points, for each agent.</span>
+    __DATA:e3_noise_effect__
+    <span><b>How it is computed.</b> Levels 05 and 06 are the same world except that at 06 the agent's
+    sense of smell — how it tells a predator from a rabbit — becomes noisier the more injured it is, while
+    its sense of its own body stays clean. Each of the four measures is computed exactly as on the rest of
+    this page, on randomly assigned starting injury, once for each level; the figure shows 06 minus 05 for
+    each agent in each wave. A consistent sign across both waves and both agents is what makes a
+    difference worth following up. <b>What this figure does not show:</b> how much of each difference is
+    the noise and how much is simply that levels 05 and 06 are separate training runs, which would differ
+    somewhat even without the noise; with one run per cell the two cannot be separated.</span>
+  </figcaption>
+</figure>
+</section>
+
+<section class="col">
+<h2><span class="num">13</span> Every gap in one place, and the leads</h2>
+
+<p>Each row is one measure from the figures above, as the neuromodulated agent's value minus the
+ordinary agent's; the last column counts how many cells share the sign of the typical gap. The table
+ranks leads by consistency. It does not test them.</p>
+
+__TABLE:e4_clue_table__
+
+<p>Read together with the figures, the page offers these leads — each a direction to explore, not a
+result:</p>
+<ol>
+  <li><b>The environment moves state dependence far more than the modulator does.</b> Making cover heal
+  quadrupled a wound's pull on hiding (Figure 4); body temperature steers behaviour strongly at the thermal
+  levels (Figure 9); the modulator shifted neither much. A modulator may need a task where the right action
+  <em>reverses</em> with internal state, not just strengthens — otherwise the ordinary network, which also
+  sees its internal state, can learn the same thing.</li>
+  <li><b>The modulator's clearest footprint is on threat identity, not on the body.</b> How predator-like a
+  predator smells moves the modulated agent's hiding more in six of seven cells (Figure 5). Worth testing
+  directly: does it gate smell evidence, and does restricting its input to internal signals alone remove
+  that?</li>
+  <li><b>Most of the modulator's output is a constant.</b> Only 8–31% of its gain variation tracks the
+  moment (Figure 6), and less at the thermal levels. Worth measuring what that part follows, and trying a
+  design that cannot collapse into a fixed rescaling — a hypernetwork, or a penalty on the constant part.</li>
+  <li><b>At level 06 the modulated agent adjusts more when the value of its internal signals changes</b>
+  (Figure 10). The one comparison where its response to a change in state differs more than the
+  ordinary agent's, and consistently across waves. A seeded replication of levels 05 and 06 would say
+  whether it is real.</li>
+  <li><b>In a scene with nothing to do, the modulated agent idles differently</b> (Figure 7) — but not in
+  its own world. A small lead about default behaviour, not about state dependence.</li>
+</ol>
+</section>
+
+<section class="col">
+<h2><span class="num">14</span> What this page cannot say</h2>
+
+<div class="callout warn">
+  <p class="eyebrow">The binding limit</p>
+  <p><strong>One training run per agent per world.</strong> Every gap on this page is one run against
+  one run. Spreads are how much a single run moves between its late checkpoints, not how far two runs
+  of the same configuration would land apart, and nothing here can measure the latter. That is why the
+  page ranks leads rather than declaring effects.</p>
+</div>
+
+<ul>
+  <li><b>Successive worlds change several things at once.</b> Blind to Wave 1 added vision and made
+  the bush predator-proof; Wave 1 to Wave 2 changed healing, the fullness target and over-eating.
+  No difference between worlds can be pinned on one of those changes.</li>
+  <li><b>Most figures read only the final checkpoint</b>, because the filtered analyses need the full
+  million-episode sample. The coarse measures in Figure 2 carry a late-checkpoint spread, and a check
+  showed a hundred thousand episodes reproduce them within a third of a point.</li>
+  <li><b>Wave 2 levels 02 and 03 were still training</b> and are left out; Wave 1 levels 02 and 03
+  are compared at matched training length.</li>
+</ul>
+
+<p>A separate page, <a href="https://claude.ai/code/artifact/203e5890-932f-452e-a885-bc60c78afc0a">The Last Checkpoint Lies</a>,
+explains the measurement rules this page follows and the earlier readings they replaced.</p>
+</section>
+
+<section class="col">
+<h2><span class="num">15</span> How to reproduce this</h2>
+<p>The plan behind this page, with its review, is
+<code>docs/<wbr>experiments/<wbr>active/<wbr>basic_levels_q2_default/<wbr>INTEGRATED_ANALYSIS_PLAN.md</code>. Each
+figure is one script in <code>scripts/<wbr>analysis/<wbr>studies/<wbr>modulator_clues/</code> and writes its
+own data-accounting file beside its image; the table is written by <code>e4_clue_table.py</code>. The
+measurements come from <code>scripts/<wbr>analysis/<wbr>context_dependence.py</code>, the Sensor Ladder
+sweep, <code>scripts/<wbr>analysis/<wbr>hiding_drivers.py</code> and
+<code>scripts/<wbr>analysis/<wbr>nmn/<wbr>run_mod_distribution.py</code>; their outputs are under
+<code>results/<wbr>analysis/<wbr>basicq2_integrated/</code>.</p>
+<p>Departures from the House Style Sheet: the chrome accent and warning hues are moved off the figure
+palette, which the sheet requires when figures spend colours on data categories; headings are set in
+Pretendard and code in the reader's system monospace, because the sheet links its IBM Plex families from
+a font host a published page cannot reach; a small evidence-kind badge sits above each caption; and wide
+tables sit in horizontal scroll boxes with an overflow cue, which is the sheet's own mechanism.</p>
+</section>
+
+</div>
+__HOUSE_SCRIPT__

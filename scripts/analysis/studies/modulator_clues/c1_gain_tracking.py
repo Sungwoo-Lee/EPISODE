@@ -40,12 +40,13 @@ for j, (world, lvl) in enumerate(COLS):
         elif by.get((world, lvl, site)):
             v = np.asarray(by[(world, lvl, site)]); M[i, j] = np.median(v); LO[i, j] = v.min(); HI[i, j] = v.max()
 fig, ax = plt.subplots(figsize=(10.0, 4.9))
-im = ax.imshow(M, cmap=house.sequential(), vmin=0, vmax=40, aspect="auto")
+# a NEUTRAL ramp: every other figure spends blue on the ordinary agent, and this is modulated-agent data
+im = ax.imshow(M, cmap="Greys", vmin=0, vmax=45, aspect="auto")
 for i in range(len(SITES)):
     for j in range(len(COLS)):
         if np.isnan(M[i, j]):
             ax.text(j, i, "—", ha="center", va="center", fontsize=10, color=house.TEXT_LIGHT); continue
-        dark = M[i, j] > 24
+        dark = M[i, j] > 27
         txt = f"{M[i, j]:.0f}%" + ("" if np.isnan(LO[i, j]) else f"\n{LO[i, j]:.0f}–{HI[i, j]:.0f}")
         ax.text(j, i, txt, ha="center", va="center", fontsize=10 if np.isnan(LO[i, j]) else 9.6,
                 color="white" if dark else house.INK)

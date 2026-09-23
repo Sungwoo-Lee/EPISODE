@@ -42,9 +42,13 @@ for j, (world, lvl) in enumerate(CELLS):
                               fontsize=10, color=house.TEXT_LIGHT)
 ax[0, 0].set_ylim(0, 60); ax[1, 0].set_ylim(0, 60)
 ax[0, 0].set_ylabel("calm hiding (%)"); ax[1, 0].set_ylabel("threat response (pp)")
-fig.supxlabel("body temperature at that step, bin lower edge (degrees from the target; death below −15)", fontsize=11)
-C.legend_below(ax[1, 1], ncol=2, offset=-0.42)
-fig.tight_layout(h_pad=1.4, w_pad=0.8, rect=(0, 0.06, 1, 1))
+fig.supxlabel("body temperature at that step, bin lower edge (degrees from the target; death below −15)", fontsize=11, y=0.07)
+# figure-level legend in its own band: anchored to one small panel it landed under the shared
+# x-label and was drawn over by it.
+_h = [plt.Line2D([], [], color=c, lw=2.2, marker="o", ms=5, label=l) for _, l, c in C.ARMS]
+_leg = fig.legend(handles=_h, loc="lower center", ncol=2, frameon=False, bbox_to_anchor=(0.5, 0.0))
+for _t in _leg.get_texts(): _t.set_fontsize(house.FS_LABEL)
+fig.tight_layout(h_pad=1.4, w_pad=0.8, rect=(0, 0.11, 1, 1))
 C.assert_no_text_overlap(fig); C.assert_min_text_px(fig)
 C.record_kind("e1_body_temperature", "observational")
 C.record_samples("e1_body_temperature", [
