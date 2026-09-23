@@ -6,7 +6,19 @@ __HOUSE_STYLE__
      green and red on the regimes of Figure 1. Chrome may therefore use none of the four. Section
      numbers, links and callout rules move to a slate blue that appears in no figure. */
   :root { --accent: #3f5b7a; --accent-text: #35506e; --warn: #7a5340; }
-  td code { overflow-wrap: normal; word-break: keep-all; }
+  /* STATED DEPARTURE (section 09): the house sheet names IBM Plex Sans Condensed for headings and
+     IBM Plex Mono for code, but LINKS them from Google Fonts rather than embedding them. A lifted
+     page carries the @font-face rules it was given, and the artifact CSP blocks the link, so those
+     two families silently became whatever sans and mono the reader's machine has. Only Pretendard
+     is embedded here, so both tokens point at it and the page renders in the face it actually has. */
+  :root { --f-head: 'Pretendard', system-ui, -apple-system, "Segoe UI", sans-serif;
+          --f-mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace; }
+  /* A figcaption is a flex item; without this its min-content width is the widest table cell, which
+     pushes the whole page sideways on a phone (register F2). */
+  figure, figcaption { min-width: 0; }
+  table.datatable { min-width: 560px; }
+  table.wide { min-width: 560px; }
+  table.wide-sm { min-width: 520px; }
 </style>
 
 <div class="wrap">
@@ -72,7 +84,9 @@ it was trying to observe.</p>
   setting and hoping, we built four and measured how much the choice moves the answer.</p>
 </div>
 
-<table>
+<p class="cue" hidden>Scroll the table sideways to see every column.</p>
+<div class="scroll">
+<table class="wide-sm">
   <thead><tr><th>World we built</th><th>What we did to it</th><th>Can the agent survive?</th><th>Can it hide?</th></tr></thead>
   <tbody>
     <tr><td><b>neutral</b></td><td>warmed the whole world to the body's target</td><td>everywhere (100 of 100 cells)</td><td>freely</td></tr>
@@ -81,6 +95,7 @@ it was trying to observe.</p>
     <tr><td><b>fire away from the bush</b></td><td>kept the trained cold, put the campfire far from the bush</td><td>only 8 of 100 cells</td><td>only at the cost of freezing</td></tr>
   </tbody>
 </table>
+</div>
 
 <p>Every one of those numbers was measured by loading the world and reading its actual temperature
 field, not computed on paper. The last row was built deliberately as the sharp case: if an agent's
@@ -129,6 +144,7 @@ agent. It is not right, and Figure 1 is the demonstration.</p>
     Shaded bands are 95% confidence intervals. Windows of 2 are omitted from the bands because their
     interval spans roughly &plusmn;400 points and would flatten everything else.</span>
     __DATA:t01_window_profile__
+    <p class="prov">Drawn by <code>scripts/analysis/studies/thermal_probes/t01_window_profile.py</code>, which also writes <code>figures/t01_window_profile.data.txt</code> — the table above.</p>
     <span><b>How it is computed.</b> For each saved checkpoint we run 30 fixed evaluation episodes
     with a predator present and 30 with an empty world, and record the share of each episode's steps
     the agent spent standing on the bush. The contrast is the predator average minus the empty
@@ -165,6 +181,7 @@ agent. It is not right, and Figure 1 is the demonstration.</p>
     30 episodes. The ringed marker at the right of each series is the final checkpoint. The shaded
     band marks the last 20 checkpoints — the window quoted everywhere else on this page.</span>
     __DATA:t02_checkpoint_trace__
+    <p class="prov">Drawn by <code>scripts/analysis/studies/thermal_probes/t02_checkpoint_trace.py</code>, which also writes <code>figures/t02_checkpoint_trace.data.txt</code> — the table above.</p>
     <span><b>How it is computed.</b> Every saved checkpoint of both level-04 runs is replayed
     against two fixed probe scenarios: one containing a hunting predator, one containing no animal at
     all. Each replay is 30 episodes with fixed seeds, so two agents meet identical worlds. Within an
@@ -205,6 +222,7 @@ particular fix would have bought almost nothing here.</p>
     two bars in each pair are two different spreads of the same underlying quantity, so they share
     the scale.</span>
     __DATA:t04_variance_budget__
+    <p class="prov">Drawn by <code>scripts/analysis/studies/thermal_probes/t04_variance_budget.py</code>, which also writes <code>figures/t04_variance_budget.data.txt</code> — the table above.</p>
     <span><b>How it is computed.</b> Two spreads are placed side by side for the same measurement.
     The first is the <em>standard error</em> of one checkpoint's estimate: we take the 30 individual
     episode values behind a single checkpoint, compute their standard deviation, and divide by the
@@ -246,6 +264,7 @@ particular fix would have bought almost nothing here.</p>
     hiding is unrelated to the predator. Error bars are 95% confidence intervals computed across the
     last 20 saved checkpoints.</span>
     __DATA:t03_arms_result__
+    <p class="prov">Drawn by <code>scripts/analysis/studies/thermal_probes/t03_arms_result.py</code>, which also writes <code>figures/t03_arms_result.data.txt</code> — the table above.</p>
     <span><b>How it is computed.</b> Each bar is the average of 20 numbers — one per saved
     checkpoint, over the newest 20 of the 50 saved. Each of those numbers is itself the difference
     between two averages of 30 fixed evaluation episodes: the share of steps spent on the bush with
@@ -270,7 +289,9 @@ particular fix would have bought almost nothing here.</p>
 They are left here rather than deleted, because a corrected page that hides what it corrected
 teaches nobody anything.</p>
 
-<table>
+<p class="cue" hidden>Scroll the table sideways to see every column.</p>
+<div class="scroll">
+<table class="wide">
   <thead><tr><th>Claim, as made</th><th>Where it came from</th><th>Status</th></tr></thead>
   <tbody>
     <tr><td>"The plain agent hides 86% of steps with nothing in the world — it is simply parked in a bush."</td>
@@ -287,6 +308,7 @@ teaches nobody anything.</p>
         <td><b>Wrong for a third reason.</b> Nobody freezes — the agents find the warm ring and visit it intermittently, so nearly every episode reaches the step cap.</td></tr>
   </tbody>
 </table>
+</div>
 
 <p>The one claim that survives untouched is the narrow one: with <em>no animal in the world</em>,
 bush permeability cannot matter, because there is nothing to walk in.</p>
@@ -318,7 +340,7 @@ bush permeability cannot matter, because there is nothing to walk in.</p>
 
 <section class="col">
 <h2><span class="num">09</span> How to reproduce this</h2>
-<p class="foot">The four temperature worlds are generated by
+<p class="prov">The four temperature worlds are generated by
 <code>configs/environment/experiment/behavior_probes/thermal/generate_thermal_probes.py</code>, which
 writes 96 test files and refuses to emit one whose bush hides without blocking. The evaluation is
 <code>scripts/eval/dwell_sweep/run_sweep.py</code> over the nine specifications in
@@ -328,9 +350,12 @@ every one with all 50 checkpoints and no failed cells. The windowing is
 <code>scripts/analysis/studies/basicq2_waves/window_profile.py</code>. Each figure is one script in
 <code>scripts/analysis/studies/thermal_probes/</code> and emits its own data-accounting file
 alongside its image. The bush fix is commit <code>a8a9040b</code>.</p>
-<p class="foot">Departures from the House Style Sheet: the chrome accent and warning hues are moved
-off the figure palette, which the sheet requires when figures spend colours on categories; and
-<code>code</code> inside a table cell does not break mid-word.</p>
+<p class="prov">Departures from the House Style Sheet, all deliberate. The chrome accent and
+warning hues are moved off the figure palette, which the sheet itself requires when figures spend
+colours on data categories. Headings and code are set in Pretendard rather than the sheet's IBM Plex
+families: the sheet links those from Google Fonts instead of embedding them, and a published artifact
+cannot fetch them, so naming them would have meant every reader seeing an unpredictable system font.
+Wide tables sit in horizontal scroll boxes with an overflow cue, which is the sheet's own mechanism.</p>
 </section>
 
 </div>

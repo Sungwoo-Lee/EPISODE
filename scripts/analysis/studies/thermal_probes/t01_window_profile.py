@@ -34,7 +34,7 @@ dm = C.contrast(C.LVL04, "lvl04_modulated")
 pc, pm = W.window_profile(dc), W.window_profile(dm)
 dif = W.difference_profile(dc, dm)
 
-fig, ax = plt.subplots(1, 2, figsize=(12.0, 5.2))
+fig, ax = plt.subplots(1, 2, figsize=(10.0, 5.0))
 
 # The window-2 interval spans about +-400 pp (a t interval on one degree of freedom). Drawn to
 # scale it flattens every real feature into a horizontal line, so both panels are clipped to the
@@ -49,12 +49,12 @@ for prof, lab, col in ((pc, "plain agent", C.ARMC["control"]),
     ax[0].plot([1], [prof["mean"].iloc[0]], marker="o", ms=11, mfc="none", mec=col, mew=2.2)
 ax[0].axhline(0, color=house.RULE, lw=1)
 ax[0].set_ylim(*LEFT_YLIM)
-ax[0].annotate("windows of 2 are omitted:\ntheir interval spans about +-400",
-               xy=(2.0, -16), fontsize=8.5, color=house.TEXT_LIGHT, ha="left", va="center")
+ax[0].annotate("windows of 2 are omitted:\ntheir interval spans about \u00b1400",
+               xy=(2.0, -16), fontsize=10, color=house.TEXT_LIGHT, ha="left", va="center")
 ax[0].set_ylabel("conditional hiding contrast (pp)")
 ax[0].set_title("Each agent, at every window size\n"
                 "Ringed marker = the final-checkpoint reading. Bands are 95% intervals.",
-                fontsize=9, color=house.INK_2, loc="left", pad=8)
+                fontsize=10, color=house.INK_2, loc="left", pad=8)
 house.legend_below(ax[0], ncol=2)
 
 d = dif[dif["window"] >= 3]
@@ -67,11 +67,11 @@ for x, y, t, col, ha in ((1.25, -57, "endpoint\nartefact\n-60 pp", house.RED, "l
                          (4.6, 24, "plateau: no difference\n(p = 0.93 to 0.92)", house.GREEN, "left"),
                          (56.0, -41, "window has reached\ninto training\n-19 pp, p = 0.004",
                           house.ORANGE, "right")):
-    ax[1].annotate(t, xy=(x, y), fontsize=8.5, color=col, ha=ha, va="center")
+    ax[1].annotate(t, xy=(x, y), fontsize=10, color=col, ha=ha, va="center")
 ax[1].set_ylabel("plain MINUS neuromodulated (pp)")
 ax[1].set_title("The difference a claim would rest on\n"
                 "Dashed line = no difference. Both ends deviate, for opposite reasons.",
-                fontsize=9, color=house.INK_2, loc="left", pad=8)
+                fontsize=10, color=house.INK_2, loc="left", pad=8)
 
 for a in ax:
     a.set_xscale("log")
@@ -87,11 +87,12 @@ C.record_samples("t01_window_profile", [
     dict(what="episodes behind each checkpoint", used=60, total=60,
          note="30 episodes with a predator and 30 with an empty world, per checkpoint, per agent"),
     dict(what="training runs", used=2, total=2,
-         note="one plain and one neuromodulated run, both seed 42 -- a single seed per arm, so the "
+         note="one plain and one neuromodulated run, both seed 42 \u2014 a single seed per arm, so the "
               "intervals describe these two runs and not the method")])
 
 fig.tight_layout(w_pad=2.4)
-house.save(fig, os.path.join(C.FIG, "t01_window_profile"))
+C.assert_min_text_px(fig)
+house.save(fig, os.path.join(C.FIG, "t01_window_profile"), column_px=C.COLUMN_PX)
 print("final %.1f | w10 %.1f p=%.3f | w20 %.1f p=%.3f | w50 %.1f p=%.3f" % (
     dif["diff"].iloc[0],
     dif[dif.window == 10]["diff"].iloc[0], dif[dif.window == 10]["p"].iloc[0],

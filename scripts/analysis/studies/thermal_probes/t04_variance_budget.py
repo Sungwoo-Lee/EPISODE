@@ -44,15 +44,19 @@ for lvl in C.LEVELS:
             n_rec += len(sel)
             ep = np.asarray(per_ep)
             _, series = W.read_series(C.arm_dir(ARM), run, cond)
-            cells.append((f"{lvl.replace('lvl0','L0')} {kind[:4]}\n{cl}",
+            cells.append((f"{C.LEVEL_NAME[lvl]}\n{C.KIND_NAME[kind]}\n{cl}",
                           ep.std(ddof=1) / np.sqrt(ep.size), series[-20:].std(ddof=1)))
 
-fig, ax = plt.subplots(figsize=(12.0, 5.2))
+fig, ax = plt.subplots(figsize=(10.0, 5.4))
 x = np.arange(len(cells)); w = 0.36
-ax.bar(x - w/2, [c[1] for c in cells], width=w, color=house.GREEN, edgecolor="none",
+# NEUTRALS, NOT THE SERIES HUES. The first build drew these bars in the house green and orange --
+# the same two values the other three figures spend on "plain agent" and "neuromodulated agent",
+# so orange meant two different things across the figure set (register F11). Nothing here is an
+# agent, so the pair is neutral and separated by lightness plus a hatch.
+ax.bar(x - w/2, [c[1] for c in cells], width=w, color=house.TEXT_LIGHT, edgecolor="none",
        label="sampling error of one checkpoint (30 episodes)")
-ax.bar(x + w/2, [c[2] for c in cells], width=w, color=house.ORANGE, edgecolor="none",
-       label="variation between checkpoints (last 20)")
+ax.bar(x + w/2, [c[2] for c in cells], width=w, color=house.INK_2, edgecolor="white",
+       hatch="///", linewidth=0.0, label="variation between checkpoints (last 20)")
 # Four of the eight cells have a sampling error of exactly zero: in the empty world every one of
 # the thirty episodes produced the SAME bush occupancy, so thirty episodes leave no residual error
 # at all while the policy still moves 1-2.7 pp between checkpoints. That is the argument in its
@@ -60,8 +64,8 @@ ax.bar(x + w/2, [c[2] for c in cells], width=w, color=house.ORANGE, edgecolor="n
 for i, c in enumerate(cells):
     txt = f"x{c[2]/c[1]:.0f}" if c[1] > 0.05 else "all 30 episodes\nidentical"
     ax.annotate(txt, xy=(x[i], max(c[1], c[2]) + 0.7), ha="center", va="bottom",
-                fontsize=8.0, color=house.INK_2)
-ax.set_xticks(x); ax.set_xticklabels([c[0] for c in cells], fontsize=8.5)
+                fontsize=10, color=house.INK_2)
+ax.set_xticks(x); ax.set_xticklabels([c[0] for c in cells], fontsize=10)
 ax.set_ylabel("spread in bush occupancy (pp)")
 ax.set_ylim(0, 15.5)
 ax.set_xlabel("run and probe condition, in the world where the fire sits away from the bush")
@@ -69,7 +73,7 @@ ax.set_title("More episodes would not help; the policy is what moves\n"
              "Green is the error 30 episodes leave behind. Orange is how much the agent itself "
              "changes\nbetween late checkpoints. The multiplier above each pair is orange over "
              "green.",
-             fontsize=9, color=house.INK_2, loc="left", pad=8)
+             fontsize=10, color=house.INK_2, loc="left", pad=8)
 house.legend_below(ax, ncol=2)
 C.record_samples("t04_variance_budget", [
     dict(what="recordings read", used=n_rec, total=n_rec,
@@ -81,7 +85,9 @@ C.record_samples("t04_variance_budget", [
          note="one thermal arm is drawn; the ratio is the same order in the other three, and "
               "showing four would repeat the same point")])
 fig.tight_layout()
-house.save(fig, os.path.join(C.FIG, "t04_variance_budget"))
+C.assert_ticks_dont_collide(ax)
+C.assert_min_text_px(fig)
+house.save(fig, os.path.join(C.FIG, "t04_variance_budget"), column_px=C.COLUMN_PX)
 for c in cells:
     r = f"x{c[2]/c[1]:.1f}" if c[1] > 0.05 else "SE=0 (all episodes identical)"
     print(f"{c[0].replace(chr(10),' '):26} SE={c[1]:5.2f}  ckpt sd={c[2]:5.2f}  {r}")

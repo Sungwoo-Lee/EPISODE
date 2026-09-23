@@ -67,3 +67,63 @@ def record_samples(stem, rows):
             pct = 100.0 * r["used"] / r["total"] if r["total"] else 0.0
             fh.write(f"{r['what']}|{r['used']}|{r['total']}|{pct:.1f}|{r['note']}\n")
     print(f"  wrote {stem}.data.txt ({len(rows)} rows)")
+
+
+#: The page's real text column: 70ch of Pretendard at 16.5px measures 688px, not the 730px
+#: `house.check_floor` assumes by default. Every figure here passes this explicitly.
+COLUMN_PX = 688
+
+#: Display names for run keys. The first build put "L05 cont" and "L06 modu" on an axis -- tokens
+#: that appear nowhere in the page's prose, which calls them "plain agent" and "neuromodulated
+#: agent" at level 05 and 06 (format register F57).
+KIND_NAME = {"control": "plain", "modulated": "neuromodulated"}
+LEVEL_NAME = {"lvl05": "level 05", "lvl06": "level 06"}
+COND_NAME = {"avoid_pred_inj00": "predator", "avoid_none_inj00": "empty world"}
+
+
+def assert_min_text_px(fig, column_px=COLUMN_PX, floor_px=9.0):
+    """Assert the figure's SMALLEST DRAWN TEXT clears the legibility floor at the real column.
+
+    `house.check_floor` computes one number from the house constant FS_LABEL at a default column of
+    730px. That is not the same question: an annotation set at 8.5pt is not FS_LABEL, and this page's
+    column is 688px. On the first build of this page that gap let annotations ship at 6.8px and tick
+    labels at 6.1px under a build line that read "smallest label 9.3px" -- the check ran, printed a
+    passing number, and measured something no reader ever sees. So this walks every visible Text
+    artist and takes the true minimum. Proposed for the format register as F63.
+    """
+    import matplotlib.text
+    w_px = fig.get_size_inches()[0] * fig.dpi
+    smallest, who = None, None
+    for t in fig.findobj(matplotlib.text.Text):
+        if not t.get_visible() or not (t.get_text() or "").strip():
+            continue
+        pt = t.get_fontsize()
+        if smallest is None or pt < smallest:
+            smallest, who = pt, (t.get_text() or "")[:40].replace("\n", " ")
+    px = smallest * (fig.dpi / 72.0) * (column_px / w_px)
+    if px < floor_px:
+        raise SystemExit(
+            f"smallest DRAWN text renders at {px:.1f}px in a {column_px}px column "
+            f"(floor {floor_px}px): {smallest:g}pt on {who!r}. Raise the size or narrow the canvas; "
+            f"do not lower the floor.")
+    return px
+
+
+def assert_ticks_dont_collide(ax, axis="x"):
+    """Assert an axis's tick labels do not overprint one another.
+
+    `house.assert_labels_fit` guards the axis label and title; `assert_text_inside_axes` guards
+    hand-placed text. Neither looks at tick labels, so long categorical names silently run into each
+    other -- which is what happened to the arm names on the results figure. Proposed as a second
+    amendment to register F18.
+    """
+    fig = ax.get_figure()
+    fig.canvas.draw()
+    labs = ax.get_xticklabels() if axis == "x" else ax.get_yticklabels()
+    boxes = [(l, l.get_window_extent()) for l in labs if (l.get_text() or "").strip()]
+    for i in range(len(boxes) - 1):
+        (la, a), (lb, b) = boxes[i], boxes[i + 1]
+        if a.x1 > b.x0 + 0.5 if axis == "x" else a.y1 > b.y0 + 0.5:
+            raise SystemExit(
+                f"{axis}-tick labels overlap: {la.get_text()!r} runs into {lb.get_text()!r}. "
+                f"Wrap or rotate them.")

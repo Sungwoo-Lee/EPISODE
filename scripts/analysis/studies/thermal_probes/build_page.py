@@ -49,12 +49,18 @@ for stem in sorted({m for m in re.findall(r'data-fig="([^"]+)"', page)}):
         fail.append(f"{stem}: no {stem}.data.txt - the figure script did not record its samples")
         continue
     rows = [l.rstrip("\n").split("|") for l in open(df) if l.strip()]
+    # td.n right-aligns and sets the counts in the mono face (house sheet); the "why" column holds
+    # full sentences, so the whole table needs the house scroll box, a declared floor and an
+    # overflow cue, or its min-content width pushes the entire page sideways on a phone.
     cells = "".join(
-        f"<tr><td>{w}</td><td>{u}</td><td>{t}</td><td>{p}%</td><td>{n}</td></tr>"
+        f'<tr><td>{w}</td><td class="n">{u}</td><td class="n">{t}</td>'
+        f'<td class="n">{p}%</td><td>{n}</td></tr>'
         for w, u, t, p, n in rows)
     block = ('<span><b>Data.</b> How much this figure used, emitted by its own script:</span>'
-             '<table class="datatable"><thead><tr><th>subset</th><th>used</th><th>available</th>'
-             f'<th>share</th><th>why</th></tr></thead><tbody>{cells}</tbody></table>')
+             '<p class="cue" hidden>Scroll the table sideways to see every column.</p>'
+             '<div class="scroll"><table class="datatable"><thead><tr><th>subset</th>'
+             '<th class="n">used</th><th class="n">available</th><th class="n">share</th>'
+             f'<th>why</th></tr></thead><tbody>{cells}</tbody></table></div>')
     page = page.replace(f"__DATA:{stem}__", block)
 
 # --- embed each raster by its key, never by position (guide: match by data-fig) --------------
@@ -107,6 +113,13 @@ for m in re.finditer(r"<figure>.*?</figure>", page, re.S):
 # "Figure 4 shows why" three paragraphs above Figure 3.
 if seen_nums != sorted(seen_nums):
     fail.append(f"figure numbers are out of document order: {seen_nums}")
+
+for tm in re.finditer(r"<table[^>]*>", page):
+    before = page[max(0, tm.start() - 400):tm.start()]
+    if 'class="scroll"' not in before:
+        fail.append(f"a <table> is not inside a .scroll box: {tm.group(0)[:60]}")
+    if "<p class=\"cue\"" not in before:
+        fail.append(f"a <table> has no overflow cue before it: {tm.group(0)[:60]}")
 
 left = re.findall(r"__[A-Z][A-Z0-9_:]*__|\{\{[^}]+\}\}", page)
 if left:

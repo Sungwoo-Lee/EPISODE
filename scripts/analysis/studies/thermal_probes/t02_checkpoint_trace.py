@@ -15,7 +15,7 @@ import numpy as np, matplotlib.pyplot as plt
 import _common as C, window_profile as W, house
 house.apply()
 
-fig, ax = plt.subplots(1, 2, figsize=(12.0, 5.0), sharey=True)
+fig, ax = plt.subplots(1, 2, figsize=(10.0, 5.0), sharey=True)
 for j, (cond, cname) in enumerate([(C.NONE, "empty world (no animal)"),
                                    (C.PRED, "a hunting predator is present")]):
     for run, lab in [("lvl04_control", "plain agent"), ("lvl04_modulated", "neuromodulated agent")]:
@@ -24,20 +24,24 @@ for j, (cond, cname) in enumerate([(C.NONE, "empty world (no animal)"),
         ax[j].plot(st / 1e6, v, color=col, lw=1.7, marker="o", ms=3.2, alpha=0.95, label=lab)
         ax[j].plot([st[-1] / 1e6], [v[-1]], marker="o", ms=11, mfc="none", mec=col, mew=2.2)
     ax[j].axvspan(st[-20] / 1e6, st[-1] / 1e6, color=house.INK_2, alpha=0.07, lw=0)
-    ax[j].set_title(cname, fontsize=10, color=house.INK, loc="left", pad=8)
+    ax[j].set_title(cname, fontsize=10.5, color=house.INK, loc="left", pad=8)
     ax[j].set_xlabel("training progress (millions of environment steps)")
 ax[0].set_ylabel("steps spent on the hiding bush (%)")
+# Both notes go ABOVE the data, not into it: the blue series reaches past 80 four times, so a
+# note at y=70-90 is printed through by the line it is describing (register F33).
+ax[0].set_ylim(-4, 128)
 ax[0].annotate("shaded = the last 20 checkpoints,\nthe window quoted on this page",
-               xy=(4.2, 92), fontsize=8.5, color=house.TEXT_LIGHT, ha="left", va="top")
-ax[0].annotate("final checkpoint: 86%\nprevious ten average 24%",
-               xy=(9.9, 78), fontsize=8.5, color=house.RED, ha="right", va="top")
+               xy=(0.2, 126), fontsize=10, color=house.TEXT_LIGHT, ha="left", va="top")
+ax[0].annotate("final checkpoint 86%;\nprevious ten average 24%",
+               xy=(10.0, 126), fontsize=10, color=house.RED, ha="right", va="top")
 house.legend_below(ax[0], ncol=2)
 C.record_samples("t02_checkpoint_trace", [
     dict(what="checkpoints drawn", used=100, total=100,
-         note="50 per agent x 2 agents, both probe conditions; the sweep wrote every one"),
+         note="50 per agent \u00d7 2 agents, both probe conditions; the sweep wrote every one"),
     dict(what="episodes per point", used=30, total=30,
          note="30 evaluation episodes at fixed seeds behind each plotted marker"),
-    dict(what="training runs", used=2, total=2, note="one seed per arm -- descriptive only")])
+    dict(what="training runs", used=2, total=2, note="one seed per arm \u2014 descriptive only")])
 fig.tight_layout(w_pad=2.2)
-house.save(fig, os.path.join(C.FIG, "t02_checkpoint_trace"))
+C.assert_min_text_px(fig)
+house.save(fig, os.path.join(C.FIG, "t02_checkpoint_trace"), column_px=C.COLUMN_PX)
 print("done t02")
