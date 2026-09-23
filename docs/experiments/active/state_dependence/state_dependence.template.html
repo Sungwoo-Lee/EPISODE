@@ -45,8 +45,8 @@ feels</strong>. So the measure is a difference of differences:</p>
 
 <div class="callout">
   <p class="eyebrow">The measure, in one line</p>
-  <p><code>state span = % of steps hiding when badly wounded &minus; % when unhurt</code>⁠, with no
-  threat present</p>
+  <p><code>state span = % of steps hiding when badly wounded &minus; % when unhurt</code>
+  &mdash; measured with no threat anywhere in the world</p>
   <p>Big means behaviour tracks the body. Zero means the body makes no difference to what the agent
   does.</p>
 </div>
@@ -186,13 +186,12 @@ changes, and that part is the entire mechanism the design rests on.</p>
     __DATA:a03_modulator_mechanism__
     <span><b>How it is computed.</b> Every modulated agent is replayed on one fixed set of 128
     episodes, so all of them see identical worlds and the comparison between them is not confounded
-    by luck. At each site the modulator emits one gain per channel per timestep. The total variation
-    in those gains is split into two parts: variation <em>across channels</em>, which is how much
-    channels differ from one another on average, and variation <em>across time</em>, which is how
-    much a single channel's own gain moves as the episode unfolds. The number plotted is the second
-    as a share of the total. A modulator whose output were a pure constant per channel would score
-    0%; one that ignored channel identity and responded only to the body would score 100%. The split
-    is computed per arm and per site and pooled across the two grids, which agree. <b>What this
+    by luck. At each site the modulator emits one gain per channel per timestep. The variation in those gains
+    splits in two: variation <em>across channels</em> — how much channels differ from one another on
+    average — and variation <em>across time</em>, how much a single channel's own gain moves as the
+    episode unfolds. The number plotted is the second as a share of the total, so a pure constant per
+    channel scores 0% and a modulator responding only to the body scores 100%. Computed per arm and
+    per site, pooled across the two grids, which agree. <b>What this
     figure does not show:</b> <em>what</em> the time-varying part tracks — it establishes that the
     gains move, not that they move with injury specifically; and it is measured on the blind-world
     grids, where the modulator's behavioural effect was also smallest.</span>
@@ -232,9 +231,7 @@ agent that freezes drops out of this measure instead of inflating it.</p>
     moving. Rest and eat are excluded from the denominator, which is the whole point: a frozen agent
     contributes nothing either way. We restrict to the first 25 steps of randomised-injury episodes
     with a predator within two cells, split those into four quarters by starting injury, and take the
-    highest quarter's rate minus the lowest. Row alignment is the subtle part and the tool documents
-    it: the deciding step is the one before, while the action and the outcome are both read off the
-    step after. <b>What this figure does not show:</b> episodes with no predator nearby, where the
+    highest quarter's rate minus the lowest. <b>What this figure does not show:</b> episodes with no predator nearby, where the
     same measure is computed but asks a different question; and it cannot say whether the agent is
     choosing something better instead — only that it is not choosing cover.</span>
   </figcaption>
