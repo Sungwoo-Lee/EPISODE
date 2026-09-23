@@ -43,6 +43,8 @@ EMPTY = {("w2", 2): "still training", ("w2", 3): "still training"}
 KIND = {"causal": "causal — starting injury assigned at random",
         "observational": "observational — the agent's own history, not assigned",
         "scene": "controlled test scene",
+        "causal_and_observational": "causal (filled markers: starting injury assigned at random) and "
+                                    "observational (hollow markers: the injury carried at that moment)",
         "between_runs": "between separate training runs — mixes the effect with seed-to-seed variation"}
 
 

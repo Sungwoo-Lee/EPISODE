@@ -46,7 +46,7 @@ def late_span(world, lvl, arm):
     s = [C.causal_metric(d, "state_span") for d in C.late(world, lvl, arm)]
     f = C.context_final(world, lvl, arm)
     return s + ([C.causal_metric(f, "state_span")] if f else [])
-fig, ax = plt.subplots(1, 2, figsize=(10.0, 5.4), sharey=True)
+fig, ax = plt.subplots(1, 2, figsize=(10.0, 5.4), sharey=True, sharex=True)   # the caption compares the waves
 out = {}
 for p, world in enumerate(("w1", "w2")):
     y = np.arange(len(NAMES))[::-1] + 1

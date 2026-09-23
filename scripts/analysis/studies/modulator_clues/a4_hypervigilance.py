@@ -75,7 +75,7 @@ leg = fig.legend(h, l, loc="lower center", ncol=2, frameon=False, bbox_to_anchor
 for t in leg.get_texts(): t.set_fontsize(house.FS_LABEL)
 fig.tight_layout(w_pad=1.2, rect=(0, 0.13, 1, 1))
 C.assert_no_text_overlap(fig); C.assert_min_text_px(fig)
-C.record_kind("a4_hypervigilance", "causal")
+C.record_kind("a4_hypervigilance", "causal_and_observational")
 C.record_samples("a4_hypervigilance", [
     dict(what="world × level cells", used=len(COLS), total=len(COLS),
          note="blind plus levels 04-06 of both waves; Wave 1 levels 02/03 unmatched, level 02 has no random injury"),

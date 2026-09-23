@@ -136,6 +136,10 @@ for m in re.finditer(r"<figure>.*?</figure>", page, re.S):
 # Figure numbers must ascend in DOCUMENT order. They did not on the first build of this page:
 # the variance figure sat before the results figure but was numbered after it, so the prose said
 # "Figure 4 shows why" three paragraphs above Figure 3.
+# Order is not enough: a chained renumber (9->10, then 10->11) keeps the order right and still
+# prints two "Figure 11"s. Every caption's number must equal its position on the page.
+if seen_nums != list(range(1, len(seen_nums) + 1)):
+    fail.append(f"figure numbers are not 1..N in document order: {seen_nums}")
 if seen_nums != sorted(seen_nums):
     fail.append(f"figure numbers are out of document order: {seen_nums}")
 
