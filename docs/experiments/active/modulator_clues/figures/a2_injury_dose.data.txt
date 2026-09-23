@@ -1,0 +1,4 @@
+world × level cells|8|8|100.0|level 02 excluded (no random starting injury); Wave 2 levels 02/03 still training
+checkpoints per Wave-1/2 cell|5|5|100.0|five late checkpoints: four 100k stores plus the final 1M store, or five matched 100k stores
+episodes per late checkpoint|100,000|100,000|100.0|enough for these coarse measures: they moved by 0.02-0.34 pp between 100k and 1M in a check
+blind-world checkpoints|1|5|20.0|final only; its saved config no longer loads
