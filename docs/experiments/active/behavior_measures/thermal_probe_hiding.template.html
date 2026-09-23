@@ -54,8 +54,9 @@ and comes out when nothing is, is doing something worth a name.</p>
 
 <p>Two things came out of it, and the second is the one worth carrying away. First, in the two
 hardest worlds the agents were never measurable at all until we rebuilt the test, and once rebuilt
-they show strong threat-driven hiding with <strong>no detectable difference between the plain and
-the neuromodulated agent</strong>. Second — and this is the finding that reaches past this
+they show strong threat-driven hiding, with a difference between the plain and the neuromodulated
+agent that is <strong>consistent in direction but too small, and resting on too few training runs,
+to claim</strong>. Second — and this is the finding that reaches past this
 experiment — <strong>the standard way we had been reading these numbers manufactures effects that
 are not there</strong>, and it did so in a published analysis of ours from the day before.</p>
 </section>
@@ -168,7 +169,7 @@ agent. It is not right, and Figure 1 is the demonstration.</p>
 <p>Figure 2 shows where that came from, by drawing the raw series the endpoint was plucked from.</p>
 
 <figure>
-  <img data-fig="t02_checkpoint_trace" alt="Two panels sharing a vertical scale, bush occupancy against training progress in millions of steps. Left panel, empty world: the blue plain agent's line swings between about 4 and 86 percent, ending at a ringed point at 86. The orange neuromodulated line stays low, mostly under 25. Right panel, predator present: both lines are high and overlapping, between about 30 and 80 percent. A shaded band covers the last fifth of each panel.">
+  <img data-fig="t02_checkpoint_trace" alt="Two panels sharing a vertical scale, bush occupancy against training progress in millions of steps. Left panel, empty world: the blue plain agent's line swings across almost the whole range, from 0 to about 97 percent, ending at a ringed point at 86. The orange neuromodulated line stays low, mostly under 25. Right panel, predator present: both lines are high and overlapping, the blue reaching about 97 and the orange dipping to about 27. A shaded band covers the last fifth of each panel.">
   <p class="zoomhint">Click the figure to open it full size.</p>
   <figcaption>
     <span><b>Figure 2 — the 86% that started it.</b>
@@ -180,7 +181,7 @@ agent. It is not right, and Figure 1 is the demonstration.</p>
     <span><b>Axes.</b> Horizontal, both panels: training progress in millions of environment steps,
     0 to about 10.5. Vertical, both panels (shared scale): the share of an episode's steps spent
     standing on the hiding bush, as a percentage; ticks run 0 to 100, and the left panel keeps blank
-    headroom above 100 so its two notes are not printed over the data. Each marker is one saved checkpoint, averaged over
+    headroom above 100 so its note is not printed over the data. Each marker is one saved checkpoint, averaged over
     30 episodes. The ringed marker at the right of each series is the final checkpoint. The shaded
     band marks the last 20 checkpoints — the window quoted everywhere else on this page.</span>
     __DATA:t02_checkpoint_trace__
@@ -252,10 +253,16 @@ particular fix would have bought almost nothing here.</p>
   <figcaption>
     <span><b>Figure 4 — strong threat-driven hiding everywhere, and no difference between the two
     agents.</b> Every bar sits far above zero: in all four temperature worlds and both curriculum
-    levels, both agents hide substantially more when something is hunting them. But the blue and
-    orange bars overlap in nearly every pair, and which one is taller flips between worlds — with
-    eight cells shown and ten tested, about one nominal "significant" result is expected from chance
-    alone, and that is roughly what we see, in inconsistent directions. The separate lesson is the
+    levels, both agents hide substantially more when something is hunting them. The blue and orange
+    bars overlap in nearly every pair — but they do not overlap <em>symmetrically</em>: the
+    neuromodulated agent's contrast is the larger one in <b>seven of these eight cells</b>, by 3.0
+    percentage points on average. Read as eight independent comparisons that would be a sign test at
+    p = 0.07. <b>They are not eight independent comparisons.</b> The four temperature worlds measure
+    the same two pairs of training runs, so this is two comparisons measured four times each, and
+    the apparent weight of "seven of eight" is mostly the same two runs counted repeatedly. The
+    honest statement is that the direction is consistent enough to be worth replicating with several
+    seeds, and far too weak — and too entangled with a single pair of runs — to claim anything
+    from now. The separate lesson is the
     left-to-right pattern: the contrast is about twice as large in the neutral world as in the one
     where the fire sits beside the bush, because there the agent is already on the bush to keep warm,
     which lifts its empty-world baseline and squeezes the difference. <b>The choice of temperature
@@ -324,9 +331,14 @@ bush permeability cannot matter, because there is nothing to walk in.</p>
   <p class="eyebrow">The binding limit</p>
   <p><strong>One training seed per arm.</strong> Every interval on this page describes the spread of
   <em>one</em> run across its own checkpoints. It cannot tell you how much two runs of the same
-  configuration would differ from each other, and that is the comparison a claim about
-  neuromodulation would need. Nothing here is evidence that neuromodulation does not work; it is
-  evidence that <em>these two runs</em> cannot be told apart by this measure.</p>
+  configuration would differ from each other, and that is exactly the comparison a claim about
+  neuromodulation needs. Nothing here is evidence that neuromodulation does not work, and nothing
+  here is evidence that it does.</p>
+  <p>This is what makes the "seven of eight cells" pattern in Figure 4 unclaimable rather than
+  merely weak. Eight cells sounds like eight chances for chance to be ruled out, but the four
+  temperature worlds re-measure the same two pairs of runs — so the pattern could be one pair of
+  runs happening to differ, re-counted four times. A handful of seeds would settle it in an
+  afternoon of compute; nothing short of that will.</p>
 </div>
 
 <ul>
@@ -344,13 +356,13 @@ bush permeability cannot matter, because there is nothing to walk in.</p>
 <section class="col">
 <h2><span class="num">09</span> How to reproduce this</h2>
 <p>The four temperature worlds are generated by
-<code>configs/environment/experiment/behavior_probes/thermal/generate_thermal_probes.py</code>, which
+<code>configs/<wbr>environment/<wbr>experiment/<wbr>behavior_probes/<wbr>thermal/<wbr>generate_thermal_probes.py</code>⁠, which
 writes 96 test files and refuses to emit one whose bush hides without blocking. The evaluation is
-<code>scripts/eval/dwell_sweep/run_sweep.py</code> over the nine specifications in
-<code>configs/eval_sweeps/thermal_probes/</code> and
-<code>configs/eval_sweeps/basicq2_wave2_blocking_bush_rppo.yaml</code>; it wrote 312 result tables,
+<code>scripts/<wbr>eval/<wbr>dwell_sweep/<wbr>run_sweep.py</code>⁠ over the nine specifications in
+<code>configs/<wbr>eval_sweeps/<wbr>thermal_probes/<wbr></code>⁠ and
+<code>configs/<wbr>eval_sweeps/<wbr>basicq2_wave2_blocking_bush_rppo.yaml</code>⁠; it wrote 312 result tables,
 every one with all 50 checkpoints and no failed cells. The windowing is
-<code>scripts/analysis/studies/basicq2_waves/window_profile.py</code>. Each figure is one script in
+<code>scripts/<wbr>analysis/<wbr>studies/<wbr>basicq2_waves/<wbr>window_profile.py</code>⁠. Each figure is one script in
 <code>scripts/<wbr>analysis/<wbr>studies/<wbr>thermal_probes/<wbr></code> and emits its own data-accounting file
 alongside its image. The bush fix is commit <code>a8a9040b</code>.</p>
 <p>Departures from the House Style Sheet, all deliberate. The chrome accent and
