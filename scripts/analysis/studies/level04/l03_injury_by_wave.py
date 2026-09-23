@@ -41,7 +41,7 @@ h = [Line2D([], [], color=house.BLUE, lw=2.4, label="ordinary agent"),
      Line2D([], [], color=house.INK_2, lw=2.2, marker="o", label="second world")]
 # fig.legend, not ax.legend: anchored to one axes and pushed sideways, the legend made
 # tight_layout reserve room for it and pulled the two panels apart.
-leg = fig.legend(handles=h, loc="lower center", bbox_to_anchor=(0.5, 0.0), ncol=4, frameon=False)
+leg = fig.legend(handles=h, loc="lower center", bbox_to_anchor=(0.5, 0.0), ncol=4, frameon=False, handlelength=2.6)
 for t in leg.get_texts(): t.set_fontsize(house.FS_LABEL)
 fig.suptitle("Training world, final checkpoint. Blue and orange overlap; dashed and solid do not.",
              fontsize=10, color=house.INK_2, x=0.005, ha="left", y=0.995, va="top")

@@ -27,10 +27,8 @@ ax.set_xticks(x); ax.set_xticklabels([t for _, t in C.THREATS], fontsize=10)
 ax.set_ylim(0, 100)
 ax.set_ylabel("steps spent on the hiding bush (%)")
 ax.set_xlabel("what is in the test scene, least to most threatening")
-ax.set_title("Both agents hide more as the threat grows; the ordinary agent hides more throughout\n"
-             "Points are the mean of the last 20 saved checkpoints; bars and bands are 95% intervals "
-             "across\nthose checkpoints — how much one run moves, not how much two runs differ.",
-             fontsize=10, color=house.INK_2, loc="left", pad=8)
+fig.suptitle("Both agents hide more as the threat grows; the ordinary agent hides more throughout.",
+             fontsize=10, color=house.INK_2, x=0.005, ha="left", y=0.995, va="top")
 C.legend_below(ax, ncol=2, offset=-0.24)
 C.record_samples("l01_threat_ladder", [
     dict(what="checkpoints per point", used=C.WIN, total=50,
@@ -42,7 +40,7 @@ C.record_samples("l01_threat_ladder", [
               "in Figure 1"),
     dict(what="training runs", used=2, total=2,
          note="one ordinary and one neuromodulated run, one seed each")])
-fig.tight_layout()
+fig.tight_layout(rect=(0, 0, 1, 0.965))
 # Guards AFTER layout: run before it, they inspect a layout that is never saved.
 C.assert_ticks_dont_collide(ax); C.assert_no_text_overlap(fig); C.assert_min_text_px(fig)
 house.save(fig, os.path.join(C.FIG, "l01_threat_ladder"), column_px=C.COLUMN_PX)

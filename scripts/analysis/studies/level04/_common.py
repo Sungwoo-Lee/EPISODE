@@ -32,7 +32,7 @@ WIN = 20
 #: Probe scenes, ordered from nothing in the world to a hunting predator.
 THREATS = [("avoid_none_inj00", "nothing"),
            ("avoid_rabbitwander_inj00", "rabbit,\nwandering"),
-           ("avoid_rabbitwander_predsmell_inj00", "wandering rabbit\n+ predator smell"),
+           ("avoid_rabbitwander_predsmell_inj00", "rabbit wandering\n+ predator smell"),
            ("avoid_rabbit_inj00", "rabbit,\nchasing"),
            ("avoid_pred_inj00", "predator")]
 

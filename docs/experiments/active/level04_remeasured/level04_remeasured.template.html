@@ -169,7 +169,7 @@ the test scene elicits, not a standing trait.</p>
 </section>
 
 <section class="col">
-<h2><span class="num">05</span> Where the difference lives: an empty scene, across training</h2>
+<h2><span class="num">05</span> The empty scene, across training</h2>
 
 <figure>
   <img data-fig="l04_idle_hiding" alt="Two panels of line charts across training from 0 to 10 million steps, one per world. In the first world both agents mostly stay below 20 percent with occasional spikes, and their last-twenty averages are about 10 and 12. In the second world the blue ordinary-agent line swings between near zero and near 100 from checkpoint to checkpoint, averaging about 30 over the last twenty, while the orange line stays low, averaging about 12.">
@@ -250,15 +250,15 @@ the test scene elicits, not a standing trait.</p>
 
 <section class="col">
 <h2><span class="num">08</span> How to reproduce this</h2>
-<p>The test-scene replays are the sweep in
-<code>results/<wbr>eval/<wbr>avoidance/<wbr>metrics_history_rppo_basicq2_wave2_blocking_bush/</code>,
-driven by <code>scripts/<wbr>eval/<wbr>dwell_sweep/<wbr>run_sweep.py</code> over the corrected test
-scenes (commit <code>a8a9040b</code>). The training-world replays and their analysis are the files
-under <code>results/<wbr>analysis/<wbr>basicq2_w1/</code>, produced by
-<code>scripts/<wbr>analysis/<wbr>context_dependence.py</code>. The 20-checkpoint average is
-<code>scripts/<wbr>analysis/<wbr>studies/<wbr>basicq2_waves/<wbr>window_profile.py</code>. Each figure
-is one script in <code>scripts/<wbr>analysis/<wbr>studies/<wbr>level04/</code> and writes its own
-data-accounting file beside its image.</p>
+<ul>
+  <li>Test-scene replays: <code>results/<wbr>eval/<wbr>avoidance/<wbr>metrics_history_rppo_basicq2_wave2_blocking_bush/</code></li>
+  <li>Sweep driver: <code>scripts/<wbr>eval/<wbr>dwell_sweep/<wbr>run_sweep.py</code></li>
+  <li>Bush fix: commit <code>a8a9040b</code></li>
+  <li>Training-world replays and analysis: <code>results/<wbr>analysis/<wbr>basicq2_w1/</code></li>
+  <li>The analysis script: <code>scripts/<wbr>analysis/<wbr>context_dependence.py</code></li>
+  <li>The 20-checkpoint average: <code>scripts/<wbr>analysis/<wbr>studies/<wbr>basicq2_waves/<wbr>window_profile.py</code></li>
+  <li>One script per figure, each writing its own data-accounting file: <code>scripts/<wbr>analysis/<wbr>studies/<wbr>level04/</code></li>
+</ul>
 <p>Departures from the House Style Sheet: the chrome accent and warning hues are moved off the
 figure palette, which the sheet requires when figures spend colours on data categories; headings are
 set in Pretendard and code in the reader's system monospace, because the sheet links its IBM Plex
