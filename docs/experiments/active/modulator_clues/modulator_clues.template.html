@@ -176,7 +176,7 @@ are not used.</p>
 <h2><span class="num">05</span> Hypervigilance: does an injured agent avoid the harmless rabbit more?</h2>
 
 <figure>
-  <img data-fig="a4_hypervigilance" alt="Three panels with seven rows: blind and Wave 1 and Wave 2 levels 04 to 06, with a blue and an orange marker pair per row. Left, hiding near the rabbit: filled markers for assigned injury sit close to zero everywhere; hollow markers for current injury sit far right, between about plus 2 and plus 17, in the blind world and Wave 1, and left of zero at Wave 2 level 04. Middle, rabbit within two squares: filled markers near zero; hollow markers all left of zero, between about minus 1 and minus 5. Right, in grey, the predator context: markers left of zero, between about minus 1 and minus 7.">
+  <img data-fig="a4_hypervigilance" alt="Three panels with seven rows: blind and Wave 1 and Wave 2 levels 04 to 06, with a blue and an orange marker pair per row. Left, hiding near the rabbit: filled markers for assigned injury sit close to zero everywhere; hollow markers for current injury sit far right, between about plus 2 and plus 17, in the blind world and Wave 1, and left of zero in Wave 2. Middle, rabbit within two squares: filled markers near zero; hollow markers all left of zero, between about minus 1 and minus 5. Right, in grey, the predator context: markers left of zero, between about minus 1 and minus 7.">
   <p class="zoomhint">Click the figure to open it full size.</p>
   __KIND:a4_hypervigilance__
   <figcaption>
@@ -186,9 +186,11 @@ are not used.</p>
     markers), neither agent does: the shift in hiding near a rabbit is between −1.9 and +0.3 points, and the
     shift in how often the rabbit is within reach is under 1.6 points either way. When "injured" means the
     injury carried at that moment (hollow markers), injured agents keep the rabbit out of reach more often in
-    every one of the 14 agent-world combinations — by 1 to 5 points, and more in the modulated agent in five
-    of seven — but that reading is confounded: an agent carrying an injury has usually just been attacked or
-    is resting. The right-hand panel, in grey, is ordinary threat avoidance near a predator, shown for
+    all 14 agent-world combinations — by 1 to 5 points, more in the modulated agent in five of seven — but on
+    the hiding reading the same injured agents hide <em>less</em> near a rabbit in Wave 2 (by 1–12 points),
+    because a wounded Wave 2 agent is in cover whether or not a rabbit is near. The two readings agree only in
+    the blind world and Wave 1, and both are confounded: an agent carrying an injury has usually just been
+    attacked, and the predator-free filter keeps mostly the steps it spends in cover after the attacker left. The right-hand panel, in grey, is ordinary threat avoidance near a predator, shown for
     context only.</span>
     <span><b>Axes.</b> Vertical, all panels: world and level. Horizontal, all panels: most-injured quarter
     minus least-injured quarter, in percentage points. Left: the proximity effect for the rabbit — extra
@@ -204,9 +206,11 @@ are not used.</p>
     predator. Each is computed twice. The causal version bins episodes by the starting injury the environment
     assigned at random before the agent acted (hiding over the whole episode, distance over the first 25
     steps). The observational version bins each step by the injury the agent carried when it chose that
-    step's action. <b>What this figure does not show:</b> any checkpoint but the last, and why the
-    observational reading shows avoidance that the causal one does not — the confound is the likeliest
-    reason, but no figure here isolates it.</span>
+    step's action. The two causal readings are not equally strong: over a whole episode the assigned wound
+    washes out as it heals and later injuries arrive non-randomly, so the hiding version is the weaker test,
+    and it keeps predator-near steps that the distance version drops. <b>What this figure does not show:</b>
+    any checkpoint but the last; an early-window version of the causal hiding measure, which would make the
+    two causal readings comparable; and how many steps the predator-free filter removes in each injury band.</span>
   </figcaption>
 </figure>
 </section>
@@ -389,21 +393,21 @@ are not used.</p>
   <p class="zoomhint">Click the figure to open it full size.</p>
   __KIND:d3_rabbit_scenes__
   <figcaption>
-    <span><b>Figure 9 — an injured start raises rabbit-scene hiding more in the modulated agent at levels
-    04 and 05, but part of that is injury alone.</b> Starting injured makes both agents hide more when a
-    harmless rabbit is present — the project's hypervigilance — and more so for the modulated agent at
-    level 04 (chasing rabbit +4.9 against +1.0; wandering +11.3 against +3.6) and at level 05. But an
-    injured start also raises hiding in the empty reference scene by about 8 points in both agents at level
-    04, so for the ordinary agent the rabbit scenes add nothing beyond injury alone, while the modulated
-    agent's wandering-rabbit shift exceeds it. At level 06 the pattern does not hold. Time with the rabbit within
-    reach mostly moves by a point or two; the exceptions point opposite ways — the injured modulated agent
-    keeps a chasing rabbit away a little more at level 04 (−2.6) but lets it within reach more at level 06
-    (+4.6).</span>
+    <span><b>Figure 9 — in controlled scenes, no rabbit-scene shift is separable from what injury alone
+    does.</b> Starting injured makes both agents hide more when a harmless rabbit is present — but it also raises
+    hiding in the empty reference scene by about 8 points in both agents at level 04, and the rabbit-scene
+    shifts do not clearly exceed that. The modulated agent's wandering-rabbit shift is 3 points above its
+    empty-scene reference, inside that reference's own checkpoint swing (standard deviation 8 points). At level
+    05 the modulated agent's larger shifts are matched by its larger empty-scene shift. In the chasing scene the
+    rabbit sits on the agent's cell once it catches up (a known quirk of the environment), so time within reach
+    there is time out of cover read backwards, not a second measure; in the wandering scene the rabbit is within
+    reach only 1–3% of the time in every condition, so those shifts are at the floor.</span>
     <span><b>Axes.</b> Vertical, both panels: three scenes — no animal (the reference), a chasing rabbit, a
     wandering rabbit — at levels 04, 05 and 06. Horizontal, left: time in the bush when starting at injury
     70 minus when starting uninjured, in percentage points. Horizontal, right: the same difference in the
     share of steps with the rabbit within reach. Dots are the two agents; at levels 05 and 06 the dot is
-    the median over four temperature versions of the scene and the bar their range.</span>
+    the median over four temperature versions of the scene and the bar their range. The reference row has no
+    within-reach value, since there is no animal.</span>
     __DATA:d3_rabbit_scenes__
     <span><b>How it is computed.</b> Each scene is a small fixed world: the agent starts in the middle with a
     full stomach, one bush three squares away, and either nothing or a single rabbit entering from the far
@@ -411,8 +415,10 @@ are not used.</p>
     twice, identical except that the agent starts uninjured or at injury 70, so their difference is caused
     by the injury. Every one of each agent's saved checkpoints is replayed there for 30 episodes with fixed
     seeds, and the value is the average over the newest 20 checkpoints. The empty scene is included because
-    an injured agent rests and hides more to heal whether or not anything is nearby; hypervigilance is the
-    part of the rabbit-scene shift that goes beyond that. Levels 05 and 06 use four survivable temperature
+    an injured agent rests and hides more to heal whether or not anything is nearby: it is our reference for
+    reading "avoids the rabbit" rather than "hides", not part of the definition. The subtraction is a reading
+    aid, not a measure — where the rabbit's presence already lifts hiding near a ceiling, as for the ordinary
+    agent in the chasing scene, an injury shift has little room left. Levels 05 and 06 use four survivable temperature
     versions of each scene. <b>What this figure does not show:</b> Wave 1, whose animal scenes were replayed
     before the bush was fixed; and any comparison between separate training runs.</span>
   </figcaption>
@@ -491,7 +497,9 @@ are not used.</p>
 
 <p>Each row is one measure from the figures above, as the neuromodulated agent's value minus the
 ordinary agent's; the last column counts how many cells share the sign of the typical gap. The table
-ranks leads by consistency. It does not test them.</p>
+ranks leads by consistency. It does not test them. The two hypervigilance rows have opposite polarity —
+on the rabbit hiding shift more avoidance is positive, on the rabbit-near shift it is negative — and both
+are small gaps on a measure that is null in every cell on the causal reading.</p>
 
 __TABLE:e4_clue_table__
 
@@ -516,9 +524,9 @@ result:</p>
   Worth asking whether the modulator's effect appears only while injury is a weaker cue, and replicating
   Wave 1 levels 05/06 with more seeds.</li>
   <li><b>Hypervigilance does not appear on the causal reading.</b> An agent handed a high starting injury
-  does not avoid the rabbit more (Figure 3). It appears only when injury is read at the moment, which is
-  confounded, and in controlled scenes where the extra hiding mostly matches what injury does with no
-  animal present — except the modulated agent's wandering-rabbit shift at level 04 (Figure 9). A world
+  does not avoid the rabbit more (Figure 3). It appears only when injury is read at the moment, on the distance reading,
+  and that reading is confounded; in controlled scenes no rabbit-scene shift is separable from what injury
+  does with no animal present (Figure 9). A world
   where the rabbit is ambiguous only when injured — the level-06 idea — would be the direct test.</li>
   <li><b>Level 06's noise changes the wound's pull in both agents</b> (Figure 11), in the same direction in
   both waves and inside one run's checkpoint spread. Whether the modulated agent adjusts more needs a
