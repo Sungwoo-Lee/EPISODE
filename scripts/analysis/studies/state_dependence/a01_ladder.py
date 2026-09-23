@@ -43,7 +43,7 @@ for k, (arm, lab) in enumerate((("control", "ordinary agent"),
 ax.set_xticks(x); ax.set_xticklabels([r[0] for r in C.RUNGS], fontsize=10)
 ax.set_ylabel("state span (percentage points)")
 ax.set_xlabel("the world the agent was trained in")
-ax.set_ylim(0, 26)
+ax.set_ylim(0, 28)   # headroom: a bar flush with the ceiling reads as clipped
 ax.set_title("How much injury changes hiding, with no threat present\n"
              "Error bars are the run-to-run spread from five seeds of one unmodulated agent — "
              "the scale a\nreal difference has to beat. Each change to the WORLD clears it "

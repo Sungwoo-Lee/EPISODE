@@ -41,8 +41,8 @@ ax.axhline(0, color=house.INK, lw=1.2)
 ax.set_xticks(x); ax.set_xticklabels([c[0] for c in CELLS], fontsize=10)
 ax.set_ylabel("change in bush-entry rate (percentage points)")
 ax.set_xlabel("the world the agent was trained in")
-ax.set_ylim(-3.6, 1.5)
-ax.annotate("the predicted direction was UP", xy=(-0.44, 1.15), fontsize=10,
+ax.set_ylim(-3.6, 1.75)
+ax.annotate("the predicted direction was UP", xy=(-0.44, 1.40), fontsize=10,
             color=house.TEXT_LIGHT, ha="left", va="top")
 ax.set_title("Being wounded makes the agent enter cover LESS when a predator is near\n"
              "Bars below zero in every world and for both agents. Error bars are the run-to-run "

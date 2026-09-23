@@ -37,12 +37,17 @@ order = sorted(by, key=lambda s: np.median(by[s]))
 fig, ax = plt.subplots(figsize=(10.0, 5.2))
 y = np.arange(len(order))
 med = [100 * np.median(by[s]) for s in order]
-ax.barh(y, med, color=house.BLUE, height=0.62, edgecolor="none")
+# ORANGE, not blue. Every other figure teaches blue = ordinary agent / orange = neuromodulated,
+# and this figure is measured on modulated arms only, so blue here would name the wrong agent.
+ax.barh(y, med, color=house.ORANGE, height=0.62, edgecolor="none")
 for i, s in enumerate(order):
     v = 100 * np.asarray(by[s])
     ax.plot(v, np.full_like(v, y[i], dtype=float), "o", ms=4.6,
             color=house.INK_2, alpha=0.55, zorder=3)
-    ax.annotate(f"{med[i]:.0f}%", xy=(med[i] + 1.2, y[i]), va="center", fontsize=10,
+    # PAST THE RIGHTMOST DOT, not past the bar end. The bar end is the MEDIAN, so by construction
+    # half the arms lie beyond it and a label anchored there lands inside the distribution every
+    # time. The text-overlap guard cannot see this: the dots are a PathCollection, not text.
+    ax.annotate(f"{med[i]:.0f}%", xy=(v.max() + 1.6, y[i]), va="center", fontsize=10,
                 color=house.INK)
 ax.axvline(50, color=house.RULE, lw=1)
 ax.annotate("half", xy=(50.8, len(order) - 0.55), fontsize=10, color=house.TEXT_LIGHT,

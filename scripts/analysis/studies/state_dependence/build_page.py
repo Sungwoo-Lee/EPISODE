@@ -61,6 +61,11 @@ for stem in sorted({m for m in re.findall(r'data-fig="([^"]+)"', page)}):
              '<div class="scroll"><table class="datatable"><thead><tr><th>subset</th>'
              '<th class="n">used</th><th class="n">available</th><th class="n">share</th>'
              f'<th>why</th></tr></thead><tbody>{cells}</tbody></table></div>')
+    # Every figure names the script that draws it -- the checklist item the folder name alone does
+    # not satisfy, since a reader cannot tell which of five scripts made which of five figures.
+    block += (f'<p class="prov">Drawn by <code>scripts/<wbr>analysis/<wbr>studies/<wbr>'
+              f'state_dependence/<wbr>{stem}.py</code>\u2060, which also writes '
+              f'<code>figures/<wbr>{stem}.data.txt</code>\u2060 \u2014 the table above.</p>')
     page = page.replace(f"__DATA:{stem}__", block)
 
 # --- embed each raster by its key, never by position (guide: match by data-fig) --------------

@@ -37,11 +37,14 @@ for p, (panel, title) in enumerate((("observed", "what the agent happened to hav
     ax[p].set_title(title, fontsize=10, color=house.INK, loc="left", pad=8)
     ax[p].set_xlabel("world")
 ax[0].set_ylabel("state span (percentage points)")
-ax[0].set_ylim(0, 26)
-ax[0].annotate("flat — and the flatness is the\nenvironment, not the agent",
-               xy=(-0.42, 24.4), fontsize=10, color=house.RED, ha="left", va="top")
-ax[1].annotate("the world matters; it rises\nfive-fold across the three",
-               xy=(-0.42, 24.4), fontsize=10, color=house.GREEN, ha="left", va="top")
+# 50, not 26: at 26 the cover-heals pair in the CONFOUNDED panel (45.3 and 46.5) was drawn
+# clipped flat against the ceiling, so the figure showed 26 for a value of 46 and the caption
+# describing the panel as 'all about 21' was reading its own clipped drawing.
+ax[0].set_ylim(0, 50)
+ax[0].annotate("blind and sighted are identical here\n— the vision effect is invisible",
+               xy=(-0.42, 47.5), fontsize=10, color=house.RED, ha="left", va="top")
+ax[1].annotate("vision doubles it, and it\nrises five-fold overall",
+               xy=(-0.42, 47.5), fontsize=10, color=house.GREEN, ha="left", va="top")
 C.legend_below(ax[0], ncol=2, offset=-0.24)
 C.record_samples("a02_two_panels", [
     dict(what="training runs", used=6, total=6,

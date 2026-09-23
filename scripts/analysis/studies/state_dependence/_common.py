@@ -78,5 +78,7 @@ def record_samples(stem, rows):
     with open(os.path.join(FIG, f"{stem}.data.txt"), "w") as fh:
         for r in rows:
             pct = 100.0 * r["used"] / r["total"] if r["total"] else 0.0
-            fh.write(f"{r['what']}|{r['used']}|{r['total']}|{pct:.1f}|{r['note']}\n")
+            u = f"{r['used']:,}" if isinstance(r["used"], int) else r["used"]
+            t = f"{r['total']:,}" if isinstance(r["total"], int) else r["total"]
+            fh.write(f"{r['what']}|{u}|{t}|{pct:.1f}|{r['note']}\n")
     print(f"  wrote {stem}.data.txt ({len(rows)} rows)")
