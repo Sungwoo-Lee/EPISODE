@@ -78,7 +78,27 @@ import argparse, json, os, sys, time
 import numpy as np, pyarrow.parquet as pq, yaml
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from hiding_drivers import slot_layout, find_stores, shard_files, listcol   # noqa: E402
+from hiding_drivers import slot_layout, find_stores, listcol   # noqa: E402
+from hiding_drivers import shard_files as _all_shard_files   # noqa: E402
+
+#: Read only the first N blocks (5,000 episodes each) of every store. None = the whole store.
+#: Set from `--max-blocks`. It exists for the POWER CHECK: recomputing a measure on the first
+#: 100k episodes of a 1M store shows how far a smaller sample moves it, before anyone collects
+#: smaller stores and trusts them. Block files are seed-contiguous, so a prefix of blocks is a
+#: prefix of the paired episode population and the contiguity check below still holds.
+_MAX_BLOCKS = None
+
+
+def shard_files(stores, kind):
+    files = _all_shard_files(stores, kind)
+    if _MAX_BLOCKS is None:
+        return files
+    import re as _re
+    keep = [f for f in files
+            if int(_re.search(rf"{kind}_(\d+)\.parquet$", f).group(1)) < _MAX_BLOCKS]
+    if not keep:
+        raise SystemExit(f"--max-blocks {_MAX_BLOCKS} selected no {kind} shards")
+    return keep
 
 MOVE_ACTIONS = (0, 1, 2, 3)   # up/down/left/right; `Rest` is 4 and `Eat` 5 (core.py:580,661)
 
@@ -433,11 +453,15 @@ def main():
                     help="B2: drop rows whose arriving action was `Rest` from the OCCUPANCY "
                          "measures. Descriptive only — it does not remove the freeze-to-heal "
                          "artefact, which is what B0 exists for.")
+    ap.add_argument("--max-blocks", type=int, default=None,
+                    help="read only the first N 5,000-episode blocks of each store (power check)")
     ap.add_argument("--label", default=None, help="name for this run in the output")
     ap.add_argument("--out", default=None, help="write metrics JSON here")
     ap.add_argument("--compare", nargs=2, metavar=("A.json", "B.json"),
                     help="compare two previously written metric files")
     a = ap.parse_args()
+    global _MAX_BLOCKS
+    _MAX_BLOCKS = a.max_blocks
 
     if a.compare:
         A = json.load(open(a.compare[0])); B = json.load(open(a.compare[1]))

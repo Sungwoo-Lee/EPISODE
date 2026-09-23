@@ -111,3 +111,100 @@ One training seed per cell; blind and sighted worlds differ in two ways (vision,
 blocks predators); the two waves differ in three ways (healing in cover, two-sided hunger,
 over-eating death); Wave 1's probe sweeps predate the bush fix and are used only for scenes without
 animals.
+
+## Feedback from plan-reviewer (2026-09-23)
+
+**Verdict: NOT READY** — three Critical findings, each of which would put a *wrong* clue on the page
+rather than a missing one. Full table, assumption list, exit conditions and owners in
+[[plan_integrated_analysis_basicq2]] (`docs/reviews/plan_integrated_analysis_basicq2.md`).
+
+1. 🔴 **Five of the twenty sighted runs never reached 80 % of training** (Wave 1: lvl02 modulated
+   5.8M, lvl02 control 8.2M, lvl03 modulated 8.8M; Wave 2: lvl02 control 7.8M, lvl02 modulated
+   5.6M, lvl03 modulated 7.4M — the last three still training at 21:04). "Five checkpoints nearest
+   80–100 %" collapse to one repeated step for these, so their checkpoint spread is zero and reads as
+   robust; and the level-02 gap compares a 56–58 %-trained agent to a 78–82 %-trained one. Gate
+   collection on completion **and** on five distinct resolved steps; state a matched-length rule (or
+   drop) for Wave 1 levels 02/03. `REANALYSIS_INVENTORY.md` already carries this caveat.
+2. 🔴 **100,000 episodes per checkpoint is a third of the sample the ladder page itself documents as
+   unreliable** (`sensor_ladder.md:737-745`: the hypervigilance / odour claims flipped between 300k
+   and 1M; the odour regression keeps 11 % of episodes). Keep the existing 1M final stores as the
+   primary sample for A5, A10–A12, B1, B2; before collecting anything, recompute each ported number on
+   the first 20 shards (100k) of its own 1M store and report the shift.
+3. 🔴 **Level 02 has no randomised starting injury** (`random_start_injury: false` in its saved
+   config; the existing `context/lvl02_*.json` puts every causal-panel row in the injury-0 bin), so
+   A8, A9, A10–A12, A13, A14 and E3 are empty there. Other empty cells the plan does not list: no
+   thermal at blind/03/04 (E1, E2, D3), no probes for blind (D1, D2), no animal probes for Wave 1
+   (D1), and body temperature is never randomised at start, so E1 has no causal panel. Add an
+   empty-cell map and have the page builder assert it.
+
+Moderate (see the review for fixes): the collector cannot express "nearest N %" per run from one
+spec (`checkpoints:` is spec-global; `resolve_checkpoint` takes exact steps); "401 files per store"
+is the 1M count — a correct 100k store has 41; fullness bins are absolute (`NUT_EDGES = [25,50,75]`)
+while Wave 2's `max_satiation` is 200 with a setpoint at 100 and Wave 1's is 100 starting full — not
+comparable as written; the ported ladder families need `make_manifest.py` / `collect_arm_data.py
+--manifest` extended to the waves and to per-checkpoint cells, and the reproduce gate must go
+through that new path rather than re-read cached aggregates; only A8 is tagged causal — every figure
+needs a causal/observational tag; the five-seed band is from the range-0 `cmp10m` world, not the
+blind world; no `SCRIPTS_DEPENDENCY_MAP.md` update named for the new/changed scripts and the `lad03`
+fix closes an open Known-Bugs row; the page as scoped (~26 figures × 15 cells) will not be readable —
+`FIGURE_PLAN.md` is neither cited nor superseded; the deletion of "Level 04, Measured Again" and the
+URL reuse need explicit confirmation; storage is ~6 GB per 100k store (~650 GB), not 1.1 GB; the
+modulator-internals family names no checkpoint.
+
+Already done: the `ckpt_io.py` name pattern (Phase 0 step 3) landed in commit `a7b56282`.
+
+Structural check against today's three errors: final-checkpoint reading — prevented for A/B/D, not
+for C, hollow for the truncated runs; observed-vs-randomised — **not** prevented (only A8 tagged);
+within-run vs run-to-run — partly (band labelled "borrowed", but from a different world, and the
+checkpoint spread is not labelled as within-run).
+
+Cost of being wrong: compute and disk are recoverable; the page exists to choose the next
+architecture direction, so the cost is a mis-steered direction.
+
+Reviewed by: plan-reviewer
+
+## Revision 2 — after plan-reviewer (NOT READY → exit conditions)
+
+Review: `docs/reviews/plan_integrated_analysis_basicq2.md`. The three Criticals were facts about the
+data that this plan got wrong; each is now a rule.
+
+**C1 — unequal training length.** Five runs never reached 80 % of training; three (Wave 2 level 02
+both arms, level 03 modulated) are still training as of 21:28. Rule: an agent pair is compared only
+at **matched training steps**, over the last 20 % of the SHORTER run, and a store-set counts only if
+its five checkpoints are pairwise distinct. Consequences: Wave 1 level 02 is compared at ≤ 5.8 M
+steps (58 %), Wave 1 level 03 at ≤ 8.8 M (88 %), both labelled with that percentage; **Wave 2 levels
+02 and 03 are marked "still training" and excluded** until their runs finish. The core of the page is
+levels 04–06, complete in both waves, plus the blind world.
+
+**C2 — sample size.** The existing **1M final-checkpoint stores are the primary sample** for every
+filtered analysis (hypervigilance, odour, the multivariate hiding model, discrimination). Late-
+checkpoint stores serve only COARSE measures (causal state span, bush-entry change, how episodes
+end, survival), and only if the power check passes: each coarse measure recomputed on the first
+100k episodes of its own 1M store (`context_dependence.py --max-blocks 20`) must move by less than
+the checkpoint-to-checkpoint spread it is meant to reveal. If it fails, late-checkpoint stores are
+not collected and every store-based number is labelled single-checkpoint.
+
+**C3 — empty cells.** An explicit map, asserted by the page builder:
+
+| family | blind | level 02 | level 03 | level 04 | level 05 | level 06 |
+|---|---|---|---|---|---|---|
+| causal injury measures (A8, A9, A13, A14, context) | ✓ | ✗ no random injury | ✓ | ✓ | ✓ | ✓ |
+| hypervigilance, odour, hiding model (A10–12, B1–B2) | ✓ | ✓ observational only | ✓ | ✓ | ✓ | ✓ |
+| controlled-scene probes (D1–D2) | ✗ no probe world | W2 only* | W2 only* | ✓ W2 blocking; W1 empty scene only | thermal scenes, W2 | thermal scenes, W2 |
+| body temperature (E1, E2) | ✗ | ✗ | ✗ | ✗ | ✓ **observational** (never randomised at start) | ✓ observational |
+| injury-gated smell noise (E3) | ✗ | ✗ | ✗ | ✗ | reference | ✓ |
+| modulator internals (C) | ✓ | matched steps | matched steps | ✓ | ✓ | ✓ |
+
+\* Wave 2 levels 02/03 pending training completion.
+
+**Moderate findings adopted.** Fullness is binned by distance from each run's OWN setpoint (Wave 1
+setpoint = ceiling 100, Wave 2 setpoint 100 of 200) (M3). Every figure is tagged *causal* or
+*observational* and the builder refuses an untagged one (M5). The five-seed band is labelled "a
+different, simpler world" wherever it appears, and every checkpoint spread is labelled "within one
+run" (M6). The page keeps to ~12 figures: A4/A5/A14 to an appendix, A10–12 merged, C4 a table, E4 is
+the closing clue table (M8). `FIGURE_PLAN.md` is superseded by this plan (M8). Store-file count is
+derived from each spec, not hard-coded (M2). Modulator internals use the same checkpoints as the
+behaviour, and the blind runs' saved configs are load-tested first (M11). Any new or changed script
+gets its `SCRIPTS_DEPENDENCY_MAP.md` row in the same commit (M7). Storage estimate corrected to
+~6 GB per 100k-episode store (M10). The deletion of "Level 04, Measured Again" and the reuse of the
+URL were confirmed explicitly by the user on 2026-09-23 (M9); the page keeps that page's correction.
