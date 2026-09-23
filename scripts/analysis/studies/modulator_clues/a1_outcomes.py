@@ -20,8 +20,10 @@ import _common as C, house
 house.apply()
 COLS = [c for c in C.COLUMNS if c[0] == "blind" or c[1] >= 4]
 OVEREAT = "over-eating"
-CAUSE = [("starved", "starved", house.ORANGE), ("killed by predator", "died of injury", house.RED),
-         ("frozen or overheated", "froze or overheated", house.BLUE), (OVEREAT, "over-ate", house.GREEN)]
+# A NEUTRAL ramp: blue and orange are the two agents in the panel directly above, and red is the
+# saturated end of Figure 5's scale -- every hue on the page is already spent (format review, finding 1).
+CAUSE = [("starved", "starved", "#2b2f36"), ("killed by predator", "died of injury", "#62686f"),
+         ("frozen or overheated", "froze or overheated", "#9aa0a6"), (OVEREAT, "over-ate", "#cfd3d6")]
 fig, ax = plt.subplots(2, 1, figsize=(10.0, 7.2), sharex=True, gridspec_kw={"height_ratios": [1, 1.2]})
 x = np.arange(len(COLS)); w = 0.2
 missing = []

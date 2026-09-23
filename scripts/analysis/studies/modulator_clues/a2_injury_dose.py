@@ -28,35 +28,15 @@ MEAS = [("state span (pp)", lambda d: C.causal_metric(d, "state_span")),
         ("entry change (pp)", C.entry_change)]
 
 
-def series(world, lvl, arm):
-    """Checkpoint-ordered JSONs: the late stores, plus the final 1M store for full-length runs."""
-    s = C.late(world, lvl, arm)
-    if (world, lvl) not in C.MATCHED and world != "blind":
-        f = C.context_final(world, lvl, arm)
-        if f is not None: s = s + [f]
-    if world == "blind":
-        f = C.context_final(world, lvl, arm); s = [f] if f else []
-    return s
-
-
 fig, ax = plt.subplots(3, 1, figsize=(10.0, 7.6), sharex=True)
 x = np.arange(len(COLS)); n_used = {}
 for j, (world, lvl) in enumerate(COLS):
-    sc, sm = series(world, lvl, "control"), series(world, lvl, "modulated")
-    # Pair checkpoints only when both agents have the SAME number of them. Pairing by position while
-    # one agent's stores were still landing compared an 80 %-trained control with a final modulated
-    # agent (plan-reviewer C3). Both sets are chosen at the same fractions of the same training length,
-    # so equal-length sets pair in order.
-    if len(sc) != len(sm):
-        raise SystemExit(f"{world} level {lvl}: {len(sc)} control vs {len(sm)} modulated checkpoints -- "
-                         f"wait for the collection to finish rather than pairing unequal sets")
-    k = len(sc); n_used[(world, lvl)] = k
+    k = len(C.late_series(world, lvl, "control")); n_used[(world, lvl)] = k
     for i, (name, f) in enumerate(MEAS):
         if k == 0:
             ax[i].annotate("pending", xy=(x[j], 0.5), xycoords=("data", "axes fraction"),
                            ha="center", fontsize=9.6, color=house.TEXT_LIGHT); continue
-        g = np.array([f(sm[t]) - f(sc[t]) for t in range(k)], float)
-        g = g[np.isfinite(g)]
+        g = C.paired_gaps(world, lvl, f)
         if not g.size: continue
         ax[i].plot([x[j], x[j]], [g.min(), g.max()], color=house.TEXT_LIGHT, lw=2.4, solid_capstyle="round")
         ax[i].plot([x[j]], [np.median(g)], "o", ms=8, color=C.GAP)

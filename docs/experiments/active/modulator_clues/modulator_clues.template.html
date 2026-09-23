@@ -12,10 +12,13 @@ __HOUSE_STYLE__
   /* Column floors must SUM to less than the 688px text column, or the table scrolls on a desktop. */
   table.wide { min-width: 585px; }
   table.wide td:nth-child(1), table.wide th:nth-child(1) { min-width: 150px; }
-  table.cluetable { min-width: 760px; }
-  table.cluetable td:first-child { min-width: 190px; }
+  table.cluetable { min-width: 560px; }
+  table.cluetable td, table.cluetable th { padding: 9px 8px; }
+  table.cluetable td:first-child { min-width: 170px; }
+  table.cluetable td.agree { white-space: normal; min-width: 80px; font-size: 13px; }
   table.cluetable .tag { display: block; font-size: 12px; color: var(--ink-3); }
-  p.kind { display: inline-block; margin: 0 0 6px; padding: 2px 9px; border-radius: 3px;
+  /* align-self: a flex child is blockified and stretched, so inline-block alone renders a full-width bar */
+  p.kind { display: inline-block; align-self: flex-start; margin: 0 0 6px; padding: 2px 9px; border-radius: 3px;
            font-size: 12.5px; letter-spacing: .02em; border: 1px solid var(--rule); color: var(--ink-2); }
   p.kind-causal { border-color: var(--accent); color: var(--accent-text); }
   h3.group { margin-top: 2.2em; font-size: 13px; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-3); }
@@ -506,14 +509,15 @@ explains the measurement rules this page follows and the earlier readings they r
 
 <section class="col">
 <h2><span class="num">15</span> How to reproduce this</h2>
-<p>The plan behind this page, with its review, is
-<code>docs/<wbr>experiments/<wbr>active/<wbr>basic_levels_q2_default/<wbr>INTEGRATED_ANALYSIS_PLAN.md</code>. Each
-figure is one script in <code>scripts/<wbr>analysis/<wbr>studies/<wbr>modulator_clues/</code> and writes its
-own data-accounting file beside its image; the table is written by <code>e4_clue_table.py</code>. The
-measurements come from <code>scripts/<wbr>analysis/<wbr>context_dependence.py</code>, the Sensor Ladder
-sweep, <code>scripts/<wbr>analysis/<wbr>hiding_drivers.py</code> and
-<code>scripts/<wbr>analysis/<wbr>nmn/<wbr>run_mod_distribution.py</code>; their outputs are under
-<code>results/<wbr>analysis/<wbr>basicq2_integrated/</code>.</p>
+<ul>
+  <li>The plan and its reviews: <code>docs/<wbr>experiments/<wbr>active/<wbr>basic_levels_q2_default/<wbr>INTEGRATED_ANALYSIS_PLAN.md</code></li>
+  <li>One script per figure, each writing its own data-accounting file: <code>scripts/<wbr>analysis/<wbr>studies/<wbr>modulator_clues/</code></li>
+  <li>The table in section 13 is written by <code>e4_clue_table.py</code> in the same folder</li>
+  <li>State dependence: <code>scripts/<wbr>analysis/<wbr>context_dependence.py</code></li>
+  <li>The hiding model: <code>scripts/<wbr>analysis/<wbr>hiding_drivers.py</code></li>
+  <li>Modulator internals: <code>scripts/<wbr>analysis/<wbr>nmn/<wbr>run_mod_distribution.py</code></li>
+  <li>All outputs: <code>results/<wbr>analysis/<wbr>basicq2_integrated/</code></li>
+</ul>
 <p>Departures from the House Style Sheet: the chrome accent and warning hues are moved off the figure
 palette, which the sheet requires when figures spend colours on data categories; headings are set in
 Pretendard and code in the reader's system monospace, because the sheet links its IBM Plex families from

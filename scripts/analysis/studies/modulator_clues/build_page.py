@@ -160,5 +160,9 @@ if "data:font" not in page:
     fail.append("no embedded font - the page would render in the system fallback")
 
 die()
+# Declare the encoding first. Without it Chrome sniffed this 2.3 MB file as windows-1252 on one load in
+# six and drew every em dash as "â€”"; the layout checkers inject a charset, so they could never see it.
+page = '<meta charset="utf-8">\n' + page
+assert page.startswith('<meta charset="utf-8">')
 open(OUT, "w").write(page)
 print(f"wrote {os.path.relpath(OUT, ROOT)}  ({len(page)/1e6:.2f} MB, {len(seen_nums)} figures)")

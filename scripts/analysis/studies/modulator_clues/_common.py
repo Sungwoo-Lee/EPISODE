@@ -134,3 +134,26 @@ def spans(z, world):
     return inj_span, hunger, over
 
 
+
+
+def late_series(world, level, arm):
+    """Checkpoint-ordered context JSONs: late 100k stores, plus the final 1M store for full-length runs."""
+    if world == "blind":
+        f = context_final(world, level, arm); return [f] if f else []
+    s = late(world, level, arm)
+    if (world, level) not in MATCHED:
+        f = context_final(world, level, arm)
+        if f is not None: s = s + [f]
+    return s
+
+
+def paired_gaps(world, level, fn):
+    """Modulated minus ordinary at each paired late checkpoint. The ONE definition shared by Figure A2
+    and the clue table: they once took, respectively, the median of paired gaps and the difference of two
+    medians, and disagreed on the page (format review, finding 2)."""
+    import numpy as np
+    sc, sm = late_series(world, level, "control"), late_series(world, level, "modulated")
+    if len(sc) != len(sm):
+        raise SystemExit(f"{world} level {level}: unequal checkpoint sets ({len(sc)} vs {len(sm)})")
+    g = np.array([fn(sm[t]) - fn(sc[t]) for t in range(len(sc))], float)
+    return g[np.isfinite(g)]
