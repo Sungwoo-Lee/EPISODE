@@ -64,7 +64,7 @@ ax.set_title("Threat-conditional hiding, last 20 checkpoints, 95% intervals\n"
              "Every bar is far above zero: both agents hide more when hunted. The two agents "
              "overlap in\nalmost every world, and the gaps change sign between worlds.",
              fontsize=10, color=house.INK_2, loc="left", pad=8)
-house.legend_below(ax, ncol=2)
+C.legend_below(ax, ncol=2, offset=-0.34)   # 2-line tick labels + x-label sit above it
 C.record_samples("t03_arms_result", [
     dict(what="arm \u00d7 level cells", used=len(rows), total=8,
          note="4 thermal arms \u00d7 2 curriculum levels; each needs both a plain and a neuromodulated "
@@ -76,8 +76,10 @@ C.record_samples("t03_arms_result", [
          note="30 with a predator and 30 with an empty world"),
     dict(what="training seeds per cell", used=1, total=1,
          note="a single seed per arm, so intervals describe these runs \u2014 not the method")])
+fig.subplots_adjust(bottom=0.30)
 fig.tight_layout()
 C.assert_ticks_dont_collide(ax)
+C.assert_no_text_overlap(fig)
 C.assert_min_text_px(fig)
 house.save(fig, os.path.join(C.FIG, "t03_arms_result"), column_px=C.COLUMN_PX)
 for r in rows:

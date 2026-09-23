@@ -60,17 +60,19 @@ house.legend_below(ax[0], ncol=2)
 d = dif[dif["window"] >= 3]
 ax[1].fill_between(d["window"], d["lo"], d["hi"], color=house.INK_2, alpha=0.16, lw=0)
 ax[1].plot(dif["window"], dif["diff"], color=house.INK, lw=2.4, marker="o", ms=4.4)
-ax[1].axhline(0, color=house.RED, lw=1.3, ls=(0, (4, 3)))
+# The reference line is chrome, not a category: RED is already the "endpoint artefact"
+# label in this same panel.
+ax[1].axhline(0, color=house.TEXT_LIGHT, lw=1.3, ls=(0, (4, 3)))
 ax[1].plot([1], [dif["diff"].iloc[0]], marker="o", ms=11, mfc="none", mec=house.INK, mew=2.2)
 ax[1].set_ylim(*RIGHT_YLIM)
 for x, y, t, col, ha in ((1.25, -57, "endpoint\nartefact\n-60 pp", house.RED, "left"),
                          (4.6, 24, "plateau: no difference\n(p = 0.93 to 0.92)", house.GREEN, "left"),
                          (56.0, -41, "window has reached\ninto training\n-19 pp, p = 0.004",
-                          house.ORANGE, "right")):
+                          house.INK_2, "right")):   # not ORANGE: that is the neuromodulated agent elsewhere
     ax[1].annotate(t, xy=(x, y), fontsize=10, color=col, ha=ha, va="center")
 ax[1].set_ylabel("plain MINUS neuromodulated (pp)")
 ax[1].set_title("The difference a claim would rest on\n"
-                "Dashed line = no difference. Both ends deviate, for opposite reasons.",
+                "Dashed grey line = no difference. Both ends deviate, for opposite reasons.",
                 fontsize=10, color=house.INK_2, loc="left", pad=8)
 
 for a in ax:
@@ -91,6 +93,7 @@ C.record_samples("t01_window_profile", [
               "intervals describe these two runs and not the method")])
 
 fig.tight_layout(w_pad=2.4)
+C.assert_no_text_overlap(fig)
 C.assert_min_text_px(fig)
 house.save(fig, os.path.join(C.FIG, "t01_window_profile"), column_px=C.COLUMN_PX)
 print("final %.1f | w10 %.1f p=%.3f | w20 %.1f p=%.3f | w50 %.1f p=%.3f" % (

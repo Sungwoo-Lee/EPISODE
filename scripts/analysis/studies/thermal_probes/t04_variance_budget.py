@@ -44,7 +44,7 @@ for lvl in C.LEVELS:
             n_rec += len(sel)
             ep = np.asarray(per_ep)
             _, series = W.read_series(C.arm_dir(ARM), run, cond)
-            cells.append((f"{C.LEVEL_NAME[lvl]}\n{C.KIND_NAME[kind]}\n{cl}",
+            cells.append((f"{C.LEVEL_NAME[lvl]}\n{C.KIND_NAME[kind].replace(chr(110)+chr(101)+chr(117)+chr(114)+chr(111), chr(110)+chr(101)+chr(117)+chr(114)+chr(111)+chr(45)+chr(10))}\n{cl}",
                           ep.std(ddof=1) / np.sqrt(ep.size), series[-20:].std(ddof=1)))
 
 fig, ax = plt.subplots(figsize=(10.0, 5.4))
@@ -70,11 +70,11 @@ ax.set_ylabel("spread in bush occupancy (pp)")
 ax.set_ylim(0, 15.5)
 ax.set_xlabel("run and probe condition, in the world where the fire sits away from the bush")
 ax.set_title("More episodes would not help; the policy is what moves\n"
-             "Green is the error 30 episodes leave behind. Orange is how much the agent itself "
-             "changes\nbetween late checkpoints. The multiplier above each pair is orange over "
-             "green.",
+             "The lighter solid bar is the error 30 episodes leave behind. The darker hatched "
+             "bar is how\nmuch the agent itself changes between late checkpoints. The multiplier "
+             "above each pair\nis hatched over solid.",
              fontsize=10, color=house.INK_2, loc="left", pad=8)
-house.legend_below(ax, ncol=2)
+C.legend_below(ax, ncol=2, offset=-0.40)   # 4-line tick labels + x-label sit above it
 C.record_samples("t04_variance_budget", [
     dict(what="recordings read", used=n_rec, total=n_rec,
          note="the newest checkpoint's 30 episodes for each run and condition shown, read "
@@ -84,8 +84,10 @@ C.record_samples("t04_variance_budget", [
     dict(what="arms represented", used=1, total=4,
          note="one thermal arm is drawn; the ratio is the same order in the other three, and "
               "showing four would repeat the same point")])
+fig.subplots_adjust(bottom=0.34)
 fig.tight_layout()
 C.assert_ticks_dont_collide(ax)
+C.assert_no_text_overlap(fig)
 C.assert_min_text_px(fig)
 house.save(fig, os.path.join(C.FIG, "t04_variance_budget"), column_px=C.COLUMN_PX)
 for c in cells:

@@ -16,7 +16,9 @@ __HOUSE_STYLE__
   /* A figcaption is a flex item; without this its min-content width is the widest table cell, which
      pushes the whole page sideways on a phone (register F2). */
   figure, figcaption { min-width: 0; }
-  table.datatable { min-width: 560px; }
+  table.datatable { min-width: 640px; }
+  table.datatable td:first-child,
+  table.datatable th:first-child { min-width: 170px; }
   table.wide { min-width: 560px; }
   table.wide-sm { min-width: 520px; }
 </style>
@@ -144,7 +146,7 @@ agent. It is not right, and Figure 1 is the demonstration.</p>
     Shaded bands are 95% confidence intervals. Windows of 2 are omitted from the bands because their
     interval spans roughly &plusmn;400 points and would flatten everything else.</span>
     __DATA:t01_window_profile__
-    <p class="prov">Drawn by <code>scripts/analysis/studies/thermal_probes/t01_window_profile.py</code>, which also writes <code>figures/t01_window_profile.data.txt</code> — the table above.</p>
+    <p class="prov">Drawn by <code>scripts/<wbr>analysis/<wbr>studies/<wbr>thermal_probes/<wbr>t01_window_profile.py</code>, which also writes <code>figures/<wbr>t01_window_profile.data.txt</code> — the table above.</p>
     <span><b>How it is computed.</b> For each saved checkpoint we run 30 fixed evaluation episodes
     with a predator present and 30 with an empty world, and record the share of each episode's steps
     the agent spent standing on the bush. The contrast is the predator average minus the empty
@@ -176,12 +178,13 @@ agent. It is not right, and Figure 1 is the demonstration.</p>
     neighbourhood; it is the <em>maximum</em> of it. The behaviour swings violently from one save to
     the next even this late in training, which is the thing the single-number reading hides.</span>
     <span><b>Axes.</b> Horizontal, both panels: training progress in millions of environment steps,
-    0 to 10. Vertical, both panels (shared scale): the share of an episode's steps spent standing on
-    the hiding bush, as a percentage, 0 to 100. Each marker is one saved checkpoint, averaged over
+    0 to about 10.5. Vertical, both panels (shared scale): the share of an episode's steps spent
+    standing on the hiding bush, as a percentage; ticks run 0 to 100, and the left panel keeps blank
+    headroom above 100 so its two notes are not printed over the data. Each marker is one saved checkpoint, averaged over
     30 episodes. The ringed marker at the right of each series is the final checkpoint. The shaded
     band marks the last 20 checkpoints — the window quoted everywhere else on this page.</span>
     __DATA:t02_checkpoint_trace__
-    <p class="prov">Drawn by <code>scripts/analysis/studies/thermal_probes/t02_checkpoint_trace.py</code>, which also writes <code>figures/t02_checkpoint_trace.data.txt</code> — the table above.</p>
+    <p class="prov">Drawn by <code>scripts/<wbr>analysis/<wbr>studies/<wbr>thermal_probes/<wbr>t02_checkpoint_trace.py</code>, which also writes <code>figures/<wbr>t02_checkpoint_trace.data.txt</code> — the table above.</p>
     <span><b>How it is computed.</b> Every saved checkpoint of both level-04 runs is replayed
     against two fixed probe scenarios: one containing a hunting predator, one containing no animal at
     all. Each replay is 30 episodes with fixed seeds, so two agents meet identical worlds. Within an
@@ -205,15 +208,15 @@ agent. It is not right, and Figure 1 is the demonstration.</p>
 particular fix would have bought almost nothing here.</p>
 
 <figure>
-  <img data-fig="t04_variance_budget" alt="Grouped bar chart with eight pairs. In every pair the green bar, the sampling error from thirty episodes, is much shorter than the orange bar, the variation between checkpoints. Multipliers above the pairs read x4.4, x19, x2.1, x4.7, x4.5, and four pairs are labelled all thirty episodes identical.">
+  <img data-fig="t04_variance_budget" alt="Grouped bar chart with eight pairs of bars. In every pair the lighter solid bar, the sampling error from thirty episodes, is much shorter than the darker hatched bar, the variation between checkpoints. Multipliers above five pairs read times four, times nineteen, times two, times five and times four; the other three pairs are labelled all thirty episodes identical.">
   <p class="zoomhint">Click the figure to open it full size.</p>
   <figcaption>
     <span><b>Figure 3 — the noise is in the agent, not in the sample.</b>
-    Green is how much uncertainty remains after 30 episodes at a single checkpoint. Orange is how
-    much the agent's own behaviour moves between late checkpoints, with the world held completely
-    fixed. Orange is 2 to 19 times green — and in four of the eight cells green is
-    <b>exactly zero</b>: all 30 episodes produced the identical number, while the policy still
-    wandered by one to three points between saves. More episodes shrink a quantity that is already
+    The lighter solid bar is how much uncertainty remains after 30 episodes at a single checkpoint.
+    The darker hatched bar is how much the agent's own behaviour moves between late checkpoints, with
+    the world held completely fixed. The hatched bar is 2 to 19 times the solid one — and in four of
+    the eight cells the solid bar is <b>exactly zero</b>: all 30 episodes produced the identical
+    number, while the policy still wandered by one to three points between saves. More episodes shrink a quantity that is already
     negligible. The honest unit of replication is the checkpoint, and beyond it the training
     seed.</span>
     <span><b>Axes.</b> Horizontal: the eight combinations of run and probe condition, in the world
@@ -222,7 +225,7 @@ particular fix would have bought almost nothing here.</p>
     two bars in each pair are two different spreads of the same underlying quantity, so they share
     the scale.</span>
     __DATA:t04_variance_budget__
-    <p class="prov">Drawn by <code>scripts/analysis/studies/thermal_probes/t04_variance_budget.py</code>, which also writes <code>figures/t04_variance_budget.data.txt</code> — the table above.</p>
+    <p class="prov">Drawn by <code>scripts/<wbr>analysis/<wbr>studies/<wbr>thermal_probes/<wbr>t04_variance_budget.py</code>, which also writes <code>figures/<wbr>t04_variance_budget.data.txt</code> — the table above.</p>
     <span><b>How it is computed.</b> Two spreads are placed side by side for the same measurement.
     The first is the <em>standard error</em> of one checkpoint's estimate: we take the 30 individual
     episode values behind a single checkpoint, compute their standard deviation, and divide by the
@@ -232,7 +235,7 @@ particular fix would have bought almost nothing here.</p>
     in training, in a world that never changes. These are different kinds of quantity, which is the
     point — one is measurement error, the other is real variation in the thing being measured. The
     episode values are recomputed from the step-by-step recordings rather than taken from the
-    summary tables, so the two sides are not derived from one another. A green bar of exactly zero
+    summary tables, so the two sides are not derived from one another. A solid bar of exactly zero
     means all 30 episodes agreed to the last digit, which happens in the empty world when the agent
     reliably never enters the bush. <b>What this figure does not show:</b> variation between
     training seeds, which we cannot estimate at all, because there is only one seed per arm.</span>
@@ -264,7 +267,7 @@ particular fix would have bought almost nothing here.</p>
     hiding is unrelated to the predator. Error bars are 95% confidence intervals computed across the
     last 20 saved checkpoints.</span>
     __DATA:t03_arms_result__
-    <p class="prov">Drawn by <code>scripts/analysis/studies/thermal_probes/t03_arms_result.py</code>, which also writes <code>figures/t03_arms_result.data.txt</code> — the table above.</p>
+    <p class="prov">Drawn by <code>scripts/<wbr>analysis/<wbr>studies/<wbr>thermal_probes/<wbr>t03_arms_result.py</code>, which also writes <code>figures/<wbr>t03_arms_result.data.txt</code> — the table above.</p>
     <span><b>How it is computed.</b> Each bar is the average of 20 numbers — one per saved
     checkpoint, over the newest 20 of the 50 saved. Each of those numbers is itself the difference
     between two averages of 30 fixed evaluation episodes: the share of steps spent on the bush with
@@ -340,7 +343,7 @@ bush permeability cannot matter, because there is nothing to walk in.</p>
 
 <section class="col">
 <h2><span class="num">09</span> How to reproduce this</h2>
-<p class="prov">The four temperature worlds are generated by
+<p>The four temperature worlds are generated by
 <code>configs/environment/experiment/behavior_probes/thermal/generate_thermal_probes.py</code>, which
 writes 96 test files and refuses to emit one whose bush hides without blocking. The evaluation is
 <code>scripts/eval/dwell_sweep/run_sweep.py</code> over the nine specifications in
@@ -348,13 +351,14 @@ writes 96 test files and refuses to emit one whose bush hides without blocking. 
 <code>configs/eval_sweeps/basicq2_wave2_blocking_bush_rppo.yaml</code>; it wrote 312 result tables,
 every one with all 50 checkpoints and no failed cells. The windowing is
 <code>scripts/analysis/studies/basicq2_waves/window_profile.py</code>. Each figure is one script in
-<code>scripts/analysis/studies/thermal_probes/</code> and emits its own data-accounting file
+<code>scripts/<wbr>analysis/<wbr>studies/<wbr>thermal_probes/<wbr></code> and emits its own data-accounting file
 alongside its image. The bush fix is commit <code>a8a9040b</code>.</p>
-<p class="prov">Departures from the House Style Sheet, all deliberate. The chrome accent and
+<p>Departures from the House Style Sheet, all deliberate. The chrome accent and
 warning hues are moved off the figure palette, which the sheet itself requires when figures spend
-colours on data categories. Headings and code are set in Pretendard rather than the sheet's IBM Plex
-families: the sheet links those from Google Fonts instead of embedding them, and a published artifact
-cannot fetch them, so naming them would have meant every reader seeing an unpredictable system font.
+colours on data categories. Headings are set in Pretendard, and code in the reader's own system monospace, rather than in the
+sheet's IBM Plex families: the sheet links those from Google Fonts instead of embedding them, and a
+published artifact cannot fetch them, so naming them would have meant headings too rendering in an
+unpredictable system font.
 Wide tables sit in horizontal scroll boxes with an overflow cue, which is the sheet's own mechanism.</p>
 </section>
 

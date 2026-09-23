@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8" standalone="no"?>
 <!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN"
   "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
-<svg xmlns:xlink="http://www.w3.org/1999/xlink" width="712.266321pt" height="375.438639pt" viewBox="0 0 712.266321 375.438639" xmlns="http://www.w3.org/2000/svg" version="1.1">
+<svg xmlns:xlink="http://www.w3.org/1999/xlink" width="712.266321pt" height="378.14359pt" viewBox="0 0 712.266321 378.14359" xmlns="http://www.w3.org/2000/svg" version="1.1">
  <metadata>
   <rdf:RDF xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:cc="http://creativecommons.org/ns#" xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
    <cc:Work>
@@ -20,8 +20,8 @@
  </defs>
  <g id="figure_1">
   <g id="patch_1">
-   <path d="M 0 375.438639 
-L 712.266321 375.438639 
+   <path d="M 0 378.14359 
+L 712.266321 378.14359 
 L 712.266321 0 
 L 0 0 
 z
@@ -29,10 +29,10 @@ z
   </g>
   <g id="axes_1">
    <g id="patch_2">
-    <path d="M 41.493594 306.87629 
-L 702.186321 306.87629 
-L 702.186321 47.423125 
-L 41.493594 47.423125 
+    <path d="M 41.493594 261.795109 
+L 702.186321 261.795109 
+L 702.186321 58.0075 
+L 41.493594 58.0075 
 z
 " style="fill: #fbfbfa"/>
    </g>
@@ -40,357 +40,362 @@ z
     <g id="xtick_1">
      <g id="line2d_1"/>
      <g id="text_1">
-      <text style="font-size: 10px; font-family: 'Pretendard', 'system-ui', 'DejaVu Sans', sans-serif; fill: #6e747e" transform="translate(97.333584 317.446603)">level 05</text>
-      <text style="font-size: 10px; font-family: 'Pretendard', 'system-ui', 'DejaVu Sans', sans-serif; fill: #6e747e" transform="translate(104.371084 328.193165)">plain</text>
-      <text style="font-size: 10px; font-family: 'Pretendard', 'system-ui', 'DejaVu Sans', sans-serif; fill: #6e747e" transform="translate(95.582022 338.669728)">predator</text>
+      <text style="font-size: 10px; font-family: 'Pretendard', 'system-ui', 'DejaVu Sans', sans-serif; fill: #6e747e" transform="translate(97.333584 272.365422)">level 05</text>
+      <text style="font-size: 10px; font-family: 'Pretendard', 'system-ui', 'DejaVu Sans', sans-serif; fill: #6e747e" transform="translate(104.371084 283.111984)">plain</text>
+      <text style="font-size: 10px; font-family: 'Pretendard', 'system-ui', 'DejaVu Sans', sans-serif; fill: #6e747e" transform="translate(95.582022 293.588547)">predator</text>
      </g>
     </g>
     <g id="xtick_2">
      <g id="line2d_2"/>
      <g id="text_2">
-      <text style="font-size: 10px; font-family: 'Pretendard', 'system-ui', 'DejaVu Sans', sans-serif; fill: #6e747e" transform="translate(170.743887 317.446603)">level 05</text>
-      <text style="font-size: 10px; font-family: 'Pretendard', 'system-ui', 'DejaVu Sans', sans-serif; fill: #6e747e" transform="translate(177.781387 328.193165)">plain</text>
-      <text style="font-size: 10px; font-family: 'Pretendard', 'system-ui', 'DejaVu Sans', sans-serif; fill: #6e747e" transform="translate(174.138419 338.669728)">empty</text>
+      <text style="font-size: 10px; font-family: 'Pretendard', 'system-ui', 'DejaVu Sans', sans-serif; fill: #6e747e" transform="translate(170.743887 272.365422)">level 05</text>
+      <text style="font-size: 10px; font-family: 'Pretendard', 'system-ui', 'DejaVu Sans', sans-serif; fill: #6e747e" transform="translate(177.781387 283.111984)">plain</text>
+      <text style="font-size: 10px; font-family: 'Pretendard', 'system-ui', 'DejaVu Sans', sans-serif; fill: #6e747e" transform="translate(174.138419 293.588547)">empty</text>
      </g>
     </g>
     <g id="xtick_3">
      <g id="line2d_3"/>
      <g id="text_3">
-      <text style="font-size: 10px; font-family: 'Pretendard', 'system-ui', 'DejaVu Sans', sans-serif; fill: #6e747e" transform="translate(244.15419 317.446603)">level 05</text>
-      <text style="font-size: 10px; font-family: 'Pretendard', 'system-ui', 'DejaVu Sans', sans-serif; fill: #6e747e" transform="translate(224.920597 327.923165)">neuromodulated</text>
-      <text style="font-size: 10px; font-family: 'Pretendard', 'system-ui', 'DejaVu Sans', sans-serif; fill: #6e747e" transform="translate(242.402628 338.399728)">predator</text>
+      <text style="font-size: 10px; font-family: 'Pretendard', 'system-ui', 'DejaVu Sans', sans-serif; fill: #6e747e" transform="translate(244.15419 272.365422)">level 05</text>
+      <text style="font-size: 10px; font-family: 'Pretendard', 'system-ui', 'DejaVu Sans', sans-serif; fill: #6e747e" transform="translate(246.664347 282.841984)">neuro-</text>
+      <text style="font-size: 10px; font-family: 'Pretendard', 'system-ui', 'DejaVu Sans', sans-serif; fill: #6e747e" transform="translate(237.817472 293.318547)">modulated</text>
+      <text style="font-size: 10px; font-family: 'Pretendard', 'system-ui', 'DejaVu Sans', sans-serif; fill: #6e747e" transform="translate(242.402628 303.795109)">predator</text>
      </g>
     </g>
     <g id="xtick_4">
      <g id="line2d_4"/>
      <g id="text_4">
-      <text style="font-size: 10px; font-family: 'Pretendard', 'system-ui', 'DejaVu Sans', sans-serif; fill: #6e747e" transform="translate(317.564493 317.446603)">level 05</text>
-      <text style="font-size: 10px; font-family: 'Pretendard', 'system-ui', 'DejaVu Sans', sans-serif; fill: #6e747e" transform="translate(298.3309 327.923165)">neuromodulated</text>
-      <text style="font-size: 10px; font-family: 'Pretendard', 'system-ui', 'DejaVu Sans', sans-serif; fill: #6e747e" transform="translate(320.959025 338.399728)">empty</text>
+      <text style="font-size: 10px; font-family: 'Pretendard', 'system-ui', 'DejaVu Sans', sans-serif; fill: #6e747e" transform="translate(317.564493 272.365422)">level 05</text>
+      <text style="font-size: 10px; font-family: 'Pretendard', 'system-ui', 'DejaVu Sans', sans-serif; fill: #6e747e" transform="translate(320.07465 282.841984)">neuro-</text>
+      <text style="font-size: 10px; font-family: 'Pretendard', 'system-ui', 'DejaVu Sans', sans-serif; fill: #6e747e" transform="translate(311.227775 293.318547)">modulated</text>
+      <text style="font-size: 10px; font-family: 'Pretendard', 'system-ui', 'DejaVu Sans', sans-serif; fill: #6e747e" transform="translate(320.959025 303.795109)">empty</text>
      </g>
     </g>
     <g id="xtick_5">
      <g id="line2d_5"/>
      <g id="text_5">
-      <text style="font-size: 10px; font-family: 'Pretendard', 'system-ui', 'DejaVu Sans', sans-serif; fill: #6e747e" transform="translate(390.891984 317.446603)">level 06</text>
-      <text style="font-size: 10px; font-family: 'Pretendard', 'system-ui', 'DejaVu Sans', sans-serif; fill: #6e747e" transform="translate(398.012296 328.193165)">plain</text>
-      <text style="font-size: 10px; font-family: 'Pretendard', 'system-ui', 'DejaVu Sans', sans-serif; fill: #6e747e" transform="translate(389.223234 338.669728)">predator</text>
+      <text style="font-size: 10px; font-family: 'Pretendard', 'system-ui', 'DejaVu Sans', sans-serif; fill: #6e747e" transform="translate(390.891984 272.365422)">level 06</text>
+      <text style="font-size: 10px; font-family: 'Pretendard', 'system-ui', 'DejaVu Sans', sans-serif; fill: #6e747e" transform="translate(398.012296 283.111984)">plain</text>
+      <text style="font-size: 10px; font-family: 'Pretendard', 'system-ui', 'DejaVu Sans', sans-serif; fill: #6e747e" transform="translate(389.223234 293.588547)">predator</text>
      </g>
     </g>
     <g id="xtick_6">
      <g id="line2d_6"/>
      <g id="text_6">
-      <text style="font-size: 10px; font-family: 'Pretendard', 'system-ui', 'DejaVu Sans', sans-serif; fill: #6e747e" transform="translate(464.302287 317.446603)">level 06</text>
-      <text style="font-size: 10px; font-family: 'Pretendard', 'system-ui', 'DejaVu Sans', sans-serif; fill: #6e747e" transform="translate(471.422599 328.193165)">plain</text>
-      <text style="font-size: 10px; font-family: 'Pretendard', 'system-ui', 'DejaVu Sans', sans-serif; fill: #6e747e" transform="translate(467.779631 338.669728)">empty</text>
+      <text style="font-size: 10px; font-family: 'Pretendard', 'system-ui', 'DejaVu Sans', sans-serif; fill: #6e747e" transform="translate(464.302287 272.365422)">level 06</text>
+      <text style="font-size: 10px; font-family: 'Pretendard', 'system-ui', 'DejaVu Sans', sans-serif; fill: #6e747e" transform="translate(471.422599 283.111984)">plain</text>
+      <text style="font-size: 10px; font-family: 'Pretendard', 'system-ui', 'DejaVu Sans', sans-serif; fill: #6e747e" transform="translate(467.779631 293.588547)">empty</text>
      </g>
     </g>
     <g id="xtick_7">
      <g id="line2d_7"/>
      <g id="text_7">
-      <text style="font-size: 10px; font-family: 'Pretendard', 'system-ui', 'DejaVu Sans', sans-serif; fill: #6e747e" transform="translate(537.71259 317.446603)">level 06</text>
-      <text style="font-size: 10px; font-family: 'Pretendard', 'system-ui', 'DejaVu Sans', sans-serif; fill: #6e747e" transform="translate(518.561809 327.923165)">neuromodulated</text>
-      <text style="font-size: 10px; font-family: 'Pretendard', 'system-ui', 'DejaVu Sans', sans-serif; fill: #6e747e" transform="translate(536.04384 338.399728)">predator</text>
+      <text style="font-size: 10px; font-family: 'Pretendard', 'system-ui', 'DejaVu Sans', sans-serif; fill: #6e747e" transform="translate(537.71259 272.365422)">level 06</text>
+      <text style="font-size: 10px; font-family: 'Pretendard', 'system-ui', 'DejaVu Sans', sans-serif; fill: #6e747e" transform="translate(540.305559 282.841984)">neuro-</text>
+      <text style="font-size: 10px; font-family: 'Pretendard', 'system-ui', 'DejaVu Sans', sans-serif; fill: #6e747e" transform="translate(531.458684 293.318547)">modulated</text>
+      <text style="font-size: 10px; font-family: 'Pretendard', 'system-ui', 'DejaVu Sans', sans-serif; fill: #6e747e" transform="translate(536.04384 303.795109)">predator</text>
      </g>
     </g>
     <g id="xtick_8">
      <g id="line2d_8"/>
      <g id="text_8">
-      <text style="font-size: 10px; font-family: 'Pretendard', 'system-ui', 'DejaVu Sans', sans-serif; fill: #6e747e" transform="translate(611.122893 317.446603)">level 06</text>
-      <text style="font-size: 10px; font-family: 'Pretendard', 'system-ui', 'DejaVu Sans', sans-serif; fill: #6e747e" transform="translate(591.972112 327.923165)">neuromodulated</text>
-      <text style="font-size: 10px; font-family: 'Pretendard', 'system-ui', 'DejaVu Sans', sans-serif; fill: #6e747e" transform="translate(614.600237 338.399728)">empty</text>
+      <text style="font-size: 10px; font-family: 'Pretendard', 'system-ui', 'DejaVu Sans', sans-serif; fill: #6e747e" transform="translate(611.122893 272.365422)">level 06</text>
+      <text style="font-size: 10px; font-family: 'Pretendard', 'system-ui', 'DejaVu Sans', sans-serif; fill: #6e747e" transform="translate(613.715862 282.841984)">neuro-</text>
+      <text style="font-size: 10px; font-family: 'Pretendard', 'system-ui', 'DejaVu Sans', sans-serif; fill: #6e747e" transform="translate(604.868987 293.318547)">modulated</text>
+      <text style="font-size: 10px; font-family: 'Pretendard', 'system-ui', 'DejaVu Sans', sans-serif; fill: #6e747e" transform="translate(614.600237 303.795109)">empty</text>
      </g>
     </g>
     <g id="text_9">
-     <text style="font-weight: 600; font-size: 13px; font-family: 'Pretendard', 'system-ui', 'DejaVu Sans', sans-serif; text-anchor: middle; fill: #16181d" x="371.839957" y="354.298165" transform="rotate(-0 371.839957 354.298165)">run and probe condition, in the world where the fire sits away from the bush</text>
+     <text style="font-weight: 600; font-size: 13px; font-family: 'Pretendard', 'system-ui', 'DejaVu Sans', sans-serif; text-anchor: middle; fill: #16181d" x="371.839957" y="319.423547" transform="rotate(-0 371.839957 319.423547)">run and probe condition, in the world where the fire sits away from the bush</text>
     </g>
    </g>
    <g id="matplotlib.axis_2">
     <g id="ytick_1">
      <g id="line2d_9">
-      <path d="M 41.493594 306.87629 
-L 702.186321 306.87629 
-" clip-path="url(#p3ea10830c7)" style="fill: none; stroke: #dcdedb; stroke-width: 0.9; stroke-linecap: round"/>
+      <path d="M 41.493594 261.795109 
+L 702.186321 261.795109 
+" clip-path="url(#p463bf0a249)" style="fill: none; stroke: #dcdedb; stroke-width: 0.9; stroke-linecap: round"/>
      </g>
      <g id="line2d_10"/>
      <g id="text_10">
-      <text style="font-size: 11px; font-family: 'Pretendard', 'system-ui', 'DejaVu Sans', sans-serif; text-anchor: end; fill: #6e747e" x="37.993594" y="310.764962" transform="rotate(-0 37.993594 310.764962)">0</text>
+      <text style="font-size: 11px; font-family: 'Pretendard', 'system-ui', 'DejaVu Sans', sans-serif; text-anchor: end; fill: #6e747e" x="37.993594" y="265.683781" transform="rotate(-0 37.993594 265.683781)">0</text>
      </g>
     </g>
     <g id="ytick_2">
      <g id="line2d_11">
-      <path d="M 41.493594 273.398463 
-L 702.186321 273.398463 
-" clip-path="url(#p3ea10830c7)" style="fill: none; stroke: #dcdedb; stroke-width: 0.9; stroke-linecap: round"/>
+      <path d="M 41.493594 235.499934 
+L 702.186321 235.499934 
+" clip-path="url(#p463bf0a249)" style="fill: none; stroke: #dcdedb; stroke-width: 0.9; stroke-linecap: round"/>
      </g>
      <g id="line2d_12"/>
      <g id="text_11">
-      <text style="font-size: 11px; font-family: 'Pretendard', 'system-ui', 'DejaVu Sans', sans-serif; text-anchor: end; fill: #6e747e" x="37.993594" y="277.287135" transform="rotate(-0 37.993594 277.287135)">2</text>
+      <text style="font-size: 11px; font-family: 'Pretendard', 'system-ui', 'DejaVu Sans', sans-serif; text-anchor: end; fill: #6e747e" x="37.993594" y="239.388606" transform="rotate(-0 37.993594 239.388606)">2</text>
      </g>
     </g>
     <g id="ytick_3">
      <g id="line2d_13">
-      <path d="M 41.493594 239.920635 
-L 702.186321 239.920635 
-" clip-path="url(#p3ea10830c7)" style="fill: none; stroke: #dcdedb; stroke-width: 0.9; stroke-linecap: round"/>
+      <path d="M 41.493594 209.204758 
+L 702.186321 209.204758 
+" clip-path="url(#p463bf0a249)" style="fill: none; stroke: #dcdedb; stroke-width: 0.9; stroke-linecap: round"/>
      </g>
      <g id="line2d_14"/>
      <g id="text_12">
-      <text style="font-size: 11px; font-family: 'Pretendard', 'system-ui', 'DejaVu Sans', sans-serif; text-anchor: end; fill: #6e747e" x="37.993594" y="243.809307" transform="rotate(-0 37.993594 243.809307)">4</text>
+      <text style="font-size: 11px; font-family: 'Pretendard', 'system-ui', 'DejaVu Sans', sans-serif; text-anchor: end; fill: #6e747e" x="37.993594" y="213.09343" transform="rotate(-0 37.993594 213.09343)">4</text>
      </g>
     </g>
     <g id="ytick_4">
      <g id="line2d_15">
-      <path d="M 41.493594 206.442807 
-L 702.186321 206.442807 
-" clip-path="url(#p3ea10830c7)" style="fill: none; stroke: #dcdedb; stroke-width: 0.9; stroke-linecap: round"/>
+      <path d="M 41.493594 182.909583 
+L 702.186321 182.909583 
+" clip-path="url(#p463bf0a249)" style="fill: none; stroke: #dcdedb; stroke-width: 0.9; stroke-linecap: round"/>
      </g>
      <g id="line2d_16"/>
      <g id="text_13">
-      <text style="font-size: 11px; font-family: 'Pretendard', 'system-ui', 'DejaVu Sans', sans-serif; text-anchor: end; fill: #6e747e" x="37.993594" y="210.331479" transform="rotate(-0 37.993594 210.331479)">6</text>
+      <text style="font-size: 11px; font-family: 'Pretendard', 'system-ui', 'DejaVu Sans', sans-serif; text-anchor: end; fill: #6e747e" x="37.993594" y="186.798255" transform="rotate(-0 37.993594 186.798255)">6</text>
      </g>
     </g>
     <g id="ytick_5">
      <g id="line2d_17">
-      <path d="M 41.493594 172.964979 
-L 702.186321 172.964979 
-" clip-path="url(#p3ea10830c7)" style="fill: none; stroke: #dcdedb; stroke-width: 0.9; stroke-linecap: round"/>
+      <path d="M 41.493594 156.614408 
+L 702.186321 156.614408 
+" clip-path="url(#p463bf0a249)" style="fill: none; stroke: #dcdedb; stroke-width: 0.9; stroke-linecap: round"/>
      </g>
      <g id="line2d_18"/>
      <g id="text_14">
-      <text style="font-size: 11px; font-family: 'Pretendard', 'system-ui', 'DejaVu Sans', sans-serif; text-anchor: end; fill: #6e747e" x="37.993594" y="176.853651" transform="rotate(-0 37.993594 176.853651)">8</text>
+      <text style="font-size: 11px; font-family: 'Pretendard', 'system-ui', 'DejaVu Sans', sans-serif; text-anchor: end; fill: #6e747e" x="37.993594" y="160.503079" transform="rotate(-0 37.993594 160.503079)">8</text>
      </g>
     </g>
     <g id="ytick_6">
      <g id="line2d_19">
-      <path d="M 41.493594 139.487151 
-L 702.186321 139.487151 
-" clip-path="url(#p3ea10830c7)" style="fill: none; stroke: #dcdedb; stroke-width: 0.9; stroke-linecap: round"/>
+      <path d="M 41.493594 130.319232 
+L 702.186321 130.319232 
+" clip-path="url(#p463bf0a249)" style="fill: none; stroke: #dcdedb; stroke-width: 0.9; stroke-linecap: round"/>
      </g>
      <g id="line2d_20"/>
      <g id="text_15">
-      <text style="font-size: 11px; font-family: 'Pretendard', 'system-ui', 'DejaVu Sans', sans-serif; text-anchor: end; fill: #6e747e" x="37.993594" y="143.375823" transform="rotate(-0 37.993594 143.375823)">10</text>
+      <text style="font-size: 11px; font-family: 'Pretendard', 'system-ui', 'DejaVu Sans', sans-serif; text-anchor: end; fill: #6e747e" x="37.993594" y="134.207904" transform="rotate(-0 37.993594 134.207904)">10</text>
      </g>
     </g>
     <g id="ytick_7">
      <g id="line2d_21">
-      <path d="M 41.493594 106.009324 
-L 702.186321 106.009324 
-" clip-path="url(#p3ea10830c7)" style="fill: none; stroke: #dcdedb; stroke-width: 0.9; stroke-linecap: round"/>
+      <path d="M 41.493594 104.024057 
+L 702.186321 104.024057 
+" clip-path="url(#p463bf0a249)" style="fill: none; stroke: #dcdedb; stroke-width: 0.9; stroke-linecap: round"/>
      </g>
      <g id="line2d_22"/>
      <g id="text_16">
-      <text style="font-size: 11px; font-family: 'Pretendard', 'system-ui', 'DejaVu Sans', sans-serif; text-anchor: end; fill: #6e747e" x="37.993594" y="109.897996" transform="rotate(-0 37.993594 109.897996)">12</text>
+      <text style="font-size: 11px; font-family: 'Pretendard', 'system-ui', 'DejaVu Sans', sans-serif; text-anchor: end; fill: #6e747e" x="37.993594" y="107.912729" transform="rotate(-0 37.993594 107.912729)">12</text>
      </g>
     </g>
     <g id="ytick_8">
      <g id="line2d_23">
-      <path d="M 41.493594 72.531496 
-L 702.186321 72.531496 
-" clip-path="url(#p3ea10830c7)" style="fill: none; stroke: #dcdedb; stroke-width: 0.9; stroke-linecap: round"/>
+      <path d="M 41.493594 77.728882 
+L 702.186321 77.728882 
+" clip-path="url(#p463bf0a249)" style="fill: none; stroke: #dcdedb; stroke-width: 0.9; stroke-linecap: round"/>
      </g>
      <g id="line2d_24"/>
      <g id="text_17">
-      <text style="font-size: 11px; font-family: 'Pretendard', 'system-ui', 'DejaVu Sans', sans-serif; text-anchor: end; fill: #6e747e" x="37.993594" y="76.420168" transform="rotate(-0 37.993594 76.420168)">14</text>
+      <text style="font-size: 11px; font-family: 'Pretendard', 'system-ui', 'DejaVu Sans', sans-serif; text-anchor: end; fill: #6e747e" x="37.993594" y="81.617553" transform="rotate(-0 37.993594 81.617553)">14</text>
      </g>
     </g>
     <g id="text_18">
-     <text style="font-weight: 600; font-size: 13px; font-family: 'Pretendard', 'system-ui', 'DejaVu Sans', sans-serif; text-anchor: middle; fill: #16181d" x="19.71625" y="177.149708" transform="rotate(-90 19.71625 177.149708)">spread in bush occupancy (pp)</text>
+     <text style="font-weight: 600; font-size: 13px; font-family: 'Pretendard', 'system-ui', 'DejaVu Sans', sans-serif; text-anchor: middle; fill: #16181d" x="19.71625" y="159.901305" transform="rotate(-90 19.71625 159.901305)">spread in bush occupancy (pp)</text>
     </g>
    </g>
    <g id="patch_3">
-    <path d="M 88.476188 306.87629 
-L 114.903897 306.87629 
-L 114.903897 279.857745 
-L 88.476188 279.857745 
+    <path d="M 88.476188 261.795109 
+L 114.903897 261.795109 
+L 114.903897 240.57338 
+L 88.476188 240.57338 
 z
-" clip-path="url(#p3ea10830c7)" style="fill: #6e747e"/>
+" clip-path="url(#p463bf0a249)" style="fill: #6e747e"/>
    </g>
    <g id="patch_4">
-    <path d="M 161.886491 306.87629 
-L 188.3142 306.87629 
-L 188.3142 304.534735 
-L 161.886491 304.534735 
+    <path d="M 161.886491 261.795109 
+L 188.3142 261.795109 
+L 188.3142 259.955933 
+L 161.886491 259.955933 
 z
-" clip-path="url(#p3ea10830c7)" style="fill: #6e747e"/>
+" clip-path="url(#p463bf0a249)" style="fill: #6e747e"/>
    </g>
    <g id="patch_5">
-    <path d="M 235.296794 306.87629 
-L 261.724503 306.87629 
-L 261.724503 248.642987 
-L 235.296794 248.642987 
+    <path d="M 235.296794 261.795109 
+L 261.724503 261.795109 
+L 261.724503 216.055734 
+L 235.296794 216.055734 
 z
-" clip-path="url(#p3ea10830c7)" style="fill: #6e747e"/>
+" clip-path="url(#p463bf0a249)" style="fill: #6e747e"/>
    </g>
    <g id="patch_6">
-    <path d="M 308.707097 306.87629 
-L 335.134806 306.87629 
-L 335.134806 306.87629 
-L 308.707097 306.87629 
+    <path d="M 308.707097 261.795109 
+L 335.134806 261.795109 
+L 335.134806 261.795109 
+L 308.707097 261.795109 
 z
-" clip-path="url(#p3ea10830c7)" style="fill: #6e747e"/>
+" clip-path="url(#p463bf0a249)" style="fill: #6e747e"/>
    </g>
    <g id="patch_7">
-    <path d="M 382.1174 306.87629 
-L 408.545109 306.87629 
-L 408.545109 265.10308 
-L 382.1174 265.10308 
+    <path d="M 382.1174 261.795109 
+L 408.545109 261.795109 
+L 408.545109 228.984321 
+L 382.1174 228.984321 
 z
-" clip-path="url(#p3ea10830c7)" style="fill: #6e747e"/>
+" clip-path="url(#p463bf0a249)" style="fill: #6e747e"/>
    </g>
    <g id="patch_8">
-    <path d="M 455.527703 306.87629 
-L 481.955412 306.87629 
-L 481.955412 306.87629 
-L 455.527703 306.87629 
+    <path d="M 455.527703 261.795109 
+L 481.955412 261.795109 
+L 481.955412 261.795109 
+L 455.527703 261.795109 
 z
-" clip-path="url(#p3ea10830c7)" style="fill: #6e747e"/>
+" clip-path="url(#p463bf0a249)" style="fill: #6e747e"/>
    </g>
    <g id="patch_9">
-    <path d="M 528.938006 306.87629 
-L 555.365715 306.87629 
-L 555.365715 264.978591 
-L 528.938006 264.978591 
+    <path d="M 528.938006 261.795109 
+L 555.365715 261.795109 
+L 555.365715 228.886541 
+L 528.938006 228.886541 
 z
-" clip-path="url(#p3ea10830c7)" style="fill: #6e747e"/>
+" clip-path="url(#p463bf0a249)" style="fill: #6e747e"/>
    </g>
    <g id="patch_10">
-    <path d="M 602.348309 306.87629 
-L 628.776018 306.87629 
-L 628.776018 306.87629 
-L 602.348309 306.87629 
+    <path d="M 602.348309 261.795109 
+L 628.776018 261.795109 
+L 628.776018 261.795109 
+L 602.348309 261.795109 
 z
-" clip-path="url(#p3ea10830c7)" style="fill: #6e747e"/>
+" clip-path="url(#p463bf0a249)" style="fill: #6e747e"/>
    </g>
    <g id="patch_11">
-    <path d="M 114.903897 306.87629 
-L 141.331606 306.87629 
-L 141.331606 188.384319 
-L 114.903897 188.384319 
+    <path d="M 114.903897 261.795109 
+L 141.331606 261.795109 
+L 141.331606 168.725535 
+L 114.903897 168.725535 
 z
-" clip-path="url(#p3ea10830c7)" style="fill: url(#hc6ca00444d)"/>
+" clip-path="url(#p463bf0a249)" style="fill: url(#he7f0958899)"/>
    </g>
    <g id="patch_12">
-    <path d="M 188.3142 306.87629 
-L 214.741909 306.87629 
-L 214.741909 262.495103 
-L 188.3142 262.495103 
+    <path d="M 188.3142 261.795109 
+L 214.741909 261.795109 
+L 214.741909 226.935885 
+L 188.3142 226.935885 
 z
-" clip-path="url(#p3ea10830c7)" style="fill: url(#hc6ca00444d)"/>
+" clip-path="url(#p463bf0a249)" style="fill: url(#he7f0958899)"/>
    </g>
    <g id="patch_13">
-    <path d="M 261.724503 306.87629 
-L 288.152212 306.87629 
-L 288.152212 186.020523 
-L 261.724503 186.020523 
+    <path d="M 261.724503 261.795109 
+L 288.152212 261.795109 
+L 288.152212 166.868891 
+L 261.724503 166.868891 
 z
-" clip-path="url(#p3ea10830c7)" style="fill: url(#hc6ca00444d)"/>
+" clip-path="url(#p463bf0a249)" style="fill: url(#he7f0958899)"/>
    </g>
    <g id="patch_14">
-    <path d="M 335.134806 306.87629 
-L 361.562515 306.87629 
-L 361.562515 288.118682 
-L 335.134806 288.118682 
+    <path d="M 335.134806 261.795109 
+L 361.562515 261.795109 
+L 361.562515 247.061937 
+L 335.134806 247.061937 
 z
-" clip-path="url(#p3ea10830c7)" style="fill: url(#hc6ca00444d)"/>
+" clip-path="url(#p463bf0a249)" style="fill: url(#he7f0958899)"/>
    </g>
    <g id="patch_15">
-    <path d="M 408.545109 306.87629 
-L 434.972818 306.87629 
-L 434.972818 112.534996 
-L 408.545109 112.534996 
+    <path d="M 408.545109 261.795109 
+L 434.972818 261.795109 
+L 434.972818 109.149649 
+L 408.545109 109.149649 
 z
-" clip-path="url(#p3ea10830c7)" style="fill: url(#hc6ca00444d)"/>
+" clip-path="url(#p463bf0a249)" style="fill: url(#he7f0958899)"/>
    </g>
    <g id="patch_16">
-    <path d="M 481.955412 306.87629 
-L 508.383121 306.87629 
-L 508.383121 264.75971 
-L 481.955412 264.75971 
+    <path d="M 481.955412 261.795109 
+L 508.383121 261.795109 
+L 508.383121 228.714621 
+L 481.955412 228.714621 
 z
-" clip-path="url(#p3ea10830c7)" style="fill: url(#hc6ca00444d)"/>
+" clip-path="url(#p463bf0a249)" style="fill: url(#he7f0958899)"/>
    </g>
    <g id="patch_17">
-    <path d="M 555.365715 306.87629 
-L 581.793424 306.87629 
-L 581.793424 119.862776 
-L 555.365715 119.862776 
+    <path d="M 555.365715 261.795109 
+L 581.793424 261.795109 
+L 581.793424 114.905257 
+L 555.365715 114.905257 
 z
-" clip-path="url(#p3ea10830c7)" style="fill: url(#hc6ca00444d)"/>
+" clip-path="url(#p463bf0a249)" style="fill: url(#he7f0958899)"/>
    </g>
    <g id="patch_18">
-    <path d="M 628.776018 306.87629 
-L 655.203727 306.87629 
-L 655.203727 289.821861 
-L 628.776018 289.821861 
+    <path d="M 628.776018 261.795109 
+L 655.203727 261.795109 
+L 655.203727 248.3997 
+L 628.776018 248.3997 
 z
-" clip-path="url(#p3ea10830c7)" style="fill: url(#hc6ca00444d)"/>
+" clip-path="url(#p463bf0a249)" style="fill: url(#he7f0958899)"/>
    </g>
    <g id="text_19">
-    <text style="font-size: 10px; font-family: 'Pretendard', 'system-ui', 'DejaVu Sans', sans-serif; text-anchor: middle; fill: #4e545e" x="114.903897" y="174.674892" transform="rotate(-0 114.903897 174.674892)">x4</text>
+    <text style="font-size: 10px; font-family: 'Pretendard', 'system-ui', 'DejaVu Sans', sans-serif; text-anchor: middle; fill: #4e545e" x="114.903897" y="157.530036" transform="rotate(-0 114.903897 157.530036)">x4</text>
    </g>
    <g id="text_20">
-    <text style="font-size: 10px; font-family: 'Pretendard', 'system-ui', 'DejaVu Sans', sans-serif; text-anchor: middle; fill: #4e545e" x="188.3142" y="248.785676" transform="rotate(-0 188.3142 248.785676)">x19</text>
+    <text style="font-size: 10px; font-family: 'Pretendard', 'system-ui', 'DejaVu Sans', sans-serif; text-anchor: middle; fill: #4e545e" x="188.3142" y="215.740386" transform="rotate(-0 188.3142 215.740386)">x19</text>
    </g>
    <g id="text_21">
-    <text style="font-size: 10px; font-family: 'Pretendard', 'system-ui', 'DejaVu Sans', sans-serif; text-anchor: middle; fill: #4e545e" x="261.724503" y="172.311096" transform="rotate(-0 261.724503 172.311096)">x2</text>
+    <text style="font-size: 10px; font-family: 'Pretendard', 'system-ui', 'DejaVu Sans', sans-serif; text-anchor: middle; fill: #4e545e" x="261.724503" y="155.673392" transform="rotate(-0 261.724503 155.673392)">x2</text>
    </g>
    <g id="text_22">
-    <text style="font-size: 10px; font-family: 'Pretendard', 'system-ui', 'DejaVu Sans', sans-serif; fill: #4e545e" transform="translate(301.442618 263.932693)">all 30 episodes</text>
-    <text style="font-size: 10px; font-family: 'Pretendard', 'system-ui', 'DejaVu Sans', sans-serif; fill: #4e545e" transform="translate(316.344181 274.409255)">identical</text>
+    <text style="font-size: 10px; font-family: 'Pretendard', 'system-ui', 'DejaVu Sans', sans-serif; fill: #4e545e" transform="translate(301.442618 225.389876)">all 30 episodes</text>
+    <text style="font-size: 10px; font-family: 'Pretendard', 'system-ui', 'DejaVu Sans', sans-serif; fill: #4e545e" transform="translate(316.344181 235.866438)">identical</text>
    </g>
    <g id="text_23">
-    <text style="font-size: 10px; font-family: 'Pretendard', 'system-ui', 'DejaVu Sans', sans-serif; text-anchor: middle; fill: #4e545e" x="408.545109" y="98.825569" transform="rotate(-0 408.545109 98.825569)">x5</text>
+    <text style="font-size: 10px; font-family: 'Pretendard', 'system-ui', 'DejaVu Sans', sans-serif; text-anchor: middle; fill: #4e545e" x="408.545109" y="97.954151" transform="rotate(-0 408.545109 97.954151)">x5</text>
    </g>
    <g id="text_24">
-    <text style="font-size: 10px; font-family: 'Pretendard', 'system-ui', 'DejaVu Sans', sans-serif; fill: #4e545e" transform="translate(448.263224 240.57372)">all 30 episodes</text>
-    <text style="font-size: 10px; font-family: 'Pretendard', 'system-ui', 'DejaVu Sans', sans-serif; fill: #4e545e" transform="translate(463.164787 251.050282)">identical</text>
+    <text style="font-size: 10px; font-family: 'Pretendard', 'system-ui', 'DejaVu Sans', sans-serif; fill: #4e545e" transform="translate(448.263224 207.04256)">all 30 episodes</text>
+    <text style="font-size: 10px; font-family: 'Pretendard', 'system-ui', 'DejaVu Sans', sans-serif; fill: #4e545e" transform="translate(463.164787 217.519122)">identical</text>
    </g>
    <g id="text_25">
-    <text style="font-size: 10px; font-family: 'Pretendard', 'system-ui', 'DejaVu Sans', sans-serif; text-anchor: middle; fill: #4e545e" x="555.365715" y="106.153349" transform="rotate(-0 555.365715 106.153349)">x4</text>
+    <text style="font-size: 10px; font-family: 'Pretendard', 'system-ui', 'DejaVu Sans', sans-serif; text-anchor: middle; fill: #4e545e" x="555.365715" y="103.709758" transform="rotate(-0 555.365715 103.709758)">x4</text>
    </g>
    <g id="text_26">
-    <text style="font-size: 10px; font-family: 'Pretendard', 'system-ui', 'DejaVu Sans', sans-serif; fill: #4e545e" transform="translate(595.08383 265.635872)">all 30 episodes</text>
-    <text style="font-size: 10px; font-family: 'Pretendard', 'system-ui', 'DejaVu Sans', sans-serif; fill: #4e545e" transform="translate(609.985393 276.112434)">identical</text>
+    <text style="font-size: 10px; font-family: 'Pretendard', 'system-ui', 'DejaVu Sans', sans-serif; fill: #4e545e" transform="translate(595.08383 226.727639)">all 30 episodes</text>
+    <text style="font-size: 10px; font-family: 'Pretendard', 'system-ui', 'DejaVu Sans', sans-serif; fill: #4e545e" transform="translate(609.985393 237.204201)">identical</text>
    </g>
    <g id="text_27">
     <text style="font-weight: 600; font-size: 10px; font-family: 'Pretendard', 'system-ui', 'DejaVu Sans', sans-serif; fill: #4e545e" transform="translate(41.493594 17.4925)">More episodes would not help; the policy is what moves</text>
-    <text style="font-weight: 600; font-size: 10px; font-family: 'Pretendard', 'system-ui', 'DejaVu Sans', sans-serif; fill: #4e545e" transform="translate(41.493594 28.428125)">Green is the error 30 episodes leave behind. Orange is how much the agent itself changes</text>
-    <text style="font-weight: 600; font-size: 10px; font-family: 'Pretendard', 'system-ui', 'DejaVu Sans', sans-serif; fill: #4e545e" transform="translate(41.493594 39.423125)">between late checkpoints. The multiplier above each pair is orange over green.</text>
+    <text style="font-weight: 600; font-size: 10px; font-family: 'Pretendard', 'system-ui', 'DejaVu Sans', sans-serif; fill: #4e545e" transform="translate(41.493594 28.428125)">The lighter solid bar is the error 30 episodes leave behind. The darker hatched bar is how</text>
+    <text style="font-weight: 600; font-size: 10px; font-family: 'Pretendard', 'system-ui', 'DejaVu Sans', sans-serif; fill: #4e545e" transform="translate(41.493594 39.423125)">much the agent itself changes between late checkpoints. The multiplier above each pair</text>
+    <text style="font-weight: 600; font-size: 10px; font-family: 'Pretendard', 'system-ui', 'DejaVu Sans', sans-serif; fill: #4e545e" transform="translate(41.493594 50.0075)">is hatched over solid.</text>
    </g>
    <g id="legend_1">
     <g id="patch_19">
-     <path d="M 127.382145 357.301139 
-L 139.482145 357.301139 
-L 139.482145 352.103639 
-L 127.382145 352.103639 
+     <path d="M 127.382145 360.00609 
+L 139.482145 360.00609 
+L 139.482145 354.80859 
+L 127.382145 354.80859 
 z
 " style="fill: #6e747e"/>
     </g>
     <g id="text_28">
-     <text style="font-size: 11px; font-family: 'Pretendard', 'system-ui', 'DejaVu Sans', sans-serif; text-anchor: start; fill: #16181d" x="148.282145" y="358.648639" transform="rotate(-0 148.282145 358.648639)">sampling error of one checkpoint (30 episodes)</text>
+     <text style="font-size: 11px; font-family: 'Pretendard', 'system-ui', 'DejaVu Sans', sans-serif; text-anchor: start; fill: #16181d" x="148.282145" y="361.35359" transform="rotate(-0 148.282145 361.35359)">sampling error of one checkpoint (30 episodes)</text>
     </g>
     <g id="patch_20">
-     <path d="M 400.957301 357.301139 
-L 413.057301 357.301139 
-L 413.057301 352.103639 
-L 400.957301 352.103639 
+     <path d="M 400.957301 360.00609 
+L 413.057301 360.00609 
+L 413.057301 354.80859 
+L 400.957301 354.80859 
 z
-" style="fill: url(#hc6ca00444d)"/>
+" style="fill: url(#he7f0958899)"/>
     </g>
     <g id="text_29">
-     <text style="font-size: 11px; font-family: 'Pretendard', 'system-ui', 'DejaVu Sans', sans-serif; text-anchor: start; fill: #16181d" x="421.857301" y="358.648639" transform="rotate(-0 421.857301 358.648639)">variation between checkpoints (last 20)</text>
+     <text style="font-size: 11px; font-family: 'Pretendard', 'system-ui', 'DejaVu Sans', sans-serif; text-anchor: start; fill: #16181d" x="421.857301" y="361.35359" transform="rotate(-0 421.857301 361.35359)">variation between checkpoints (last 20)</text>
     </g>
    </g>
   </g>
  </g>
  <defs>
-  <clipPath id="p3ea10830c7">
-   <rect x="41.493594" y="47.423125" width="660.692727" height="259.453165"/>
+  <clipPath id="p463bf0a249">
+   <rect x="41.493594" y="58.0075" width="660.692727" height="203.787609"/>
   </clipPath>
  </defs>
  <defs>
-  <pattern id="hc6ca00444d" patternUnits="userSpaceOnUse" x="0" y="0" width="72" height="72">
+  <pattern id="he7f0958899" patternUnits="userSpaceOnUse" x="0" y="0" width="72" height="72">
    <rect x="0" y="0" width="73" height="73" fill="#4e545e"/>
    <path d="M -36 36 
 L 36 -36 

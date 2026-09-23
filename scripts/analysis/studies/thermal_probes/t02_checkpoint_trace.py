@@ -25,15 +25,22 @@ for j, (cond, cname) in enumerate([(C.NONE, "empty world (no animal)"),
         ax[j].plot([st[-1] / 1e6], [v[-1]], marker="o", ms=11, mfc="none", mec=col, mew=2.2)
     ax[j].axvspan(st[-20] / 1e6, st[-1] / 1e6, color=house.INK_2, alpha=0.07, lw=0)
     ax[j].set_title(cname, fontsize=10.5, color=house.INK, loc="left", pad=8)
+    ax[j].set_xlim(-0.35, 10.6)
     ax[j].set_xlabel("training progress (millions of environment steps)")
 ax[0].set_ylabel("steps spent on the hiding bush (%)")
 # Both notes go ABOVE the data, not into it: the blue series reaches past 80 four times, so a
 # note at y=70-90 is printed through by the line it is describing (register F33).
-ax[0].set_ylim(-4, 128)
-ax[0].annotate("shaded = the last 20 checkpoints,\nthe window quoted on this page",
-               xy=(0.2, 126), fontsize=10, color=house.TEXT_LIGHT, ha="left", va="top")
-ax[0].annotate("final checkpoint 86%;\nprevious ten average 24%",
-               xy=(10.0, 126), fontsize=10, color=house.RED, ha="right", va="top")
+# STACKED, NOT SIDE BY SIDE. Moving both notes to the same height cured them being printed
+# through by the data and left them printed through by each other -- each is about 45% of the
+# panel wide. Ticks stop at 100 so the headroom carries no 120% reading on a percentage axis.
+ax[0].set_ylim(-3, 132)
+ax[0].set_yticks(range(0, 101, 20))
+ax[0].annotate("final checkpoint 86%; previous ten average 24%",
+               xy=(10.4, 129), fontsize=10, color=house.RED, ha="right", va="top")
+# The band note lives in the subtitle, not the panel: at 10pt it is wider than the axes, and any
+# position inside them either leaves the panel or lands on one of the other two text items.
+fig.suptitle("Shaded band = the last 20 checkpoints, the window quoted on this page.",
+             fontsize=10, color=house.TEXT_LIGHT, x=0.005, ha="left", y=0.995, va="top")
 house.legend_below(ax[0], ncol=2)
 C.record_samples("t02_checkpoint_trace", [
     dict(what="checkpoints drawn", used=100, total=100,
@@ -41,7 +48,8 @@ C.record_samples("t02_checkpoint_trace", [
     dict(what="episodes per point", used=30, total=30,
          note="30 evaluation episodes at fixed seeds behind each plotted marker"),
     dict(what="training runs", used=2, total=2, note="one seed per arm \u2014 descriptive only")])
-fig.tight_layout(w_pad=2.2)
+fig.tight_layout(w_pad=2.2, rect=(0, 0, 1, 0.965))
+C.assert_no_text_overlap(fig)
 C.assert_min_text_px(fig)
 house.save(fig, os.path.join(C.FIG, "t02_checkpoint_trace"), column_px=C.COLUMN_PX)
 print("done t02")

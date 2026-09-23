@@ -123,7 +123,84 @@ def assert_ticks_dont_collide(ax, axis="x"):
     boxes = [(l, l.get_window_extent()) for l in labs if (l.get_text() or "").strip()]
     for i in range(len(boxes) - 1):
         (la, a), (lb, b) = boxes[i], boxes[i + 1]
-        if a.x1 > b.x0 + 0.5 if axis == "x" else a.y1 > b.y0 + 0.5:
+        # A HALF-PIXEL TOLERANCE IS NOT A GAP. The first version accepted boxes that merely
+        # touched, and passed two three-line labels whose words ended up 5px apart on a 2175px
+        # canvas -- 1.6px at the page's column, which reads as one word
+        # ("neuromodulatedneuromodulated"). The gap has to be in em, not px.
+        need = 0.5 * la.get_fontsize() * fig.dpi / 72.0
+        gap = (b.x0 - a.x1) if axis == "x" else (b.y0 - a.y1)
+        if gap < need:
             raise SystemExit(
-                f"{axis}-tick labels overlap: {la.get_text()!r} runs into {lb.get_text()!r}. "
-                f"Wrap or rotate them.")
+                f"{axis}-tick labels are {gap:.1f}px apart, under the {need:.1f}px (0.5em) floor: "
+                f"{la.get_text()!r} beside {lb.get_text()!r}. Wrap, shorten or rotate them.")
+
+
+def assert_no_text_overlap(fig, min_gap_px=1.0):
+    """Assert no drawn text overlaps any other drawn text, anywhere in the figure.
+
+    THE REASON THIS IS ONE GLOBAL CHECK RATHER THAN SEVERAL TARGETED ONES. Every targeted guard so
+    far has been defeated by the fix for the previous one. Wrapping tick labels onto three lines
+    cured their collision and pushed the axis label down into the legend's band. Moving two
+    annotations out of the data cured them being printed through by a line and left them printed
+    through by each other. The label-fit guard checks a label against its panel, the tick guard
+    checks ticks against each other, and nothing checked the whole stack -- so each fix was verified
+    against the rule it was fixing and against nothing else.
+
+    Text over text is always a defect, so the honest check is the total one: take every visible Text
+    artist the figure will draw, including legend entries, and require their rendered boxes to be
+    pairwise disjoint.
+    """
+    import itertools
+    import matplotlib.text
+    fig.canvas.draw()
+
+    # Matplotlib keeps a Text artist for ticks OUTSIDE the current view; they are positioned beyond
+    # the panel and are never drawn, but findobj still returns them. On a two-panel figure the left
+    # panel's out-of-view tick sits under the right panel's, which is a collision no reader can see.
+    # They are excluded by asking each axis which tick locations are actually in view.
+    dead = set()
+    for ax_ in fig.axes:
+        for axis, lim in ((ax_.xaxis, ax_.get_xlim()), (ax_.yaxis, ax_.get_ylim())):
+            lo, hi = sorted(lim)
+            for loc, lab in zip(axis.get_ticklocs(), axis.get_ticklabels()):
+                if not (lo <= loc <= hi):
+                    dead.add(id(lab))
+
+    items = []
+    for t in fig.findobj(matplotlib.text.Text):
+        txt = (t.get_text() or "").strip()
+        if not t.get_visible() or not txt or id(t) in dead:
+            continue
+        try:
+            bb = t.get_window_extent()
+        except Exception:
+            continue
+        if bb.width <= 0 or bb.height <= 0:
+            continue
+        items.append((txt, bb))
+    for (ta, a), (tb, b) in itertools.combinations(items, 2):
+        ox = min(a.x1, b.x1) - max(a.x0, b.x0)
+        oy = min(a.y1, b.y1) - max(a.y0, b.y0)
+        if ox > min_gap_px and oy > min_gap_px:
+            raise SystemExit(
+                f"text is printed over text ({ox:.0f}x{oy:.0f}px overlap):\n"
+                f"   {ta[:60]!r}\n   {tb[:60]!r}\n"
+                f"Move one of them; a raster is a single box to the page's layout checker, so "
+                f"nothing downstream can see this.")
+    return len(items)
+
+
+def legend_below(ax, ncol=2, offset=-0.13):
+    """House legend, but with the vertical offset under the caller's control.
+
+    `house.legend_below` hardcodes -0.13, which is tuned for one-line tick labels. Wrapping tick
+    labels onto three lines to cure a collision pushes the axis label down into that fixed band, so
+    the legend ends up printed over the axis label -- the fix for one guard defeating another. The
+    offset belongs to the figure that knows how tall its tick labels are.
+    """
+    import house as _h
+    leg = ax.legend(loc="upper center", bbox_to_anchor=(0.5, offset), ncol=ncol, frameon=False)
+    for t in leg.get_texts():
+        t.set_color(_h.INK)
+        t.set_fontsize(_h.FS_LABEL)
+    return leg
