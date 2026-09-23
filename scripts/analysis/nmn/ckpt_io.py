@@ -48,10 +48,46 @@ import numpy as np
 #  20260907-045531_rppo_nmnsite_t1none_s42
 #  20260909-023639_rppo_olfmc_t2enc_ALL_s42      <- the extended-olfaction twins
 #  20260909-161137_rppo_olfgae_t3rnn_I_s42
+#  20260921-114851_rppo_basicq2_lvl04_t16quad_s42   <- basic-levels waves: a curriculum level, and
+#  20260922-182527_rppo_bq2cover_lvl04_t16quad_s42     NO slice suffix (see _slice_from_config)
 _RUN_RE = re.compile(
-    r"^(?P<stamp>\d{8}-\d{6})_rppo_(?P<grid>nmnsite|nmngaenorm|olfmc|olfgae)_"
+    r"^(?P<stamp>\d{8}-\d{6})_rppo_(?P<grid>nmnsite|nmngaenorm|olfmc|olfgae|basicq2|bq2cover)_"
+    r"(?:lvl(?P<level>\d{2})_)?"
     r"(?P<arm>t\d+[a-z]+)(?:_(?P<slice>ALL|I|X))?_s(?P<seed>\d+)$"
 )
+
+#: `input_sensors` in a run's saved config -> the slice label the grids encode in their names.
+_INPUT_SENSORS_TO_SLICE = {"all": "ALL"}
+
+
+def _slice_from_config(models_dir: Path) -> str:
+    """The input slice of a modulated run whose NAME does not carry one.
+
+    The basic-levels waves name their modulated arm `t16quad` with no `_ALL`, although the
+    modulator reads every input. Inferring "no slice" from the name would label a modulated run
+    "n/a (no modulator)", so the slice is read from the run's own saved config instead. An
+    `input_sensors` value with no known slice is an error, never a silent default.
+    """
+    import yaml
+    cfg = yaml.safe_load(open(Path(models_dir) / "config.yaml"))
+    found = []
+    def walk(o):
+        if isinstance(o, dict):
+            for k, v in o.items():
+                if k == "input_sensors":
+                    found.append(v)
+                walk(v)
+        elif isinstance(o, list):
+            for v in o:
+                walk(v)
+    walk(cfg)
+    vals = {str(v) for v in found}
+    if len(vals) != 1:
+        raise ValueError(f"{models_dir}: expected exactly one input_sensors value, found {sorted(vals)}")
+    v = vals.pop()
+    if v not in _INPUT_SENSORS_TO_SLICE:
+        raise ValueError(f"{models_dir}: input_sensors={v!r} has no known slice label")
+    return _INPUT_SENSORS_TO_SLICE[v]
 
 #: Which of the four FiLM sites each arm switches on. Read from the run's own saved
 #: config at load time; this table exists only to give the arms readable names.
@@ -84,6 +120,7 @@ class RunInfo:
     arm: str                 # t1none | t2enc | t3rnn | t4act | t5crt | t16quad
     input_slice: str | None  # ALL | I | X, or None for the control
     seed: int
+    level: int | None = None  # curriculum level for the basic-levels waves; None for the grids
 
     @property
     def modulated(self) -> bool:
@@ -113,10 +150,13 @@ def discover_runs(results_root: str | os.PathLike = "results/JAX_RecurrentPPO",
                 f"run {d.name} matches the grid naming pattern but has no models/ "
                 f"directory — refusing to skip it silently."
             )
+        arm, sl = m.group("arm"), m.group("slice")
+        if sl is None and arm != "t1none":
+            sl = _slice_from_config(models)
         out.append(RunInfo(
             tag=d.name, run_dir=d, models_dir=models,
-            grid=m.group("grid"), arm=m.group("arm"),
-            input_slice=m.group("slice"), seed=int(m.group("seed")),
+            grid=m.group("grid"), arm=arm, input_slice=sl, seed=int(m.group("seed")),
+            level=int(m.group("level")) if m.group("level") else None,
         ))
     return out
 
