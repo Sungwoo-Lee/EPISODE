@@ -138,12 +138,15 @@ are not used.</p>
   <p class="zoomhint">Click the figure to open it full size.</p>
   __KIND:a2_injury_dose__
   <figcaption>
-    <span><b>Figure 2 — the modulator barely changes what a wound does to behaviour.</b>
-    On three causal measures of injury's effect the gap between the agents is small and mostly
-    straddles zero once its spread across checkpoints is drawn. This is the test the modulator was
-    most directly designed to pass — a state-dependent gain should make a wound move behaviour more
-    — and in these runs it does not, in any world. The clue it gives is negative but specific: if
-    the modulator's influence exists, it is not in how strongly injury alone steers hiding.</span>
+    <span><b>Figure 2 — mostly no difference in what a wound does, with one pattern at Wave 1's
+    thermal levels.</b> Of 21 world-level-measure combinations, 16 have gaps whose range across five late
+    checkpoints crosses zero. Five keep one sign throughout, and three of those sit together: at Wave 1
+    levels 05 and 06 the modulated agent's response to a nearby predator falls <em>more steeply</em> as its
+    starting injury rises (−0.4 to −1.9 points per injury band), and at level 06 its rate of stepping into
+    cover falls more with injury too (−1.3 to −2.9). That is a more injury-dependent threat response, at
+    the levels built to need one — the closest thing to state dependence on this page — and it does not
+    reappear in Wave 2. The other two one-signed cells (Wave 1 level 03 and Wave 2 level 04, entry change)
+    are under about a point.</span>
     <span><b>Axes.</b> Horizontal, all panels: world and level. Vertical: the neuromodulated agent's
     value minus the ordinary agent's — top, the state span in percentage points; middle, the threat
     trend in percentage points per injury band; bottom, the bush-entry change in percentage points.
@@ -157,7 +160,9 @@ are not used.</p>
     injury band to the next. The <em>bush-entry change</em> scores a decision rather than a place: of
     the moments the agent is in the open and chooses to move, how often the move takes it into cover —
     so an injured agent that simply stops where it stands cannot inflate it. Each is computed at five
-    late checkpoints per run, paired in order between the two agents. <b>What this figure does not
+    late checkpoints per run, paired in order between the two agents: four with 100,000 episodes and, for
+    runs that trained to full length, the final one with a million (a check found 100,000 episodes move
+    these measures by at most a third of a point). <b>What this figure does not
     show:</b> how the two agents differ from a second training run of themselves, which one run per
     agent cannot tell us; and level 02, which never randomises the starting injury.</span>
   </figcaption>
@@ -459,6 +464,11 @@ result:</p>
   <li><b>Most of the modulator's output is a constant.</b> Only 8–31% of its gain variation changes from moment
   to moment (Figure 6), and less at the thermal levels. Worth measuring what that part follows, and trying a
   design that cannot collapse into a fixed rescaling — a hypernetwork, or a penalty on the constant part.</li>
+  <li><b>At Wave 1's thermal levels the modulated agent's threat response depended more on injury</b>
+  (Figure 2) — the only pattern on the page that holds its sign across all five late checkpoints, at the levels
+  designed to need it. It did not recur in Wave 2, where cover heals and injury matters more for everyone.
+  Worth asking whether the modulator's effect appears only while injury is a weaker cue, and replicating
+  Wave 1 levels 05/06 with more seeds.</li>
   <li><b>Level 06's noise changes the wound's pull in both agents</b> (Figure 10), in the same direction in
   both waves and inside one run's checkpoint spread. Whether the modulated agent adjusts more needs a
   seeded replication of levels 05 and 06.</li>
