@@ -35,10 +35,25 @@ def measures(world, lvl, arm):
 
 
 NAMES = ["injury span", "hunger span", "wound's predator shift", "criterion shift"]
-fig, ax = plt.subplots(1, 2, figsize=(10.0, 4.8), sharey=True)
+LATE = "state span, 5 checkpoints"
+
+
+def late_span(world, lvl, arm):
+    """Causal state span at each late checkpoint (four 100k stores + the final 1M), in order."""
+    s = [C.causal_metric(d, "state_span") for d in C.late(world, lvl, arm)]
+    f = C.context_final(world, lvl, arm)
+    return s + ([C.causal_metric(f, "state_span")] if f else [])
+fig, ax = plt.subplots(1, 2, figsize=(10.0, 5.4), sharey=True)
 out = {}
 for p, world in enumerate(("w1", "w2")):
-    y = np.arange(len(NAMES))[::-1]
+    y = np.arange(len(NAMES))[::-1] + 1
+    for k, (arm, lab, col) in enumerate(C.ARMS):
+        a, b = late_span(world, 6, arm), late_span(world, 5, arm)
+        if len(a) == len(b) and a:
+            d = np.array(a) - np.array(b); yy = 0 + (0.5 - k) * 0.36
+            ax[p].plot([d.min(), d.max()], [yy, yy], color=col, lw=3, alpha=0.45, solid_capstyle="round")
+            ax[p].plot([np.median(d)], [yy], "o", ms=7, color=col)
+            out[(world, arm, "late")] = (np.median(d), d.min(), d.max())
     for k, (arm, lab, col) in enumerate(C.ARMS):
         d6, d5 = measures(world, 6, arm), measures(world, 5, arm)
         v = [d6[n] - d5[n] for n in NAMES]; out[(world, arm)] = v
@@ -46,15 +61,17 @@ for p, world in enumerate(("w1", "w2")):
     ax[p].axvline(0, color=house.INK, lw=1); ax[p].grid(axis="y", visible=False)
     ax[p].set_title(C.WORLD_NAME[world], fontsize=10.5, color=house.INK, loc="left", pad=8)
     ax[p].set_xlabel("level 06 − level 05 (pp)")
-ax[0].set_yticks(np.arange(len(NAMES))[::-1]); ax[0].set_yticklabels(NAMES, fontsize=10)
+ax[0].set_yticks(list(np.arange(len(NAMES))[::-1] + 1) + [0]); ax[0].set_yticklabels(NAMES + [LATE], fontsize=10)
 C.legend_below(ax[0], ncol=2, offset=-0.22)
 fig.tight_layout(w_pad=1.6)
 C.assert_no_text_overlap(fig); C.assert_min_text_px(fig)
-C.record_kind("e3_noise_effect", "causal")
+C.record_kind("e3_noise_effect", "between_runs")
 C.record_samples("e3_noise_effect", [
     dict(what="training runs", used=8, total=8, note="levels 05 and 06 × two agents × two waves, one seed each"),
     dict(what="episodes per run", used=1000000, total=1000000, note="final-checkpoint store; randomly assigned starting injury"),
     dict(what="measures", used=4, total=4, note="injury span, hunger span, wound's predator shift, criterion shift"),
+    dict(what="late checkpoints in the bottom row", used=5, total=5,
+         note="four 100k stores plus the final 1M store per run, paired in order between levels 06 and 05"),
     dict(what="seed-to-seed spread", used=0, total=1,
          note="not estimable: each level is a different single run, so the difference mixes noise effect and seed")])
 house.save(fig, os.path.join(C.FIG, "e3_noise_effect"), column_px=C.COLUMN_PX)

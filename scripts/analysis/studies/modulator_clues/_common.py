@@ -42,7 +42,8 @@ EMPTY = {("w2", 2): "still training", ("w2", 3): "still training"}
 
 KIND = {"causal": "causal — starting injury assigned at random",
         "observational": "observational — the agent's own history, not assigned",
-        "scene": "controlled test scene"}
+        "scene": "controlled test scene",
+        "between_runs": "between separate training runs — mixes the effect with seed-to-seed variation"}
 
 
 def col_label(world, level):

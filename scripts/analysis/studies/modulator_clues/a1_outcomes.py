@@ -19,15 +19,29 @@ import _common as C, house
 
 house.apply()
 COLS = [c for c in C.COLUMNS if c[0] == "blind" or c[1] >= 4]
+OVEREAT = "over-eating"
 CAUSE = [("starved", "starved", house.ORANGE), ("killed by predator", "died of injury", house.RED),
-         ("frozen or overheated", "froze or overheated", house.BLUE), ("3", "over-ate", house.GREEN)]
+         ("frozen or overheated", "froze or overheated", house.BLUE), (OVEREAT, "over-ate", house.GREEN)]
 fig, ax = plt.subplots(2, 1, figsize=(10.0, 7.2), sharex=True, gridspec_kw={"height_ratios": [1, 1.2]})
 x = np.arange(len(COLS)); w = 0.2
 missing = []
+#: The ladder aggregate names four termination codes; over-eating (code 3, possible only since Wave 2)
+#: arrives under its bare number. Mapped here by NAME rather than read as "3" in the drawing code.
+OVEREAT = "over-eating"
+
+
+def outcomes(d):
+    t = {(OVEREAT if k == "3" else k): v for k, v in d["term_pct"].items()}
+    tot = sum(t.values())
+    assert abs(tot - 100.0) < 0.05, f"{d['arm']}: outcome shares sum to {tot:.2f}, not 100"
+    return t
+
+
 for i, (world, lvl) in enumerate(COLS):
     d = {arm: C.ladder(world, lvl, arm) for arm, _, _ in C.ARMS}
     if None in d.values():
         missing.append(i); continue
+    for arm in d: d[arm] = dict(d[arm], term_pct=outcomes(d[arm]))
     for k, (arm, lab, col) in enumerate(C.ARMS):
         ax[0].plot(x[i] + (k - 0.5) * 0.18, d[arm]["mean_survival"], "o", ms=8, color=col,
                    label=lab if i == 0 else None)

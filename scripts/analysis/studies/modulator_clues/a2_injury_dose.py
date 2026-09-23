@@ -43,7 +43,14 @@ fig, ax = plt.subplots(3, 1, figsize=(10.0, 7.6), sharex=True)
 x = np.arange(len(COLS)); n_used = {}
 for j, (world, lvl) in enumerate(COLS):
     sc, sm = series(world, lvl, "control"), series(world, lvl, "modulated")
-    k = min(len(sc), len(sm)); n_used[(world, lvl)] = k
+    # Pair checkpoints only when both agents have the SAME number of them. Pairing by position while
+    # one agent's stores were still landing compared an 80 %-trained control with a final modulated
+    # agent (plan-reviewer C3). Both sets are chosen at the same fractions of the same training length,
+    # so equal-length sets pair in order.
+    if len(sc) != len(sm):
+        raise SystemExit(f"{world} level {lvl}: {len(sc)} control vs {len(sm)} modulated checkpoints -- "
+                         f"wait for the collection to finish rather than pairing unequal sets")
+    k = len(sc); n_used[(world, lvl)] = k
     for i, (name, f) in enumerate(MEAS):
         if k == 0:
             ax[i].annotate("pending", xy=(x[j], 0.5), xycoords=("data", "axes fraction"),
