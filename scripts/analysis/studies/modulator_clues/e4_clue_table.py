@@ -22,7 +22,14 @@ def lad(world, lvl, arm, key):
     if key == "hiding": return d["bush_dwell_pct"]
     g = d["grids"]; f = lambda k, b: proximity_effect(g[f"{k}_bush"], g[f"{k}_tot"], b)
     pre = f("pd", (3,)) - f("pd", (0,)); rab = f("rd", (3,)) - f("rd", (0,))
-    return {"predshift": pre, "criterion": rab - pre}[key]
+    return {"predshift": pre, "rabshift": rab}[key]
+
+
+def rab_dist(world, lvl, arm):
+    import json as _j
+    k = f"blind_{arm}" if world == "blind" else f"{world}_lvl{lvl:02d}_{arm}"
+    f = os.path.join(C.INT, "rabbit_avoidance", k + ".json")
+    return _j.load(open(f))["start"]["near_share_shift"] if os.path.exists(f) else np.nan
 
 
 def drive(world, lvl, arm, i):
@@ -41,8 +48,9 @@ MEAS = [("survival (steps)", lambda w, l, a: lad(w, l, a, "survival"), "A1", "ob
         ("hunger span (pp)", lambda w, l, a: drive(w, l, a, 1), "A5", "causal"),
         ("over-full span (pp)", lambda w, l, a: drive(w, l, a, 2), "A5", "causal"),
         ("bush-entry change (pp)", None, "A2", "causal"),
-        ("wound's predator shift (pp)", lambda w, l, a: lad(w, l, a, "predshift"), "A4", "causal"),
-        ("criterion shift (pp)", lambda w, l, a: lad(w, l, a, "criterion"), "A4", "causal")]
+        ("hypervigilance: rabbit hiding shift (pp)", lambda w, l, a: lad(w, l, a, "rabshift"), "A4", "causal"),
+        ("hypervigilance: rabbit-near shift (pp)", rab_dist, "A4", "causal"),
+        ("context: predator hiding shift (pp)", lambda w, l, a: lad(w, l, a, "predshift"), "A4", "causal")]
 rows = []
 for name, fn, fig, kind in MEAS:
     gaps = ([entry_gap(w, l) for w, l in COLS] if fn is None

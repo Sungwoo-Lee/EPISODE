@@ -173,35 +173,40 @@ are not used.</p>
 </section>
 
 <section class="col">
-<h2><span class="num">05</span> Does a wound make a harmless animal look dangerous?</h2>
+<h2><span class="num">05</span> Hypervigilance: does an injured agent avoid the harmless rabbit more?</h2>
 
 <figure>
-  <img data-fig="a4_hypervigilance" alt="Two panels with seven rows for blind and Wave 1 and Wave 2 levels 04 to 06. Left: for each agent, a filled dot for the wound's effect near a harmless rabbit and a hollow square for near a predator; the squares sit left of zero, between about minus 1 and minus 7. Right: black bars of the modulated-minus-ordinary difference in criterion shift, mostly within one point of zero, positive in Wave 1 and mixed in Wave 2.">
+  <img data-fig="a4_hypervigilance" alt="Three panels with seven rows: blind and Wave 1 and Wave 2 levels 04 to 06, with a blue and an orange marker pair per row. Left, hiding near the rabbit: filled markers for assigned injury sit close to zero everywhere; hollow markers for current injury sit far right, between about plus 2 and plus 17, in the blind world and Wave 1, and left of zero at Wave 2 level 04. Middle, rabbit within two squares: filled markers near zero; hollow markers all left of zero, between about minus 1 and minus 5. Right, in grey, the predator context: markers left of zero, between about minus 1 and minus 7.">
   <p class="zoomhint">Click the figure to open it full size.</p>
   __KIND:a4_hypervigilance__
   <figcaption>
-    <span><b>Figure 3 — no sign that a wound makes the harmless animal count for more, in either
-    agent.</b> The project's working definition of hypervigilance is a wound that raises the response
-    to a harmless rabbit by more than the response to a predator. Here a wound instead <em>lowers</em> the
-    extra hiding a nearby predator causes, in every sighted cell. In Wave 2 the hurt agent's calm hiding
-    rises about six points, so a predator's approach adds less; in Wave 1 both quantities move under 1.5
-    points. The criterion comes out positive because the predator effect is five to eight times the
-    rabbit effect and both shrink — in proportion the rabbit response shrinks at least as much. The
-    modulated agent's value is a little larger at all three Wave 1 levels and mixed in Wave 2.</span>
-    <span><b>Axes.</b> Vertical, both panels: world and level. Horizontal, left: the wound's shift in
-    proximity effect, in percentage points — near a rabbit (filled) and near a predator (hollow), for
-    each agent. Horizontal, right: the neuromodulated agent's criterion shift minus the ordinary agent's,
-    in percentage points.</span>
+    <span><b>Figure 3 — on the causal reading, no injury-dependent avoidance of the rabbit in either
+    agent.</b> The project defines hypervigilance as a badly injured agent avoiding the harmless rabbit more
+    than a lightly injured one. When "injured" means the starting injury handed out at random (filled
+    markers), neither agent does: the shift in hiding near a rabbit is between −1.9 and +0.3 points, and the
+    shift in how often the rabbit is within reach is under 1.6 points either way. When "injured" means the
+    injury carried at that moment (hollow markers), injured agents keep the rabbit out of reach more often in
+    every one of the 14 agent-world combinations — by 1 to 5 points, and more in the modulated agent in five
+    of seven — but that reading is confounded: an agent carrying an injury has usually just been attacked or
+    is resting. The right-hand panel, in grey, is ordinary threat avoidance near a predator, shown for
+    context only.</span>
+    <span><b>Axes.</b> Vertical, all panels: world and level. Horizontal, all panels: most-injured quarter
+    minus least-injured quarter, in percentage points. Left: the proximity effect for the rabbit — extra
+    share of steps in a bush with the nearest rabbit 1–2 squares away rather than 6 or more; positive means
+    the injured agent hides from it more. Middle: share of steps with a rabbit within 2 squares; negative
+    means the injured agent keeps it away more. Right: the proximity effect for the predator (context).</span>
     __DATA:a4_hypervigilance__
-    <span><b>How it is computed.</b> The proximity effect is the share of steps spent in a bush when
-    the nearest animal is one or two squares away, minus the share when it is six or more away. It is
-    computed separately for the least-injured and most-injured quarter of the randomly assigned starting
-    injury; the wound's shift is the difference. Doing this for the nearest rabbit and the nearest
-    predator separately and subtracting gives the criterion shift: positive means the wound raised the
-    response to the harmless animal more than to the dangerous one. Both animals move identically when
-    chasing, and the agent tells them apart only by smell. <b>What this figure does not show:</b> any
-    checkpoint but the last — this needs the full million-episode sample — and why a wound lowers the
-    predator response, which the mechanical reading above explains but no test here confirms.</span>
+    <span><b>How it is computed.</b> Only episodes containing a rabbit count. The hiding measure is the
+    proximity effect — the share of steps spent in a bush when the nearest rabbit is one or two squares away,
+    minus when it is six or more away — computed within the least- and most-injured quarter and differenced.
+    The distance measure is the share of steps on which the nearest rabbit is within two squares, counted
+    only on steps with no predator within two squares, so staying away from the rabbit cannot be fleeing a
+    predator. Each is computed twice. The causal version bins episodes by the starting injury the environment
+    assigned at random before the agent acted (hiding over the whole episode, distance over the first 25
+    steps). The observational version bins each step by the injury the agent carried when it chose that
+    step's action. <b>What this figure does not show:</b> any checkpoint but the last, and why the
+    observational reading shows avoidance that the causal one does not — the confound is the likeliest
+    reason, but no figure here isolates it.</span>
   </figcaption>
 </figure>
 </section>
@@ -322,7 +327,7 @@ are not used.</p>
     Averaged over the last 20 checkpoints, the modulated agent spends 18–30 points less time in the bush
     in all five scenes, including the one with nothing in it; both agents still hide most from a
     predator, and the extra hiding a predator adds is similar in both. In the agents' own training world
-    the two hide alike (the overall-hiding row of the table in section 13), so the gap is elicited by the
+    the two hide alike (the overall-hiding row of the table in section 14), so the gap is elicited by the
     scene. It is the <em>ordinary</em> agent whose idle hiding swings between checkpoints (standard
     deviation 27 points against 12), so the lead is as much about the ordinary agent's instability as
     the modulated agent's default.</span>
@@ -377,15 +382,53 @@ are not used.</p>
 </section>
 
 <section class="col">
+<h2><span class="num">11</span> Hypervigilance in controlled scenes</h2>
+
+<figure>
+  <img data-fig="d3_rabbit_scenes" alt="Two panels with nine rows: an empty reference scene, a chasing rabbit and a wandering rabbit, at levels 04, 05 and 06. Each row has a blue and an orange dot, with range bars at levels 05 and 06, for the change caused by starting injured. Left, time in the bush: the empty reference rows sit at about plus 3 to plus 12 for both agents; the rabbit rows are mostly positive, with the orange dots further right than the blue at levels 04 and 05. Right, time with the rabbit within reach: most dots sit near zero, with orange at about minus 2.6 at level 04 and about plus 4.6 at level 06 in the chasing-rabbit rows.">
+  <p class="zoomhint">Click the figure to open it full size.</p>
+  __KIND:d3_rabbit_scenes__
+  <figcaption>
+    <span><b>Figure 9 — an injured start raises rabbit-scene hiding more in the modulated agent at levels
+    04 and 05, but part of that is injury alone.</b> Starting injured makes both agents hide more when a
+    harmless rabbit is present — the project's hypervigilance — and more so for the modulated agent at
+    level 04 (chasing rabbit +4.9 against +1.0; wandering +11.3 against +3.6) and at level 05. But an
+    injured start also raises hiding in the empty reference scene by about 8 points in both agents at level
+    04, so for the ordinary agent the rabbit scenes add nothing beyond injury alone, while the modulated
+    agent's wandering-rabbit shift exceeds it. At level 06 the pattern does not hold. Time with the rabbit within
+    reach mostly moves by a point or two; the exceptions point opposite ways — the injured modulated agent
+    keeps a chasing rabbit away a little more at level 04 (−2.6) but lets it within reach more at level 06
+    (+4.6).</span>
+    <span><b>Axes.</b> Vertical, both panels: three scenes — no animal (the reference), a chasing rabbit, a
+    wandering rabbit — at levels 04, 05 and 06. Horizontal, left: time in the bush when starting at injury
+    70 minus when starting uninjured, in percentage points. Horizontal, right: the same difference in the
+    share of steps with the rabbit within reach. Dots are the two agents; at levels 05 and 06 the dot is
+    the median over four temperature versions of the scene and the bar their range.</span>
+    __DATA:d3_rabbit_scenes__
+    <span><b>How it is computed.</b> Each scene is a small fixed world: the agent starts in the middle with a
+    full stomach, one bush three squares away, and either nothing or a single rabbit entering from the far
+    side, either chasing the agent — moving exactly as a predator would — or wandering. Each scene is run
+    twice, identical except that the agent starts uninjured or at injury 70, so their difference is caused
+    by the injury. Every one of each agent's saved checkpoints is replayed there for 30 episodes with fixed
+    seeds, and the value is the average over the newest 20 checkpoints. The empty scene is included because
+    an injured agent rests and hides more to heal whether or not anything is nearby; hypervigilance is the
+    part of the rabbit-scene shift that goes beyond that. Levels 05 and 06 use four survivable temperature
+    versions of each scene. <b>What this figure does not show:</b> Wave 1, whose animal scenes were replayed
+    before the bush was fixed; and any comparison between separate training runs.</span>
+  </figcaption>
+</figure>
+</section>
+
+<section class="col">
 <h3 class="group">The levels built to need state dependence</h3>
-<h2><span class="num">11</span> Behaviour and body temperature</h2>
+<h2><span class="num">12</span> Behaviour and body temperature</h2>
 
 <figure>
   <img data-fig="e1_body_temperature" alt="Eight small panels in two rows for Wave 1 and Wave 2 at levels 05 and 06. Top row: calm hiding falls steeply as the body warms, from about 45 to 60 percent below minus 10 degrees to about 10 to 18 percent at zero and above. Bottom row: threat response rises from about 10 to 20 points when cold to about 40 when warm. Blue and orange lines lie almost on top of each other in every panel.">
   <p class="zoomhint">Click the figure to open it full size.</p>
   __KIND:e1_body_temperature__
   <figcaption>
-    <span><b>Figure 9 — calm hiding tracks body temperature, identically in both agents.</b>
+    <span><b>Figure 11 — calm hiding tracks body temperature, identically in both agents.</b>
     In the rare steps below −10° (under 1% of all steps) calm hiding rises from about a tenth to about a
     half, the same in both agents. Hiding with a predator near stays at 60–65% in every band, so the
     lower panel's rise is the calm baseline moving, not a change in the threat response. Cold may cause
@@ -411,14 +454,14 @@ are not used.</p>
 </section>
 
 <section class="col">
-<h2><span class="num">12</span> What the injury-gated smell noise does</h2>
+<h2><span class="num">13</span> What the injury-gated smell noise does</h2>
 
 <figure>
   <img data-fig="e3_noise_effect" alt="Two panels, Wave 1 and Wave 2, each with four rows of measures and a blue and orange bar per row. The injury-span row has long negative bars for both agents in both waves, between about minus 10 and minus 20, with the orange bar longer in both waves. The other rows have short bars near zero.">
   <p class="zoomhint">Click the figure to open it full size.</p>
   __KIND:e3_noise_effect__
   <figcaption>
-    <span><b>Figure 10 — the noise at level 06 weakens a wound's pull on hiding, in both agents.</b>
+    <span><b>Figure 11 — the noise at level 06 weakens a wound's pull on hiding, in both agents.</b>
     Level 06 adds injury-gated noise to smell and to vision. Moving from level 05 to level 06 cuts how
     much a wound raises hiding in both waves and both agents, the opposite of the design's expectation of
     more caution. On the final checkpoints the cut is larger in the modulated agent in both waves; on the
@@ -426,7 +469,7 @@ are not used.</p>
     the same in both waves, inside one run's checkpoint spread — a seeded replication of levels 05 and 06
     is the only test.</span>
     <span><b>Axes.</b> Vertical, both panels: four injury measures on the final checkpoint — injury span,
-    hunger span, the wound's shift in response to a nearby predator, and the criterion shift — and, at
+    hunger span, the rabbit hiding shift (hypervigilance) and, for context, the predator hiding shift — and, at
     the bottom, the state span over five late checkpoints (dot: median; bar: range). Horizontal: level
     06's value minus level 05's, in percentage points, for each agent.</span>
     __DATA:e3_noise_effect__
@@ -444,7 +487,7 @@ are not used.</p>
 </section>
 
 <section class="col">
-<h2><span class="num">13</span> Every gap in one place, and the leads</h2>
+<h2><span class="num">14</span> Every gap in one place, and the leads</h2>
 
 <p>Each row is one measure from the figures above, as the neuromodulated agent's value minus the
 ordinary agent's; the last column counts how many cells share the sign of the typical gap. The table
@@ -472,7 +515,12 @@ result:</p>
   designed to need it. It did not recur in Wave 2, where cover heals and injury matters more for everyone.
   Worth asking whether the modulator's effect appears only while injury is a weaker cue, and replicating
   Wave 1 levels 05/06 with more seeds.</li>
-  <li><b>Level 06's noise changes the wound's pull in both agents</b> (Figure 10), in the same direction in
+  <li><b>Hypervigilance does not appear on the causal reading.</b> An agent handed a high starting injury
+  does not avoid the rabbit more (Figure 3). It appears only when injury is read at the moment, which is
+  confounded, and in controlled scenes where the extra hiding mostly matches what injury does with no
+  animal present — except the modulated agent's wandering-rabbit shift at level 04 (Figure 9). A world
+  where the rabbit is ambiguous only when injured — the level-06 idea — would be the direct test.</li>
+  <li><b>Level 06's noise changes the wound's pull in both agents</b> (Figure 11), in the same direction in
   both waves and inside one run's checkpoint spread. Whether the modulated agent adjusts more needs a
   seeded replication of levels 05 and 06.</li>
   <li><b>In a scene with nothing to do, the two agents idle differently</b> (Figure 7) — mainly because the
@@ -482,7 +530,7 @@ result:</p>
 </section>
 
 <section class="col">
-<h2><span class="num">14</span> What this page cannot say</h2>
+<h2><span class="num">15</span> What this page cannot say</h2>
 
 <div class="callout warn">
   <p class="eyebrow">The binding limit</p>
@@ -508,11 +556,11 @@ explains the measurement rules this page follows and the earlier readings they r
 </section>
 
 <section class="col">
-<h2><span class="num">15</span> How to reproduce this</h2>
+<h2><span class="num">16</span> How to reproduce this</h2>
 <ul>
   <li>The plan and its reviews: <code>docs/<wbr>experiments/<wbr>active/<wbr>basic_levels_q2_default/<wbr>INTEGRATED_ANALYSIS_PLAN.md</code></li>
   <li>One script per figure, each writing its own data-accounting file: <code>scripts/<wbr>analysis/<wbr>studies/<wbr>modulator_clues/</code></li>
-  <li>The table in section 13 is written by <code>e4_clue_table.py</code> in the same folder</li>
+  <li>The table in section 14 is written by <code>e4_clue_table.py</code> in the same folder</li>
   <li>State dependence: <code>scripts/<wbr>analysis/<wbr>context_dependence.py</code></li>
   <li>The hiding model: <code>scripts/<wbr>analysis/<wbr>hiding_drivers.py</code></li>
   <li>Modulator internals: <code>scripts/<wbr>analysis/<wbr>nmn/<wbr>run_mod_distribution.py</code></li>

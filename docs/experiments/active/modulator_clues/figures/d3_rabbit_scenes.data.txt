@@ -1,0 +1,4 @@
+checkpoints per value|20|50|40.0|the newest 20 of each run's 50
+episodes per checkpoint per scene|30|30|100.0|fixed seeds, both agents, both injury starts
+temperature versions at levels 05/06|4|4|100.0|median shown, range as the bar
+worlds|1|3|33.3|Wave 2 only; Wave 1's animal scenes predate the bush fix, the blind world has none

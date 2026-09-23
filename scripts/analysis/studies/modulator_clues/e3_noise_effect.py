@@ -8,8 +8,8 @@ switching strategy with injury, so if it matters anywhere, it should show here.
 
 WHAT IS PLOTTED. For each wave and each agent, level 06's value MINUS level 05's, on four injury-
 related measures computed elsewhere on this page: the causal injury span and hunger span (Figure A5),
-the wound's shift in response to a nearby predator, and the criterion shift -- how much more the wound
-raises the response to a harmless rabbit than to a predator (Figure A4). All four use randomly
+the rabbit hiding shift -- how much more a badly injured agent hides from a nearby harmless rabbit, the
+project's measure of hypervigilance -- and, as context only, the same shift for a predator. All four use randomly
 assigned starting injury.
 
 WHAT IT CANNOT SEPARATE. Levels 05 and 06 are different training runs. Their difference is the smell
@@ -31,10 +31,13 @@ def measures(world, lvl, arm):
     g = d["grids"]; f = lambda k, b: proximity_effect(g[f"{k}_bush"], g[f"{k}_tot"], b)
     pre = f("pd", (3,)) - f("pd", (0,)); rab = f("rd", (3,)) - f("rd", (0,))
     inj, hun, _ = C.spans(z, world)
-    return {"injury span": inj, "hunger span": hun, "wound's predator shift": pre, "criterion shift": rab - pre}
+    # Hypervigilance is the injured agent avoiding the RABBIT more -- measured on the rabbit alone.
+    # The predator row is ordinary threat avoidance, kept only as context.
+    return {"injury span": inj, "hunger span": hun, "rabbit hiding shift (hypervigilance)": rab,
+            "predator hiding shift (context)": pre}
 
 
-NAMES = ["injury span", "hunger span", "wound's predator shift", "criterion shift"]
+NAMES = ["injury span", "hunger span", "rabbit hiding shift (hypervigilance)", "predator hiding shift (context)"]
 LATE = "state span, 5 checkpoints"
 
 
@@ -69,7 +72,7 @@ C.record_kind("e3_noise_effect", "between_runs")
 C.record_samples("e3_noise_effect", [
     dict(what="training runs", used=8, total=8, note="levels 05 and 06 × two agents × two waves, one seed each"),
     dict(what="episodes per run", used=1000000, total=1000000, note="final-checkpoint store; randomly assigned starting injury"),
-    dict(what="measures", used=4, total=4, note="injury span, hunger span, wound's predator shift, criterion shift"),
+    dict(what="measures", used=4, total=4, note="injury span, hunger span, rabbit hiding shift (hypervigilance), predator hiding shift (context)"),
     dict(what="late checkpoints in the bottom row", used=5, total=5,
          note="four 100k stores plus the final 1M store per run, paired in order between levels 06 and 05"),
     dict(what="seed-to-seed spread", used=0, total=1,

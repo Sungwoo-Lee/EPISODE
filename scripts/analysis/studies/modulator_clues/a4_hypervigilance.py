@@ -1,20 +1,23 @@
-"""FIGURE A4 — Does a wound make the agent treat a HARMLESS animal as a threat? (Sensor Ladder 10-12)
+"""FIGURE A4 — Hypervigilance: does a badly injured agent avoid the harmless rabbit more? (Sensor Ladder 10-12)
 
-THE QUESTION. Hiding more from a predator when wounded is ordinary caution. The signature the
-project is looking for -- hypervigilance -- is a change in what counts as a threat: a wound that
-raises the agent's response to a harmless rabbit by MORE than it raises its response to a predator.
-If both rise equally, the agent has only become more defensive overall.
+THE PROJECT'S DEFINITION. Hypervigilance is injury-state-dependent avoidance of a HARMLESS animal: a
+badly injured agent avoids the rabbit more than a lightly injured one. The predator is not the
+reference -- it appears only in the right-hand panel, as ordinary threat avoidance, for context.
 
-HOW IT IS COMPUTED. Within each quarter of the STARTING injury -- assigned at random before the agent
-acts, so the contrast is causal -- the proximity effect is the share of steps on a bush with the
-nearest animal 1-2 squares away minus with it 6 or more away. The wound's shift is the most-wounded
-quarter minus the least. The "criterion shift" is the rabbit shift minus the predator shift:
-positive means the wound made the harmless animal count for more, relative to the real threat.
+TWO READINGS OF "AVOID", each as the most-injured quarter minus the least-injured one:
+  * hiding  -- the proximity effect: share of steps in a bush with the nearest rabbit 1-2 squares
+               away minus with it 6 or more away. A positive shift = the injured agent hides from a
+               nearby rabbit more;
+  * distance -- share of steps on which the nearest rabbit is within 2 squares, with no predator within
+               2 squares. A NEGATIVE shift = the injured agent lets the rabbit come close less often.
+TWO READINGS OF "INJURED": the starting injury the environment assigned at random (filled markers,
+causal; hiding over the whole episode, distance over the first 25 steps) and the injury the agent
+carries at that moment (hollow markers, observational -- a hurt agent was usually just attacked).
 
-WHAT CLUE IT OFFERS. Where, if anywhere, the modulator makes a harmless cue more alarming when
-wounded -- which is the behaviour a state-dependent gain on threat evidence ought to produce.
+WHAT CLUE IT OFFERS. Where, if anywhere, either agent shows the injury-dependent rabbit avoidance the
+project calls hypervigilance, and whether the modulator adds to it.
 """
-import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import sys, os, json; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "ladder"))
 import numpy as np, matplotlib.pyplot as plt
 import _common as C, house
@@ -24,51 +27,61 @@ house.apply()
 COLS = [c for c in C.COLUMNS if c[0] == "blind" or c[1] >= 4]
 
 
-def shifts(d):
-    g = d["grids"]
-    f = lambda k, b: proximity_effect(g[f"{k}_bush"], g[f"{k}_tot"], b)
-    rab = f("rd", (3,)) - f("rd", (0,)); pre = f("pd", (3,)) - f("pd", (0,))
-    return rab, pre, rab - pre
+def key(world, lvl, arm):
+    return f"blind_{arm}" if world == "blind" else f"{world}_lvl{lvl:02d}_{arm}"
 
 
-fig, ax = plt.subplots(1, 2, figsize=(10.0, 5.4), sharey=True, gridspec_kw={"width_ratios": [1.25, 1]})
+def hiding_shift(d, grid):
+    g = d["grids"]; f = lambda b: proximity_effect(g[f"{grid}_bush"], g[f"{grid}_tot"], b)
+    return f((3,)) - f((0,))
+
+
+def distance_shift(world, lvl, arm, which):
+    p = os.path.join(C.INT, "rabbit_avoidance", key(world, lvl, arm) + ".json")
+    return json.load(open(p))[which]["near_share_shift"] if os.path.exists(p) else np.nan
+
+
+V = {}
+for j, (world, lvl) in enumerate(COLS):
+    for arm, _, _ in C.ARMS:
+        d = C.ladder(world, lvl, arm)
+        V[(j, arm)] = dict(hide_s=hiding_shift(d, "rd"), hide_c=hiding_shift(d, "rdc"),
+                           dist_s=distance_shift(world, lvl, arm, "start"),
+                           dist_c=distance_shift(world, lvl, arm, "current"),
+                           pred_s=hiding_shift(d, "pd"))
+PANELS = [("hide", "hiding near the rabbit\n(+ = injured hides more)"),
+          ("dist", "rabbit within 2 squares\n(− = injured keeps it away)"),
+          ("pred", "context: hiding near a predator\n(ordinary threat avoidance)")]
+fig, ax = plt.subplots(1, 3, figsize=(10.0, 5.6), sharey=True)
 y = np.arange(len(COLS))[::-1]
-vals, pend = {}, []
-for i, (world, lvl) in enumerate(COLS):
-    d = {arm: C.ladder(world, lvl, arm) for arm, _, _ in C.ARMS}
-    if None in d.values():
-        pend.append(i); continue
-    for arm in d: vals[(i, arm)] = shifts(d[arm])
-for i in range(len(COLS)):
-    if i in pend:
-        ax[0].annotate("pending", xy=(0, y[i]), ha="center", va="center", fontsize=10, color=house.TEXT_LIGHT)
-        continue
-    for k, (arm, lab, col) in enumerate(C.ARMS):
-        r, p, c = vals[(i, arm)]
-        ax[0].plot([r], [y[i] + (0.5 - k) * 0.28], "o", ms=7.5, color=col, label=lab if i == 0 else None)
-        ax[0].plot([p], [y[i] + (0.5 - k) * 0.28], "s", ms=7, mfc="none", mec=col, mew=1.8)
-    gap = vals[(i, "modulated")][2] - vals[(i, "control")][2]
-    ax[1].barh(y[i], gap, color=C.GAP, height=0.55)
-ax[0].plot([], [], "o", color=house.INK_2, label="harmless rabbit (filled)")
-ax[0].plot([], [], "s", mfc="none", mec=house.INK_2, mew=1.8, label="predator (hollow)")
-for a in ax:
-    a.axvline(0, color=house.INK, lw=1); a.grid(axis="y", visible=False)
-    a.set_ylim(-0.8, len(COLS) - 0.2)
+for p, (kind, title) in enumerate(PANELS):
+    for j in range(len(COLS)):
+        for k, (arm, lab, col) in enumerate(C.ARMS):
+            yy = y[j] + (0.5 - k) * 0.3
+            if kind == "pred":
+                ax[p].plot([V[(j, arm)]["pred_s"]], [yy], "o", ms=7, color=col, alpha=0.55)
+                continue
+            ax[p].plot([V[(j, arm)][f"{kind}_s"]], [yy], "o", ms=7.5, color=col,
+                       label=f"{lab}, assigned injury (causal)" if (p == 0 and j == 0) else None)
+            ax[p].plot([V[(j, arm)][f"{kind}_c"]], [yy], "o", ms=7.5, mfc="none", mec=col, mew=1.8,
+                       label=f"{lab}, current injury (observational)" if (p == 0 and j == 0) else None)
+    ax[p].axvline(0, color=house.INK, lw=1); ax[p].grid(axis="y", visible=False)
+    ax[p].set_ylim(-0.8, len(COLS) - 0.2)
+    ax[p].set_title(title, fontsize=10, color=house.INK if kind != "pred" else house.TEXT_LIGHT, loc="left", pad=8)
+    ax[p].set_xlabel("most − least injured (pp)", fontsize=10)
 ax[0].set_yticks(y); ax[0].set_yticklabels([C.col_label(*c).replace(chr(10), " ") for c in COLS], fontsize=10)
-ax[0].set_xlabel("wound's shift in proximity effect (pp)")
-ax[0].set_title("how much a wound raises hiding near each animal", fontsize=10.5, color=house.INK, loc="left", pad=8)
-ax[1].set_xlabel("criterion shift: neuromodulated − ordinary (pp)")
-ax[1].set_title("the modulator's effect on it", fontsize=10.5, color=house.INK, loc="left", pad=8)
-C.legend_below(ax[0], ncol=2, offset=-0.17)
-fig.tight_layout(w_pad=1.6)
+h, l = ax[0].get_legend_handles_labels()
+leg = fig.legend(h, l, loc="lower center", ncol=2, frameon=False, bbox_to_anchor=(0.5, 0.0))
+for t in leg.get_texts(): t.set_fontsize(house.FS_LABEL)
+fig.tight_layout(w_pad=1.2, rect=(0, 0.13, 1, 1))
 C.assert_no_text_overlap(fig); C.assert_min_text_px(fig)
 C.record_kind("a4_hypervigilance", "causal")
 C.record_samples("a4_hypervigilance", [
-    dict(what="world × level cells", used=len(COLS) - len(pend), total=len(COLS),
-         note="blind plus levels 04-06; level 02 never randomises the starting wound, and Wave 1 level 03 is unmatched"),
-    dict(what="injury quarters compared", used=2, total=4, note="the most and least wounded starting quarters"),
-    dict(what="distance bins", used=6, total=8, note="1-2 squares (near) against 6 or more (far); 3-5 are left out as ambiguous"),
-    dict(what="checkpoints", used=1, total=5, note="final only — this filtered measure needs the 1M sample")])
+    dict(what="world × level cells", used=len(COLS), total=len(COLS),
+         note="blind plus levels 04-06 of both waves; Wave 1 levels 02/03 unmatched, level 02 has no random injury"),
+    dict(what="episodes per agent per cell", used=1000000, total=1000000,
+         note="final-checkpoint store; only episodes containing a rabbit count"),
+    dict(what="injury quarters compared", used=2, total=4, note="the most- and least-injured quarters")])
 house.save(fig, os.path.join(C.FIG, "a4_hypervigilance"), column_px=C.COLUMN_PX)
-for (i, arm), v in sorted(vals.items()):
-    print(f"  {C.col_label(*COLS[i]).replace(chr(10),' '):20} {arm:9} rabbit {v[0]:+6.2f} predator {v[1]:+6.2f} criterion {v[2]:+6.2f}")
+for (j, arm), v in sorted(V.items()):
+    print(f"  {C.col_label(*COLS[j]).replace(chr(10),' '):18} {arm:9} " + " ".join(f"{k}={v[k]:+.2f}" for k in v))
