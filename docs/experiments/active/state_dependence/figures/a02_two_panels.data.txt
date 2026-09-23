@@ -1,0 +1,3 @@
+training runs|6|6|100.0|ordinary and neuromodulated at each of three worlds; one seed each
+step-rows in the confounded panel|104|104|100.0|approximate millions: every step of every episode, no restriction
+step-rows in the causal panel|20|104|19.2|approximate millions: only the first 25 steps of episodes whose starting injury was randomly assigned — about a fifth of the data, which is the price of breaking the loop

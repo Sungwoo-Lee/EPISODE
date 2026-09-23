@@ -1,0 +1,4 @@
+training runs shown|6|6|100.0|one ordinary and one neuromodulated run at each of the three worlds; every one is a single seed, which is the binding limit on this page
+episodes behind each bar|1000000|1000000|100.0|the full trajectory store per run, all at seed_base 1,000,000 so the three worlds are compared on paired episode populations
+episodes entering the causal estimate|20|24|83.3|approximate millions of step-rows: only steps in the first 25 of an episode whose starting injury was randomly assigned, with a predator within two cells
+seeds behind the error bar|5|5|100.0|five seeds of one unmodulated agent in a fixed world; the conservative of the two return estimators is used
