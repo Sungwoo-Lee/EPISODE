@@ -108,3 +108,28 @@ def record_kind(stem, kind):
     assert kind in KIND, kind
     os.makedirs(FIG, exist_ok=True)
     open(os.path.join(FIG, f"{stem}.kind.txt"), "w").write(kind + "\n")
+
+
+# ---------------------------------------------------------------- per-episode drives (Figures A5, E3)
+TARGET = {"blind": 100.0, "w1": 100.0, "w2": 100.0}
+
+
+def npz(world, lvl, arm):
+    if world == "blind":
+        p = os.path.join(A, "nmn_olf_gae_grid/ladderstyle",
+                         f"{'t1none' if arm == 'control' else 't16quad_ALL'}_episodes.npz")
+    else:
+        p = os.path.join(INT, "ladderstyle", f"{world}_lvl{lvl:02d}_{arm}_episodes.npz")
+    return np.load(p) if os.path.exists(p) else None
+
+
+def spans(z, world):
+    be, se = z["bush_early"].astype(float), z["steps_early"].astype(float)
+    rate = lambda m: 100 * be[m].sum() / se[m].sum() if se[m].sum() > 5000 else np.nan
+    inj = z["inj0"]; dev = z["nut0"] - TARGET[world]            # negative = below target
+    inj_span = rate(inj >= 75) - rate(inj < 25)
+    hunger = rate((dev <= -75) & (dev >= -100)) - rate((dev > -25) & (dev <= 0))
+    over = rate((dev > 25) & (dev <= 100)) - rate((dev > -25) & (dev <= 0)) if world == "w2" else np.nan
+    return inj_span, hunger, over
+
+

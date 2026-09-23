@@ -1,0 +1,4 @@
+training runs|8|8|100.0|levels 05 and 06 × two agents × two waves, one seed each
+episodes per run|1,000,000|1,000,000|100.0|final-checkpoint store; randomly assigned starting injury
+measures|4|4|100.0|injury span, hunger span, wound's predator shift, criterion shift
+seed-to-seed spread|0|1|0.0|not estimable: each level is a different single run, so the difference mixes noise effect and seed
