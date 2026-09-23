@@ -65,6 +65,14 @@ environment:
       damage: [0.0, 0.0]
       nociception_intensity: 0.0
       hides_agent: true
+      # BLOCKING, matching every world these agents trained in. `blocks_animals` is read
+      # with a fallback of False (config_loader.py:1888), and this probe redeclares
+      # `obstacles:` -- and `Config.merge` REPLACES lists wholesale -- so omitting it left the
+      # bush PERMEABLE: a predator could step onto the hiding cell and bite the hidden agent,
+      # an event impossible in training. That corrupts the very quantity this battery measures.
+      # default.yaml has carried `blocks_animals: true` since 2026-09-14; the registry requires
+      # post-change agents be evaluated on blocking probes. Added 2026-09-23.
+      blocks_animals: true
       properties: [0.0, 0.0, 0.0, 1.0, 0.0]
       properties_std: [0.0, 0.0, 0.0, 0.0, 0.0]
       visual_properties: [1.0]
@@ -78,3 +86,18 @@ body:
   start_nutrition: 100
   start_injury_low: 0
   start_injury_high: 0
+
+# ARENA SIZE FOR RECORDED VIDEO — experiment-specific, 2026-09-23.
+# `visualization.local_view_size` is how many world squares the video's grid panel draws. The
+# project default is 5, which on this 10x10 scene shows a 5x5 WINDOW centred on the agent: you
+# watch the agent and lose the predator the moment it is more than two squares away, which makes
+# a hiding video impossible to read. This probe sets it to the world's full width so the whole
+# arena is visible and the chase can be followed end to end.
+#
+# 10 is not an arbitrary choice and it is close to a hard ceiling: the arena card is a FIXED 480px
+# box and the renderer refuses to draw squares below 43px, at which two occupants sharing a square
+# stop being separable. That puts the widest drawable window at 11 squares; 10 lands at 48px per
+# square. A larger world would have to shrink the world or grow the arena card, not just raise
+# this number.
+visualization:
+  local_view_size: 10

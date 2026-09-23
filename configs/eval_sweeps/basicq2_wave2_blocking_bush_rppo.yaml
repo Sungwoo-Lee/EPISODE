@@ -1,0 +1,38 @@
+# Level-04 bush-hiding sweep, RE-RUN on the CORRECTED (blocking) probe battery.
+#
+# WHY THIS EXISTS. The first level-04 sweep -- output_dir
+# `results/eval/avoidance/metrics_history_rppo_basicq2_wave2` -- was measured on a battery whose
+# hiding bush was PERMEABLE. The bush declared `hides_agent: true` but not `blocks_animals`, which
+# `config_loader.py:1888` reads with a fallback of False; because every probe redeclares
+# `obstacles:` and `Config.merge` replaces lists wholesale, the key was simply absent. A predator
+# could therefore stand on the hiding cell and bite the hidden agent -- impossible in the world
+# these agents trained in, where the bush blocks animals -- which corrupts the very quantity the
+# sweep measures. Found by env-config-reviewer on 2026-09-23 and fixed the same day by adding
+# `blocks_animals: true` to all 12 core probes.
+#
+# WHICH EARLIER NUMBERS SURVIVE. The `avoid_none_*` conditions contain NO ANIMAL, so bush
+# permeability cannot touch them; the headline parked-vs-conditional contrast (control hides 86.1%
+# of steps with nothing in the world, the neuromodulated agent 5.9%) stands unchanged. What needs
+# this re-run is every condition containing an animal: the threat-discrimination percentages and
+# the hiding-vs-threat contingency and exposure figures.
+#
+# A SEPARATE `output_dir` IS LOAD-BEARING, NOT TIDINESS. The driver schedules only checkpoints
+# NEWER than each CSV's maximum step. Pointed at the old directory it would find 50 checkpoints
+# already recorded and schedule nothing, silently returning the permeable-bush numbers as though
+# they had been re-measured. A fresh directory is the only way to force a real re-run.
+#
+# `nodes:` is deliberately EMPTY -- it is filled at launch from live GPU state. Leaving it empty
+# makes the driver raise `ValueError: min() arg is an empty sequence` out of `lpt_partition`,
+# which is a loud failure rather than a silent default.
+name: basicq2_wave2_blocking_bush
+algo: rppo
+output_dir: results/eval/avoidance/metrics_history_rppo_basicq2_wave2_blocking_bush
+probe: configs/environment/experiment/behavior_probes/core/avoidance
+conditions: all
+episodes: 30
+nodes: []
+x_axis: steps
+plot_measures: [bush_hiding, spatial_spread, survival_steps]
+runs:
+  - {label: lvl04_control, path: results/JAX_RecurrentPPO/20260922-182522_rppo_bq2cover_lvl04_t1none_s42}
+  - {label: lvl04_modulated, path: results/JAX_RecurrentPPO/20260922-182527_rppo_bq2cover_lvl04_t16quad_s42}

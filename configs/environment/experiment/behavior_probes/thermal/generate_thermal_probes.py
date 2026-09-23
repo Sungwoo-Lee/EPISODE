@@ -294,6 +294,28 @@ def verify(path, arm, m):
     if bool(m['surv'][BUSH]) != want_bush:
         fails.append(f"bush survivable {bool(m['surv'][BUSH])} != {want_bush} "
                      f"(settles {m['eq'][BUSH]:+.2f})")
+
+    # A HIDING BUSH MUST ALSO BLOCK ANIMALS. `blocks_animals` is read with a fallback of
+    # False (config_loader.py:1888) and every probe redeclares `obstacles:`, which
+    # `Config.merge` replaces wholesale -- so a source probe that omits the key yields a
+    # PERMEABLE bush here. A predator can then stand on the hiding cell and bite the hidden
+    # agent, which was impossible in every world these agents trained in, and which corrupts
+    # the exact quantity this battery exists to measure. Caught by env-config-reviewer
+    # 2026-09-23 after it had already shipped into a measured sweep; asserted from now on so
+    # it cannot come back through a source-probe edit.
+    import numpy as _np
+    pr = m['params']
+    hides = _np.asarray(pr.obs_hides_agent)
+    blocks = _np.asarray(pr.obs_blocks_animals)
+    leaky = _np.flatnonzero(hides & ~blocks)
+    if leaky.size:
+        fails.append(f"hiding obstacle(s) at slot(s) {leaky.tolist()} are PERMEABLE "
+                     f"(hides_agent true, blocks_animals false) -- fix the source probe")
+
+    # The full-arena video fix. Without it the recorded episode draws a 5x5 window and the
+    # chase leaves frame, which is what made the hiding videos unreadable.
+    if int(getattr(pr, 'local_view_size', 0)) != 10:
+        fails.append("visualization.local_view_size != 10 -- the full-arena video fix is missing")
     return fails
 
 

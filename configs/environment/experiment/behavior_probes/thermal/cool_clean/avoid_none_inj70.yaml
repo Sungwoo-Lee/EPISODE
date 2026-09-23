@@ -83,6 +83,7 @@ environment:
     damage: [0.0, 0.0]
     nociception_intensity: 0.0
     hides_agent: true
+    blocks_animals: true
     properties: [0.0, 0.0, 0.0, 1.0, 0.0]
     properties_std: [0.0, 0.0, 0.0, 0.0, 0.0]
     visual_properties: [1.0]
