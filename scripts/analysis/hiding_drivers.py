@@ -39,20 +39,40 @@ NEAR_D    = 2                            # Chebyshev radius for "an animal is ne
 
 
 # ----------------------------------------------------------------- layout ----
+def _alloc(d: dict, family: str) -> int:
+    """How many slots this declaration allocates.
+
+    `count_high` is the ALLOCATION size, not the sampled count: the store's columns are allocated
+    for the maximum and unused slots are masked by `*_active`. A declaration with a FIXED `count`
+    allocates exactly that many, so the two spellings are alternatives rather than one being a
+    default for the other -- which is why neither is filled in silently when both are absent.
+    The maintained basic levels use both: 00-02 and the `tree` on 05/06 declare `count`, while
+    03/04 declare `count_low`/`count_high`. Reading only `count_high` raised KeyError on five of
+    the seven, which is how this was found.
+    """
+    if "count_high" in d:
+        return int(d["count_high"])
+    if "count" in d:
+        return int(d["count"])
+    raise KeyError(
+        f"{family} declaration {d.get('name', d.get('class', d.get('type', '?')))!r} has neither "
+        f"'count_high' nor 'count'; slot allocation cannot be derived from it")
+
+
 def slot_layout(cfg: dict) -> dict:
     """Derive slot indices from the run's saved config. No environment rebuild."""
     env = cfg["environment"]
     pred, neu, s = [], [], 0
     for e in env["entities"]:
-        n = e["count_high"]
+        n = _alloc(e, "entity")
         (pred if e["class"] == "predator" else neu).extend(range(s, s + n)); s += n
     bush, rock, s = [], [], 0
     for o in env["obstacles"]:
-        n = o["count_high"]
+        n = _alloc(o, "obstacle")
         (bush if o.get("hides_agent") else rock).extend(range(s, s + n)); s += n
     food, amb, s = [], [], 0
     for r in env["resources"]:
-        n = r["count_high"]
+        n = _alloc(r, "resource")
         (amb if max(r.get("damage", [0, 0])) > 0 else food).extend(range(s, s + n)); s += n
     return dict(pred=pred, neutral=neu, bush=bush, rock=rock, food=food, ambush=amb,
                 n_animal=len(pred) + len(neu))

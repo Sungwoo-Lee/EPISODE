@@ -9,7 +9,7 @@ RUN = "results/JAX_RecurrentPPO/20260810-185749_rppo_restprem_a01_n106"
 env = yaml.safe_load(open(f"{RUN}/models/config.yaml"))["environment"]
 PRED, RAB, s = [], [], 0
 for e in env["entities"]:
-    hi = e["count_high"]
+    hi = int(e["count_high"]) if "count_high" in e else int(e["count"])
     (PRED if e["class"] == "predator" else RAB).extend(range(s, s+hi)); s += hi
 D = 2
 
