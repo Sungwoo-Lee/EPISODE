@@ -105,9 +105,20 @@ MOVE_ACTIONS = (0, 1, 2, 3)   # up/down/left/right; `Rest` is 4 and `Eat` 5 (cor
 INJ_EDGES  = [1e-9, 25.0, 50.0]
 NUT_EDGES  = [25.0, 50.0, 75.0]
 PAIN_EDGES = [1e-9, 8.0, 18.0, 32.0]
+#: Body temperature, in degrees from the 0.0 setpoint; the agent dies below -15 (min_temperature).
+#: Only thermal worlds (levels 05/06) have it, and it is NEVER randomised at episode start -- every
+#: episode begins at the setpoint -- so for this state only the OBSERVED panel is meaningful; the
+#: "randomised" panel collapses into one bin and must not be read as causal.
+BT_EDGES   = [-10.0, -5.0, 0.0]
+#: Body temperature is not a column of the step table. The agent OBSERVES it, and the observation
+#: vector puts it in slot 1, right after satiation (src/environment/sensor.py:573). Asserted per
+#: shard below rather than trusted: slot 0 must equal satiation divided by one constant, and slot 1
+#: must stay inside the survivable band plus a margin.
+BT_SLOT    = 1
 NEAR_D     = 2
 EARLY      = 25          # steps counted as "early" for the randomised-state measure
-LABELS = {"injury":    ["injury 0", "0-25", "25-50", ">=50"],
+LABELS = {"body_temp": ["below -10", "-10 to -5", "-5 to 0", "0 and above"],
+          "injury":    ["injury 0", "0-25", "25-50", ">=50"],
           "nutrition": ["nutr <25", "25-50", "50-75", ">=75"],
           "felt_pain": ["felt 0", "0-8", "8-18", "18-32", "32+"]}
 
@@ -138,17 +149,39 @@ def sweep(stores, lay, state, kernel, exclude_rest=False, verbose=True):
     P = lay["pred"]
     nb = len(LABELS[state])
     C = np.zeros((nb, 2, 2)); E = np.zeros((nb, 2, 2))
-    body_col = "nutrition" if state == "nutrition" else "injury_level"
-    edges = {"injury": INJ_EDGES, "nutrition": NUT_EDGES, "felt_pain": PAIN_EDGES}[state]
+    body_col = {"nutrition": "nutrition", "body_temp": "obs_true"}.get(state, "injury_level")
+    edges = {"injury": INJ_EDGES, "nutrition": NUT_EDGES, "felt_pain": PAIN_EDGES,
+             "body_temp": BT_EDGES}[state]
     files = shard_files(stores, "steps"); t0 = time.time()
     cols = ["episode_seed", "t", "agent_in_bush", body_col,
             "agent_row", "agent_col", "animal_row", "animal_col"]
     if exclude_rest:
         cols.append("rested")
+    if state == "body_temp":
+        cols.append("satiation")
     for fi, f in enumerate(files):
         tb = pq.read_table(f, columns=cols)
         sd = tb.column("episode_seed").to_numpy(); t = tb.column("t").to_numpy(); N = len(t)
-        body = tb.column(body_col).to_numpy(zero_copy_only=False).astype(np.float64)
+        if state == "body_temp":
+            # Arrow's flat child buffer, reshaped -- not to_pylist(), which costs ~30 s a shard.
+            oc = tb.column("obs_true").combine_chunks()
+            flat = oc.flatten().to_numpy(zero_copy_only=False)
+            obs = flat.reshape(N, flat.size // N).astype(np.float64)
+            sat = tb.column("satiation").to_numpy(zero_copy_only=False).astype(np.float64)
+            ok = sat > 1.0
+            ratio = sat[ok] / np.maximum(obs[ok, 0], 1e-12)
+            if ok.sum() and np.ptp(ratio) > 1e-3 * ratio.mean():
+                raise SystemExit(f"{f}: obs slot 0 is not satiation/const -- the observation "
+                                 "layout is not the one BT_SLOT assumes")
+            body = obs[:, BT_SLOT]
+            # Plausible physical range, not the survivable band: an agent that steps onto a fire
+            # dies above +15, and its fatal step records the overshoot (17.4 observed); a fire core
+            # settles near +52. Any non-temperature slot lives on a 0-1 scale and fails this.
+            if body.min() < -20.0 or body.max() > 60.0 or np.ptp(body) < 2.0:
+                raise SystemExit(f"{f}: obs slot {BT_SLOT} ranges {body.min():.1f}..{body.max():.1f} "
+                                 "-- not a body temperature")
+        else:
+            body = tb.column(body_col).to_numpy(zero_copy_only=False).astype(np.float64)
         bu = tb.column("agent_in_bush").to_numpy(zero_copy_only=False).astype(np.int64)
         ar = tb.column("agent_row").to_numpy(); ac = tb.column("agent_col").to_numpy()
         st = np.flatnonzero(t == 0); ends = np.append(st[1:], N)
@@ -445,7 +478,7 @@ def main():
                          "extended, so a top-up goes to a fresh root with a continuing seed "
                          "base. find_stores() already treats the union as ONE population; "
                          "only this flag was single-valued.")
-    ap.add_argument("--state", default="felt_pain", choices=["injury", "nutrition", "felt_pain"])
+    ap.add_argument("--state", default="felt_pain", choices=["injury", "nutrition", "felt_pain", "body_temp"])
     ap.add_argument("--measures", default="all", choices=["all", "occupancy", "entry"],
                     help="'entry' = B0/B1/B3 only (one pass); 'occupancy' = the older "
                          "P(in a bush) measures only; 'all' = both (two passes)")

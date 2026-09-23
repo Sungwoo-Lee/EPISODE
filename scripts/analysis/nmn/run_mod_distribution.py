@@ -37,6 +37,9 @@ def main() -> int:
     ap.add_argument("--seed-base", type=int, default=90_000)
     ap.add_argument("--grids", nargs="+", default=["nmnsite", "nmngaenorm"])
     ap.add_argument("--only", nargs="*", default=None, help="restrict to these run tags")
+    ap.add_argument("--steps", default=None,
+                    help="JSON file mapping run tag -> list of checkpoint steps to replay. "
+                         "Without it every run is replayed at its final checkpoint only.")
     args = ap.parse_args()
 
     out_dir = Path(args.out)
@@ -53,14 +56,21 @@ def main() -> int:
     survival: list[dict] = []
     t0 = time.time()
 
-    for run in runs:
-        agent = replay.load_agent(run.models_dir)
+    step_map = json.load(open(args.steps)) if args.steps else {}
+    if args.steps:
+        missing = [r.tag for r in runs if r.tag not in step_map]
+        if missing:
+            raise SystemExit(f"--steps names no checkpoints for: {missing}")
+    jobs = [(run, st) for run in runs for st in (step_map.get(run.tag) or [None])]
+
+    for run, want_step in jobs:
+        agent = replay.load_agent(run.models_dir, step=want_step)
         out = replay.rollout(agent, seeds)
         valid = out["valid"]
         lengths = out["lengths"]
 
         survival.append({
-            "tag": run.tag, "grid": run.grid, "arm": run.arm,
+            "tag": run.tag, "grid": run.grid, "arm": run.arm, "level": run.level,
             "input_slice": run.input_slice or "", "step": agent.step,
             "modulated": run.modulated,
             "mean_survival_steps": float(lengths.mean()),
@@ -96,10 +106,16 @@ def main() -> int:
             r = md.summarise_site(g, b, valid)
             r.update(grid=run.grid, arm=run.arm, input_slice=run.input_slice or "",
                      tag=run.tag, site=site, step=agent.step,
+                     level="" if run.level is None else run.level,
                      mean_survival_steps=float(lengths.mean()),
                      mod_h_max_abs=h_max)
             rows.append(r)
-            key = f"{run.grid}/{run.arm}_{run.input_slice}/{site}"
+            # Level and step are part of the key: the basic-level waves reuse one grid name and
+            # one arm name across levels, and --steps replays several checkpoints per run, so a
+            # grid/arm/site key would let later levels and checkpoints silently overwrite earlier.
+            key = (f"{run.grid}/lvl{run.level}/{run.arm}_{run.input_slice}/{site}/step{agent.step}"
+                   if (run.level is not None or args.steps)
+                   else f"{run.grid}/{run.arm}_{run.input_slice}/{site}")
             hists[key] = {"gamma": md.histogram(g, valid, lo=-4.0, hi=4.0),
                           "beta": md.histogram(b, valid, lo=-6.0, hi=6.0)}
             per_unit[f"{key}/gamma_mean"] = g[valid].mean(axis=0)
@@ -112,7 +128,7 @@ def main() -> int:
     if not rows:
         raise SystemExit("no modulated arms matched")
 
-    lead = ["grid", "arm", "input_slice", "tag", "site", "step"]
+    lead = ["grid", "level", "arm", "input_slice", "tag", "site", "step"]
     cols = lead + [k for k in rows[0] if k not in lead]
     with open(out_dir / "distributions.csv", "w", newline="") as fh:
         w = csv.DictWriter(fh, fieldnames=cols, restval="")
@@ -125,7 +141,8 @@ def main() -> int:
         json.dump({"generated_utc": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
                    "n_episodes": len(seeds), "seed_base": args.seed_base,
                    "seeds_first": seeds[0], "seeds_last": seeds[-1],
-                   "policy": "greedy (argmax); perceptual noise off in these runs",
+                   "policy": "greedy (argmax); perceptual noise as in each run's own saved "
+                             "config (ON at basic level 06)",
                    "survival": survival}, fh, indent=2)
     print(f"[dist] wrote {len(rows)} rows -> {out_dir/'distributions.csv'} "
           f"in {time.time() - t0:.0f}s", flush=True)
