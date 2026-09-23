@@ -1,0 +1,4 @@
+world × level cells|3|7|42.9|blind plus levels 04-06; level 02 never randomises the starting wound, and Wave 1 level 03 is unmatched
+injury quarters compared|2|4|50.0|the most and least wounded starting quarters
+distance bins|6|8|75.0|1-2 squares (near) against 6 or more (far); 3-5 are left out as ambiguous
+checkpoints|1|5|20.0|final only — this filtered measure needs the 1M sample
