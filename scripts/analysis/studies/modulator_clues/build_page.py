@@ -102,6 +102,7 @@ for stem in sorted({m for m in re.findall(r'data-fig="([^"]+)"', page)}):
 
 # --- per-figure checks, sliced element by element so a greedy pattern cannot skip one --------
 seen_nums = []
+seen_app, order = [], []
 for m in re.finditer(r"<figure>.*?</figure>", page, re.S):
     blk = m.group(0)
     # Prose wraps across lines, so every phrase check runs on a whitespace-collapsed copy.
@@ -129,19 +130,26 @@ for m in re.finditer(r"<figure>.*?</figure>", page, re.S):
     alt = re.search(r'alt="([^"]*)"', blk)
     if not alt or len(alt.group(1)) < 60:
         fail.append(f"{stem}: alt text missing or too short to describe the figure")
-    fn = re.search(r"<b>Figure (\d+)", flat)
-    if fn:
-        seen_nums.append(int(fn.group(1)))
+    fn = re.search(r"<b>Figure (A?)(\d+)", flat)
+    if not fn:
+        fail.append(f"{stem}: caption has no 'Figure N' or 'Figure AN' number")
+    else:
+        (seen_app if fn.group(1) else seen_nums).append(int(fn.group(2)))
+        order.append(fn.group(1))
 
 # Figure numbers must ascend in DOCUMENT order. They did not on the first build of this page:
 # the variance figure sat before the results figure but was numbered after it, so the prose said
 # "Figure 4 shows why" three paragraphs above Figure 3.
 # Order is not enough: a chained renumber (9->10, then 10->11) keeps the order right and still
 # prints two "Figure 11"s. Every caption's number must equal its position on the page.
+# Two series: the main body's Figures 1..N, then the appendix's Figures A1..AM, each numbered by
+# position, and every main-body figure before every appendix one.
 if seen_nums != list(range(1, len(seen_nums) + 1)):
     fail.append(f"figure numbers are not 1..N in document order: {seen_nums}")
-if seen_nums != sorted(seen_nums):
-    fail.append(f"figure numbers are out of document order: {seen_nums}")
+if seen_app != list(range(1, len(seen_app) + 1)):
+    fail.append(f"appendix figure numbers are not A1..AM in document order: {seen_app}")
+if "A" in order and "" in order[order.index("A"):]:
+    fail.append("a main-body figure appears after the appendix began")
 
 for tm in re.finditer(r"<table[^>]*>", page):
     before = page[max(0, tm.start() - 400):tm.start()]

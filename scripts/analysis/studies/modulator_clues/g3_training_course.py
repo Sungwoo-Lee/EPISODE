@@ -13,7 +13,7 @@ import _common as C, _inj as I, house
 
 house.apply()
 SC = [("avoid_none", "no animal"), ("avoid_rabbitwander", "wandering rabbit")]
-fig, ax = plt.subplots(len(SC), len(I.SCENE_COLS), figsize=(10.0, 5.4), sharex=True, sharey="row")
+fig, ax = plt.subplots(len(SC), len(I.SCENE_COLS), figsize=(10.0, 5.8), sharex=True, sharey="row")
 samples = []
 for j, (lv, vers, title) in enumerate(I.SCENE_COLS):
     for i, (scene, sname) in enumerate(SC):
@@ -32,14 +32,15 @@ for j, (lv, vers, title) in enumerate(I.SCENE_COLS):
                                     note=f"checkpoints with all ten injury levels; {len(ser)} scene version(s)"))
         a.axhline(0, color=house.INK, lw=0.8)
         if j == 0:
-            a.set_ylabel(f"{sname}\nslope (pts / 10 injury)")
+            a.set_ylabel(sname)
         if i == 0:
             a.set_title(title, loc="left", fontsize=10, color=house.INK)
         if i == len(SC) - 1:
-            a.set_xlabel("training steps (M)"); a.set_xticks([0, 5, 10])
-fig.tight_layout(h_pad=0.8, w_pad=0.5)
-C.legend_below(ax[-1, 0], ncol=2, offset=-0.55)
-fig.tight_layout(h_pad=0.8, w_pad=0.5)
+            a.set_xticks([0, 5, 10])
+fig.supxlabel("training steps (millions)", y=0.12, fontsize=11)
+fig.supylabel("slope: points of hiding per 10 injury", x=0.005, fontsize=11)
+fig.tight_layout(h_pad=0.8, w_pad=0.5, rect=(0.02, 0.1, 1, 1))
+C.legend_below(ax[-1, 0], ncol=2, offset=-0.45)
 C.assert_no_text_overlap(fig); C.assert_min_text_px(fig)
 C.record_kind("g3_training_course", "scene")
 C.record_samples("g3_training_course", samples)

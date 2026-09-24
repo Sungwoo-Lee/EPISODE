@@ -18,8 +18,8 @@ ARMS_T = ("neutral", "cool", "fire_by_bush", "fire_away")
 VERSIONS = {"lvl02": ["core"], "lvl03": ["core"], "lvl04": ["core"],
             "lvl05": [f"{a}_clean" for a in ARMS_T],
             "lvl06": [f"{a}_{b}" for a in ARMS_T for b in ("clean", "noise_matched")]}
-VERSION_NAME = {"core": "", "neutral": "comfortable", "cool": "cool", "fire_by_bush": "fire by the bush",
-                "fire_away": "fire away from the bush"}
+VERSION_NAME = {"core": "", "neutral": "comfortable", "cool": "cool", "fire_by_bush": "fire by bush",
+                "fire_away": "fire away"}
 SCENES = [("avoid_none", "no animal"), ("avoid_pred", "predator"), ("avoid_rabbitwander", "wandering rabbit")]
 MIN_DEN = 2000                   # a dose-scan bin needs this many decisions to be drawn
 LAST = 20                        # scene measures: mean over the newest 20 checkpoints
@@ -29,7 +29,7 @@ def version_label(v):
     if v == "core":
         return ""
     arm = v.replace("_clean", "").replace("_noise_matched", "")
-    return VERSION_NAME[arm] + (", noise on" if v.endswith("noise_matched") else "")
+    return VERSION_NAME[arm] + (", noise" if v.endswith("noise_matched") else "")
 
 
 # ------------------------------------------------------------------ training-world dose scans
@@ -217,3 +217,70 @@ def manip_curve(versions, label, scene_inj, job, measure):
     if not per:
         return None, 0
     return np.median(np.array(per), 0), len(per)
+
+
+# ------------------------------------------------------------------ per-step scene summaries
+STEPS_DIR = os.path.join(ID, "scene_steps")
+STARTS = (0, 30, 60, 90)
+
+
+def steps_npz(version, label):
+    p = os.path.join(STEPS_DIR, version, f"{label}.npz")
+    return np.load(p) if os.path.exists(p) else None
+
+
+def steps_mean(versions, label, key):
+    """Mean over scene versions of one per-step array, or None."""
+    arrs = [z[key] for z in (steps_npz(v, label) for v in versions) if z is not None and key in z.files]
+    return (np.nanmean(np.array(arrs), 0), len(arrs)) if arrs else (None, 0)
+
+
+def early_series(version, label, scene, inj):
+    """Per-checkpoint share (percent) of steps 1-25 in the bush, newest 20 checkpoints, from the
+    per-step summaries; (checkpoint steps, values) or (None, None)."""
+    z = steps_npz(version, label)
+    k = f"{scene}_inj{inj:02d}"
+    if z is None or f"{k}__early_ck" not in z.files or len(z[f"{k}__early_ck"]) == 0:
+        return None, None
+    return z[f"{k}__checkpoints"], 100.0 * z[f"{k}__early_ck"]
+
+
+def series(window, version, label, scene, inj):
+    """window 'early' (steps 1-25, per-step summaries) or 'episode' (whole episode, sweep CSV)."""
+    if window == "early":
+        return early_series(version, label, scene, inj)
+    s, v = scene_series(version, label, scene, inj)
+    return (s[-LAST:], v[-LAST:]) if s is not None else (None, None)
+
+
+def dose_curve_w(window, versions, label, scene):
+    """As dose_curve, for either window."""
+    per = []
+    for v in versions:
+        row = []
+        for i in INJ:
+            s, x = series(window, v, label, scene, i)
+            row.append((np.nan, np.nan) if s is None else (x.mean(), x.std()))
+        per.append(row)
+    M = np.array([[m for m, _ in r] for r in per]); SD = np.array([[s for _, s in r] for r in per])
+    if len(versions) == 1:
+        return M[0], M[0] - SD[0], M[0] + SD[0]
+    return np.nanmedian(M, 0), np.nanmin(M, 0), np.nanmax(M, 0)
+
+
+def slopes_w(window, version, label, scene):
+    """Per-checkpoint least-squares slope over the ten starting injuries (points per 10 injury)."""
+    S, V = None, []
+    for i in INJ:
+        s, v = series(window, version, label, scene, i)
+        if s is None:
+            return None
+        if S is None:
+            S = s
+        n = min(len(S), len(s))
+        if not np.array_equal(S[:n], s[:n]):
+            raise ValueError(f"{version} {label} {scene}: checkpoints differ across injury levels")
+        V.append(v)
+    n = min(len(x) for x in V)
+    Y = np.array([x[:n] for x in V]); xs = np.array(INJ) / 10.0; xc = xs - xs.mean()
+    return (xc[:, None] * (Y - Y.mean(0))).sum(0) / (xc ** 2).sum()

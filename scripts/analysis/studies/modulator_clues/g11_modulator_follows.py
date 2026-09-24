@@ -17,7 +17,7 @@ import _common as C, _inj as I, house
 house.apply()
 SITES = [("encoder_unimodal", "encoder, per sense"), ("encoder_multimodal", "encoder, combined"),
          ("rnn", "memory (GRU)"), ("actor", "action head"), ("critic", "value head")]
-cols = house.sequential(stops=None)(np.linspace(0.35, 1.0, len(SITES)))   # one hue, light to dark
+cols = house.sequential(stops=["#d4d6dc", "#8a8f99", house.INK])(np.linspace(0.15, 1.0, len(SITES)))   # neutral: blue/orange mean the agents
 x = np.array(I.LADDER) * 100
 
 
@@ -51,13 +51,14 @@ for j, (lv, vers, title) in enumerate(I.MANIP_COLS):
             a.plot(x, np.median(ys, 0), "-", color=cols[k], lw=1.7, label=sl if j == 0 else None)
     a.axhline(0, color=house.INK, lw=0.8)
     a.set_title(title, loc="left", fontsize=10, color=house.INK)
-    a.set_xlabel("felt injury given"); a.set_xticks([0, 50, 90])
+    a.set_xticks([0, 50, 90])
     samples.append(dict(what=title.replace("\n", " "), used=nck, total=len(vers) * I.LAST,
                         note="checkpoint step-recordings (30 episodes x 10 values each)"))
 ax[0].set_ylabel("change in mean gain")
-fig.tight_layout(w_pad=0.5)
-C.legend_below(ax[0], ncol=3, offset=-0.42)
-fig.tight_layout(w_pad=0.5)
+fig.supxlabel("felt injury given", y=0.17, fontsize=11)
+fig.tight_layout(w_pad=0.5, rect=(0, 0.16, 1, 1))
+h, l = ax[0].get_legend_handles_labels()
+fig.legend(h, l, loc="lower center", ncol=5, frameon=False, bbox_to_anchor=(0.5, 0.0), fontsize=10)
 C.assert_no_text_overlap(fig); C.assert_min_text_px(fig)
 C.record_kind("g11_modulator_follows", "manipulation")
 C.record_samples("g11_modulator_follows", samples)

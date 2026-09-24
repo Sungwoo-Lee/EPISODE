@@ -26,11 +26,11 @@ for j, (lv, vers, title) in enumerate(I.MANIP_COLS):
             y, n = I.manip_curve(vers, f"{lv}_{arm}", "avoid_none_inj00", "ladder_sustained", mt)
             if y is None:
                 continue
-            a.plot(x, sc * y, "-", color=col, lw=1.7, label=f"{alab}, main memory" if (i == ax.shape[0] - 1 and j == 0) else None)
+            a.plot(x, sc * y, "-", color=col, lw=1.7, label=f"{alab}, main memory" if (i == 0 and j == 0) else None)
             if arm == "modulated":
                 ym, _ = I.manip_curve(vers, f"{lv}_{arm}", "avoid_none_inj00", "ladder_sustained", mm)
                 a.plot(x, sc * ym, ":", color=col, lw=1.9,
-                       label="neuromodulated agent, modulator memory" if (i == ax.shape[0] - 1 and j == 0) else None)
+                       label="neuromodulated agent, modulator memory" if (i == 0 and j == 0) else None)
             if i == 0:
                 samples.append(dict(what=f"{title.replace(chr(10), ' ')} {alab}", used=n, total=len(vers),
                                     note="scene versions finished (x 20 checkpoints x 30 episodes x 10 values)"))
@@ -39,10 +39,15 @@ for j, (lv, vers, title) in enumerate(I.MANIP_COLS):
         if i == 0:
             a.set_title(title, loc="left", fontsize=10, color=house.INK)
         if i == len(ROWS) - 1:
-            a.set_xlabel("felt injury given"); a.set_xticks([0, 50, 90])
-fig.tight_layout(h_pad=0.8, w_pad=0.5)
-C.legend_below(ax[-1, 0], ncol=3, offset=-0.62)
-fig.tight_layout(h_pad=0.8, w_pad=0.5)
+            a.set_xticks([0, 50, 90])
+for a in ax[1]:
+    a.set_ylim(0, 60)
+for a in ax[0]:
+    a.set_ylim(0, 2.6)
+fig.supxlabel("felt injury given", y=0.12, fontsize=11)
+fig.tight_layout(h_pad=0.8, w_pad=0.5, rect=(0, 0.11, 1, 1))
+h, l = ax[0, 0].get_legend_handles_labels()
+fig.legend(h, l, loc="lower center", ncol=3, frameon=False, bbox_to_anchor=(0.5, 0.0), fontsize=10)
 C.assert_no_text_overlap(fig); C.assert_min_text_px(fig)
 C.record_kind("g7_memory", "manipulation")
 C.record_samples("g7_memory", samples)
