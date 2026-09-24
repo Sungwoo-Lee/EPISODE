@@ -34,7 +34,7 @@ for j, (lv, vers, title) in enumerate(I.SCENE_COLS):
             a.plot(x[~full], m[~full], "o", mfc="white", mec=col, ms=4.2, mew=1.2)
         a.set_ylim(0, 100); a.set_yticks([0, 50, 100])
         if j == 0:
-            a.set_ylabel(f"{sname}\n% in bush, steps 1-25")
+            a.set_ylabel(sname)
         if i == 0:
             a.set_title(title, loc="left", fontsize=10, color=house.INK)
         if i == len(I.SCENES) - 1:
@@ -46,7 +46,8 @@ for j, (lv, vers, title) in enumerate(I.SCENE_COLS):
                             used=n, total=len(vers) * len(I.SCENES) * len(I.INJ) * I.LAST,
                             note=f"newest {I.LAST} checkpoints x 30 episodes; {len(vers)} scene version(s)"))
 fig.supxlabel("starting injury", y=0.1, fontsize=11)
-fig.tight_layout(h_pad=0.8, w_pad=0.5, rect=(0, 0.08, 1, 1))
+fig.supylabel("% of steps 1-25 in the bush", x=0.005, fontsize=11)
+fig.tight_layout(h_pad=0.8, w_pad=0.5, rect=(0.02, 0.08, 1, 1))
 C.legend_below(ax[-1, 0], ncol=2, offset=-0.45)
 C.assert_no_text_overlap(fig); C.assert_min_text_px(fig)
 C.record_kind("g1_scene_dose", "scene")

@@ -80,7 +80,14 @@ keeps the earlier survey, unchanged, as an appendix.</p>
   <p class="zoomhint">Click the figure to open it full size.</p>
   __KIND:g1_scene_dose__
   <figcaption>
-    <span><b>Figure 1 — {{F1_HEAD}}</b> {{F1_TEXT}}</span>
+    <span><b>Figure 1 — read over the first 25 steps, both agents' hiding follows the starting injury strongly at
+levels 03–05, and barely at level 06.</b> At levels 03–05, in every scene, both agents go from 10–68 % of the first 25 steps in the bush at
+injury 0 to 69–86 % at injury 90, and their curves nearly coincide; the neuromodulated agent usually starts
+lower (for example 20 % against 32 % in the level-04 empty scene) and its checkpoint band is narrower
+(half-width 3–9 points against 4–19). At level 02 the neuromodulated agent's hiding keeps rising to
+73–79 % while the ordinary agent's stops near 50 %. At level 06 neither agent's hiding rises much: at most
+34 % for the ordinary agent and 19 % for the neuromodulated one away from the predator, and with the
+noise on it falls again at the highest injuries.</span>
     <span><b>Axes.</b> Horizontal, every panel: the injury the agent started the episode with, 0 to 90.
     Vertical: the share of the first 25 steps it spent in the bush, in percent. Rows are the three scenes;
     columns are the levels, with level 06 shown without and with its injury-driven sensory noise.</span>
@@ -109,14 +116,26 @@ keeps the earlier survey, unchanged, as an appendix.</p>
 <p>Before looking at these data, the analysis plan fixed when this page may say that one agent's
 behaviour depends more on injury than the other's: the two agents' averages must differ by more than
 <em>either</em> agent's own checkpoint-to-checkpoint spread. Anything weaker is reported as a lean,
-with its count. {{S04_TEXT}}</p>
+with its count. Over the first 25 steps the rule holds in 12 of the 45 scene-version rows. At level 05 the
+neuromodulated agent's dependence is the larger in 11 of 12 rows and clears the rule in 4 — all in its
+favour; at level 02 it clears the rule in all 3 scenes; at level 03 the direction is mixed and one row
+clears the rule in the ordinary agent's favour; at level 04 the neuromodulated agent's is the larger in all
+3 rows without clearing it; at level 06 it is the larger in only 11 of 24
+rows and the 4 rows that clear the rule split two and two. The whole-episode measure the sweeps record
+gives the same picture at level 05 (larger in 12 of 12, 5 clear the rule, all in its favour) and reverses
+it at level 02 (the ordinary agent's is the larger in 2 of 3 and clears the rule in both), because the
+ordinary agent there keeps flickering in and out of cover all episode (Figure 4).</p>
 
 <figure>
   <img data-fig="g2_level_contrast" alt="Three panels (no animal, predator, wandering rabbit) listing fifteen scene versions from level 02 to level 06. For each, a blue and an orange dot with a bar give how many points of hiding each agent adds per ten points of starting injury; black diamonds at the right mark rows where the gap exceeds both agents' checkpoint spread.">
   <p class="zoomhint">Click the figure to open it full size.</p>
   __KIND:g2_level_contrast__
   <figcaption>
-    <span><b>Figure 2 — {{F2_HEAD}}</b> {{F2_TEXT}}</span>
+    <span><b>Figure 2 — level 05 is the one level where the neuromodulated agent's stronger injury dependence clears the
+pre-stated rule, and level 06 is where it disappears.</b> At level 05 the neuromodulated agent adds more hiding per unit of injury in 11 of 12 scene
+versions; at levels 03–04 the two agents' slopes overlap within their checkpoint spreads in all but one row; at level 06 the
+neuromodulated agent's slope is the smaller one in about half the versions. Black diamonds mark the 12 rows
+that pass.</span>
     <span><b>Axes.</b> Horizontal: how many percentage points of hiding in the first 25 steps each agent
     adds for every 10 points of starting injury (the slope of Figure 1's curves). Vertical: one row per
     level and scene version. One panel per scene.</span>
@@ -139,14 +158,23 @@ with its count. {{S04_TEXT}}</p>
 <section class="col">
 <h2><span class="num">05</span> Over the course of training</h2>
 
-<p>{{S05_TEXT}}</p>
+<p>The steadiness the earlier page first noticed is the clearest difference between the two agents
+on this page. Once training is under way, the neuromodulated agent's injury dependence settles early and
+barely moves; the ordinary agent's keeps swinging, and at level 04 it repeatedly reverses — in about a
+third of its checkpoints its whole-episode hiding goes <em>down</em> as starting injury goes up.</p>
 
 <figure>
   <img data-fig="g3_training_course" alt="Twelve small panels, two scenes (no animal, wandering rabbit) by six level columns. Each plots, against training steps from 0 to 10 million, how strongly each agent's whole-episode hiding follows its starting injury, blue for the ordinary agent and orange for the neuromodulated one.">
   <p class="zoomhint">Click the figure to open it full size.</p>
   __KIND:g3_training_course__
   <figcaption>
-    <span><b>Figure 3 — {{F3_HEAD}}</b> {{F3_TEXT}}</span>
+    <span><b>Figure 3 — the neuromodulated agent's injury dependence is steadier across training at every level, and at
+level 04 the ordinary agent's keeps reversing.</b> After the first two million steps, the checkpoint-to-checkpoint standard deviation of the
+neuromodulated agent's slope is 0.12–0.73 points per 10 injury across all levels and both scenes,
+against 0.25–2.32 for the ordinary agent. At level 04 the ordinary agent's slope is below zero in 32–37 %
+of its checkpoints (the neuromodulated agent's in 5 %); at level 05 the neuromodulated agent's slope is
+both larger (1.8–1.9 against 1.4) and three times steadier. At level 06 without noise the neuromodulated
+agent's slope is the smaller one (0.2–0.5 against 0.9–1.0).</span>
     <span><b>Axes.</b> Horizontal: training steps, in millions. Vertical: points of hiding added per 10
     points of starting injury, over the whole episode. Rows: the no-animal and wandering-rabbit scenes;
     columns: the levels.</span>
@@ -168,14 +196,20 @@ with its count. {{S04_TEXT}}</p>
 <h3 class="group">Inside an episode</h3>
 <h2><span class="num">06</span> How long injured hiding lasts</h2>
 
-<p>{{S06_TEXT}}</p>
+<p>Healing sets the time scale. Started at injury 90 in the empty scene, both agents at levels
+03–05 go straight into cover, stay until the felt injury has fallen, and leave at step 22–24; by step 30
+their felt injury is down to 1–11. Two exceptions carry the clues.</p>
 
 <figure>
   <img data-fig="g4_time_course" alt="Three rows of six panels. Top two rows: share of episodes in the bush at each of the first 60 steps, for starts at injury 0, 30, 60 and 90, ordinary agent then neuromodulated agent. Bottom row: the felt injury after a start at 90, rising over the first ten steps and falling as the agent heals.">
   <p class="zoomhint">Click the figure to open it full size.</p>
   __KIND:g4_time_course__
   <figcaption>
-    <span><b>Figure 4 — {{F4_HEAD}}</b> {{F4_TEXT}}</span>
+    <span><b>Figure 4 — at levels 03–05 both agents hide until healed and then leave; at level 02 the ordinary agent
+never settles, and at level 06 neither agent stays in cover long enough to heal.</b> After a start at injury 90, the level-02 ordinary agent leaves cover within four steps and keeps
+flickering in and out (48 % in the bush between steps 40 and 60), so it barely heals — its felt injury is
+still 78 at step 30, against 6 for the neuromodulated agent, which stays until healed. At level 06 hiding
+peaks at only 16–40 %, and the felt injury is still 58–76 at step 30 in both agents.</span>
     <span><b>Axes.</b> Horizontal, every panel: the step of the episode, 0 to 60. Vertical, top two rows:
     the share of episodes in which the agent is in the bush at that step, in percent, with one line per
     starting injury (light to dark: 0, 30, 60, 90). Bottom row: the felt injury, 0–100, after a start at 90.</span>
@@ -197,14 +231,19 @@ with its count. {{S04_TEXT}}</p>
 <section class="col">
 <h2><span class="num">07</span> When the agent leaves cover</h2>
 
-<p>{{S07_TEXT}}</p>
+<p>If staying in cover is set by injury, the chance of leaving should be low while the agent
+feels injured and high once it has healed. At levels 03–05 that is what both agents do.</p>
 
 <figure>
   <img data-fig="g5_exit" alt="Six panels, one per level column. Each plots, for the ordinary agent in blue and the neuromodulated agent in orange, the share of in-bush steps after which the agent left the bush, against the felt injury it had at the time.">
   <p class="zoomhint">Click the figure to open it full size.</p>
   __KIND:g5_exit__
   <figcaption>
-    <span><b>Figure 5 — {{F5_HEAD}}</b> {{F5_TEXT}}</span>
+    <span><b>Figure 5 — at levels 03–05 both agents leave cover only once the felt injury has fallen below about 30;
+the level-02 ordinary agent leaves regardless.</b> Above a felt injury of about 30 the exit rate is near zero in both agents at levels 02–05 (the
+level-02 ordinary agent excepted: 57–100 % at every level of felt injury). At level 06 the rate falls more
+gradually, and at low felt injury the neuromodulated agent leaves more readily than the ordinary one
+(70 % against 46 % without noise).</span>
     <span><b>Axes.</b> Horizontal: the felt injury the agent had, 0–100, in ten-point bins. Vertical: of
     the steps it spent in the bush with no animal within two squares, the share after which it was out of
     the bush, in percent.</span>
@@ -230,8 +269,10 @@ with its count. {{S04_TEXT}}</p>
 <p>Everything above changes the true injury, and with it everything that goes with being hurt. Here the
 agent starts <em>unhurt</em> and only the felt-injury number it receives is changed — held at 0, 0.1, …
 0.9 from the first step — while the world, the true injury and every other input stay as they are. The
-tool that does this reproduces the scene replays exactly when nothing is changed: step for step, in
-6 runs × 20 checkpoints × 30 episodes checked.</p>
+tool that does this reproduces the scene replays exactly when nothing is changed: step for step, for every
+run in every scene version checked — 600 checkpoints, 30 episodes each. (One checkpoint first failed on a
+different make of processor: at one step the agent rated two moves exactly equal, and that processor broke
+the tie the other way; on the sweep's own kind of processor it matches.)</p>
 
 <p>Because both agents carry a memory, the change is applied two ways. <b>Sustained</b>: the changed
 input flows into the memory, as a real feeling would. <b>One step</b>: at every step the agent acts from
@@ -383,8 +424,8 @@ per agent give a causal dose-response in the world the agent actually learned in
   __KIND:g9_training_felt__
   <figcaption>
     <span><b>Figure 10 — read by the injury felt at each decision, the two agents again look alike;
-    both leave cover almost never while they feel injured.</b> The bush-exit rate falls from 17–44 % at a
-    felt injury under 10 to 0–2 % at the top, in both agents at every level. At level 06 hiding hardly
+    both leave cover almost never while they feel injured.</b> The bush-exit rate falls from 17–46 % at a
+    felt injury under 10 to 0–2 % in the highest bin drawn, in every agent measured at every level. At level 06 hiding hardly
     rises with felt injury in either agent (16–18 % to 16–21 %), though resting still does.</span>
     <span><b>Axes.</b> Horizontal: the felt injury the agent had when it decided, 0–100, in ten-point bins.
     Vertical: the share of decisions, in percent, in the bush (top), choosing Rest (middle), or leaving the
@@ -444,7 +485,36 @@ one differs on 6–17 of 435,000–771,000 decisions per level, each a near-exac
 <section class="col">
 <h2><span class="num">14</span> Leads and directions</h2>
 
-{{S14_LIST}}
+<ol>
+  <li><b>Both agents act on the feeling itself.</b> An unhurt agent made to feel injured hides like an
+  injured one (Figure 6), and erasing the feeling removes most of the pull to rest (Figure 11). Injury
+  dependence is present without the modulator, so the modulator's contribution has to be read in its
+  <em>shape</em>, not its presence.</li>
+  <li><b>The modulator makes injury dependence steadier.</b> Across training its injury dependence moves
+  less from checkpoint to checkpoint at every level — a quarter to a half as much at levels 04 and 05 — and
+  at level 04 it rarely reverses (5 % of checkpoints, against 32–37 % for the ordinary agent; Figure 3). If this repeats in a second seed, it is the modulator's
+  most reliable effect so far — worth measuring directly as a training-stability outcome.</li>
+  <li><b>The modulator ties the feeling to memory.</b> Given a felt injury its memory has not caught up
+  with, the neuromodulated agent overreacts (Figure 11) or collapses into not hiding at all (Figure 6); the
+  ordinary agent does neither. Its own memory is the part most moved by the feeling (Figure 7). A
+  modulator without memory, or one whose memory is reset, would test whether the steadiness comes from
+  this integration.</li>
+  <li><b>Level 05 is the modulator's best level; level 06 its worst.</b> Only at level 05 does its stronger
+  injury dependence clear the pre-stated rule (Figure 2). At level 06 it barely responds to the feeling in
+  scenes without a fire (Figure 6), neither agent stays in cover to heal (Figure 4), and where the
+  modulator responds shifts from the sensory encoders to the decision heads (Figure 8). Level 06 was meant
+  to make injury matter more; for this agent pair it made the feeling matter less. Worth checking before
+  building on level 06: does its injury-driven noise make cover unsafe or uninformative, and does
+  manipulating body temperature (which the same tool can do) restore the response?</li>
+  <li><b>The training world hides most of this.</b> In the million-episode recordings the two agents'
+  injury curves nearly coincide (Figures 9–10); the one causal difference, a much steeper Rest curve for
+  the neuromodulated agent at level 04, has a wide checkpoint band. The scenes and the manipulation were
+  needed to see the differences at all.</li>
+  <li><b>What would turn leads into findings:</b> two or three more seeds per agent at levels 04–06; the
+  same analyses at a matched-capacity ordinary agent, to separate the modulator from the extra parameters
+  it brings; and a manipulation that holds the modulator's output fixed while the feeling changes, to test
+  whether its gain changes cause the behaviour.</li>
+</ol>
 </section>
 
 <section class="col">

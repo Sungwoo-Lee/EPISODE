@@ -1,0 +1,10 @@
+level 02 ordinary agent: all decisions, no predator within reach|405,907,435|405,908,897|100.0|ten-point bins under 2,000 decisions not drawn; bands from 0 late-checkpoint stores
+level 02 neuromodulated agent|0|1|0.0|final-checkpoint store not collected yet
+level 03 ordinary agent: all decisions, no predator within reach|273,063,520|273,063,520|100.0|ten-point bins under 2,000 decisions not drawn; bands from 0 late-checkpoint stores
+level 03 neuromodulated agent: all decisions, no predator within reach|274,416,188|274,416,188|100.0|ten-point bins under 2,000 decisions not drawn; bands from 0 late-checkpoint stores
+level 04 ordinary agent: all decisions, no predator within reach|251,107,298|251,107,298|100.0|ten-point bins under 2,000 decisions not drawn; bands from 4 late-checkpoint stores
+level 04 neuromodulated agent: all decisions, no predator within reach|249,879,565|249,879,565|100.0|ten-point bins under 2,000 decisions not drawn; bands from 4 late-checkpoint stores
+level 05 ordinary agent: all decisions, no predator within reach|224,573,898|224,573,898|100.0|ten-point bins under 2,000 decisions not drawn; bands from 4 late-checkpoint stores
+level 05 neuromodulated agent: all decisions, no predator within reach|224,921,286|224,921,286|100.0|ten-point bins under 2,000 decisions not drawn; bands from 4 late-checkpoint stores
+level 06 ordinary agent: all decisions, no predator within reach|185,550,799|185,550,799|100.0|ten-point bins under 2,000 decisions not drawn; bands from 4 late-checkpoint stores
+level 06 neuromodulated agent: all decisions, no predator within reach|187,282,717|187,282,717|100.0|ten-point bins under 2,000 decisions not drawn; bands from 4 late-checkpoint stores
