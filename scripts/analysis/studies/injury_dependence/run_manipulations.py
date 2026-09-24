@@ -65,13 +65,32 @@ def jobs():
                     yield out, cmd
 
 
+CLAIM_FRESH_S = 1800      # a log.txt touched this recently means another driver is running the job
+
+
 def run_one(job):
+    """Run one job unless it is finished or claimed. Several drivers (different nodes) can share the
+    job list: a job is claimed atomically with an O_EXCL `claim` file, and a job an older driver
+    started before claims existed is recognised by a recently written log.txt."""
+    import time
     out, cmd = job
-    if os.path.exists(os.path.join(ROOT, out, "manifest.json")):
+    d = os.path.join(ROOT, out)
+    if os.path.exists(os.path.join(d, "manifest.json")):
         return out, "skip"
-    os.makedirs(os.path.join(ROOT, out), exist_ok=True)
-    with open(os.path.join(ROOT, out, "log.txt"), "w") as log:
+    os.makedirs(d, exist_ok=True)
+    log_p = os.path.join(d, "log.txt")
+    if os.path.exists(log_p) and time.time() - os.path.getmtime(log_p) < CLAIM_FRESH_S \
+            and not os.path.exists(os.path.join(d, "claim")):
+        return out, "busy"
+    try:
+        fd = os.open(os.path.join(d, "claim"), os.O_CREAT | os.O_EXCL | os.O_WRONLY)
+        os.write(fd, f"{os.uname().nodename} {os.getpid()} {time.time():.0f}\n".encode()); os.close(fd)
+    except FileExistsError:
+        return out, "claimed"
+    with open(log_p, "w") as log:
         rc = subprocess.run(cmd, cwd=ROOT, stdout=log, stderr=subprocess.STDOUT).returncode
+    if rc != 0:
+        os.remove(os.path.join(d, "claim"))          # release, so a re-run can retry it
     return out, "ok" if rc == 0 else f"FAIL rc={rc}"
 
 
@@ -79,6 +98,8 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--procs", type=int, required=True)
     ap.add_argument("--dry-run", action="store_true")
+    ap.add_argument("--shards", default=None,
+                    help="'i,j/k': run only jobs whose index mod k is in {i, j} (split across nodes)")
     ap.add_argument("--parity-sample", action="store_true",
                     help="re-run the ladder/sustained job of every run on one scene per version with "
                          "--check-against-sweep into a scratch dir; the sweeps must be complete")
@@ -93,6 +114,10 @@ def main():
                 sweep = f"{EV}/metrics_history_rppo_injurygrid_{ver}/_scratch/{label}/{scene}"
                 P.append((pout, cmd[:cmd.index("--out") + 1] + [pout, "--check-against-sweep", sweep]))
         J = P
+    if a.shards:
+        mine, k = a.shards.split("/")
+        mine = {int(x) for x in mine.split(",")}
+        J = [j for n, j in enumerate(J) if n % int(k) in mine]
     print(f"{len(J)} jobs")
     if a.dry_run:
         for out, cmd in J[:3]:
@@ -102,6 +127,8 @@ def main():
     with ThreadPoolExecutor(a.procs) as ex:
         for i, (out, status) in enumerate(ex.map(run_one, J), 1):
             n_fail += status.startswith("FAIL")
+            if status in ("busy", "claimed"):
+                continue
             print(f"[{i}/{len(J)}] {status:8} {out}", flush=True)
     print(f"done; {n_fail} failed")
     return 1 if n_fail else 0

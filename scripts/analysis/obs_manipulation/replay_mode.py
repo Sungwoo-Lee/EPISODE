@@ -28,7 +28,8 @@ import sys
 
 _HERE = os.path.dirname(os.path.abspath(__file__))
 _ROOT = os.path.abspath(os.path.join(_HERE, "..", "..", ".."))
-TIE_TOL = 1e-3   # max preference gap (probability) at which a flipped greedy choice counts as a tie
+TIE_LOG_RATIO = 0.01   # a flipped greedy choice is a tie only if the recorded move is the runner-up and
+                       # the two preferences differ by under 1 % of each other (|log ratio| < 0.01)
 BINS = [0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0001]
 
 
@@ -145,23 +146,30 @@ def run(a):
             n_bad = int(mism.sum())
             ties = []
             if n_bad:
-                # A GPU forward pass at a different batch size can round differently; on a decision the
-                # agent rated two moves almost equally that flips the greedy choice. Such a step is
-                # accepted only if the recorded move's preference is within TIE_TOL of the top one;
-                # anything else is a real mismatch and fatal.
+                # A GPU forward pass at a different batch size rounds differently, and over hundreds of
+                # recurrent steps the difference grows to ~1e-3 in the logits; on a decision the agent
+                # rated two moves almost equally that flips the greedy choice. Such a step is accepted
+                # only if the recorded move is the network's runner-up and the two preferences are
+                # within 1 % of each other; anything else is a real mismatch and fatal.
                 ps = outs[0]["p_shadow"]
                 for tt, i in np.argwhere(mism):
-                    gap = float(ps[tt, i].max() - ps[tt, i, rec_action[tt, i]])
-                    ties.append((int(tt), int(seeds[i]), gap))
-                real = [x for x in ties if x[2] > TIE_TOL]
+                    order = np.argsort(ps[tt, i])[::-1]
+                    runner_up = int(order[1]) == int(rec_action[tt, i])
+                    gap = float(abs(np.log(ps[tt, i, order[0]]) - np.log(ps[tt, i, rec_action[tt, i]])))
+                    gap = gap if runner_up else float("inf")
+                    ties.append((int(tt), int(seeds[i]), gap, int(rec_action[tt, i]),
+                                 int(outs[0]["shadow_action"][tt, i]), [float(q) for q in ps[tt, i]]))
+                real = [x for x in ties if not x[2] < TIE_LOG_RATIO]
                 if real:
                     raise RuntimeError(f"replay parity FAILED on {len(real)} of {int(valid.sum())} decisions "
-                                       f"(preference gap > {TIE_TOL}); first: step {real[0][0]}, "
-                                       f"seed {real[0][1]}, gap {real[0][2]:.3g}")
-            tie_note = (f"; {len(ties)} near-tie flip(s), largest preference gap "
+                                       f"(not a runner-up within |log ratio| {TIE_LOG_RATIO}); first: step {real[0][0]}, "
+                                       f"seed {real[0][1]}, gap {real[0][2]!r}, recorded action {real[0][3]}, "
+                                       f"network's choice {real[0][4]}, preferences {real[0][5]}")
+            tie_note = (f"; {len(ties)} near-tie flip(s), largest |log preference ratio| "
                         f"{max(x[2] for x in ties):.2g}" if ties else "")
             print(f"  replay parity: {int(valid.sum()) - len(ties)} of {int(valid.sum())} recorded decisions reproduced exactly{tie_note}")
-            parity = {"decisions": int(valid.sum()), "near_tie_flips": ties}
+            parity = {"decisions": int(valid.sum()),
+                      "near_tie_flips": [dict(step=a, seed=b, gap=c, recorded=d, chosen=e) for a, b, c, d, e, _ in ties]}
 
     natural = outs[0]["felt_true"][..., 0]                       # (T, N) first manipulated input
     bins = np.digitize(natural, BINS) - 1
@@ -200,6 +208,6 @@ def run(a):
                "episode_seeds_first_last": [seeds[0], seeds[-1]], "memory": a.memory, "device": a.device,
                "manipulation_file": os.path.abspath(a.manipulation), "manipulation": M.spec,
                "conditions": M.labels, "bins_natural_first_input": BINS[:-1] + [1.0],
-               "parity": parity, "tie_tolerance": TIE_TOL, "git_sha": sha},
+               "parity": parity, "tie_log_ratio": TIE_LOG_RATIO, "git_sha": sha},
               open(os.path.join(a.out, "manifest.json"), "w"), indent=1)
     print(f"wrote {a.out}/summary.csv ({len(summ)} rows) and episodes.csv ({len(eps)} rows)")

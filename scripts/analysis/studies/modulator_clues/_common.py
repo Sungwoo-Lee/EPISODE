@@ -45,7 +45,8 @@ KIND = {"causal": "causal — starting injury assigned at random",
         "scene": "controlled test scene",
         "causal_and_observational": "causal (filled markers: starting injury assigned at random) and "
                                     "observational (hollow markers: the injury carried at that moment)",
-        "between_runs": "between separate training runs — mixes the effect with seed-to-seed variation"}
+        "between_runs": "between separate training runs — mixes the effect with seed-to-seed variation",
+        "manipulation": "input manipulation — only the injury the agent feels is changed; the world is untouched"}
 
 
 def col_label(world, level):
