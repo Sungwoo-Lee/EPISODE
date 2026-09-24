@@ -69,7 +69,7 @@ for name, fig, kind, gaps, agree, n, med in rows:
     cells = "".join(f"<td class=\"n\">{'—' if not np.isfinite(g) else f'{g:+.1f}'}</td>" for g in gaps)
     body += (f"<tr><td>{name} <span class=\"tag\">{fig} · {kind}</span></td>{cells}"
              f"<td class=\"agree\">{agree} of {n} {'below' if med < 0 else 'above'} zero</td></tr>")
-html = ('<p class="cue" hidden>Scroll the table sideways to see every column.</p>\n<div class="scroll">'
+html = ('<p class="cue" hidden>Wider than the screen — scroll sideways; the right-hand columns are cut off.</p>\n<div class="scroll">'
         f'<table class="cluetable"><thead><tr><th rowspan="2">measure</th>{top}<th rowspan="2">agree</th></tr>'
         f'<tr>{head2}</tr></thead>'
         f'<tbody>{body}</tbody></table></div>')

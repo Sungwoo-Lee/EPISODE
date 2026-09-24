@@ -40,6 +40,7 @@ if not (style and script and viewer):
 page = open(TPL).read()
 page = page.replace("__HOUSE_STYLE__", style.group(0))
 # The viewer SCRIPT is useless without the viewer MARKUP it reaches by id (register F57).
+assert page.count("__HOUSE_SCRIPT__") == 1, "the viewer placeholder must occur exactly once (duplicate ids otherwise)"
 page = page.replace("__HOUSE_SCRIPT__", viewer.group(0) + "\n" + script.group(0))
 
 # --- data-accounting blocks, read from what each figure script EMITTED (guide 11b) ----------
@@ -57,7 +58,7 @@ for stem in sorted({m for m in re.findall(r'data-fig="([^"]+)"', page)}):
         f'<td class="n">{p}%</td><td>{n}</td></tr>'
         for w, u, t, p, n in rows)
     block = ('<span><b>Data.</b> How much this figure used, emitted by its own script:</span>'
-             '<p class="cue" hidden>Scroll the table sideways to see every column.</p>'
+             '<p class="cue" hidden>Wider than the screen — scroll sideways; the right-hand columns are cut off.</p>'
              '<div class="scroll"><table class="datatable"><thead><tr><th>subset</th>'
              '<th class="n">used</th><th class="n">available</th><th class="n">share</th>'
              f'<th>why</th></tr></thead><tbody>{cells}</tbody></table></div>')

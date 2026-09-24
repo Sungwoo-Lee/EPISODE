@@ -84,20 +84,18 @@ def dose_grid(reading, levels, stem, kind, xlabel, note):
                            squeeze=False)
     samples = []
     for j, lv in enumerate(levels):
+        missing = 0
         for arm, alab, col in C.ARMS:
             lab = f"{lv}_{arm}"
             fin, late = dose(lab, "final"), dose(lab, "late")
             if fin is None:
-                if not ax[0, j].texts:
-                    ax[0, j].text(0.5, 0.5, "store not\ncollected yet", transform=ax[0, j].transAxes,
-                                  ha="center", va="center", color=house.INK, fontsize=9.5)
+                missing += 1
                 samples.append(dict(what=f"level {lv[-2:]} {alab}", used=0, total=1,
                                     note="final-checkpoint store not collected yet"))
                 continue
             for i, (m, _) in enumerate(MEAS):
                 r, _den = rate(fin[reading][m])
-                ax[i, j].plot(x, r, "-o", color=col, ms=3.5, lw=1.8,
-                              label=alab if (i == ax.shape[0] - 1 and j == 0) else None)
+                ax[i, j].plot(x, r, "-o", color=col, ms=3.5, lw=1.8)
                 if late:
                     L = np.array([rate(t[reading][m])[0] for t in late])
                     ax[i, j].fill_between(x, np.nanmin(L, 0), np.nanmax(L, 0), color=col, alpha=0.18, lw=0)
@@ -106,15 +104,23 @@ def dose_grid(reading, levels, stem, kind, xlabel, note):
                                 used=int(den[den >= MIN_DEN].sum()), total=int(den.sum()),
                                 note=f"ten-point bins under {MIN_DEN:,} decisions not drawn; bands from "
                                      f"{len(late) if late else 0} late-checkpoint stores"))
+        if missing == len(C.ARMS):                 # a note only where the panel is empty
+            ax[0, j].text(0.5, 0.5, "store not\ncollected yet", transform=ax[0, j].transAxes,
+                          ha="center", va="center", color=house.INK, fontsize=9.5)
         ax[0, j].set_title(f"level {lv[-2:]}", loc="left", fontsize=10.5, color=house.INK)
     for i, (_, yl) in enumerate(MEAS):
         ax[i, 0].set_ylabel(yl)
     for j in range(len(levels)):
         ax[-1, j].set_xlabel(xlabel)
         ax[-1, j].set_xticks([0, 50, 100])
-    fig.tight_layout(h_pad=1.0, w_pad=0.8)
-    C.legend_below(ax[-1, 0], ncol=2, offset=-0.42)
-    fig.tight_layout(h_pad=1.0, w_pad=0.8)
+    for a in ax.flat:
+        a.set_ylim(bottom=0)                       # shares of decisions never go below 0 %
+    fig.tight_layout(h_pad=1.0, w_pad=0.8, rect=(0, 0.07, 1, 1))
+    # the shared legend is built from explicit handles for BOTH agents, never from one panel,
+    # which may lack a series (F64: a level whose second run is not collected yet)
+    from matplotlib.lines import Line2D
+    hs = [Line2D([], [], color=col, marker="o", ms=3.5, lw=1.8, label=alab) for _, alab, col in C.ARMS]
+    fig.legend(handles=hs, loc="lower center", ncol=2, frameon=False, bbox_to_anchor=(0.5, 0.0))
     C.assert_no_text_overlap(fig); C.assert_min_text_px(fig)
     C.record_kind(stem, kind)
     C.record_samples(stem, samples)
