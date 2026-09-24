@@ -25,10 +25,13 @@ measures) — the parity test that shows this tool measures the same episodes th
 Survival steps, never reward.
 
 Example:
-  python scripts/analysis/obs_manipulation/run.py --run results/JAX_RecurrentPPO/<run> \\
+  python scripts/analysis/obs_manipulation/run.py --mode live --run results/JAX_RecurrentPPO/<run> \\
       --checkpoints last:20 --world configs/.../avoid_none_inj00.yaml \\
       --manipulation scripts/analysis/obs_manipulation/examples/felt_injury_ladder.yaml \\
       --memory sustained --device cpu --record summary --out results/analysis/obs_manipulation/x
+  python scripts/analysis/obs_manipulation/run.py --mode replay --run results/JAX_RecurrentPPO/<run> \\
+      --store results/trajectories_basicq2_w2 --episodes 2000 --memory sustained --device gpu \\
+      --manipulation scripts/analysis/obs_manipulation/examples/felt_injury_shift.yaml --out ...
 """
 from __future__ import annotations
 
@@ -47,21 +50,35 @@ _ROOT = os.path.abspath(os.path.join(_HERE, "..", "..", ".."))
 
 def _parse():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    ap.add_argument("--mode", required=True, choices=["live", "replay"],
+                    help="live: the agent acts in --world; replay: recorded episodes from --store "
+                         "are fed back (see replay_mode.py)")
     ap.add_argument("--run", required=True, help="training run directory (contains models/)")
-    ap.add_argument("--checkpoints", required=True,
-                    help="'all', 'last:N', or comma-separated steps")
-    ap.add_argument("--world", required=True, help="probe config path, or 'training'")
+    ap.add_argument("--checkpoints", help="live only: 'all', 'last:N', or comma-separated steps")
+    ap.add_argument("--world", help="live only: probe config path, or 'training'")
+    ap.add_argument("--store", help="replay only: trajectory-store root holding this run's store")
     ap.add_argument("--manipulation", required=True, help="manipulation YAML (see manip.py)")
     ap.add_argument("--memory", required=True, choices=["sustained", "one_step"])
     ap.add_argument("--episodes", required=True, type=int,
                     help="episodes per condition; seeds are the world's behavior_measures.eval_seeds[:N]")
     ap.add_argument("--device", required=True, choices=["cpu", "gpu"])
-    ap.add_argument("--record", required=True, choices=["summary", "steps"])
+    ap.add_argument("--record", choices=["summary", "steps"], help="live only")
     ap.add_argument("--out", required=True)
     ap.add_argument("--check-against-sweep", default=None,
                     help="a dwell-sweep scratch dir for this run+condition "
                          "(…/_scratch/<label>/<condition>); compares the identity condition")
-    return ap.parse_args()
+    a = ap.parse_args()
+    need = {"live": ("checkpoints", "world", "record"), "replay": ("store",)}[a.mode]
+    miss = [k for k in need if getattr(a, k) is None]
+    if miss:
+        ap.error(f"--mode {a.mode} requires " + ", ".join("--" + k.replace("_", "-") for k in miss))
+    wrong = [k for k in ("checkpoints", "world", "record", "store", "check_against_sweep")
+             if k not in need and k != "check_against_sweep" and getattr(a, k) is not None]
+    if a.mode == "replay" and a.check_against_sweep:
+        wrong.append("check_against_sweep")
+    if wrong:
+        ap.error(f"--mode {a.mode} does not take " + ", ".join("--" + k.replace("_", "-") for k in wrong))
+    return a
 
 
 def _set_device(device):
@@ -145,6 +162,9 @@ def main():
     sys.path.insert(0, _ROOT)
     sys.path.insert(0, _HERE)
     sys.path.insert(0, os.path.join(_ROOT, "scripts", "behavior_measures"))
+    if a.mode == "replay":
+        import replay_mode
+        return replay_mode.run(a)
     import numpy as np
     import jax
     import jax.numpy as jnp
