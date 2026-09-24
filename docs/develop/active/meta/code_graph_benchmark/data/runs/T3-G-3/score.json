@@ -1,0 +1,35 @@
+{
+ "task": "T3",
+ "run": "T3-G-3",
+ "correct": true,
+ "f2p_passed": "1/1",
+ "p2p_broken": 0,
+ "p2p_total": 243,
+ "ref_recall": 1.0,
+ "ref_files": [
+  "scripts/eval/traj_collect/collect_trajectories.py",
+  "src/environment/config_loader.py"
+ ],
+ "changed_files": [
+  "scripts/analysis/supplementary/parity.py",
+  "scripts/eval/traj_collect/collect_trajectories.py",
+  "src/environment/config_loader.py",
+  "tests/env/test_directional_sensors.py"
+ ],
+ "wall_s": 191,
+ "turns": 18,
+ "input_tokens": 34,
+ "cache_read": 918174,
+ "cache_write": 57278,
+ "output_tokens": 7100,
+ "usd_equiv": 0.4838148000000001,
+ "is_error": false,
+ "subtype": "success",
+ "tool_calls": 17,
+ "tools": {
+  "Bash": 14,
+  "Grep": 2,
+  "Read": 1
+ },
+ "first_edit": null
+}

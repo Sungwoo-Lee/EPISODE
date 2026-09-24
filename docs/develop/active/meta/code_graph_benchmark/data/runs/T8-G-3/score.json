@@ -1,0 +1,38 @@
+{
+ "task": "T8",
+ "run": "T8-G-3",
+ "correct": true,
+ "f2p_passed": "40/40",
+ "p2p_broken": 0,
+ "p2p_total": 51,
+ "ref_recall": 0.6,
+ "ref_files": [
+  "configs/models/recurrent_ppo/recurrent_ppo_cmp_gaenorm.yaml",
+  "configs/models/recurrent_ppo/recurrent_ppo_cmp_mcraw.yaml",
+  "src/models/ppo_trainer.py",
+  "src/models/recurrent_ppo_trainer.py",
+  "train.py"
+ ],
+ "changed_files": [
+  "src/models/ppo_trainer.py",
+  "src/models/recurrent_ppo_trainer.py",
+  "tests/models/test_mc_fixed_mode.py",
+  "train.py"
+ ],
+ "wall_s": 106,
+ "turns": 11,
+ "input_tokens": 16,
+ "cache_read": 381942,
+ "cache_write": 55245,
+ "output_tokens": 6645,
+ "usd_equiv": 0.36385039999999996,
+ "is_error": false,
+ "subtype": "success",
+ "tool_calls": 10,
+ "tools": {
+  "Bash": 4,
+  "Grep": 3,
+  "Read": 3
+ },
+ "first_edit": null
+}

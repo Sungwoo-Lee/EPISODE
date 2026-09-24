@@ -1,0 +1,1 @@
+Attempts used: 54 of 61 (89%) &mdash; every graded attempt; each ratio pairs a tool group's 18 attempts with the plain group's 18 on the same six tasks. Tasks paired: 6 of 6 (100%) &mdash; all six tasks that passed the validity and leak checks.

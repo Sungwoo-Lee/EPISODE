@@ -1,0 +1,154 @@
+diff --git a/scripts/analysis/supplementary/parity.py b/scripts/analysis/supplementary/parity.py
+index f546566..d7ecb57 100644
+--- a/scripts/analysis/supplementary/parity.py
++++ b/scripts/analysis/supplementary/parity.py
+@@ -20,9 +20,7 @@ from src.environment.sensor import get_observation
+ 
+ RUN='results/JAX_RecurrentPPO/20260810-185749_rppo_restprem_a01_n106'
+ S=sorted(glob.glob('results/trajectories/*_a01_*/*/*/'))[0]
+-NEW={'sensory.olfactory_grid_range':0,'sensory.visual_blur_enabled':False,
+-     'sensory.visual_blur_radial_scale':0.0,'sensory.visual_blur_anisotropy':0.0,
+-     'sensory.visual_blur_sigma_floor':0.0}
++NEW={'sensory.olfactory_grid_range':0,'sensory.visual_blur_enabled':False}
+ raw=yaml.safe_load(open(RUN+'/models/config.yaml'))
+ for k,v in NEW.items():
+     parts=k.split('.'); d=raw
+diff --git a/scripts/eval/traj_collect/collect_trajectories.py b/scripts/eval/traj_collect/collect_trajectories.py
+index a140434..d702312 100644
+--- a/scripts/eval/traj_collect/collect_trajectories.py
++++ b/scripts/eval/traj_collect/collect_trajectories.py
+@@ -306,19 +306,9 @@ def _np_list(x):
+ # field — reflects the config actually used.
+ PRE_V31_SENSOR_DEFAULTS = {
+     "olfactory_grid_range": 0,        # 0 = the original single-point sample
++    # Blur's radial_scale / anisotropy / sigma_floor are deliberately absent: the loader
++    # only demands them when blur is on.
+     "visual_blur_enabled": False,
+-    # These three MUST be the shipped default.yaml values, not zeros. They were
+-    # zeros originally on the reasoning that blur sits behind a trace-time static
+-    # branch, so the values are behaviourally inert when it is off -- which is
+-    # still true. But commit 4a5fcd4 added load-time validation that rejects
+-    # anisotropy <= 0 and sigma_floor <= 0 REGARDLESS of whether blur is enabled,
+-    # precisely so a config cannot carry a divide-by-zero that only detonates when
+-    # someone later flips the flag. Zeros therefore no longer load at all.
+-    # Semantically these are also the right values: an old run had no such key, so
+-    # the honest reconstruction is whatever the base config would supply.
+-    "visual_blur_radial_scale": 0.5,
+-    "visual_blur_anisotropy": 3.0,
+-    "visual_blur_sigma_floor": 0.5,
+ }
+ 
+ # Commit 9771e98 (v3.2, 2026-08-26) added visual value modes and line-of-sight occlusion and made
+@@ -680,8 +670,8 @@ def parse_args(argv=None):
+                         "pre-v3.2 code path untouched. Needed for runs launched before "
+                         "2026-08-26 16:00. Refuses if the run already sets them.")
+     p.add_argument("--assume-pre-v31-sensors", action="store_true",
+-                   help="Supply the five sensory keys that commit 0e8a4ef made mandatory "
+-                        "(olfactory_grid_range, visual_blur_*) at the values that "
++                   help="Supply the sensory keys that commit 0e8a4ef made mandatory "
++                        "(olfactory_grid_range, visual_blur_enabled) at the values that "
+                         "reproduce the pre-v3.1 sensors exactly. Required to replay any run "
+                         "trained before 2026-08-21. Refuses if the run already sets them.")
+     p.add_argument("--allow-weak-restore-check", action="store_true",
+diff --git a/src/environment/config_loader.py b/src/environment/config_loader.py
+index 957dde5..2eec9a5 100644
+--- a/src/environment/config_loader.py
++++ b/src/environment/config_loader.py
+@@ -1023,22 +1023,27 @@ def load_env_params(config: Config) -> EnvParams:
+     # Blur knobs are traced, so load time is the ONLY place they can be checked.
+     # Unvalidated, sigma_floor=0 with radial_scale=0 loads clean and produces an
+     # all-NaN observation (1/(2*pi*0*0)); anisotropy=0 divides by zero and blinds
+-    # vision without ever raising. Checked whether or not blur is currently on, so
+-    # a config cannot carry a landmine that only detonates when someone enables it.
+-    _blur_scale = float(config.get_mandatory('sensory.visual_blur_radial_scale'))
+-    _blur_rho = float(config.get_mandatory('sensory.visual_blur_anisotropy'))
+-    _blur_floor = float(config.get_mandatory('sensory.visual_blur_sigma_floor'))
+-    if _blur_scale < 0.0:
+-        raise ValueError(
+-            f"sensory.visual_blur_radial_scale must be >= 0, got {_blur_scale}.")
+-    if _blur_rho <= 0.0:
+-        raise ValueError(
+-            f"sensory.visual_blur_anisotropy must be > 0 (it divides sigma_par), "
+-            f"got {_blur_rho}.")
+-    if _blur_floor <= 0.0:
+-        raise ValueError(
+-            f"sensory.visual_blur_sigma_floor must be > 0 (it is the only thing "
+-            f"keeping the kernel's normalisation finite), got {_blur_floor}.")
++    # vision without ever raising. The knobs are read ONLY when blur is enabled (the
++    # conditional-key pattern, CONFIG_GUIDE.md §5), so a config with blur off -- e.g.
++    # a historical run snapshot -- need not carry them.
++    _blur_on = bool(config.get_mandatory('sensory.visual_blur_enabled'))
++    if _blur_on:
++        _blur_scale = float(config.get_mandatory('sensory.visual_blur_radial_scale'))
++        _blur_rho = float(config.get_mandatory('sensory.visual_blur_anisotropy'))
++        _blur_floor = float(config.get_mandatory('sensory.visual_blur_sigma_floor'))
++        if _blur_scale < 0.0:
++            raise ValueError(
++                f"sensory.visual_blur_radial_scale must be >= 0, got {_blur_scale}.")
++        if _blur_rho <= 0.0:
++            raise ValueError(
++                f"sensory.visual_blur_anisotropy must be > 0 (it divides sigma_par), "
++                f"got {_blur_rho}.")
++        if _blur_floor <= 0.0:
++            raise ValueError(
++                f"sensory.visual_blur_sigma_floor must be > 0 (it is the only thing "
++                f"keeping the kernel's normalisation finite), got {_blur_floor}.")
++    else:
++        _blur_scale, _blur_rho, _blur_floor = 0.0, 1.0, 1.0   # inert; never read when disabled
+ 
+     _occ_on = bool(config.get_mandatory('sensory.visual_occlusion_enabled'))
+     if _occ_on:
+@@ -1586,7 +1591,7 @@ def load_env_params(config: Config) -> EnvParams:
+         nociception_enabled=config.get_mandatory('sensory.nociception_enabled'),
+         location_sensor_enabled=config.get_mandatory('sensory.location_sensor'),
+         olfactory_grid_range=int(config.get_mandatory('sensory.olfactory_grid_range')),
+-        visual_blur_enabled=bool(config.get_mandatory('sensory.visual_blur_enabled')),
++        visual_blur_enabled=_blur_on,
+         visual_blur_radial_scale=_blur_scale,
+         visual_blur_anisotropy=_blur_rho,
+         visual_blur_sigma_floor=_blur_floor,
+diff --git a/tests/env/test_directional_sensors.py b/tests/env/test_directional_sensors.py
+index 648ec37..b56c5c8 100644
+--- a/tests/env/test_directional_sensors.py
++++ b/tests/env/test_directional_sensors.py
+@@ -246,6 +246,40 @@ def test_occlusion_defaults_off_and_validates_its_subkeys():
+             params(**bad)
+ 
+ 
++_BLUR_KNOBS = ('radial_scale', 'anisotropy', 'sigma_floor')
++
++
++def _params_without_blur_knobs(missing=_BLUR_KNOBS, **overrides):
++    c = Config.load_yaml(DEFAULT)
++    for k in missing:
++        del c.to_dict()['sensory'][f'visual_blur_{k}']
++    for k, v in overrides.items():
++        c.set(k, v)
++    return load_env_params(c)
++
++
++def test_blur_knobs_are_not_required_when_blur_is_off():
++    p = _params_without_blur_knobs()
++    assert p.visual_blur_enabled is False
++
++
++@pytest.mark.parametrize('knob', _BLUR_KNOBS)
++def test_blur_knob_is_required_when_blur_is_on(knob):
++    with pytest.raises(ValueError, match=f'visual_blur_{knob}'):
++        _params_without_blur_knobs(missing=(knob,), **{'sensory.visual_blur_enabled': True})
++
++
++@pytest.mark.parametrize('overrides, knob', [
++    ({'sensory.visual_blur_anisotropy': 0.0}, 'anisotropy'),
++    ({'sensory.visual_blur_sigma_floor': 0.0, 'sensory.visual_blur_radial_scale': 0.0},
++     'sigma_floor'),
++    ({'sensory.visual_blur_radial_scale': -0.5}, 'radial_scale'),
++])
++def test_blur_value_checks_fire_when_blur_is_on(overrides, knob):
++    with pytest.raises(ValueError, match=f'visual_blur_{knob}'):
++        params(**{'sensory.visual_blur_enabled': True, **overrides})
++
++
+ def test_occlusion_hides_only_what_is_behind_a_blocker():
+     """A blocker at 2 cells hides a target at 4 cells on the same bearing, and
+     leaves a target on a different bearing alone."""

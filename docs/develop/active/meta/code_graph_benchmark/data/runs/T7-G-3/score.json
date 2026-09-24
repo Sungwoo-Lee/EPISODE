@@ -1,0 +1,38 @@
+{
+ "task": "T7",
+ "run": "T7-G-3",
+ "correct": true,
+ "f2p_passed": "17/17",
+ "p2p_broken": 0,
+ "p2p_total": 587,
+ "ref_recall": 0.6,
+ "ref_files": [
+  "configs/environment/experiment/basic/05-campfire_thermal_10x10_olf1_vis2.yaml",
+  "configs/environment/experiment/basic/05-campfire_thermal_10x10_olf1_vis3.yaml",
+  "src/environment/dashboard/labels.py",
+  "src/environment/dashboard/painters.py",
+  "src/environment/dashboard/panels.py"
+ ],
+ "changed_files": [
+  "src/environment/dashboard/labels.py",
+  "src/environment/dashboard/painters.py",
+  "src/environment/dashboard/panels.py",
+  "tests/env/test_dashboard_layout.py"
+ ],
+ "wall_s": 120,
+ "turns": 16,
+ "input_tokens": 28,
+ "cache_read": 903011,
+ "cache_write": 69563,
+ "output_tokens": 7785,
+ "usd_equiv": 0.5367602,
+ "is_error": false,
+ "subtype": "success",
+ "tool_calls": 15,
+ "tools": {
+  "Grep": 2,
+  "Read": 3,
+  "Bash": 10
+ },
+ "first_edit": null
+}
