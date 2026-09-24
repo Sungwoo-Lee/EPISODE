@@ -1,0 +1,8 @@
+# Felt injury shifted up, keeping its natural rise and healing -- the realism check.
+manipulations:
+  - name: felt_injury
+    sensor: Interoceptive Nociception
+    element: 0
+    op: add
+    values: [0.1, 0.2, 0.3, 0.4, 0.5]
+    steps: [0, null]

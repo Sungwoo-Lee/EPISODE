@@ -1,0 +1,9 @@
+# Felt injury raised for steps 0-19 only, then returned to the truth -- the after-effect test:
+# how many steps do the memory (d_task, d_mod) and the behaviour take to return to natural?
+manipulations:
+  - name: felt_injury
+    sensor: Interoceptive Nociception
+    element: 0
+    op: set
+    values: [0.3, 0.6, 0.9]
+    steps: [0, 20]
