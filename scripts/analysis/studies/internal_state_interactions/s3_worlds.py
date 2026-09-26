@@ -1,11 +1,12 @@
-"""FIGURE S3 — For each world: how often the best choice needs more than one body variable, and
-how the choices are shared out (ideal planner, no trained agent).
+"""FIGURE S3 — For each world: how much knowing a second body variable improves the best choice,
+how the choices are shared out, and whether the ideal policy survives (ideal planner, no agent).
 
-Left: interaction share (share of training start states whose best choice cannot be predicted from
-any single body variable), for the map without a warm bush (filled) and with one (hollow); the
-vertical line is today's level 05, the dotted line is today + 5 points (the reading rule).
-Right: need balance, the share of start states in which each choice is best (map without a warm
-bush). A black diamond marks worlds that pass the reading rule fixed in the study plan (both maps).
+Left: combination gain (accuracy of the best two-variable rule minus the best one-variable rule, in
+points, over training start states, both maps pooled 0.59/0.41, ties excluded). Solid line: today's
+level 05 with B1; dotted: +5 points (rule 1); the grey band is today +/- twice the noise floor.
+Middle: need balance -- share of start states in which each choice is best.
+Right: survival share of the ideal policy over 500 steps (2,000 starts per map).
+A black diamond marks worlds that pass the pre-registered reading rule (STUDY_PLAN.md, Revision 1).
 Writes results/analysis/internal_state_interactions/reading_rule.json.
 """
 import sys, os, json; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -14,53 +15,66 @@ import _common as C, sweep as SW
 
 house = C.house; house.apply()
 R = C.sweep_results()
-rows = [w for w in SW.worlds() if (w[0], False) in R and (w[0], True) in R]
-base = {warm: R[("baseline__level 05__today", warm)]["summary"] for warm in (False, True)}
+base = R["baseline__level 05__today"]
+finer = R["check__finer grid__81x41x91"]
+g99_base = R["check__discount__0.99"]
+noise = abs(finer["summary"]["combination_gain"] - base["summary"]["combination_gain"])
+b_gain, b_surv = base["summary"]["combination_gain"], base["survival_share"]
+settings = [w for w in SW.worlds() if w[1] not in ("check",) and w[0] in R]
 
 
-def passes(summ, warm):
-    b = summ["balance"]
-    return (summ["interaction_share"] >= base[warm]["interaction_share"] + 0.05
-            and max(b.values()) <= 0.80
-            and any(v >= 0.10 for k, v in b.items() if not k.startswith("rest in cover")))
+def rule(res):
+    s = res["summary"]; bal = s["balance"]
+    r1 = s["combination_gain"] >= b_gain + 0.05 and (s["combination_gain"] - b_gain) > 2 * noise
+    r2 = max(bal.values()) <= 0.80 and any(v >= 0.10 for k, v in bal.items() if k != "rest in cover")
+    r3 = res["survival_share"] >= b_surv - 0.05
+    return r1, r2, r3
 
 
-fig, ax = plt.subplots(1, 2, figsize=(10.0, 8.0), gridspec_kw=dict(width_ratios=[1, 1.25]), sharey=True)
-y = np.arange(len(rows))[::-1]; rule = {}; labels = []
-for r, (name, group, label, value, _, _) in enumerate(rows):
+fig, ax = plt.subplots(1, 3, figsize=(10.0, 8.2), gridspec_kw=dict(width_ratios=[1, 1.2, 0.6]), sharey=True)
+y = np.arange(len(settings))[::-1]; out = {}; labels = []
+for r, (name, group, label, value, *_rest) in enumerate(settings):
+    res = R[name]; s = res["summary"]
     labels.append("today" if group == "baseline" else f"{group}: {label} = {value:g}")
-    s0, s1 = R[(name, False)]["summary"], R[(name, True)]["summary"]
-    ax[0].plot([100 * s0["interaction_share"]], [y[r]], "o", color=house.INK, ms=6)
-    ax[0].plot([100 * s1["interaction_share"]], [y[r]], "o", mfc="white", mec=house.INK, ms=6, mew=1.3)
-    ok = passes(s0, False) and passes(s1, True)
-    rule[name] = dict(group=group, label=label, value=value, passes=bool(ok),
-                      interaction_share=[s0["interaction_share"], s1["interaction_share"]],
-                      balance=[s0["balance"], s1["balance"]])
+    r1, r2, r3 = rule(res); ok = r1 and r2 and r3 and group != "baseline"
+    out[name] = dict(group=group, label=label, value=value, combination_gain=s["combination_gain"],
+                     balance=s["balance"], tie_share=s["tie_share"], survival_share=res["survival_share"],
+                     rule_1_gain=bool(r1), rule_2_balance=bool(r2), rule_3_survival=bool(r3), passes=bool(ok))
+    ax[0].plot([100 * s["combination_gain"]], [y[r]], "o", color=house.INK, ms=6)
     if ok:
-        ax[0].plot([1.0], [y[r]], marker="D", color=house.INK, ms=5, transform=ax[0].get_yaxis_transform(), clip_on=False)
+        ax[2].plot([1.0], [y[r]], marker="D", color=house.INK, ms=5, transform=ax[2].get_yaxis_transform(), clip_on=False)
     left = 0.0
     for cat in C.CHOICE_ORDER:
-        v = 100 * s0["balance"].get(cat, 0.0)
-        ax[1].barh(y[r], v, left=left, color=C.CHOICE_COLOURS[cat], height=0.7,
-                   label=cat if r == 0 else None, edgecolor="white", linewidth=0.4)
+        v = 100 * s["balance"][cat]
+        ax[1].barh(y[r], v, left=left, color=C.CHOICE_COLOURS[cat], height=0.7, label=cat if r == 0 else None,
+                   edgecolor="white", linewidth=0.4)
         left += v
-b0 = 100 * base[False]["interaction_share"]
-ax[0].axvline(b0, color=house.INK, lw=0.9); ax[0].axvline(b0 + 5, color=house.INK, lw=0.9, ls=":")
+    ax[2].plot([100 * res["survival_share"]], [y[r]], "o", color=house.INK, ms=5)
+ax[0].axvspan(100 * (b_gain - 2 * noise), 100 * (b_gain + 2 * noise), color="#d4d6dc", lw=0)
+ax[0].axvline(100 * b_gain, color=house.INK, lw=0.9); ax[0].axvline(100 * b_gain + 5, color=house.INK, lw=0.9, ls=":")
 ax[0].set_yticks(y); ax[0].set_yticklabels(labels, fontsize=9.5)
-ax[0].set_xlabel("interaction share (% of start states)"); ax[0].grid(axis="y", visible=False)
-ax[1].set_xlabel("best choice (% of start states, no warm bush)"); ax[1].set_xlim(0, 100); ax[1].grid(axis="y", visible=False)
-ax[0].set_ylim(-0.8, len(rows) - 0.3)
-fig.tight_layout(w_pad=1.0, rect=(0, 0.07, 1, 1))
+ax[0].set_xlabel("combination gain (points)"); ax[1].set_xlabel("best choice (% of start states)")
+ax[2].set_xlabel("survival (%)"); ax[1].set_xlim(0, 100)
+for a in ax:
+    a.grid(axis="y", visible=False)
+ax[0].set_ylim(-0.8, len(settings) - 0.3)
+fig.tight_layout(w_pad=0.8, rect=(0, 0.06, 1, 1))
 h, l = ax[1].get_legend_handles_labels()
-fig.legend(h, l, loc="lower center", ncol=3, frameon=False, bbox_to_anchor=(0.62, 0.0), fontsize=9.5)
+fig.legend(h, l, loc="lower center", ncol=4, frameon=False, bbox_to_anchor=(0.55, 0.0), fontsize=9.5)
 C.assert_no_text_overlap(fig); C.assert_min_text_px(fig)
 C.record_kind("s3_worlds", "planner")
-n_states = base[False]["n_states"]
 C.record_samples("s3_worlds", [
-    dict(what="worlds solved (each on two maps)", used=len(rows), total=len(SW.worlds()), note="sweep outputs present"),
-    dict(what="start states per world and map", used=n_states, total=n_states,
-         note="grid: food 0-200 by 4, injury 0-100 by 4, temperature -10..+5 by 0.5, at open ground")])
+    dict(what="worlds solved (each on two maps)", used=len(settings), total=len([w for w in SW.worlds() if w[1] != "check"]),
+         note="one setting changed at a time from today's level 05 with B1"),
+    dict(what="start states per map (food x injury x temperature at open ground)", used=41106, total=41106,
+         note="grid 51 x 26 x 31 over food 0-200, injury 0-100, temperature -10..+5"),
+    dict(what="start states excluded as ties (today's world)", used=int(round(41106 * base["summary"]["tie_share"])), total=41106,
+         note="best and second-best choice within 0.5 return units")])
 house.save(fig, os.path.join(C.FIG, "s3_worlds"), column_px=C.COLUMN_PX)
-json.dump(rule, open(os.path.join(C.OUT, "reading_rule.json"), "w"), indent=1)
-for k, v in rule.items():
-    print(f"  {'PASS' if v['passes'] else '    '} {k:60} share {100*v['interaction_share'][0]:5.1f} / {100*v['interaction_share'][1]:5.1f}")
+out["_meta"] = dict(baseline_gain=b_gain, noise_floor=noise, baseline_survival=b_surv,
+                    baseline_gain_discount_099=g99_base["summary"]["combination_gain"])
+json.dump(out, open(os.path.join(C.OUT, "reading_rule.json"), "w"), indent=1)
+print(f"baseline gain {100*b_gain:.1f}  noise floor {100*noise:.1f}  survival {100*b_surv:.1f}")
+for k, v in out.items():
+    if k != "_meta":
+        print(f"  {'PASS' if v['passes'] else '    '} {k:58} gain {100*v['combination_gain']:5.1f}  max-cat {100*max(v['balance'].values()):4.0f}  surv {100*v['survival_share']:5.1f}  r1{int(v['rule_1_gain'])} r2{int(v['rule_2_balance'])} r3{int(v['rule_3_survival'])}")

@@ -10,9 +10,12 @@ The reduced world -- every number measured, see measure_world.py / world_measure
   R  open fire ring, cell +8.8 F  a food item, cell -30
   * going to a place takes `trip[place]` steps (median measured trip 2) on cold ground; the last
     step is taken in the destination cell, as in the environment (post-move cell)
-  * predators: every step NOT in a bush adds `hazard` expected injury (0.64 measured from Wave 2
-    level-05 training recordings; 0.0 inside a bush, which animals cannot enter) -- an expected
-    value, so the planner sees the average cost of exposure, not single attacks
+  * predators: every step NOT in a bush adds expected injury -- `hazard_rest` on a resting step
+    (0.12 measured), `hazard_move` on any other step (0.70), 0.0 inside a bush (animals cannot
+    enter); measured from Wave 2 level-05 training recordings. An expected value (mean-field): the
+    planner sees the average cost of exposure, not single ~21-point attacks, so it under-counts
+    single-hit deaths at high injury; and agents choose where they rest, so the resting rate is
+    partly a selection effect
   * a bush on a fire ring exists in 41 % of episodes; each world is solved with and without one and
     summaries pool the two maps with weights 0.59 / 0.41
   * food items allow 12 bites before moving; the planner's food never runs out (stated limitation:
@@ -47,7 +50,8 @@ class World:
     body: B.Body = field(default_factory=B.Body)
     trip: dict = field(default_factory=lambda: {"O": 2, "B": 2, "W": 2, "R": 2, "F": 2})
     warm_bush: bool = True
-    hazard: float = 0.64
+    hazard_rest: float = 0.12
+    hazard_move: float = 0.70
     gamma: float = 0.95
     grid: tuple = (51, 26, 61)                 # food, injury, temperature grid points
 
@@ -78,8 +82,9 @@ def one_step(world, N, I, T, what, cell, bush):
     P = world.body
     s = B.step(N, I, T, rested=(what == "rest"), ate=(what == "eat"), in_bush=bush, cell_temp=cell, P=P)
     I2, dead, r = s["I"], s["dead"], s["reward"]
-    if world.hazard and not bush:
-        I3 = np.minimum(I2 + world.hazard, P.max_injury)
+    hz = world.hazard_rest if what == "rest" else world.hazard_move
+    if hz and not bush:
+        I3 = np.minimum(I2 + hz, P.max_injury)
         newly = (~dead) & (I3 >= P.max_injury)
         # the hazard's injury changes the drive this step too, and an injury death costs the penalty
         r = r + (B.drive(s["N"], I2, s["T"], P) - B.drive(s["N"], I3, s["T"], P)) - np.where(newly, P.death_penalty, 0.0)
@@ -92,7 +97,8 @@ def macro(world, N, I, T, kind, place):
     discount and the number of environment steps it took."""
     if kind == "go":
         n = world.trip[place]
-        steps = [("move", TRAVEL_CELL, False)] * (n - 1) + [("move", CELL[place], False)]
+        # the last step lands in the destination cell; arriving in a bush is already cover
+        steps = [("move", TRAVEL_CELL, False)] * (n - 1) + [("move", CELL[place], IN_BUSH[place])]
     else:
         steps = [(kind, CELL[place], IN_BUSH[place])]
     R = np.zeros_like(N); disc = np.ones_like(N); dead = np.zeros(N.shape, bool)
@@ -183,10 +189,10 @@ def start_mask(world, T_lo=-10.0, T_hi=5.0):
     return ((TT >= T_lo - 1e-9) & (TT <= T_hi + 1e-9)).ravel(), NN.ravel(), II.ravel(), TT.ravel()
 
 
-def summarise(sols, margin=0.5, T_lo=-10.0, T_hi=5.0):
-    """Pool the two maps (no warm bush / warm bush, weights 0.59 / 0.41) over training start states.
+def summarise_map(sol, margin=0.5, T_lo=-10.0, T_hi=5.0):
+    """One map, over training start states at open ground.
 
-    need balance        weighted share of states whose best category is each category
+    need balance        share of states whose best category is each category
     tie share           share whose best and second-best categories are within `margin` return units
     single accuracy     per body variable: accuracy of "the most common best category at this value"
     pair accuracy       the same with two variables known
@@ -194,32 +200,40 @@ def summarise(sols, margin=0.5, T_lo=-10.0, T_hi=5.0):
     interaction share   1 - best single accuracy (reported; capped by the balance of categories)
     Ties are excluded from the accuracies.
     """
-    cats, keep, w, X = [], [], [], {"food energy": [], "injury": [], "body temperature": []}
-    for sol, weight in sols:
-        mask, NN, II, TT = start_mask(sol["world"], T_lo, T_hi)
-        c, tie = best_category(sol, "O", margin)
-        cats.append(c[mask]); keep.append(~tie[mask]); w.append(np.full(mask.sum(), weight / mask.sum()))
-        X["food energy"].append(NN[mask]); X["injury"].append(II[mask]); X["body temperature"].append(TT[mask])
-    cats, keep, w = np.concatenate(cats), np.concatenate(keep), np.concatenate(w)
-    X = {k: np.concatenate(v) for k, v in X.items()}
-    w = w / w.sum()
-    balance = {c: float(w[cats == c].sum()) for c in CATEGORIES}
-    tie_share = float(w[~keep].sum())
-    cw, cc = w[keep] / w[keep].sum(), cats[keep]
+    mask, NN, II, TT = start_mask(sol["world"], T_lo, T_hi)
+    c, tie = best_category(sol, "O", margin)
+    cats, keep = c[mask], ~tie[mask]
+    X = {"food energy": NN[mask], "injury": II[mask], "body temperature": TT[mask]}
+    balance = {k: float((cats == k).mean()) for k in CATEGORIES}
+    cc = cats[keep]
 
     def acc(keys):
         k = np.zeros(cc.size)
-        for j, name in enumerate(keys):
+        for name in keys:
             k = k * 1e4 + X[name][keep]
-        total = 0.0
+        total = 0
         for v in np.unique(k):
             sel = k == v
-            total += max(cw[sel & (cc == c)].sum() for c in CATEGORIES)
-        return total
+            total += max(int((sel & (cc == c2)).sum()) for c2 in CATEGORIES)
+        return total / max(cc.size, 1)
     names = list(X)
     single = {n: acc([n]) for n in names}
     pair = {f"{a} + {b}": acc([a, b]) for i, a in enumerate(names) for b in names[i + 1:]}
-    return dict(balance=balance, tie_share=tie_share, single_accuracy=single, pair_accuracy=pair,
+    return dict(balance=balance, tie_share=float((~keep).mean()), single_accuracy=single, pair_accuracy=pair,
                 combination_gain=max(pair.values()) - max(single.values()),
-                interaction_share=1.0 - max(single.values()),
-                three_way_share=1.0 - max(pair.values()))
+                interaction_share=1.0 - max(single.values()), three_way_share=1.0 - max(pair.values()))
+
+
+def summarise(sols, margin=0.5, T_lo=-10.0, T_hi=5.0):
+    """Per-map summaries pooled with the map weights (plan-reviewer R2: accuracies and gains are
+    computed within each map, so a choice that differs between maps is not counted as a body-state
+    interaction)."""
+    per = [(summarise_map(s, margin, T_lo, T_hi), w) for s, w in sols]
+    tot = sum(w for _, w in per)
+    pool = lambda f: sum(w * f(s) for s, w in per) / tot
+    return dict(balance={c: pool(lambda s: s["balance"][c]) for c in CATEGORIES},
+                tie_share=pool(lambda s: s["tie_share"]),
+                combination_gain=pool(lambda s: s["combination_gain"]),
+                interaction_share=pool(lambda s: s["interaction_share"]),
+                three_way_share=pool(lambda s: s["three_way_share"]),
+                per_map=[s for s, _ in per])

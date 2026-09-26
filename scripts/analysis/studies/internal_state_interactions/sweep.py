@@ -2,9 +2,10 @@
 
 Each world changes ONE setting from today's level 05 with the random starting temperature (B1),
 and is solved on both maps (no warm bush / warm bush) and pooled 0.59 / 0.41. Also: the survival
-share of the ideal policy (rollouts from 2,000 training-style starts per map), and three checks that
-are not settings -- a finer grid (noise floor of the metric), the discount 0.99 instead of the
-training runs' 0.95, and the predator hazard at 0 and doubled. Resumable: existing JSONs are skipped.
+share of the ideal policy (rollouts from 2,000 training-style starts per map); every world is also
+solved at discount 0.99 (the runs train at 0.95) and summarised at tie margins 0 / 0.5 / 2; checks
+that are not settings: a finer grid (noise floor of the metric) and the predator hazard at 0 and
+doubled. Resumable: existing JSONs are skipped.
 
   python sweep.py --procs 8 --out results/analysis/internal_state_interactions/sweep
 """
@@ -44,10 +45,23 @@ def worlds():
         add("B5", "healing slows when hungry (floor)", f, body=dict(b5=True, b5_floor=f, b5_low=lo, b5_high=100.0))
     # checks, not settings
     add("check", "finer grid", "81x41x91", world=dict(grid=(81, 41, 91)))
-    add("check", "discount", 0.99, world=dict(gamma=0.99))
-    add("check", "predator hazard", 0.0, world=dict(hazard=0.0))
-    add("check", "predator hazard", 1.28, world=dict(hazard=1.28))
+    add("check", "predator hazard (x rest 0.12 / move 0.70)", 0.0, world=dict(hazard_rest=0.0, hazard_move=0.0))
+    add("check", "predator hazard (x rest 0.12 / move 0.70)", 2.0, world=dict(hazard_rest=0.24, hazard_move=1.40))
     return W
+
+
+MEAS = json.load(open(os.path.join(HERE, "..", "..", "..", "..",
+                             "results/analysis/internal_state_interactions/world_measurements.json")))
+_g = set(MEAS["gamma"].values())
+assert _g == {PL.World().gamma}, f"planner discount {PL.World().gamma} != training runs' {_g} (plan-reviewer R7)"
+MARGINS = (0.0, 0.5, 2.0)
+
+
+def solve_pair(body, t, wkw, gamma):
+    sols = []
+    for warm, weight in ((False, 1 - PL.WARM_BUSH_SHARE), (True, PL.WARM_BUSH_SHARE)):
+        sols.append((PL.solve(PL.World(body=BASE.with_(**body), trip=t, warm_bush=warm, gamma=gamma, **wkw)), weight))
+    return sols
 
 
 def run(job):
@@ -56,24 +70,29 @@ def run(job):
     if os.path.exists(path):
         return path, "skip"
     t = dict(TRIP); t.update(trip)
-    sols, surv, arrays = [], {}, {}
-    for warm, weight in ((False, 1 - PL.WARM_BUSH_SHARE), (True, PL.WARM_BUSH_SHARE)):
-        w = PL.World(body=BASE.with_(**body), trip=t, warm_bush=warm, **wkw)
-        sol = PL.solve(w)
-        sols.append((sol, weight))
+    sols = solve_pair(body, t, wkw, PL.World().gamma)
+    surv, arrays = {}, {}
+    for sol, _ in sols:
+        warm = sol["world"].warm_bush
         surv[f"warm{int(warm)}"] = PL.rollout_survival(sol)
         cat, tie = PL.best_category(sol, "O", 0.5)
         arrays[f"cat_warm{int(warm)}"] = np.array([PL.CATEGORIES.index(c) for c in cat], np.uint8)
         arrays[f"tie_warm{int(warm)}"] = tie
-        arrays[f"iters_warm{int(warm)}"] = np.array(sol["iters"])
-    summ = PL.summarise(sols)
+    summ = PL.summarise(sols, margin=0.5)
+    by_margin = {str(m): PL.summarise(sols, margin=m)["combination_gain"] for m in MARGINS}
     survival = sum(wt * surv[f"warm{int(s['world'].warm_bush)}"][0] for s, wt in sols)
     mean_steps = sum(wt * surv[f"warm{int(s['world'].warm_bush)}"][1] for s, wt in sols)
+    iters = [s["iters"] for s, _ in sols]; delta = [s["delta"] for s, _ in sols]
+    grid = list(sols[0][0]["world"].grid)
+    del sols
+    s99 = solve_pair(body, t, wkw, 0.99)                         # plan-reviewer R1: every world at 0.99
+    summ99 = PL.summarise(s99, margin=0.5)
     res = dict(name=name, group=group, label=label, value=value, body=body, trip=t, world=wkw,
-               grid=list(sols[0][0]["world"].grid), iters=[s["iters"] for s, _ in sols],
-               delta=[s["delta"] for s, _ in sols], summary=summ, survival_share=survival,
-               mean_survival_steps=mean_steps, survival_by_map=surv)
-    np.savez_compressed(path.replace(".json", ".npz"), grid=np.array(sols[0][0]["world"].grid), **arrays)
+               grid=grid, iters=iters, delta=delta,
+               summary=summ, gain_by_margin=by_margin, survival_share=survival, mean_survival_steps=mean_steps,
+               survival_by_map=surv, summary_gamma099=dict(combination_gain=summ99["combination_gain"],
+                                                           balance=summ99["balance"], tie_share=summ99["tie_share"]))
+    np.savez_compressed(path.replace(".json", ".npz"), grid=np.array(grid), **arrays)
     json.dump(res, open(path, "w"), indent=1)
     return path, "ok"
 

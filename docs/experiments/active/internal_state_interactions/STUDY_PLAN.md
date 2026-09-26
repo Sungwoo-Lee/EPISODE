@@ -143,6 +143,18 @@ the same commit.
 validation through a stripped world) and the internal-state reward study are the precedents; this
 study reuses their approach of checking a numeric model against the real `update_body`.
 
+### Revision 1b (2026-09-26) — answers to the confirming pass (R1–R8), before any sweep result was read
+
+The sweep started after Revision 1 was stopped and deleted unread. Changes: every world is solved at
+0.99 as well, so rule 4 is evaluated per world (R1); accuracies and the combination gain are computed
+within each map and then pooled 0.59 / 0.41 (R2); the predator hazard is split — **0.12** per resting
+step and **0.70** per other step outside a bush (measured; both agents agree within 0.04), with the
+mean-field and selection caveats stated (R3); the gain is also reported at tie margins 0 and 2
+alongside 0.5, and a world whose tie share exceeds **40 %** is flagged and not ranked (R4); the
+validation record carries the source commit (`2004b234`) and the page build checks it (R5); arriving
+in a bush counts as cover on the arrival step (R6); the sweep asserts the planner discount equals the
+training runs' measured one (R7); the page build refuses without passing validation (R8).
+
 ## Feedback from plan-reviewer
 
 **Verdict: NOT READY** (2026-09-26, reviewed against the plan above and the scripts that had
@@ -176,5 +188,38 @@ code uses 3 and cites a measurement the plan does not record.
 **What would flip the verdict to SOUND WITH CONCERNS:** the discount named in this plan with its
 source and matched in the code, and the reading rule's category list, layout comparison and
 indifference margin written down here before the sweep is read.
+
+Reviewed by: plan-reviewer
+
+## Feedback from plan-reviewer — addendum (confirming pass on Revision 1, commit `ad96c082`)
+
+**Verdict: SOUND WITH CONCERNS.** The Critical finding is resolved: the discount is 0.95, read from
+the two level-05 training runs' saved configs and recorded in `world_measurements.json`, with 0.99
+kept as a sensitivity check. Of the nine Moderate findings, seven are resolved in both plan and code
+(M1 tie margin + merged categories, M2 combination gain + finer-grid floor, M4 stated, M5 pooled
+maps + fixed categories, M6 survival rollout, M8 map row, M9 measured trips); M3 and M7 are
+resolved in design but each leaves one concern below. The simulator validation passed (4,000
+states, max difference 2e-5, no death-flag mismatch).
+
+**Concerns to settle before the page is read** (none blocks the sweep from running):
+
+| # | Sev | Where | Concern | Fix |
+|---|---|---|---|---|
+| R1 | 🟡 | Reading rule condition 4; `sweep.py:47` | The 0.99 check is solved for the baseline only, so "the same direction holds at 0.99" cannot be evaluated per world. | Solve every world (or every world that passes 1–3) at 0.99 too; it is the same code with `gamma=0.99`. |
+| R2 | 🟡 | `planner.summarise` (pooled accuracies) | Both maps are pooled *before* the accuracies are computed, so a label that differs between the maps at the same body state counts as "unexplained by any body variable". Map identity is not a body-state interaction; it lowers single and pair accuracy together and moves the gain in a direction that is not sign-determined. | Compute single / pair accuracy and the gain per map, then pool the gains 0.59 / 0.41 (balance and tie share can stay pooled). |
+| R3 | 🟡 | `measure_world.py:60-66`; `planner.one_step` | The hazard 0.64 is the mean damage over *all* open steps, moving and resting alike, but it is charged identically to "rest in the open", "warm up", "eat" and travel. Walking into hidden predators and being pounced while resting are different rates, and the rest-vs-cover split is the choice the metric hinges on. The 0 / 1.28 sensitivity brackets it only for the baseline. | Split the measurement by action (rest vs not) outside bushes and use two hazards (rest, move). Expected-value treatment is fine to first order — a 3 % chance of a ~21-point hit has the same mean — but say on the page that deaths from a single large hit at high injury are under-counted by a deterministic drift. |
+| R4 | 🟡 | Reading rule (ties excluded) | Excluding ties changes the population the gain is computed over; a world with a large tie share is compared on a different subset than the baseline. The finer-grid floor calibrates the grid, not the margin. | Add to the rule: a world whose tie share exceeds a stated cap (e.g. 20 %) is flagged, not ranked; report the baseline's gain at margins 0 / 0.5 / 2 so the margin's leverage is visible. |
+| R5 | 🟡 | `validation_current_rules.json` (`src_root` is a session scratchpad path) | The gate's meaning is "validated against *these* rules", but the record names a temporary copy that will not exist tomorrow. | `validate.py` records the commit SHA of the frozen tree (and `sweep`/page build print it); the gate compares it with the SHA the sweep ran against. |
+| R6 | 🟢 | `planner.macro:95` | The arrival step of a trip is flagged `bush=False`, so a trip *to* cover is charged one hazard step the environment would not charge (animals cannot enter the bush). Small (0.64 injury) and one-directional against cover. | Use `IN_BUSH[place]` on the last step. |
+| R7 | 🟢 | `planner.World.gamma` literal | 0.95 is typed, while the plan says it is read from the runs. | `sweep.py` asserts the literal equals `world_measurements.json["gamma"]`. |
+| R8 | 🟢 | Gates | The page-build refusal without a passing validation is a plan promise; no `build_page.py` exists yet. Expected at this stage; must be in the build script when it appears. | — |
+
+**Checked and holds:** the hazard's death and drive accounting (`one_step:82-86`); the pair-key
+construction cannot collide on this grid; the start mask's −10 / +5 bounds fall on grid points at
+both resolutions; the rollout's step accounting and 500-step cap; the trip measurement (nothing
+blocks movement on this map, so Manhattan distance is the path length); the map row.
+
+**Cost of being wrong now:** rankings could shift at the margin by R2/R3/R4, and condition 4 is
+unevaluable until R1 — a re-run of a minutes-long sweep, not a wrong horizon.
 
 Reviewed by: plan-reviewer

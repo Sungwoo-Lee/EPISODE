@@ -72,3 +72,15 @@ Severity legend: 🔴 Critical = fix before going further · 🟡 Moderate = lik
 The study costs minutes; its output chooses which level-05 variants get multi-seed training, each variant days of GPU. As written, the choice would be made for a 100-step-horizon oracle rather than the 20-step agent the project trains, and the tie / balance artefacts can pass or fail a setting by a margin the size of the pre-registered threshold — a week of training answering a slightly different question. No data-loss hazard.
 
 Reviewed by: plan-reviewer
+
+## Addendum — confirming pass on Revision 1 (commit `ad96c082`)
+
+Verdict lifted to **SOUND WITH CONCERNS**. C1 resolved (γ = 0.95 from the level-05 runs' saved
+configs, recorded in `results/analysis/internal_state_interactions/world_measurements.json`; 0.99 as
+sensitivity). M1, M2, M4, M5, M6, M8, M9, L1–L4 resolved in plan and code; M3 and M7 resolved in
+design with one residual concern each. The full residual list (R1–R8: per-world 0.99 solve, per-map
+accuracy pooling, hazard split by rest vs move, tie-share cap, validation provenance by commit SHA,
+bush arrival step, γ assertion, page gate still to be coded) is in the plan's own addendum section,
+`docs/experiments/active/internal_state_interactions/STUDY_PLAN.md` § "Feedback from plan-reviewer — addendum".
+
+Reviewed by: plan-reviewer

@@ -55,14 +55,17 @@ def main():
     hazard = {}
     for run in RUNS:
         fs = sorted(glob.glob(os.path.join(ROOT, f"results/trajectories_basicq2_w2/{run}/*/*/steps_*.parquet")))[:10]
-        d, b, t = [], [], []
+        d, b, t, rs = [], [], [], []
         for f in fs:
-            tb = pq.read_table(f, columns=["t", "damage", "agent_in_bush"])
+            tb = pq.read_table(f, columns=["t", "damage", "agent_in_bush", "rested"])
             d.append(tb.column("damage").to_numpy()); b.append(tb.column("agent_in_bush").to_numpy(zero_copy_only=False))
-            t.append(tb.column("t").to_numpy())
-        d, b, t = np.concatenate(d), np.concatenate(b).astype(bool), np.concatenate(t)
+            t.append(tb.column("t").to_numpy()); rs.append(tb.column("rested").to_numpy(zero_copy_only=False))
+        d, b, t, rst = np.concatenate(d), np.concatenate(b).astype(bool), np.concatenate(t), np.concatenate(rs).astype(bool)
         m = t >= 1
+        # split outside cover by whether the agent rested that step (plan-reviewer R3): the rest-vs-cover
+        # choice hinges on the resting rate. Selection caveat: agents choose where they rest.
         hazard[run] = dict(open=float(d[m & ~b].mean()), bush=float(d[m & b].mean()),
+                           open_resting=float(d[m & ~b & rst].mean()), open_not_resting=float(d[m & ~b & ~rst].mean()),
                            open_hit_share=float((d[m & ~b] > 0).mean()), rows=int(m.sum()))
     gammas = {run: yaml.safe_load(open(os.path.join(ROOT, "results/JAX_RecurrentPPO", run, "models/config.yaml")))["agent"]["gamma"]
               for run in RUNS}

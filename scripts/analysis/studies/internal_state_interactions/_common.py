@@ -17,10 +17,10 @@ KIND = {"simulation": "simulation — body rules only, no trained agent",
         "planner": "ideal planner — the best choices under the body rules, not a trained agent",
         "validation": "check — simulator against the real environment"}
 
-# one colour per choice category, shared by every figure (house hues; neutral for 'wait')
-CHOICE_COLOURS = {"rest in cover": house.BLUE, "rest in cover (warm)": "#7fb0e6", "warm up": house.ORANGE,
-                  "eat": house.GREEN, "rest in the open": "#8a8f99", "wait": "#d4d6dc"}
-CHOICE_ORDER = ["rest in cover", "rest in cover (warm)", "warm up", "eat", "rest in the open", "wait"]
+# one colour per choice category (planner.CATEGORIES), shared by every figure
+CHOICE_COLOURS = {"rest in cover": house.BLUE, "warm up": house.ORANGE, "eat": house.GREEN,
+                  "stay in the open": "#b8bcc4"}
+CHOICE_ORDER = ["rest in cover", "warm up", "eat", "stay in the open"]
 
 
 def record_samples(stem, rows):
@@ -41,9 +41,5 @@ def record_kind(stem, kind):
 
 
 def sweep_results():
-    """All sweep JSONs, keyed by (name, warm_bush)."""
-    out = {}
-    for p in sorted(glob.glob(os.path.join(SWEEP, "*.json"))):
-        d = json.load(open(p))
-        out[(d["name"], d["warm_bush"])] = d
-    return out
+    """All sweep JSONs, keyed by world name."""
+    return {json.load(open(p))["name"]: json.load(open(p)) for p in sorted(glob.glob(os.path.join(SWEEP, "*.json")))}

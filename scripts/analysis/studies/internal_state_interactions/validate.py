@@ -25,6 +25,7 @@ def main():
     ap.add_argument("--mechanics", required=True, choices=["none", "all"])
     ap.add_argument("--n", type=int, required=True)
     ap.add_argument("--out", required=True)
+    ap.add_argument("--src-commit", required=True, help="the commit the --src-root tree was exported from")
     a = ap.parse_args()
     os.environ.setdefault("JAX_PLATFORMS", "cpu")
     sys.path.insert(0, os.path.abspath(a.src_root)); sys.path.insert(0, HERE)
@@ -105,7 +106,7 @@ def main():
     N32, I32, T32, c32 = (np.asarray(x, np.float32).astype(float) for x in (N, I, T, cell))
     s = B.step(N32, I32, T32, rested, ate, in_bush, c32, Psim)
     tol = 1e-3
-    res = {"n": n, "mechanics": a.mechanics, "src_root": a.src_root, "world": a.world,
+    res = {"n": n, "mechanics": a.mechanics, "src_commit": a.src_commit, "world": a.world,
            "max_abs_diff": {"nutrition": float(np.abs(s["N"] - nut).max()), "injury": float(np.abs(s["I"] - inj).max()),
                             "body_temp": float(np.abs(s["T"] - bt).max()),
                             "drive": float(np.abs(B.drive(s["N"], s["I"], s["T"], Psim) - drv).max())},
