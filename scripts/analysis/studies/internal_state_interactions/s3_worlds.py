@@ -20,7 +20,7 @@ base = R["baseline__level 05__today"]
 finer = R["check__finer grid__81x41x91"]
 noise = abs(finer["summary"]["combination_gain"] - base["summary"]["combination_gain"])
 b_gain, b_surv = base["summary"]["combination_gain"], base["survival_share"]
-settings = [w for w in SW.worlds() if w[1] not in ("check",) and w[0] in R]
+settings = [w for w in SW.worlds(R["baseline__level 05__today"]["trip"]["F"]) if w[1] not in ("check",) and w[0] in R]
 
 
 def rule(res):
@@ -74,7 +74,7 @@ fig.legend(h0 + h, l0 + l, loc="lower center", ncol=4, frameon=False, bbox_to_an
 C.assert_no_text_overlap(fig); C.assert_min_text_px(fig)
 C.record_kind("s3_worlds", "planner")
 C.record_samples("s3_worlds", [
-    dict(what="worlds solved (each on two maps)", used=len(settings), total=len([w for w in SW.worlds() if w[1] != "check"]),
+    dict(what="worlds solved (each on two maps)", used=len(settings), total=len([w for w in SW.worlds(R["baseline__level 05__today"]["trip"]["F"]) if w[1] != "check"]),
          note="one setting changed at a time from today's level 05 with B1"),
     dict(what="start states per map (food x injury x temperature at open ground)", used=41106, total=41106,
          note="grid 51 x 26 x 31 over food 0-200, injury 0-100, temperature -10..+5"),

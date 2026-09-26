@@ -40,7 +40,8 @@ def main():
                 by_d.setdefault(min(d, 4), []).append(float(F[r, c]))
         hides = np.asarray(P.obs_hides_agent) & np.asarray(st.obs_active)
         bushes = np.asarray(st.obs_pos)[hides]
-        foods = np.asarray(st.res_pos)[np.asarray(st.res_active)]
+        # food items only: res_type 1 is an ambush predator (plan-reviewer / env-config-reviewer 2026-09-26)
+        foods = np.asarray(st.res_pos)[np.asarray(st.res_active) & (np.asarray(st.res_type) == 0)]
         rings = [(r, c) for r in range(H) for c in range(W) if min(dist((r, c), f) for f in fires) == 1]
         warm.append(any(min(dist(b, f) for f in fires) <= 1 for b in bushes))
         ring_bush.extend(min(dist(b, f) for f in fires) <= 1 for b in bushes)

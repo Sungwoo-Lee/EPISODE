@@ -14,7 +14,7 @@ R = C.sweep_results()
 rule = json.load(open(os.path.join(C.OUT, "reading_rule.json")))
 base = R["baseline__level 05__today"]
 noise = rule["_meta"]["noise_floor"]
-rows = [w for w in SW.worlds() if w[0] in R and w[1] != "baseline" and not w[0].startswith("check__finer")]
+rows = [w for w in SW.worlds(R["baseline__level 05__today"]["trip"]["F"]) if w[0] in R and w[1] != "baseline" and not w[0].startswith("check__finer")]
 # shapes and fills only, all in ink: blue and grey already mean choices on this page (F11)
 VARIANTS = [("margin 0", lambda r: r["gain_by_margin"]["0.0"], "o", house.INK, "full"),
             ("margin 0.5 (rule)", lambda r: r["gain_by_margin"]["0.5"], "o", house.INK, "none"),

@@ -18,10 +18,10 @@ import bodysim as B
 import planner as PL
 
 BASE = B.Body()
-TRIP = {"O": 2, "B": 2, "W": 2, "R": 2, "F": 2}
+TRIP = {"O": 2, "B": 2, "W": 2, "R": 2}      # plus "F" (trip to food), set by --food-trip
 
 
-def worlds():
+def worlds(food_trip):
     """(name, group, label, value, body kwargs, trip overrides, world kwargs)."""
     W = []
     def add(group, label, value, body=None, trip=None, world=None):
@@ -31,7 +31,7 @@ def worlds():
         add("A1", "staying warm costs food (rate)", r, body=dict(coupling=True, coupling_rate=r))
     for c in (0.25, 0.5, 1.0, 2.0):
         add("B3", "healing costs food (per point)", c, body=dict(heal_cost=c, shortfall="partial"))
-    for d in (4, 6, 8):
+    for d in (food_trip + 2, food_trip + 4, food_trip + 6):
         add("A4", "trip to food (steps)", d, trip=dict(F=d))
     for g in (3.0, 2.0):
         add("A4", "food per bite (net)", g, body=dict(food_gain_net=g))
@@ -65,11 +65,11 @@ def solve_pair(body, t, wkw, gamma):
 
 
 def run(job):
-    name, group, label, value, body, trip, wkw, out = job
+    name, group, label, value, body, trip, wkw, out, food_trip = job
     path = os.path.join(out, f"{name}.json")
     if os.path.exists(path):
         return path, "skip"
-    t = dict(TRIP); t.update(trip)
+    t = dict(TRIP, F=food_trip); t.update(trip)
     sols = solve_pair(body, t, wkw, PL.World().gamma)
     surv, arrays = {}, {}
     for sol, _ in sols:
@@ -99,9 +99,12 @@ def run(job):
 
 def main():
     ap = argparse.ArgumentParser(); ap.add_argument("--procs", type=int, required=True)
-    ap.add_argument("--out", required=True); a = ap.parse_args()
+    ap.add_argument("--out", required=True)
+    ap.add_argument("--food-trip", type=int, required=True,
+                    help="steps to food; measured median 4 once ambush predators are excluded (the first sweep used 2)")
+    a = ap.parse_args()
     os.makedirs(a.out, exist_ok=True)
-    jobs = [(n, g, l, v, b, t, wk, a.out) for (n, g, l, v, b, t, wk) in worlds()]
+    jobs = [(n, g, l, v, b, t, wk, a.out, a.food_trip) for (n, g, l, v, b, t, wk) in worlds(a.food_trip)]
     with ProcessPoolExecutor(a.procs) as ex:
         for p, s in ex.map(run, jobs):
             print(s, os.path.basename(p), flush=True)
