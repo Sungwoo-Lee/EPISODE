@@ -8,8 +8,17 @@ last_updated: 2026-09-26
 
 # Behaviour probes that set injury, fullness and body temperature together (body-state grid)
 
-> **Status**: PLANNED. Waiting on the user decisions in §Decisions, then `plan-reviewer`, then approval.
+> **Status**: PLANNED, Revision 1. `plan-reviewer` has reviewed it (SOUND WITH CONCERNS, see the feedback at the end); this revision resolves every finding. Waiting on the four user decisions in §Decisions, then approval.
 > **Opened**: 2026-09-26
+
+> **Revision 1 (2026-09-26), in response to the plan-reviewer feedback appended below.** What changed, in plain words:
+> - **The comparison recordings are now re-made with today's code** (M1). The byte-exact check in CP4 used to compare against recordings made two days ago, before four environment changes. It now re-makes those four reference recordings first. Comparing old against fresh is kept as a separate, optional check.
+> - **One known tiny rounding difference is allowed, and only that one** (M2). Recompiling the reset can shift one animal value by at most one float step (Known Bugs row 153). CP4 now says in advance exactly when that is accepted.
+> - **The example runs never trained with a random start temperature** (M3). The two level-05 runs used as the worked example always started at 0°. Their −10/−5/+5 cells are outside what they trained on. §D1 and CP5 now say so. The manifest records each run's own training start ranges, and the summary tool flags cells outside them.
+> - **The rule check now compares what the environment actually loads** (M4, O4). It compares the loaded environment parameters, not the YAML text. "Temperature system on/off" is always compared, never exempt.
+> - **The record of what was generated is kept with the results and in git** (M5). The manifest is copied into the sweep's output folder, the summary tool reads it from there, and `manifest.json` is no longer gitignored.
+> - **CP1 now diffs the recordings themselves** (M6). Before and after the recorder fix, everything must be identical except the new body-temperature entry.
+> - Also: a fresh-output-folder check and a note on thermal-off runs (L1), a corrected cost note (L2), the temperature "runway" caveat (O1), rPPO-only scope (O2), and a mandatory per-run `--check-only` before launch (O3). The new §Pre-launch steps collects these.
 > **Related**: [[STATE_DEPENDENT_BODY_MECHANICS]] (the level-05 body rules that motivate this) · [[INJURY_DEPENDENCE_PLAN]] (the injury-only probe battery this extends) · [[SAVED_RUN_CONFIG_COMPAT]] (how old runs' saved settings are re-opened) · [[EXPERIMENT_EVAL_DURING_TRAINING]] · `docs/experiments/active/level05_body_interactions/` (the upcoming 16-world experiment, being designed by `experiment-designer`; folder does not exist yet)
 
 ---
@@ -37,7 +46,9 @@ To answer that, a probe must set three things at once, and exactly: starting inj
 
 The generator copies the run's own body rules into the probes. Without that, an agent trained where healing costs food would be tested in a world where healing is free.
 
-The work needs no change to the environment code (`src/`). It uses configs and scripts only, and it reuses the existing evaluation sweep. The default grid costs about 14,400 test episodes per run, at one checkpoint. For comparison, one arm of the existing injury grid costs 45,000 episodes per run.
+The work needs no change to the environment code (`src/`). It uses configs and scripts only, and it reuses the existing evaluation sweep. The default grid costs about 14,400 test episodes per run, at one checkpoint. For comparison, one arm of the existing injury grid costs 45,000 episodes per run. Fewer episodes does not mean proportionally less time, though: each starting temperature needs its own compile (see §Cost).
+
+The generator supports **recurrent-PPO runs only** for now. Dreamer runs load their evaluation settings differently and have not been checked (plan-reviewer O2).
 
 ---
 
@@ -68,6 +79,8 @@ Reset path, `src/environment/core.py:1897-1929`:
 
 **The temperature draw does not shift other random streams.** `body_key1` is split whether or not B1 is on, and before B1 nothing read it (`core.py:1898`, comment at `:1919-1922`). So a probe with the flag on and `T` equal to the setpoint (0.0) starts in exactly the same state as today's probe with the flag off, and every other random draw is the same too. §CP4 uses this as a byte-exact anchor.
 
+One caveat (Revision 1, M2). `thermal.random_start_body_temp` and the two range keys are **static** fields of `EnvParams` (`src/environment/state.py:456-458`). Turning the flag on changes how `jax_reset` is compiled. Known Bugs row 153 records that a recompiled reset can differ by 1 ulp (one float32 step) in `animal_property_sampled`. That is documented behaviour, not a bug. CP4 therefore pre-registers exactly this tolerance and nothing wider.
+
 **How the existing generators build a probe.** `behavior_probes/injury_grid/generate_injury_grid.py` reads one of three core scenes (`core/avoidance/avoid_{none,pred,rabbitwander}_inj00.yaml`). It sets `start_injury_low/high`, then passes the result through the thermal generator's `build()` (`behavior_probes/thermal/generate_thermal_probes.py:219-240`) for four temperature "arms":
 
 | Arm | Surroundings |
@@ -94,6 +107,8 @@ Probe episodes last `max_steps: 100`. The scenes have no food. Nutrition runs 0�
 - An agent that starts at N = 20 starves by about step 20. At N = 60 it starves by about step 60.
 - That is a real outcome: survival steps are the project's performance measure. It also means behaviour after that step is simply missing.
 - The analysis tool therefore reports survival steps and termination reason in every cell. Hiding and resting rates use **alive steps only**, the same convention `scene_steps.py` uses, and each is given with its denominator.
+
+**Temperature has the same "runway" effect in the `fire_away` arm** (Revision 1, O1). There the air is cold and the bush is lethally cold (its steady temperature is −20.24°). An agent that starts at −10° reaches the −15° floor within a fraction of the 100-step window unless it reaches the fire. So in that arm the temperature axis partly measures how long the agent can survive, not only what it chooses to do. The termination-reason counts will show this, and any write-up must read the `fire_away` temperature cells with that in mind.
 
 Whether to add a scene **with** food is a scene-design question (§Decisions Q2). The generator takes any list of source scenes, so a food scene can be added later without changing code.
 
@@ -124,7 +139,9 @@ From `scripts/eval/dwell_sweep/run_sweep.py`:
 
 ### Design
 
-**D1. The grid (default values; see Q1).** All values below are inside level 05's training ranges (nutrition 0–200, injury 0–100, body temperature −10 to +5).
+**D1. The grid (default values; see Q1).** All values below are inside the **current** level-05 training ranges (nutrition 0–200, injury 0–100, body temperature −10 to +5).
+
+**This is not true of every existing run** (Revision 1, M3). The random start temperature (B1) was added on 2026-09-26. The second-wave level-05 runs used as the worked example (change 4) predate it: their saved config has no `random_start_body_temp`, the compatibility layer supplies `false`, and the critical-settings change log of 2026-09-26 records that those runs started every episode at 0.0°. For them, the −10, −5 and +5 cells are starting states they never trained from. That is acceptable for a smoke test. It is **not** acceptable to quote those cells as a result. To keep this from being lost, the manifest records each run's own training start range per axis (§D4), and the reducer flags every cell outside it (change 3).
 
 | Axis | Levels | Why these |
 |---|---|---|
@@ -137,15 +154,21 @@ From `scripts/eval/dwell_sweep/run_sweep.py`:
 That gives 4 × 5 × 4 = 80 cells per scene and arm, and **80 × 3 × 2 = 480 probe conditions per run**. For a run with no temperature system (levels 02–04) the temperature axis and the arms drop out: 4 × 5 × 3 = 60 conditions, built from the core scenes.
 
 **D2. Rules come from the run; the scene comes from the probe.** For each output cell the generator does the following.
-1. Load the core scene YAML, then apply the thermal generator's `build(src, arm, 'clean', None)` (imported, as `generate_injury_grid.py` does) to add the arm's ambient temperature and fire.
+1. Load the core scene YAML. If the run has thermal on, apply the thermal generator's `build(src, arm, 'clean', None)` (imported, as `generate_injury_grid.py` does) to add the arm's ambient temperature and fire. **If the run has thermal off, `build()` is skipped** and the core scene is used as is (there are no arms; `--arms` is refused).
 2. Load the run's saved config (`<run>/models/config.yaml`) through `load_env_config`, then `apply_saved_config_compat` (the same path `eval_rollout.py` uses for a saved config, so old runs work).
-3. **Replace** the probe's `body:`, `sensory:` and `perceptual_noise:` sections, and every `thermal:` key except `enabled` and `default_temp`, with the run's resolved values. `default_temp` stays under the arm's control. The scene (`environment:`) and `behavior_measures:` stay the probe's, so behaviour is measured the same way in every run.
+3. **Replace** the probe's `body:`, `sensory:` and `perceptual_noise:` sections, and every `thermal:` key except `default_temp`, with the run's resolved values. `default_temp` stays under the arm's control. (Revision 1, O4: `thermal.enabled` is now copied from the run too, and it is **never** exempt from the rule check in §D3 (b). If it were exempt, checking a level-05 folder against a level-04 run would wrongly pass.) The scene (`environment:`) and `behavior_measures:` stay the probe's, so behaviour is measured the same way in every run.
 4. Override the start keys exactly as in §A1. Set `body.random_start_nutrition: false`, `body.start_nutrition: N`, `body.random_start_injury: true`, `body.start_injury_low/high: I`. When thermal is on, also set `thermal.random_start_body_temp: true` and `thermal.start_body_temp_low/high: T`. All five are always written explicitly, because the run's own values are random ranges (level 05 randomises all three).
 5. Because perceptual noise comes from the run, the "clean vs noise-matched" battery choice goes away. A level-05 run gets its own (no) noise and a level-06 run gets its own noise block, which is the noise-matched battery by construction.
 
 **D3. Checks run on the written file, not on the recipe.** The file is loaded through `load_env_config` → `load_env_params`, and the real `ParallelEnv` is reset. The generator then checks:
 - **(a)** For all 4 episodes of a `PRNGKey(0)` reset, the state's `injury_level == I`, `nutrition == N` and `body_temp == T`, exactly in float32. Satiation equals the value derived from N.
-- **(b)** A **rule diff**: every flattened key under `body`, `thermal`, `sensory` and `perceptual_noise` of the loaded probe equals the loaded run config's value. The only exceptions are an explicit allowlist: the start keys from D2 step 4 and `thermal.default_temp`. Keys missing from the run config (sub-keys whose parent switch is off) are listed as "unread, from default" and do not fail the check.
+- **(b)** A **rule check on what the environment actually loads** (Revision 1, M4). Build `EnvParams` twice: `load_env_params(probe)` and `load_env_params(run config after apply_saved_config_compat)`. Compare every field. A field may differ only if it is on one of two explicit, named lists that the script prints into the report:
+  - **scene fields**: fields that are filled from the probe's `environment:` or `behavior_measures:` sections (grid layout, entities, resources, measure settings). The developer builds this list by reading `load_env_params`, and each entry names the YAML section it comes from;
+  - **start fields**: the fields loaded from the five start keys of D2 step 4 (for temperature, `thermal_random_start_body_temp`, `thermal_start_body_temp_low`, `thermal_start_body_temp_high`), and the field loaded from `thermal.default_temp`.
+
+  Every other field, including the one loaded from `thermal.enabled`, must be equal. This compares the ground truth the environment runs on, so a missing YAML key can no longer hide a difference: the loader turns it into a concrete value on both sides.
+
+  A YAML-level diff is still written into the manifest, as a readable report only. In that report, a key missing from the run config is allowed only when its parent switch is **off in the probe**. The one named exception is B1's range keys (`thermal.start_body_temp_low/high`), which the probe always writes. Any other missing key is shown as an error in the report. The `EnvParams` comparison is what passes or fails the check.
 - **(c)** The observation width equals the run's.
 - **(d)** For thermal arms, `T.verify` (arm survivability contract, a hiding bush that also blocks animals, full-arena view).
 
@@ -155,11 +178,14 @@ That gives 4 × 5 × 4 = 80 cells per scene and arm, and **80 × 3 × 2 = 480 pr
 - for each condition: its scene, arm, injury, nutrition and temperature;
 - the source run path and the sha256 of its saved config;
 - the generator's git commit;
-- the rule-diff report.
+- the rule-check report (the `EnvParams` comparison and the YAML report, §D3 (b));
+- **the run's own training start range per axis** (Revision 1, M3), read from the run's resolved config: nutrition (`random_start_nutrition`, low/high or the fixed value), injury (`random_start_injury`, low/high, or fixed 0), and body temperature (`thermal.random_start_body_temp`, low/high, or fixed at the setpoint). For each condition the manifest also stores `in_training_range: {injury, nutrition, body_temp}` as three booleans.
+
+**The manifest travels with the results and is in git** (Revision 1, M5). The generated YAML files stay gitignored (if Q3 = gitignored), but `manifest.json` is un-ignored with a negation pattern (change 5), so it can be committed. At launch the manifest is copied into the sweep's `output_dir` (§Pre-launch steps), and the reducer reads it **from there**. Regenerating a world folder later with different levels therefore cannot silently pair old results with a new manifest.
 
 Keeping the files under `configs/` matters. `eval_rollout.py` applies saved-config compatibility, which quietly fills missing keys, only to files **outside** `configs/` (`_is_under_configs`, `:804-808`). A probe that lived under `results/` would therefore quietly skip the missing-key error.
 
-**D5. Reuse across runs of the same world.** All seeds and both agents of one world share one `<world_label>` folder. `--check-only --run <other run>` re-runs check (b) against that other run. It must pass before the run is added to that world's sweep spec. A mismatch (a different world) fails loudly.
+**D5. Reuse across runs of the same world.** All seeds and both agents of one world share one `<world_label>` folder. `--check-only --run <other run>` re-runs check (b) against that other run. A mismatch (a different world) fails loudly. **This is a mandatory pre-launch step for every run in a spec, not an optional one** (Revision 1, O3). Whether the control and modulated agents of one world really share identical environment settings depends on how `experiment-designer` writes the 16-world configs. It is true for wave 2, but it has to be checked per run.
 
 ### File Changes
 
@@ -170,7 +196,7 @@ No `src/` change. No config-schema change, so `CONFIG_GUIDE.md` and `02_config_s
 One level under `scripts/`, so the repo root is `parents[2]` (the depth hazard in `SCRIPTS_DEPENDENCY_MAP.md`). CLI:
 
 ```text
---run <run dir>            mandatory; reads <run>/models/config.yaml
+--run <run dir>            mandatory; reads <run>/models/config.yaml (rPPO runs only; refuse a Dreamer run dir)
 --world-label <slug>       mandatory; output subfolder name
 --injury 0 30 60 90        mandatory (no default in code; the values go in the command / spec header)
 --nutrition 20 60 100 140 180   mandatory
@@ -183,6 +209,7 @@ One level under `scripts/`, so the repo root is `parents[2]` (the depth hazard i
 - Every grid value comes from the command line. **No defaults** (project rule), and each is echoed into each file's header and the manifest.
 - The script refuses nutrition outside `[0, max_nutrition]` (after the run's config is loaded), injury outside `[0, max_injury]`, and temperature outside `[min_temperature, max_temperature]`.
 - It refuses to overwrite a `<world_label>` folder whose manifest names a source run from a **different world**, meaning check (b) fails against it.
+- It refuses a run whose saved config is not a resolved recurrent-PPO config (for example one that still contains `extends:`, or a Dreamer run). Dreamer support is out of scope (O2).
 - It imports `build`, `measure`, `verify` and `ARMS` from `generate_thermal_probes.py` by file spec (as `generate_injury_grid.py:51-55` does). It does not copy them.
 - Each file's header has the same form as the injury grid's: generated, do not hand-edit, the regenerate command, the source run, the cell values.
 
@@ -203,14 +230,14 @@ On a thermal-off config `state.body_temp` is still a scalar that stays at the se
 
 #### 3. NEW `scripts/analysis/body_state_grid_steps.py`
 
-One level deep, `parents[2]`, run-agnostic. It takes `--eval-dir <sweep output_dir>`, `--label <run label>`, `--manifest <generated dir>/manifest.json` and `--out <file>.npz/.json`. Per condition, at the evaluated checkpoint, it computes:
+One level deep, `parents[2]`, run-agnostic. It takes `--eval-dir <sweep output_dir>`, `--label <run label>` and `--out <file>.npz/.json`. **It reads the manifest from `<eval-dir>/manifest.json`** (Revision 1, M5), the copy made at launch, not from the generated folder. If that file is missing it exits non-zero. There is no `--manifest` option. Per condition, at the evaluated checkpoint, it computes:
 - survival steps (mean, median, and the full per-episode list);
 - termination-reason counts;
 - time course of share in the bush and share resting, over alive episodes only, each with its denominator;
 - mean injury, nutrition and body temperature over time (body temperature needs change 2; the tool exits non-zero if a thermal cell's recordings lack `body_temp`);
 - share of steps 1–25 spent in the bush (the injured window `scene_steps.py` uses).
 
-It reads the recordings the sweep keeps under `<output_dir>/_scratch/`. It flags the no-animal scene as `deterministic: true`, so later statistics treat it as n = 1. **Survival steps are the performance measure; reward is not read.**
+It reads the recordings the sweep keeps under `<output_dir>/_scratch/`. It flags the no-animal scene as `deterministic: true`, so later statistics treat it as n = 1. It copies the manifest's `in_training_range` flags onto every cell and prints how many cells are off-range for the run (M3), so an off-range cell cannot be read as an ordinary result by accident. **Survival steps are the performance measure; reward is not read.**
 
 #### 4. NEW `configs/eval_sweeps/body_state_grid/bodygrid_lvl05_wave2_rppo.yaml`
 
@@ -219,7 +246,7 @@ This is the worked example and the smoke test, for the two second-wave level-05 
 ```yaml
 name: bodygrid_lvl05_wave2
 algo: rppo
-output_dir: results/eval/avoidance/metrics_history_rppo_bodygrid_lvl05_wave2   # fresh; must not exist
+output_dir: results/eval/avoidance/metrics_history_rppo_bodygrid_lvl05_wave2   # fresh; asserted absent before launch (run_sweep.py does not check)
 probe: configs/environment/experiment/behavior_probes/body_state_grid/generated/lvl05_wave2
 conditions: all
 episodes: 30
@@ -231,9 +258,17 @@ runs:
   - {label: lvl05_modulated, path: results/JAX_RecurrentPPO/20260922-182538_rppo_bq2cover_lvl05_t16quad_s42}
 ```
 
-The header comment states the generator command that must be run first, because the probe folder is gitignored. The 16-world specs are `experiment-designer`'s (§Hand-offs).
+The header comment states the generator command that must be run first, because the probe folder is gitignored, and points to §Pre-launch steps. These runs never trained with a random start temperature (M3): the header says their off-0° cells are a smoke test only. The 16-world specs are `experiment-designer`'s (§Hand-offs).
 
-#### 5. `.gitignore`: add `configs/environment/experiment/behavior_probes/body_state_grid/generated/` (only if Q3 = gitignored)
+#### 5. `.gitignore` (only if Q3 = gitignored)
+
+```gitignore
+configs/environment/experiment/behavior_probes/body_state_grid/generated/**
+!configs/environment/experiment/behavior_probes/body_state_grid/generated/*/
+!configs/environment/experiment/behavior_probes/body_state_grid/generated/*/manifest.json
+```
+
+Ignore the generated YAML files, but keep each world's `manifest.json` trackable (M5). The developer must confirm with `git check-ignore -v` that a generated `.yaml` is ignored and a `manifest.json` is not.
 
 #### 6. NEW `tests/scripts/test_body_state_grid.py`
 
@@ -242,6 +277,8 @@ Each test must fail on today's code.
 - `test_cell_pins_exact_start_state`: generate 3 cells into `tmp_path` from a fixture run config (a copy of the resolved level-05 world with thermal on). Include one cell with T = −10 and one with N = 180. Reset and assert (a) exactly. It fails today because the script does not exist.
 - `test_run_rules_are_copied`: the fixture run config sets `body.healing_nutrition_cost: 0.5` and `thermal.metabolic_coupling: true`. Assert that both reach the loaded `EnvParams` of the generated probe. Then assert that a probe built the injury-grid way (extending `environment/default`) has 0.0 and false. That second assertion documents the gap this plan closes.
 - `test_rule_diff_catches_mismatch`: hand-edit one generated file's `body.metabolic_cost` and assert that `--check-only` exits non-zero.
+- `test_rule_check_catches_switch_turned_on` (Revision 1, M4): in a generated file, turn on a parent switch that is off in the run (for example `body.healing_nutrition_dependence`), leaving its sub-keys absent. Assert that `--check-only` exits non-zero. A YAML diff that exempts missing keys would pass this; the `EnvParams` comparison must not.
+- `test_thermal_enabled_is_never_exempt` (O4): check a thermal-on generated file against a fixture run config with `thermal.enabled: false`, and assert failure.
 - `test_batched_recording_has_body_temp`: run `eval_rollout.py --batched --record` for 2 episodes of 5 steps on a thermal probe with a tiny checkpoint fixture. If no fixture checkpoint exists in `tests/`, call the batched rollout function directly with a random-init policy, following the pattern in `tests/scripts/test_eval_rollout_online_replay.py`. Assert that each snapshot has `body_temp`, and that it equals the unbatched path's value for the same seed. It fails today because the key is absent.
 
 #### 7. `docs/environment/SCRIPTS_DEPENDENCY_MAP.md` (same change; Maintenance Contract)
@@ -266,27 +303,51 @@ Add one paragraph: body-state grid probes are generated per world (point to the 
 | 16-world experiment, per seed (2 agents per world) | 32 runs × 14,400 = **460,800 episodes** |
 | Generated YAML files | 480 per world → 7,680 for 16 worlds (why Q3 matters) |
 
-Wall time is **not estimated**. It is measured at CP5. The only number on file is ~36 s for 12 conditions × 30 episodes in one batched process on a 20-core node ([[EXPERIMENT_EVAL_DURING_TRAINING]]). Scaled linearly, that suggests roughly 20–30 CPU-minutes per run. That scaling is an assumption until CP5 measures it. Recording disk size is also measured at CP5, not assumed.
+Wall time is **not estimated**. It is measured at CP5. The only number on file is ~36 s for 12 conditions × 30 episodes in one batched process on a 20-core node ([[EXPERIMENT_EVAL_DURING_TRAINING]]).
+
+**Linear scaling from that number underestimates** (Revision 1, L2). The two temperature range keys are static fields (`state.py:457-458`), so every starting temperature is a separate compile of the batched rollout. The default grid needs about 4 temperatures × 3 scenes × 2 arms = **24 compiles per run**, against about 6 for the injury grid, and the 36 s figure came from a battery that shared compiles. Expect compile time to be a visible share of each run; CP5 measures it.
+
+**Disk.** Existing injury-grid `.rec.gz` recordings are about 10 KB each (measured by plan-reviewer). At 14,400 episodes that is about **145 MB per run**, about **4.6 GB for the 32 runs** of one seed of the 16-world experiment. CP5 confirms this.
 
 ---
 
 ## Checkpoints
 
-- [ ] **CP1: the recorder change breaks nothing.** Before and after change 2, run the parity harness `scripts/eval/parity_check_eval_rollout.py` on one level-04 and one level-05 checkpoint, plus one probe config. Every existing snapshot field and all 11 measures must be byte-identical, and the only new key must be `body_temp`.
-- [ ] **CP2: the generator's own checks.** Generate `lvl05_wave2` from the modulated run. All 480 files must pass (a)–(d). Check that the rule-diff report lists only the allowlisted keys, and paste it into the Implementation Report. Then run `--check-only --run <the control run>`; it must pass. Also run it against a level-04 run; it must **fail** (different world).
+- [ ] **CP1: the recorder change breaks nothing.** Two parts (Revision 1, M6).
+  - **(a) Measures.** Before and after change 2, run the parity harness `scripts/eval/parity_check_eval_rollout.py` on one level-04 and one level-05 checkpoint, plus one probe config. All 11 measures must be identical. (The harness compares measures only; it never opens the recordings.)
+  - **(b) Recordings.** On one thermal probe and one level-05 checkpoint, run `eval_rollout.py --batched --record --seed 0` twice: once on the commit without change 2 and once with it, all else equal. Load both `.rec.gz` files. Assert that every payload key and every array is equal (`np.array_equal`), **except** `snapshots[*]['body_temp']`, which must be present after and absent before. Any other difference fails CP1. Paste the list of compared keys into the Implementation Report. (Test 4 compares batched with unbatched; this compares batched before with batched after. Both are needed.)
+- [ ] **CP2: the generator's own checks.** Generate `lvl05_wave2` from the modulated run. All 480 files must pass (a)–(d). Check that the `EnvParams` comparison differs only on the named scene and start fields, and paste both lists and the YAML report into the Implementation Report. Check that the manifest's `in_training_range` marks T = −10, −5, +5 as off-range for this run (M3). Then run `--check-only --run <the control run>`; it must pass. Also run it against a level-04 run; it must **fail** (different world).
 - [ ] **CP3: a test that must fail.** Run `tests/scripts/test_body_state_grid.py` on a checkout without changes 1–2. Record that it fails, then that it passes with them.
-- [ ] **CP4: byte-exact anchor against the existing injury grid.** For the modulated level-05 run's newest checkpoint, compare cells `fireaway × {inj00, inj30, inj60, inj90} × nut100 × temp 0` with the existing `injurygrid_fire_away_clean` recordings for the same checkpoint and conditions (`avoid_*_inj{00,30,60,90}`), under `results/eval/avoidance/metrics_history_rppo_injurygrid_fire_away_clean/lvl05_modulated`. The CSV rows (11 measures) must be identical, and the per-step actions and positions of all 30 episodes must be `np.array_equal`. This confirms that pinning temperature at the setpoint and copying the run's rules changed nothing else (§A1, §A2). **If the existing recordings are missing, this checkpoint FAILS; it does not skip.** Regenerate them with that spec and `--max-checkpoints 1` first.
+- [ ] **CP4: byte-exact anchor against the injury grid, both made with today's code** (Revision 1, M1, M2).
+  - **Step 1, make a fresh reference.** The existing `injurygrid_fire_away_clean` recordings for this checkpoint were made on 2026-09-24, before four environment commits of 2026-09-26 (`eef30212`, `11b9a1b7`, `c073ce99`, `7b77d13d`) and before change 2. So they are **not** the reference. Instead, re-run the injury-grid `fire_away` clean spec at HEAD (with change 2) for the modulated level-05 run, with `--max-checkpoints 1`, restricted to the four conditions `avoid_*_inj{00,30,60,90}` of the scenes in the grid, into a **fresh** output folder (asserted absent first; for example `results/eval/avoidance/metrics_history_rppo_injurygrid_fire_away_clean_cp4anchor`). Never write into the old folder.
+  - **Step 2, compare.** Compare the new grid's cells `fireaway × {inj00, inj30, inj60, inj90} × nut100 × temp 0` with that fresh reference. The CSV rows (11 measures) must be identical, and the per-step actions and positions of all 30 episodes must be `np.array_equal`. The only differences in this comparison are the probe's rules (now copied from the run) and the pinned temperature, so a pass confirms that neither changed anything else (§A1, §A2).
+  - **Pre-registered tolerance (M2).** If step 2 does not match exactly, first diff the reset states of the two probes for the same key. If the **only** difference is at most 1 ulp in `animal_property_sampled` (Known Bugs row 153), record the difference in the Implementation Report and pass CP4 on the 11 measures alone. Any other difference, or more than 1 ulp, fails CP4.
+  - **Optional, separate check: are the environment changes inert on this run?** Diff the fresh reference against the 2026-09-24 recordings. The result is reported on its own line and does **not** decide CP4. A difference there points to the 2026-09-26 environment commits or the recorder change, not to this plan's generator.
+  - If the fresh reference cannot be produced, CP4 FAILS; it does not skip.
 - [ ] **CP5: smoke run and cost measurement.** Run the example spec (change 4) on both runs through the real driver, on nodes chosen from live GPU and diary state. Record the wall time per run, the CPU-minutes, and the disk used under `_scratch/`. Then run `body_state_grid_steps.py` on both. Check three things:
   - in the `neutral` arm, a cell's `body_temp[0]` equals its T;
   - N = 20 cells end at or before step ~20, with termination reason starvation;
-  - the no-animal scene is flagged deterministic.
+  - the no-animal scene is flagged deterministic;
+  - the reducer read the manifest from the sweep output folder, and it reports the T = −10, −5, +5 cells as off-range for both runs (M3). **These runs never trained from those temperatures, so CP5's numbers for those cells are a pipeline check, not a finding, and must not be quoted as one.**
+
+## Pre-launch steps (every sweep of this kind)
+
+Added in Revision 1 (L1, M5, O3). These run in order before `run_sweep.py`, for the example spec and for every 16-world spec. Each one fails loudly; none may be skipped.
+
+1. **Generate** the world folder with `make_body_state_grid.py` (if it is not already there), from one run of the world.
+2. **Check every run in the spec**: `make_body_state_grid.py --check-only --run <run>` for **each** run listed, not only the one the folder was generated from (O3). Any failure stops the launch.
+3. **Assert the output folder is absent**: `test ! -e <output_dir>` (L1). `run_sweep.py` resumes into an existing folder by design, so it will not catch this.
+4. **Copy the manifest** into the output folder: `mkdir -p <output_dir> && cp <generated dir>/manifest.json <output_dir>/manifest.json` (M5). Step 3 runs first, so this creates the folder fresh.
+5. **Pre-flight** (`env-config-reviewer`) on the world folder, for the first real sweep of each world.
 
 ## Decisions (user)
 
-- **Q1: grid size.** The default is 4 injury × 5 fullness × 4 temperature × 3 scenes × 2 arms = 480 conditions per run. A lighter option is 3 × 3 × 3 × 3 × 2 = 162: injury 0/45/90, fullness 40/100/160, temperature −10/0/+5. A heavier option uses all four temperature arms: 960.
-- **Q2: a scene with food?** The current scenes have no food, so a hungry agent cannot act on its hunger. It can only run out of time. A scene with a food item away from the bush would test the "eat or hide" trade-off directly. That is scene design, which belongs to `experiment-designer`. The generator accepts any scene, so this can come later. Should it be part of the first batch?
-- **Q3: where the generated files live.** Recommended: gitignored under `configs/`, regenerated on demand from the manifest command. This avoids committing about 7,700 generated files and keeps the missing-key error active. The alternative is to commit them for full provenance.
-- **Q4: which checkpoint.** The default is the newest checkpoint only. The existing injury grid evaluated every checkpoint (about 50 per run), which would multiply the cost by about 50.
+These four are still open. Each needs your choice before the plan is approved.
+
+- **Q1: how big should the grid be?** How many starting values to test on each axis. The default is 4 injury levels × 5 fullness levels × 4 starting temperatures × 3 scenes × 2 temperature settings = **480 test conditions per run**. A lighter option is 3 × 3 × 3 × 3 × 2 = **162**: injury 0/45/90, fullness 40/100/160, temperature −10/0/+5. A heavier option also tests the two remaining temperature settings (4 instead of 2): **960**.
+- **Q2: should the first batch include a scene with food?** Today's test scenes contain no food, so a hungry agent cannot act on its hunger. It can only run out of time. A scene with a food item away from the bush would test "eat or hide?" directly. Designing that scene is `experiment-designer`'s job. The generator takes any scene, so food can also be added later.
+- **Q3: where should the generated test files live?** Recommended: in `configs/`, but not committed to git, and regenerated on demand from the command saved in the manifest. This avoids committing about 7,700 generated files, and it keeps the safety check that catches missing settings. After Revision 1 the manifest itself **is** committed either way. The alternative is to commit all the generated files too, for a complete record.
+- **Q4: which saved training checkpoint to test?** The default is the latest checkpoint of each run only. The existing injury grid tested every saved checkpoint (about 50 per run), which would make this about 50 times more expensive.
 
 ## Hand-offs
 
