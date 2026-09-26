@@ -442,3 +442,8 @@ These replace Revision 1's list. Each fails loudly; none may be skipped.
 If M1/M2 bite, CP4 fails on a phantom and the developer loses a day untangling three causes. If M4 bites during the 16-world sweep, a probe silently drops a body rule and 32 runs × 14,400 episodes (~10–16 CPU-hours) measure a different world than the agents trained in — a wrong conclusion about state-combination behaviour, which is the paper's claim. No data-loss hazard anywhere in this plan.
 
 *Reviewed by: plan-reviewer*
+
+## User decision 2026-09-26 (recorded by the parent session)
+
+- **Q5 (scene count):** all four scenes are documented in the combination recipe — no animal, predator, wandering rabbit, and the food scene — giving 640 conditions per run. User: "Just document them to remember not generate any config files." The recipe records the combinations; **no per-condition config files are generated**, now or at run time (conditions are built in memory, as Revision 2 specifies).
+- **Q6 (recipe location):** next to the sweep specs, as the plan proposes.
