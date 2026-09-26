@@ -9,7 +9,7 @@ aliases: [state_dependent_body_mechanics]
 
 # Four body mechanics that make the best action depend on combinations of internal states (level 05)
 
-> **Status**: PLANNED, Revision 3 (2026-09-26). Adds B5 (healing speed depends on nutrition). Changes B1 and B4 warnings from load refusals to logged, informational messages (user: "allow, make visible"). Folds in the `plan-reviewer` addendum (N1–N6). See §Revision log. Waiting on §Still open for the user, then approval.
+> **Status**: IMPLEMENTED and VERIFIED WITH NOTES (2026-09-26; see §Verification Report). Plan text: Revision 3 (2026-09-26). Adds B5 (healing speed depends on nutrition). Changes B1 and B4 warnings from load refusals to logged, informational messages (user: "allow, make visible"). Folds in the `plan-reviewer` addendum (N1–N6). See §Revision log. Waiting on §Still open for the user, then approval.
 > **Opened**: 2026-09-26
 > **Related**: [[INJURY_DEPENDENCE_PLAN]] (the analysis that motivated this) · [[WARMING_COOLING_RATE_SCALES]] (the fixture-from-a-pre-change-worktree precedent; the body-temperature recurrence) · [[BUSH_REFUGE_AND_LOCATION_DEPENDENT_RECOVERY]] (precedent for a static-gated body key and its roll-out cost) · [[SAVED_RUN_CONFIG_COMPAT]] (the general old-run loading plan; **read, not edited** — another session owns it; this plan builds a minimal, absorbable first slice of it, §A7 and §Hand-off) · [[recovery_in_bush_tuning]] · [[IMPLEMENTATION_PLAN]] (thermal)
 
@@ -881,14 +881,84 @@ Local RTX 4090 (GPU 0), `tmp/20260926_bodymech_sps_bench.py`: 512 envs, 200-step
 
 ## Verification Report
 
-> **Verified by**: [agent/person]
-> **Date**: [date]
+> **Verified by**: senior-developer
+> **Date**: 2026-09-26
+> **Commits checked**: `34310732` (claim), `eef30212` (C0), `8a865d9c` (C1), `11b9a1b7` (C2), `8d07a00f` (C3), `79cf90ef` (report)
+
+**Verdict in plain words.** The build matches the approved plan (Revision 3). All five mechanics are in the environment and switched off by default. I confirmed that "off" really means "unchanged" with a check that does not reuse the developer's reference data: I rebuilt the old environment from a separate pre-change checkout and compared it with the committed recordings, and they are identical. Old runs' saved settings still load through the compatibility step, and the trajectory-store folder names do not move. Level 05 (and level 06, which inherits it) now starts each episode at a random body temperature in [−10, +5]. All six deviations are recorded and justified. Two things remain for other agents (below). Nothing blocks.
+
+### Independent checks (run by the verifier, not copied from the report)
+
+| Check | Result |
+|---|---|
+| Key tests rerun on CPU with the conda interpreter: parity, units, compat, plus the must-stay-green set (`thermal_reward_gate`, `thermal_rate_scales`, `recovery_in_bush`, `two_sided_nutrition`, `no_recompile`, `truncation_not_death`, `metabolic_coupling`) | **202 passed, 0 failed** (8 min 9 s). That is 21 + 85 + 18 + 78, the report's counts exactly |
+| **Is the fixture really pre-change? (not circular)** Fresh detached worktree at `0317083f`, the parent of C2 and a *different* pre-change commit from the developer's `eef30212`. Imported `src/` and `configs/` from it (asserted `core.__file__` was inside the worktree, and that `EnvParams` has no `healing_nutrition_cost`), then rolled out seeds 0, 5 and 11 of both worlds and compared them `np.array_equal` with the committed `.npz` | lvl05: 336 arrays, **0 mismatches**; lvl04: 333 arrays, **0 mismatches**. The pre-change jaxpr SHAs equal the fixture's and the report's (`e3ddd681` / `96af4b00` / `b5a89ad6`; `5c891836` / `7625cffb` / `b58206f3`). The fixture's `_provenance_sha` = `eef30212`, and `eef30212` touches no `core.py` / `config_loader.py` / `state.py` / `sensor.py` / `configs/`. Worktree removed afterwards |
+| C1 generator edited in C2 | Only `seeds=` / `max_t=` parameters added, with defaults equal to the old constants. The harness is unchanged in behaviour, so the test's imported loop is the one that produced the fixture |
+| Saved-run fixtures verbatim | `cmp` against both `results/JAX_RecurrentPPO/<run>/models/config.yaml`: byte-identical |
+| Shim on live saved configs (CP-C0(d)): Wave 1 lvl05, Wave 2 lvl05, Wave 1 lvl06 | Raw load fails with `thermal.random_start_body_temp ... required but missing`. The shim supplies exactly the six keys, and the world builds with B1 off and cost 0.0. The caller's dict is unchanged after the call |
+| Store fingerprint stability (N1) | All **23/23** existing `trajectories_basicq2_w1` / `_w2` store directories equal `env_fingerprint` of their raw saved config at HEAD |
+
+### Plan adherence, item by item
+
+| Item | Status | Notes |
+|---|:--:|---|
+| 15 keys, inert defaults in `default.yaml` | ✅ | The YAML matches the plan verbatim, plus a doc-link line. Off values: `false` / `0.0` / `cooling_only` / `partial` / `false`, with placeholder ramps |
+| All 15 `EnvParams` fields static | ✅ | `struct.field(pytree_node=False)` on every one. Floats are `float()`-coerced and strings enum-checked. The M1 comment is present. The unchanged SHAs prove there are no new leaves |
+| B1 draw and range | ✅ | `uniform(body_key1, (), low, high)` behind a static flag, and `body_key1` was previously unused. Loader: `min_T ≤ low ≤ high ≤ max_T`, finite. The range is read only when the flag is on; when off, the sentinel is `(setpoint, setpoint)` |
+| B2 form | ✅ | `w(T)` on the pre-step temperature, after the bush premium, with static per-side gates. Matches D2 |
+| B5 form | ✅ | Pre-step `state.nutrition`, hunger ramp × an optional over-full ramp (static on `f_o != 1`), applied after B2. Validation: `0 ≤ low < high ≤ max_N`, floors in [0, 1] (NaN refused), and `high ≤ start < max_N` only when `f_o < 1`. Requires `with_nutrition ∧ with_injury` |
+| B3 predicate and label | ✅ | `_N_pre` stays unclipped and the single clip comes after the charge, with satiation derived afterwards (all static on `c != 0`). The `partial` cap is `max(N_pre, 0)/c`. `starved = clip(N_pre) ≤ 0` is computed once, folded into `done`, **appended at index 9**, and read by `jax_step` reason 2 behind a static `is not None`. `full` mode keeps today's `N' ≤ 0`. Over-eating is judged after the charge. The off-path statements and their order are today's (CP4 SHA identical) |
+| B4 modes, bound, logging | ✅ | `k_ex·(1 + g·I/I_max)` on the pre-step injury, with `cooling_only` = `where(T_cell < T, boost, k_ex)`. It replaces `k_exchange` in both rate branches. The stability bound is checked at `k_ex(1+g)` for both scales and is still a **refusal**. `with_injury` is required. The full-injury structure pass uses `raise_on_failure=False` and logs a WARNING; the injury-0 call is unchanged and still raises (T-LOG-5). The per-ring same-side rule is in `_thermal_radial_equilibria` |
+| B1 / B4-`both` first-step log | ✅ | `_thermal_first_fire_step`: one combined line; INFO, or WARNING when lethal; never raised. Level 05 logs +10.78 at INFO (T-LOG-1), and a +10 start logs +15.18 at WARNING (T-LOG-2) |
+| C0 scope and refusals | ✅ | Six `_ERA_KEYS` rows, each with value, era and inert branch. (a) a source under `configs/` is refused; (b) keys already present are left alone; (c) all-or-none per block; (d) thermal keys only when `thermal.enabled` is true. One WARNING line; returns a sorted list. Same path and API as the compat plan |
+| C0 deep-copy injection at the call sites | ✅ | The plan's five sites plus `obs_manipulation/run.py` (deviation 2) all use `deepcopy` → shim → `load_env_params(Config(copy))`. `collect_trajectories` hashes and writes its manifest from the untouched `cfg`. `eval_rollout` applies the shim only outside `configs/`. It rebinds `config_i` to the injected copy, but downstream that copy is used only for icons and display, not hashed |
+| C0 claim, then `git log` before commit (N3) | ✅ | Diary claim `34310732` precedes C0. The empty `git log` result is recorded |
+| M3 gate and pre-flight | ✅ | The negative half is unconditional in C2 (N5). The pre-flight was recorded at 20:37:15 on 109–113 (none live), and C2 was committed at 20:37:35 |
+| Parity test | ✅ | Fails rather than skips when inputs are missing. Checks: provenance SHA; named drift check (O3); `np.array_equal` on every array; jaxpr SHA equality; 11 contrasts. B1 is forced off in memory for level 05 after C3, and the test prints that it did |
+| Unit tests | ✅ | Hand-computed literals; they read no fixture and do not recompute the expected values from the code under test. The graph-identity tests walk the jaxpr backwards. The R2 docstring explains why B5 is omitted |
+| Maintenance-contract docs | ✅ | `CONFIG_GUIDE.md` §5; `02_config_schema.md` (all 15 keys); `05_body_homeostasis.md` (includes R1's pre-step-nutrition note); `06_reward_and_termination.md` (reasons 2 and 5); `CONFIG_CRITICAL_SETTINGS.md` (5 registry rows, plus a C2 change-log entry with SHAs, family counts, archived 41 → 35 loadable, saved-run 40 → 40 through the shim, and the compat step, plus a C3 change-log entry for B1 enabled with the CP8 numbers); `SCRIPTS_DEPENDENCY_MAP.md` (§1e call sites, §3 generator, §1c test imports). Each landed in the same commit as its change |
+| C3 | ✅ | Level 05 sets `random_start_body_temp: true`, [−10.0, +5.0], with the header updated. Level 06 has a header note only and inherits the setting |
+| `calculate_drive` / reward untouched (CP9) | ✅ | Not in the diff. `test_thermal_reward_gate` passes with its data unregenerated |
+
+### Files
 
 | File | Change | Status | Notes |
 |------|--------|:------:|-------|
-| | | | |
+| `src/environment/state.py` | 15 static fields, comments | ✅ | |
+| `src/environment/core.py` | D1, D2, D2b, D3, D4, `starved`, reason-2 selection | ✅ | Return annotation loosened to `tuple` (cosmetic) |
+| `src/environment/config_loader.py` | Key reads and validation, `raise_on_failure`, the boosted-equilibria helper, `_thermal_first_fire_step` | ✅ | +326 lines, in proportion to the 15 keys, 3 helpers and the log |
+| `src/environment/saved_config_compat.py` | new (C0) | ✅ | |
+| 6 saved-config scripts | shim wiring | ✅ | Sixth site is deviation 2 |
+| `scripts/fixtures/generate_body_mechanics_parity_fixture.py` + `.npz` | new (C1); parameters added in C2 | ✅ | Independently reproduced from pre-change code |
+| `configs/environment/default.yaml`, 11 standalone worlds, frozen parity world, 29 archived test inputs, 1 test fixture YAML | inert keys | ✅ | Archive edits limited to live test inputs, following the 2026-09-15 / 09-17 precedent. `archive/basic_vec8` was deliberately not migrated |
+| `basic/05`, `basic/06` | C3 | ✅ | |
+| 19 test modules' inline YAML | 2 body keys each | ✅ | Config lines only. `test_no_recompile` and `test_visual_properties` are on the "unmodified" list but received only these required key lines; no assertion changed |
+| 3 new test modules + 2 saved-run fixtures + README | new | ✅ | |
+| 6 `docs/environment/` files | contract docs | ✅ | |
 
-**Conclusion**: [one-line summary]
+### Deviations (six reported), judged
+
+| # | Deviation | Verdict |
+|---|---|---|
+| 1 | Fixture streams auto-reset on `done` | ✅ Justified. The plan's own coverage gate refused to write zero-eat fixtures. Seeds, action rule, budget and coverage are unchanged. Recorded in the generator docstring and the report |
+| 2 | Sixth call site `obs_manipulation/run.py` | ✅ Required by the plan's own "re-grep" instruction. Same pattern; listed in the compat test and map §1e |
+| 3 | T-B4-6 / T-B4-7 assert "logged", not "refused" | ✅ Correct. The plan's test list kept its Revision 2 wording, which contradicts Revision 3 §A2 and §Design ("logged, not raised"). The developer followed the decision, not the stale text. **Plan-text defect (mine), not an implementation defect.** |
+| 4 | `jax.clear_caches()` teardown in the two new modules | ✅ Test-infrastructure fix for `vm.max_map_count` exhaustion. It does not weaken any assertion. Worth a note for future many-world test modules |
+| 5 | Strict `isinstance(bool)` for the two new flags | ✅ Stricter than the plan, in the no-silent-coercion direction. Acceptable |
+| 6 | `_ERA` label instead of a hash | ✅ Unavoidable ordering (C0 predates C2). The report gives the hash, `11b9a1b7` |
+
+**Speed (CP10):** ✅ no regression. Median SPS is within run-to-run noise on both levels. This is consistent with identical off-path jaxprs, which makes a runtime change essentially impossible at the shipped values. The measurement was on a local RTX 4090 rather than a lab node, which is acceptable given that the graphs are identical.
+
+### Notes (non-blocking)
+
+1. **CP12 hand-offs are still open** and belong to the parent: (i) `bug-curator`, for the mandatory-key roll-out row and "B3 partial starvation shares one predicate"; (ii) the owner of [[SAVED_RUN_CONFIG_COMPAT]], for §Hand-off (the module now exists with six rows); (iii) `experiment-designer`, for the §A0 observability caveat and the requirement that the B3 variant state `healing_nutrition_shortfall: partial` explicitly.
+2. **Pre-existing stale comments, not introduced here.** The level-05 thermal-block comment says `default.yaml` carries `default_temp [-28,-22]` and `k_loss 0.01`, and the level-06 header says `-28..-22`. `default.yaml` actually has `default_temp: [-31, -29]`, and the loader logs `default_temp=-31`. C3 edited the adjacent sentence but left these values alone. This could be fixed in a later config touch (`experiment-designer`).
+3. **Pre-existing test failures outside `tests/env`** (38 in `test_trajectory_collection.py` on `sensory.visual_value_mode`, and one `test_modulation_input_slice` assertion) are unrelated to these keys. Route them to `bug-curator` to confirm they are recorded.
+4. The T-B4-6 / T-B4-7 wording in §File Changes is left as written (history). Deviation 3 above is the authoritative reading.
+
+**Conclusion**: VERIFIED WITH NOTES. The implementation matches Revision 3. "Off = today" holds, and I confirmed it independently from a separate pre-change checkout. The compat step and fingerprint stability are confirmed on real saved runs. All six deviations are justified and recorded. Nothing needs fixing in code; the CP12 hand-offs remain for the parent.
+
+*Verified by: senior-developer*
 
 ---
 
