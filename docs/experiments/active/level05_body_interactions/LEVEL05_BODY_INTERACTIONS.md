@@ -3,7 +3,7 @@ title: "Level 05 body interactions: does the modulator's advantage grow when the
 topic: level05_body_interactions
 status: active
 created: 2026-09-26
-last_updated: 2026-09-26
+last_updated: 2026-09-27
 wandb_tag: "rppo_l05body_*"
 develop_link: docs/develop/active/thermal/STATE_DEPENDENT_BODY_MECHANICS.md
 ---
@@ -465,22 +465,22 @@ by `training-runner`.
 
 | Run | Status | Cell | Tag (= wandb-name) | wandb-group | wandb-job-type | Seed | Node | GPU | Launched at | WandB run ID | Log path |
 |---|---|---|---|---|---|---|---|---|---|---|---|
-| P0a | planned | unchanged level 05 | `rppo_l05body_p00_base_t1none_s42` | level05_body_interactions | pilot | 42 | — | — | — | — | — |
-| P0b | planned | unchanged level 05 | `rppo_l05body_p00_base_t1none_s43` | level05_body_interactions | pilot | 43 | — | — | — | — | — |
-| P0c | planned (Revision 1) | unchanged level 05 | `rppo_l05body_p00_base_t1none_s44` | level05_body_interactions | pilot | 44 | — | — | — | — | — |
-| P01 | planned | B5 floor 0.5 | `rppo_l05body_p01_b5floor0p5_t1none_s42` | level05_body_interactions | pilot | 42 | — | — | — | — | — |
-| P02 | planned | B5 floor 0.2 | `rppo_l05body_p02_b5floor0p2_t1none_s42` | level05_body_interactions | pilot | 42 | — | — | — | — | — |
-| P03 | planned | B5 floor 0.0 | `rppo_l05body_p03_b5floor0p0_t1none_s42` | level05_body_interactions | pilot | 42 | — | — | — | — | — |
-| P04 | planned | B3 cost 0.5 | `rppo_l05body_p04_b3cost0p5_t1none_s42` | level05_body_interactions | pilot | 42 | — | — | — | — | — |
-| P05 | planned | B3 cost 1.0 | `rppo_l05body_p05_b3cost1p0_t1none_s42` | level05_body_interactions | pilot | 42 | — | — | — | — | — |
-| P06 | planned | B3 cost 2.0 | `rppo_l05body_p06_b3cost2p0_t1none_s42` | level05_body_interactions | pilot | 42 | — | — | — | — | — |
-| P07 | planned | A1 rate 2 | `rppo_l05body_p07_a1rate2_t1none_s42` | level05_body_interactions | pilot | 42 | — | — | — | — | — |
-| P08 | planned | A1 rate 4 | `rppo_l05body_p08_a1rate4_t1none_s42` | level05_body_interactions | pilot | 42 | — | — | — | — | — |
-| P09 | planned | A1 rate 8 | `rppo_l05body_p09_a1rate8_t1none_s42` | level05_body_interactions | pilot | 42 | — | — | — | — | — |
-| P10 | planned | A4 bite, gain 4 | `rppo_l05body_p10_a4bitegain4_t1none_s42` | level05_body_interactions | pilot | 42 | — | — | — | — | — |
-| P11 | planned | A4 bite, gain 3 | `rppo_l05body_p11_a4bitegain3_t1none_s42` | level05_body_interactions | pilot | 42 | — | — | — | — | — |
-| P12 | planned | A4 trip, food 1–2 | `rppo_l05body_p12_a4tripfood1to2_t1none_s42` | level05_body_interactions | pilot | 42 | — | — | — | — | — |
-| P13 | planned | A4 trip, food 1 | `rppo_l05body_p13_a4tripfood1to1_t1none_s42` | level05_body_interactions | pilot | 42 | — | — | — | — | — |
+| P0a | running | unchanged level 05 | `rppo_l05body_p00_base_t1none_s42` | level05_body_interactions | pilot | 42 | 106 | cuda:0 | 2026-09-27T00:43:26 | `nz0o6b70` | `logs/20260927_004326.log` · HEAD `4209024d` · ladder `8187c570` |
+| P0b | running | unchanged level 05 | `rppo_l05body_p00_base_t1none_s43` | level05_body_interactions | pilot | 43 | 106 | cuda:1 | 2026-09-27T00:43:31 | `p4tlq5fq` | `logs/20260927_004331.log` · HEAD `4209024d` · ladder `8187c570` |
+| P0c | running | unchanged level 05 | `rppo_l05body_p00_base_t1none_s44` | level05_body_interactions | pilot | 44 | 107 | cuda:0 | 2026-09-27T00:43:36 | `qwrtf2x5` | `logs/20260927_004336.log` · HEAD `4209024d` · ladder `8187c570` |
+| P01 | running | B5 floor 0.5 | `rppo_l05body_p01_b5floor0p5_t1none_s42` | level05_body_interactions | pilot | 42 | 107 | cuda:1 | 2026-09-27T00:43:41 | `a2mnxvdo` | `logs/20260927_004341.log` · HEAD `4209024d` · ladder `8187c570` |
+| P02 | running | B5 floor 0.2 | `rppo_l05body_p02_b5floor0p2_t1none_s42` | level05_body_interactions | pilot | 42 | 108 | cuda:0 | 2026-09-27T00:43:46 | `g06iwqng` | `logs/20260927_004346.log` · HEAD `4209024d` · ladder `8187c570` |
+| P03 | running | B5 floor 0.0 | `rppo_l05body_p03_b5floor0p0_t1none_s42` | level05_body_interactions | pilot | 42 | 108 | cuda:1 | 2026-09-27T00:43:52 | `l0m2u80f` | `logs/20260927_004352.log` · HEAD `4209024d` · ladder `8187c570` |
+| P04 | running | B3 cost 0.5 | `rppo_l05body_p04_b3cost0p5_t1none_s42` | level05_body_interactions | pilot | 42 | 109 | cuda:0 | 2026-09-27T00:43:57 | `yqgfofeg` | `logs/20260927_004357.log` · HEAD `4209024d` · ladder `8187c570` |
+| P05 | running | B3 cost 1.0 | `rppo_l05body_p05_b3cost1p0_t1none_s42` | level05_body_interactions | pilot | 42 | 109 | cuda:1 | 2026-09-27T00:44:02 | `zjsj372y` | `logs/20260927_004402.log` · HEAD `4209024d` · ladder `8187c570` |
+| P06 | running | B3 cost 2.0 | `rppo_l05body_p06_b3cost2p0_t1none_s42` | level05_body_interactions | pilot | 42 | 110 | cuda:0 | 2026-09-27T00:44:07 | `o58en3za` | `logs/20260927_004407.log` · HEAD `4209024d` · ladder `8187c570` |
+| P07 | running | A1 rate 2 | `rppo_l05body_p07_a1rate2_t1none_s42` | level05_body_interactions | pilot | 42 | 110 | cuda:1 | 2026-09-27T00:44:11 | `85eqet0o` | `logs/20260927_004411.log` · HEAD `4209024d` · ladder `8187c570` |
+| P08 | running | A1 rate 4 | `rppo_l05body_p08_a1rate4_t1none_s42` | level05_body_interactions | pilot | 42 | 111 | cuda:0 | 2026-09-27T00:44:16 | `dqm4du57` | `logs/20260927_004416.log` · HEAD `4209024d` · ladder `8187c570` |
+| P09 | running | A1 rate 8 | `rppo_l05body_p09_a1rate8_t1none_s42` | level05_body_interactions | pilot | 42 | 111 | cuda:1 | 2026-09-27T00:44:21 | `glqka8g7` | `logs/20260927_004421.log` · HEAD `4209024d` · ladder `8187c570` |
+| P10 | running | A4 bite, gain 4 | `rppo_l05body_p10_a4bitegain4_t1none_s42` | level05_body_interactions | pilot | 42 | 112 | cuda:0 | 2026-09-27T00:44:26 | `z8ew4j46` | `logs/20260927_004426.log` · HEAD `4209024d` · ladder `8187c570` |
+| P11 | running | A4 bite, gain 3 | `rppo_l05body_p11_a4bitegain3_t1none_s42` | level05_body_interactions | pilot | 42 | 112 | cuda:1 | 2026-09-27T00:44:32 | `sr9scxml` | `logs/20260927_004432.log` · HEAD `4209024d` · ladder `8187c570` |
+| P12 | running (PID unverified: node 113 SSH unreachable) | A4 trip, food 1–2 | `rppo_l05body_p12_a4tripfood1to2_t1none_s42` | level05_body_interactions | pilot | 42 | 113 | cuda:0 | 2026-09-27T00:44:36 | `c3wd9snn` | `logs/20260927_004436.log` · HEAD `4209024d` · ladder `8187c570` |
+| P13 | running (PID unverified: node 113 SSH unreachable) | A4 trip, food 1 | `rppo_l05body_p13_a4tripfood1to1_t1none_s42` | level05_body_interactions | pilot | 42 | 113 | cuda:1 | 2026-09-27T00:44:41 | `35f5vjgq` | `logs/20260927_004441.log` · HEAD `4209024d` · ladder `8187c570` |
 | P14 | planned (stage 2) | all four, selected | `rppo_l05body_p14_all4sel_t1none_s42` | level05_body_interactions | pilot | 42 | — | — | — | — | — |
 | P15 | planned (stage 2; config written at the gate) | all four, drainers one rung weaker | `rppo_l05body_p15_all4weaker_t1none_s42` | level05_body_interactions | pilot | 42 | — | — | — | — | — |
 

@@ -4175,9 +4175,56 @@ cd /media/nas01/projects/Interoceptive-AI/grid_world_pain
 # Representative active command (run 14 — level 06, modulated arm, node 108 cuda:1).
 # The other thirteen differ only in --config, --agent_config, --device and the tag pair.
 # ---------------------------------------------------------------------------
+# /home/vncuser/miniconda3/envs/grid_world_pain/bin/python train.py \
+#   --config configs/environment/experiment/basic/06-sensory_noise_10x10.yaml \
+#   --agent_config configs/models/recurrent_ppo/nmn_input_site_grid_gaenorm/nmngaenorm_t16quad_ALL.yaml \
+#   --episodes 10000000 --device cuda:1 --log-interval 10 \
+#   --tag "rppo_bq2cover_lvl06_t16quad_s42" --wandb-name "rppo_bq2cover_lvl06_t16quad_s42" \
+#   --wandb-group "basic_levels_q2_cover" --wandb-job-type "pilot"
+
+# ---------------------------------------------------------------------------
+# LEVEL-05 BODY INTERACTIONS — STAGE-1 PILOTS (16 runs) — 2026-09-27
+# ---------------------------------------------------------------------------
+# Plan: docs/experiments/active/level05_body_interactions/LEVEL05_BODY_INTERACTIONS.md
+# (§3.0 rows P0a-P0c, P01-P13; §3.1 launch command). Ordinary agent only
+# (nmngaenorm_t1none.yaml). 2,000,000 episodes, --log-interval 10, group
+# level05_body_interactions, job-type pilot, tag = wandb-name.
+# Seed: config-owned 42, except P0b --seed 43 and P0c --seed 44 (per the plan).
+# P14/P15 and every factorial row NOT launched: all four factors/selected_*.yaml
+# still say PROVISIONAL (expected; stage 2 gated).
+#
+# M7 ladder state at launch (all 16 rows):
+#   HEAD                                   4209024d9a46b756dc8b15541bb46d12b7ef72d4
+#   last commit on default.yaml + basic/   8187c570c09b0c40dfb89658b34f231fc7d03eab
+#   (thermal.bush_min_fire_distance: 0 in default.yaml — inert, per §2.6)
+#   git status --short src/ configs/environment/ was clean.
+#
+# | Run | Env config                                              | node:GPU | extra   |
+# |-----|---------------------------------------------------------|----------|---------|
+# | P0a | basic/05-campfire_thermal_10x10.yaml                    | 106:0    |         |
+# | P0b | basic/05-campfire_thermal_10x10.yaml                    | 106:1    | seed 43 |
+# | P0c | basic/05-campfire_thermal_10x10.yaml                    | 107:0    | seed 44 |
+# | P01 | level05_body_interactions/pilots/p01_b5_floor0p5.yaml   | 107:1    |         |
+# | P02 | .../pilots/p02_b5_floor0p2.yaml                         | 108:0    |         |
+# | P03 | .../pilots/p03_b5_floor0p0.yaml                         | 108:1    |         |
+# | P04 | .../pilots/p04_b3_cost0p5.yaml                          | 109:0    |         |
+# | P05 | .../pilots/p05_b3_cost1p0.yaml                          | 109:1    |         |
+# | P06 | .../pilots/p06_b3_cost2p0.yaml                          | 110:0    |         |
+# | P07 | .../pilots/p07_a1_rate2.yaml                            | 110:1    |         |
+# | P08 | .../pilots/p08_a1_rate4.yaml                            | 111:0    |         |
+# | P09 | .../pilots/p09_a1_rate8.yaml                            | 111:1    |         |
+# | P10 | .../pilots/p10_a4bite_gain4.yaml                        | 112:0    |         |
+# | P11 | .../pilots/p11_a4bite_gain3.yaml                        | 112:1    |         |
+# | P12 | .../pilots/p12_a4trip_food1to2.yaml                     | 113:0    |         |
+# | P13 | .../pilots/p13_a4trip_food1to1.yaml                     | 113:1    |         |
+# Launched via CIFS-bypass /tmp scripts + run_command.py --no-tail.
+#
+# Representative active command (P13 — node 113 cuda:1). The other fifteen differ
+# only in --config, --device, the tag pair, and --seed for P0b/P0c.
+# ---------------------------------------------------------------------------
 /home/vncuser/miniconda3/envs/grid_world_pain/bin/python train.py \
-  --config configs/environment/experiment/basic/06-sensory_noise_10x10.yaml \
-  --agent_config configs/models/recurrent_ppo/nmn_input_site_grid_gaenorm/nmngaenorm_t16quad_ALL.yaml \
-  --episodes 10000000 --device cuda:1 --log-interval 10 \
-  --tag "rppo_bq2cover_lvl06_t16quad_s42" --wandb-name "rppo_bq2cover_lvl06_t16quad_s42" \
-  --wandb-group "basic_levels_q2_cover" --wandb-job-type "pilot"
+  --config configs/environment/experiment/level05_body_interactions/pilots/p13_a4trip_food1to1.yaml \
+  --agent_config configs/models/recurrent_ppo/nmn_input_site_grid_gaenorm/nmngaenorm_t1none.yaml \
+  --episodes 2000000 --device cuda:1 --log-interval 10 \
+  --tag "rppo_l05body_p13_a4tripfood1to1_t1none_s42" --wandb-name "rppo_l05body_p13_a4tripfood1to1_t1none_s42" \
+  --wandb-group "level05_body_interactions" --wandb-job-type "pilot"
