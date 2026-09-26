@@ -953,7 +953,38 @@ would therefore be the same world as p14, so it is not written or run. Consequen
 branch: option (b) ("run with p15's weaker drainers") does not exist at the tested grids; if p14
 collapses, weakening would need rungs below the grid, which is a new user decision under option (c).
 
-**Stacking outcome:** *(empty until p14 finishes)*
+**Stacking outcome (2026-09-27, experiment-analyzer): P14 did NOT collapse; the factorial may launch at the
+selected strengths.** The all-four world ends at 150.5 survival steps, 66.2 % of the unchanged
+world's 227.5, with 36.2 % of deaths from starvation. Read with the stage-1 script and method
+(`pilot_pick.py`, last 10 % = episodes 1,800,000-2,000,000, 50 logged rows, `_window_n`-weighted,
+survival steps only; WandB `438j1im3`, "Training complete" in `logs/20260927_040217.log`). The three
+§2.4 clauses, each checked against its own text:
+
+| §2.4 clause | Threshold | P14 | Fires? |
+|---|---|---|---|
+| `S < 0.60·S_base` | S < 136.5 | 150.5 | no (margin 14.0 steps) |
+| starvation share > 0.60 | > 0.600 | 0.362 | no |
+| starvation share > `starve_base + 0.35` | > 0.614 | 0.362 | no |
+
+Temporal evolution (weighted S per tenth of training): 41, 50, 63, 85, 101, 117, 133, 140, 149,
+151; starvation share per tenth: 0.39, 0.47, 0.49, 0.56, 0.46, 0.43, 0.38, 0.34, 0.32, 0.36.
+
+Caveats, recorded rather than acted on:
+- **Late in training it is flattening, not climbing steeply.** Gains over the last three tenths are +7,
+  +9, +2 steps (base runs: +3 to +8 per tenth, last tenth +3 to +5). P14 rose steeply through mid-
+  training, so it converged later than the base. A partial read at ~75 % of training gave 135.1
+  (59.4 %, which would have fired clause 1). The verdict comes from the finished run and depends on
+  reading it there.
+- **Not "survivable" by the stage-1 bar** (S >= 182.0 and starvation <= 0.464): P14 fails the
+  survival half. That bar applies to single factors in stage 1, not to the stacked world; §2.4 is
+  the only stage-2 rule. The script's "STOP: not survivable" line is the stage-1 pick rule applied
+  to a one-row factor and is not a stage-2 outcome.
+- **Starvation share ticks up in the last tenth** (0.32 → 0.36) while S still rises; well inside both
+  starvation clauses.
+- Per review note O3, the 34 % drop is not evidence of an interaction: four factors at their
+  single-factor effects compound multiplicatively without one.
+- One seed (42); there is no p15 (see above) and no second P14 seed, so the margin of 14 steps over
+  the collapse line has no seed-noise estimate of its own (base seed SD is 1.5 steps).
 
 ### 6.3 Note for the simulation study's owner
 
