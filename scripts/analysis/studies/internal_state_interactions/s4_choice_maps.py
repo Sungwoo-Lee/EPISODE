@@ -20,6 +20,10 @@ others = sorted([k for k in rows if not rule[k]["passes"] and rule[k]["group"] !
                 key=lambda k: -rule[k]["combination_gain"])
 chosen = ["baseline__level 05__today"] + (passing + others)[:3]
 TEMPS = (-8.0, -3.0, 3.0)
+SHORT = {"A1": lambda v: f"warmth costs food\n(rate {v:g})", "A4": lambda v: f"scarcer food\n({v:g})",
+         "A5": lambda v: f"fewer bushes\n(trip {v:g})", "B2": lambda v: f"heal needs warmth\n({v:g}/deg)",
+         "B3": lambda v: f"heal costs food\n({v:g}/point)", "B4": lambda v: f"injury chills\n(gain {v:g})",
+         "B5": lambda v: f"heal needs food\n(floor {v:g})"}
 GN, GI, GT = PL.grids(PL.World())
 cmap = ListedColormap([C.CHOICE_COLOURS[c] for c in PL.CATEGORIES])
 fig, ax = plt.subplots(len(chosen), len(TEMPS), figsize=(10.0, 2.3 * len(chosen) + 1.0), sharex=True, sharey=True,
@@ -29,9 +33,9 @@ for r, name in enumerate(chosen):
     z = np.load(os.path.join(C.SWEEP, f"{name}.npz"))
     cat = z["cat_warm0"].reshape(len(GN), len(GI), len(GT)); tie = z["tie_warm0"].reshape(cat.shape)
     info = rule[name]
-    title = "today" if info["group"] == "baseline" else f"{info['group']}: {info['label']} = {info['value']:g}"
+    title = SHORT[info["group"]](info["value"]) if info["group"] != "baseline" else "today"
     if info["group"] != "baseline" and not info["passes"]:
-        title += " (does not pass)"
+        title += "\n(does not pass)"
     for j, t in enumerate(TEMPS):
         k = int(np.argmin(np.abs(GT - t)))
         img = cmap(cat[:, :, k].T.astype(float) / (len(PL.CATEGORIES) - 1))
@@ -40,12 +44,11 @@ for r, name in enumerate(chosen):
         if r == 0:
             ax[r, j].set_title(f"body temperature {t:+g} deg", loc="left", fontsize=10)
         ax[r, j].grid(False)
-    ax[r, 0].set_ylabel("injury"); ax[r, 0].text(0.0, 1.04, title, transform=ax[r, 0].transAxes, fontsize=9.5,
-                                                  color=house.INK, va="bottom") if r > 0 else None
-    samples.append(dict(what=title, used=int(cat.size), total=int(cat.size), note="grid states, map without a warm bush"))
-for j in range(len(TEMPS)):
-    ax[-1, j].set_xlabel("food energy")
-fig.tight_layout(h_pad=1.8, w_pad=0.6, rect=(0, 0.05, 1, 1))
+    ax[r, 0].set_ylabel(title, fontsize=9.5)
+    samples.append(dict(what=title.replace("\n", " "), used=int(cat.size), total=int(cat.size), note="grid states, map without a warm bush"))
+fig.supxlabel("food energy (0-200)", y=0.07, fontsize=11)
+fig.supylabel("injury (0-100), per row", x=0.005, fontsize=11)
+fig.tight_layout(h_pad=1.2, w_pad=0.6, rect=(0.02, 0.08, 1, 1))
 from matplotlib.patches import Patch
 fig.legend(handles=[Patch(color=C.CHOICE_COLOURS[c], label=c) for c in PL.CATEGORIES], loc="lower center",
            ncol=4, frameon=False, bbox_to_anchor=(0.5, 0.0), fontsize=9.5)

@@ -1,0 +1,4 @@
+today|80,886|80,886|100.0|grid states, map without a warm bush
+fewer bushes (trip 8)|80,886|80,886|100.0|grid states, map without a warm bush
+fewer bushes (trip 6) (does not pass)|80,886|80,886|100.0|grid states, map without a warm bush
+heal needs food (floor 0.2) (does not pass)|80,886|80,886|100.0|grid states, map without a warm bush

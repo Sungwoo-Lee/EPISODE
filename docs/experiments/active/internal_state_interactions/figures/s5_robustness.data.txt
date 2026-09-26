@@ -1,0 +1,2 @@
+worlds and checks shown|27|27|100.0|each solved twice (discount 0.95 and 0.99) on both maps
+analysis variants per world|4|4|100.0|tie margins 0 / 0.5 / 2; discount 0.99

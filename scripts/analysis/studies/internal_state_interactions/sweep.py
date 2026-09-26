@@ -45,8 +45,8 @@ def worlds():
         add("B5", "healing slows when hungry (floor)", f, body=dict(b5=True, b5_floor=f, b5_low=lo, b5_high=100.0))
     # checks, not settings
     add("check", "finer grid", "81x41x91", world=dict(grid=(81, 41, 91)))
-    add("check", "predator hazard (x rest 0.12 / move 0.70)", 0.0, world=dict(hazard_rest=0.0, hazard_move=0.0))
-    add("check", "predator hazard (x rest 0.12 / move 0.70)", 2.0, world=dict(hazard_rest=0.24, hazard_move=1.40))
+    add("check", "predator hazard (times measured)", 0.0, world=dict(hazard_rest=0.0, hazard_move=0.0))
+    add("check", "predator hazard (times measured)", 2.0, world=dict(hazard_rest=0.24, hazard_move=1.40))
     return W
 
 

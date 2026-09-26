@@ -1,0 +1,2 @@
+body states per curve|121|121|100.0|a regular grid; the simulator is deterministic
+simulator steps checked against the real environment|4,000|4,000|100.0|today's rules; max difference 2e-5 (validation_current_rules.json)
