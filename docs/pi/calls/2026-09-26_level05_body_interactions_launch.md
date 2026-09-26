@@ -2,7 +2,7 @@
 title: "PI call — launch the 32-run body-rules screen as designed, add a noise check, or stage it?"
 date: 2026-09-26
 caller: pi
-status: awaiting-user-decision
+status: decided
 trigger: "Pre-launch PI consultation requested by the parent session, after experiment-designer (Revision 2), env-config-reviewer (GO WITH NOTES) and plan-reviewer (SOUND WITH CONCERNS, resolved)."
 inputs:
   - docs/experiments/active/level05_body_interactions/LEVEL05_BODY_INTERACTIONS.md
@@ -103,3 +103,9 @@ _Pending._
   rows/configs to §3 of the design); otherwise straight to `training-runner` for the stage-1
   pilots (node and GPU collected from the user first).
 - **Stop rule:** as chosen in Question 2.
+
+## Decision (user, 2026-09-26, relayed by the parent session)
+
+- **Question 1 — compute:** **launch exactly as designed** (18 strength-setting pilots, then the 32 main runs, one seed). User: "As we are focus on the finding any clue for which condition will increase the better state dependent behavior with NMN don't worry about multiple seed. Exactly as designed." The PI's recommended four repeat runs were declined; the study is explicitly a screen for clues, and any result is read as such.
+- **Question 2 — what a null means:** **decide after the results.** No conclusion is committed in advance.
+- **Next:** training-runner launches the stage-1 pilots once the user supplies nodes and GPUs.
