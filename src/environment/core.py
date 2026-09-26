@@ -190,6 +190,9 @@ def update_body(state: EnvState, info: dict, params: EnvParams, new_agent_pos: j
     # pytree_node=False float, so at 0.0 none of the B3 statements is traced. The
     # loader refuses cost > 0 unless with_nutrition and with_injury are both on.
     _b3_on = params.healing_nutrition_cost != 0.0
+    # The loader enforces this; params.replace() does not (code review 2026-09-26).
+    assert not _b3_on or (params.with_nutrition and params.with_injury), \
+        "healing_nutrition_cost > 0 needs with_nutrition and with_injury"
     starved = None
     # --- Nutrition Dynamics (Linear Decay) ---
     if params.with_nutrition:

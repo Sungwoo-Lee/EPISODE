@@ -2411,6 +2411,10 @@ def load_env_params(config: Config) -> EnvParams:
         raise ValueError(
             f"body.max_nutrition must be > 0 (nutrition is clipped into "
             f"[0, max_nutrition] and death fires at both ends); got {_max_nutr}")
+    if not (_max_inj > 0.0):
+        raise ValueError(
+            f"body.max_injury must be > 0 (injury is clipped into [0, max_injury] "
+            f"and the drive and B4 divide by it); got {_max_inj}")
     if not (0.0 <= _setpoint <= _max_sat):
         raise ValueError(
             f"body.satiation_setpoint must satisfy 0 <= setpoint <= max_satiation "

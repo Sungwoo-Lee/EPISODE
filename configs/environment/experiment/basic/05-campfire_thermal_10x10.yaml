@@ -13,7 +13,7 @@
 #
 # PURPOSE (plain language): the 10x10 world of levels 02/03/04 with the BODY-TEMPERATURE
 # system switched on and one to three CAMPFIRES burning in it. The world's baseline is
-# cold (about -28..-22 degrees), so the agent slowly chills unless it sits near a fire;
+# cold (about -31..-29 degrees), so the agent slowly chills unless it sits near a fire;
 # a fire cell itself is lethally hot, and the survivable spot is the ring one cell out.
 # A campfire shares the obstacle visual channel with rock and bush on purpose — the only
 # way to tell a fire from a rock is to FEEL it, which is the point of the thermoceptor.
@@ -148,9 +148,9 @@ environment:
 
 # The gate and (since 2026-09-26) the three B1 keys are the ONLY thermal keys this world
 # changes. Every other key under `thermal:`
-# in default.yaml already carries the archived campfire world's value (sigma 0.7,
-# default_temp [-28,-22], min_fire_separation 3, setpoint 0.0, min/max_temperature
-# -15/+15, k_exchange 0.04, k_loss 0.01, grid_range 1, relative true,
+# comes from default.yaml (sigma 0.7, default_temp [-31,-29], min_fire_separation 4,
+# setpoint 0.0, min/max_temperature -15/+15, k_exchange 0.04, k_loss 0.02,
+# grid_range 1, relative true,
 # body_temp_observable true), so restating them here would only create drift.
 thermal:
   enabled: true

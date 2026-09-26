@@ -46,7 +46,7 @@
 #     therefore sees more channels here than it did under the old `05-sensory_noise` name.
 #   - ARENA gains 1-3 CAMPFIRES, plus `tree` (count 0). A campfire shares the obstacle
 #     visual channel with rock and bush, so only thermoception tells them apart.
-#   - The world baseline is COLD (default_temp -28..-22), so an agent that never warms up
+#   - The world baseline is COLD (default_temp -31..-29), so an agent that never warms up
 #     freezes: freezing/overheating is a real cause of death at this level, alongside
 #     starvation and predation.
 #   - Since 2026-09-26 each episode also STARTS AT A RANDOM BODY TEMPERATURE in [-10, +5]
