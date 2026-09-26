@@ -1726,9 +1726,9 @@ def load_env_params(config: Config) -> EnvParams:
         _th_heal_warm = float(config.get_mandatory('thermal.healing_warm_sensitivity'))
         for _key, _val in (('thermal.healing_cold_sensitivity', _th_heal_cold),
                            ('thermal.healing_warm_sensitivity', _th_heal_warm)):
-            if not (_val >= 0.0):          # `not (>=)` so NaN is refused too
+            if not (np.isfinite(_val) and _val >= 0.0):   # refuses NaN and inf too
                 raise ValueError(
-                    f"{_key} must be >= 0 (the fraction of injury recovery lost per "
+                    f"{_key} must be finite and >= 0 (the fraction of injury recovery lost per "
                     f"degree away from temperature_setpoint; 0.0 = off), got {_val}.")
         # B4 — injury speeds heat exchange: k_exchange*(1 + gain*injury/max_injury).
         _th_inj_gain = float(config.get_mandatory('thermal.injury_heat_exchange_gain'))
@@ -2475,9 +2475,9 @@ def load_env_params(config: Config) -> EnvParams:
     _with_inj = bool(config.get_mandatory('body.with_injury'))
     # B3 — healing uses energy: nutrition per injury point healed.
     _heal_cost = float(config.get_mandatory('body.healing_nutrition_cost'))
-    if not (_heal_cost >= 0.0):
+    if not (np.isfinite(_heal_cost) and _heal_cost >= 0.0):   # refuses NaN and inf too
         raise ValueError(
-            f"body.healing_nutrition_cost must be >= 0 (nutrition charged per "
+            f"body.healing_nutrition_cost must be finite and >= 0 (nutrition charged per "
             f"injury point healed; 0.0 = off), got {_heal_cost}.")
     if _heal_cost > 0.0:
         if not (_with_nutr and _with_inj):

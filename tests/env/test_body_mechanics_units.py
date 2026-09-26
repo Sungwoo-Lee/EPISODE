@@ -259,7 +259,7 @@ def test_B2_5_inherits_rest_and_no_damage(scene):
 
 
 @pytest.mark.parametrize("key", ["healing_cold_sensitivity", "healing_warm_sensitivity"])
-@pytest.mark.parametrize("val", [-0.1, float("nan")])
+@pytest.mark.parametrize("val", [-0.1, float("nan"), float("inf")])
 def test_B2_6_refuses_negative_and_nan(key, val):
     with pytest.raises(ValueError, match=key):
         _p(_with(_lvl05(), **{f"thermal__{key}": val}))
@@ -379,8 +379,8 @@ def test_B3_11_loader():
     d = copy.deepcopy(base)
     del d["body"]["healing_nutrition_shortfall"]
     assert _p(d).healing_nutrition_cost == 0.0           # not read at c = 0
-    for bad in (-1.0, float("nan")):
-        with pytest.raises(ValueError, match="healing_nutrition_cost must be >= 0"):
+    for bad in (-1.0, float("nan"), float("inf")):
+        with pytest.raises(ValueError, match="healing_nutrition_cost must be finite and >= 0"):
             _p(_with(base, body__healing_nutrition_cost=bad))
 
 
