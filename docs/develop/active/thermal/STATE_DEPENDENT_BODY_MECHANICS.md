@@ -9,24 +9,33 @@ aliases: [state_dependent_body_mechanics]
 
 # Four body mechanics that make the best action depend on combinations of internal states (level 05)
 
-> **Status**: PLANNED (awaiting `plan-reviewer`, then user approval of the open decisions in §Open decisions)
+> **Status**: PLANNED, Revision 2 (2026-09-26). The user's decisions and the `plan-reviewer` and `math-reviewer` findings are folded in; see §Revision log. Waiting on the items in §Still open for the user, then approval.
 > **Opened**: 2026-09-26
-> **Related**: [[INJURY_DEPENDENCE_PLAN]] (the analysis that motivated this) · [[WARMING_COOLING_RATE_SCALES]] (the fixture-from-a-pre-change-worktree precedent, and the body-temperature recurrence) · [[BUSH_REFUGE_AND_LOCATION_DEPENDENT_RECOVERY]] (the precedent for a static-gated body key and its roll-out cost) · [[SAVED_RUN_CONFIG_COMPAT]] (old-run loading; read, not edited — another session owns it) · [[recovery_in_bush_tuning]] · [[IMPLEMENTATION_PLAN]] (thermal)
+> **Related**: [[INJURY_DEPENDENCE_PLAN]] (the analysis that motivated this) · [[WARMING_COOLING_RATE_SCALES]] (the fixture-from-a-pre-change-worktree precedent; the body-temperature recurrence) · [[BUSH_REFUGE_AND_LOCATION_DEPENDENT_RECOVERY]] (precedent for a static-gated body key and its roll-out cost) · [[SAVED_RUN_CONFIG_COMPAT]] (the general old-run loading plan; **read, not edited** — another session owns it; this plan builds a minimal, absorbable first slice of it, §A7 and §Hand-off) · [[recovery_in_bush_tuning]] · [[IMPLEMENTATION_PLAN]] (thermal)
 
 ---
 
 ## Context
 
-The project is making the campfire world — curriculum level 05, a cold 10×10 grid with one to three campfires, where the agent must keep three body quantities near their comfortable values (how full it is, how injured it is, and its body temperature) — the main world for studying whether a neuromodulated agent's behaviour depends on its internal state. A recent analysis found that, in both the modulated and the unmodulated agent, the response to injury is a simple habit that ignores everything else: healing is fast and costs nothing (five injury points per step while resting in a bush), so "injured → go to a bush and rest" is always right, whatever the agent's hunger or temperature.
+The project is making the campfire world the main place to study whether a neuromodulated agent's behaviour depends on its internal state. That world is curriculum level 05: a cold 10×10 grid with one to three campfires, where the agent must keep three body quantities near their comfortable values — how full it is, how injured it is, and its body temperature.
+
+A recent analysis found that, in both the modulated and the unmodulated agent, the response to injury is a simple habit that ignores everything else. Healing is fast and costs nothing (five injury points per step while resting in a bush), so "injured → go to a bush and rest" is always right, whatever the agent's hunger or temperature.
 
 This plan adds four mechanics that change the **consequences** of actions on the body, so that the best action depends on **combinations** of internal states. The reward formula is untouched.
 
-- **B1**: each episode starts at a random body temperature, not always at the comfortable value.
-- **B2**: healing slows when the body is far from its comfortable temperature, so a cold injured agent must warm up before resting pays off.
-- **B3**: healing costs food energy, so a hungry injured agent must choose between eating and healing.
-- **B4**: injury makes the body lose heat faster, so an injured agent freezes sooner away from a fire.
+- **B1**: each episode starts at a random body temperature.
+- **B2**: healing slows when the body is too cold or too warm, with separate settings for each side.
+- **B3**: healing costs food energy. A setting decides what happens when the agent cannot pay: heal only what it can afford, or heal fully and starve.
+- **B4**: injury makes the body exchange heat faster. A setting decides whether that applies only while losing heat or in both directions.
 
-Each mechanic has an exact "off" value at which the environment behaves exactly as today, byte for byte. That claim is tested against rollouts recorded from the current code before the change.
+Following the user's rule for this work, every interaction is a config setting; no behaviour choice is hard-coded. Each setting has an exact "off" value at which the environment behaves as it does today, byte for byte, and a test compares against rollouts recorded from the current code.
+
+**What is switched on:**
+- B1 is enabled in level 05, and level 06 inherits it.
+- B3 will be used by one variant world, written later by `experiment-designer`.
+- B2 and B4 ship off.
+
+Because every old training run's saved settings file would stop loading once these settings become mandatory, a small, logged compatibility step lands **first**. It fills in exactly these new settings, at their off values, when an analysis tool re-opens an old run.
 
 ---
 
@@ -34,216 +43,274 @@ Each mechanic has an exact "off" value at which the environment behaves exactly 
 
 ### A0 — Wiki pull gate and known bugs
 
-Read the `config_system` and `env_entities` folders of the LLM Wiki. Four entries bear on this plan:
+The `config_system` and `env_entities` folders of the LLM Wiki were read. Four entries bear on this plan:
 
-- `20260622_1746_start_injury_dead_needs_random_range`: `body.start_injury` is never read, and a fixed non-zero start needs a random range with `low == high`. **B1 does not add a fixed-value key at all**, so it cannot recreate that dead key. A pinned start temperature is written as flag on with `low == high`, and a unit test pins that this works (T-B1-2).
-- `20260909_1402_parity_gates_green_without_comparing`: a parity gate must **fail**, not skip, when its fixture, config or backend is missing. §File Changes → parity test carries that requirement.
-- `20260820_1606_reset_ulp_divergence_is_compiler_fusion`: two compilations can differ by one float32 ULP. The no-change test is pinned to CPU on both sides, and also compares the jaxpr, so it does not rely on rollout equality alone.
-- `20260901_1528_interoceptive_channel_is_two_dims_by_design`: injury and nutrition are **not observed** at level 05 (`sensory.injury_observable: false`, `nutrition_observable: false`). B2/B3 couple hidden states. That is a question for the experiment design (can the agent infer the combination from nociception and its own history?), not a defect here. Flagged for `experiment-designer`.
+- **`20260622_1746_start_injury_dead_needs_random_range`.** `body.start_injury` is never read; a fixed non-zero start needs a random range with `low == high`. **B1 adds no fixed-value key at all**, so that trap cannot recur. A pinned start is written as "flag on, `low == high`", and T-B1-2 pins that it works.
+- **`20260909_1402_parity_gates_green_without_comparing`.** Parity gates must **fail**, not skip, when their inputs are missing. The parity test and the compat test both carry that requirement.
+- **`20260820_1606_reset_ulp_divergence_is_compiler_fusion`.** Two compilations can differ by one float32 ULP. The fixture and the test are both pinned to CPU.
+- **`20260901_1528_interoceptive_channel_is_two_dims_by_design`.** Injury and nutrition are **not observed** at level 05, so B2 and B3 couple hidden states. That is an experiment-design question for `experiment-designer`, not a defect here.
 
-Known bugs (from `bug-curator`, supplied with the task) and how each is handled:
+Known bugs (from `bug-curator`) and how each is handled:
 
-| Known bug | Handling in this plan |
+| Known bug | Handling |
 |---|---|
-| `start_satiation` / `start_injury` inert unless the random range is used | B1 has no fixed-start key. Pinning = flag + `low == high`; T-B1-2 asserts the exact value. The default range is the degenerate `[setpoint, setpoint]`, so switching only the flag on reproduces today's start. |
-| Termination-reason codes untrustworthy when a body system is disabled (`core.py:1010`, the ungated `new_injury >= max_injury → 4` line) | B3 **refuses to load** unless `with_nutrition` and `with_injury` are both true. B3 and B4 add **no new reason code and no new predicate**: a B3 starvation reaches reason 2 through the existing clipped-nutrition test, and a B4 freeze reaches reason 5 through the existing `thermal_death`. |
-| 227/265 standalone configs already fail to load; each new mandatory key extends this (accepted policy) | Stated with measured numbers in §A6. Archived worlds are not migrated. The only exceptions are the archived files that are **live test inputs**, following the 2026-09-15 precedent (§A6). |
-| `tests/env/test_backward_compat_configs.py` skips every `basic/` world because it does not resolve `extends:` | The no-change test loads `basic/05` and `basic/04` through `load_env_config` → `load_env_params` (the resolving loader the trainer uses). |
-| Render-audit fixtures rejected by the thermal structure check (`config_loader.py:682-701`) | B1's start range does **not** enter the structure check (the check is about settle temperatures, not starting ones). B4 extends the check **only when its gain is non-zero**. At the inert 0.0 the check is literally the same code path, so no fixture that passes today can start failing. |
-| `tests/env/test_thermal_reward_gate.py` reference data must be regenerated if `calculate_drive` changes | `calculate_drive` is **not touched**. That test must pass unchanged; regenerating its data is forbidden in this change (Checkpoint CP9). |
-| Interoceptive nociception buffer zeroed at reset (`core.py:1112` area) | Kept. B1 changes only `body_temp` at reset. |
-| Nutrition two-sided 0–200, setpoint 100 (`379ec8fc`) | B3 charges before the single clip, so the over-eating ceiling test and the starvation floor test both read the post-charge value (§A3). |
+| `start_satiation` / `start_injury` inert unless the random range is used | B1 has no fixed-start key. Pinning is "flag on, `low == high`" (T-B1-2). The default range is `[setpoint, setpoint]`. |
+| Termination-reason codes untrustworthy when a body system is disabled (`core.py:1010`) | The loader **refuses** B3 (`c > 0`) unless `with_nutrition` and `with_injury` are both true, and refuses B4 (`g > 0`) unless `with_injury` is true (reviewer L3). No new reason code is added. B3's partial-mode starvation test is **returned by `update_body` and read by `jax_step`**, so the label and `done` share one predicate (§A3). |
+| 227/265 standalone configs already fail to load (accepted policy) | Measured and stated (§A6). Only archived files that are **live test inputs** get the off values (2026-09-15 / 09-17 precedent). |
+| `test_backward_compat_configs.py` skips every `basic/` world | The no-change test loads basic/05 and basic/04 through `load_env_config` → `load_env_params`. |
+| Render-audit fixtures rejected by the thermal structure check (`config_loader.py:682-701`) | B1's start range does not enter the structure check. B4 extends that check only when `g > 0`, so the `g = 0` path is the same code. |
+| `test_thermal_reward_gate.py` reference data must be regenerated if `calculate_drive` changes | `calculate_drive` is not touched. The test must pass with its data **unregenerated** (CP9). |
+| Interoceptive nociception buffer zeroed at reset | Kept. B1 changes only `body_temp` at reset. |
+| Nutrition two-sided, 0–200 with setpoint 100 (`379ec8fc`) | Over-eating is judged after the healing charge in both B3 modes; starvation is judged after the charge in `full` mode and before it in `partial` mode (§A3). |
 
-### A1 — Where things are today (code as truth, HEAD of `v4.0`, 2026-09-26)
+### A1 — Where things are today (code as truth, `v4.0`, 2026-09-26)
 
-**Level 05 resolved through the real loader** (`load_env_config` → `load_env_params` on the level-05 campfire world config): recovery base 0.2/step, compounding 0.0, bush multiplier 25.0, so healing is **5.0 injury points per rest step in a bush** and 0.2 in the open. Metabolic cost 1.0/step. Nutrition range [0, 200], setpoint 100, over-eating death on. Random start nutrition [0, 200], random start injury [0, 100]. Thermal: setpoint 0.0, death outside [-15, +15], `k_exchange` 0.04, `k_loss` 0.02, `k_metabolic` 0.0, warming scale 2.0, cooling scale 0.25, metabolic coupling off, world baseline sampled from [-31, -29], fire = 11 × |baseline|.
+**Level 05 resolved through the real loader:**
 
-Settle temperatures at the level-05 values, from the loader's own `_thermal_radial_equilibria`, at baseline −30: fire cell +51.4 (lethal), ring one cell out **+5.75** (survivable; the ring cell itself is +8.6°), three cells out −19.7 (lethal). Away from a fire the body cools from 0 to −15 in **92 steps**. Leaving the ring at +5.8, it takes 17 steps to reach 0, 36 to reach −5 and 63 to reach −10. Rewarming from −14 at the ring takes 10 steps.
+| Setting | Value |
+|---|---|
+| Recovery | base 0.2/step, compounding 0.0, bush multiplier 25.0 → **5.0 injury points per rest step in a bush**, 0.2 in the open |
+| Metabolic cost | 1.0/step |
+| Nutrition | range [0, 200], setpoint 100, over-eating death on |
+| Random starts | nutrition [0, 200], injury [0, 100] |
+| Body temperature | setpoint 0.0, death outside [−15, +15] |
+| Heat exchange | `k_exchange` 0.04, `k_loss` 0.02, `k_metabolic` 0.0 |
+| Rate scales | warming 2.0, cooling 0.25 |
+| Metabolic coupling | off |
+| World | baseline sampled from [−31, −29]; fire = 11 × \|baseline\| |
 
-**The update order inside `core.py::update_body` (lines 155–422):**
+**Temperatures from the loader's single-fire model** (`_thermal_single_fire_field` / `_thermal_radial_equilibria`). These are model values; the state temperatures measured on real resets are wider, for example ring settles of 5.56–6.78 including merged-fire layouts.
 
-1. Nutrition (183–255): decay `− metabolic_cost` → thermal drain A1 (`thermal.metabolic_coupling`, static gate, 245–249, billed on the **pre-step** body temperature) → add food → **one clip** to [0, max_nutrition] (253).
-2. Satiation derived from the clipped nutrition (258–263).
-3. Injury (265–323): damage slice from the smoothing buffer → rest streak → `recovery_amount = base·(1+accel)^(streak−1)` → bush premium (static gate on `recovery_in_bush_multiplier != 1.0`, 309–313) → `can_recover = rested ∧ applied_inc ≤ 0` → subtract → clip [0, max_injury].
-4. Death: `new_nutrition <= 0` / `>= max_nutrition` (gated) / `new_injury >= max_injury` (330–358).
-5. Body temperature (373–420), static on `thermal_enabled`, then static on `warming == cooling == 1.0`. Recurrence `T ← T + s·[k_ex·(T_cell − T) + k_met − k_loss·(T − T_set)]`.
-
-**Consequence for B3:** nutrition is finalised (clipped, and satiation derived from it) **before** the injury block computes how much was healed. B3 therefore has to move the clip and the satiation derivation behind the injury block. §Design D3 does this with static branches so the off path is unchanged.
-
-**Reset (`core.py:1775`):** `body_key1, body_key2, body_key3 = jax.random.split(body_key, 3)`. `body_key2` draws nutrition and `body_key3` draws injury. **`body_key1` is split and never used.** B1 draws from `body_key1`. That touches no existing stream: switching B1 on changes nothing about positions, nutrition, injury, properties or `state.key`, and switching it off leaves the reset graph identical. `body_temp` is set at `core.py:2064` to `params.temperature_setpoint`.
-
-**Loader:** the thermal body constants are conditional-mandatory under `thermal.enabled` (`config_loader.py:1523–1621`), with inert literals in the `else` arm (1647–1672). The rate-scale bound `scale·(k_ex + k_loss) ≤ 1` is at 1571–1591. The structure check `_check_thermal_structure` is at 530–706 and is called from inside the thermal-on arm. The body start ranges follow the "flag → conditional-mandatory range, else sentinel" pattern at 2154–2209. `recovery_in_bush_multiplier` is unconditional-mandatory and `float()`-coerced because it is a static field (2211–2233).
-
-### A2 — B4: the task wording names the wrong coefficient, so B4 scales `k_exchange`, not `k_loss`
-
-The task says "the `k_loss` term grows with injury". In this code `k_loss` is **not** heat loss. It is the body's **defence**: the fraction of the deviation from the setpoint that physiology undoes each step (loader message at `config_loader.py:1551`: "the per-step fraction of the deviation from setpoint that physiology undoes"; `core.py:365–370`). Raising `k_loss` with injury would pull an injured body **closer** to its setpoint, so injury would protect against the cold. That is the opposite of the intent.
-
-The coefficient that sets how fast the body loses heat to a cold cell is `k_exchange`. B4 therefore scales `k_exchange` with injury:
-
-$$
-k_{ex}^{\text{eff}} = k_{ex}\,\Bigl(1 + g\,\frac{I}{I_{\max}}\Bigr),\qquad g \ge 0,\quad I \in [0, I_{\max}]
-$$
-
-- **Off value:** `g = 0.0`, exactly (static gate; the code keeps using `params.thermal_k_exchange` itself).
-- **Bounds:** the factor lies in [1, 1+g]. It is monotone increasing in injury.
-- **Effect on settle points:** `T* = (k_ex^eff·T_cell + k_loss·T_set + k_met)/(k_ex^eff + k_loss)`, which moves toward the cell's temperature as injury rises. The derivative with respect to `k_ex^eff` has a sign that does not depend on `k_ex^eff`, so settle points are monotone in injury. Checking injury 0 and injury max is therefore enough (used in §Design D4).
-- **Symmetric by construction:** next to a fire an injured body also warms faster (ring settle +5.75 → +6.9 at g = 1 and full injury; the ring cell is +8.6°, so it can never exceed that). A cold-only variant is Open decision D-B4.
-- **A1 drain unaffected:** the metabolic-coupling bill is `rate·|k_loss·(T − T_set)|` and does not involve `k_exchange`.
-
-Level-05 numbers (cell −30, cooling scale 0.25):
-
-| g | injury 0 | injury 50 | injury 100 |
-|---|---|---|---|
-| steps from 0 °C to freezing (< −15) | 92 / 92 / 92 at g = 0 | 55 at g = 1 | 39 at g = 1 |
-| g = 0.5 | 92 | 69 | 55 |
-| g = 2 | 92 | 39 | 25 |
-| settle temperature, g = 1 | −20.0 | −22.5 | −24.0 |
-| first step from 0 °C, g = 1 | −0.30 | −0.45 | −0.60 |
-
-**The stability bound that B4 can break.** The loader enforces `k_ex + k_loss ≤ 1` and `scale·(k_ex + k_loss) ≤ 1` for each scale. With B4 the effective sum is largest at full injury: `k_ex·(1+g) + k_loss`. At level 05 the binding case is the warming scale 2.0: `2.0·(0.04·(1+g) + 0.02) ≤ 1` ⇒ **g ≤ 11**. Nothing plausible is near that. The loader must still check the full-injury value (D4), because another world (or a later retune) could break it.
-
-**Structure check.** At g = 1 and g = 2 and full injury, the level-05 profile stays certified (d0 +61.7 / +66.1 still lethal, d1 +6.9 / +7.4 survivable, d3 −23.7 / −25.3 lethal). D4 evaluates the check at both ends of the injury range when g > 0.
-
-### A3 — B3 ordering, and its interaction with the two lethal ends of nutrition
-
-"Healed" must mean **injury points actually removed by recovery this step**, not the nominal `recovery_amount`:
-
-- At injury 3 with a nominal 5-point heal, the clip at 0 removes only 3. The agent is charged for 3.
-- At injury 0 nothing is healed and nothing is charged.
-- **Pitfall:** on a step where damage pushes injury past `max_injury`, the upper clip also lowers injury. That is not healing. Using `injury_before − injury_after` without the `can_recover` mask would charge for it. The formula is therefore masked: `healed = where(can_recover, max(injury_after_damage − injury_after_clip, 0), 0)`. Under `can_recover`, `applied_inc ≤ 0`, so the upper clip cannot fire. T-B3-5 pins this.
-
-**Order (proposed, pinned in code comments and in `05_body_homeostasis.md`):**
-
-1. linear decay `− metabolic_cost`
-2. A1 thermal drain (if on)
-3. food refill (if ate)
-4. **B3 healing charge `− c · healed`** (new; `healed` comes from the injury block, which runs before this step when B3 is on)
-5. **one** clip to [0, max_nutrition]
-6. satiation derived from the clipped value
-
-This keeps the existing invariant, "exactly one clip, after every debit and credit", which is what lets the termination tests read the clipped value:
-
-- **Starvation:** a heal that costs more than the agent has lands on exactly 0.0, sets `done` through the existing `new_nutrition <= 0.0` line, and is labelled reason 2 through the existing jax_step predicate. Nothing new is added. So **healing can starve an agent**. That is the intended trade-off. The alternative, capping healing by available energy, is Open decision D-B3.
-- **Over-eating:** charged before the clip, so a step that both eats up to the ceiling and heals is tested against the ceiling **after** paying for the heal. This can only happen in auto-eat worlds (`eat_action_enabled: false`), where standing on food and resting coincide. At level 05 eating and resting are separate actions (4 = rest, 5 = eat), so they never coincide. T-B3-6 pins the auto-eat case.
-
-B3 needs `with_injury` (to heal) and `with_nutrition` (to pay). The loader refuses `c > 0` otherwise, so B3 cannot create another "label without the system" instance of the `core.py:1010` bug.
-
-B3 and B2 compose multiplicatively and without special handling: the charge is per point healed, so a B2-slowed heal costs proportionally less per step.
-
-Level-05 numbers (B2 off, in a bush, resting, no damage, 5 points healed per step):
-
-| c | extra nutrition per heal step | cost of a full 100-point heal | full heal as a share of the 0–200 range |
-|---|---|---|---|
-| 0.5 | 2.5 | 50 | 25 % |
-| 1.0 | 5.0 | 100 | 50 % |
-
-Each rest step also pays the ordinary 1.0 metabolic cost.
-
-### A4 — B2 functional form
-
-$$
-w(T) = \max\bigl(0,\; 1 - s\,\lvert T - T_{set}\rvert\bigr),\qquad \text{recovery} \leftarrow \text{recovery}\cdot w(T)
-$$
-
-- `s ≥ 0` is the fraction of healing lost per degree of deviation (unit 1/°C). **Off value `s = 0.0` exactly** (static gate; the branch is not traced).
-- **Bounded** in [0, 1]: healing can be slowed or stopped, never reversed and never boosted.
-- **Monotone** decreasing in |T − T_set|. Healing reaches zero at |ΔT| = 1/s.
-- The multiplier applies to `recovery_amount` after the bush premium, so it inherits the rest-and-no-net-damage condition, exactly as the bush premium does.
-- It uses the **pre-step** body temperature (`state.body_temp`). The body update runs later in `update_body`, and the A1 drain already bills on the pre-step temperature, so this keeps one convention for "the body's state at the start of the step drives this step's physiology". It also avoids reordering the function.
-
-Healing per rest step in a bush at level 05 (base 5.0/step):
-
-| body temp | s = 1/15 (healing stops at the death threshold) | s = 0.1 (healing stops at ±10°) |
+| Quantity | Baseline −31 (hot corner) | Baseline −29 |
 |---|---|---|
-| 0 | 5.00 | 5.00 |
-| −5 | 3.33 | 2.50 |
-| −10 | 1.67 | 0.00 |
-| −15 | 0.00 | 0.00 |
-| +6 (ring beside a fire) | 3.00 | 2.00 |
+| Fire-cell temperature | **79.73** | 74.59 |
+| Ring settle (one cell out) | **+5.94** | +5.56 |
+| Three cells out | about −20 | about −19 |
 
-**The +6 row is the reason for Open decision D-B2.** The task specifies "closeness to the setpoint", which is symmetric. The warm spot next to a fire, where a body settles, is about +5.8°, so a symmetric form **slows healing at the fire**. That arguably contradicts "healing needs warmth". A cold-only form, `max(0, 1 − s·max(0, T_set − T))`, heals at full speed at the ring. Either is a one-line difference in the same static branch. The plan implements the symmetric form (the task's wording) unless the user picks otherwise.
+**Other timings at level 05:**
+- Away from a fire, the body cools from 0 to −15 in 92 steps (cell −30).
+- After leaving the ring at +5.8 it takes 17 / 36 / 63 steps to reach 0 / −5 / −10.
+- Rewarming from −14 at the ring takes 10 steps.
 
-### A5 — B1 key placement and the random draw
+**Update order inside `core.py::update_body` (155–422):**
+1. **Nutrition:** decay → A1 thermal drain (static gate, pre-step body temperature) → food → **one clip** to [0, max] (line 253).
+2. **Satiation** derived from the clipped nutrition (258–263).
+3. **Injury:** damage slice → rest streak → recovery → bush premium (static gate, 309–313) → `can_recover = rested ∧ applied_inc ≤ 0` → subtract → clip.
+4. **Death tests** (330–358).
+5. **Body temperature** (373–420): static on `thermal_enabled`, then static on the scales being 1.0/1.0.
 
-Keys live under `thermal:`, next to `temperature_setpoint` / `min_temperature` / `max_temperature`, and are conditional-mandatory under `thermal.enabled`. This mirrors both existing patterns:
+Nutrition is finalised before the injury block knows what was healed, so B3 moves the clip and the satiation derivation behind the injury block. This happens in static branches (D3).
 
-- body-temperature constants are read only when thermal is on;
-- the injury start pattern is flag → range conditional-mandatory → sentinel otherwise.
+**Reset.** At `core.py:1775`, `body_key1, body_key2, body_key3 = split(body_key, 3)`. `body_key1` is **split and never used** (the reviewer confirmed this), so B1 draws from it and no existing random stream moves.
 
-Validation: `min_temperature ≤ low ≤ high ≤ max_temperature`, finite. This is the same closed-interval shape as `start_injury_low/high` (a start exactly on the boundary is survivable, because death is strictly outside it). The draw is `jax.random.uniform(body_key1, (), minval=low, maxval=high)`. With `low == high` JAX's uniform returns exactly `low` (`u·0 + low`), and T-B1-2 pins that.
+**Static vs traced parameters.** Every `EnvParams` leaf becomes a jaxpr input whether or not it is used. A new traced field therefore renumbers the jaxpr string even on the off path (reviewer M1; verified empirically). This plan makes **every new field static** (`struct.field(pytree_node=False)`, with floats `float()`-coerced at load): one rule, no new leaves. The pre-change and post-change `jax_step` / `jax_reset` jaxprs are then comparable as strings on the off path.
 
-**Proposed level-05 range [−10, +5] (Open decision D-B1).** Reasoning at level-05 values:
+### A2 — B4: scale `k_exchange` (confirmed), with a configurable direction
 
-- The upper end stays below the ring's settle temperature (+5.75), so an agent that spawns beside a fire and steps onto it survives the first step, as the 2026-09-19 calibration target requires: 5 + 2.0·(0.04·(79.7 − 5) − 0.02·5) = +10.8, below +15. From +10 it would be +14.96, a knife-edge.
-- The lower end leaves 46 steps before freezing at the coldest cell, and fewer than 10 steps to rewarm at a ring.
+In this code `k_loss` is the body's **defence**, the share of the deviation that physiology undoes each step (`config_loader.py:1551`). Raising it with injury would protect the injured body. The user confirmed that B4 scales `k_exchange`, the heat swap with the cell:
 
-**Consequence the user already accepted:** Wave 2 level-05 runs stop being a like-for-like baseline. **Also:** the sensory-noise world (level 06) `extends:` level 05, so **level 06 inherits B1 as well** (Open decision D-L06).
+$$
+k_{ex}^{\text{boost}} = k_{ex}\,\Bigl(1 + g\,\frac{I}{I_{\max}}\Bigr),\qquad g \ge 0
+$$
 
-### A6 — Roll-out cost of the new mandatory keys (measured, 2026-09-26)
+**Direction setting, `thermal.injury_heat_exchange_mode`:**
+- **`cooling_only`** (default, and the value for this batch): the boost applies on a step where the cell is colder than the body (`T_cell < T`), i.e. while heat flows out. Stepping onto a fire is unaffected, so the 2026-09-19 fire calibration still holds for injured agents.
+- **`both`**: the boost applies on every step. An injured agent also heats faster at a fire and can die on its **first** step onto one (math-reviewer). The loader therefore runs a first-step-onto-fire check for this mode (D4).
 
-**Thermal-conditional keys (B1, B2, B4).** These are read only when `thermal.enabled`. The raw-loaded thermal-on inputs are:
+**Properties:**
+- Off at `g = 0.0` exactly (static gate).
+- The boost factor lies in [1, 1+g] and is monotone in injury.
+- Settle point `T* = (k_ex'·T_cell + k_loss·T_set + k_met)/(k_ex' + k_loss)`.
+- **Same-side note (math-reviewer).** The sign of `T* − T_cell` is the sign of `k_loss·(T_set − T_cell) + k_met`, which does not depend on `k_ex'`. So whether a cell is on the "body warmer than cell" (cooling) side does not change with injury, and in `cooling_only` mode each cell uses one coefficient consistently. Settle points are monotone in `k_ex'` on each side, so checking injury 0 and injury max is sufficient.
 
-- `configs/environment/default.yaml` (thermal off by default; carries the keys for inheritance);
-- two **archived test inputs**, `configs/environment/experiment/archive/thermal/campfire_world.yaml` and `campfire_world_body_temp_hidden.yaml`. These are loaded from a raw `Config` by nine `tests/env/test_thermal_*` / `test_metabolic_coupling` / `test_thermoception` / `test_body_temperature_observation` / `test_dashboard_layout` modules and by `scripts/fixtures/generate_{metabolic_coupling,thermal_rate_scale}_fixture.py`.
+**Level-05 numbers** (cold cell −30, cooling scale 0.25; identical in both modes because heat only flows out):
 
-The 2026-09-17 warming/cooling change added its keys inline to both archived files (lines 357–360 of `campfire_world.yaml`), and the 2026-09-15 bush change did the same for 29 archived test inputs. That precedent is followed: **these are live test inputs, not a migration of the archive.**
-
-The `basic/` worlds inherit through `extends:`.
-
-**Unconditional key (B3, `body.healing_nutrition_cost`).** This has the same roll-out population as `body.recovery_in_bush_multiplier` on 2026-09-15:
-
-- every non-archive file that carries `recovery_in_bush_multiplier` today: 36 files by `grep -rl recovery_in_bush_multiplier configs tests | grep -v experiment/archive` (default.yaml, 5 `configs/continual/nmn_double_return_stages/*`, 6 `configs/verification/*`, about 24 test modules and fixture YAMLs with inline `body:` blocks);
-- the frozen world `tests/env/fixtures/frozen_parity_worlds/environment__default.yaml`, with the same "ADDED AFTER THE FREEZE, inert" comment block its line 225 uses;
-- every archived file that carries the inline `recovery_in_bush_multiplier` line **and** is loaded by a test. The developer finds this set by the same grep restricted to `experiment/archive` intersected with the paths referenced under `tests/` and `scripts/fixtures/`.
-
-**Accepted breakage, to be measured and stated in the change log.** Archived configs that are not test inputs are not migrated. The developer re-runs the 2026-09-15 before/after count ("resolve every config under `experiment/archive/` through `load_env_config` → `load_env_params`") and records the numbers. The expectation is that nearly every archived world that still loads today stops loading, because B3 is unconditional.
-
-### A7 — Old level-05 checkpoints: what breaks, measured on real saved configs
-
-Evaluation, replay and trajectory collection rebuild the world from the run's **own frozen copy**, `results/<algo>/<run>/models/config.yaml`, never from `configs/`. The call sites (`collect_trajectories.py:699–727`, `eval_rollout.py:959/1007`, `scripts/analysis/nmn/replay.py:82`, `trajectory_glm.py:54`, `supplementary/parity.py`) are enumerated in [[SAVED_RUN_CONFIG_COMPAT]] §A4.
-
-Verified today on `results/JAX_RecurrentPPO/20260922-182534_rppo_bq2cover_lvl05_t1none_s42/models/config.yaml`: it is fully resolved (no `extends:`), carries `thermal.enabled: true` and `recovery_in_bush_multiplier: 25.0`, and `load_env_params(Config(yaml))` succeeds at HEAD.
-
-When this plan lands without a compatibility step:
-
-| New key | Saved configs that stop loading | Which |
-|---|---|---|
-| `thermal.random_start_body_temp` / `healing_temperature_sensitivity` / `injury_heat_exchange_gain` (thermal-conditional) | **12** of the 45 saved configs written since 2026-09-14 | The 8 Wave 1 + Wave 2 level-05 / level-06 runs (`20260921-1148*/1149*`, `20260922-18253*/18254*`) and 4 render-audit / smoke runs |
-| `body.healing_nutrition_cost` (unconditional) | **every** saved config, including all 36 of the 45 recent ones that load today | All of Wave 1 and Wave 2 (28 runs), plus every other currently rebuildable run |
-
-The error is `Strict Config: Configuration key '<key>' is required but missing.`
-
-**This collides with in-flight work.** `configs/trajectory_collection/basicq2_wave1.yaml` (untracked, another session) collects trajectory stores for all 14 Wave 1 runs from their saved configs. If this plan's keys land before that collection (and any Wave 2 collection) finishes, a resume dies at config load. See Open decision D-COMPAT.
-
-**Proposed route, consistent with [[SAVED_RUN_CONFIG_COMPAT]] (which is PLANNED, not implemented — `src/environment/saved_config_compat.py` does not exist yet):** add these keys to that plan's `_ERA_KEYS` table (its §File Changes) at their inert values, each justified by the static branch that makes it inert. This plan's no-change test is the parity instrument that table demands ("A value here is a CLAIM ABOUT WHAT THE OLD CODE DID and must name the branch that makes it true").
-
-| Key | Era value | Justification |
-|---|---|---|
-| `thermal.random_start_body_temp` | `False` | `jax_reset` static branch; start at setpoint |
-| `thermal.healing_temperature_sensitivity` | `0.0` | `update_body` static gate |
-| `thermal.injury_heat_exchange_gain` | `0.0` | `update_body` static gate |
-| `body.healing_nutrition_cost` | `0.0` | `update_body` static gate |
-
-- The range keys need no entry: they are read only when the flag is true.
-- One design point for that plan's owner: the three thermal-conditional keys should be supplied only when the (possibly supplied) `thermal.enabled` is true. Supplying them into a thermal-off config is harmless but inflates the logged "supplied" list, and also the store fingerprint (its §A10).
-- **This plan does not edit that document or implement that module.** The hand-off is a message to its owner (or a signed appended "Feedback from `senior-developer`" block once that session has finished editing it).
-
-Without fallback defaults and without that layer, the only other correct way to analyse an old run after this lands is to run the analysis tool from a **git worktree of a pre-change commit**. That works today and needs no code.
-
-### A8 — Termination reason and per-step drive terms (requirement 5)
-
-| Quantity | Trainer / WandB | Trajectory store (Parquet) | Eval recordings (`.rec.gz`) |
+| g | steps from 0 °C to freezing, injury 0 / 50 / 100 | settle temperature at injury 100 | first step from 0 °C at injury 100 |
 |---|---|---|---|
-| Termination reason | ✅ `Episode/Term_{MaxSteps,Starvation,Overeating,Injury,Thermal}` one-hot (`src/behavior/episode_metrics.py`) | ✅ per-episode and per-step `termination_reason` (`trajectory_store.py:140,172`) | ✅ |
-| Satiation, nutrition, injury (state at t) | — | ✅ columns | ✅ |
-| **Body temperature (state at t)** | — | ❌ **no column** | ✅ `snap['body_temp']` (`eval_recording.py:66`) |
-| Per-axis drive terms | — | ❌ (not stored; `info['drive_hunger' / 'drive_injury' / 'drive_thermal']` exist in `jax_step` but no consumer records them) | ❌ |
+| 0 | 92 / 92 / 92 | −20.0 | −0.30 |
+| 0.5 | 92 / 69 / 55 | −22.5 at g = 1, injury 50 | — |
+| 1 | 92 / 55 / 39 | −24.0 | −0.60 |
+| 2 | 92 / 39 / 25 | −25.7 | — |
 
-The per-axis drives are pure functions of stored state plus the run's params, so "which need is most pressing" is **derivable** offline from satiation, injury and body temperature. It is **not derivable from the store for any thermal world**, because body temperature is missing. B1 makes starting body temperature a per-episode draw, which makes that gap worse.
+**Stability bound.** The loader enforces `scale·(k_ex + k_loss) ≤ 1`. The boost can apply on a warming step even in `cooling_only` mode: when `T_cell < T < T_set`, `k_loss` can pull the body up while the cell pulls it down. So the bound is checked at `k_ex·(1+g)` for **both** scales in **both** modes. At level 05 the binding case is warming 2.0: `2.0·(0.04·(1+g) + 0.02) ≤ 1` ⇒ g ≤ 11. The tests use g = 10.9 (loads) and g = 11.5 (refused), not the exact boundary (reviewer L1).
 
-**Gap to close:** add `body_temp` (float32, "state at t", `state.body_temp`) to the store's step columns. The store contract (`trajectory_store.py:115–116`) says no column may be inserted without a `SCHEMA_VERSION` bump (currently `1`), and the reader hard-errors on unknown versions (line 525). **Bumping a version needs the user's permission** (project rule). This is therefore Part L below, gated on Open decision D-L. Recommended: add only `body_temp` (derive the drives offline using the same deviation scales as `calculate_drive`); do not store drives.
+**First-step-onto-fire check (`both` mode only; math-reviewer's inequality):**
 
-No new termination codes are needed. B3 starvation → 2 and B4 freezing → 5 go through existing predicates. After this change, "why episodes end" is exactly as available as today.
+$$
+T_{high} + s_w\bigl(k_{ex}(1+g)(F_{max} - T_{high}) - k_{loss}(T_{high} - T_{set}) + k_{met}\bigr) \le T_{max}
+$$
+
+- `F_max` is the model's fire-cell temperature at the hottest corner (`ratio_high·|default_temp_low|` through `_thermal_single_fire_field`).
+- `T_high = max(B1 upper start (or T_set if B1 is off), full-injury ring equilibrium)`. Including the ring term is this plan's addition: a body settled beside a fire is the calibrated starting point for "first step onto the fire".
+
+Level 05 (baseline −31, `F_max` 79.73):
+
+| g | ring equilibrium at full injury | first step from `max(+5, ring)` | verdict |
+|---|---|---|---|
+| 0 | +5.94 | +11.61 | ok |
+| 0.5 | +6.68 | +15.18 | **refused** |
+| 1 | +7.13 | +18.46 | **refused** |
+
+So `both` mode admits roughly g ≲ 0.45 at level 05; the developer computes the exact value in the test. Merged fires are not in the single-fire model; CP8 measures them.
+
+### A3 — B3: healing uses energy, with a configurable shortfall mode
+
+**Keys:**
+- `body.healing_nutrition_cost` (`c ≥ 0`, nutrition per injury point healed; off at 0.0).
+- `body.healing_nutrition_shortfall` ∈ {`partial`, `full`}. It is read **only when `c > 0`** (conditional-mandatory, the same shape as `thermal.metabolic_coupling_rate`). `default.yaml` carries `partial`, which is inert because `c = 0`. The variant world sets `c` and states `partial` explicitly.
+
+**Definitions** (all quantities for one step):
+
+| Symbol | Meaning |
+|---|---|
+| `I_d` | injury after this step's damage slice. Under `can_recover`, `applied_inc == 0`, so `I_d == prev_injury` (reviewer: `damage ≥ 0`). |
+| `r` | `recovery_amount` after the bush premium and after B2 |
+| `N_pre` | nutrition after decay, A1 drain and food, **before** the charge and before the clip |
+| `h_nom` | `where(can_recover, min(r, I_d), 0)` — what would be healed if unpaid |
+
+**Healed amount:**
+
+$$
+h = \begin{cases} h_{nom} & \texttt{full} \\ \min\bigl(h_{nom},\ \max(N_{pre}, 0)/c\bigr) & \texttt{partial} \end{cases}
+$$
+
+In `partial` this is the user's `min(recovery, prev_injury, available_nutrition / c)`, with available nutrition = `max(N_pre, 0)`.
+
+**Updates:**
+- `I' = clip(where(can_recover, I_d − h, I_d), 0, I_max)`. In `full` mode this equals today's `clip(I_d − r, 0, I_max)` exactly: `I_d − min(r, I_d)` is `I_d − r` when `r ≤ I_d`, and 0 otherwise. So the injury path does not change.
+- `N' = clip(N_pre − c·h, 0, N_max)`: one clip, after every debit and credit.
+- Satiation is derived from `N'`.
+
+**Death labels** (one predicate, shared by `done` and the reason code):
+- **Over-eating (both modes):** `N' ≥ N_max`, judged after the charge. It can only coincide with healing in auto-eat worlds (T-B3-6).
+- **Starvation, `full` mode:** `N' ≤ 0`, the existing predicate. A heal that costs more than the agent has lands on 0 and the agent starves (reason 2).
+- **Starvation, `partial` mode:** `clip(N_pre) ≤ 0`, i.e. judged **before** the charge. The charge can bring nutrition to 0 (or within a rounding ulp of it) but can never be the cause of death: "no death from the charge itself". If `N_pre ≤ 0` the agent was already starving from metabolism alone. Then `h = 0` and it dies with reason 2, exactly as today. This predicate is computed in `update_body` and **returned**; `jax_step`'s reason-2 line uses the returned value (static branch), so the label and `done` cannot diverge — the failure class the `core.py:1010` bug belongs to.
+- **New reachable state in `partial` mode:** an agent can be alive at `N = 0`. On the next step decay drives `N_pre` negative, so it starves unless it eats that step. That is the intended "healed with its last reserves" situation, and a user-visible behaviour to know about.
+
+**The loader refuses:** `c > 0` without both `with_nutrition` and `with_injury`; `c < 0` or NaN; a shortfall value other than the two names.
+
+**Level-05 examples** (in a bush, resting, no damage, B2 off, `h_nom = 5`, `c = 1`):
+
+| Nutrition before the step | `N_pre` | `full`: healed / N' / dies? | `partial`: healed / N' / dies? |
+|---|---|---|---|
+| 100 | 99 | 5 / 94 / no | 5 / 94 / no |
+| 4 | 3 | 5 / 0 / **yes (2)** | 3 / 0 / no |
+| 0.5 | −0.5 | 5 / 0 / yes (2) | 0 / 0 / yes (2), from metabolism |
+
+**Cost scale at `c = 1`:** a full 100-point heal costs 100, half the 0–200 range. At `c = 0.5` it costs 50.
+
+### A4 — B2: healing needs warmth, with separate cold and warm sensitivities
+
+$$
+w(T) = \max\Bigl(0,\; 1 - s_c\,\max(0, T_{set}-T) - s_w\,\max(0, T - T_{set})\Bigr),\qquad r \leftarrow r\cdot w(T)
+$$
+
+- **Keys:** `thermal.healing_cold_sensitivity` (`s_c`) and `thermal.healing_warm_sensitivity` (`s_w`), each ≥ 0, unit 1/°C.
+- Equal values give the symmetric form. With both at 0 the branch is not traced (static gate on `s_c != 0 or s_w != 0`). Inside the branch, a side whose sensitivity is 0 contributes no term (static).
+- `w` is bounded in [0, 1], never negative and never a boost, and monotone in the deviation on each side.
+- It multiplies `recovery_amount` after the bush premium, so it inherits the rest-and-no-net-damage condition.
+- It uses the pre-step body temperature, the same convention as the A1 drain.
+
+**Healing per rest step in a bush at level 05** (base 5.0; the fire ring settles near +6):
+
+| Body temp | cold-only `s_c = 1/15, s_w = 0` | symmetric `s_c = s_w = 1/15` | cold-strong, warm-mild `s_c = 0.1, s_w = 1/30` |
+|---|---|---|---|
+| +6 (ring beside a fire) | 5.00 | 3.00 | 4.00 |
+| 0 | 5.00 | 5.00 | 5.00 |
+| −5 | 3.33 | 3.33 | 2.50 |
+| −10 | 1.67 | 1.67 | 0.00 |
+| −15 | 0.00 | 0.00 | 0.00 |
+
+With `1/15`, healing reaches zero exactly at the death threshold.
+
+### A5 — B1: key placement, the draw, and the level-05 range (decided: [−10, +5])
+
+**Keys:** `thermal.random_start_body_temp` (bool) and `thermal.start_body_temp_low` / `_high`.
+- They are conditional-mandatory under `thermal.enabled`; the range is read only when the flag is on.
+- Validation: `min_temperature ≤ low ≤ high ≤ max_temperature`, finite.
+- The draw is `uniform(body_key1, (), low, high)`. With `low == high` it returns exactly `low`.
+
+**Level 05 uses [−10, +5] (user decision).** Recomputed at the hot corner (baseline −31, fire cell 79.73) per reviewer M2:
+
+| Start | First step onto a single fire, baseline −31 | Baseline −30 |
+|---|---|---|
+| +5 | **+10.78** | +10.57 |
+| +10 | **+15.18 — lethal** | +14.97 |
+
+- **Safe single-fire ceiling:** `(15 − 2·0.04·79.73)/(1 − 2·0.06) = 9.80`, so the rejected [−10, +10] alternative would have killed agents in hot-corner episodes.
+- **Merged fires** can raise the fire-cell temperature above the single-fire model; the 2026-09-19 change log measured a ring-start worst case of 12.3. That is why CP8's measurement is **adversarial**: start pinned at +5 across many resets including multi-fire layouts, as described in CP8.
+- **Cold end:** 46 steps before freezing at the coldest cell; under 10 steps to rewarm at a ring.
+
+**Consequences (accepted):**
+- Wave 2 level-05 runs are no longer a like-for-like baseline.
+- **Level 06 inherits B1** through `extends:` (user decision: yes).
+- The M3/M4 render-fixture recordings will differ when regenerated.
+
+### A6 — Roll-out cost of the new mandatory keys (measured 2026-09-26)
+
+**Thermal-conditional keys** (B1 flag, B2 ×2, B4 gain; plus the conditional B1 range and B4 mode). The only raw-loaded thermal-on inputs are:
+- `configs/environment/default.yaml`;
+- two archived **test inputs**, `experiment/archive/thermal/campfire_world.yaml` and `campfire_world_body_temp_hidden.yaml`. They are loaded from a raw `Config` by the thermal test modules and by `scripts/fixtures/generate_{metabolic_coupling,thermal_rate_scale}_fixture.py`. Their off values are added inline (user decision, 2026-09-17 precedent), with the same comment.
+
+The `basic/` worlds inherit.
+
+**Unconditional key `body.healing_nutrition_cost`.** Same population as `recovery_in_bush_multiplier` on 2026-09-15:
+- `grep -rl --include='*.yaml' --include='*.py' recovery_in_bush_multiplier configs tests | grep -v experiment/archive` → **34 files**: 12 under `configs/`, 22 under `tests/` (reviewer L2).
+- `tests/env/fixtures/frozen_parity_worlds/environment__default.yaml`, with an "ADDED AFTER THE FREEZE" block modelled on its lines 225–233.
+- The archived files that carry the inline bush line **and** are loaded by a test or fixture script. The developer lists them.
+
+**Accepted breakage.** Other archived configs are not migrated. The developer records the before/after count from resolving every `experiment/archive/` config through `load_env_config` → `load_env_params`.
+
+### A7 — Old runs: what would break, and the minimal compatibility step that lands first
+
+Evaluation, replay and trajectory collection rebuild a run's world from its **own saved copy** of the settings, `results/<algo>/<run>/models/config.yaml`. Measured on 45 saved configs written since 2026-09-14:
+- **12** are thermal-on: the 8 Wave 1 / Wave 2 level-05 and level-06 runs, plus 4 render-audit / smoke runs.
+- **36** load at HEAD today; the Wave 2 level-05 config was checked directly.
+
+Once C2 lands:
+- the thermal-conditional keys break the 12;
+- the unconditional B3 key breaks **every** saved config, including all of Wave 1 and Wave 2 (28 runs).
+
+**User decision: build a minimal compatibility step first** (C0). It is scoped to exactly this change's keys and is designed to be absorbed by [[SAVED_RUN_CONFIG_COMPAT]], which is PLANNED, not implemented (`src/environment/saved_config_compat.py` does not exist as of 2026-09-26). C0 follows that plan's own specification (its §Design and §File Changes) so the owner can extend rather than replace it:
+
+- **Same module path and function:** `src/environment/saved_config_compat.py`, `apply_saved_config_compat(cfg: dict, *, source: str) -> list[str]`, mutating `cfg` in place.
+- **`_ERA_KEYS` holds only this change's keys:**
+
+| Key | Supplied value | Condition | Why the value is inert |
+|---|---|---|---|
+| `thermal.random_start_body_temp` | `False` | only if the saved `thermal.enabled` is true | `jax_reset` static branch |
+| `thermal.healing_cold_sensitivity` | `0.0` | same | `update_body` static gate |
+| `thermal.healing_warm_sensitivity` | `0.0` | same | same |
+| `thermal.injury_heat_exchange_gain` | `0.0` | same | same |
+| `body.healing_nutrition_cost` | `0.0` | always | same |
+
+  The conditional keys (B1 range, B4 mode, B3 shortfall) are never supplied: they are read only when their parent is non-inert.
+
+- **Refusal rules** (from the compat plan's list):
+  - (a) raise if `source` resolves under the repo's `configs/` — the live path keeps hard-erroring;
+  - (b) a key already present is left alone;
+  - (c) **all-or-none per gate group** — a saved thermal block carrying some of the four thermal keys but not all is an edited or foreign file, so raise;
+  - (d) if the saved config lacks `thermal.enabled` altogether (a pre-thermal run), supply none of the thermal keys and let the loader fail on `thermal.enabled` as it does today. That key belongs to the compat plan's Stage 1, not here.
+- **Loud:** one WARNING line naming every key supplied, its value and `source`. The function returns the sorted list, and callers print it.
+- **The trajectory-store fingerprint is computed on the config before injection.** This is the compat plan's §A10 decision. It is load-bearing here: a store started before C2 must resume into the **same** directory after C2, and hashing after injection would silently fork it and restart from block 0. `collect_trajectories.py` currently hashes after its opt-in sensory shims (lines 713–745). That stays as it is; the new injection runs after the hash and after the manifest's `resolved_env_config` is taken.
+- **Call sites** (the compat plan's §A4 Group 1): `scripts/eval/traj_collect/collect_trajectories.py` (699–727), `scripts/eval/eval_rollout.py` (959/1007; only when the resolved `--config` is outside `configs/`), `scripts/analysis/nmn/replay.py` (82–84), `scripts/analysis/trajectory_glm.py` (54), `scripts/analysis/supplementary/parity.py` (26–31). The developer re-greps `load_env_params` for any site added since 2026-09-10.
+- **Eval recordings** (reviewer O1). `.rec.gz` files pickle `EnvParams`, and an unpickled old object lacks the new fields. Recordings are only rendered, never stepped. The developer greps for `.replace(` / `dataclasses.replace` on unpickled params before C2; the renderer already works around this at `render_recordings_v2.py:184–193` with `object.__setattr__`. No change is expected; any hit is fixed the same way.
+
+**Failable gate (reviewer M3).** C2 may not be committed unless, **after** C2, two verbatim saved configs:
+- `20260921-114858_rppo_basicq2_lvl05_t1none_s42` (Wave 1, level 05)
+- `20260922-182534_rppo_bq2cover_lvl05_t1none_s42` (Wave 2, level 05)
+
+— copied into `tests/env/fixtures/saved_run_configs/` — **fail** `load_env_params(Config(raw))` with the missing-key error **and succeed** through `apply_saved_config_compat`, supplying exactly the five keys above. They must also give the same collector fingerprint as the raw file. A committed test (`tests/env/test_saved_config_compat.py`) and CP-C0 run it.
+
+**Pre-flight (reviewer M3).** `run_collection.py` launches per-run subprocesses that import `src/` fresh from the NAS. If C2 lands mid-collection, later runs in the same collection execute the new code, and the store mixes code versions. Before C2 is committed:
+- no `collect_trajectories` / `run_collection` process may be live on nodes 109–113: `gpu-status` skill, plus `pgrep -af collect_trajectories` on each node through the same direct-SSH path, plus today's diary;
+- if one is live, **C2 waits**.
+
+### A8 — Termination reason and per-step drive terms
+
+- **Termination reason** is available to the trainer (`Episode/Term_*`, `src/behavior/episode_metrics.py`), in the trajectory store (per episode and per step) and in eval recordings. B3 and B4 add no reason code: starvation → 2 and freezing → 5 go through existing labels.
+- **Per-axis drives** are pure functions of satiation, injury and body temperature plus the run's params, so they are derivable offline.
+- **Gap:** the trajectory store has **no body-temperature column** (eval recordings do). Per the user's decision this is a **separate plan**, out of scope here. It needs a `SCHEMA_VERSION` change, which requires the user's permission.
 
 ---
 
@@ -251,344 +318,324 @@ No new termination codes are needed. B3 starvation → 2 and B4 freezing → 5 g
 
 ### Design
 
-Four static-gated mechanics, one mandatory key each (plus B1's two range keys). Every gate is a **trace-time Python `if` on a static `EnvParams` field**, so at the inert value the branch emits no operation and the traced graph is the same as today. That is the `recovery_in_bush_multiplier` / warming-scale discipline. It is proved three ways:
+The design has four mechanics, nine keys and one rule: **every new field is static** (`struct.field(pytree_node=False)`; floats `float()`-coerced, strings validated against their enum). Each mechanic sits behind a trace-time Python `if` that emits nothing at its off value.
 
-1. rollout equality against a pre-change fixture;
-2. jaxpr equality against the pre-change jaxpr;
-3. a per-mechanic contrast test showing each gate, once non-inert, **does** change the rollout.
+The claim "off = today" is proved three ways:
+1. rollout equality against a fixture recorded from pre-change code;
+2. `jax_step` / `jax_reset` jaxpr-string equality. This is valid because no new leaves exist (reviewer M1);
+3. a contrast half showing that each mechanic, once on, changes both the rollout and the jaxpr.
 
-All four new static float fields are `float()`-coerced at load (a static field is part of JAX's trace-cache key, and YAML `0` vs `0.0` would otherwise recompile).
-
-**D1 (B1, reset).** In `jax_reset`, after the injury draw:
+**D1 (B1, `jax_reset`):**
 
 ```python
-if params.thermal_random_start_body_temp:          # static; False on every thermal-off config
-    body_temp0 = jax.random.uniform(
-        body_key1, (), minval=params.thermal_start_body_temp_low,
-        maxval=params.thermal_start_body_temp_high)
+if params.thermal_random_start_body_temp:          # static
+    body_temp0 = jax.random.uniform(body_key1, (),
+        minval=params.thermal_start_body_temp_low, maxval=params.thermal_start_body_temp_high)
 else:
     body_temp0 = params.temperature_setpoint
 ...
-body_temp=jnp.asarray(body_temp0, dtype=jnp.float32),   # was: params.temperature_setpoint
+body_temp=jnp.asarray(body_temp0, dtype=jnp.float32),
 ```
 
-`body_key1` is already split and unused, so no existing stream moves. The comment at `core.py:2061–2063` is updated accordingly.
-
-**D2 (B2, `update_body` injury block, right after the bush premium at line 313):**
+**D2 (B2, after the bush premium, `core.py:313`):**
 
 ```python
-if params.thermal_healing_temperature_sensitivity != 0.0:   # static; 0.0 on thermal-off
-    _warmth = jnp.maximum(
-        0.0, 1.0 - params.thermal_healing_temperature_sensitivity
-        * jnp.abs(state.body_temp - params.temperature_setpoint))
-    recovery_amount = recovery_amount * _warmth
+_sc = params.thermal_healing_cold_sensitivity; _sw = params.thermal_healing_warm_sensitivity
+if _sc != 0.0 or _sw != 0.0:                        # static
+    _dev = state.body_temp - params.temperature_setpoint
+    _loss = 0.0
+    if _sc != 0.0: _loss = _loss + _sc * jnp.maximum(-_dev, 0.0)
+    if _sw != 0.0: _loss = _loss + _sw * jnp.maximum(_dev, 0.0)
+    recovery_amount = recovery_amount * jnp.maximum(0.0, 1.0 - _loss)
 ```
 
-**D3 (B3, `update_body`).** Three static edits, and on the off path the executed statements are the same as today, in the same order:
+**D3 (B3, `update_body`).** Static on `params.healing_nutrition_cost != 0.0`. On the off path the executed statements are today's, in today's order.
 
 ```python
-# nutrition block — replace line 253
-if params.healing_nutrition_cost == 0.0:
-    new_nutrition = jnp.clip(new_nutrition, 0.0, params.max_nutrition)
-# (else: clip deferred until after the injury block)
-
-# satiation block — derive here only on the off path
-if params.with_satiation and params.healing_nutrition_cost == 0.0:
-    <today's two lines, verbatim>
-elif not params.with_satiation:
-    new_satiation = state.satiation
-# (else: derived after the charge)
-
-# injury block — capture before recovery, compute healed after the clip
-_injury_before_recovery = new_injury                       # after the damage slice
-... existing recovery + clip ...
-if params.healing_nutrition_cost != 0.0:
-    _healed = jnp.where(can_recover,
-                        jnp.maximum(_injury_before_recovery - new_injury, 0.0), 0.0)
-
-# after the injury block, before the death checks
-if params.healing_nutrition_cost != 0.0:        # loader guarantees with_nutrition and with_injury
-    new_nutrition = new_nutrition - params.healing_nutrition_cost * _healed
-    new_nutrition = jnp.clip(new_nutrition, 0.0, params.max_nutrition)
-    if params.with_satiation:
-        <today's two satiation lines, verbatim>
-```
-
-The `_injury_before_recovery = new_injury` alias is a Python name binding, not an op, so it is safe on the off path. The ORDER comment at `core.py:184–193` is rewritten to list step 4 (B3 charge) and state that the single clip sits after it.
-
-**D4 (B4, body-temperature block, lines 385–409):**
-
-```python
-if params.thermal_injury_heat_exchange_gain != 0.0:          # static
-    _k_ex = params.thermal_k_exchange * (
-        1.0 + params.thermal_injury_heat_exchange_gain
-        * state.injury_level / params.max_injury)
+# nutrition block: line 253's clip runs here ONLY when c == 0; else keep N_pre unclipped
+# satiation block: derived here ONLY when c == 0 (else after the charge)
+# injury block, B3 on:
+_I_d = new_injury                                    # after the damage slice
+_h_nom = jnp.where(can_recover, jnp.minimum(recovery_amount, _I_d), 0.0)
+if params.healing_nutrition_shortfall == 'partial':  # static
+    _h = jnp.minimum(_h_nom, jnp.maximum(_N_pre, 0.0) / params.healing_nutrition_cost)
 else:
-    _k_ex = params.thermal_k_exchange                        # the same traced leaf; no op
+    _h = _h_nom
+new_injury = jnp.clip(jnp.where(can_recover, _I_d - _h, _I_d), 0.0, params.max_injury)
+# after the injury block, B3 on:
+new_nutrition = jnp.clip(_N_pre - params.healing_nutrition_cost * _h, 0.0, params.max_nutrition)
+<satiation derived from new_nutrition, today's two lines>
+# death block, B3 on and partial:
+_starved = jnp.clip(_N_pre, 0.0, params.max_nutrition) <= 0.0
+done = jnp.where(_starved, True, done)               # replaces the N' <= 0 line in this mode only
 ```
 
-Then replace `params.thermal_k_exchange` with `_k_ex` in **both** branches (the 1.0/1.0 branch at 389 and the scaled branch at 402). Nothing else in the recurrence changes. It uses pre-step injury (`state.injury_level`), the same convention as B2's pre-step temperature.
+- `update_body` returns `starved` as a new final element: `None` on every path except B3-partial.
+- `jax_step` statically picks `reason = where(starved, 2, reason)` when `starved is not None`; otherwise it keeps today's line (`core.py:999`).
+- The ORDER comment at `core.py:184–193` is rewritten.
+- `calculate_drive` is not touched.
 
-**Loader, D4.** When g ≠ 0:
+**D4 (B4, body-temperature block, `core.py:385–409`):**
 
-- extend both stability checks to the full-injury coefficient: `k_ex·(1+g) + k_loss ≤ 1`, and `scale·(k_ex·(1+g) + k_loss) ≤ 1` per scale, with an error message naming `thermal.injury_heat_exchange_gain`;
-- call `_check_thermal_structure` a second time with `k_exchange = k_ex·(1+g)`, and prefix its failure message with "at full injury (thermal.injury_heat_exchange_gain = g)".
+```python
+if params.thermal_injury_heat_exchange_gain != 0.0:  # static
+    _boost = params.thermal_k_exchange * (1.0 + params.thermal_injury_heat_exchange_gain
+                                          * state.injury_level / params.max_injury)
+    if params.thermal_injury_heat_exchange_mode == 'both':   # static
+        _k_ex = _boost
+    else:                                                     # 'cooling_only'
+        _k_ex = jnp.where(cell_temp < state.body_temp, _boost, params.thermal_k_exchange)
+else:
+    _k_ex = params.thermal_k_exchange
+```
 
-Endpoint checks suffice because settle points are monotone in `k_ex` (§A2). When g = 0 the loader path is byte-identical to today.
+`_k_ex` replaces `params.thermal_k_exchange` in both the 1.0/1.0 branch and the scaled branch.
 
-**Loader, validation per key.** All keys are read with `get_mandatory`. All are refused when NaN (write the check as `not (x >= 0)`).
+**Loader, B4 (`g > 0`):**
+- Refuse if `with_injury` is false (reviewer L3).
+- Stability checks at `k_ex·(1+g)` for both scales.
+- A second `_check_thermal_structure` pass at full injury. In `cooling_only` mode the boosted coefficient is used only for rings on the cooling side, decided by the sign of `k_loss·(T_set − T_amb) + k_met`. In `both` mode it is used for every ring. The failure message is prefixed "at full injury".
+- In `both` mode only: the first-step-onto-fire check of §A2, naming both keys in the error.
 
-| Key | Scope | Validation |
-|---|---|---|
-| `thermal.random_start_body_temp` | conditional under `thermal.enabled` | bool |
-| `thermal.start_body_temp_low/high` | conditional under the flag; sentinel `(setpoint, setpoint)` otherwise; `(0.0, 0.0)` when thermal is off | `min_temperature ≤ low ≤ high ≤ max_temperature` |
-| `thermal.healing_temperature_sensitivity` | conditional under `thermal.enabled`; sentinel `0.0` when off | `≥ 0` |
-| `thermal.injury_heat_exchange_gain` | conditional under `thermal.enabled`; sentinel `0.0` when off | `≥ 0`, plus the bound checks above |
-| `body.healing_nutrition_cost` | **unconditional** | `≥ 0`; if `> 0` then `with_nutrition` and `with_injury` must both be true, else `ValueError` explaining why |
+**Loader validation table:**
 
-**Why B3 is unconditional and B2/B4 are not.** B2 and B4 read body temperature, which does not exist in a thermal-off world. B3 has no natural gate, and it follows the `recovery_in_bush_multiplier` precedent. Its broader roll-out and saved-run cost are stated in §A6 and §A7.
-
-**Part L (gated on D-L).** Add the `body_temp` step column to the trajectory store with a `SCHEMA_VERSION` bump, and teach the reader to accept both 1 and 2 (a v1 store has no `body_temp`, and readers must not assume it). This is a separate commit. It may be split into its own plan if the user prefers.
+| Key | Read when | Inert / sentinel | Validation |
+|---|---|---|---|
+| `thermal.random_start_body_temp` | `thermal.enabled` | `false` | bool |
+| `thermal.start_body_temp_low` / `_high` | flag true | `(setpoint, setpoint)`; `(0.0, 0.0)` if thermal off | `min_T ≤ low ≤ high ≤ max_T`, finite |
+| `thermal.healing_cold_sensitivity` | `thermal.enabled` | `0.0` | `≥ 0`, not NaN |
+| `thermal.healing_warm_sensitivity` | `thermal.enabled` | `0.0` | `≥ 0`, not NaN |
+| `thermal.injury_heat_exchange_gain` | `thermal.enabled` | `0.0` | `≥ 0`, not NaN; `with_injury` if `> 0`; bounds and checks above |
+| `thermal.injury_heat_exchange_mode` | gain `> 0` | `cooling_only` | ∈ {`cooling_only`, `both`} |
+| `body.healing_nutrition_cost` | always | `0.0` | `≥ 0`, not NaN; `with_nutrition ∧ with_injury` if `> 0` |
+| `body.healing_nutrition_shortfall` | cost `> 0` | `partial` | ∈ {`partial`, `full`} |
 
 ### File Changes
 
-**Commit C1 — the pre-change fixture (made FIRST, from a worktree of the pre-change tip; no `src/` change)**
+**Commit C1 — pre-change fixture (first; no `src/` change)**
 
-#### NEW `scripts/fixtures/generate_body_mechanics_parity_fixture.py`
+`scripts/fixtures/generate_body_mechanics_parity_fixture.py` (NEW), modelled on `generate_thermal_rate_scale_fixture.py`:
+- `--src-root` is required; `JAX_PLATFORMS=cpu` is set before any jax import; `_provenance_sha` is stamped.
+- **Worlds:** basic/05 and basic/04, loaded through `load_env_config` → `load_env_params` from the worktree.
+- **Episodes:** 16 seeds (0–15), up to 300 steps each.
+- **Actions:** deterministic. Rest (4) when `(t // 20) % 3 == 2`; otherwise `randint(fold_in(PRNGKey(1234), seed·1000 + t), 0, 6)`.
+- **Records:** every `EnvState` leaf per step (including `key` and `body_temp`), `reward`, `done`, every numeric `info` entry (`termination_reason`, `drive_*`, `damage`, `rested`, `ate_food`, `agent_in_bush`), `get_observation`, and the `jax_step` / `jax_reset` jaxpr SHA-1s per world.
+- **Also stamps** the full resolved config dict of each world as canonical YAML (reviewer O3).
+- **Refuses to write** unless each world has at least one rest step with healing, at least one rest step in a bush with healing, at least one real death, and at least one eat event; for level 05 the body temperature must also span at least 5°. It prints the counts.
 
-- Modelled on `scripts/fixtures/generate_thermal_rate_scale_fixture.py`: `--src-root` is **required** (no default); `JAX_PLATFORMS=cpu` is set before any jax import; the SHA of `--src-root` is stamped as `_provenance_sha`; output always goes to this checkout's `tests/env/fixtures/body_mechanics_parity/pre_change_rollouts.npz`.
-- **Worlds** (both loaded through `load_env_config` → `load_env_params` from the `--src-root` tree): `configs/environment/experiment/basic/05-campfire_thermal_10x10.yaml` (thermal) and `configs/environment/experiment/basic/04-jump_attack_10x10.yaml` (non-thermal parent; random start injury and nutrition, bush healing, pounce).
-- **Episodes:** 16 reset seeds (0–15) × up to 300 steps each, stepped with `jax.jit(jax_step)` until `done`.
-- **Actions:** a deterministic stream. `action_t = 4 (rest)` when `(t // 20) % 3 == 2`, otherwise `jax.random.randint(fold_in(PRNGKey(1234), seed·1000 + t), (), 0, 6)`. The rest bursts produce rest streaks, and therefore healing.
-- **Recorded per step:** every leaf of `EnvState` via `jax.tree_util.tree_flatten` (including `key`, `body_temp`, `nutrition`, `injury_level`, `rest_streak`; `thermal_field` once per episode), `reward`, `done`, every numeric `info` entry (at minimum `termination_reason`, `drive_hunger`, `drive_injury`, `drive_thermal` where present, `damage`, `rested`, `ate_food`, `agent_in_bush`), and `get_observation(state, params)`. Padded arrays plus per-episode lengths.
-- **Also recorded:** `sha1(str(jax.make_jaxpr(jax_step)(state0, action0, params)))` and the same for `jax_reset`, per world.
-- **Refuses to write** (non-zero exit) unless the rollouts cover what the test must see. Per world:
-  - ≥ 1 rest step with a positive injury decrease;
-  - ≥ 1 rest step on a bush with a positive injury decrease;
-  - ≥ 1 real death (termination reason ≥ 2);
-  - ≥ 1 eat event;
-  - for level 05, a body temperature range spanning ≥ 5°.
+Output: `tests/env/fixtures/body_mechanics_parity/pre_change_rollouts.npz`, generated via `git worktree add --detach /tmp/gwp_bodymech_baseline <SHA>` → generator → `git worktree remove`.
 
-  It prints the counts. If a threshold is not met, raise the step budget or the seed count; do not lower the threshold.
-- Module docstring states: the scenario constants (seeds, step budget, action rule, worlds) are duplicated in the test and must be changed in both places; and it must be generated from pre-change code.
+`docs/environment/SCRIPTS_DEPENDENCY_MAP.md`: a row for the generator.
 
-#### NEW `tests/env/fixtures/body_mechanics_parity/pre_change_rollouts.npz`
+**Commit C0 — minimal saved-config compatibility step (before C2)**
 
-Generated with `git worktree add --detach /tmp/gwp_bodymech_baseline <pre-change SHA>` → run the generator with `--src-root` → `git worktree remove`. Record the SHA in the Implementation Report.
+- `src/environment/saved_config_compat.py` (NEW), per §A7. The docstring states that it is the first slice of [[SAVED_RUN_CONFIG_COMPAT]], and that `_ERA_KEYS` rows need a value, the era commit and the branch that makes the value inert (the compat plan's rule).
+  - **If that module exists by the time C0 is implemented** (the other session landed first), add the five rows to its table instead of creating the file, and note it in the Implementation Report.
+- **Wire the five call sites of §A7.** Fingerprint and manifest `resolved_env_config` are taken **before** injection. Each site prints the returned list.
+- `tests/env/fixtures/saved_run_configs/` (NEW): the two saved configs copied **verbatim**, with a README naming the source run and the date copied.
+- `tests/env/test_saved_config_compat.py` (NEW). It fails rather than skips if a fixture is missing.
+  - (i) Both fixtures load through the shim, returning exactly the five keys (the negative half of the gate becomes active after C2; before C2 the test asserts that injection returns the five keys and the load succeeds).
+  - (ii) After C2: the raw load raises the missing-key error.
+  - (iii) A `source` under `configs/` raises.
+  - (iv) A thermal block carrying two of the four thermal keys raises.
+  - (v) Present keys are not overwritten.
+  - (vi) The collector's fingerprint of each fixture equals `env_fingerprint(raw)`.
+  - (vii) A thermal-off saved config gets only `body.healing_nutrition_cost`.
+- `docs/environment/SCRIPTS_DEPENDENCY_MAP.md`: note the new `src/` import in the five scripts.
 
-#### `docs/environment/SCRIPTS_DEPENDENCY_MAP.md`
+**Commit C2 — mechanics, keys, tests, docs (everything inert).** Blocked on the M3 gate and the pre-flight in §A7.
 
-Add a row for the new generator. Callers: the test in C2 (by docstring reference) and a human running it. `sys.path` root depth: 2, the same as its sibling generators.
+`src/environment/state.py`:
+- `healing_nutrition_cost: float` and `healing_nutrition_shortfall: str` next to `recovery_in_bush_multiplier`, both static.
+- In the thermal block: `thermal_random_start_body_temp: bool`, `thermal_start_body_temp_low: float`, `thermal_start_body_temp_high: float`, `thermal_healing_cold_sensitivity: float`, `thermal_healing_warm_sensitivity: float`, `thermal_injury_heat_exchange_gain: float`, `thermal_injury_heat_exchange_mode: str`. **All static.**
+- A comment on why static (M1).
+- Update the `body_temp` comment.
 
-**Commit C2 — mechanics, keys, tests and docs (everything inert; no world behaves differently)**
+`src/environment/config_loader.py`:
+- Thermal-on arm, after the rate-scale block (~1591): B1, B2, B4 per the table, the B4 stability extension and the `both`-mode transient check.
+- Thermal-off arm (1647–1672): sentinels.
+- Structure-check call (~2019): the full-injury pass when `g > 0`.
+- Body block (after 2233): B3 keys.
+- `EnvParams(...)`: the nine fields.
 
-#### `src/environment/state.py` (EnvParams)
+`src/environment/core.py`:
+- D1 (1775–1792, 2061–2064);
+- D2, D3, D4 in `update_body`, plus the `starved` return;
+- `jax_step`: the static reason-2 selection only;
+- `calculate_drive` untouched.
 
-- Next to `recovery_in_bush_multiplier` (line 259): `healing_nutrition_cost: float = struct.field(pytree_node=False)`, with a comment in the style of lines 251–258 (why static; `float()` coercion).
-- In the thermal block, near lines 393–424:
-  - `thermal_random_start_body_temp: bool = struct.field(pytree_node=False)`
-  - `thermal_start_body_temp_low: float` (traced)
-  - `thermal_start_body_temp_high: float` (traced)
-  - `thermal_healing_temperature_sensitivity: float = struct.field(pytree_node=False)`
-  - `thermal_injury_heat_exchange_gain: float = struct.field(pytree_node=False)`
-- Update the `body_temp` comment at lines 90–95 ("initialised to the setpoint, or drawn from [low, high] when `thermal_random_start_body_temp`").
-
-#### `src/environment/config_loader.py`
-
-- Thermal-on arm (after the rate-scale block at 1591, before metabolic coupling at 1593): read and validate B1, B2 and B4 per the table in §Design. Extend the two stability checks when g ≠ 0.
-- Thermal-off `else` arm (1647–1672): inert sentinels `False, 0.0, 0.0, 0.0, 0.0`, with a comment that they are never read and why the values are the no-op ones.
-- Structure check call (around line 2019): second invocation at the full-injury `k_exchange` when g ≠ 0.
-- Body block (after 2233): `body.healing_nutrition_cost`, unconditional, `float()`, validated per §Design.
-- `EnvParams(...)` construction (around 2333–2400): pass the six new fields.
-
-#### `src/environment/core.py`
-
-- `update_body` (155–422): D2, D3 and D4 exactly as specified. Update the Returns/ORDER comments. `calculate_drive` (72–127) is **not touched**.
-- `jax_reset` (1775–1792, 2061–2064): D1.
-- `jax_step` termination chain (994–1016): **no change** (B3 and B4 reuse existing predicates). Add one comment line at the reason-2 line: "B3 starvation lands here via the single clip in update_body".
-
-#### `configs/environment/default.yaml`
-
-Under `thermal:` (after `metabolic_coupling_rate`, line 546):
+`configs/environment/default.yaml`, under `thermal:` after `metabolic_coupling_rate`:
 
 ```yaml
-  # Random starting body temperature (B1). Read ONLY when thermal.enabled. The range is
-  # read ONLY when random_start_body_temp is true; there is no fixed-start key (pin a
-  # start with low == high). Default range = the setpoint, so flipping only the flag
-  # reproduces today's start exactly.
+  # B1 — random starting body temperature. Read only when thermal.enabled; the range only
+  # when the flag is true. No fixed-start key: pin a start with low == high.
   random_start_body_temp: false
   start_body_temp_low: 0.0
   start_body_temp_high: 0.0
-  # Healing needs warmth (B2): fraction of injury recovery lost per degree the body is
-  # away from temperature_setpoint (1/deg). 0.0 = off (today's recovery, byte-identical).
-  healing_temperature_sensitivity: 0.0
-  # Injury speeds heat exchange (B4): k_exchange is multiplied by 1 + gain*injury/max_injury.
-  # 0.0 = off. NOTE: scales k_exchange, NOT k_loss — k_loss is the body's DEFENCE toward
-  # setpoint, and raising it with injury would make injury protective.
+  # B2 — healing needs warmth. Fraction of injury recovery lost per degree the body is
+  # below (cold) / above (warm) temperature_setpoint. Equal = symmetric; both 0.0 = off.
+  healing_cold_sensitivity: 0.0
+  healing_warm_sensitivity: 0.0
+  # B4 — injury speeds heat exchange: k_exchange x (1 + gain*injury/max_injury). 0.0 = off.
+  # Scales k_exchange, NOT k_loss (k_loss is the body's defence toward setpoint).
   injury_heat_exchange_gain: 0.0
+  # Read only when gain > 0. cooling_only: boost only while the cell is colder than the
+  # body. both: also at a fire (the loader then checks the first step onto a fire).
+  injury_heat_exchange_mode: cooling_only
 ```
 
-Under `body:` (after `recovery_in_bush_multiplier`):
+`configs/environment/default.yaml`, under `body:` after `recovery_in_bush_multiplier`:
 
 ```yaml
-  # Healing uses energy (B3): nutrition charged per injury point actually healed this step,
-  # before the single clip to [0, max_nutrition]. 0.0 = off. Requires with_nutrition and
-  # with_injury. A heal that costs more than the agent has starves it (termination 2).
+  # B3 — healing uses energy: nutrition per injury point healed, charged before the single
+  # clip. 0.0 = off. Requires with_nutrition and with_injury.
   healing_nutrition_cost: 0.0
+  # Read only when healing_nutrition_cost > 0. partial: heal only what remaining nutrition
+  # pays for, and the charge never kills. full: heal fully, and a shortfall starves.
+  healing_nutrition_shortfall: partial
 ```
 
-#### Raw-loaded configs that need the inert keys (§A6)
+**Raw-loaded configs** (§A6):
+- the thermal keys go into the two archived campfire test inputs;
+- `body.healing_nutrition_cost: 0.0` goes into the 34-file set, the frozen parity world, and the archived test inputs the developer lists.
 
-- **Thermal keys** (inline, with the same "kept loadable because a test loads it from a raw Config" comment the 2026-09-17 lines carry): `configs/environment/experiment/archive/thermal/campfire_world.yaml` and `campfire_world_body_temp_hidden.yaml`.
-- **`body.healing_nutrition_cost: 0.0`** in:
-  - every file in the 36-file non-archive set (`grep -rl recovery_in_bush_multiplier configs tests | grep -v experiment/archive`);
-  - `tests/env/fixtures/frozen_parity_worlds/environment__default.yaml` (comment block modelled on its lines 225–233);
-  - the archived test inputs identified in §A6.
+`tests/env/test_body_mechanics_parity.py` (NEW):
+- CPU only. It **fails, never skips**, on a missing fixture, config or provenance.
+- Loads both worlds at HEAD through the resolving loader. After C3, it sets `thermal.random_start_body_temp: false` in memory for basic/05 (and records that it did).
+- **Named drift check (O3):** the resolved dict minus the nine new keys must equal the fixture's stamped dict, so unrelated config drift fails with its own message.
+- `np.array_equal` on every recorded array.
+- `jax_step` / `jax_reset` jaxpr SHA-1 equality.
+- **Contrast half:** B1 [−5, −5]; B2 `s_c = 0.1`; B2 `s_w = 0.1` in a warm scene; B3 `c = 1` in each shortfall mode, on both worlds; B4 `g = 1` in each mode. Each must change the rollout and the jaxpr.
+- Re-asserts the coverage counts.
 
-  The developer lists every touched file in the Implementation Report, with the before/after load counts.
-
-#### NEW `tests/env/test_body_mechanics_parity.py` — the no-change test (requirement 2)
-
-- `JAX_PLATFORMS=cpu` is set before the jax import. **Fails, never skips**, if the fixture, a world config, or `_provenance_sha` is missing.
-- Loads both worlds at HEAD via `load_env_config` → `load_env_params`. For level 05, once C3 has landed, it sets `thermal.random_start_body_temp: false` **in memory** on the resolved dict before building params. It also asserts that every other new key already resolves to its inert value, so a later default change cannot silently turn this into a comparison of a different world.
-- Replays the identical scenario. Asserts `np.array_equal` (no tolerance) on every recorded array, per step, per episode, including `state.key`, reward, `termination_reason` and observations.
-- Asserts the jaxpr SHA-1s for `jax_step` and `jax_reset` equal the fixture's (inert worlds).
-- **Contrast half** (anti-vacuous), on level 05 unless noted: switching on
-  - B1 (flag on, range [−5, −5]),
-  - B2 (s = 0.1),
-  - B3 (c = 1.0, on both worlds),
-  - B4 (g = 1.0)
-
-  each yields a rollout that **differs** from the fixture, and a jaxpr SHA that differs.
-- Re-asserts the fixture's coverage counts (§C1) so a regenerated, degenerate fixture cannot pass.
-
-#### NEW `tests/env/test_body_mechanics_units.py` — per-mechanic unit tests (requirement 3)
-
-Hand-built `EnvState` / `info` fed directly to `update_body` (and `jax_reset` for B1), with params from level 05 via the resolving loader plus in-memory overrides. Expected values are hand-computed and written as literals in the test. Tolerance is `atol=1e-5` for arithmetic values; **exact equality** for the off cases.
+`tests/env/test_body_mechanics_units.py` (NEW). Hand-computed literals; `atol = 1e-5`; exact equality for off cases.
 
 - **B1**
-  - T-B1-1: flag off → `body_temp == temperature_setpoint`, and every other reset leaf equals the pre-change reset for 32 keys.
-  - T-B1-2: flag on, `low == high == −7.0` → `body_temp == −7.0` exactly (the trap test).
-  - T-B1-3: flag on, [−10, 5] over 1000 keys → all in range, sample mean within ±0.5 of −2.5, and **every non-body_temp reset leaf equals the flag-off reset for the same key** (stream isolation).
-  - T-B1-4: loader — flag missing with thermal on → `ValueError` naming the key; low > high, low < min_temperature, high > max_temperature → `ValueError`; thermal off with all B1/B2/B4 keys deleted → loads.
-- **B2** (resting, in a bush, no damage, injury 50, s = 0.1)
-  - T-B2-1: T = 0 → 45.0; T = −5 → 47.5; T = −10 → 50.0; T = +6 → 48.0; T = −30 → 50.0 (factor floors at 0, never negative).
-  - T-B2-2: in the open at T = −5 → 49.9.
-  - T-B2-3: s = 0 → exactly today's value at all T.
-  - T-B2-4: not resting, or taking damage → no recovery regardless of T.
-  - T-B2-5: s < 0 / NaN → `ValueError`.
-- **B3** (c = 1.0, resting in a bush, T = 0, B2 off, prev nutrition 100, metabolic 1.0)
-  - T-B3-1: injury 50 → nutrition 94.0.
-  - T-B3-2: injury 3 → 96.0 (charged for 3, not 5).
-  - T-B3-3: injury 0 → 99.0.
-  - T-B3-4: prev nutrition 4, injury 50 → nutrition 0.0, `done` true, and through `jax_step` `termination_reason == 2`.
-  - T-B3-5: a damage step that pushes injury past max → no charge.
-  - T-B3-6 (auto-eat world, `eat_action_enabled: false`): rest on food in the open, injury 50, prev nutrition 196, gain 6, eat cost 1 → 196 − 1 + 5 − 0.2 = 199.8, and **no** over-eating death. With c = 0 the same step lands on 200 and dies (documents the order).
-  - T-B3-7: A1 coupling on at rate 1, T = −10, k_loss 0.02 → 100 − 1 − 0.2 − 5 = 93.8.
-  - T-B3-8: B2 s = 0.1 at T = −5 → healed 2.5 → 96.5.
-  - T-B3-9: `c > 0` with `with_injury: false` or `with_nutrition: false` → `ValueError`; c < 0 → `ValueError`; key missing → `ValueError`.
-- **B4** (uniform cell −30, T = 0, level-05 scales)
-  - T-B4-1: g = 1, I = 50 → T' = −0.45; I = 100 → −0.60; I = 0 → −0.30 exactly equal to g = 0.
-  - T-B4-2: 1.0/1.0 scales: I = 50 → −1.8 versus −1.2 at g = 0.
-  - T-B4-3: warm cell +10, T = 0, I = 50 → +1.2 (symmetric exchange, warming scale 2).
-  - T-B4-4: settle point after 3000 steps at cell −10, I = 100, g = 1, scales 1/1 → −8.0 (versus −6.667 at g = 0).
-  - T-B4-5: loader — g = 11.5 at level-05 values → `ValueError` naming the gain (bound `2.0·(0.04·12.5 + 0.02) = 1.04 > 1`); g = 11 → loads; g < 0 / NaN → `ValueError`.
-  - T-B4-6: a synthetic world whose ring is survivable at I = 0 but lethal at full injury → structure check raises with the "at full injury" prefix; the same world at g = 0 loads.
-- **Graph identity, in the style of `test_recovery_in_bush.py::test_multiplier_one_is_graph_identical`:** at each inert value the traced `update_body` does not consume the relevant input; at a non-inert value it does. Inputs: `state.body_temp` for B2 inside the injury block; `state.injury_level` for B4 inside the thermal block. Locate the leaf positionally.
+  - T-B1-1: off → setpoint; other reset leaves unchanged over 32 keys.
+  - T-B1-2: `low == high == −7` → exactly −7.
+  - T-B1-3: [−10, 5] over 1000 keys → in range, mean −2.5 ± 0.5, and every other leaf equals the flag-off reset (stream isolation).
+  - T-B1-4: loader refusals, and thermal-off loads with all thermal keys deleted.
+- **B2** (resting in a bush, no damage, injury 50, `s_c = 0.1`, `s_w = 0.05`)
+  - T-B2-1: T = 0 → 45.0; −5 → 47.5; −10 → 50.0; +6 → 46.5; −30 → 50.0.
+  - T-B2-2: `s_w = 0` → +6 gives 45.0.
+  - T-B2-3: `s_c = 0`, `s_w = 0.05` → −5 gives 45.0.
+  - T-B2-4: both 0 → today's value exactly.
+  - T-B2-5: not resting, or taking damage → no recovery.
+  - T-B2-6: negative / NaN → `ValueError`.
+- **B3** (`c = 1`, in a bush, T = 0, B2 off, metabolic 1)
+  - T-B3-1: `full`, N 100, I 50 → N 94, I 45.
+  - T-B3-2: `full`, I 3 → N 96, I 0.
+  - T-B3-3: I 0 → N 99 in both modes.
+  - T-B3-4: `full`, N 4, I 50 → N 0, I 45, `done`, reason 2.
+  - T-B3-5: `partial`, N 4, I 50 → N 0 (≤ 1e-6), I 47, **not** `done`, reason 0. The next rest step with no food → `done`, reason 2, I 47.
+  - T-B3-6: `partial`, N 0.5 → h 0, `done`, reason 2.
+  - T-B3-7: auto-eat world, rest on food in the open, I 50, N 196, gain 6, eat cost 1 → 199.8 and no over-eating death; with `c = 0` → 200 and death.
+  - T-B3-8: A1 coupling rate 1, T = −10 → 93.8.
+  - T-B3-9: B2 `s_c = 0.1` at T = −5 → h 2.5 → N 96.5.
+  - T-B3-10: a damage step pushing injury past the max → no charge.
+  - T-B3-11: loader — `c > 0` without `with_injury` or `with_nutrition` → `ValueError`; bad shortfall string → `ValueError`; cost missing → `ValueError`; shortfall missing with `c > 0` → `ValueError`; shortfall missing with `c = 0` → loads.
+- **B4** (cell −30, T = 0, level-05 scales)
+  - T-B4-1: `g = 1`, I 50 → −0.45; I 100 → −0.60; I 0 → −0.30, exactly equal to `g = 0`.
+  - T-B4-2: scales 1/1, I 50 → −1.8.
+  - T-B4-3: warm cell +10, I 50 → +0.8 in `cooling_only` (exactly the `g = 0` value), +1.2 in `both`.
+  - T-B4-4: settle point at cell −10, I 100, `g = 1`, scales 1/1 → −8.0.
+  - T-B4-5: `cooling_only`, `g = 10.9` loads; `g = 11.5` refused.
+  - T-B4-6: `both` at level 05, `g = 1` → refused by the first-step check; the developer computes the level-05 `both` threshold from the loader model and tests at 0.9× (loads) and 1.1× (refused).
+  - T-B4-7: synthetic world with a ring survivable at injury 0 but lethal at full injury → refused "at full injury".
+  - T-B4-8: `g > 0` with `with_injury: false` → refused.
+  - T-B4-9: bad mode string → refused.
+- **Graph-identity** tests in the style of `test_recovery_in_bush.py`: `state.body_temp` is unused by the injury block at B2 off; `state.injury_level` is unused by the thermal block at B4 off. The leaf is located positionally.
 
-#### Existing tests that must stay green **unmodified**
+**Must stay green unmodified:** `test_thermal_parity`, `test_unified_parity`, `test_visual_parity`, `test_metabolic_coupling`, `test_thermal_rate_scales`, `test_recovery_in_bush`, `test_two_sided_nutrition`, `test_thermal_reward_gate` (**no regeneration**), `test_no_recompile`, `test_truncation_not_death`, `test_config_layer_silent_failures_20260723`, `test_dashboard_layout`.
 
-`test_thermal_parity.py`, `test_unified_parity.py`, `test_visual_parity.py`, `test_metabolic_coupling.py`, `test_thermal_rate_scales.py`, `test_recovery_in_bush.py`, `test_two_sided_nutrition.py`, `test_thermal_reward_gate.py` (**no fixture regeneration permitted** — `calculate_drive` is untouched), `test_no_recompile.py`, `test_truncation_not_death.py`, `test_config_layer_silent_failures_20260723.py`, `test_dashboard_layout.py`. Only the inline-YAML additions of §A6 may touch test files.
+**Docs, in the same commit:**
+- `CONFIG_GUIDE.md` §5: the new keys, the conditional reads, "pin with `low == high`", and the saved-config compat step and its rule.
+- `02_config_schema.md`: nine rows.
+- `05_body_homeostasis.md`: the order, B2, B3 (both modes, the death labels, the alive-at-0 state), B4 (why `k_exchange`; the modes) and B1.
+- `06_reward_and_termination.md`: reasons 2 and 5 reused; partial-mode starvation is judged before the charge.
+- `CONFIG_CRITICAL_SETTINGS.md`: registry rows, plus a change-log entry "new keys, shipped inert" carrying the jaxpr SHAs, the parity-family counts, the archived before/after counts, the saved-run counts and the compat step.
 
-#### Docs (same commit — maintenance contracts)
-
-- `docs/environment/CONFIG_GUIDE.md`: §5 (conditional-mandatory keys). Add the three thermal-conditional keys, the unconditional body key, the "pin a start with low == high; there is no fixed-start key" note, and the recovery path for a repo config missing a key (add the inert value; never edit a saved run config).
-- `docs/environment/02_config_schema.md`: rows for all six keys (path, type, unit, inert value, validation, read condition).
-- `docs/environment/05_body_homeostasis.md`: the new update ORDER (step 4, the B3 charge), the B2 multiplier, the B4 coefficient (and why `k_exchange`, not `k_loss`), and B1 at reset.
-- `docs/environment/06_reward_and_termination.md`: one line saying that B3 starvation and B4 freezing reuse reasons 2 and 5, and that the reward formula is unchanged.
-- `docs/environment/CONFIG_CRITICAL_SETTINGS.md`:
-  - registry rows for the four mechanics (canonical value 0.0 / false in `default.yaml`);
-  - a dated change-log entry "2026-09-2x — new keys …, shipped inert". It carries the jaxpr SHAs before and after, the parity-family pass counts, the archived before/after load counts, the saved-run count (§A7 table), and the roll-out file list.
-
-**Commit C3 — enable B1 in level 05 (the only behaviour change in this plan)**
-
-#### `configs/environment/experiment/basic/05-campfire_thermal_10x10.yaml`
-
-In the `thermal:` block (currently only `enabled: true`), plus a header note:
+**Commit C3 — enable B1 in level 05 (the only behaviour change).** `configs/environment/experiment/basic/05-campfire_thermal_10x10.yaml`:
 
 ```yaml
 thermal:
   enabled: true
-  # Random starting body temperature (B1), enabled 2026-09-2x as a standard internal
-  # state of this world. Range: Open decision D-B1 in
-  # docs/develop/active/thermal/STATE_DEPENDENT_BODY_MECHANICS.md. The upper end stays
-  # below the fire-ring settle temperature (+5.75) so the first step onto a fire stays
-  # survivable (+10.8 < +15).
+  # B1 — random starting body temperature, a standard internal state of this world
+  # (decided 2026-09-26). Upper end +5: the first step onto a single hot-corner fire lands
+  # at +10.78 (< +15); +10 would reach +15.18 and kill. Level 06 inherits this.
   random_start_body_temp: true
   start_body_temp_low: -10.0
   start_body_temp_high: 5.0
 ```
 
-Update the header comment's list of values that differ from default.yaml, and note that level 06 inherits this (per D-L06).
-
-#### `docs/environment/CONFIG_CRITICAL_SETTINGS.md`
-
-A dated change-log entry: "B1 enabled in level 05 (and, by inheritance, level 06)". **Why:** per the 2026-09-26 decision, level 05 becomes the main world for state-dependence. **Consequence:** Wave 2 level-05 and level-06 runs are no longer like-for-like baselines for anything trained after this line. Also: render-fixture recordings of M3/M4 differ on regeneration. Include the measured start-temperature distribution over 600 real resets through the live loader (min, max, mean) and the first-step-onto-fire maximum measured over those resets.
-
-**Commit C4 — Part L (only if D-L is approved)**
-
-- `src/utils/trajectory_store.py`: `SCHEMA_VERSION` bumped to the value the user approves. Add `Column("body_temp", None, "float32", "state at t", "state.body_temp")` after `injury_level`. The reader accepts the old and new versions; a v1 store yields no `body_temp` column, and `validate_*` must not require it.
-- The writer site in `scripts/eval/traj_collect/collect_trajectories.py` (wherever step columns are filled): fill `body_temp`.
-- `docs/environment/TRAJECTORY_STORE_SCHEMA.md`: the new column and the version note.
-- `docs/environment/SCRIPTS_DEPENDENCY_MAP.md`: only if a script's callers change.
-- Test: extend the store round-trip test to assert that `body_temp` equals `state.body_temp` on a short level-05 collection, and that a v1 store still reads.
+Also:
+- update the header list of differences from `default.yaml` in the level-05 file, and add a header note in the level-06 file that it inherits B1;
+- `CONFIG_CRITICAL_SETTINGS.md` change log: B1 enabled in levels 05 and 06; Wave 2 level-05 and level-06 runs are no longer like-for-like baselines; the CP8 measurements.
 
 ---
 
-## Open decisions (for the user)
+## Hand-off to the owner of [[SAVED_RUN_CONFIG_COMPAT]]
 
-- **D-B1 — Level-05 start range.** Proposed [−10, +5]. The upper end keeps the first step onto a fire survivable (+10.8 against +15); the lower end leaves 46 steps before freezing at the coldest cell. Alternatives: [−10, +10], which makes the first fire step a knife-edge (+14.96); or a narrower [−5, +5].
-- **D-B2 — Symmetric vs cold-only healing penalty.** The symmetric form (the task's wording) slows healing at the warm ring beside a fire (+5.8° → 3.0/step at s = 1/15). Cold-only heals at full speed there. Also: which sensitivity to use in the B2 test world — 1/15 (healing stops at the death threshold) or 0.1 (stops at ±10°)? B2 ships off, so this only matters when it is turned on.
-- **D-B3 — When a heal costs more than the agent has.** Proposed: charge, and let the single clip starve it (reason 2). Alternative: cap healing at what the remaining nutrition can pay, so healing never kills. That is more code and a second coupling, but perhaps more "biological".
-- **D-B4 — Confirm the coefficient.** B4 scales `k_exchange`, not `k_loss` (§A2: raising `k_loss` makes injury protective). Symmetric (injured bodies also warm faster at a fire) vs cold-only (the gain applies only when the cell is colder than the body).
-- **D-L06 — Level 06 inherits B1** through `extends:`. Accept, or pin it off in the level-06 file?
-- **D-COMPAT — Sequencing against old-run analysis.** Once C2 lands, all Wave 1 and Wave 2 saved configs stop loading (B3 is unconditional), and the Wave 1 trajectory collection now being prepared would die at config load. Options:
-  - (a) land [[SAVED_RUN_CONFIG_COMPAT]] Stage 1 first, with these four era keys added to its table;
-  - (b) hold C2 until the pending collections finish, and run later analyses of old runs from a pre-change git worktree;
-  - (c) land now and accept the gap.
+This section is for the session that owns that plan; this plan does not edit it.
 
-  Recommended: (a), or (b) if the compat plan is not ready.
-- **D-L — Trajectory-store `body_temp` column.** It needs a `SCHEMA_VERSION` bump (your permission is needed for any version change). Without it, "which need is most pressing" cannot be computed from stores in the thermal world. Alternatives: use `.rec.gz` eval recordings (which already carry body temperature, but only for small N), or split Part L into its own plan.
-- **D-ARCH — Two archived thermal worlds are de-facto test fixtures.** `campfire_world.yaml` and `campfire_world_body_temp_hidden.yaml` sit under `archive/` but are loaded by about nine test modules. This plan adds the inert keys to them (precedent 2026-09-17). Moving them to `tests/env/fixtures/` is out of scope here, but recommended as a follow-up.
+C0 creates, or extends, `src/environment/saved_config_compat.py` with the API and refusal rules that plan specifies. Its `_ERA_KEYS` holds **only** the five rows of §A7, each with the branch that makes it inert. The parity instrument that plan demands for those rows is this plan's `tests/env/test_body_mechanics_parity.py`.
+
+To absorb it:
+1. Add the Stage 1 / 2 rows (`thermal.enabled`, the four sensory keys).
+2. Keep the "thermal keys only when `thermal.enabled` is true" condition and the all-or-none group rule.
+3. Keep the pre-injection fingerprint (that plan's own §A10).
+4. Move the two `tests/env/fixtures/saved_run_configs/` files into that plan's era-representative fixture set.
+
+**Not done here, deliberately:**
+- the manifest `saved_config_compat` field (that plan's §A10);
+- `thermal.enabled` and the sensory keys;
+- the opt-in vs automatic debate (C0 is automatic at saved-path sites, following that plan's recommendation, and narrow).
+
+The hand-off is delivered by message through the coordinator, and a signed "Feedback from `senior-developer`" block may be appended to that doc once its session has finished editing it.
+
+---
+
+## Still open for the user
+
+1. **Partial mode leaves a new state reachable.** An agent can be alive at nutrition 0 after spending its last reserves on healing; it then starves on the next step unless it eats. This follows directly from "no death from the charge itself". Confirm that this is what is wanted. The alternative is to judge starvation after the charge, but then an emptying charge kills, which contradicts the spec.
+2. **No loader guard for B1's hot start.** The first-step-onto-fire check runs only for B4 `both` mode, as specified. B1's start range is protected by measurement (CP8), not by a loader refusal, so a variant world that raises `start_body_temp_high` above about +9.8 at level-05 temperatures would load and silently break the fire calibration. Should the same check also run whenever B1 is on?
+3. **Carried over, not re-asked:** the trajectory-store body-temperature column is a separate plan and needs a `SCHEMA_VERSION` decision there.
 
 ---
 
 ## Out of scope
 
-- The injury × starting-fullness probe scenes (a separate, later plan).
-- Level-05 variant world configs, for example the B3-on world (these belong to `experiment-designer`, outside `basic/`). The keys above make them expressible: a variant `extends:` level 05 and sets `body.healing_nutrition_cost`.
-- Any change to `calculate_drive` or the reward.
-- Implementing `saved_config_compat.py` (owned by [[SAVED_RUN_CONFIG_COMPAT]]).
+- The injury × starting-fullness probe scenes (a later plan).
+- The level-05 variant worlds, including the B3-`partial` world (`experiment-designer`, outside `basic/`).
+- The trajectory-store body-temperature column (a separate plan).
+- `calculate_drive` or the reward.
+- The general compatibility layer beyond these five keys.
 
 ---
 
 ## Checkpoints
 
-- [ ] **CP1 — C1 before any `src/` edit.** Fixture generated from a worktree of the pre-change tip. Coverage counts printed and all non-zero. `_provenance_sha` recorded in the Implementation Report. The fixture is committed on its own.
-- [ ] **CP2 — B1 stream isolation.** After D1, T-B1-3 passes: a flag-on reset differs from a flag-off reset **only** in `body_temp`, over 1000 keys.
-- [ ] **CP3 — Inert = today, measured three ways.** `test_body_mechanics_parity.py` is green (rollouts plus jaxpr SHAs) for both worlds, and its contrast half is green (every mechanic, once on, changes the rollout). Record the jaxpr SHA-1s in the Implementation Report.
-- [ ] **CP4 — B3 off path.** `str(jax.make_jaxpr(update_body)(…))` at c = 0 is identical before and after D3 on both worlds. This checks specifically that moving the clip and satiation behind static branches emitted the same ops in the same order.
-- [ ] **CP5 — Unit tests.** All of T-B1 … T-B4 green, with the hand-computed literals in the test source.
-- [ ] **CP6 — Loader.** Every new key raises when missing in its read condition; thermal-off configs load with the thermal keys deleted; B4 bound and structure-check extensions exercised (T-B4-5, T-B4-6); the level-05 structure check still passes at g ∈ {0, 1, 2}.
-- [ ] **CP7 — Roll-out.** `tests/` fully green on CPU, run file by file for the parity families (report passed / skipped counts per family and compare them with the counts in the 2026-09-17 change-log entry; any new skip needs an explanation). Report archived before/after load counts. Report the saved-run count that stops loading (§A7 table, re-measured).
-- [ ] **CP8 — Level 05 through the real loader after C3.** `load_env_config` → `load_env_params` resolves `thermal_random_start_body_temp == True`, the range [−10, 5] (or the approved range), and the other three keys inert. 600 real resets: every `body_temp` in range, and the max first-step-onto-fire temperature below +15. Level 06 resolves per D-L06.
-- [ ] **CP9 — Reward untouched.** `git diff` shows no change inside `calculate_drive`. `tests/env/test_thermal_reward_gate.py` passes with its **unregenerated** reference data.
-- [ ] **CP10 — Speed.** SPS on level 05 (B1 on) and level 04 before and after, same node, GPU and seed, with a step budget long enough to pass warm-up. Expected change within noise: B1 adds one scalar draw per reset, and the other three are not traced.
-- [ ] **CP11 — Docs.** CONFIG_GUIDE §5, 02_config_schema, 05_body_homeostasis, 06_reward_and_termination, the CONFIG_CRITICAL_SETTINGS registry plus two change-log entries (C2, C3), and the SCRIPTS_DEPENDENCY_MAP row. All in the same commits as the code they describe.
+- [ ] **CP1 — C1 first.** Fixture from a pre-change worktree; coverage counts non-zero; `_provenance_sha` and the stamped config recorded.
+- [ ] **CP-C0 — compat.** `test_saved_config_compat.py` green. At C0 time the shim returns the five keys and the fingerprint is unchanged. Recheck after C2 (M3 gate): the raw loads of both fixtures **fail** and the shim loads **succeed**. Also run the shim against the live `results/…/models/config.yaml` of both runs and against one Wave 1 level-06 run. The printed key lists go in the report.
+- [ ] **CP2 — B1 stream isolation** (T-B1-3).
+- [ ] **CP3 — Off = today, three ways.** Parity test green, including jaxpr SHA equality and the contrast half. SHAs recorded.
+- [ ] **CP4 — B3 off path.** `update_body` jaxpr string identical before and after at `c = 0` on both worlds.
+- [ ] **CP5 — Unit tests** green.
+- [ ] **CP6 — Loader.** Every key raises when missing within its read condition; B4 bounds, structure pass, `both` transient and `with_injury` refusal exercised; the level-05 structure check passes at `g` ∈ {0, 1, 2} in `cooling_only`.
+- [ ] **CP7 — Roll-out and pre-flight.** `tests/` green on CPU with per-family pass/skip counts compared to the 2026-09-17 entry. Archived before/after counts reported. **Immediately before committing C2:** the live-collection pre-flight of §A7 run and its output pasted into the report; any live process means C2 waits.
+- [ ] **CP8 — Level 05 after C3, adversarial.**
+  - The loader resolves B1 on with [−10, 5] for levels 05 and 06.
+  - (a) 600 real resets at the configured range → every start within range.
+  - (b) **Pinned `low == high == +5`**, at least 600 real resets, with the per-episode fire count logged so multi-fire layouts are visibly included. For every active fire cell, compute the first step onto it from +5 using that reset's real field value: `5 + s_w·(k_ex·(F − 5) − k_loss·5)`. Report the max, which must be < +15, and the max `F`.
+  - (c) The same from the loader-model ring settle, as a cross-check against the 09-19 figure of 12.3.
+  - (d) `tests/` green after C3 (reviewer L4), including `test_truncation_not_death.py`.
+- [ ] **CP9 — Reward untouched.** No diff inside `calculate_drive`; `test_thermal_reward_gate.py` green without regeneration.
+- [ ] **CP10 — Speed.** Steps per second before/after on levels 05 and 04: same node, GPU and seed, with a budget past warm-up.
+- [ ] **CP11 — Docs** as listed, in the same commits.
 - [ ] **CP12 — Hand-offs.**
-  - `bug-curator`: update the "mandatory keys land without migrating the archive" row with this plan's counts, and note that B3 adds no reason-code path.
-  - The [[SAVED_RUN_CONFIG_COMPAT]] owner: the four era-key rows of §A7.
-  - `experiment-designer`: the observability caveat in §A0 (injury and nutrition are not observed at level 05).
+  - `bug-curator`: the mandatory-key roll-out row, and "B3 partial starvation shares one predicate".
+  - Compat-plan owner: the §Hand-off section.
+  - `experiment-designer`: the §A0 observability caveat, and that the variant must state `healing_nutrition_shortfall: partial` explicitly.
 
 ---
 
@@ -597,11 +644,11 @@ A dated change-log entry: "B1 enabled in level 05 (and, by inheritance, level 06
 > **Implemented by**: [agent/person]
 > **Date**: [date]
 
-<!-- Filled by `developer`. Must include: pre-change SHA + fixture coverage counts (CP1); jaxpr SHA-1s
-     before/after for jax_step, jax_reset, update_body on both worlds (CP3/CP4); the full list of files
-     that received inert keys; parity-family pass/skip counts; archived before/after load counts;
-     saved-run count that no longer loads; the 600-reset B1 measurement (CP8); SPS before/after (CP10);
-     any deviation from this plan and why. -->
+<!-- Filled by `developer`. Must include: pre-change SHA + fixture coverage counts (CP1); compat gate
+     results and printed key lists (CP-C0); jaxpr SHA-1s (CP3/CP4); files that received inert keys;
+     parity-family pass/skip counts; archived before/after counts; the live-collection pre-flight output
+     (CP7); the CP8 adversarial numbers (max first-step temperature, max F, fire-count distribution);
+     SPS before/after (CP10); deviations and why. -->
 
 ## Verification Report
 
@@ -613,3 +660,87 @@ A dated change-log entry: "B1 enabled in level 05 (and, by inheritance, level 06
 | | | | |
 
 **Conclusion**: [one-line summary]
+
+---
+
+## Feedback from plan-reviewer
+
+> **Reviewed**: 2026-09-26 at commit `958f8c37` · **Verdict**: **SOUND WITH CONCERNS** — no Critical finding, so no `docs/reviews/` file. Three Moderate findings to resolve before C2; the rest are Low or Open.
+>
+> Severity legend: 🔴 Critical = fix before going further · 🟡 Moderate = likely costs a re-run · 🟢 Low = cosmetic · ❓ Open = an assumption nobody has verified yet.
+
+### What was checked against the code and holds
+
+- **Off path is the same graph in the same order.** D1, D2 and D4 are pure trace-time branches. D3 was read against `core.py:253`, `258–263`, `316–319`: on the off path the clip stays inside `if params.with_nutrition:`, the satiation lines stay where they are, and the injury block is unchanged; the `_injury_before_recovery` alias is a name binding. The *instrument* for proving it has a defect (M1 below), but the design claim is right.
+- **Not circular.** `_CONFIGS_ROOT` is `dirname(config_loader.__file__)/../../configs` (`config_loader.py:29`), so a generator that imports `src` from `--src-root` resolves `extends:` inside the worktree, not this checkout. `train.py:70,202,527` builds the world with the same `load_env_config` → `load_env_params` the test uses.
+- **`body_key1` is split and never read** — the only reference is the split at `core.py:1775`.
+- **B3 masking and labels.** `damage ≥ 0` so `applied_inc ≥ 0`, hence `can_recover ⇒ applied_inc == 0 ⇒ injury_before == prev_injury ≤ max_injury`: the upper clip cannot fire under the mask, and `healed = min(recovery, prev_injury)`. Reasons 2 and 5 are reused at `core.py:999` / `:1014` with no new predicate. The "only in auto-eat worlds" claim for T-B3-6 holds: `rested = rest_action_enabled ∧ action == 4` (`core.py:952`) and `ate_food_auto` requires `not eat_action_enabled` (`core.py:874–876`).
+- **B4 arithmetic.** Recomputed every number in §A2 and T-B4-1…4 (settle −20 / −22.5 / −24; first step −0.30 / −0.45 / −0.60; ring +6.9 at g = 1; g ≤ 11). `_check_thermal_structure` takes `k_exchange` as a keyword (`config_loader.py:530`), so the second call at full injury is feasible. The stability checks are where §A1 says (`:1553–1591`).
+- **Project rules.** `get_mandatory` throughout; every maintenance-contract doc is paired in the same commit; frontmatter present; the archive carve-out for test inputs follows the recorded 2026-09-15 / 09-17 precedent; `SCHEMA_VERSION` is a real in-code scheme (`trajectory_store.py:115–116`, reader hard-fails at `:525`), and the bump is explicitly gated on user permission (D-L) — compliant with the no-versions rule. No `git clean` / force-checkout anywhere; `worktree add --detach` + `remove` is safe.
+- **Prior art.** No doc under `docs/` names any of the six keys; the KNOWN_BUGS rows cited in §A0 exist and say what the plan says they say; all four wiki entries exist.
+
+### Findings
+
+| # | Sev | Location | Issue | Suggested fix | Owner |
+|---|---|---|---|---|---|
+| M1 | 🟡 | §Design (state.py: `thermal_start_body_temp_low/high` **traced**); §File Changes → parity test (jaxpr SHA-1 equality); CP3; CP4 | **The jaxpr-SHA assertion fails by construction on the inert path.** Every pytree leaf of `params` becomes an input variable of the jaxpr whether or not it is used, and all later variables are renumbered. Verified in this env with a two-field vs four-field `flax.struct` dataclass: `str(jaxpr)` differs, `eqns` are identical. Two new traced floats therefore change `sha1(str(make_jaxpr(jax_step)))`, `jax_reset` and `update_body` (CP4) even when no operation changed — and the contrast half ("SHA differs when on") becomes vacuous, because the SHA already differs when off. The 2026-09-17 SHAs held only because those keys were static. | Either make the two range keys `struct.field(pytree_node=False)` + `float()`-coerced (they are config constants; pinning with `low == high` is a static value anyway — and then all six keys are static, one rule), **or** compare `[str(e) for e in jaxpr.eqns]` / the precedent's `_count_primitives` (`tests/env/test_thermal_rate_scales.py:244`) instead of `str(jaxpr)`. Say which in §Design so the developer does not discover it as a red gate. | `senior-developer` (plan) → `developer` |
+| M2 | 🟡 | §A1 (ring +5.75, fire settle +51.4 are baseline −30), §A5 and D-B1 (`79.7` is the baseline −31 fire cell) | **Two baselines are mixed, and the [−10, +10] alternative is not a knife-edge — it is lethal at the hot corner.** Real loader field at baseline −31: fire cell 79.7, first step from +10 = **+15.18 > 15**; at −30 it is +14.97. From +5 the first step is 10.78 (−31) / 10.57 (−30), so the proposed range survives the single-fire case. But the 2026-09-19 change-log entry records that merged fires raised the ring-start worst case from ~11.2 to **12.3** (and to +16.3 before `min_fire_separation` went to 4), so the multi-fire corner is the one that decides D-B1, and 600 *uniform* draws over [−10, 5] will almost never place a +5 start beside a merged pair. | Restate the D-B1 table at baseline −31 and say [−10, +10] kills in hot-corner episodes. Make CP8's measurement adversarial, not uniform: pin the start at the upper end (`low == high == +5`, the plan's own pin mechanism), sweep 600 resets, and report the max first-step-onto-fire temperature from that pinned start. | `senior-developer` |
+| M3 | 🟡 | §A7, D-COMPAT, CP12 | **The recommended route (a) has no step that can fail.** It depends on `src/environment/saved_config_compat.py`, which does not exist, in a doc another session is editing right now (`git status` shows it `MM`), and the plan's hand-off is "a message". If (a) is chosen and C2 lands first anyway, every Wave 1 / Wave 2 saved config (28 runs) stops loading and the untracked 14-run × 1M-episode collection on nodes 109–113 dies at resume — days of GPU time, not a wrong conclusion. | State explicitly that **C2 is blocked on the user's D-COMPAT choice**. Under (a): add to CP7 "`load_env_params` through the shim succeeds on one Wave 1 and one Wave 2 saved `models/config.yaml`" — a check that can fail. Under (b): add to CP1/CP7 a pre-flight that no `collect_trajectories` process is live on 109–113 (`gpu-status` + diary) before C2 is committed. | user (decision) → `senior-developer` |
+| L1 | 🟢 | T-B4-5 (`g = 11 → loads`) | The bound is exactly 1.0 at g = 11; whether float64 lands on 1.0 or 1.0000000000000002 depends on the association order the developer writes. A boundary case is a flaky test. | Test g = 10.9 loads / g = 11.5 refuses, or pin the expression order in the plan. | `developer` |
+| L2 | 🟢 | §A6 "36 files" | Measured 34 with `--include='*.yaml' --include='*.py'`; the plan's bare `grep -rl` also counts `.md`/binary hits. Harmless — the developer re-measures — but the number is quoted as a population. | Re-state with the exact grep. | `developer` |
+| L3 | 🟢 | §Design loader table, B4 | `injury_heat_exchange_gain > 0` with `with_injury: false` loads and is silently inert (`injury_level` stays 0). B3 refuses the analogous case. | Refuse, or document the asymmetry in `02_config_schema.md`. | `senior-developer` |
+| L4 | 🟢 | C3 / CP8 | `tests/env/test_truncation_not_death.py` builds basic/05 by path and resets with fixed seeds; C3 changes that world's reset. The "must stay green unmodified" list sits under C2 only. Probably green (`max_steps` 3), but nothing in CP8 runs it. | Add "`tests/` green after C3" to CP8. | `developer` |
+| O1 | ❓ | §A7 (compat surface) | Eval recordings (`.rec.gz`) pickle `EnvParams`. Six new fields on the class mean any `replace()` / rebuild on an old recording's params raises — `scripts/eval/render_recordings_v2.py:184–193` already works around exactly this for `thermal_warming_rate_scale`. Recordings are not listed as a compatibility surface. | `developer`: grep for `.replace(` / `dataclasses.replace` on unpickled params before C2; note recordings in §A7. | `developer` |
+| O2 | ❓ | §A7 counts (12 / 45, 36 / 45) | Not re-verified here; CP7 re-measures. Fine as stated. | — | — |
+| O3 | ❓ | C1 / parity test | The fixture rolls out the **worktree's** basic/04 and basic/05; the test rolls out **HEAD's**. Parallel sessions edit `configs/`. The test asserts the six new keys resolve inert but not that every *other* key is unchanged, so unrelated config drift would surface as an unexplained rollout mismatch. | Have the generator stamp the resolved config dict (or its hash) and have the test compare it minus the six new keys — drift becomes a named failure. | `developer` |
+
+### Assumptions the plan rests on
+
+| Assumption | Status |
+|---|---|
+| Unused pytree leaves do not change the jaxpr string | **False** (M1) — verified empirically |
+| `body_key1` is unused | Verified (`core.py:1775` only) |
+| The trainer resolves `extends:` with the same loader the test uses | Verified (`train.py:70,202,527`) |
+| `_CONFIGS_ROOT` follows the imported module, so `--src-root` is not circular | Verified (`config_loader.py:29`) |
+| Thermal-conditional keys need only `default.yaml` + the two archived campfire files | Verified — `warming_rate_scale` appears inline in exactly those config files (plus the unreferenced `archive/basic_vec8/default.yaml`) |
+| Fire-cell numbers in §A5 are the worst-case corner | Partly — mixed baselines (M2) |
+| The compat layer will exist before C2 | Unverified; module absent, doc in flight (M3) |
+| basic/04 and basic/05 do not drift between the pre-change SHA and HEAD | Unverified (O3) |
+| Saved-config counts in §A7 | Unverified here (O2) |
+
+### Cost of being wrong
+
+No data-loss path exists in this plan. If M1 is left as written, the parity gate goes red on the inert path and the developer either loses an hour or weakens it — a confused afternoon. If D-COMPAT is mishandled, 28 finished runs and a 14-run million-episode collection become un-analysable by current code until the compat layer lands: days of GPU time to re-collect, not a wrong conclusion. If D-B1 is decided from the mixed-baseline table and lands on [−10, +10], the "first step onto a fire is survivable" calibration silently fails in hot-corner episodes and the B1 training world is mis-specified from the first launch.
+
+*Reviewed by: plan-reviewer*
+
+---
+
+## Revision log
+
+### Revision 2 — 2026-09-26, the user's decisions plus the `plan-reviewer` and `math-reviewer` findings
+
+**User rule:** every interaction is configurable. It produced two new mode keys (`injury_heat_exchange_mode`, `healing_nutrition_shortfall`), and B2's single sensitivity was split into cold and warm.
+
+| Item | Resolution |
+|---|---|
+| D-B1 | [−10, +5] adopted (C3); level 06 inherits it (§A5). |
+| D-B2 | Separate cold and warm sensitivities; table recomputed (§A4). |
+| D-B3 | `healing_nutrition_shortfall: partial \| full`; exact formula, clip order and labels in §A3; `partial` starvation judged before the charge and shared through the returned predicate. |
+| D-B4 | `k_exchange` confirmed; `injury_heat_exchange_mode: cooling_only \| both`, default `cooling_only`; `both` has the first-step check (§A2). |
+| D-COMPAT | Minimal compat step C0 lands first, with a failable gate and a pre-flight (§A7). |
+| D-store | Moved to a separate plan; Part L and C4 removed. |
+| D-archived | Kept (§A6). |
+| M1 | All nine new fields are static, so no new jaxpr leaves; SHA equality is valid; stated in §A1 and §Design. |
+| M2 | Numbers restated at −31: +5 → +10.78, +10 → +15.18 (lethal), safe single-fire ceiling 9.80; CP8 is adversarial with a pinned +5 start across multi-fire resets. |
+| M3 | C2 blocked on the CP-C0 gate and the CP7 pre-flight. |
+| L1 | 10.9 / 11.5. |
+| L2 | Exact grep, 34 files. |
+| L3 | B4 refused without `with_injury`. |
+| L4 | CP8(d). |
+| O1 | Grep step in §A7. |
+| O3 | Stamped config and named drift check. |
+| Math: ring numbers | Labelled as loader-model; measured-state range 5.56–6.78 noted (§A1). |
+| Math: same-side | Stated (§A2). |
+| Math: redundant `max(·,0)` | Removed. `h_nom = min(r, I_d)` under the mask replaces "before − after". |
+
