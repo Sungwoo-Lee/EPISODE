@@ -155,6 +155,21 @@ archaeology but are **not actionable** unless the stack is revived.
 
 ---
 
+## Fixed — an analysis script that counted hiding predators as food (2026-09-26)
+
+**What this is.** In the level-05 world some "resource" slots are not food at all — they are ambush
+predators hiding in place. A measuring script for the internal-state interaction simulation study
+counted every active resource slot as food, so the "how far is the nearest food" measure came out
+about half its true value, and the study's published page overstated one body rule's effect and
+understated another's. **The hazard is general:** any code that reads the resource slots as food
+without checking each slot's type will make the same mistake in any world that has hiding predators.
+
+| Bug | What happened | Status | Severity | Area | Fix + detail |
+|-----|---------------|--------|----------|------|--------------|
+| **Simulation study measured distance to food with hiding predators counted as food** | `measure_world.py` took `res_pos[res_active]` as the food set; in level 05, `res_type == 1` slots are hiding predators (0 = food; field lives on `EnvParams.res_type` in `src/environment/state.py`, not on `EnvState`). Median trip to food read 2 instead of 4, so the page overstated rule B5's effect and understated B3's. First fix read `res_type` from the state, crashed, and the crash was hidden behind a pipe. | **FIXED** | Med (analysis numbers on a published page) | analysis / internal_state_interactions | `e2991ceb` (food-trip sweep + type filter) · follow-up using `P.res_type`, committed with the corrected page · study page `docs/experiments/active/internal_state_interactions/`. **Other unfiltered call sites (not fixed, unverified):** `scripts/analysis/supplementary/mech.py` (treats active `res_row/res_col` tiles as food — suspect in predator worlds); `src/environment/core.py` `_build_thermal_field` stamps heat for every active resource slot incl. predators (may be intended — verify). Remaining `res_active` users (recorders, fixtures, trajectory store, eval scans) only pass the array through. |
+
+---
+
 ## Fixed — over-eating deaths that never ended the episode (2026-09-22)
 
 **What this is.** The environment has two ways to die of food: starving, and eating so much that
