@@ -7,8 +7,15 @@ Writes results/analysis/internal_state_interactions/world_measurements.json:
   predator hazard: mean damage per step outside / inside a bush, from Wave 2 level-05 training
   recordings (first 10 blocks of each agent's final-checkpoint store)
   discount factor of the level-05 training runs (their saved configs)
+  share of active bushes by (Manhattan, Chebyshev) class to the nearest burning fire
+  ("bushes_by_fire_class"; BUSH_FIRE_CLEARANCE §A2)
 
   python measure_world.py --src-root <frozen source tree> --resets 300
+  python measure_world.py --src-root <tree> --resets 300 --bush-min-fire-distance 3 --out tmp/<ts>_x.json
+
+--bush-min-fire-distance N sets thermal.bush_min_fire_distance IN MEMORY after loading
+level 05 (no config file is written); it requires --out, so a variant run can never
+overwrite the study's world_measurements.json. Without it the script writes exactly as before.
 """
 import argparse, glob, json, os, sys
 import numpy as np, yaml
@@ -20,14 +27,30 @@ RUNS = ["20260922-182534_rppo_bq2cover_lvl05_t1none_s42", "20260922-182538_rppo_
 
 def main():
     ap = argparse.ArgumentParser(); ap.add_argument("--src-root", required=True)
-    ap.add_argument("--resets", type=int, required=True); a = ap.parse_args()
+    ap.add_argument("--resets", type=int, required=True)
+    ap.add_argument("--bush-min-fire-distance", type=int, default=None,
+                    help="set thermal.bush_min_fire_distance in memory (requires --out)")
+    ap.add_argument("--out", default=None, help="output JSON path (required with --bush-min-fire-distance)")
+    a = ap.parse_args()
+    if a.bush_min_fire_distance is not None and a.out is None:
+        ap.error("--bush-min-fire-distance requires --out (never overwrite world_measurements.json)")
     os.environ.setdefault("JAX_PLATFORMS", "cpu"); sys.path.insert(0, os.path.abspath(a.src_root))
     import jax
     from src.environment.config_loader import load_env_config, load_env_params
     from src.environment import core
-    P = load_env_params(load_env_config(os.path.join(a.src_root, "configs/environment/experiment/basic/05-campfire_thermal_10x10.yaml")))
+    cfg = load_env_config(os.path.join(a.src_root, "configs/environment/experiment/basic/05-campfire_thermal_10x10.yaml"))
+    if a.bush_min_fire_distance is not None:
+        cfg.set("thermal.bush_min_fire_distance", a.bush_min_fire_distance)
+        print(f"[measure_world] thermal.bush_min_fire_distance set to {a.bush_min_fire_distance} in memory")
+    P = load_env_params(cfg)
     reset = jax.jit(core.jax_reset)
     by_d = {}; trips = {"bush": [], "food": [], "ring": []}; warm = []; ring_bush = []
+    bush_class = {}
+
+    def fire_class(b, fires):
+        m, c = min((abs(int(b[0]) - int(f[0])) + abs(int(b[1]) - int(f[1])),
+                    max(abs(int(b[0]) - int(f[0])), abs(int(b[1]) - int(f[1])))) for f in fires)
+        return f"({m},{c})" if (m, c) in {(0, 0), (1, 1), (2, 1), (2, 2), (3, 2)} else "far"
     rng = np.random.default_rng(0)
     for s in range(a.resets):
         st = reset(P, jax.random.PRNGKey(s)); F = np.asarray(st.thermal_field)
@@ -41,10 +64,12 @@ def main():
         hides = np.asarray(P.obs_hides_agent) & np.asarray(st.obs_active)
         bushes = np.asarray(st.obs_pos)[hides]
         # food items only: res_type 1 is an ambush predator (plan-reviewer / env-config-reviewer 2026-09-26)
-        foods = np.asarray(st.res_pos)[np.asarray(st.res_active) & (np.asarray(st.res_type) == 0)]
+        foods = np.asarray(st.res_pos)[np.asarray(st.res_active) & (np.asarray(P.res_type) == 0)]
         rings = [(r, c) for r in range(H) for c in range(W) if min(dist((r, c), f) for f in fires) == 1]
         warm.append(any(min(dist(b, f) for f in fires) <= 1 for b in bushes))
         ring_bush.extend(min(dist(b, f) for f in fires) <= 1 for b in bushes)
+        for b in bushes:
+            k = fire_class(b, fires); bush_class[k] = bush_class.get(k, 0) + 1
         occupied = {tuple(b) for b in bushes} | {tuple(f) for f in fires}
         for _ in range(20):                                  # random open cells
             p = (int(rng.integers(1, H - 1)), int(rng.integers(1, W - 1)))
@@ -77,8 +102,10 @@ def main():
                trip_steps={k: dict(median=float(np.median(v)), mean=float(np.mean(v)), p90=float(np.percentile(v, 90)))
                            for k, v in trips.items()},
                warm_bush_episode_share=float(np.mean(warm)),
-               share_of_bushes_on_a_fire_ring=float(np.mean(ring_bush)), hazard=hazard, gamma=gammas)
-    p = os.path.join(ROOT, "results/analysis/internal_state_interactions/world_measurements.json")
+               share_of_bushes_on_a_fire_ring=float(np.mean(ring_bush)),
+               bushes_by_fire_class={k: v / max(1, sum(bush_class.values())) for k, v in sorted(bush_class.items())},
+               hazard=hazard, gamma=gammas)
+    p = a.out or os.path.join(ROOT, "results/analysis/internal_state_interactions/world_measurements.json")
     os.makedirs(os.path.dirname(p), exist_ok=True); json.dump(out, open(p, "w"), indent=1)
     print(json.dumps(out, indent=1))
 

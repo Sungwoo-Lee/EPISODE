@@ -24,8 +24,10 @@ __HOUSE_STYLE__
            font-size: 12.5px; letter-spacing: .02em; border: 1px solid var(--rule); color: var(--ink-2); }
   p.kind-simulation { border-color: var(--rule); color: var(--ink-2); }
   p.kind-planner { border-color: var(--accent); color: var(--accent-text); }
-  /* dense figures keep a legible floor on a phone and scroll sideways, with a measured cue */
-  .figscroll img { min-width: 600px; }
+  /* dense figures keep a legible floor on a phone and scroll sideways, with a measured cue.
+     F65: floor = canvas px x 9 / smallest label px = 2207 x 9 / 29 = 685 (s4, the widest canvas;
+     s3 672, s5 675), so smallest labels render at >= 9 px -- not a round number */
+  .figscroll img { min-width: 690px; }
   p.kind-manipulation { border-color: var(--warn); color: var(--warn); }
   /* lists: the house sheet has no list rule (F61 family) -- paragraph rhythm, modest indent */
   ol, ul { margin: 0; padding-left: 1.4em; } li + li { margin-top: 6px; }
@@ -57,17 +59,31 @@ rules into a small simulator, reduces level 05 to five places, and computes the 
 state with an ideal planner. Everything here describes what an ideal agent would do — a guide for choosing
 worlds, not evidence about trained agents.</p>
 
+<div class="callout warn">
+  <p class="eyebrow">Corrected on 26 September 2026</p>
+  <p>The first version of this page put food a median of <strong>2</strong> steps away. The measurement
+  counted the hiding predators' places as food items; real food is a median of <strong>4</strong> steps
+  away. Everything below is re-run with the corrected distance, and three conclusions changed. Healing that
+  needs food (B5), shown before as the strongest change in episodes without a warm bush (+5.4), now does
+  nothing there (+0.1). The fewer-bushes world, which passed the rule before, no longer does. And healing
+  that costs food (B3), shown before as small (+0.1 to +1.1), is now the largest of the rules in the
+  training batch (+3.1 and +3.2). Today's own value moved too: 11.9 points instead of 13.6 (17.1 and 4.3
+  without and with a warm bush, instead of 18.1 and 7.2).</p>
+</div>
+
 <div class="callout">
   <p class="eyebrow">The answer, in one paragraph</p>
-  <p>The biggest thing keeping today's level 05 simple is a <strong>bush on a fire ring</strong>: in the
-  41 % of episodes that have one, "go and rest in the warm bush" is best almost everywhere, and the best
-  choice depends much less on combinations of body states. Of 25 single changes, one clears the pooled
-  rule fixed before the data — making cover scarce (a bush about 8 steps away), by about 7 points — but
-  5 of those 7 points come from the episodes with a warm bush, where the change mostly breaks that warm
-  bush's dominance; in the other 59 % its gain (+3) is inside the noise. <strong>Healing that needs food
-  (B5)</strong> is the reverse: +5.4 in episodes without a warm bush, above the line, and nothing with one.
-  Healing that costs food (B3), warmth that costs food (A1) and injury that speeds cooling (B4) stay within
-  the noise; scarcer food (A4) and healing that needs warmth (B2) make the best choice <em>simpler</em>.</p>
+  <p>The biggest thing keeping today's level 05 simple is still a <strong>bush on a fire ring</strong>: in
+  the 41 % of episodes that have one, "go and rest in the warm bush" is best almost everywhere, and the
+  combination gain is 4.3 points against 17.1 without one. <strong>No single change passes the rule</strong>
+  fixed before the data (5 points above today). The largest are fewer bushes (up to +3.7, almost all of it
+  by breaking the warm bush's dominance) and <strong>healing that costs food (B3)</strong> at 1 or 2 food
+  per point healed (+3.1 and +3.2); B3's gain holds at tie margins 0 and 0.5 but disappears at the wider
+  margin and when the planner looks further ahead, and most of it comes from episodes with a warm bush.
+  Healing that needs food (B5) adds +1.6, all of it in episodes with a warm bush. Warmth that costs food
+  (A1), scarcer food (A4) and injury that speeds cooling (B4) stay within the noise at the rule's reading
+  (A4 and B4 lower the gain at the wider margin and the longer horizon); only healing that needs warmth
+  (B2) clearly makes the best choice <em>simpler</em>.</p>
 </div>
 </section>
 
@@ -84,8 +100,8 @@ worlds, not evidence about trained agents.</p>
   identically every time.</li>
   <li><b>The world, reduced to five places</b>, with every number measured from 300 real level-05 starts
   and the level-05 agents' training recordings: open cold ground (−30°), a bush in the cold, a bush on a
-  fire ring (+8.8°, present in 41 % of episodes), the open fire ring, and a food item. Each is a median of
-  2 steps away. Outside a bush, predators add injury on average — 0.12 per step while resting, 0.70 while
+  fire ring (+8.8°, present in 41 % of episodes), the open fire ring, and a food item. The bushes and the
+  fire ring are a median of 2 steps away; food is 4 (corrected — see the box above). Outside a bush, predators add injury on average — 0.12 per step while resting, 0.70 while
   moving — and nothing inside one.</li>
   <li><b>The ideal planner.</b> For every combination of food energy, injury, body temperature and place,
   it computes the choice that gives the best long-run reward, looking ahead the way our agents do (a
@@ -106,9 +122,9 @@ worlds, not evidence about trained agents.</p>
   <dd>A state where the best two choices are worth almost the same (within 0.5 reward units). Ties are
   left out of the accuracies, because the planner's preference there is noise.</dd>
   <dt>Noise floor</dt>
-  <dd>How much the combination gain moves when today's world is re-solved on a finer grid: 1.2 points.
+  <dd>How much the combination gain moves when today's world is re-solved on a finer grid: 1.0 point.
   Differences smaller than twice this are not read. Measured per map, it is 1.6 points
-  without a warm bush and 0.5 with one.</dd>
+  without a warm bush and 0.2 with one.</dd>
 </dl>
 
 <p>The rule was written down before any result was read (study plan, Revisions 1 and 1b): a world is
@@ -160,31 +176,31 @@ no choice wins in more than 80 % of starting states while another than "rest in 
 <h2><span class="num">04</span> Which settings make the best choice depend on combinations</h2>
 
 <p>Each world changes one setting from today's level 05 (with its new random starting temperature). Today's
-world already has some combination dependence: knowing two body states predicts the ideal choice 13.6
+world already has some combination dependence: knowing two body states predicts the ideal choice 11.9
 points better than knowing the best single one. The question is which settings raise that.</p>
 
 <figure>
   <p class="cue" hidden>Wider than the screen — scroll sideways, or click the figure to open it full size.</p>
-  <div class="scroll figscroll"><img data-fig="s3_worlds" alt="A table-like chart with one row per world. Left: for each world a black dot for its pooled combination gain and two triangles for the map without a warm bush (blue) and with one (grey), against a vertical line for today at 13.6 and a dotted line at plus 5 points; the grey triangles sit far left for most worlds and rise for fewer bushes, the blue triangles are highest for healing that needs food. Middle: stacked bars of how often each choice is best. Right: survival share of the ideal agent, between 94 and 98 percent everywhere."></div>
+  <div class="scroll figscroll"><img data-fig="s3_worlds" alt="A table-like chart with one row per world. Left: for each world a black dot for its pooled combination gain and two triangles for the map without a warm bush (blue) and with one (grey), against a vertical line for today at 11.9 and a dotted line at plus 5 points; the grey triangles sit far left for most worlds and rise for fewer bushes and for healing that costs food, the blue triangles cluster near 17 and fall for healing that needs warmth. No world reaches the dotted line. Middle: stacked bars of how often each choice is best. Right: survival share of the ideal agent, between 92 and 96 percent everywhere."></div>
   <p class="zoomhint">Click the figure to open it full size.</p>
   __KIND:s3_worlds__
   <figcaption>
-    <span><b>Figure 2 — a bush on a fire ring makes the best choice simple; scarce cover passes the pooled
-    rule mostly by removing that shortcut, and healing that needs food is the strongest change where there
-    is no warm bush.</b> Today the combination gain is 18.1 points without a warm bush and 7.2 with one
-    (13.6 pooled). Scarce cover (8 steps) reaches 20.5 pooled — +3.0 without a warm bush, +12.5 with one — and
-    spreads the best choices across hiding, warming and eating (22–36 % each). B5 reaches +5.2 to +5.4 without
-    a warm bush (floors 0 and 0.2) and about 0 with one. A1 and B4 stay within or just past the noise on both maps,
-    B3 except for +3.0 on the warm-bush map at its highest cost; A4 lowers the gain on
-    both, and B2 on the map without a warm bush. Survival differs little between worlds (94–98 %): the
-    starts that are lost are mostly ones that cannot be saved, not a weaker policy.</span>
+    <span><b>Figure 2 — a bush on a fire ring makes the best choice simple; no single change clears the rule,
+    and the largest gains come from the warm-bush episodes.</b> Today the combination gain is 17.1 points
+    without a warm bush and 4.3 with one (11.9 pooled). Fewer bushes (a trip of 8) reaches 15.6 pooled —
+    −0.4 without a warm bush, +9.6 with one — and spreads the best choices across hiding, warming and eating
+    (17–38 % each). Healing that costs food reaches 14.9 and 15.0 at 1 and 2 food per point (+2.9 and +1.1
+    without a warm bush, inside that map's noise band of ±3.2; +3.4 and +6.2 with one). Healing that needs
+    food adds +0.1 without a warm bush and +3.8 with one. A1, A4 and B4 stay within or just past the noise
+    (A4 slightly below today on both maps); B2 lowers the gain on the map without a warm bush (down to −8.3). Survival differs
+    little between worlds (92.6–96.0 %).</span>
     <span><b>Axes.</b> Vertical, all panels: one row per world, named by the setting changed and its value.
     Left, horizontal: combination gain, in points of accuracy — black: both maps pooled (the ruled value);
     blue triangle: the map without a bush on a fire ring (59 % of episodes); grey triangle: the map with one
     (41 %); solid line today (pooled), dotted line today plus 5 points, grey band today plus or minus twice
     the noise floor. Middle, horizontal: share of starting states
     in which each choice is best, in percent. Right, horizontal: share of starts the ideal agent survives for
-    500 steps, in percent. A black diamond marks the world that passes the rule.</span>
+    500 steps, in percent. A black diamond would mark a world that passes the rule; none does.</span>
     __DATA:s3_worlds__
     <span><b>How it is computed.</b> For each world the planner is solved twice — with and without a bush on
     a fire ring — by value iteration: starting from zero, every state's value is repeatedly replaced by the
@@ -197,10 +213,8 @@ points better than knowing the best single one. The question is which settings r
     from 2,000 random starts per map for 500 steps. <b>What this figure does not show:</b> what a trained agent
     learns — an ideal planner knows its injury exactly and plans perfectly; the reduced world's predators are
     an average cost, not attacks, and its food never runs out, which makes eating look cheaper than it is and
-    so, if anything, under-rates the scarce-food worlds; and the maps are pooled at today's 41 % warm-bush
-    share even for the fewer-bushes worlds, where warm bushes would be rarer — reweighting them to a
-    realistic share (about 8 % with one bush, since 7.8 % of bushes sit on a fire ring in real resets) moves
-    their pooled gain from 18.5–20.5 to 19.0–21.0 for trips of 6 and 8 steps.</span>
+    so, if anything, under-rates the scarce-food worlds; food is a median of 4 steps away (the first version
+    of this page used 2). Section 07 (item 4) explains why the fewer-bushes worlds are read against a lower warm-bush share.</span>
   </figcaption>
 </figure>
 </section>
@@ -214,19 +228,21 @@ next, the choice depends on more than one body state.</p>
 
 <figure>
   <p class="cue" hidden>Wider than the screen — scroll sideways, or click the figure to open it full size.</p>
-  <div class="scroll figscroll"><img data-fig="s4_choice_maps" alt="Twelve coloured maps, four worlds by three body temperatures. At minus 8 degrees warm-up fills almost every map except a thin strip of eating when starving and of cover when near death. At minus 3 and plus 3 degrees the maps split diagonally into eat at low food, rest in cover at high injury and warm-up or staying in the open at low injury, with the cover region shrinking and warm-up growing in the fewer-bushes worlds."></div>
+  <div class="scroll figscroll"><img data-fig="s4_choice_maps" alt="Twelve coloured maps, four worlds by three body temperatures. Today at minus 8 degrees warm-up fills almost every map except a thin strip of eating when starving. With healing that costs food, a well-fed injured agent rests in cover even at minus 8, so the warm-up region ends along a diagonal. At minus 3 and plus 3 degrees the maps split into eat at low food and rest in cover at high injury; with healing that costs food the eating region reaches higher injury and the warm-up wedge at minus 3 is bounded diagonally; with fewer bushes cover is chosen only above about 60 injury at minus 3."></div>
   <p class="zoomhint">Click the figure to open it full size.</p>
   __KIND:s4_choice_maps__
   <figcaption>
-    <span><b>Figure 3 — cold overrides everything; above it, the boundaries run diagonally, and scarce cover
-    turns "hide or warm up" into a decision that depends on all three states.</b> At −8° the best choice is
-    to warm up almost everywhere. At −3° and +3° the line between "eat first" and "rest in cover" is
-    diagonal: the more injured the agent, the hungrier it must be before eating comes first. With cover 8
-    steps away, resting in cover is worth the trip only above about 60 injury at −3°, and a wedge of mildly
-    injured, fed states switches to warming up.</span>
+    <span><b>Figure 3 — cold overrides everything today; when healing costs food, how fed the agent is decides
+    between warming up and hiding even in the cold.</b> Today at −8° the best choice is to warm up almost
+    everywhere. With healing that costs food (1 or 2 per point), an injured agent with plenty of food rests in
+    cover even at −8°, and the edge between the two runs diagonally: the more injured it is, the less food
+    it needs before hiding wins. At −8° that edge lies above the ideal food level of 100 (about 115–200),
+    so what matters there is a surplus of food, not hunger; at −3° it reaches below 100. At −3° the same rule bounds the warm-up region diagonally, and the eating
+    region reaches higher injury, because healing now draws on food. With cover 8 steps away, resting in
+    cover is worth the trip only above about 60 injury at −3°.</span>
     <span><b>Axes.</b> Horizontal, every map: food energy, 0–200. Vertical: injury, 0–100. Columns: body
-    temperature −8°, −3° and +3°. Rows: today's level 05, the passing world (a trip of 8 to cover) and the two
-    next-highest worlds. Colours: the best choice; pale cells are ties.</span>
+    temperature −8°, −3° and +3°. Rows: today's level 05 and the three worlds with the highest combination gain
+    (fewer bushes with a trip of 8; healing that costs 2 and 1 food per point); none passes the rule. Colours: the best choice; pale cells are ties.</span>
     __DATA:s4_choice_maps__
     <span><b>How it is computed.</b> These are the planner's solutions from Figure 2, read on the map without
     a bush on a fire ring (the more common map, 59 % of episodes) at open ground, at the three grid
@@ -246,15 +262,17 @@ next, the choice depends on more than one body state.</p>
 
 <figure>
   <p class="cue" hidden>Wider than the screen — scroll sideways, or click the figure to open it full size.</p>
-  <div class="scroll figscroll"><img data-fig="s5_robustness" alt="One row per world, four markers each for tie margins 0, 0.5 and 2 and a longer horizon, showing the combination gain minus today's. The fewer-bushes rows sit to the right of zero under every variant; scarcer-food and warmth-dependent-healing rows sit to the left; most others straddle zero."></div>
+  <div class="scroll figscroll"><img data-fig="s5_robustness" alt="One row per world, four markers each for tie margins 0, 0.5 and 2 and a longer horizon, showing the combination gain minus today's. The fewer-bushes rows sit right of zero under every variant, furthest at the longer horizon; healing that costs food sits right of zero at margins 0 and 0.5, below zero at margin 2, and at +1.7 or −0.7 at the longer horizon; scarcer-food and injury-speeds-cooling rows sit to the left; most others straddle zero."></div>
   <p class="zoomhint">Click the figure to open it full size.</p>
   __KIND:s5_robustness__
   <figcaption>
-    <span><b>Figure 4 — scarce cover leads under every variant; the small effects of B3 and B5 depend on how
-    far ahead the planner looks.</b> The fewer-bushes worlds stay about 2–8 points above today at every tie margin
-    and at the longer horizon. At the longer horizon, where 43 % of today's states are ties, B5 falls below
-    today's value and B3 turns negative (down to −5 points) except at its lowest cost. Switching the predators off or doubling them moves
-    today's world by −0.3 and −3.6 points at the rule's margin.</span>
+    <span><b>Figure 4 — fewer bushes leads under every variant; healing that costs food holds only at the
+    rule's own reading.</b> The fewer-bushes worlds stay 1–7 points above today at every tie margin and
+    6–9 points above at the longer horizon. Healing that costs food (1 or 2 per point) is +2.7 to +3.8 at
+    margins 0 and 0.5, but −1.9 to −0.7 at margin 2 and +1.7 and −0.7 at the longer horizon. Healing that
+    needs food (floors 0 and 0.2) is +0.7 to +1.6 at the tighter margins and +4.9 at margin 2. Scarcer food is
+    zero or negative everywhere. Switching the predators off or doubling them moves today's world by −0.3 and
+    −3.3 points at the rule's margin.</span>
     <span><b>Axes.</b> Horizontal: the combination gain minus today's, in points. Vertical: one row per world
     and the two predator checks. Markers: tie margin 0 (filled circle), 0.5 — the rule's (open circle), 2
     (open square), and a planner looking further ahead, discount 0.99 (filled triangle). Grey band: plus or
@@ -265,7 +283,7 @@ next, the choice depends on more than one body state.</p>
     then recomputed with ties defined three ways — any difference counts (margin 0), within 0.5 reward units
     (the rule's) and within 2 — and today's value under the same variant was subtracted, so each marker
     shows how much that world differs from today under one version of the analysis. At the longer horizon
-    the tie share rises to 21–48 % (43 % today), above the plan's 40 % flag, so those markers rest on fewer
+    the tie share rises to 22–44 % (42 % today), above the plan's 40 % flag, so those markers rest on fewer
     states. Two extra rows re-solve
     today's world with the predator cost switched off and doubled; they show how much the measured hazard
     matters. The same rule reading applies: differences inside the grey band are not read. <b>What this figure does not show:</b> uncertainty from the measurements themselves (trip
@@ -278,37 +296,44 @@ next, the choice depends on more than one body state.</p>
 <section class="col">
 <h2><span class="num">07</span> What this suggests for the level-05 variants</h2>
 
-<p>The test batch planned earlier trains one change at a time: A1 (staying warm costs food), B3 (healing
-costs food), A4 (scarcer food) and A5 (fewer bushes). Read map by map, the planner points to a different
-priority:</p>
+<p>Since the first version of this page, the training plan changed: every combination of four rules —
+healing that needs food (B5), healing that costs food (B3), warmth that costs food (A1) and scarcer food
+(A4) — is being trained, sixteen worlds in all, and a rule keeping bushes off fire rings is being built.
+Read with the corrected food distance, the planner says:</p>
 
 <ol>
-  <li><b>Keep bushes off the fire rings — not in the batch, and perhaps the cheapest lever.</b> Today's world
-  without a warm bush already has a combination gain of 18.1 against 13.6 pooled; a bush on a fire ring makes
-  "rest in the warm bush" the answer to almost everything. No setting controls this today (food has a
-  minimum distance from fires; bushes do not), so it would need a small placement rule.</li>
-  <li><b>B5, healing needs food — the strongest change where there is no warm bush</b> (+5.2 to +5.4 at floors 0 and 0.2; +1.6 at 0.5; above
-  the line and above that map's noise floor of 3.2) and should be in the batch on that evidence. It does
-  nothing on the warm-bush map, and at the longer horizon, where 43 % of states are ties, it falls below
-  today's value.</li>
-  <li><b>A5, fewer bushes — passes the pooled rule, mostly by removing the warm-bush shortcut.</b> Most of
-  its gain is on the warm-bush map (+6.7 to +12.5); on the other map it is within the noise (−0.9 to +3.0). The
-  passing trip (8 steps) is harsher than one randomly placed bush (typically 6 steps away on this map);
-  two or three bushes give a trip of about 4–5 steps (uniform-placement estimate,
-  <code>bush_trip_estimate.json</code>). If the placement rule in item 1 is added, A5 may add little.</li>
-  <li><b>B3, healing costs food — small:</b> within the noise without a warm bush (−0.9 to +0.7), and up to +3.0 with one at the highest cost (2 food per point healed).</li>
-  <li><b>A1, staying warm costs food — no effect</b> (−1.5 to −0.1): the ideal agent already avoids the
-  cold, so the extra food cost rarely matters.</li>
-  <li><b>A4, scarcer food — makes the choice simpler</b> on both maps (−0.6 to −4.7), in every version and at
-  every margin: hunger takes over more states and the other needs matter less — the "one need dominates"
-  risk raised when this batch was planned.</li>
-  <li><b>B2, healing needs warmth, also makes the choice simpler</b> without a warm bush (−3.4 to −6.0):
-  warming up and healing then point the same way.</li>
+  <li><b>Keeping bushes off the fire rings is still the largest lever.</b> Today's world without a warm
+  bush has a combination gain of 17.1 against 4.3 with one. That rule is now being built (two cells of
+  clearance around each burning fire).</li>
+  <li><b>B3, healing costs food — the largest of the four rules in the training batch, but fragile</b>
+  (+3.1 and +3.2 pooled at 1 and 2 food per point; +0.4 and −0.3 at 0.25 and 0.5). It is inside the noise
+  band on the common map, and it disappears at the wider tie margin and the longer horizon. Figure 3 shows
+  what it changes: how fed the agent is decides between warming up and hiding.</li>
+  <li><b>B5, healing needs food — small</b> (+1.6 pooled at floors 0 and 0.2, all from episodes with a warm
+  bush; +0.1 at 0.5). The first version of this page ranked it first; that came from the wrong food
+  distance.</li>
+  <li><b>A5, fewer bushes — below the rule</b> (+1.8 to +3.7 pooled), almost all of it on the warm-bush
+  map. Figure 2 pools its maps at today's 41 % warm-bush share, but a sparse world has fewer warm bushes:
+  about 8 % of episodes with one bush, since 7.8 % of bushes sit on a fire ring in real resets. Reweighted
+  to that share, trips of 6 and 8 steps score 15.1–16.5 — about what today's world itself scores at the same
+  share (16.1). So fewer bushes work by removing warm bushes, the same lever as item 1, not through the
+  longer trip. (A trip of 8 is longer than even a single randomly placed bush gives on this map — a median
+  of 6 — so it is an upper bound, not a world the map produces.)</li>
+  <li><b>A1, warmth costs food — no effect</b> (−0.9 to −0.1): the ideal agent already avoids the cold.</li>
+  <li><b>A4, scarcer food — within the noise at the rule's reading</b> (−0.7 to −1.3 pooled), lower at the
+  wider margin (down to −5.0) and the longer horizon, where the margin's noise was not measured: hunger
+  takes over more states.</li>
+  <li><b>B2 makes the choice simpler</b> (down to −4.9 pooled); <b>B4 is within the noise</b> (down to
+  −1.3).</li>
 </ol>
 
-<p>Worlds combining these (for example no warm bush with B5, or with B3) were not solved; the plan tested
-one change at a time. That is the natural next sweep before choosing the final configurations.</p>
-</section>
+<p>So the planner no longer singles out any rule in the training batch; the sixteen-world training run is
+a screen, not a confirmation. One more reading follows from the two maps: B3's pooled gain is carried by
+the episodes with a warm bush (+3.4 and +6.2); in episodes without one — the only kind a world with bushes
+kept off fire rings has — no rule in the batch moves the gain beyond the noise (B3 +2.9 and +1.1, B5 +0.1,
+A1 and A4 slightly negative). The sixteen worlds keep today's bush placement, so both kinds of episode are
+in them. Worlds combining two or more rules were not solved here.</p>
+
 
 <section class="col">
 <h2><span class="num">08</span> What this page cannot say</h2>
@@ -330,6 +355,9 @@ one change at a time. That is the natural next sweep before choosing the final c
   <li><b>Predators are an average cost.</b> The planner sees 0.12 or 0.70 injury per step outside cover, not
   single attacks of about 21; it under-counts sudden deaths at high injury, and agents choose where they rest,
   so the resting rate partly reflects that choice.</li>
+  <li><b>Trip lengths are medians.</b> Food is 4 steps away and the bushes and fire ring 2, as medians
+  over real starts; the spread (food: 90 % within 8 steps) is not modelled. The first version of this page
+  used a food trip of 2 because the measurement counted the hiding predators' places as food.</li>
   <li><b>Food never runs out</b> in the planner (a real item allows 12 bites), so eating looks cheaper than
   it is.</li>
   <li><b>Only starting states are scored</b>, at open ground; the modulator would matter over every state an
@@ -346,7 +374,7 @@ one change at a time. That is the natural next sweep before choosing the final c
     <ul>
       <li><code>validation_current_rules.json</code> — the simulator check</li>
       <li><code>world_measurements.json</code> and <code>bush_trip_estimate.json</code> — the measured world</li>
-      <li><code>sweep/</code> — one solution per world</li>
+      <li><code>sweep_food4/</code> — one solution per world, food 4 steps away (the page's numbers); <code>sweep/</code> — the first run, food 2 steps away, kept for the correction</li>
       <li><code>reading_rule.json</code> — the rule applied to every world</li>
     </ul></li>
   <li>The body rules being implemented: <code>docs/<wbr>develop/<wbr>active/<wbr>thermal/<wbr>STATE_DEPENDENT_BODY_MECHANICS.md</code></li>

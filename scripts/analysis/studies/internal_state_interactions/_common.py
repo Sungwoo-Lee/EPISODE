@@ -10,7 +10,7 @@ from figguards import (assert_min_text_px, assert_no_text_overlap,   # noqa: E40
                        assert_ticks_dont_collide, legend_below, COLUMN_PX)
 
 OUT = os.path.join(ROOT, "results/analysis/internal_state_interactions")
-SWEEP = os.path.join(OUT, "sweep")
+SWEEP = os.path.join(OUT, "sweep_food4")   # food trip 4 (measured, predators excluded); "sweep" used 2
 FIG = os.path.join(ROOT, "docs/experiments/active/internal_state_interactions/figures")
 
 KIND = {"simulation": "simulation — body rules only, no trained agent",

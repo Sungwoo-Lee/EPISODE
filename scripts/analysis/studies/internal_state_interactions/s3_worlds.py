@@ -76,7 +76,7 @@ C.record_kind("s3_worlds", "planner")
 C.record_samples("s3_worlds", [
     dict(what="worlds solved (each on two maps)", used=len(settings), total=len([w for w in SW.worlds(R["baseline__level 05__today"]["trip"]["F"]) if w[1] != "check"]),
          note="one setting changed at a time from today's level 05 with B1"),
-    dict(what="start states per map (food x injury x temperature at open ground)", used=41106, total=41106,
+    dict(what="start states per map (food × injury × temperature at open ground)", used=41106, total=41106,
          note="grid 51 x 26 x 31 over food 0-200, injury 0-100, temperature -10..+5"),
     dict(what="start states excluded as ties (today's world)", used=int(round(41106 * base["summary"]["tie_share"])), total=41106,
          note="best and second-best choice within 0.5 return units")])
