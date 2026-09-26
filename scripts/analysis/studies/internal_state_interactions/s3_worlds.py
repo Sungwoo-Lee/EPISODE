@@ -7,7 +7,7 @@ value), and each map alone (blue: no bush on a fire ring; grey: a bush on a fire
 level 05 with B1; dotted: +5 points (rule 1); the grey band is today +/- twice the noise floor.
 Middle: need balance -- share of start states in which each choice is best.
 Right: survival share of the ideal policy over 500 steps (2,000 starts per map).
-A black diamond marks worlds that pass the pre-registered reading rule (STUDY_PLAN.md, Revisions 1 and 1b).
+A black diamond in the right margin marks worlds that pass the pre-registered reading rule (STUDY_PLAN.md, Revisions 1 and 1b).
 Writes results/analysis/internal_state_interactions/reading_rule.json.
 """
 import sys, os, json; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -51,7 +51,8 @@ for r, (name, group, label, value, *_rest) in enumerate(settings):
     ax[0].plot([100 * s["per_map"][1]["combination_gain"]], [y[r] - 0.22], "^", mfc="white", mec="#8a8f99", ms=5,
                label="a bush on a fire ring (41 %)" if r == 0 else None)
     if ok:
-        ax[2].plot([1.0], [y[r]], marker="D", color=house.INK, ms=5, transform=ax[2].get_yaxis_transform(), clip_on=False)
+        # in the right margin, outside the survival axis, so it cannot read as a survival value
+        ax[2].plot([1.12], [y[r]], marker="D", color=house.INK, ms=5, transform=ax[2].get_yaxis_transform(), clip_on=False)
     left = 0.0
     for cat in C.CHOICE_ORDER:
         v = 100 * s["balance"][cat]

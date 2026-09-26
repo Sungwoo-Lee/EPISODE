@@ -43,7 +43,7 @@ for r, name in enumerate(chosen):
         ax[r, j].imshow(img, origin="lower", aspect="auto", extent=(GN[0], GN[-1], GI[0], GI[-1]), interpolation="nearest")
         if r == 0:
             ax[r, j].set_title(f"body temperature {t:+g} deg", loc="left", fontsize=10)
-        ax[r, j].grid(False)
+        ax[r, j].grid(False); ax[r, j].set_xticks([50, 100, 150])
     ax[r, 0].set_ylabel(title, fontsize=9.5)
     shown = len(GN) * len(GI) * len(TEMPS)
     samples.append(dict(what=title.replace("\n", " "), used=int(shown), total=int(cat.size),
@@ -52,8 +52,11 @@ fig.supxlabel("food energy (0-200)", y=0.07, fontsize=11)
 fig.supylabel("injury (0-100), per row", x=0.005, fontsize=11)
 fig.tight_layout(h_pad=1.2, w_pad=0.6, rect=(0.02, 0.08, 1, 1))
 from matplotlib.patches import Patch
-fig.legend(handles=[Patch(color=C.CHOICE_COLOURS[c], label=c) for c in PL.CATEGORIES], loc="lower center",
-           ncol=4, frameon=False, bbox_to_anchor=(0.5, 0.0), fontsize=9.5)
+from matplotlib.colors import to_rgb
+_pale = tuple(1 - 0.45 * (1 - np.array(to_rgb(C.CHOICE_COLOURS["rest in cover"]))))
+fig.legend(handles=[Patch(color=C.CHOICE_COLOURS[c], label=c) for c in PL.CATEGORIES]
+           + [Patch(color=_pale, label="pale: a tie (e.g. rest in cover)")], loc="lower center",
+           ncol=5, frameon=False, bbox_to_anchor=(0.5, 0.0), fontsize=9.5)
 C.assert_no_text_overlap(fig); C.assert_min_text_px(fig)
 C.record_kind("s4_choice_maps", "planner")
 C.record_samples("s4_choice_maps", samples)

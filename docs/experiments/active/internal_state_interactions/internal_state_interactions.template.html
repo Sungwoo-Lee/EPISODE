@@ -1,8 +1,8 @@
 <title>Interactions Between Internal States</title>
 __HOUSE_STYLE__
 <style>
-  /* REQUIRED OVERRIDE (House Style Sheet, F11 amendment): figures spend --series-1 blue on the
-     ordinary agent and --series-2 orange on the neuromodulated one; chrome uses neither. */
+  /* REQUIRED OVERRIDE (House Style Sheet, F11 amendment): figures spend blue, orange and green on the
+     four choice categories (rest in cover, warm up, eat; grey for stay in the open); chrome uses none of them. */
   :root { --accent: #3f5b7a; --accent-text: #35506e; --warn: #7a5340; }
   :root { --f-head: 'Pretendard', system-ui, -apple-system, "Segoe UI", sans-serif;
           --f-mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace; }
@@ -22,7 +22,10 @@ __HOUSE_STYLE__
   /* align-self: a flex child is blockified and stretched, so inline-block alone renders a full-width bar */
   p.kind { display: inline-block; align-self: flex-start; margin: 0 0 6px; padding: 2px 9px; border-radius: 3px;
            font-size: 12.5px; letter-spacing: .02em; border: 1px solid var(--rule); color: var(--ink-2); }
-  p.kind-causal { border-color: var(--accent); color: var(--accent-text); }
+  p.kind-simulation { border-color: var(--rule); color: var(--ink-2); }
+  p.kind-planner { border-color: var(--accent); color: var(--accent-text); }
+  /* dense figures keep a legible floor on a phone and scroll sideways, with a measured cue */
+  .figscroll img { min-width: 600px; }
   p.kind-manipulation { border-color: var(--warn); color: var(--warn); }
   /* lists: the house sheet has no list rule (F61 family) -- paragraph rhythm, modest indent */
   ol, ul { margin: 0; padding-left: 1.4em; } li + li { margin-top: 6px; }
@@ -119,7 +122,8 @@ no choice wins in more than 80 % of starting states while another than "rest in 
 <h2><span class="num">03</span> What each new rule does on its own</h2>
 
 <figure>
-  <img data-fig="s1_single_rules" alt="Six panels. (a) Healing per rest step falls as body temperature moves away from 0 for B2. (b) Healing per step rises with food energy up to 100 for B5. (c) Steps from 0 degrees to freezing fall with injury for B4. (d) Food energy left after a 70-point heal falls as the cost per point rises for B3. (e) Food burned per step rises with distance from 0 degrees for A1. (f) The temperature after a first step onto a fire rises with the starting temperature, crossing the death line near +9.8.">
+  <p class="cue" hidden>Wider than the screen — scroll sideways, or click the figure to open it full size.</p>
+  <div class="scroll figscroll"><img data-fig="s1_single_rules" alt="Six panels. (a) Healing per rest step falls as body temperature moves away from 0 for B2. (b) Healing per step rises with food energy up to 100 for B5. (c) Steps from 0 degrees to freezing fall with injury for B4. (d) Food energy left after a 70-point heal falls as the cost per point rises for B3. (e) Food burned per step rises with distance from 0 degrees for A1. (f) The temperature after a first step onto a fire rises with the starting temperature, crossing the death line near +9.8."></div>
   <p class="zoomhint">Click the figure to open it full size.</p>
   __KIND:s1_single_rules__
   <figcaption>
@@ -159,7 +163,8 @@ world already has some combination dependence: knowing two body states predicts 
 points better than knowing the best single one. The question is which settings raise that.</p>
 
 <figure>
-  <img data-fig="s3_worlds" alt="A table-like chart with one row per world. Left: a dot per world for its combination gain against a vertical line for today at 13.6 and a dotted line at plus 5 points; only the rows for fewer bushes rise clearly to the right. Middle: stacked bars of how often each choice is best. Right: survival share of the ideal agent, between 94 and 98 percent everywhere.">
+  <p class="cue" hidden>Wider than the screen — scroll sideways, or click the figure to open it full size.</p>
+  <div class="scroll figscroll"><img data-fig="s3_worlds" alt="A table-like chart with one row per world. Left: for each world a black dot for its pooled combination gain and two triangles for the map without a warm bush (blue) and with one (grey), against a vertical line for today at 13.6 and a dotted line at plus 5 points; the grey triangles sit far left for most worlds and rise for fewer bushes, the blue triangles are highest for healing that needs food. Middle: stacked bars of how often each choice is best. Right: survival share of the ideal agent, between 94 and 98 percent everywhere."></div>
   <p class="zoomhint">Click the figure to open it full size.</p>
   __KIND:s3_worlds__
   <figcaption>
@@ -168,7 +173,7 @@ points better than knowing the best single one. The question is which settings r
     is no warm bush.</b> Today the combination gain is 18.1 points without a warm bush and 7.2 with one
     (13.6 pooled). Scarce cover (8 steps) reaches 20.5 pooled — +3.0 without a warm bush, +12.5 with one — and
     spreads the best choices across hiding, warming and eating (22–36 % each). B5 reaches +5.2 to +5.4 without
-    a warm bush (floors 0 and 0.2) and about 0 with one. A1 and B4 stay within about the noise on both maps,
+    a warm bush (floors 0 and 0.2) and about 0 with one. A1 and B4 stay within or just past the noise on both maps,
     B3 except for +3.0 on the warm-bush map at its highest cost; A4 lowers the gain on
     both, and B2 on the map without a warm bush. Survival differs little between worlds (94–98 %): the
     starts that are lost are mostly ones that cannot be saved, not a weaker policy.</span>
@@ -193,7 +198,8 @@ points better than knowing the best single one. The question is which settings r
     an average cost, not attacks, and its food never runs out, which makes eating look cheaper than it is and
     so, if anything, under-rates the scarce-food worlds; and the maps are pooled at today's 41 % warm-bush
     share even for the fewer-bushes worlds, where warm bushes would be rarer — reweighting them to a
-    realistic share (about 8 % with one bush) moves their pooled gain from 18.5–20.5 to 19.0–21.0.</span>
+    realistic share (about 8 % with one bush, since 7.8 % of bushes sit on a fire ring in real resets) moves
+    their pooled gain from 18.5–20.5 to 19.0–21.0 for trips of 6 and 8 steps.</span>
   </figcaption>
 </figure>
 </section>
@@ -206,7 +212,8 @@ body temperatures. Where a boundary between colours runs diagonally, or moves fr
 next, the choice depends on more than one body state.</p>
 
 <figure>
-  <img data-fig="s4_choice_maps" alt="Twelve coloured maps, four worlds by three body temperatures. At minus 8 degrees warm-up fills almost every map except a thin strip of eating when starving and of cover when near death. At minus 3 and plus 3 degrees the maps split diagonally into eat at low food, rest in cover at high injury and warm-up or staying in the open at low injury, with the cover region shrinking and warm-up growing in the fewer-bushes worlds.">
+  <p class="cue" hidden>Wider than the screen — scroll sideways, or click the figure to open it full size.</p>
+  <div class="scroll figscroll"><img data-fig="s4_choice_maps" alt="Twelve coloured maps, four worlds by three body temperatures. At minus 8 degrees warm-up fills almost every map except a thin strip of eating when starving and of cover when near death. At minus 3 and plus 3 degrees the maps split diagonally into eat at low food, rest in cover at high injury and warm-up or staying in the open at low injury, with the cover region shrinking and warm-up growing in the fewer-bushes worlds."></div>
   <p class="zoomhint">Click the figure to open it full size.</p>
   __KIND:s4_choice_maps__
   <figcaption>
@@ -237,7 +244,8 @@ next, the choice depends on more than one body state.</p>
 <h2><span class="num">06</span> Does the ranking depend on the analysis's own choices?</h2>
 
 <figure>
-  <img data-fig="s5_robustness" alt="One row per world, four markers each for tie margins 0, 0.5 and 2 and a longer horizon, showing the combination gain minus today's. The fewer-bushes rows sit to the right of zero under every variant; scarcer-food and warmth-dependent-healing rows sit to the left; most others straddle zero.">
+  <p class="cue" hidden>Wider than the screen — scroll sideways, or click the figure to open it full size.</p>
+  <div class="scroll figscroll"><img data-fig="s5_robustness" alt="One row per world, four markers each for tie margins 0, 0.5 and 2 and a longer horizon, showing the combination gain minus today's. The fewer-bushes rows sit to the right of zero under every variant; scarcer-food and warmth-dependent-healing rows sit to the left; most others straddle zero."></div>
   <p class="zoomhint">Click the figure to open it full size.</p>
   __KIND:s5_robustness__
   <figcaption>
@@ -248,7 +256,7 @@ next, the choice depends on more than one body state.</p>
     today's world by −0.3 and −3.6 points at the rule's margin.</span>
     <span><b>Axes.</b> Horizontal: the combination gain minus today's, in points. Vertical: one row per world
     and the two predator checks. Markers: tie margin 0 (filled circle), 0.5 — the rule's (open circle), 2
-    (grey square), and a planner looking further ahead, discount 0.99 (blue triangle). Grey band: plus or
+    (open square), and a planner looking further ahead, discount 0.99 (filled triangle). Grey band: plus or
     minus twice the noise floor; dotted line: plus 5 points.</span>
     __DATA:s5_robustness__
     <span><b>How it is computed.</b> Every world was solved at the agents' discount of 0.95 and again at 0.99,
@@ -259,7 +267,7 @@ next, the choice depends on more than one body state.</p>
     the tie share rises to 21–48 % (43 % today), above the plan's 40 % flag, so those markers rest on fewer
     states. Two extra rows re-solve
     today's world with the predator cost switched off and doubled; they show how much the measured hazard
-    matters. <b>What this figure does not show:</b> uncertainty from the measurements themselves (trip
+    matters. The same rule reading applies: differences inside the grey band are not read. <b>What this figure does not show:</b> uncertainty from the measurements themselves (trip
     lengths, temperatures, the hazard rate) beyond these checks; and whether a trained agent is affected by
     how far ahead it looks in the same way as the planner.</span>
   </figcaption>
@@ -332,7 +340,13 @@ one change at a time. That is the natural next sweep before choosing the final c
 <ul>
   <li>Study plan with its pre-registered rule and both review rounds: <code>docs/<wbr>experiments/<wbr>active/<wbr>internal_state_interactions/<wbr>STUDY_PLAN.md</code></li>
   <li>Simulator, validation, measurements, planner, sweep and one script per figure: <code>scripts/<wbr>analysis/<wbr>studies/<wbr>internal_state_interactions/</code></li>
-  <li>Outputs: <code>results/<wbr>analysis/<wbr>internal_state_interactions/</code> — <code>validation_current_rules.json</code>, <code>world_measurements.json</code>, <code>sweep/</code>, <code>reading_rule.json</code></li>
+  <li>Outputs, all under <code>results/<wbr>analysis/<wbr>internal_state_interactions/</code>:
+    <ul>
+      <li><code>validation_current_rules.json</code> — the simulator check</li>
+      <li><code>world_measurements.json</code> and <code>bush_trip_estimate.json</code> — the measured world</li>
+      <li><code>sweep/</code> — one solution per world</li>
+      <li><code>reading_rule.json</code> — the rule applied to every world</li>
+    </ul></li>
   <li>The body rules being implemented: <code>docs/<wbr>develop/<wbr>active/<wbr>thermal/<wbr>STATE_DEPENDENT_BODY_MECHANICS.md</code></li>
 </ul>
 <p>Departures from the House Style Sheet, as on the project's other analysis pages: the chrome accent and

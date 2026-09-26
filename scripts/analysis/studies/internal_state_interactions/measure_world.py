@@ -27,7 +27,7 @@ def main():
     from src.environment import core
     P = load_env_params(load_env_config(os.path.join(a.src_root, "configs/environment/experiment/basic/05-campfire_thermal_10x10.yaml")))
     reset = jax.jit(core.jax_reset)
-    by_d = {}; trips = {"bush": [], "food": [], "ring": []}; warm = []
+    by_d = {}; trips = {"bush": [], "food": [], "ring": []}; warm = []; ring_bush = []
     rng = np.random.default_rng(0)
     for s in range(a.resets):
         st = reset(P, jax.random.PRNGKey(s)); F = np.asarray(st.thermal_field)
@@ -43,6 +43,7 @@ def main():
         foods = np.asarray(st.res_pos)[np.asarray(st.res_active)]
         rings = [(r, c) for r in range(H) for c in range(W) if min(dist((r, c), f) for f in fires) == 1]
         warm.append(any(min(dist(b, f) for f in fires) <= 1 for b in bushes))
+        ring_bush.extend(min(dist(b, f) for f in fires) <= 1 for b in bushes)
         occupied = {tuple(b) for b in bushes} | {tuple(f) for f in fires}
         for _ in range(20):                                  # random open cells
             p = (int(rng.integers(1, H - 1)), int(rng.integers(1, W - 1)))
@@ -74,7 +75,8 @@ def main():
                                                         p90=float(np.percentile(v, 90))) for k, v in sorted(by_d.items())},
                trip_steps={k: dict(median=float(np.median(v)), mean=float(np.mean(v)), p90=float(np.percentile(v, 90)))
                            for k, v in trips.items()},
-               warm_bush_episode_share=float(np.mean(warm)), hazard=hazard, gamma=gammas)
+               warm_bush_episode_share=float(np.mean(warm)),
+               share_of_bushes_on_a_fire_ring=float(np.mean(ring_bush)), hazard=hazard, gamma=gammas)
     p = os.path.join(ROOT, "results/analysis/internal_state_interactions/world_measurements.json")
     os.makedirs(os.path.dirname(p), exist_ok=True); json.dump(out, open(p, "w"), indent=1)
     print(json.dumps(out, indent=1))
