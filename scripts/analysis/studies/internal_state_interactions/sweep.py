@@ -1,0 +1,92 @@
+"""Solve the ideal planner for every world in the sweep; one JSON summary + NPZ policy per world.
+
+Each world changes ONE setting from today's level 05 with the random starting temperature (B1),
+and is solved on both maps (no warm bush / warm bush) and pooled 0.59 / 0.41. Also: the survival
+share of the ideal policy (rollouts from 2,000 training-style starts per map), and three checks that
+are not settings -- a finer grid (noise floor of the metric), the discount 0.99 instead of the
+training runs' 0.95, and the predator hazard at 0 and doubled. Resumable: existing JSONs are skipped.
+
+  python sweep.py --procs 8 --out results/analysis/internal_state_interactions/sweep
+"""
+import argparse, json, os, sys
+from concurrent.futures import ProcessPoolExecutor
+import numpy as np
+
+HERE = os.path.dirname(os.path.abspath(__file__)); sys.path.insert(0, HERE)
+import bodysim as B
+import planner as PL
+
+BASE = B.Body()
+TRIP = {"O": 2, "B": 2, "W": 2, "R": 2, "F": 2}
+
+
+def worlds():
+    """(name, group, label, value, body kwargs, trip overrides, world kwargs)."""
+    W = []
+    def add(group, label, value, body=None, trip=None, world=None):
+        W.append((f"{group}__{label}__{value}", group, label, value, body or {}, trip or {}, world or {}))
+    add("baseline", "level 05", "today")
+    for r in (0.5, 1.0, 2.0, 4.0):
+        add("A1", "staying warm costs food (rate)", r, body=dict(coupling=True, coupling_rate=r))
+    for c in (0.25, 0.5, 1.0, 2.0):
+        add("B3", "healing costs food (per point)", c, body=dict(heal_cost=c, shortfall="partial"))
+    for d in (4, 6, 8):
+        add("A4", "trip to food (steps)", d, trip=dict(F=d))
+    for g in (3.0, 2.0):
+        add("A4", "food per bite (net)", g, body=dict(food_gain_net=g))
+    for d in (4, 6, 8):
+        add("A5", "trip to a bush (steps)", d, trip=dict(B=d, W=d))
+    for s in (1 / 30, 1 / 15, 1 / 10):
+        add("B2", "healing slows off 0 deg (per deg)", round(s, 4), body=dict(heal_cold_s=s, heal_warm_s=s))
+    for g in (0.5, 1.0, 2.0):
+        add("B4", "injury speeds cooling (gain)", g, body=dict(inj_gain=g, inj_mode="cooling_only"))
+    for f, lo in ((0.5, 20.0), (0.2, 20.0), (0.0, 0.0)):
+        add("B5", "healing slows when hungry (floor)", f, body=dict(b5=True, b5_floor=f, b5_low=lo, b5_high=100.0))
+    # checks, not settings
+    add("check", "finer grid", "81x41x91", world=dict(grid=(81, 41, 91)))
+    add("check", "discount", 0.99, world=dict(gamma=0.99))
+    add("check", "predator hazard", 0.0, world=dict(hazard=0.0))
+    add("check", "predator hazard", 1.28, world=dict(hazard=1.28))
+    return W
+
+
+def run(job):
+    name, group, label, value, body, trip, wkw, out = job
+    path = os.path.join(out, f"{name}.json")
+    if os.path.exists(path):
+        return path, "skip"
+    t = dict(TRIP); t.update(trip)
+    sols, surv, arrays = [], {}, {}
+    for warm, weight in ((False, 1 - PL.WARM_BUSH_SHARE), (True, PL.WARM_BUSH_SHARE)):
+        w = PL.World(body=BASE.with_(**body), trip=t, warm_bush=warm, **wkw)
+        sol = PL.solve(w)
+        sols.append((sol, weight))
+        surv[f"warm{int(warm)}"] = PL.rollout_survival(sol)
+        cat, tie = PL.best_category(sol, "O", 0.5)
+        arrays[f"cat_warm{int(warm)}"] = np.array([PL.CATEGORIES.index(c) for c in cat], np.uint8)
+        arrays[f"tie_warm{int(warm)}"] = tie
+        arrays[f"iters_warm{int(warm)}"] = np.array(sol["iters"])
+    summ = PL.summarise(sols)
+    survival = sum(wt * surv[f"warm{int(s['world'].warm_bush)}"][0] for s, wt in sols)
+    mean_steps = sum(wt * surv[f"warm{int(s['world'].warm_bush)}"][1] for s, wt in sols)
+    res = dict(name=name, group=group, label=label, value=value, body=body, trip=t, world=wkw,
+               grid=list(sols[0][0]["world"].grid), iters=[s["iters"] for s, _ in sols],
+               delta=[s["delta"] for s, _ in sols], summary=summ, survival_share=survival,
+               mean_survival_steps=mean_steps, survival_by_map=surv)
+    np.savez_compressed(path.replace(".json", ".npz"), grid=np.array(sols[0][0]["world"].grid), **arrays)
+    json.dump(res, open(path, "w"), indent=1)
+    return path, "ok"
+
+
+def main():
+    ap = argparse.ArgumentParser(); ap.add_argument("--procs", type=int, required=True)
+    ap.add_argument("--out", required=True); a = ap.parse_args()
+    os.makedirs(a.out, exist_ok=True)
+    jobs = [(n, g, l, v, b, t, wk, a.out) for (n, g, l, v, b, t, wk) in worlds()]
+    with ProcessPoolExecutor(a.procs) as ex:
+        for p, s in ex.map(run, jobs):
+            print(s, os.path.basename(p), flush=True)
+
+
+if __name__ == "__main__":
+    main()
