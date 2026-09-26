@@ -9,7 +9,7 @@ aliases: [bush_fire_clearance]
 
 # Keep bushes away from campfires: a configurable world-generation rule
 
-> **Status**: APPROVED, Revision 1, in implementation. `plan-reviewer` has reviewed it (SOUND WITH CONCERNS), and its findings are resolved below.
+> **Status**: IMPLEMENTED (awaiting `senior-developer` verification), Revision 1. `plan-reviewer` has reviewed it (SOUND WITH CONCERNS), and its findings are resolved below.
 > **Opened**: 2026-09-26
 >
 > **User decisions (2026-09-26).** **D1 = Option B**, two cells of clearance (`bush_min_fire_distance: 3`, the value variants will use). **D2 = burning fires only.** The key ships at the inert value `0` in `default.yaml` and is **not** enabled in `basic/05` (variant use comes later, via `experiment-designer`). Tests exercise v = 3 and v = 2.
@@ -437,15 +437,15 @@ Output: `tests/env/fixtures/bush_fire_clearance_parity/pre_change_resets.npz`.
 
 ## Checkpoints
 
-- [ ] **CP0**: before C0 and again before C2, run the `git diff` / `git log` pair from §File Changes ("Parallel edits") on `core.py`, `config_loader.py`, `saved_config_compat.py` and `test_saved_config_compat.py`. If there are foreign uncommitted hunks, or `_ERA_KEYS` rows new since this plan, coordinate and re-derive the C0 regression test. Record the output.
-- [ ] **CP1**: the compat regression test fails on the pre-C0 module with "thermal block carries". Paste the output.
-- [ ] **CP2**: the fixture was generated in a worktree at a named SHA, and `_provenance_sha` matches.
-- [ ] **CP3**: off-parity: jaxpr SHAs and 64-seed reset leaves identical for all four worlds.
-- [ ] **CP4**: on: 1,000 resets at each tested v give 0 violations, 0 bushes outside their area, and 0 shared cells. Non-bush state is identical to off.
-- [ ] **CP5**: loader: each refusal fires with its message. The level-05 feasibility margin for the chosen v is logged and matches §A3 (53 / 29 / 41).
-- [ ] **CP6**: run `measure_world.py --src-root <repo> --resets 300 --bush-min-fire-distance <v> --out tmp/<ts>_bush_clearance_measure.json`. Required: `warm_bush_episode_share == 0.0` and `share_of_bushes_on_a_fire_ring == 0.0`. Under D1-B, also 0 bushes in the diagonal class. **Exact fire check (Revision 1, M3):** run the same 300 seeds at 0 as well. For **every** seed, the set of fire cells (`thermal_field > 40`) at v must equal the set at 0 exactly. One mismatch fails CP6. The cell-temperature-by-distance table is printed as a sanity summary only. It is not a gate. Paste the JSON summary and the count of mismatched seeds (required: 0 of 300).
-- [ ] **CP7**: a saved Wave 2 level-05 config still loads through the compat step and gets 0 for the new key. The store fingerprint equals `env_fingerprint(raw)`.
-- [ ] **CP8 (speed)**: `jax_reset` throughput (vmapped, 1,024 envs, CPU and one GPU) at 0 vs the chosen v; plus a short level-05 rPPO run at value 0 vs HEAD. Expected: no change at 0 (identical graph), and a small reset-only cost when on. Record before/after.
+- [x] **CP0** (clean before C0 and before C2: no foreign hunks in the four files, no new `_ERA_KEYS` rows; last compat commits were `11b9a1b7` / `eef30212`): before C0 and again before C2, run the `git diff` / `git log` pair from §File Changes ("Parallel edits") on `core.py`, `config_loader.py`, `saved_config_compat.py` and `test_saved_config_compat.py`. If there are foreign uncommitted hunks, or `_ERA_KEYS` rows new since this plan, coordinate and re-derive the C0 regression test. Record the output.
+- [x] **CP1** (fails pre-fix; see report): the compat regression test fails on the pre-C0 module with "thermal block carries". Paste the output.
+- [x] **CP2** (worktree at `222f58e6`, `_provenance_sha` = `222f58e62b404e7e4e819574447881e35e9c7639`): the fixture was generated in a worktree at a named SHA, and `_provenance_sha` matches.
+- [x] **CP3** (17/17 off-side tests pass): off-parity: jaxpr SHAs and 64-seed reset leaves identical for all four worlds.
+- [x] **CP4** (v = 3 and 2, stress and natural: 0 / 0 / 0; non-bush leaves identical over 256 seeds): on: 1,000 resets at each tested v give 0 violations, 0 bushes outside their area, and 0 shared cells. Non-bush state is identical to off.
+- [x] **CP5** (10 refusals pass; logged margins 19 at v = 3, 43 at v = 2): loader: each refusal fires with its message. The level-05 feasibility margin for the chosen v is logged and matches §A3 (53 / 29 / 41).
+- [x] **CP6** (warm-bush share 0.0, ring share 0.0, no diagonal bushes; 0 of 300 fire-set mismatches): run `measure_world.py --src-root <repo> --resets 300 --bush-min-fire-distance <v> --out tmp/<ts>_bush_clearance_measure.json`. Required: `warm_bush_episode_share == 0.0` and `share_of_bushes_on_a_fire_ring == 0.0`. Under D1-B, also 0 bushes in the diagonal class. **Exact fire check (Revision 1, M3):** run the same 300 seeds at 0 as well. For **every** seed, the set of fire cells (`thermal_field > 40`) at v must equal the set at 0 exactly. One mismatch fails CP6. The cell-temperature-by-distance table is printed as a sanity summary only. It is not a gate. Paste the JSON summary and the count of mismatched seeds (required: 0 of 300).
+- [x] **CP7** (7 keys supplied, bush key 0; store dir `ac5f70226a` = `env_fingerprint(raw)`): a saved Wave 2 level-05 config still loads through the compat step and gets 0 for the new key. The store fingerprint equals `env_fingerprint(raw)`.
+- [x] **CP8 (speed)** (reset throughput measured; rPPO run skipped, see report): `jax_reset` throughput (vmapped, 1,024 envs, CPU and one GPU) at 0 vs the chosen v; plus a short level-05 rPPO run at value 0 vs HEAD. Expected: no change at 0 (identical graph), and a small reset-only cost when on. Record before/after.
 
 ## Hand-off to the owner of [[SAVED_RUN_CONFIG_COMPAT]]
 
@@ -472,10 +472,73 @@ A one-line touch on each of three rows in `KNOWN_BUGS.md`:
 
 ## Implementation Report
 
-> **Implemented by**: _(developer)_
-> **Date**: _(date)_
+> **Implemented by**: developer
+> **Date**: 2026-09-26 / 27
 
-_(Commits, file-by-file changes, test output, CP results, speed numbers, deviations.)_
+**What was built, in one paragraph.** A new setting, `thermal.bush_min_fire_distance`, keeps every bush at least `v` grid steps from every burning campfire when it is non-zero. It ships at `0` in `default.yaml`, and at `0` the world is generated exactly as before: the tests prove the compiled reset and step graphs and 64 reset states per world are identical to the pre-change code. No maintained world turns it on. With it on (tested at 3 and 2), 1,000 resets show no bush near a fire, and only bushes move.
+
+### Commits
+
+| Commit | Content |
+|---|---|
+| `456f72d8` | Plan: user decisions recorded (D1 = B, value 3; D2 = burning fires only). |
+| `222f58e6` | **C0**: `saved_config_compat.py` all-or-none per (block, era), built generically from the era strings; new row `thermal.bush_min_fire_distance = 0`; `_ERA` renamed `_ERA_BODY_MECHANICS`, `_ERA_BUSH` added; compat tests. |
+| `67a240f5` | **C1**: `scripts/fixtures/generate_bush_fire_clearance_parity_fixture.py` + `tests/env/fixtures/bush_fire_clearance_parity/pre_change_resets.npz` (from a detached worktree at `222f58e6`); `SCRIPTS_DEPENDENCY_MAP.md` (new row, new caller on the body-mechanics generator row, test-import row). |
+| `8187c570` | **C2**: `state.py`, `core.py`, `config_loader.py`, `default.yaml`, the two archived campfire test inputs, the new test module, the three existing-test edits, `CONFIG_GUIDE.md`, `02_config_schema.md`, `CONFIG_CRITICAL_SETTINGS.md`. |
+| `7c004dc4` (foreign) | **C3's `measure_world.py` flags landed here**, see Deviations. |
+| (this commit) | Implementation Report + checkpoints. |
+
+### File by file
+
+- `src/environment/saved_config_compat.py`: `_era_groups(block)` groups `_ERA_KEYS` rows by block prefix and era string at call time; `_check_block` enforces all-or-none per group and keeps the "`<block>` block carries" wording (now also naming the era). Docstring updated.
+- `src/environment/state.py`: static `thermal_bush_min_fire_distance`.
+- `src/environment/core.py`: `_THERMAL_BUSH_KEY = 0xB05E`; `_COUNT_KEY_*` and `_build_activation_mask` hoisted unchanged above `# 2. Entity Placement` (§7b keeps its three calls); the D2/D3 guard widened; the bush pass after D3 exactly as §File Changes (c); `relocate_blocked_entities` docstring names the new caller.
+- `src/environment/config_loader.py`: mandatory read + refusal of `< 0` and `1`; thermal-off pin; `per_type` guard names all three keys; module helper `_check_bush_fire_clearance` (no fire / no bush / bush-is-fire / resource heat source / config-wide §A3 bound per distinct bush area; logs the margin at INFO); `EnvParams` wiring.
+- `configs/environment/default.yaml`: key at `0`; comments state which fires each rule counts (food: every slot; bush: burning only).
+- `configs/environment/experiment/archive/thermal/campfire_world{,_body_temp_hidden}.yaml`: key at `0` with the precedent comment. Re-grep of `food_min_fire_distance` over `configs tests scripts`: default.yaml, these two, `archive/basic_vec8/default.yaml` (not migrated, policy), `frozen_parity_worlds/environment__default.yaml` (thermal **off**, no key needed), the two saved-run fixtures (never edited), `test_thermal_field.py`, `test_thermal_validation.py`. No inline thermal-on YAML base elsewhere.
+- Tests: new `tests/env/test_bush_fire_clearance.py` (36 tests); `test_saved_config_compat.py` (C0); `test_body_mechanics_parity.py` (`LATER_INERT_KEYS`); `test_thermal_field.py`; `test_thermal_validation.py`.
+- `scripts/analysis/studies/internal_state_interactions/measure_world.py`: `--bush-min-fire-distance` (in memory, printed), `--out` (required with it), output field `bushes_by_fire_class`, docstring.
+
+### Checkpoint evidence
+
+- **CP1 (regression test first).** `test_body_mechanics_era_config_gets_only_the_bush_key` on the pre-C0 module: **FAILED** (`assert [] == ['thermal.bush_min_fire_distance']`: today's module has no row, so it supplies nothing). To show the failure the plan describes, the test was also run against a probe module with the row appended but the old block-level grouping: **FAILED** with `ValueError: ... the thermal block carries [4 body-mechanics keys] but not ['thermal.bush_min_fire_distance']`. After C0: **passes**. Compat file: 21 passed.
+- **CP3.** `test_no_unrelated_config_drift`, `test_off_value_resolves_to_zero`, `test_off_jaxpr_identical`, `test_off_resets_byte_identical` × {lvl04, lvl05, lvl05_d3, default}: 17 passed (incl. the fixture's stamped config lacking the key). Pre-change `jax_reset` SHA-1 for lvl05 `d268095f…`, lvl05_d3 `beb74162…`. Contrast `test_on_changes_the_reset_graph` passes (reset SHA differs at v = 3; step SHA unchanged).
+- **CP4.** `[bush-clearance] v=3 stress / v=2 stress / v=3 natural / v=2 natural: 1000 resets, violations=0, out_of_area=0, shared_cells=0`; each also asserts the rule-off world with the same seeds DOES have bushes near fires (non-vacuous). `test_on_moves_only_bushes`: every leaf except `obs_pos` identical over 256 seeds, non-bush `obs_pos` rows identical, some bushes moved. `test_existing_rules_still_hold_when_on` (food 4 + bush 3) passes.
+- **CP5.** Log lines: `100 - 3*13 - 32 = 29 >= n_bush 10 (margin 19)` (v = 3), `100 - 3*5 - 32 = 53 >= n_bush 10 (margin 43)` (v = 2), matching §A3. Two-bush-entry case refused with `= 9 < n_bush_slots = 13` (per-entry reading would give 9 ≥ 3 and pass).
+- **CP6.** `measure_world.py --src-root . --resets 300 --bush-min-fire-distance 3 --out tmp/20260926_bfc_measure_v3.json`: `warm_bush_episode_share 0.0`, `share_of_bushes_on_a_fire_ring 0.0`, `bushes_by_fire_class {"(3,2)": 0.189, "far": 0.811}` (no `(2,1)` diagonal, no `(2,2)`). Same run at 0: 0.41 / 0.0784, classes (1,1) 7.8%, (2,1) 7.6%, (2,2) 7.9%, (3,2) 13.4%, far 63.3%, reproducing §A2. Exact fire check (`tmp/20260926_bfc_cp6_firecheck.py 3 300`): **0 of 300** seeds with a different fire-cell set; the whole `thermal_field` was identical in 300/300. Cell temperature by distance, v = 3 and v = 0 identical: 77.3 / 8.8 / −16.5 / −29.4 / −30.0.
+- **CP7.** Real saved config `results/JAX_RecurrentPPO/20260922-182534_rppo_bq2cover_lvl05_t1none_s42/models/config.yaml`: compat supplies 7 keys, `thermal_bush_min_fire_distance == 0`, loads; `env_fingerprint(raw) = ac5f70226a`, the store directory under `results/trajectories_basicq2_w2/…/10000012/ac5f70226a/`.
+
+### Tests
+
+- `pytest tests/env/test_bush_fire_clearance.py`: 36 passed. `pytest tests/env/test_saved_config_compat.py`: 21 passed.
+- `JAX_PLATFORMS=cpu pytest tests/env` (log `tmp/20260926_bfc_tests_env.log`): **1330 passed, 1671 skipped, 17 failed** in 36 min. All 17 failures are `test_channel_names_match_configs.py::test_every_maintained_config_can_write_a_recording[...level05_body_interactions/factors/*.yaml]`, untracked configs of another session that fail on `sensory.visual_value_mode` missing; none mention the new key. `test_body_mechanics_parity.py` and `test_thermal_parity.py` are green (body-mechanics changed only by the drift ignore).
+
+### Speed (CP8)
+
+`tmp/20260926_bfc_cp8_speed.py`, level 05, vmapped `jax_reset`, 1,024 envs, 50 timed calls, two alternating passes:
+
+| Backend | v = 0 (ms / 1,024 resets) | v = 3 | Delta |
+|---|---|---|---|
+| CPU | 135.0, 135.5 | 223.5, 225.7 | +65% reset-only |
+| GPU (local RTX 4090) | 5.29, 3.80 | 4.44, 4.84 | within noise |
+
+At 0 no change is possible: the `jax_reset` and `jax_step` jaxpr SHA-1s equal the pre-change ones (CP3), so the compiled programs are the same. The on-cost is paid once per episode reset, not per step. **The short level-05 rPPO run at 0 vs HEAD was not run**: with identical jaxprs for reset and step it would compare the same program; flagged for `senior-developer` to decide whether it is still wanted.
+
+### Deviations
+
+1. **`measure_world.py` edits landed in a foreign commit.** A parallel session's commit `7c004dc4` ("internal-state study page re-run with the corrected food distance") staged the whole file while my C3 edits were uncommitted, so the three flag changes are in that commit, not a C3 of mine. The content is what the plan specifies. No other file of mine was swept.
+2. **`test_present_keys_are_not_overwritten` also edited in C0** (not listed in the plan): with a seventh key, a config carrying the six old keys now correctly gets the bush key, so the "later-era run" fixture in that test had to carry `bush_min_fire_distance` too.
+3. **`test_thermal_validation.py` has no missing-key parametrization** (the plan's "`stage1_food_min_fire_distance` pattern" is in the must-load list). So: two refusal cases (−1, 1) went into `_MUST_RAISE`, a must-load case at 3 into `_MUST_LOAD`, and the missing-key test is `test_missing_key_raises_when_thermal_on` in the new module.
+4. **CP1 wording.** On the actual pre-C0 module the regression test fails with a wrong return value, not with "thermal block carries" (that message needs the row to exist). Both failures are recorded above.
+5. **Extra tests** beyond the plan's table in the new module: `test_off_value_resolves_to_zero`, `test_level05_feasibility_margin_logged` (CP5), `test_missing_key_raises_when_thermal_on`, and a `warm_bush_entry` refusal case.
+6. `SCRIPTS_DEPENDENCY_MAP.md` landed in C1 with the new script (same change as the file it describes), not in C2.
+7. The `resolve_overlaps_global` docstring was not changed (the new pass calls only `relocate_blocked_entities`, whose docstring names it).
+
+### Hand-offs
+
+- **`bug-curator`**: touch rows 117 (new guarded caller of `relocate_blocked_entities`), 119 (one more thermal-conditional mandatory key; archive not migrated), 123 (compat now supplies a seventh key; all-or-none per (block, era)).
+- **Owner of [[SAVED_RUN_CONFIG_COMPAT]]**: as in §Hand-off above; the plan doc was not touched.
+- **Not mine, noticed**: the 17 `level05_body_interactions/factors/*.yaml` configs fail to load (`sensory.visual_value_mode` missing) → `experiment-designer`.
 
 ## Verification Report
 
