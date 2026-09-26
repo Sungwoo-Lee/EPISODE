@@ -309,3 +309,47 @@ Wall time is **not estimated**. It is measured at CP5. The only number on file i
 | | | | |
 
 **Conclusion**:
+
+---
+
+## Feedback from plan-reviewer
+
+> **Reviewed by**: plan-reviewer · **Date**: 2026-09-26 · **Object**: this plan at commit `bf71048c`
+> **Verdict**: **SOUND WITH CONCERNS** — no Critical finding; six Moderate items worth fixing before implementation, four open assumptions.
+>
+> Severity legend: 🔴 Critical = fix before going further · 🟡 Moderate = likely costs a re-run · 🟢 Low = cosmetic · ❓ Open = an assumption nobody has verified yet.
+
+### What I checked against the code (all confirmed)
+
+- **The three pins really pin.** `jax.random.uniform(key, (), minval=x, maxval=x)` returns `x` exactly in float32 — run in the project env for −10, 0, 5, 30, 60, 180, 0.3, 7.1. `body_key1` is split unconditionally (`src/environment/core.py:1898`) and read only by B1; `random_start_nutrition: false` reads `start_nutrition` directly (`:1906`); reset stores `body_temp` as a float32 scalar on every config (`:2200`), so the batched recorder's `states0_np.body_temp[i]` (`scripts/eval/eval_rollout.py:443` is a `tree_map`) will exist. `test_B1_2_pinned_start_is_exact` exists (`tests/env/test_body_mechanics_units.py:180`).
+- **Sweep-driver claims** (`run_sweep.py:131-152, 212-213, 384, 401`): `probe:` accepts any dir, `conditions: all` globs `avoid_*`, `max_checkpoints` caps to newest-N, `plot_measures: []` draws nothing, `x_axis` is optional.
+- **Compat gate**: `_is_under_configs` (`eval_rollout.py:804-808`) and the compat call only outside `configs/` (`:962-971`) — the "keep generated files under `configs/`" reasoning in §D4 is correct.
+- **§A2's measurement reproduced**: flattened diff of the wave-2 modulated run (after compat) vs `injury_grid/fire_away_clean/avoid_pred_inj30.yaml` differs only on `random_start_nutrition`, `start_injury_low/high`, and keys absent from the run (B3/B4/B5 sub-keys, B1 range keys). Control vs modulated runs have **identical** env sections (only `agent.modulation.*` differs), so §D5's one-folder-per-world premise holds for wave 2.
+- **Known Bugs**: `start_satiation` dead knob (row 94, plan already handles), glued rabbit (row 99, excluded), reset 1-ulp across lowerings (row 153, see M2), termination reason unreliable with a body system off (row 473 — only bites nutrition-off worlds, not these). No earlier plan on a joint body-state grid; [[STATE_DEPENDENT_BODY_MECHANICS]] is the right citation.
+- **Maintenance contracts**: no new mandatory key, no registry setting changed, `SCRIPTS_DEPENDENCY_MAP.md` update is in the change list, `parents[2]` is right for both new scripts.
+
+### Findings
+
+| Sev | Location | Issue | Suggested fix | Owner |
+|---|---|---|---|---|
+| 🟡 M1 | §CP4 | **The anchor is not produced by the same code as the new recordings.** The existing `injurygrid_fire_away_clean` recordings for checkpoint 10000011 are dated **2026-09-24 13:01**; the four `src/environment` commits of 2026-09-26 (C0 `eef30212`, C2 `11b9a1b7`, `c073ce99`, `7b77d13d`) and change 2 all post-date them. If CP4 fails there are three candidate causes (C2 src change, recorder change, probe/rule change) and "FAILS; does not skip" gives no diagnosis path. | Regenerate the four anchor conditions at HEAD into a fresh output dir with `--max-checkpoints 1` (~2 min) and use *that* as the CP4 reference. Optionally diff the fresh anchor against the 09-24 one as a separate, separately-attributable check that C2 is inert on this run. | `senior-developer` (plan), `developer` |
+| 🟡 M2 | §CP4 | `np.array_equal` on positions/actions is stricter than the reset code guarantees across a re-lowering: Known Bugs row 153 (documented, not a bug) — a 1-ulp difference on `animal_property_sampled` when the trace changes. Flipping `thermal.random_start_body_temp` (a **static** field, `src/environment/state.py:456`) changes `jax_reset`'s trace. | Pre-register the fallback: on mismatch, first diff both probes' reset states; if the only difference is ≤ 1 ulp on `animal_property_sampled`, record it and pass CP4 on the measures; anything else fails. | `senior-developer` |
+| 🟡 M3 | §D1, §Context | "All values are inside level 05's training ranges (body temperature −10 to +5)" is **false for the worked-example runs**: the wave-2 level-05 runs predate B1 (their saved config has no `random_start_body_temp`; compat supplies `false`; the critical-settings change log of 2026-09-26 says "Wave 2 level-05 and level-06 runs started every episode at 0.0"). T = −10 / −5 / +5 are off-distribution starts for them. Fine for a smoke test, wrong if CP5's readout is ever quoted as a result. | Say so in §D1 and §CP5. Have the manifest record the run's own start ranges per axis (read from the run config) so the reducer flags off-range cells. | `senior-developer` |
+| 🟡 M4 | §D3 (b) | The rule-diff exemption is broader than stated: "keys missing from the run config do not fail" is applied without checking that the parent switch is off, and the check is a YAML re-derivation rather than what the env reads. Today the missing keys are exactly the B3/B4/B5 sub-keys and B1 range keys, so it passes for the right reason — but a future world that turns a parent on in the probe would slip through. | Prefer comparing resolved `EnvParams` scalar/static fields between `load_env_params(probe)` and `load_env_params(run + compat)`, excluding scene-derived arrays and the allowlisted start fields — that is the ground truth. If the YAML diff stays, permit a missing key only when its parent switch *in the probe* is off, with B1's range keys the sole named exception. | `senior-developer` |
+| 🟡 M5 | §D4, change 3 | `manifest.json` (the provenance record) is gitignored with the generated files, and the reducer reads it from the generated dir. Regenerating a world folder with different levels silently pairs an older sweep output with the wrong manifest. | Copy `manifest.json` into the sweep `output_dir` at launch and have the reducer read it from there; un-ignore `manifest.json` with a negation pattern (or commit copies under the experiment folder). | `senior-developer` |
+| 🟡 M6 | §CP1 | `parity_check_eval_rollout.py` compares only the 11 measures per episode (legacy vs batched); it never opens snapshot fields, so "every existing snapshot field byte-identical" is not something CP1 as written can establish. | Add an explicit recording diff: batched run on one probe before and after change 2 (same seed, same commit otherwise); load both `.rec.gz`; assert every payload key/array equal except `snapshots[*]['body_temp']`. Test 4 covers batched-vs-unbatched, not batched-before-vs-after. | `developer` |
+| 🟢 L1 | change 4, §D2 step 1 | `output_dir` "fresh; must not exist" is not enforced by `run_sweep.py` (incremental by design). §D2 step 1 says `build()` is always applied, but `--arms` is refused for thermal-off runs. | Assert the dir is absent in the launch step (or the spec header). State that `build()` is skipped when thermal is off. | `developer` |
+| 🟢 L2 | §Cost | `thermal_start_body_temp_low/high` are static (`state.py:457-458`), so each T value is a separate compile of the batched rollout: ~4 T × 3 scenes × 2 arms = 24 compiles per run vs 6 for the injury grid; the 36 s / 12-condition figure came from a battery that shared traces, so linear scaling underestimates. Disk: existing injury-grid `.rec.gz` files are ~10 KB each (measured), so ~145 MB per run, ~4.6 GB for 32 runs. | Nothing to change — CP5 measures — just do not be surprised by the compile overhead. | — |
+
+### Open assumptions (❓)
+
+- **O1 — thermal runway in `fire_away`.** From T = −10 the body reaches the −15 floor within a fraction of the 100-step window unless the agent reaches the fire (bush equilibrium −20.24). In that arm the T axis is partly a survival-runway axis, like N in §A3. The reducer's termination-reason counts will show it; §A3 should say it.
+- **O2 — rPPO-only saved config.** The generator assumes `<run>/models/config.yaml` with resolved env sections and no `extends:`. Verified for wave 2; not verified for Dreamer runs (the sweep supports `algo: dreamer`, whose probe eval layers train/eval/visualization defaults under the probe). Scope the generator to rPPO or verify one Dreamer run.
+- **O3 — env identical across a world's agent arms** (the §D5 premise). True for wave 2; for the 16-world experiment it depends on `experiment-designer` keeping env sections identical across agent arms. `--check-only` catches a mismatch only if it is run per run before launch — make that a listed pre-launch step, not an optional one.
+- **O4 — `thermal.enabled` in the diff.** The "except `enabled`" copy exemption must not become a diff allowlist entry, or `--check-only` against a level-04 run (CP2) would not fail as required.
+
+### Cost of being wrong
+
+If M1/M2 bite, CP4 fails on a phantom and the developer loses a day untangling three causes. If M4 bites during the 16-world sweep, a probe silently drops a body rule and 32 runs × 14,400 episodes (~10–16 CPU-hours) measure a different world than the agents trained in — a wrong conclusion about state-combination behaviour, which is the paper's claim. No data-loss hazard anywhere in this plan.
+
+*Reviewed by: plan-reviewer*
