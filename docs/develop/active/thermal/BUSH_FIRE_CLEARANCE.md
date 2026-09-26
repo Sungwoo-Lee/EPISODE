@@ -3,13 +3,13 @@ title: "Keep bushes away from campfires: a configurable world-generation rule"
 topic: env_entities
 status: active
 created: 2026-09-26
-last_updated: 2026-09-26
+last_updated: 2026-09-27
 aliases: [bush_fire_clearance]
 ---
 
 # Keep bushes away from campfires: a configurable world-generation rule
 
-> **Status**: IMPLEMENTED (awaiting `senior-developer` verification), Revision 1. `plan-reviewer` has reviewed it (SOUND WITH CONCERNS), and its findings are resolved below.
+> **Status**: IMPLEMENTED and VERIFIED (2026-09-27, `senior-developer`), Revision 1. `plan-reviewer` has reviewed it (SOUND WITH CONCERNS), and its findings are resolved below.
 > **Opened**: 2026-09-26
 >
 > **User decisions (2026-09-26).** **D1 = Option B**, two cells of clearance (`bush_min_fire_distance: 3`, the value variants will use). **D2 = burning fires only.** The key ships at the inert value `0` in `default.yaml` and is **not** enabled in `basic/05` (variant use comes later, via `experiment-designer`). Tests exercise v = 3 and v = 2.
@@ -542,10 +542,55 @@ At 0 no change is possible: the `jax_reset` and `jax_step` jaxpr SHA-1s equal th
 
 ## Verification Report
 
-> **Verified by**: _(senior-developer)_
-> **Date**: _(date)_
+> **Verified by**: senior-developer
+> **Date**: 2026-09-27
 
-_(Per-file table, independent checks, speed verdict, conclusion.)_
+**Verdict in plain words.** The new bush-clearance setting was built as planned. When it is off (the shipped value 0), world generation is provably the same as before the change: I rebuilt the "before" snapshot myself from the pre-change code and it matches the committed one exactly. When it is on, only bushes move and none lands near a burning fire. Old saved runs still load. Nothing in this change blocks the pilot trainings now launching from HEAD. The 17 failing environment tests come from a different session's config fragments and a test that loads every YAML file in a folder, not from this change.
+
+### Independent checks (run by me, CPU, conda interpreter)
+
+| Check | Result |
+|---|---|
+| `JAX_PLATFORMS=cpu pytest tests/env/test_bush_fire_clearance.py test_saved_config_compat.py test_body_mechanics_parity.py test_thermal_parity.py test_thermal_field.py test_thermal_validation.py` | ✅ **136 passed, 445 skipped, 0 failed** (7 min 56 s). The 445 skips are all in `test_thermal_parity.py`: archived worlds with no adjudicated fixture, skipped by design (its docstring, line 13). None are in the new module or the two parity modules, which fail rather than skip. |
+| **Is the parity fixture really pre-change?** Exported `src/` + `configs/` at `456f72d8` (the plan-only commit *before* C0, so one commit earlier than the developer's `222f58e6`) with `git archive`, then re-ran the generator's own `capture()` against that tree, writing only to the scratchpad | ✅ **176 / 176 arrays byte-identical** to the committed `pre_change_resets.npz` (every reset leaf × 64 seeds, both jaxpr SHA-1s, the resolved config, for all four worlds). The stamped `_provenance_sha` is `222f58e6`. That commit changed only the compat module, which `jax_reset` never imports, so a different, earlier source reproduces the fixture. It is not an echo of post-change code. |
+| **Off is inert (value 0).** Read the C2 diff of `core.py` | ✅ Everything new sits behind the static `if _bush_min_dist > 0`. The widened guard `if _min_fire_sep > 0 or _food_min_dist > 0 or _bush_min_dist > 0` is unchanged in effect at 0. The `_build_activation_mask` hoist is a pure-Python `def` plus three int constants, so it emits no ops. `test_off_jaxpr_identical` / `test_off_resets_byte_identical` (4 worlds) pass against the independently confirmed fixture, and `test_on_changes_the_reset_graph` shows the comparison is not vacuous. |
+| **Compat per-era change** (`222f58e6`) | ✅ `_era_groups(block)` groups `_ERA_KEYS` by block prefix and era string at call time, and hard-codes no era constant. `_check_block` keeps the "`<block>` block carries" wording and adds the era. The thermal groups are still supplied only when `thermal.enabled` is true. The regression, partial-era refusal and synthetic-third-era tests are present and green. There are no uncommitted changes in `src/`, `configs/` or `tests/` at HEAD, so no foreign hunks are mixed in. 🟢 One cosmetic point: the label `_ERA_BUSH = "… C2 (2026-09-26)"` is off by one, because C2 is dated 2026-09-27 00:34 (+0900). It is a label only, and changing it later would alter a compat claim, so leave it. |
+| **`measure_world.py` as committed in the foreign `7c004dc4`** | ✅ It matches §File Changes. `--bush-min-fire-distance` is set in memory after `load_env_config`, and the script prints that it did. `--out` is enforced through `ap.error` when the flag is given, so the study JSON cannot be overwritten. `bushes_by_fire_class` is added, and so is the docstring invocation. ✅ The parent session's food-only fix is intact: `foods = … st.res_active & (np.asarray(P.res_type) == 0)` reads the type from `EnvParams`, not from the state. The file has no later commits and no uncommitted diff. Deviation 1 is accepted, and attribution is recorded here. |
+| Loader (`_check_bush_fire_clearance`) | ✅ The bound is config-wide (`n_other = num_total_slots − n_bush − n_fire`) and is checked per distinct bush area, which closes M2. The read uses `get_mandatory`, and the thermal-off pin is set without a read. The `per_type` guard names all three keys. |
+| Registry / maintenance contracts | ✅ `CONFIG_CRITICAL_SETTINGS.md` has the row and a dated change-log entry. `CONFIG_GUIDE.md` and `02_config_schema.md` are updated in C2. `SCRIPTS_DEPENDENCY_MAP.md` is updated in C1, together with the script it describes. |
+
+### Per-file table
+
+| File | Commit | Status |
+|---|---|---|
+| `src/environment/saved_config_compat.py` + `tests/env/test_saved_config_compat.py` | C0 `222f58e6` | ✅ (deviation 2, the extra edit to `test_present_keys_are_not_overwritten`, is a necessary consequence of adding the key, so it is accepted) |
+| `scripts/fixtures/generate_bush_fire_clearance_parity_fixture.py`, `tests/env/fixtures/bush_fire_clearance_parity/pre_change_resets.npz`, `docs/environment/SCRIPTS_DEPENDENCY_MAP.md` | C1 `67a240f5` | ✅ fixture independently reproduced |
+| `src/environment/state.py`, `core.py`, `config_loader.py` | C2 `8187c570` | ✅ as §File Changes (c); deviation 7 (the `resolve_overlaps_global` docstring was not changed) is accepted |
+| `configs/environment/default.yaml`, two archived campfire test inputs | C2 | ✅ 0 in all three, with comments giving the two different meanings of "fire" (D2) |
+| `tests/env/test_bush_fire_clearance.py` (36), `test_body_mechanics_parity.py`, `test_thermal_field.py`, `test_thermal_validation.py` | C2 | ✅ (deviation 3, where the missing-key test lives, is accepted) |
+| `CONFIG_GUIDE.md`, `02_config_schema.md`, `CONFIG_CRITICAL_SETTINGS.md` | C2 | ✅ |
+| `scripts/analysis/studies/internal_state_interactions/measure_world.py` | foreign `7c004dc4` | ✅ content correct; ⚠️ the commit carries another session's message (process note only) |
+| Out-of-scope files | — | none found in C0–C3 |
+
+### The 17 `tests/env` failures (not caused by this change)
+
+- **Test:** `tests/env/test_channel_names_match_configs.py::test_every_maintained_config_can_write_a_recording`. Its `_collect()` (lines 51–70) globs `configs/environment/experiment/**/*.yaml`, excluding only `archive/`. By design (docstring lines 21–35) the only files it may skip are those directly under `configs/continual/`.
+- **Cause:** the 17 files in `configs/environment/experiment/level05_body_interactions/factors/`. Their headers say "FRAGMENT, NOT A WORLD … Loaded alone it is missing every other mandatory key." They are now **tracked** (`ec92b077`), not untracked as the report says. The `worlds/` and `pilots/` files that extend them pass.
+- **Where the fix belongs: on the config side**, owned by **`experiment-designer`**. Move the fragments out of the world glob, for example to `configs/environment/fragments/level05_body_interactions/`, and update the `extends:` lists in `pilots/` and `worlds/` in the same commit. A skip list in the test is the wrong fix: the test deliberately refuses blanket or path-pattern skips so that a new world that fails to build cannot hide. Adding a `factors/` exception would bring back exactly that hole for the next folder that uses the name. **Timing:** make the move only once the pilot launches in progress have read their configs, because moving the fragments while a launch is resolving `extends:` would break it. Runs already started are unaffected, since their saved `models/config.yaml` is fully resolved.
+
+### Speed verdict (CP8)
+
+✅ **No regression at 0.** The `jax_reset` and `jax_step` jaxpr SHA-1s at 0 equal the pre-change ones, and that fixture is now independently reproduced. The compiled programs are therefore the same, and a training-throughput run would time an identical program. **The skipped short rPPO speed run is not needed**, and I do not ask for it. When the rule is on, the reset cost is +65% on CPU and within noise on GPU. It is paid once per episode reset, not per step, so it is acceptable for variants. Nothing enables it yet.
+
+### Hand-offs (still open)
+
+- `experiment-designer`: relocate the 17 `factors/` fragments (above).
+- `bug-curator`: touch rows 117, 119 and 123 (§Hand-off to `bug-curator`).
+- Owner of [[SAVED_RUN_CONFIG_COMPAT]]: note the per-(block, era) grouping (§Hand-off).
+
+**Conclusion:** ✅ Verified. The implementation matches the plan, the parity claim is independently confirmed, and there is no speed regression when the rule is off.
+
+*Verified by: senior-developer*
 
 ---
 
