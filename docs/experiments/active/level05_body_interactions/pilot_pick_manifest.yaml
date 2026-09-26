@@ -1,0 +1,50 @@
+# Stage-1 pilot manifest for the pick rule of LEVEL05_BODY_INTERACTIONS.md §2.3.
+# Input to scripts/analysis/studies/level05_body_interactions/pilot_pick.py.
+#
+# Runs are identified by their results/ run directory AND their WandB run ID (from the
+# doc's §3 Launch Manifest). The script cross-checks the WandB config's `tag` and the
+# launch `--config` against the values here, so a mis-mapped row fails loudly.
+# P12/P13: only the node-101 relaunches (01:16) are listed; the abandoned node-113 copies
+# (WandB c3wd9snn, 35f5vjgq) are deliberately absent.
+
+study: level05_body_interactions
+design_doc: docs/experiments/active/level05_body_interactions/LEVEL05_BODY_INTERACTIONS.md
+readout_fraction: 0.10          # last 10 % of each pilot's episodes
+
+thresholds:                      # §2.3, Revisions 1-2
+  noticeable_floor_frac: 0.05    # max(2n, 0.05*S_base) ...
+  noticeable_noise_mult: 2.0
+  noticeable_cap_frac: 0.15      # ... capped at 0.15*S_base
+  survivable_frac: 0.80          # S >= 0.80*S_base
+  starvation_rise_max: 0.20      # starvation share <= starve_base + 0.20
+  collapse_frac: 0.60            # §2.4 (stage 2 only)
+  collapse_starve_abs: 0.60
+  collapse_starve_rise: 0.35
+
+factors:                         # strengths listed weak -> strong
+  B5:   {label: "healing slows when hungry (hunger floor)", rule: strongest_survivable}
+  B3:   {label: "healing costs food (cost per injury point)", rule: weakest_noticeable}
+  A1:   {label: "being away from 0 degrees costs food (rate)", rule: weakest_noticeable}
+  A4_bite: {label: "scarcer food, bite form (food_nutrition_gain)", rule: weakest_noticeable, group: A4, form: bite}
+  A4_trip: {label: "scarcer food, trip form (food items per episode)", rule: weakest_noticeable, group: A4, form: trip}
+
+groups:                          # §2.3 A4 form choice
+  A4: {preferred_form: bite, fallback: {factor: A4_bite, strength: "gain 3"}}
+
+runs:
+  - {id: P0a, role: base, run_dir: results/JAX_RecurrentPPO/20260927-004332_rppo_l05body_p00_base_t1none_s42, wandb_id: nz0o6b70, log: logs/20260927_004326.log, tag: rppo_l05body_p00_base_t1none_s42, config: configs/environment/experiment/basic/05-campfire_thermal_10x10.yaml}
+  - {id: P0b, role: base, run_dir: results/JAX_RecurrentPPO/20260927-004337_rppo_l05body_p00_base_t1none_s43, wandb_id: p4tlq5fq, log: logs/20260927_004331.log, tag: rppo_l05body_p00_base_t1none_s43, config: configs/environment/experiment/basic/05-campfire_thermal_10x10.yaml}
+  - {id: P0c, role: base, run_dir: results/JAX_RecurrentPPO/20260927-004341_rppo_l05body_p00_base_t1none_s44, wandb_id: qwrtf2x5, log: logs/20260927_004336.log, tag: rppo_l05body_p00_base_t1none_s44, config: configs/environment/experiment/basic/05-campfire_thermal_10x10.yaml}
+  - {id: P01, role: pilot, factor: B5, strength: "floor 0.5", run_dir: results/JAX_RecurrentPPO/20260927-004346_rppo_l05body_p01_b5floor0p5_t1none_s42, wandb_id: a2mnxvdo, log: logs/20260927_004341.log, tag: rppo_l05body_p01_b5floor0p5_t1none_s42, config: configs/environment/experiment/level05_body_interactions/pilots/p01_b5_floor0p5.yaml}
+  - {id: P02, role: pilot, factor: B5, strength: "floor 0.2", run_dir: results/JAX_RecurrentPPO/20260927-004352_rppo_l05body_p02_b5floor0p2_t1none_s42, wandb_id: g06iwqng, log: logs/20260927_004346.log, tag: rppo_l05body_p02_b5floor0p2_t1none_s42, config: configs/environment/experiment/level05_body_interactions/pilots/p02_b5_floor0p2.yaml}
+  - {id: P03, role: pilot, factor: B5, strength: "floor 0.0", run_dir: results/JAX_RecurrentPPO/20260927-004357_rppo_l05body_p03_b5floor0p0_t1none_s42, wandb_id: l0m2u80f, log: logs/20260927_004352.log, tag: rppo_l05body_p03_b5floor0p0_t1none_s42, config: configs/environment/experiment/level05_body_interactions/pilots/p03_b5_floor0p0.yaml}
+  - {id: P04, role: pilot, factor: B3, strength: "cost 0.5", note: "corrected planner predicts no gain at cost 0.5 (-0.3 pooled, -2.9 common map; §2.2.1); a null B3 effect is then expected", run_dir: results/JAX_RecurrentPPO/20260927-004403_rppo_l05body_p04_b3cost0p5_t1none_s42, wandb_id: yqgfofeg, log: logs/20260927_004357.log, tag: rppo_l05body_p04_b3cost0p5_t1none_s42, config: configs/environment/experiment/level05_body_interactions/pilots/p04_b3_cost0p5.yaml}
+  - {id: P05, role: pilot, factor: B3, strength: "cost 1.0", run_dir: results/JAX_RecurrentPPO/20260927-004407_rppo_l05body_p05_b3cost1p0_t1none_s42, wandb_id: zjsj372y, log: logs/20260927_004402.log, tag: rppo_l05body_p05_b3cost1p0_t1none_s42, config: configs/environment/experiment/level05_body_interactions/pilots/p05_b3_cost1p0.yaml}
+  - {id: P06, role: pilot, factor: B3, strength: "cost 2.0", run_dir: results/JAX_RecurrentPPO/20260927-004411_rppo_l05body_p06_b3cost2p0_t1none_s42, wandb_id: o58en3za, log: logs/20260927_004407.log, tag: rppo_l05body_p06_b3cost2p0_t1none_s42, config: configs/environment/experiment/level05_body_interactions/pilots/p06_b3_cost2p0.yaml}
+  - {id: P07, role: pilot, factor: A1, strength: "rate 2", run_dir: results/JAX_RecurrentPPO/20260927-004416_rppo_l05body_p07_a1rate2_t1none_s42, wandb_id: 85eqet0o, log: logs/20260927_004411.log, tag: rppo_l05body_p07_a1rate2_t1none_s42, config: configs/environment/experiment/level05_body_interactions/pilots/p07_a1_rate2.yaml}
+  - {id: P08, role: pilot, factor: A1, strength: "rate 4", run_dir: results/JAX_RecurrentPPO/20260927-004421_rppo_l05body_p08_a1rate4_t1none_s42, wandb_id: dqm4du57, log: logs/20260927_004416.log, tag: rppo_l05body_p08_a1rate4_t1none_s42, config: configs/environment/experiment/level05_body_interactions/pilots/p08_a1_rate4.yaml}
+  - {id: P09, role: pilot, factor: A1, strength: "rate 8", run_dir: results/JAX_RecurrentPPO/20260927-004426_rppo_l05body_p09_a1rate8_t1none_s42, wandb_id: glqka8g7, log: logs/20260927_004421.log, tag: rppo_l05body_p09_a1rate8_t1none_s42, config: configs/environment/experiment/level05_body_interactions/pilots/p09_a1_rate8.yaml}
+  - {id: P10, role: pilot, factor: A4_bite, strength: "gain 4", run_dir: results/JAX_RecurrentPPO/20260927-004431_rppo_l05body_p10_a4bitegain4_t1none_s42, wandb_id: z8ew4j46, log: logs/20260927_004426.log, tag: rppo_l05body_p10_a4bitegain4_t1none_s42, config: configs/environment/experiment/level05_body_interactions/pilots/p10_a4bite_gain4.yaml}
+  - {id: P11, role: pilot, factor: A4_bite, strength: "gain 3", run_dir: results/JAX_RecurrentPPO/20260927-004438_rppo_l05body_p11_a4bitegain3_t1none_s42, wandb_id: sr9scxml, log: logs/20260927_004432.log, tag: rppo_l05body_p11_a4bitegain3_t1none_s42, config: configs/environment/experiment/level05_body_interactions/pilots/p11_a4bite_gain3.yaml}
+  - {id: P12, role: pilot, factor: A4_trip, strength: "food 1-2", run_dir: results/JAX_RecurrentPPO/20260927-011655_rppo_l05body_p12_a4tripfood1to2_t1none_s42, wandb_id: e8pc7ajl, log: logs/20260927_011649.log, tag: rppo_l05body_p12_a4tripfood1to2_t1none_s42, config: configs/environment/experiment/level05_body_interactions/pilots/p12_a4trip_food1to2.yaml}
+  - {id: P13, role: pilot, factor: A4_trip, strength: "food 1", run_dir: results/JAX_RecurrentPPO/20260927-011702_rppo_l05body_p13_a4tripfood1to1_t1none_s42, wandb_id: nuy4mx32, log: logs/20260927_011655.log, tag: rppo_l05body_p13_a4tripfood1to1_t1none_s42, config: configs/environment/experiment/level05_body_interactions/pilots/p13_a4trip_food1to1.yaml}
