@@ -284,10 +284,10 @@ FAQ: Is the death penalty also applied on truncation? **Yes.** `done = done_from
 |------|------|-----------------|---------|-------|
 | 0 | Active | — (default) | No | Episode is running normally |
 | 1 | Truncated | `(state.current_step + 1) >= params.max_steps` | Yes | Standard episode length limit |
-| 2 | Starvation | `new_nutrition <= 0.0` | Yes (via `update_body`) | Guarded on `params.with_nutrition` in `jax_step` since `8334d89` (2026-07-23) — see note below |
+| 2 | Starvation | `new_nutrition <= 0.0` — or, with B3 `healing_nutrition_shortfall: partial`, the `starved` predicate returned by `update_body` (nutrition **before** the healing charge `<= 0`) | Yes (via `update_body`) | Guarded on `params.with_nutrition` in `jax_step` since `8334d89` (2026-07-23) — see note below. **B3 partial (2026-09-26):** starvation is judged before the healing charge, so the charge never kills; `jax_step` reads the SAME returned predicate for the label as `update_body` used for `done` (static selection). In B3 `full` mode the predicate is today's, after the charge |
 | 3 | Overeating | `new_nutrition >= params.max_nutrition` | Yes (via `update_body`) | Only set if `params.overeating_death=True`. **Changed 2026-09-22**: this used to be `new_satiation >= max_satiation` and set the label WITHOUT ever setting `done` — a no-op recorded as a latent bug from 2026-06-09. Both the label and `done` now read the same nutrition predicate under the same static gate, so a reason-3 label without a death is structurally impossible. |
 | 4 | Injury | `new_injury >= params.max_injury` | Yes (via `update_body`) | No `with_injury` guard in `jax_step` — see note below |
-| 5 | Thermal | `new_body_temp` outside `[params.min_temperature, params.max_temperature]` | Yes (via `update_body`) | Only set if `params.thermal_enabled=True`; the body-temperature recurrence is in [05_body_homeostasis.md](05_body_homeostasis.md) |
+| 5 | Thermal | `new_body_temp` outside `[params.min_temperature, params.max_temperature]` | Yes (via `update_body`) | Only set if `params.thermal_enabled=True`; the body-temperature recurrence is in [05_body_homeostasis.md](05_body_homeostasis.md). Reused unchanged by the 2026-09-26 body mechanics (B1 random start, B4 injury-boosted heat exchange) — no new code |
 
 **Nutrition is a two-sided axis (since 2026-09-22).** It runs 0–200 with the homeostatic
 setpoint at **100**, the middle, so BOTH ends are lethal and symmetric: code 2 at
@@ -308,7 +308,7 @@ nutrition removes that.
 # core.py:540–545
 reason = jnp.array(0, dtype=jnp.int32)
 reason = jnp.where(truncated,                              1, reason)   # lowest priority
-reason = jnp.where(new_nutrition <= 0.0,                   2, reason)
+reason = jnp.where(new_nutrition <= 0.0,                   2, reason)   # B3 partial: where(starved, 2, reason)
 if params.overeating_death:
     reason = jnp.where(new_nutrition >= params.max_nutrition, 3, reason)
 reason = jnp.where(new_injury >= params.max_injury,        4, reason)
@@ -334,7 +334,10 @@ The truncation check, priority-chain termination codes, `done` assembly, and whe
     reason = jnp.array(0, dtype=jnp.int32)
     reason = jnp.where(truncated, 1, reason)
     if params.with_nutrition:
-        reason = jnp.where(new_nutrition <= 0.0, 2, reason)
+        if starved is not None:          # B3 partial: update_body's returned predicate
+            reason = jnp.where(starved, 2, reason)
+        else:
+            reason = jnp.where(new_nutrition <= 0.0, 2, reason)
         if params.overeating_death:
             reason = jnp.where(new_nutrition >= params.max_nutrition, 3, reason)
     reason = jnp.where(new_injury >= params.max_injury, 4, reason)
@@ -344,6 +347,9 @@ The truncation check, priority-chain termination codes, `done` assembly, and whe
     info['termination_reason'] = reason
     done = jnp.logical_or(done, truncated)
 ```
+
+(Comments abridged; `starved` is the tenth element of `update_body`'s return and is `None`
+except in B3 `partial` mode — [05_body_homeostasis.md](05_body_homeostasis.md).)
 
 > **API notes**
 >

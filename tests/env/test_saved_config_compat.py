@@ -14,8 +14,8 @@ The two fixtures are verbatim copies of real Wave 1 and Wave 2 level-05 saved co
 
 What is pinned here:
   (i)   both fixtures load through the shim, which supplies exactly the six keys;
-  (ii)  [added with the mechanics commit] the raw load of each fixture raises the
-        missing-key error -- unconditional, not dependent on which commit runs it;
+  (ii)  the raw load of each fixture raises the missing-key error (the reason the shim
+        exists -- unconditional, not dependent on which commit runs it);
   (iii) a `source` under `configs/` is refused;
   (iv)  a partial thermal set, or a partial body set, is refused;
   (v)   keys already present are not overwritten;
@@ -88,6 +88,18 @@ def test_fixture_loads_through_shim_with_exactly_six_keys(name):
     assert supplied == _SIX
     params = load_env_params(Config(cfg_load))
     assert params.thermal_enabled
+
+
+@pytest.mark.parametrize("name", _FIXTURES)
+def test_fixture_raw_load_fails_on_missing_key(name):
+    """(ii) Negative half: without the shim the frozen config does not load.
+
+    Unconditional: this is the reason the compat step exists once the body-mechanics keys
+    are mandatory.
+    """
+    raw, _ = _load_fixture(name)
+    with pytest.raises(ValueError, match="required but missing"):
+        load_env_params(Config(copy.deepcopy(raw)))
 
 
 def test_source_under_configs_is_refused():

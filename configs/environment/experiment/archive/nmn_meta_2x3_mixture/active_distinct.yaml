@@ -280,6 +280,11 @@ body:
   # this fixture pins would go red at config load. 1.0 is the inert value and the
   # fixture proves it: the committed .npz still matches byte-for-byte.
   recovery_in_bush_multiplier: 1.0
+  # ADDED 2026-09-26 (STATE_DEPENDENT_BODY_MECHANICS C2). NOT a migration of the
+  # archive: this world is a LIVE test input loaded from a raw Config. B3 / B5 keys
+  # became mandatory; 0.0 / false are the inert values.
+  healing_nutrition_cost: 0.0
+  healing_nutrition_dependence: false
   injury_smoothing_duration: 3
   use_homeostatic_reward: true
   death_penalty: 100

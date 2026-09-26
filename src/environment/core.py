@@ -152,7 +152,7 @@ def agent_in_hiding_obstacle(agent_pos, obs_pos, obs_hides_agent, obs_active=Non
     eff_hides = obs_hides_agent if obs_active is None else (obs_hides_agent & obs_active)
     return jnp.any(jnp.logical_and(jnp.all(obs_pos == agent_pos, axis=-1), eff_hides))
 
-def update_body(state: EnvState, info: dict, params: EnvParams, new_agent_pos: jnp.ndarray) -> tuple[jnp.ndarray, jnp.ndarray, jnp.ndarray, jnp.ndarray, jnp.ndarray, jnp.ndarray, jnp.ndarray, jnp.ndarray, bool]:
+def update_body(state: EnvState, info: dict, params: EnvParams, new_agent_pos: jnp.ndarray) -> tuple:
     """Updates satiation, nutrition, injury and body temperature.
 
     `new_agent_pos` is the POST-move agent cell, and it is a required argument
@@ -167,7 +167,14 @@ def update_body(state: EnvState, info: dict, params: EnvParams, new_agent_pos: j
 
     Returns:
         (satiation, nutrition, injury, injury_buffer, nociception_history,
-         rest_streak, body_temp, thermal_death, done)
+         rest_streak, body_temp, thermal_death, done, starved)
+
+        `starved` (index 9, APPENDED so positional readers of indices 0-8 are
+        unaffected) is the starvation predicate `jax_step` must use for reason 2.
+        It is `None` on every path except B3 in `partial` mode, where starvation
+        is judged BEFORE the healing charge; `None` is an empty pytree, so the
+        off-path jaxpr is unchanged. When it is `None`, `jax_step` keeps its own
+        `new_nutrition <= 0.0` line.
 
         `done` is REAL DEATH only — starvation / over-eating / injury / thermal.
         Over-eating became true here on 2026-09-22; before that the phrase was
@@ -179,11 +186,21 @@ def update_body(state: EnvState, info: dict, params: EnvParams, new_agent_pos: j
     prev_nutrition = state.nutrition
     prev_injury = state.injury_level
     prev_rest_streak = state.rest_streak
+    # B3 (healing uses energy). STATIC: `healing_nutrition_cost` is a
+    # pytree_node=False float, so at 0.0 none of the B3 statements is traced. The
+    # loader refuses cost > 0 unless with_nutrition and with_injury are both on.
+    _b3_on = params.healing_nutrition_cost != 0.0
+    starved = None
     # --- Nutrition Dynamics (Linear Decay) ---
     if params.with_nutrition:
         # ORDER IS PINNED, and it is not recoverable from the config:
         #   1. linear decay          2. thermoregulatory drain (Stage 5)
         #   3. refill from food      4. a SINGLE clip to [0, max_nutrition]
+        # With B3 on (`body.healing_nutrition_cost > 0`, STATIC gate) step 4 moves:
+        # the unclipped value is kept as `_N_pre`, the injury block below charges
+        # `cost * healed` against it, and the ONE clip (and the satiation
+        # derivation) runs after the charge. With B3 off the executed statements
+        # are exactly the ones below, in this order.
         # The clip comes last, after both the drain and the refill, which is what
         # decides whether a cold step can starve an agent that also ate this step:
         # eating offsets the drain within the same step rather than after it. And
@@ -250,17 +267,22 @@ def update_body(state: EnvState, info: dict, params: EnvParams, new_agent_pos: j
         # Refill from food (immediate) - with consumption cost
         ate_food_gain = params.food_nutrition_gain - params.eating_nutrition_cost
         new_nutrition = jnp.where(info['ate_food'], new_nutrition + ate_food_gain, new_nutrition)
-        new_nutrition = jnp.clip(new_nutrition, 0.0, params.max_nutrition)
+        if _b3_on:
+            _N_pre = new_nutrition              # clipped after the healing charge (B3)
+        else:
+            new_nutrition = jnp.clip(new_nutrition, 0.0, params.max_nutrition)
     else:
         new_nutrition = prev_nutrition
 
     # --- Satiation Dynamics (Derived Non-linearly from Nutrition) ---
-    if params.with_satiation:
-        # Subjective fullness S = Max * (N/MaxN)^k
-        fullness_ratio = jnp.clip(new_nutrition / params.max_nutrition, 0.0, 1.0)
-        new_satiation = params.max_satiation * jnp.power(fullness_ratio, params.nutrition_to_satiation_scaling_factor)
-    else:
-        new_satiation = state.satiation
+    # With B3 on it is derived after the healing charge instead (below).
+    if not _b3_on:
+        if params.with_satiation:
+            # Subjective fullness S = Max * (N/MaxN)^k
+            fullness_ratio = jnp.clip(new_nutrition / params.max_nutrition, 0.0, 1.0)
+            new_satiation = params.max_satiation * jnp.power(fullness_ratio, params.nutrition_to_satiation_scaling_factor)
+        else:
+            new_satiation = state.satiation
 
     # --- Injury Dynamics (Instant-start smoothing) ---
     damage = info['damage']
@@ -312,15 +334,83 @@ def update_body(state: EnvState, info: dict, params: EnvParams, new_agent_pos: j
             recovery_amount = recovery_amount * jnp.where(
                 _in_bush, params.recovery_in_bush_multiplier, 1.0)
 
+        # --- B2: healing needs warmth (thermal.healing_{cold,warm}_sensitivity) ---
+        # w(T) = max(0, 1 - s_c*max(0, T_set - T) - s_w*max(0, T - T_set)) on the
+        # PRE-step body temperature (the A1 drain's convention). STATIC gates: with
+        # both sensitivities 0.0 nothing here is traced, and a side at 0.0
+        # contributes no term. Multiplies recovery_amount AFTER the bush premium, so
+        # it inherits the rest-and-no-net-damage condition below. Bounded in [0, 1]:
+        # never negative, never a boost. Both are 0.0 on every thermal-off config.
+        _sc = params.thermal_healing_cold_sensitivity
+        _sw = params.thermal_healing_warm_sensitivity
+        if _sc != 0.0 or _sw != 0.0:
+            _dev = state.body_temp - params.temperature_setpoint
+            _loss = 0.0
+            if _sc != 0.0:
+                _loss = _loss + _sc * jnp.maximum(-_dev, 0.0)
+            if _sw != 0.0:
+                _loss = _loss + _sw * jnp.maximum(_dev, 0.0)
+            recovery_amount = recovery_amount * jnp.maximum(0.0, 1.0 - _loss)
+
+        # --- B5: healing speed depends on nutrition (body.healing_nutrition_dependence) ---
+        # Reads `state.nutrition`: the PRE-step store, i.e. BEFORE this step's
+        # decay, drain and food (one step behind B3's `_N_pre` cap below — the same
+        # pre-step convention as B2's temperature and B4's injury). Factor =
+        # hunger ramp (floor at/below hunger_low, 1 at/above hunger_high) x an
+        # optional over-full ramp (1 up to overfull_start, down to overfull_floor at
+        # max_nutrition). STATIC gates; false = untraced. Applied after B2 (order
+        # pinned by the units test), so B3's h_nom pays for the slowed heal.
+        if params.healing_nutrition_dependence:
+            _N = state.nutrition
+            _fh = params.healing_hunger_floor
+            _ramp = jnp.clip((_N - params.healing_hunger_low)
+                             / (params.healing_hunger_high - params.healing_hunger_low),
+                             0.0, 1.0)
+            _factor = _fh + (1.0 - _fh) * _ramp
+            if params.healing_overfull_floor != 1.0:
+                _fo = params.healing_overfull_floor
+                _factor = _factor * (1.0 - (1.0 - _fo) * jnp.clip(
+                    (_N - params.healing_overfull_start)
+                    / (params.max_nutrition - params.healing_overfull_start), 0.0, 1.0))
+            recovery_amount = recovery_amount * _factor
+
         # Recovery only applies if resting and not currently taking net damage
         can_recover = jnp.logical_and(info['rested'], applied_inc <= 0)
-        new_injury = jnp.where(can_recover, new_injury - recovery_amount, new_injury)
-        
-        new_injury = jnp.clip(new_injury, 0.0, params.max_injury)
+        if _b3_on:
+            # --- B3: healing uses energy (body.healing_nutrition_cost = c) ---
+            # h_nom = what would be healed unpaid. Under can_recover applied_inc == 0
+            # (damage >= 0), so _I_d == prev_injury. `partial`: heal only what the
+            # remaining nutrition max(N_pre, 0) pays for. `full`: heal h_nom; a
+            # shortfall lands nutrition on 0 and the agent starves. In `full` mode
+            # I_d - min(r, I_d) equals today's clip(I_d - r, 0, .) exactly.
+            _I_d = new_injury
+            _h_nom = jnp.where(can_recover, jnp.minimum(recovery_amount, _I_d), 0.0)
+            if params.healing_nutrition_shortfall == 'partial':
+                _h = jnp.minimum(
+                    _h_nom, jnp.maximum(_N_pre, 0.0) / params.healing_nutrition_cost)
+            else:
+                _h = _h_nom
+            new_injury = jnp.clip(jnp.where(can_recover, _I_d - _h, _I_d),
+                                  0.0, params.max_injury)
+        else:
+            new_injury = jnp.where(can_recover, new_injury - recovery_amount, new_injury)
+
+            new_injury = jnp.clip(new_injury, 0.0, params.max_injury)
     else:
         new_injury = prev_injury
         new_buffer = state.injury_buffer
         new_rest_streak = prev_rest_streak
+
+    if _b3_on:
+        # B3: the single nutrition clip, after every debit (decay, drain, healing
+        # charge) and credit (food); then satiation from the charged value.
+        new_nutrition = jnp.clip(_N_pre - params.healing_nutrition_cost * _h,
+                                 0.0, params.max_nutrition)
+        if params.with_satiation:
+            fullness_ratio = jnp.clip(new_nutrition / params.max_nutrition, 0.0, 1.0)
+            new_satiation = params.max_satiation * jnp.power(fullness_ratio, params.nutrition_to_satiation_scaling_factor)
+        else:
+            new_satiation = state.satiation
 
     # Roll the perceptual history buffer and write the new injury at slot 0.
     # Buffer is non-conditional on `with_injury`: if injury never updates, slot 0 stays at prev_injury (0 from reset).
@@ -347,7 +437,14 @@ def update_body(state: EnvState, info: dict, params: EnvParams, new_agent_pos: j
         # STATIC Python gate on `params.overeating_death` (a non-pytree field): with it
         # false this branch contributes no operation to the traced graph, so every
         # config that predates the two-sided axis is graph-identical here.
-        done = jnp.where(new_nutrition <= 0.0, True, done)
+        if _b3_on and params.healing_nutrition_shortfall == 'partial':
+            # B3 partial: starvation is judged BEFORE the healing charge — the
+            # charge can bring nutrition to 0 but can never be the cause of death.
+            # Returned as `starved` so jax_step's reason 2 reads this same predicate.
+            starved = jnp.clip(_N_pre, 0.0, params.max_nutrition) <= 0.0
+            done = jnp.where(starved, True, done)
+        else:
+            done = jnp.where(new_nutrition <= 0.0, True, done)
         if params.overeating_death:
             done = jnp.where(new_nutrition >= params.max_nutrition, True, done)
 
@@ -372,6 +469,24 @@ def update_body(state: EnvState, info: dict, params: EnvParams, new_agent_pos: j
     # A STATIC Python branch: a thermal-off config traces none of this.
     if params.thermal_enabled:
         cell_temp = state.thermal_field[new_agent_pos[0], new_agent_pos[1]]
+        # --- B4: injury speeds heat exchange (thermal.injury_heat_exchange_gain) ---
+        # k_ex' = k_exchange*(1 + gain*injury/max_injury) on the PRE-step injury.
+        # Scales k_exchange, NOT k_loss (k_loss is the body's defence toward the
+        # setpoint; raising it would protect the injured body). STATIC gates: at
+        # gain 0.0 `_k_ex` is `params.thermal_k_exchange` itself and the lines below
+        # trace the pre-B4 graph. `cooling_only`: boosted only on a step where the
+        # cell is colder than the body (heat flowing out); `both`: every step.
+        if params.thermal_injury_heat_exchange_gain != 0.0:
+            _boost = params.thermal_k_exchange * (
+                1.0 + params.thermal_injury_heat_exchange_gain
+                * state.injury_level / params.max_injury)
+            if params.thermal_injury_heat_exchange_mode == 'both':
+                _k_ex = _boost
+            else:
+                _k_ex = jnp.where(cell_temp < state.body_temp, _boost,
+                                  params.thermal_k_exchange)
+        else:
+            _k_ex = params.thermal_k_exchange
         # Warming / cooling speed. STATIC gate on two static floats (cast with
         # float() at load, so YAML `1` == 1.0). At 1.0 / 1.0 the four lines below
         # are character-for-character the single-rate code and the scaled branch
@@ -386,7 +501,7 @@ def update_body(state: EnvState, info: dict, params: EnvParams, new_agent_pos: j
                 and params.thermal_cooling_rate_scale == 1.0):
             new_body_temp = (
                 state.body_temp
-                + params.thermal_k_exchange * (cell_temp - state.body_temp)
+                + _k_ex * (cell_temp - state.body_temp)
                 + params.thermal_k_metabolic
                 - params.thermal_k_loss * (state.body_temp - params.temperature_setpoint)
             )
@@ -399,7 +514,7 @@ def update_body(state: EnvState, info: dict, params: EnvParams, new_agent_pos: j
             # change (d > 0 warming, else cooling; at d == 0, s*0 == 0 either way),
             # not the body's position relative to the setpoint or the cell.
             body_temp_change = (
-                params.thermal_k_exchange * (cell_temp - state.body_temp)
+                _k_ex * (cell_temp - state.body_temp)
                 + params.thermal_k_metabolic
                 - params.thermal_k_loss * (state.body_temp - params.temperature_setpoint)
             )
@@ -419,7 +534,7 @@ def update_body(state: EnvState, info: dict, params: EnvParams, new_agent_pos: j
         new_body_temp = state.body_temp
         thermal_death = jnp.array(False)
 
-    return new_satiation, new_nutrition, new_injury, new_buffer, new_nociception_history, new_rest_streak, new_body_temp, thermal_death, done
+    return new_satiation, new_nutrition, new_injury, new_buffer, new_nociception_history, new_rest_streak, new_body_temp, thermal_death, done, starved
 
 def update_resources(res_active, res_reg_timer, res_cons_count, params,
                      res_allocated=None):
@@ -978,7 +1093,7 @@ def jax_step(state: EnvState, action: int, params: EnvParams) -> tuple[EnvState,
         'hit_neutral': jnp.any(at_neutral_pre) if state.animal_pos.shape[0] > 0 else jnp.array(False),
     }
     
-    new_satiation, new_nutrition, new_injury, next_injury_buffer, next_nociception_history, new_rest_streak, new_body_temp, thermal_death, done = update_body(state, info, params, new_agent_pos)
+    new_satiation, new_nutrition, new_injury, next_injury_buffer, next_nociception_history, new_rest_streak, new_body_temp, thermal_death, done, starved = update_body(state, info, params, new_agent_pos)
     # `done` here is REAL DEATH only (starvation / over-eating / injury / thermal). update_body does not know
     # about the step clock, so it never fires on a timeout. Capture it BEFORE the truncation merge
     # below so the death_penalty can be gated on real death and NOT on surviving to the step limit.
@@ -996,7 +1111,12 @@ def jax_step(state: EnvState, action: int, params: EnvParams) -> tuple[EnvState,
     reason = jnp.array(0, dtype=jnp.int32)
     reason = jnp.where(truncated, 1, reason)
     if params.with_nutrition:
-        reason = jnp.where(new_nutrition <= 0.0, 2, reason)
+        if starved is not None:
+            # B3 partial: the SAME predicate update_body folded into `done`
+            # (starvation judged before the healing charge). Static selection.
+            reason = jnp.where(starved, 2, reason)
+        else:
+            reason = jnp.where(new_nutrition <= 0.0, 2, reason)
         # Reason 3 reads the SAME predicate `update_body` folds into `done`
         # (`new_nutrition >= max_nutrition`, under the same static
         # `overeating_death` gate, inside the same `with_nutrition` guard). It used
@@ -1793,6 +1913,18 @@ def jax_reset(params: EnvParams, key: jax.random.PRNGKey) -> EnvState:
     else:
         injury = 0.0
 
+    # B1 — random starting body temperature (thermal.random_start_body_temp).
+    # STATIC flag; drawn from `body_key1`, which is split above and was never
+    # read before, so no existing random stream moves. With the flag off the
+    # body starts at its setpoint exactly as before. Pin a start with low == high.
+    if params.thermal_random_start_body_temp:
+        body_temp0 = jax.random.uniform(
+            body_key1, (),
+            minval=params.thermal_start_body_temp_low,
+            maxval=params.thermal_start_body_temp_high)
+    else:
+        body_temp0 = params.temperature_setpoint
+
     injury_buffer = jnp.zeros(params.smoothing_duration)
     nociception_history_buffer = jnp.zeros(params.interoceptive_kernel_length)
 
@@ -2058,10 +2190,11 @@ def jax_reset(params: EnvParams, key: jax.random.PRNGKey) -> EnvState:
         nociception_history_buffer=nociception_history_buffer,
         last_collision_noc=jnp.array(0.0, dtype=jnp.float32),
         rest_streak=jnp.array(0, dtype=jnp.int32),
-        # The body starts at its own setpoint, not at the cell it spawns on: the
-        # agent begins comfortable and the cold has to work on it. On a thermal-off
+        # The body starts at its own setpoint (or, with B1 on, a draw from the
+        # configured range), not at the cell it spawns on: the agent begins
+        # comfortable and the cold has to work on it. On a thermal-off
         # config `temperature_setpoint` is the inert 0.0 and nothing ever moves it.
-        body_temp=jnp.asarray(params.temperature_setpoint, dtype=jnp.float32),
+        body_temp=jnp.asarray(body_temp0, dtype=jnp.float32),
         terminated=jnp.array(False, dtype=jnp.bool_),
         key=key,
         last_action=jnp.array(4 if params.rest_action_enabled else 5, dtype=jnp.int32),

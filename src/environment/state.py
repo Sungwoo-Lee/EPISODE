@@ -90,6 +90,9 @@ class EnvState:
     # Body temperature (Stage 2). ALWAYS a real scalar leaf, thermal on or off —
     # unlike `thermal_field` there is no shape trick available for a scalar, and a
     # [0] array would only move the failure from "reads 0.0" to "reads nothing".
+    # At reset it is `params.temperature_setpoint`, or — when B1
+    # (`thermal_random_start_body_temp`, thermal-on only) is set — a uniform draw
+    # from [thermal_start_body_temp_low, thermal_start_body_temp_high].
     # When thermal is off it is initialised to `params.temperature_setpoint` (the
     # inert 0.0) at reset and never updated: `update_body`'s recurrence sits behind
     # a STATIC `if params.thermal_enabled:`, so a thermal-off config traces no
@@ -257,6 +260,26 @@ class EnvParams:
     # `float()` because a static field participates in the trace-cache key and
     # YAML's `1` and `1.0` would otherwise be two different cache entries.
     recovery_in_bush_multiplier: float = struct.field(pytree_node=False)
+    # ── State-dependent body mechanics B3 / B5 (2026-09-26) ──────────────────
+    # docs/develop/active/thermal/STATE_DEPENDENT_BODY_MECHANICS.md.
+    # ALL STATIC (pytree_node=False), and that is load-bearing, not tidiness:
+    # every traced EnvParams leaf becomes a jaxpr input whether or not it is
+    # used, so a new traced field would renumber the `jax_step` jaxpr string even
+    # on the off path and the "off = today" jaxpr-SHA proof would be impossible
+    # (plan §A1, reviewer M1). Static fields live in the treedef, not the jaxpr.
+    # Floats are `float()`-coerced at load so YAML `1` and `1.0` share one
+    # trace-cache entry; strings are validated against their enum.
+    # B3 — healing uses energy: nutrition per injury point healed; 0.0 = off.
+    healing_nutrition_cost: float = struct.field(pytree_node=False)
+    # 'partial' | 'full'; read only when the cost is > 0 (inert 'partial' otherwise).
+    healing_nutrition_shortfall: str = struct.field(pytree_node=False)
+    # B5 — healing speed depends on PRE-step nutrition; False = off (untraced).
+    healing_nutrition_dependence: bool = struct.field(pytree_node=False)
+    healing_hunger_low: float = struct.field(pytree_node=False)
+    healing_hunger_high: float = struct.field(pytree_node=False)
+    healing_hunger_floor: float = struct.field(pytree_node=False)
+    healing_overfull_floor: float = struct.field(pytree_node=False)   # 1.0 = no over-full slowdown
+    healing_overfull_start: float = struct.field(pytree_node=False)
     smoothing_duration: int = struct.field(pytree_node=False)
     death_penalty: float
     overeating_death: bool = struct.field(pytree_node=False)
@@ -422,6 +445,26 @@ class EnvParams:
     # magnitude is in degrees-per-step.
     thermal_metabolic_coupling: bool = struct.field(pytree_node=False)
     thermal_metabolic_coupling_rate: float
+    # ── State-dependent body mechanics B1 / B2 / B4 (2026-09-26) ─────────────
+    # ALL STATIC for the same reason as the B3 / B5 fields next to
+    # `recovery_in_bush_multiplier`: no new jaxpr leaves, so the off path is the
+    # same jaxpr string (plan §A1, reviewer M1). Inert values when
+    # `thermal_enabled` is False: False / 0.0 / 0.0 / 0.0 / 0.0 / 0.0 / 'cooling_only'.
+    # B1 — random starting body temperature, drawn from `body_key1` in jax_reset
+    # (split and previously unused, so no existing random stream moves). No
+    # fixed-start key: a pinned start is "flag on, low == high".
+    thermal_random_start_body_temp: bool = struct.field(pytree_node=False)
+    thermal_start_body_temp_low: float = struct.field(pytree_node=False)
+    thermal_start_body_temp_high: float = struct.field(pytree_node=False)
+    # B2 — healing needs warmth: fraction of recovery lost per degree below (cold)
+    # / above (warm) temperature_setpoint, on the PRE-step body temperature.
+    thermal_healing_cold_sensitivity: float = struct.field(pytree_node=False)
+    thermal_healing_warm_sensitivity: float = struct.field(pytree_node=False)
+    # B4 — injury speeds heat exchange: k_exchange*(1 + gain*injury/max_injury)
+    # on the PRE-step injury. Scales k_exchange, NOT k_loss (k_loss is the body's
+    # defence toward setpoint). Mode 'cooling_only' | 'both'.
+    thermal_injury_heat_exchange_gain: float = struct.field(pytree_node=False)
+    thermal_injury_heat_exchange_mode: str = struct.field(pytree_node=False)
     # Thermoceptor (Stage 3). Both are STATIC: `thermal_grid_range` fixes the
     # number of observation dimensions (2r^2 + 2r + 1) and `thermal_relative`
     # selects a trace-time branch. Both are also part of the curriculum modality

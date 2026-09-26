@@ -284,6 +284,10 @@ body:
   random_start_satiation: false
   recovery_accel_rate: 0.5
   recovery_in_bush_multiplier: 1.0   # inert; mandatory key, no fallback default
+  # Body mechanics B3 / B5 (STATE_DEPENDENT_BODY_MECHANICS, 2026-09-26): mandatory, no
+  # fallback; 0.0 / false are the inert values (sub-keys read only when on).
+  healing_nutrition_cost: 0.0
+  healing_nutrition_dependence: false
   recovery_base_rate: 0.1
   satiation_setpoint: 100
   start_nutrition: 100

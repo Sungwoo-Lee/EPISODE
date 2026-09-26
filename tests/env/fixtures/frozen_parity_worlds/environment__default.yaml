@@ -232,6 +232,15 @@ body:
   # the gate itself -- these files still reproduce their pinned pre-change
   # fixtures byte-for-byte, or the tests fail. Nothing else here may change.
   recovery_in_bush_multiplier: 1.0
+  # --- ADDED 2026-09-26, AFTER the freeze, and deliberately -------------------
+  # `body.healing_nutrition_cost` and `body.healing_nutrition_dependence` became
+  # MANDATORY in commit C2 of STATE_DEPENDENT_BODY_MECHANICS, so without these lines
+  # this frozen world no longer LOADS. 0.0 / false are the inert values: the gates
+  # behind them are trace-time `if`s that emit no operation, and the proof that the
+  # world is unchanged is the gate itself -- it still reproduces its pinned
+  # pre-change fixtures byte-for-byte, or the tests fail. Nothing else may change.
+  healing_nutrition_cost: 0.0
+  healing_nutrition_dependence: false
   # Injury: Damage is spread over duration steps (applied_dam = total_dam / duration)
   injury_smoothing_duration: 3
   # Reward: if use_homeostatic_reward, Reward = prev_drive - curr_drive

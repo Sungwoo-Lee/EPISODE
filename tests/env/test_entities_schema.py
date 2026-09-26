@@ -105,6 +105,8 @@ body:
   recovery_base_rate: 0.5
   recovery_accel_rate: 0.5
   recovery_in_bush_multiplier: 1.0   # inert; mandatory key, no fallback default
+  healing_nutrition_cost: 0.0          # inert; mandatory key, no fallback default
+  healing_nutrition_dependence: false   # inert; mandatory key, no fallback default
   injury_smoothing_duration: 3
   death_penalty: 10.0
   overeating_death: false

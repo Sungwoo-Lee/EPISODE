@@ -212,6 +212,24 @@ body:
   # runs bit-identical to those predating the key. 25 switches that branch on, so the
   # computation graph is no longer the pre-feature one.
   recovery_in_bush_multiplier: 25.0
+  # B3 — healing uses energy: nutrition per injury point healed, charged before the single
+  # clip. 0.0 = off. Requires with_nutrition and with_injury.
+  # (docs/develop/active/thermal/STATE_DEPENDENT_BODY_MECHANICS.md)
+  healing_nutrition_cost: 0.0
+  # Read only when healing_nutrition_cost > 0. partial: heal only what remaining nutrition
+  # pays for, and the charge never kills. full: heal fully, and a shortfall starves.
+  healing_nutrition_shortfall: partial
+  # B5 — healing speed depends on nutrition (the pre-step energy store). false = off.
+  # Factor = hunger ramp (floor at/below hunger_low, 1 at/above hunger_high) x an optional
+  # over-full ramp (1 up to overfull_start, falling to overfull_floor at max_nutrition).
+  # Requires with_nutrition and with_injury. The ramp values below are placeholders and are
+  # read only when the flag is true; the parameter study chooses real ones.
+  healing_nutrition_dependence: false
+  healing_hunger_low: 0.0
+  healing_hunger_high: 100.0
+  healing_hunger_floor: 0.0
+  healing_overfull_floor: 1.0     # 1.0 = being over-full does not slow healing
+  healing_overfull_start: 150.0   # read only when healing_overfull_floor < 1
   # Injury: Damage is spread over duration steps (applied_dam = total_dam / duration)
   injury_smoothing_duration: 3
   # Reward: if use_homeostatic_reward, Reward = prev_drive - curr_drive
@@ -544,6 +562,22 @@ thermal:
   # charged inside the with_nutrition block, after the linear decay and before
   # the food refill and the single clip to [0, max_nutrition].
   metabolic_coupling_rate: 1.0
+  # B1 — random starting body temperature. Read only when thermal.enabled; the range only
+  # when the flag is true. No fixed-start key: pin a start with low == high.
+  # (docs/develop/active/thermal/STATE_DEPENDENT_BODY_MECHANICS.md)
+  random_start_body_temp: false
+  start_body_temp_low: 0.0
+  start_body_temp_high: 0.0
+  # B2 — healing needs warmth. Fraction of injury recovery lost per degree the body is
+  # below (cold) / above (warm) temperature_setpoint. Equal = symmetric; both 0.0 = off.
+  healing_cold_sensitivity: 0.0
+  healing_warm_sensitivity: 0.0
+  # B4 — injury speeds heat exchange: k_exchange x (1 + gain*injury/max_injury). 0.0 = off.
+  # Scales k_exchange, NOT k_loss (k_loss is the body's defence toward setpoint).
+  injury_heat_exchange_gain: 0.0
+  # Read only when gain > 0. cooling_only: boost only while the cell is colder than the
+  # body. both: also at a fire (the loader then logs the first step onto a fire).
+  injury_heat_exchange_mode: cooling_only
 
   # --- sensor (read from Stage 3 onward) ---
   grid_range: 1             # validated >= 0

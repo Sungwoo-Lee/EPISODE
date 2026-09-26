@@ -223,6 +223,11 @@ body:
   # `recovery_in_bush_multiplier` became mandatory in B2; without this line 73 tests
   # die at config load. 1.0 is the inert value.
   recovery_in_bush_multiplier: 1.0
+  # ADDED 2026-09-26 (STATE_DEPENDENT_BODY_MECHANICS C2). NOT a migration of the
+  # archive: this world is a LIVE test input loaded from a raw Config. B3 / B5 keys
+  # became mandatory; 0.0 / false are the inert values.
+  healing_nutrition_cost: 0.0
+  healing_nutrition_dependence: false
   # Injury: Damage is spread over duration steps (applied_dam = total_dam / duration)
   injury_smoothing_duration: 3
   # Reward: if use_homeostatic_reward, Reward = prev_drive - curr_drive
@@ -375,6 +380,14 @@ thermal:
   # charged inside the with_nutrition block, after the linear decay and before
   # the food refill and the single clip to [0, max_nutrition].
   metabolic_coupling_rate: 1.0
+  # ADDED 2026-09-26 (STATE_DEPENDENT_BODY_MECHANICS C2). NOT a migration of the
+  # archive: this thermal-ON world is loaded from a raw Config by the thermal test
+  # modules and the fixture generators listed above. B1 / B2 / B4 keys are mandatory
+  # whenever thermal is on; these are the inert values (range / mode never read).
+  random_start_body_temp: false
+  healing_cold_sensitivity: 0.0
+  healing_warm_sensitivity: 0.0
+  injury_heat_exchange_gain: 0.0
 
   # --- sensor (read from Stage 3 onward) ---
   grid_range: 1             # validated >= 0

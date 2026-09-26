@@ -129,9 +129,10 @@ Since satiation is fully derived from nutrition, `random_start_satiation` is a n
 | `nociception_history_buffer` | always | `jnp.zeros(interoceptive_kernel_length)` |
 | `last_collision_noc` | always | `0.0` |
 | `rest_streak` | always | `0` |
-| `body_temp` | always | `params.temperature_setpoint` (0.0 with the temperature system off) |
+| `body_temp` | `thermal.random_start_body_temp=False` (or thermal off) | `params.temperature_setpoint` (0.0 with the temperature system off) |
+| `body_temp` | `thermal.random_start_body_temp=True` (B1) | Uniform `[start_body_temp_low, start_body_temp_high]`, drawn from `body_key1` |
 
-The agent starts each episode **comfortable**, at its own setpoint, rather than at the temperature of the cell it happens to spawn on. The cold has to work on it.
+The agent starts each episode **comfortable**, at its own setpoint, rather than at the temperature of the cell it happens to spawn on. The cold has to work on it. With B1 on (below) the start is instead a random draw from the configured range.
 
 ---
 
@@ -604,6 +605,87 @@ against a fixture captured from source that predates the feature.
 ### Death
 
 `thermal_death = (T_{t+1} < min_temperature) OR (T_{t+1} > max_temperature)`, folded into `update_body`'s `done` return **inside `update_body`** — which is what makes it a *real death* rather than merely an episode end. `jax_step` captures `real_death` from that return value before it merges truncation in, so the `death_penalty` applies. Termination code 5 is assigned separately, after the truncation line, so a thermal death on the final step reports 5 rather than 1. See [06_reward_and_termination.md](06_reward_and_termination.md).
+
+---
+
+## State-dependent body mechanics B1–B5 (2026-09-26)
+
+Plan: [[STATE_DEPENDENT_BODY_MECHANICS]]. Five mechanics that change the **consequences** of
+actions on the body so that the best action depends on **combinations** of internal states
+(healing is no longer free and context-free). The reward is untouched (`calculate_drive` is
+not modified). Every one is a static field behind a trace-time `if`; at its off value it
+emits no operation and the environment is the pre-change one byte for byte
+(`tests/env/test_body_mechanics_parity.py`). Keys and validation: `02_config_schema.md`.
+
+**Order inside `update_body`.** Nutrition: decay → A1 drain → food → (single clip, **moved
+after the healing charge when B3 is on**). Satiation derived from the final nutrition.
+Injury: damage slice → rest streak → base recovery → bush premium → **B2** factor → **B5**
+factor → `can_recover` → (**B3** charge) → subtract → clip. Death tests. Body temperature,
+with **B4**'s coefficient. B2, B4, B5 all read **pre-step** state (`state.body_temp`,
+`state.injury_level`, `state.nutrition`), the same convention as the A1 drain.
+
+**B1 — random starting body temperature** (`thermal.random_start_body_temp`,
+`start_body_temp_low/high`). A uniform draw at reset from the previously unused
+`body_key1`, so no other random stream moves. No fixed-start key: pin with `low == high`.
+Level 05 uses [−10, +5] (level 06 inherits it). **The worst case is logged, not refused:**
+the loader computes the first step from `start_body_temp_high` onto the hottest single-fire
+corner, `T_1 = T_high + s_w·(k_ex·(F_max − T_high) − k_loss·(T_high − T_set) + k_met)`, and
+logs it at INFO (level 05: **+10.78**), or at WARNING when it exceeds `max_temperature`
+(a +10 upper start would log +15.18 — "allowed by configuration"). Merged fires can run
+hotter than the single-fire model.
+
+**B2 — healing needs warmth** (`thermal.healing_cold_sensitivity` = `s_c`,
+`healing_warm_sensitivity` = `s_w`, 1/°C):
+`w(T) = max(0, 1 − s_c·max(0, T_set − T) − s_w·max(0, T − T_set))`, `recovery ×= w`. Bounded
+in [0, 1] — never negative, never a boost. With `1/15` healing reaches zero exactly at the
+freezing threshold. Applied after the bush premium, so it inherits the rest-and-no-damage rule.
+
+**B3 — healing uses energy** (`body.healing_nutrition_cost` = `c`, nutrition per injury
+point healed; `healing_nutrition_shortfall`). With `h_nom = where(can_recover, min(r, I_d), 0)`
+and `N_pre` = nutrition after decay, drain and food but **before** the clip:
+
+- `full`: `h = h_nom`; `N' = clip(N_pre − c·h, 0, N_max)`. A heal the agent cannot afford
+  lands nutrition on 0 and it starves (reason 2). The injury path equals today's exactly.
+- `partial`: `h = min(h_nom, max(N_pre, 0)/c)` — heal only what the remaining nutrition pays
+  for. **Starvation is judged before the charge** (`clip(N_pre) <= 0`), so the charge can
+  bring nutrition to 0 but can never be the cause of death. This predicate is returned from
+  `update_body` as `starved` (tuple index 9) and `jax_step`'s reason 2 reads the same value,
+  so the label and `done` cannot diverge. **New reachable state:** an agent can be alive at
+  `N = 0`; on the next step decay makes `N_pre` negative and it starves unless it eats.
+- Over-eating (reason 3) is judged on `N'` after the charge in both modes; it can only
+  coincide with healing in auto-eat worlds.
+
+**B4 — injury speeds heat exchange** (`thermal.injury_heat_exchange_gain` = `g`,
+`injury_heat_exchange_mode`): `k_exchange' = k_exchange·(1 + g·I/I_max)`. It scales
+`k_exchange` (the heat swap with the cell), **not** `k_loss` — `k_loss` is the body's
+defence toward setpoint, and raising it would protect the injured body. `cooling_only`
+(default) boosts only on a step where the cell is colder than the body, so stepping onto a
+fire is unaffected; `both` boosts every step, so an injured agent also heats faster at a
+fire. Whether a cell is on the cooling side does not depend on `k_exchange'`, so each cell
+uses one coefficient consistently. The stability bound `scale·(k_exchange·(1+g) + k_loss) <= 1`
+is a load **refusal** (above it the update overshoots and oscillates); the structure check at
+full injury, and in `both` mode the first step onto a fire, are **logged**.
+
+**B5 — healing speed depends on nutrition** (`body.healing_nutrition_dependence`,
+`healing_hunger_low/high/floor`, `healing_overfull_floor/start`):
+`f_hunger = f_h + (1 − f_h)·clip((N − N_lo)/(N_hi − N_lo), 0, 1)`,
+`f_over = 1 − (1 − f_o)·clip((N − N_os)/(N_max − N_os), 0, 1)`, `recovery ×= f_hunger·f_over`.
+
+- Defined on **nutrition** (the store B3 charges), not satiation (a derived reading of it).
+- **It reads `state.nutrition` — nutrition BEFORE this step's decay**, one step behind B3's
+  `N_pre` cap. Example: at nutrition 50 with `f_h = 0.2, N_lo = 20, N_hi = 100` and
+  B3 `c = 1` `full`, the factor is 0.5 (from 50, not the post-decay 49), the heal is 2.5,
+  and nutrition ends at 50 − 1 − 2.5 = **46.5** (not 46.55). That is deliberate and pinned
+  (T-B5-5), not a rounding bug.
+- Over-full slowing is a separate setting: `healing_overfull_floor = 1.0` (default) means
+  being over-full does not slow healing, which keeps B5 monotone.
+- **What it buys with B3:** a runway, not a saving. A hungry injured agent resting until it
+  starves lives about 2.4× longer (10–11 → 24–25 steps at start nutrition 60, `c = 1`), but
+  healing the same injury costs **more** total food (91 vs 84 at start 120), because the
+  slower heal pays metabolism for more steps.
+
+**Termination:** no new reason code. Starvation → 2 and freezing/overheating → 5 reuse the
+existing labels.
 
 ---
 

@@ -113,7 +113,7 @@ def jaxpr_shas(jax, jnp, core, params, state):
     return {"jax_step": sha(step_jp), "jax_reset": sha(reset_jp), "update_body": sha(ub_jp)}
 
 
-def rollout_world(jax, jnp, core, get_observation, params):
+def rollout_world(jax, jnp, core, get_observation, params, seeds=SEEDS, max_t=MAX_T):
     """Roll the 16 seeds, MAX_T steps each, auto-resetting on `done`.
 
     Episode `e` of seed `s` resets with `fold_in(PRNGKey(s), e)` (episode 0 uses
@@ -124,11 +124,11 @@ def rollout_world(jax, jnp, core, get_observation, params):
     step = jax.jit(core.jax_step)
     reset = jax.jit(core.jax_reset)
     out = {}
-    for seed in SEEDS:
+    for seed in seeds:
         state = reset(params, jax.random.PRNGKey(seed))
         resets, reset_obs, ep_start = [state], [np.asarray(get_observation(state, params))], [0]
         states, obs, rewards, dones, infos = [], [], [], [], []
-        for t in range(MAX_T):
+        for t in range(max_t):
             a = jnp.asarray(action_at(jax, seed, t), dtype=jnp.int32)
             state, r, d, info = step(state, a, params)
             states.append(state)
@@ -136,7 +136,7 @@ def rollout_world(jax, jnp, core, get_observation, params):
             rewards.append(np.asarray(r))
             dones.append(np.asarray(d))
             infos.append({k: np.asarray(v) for k, v in info.items()})
-            if bool(d) and t + 1 < MAX_T:
+            if bool(d) and t + 1 < max_t:
                 state = reset(params, jax.random.fold_in(jax.random.PRNGKey(seed),
                                                          len(resets)))
                 resets.append(state)

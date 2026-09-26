@@ -53,6 +53,10 @@ body:
   # from resting in the open). Mandatory, no fallback; must be > 0. See
   # docs/environment/05_body_homeostasis.md.
   recovery_in_bush_multiplier: 1.0
+  # Body mechanics B3 / B5 (STATE_DEPENDENT_BODY_MECHANICS, 2026-09-26): mandatory, no
+  # fallback; 0.0 / false are the inert values (sub-keys read only when on).
+  healing_nutrition_cost: 0.0
+  healing_nutrition_dependence: false
   injury_smoothing_duration: 3
   use_homeostatic_reward: true
   death_penalty: 100

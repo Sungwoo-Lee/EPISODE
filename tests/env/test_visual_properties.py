@@ -211,6 +211,8 @@ def _make_v4_config() -> str:
           recovery_base_rate: 0.0
           recovery_accel_rate: 0.0
           recovery_in_bush_multiplier: 1.0   # inert; mandatory key, no fallback default
+          healing_nutrition_cost: 0.0          # inert; mandatory key, no fallback default
+          healing_nutrition_dependence: false   # inert; mandatory key, no fallback default
           injury_smoothing_duration: 1
           death_penalty: 0.0
           overeating_death: false
@@ -336,6 +338,8 @@ def _make_v4_config_with_noise() -> str:
           recovery_base_rate: 0.0
           recovery_accel_rate: 0.0
           recovery_in_bush_multiplier: 1.0   # inert; mandatory key, no fallback default
+          healing_nutrition_cost: 0.0          # inert; mandatory key, no fallback default
+          healing_nutrition_dependence: false   # inert; mandatory key, no fallback default
           injury_smoothing_duration: 1
           death_penalty: 0.0
           overeating_death: false
@@ -493,6 +497,8 @@ def _base_yaml_v4_resource_missing_vp() -> str:
           recovery_base_rate: 0.0
           recovery_accel_rate: 0.0
           recovery_in_bush_multiplier: 1.0   # inert; mandatory key, no fallback default
+          healing_nutrition_cost: 0.0          # inert; mandatory key, no fallback default
+          healing_nutrition_dependence: false   # inert; mandatory key, no fallback default
           injury_smoothing_duration: 1
           death_penalty: 0.0
           overeating_death: false

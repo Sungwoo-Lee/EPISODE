@@ -1256,6 +1256,7 @@ body.start_nutrition                   body.metabolic_cost
 body.nutrition_to_satiation_scaling_factor
 body.recovery_base_rate                body.recovery_accel_rate
 body.recovery_in_bush_multiplier
+body.healing_nutrition_cost            body.healing_nutrition_dependence
 body.injury_smoothing_duration         body.death_penalty
 body.overeating_death                  body.use_homeostatic_reward
 body.with_satiation                    body.with_nutrition
@@ -1289,8 +1290,20 @@ thermal.max_temperature                thermal.k_exchange
 thermal.k_loss                         thermal.k_metabolic
 thermal.metabolic_coupling             thermal.grid_range
 thermal.relative                       thermal.warming_rate_scale
-thermal.cooling_rate_scale
+thermal.cooling_rate_scale             thermal.random_start_body_temp
+thermal.healing_cold_sensitivity       thermal.healing_warm_sensitivity
+thermal.injury_heat_exchange_gain
 ```
+
+and, only when `thermal.random_start_body_temp` is true: `thermal.start_body_temp_low`,
+`thermal.start_body_temp_high`; only when `thermal.injury_heat_exchange_gain > 0`:
+`thermal.injury_heat_exchange_mode`.
+
+**Body-mechanics conditional keys** (2026-09-26): only when `body.healing_nutrition_cost > 0`:
+`body.healing_nutrition_shortfall`; only when `body.healing_nutrition_dependence` is true:
+`body.healing_hunger_low`, `body.healing_hunger_high`, `body.healing_hunger_floor`,
+`body.healing_overfull_floor`, and — only when that floor is `< 1` —
+`body.healing_overfull_start`.
 
 and, only when `thermal.use_random_spots` is true:
 
@@ -1336,6 +1349,33 @@ the key is read):
 | `thermal.k_metabolic` | float | — (may be any sign; still zero — the metabolic coupling below runs the other way, charging nutrition for defence rather than feeding heat back into the body) |
 | `thermal.metabolic_coupling` | bool | — (gate; when true, defending body temperature drains nutrition. **Static** — it gates a Python `if` in `update_body`, so with it false the drain contributes nothing to the traced graph) |
 | `thermal.metabolic_coupling_rate` | float | `>= 0`, read **only** when `metabolic_coupling` is true. Nutrition units drawn per degree-per-step of thermoregulatory defence: the per-step drain is `rate * \|k_loss * (body_temp − temperature_setpoint)\|`, charged inside the `with_nutrition` block after the linear decay and before the food refill and the single clip to `[0, max_nutrition]`. A negative rate would pay the agent for being cold |
+
+**State-dependent body mechanics** (2026-09-26, [[STATE_DEPENDENT_BODY_MECHANICS]]). Fifteen
+keys, all **static** `EnvParams` fields behind trace-time `if`s (floats `float()`-coerced,
+strings checked against their enum), so at the off values the step/reset jaxprs are the
+pre-change strings. Validation raises `ValueError` naming the key:
+
+| Key | Type | Read when | Validation / meaning |
+|---|---|---|---|
+| `thermal.random_start_body_temp` (B1) | bool | `thermal.enabled` | must be a YAML bool. True: `jax_reset` draws the start body temperature uniformly from the range below using `body_key1` (split, previously unused — no existing stream moves) |
+| `thermal.start_body_temp_low` / `_high` | float | B1 flag true | finite, `min_temperature <= low <= high <= max_temperature`. Pin a start with `low == high`; there is no fixed-start key |
+| `thermal.healing_cold_sensitivity` (B2) | float | `thermal.enabled` | `>= 0` (NaN refused). Fraction of recovery lost per °C the **pre-step** body is below `temperature_setpoint` |
+| `thermal.healing_warm_sensitivity` (B2) | float | `thermal.enabled` | `>= 0` (NaN refused). Same, above the setpoint. Factor `w = max(0, 1 − s_c·max(0, T_set−T) − s_w·max(0, T−T_set))` multiplies recovery after the bush premium |
+| `thermal.injury_heat_exchange_gain` (B4) | float | `thermal.enabled` | `>= 0` (NaN refused); `> 0` requires `body.with_injury` and `scale·(k_exchange·(1+gain) + k_loss) <= 1` for **both** scales (a refusal). `k_exchange' = k_exchange·(1 + gain·injury/max_injury)` on the pre-step injury; scales `k_exchange`, **not** `k_loss` |
+| `thermal.injury_heat_exchange_mode` | str | gain `> 0` | `cooling_only` (boost only while the cell is colder than the body) or `both`. With `gain > 0` the structure check is repeated at full injury and **logged** (WARNING "at full injury — allowed by configuration"), never raised; in `both` mode the worst first step onto a fire is logged too |
+| `body.healing_nutrition_cost` (B3) | float | always | `>= 0` (NaN refused); `> 0` requires `with_nutrition` and `with_injury`. Nutrition charged per injury point healed, before the single nutrition clip |
+| `body.healing_nutrition_shortfall` | str | cost `> 0` | `partial` (heal `min(h_nom, max(N_pre,0)/c)`; starvation judged **before** the charge, so the charge never kills — an agent can be alive at `N = 0`) or `full` (heal fully; a shortfall lands on 0 and starves, reason 2) |
+| `body.healing_nutrition_dependence` (B5) | bool | always | must be a YAML bool; true requires `with_nutrition` and `with_injury`. Recovery × `f_hunger(N)·f_over(N)` on the **pre-step** nutrition (before this step's decay) |
+| `body.healing_hunger_low` / `_high` | float | B5 on | `0 <= low < high <= max_nutrition`; factor is the floor at/below `low`, 1 at/above `high` |
+| `body.healing_hunger_floor` | float | B5 on | `[0, 1]` (NaN refused) |
+| `body.healing_overfull_floor` | float | B5 on | `[0, 1]`; `1.0` = being over-full does not slow healing |
+| `body.healing_overfull_start` | float | B5 on and overfull floor `< 1` | `healing_hunger_high <= start < max_nutrition` (the ramps cannot overlap) |
+
+With B1 on (or B4 in `both` mode) the loader logs the worst-case first step onto a single fire,
+`T_1 = T_high + s_w·(k_ex'·(F_max − T_high) − k_loss·(T_high − T_set) + k_met)`, at INFO — or
+WARNING when `T_1 > max_temperature`; it never refuses. Level 05's B1 range [−10, +5] logs
++10.78. Saved run configs that predate these keys are re-opened through
+`src/environment/saved_config_compat.py` (CONFIG_GUIDE §5).
 
 The first eight drive the body-temperature recurrence documented in
 [05_body_homeostasis.md](05_body_homeostasis.md#body-temperature-thermal), and leaving the
@@ -1504,7 +1544,7 @@ def load_behavior_measure_cfg(config) -> "BehaviorMeasureCfg | None":
 | Animal metadata | `animal_classes`, `animal_behaviours`, `animal_tags`, `hunt_idx`, `wander_idx`, `static_idx`, `predator_indices`, `neutral_indices`, `has_attack_feature` | `animal_property [N,V]`, `animal_property_std [N,V]`, `animal_nociception [N]`, `animal_move_int [N]`, `animal_damage [N,2]`, `animal_attack_delay [N]`, `animal_spawn_area [N,4]`, `animal_patrol [N,4]`, all ten `animal_*_low/high` arrays, `animal_attack_range_low [N]`, `animal_attack_range_high [N]`, `animal_attack_success_rate [N]` (jump/pounce feature — see [PREDATOR_JUMP_MECHANISM.md](../develop/active/env_entities/PREDATOR_JUMP_MECHANISM.md)), `animal_classes_int [N]`, `animal_behaviours_int [N]`, `animal_is_damaging [N]`, `animal_visual_channel [N]` |
 | Obstacles | `obstacle_names` | `obs_blocking [N]`, `obs_hides_agent [N]`, `obs_blocks_animals [N]`, `obs_spawn_area [N,4]`, `obs_damage [N,2]`, `obs_property [N,V]`, `obs_property_std [N,V]`, `obs_nociception [N]`, `obs_type [N]` |
 | Placement | `max_per_type`, `num_types`, `num_entities`, `placement_mode` | `type_areas [T,4]`, `type_counts [T]`, `type_entity_map [T,max_per_type]` |
-| Body flags | `recovery_in_bush_multiplier` (**see note below**), `smoothing_duration`, `overeating_death`, `use_homeostatic_reward`, `with_satiation`, `with_nutrition`, `with_injury`, `random_start_satiation`, `random_start_nutrition`, `random_start_injury`, `random_start_pos`, `rest_action_enabled`, `eat_action_enabled` | `max_satiation`, `max_nutrition`, `max_injury`, `food_nutrition_gain`, `setpoint`, `start_satiation`, `start_nutrition`, `metabolic_cost`, `nutrition_to_satiation_scaling_factor`, `recovery_base_rate`, `recovery_accel_rate`, `death_penalty`, `eating_nutrition_cost`, `eating_reward_penalty`, `start_pos [2]` |
+| Body flags | `recovery_in_bush_multiplier` (**see note below**), the eight B3/B5 `healing_*` fields and the seven B1/B2/B4 `thermal_*` body-mechanics fields (all static for the same reason — no new jaxpr leaves), `smoothing_duration`, `overeating_death`, `use_homeostatic_reward`, `with_satiation`, `with_nutrition`, `with_injury`, `random_start_satiation`, `random_start_nutrition`, `random_start_injury`, `random_start_pos`, `rest_action_enabled`, `eat_action_enabled` | `max_satiation`, `max_nutrition`, `max_injury`, `food_nutrition_gain`, `setpoint`, `start_satiation`, `start_nutrition`, `metabolic_cost`, `nutrition_to_satiation_scaling_factor`, `recovery_base_rate`, `recovery_accel_rate`, `death_penalty`, `eating_nutrition_cost`, `eating_reward_penalty`, `start_pos [2]` |
 | Sensory flags | `sensor_range`, `visual_sensor_enabled`, `visual_sensor_range`, `local_view_size`, `olfactory_enabled`, `nociception_enabled`, `location_sensor_enabled`, `injury_observable`, `nutrition_observable`, `interoceptive_nociception_enabled`, `interoceptive_convolution_enabled`, `interoceptive_kernel_length`, `proprioception_enabled`, `action_dim`, `olfactory_vector_size`, `nociception_size` | `sensor_radius`, `sensor_decay`, `interoceptive_kernel [K]` |
 | Noise | `perceptual_noise_enabled`, `noise_modality_order` | `noise_modes [13]`, `noise_sigmas [13]`, `noise_injury_scales [13]`, `noise_clip_min [13]`, `noise_clip_max [13]` |
 

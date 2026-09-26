@@ -476,12 +476,19 @@ def _thermal_single_fire_field(amplitude, default_temp, sigma, kernel_radius,
 
 def _thermal_radial_equilibria(amplitude, default_temp, sigma, kernel_radius,
                                grid_h, grid_w, k_exchange, k_loss, k_metabolic,
-                               setpoint):
+                               setpoint, k_exchange_boosted=None, boost_mode=None):
     """Equilibrium body temperature at Manhattan distance 0, 1 and 3 from ONE fire.
 
     Averages `_thermal_single_fire_field` over each Manhattan ring around the
     fire and converts the ring's mean ambient temperature into the body
     temperature the recurrence settles at there.
+
+    B4 (injury speeds heat exchange): with `k_exchange_boosted` set, a ring uses
+    the boosted coefficient in `boost_mode == 'both'`, and in `'cooling_only'`
+    only when the ring is on the COOLING side — the settled body is warmer than
+    the cell, i.e. `k_loss*(setpoint - T_amb) + k_metabolic > 0`. That sign does
+    not depend on k_exchange, so one coefficient per ring is consistent
+    (STATE_DEPENDENT_BODY_MECHANICS §A2, "same-side note"). Default None = today.
 
     Returns `{distance: equilibrium}`; a distance whose ring falls entirely off
     the grid maps to None.
@@ -495,8 +502,16 @@ def _thermal_radial_equilibria(amplitude, default_temp, sigma, kernel_radius,
         ring = [field[r, c]
                 for r in range(int(grid_h)) for c in range(int(grid_w))
                 if abs(r - c_r) + abs(c - c_c) == d]
-        out[d] = None if not ring else _thermal_equilibrium(
-            float(np.mean(ring)), k_exchange, k_loss, k_metabolic, setpoint)
+        if not ring:
+            out[d] = None
+            continue
+        t_amb = float(np.mean(ring))
+        k_ex = k_exchange
+        if k_exchange_boosted is not None and (
+                boost_mode == 'both'
+                or k_loss * (setpoint - t_amb) + k_metabolic > 0.0):
+            k_ex = k_exchange_boosted
+        out[d] = _thermal_equilibrium(t_amb, k_ex, k_loss, k_metabolic, setpoint)
     return out
 
 
@@ -533,8 +548,19 @@ def _check_thermal_structure(*, obs_temperature, obs_ratio_low, obs_ratio_high,
                              default_temp_low, default_temp_high, sigma,
                              kernel_radius, grid_h, grid_w, k_exchange, k_loss,
                              k_metabolic, setpoint, min_temperature,
-                             max_temperature, min_fire_separation):
+                             max_temperature, min_fire_separation,
+                             raise_on_failure=True, k_exchange_boosted=None,
+                             boost_mode=None):
     """Refuse to load a thermal config whose radial profile has lost the task.
+
+    B4 FULL-INJURY PASS (2026-09-26). With `k_exchange_boosted` / `boost_mode`
+    set, the radial profile is evaluated with the injury-boosted heat exchange
+    (see `_thermal_radial_equilibria`). That pass is called with
+    `raise_on_failure=False`: a structural failure at FULL injury is LOGGED at
+    WARNING ("at full injury — allowed by configuration") instead of raised,
+    because it is a behavioural outcome of a configured mechanic, not a broken
+    world (user decision, STATE_DEPENDENT_BODY_MECHANICS Revision 3). The
+    injury-0 call uses the default `raise_on_failure=True` and is unchanged.
 
     WHEN IT RUNS. All four of these must hold, or the check logs one line saying
     which precondition failed and returns:
@@ -671,7 +697,8 @@ def _check_thermal_structure(*, obs_temperature, obs_ratio_low, obs_ratio_high,
             amplitude = ratio * abs(d_temp)
             eq = _thermal_radial_equilibria(
                 amplitude, d_temp, sigma, kernel_radius, grid_h, grid_w,
-                k_exchange, k_loss, k_metabolic, setpoint)
+                k_exchange, k_loss, k_metabolic, setpoint,
+                k_exchange_boosted=k_exchange_boosted, boost_mode=boost_mode)
             if eq[3] is None:
                 _log.info(
                     "thermal structure check SKIPPED: a %dx%d grid has no "
@@ -681,6 +708,16 @@ def _check_thermal_structure(*, obs_temperature, obs_ratio_low, obs_ratio_high,
                 return
             ok, failures = _thermal_structure_verdict(
                 eq, min_temperature, max_temperature)
+            if not ok and not raise_on_failure:
+                _log.warning(
+                    "thermal structure check at full injury — allowed by "
+                    "configuration (thermal.injury_heat_exchange_gain, mode %s): "
+                    "heat source %r, corner default_temp=%g ratio=%g -> d0=%+.2f "
+                    "d1=%+.2f d3=%+.2f against [%g, %g]: %s. A fully injured agent "
+                    "is in a world without this structure.",
+                    boost_mode, label, d_temp, ratio, eq[0], eq[1], eq[3],
+                    min_temperature, max_temperature, "; ".join(failures))
+                continue
             if not ok:
                 raise ValueError(
                     f"thermal structure check FAILED for heat source "
@@ -701,9 +738,72 @@ def _check_thermal_structure(*, obs_temperature, obs_ratio_low, obs_ratio_high,
                     f"is sigma near 0.7 with a ratio of 11-13.")
 
     _log.info(
-        "thermal structure check PASSED for %d heat-source slot(s) over %d "
+        "thermal structure check %s for %d heat-source slot(s) over %d "
         "ratio band(s), at the corners and midpoint of the sampled ranges.",
+        "PASSED" if k_exchange_boosted is None else "evaluated at full injury",
         n_fire_slots, len(bands))
+
+
+def _thermal_first_fire_step(*, obs_temperature, obs_ratio_low, obs_ratio_high,
+                             res_temperature, res_ratio_low, res_ratio_high,
+                             use_object_sources, default_temp_low, default_temp_high,
+                             sigma, kernel_radius, grid_h, grid_w, k_exchange,
+                             k_loss, k_metabolic, setpoint, warming_scale,
+                             t_high, k_exchange_boosted=None, boost_mode=None):
+    """Worst-case body temperature after ONE step onto a single fire (B1 / B4 log).
+
+        T_1 = T_high + s_w*(k_ex'*(F - T_high) - k_loss*(T_high - T_set) + k_met)
+
+    over the corners and midpoint of every ratio band, where F is the fire-cell
+    temperature of `_thermal_single_fire_field` (the environment's own blur).
+    `k_ex'` is `k_exchange_boosted` in B4 `both` mode, else `k_exchange`. In
+    `both` mode `T_high` is raised to the full-injury ring (d1) equilibrium when
+    that is warmer: a body settled beside a fire is the calibrated starting point
+    for a step onto it.
+
+    Returns `(T_1, F, d_temp, ratio, T_high_used)` for the worst corner, or None
+    when the world has no ratio-declared fire (the same preconditions the
+    structure check skips on). The single-fire model does not see merged fires.
+    """
+    from src.environment.core import heat_source_mask
+    if not use_object_sources:
+        return None
+    ratios = set()
+    for temp, lo_arr, hi_arr in ((obs_temperature, obs_ratio_low, obs_ratio_high),
+                                 (res_temperature, res_ratio_low, res_ratio_high)):
+        fire = np.asarray(heat_source_mask(np.asarray(temp), np.asarray(lo_arr),
+                                           np.asarray(hi_arr)))
+        for i in np.flatnonzero(fire):
+            lo, hi = float(np.asarray(lo_arr)[i]), float(np.asarray(hi_arr)[i])
+            if not (lo == 0.0 and hi == 0.0):
+                ratios.add((lo, hi))
+    if not ratios:
+        return None
+    boosted = k_exchange_boosted is not None and boost_mode == 'both'
+    k_ex = k_exchange_boosted if boosted else k_exchange
+    d_lo, d_hi = float(default_temp_low), float(default_temp_high)
+    worst = None
+    for r_lo, r_hi in sorted(ratios):
+        draws = [(d_lo, r_lo), (d_lo, r_hi), (d_hi, r_lo), (d_hi, r_hi),
+                 (0.5 * (d_lo + d_hi), 0.5 * (r_lo + r_hi))]
+        for d_temp, ratio in draws:
+            amplitude = ratio * abs(d_temp)
+            field = _thermal_single_fire_field(amplitude, d_temp, sigma,
+                                               kernel_radius, grid_h, grid_w)
+            f_fire = float(field[int(grid_h) // 2, int(grid_w) // 2])
+            th = float(t_high)
+            if boosted:
+                eq = _thermal_radial_equilibria(
+                    amplitude, d_temp, sigma, kernel_radius, grid_h, grid_w,
+                    k_exchange, k_loss, k_metabolic, setpoint,
+                    k_exchange_boosted=k_exchange_boosted, boost_mode=boost_mode)
+                if eq[1] is not None:
+                    th = max(th, float(eq[1]))
+            t1 = th + warming_scale * (k_ex * (f_fire - th)
+                                       - k_loss * (th - setpoint) + k_metabolic)
+            if worst is None or t1 > worst[0]:
+                worst = (t1, f_fire, d_temp, ratio, th)
+    return worst
 
 
 def _read_properties_std(entry, entity_label):
@@ -1589,6 +1689,82 @@ def load_env_params(config: Config) -> EnvParams:
                     f"and the approach stops being monotone, which the load-time "
                     f"structure check relies on.")
 
+        # ── State-dependent body mechanics B1 / B2 / B4 (2026-09-26) ──────
+        # docs/develop/active/thermal/STATE_DEPENDENT_BODY_MECHANICS.md. All
+        # conditional-mandatory under `thermal.enabled`, no fallback; each has an
+        # exact off value at which `jax_reset` / `update_body` trace the pre-change
+        # graph (static gates on static fields, float()-coerced so YAML ints and
+        # floats share one trace-cache entry). Sub-keys are read only when their
+        # parent is on. Outcome checks (a lethal first step onto a fire, a lethal
+        # ring at full injury) are LOGGED at the structure-check site below, never
+        # refused (user: "allow, make visible"); the numerical stability bound
+        # stays a refusal.
+        #
+        # B1 — random starting body temperature. No fixed-start key (the
+        # `start_injury` trap): pin a start with the flag on and low == high.
+        _th_rand_body_temp = config.get_mandatory('thermal.random_start_body_temp')
+        if not isinstance(_th_rand_body_temp, bool):
+            raise ValueError(
+                f"thermal.random_start_body_temp must be true or false, got "
+                f"{_th_rand_body_temp!r}.")
+        if _th_rand_body_temp:
+            _th_start_bt_low = float(config.get_mandatory('thermal.start_body_temp_low'))
+            _th_start_bt_high = float(config.get_mandatory('thermal.start_body_temp_high'))
+            if not (np.isfinite(_th_start_bt_low) and np.isfinite(_th_start_bt_high)
+                    and _th_min_temp <= _th_start_bt_low <= _th_start_bt_high
+                    <= _th_max_temp):
+                raise ValueError(
+                    f"thermal.start_body_temp_low/high must be finite and satisfy "
+                    f"min_temperature <= low <= high <= max_temperature "
+                    f"([{_th_min_temp}, {_th_max_temp}]); got low={_th_start_bt_low}, "
+                    f"high={_th_start_bt_high}.")
+        else:
+            # Never read: jax_reset's draw sits behind a static flag.
+            _th_start_bt_low = _th_start_bt_high = _th_setpoint
+        # B2 — healing needs warmth: separate cold / warm sensitivities (1/degC).
+        _th_heal_cold = float(config.get_mandatory('thermal.healing_cold_sensitivity'))
+        _th_heal_warm = float(config.get_mandatory('thermal.healing_warm_sensitivity'))
+        for _key, _val in (('thermal.healing_cold_sensitivity', _th_heal_cold),
+                           ('thermal.healing_warm_sensitivity', _th_heal_warm)):
+            if not (_val >= 0.0):          # `not (>=)` so NaN is refused too
+                raise ValueError(
+                    f"{_key} must be >= 0 (the fraction of injury recovery lost per "
+                    f"degree away from temperature_setpoint; 0.0 = off), got {_val}.")
+        # B4 — injury speeds heat exchange: k_exchange*(1 + gain*injury/max_injury).
+        _th_inj_gain = float(config.get_mandatory('thermal.injury_heat_exchange_gain'))
+        if not (_th_inj_gain >= 0.0):
+            raise ValueError(
+                f"thermal.injury_heat_exchange_gain must be >= 0 (0.0 = off), got "
+                f"{_th_inj_gain}.")
+        if _th_inj_gain > 0.0:
+            if not bool(config.get_mandatory('body.with_injury')):
+                raise ValueError(
+                    "thermal.injury_heat_exchange_gain > 0 requires body.with_injury: "
+                    "true — with no injury system the injury level stays 0 and the "
+                    "boost would be silently inert.")
+            _th_inj_mode = config.get_mandatory('thermal.injury_heat_exchange_mode')
+            if _th_inj_mode not in ('cooling_only', 'both'):
+                raise ValueError(
+                    f"thermal.injury_heat_exchange_mode must be 'cooling_only' or "
+                    f"'both', got {_th_inj_mode!r}.")
+            # Stability at the boosted coefficient, for BOTH scales in BOTH modes:
+            # the boost can apply on a warming step even in cooling_only mode
+            # (T_cell < T < T_set, where k_loss pulls the body up). A refusal, not a
+            # log: above the bound the discrete update overshoots and oscillates,
+            # a numerical defect rather than a behavioural outcome.
+            _k_ex_max = _th_k_exchange * (1.0 + _th_inj_gain)
+            for _key, _scale in (('thermal.warming_rate_scale', _th_warming_scale),
+                                 ('thermal.cooling_rate_scale', _th_cooling_scale)):
+                if not (_scale * (_k_ex_max + _th_k_loss) <= 1.0):
+                    raise ValueError(
+                        f"{_key} * (thermal.k_exchange*(1 + "
+                        f"thermal.injury_heat_exchange_gain) + thermal.k_loss) must be "
+                        f"<= 1 ({_scale} * ({_th_k_exchange}*(1 + {_th_inj_gain}) + "
+                        f"{_th_k_loss}) = {_scale * (_k_ex_max + _th_k_loss)}); above 1 "
+                        f"a fully injured body overshoots its settling temperature.")
+        else:
+            _th_inj_mode = 'cooling_only'   # never read at gain 0
+
         # ── Metabolic coupling (Stage 5) ──────────────────────────────────
         # `metabolic_coupling` is conditional-mandatory under `thermal.enabled`;
         # `metabolic_coupling_rate` is conditional-mandatory one level deeper,
@@ -1665,6 +1841,12 @@ def load_env_params(config: Config) -> EnvParams:
         # never read on a thermal-off config anyway (the whole body block sits
         # behind `if params.thermal_enabled:`).
         _th_warming_scale, _th_cooling_scale = 1.0, 1.0
+        # Body mechanics B1 / B2 / B4, inert: the static gates in jax_reset /
+        # update_body sit behind `thermal_enabled` or are off at these values.
+        _th_rand_body_temp = False
+        _th_start_bt_low, _th_start_bt_high = 0.0, 0.0
+        _th_heal_cold, _th_heal_warm = 0.0, 0.0
+        _th_inj_gain, _th_inj_mode = 0.0, 'cooling_only'
         # Metabolic coupling block (Stage 5), inert. `False` is the value that
         # makes the drain in `update_body` untraceable on a thermal-off config:
         # it gates a static Python `if`, so the nutrition update is the
@@ -2101,6 +2283,58 @@ def load_env_params(config: Config) -> EnvParams:
             max_temperature=_th_max_temp,
             min_fire_separation=_th_min_fire_sep,
         )
+        _th_struct_kwargs = dict(
+            obs_temperature=obs_temperature, obs_ratio_low=obs_temp_ratio_low,
+            obs_ratio_high=obs_temp_ratio_high, obs_labels=_obs_labels,
+            res_temperature=res_temperature, res_ratio_low=res_temp_ratio_low,
+            res_ratio_high=res_temp_ratio_high, res_labels=_res_labels,
+            use_object_sources=_th_object_sources, default_temp_low=_th_default_low,
+            default_temp_high=_th_default_high, sigma=_th_sigma,
+            kernel_radius=_th_kernel_radius, grid_h=height, grid_w=width,
+            k_exchange=_th_k_exchange, k_loss=_th_k_loss, k_metabolic=_th_k_metabolic,
+            setpoint=_th_setpoint, min_temperature=_th_min_temp,
+            max_temperature=_th_max_temp, min_fire_separation=_th_min_fire_sep)
+        # B4: the same structure evaluated at FULL injury — LOGGED, not raised.
+        if _th_inj_gain > 0.0:
+            _check_thermal_structure(
+                **_th_struct_kwargs, raise_on_failure=False,
+                k_exchange_boosted=_th_k_exchange * (1.0 + _th_inj_gain),
+                boost_mode=_th_inj_mode)
+        # B1 / B4-both: the worst-case first step onto a single fire, logged
+        # (INFO, or WARNING when it crosses max_temperature). Never refused: a lethal
+        # step onto a fire is an outcome the agent can learn to avoid. The loader
+        # has no load-summary object; this log line is the record. One combined
+        # line when both are on.
+        _b4_both = _th_inj_gain > 0.0 and _th_inj_mode == 'both'
+        if _th_rand_body_temp or _b4_both:
+            _t_high = _th_start_bt_high if _th_rand_body_temp else _th_setpoint
+            _fs_kwargs = {k: v for k, v in _th_struct_kwargs.items()
+                          if k not in ('obs_labels', 'res_labels', 'min_temperature',
+                                       'max_temperature', 'min_fire_separation')}
+            _worst = _thermal_first_fire_step(
+                **_fs_kwargs, warming_scale=_th_warming_scale, t_high=_t_high,
+                k_exchange_boosted=(_th_k_exchange * (1.0 + _th_inj_gain)
+                                    if _b4_both else None),
+                boost_mode=_th_inj_mode if _b4_both else None)
+            _what = " and ".join(
+                ([f"B1 start_body_temp_high={_th_start_bt_high:+.2f}"]
+                 if _th_rand_body_temp else [])
+                + ([f"B4 injury_heat_exchange_gain={_th_inj_gain:g} (mode both, "
+                    f"full injury)"] if _b4_both else []))
+            if _worst is None:
+                _log.info(
+                    "worst-case first step onto a fire (%s): not computed — no "
+                    "ratio-declared heat source in this world.", _what)
+            else:
+                _t1, _f, _d, _r, _th_used = _worst
+                _lethal = _t1 > _th_max_temp
+                (_log.warning if _lethal else _log.info)(
+                    "worst-case first step onto a fire (%s): body %+.2f -> %+.2f "
+                    "(single-fire model, fire cell %+.2f at default_temp=%g, "
+                    "ratio=%g; max_temperature %+.2f)%s",
+                    _what, _th_used, _t1, _f, _d, _r, _th_max_temp,
+                    " — an agent can die on its first step onto a fire; allowed by "
+                    "configuration" if _lethal else "")
 
     _log.debug("=" * 60)
     _log.debug("ENTITY PLACEMENT STRATEGY: %s", placement_mode)
@@ -2232,6 +2466,71 @@ def load_env_params(config: Config) -> EnvParams:
             f"1.0 means 'no difference from resting in the open'), got "
             f"{_recovery_in_bush_mult}.")
 
+    # ── State-dependent body mechanics B3 / B5 (2026-09-26) ──────────────────
+    # docs/develop/active/thermal/STATE_DEPENDENT_BODY_MECHANICS.md. Both parents
+    # are unconditionally mandatory (a world that does not say whether healing
+    # costs food cannot be reproduced from its own file); their sub-keys are read
+    # only when the parent is on. All static and float()-coerced (see state.py).
+    _with_nutr = bool(config.get_mandatory('body.with_nutrition'))
+    _with_inj = bool(config.get_mandatory('body.with_injury'))
+    # B3 — healing uses energy: nutrition per injury point healed.
+    _heal_cost = float(config.get_mandatory('body.healing_nutrition_cost'))
+    if not (_heal_cost >= 0.0):
+        raise ValueError(
+            f"body.healing_nutrition_cost must be >= 0 (nutrition charged per "
+            f"injury point healed; 0.0 = off), got {_heal_cost}.")
+    if _heal_cost > 0.0:
+        if not (_with_nutr and _with_inj):
+            raise ValueError(
+                "body.healing_nutrition_cost > 0 requires body.with_nutrition and "
+                "body.with_injury both true (healing is charged to nutrition; with "
+                "either system off the termination labels become untrustworthy).")
+        _heal_shortfall = config.get_mandatory('body.healing_nutrition_shortfall')
+        if _heal_shortfall not in ('partial', 'full'):
+            raise ValueError(
+                f"body.healing_nutrition_shortfall must be 'partial' or 'full', got "
+                f"{_heal_shortfall!r}.")
+    else:
+        _heal_shortfall = 'partial'     # never read at cost 0
+    # B5 — healing speed depends on (pre-step) nutrition.
+    _heal_dep = config.get_mandatory('body.healing_nutrition_dependence')
+    if not isinstance(_heal_dep, bool):
+        raise ValueError(
+            f"body.healing_nutrition_dependence must be true or false, got "
+            f"{_heal_dep!r}.")
+    if _heal_dep:
+        if not (_with_nutr and _with_inj):
+            raise ValueError(
+                "body.healing_nutrition_dependence: true requires body.with_nutrition "
+                "and body.with_injury both true (with nutrition frozen the factor is a "
+                "constant; with no injury system it does nothing).")
+        _hunger_low = float(config.get_mandatory('body.healing_hunger_low'))
+        _hunger_high = float(config.get_mandatory('body.healing_hunger_high'))
+        _hunger_floor = float(config.get_mandatory('body.healing_hunger_floor'))
+        _overfull_floor = float(config.get_mandatory('body.healing_overfull_floor'))
+        if not (0.0 <= _hunger_low < _hunger_high <= _max_nutr):
+            raise ValueError(
+                f"body.healing_hunger_low/high must satisfy 0 <= low < high <= "
+                f"max_nutrition ({_max_nutr}); got low={_hunger_low}, "
+                f"high={_hunger_high}.")
+        for _key, _val in (('body.healing_hunger_floor', _hunger_floor),
+                           ('body.healing_overfull_floor', _overfull_floor)):
+            if not (0.0 <= _val <= 1.0):
+                raise ValueError(f"{_key} must lie in [0, 1], got {_val}.")
+        if _overfull_floor < 1.0:
+            _overfull_start = float(config.get_mandatory('body.healing_overfull_start'))
+            if not (_hunger_high <= _overfull_start < _max_nutr):
+                raise ValueError(
+                    f"body.healing_overfull_start must satisfy healing_hunger_high "
+                    f"({_hunger_high}) <= start < max_nutrition ({_max_nutr}), so the "
+                    f"two ramps cannot overlap; got {_overfull_start}.")
+        else:
+            _overfull_start = 150.0     # never read at overfull_floor 1.0
+    else:
+        # Never read: update_body's B5 block sits behind a static flag.
+        _hunger_low, _hunger_high, _hunger_floor = 0.0, 100.0, 0.0
+        _overfull_floor, _overfull_start = 1.0, 150.0
+
     return EnvParams(
         height=height,
         width=width,
@@ -2337,6 +2636,14 @@ def load_env_params(config: Config) -> EnvParams:
         recovery_base_rate=config.get_mandatory('body.recovery_base_rate'),
         recovery_accel_rate=config.get_mandatory('body.recovery_accel_rate'),
         recovery_in_bush_multiplier=_recovery_in_bush_mult,
+        healing_nutrition_cost=_heal_cost,
+        healing_nutrition_shortfall=_heal_shortfall,
+        healing_nutrition_dependence=_heal_dep,
+        healing_hunger_low=_hunger_low,
+        healing_hunger_high=_hunger_high,
+        healing_hunger_floor=_hunger_floor,
+        healing_overfull_floor=_overfull_floor,
+        healing_overfull_start=_overfull_start,
         smoothing_duration=config.get_mandatory('body.injury_smoothing_duration'),
         death_penalty=config.get_mandatory('body.death_penalty'),
         overeating_death=config.get_mandatory('body.overeating_death'),
@@ -2398,6 +2705,13 @@ def load_env_params(config: Config) -> EnvParams:
         thermal_cooling_rate_scale=_th_cooling_scale,
         thermal_metabolic_coupling=_th_met_coupling,
         thermal_metabolic_coupling_rate=_th_met_coupling_rate,
+        thermal_random_start_body_temp=_th_rand_body_temp,
+        thermal_start_body_temp_low=_th_start_bt_low,
+        thermal_start_body_temp_high=_th_start_bt_high,
+        thermal_healing_cold_sensitivity=_th_heal_cold,
+        thermal_healing_warm_sensitivity=_th_heal_warm,
+        thermal_injury_heat_exchange_gain=_th_inj_gain,
+        thermal_injury_heat_exchange_mode=_th_inj_mode,
         temperature_setpoint=_th_setpoint,
         min_temperature=_th_min_temp,
         max_temperature=_th_max_temp,

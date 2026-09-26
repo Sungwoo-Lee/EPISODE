@@ -605,6 +605,57 @@ human who has already hit the wall, not a migration. When the compatibility laye
 should join its table and its era-representative fixtures, so the *seventh* key is a red test
 rather than a failed analysis.
 
+### The body-mechanics keys (2026-09-26) — and the first saved-config compat step
+
+[[STATE_DEPENDENT_BODY_MECHANICS]] added **fifteen** keys for five mechanics that make the best
+action depend on combinations of internal states. Every one is a **static** `EnvParams` field
+(float-coerced; strings checked against their enum) behind a trace-time `if`, so at the off value
+nothing is traced and the step / reset jaxprs are the pre-change strings (pinned by
+`tests/env/test_body_mechanics_parity.py`). Read conditions:
+
+| Key | Read when | Off / inert value |
+|---|---|---|
+| `thermal.random_start_body_temp` (B1) | `thermal.enabled` | `false` |
+| `thermal.start_body_temp_low` / `_high` | the B1 flag is true | never read when off |
+| `thermal.healing_cold_sensitivity` / `healing_warm_sensitivity` (B2) | `thermal.enabled` | `0.0` / `0.0` |
+| `thermal.injury_heat_exchange_gain` (B4) | `thermal.enabled` | `0.0` |
+| `thermal.injury_heat_exchange_mode` | gain `> 0` | (`cooling_only` in `default.yaml`) |
+| `body.healing_nutrition_cost` (B3) | **always** | `0.0` |
+| `body.healing_nutrition_shortfall` | cost `> 0` | (`partial` in `default.yaml`) |
+| `body.healing_nutrition_dependence` (B5) | **always** | `false` |
+| `body.healing_hunger_low` / `_high` / `_floor`, `healing_overfull_floor` | B5 flag true | placeholders |
+| `body.healing_overfull_start` | B5 flag true **and** `healing_overfull_floor < 1` | placeholder |
+
+- **Pin a start temperature with the flag on and `low == high`.** There is deliberately no
+  fixed-start key (the `body.start_injury` trap: a fixed key that is never read).
+- **Outcome checks are logged, not refused.** With B1 on (or B4 in `both` mode) the loader logs
+  the worst-case first step onto a single fire — INFO, or WARNING when it crosses
+  `max_temperature` ("allowed by configuration"). With B4 on, the thermal structure check is
+  repeated at full injury and a failure there is a WARNING. The injury-0 structure check and
+  the B4 stability bound `scale·(k_exchange·(1+gain) + k_loss) <= 1` still **refuse**. The
+  loader has no load-summary object; the log line is the record.
+- B3 / B5 (and B4) refuse to load unless the body systems they couple are on
+  (`with_nutrition` / `with_injury`).
+- **Rollout:** the thermal keys ride on `default.yaml` plus the two archived campfire test
+  inputs; the two unconditional body keys went into every raw-loaded config (the standalone
+  `configs/continual/` and `configs/verification/` worlds, the frozen parity world, the
+  archived test inputs and the inline test bases).
+
+**Saved run configs now have a compatibility step.** `src/environment/saved_config_compat.py`
+(`apply_saved_config_compat(cfg, *, source)`) supplies exactly six of these keys, at their off
+values, when a tool re-opens a finished run's `models/config.yaml`: the four thermal keys
+`random_start_body_temp`, `healing_cold_sensitivity`, `healing_warm_sensitivity`,
+`injury_heat_exchange_gain` (only when the saved `thermal.enabled` is true) and the two body
+keys (always). Its rules: it refuses any `source` under `configs/` (a live config must still
+hard-error), never overwrites a present key, refuses a partial set within a block, and logs one
+WARNING naming every key supplied. Callers inject into a **deep copy** and build `EnvParams`
+from it, so the trajectory store's `env_fingerprint` and manifest still see the untouched dict
+and a store started before the keys existed resumes into the same directory. Wired sites are
+listed in `SCRIPTS_DEPENDENCY_MAP.md` §1e. **Rule for any future mandatory key:** add a row to
+`_ERA_KEYS` (value, era, and the branch that makes it inert) in the same change, or every saved
+run stops loading. It is the first slice of [[SAVED_RUN_CONFIG_COMPAT]], whose owner extends it
+with the older keys listed above.
+
 If the key is experiment-facing, the schema/loader work is `senior-developer` + `developer`'s job first; only then does `experiment-designer` author configs that use it.
 
 ---
