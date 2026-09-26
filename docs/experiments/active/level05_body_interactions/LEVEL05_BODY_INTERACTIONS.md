@@ -482,7 +482,7 @@ by `training-runner`.
 | P12 | running (stuck at compile on 113 (node SSH-unreachable), relaunched on 101 at 01:16; 113 copy abandoned: WandB `c3wd9snn`, `logs/20260927_004436.log`) | A4 trip, food 1–2 | `rppo_l05body_p12_a4tripfood1to2_t1none_s42` | level05_body_interactions | pilot | 42 | 101 | cuda:0 | 2026-09-27T01:16:49 | `e8pc7ajl` | `logs/20260927_011649.log` · HEAD `4209024d` · ladder `8187c570` |
 | P13 | running (stuck at compile on 113 (node SSH-unreachable), relaunched on 101 at 01:16; 113 copy abandoned: WandB `35f5vjgq`, `logs/20260927_004441.log`) | A4 trip, food 1 | `rppo_l05body_p13_a4tripfood1to1_t1none_s42` | level05_body_interactions | pilot | 42 | 101 | cuda:1 | 2026-09-27T01:16:55 | `nuy4mx32` | `logs/20260927_011655.log` · HEAD `4209024d` · ladder `8187c570` |
 | P14 | planned (stage 2) | all four, selected | `rppo_l05body_p14_all4sel_t1none_s42` | level05_body_interactions | pilot | 42 | — | — | — | — | — |
-| P15 | planned (stage 2; config written at the gate) | all four, drainers one rung weaker | `rppo_l05body_p15_all4weaker_t1none_s42` | level05_body_interactions | pilot | 42 | — | — | — | — | — |
+| P15 | **skipped** (2026-09-27): every drainer pick is already its weakest rung, so P15 would equal P14 (§6.2) | all four, drainers one rung weaker | `rppo_l05body_p15_all4weaker_t1none_s42` | level05_body_interactions | pilot | 42 | — | — | — | — | — |
 
 ### 3.0b Stage 3 factorial (10,000,000 episodes). Launch only after §2.3–2.4 are recorded in §6
 
@@ -536,7 +536,7 @@ prefix is `configs/models/recurrent_ppo/nmn_input_site_grid_gaenorm/`.
 | P0a, P0b, P0c | `configs/environment/experiment/basic/05-campfire_thermal_10x10.yaml` (unchanged; P0c needs no new file, only `--seed 44`) | `nmngaenorm_t1none.yaml` |
 | P01–P13 | `pilots/p01_b5_floor0p5.yaml` … `pilots/p13_a4trip_food1to1.yaml` (one per row, same number) | `nmngaenorm_t1none.yaml` |
 | P14 | `pilots/p14_all4_selected.yaml` | `nmngaenorm_t1none.yaml` |
-| P15 | `pilots/p15_all4_weaker.yaml`: **written at the stage-1 → 2 gate** | `nmngaenorm_t1none.yaml` |
+| P15 | **not written**: skipped, identical to P14 (§6.2) | `nmngaenorm_t1none.yaml` |
 | F(odd) | `worlds/w<code>.yaml` | `nmngaenorm_t1none.yaml` |
 | F(even) | `worlds/w<code>.yaml` | `nmngaenorm_t16quad_ALL.yaml` |
 
@@ -548,8 +548,9 @@ Strength fragments (not worlds on their own):
 - `factors/a4_scarcer_food_bite__gain{4,3}.yaml`
 - `factors/a4_scarcer_food_trip__food1to{2,1}.yaml`
 
-The selectors are `factors/selected_{b5,b3,a1,a4}.yaml`. They are **PROVISIONAL** and currently
-point at B5 floor 0.2, B3 cost 1.0, A1 rate 4, and A4 bite gain 4.
+The selectors are `factors/selected_{b5,b3,a1,a4}.yaml`. They were PROVISIONAL until 2026-09-27 and
+now hold the stage-1 picks (§6.1): B5 floor 0.0, B3 cost 0.5 (with `healing_nutrition_shortfall:
+partial` explicit in its fragment), A1 rate 2, and A4 bite form gain 4.
 
 **Launch command** (for `training-runner`, one per row, via `run_command.py`; node and GPU are
 chosen at launch time):
@@ -933,7 +934,26 @@ Survivable: S >= 182.0 and starvation share <= 0.464.
 
 ### 6.2 Stage-2 stacking record
 
-*(empty)*
+**Picks written (2026-09-27, experiment-designer).** The four selectors now extend B5 floor 0.0,
+B3 cost 0.5, A1 rate 2 and A4 bite gain 4; none says PROVISIONAL, so the §3.1 guard passes. All 16
+worlds and p14 were loaded through `load_env_config` → `load_env_params` with the project conda
+interpreter and their `EnvParams` diffed against unchanged basic/05. Each world differs from basic/05
+in exactly the keys of its switched-on factors, at the picked values: A4 `food_nutrition_gain` 6→4;
+A1 `thermal_metabolic_coupling` False→True, rate 0.0→2.0; B3 `healing_nutrition_cost` 0.0→0.5;
+B5 `healing_nutrition_dependence` False→True, `healing_hunger_low` 0.0→20.0 (the floor 0.0, high
+100.0 and overfull floor 1.0 equal the defaults, so they do not show in the diff; p14 prints
+`healing_hunger_floor` 0.0 and `healing_nutrition_shortfall` partial). `w0000` shows no difference
+at all, and p14 is identical to `w1111`.
+
+**P15 skipped.** §2.4 defines p15 as the all-four world with each food-draining factor moved one
+rung weaker, and "if a pick is already the weakest rung, it stays"; B5 is unchanged. All three
+drainer picks are already the weakest rung of their grids (B3 cost 0.5 of {0.5, 1.0, 2.0}; A1 rate 2
+of {2, 4, 8}; A4 bite gain 4 of {4, 3}, where a larger gain per bite means less scarce food). p15
+would therefore be the same world as p14, so it is not written or run. Consequence for the collapse
+branch: option (b) ("run with p15's weaker drainers") does not exist at the tested grids; if p14
+collapses, weakening would need rungs below the grid, which is a new user decision under option (c).
+
+**Stacking outcome:** *(empty until p14 finishes)*
 
 ### 6.3 Note for the simulation study's owner
 

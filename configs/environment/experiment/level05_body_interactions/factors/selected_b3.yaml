@@ -5,8 +5,6 @@
 # Every worlds/ file that switches this factor on extends THIS file, never a strength file
 # directly, so the pilot pick is changed in one line here and nowhere else.
 #
-# STATUS: PROVISIONAL (2026-09-26). Points at the strength the simulation study favours, so the
-# worlds load and can be reviewed now. It is REPLACED by the pilot pick under the design doc's
-# pre-registered rule (section 2.3) before any factorial run launches. Do not launch the
-# factorial while this line says PROVISIONAL.
-extends: environment/experiment/level05_body_interactions/factors/b3_healing_costs_food__cost1p0
+# STATUS: PICKED (2026-09-27) by the stage-1 pilot pick rule (design doc section 2.3); pick record
+# and pilot numbers in design doc section 6.1. Pick: cost 0.5 (weakest rung); the fragment keeps healing_nutrition_shortfall: partial explicit.
+extends: environment/experiment/level05_body_interactions/factors/b3_healing_costs_food__cost0p5
