@@ -763,28 +763,28 @@ Three items for later or for awareness:
 
 ## Checkpoints
 
-- [ ] **CP1 — C1 first.** Fixture from a pre-change worktree; coverage counts non-zero; `_provenance_sha` and the stamped config recorded.
-- [ ] **CP-C0 — compat.**
+- [x] **CP1 — C1 first.** Done `8a865d9c` from a worktree of `eef30212`; coverage lvl05 1772/70/177/7 (heal/bush-heal/deaths/eats), span 33.1°; lvl04 1794/122/164/5; `_provenance_sha` + stamped YAML recorded. Streams auto-reset (deviation 1). Fixture from a pre-change worktree; coverage counts non-zero; `_provenance_sha` and the stamped config recorded.
+- [x] **CP-C0 — compat.** Claim diary note `34310732`; `git log` on the path empty before C0 (`eef30212`); positive half green at C0, negative half + shim green after C2; end-to-end collection store dir `ac5f70226a` = `env_fingerprint(raw)`; key lists in the report.
   - (a) **Before C0 starts:** a diary note claims the module path (N3). **Immediately before committing C0:** `git log --oneline -- src/environment/saved_config_compat.py`, with the output pasted.
   - (b) At C0: `test_saved_config_compat.py` (the positive half) is green. **After C2 (M3 gate):** the unconditional negative half is green (both raw loads fail), and the shim loads succeed with exactly six keys.
   - (c) **End to end, after C2 (N1 + N2):** a few-episode CPU `collect_trajectories.py` run on the Wave 2 level-05 run into a scratch out-root. Paste its printed injected-key list. Assert the store directory name equals `env_fingerprint` of the raw saved config.
   - (d) Also run the shim on the live saved configs of both gate runs and one Wave 1 level-06 run, and paste the key lists.
-- [ ] **CP2 — B1 stream isolation** (T-B1-3).
-- [ ] **CP3 — Off = today, three ways.** Parity test green, including jaxpr SHA equality and the contrast half. SHAs recorded.
-- [ ] **CP4 — B3 off path.** `update_body` jaxpr string identical before and after at `c = 0` on both worlds.
-- [ ] **CP5 — Unit tests** green.
-- [ ] **CP6 — Loader.** Every key raises when missing within its read condition; B4 bounds, structure pass, `both` transient and `with_injury` refusal exercised; the level-05 structure check passes at `g` ∈ {0, 1, 2} in `cooling_only`.
-- [ ] **CP7 — Roll-out and pre-flight.** `tests/` green on CPU with per-family pass/skip counts compared to the 2026-09-17 entry. Archived before/after counts reported. **Immediately before committing C2:** the live-collection pre-flight of §A7 run and its output pasted into the report; any live process means C2 waits.
-- [ ] **CP8 — Level 05 after C3, adversarial.**
+- [x] **CP2 — B1 stream isolation** (T-B1-3). Green: 1000 resets, every other leaf identical to the flag-off reset.
+- [x] **CP3 — Off = today, three ways.** `test_body_mechanics_parity.py` 21 passed: rollouts byte-identical, jaxpr SHAs identical, all 11 contrasts change rollout + jaxpr. Parity test green, including jaxpr SHA equality and the contrast half. SHAs recorded.
+- [x] **CP4 — B3 off path.** `update_body` jaxpr SHA identical at c = 0 on both worlds (lvl05 `b5a89ad6`, lvl04 `b58206f3`). `update_body` jaxpr string identical before and after at `c = 0` on both worlds.
+- [x] **CP5 — Unit tests** green: `test_body_mechanics_units.py` 85 passed.
+- [x] **CP6 — Loader.** All 15 keys raise when missing inside their read condition; B4 bound (10.9 / 11.5), full-injury pass, `both` threshold (g* = 0.4731, logged), `with_injury` refusal exercised; level 05 structure holds at g ∈ {0,1,2} cooling_only. Every key raises when missing within its read condition; B4 bounds, structure pass, `both` transient and `with_injury` refusal exercised; the level-05 structure check passes at `g` ∈ {0, 1, 2} in `cooling_only`.
+- [x] **CP7 — Roll-out and pre-flight.** tests/env 1109 → 1256 passed, 0 failed; parity families unchanged; archived 41 → 35 loadable; pre-flight clean (no live collection on 109–113) at 20:37 before `11b9a1b7`. `tests/` green on CPU with per-family pass/skip counts compared to the 2026-09-17 entry. Archived before/after counts reported. **Immediately before committing C2:** the live-collection pre-flight of §A7 run and its output pasted into the report; any live process means C2 waits.
+- [x] **CP8 — Level 05 after C3, adversarial.** (a) 600/600 in range (05 and 06); (b) pinned +5 × 1000 resets → max first step +10.779, max F +79.737, fire counts 330/334/336; (c) ring-settle +12.39; loader logs +10.78 INFO; (d) tests/env 1256 passed after C3.
   - The loader resolves B1 on with [−10, 5] for levels 05 and 06.
   - (a) 600 real resets at the configured range → every start within range.
   - (b) **Pinned `low == high == +5`**, at least 600 real resets, with the per-episode fire count logged so multi-fire layouts are visibly included. For every active fire cell, compute the first step onto it from +5 using that reset's real field value: `5 + s_w·(k_ex·(F − 5) − k_loss·5)`. Report the max and the max `F`. The level-05 range was chosen so this stays below +15. A value at or above +15 is **reported to the user, not a failure** ("allow, make visible"). Also confirm that the loader's own log line for level 05 reads +10.78 (INFO).
   - (c) The same from the loader-model ring settle, as a cross-check against the 09-19 figure of 12.3.
   - (d) `tests/` green after C3 (reviewer L4), including `test_truncation_not_death.py`.
-- [ ] **CP9 — Reward untouched.** No diff inside `calculate_drive`; `test_thermal_reward_gate.py` green without regeneration.
-- [ ] **CP10 — Speed.** Steps per second before/after on levels 05 and 04: same node, GPU and seed, with a budget past warm-up.
-- [ ] **CP11 — Docs** as listed, in the same commits.
-- [ ] **CP12 — Hand-offs.**
+- [x] **CP9 — Reward untouched.** `calculate_drive` not in the diff; `test_thermal_reward_gate.py` 18 passed, fixture not regenerated. No diff inside `calculate_drive`; `test_thermal_reward_gate.py` green without regeneration.
+- [x] **CP10 — Speed.** Local RTX 4090, 512 envs × 200-step scan: median SPS within run-to-run noise before/after on both levels (graph identical). Steps per second before/after on levels 05 and 04: same node, GPU and seed, with a budget past warm-up.
+- [x] **CP11 — Docs** as listed, in the same commits (C0: map §1e; C1: map §3; C2: guide, schema, 05, 06, registry, map §1c; C3: registry change log).
+- [ ] **CP12 — Hand-offs.** Not done by `developer` (no `Agent` tool): named for the parent in the Implementation Report.
   - `bug-curator`: the mandatory-key roll-out row, and "B3 partial starvation shares one predicate".
   - Compat-plan owner: the §Hand-off section.
   - `experiment-designer`: the §A0 observability caveat, and that the variant must state `healing_nutrition_shortfall: partial` explicitly.
@@ -793,14 +793,91 @@ Three items for later or for awareness:
 
 ## Implementation Report
 
-> **Implemented by**: [agent/person]
-> **Date**: [date]
+> **Implemented by**: developer (session `4efbe660`)
+> **Date**: 2026-09-26
 
-<!-- Filled by `developer`. Must include: pre-change SHA + fixture coverage counts (CP1); compat gate
-     results and printed key lists (CP-C0); jaxpr SHA-1s (CP3/CP4); files that received inert keys;
-     parity-family pass/skip counts; archived before/after counts; the live-collection pre-flight output
-     (CP7); the CP8 adversarial numbers (max first-step temperature, max F, fire-count distribution);
-     SPS before/after (CP10); deviations and why. -->
+**In plain words.** The five body mechanics (B1–B5) are in the environment, every one switched off by default, and the environment is provably unchanged when they are off: rollouts recorded from the old code match byte for byte, and the compiled step/reset graphs are identical. Old training runs' saved settings still load, through a small logged compatibility step that landed first. The only behaviour change is that curriculum level 05 (and level 06, which builds on it) now starts each episode at a random body temperature between −10 and +5; the worst first step onto a fire from +5 is +10.78, below the +15 death line, measured over 1,000 real resets including multi-fire layouts.
+
+### Commits
+
+| Step | Commit | What |
+|---|---|---|
+| claim | `34310732` | diary note claiming `src/environment/saved_config_compat.py` (N3) |
+| C0 | `eef30212` | saved-config compat step + 6 wired call sites + positive-half test + 2 verbatim saved configs; map §1e |
+| C1 | `8a865d9c` | pre-change fixture (from a worktree of `eef30212`) + generator; map §3 |
+| C2 | `11b9a1b7` | the mechanics, 15 keys, loader, inert-key roll-out, parity + units tests, compat negative half, docs |
+| C3 | `8d07a00f` | B1 on in level 05 ([−10, +5]); level 06 header note; registry change log |
+
+Order C0 → C1 → C2 → C3. The fixture was generated from a checkout of the pre-change commit (`eef30212` = C0, which touches no environment code) and committed before the mechanics.
+
+### File by file
+
+- **`src/environment/saved_config_compat.py`** (new, C0): `apply_saved_config_compat(cfg, *, source) -> list[str]`; `_ERA_KEYS` = the six §A7 rows, each with value, era and inert branch; refusal rules (a)–(d); one WARNING line. N3: `git log --oneline --all -- src/environment/saved_config_compat.py` was **empty** immediately before committing C0; no other session had landed the file.
+- **Call sites** (C0), all `cfg_load = copy.deepcopy(...)` → shim → `load_env_params(Config(cfg_load))`, each printing the key list: `collect_trajectories.py` (fingerprint/manifest keep the raw `cfg`), `eval_rollout.py` (only when the resolved config is outside `configs/`, new `_is_under_configs`), `nmn/replay.py`, `trajectory_glm.py`, `supplementary/parity.py`, **plus `obs_manipulation/run.py` (`--world training`)**, added 2026-09-24 and found by the plan's re-grep (deviation 2). The Dreamer probe paths were checked and left alone: they load probe configs from `configs/` merged over `default.yaml`, never a saved config. O1 grep: no `.replace(` on unpickled recording params beyond the existing `object.__setattr__` in `render_recordings_v2.py`.
+- **`state.py`** (C2): 15 static fields, M1 comment, `body_temp` comment.
+- **`config_loader.py`** (C2): B1/B2/B4 in the thermal arm (after the rate-scale block) with off-arm sentinels; B3/B5 after `recovery_in_bush_multiplier`; `_thermal_radial_equilibria(k_exchange_boosted, boost_mode)` with the per-ring same-side rule; `_check_thermal_structure(raise_on_failure, …)` (full-injury pass logs WARNING "at full injury — allowed by configuration"); new `_thermal_first_fire_step` for the B1 / B4-`both` log (one combined line). There is still no load-summary object (grep), so the log line is the record.
+- **`core.py`** (C2): D1 (`body_key1`), D2, D2b, D3, D4; `starved` appended at index 9; `jax_step` unpack and static reason-2 selection; ORDER comment extended; `calculate_drive` untouched.
+- **Configs** (C2): `default.yaml` (the plan's YAML verbatim, plus a doc-link line); body keys into the 11 standalone worlds (`configs/continual/nmn_double_return_stages/0[1-5]*`, `configs/verification/{observability_gates_S1-4,olfaction_parity_*}`), the frozen parity world ("ADDED AFTER THE FREEZE"), `tests/fixtures/trajectory_collection/dual_format_config.yaml`, and the 29 archived configs carrying the 2026-09-15 live-test-input note (27 body-only; the two campfire worlds also got the four thermal keys). `archive/basic_vec8/default.yaml` also carries the bush line but nothing loads it, so it was left alone.
+- **Inline YAML bases in 19 test modules** (C2): the two body keys next to `recovery_in_bush_multiplier` (the §A6 "34-file set"; the grep now returns 36 because it also matches the two verbatim C0 saved-run fixtures, which were not edited). This includes `test_no_recompile.py` and `test_visual_properties.py`: config lines only, no assertion changed.
+- **Tests**: `test_saved_config_compat.py` (16 at C0, 18 with the C2 negative half), `test_body_mechanics_parity.py` (21), `test_body_mechanics_units.py` (85). **R2**: the units module docstring explains why B5 is not in the graph-identity set. **R1**: `05_body_homeostasis.md` says B5 reads nutrition before this step's decay, with the 46.5-vs-46.55 example.
+- **Docs**: `CONFIG_GUIDE.md` §5 (keys, read conditions, pin with `low == high`, the compat step and its `_ERA_KEYS` rule); `02_config_schema.md` (mandatory lists, a table covering all 15 keys, static-field row); `05_body_homeostasis.md` (order, B1–B5, alive-at-0, runway finding); `06_reward_and_termination.md` (reason 2 under B3 partial, reason 5 reused, verbatim block); `CONFIG_CRITICAL_SETTINGS.md` (5 registry rows, C2 and C3 change-log entries); `SCRIPTS_DEPENDENCY_MAP.md` (§1e, §3, §1c).
+
+### Test results
+
+| Check | Result |
+|---|---|
+| `tests/env/`, CPU, pre-change (worktree `eef30212`) | 1109 passed, 1569 skipped, 0 failed |
+| `tests/env/` after C2 | **1256 passed, 1530 skipped, 0 failed** |
+| `tests/env/` after C3 | **1256 passed, 1530 skipped, 0 failed** (includes `test_truncation_not_death`) |
+| `test_body_mechanics_parity.py` | 21 passed (rollouts, jaxpr SHAs, drift check, coverage, 11 contrasts) |
+| `test_body_mechanics_units.py` | 85 passed |
+| `test_saved_config_compat.py` after C2 | 18 passed (both raw loads fail; shim supplies exactly six keys) |
+| Parity families, before → after | `thermal_parity` 12 / 398 skipped → same; `unified_parity` 34 / 711 → same; `visual_parity` 8 → 8; `extero_noc_parity` 3 → 3; `metabolic_coupling` 11 → 11; `directional_sensors` 28 → 28 |
+| Must-stay-green list | `thermal_rate_scales` 14, `recovery_in_bush` 8, `two_sided_nutrition` 22, `thermal_reward_gate` 18 (**not regenerated**), `no_recompile` 3, `truncation_not_death` 2, `config_layer_silent_failures_20260723` 5, `dashboard_layout` 123 — identical before and after |
+| `tests/ --ignore=tests/env`, main tree after C2 | 62 failed, 559 passed, 29 errors — all pre-existing: the 38 `test_trajectory_collection.py` failures/errors are `sensory.visual_value_mode ... required but missing` (also at the pre-C0 script: 33 F + 8 E); `test_modulation_input_slice::test_hand_computed_breakdown…` fails at the baseline too; `dreamer_srl/test_loss.py::test_symlog…` is flaky (4/4 on rerun). No failure names a new key. The worktree baseline (no `results/`) is not directly comparable. |
+
+jaxpr SHA-1s (params traced), identical before and after: level 05 `jax_step` `e3ddd681…`, `jax_reset` `96af4b00…`, `update_body` `b5a89ad6…`; level 04 `5c891836…`, `7625cffb…`, `b58206f3…`.
+
+### CP-C0 — compatibility gate
+
+- (b) Raw loads of both fixtures fail with `Configuration key 'thermal.random_start_body_temp' is required but missing`; through the shim both load with exactly the six keys.
+- (c) End to end on a real call site (N1 + N2): `collect_trajectories.py --run results/JAX_RecurrentPPO/20260922-182534_rppo_bq2cover_lvl05_t1none_s42 --episodes 4 --seed-base 900000 --shard-episodes 4 --obs-precision float32 --device cpu` into a scratch out-root printed `[collect] saved-config compat supplied: ['body.healing_nutrition_cost', 'body.healing_nutrition_dependence', 'thermal.healing_cold_sensitivity', 'thermal.healing_warm_sensitivity', 'thermal.injury_heat_exchange_gain', 'thermal.random_start_body_temp']` and created `…/10000012/ac5f70226a`; `env_fingerprint` of the raw saved config = `ac5f70226a` — **equal**. All 23 existing Wave 1 / Wave 2 store directories also equal `env_fingerprint` of their raw saved configs.
+- (d) Live saved configs of Wave 1 lvl05 `20260921-114858…`, Wave 2 lvl05 `20260922-182534…` and Wave 1 lvl06 `20260921-114905…`: raw load fails; the shim supplies the same six keys; the world builds.
+- Population: 542 saved `models/config.yaml`; 40 loaded at the pre-change commit; after C2, 0 load raw and **all 40 load through the shim** (16 thermal-on get six keys, 24 thermal-off get two).
+
+### CP7 — roll-out and pre-flight
+
+- Archived configs through `load_env_config` → `load_env_params`: 335 files, **41 → 35** loadable; the 6 lost are all `archive/basic_vec8/` (no test input; policy-accepted).
+- Pre-flight at 20:37:15, immediately before C2: `run_command.py --foreground <n> "pgrep -af 'collect_trajectories|run_collection'"` → `NONE` on 109–113; `gpu_status.py`: all ten GPUs on 109–113 FREE; today's diary: no collection entry.
+
+### CP8 — level 05 after C3, on real resets
+
+- Levels 05 and 06 resolve `random_start_body_temp: true`, [−10, +5]; loader log for both: `body +5.00 -> +10.78 (single-fire model, fire cell +79.73 at default_temp=-31, ratio=11)` at **INFO**.
+- (a) 600 resets each of levels 05 and 06: all in range (min −10.00, max +4.98, mean −2.57).
+- (b) Start pinned at +5, **1,000** resets, fire count 1 / 2 / 3 = 330 / 334 / 336: worst first step onto any active fire **+10.779** (per count 10.778 / 10.779 / 10.778); hottest fire cell **+79.737**. Nothing reached +15.
+- (c) From the ring settle beside each fire: worst first step **+12.39** (ring settle +6.84), against the 2026-09-19 figure of 12.3.
+- (d) `tests/env/` 1256 passed / 0 failed after C3.
+
+### CP10 — speed
+
+Local RTX 4090 (GPU 0), `tmp/20260926_bodymech_sps_bench.py`: 512 envs, 200-step jitted scan, 9 reps, two runs each. Median SPS before → after: level 05 4.60M / 4.80M → 4.65M / 4.62M; level 04 4.60M / 4.61M → 4.63M / 4.95M. Within run-to-run noise, as expected from an identical off-path graph. Not measured on a lab node.
+
+### Deviations (none silent)
+
+1. **Fixture streams auto-reset on `done`** (C1). The plan says "up to 300 steps each". With its action rule, random start injury up to 100 ends most level-04/05 episodes within ~5–40 steps, and 16 single episodes produced **zero** eat events, so the plan's own coverage gate refused to write. Each seed is now a 300-step stream that resets with `fold_in(PRNGKey(seed), e)` on `done`. Action rule, seeds, step budget and all coverage requirements are as planned.
+2. **Sixth call site** `scripts/analysis/obs_manipulation/run.py` (`--world training`), found by the §A7 re-grep; same deep-copy pattern; listed in the compat test and map §1e.
+3. **T-B4-6 / T-B4-7 follow Revision 3, not their Revision-2 wording** (they still say "refused"). T-B4-6 computes the level-05 `both` threshold from the loader model, **g\* = 0.4731**, and asserts 0.9 g\* logs INFO and 1.1 g\* logs WARNING and loads. T-B4-7 uses a synthetic ratio-14 world (ring +13.20 at injury 0, +15.84 at full injury in `both`) and asserts a WARNING in `both` and none in `cooling_only`. T-LOG-5 uses ratio 16.
+4. **`jax.clear_caches()` teardown in the two new test modules.** The first whole-suite run aborted inside XLA compilation in `test_bush_blocks_animals.py`: the new modules compile many distinct worlds and the process reached **65,479** memory mappings against this machine's `vm.max_map_count` of 65,530. With a per-test clear (parity) and a per-module clear (units) the peak is ~20k. Not a product bug; relevant to any future test that compiles many worlds in one process.
+5. **Strict bool validation** for the two new flags (`random_start_body_temp`, `healing_nutrition_dependence` must be YAML booleans), because `bool("false")` is `True`; existing flags use `bool(...)` coercion.
+6. `_ERA_KEYS` names the era "STATE_DEPENDENT_BODY_MECHANICS C2 (2026-09-26)" rather than a hash (C2 did not exist when C0 was written); the hash is `11b9a1b7`.
+
+### Needs the parent / user
+
+- **CP12 hand-offs** (no `Agent` tool here): `bug-curator` — the mandatory-key roll-out row and "B3 partial starvation shares one predicate"; the owner of [[SAVED_RUN_CONFIG_COMPAT]] — §Hand-off (the module exists since `eef30212` with six rows; their doc was not touched); `experiment-designer` — the §A0 observability caveat and that the B3 variant must state `healing_nutrition_shortfall: partial` explicitly.
+- Pre-existing, not introduced here: the 38 `tests/test_trajectory_collection.py` failures on `sensory.visual_value_mode` and one `test_modulation_input_slice` assertion. `bug-curator` may want to confirm both are recorded.
+- The plan-reviewer's addendum 2 (R1/R2) was uncommitted in this doc when implementation started; it is committed with this report.
+
+*Implemented by: developer*
 
 ## Verification Report
 
@@ -932,3 +1009,24 @@ No data-loss path exists in this plan. If M1 is left as written, the parity gate
 | N5 | The negative half ("raw load must fail") is committed in C2 as an unconditional assertion; C0 carries only the positive half. |
 | Key count | Fifteen keys (nine from Revision 2 plus six B5 keys); six compat rows. |
 
+
+## Feedback from plan-reviewer — addendum 2 (confirming pass on Revision 3, commit `2004b234`)
+
+> **Verdict**: **SOUND — ready for user approval.** N1–N5 are resolved as claimed; B5's mathematics and every worked number check; "log, don't refuse" introduces no hazard beyond the one the user accepted. Two Low notes, neither blocking.
+
+**(a) B5 math — verified.** `f_hunger ∈ [f_h, 1]` non-decreasing, `f_over ∈ [f_o, 1]` non-increasing, product in [0, 1]; `N_lo < N_hi` and `N_os < N_max` are strict so neither denominator can be zero; `N_hi ≤ N_os` keeps the ramps disjoint, so the product is rising / flat / falling as stated. Off = flag false = untraced. The worked table (1.0 / 2.5 / 5.0 / 5.0 at 20 / 50 / 100 / 150; 3.5 at 180 with the over-full ramp) and T-B5-1…5 all recompute exactly. **The B3×B5 table was re-simulated from §A3's rules in both shortfall modes: all eight rows reproduce** (the plan's 37, 52.5 and 53.5 are roundings of 36.986, 52.476 and 53.476). Ordering: B2 → B5 → B3 `h_nom` is a chain of multipliers, so B3 pays for the slowed heal automatically. B5 reads `state.nutrition` (before this step's decay) while B3-partial caps on `N_pre` (after decay, drain and food) — a deliberate one-step lag consistent with B2/B4/A1's pre-step convention, and T-B5-5 pins it (factor at 50, not 49).
+
+**(b) Logging instead of refusing — no new hazard.** The stability bound still refuses (a numerical defect, not an outcome); the injury-0 structure check still refuses via the default `raise_on_failure=True`, so world-validity policy is untouched and only outcome-level checks under configurable mechanics are demoted to WARNING. T-LOG-1 (level 05 logs +10.78 at INFO) is now the standing regression guard on the fire calibration, which is the right place for it once the loader no longer enforces it.
+
+**(c) N1–N5 — resolved.** Deep-copy injection with unit test (vi) and the end-to-end CP-C0(c) (N1 + N2); diary claim plus `git log` before committing C0 (N3); `starved` appended at index 9 (N4); negative half unconditional in C2 (N5).
+
+**(d) New — Low only.**
+
+| # | Sev | Location | Note | Owner |
+|---|---|---|---|---|
+| R1 | 🟢 | §A4b / `05_body_homeostasis.md` | Say explicitly that B5 reads nutrition **before this step's decay** (one step behind B3's `N_pre` cap). It is correct and pinned, but a reader comparing T-B5-5 (46.5) with a post-decay expectation (46.55) will otherwise suspect a bug. | `developer` (docs) |
+| R2 | 🟢 | File Changes, graph-identity tests (line 691) | The list correctly omits B5 — `state.nutrition` is always consumed by the nutrition block, so a positional "leaf unused" test cannot express B5's inertness; parity + jaxpr SHA cover it. State that in the test module docstring so nobody later "completes" the set and gets a false failure. | `developer` |
+
+**Cost of being wrong now:** unchanged from addendum 1 — no data loss; the mechanics carry no wrong-conclusion risk at their inert values.
+
+*Reviewed by: plan-reviewer — addendum 2, 2026-09-26*
