@@ -9,8 +9,15 @@ aliases: [bush_fire_clearance]
 
 # Keep bushes away from campfires: a configurable world-generation rule
 
-> **Status**: PLANNED. Waiting on the user's decisions in §Decisions, then `plan-reviewer`, then approval. Nothing is implemented.
+> **Status**: PLANNED, Revision 1. `plan-reviewer` has reviewed it (SOUND WITH CONCERNS), and its findings are resolved below. Still waiting on the user's decisions in §Decisions, then approval. Nothing is implemented.
 > **Opened**: 2026-09-26
+
+> **Revision 1 (2026-09-26), responding to the plan-reviewer feedback at the end of this doc (commit `8ec6b4e2`).** D1 and D2 are **not** resolved. The user still decides them.
+> - **M1**: CP0 and the parallel-edit warning now also cover `src/environment/saved_config_compat.py` and `tests/env/test_saved_config_compat.py`. The compat all-or-none check now groups keys by the era string of every row in `_ERA_KEYS`, so it no longer depends on two named constants. It therefore also covers eras the compat owner adds first. The `core.py` / `config_loader.py` warning is marked as clean at HEAD, but the check is still run.
+> - **M2**: the §A3 bound now counts **all** bush slots across every bush entry, and `n_other` excludes all of them. A refusal test with two bush entries has been added.
+> - **M3**: CP6 now gates on the set of fire cells being exactly equal, per seed, at v and at 0. The temperature table is printed but is not a gate.
+> - **L1**: the `_SIX` → seven-key test change moves into C0. **L2**: the reason given for off-parity with the float leaf is corrected. **L3**: the hand-off to `bug-curator` names rows 117, 119 and 123. **L4**: the dependency map also lists the new generator as a caller of the body-mechanics generator.
+> - D1 gains the point that metabolic coupling makes a diagonal bush cost food. D2 gains the two facts about "burning only".
 > **Related**: [[STATE_DEPENDENT_BODY_MECHANICS]] (the closest precedent: static off-switch keys, the parity fixture, the saved-run compat slice) · [[SAVED_RUN_CONFIG_COMPAT]] (general old-run loading plan; **read, not edited**, another session owns it) · [[IMPLEMENTATION_PLAN]] (thermal; where the fire-separation and food-distance placement rules were built) · [[WARMING_COOLING_RATE_SCALES]] (the body-temperature settling point used below) · [[KNOWN_BUGS]] (row "An entity whose spawn area is full is silently parked at cell (0,0)") · the internal-state interaction study, `docs/experiments/active/internal_state_interactions/STUDY_PLAN.md` (the motivation; owned by the experiment agents; backlink to be added by them)
 
 ---
@@ -54,11 +61,16 @@ The subtlety is that the diagonal cells sit at the same step count as the cold "
 
 **Recommendation: B.** The study's point is that warmth and safety should never be available in the same cell. A diagonal bush where the agent can wait indefinitely is still most of that shortcut.
 
+**One more input (from plan-reviewer, Revision 1).** "The agent can hide there forever" at a diagonal bush is true **for temperature only**. When "staying warm costs food" is on (`thermal.metabolic_coupling`, one of the study's own factors, `core.py:265–269`), holding the body at −10.6 burns food **every step**. So under coupling the diagonal bush is already a shortcut whose value depends on how full the agent is. It keeps the body-state interaction the study measures instead of removing it. This does not flip the recommendation, but it means Option A may be enough for the coupled arm, while only Option B is enough for the uncoupled arm. The user decides with this in view.
+
 ### D2 — Do fires that are not burning this episode count?
 
 Level 05 allocates three fire slots and lights one to three of them per episode. The world generator places all three slots first and decides which ones burn afterwards.
 
 - **Burning fires only (recommended).** Bushes avoid only real fires. Compared with level 05, the bush layout changes only near fires that actually exist, which is the cleanest contrast for the experiment. It costs about 10 extra lines: the "which fires burn" draw has to be available before bushes are moved. That draw never depends on positions, so this moves no random number.
+  Two consequences to accept with this option (from plan-reviewer, Revision 1):
+  1. **Bush positions then depend on the fire-lighting random stream** (`property_key`, which today decides only counts and properties, never positions). Any future tool that rebuilds a layout from the placement stream alone would get the bushes wrong.
+  2. **The thermal block would hold two fire rules with different meanings of "fire".** The food-vs-fire rule (`food_min_fire_distance`) counts every fire slot, and the bush rule would count burning fires only. `02_config_schema.md` and the `default.yaml` comment must say so for each key.
 - **Every fire slot.** This matches how the two existing fire rules work. It is simpler, but in an average episode about one ghost fire leaves an unexplained bush-free patch (13 cells under D1-B) where nothing is burning.
 
 ### Not decisions (stated so they can be objected to)
@@ -82,8 +94,8 @@ Known-bug rows on placement, reset and PRNG (grepped from `KNOWN_BUGS.md`, not l
 
 | Row | Bearing on this plan |
 |---|---|
-| **An entity whose spawn area is full is silently parked at cell (0,0)** (OPEN, `KNOWN_BUGS.md:117`) | The relocation helper this plan reuses (`relocate_blocked_entities`) carries that same silent fallback. This plan does **not** fix the row. It makes the fallback unreachable for the new pass with a load-time feasibility check (§A3), and the test asserts every bush lands inside its own spawn area over 1,000 resets. After landing, `bug-curator` should note the new, guarded caller on the row. |
-| **Environment reset is not bit-identical across compilations** (one-ULP float difference, 2026-08-20) | The parity fixture and test run on CPU only (conftest), as the body-mechanics precedent does. Positions are integers and are unaffected. |
+| **An entity whose spawn area is full is silently parked at cell (0,0)** (OPEN, `KNOWN_BUGS.md:117`) | The relocation helper this plan reuses (`relocate_blocked_entities`) carries that same silent fallback. This plan does **not** fix the row. It makes the fallback unreachable for the new pass with a load-time feasibility check (§A3), and the test asserts every bush lands inside its own spawn area over 1,000 resets. After landing, `bug-curator` should note the new, guarded caller on the row (see §Hand-off to `bug-curator`, which also names rows 119 and 123). |
+| **Environment reset is not bit-identical across compilations** (one-ULP float difference, 2026-08-20) | The parity fixture and test run on CPU only (conftest), as the body-mechanics precedent does. The test compares **every** `EnvState` leaf, including the float `animal_property_sampled` that this row says can drift. It is safe because at value 0 the graph is identical, so XLA makes the identical fusion choice and produces identical floats. That is also why the precedent's rollout parity test passed. (Revision 1: the earlier reason, "positions are integers", did not cover the float leaf.) |
 | rPPO rollout reused reset and step PRNG bits; stochastic eval reused one key (both FIXED) | These concern the trainer's key handling, not `jax_reset`. Not touched here. |
 
 ### A1 — Where placement happens today (code as truth, `v4.0`, 2026-09-26)
@@ -131,10 +143,16 @@ For each distinct spawn area `A` of a bush entry, require
 |A|  −  n_fire_slots · D(v)  −  n_other_slots  ≥  n_bush_slots
 ```
 
-- `D(v) = 2v² − 2v + 1` is the number of cells at Manhattan distance `< v` from a fire, the fire's own cell included. D(2) = 5, D(3) = 13 (option C: `(2v−1)²` = 9).
-- `n_other_slots` = every resource, animal and non-bush, non-fire obstacle slot. Any of them might sit inside `A`.
+The three counts are **config-wide, the same for every area `A`** (Revision 1, M2):
 
-**Why it is sufficient.** When the last bush moves, at most `n_fire·D(v)` cells of `A` are blocked, and at most `n_other + n_bush − 1` are held by other entities. So at least one valid cell remains. Edge clipping of the blocked disks only makes the real count larger.
+- `n_bush_slots` = **all** bush slots (`hides_agent & ~heat_source`) summed over **every** bush entry in the config, at `count_high`. It is **not** the slots of the entry whose area is being checked.
+- `n_fire_slots` = all heat-source obstacle slots, at `count_high`.
+- `n_other_slots` = every remaining slot: resources, animals and non-bush, non-fire obstacles. It excludes all bush slots and all fire slots. Any of them might sit inside `A`.
+- `D(v) = 2v² − 2v + 1` is the number of cells at Manhattan distance `< v` from a fire, the fire's own cell included. D(2) = 5, D(3) = 13 (option C: `(2v−1)²` = 9).
+
+The per-entry reading would be unsafe. With two bush entries of different areas, bushes of the large-area entry can sit inside the small area, and a per-entry count misses them. The loader would pass the world, and a bush could still hit the (0,0) fallback.
+
+**Why it is sufficient.** When the last bush moves, at most `n_fire·D(v)` cells of `A` are blocked, and at most `n_other + n_bush − 1` are held by other entities, counting bushes of every entry. So at least one valid cell remains. Edge clipping of the blocked disks only makes the real count larger.
 
 **Level 05 at `count_high`:** |A| = 100 (bush area is the whole grid), fire slots 3, bush slots 10, other slots 45 − 10 − 3 = 32.
 
@@ -297,10 +315,18 @@ Anchors: the D2/D3 reads (~1608–1618), the thermal-off pins (~1827), the `per_
    - no obstacle slot is a heat source (`core.heat_source_mask`), or no obstacle slot has `hides_agent`. A rule that is set but has nothing to act on is a config mistake;
    - any obstacle slot is both a heat source and `hides_agent`. The rule would be self-contradictory;
    - any **resource** slot is a heat source. Resources stamp heat into the field, but the rule only sees obstacle fires, so a warm bush could survive silently;
-   - the §A3 bound fails for any bush entry's spawn area. The message names the entry, `|A|`, `n_fire_slots·D(v)`, `n_other_slots` and `n_bush_slots`.
+   - the §A3 bound fails for any bush entry's spawn area. `n_bush_slots` is the config-wide total over all bush entries, and `n_other_slots` excludes every bush and fire slot (§A3, M2). The message names the entry, `|A|`, `n_fire_slots·D(v)`, `n_other_slots` and `n_bush_slots`.
 5. Pass `thermal_bush_min_fire_distance=_th_bush_min_dist` to `EnvParams`.
 
-A parallel session has uncommitted edits in `config_loader.py` and `core.py`. Before starting, the developer runs `git diff -- src/environment/config_loader.py src/environment/core.py`. If those hunks are still uncommitted, the developer waits or coordinates. Never commit another session's hunks.
+**Parallel edits (CP0).** When this plan was drafted, a parallel session had uncommitted edits in `config_loader.py` and `core.py`. Those landed in `7b77d13d`, so both files are clean at HEAD, but the check still runs. A more live hazard is the compat module that C0 rewrites. Its owner ([[SAVED_RUN_CONFIG_COMPAT]]) is editing its plan, and its next slice adds new `_ERA_KEYS` rows to the same module. Before C0 and again before C2, the developer runs:
+
+```bash
+git diff HEAD -- src/environment/config_loader.py src/environment/core.py \
+                 src/environment/saved_config_compat.py tests/env/test_saved_config_compat.py
+git log --oneline -5 -- src/environment/saved_config_compat.py tests/env/test_saved_config_compat.py
+```
+
+If any of these shows foreign hunks or `_ERA_KEYS` rows that are new since this plan, the developer coordinates before C0 and re-derives the C0 regression test against the module as it then stands. Never commit another session's hunks.
 
 #### `src/environment/saved_config_compat.py`
 
@@ -312,8 +338,8 @@ A parallel session has uncommitted edits in `config_loader.py` and `core.py`. Be
       "static `if params.thermal_bush_min_fire_distance > 0` in core.jax_reset; 0 = the "
       "bush pass is not traced (tests/env/test_bush_fire_clearance.py parity)."),
   ```
-- Replace the block-level `_THERMAL_KEYS` / `_BODY_KEYS` all-or-none with per-**(block, era)** groups. Supply thermal groups only when `thermal.enabled` is true. Keep the refusal wording (`"thermal block carries"`, `"body block carries"`) and the WARNING line.
-- Update the module docstring: `_ERA_KEYS` now holds two eras, and all-or-none is per era (§A6).
+- Replace the block-level `_THERMAL_KEYS` / `_BODY_KEYS` all-or-none with per-**(block, era)** groups. **Build the groups generically** from the table itself (Revision 1, M1): group every `_ERA_KEYS` row by `(block prefix, era string)`, for whatever eras the table holds. Do not hard-code the two constants `_ERA_BODY_MECHANICS` and `_ERA_BUSH` in the grouping logic. That way a Stage 1/2 era added by the compat owner, before or after this change, is covered without further edits. Supply thermal groups only when `thermal.enabled` is true. Keep the refusal wording (`"thermal block carries"`, `"body block carries"`) and the WARNING line.
+- Update the module docstring: `_ERA_KEYS` can hold several eras, and all-or-none is checked per (block, era) (§A6).
 
 #### `configs/environment/default.yaml` (thermal block, after `food_min_fire_distance: 0`)
 
@@ -362,15 +388,16 @@ Output: `tests/env/fixtures/bush_fire_clearance_parity/pre_change_resets.npz`.
 | `test_on_moves_only_bushes` | Same seeds on vs off. `res_pos`, `animal_pos`, every non-bush `obs_pos`, `obs_active`, `thermal_field` and all sampled properties are identical. Some bush positions differ (not vacuous). |
 | `test_on_changes_the_reset_graph` | At v > 0 the `jax_reset` jaxpr SHA differs from value 0. This is the contrast that makes the off-parity test non-vacuous. |
 | `test_existing_rules_still_hold_when_on` | With `food_min_fire_distance: 4` and the bush rule on: fire separation ≥ `min_fire_separation`, no food at `< 4`, no bush at `< v`. |
-| `test_loader_refusals` (parametrized) | Refuses −1; refuses 1; refuses `per_type`; refuses no fire slot; refuses no bush slot; refuses a slot that is both bush and fire; refuses a resource heat source; refuses the infeasible world (e.g. 5×5 grid, 3 fires, 10 bushes). Each with a message regex. |
+| `test_loader_refusals` (parametrized) | Refuses −1; refuses 1; refuses `per_type`; refuses no fire slot; refuses no bush slot; refuses a slot that is both bush and fire; refuses a resource heat source; refuses the infeasible world (e.g. 5×5 grid, 3 fires, 10 bushes); **refuses a two-bush-entry world** (M2) in which one entry has a small spawn area that passes the per-entry reading of the bound but fails the config-wide one. The developer records both sides of the arithmetic in the test's comment. Each with a message regex. |
 | `test_thermal_off_needs_no_key` | A thermal-off config without the key loads, and the field is 0. |
 
 #### Existing tests to update
 
-- `tests/env/test_saved_config_compat.py`:
+- `tests/env/test_saved_config_compat.py` (**all of these land in C0**, not C2. C0 changes what the compat step supplies, so C0's own gate is red without them. Revision 1, L1):
   - `_SIX` → the seven expected keys (the two fixtures are thermal-on); rename `test_fixture_loads_through_shim_with_exactly_six_keys` accordingly;
   - **add the regression test** `test_body_mechanics_era_config_gets_only_the_bush_key`. A fixture with the four body-mechanics thermal keys and the two body keys present, but no bush key, gets exactly `["thermal.bush_min_fire_distance"]` and is not refused. **This test must fail on today's module** (it raises "thermal block carries"). The developer records that failure before the fix;
-  - add `test_partial_era_group_is_still_refused` (two of the four body-mechanics thermal keys, with the bush key present, is still refused).
+  - add `test_partial_era_group_is_still_refused` (two of the four body-mechanics thermal keys, with the bush key present, is still refused);
+  - add `test_era_grouping_is_generic`: patch a third, synthetic era row into `_ERA_KEYS` (monkeypatch) and check that a config missing only that era's keys gets exactly those keys, and that a partial set of that era is refused. This proves the grouping is not tied to the two named constants (M1).
 - `tests/env/test_body_mechanics_parity.py`: its drift check drops only its own 15 keys, and the resolved level-05 config at HEAD will now carry the new key. Add a separate `LATER_INERT_KEYS = ("thermal.bush_min_fire_distance",)`, dropped in `test_no_unrelated_config_drift`, with a comment pointing here. Its jaxpr and rollout tests must pass **unchanged**, which independently corroborates off-parity.
 - `tests/env/test_thermal_field.py::test_placement_constraints_are_noops_when_disabled`: set and assert the new key at 0 alongside the two existing ones.
 - `tests/env/test_thermal_validation.py`: add the new key to the missing-key parametrization (the `stage1_food_min_fire_distance` pattern, ~line 216) and a negative-value case.
@@ -387,14 +414,15 @@ Output: `tests/env/fixtures/bush_fire_clearance_parity/pre_change_resets.npz`.
 - `docs/environment/CONFIG_GUIDE.md`: the thermal block listing (~317) and the placement notes (~414): one line plus a short note (off = today, the refused values, it moves only bushes, the feasibility refusal).
 - `docs/environment/02_config_schema.md`: a row next to `food_min_fire_distance` (~83) and a sentence in the placement paragraph (~171).
 - `docs/environment/CONFIG_CRITICAL_SETTINGS.md`: a registry row for `thermal.bush_min_fire_distance` (canonical **0**, `default.yaml`, what it does, "0 is the only value that leaves the placement graph unchanged", read only when thermal is on). Plus a **dated change-log entry**: new key added, canonical off, no world enables it, saved runs get 0 through the compat step, parity result.
-- `docs/environment/SCRIPTS_DEPENDENCY_MAP.md`: add the new fixture generator (caller: `tests/env/test_bush_fire_clearance.py`, via the fixture) and the `measure_world.py` flags in the `internal_state_interactions` row.
+- `docs/environment/SCRIPTS_DEPENDENCY_MAP.md`: add the new fixture generator (caller: `tests/env/test_bush_fire_clearance.py`, via the fixture) and the `measure_world.py` flags in the `internal_state_interactions` row. **Also** add the new generator as a caller in the existing row for `generate_body_mechanics_parity_fixture.py` (row ~243), because the new generator imports it (Revision 1, L4).
+- `docs/environment/02_config_schema.md` and the `default.yaml` comment, under D2 "burning only": state for each fire-distance key which fires it counts (food rule: every slot; bush rule: burning only).
 - Any other `docs/environment/*` page that documents `food_min_fire_distance`: the developer greps and mirrors.
 
 ### Commit sequence
 
 | Commit | Content | Gate |
 |---|---|---|
-| C0 | Compat per-era grouping plus the new row, compat tests (the regression test fails first, then passes). | `pytest tests/env/test_saved_config_compat.py` green. Supplying a key the loader does not yet read is harmless, because the loader ignores unknown keys. |
+| C0 | Compat per-era grouping plus the new row, and all compat test edits including the `_SIX` → seven-key change (the regression test fails first, then passes). | `pytest tests/env/test_saved_config_compat.py` green. Supplying a key the loader does not yet read is harmless, because the loader ignores unknown keys. |
 | C1 | Fixture generator plus the fixture, from a pre-change worktree. | Fixture `_provenance_sha` = the C0 commit. |
 | C2 | state, core, loader, default.yaml, archived test inputs, new tests, existing-test edits, docs. | `pytest tests/env` green; `test_body_mechanics_parity.py` and `test_thermal_parity.py` green unchanged except the drift ignore. |
 | C3 | `measure_world.py` flags plus the verification run (CP6). | CP6 numbers recorded. |
@@ -405,13 +433,13 @@ Output: `tests/env/fixtures/bush_fire_clearance_parity/pre_change_resets.npz`.
 
 ## Checkpoints
 
-- [ ] **CP0**: before any code, run `git diff` on `core.py` / `config_loader.py`. If there are foreign uncommitted hunks, coordinate. Record it.
+- [ ] **CP0**: before C0 and again before C2, run the `git diff` / `git log` pair from §File Changes ("Parallel edits") on `core.py`, `config_loader.py`, `saved_config_compat.py` and `test_saved_config_compat.py`. If there are foreign uncommitted hunks, or `_ERA_KEYS` rows new since this plan, coordinate and re-derive the C0 regression test. Record the output.
 - [ ] **CP1**: the compat regression test fails on the pre-C0 module with "thermal block carries". Paste the output.
 - [ ] **CP2**: the fixture was generated in a worktree at a named SHA, and `_provenance_sha` matches.
 - [ ] **CP3**: off-parity: jaxpr SHAs and 64-seed reset leaves identical for all four worlds.
 - [ ] **CP4**: on: 1,000 resets at each tested v give 0 violations, 0 bushes outside their area, and 0 shared cells. Non-bush state is identical to off.
 - [ ] **CP5**: loader: each refusal fires with its message. The level-05 feasibility margin for the chosen v is logged and matches §A3 (53 / 29 / 41).
-- [ ] **CP6**: run `measure_world.py --src-root <repo> --resets 300 --bush-min-fire-distance <v> --out tmp/<ts>_bush_clearance_measure.json`. Required: `warm_bush_episode_share == 0.0` and `share_of_bushes_on_a_fire_ring == 0.0`. Under D1-B, also 0 bushes in the diagonal class. The cell-temperature-by-distance table is unchanged from `world_measurements.json` within sampling noise, because fires do not move. Paste the JSON summary.
+- [ ] **CP6**: run `measure_world.py --src-root <repo> --resets 300 --bush-min-fire-distance <v> --out tmp/<ts>_bush_clearance_measure.json`. Required: `warm_bush_episode_share == 0.0` and `share_of_bushes_on_a_fire_ring == 0.0`. Under D1-B, also 0 bushes in the diagonal class. **Exact fire check (Revision 1, M3):** run the same 300 seeds at 0 as well. For **every** seed, the set of fire cells (`thermal_field > 40`) at v must equal the set at 0 exactly. One mismatch fails CP6. The cell-temperature-by-distance table is printed as a sanity summary only. It is not a gate. Paste the JSON summary and the count of mismatched seeds (required: 0 of 300).
 - [ ] **CP7**: a saved Wave 2 level-05 config still loads through the compat step and gets 0 for the new key. The store fingerprint equals `env_fingerprint(raw)`.
 - [ ] **CP8 (speed)**: `jax_reset` throughput (vmapped, 1,024 envs, CPU and one GPU) at 0 vs the chosen v; plus a short level-05 rPPO run at value 0 vs HEAD. Expected: no change at 0 (identical graph), and a small reset-only cost when on. Record before/after.
 
@@ -419,6 +447,15 @@ Output: `tests/env/fixtures/bush_fire_clearance_parity/pre_change_resets.npz`.
 
 - `_ERA_KEYS` gains a second era (this key). All-or-none is now checked per (block, era), not per block. This matches that plan's own "keys are independent" design item.
 - The value `0` is a claim about old code: before this change there was no bush pass. Changing it later is a breaking change for trajectory stores, per that module's rule.
+- The grouping is generic over era strings, so eras that owner adds are covered without editing the grouping logic.
+
+## Hand-off to `bug-curator` (after landing; Revision 1, L3)
+
+A one-line touch on each of three rows in `KNOWN_BUGS.md`:
+
+- **Row 117** (an entity whose spawn area is full is silently parked at (0,0)): a new, guarded caller of `relocate_blocked_entities`. The load-time bound makes the fallback unreachable for it.
+- **Row 119** (mandatory keys landing without migrating the archive): one more thermal-conditional mandatory key. Every archived thermal-on config that is not a live test input now lacks it, by policy.
+- **Row 123** (saved configs stop loading): the compat step now supplies a seventh key, and all-or-none is checked per (block, era).
 
 ## Out of scope
 
