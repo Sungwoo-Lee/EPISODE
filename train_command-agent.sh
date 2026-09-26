@@ -4218,6 +4218,10 @@ cd /media/nas01/projects/Interoceptive-AI/grid_world_pain
 # | P12 | .../pilots/p12_a4trip_food1to2.yaml                     | 113:0    |         |
 # | P13 | .../pilots/p13_a4trip_food1to1.yaml                     | 113:1    |         |
 # Launched via CIFS-bypass /tmp scripts + run_command.py --no-tail.
+# RELAUNCH 2026-09-27 01:16: P12/P13 stuck at XLA compile on 113 (node SSH-unreachable;
+# abandoned WandB c3wd9snn / 35f5vjgq). Relaunched identically on 101:0 (P12, WandB
+# e8pc7ajl, logs/20260927_011649.log) and 101:1 (P13, WandB nuy4mx32,
+# logs/20260927_011655.log). The 113 processes were NOT killed (node unreachable).
 #
 # Representative active command (P13 — node 113 cuda:1). The other fifteen differ
 # only in --config, --device, the tag pair, and --seed for P0b/P0c.
