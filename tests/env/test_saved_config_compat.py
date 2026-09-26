@@ -4,20 +4,22 @@
 its settings (`results/<algo>/<run>/models/config.yaml`). Evaluation, replay and
 trajectory collection rebuild the run's world from that copy. The body-mechanics change
 (`docs/develop/active/thermal/STATE_DEPENDENT_BODY_MECHANICS.md`) adds six settings
-that the loader requires, so without help every frozen copy would stop loading.
-`src/environment/saved_config_compat.py` fills in exactly those six settings, at the
-values that reproduce the old behaviour, and only for saved run configs -- never for a
-live file under `configs/`.
+that the loader requires, and the bush-to-fire clearance change
+(`docs/develop/active/thermal/BUSH_FIRE_CLEARANCE.md`) adds a seventh, so without help
+every frozen copy would stop loading. `src/environment/saved_config_compat.py` fills in
+exactly those seven settings, at the values that reproduce the old behaviour, and only for
+saved run configs -- never for a live file under `configs/`.
 
 The two fixtures are verbatim copies of real Wave 1 and Wave 2 level-05 saved configs
 (`tests/env/fixtures/saved_run_configs/`). A missing fixture FAILS, never skips.
 
 What is pinned here:
-  (i)   both fixtures load through the shim, which supplies exactly the six keys;
+  (i)   both fixtures load through the shim, which supplies exactly the seven keys;
   (ii)  the raw load of each fixture raises the missing-key error (the reason the shim
         exists -- unconditional, not dependent on which commit runs it);
   (iii) a `source` under `configs/` is refused;
-  (iv)  a partial thermal set, or a partial body set, is refused;
+  (iv)  a partial set of one era's thermal keys, or a partial body set, is refused;
+        all-or-none is per (block, era), so a run from between two eras is NOT refused;
   (v)   keys already present are not overwritten;
   (vi)  the deep-copy pattern: the caller's dict (and so the trajectory-store
         fingerprint) is unchanged, and every wired call site injects into a deep copy;
@@ -41,13 +43,14 @@ _FIXTURES = (
     "20260921-114858_rppo_basicq2_lvl05_t1none_s42.yaml",  # Wave 1, level 05
     "20260922-182534_rppo_bq2cover_lvl05_t1none_s42.yaml",  # Wave 2, level 05
 )
-_SIX = sorted([
+_SEVEN = sorted([
     "thermal.random_start_body_temp",
     "thermal.healing_cold_sensitivity",
     "thermal.healing_warm_sensitivity",
     "thermal.injury_heat_exchange_gain",
     "body.healing_nutrition_cost",
     "body.healing_nutrition_dependence",
+    "thermal.bush_min_fire_distance",   # BUSH_FIRE_CLEARANCE era
 ])
 # A path outside configs/ -- the saved-run shape. Never read; only resolved.
 _SAVED_SOURCE = os.path.join(_REPO, "results", "JAX_RecurrentPPO", "x", "models", "config.yaml")
@@ -80,12 +83,12 @@ def _get(cfg, dotted):
 
 
 @pytest.mark.parametrize("name", _FIXTURES)
-def test_fixture_loads_through_shim_with_exactly_six_keys(name):
-    """(i) Positive half: the shim supplies exactly the six keys and the world builds."""
+def test_fixture_loads_through_shim_with_exactly_seven_keys(name):
+    """(i) Positive half: the shim supplies exactly the seven keys and the world builds."""
     raw, path = _load_fixture(name)
     cfg_load = copy.deepcopy(raw)
     supplied = apply_saved_config_compat(cfg_load, source=path)
-    assert supplied == _SIX
+    assert supplied == _SEVEN
     params = load_env_params(Config(cfg_load))
     assert params.thermal_enabled
 
@@ -134,7 +137,8 @@ def test_present_keys_are_not_overwritten():
     raw, _ = _load_fixture(_FIXTURES[1])
     cfg = copy.deepcopy(raw)
     cfg["thermal"].update(random_start_body_temp=True, healing_cold_sensitivity=0.1,
-                          healing_warm_sensitivity=0.05, injury_heat_exchange_gain=1.0)
+                          healing_warm_sensitivity=0.05, injury_heat_exchange_gain=1.0,
+                          bush_min_fire_distance=3)
     cfg["body"].update(healing_nutrition_cost=0.5, healing_nutrition_dependence=True)
     before = copy.deepcopy(cfg)
     assert apply_saved_config_compat(cfg, source=_SAVED_SOURCE) == []
@@ -201,3 +205,58 @@ def test_supplied_values_are_the_inert_values():
     assert _get(cfg, "thermal.injury_heat_exchange_gain") == 0.0
     assert _get(cfg, "body.healing_nutrition_cost") == 0.0
     assert _get(cfg, "body.healing_nutrition_dependence") is False
+    assert _get(cfg, "thermal.bush_min_fire_distance") == 0
+
+
+# --- BUSH_FIRE_CLEARANCE C0: all-or-none is checked per (block, era), not per block ------
+
+_BODY_MECH_THERMAL = dict(random_start_body_temp=False, healing_cold_sensitivity=0.0,
+                          healing_warm_sensitivity=0.0, injury_heat_exchange_gain=0.0)
+
+
+def test_body_mechanics_era_config_gets_only_the_bush_key():
+    """A run trained after the body-mechanics change but before the bush-clearance key.
+
+    It carries all four body-mechanics thermal keys and both body keys, and lacks only
+    `thermal.bush_min_fire_distance`. It must get exactly that key and must NOT be refused
+    as an edited file (a block-level all-or-none would call it "4 of 5 present").
+    """
+    raw, _ = _load_fixture(_FIXTURES[1])
+    cfg = copy.deepcopy(raw)
+    cfg["thermal"].update(_BODY_MECH_THERMAL)
+    cfg["body"].update(healing_nutrition_cost=0.0, healing_nutrition_dependence=False)
+    assert apply_saved_config_compat(cfg, source=_SAVED_SOURCE) == [
+        "thermal.bush_min_fire_distance"]
+    assert cfg["thermal"]["bush_min_fire_distance"] == 0
+
+
+def test_partial_era_group_is_still_refused():
+    """Two of the four body-mechanics thermal keys, with the later bush key present, is
+    still an edited file: all-or-none holds inside each era."""
+    raw, _ = _load_fixture(_FIXTURES[1])
+    cfg = copy.deepcopy(raw)
+    cfg["thermal"].update(random_start_body_temp=False, healing_cold_sensitivity=0.0,
+                          bush_min_fire_distance=0)
+    with pytest.raises(ValueError, match="thermal block carries"):
+        apply_saved_config_compat(cfg, source=_SAVED_SOURCE)
+
+
+def test_era_grouping_is_generic(monkeypatch):
+    """The grouping is built from the era strings in `_ERA_KEYS`, not from named constants:
+    a synthetic third era is supplied whole when absent and refused when partial."""
+    import src.environment.saved_config_compat as compat
+    table = dict(compat._ERA_KEYS)
+    table["thermal.synthetic_a"] = (1.5, "SYNTHETIC era (test only)", "test")
+    table["thermal.synthetic_b"] = (False, "SYNTHETIC era (test only)", "test")
+    monkeypatch.setattr(compat, "_ERA_KEYS", table)
+
+    raw, _ = _load_fixture(_FIXTURES[1])
+    cfg = copy.deepcopy(raw)
+    cfg["thermal"].update(_BODY_MECH_THERMAL, bush_min_fire_distance=0)
+    cfg["body"].update(healing_nutrition_cost=0.0, healing_nutrition_dependence=False)
+    assert compat.apply_saved_config_compat(copy.deepcopy(cfg), source=_SAVED_SOURCE) == [
+        "thermal.synthetic_a", "thermal.synthetic_b"]
+
+    cfg["thermal"]["synthetic_a"] = 1.5
+    with pytest.raises(ValueError, match="thermal block carries.*SYNTHETIC era"):
+        compat.apply_saved_config_compat(cfg, source=_SAVED_SOURCE)

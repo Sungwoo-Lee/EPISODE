@@ -33,9 +33,17 @@ This module is the FIRST SLICE of the plan
 ``docs/develop/active/refactors/SAVED_RUN_CONFIG_COMPAT.md`` (PLANNED, owned by another
 session), created by ``docs/develop/active/thermal/STATE_DEPENDENT_BODY_MECHANICS.md``
 (commit C0). It follows that plan's module path, function name and refusal rules so the
-owner can extend it rather than replace it. ``_ERA_KEYS`` holds ONLY the six keys of the
-body-mechanics change. The owner adds the Stage 1/2 rows (``thermal.enabled``, the
-sensory keys) and the manifest ``saved_config_compat`` field.
+owner can extend it rather than replace it. ``_ERA_KEYS`` holds the keys of more than one
+era: the six keys of the body-mechanics change, and the bush-to-fire clearance key of
+``docs/develop/active/thermal/BUSH_FIRE_CLEARANCE.md``. The owner adds the Stage 1/2 rows
+(``thermal.enabled``, the sensory keys) and the manifest ``saved_config_compat`` field.
+
+All-or-none is checked per (block, era), not per block. The keys of one era arrived
+together, so a saved config carrying some of an era's keys but not all of them is an
+edited or foreign file. Keys of different eras are independent: a run trained between two
+eras carries every key of the earlier era and none of the later one. The groups are built
+from the table itself (grouped by block prefix and era string), so an era added here later
+is covered without editing the grouping logic.
 
 Rule for ``_ERA_KEYS`` rows (the compat plan's rule): every row needs the supplied
 value, the era it became mandatory, and the branch that makes that value inert. A value
@@ -52,40 +60,74 @@ _log = logging.getLogger(__name__)
 # Repo root = two levels above src/environment/.
 _CONFIGS_DIR = (Path(__file__).resolve().parents[2] / "configs").resolve()
 
-_ERA = "STATE_DEPENDENT_BODY_MECHANICS C2 (2026-09-26)"
+_ERA_BODY_MECHANICS = "STATE_DEPENDENT_BODY_MECHANICS C2 (2026-09-26)"
+_ERA_BUSH = "BUSH_FIRE_CLEARANCE C2 (2026-09-26)"
 
 # dotted key -> (value that reproduces the pre-change behaviour, era, branch that makes it inert)
 _ERA_KEYS = {
     # --- thermal block: supplied only when the saved thermal.enabled is true -------------
     "thermal.random_start_body_temp": (
-        False, _ERA,
+        False, _ERA_BODY_MECHANICS,
         "B1: static `if params.thermal_random_start_body_temp` in core.jax_reset; false "
         "keeps body_temp0 = temperature_setpoint (today's reset). Range keys not read."),
     "thermal.healing_cold_sensitivity": (
-        0.0, _ERA,
+        0.0, _ERA_BODY_MECHANICS,
         "B2: static gate `if s_c != 0 or s_w != 0` in core.update_body; both 0 = untraced."),
     "thermal.healing_warm_sensitivity": (
-        0.0, _ERA,
+        0.0, _ERA_BODY_MECHANICS,
         "B2: same static gate as healing_cold_sensitivity."),
     "thermal.injury_heat_exchange_gain": (
-        0.0, _ERA,
+        0.0, _ERA_BODY_MECHANICS,
         "B4: static gate `if gain != 0` in the body-temperature block of core.update_body; "
         "0 = k_exchange unchanged. The mode key is not read."),
     # --- body block: always supplied --------------------------------------------------
     "body.healing_nutrition_cost": (
-        0.0, _ERA,
+        0.0, _ERA_BODY_MECHANICS,
         "B3: static gate `if params.healing_nutrition_cost != 0` in core.update_body; 0 = "
         "today's statements in today's order. The shortfall key is not read."),
     "body.healing_nutrition_dependence": (
-        False, _ERA,
+        False, _ERA_BODY_MECHANICS,
         "B5: static `if params.healing_nutrition_dependence` in core.update_body; false = "
         "untraced. The ramp keys are not read."),
+    # --- thermal block, bush-to-fire clearance era ---------------------------------------
+    "thermal.bush_min_fire_distance": (
+        0, _ERA_BUSH,
+        "static `if params.thermal_bush_min_fire_distance > 0` in core.jax_reset; 0 = the "
+        "bush pass is not traced (tests/env/test_bush_fire_clearance.py parity)."),
 }
 
-# Parity instrument for every row above: tests/env/test_body_mechanics_parity.py.
+# Parity instruments: tests/env/test_body_mechanics_parity.py (body-mechanics era) and
+# tests/env/test_bush_fire_clearance.py (bush-clearance era).
 
-_THERMAL_KEYS = tuple(k for k in _ERA_KEYS if k.startswith("thermal."))
-_BODY_KEYS = tuple(k for k in _ERA_KEYS if k.startswith("body."))
+
+def _era_groups(block: str) -> list[tuple[str, tuple[str, ...]]]:
+    """``[(era, keys), ...]`` for every era with rows in ``block``, in table order.
+
+    Built from ``_ERA_KEYS`` at call time, grouped by the era string of each row, so it
+    covers every era the table holds and is not tied to any named era constant.
+    """
+    groups: dict[str, list[str]] = {}
+    for k, (_value, era, _branch) in _ERA_KEYS.items():
+        if k.split(".", 1)[0] == block:
+            groups.setdefault(era, []).append(k)
+    return [(era, tuple(keys)) for era, keys in groups.items()]
+
+
+def _check_block(cfg: dict, block: str, source: str) -> list[str]:
+    """All-or-none per (block, era); return the keys of every wholly-absent era."""
+    to_supply: list[str] = []
+    for era, keys in _era_groups(block):
+        present = [k for k in keys if _has(cfg, k)]
+        if present and len(present) != len(keys):
+            missing = [k for k in keys if k not in present]
+            raise ValueError(
+                f"apply_saved_config_compat refused ({source}): the {block} block carries "
+                f"{present} but not {missing} (era {era!r}). A saved config carries all "
+                f"{len(keys)} keys of an era or none; a partial set means an edited or "
+                "foreign file.")
+        if not present:
+            to_supply.extend(keys)
+    return to_supply
 
 
 def _has(cfg: dict, dotted: str) -> bool:
@@ -120,9 +162,9 @@ def apply_saved_config_compat(cfg: dict, *, source: str) -> list[str]:
       (a) ``source`` resolving under the repo's ``configs/`` -> ``ValueError`` (the live
           path keeps hard-erroring).
       (b) a key already present is left alone.
-      (c) all-or-none per block: a thermal-on block carrying some but not all of the four
-          thermal keys, or a body block carrying one of the two body keys but not the
-          other, is an edited or foreign file -> ``ValueError``.
+      (c) all-or-none per (block, era): a block carrying some but not all of one era's
+          keys (e.g. two of the four body-mechanics thermal keys) is an edited or foreign
+          file -> ``ValueError``. Keys of different eras are independent.
       (d) the thermal keys are supplied only when the saved ``thermal.enabled`` is true.
           A config lacking ``thermal.enabled`` altogether (a pre-thermal run) gets none of
           them, and the loader fails on ``thermal.enabled`` as it does today.
@@ -144,26 +186,10 @@ def apply_saved_config_compat(cfg: dict, *, source: str) -> list[str]:
     thermal = cfg.get("thermal")
     thermal_on = isinstance(thermal, dict) and thermal.get("enabled") is True
     if thermal_on:
-        present = [k for k in _THERMAL_KEYS if _has(cfg, k)]
-        if present and len(present) != len(_THERMAL_KEYS):
-            missing = [k for k in _THERMAL_KEYS if k not in present]
-            raise ValueError(
-                f"apply_saved_config_compat refused ({source}): the thermal block carries "
-                f"{present} but not {missing}. A saved config carries all four or none; a "
-                "partial set means an edited or foreign file.")
-        if not present:
-            to_supply.extend(_THERMAL_KEYS)
+        to_supply.extend(_check_block(cfg, "thermal", source))
 
     # --- body block (always) ---
-    present = [k for k in _BODY_KEYS if _has(cfg, k)]
-    if present and len(present) != len(_BODY_KEYS):
-        missing = [k for k in _BODY_KEYS if k not in present]
-        raise ValueError(
-            f"apply_saved_config_compat refused ({source}): the body block carries "
-            f"{present} but not {missing}. A saved config carries both or neither; a "
-            "partial set means an edited or foreign file.")
-    if not present:
-        to_supply.extend(_BODY_KEYS)
+    to_supply.extend(_check_block(cfg, "body", source))
 
     for k in to_supply:
         _set(cfg, k, _ERA_KEYS[k][0])
