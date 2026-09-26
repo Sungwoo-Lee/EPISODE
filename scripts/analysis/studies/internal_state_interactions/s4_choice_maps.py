@@ -45,7 +45,9 @@ for r, name in enumerate(chosen):
             ax[r, j].set_title(f"body temperature {t:+g} deg", loc="left", fontsize=10)
         ax[r, j].grid(False)
     ax[r, 0].set_ylabel(title, fontsize=9.5)
-    samples.append(dict(what=title.replace("\n", " "), used=int(cat.size), total=int(cat.size), note="grid states, map without a warm bush"))
+    shown = len(GN) * len(GI) * len(TEMPS)
+    samples.append(dict(what=title.replace("\n", " "), used=int(shown), total=int(cat.size),
+                        note="three temperature slices shown of all grid states solved; map without a warm bush"))
 fig.supxlabel("food energy (0-200)", y=0.07, fontsize=11)
 fig.supylabel("injury (0-100), per row", x=0.005, fontsize=11)
 fig.tight_layout(h_pad=1.2, w_pad=0.6, rect=(0.02, 0.08, 1, 1))

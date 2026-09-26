@@ -2,7 +2,8 @@
 how the choices are shared out, and whether the ideal policy survives (ideal planner, no agent).
 
 Left: combination gain (accuracy of the best two-variable rule minus the best one-variable rule, in
-points, over training start states, both maps pooled 0.59/0.41, ties excluded). Solid line: today's
+points, over training start states, ties excluded): both maps pooled 0.59/0.41 (black, the ruled
+value), and each map alone (blue: no bush on a fire ring; grey: a bush on a fire ring). Solid line: today's
 level 05 with B1; dotted: +5 points (rule 1); the grey band is today +/- twice the noise floor.
 Middle: need balance -- share of start states in which each choice is best.
 Right: survival share of the ideal policy over 500 steps (2,000 starts per map).
@@ -43,7 +44,12 @@ for r, (name, group, label, value, *_rest) in enumerate(settings):
                      rule_1_gain=bool(r1), rule_2_balance=bool(r2), rule_3_survival=bool(r3),
                      rule_4_same_direction_at_099=bool(r4), tie_flag=bool(tie_flag), passes=bool(ok),
                      gain_by_margin=res["gain_by_margin"], gain_099=res["summary_gamma099"]["combination_gain"])
-    ax[0].plot([100 * s["combination_gain"]], [y[r]], "o", color=house.INK, ms=6)
+    ax[0].plot([100 * s["combination_gain"]], [y[r]], "o", color=house.INK, ms=6.5,
+               label="both maps (59 : 41)" if r == 0 else None)
+    ax[0].plot([100 * s["per_map"][0]["combination_gain"]], [y[r] + 0.22], "v", color=house.BLUE, ms=5,
+               label="no bush on a fire ring (59 %)" if r == 0 else None)
+    ax[0].plot([100 * s["per_map"][1]["combination_gain"]], [y[r] - 0.22], "^", mfc="white", mec="#8a8f99", ms=5,
+               label="a bush on a fire ring (41 %)" if r == 0 else None)
     if ok:
         ax[2].plot([1.0], [y[r]], marker="D", color=house.INK, ms=5, transform=ax[2].get_yaxis_transform(), clip_on=False)
     left = 0.0
@@ -61,9 +67,9 @@ ax[2].set_xlabel("survival (%)"); ax[1].set_xlim(0, 100)
 for a in ax:
     a.grid(axis="y", visible=False)
 ax[0].set_ylim(-0.8, len(settings) - 0.3)
-fig.tight_layout(w_pad=0.8, rect=(0, 0.06, 1, 1))
-h, l = ax[1].get_legend_handles_labels()
-fig.legend(h, l, loc="lower center", ncol=4, frameon=False, bbox_to_anchor=(0.55, 0.0), fontsize=9.5)
+fig.tight_layout(w_pad=0.8, rect=(0, 0.09, 1, 1))
+h, l = ax[1].get_legend_handles_labels(); h0, l0 = ax[0].get_legend_handles_labels()
+fig.legend(h0 + h, l0 + l, loc="lower center", ncol=4, frameon=False, bbox_to_anchor=(0.5, 0.0), fontsize=9.5)
 C.assert_no_text_overlap(fig); C.assert_min_text_px(fig)
 C.record_kind("s3_worlds", "planner")
 C.record_samples("s3_worlds", [
