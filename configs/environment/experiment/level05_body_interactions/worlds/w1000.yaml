@@ -1,0 +1,15 @@
+# EXPERIMENTAL, NOT MAINTAINED (CLAUDE.md "Config maintenance scope"): part of the level-05
+# body-interactions study, docs/experiments/active/level05_body_interactions/LEVEL05_BODY_INTERACTIONS.md.
+#
+# FACTORIAL WORLD w1000 — one cell of the full 2x2x2x2 design. The four digits are the four
+# factors in the fixed order B5 B3 A1 A4 (1 = on at its selected strength, 0 = off):
+#   ON : B5 healing slows when hungry
+#   off: B3 healing costs food
+#   off: A1 staying warm costs food
+#   off: A4 scarcer food
+# Base: level 05 exactly as in basic/05 (random start body temperature B1 is on in every cell).
+# Strengths come ONLY from factors/selected_*.yaml; check those are no longer PROVISIONAL
+# before launching.
+extends:
+  - environment/experiment/basic/05-campfire_thermal_10x10
+  - environment/experiment/level05_body_interactions/factors/selected_b5

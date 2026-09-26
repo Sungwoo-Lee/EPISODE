@@ -1,0 +1,10 @@
+# EXPERIMENTAL, NOT MAINTAINED (CLAUDE.md "Config maintenance scope"): part of the level-05
+# body-interactions study, docs/experiments/active/level05_body_interactions/LEVEL05_BODY_INTERACTIONS.md.
+#
+# PILOT WORLD p11 (stage 1, one factor at one strength): level 05 exactly as in basic/05
+# (random start body temperature B1 included) with ONE change: scarcer food by less energy per bite, gain 6 -> 3 (A4, bite form).
+# Trained short (2,000,000 episodes, ordinary agent only) to calibrate the strength; see the
+# design doc's section 2.3 for the pre-registered pick rule.
+extends:
+  - environment/experiment/basic/05-campfire_thermal_10x10
+  - environment/experiment/level05_body_interactions/factors/a4_scarcer_food_bite__gain3

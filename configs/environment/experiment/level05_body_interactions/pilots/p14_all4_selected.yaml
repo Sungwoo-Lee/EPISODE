@@ -1,0 +1,14 @@
+# EXPERIMENTAL, NOT MAINTAINED (CLAUDE.md "Config maintenance scope"): part of the level-05
+# body-interactions study, docs/experiments/active/level05_body_interactions/LEVEL05_BODY_INTERACTIONS.md.
+#
+# PILOT WORLD p14 (stage 2, the stacking check): level 05 with ALL FOUR factors on at their
+# SELECTED strengths — the same layers as worlds/w1111.yaml, trained short (2,000,000 episodes,
+# ordinary agent) to test whether the three food-draining factors stacked together make the
+# world unsurvivable. Runs only after the four selected_*.yaml files hold the stage-1 picks.
+# Pre-registered collapse rule: design doc section 2.4.
+extends:
+  - environment/experiment/basic/05-campfire_thermal_10x10
+  - environment/experiment/level05_body_interactions/factors/selected_b5
+  - environment/experiment/level05_body_interactions/factors/selected_b3
+  - environment/experiment/level05_body_interactions/factors/selected_a1
+  - environment/experiment/level05_body_interactions/factors/selected_a4

@@ -1,0 +1,12 @@
+# EXPERIMENTAL, NOT MAINTAINED (CLAUDE.md "Config maintenance scope"): part of the level-05
+# body-interactions study, docs/experiments/active/level05_body_interactions/LEVEL05_BODY_INTERACTIONS.md.
+#
+# SELECTED STRENGTH for factor A1 "staying warm costs food" — the single place the 16 factorial worlds read it from.
+# Every worlds/ file that switches this factor on extends THIS file, never a strength file
+# directly, so the pilot pick is changed in one line here and nowhere else.
+#
+# STATUS: PROVISIONAL (2026-09-26). Points at the strength the simulation study favours, so the
+# worlds load and can be reviewed now. It is REPLACED by the pilot pick under the design doc's
+# pre-registered rule (section 2.3) before any factorial run launches. Do not launch the
+# factorial while this line says PROVISIONAL.
+extends: environment/experiment/level05_body_interactions/factors/a1_warmth_costs_food__rate4
