@@ -4249,3 +4249,46 @@ cd /media/nas01/projects/Interoceptive-AI/grid_world_pain
   --episodes 2000000 --device cuda:0 --log-interval 10 \
   --tag "rppo_l05body_p14_all4sel_t1none_s42" --wandb-name "rppo_l05body_p14_all4sel_t1none_s42" \
   --wandb-group "level05_body_interactions" --wandb-job-type "pilot"
+
+# ---------------------------------------------------------------------------
+# LEVEL-05 BODY INTERACTIONS — STAGE-3 FACTORIAL (32 runs, F01-F32) — 2026-09-27
+# ---------------------------------------------------------------------------
+# Plan: docs/experiments/active/level05_body_interactions/LEVEL05_BODY_INTERACTIONS.md
+# (§3.0b rows F01-F32; §3.1 launch command). 16 worlds worlds/w<B5 B3 A1 A4>.yaml x
+# {ordinary nmngaenorm_t1none (odd F), full modulator nmngaenorm_t16quad_ALL (even F)}.
+# 10,000,000 episodes, --log-interval 10, group level05_body_interactions, job-type prod,
+# tag = wandb-name. Seed: config-owned 42 (not passed). --num-envs / --checkpoint-frequency
+# config-owned (not passed).
+# Gates: no selected_*.yaml says PROVISIONAL; stage-2 P14 not collapsed (§6.2, f00f6c61);
+# src/ + configs/environment/ clean; HEAD f00f6c61; ladder (M7) 8187c570 = pilots' ladder.
+# Placement (user-authorised): t16quad on 3090/4090 (106-112, 102); t1none w0000-w0111 on
+# 101/103/104/105, w1000-w1111 two per GPU on 114 (Ada 49 GB; train.py disables JAX
+# preallocation). Every command below = the representative one with --config,
+# --agent_config, --device and the tag pair substituted. Launched via CIFS-bypass /tmp
+# scripts + run_command.py --no-tail.
+#
+# | Run | world | agent   | node:GPU |    | Run | world | agent    | node:GPU |
+# | F01 | w0000 | t1none  | 101:0    |    | F02 | w0000 | t16quad  | 106:0    |
+# | F03 | w0001 | t1none  | 101:1    |    | F04 | w0001 | t16quad  | 106:1    |
+# | F05 | w0010 | t1none  | 103:0    |    | F06 | w0010 | t16quad  | 107:0    |
+# | F07 | w0011 | t1none  | 103:1    |    | F08 | w0011 | t16quad  | 107:1    |
+# | F09 | w0100 | t1none  | 104:0    |    | F10 | w0100 | t16quad  | 108:0    |
+# | F11 | w0101 | t1none  | 104:1    |    | F12 | w0101 | t16quad  | 108:1    |
+# | F13 | w0110 | t1none  | 105:0    |    | F14 | w0110 | t16quad  | 109:0    |
+# | F15 | w0111 | t1none  | 105:1    |    | F16 | w0111 | t16quad  | 109:1    |
+# | F17 | w1000 | t1none  | 114:0    |    | F18 | w1000 | t16quad  | 110:0    |
+# | F19 | w1001 | t1none  | 114:0    |    | F20 | w1001 | t16quad  | 110:1    |
+# | F21 | w1010 | t1none  | 114:1    |    | F22 | w1010 | t16quad  | 111:0    |
+# | F23 | w1011 | t1none  | 114:1    |    | F24 | w1011 | t16quad  | 111:1    |
+# | F25 | w1100 | t1none  | 114:2    |    | F26 | w1100 | t16quad  | 112:0    |
+# | F27 | w1101 | t1none  | 114:2    |    | F28 | w1101 | t16quad  | 112:1    |
+# | F29 | w1110 | t1none  | 114:3    |    | F30 | w1110 | t16quad  | 102:0    |
+# | F31 | w1111 | t1none  | 114:3    |    | F32 | w1111 | t16quad  | 102:1    |
+#
+# Representative active command (F32 — w1111, modulator, node 102 cuda:1).
+/home/vncuser/miniconda3/envs/grid_world_pain/bin/python train.py \
+  --config configs/environment/experiment/level05_body_interactions/worlds/w1111.yaml \
+  --agent_config configs/models/recurrent_ppo/nmn_input_site_grid_gaenorm/nmngaenorm_t16quad_ALL.yaml \
+  --episodes 10000000 --device cuda:1 --log-interval 10 \
+  --tag "rppo_l05body_w1111_t16quad_s42" --wandb-name "rppo_l05body_w1111_t16quad_s42" \
+  --wandb-group "level05_body_interactions" --wandb-job-type "prod"

@@ -490,38 +490,38 @@ Cell code = B5 B3 A1 A4 (1 = on). Agents: **o** = ordinary (`t1none`), **m** = m
 
 | Run | Status | Cell | Tag (= wandb-name) | wandb-group | wandb-job-type | Seed | Node | GPU | Launched at | WandB run ID | Log path |
 |---|---|---|---|---|---|---|---|---|---|---|---|
-| F01 | planned | w0000 o | `rppo_l05body_w0000_t1none_s42` | level05_body_interactions | prod | 42 | — | — | — | — | — |
-| F02 | planned | w0000 m | `rppo_l05body_w0000_t16quad_s42` | level05_body_interactions | prod | 42 | — | — | — | — | — |
-| F03 | planned | w0001 o | `rppo_l05body_w0001_t1none_s42` | level05_body_interactions | prod | 42 | — | — | — | — | — |
-| F04 | planned | w0001 m | `rppo_l05body_w0001_t16quad_s42` | level05_body_interactions | prod | 42 | — | — | — | — | — |
-| F05 | planned | w0010 o | `rppo_l05body_w0010_t1none_s42` | level05_body_interactions | prod | 42 | — | — | — | — | — |
-| F06 | planned | w0010 m | `rppo_l05body_w0010_t16quad_s42` | level05_body_interactions | prod | 42 | — | — | — | — | — |
-| F07 | planned | w0011 o | `rppo_l05body_w0011_t1none_s42` | level05_body_interactions | prod | 42 | — | — | — | — | — |
-| F08 | planned | w0011 m | `rppo_l05body_w0011_t16quad_s42` | level05_body_interactions | prod | 42 | — | — | — | — | — |
-| F09 | planned | w0100 o | `rppo_l05body_w0100_t1none_s42` | level05_body_interactions | prod | 42 | — | — | — | — | — |
-| F10 | planned | w0100 m | `rppo_l05body_w0100_t16quad_s42` | level05_body_interactions | prod | 42 | — | — | — | — | — |
-| F11 | planned | w0101 o | `rppo_l05body_w0101_t1none_s42` | level05_body_interactions | prod | 42 | — | — | — | — | — |
-| F12 | planned | w0101 m | `rppo_l05body_w0101_t16quad_s42` | level05_body_interactions | prod | 42 | — | — | — | — | — |
-| F13 | planned | w0110 o | `rppo_l05body_w0110_t1none_s42` | level05_body_interactions | prod | 42 | — | — | — | — | — |
-| F14 | planned | w0110 m | `rppo_l05body_w0110_t16quad_s42` | level05_body_interactions | prod | 42 | — | — | — | — | — |
-| F15 | planned | w0111 o | `rppo_l05body_w0111_t1none_s42` | level05_body_interactions | prod | 42 | — | — | — | — | — |
-| F16 | planned | w0111 m | `rppo_l05body_w0111_t16quad_s42` | level05_body_interactions | prod | 42 | — | — | — | — | — |
-| F17 | planned | w1000 o | `rppo_l05body_w1000_t1none_s42` | level05_body_interactions | prod | 42 | — | — | — | — | — |
-| F18 | planned | w1000 m | `rppo_l05body_w1000_t16quad_s42` | level05_body_interactions | prod | 42 | — | — | — | — | — |
-| F19 | planned | w1001 o | `rppo_l05body_w1001_t1none_s42` | level05_body_interactions | prod | 42 | — | — | — | — | — |
-| F20 | planned | w1001 m | `rppo_l05body_w1001_t16quad_s42` | level05_body_interactions | prod | 42 | — | — | — | — | — |
-| F21 | planned | w1010 o | `rppo_l05body_w1010_t1none_s42` | level05_body_interactions | prod | 42 | — | — | — | — | — |
-| F22 | planned | w1010 m | `rppo_l05body_w1010_t16quad_s42` | level05_body_interactions | prod | 42 | — | — | — | — | — |
-| F23 | planned | w1011 o | `rppo_l05body_w1011_t1none_s42` | level05_body_interactions | prod | 42 | — | — | — | — | — |
-| F24 | planned | w1011 m | `rppo_l05body_w1011_t16quad_s42` | level05_body_interactions | prod | 42 | — | — | — | — | — |
-| F25 | planned | w1100 o | `rppo_l05body_w1100_t1none_s42` | level05_body_interactions | prod | 42 | — | — | — | — | — |
-| F26 | planned | w1100 m | `rppo_l05body_w1100_t16quad_s42` | level05_body_interactions | prod | 42 | — | — | — | — | — |
-| F27 | planned | w1101 o | `rppo_l05body_w1101_t1none_s42` | level05_body_interactions | prod | 42 | — | — | — | — | — |
-| F28 | planned | w1101 m | `rppo_l05body_w1101_t16quad_s42` | level05_body_interactions | prod | 42 | — | — | — | — | — |
-| F29 | planned | w1110 o | `rppo_l05body_w1110_t1none_s42` | level05_body_interactions | prod | 42 | — | — | — | — | — |
-| F30 | planned | w1110 m | `rppo_l05body_w1110_t16quad_s42` | level05_body_interactions | prod | 42 | — | — | — | — | — |
-| F31 | planned | w1111 o | `rppo_l05body_w1111_t1none_s42` | level05_body_interactions | prod | 42 | — | — | — | — | — |
-| F32 | planned | w1111 m | `rppo_l05body_w1111_t16quad_s42` | level05_body_interactions | prod | 42 | — | — | — | — | — |
+| F01 | running | w0000 o | `rppo_l05body_w0000_t1none_s42` | level05_body_interactions | prod | 42 | 101 | cuda:0 | 2026-09-27T05:30:50 | `dg1ry2be` | `logs/20260927_053050.log` · HEAD `f00f6c61` · ladder `8187c570` |
+| F02 | running | w0000 m | `rppo_l05body_w0000_t16quad_s42` | level05_body_interactions | prod | 42 | 106 | cuda:0 | 2026-09-27T05:30:54 | `nl1h2j21` | `logs/20260927_053055.log` · HEAD `f00f6c61` · ladder `8187c570` |
+| F03 | running | w0001 o | `rppo_l05body_w0001_t1none_s42` | level05_body_interactions | prod | 42 | 101 | cuda:1 | 2026-09-27T05:30:58 | `qgjfgyza` | `logs/20260927_053059.log` · HEAD `f00f6c61` · ladder `8187c570` |
+| F04 | running | w0001 m | `rppo_l05body_w0001_t16quad_s42` | level05_body_interactions | prod | 42 | 106 | cuda:1 | 2026-09-27T05:31:02 | `3ff8uvxm` | `logs/20260927_053103.log` · HEAD `f00f6c61` · ladder `8187c570` |
+| F05 | running | w0010 o | `rppo_l05body_w0010_t1none_s42` | level05_body_interactions | prod | 42 | 103 | cuda:0 | 2026-09-27T05:31:07 | `i89y7cmh` | `logs/20260927_053107.log` · HEAD `f00f6c61` · ladder `8187c570` |
+| F06 | running | w0010 m | `rppo_l05body_w0010_t16quad_s42` | level05_body_interactions | prod | 42 | 107 | cuda:0 | 2026-09-27T05:31:11 | `rx87xmpc` | `logs/20260927_053112.log` · HEAD `f00f6c61` · ladder `8187c570` |
+| F07 | running | w0011 o | `rppo_l05body_w0011_t1none_s42` | level05_body_interactions | prod | 42 | 103 | cuda:1 | 2026-09-27T05:31:16 | `1w9v8nvh` | `logs/20260927_053116.log` · HEAD `f00f6c61` · ladder `8187c570` |
+| F08 | running | w0011 m | `rppo_l05body_w0011_t16quad_s42` | level05_body_interactions | prod | 42 | 107 | cuda:1 | 2026-09-27T05:31:19 | `cppmebro` | `logs/20260927_053120.log` · HEAD `f00f6c61` · ladder `8187c570` |
+| F09 | running | w0100 o | `rppo_l05body_w0100_t1none_s42` | level05_body_interactions | prod | 42 | 104 | cuda:0 | 2026-09-27T05:31:23 | `fc13issb` | `logs/20260927_053124.log` · HEAD `f00f6c61` · ladder `8187c570` |
+| F10 | running | w0100 m | `rppo_l05body_w0100_t16quad_s42` | level05_body_interactions | prod | 42 | 108 | cuda:0 | 2026-09-27T05:31:27 | `3xy93bn9` | `logs/20260927_053128.log` · HEAD `f00f6c61` · ladder `8187c570` |
+| F11 | running | w0101 o | `rppo_l05body_w0101_t1none_s42` | level05_body_interactions | prod | 42 | 104 | cuda:1 | 2026-09-27T05:31:31 | `bvrf6o3f` | `logs/20260927_053132.log` · HEAD `f00f6c61` · ladder `8187c570` |
+| F12 | running | w0101 m | `rppo_l05body_w0101_t16quad_s42` | level05_body_interactions | prod | 42 | 108 | cuda:1 | 2026-09-27T05:31:36 | `be7m3u4a` | `logs/20260927_053136.log` · HEAD `f00f6c61` · ladder `8187c570` |
+| F13 | running | w0110 o | `rppo_l05body_w0110_t1none_s42` | level05_body_interactions | prod | 42 | 105 | cuda:0 | 2026-09-27T05:31:39 | `9fkmn3e9` | `logs/20260927_053140.log` · HEAD `f00f6c61` · ladder `8187c570` |
+| F14 | running | w0110 m | `rppo_l05body_w0110_t16quad_s42` | level05_body_interactions | prod | 42 | 109 | cuda:0 | 2026-09-27T05:31:43 | `3p3vxy30` | `logs/20260927_053144.log` · HEAD `f00f6c61` · ladder `8187c570` |
+| F15 | running | w0111 o | `rppo_l05body_w0111_t1none_s42` | level05_body_interactions | prod | 42 | 105 | cuda:1 | 2026-09-27T05:31:48 | `xnwl4cac` | `logs/20260927_053149.log` · HEAD `f00f6c61` · ladder `8187c570` |
+| F16 | running | w0111 m | `rppo_l05body_w0111_t16quad_s42` | level05_body_interactions | prod | 42 | 109 | cuda:1 | 2026-09-27T05:31:52 | `jbzap4iw` | `logs/20260927_053153.log` · HEAD `f00f6c61` · ladder `8187c570` |
+| F17 | running | w1000 o | `rppo_l05body_w1000_t1none_s42` | level05_body_interactions | prod | 42 | 114 | cuda:0 | 2026-09-27T05:31:56 | `ffkn03ot` | `logs/20260927_053156.log` · HEAD `f00f6c61` · ladder `8187c570` |
+| F18 | running | w1000 m | `rppo_l05body_w1000_t16quad_s42` | level05_body_interactions | prod | 42 | 110 | cuda:0 | 2026-09-27T05:32:00 | `beq5xdkx` | `logs/20260927_053200.log` · HEAD `f00f6c61` · ladder `8187c570` |
+| F19 | running | w1001 o | `rppo_l05body_w1001_t1none_s42` | level05_body_interactions | prod | 42 | 114 | cuda:0 | 2026-09-27T05:32:04 | `ygr4kset` | `logs/20260927_053204.log` · HEAD `f00f6c61` · ladder `8187c570` |
+| F20 | running | w1001 m | `rppo_l05body_w1001_t16quad_s42` | level05_body_interactions | prod | 42 | 110 | cuda:1 | 2026-09-27T05:32:08 | `vbxv4ezr` | `logs/20260927_053209.log` · HEAD `f00f6c61` · ladder `8187c570` |
+| F21 | running | w1010 o | `rppo_l05body_w1010_t1none_s42` | level05_body_interactions | prod | 42 | 114 | cuda:1 | 2026-09-27T05:32:12 | `tb31cljk` | `logs/20260927_053214.log` · HEAD `f00f6c61` · ladder `8187c570` |
+| F22 | running | w1010 m | `rppo_l05body_w1010_t16quad_s42` | level05_body_interactions | prod | 42 | 111 | cuda:0 | 2026-09-27T05:32:17 | `s9obueb0` | `logs/20260927_053221.log` · HEAD `f00f6c61` · ladder `8187c570` |
+| F23 | running | w1011 o | `rppo_l05body_w1011_t1none_s42` | level05_body_interactions | prod | 42 | 114 | cuda:1 | 2026-09-27T05:32:24 | `vxx52421` | `logs/20260927_053225.log` · HEAD `f00f6c61` · ladder `8187c570` |
+| F24 | running | w1011 m | `rppo_l05body_w1011_t16quad_s42` | level05_body_interactions | prod | 42 | 111 | cuda:1 | 2026-09-27T05:32:28 | `f18yd8zm` | `logs/20260927_053229.log` · HEAD `f00f6c61` · ladder `8187c570` |
+| F25 | running | w1100 o | `rppo_l05body_w1100_t1none_s42` | level05_body_interactions | prod | 42 | 114 | cuda:2 | 2026-09-27T05:32:33 | `hk2pvm2t` | `logs/20260927_053233.log` · HEAD `f00f6c61` · ladder `8187c570` |
+| F26 | running | w1100 m | `rppo_l05body_w1100_t16quad_s42` | level05_body_interactions | prod | 42 | 112 | cuda:0 | 2026-09-27T05:32:37 | `i1jjcr9x` | `logs/20260927_053237.log` · HEAD `f00f6c61` · ladder `8187c570` |
+| F27 | running | w1101 o | `rppo_l05body_w1101_t1none_s42` | level05_body_interactions | prod | 42 | 114 | cuda:2 | 2026-09-27T05:32:41 | `5uxys00c` | `logs/20260927_053315.log` · HEAD `f00f6c61` · ladder `8187c570` |
+| F28 | running | w1101 m | `rppo_l05body_w1101_t16quad_s42` | level05_body_interactions | prod | 42 | 112 | cuda:1 | 2026-09-27T05:33:18 | `j0aafmto` | `logs/20260927_053319.log` · HEAD `f00f6c61` · ladder `8187c570` |
+| F29 | running | w1110 o | `rppo_l05body_w1110_t1none_s42` | level05_body_interactions | prod | 42 | 114 | cuda:3 | 2026-09-27T05:33:22 | `yg1wi9rl` | `logs/20260927_053323.log` · HEAD `f00f6c61` · ladder `8187c570` |
+| F30 | running | w1110 m | `rppo_l05body_w1110_t16quad_s42` | level05_body_interactions | prod | 42 | 102 | cuda:0 | 2026-09-27T05:33:26 | `wacnzkx4` | `logs/20260927_053403.log` · HEAD `f00f6c61` · ladder `8187c570` |
+| F31 | running | w1111 o | `rppo_l05body_w1111_t1none_s42` | level05_body_interactions | prod | 42 | 114 | cuda:3 | 2026-09-27T05:34:16 | `2zg00mnl` | `logs/20260927_053437.log` · HEAD `f00f6c61` · ladder `8187c570` |
+| F32 | running | w1111 m | `rppo_l05body_w1111_t16quad_s42` | level05_body_interactions | prod | 42 | 102 | cuda:1 | 2026-09-27T05:34:40 | `rtsbklo3` | `logs/20260927_053447.log` · HEAD `f00f6c61` · ladder `8187c570` |
 
 All 51 tags are unique. None collides with an existing `results/JAX_RecurrentPPO/` directory,
 since the prefix `rppo_l05body_` is new.
