@@ -223,3 +223,14 @@ blocks movement on this map, so Manhattan distance is the path length); the map 
 unevaluable until R1 — a re-run of a minutes-long sweep, not a wrong horizon.
 
 Reviewed by: plan-reviewer
+
+## Feedback from plan-reviewer — analysis-verdict review of the built page (commit `71e0d770`)
+
+**Verdict: SUPPORTED WITH CAVEATS**, one 🔴 Critical on interpretation. The rule was applied exactly
+as pre-registered and every number checked is right; but the passing world's pooled +6.9 splits
++3.0 on the map without a warm bush (inside that map's noise) and +12.5 on the map with one (where
+the change also moves the warm bush away and breaks its dominance), while B5 splits +5.4 / +0.4 —
+the ranking inverts on the majority map. Callout and §07 must report the per-map split before the
+batch is chosen. Full table: [[plan_internal_state_interactions]] § "Analysis-verdict review".
+
+Reviewed by: plan-reviewer

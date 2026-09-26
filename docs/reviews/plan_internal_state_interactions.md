@@ -84,3 +84,35 @@ bush arrival step, γ assertion, page gate still to be coded) is in the plan's o
 `docs/experiments/active/internal_state_interactions/STUDY_PLAN.md` § "Feedback from plan-reviewer — addendum".
 
 Reviewed by: plan-reviewer
+
+---
+
+## Analysis-verdict review of the built page (2026-09-26, commit `71e0d770`)
+
+**Verdict: SUPPORTED WITH CAVEATS** — one 🔴 Critical on the page's interpretation, not on the rule.
+
+**In plain language.** The page applies the pre-registered rule exactly (all four conditions, the
+tie flag, both maps pooled 59 : 41), every number I checked against `reading_rule.json` and the
+sweep files is right to rounding, and the one passing world (a bush 8 steps away) does pass. What
+the page does not say is that its two maps disagree about *why*. On the map without a bush on a
+fire ring (59 % of episodes) the far-bush world gains only +3.0 points — inside twice that map's
+noise floor (1.6) — while "healing needs food" (B5) gains +5.4 there, above the rule's line. On
+the map *with* a warm bush (41 %) the far-bush world gains +12.5, because the change also moves the
+warm bush 8 steps away and breaks the "rest in the warm bush" habit that dominates that map (cover
+share 79 % → 48 %). Roughly three-quarters of the passing world's pooled +6.9 comes from that
+second map. So the headline "scarce cover is the one lever; B5 helps a little" is one reading of a
+pooled number that hides a map-level reversal, and section 07's advice to the training batch
+(A5 strongest, B5 a footnote) would steer configs by it. All the numbers needed to say this are
+already on disk (`summary.per_map` in every sweep JSON); no re-run is required.
+
+| # | Sev | Where | Finding | Fix |
+|---|---|---|---|---|
+| V1 | 🔴 | callout §01; Fig 2 caption; §07 items 1 and 5 | Passing world's gain splits +3.0 (no-warm-bush map) / +12.5 (warm-bush map); B5 splits +5.4 / +0.4. Pooled ranking inverts on the majority map. "Fewer bushes" also lowers the warm-bush share below 41 % in reality (a design confound the sweep holds fixed). | Report per-map gains for the passing and runner-up worlds; reword callout and §07 (wording in the inline report); optionally solve "no warm bush, trips unchanged" to isolate the warm-bush effect (minutes). |
+| V2 | 🟡 | §02 glossary vs callout / §07 | Page says differences under 2 × 1.2 = 2.3 points "are not read", then reads B3 (+0.1 … +1.1) as "helps a little" and A4 (−1.5 … −2.9) as "simpler". | Call B3/A1/B4 "within the noise floor"; A4 "at the edge of the noise floor, consistent in direction across all five settings". |
+| V3 | 🟡 | Fig 4; §07 item 5; rule 4 | At discount 0.99 the tie share is 21–48 % (baseline 43 %) — above the plan's own 40 % flag — so every 0.99 direction call is made on a population with nearly half the states removed. | State it in Fig 4's caption/method; soften "B5 falls below today's at the longer horizon" and "B3 turns negative" to "at the longer horizon, where 43 % of states are ties, …". |
+| V4 | 🟡 | Fig 2 caption "(about one bush per episode)"; §07 item 1 | Bush-count → trip mapping (1 bush ≈ 6, 2–3 ≈ 4–5) is a uniform-placement estimate not on disk. I reproduced it (10×10, 200 k draws: 1 bush median 6 / mean 6.6; 2 → 4 / 4.8; 3 → 4 / 3.9; 7 → 2 / 2.5, matching the measured 2 / 2.5 for today's 4–10 bushes). | Either record it (a few lines in `measure_world.py` writing to `world_measurements.json`) or say on the page it is a uniform-placement estimate on an empty grid; move it out of the figure caption. |
+| V5 | 🟡 | §03 method, §08 | Simulator-only caveat is accurate today but hand-typed; nothing forces a rebuild once B1–B5 land, and the page does not name the spec revision it copied (Revision 3). | Name the revision; add to §08 that the page must be rebuilt after `validate.py --mechanics all` passes at the sweep's extreme values. |
+
+Low: B5 gain is +3.3, not +3.4 (0.1696 − 0.1362); "2–8 points" for the fewer-bushes rows is 1.8–7.9; the fire cell "79.7° measured on real resets" is the mechanics plan's hot-corner figure — the on-disk measurement gives median 77.3 / p90 79.3; Fig 3's data table says 80,886 used, but 3 slices × 1,326 = 3,978 states are drawn; survival by map is identical to four decimals in 19 of 29 worlds, i.e. the survival gate counts doomed starts (e.g. food < trip) and cannot fail.
+
+Reviewed by: plan-reviewer
