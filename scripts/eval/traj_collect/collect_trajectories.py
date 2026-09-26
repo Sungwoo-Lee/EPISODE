@@ -723,8 +723,18 @@ def main(argv=None) -> int:
             print(f"[collect] --assume-pre-v32-sensors: supplied {k32} "
                   f"at pre-v3.2 values (env fingerprint reflects this)")
 
+    # Saved-config compat (STATE_DEPENDENT_BODY_MECHANICS C0): inject the era keys into a
+    # DEEP COPY used only to build params. `cfg` stays exactly as read (plus the opt-in
+    # sensory shims above), so `env_fingerprint(cfg)` and the manifest below are unchanged
+    # and a store started before those keys became mandatory resumes into the SAME directory.
+    import copy
     from src.environment.config_loader import load_env_params
-    params = load_env_params(Config(cfg))
+    from src.environment.saved_config_compat import apply_saved_config_compat
+    cfg_load = copy.deepcopy(cfg)
+    compat_keys = apply_saved_config_compat(cfg_load, source=str(cfg_path))
+    if not args.quiet:
+        print(f"[collect] saved-config compat supplied: {compat_keys}")
+    params = load_env_params(Config(cfg_load))
     dims = env_dims(params)
     max_steps = int(params.max_steps)
 

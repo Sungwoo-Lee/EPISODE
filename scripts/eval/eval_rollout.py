@@ -801,6 +801,13 @@ def _parse_config_list(path: str):
     return entries
 
 
+def _is_under_configs(path) -> bool:
+    """True when `path` resolves inside the repo's live `configs/` tree."""
+    cfg_root = (PROJECT_ROOT / "configs").resolve()
+    p = Path(path).resolve()
+    return p == cfg_root or cfg_root in p.parents
+
+
 def _load_dreamer_probe_env_cfg(env_config_path: str) -> Config:
     """Merged env Config for a Dreamer probe eval, mirroring
     `dreamer_srl_main.py`'s single-config path (L507-L520) and ported verbatim
@@ -957,6 +964,18 @@ def main():
                                                       quiet=args.quiet)
         config_path_i = stage_cfg if stage_cfg is not None else config_arg
         config_i = load_env_config(config_path_i)  # honours `extends:` if present
+        # Saved-config compat (STATE_DEPENDENT_BODY_MECHANICS C0): only for a config that
+        # resolves OUTSIDE configs/ (a run's saved copy). A live configs/ file keeps
+        # hard-erroring on a missing key. Injected into a deep copy.
+        if not _is_under_configs(config_path_i):
+            import copy
+            from src.environment.saved_config_compat import apply_saved_config_compat
+            _cfg_load = copy.deepcopy(config_i.to_dict())
+            _compat_keys = apply_saved_config_compat(_cfg_load, source=str(config_path_i))
+            if not args.quiet:
+                print(f"[eval_rollout] saved-config compat supplied: {_compat_keys}",
+                      flush=True)
+            config_i = Config(_cfg_load)
         bm_cfg_i = load_behavior_measure_cfg(config_i)
         if bm_cfg_i is None:
             print(f"WARNING: behavior_measures block absent in config {config_arg}; "

@@ -189,8 +189,18 @@ def main():
         if bad:
             raise ValueError(f"checkpoints {bad} not saved under {models}")
 
-    world_cfg = (Config.load_yaml(os.path.join(models, "config.yaml")) if a.world == "training"
-                 else load_env_config(a.world))
+    if a.world == "training":
+        # Saved-config compat (STATE_DEPENDENT_BODY_MECHANICS C0): the run's own saved copy
+        # gets the era keys, injected into a deep copy of the dict as read.
+        import copy
+        from src.environment.saved_config_compat import apply_saved_config_compat
+        _saved = os.path.join(models, "config.yaml")
+        _cfg_load = copy.deepcopy(Config.load_yaml(_saved).to_dict())
+        print(f"saved-config compat supplied: "
+              f"{apply_saved_config_compat(_cfg_load, source=_saved)}")
+        world_cfg = Config(_cfg_load)
+    else:
+        world_cfg = load_env_config(a.world)
     params = load_env_params(world_cfg)
     bm = load_behavior_measure_cfg(world_cfg)
     if bm is None:

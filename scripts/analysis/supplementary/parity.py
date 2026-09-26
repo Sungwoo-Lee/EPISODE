@@ -28,7 +28,12 @@ for k,v in NEW.items():
     parts=k.split('.'); d=raw
     for p in parts[:-1]: d=d.setdefault(p,{})
     d[parts[-1]]=v
-params=load_env_params(Config(raw))
+# Saved-config compat (STATE_DEPENDENT_BODY_MECHANICS C0): era keys go into a deep copy.
+from src.environment.saved_config_compat import apply_saved_config_compat
+cfg_load=copy.deepcopy(raw)
+print("saved-config compat supplied:",
+      apply_saved_config_compat(cfg_load, source=RUN+'/models/config.yaml'))
+params=load_env_params(Config(cfg_load))
 print(f"params built. olfactory_grid_range={params.olfactory_grid_range} "
       f"visual_blur_enabled={params.visual_blur_enabled}")
 

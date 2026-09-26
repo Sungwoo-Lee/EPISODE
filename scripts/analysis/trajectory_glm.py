@@ -51,7 +51,15 @@ def bush_dwell_per_episode(store):
 
 def build_design(store, run, dwell):
     import pyarrow.parquet as pq
-    p = load_env_params(Config(yaml.safe_load(open(f"{run}/models/config.yaml"))))
+    # Saved-config compat (STATE_DEPENDENT_BODY_MECHANICS C0): era keys go into a deep copy.
+    import copy
+    from src.environment.saved_config_compat import apply_saved_config_compat
+    _cfg_path = f"{run}/models/config.yaml"
+    _raw = yaml.safe_load(open(_cfg_path))
+    _cfg_load = copy.deepcopy(_raw)
+    print(f"saved-config compat supplied: "
+          f"{apply_saved_config_compat(_cfg_load, source=_cfg_path)}")
+    p = load_env_params(Config(_cfg_load))
     PRED = list(p.predator_indices)
     res_dmg = np.asarray(p.res_damage)
     HIDE = [i for i in range(res_dmg.shape[0]) if res_dmg[i, 1] > 0]

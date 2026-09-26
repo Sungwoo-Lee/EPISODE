@@ -79,9 +79,17 @@ def load_agent(models_dir, step: int | None = None) -> LoadedAgent:
     from scripts.analysis.nmn import ckpt_io
 
     models_dir = os.path.abspath(str(models_dir))
+    import copy
+    from src.environment.saved_config_compat import apply_saved_config_compat
+
     cfg_path = os.path.join(models_dir, "config.yaml")
     cfg = Config.load_yaml(cfg_path)
-    env_params = load_env_params(cfg)
+    # Saved-config compat (STATE_DEPENDENT_BODY_MECHANICS C0): era keys go into a deep
+    # copy used only to build env params; `cfg` (read for the agent block) is untouched.
+    _cfg_load = copy.deepcopy(cfg.to_dict())
+    print(f"[replay] saved-config compat supplied: "
+          f"{apply_saved_config_compat(_cfg_load, source=cfg_path)}")
+    env_params = load_env_params(Config(_cfg_load))
     obs_breakdown = get_observation_breakdown(env_params)
     input_dim = sum(obs_breakdown.values())
     action_dim = (4 + int(env_params.rest_action_enabled)

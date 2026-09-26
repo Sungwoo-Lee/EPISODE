@@ -100,6 +100,19 @@ These use **bare-name imports** (no `scripts.` prefix), which resolve only becau
 
 **Rule:** these two already live in `verification/`; if moved, update the allowlist or the next run re-prompts for permission (non-fatal, but annoying).
 
+### 1e. Saved-run-config sites that import `src/environment/saved_config_compat.py` (added 2026-09-26)
+
+Every script that rebuilds a world from a finished run's own `models/config.yaml` calls `apply_saved_config_compat` on a **deep copy** of that dict before `load_env_params`, so old runs keep loading after new mandatory keys land ([[STATE_DEPENDENT_BODY_MECHANICS]] C0, first slice of [[SAVED_RUN_CONFIG_COMPAT]]). The untouched dict is what `env_fingerprint` / the trajectory-store manifest see. `tests/env/test_saved_config_compat.py` greps each file below for the deep-copy pattern, so **a move or rename of any of these six files must update `_CALL_SITES` in that test** (it fails, not skips, on a missing file).
+
+| Script | Where |
+|---|---|
+| `scripts/eval/traj_collect/collect_trajectories.py` | `main`, just before `load_env_params` (fingerprint and manifest keep the raw `cfg`) |
+| `scripts/eval/eval_rollout.py` | `_resolve_entry`, only when the resolved config is **outside** `configs/` (`_is_under_configs`) |
+| `scripts/analysis/nmn/replay.py` | `load_agent`, the saved `config.yaml` |
+| `scripts/analysis/trajectory_glm.py` | `build_design` |
+| `scripts/analysis/supplementary/parity.py` | after its own `NEW` sensory injection |
+| `scripts/analysis/obs_manipulation/run.py` | `--world training` only (site added 2026-09-24, found by the re-grep) |
+
 ---
 
 ## 2. Claude tooling edges (break silently — no error until an agent runs them)
