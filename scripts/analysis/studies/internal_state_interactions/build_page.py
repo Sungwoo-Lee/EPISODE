@@ -33,7 +33,8 @@ else:
     if not (_v.get("pass") is True and _v.get("src_commit") == "2004b234" and _v.get("mechanics") == "none"):
         fail.append(f"current-rules validation did not pass on commit 2004b234: {_v}")
 _valnew = os.path.join(ROOT, "results/analysis/internal_state_interactions/validation_new_rules.json")
-NEW_RULES_VALIDATED = os.path.exists(_valnew) and _json.load(open(_valnew)).get("pass") is True
+NEW_RULES_VALIDATED = os.path.exists(_valnew) and _json.load(open(_valnew)).get("pass") is True \
+    and _json.load(open(_valnew)).get("mechanics") == "all" and len(_json.load(open(_valnew)).get("sets", [])) >= 3
 
 
 def die():

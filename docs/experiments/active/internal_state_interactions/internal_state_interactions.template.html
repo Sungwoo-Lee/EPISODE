@@ -147,9 +147,10 @@ no choice wins in more than 80 % of starting states while another than "rest in 
     in the cold; and the fire step from the environment's own temperature update with the hot-corner fire cell of the
     mechanics plan (79.7°; the median fire cell on real resets is 77.3°). The simulator's copy of today's rules was checked against the real
     environment on 4,000 random states before any of this was drawn. <b>What this figure does not show:</b>
-    how the rules combine, or what an agent would choose — sections 04–06 do that; and the new rules have
-    not yet been checked against the real environment, because their code is still being written, so these
-    curves are simulator-only until that check passes.</span>
+    how the rules combine, or what an agent would choose — sections 04–06 do that. The five new rules were
+    checked against their implementation once it landed (commit <code>79cf90ef</code>): on 4,000 random states
+    at mid values, at the sweep's extremes and in the alternative modes, the largest difference was 0.00002 and
+    every death was decided identically.</span>
   </figcaption>
 </figure>
 </section>
@@ -321,9 +322,10 @@ one change at a time. That is the natural next sweep before choosing the final c
 </div>
 
 <ul>
-  <li><b>The new rules are simulator-only.</b> B1–B5 are copied from their implementation plan
-  (Revision 3); their code is still being written. Once it lands, the simulator will be checked against it at
-  the sweep's extreme values (B3 cost 2, B2 1/10, B4 gain 2, B5 floor 0) and this page rebuilt.
+  <li><b>The new rules match their implementation.</b> B1–B5 were written from their plan (Revision 3)
+  before the code existed, then checked against it once it landed (commit <code>79cf90ef</code>) at mid values,
+  the sweep's extremes (B3 cost 2, B2 1/10, B4 gain 2, B5 floor 0) and the alternative modes: largest
+  difference 0.00002, no disagreement on any death.
   Today's rules are already checked (4,000 states, largest difference 0.00002).</li>
   <li><b>Predators are an average cost.</b> The planner sees 0.12 or 0.70 injury per step outside cover, not
   single attacks of about 21; it under-counts sudden deaths at high injury, and agents choose where they rest,

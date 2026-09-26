@@ -35,25 +35,49 @@ def main():
     import bodysim as B
 
     cfg = load_env_config(os.path.join(a.src_root, a.world))
-    P_env = load_env_params(cfg)
-    Psim = B.Body()
-    if a.mechanics == "all":
-        over = dict(thermal_healing_cold_sensitivity=0.08, thermal_healing_warm_sensitivity=0.04,
-                    thermal_injury_heat_exchange_gain=1.0, thermal_injury_heat_exchange_mode="cooling_only",
-                    healing_nutrition_cost=0.7, healing_nutrition_shortfall="partial",
-                    healing_nutrition_dependence=True, healing_hunger_low=20.0, healing_hunger_high=100.0,
-                    healing_hunger_floor=0.2, healing_overfull_floor=0.5, healing_overfull_start=150.0,
-                    thermal_metabolic_coupling=True, thermal_metabolic_coupling_rate=1.0)
-        missing = [k for k in over if not hasattr(P_env, k)]
+    P_env0 = load_env_params(cfg)
+    Psim0 = B.Body()
+    # (env overrides, simulator overrides) per checked set; "all" covers mid values, the sweep's
+    # extremes, and the alternative modes (B3 full, B4 both) -- study plan R1b / reviewer V5
+    SETS = {"none": [({}, {})]}
+    mid = (dict(thermal_healing_cold_sensitivity=0.08, thermal_healing_warm_sensitivity=0.04,
+                thermal_injury_heat_exchange_gain=1.0, thermal_injury_heat_exchange_mode="cooling_only",
+                healing_nutrition_cost=0.7, healing_nutrition_shortfall="partial",
+                healing_nutrition_dependence=True, healing_hunger_low=20.0, healing_hunger_high=100.0,
+                healing_hunger_floor=0.2, healing_overfull_floor=0.5, healing_overfull_start=150.0,
+                thermal_metabolic_coupling=True, thermal_metabolic_coupling_rate=1.0),
+           dict(heal_cold_s=0.08, heal_warm_s=0.04, inj_gain=1.0, inj_mode="cooling_only", heal_cost=0.7,
+                shortfall="partial", b5=True, b5_low=20.0, b5_high=100.0, b5_floor=0.2, b5_over_floor=0.5,
+                b5_over_start=150.0, coupling=True, coupling_rate=1.0))
+    ext = (dict(thermal_healing_cold_sensitivity=0.1, thermal_healing_warm_sensitivity=0.1,
+                thermal_injury_heat_exchange_gain=2.0, thermal_injury_heat_exchange_mode="cooling_only",
+                healing_nutrition_cost=2.0, healing_nutrition_shortfall="partial",
+                healing_nutrition_dependence=True, healing_hunger_low=0.0, healing_hunger_high=100.0,
+                healing_hunger_floor=0.0, healing_overfull_floor=1.0, healing_overfull_start=150.0,
+                thermal_metabolic_coupling=True, thermal_metabolic_coupling_rate=4.0),
+           dict(heal_cold_s=0.1, heal_warm_s=0.1, inj_gain=2.0, inj_mode="cooling_only", heal_cost=2.0,
+                shortfall="partial", b5=True, b5_low=0.0, b5_high=100.0, b5_floor=0.0, b5_over_floor=1.0,
+                coupling=True, coupling_rate=4.0))
+    modes = (dict(healing_nutrition_cost=1.0, healing_nutrition_shortfall="full",
+                  thermal_injury_heat_exchange_gain=1.0, thermal_injury_heat_exchange_mode="both"),
+             dict(heal_cost=1.0, shortfall="full", inj_gain=1.0, inj_mode="both"))
+    SETS["all"] = [mid, ext, modes]
+    results = []
+    for over_env, over_sim in SETS[a.mechanics]:
+        missing = [k for k in over_env if not hasattr(P_env0, k)]
         if missing:
-            raise SystemExit(f"env params lack {missing}: the B1-B5 implementation has not landed in "
-                             f"{a.src_root}; field names may differ -- check the implemented names")
-        P_env = P_env.replace(**over)
-        Psim = Psim.with_(heal_cold_s=0.08, heal_warm_s=0.04, inj_gain=1.0, inj_mode="cooling_only",
-                          heal_cost=0.7, shortfall="partial", b5=True, b5_low=20.0, b5_high=100.0,
-                          b5_floor=0.2, b5_over_floor=0.5, b5_over_start=150.0,
-                          coupling=True, coupling_rate=1.0)
+            raise SystemExit(f"env params lack {missing}: the B1-B5 implementation has not landed in {a.src_root}")
+        results.append(check(P_env0.replace(**over_env) if over_env else P_env0, Psim0.with_(**over_sim),
+                             core, B, jax, jnp, a.n))
+    res = {"n": a.n, "mechanics": a.mechanics, "src_commit": a.src_commit, "world": a.world, "sets": results,
+           "pass": all(r["pass"] for r in results)}
+    os.makedirs(os.path.dirname(os.path.abspath(a.out)), exist_ok=True)
+    json.dump(res, open(a.out, "w"), indent=1)
+    print(json.dumps(res, indent=1))
+    sys.exit(0 if res["pass"] else 1)
 
+
+def check(P_env, Psim, core, B, jax, jnp, n):
     # the constants the simulator hard-codes must be the world's own
     checks = dict(max_nutrition=float(P_env.max_nutrition), setpoint=float(P_env.setpoint),
                   metabolic_cost=float(P_env.metabolic_cost),
@@ -79,7 +103,7 @@ def main():
     open_cell = next((r, c) for r in range(1, 9) for c in range(1, 9) if (r, c) not in occupied)
     shape = s0.thermal_field.shape
 
-    rng = np.random.default_rng(0); n = a.n
+    rng = np.random.default_rng(0)
     N = rng.uniform(0, 200, n); I = rng.uniform(0, 100, n); T = rng.uniform(-15, 15, n)
     cell = np.where(rng.random(n) < 0.4, -30.0, np.where(rng.random(n) < 0.5, 8.5, rng.uniform(-35, 80, n)))
     act = rng.integers(0, 3, n)                      # 0 move/idle, 1 rest, 2 eat
@@ -106,16 +130,12 @@ def main():
     N32, I32, T32, c32 = (np.asarray(x, np.float32).astype(float) for x in (N, I, T, cell))
     s = B.step(N32, I32, T32, rested, ate, in_bush, c32, Psim)
     tol = 1e-3
-    res = {"n": n, "mechanics": a.mechanics, "src_commit": a.src_commit, "world": a.world,
-           "max_abs_diff": {"nutrition": float(np.abs(s["N"] - nut).max()), "injury": float(np.abs(s["I"] - inj).max()),
+    res = {"max_abs_diff": {"nutrition": float(np.abs(s["N"] - nut).max()), "injury": float(np.abs(s["I"] - inj).max()),
                             "body_temp": float(np.abs(s["T"] - bt).max()),
                             "drive": float(np.abs(B.drive(s["N"], s["I"], s["T"], Psim) - drv).max())},
-           "death_flag_mismatches": int((s["dead"] != done).sum())}
+           "death_flag_mismatches": int((s["dead"] != done).sum()), "simulator_settings": repr(Psim)}
     res["pass"] = all(v < tol for v in res["max_abs_diff"].values()) and res["death_flag_mismatches"] == 0
-    os.makedirs(os.path.dirname(os.path.abspath(a.out)), exist_ok=True)
-    json.dump(res, open(a.out, "w"), indent=1)
-    print(json.dumps(res, indent=1))
-    sys.exit(0 if res["pass"] else 1)
+    return res
 
 
 if __name__ == "__main__":
