@@ -481,7 +481,7 @@ by `training-runner`.
 | P11 | running | A4 bite, gain 3 | `rppo_l05body_p11_a4bitegain3_t1none_s42` | level05_body_interactions | pilot | 42 | 112 | cuda:1 | 2026-09-27T00:44:32 | `sr9scxml` | `logs/20260927_004432.log` · HEAD `4209024d` · ladder `8187c570` |
 | P12 | running (stuck at compile on 113 (node SSH-unreachable), relaunched on 101 at 01:16; 113 copy abandoned: WandB `c3wd9snn`, `logs/20260927_004436.log`) | A4 trip, food 1–2 | `rppo_l05body_p12_a4tripfood1to2_t1none_s42` | level05_body_interactions | pilot | 42 | 101 | cuda:0 | 2026-09-27T01:16:49 | `e8pc7ajl` | `logs/20260927_011649.log` · HEAD `4209024d` · ladder `8187c570` |
 | P13 | running (stuck at compile on 113 (node SSH-unreachable), relaunched on 101 at 01:16; 113 copy abandoned: WandB `35f5vjgq`, `logs/20260927_004441.log`) | A4 trip, food 1 | `rppo_l05body_p13_a4tripfood1to1_t1none_s42` | level05_body_interactions | pilot | 42 | 101 | cuda:1 | 2026-09-27T01:16:55 | `nuy4mx32` | `logs/20260927_011655.log` · HEAD `4209024d` · ladder `8187c570` |
-| P14 | planned (stage 2) | all four, selected | `rppo_l05body_p14_all4sel_t1none_s42` | level05_body_interactions | pilot | 42 | — | — | — | — | — |
+| P14 | running | all four, selected | `rppo_l05body_p14_all4sel_t1none_s42` | level05_body_interactions | pilot | 42 | 106 | cuda:0 | 2026-09-27T04:02:17 | `438j1im3` | `logs/20260927_040217.log` · HEAD `feb6e625` · ladder `8187c570` |
 | P15 | **skipped** (2026-09-27): every drainer pick is already its weakest rung, so P15 would equal P14 (§6.2) | all four, drainers one rung weaker | `rppo_l05body_p15_all4weaker_t1none_s42` | level05_body_interactions | pilot | 42 | — | — | — | — | — |
 
 ### 3.0b Stage 3 factorial (10,000,000 episodes). Launch only after §2.3–2.4 are recorded in §6

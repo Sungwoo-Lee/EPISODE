@@ -4226,9 +4226,26 @@ cd /media/nas01/projects/Interoceptive-AI/grid_world_pain
 # Representative active command (P13 — node 113 cuda:1). The other fifteen differ
 # only in --config, --device, the tag pair, and --seed for P0b/P0c.
 # ---------------------------------------------------------------------------
+# /home/vncuser/miniconda3/envs/grid_world_pain/bin/python train.py \
+#   --config configs/environment/experiment/level05_body_interactions/pilots/p13_a4trip_food1to1.yaml \
+#   --agent_config configs/models/recurrent_ppo/nmn_input_site_grid_gaenorm/nmngaenorm_t1none.yaml \
+#   --episodes 2000000 --device cuda:1 --log-interval 10 \
+#   --tag "rppo_l05body_p13_a4tripfood1to1_t1none_s42" --wandb-name "rppo_l05body_p13_a4tripfood1to1_t1none_s42" \
+#   --wandb-group "level05_body_interactions" --wandb-job-type "pilot"
+
+# ---------------------------------------------------------------------------
+# 2026-09-27 — level-05 body interactions, STAGE-2 pilot P14 (all four factors at the
+# selected strengths; identical world to factorial cell w1111). Ordinary agent t1none,
+# config-owned seed 42, 2,000,000 episodes. P15 skipped per design doc §6.2.
+# Node 106 cuda:0 (RTX 3090; P0a finished there). Provisional guard passed (grep printed nothing).
+# M7 ladder state at launch:
+#   HEAD                                   feb6e62567c5b1b9d99673446b924f8f12c496f1
+#   last commit on default.yaml + basic/   8187c570c09b0c40dfb89658b34f231fc7d03eab
+#   git status --short src/ configs/environment/ was clean.
+# ---------------------------------------------------------------------------
 /home/vncuser/miniconda3/envs/grid_world_pain/bin/python train.py \
-  --config configs/environment/experiment/level05_body_interactions/pilots/p13_a4trip_food1to1.yaml \
+  --config configs/environment/experiment/level05_body_interactions/pilots/p14_all4_selected.yaml \
   --agent_config configs/models/recurrent_ppo/nmn_input_site_grid_gaenorm/nmngaenorm_t1none.yaml \
-  --episodes 2000000 --device cuda:1 --log-interval 10 \
-  --tag "rppo_l05body_p13_a4tripfood1to1_t1none_s42" --wandb-name "rppo_l05body_p13_a4tripfood1to1_t1none_s42" \
+  --episodes 2000000 --device cuda:0 --log-interval 10 \
+  --tag "rppo_l05body_p14_all4sel_t1none_s42" --wandb-name "rppo_l05body_p14_all4sel_t1none_s42" \
   --wandb-group "level05_body_interactions" --wandb-job-type "pilot"
