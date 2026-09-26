@@ -34,18 +34,20 @@ state-dependent behaviour grow when these rules are on? And which rule, or which
 makes it grow?
 
 Before the 32 main runs, short calibration trainings of the ordinary agent choose how strong each
-rule is. A simulation study with an ideal planner predicted that "healing slows when hungry"
-matters most, "healing uses food" matters a little, "temperature costs food" does nothing, and
-scarcer food works against the effect. Those predictions are registered here before any training
-runs, with a plain warning: the simulation's support for the first one is weak. It fell short of
-the study's own pass mark and reversed direction under a longer planning horizon (§2.2).
-There is one training run per agent per world, so this is a **screen**: it finds which rules
-deserve a properly seeded follow-up, and it cannot confirm anything by itself.
+rule is. A simulation study with an ideal planner was meant to say in advance which rule matters
+most. Its first version put "healing slows when hungry" on top, but that version placed food about
+2 steps from the agent when the real distance is about 4. Re-run with the correct distance, the
+simulation **no longer singles out any rule**: "healing uses food" now edges ahead, "healing slows
+when hungry" shrinks to a small effect, and no rule's effect on the most common map is larger than
+the simulation's own noise band (§2.2, Revision 2). So the factorial is registered as a **screen
+with no favourite**: it asks which rules, if any, widen the gap, and it expects the two healing
+rules to be the likelier candidates. There is one training run per agent per world, so it finds
+which rules deserve a properly seeded follow-up and cannot confirm anything by itself.
 
 **Status:** designed, configs written and loader-validated, nothing launched. The four
-selected strengths are **provisional** until the stage-1 pilots run (§2.3). Revised once after
-plan review (Revision 1, below). **Five decisions are still the user's** before the pilots launch
-(§1.2).
+selected strengths are **provisional** until the stage-1 pilots run (§2.3). Revised after plan
+review (Revision 1) and after the corrected simulation (Revision 2, §1.3). The user's five
+pre-pilot decisions, plus two related ones, were made on 2026-09-26 (§1.2).
 
 ### 1.1 Revision 1 (2026-09-26): changes after plan review and config review
 
@@ -56,7 +58,7 @@ env-config-reviewer's notes (verdict GO WITH NOTES).
 |---|---|
 | M1 pick thresholds can cross | Third unchanged-level-05 pilot **P0c** (seed 44) added, and the "non-negligible" threshold is **capped at 15 % of baseline survival**, so a band of strengths that is both non-negligible and survivable always exists (§2.3). |
 | M2 simulation facts not disclosed | §2.2 now states that every B5 world failed the simulation study's own 5-point pass rule and that B5's gain falls **below** baseline at discount 0.99. It also carries a placeholder row for the re-run with the corrected food distance. §2.8 and §6.3 now agree: the food-distance error touches **every** prediction's baseline, not only A4's trip form. |
-| M3 weakest vs strongest pick for B5 | **Not decided.** Left to the user with the reviewer's recommendation (§1.2, D1). |
+| M3 weakest vs strongest pick for B5 | Left to the user at Revision 1; **decided 2026-09-26** as recommended (§1.2, D1). |
 | M4 multiple effects vs one margin | Lenth's simultaneous margin (SME ≈ 5.22 × PSE) is reported beside the individual margin (ME ≈ 2.57 × PSE). Exploratory effects are "noted" only above SME. Two effects are compared against √2 × ME (§4.3; the refutation clause in §2.2). |
 | M5 slope over varying injury ranges; no tooling | Measure 1 (and 3) is now a **fixed contrast** over pre-registered injury ranges with a "not computable" rule. Temperature for measure 4 comes from `obs_true` in raw degrees. The four new analysis scripts, their dependency-map rows and their owner (`developer`) are named (§4.1, §4.6). |
 | M6 recording volume uncosted | Episode counts, precision, cadence and a terabyte estimate are fixed in §4.5. §4.4 cadence is set to every fifth checkpoint. |
@@ -64,31 +66,34 @@ env-config-reviewer's notes (verdict GO WITH NOTES).
 | L1 WandB window means | The read-out is an `Episode/_window_n`-weighted mean over rows selected by `Episode/Number` (§2.3). |
 | L2 A1 is symmetric | A1's wording is changed to "being away from 0 degrees costs food" wherever the direction matters (§1, §2.1, §2.3, measure 4). |
 | L3 scene battery regime mismatch | Measure 5 is marked **invalid on factor-on cells** until the body-state probe grid plan lands (§4.1). |
-| L4 folder placement | **Not decided.** User's call (§1.2, D2). |
+| L4 folder placement | Left to the user at Revision 1; **approved 2026-09-26** (§1.2, D2). |
 | env-config-reviewer: PROVISIONAL guard | `grep -l PROVISIONAL` over the four selector files is a **blocking** launch-checklist step for P14 and every factorial row (§3.1). |
 | env-config-reviewer N2 | The pre-flight names `healing_nutrition_cost` as the B3 discriminator. `healing_nutrition_shortfall: partial` is already the default in every cell and so tells nothing (§3.1). |
 
-### 1.2 Decisions left to the user (before any pilot launches)
+### 1.2 Decisions made by the user (2026-09-26, before any pilot launched)
 
-- **D1. Which strength to pick for "healing slows when hungry" (M3).** As written, every
-  factor takes the *weakest* strength that measurably lowers survival, to keep the all-four world
-  from starving. The reviewer points out that this rule exists because of food drain, and
-  "healing slows when hungry" drains no food. The simulation rates its weakest strength (floor
-  0.5) at a third of the effect of the other two. **Reviewer's recommendation:** for "healing
-  slows when hungry", pick the *strongest survivable* strength. Keep "weakest" for the three
-  food-draining rules. The designer agrees. This changes the pre-registered rule, so the user must
-  approve it.
-- **D2. Folder placement (L4).** The study's configs sit in a new folder next to `basic/`, which
-  the letter of CLAUDE.md does not allow (§2.9). The reviewer calls it the user's call, with
-  `behavior_probes/` as precedent.
-- **D3. Rate 8 for "temperature costs food".** The pilot grid goes one strength beyond anything
-  the simulation tested (§2.3). Keep it, or cap the grid at the simulation's rate 4.
-- **D4. Pilot count.** With P0c there are 16 stage-1 pilots and 2 stage-2 pilots (18 in all,
-  ≈ 36 GPU-hours). The range is 15–18: dropping P0c gives 15 + 2 = 17 but leaves the M1 cap as the
-  only safeguard; dropping P15 as well gives 15 + 1 = 16.
-- **D5. Hidden injury.** The agents feel injury only through a delayed signal (§2.7). A null
-  result on the healing rules is therefore ambiguous. Accept that ambiguity for this screen, or
-  switch injury observability on (a different experiment).
+All were taken as recommended. No decision is open before the pilots.
+
+| # | Question | Decision | Where it acts |
+|---|---|---|---|
+| D1 | Which strength each factor gets (M3) | **"Healing slows when hungry" (B5) takes the strongest survivable strength**, because it drains no food and its weakest strength is the planner's weakest. **The three food-draining rules (B3 healing costs food, A1 being away from 0 degrees costs food, A4 scarcer food) take the weakest noticeable strength**, to keep the all-four world from starving. | §2.3 pick rule |
+| D2 | Folder placement next to `basic/` (L4) | **Approved.** After the study the folder moves to `archive/`, and the worlds that matter are promoted into `basic/` as new maintained files. | §2.9 |
+| D3 | Rate 8 for "being away from 0 degrees costs food" | **Kept** in the pilot grid, one rung beyond the simulation's rate 4. | §2.3 grid |
+| D4 | Pilot count | **16 stage-1 + 2 stage-2 pilots** (18 in all, ≈ 36 GPU-hours), including the third base seed P0c and the weaker-drainer stacking pilot P15. | §2.3, §2.4, §3.0 |
+| D5 | Hidden injury | **Accepted** for this screen. Injury observability stays off; every behaviour measure is analysed against **both** true injury and felt injury, and a null on the healing rules is reported as ambiguous. | §2.7, §4.1 |
+| D6 | Bush-fire clearance ([[BUSH_FIRE_CLEARANCE]]) | Built with **2 cells of clearance (key value 3), around burning fires only**. During this experiment the key stays at its **inert default** in every pilot and world, so placement is unchanged; the M7 rule in §2.6 applies (inert value recorded, not a confound; any active value is a confound). | §2.6 |
+| D7 | Probe scenes (measure 5) | **A grid of 480 conditions per run, including a food scene, at the final checkpoint only.** The grid is written as a **combination spec** (factors × levels), not as one config file per condition. | §4.1 measure 5 |
+
+### 1.3 Revision 2 (2026-09-26): re-registration after the corrected simulation
+
+The Revision 1 registration carried a placeholder row for a re-run of the simulation with the
+correct food distance, and a trigger: if that re-run reversed a sign or B5's rank, the predictions
+would be revised **before** the pilots. The re-run (commit `e2991ceb`) fired the trigger. B5 is no
+longer first (B3 overtakes it), B5's effect on the common map vanishes (+5.2 → +0.1), and no
+single change clears the common-map noise band. §2.2 now carries the Revision 2 predictions; the
+Revision 1 predictions stay below them, marked superseded. §2.1, §4.3 and §5 are changed to match
+the screen framing: no main effect is privileged, so every effect is judged against the
+simultaneous margin. No pilot had launched when this revision was made.
 
 ---
 
@@ -105,10 +110,16 @@ pilot-calibrated strengths:
   taxed);
 - A4, scarcer food.
 
-Does switching on B5 increase the modulated-minus-ordinary difference in state-dependent behaviour
-(§4.1) by more than the factorial's own noise margin (Lenth's margin of error over the 15
-factorial effects, §4.3)? And is B5's effect the largest of the four main effects? The design
-uses 1 seed (42) and 10,000,000 training episodes per run.
+**Revision 2 (screen form).** Which of the four factors, if any, changes the modulated-minus-ordinary
+difference in state-dependent behaviour (§4.1) by more than the factorial's own simultaneous noise
+margin (Lenth's SME over the 15 factorial effects, §4.3), and do the signs of the four main effects
+match the corrected simulation's pattern (B3 and B5 non-negative, A1 null, A4 non-positive)? The
+design uses 1 seed (42) and 10,000,000 training episodes per run.
+
+*Superseded (Revision 1):* "Does switching on B5 increase the modulated-minus-ordinary difference
+in state-dependent behaviour (§4.1) by more than the factorial's own noise margin (Lenth's margin
+of error over the 15 factorial effects, §4.3)? And is B5's effect the largest of the four main
+effects?"
 
 ### 2.2 Hypotheses and pre-registered predictions
 
@@ -119,15 +130,55 @@ knowing only one. Its numbers are for a planner, not a trained network. We take 
 predicted **direction and rank** of each factor's main effect on the agents' modulator advantage.
 They are not predicted magnitudes.
 
+#### 2.2.1 Revision 2 predictions (registered 2026-09-26, before any pilot) — current
+
+Source: `results/analysis/internal_state_interactions/sweep_food4/*.json` (base food trip 4 steps,
+the measured real value), compared with `sweep/*.json` (the Revision 1 source, base trip 2).
+Baseline combination gain 11.9 points pooled; 17.1 on the map without a warm bush (the common map,
+59 % of episodes) and 4.3 on the warm-bush map. The noise floor on the common map is 1.6, so the
+study's "twice the noise floor" band is ±3.2. Numbers are points of change from that baseline,
+pooled (common map / warm-bush map), discount 0.95 unless marked 0.99.
+
+| Factor | Corrected simulation, trip 4 (was, trip 2) | Discount 0.99, trip 4 (was) | Predicted main effect on the modulated-minus-ordinary difference |
+|---|---|---|---|
+| B5 healing slows when hungry | floor 0.5: +0.1 (−0.9 / +1.6) (was +1.0); floor 0.2: **+1.6 (+0.1 / +3.9)** (was +3.3 (+5.2 / +0.7)); floor 0.0: +1.6 (+0.2 / +3.8) (was +3.3) | +3.2 / +1.8 / +1.4 (was −2.2 / −3.6 / −4.0) | **small positive or null.** Under the strongest-survivable rule (D1) the pick is likely floor 0.2 or 0.0, where the planner gains +1.6. The effect sits on the warm-bush map; on the common map it is nil |
+| B3 healing costs food | cost 0.5: −0.3 (−2.9 / +3.4) (was +0.5); cost 1.0: **+3.1 (+2.9 / +3.4)** (was +0.7); cost 2.0: +3.2 (+1.1 / +6.2) (was +1.1) | +2.3 / +1.7 / −0.7 (was −0.8 / −3.0 / −5.1) | **positive if the pick is cost 1.0 or 2.0; null if it is cost 0.5.** The planner's response is not monotone: cost 0.5 is below baseline on the common map. The weakest-noticeable rule (D1) can land on 0.5, and the pick record (§6.1) states which case applies before stage 3 |
+| A1 being away from 0 degrees costs food | rate 2: −0.2; rate 4: **−0.9 (−1.5 / −0.1)** (was −1.4); rate 8: not simulated | +1.3 / +1.0 (was −1.4 / −0.0) | **none (within noise).** The two discounts disagree in sign |
+| A4 scarcer food | net per bite 3: **−0.8 (−0.4 / −1.5)** (was −1.5); net per bite 2: −1.0 (was −2.3); trip 6 / 8 / 10: −0.7 / −1.2 / −1.3 (pilot trip form measures 5–6 steps) | bite 3 / 2: −2.2 / −3.3; trip 6: −1.7 | **small negative, likely within noise** |
+
+**What the corrected simulation says, plainly.** It no longer singles out a factor. The largest
+pooled change among the four factors is B3 at +3.1 to +3.2; B5 is +1.6. No change to any of the
+four clears the common-map band of ±3.2 (the nearest is B3 cost 1.0 at +2.9). None reaches the
+study's own 5-point pass mark. Two things improved relative to Revision 1: B5's sign now agrees
+between discounts 0.95 and 0.99, and B3 at cost 1.0 is positive under both. The prior for any
+single factor remains weak, and the factorial is therefore read as a **screen**: which of the four,
+if any, stands out in trained agents.
+
+- **Screen outcome (primary):** each of the 15 effects on the §4.1 primary measure is reported with
+  ME and SME (§4.3). An effect is **noted** as a follow-up candidate when it exceeds SME. No main
+  effect has a privileged margin.
+- **Sign pattern (secondary):** the simulation's direction for the four main effects is B3 ≥ 0,
+  B5 ≥ 0, A1 ≈ 0, A4 ≤ 0. The pattern is **contradicted** if any main effect clears SME in the
+  opposite direction to its prediction, or A1 clears SME in either direction. It is **consistent**
+  otherwise; that includes an all-null screen, which is reported as uninformative about transfer,
+  not as support.
+- **Expected candidates:** the healing rules (B3, B5) and their pair B3×B5. A noted B3 or B5 effect
+  is read as "consistent with the corrected planner", never "confirmed as predicted".
+
+#### 2.2.2 Revision 1 predictions — superseded 2026-09-26 by §2.2.1
+
+Kept for the record. These were registered from the simulation with food at trip 2 and were
+superseded when the corrected re-run fired the revision trigger in the last row.
+
 | Factor | Simulation (planner combination gain vs today, points; pooled / map without a warm bush, 59 % of episodes) | Predicted main effect on the modulated-minus-ordinary difference |
 |---|---|---|
 | B5 healing slows when hungry | floor 0.2: **+3.3 / +5.2**; floor 0.0: +3.3 / +5.2; floor 0.5: +1.0 | **positive, largest of the four** |
 | B3 healing costs food | cost 0.5 → 2.0: +0.5 → +1.1 pooled | positive but small; expected **not** to clear the noise margin |
 | A1 being away from 0 degrees costs food | rate 0.5 → 4: −0.1 → −1.4 | none (within noise) |
 | A4 scarcer food | trip 4/6/8: −1.8 / −2.4 / −2.9; net per bite 3/2: −1.5 / −2.3 | **negative** |
-| **Re-run with corrected food distance — done 2026-09-26** (base trip 4, `results/analysis/internal_state_interactions/sweep_food4/`; baseline combination gain 11.9 pooled, 17.1 / 4.3 on the no-warm-bush / warm-bush maps; noise floor on the common map 1.6, so its ±2× band is ±3.2) | Change in combination gain vs baseline, pooled (common map / warm-bush map), discount 0.95, at the provisional strengths — B5 floor 0.2: **+1.6** (+0.1 / +3.9), was +3.3 (+5.2 / +0.7) · B3 cost 1.0: **+3.1** (+2.9 / +3.4), was +0.7 · A1 rate 4: **−0.9** (−1.5 / −0.1), was −1.4 · A4 net food per bite 3: **−0.8** (−0.4 / −1.5), was −1.5. Discount 0.99: B5 +1.8, B3 +1.7, A1 +1.0, A4 −2.2. **The revision trigger fired:** B5 no longer ranks first (B3 overtakes it), and B5's effect on the common map vanishes; no single change clears the common-map noise band. | the predictions above stand unless this row reverses a sign or B5's rank; if it does, the registration is revised **before** the pilots and the revision is dated here |
+| **Re-run with corrected food distance — done 2026-09-26** (base trip 4, `results/analysis/internal_state_interactions/sweep_food4/`; baseline combination gain 11.9 pooled, 17.1 / 4.3 on the no-warm-bush / warm-bush maps; noise floor on the common map 1.6, so its ±2× band is ±3.2) | Change in combination gain vs baseline, pooled (common map / warm-bush map), discount 0.95, at the provisional strengths — B5 floor 0.2: **+1.6** (+0.1 / +3.9), was +3.3 (+5.2 / +0.7) · B3 cost 1.0: **+3.1** (+2.9 / +3.4), was +0.7 · A1 rate 4: **−0.9** (−1.5 / −0.1), was −1.4 · A4 net food per bite 3: **−0.8** (−0.4 / −1.5), was −1.5. Discount 0.99: B5 +1.8, B3 +1.7, A1 +1.0, A4 −2.2. **The revision trigger fired:** B5 no longer ranks first (B3 overtakes it), and B5's effect on the common map vanishes; no single change clears the common-map noise band. | the predictions above stand unless this row reverses a sign or B5's rank; if it does, the registration is revised **before** the pilots and the revision is dated here. **Fired; revised 2026-09-26 as Revision 2 (§2.2.1)** |
 
-**What the simulation does not support (disclosed, M2).** Two facts from the same simulation
+**What the trip-2 simulation did not support (disclosed at Revision 1, M2; superseded).** Two facts from the same simulation
 output (`reading_rule.json`) weaken the B5 prediction:
 
 - **No B5 world passed the study's own pre-registered rule.** Rule 1 asks for a gain of at least
@@ -142,16 +193,19 @@ The prediction is registered from the discount-0.95 result because 0.95 is the a
 screen is read as "consistent with the 0.95 planner", **not** as "confirmed as predicted", and the
 0.99 disagreement is repeated wherever the result is reported.
 
-- **Confirms (for this screen):** B5's main effect on the §4.1 primary measure is positive,
-  exceeds Lenth's margin of error, and is the largest positive main effect.
-- **Refutes:** B5's main effect is ≤ 0 or inside the margin (ME, §4.3). The same applies if another
-  factor's positive effect exceeds B5's by more than **√2 × ME**, since then the planner's ranking
-  does not transfer to trained agents. The √2 applies because the difference of two effects
-  carries the noise of both.
-- **Shape predicted:** a B5-on world has a larger gap because the modulated agent's injury
-  response becomes nutrition-dependent (it hides less, and eats first, when injured *and* hungry),
-  while the ordinary agent keeps the fixed "hurt → hide" habit. The gap should appear in the
-  late-training window and stay there, not flicker (§4.4).
+- *(Superseded)* **Confirms (for this screen):** B5's main effect on the §4.1 primary measure is
+  positive, exceeds Lenth's margin of error, and is the largest positive main effect.
+- *(Superseded)* **Refutes:** B5's main effect is ≤ 0 or inside the margin (ME, §4.3). The same
+  applies if another factor's positive effect exceeds B5's by more than **√2 × ME**, since then the
+  planner's ranking does not transfer to trained agents. The √2 applies because the difference of
+  two effects carries the noise of both.
+
+#### 2.2.3 Shape, interactions and survival (unchanged; apply to Revision 2)
+
+- **Shape predicted:** a world with a healing rule on (B5 or B3) has a larger gap because the
+  modulated agent's injury response becomes nutrition-dependent (it hides less, and eats first,
+  when injured *and* hungry), while the ordinary agent keeps the fixed "hurt → hide" habit. The gap
+  should appear in the late-training window and stay there, not flicker (§4.4).
 - **Interactions:** the simulation varied one factor at a time, so there is **no directional
   prediction** for any pair. B5×B3 is the designed pair (as food runs low, slower healing also
   slows the food spent on healing; [[STATE_DEPENDENT_BODY_MECHANICS]] §A4b), so it is read first.
@@ -183,7 +237,7 @@ steep part of the curve (≈ 91 % of final), and that point took about 1 h 55 mi
 |---|---|---|
 | B5 hunger floor (ramp 20 → 100 nutrition, no over-full slowdown) | 0.5, 0.2, 0.0 | the simulation's three floors; 0.2 and 0.0 tie in the planner, 0.5 is a third as strong |
 | B3 cost per injury point healed (`partial`) | 0.5, 1.0, 2.0 | the simulation's range minus its weakest 0.25 (its effect was +0.1 points). A full 100-point heal costs 50 / 100 / 200 of the 0–200 nutrition range |
-| A1 coupling rate (charged for distance from 0 degrees in either direction) | 2, 4, **8** (rate 8 is an open user decision, §1.2 D3) | the planner saw nothing up to 4, because it keeps itself warm. A trained agent spends more time cold (starts average −2.6 degrees), so the grid reaches one rung **beyond** the simulation. At −10 degrees (or +10) the extra drain is 0.4 / 0.8 / 1.6 per step, against the 1.0 metabolic cost; sitting on the +8.8-degree fire ring costs 0.35 / 0.7 / 1.4 |
+| A1 coupling rate (charged for distance from 0 degrees in either direction) | 2, 4, **8** (rate 8 kept by the user, §1.2 D3) | the planner saw nothing up to 4, because it keeps itself warm. A trained agent spends more time cold (starts average −2.6 degrees), so the grid reaches one rung **beyond** the simulation. At −10 degrees (or +10) the extra drain is 0.4 / 0.8 / 1.6 per step, against the 1.0 metabolic cost; sitting on the +8.8-degree fire ring costs 0.35 / 0.7 / 1.4 |
 | A4 bite form: `food_nutrition_gain` | 6 → 4, 6 → 3 (net per bite 5 → 3, 2) | exactly the simulation's two bite values |
 | A4 trip form: food items per episode | 1–4 → 1–2, → exactly 1 | measured nearest-food trip, 300 real resets: median **4 → 5 → 6** steps (mean 4.3 / 5.2 / 5.9). A 10×10 map cannot reach the simulation's 8 |
 
@@ -214,14 +268,27 @@ large for a survival-based pick to be sharp, and the pick is flagged as noise-li
 the third seed were both adopted. The cap is the structural guarantee; the third seed makes `n`
 less of a coin toss.
 
-**Pick rule, per factor:** choose the **weakest** strength that is both non-negligible and
-survivable. Weakest is chosen deliberately: three of the four factors drain food energy, and
-stacking them is the main risk (§2.4). **For B5 this is an open user decision (§1.2, D1).** The
-reviewer and the designer recommend the *strongest survivable* strength for B5, which drains no
-food. Until the user decides, the rule above stands as written for all four factors. Edge cases:
+**Pick rule, per factor (user decision D1, 2026-09-26):**
 
-- **No strength is non-negligible:** pick the strongest survivable one and flag "no measurable
-  survival effect at the tested strengths". The user decides whether to add one stronger pilot.
+- **B3, A1, A4 (the food-draining rules):** choose the **weakest noticeable** strength, i.e. the
+  weakest that is both non-negligible and survivable. Weakest is chosen deliberately: these three
+  drain food energy, and stacking them is the main risk (§2.4).
+- **B5 (healing slows when hungry):** choose the **strongest survivable** strength. B5 drains no
+  food, so the stacking argument does not apply, and its weakest strength (floor 0.5) is the one
+  the planner rates lowest (§2.2.1). Whether that strength is also non-negligible is recorded in
+  §6.1 but is not required.
+
+*Superseded (Revision 1):* "choose the weakest strength that is both non-negligible and survivable"
+for all four factors.
+
+Edge cases:
+
+- **No strength is non-negligible (B3, A1, A4):** pick the strongest survivable one and flag "no
+  measurable survival effect at the tested strengths". The user decides whether to add one
+  stronger pilot.
+- **B3 lands on cost 0.5:** record in §6.1 that the corrected planner predicts no gain there
+  (−0.3 pooled, −2.9 on the common map; §2.2.1), so a null B3 effect is then the expected outcome.
+  The pick is not overridden.
 - **Even the weakest strength is not survivable:** stop and report to the user. Nothing weaker
   than the grid is tried without the user's approval.
 - **Survival does not fall steadily with strength:** report it. The rule still applies as written.
@@ -312,7 +379,10 @@ baseline: the Wave-2 level-05 runs started every episode at 0 degrees and are no
   ([[BUSH_FIRE_CLEARANCE]], `docs/develop/active/thermal/BUSH_FIRE_CLEARANCE.md`) adds
   `thermal.bush_min_fire_distance: 0` to `default.yaml`. It may land mid-study. At its inert value 0
   it leaves placement unchanged, so if it appears in some saved configs and not others **at 0**, it
-  is recorded but not a confound. Any non-zero value is a confound.
+  is recorded but not a confound. Any non-zero value is a confound. The user decided (D6,
+  2026-09-26) that the feature is built with 2 cells of clearance (value 3) around burning fires
+  only, and stays at its inert default throughout this experiment, so a saved config showing 3 is
+  a confound.
 - **Reward** is untouched by every factor. B3/B5/A1 change body dynamics only, and A4 changes food
   yield or placement.
 
@@ -346,7 +416,7 @@ project design decision, recorded in the LLM Wiki entry
 | The trip form of A4 also changes the scent and vision landscape | A4 if the trip form is kept | Low–Medium | the bite form is preferred when both qualify (§2.3) |
 | Hidden injury (§2.7) | B3, B5 | Medium | analyse against true and felt injury; state the ambiguity of a null |
 | Survival changes the composition of the data (a world where agents die early has fewer late-episode, high-injury steps) | behaviour measures | Medium | measures 1 and 3 use **fixed** injury ranges and nutrition bands that every run must cover with ≥ 200 steps, else the run is "not computable" (§4.1); measure 4 uses fixed bins, and bins below the count are dropped and counted |
-| The simulation's food-trip baseline counted hiding predators as food (§6.3), so its base world had food about 2 steps away instead of about 4 | the **baseline of every simulated world**, so the size, and for the small effects possibly the sign, of all four §2.2 predictions; most plausibly it makes the food-draining rules (A4, B3) look milder than they are | Low–Medium | the A4 trip form is calibrated from real resets here; the simulation is being re-run with base trip 4, and the result enters the §2.2 placeholder row before the pilots (Revision 1) |
+| The simulation's food-trip baseline counted hiding predators as food (§6.3), so its base world had food about 2 steps away instead of about 4 | the **baseline of every simulated world**, so the size, and for the small effects possibly the sign, of all four §2.2 predictions; most plausibly it makes the food-draining rules (A4, B3) look milder than they are | Resolved for the registration | the A4 trip form is calibrated from real resets here; the simulation was re-run with base trip 4 (`sweep_food4/`) and the predictions re-registered from it before the pilots (Revision 2, §2.2.1). As expected, B3 grew; B5 also shrank, which was not foreseen |
 
 ### 2.9 Where the configs live, and why
 
@@ -358,10 +428,10 @@ worlds and will select only important configs").
   in this folder says in its header that it is experimental and not maintained. A schema change
   that breaks these files is **not** migrated. A world that proves important is promoted into
   `basic/` as a new, maintained file.
-- **The placement is flagged for the user.** CLAUDE.md says everything else under
-  `experiment/` "belongs in `archive/`". Putting this folder in `archive/` now would be wrong: it
-  is live and must load for the next few weeks. After the study, the folder should be moved to
-  `archive/`, or its winners promoted into `basic/`.
+- **The placement was approved by the user (D2, 2026-09-26).** CLAUDE.md says everything else
+  under `experiment/` "belongs in `archive/`". Putting this folder in `archive/` now would be
+  wrong: it is live and must load for the next few weeks. **After the study**, the folder moves to
+  `archive/` and the worlds that matter are promoted into `basic/` as new, maintained files.
 - **The existing test gate is unaffected.** `test_backward_compat_configs.py` loads every
   non-archived file here with the raw loader, which does not resolve `extends:`. It therefore skips
   them as "missing mandatory key", as it already does for every `basic/` world.
@@ -598,7 +668,10 @@ comparable. Measures 1 and 3 now use one fixed contrast:
    factor switched on, it would therefore test the agent in a world where that factor is off: a
    regime mismatch ([[BODY_STATE_PROBE_GRID]] §A2). Until that plan lands and the battery can
    inherit the cell's own world, the battery is valid **only on `w0000`**, and no factor-on result
-   from it is reported.
+   from it is reported. **Probe-scene scope (user decision D7, 2026-09-26):** once the probe grid
+   lands, each of the 32 runs is probed on a grid of **480 conditions, including a food scene, at
+   the final checkpoint only**. The grid is defined as a combination spec (factors × levels), not
+   as one config file per condition.
 
 ### 4.2 Pre-registered primary statistic
 
@@ -620,15 +693,17 @@ genuine world differences. Two noise yardsticks are used, and both are reported:
 1. **Lenth's pseudo standard error (PSE)** over the 15 effects. This is the standard method for an
    unreplicated two-level factorial: it treats the bulk of small effects as noise. Two margins are
    computed from it and **both are reported for every effect**:
-   - **ME** (margin of error) = t(0.975, 5) × PSE ≈ **2.57 × PSE**. It applies to the **one**
-     pre-registered contrast, B5's main effect (§2.2).
+   - **ME** (margin of error) = t(0.975, 5) × PSE ≈ **2.57 × PSE**. Reported beside every effect
+     for context. *(Superseded, Revision 1: ME was the decision margin for the one pre-registered
+     contrast, B5's main effect. Revision 2 has no privileged contrast.)*
    - **SME** (simultaneous margin of error) = t(γ, 5) × PSE with γ = (1 + 0.95^(1/15)) / 2, which
      is ≈ **5.22 × PSE**. It guards against the fact that with 15 effects, at least one clears ME
-     by chance about half the time in a pure-noise screen. Every **exploratory** effect (the
-     other 3 main effects, the 11 interactions, and the same set on each agent's own measure) is
-     **noted** only when it exceeds SME.
-   - **Comparing two effects** (for example, "another factor beats B5") uses **√2 × ME ≈ 3.64 ×
-     PSE**, since the difference of two effects carries the noise of both.
+     by chance about half the time in a pure-noise screen. Under Revision 2 **every** effect (all
+     4 main effects, the 11 interactions, and the same set on each agent's own measure) is
+     **noted** only when it exceeds SME, and the §2.2.1 sign-pattern check uses SME.
+   - **Comparing two effects** (for example, "B3 beats B5") uses **√2 × SME**, since the
+     difference of two effects carries the noise of both. *(Revision 1 used √2 × ME ≈ 3.64 × PSE
+     for "another factor beats B5".)*
 
    Nothing is called significant.
 2. **Across-checkpoint spread.** This is the standard deviation of `D_w` over the newest 5
@@ -697,8 +772,8 @@ test of this study's hypothesis.
 
 ### 4.7 Follow-up this screen feeds (named now)
 
-Take the noted factors plus `w0000`: at most 4 cells, for example the 2×2 of B5 × the
-strongest other factor. Train them with **5 seeds** per agent, at 10 M episodes, which is
+Take the noted factors plus `w0000`: at most 4 cells, i.e. the 2×2 of the two strongest noted
+factors (Revision 2; Revision 1 named "B5 × the strongest other factor"). Train them with **5 seeds** per agent, at 10 M episodes, which is
 ≤ 40 runs. That replicated 2×2 is the experiment that can confirm. This screen only decides which
 2×2 it is.
 
@@ -714,8 +789,8 @@ strongest other factor. Train them with **5 seeds** per agent, at 10 M episodes,
 | A factorial cell collapses for one agent only (survival < 0.60 × `w0000` of that agent) | that cell's `D_w` is reported and marked; effects are computed with and without it; a factor whose effect depends on that cell is reported as fragile |
 | The modulated run NaNs (critic explosion, modulator saturation) | the run failed, not the architecture: one rerun; if it fails twice the cell is marked "modulator unstable in this world", which is itself reported per factor |
 | `D_w` on survival is large but the behaviour measures show nothing | a performance effect without a state-dependence mechanism; reported as such, and does not confirm §2.2 |
-| B5's effect inside ME and every other effect inside SME (§4.3) | a null screen at 1 seed; the simulation's ranking did not transfer detectably. The follow-up is then **not** automatic, and the PI is consulted |
-| B5's effect exists only against felt injury, or only against true injury | reported separately; felt-only is the more interesting, because the modulator reads felt injury |
+| Every effect inside SME (§4.3) | a null screen at 1 seed, uninformative about whether the simulation transfers. The follow-up is then **not** automatic, and the PI is consulted. *(Revision 1 wording: "B5's effect inside ME and every other effect inside SME".)* |
+| A healing-rule effect (B5 or B3) exists only against felt injury, or only against true injury | reported separately; felt-only is the more interesting, because the modulator reads felt injury |
 
 ---
 
@@ -747,9 +822,10 @@ The consequences:
   (reconciled in Revision 1).
 
 The A4 trip form's strength is calibrated from real resets, so the pilots do not depend on the
-number. The **registered predictions** do, and the simulation is being re-run with base trip 4
-(`results/analysis/internal_state_interactions/sweep_food4/`); its numbers go into the §2.2
-placeholder row before any pilot launches. This doc does not edit that study.
+number. The **registered predictions** do. The simulation was re-run with base trip 4
+(`results/analysis/internal_state_interactions/sweep_food4/`, fix in commit `e2991ceb`), and the
+predictions were re-registered from it before any pilot launched (Revision 2, §2.2.1). This doc
+does not edit that study.
 
 ---
 
@@ -773,8 +849,9 @@ separate job. This design does **not** depend on it: temperature comes from `obs
 - Implementation of the four mechanics: [[STATE_DEPENDENT_BODY_MECHANICS]]
   (`docs/develop/active/thermal/STATE_DEPENDENT_BODY_MECHANICS.md`)
 - Simulation study and sweep: [[STUDY_PLAN]]
-  (`docs/experiments/active/internal_state_interactions/`); numbers from
-  `results/analysis/internal_state_interactions/reading_rule.json` and `sweep/*.json`
+  (`docs/experiments/active/internal_state_interactions/`); Revision 2 numbers from
+  `results/analysis/internal_state_interactions/sweep_food4/*.json`; superseded Revision 1
+  numbers from `reading_rule.json` and `sweep/*.json`
 - Agents and prior level-05 runs: [[BASIC_LEVELS_Q2_DEFAULT]]; runs
   `results/JAX_RecurrentPPO/20260922-182534_rppo_bq2cover_lvl05_t1none_s42` and
   `20260922-182538_rppo_bq2cover_lvl05_t16quad_s42` (WandB `z2u1orlf`, `ihq3tt7f`)
