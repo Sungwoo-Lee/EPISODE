@@ -80,7 +80,8 @@ thermoceptor. Temperature is not in the reward yet (Stage 4). Plan:
 | `random_spots.size` | `thermal_spot_size` | **yes** | `>= 1` | stamp width in cells |
 | `random_spots.temp` | `thermal_spot_temp` | no | — | stamp magnitude; sign is drawn per spot |
 | `min_fire_separation` | `thermal_min_fire_separation` | **yes** | `>= 0` | Manhattan; `0` disables |
-| `food_min_fire_distance` | `thermal_food_min_fire_distance` | **yes** | `>= 0` | Manhattan; `0` disables |
+| `food_min_fire_distance` | `thermal_food_min_fire_distance` | **yes** | `>= 0` | Manhattan; `0` disables. Counts **every** fire slot, burning or not |
+| `bush_min_fire_distance` | `thermal_bush_min_fire_distance` | **yes** | `0` or `>= 2` (`1` refused) | Manhattan, bush (`hides_agent`, not a heat source) to fire; `0` disables and is today's placement exactly. Counts **burning** fires only (unlit slots do not count). Static. [[BUSH_FIRE_CLEARANCE]] |
 | `warming_rate_scale` | `thermal_warming_rate_scale` | **yes** | `> 0`; `× (k_exchange + k_loss) <= 1` | multiplies the body's per-step temperature change when it is positive; 1.0 = single-rate. Conditional-mandatory under `enabled` |
 | `cooling_rate_scale` | `thermal_cooling_rate_scale` | **yes** | `> 0`; `× (k_exchange + k_loss) <= 1` | multiplies the body's per-step temperature change when it is zero or negative; 1.0 = single-rate. Conditional-mandatory under `enabled` |
 | `grid_range` | `thermal_grid_range` | **yes** | `>= 0` | thermoceptor **radius**; contributes `2r²+2r+1` observation dims |
@@ -175,7 +176,17 @@ config-time constant, so `0` traces the pre-thermal graph exactly.
   exists. The second pass moves *only* food and leaves every other entity where the first
   pass put it — re-running the full overlap scan instead lets a displaced entity cascade
   onto the fire's own cell, moving the very fire the exclusion mask was computed from.
-- Under **`placement.mode: per_type`** neither constraint is supported (that mode uses
+- **`bush_min_fire_distance`** is a **third pass** after the food pass, reusing
+  `relocate_blocked_entities` with its own stream (`fold_in(resolve_key, 0xB05E)`): it
+  moves *only* bushes (obstacle slots with `hides_agent` that are not heat sources) off
+  every cell at Manhattan `< value` from a **burning** fire, so fires, food, animals and
+  rocks keep the cells (and the random numbers) the rule-off world gives them. Unlike the
+  food rule it ignores unlit fire slots, so it needs the per-episode obstacle activation
+  mask before placement; that draw depends on `property_key` alone. At load the rule is
+  refused unless the world has a fire and a bush, no slot is both, no resource is a heat
+  source, and a worst-case count bound proves every bush can always find a cell (so the
+  `(0, 0)` fallback below cannot fire for it). Plan: [[BUSH_FIRE_CLEARANCE]].
+- Under **`placement.mode: per_type`** none of the three constraints is supported (that mode uses
   `place_in_area` and bypasses the validity mask), and a non-zero value **raises at load**
   rather than being silently ignored.
 
@@ -1285,6 +1296,7 @@ thermal.enabled
 thermal.sigma                          thermal.default_temp
 thermal.use_random_spots               thermal.use_object_sources
 thermal.min_fire_separation            thermal.food_min_fire_distance
+thermal.bush_min_fire_distance
 thermal.temperature_setpoint           thermal.min_temperature
 thermal.max_temperature                thermal.k_exchange
 thermal.k_loss                         thermal.k_metabolic

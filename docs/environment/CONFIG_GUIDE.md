@@ -315,7 +315,8 @@ thermal:
   use_random_spots: false
   use_object_sources: true
   min_fire_separation: 3    # Manhattan, between heat sources
-  food_min_fire_distance: 0 # Manhattan, food to fire; 0 = today's behaviour
+  food_min_fire_distance: 0 # Manhattan, food to fire (every fire slot); 0 = today's behaviour
+  bush_min_fire_distance: 0 # Manhattan, bush to BURNING fire; 0 = today's placement; 1 refused
   temperature_setpoint: 0.0 # the body temperature the agent is trying to hold
   min_temperature: -15.0    # survivable band; leaving it ends the episode (code 5)
   max_temperature: 15.0
@@ -418,6 +419,15 @@ Seven things that bite:
   about thermoregulation while still counting as a thermal episode in every metric. If
   such episodes are common the results will understate the task's difficulty. Measure the
   frequency before switching it on.
+- **`bush_min_fire_distance` keeps bushes away from burning fires, and is off.** At `0`
+  world generation is exactly today's (same random numbers, same positions; a parity test
+  proves it). `1` is refused (it would block only the fire's own cell). `2` keeps bushes
+  off the four cells beside a fire; `3` also off the diagonal and two-straight-out cells.
+  When on, a third placement pass moves **only** bushes; everything else is where the
+  rule-off world puts it. The loader refuses a world where that pass could run out of room
+  (a worst-case count over the bush spawn area) instead of letting a bush be parked at
+  `(0, 0)`. It counts burning fires only, unlike `food_min_fire_distance`. Plan:
+  [BUSH_FIRE_CLEARANCE.md](../develop/active/thermal/BUSH_FIRE_CLEARANCE.md).
 
 All the sub-keys are **conditional-mandatory** (§5 pattern), read only when
 `thermal.enabled` is true, and the `random_spots.*` trio only when `use_random_spots` is

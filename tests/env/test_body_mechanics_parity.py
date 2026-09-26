@@ -59,6 +59,12 @@ NEW_KEYS = (
 )
 assert len(NEW_KEYS) == 15
 
+# Keys added by LATER changes, inert at their shipped value, that the resolved level-05
+# config now carries but this fixture predates. Dropped only in the drift check; their own
+# off-parity is proved elsewhere. bush_min_fire_distance: BUSH_FIRE_CLEARANCE
+# (tests/env/test_bush_fire_clearance.py).
+LATER_INERT_KEYS = ("thermal.bush_min_fire_distance",)
+
 CONTRAST_SEEDS = (0, 1, 2, 3)
 
 
@@ -127,8 +133,8 @@ def _rollout(params, seeds=G.SEEDS, max_t=G.MAX_T):
 def test_no_unrelated_config_drift(fx, world):
     """O3: the resolved world minus the fifteen new keys equals the stamped one."""
     stamped = yaml.safe_load(str(fx[f"{world}._config_yaml"]))
-    now = _drop(_world_dict(world), NEW_KEYS)
-    stamped = _drop(stamped, NEW_KEYS)
+    now = _drop(_world_dict(world), NEW_KEYS + LATER_INERT_KEYS)
+    stamped = _drop(stamped, NEW_KEYS + LATER_INERT_KEYS)
     if now != stamped:
         diffs = []
         for blk in sorted(set(now) | set(stamped)):

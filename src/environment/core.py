@@ -1449,7 +1449,10 @@ def relocate_blocked_entities(
 
     Same PRNG discipline as `resolve_overlaps_global`: ONE permutation drawn up
     front, then a deterministic walk. Zero per-entity draws. The whole call is
-    reached only inside a static `if food_min_fire_distance > 0`.
+    reached only inside a static `if food_min_fire_distance > 0`, or (a second,
+    independent caller, BUSH_FIRE_CLEARANCE) a static
+    `if bush_min_fire_distance > 0`, which moves only bushes and whose
+    feasibility is checked at load so the fallback below cannot fire for it.
 
     Shares the same silent fallback: if no cell satisfies the mask the entity is
     parked at (0, 0) with nothing raised.
@@ -1550,6 +1553,7 @@ def place_in_area(
 # does not reach them at all.
 _THERMAL_FIELD_KEY = 0x7EE7   # field build (default_temp, spots, per-slot ratios)
 _THERMAL_FOOD_KEY = 0xF00D    # D3's second placement pass
+_THERMAL_BUSH_KEY = 0xB05E    # bush-to-fire clearance pass (BUSH_FIRE_CLEARANCE)
 
 
 def heat_source_mask(temperature, ratio_low, ratio_high):
@@ -1727,6 +1731,69 @@ def jax_reset(params: EnvParams, key: jax.random.PRNGKey) -> EnvState:
     random_pos = jax.random.randint(agent_key, (2,), 0, jnp.array([params.height, params.width]))
     agent_pos = jnp.where(params.random_start_pos, random_pos, params.start_pos)
 
+    # Per-episode count-range activation masks (NEW — PER_EPISODE_ENV_VARIANCE),
+    # drawn in §7b below. Defined here, unchanged, so the bush-clearance pass
+    # (BUSH_FIRE_CLEARANCE, "burning fires only") can draw the SAME obstacle mask
+    # before placement: the draw depends on property_key and static config only.
+    #
+    # For each entity class (res / animal / obs):
+    #   - If ALL entries are degenerate (low == high), skip the K-draw entirely so
+    #     the PRNG stream is byte-identical to pre-feature code (parity guard).
+    #     The mask is all-True (same as the fixed-count semantics).
+    #   - If ANY entry has a genuine range (low < high), derive a per-episode key
+    #     via fold_in(property_key, <class-specific constant>) and draw K per entry.
+    #     Slots [K:count_high] for that entry are set False and parked off-grid.
+    #
+    # Fold-in constants are chosen to not collide with existing uses
+    # (0xAE1 = animal_episode_key, 0x7150A1 = visual_property_key):
+    _COUNT_KEY_RES    = 0xC0A1  # resource activation
+    _COUNT_KEY_ANIMAL = 0xC0A2  # animal activation
+    _COUNT_KEY_OBS    = 0xC0A3  # obstacle activation
+
+    def _build_activation_mask(count_low_arr, count_high_arr, entry_id_arr,
+                               has_range: bool, fold_const: int, num_slots: int,
+                               rng_key):
+        """Return (mask [num_slots bool], positions_park [not used here]).
+
+        When has_range=False (pure Python bool, static), returns all-True without
+        any jax.random call so the PRNG stream is untouched.
+        When has_range=True, draws K per entry and builds the mask.
+        """
+        if (not has_range) or num_slots == 0:
+            return jnp.ones(num_slots, dtype=jnp.bool_)
+        # Derive independent key for count-activation draws
+        act_key = jax.random.fold_in(rng_key, fold_const)
+        num_entries = count_low_arr.shape[0]
+        # Draw K per entry: randint(act_key_i, (), low, high+1) → K_i in [low, high]
+        entry_keys = jax.random.split(act_key, num_entries)
+        def _draw_k(ek, lo, hi):
+            # When lo==hi, uniform([lo, hi+1)) always returns lo (integer draw)
+            return jax.random.randint(ek, (), lo, hi + 1)
+        K_per_entry = jax.vmap(_draw_k)(entry_keys, count_low_arr, count_high_arr)
+        # Build slot mask: slot s is active iff its within-entry rank < K_entry
+        # entry_id_arr[s] = which entry slot s belongs to.
+        # within_rank[s] = how many slots for the same entry came before slot s
+        # = cumcount(entry_id_arr)[s]
+        # Computed as: rank[s] = sum_{t < s} (entry_id_arr[t] == entry_id_arr[s])
+        # Vectorized: (arange(num_slots)[:, None] > arange(num_slots)[None, :]) &
+        #             (entry_id_arr[:, None] == entry_id_arr[None, :])  → too large.
+        # Instead, use lax.scan to build cumcount:
+        def _cumcount(carry, eid):
+            counts = carry
+            rank = counts[eid]
+            counts = counts.at[eid].add(1)
+            return counts, rank
+        _, slot_rank = jax.lax.scan(
+            _cumcount,
+            jnp.zeros(num_entries, dtype=jnp.int32),
+            entry_id_arr
+        )
+        # slot_rank[s] = rank of slot s within its entry (0-based)
+        # Slot is active iff slot_rank[s] < K[entry_id[s]]
+        slot_K = K_per_entry[entry_id_arr]  # [num_slots] — K for this slot's entry
+        mask = slot_rank < slot_K
+        return mask
+
     # 2. Entity Placement
     num_res = params.res_type.shape[0]
     # N1 fix: pred = animals with predator class; neutral = animals with neutral class.
@@ -1790,8 +1857,9 @@ def jax_reset(params: EnvParams, key: jax.random.PRNGKey) -> EnvState:
         # same arguments and traces the same graph it always did.
         _min_fire_sep = params.thermal_min_fire_separation
         _food_min_dist = params.thermal_food_min_fire_distance
+        _bush_min_dist = params.thermal_bush_min_fire_distance
         _is_fire_concat = None
-        if _min_fire_sep > 0 or _food_min_dist > 0:
+        if _min_fire_sep > 0 or _food_min_dist > 0 or _bush_min_dist > 0:
             # A "heat source" is a SLOT with a non-zero declared temperature,
             # in either style — not a named entry. `heat_source_mask` is the
             # single definition, shared with the load-time structure check.
@@ -1836,6 +1904,45 @@ def jax_reset(params: EnvParams, key: jax.random.PRNGKey) -> EnvState:
                 all_positions = relocate_blocked_entities(
                     all_positions, all_spawn_areas, params.height, params.width, _food_key,
                     entity_mask=_is_food_concat, blocked_cells=_fire_block,
+                )
+
+            # Bush clearance — "no bush within v of a BURNING fire"
+            # (BUSH_FIRE_CLEARANCE). A post-pass over FINAL positions, so it holds
+            # whatever order fires and bushes have in the obstacle list. Moves ONLY
+            # bushes; fires cannot move, so D2 and D3 still hold. Its feasibility is
+            # proved at load (config_loader._check_bush_fire_clearance), so the
+            # (0, 0) fallback of relocate_blocked_entities is unreachable. Static,
+            # so the off graph is today's.
+            if _bush_min_dist > 0:
+                # "Burning only": the activation draw depends on property_key alone,
+                # never on placement, so this is the same mask §7b draws later.
+                _obs_act = _build_activation_mask(
+                    params.obs_count_low, params.obs_count_high, params.obs_entry_id,
+                    params.has_obs_range, _COUNT_KEY_OBS, num_obs, property_key)
+                _total_cells = params.height * params.width
+                _cr = jnp.arange(_total_cells) // params.width
+                _cc = jnp.arange(_total_cells) % params.width
+                # Recomputed on purpose: must use the positions AFTER the D3 pass.
+                _d = (jnp.abs(_cr[None, :] - all_positions[:, 0][:, None])
+                      + jnp.abs(_cc[None, :] - all_positions[:, 1][:, None]))
+                _burning = _is_fire_concat & jnp.concatenate([
+                    jnp.ones(num_res, dtype=jnp.bool_),
+                    jnp.ones(num_pred_class, dtype=jnp.bool_),
+                    _obs_act,
+                    jnp.ones(num_neutral_class, dtype=jnp.bool_),
+                ])
+                _near_fire = jnp.any((_d < _bush_min_dist) & _burning[:, None], axis=0)
+                _is_bush_concat = jnp.concatenate([
+                    jnp.zeros(num_res, dtype=jnp.bool_),
+                    jnp.zeros(num_pred_class, dtype=jnp.bool_),
+                    params.obs_hides_agent & ~_obs_is_fire & _obs_act,
+                    jnp.zeros(num_neutral_class, dtype=jnp.bool_),
+                ])
+                # An independent stream via fold_in; resolve_key is not consumed.
+                _bush_key = jax.random.fold_in(resolve_key, _THERMAL_BUSH_KEY)
+                all_positions = relocate_blocked_entities(
+                    all_positions, all_spawn_areas, params.height, params.width, _bush_key,
+                    entity_mask=_is_bush_concat, blocked_cells=_near_fire,
                 )
 
     else:  # per_type
@@ -1997,64 +2104,9 @@ def jax_reset(params: EnvParams, key: jax.random.PRNGKey) -> EnvState:
             (0, params.animal_visual_property.shape[-1]), dtype=jnp.float32)
 
     # 7b. Per-episode count-range activation masks (NEW — PER_EPISODE_ENV_VARIANCE).
-    #
-    # For each entity class (res / animal / obs):
-    #   - If ALL entries are degenerate (low == high), skip the K-draw entirely so
-    #     the PRNG stream is byte-identical to pre-feature code (parity guard).
-    #     The mask is all-True (same as the fixed-count semantics).
-    #   - If ANY entry has a genuine range (low < high), derive a per-episode key
-    #     via fold_in(property_key, <class-specific constant>) and draw K per entry.
-    #     Slots [K:count_high] for that entry are set False and parked off-grid.
-    #
-    # Fold-in constants are chosen to not collide with existing uses
-    # (0xAE1 = animal_episode_key, 0x7150A1 = visual_property_key):
-    _COUNT_KEY_RES    = 0xC0A1  # resource activation
-    _COUNT_KEY_ANIMAL = 0xC0A2  # animal activation
-    _COUNT_KEY_OBS    = 0xC0A3  # obstacle activation
-
-    def _build_activation_mask(count_low_arr, count_high_arr, entry_id_arr,
-                               has_range: bool, fold_const: int, num_slots: int,
-                               rng_key):
-        """Return (mask [num_slots bool], positions_park [not used here]).
-
-        When has_range=False (pure Python bool, static), returns all-True without
-        any jax.random call so the PRNG stream is untouched.
-        When has_range=True, draws K per entry and builds the mask.
-        """
-        if (not has_range) or num_slots == 0:
-            return jnp.ones(num_slots, dtype=jnp.bool_)
-        # Derive independent key for count-activation draws
-        act_key = jax.random.fold_in(rng_key, fold_const)
-        num_entries = count_low_arr.shape[0]
-        # Draw K per entry: randint(act_key_i, (), low, high+1) → K_i in [low, high]
-        entry_keys = jax.random.split(act_key, num_entries)
-        def _draw_k(ek, lo, hi):
-            # When lo==hi, uniform([lo, hi+1)) always returns lo (integer draw)
-            return jax.random.randint(ek, (), lo, hi + 1)
-        K_per_entry = jax.vmap(_draw_k)(entry_keys, count_low_arr, count_high_arr)
-        # Build slot mask: slot s is active iff its within-entry rank < K_entry
-        # entry_id_arr[s] = which entry slot s belongs to.
-        # within_rank[s] = how many slots for the same entry came before slot s
-        # = cumcount(entry_id_arr)[s]
-        # Computed as: rank[s] = sum_{t < s} (entry_id_arr[t] == entry_id_arr[s])
-        # Vectorized: (arange(num_slots)[:, None] > arange(num_slots)[None, :]) &
-        #             (entry_id_arr[:, None] == entry_id_arr[None, :])  → too large.
-        # Instead, use lax.scan to build cumcount:
-        def _cumcount(carry, eid):
-            counts = carry
-            rank = counts[eid]
-            counts = counts.at[eid].add(1)
-            return counts, rank
-        _, slot_rank = jax.lax.scan(
-            _cumcount,
-            jnp.zeros(num_entries, dtype=jnp.int32),
-            entry_id_arr
-        )
-        # slot_rank[s] = rank of slot s within its entry (0-based)
-        # Slot is active iff slot_rank[s] < K[entry_id[s]]
-        slot_K = K_per_entry[entry_id_arr]  # [num_slots] — K for this slot's entry
-        mask = slot_rank < slot_K
-        return mask
+    # `_build_activation_mask` and its fold-in constants are defined before
+    # "# 2. Entity Placement" (hoisted unchanged for the bush-clearance pass, which
+    # needs the obstacle mask before placement; a pure-Python def emits no ops).
 
     # Resource activation mask
     num_res_entries_for_mask = params.res_count_low.shape[0]

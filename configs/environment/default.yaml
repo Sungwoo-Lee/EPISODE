@@ -530,9 +530,19 @@ thermal:
                            # apart merge enough that stepping onto the fire from the ring
                            # beside it crosses the heat-death threshold on the FIRST step.
                            # Measured over real resets; 4 clears it. See WARMING_COOLING_RATE_SCALES.md.
-  # Minimum Manhattan distance from food to any fire. 0 = no constraint, which
+  # Minimum Manhattan distance from food to any fire SLOT (burning or not: this
+  # rule counts every allocated fire slot). 0 = no constraint, which
   # is today's behaviour; a non-zero value costs a second placement pass.
   food_min_fire_distance: 0
+  # Minimum Manhattan distance from a bush (any obstacle with hides_agent that is
+  # not itself a heat source) to any BURNING fire (unlit fire slots do not count,
+  # unlike food_min_fire_distance): a bush may not sit at distance < value.
+  # 0 = no constraint, which is today's placement exactly (same random numbers,
+  # same positions); 1 is refused; 2 = not beside a fire; 3 = not beside, diagonal
+  # to, or two cells straight out. A non-zero value costs a third placement pass
+  # that moves only bushes, and the loader refuses a world where the pass could
+  # run out of room. See docs/develop/active/thermal/BUSH_FIRE_CLEARANCE.md.
+  bush_min_fire_distance: 0
 
   # --- body (read from Stage 2 onward) ---
   temperature_setpoint: 0.0

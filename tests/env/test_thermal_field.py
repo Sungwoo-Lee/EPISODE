@@ -341,11 +341,13 @@ def test_placement_constraints_are_noops_when_disabled():
     thermal_on["thermal"]["enabled"] = True
     thermal_on["thermal"]["min_fire_separation"] = 0
     thermal_on["thermal"]["food_min_fire_distance"] = 0
+    thermal_on["thermal"]["bush_min_fire_distance"] = 0
 
     for label, d in (("thermal off", base), ("thermal on, constraints 0", thermal_on)):
         params = _params(d)
         assert params.thermal_min_fire_separation == 0
         assert params.thermal_food_min_fire_distance == 0
+        assert params.thermal_bush_min_fire_distance == 0
         state = jax_reset(params, jax.random.PRNGKey(0))
         # index 0 of each stacked fixture array is the reset state
         for field in ("key", "res_pos", "animal_pos", "obs_pos"):

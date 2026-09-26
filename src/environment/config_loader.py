@@ -542,6 +542,91 @@ def _thermal_structure_verdict(eq, min_temperature, max_temperature):
     return (not failures), failures
 
 
+def _check_bush_fire_clearance(*, bush_min_fire_distance, obs_temperature,
+                               obs_ratio_low, obs_ratio_high, obs_hides_agent,
+                               obs_spawn_area, obs_names, res_temperature,
+                               res_ratio_low, res_ratio_high, num_total_slots):
+    """Refuse a `thermal.bush_min_fire_distance > 0` world the bush pass cannot serve.
+
+    BUSH_FIRE_CLEARANCE §A3. All numpy on config constants; costs nothing at reset.
+    Raises ``ValueError`` when:
+
+      * no obstacle slot is a heat source, or no obstacle slot hides the agent
+        (a rule that is set but has nothing to act on is a config mistake);
+      * an obstacle slot is both a heat source and `hides_agent` (self-contradictory);
+      * a RESOURCE slot is a heat source (it stamps heat, but the bush pass only sees
+        obstacle fires, so a warm bush could survive silently);
+      * the worst-case feasibility bound fails for a bush spawn area. For each
+        distinct spawn area ``A`` of a bush slot, require
+
+            |A| - n_fire_slots * D(v) - n_other_slots >= n_bush_slots
+
+        with ``D(v) = 2v^2 - 2v + 1`` (cells at Manhattan distance < v from a fire,
+        its own cell included). The counts are CONFIG-WIDE, the same for every ``A``:
+        ``n_bush_slots`` is every bush slot of every bush entry (slots are allocated at
+        ``count_high``), ``n_fire_slots`` every heat-source obstacle slot (all assumed
+        burning), ``n_other_slots`` every remaining slot (resources, animals, other
+        obstacles). A per-entry count would miss bushes of a larger-area entry sitting
+        inside a smaller area. When the bound holds, the pass's silent (0, 0) fallback
+        (`core.relocate_blocked_entities`) is unreachable.
+    """
+    from src.environment.core import heat_source_mask
+
+    v = int(bush_min_fire_distance)
+    is_fire = np.asarray(heat_source_mask(
+        np.asarray(obs_temperature), np.asarray(obs_ratio_low), np.asarray(obs_ratio_high)),
+        dtype=bool)
+    hides = np.asarray(obs_hides_agent, dtype=bool)
+    res_fire = np.asarray(heat_source_mask(
+        np.asarray(res_temperature), np.asarray(res_ratio_low), np.asarray(res_ratio_high)),
+        dtype=bool)
+    key = f"thermal.bush_min_fire_distance={v}"
+    if not is_fire.any():
+        raise ValueError(
+            f"{key} is set, but no obstacle slot is a heat source: the rule has no fire "
+            "to keep bushes away from. Set it to 0 or add a heat-source obstacle.")
+    if not hides.any():
+        raise ValueError(
+            f"{key} is set, but no obstacle slot has hides_agent: true: the rule has no "
+            "bush to move. Set it to 0 or add a hiding obstacle.")
+    both = is_fire & hides
+    if both.any():
+        names = sorted({obs_names[i] for i in np.flatnonzero(both)})
+        raise ValueError(
+            f"{key}: obstacle(s) {names} are both a heat source and hides_agent: true. "
+            "A bush that is itself a fire cannot be kept away from fires.")
+    if res_fire.any():
+        raise ValueError(
+            f"{key}: {int(res_fire.sum())} resource slot(s) are heat sources. The bush "
+            "rule only sees obstacle fires, so a bush could sit beside a warm resource "
+            "unchecked. Remove the resource temperature or set the rule to 0.")
+
+    is_bush = hides & ~is_fire
+    n_bush = int(is_bush.sum())
+    n_fire = int(is_fire.sum())
+    n_other = int(num_total_slots) - n_bush - n_fire
+    d_v = 2 * v * v - 2 * v + 1
+    areas = np.asarray(obs_spawn_area)
+    seen = {}
+    for i in np.flatnonzero(is_bush):
+        seen.setdefault(tuple(int(x) for x in areas[i]), set()).add(obs_names[i])
+    for (r0, c0, r1, c1), names in seen.items():
+        size = max(0, r1 - r0) * max(0, c1 - c0)
+        lhs = size - n_fire * d_v - n_other
+        if lhs < n_bush:
+            raise ValueError(
+                f"{key} is infeasible for bush entry {sorted(names)} (0-based spawn area "
+                f"rows [{r0},{r1}) x cols [{c0},{c1})): worst case |A| - n_fire_slots*D(v) "
+                f"- n_other_slots = {size} - {n_fire}*{d_v} - {n_other} = {lhs} < "
+                f"n_bush_slots = {n_bush} (all bush slots, config-wide, at count_high). "
+                "A bush could then be parked at cell (0, 0) silently. Lower the value, "
+                "the bush count_high or the fire count_high, or widen the bush area.")
+        _log.info(
+            "bush-fire clearance feasible for %s: |A| - n_fire*D(v) - n_other = "
+            "%d - %d*%d - %d = %d >= n_bush %d (margin %d)",
+            sorted(names), size, n_fire, d_v, n_other, lhs, n_bush, lhs - n_bush)
+
+
 def _check_thermal_structure(*, obs_temperature, obs_ratio_low, obs_ratio_high,
                              obs_labels, res_temperature, res_ratio_low,
                              res_ratio_high, res_labels, use_object_sources,
@@ -1615,6 +1700,13 @@ def load_env_params(config: Config) -> EnvParams:
             raise ValueError(
                 f"thermal.food_min_fire_distance must be >= 0 (Manhattan cells; 0 is "
                 f"today's unconstrained behaviour), got {_th_food_min_dist}.")
+        # BUSH_FIRE_CLEARANCE: bushes stay at Manhattan >= value from every BURNING fire.
+        _th_bush_min_dist = int(config.get_mandatory('thermal.bush_min_fire_distance'))
+        if _th_bush_min_dist < 0 or _th_bush_min_dist == 1:
+            raise ValueError(
+                f"thermal.bush_min_fire_distance must be 0 (off) or >= 2 (Manhattan cells; a "
+                f"bush may not sit at distance < value from a fire). 1 would block only the "
+                f"fire's own cell, which is already occupied. Got {_th_bush_min_dist}.")
         # Kernel half-width, matching the sandbox oracle's `int(ceil(3*sigma))`
         # (docs/develop/active/thermal/temperature_system_plan/sim.py). Static,
         # because it fixes the number of unrolled shifts in the blur.
@@ -1826,6 +1918,7 @@ def load_env_params(config: Config) -> EnvParams:
         _th_spot_count, _th_spot_size, _th_spot_temp = 0, 1, 0.0
         _th_min_fire_sep = 0
         _th_food_min_dist = 0
+        _th_bush_min_dist = 0
         _th_kernel_radius = 0
         # Body block (Stage 2), inert. `update_body`'s recurrence is behind a
         # static `if params.thermal_enabled:`, so none of these is ever read on a
@@ -2237,14 +2330,17 @@ def load_env_params(config: Config) -> EnvParams:
     # groups). Raise rather than silently ignore them: a config whose own
     # validation says fires cannot merge, while the placement mode it selected
     # never enforces that, is worse than a config that fails to load.
-    if placement_mode == 'per_type' and (_th_min_fire_sep > 0 or _th_food_min_dist > 0):
+    if placement_mode == 'per_type' and (_th_min_fire_sep > 0 or _th_food_min_dist > 0
+                                         or _th_bush_min_dist > 0):
         raise ValueError(
-            "thermal.min_fire_separation / thermal.food_min_fire_distance are not "
+            "thermal.min_fire_separation / thermal.food_min_fire_distance / "
+            "thermal.bush_min_fire_distance are not "
             "supported under environment.placement.mode: per_type — that mode uses "
             "`place_in_area`, which bypasses the placement validity mask the "
-            "constraints attach to. Use placement.mode: per_entity, or set both "
+            "constraints attach to. Use placement.mode: per_entity, or set all three "
             f"constraints to 0 (currently min_fire_separation={_th_min_fire_sep}, "
-            f"food_min_fire_distance={_th_food_min_dist})."
+            f"food_min_fire_distance={_th_food_min_dist}, "
+            f"bush_min_fire_distance={_th_bush_min_dist})."
         )
 
     # ── Load-time thermal structure check (Stage 6b) ──────────────────────────
@@ -2283,6 +2379,16 @@ def load_env_params(config: Config) -> EnvParams:
             max_temperature=_th_max_temp,
             min_fire_separation=_th_min_fire_sep,
         )
+        # BUSH_FIRE_CLEARANCE: structure + worst-case feasibility of the bush pass.
+        if _th_bush_min_dist > 0:
+            _check_bush_fire_clearance(
+                bush_min_fire_distance=_th_bush_min_dist,
+                obs_temperature=obs_temperature, obs_ratio_low=obs_temp_ratio_low,
+                obs_ratio_high=obs_temp_ratio_high, obs_hides_agent=obs_hides_agent,
+                obs_spawn_area=obs_spawn_area, obs_names=_obs_labels,
+                res_temperature=res_temperature, res_ratio_low=res_temp_ratio_low,
+                res_ratio_high=res_temp_ratio_high,
+                num_total_slots=num_total_entities)
         _th_struct_kwargs = dict(
             obs_temperature=obs_temperature, obs_ratio_low=obs_temp_ratio_low,
             obs_ratio_high=obs_temp_ratio_high, obs_labels=_obs_labels,
@@ -2698,6 +2804,7 @@ def load_env_params(config: Config) -> EnvParams:
         thermal_spot_size=_th_spot_size,
         thermal_min_fire_separation=_th_min_fire_sep,
         thermal_food_min_fire_distance=_th_food_min_dist,
+        thermal_bush_min_fire_distance=_th_bush_min_dist,
         thermal_sigma=_th_sigma,
         thermal_spot_temp=_th_spot_temp,
         thermal_default_temp_low=_th_default_low,

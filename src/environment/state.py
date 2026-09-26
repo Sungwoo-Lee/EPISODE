@@ -385,6 +385,7 @@ class EnvParams:
     # did. See IMPLEMENTATION_PLAN.md hazard H10.
     thermal_min_fire_separation: int = struct.field(pytree_node=False)     # Manhattan; 0 = disabled
     thermal_food_min_fire_distance: int = struct.field(pytree_node=False)  # Manhattan; 0 = disabled
+    thermal_bush_min_fire_distance: int = struct.field(pytree_node=False)  # Manhattan; 0 = disabled (BUSH_FIRE_CLEARANCE)
     thermal_sigma: float
     thermal_spot_temp: float
     thermal_default_temp_low: float

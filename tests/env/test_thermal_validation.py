@@ -127,6 +127,12 @@ _MUST_RAISE = [
     ("negative_food_min_fire_distance",
      lambda: _with_thermal(food_min_fire_distance=-1),
      r"thermal\.food_min_fire_distance must be >= 0"),
+    ("negative_bush_min_fire_distance",
+     lambda: _with_thermal(bush_min_fire_distance=-1),
+     r"thermal\.bush_min_fire_distance must be 0 \(off\) or >= 2"),
+    ("bush_min_fire_distance_one",
+     lambda: _with_thermal(bush_min_fire_distance=1),
+     r"thermal\.bush_min_fire_distance must be 0 \(off\) or >= 2"),
     ("merged_fires_cannot_be_certified",
      lambda: _with_thermal(min_fire_separation=0),      # count_high: 3 in the base config
      r"thermal\.min_fire_separation is 0 while 3 heat-source slots"),
@@ -214,6 +220,7 @@ _MUST_LOAD = [
         _fire_entry(d).pop("count_high", None),
         _fire_entry(d).update(count=3), d)[-1])(_campfire_dict())),
     ("stage1_food_min_fire_distance", lambda: _with_thermal(food_min_fire_distance=4)),
+    ("bush_min_fire_distance_3", lambda: _with_thermal(bush_min_fire_distance=3)),
     ("stage1_thermal_on_constraints_zero", lambda: (lambda d: (
         d["thermal"].update(enabled=True, min_fire_separation=0,
                             food_min_fire_distance=0), d)[-1])(_default_dict())),

@@ -345,6 +345,9 @@ thermal:
   # Minimum Manhattan distance from food to any fire. 0 = no constraint, which
   # is today's behaviour; a non-zero value costs a second placement pass.
   food_min_fire_distance: 0
+  # ADDED 2026-09-26 (BUSH_FIRE_CLEARANCE): live test input, so it carries the new
+  # thermal-conditional mandatory key at its off value (0 = today's placement).
+  bush_min_fire_distance: 0
 
   # --- body (read from Stage 2 onward) ---
   temperature_setpoint: 0.0
