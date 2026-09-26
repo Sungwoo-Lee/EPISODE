@@ -9,8 +9,10 @@ aliases: [bush_fire_clearance]
 
 # Keep bushes away from campfires: a configurable world-generation rule
 
-> **Status**: PLANNED, Revision 1. `plan-reviewer` has reviewed it (SOUND WITH CONCERNS), and its findings are resolved below. Still waiting on the user's decisions in §Decisions, then approval. Nothing is implemented.
+> **Status**: APPROVED, Revision 1, in implementation. `plan-reviewer` has reviewed it (SOUND WITH CONCERNS), and its findings are resolved below.
 > **Opened**: 2026-09-26
+>
+> **User decisions (2026-09-26).** **D1 = Option B**, two cells of clearance (`bush_min_fire_distance: 3`, the value variants will use). **D2 = burning fires only.** The key ships at the inert value `0` in `default.yaml` and is **not** enabled in `basic/05` (variant use comes later, via `experiment-designer`). Tests exercise v = 3 and v = 2.
 
 > **Revision 1 (2026-09-26), responding to the plan-reviewer feedback at the end of this doc (commit `8ec6b4e2`).** D1 and D2 are **not** resolved. The user still decides them.
 > - **M1**: CP0 and the parallel-edit warning now also cover `src/environment/saved_config_compat.py` and `tests/env/test_saved_config_compat.py`. The compat all-or-none check now groups keys by the era string of every row in `_ERA_KEYS`, so it no longer depends on two named constants. It therefore also covers eras the compat owner adds first. The `core.py` / `config_loader.py` warning is marked as clean at HEAD, but the check is still run.
@@ -39,6 +41,8 @@ The rule is not switched on in level 05. It is for experiment variants, which `e
 ## Decisions the user must make
 
 The plan is written so each option is a one-line switch in the File Changes. Recommendations are marked.
+
+> **Decided by the user, 2026-09-26: D1 = B (value 3), D2 = burning fires only.**
 
 ### D1 — How far must a bush stay from a fire?
 
