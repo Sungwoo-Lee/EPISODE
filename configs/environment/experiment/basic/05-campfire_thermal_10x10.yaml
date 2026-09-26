@@ -77,7 +77,9 @@
 # Composition: food 1-4 | hiding_predator 2-12 | predator 0-2 | rabbit 0-2 |
 #              campfire 1-3 | rock 6-12 | bush 4-10 | tree 0 | grid 10x10, thermal ON,
 #              jump/pounce ON (attack_range {2,3}, success 0.5), random start position,
-#              random start nutrition [0,100] and injury [0,100]
+#              random start nutrition [0,100] and injury [0,100],
+#              random start BODY TEMPERATURE [-10, +5] (B1, added 2026-09-26 — see the
+#              thermal block below; level 06 inherits it)
 extends: environment/experiment/basic/04-jump_attack_10x10
 
 environment:
@@ -144,10 +146,18 @@ environment:
       visual_properties: [1.0]
       visual_properties_std: [0.0]
 
-# The gate, and the ONLY thermal key this world changes. Every other key under `thermal:`
+# The gate and (since 2026-09-26) the three B1 keys are the ONLY thermal keys this world
+# changes. Every other key under `thermal:`
 # in default.yaml already carries the archived campfire world's value (sigma 0.7,
 # default_temp [-28,-22], min_fire_separation 3, setpoint 0.0, min/max_temperature
 # -15/+15, k_exchange 0.04, k_loss 0.01, grid_range 1, relative true,
 # body_temp_observable true), so restating them here would only create drift.
 thermal:
   enabled: true
+  # B1 — random starting body temperature, a standard internal state of this world
+  # (decided 2026-09-26). Upper end +5: the first step onto a single hot-corner fire lands
+  # at +10.78 (< +15); +10 would reach +15.18 and kill. Level 06 inherits this.
+  # (docs/develop/active/thermal/STATE_DEPENDENT_BODY_MECHANICS.md, commit C3)
+  random_start_body_temp: true
+  start_body_temp_low: -10.0
+  start_body_temp_high: 5.0

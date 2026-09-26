@@ -49,6 +49,10 @@
 #   - The world baseline is COLD (default_temp -28..-22), so an agent that never warms up
 #     freezes: freezing/overheating is a real cause of death at this level, alongside
 #     starvation and predation.
+#   - Since 2026-09-26 each episode also STARTS AT A RANDOM BODY TEMPERATURE in [-10, +5]
+#     (B1 of docs/develop/active/thermal/STATE_DEPENDENT_BODY_MECHANICS.md), inherited from
+#     level 05's `thermal:` block; nothing here overrides it. Runs trained before that date
+#     started every episode at the setpoint (0.0) and are not a like-for-like baseline.
 #
 # THE THERMAL CHANNELS ARE NOT NOISED HERE, DELIBERATELY. `body_temperature` and
 # `thermoception` are not overridden below, so they fall through to default.yaml's entries:
