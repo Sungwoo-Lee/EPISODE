@@ -404,3 +404,54 @@ Reviewed by: plan-reviewer
 | **M8** new modules need dependency-map rows | Added in the same commit as the code. |
 | **L1** travel in the time shares | "Elsewhere" (open ground, travel) counts as an activity under the 70 % cap. |
 | Open: true vs felt injury for trained-agent metrics | The metrics section will specify both, and cite the registry rows on the felt-pain leak and contemporaneous binning. |
+
+## Feedback from plan-reviewer — confirming pass on Revision 2a (`e2568cef`)
+
+**Verdict: SOUND WITH CONCERNS** (2026-09-27, before any Revision-2 result). Both Critical findings
+of the Revision-2 review are resolved as written (C1: B-need dropped to report-only, replaced by the
+behavioural B-drive; C2: E2 respecified with fixed size bins including a lethal ≥ 100 bin, per
+activity, per agent, ordinary agent primary). M1–M8 and L1 are resolved in the plan. No new
+Critical. One concern must be written into the plan **before any Revision-2 result is read**;
+the others can be settled while the sweep runs.
+
+**In plain language.** The reviewer computed the new B-drive ratios on today's level 05 with the
+existing (Revision-1) planner, so the "is it satisfiable today?" question the plan defers to the
+sweep is answered now. On the primary map (no warm bush) two of the three pass with margin —
+eating when hungry vs fed 3.0, hiding when injured vs healed 3.3 (and criterion 5, B-hide among the
+well-fed, 3.96) — but **warming when cold vs warm fails at 1.31** (share of steps on a warm cell
+0.245 when body temperature < −5 vs 0.187 when > 0). The reason is the ideal policy's behaviour, not
+a setting: it runs a thermostat, holding temperature between about −1.2 and +0.7 by shuttling
+between the ring and elsewhere, so the warm-cell share is flat (0.15–0.42) across every temperature
+band and steps below −5 are 50–66 % start transients. No choice of bands makes (b) discriminative,
+and the cooling-rate and B4 axes tighten the thermostat rather than create a cold→warm gradient.
+The plan's fallback ("if today fails for a reason of geometry rather than settings, report, not
+gate") is honest in direction — it demotes a criterion, it does not promote a result — but it is not
+decidable as written: "geometry rather than settings" has no test, and the decision would be taken
+after the number is seen. The number is known now; decide now.
+
+| # | Sev | Where | Concern | Fix |
+|---|---|---|---|---|
+| N1 | 🟡 (must be written before results are read) | Rev 2a, C1 row — B-drive (b) and its fallback | (b) fails today at 1.31 on the primary map for the thermostat reason above; the fallback fires post hoc with no decision rule. | Pre-register the disposition now: either drop (b) from the gate (report only; criterion 2 = (a) and (c), both satisfiable today), or replace it with the per-decision version — from the choice map, the share of start states where "warm up" is best at T ≤ −5 vs T ≥ 0 — and state that (a)/(c) pass today at 3.0 / 3.3. |
+| N2 | 🟡 | Rev 2a, M5 row — the three added checks | (i) "E2 collapsed to its mean reproduces E2-off" cannot hold: E2-off has two activity classes (rest 0.12 / other 0.70), E2 has three whose means are eating ≈ 0.62, moving ≈ 0.73, resting ≈ 0.13. (ii) "≈ 12 bites per food visit" measures the agent's choice to leave when sated, not the geometric draw. (iii) "p × mean size reproduces mean damage within 5 %" is an identity when both come from the same recordings. | (i) collapse size to its mean **and** pool activities to rest / other, then require equality. (ii) check relocation events per bite ≈ 1/12. (iii) name the independent path: per-activity mean damage computed as Σ damage / steps from the recordings, versus p × Σ(bin share × bin mean) from the binned model — that tests the binning; and note the eating class is ~11 % below the Revision-1 pooled "other" value, so a 5 % check against 0.70 would fail by design. |
+| N3 | 🟡 | Rev 2a, C2 row — E2 bins | The value the planner uses for a hit in each bin is unstated (midpoint vs measured bin mean); the ≥ 100 bin has no upper edge. | Use the measured bin mean, clip at 100; the choice feeds N2(iii). |
+| N4 | 🟢 | Rev 2a, M1/M7 row × "bush on a fire ring" axis | With the primary verdict on the no-warm-bush map, the "never" setting is the same solve as the "allowed" primary map, so 12 of the 24 grid worlds are duplicates for the verdict; the axis only moves the secondary report. | Say so on the page, or skip the duplicate solves. |
+| N5 | 🟢 | Rev 2a, M2 row — B-death | Whether the "≥ 5 % of starts die" gate is counted before or after the 20-step exclusion is unstated (today: 80 deaths, 77 in the first 20 steps, all starvation, 3 remain = 0.15 %). Also define the (a)–(c) ratios when a denominator is 0 (treat as pass). | One sentence each. |
+| N6 | 🟢 | Rev 2a, M4 row — trip ÷ bites axis | trip 8 / bites 12 and trip 4 / bites 6 give the same value (0.67); under E1 their hazard per bite is also equal. | Name the pair as a built-in consistency check of "one effective axis". |
+
+**Open assumptions.** ❓ The reviewer's numbers come from the Revision-1 planner (mean-field
+hazard, E1/E2 off, food trip 4, 2,000 starts per map); E2 moves the injury side, not the thermostat,
+and (c)/criterion 5 have margin, so the conclusion on (b) should survive E2 — verify on the first E2
+baseline. ❓ Per-activity hit odds come from Wave-2 agents started at 0 °C, untrained under any swept
+setting (stated in the plan; unverified). ❓ Finer-grid noise-floor solve with E2 on (7 outcomes ×
+8 corners per transition) is untested for run time.
+
+**Passes with nothing to report:** data-loss hazards (analysis outputs only); fallback defaults
+(simulator constants); prior art (registry rows on the felt-pain leak and contemporaneous binning
+are already cited by the plan; nothing new for `bug-curator`); doc framing (entry point is plain
+language); version numbers (none invented).
+
+**Cost of being wrong.** Minutes of sweep. The downstream cost of leaving N1 open is a criterion
+demoted after the data, which makes the "balanced" set larger than the pre-registered one and sends
+the ordinary-agent training to settings chosen on a softer rule.
+
+Reviewed by: plan-reviewer
