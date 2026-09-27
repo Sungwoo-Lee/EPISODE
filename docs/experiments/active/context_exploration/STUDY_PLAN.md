@@ -1645,3 +1645,24 @@ Severity legend: 🔴 Critical = fix before going further · 🟡 Moderate = lik
 **Cost of being wrong.** If M1 is wrong nothing downstream changes — the same two worlds wait for the same two seed-43 runs. If M2 is ignored the cost is one 20 × 20 extension (a few GPU-hours) that its own curve predicts will return the same verdict. The only claim that would reach a paper — "the simulation is not trustworthy for choosing worlds" — rests on one seed with a large margin and already has its second seed scheduled.
 
 Reviewed by: plan-reviewer (2026-09-27, on `f655459b`)
+
+## Part 4 extension — readings fixed before the 5 M read-out (2026-09-28, experiment-analyzer)
+
+**In plain words.** Two rules in Revision 1 can be read more than one way once the runs reach 5 million
+episodes. They are fixed here, **before any value logged after the 2 M resume has been read**, so the
+choice cannot follow the numbers.
+
+- **Survival borderline floor (reviewer's L3).** "5 % relative on survival" (R1.5) is read, as at 2 M,
+  as **5 % of the criterion-4 line** (0.05 × 0.8 × extended S_ref). The alternative reading (5 % of the
+  extended S_ref itself) is reported beside it; if the two readings disagree on whether a world is
+  borderline, both are stated and the wider band (the alternative) decides whether a seed-43 run is
+  required before forwarding — the conservative choice.
+- **Still-learning flag at 5 M.** R1.4 defines the flag as a comparison of two 200,000-episode windows,
+  so at 5 M it is **4.8–5.0 M against 4.6–4.8 M, > 5 % relative** on survival steps. The read-out
+  window for the criteria is R1.4's **4.9–5.0 M** (rows with `Episode/Number` in (4.9 M, 5.0 M], same
+  weighting as R1.6 L2). No further extension is pre-registered: a world still learning at 5 M is
+  reported as undecided at 5 M, and the decision goes to the user.
+- **Seam check (R1.4) as written:** survival in each of the blocks (2.0, 2.2] M and (2.2, 2.4] M within
+  ± 5 % of the (1.8, 2.0] M block. Applied literally to every run, including the still-climbing C3 / C4,
+  where an upward excursion beyond 5 % would still be reported as a seam break and inspected row by row
+  around the resume point.
