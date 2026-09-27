@@ -571,3 +571,53 @@ verification protocol, more than 5 % needs discussion and more than 15 % blocks 
 | | | | |
 
 **Conclusion**:
+
+---
+
+## Feedback from plan-reviewer
+
+> **Reviewed**: 2026-09-27 · **Verdict**: **NOT READY** (one Critical, all else Moderate/Open) · Full report: [[plan_balance_metrics_training_logging]] (`docs/reviews/plan_balance_metrics_training_logging.md`)
+>
+> Severity legend — 🔴 Critical = fix before going further · 🟡 Moderate = likely costs a re-run · 🟢 Low = cosmetic · ❓ Open = an assumption nobody has verified yet.
+
+**What the plan gets right (verified against source, not from memory).** The "off" switch is genuinely
+static: `PPOConfig` is `static_argnums=(6,)` (`train.py:1253`), `thermal_enabled` /
+`interoceptive_nociception_enabled` are already used as Python `if`s inside jitted code
+(`core.py:473`, `sensor.py:492`), and `train_iteration` builds `PPOBatch` field by field rather than
+tree-mapping the whole `Transition` (`recurrent_ppo_trainer.py:523-545`), so the new arrays never enter
+the update path. The pre-step-state / post-step-outcome pairing (A2) matches `agent_in_bush`'s
+post-step position (`core.py:1276-1279`) and the planner (`planner.py:479-489`). The
+continual path is safe: rPPO train defaults are merged (`train.py:507-514`) *before*
+`_build_continual_schedule` clones `config` into every stage (`train.py:553`, `:195-200`), so the
+mandatory key reaches stage configs. The 32-run safety argument holds as written.
+
+| Sev | Location | Issue | Suggested fix | Owner |
+|---|---|---|---|---|
+| 🔴 | A9(a) "Merge back when the tests are green"; Checkpoint 1 | The merge into the shared tree has **no `results/` snapshot and no conflict strategy**. `train.py` is edited by parallel sessions daily, so a real (non-fast-forward) merge with conflicts is the likely case, and a failed merge followed by cleanup is exactly how `results/` was lost once. CLAUDE.md requires `cp -a results /tmp/results-bk-$(date +%s)` before any merge. | Add to Checkpoint 1/10: rebase the worktree branch onto the current `v4.0` tip **inside the worktree**, resolve conflicts there, then advance the shared tree by fast-forward only (`git merge --ff-only`); snapshot `results/` first; never `git clean -x`. State this as an explicit step. | senior-developer |
+| 🟡 | T7 (Part B) | Test spec contradicts A4. T7 asserts "a −16 °C cell with a −14 °C body **counts as warm**", but under the plan's own definition (`cell_t > temperature_setpoint`, setpoint 0) a −16 °C cell is never warm. An implementer coding to spec would write an assertion the correct code fails, then "fix" the code. | Rewrite T7 as two cases: (−16 °C cell, −20 °C body) → **not** warm (cell-only, not cell-vs-body); (+8.8 °C cell, +10 °C body) → warm even though the cell is cooler than the body. | senior-developer |
+| 🟡 | A4 "Matches the planner exactly" | Vacuously true for the diagonal: the planner's world has only −30 and +8.8 cells (`planner.py:8`, `TRAVEL_CELL=-30`) and STUDY_PLAN E5 says the cooler diagonal is "not modeled". So `warm = cell > 0` was never tested against a −16 °C cell. A trained agent parked on the diagonal (body settles ≈ ⅔ × −16 ≈ −10.7 °C, in the cold bin) is scored as *cold and not warming*, and its steps fall into `elsewhere`. Rev 2c makes the warming ratio report-only, but `Bal_TimeWarm` feeds criterion 1 (each activity ≥ 10 %), which is pass/fail. | Keep the definition (cell above setpoint is the physically right one) but (i) say in A4 and the metrics reference that the diagonal is a new case the planner never saw, and (ii) add one counter `near_fire` (cell above open-ground temperature, e.g. `cell_t > default_temp_high`) → `Episode/Bal_TimeNearFire`, so the diagonal is visible rather than folded into `elsewhere`. | senior-developer |
+| 🟡 | T1/T2 (Part B) | Neither test names the env config. The tiny-GRU fixture from `test_mc_fixed_mode.py` is a thermal-off, interoception-off world; on it the "on" path traces `on_warm=None, felt=None` and T2 proves almost nothing about the extra ops. | State that T2 (and Checkpoint 4) run on a world with `thermal.enabled: true` **and** interoceptive nociception on (a level-05-derived test config); T1 may keep the small fixture. | senior-developer |
+| 🟡 | A5 "Constants, not config" × `recurrent_ppo.yaml: balance_metrics: true` | Thresholds are absolute level-05 units (max nutrition 200, max injury 100) but the switch is on for **every** rPPO run in every world. A level-02 run logs `Bal_*` with silently mis-calibrated bins. | Have `window_log` also emit the calibration it assumed (`Bal_cal_max_nutrition`, `Bal_cal_max_injury`, read from `params`) once into `wandb.config`, or skip emission with a one-time printed warning when `params.max_nutrition`/`max_injury` differ from the calibration. Do not default; record. | senior-developer |
+| 🟡 | Part D | Study docs back-link is handed off but not sequenced; the metrics reference gains ~50 keys. Fine. But `docs/environment/02_config_schema.md` + CONFIG_GUIDE rows are listed while the paired **`WANDB_METRICS_REFERENCE.md` "training-policy vs eval-policy"** caveat (C4) must also land in the study page §07, or the analyzer will pool online and post-hoc numbers. | Add "page §07 states the C4 caveat" to the experiment-designer hand-off line. | experiment-designer |
+| 🟢 | A9(a), Checkpoint 1 | "worktree outside the repo directory" departs from the project's existing convention (`.claude/worktrees/`, gitignored at `.gitignore:51`). Either is fine; say which and note a `/tmp` worktree is container-local. | One clause. | senior-developer |
+| ❓ | D2 / A7 | `Bal_LateDeathShare` denominator is unstated. Rev 2b N5 pre-registers the 5 % gate as *after* the 20-step exclusion, i.e. late deaths ÷ **all** episodes in the window (MaxSteps truncations included). Also unverified: level-05 `environment.max_steps` vs the planner's 500-step horizon — the 5 % gate was calibrated on the latter. | State the denominator in A7; check `max_steps` and say whether the gate transfers. | senior-developer |
+| ❓ | A3 "A real effect, not a leak" | With `thermal_random_start_body_temp` and (if set) random start injury, the felt buffer is zero for the first ~12 steps of every episode, so `N_InjLo_Felt` is inflated at episode starts by construction. Accepting this is defensible (true injury decides, Rev 2c) but the analyzer must be told, or `HideRatio_Felt` will read low for a reason that has nothing to do with the policy. | One sentence in the metrics reference; optionally exclude steps `< interoceptive_kernel_length` from the `_felt` counters only. | senior-developer |
+| ❓ | A6 pooling | Pooled step counts weight long-lived episodes; the planner pooled fixed-horizon rollouts. Same convention, but the mixture differs (training episodes die at different times). Not wrong — an assumption to name. | Note it next to the ratio-of-sums rule. | senior-developer |
+
+**Passes skipped.** Pass 6 (experiment-plan specifics) does not apply: this is an engineering plan with no
+arms, seeds or budget. Pass 7 does not apply (no analysis verdict).
+
+**Prior art.** Registry rows read directly (`KNOWN_BUGS.md:101, 125, 298, 488` and the class note at
+`:287`); the plan cites and handles all of them. No new registry row needed; nothing for `bug-curator`.
+Collision check with the in-flight `SAVED_RUN_CONFIG_COMPAT` plan: none — that plan touches *frozen run
+copies* read by eval scripts, and no eval script reads `logging.*`.
+
+**Cost of being wrong.** The Critical costs unrecoverable training output if a conflicted merge is
+"cleaned up" the way it was once before (one line prevents it). The T7/A4 pair costs a wrong
+`Bal_TimeWarm` in every rPPO run from merge day on, which feeds a pass/fail criterion of the study —
+a definitional error that no rerun fixes, only a re-definition and a re-read of every dashboard.
+
+**Exit condition for NOT READY → SOUND WITH CONCERNS.** Add the snapshot + rebase-in-worktree +
+`--ff-only` merge step (Critical), and fix T7 to agree with A4.
+
+*Reviewed by: plan-reviewer*
