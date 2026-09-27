@@ -1020,7 +1020,16 @@ hide from injury *differently depending on hunger* (and to eat differently depen
 more than the ordinary agent does? And which rule, or pair of rules, makes the gap grow?
 
 **Answer: none of them, at this screen's resolution.** In all 16 worlds the two agents behave
-almost identically on every pre-registered behaviour measure. The four rules do change
+almost identically on every pre-registered behaviour measure. One caution about the primary measure
+(M1, "how much less the agent's time in cover rises with injury when it is hungry than when it is
+fed"): it was registered on the premise that an agent that simply "hides when hurt" scores about 0,
+and only an agent that eats first when hurt and hungry scores above 0. The check of that premise on
+the earlier level-05 runs (§7.10) fails: those agents also score about +0.25. The reason is a baseline
+offset, not "eat first when hurt": even when unhurt, hungry agents sit in a bush about 42–46 % of the
+time against 21–25 % when fed, while when badly hurt both sit in cover a similar 51–58 %. Starting
+higher, the hungry agents' cover has less room to rise, so M1 is positive without any change in what
+the agents do when hurt. So the gap below is null *on a measure whose zero point is not calibrated*;
+M1 is not read here as measuring "eat first when hurt". The four rules do change
 behaviour, often strongly: scarcer food, for example, makes *both* agents stop hiding when hurt
 and hungry. But they change it for the ordinary agent by the same amount as for the modulated
 one. Not one of the 15 factorial effects on the modulated-minus-ordinary gap reaches even the
@@ -1034,13 +1043,23 @@ steps (mean +3.6, about 1.6 %). The lead appears by the third tenth of training 
 that. The rules do not change the size of the lead (no effect on it clears even ME), and §2.2.3
 registered no prediction about it. Each food-draining rule lowers both agents' survival as
 predicted; "healing slows when hungry" barely does.
+**What this lead does and does not show.** The 16 worlds are not 16 independent replicates of the
+comparison. The trainer derives its starting weights and first environment draws from the seed alone
+(seed 42 everywhere), with nothing depending on the world, so all 16 ordinary runs start from one
+initialisation and all 16 modulated runs from another. The modulated agent also has extra parameters
+(its modulation network at four sites). Survival varies by about 1.5 steps between seeds (stage-1
+pilots, §6.1), so a single run-minus-run gap varies by about 2.1 steps; the gaps of 1.9–5.8 are one to
+three of those. What is licensed: *with this seed pairing, the modulated agent survived about 1.6 %
+longer in all 16 worlds, and no rule changed that lead.* What is not: "the modulator improves
+survival", because initialisation, capacity and seed are confounded, and nothing here shows a
+mechanism.
 
-**Surprises (flagged, not interpreted):** (1) even in the unchanged world, both agents' hiding
-already depends on hunger (measure 1 is about +0.22, where the design's sanity check expected about
-0 on the earlier level-05 runs); (2) the time-in-cover curve against injury rises and then *falls*
+**Surprises (flagged, not interpreted):** (1) even in the unchanged world, M1 is about +0.22, and
+the design's sanity check on the earlier level-05 runs, which expected about 0, reads +0.25 there
+too (the baseline offset above; §7.10); (2) the time-in-cover curve against injury rises and then *falls*
 at high injury in every run, so the fixed "0–20 vs 60–100" contrast averages over both limbs;
 (3) the Lenth noise yardstick is very small for some single-agent measures, so many single-agent
-effects are "noted" there.
+effects pass it; those per-agent lists are descriptive only and are not carried into any summary.
 
 ### 7.1 What was analysed
 
@@ -1051,7 +1070,8 @@ effects are "noted" there.
   (200 of 200 blocks; 400 parquet files each). The measures use **decision rows**, the states the
   policy acted from: 192–258 million per run.
 - **Frozen cut-points** (from the unchanged-world ordinary run, before any other complete store was
-  read; commit `6eb8b253`, copies in `frozen_cutpoints/`). Felt injury low is **exactly 0** (51.8 %
+  read; commit `6eb8b253`, copies in `frozen_cutpoints/`; partial-store tooling tests had been
+viewed before the freeze, but the cut-points depend only on the reference run). Felt injury low is **exactly 0** (51.8 %
   of steps), per the pre-analysis decision; high is felt ≥ 0.0878 (top fifth). Temperature bins
   for measure 4 are 10 equal bins over −11.94 to +4.88 °, with open outer bins.
 - **Survival (measure 2):** local WandB binaries, `Episode/_window_n`-weighted mean of
@@ -1064,8 +1084,9 @@ effects are "noted" there.
   5 checkpoints, needs the late-window recordings, which were deferred. So per-world gaps below are
   values, not statements that a world's gap is real (the [[INJURY_DEPENDENCE_PLAN]] reading rule
   cannot be applied). (b) The §4.4 behaviour time course was deferred, so temporal evolution is shown
-  for survival only (§7.5). (c) The §4.6 known-input check on the Wave-2 level-05 stores was **not
-  run**; the tooling was tested on partial stores only. (d) Measure 5 (scene battery) was not run
+  for survival only (§7.5). (c) The §4.6 known-input check on the Wave-2 level-05 stores was not run before
+  the verdict; it was run afterwards, on 2026-09-28, at plan-reviewer's request (§7.10), and fails its
+  expectation. (d) Measure 5 (scene battery) was not run
   (invalid on factor-on cells, §4.1).
 
 ### 7.2 Per-world results: modulated minus ordinary (`D_w`)
@@ -1174,7 +1195,9 @@ survival column (greedy-policy episode lengths) agrees: no gap effect exceeds ME
 largest |effect| 2.39 for B5 × A4).
 
 **Effects on each agent's own measure (§4.2 decomposition; noted = > SME of that agent's own set).**
-These show that the rules move both agents, and move them alike:
+These show that the rules move both agents, and move them alike. **Descriptive only:** Lenth's margin
+assumes most effects are noise, which fails when 5–7 of 15 per-agent effects are real (flag 4), so
+these "noted" lists are not findings and are not carried into any summary or page.
 
 | Measure | Ordinary: noted | Modulated: noted |
 |---|---|---|
@@ -1219,7 +1242,7 @@ world and agent, from the same final-checkpoint decision rows. **Time in cover**
 steps in a bush in each 10-point true-injury bin, split fed (nutrition ≥ 100) vs hungry (< 60).
 **Eating** is the share of decisions that ate in each 10-point nutrition bin, split by true injury
 (low 0–20 vs high 60–100). Each bin carries its counts; a share is null below 200 steps. File:
-`figure_data/dose_tables.json`, made by `figure_data/dose_tables.py`.
+`figure_data/dose_tables.json`, made by `scripts/analysis/studies/level05_body_interactions/dose_tables.py`.
 
 What the tables show, descriptively:
 - **Cover rises and then falls with injury, in every run.** Unchanged world, ordinary agent, fed:
@@ -1238,22 +1261,26 @@ What the tables show, descriptively:
 | **Sign pattern (secondary):** B3 ≥ 0, B5 ≥ 0, A1 ≈ 0, A4 ≤ 0; contradicted only if a main effect clears SME the wrong way, or A1 clears SME | **Consistent, in the all-null sense** that §2.2.1 says is "uninformative about transfer, not support". The observed signs (B5 +0.019, B3 +0.008, A1 +0.004, A4 −0.029) happen to match, but all four are inside ME. |
 | **Expected candidates:** B3, B5 and the pair B3 × B5 | None noted (B3 +0.008, B5 +0.019, B3 × B5 −0.011). B3 at cost 0.5 was already expected to be null (§6.1 edge case). |
 | **Shape (§2.2.3):** with a healing rule on, the modulated agent's injury response becomes nutrition-dependent while the ordinary agent keeps "hurt → hide" | **Not observed.** Where a rule makes the response nutrition-dependent (A4 most of all, B3 for M1 and M3), it does so for the **ordinary agent too**, by about the same amount (§7.3 per-agent table). |
-| **Survival:** each factor lowers both agents' survival; no prediction on the gap | B3 (−19), A1 (−13) and A4 (−31 to −32) lower both agents, all noted. **B5 does not clearly lower survival**: −3.4 steps for the ordinary agent (inside ME) and −4.3 for the modulated one (> ME, < SME), in line with the stage-1 pilot, where no B5 strength was noticeable. No rule changes the survival gap. |
+| **Survival:** each factor lowers both agents' survival; no prediction on the gap | B3 (−19), A1 (−13) and A4 (−31 to −32) lower both agents, all noted. **B5 does not clearly lower survival**: −3.4 steps for the ordinary agent (inside ME) and −4.3 for the modulated one (> ME, < SME), in line with the stage-1 pilot, where no B5 strength was noticeable. No rule changes the survival gap. The +3.6-step lead itself comes from one initialisation pair (every ordinary run shares one start, every modulated run another; plus the modulation network's extra parameters), against a ≈ 2.1-step single-gap seed yardstick: it is not evidence that the modulator improves survival (§7.0). |
 | §5: "Every effect inside SME" | Applies: a null screen at one seed, uninformative about whether the simulation transfers; the follow-up is not automatic, and the PI is consulted. |
 | §5: "`D_w` on survival is large but the behaviour measures show nothing" | Partly applies. The survival gap is **consistent** (16/16 worlds, stable from the third tenth), but small (+3.6 steps, about 1.6 %). The behaviour gaps are null. If read at all, this is a performance difference with no state-dependence mechanism shown, and it does not confirm §2.2. |
 | §5: a healing-rule effect only on felt or only on true injury | Does not arise: no healing-rule gap effect clears SME on either axis. |
 
 ### 7.8 Flags (surprising or limiting; not interpreted further here)
 
-1. **The unchanged world is not "M1 ≈ 0".** Both agents score M1 ≈ +0.22 / +0.24 (true injury)
-   and +0.41 / +0.48 (felt). The cells show why: unhurt and fed, the agents are in a bush 23–25 % of
-   the time; unhurt and hungry, 42–47 %. §4.6 expected about 0 on the Wave-2 level-05 stores. That
-   check was not run, and this world differs from Wave 2 (random start temperature), so the two
-   cannot be compared here.
+1. **The unchanged world is not "M1 ≈ 0", and neither is Wave 2.** Both agents score M1 ≈ +0.22 /
+   +0.24 (true injury) and +0.41 / +0.48 (felt). The cells show why: unhurt and fed, the agents are in
+   a bush 23–25 % of the time; unhurt and hungry, 42–47 %. §4.6 expected about 0 on the Wave-2
+   level-05 stores; run afterwards (§7.10), it reads +0.25 there for both agents. So the offset is not
+   caused by this study's world changes: it is a property of the measure on these agents.
 2. **The fixed contrast straddles a non-monotone curve.** Cover peaks at injury 40–60 and falls at
    80–100 in every run (§7.6). The pre-registered high range (60–100) mixes the peak with the fall.
    This does not change the null: the curves of the two agents overlap. It does limit what M1 can
-   detect.
+   detect. **Robustness (plan-reviewer, A3):** recomputing the 15 gap effects from the dose tables with
+   the high range moved to the peak (40–60), to 60–80 or to 80–100 gives no effect above ME in any
+   case (largest 0.038–0.040 against ME 0.043–0.057). The two agents also place the same share of
+   their high-range steps in 80–100 (fed 0.377 vs 0.380; hungry 0.340 vs 0.340), so the null is not a
+   mixing artefact of the straddled curve.
 3. **Felt and true injury disagree on per-agent M1 by up to ~0.4** (for example, w0001: −0.05 true,
    +0.35 felt). The felt low bin is "exactly 0 felt", a different set of states from "true injury
    0–20".
@@ -1266,6 +1293,44 @@ What the tables show, descriptively:
    14 of 16 worlds and its starvation share higher in 13 of 16 (for example, w0000: injury 42.5 →
    37.7 %, starvation 24.1 → 27.3 %). This is descriptive and was not pre-registered.
 
+### 7.10 The §4.6 known-input check on the earlier level-05 runs (run 2026-09-28, after the verdict)
+
+**What and why.** §4.6 registered a sanity check: run the measure scripts on the recordings of the two
+earlier level-05 runs (Wave 2 of [[BASIC_LEVELS_Q2_DEFAULT]]: one ordinary, one modulated agent, same
+seed and budget, no body rule), where M1 was expected to be about 0 because both agents "learned hurt →
+hide whatever their nutrition". It was skipped before the verdict; plan-reviewer (A1) asked for it.
+
+**How.** The same scripts and the same bands, ranges and thresholds, over a second analysis manifest
+(`wave2_sanity_manifest.yaml`) whose run list (`wave2_sanity_runs.yaml`) relabels the two Wave-2 runs
+`w0000_ordinary` / `w0000_modulated`, because the scripts require that label form. Felt-injury and
+temperature cut-points were frozen from the Wave-2 ordinary run (felt low = exactly 0, 53.0 % of rows;
+high ≥ 0.0870, close to this study's 0.0878). Final checkpoints, 1,000,000 episodes each,
+259 M / 260 M decision rows. Outputs: `results/analysis/level05_body_interactions/wave2_sanity/`.
+
+| Wave-2 level 05 | M1 true | M1 felt | M3 true | M3 felt | Gain (pts) | Store survival (steps) |
+|---|---|---|---|---|---|---|
+| Ordinary | +0.249 | +0.467 | +0.030 | +0.101 | 2.81 | 258.8 |
+| Modulated | +0.255 | +0.431 | +0.038 | +0.113 | 2.34 | 259.7 |
+| Modulated − ordinary | +0.006 | −0.036 | +0.008 | +0.012 | −0.47 | +0.8 |
+
+Share of steps in a bush, true injury (ordinary / modulated): hungry and unhurt 0.456 / 0.419,
+hungry and badly hurt 0.533 / 0.513; fed and unhurt 0.252 / 0.211, fed and badly hurt 0.578 / 0.559.
+
+**Reading.** The expectation "M1 ≈ 0" **fails**: both agents read about +0.25, the same as this study's
+unchanged world (+0.22 / +0.24). The tooling is not the cause. An independent read of the ordinary run
+that bypasses the study's reader (plain parquet, 10 of 200 blocks, last row of each episode dropped)
+gives M1 = +0.248 with the same four cell shares. The premise is what fails: M1's positive value comes
+from the unhurt row (hungry agents already in cover about twice as often as fed ones), not from a
+difference in what hurt agents do (51–58 % in cover either way). A "hurt → hide" agent therefore does
+not score 0 here, and M1 does not isolate "eat first when hurt and hungry". Why unhurt hungry agents
+sit in bushes so much is not established by this check.
+
+**What this changes.** Nothing about the null on the gap: the modulated-minus-ordinary difference is
+small in Wave 2 too (+0.006), both agents carry the same offset, and their dose curves overlap (§7.6).
+It does change what M1 may be called: it is a contrast with an uncalibrated zero point, and any reading
+of it as "nutrition-dependent hiding in the registered sense" is withdrawn. A follow-up that relies on
+M1 should first redefine its zero point (for example, against the unhurt baseline of each nutrition band).
+
 ### 7.9 Outputs
 
 - Frozen cut-points: `docs/experiments/active/level05_body_interactions/frozen_cutpoints/`
@@ -1273,7 +1338,11 @@ What the tables show, descriptively:
   This holds `dose_tables.json` (cover by injury, fed/hungry; eating by nutrition, low/high injury),
   `survival_tenths.json` (survival and starvation share per tenth of training, 32 runs),
   `factorial_effects.json` / `.md` (every effect, per agent and gap, with Lenth margins).
-  It also holds two working scripts, `dose_tables.py` and `survival_tenths.py`.
+  They are made by `scripts/analysis/studies/level05_body_interactions/dose_tables.py` and
+  `survival_tenths.py` (moved there from this folder on 2026-09-28, with dependency-map rows; the moved
+  `survival_tenths.py` reproduces the tracked JSON exactly).
+- §4.6 known-input check (§7.10): `wave2_sanity_manifest.yaml`, `wave2_sanity_runs.yaml` in this folder;
+  outputs `results/analysis/level05_body_interactions/wave2_sanity/`
 - Full per-run outputs (gitignored): `results/analysis/level05_body_interactions/`
   (`state_contrasts.json`, `combination_gain.json`, `factorial_effects.json`,
   `dose_response/dose_<label>.json`)
@@ -1281,11 +1350,10 @@ What the tables show, descriptively:
   over `analysis_manifest.yaml`
 
 **Related issues / follow-ups for the user (not acted on here):**
-- The two working scripts in `figure_data/` belong under `scripts/analysis/studies/level05_body_interactions/`
-  with dependency-map rows. They are kept beside the data until then, because the analyzer does not
-  write to `scripts/` (route through `feature-workflow` if wanted).
-- The §4.6 known-input check (the Wave-2 level-05 stores) was never run. It is worth running before a
-  follow-up relies on M1, given flag 1.
+- The §4.6 known-input check has now been run (§7.10) and fails its expectation: M1's zero point
+  needs redefining before any follow-up relies on it.
+- Whether to replicate the survival lead (about 3 seeds of the unchanged world for both agents, ~6 runs)
+  is the PI's call (plan-reviewer A2).
 - Per §5, the null screen goes to the PI. The follow-up 2×2 of §4.7 has no noted factors to be built
   from.
 

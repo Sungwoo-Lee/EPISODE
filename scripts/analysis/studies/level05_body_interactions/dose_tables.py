@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""dose_tables.py -- figure tables for the level-05 body-interactions factorial (analysis working script).
+"""dose_tables.py -- figure tables for the level-05 body-interactions factorial (descriptive; LEVEL05 §7.6).
 
 Plain language: for every world and agent, how does time in cover change with how injured the agent
 is, separately when it is well fed and when it is hungry; and how does eating change with how full it
@@ -18,6 +18,8 @@ Every cell carries n (rows) and k (numerator); share = k / n, null when n < 200 
 Survival steps only; reward is never read.
 
 Usage: PY dose_tables.py MANIFEST OUT_DIR [--workers N]
+  e.g. MANIFEST docs/experiments/active/level05_body_interactions/analysis_manifest.yaml,
+       OUT_DIR results/analysis/level05_body_interactions/dose_response
 Writes OUT_DIR/dose_<label>.json per run (cached; skipped if present) and OUT_DIR/dose_tables.json.
 """
 from __future__ import annotations
@@ -26,8 +28,7 @@ from functools import partial
 from pathlib import Path
 import numpy as np
 
-ROOT = Path(__file__).resolve().parents[5]
-sys.path.insert(0, str(ROOT / "scripts/analysis/studies/level05_body_interactions"))
+sys.path.insert(0, str(Path(__file__).resolve().parent))   # same folder as _common.py
 import _common as C  # noqa: E402
 
 INJ_EDGES = np.arange(0, 101, 10.0)            # 10 bins
