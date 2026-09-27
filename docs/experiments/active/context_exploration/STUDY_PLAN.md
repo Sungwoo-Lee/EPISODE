@@ -425,3 +425,173 @@ Reviewed by: plan-reviewer
 - **Still learning:** "> 5 %" means a relative rise of more than 5 % in survival steps over the last fifth
   of training.
 - **Status: approved by the user ("proceed", 2026-09-27); Parts 1–3 may run.**
+
+## Results (raw) — Parts 1–3 (2026-09-27)
+
+Numbers only; no reading is written here. Outputs: `results/analysis/context_exploration/` (`part1_hidden_context.json`, `part2_context_hazard.json`, `part2_value_of_knowing.json`, `part3_search_times.json`, `part3_balance_worlds.json`, `part3_balance_worlds_manifest.json`, `worlds/`). Scripts: `scripts/analysis/studies/context_exploration/`.
+
+### Part 1 — hidden axis (ambushers high 9–12 minus low 2–5), matched on injury × food energy × time in episode
+
+Stores: 200 of 200 blocks per agent, 1,000,000 episodes each; `seed_base` 1,000,000 in both → paired. Episodes: low 363,890, high 363,737, excluded 6–8 272,373. Cells counted 65 of 80. Gaps in percentage points, 95 % bootstrap interval (1,000 resamples).
+
+| Agent | Measure | Gap, matched (time) | Rule | Gap, matched (steps since last hit) | Raw low → high (%) |
+|---|---|---|---|---|---|
+| ordinary | cover | +0.63 [+0.57, +0.70] | does not adapt | +0.72 [+0.65, +0.79] | 25.0 → 27.8 |
+| ordinary | eat | -0.08 [-0.10, -0.06] | does not adapt | -0.59 [-0.61, -0.56] | 16.6 → 15.7 |
+| ordinary | open | -0.58 [-0.67, -0.48] | does not adapt | -0.68 [-0.78, -0.57] | 53.4 → 51.1 |
+| modulator | cover | +0.53 [+0.47, +0.59] | does not adapt | +0.43 [+0.36, +0.50] | 23.4 → 26.0 |
+| modulator | eat | -0.06 [-0.08, -0.04] | does not adapt | -0.53 [-0.55, -0.50] | 16.7 → 15.8 |
+| modulator | open | -0.45 [-0.54, -0.36] | does not adapt | -0.37 [-0.47, -0.28] | 55.4 → 53.3 |
+
+| Agent | Steps before first bite, high − low (matched on starting food energy) | No-bite share low / high |
+|---|---|---|
+| ordinary | +1.65 [+1.54, +1.76] steps | 0.222 / 0.247 |
+| modulator | +1.68 [+1.57, +1.80] steps | 0.221 / 0.244 |
+
+Paired agent difference (modulator gap − ordinary gap): cover -0.11 [-0.16, -0.05], eat +0.02 [+0.00, +0.04], open +0.13 [+0.05, +0.20].
+
+**Sensed-threat axis (hunting predators), cover-share gap in points** — matched on injury × food × time, and additionally on animal-smell quintile (edges 0.00, 1.33, 2.39, 4.04):
+
+| Agent | Contrast | Cover, matched | Cover, + smell | Eat, + smell | Open, + smell | Raw cover % (0/1/2) |
+|---|---|---|---|---|---|---|
+| ordinary | 1 − 0 | +12.47 [+12.40, +12.53] | +9.00 [+8.94, +9.06] | +1.10 [+1.08, +1.13] | -9.67 [-9.76, -9.57] | 15.0 / 35.1 / 54.4 |
+| ordinary | 2 − 0 | +23.40 [+23.29, +23.51] | +13.46 [+13.32, +13.62] | +6.38 [+6.20, +6.57] | -13.23 [-13.50, -12.97] | 15.0 / 35.1 / 54.4 |
+| ordinary | 2 − 1 | +11.83 [+11.73, +11.93] | +5.98 [+5.89, +6.08] | +1.32 [+1.27, +1.38] | -5.18 [-5.30, -5.07] | 15.0 / 35.1 / 54.4 |
+| modulator | 1 − 0 | +12.05 [+11.99, +12.11] | +8.61 [+8.55, +8.66] | +1.16 [+1.13, +1.18] | -8.94 [-9.03, -8.84] | 13.8 / 32.9 / 52.1 |
+| modulator | 2 − 0 | +23.18 [+23.08, +23.29] | +13.69 [+13.53, +13.85] | +6.50 [+6.31, +6.70] | -12.87 [-13.15, -12.60] | 13.8 / 32.9 / 52.1 |
+| modulator | 2 − 1 | +11.98 [+11.88, +12.09] | +6.61 [+6.51, +6.71] | +1.38 [+1.32, +1.44] | -5.56 [-5.69, -5.43] | 13.8 / 32.9 / 52.1 |
+
+### Part 2 — contexts and value of knowing the danger
+
+Check against the review's injury per exposed step (ordinary agent, 200 blocks): 0 predators 0.201 vs 0.20 (0.3%), 1: 1.102 vs 1.11 (0.7%), 2: 2.591 vs 2.62 (1.1%) — pass within 5 %. Pooled (average-context) injury per exposed step: ordinary 0.635.
+
+Planner: balance-study baseline world (E1 + E2 bins, discount 0.95), no warm bush; 3 seeds × 10,000 starts per policy; value in survival-share points (95 % interval); choice difference = share of start states where the context policy's best category beats the average policy's by > margin.
+
+| Agent | Context | Injury / exposed step | Survival: context policy / average policy | Mean steps (ctx / avg) | Value (points) | Choice diff @0.5 (0 / 2) |
+|---|---|---|---|---|---|---|
+| ordinary | pred0 | 0.20 | 0.965 / 0.966 | 483 / 483 | -0.10 [-0.39, +0.19] | 0.057 (0.105 / 0.013) |
+| ordinary | pred0_amblow | 0.12 | 0.968 / 0.968 | 484 / 484 | -0.00 [-0.29, +0.28] | 0.074 (0.124 / 0.016) |
+| ordinary | pred0_ambhigh | 0.28 | 0.963 / 0.963 | 482 / 482 | +0.04 [-0.26, +0.34] | 0.042 (0.086 / 0.011) |
+| ordinary | pred1 | 1.10 | 0.402 / 0.355 | 323 / 308 | +4.72 [+3.94, +5.50] | 0.056 (0.086 / 0.011) |
+| ordinary | pred1_amblow | 0.98 | 0.413 / 0.370 | 328 / 313 | +4.34 [+3.56, +5.12] | 0.047 (0.077 / 0.007) |
+| ordinary | pred1_ambhigh | 1.24 | 0.382 / 0.342 | 317 / 302 | +4.00 [+3.23, +4.77] | 0.069 (0.098 / 0.022) |
+| ordinary | pred2 | 2.59 | 0.111 / 0.064 | 202 / 168 | +4.70 [+4.25, +5.15] | 0.187 (0.203 / 0.136) |
+| ordinary | pred2_amblow | 2.41 | 0.118 / 0.074 | 207 / 175 | +4.48 [+4.01, +4.95] | 0.185 (0.202 / 0.136) |
+| ordinary | pred2_ambhigh | 2.78 | 0.099 / 0.058 | 195 / 162 | +4.14 [+3.71, +4.57] | 0.192 (0.207 / 0.144) |
+| modulator | pred0 | 0.19 | 0.967 / 0.966 | 483 / 483 | +0.01 [-0.28, +0.29] | 0.055 (0.103 / 0.011) |
+| modulator | pred0_amblow | 0.12 | 0.967 / 0.968 | 484 / 484 | -0.04 [-0.32, +0.24] | 0.071 (0.121 / 0.014) |
+| modulator | pred0_ambhigh | 0.27 | 0.965 / 0.964 | 483 / 482 | +0.07 [-0.23, +0.36] | 0.041 (0.086 / 0.010) |
+| modulator | pred1 | 1.09 | 0.415 / 0.372 | 328 / 313 | +4.32 [+3.54, +5.10] | 0.057 (0.084 / 0.012) |
+| modulator | pred1_amblow | 0.97 | 0.434 / 0.382 | 335 / 318 | +5.12 [+4.33, +5.91] | 0.045 (0.073 / 0.010) |
+| modulator | pred1_ambhigh | 1.23 | 0.399 / 0.355 | 321 / 306 | +4.35 [+3.58, +5.13] | 0.066 (0.094 / 0.020) |
+| modulator | pred2 | 2.63 | 0.120 / 0.069 | 208 / 172 | +5.11 [+4.64, +5.58] | 0.182 (0.201 / 0.132) |
+| modulator | pred2_amblow | 2.45 | 0.129 / 0.078 | 212 / 179 | +5.04 [+4.55, +5.53] | 0.175 (0.194 / 0.125) |
+| modulator | pred2_ambhigh | 2.82 | 0.110 / 0.061 | 202 / 168 | +4.90 [+4.46, +5.35] | 0.191 (0.210 / 0.143) |
+
+Pre-registered rule output (primary contexts pred0/1/2): ordinary — **worth knowing**; modulator — **worth knowing**. Average-context policy in the average world: ordinary survival 0.587, modulator 0.596.
+
+### Part 3 — worlds, search times, balance
+
+- Worlds generated: 18 reset layouts × 4 smell ranges = 72 worlds; 1,000 real resets per layout; every layout passed the span, (0,0) and fire-placement assertions; no fire count needed capping; every range's YAML differs from its range-20 world only in `sensor_radius`. Observation width 58 in every world.
+- Forager validation (i) hitting time vs exact Markov chain: pass, max relative error 0.009 (18 grid/target/range cases). (ii) monotone in smell range: pass, 0 violations. (iii) today's world at range 20: forager median food search 4 (mean 4.70) vs measured median trip 4.
+- Planner search option check: find probability 1 vs one-step trip — V and Q tables identical (max diff 0.0), rollout survival 0.6428 vs 0.6499 (1.05 SE).
+- Archived 20 × 20 config check: one archived 20 × 20 world exists, `configs/environment/experiment/archive/2X2_area.yaml` (four-quadrant layout, fixed start, food regrowing after 100 steps, no thermal); no training result or rejection is recorded for it in `docs/`.
+- Today's world as measured here (10 × 10, range 20, food 1–4): survival 0.371 at hazard ×1, 0.186 at ×2 (criterion-4 reference = ×1).
+
+Primary scaling (other things at today's density, `od`). Search means in steps (1,000 resets); criteria string = pass(1)/fail(0) for criteria 1 time, 2 drive, 3 death, 4 survival, 5 hide.
+
+| World | Food search mean [95 %] | median / p90 | capped | Cover | Warmth (5 °C) | Survival ×1 | Crit ×1 | Survival ×2 | Crit ×2 | Starvation share of late deaths ×1 |
+|---|---|---|---|---|---|---|---|---|---|---|
+| g10r20f1to4b12_od | 4.7 [4.5, 4.9] | 4 / 9 | 0.000 | 2.5 | 21.0 | 0.371 | 10111 | 0.186 | 10001 | 0.02 |
+| g10r8f1to4b12_od | 4.9 [4.7, 5.2] | 4 / 9 | 0.000 | 2.5 | 21.0 | 0.377 | 10111 | 0.175 | 10001 | 0.02 |
+| g10r5f1to4b12_od | 7.2 [6.4, 8.0] | 4 / 13 | 0.000 | 2.5 | 21.0 | 0.340 | 10111 | 0.128 | 10101 | 0.08 |
+| g10r3f1to4b12_od | 15.7 [13.7, 17.7] | 4 / 44 | 0.000 | 3.0 | 21.0 | 0.113 | 10101 | 0.026 | 10101 | 0.44 |
+| g10r20f1to2b36_od | 5.7 [5.5, 5.9] | 6 / 10 | 0.000 | 2.5 | 20.0 | 0.406 | 10011 | 0.205 | 10001 | 0.02 |
+| g10r8f1to2b36_od | 6.1 [5.8, 6.4] | 6 / 10 | 0.000 | 2.5 | 20.0 | 0.399 | 10011 | 0.189 | 10001 | 0.03 |
+| g10r5f1to2b36_od | 11.8 [10.4, 13.1] | 6 / 26 | 0.000 | 2.6 | 20.0 | 0.285 | 10101 | 0.112 | 10101 | 0.18 |
+| g10r3f1to2b36_od | 26.7 [23.5, 29.9] | 6 / 67 | 0.000 | 3.2 | 20.0 | 0.067 | 10101 | 0.015 | 00101 | 0.57 |
+| g15r20f1to4b12_od | 7.3 [7.0, 7.6] | 7 / 13 | 0.000 | 2.5 | 26.6 | 0.204 | 10101 | 0.070 | 10101 | 0.06 |
+| g15r8f1to4b12_od | 14.9 [12.7, 17.1] | 7 / 26 | 0.000 | 2.5 | 26.6 | 0.063 | 10101 | 0.011 | 10101 | 0.35 |
+| g15r5f1to4b12_od | 36.5 [31.1, 41.8] | 7 / 102 | 0.000 | 2.5 | 26.6 | 0.003 | 00001 | 0.000 | 00001 | 0.68 |
+| g15r3f1to4b12_od | 72.2 [62.9, 81.6] | 14 / 215 | 0.000 | 3.3 | 26.6 | 0.000 | 00001 | 0.000 | 00000 | 0.78 |
+| g15r20f2to9b12_od | 4.9 [4.7, 5.0] | 4 / 9 | 0.000 | 2.5 | 29.6 | 0.194 | 10101 | 0.081 | 10101 | 0.01 |
+| g15r8f2to9b12_od | 5.9 [5.3, 6.5] | 4 / 9 | 0.000 | 2.5 | 29.6 | 0.182 | 10101 | 0.073 | 10101 | 0.02 |
+| g15r5f2to9b12_od | 9.7 [8.2, 11.2] | 4 / 16 | 0.000 | 2.5 | 29.6 | 0.124 | 10101 | 0.034 | 10101 | 0.13 |
+| g15r3f2to9b12_od | 20.5 [17.3, 23.7] | 4 / 54 | 0.000 | 2.9 | 29.6 | 0.023 | 10101 | 0.003 | 00101 | 0.45 |
+| g15r20f1to2b36_od | 8.8 [8.5, 9.1] | 8 / 15 | 0.000 | 2.5 | 26.8 | 0.201 | 10101 | 0.071 | 10101 | 0.06 |
+| g15r8f1to2b36_od | 23.0 [19.9, 26.1] | 8 / 57 | 0.000 | 2.5 | 26.8 | 0.051 | 10101 | 0.013 | 00101 | 0.42 |
+| g15r5f1to2b36_od | 51.4 [45.3, 57.6] | 9 / 149 | 0.000 | 2.5 | 26.8 | 0.005 | 00001 | 0.001 | 00001 | 0.68 |
+| g15r3f1to2b36_od | 116.1 [104.4, 127.8] | 35 / 331 | 0.000 | 3.3 | 26.8 | 0.000 | 00001 | 0.000 | 00000 | 0.79 |
+| g15r20f2to4b12_od | 6.2 [6.0, 6.4] | 6 / 11 | 0.000 | 2.5 | 26.6 | 0.210 | 10101 | 0.075 | 10101 | 0.04 |
+| g15r8f2to4b12_od | 8.5 [7.5, 9.5] | 6 / 12 | 0.000 | 2.5 | 26.6 | 0.186 | 10101 | 0.054 | 10101 | 0.13 |
+| g15r5f2to4b12_od | 17.1 [14.8, 19.4] | 6 / 45 | 0.000 | 2.5 | 26.6 | 0.048 | 10101 | 0.010 | 00101 | 0.40 |
+| g15r3f2to4b12_od | 36.9 [32.4, 41.4] | 7 / 104 | 0.000 | 3.3 | 26.6 | 0.002 | 00001 | 0.001 | 00000 | 0.69 |
+| g20r20f1to4b12_od | 9.4 [9.1, 9.7] | 8 / 17 | 0.000 | 2.4 | 29.1 | 0.149 | 10101 | 0.050 | 10101 | 0.13 |
+| g20r8f1to4b12_od | 38.8 [33.0, 44.5] | 8 / 96 | 0.000 | 2.4 | 29.1 | 0.003 | 00001 | 0.001 | 00001 | 0.68 |
+| g20r5f1to4b12_od | 94.1 [80.6, 107.6] | 12 / 239 | 0.001 | 2.5 | 29.1 | 0.000 | 00001 | 0.000 | 00001 | 0.79 |
+| g20r3f1to4b12_od | 179.0 [157.5, 200.5] | 38 / 501 | 0.009 | 2.8 | 29.1 | 0.000 | 00001 | 0.000 | 00000 | 0.82 |
+| g20r20f4to16b12_od | 4.5 [4.3, 4.7] | 4 / 8 | 0.000 | 2.3 | 26.4 | 0.278 | 10101 | 0.123 | 10101 | 0.01 |
+| g20r8f4to16b12_od | 5.5 [4.9, 6.1] | 4 / 8 | 0.000 | 2.4 | 26.4 | 0.271 | 10101 | 0.106 | 10101 | 0.02 |
+| g20r5f4to16b12_od | 9.3 [7.6, 11.0] | 4 / 12 | 0.000 | 2.5 | 26.4 | 0.175 | 10101 | 0.056 | 10101 | 0.13 |
+| g20r3f4to16b12_od | 19.7 [15.9, 23.6] | 4 / 40 | 0.000 | 3.1 | 26.4 | 0.032 | 10101 | 0.009 | 00101 | 0.50 |
+| g20r20f1to2b36_od | 11.5 [11.1, 11.9] | 11 / 20 | 0.000 | 2.4 | 27.6 | 0.170 | 10101 | 0.072 | 10101 | 0.14 |
+| g20r8f1to2b36_od | 75.7 [65.1, 86.4] | 11 / 208 | 0.000 | 2.4 | 27.6 | 0.001 | 00001 | 0.000 | 00001 | 0.74 |
+| g20r5f1to2b36_od | 151.7 [134.8, 168.6] | 40 / 403 | 0.004 | 2.5 | 27.6 | 0.000 | 00001 | 0.000 | 00001 | 0.80 |
+| g20r3f1to2b36_od | 251.4 [228.0, 274.8] | 92 / 746 | 0.008 | 2.8 | 27.6 | 0.000 | 00001 | 0.000 | 00000 | 0.82 |
+| g20r20f2to6b12_od | 7.1 [6.9, 7.4] | 6 / 13 | 0.000 | 2.3 | 27.2 | 0.220 | 10101 | 0.083 | 10101 | 0.06 |
+| g20r8f2to6b12_od | 17.4 [14.2, 20.6] | 6 / 22 | 0.000 | 2.3 | 27.2 | 0.051 | 10101 | 0.011 | 00101 | 0.42 |
+| g20r5f2to6b12_od | 33.4 [27.9, 38.8] | 6 / 89 | 0.000 | 2.4 | 27.2 | 0.006 | 00001 | 0.000 | 00001 | 0.67 |
+| g20r3f2to6b12_od | 72.2 [62.5, 81.9] | 13 / 209 | 0.000 | 2.8 | 27.2 | 0.000 | 00001 | 0.000 | 00000 | 0.78 |
+
+Check scaling (other things at today's count, `oc`, 32 worlds): food search identical to the matching `od` world (same food positions and agent starts); cover mean 4.0–28.3; warmth mean 94.6–243.1; survival ×1 at most 0.007; criteria 1–5 passed at ×1 by 0 worlds.
+
+Criterion failures over all 72 worlds — ×1: 1_time fails in 45, 2_drive fails in 72, 3_death fails in 43, 4_survival fails in 67, 5_hide fails in 0; ×2: 1_time fails in 51, 2_drive fails in 72, 3_death fails in 42, 4_survival fails in 72, 5_hide fails in 9. Criterion 2's per-decision warming ratio is "not computable" (no start state at body temperature ≥ 0 chooses warming) in all 72 worlds, which fails criterion 2 by the inherited rule; example eating / hiding ratios at ×1: today 2.77 / 14.26.
+
+Worlds meeting the search floor (mean food search ≥ 20): 31 of 72; worlds with > 1 % capped food searches: 0.
+
+**Candidate rule output: candidates = none; shortest-range 10 × 10 world passing criteria 1–5 at both hazards = none.** The candidate manifest (`part3_balance_worlds_manifest.json`) is therefore empty; Part 4, per the plan, does not run on this output.
+
+## Implementation Report — Parts 1–3 (2026-09-27)
+
+**Files.** New folder `scripts/analysis/studies/context_exploration/`: `hidden_context.py` (Part 1),
+`context_hazard.py` + `value_of_knowing.py` (Part 2), `make_worlds.py` + `forager.py` + `balance_worlds.py`
+(Part 3). Reused, with one new optional argument each and no change to existing behaviour:
+`internal_state_interactions/measure_world.py` (`measure_hazard_bins(..., episode_select=None)`) and
+`internal_state_interactions/planner.py` (`World.find_prob=None`; `macro_branches(..., steps=None)`;
+`rollout_balance(..., dyn_world=None)`). `docs/environment/SCRIPTS_DEPENDENCY_MAP.md`: new row + the
+internal-state row's "callers outside the folder". Nothing under `src/` or `configs/` was touched;
+`make_training_configs.py` (Part 4) is not written.
+
+**Validation of the reused modules.** `validate_balance.py` run before and after the edits: all gates pass,
+and the two output JSONs are byte-identical. `measure_hazard_bins` with an all-episodes selector returns
+exactly the default call's result (3 blocks). Planner search option: find probability 1 reproduces a
+one-step trip bit for bit (above).
+
+**Choices the plan left open (stated, not silent).**
+1. Resets: 1,000 per layout (Revision 1a), not 300.
+2. Assertion 2 ((0,0)) is strict only for types whose area excludes (0,0) (fires, inset by `edge_margin` 2).
+   Widened areas `[[1,1],[G,G]]` include (0,0) for every other type, so there the count at (0,0) is
+   reported beside the mean of the other three corners (in `worlds/*/layout.json`).
+3. Warmth ambient = the episode's coldest cell (the field's fill value).
+4. "In the open away from cover" = not in a bush and Manhattan distance ≥ 2 from every active bush.
+5. Steps-since-last-hit sensitivity has a fourth bin, "no hit yet", for steps before the episode's first hit.
+6. Bootstrap = Poisson(1) episode weights seeded by the episode seed (1,000 resamples), so the two agents'
+   gaps are paired per episode; smell quintile edges fixed on block 0 of both agents.
+7. Part 2 value interval = normal interval of a difference of two proportions over 30,000 starts per policy
+   (seeds pooled; per-seed values in the JSON). Choice difference primary at the balance study's
+   choice-category level; action level also in the JSON.
+8. Part 3 planner: map without a warm bush only; find probability for food, cover and warmth
+   (warmth at 5 °C); going to open ground keeps the 2-step trip; rollouts 2,000 starts, seed 0 (balance
+   study default); hazard scale = hunting predators per cell (count-range midpoint) relative to today's.
+   The middle food rung uses 12 bites. Criterion 4 is judged against today's world at ×1 at both hazards;
+   the ratio to today at the same hazard is in the JSON (`survival_vs_today_same_hazard`).
+9. Forager validation (i) raises the step cap to 100,000 so the comparison with the uncapped chain is not
+   truncated (at the 2,000 cap one corner-target case read 9.2 % off).
+
+**Speed check.** Skipped: analysis tooling only, no training hot path touched.
+
+**Open items for `senior-developer`.** Part 3's candidate list is empty, so Part 4 does not run on this
+output (plan: "the study returns to this plan"). Known Bugs consulted by grep (`res_type` filter,
+(0,0) parking, stale saved budget), all as cited in the plan; nothing new for `bug-curator`.
+
+Implemented by: developer
