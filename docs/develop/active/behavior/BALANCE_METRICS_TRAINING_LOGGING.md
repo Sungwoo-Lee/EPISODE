@@ -285,7 +285,7 @@ Criterion mapping, for the analyzer:
 | Study criterion | Keys |
 |---|---|
 | 1, time | `Bal_Time*` |
-| 2, drive: eat and hide ratio ≥ 2 | `Bal_EatRatio`, `Bal_HideRatio_True`; the rollout warming ratio `Bal_WarmRatio` is report-only per Rev 2b N1 |
+| 2, drive: eat and hide ratio ≥ 2 | `Bal_EatRatio`, `Bal_HideRatio_True` (true injury decides; `_Felt` reported); `Bal_WarmRatio` is logged but not pass/fail in training (Rev 2c, which landed while this plan was drafted and agrees with it) |
 | 3, deaths | `Bal_LateDeath*` |
 | 4, survival | existing `Episode/Steps` |
 | 5, fed hiding ≥ 2× | `Bal_HideRatio_True_Fed` |
