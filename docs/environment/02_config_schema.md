@@ -380,6 +380,14 @@ training:                    # configs/train/ layer — NOT read by config_loade
                              #   false = legacy blocking render (kill-switch; DQN/DRQN/PPO fallback)
   render_every_n_checkpoints # int — MP4 every Nth checkpoint (async path only); recordings unaffected
   render_workers             # int|null — --workers cap for the render subprocess (null = cpu_count-1)
+
+logging:                     # configs/train/ layer — NOT read by config_loader.py (CONFIG_GUIDE.md §7)
+  episode:
+    # 2026-09-27 additions (BALANCE_METRICS_TRAINING_LOGGING) — rPPO only, in
+    # configs/train/recurrent_ppo.yaml; deliberately ABSENT from configs/train/default.yaml:
+    balance_metrics                # bool, mandatory for RecurrentPPO — Episode/Bal_* logging on/off
+    balance_early_death_max_steps  # int >= 0, mandatory when balance_metrics is true — deaths at
+                                   #   length <= this are "early" (excluded from Bal_LateDeath*); 20
 ```
 
 ---

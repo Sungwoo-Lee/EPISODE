@@ -55,6 +55,7 @@ GAMMA = 0.9
 class _Cfg:
     """Static config stub carrying only the fields train_iteration reads."""
     rnn_type = "GRU"
+    balance_metrics = False
     num_steps = T
     num_epochs = 1
     gamma = GAMMA
@@ -109,7 +110,7 @@ def _capture_batch(return_mode, monkeypatch, reward_scale=30.0):
     seen = {}
 
     def fake_collect(model, env_params, last_state, last_h_state, last_key,
-                     num_steps, rnn_type="LSTM", return_mode="MC"):
+                     num_steps, rnn_type="LSTM", return_mode="MC", *, balance_metrics):
         seen["collect_return_mode"] = return_mode
         return traj, h_states, last_state, last_h_state, last_key, bootstrap_value
 
@@ -227,7 +228,7 @@ def test_mc_raw_ignores_the_per_step_next_value(monkeypatch):
     seen = {}
 
     def fake_collect(model, env_params, last_state, last_h_state, last_key,
-                     num_steps, rnn_type="LSTM", return_mode="MC"):
+                     num_steps, rnn_type="LSTM", return_mode="MC", *, balance_metrics):
         return traj, h_states, last_state, last_h_state, last_key, boot
 
     def fake_update(model, optimizer, batch, config):
@@ -273,7 +274,7 @@ def test_mc_raw_collect_leaves_next_value_all_zero(tiny_env_and_model):
     h = model.initial_state(2)
     traj, _, _, _, _, bootstrap_value = rpt.collect_trajectories(
         model, params, state, h, jax.random.PRNGKey(3), 4,
-        rnn_type="GRU", return_mode="MC_RAW")
+        rnn_type="GRU", return_mode="MC_RAW", balance_metrics=False)
     assert not bool(jnp.any(traj.next_value != 0.0))
     assert bootstrap_value.shape == (2,)
 
@@ -287,7 +288,7 @@ def test_mc_raw_rollout_matches_mc_fixed_rollout(tiny_env_and_model):
     for mode in ("MC_FIXED", "MC_RAW"):
         traj, _, _, _, _, boot = rpt.collect_trajectories(
             model, params, state, h, jax.random.PRNGKey(3), 4,
-            rnn_type="GRU", return_mode=mode)
+            rnn_type="GRU", return_mode=mode, balance_metrics=False)
         out[mode] = (traj.reward, traj.value, traj.next_value, boot)
     for a, b in zip(out["MC_FIXED"], out["MC_RAW"]):
         assert jnp.array_equal(a, b)

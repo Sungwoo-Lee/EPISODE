@@ -232,3 +232,66 @@ def test_continual_bm_stage_transition_no_crash():
             f"train.py exited with non-zero code {result.returncode}.\n\n"
             f"STDOUT:\n{result.stdout}\n\nSTDERR:\n{result.stderr}"
         )
+
+
+# ---------------------------------------------------------------------------
+# T10 (balance metrics, docs/develop/active/behavior/BALANCE_METRICS_TRAINING_LOGGING.md):
+# the balance switch is on (configs/train/recurrent_ppo.yaml) across a stage swap.
+#
+# The plan asked for a thermal-on -> thermal-off stage pair. That pair cannot exist:
+# train.py rejects any continual schedule whose stages differ in `thermal_enabled` or
+# `interoceptive_nociception_enabled` (the obs-dim check and `_modality_fingerprint`),
+# so the balance flags can never change across a swap. What CAN go wrong at a swap --
+# the per-env counters not being wiped, the calibration not being re-recorded, a crash
+# in the emit path -- is exercised here on two level-05 (thermal + felt injury) stages.
+# WANDB_MODE=disabled keeps `wandb_enabled` true so the Episode/* emit path (and with it
+# the Bal_* aggregation) actually runs, without network or files.
+# ---------------------------------------------------------------------------
+_BAL_STAGE_YAML = textwrap.dedent("""\
+    # Balance-metrics continual test stage: level 05, short episodes, small windows.
+    extends: environment/experiment/basic/05-campfire_thermal_10x10
+    environment:
+      max_steps: 30
+    logging:
+      episode:
+        smoothing_episodes: 4
+        interval_episodes: 2
+    training:
+      video_during_training: false
+""")
+
+
+@pytest.mark.slow
+def test_continual_balance_metrics_stage_swap():
+    with tempfile.TemporaryDirectory(prefix="bal_transition_test_") as tmpdir:
+        stages_dir = os.path.join(tmpdir, "stages")
+        os.makedirs(stages_dir)
+        _write(os.path.join(stages_dir, "00_a.yaml"), _BAL_STAGE_YAML)
+        _write(os.path.join(stages_dir, "01_b.yaml"), _BAL_STAGE_YAML)
+        schedule_path = os.path.join(tmpdir, "schedule.yaml")
+        _write(schedule_path, _SCHEDULE_YAML)
+        results_dir = os.path.join(tmpdir, "results")
+        os.makedirs(results_dir)
+        cmd = [
+            _PYTHON, _TRAIN_PY,
+            "--configs-dir", stages_dir,
+            "--continual-schedule", schedule_path,
+            "--agent_config", _AGENT_CONFIG,
+            "--num-envs", "2",
+            "--num-steps", "10",
+            "--device", "cpu",
+            "--results-dir", results_dir,
+        ]
+        env = dict(os.environ, WANDB_MODE="disabled", WANDB_DIR=tmpdir)
+        result = subprocess.run(cmd, capture_output=True, text=True, timeout=900,
+                                cwd=_REPO_ROOT, env=env)
+        combined = result.stdout + result.stderr
+        assert "Traceback" not in combined, combined[-4000:]
+        assert result.returncode == 0, combined[-4000:]
+        assert "[STAGE]" in combined, combined[-4000:]
+        assert "[balance] balance_calibration: " in combined, combined[-4000:]
+        stage1 = [l for l in combined.splitlines()
+                  if l.startswith("[balance] balance_calibration_stage_1: ")]
+        assert len(stage1) == 1, combined[-4000:]
+        assert "'thermal_on': True" in stage1[0] and "'max_injury': 100.0" in stage1[0]
+        assert "'early_death_max_steps': 20" in stage1[0]

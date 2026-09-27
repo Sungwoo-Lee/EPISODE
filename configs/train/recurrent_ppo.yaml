@@ -54,6 +54,15 @@ logging:
     # rPPO's episode throughput is far below Dreamer's, so a larger interval keeps
     # rows/session in the same ballpark. 4000 < 5000 -> windows still overlap.
     interval_episodes: 4000
+    # Balance metrics (docs/develop/active/behavior/BALANCE_METRICS_TRAINING_LOGGING.md):
+    # time split + need-behaviour ratios + hiding gap + early/late deaths, Episode/Bal_* keys.
+    # Pure function of rollout data; training is bit-identical on/off
+    # (tests/models/test_balance_metrics_parity.py). REQUIRED for rPPO, no default.
+    balance_metrics: true
+    # An episode that dies at length <= this many steps is an "early" death, excluded from
+    # Episode/Bal_LateDeath*. 20 = the internal-state study's pre-registered cut-off
+    # (level-05 value). REQUIRED when balance_metrics is true; read only then.
+    balance_early_death_max_steps: 20
   step:
     # 1 rPPO iteration = num_steps(128) * num_envs(16) = 2048 env-steps, i.e. 128x a
     # Dreamer iteration. 100 iters = ~204k env-steps of loss averaging.

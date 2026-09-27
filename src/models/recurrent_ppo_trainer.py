@@ -24,6 +24,23 @@ class StepInfo(NamedTuple):
     dist_per_neutral: jnp.ndarray   # [num_neutral]  per-rabbit distance, unreduced
     dist_per_predator: jnp.ndarray  # [num_predator] per-predator distance, unreduced
     agent_in_bush: jnp.ndarray      # bool — True iff agent is on a hides_agent obstacle (behavior toolkit v1)
+    # BalanceStepInfo when the static `balance_metrics` switch is on, else None (no leaves,
+    # so the metrics-off program is identical to the pre-change one).
+    # docs/develop/active/behavior/BALANCE_METRICS_TRAINING_LOGGING.md
+    balance: Any
+
+class BalanceStepInfo(NamedTuple):
+    """Per-step inputs of src/behavior/balance_metrics.step_counts (plan A2-A4).
+
+    Body state is read from the PRE-step state (what the agent observed when it chose the
+    action); cell reads from the post-step, pre-auto-reset state. Fields whose modality
+    is off (static EnvParams flags) are None."""
+    nutrition: jnp.ndarray            # pre-step nutrition
+    injury: jnp.ndarray               # pre-step true injury
+    felt_injury: Any                  # pre-step felt injury (noise-free percept x max_injury) | None
+    body_temp: Any                    # pre-step body temperature degC | None
+    on_warm_cell: Any                 # landing cell temp > temperature_setpoint | None
+    near_fire: Any                    # thermal_default_temp_high < landing cell temp <= setpoint | None
 
 class Transition(NamedTuple):
     obs: jnp.ndarray
@@ -228,10 +245,15 @@ def validate_return_mode(return_mode):
         )
     return mode
 
-def collect_trajectories(model, env_params, last_state, last_h_state, last_key, num_steps, rnn_type="LSTM", return_mode="MC"):
-    """Collects parallel trajectories using jax.lax.scan and NNX model."""
+def collect_trajectories(model, env_params, last_state, last_h_state, last_key, num_steps, rnn_type="LSTM", return_mode="MC", *, balance_metrics: bool):
+    """Collects parallel trajectories using jax.lax.scan and NNX model.
+
+    `balance_metrics` (static Python bool, required): when True, each step also emits a
+    BalanceStepInfo in `step_info.balance` (pure reads of pre-step / pre-reset state; no
+    random key, not used by the loss). When False, `step_info.balance` is None.
+    """
     from src.environment.core import jax_step
-    from src.environment.sensor import get_observation
+    from src.environment.sensor import get_observation, sense_interoceptive_nociception
 
     # Infer vmap axes from the hidden state structure (handles any PyTree)
     h_axes = _h_vmap_axes(last_h_state)
@@ -286,6 +308,29 @@ def collect_trajectories(model, env_params, last_state, last_h_state, last_key, 
         else:
             next_value = jnp.zeros_like(value)
 
+        # 3c. Balance-metric reads (static switch, resolved at trace time). Body state from
+        # the PRE-step `state` (what the action was chosen on); landing cell from the
+        # pre-auto-reset `next_state`. docs/develop/active/behavior/BALANCE_METRICS_TRAINING_LOGGING.md A2-A4.
+        if balance_metrics:
+            with jax.named_scope("rppo_balance_reads"):
+                if env_params.interoceptive_nociception_enabled:
+                    felt = (jax.vmap(sense_interoceptive_nociception, in_axes=(0, None))(state, env_params)[:, 0]
+                            * env_params.max_injury)
+                else:
+                    felt = None
+                if env_params.thermal_enabled:
+                    cell_t = jax.vmap(lambda f, p: f[p[0], p[1]])(next_state.thermal_field, next_state.agent_pos)
+                    on_warm = cell_t > env_params.temperature_setpoint
+                    near_fire = (cell_t > env_params.thermal_default_temp_high) & ~on_warm
+                    body_t = state.body_temp
+                else:
+                    on_warm = near_fire = body_t = None
+                balance = BalanceStepInfo(
+                    nutrition=state.nutrition, injury=state.injury_level, felt_injury=felt,
+                    body_temp=body_t, on_warm_cell=on_warm, near_fire=near_fire)
+        else:
+            balance = None
+
         # 4. Handle Auto-Reset
         with jax.named_scope("rppo_env_reset"):
             # Advance the carried key (never reuse a sub-key): the old
@@ -328,6 +373,7 @@ def collect_trajectories(model, env_params, last_state, last_h_state, last_key, 
             dist_per_neutral=info['dist_per_neutral'],
             dist_per_predator=info['dist_per_predator'],
             agent_in_bush=info['agent_in_bush'],
+            balance=balance,
         )
         trans = Transition(
             obs=obs, action=action, reward=reward, done=done,
@@ -405,7 +451,8 @@ def train_iteration(model, optimizer, env_params, env_state, h_state, key, confi
     # 1. Collect rollouts
     with jax.named_scope("rppo_collect_trajectories"):
         trajectories, h_states, next_env_state, next_h_state, key, bootstrap_value = collect_trajectories(
-            model, env_params, env_state, h_state, key, config.num_steps, rnn_type=rnn_type, return_mode=return_mode
+            model, env_params, env_state, h_state, key, config.num_steps, rnn_type=rnn_type, return_mode=return_mode,
+            balance_metrics=config.balance_metrics,
         )
 
     # 2. Compute Advantages and Targets

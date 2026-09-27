@@ -77,6 +77,15 @@ from src.environment.sensor import get_observation, get_observation_breakdown
 from src.environment.core import jax_step
 from src.models.recurrent_ppo_network import ActorCriticRNN
 from src.models.recurrent_ppo_trainer import train_iteration, validate_return_mode
+from src.behavior.balance_metrics import (
+    K as BALANCE_K,
+    calibration_record as balance_calibration_record,
+    late_death_log as balance_late_death_log,
+    resolve_balance_metrics_flag,
+    resolve_early_death_max_steps,
+    step_counts as balance_step_counts,
+    window_log as balance_window_log,
+)
 from src.models.dqn_network import DQNNetwork, get_action_dqn_nnx
 from src.models.dqn_trainer import ReplayBuffer as DQNReplayBuffer, update_step_dqn
 from src.models.drqn_network import DRQNNetwork, get_action_drqn_nnx
@@ -108,6 +117,9 @@ class PPOConfig(NamedTuple):
     ent_coef: float
     vf_coef: float
     lr: float
+    # Static switch for Episode/Bal_* logging (rPPO; required, no default).
+    # docs/develop/active/behavior/BALANCE_METRICS_TRAINING_LOGGING.md
+    balance_metrics: bool
     rnn_type: str = "LSTM"
     activation: str = "tanh"
     return_mode: str = "MC"
@@ -1163,6 +1175,32 @@ def main():
         print(f"Learning Rate: {lr}")
         print("--------------------------------------------\n")
     
+    # Balance metrics (docs/develop/active/behavior/BALANCE_METRICS_TRAINING_LOGGING.md).
+    # rPPO-only: the switch and the early-death cut-off are mandatory for RecurrentPPO
+    # (configs/train/recurrent_ppo.yaml); the cut-off is read only when the switch is on.
+    if algorithm == "RecurrentPPO":
+        bal_enabled = resolve_balance_metrics_flag(config)
+        bal_early_death_max_steps = resolve_early_death_max_steps(config) if bal_enabled else None
+    else:
+        # Other algorithms have no balance logging (plan A8) -- not a fallback.
+        bal_enabled = False
+        bal_early_death_max_steps = None
+
+    def _record_balance_calibration(record_key):
+        """Write the calibration the balance bins were measured under (plan A5) into the
+        run's logged config and stdout, from the CURRENT stage's params."""
+        if not bal_enabled:
+            return
+        rec = balance_calibration_record(
+            params, thermal_on=bool(params.thermal_enabled),
+            felt_on=bool(params.interoceptive_nociception_enabled),
+            early_death_max_steps=bal_early_death_max_steps)
+        print(f"[balance] {record_key}: {rec}", flush=True)
+        if wandb_enabled:
+            wandb.config.update({record_key: rec}, allow_val_change=True)
+
+    _record_balance_calibration("balance_calibration")
+
     # 6. Algorithm Initialization
     if args.debug: print(f"[DEBUG] Phase 6: Algorithm Initialization ({algorithm})...", flush=True)
     if algorithm == "RecurrentPPO":
@@ -1232,6 +1270,7 @@ def main():
             ent_coef=config.get_mandatory('agent.entropy_coef'),
             vf_coef=config.get_mandatory('agent.vf_coef'),
             lr=lr,
+            balance_metrics=bal_enabled,
             rnn_type=rnn_type,
             activation=activation,
             return_mode=return_mode,
@@ -1334,6 +1373,9 @@ def main():
             ent_coef=config.get_mandatory('agent.entropy_coef'),
             vf_coef=config.get_mandatory('agent.vf_coef'),
             lr=lr_actor,
+            # Plain PPO has no balance logging (its trainer never reads this field);
+            # explicit False because PPOConfig requires it -- not a fallback.
+            balance_metrics=False,
             activation=activation,
             return_mode=return_mode
         )
@@ -1361,6 +1403,8 @@ def main():
 
     episode_behavior = {k: np.zeros(num_envs, dtype=np.float32) for k in BEHAVIOR_KEYS}
     episode_dist_sums = {k: np.zeros(num_envs, dtype=np.float32) for k in BEHAVIOR_DIST_KEYS}
+    # Balance metrics: per-env counters (src/behavior/balance_metrics.COUNTER_NAMES order).
+    episode_balance = np.zeros((num_envs, BALANCE_K), dtype=np.int32) if bal_enabled else None
 
     # Per-instance (tag-based) accumulators for Round-2 metrics.
     neutral_tags  = tuple(params.neutral_tags)   # static; possibly empty
@@ -1528,6 +1572,7 @@ def main():
         # stage-transition block at the 'Fix 4' comment).
         if algorithm == "RecurrentPPO":
             h_state = model.initial_state(num_envs)
+        _record_balance_calibration(f"balance_calibration_stage_{current_stage}")
         if not args.quiet:
             print(f"[RESUME] Stage {current_stage}:"
                   f"{schedule.stage_names[current_stage]} environment rebuilt "
@@ -1590,6 +1635,19 @@ def main():
             # Behavior-measure toolkit v1: WandB fan-out (Site 1)
             if bm_enabled:
                 _bm_log_wandb(ep_log, eps)
+        # Balance metrics (Episode/Bal_*): pooled counters + early/late death shares.
+        # Flags follow the CURRENT stage's params (the window is cleared on a stage swap).
+        if bal_enabled:
+            _bal_counts = [ep['bal_counts'] for ep in eps if 'bal_counts' in ep]
+            if _bal_counts:
+                ep_log.update(balance_window_log(
+                    _bal_counts, thermal_on=bool(params.thermal_enabled),
+                    felt_on=bool(params.interoceptive_nociception_enabled)))
+            _bal_term = [ep for ep in eps if 'termination_reason' in ep]
+            if _bal_term:
+                ep_log.update(balance_late_death_log(
+                    [ep['l'] for ep in _bal_term], [ep['termination_reason'] for ep in _bal_term],
+                    early_death_max_steps=bal_early_death_max_steps))
         wandb.log(ep_log)
 
     with tqdm(total=episodes, disable=args.quiet, desc="Training") as pbar:
@@ -1633,6 +1691,12 @@ def main():
                             episode_dist_sums[_bk][:] = 0.0
                         if num_neutral_for_log  > 0: episode_dist_per_neutral_sums[:, :]  = 0.0
                         if num_predator_for_log > 0: episode_dist_per_predator_sums[:, :] = 0.0
+                        # Balance metrics: wipe counters; the thermal / felt flags are read
+                        # from the new `params` at every use, and the new stage's calibration
+                        # is recorded (Known Bugs "stage swap keeps stage-0 accumulators").
+                        if bal_enabled:
+                            episode_balance[:, :] = 0
+                            _record_balance_calibration(f"balance_calibration_stage_{new_stage}")
                         # Two-level path: Buffer B can hold up to smoothing_episodes
                         # (production default 5000) completed episodes, spanning far
                         # longer than a single log_interval window — long enough to
@@ -1709,6 +1773,18 @@ def main():
                         if num_predator_for_log > 0: info_np['dist_per_predator'] = np.array(step_info.dist_per_predator)
                         # Behavior-measure toolkit v1: agent_in_bush (explicit extraction — Site 1 anti-pattern guard)
                         info_np['agent_in_bush'] = np.array(step_info.agent_in_bush)
+                    # Balance metrics: [T, B, K] per-step counters, once per iteration.
+                    bal_C = None
+                    if bal_enabled:
+                        _bal = step_info.balance
+                        _np_or_none = lambda v: None if v is None else np.asarray(v)
+                        bal_C = balance_step_counts(
+                            np.asarray(_bal.nutrition), np.asarray(_bal.injury),
+                            _np_or_none(_bal.felt_injury), _np_or_none(_bal.body_temp),
+                            _np_or_none(_bal.on_warm_cell), _np_or_none(_bal.near_fire),
+                            info_np['ate_food'], info_np['agent_in_bush'],
+                            thermal_on=bool(params.thermal_enabled),
+                            felt_on=bool(params.interoceptive_nociception_enabled))
 
                     rollout_rew = trajectories.reward
                     rollout_done = trajectories.done
@@ -1753,6 +1829,8 @@ def main():
                                 if 'dist_per_predator' in info_np: _bm_info_t['dist_per_predator'] = info_np['dist_per_predator'][t]
                                 if 'dist_per_neutral'  in info_np: _bm_info_t['dist_per_neutral']  = info_np['dist_per_neutral'][t]
                                 _bm_step_update(_bm_info_t, done_np[t].astype(bool))
+                        if bal_C is not None:
+                            episode_balance += bal_C[t]
 
                         dones_t = done_np[t].astype(bool)
 
@@ -1783,6 +1861,8 @@ def main():
                                     # Behavior-measure toolkit v1: per-episode finalisation (Site 1)
                                     if bm_enabled:
                                         _bm_finalise_episode(i, ep_data)
+                                if bal_C is not None:
+                                    ep_data['bal_counts'] = episode_balance[i].copy()
 
                                 # Store for moving average (tqdm)
                                 ep_info_buffer.append(ep_data)
@@ -1824,6 +1904,8 @@ def main():
                                 # Behavior-measure toolkit v1: per-env reset (Site 1)
                                 if bm_enabled:
                                     _bm_reset_env(i)
+                                if bal_C is not None:
+                                    episode_balance[i, :] = 0
 
                     # LEGACY path only — two-level path emits at the push site above.
                     if (logging_cfg is None and wandb_enabled and iteration_episodes

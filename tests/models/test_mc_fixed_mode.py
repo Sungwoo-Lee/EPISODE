@@ -47,6 +47,7 @@ GAMMA = 0.9
 class _Cfg:
     """Static config stub carrying only the fields train_iteration reads."""
     rnn_type = "GRU"
+    balance_metrics = False
     num_steps = T
     num_epochs = 1
     gamma = GAMMA
@@ -92,7 +93,7 @@ def _capture_batch(return_mode, monkeypatch):
     seen = {}
 
     def fake_collect(model, env_params, last_state, last_h_state, last_key,
-                     num_steps, rnn_type="LSTM", return_mode="MC"):
+                     num_steps, rnn_type="LSTM", return_mode="MC", *, balance_metrics):
         seen["collect_return_mode"] = return_mode
         return traj, h_states, last_state, last_h_state, last_key, bootstrap_value
 
@@ -245,7 +246,7 @@ def test_bootstrap_path_selection(mode, expect_per_step_next_value, tiny_env_and
     h = model.initial_state(2)
     traj, _, _, _, _, bootstrap_value = rpt.collect_trajectories(
         model, params, state, h, jax.random.PRNGKey(3), 4,
-        rnn_type="GRU", return_mode=mode)
+        rnn_type="GRU", return_mode=mode, balance_metrics=False)
     per_step_ran = bool(jnp.any(traj.next_value != 0.0))
     assert per_step_ran == expect_per_step_next_value
     # Every mode still returns a usable window-edge bootstrap of shape (num_envs,).

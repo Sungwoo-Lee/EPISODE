@@ -715,6 +715,15 @@ get_default_config() (built-in seed)
 
 Recordings, `run_meta.pkl`, and Orbax checkpoints are byte-identical in both modes; only the MP4 drawing + WandB upload move off the critical path (the video lands on the dashboard ~1–4 min later, at a later — still forward-monotone — step).
 
+**Balance-metrics keys (added 2026-09-27, [[BALANCE_METRICS_TRAINING_LOGGING]]).** Two rPPO-only `logging.episode.*` keys switch on the `Episode/Bal_*` dashboard family (time split, need-behaviour ratios, hiding gap, early/late deaths):
+
+| Key | `default.yaml` | `recurrent_ppo.yaml` | Meaning |
+|---|---|---|---|
+| `logging.episode.balance_metrics` | **absent by design** | `true` | Static on/off switch for the balance counters in the rPPO rollout and the `Episode/Bal_*` keys. Read with `get_mandatory` for `RecurrentPPO` runs and must be a real bool; missing → `ValueError`. Training is bit-identical on and off (`tests/models/test_balance_metrics_parity.py`). |
+| `logging.episode.balance_early_death_max_steps` | **absent by design** | `20` | An episode that dies at length ≤ this many steps is an *early* death, excluded from `Episode/Bal_LateDeath*`. 20 is the internal-state study's pre-registered cut-off (level-05 value). Read with `get_mandatory` **only when the switch is on**; must be a non-negative int. |
+
+**Why they are absent from `default.yaml` (a stated exception to the "default.yaml declares every knob" rule above):** `default.yaml` is merged under `recurrent_ppo.yaml` for every rPPO run, so a value there would silently satisfy a missing rPPO key — exactly the fallback the no-default rule forbids. The file carries a comment pointing here instead. Plain PPO / DQN / DRQN never read these keys (`train.py` sets the switch off for them explicitly).
+
 An earlier revision of this split enforced `logging.episode.smoothing_episodes` (how many episodes are averaged into each dashboard point) **structurally identical** across algorithms by declaring it *only* in `default.yaml` and omitting it from both per-algo files, so they inherited the same value by construction. **That structural enforcement has been intentionally reversed** — the user may legitimately want different smoothing per algorithm, so it must not be locked. `smoothing_episodes` is now declared explicitly in `default.yaml`, `recurrent_ppo.yaml`, and `dreamer_srl.yaml` (currently all `5000`, by convention, not by code). **Keeping the value equal across the two per-algo files is a documented convention, not a structural constraint** — the comparability guarantee (a Dreamer curve and an rPPO curve being equally noisy) now depends on a human keeping the two copies in sync, not on the merge order making drift impossible. See [[DREAMER_TRAIN_CONFIG_SPLIT]] for the full design history, including the superseded rationale.
 
 ---
