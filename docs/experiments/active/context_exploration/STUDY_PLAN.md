@@ -12,6 +12,8 @@ wandb_tag: context_exploration
 > **Status**: PLANNED, **Revision 1** (2026-09-27) — every plan-reviewer finding answered (table
 > below) and Part 4 (real training) added at the user's request. Nothing has run; no result has been
 > read. Awaiting the plan-reviewer's confirming pass.
+> **Part 4 design (Revision 3, 2026-09-27)**: seven worlds chosen from the simulation at the user's request; the
+> ordinary agent is trained on each and judged by the balance tests — see "Part 4 design" at the end. Not launched.
 > **Related**: internal-state interaction study [plan](../internal_state_interactions/STUDY_PLAN.md) (
 > Revisions 2–2c: the balance criteria) · [[BALANCE_SETTINGS_INVENTORY]] · balance metrics in training
 > [[BALANCE_METRICS_TRAINING_LOGGING]] · level-05 body-interaction study [[LEVEL05_BODY_INTERACTIONS]]
@@ -838,3 +840,260 @@ included (0.655 of today's ×1 survival), so the candidate rule as written canno
 the same-hazard comparison is reported above. Nothing for `bug-curator`.
 
 Implemented by: developer
+
+## Part 4 design (Revision 3, 2026-09-27) — which worlds the ordinary agent is trained on, and how it is judged
+
+**In plain words.** The simulation (Part 3) could not produce a "candidate" by its own pre-registered
+rule: no world stayed balanced when the danger was doubled, and no world where food takes 20 or more
+steps to find stayed balanced even at today's danger. The user then asked for a training design chosen
+from the simulation ("Based on the simulation, you can select proper design for the training. Then
+proceed.", 2026-09-27). This section is that design, written **before any Part-4 run exists**. It trains
+the ordinary agent (no modulator) on seven worlds: today's campfire world as the yardstick; the four
+worlds the simulation calls balanced at today's danger where food is hardest to find (two to three
+times longer searches than today: 9–12 steps against about 5); and two worlds just past the
+simulation's edge, where food takes 23–27 steps to find and the simulation predicts the agent survives
+far less than today. Each trained agent is then judged by the same balance tests used in the
+internal-state study, and its verdict is set beside the simulation's verdict for the same world, so
+the training both screens worlds for the later modulator comparison and tests whether the simulation's
+balance map can be trusted.
+
+### 4.1 Departure from the Part-4 text above (stated, not hidden)
+
+- Part 4 (Revision 1) said: "If Part 3 finds no candidate, Part 4 does not run and the study returns
+  to this plan." Part 3 found none. The study returned to the user, who authorised the selection below.
+  Candidate status is **not** claimed for any world; the selection rule is new and is stated here.
+- **Selection rule (applied to the Revision-2 results table, memory warmth trip):**
+  (a) *balanced arm* — among the 18 worlds that pass criteria 1, 2, 4, 5 at hazard ×1, the four with the
+  longest mean food search (11.8, 11.5, 9.4, 9.3 steps; the next is 8.8); the ×2 requirement and the
+  20-step search floor are dropped because no world meets them together with ×1 balance;
+  (b) *edge arm* — the two worlds with the longest mean food search among those that miss **only**
+  criterion 4 (survival) at ×1 (26.7 and 23.0 steps; a third such world, `g15r3f2to9b12_od`, 20.5 steps,
+  is not run); (c) today's level 05 as the reference.
+- Seven worlds, eight runs: within Part 4's cap of 8 worlds / 9 runs.
+- Other entities in every chosen world are at today's **density** (`_od`); no world at today's count
+  (`_oc`) is run.
+
+### 4.2 The worlds
+
+The training files are byte-for-byte copies of the bodies of the simulation's own world files (only
+the header comment differs), so training runs exactly the worlds the simulation measured. Sim numbers:
+Revision-2 re-run, memory warmth trip, hazard ×1; survival ratio = mean survival steps against today's
+(376.1 steps; the survival-share ratio used by the simulation's criterion 4 in brackets).
+
+| # | Slug (sim id without `_od`) | Grid | Smell range | Food items × bites | Sim food search (mean, steps) | Sim criteria 1-2-3-4-5 | Sim survival vs today, steps (share) | Sim late-death cause, injury / starvation | Arm |
+|---|---|---|---|---|---|---|---|---|---|
+| 1 | `lvl05ref` (= level 05 itself, `g10r20f1to4b12`) | 10 | 20 | 1–4 × 12 | 4.7 | 1 1 0 1 1 | 1.00 (1.00) | 0.99 / 0.01 | reference |
+| 2 | `g10r5f1to2b36` | 10 | 5 | 1–2 × 36 | 11.8 | 1 1 0 1 1 | 0.91 (0.85) | 0.81 / 0.19 | balanced |
+| 3 | `g20r20f1to4b12` | 20 | 20 | 1–4 × 12 | 9.4 | 1 1 0 1 1 | 0.92 (0.87) | 0.85 / 0.15 | balanced |
+| 4 | `g20r5f4to16b12` | 20 | 5 | 4–16 × 12 | 9.3 | 1 1 0 1 1 | 0.94 (0.91) | 0.84 / 0.16 | balanced |
+| 5 | `g20r20f1to2b36` | 20 | 20 | 1–2 × 36 | 11.5 | 1 1 0 1 1 | 0.91 (0.88) | 0.84 / 0.16 | balanced |
+| 6 | `g10r3f1to2b36` | 10 | 3 | 1–2 × 36 | 26.7 | 1 1 0 0 1 | 0.62 (0.29) | 0.33 / 0.67 | edge |
+| 7 | `g15r8f1to2b36` | 15 | 8 | 1–2 × 36 | 23.0 | 1 1 0 0 1 | 0.67 (0.38) | 0.39 / 0.61 | edge |
+
+Sim criterion 3 fails in every world, the reference included (injury or starvation causes > 60 % of
+late deaths); it was report-only in Part 3 and is judged for real here (4.4).
+
+### 4.3 What runs (fixed)
+
+- **Agent:** the ordinary agent, `t1none` — the unmodulated GAE_NORM agent config used by the Wave-2
+  level-05 ordinary runs and the level-05 body-interaction pilots and factorial (`nmngaenorm_t1none.yaml`).
+- **Budget:** 2,000,000 episodes per run, `--log-interval 10`, as the body-interaction pilots.
+- **Seeds:** 42 for every world (config-owned, `configs/train/default.yaml`); the reference also 43.
+  Borderline rule unchanged from Part 4: a world whose value on any criterion lies within the
+  reference's seed-42/43 gap of its threshold gets a seed-43 run before it goes downstream (needs a new
+  manifest row, same tag scheme).
+- **Balance metrics on:** `logging.episode.balance_metrics: true` and
+  `logging.episode.balance_early_death_max_steps: 20` live in `configs/train/recurrent_ppo.yaml`, which
+  `train.py` merges for every `RecurrentPPO` agent config above `train/default.yaml` and below the
+  experiment `--config` (`train.py:514-525`). No world file carries a `logging:` block. Verified by
+  replaying that merge order for all seven worlds (4.8).
+- **Calibration guard:** each run's stdout calibration record must read max food energy 200, max
+  injury 100, temperature setpoint 0, open-ground upper edge −29, thermal and felt injury on — identical
+  to level 05. A mismatch stops the run (Part 4 precondition).
+- Everything else pinned to level 05 (body, thermal, rewards, random start body temperature
+  [−10, +5], 500-step episode cap, sensors): the load-time diff against level 05 (4.8) shows only
+  grid-size-, food- and smell-range-dependent fields.
+
+### 4.4 Read-out and criteria (pre-registered)
+
+**Window.** The last 10 % of training, episodes 1.8–2.0 M. Every logged row in the window counts,
+weighted by the episodes it covers (difference of `Episode/Number` between rows). Balance shares with a
+state counter (`Episode/Bal_N_*`) are pooled weighted by that counter and ratios are recomputed from the
+pooled shares; the mean of per-row ratios is reported beside it. Time shares are weighted by the row's
+steps (episodes × `Episode/Steps`).
+
+**Environment steps.** For every run, the environment-step count (`timesteps`) at episode 1.8 M and
+2.0 M is read from WandB (or the log), never from the saved config (Known Bugs 2026-09-04, stale saved
+budget). Survival is reported per episode (`Episode/Steps`) and per 1,000 environment steps (episodes
+completed ÷ environment steps × 1,000, a death-rate view); criterion 4 is judged on survival steps per
+episode, with the step-count difference against the reference stated.
+
+**Criteria** (internal-state study Revisions 2a–2c, applied to trained agents; key mapping from
+[[BALANCE_METRICS_TRAINING_LOGGING]]):
+
+1. **Time split:** no activity above 70 % of steps (`Bal_TimeBush`, `Bal_TimeWarm`, `Bal_TimeEat`,
+   `Bal_TimeElsewhere`), and cover, warm cell and eating each at least 10 %. `Bal_TimeNearFire` report-only.
+2. **Each need drives its own behaviour:** eating ratio (`Bal_EatRatio`) ≥ 2 **and** hiding ratio by true
+   injury (`Bal_HideRatio_True`) ≥ 2. Felt-injury ratio reported. **Warming ratio (`Bal_WarmRatio`) logged,
+   not pass/fail.**
+3. **Deaths (gated):** if the share of all episodes dying after step 20 (`Bal_LateDeathShare`) is at least
+   5 %, no single cause (`Bal_LateDeath_{Starvation,Overeating,Injury,Thermal}`) may exceed 60 % of those
+   late deaths. Below 5 % the criterion passes. Early-death share reported.
+4. **Survival:** mean survival steps per episode ≥ 80 % of the reference's (mean of seeds 42 and 43).
+   For the reference itself this is 1.0 by construction.
+5. **Injury still drives hiding among well-fed states:** `Bal_HideRatio_True_Fed` ≥ 2.
+
+A ratio whose denominator is zero is "not computable" and fails its criterion (Revision 2b N5).
+**Trained-balanced** = passes 1–5. **Still learning:** if survival steps in 1.8–2.0 M exceed those in
+1.6–1.8 M by more than 5 % (relative), the world is "still learning" and its verdict is undecided;
+extending it needs the user's approval. The reference's criterion values also set the noise scale
+(seed 42 vs 43 gap), which defines "borderline" above.
+
+**Temporal evolution (reported for every run):** survival steps, the five criteria's keys and the
+late-death shares in 200,000-episode blocks across the whole run.
+
+### 4.5 Simulation vs trained agent — agreement table (pre-registered)
+
+For each world, one row: sim pass/fail on criteria 1, 2, 4, 5 (the set Part 3 judged; hazard ×1,
+memory trip) against the trained agent's pass/fail on the same four, plus the trained criterion 3 (no sim
+counterpart; sim failed it everywhere), sim vs trained survival ratio against today, and sim vs trained
+late-death cause split.
+
+- **Agreement per world** = the sim and the trained agent give the same pass/fail on all four of 1, 2, 4, 5.
+- **Direction of the edge prediction:** the simulation predicts the two edge worlds fail criterion 4
+  (trained survival < 80 % of the reference) and the four balanced worlds pass it. If an edge world's
+  trained survival is ≥ 80 % of the reference, the simulation's balance edge is **too pessimistic** on
+  the search axis; if a balanced world falls below 80 %, it is **too optimistic**. Either is stated as a
+  finding about the simulation, not as a reason to re-run it.
+- **Summary:** agreements out of 7 (6 excluding the reference, whose sim 1, 2, 4, 5 are 1 1 1 1 by the
+  validity gate). The simulation is called **trustworthy for choosing worlds** if at least 5 of 6
+  non-reference worlds agree **and** both criterion-4 directions hold; otherwise **not trustworthy**, and
+  future world choices go through training rather than the simulation.
+
+### 4.6 What result leads to the modulator comparison (pre-registered)
+
+- **Goes forward:** a non-reference world that is trained-balanced (1–5), not still learning, and not
+  borderline (or borderline and confirmed by its seed-43 run). Among those, priority by the simulation's
+  mean food search (the longest search first, since hidden context is the point), at most three worlds
+  for the modulator comparison, which is a separate design with ≥ 3 seeds per agent.
+- **An edge world that turns out trained-balanced goes first**: it is the least observable world that
+  holds up.
+- **If no non-reference world passes 1–5:** no modulator comparison is designed from Part 4. If the
+  failure is criterion 3 alone and the reference also fails criterion 3, the table says "balanced except
+  deaths, as today"; that label is **reported, not forwarded**, and the decision returns to the user and
+  PI — no threshold moves after the data are read.
+- **If the reference itself fails criteria 1, 2 or 5**, the trained-agent criteria are not able to
+  recognise today's world, which the balance study called balanced; that is reported as a finding about
+  the criteria and the decision returns to the user.
+
+### 4.7 Failure modes decided in advance
+
+- **Run crashes / NaN / calibration mismatch:** the run is invalid, not the world; re-launch once with the
+  same tag suffixed `_r2` after cause is found.
+- **Wall-clock:** 20 × 20 runs may be 2–3× slower (more entities per step, possibly longer episodes);
+  no run is cut short to save time — a run that has not reached 2.0 M episodes has no verdict.
+- **Still learning:** undecided (4.4), not failed.
+- **Edge worlds collapse early** (survival far below the reference by episode 0.5 M): expected by the
+  simulation; the run continues to 2.0 M so the agreement table has a trained value.
+
+### 4.8 Validation performed (2026-09-27, live loader, project interpreter)
+
+A scratch validator (session scratchpad, not committed; same approach as the body-interaction study's
+§3.2) did, for each of the seven worlds:
+
+- loaded the repo file through `load_env_config` → `load_env_params`, and the simulation's world file
+  the same way: **the two `EnvParams` are identical field by field** in all six new worlds, and level 05
+  equals the simulation's `g10r20f1to4b12_od` world field by field;
+- replayed `train.py`'s single-config merge order (default → train/default → train/recurrent_ppo →
+  evaluation → logger → visualization → world → `nmngaenorm_t1none.yaml`): `balance_metrics` = true,
+  early-death cut-off = 20, and the `EnvParams` built from the merged config equal the stand-alone ones;
+- reset each world **300 times** (keys 0–299) and asserted the plan's per-reset checks with Part 3's own
+  `check_resets`: (1) every entity and resource type spans the grid to within one cell of each edge the
+  inset allows — pass; (2) no active slot sits at (0,0) where its placement box excludes (0,0) — pass
+  (0,0 lies inside every 1-based `[[1,1],[G,G]]` box except the campfire's inset one, so only fires can
+  show the fallback: **0 fires at (0,0)** in every world); (3) fires placed = drawn: every active fire
+  inside its inset box and at least `min_fire_separation` 4 apart on 300 / 300 resets — pass (fires per
+  reset: 10 × 10 1–3, 15 × 15 2–7, 20 × 20 4–12; no world is fire-capped);
+- **observation width 58 in every world, equal to level 05's** (the width does not depend on grid or
+  smell range);
+- grid size and smell range as named.
+
+The load-time diff against level 05 contains only the food / hiding-predator slot arrays and, for the
+10 × 10 worlds, `sensor_radius`; the 15 × 15 and 20 × 20 worlds add grid size, location map and every
+entity / obstacle slot array (counts and boxes scaled). Body, thermal, reward and sensor fields are
+identical. `tests/env/test_channel_names_match_configs.py` and `test_backward_compat_configs.py` on
+the new folder: 6 passed, 6 skipped (the usual `extends:` skip).
+
+**Critical-settings registry:** `sensory.sensor_radius` differs from canonical 20 in three of the new
+files (5, 3, 8); change-log entry added to `CONFIG_CRITICAL_SETTINGS.md` in the same commit.
+
+### 4.9 Launch Manifest
+
+Group `context_exploration`, job type `pilot`, Tag = WandB name, always. Node, GPU, launch time, WandB
+id and log path are filled by `training-runner`. Tags are unique; no `results/JAX_RecurrentPPO/`
+directory contains `ctxexp` (checked 2026-09-27).
+
+| Run | Status | World | Tag (= wandb-name) | wandb-group | wandb-job-type | Seed | Node | GPU | Launched at | WandB run ID | Log path |
+|---|---|---|---|---|---|---|---|---|---|---|---|
+| C1a | planned | 1 reference | `rppo_ctxexp_lvl05ref_t1none_s42` | context_exploration | pilot | 42 | — | — | — | — | — |
+| C1b | planned | 1 reference | `rppo_ctxexp_lvl05ref_t1none_s43` | context_exploration | pilot | 43 | — | — | — | — | — |
+| C2 | planned | 2 balanced | `rppo_ctxexp_g10r5f1to2b36_t1none_s42` | context_exploration | pilot | 42 | — | — | — | — | — |
+| C3 | planned | 3 balanced | `rppo_ctxexp_g20r20f1to4b12_t1none_s42` | context_exploration | pilot | 42 | — | — | — | — | — |
+| C4 | planned | 4 balanced | `rppo_ctxexp_g20r5f4to16b12_t1none_s42` | context_exploration | pilot | 42 | — | — | — | — | — |
+| C5 | planned | 5 balanced | `rppo_ctxexp_g20r20f1to2b36_t1none_s42` | context_exploration | pilot | 42 | — | — | — | — | — |
+| C6 | planned | 6 edge | `rppo_ctxexp_g10r3f1to2b36_t1none_s42` | context_exploration | pilot | 42 | — | — | — | — | — |
+| C7 | planned | 7 edge | `rppo_ctxexp_g15r8f1to2b36_t1none_s42` | context_exploration | pilot | 42 | — | — | — | — | — |
+
+#### 4.9.1 Configs to Produce
+
+Agent config for every row: `configs/models/recurrent_ppo/nmn_input_site_grid_gaenorm/nmngaenorm_t1none.yaml`.
+
+| Run | Env config |
+|---|---|
+| C1a, C1b | `configs/environment/experiment/basic/05-campfire_thermal_10x10.yaml` (unchanged; no new file) |
+| C2 | `configs/environment/experiment/context_exploration/g10r5f1to2b36.yaml` |
+| C3 | `configs/environment/experiment/context_exploration/g20r20f1to4b12.yaml` |
+| C4 | `configs/environment/experiment/context_exploration/g20r5f4to16b12.yaml` |
+| C5 | `configs/environment/experiment/context_exploration/g20r20f1to2b36.yaml` |
+| C6 | `configs/environment/experiment/context_exploration/g10r3f1to2b36.yaml` |
+| C7 | `configs/environment/experiment/context_exploration/g15r8f1to2b36.yaml` |
+
+The folder is experimental and not maintained (CLAUDE.md "Config maintenance scope"), like
+`level05_body_interactions/`; every file says so in its header. Worlds that go forward may later be
+promoted into `basic/`.
+
+#### 4.9.2 Launch commands (for `training-runner`, one per row, via `run_command.py`)
+
+```
+/home/vncuser/miniconda3/envs/grid_world_pain/bin/python train.py \
+  --config <env config from 4.9.1> \
+  --agent_config configs/models/recurrent_ppo/nmn_input_site_grid_gaenorm/nmngaenorm_t1none.yaml \
+  --episodes 2000000 --device cuda:<gpu> --log-interval 10 \
+  --tag "<tag>" --wandb-name "<tag>" \
+  --wandb-group "context_exploration" --wandb-job-type "pilot"
+```
+
+Only C1b adds `--seed 43`; every other row uses the config-owned seed 42 and does not pass `--seed`.
+Example (C4):
+
+```
+/home/vncuser/miniconda3/envs/grid_world_pain/bin/python train.py \
+  --config configs/environment/experiment/context_exploration/g20r5f4to16b12.yaml \
+  --agent_config configs/models/recurrent_ppo/nmn_input_site_grid_gaenorm/nmngaenorm_t1none.yaml \
+  --episodes 2000000 --device cuda:<gpu> --log-interval 10 \
+  --tag "rppo_ctxexp_g20r5f4to16b12_t1none_s42" --wandb-name "rppo_ctxexp_g20r5f4to16b12_t1none_s42" \
+  --wandb-group "context_exploration" --wandb-job-type "pilot"
+```
+
+**Pre-flight discriminators for the runner** (from each run's banner / stdout / saved `models/config.yaml`):
+- banner prints `Loading rPPO train defaults from …/configs/train/recurrent_ppo.yaml` and observation
+  width **58**; `Neuromodulation: DISABLED`;
+- stdout calibration record as in 4.3;
+- saved config: `environment.height`/`width` = the row's grid, `sensory.sensor_radius` = its smell range,
+  food `count_low`/`count_high`/`max_consumption` as in 4.2, `logging.episode.balance_metrics: true`,
+  `balance_early_death_max_steps: 20`;
+- record `git rev-parse HEAD` per row.
+
+**When / where.** Not before the running level-05 runs free their GPUs, after the pre-launch PI
+consultation and the user's go. Mid-tier cards (RTX 3090), packed node by node. Compute: 10 × 10 about
+2 h per run on a 3090 (level-05 pilots); 15 × 15 / 20 × 20 plausibly 3–6 h; total about 25–35 GPU-hours.
