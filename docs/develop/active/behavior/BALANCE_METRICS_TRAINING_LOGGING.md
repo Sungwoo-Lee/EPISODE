@@ -695,7 +695,7 @@ verification protocol, more than 5 % needs discussion and more than 15 % blocks 
 - [—] 9. Post-hoc companion: **dropped from scope** by user decision D3 (2026-09-27).
 - [x] 10. Part D docs updated (WANDB_METRICS_REFERENCE, CONFIG_GUIDE §7, 02_config_schema). No
   `scripts/` change, so no SCRIPTS_DEPENDENCY_MAP row. `regen_dev_index.py`: see report.
-- [ ] 11. Merge-back — see report.
+- [x] 11. Merge-back: two in-worktree rebases (v4.0 moved once), tests re-run green, backup skipped with reason (see report), `git merge --ff-only` landed `fce9beea`, worktree removed.
 
 ## Implementation Report
 
@@ -787,6 +787,16 @@ the device part is within this node's run-to-run noise.
    no other config carries a `logging:` block, so no other file needed the keys.
 6. Plan Rev 1 said the "choice" measure's felt-injury note should be kept for the analyzer: it is in
    the metrics reference and the module docstring.
+
+### Merge-back record (A9 procedure)
+
+| Step | Outcome |
+|---|---|
+| 1. Rebase in worktree | `git rebase v4.0` onto `1908a30e`: clean, no conflicts. |
+| 3. Tests after rebase | `tests/models tests/behavior tests/training`: 231 passed, the same 3 pre-existing failures. `tests/env` not re-run: the only upstream changes since the full env run were under `docs/` and `scripts/analysis/studies/` (verified with `git diff --name-only`), which no env test imports. |
+| 4. `results/` backup | **Skipped.** `du -sb results` was run to measure it and did **not finish in 50 minutes** (`timeout 3000`, exit 124; the plan review already saw it exceed 280 s). A tree that cannot be sized in 50 min cannot be copied in any practical window, and 32 live runs write into it, so any copy would be an inconsistent partial snapshot. No copy was started, so no merge followed a failed copy. The merge is `--ff-only` and moves tracked files only: `results/` is gitignored (`git check-ignore results` true) and no path in the branch diff lies under it. |
+| 5. Fast-forward | `v4.0` had moved to `e993549f` (docs only) → returned to step 1 once: rebased again cleanly, Part B tests re-run (84 passed), then `git merge --ff-only balance_metrics` in the shared tree: **succeeded**, `e993549f` → `fce9beea`. No foreign uncommitted edit touched a branch file (the shared tree's dirty files were four unrelated docs). |
+| 6. Worktree | `git worktree remove .claude/worktrees/balance_metrics` after the merge landed. Branch `balance_metrics` left in place (fully merged). Scratch logs and benchmark scripts kept in `tmp/20260927_balance_metrics/`. |
 
 ### Follow-ups / for other owners
 
