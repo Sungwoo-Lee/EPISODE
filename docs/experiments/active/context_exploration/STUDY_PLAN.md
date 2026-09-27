@@ -691,3 +691,150 @@ Reviewed by: plan-reviewer
 - **Wording:** the balance study's ring trip was a straight-line (Manhattan, through rocks) median of 2 fed
   as a fixed trip; Part 3's is walking distance around rocks and fires, fed as a per-step chance 1 / mean.
   The difference is small (re-solve: survival 0.5775 vs 0.5725) and stated.
+
+## Results (raw) — Revision 2 (2026-09-27)
+
+Re-run of Part 3 under Revisions 2 / 2a: warmth trip with memory (primary) and blind (bracket) both solved;
+criterion 2's warming part by the Revision-2a rule (applied in `balance_worlds.py`; `balance_rule.py`
+unchanged); criterion 3 report-only; candidate rule uses criteria 1, 2, 4, 5. Outputs:
+`results/analysis/context_exploration/part3_search_times_rev2.json`, `part3_balance_worlds_rev2.json`
+(Revision-1 files kept).
+
+### Validity gate
+
+- Validity gate (today's level 05, memory trip, hazard x1): criteria 1/2/4/5 = 1/1/1/1; survival 0.5770 (target 0.5725 +/- 0.05); cold deaths 0 of 722 deaths after step 20 (0.000, max 0.01). **Gate: PASS**.
+- Today's survival: memory x1 0.5770, x2 0.3780; blind x1 0.3715, x2 0.1860.
+- Blind-trip solves reproduce Revision 1's survival exactly in all 72 worlds × 2 hazards (max difference 0.0).
+- Warmth trip with memory (walking distance, around rocks and fires, 20 random open interior cells per reset,
+  1,000 resets): today's world mean 2.69, median 2, p90 6, unreachable samples 0.001; Manhattan-through
+  mean 2.59 (balance study's ring trip: mean 2.57, median 2). Food, cover and blind-warmth search times are
+  identical to Revision 1's.
+
+### Worlds
+
+Criteria strings = pass(1)/fail(0) for criteria 1 time, 2 drive (Revision-2a warming rule), 3 death
+(report-only), 4 survival (vs today at ×1 under the same trip), 5 hide. Food = "count" (same count as
+today, 1–4), "density" (same density), "mid" (middle rung), "fewrich" (1–2 items); b = bites per item. Others: `od` = other
+entities at today's density, `oc` = at today's count. Search and warmth trips in steps.
+
+| World | Grid | Food | Range | Others | Food search mean | Warmth memory / blind | Crit ×1 (memory) | Crit ×2 (memory) | Survival ×1 / ×2 (memory) | Cold share of late deaths ×1 | Blind: crit ×1 / ×2, survival ×1 | Meets rule (blind) | Candidate |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| g10r20f1to2b36_od | 10 | fewrich (b36) | 20 | od | 5.7 | 2.68 / 20.0 | 11011 | 11001 | 0.566 / 0.370 | 0.000 | 11011 / 11001, 0.406 | no | no |
+| g10r8f1to2b36_od | 10 | fewrich (b36) | 8 | od | 6.1 | 2.68 / 20.0 | 11011 | 11001 | 0.573 / 0.365 | 0.000 | 11011 / 11001, 0.399 | no | no |
+| g10r5f1to2b36_od | 10 | fewrich (b36) | 5 | od | 11.8 | 2.68 / 20.0 | 11011 | 11001 | 0.490 / 0.265 | 0.000 | 11101 / 11101, 0.285 | no | no |
+| g10r3f1to2b36_od | 10 | fewrich (b36) | 3 | od | 26.7 | 2.68 / 20.0 | 11001 | 11101 | 0.166 / 0.054 | 0.000 | 11101 / 01101, 0.067 | no | no |
+| g10r20f1to4b12_od | 10 | count (b12) | 20 | od | 4.7 | 2.69 / 21.0 | 11011 | 11001 | 0.577 / 0.378 | 0.000 | 11111 / 11001, 0.371 | no | no |
+| g10r8f1to4b12_od | 10 | count (b12) | 8 | od | 4.9 | 2.69 / 21.0 | 11011 | 11001 | 0.577 / 0.365 | 0.000 | 11111 / 11001, 0.377 | no | no |
+| g10r5f1to4b12_od | 10 | count (b12) | 5 | od | 7.2 | 2.69 / 21.0 | 11011 | 11001 | 0.545 / 0.326 | 0.000 | 11111 / 11101, 0.340 | no | no |
+| g10r3f1to4b12_od | 10 | count (b12) | 3 | od | 15.7 | 2.69 / 21.0 | 11101 | 11101 | 0.299 / 0.108 | 0.000 | 11101 / 11101, 0.113 | no | no |
+| g15r20f1to2b36_od | 15 | fewrich (b36) | 20 | od | 8.8 | 3.10 / 26.8 | 11011 | 11001 | 0.519 / 0.301 | 0.000 | 11101 / 11101, 0.201 | no | no |
+| g15r8f1to2b36_od | 15 | fewrich (b36) | 8 | od | 23.0 | 3.10 / 26.8 | 11001 | 11101 | 0.217 / 0.072 | 0.000 | 11101 / 01101, 0.051 | no | no |
+| g15r5f1to2b36_od | 15 | fewrich (b36) | 5 | od | 51.4 | 3.10 / 26.8 | 01001 | 01000 | 0.015 / 0.003 | 0.000 | 01001 / 01001, 0.005 | no | no |
+| g15r3f1to2b36_od | 15 | fewrich (b36) | 3 | od | 116.1 | 3.10 / 26.8 | 01001 | 00000 | 0.001 / 0.001 | 0.000 | 01001 / 00000, 0.000 | no | no |
+| g15r20f1to4b12_od | 15 | count (b12) | 20 | od | 7.3 | 3.10 / 26.6 | 11011 | 11001 | 0.533 / 0.291 | 0.000 | 11101 / 11101, 0.204 | no | no |
+| g15r8f1to4b12_od | 15 | count (b12) | 8 | od | 14.9 | 3.10 / 26.6 | 11101 | 11101 | 0.294 / 0.115 | 0.000 | 11101 / 11101, 0.063 | no | no |
+| g15r5f1to4b12_od | 15 | count (b12) | 5 | od | 36.5 | 3.10 / 26.6 | 01001 | 01000 | 0.014 / 0.004 | 0.000 | 01001 / 01001, 0.003 | no | no |
+| g15r3f1to4b12_od | 15 | count (b12) | 3 | od | 72.2 | 3.10 / 26.6 | 01001 | 01000 | 0.000 / 0.000 | 0.000 | 01001 / 00000, 0.000 | no | no |
+| g15r20f2to4b12_od | 15 | mid (b12) | 20 | od | 6.2 | 3.10 / 26.6 | 11011 | 11001 | 0.533 / 0.311 | 0.000 | 11101 / 11101, 0.210 | no | no |
+| g15r8f2to4b12_od | 15 | mid (b12) | 8 | od | 8.5 | 3.10 / 26.6 | 11011 | 11001 | 0.503 / 0.258 | 0.000 | 11101 / 11101, 0.186 | no | no |
+| g15r5f2to4b12_od | 15 | mid (b12) | 5 | od | 17.1 | 3.10 / 26.6 | 11101 | 11101 | 0.227 / 0.070 | 0.000 | 11101 / 01101, 0.048 | no | no |
+| g15r3f2to4b12_od | 15 | mid (b12) | 3 | od | 36.9 | 3.10 / 26.6 | 01001 | 01000 | 0.015 / 0.002 | 0.000 | 01001 / 01000, 0.002 | no | no |
+| g15r20f2to9b12_od | 15 | density (b12) | 20 | od | 4.9 | 3.12 / 29.6 | 11011 | 11001 | 0.539 / 0.325 | 0.000 | 11101 / 11101, 0.194 | no | no |
+| g15r8f2to9b12_od | 15 | density (b12) | 8 | od | 5.9 | 3.12 / 29.6 | 11011 | 11001 | 0.538 / 0.329 | 0.000 | 11101 / 11101, 0.182 | no | no |
+| g15r5f2to9b12_od | 15 | density (b12) | 5 | od | 9.7 | 3.12 / 29.6 | 11001 | 11001 | 0.454 / 0.238 | 0.000 | 11101 / 11101, 0.124 | no | no |
+| g15r3f2to9b12_od | 15 | density (b12) | 3 | od | 20.5 | 3.12 / 29.6 | 11001 | 11101 | 0.142 / 0.033 | 0.000 | 11101 / 01101, 0.023 | no | no |
+| g20r20f1to2b36_od | 20 | fewrich (b36) | 20 | od | 11.5 | 3.21 / 27.6 | 11011 | 11001 | 0.509 / 0.286 | 0.000 | 11101 / 11101, 0.170 | no | no |
+| g20r8f1to2b36_od | 20 | fewrich (b36) | 8 | od | 75.7 | 3.21 / 27.6 | 01001 | 01000 | 0.004 / 0.001 | 0.000 | 01001 / 01001, 0.001 | no | no |
+| g20r5f1to2b36_od | 20 | fewrich (b36) | 5 | od | 151.7 | 3.21 / 27.6 | 01001 | 00000 | 0.000 / 0.000 | 0.000 | 01001 / 01001, 0.000 | no | no |
+| g20r3f1to2b36_od | 20 | fewrich (b36) | 3 | od | 251.4 | 3.21 / 27.6 | 01001 | 00000 | 0.000 / 0.000 | 0.000 | 01001 / 00000, 0.000 | no | no |
+| g20r20f1to4b12_od | 20 | count (b12) | 20 | od | 9.4 | 3.21 / 29.1 | 11011 | 11001 | 0.502 / 0.299 | 0.000 | 11101 / 11101, 0.149 | no | no |
+| g20r8f1to4b12_od | 20 | count (b12) | 8 | od | 38.8 | 3.21 / 29.1 | 01001 | 01000 | 0.018 / 0.001 | 0.000 | 01001 / 01001, 0.003 | no | no |
+| g20r5f1to4b12_od | 20 | count (b12) | 5 | od | 94.1 | 3.21 / 29.1 | 01001 | 00000 | 0.001 / 0.000 | 0.000 | 01001 / 01001, 0.000 | no | no |
+| g20r3f1to4b12_od | 20 | count (b12) | 3 | od | 179.0 | 3.21 / 29.1 | 01001 | 00000 | 0.000 / 0.000 | 0.000 | 01001 / 00000, 0.000 | no | no |
+| g20r20f2to6b12_od | 20 | mid (b12) | 20 | od | 7.1 | 3.21 / 27.2 | 11011 | 11001 | 0.560 / 0.330 | 0.000 | 11101 / 11101, 0.220 | no | no |
+| g20r8f2to6b12_od | 20 | mid (b12) | 8 | od | 17.4 | 3.21 / 27.2 | 11101 | 11101 | 0.236 / 0.090 | 0.000 | 11101 / 01101, 0.051 | no | no |
+| g20r5f2to6b12_od | 20 | mid (b12) | 5 | od | 33.4 | 3.21 / 27.2 | 01001 | 01000 | 0.024 / 0.006 | 0.000 | 01001 / 01001, 0.006 | no | no |
+| g20r3f2to6b12_od | 20 | mid (b12) | 3 | od | 72.2 | 3.21 / 27.2 | 01001 | 01000 | 0.001 / 0.000 | 0.000 | 01001 / 01000, 0.000 | no | no |
+| g20r20f4to16b12_od | 20 | density (b12) | 20 | od | 4.5 | 3.23 / 26.4 | 11011 | 11001 | 0.590 / 0.367 | 0.000 | 11101 / 11101, 0.278 | no | no |
+| g20r8f4to16b12_od | 20 | density (b12) | 8 | od | 5.5 | 3.23 / 26.4 | 11011 | 11001 | 0.584 / 0.362 | 0.000 | 11101 / 11101, 0.271 | no | no |
+| g20r5f4to16b12_od | 20 | density (b12) | 5 | od | 9.3 | 3.23 / 26.4 | 11011 | 11001 | 0.525 / 0.279 | 0.000 | 11101 / 11101, 0.175 | no | no |
+| g20r3f4to16b12_od | 20 | density (b12) | 3 | od | 19.7 | 3.23 / 26.4 | 11001 | 11101 | 0.165 / 0.048 | 0.000 | 11101 / 01101, 0.032 | no | no |
+| g15r20f1to2b36_oc | 15 | fewrich (b36) | 20 | oc | 8.8 | 5.17 / 98.2 | 01011 | 01011 | 0.729 / 0.564 | 0.000 | 01001 / 00001, 0.005 | no | no |
+| g15r8f1to2b36_oc | 15 | fewrich (b36) | 8 | oc | 23.0 | 5.17 / 98.2 | 01001 | 11001 | 0.338 / 0.229 | 0.000 | 01001 / 00001, 0.001 | no | no |
+| g15r5f1to2b36_oc | 15 | fewrich (b36) | 5 | oc | 51.4 | 5.17 / 98.2 | 00001 | 01001 | 0.032 / 0.021 | 0.000 | 01001 / 01101, 0.001 | no | no |
+| g15r3f1to2b36_oc | 15 | fewrich (b36) | 3 | oc | 116.1 | 5.17 / 98.2 | 01001 | 01001 | 0.002 / 0.000 | 0.000 | 01101 / 01101, 0.000 | no | no |
+| g15r20f1to4b12_oc | 15 | count (b12) | 20 | oc | 7.3 | 5.17 / 94.6 | 01011 | 11011 | 0.728 / 0.555 | 0.000 | 01001 / 00001, 0.004 | no | no |
+| g15r8f1to4b12_oc | 15 | count (b12) | 8 | oc | 14.9 | 5.17 / 94.6 | 01001 | 11101 | 0.457 / 0.290 | 0.000 | 01001 / 00001, 0.003 | no | no |
+| g15r5f1to4b12_oc | 15 | count (b12) | 5 | oc | 36.5 | 5.17 / 94.6 | 01001 | 01001 | 0.032 / 0.015 | 0.000 | 01001 / 01101, 0.001 | no | no |
+| g15r3f1to4b12_oc | 15 | count (b12) | 3 | oc | 72.2 | 5.17 / 94.6 | 01001 | 01001 | 0.002 / 0.000 | 0.000 | 01101 / 01101, 0.000 | no | no |
+| g15r20f2to4b12_oc | 15 | mid (b12) | 20 | oc | 6.2 | 5.17 / 94.6 | 01011 | 11011 | 0.747 / 0.567 | 0.000 | 01001 / 00001, 0.005 | no | no |
+| g15r8f2to4b12_oc | 15 | mid (b12) | 8 | oc | 8.5 | 5.17 / 94.6 | 01011 | 01011 | 0.690 / 0.532 | 0.000 | 01001 / 00001, 0.005 | no | no |
+| g15r5f2to4b12_oc | 15 | mid (b12) | 5 | oc | 17.1 | 5.17 / 94.6 | 01001 | 01101 | 0.343 / 0.214 | 0.000 | 01001 / 01001, 0.003 | no | no |
+| g15r3f2to4b12_oc | 15 | mid (b12) | 3 | oc | 36.9 | 5.17 / 94.6 | 01001 | 01001 | 0.032 / 0.011 | 0.000 | 01001 / 01101, 0.000 | no | no |
+| g15r20f2to9b12_oc | 15 | density (b12) | 20 | oc | 4.9 | 5.17 / 95.6 | 01011 | 01011 | 0.751 / 0.578 | 0.000 | 01001 / 00001, 0.007 | no | no |
+| g15r8f2to9b12_oc | 15 | density (b12) | 8 | oc | 5.9 | 5.17 / 95.6 | 01011 | 01011 | 0.748 / 0.569 | 0.000 | 01001 / 00001, 0.007 | no | no |
+| g15r5f2to9b12_oc | 15 | density (b12) | 5 | oc | 9.7 | 5.17 / 95.6 | 01011 | 01001 | 0.648 / 0.458 | 0.000 | 01001 / 00001, 0.003 | no | no |
+| g15r3f2to9b12_oc | 15 | density (b12) | 3 | oc | 20.5 | 5.17 / 95.6 | 01001 | 01101 | 0.220 / 0.106 | 0.001 | 01001 / 01001, 0.002 | no | no |
+| g20r20f1to2b36_oc | 20 | fewrich (b36) | 20 | oc | 11.5 | 7.84 / 243.1 | 01011 | 01011 | 0.745 / 0.634 | 0.020 | 00001 / 00001, 0.000 | no | no |
+| g20r8f1to2b36_oc | 20 | fewrich (b36) | 8 | oc | 75.7 | 7.84 / 243.1 | 01001 | 01001 | 0.009 / 0.005 | 0.000 | 00001 / 00001, 0.000 | no | no |
+| g20r5f1to2b36_oc | 20 | fewrich (b36) | 5 | oc | 151.7 | 7.84 / 243.1 | 01001 | 01001 | 0.001 / 0.000 | 0.000 | 01001 / 00001, 0.000 | no | no |
+| g20r3f1to2b36_oc | 20 | fewrich (b36) | 3 | oc | 251.4 | 7.84 / 243.1 | 01001 | 01001 | 0.000 / 0.000 | 0.001 | 01101 / 00100, 0.000 | no | no |
+| g20r20f1to4b12_oc | 20 | count (b12) | 20 | oc | 9.4 | 7.83 / 236.9 | 01011 | 01011 | 0.744 / 0.626 | 0.035 | 00001 / 00001, 0.000 | no | no |
+| g20r8f1to4b12_oc | 20 | count (b12) | 8 | oc | 38.8 | 7.83 / 236.9 | 01001 | 01001 | 0.025 / 0.018 | 0.000 | 00001 / 00001, 0.000 | no | no |
+| g20r5f1to4b12_oc | 20 | count (b12) | 5 | oc | 94.1 | 7.83 / 236.9 | 01001 | 01001 | 0.001 / 0.001 | 0.000 | 01001 / 00001, 0.000 | no | no |
+| g20r3f1to4b12_oc | 20 | count (b12) | 3 | oc | 179.0 | 7.83 / 236.9 | 01001 | 01001 | 0.000 / 0.000 | 0.000 | 01101 / 00100, 0.000 | no | no |
+| g20r20f2to6b12_oc | 20 | mid (b12) | 20 | oc | 7.1 | 7.83 / 227.9 | 01011 | 01011 | 0.799 / 0.658 | 0.011 | 00001 / 00001, 0.000 | no | no |
+| g20r8f2to6b12_oc | 20 | mid (b12) | 8 | oc | 17.4 | 7.83 / 227.9 | 01001 | 01001 | 0.372 / 0.256 | 0.008 | 00001 / 00001, 0.000 | no | no |
+| g20r5f2to6b12_oc | 20 | mid (b12) | 5 | oc | 33.4 | 7.83 / 227.9 | 01001 | 01001 | 0.038 / 0.029 | 0.001 | 01001 / 00001, 0.000 | no | no |
+| g20r3f2to6b12_oc | 20 | mid (b12) | 3 | oc | 72.2 | 7.83 / 227.9 | 01001 | 01001 | 0.001 / 0.000 | 0.000 | 01001 / 00000, 0.000 | no | no |
+| g20r20f4to16b12_oc | 20 | density (b12) | 20 | oc | 4.5 | 7.84 / 237.9 | 01011 | 01011 | 0.829 / 0.704 | 0.027 | 00001 / 00001, 0.000 | no | no |
+| g20r8f4to16b12_oc | 20 | density (b12) | 8 | oc | 5.5 | 7.84 / 237.9 | 01011 | 01011 | 0.804 / 0.676 | 0.007 | 00001 / 00001, 0.001 | no | no |
+| g20r5f4to16b12_oc | 20 | density (b12) | 5 | oc | 9.3 | 7.84 / 237.9 | 01011 | 01011 | 0.705 / 0.528 | 0.014 | 01001 / 00001, 0.000 | no | no |
+| g20r3f4to16b12_oc | 20 | density (b12) | 3 | oc | 19.7 | 7.84 / 237.9 | 01001 | 01001 | 0.241 / 0.163 | 0.007 | 01001 / 00001, 0.000 | no | no |
+
+Criterion failures over 72 worlds — memory trip ×1: 1_time 45, 2_drive 1, 3_death 68, 4_survival 41,
+5_hide 0; ×2: 1_time 41, 2_drive 5, 3_death 61, 4_survival 60, 5_hide 13. Blind trip ×1: 1_time 45,
+2_drive 8, 3_death 43, 4_survival 67, 5_hide 0; ×2: 1_time 51, 2_drive 29, 3_death 42, 4_survival 72, 5_hide 9.
+Warming part of criterion 2 (memory) passes in 72 / 72 worlds at both hazards — ×1: 44 by the "share at
+≥ 0 °C is 0, share at ≤ −5 °C ≥ 0.10" branch, 28 by ratio ≥ 2; ×2: 64 and 8. Eating + hiding ratios pass in
+71 / 72 at ×1.
+
+Worlds passing criteria 1, 2, 4, 5 at ×1 (memory): 18; at both ×1 and ×2: 0. Today's own ×2 survival is
+0.378 = 0.655 of its ×1 value (criterion 4 threshold 0.80). Reported, not the rule: with criterion 4 judged
+against today at the same hazard (`criterion4_vs_today_same_hazard`), 11 worlds pass 1, 2, 4, 5 at both
+hazards, food search means 4.5–7.2. Worlds meeting the search floor (≥ 20): 31; among them passing 1, 2, 4, 5
+at ×1 (memory): 0. Worlds with > 1 % capped food searches: 0.
+
+**Candidate rule output (memory trip, gate passed): candidates = none; shortest-range 10 × 10 world passing
+criteria 1, 2, 4, 5 at both hazards = none. Blind bracket: worlds meeting the rule = none.** No manifest is
+written.
+
+## Implementation Report — Revision 2 / 2a re-run (2026-09-27)
+
+**Files.** `scripts/analysis/studies/context_exploration/forager.py`: new `warmth_memory()` (multi-source
+breadth-first search from every cell > 0 °C, four moves, rock and fire cells never entered, bushes crossable;
+start = random interior cell that is not bush / rock / fire, 20 per reset, seed 0, as `measure_world.py`'s
+ring trip; unreachable samples excluded and counted; Manhattan-through distance reported beside it), output
+key `warmth_memory`. `balance_worlds.py`: both trips solved per world and hazard (288 solves, 26 min on 16
+processes); `criteria_rev2a()` wraps `balance_rule.criteria` and replaces only criterion 2's warming part
+(the inherited value is kept as `2_drive_inherited`); criterion 3 report-only; validity gate as Revision 2a;
+candidates and manifest only when the gate passes. Nothing under `src/`, `configs/` or
+`internal_state_interactions/` changed.
+
+**Checks.** `validate_balance.py` re-run: all gates pass, output JSON identical to the stored one.
+Forager validation (i) and (ii) pass as before; food / cover / blind warmth search times identical to
+Revision 1; blind balance solves identical to Revision 1.
+
+**Choices stated.** (1) "Around rocks and fires" follows the plan text (Revision 2a); the food forager
+crosses rocks — the Manhattan-through number (2.59 vs walking 2.69 in today's world) bounds the difference.
+(2) Warm target cells exclude fire cells (not enterable). (3) Revision-2a's rule leaves share at ≥ 0 °C = 0
+with 0 < share at ≤ −5 °C < 0.10 undefined; it is treated as "ratio not computable → fail" (no world hit it
+at either hazard). (4) Output files carry a `_rev2` suffix so the Revision-1 outputs cited above stay intact.
+
+**Speed check.** Skipped: analysis tooling only.
+
+**For `senior-developer`.** Under the gate-passing method no world passes criteria 1, 2, 4, 5 at ×2, today's
+included (0.655 of today's ×1 survival), so the candidate rule as written cannot return a candidate at ×2;
+the same-hazard comparison is reported above. Nothing for `bug-curator`.
+
+Implemented by: developer

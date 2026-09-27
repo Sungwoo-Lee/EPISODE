@@ -13,6 +13,13 @@ reset maps saved by make_worlds.py (1,000 resets per world, from the reset's own
                 episode's coldest cell, the field's fill value) means "felt"; then climb to the warmest
                 stencil neighbour until standing on a cell above 0 C; a random step if nothing is felt
                 or the climb is stuck below 0 C.
+  warmth, with memory (primary since Revision 2 / 2a): the walking distance (breadth-first grid steps
+                of four moves, never entering a rock or fire cell, bushes crossable) from a random open
+                cell to the nearest cell warmer than 0 C. Open cell = interior cell (rows / columns 1 ..
+                G-2, as measure_world.py's ring trip) that is not a bush, rock or fire; 20 samples per
+                reset (seed 0), as measure_world.py. The Manhattan distance through everything (the
+                balance study's ring-trip definition) is reported beside it. The blind search above is
+                kept as the pessimistic bracket.
   cap           2,000 steps; the capped share is reported; > 1 % capped food searches = "search
                 unmeasured" (not a candidate).
 Reported per world: median, mean (with 95 % interval), 90th percentile, capped share, exposure steps.
@@ -27,7 +34,8 @@ Validation (STUDY_PLAN.md Part 3, can fail):
   (iii) sanity only: today's world at range 20 vs the measured 4-step median food trip
 
   python forager.py --procs 16 --worlds results/analysis/context_exploration/worlds \
-      --out results/analysis/context_exploration/part3_search_times.json
+      --out results/analysis/context_exploration/part3_search_times_rev2.json
+  (Revision-1 output part3_search_times.json is kept; food / cover / blind warmth are seeded and identical)
 """
 import argparse, glob, json, os, sys, time
 os.environ.setdefault("OMP_NUM_THREADS", "1")
@@ -135,6 +143,40 @@ def warmth_search(start, field, thr, rocks, rock_act, seed):
     return t, ~done, expo
 
 
+def warmth_memory(Z, G, n_per_reset=20, seed=0):
+    """Revision 2 / 2a warmth trip with memory: BFS walking distance around rocks and fires from random
+    open cells to the nearest cell > 0 C. Returns (walk [m], unreachable [m], manhattan-through [m])."""
+    from collections import deque
+    rng = np.random.default_rng(seed)
+    F = Z["thermal_field"]; walk, unr, man = [], [], []
+    for i in range(F.shape[0]):
+        block = np.zeros((G, G), bool)
+        for key in ("rock", "fire"):
+            p = Z[f"{key}_pos"][i][Z[f"{key}_act"][i]]
+            block[p[:, 0], p[:, 1]] = True
+        bush = np.zeros((G, G), bool)
+        b = Z["bush_pos"][i][Z["bush_act"][i]]; bush[b[:, 0], b[:, 1]] = True
+        warm = (F[i] > 0.0) & ~block
+        # multi-source BFS from every warm cell (four moves, blocked cells never entered)
+        dist = np.full((G, G), -1, int); q = deque()
+        for r, c in np.argwhere(warm):
+            dist[r, c] = 0; q.append((r, c))
+        while q:
+            r, c = q.popleft()
+            for dr, dc in MOVES:
+                rr, cc = r + dr, c + dc
+                if 0 <= rr < G and 0 <= cc < G and dist[rr, cc] < 0 and not block[rr, cc]:
+                    dist[rr, cc] = dist[r, c] + 1; q.append((rr, cc))
+        wc = np.argwhere(F[i] > 0.0)
+        for _ in range(n_per_reset):
+            p = (int(rng.integers(1, G - 1)), int(rng.integers(1, G - 1)))
+            if block[p] or bush[p]:
+                continue
+            man.append(int(np.abs(wc - np.array(p)).sum(1).min()) if len(wc) else np.nan)
+            walk.append(int(dist[p])); unr.append(bool(dist[p] < 0))
+    return np.array(walk), np.array(unr), np.array(man, float)
+
+
 def stats(x, capped, expo):
     x = np.asarray(x, float); n = x.size
     rng = np.random.default_rng(0)
@@ -160,6 +202,14 @@ def measure_layout(wdir):
     for thr in WARM_THRESHOLDS:
         s, c, e = warmth_search(start, Z["thermal_field"], thr, Z["rock_pos"], Z["rock_act"], seed=13)
         out["warmth"][str(thr)] = stats(s, c, e)
+    w, u, m = warmth_memory(Z, G)
+    ok = ~u
+    out["warmth_memory"] = dict(**stats(w[ok], np.zeros(ok.sum(), bool), np.zeros(ok.sum())),
+                                samples=int(w.size), unreachable_share=float(u.mean()),
+                                manhattan_through_mean=float(np.nanmean(m)), manhattan_through_median=float(np.nanmedian(m)),
+                                definition="walking distance (4 moves, around rocks and fires) from a random open "
+                                           "interior cell (not bush / rock / fire; 20 per reset, seed 0) to the "
+                                           "nearest cell > 0 C; unreachable samples excluded and counted")
     # (ii) monotone in smell range (longer range must not be slower)
     viol = []
     for kind in ("food", "cover"):
@@ -233,6 +283,7 @@ def main():
             f = o["food"]
             print(f"{o['layout']:28s} food mean " + " ".join(f"r{r}:{f[str(r)]['mean']:.1f}" for r in RANGES)
                   + f"  cover r3 {o['cover']['3']['mean']:.1f}  warmth(5C) {o['warmth']['5.0']['mean']:.1f}"
+                  + f"  warmth memory {o['warmth_memory']['mean']:.2f} (unreach {o['warmth_memory']['unreachable_share']:.3f})"
                   + (f"  VIOL {o['monotone_violations']}" if o["monotone_violations"] else "") + f" ({o['seconds']:.0f}s)",
                   flush=True)
     meas = json.load(open(os.path.join(ROOT, "results/analysis/internal_state_interactions/world_measurements.json")))
@@ -245,7 +296,7 @@ def main():
                       measured_mean_food_trip=meas["trip_steps"]["food"]["mean"],
                       note="sanity only (plan iii): the balance study's trip is from a random open cell to the "
                            "nearest food; the forager starts at the reset's agent start")
-    out = dict(design="STUDY_PLAN.md Part 3 (Revisions 1, 1a): search times on real resets", cap=CAP,
+    out = dict(design="STUDY_PLAN.md Part 3 (Revisions 1, 1a, 2, 2a): search times on real resets", cap=CAP,
                ranges=list(RANGES), warmth_thresholds=list(WARM_THRESHOLDS),
                validation=dict(i_hitting_time=val,
                                ii_monotone=dict(violations={k: v["monotone_violations"] for k, v in res.items() if v["monotone_violations"]},
