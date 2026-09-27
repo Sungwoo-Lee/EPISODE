@@ -8,9 +8,10 @@ __HOUSE_STYLE__
   :root { --f-head: 'Pretendard', system-ui, -apple-system, "Segoe UI", sans-serif;
           --f-mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace; }
   figure, figcaption { min-width: 0; }
-  /* floors sum under the 688px column (160 + 220 + ~300 content), so tables fit a desktop and scroll
-     only on narrow screens (F24 amendment, F35) */
-  table.datatable td:last-child, table.datatable th:last-child { min-width: 220px; }
+  /* floors must sum under the 688px column with the widest numeric columns: 160 + 2 x 130 (13-digit
+     counts, nowrap) + 75 + 190 = 685 px, so tables fit a desktop and scroll only on narrow screens
+     (F24 amendment, F35) */
+  table.datatable td:last-child, table.datatable th:last-child { min-width: 190px; }
   table.datatable td:first-child, table.datatable th:first-child { min-width: 160px; }
   /* align-self: a flex child is blockified and stretched, so inline-block alone renders a full-width bar */
   p.kind { display: inline-block; align-self: flex-start; margin: 0 0 6px; padding: 2px 9px; border-radius: 3px;
@@ -28,31 +29,62 @@ __HOUSE_STYLE__
 
 <section class="col">
   <h1>Body Rules and the Modulator</h1>
-  <p class="lede"><!-- PROSE:lede --></p>
+  <p class="lede">Sixteen versions of level 05, each with a different mix of four new body rules, trained with an ordinary agent and with a neuromodulated one. Does any mix make the modulator's behaviour depend on its body state more than the ordinary agent's does?</p>
 </section>
 
 <section class="col">
 <h2><span class="num">01</span> What this page asks</h2>
-<!-- PROSE:asks -->
+<p>The modulator is a small side network that rescales the agent's brain according to its body state. It
+should matter most when the right action depends on <strong>combinations</strong> of body states — hurt
+<em>and</em> hungry, hurt <em>and</em> cold. In today's level 05 both agents learned the same simple habit,
+"when hurt, hide". Four body rules were built to make hunger and temperature matter more to recovery, and
+this experiment switched them on in every combination to see whether any combination makes the two agents'
+behaviour diverge. The measures, the comparisons and the bar for a real effect were written down before training; the
+hiding curves and Figure 1's intervals were added for this page.</p>
 <div class="callout">
   <p class="eyebrow">The answer, in one paragraph</p>
-  <p><!-- PROSE:answer --></p>
+  <p><strong>No mix of the four rules makes the modulator behave differently from the ordinary agent.</strong>
+The rules do change behaviour, sometimes a lot — with less food per bite, both agents stop hiding when hurt
+and hungry — but they change both agents by the same amount: none of the 15 rule effects on the difference
+between the agents comes near the bar set in advance. The modulator survived slightly longer (1.9–5.8 steps,
+about 1.6 %) in all 16 worlds, but every modulator run started from the same initial weights, so that lead is
+one comparison repeated, not sixteen. And the main hiding measure turned out to have an uncalibrated zero
+point: it reads about +0.22 even in plain level 05, so it cannot be read as "eats first when hurt and hungry".</p>
 </div>
 </section>
 
 <section class="col">
 <h2><span class="num">02</span> Sixteen worlds, four body rules</h2>
-<!-- PROSE:worlds -->
+<p>Each world is level 05 with some of four rules switched on, at strengths chosen by short pilot runs:</p>
+<ul>
+  <li><b>Healing slower when hungry</b> — healing speed falls as food energy drops below 100 and stops at 20 and below.</li>
+  <li><b>Healing uses up food</b> — each point of injury healed costs 0.5 food energy.</li>
+  <li><b>Being cold or hot uses up food</b> — the body burns extra food for each degree away from 0 °C.</li>
+  <li><b>Less food per bite</b> — a bite gives 4 instead of 6, so an eating step gains +2 instead of +4.</li>
+</ul>
+<p>All 16 on/off combinations were trained for 10 million episodes, once with the ordinary agent and once with
+the modulator agent (32 runs, one seed each). Each final agent was then recorded for 1,000,000 episodes, and
+everything below is measured on those recordings.</p>
 </section>
 
 <section class="col">
 <h2><span class="num">03</span> What is measured</h2>
-<!-- PROSE:measures -->
+<p><b>Measure 1 (the main one)</b> asks whether hiding depends on hunger. For fed agents (food energy 100 or
+more) and for hungry agents (under 60) separately, it takes the share of steps in cover when badly hurt
+(injury 60–100) minus the share when barely hurt (0–20); measure 1 is the fed value minus the hungry value.
+The idea was that an agent that simply "hides when hurt" would score about 0, and one that eats first when hurt
+and hungry would score above 0. <b>That premise failed</b>: on the earlier level-05 runs, with no new rules,
+both agents score about +0.25. Unhurt hungry agents already sit in a bush about twice as often as unhurt fed
+ones, which leaves less room to rise — so measure 1 is positive without any difference in what hurt agents do.
+It is still valid for comparing the two agents, which share the offset, but not as a measure of "eats first".</p>
+<p><b>Measure 4</b> asks whether behaviour depends on combinations of body states: how much better the agent's
+activity is predicted from two body readings than from the best single one. <b>Survival</b> is the mean
+episode length over the last tenth of training. Reward is never used.</p>
 </section>
 
 <section class="col">
 <h2><span class="num">04</span> Does the modulator's hiding depend on hunger more, world by world?</h2>
-<!-- PROSE:f1_intro -->
+<p>For each world, the modulator agent's measure minus the ordinary agent's.</p>
 
 <figure>
   <p class="cue" hidden>Wider than the screen — scroll sideways, or click the figure to open it full size.</p>
@@ -60,17 +92,17 @@ __HOUSE_STYLE__
   <p class="zoomhint">Click the figure to open it full size.</p>
   __KIND:f1_world_differences__
   <figcaption>
-    <span><b>Figure 1 — <!-- PROSE:f1_title --></b> <!-- PROSE:f1_summary --></span>
+    <span><b>Figure 1 — the gap between the agents varies from world to world, with no pattern that follows the rules.</b> The modulator's measure 1 is between 4.5 points lower and 7.6 points higher than the ordinary agent's, positive in 12 worlds. The narrow intervals reflect only the 1,000,000 recorded episodes, not differences between training runs: with one training run per agent per world, run-to-run variation is unknown here, and Figure 2 is where noise is judged.</span>
     <span><b>Axes.</b> Vertical, all panels: one row per world; the left panel's filled dots mark which of the four body rules is switched on. Middle panel, horizontal: the modulator agent's hiding contrast minus the ordinary agent's, in percentage points of steps, for fed agents (filled circles) and hungry agents (open diamonds); bars are 95 % intervals. Right panel, horizontal: the modulator's measure 1 minus the ordinary agent's, in percentage points (squares, 95 % intervals). Grey line at zero: no difference between the agents.</span>
     __DATA:f1_world_differences__
-    <span><b>How it is computed.</b> <!-- PROSE:f1_method --> <b>What this figure does not show:</b> <!-- PROSE:f1_notshow --></span>
+    <span><b>How it is computed.</b> Every decision step of the 1,000,000 recorded episodes is sorted into four cells by food energy (fed: 100 or more; hungry: under 60) and true injury (barely hurt: 0–20; badly hurt: 60–100). In each cell, the share of steps the agent spends in a bush is counted. The hiding contrast is the badly-hurt share minus the barely-hurt share, computed for fed and for hungry agents; measure 1 is the fed contrast minus the hungry one. The modulator's value minus the ordinary agent's is plotted. The intervals come from re-sampling whole blocks of 5,000 episodes (bootstrap), so they show how much the measure would move with a different set of recorded episodes from the same trained agent. <b>What this figure does not show:</b> how much the result would change with a different training run of the same agent — each world was trained once per agent; nor the injury range between 20 and 60, which measure 1 does not use.</span>
   </figcaption>
 </figure>
 </section>
 
 <section class="col">
 <h2><span class="num">05</span> Which rules change the gap?</h2>
-<!-- PROSE:f2_intro -->
+<p>Because every combination of rules was trained, the effect of each rule, and of each pair or group of rules together, can be separated.</p>
 
 <figure>
   <p class="cue" hidden>Wider than the screen — scroll sideways, or click the figure to open it full size.</p>
@@ -78,35 +110,35 @@ __HOUSE_STYLE__
   <p class="zoomhint">Click the figure to open it full size.</p>
   __KIND:f2_factorial_effects__
   <figcaption>
-    <span><b>Figure 2 — <!-- PROSE:f2_title --></b> <!-- PROSE:f2_summary --></span>
+    <span><b>Figure 2 — the rules move both agents a lot, but move the gap between them not at all.</b> On each agent's own measure, less food per bite lowers measure 1 by about 18 (ordinary) and 21 (modulator) points, and healing that uses up food raises it by about 13 (ordinary). On the gap, every one of the 15 effects stays within 4 points of zero, inside even the looser margin — nothing is noted. The per-agent margins are descriptive only: Lenth's method assumes most effects are noise, which the rules break for a single agent's own measure.</span>
     <span><b>Axes.</b> Vertical, all panels: one row per effect, named by the rule or rules switched on (× marks an interaction; &ldquo;all four together&rdquo; is the four-way interaction). Horizontal, all panels: the effect of switching those rules on, on measure 1, in percentage points; left, on the ordinary agent's own measure; middle, on the modulator agent's own measure; right, on the modulator-minus-ordinary gap. Dotted lines: the single-effect margin (ME); dashed lines and the shaded band: the margin over all fifteen effects (SME). Filled markers exceed SME (&ldquo;noted&rdquo;); open markers do not.</span>
     __DATA:f2_factorial_effects__
-    <span><b>How it is computed.</b> <!-- PROSE:f2_method --> <b>What this figure does not show:</b> <!-- PROSE:f2_notshow --></span>
+    <span><b>How it is computed.</b> With four on/off rules there are 15 effects: four for single rules, six for pairs, four for triples and one for all four together. Each effect is the average measure with that rule (or combination) switched on minus the average with it off, over all 16 worlds, the standard way of reading a full factorial design. Whether an effect is bigger than noise is judged by Lenth's method, which estimates the noise from the many small effects themselves, because each world was trained only once. The single-effect margin (ME) is the bar for one pre-chosen effect; the margin over all 15 (SME) is stricter, because looking at 15 effects makes one of them look big by chance about half the time. An effect is &ldquo;noted&rdquo; only above SME, as fixed before training. <b>What this figure does not show:</b> effects smaller than the margins, which this one-seed screen cannot detect; and effects on measures other than measure 1 (the same analysis on measure 4 and on survival gives no noted effect on the gap either).</span>
   </figcaption>
 </figure>
 </section>
 
 <section class="col">
 <h2><span class="num">06</span> What the hiding curves look like</h2>
-<!-- PROSE:f3_intro -->
+<p>What measure 1 summarises: the share of time in cover at each injury level, for fed and hungry agents of both kinds.</p>
 
 <figure>
   <p class="cue" hidden>Wider than the screen — scroll sideways, or click the figure to open it full size.</p>
-  <div class="scroll figscroll"><img data-fig="f3_dose_response" alt="Four panels: plain level 05, all four rules on, and the two other worlds where the agents' measure-1 values differ most. Each panel shows the share of steps in cover against true injury for fed and hungry agents of both kinds. Fed agents' cover rises from about 20 to 45 percent at low injury to a peak near 65 to 70 percent at injury 40 to 60, then falls to about 30 percent at injury 90 to 100. Hungry agents' curves are flatter, and nearly flat at 20 to 40 percent when food is scarcer. In every panel the ordinary and modulator curves lie within a few points of each other."></div>
+  <div class="scroll figscroll"><img data-fig="f3_dose_response" alt="Four panels: plain level 05, all four rules on, and the two other worlds where the agents' measure-1 values differ most. Each panel shows the share of steps in cover against true injury for fed and hungry agents of both kinds. Fed agents' cover rises from about 20 to 45 percent at low injury to a peak near 65 to 70 percent at injury 40 to 60, then falls to about 30 percent at injury 90 to 100. Hungry agents' curves are flatter, and nearly flat at 20 to 40 percent when food is scarcer. In every panel the ordinary and modulator curves lie mostly within 3 points of each other, at most about 8."></div>
   <p class="zoomhint">Click the figure to open it full size.</p>
   __KIND:f3_dose_response__
   <figcaption>
-    <span><b>Figure 3 — <!-- PROSE:f3_title --></b> <!-- PROSE:f3_summary --></span>
+    <span><b>Figure 3 — the two agents' hiding curves lie almost on top of each other in every world.</b> Fed agents hide more as injury rises, peaking at 65–70 % of steps around injury 40–60, then hide less when very badly hurt. Hungry agents' curves are flatter, and almost flat when food is scarcer: hunger pulls them out of cover whatever their injury. The modulator curves follow the ordinary ones, mostly within 3 points and at most about 8.</span>
     <span><b>Axes.</b> Horizontal, all panels: true injury, in bins of 10 points from 0 to 100 (points at bin centres); the shaded bands mark the low (0–20) and high (60–100) injury ranges that measure 1 compares. Vertical, all panels: share of decision steps spent in cover (a bush), in percent. Ink circles: ordinary agent; grey squares: modulator agent; solid lines with filled markers: fed; dashed lines with open markers: hungry. Each panel names the rules switched on in its world and prints that world's measure-1 gap.</span>
     __DATA:f3_dose_response__
-    <span><b>How it is computed.</b> <!-- PROSE:f3_method --> <b>What this figure does not show:</b> <!-- PROSE:f3_notshow --></span>
+    <span><b>How it is computed.</b> Decision steps from the 1,000,000 recorded episodes of each agent are grouped by true injury into 10-point bins, separately for fed agents (food energy 100 or more) and hungry agents (under 60), and the share of steps spent in a bush is computed in each bin. Plain level 05 and the world with all four rules are always shown; the other two panels are the worlds where the agents' measure 1 differs most, chosen by the script from the data. The shaded bands mark the low and high injury ranges that measure 1 compares: because the curves rise and then fall, the high range mixes the peak with the drop. Comparing other high ranges instead (40–60, 60–80, 80–100) gives the same null result on the gap. <b>What this figure does not show:</b> the other 12 worlds, which look alike; felt injury, the signal the agent actually senses (measure 1 on felt injury is in the study files); and nutrition between 60 and 100.</span>
   </figcaption>
 </figure>
 </section>
 
 <section class="col">
 <h2><span class="num">07</span> Survival</h2>
-<!-- PROSE:f4_intro -->
+<p>Survival, the project's performance measure: how many steps the agent stays alive.</p>
 
 <figure>
   <p class="cue" hidden>Wider than the screen — scroll sideways, or click the figure to open it full size.</p>
@@ -114,17 +146,17 @@ __HOUSE_STYLE__
   <p class="zoomhint">Click the figure to open it full size.</p>
   __KIND:f4_survival__
   <figcaption>
-    <span><b>Figure 4 — <!-- PROSE:f4_title --></b> <!-- PROSE:f4_summary --></span>
+    <span><b>Figure 4 — the modulator agent survives slightly longer in all 16 worlds — but from one shared starting point.</b> The ordinary agent survives 182–250 steps depending on the world; the modulator agent 1.9–5.8 steps longer (mean +3.6, about 1.6 %) in the training logs. In the recorded episodes of the final agents the lead is smaller and less uniform (mean +2.6, longer in 15 of 16 worlds). No rule changes the size of that lead. The rules that drain food lower both agents' survival by 13–32 steps; healing slower when hungry lowers it by only 3–4.</span>
     <span><b>Axes.</b> Vertical, all panels: one row per world; the left panel's filled dots mark which body rules are on. Middle panel, horizontal: survival, the mean episode length in steps over the last tenth of training (episodes 9 to 10 million), for the ordinary agent (filled circles) and the modulator agent (open squares). Right panel, horizontal: modulator minus ordinary, in steps; grey line at zero.</span>
     __DATA:f4_survival__
-    <span><b>How it is computed.</b> <!-- PROSE:f4_method --> <b>What this figure does not show:</b> <!-- PROSE:f4_notshow --></span>
+    <span><b>How it is computed.</b> Survival is read from each run's training log: the mean episode length over the last tenth of training (episodes 9–10 million), weighting each logged window by the episodes it covers. Important for reading the right panel: the trainer derives an agent's starting weights from the seed alone, with nothing depending on the world, so all 16 ordinary runs started from one set of weights and all 16 modulator runs from another. The modulator also has extra parameters. The survival difference between two seeds of the same agent in plain level 05 is about 1.5 steps, so a single modulator-minus-ordinary gap varies by about 2 steps by chance; the gaps seen are one to three times that. <b>What this figure does not show:</b> that the modulator improves survival — starting weights, network size and seed are confounded, and a claim would need several seeds of both agents; nor how survival changed during training (the lead appears by the third tenth and then holds).</span>
   </figcaption>
 </figure>
 </section>
 
 <section class="col">
 <h2><span class="num">08</span> Does behaviour depend on combinations of body states?</h2>
-<!-- PROSE:f5_intro -->
+<p>Measure 4: does behaviour depend on combinations of body states, and more so for the modulator?</p>
 
 <figure>
   <p class="cue" hidden>Wider than the screen — scroll sideways, or click the figure to open it full size.</p>
@@ -132,17 +164,30 @@ __HOUSE_STYLE__
   <p class="zoomhint">Click the figure to open it full size.</p>
   __KIND:f5_combination__
   <figcaption>
-    <span><b>Figure 5 — <!-- PROSE:f5_title --></b> <!-- PROSE:f5_summary --></span>
+    <span><b>Figure 5 — both agents' behaviour depends a little on combinations of body states, and about equally.</b> Knowing two body readings predicts the agent's activity 2.1–5.3 points better than knowing the best single one, most where food per bite is lower. The modulator's gain differs from the ordinary agent's by −0.5 to +1.1 points, higher in 10 of 16 worlds — no consistent difference.</span>
     <span><b>Axes.</b> Vertical, all panels: one row per world; the left panel's filled dots mark which body rules are on. Middle panel, horizontal: combination gain, in percentage points of steps: how much better the agent's activity (eating, in cover, on a fire ring, in the open) is predicted from two body variables than from the best single one; ordinary agent filled circles, modulator agent open squares. Right panel, horizontal: modulator minus ordinary, in percentage points; grey line at zero.</span>
     __DATA:f5_combination__
-    <span><b>How it is computed.</b> <!-- PROSE:f5_method --> <b>What this figure does not show:</b> <!-- PROSE:f5_notshow --></span>
+    <span><b>How it is computed.</b> Each decision step is labelled with the agent's activity (eating, in cover, on a warm fire ring, or in the open) and its body state (food energy, true injury and body temperature, each in bands fixed from the plain-level-05 ordinary run before other runs were read). For each single body reading, and each pair, the rule &ldquo;predict the most common activity at these values&rdquo; is scored for accuracy over all steps. The combination gain is the best pair's accuracy minus the best single reading's accuracy, in percentage points: how much the second reading adds. Bands with fewer than 200 steps would be dropped; none were. <b>What this figure does not show:</b> combinations of three readings; activities finer than the four groups; and the planner's ideal gain for these worlds, which the simulation study computed separately.</span>
   </figcaption>
 </figure>
 </section>
 
 <section class="col">
 <h2><span class="num">09</span> What this page cannot say</h2>
-<!-- PROSE:limits -->
+<ul>
+  <li><b>One training run per agent per world.</b> Differences between runs of the same agent are unknown, and
+  every run of an agent shared the same starting weights. The rule effects are judged against a noise estimate
+  taken from the effects themselves; smaller effects than the margins cannot be seen.</li>
+  <li><b>Measure 1's zero point is not calibrated</b>, as section 03 explains; it compares the agents fairly but
+  does not measure "eats first when hurt".</li>
+  <li><b>Final behaviour only.</b> Only each run's final agent was recorded; an effect that appeared mid-training and
+  faded would be missed.</li>
+  <li><b>Level 05's world, today's sensing.</b> The agent smells food and predators almost everywhere; a world
+  where danger must be inferred (studied on the internal-state interactions page) might separate the agents
+  where these rules do not.</li>
+  <li>What this means for the project — continue with body rules, change the world, or change the modulator — is
+  the user's decision, recorded with the PI.</li>
+</ul>
 </section>
 
 <section class="col">
