@@ -4326,3 +4326,11 @@ cd /media/nas01/projects/Interoceptive-AI/grid_world_pain
   --episodes 2000000 --device cuda:0 --log-interval 10 \
   --tag "rppo_ctxexp_lvl05ref_t1none_s42" --wandb-name "rppo_ctxexp_lvl05ref_t1none_s42" \
   --wandb-group "context_exploration" --wandb-job-type "pilot"
+
+# context_exploration Part 4 — C1b (level-05 reference, seed 43), node 105 cuda:1
+/home/vncuser/miniconda3/envs/grid_world_pain/bin/python train.py \
+  --config configs/environment/experiment/basic/05-campfire_thermal_10x10.yaml \
+  --agent_config configs/models/recurrent_ppo/nmn_input_site_grid_gaenorm/nmngaenorm_t1none.yaml \
+  --episodes 2000000 --seed 43 --device cuda:1 --log-interval 10 \
+  --tag "rppo_ctxexp_lvl05ref_t1none_s43" --wandb-name "rppo_ctxexp_lvl05ref_t1none_s43" \
+  --wandb-group "context_exploration" --wandb-job-type "pilot"
