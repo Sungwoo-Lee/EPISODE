@@ -595,3 +595,27 @@ output (plan: "the study returns to this plan"). Known Bugs consulted by grep (`
 (0,0) parking, stale saved budget), all as cited in the plan; nothing new for `bug-curator`.
 
 Implemented by: developer
+
+## Revision 2 (2026-09-27) — fixing the warmth trip in Part 3, written after Part 3's null and before its re-run
+
+**Why.** Part 3 found no candidate, but today's level 05 itself failed the balance criteria under the
+Part-3 method, so the method cannot rank worlds. The cause is the warmth trip: the forager searched for
+warmth blind every time (random walk until heat is felt), giving mean trips of 20–30 steps even in today's
+world, where the balance study measured 2. A trained agent does not re-search: fires are fixed within an
+episode, heat is felt a few cells away, and the agent can remember where it was warm.
+
+**Change (Part 3 only; Parts 1–2 stand).**
+- **Warmth, with memory (primary):** the warmth trip is the walking distance (grid steps, around rocks and
+  fires) from a random open cell to the nearest cell warmer than 0 °C, measured on the same 1,000 resets per
+  world — the same definition the balance study used for its ring trip.
+- **Warmth, blind search (reported):** the Revision-1 forager result, as the pessimistic bracket.
+- Food and cover trips are unchanged (food moves after it is used up, so memory does not help there; cover
+  is found by smell).
+
+**Validity gate (pre-registered).** The Part-3 method is valid only if **today's level 05 passes balance
+criteria 1, 2, 4 and 5 under the primary (memory) warmth trip**. If it does not, Part 3 reports "method not
+valid" and no world is ranked; nothing is loosened after the fact.
+
+**Everything else unchanged:** the candidate rule (Revision 1 / 1a: balance criteria at hazard ×1 and ×2,
+mean food search ≥ 20 steps over 1,000 resets, survival ≥ 80 % of today's under the same method), the
+worlds (72), and Part 4.
