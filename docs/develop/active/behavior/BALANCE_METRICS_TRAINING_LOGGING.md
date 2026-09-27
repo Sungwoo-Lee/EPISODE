@@ -674,41 +674,132 @@ verification protocol, more than 5 % needs discussion and more than 15 % blocks 
 
 ## Checkpoints
 
-- [ ] 1. Worktree created at `.claude/worktrees/balance_metrics` on a new branch
-  `balance_metrics` cut from the current `v4.0` tip. T1 golden generated **there, on the
-  pre-change commit**, on the level-05-derived world (SHA recorded in the npz and in the
-  Implementation Report). No checkout in the shared tree.
-- [ ] 2. `balance_metrics.py` unit tests T4–T9 and T11 green before any trainer edit.
-- [ ] 3. `StepInfo.balance is None` when off, confirmed by printing `jax.tree_util.tree_structure(trajectories.step_info)` off vs on. T1 green.
-- [ ] 4. T2 green on CPU, on the level-05-derived world with thermal and interoceptive
-  nociception on (asserted in the test). Then on one free GPU: 20 iterations on the level-05
-  world, **off vs off** first. If off-vs-off is not bitwise on GPU (XLA GPU reductions can be
-  nondeterministic), report that and compare on vs off against the off-vs-off spread instead
-  of bitwise.
-- [ ] 5. T3 green, and fails when the pre-step reads are temporarily swapped to `next_state`
-  (red-green demonstration recorded in the report).
-- [ ] 6. CPU smoke: `train.py` with the level-05 world, 4 envs, `WANDB_MODE=offline`, enough
-  episodes for 2 emitted rows. The offline run file contains the `Episode/Bal_*` keys, the time
-  shares sum to at least 1 (they overlap) with `TimeElsewhere` ≤ 1, `TimeNearFire` ≤
-  `TimeElsewhere + TimeBush + TimeEat`, and no share is outside [0, 1]. The stdout shows the calibration
-  block (max nutrition 200, max injury 100, all bin edges). Also print the cell counts per class
-  (warm / near_fire / open) for one level-05 reset (A4).
-- [ ] 7. Speed: same free GPU, same world, 128 envs, 300 iterations after a 20-iteration
-  warm-up, off vs on. Report s/it both ways and host-loop time.
-- [ ] 8. T10 green (stage swap, thermal on → off).
-- [ ] 9. Post-hoc C5 tests green. Run the script on one existing level-05 trajectory store and
-  one `.rec.gz` set, and report key values next to the same run's online row where one exists.
-  They are not expected to match (C4), but a gross mismatch is flagged.
-- [ ] 10. Docs in Part D updated. `regen_dev_index.py` run. `SCRIPTS_DEPENDENCY_MAP.md` row
-  present.
-- [ ] 11. Merge-back by the A9 procedure: rebase in the worktree (on conflict: abort, stop,
-  hand back), tests re-run green, `results/` snapshot path recorded, `git merge --ff-only`
-  succeeded, worktree removed. Any refusal is reported, never forced.
+- [x] 1. Worktree `.claude/worktrees/balance_metrics`, branch `balance_metrics` cut from `v4.0` at
+  `dd887635`. T1 golden generated there on the unmodified commit (SHA `dd887635…` stored in the npz
+  as `_meta_commit`); no checkout in the shared tree.
+- [x] 2. `balance_metrics.py` unit tests T4–T9, T11 green.
+- [x] 3. `StepInfo.balance` is `None` when off: `tree_structure(step_info)` has 18 leaves off, 24 on
+  (`BalanceStepInfo`, 6 fields). T1 green.
+- [x] 4. T2 green on CPU (level-05, thermal + felt injury asserted). GPU (102:1, RTX 4090), 20
+  iterations: off-vs-off **bitwise identical** (844 arrays), so on-vs-off was compared bitwise too:
+  **0 of 844 arrays differ**.
+- [x] 5. T3 green; red when the pre-step reads are swapped to `next_state` (nutrition swap fails
+  the `eat_hungry` assertion; injury swap fails the `bush_inj_hi_true` assertion).
+- [x] 6. CPU smoke (level 05, 4 envs, offline WandB, small windows): 4 rows with 49–55 `Bal_*`
+  keys; time shares sum to 1.000–1.001, `TimeNearFire ≤ TimeElsewhere + TimeBush + TimeEat`, no
+  share outside [0, 1]; calibration block printed and written to the offline run config. Level-05
+  reset: 5 warm / 8 near_fire / 87 open cells.
+- [x] 7. Speed: GPU 102:1, 128 envs, 20 warm-up + 300 iterations each: 0.2792 → 0.2860 s/it
+  (+2.4 %, inside the ±5 % block-to-block spread); host 3.4 ms/iteration. See report.
+- [x] 8. T10 green (stage swap with the switch on; thermal-on → off pair impossible — see Deviations).
+- [—] 9. Post-hoc companion: **dropped from scope** by user decision D3 (2026-09-27).
+- [x] 10. Part D docs updated (WANDB_METRICS_REFERENCE, CONFIG_GUIDE §7, 02_config_schema). No
+  `scripts/` change, so no SCRIPTS_DEPENDENCY_MAP row. `regen_dev_index.py`: see report.
+- [ ] 11. Merge-back — see report.
 
 ## Implementation Report
 
-> **Implemented by**:
-> **Date**:
+> **Implemented by**: developer
+> **Date**: 2026-09-27
+
+**In one paragraph.** rPPO now logs the balance measures on every `Episode/*` dashboard row
+(`Episode/Bal_*`: time split, eat / hide / warm-up rates by body state with true and felt injury,
+the hungry-vs-fed hiding gap, and early/late death shares). The switch and the early-death cut-off
+are required config keys with no default. Training is proven unchanged: with the switch off the
+rollout is bit-identical to one captured before the change, and three (CPU) or twenty (GPU) full
+training iterations with the switch on and off are bit-identical. The offline "choice" script
+(Part C) was dropped by the user (D3) and is not implemented. Work was done in the worktree
+`.claude/worktrees/balance_metrics` (branch `balance_metrics`).
+
+### Files (by commit, branch `balance_metrics`)
+
+| Commit | Files | What |
+|---|---|---|
+| `cbf8a02e` test | `tests/fixtures/balance_metrics/generate_pre_change_rollout.py`, `pre_change_rollout.npz` | T1 golden captured on unmodified `dd887635` (level-05, 4 envs, 8 steps, tiny GRU, MC, CPU; 70 arrays + `_meta_commit`). The generator uses the pre-change signature, so rerunning it after the change raises instead of writing a tautological golden. |
+| `0bb857be` feat | `src/behavior/balance_metrics.py` (new) | 38 counters (`COUNTER_NAMES`), `step_counts`, `window_log` (pooled sums; empty bins omit share/ratio/gap, `N` always logged), `late_death_log`, `calibration_record`, `resolve_balance_metrics_flag`, `resolve_early_death_max_steps`. |
+| | `src/models/recurrent_ppo_trainer.py` | `BalanceStepInfo`; `StepInfo.balance` (required); `collect_trajectories(..., *, balance_metrics)` required keyword; `scan_fn` reads pre-step `state` (nutrition, injury, felt = `sense_interoceptive_nociception`×`max_injury`, body temp) and pre-reset `next_state` landing cell (warm = `cell > setpoint`, near_fire = `cell > thermal_default_temp_high & ~warm`); `train_iteration` passes `config.balance_metrics`. |
+| | `train.py` | `PPOConfig.balance_metrics` (no default); rPPO resolves both keys, plain PPO sets `False` explicitly; `episode_balance [B,K]` counters, one `+=` per t; `ep_data['bal_counts']`; wipe on stage swap; calibration record → `wandb.config` + stdout at start, on continual resume rebuild, and per stage swap; `window_log` + `late_death_log` in `_emit_episode_row`. Thermal / felt flags are read from the current `params` at every use. |
+| | `configs/train/recurrent_ppo.yaml`, `configs/train/default.yaml` | `logging.episode.balance_metrics: true`, `logging.episode.balance_early_death_max_steps: 20`; comment-only note in `default.yaml`. |
+| | `docs/environment/CONFIG_GUIDE.md` §7, `docs/environment/02_config_schema.md` | Key rows + why they are absent from `default.yaml` (config-system maintenance contract, same commit). |
+| | tests | `tests/behavior/test_balance_metrics.py` (T3–T9, T11 + shipped-config and scan_fn-rule pins), `tests/models/test_balance_metrics_parity.py` (T1, T2), T10 appended to `tests/training/test_continual_bm_transition.py`; `balance_metrics` added to `_Cfg` / `fake_collect` / direct calls in `test_mc_fixed_mode.py`, `test_mc_raw_mode.py`, `test_gae_norm_mode.py`. |
+| `7b1cf5cb` docs | `docs/develop/active/behavior/WANDB_METRICS_REFERENCE.md` | "Balance metrics (rPPO)" section: every key, pooled-sum rule + long-episode weighting, window-total `N`, empty-bin rule, felt 12-step under-read, warm vs near-fire (whole outer ring, report-only), late-death denominators, calibration record, training- vs eval-policy caveat. |
+
+### New config keys (exact)
+
+```yaml
+# configs/train/recurrent_ppo.yaml
+logging:
+  episode:
+    balance_metrics: true                 # bool, get_mandatory for RecurrentPPO; non-bool -> ValueError
+    balance_early_death_max_steps: 20     # int >= 0, get_mandatory only when the switch is on
+```
+
+WandB: `Episode/Bal_*` — 5 time shares (`TimeNearFire` report-only), 5 eating, 5 × {True, Felt}
+hiding, 5 warming, 6 × {True, Felt} × {Hungry, Fed} combination, 6 death keys (≤ 55 keys per row
+in level 05; warm keys absent with thermal off, `_Felt` keys absent with felt injury off). WandB
+config: `balance_calibration`, `balance_calibration_stage_<k>`.
+
+### Tests
+
+| Command (`JAX_PLATFORMS=cpu`, worktree) | Result |
+|---|---|
+| `pytest tests/behavior/test_balance_metrics.py tests/models/test_balance_metrics_parity.py` | 13 passed (T1–T9, T11 + pins) |
+| T2 red check: inject `key, _ = jax.random.split(key)` into the ON branch | 165 of 198 arrays differ → test fails (restored after) |
+| T3 red checks: swap `nutrition` / `injury` reads to `next_state` | fails on `eat_hungry` / `bush_inj_hi_true` respectively (restored after) |
+| `pytest tests/models tests/behavior tests/training` | 231 passed, 3 failed — all 3 **pre-existing** (fail identically on unmodified `v4.0` in the shared tree): `test_modulation_input_slice.py::test_hand_computed_breakdown_matches_the_live_environment` (obs breakdown Olfaction 25 vs 5, Visual 13 vs 8), `test_continual_bm_transition.py::test_continual_bm_stage_transition_no_crash` and `test_continual_resume_rebuild.py::test_continual_resume_rebuilds_stage_env` (stale test YAML: `visual_properties` length 8 vs `visual_vector_size` 1) |
+| `pytest tests/env` | 1291 passed, 1710 skipped, 17 failed — all in `test_channel_names_match_configs.py::test_every_maintained_config_can_write_a_recording[...level05_body_interactions/factors/*]`, **pre-existing** (`sensory.visual_value_mode` missing in those configs; reproduced on unmodified `v4.0`). No env code changed. |
+| T10 (`test_continual_balance_metrics_stage_swap`) | passed: `[balance] balance_calibration` and exactly one `balance_calibration_stage_1` record (`thermal_on True`, `max_injury 100.0`, `early_death_max_steps 20`) |
+
+Note: two modulation golden fixtures (`tests/fixtures/modulation/*_legacy.npz`) are gitignored
+(`*legacy*`), so a fresh worktree lacks them; they were copied in from the shared tree to run the suite.
+
+### Speed check
+
+| Setting | Off | On | Δ |
+|---|---|---|---|
+| GPU 102:1 (RTX 4090), level 05, 128 envs × 128 steps, 4 epochs, 20 warm-up + 300 timed iterations each, interleaved 50-iteration blocks | 0.2792 s/it | 0.2860 s/it | **+2.4 %** (block spread 0.263–0.307 s/it both ways; another job shared the node) |
+| CPU, 32 envs, 20 timed iterations each | 1.3800 s/it | 1.3856 s/it | +0.4 % |
+| Host (NumPy) per iteration, 128 × 128: `step_counts` + 128 accumulates | — | 3.4 ms (GPU node) / 1.4 ms | ≈ +1.2 % of a 0.28 s iteration |
+| `window_log` per emitted row, 5000-episode window | — | 26–65 ms | once per 4000 episodes |
+
+Command: `tmp/20260927_speed_bench_gpu.py 128` / `tmp/20260927_speed_bench.py 32` in the worktree
+(device part = jitted `train_iteration` + the host transfer of step info). Combined estimate ≈ +3–4 %,
+below the 5 % discussion threshold but **flagged** because it is above the plan's "< 1 %" estimate;
+the device part is within this node's run-to-run noise.
+
+### Deviations (none silent)
+
+1. **Early-death cut-off is a config key, not the constant `EARLY_DEATH_MAX_LEN`** (user decision D2):
+   `logging.episode.balance_early_death_max_steps`, recorded in the calibration block as
+   `early_death_max_steps`.
+2. **Part C (post-hoc script, C1–C5, checkpoint 9) not implemented** (user decision D3). Consequently
+   no `scripts/` file changed and no SCRIPTS_DEPENDENCY_MAP row was added.
+3. **T10's thermal-on → thermal-off stage pair cannot be built**: `train.py` rejects continual
+   schedules whose stages differ in `thermal_enabled` or `interoceptive_nociception_enabled`
+   (obs-dim check + `_modality_fingerprint`). T10 instead runs two level-05 stages with the switch on
+   and checks crash-freedom, the per-stage calibration record, and the emit path (WANDB_MODE=disabled
+   keeps `wandb_enabled` true). The flag-follows-new-stage rule is still implemented (flags read
+   from current `params` at every use) and the off-flag key suppression is covered by T6.
+4. **Calibration record also carries `thermal_on`, `felt_on`, `early_death_max_steps`**, and is also
+   written on the continual *resume* rebuild (same reason as the stage swap: params change).
+5. **"Stand-alone configs that train rPPO"** (D1): the only rPPO training-layer config is
+   `configs/train/recurrent_ppo.yaml`, merged by `train.py` for every rPPO run (single and continual);
+   no other config carries a `logging:` block, so no other file needed the keys.
+6. Plan Rev 1 said the "choice" measure's felt-injury note should be kept for the analyzer: it is in
+   the metrics reference and the module docstring.
+
+### Follow-ups / for other owners
+
+- `bug-curator`: two pre-existing, apparently unrecorded failures — the obs-breakdown mismatch in
+  `test_modulation_input_slice.py::test_hand_computed_breakdown_matches_the_live_environment`, and
+  the stale stage YAMLs in `tests/training/test_continual_bm_transition.py` /
+  `test_continual_resume_rebuild.py`; plus the 17 `level05_body_interactions/factors/*` configs that
+  no longer resolve (`sensory.visual_value_mode` missing). The Known Bugs row "rPPO continual stage
+  swap keeps stage-0 metric accumulators" stays OPEN (not fixed here); the new balance counters do
+  not inherit it (wiped and re-flagged per stage).
+- `experiment-designer` (after merge, per Part D): back-link from the study plan / page §07; state
+  the C4 training-vs-eval-policy caveat and that `Bal_TimeNearFire` is report-only.
+- CONFIG_CRITICAL_SETTINGS: no entry (logging switch, not a registry setting; no registry setting changed).
 
 ## Verification Report
 
