@@ -619,3 +619,56 @@ valid" and no world is ranked; nothing is loosened after the fact.
 **Everything else unchanged:** the candidate rule (Revision 1 / 1a: balance criteria at hazard ×1 and ×2,
 mean food search ≥ 20 steps over 1,000 resets, survival ≥ 80 % of today's under the same method), the
 worlds (72), and Part 4.
+
+## Feedback from plan-reviewer — Revision 2 (2026-09-27, before the Part-3 re-run)
+
+**Verdict: NOT READY — one Critical, fixable in the text alone.** The correction itself is legitimate,
+not a rescue: the balance study defined warmth as a static ring trip (mean 2.57 steps, Manhattan, from a
+random open cell — `measure_world.py:159-171`, `world_measurements.json`) *before* Part 3 existed, and
+Revision 1's blind forager was the departure from it (mean 21 on the same world). I re-solved today's
+world with the Part-3 pipeline (`planner.py` + `find_prob`, everything else as in `balance_worlds.py`)
+with the warmth find-probability set to 1 / 2.57 instead of 1 / 21: survival **0.5775** vs the balance
+study's baseline **0.5725**; late deaths injury 716 / cold 0 vs 732 / 0; eat drive 3.66 vs 3.64; hide 9.9
+vs 8.3. The warmth trip is the whole discrepancy (Revision 1 gave 0.3715 with 450 cold late-deaths).
+The candidate rule is untouched and the change applies to all 72 worlds alike, so this is a measurement
+fix. What is wrong is the **gate**, which as written will fail on a technicality and force exactly the
+after-the-fact loosening the plan forbids itself.
+
+Severity legend: 🔴 Critical = fix before going further · 🟡 Moderate = likely costs a re-run ·
+🟢 Low = cosmetic · ❓ Open = an assumption nobody has verified yet.
+
+| Sev | Where | Issue | Fix |
+|---|---|---|---|
+| 🔴 | Revision 2 "Validity gate" × `balance_rule.py:26-27`, `planner.py:595` | Criterion 2 fails today's world not because of the warmth trip but because the per-decision warming ratio is `None`: no warm-bodied (≥ 0 °C) start state ever chooses "warm up", so the denominator is zero and the inherited rule (`v is not None`) counts a perfectly specific drive as a fail. **This does not go away with the memory trip**: my re-solve gives `share_cold` 0.535, `share_warm` 0.0, ratio `None` → criterion 2 fails → the gate fails → "method not valid", while the pipeline reproduces the balance study to 0.005 in survival. The balance study's own baseline passed only by accident: `share_warm` = 6.9 × 10⁻⁵ (ratio 8797), one boundary state that the geometric feed flips. | **Pre-register now, before the re-run, uniformly for all worlds:** a `None` ratio with `share_warm` = 0 and `share_cold` ≥ a stated floor (the balance baseline's 0.60 makes 0.30 safe) is a **pass** (ratio reported as "∞, cold share x"); `None` with `share_cold` = 0 stays a fail. Record in the doc that this is a clarification of a degenerate case the balance study never hit, and correct the "Why" paragraph: the criterion-2 fail was the `None` rule; the warmth trip is what moved survival 0.57 → 0.37 and created the 450 cold deaths. |
+| 🟡 | Validity gate | The gate is nearly vacuous once criterion 2 is settled: criterion 4 is today-vs-itself (ratio 1.0 by construction, `balance_worlds.py` `base = res[tslug]`), criterion 5 passed 72 / 72 worlds at ×1, criterion 1 passed today already. Nothing in it checks against ground truth *outside* the Part-3 pipeline. | Add: today's world under the memory trip must reproduce the balance study's baseline on the no-warm-bush map — survival within ±0.05 of 0.5725 and cold late-deaths ≤ 5 % of late deaths (balance: 0). The re-solve says this passes (0.5775, 0 / 720); it is the one check that would have caught Revision 1 outright. |
+| 🟡 | Validity gate | Hazard is unstated. At ×2 criterion 4 compares to today's **×1** survival (Implementation Report item 8; `crit = BR.criteria(r, base[1.0], …)`), so today's own ×2 run is 0.50 of itself and fails 4 by construction. Read as "both hazards", the gate cannot pass. | State "at hazard ×1 (today's real hazard)". |
+| 🟡 | Validity gate | Criterion 3 is dropped from the gate with no reason given, which reads as gerrymandering. The reason exists and is good: the balance study's baseline **fails 3** (`balance_rule.json` baseline: 732 / 732 late deaths injury; verdict "neither"), and Revision 1's today passed 3 only because 450 cold deaths diluted the injury share to 0.586. | Say so in the doc, and note the consequence: under the memory trip today fails 3 again, so a candidate must pass a criterion the reference does not — inherited from the balance study and pre-registered, but it should be visible. |
+| 🟡 | Revision 2 "Warmth, with memory" | "The same definition the balance study used" is not accurate on two counts. (a) The balance ring trip is straight Manhattan distance through everything (`measure_world.py:157`), not "walking distance around rocks and fires"; rocks are non-blocking in level 05 and the Part-3 food forager crosses them, so "around rocks" is a third convention inside one method. (b) The balance planner fed the **median (2) as a deterministic trip** (`sweep_balance.py:51`); Part 3 feeds **1 / mean as a geometric find-probability** (mean 2.57, so 0.39 per step). The re-solve shows (b) changes survival by ≈ 0.005, so it is harmless — but say it. | Either use the balance study's Manhattan definition outright, or keep walking distance and state the deviation plus the feed difference. "Warmer than 0 °C" is fine: only Manhattan-1 ring cells (+8.8) and the fire cell (+77) are above 0 (`cell_temp_by_fire_distance`: d = 2 median −16.5, p90 −15.6), and the fire cell is never the nearest from an open cell. |
+| 🟢 | Same | Start cell: warmth uses "a random open cell", food / cover use the reset's agent start. With random start on they coincide in distribution; say "the reset's agent start, as food and cover" or "interior open cell excluding bush / fire as `measure_world.py`". | One clause. |
+| 🟢 | Same | The blind bracket is worth keeping, but note that it is pessimistic for a second reason: fires are visible on the obstacle channel, so a trained agent can walk to candidate obstacles rather than random-walk. | One clause. |
+
+**Criterion 4 within method — confirmed in code, not just prose.** `balance_worlds.py` takes today's
+reference from the same run's solve of `g10r20f1to4b12_od`, so the 0.371 baseline is recomputed under
+whatever warmth feed is used; nothing is hard-coded. Correct as the plan states.
+
+**Assumptions the re-run rests on.** (1) Fires are fixed within an episode and remembered — verified for
+the planner (a static per-world trip is what the balance study used), unverified for the trained agent
+(Part 4 is where that shows). (2) The memory trip stays ≈ 2–3 steps in every `od` world because fire
+density is held — plausible (ring trip scales with the inter-fire distance, not the grid), unverified until
+measured; in `oc` worlds it will grow and cold deaths will return, which is the intended contrast.
+(3) Criterion 2's eat / hide ratios are unaffected by the warmth feed — the re-solve says yes for today
+(3.66 / 9.9), not checked for other worlds.
+
+**Cost of being wrong.** If the gate is left as written, the ~1-hour re-run over 72 worlds ends with
+"method not valid" on a degenerate-denominator technicality, the author has to loosen the rule after
+seeing the data, and every Part-3 ranking downstream carries a post-hoc mark it did not need. If the
+gate is fixed but the survival-agreement check is not added, a future measurement flaw of the same kind
+passes silently again. Neither loses data.
+
+**To flip to SOUND:** pre-register the `None` treatment (🔴), state hazard ×1 and the criterion-3 reason,
+add the survival-agreement check, and correct the "same definition" sentence. All text; no code needs to
+change before the re-run except the `None` rule in `balance_worlds.py`'s criterion call, which `developer`
+should apply uniformly rather than special-casing today's world. Owner: `experiment-designer` (plan text),
+`developer` (the one rule change). Nothing for `bug-curator`.
+
+Reviewed by: plan-reviewer
