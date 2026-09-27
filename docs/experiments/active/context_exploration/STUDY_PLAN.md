@@ -14,6 +14,7 @@ wandb_tag: context_exploration
 > read. Awaiting the plan-reviewer's confirming pass.
 > **Part 4 design (Revision 3, 2026-09-27)**: seven worlds chosen from the simulation at the user's request; the
 > ordinary agent is trained on each and judged by the balance tests — see "Part 4 design" at the end. Not launched.
+> **Part 4 results (2026-09-27)**: all eight runs valid, trainer replicates the pilots; the simulation is not trustworthy for choosing worlds (2 of 6 agree); nothing forwarded yet — two 10 × 10 short-smell worlds pass every test and await a second seed, three worlds are still learning and await an extension to 5 M episodes; the sparse 15 × 15 / 20 × 20 worlds fail because the agent never learns to eat — see "Part 4 results" at the end.
 > **Related**: internal-state interaction study [plan](../internal_state_interactions/STUDY_PLAN.md) (
 > Revisions 2–2c: the balance criteria) · [[BALANCE_SETTINGS_INVENTORY]] · balance metrics in training
 > [[BALANCE_METRICS_TRAINING_LOGGING]] · level-05 body-interaction study [[LEVEL05_BODY_INTERACTIONS]]
@@ -1307,3 +1308,291 @@ needs a second seed before it can lead the next study. Everything in 4.1–4.9 s
 - **Saved config `episodes: 100`** is the known stale nested copy (L3a); never read the budget from it.
 
 Revised by: experiment-designer (2026-09-27, on `5e6f82e3`)
+
+## Part 4 results (2026-09-27) — the ordinary agent trained on the seven worlds
+
+### Verdict, in plain words
+
+We trained the ordinary agent (no modulator) for 2 million episodes on today's campfire world
+(twice, seeds 42 and 43) and on six larger or less-smellable worlds that the simulation of Part 3 had
+chosen, and judged each with the pre-registered balance tests: does the agent split its time between
+hiding in bushes, warming at a fire and eating; do hunger and injury each drive their own behaviour;
+is no single cause of death dominant; does it survive at least 80 % as long as in today's world.
+
+- **The trainer is sound and today's world passes every test.** Both reference runs reproduce the
+  earlier level-05 pilots to within one survival step (227 and 226 steps against 228 and 226), and
+  today's world passes all five tests — so no test is dropped from the comparison.
+- **Two 10 × 10 worlds with a short smell range pass all five tests and survive as long as today's
+  world** (smell range 5 with rich food; smell range 3 with rich food). Neither goes forward yet: the
+  range-5 world's dominant death cause (injury, 57.5 %) sits within the pre-registered borderline
+  band of the 60 % line, and the range-3 world contradicts the simulation (which predicted it would
+  survive far less), so each needs a second seed first.
+- **In the three worlds where food is sparse over a large area** (20 × 20 with 1–4 or 1–2 food items,
+  and 15 × 15 with 1–2), **the agent never learned to eat**: it takes about 0.02 bites per episode
+  for the whole run (today's agent takes 35), and dies of starvation after about 70–80 steps (a third
+  of today's survival). One of them (20 × 20, 1–4 items) began eating only in the last 200,000
+  episodes.
+- **Three worlds are still improving** (survival rose more than 5 % over the last fifth), so by the
+  pre-registered rule their verdict is withheld: the 20 × 20 world with many small food items (which
+  passes all five tests at 2 M, narrowly) and the two sparse 20 × 20 worlds.
+- **The simulation is not trustworthy for choosing worlds.** It agrees with training in 2 of 6
+  worlds; it was too pessimistic about the 10 × 10 smell-range-3 world and too optimistic about the
+  sparse 20 × 20 worlds (the latter partly because those runs got a third of the reference's
+  training steps).
+- **Nothing goes forward to the modulator comparison today.** Two seed-43 runs and a 5 M-episode
+  extension of three worlds (with today's world alongside) are needed first; both need the user's go.
+
+### Methods (what was read, and how)
+
+- **Data:** the local WandB binaries of the eight runs in 4.9 (never the web API) and each run's stdout
+  log. Script `scripts/analysis/studies/context_exploration/part4_readout.py`, input
+  `docs/experiments/active/context_exploration/part4_manifest.yaml` (the 4.9 rows plus the simulation
+  values of 4.2); output `tmp/20260927_2300_ctxexp_part4.{md,json}`.
+- **Window:** rows with `Episode/Number` in (1.8 M, 2.0 M], weighted by `Episode/_window_n` (R1.6 L2);
+  time shares weighted by `_window_n × Episode/Steps`; conditional shares pooled by their `Bal_N_*`
+  counter and ratios recomputed from the pooled shares (w-weighted mean of per-row ratios beside it);
+  late-death causes weighted by `_window_n × Bal_LateDeathShare`. Survival = `Episode/Steps`; reward is
+  never read.
+- **Rules applied exactly as pre-registered:** replication gate (R1.6 L4); still-learning flag (4.4,
+  1.8–2.0 M vs 1.6–1.8 M, > 5 % relative); criteria 1–5 (4.4); criterion 3 absolute (60 %) reported
+  and criterion 3-fwd (R1.1: dominant late-death cause ≤ max(60 %, D_ref + 5 points)) used for
+  forwarding; withheld criteria (R1.2); step ratio (R1.3); borderline band = max(reference seed gap,
+  floor 5 points on shares / 0.5 on ratios / 5 % of the survival line) (R1.5); seed-43 rule (R1.5);
+  agreement and trust (4.5 + R1.2); forwarding (4.6 + R1.1).
+- **One reading made explicit:** the 5 % survival floor is taken as 5 % of the criterion-4 line
+  (0.05 × 181.3 = 9.1 steps). It changes nothing below: the only world near the line (C4) is withheld
+  as still learning anyway.
+
+### Run validity (every check from 4.3, 4.9.2 and R1.6 L3)
+
+Budget and seed read from the WandB run config (not the saved `config.yaml`, whose `episodes: 100` is
+the known stale copy); environment steps from WandB `timesteps` on the episode rows.
+
+| Run | World | Seed (WandB) | Budget (WandB) | Last episode row | "Training complete" | Calibration = level 05 | Obs width | Modulator off | `Bal_*` keys on first row | Env steps at 1.8 M | Env steps at 2.0 M | Step ratio vs reference |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| C1a | today (`lvl05ref`) | 42 | 2,000,000 | 2,000,000 | yes | yes | 58 | yes | 55 | 294.9 M | 340.0 M | 1.00 |
+| C1b | today (`lvl05ref`) | 43 | 2,000,000 | 2,000,000 | yes | yes | 58 | yes | 55 | 293.3 M | 338.3 M | 1.00 |
+| C2 | `g10r5f1to2b36` | 42 | 2,000,000 | 2,000,000 | yes | yes | 58 | yes | 55 | 297.4 M | 342.4 M | 1.01 |
+| C3 | `g20r20f1to4b12` | 42 | 2,000,000 | 2,000,000 | yes | yes | 58 | yes | 55 | 111.4 M | 127.0 M | 0.37 |
+| C4 | `g20r5f4to16b12` | 42 | 2,000,000 | 2,000,000 | yes | yes | 58 | yes | 55 | 208.1 M | 244.9 M | 0.72 |
+| C5 | `g20r20f1to2b36` | 42 | 2,000,000 | 2,000,000 | yes | yes | 58 | yes | 55 | 109.8 M | 125.3 M | 0.37 |
+| C6 | `g10r3f1to2b36` | 42 | 2,000,000 | 2,000,000 | yes | yes | 58 | yes | 55 | 296.6 M | 341.6 M | 1.01 |
+| C7 | `g15r8f1to2b36` | 42 | 2,000,000 | 2,000,000 | yes | yes | 58 | yes | 55 | 109.0 M | 123.7 M | 0.36 |
+
+All eight runs are valid. **Replication gate (R1.6 L4): PASS** — C1a 227.1 steps (allowed 223.8–232.8),
+C1b 226.2 (allowed 221.3–230.3). The read-out proceeds.
+
+Reference: S_ref = mean(C1a, C1b) = **226.7** survival steps; criterion-4 line 0.8 × S_ref = **181.3**.
+Reference dominant late-death cause D_ref = 0.541 (injury); criterion-3-fwd line = max(0.60, 0.591) = **0.600**.
+Reference seed gaps (C1a vs C1b): survival 0.9 steps, dominant cause 0.014, late-death share 0.008,
+eat ratio 0.22, hide ratio 0.02, hide ratio among fed 0.07, time shares ≤ 0.002 — every gap is below
+its floor, so the borderline band is the floor throughout.
+
+### Results — survival and the still-learning flag
+
+Survival steps per episode, `_window_n`-weighted.
+
+| Run | World | Arm | Survival 1.6–1.8 M | Survival 1.8–2.0 M | Rise | Still learning (> 5 %) | Survival vs today | Simulation's prediction |
+|---|---|---|---|---|---|---|---|---|
+| C1a | today | reference | 221.1 | 227.1 | +2.7 % | no | 1.00 | 1.00 |
+| C1b | today | reference | 223.0 | 226.2 | +1.4 % | no | 1.00 | 1.00 |
+| C2 | 10 × 10, smell 5, 1–2 × 36 | balanced | 224.7 | 226.8 | +0.9 % | no | **1.00** | 0.91 |
+| C3 | 20 × 20, smell 20, 1–4 × 12 | balanced | 75.8 | 80.5 | +6.2 % | **YES** | 0.36 | 0.92 |
+| C4 | 20 × 20, smell 5, 4–16 × 12 | balanced | 176.2 | 185.3 | +5.1 % | **YES** | 0.82 | 0.94 |
+| C5 | 20 × 20, smell 20, 1–2 × 36 | balanced | 70.5 | 74.4 | +5.4 % | **YES** | 0.33 | 0.91 |
+| C6 | 10 × 10, smell 3, 1–2 × 36 | edge | 222.0 | 225.0 | +1.3 % | no | **0.99** | 0.62 |
+| C7 | 15 × 15, smell 8, 1–2 × 36 | edge | 69.9 | 70.1 | +0.4 % | no | 0.31 | 0.67 |
+
+### Results — criterion values, last 10 % (1.8–2.0 M)
+
+Shares as fractions; ratios pooled (w-weighted per-row mean in brackets). "Report" columns are not
+pass/fail. The felt-injury hide ratio carries the first-steps caveat: the felt-injury percept is zeroed
+at reset and under-reads for about the first 12 steps of every episode, so early steps land in the
+"barely injured" bin by construction; true injury decides criterion 2.
+
+| Run | Bush | Warm cell | Eating | Elsewhere | Near fire (report) | Eat ratio | Hide ratio, true injury | Hide ratio, felt (report) | Hide ratio among fed | Warm ratio (report) | Early-death share | Late-death share | Late deaths: starvation / injury / thermal |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| C1a | 0.259 | 0.206 | 0.157 | 0.437 | 0.334 | 6.91 (8.27) | 2.95 (2.95) | 3.77 | 4.06 (4.07) | 0.47 | 0.148 | 0.582 | 0.39 / 0.53 / 0.07 |
+| C1b | 0.260 | 0.204 | 0.156 | 0.438 | 0.335 | 6.69 (7.73) | 2.92 (2.93) | 3.76 | 4.00 (4.00) | 0.47 | 0.145 | 0.590 | 0.40 / 0.55 / 0.05 |
+| C2 | 0.237 | 0.213 | 0.161 | 0.445 | 0.340 | 7.75 (8.42) | 3.15 (3.16) | 4.10 | 4.49 (4.50) | 0.49 | 0.161 | 0.536 | 0.36 / 0.57 / 0.07 |
+| C3 | 0.505 | 0.145 | 0.011 | 0.390 | 0.305 | 3.97 (3.98) | 1.23 (1.24) | 1.71 | 1.19 (1.20) | 0.26 | 0.219 | 0.781 | 0.76 / 0.16 / 0.08 |
+| C4 | 0.292 | 0.182 | 0.143 | 0.438 | 0.313 | 6.34 (8.02) | 2.42 (2.44) | 3.18 | 2.99 (3.00) | 0.42 | 0.169 | 0.696 | 0.35 / 0.58 / 0.07 |
+| C5 | 0.499 | 0.148 | 0.000 | 0.402 | 0.311 | 1.96 (2.52) | 1.25 (1.27) | 1.74 | 1.23 (1.25) | 0.27 | 0.230 | 0.770 | 0.75 / 0.18 / 0.07 |
+| C6 | 0.238 | 0.209 | 0.157 | 0.449 | 0.342 | 7.34 (8.05) | 3.02 (3.02) | 3.95 | 4.31 (4.31) | 0.49 | 0.156 | 0.553 | 0.43 / 0.52 / 0.06 |
+| C7 | 0.471 | 0.139 | 0.000 | 0.429 | 0.275 | 1.77 (1.98) | 1.24 (1.25) | 1.77 | 1.21 (1.23) | 0.31 | 0.257 | 0.743 | 0.72 / 0.22 / 0.06 |
+
+Overeating is 0.00 of late deaths in every run. Reference pooled over both seeds: bush 0.260, warm 0.205,
+eat 0.156, elsewhere 0.438; eat ratio 6.80, hide ratio 2.93, hide ratio among fed 4.03 — criteria 1, 2
+and 5 pass pooled and on each seed alone, so **no criterion is withheld** (R1.2). The warming ratio
+is below 1 everywhere (cold-bodied steps are *less* often on a warm cell than warm-bodied ones); it is
+report-only by Revision 2a and is not judged.
+
+### Results — per-world verdicts
+
+| Run | World | 1 time split | 2 eat & hide | 3 deaths, absolute 60 % (report) | 3-fwd, relative to today | Dominant late cause | 4 survival ≥ 80 % | 5 hiding among fed | Still learning | Borderline (within band of a line) | Verdict |
+|---|---|---|---|---|---|---|---|---|---|---|---|
+| C1a/b | today | pass | pass | pass | pass | injury 0.53 / 0.55 | pass (1.00) | pass | no | — | reference |
+| C2 | 10 × 10, smell 5 | pass | pass | pass | pass | injury 0.575 | pass (1.00) | pass | no | 3-fwd: 0.575 vs 0.600 (band 0.05) | **trained-balanced, borderline → seed 43 before forwarding** |
+| C3 | 20 × 20, smell 20, 1–4 × 12 | FAIL (eating 1 %) | FAIL (hide 1.23) | FAIL | FAIL | starvation 0.76 | FAIL (0.36) | FAIL (1.19) | **yes (+6.2 %)** | warm 0.145 vs 0.10 | **withheld — still learning** (fails 1–5 at 2 M) |
+| C4 | 20 × 20, smell 5, 4–16 × 12 | pass | pass | pass | pass | injury 0.576 | pass (0.82) | pass | **yes (+5.1 %)** | eating 0.143, hide 2.42, 3-fwd 0.576, survival 185.3 vs 181.3 | **withheld — still learning** (passes 1–5 at 2 M, borderline on four) |
+| C5 | 20 × 20, smell 20, 1–2 × 36 | FAIL (eating 0 %) | FAIL (eat 1.96, hide 1.25) | FAIL | FAIL | starvation 0.75 | FAIL (0.33) | FAIL (1.23) | **yes (+5.4 %)** | warm 0.148, eat 1.96 | **withheld — still learning** (fails 1–5 at 2 M) |
+| C6 | 10 × 10, smell 3 | pass | pass | pass | pass | injury 0.52 | pass (0.99) | pass | no | — | **trained-balanced; criterion 4 disagrees with the simulation → seed 43 before forwarding** |
+| C7 | 15 × 15, smell 8, 1–2 × 36 | FAIL (eating 0 %) | FAIL (eat 1.77, hide 1.24) | FAIL | FAIL | starvation 0.72 | FAIL (0.31) | FAIL (1.21) | no | warm 0.139, eat 1.77 | **not trained-balanced** |
+
+### Results — agreement with the simulation (4.5 + R1.2)
+
+Sim / trained pass (1) or fail (0) on criteria 1, 2, 4, 5 (no criterion withheld); trained criterion 3
+has no simulation counterpart. The survival and late-death columns set the simulation's numbers beside
+the trained agent's.
+
+| Run | World | Arm | Crit 1 | Crit 2 | Crit 4 | Crit 5 | Trained crit 3 (abs / fwd) | Survival vs today, sim / trained | Late deaths injury, sim / trained | Late deaths starvation, sim / trained | Step ratio | Agree |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| C1a | today | reference | 1 / 1 | 1 / 1 | 1 / 1 | 1 / 1 | 1 / 1 | 1.00 / 1.00 | 0.99 / 0.53 | 0.01 / 0.39 | 1.00 | yes |
+| C1b | today | reference | 1 / 1 | 1 / 1 | 1 / 1 | 1 / 1 | 1 / 1 | 1.00 / 1.00 | 0.99 / 0.55 | 0.01 / 0.40 | 1.00 | yes |
+| C2 | 10 × 10, smell 5 | balanced | 1 / 1 | 1 / 1 | 1 / 1 | 1 / 1 | 1 / 1 | 0.91 / 1.00 | 0.81 / 0.57 | 0.19 / 0.36 | 1.01 | **yes** |
+| C3 | 20 × 20, smell 20, 1–4 | balanced | 1 / 0 | 1 / 0 | 1 / 0 | 1 / 0 | 0 / 0 | 0.92 / 0.36 | 0.85 / 0.16 | 0.15 / 0.76 | 0.37 | no (still learning) |
+| C4 | 20 × 20, smell 5, 4–16 | balanced | 1 / 1 | 1 / 1 | 1 / 1 | 1 / 1 | 1 / 1 | 0.94 / 0.82 | 0.84 / 0.58 | 0.16 / 0.35 | 0.72 | yes (still learning) |
+| C5 | 20 × 20, smell 20, 1–2 | balanced | 1 / 0 | 1 / 0 | 1 / 0 | 1 / 0 | 0 / 0 | 0.91 / 0.33 | 0.84 / 0.18 | 0.16 / 0.75 | 0.37 | no (still learning) |
+| C6 | 10 × 10, smell 3 | edge | 1 / 1 | 1 / 1 | **0 / 1** | 1 / 1 | 1 / 1 | 0.62 / 0.99 | 0.33 / 0.52 | 0.67 / 0.43 | 1.01 | **no** |
+| C7 | 15 × 15, smell 8 | edge | 1 / 0 | 1 / 0 | 0 / 0 | 1 / 0 | 0 / 0 | 0.67 / 0.31 | 0.39 / 0.22 | 0.61 / 0.72 | 0.36 | **no** |
+
+- **Count at 2 M: 2 of 6 non-reference worlds agree** (C2, C4). The still-learning rule leaves C3, C4
+  and C5 undecided; on the three decided worlds the count is 1 of 3 (C2), so the best reachable total
+  is 4 of 6 — below the 5 of 6 the trust rule needs, whatever the extension shows.
+- **Direction of the edge prediction:** C6 (edge) survives 0.99 of today — the simulation is **too
+  pessimistic** on the search axis for a 10 × 10 world with smell range 3. By R1.3 this is the strong
+  direction (C6 got as many environment steps as the reference, step ratio 1.01). C3 and C5
+  (balanced) fall below 80 % — **too optimistic** — but both are still learning and got 0.37 of the
+  reference's environment steps, the confound R1.3 names; that direction is weak evidence until the
+  extension.
+- **Trust verdict: not trustworthy for choosing worlds** (2 / 6, and both criterion-4 directions
+  fail). Per 4.5, future world choices go through training rather than the simulation.
+- **Late-death causes:** the simulation over-predicts injury's share everywhere, today's world
+  included (0.99 predicted vs 0.53–0.55 trained): the trained agent starves far more often than the
+  ideal planner does. The 60 %-line worry of M1 did not materialise for today's world (D_ref 0.541).
+
+### Results — forwarding (4.6 + R1.1 + R1.5)
+
+| Run | Passes 1, 2, 4, 5 and 3-fwd | Still learning | Criterion 4 vs simulation | Borderline | Status |
+|---|---|---|---|---|---|
+| C6 (edge, search 26.7) | yes | no | disagrees | no | **pending seed 43**; if it also passes criteria 4 and 3-fwd it **goes first** (4.6 edge rule) |
+| C2 (balanced, search 11.8) | yes | no | agrees | yes (3-fwd 0.575 vs 0.600) | **pending seed 43** |
+| C4 (balanced, search 9.3) | yes (at 2 M) | **yes** | agrees | yes (4 quantities) | **withheld — extension** |
+| C3, C5 | no (at 2 M) | **yes** | disagree | — | **withheld — extension** |
+| C7 | no | no | agrees on 4, disagrees on 1, 2, 5 | — | not forwarded |
+
+**Nothing goes forward today.** Named follow-ups, each needing the user's go:
+
+1. **Seed-43 runs (R1.5)** — new manifest rows `C6b` (`rppo_ctxexp_g10r3f1to2b36_t1none_s43`) and
+   `C2b` (`rppo_ctxexp_g10r5f1to2b36_t1none_s43`), same command as 4.9.2 with `--seed 43`, same group
+   and job type; ≈ 2 GPU-h each on a 3090.
+2. **Extension to 5 M episodes (R1.4)** — three of seven worlds are flagged (not more than half), so
+   **C3, C4, C5 and both reference runs C1a, C1b** are resumed with the R1.4 command from their 2 M
+   checkpoints: C1a `models/2000052`, C1b `models/2000065` (+ `--seed 43`), C3 `models/2000166`,
+   C4 `models/2000021`, C5 `models/2000145`, each with `--wandb-resume-id` = its WandB id from 4.9.
+   Seam check (R1.4) before reading any extended value; extended worlds judged on 4.9–5.0 M against
+   the extended reference on 4.9–5.0 M. Roughly 2.5 × the 2 M cost for these five runs.
+
+### Analysis — how the runs evolved (200,000-episode blocks)
+
+Survival steps per episode:
+
+| Run | 0.2 M | 0.4 M | 0.6 M | 0.8 M | 1.0 M | 1.2 M | 1.4 M | 1.6 M | 1.8 M | 2.0 M |
+|---|---|---|---|---|---|---|---|---|---|---|
+| C1a | 47 | 83 | 139 | 170 | 188 | 199 | 211 | 217 | 221 | 227 |
+| C1b | 51 | 78 | 131 | 166 | 186 | 202 | 211 | 219 | 223 | 226 |
+| C2 | 44 | 67 | 127 | 171 | 203 | 212 | 218 | 220 | 225 | 227 |
+| C3 | 36 | 45 | 55 | 66 | 69 | 67 | 70 | 74 | 76 | 80 |
+| C4 | 44 | 55 | 78 | 116 | 133 | 133 | 152 | 156 | 176 | 185 |
+| C5 | 36 | 48 | 65 | 61 | 65 | 68 | 68 | 71 | 71 | 74 |
+| C6 | 46 | 82 | 124 | 172 | 198 | 210 | 214 | 219 | 222 | 225 |
+| C7 | 37 | 51 | 62 | 65 | 62 | 65 | 67 | 70 | 70 | 70 |
+
+Food bites eaten per episode (`Episode/FoodEaten`, report-only):
+
+| Run | 0.2 M | 0.4 M | 0.6 M | 0.8 M | 1.0 M | 1.2 M | 1.4 M | 1.6 M | 1.8 M | 2.0 M |
+|---|---|---|---|---|---|---|---|---|---|---|
+| C1a | 0.38 | 3.30 | 16.15 | 23.43 | 27.31 | 30.01 | 32.06 | 33.40 | 34.35 | 35.57 |
+| C1b | 0.47 | 2.67 | 13.75 | 22.17 | 27.11 | 30.22 | 32.20 | 34.28 | 34.74 | 35.22 |
+| C2 | 0.09 | 1.46 | 14.78 | 25.05 | 31.68 | 33.63 | 34.84 | 35.28 | 36.05 | 36.56 |
+| C3 | 0.01 | 0.04 | 0.03 | 0.01 | 0.01 | 0.02 | 0.03 | 0.03 | 0.05 | 0.86 |
+| C4 | 0.23 | 0.05 | 3.28 | 11.41 | 15.20 | 16.48 | 19.88 | 21.18 | 25.34 | 26.57 |
+| C5 | 0.01 | 0.07 | 0.02 | 0.01 | 0.01 | 0.01 | 0.01 | 0.01 | 0.02 | 0.02 |
+| C6 | 0.18 | 3.93 | 13.74 | 24.07 | 29.72 | 32.21 | 33.25 | 34.08 | 34.80 | 35.42 |
+| C7 | 0.02 | 0.04 | 0.02 | 0.01 | 0.01 | 0.02 | 0.02 | 0.02 | 0.03 | 0.02 |
+
+Hide ratio by true injury (criterion 2's hiding half):
+
+| Run | 0.2 M | 0.4 M | 0.6 M | 0.8 M | 1.0 M | 1.2 M | 1.4 M | 1.6 M | 1.8 M | 2.0 M |
+|---|---|---|---|---|---|---|---|---|---|---|
+| C1a | 0.09 | 0.27 | 1.23 | 2.26 | 2.61 | 2.74 | 2.81 | 3.00 | 2.99 | 2.95 |
+| C1b | 0.13 | 0.61 | 1.20 | 1.98 | 2.74 | 2.90 | 3.00 | 3.01 | 3.05 | 2.92 |
+| C2 | 0.25 | 0.58 | 1.27 | 2.60 | 3.15 | 3.26 | 3.16 | 3.20 | 3.17 | 3.15 |
+| C3 | 0.49 | 0.19 | 0.45 | 0.84 | 1.07 | 1.05 | 1.19 | 1.19 | 1.19 | 1.23 |
+| C4 | 0.14 | 0.64 | 0.96 | 1.23 | 1.54 | 1.78 | 1.97 | 2.10 | 2.45 | 2.42 |
+| C5 | 0.49 | 0.19 | 0.64 | 0.82 | 0.98 | 1.03 | 1.09 | 1.25 | 1.14 | 1.25 |
+| C6 | 0.15 | 0.50 | 1.47 | 2.56 | 3.01 | 2.99 | 3.04 | 3.04 | 3.04 | 3.02 |
+| C7 | 0.38 | 0.26 | 0.78 | 1.02 | 1.07 | 1.07 | 1.19 | 1.23 | 1.21 | 1.24 |
+
+Injury share of late deaths (criterion 3):
+
+| Run | 0.2 M | 0.4 M | 0.6 M | 0.8 M | 1.0 M | 1.2 M | 1.4 M | 1.6 M | 1.8 M | 2.0 M |
+|---|---|---|---|---|---|---|---|---|---|---|
+| C1a | 0.26 | 0.17 | 0.38 | 0.49 | 0.52 | 0.52 | 0.54 | 0.55 | 0.56 | 0.53 |
+| C1b | 0.27 | 0.21 | 0.33 | 0.42 | 0.54 | 0.55 | 0.56 | 0.58 | 0.57 | 0.55 |
+| C2 | 0.27 | 0.26 | 0.40 | 0.53 | 0.58 | 0.58 | 0.57 | 0.56 | 0.56 | 0.57 |
+| C3 | 0.34 | 0.28 | 0.26 | 0.22 | 0.20 | 0.20 | 0.21 | 0.18 | 0.16 | 0.16 |
+| C4 | 0.30 | 0.27 | 0.29 | 0.39 | 0.42 | 0.54 | 0.55 | 0.61 | 0.62 | 0.58 |
+| C5 | 0.34 | 0.26 | 0.20 | 0.21 | 0.21 | 0.19 | 0.18 | 0.20 | 0.18 | 0.18 |
+| C6 | 0.28 | 0.25 | 0.39 | 0.50 | 0.51 | 0.52 | 0.54 | 0.52 | 0.53 | 0.52 |
+| C7 | 0.32 | 0.23 | 0.24 | 0.23 | 0.25 | 0.22 | 0.24 | 0.22 | 0.21 | 0.22 |
+
+Further blocks (warm, bush and eating time shares, eat ratio, hide ratio among fed, late-death share,
+starvation share) are in `tmp/20260927_2300_ctxexp_part4.md`.
+
+**What the curves say.**
+
+- **The three 10 × 10 worlds learn alike.** Today's world and both short-smell 10 × 10 worlds climb
+  on the same schedule (≈ 200 steps by 1.0 M, ≈ 225 by 2.0 M), and every balance measure settles by
+  about 1.0 M at nearly the same values. Cutting smell range from 20 to 3 or 5 on a 10 × 10 grid
+  (with fewer, richer food items) costs the trained agent nothing measurable. Why is not tested here:
+  the agent also has 13 visual channels and a recurrent memory, which the simulation's forager lacks —
+  a hypothesis, not a finding.
+- **The sparse large worlds are an exploration failure, not a balance property.** In C5 and C7 the
+  agent eats about 0.02 bites per episode from the first block to the last; in C3 it ate as little
+  until eating appeared in the last 200,000 episodes (0.05 → 0.86 bites). Without eating, the only
+  reachable behaviour is to hide and survive until the starting food energy runs out (≈ 70–80 steps),
+  so bush time rises to ≈ 0.5, hiding stops tracking injury (ratio ≈ 1.2) and starvation dominates
+  deaths. The pre-registered criteria correctly fail these worlds, but what they measure here is
+  "the ordinary agent never found out that food exists" rather than "the needs are out of balance".
+- **C4 (20 × 20, many small food items, smell 5) is a slow learner that is still climbing**
+  (133 → 185 steps from 1.0 M to 2.0 M) and got 0.72 of the reference's environment steps; its values
+  at 2 M pass every test narrowly. The extension decides it.
+- **Seed dispersion:** only the reference has two seeds, and its seeds agree closely (survival gap
+  0.9 steps, every share within 0.002, ratios within 0.22). Every other world is n = 1; the
+  borderline and seed-43 rules exist for that reason.
+
+### Conclusions
+
+- **Did the simulation's picks hold up in training?** No (2 of 6 agree; trust rule failed). The
+  simulation was too pessimistic about the 10 × 10 short-smell worlds and — pending the extension and
+  its step-count confound — too optimistic about sparse food on large grids, where the ordinary agent
+  fails to discover eating at all at 2 M episodes. The simulation assumes a competent forager; the
+  trained agent is not one when food is rarely encountered.
+- **Which worlds are candidates for the modulator comparison?** The 10 × 10 world with smell range 3
+  (C6, the least observable world that holds up) and the 10 × 10 world with smell range 5 (C2), each
+  after its seed-43 run; C4 after the extension. None is forwarded yet.
+- **Failure-mode catalog (4.7):** no crash, NaN or calibration mismatch; no run cut short; the edge
+  world C7 collapsed early as the simulation expected (but for a different reason — no eating — and
+  lower than predicted, 0.31 vs 0.67); three worlds still learning → undecided, not failed.
+- **Caveat on scope:** these are single-seed screening runs (except the reference); every non-reference
+  number above is n = 1.
+
+### Related issues / follow-ups
+
+- None suspected in code: eating works on a 20 × 20 grid (C4 learns it; C3 starts to), so the sparse
+  worlds' failure is attributed to learning, not to a bug. A direct check (a scripted agent walking onto
+  food in `g20r20f1to2b36`) was not run.
+- No new metric is needed; `Episode/FoodEaten` already shows the exploration failure.
+
+Analysed by: experiment-analyzer (2026-09-27)
