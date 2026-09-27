@@ -99,3 +99,37 @@ sees predators as odds. Part 1 uses agents trained under today's world only.
 
 Result sections appended here; a short page, or a new section on the internal-state study page, after
 verdict review.
+
+## Feedback from plan-reviewer
+
+**Verdict: NOT READY** (2026-09-27, before any part runs). Two Critical findings, seven Moderate,
+four Low; full table with the measured evidence: [[plan_context_exploration]]
+(`docs/reviews/plan_context_exploration.md`).
+
+**In plain language.** Part 1 would measure a sensed signal and call it hidden: on a 10 × 10 grid
+every cell is within the 20-cell smell radius, so a hunting predator is in the agent's smell field
+on every step. The recordings already show the "adaptation" the plan would report — the ordinary
+agent is in a bush 15 % / 35 % / 54 % of the time with 0 / 1 / 2 predators — and it is a reaction
+to a present smell, not an inference about the episode. The ambusher count (no smell) is the only
+hidden axis, and its effect is small (bush 24 % vs 28 %). Part 2's contexts (hazard ×0.5 / ×1 / ×2)
+cover about a third of the real spread: measured from the same recordings, injury per exposed step
+is 0.20 / 1.11 / 2.62 for 0 / 1 / 2 predators (×0.3 to ×4.1 of the average) and 10 % vs 97 % of
+episodes end in death — so the value of knowing the danger is under-estimated and the pre-registered
+negative reading could fire wrongly. Both are fixed in the plan text plus one measurement the
+balance study's `measure_hazard_bins` already makes, conditioned on the per-episode predator count.
+
+**Moderate, to settle before Part 3 runs:** hit odds are not scaled with the smell range, which is
+what shortening it changes (M1); density scaling needs every hard-coded `[[1, 1], [10, 10]]`
+placement box widened, the full entity lists restated, and a reset-level check for the silent
+(0,0) placement fallback and for fires that cannot be packed (M2); the forager's validation at
+range 20 is the Manhattan walk the study already measures and cannot fail on the search phase (M3);
+the planner should take the mean or a per-step find probability, not the median, for heavy-tailed
+searches (M4); criterion 3 on deaths stays gated (M5); scripts-dependency-map rows and a Files
+section (M6); the "≥ 2 × today" floor needs a reason or a horizon-based value (M7).
+
+**What flips the verdict:** C1 — ambusher count as the hidden axis, predator axis relabelled as
+sensed threat (or matched on the recorded smell), time-in-episode in the matching, a pre-registered
+effect size; C2 — contexts rebuilt from per-predator-count hazard bins, thresholds with units,
+interval and tie margin. Both in this plan before Parts 1–2 run.
+
+Reviewed by: plan-reviewer
