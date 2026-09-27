@@ -479,3 +479,12 @@ Reviewed by: plan-reviewer
 - **N6.** Trip 8 / bites 12 and trip 4 / bites 6 must give the same result (same trip ÷ bites); a free
   consistency check, reported.
 - Open (❓): the thermostat finding predates E2; it is re-checked on the first E2 baseline and reported.
+
+### Revision 2c (2026-09-27) — after the balance sweep, before any balance-metric training data exists
+
+Pre-registered for the trained-agent balance criteria (verdict review of the page): the **warming** part of
+criterion 2 is **logged but not pass/fail** in training — an agent that holds its temperature steady is
+rarely cold, so the over-time ratio is near 1 even for the ideal agent (1.14 on the E2 baseline), and the
+per-decision version cannot be measured on trained agents. Criterion 2 in training = eating ratio ≥ 2 and
+hiding ratio ≥ 2 (true and felt injury both reported; true injury decides). All other thresholds of
+Revisions 2a–2b carry over unchanged.
