@@ -45,10 +45,13 @@ def _bin_of(x):
     return np.where(x >= 100.0, 5, b)
 
 
-def measure_hazard_bins(runs, n_blocks):
+def measure_hazard_bins(runs, n_blocks, episode_select=None):
     """E2 numbers from the Wave-2 level-05 recordings, per run and activity outside cover.
     Accumulates counts/sums block by block (no whole-store load); also reports the two halves of the
-    blocks separately as a stability check."""
+    blocks separately as a stability check.
+    episode_select (optional; context-exploration study Part 2): callable(steps_parquet_path) -> array of
+    episode seeds whose steps are kept (e.g. the episodes with a given predator count); None = every
+    episode, exactly as before."""
     import pyarrow.parquet as pq
     out = {}
     for run in runs:
@@ -57,12 +60,15 @@ def measure_hazard_bins(runs, n_blocks):
             raise SystemExit(f"no step blocks for {run}")
         acc = {h: {a: dict(rows=0, hits=0, dmg=0.0, cnt=np.zeros(6), sz=np.zeros(6)) for a in ACTIVITIES} for h in (0, 1)}
         for k, f in enumerate(fs):
-            tb = pq.read_table(f, columns=["t", "damage", "agent_in_bush", "rested", "ate_food"])
+            tb = pq.read_table(f, columns=["t", "damage", "agent_in_bush", "rested", "ate_food"]
+                               + (["episode_seed"] if episode_select is not None else []))
             t = tb.column("t").to_numpy(); d = tb.column("damage").to_numpy().astype(np.float64)
             bush = tb.column("agent_in_bush").to_numpy(zero_copy_only=False).astype(bool)
             rst = tb.column("rested").to_numpy(zero_copy_only=False).astype(bool)
             ate = tb.column("ate_food").to_numpy(zero_copy_only=False).astype(bool)
             m = (t >= 1) & ~bush
+            if episode_select is not None:
+                m = m & np.isin(tb.column("episode_seed").to_numpy(), np.asarray(episode_select(f)))
             sel = {"eat": m & ate, "rest": m & rst & ~ate, "move": m & ~rst & ~ate}
             h = int(k >= len(fs) / 2)
             for a, s in sel.items():

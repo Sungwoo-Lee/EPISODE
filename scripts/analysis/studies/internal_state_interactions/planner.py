@@ -61,6 +61,11 @@ class World:
     hazard_eat: float | None = None            # mean mode: eating-step hazard (None -> hazard_move, Revision 1)
     hazard_bins: dict | None = None            # bins mode: {"eat"|"move"|"rest": (p_hit, [bin probs], [bin sizes])}
     hazard_scale: float = 1.0                  # diagnostic: hit probability (bins) / mean (mean) times this
+    # ---- context-exploration study (Part 3); None reproduces everything above exactly ----
+    find_prob: dict | None = None              # {place: p}: "go" to that place is a one-step search that
+                                               #   arrives with prob p (last step in the place's cell) or
+                                               #   leaves the agent on open ground (a travel step); mean
+                                               #   search time 1/p steps (geometric)
 
 
 def grids(world):
@@ -162,7 +167,7 @@ def options(world, p):
 
 def solve(world: World, iters: int = 5000, tol: float = 1e-4):
     """Revision-1 (deterministic) solver when E1 and E2 are off; the stochastic solver otherwise."""
-    if world.e1 or world.e2 != "mean":
+    if world.e1 or world.e2 != "mean" or world.find_prob:
         return solve_stochastic(world, iters, tol)
     GN, GI, GT = G = grids(world)
     NN, II, TT = np.meshgrid(GN, GI, GT, indexing="ij")
@@ -291,7 +296,7 @@ def summarise(sols, margin=0.5, T_lo=-10.0, T_hi=5.0):
 # Revision 2 (balance study): stochastic world -- E1 food relocation, E2 hits drawn from measured bins
 # =====================================================================================================
 
-def macro_branches(world, N, I, T, kind, place):
+def macro_branches(world, N, I, T, kind, place, steps=None):
     """Outcome branches of one macro action when the hazard is stochastic (E2 bins).
 
     Exact for the FIRST hit inside the macro (any bin, at any step). After a branch's first hit the
@@ -299,11 +304,13 @@ def macro_branches(world, N, I, T, kind, place):
     damage is preserved; what is lost is the variance of a second hit within one macro (at 2.7 % per
     moving step, P(two hits in a 4-step trip) is about 0.4 %). Single-step actions are exact.
     Returns [(prob, N, I, T, discounted reward, dead)], the common continuation discount, #steps.
-    With a one-outcome (mean-field) distribution this is `macro`, operation for operation."""
+    With a one-outcome (mean-field) distribution this is `macro`, operation for operation.
+    `steps` (optional) replaces the macro's step list (used by the find_prob search option)."""
     P = world.body
     br = [(1.0, N, I, T, np.zeros_like(N), np.zeros(N.shape, bool), False)]
     disc = np.ones_like(N)
-    steps = macro_steps(world, kind, place)
+    if steps is None:
+        steps = macro_steps(world, kind, place)
     for what, cell, bush in steps:
         dist = hazard_dist(world, what, bush)
         mean = sum(p * x for p, x in dist) if len(dist) > 1 else dist[0][1]
@@ -344,10 +351,18 @@ def solve_stochastic(world: World, iters: int = 5000, tol: float = 1e-4):
     for p in places:
         start = len(Rs)
         for kind, q in options(world, p):
-            br, disc, _ = macro_branches(world, N0, I0, T0, kind, q)
-            dests = [(q, 1.0 - e), ("O", e)] if (kind == "eat" and e > 0) else [(q, 1.0)]
+            fp = (world.find_prob or {}).get(q) if kind == "go" else None
+            if fp is None:
+                br, disc, _ = macro_branches(world, N0, I0, T0, kind, q)
+                dests = [(q, 1.0 - e), ("O", e)] if (kind == "eat" and e > 0) else [(q, 1.0)]
+                br = [b + (dests,) for b in br]
+            else:   # search: one step, found with prob fp (step in q's cell), else a travel step to open ground
+                bs, disc, _ = macro_branches(world, N0, I0, T0, kind, q, steps=[("move", CELL[q], IN_BUSH[q])])
+                bf, _, _ = macro_branches(world, N0, I0, T0, kind, q, steps=[("move", TRAVEL_CELL, False)])
+                br = ([(b[0] * fp,) + b[1:] + ([(q, 1.0)],) for b in bs]
+                      + [(b[0] * (1.0 - fp),) + b[1:] + ([("O", 1.0)],) for b in bf])
             R = np.zeros(S); rr, cc, dd = [], [], []
-            for prob, N1, I1, T1, Rb, dead in br:
+            for prob, N1, I1, T1, Rb, dead, dests in br:
                 R = R + prob * Rb
                 if dead.all():
                     continue
@@ -424,20 +439,26 @@ def _ratio(num_a, den_a, num_b, den_b):
     return (num_a / den_a) / (num_b / den_b)
 
 
-def rollout_balance(sol, n_starts=2000, max_steps=500, T_lo=-10.0, T_hi=5.0, seed=0, early=20):
+def rollout_balance(sol, n_starts=2000, max_steps=500, T_lo=-10.0, T_hi=5.0, seed=0, early=20, dyn_world=None):
     """Follow the ideal policy step by step from training-style starts at open ground and count the
     Revision-2a balance measures. Hazard hits are SAMPLED from the world's bins (several hits per trip
     possible); in mean mode the mean-field injury is added deterministically, as in Revision 1.
     E1: after each bite the item moves with prob 1/bites_per_item and the agent is back at open ground.
     Per-step shares use the body state at the START of the step and the cell the step is spent in
-    (the destination cell on a trip's last step). Returns raw counts plus derived shares / ratios."""
-    world = sol["world"]; P = world.body; GN, GI, GT = grids(world)
+    (the destination cell on a trip's last step). Returns raw counts plus derived shares / ratios.
+    dyn_world (optional): the world whose body, hazard, food and search rules the rollout follows, while
+    the policy is sol's (value of knowing the context); None = sol["world"], as before. find_prob
+    places: a "go" is one search step, found with the place's probability, else back at open ground."""
+    world = dyn_world if dyn_world is not None else sol["world"]; P = world.body
+    GN, GI, GT = grids(sol["world"])
     rng = np.random.default_rng(seed)
     n = n_starts
     N = rng.uniform(0, 200, n); I = rng.uniform(0, 100, n); T = rng.uniform(T_lo, T_hi, n)
     places = sol["places"]; pidx = {p: k for k, p in enumerate(places)}
     cell_of = np.array([CELL[p] for p in places]); bush_of = np.array([IN_BUSH[p] for p in places])
     trip_of = np.array([world.trip[p] for p in places])
+    fp_of = np.array([(world.find_prob or {}).get(p, -1.0) for p in places], float)   # -1: fixed trip
+    search = bool(world.find_prob)
     place = np.full(n, pidx["O"]); dest = np.full(n, -1); left = np.zeros(n, int); local = np.zeros(n, int)
     alive = np.ones(n, bool); death_t = np.full(n, -1); cause = np.full(n, -1)
     e = 1.0 / world.bites_per_item if world.e1 else 0.0
@@ -468,12 +489,16 @@ def rollout_balance(sol, n_starts=2000, max_steps=500, T_lo=-10.0, T_hi=5.0, see
             for c in np.unique(choice):
                 k = sel[choice == c]; kind, q = c.split("_")
                 if kind == "go":
-                    dest[k] = pidx[q]; left[k] = trip_of[pidx[q]]; local[k] = -1
+                    dest[k] = pidx[q]; left[k] = 1 if fp_of[pidx[q]] >= 0 else trip_of[pidx[q]]; local[k] = -1
                 else:
                     local[k] = code[kind]
         # ---- this step's activity, cell and cover ----
         trav = left[a] > 0
         last = trav & (left[a] == 1)
+        if search:      # a search step is found with the destination's probability (else: a travel step)
+            fpa = fp_of[np.maximum(dest[a], 0)]
+            found = np.where(trav & (fpa >= 0), rng.random(a.size) < fpa, True)
+            last = last & found
         what = np.where(trav, 3, local[a])
         cell = np.where(trav, np.where(last, cell_of[np.maximum(dest[a], 0)], TRAVEL_CELL), cell_of[place[a]])
         bush = np.where(trav, last & bush_of[np.maximum(dest[a], 0)], bush_of[place[a]])
@@ -527,6 +552,9 @@ def rollout_balance(sol, n_starts=2000, max_steps=500, T_lo=-10.0, T_hi=5.0, see
         tr = a[trav]
         left[tr] -= 1
         arr = tr[left[tr] == 0]
+        if search:      # an unsuccessful search step ends on open ground
+            miss = arr[~found[np.searchsorted(a, arr)]]
+            dest[miss] = pidx["O"]
         C["food_arrivals"] += int((dest[arr] == pidx.get("F", -9)).sum())
         place[arr] = dest[arr]; dest[arr] = -1
     late = (death_t >= early)
