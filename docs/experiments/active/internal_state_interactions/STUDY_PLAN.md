@@ -388,3 +388,19 @@ metrics; hazard is place-independent although eating steps are hit twice as ofte
 plan, before the sweep runs.
 
 Reviewed by: plan-reviewer
+
+### Revision 2a (2026-09-27) — answers to the plan-reviewer (`26190c89`), before any Revision-2 result
+
+| Finding | Change |
+|---|---|
+| **C1** "largest drive component" is set by map geometry and the reward's weighting | **B-need is dropped as a criterion** (reported only, relative to today). Replaced by **B-drive — each need drives its own behaviour**: on the rollouts, (a) eating: share of steps eating when food energy < 60 vs ≥ 100; (b) warming: share of steps on a warm cell (ring or warm bush) when body temperature < −5 vs > 0; (c) hiding: share of steps in cover when injury ≥ 60 vs ≤ 20. Criterion 2 becomes: each ratio ≥ 2. Before it gates anything, it is computed on today's level 05 and reported; if today fails it for a reason of geometry rather than settings, that is stated and the criterion is reported, not gated. |
+| **C2** five quantiles contain no lethal hit; hit odds differ by activity | **E2 respecified.** Per activity outside cover — eating, moving, resting — a per-step probability of a hit and a distribution over **fixed size bins** (0–5, 5–15, 15–30, 30–60, 60–100, ≥ 100 lethal), measured from the Wave-2 level-05 recordings for **each agent separately**. The ordinary agent's numbers are primary (the balance study concerns ordinary agents); the modulated agent's are reported as a check. Assertion before use: for each activity, probability × mean hit size reproduces the recordings' mean damage per step within 5 %. The planner's hazard therefore depends on what the agent is doing (eating steps are hit about twice as often as moving steps). |
+| **M1/M7** the warm bush dominates the ring, so time shares depend on the map mix | **Criteria are applied per map; the primary verdict is on the map without a warm bush** (the common map, and the only one once bushes are kept off fire rings). The warm-bush map is reported. B-time uses overlapping shares: in cover, on a warm cell (ring or warm bush), eating. |
+| **M2** start-doomed deaths dominate B-death | B-death excludes deaths in the first 20 steps; counts reported. |
+| **M3** B-comb floor dropped | Criterion 6: combination gain above today's by at least max(5 points, twice the noise floor, the spread across tie margins 0 / 0.5 / 2). |
+| **M4** the food axis cannot show a peak; trip and bites are one axis | Food energy per bite (gross) 10, 8, 6 (today), 5, 4, 3, so today sits inside the range. "Food search cost" = trip ÷ bites per item, one axis: trip 4 / 6 / 8 × bites 12 / 6, plotted as trip/bites. The 2-D grid uses gross 10 / 8 / 6 / 5 / 4 / 3. |
+| **M5** reproduction check guards the shared path only | Added: E2 collapsed to its mean reproduces the E2-off result; E1 rollouts average ≈ 12 bites per food visit; both agents' hazard numbers compared. |
+| **M6** hit-probability ×0.5/×2 has no config knob | Relabelled as a **diagnostic** ("if hazards were half / double"), not a setting to adopt; reported separately. |
+| **M8** new modules need dependency-map rows | Added in the same commit as the code. |
+| **L1** travel in the time shares | "Elsewhere" (open ground, travel) counts as an activity under the 70 % cap. |
+| Open: true vs felt injury for trained-agent metrics | The metrics section will specify both, and cite the registry rows on the felt-pain leak and contemporaneous binning. |
