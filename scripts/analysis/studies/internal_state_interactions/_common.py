@@ -15,7 +15,8 @@ FIG = os.path.join(ROOT, "docs/experiments/active/internal_state_interactions/fi
 
 KIND = {"simulation": "simulation — body rules only, no trained agent",
         "planner": "ideal planner — the best choices under the body rules, not a trained agent",
-        "validation": "check — simulator against the real environment"}
+        "validation": "check — simulator against the real environment",
+        "recordings": "recordings — trained agents' own episodes"}
 
 # one colour per choice category (planner.CATEGORIES), shared by every figure
 CHOICE_COLOURS = {"rest in cover": house.BLUE, "warm up": house.ORANGE, "eat": house.GREEN,
