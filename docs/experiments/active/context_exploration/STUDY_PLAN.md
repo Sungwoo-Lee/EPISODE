@@ -1024,8 +1024,12 @@ entity / obstacle slot array (counts and boxes scaled). Body, thermal, reward an
 identical. `tests/env/test_channel_names_match_configs.py` and `test_backward_compat_configs.py` on
 the new folder: 6 passed, 6 skipped (the usual `extends:` skip).
 
-**Critical-settings registry:** `sensory.sensor_radius` differs from canonical 20 in three of the new
-files (5, 3, 8); change-log entry added to `CONFIG_CRITICAL_SETTINGS.md` in the same commit.
+**Critical-settings registry:** `sensory.sensor_radius` differs from canonical 20 in **four** of the
+six new files (5, 5, 3, 8: `g10r5f1to2b36`, `g20r5f4to16b12`, `g10r3f1to2b36`, `g15r8f1to2b36`); the
+other two (`g20r20f1to4b12`, `g20r20f1to2b36`) keep 20. Change-log entry in `CONFIG_CRITICAL_SETTINGS.md`.
+*(Corrected in Part 4 Revision 1; the original sentence said "three of the new files (5, 3, 8)". The
+load-time diff sentence above is likewise corrected there: `sensor_radius` also differs in the 15 × 15
+and 20 × 20 short-smell worlds, not only the 10 × 10 ones.)*
 
 ### 4.9 Launch Manifest
 
@@ -1163,3 +1167,143 @@ to fix now: forwarding a single-seed, simulation-disagreeing pass into a ≥ 3-s
 (weeks), or a predictable "nothing passes criterion 3" that returns the decision with no rule attached.
 
 Reviewed by: plan-reviewer (2026-09-27, on `ff37eff5`)
+
+## Part 4 Revision 1 (2026-09-27) — answers to the plan review of the Part 4 design and to env-config-reviewer, before any launch
+
+**In plain words.** The reviewers found no error in the eight runs themselves, but several places where
+the way the results will be *read* was not fixed in advance. This note fixes them now, before any run
+exists, so no rule can be bent after the numbers are seen. The main changes: (1) today's world is
+itself expected to have its late deaths dominated by one cause (mostly injury), so the deaths test used
+to decide which worlds move on is now judged *relative to today's world* rather than against a fixed
+60 % line; (2) a test that today's world fails in training is not held against the simulation when
+judging whether the simulation can be trusted; (3) the fixed budget of 2 million episodes gives worlds
+where the agent dies sooner fewer learning updates, which tilts the survival comparison toward agreeing
+with the simulation — that bias is now stated and measured per world; (4) the budget stays 2 million
+episodes for all eight runs, with an exact command for extending any world (and today's world with it)
+to 5 million if it is still improving; (5) a world whose survival verdict contradicts the simulation
+needs a second seed before it can lead the next study. Everything in 4.1–4.9 stands unless changed here.
+
+### R1.1 Criterion 3 for forwarding is reference-relative (M1)
+
+- **Criterion 3 as written in 4.4 (absolute, 60 % line) stays** and is reported in the agreement table
+  and every world row.
+- **Criterion 3-fwd** replaces it in 4.6 (what goes forward) only. Let `D_w` = the world's largest
+  late-death cause share (the max of `Bal_LateDeath_{Starvation,Overeating,Injury,Thermal}` from the
+  pooled window, R1.6) and `D_ref` = the same quantity for the reference, mean of C1a and C1b. A world
+  **passes 3-fwd** if its late-death share (`Bal_LateDeathShare`) is below 5 %, **or**
+  `D_w ≤ max(60 %, D_ref + 5 points)`. Margin 5 points: five times the ≈ 1-point seed spread of cause
+  shares in the level-05 pilots, and equal to the borderline floor in R1.5.
+- The dominant cause's *identity* is reported beside `D_w` (a world whose late deaths are 85 %
+  starvation against a reference at 85 % injury passes 3-fwd, but the switch is stated as a finding).
+- The reference passes 3-fwd by construction. 4.6's "balanced except deaths, as today — reported, not
+  forwarded" label is withdrawn; a world that fails absolute 3 but passes 3-fwd is forwarded as
+  "trained-balanced relative to today", and that wording is used downstream.
+
+### R1.2 Criteria the reference fails are excluded from the agreement count (M2)
+
+- A criterion among 1, 2, 5 that the reference fails in training (on the pooled C1a + C1b values, or
+  on either seed alone — any reference failure excludes it) is **withheld for every world** in 4.5:
+  no agreement or disagreement is scored on it; the trained pass/fail is still printed.
+- Criterion 4 cannot be excluded (the reference is 1.0 by construction).
+- Agreement per world is then "same pass/fail on all remaining criteria". The trust rule of 4.5
+  (≥ 5 of 6 non-reference worlds agree **and** both criterion-4 directions hold) is kept, stated over the
+  remaining criteria, and the summary names which criteria were withheld. If criteria 1, 2 and 5 are all
+  withheld, the trust verdict rests on criterion 4 alone and is labelled "survival-only".
+- A withheld criterion is also dropped from "trained-balanced" in 4.6 for forwarding, with the same
+  label; per 4.6's last bullet this is reported as a finding about the criteria and goes to the user.
+
+### R1.3 The per-episode budget and the update-count confound (M3)
+
+- A 2 M-episode budget gives a world whose agent dies sooner fewer environment steps and so fewer
+  gradient updates. At the simulation's survival ratios the edge worlds get roughly 35 % fewer steps
+  than the reference. **Direction:** this lowers a slow world's trained survival, so it leans
+  criterion 4 toward *confirming* the simulation's edge failure and against finding the simulation
+  "too pessimistic". An edge world that fails criterion 4 is therefore weak evidence for the simulation;
+  one that passes is strong evidence against it.
+- **Reported per world, next to the agreement table:** step ratio = environment steps at 2.0 M episodes
+  ÷ the reference's (mean C1a / C1b), from WandB `timesteps` (R1.6 join rule).
+- **The "per 1,000 environment steps" survival view in 4.4 is dropped.** It is 1,000 ÷ mean survival
+  steps — the same number rearranged, not an independent view.
+
+### R1.4 Budget: 2 M for all eight, and the extension path (M4 — decided)
+
+- **Decision:** 2,000,000 episodes for all eight runs (parent decision following the reviewer; the user
+  was offered 5 M for the large grids and has not objected). No arm runs a different budget.
+- **What the still-learning flag means:** it compares two 200,000-episode windows (1.6–1.8 M vs
+  1.8–2.0 M); "not still learning" means "not improving steeply", **not** "converged" — level 05 itself
+  gains ≈ 10 % between 2 M and 10 M while its last-fifth rise is ≈ 2.5 %.
+- **Extension, triggered by the still-learning flag on any world, with the user's approval:** that world
+  **and both reference runs (C1a, C1b)** are resumed to 5,000,000 episodes (`--episodes` is the total
+  target; the loop runs while completed episodes < `--episodes`). Per run, same tag, same node class:
+
+```
+/home/vncuser/miniconda3/envs/grid_world_pain/bin/python train.py \
+  --config <env config from 4.9.1> \
+  --agent_config configs/models/recurrent_ppo/nmn_input_site_grid_gaenorm/nmngaenorm_t1none.yaml \
+  --load-checkpoint results/JAX_RecurrentPPO/<run dir>/models/<highest episode-numbered checkpoint dir, ≥ 2000000> \
+  --episodes 5000000 --device cuda:<gpu> --log-interval 10 \
+  --wandb-resume-id <the run's WandB id> \
+  --tag "<same tag>" --wandb-name "<same tag>" \
+  --wandb-group "context_exploration" --wandb-job-type "pilot"
+```
+
+  (C1b adds `--seed 43`.) Checkpoints are saved every 200,000 episodes as episode-numbered
+  directories under `models/`. **Seam check, before reading any extended value:** survival steps in the
+  first two logged 200 k-episode blocks after the resume are within the pre-resume block's value ± 5 %;
+  a break goes to `bug-curator` / `senior-developer` (Known Bugs: rPPO resume H1 fixed; B5 "restored
+  memory + fresh worlds" affects the first post-resume window only). Extended worlds are then judged on
+  4.9–5.0 M against the extended reference on 4.9–5.0 M; the 2 M verdicts stay in the table beside them.
+  If more than half the worlds are flagged, all eight are extended (≈ 65–90 GPU-h).
+
+### R1.5 Second seed for simulation-disagreeing survival verdicts; borderline floor (M5)
+
+- **Any world whose trained criterion-4 verdict disagrees with the simulation's** (an edge world ≥ 80 %
+  of the reference, or a balanced world < 80 %) gets a seed-43 run before it can be forwarded or lead the
+  modulator comparison, borderline or not. The 4.6 rule "an edge world that turns out trained-balanced
+  goes first" applies only if the seed-43 run also passes criterion 4 and 3-fwd.
+- **Borderline band** = the larger of the reference's seed-42 / 43 gap and a **floor of 5 points** on
+  time shares and late-death shares, **0.5** on ratios (eat / hide), and **5 % relative** on survival.
+- Extra seed runs take new manifest rows `C<n>b`, tag `rppo_ctxexp_<slug>_t1none_s43`, same group and
+  job type; each needs the user's go (≈ 2–6 GPU-h each).
+
+### R1.6 Lows (L1–L4)
+
+- **L1 — false sentence corrected.** 4.2's "Sim criterion 3 fails in every world, the reference
+  included" should read "**in all seven chosen worlds**". In the full Revision-2 table the simulation
+  does pass criterion 3 in several density-matched worlds that miss only survival (pattern `11101`, e.g.
+  `g15r8f1to4b12_od` 14.9, `g15r5f2to4b12_od` 17.1, `g20r8f2to6b12_od` 17.4 search steps), available
+  later if a criterion-3-passing comparator is wanted. 4.1's "a third such world, 20.5 steps" aside is
+  incomplete (`g20r3f4to16b12_od` at 19.7 and the `11101` worlds also miss only criterion 4); the pick
+  is unchanged.
+- **L2 — window weighting.** Logged rows overlap (smoothing window 5,000 episodes, logged every 4,000).
+  Each row in 1.8–2.0 M is weighted by its `Episode/_window_n` (as in the level-05 pilots), replacing
+  4.4's "difference of `Episode/Number`"; time shares are weighted by `_window_n × Episode/Steps`; summed
+  `Bal_N_*` counters are pooling weights only and are **never quoted as episode counts** (≈ 1.25 ×
+  double-count). A ratio missing from one row (empty bin) is not a failure; a ratio is "not computable"
+  and fails only if its **pooled** denominator over the window is zero.
+- **L3 — pre-flight additions for `training-runner`** (added to 4.9.2's discriminators):
+  (a) C1b's saved config shows **top-level** `seed: 43` (the nested `training.seed` always reads 42 —
+  Known Bugs, stale saved seed/budget copy); likewise the saved config's `training.episodes: 100` is
+  that stale copy — the budget (2,000,000) is verified from the WandB run config or the log banner;
+  (b) the **first logged Episode row carries ≥ 49 `Episode/Bal_*` keys** (the system's own output,
+  not 4.8's merge replay);
+  (c) `timesteps` (iteration rows) is joined to `Episode/*` rows (keyed by `Episode/Number`) by nearest
+  WandB `_step`.
+- **L4 — replication gate on the trainer.** C1a and C1b are seed-twins of the level-05 pilots P0a / P0b
+  (228.3 / 225.8 survival steps at 2 M, same world and agent config). Pre-registered: C1a must be within
+  228.3 ± 4.5 and C1b within 225.8 ± 4.5 (3 × the ≈ 1.5-step pilot spread). A miss stops the read-out
+  for every world and goes to `senior-developer` as possible code drift.
+
+### R1.7 env-config-reviewer notes
+
+- **Smell-range count corrected** in 4.8 and in `CONFIG_CRITICAL_SETTINGS.md`'s 2026-09-27 entry:
+  **four** files differ from 20 (`g10r5f1to2b36` 5, `g20r5f4to16b12` 5, `g10r3f1to2b36` 3,
+  `g15r8f1to2b36` 8); two keep 20 (`g20r20f1to4b12`, `g20r20f1to2b36`). 4.8's load-time diff sentence
+  ("for the 10 × 10 worlds, `sensor_radius`") should read: `sensor_radius` differs in the four
+  short-smell worlds of any grid size.
+- **Launches staggered by more than 1 second** (Known Bugs: a fast batch launch collapses several runs'
+  log files into one, because `run_command.py` names logs at one-second resolution). The runner waits
+  ≥ 2 s between rows and confirms one distinct log path per row in the manifest.
+- **Saved config `episodes: 100`** is the known stale nested copy (L3a); never read the budget from it.
+
+Revised by: experiment-designer (2026-09-27, on `5e6f82e3`)
