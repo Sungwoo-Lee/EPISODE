@@ -4354,3 +4354,44 @@ cd /media/nas01/projects/Interoceptive-AI/grid_world_pain
   --episodes 2000000 --device cuda:1 --log-interval 10 \
   --tag "rppo_ctxexp_g10r3f1to2b36_t1none_s42" --wandb-name "rppo_ctxexp_g10r3f1to2b36_t1none_s42" \
   --wandb-group "context_exploration" --wandb-job-type "pilot"
+
+# ---------------------------------------------------------------------------
+# context_exploration Part 4 — 2M -> 5M extension (R1.4), 2026-09-27, user-approved: C4 102:0, C3 102:1, C1a 113:0, C1b 113:1
+# (C5, C7 NOT extended.) CIFS-bypass /tmp launch; this block is the audit record (commented).
+# ---------------------------------------------------------------------------
+# C4
+# /home/vncuser/miniconda3/envs/grid_world_pain/bin/python train.py \
+#   --config configs/environment/experiment/context_exploration/g20r5f4to16b12.yaml \
+#   --agent_config configs/models/recurrent_ppo/nmn_input_site_grid_gaenorm/nmngaenorm_t1none.yaml \
+#   --load-checkpoint results/JAX_RecurrentPPO/20260927-184755_rppo_ctxexp_g20r5f4to16b12_t1none_s42/models/2000021 \
+#   --episodes 5000000 --device cuda:0 --log-interval 10 \
+#   --wandb-resume-id 7ctxxltq \
+#   --tag "rppo_ctxexp_g20r5f4to16b12_t1none_s42" --wandb-name "rppo_ctxexp_g20r5f4to16b12_t1none_s42" \
+#   --wandb-group "context_exploration" --wandb-job-type "pilot"
+# C3
+# /home/vncuser/miniconda3/envs/grid_world_pain/bin/python train.py \
+#   --config configs/environment/experiment/context_exploration/g20r20f1to4b12.yaml \
+#   --agent_config configs/models/recurrent_ppo/nmn_input_site_grid_gaenorm/nmngaenorm_t1none.yaml \
+#   --load-checkpoint results/JAX_RecurrentPPO/20260927-184753_rppo_ctxexp_g20r20f1to4b12_t1none_s42/models/2000166 \
+#   --episodes 5000000 --device cuda:1 --log-interval 10 \
+#   --wandb-resume-id whpmbq6l \
+#   --tag "rppo_ctxexp_g20r20f1to4b12_t1none_s42" --wandb-name "rppo_ctxexp_g20r20f1to4b12_t1none_s42" \
+#   --wandb-group "context_exploration" --wandb-job-type "pilot"
+# C1a
+# /home/vncuser/miniconda3/envs/grid_world_pain/bin/python train.py \
+#   --config configs/environment/experiment/basic/05-campfire_thermal_10x10.yaml \
+#   --agent_config configs/models/recurrent_ppo/nmn_input_site_grid_gaenorm/nmngaenorm_t1none.yaml \
+#   --load-checkpoint results/JAX_RecurrentPPO/20260927-185708_rppo_ctxexp_lvl05ref_t1none_s42/models/2000052 \
+#   --episodes 5000000 --device cuda:0 --log-interval 10 \
+#   --wandb-resume-id v4tbwrfn \
+#   --tag "rppo_ctxexp_lvl05ref_t1none_s42" --wandb-name "rppo_ctxexp_lvl05ref_t1none_s42" \
+#   --wandb-group "context_exploration" --wandb-job-type "pilot"
+# C1b
+# /home/vncuser/miniconda3/envs/grid_world_pain/bin/python train.py \
+#   --config configs/environment/experiment/basic/05-campfire_thermal_10x10.yaml \
+#   --agent_config configs/models/recurrent_ppo/nmn_input_site_grid_gaenorm/nmngaenorm_t1none.yaml \
+#   --load-checkpoint results/JAX_RecurrentPPO/20260927-191211_rppo_ctxexp_lvl05ref_t1none_s43/models/2000065 \
+#   --episodes 5000000 --seed 43 --device cuda:1 --log-interval 10 \
+#   --wandb-resume-id qxz17vr0 \
+#   --tag "rppo_ctxexp_lvl05ref_t1none_s43" --wandb-name "rppo_ctxexp_lvl05ref_t1none_s43" \
+#   --wandb-group "context_exploration" --wandb-job-type "pilot"
