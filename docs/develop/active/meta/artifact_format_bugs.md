@@ -3,7 +3,7 @@ title: Artifact format bugs — the register, and why reading the CSS never find
 topic: meta
 status: active
 created: 2026-08-31
-last_updated: 2026-09-14
+last_updated: 2026-09-16
 ---
 
 # Artifact format bugs
@@ -1593,11 +1593,605 @@ checker sees nothing overflow. Only reading rendered lines, or probing which chi
 shows it.
 
 **Rule:** a citation chip is never preceded by a breakable space and never followed by the sentence's
-punctuation. The builder moves any following `. , ; :` in front of the chip(s) and deletes the
-whitespace before each chip; the chip's own `margin-left` supplies the visual gap
+punctuation. The builder moves any following `. , ; :` in front of the chip(s), deletes the
+whitespace before each chip, **and puts U+2060 WORD JOINER immediately before each chip**; the chip's
+own `margin-left` supplies the visual gap. Deleting the space alone is not enough: the second gate
+found Chrome still breaks between sentence punctuation (`.` `:` `”`) and the chip's `[`, leaving
+1–3 chips per width at a line start and two alone on a line; the word joiner closed all of them
 (`scripts/analysis/tutorials/loop_graph_engineering/build_page.py`). A page built from the
 field-review citation pattern (guide §12b) should do the same.
 
 **Verifying a fix:** at 834, 500 and 390 px, for every `a.cite`, check that its first client rect is
 not the first inline box on its line (compare its `top` with the previous text node's last rect), and
 that the character after the chip is never `.`, `,`, `;` or `:`.
+
+### Tool note — the overlap test compares bounding boxes, so two wrapped inline chips always "overlap"
+
+**Saw (2026-09-14, Loop and Graph Engineering tutorial, second format gate):** `check_artifact_layout.py`
+reported "text overlaps other text" between two consecutive long path chips in the Provenance paragraph
+at every width. The crops at 390 and 500 px showed clean, non-overlapping lines.
+
+**Cause:** the overlap test uses `getBoundingClientRect()`. A *wrapped* inline element's bounding box
+spans the full column across every line it touches, so any two consecutive inline elements that both
+wrap report as overlapping even though no glyphs collide. A fragment-level comparison using
+`getClientRects()` found zero overlapping fragments.
+
+**Rule:** treat an overlap report between two wrapped inline elements as unconfirmed until the line
+fragments (`getClientRects()`) or a crop show a real collision. Expect it on any page with two adjacent
+long `code` chips until the checker compares fragments instead of bounding boxes.
+
+### F51 — a heading placed mid-container under a uniform flex `gap` is equidistant from the paragraph above and below
+
+**Saw (2026-09-14, Loop and Graph Engineering tutorial, §06 gate):** five idea headings (B–F) sat 18 px
+under the previous idea's closing paragraph and 18 px over their own opening one, so each read as a
+caption to the wrong paragraph.
+
+**Cause:** `.col{display:flex;flex-direction:column;gap:18px}` plus `h3{margin:0}`. That is correct while
+every `h3` is the first child of its section (the section boundary supplies the `.wrap` 52 px gap), and
+wrong the first time a heading is emitted mid-section.
+
+**Why both review methods missed it:** nothing overlaps, clips or overflows, and both rules are correct
+for the structure they were written against. Only measuring the space above against the space below
+shows it.
+
+**Rule:** a heading's space above must exceed its space below. Either never emit a heading mid-container,
+or give non-first headings a `margin-top` larger than the gap (the tutorial page uses
+`.col > h3:not(:first-child){margin-top:24px}`).
+
+**Verifying a fix:** for every `h2`/`h3` that is not the first child of its container, assert
+`gapAbove > gapBelow` from `getBoundingClientRect()` at 1440 and 390 px.
+
+### Tool note — the interaction checker's tab walk stops at the first repeated identical stop
+
+**Saw (2026-09-14, same gate):** `check_artifact_interactions.py` stopped its tab walk after 3 stops
+(`[1]`, `[1]`, Figure 1). Its dedupe key is `(tag, id, text, w, h)`, so identical citation chips share a
+key and the walk treats the repeat as a cycle. Figures 2–13's focus rings went unchecked by the walk.
+**Rule:** until the key includes document-order index or a DOM path, do not read a short tab walk on a
+page with repeated identical chips as coverage.
+
+### F18 amendment — the label-fit guard checks axis labels only, so a rotated `ax.text` walks out of the panel
+
+The original F18 is an **axis label** wider than its panel. `_plot.assert_labels_fit(fig, ax)` measures
+`ax.xaxis.label` and `ax.title` against the panel width and refuses to save on overflow. It looks like
+a general guard and is not: it never touches `ax.texts`.
+
+**Saw (2026-09-16, recovery_in_bush_tuning format gate):** in the study's answer figure a rotated
+annotation — "half the threshold, or twice the budget", `rotation=90`, anchored low on a log y-axis —
+started inside the axes and ran out through the **bottom**, printing across the x-axis title so the
+reader saw `(injur`**y**` points`. Two further escapes in the same figure set were found only once the
+missing check was written: a three-line advisory note ran 220 px past the right edge of its own panel,
+and a marker label ran 110 px past it.
+
+**Cause:** an annotation is anchored in **data** coordinates with a **pixel** offset, so how far it
+reaches depends on the axis scale, the rotation and the string length at draw time. None of those is
+knowable when the call is written, and matplotlib clips nothing by default.
+
+**Why nothing caught it:** three separate guards each looked past it. `_plot.assert_labels_fit` reads
+only the axis label and the title. `house.check_floor` measures type size, not position.
+`house.save`'s margin-ink check is defeated by `bbox_inches="tight"`, which **grows the canvas** to
+include the escaped text — so the figure is not clipped, it is merely wrong, and the guard sees clean
+margins. And the DOM layout checker sees a PNG.
+
+**Rule:** measure every **hand-placed** text artist's rendered bbox against its own axes bbox and
+refuse to save on escape. Ticks, axis labels and titles are excluded — they are supposed to sit
+outside. `house.assert_text_inside_axes(axes)` does this and is now called by all five scripts of
+`scripts/analysis/studies/recovery_in_bush_tuning/`; it caught two of the three cases above by itself.
+
+**Verifying a fix:** re-run the figure script. The guard raises with the offending string, the pixel
+overshoot and the rotation, which is enough to re-anchor without re-rendering by eye. Where an
+annotation has nowhere collision-free to sit, move its text to the **legend** — a line's meaning
+belongs there anyway — rather than shrinking it until it fits.
+
+### F52 — an annotation ink chosen against the page ground, drawn over a colour-mapped ground
+
+**Saw (2026-09-16, recovery_in_bush_tuning format gate):** three labels on a heat map — "shipped
+default", and "a01" in both panels — were set in `--ink-2` and drawn over the dark end of a blue
+sequential ramp. Measured contrast about **1.5 : 1**. At 1440 px they were readable by squinting; at
+834 px they were effectively absent. The token was the correct one for the page, and every static
+check of it passes.
+
+**Cause:** a text colour is chosen once, against the **page ground**, where `--ink-2` is about 8 : 1.
+A heat map has no single ground: the colour under a label is whatever the data puts there, and a
+label anchored in data coordinates lands wherever its setting happens to be. A marker moves with the
+data; the ink does not move with the marker.
+
+**A second, related face of the same defect:** the house sequential ramp runs through `--series-1`
+exactly. On a page that spends blue on a data category, a blue marker is then drawn on blue ground and
+survives only on its white edge — the F11 second amendment, reached from the colour-ramp side. The fix
+is a **neutral ramp for that figure**, not a change to the shared one, which is blue by design and has
+other consumers.
+
+**Why nothing caught it:** contrast checkers read tokens against a declared background, and the
+declared background is right. The ground that matters is inside the PNG, and it varies per pixel.
+
+**Rule:** any text drawn over a heat map, an image or a data line is **outlined in the page ground**
+rather than recoloured — `house.halo()` returns the `path_effects` list
+(`withStroke(foreground=PAPER)`). One ink then survives every ground, including grounds the data will
+move under it next time the figure is regenerated. The same treatment applies to contour labels and
+to contour lines themselves.
+
+**Verifying a fix:** sample the rendered ground beneath each text bbox and compute contrast against
+the text colour — do **not** check the token against the page background, which is the measurement
+that passes while the label is invisible. A halo makes the check moot, which is the point of
+preferring it to a per-region colour choice.
+
+### F33 amendment — a gridline is ink, and a per-glyph halo does not mask one
+
+The original F33 is "an annotation goes where there is no ink. Enlarge the axis margin until empty
+space exists." In practice "ink" gets read as *data* — the series, the markers, the bars — and a
+gridline is mentally filed as background.
+
+**Saw (2026-09-16, recovery_in_bush_tuning re-gate):** in the validation figure's residual panel, the
+horizontal rules at 10⁰, 10⁻² and 10⁻³ ran straight through two hand-placed notes, at every viewport
+width. The note had already been given a `house.halo()` outline, and the strike-through survived it.
+
+**Cause, and the part worth keeping:** `path_effects.withStroke` outlines **each glyph**. It breaks a
+rule where a letter is and leaves it running in the gaps **between** letters — so a line still reads as
+continuous across a word at normal viewing size. A halo solves a contrast problem (F52). It does not
+solve an occlusion problem.
+
+**Rule:** a multi-line annotation over a gridded panel brings its own ground —
+`bbox=dict(boxstyle="square,pad=0.5", facecolor=PAPER, edgecolor="none")` — rather than a halo. Reserve
+the halo for short labels over a colour-mapped or image ground, where there is no line to interrupt.
+Either way, treat gridlines as ink when deciding where an annotation may sit.
+
+**Verifying a fix:** crop the annotation at full resolution and look along each text line for a rule
+resuming on both sides of the block. If the rule stops at the block's edge and restarts after it, the
+patch is masking; if it reappears between words, it is a halo and it has not worked.
+
+### F53 — a legend handle shorter than one dash period shows a line style the plot does not have
+
+**Saw (2026-09-16, recovery_in_bush_tuning re-gate):** three of five figures distinguish series by
+**line style** (solid = resting in the open, dashed = resting on a bush), and the legend handle for a
+dashed series rendered as a dash-and-a-bit — close enough to a short solid rule that the legend did not
+teach the distinction the figures rely on.
+
+**Cause:** `house.py` sets `legend.handlelength: 1.1` (em). A dash pattern needs at least one full
+period, and preferably two, inside the handle before the handle *depicts* the style rather than
+sampling it. The value is fine for a legend that separates series by colour alone, which is what it was
+chosen against.
+
+**Why nothing caught it:** nothing is clipped, overlapped or off-palette, and the figure is a PNG. It is
+a legibility defect in a legend, which no geometric check looks at.
+
+**Scope, and why it is recorded rather than fixed:** `handlelength` is in the **shared** style module,
+so changing it regenerates every figure in the project that uses the house style, not only the three
+here. That is its own change with its own before/after check, not a line to slip into a format-gate
+pass.
+
+**Rule:** where a legend distinguishes series by dash pattern, the handle must be long enough to show at
+least one full dash period — roughly `handlelength >= 2.4` for the house dash patterns. A figure that
+cannot have a long handle should label the lines directly instead.
+
+### F54 — a page-specific class reusing a house class name inherits every declaration it does not override
+
+**Saw:** an entire page rendering as one flat `--pick` rectangle at every width, with a single stray
+expression in the top-left corner. Nothing else. Clicks landed on the rectangle.
+
+**Cause:** the page was ported onto the House Style Sheet, whose head defines the full-size figure
+viewer as `.lb { position:fixed; inset:0; z-index:99; background:rgba(12,12,14,.93); display:flex }`.
+The page's own block then declared `.lb` for three small equation label chips, setting font, size,
+background, colour and padding. Equal specificity, so the later rule won — **but only for the five
+properties it named.** `position:fixed`, `inset:0`, `z-index:99` and `display:flex` survived from the
+house rule, so each chip became a full-viewport overlay and the last one in the DOM painted over the
+document.
+
+**Why every check passed it:** an orphan-class audit compares classes *used* against classes
+*defined* and sees one name with one definition site — it cannot see a name defined twice. The
+geometry checker compares text bounding boxes, not paint order, so no box overlapped. The keyboard
+walk still reached every link, because they were all still there, underneath. And both tools happily
+reported "clean" on screenshots that were 100% a single colour.
+
+**Rule, and it is a build step rather than a review step:** before appending page-specific CSS to a
+house head, **intersect the set of class selectors defined in the two blocks and require it to be
+empty**, or inspect every name in the intersection and satisfy yourself it is a deliberate
+descendant or token-scope override rather than a second component wearing the same name. And delete
+any house component the page does not use — this collision lived entirely inside a viewer block that
+the page had already dropped the script for.
+
+**Two instances, and the second is why the guard matters more than the fix.** `.lb` was visible and
+fatal. Applying the intersection guard immediately surfaced `.sw` — a house colour-swatch container
+(border plus `background:var(--ground)`) reused by the page for a 13px legend swatch. That one was
+invisible, because an inline `style` on every instance happened to override the inherited background.
+A latent collision waiting for the inline style to be refactored away.
+
+**Verifying:** compute `position` on every element whose class appears in both blocks; assert no
+element with `position:fixed|absolute` covers more than half the viewport; and sample
+`document.elementFromPoint()` at the centre of ~50 text nodes — if the hit element is neither the
+node nor an ancestor of it, something is painted over the page.
+
+**Tool note:** neither checker detects an element painting over the page, and neither notices a
+capture that is one solid colour. An ink-fraction sanity check on the screenshot would have caught
+this in one line, and belongs in `check_artifact_layout.py` alongside the `elementFromPoint` sample.
+
+### Tool note — a guard "called from all N scripts" is a guard only where the call site exists
+
+**Saw (2026-09-16, recovery_in_bush_tuning re-gate):** a new figure guard
+(`house.assert_text_inside_axes`) was wired into five figure scripts by hand and reported as such. It
+was in four. The fifth kept only a **comment naming the guard** next to the annotation it was meant to
+protect — a later edit of that file replaced a slice between two string indices without re-reading what
+was inside it, and took the call (and the figure's halo loop) with it. The figure then shipped
+unguarded, and the report said it was guarded, because the comment read like evidence.
+
+**Rule, two halves.** For the *reader* of a claim: **grep the call sites, not the claim** — a comment
+mentioning a function is not a call to it, and `grep -rn "house.save\|assert_text_inside_axes"` costs
+nothing. For the *author* of a guard: **a check that every script must remember to call is a check that
+some script will forget.** Put it on the one path every figure already takes — here, inside
+`house.save()`, which no figure can skip — and keep the standalone function only for scripts that want
+to fail earlier. Provide a documented opt-out (`check_text=False`) for the legitimate exception rather
+than letting scripts drift out silently; the loop-and-graph tutorial's diagrams use it, because their
+axes are a bare borderless canvas with no axis title for a label to print through.
+
+**Related:** the same shape as F15 (a number typed into markup where no test reaches it) and as the
+entry above about editing one of N repeated structures with a `.*?` regex — an edit that spans more
+text than its author was looking at.
+
+### F55 — a legend's swatches copied as literals from another module's palette, orphaned when that palette changed
+
+**Saw (2026-09-16, renderer_layout_redesign format gate):** after three icons were redrawn — food from a green
+apple to a rose-red one, the hiding predator from a green bush-with-eyes to a charcoal thorn cluster, the
+neutral animal from teal to grey — Figures 3, 4 and 8 and all 35 scrubber frames showed the new icons, and
+Figure 6's colour key, 800 px below Figure 8, still read **Food = green, Hiding predator = dark green,
+Neutral = teal**. Its three swatches were byte-identical to the *old* icon constants (`#1E9E5A`, `#33503A`,
+`#0E7490`). Green now meant food in one figure and leaf/bush/tree in the next; teal meant a neutral animal in
+Figure 6 and the smell ramp everywhere else.
+
+**Cause:** the figure script chose its categorical hues to match the icons — the comment says so, "object icon
+colours where free" — but wrote them down as literal hex strings instead of reading them from
+`dashboard_style.py`. When the icon module changed, the copy did not. The page's footer then declared Figures
+5–7 un-regenerable (the world they were drawn from was archived), which made the stale key look permanent.
+That claim was wrong: the script reads a saved export (`data/extended.json`), not the world, and re-running it
+in a scratch tree reproduced all three PNGs byte-for-byte.
+
+**Why neither review method catches it:** the figure is correct against its own script, the icons are correct
+against theirs, and a diff of the icon commit touches neither the figure script nor the legend. Nothing
+overflows, overlaps or clips. F11's pixel census against `:root` tokens does not fire, because the stale hues
+are not page tokens — they are the *previous* values of a module the census never reads. Only holding one
+figure's swatches against another figure's glyphs shows it.
+
+**Rule:** a legend that means "the colour of X" imports X's colour; it never restates it. And a note that says
+"this figure cannot be regenerated" is a claim to be tested by running the script, not a reason to ship a
+figure that contradicts its neighbour — say what *step* cannot be re-run (here, the export), not that the figure
+is frozen.
+
+**Verifying a fix:** for every figure whose hues are keyed to a palette elsewhere, take the swatch pixels from
+the rendered PNG and assert each is within a small ΔE of the *current* value in the module that owns it. After
+any icon or palette change, re-run every figure script on the page from its saved inputs and `cmp` the outputs:
+a figure that changes was keyed to the palette; a figure that must change but cannot be re-run is the defect.
+
+### F33 amendment — a label anchored at a marker on a line, where the line runs on past the marker
+
+**Saw (2026-09-16, recovery_in_bush_tuning Figure 1 gate):** the "passes A" verdict label in panel (a),
+anchored at the marker where the recommended line meets the rest-budget edge (x = 50), with the line
+itself drawn on to the axis edge at x = 62. The stroke ran straight through the glyphs at every width —
+legible-but-struck-through at 1440 px, a green smear at 390 px. A struck-through "passes" reads as its
+opposite.
+
+**Cause:** the annotation was placed at the *event* (the marker) rather than at the *end of the ink*.
+F33 already says an annotation goes where there is no ink; the trap is that "the marker" and "the end of
+the line" look like the same point when the call is written, and are not when the line's x-range exceeds
+the marker's.
+
+**Why nothing caught it:** `house.assert_text_inside_axes` (F18 amendment) reads like a general text
+guard and checks only that text stays *inside* the axes — text over data is inside the axes. The guard's
+existence is the hazard: a script that calls it looks protected against F33 and is not.
+
+**Rule:** a label for a line's end goes beyond the line's last x, or above/below it with a y offset that
+clears the stroke, or into the legend. Verify per F33: sample every plotted series over the label bbox's
+x-range and assert no y falls inside the bbox.
+
+### F56 — a script-emitted description that describes the intended drawing, not the drawn one
+
+**Saw (2026-09-16, same gate):** Figure 1 panel (b)'s alt text, its "How it is computed" block and its
+script-emitted Data line all said "three rectangles" / "3 boxes with 2 diagonals", including "a faint
+reference one 25 by 50". The render has two rectangles drawn as top-and-right edge pairs, and for the
+third only a grey dot at its corner and a dotted diagonal — a pixel scan at x = 50 between y = 12.5 and
+y = 25 finds only page ground. A screen-reader user is told about a box a sighted reader cannot find.
+
+**Cause:** the used/available Data line is emitted by the figure script, which the guide treats as
+protection against hand-typed drift (F15). But the emitted *string* was still authored by hand, from the
+author's plan for the figure, and was never read back against the draw calls. Emission guarantees the
+numbers in the string are not stale; it says nothing about the nouns.
+
+**Why nothing caught it:** the F15 check asks "is this number emitted?" — it is. The F44 checks ask
+"does the caption name something a theme or breakpoint hides?" — nothing hides it; it was never drawn.
+The geometry checker sees a PNG.
+
+**Rule:** the nouns in an alt text, a Data line and a method block are checked against the figure's
+*artists*, not its plan. Where a script emits descriptive prose, derive counts from what it drew
+(`len(ax.patches)`, `len(ax.lines)`), never from a literal — and a reviewer counts the rendered shapes
+against the sentence, the same way F36 counts tick labels against a binning word.
+
+### F57 — a values table prints the code's token where every hand-written surface prints the display name
+
+**Saw (2026-09-17, renderer_layout_redesign format gate):** the scrubber's numbers grid, in the row
+"Shared squares in this frame", read **`agent + food, neutral + rock`**. Two paragraphs above it the
+caption said the two shared squares hold "the agent and food" and "a rabbit and a rock", and Figure 8
+labelled that same glyph **"Rabbit"**. `neutral` is the code's token for the rabbit. Nothing on the page
+told a reader the two words name one animal, so the grid read as a fifth kind of thing the world
+contains.
+
+**Cause:** the exporter serialised the renderer's occupancy census — a dict keyed by entity token —
+straight into the JSON the page prints. The project's rule protects numbers by *emitting* them from the
+script instead of typing them (F15), and that rule was followed here: the value is emitted, it is
+current, it matches the frame beside it. The defect is *in* the emission. Emission guarantees a string
+is not stale; it says nothing about whether the string is in the reader's vocabulary.
+
+**Why nothing caught it:** every automated check passes — the token is the correct token, the row
+matches the frame, no box overflows, the contrast is fine. And prose review does not catch it either,
+which is the trap worth naming: an identifier that happens to be a plausible English word reads as
+prose. A reviewer skims "neutral + rock" and parses "neutral" as an adjective describing the square,
+not as a class name. `hiding_predator` would have been caught on sight; `neutral` was not. The more
+ordinary the identifier looks, the longer it survives.
+
+**Rule:** an exporter that emits a string a reader will see routes it through the same display-name
+table the figure labels use — one table, owned by the module that defines the tokens, with a
+coverage guard so a new entity without a reader's name fails at import rather than reaching a page.
+A label written by hand next to that table is the same defect one step later: derive the figure's
+labels from the table too, so the two cannot drift.
+
+**Verifying a fix:** strip tags and scripts from the *built* page, then grep the visible text for
+identifier shapes — `snake_case`, bare lowercase class names, short ALL-CAPS codes, config stems,
+file paths — and hold every hit against the page's own vocabulary. A hit is legitimate only if the
+page defines it where a reader meets it (a cell name like `M4` that the page explains, a script name
+in a "how to regenerate" line); an entity's internal class name never is. Run the same grep over the
+emitted data file, not only the markup, because the markup may be innocent and the payload guilty.
+
+---
+
+### F58 — a point label that clears every other label and still lands on somebody else's mark
+
+**Saw (2026-09-17, imperativism field-review page; recurred 2026-09-21 on the computational-functionalism
+page):** on a debate map, "Klein 2016" sat immediately beside the mark for Coelho Mollo 2018, nearer to
+that mark than to its own. The placement routine was working exactly as written — it had checked the
+label against every *label* already placed and found no overlap — and the figure passed the text-inside-
+axes guard, the legibility floor and a careful read of the code.
+
+**Cause:** the obstacle set was labels only. A scatter figure's marks are drawn first and are not text,
+so a routine that grows its obstacle list as it places labels never sees them. Every offset the routine
+tries is small by design, which means the winning offset is frequently the one that tucks the label into
+the gap *between* two marks — the position that looks tidiest and reads wrongest.
+
+**Two things bite while fixing it.** `Annotation.get_window_extent` includes the leader line's bounding
+box, so a label joined to its mark by a leader measures as a box stretching back to the mark and collides
+with everything on the way; measure with `Text.get_window_extent` after `update_positions(renderer)`
+instead. And `subplots_adjust` after placement moves every axis under labels already measured in pixels,
+so the layout must be fixed *before* the first label is placed.
+
+**Rule:** a label-placement routine treats every drawn mark as an obstacle, padded by about a marker
+radius at the figure's dpi, and accepts a candidate position only if the label is nearer to its own mark
+than to any other — relaxed only for a position joined to its mark by a drawn leader line, where the
+pairing is explicit. A label that fits nowhere is dropped and reported, and the script exits non-zero
+rather than shipping a figure whose labels are ambiguous. The reference implementation is
+`label_positions()` in `docs/project/references/computational_functionalism/page/_cffig.py`.
+
+---
+
+### F50 amendment — the same `&nbsp;` glue, applied to a chip that is not short
+
+**Saw (2026-09-21, computational-functionalism field-review page, format gate):** at 360 px the
+whole document scrolled sideways by 19 px, and nine reference entries pushed their status chip past
+the column edge. F50's rule — glue a chip to its preceding word with `&nbsp;` so a line break cannot
+orphan it — had been applied to the reference list's `[short summary from the PDF]` tag. With
+`white-space: nowrap` on the chip, `implementation&nbsp;[short summary from the PDF]` is a single
+unbreakable token of word-length plus chip-length.
+
+**Why the checker under-reported it:** the layout tool measures in fallback fonts, which are wider,
+so it flagged +45 px where the real fonts give +11 to +17 px. The number was wrong in the safe
+direction; the defect was real at three of the widths and only the narrowest scrolled the document.
+
+**Rule:** glue a chip to its word only when word + chip fits the narrowest supported column. A
+citation marker (`[12]`) always does; a status tag carrying three or four words does not. When it
+does not, use a plain space and let the chip wrap onto its own line, which is what it does elsewhere
+in the same list without looking wrong.
+
+---
+
+### F59 — a chip styled for one word, filled from a data column
+
+**Saw (2026-09-21, same page and gate):** a monospace status badge designed to read
+`status in this corpus: open` rendered a thirty-word sentence instead, because the debate table's
+`status_direction` column was appended to it. At 390 px it was a six-line block of 12.5 px mono
+`334 × 132 px`; at 1440 px a three-line grey slab. Nothing overflowed, so neither the layout checker
+nor the interaction checker fired.
+
+**Cause:** two separate mistakes that look like one. The renderer prefixed `"leaning toward "` to a
+column whose values already begin with `"toward"`, so the chip read `leaning — leaning toward toward
+Putnam's mapping construction failing…`; and the direction text had no business in a chip at any
+length.
+
+**Rule:** a chip renders a **controlled-vocabulary** value — one of a known, short set. Free text
+from a data column goes in a prose element beside it. Where a builder composes chip text from data,
+assert the vocabulary (the build fails on an unknown status) and assert the length, so the first
+long value breaks the build rather than the page. And when a renderer prepends a word to a data
+value, check the column does not already start with it: this one shipped `toward toward`.
+
+### F60 — a builder lifts a component from another page's TEMPLATE rather than its BUILT output
+
+**What a reader saw.** Nothing. The page rendered, in the wrong typeface, and said nothing about it.
+
+**What happened.** A new page's builder copied the House Style Sheet's `<style>` block so the page
+would inherit the house look — and copied it from `house_style_sheet.template.html` instead of the
+built `house_style_sheet.html`. The template's two `@font-face` rules read
+`src: url(data:font/woff;base64,{{FONT:Regular}})`; the substitution that fills those in lives in
+`build_style_page.py`, which the new builder never ran. So the page shipped with both faces pointing
+at the literal string `{{FONT:Regular}}`.
+
+**Why nothing failed.** A `{{...}}` inside a CSS `url()` is an invalid URL, and CSS **discards an
+invalid declaration silently**. There is no error, no fallback warning, no visual break — the
+browser simply uses the next font in the stack. The only trace is two `ERR_INVALID_URL` console
+lines and `document.fonts` reporting `error` rather than `loaded`, neither of which anyone reads.
+
+**Why both review methods missed it.** A source read sees an `@font-face` with a `src` and moves on;
+the token looks like something the build fills in, and it is — just not by this build. And a
+screenshot scan sees clean, legible text, because the fallback is a real font. The page looked
+*fine*. What it was not was the house style, and the page declared no departure.
+
+**The cost is bigger than the typeface.** Every width measurement taken against that build was a
+fallback-metric measurement: different advance widths, different wrap points, different overflow.
+One full review pass — six findings, three of them measured in pixels — had to be redone once the
+real fonts loaded.
+
+**Rule:** a builder lifts a component only from a **built artefact**, never from the template that
+produces it. Where that is impractical, run the same substitution. And assert it: no `{{` may
+survive into the output, and a page that embeds fonts must contain `data:font`.
+
+**How to verify a fix:** `grep -c '{{' built.html` is 0 and `grep -c 'data:font' built.html` is
+non-zero; in the browser, `document.fonts` reports `loaded` for every declared face. Re-take any
+layout measurement made before the fonts loaded — it is not comparable.
+
+### F61 — a page copies the house HEAD without the house BODY scaffolding, collapsing every gap
+
+**What a reader saw.** Paragraphs run together with no space between them; every section heading sits
+flush against the block above it, reading as that block's caption rather than as the next section's
+title; prose runs about 130 characters per line while the figures beneath it are capped much
+narrower.
+
+**What happened.** The house sheet resets element margins — `p{margin:0}`, `h2{margin:0}` — and
+expresses **all** vertical rhythm through flex `gap`: `.wrap{gap:52px}` between sections,
+`.col{gap:18px}` inside one, with `.col{max-width:70ch}` holding the measure. A page that copies the
+`<style>` block but writes bare `<section>` elements therefore gets the reset and none of the
+rhythm: measured section-to-section gap 0 px, paragraph-to-paragraph gap 0 px, every heading 0 px
+above and 0 px below.
+
+**The second face, which survives the obvious fix.** Adding `class="col"` to every section fixed the
+inner gaps and not the outer ones, because the page also had a `<main>` between `.wrap` and the
+sections. `<main>` is `display:block`, so it was `.wrap`'s only flex child and absorbed the entire
+52 px section gap. Every section carried the class and every section still touched.
+
+**Rule:** the invariant is **`.wrap > section.col`** — the sections must be *direct children* of
+`.wrap`. Any wrapper between them defeats the outer gap even when the class is correct. Copying a
+house head obliges the page to copy the house body scaffolding with it.
+
+**How to verify a fix:** assert `.wrap`'s element children are exactly the sections, and in the
+browser that the gap between consecutive `section.col` is 52 px and that every `h2` has more space
+above it than below.
+
+### F62 — a scroll cue that does not say anything, or measures the wrong box
+
+**What a reader saw.** On a phone, a five-column table cut off after the fourth column, with the
+whole explanatory column off-screen — and above it, either a blank line or nothing at all.
+
+**Three faces, all of which pass a naive "cue present, and shown only when it overflows" check.**
+
+1. **No text.** The builder emitted `<p class="cue"></p>` — the element, the class, the toggling,
+   and no words. It appears and disappears correctly and tells the reader nothing.
+2. **The wrong box.** A command block was emitted as `<p class="cue">` + `<div class="scroll">` +
+   `<pre>`. The house gives `<pre>` its own `overflow-x:auto`, so the `<pre>` became the scroll
+   container and the `.scroll` wrapper around it could never overflow. `updateCues()` measures the
+   cue's `nextElementSibling` — the wrapper — so the cue stayed hidden at 390 px while the `<pre>`
+   inside it was visibly cut to `…bin/py`. Correct by every structural check, bound to a box that
+   cannot overflow.
+3. **The general rule behind both.** A cue is a *promise about a specific element*. It is only true
+   if it says something, and if the element it measures is the element that scrolls.
+
+**Rule:** the builder emits the cue's text, not an empty shell, and emits it `hidden` so there is no
+flash before the toggle runs. A cue's next sibling must be the actual scroll container — never a
+wrapper around something that has its own `overflow`.
+
+**How to verify a fix:** for every `.cue`, read `nextElementSibling`; assert its `overflow-x` is
+`auto` or it is a `<pre>`; assert no descendant of it is also a scroll container; assert its text
+content is non-empty after stripping tags and entities; and assert
+`hidden == !(scrollWidth > clientWidth)` across a width sweep that **includes one below 480 px**,
+which is where the only misbinding on the page that produced this entry actually lived.
+
+### F24 amendment — the rule is about any scroll container, and the signal is a cue visible on a desktop
+
+**What a reader saw.** On a 1440 px desktop, the one equation a page's new section existed to state,
+cut at `… / max_te`, with a scroll cue above it.
+
+**Why every mechanism on the page missed it, each behaving correctly.** The cue truthfully reported
+that its box overflowed. The layout checker truthfully found no page-level horizontal overflow,
+because it exempts scroll containers **by design** — that exemption is what stops it firing on every
+legitimately-scrolling wide table. The build check asserted the cue was present, carried text, and
+was bound to the element that actually scrolls: all three true. Nothing in the stack distinguishes
+"this box scrolls on a phone, as intended" from "this box scrolls on every screen ever made".
+
+**The rule, generalised from tables to anything with its own `overflow`.** Overflow at the *widest
+supported viewport* means the content was never designed to fit its column. A phone scroll is an
+accommodation; a desktop scroll is a defect. The detectable signal is therefore not the overflow —
+it is **a cue that is visible at the widest width**.
+
+**Two traps in guarding it at build time.** First, entities: a formula built from `&minus;`,
+`&sup2;` and `&radic;` measures at roughly twice its rendered width if you count source characters,
+so entities must resolve to one glyph before measuring. Second, and the reason this amendment
+exists rather than a bare limit: **a character count silently encodes one font's advance width**,
+which is exactly the assumption F35's measured floors were written to stop people inheriting. Derive
+the limit from two stated, browser-measurable constants — the prose column at the widest width, and
+the monospace advance at its rendered size — so that a change to either is a change to a named
+number rather than a mystery.
+
+**How to verify a fix:** `pre.scrollWidth == pre.clientWidth` at the widest supported width, and the
+cue hidden there. It may legitimately still scroll, with its cue visible, on a phone.
+
+**Also worth knowing:** the fix that produced this defect was itself a fix. The `<pre>` began as an
+ASCII fraction with stacked numerator and denominator, whose middle line sat one column off and
+which would have drifted the first time anyone edited a term. Breaking each equation at its `+`
+signs, one term per line with a hanging indent, removes both problems at once: nothing is
+column-aligned across lines except the leading `+`, so no edit can shift another term.
+
+
+### F64 — a figure-level legend built from one panel's handles, where that panel lacks a series
+
+**What a reader saw.** A 15-panel figure (behaviour by injury, five levels) with blue and orange
+lines in 12 panels and a legend naming only "ordinary agent"; the caption said "the two agents again
+look alike".
+
+**Cause.** The shared legend was built by `legend_below(ax[-1, 0])`, i.e. from the handles of the
+bottom-left panel. In that grid the first column is a level whose second run had not been collected
+yet, so the panel held one series and the figure's legend inherited that panel's truth.
+
+**Why nothing caught it.** The legend was correct for the panel it was read from; the figure guards
+check text size, placement and overlap, never that the legend's label set equals the set of labels
+actually plotted; and the sibling figure built by the same function was right only because its first
+column happened to be complete.
+
+**Rule.** A legend shared by several panels is built from explicit handles (one per series the figure
+can show) or from the union of every panel's handles — never from one panel's.
+
+**How to verify a fix.** Before saving, collect `get_legend_handles_labels()` over all axes and assert
+the legend's labels equal that union; render the figure with one series missing from the first panel
+and check both entries still appear. Found on "Injury, Behaviour and the Modulator", Figure 10
+(`scripts/analysis/studies/modulator_clues/_inj.py::dose_grid`), 2026-09-24.
+
+### F65 — a dense raster figure with no width floor shrinks to a thumbnail on a phone
+
+**What a reader saw.** On a 390 px phone, three figures with 26–27 labelled rows or twelve small maps
+rendered 334 px wide; their row labels came out at about 4–5 px, and the fit-mode viewer (354 px) did
+not help. The same page gave every data table a scroll box and a cue.
+
+**Why it was missed.** `check_floor` / `assert_min_text_px` measure text against the desktop column
+(688 px), where the labels were 10.5 px; the layout checker found no overflow because the image simply
+scaled down. Nothing measured a raster's label size at the narrowest width.
+
+**Rule.** A figure whose smallest label falls under 9 px at 390 px gets a width floor (canvas px × 9 /
+label px, rounded up) inside a `.scroll` box with a `hidden` cue toggled by the same measured-overflow
+script as the tables.
+
+**How to verify a fix.** Pinned 390 px pass: each dense figure's `img.clientWidth` ≥ its floor, its
+scroll box overflows and its cue is visible; at 1440 px the cue is hidden and the figure fills the column.
+Found on "Interactions Between Internal States", 2026-09-26.
+
+### F66 — an unclosed `<section>` nests every section after it, and only the spacing shows it
+
+**What a reader saw.** On a 1440 px desktop, the last two section headings of a fifteen-section page sat
+18 px below the paragraph above them where every other heading sat 52 px below its predecessor. Nothing
+overflowed, nothing overlapped, every word was readable — the page just looked wrong at the end.
+
+**Cause.** The template had 18 `<section class="col">` and 17 `</section>`; section 13 was never closed.
+HTML has no error for this: the parser nests sections 14 and 15 *inside* 13, so they become children of
+a `.col` flex column (gap 18 px) instead of children of `.wrap` (gap 52 px). Pre-existing for at least one
+publish before it was noticed.
+
+**Why nothing caught it.** The markup reads correctly section by section — the missing tag is an absence,
+not a wrong line. The layout checker measures overflow, overlap and zero-height boxes; a nested section
+produces none of them. The interaction checker walks focusable elements; a section is not one. A screenshot
+scan passes over it because a heading 18 px below a paragraph is still a heading below a paragraph.
+
+**Rule.** Sections are balanced by count at build time: the builder fails when `<section` and `</section`
+counts differ. A page's top-level sections all share one parent.
+
+**How to verify a fix.** `document.querySelectorAll('section section').length === 0`, and for every `h2`
+the vertical gap to the previous sibling of its section is the same number (here 52 px, or the group-heading
+value where an `h3.group` precedes it). Found on "Interactions Between Internal States", 2026-09-27; the
+builder now asserts the count (18/18).
