@@ -672,3 +672,22 @@ should apply uniformly rather than special-casing today's world. Owner: `experim
 `developer` (the one rule change). Nothing for `bug-curator`.
 
 Reviewed by: plan-reviewer
+
+## Revision 2a (2026-09-27) — answers to the review of Revision 2 (`480a1cc2`), before the re-run
+
+- **Correction to Revision 2's "Why".** Today's criterion-2 failure under Part 3 was not only the trip: the
+  per-decision warming ratio was "not computable" because no warm-bodied start state ever chooses to warm
+  up (share at ≥ 0 °C is exactly 0). That is the ideal pattern, not a failure. **Rule, applied uniformly to
+  all worlds:** if the share at ≥ 0 °C is 0 and the share at ≤ −5 °C is at least 10 %, the warming part of
+  criterion 2 **passes**; if both shares are 0 it fails. (The balance study passed today's world only through
+  a single boundary state; this rule removes that fragility.) `balance_rule.py` in the internal-state study
+  is not changed; the Part-3 script applies this rule and says so.
+- **Validity gate, made independent:** at hazard ×1 only, today's level 05 under the primary (memory) warmth
+  trip must (i) pass criteria 1, 2, 4 and 5 and (ii) reproduce the balance study's baseline — survival share
+  within ±0.05 of 0.5725 and cold deaths at most 1 % of deaths after step 20.
+- **Criterion 3 (deaths) is report-only in Part 3.** In the planner, injury causes 94–100 % of late deaths in
+  every world (balance study, published); gating on it would reject every world, the reference included.
+  Real training judges deaths (Part 4).
+- **Wording:** the balance study's ring trip was a straight-line (Manhattan, through rocks) median of 2 fed
+  as a fixed trip; Part 3's is walking distance around rocks and fires, fed as a per-step chance 1 / mean.
+  The difference is small (re-solve: survival 0.5775 vs 0.5725) and stated.
