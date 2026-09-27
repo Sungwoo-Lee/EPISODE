@@ -24,6 +24,21 @@ Rules applied (all from the plan; nothing tuned here):
   borderline band = max(reference seed gap, floor) (R1.5), seed-43 rule for simulation-disagreeing
   criterion-4 verdicts (R1.5), agreement table + trust rule (4.5 + R1.2), forwarding (4.6 + R1.1).
 
+Extension read-out (R1.4 + "Part 4 extension - readings fixed before the 5 M read-out"):
+a run resumed in place (`--wandb-resume-id`) has several local `wandb/run-*-<id>/` folders, one per
+session; their Episode rows are merged by `Episode/Number` (a folder with no Episode rows - e.g. a
+launch that crashed at restore - is listed but contributes nothing), the budget/seed/tag/--config are
+read from the LAST folder with rows, and `log` may be a list (every log is checked for calibration /
+obs width / modulator off; "Training complete" is read from the last). Optional manifest keys:
+  readout_window        episodes in the read-out window (default readout_fraction x N);
+  still_learning_window episodes per still-learning window (default = readout window);
+  block_size            temporal-evolution block (default N / 10);
+  seam: {at, block, tol} continuity check at the resume point (R1.4): survival in each of the first
+                        two blocks after `at` within +- tol (relative) of the block before;
+  runs[].wandb_dirs     optional explicit folder list; default = every wandb/run-*-<id>;
+  replication_gate      optional (the 2 M gate is not re-applied at 5 M).
+The 2 M manifest (part4_manifest.yaml) runs unchanged.
+
 Usage:
   python scripts/analysis/studies/context_exploration/part4_readout.py MANIFEST.yaml \
       [--md-out FILE] [--json-out FILE]
@@ -72,13 +87,31 @@ def _abs(p):
 
 # ------------------------------------------------------------------------------------ reading --
 def read_run(run: dict) -> dict:
+    if run.get("wandb_dirs"):   # explicit folder list (e.g. the 2 M read-out of a later-resumed run)
+        hits = [_abs(h) for h in run["wandb_dirs"]]
+    else:
+        hits = sorted(glob.glob(os.path.join(ROOT, "wandb", f"run-*-{run['wandb_id']}")))
+    if not hits:
+        raise ValueError(f"{run['id']}: no wandb/run-*-{run['wandb_id']}")
+    merged, segments, cfg, wdir = {}, [], {}, None
+    for h in hits:
+        seg_rows, seg_cfg = _scan(h)
+        segments.append({"dir": os.path.relpath(h, ROOT), "n_rows": len(seg_rows),
+                         "first": seg_rows[0]["Episode/Number"] if seg_rows else None,
+                         "last": seg_rows[-1]["Episode/Number"] if seg_rows else None,
+                         "episodes_cfg": seg_cfg.get("episodes")})
+        if seg_rows:
+            cfg, wdir = seg_cfg, h
+            for r in seg_rows:          # later session wins on a duplicated Episode/Number
+                merged[r["Episode/Number"]] = r
+    rows = [merged[k] for k in sorted(merged)]
+    return _finish(run, rows, cfg, wdir, segments)
+
+
+def _scan(wdir):
     from wandb.proto import wandb_internal_pb2 as pb
     from wandb.sdk.internal import datastore
 
-    hits = sorted(glob.glob(os.path.join(ROOT, "wandb", f"run-*-{run['wandb_id']}")))
-    if len(hits) != 1:
-        raise ValueError(f"{run['id']}: expected one wandb/run-*-{run['wandb_id']}, found {hits}")
-    wdir = hits[0]
     f = glob.glob(os.path.join(wdir, "run-*.wandb"))
     if len(f) != 1:
         raise ValueError(f"{wdir}: expected one run-*.wandb")
@@ -110,6 +143,10 @@ def read_run(run: dict) -> dict:
                     pass
         rows.append(r)
     rows.sort(key=lambda r: r["Episode/Number"])
+    return rows, cfg
+
+
+def _finish(run, rows, cfg, wdir, segments):
     args = json.load(open(os.path.join(wdir, "files", "wandb-metadata.json"))).get("args", [])
     launch_cfg = args[args.index("--config") + 1] if "--config" in args else None
     # --- identity / budget checks (WandB config, not the stale saved config.yaml) ---
@@ -120,14 +157,20 @@ def read_run(run: dict) -> dict:
     if int(cfg.get("seed", -1)) != int(run["seed"]):
         raise ValueError(f"{run['id']}: WandB seed {cfg.get('seed')} != manifest {run['seed']}")
     # --- log checks ---
-    log = open(_abs(run["log"]), errors="replace").read()
-    m = re.search(r"\[balance\] balance_calibration: (\{.*\})", log)
-    calib = ast.literal_eval(m.group(1)) if m else None
-    obs = re.search(r"Observation Dim: (\d+)", log)
-    return {"wdir": os.path.relpath(wdir, ROOT), "rows": rows, "episodes_cfg": int(cfg["episodes"]),
+    logs = run["log"] if isinstance(run["log"], list) else [run["log"]]
+    calibs, obs_dims, nmn = [], [], []
+    for lp in logs:
+        log = open(_abs(lp), errors="replace").read()
+        m = re.search(r"\[balance\] balance_calibration: (\{.*\})", log)
+        calibs.append(ast.literal_eval(m.group(1)) if m else None)
+        obs = re.search(r"Observation Dim: (\d+)", log)
+        obs_dims.append(int(obs.group(1)) if obs else None)
+        nmn.append("Neuromodulation: DISABLED" in log)
+    return {"wdir": os.path.relpath(wdir, ROOT), "segments": segments, "rows": rows,
+            "episodes_cfg": int(cfg["episodes"]),
             "seed_cfg": int(cfg["seed"]), "complete_log": "Training complete" in log[-20000:],
-            "calibration": calib, "obs_dim": int(obs.group(1)) if obs else None,
-            "nmn_disabled": "Neuromodulation: DISABLED" in log,
+            "calibrations": calibs, "calibration": calibs[0], "obs_dim": obs_dims[0] if len(set(obs_dims)) == 1 else obs_dims,
+            "nmn_disabled": all(nmn),
             "first_row_bal_keys": sum(1 for k in rows[0] if k.startswith(P))}
 
 
@@ -225,23 +268,39 @@ def borderline(p, S_ref, D_ref, gaps) -> list[str]:
 # ------------------------------------------------------------------------------------- main --
 def analyse(man: dict) -> dict:
     N = int(man["episodes"])
-    f = float(man["readout_fraction"])
+    Wn = float(man.get("readout_window", float(man["readout_fraction"]) * N))
+    Ws = float(man.get("still_learning_window", Wn))
+    B = float(man.get("block_size", N / 10))
+    seam = man.get("seam")
     runs = {}
     for run in man["runs"]:
         d = read_run(run)
         if d["episodes_cfg"] != N:
             raise ValueError(f"{run['id']}: WandB budget {d['episodes_cfg']} != {N}")
         reached = d["rows"][-1]["Episode/Number"]
-        cal = d["calibration"] or {}
-        cal_ok = all(cal.get(k) == v for k, v in man["calibration"].items())
+        cal_ok = all(c is not None and all(c.get(k) == v for k, v in man["calibration"].items())
+                     for c in d["calibrations"])
         rows = d["rows"]
         d.update(run)
-        d.update({"reached": reached, "complete": reached >= N and d["complete_log"], "calibration_ok": cal_ok,
-                  "win": pool(window(rows, N - f * N, N)),
-                  "prev": pool(window(rows, N - 2 * f * N, N - f * N)),
-                  "ts_18": ts_at(rows, N - f * N), "ts_20": ts_at(rows, N),
-                  "blocks": [pool(window(rows, N * b / 10, N * (b + 1) / 10)) for b in range(10)]})
-        d["rise"] = d["win"]["S"] / d["prev"]["S"] - 1
+        # rows are logged every `log_every` episodes counted from the (resume) start, so the last row can
+        # fall up to one interval short of N although training ran to N ("Training complete" in the log)
+        log_every = float(man.get("log_every_episodes", 4000))
+        d.update({"reached": reached, "complete": reached >= N - log_every and d["complete_log"], "calibration_ok": cal_ok,
+                  "win": pool(window(rows, N - Wn, N)),
+                  "sl_last": pool(window(rows, N - Ws, N)),
+                  "prev": pool(window(rows, N - 2 * Ws, N - Ws)),
+                  "ts_18": ts_at(rows, N - Wn), "ts_20": ts_at(rows, N),
+                  "blocks": [pool(window(rows, B * b, B * (b + 1))) for b in range(int(round(N / B)))]})
+        d["rise"] = d["sl_last"]["S"] / d["prev"]["S"] - 1
+        if seam:
+            at, sb, tol = float(seam["at"]), float(seam["block"]), float(seam["tol"])
+            before = pool(window(rows, at - sb, at))["S"]
+            after = [pool(window(rows, at + k * sb, at + (k + 1) * sb))["S"] for k in range(2)]
+            # rows straddling the resume point, for a row-level look at the seam
+            near = [(r["Episode/Number"], r["Episode/Steps"], r.get("Episode/_window_n"))
+                    for r in rows if at - 5 * sb / 50 < r["Episode/Number"] <= at + 5 * sb / 50]
+            d["seam"] = {"before": before, "after": after, "rel": [a / before - 1 for a in after],
+                         "pass": all(abs(a / before - 1) <= tol for a in after), "rows_near": near}
         d["still_learning"] = d["rise"] > 0.05
         del d["rows"]
         d["_rows"] = rows
@@ -249,13 +308,13 @@ def analyse(man: dict) -> dict:
 
     ref_ids = [r["id"] for r in man["runs"] if man["worlds"][r["world"]]["arm"] == "reference"]
     gate = {}
-    for rid, g in man["replication_gate"].items():
+    for rid, g in man.get("replication_gate", {}).items():
         S = runs[rid]["win"]["S"]
         gate[rid] = {"S": S, "target": g["target"], "tol": g["tol"], "pass": abs(S - g["target"]) <= g["tol"]}
     S_ref = float(np.mean([runs[i]["win"]["S"] for i in ref_ids]))
     D_ref = float(np.mean([runs[i]["win"]["D"] for i in ref_ids]))
     ts_ref = float(np.mean([runs[i]["ts_20"] for i in ref_ids]))
-    pooled_ref = pool(sum((window(runs[i]["_rows"], N - f * N, N) for i in ref_ids), []))
+    pooled_ref = pool(sum((window(runs[i]["_rows"], N - Wn, N) for i in ref_ids), []))
     gap_keys = ["S", "D", "LateDeathShare", "EatRatio", "HideRatio_True", "HideRatio_True_Fed",
                 "TimeBush", "TimeWarm", "TimeEat", "TimeElsewhere"]
     a, b = (runs[i]["win"] for i in ref_ids[:2])
@@ -324,33 +383,50 @@ def yn(b):
 
 def render(man, R) -> str:
     runs = R["runs"]
+    N = int(man["episodes"])
+    Wn = float(man.get("readout_window", float(man["readout_fraction"]) * N))
+    Ws = float(man.get("still_learning_window", Wn))
+    B = float(man.get("block_size", N / 10))
+    M = lambda x: f"{x / 1e6:.1f} M"
     L = []
     L.append("**Run validity.**\n")
-    L.append("| Run | World | Seed (WandB) | Budget (WandB) | Last episode logged | 'Training complete' | Calibration = level 05 | Obs width | Modulator off | Bal keys on first row | Env steps at 1.8 M | Env steps at 2.0 M | Step ratio vs reference |")
+    L.append("| Run | World | Seed (WandB) | Budget (WandB) | Last episode logged | 'Training complete' | Calibration = level 05 | Obs width | Modulator off | Bal keys on first row | Env steps at " + M(N - Wn) + " | Env steps at " + M(N) + " | Step ratio vs reference |")
     L.append("|---|---|---|---|---|---|---|---|---|---|---|---|---|")
     for d in runs.values():
         L.append(f"| {d['id']} | `{d['world']}` | {d['seed_cfg']} | {d['episodes_cfg']:,} | {d['reached']:,.0f} | "
                  f"{'yes' if d['complete_log'] else 'NO'} | {'yes' if d['calibration_ok'] else 'NO'} | {d['obs_dim']} | "
                  f"{'yes' if d['nmn_disabled'] else 'NO'} | {d['first_row_bal_keys']} | {d['ts_18']:,.0f} | {d['ts_20']:,.0f} | {d['step_ratio']:.2f} |")
     L.append("")
-    L.append("**Replication gate** (reference runs vs the level-05 pilots at 2 M):\n")
-    L.append("| Run | Survival steps, last 10 % | Pilot target | Allowed range | Result |")
-    L.append("|---|---|---|---|---|")
-    for rid, g in R["gate"].items():
-        L.append(f"| {rid} | {g['S']:.1f} | {g['target']} | {g['target']-g['tol']:.1f}-{g['target']+g['tol']:.1f} | {yn(g['pass'])} |")
-    L.append("")
+    if any("seam" in d for d in runs.values()):
+        L.append("**Seam check at the resume point** (survival steps; block before vs the first two blocks after):\n")
+        L.append("| Run | Segments (dir: first-last episode) | Block before | Block 1 after | Block 2 after | Change 1 / 2 | Within tolerance |")
+        L.append("|---|---|---|---|---|---|---|")
+        for d in runs.values():
+            s_ = d["seam"]
+            segs = "; ".join(f"{os.path.basename(g['dir'])[4:19]}: " + (f"{g['first']:,.0f}-{g['last']:,.0f}" if g["n_rows"] else "no rows")
+                             for g in d["segments"])
+            L.append(f"| {d['id']} | {segs} | {s_['before']:.1f} | {s_['after'][0]:.1f} | {s_['after'][1]:.1f} | "
+                     f"{100*s_['rel'][0]:+.1f} % / {100*s_['rel'][1]:+.1f} % | {'yes' if s_['pass'] else '**NO**'} |")
+        L.append("")
+    if R["gate"]:
+        L.append("**Replication gate** (reference runs vs the level-05 pilots at 2 M):\n")
+        L.append("| Run | Survival steps, last 10 % | Pilot target | Allowed range | Result |")
+        L.append("|---|---|---|---|---|")
+        for rid, g in R["gate"].items():
+            L.append(f"| {rid} | {g['S']:.1f} | {g['target']} | {g['target']-g['tol']:.1f}-{g['target']+g['tol']:.1f} | {yn(g['pass'])} |")
+        L.append("")
     L.append(f"Reference survival S_ref = mean(C1a, C1b) = **{R['S_ref']:.1f}** steps; criterion-4 line 0.8 x S_ref = "
              f"{0.8*R['S_ref']:.1f}. Reference dominant late-death share D_ref = {R['D_ref']:.3f}; criterion-3-fwd line = "
              f"max(0.60, D_ref + 0.05) = {max(0.60, R['D_ref']+0.05):.3f}.\n")
     L.append("**Survival and still-learning flag** (survival steps per episode, `_window_n`-weighted):\n")
-    L.append("| Run | World | Arm | S 1.6-1.8 M | S 1.8-2.0 M | Rise | Still learning (> 5 %) | Survival vs reference | Sim survival vs today |")
-    L.append("|---|---|---|---|---|---|---|---|---|")
+    L.append(f"| Run | World | Arm | S {M(N-2*Ws)}-{M(N-Ws)} | S {M(N-Ws)}-{M(N)} | Rise | Still learning (> 5 %) | S read-out window {M(N-Wn)}-{M(N)} | Survival vs reference | Sim survival vs today |")
+    L.append("|---|---|---|---|---|---|---|---|---|---|")
     for d in runs.values():
         W = man["worlds"][d["world"]]
-        L.append(f"| {d['id']} | `{d['world']}` | {d['arm']} | {d['prev']['S']:.1f} | {d['win']['S']:.1f} | {100*d['rise']:+.1f} % | "
-                 f"{'**YES**' if d['still_learning'] else 'no'} | {d['surv_ratio']:.2f} | {W['sim_surv']:.2f} |")
+        L.append(f"| {d['id']} | `{d['world']}` | {d['arm']} | {d['prev']['S']:.1f} | {d['sl_last']['S']:.1f} | {100*d['rise']:+.1f} % | "
+                 f"{'**YES**' if d['still_learning'] else 'no'} | {d['win']['S']:.1f} | {d['surv_ratio']:.2f} | {W['sim_surv']:.2f} |")
     L.append("")
-    L.append("**Criterion values, last 10 %** (shares as fractions; ratios pooled, per-row mean in brackets):\n")
+    L.append(f"**Criterion values, {M(N-Wn)}-{M(N)}** (shares as fractions; ratios pooled, per-row mean in brackets):\n")
     L.append("| Run | Bush | Warm cell | Eating | Elsewhere | Near fire (report) | Eat ratio | Hide ratio, true injury | Hide ratio, felt (report) | Hide ratio among fed, true | Warm ratio (report) | Early-death share | Late-death share | Late deaths: starvation / overeating / injury / thermal | All deaths: starvation / injury / thermal / reached cap |")
     L.append("|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|")
     for d in runs.values():
@@ -400,14 +476,15 @@ def render(man, R) -> str:
              f"{', '.join(R['too_optimistic']) or 'none'}. Trust verdict: **{'trustworthy' if R['trust'] else 'not trustworthy'}"
              f"{' (' + R['trust_label'] + ')' if R['trust_label'] else ''}**.\n")
     L.append(f"Forward order (max 3): {', '.join(R['forward_order']) or 'none'}.\n")
-    L.append("**Temporal evolution** (200,000-episode blocks, 0-0.2 M ... 1.8-2.0 M):\n")
+    nb = int(round(N / B))
+    L.append(f"**Temporal evolution** ({B:,.0f}-episode blocks; column = block end):\n")
     for key, lab, n in (("S", "Survival steps", 0), ("FoodEaten", "Food bites eaten per episode (report-only)", 2), ("TimeWarm", "Warm-cell time share", 3), ("TimeBush", "Bush time share", 3),
                         ("TimeEat", "Eating time share", 3), ("EatRatio", "Eat ratio", 2), ("HideRatio_True", "Hide ratio (true injury)", 2),
                         ("HideRatio_True_Fed", "Hide ratio among fed", 2), ("LateDeathShare", "Late-death share", 3),
                         ("LateDeath_Injury", "Injury share of late deaths", 2), ("LateDeath_Starvation", "Starvation share of late deaths", 2)):
         L.append(f"*{lab}*\n")
-        L.append("| Run | " + " | ".join(f"{0.2*(i+1):.1f} M" for i in range(10)) + " |")
-        L.append("|---|" + "---|" * 10)
+        L.append("| Run | " + " | ".join(M(B * (i + 1)) for i in range(nb)) + " |")
+        L.append("|---|" + "---|" * nb)
         for d in runs.values():
             L.append(f"| {d['id']} | " + " | ".join(fmt(b.get(key), n) for b in d["blocks"]) + " |")
         L.append("")

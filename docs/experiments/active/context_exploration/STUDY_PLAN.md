@@ -3,7 +3,7 @@ title: "Hidden context and exploration — choosing larger, less observable leve
 topic: context_exploration
 status: active
 created: 2026-09-27
-last_updated: 2026-09-27
+last_updated: 2026-09-28
 wandb_tag: context_exploration
 ---
 
@@ -1666,3 +1666,240 @@ choice cannot follow the numbers.
   ± 5 % of the (1.8, 2.0] M block. Applied literally to every run, including the still-climbing C3 / C4,
   where an upward excursion beyond 5 % would still be reported as a seam break and inspected row by row
   around the resume point.
+
+## Part 4 extension results (2026-09-28) — four runs continued from 2 M to 5 M episodes
+
+### Verdict, in plain words
+
+At 2 million episodes three of the larger worlds were still improving, so their verdicts were withheld.
+Two of them — the 20 × 20 world with many small food items and short smell range (C4), and the 20 × 20
+world with few food items and long smell range (C3) — were continued to 5 million episodes, together
+with both runs of today's campfire world (the yardstick). The pre-registered balance tests were then
+applied again, now against today's world at 5 M.
+
+- **Today's world still passes every test at 5 M**; it survives about 6 % longer than at 2 M
+  (240 against 227 steps), so the survival bar rose with it (80 % line: 192 steps).
+- **The many-small-food 20 × 20 world (C4) passes all five tests and has stopped climbing**
+  (211 steps, 0.88 of today's). It is now "trained-balanced relative to today", but two values sit
+  inside the pre-registered borderline band (eating takes 14.8 % of time against a 10 % floor; hiding
+  when injured is 2.4 times more likely, against a floor of 2), so it needs a second seed before it can
+  go forward.
+- **The few-food 20 × 20 world (C3) learned to eat after all** (0.05 bites per episode before 1.8 M,
+  about 15 by 5 M) and now passes the time-split, eat-and-hide and hide-when-fed tests, but it **fails
+  survival** (151 steps, 0.63 of today's) and **its deaths are dominated by starvation** (64 % of late
+  deaths). Final verdict: not balanced. It had by now received 1.5 times the training steps today's world
+  had at 2 M, so the "too few updates" excuse from 2 M no longer covers the gap.
+- **The simulation is still not trustworthy for choosing worlds** (2 of 6 worlds agree; it was too
+  pessimistic about one 10 × 10 world and, now decided, too optimistic about C3).
+- **Nothing goes forward yet.** Three worlds are candidates for the modulator comparison, each pending a
+  second-seed run: the 10 × 10 smell-range-3 world (first), the 10 × 10 smell-range-5 world, and C4.
+- **Caveat:** the pre-registered continuity check at the resume point fails *literally* for C3 and C4,
+  because both were still climbing; a row-by-row look shows no jump at the resume point. That reading
+  is stated below and flagged for `bug-curator`; the verdicts above assume it holds.
+
+### Methods
+
+- **Data:** local WandB binaries only. Each resumed run has three local folders under `wandb/` (the 2 M
+  session, the 23:12 launch that crashed at restore and logged no rows, and the 23:25 resumed session);
+  their episode rows are merged by `Episode/Number`. Logs: the 2 M log plus
+  `logs/20260927_2325{26,29,22,18}.log` (C1a, C1b, C3, C4).
+- **Script:** `scripts/analysis/studies/context_exploration/part4_readout.py`, extended (not rewritten)
+  for merged resume sessions, several logs per run, and configurable read-out / still-learning windows,
+  block size and a seam check; the 2 M manifest pins the four resumed runs to their 2 M folders and
+  reproduces the 2 M read-out number for number (checked by diff; only column labels changed). Input
+  `docs/experiments/active/context_exploration/part4_ext_manifest.yaml`; output
+  `tmp/20260928_062642_ctxexp_part4_ext.md` and `tmp/20260928_ctxexp_part4_ext.json`.
+- **Rules applied** exactly as at 2 M (4.4–4.6, R1.1–R1.6), with the readings fixed before any post-resume
+  value was read (previous section, commit `82ddae14`): read-out window 4.9–5.0 M; still-learning flag
+  4.8–5.0 M against 4.6–4.8 M (> 5 %); **survival borderline floor = 5 % of the criterion-4 line**
+  (9.6 steps), with 5 % of the reference (12.0 steps) reported beside it. The two readings agree for
+  both worlds (C4 is 19.0 steps above the line; C3 41.1 below), so the choice decides nothing here.
+- **Completion check changed once, stated:** episode rows are logged every 4,000 episodes counted from
+  the resume point, so C1b's and C3's last rows sit at 4,996,065 / 4,996,166 although both logs print
+  "Training complete" at their 5 M checkpoint. The first run of the script called C3 "invalid" for that
+  reason; the check now accepts a last row within one logging interval of 5 M. Their read-out window is
+  therefore (4.9 M, 4.996 M]. No verdict depended on anything else in that first run.
+- The 2 M replication gate (R1.6 L4) is not re-applied at 5 M (it has no 5 M target).
+
+### Run validity
+
+| Run | World | Seed (WandB) | Budget (WandB) | Last episode row | "Training complete" | Calibration = level 05 (both logs) | Obs width | Modulator off | Env steps at 5.0 M | Step ratio vs reference |
+|---|---|---|---|---|---|---|---|---|---|---|
+| C1a | today | 42 | 5,000,000 | 5,000,052 | yes | yes | 58 | yes | 1,046.7 M | 1.00 |
+| C1b | today | 43 | 5,000,000 | 4,996,065 | yes | yes | 58 | yes | 1,048.8 M | 1.00 |
+| C3 | 20 × 20, smell 20, 1–4 × 12 | 42 | 5,000,000 | 4,996,166 | yes | yes | 58 | yes | 512.7 M | 0.49 |
+| C4 | 20 × 20, smell 5, 4–16 × 12 | 42 | 5,000,000 | 5,000,021 | yes | yes | 58 | yes | 859.9 M | 0.82 |
+
+All four resumed from their 2 M checkpoints (first post-resume rows at 2,004,052 / 2,004,065 / 2,004,166 /
+2,004,021) and completed.
+
+### Seam check at the resume point (R1.4)
+
+Survival steps per episode, 200,000-episode blocks; tolerance ± 5 % of the block before the resume.
+
+| Run | Block 1.8–2.0 M | Block 2.0–2.2 M | Block 2.2–2.4 M | Change | Pre-registered result | Last 5 rows before 2 M → first 4 rows after |
+|---|---|---|---|---|---|---|
+| C1a | 227.1 | 228.9 | 231.5 | +0.8 % / +1.9 % | pass | 224.4, 226.6, 228.6, 228.6, 225.2 → 220.6, 225.3, 225.8, 221.2 |
+| C1b | 226.2 | 228.3 | 230.1 | +0.9 % / +1.8 % | pass | 221.9, 225.9, 222.4, 228.5, 227.4 → 220.6, 222.2, 223.7, 223.2 |
+| C3 | 80.5 | 86.9 | 98.4 | +8.0 % / +22.3 % | **FAIL (literal)** | 84.3, 86.6, 85.4, 86.7, 88.1 → 86.5, 85.9, 85.3, 87.3 |
+| C4 | 185.3 | 193.5 | 196.3 | +4.5 % / +6.0 % | **FAIL (literal)** | 188.6, 185.6, 188.7, 194.4, 198.9 → 194.0, 195.1, 195.0, 198.0 |
+
+**Reading.** Both references — the direct test of the resume path, since they had stopped climbing —
+are continuous. The two failures are upward and follow the pre-resume trend: C3's last rows before 2 M
+(84–88) were already above its 1.8–2.0 M block mean (80.5) because it had just started eating, and the
+first rows after resume equal them; C4 rose 5.1 % in the block before the resume and 4.5 % in the block
+after, i.e. no acceleration. No run shows a step at the resume point. The first one or two rows after
+resume sit 1–7 steps below the last pre-resume row in all four runs and recover within about three rows
+(≈ 12,000 episodes) — the size of row-to-row noise, and consistent with the known "restored memory,
+fresh worlds" first-window effect (Known Bugs B5), which does not reach the 4.9–5.0 M window. The rule
+as written cannot tell a resume break from a still-climbing run; that limitation goes to `bug-curator`
+(Related issues) rather than being resolved here, and **every C3 / C4 value below is conditional on
+the seam being sound**.
+
+### Survival and the still-learning flag
+
+| Run | World | 4.6–4.8 M | 4.8–5.0 M | Rise | Still learning (> 5 %) | Read-out 4.9–5.0 M | vs today (5 M) | At 2 M, vs today (2 M) | Simulation |
+|---|---|---|---|---|---|---|---|---|---|
+| C1a | today | 239.8 | 236.9 | −1.2 % | no | 237.9 | 0.99 | 1.00 | 1.00 |
+| C1b | today | 243.0 | 242.9 | −0.0 % | no | 243.0 | 1.01 | 1.00 | 1.00 |
+| C3 | 20 × 20, smell 20, 1–4 × 12 | 148.5 | 146.6 | −1.2 % | no | 151.3 | **0.63** | 0.36 | 0.92 |
+| C4 | 20 × 20, smell 5, 4–16 × 12 | 215.3 | 212.1 | −1.5 % | no | 211.4 | **0.88** | 0.82 | 0.94 |
+
+Extended reference: S_ref = **240.4** steps (seeds 237.9 / 243.0, gap 5.2); criterion-4 line **192.4**.
+D_ref = 0.533 (injury); criterion-3-fwd line max(0.60, 0.583) = **0.600**. No run is still learning, so
+both extended worlds get final verdicts. ("Not still learning" means "not improving steeply", R1.4.)
+
+### Criterion values, 4.9–5.0 M
+
+| Run | Bush | Warm cell | Eating | Elsewhere | Eat ratio | Hide ratio, true injury | Hide ratio among fed | Late-death share | Late deaths: starvation / injury / thermal | Bites per episode (report) |
+|---|---|---|---|---|---|---|---|---|---|---|
+| C1a | 0.260 | 0.206 | 0.158 | 0.434 | 4.59 | 2.88 | 3.98 | 0.576 | 0.40 / 0.52 / 0.08 | 37.5 |
+| C1b | 0.261 | 0.209 | 0.160 | 0.430 | 4.71 | 2.94 | 4.09 | 0.568 | 0.42 / 0.54 / 0.04 | 38.8 |
+| C3 | 0.362 | 0.182 | 0.103 | 0.410 | 7.04 | 2.04 | 2.31 | 0.774 | **0.64** / 0.32 / 0.03 | 14.5 |
+| C4 | 0.299 | 0.187 | 0.148 | 0.422 | 5.54 | 2.43 | 3.13 | 0.681 | 0.38 / 0.52 / 0.10 | 31.7 |
+
+Overeating 0.00 everywhere. Reference pooled: criteria 1, 2, 5 pass pooled and on each seed, so **no
+criterion is withheld** (R1.2). The reference's eat ratio fell from 6.80 at 2 M to 4.65 at 5 M (still
+far above 2) — report only. Full per-row-mean ratios, felt-injury and warm ratios, early-death shares
+and all-death causes are in the tmp read-out.
+
+### Per-world verdicts (final)
+
+| Run | 1 time split | 2 eat & hide | 3 absolute (report) | 3-fwd | 4 survival | 5 hide among fed | Borderline (within band) | Verdict at 5 M | Verdict at 2 M |
+|---|---|---|---|---|---|---|---|---|---|
+| C1a / C1b | pass | pass | pass | pass | pass | pass | — | reference | reference |
+| C3 | pass | pass | FAIL | **FAIL** (starvation 0.642 > 0.600) | **FAIL** (0.63) | pass | eating 0.103, hide 2.04, 3-fwd 0.642, hide-fed 2.31 | **not trained-balanced** (survival fails by 41 steps, far outside any band) | withheld (still learning) |
+| C4 | pass | pass | pass | pass | pass (0.88) | pass | eating 0.148 vs 0.10 (band 0.05); hide 2.43 vs 2.0 (band 0.5) | **trained-balanced relative to today; borderline → seed 43 before forwarding** | withheld (still learning) |
+
+C4's dominant late-death cause (injury 0.52) is now below the reference line with room (0.08); at 2 M it
+was 0.576 and borderline. Survival borderline: C4 19.0 steps above the line against a band of 9.6
+(pre-registered reading) or 12.0 (alternative) — not borderline under either.
+
+### Agreement with the simulation — updated table (4.5 + R1.2)
+
+Extended worlds scored at 5 M against the 5 M reference; the others keep their 2 M values. Sim / trained
+pass (1) or fail (0); no criterion withheld.
+
+| Run | World | Arm | Budget judged | Crit 1 | Crit 2 | Crit 4 | Crit 5 | Survival vs today, sim / trained | Step ratio | Agree |
+|---|---|---|---|---|---|---|---|---|---|---|
+| C2 | 10 × 10, smell 5 | balanced | 2 M | 1 / 1 | 1 / 1 | 1 / 1 | 1 / 1 | 0.91 / 1.00 | 1.01 | yes |
+| C3 | 20 × 20, smell 20, 1–4 | balanced | **5 M** | 1 / 1 | 1 / 1 | **1 / 0** | 1 / 1 | 0.92 / 0.63 | 0.49 | **no** (was undecided) |
+| C4 | 20 × 20, smell 5, 4–16 | balanced | **5 M** | 1 / 1 | 1 / 1 | 1 / 1 | 1 / 1 | 0.94 / 0.88 | 0.82 | **yes** (was undecided) |
+| C5 | 20 × 20, smell 20, 1–2 | balanced | 2 M | 1 / 0 | 1 / 0 | 1 / 0 | 1 / 0 | 0.91 / 0.33 | 0.37 | undecided (still learning, not extended) |
+| C6 | 10 × 10, smell 3 | edge | 2 M | 1 / 1 | 1 / 1 | 0 / 1 | 1 / 1 | 0.62 / 0.99 | 1.01 | no |
+| C7 | 15 × 15, smell 8 | edge | 2 M | 1 / 0 | 1 / 0 | 0 / 0 | 1 / 0 | 0.67 / 0.31 | 0.36 | no |
+
+- **Count: 2 of 6 agree** (C2, C4); C5 undecided, so at most 3 of 6 — below the 5 needed.
+- **Directions:** too pessimistic on C6 (as at 2 M) and **too optimistic on C3, now decided** (0.63 of
+  today against a predicted 0.92). R1.3's update-count confound weakens but does not explain it: at 5 M
+  C3 had 513 M environment steps, 1.5 × what today's world had at 2 M (340 M), where today's agent already
+  survived 227 steps; C3 survives 151.
+- **Trust verdict unchanged: not trustworthy for choosing worlds**, now with both directions decided.
+- Mixed budgets in one table (2 M and 5 M rows) are what R1.4 prescribes ("the 2 M verdicts stay beside
+  them"); C2 / C6 / C7 would likely rise a few percent by 5 M as the reference did (+6 %), which does not
+  move any of their pass/fail values (all ≥ 25 steps from the line).
+
+### Forwarding — updated (4.6 + R1.1 + R1.5)
+
+| Run | Search (sim, steps) | Passes 1, 2, 4, 5, 3-fwd | Still learning | Crit 4 vs sim | Borderline | Status |
+|---|---|---|---|---|---|---|
+| C6 | 26.7 (edge) | yes (2 M) | no | disagrees | no | pending seed 43 — **goes first** if it also passes 4 and 3-fwd |
+| C2 | 11.8 | yes (2 M) | no | agrees | yes (3-fwd 0.575) | pending seed 43 |
+| C4 | 9.3 | **yes (5 M)** | no | agrees | **yes (eating time, hide ratio)** | **pending seed 43 — new** |
+| C3 | 9.4 | no (3-fwd, 4) | no | disagrees | — | **not forwarded — new** |
+| C5 | 11.5 | no (2 M) | yes (2 M) | — | — | withheld, not extended (user decision) |
+| C7 | 23.0 | no | no | — | — | not forwarded |
+
+**Outcome: nothing goes forward yet.** If all three seed-43 runs confirm, the modulator comparison gets
+exactly its cap of three worlds, in the order C6, C2, C4. C4's seed-43 run has to be judged at the budget
+its verdict was reached at: a fresh 5 M run on a 20 × 20 grid (the 2 M → 5 M continuation alone took ≈ 7 h, against ≈ 2 h
+for the 10 × 10 seed-43 runs); that is for the user to approve.
+
+### Analysis — how the extended runs evolved
+
+Survival steps per episode, 200,000-episode blocks (column = block end; 2.0 M is the last pre-resume block):
+
+| Run | 1.0 M | 2.0 M | 2.4 M | 2.8 M | 3.2 M | 3.6 M | 4.0 M | 4.4 M | 4.8 M | 5.0 M |
+|---|---|---|---|---|---|---|---|---|---|---|
+| C1a | 188 | 227 | 231 | 235 | 232 | 232 | 238 | 241 | 240 | 237 |
+| C1b | 186 | 226 | 230 | 235 | 237 | 238 | 240 | 241 | 243 | 243 |
+| C3 | 69 | 80 | 98 | 115 | 129 | 139 | 139 | 144 | 148 | 147 |
+| C4 | 133 | 185 | 196 | 202 | 202 | 205 | 211 | 213 | 215 | 212 |
+
+Food bites per episode (report-only):
+
+| Run | 1.8 M | 2.0 M | 2.2 M | 2.4 M | 2.8 M | 3.2 M | 3.6 M | 4.0 M | 4.4 M | 5.0 M |
+|---|---|---|---|---|---|---|---|---|---|---|
+| C1a | 34.4 | 35.6 | 35.9 | 36.4 | 37.3 | 36.6 | 36.5 | 37.7 | 38.4 | 37.5 |
+| C1b | 34.7 | 35.2 | 35.8 | 36.1 | 37.2 | 37.5 | 38.0 | 38.3 | 38.4 | 38.8 |
+| C3 | 0.05 | 0.86 | 2.26 | 4.43 | 8.17 | 10.68 | 13.17 | 12.92 | 13.97 | 14.51 |
+| C4 | 25.3 | 26.6 | 28.5 | 28.8 | 29.8 | 29.7 | 30.4 | 31.5 | 31.9 | 31.7 |
+
+C3, hide ratio by true injury: 1.23 (2.0 M) → 1.62 (2.6 M) → 1.92 (3.6 M) → 2.01 (5.0 M); starvation
+share of late deaths 0.76 → 0.70 → 0.65 → 0.66; bush time 0.51 → 0.41 → 0.38 → 0.37. C4's balance values
+were flat from about 2.4 M (eating time 0.147–0.151, hide ratio 2.42–2.53, hide among fed 3.06–3.23).
+Full 25-block tables for every key are in the tmp read-out.
+
+**What the curves say.**
+
+- **Today's world** gains ≈ 6 % from 2 M to 5 M, mostly by 2.8 M, and is flat after ≈ 4 M — in line with
+  the ≈ 10 % by 10 M the reviewer cited (M4). Its balance values do not move.
+- **C4** adds ≈ 27 steps, mostly in the first 0.8 M after the resume, then plateaus at ≈ 212 (0.88 of
+  today). Its eating and hiding values settle by 2.4 M at the 2 M levels, which is why they stay
+  borderline; more training did not move them away from their floors.
+- **C3 is a late learner, not a non-learner.** Eating appeared at ≈ 2 M and bites rose to ≈ 13 by 3.6 M,
+  then flattened; as it learned to eat, hiding began to track injury (the hide ratio crossed 2 only at
+  ≈ 4.6 M) and starvation's share of deaths fell — but only to 0.64–0.66, and survival plateaued at
+  ≈ 147, well under today's world. It eats less than half as often as today's agent (14.5 against
+  ≈ 38 bites), and starvation, not injury, still ends most episodes. The plan-reviewer's point stands:
+  C3 differs from C4 in both food count and smell range, so whether sparse food or a flat smell gradient
+  is the obstacle is not separable from these runs.
+- **Seeds:** the two reference seeds are now 5.2 steps apart at 5 M (0.9 at 2 M; seed 42 dipped in the
+  last block, −1.2 %). Every other value in this section is n = 1.
+
+### Conclusions
+
+- **Hypothesis for the extended worlds** (the simulation's "balanced" call holds once training has had
+  time): **holds for C4, fails for C3.** C4 is trained-balanced relative to today at 5 M on one seed,
+  borderline on two quantities; C3 is not balanced at 5 M (survival 0.63 of today, starvation 64 % of
+  late deaths) even with more environment steps than today's world had at 2 M.
+- **The simulation's trust verdict is unchanged** (not trustworthy; 2 of 6), and its optimism about the
+  large, food-poor grid is now a decided finding rather than one hedged by the step-count confound.
+- **Forwarding:** three candidates (C6, C2, C4), each pending its seed-43 run; nothing forwarded.
+- **Failure-mode catalog (4.7):** no crash, NaN or calibration mismatch; no run cut short; no run still
+  learning at 5 M. The seam check failed literally on the two climbing runs (see above).
+
+### Related issues / follow-ups
+
+- **For `bug-curator`:** the R1.4 seam rule (block after resume within ± 5 % of the block before)
+  cannot distinguish a resume discontinuity from a run that is still climbing — it failed on C3 and C4,
+  whose row-level series show no step at the resume point, while both non-climbing references passed.
+  A trend-adjusted or row-level seam check would be the fix for future extensions; no code defect is
+  suspected. The small first-rows dip after resume in all four runs (1–7 steps, recovered within
+  ≈ 12,000 episodes) is consistent with Known Bugs B5 and worth adding as an observation to that row.
+- **Needs the user's go:** seed-43 runs `C6b`, `C2b` (2 M) and `C4b` (5 M on a 20 × 20 grid; the 3 M continuation alone took ≈ 7 h).
+- **Manifest status column (4.9)** still reads "running" for the four extension rows; owned by
+  `training-runner` / `experiment-designer`, not edited here.
+- No new metric needed.
+
+Analysed by: experiment-analyzer (2026-09-28)
