@@ -1039,7 +1039,7 @@ directory contains `ctxexp` (checked 2026-09-27).
 
 | Run | Status | World | Tag (= wandb-name) | wandb-group | wandb-job-type | Seed | Node | GPU | Launched at | WandB run ID | Log path |
 |---|---|---|---|---|---|---|---|---|---|---|---|
-| C1a | planned | 1 reference | `rppo_ctxexp_lvl05ref_t1none_s42` | context_exploration | pilot | 42 | — | — | — | — | — |
+| C1a | running | 1 reference | `rppo_ctxexp_lvl05ref_t1none_s42` | context_exploration | pilot | 42 | 102 | cuda:0 | 2026-09-27T18:57:03 | `v4tbwrfn` | `logs/20260927_185703.log` · HEAD `1d3a3d0f` |
 | C1b | planned | 1 reference | `rppo_ctxexp_lvl05ref_t1none_s43` | context_exploration | pilot | 43 | — | — | — | — | — |
 | C2 | planned | 2 balanced | `rppo_ctxexp_g10r5f1to2b36_t1none_s42` | context_exploration | pilot | 42 | — | — | — | — | — |
 | C3 | running | 3 balanced | `rppo_ctxexp_g20r20f1to4b12_t1none_s42` | context_exploration | pilot | 42 | 102 | cuda:1 | 2026-09-27T18:47:47 | `whpmbq6l` | `logs/20260927_184748.log` · HEAD `a90eb973` |
