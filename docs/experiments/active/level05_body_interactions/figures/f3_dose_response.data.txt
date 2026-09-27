@@ -1,0 +1,9 @@
+worlds shown|4|16|25.0|plain level 05 and all four rules, always; plus the two other worlds with the largest modulator-minus-ordinary difference on measure 1, either sign: healing slower when hungry + being cold or hot uses up food + less food per bite (+7.6 points), healing uses up food (+7.4 points)
+plain level 05 (no rule on), ordinary agent: fed + hungry decision steps|97,107,315|97,107,315|100.0|all injury bins hold >= 200 steps
+plain level 05 (no rule on), modulator agent: fed + hungry decision steps|101,877,554|101,877,554|100.0|all injury bins hold >= 200 steps
+all four rules, ordinary agent: fed + hungry decision steps|90,084,717|90,084,717|100.0|all injury bins hold >= 200 steps
+all four rules, modulator agent: fed + hungry decision steps|89,412,053|89,412,053|100.0|all injury bins hold >= 200 steps
+healing slower when hungry + being cold or hot uses up food + less food per bite, ordinary agent: fed + hungry decision steps|102,300,912|102,300,912|100.0|all injury bins hold >= 200 steps
+healing slower when hungry + being cold or hot uses up food + less food per bite, modulator agent: fed + hungry decision steps|99,822,174|99,822,174|100.0|all injury bins hold >= 200 steps
+healing uses up food, ordinary agent: fed + hungry decision steps|90,161,736|90,161,736|100.0|all injury bins hold >= 200 steps
+healing uses up food, modulator agent: fed + hungry decision steps|91,228,155|91,228,155|100.0|all injury bins hold >= 200 steps

@@ -1,0 +1,165 @@
+<title>Body Rules and the Modulator</title>
+__HOUSE_STYLE__
+<style>
+  /* REQUIRED OVERRIDE (House Style Sheet, F11 amendment): on this project's pages blue, orange and green
+     mean rest in cover, warm up and eat; these figures spend no hue at all (ink, grey and marker shape),
+     and the chrome is kept off those three hues so a reader never reads the page accent as a choice. */
+  :root { --accent: #3f5b7a; --accent-text: #35506e; --warn: #7a5340; }
+  :root { --f-head: 'Pretendard', system-ui, -apple-system, "Segoe UI", sans-serif;
+          --f-mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace; }
+  figure, figcaption { min-width: 0; }
+  /* floors sum under the 688px column (160 + 220 + ~300 content), so tables fit a desktop and scroll
+     only on narrow screens (F24 amendment, F35) */
+  table.datatable td:last-child, table.datatable th:last-child { min-width: 220px; }
+  table.datatable td:first-child, table.datatable th:first-child { min-width: 160px; }
+  /* align-self: a flex child is blockified and stretched, so inline-block alone renders a full-width bar */
+  p.kind { display: inline-block; align-self: flex-start; margin: 0 0 6px; padding: 2px 9px; border-radius: 3px;
+           font-size: 12.5px; letter-spacing: .02em; border: 1px solid var(--rule); color: var(--ink-2); }
+  p.kind-recordings { border-color: var(--ink-2); color: var(--ink-2); }
+  p.kind-training { border-color: var(--accent); color: var(--accent-text); }
+  /* F65: floor = canvas px x 9 / smallest label px. Every figure's smallest text is 9.5 pt at 220 dpi
+     (29.0 px) and page/_common.save() refuses a canvas wider than 2209 px, so 685 px keeps it at >= 9 px.
+     It must stay <= the 688 px column, or every figure shows a scroll cue on a desktop (F32 amendment). */
+  .figscroll img { min-width: 685px; }
+  ol, ul { margin: 0; padding-left: 1.4em; } li + li { margin-top: 6px; }
+</style>
+
+<div class="wrap">
+
+<section class="col">
+  <h1>Body Rules and the Modulator</h1>
+  <p class="lede"><!-- PROSE:lede --></p>
+</section>
+
+<section class="col">
+<h2><span class="num">01</span> What this page asks</h2>
+<!-- PROSE:asks -->
+<div class="callout">
+  <p class="eyebrow">The answer, in one paragraph</p>
+  <p><!-- PROSE:answer --></p>
+</div>
+</section>
+
+<section class="col">
+<h2><span class="num">02</span> Sixteen worlds, four body rules</h2>
+<!-- PROSE:worlds -->
+</section>
+
+<section class="col">
+<h2><span class="num">03</span> What is measured</h2>
+<!-- PROSE:measures -->
+</section>
+
+<section class="col">
+<h2><span class="num">04</span> Does the modulator's hiding depend on hunger more, world by world?</h2>
+<!-- PROSE:f1_intro -->
+
+<figure>
+  <p class="cue" hidden>Wider than the screen — scroll sideways, or click the figure to open it full size.</p>
+  <div class="scroll figscroll"><img data-fig="f1_world_differences" alt="Three panels, one row per world. Left: a dot matrix showing which of the four body rules is on in each of the 16 worlds. Middle: modulator minus ordinary on the hiding contrast (steps in cover when badly hurt minus when barely hurt), for fed and for hungry agents; values run from about minus 6 to plus 7 points, with 95 percent intervals mostly narrower than the markers. Right: modulator minus ordinary on measure 1 (fed contrast minus hungry contrast), from about minus 4.5 to plus 7.6 points, positive in 12 worlds and negative in 4."></div>
+  <p class="zoomhint">Click the figure to open it full size.</p>
+  __KIND:f1_world_differences__
+  <figcaption>
+    <span><b>Figure 1 — <!-- PROSE:f1_title --></b> <!-- PROSE:f1_summary --></span>
+    <span><b>Axes.</b> Vertical, all panels: one row per world; the left panel's filled dots mark which of the four body rules is switched on. Middle panel, horizontal: the modulator agent's hiding contrast minus the ordinary agent's, in percentage points of steps, for fed agents (filled circles) and hungry agents (open diamonds); bars are 95 % intervals. Right panel, horizontal: the modulator's measure 1 minus the ordinary agent's, in percentage points (squares, 95 % intervals). Grey line at zero: no difference between the agents.</span>
+    __DATA:f1_world_differences__
+    <span><b>How it is computed.</b> <!-- PROSE:f1_method --> <b>What this figure does not show:</b> <!-- PROSE:f1_notshow --></span>
+  </figcaption>
+</figure>
+</section>
+
+<section class="col">
+<h2><span class="num">05</span> Which rules change the gap?</h2>
+<!-- PROSE:f2_intro -->
+
+<figure>
+  <p class="cue" hidden>Wider than the screen — scroll sideways, or click the figure to open it full size.</p>
+  <div class="scroll figscroll"><img data-fig="f2_factorial_effects" alt="Three panels sharing fifteen rows: the four single rules, the six pairs, the four triples and all four together. Each panel draws the effect of switching those rules on, in percentage points, with dotted single-effect margins and dashed margins over all fifteen. On the ordinary agent's own measure, healing uses up food (about plus 13) and less food per bite (about minus 18) pass the dashed margin; on the modulator's own measure, less food per bite (about minus 21) does. On the gap between the agents every effect lies within about 4 points of zero, inside both margins."></div>
+  <p class="zoomhint">Click the figure to open it full size.</p>
+  __KIND:f2_factorial_effects__
+  <figcaption>
+    <span><b>Figure 2 — <!-- PROSE:f2_title --></b> <!-- PROSE:f2_summary --></span>
+    <span><b>Axes.</b> Vertical, all panels: one row per effect, named by the rule or rules switched on (× marks an interaction; &ldquo;all four together&rdquo; is the four-way interaction). Horizontal, all panels: the effect of switching those rules on, on measure 1, in percentage points; left, on the ordinary agent's own measure; middle, on the modulator agent's own measure; right, on the modulator-minus-ordinary gap. Dotted lines: the single-effect margin (ME); dashed lines and the shaded band: the margin over all fifteen effects (SME). Filled markers exceed SME (&ldquo;noted&rdquo;); open markers do not.</span>
+    __DATA:f2_factorial_effects__
+    <span><b>How it is computed.</b> <!-- PROSE:f2_method --> <b>What this figure does not show:</b> <!-- PROSE:f2_notshow --></span>
+  </figcaption>
+</figure>
+</section>
+
+<section class="col">
+<h2><span class="num">06</span> What the hiding curves look like</h2>
+<!-- PROSE:f3_intro -->
+
+<figure>
+  <p class="cue" hidden>Wider than the screen — scroll sideways, or click the figure to open it full size.</p>
+  <div class="scroll figscroll"><img data-fig="f3_dose_response" alt="Four panels: plain level 05, all four rules on, and the two other worlds where the agents' measure-1 values differ most. Each panel shows the share of steps in cover against true injury for fed and hungry agents of both kinds. Fed agents' cover rises from about 20 to 45 percent at low injury to a peak near 65 to 70 percent at injury 40 to 60, then falls to about 30 percent at injury 90 to 100. Hungry agents' curves are flatter, and nearly flat at 20 to 40 percent when food is scarcer. In every panel the ordinary and modulator curves lie within a few points of each other."></div>
+  <p class="zoomhint">Click the figure to open it full size.</p>
+  __KIND:f3_dose_response__
+  <figcaption>
+    <span><b>Figure 3 — <!-- PROSE:f3_title --></b> <!-- PROSE:f3_summary --></span>
+    <span><b>Axes.</b> Horizontal, all panels: true injury, in bins of 10 points from 0 to 100 (points at bin centres); the shaded bands mark the low (0–20) and high (60–100) injury ranges that measure 1 compares. Vertical, all panels: share of decision steps spent in cover (a bush), in percent. Ink circles: ordinary agent; grey squares: modulator agent; solid lines with filled markers: fed; dashed lines with open markers: hungry. Each panel names the rules switched on in its world and prints that world's measure-1 gap.</span>
+    __DATA:f3_dose_response__
+    <span><b>How it is computed.</b> <!-- PROSE:f3_method --> <b>What this figure does not show:</b> <!-- PROSE:f3_notshow --></span>
+  </figcaption>
+</figure>
+</section>
+
+<section class="col">
+<h2><span class="num">07</span> Survival</h2>
+<!-- PROSE:f4_intro -->
+
+<figure>
+  <p class="cue" hidden>Wider than the screen — scroll sideways, or click the figure to open it full size.</p>
+  <div class="scroll figscroll"><img data-fig="f4_survival" alt="Three panels, one row per world. Left: which of the four body rules is on. Middle: survival steps of the ordinary agent (filled circles) and the modulator agent (open squares), from about 182 to 250 steps for the ordinary agent, lowest when less food per bite is combined with the food-draining rules. Right: modulator minus ordinary, positive in all 16 worlds, between about 2 and 6 steps."></div>
+  <p class="zoomhint">Click the figure to open it full size.</p>
+  __KIND:f4_survival__
+  <figcaption>
+    <span><b>Figure 4 — <!-- PROSE:f4_title --></b> <!-- PROSE:f4_summary --></span>
+    <span><b>Axes.</b> Vertical, all panels: one row per world; the left panel's filled dots mark which body rules are on. Middle panel, horizontal: survival, the mean episode length in steps over the last tenth of training (episodes 9 to 10 million), for the ordinary agent (filled circles) and the modulator agent (open squares). Right panel, horizontal: modulator minus ordinary, in steps; grey line at zero.</span>
+    __DATA:f4_survival__
+    <span><b>How it is computed.</b> <!-- PROSE:f4_method --> <b>What this figure does not show:</b> <!-- PROSE:f4_notshow --></span>
+  </figcaption>
+</figure>
+</section>
+
+<section class="col">
+<h2><span class="num">08</span> Does behaviour depend on combinations of body states?</h2>
+<!-- PROSE:f5_intro -->
+
+<figure>
+  <p class="cue" hidden>Wider than the screen — scroll sideways, or click the figure to open it full size.</p>
+  <div class="scroll figscroll"><img data-fig="f5_combination" alt="Three panels, one row per world. Left: which of the four body rules is on. Middle: the combination gain of the ordinary agent (filled circles) and the modulator agent (open squares), between about 2 and 5.3 percentage points, higher in the worlds with less food per bite. Right: modulator minus ordinary, between about minus 0.5 and plus 1.1 points, positive in 10 of 16 worlds."></div>
+  <p class="zoomhint">Click the figure to open it full size.</p>
+  __KIND:f5_combination__
+  <figcaption>
+    <span><b>Figure 5 — <!-- PROSE:f5_title --></b> <!-- PROSE:f5_summary --></span>
+    <span><b>Axes.</b> Vertical, all panels: one row per world; the left panel's filled dots mark which body rules are on. Middle panel, horizontal: combination gain, in percentage points of steps: how much better the agent's activity (eating, in cover, on a fire ring, in the open) is predicted from two body variables than from the best single one; ordinary agent filled circles, modulator agent open squares. Right panel, horizontal: modulator minus ordinary, in percentage points; grey line at zero.</span>
+    __DATA:f5_combination__
+    <span><b>How it is computed.</b> <!-- PROSE:f5_method --> <b>What this figure does not show:</b> <!-- PROSE:f5_notshow --></span>
+  </figcaption>
+</figure>
+</section>
+
+<section class="col">
+<h2><span class="num">09</span> What this page cannot say</h2>
+<!-- PROSE:limits -->
+</section>
+
+<section class="col">
+<h2><span class="num">10</span> How to reproduce this</h2>
+<ul>
+  <li>Design, pre-registration, pre-analysis decision and results: <code>docs/<wbr>experiments/<wbr>active/<wbr>level05_body_interactions/<wbr>LEVEL05_BODY_INTERACTIONS.md</code> (§4 measures, §7 results)</li>
+  <li>Analysis manifest (bands, ranges, runs): <code>docs/<wbr>experiments/<wbr>active/<wbr>level05_body_interactions/<wbr>analysis_manifest.yaml</code></li>
+  <li>Measures and effects: <code>scripts/<wbr>analysis/<wbr>studies/<wbr>level05_body_interactions/</code> — <code>state_contrasts.py</code> (measures 1 and 3), <code>behavioural_combination_gain.py</code> (measure 4), <code>factorial_effects.py</code> (the 15 effects, Lenth margins, WandB survival)</li>
+  <li>This page: <code>scripts/<wbr>analysis/<wbr>studies/<wbr>level05_body_interactions/<wbr>page/</code> — <code>shard_cells.py</code> (per-block counts for Figure 1's intervals), one script per figure, <code>build_page.py</code></li>
+  <li>Outputs, all under <code>results/<wbr>analysis/<wbr>level05_body_interactions/</code>: <code>state_contrasts.json</code>, <code>combination_gain.json</code>, <code>factorial_effects.json</code>, <code>dose_response/<wbr>dose_tables.json</code>, <code>page/<wbr>shard_cells.json</code></li>
+</ul>
+<p>Departures from the House Style Sheet, as on the project's other analysis pages: the chrome accent and
+warning hues are moved off the figure palette; headings use Pretendard and code the reader's system
+monospace; a small evidence-kind badge sits above each caption; wide tables sit in scroll boxes with an
+overflow cue. The figures use no hue: the two agents and the two nutrition bands differ by ink versus grey,
+marker shape and line style.</p>
+</section>
+
+</div>
+__HOUSE_SCRIPT__
