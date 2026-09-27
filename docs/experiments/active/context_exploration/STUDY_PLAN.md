@@ -345,3 +345,64 @@ effect size; C2 — contexts rebuilt from per-predator-count hazard bins, thresh
 interval and tie margin. Both in this plan before Parts 1–2 run.
 
 Reviewed by: plan-reviewer
+
+### Confirming pass on Revision 1 (2026-09-27)
+
+**Verdict: SOUND WITH CONCERNS.** Every Revision-0 finding (C1, C2, M1–M7, L1–L4, the four open
+assumptions) is resolved as written; Part 4 adds no Critical problem. No review file is written
+(none is Critical). Verified along the way: both Wave-2 stores carry `seed_base` 1,000,000
+(`_manifest.json` in each), so Part 1's paired comparison is available; the ordinary agent's
+discount is 0.95 (`nmngaenorm_t1none.yaml:37`), so the 20-step horizon is real; the ambusher /
+food slot arrays are allocated at `count_high` per entry (`config_loader.py:1970-1977`), so
+8–48 ambushers hit no static cap; `sensory.sensor_radius` is a registered critical setting.
+
+**Search floor (mean food search ≥ 20) — decidable, not trivial.** The forager detects an item
+when any of its five diamond cells is within `sensor_radius` (Euclidean), so the detection region
+is roughly a disc of radius range + 1: ≈ 50 cells at range 3, ≈ 113 at range 5, ≈ 254 at range 8.
+Rough 2D hitting-time estimate (L²/π · ln(L / r_eff)): a 20 × 20 world with 1–2 items sits near
+100–200 steps at range 3 and ≈ 100 at range 8; 15 × 15 with 1–2 items near 40–95; density-scaled
+worlds (4–16 items at 20 × 20) cover 40–90 % of cells and sit near today's 4–15. So the floor
+separates food-count regimes rather than fine-tuning within one, and the ranking will simply
+order "fewest items, shortest range" first. Two things to fix so it stays decidable:
+- 🟡 Say whether the point estimate or the 95 % interval's lower bound must clear 20. With 300
+  resets and a geometric-like tail (SD ≈ mean), the SE is ≈ mean / 17, so a world at 22 is inside
+  its own interval; 1,000 resets are cheap and halve it.
+- 🟡 The sweep has no food count between "1–2" and "same density" (4–16 at 20 × 20). If the
+  low-count worlds all starve (metabolic cost 1 / step, start energy uniform 0–200) and the
+  dense ones all fail the floor, Part 3 returns nothing. Add one intermediate rung (e.g. 2–4 and
+  2–6 at 20 × 20; 2–3 at 15 × 15) so the region around 20–60 steps is populated.
+
+**Part 4 — Moderate, to settle before configs are written.**
+- 🟡 Budget confound. The budget is in episodes, and episodes on a larger grid have a different
+  step length, so 2 M episodes gives each world a different number of gradient updates. Record
+  total environment steps at read-out and report survival against both; or state that the
+  screening tolerates it. Criterion 4 (survival ≥ 80 % of the reference) is the one it touches.
+- 🟡 Reference noise is already measured. The body-interaction base pilots P0a/b/c (same world,
+  same agent, seeds 42/43/44, 2 M episodes) read 228.3 / 225.8 / 228.6 survival steps in
+  1.8–2.0 M ([[LEVEL05_BODY_INTERACTIONS]] §6): a 3-seed spread of 2.8 steps (1.2 %). Use that as
+  the survival noise scale; the two new reference seeds are still needed, but only for the
+  `Bal_*` keys' noise. A single two-seed gap can be near zero by chance and then nothing is
+  borderline.
+- 🟢 "The early-death cut-off key at 20 steps" is not a config key: the balance-metrics plan fixes
+  the 20-step cut-off as a module constant (its §A5, "Constants, not config"). The only required
+  key is `logging.episode.balance_metrics`. Correct the sentence so `make_training_configs.py`
+  does not write a key nothing reads.
+- 🟢 Still-learning rule "> 5 %": say relative or percentage points. (The P0 pilots rose 1.3 %
+  over the last two blocks, so the reference itself will not trip it.)
+- ❓ Verifying the budget of a finished run: the saved `models/config.yaml` carries a stale second
+  copy of the seed and episode budget that always reads 42 / 100 (Known Bugs, 2026-09-04). Read
+  the budget from the WandB episode counter or the launch log, not the saved config.
+- ❓ Part 4 is gated on the balance-metrics merge; the branch exists (`balance_metrics` worktree)
+  and nothing under `src/` carries it yet. The gate is stated; the date is outside this plan.
+
+**Passes with nothing to report.** Data loss (analysis outputs and new configs only). Fallback
+defaults (no new code paths; configs to `env-config-reviewer`). Survival, not reward. Version
+numbers. Doc framing. Maintenance contracts (map row and critical-settings entry both named).
+Prior art: the three registry rows already cited (res_type filter, (0,0) parking, stale saved
+budget) are the only relevant ones; nothing new for `bug-curator`.
+
+**Cost of being wrong.** Part 4 wrong in the way suspected → one candidate passed or failed on a
+2-seed noise estimate or a step-count confound, costing a 2–6 h re-run per world; Part 3's sweep
+empty → a day of measurement and a redesign of the food axis. No unrecoverable loss.
+
+Reviewed by: plan-reviewer
