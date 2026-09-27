@@ -54,6 +54,13 @@ class World:
     hazard_move: float = 0.70
     gamma: float = 0.95
     grid: tuple = (51, 26, 61)                 # food, injury, temperature grid points
+    # ---- Revision 2 (balance study); the defaults reproduce Revision 1 exactly ----
+    e1: bool = False                           # E1: after each bite the item moves with prob 1/bites_per_item
+    bites_per_item: float = 12.0               #     (agent is then back at open ground)
+    e2: str = "mean"                           # E2: "mean" = mean-field hazard; "bins" = hits drawn from hazard_bins
+    hazard_eat: float | None = None            # mean mode: eating-step hazard (None -> hazard_move, Revision 1)
+    hazard_bins: dict | None = None            # bins mode: {"eat"|"move"|"rest": (p_hit, [bin probs], [bin sizes])}
+    hazard_scale: float = 1.0                  # diagnostic: hit probability (bins) / mean (mean) times this
 
 
 def grids(world):
@@ -77,12 +84,46 @@ def _interp_setup(N, I, T, G):
     return np.stack(idx), np.stack(wts)
 
 
+def activity(what):
+    """E2 activity class of a step: eating, resting, or moving (moves and staying in place)."""
+    return "rest" if what == "rest" else "eat" if what == "eat" else "move"
+
+
+def mean_hazard(world, what):
+    """Mean-field hazard of one step outside cover (Revision 1 when hazard_eat is None)."""
+    hz = world.hazard_rest if what == "rest" else (
+        world.hazard_eat if (what == "eat" and world.hazard_eat is not None) else world.hazard_move)
+    return hz * world.hazard_scale if world.hazard_scale != 1.0 else hz
+
+
+def hazard_dist(world, what, bush):
+    """Outcomes of one step's hazard as [(probability, injury added)], sizes 0 = no hit.
+    mean mode: one certain outcome of the mean; bins mode: no hit, or a hit of each bin's measured
+    mean size (the >= 100 bin kills at any injury, since injury is clipped at 100)."""
+    if bush:
+        return [(1.0, 0.0)]
+    if world.e2 == "mean":
+        return [(1.0, mean_hazard(world, what))]
+    p_hit, probs, sizes = world.hazard_bins[activity(what)]
+    p = min(1.0, p_hit * world.hazard_scale)
+    return [(1.0 - p, 0.0)] + [(p * q, float(x)) for q, x in zip(probs, sizes) if q > 0]
+
+
+def apply_hit(P, s, x):
+    """Add a hit of size x (scalar or array) to a bodysim step result; same arithmetic as Revision 1."""
+    I2, dead, r = s["I"], s["dead"], s["reward"]
+    I3 = np.minimum(I2 + x, P.max_injury)
+    newly = (~dead) & (I3 >= P.max_injury)
+    r = r + (B.drive(s["N"], I2, s["T"], P) - B.drive(s["N"], I3, s["T"], P)) - np.where(newly, P.death_penalty, 0.0)
+    return s["N"], I3, s["T"], r, dead | newly, newly
+
+
 def one_step(world, N, I, T, what, cell, bush):
     """One environment step (bodysim) plus the expected predator hazard outside cover."""
     P = world.body
     s = B.step(N, I, T, rested=(what == "rest"), ate=(what == "eat"), in_bush=bush, cell_temp=cell, P=P)
     I2, dead, r = s["I"], s["dead"], s["reward"]
-    hz = world.hazard_rest if what == "rest" else world.hazard_move
+    hz = mean_hazard(world, what)
     if hz and not bush:
         I3 = np.minimum(I2 + hz, P.max_injury)
         newly = (~dead) & (I3 >= P.max_injury)
@@ -92,15 +133,19 @@ def one_step(world, N, I, T, what, cell, bush):
     return s["N"], I2, s["T"], r, dead
 
 
-def macro(world, N, I, T, kind, place):
-    """Apply one macro action; returns next state, summed discounted reward, death, continuation
-    discount and the number of environment steps it took."""
+def macro_steps(world, kind, place):
+    """The environment steps of a macro action as (what, cell temperature, in bush)."""
     if kind == "go":
         n = world.trip[place]
         # the last step lands in the destination cell; arriving in a bush is already cover
-        steps = [("move", TRAVEL_CELL, False)] * (n - 1) + [("move", CELL[place], IN_BUSH[place])]
-    else:
-        steps = [(kind, CELL[place], IN_BUSH[place])]
+        return [("move", TRAVEL_CELL, False)] * (n - 1) + [("move", CELL[place], IN_BUSH[place])]
+    return [(kind, CELL[place], IN_BUSH[place])]
+
+
+def macro(world, N, I, T, kind, place):
+    """Apply one macro action; returns next state, summed discounted reward, death, continuation
+    discount and the number of environment steps it took."""
+    steps = macro_steps(world, kind, place)
     R = np.zeros_like(N); disc = np.ones_like(N); dead = np.zeros(N.shape, bool)
     for what, cell, bush in steps:
         N2, I2, T2, r, d = one_step(world, N, I, T, what, cell, bush)
@@ -116,6 +161,9 @@ def options(world, p):
 
 
 def solve(world: World, iters: int = 5000, tol: float = 1e-4):
+    """Revision-1 (deterministic) solver when E1 and E2 are off; the stochastic solver otherwise."""
+    if world.e1 or world.e2 != "mean":
+        return solve_stochastic(world, iters, tol)
     GN, GI, GT = G = grids(world)
     NN, II, TT = np.meshgrid(GN, GI, GT, indexing="ij")
     N0, I0, T0 = NN.ravel(), II.ravel(), TT.ravel()
@@ -237,3 +285,290 @@ def summarise(sols, margin=0.5, T_lo=-10.0, T_hi=5.0):
                 interaction_share=pool(lambda s: s["interaction_share"]),
                 three_way_share=pool(lambda s: s["three_way_share"]),
                 per_map=[s for s, _ in per])
+
+
+# =====================================================================================================
+# Revision 2 (balance study): stochastic world -- E1 food relocation, E2 hits drawn from measured bins
+# =====================================================================================================
+
+def macro_branches(world, N, I, T, kind, place):
+    """Outcome branches of one macro action when the hazard is stochastic (E2 bins).
+
+    Exact for the FIRST hit inside the macro (any bin, at any step). After a branch's first hit the
+    remaining steps of the same macro take the mean-field hazard of their activity, so the expected
+    damage is preserved; what is lost is the variance of a second hit within one macro (at 2.7 % per
+    moving step, P(two hits in a 4-step trip) is about 0.4 %). Single-step actions are exact.
+    Returns [(prob, N, I, T, discounted reward, dead)], the common continuation discount, #steps.
+    With a one-outcome (mean-field) distribution this is `macro`, operation for operation."""
+    P = world.body
+    br = [(1.0, N, I, T, np.zeros_like(N), np.zeros(N.shape, bool), False)]
+    disc = np.ones_like(N)
+    steps = macro_steps(world, kind, place)
+    for what, cell, bush in steps:
+        dist = hazard_dist(world, what, bush)
+        mean = sum(p * x for p, x in dist) if len(dist) > 1 else dist[0][1]
+        new = []
+        for prob, n_, i_, t_, R, dead, hit in br:
+            if dead.all():
+                new.append((prob, n_, i_, t_, R, dead, hit)); continue
+            s = B.step(n_, i_, t_, rested=(what == "rest"), ate=(what == "eat"), in_bush=bush, cell_temp=cell, P=P)
+            for p, x in ([(1.0, mean)] if hit else dist):
+                if p <= 0.0:
+                    continue
+                if x:
+                    N2, I2, T2, r, d, _ = apply_hit(P, s, x)
+                else:
+                    N2, I2, T2, r, d = s["N"], s["I"], s["T"], s["reward"], s["dead"]
+                new.append((prob * p, N2, I2, T2, R + np.where(dead, 0.0, disc * r), dead | d, hit or x > 0))
+        br = new; disc = disc * world.gamma
+    return [b[:6] for b in br], disc, len(steps)
+
+
+def solve_stochastic(world: World, iters: int = 5000, tol: float = 1e-4):
+    """Value iteration with expectations over hazard outcomes (E2) and food relocation (E1).
+
+    Each option's expected continuation is a sparse matrix (rows: states; columns: next place x grid
+    state; entries: outcome probability x survival x trilinear interpolation weight), so one Bellman
+    backup is one sparse matrix-vector product. Q = R + discount * (A @ V), which for a one-outcome
+    world is the Revision-1 update in the same floating-point order (validate_balance.py checks this)."""
+    from scipy import sparse
+    GN, GI, GT = G = grids(world)
+    NN, II, TT = np.meshgrid(GN, GI, GT, indexing="ij")
+    N0, I0, T0 = NN.ravel(), II.ravel(), TT.ravel()
+    S = N0.size
+    places = [p for p in PLACES if p != "W" or world.warm_bush]
+    pi = {p: k for k, p in enumerate(places)}
+    e = 1.0 / world.bites_per_item if world.e1 else 0.0
+    rows8 = np.repeat(np.arange(S, dtype=np.int32)[:, None], 8, axis=1).ravel()
+    blocks, Rs, Ds, names, span = [], [], [], {p: [] for p in places}, {}
+    for p in places:
+        start = len(Rs)
+        for kind, q in options(world, p):
+            br, disc, _ = macro_branches(world, N0, I0, T0, kind, q)
+            dests = [(q, 1.0 - e), ("O", e)] if (kind == "eat" and e > 0) else [(q, 1.0)]
+            R = np.zeros(S); rr, cc, dd = [], [], []
+            for prob, N1, I1, T1, Rb, dead in br:
+                R = R + prob * Rb
+                if dead.all():
+                    continue
+                idx, wts = _interp_setup(N1, I1, T1, G)
+                alive = (~dead).astype(float)
+                for dq, dp in dests:
+                    rr.append(rows8); cc.append((idx.T + pi[dq] * S).astype(np.int32).ravel())
+                    dd.append((wts * ((prob * dp) * alive)[None, :]).T.ravel())
+            A = sparse.coo_matrix((np.concatenate(dd), (np.concatenate(rr), np.concatenate(cc))),
+                                  shape=(S, len(places) * S)).tocsr()
+            A.sum_duplicates(); A.sort_indices()
+            blocks.append(A); Rs.append(R); Ds.append(disc); names[p].append(f"{kind}_{q}")
+            del rr, cc, dd
+        span[p] = (start, len(Rs))
+    A = sparse.vstack(blocks, format="csr"); del blocks
+    Rall, Dall = np.concatenate(Rs), np.concatenate(Ds)
+    nnz = int(A.nnz)
+    V = np.zeros((len(places), S))
+
+    def backup(V):
+        return Rall + Dall * (A @ V.ravel())
+    for it in range(iters):
+        Q = backup(V)
+        Vn = np.stack([Q[span[p][0] * S:span[p][1] * S].reshape(-1, S).max(0) for p in places])
+        delta = np.abs(Vn - V).max(); V = Vn
+        if delta < tol:
+            break
+    Q = backup(V)
+    q_values = {p: (np.array(names[p]), Q[span[p][0] * S:span[p][1] * S].reshape(-1, S)) for p in places}
+    return dict(V=V, q=q_values, places=places, iters=it + 1, delta=float(delta), world=world, nnz=nnz)
+
+
+def hazard_bins_from_measurements(meas, run=None, pool=None, collapse=False):
+    """World.hazard_bins from world_measurements.json["hazard_bins"].
+    run      which agent's recordings (default: the primary, ordinary agent)
+    pool     None = per activity (eat / move / rest); "rest_other" = rest vs eat+move pooled;
+             "all" = one distribution for every step outside cover
+    collapse replace each distribution by a certain hit of its mean (p 1, one bin): the
+             mean-field model expressed in the bins code path (validation)."""
+    hb = meas["hazard_bins"]; acts = hb["runs"][run or hb["primary_run"]]["activities"]
+
+    def combine(keys):
+        rows = sum(acts[k]["rows"] for k in keys); hits = sum(acts[k]["hits"] for k in keys)
+        cnt = np.sum([np.array(acts[k]["bin_counts"], float) for k in keys], 0)
+        sz = np.sum([np.array(acts[k]["bin_counts"], float) * np.array(acts[k]["bin_mean_size"]) for k in keys], 0)
+        return hits / rows, (cnt / hits).tolist(), np.where(cnt > 0, sz / np.maximum(cnt, 1), 0.0).tolist()
+    groups = {None: {"eat": ["eat"], "move": ["move"], "rest": ["rest"]},
+              "rest_other": {"eat": ["eat", "move"], "move": ["eat", "move"], "rest": ["rest"]},
+              "all": {a: ["eat", "move", "rest"] for a in ("eat", "move", "rest")}}[pool]
+    out = {}
+    for a, keys in groups.items():
+        p, probs, sizes = combine(keys)
+        if collapse:
+            m = p * float(np.dot(probs, sizes))
+            p, probs, sizes = 1.0, [1.0], [m]
+        out[a] = (p, probs, sizes)
+    return out
+
+
+def mean_of_bins(bins):
+    """Per-activity mean damage per step of a hazard_bins dict."""
+    return {a: p * float(np.dot(probs, sizes)) for a, (p, probs, sizes) in bins.items()}
+
+
+# ---- rollouts for the balance measures (study plan Revision 2a / 2b) --------------------------------
+WHAT_CODES = ["idle", "rest", "eat", "move"]
+DEATH_CAUSES = ["injury", "starvation", "over-eating", "cold", "heat"]
+
+
+def _ratio(num_a, den_a, num_b, den_b):
+    """(num_a/den_a) / (num_b/den_b); None ("not computable") on any zero denominator."""
+    if den_a == 0 or den_b == 0 or num_b == 0:
+        return None
+    return (num_a / den_a) / (num_b / den_b)
+
+
+def rollout_balance(sol, n_starts=2000, max_steps=500, T_lo=-10.0, T_hi=5.0, seed=0, early=20):
+    """Follow the ideal policy step by step from training-style starts at open ground and count the
+    Revision-2a balance measures. Hazard hits are SAMPLED from the world's bins (several hits per trip
+    possible); in mean mode the mean-field injury is added deterministically, as in Revision 1.
+    E1: after each bite the item moves with prob 1/bites_per_item and the agent is back at open ground.
+    Per-step shares use the body state at the START of the step and the cell the step is spent in
+    (the destination cell on a trip's last step). Returns raw counts plus derived shares / ratios."""
+    world = sol["world"]; P = world.body; GN, GI, GT = grids(world)
+    rng = np.random.default_rng(seed)
+    n = n_starts
+    N = rng.uniform(0, 200, n); I = rng.uniform(0, 100, n); T = rng.uniform(T_lo, T_hi, n)
+    places = sol["places"]; pidx = {p: k for k, p in enumerate(places)}
+    cell_of = np.array([CELL[p] for p in places]); bush_of = np.array([IN_BUSH[p] for p in places])
+    trip_of = np.array([world.trip[p] for p in places])
+    place = np.full(n, pidx["O"]); dest = np.full(n, -1); left = np.zeros(n, int); local = np.zeros(n, int)
+    alive = np.ones(n, bool); death_t = np.full(n, -1); cause = np.full(n, -1)
+    e = 1.0 / world.bites_per_item if world.e1 else 0.0
+    near = lambda x, g: np.clip(np.rint((x - g[0]) / (g[1] - g[0])).astype(int), 0, len(g) - 1)
+    code = {"idle": 0, "rest": 1, "eat": 2}
+    dist = {w: hazard_dist(world, w, False) for w in WHAT_CODES}
+    C = {k: 0 for k in ("steps", "cover", "warm", "eat", "elsewhere",
+                        "n_hungry", "eat_hungry", "n_fed", "eat_fed",
+                        "n_cold", "warm_cold", "n_warmT", "warm_warmT",
+                        "n_inj", "cover_inj", "n_heal", "cover_heal",
+                        "fed_n_inj", "fed_cover_inj", "fed_n_heal", "fed_cover_heal",
+                        "hun_n_inj", "hun_cover_inj", "hun_n_heal", "hun_cover_heal",
+                        "need_hunger", "need_injury", "need_temperature",
+                        "bites", "relocations", "food_arrivals", "hits", "hit_damage")}
+    for t in range(max_steps):
+        a = np.flatnonzero(alive)
+        if a.size == 0:
+            break
+        # ---- decisions for agents not on a trip ----
+        dec = a[left[a] == 0]
+        for p in places:
+            sel = dec[place[dec] == pidx[p]]
+            if sel.size == 0:
+                continue
+            names, vals = sol["q"][p]
+            flat = (near(N[sel], GN) * len(GI) + near(I[sel], GI)) * len(GT) + near(T[sel], GT)
+            choice = names[vals[:, flat].argmax(0)]
+            for c in np.unique(choice):
+                k = sel[choice == c]; kind, q = c.split("_")
+                if kind == "go":
+                    dest[k] = pidx[q]; left[k] = trip_of[pidx[q]]; local[k] = -1
+                else:
+                    local[k] = code[kind]
+        # ---- this step's activity, cell and cover ----
+        trav = left[a] > 0
+        last = trav & (left[a] == 1)
+        what = np.where(trav, 3, local[a])
+        cell = np.where(trav, np.where(last, cell_of[np.maximum(dest[a], 0)], TRAVEL_CELL), cell_of[place[a]])
+        bush = np.where(trav, last & bush_of[np.maximum(dest[a], 0)], bush_of[place[a]])
+        n0, i0, t0 = N[a], I[a], T[a]
+        warm = cell > 0; eating = what == 2
+        C["steps"] += a.size; C["cover"] += int(bush.sum()); C["warm"] += int(warm.sum())
+        C["eat"] += int(eating.sum()); C["elsewhere"] += int((~bush & ~warm & ~eating).sum())
+        hungry, fed_ = n0 < 60, n0 >= 100
+        C["n_hungry"] += int(hungry.sum()); C["eat_hungry"] += int((eating & hungry).sum())
+        C["n_fed"] += int(fed_.sum()); C["eat_fed"] += int((eating & fed_).sum())
+        cold, warmT = t0 < -5, t0 > 0
+        C["n_cold"] += int(cold.sum()); C["warm_cold"] += int((warm & cold).sum())
+        C["n_warmT"] += int(warmT.sum()); C["warm_warmT"] += int((warm & warmT).sum())
+        inj, heal = i0 >= 60, i0 <= 20
+        C["n_inj"] += int(inj.sum()); C["cover_inj"] += int((bush & inj).sum())
+        C["n_heal"] += int(heal.sum()); C["cover_heal"] += int((bush & heal).sum())
+        for tag, m in (("fed", (n0 >= 80) & (n0 <= 160)), ("hun", hungry)):
+            C[f"{tag}_n_inj"] += int((m & inj).sum()); C[f"{tag}_cover_inj"] += int((m & inj & bush).sum())
+            C[f"{tag}_n_heal"] += int((m & heal).sum()); C[f"{tag}_cover_heal"] += int((m & heal & bush).sum())
+        need = np.argmax(np.stack([np.abs(n0 - P.setpoint), i0, np.abs(t0 - P.t_set) * 100.0 / P.t_max]), 0)
+        for k, nm in enumerate(("need_hunger", "need_injury", "need_temperature")):
+            C[nm] += int((need == k).sum())
+        # ---- body step, then the hazard outside cover ----
+        s = B.step(n0, i0, t0, rested=(what == 1), ate=eating, in_bush=bush, cell_temp=cell, P=P)
+        x = np.zeros(a.size)
+        for k, w in enumerate(WHAT_CODES):
+            m = (what == k) & ~bush
+            if not m.any():
+                continue
+            outs = dist[w]
+            if len(outs) == 1:
+                x[m] = outs[0][1]
+            else:
+                pr = np.array([o[0] for o in outs]); sz = np.array([o[1] for o in outs])
+                j = np.searchsorted(np.cumsum(pr) / pr.sum(), rng.random(int(m.sum())), side="right")
+                x[m] = sz[np.minimum(j, len(sz) - 1)]
+        if world.e2 != "mean":
+            C["hits"] += int((x > 0).sum()); C["hit_damage"] += float(x.sum())
+        N2, I2, T2, _, dead, newly = apply_hit(P, s, x)
+        c = np.full(a.size, -1)
+        for k, m in enumerate((s["injury_death"] | newly, s["starve"], s["overeat"], T2 < P.t_min, T2 > P.t_max)):
+            c = np.where((c < 0) & dead & m, k, c)
+        N[a], I[a], T[a] = N2, I2, T2
+        died = a[dead]; alive[died] = False; death_t[died] = t; cause[died] = c[dead]
+        # ---- E1 relocation, trip progress ----
+        ate_alive = a[eating & ~dead]
+        C["bites"] += int(eating.sum())
+        if e > 0 and ate_alive.size:
+            mv = ate_alive[rng.random(ate_alive.size) < e]
+            C["relocations"] += int(mv.size); place[mv] = pidx["O"]
+        tr = a[trav]
+        left[tr] -= 1
+        arr = tr[left[tr] == 0]
+        C["food_arrivals"] += int((dest[arr] == pidx.get("F", -9)).sum())
+        place[arr] = dest[arr]; dest[arr] = -1
+    late = (death_t >= early)
+    deaths = {nm: int(((cause == k) & late).sum()) for k, nm in enumerate(DEATH_CAUSES)}
+    early_deaths = {nm: int(((cause == k) & (death_t >= 0) & ~late).sum()) for k, nm in enumerate(DEATH_CAUSES)}
+    n_late = int(sum(deaths.values()))
+    st = max(C["steps"], 1)
+    steps_lived = np.where(death_t >= 0, death_t + 1, max_steps)
+    out = dict(
+        n_starts=n, max_steps=max_steps, counts=C,
+        survival_share=float(alive.mean()), mean_survival_steps=float(steps_lived.mean()),
+        time_share={k: C[k] / st for k in ("cover", "warm", "eat", "elsewhere")},
+        drive_ratio=dict(eat=_ratio(C["eat_hungry"], C["n_hungry"], C["eat_fed"], C["n_fed"]),
+                         warm=_ratio(C["warm_cold"], C["n_cold"], C["warm_warmT"], C["n_warmT"]),
+                         hide=_ratio(C["cover_inj"], C["n_inj"], C["cover_heal"], C["n_heal"])),
+        need_share={k: C[f"need_{k}"] / st for k in ("hunger", "injury", "temperature")},
+        deaths_after_early=deaths, deaths_early=early_deaths, early_steps=early,
+        late_death_share_of_starts=n_late / n,
+        death_cause_share={k: (v / n_late if n_late else None) for k, v in deaths.items()},
+        hide=dict(fed=_ratio(C["fed_cover_inj"], C["fed_n_inj"], C["fed_cover_heal"], C["fed_n_heal"]),
+                  hungry=_ratio(C["hun_cover_inj"], C["hun_n_inj"], C["hun_cover_heal"], C["hun_n_heal"])),
+        e1=dict(bites=C["bites"], relocations=C["relocations"], food_arrivals=C["food_arrivals"],
+                relocations_per_bite=(C["relocations"] / C["bites"] if C["bites"] else None),
+                bites_per_visit=(C["bites"] / C["food_arrivals"] if C["food_arrivals"] else None)))
+    return out
+
+
+def warming_per_decision(sol, margin=0.5, T_lo=-10.0, T_hi=5.0, cold=-5.0, warmT=0.0):
+    """Criterion 2 (b'), study plan Revision 2b: among training start states at open ground, the share
+    whose best choice is "warm up" at body temperature <= -5 divided by the share at >= 0.
+    Primary: all start states; also reported with ties (within `margin`) excluded."""
+    mask, NN, II, TT = start_mask(sol["world"], T_lo, T_hi)
+    cat, tie = best_category(sol, "O", margin)
+    w = (cat == "warm up")
+    lo, hi = mask & (TT <= cold + 1e-9), mask & (TT >= warmT - 1e-9)
+    def ratio(extra):
+        a_, b_ = lo & extra, hi & extra
+        if a_.sum() == 0 or b_.sum() == 0 or (w & b_).sum() == 0:
+            return None, float((w & a_).sum() / max(a_.sum(), 1)), float((w & b_).sum() / max(b_.sum(), 1))
+        sa, sb = (w & a_).sum() / a_.sum(), (w & b_).sum() / b_.sum()
+        return float(sa / sb), float(sa), float(sb)
+    r, sa, sb = ratio(np.ones_like(mask))
+    rt, sat, sbt = ratio(~tie)
+    return dict(ratio=r, share_cold=sa, share_warm=sb, ratio_ties_excluded=rt,
+                share_cold_ties_excluded=sat, share_warm_ties_excluded=sbt)

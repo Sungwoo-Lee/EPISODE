@@ -12,6 +12,16 @@ Writes results/analysis/internal_state_interactions/world_measurements.json:
 
   python measure_world.py --src-root <frozen source tree> --resets 300
   python measure_world.py --src-root <tree> --resets 300 --bush-min-fire-distance 3 --out tmp/<ts>_x.json
+  python measure_world.py --hazard-bins-only --blocks 200
+
+--hazard-bins-only (study plan Revision 2a, E2) adds ONE key, "hazard_bins", to the existing
+world_measurements.json and leaves every other key untouched (no environment is needed: it reads
+only the recordings). Per activity outside cover -- eating (ate_food), resting (rested), moving
+(neither; includes staying in place) -- the per-step hit probability and the distribution of hit
+sizes (damage > 0) over fixed bins 0-5, 5-15, 15-30, 30-60, 60-100, >=100 (the last is lethal at
+any injury), for each agent separately; the ordinary agent (t1none) is primary. Asserts, per
+activity, that p(hit) x the binned mean hit size reproduces the recordings' mean damage per step
+within 5 %. The full measurement (without the flag) writes the same key as well.
 
 --bush-min-fire-distance N sets thermal.bush_min_fire_distance IN MEMORY after loading
 level 05 (no config file is written); it requires --out, so a variant run can never
@@ -23,15 +33,90 @@ import numpy as np, yaml
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.abspath(os.path.join(HERE, "..", "..", "..", ".."))
 RUNS = ["20260922-182534_rppo_bq2cover_lvl05_t1none_s42", "20260922-182538_rppo_bq2cover_lvl05_t16quad_s42"]
+PRIMARY_RUN = RUNS[0]                     # the ordinary agent: the balance study concerns ordinary agents
+MEAS_PATH = os.path.join(ROOT, "results/analysis/internal_state_interactions/world_measurements.json")
+# hit-size bins (upper edges inclusive): (0,5], (5,15], (15,30], (30,60], (60,100), [100, inf) lethal
+BIN_LABELS = ["0-5", "5-15", "15-30", "30-60", "60-100", ">=100"]
+ACTIVITIES = ("eat", "move", "rest")
+
+
+def _bin_of(x):
+    b = np.digitize(x, [5.0, 15.0, 30.0, 60.0], right=True)          # 0..4 for x <= 60, 4 for (60, inf)
+    return np.where(x >= 100.0, 5, b)
+
+
+def measure_hazard_bins(runs, n_blocks):
+    """E2 numbers from the Wave-2 level-05 recordings, per run and activity outside cover.
+    Accumulates counts/sums block by block (no whole-store load); also reports the two halves of the
+    blocks separately as a stability check."""
+    import pyarrow.parquet as pq
+    out = {}
+    for run in runs:
+        fs = sorted(glob.glob(os.path.join(ROOT, f"results/trajectories_basicq2_w2/{run}/*/*/steps_*.parquet")))[:n_blocks]
+        if not fs:
+            raise SystemExit(f"no step blocks for {run}")
+        acc = {h: {a: dict(rows=0, hits=0, dmg=0.0, cnt=np.zeros(6), sz=np.zeros(6)) for a in ACTIVITIES} for h in (0, 1)}
+        for k, f in enumerate(fs):
+            tb = pq.read_table(f, columns=["t", "damage", "agent_in_bush", "rested", "ate_food"])
+            t = tb.column("t").to_numpy(); d = tb.column("damage").to_numpy().astype(np.float64)
+            bush = tb.column("agent_in_bush").to_numpy(zero_copy_only=False).astype(bool)
+            rst = tb.column("rested").to_numpy(zero_copy_only=False).astype(bool)
+            ate = tb.column("ate_food").to_numpy(zero_copy_only=False).astype(bool)
+            m = (t >= 1) & ~bush
+            sel = {"eat": m & ate, "rest": m & rst & ~ate, "move": m & ~rst & ~ate}
+            h = int(k >= len(fs) / 2)
+            for a, s in sel.items():
+                x = d[s]; hit = x > 0; b = _bin_of(x[hit]); A = acc[h][a]
+                A["rows"] += int(s.sum()); A["hits"] += int(hit.sum()); A["dmg"] += float(x.sum())
+                A["cnt"] += np.bincount(b, minlength=6); A["sz"] += np.bincount(b, weights=x[hit], minlength=6)
+        res = {}
+        for a in ACTIVITIES:
+            tot = {key: acc[0][a][key] + acc[1][a][key] for key in ("rows", "hits", "dmg", "cnt", "sz")}
+            p_hit = tot["hits"] / tot["rows"]
+            probs = tot["cnt"] / max(tot["hits"], 1)
+            means = np.where(tot["cnt"] > 0, tot["sz"] / np.maximum(tot["cnt"], 1), 0.0)
+            mean_dmg = tot["dmg"] / tot["rows"]
+            reproduced = p_hit * float((probs * means).sum())
+            rel = abs(reproduced - mean_dmg) / mean_dmg if mean_dmg > 0 else 0.0
+            halves = [dict(rows=acc[h][a]["rows"], p_hit=acc[h][a]["hits"] / max(acc[h][a]["rows"], 1),
+                           mean_damage_per_step=acc[h][a]["dmg"] / max(acc[h][a]["rows"], 1),
+                           bin_probs=(acc[h][a]["cnt"] / max(acc[h][a]["hits"], 1)).tolist()) for h in (0, 1)]
+            res[a] = dict(rows=tot["rows"], hits=tot["hits"], p_hit=p_hit, bin_labels=BIN_LABELS,
+                          bin_counts=tot["cnt"].astype(int).tolist(), bin_probs=probs.tolist(),
+                          bin_mean_size=means.tolist(), mean_damage_per_step=mean_dmg,
+                          reproduced_mean_damage=reproduced, reproduction_rel_error=rel,
+                          reproduction_pass=bool(rel <= 0.05), halves=halves)
+            assert rel <= 0.05, f"{run} {a}: p x mean hit {reproduced:.4f} vs recorded {mean_dmg:.4f} ({rel:.1%})"
+        out[run] = dict(blocks=len(fs), activities=res)
+        print(f"[hazard_bins] {run}: {len(fs)} blocks, rows " +
+              ", ".join(f"{a} {res[a]['rows']:,} (p {res[a]['p_hit']:.4f}, mean {res[a]['mean_damage_per_step']:.3f})"
+                        for a in ACTIVITIES), flush=True)
+    return dict(primary_run=PRIMARY_RUN, source="results/trajectories_basicq2_w2 (Wave-2 level-05 final checkpoints)",
+                activity_definition="outside cover (agent_in_bush false), t >= 1; eat = ate_food; rest = rested; "
+                                    "move = neither (includes staying in place)",
+                bins="(0,5], (5,15], (15,30], (30,60], (60,100), [100,inf) lethal; bin_mean_size = mean hit within the bin",
+                runs=out)
 
 
 def main():
-    ap = argparse.ArgumentParser(); ap.add_argument("--src-root", required=True)
-    ap.add_argument("--resets", type=int, required=True)
+    ap = argparse.ArgumentParser(); ap.add_argument("--src-root", default=None)
+    ap.add_argument("--resets", type=int, default=None)
+    ap.add_argument("--hazard-bins-only", action="store_true",
+                    help="add only the 'hazard_bins' key to the existing world_measurements.json (no env needed)")
+    ap.add_argument("--blocks", type=int, default=200, help="step blocks per run read for hazard_bins")
     ap.add_argument("--bush-min-fire-distance", type=int, default=None,
                     help="set thermal.bush_min_fire_distance in memory (requires --out)")
     ap.add_argument("--out", default=None, help="output JSON path (required with --bush-min-fire-distance)")
     a = ap.parse_args()
+    if a.hazard_bins_only:
+        p = a.out or MEAS_PATH
+        meas = json.load(open(p))
+        meas["hazard_bins"] = measure_hazard_bins(RUNS, a.blocks)
+        json.dump(meas, open(p, "w"), indent=1)
+        print(f"[measure_world] wrote hazard_bins into {p} (other keys unchanged)")
+        return
+    if a.src_root is None or a.resets is None:
+        ap.error("--src-root and --resets are required unless --hazard-bins-only")
     if a.bush_min_fire_distance is not None and a.out is None:
         ap.error("--bush-min-fire-distance requires --out (never overwrite world_measurements.json)")
     os.environ.setdefault("JAX_PLATFORMS", "cpu"); sys.path.insert(0, os.path.abspath(a.src_root))
@@ -104,8 +189,8 @@ def main():
                warm_bush_episode_share=float(np.mean(warm)),
                share_of_bushes_on_a_fire_ring=float(np.mean(ring_bush)),
                bushes_by_fire_class={k: v / max(1, sum(bush_class.values())) for k, v in sorted(bush_class.items())},
-               hazard=hazard, gamma=gammas)
-    p = a.out or os.path.join(ROOT, "results/analysis/internal_state_interactions/world_measurements.json")
+               hazard=hazard, gamma=gammas, hazard_bins=measure_hazard_bins(RUNS, a.blocks))
+    p = a.out or MEAS_PATH
     os.makedirs(os.path.dirname(p), exist_ok=True); json.dump(out, open(p, "w"), indent=1)
     print(json.dumps(out, indent=1))
 
