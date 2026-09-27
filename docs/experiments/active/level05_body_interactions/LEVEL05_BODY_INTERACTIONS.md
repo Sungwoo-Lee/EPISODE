@@ -3,7 +3,7 @@ title: "Level 05 body interactions: does the modulator's advantage grow when the
 topic: level05_body_interactions
 status: active
 created: 2026-09-26
-last_updated: 2026-09-27
+last_updated: 2026-09-28
 wandb_tag: "rppo_l05body_*"
 develop_link: docs/develop/active/thermal/STATE_DEPENDENT_BODY_MECHANICS.md
 ---
@@ -44,7 +44,7 @@ with no favourite**: it asks which rules, if any, widen the gap, and it expects 
 rules to be the likelier candidates. There is one training run per agent per world, so it finds
 which rules deserve a properly seeded follow-up and cannot confirm anything by itself.
 
-**Status:** designed, configs written and loader-validated, nothing launched. The four
+**Result (2026-09-28, §7):** a **null screen**. None of the four rules, and no pair, changes the gap between the modulated and the ordinary agent on any behaviour measure beyond the noise margin; the modulated agent survives 2–6 steps longer in all 16 worlds, and no rule changes that lead. **Status at design time:** designed, configs written and loader-validated, nothing launched. The four
 selected strengths are **provisional** until the stage-1 pilots run (§2.3). Revised after plan
 review (Revision 1) and after the corrected simulation (Revision 2, §1.3). The user's five
 pre-pilot decisions, plus two related ones, were made on 2026-09-26 (§1.2).
@@ -1008,6 +1008,286 @@ number. The **registered predictions** do. The simulation was re-run with base t
 (`results/analysis/internal_state_interactions/sweep_food4/`, fix in commit `e2991ceb`), and the
 predictions were re-registered from it before any pilot launched (Revision 2, §2.2.1). This doc
 does not edit that study.
+
+---
+
+## 7. Results (stage 3 factorial; analysed 2026-09-28 by `experiment-analyzer`)
+
+### 7.0 Plain-language summary
+
+**Question.** When the four body rules are switched on, does the neuromodulated agent learn to
+hide from injury *differently depending on hunger* (and to eat differently depending on injury)
+more than the ordinary agent does? And which rule, or pair of rules, makes the gap grow?
+
+**Answer: none of them, at this screen's resolution.** In all 16 worlds the two agents behave
+almost identically on every pre-registered behaviour measure. The four rules do change
+behaviour, often strongly: scarcer food, for example, makes *both* agents stop hiding when hurt
+and hungry. But they change it for the ordinary agent by the same amount as for the modulated
+one. Not one of the 15 factorial effects on the modulated-minus-ordinary gap reaches even the
+looser single-effect noise margin (ME), let alone the simultaneous margin the registration uses to
+"note" a follow-up candidate (SME). This is the pre-registered **null screen**. Per §5 it is
+*uninformative* about whether the ideal-planner simulation transfers to trained agents. It is not
+evidence against the simulation. The follow-up is not automatic; §5 routes the decision to the PI.
+
+**Survival.** The modulated agent outlives the ordinary one in **all 16 worlds**, by 1.9 to 5.8
+steps (mean +3.6, about 1.6 %). The lead appears by the third tenth of training and holds after
+that. The rules do not change the size of the lead (no effect on it clears even ME), and §2.2.3
+registered no prediction about it. Each food-draining rule lowers both agents' survival as
+predicted; "healing slows when hungry" barely does.
+
+**Surprises (flagged, not interpreted):** (1) even in the unchanged world, both agents' hiding
+already depends on hunger (measure 1 is about +0.22, where the design's sanity check expected about
+0 on the earlier level-05 runs); (2) the time-in-cover curve against injury rises and then *falls*
+at high injury in every run, so the fixed "0–20 vs 60–100" contrast averages over both limbs;
+(3) the Lenth noise yardstick is very small for some single-agent measures, so many single-agent
+effects are "noted" there.
+
+### 7.1 What was analysed
+
+- **Runs:** all 32 factorial runs (16 worlds × {ordinary, modulated}), seed 42, 10,000,000 training
+  episodes each, all "Training complete". No run NaN'd; no rerun.
+- **Recordings:** final checkpoint only, 1,000,000 evaluation episodes per run (greedy policy,
+  `seed_base` 1,000,000, float32), per the pre-analysis decision above. Every store is complete
+  (200 of 200 blocks; 400 parquet files each). The measures use **decision rows**, the states the
+  policy acted from: 192–258 million per run.
+- **Frozen cut-points** (from the unchanged-world ordinary run, before any other complete store was
+  read; commit `6eb8b253`, copies in `frozen_cutpoints/`). Felt injury low is **exactly 0** (51.8 %
+  of steps), per the pre-analysis decision; high is felt ≥ 0.0878 (top fifth). Temperature bins
+  for measure 4 are 10 equal bins over −11.94 to +4.88 °, with open outer bins.
+- **Survival (measure 2):** local WandB binaries, `Episode/_window_n`-weighted mean of
+  `Episode/Steps` over episodes 9 M–10 M. Reward is never read. The store's own greedy-policy episode
+  lengths are reported as a second survival column.
+- **Computability (≥ 200 steps in every hungry/fed × low/high cell):** **computable at the final
+  checkpoint in all 16 worlds, for both true and felt injury.** The smallest cell holds 1.55 M
+  decision steps, so no pooling and no "not computable" world arose.
+- **Not available, disclosed:** (a) §4.3's second yardstick, the spread of the gap over the newest
+  5 checkpoints, needs the late-window recordings, which were deferred. So per-world gaps below are
+  values, not statements that a world's gap is real (the [[INJURY_DEPENDENCE_PLAN]] reading rule
+  cannot be applied). (b) The §4.4 behaviour time course was deferred, so temporal evolution is shown
+  for survival only (§7.5). (c) The §4.6 known-input check on the Wave-2 level-05 stores was **not
+  run**; the tooling was tested on partial stores only. (d) Measure 5 (scene battery) was not run
+  (invalid on factor-on cells, §4.1).
+
+### 7.2 Per-world results: modulated minus ordinary (`D_w`)
+
+World code = B5 B3 A1 A4 (1 = on): B5 healing slows when hungry (floor 0.0), B3 healing costs food
+(0.5 per injury point), A1 being away from 0 degrees costs food (rate 2), A4 scarcer food (4 per
+bite). M1 = nutrition-dependence of injury-driven hiding (share of steps in a bush, primary).
+M3 = injury-dependence of eating. Gain = behavioural combination gain, in percentage points.
+Survival = WandB, last 10 % of training. "Final" means computed on the final checkpoint.
+
+| World | Survival ord / mod (steps) | ΔSurvival | ΔM1 true (primary) | ΔM1 felt | ΔM3 true | ΔM3 felt | ΔGain (pts) | Computable (true / felt) |
+|---|---|---|---|---|---|---|---|---|
+| w0000 | 249.8 / 253.4 | +3.6 | +0.028 | +0.072 | +0.0012 | +0.0045 | +1.07 | final / final |
+| w0001 | 223.6 / 227.9 | +4.4 | +0.008 | −0.006 | −0.0130 | −0.0405 | −0.09 | final / final |
+| w0010 | 238.0 / 241.3 | +3.3 | +0.005 | +0.003 | −0.0316 | −0.0297 | −0.04 | final / final |
+| w0011 | 209.8 / 214.0 | +4.2 | −0.036 | −0.070 | −0.0506 | −0.0554 | −0.53 | final / final |
+| w0100 | 228.3 / 233.5 | +5.3 | +0.074 | +0.092 | −0.0006 | −0.0038 | −0.02 | final / final |
+| w0101 | 199.2 / 203.1 | +3.9 | +0.001 | +0.002 | −0.0123 | −0.0092 | +0.63 | final / final |
+| w0110 | 221.0 / 223.5 | +2.4 | +0.016 | −0.053 | −0.0029 | −0.0004 | +0.34 | final / final |
+| w0111 | 181.7 / 187.5 | +5.8 | −0.012 | −0.051 | −0.0262 | −0.0332 | +0.20 | final / final |
+| w1000 | 246.0 / 249.5 | +3.5 | +0.028 | +0.076 | −0.0172 | −0.0186 | +0.21 | final / final |
+| w1001 | 214.8 / 217.9 | +3.1 | −0.006 | +0.010 | +0.0046 | +0.0259 | +0.26 | final / final |
+| w1010 | 234.5 / 237.2 | +2.7 | +0.027 | +0.021 | −0.0040 | −0.0104 | +0.17 | final / final |
+| w1011 | 199.5 / 202.3 | +2.7 | +0.076 | −0.002 | +0.0205 | +0.0281 | −0.12 | final / final |
+| w1100 | 228.8 / 232.6 | +3.8 | +0.057 | +0.035 | −0.0010 | −0.0197 | +0.28 | final / final |
+| w1101 | 198.3 / 202.2 | +3.9 | −0.045 | −0.120 | −0.0339 | −0.0249 | −0.15 | final / final |
+| w1110 | 219.5 / 221.4 | +1.9 | +0.040 | −0.030 | −0.0069 | −0.0150 | +0.53 | final / final |
+| w1111 | 183.1 / 186.7 | +3.6 | +0.060 | +0.016 | −0.0462 | −0.0458 | +0.34 | final / final |
+
+Per-agent values (ordinary / modulated):
+
+| World | M1 true | M1 felt | M3 true | M3 felt | Gain (pts) | Smallest cell, true (steps) |
+|---|---|---|---|---|---|---|
+| w0000 | +0.216 / +0.244 | +0.406 / +0.477 | +0.020 / +0.021 | +0.101 / +0.106 | 2.07 / 3.14 | 1,811,908 / 1,721,900 |
+| w0001 | −0.048 / −0.040 | +0.349 / +0.343 | −0.062 / −0.075 | +0.152 / +0.112 | 4.94 / 4.85 | 1,744,169 / 1,745,601 |
+| w0010 | +0.238 / +0.242 | +0.448 / +0.451 | +0.049 / +0.017 | +0.125 / +0.096 | 2.11 / 2.08 | 1,735,063 / 1,735,979 |
+| w0011 | −0.088 / −0.124 | +0.384 / +0.314 | −0.052 / −0.102 | +0.160 / +0.105 | 4.86 / 4.33 | 1,722,432 / 1,689,047 |
+| w0100 | +0.310 / +0.384 | +0.286 / +0.378 | +0.127 / +0.127 | +0.107 / +0.103 | 3.45 / 3.43 | 1,644,800 / 1,608,986 |
+| w0101 | +0.217 / +0.218 | +0.537 / +0.539 | +0.182 / +0.169 | +0.202 / +0.193 | 4.15 / 4.78 | 1,584,305 / 1,574,896 |
+| w0110 | +0.346 / +0.362 | +0.350 / +0.297 | +0.137 / +0.135 | +0.105 / +0.105 | 3.55 / 3.88 | 1,594,657 / 1,593,949 |
+| w0111 | +0.226 / +0.215 | +0.549 / +0.498 | +0.206 / +0.180 | +0.235 / +0.202 | 3.99 / 4.19 | 1,587,898 / 1,594,111 |
+| w1000 | +0.228 / +0.256 | +0.429 / +0.505 | +0.107 / +0.089 | +0.120 / +0.101 | 2.81 / 3.02 | 1,770,817 / 1,739,959 |
+| w1001 | +0.080 / +0.074 | +0.439 / +0.448 | +0.102 / +0.107 | +0.159 / +0.185 | 5.01 / 5.27 | 1,771,434 / 1,749,911 |
+| w1010 | +0.272 / +0.299 | +0.487 / +0.508 | +0.114 / +0.110 | +0.129 / +0.119 | 2.43 / 2.60 | 1,778,142 / 1,701,683 |
+| w1011 | +0.092 / +0.168 | +0.506 / +0.504 | +0.123 / +0.143 | +0.200 / +0.228 | 4.33 / 4.21 | 1,761,617 / 1,710,683 |
+| w1100 | +0.287 / +0.344 | +0.335 / +0.370 | +0.108 / +0.107 | +0.098 / +0.079 | 3.55 / 3.83 | 1,632,573 / 1,645,704 |
+| w1101 | +0.173 / +0.128 | +0.483 / +0.363 | +0.151 / +0.118 | +0.173 / +0.148 | 4.80 / 4.65 | 1,594,171 / 1,593,032 |
+| w1110 | +0.337 / +0.377 | +0.397 / +0.367 | +0.139 / +0.132 | +0.109 / +0.094 | 3.68 / 4.21 | 1,585,836 / 1,648,398 |
+| w1111 | +0.128 / +0.189 | +0.529 / +0.546 | +0.170 / +0.124 | +0.209 / +0.163 | 4.14 / 4.48 | 1,546,617 / 1,555,533 |
+
+Termination shares of the recorded episodes (%, starvation / injury / thermal / time limit;
+over-eating is 0.0 everywhere):
+
+| World | Ordinary | Modulated |
+|---|---|---|
+| w0000 | 24.1 / 42.5 / 0.9 / 32.5 | 27.3 / 37.7 / 2.3 / 32.8 |
+| w0001 | 34.4 / 38.2 / 2.8 / 24.6 | 36.4 / 35.9 / 2.1 / 25.6 |
+| w0010 | 27.8 / 40.3 / 0.7 / 31.2 | 30.8 / 36.3 / 1.1 / 31.8 |
+| w0011 | 42.5 / 35.3 / 0.9 / 21.3 | 41.6 / 34.2 / 1.4 / 22.8 |
+| w0100 | 26.4 / 43.3 / 1.9 / 28.5 | 29.9 / 39.4 / 1.1 / 29.6 |
+| w0101 | 36.1 / 42.0 / 2.0 / 19.9 | 37.0 / 41.8 / 1.1 / 20.2 |
+| w0110 | 29.6 / 41.8 / 0.9 / 27.6 | 33.6 / 37.5 / 1.2 / 27.7 |
+| w0111 | 34.6 / 46.9 / 1.3 / 17.2 | 38.6 / 43.0 / 0.7 / 17.7 |
+| w1000 | 24.7 / 42.3 / 2.1 / 30.9 | 25.8 / 39.3 / 2.2 / 32.8 |
+| w1001 | 34.3 / 41.6 / 1.8 / 22.4 | 30.3 / 46.1 / 1.3 / 22.3 |
+| w1010 | 26.8 / 41.9 / 1.5 / 29.8 | 29.4 / 38.8 / 1.1 / 30.6 |
+| w1011 | 34.3 / 45.0 / 1.8 / 19.0 | 40.8 / 38.2 / 1.5 / 19.5 |
+| w1100 | 30.0 / 38.5 / 3.4 / 28.1 | 30.6 / 37.7 / 2.4 / 29.3 |
+| w1101 | 33.4 / 45.9 / 1.3 / 19.5 | 37.3 / 41.3 / 2.0 / 19.3 |
+| w1110 | 30.5 / 40.3 / 1.8 / 27.4 | 29.5 / 41.4 / 1.0 / 28.0 |
+| w1111 | 37.1 / 45.1 / 1.5 / 16.4 | 39.3 / 43.0 / 0.8 / 16.9 |
+
+### 7.3 The 15 factorial effects on the gap, with Lenth's margins
+
+Each entry is the effect of switching the named rule(s) on, applied to the modulated-minus-ordinary
+gap. A main effect is the mean over the 8 worlds with the rule on minus the mean over the 8 with it
+off; interactions are the standard ± contrasts. PSE is Lenth's pseudo standard error, estimated from
+the bulk of small effects. ME = 2.57 × PSE is the single-effect margin; SME = 5.22 × PSE is the
+simultaneous margin that decides "noted" (§4.3, M4). "Noted" = |effect| > SME.
+
+| Effect | ΔM1 true (primary) | ΔM1 felt | ΔM3 true | ΔM3 felt | ΔGain (pts) | ΔSurvival (steps) |
+|---|---:|---:|---:|---:|---:|---:|
+| B5 | +0.019 | +0.002 | +0.0065 | +0.0109 | −0.01 | −0.94 |
+| B3 | +0.008 | −0.027 | −0.0050 | −0.0070 | +0.15 | +0.40 |
+| A1 | +0.004 | −0.041 | −0.0095 | −0.0094 | −0.16 | −0.60 |
+| A4 | −0.029 | −0.055 | −0.0118 | −0.0077 | −0.25 | +0.63 |
+| B5 × B3 | −0.011 | −0.024 | −0.0180 | −0.0256 | −0.03 | −0.09 |
+| B5 × A1 | +0.039 | +0.042 | +0.0122 | +0.0080 | +0.24 | −0.24 |
+| B5 × A4 | +0.012 | +0.005 | +0.0053 | +0.0195 | +0.03 | −0.26 |
+| B3 × A1 | +0.000 | +0.009 | +0.0009 | +0.0003 | +0.33 | −0.18 |
+| B3 × A4 | −0.017 | +0.005 | −0.0150 | −0.0108 | +0.22 | +0.30 |
+| A1 × A4 | +0.029 | +0.043 | −0.0025 | −0.0050 | −0.03 | +0.84 |
+| B5 × B3 × A1 | +0.001 | +0.026 | −0.0127 | −0.0069 | −0.04 | −0.07 |
+| B5 × B3 × A4 | −0.007 | −0.010 | −0.0146 | −0.0189 | −0.32 | +0.22 |
+| B5 × A1 × A4 | +0.022 | +0.019 | +0.0016 | −0.0029 | +0.00 | −0.36 |
+| B3 × A1 × A4 | +0.013 | +0.031 | −0.0020 | −0.0083 | −0.11 | +0.73 |
+| B5 × B3 × A1 × A4 | −0.003 | +0.009 | −0.0003 | +0.0034 | +0.25 | −0.42 |
+| **PSE** | 0.018 | 0.036 | 0.0097 | 0.0120 | 0.23 | 0.54 |
+| **ME** (2.57 × PSE) | 0.047 | 0.094 | 0.0250 | 0.0308 | 0.59 | 1.39 |
+| **SME** (5.22 × PSE) | 0.095 | 0.190 | 0.0508 | 0.0625 | 1.19 | 2.82 |
+| √2 × SME (two effects compared) | 0.135 | 0.269 | 0.0718 | 0.0883 | 1.69 | 3.98 |
+| Mean of `D_w` over 16 worlds | +0.020 | −0.000 | −0.0137 | −0.0155 | +0.19 | +3.63 |
+
+**Noted effects on the gap: none, on any measure. None exceeds even ME.** The store-based
+survival column (greedy-policy episode lengths) agrees: no gap effect exceeds ME (PSE 1.56,
+largest |effect| 2.39 for B5 × A4).
+
+**Effects on each agent's own measure (§4.2 decomposition; noted = > SME of that agent's own set).**
+These show that the rules move both agents, and move them alike:
+
+| Measure | Ordinary: noted | Modulated: noted |
+|---|---|---|
+| M1 true | B3 +0.129, A4 −0.182 | A4 −0.210 (B3 +0.137 > ME only) |
+| M1 felt | B5 +0.037, A1 +0.048, A4 +0.080, B3 × A4 +0.103, B5 × B3 × A4 −0.040 (PSE 0.007) | none (B3 × A4 +0.108 > ME only; PSE 0.037) |
+| M3 true | B5 +0.051, B3 +0.103, A1 +0.019, B5 × B3 −0.072, B3 × A4 +0.047, B5 × B3 × A4 −0.029 (PSE 0.0035) | B3 +0.098, B5 × B3 −0.090 |
+| M3 felt | A4 +0.074 | A4 +0.067 |
+| Gain | A4 +1.57 | none (A4 +1.32 > ME only) |
+| Survival (WandB) | B3 −19.5, A1 −12.7, A4 −32.0 (B5 −3.4 inside ME) | B3 −19.1, A1 −13.3, A4 −31.4 (B5 −4.3 > ME only) |
+
+Where one agent has a noted effect and the other does not, the two values are close (for example,
+M1 felt A4: ordinary +0.080, modulated +0.025; the gap effect is −0.055, inside ME). The difference in "noted" status comes mostly from very different PSEs (0.007 vs 0.037).
+
+### 7.4 Collapsed-world check and refit (§5)
+
+No cell collapsed. The collapse line is 0.60 × the same agent's unchanged-world survival: 149.9
+steps for the ordinary agent and 152.0 for the modulated one. The harshest world, w0111 (healing
+costs food, temperature costs food, scarcer food), keeps 72.7 % (ordinary, 181.7 steps) and 74.0 %
+(modulated, 187.5 steps). The "without collapsed worlds" refit is therefore identical to the full
+fit, and no factor is marked fragile.
+
+### 7.5 Temporal evolution (survival only; the behaviour time course was deferred)
+
+Survival gap (modulated minus ordinary, WandB, `_window_n`-weighted) per tenth of training, averaged
+over the 16 worlds, and the number of worlds where it is positive:
+
+| Tenth of training | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 |
+|---|---|---|---|---|---|---|---|---|---|---|
+| Mean gap (steps) | −1.5 | +3.0 | +2.1 | +2.5 | +2.8 | +2.9 | +3.0 | +3.4 | +3.4 | +3.6 |
+| Worlds with gap > 0 | 6 / 16 | 11 / 16 | 16 / 16 | 16 / 16 | 16 / 16 | 16 / 16 | 16 / 16 | 16 / 16 | 16 / 16 | 16 / 16 |
+
+Both agents climb steeply over the first 20–30 % of training and flatten after that. In the
+unchanged world, for example, the ordinary agent goes 133 → 218 → 233 … 250 steps and the modulated
+agent 115 → 217 → 234 … 253. The modulated agent's lead appears in the third tenth and holds in
+every world through the end, so it is present across the late window, not only at the final
+point. Per-world series are in `figure_data/survival_tenths.json`.
+
+### 7.6 Dose-response tables for figures (descriptive; not pre-registered)
+
+In the spirit of the earlier injury-dose analysis (`scripts/analysis/injury_dose_store.py`), per
+world and agent, from the same final-checkpoint decision rows. **Time in cover** is the share of
+steps in a bush in each 10-point true-injury bin, split fed (nutrition ≥ 100) vs hungry (< 60).
+**Eating** is the share of decisions that ate in each 10-point nutrition bin, split by true injury
+(low 0–20 vs high 60–100). Each bin carries its counts; a share is null below 200 steps. File:
+`figure_data/dose_tables.json`, made by `figure_data/dose_tables.py`.
+
+What the tables show, descriptively:
+- **Cover rises and then falls with injury, in every run.** Unchanged world, ordinary agent, fed:
+  0.22, 0.45, 0.59, 0.64, 0.68, 0.68, 0.65, 0.60, 0.49, 0.30 from injury 0–10 up to 90–100.
+- **With scarcer food on (A4), hungry agents barely hide more when hurt.** Hungry cover is about
+  0.25 across injury 20–100, while the fed curve keeps its hump. This holds for **both** agents:
+  in w0101, ordinary hungry 0.42, 0.32, 0.28, 0.27, 0.27, 0.28, 0.29, 0.30, 0.29, 0.25 against
+  modulated 0.39, 0.31, 0.28, 0.25, 0.24, 0.25, 0.27, 0.28, 0.27, 0.26.
+- The two agents' curves overlap closely in every world, as the null gap effects imply.
+
+### 7.7 Pre-registered predictions against outcomes
+
+| Registered (§2.2.1, §2.2.3, §5) | Outcome |
+|---|---|
+| **Screen outcome (primary):** an effect on the M1 gap is noted as a follow-up candidate when it exceeds SME | **No effect noted.** The largest is B5 × A1 at +0.039 against SME 0.095 (and ME 0.047). Null screen. |
+| **Sign pattern (secondary):** B3 ≥ 0, B5 ≥ 0, A1 ≈ 0, A4 ≤ 0; contradicted only if a main effect clears SME the wrong way, or A1 clears SME | **Consistent, in the all-null sense** that §2.2.1 says is "uninformative about transfer, not support". The observed signs (B5 +0.019, B3 +0.008, A1 +0.004, A4 −0.029) happen to match, but all four are inside ME. |
+| **Expected candidates:** B3, B5 and the pair B3 × B5 | None noted (B3 +0.008, B5 +0.019, B3 × B5 −0.011). B3 at cost 0.5 was already expected to be null (§6.1 edge case). |
+| **Shape (§2.2.3):** with a healing rule on, the modulated agent's injury response becomes nutrition-dependent while the ordinary agent keeps "hurt → hide" | **Not observed.** Where a rule makes the response nutrition-dependent (A4 most of all, B3 for M1 and M3), it does so for the **ordinary agent too**, by about the same amount (§7.3 per-agent table). |
+| **Survival:** each factor lowers both agents' survival; no prediction on the gap | B3 (−19), A1 (−13) and A4 (−31 to −32) lower both agents, all noted. **B5 does not clearly lower survival**: −3.4 steps for the ordinary agent (inside ME) and −4.3 for the modulated one (> ME, < SME), in line with the stage-1 pilot, where no B5 strength was noticeable. No rule changes the survival gap. |
+| §5: "Every effect inside SME" | Applies: a null screen at one seed, uninformative about whether the simulation transfers; the follow-up is not automatic, and the PI is consulted. |
+| §5: "`D_w` on survival is large but the behaviour measures show nothing" | Partly applies. The survival gap is **consistent** (16/16 worlds, stable from the third tenth), but small (+3.6 steps, about 1.6 %). The behaviour gaps are null. If read at all, this is a performance difference with no state-dependence mechanism shown, and it does not confirm §2.2. |
+| §5: a healing-rule effect only on felt or only on true injury | Does not arise: no healing-rule gap effect clears SME on either axis. |
+
+### 7.8 Flags (surprising or limiting; not interpreted further here)
+
+1. **The unchanged world is not "M1 ≈ 0".** Both agents score M1 ≈ +0.22 / +0.24 (true injury)
+   and +0.41 / +0.48 (felt). The cells show why: unhurt and fed, the agents are in a bush 23–25 % of
+   the time; unhurt and hungry, 42–47 %. §4.6 expected about 0 on the Wave-2 level-05 stores. That
+   check was not run, and this world differs from Wave 2 (random start temperature), so the two
+   cannot be compared here.
+2. **The fixed contrast straddles a non-monotone curve.** Cover peaks at injury 40–60 and falls at
+   80–100 in every run (§7.6). The pre-registered high range (60–100) mixes the peak with the fall.
+   This does not change the null: the curves of the two agents overlap. It does limit what M1 can
+   detect.
+3. **Felt and true injury disagree on per-agent M1 by up to ~0.4** (for example, w0001: −0.05 true,
+   +0.35 felt). The felt low bin is "exactly 0 felt", a different set of states from "true injury
+   0–20".
+4. **Tiny PSEs inflate "noted" counts in single-agent sets** (ordinary M3 true PSE 0.0035; ordinary M1
+   felt PSE 0.007). Lenth's PSE assumes most effects are noise. When most effects are small but
+   real, it is optimistic. Treat the per-agent "noted" lists as descriptive.
+5. **One seed per cell, and no late-window spread.** Seed noise is not measured by either yardstick
+   (§4.3). A null here does not exclude a gap effect smaller than about ME (0.047 on M1 true).
+6. **The modulated agent dies of injury less and of starvation more.** Its injury share is lower in
+   14 of 16 worlds and its starvation share higher in 13 of 16 (for example, w0000: injury 42.5 →
+   37.7 %, starvation 24.1 → 27.3 %). This is descriptive and was not pre-registered.
+
+### 7.9 Outputs
+
+- Frozen cut-points: `docs/experiments/active/level05_body_interactions/frozen_cutpoints/`
+- Figure data (tracked copies): `docs/experiments/active/level05_body_interactions/figure_data/`.
+  This holds `dose_tables.json` (cover by injury, fed/hungry; eating by nutrition, low/high injury),
+  `survival_tenths.json` (survival and starvation share per tenth of training, 32 runs),
+  `factorial_effects.json` / `.md` (every effect, per agent and gap, with Lenth margins).
+  It also holds two working scripts, `dose_tables.py` and `survival_tenths.py`.
+- Full per-run outputs (gitignored): `results/analysis/level05_body_interactions/`
+  (`state_contrasts.json`, `combination_gain.json`, `factorial_effects.json`,
+  `dose_response/dose_<label>.json`)
+- Made by `scripts/analysis/studies/level05_body_interactions/{state_contrasts,behavioural_combination_gain,factorial_effects}.py`
+  over `analysis_manifest.yaml`
+
+**Related issues / follow-ups for the user (not acted on here):**
+- The two working scripts in `figure_data/` belong under `scripts/analysis/studies/level05_body_interactions/`
+  with dependency-map rows. They are kept beside the data until then, because the analyzer does not
+  write to `scripts/` (route through `feature-workflow` if wanted).
+- The §4.6 known-input check (the Wave-2 level-05 stores) was never run. It is worth running before a
+  follow-up relies on M1, given flag 1.
+- Per §5, the null screen goes to the PI. The follow-up 2×2 of §4.7 has no noted factors to be built
+  from.
 
 ---
 
