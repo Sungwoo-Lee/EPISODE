@@ -1596,3 +1596,38 @@ starvation share) are in `tmp/20260927_2300_ctxexp_part4.md`.
 - No new metric is needed; `Episode/FoodEaten` already shows the exploration failure.
 
 Analysed by: experiment-analyzer (2026-09-27)
+
+## Feedback from plan-reviewer — Part 4 results (analysis verdict, commit `f655459b`)
+
+**Verdict: SUPPORTED WITH CAVEATS.** No Critical finding; two Moderate, three Low, one open assumption.
+
+**In plain words.** The numbers are right and the rules were applied as written before the runs
+existed: I re-read every rule in 4.4–4.6 and Revision 1 against the read-out script, and every
+figure quoted above against the script's saved output — they match, and no threshold was moved after
+the data were seen. All eight runs are in the tables; the four different code snapshots the runs were
+launched from differ only by the launch bookkeeping commits, not by any code or config; the check that
+today's world reproduces the earlier pilots passed on real logged survival. The two caveats are on
+sentences that *explain* the result, not on the result: (1) "the agent never found food because food
+is sparse" is one of two explanations the data cannot separate — the other is that on a 20 × 20 grid
+with a 20-cell smell range the smell barely changes from one cell to the next, and in this world
+smell is the only sense that can tell food from anything else; (2) "the extension decides it" is well
+founded for two of the three withheld worlds but weak for the third, whose survival rose without a
+single extra bite. Neither caveat changes which worlds go forward (none, pending two second seeds).
+
+Severity legend: 🔴 Critical = fix before going further · 🟡 Moderate = likely costs a re-run ·
+🟢 Low = cosmetic · ❓ Open = an assumption nobody has verified yet.
+
+| # | Sev | Where | Issue | Suggested fix | Owner |
+|---|---|---|---|---|---|
+| M1 | 🟡 | "What the curves say" 2nd bullet; Conclusions 1st bullet; Related issues | The sparse-food attribution is under-determined. C3 / C5 differ from C4 (the one 20 × 20 world that learned to eat) in **two** things at once: food count (×4) *and* smell range (20 vs 5). In level 05 vision is width-1 presence-only (every entity, food included, is `visual_properties: [1.0]`), so smell channel 0 is the **only** food-specific cue; smell decays as 1/d (`decay_power 1.0`) over a 5-cell stencil, so at the ~10-cell distances typical of a 20 × 20 grid the across-stencil difference is ≈ 1 % of the reading. A flat-gradient account predicts the same three failures (C7: range 8 on 15 × 15, food mostly out of range) and also says *why* the Part-3 forager is over-optimistic exactly there: it "walks straight to the nearest food" the moment any stencil cell is in range — direction assumed known once smelled. The config-bug alternative is excluded (C7's food block is byte-identical to C6's, which eats 35 bites; C3 began eating in its last block); "not a bug" stands. | Reword to "consistent with a food-finding failure; density and smell range are confounded between C4 and C3 / C5". If a 20 × 20 world is ever wanted, vary count and smell range separately (e.g. `g20r5f1to2b36`). No re-run needed for this study's verdict. | experiment-analyzer (wording); experiment-designer (future worlds) |
+| M2 | 🟡 | Forwarding table; follow-up 2 | "The extension decides it" holds for C4 (climbing, eating 26 bites) and C3 (eating appeared: 0.05 → 0.86 bites in the last block) but is weak for C5: its +5.4 % rise (70.5 → 74.4 steps) came with 0.01–0.02 bites in every one of the ten blocks — the still-learning flag measures survival slope, not acquisition of the skill C5 fails on. C7 (same never-ate mode, +0.4 %) meanwhile gets a *final* verdict and no extension. The rules were applied correctly; the inference "C5 undecided, C7 decided" is what the flag produces, not what the curves show. | Say so next to the table, and put the C5 extension (≈ 2.5 × its 2 M cost) to the user / PI as a choice rather than a consequence; if extended, C7 riding along costs the same and makes the two sparse verdicts comparable. | user / pi |
+| L1 | 🟢 | "What the curves say" 2nd bullet | "survive until the starting food energy runs out (≈ 70–80 steps)": start nutrition is 100 at 1 per step (no override in the chain), so a non-eater starves at step **100**; 70–80 is the mean survival pulled down by injury deaths (all-death injury share 0.26–0.33 in C3 / C5 / C7). | Reword. | experiment-analyzer |
+| L2 | 🟢 | 4.9 Launch Manifest | Status column still reads "running" for six rows; the results say all eight completed. | Update the column. | experiment-analyzer |
+| L3 | 🟢 | Methods, "One reading made explicit" | "5 % relative on survival" (R1.5) was read as 5 % of the 80 % line (9.1 steps); 5 % of the reference (11.3 steps) is an equally literal reading. Immaterial today (C4 is the only world near the line and is withheld) — but the extension read-out may put C4 near the line again. | Pre-register one reading now, before 4.9–5.0 M is read. | experiment-designer |
+| O1 | ❓ | Agreement table; Conclusions | The trust verdict rests on C6 (edge world surviving 0.99 of today against a simulated 0.62) — n = 1. A flip is implausible (44 steps above the line against a 0.9-step reference seed gap, and C2's near-identical curve), and the planned C6 seed-43 run closes it; the Conclusions should say "on one seed, 24 points above the line" rather than leave the margin implicit. | One clause. | experiment-analyzer |
+
+**Checked and clean.** Pre-registration: window (1.8–2.0 M], `_window_n` weights, time shares × steps, conditional shares pooled by their `Bal_N_*` counters, late-death causes × late-death share; still-learning > 5 % on 1.6–1.8 vs 1.8–2.0 M; criteria 1–5, absolute criterion 3 reported, 3-fwd = max(60 %, D_ref + 5 pts) for forwarding only; withheld = reference fails pooled or on either seed (none withheld — reference passes 1, 2, 5 on each seed); agreement over the kept four; trust = ≥ 5 / 6 **and** both directions; edge-first forwarding; seed-43 for C6 (disagrees) and C2 (0.575 within 0.05 of 0.600) — all as written in `part4_readout.py:185-222, 250-314`. Agreement arithmetic: decided C2 yes / C6 no / C7 no, three undecided → at most 4 / 6, and the trust rule already fails on C6's direction alone, so "the extension cannot rescue it" holds. Run inventory: all eight 4.9 rows, WandB ids and log paths match the manifest. Confounds: the four launch HEADs (`a90eb973` → `32c22c8b`) contain no change under `src/`, `train.py`, `configs/` or `scripts/`; equal budgets; step-ratio confound stated with direction. Metric: survival steps; the script has no reward key. Temporal evolution: ten blocks reported. "Simulation expects ≈ 99 % injury late deaths vs 53–55 % trained": both use deaths after step 20 (Part 3 line 217); the planner is an optimal policy that never starves by construction, so the gap is expected and is correctly reported, not scored. Maintenance: `SCRIPTS_DEPENDENCY_MAP.md` row added in the same commit. Known Bugs: cross-batch level hazard honoured by the in-batch reference; the (0,0)-parking row was checked in 4.8; nothing unrecorded that is a code defect — the Part-3 forager's "straight to food once smelled" assumption is an interpretation hazard `bug-curator` may want as a row.
+
+**Cost of being wrong.** If M1 is wrong nothing downstream changes — the same two worlds wait for the same two seed-43 runs. If M2 is ignored the cost is one 20 × 20 extension (a few GPU-hours) that its own curve predicts will return the same verdict. The only claim that would reach a paper — "the simulation is not trustworthy for choosing worlds" — rests on one seed with a large margin and already has its second seed scheduled.
+
+Reviewed by: plan-reviewer (2026-09-27, on `f655459b`)
