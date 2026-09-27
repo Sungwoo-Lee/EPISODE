@@ -770,3 +770,41 @@ a definitional error that no rerun fixes, only a re-definition and a re-read of 
 `--ff-only` merge step (Critical), and fix T7 to agree with A4.
 
 *Reviewed by: plan-reviewer*
+
+---
+
+## Feedback from plan-reviewer (Revision 1 re-review)
+
+> **Reviewed**: 2026-09-27, plan at commit `94096470` · **Verdict**: **SOUND WITH CONCERNS** — every finding of the first review is resolved as written; no new Critical finding. Remaining items are one Moderate (the `results/` snapshot step may not be feasible as literally written on this container) and two Low.
+>
+> Severity legend — 🔴 Critical = fix before going further · 🟡 Moderate = likely costs a re-run · 🟢 Low = cosmetic · ❓ Open = an assumption nobody has verified yet.
+
+**Resolution check (each item verified against source, not against the doc's own claims).**
+
+| First-review finding | Resolved? | Where / evidence |
+|---|---|---|
+| 🔴 Merge-back with no snapshot, no conflict rule | **Yes.** Rebase inside the worktree, abort-and-hand-back on any conflict, tests re-run, `results/` snapshot, `git merge --ff-only` in the shared tree, refusal → stop, never stash/checkout -f/reset/clean. | A9 "Merge-back procedure" steps 1–6; Checkpoints 1 and 11. `.claude/worktrees/` is gitignored (`.gitignore:51`, confirmed). |
+| 🟡 T7 contradicts A4 | **Yes.** T7(a) −16 °C cell / −20 °C body → not warm **and** `near_fire`; (b) +8.8 °C cell / +10 °C body → warm, not `near_fire`; (c) −30 °C → neither. All three agree with `cell > setpoint` (0) and `−29 < cell ≤ 0`. | Part B T7; A4. Level 05 inherits `default_temp: [-31, -29]` (`configs/environment/default.yaml:512`), so `thermal_default_temp_high` = −29 as the plan states (`state.py:392`). |
+| 🟡 Warm rule untested on the diagonal | **Yes.** Gap stated; `near_fire` counter (#37) and `Episode/Bal_TimeNearFire` added, **report-only**, not added to `Bal_TimeWarm`; analyzer routing stated. | A4, counter table, criterion mapping row 1. Random thermal spots are off by default (`default.yaml:517`, `core.py:1673`), and only the campfire carries a `temperature_ratio` in level 05 (`05-campfire_thermal_10x10.yaml:97`), so "any cell above −29 °C was heated by a fire" holds in that world. |
+| 🟡 T1/T2 world unnamed | **Yes.** Level-05-derived, thermal + interoceptive nociception on, asserted inside the tests; T2 additionally asserts the three extra fields are arrays. | Part B T1, T2; Checkpoint 4. |
+| 🟡 Thresholds applied silently in every world | **Yes.** `calibration_record(params, thermal_on=…)` reads `max_nutrition` / `max_injury` (`state.py:240-241`), setpoint and `thermal_default_temp_high` by attribute (AttributeError, no default); written via `wandb.config.update` at start and as `balance_calibration_stage_<k>` on swap; T11 covers it. The stage-swap block rebinds `params = load_env_params(schedule.stage_configs[new_stage])` (`train.py:1621`) **before** the accumulator wipe, so the per-stage read is well-ordered. | A5; `train.py` changes; T10, T11. |
+| 🟡 C4 caveat to the study page | **Yes.** In the experiment-designer hand-off, sequenced after the merge. | Part D last row. |
+| ❓ Late-death denominator; episode cap | **Yes.** All window episodes, truncations included; cause shares among late deaths. `max_steps: 500` inherited (`default.yaml:7`; no override in levels 03–05, confirmed). Study Rev 2c exists as cited (`STUDY_PLAN.md:483-490`) and the criterion mapping follows it. | A7; keys table. |
+| ❓ Felt buffer zero start | **Yes.** Buffer zeroed at reset (`core.py:2038`), 12-step under-read stated for the analyzer, kept deliberately. | A3 "What the analyzer must be told"; Part D. |
+| ❓ Pooling weights long episodes | **Yes.** Named next to the ratio-of-sums rule. | A6. |
+
+**New findings.**
+
+| Sev | Location | Issue | Suggested fix | Owner |
+|---|---|---|---|---|
+| 🟡 | Merge-back step 4 (`cp -a results /tmp/results-bk-$(date +%s)`) | On this container `/tmp` is a **63 GB tmpfs (RAM-backed), 55 GB free**, and `du -sh results` did not finish in 280 s (25 top-level dirs incl. every trajectory store and every algorithm's run tree). The copy is therefore likely to be either very slow or to stop with `ENOSPC` part-way — and a half-written snapshot is worse than none, because step 5 proceeds on the belief that a rollback exists. The merge itself is `--ff-only` and never touches gitignored data, so this is not a data-loss path; it is the safety net that may not be there. | Before step 4: measure (`du -sh results/*`, generous timeout). If it does not fit `/tmp`, snapshot to a NAS-side path **outside the repo** (e.g. a sibling of the project dir) and record that path; either way record the `cp` exit status in the Implementation Report and do not start step 5 on a non-zero exit. | senior-developer → developer |
+| 🟢 | A4 `near_fire`; Checkpoint 6 | The field is blurred once with a Gaussian (`core.py:1707`), so `near_fire` (`cell > −29`) picks up every cell inside the blur kernel around the fire, not only the four diagonals. Checkpoint 6's printed class counts will show a wider ring than "the diagonal". Not a defect — the counter is report-only — but the analyzer wording "warms on the cooler diagonal" should read "on the fire's outer ring". | One word in A4 and the metrics reference. | senior-developer |
+| 🟢 | A9 step 1 | `git -C <worktree> rebase v4.0` rebases onto the **local** `v4.0`; the plan says "no fetch needed" which is true only while no parallel session pushes to `origin/v4.0` and pulls back. Harmless today (nobody pushes), stated for completeness. | None required. | — |
+
+**Assumptions the plan still rests on (all now verified-in-plan or stated):** the four `params` attribute names exist (verified); `thermal_enabled` / `interoceptive_nociception_enabled` are static (`state.py:344, 376`, `pytree_node=False`, verified); level-05 thermal baseline range is `[-31, -29]` (verified); `rest` in a bush at I = 61 reduces injury below 60 in one step (T3 premise — unverified here, but T3 fails loudly if it does not, which is the right shape).
+
+**Passes skipped.** Pass 6 (experiment-plan specifics) and pass 7 (analysis verdict) are structurally inapplicable, as before. Prior-art: no new registry rows touch worktree/ff-only/`wandb.config`; nothing for `bug-curator`.
+
+**Cost of being wrong.** If the snapshot step fails silently, the cost is zero on a clean fast-forward (the likely case) and a missing rollback on the one path the procedure already tells the developer to stop on; the procedure's stop rules, not the snapshot, are what actually protect `results/`. Nothing in Revision 1 can produce a wrong study conclusion that the first review did not already close.
+
+*Reviewed by: plan-reviewer*
