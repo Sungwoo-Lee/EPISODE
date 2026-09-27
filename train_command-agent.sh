@@ -4292,3 +4292,29 @@ cd /media/nas01/projects/Interoceptive-AI/grid_world_pain
   --episodes 10000000 --device cuda:1 --log-interval 10 \
   --tag "rppo_l05body_w1111_t16quad_s42" --wandb-name "rppo_l05body_w1111_t16quad_s42" \
   --wandb-group "level05_body_interactions" --wandb-job-type "prod"
+
+# ---------------------------------------------------------------------------
+# CONTEXT EXPLORATION — PART 4 (rows C3, C4, C5) — 2026-09-27
+# ---------------------------------------------------------------------------
+# Plan: docs/experiments/active/context_exploration/STUDY_PLAN.md ("Part 4 design" 4.9 +
+# "Part 4 Revision 1"). Ordinary agent t1none, 2,000,000 episodes, --log-interval 10,
+# group context_exploration, job-type pilot, tag = wandb-name. Seed config-owned 42
+# (not passed). --num-envs / --checkpoint-frequency config-owned (not passed).
+# HEAD a90eb973a90c376442e568864c98690984a866a7. User-approved placement (all RTX 4090):
+#
+# | Run | world           | node:GPU |
+# | C3  | g20r20f1to4b12  | 102:1    |
+# | C4  | g20r5f4to16b12  | 113:0    |
+# | C5  | g20r20f1to2b36  | 113:1    |
+#
+# Launched ≥2 s apart via CIFS-bypass /tmp scripts + run_command.py --no-tail.
+# The other two rows differ only in --config, --device and the tag pair.
+# C3: g20r20f1to4b12.yaml, cuda:1 (node 102), rppo_ctxexp_g20r20f1to4b12_t1none_s42
+# C5: g20r20f1to2b36.yaml, cuda:1 (node 113), rppo_ctxexp_g20r20f1to2b36_t1none_s42
+# Representative active command (C4 — node 113 cuda:0).
+/home/vncuser/miniconda3/envs/grid_world_pain/bin/python train.py \
+  --config configs/environment/experiment/context_exploration/g20r5f4to16b12.yaml \
+  --agent_config configs/models/recurrent_ppo/nmn_input_site_grid_gaenorm/nmngaenorm_t1none.yaml \
+  --episodes 2000000 --device cuda:0 --log-interval 10 \
+  --tag "rppo_ctxexp_g20r5f4to16b12_t1none_s42" --wandb-name "rppo_ctxexp_g20r5f4to16b12_t1none_s42" \
+  --wandb-group "context_exploration" --wandb-job-type "pilot"

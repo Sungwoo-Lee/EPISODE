@@ -1042,9 +1042,9 @@ directory contains `ctxexp` (checked 2026-09-27).
 | C1a | planned | 1 reference | `rppo_ctxexp_lvl05ref_t1none_s42` | context_exploration | pilot | 42 | — | — | — | — | — |
 | C1b | planned | 1 reference | `rppo_ctxexp_lvl05ref_t1none_s43` | context_exploration | pilot | 43 | — | — | — | — | — |
 | C2 | planned | 2 balanced | `rppo_ctxexp_g10r5f1to2b36_t1none_s42` | context_exploration | pilot | 42 | — | — | — | — | — |
-| C3 | planned | 3 balanced | `rppo_ctxexp_g20r20f1to4b12_t1none_s42` | context_exploration | pilot | 42 | — | — | — | — | — |
-| C4 | planned | 4 balanced | `rppo_ctxexp_g20r5f4to16b12_t1none_s42` | context_exploration | pilot | 42 | — | — | — | — | — |
-| C5 | planned | 5 balanced | `rppo_ctxexp_g20r20f1to2b36_t1none_s42` | context_exploration | pilot | 42 | — | — | — | — | — |
+| C3 | running | 3 balanced | `rppo_ctxexp_g20r20f1to4b12_t1none_s42` | context_exploration | pilot | 42 | 102 | cuda:1 | 2026-09-27T18:47:47 | `whpmbq6l` | `logs/20260927_184748.log` · HEAD `a90eb973` |
+| C4 | running | 4 balanced | `rppo_ctxexp_g20r5f4to16b12_t1none_s42` | context_exploration | pilot | 42 | 113 | cuda:0 | 2026-09-27T18:47:51 | `7ctxxltq` | `logs/20260927_184752.log` · HEAD `a90eb973` |
+| C5 | running | 5 balanced | `rppo_ctxexp_g20r20f1to2b36_t1none_s42` | context_exploration | pilot | 42 | 113 | cuda:1 | 2026-09-27T18:47:55 | `f8o1wgdw` | `logs/20260927_184755.log` · HEAD `a90eb973` |
 | C6 | planned | 6 edge | `rppo_ctxexp_g10r3f1to2b36_t1none_s42` | context_exploration | pilot | 42 | — | — | — | — | — |
 | C7 | planned | 7 edge | `rppo_ctxexp_g15r8f1to2b36_t1none_s42` | context_exploration | pilot | 42 | — | — | — | — | — |
 
