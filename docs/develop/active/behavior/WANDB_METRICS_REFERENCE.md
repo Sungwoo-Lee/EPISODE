@@ -3,7 +3,7 @@ title: WandB Metrics Reference
 topic: behavior
 status: active
 created: 2026-03-09
-last_updated: 2026-04-24
+last_updated: 2026-09-27
 ---
 
 # WandB Metrics Reference
@@ -166,6 +166,32 @@ Logged when `training.stats_during_training` is enabled, triggered at checkpoint
 | `modulator/beta_uni_std` | float | Std of unimodal additive bias |
 | `modulator/beta_multi_mean` | float | Mean of multimodal additive bias (z_multimodal_add) |
 | `modulator/beta_multi_std` | float | Std of multimodal additive bias |
+
+#### Balance metrics (rPPO) — `Episode/Bal_*`
+
+Added 2026-09-27 by [[BALANCE_METRICS_TRAINING_LOGGING]] for the internal-state interaction study ([study plan](../../../experiments/active/internal_state_interactions/STUDY_PLAN.md)). They answer: *does the agent split its time between hiding in bushes, eating and warming up, and does each body need drive its own behaviour?* Switched by `logging.episode.balance_metrics` (true in `configs/train/recurrent_ppo.yaml`); logged on the same `Episode/*` rows as the metrics above (x-axis `Episode/Number`, window = `logging.episode.smoothing_episodes`). Code: `src/behavior/balance_metrics.py`. Training is bit-identical with the switch on or off.
+
+**How each step is counted.** Body state (nutrition `N`, true injury `I`, felt injury, body temperature `T`) is read **before** the step — what the agent saw when it chose the action. The outcome (in a bush, on a warm cell, ate) is read **after** the step. (Pairing post-step body state with the outcome is the "contemporaneous binning" mistake recorded three times in the Known Bugs registry.)
+
+| Family | Keys | Definition |
+|---|---|---|
+| Time split | `Bal_TimeBush`, `Bal_TimeWarm`, `Bal_TimeEat`, `Bal_TimeElsewhere`, `Bal_TimeNearFire` | Fraction of the window's steps that land in a bush / on a warm cell / eat / none of those three. Bush, warm and eat may overlap, so the four shares sum to ≥ 1. `Bal_TimeNearFire` is **report-only** (see below). |
+| Eating vs hunger | `Bal_EatShare_Hungry`, `Bal_EatShare_Fed`, `Bal_EatRatio`, `Bal_N_Hungry`, `Bal_N_Fed` | Share of steps that eat among hungry (`N < 60`) and fed (`N ≥ 100`) steps; ratio = hungry ÷ fed. |
+| Hiding vs injury (`S` = `True`, `Felt`) | `Bal_BushShare_InjHi_S`, `Bal_BushShare_InjLo_S`, `Bal_HideRatio_S`, `Bal_N_InjHi_S`, `Bal_N_InjLo_S` | Share of steps in a bush among badly injured (`I ≥ 60`) and barely injured (`I ≤ 20`) steps; ratio = injured ÷ barely injured. **True injury decides** the study's hiding criterion; felt is reported beside it. |
+| Warming vs body temperature | `Bal_WarmShare_Cold`, `Bal_WarmShare_Warm`, `Bal_WarmRatio`, `Bal_N_Cold`, `Bal_N_Warm` | Share of steps on a warm cell among cold (`T ≤ −5 °C`) and warm (`T ≥ 0 °C`) steps. Logged, **not pass/fail** in training (study Rev 2c). |
+| Combination (`F` = `Hungry` `N < 60`, `Fed` `80 ≤ N ≤ 160`) | `Bal_BushShare_InjHi_S_F`, `Bal_BushShare_InjLo_S_F`, `Bal_HideGap_S_F`, `Bal_HideRatio_S_F`, `Bal_N_InjHi_S_F`, `Bal_N_InjLo_S_F` | The hiding measures restricted to hungry / fed steps. `HideGap` = injured share − barely-injured share. `Bal_HideRatio_True_Fed` is the study's "fed hiding ≥ 2×" criterion. |
+| Deaths | `Bal_EarlyDeathShare`, `Bal_LateDeathShare`, `Bal_LateDeath_{Starvation,Overeating,Injury,Thermal}` | Early = death (reason codes 2–5) at episode length ≤ `logging.episode.balance_early_death_max_steps` (20); late = longer. Early and late shares divide by **all** window episodes, step-cap truncations included (the study's 5 % late-death gate). Cause shares are **among late deaths** and are absent when there are none. |
+
+**Rules a reader needs.**
+
+- **Ratio of pooled sums.** Every share and ratio is computed once per window from step counts summed over all the window's episodes — never a mean of per-episode ratios. This weights long-lived episodes more heavily than short ones (the study's planner pooled fixed-length rollouts instead; same rule, different mixture of episodes).
+- **`N` keys are window-total step counts**, not per-episode means like the other `Episode/*` keys.
+- **Empty bins.** When a bin has no steps in the window, its share, ratio and gap are **not logged** (WandB shows a gap). A ratio is also not logged when the "off" bin's share is 0. The `N` keys are always logged, including 0, so an absent ratio can be told apart from a bug.
+- **Switched-off modalities.** With thermal off, every `Warm`/`Cold`/`NearFire`/`TimeWarm` key is absent; with interoceptive nociception off, every `_Felt` key is absent.
+- **Warm cell** = the landing cell's temperature is above the body setpoint (0 °C in level 05) — a property of the cell, not of the body. **Near fire** = a cell the fire heats (above the open-ground upper edge, −29 °C in level 05) but still at or below the setpoint: the fire's whole outer, blurred ring (in one level-05 reset: 5 warm cells, 8 near-fire cells, 87 open). The planner the study calibrated on never modelled these cells. `Bal_TimeWarm` alone decides the "≥ 10 % of time" criterion; if a run fails it while `Bal_TimeWarm + Bal_TimeNearFire` would pass, report that in words ("the agent warms on the fire's outer ring, not on the ring itself") and route a possible re-definition to the user — do not re-score.
+- **Felt injury** is the environment's own noise-free interoceptive-nociception percept × `max_injury` (same 60 / 20 thresholds). Its buffer is zeroed at reset and covers the last 12 steps, so it **under-reads for about the first 12 steps of every episode**. With random starting injury (level 05) this inflates `Bal_N_InjLo_Felt` at episode starts by construction and pulls `Bal_HideRatio_Felt` down for a reason unrelated to the policy.
+- **Absolute thresholds, calibrated to level 05** (max nutrition 200, max injury 100). Each run records the calibration it was measured under in its WandB config as `balance_calibration` (and `balance_calibration_stage_<k>` on each continual stage swap), also printed to stdout as `[balance] ...`: `max_nutrition` and `max_injury` from the run's params, every bin edge, the early-death cut-off, the thermal/felt flags and, with thermal on, the setpoint and open-ground upper edge. Judge comparability across worlds from this block.
+- **Training policy, not evaluation policy.** These numbers come from the exploring (sampling) training policy. Numbers computed later from evaluation recordings or trajectory stores come from the greedy evaluation policy; never pool or threshold the two interchangeably.
 
 ---
 
