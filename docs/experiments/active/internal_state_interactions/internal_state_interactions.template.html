@@ -32,6 +32,7 @@ __HOUSE_STYLE__
      column, or every figure shows a scroll cue on a desktop (F32 amendment) */
   .figscroll img { min-width: 685px; }
   p.kind-manipulation { border-color: var(--warn); color: var(--warn); }
+  p.kind-recordings { border-color: var(--ink-2); color: var(--ink-2); }
   /* lists: the house sheet has no list rule (F61 family) -- paragraph rhythm, modest indent */
   ol, ul { margin: 0; padding-left: 1.4em; } li + li { margin-top: 6px; }
   h3.group { margin-top: 2.2em; font-size: 13px; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-3); }
@@ -62,6 +63,10 @@ time, hiding would collapse, and the world would be one-sided again in the other
 is a <strong>balanced</strong> world. This page asks where that balance lies, using an ideal planner on a
 simplified copy of level 05 — and turns the answer into what the training runs, with ordinary agents only,
 should measure. The planner is a guide for where to look; trained agents decide.</p>
+
+<p>Sections 08–10 then ask a related question: whether the agents adapt to danger they cannot sense, and
+whether a larger world with a shorter smell range can make searching for food a real task without
+breaking the balance.</p>
 
 <div class="callout">
   <p class="eyebrow">The answer, in one paragraph</p>
@@ -271,6 +276,136 @@ add to training logging, their cost, and tests — is the next plan.</p>
 </section>
 
 <section class="col">
+<h3 class="group">Hidden context and exploration</h3>
+<p>A modulator should help most when the right behaviour depends on something the agent cannot sense and
+must infer — how dangerous this episode is, where food might be. In today's level 05 almost nothing is
+hidden: smells carry 20 cells on a 10 × 10 map. The three sections below ask whether today's agents adapt to
+the one hidden danger they have, whether knowing the danger is worth anything, and whether larger worlds
+with a shorter smell range can make searching a real task while staying balanced (study plan:
+<code>docs/<wbr>experiments/<wbr>active/<wbr>context_exploration/<wbr>STUDY_PLAN.md</code>).</p>
+</section>
+
+<section class="col">
+<h2><span class="num">08</span> Do the agents adapt to danger they cannot sense?</h2>
+
+<figure>
+  <p class="cue" hidden>Wider than the screen — scroll sideways, or click the figure to open it full size.</p>
+  <div class="scroll figscroll"><img data-fig="c1_hidden_context" alt="Dot chart, one row per comparison, for the ordinary agent (filled circles) and the modulator agent (open squares). The two rows for many versus few ambushers sit at about half a point, inside the shaded band below the 5-point adaptation bar. The four rows for 1 or 2 predators versus none sit between 9 and 23 points, both agents almost identical."></div>
+  <p class="zoomhint">Click the figure to open it full size.</p>
+  __KIND:c1_hidden_context__
+  <figcaption>
+    <span><b>Figure 3 — both agents react to danger they can smell and not to the hidden ambushers; the
+    modulator agent behaves like the ordinary one.</b> With many hidden ambushers (9–12) rather than few
+    (2–5), neither agent spends more time in cover: +0.6 points (ordinary) and +0.5 (modulator), far below the
+    5-point bar fixed in advance. With 2 hunting predators rather than none — predators the agent can smell —
+    both spend about 23 points more of their time in cover, and still about 14 points more when compared at
+    the same smell strength.</span>
+    <span><b>Axes.</b> Vertical: one row per comparison, with what is held equal in brackets. Horizontal:
+    how many more percentage points of steps the agent spends in cover in the more dangerous episodes than in
+    the safer ones. Filled circles: ordinary agent; open squares: modulator agent; the dotted line is the
+    5-point bar.</span>
+    __DATA:c1_hidden_context__
+    <span><b>How it is computed.</b> From the recorded level-05 episodes of both trained agents (the Wave-2
+    runs, final checkpoint), every step is labelled with its episode's danger: the number of ambushers —
+    predators that lie still and cannot be smelled — and the number of hunting predators. Because dangerous
+    episodes also leave the agent more injured and shorter-lived, steps are grouped into bins of equal body
+    state (injury and food energy) and equal time in the episode, and the share of steps in cover is compared
+    only within bins that both contexts fill with at least 200 steps; the per-bin differences are averaged.
+    The intervals come from re-sampling whole episodes (bootstrap), and are narrower than the markers. The
+    "also matched on smell" rows further require equal predator smell, separating reaction to a smell from
+    inference about danger. Section 09 shows that even an ideal agent gains about nothing from knowing the
+    ambusher count, so this null says the agents had no reason to adapt — not that they cannot infer hidden
+    danger. <b>What this figure does not show:</b> agents trained with a shorter smell range,
+    where predators too would be hidden; and whether these agents started warm or cold — they predate the
+    random starting temperature.</span>
+  </figcaption>
+</figure>
+</section>
+
+<section class="col">
+<h2><span class="num">09</span> Would knowing the danger be worth anything?</h2>
+
+<figure>
+  <p class="cue" hidden>Wider than the screen — scroll sideways, or click the figure to open it full size.</p>
+  <div class="scroll figscroll"><img data-fig="c2_value_of_knowing" alt="Two panels against the danger context: no, 1 or 2 hunting predators. Left: value of knowing the context is about 0 with no predators and about 4 to 5 survival points with 1 or 2, above the 2-point bar, for hit rates from either agent. Right: the share of start states whose best choice changes is about 5.6 percent with 0 or 1 predator and about 18 percent with 2, above the 10 percent bar only with 2."></div>
+  <p class="zoomhint">Click the figure to open it full size.</p>
+  __KIND:c2_value_of_knowing__
+  <figcaption>
+    <span><b>Figure 4 — knowing how many predators are about is worth 4–5 points of survival.</b> With no
+    predators, knowing changes nothing. With 1 or 2, an ideal agent that knows the danger survives 4.3–5.1
+    points more often than one planning for the average episode, and with 2 predators its best choice differs
+    in about 18 % of situations. So danger is worth inferring — which today's agents never have to do, because
+    they smell predators directly.</span>
+    <span><b>Axes.</b> Horizontal, both panels: the danger context, the number of hunting predators in the
+    episode. Vertical, left: value of knowing the context, in percentage points of the share of starts that
+    survive 500 steps (bars: interval over seeds; small dots: individual seeds). Vertical, right: share of
+    start states whose best choice changes, percent. Circles and squares use the hit rates measured from the
+    ordinary and the modulator agent respectively.</span>
+    __DATA:c2_value_of_knowing__
+    <span><b>How it is computed.</b> The predator hit rates and hit sizes of the balance study were measured
+    again separately for episodes with 0, 1 and 2 hunting predators, from each agent's recordings. The planner
+    is then solved once per context with that context's rates, and once with the rates pooled over all
+    episodes — the "average episode" an agent that cannot tell contexts apart would plan for. Both policies
+    are followed in each context from 10,000 starts in each of 3 seeds, and the survival difference is the
+    value of knowing. Choices within 0.5 reward units of each other count as ties, not as differences.
+    The same comparison split by ambusher count (study files) finds knowing it worth about 0 points: the
+    hidden danger carries no survival value to adapt to. <b>What this figure does not show:</b> how fast an
+    agent could infer the context from clues; and trained agents.</span>
+  </figcaption>
+</figure>
+</section>
+
+<section class="col">
+<h2><span class="num">10</span> Can a larger world make searching a real task?</h2>
+
+<figure>
+  <p class="cue" hidden>Wider than the screen — scroll sideways, or click the figure to open it full size.</p>
+  <div class="scroll figscroll"><img data-fig="c3_search_vs_survival" alt="Left: mean food search time on a log scale against smell range from 20 down to 3 cells, one line per grid size and food setting; all rise as the range shrinks, from about 5 steps today to over 200 on the 20 by 20 grid with 1 to 2 items. Right: survival of the ideal agent against mean food search time, one point per world; worlds passing the balance criteria sit at 4.5 to 12 steps and 50 to 59 percent survival; beyond about 15 steps survival falls steeply and is near zero past 30 steps."></div>
+  <p class="zoomhint">Click the figure to open it full size.</p>
+  __KIND:c3_search_vs_survival__
+  <figcaption>
+    <span><b>Figure 5 — making food hard to find breaks the balance: past about 15 steps of search, the ideal
+    agent's survival collapses, mostly through starvation.</b> Shrinking the smell range or thinning the food raises the mean search from 4.7 steps
+    today to as much as 250 steps. The 18 worlds that stay balanced all need at most 11.8 steps; every world needing
+    20 or more survives at most 34 % of starts (22 % with fires, bushes and predators at today's density),
+    against 58 % today and a bar of 46 %. Keeping today's counts of those on a larger grid thins the predators
+    and raises survival (up to 83 %), but none of those worlds passes the balance criteria. None meets both "balanced"
+    and "searching takes 20 steps", so no larger world is a candidate. "Balanced" here means criteria 1, 2, 4
+    and 5 at today's predator level, with deaths reported only; the rule also asked for doubled predators,
+    which no world can meet — even today's own world, with predators doubled, survives only 66 % as often as at today's level, below the 80 % bar.</span>
+    <span><b>Axes.</b> Left: horizontal, how far a smell carries, in cells (today 20); vertical, mean steps
+    to find food, log scale (dotted line at 20). Right: horizontal, mean steps to find food, log scale;
+    vertical, share of starts the ideal agent survives for 500 steps, percent (dotted lines at 20 steps and at
+    80 % of today). Marker shape: grid size; filled: fires, bushes and predators kept at today's density; open:
+    at today's count; dark: passes the balance criteria.</span>
+    __DATA:c3_search_vs_survival__
+    <span><b>How it is computed.</b> Seventy-two worlds — three grid sizes, four smell ranges, several food
+    settings, and other things at today's density or count — are generated with every placement area
+    widened, then reset 1,000 times each. A simple searcher, starting from random open cells, walks to the
+    nearest food once it smells any and wanders at random otherwise; its steps to reach food give the search
+    time (checked against an exact random-walk calculation). Warmth uses the walking distance to the nearest
+    warm cell, as an agent that remembers where the fire is would; blind search for warmth is reported in the
+    study files. These times replace the planner's trips, and the balance criteria are applied, with the method
+    first required to reproduce today's world (survival 57.7 % against 57.3 % in the balance study). This
+    warmth definition was adopted after a first run in which the searcher also looked for warmth blindly: that
+    run failed today's own world and passed none; the change was written down and reviewed before the re-run.
+    <b>What this figure does not show:</b> agents that remember where food was — food jumps to a random cell
+    after it is used up, so memory cannot help here; and trained agents.</span>
+  </figcaption>
+</figure>
+
+<p><b>What this means.</b> Each search for food costs the agent twice: it burns food energy while walking,
+and it walks in the open where predators strike. Richer food items did not visibly help in these worlds, and they cannot help much in principle, because
+eating past 200 kills, so one find cannot be banked. A proposal, not yet tested: searching might become a real task without starving the agent if finding
+food again gets easier — food that regrows <em>in the same place</em>, so an agent that remembers where it
+ate can return. That needs a new environment rule, and it is the kind of memory a modulator might help
+with. Until then, the worlds that are balanced and still make the agent search a little (about
+9–12 steps: for example a 10 × 10 grid with a 5-cell smell range and 1–2 rich items, or 20 × 20 with today's
+food count) are the natural first training candidates — and a short smell range also hides predators,
+turning the danger of Figure 4 into something the agent has to infer.</p>
+</section>
+
+<section class="col">
 <h3 class="group">The first study: one rule at a time</h3>
 <p>The sections below are the earlier version of this study (corrected 26 September): the same planner
 without food running out or single predator hits, asking which one-at-a-time change makes the best action
@@ -278,7 +413,7 @@ depend most on combinations of body states.</p>
 </section>
 
 <section class="col">
-<h2><span class="num">08</span> How it works</h2>
+<h2><span class="num">11</span> How it works</h2>
 
 <ol>
   <li><b>The body, copied exactly.</b> A small program repeats the environment's body update line by line:
@@ -325,7 +460,7 @@ no choice wins in more than 80 % of starting states while another than "rest in 
 
 <section class="col">
 <h3 class="group">The rules one at a time</h3>
-<h2><span class="num">09</span> What each new rule does on its own</h2>
+<h2><span class="num">12</span> What each new rule does on its own</h2>
 
 <figure>
   <p class="cue" hidden>Wider than the screen — scroll sideways, or click the figure to open it full size.</p>
@@ -333,7 +468,7 @@ no choice wins in more than 80 % of starting states while another than "rest in 
   <p class="zoomhint">Click the figure to open it full size.</p>
   __KIND:s1_single_rules__
   <figcaption>
-    <span><b>Figure 3 — each rule links two body states; the strength of the link is a setting.</b> Healing
+    <span><b>Figure 6 — each rule links two body states; the strength of the link is a setting.</b> Healing
     can be made to depend on temperature (a) or food energy (b); injury can speed cooling (c); healing can
     cost food (d), as can staying warm (e). A random start temperature (f) stays safe from a fire's first
     step up to a start of about +9.8°; level 05 uses −10 to +5.</span>
@@ -353,7 +488,7 @@ no choice wins in more than 80 % of starting states while another than "rest in 
     in the cold; and the fire step from the environment's own temperature update with the hot-corner fire cell of the
     mechanics plan (79.7°; the median fire cell on real resets is 77.3°). The simulator's copy of today's rules was checked against the real
     environment on 4,000 random states before any of this was drawn. <b>What this figure does not show:</b>
-    how the rules combine, or what an agent would choose — sections 10–12 do that. The five new rules were
+    how the rules combine, or what an agent would choose — sections 13–15 do that. The five new rules were
     checked against their implementation once it landed (commit <code>79cf90ef</code>): on 4,000 random states
     at mid values, at the sweep's extremes and in the alternative modes, the largest difference was 0.00002 and
     every death was decided identically.</span>
@@ -363,7 +498,7 @@ no choice wins in more than 80 % of starting states while another than "rest in 
 
 <section class="col">
 <h3 class="group">What an ideal agent would do</h3>
-<h2><span class="num">10</span> Which settings make the best choice depend on combinations</h2>
+<h2><span class="num">13</span> Which settings make the best choice depend on combinations</h2>
 
 <p>Each world changes one setting from today's level 05 (with its new random starting temperature). Today's
 world already has some combination dependence: knowing two body states predicts the ideal choice 11.9
@@ -375,7 +510,7 @@ points better than knowing the best single one. The question is which settings r
   <p class="zoomhint">Click the figure to open it full size.</p>
   __KIND:s3_worlds__
   <figcaption>
-    <span><b>Figure 4 — a bush on a fire ring makes the best choice simple; no single change clears the rule,
+    <span><b>Figure 7 — a bush on a fire ring makes the best choice simple; no single change clears the rule,
     and the largest gains come from the warm-bush episodes.</b> Today the combination gain is 17.1 points
     without a warm bush and 4.3 with one (11.9 pooled). Fewer bushes (a trip of 8) reaches 15.6 pooled —
     −0.4 without a warm bush, +9.6 with one — and spreads the best choices across hiding, warming and eating
@@ -404,13 +539,13 @@ points better than knowing the best single one. The question is which settings r
     learns — an ideal planner knows its injury exactly and plans perfectly; the reduced world's predators are
     an average cost, not attacks, and its food never runs out, which makes eating look cheaper than it is and
     so, if anything, under-rates the scarce-food worlds; food is a median of 4 steps away (the first version
-    of this page used 2). Section 13 (item 4) explains why the fewer-bushes worlds are read against a lower warm-bush share.</span>
+    of this page used 2). Section 16 (item 4) explains why the fewer-bushes worlds are read against a lower warm-bush share.</span>
   </figcaption>
 </figure>
 </section>
 
 <section class="col">
-<h2><span class="num">11</span> What the best choices look like</h2>
+<h2><span class="num">14</span> What the best choices look like</h2>
 
 <p>The maps below show the planner's best choice for every combination of food energy and injury, at three
 body temperatures. Where a boundary between colours runs diagonally, or moves from one temperature to the
@@ -422,7 +557,7 @@ next, the choice depends on more than one body state.</p>
   <p class="zoomhint">Click the figure to open it full size.</p>
   __KIND:s4_choice_maps__
   <figcaption>
-    <span><b>Figure 5 — cold overrides everything today; when healing costs food, how fed the agent is decides
+    <span><b>Figure 8 — cold overrides everything today; when healing costs food, how fed the agent is decides
     between warming up and hiding even in the cold.</b> Today at −8° the best choice is to warm up almost
     everywhere. With healing that costs food (1 or 2 per point), an injured agent with plenty of food rests in
     cover even at −8°, and the edge between the two runs diagonally: the more injured it is, the less food
@@ -434,7 +569,7 @@ next, the choice depends on more than one body state.</p>
     temperature −8°, −3° and +3°. Rows: today's level 05 and the three worlds with the highest combination gain
     (fewer bushes with a trip of 8; healing that costs 2 and 1 food per point); none passes the rule. Colours: the best choice; pale cells are ties.</span>
     __DATA:s4_choice_maps__
-    <span><b>How it is computed.</b> These are the planner's solutions from Figure 4, read on the map without
+    <span><b>How it is computed.</b> These are the planner's solutions from Figure 7, read on the map without
     a bush on a fire ring (the more common map, 59 % of episodes) at open ground, at the three grid
     temperatures shown. Each cell is one grid state of food energy (steps of 4) and injury (steps of 4); its
     colour is the choice category with the highest long-run value, and it is drawn pale when the second-best
@@ -448,7 +583,7 @@ next, the choice depends on more than one body state.</p>
 </section>
 
 <section class="col">
-<h2><span class="num">12</span> Does the ranking depend on the analysis's own choices?</h2>
+<h2><span class="num">15</span> Does the ranking depend on the analysis's own choices?</h2>
 
 <figure>
   <p class="cue" hidden>Wider than the screen — scroll sideways, or click the figure to open it full size.</p>
@@ -456,7 +591,7 @@ next, the choice depends on more than one body state.</p>
   <p class="zoomhint">Click the figure to open it full size.</p>
   __KIND:s5_robustness__
   <figcaption>
-    <span><b>Figure 6 — fewer bushes leads under every variant; healing that costs food holds only at the
+    <span><b>Figure 9 — fewer bushes leads under every variant; healing that costs food holds only at the
     rule's own reading.</b> The fewer-bushes worlds stay 1–7 points above today at every tie margin and
     6–9 points above at the longer horizon. Healing that costs food (1 or 2 per point) is +2.7 to +3.8 at
     margins 0 and 0.5, but −1.9 to −0.7 at margin 2 and +1.7 and −0.7 at the longer horizon. Healing that
@@ -484,7 +619,7 @@ next, the choice depends on more than one body state.</p>
 </section>
 
 <section class="col">
-<h2><span class="num">13</span> What this suggests for the level-05 variants</h2>
+<h2><span class="num">16</span> What this suggests for the level-05 variants</h2>
 
 <p>Since the first version of this page, the training plan changed: every combination of four rules —
 healing that needs food (B5), healing that costs food (B3), warmth that costs food (A1) and scarcer food
@@ -497,13 +632,13 @@ Read with the corrected food distance, the planner says:</p>
   clearance around each burning fire).</li>
   <li><b>B3, healing costs food — the largest of the four rules in the training batch, but fragile</b>
   (+3.1 and +3.2 pooled at 1 and 2 food per point; +0.4 and −0.3 at 0.25 and 0.5). It is inside the noise
-  band on the common map, and it disappears at the wider tie margin and the longer horizon. Figure 5 shows
+  band on the common map, and it disappears at the wider tie margin and the longer horizon. Figure 8 shows
   what it changes: how fed the agent is decides between warming up and hiding.</li>
   <li><b>B5, healing needs food — small</b> (+1.6 pooled at floors 0 and 0.2, all from episodes with a warm
   bush; +0.1 at 0.5). The first version of this page ranked it first; that came from the wrong food
   distance.</li>
   <li><b>A5, fewer bushes — below the rule</b> (+1.8 to +3.7 pooled), almost all of it on the warm-bush
-  map. Figure 4 pools its maps at today's 41 % warm-bush share, but a sparse world has fewer warm bushes:
+  map. Figure 7 pools its maps at today's 41 % warm-bush share, but a sparse world has fewer warm bushes:
   about 8 % of episodes with one bush, since 7.8 % of bushes sit on a fire ring in real resets. Reweighted
   to that share, trips of 6 and 8 steps score 15.1–16.5 — about what today's world itself scores at the same
   share (16.1). So fewer bushes work by removing warm bushes, the same lever as item 1, not through the
@@ -528,7 +663,7 @@ in them. Worlds combining two or more rules were not solved here.</p>
 </section>
 
 <section class="col">
-<h2><span class="num">14</span> What this page cannot say</h2>
+<h2><span class="num">17</span> What this page cannot say</h2>
 
 <div class="callout warn">
   <p class="eyebrow">The binding limit</p>
@@ -558,7 +693,7 @@ in them. Worlds combining two or more rules were not solved here.</p>
 </section>
 
 <section class="col">
-<h2><span class="num">15</span> How to reproduce this</h2>
+<h2><span class="num">18</span> How to reproduce this</h2>
 <ul>
   <li>Settings inventory: <code>docs/<wbr>experiments/<wbr>active/<wbr>internal_state_interactions/<wbr>BALANCE_SETTINGS_INVENTORY.md</code></li>
   <li>Study plan with its pre-registered rule and its review rounds (balance study: Revisions 2–2b): <code>docs/<wbr>experiments/<wbr>active/<wbr>internal_state_interactions/<wbr>STUDY_PLAN.md</code></li>
@@ -573,6 +708,7 @@ in them. Worlds combining two or more rules were not solved here.</p>
       <li><code>validation_balance.json</code> — the checks of the new planner parts</li>
     </ul></li>
   <li>The body rules being implemented: <code>docs/<wbr>develop/<wbr>active/<wbr>thermal/<wbr>STATE_DEPENDENT_BODY_MECHANICS.md</code></li>
+  <li>Sections 08–10: <code>docs/<wbr>experiments/<wbr>active/<wbr>context_exploration/<wbr>STUDY_PLAN.md</code>; outputs in <code>results/<wbr>analysis/<wbr>context_exploration/</code>; scripts in <code>scripts/<wbr>analysis/<wbr>studies/<wbr>context_exploration/</code></li>
 </ul>
 <p>Departures from the House Style Sheet, as on the project's other analysis pages: the chrome accent and
 warning hues are moved off the figure palette; headings use Pretendard and code the reader's system
