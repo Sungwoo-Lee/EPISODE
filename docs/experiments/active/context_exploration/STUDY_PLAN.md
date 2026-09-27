@@ -406,3 +406,22 @@ budget) are the only relevant ones; nothing new for `bug-curator`.
 empty → a day of measurement and a redesign of the food axis. No unrecoverable loss.
 
 Reviewed by: plan-reviewer
+
+## Revision 1a (2026-09-27) — answers to the confirming pass (`3cab2d71`), before anything runs
+
+- **Search floor rule:** the point estimate of the mean food search time over **1,000 resets** per world must be
+  ≥ 20 steps (1,000 resets give a standard error of about mean/30); the 95 % interval is reported.
+- **Food axis gains a middle rung:** 2–4 items at 15 × 15 and 2–6 at 20 × 20, between "few and rich" and
+  "same density", so Part 3 cannot fall between two failing extremes.
+- **Part 4 budget:** each run's environment steps at the read-out window are recorded from WandB / the log (not
+  the saved config, whose budget copy can be stale — Known Bugs 2026-09-04); survival is reported per episode
+  and per 1,000 environment steps, and criterion 4 is judged on survival steps per episode against the
+  reference, with the step-count difference stated.
+- **Noise scale:** survival noise for the reference world is taken from pilots P0a–P0c (228.3 / 225.8 / 228.6
+  steps, same world, agent and budget); the two reference seeds of Part 4 exist for the new balance numbers'
+  noise.
+- **Early-death cut-off:** a required config key, by the user's decision on the balance-metrics plan
+  (2026-09-27), superseding that plan's module constant; level-05 value 20.
+- **Still learning:** "> 5 %" means a relative rise of more than 5 % in survival steps over the last fifth
+  of training.
+- **Status: approved by the user ("proceed", 2026-09-27); Parts 1–3 may run.**
