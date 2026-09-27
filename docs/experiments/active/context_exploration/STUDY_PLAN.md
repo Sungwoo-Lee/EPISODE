@@ -1048,14 +1048,14 @@ directory contains `ctxexp` (checked 2026-09-27).
 | C5 | done 2026-09-27T20:04 | 5 balanced | `rppo_ctxexp_g20r20f1to2b36_t1none_s42` | context_exploration | pilot | 42 | 113 | cuda:1 | 2026-09-27T18:47:55 | `f8o1wgdw` | `logs/20260927_184755.log` · HEAD `a90eb973` |
 | C6 | running | 6 edge | `rppo_ctxexp_g10r3f1to2b36_t1none_s42` | context_exploration | pilot | 42 | 112 | cuda:1 | 2026-09-27T20:12:23 | `5sqbvlko` | `logs/20260927_201223.log` · HEAD `32c22c8b` |
 | C7 | running | 7 edge | `rppo_ctxexp_g15r8f1to2b36_t1none_s42` | context_exploration | pilot | 42 | 102 | cuda:1 | 2026-09-27T20:12:16 | `ds54a5nw` | `logs/20260927_201216.log` · HEAD `32c22c8b` |
-| C4-ext | failed at launch 23:14 (restore error; not relaunched) | 4 balanced | `rppo_ctxexp_g20r5f4to16b12_t1none_s42` | context_exploration | pilot | 42 | 102 | cuda:0 | 2026-09-27T23:12:19 | `7ctxxltq` (resumed) | `logs/20260927_231219.log` · from `models/2000021` · HEAD `e4810d08` |
-| C3-ext | failed at launch 23:14 (restore error; not relaunched) | 3 balanced | `rppo_ctxexp_g20r20f1to4b12_t1none_s42` | context_exploration | pilot | 42 | 102 | cuda:1 | 2026-09-27T23:12:22 | `whpmbq6l` (resumed) | `logs/20260927_231222.log` · from `models/2000166` · HEAD `e4810d08` |
-| C1a-ext | failed at launch 23:14 (restore error; not relaunched) | 1 reference | `rppo_ctxexp_lvl05ref_t1none_s42` | context_exploration | pilot | 42 | 113 | cuda:0 | 2026-09-27T23:12:26 | `v4tbwrfn` (resumed) | `logs/20260927_231226.log` · from `models/2000052` · HEAD `e4810d08` |
-| C1b-ext | failed at launch 23:14 (restore error; not relaunched) | 1 reference | `rppo_ctxexp_lvl05ref_t1none_s43` | context_exploration | pilot | 43 | 113 | cuda:1 | 2026-09-27T23:12:29 | `qxz17vr0` (resumed) | `logs/20260927_231230.log` · from `models/2000065` · HEAD `e4810d08` |
+| C4-ext | running (2 M → 5 M, R1.4; relaunched after restore-path fix) | 4 balanced | `rppo_ctxexp_g20r5f4to16b12_t1none_s42` | context_exploration | pilot | 42 | 102 | cuda:0 | 2026-09-27T23:25:18 | `7ctxxltq` (resumed) | `logs/20260927_232518.log` · from `ckpt 2000021` · HEAD `7ec12aa8`; first attempt 23:12 failed |
+| C3-ext | running (2 M → 5 M, R1.4; relaunched after restore-path fix) | 3 balanced | `rppo_ctxexp_g20r20f1to4b12_t1none_s42` | context_exploration | pilot | 42 | 102 | cuda:1 | 2026-09-27T23:25:22 | `whpmbq6l` (resumed) | `logs/20260927_232522.log` · from `ckpt 2000166` · HEAD `7ec12aa8`; first attempt 23:12 failed |
+| C1a-ext | running (2 M → 5 M, R1.4; relaunched after restore-path fix) | 1 reference | `rppo_ctxexp_lvl05ref_t1none_s42` | context_exploration | pilot | 42 | 113 | cuda:0 | 2026-09-27T23:25:26 | `v4tbwrfn` (resumed) | `logs/20260927_232526.log` · from `ckpt 2000052` · HEAD `7ec12aa8`; first attempt 23:12 failed |
+| C1b-ext | running (2 M → 5 M, R1.4; relaunched after restore-path fix) | 1 reference | `rppo_ctxexp_lvl05ref_t1none_s43` | context_exploration | pilot | 43 | 113 | cuda:1 | 2026-09-27T23:25:29 | `qxz17vr0` (resumed) | `logs/20260927_232529.log` · from `ckpt 2000065` · HEAD `7ec12aa8`; first attempt 23:12 failed |
 
-*Extension rows (user decision 2026-09-27): only C4, C3, C1a, C1b are extended; C5 and C7 are not, and no seed-43 world runs are launched. Resumed runs log into their original WandB runs but write new `results/JAX_RecurrentPPO/20260927-2312xx_<tag>/` directories (C4 `231224`, C3 `231228`, C1a `231229`, C1b `231233`); the 2 M directories are untouched. Seam check (R1.4) pending — first two 200 k blocks after 2 M.*
+*Extension rows (user decision 2026-09-27): only C4, C3, C1a, C1b are extended; C5 and C7 are not, and no seed-43 world runs are launched. Resumed runs log into their original WandB runs but write new `results/JAX_RecurrentPPO/20260927-2312xx_<tag>/` directories (C4 `231224`, C3 `231228`, C1a `231229`, C1b `231233`); the 2 M directories are untouched. Those `2312xx` folders are from the failed first attempt (empty); the running relaunch writes `20260927-2325xx_<tag>/` (C4 `232524`, C3 `232528`, C1a `232529`, C1b `232533`). Seam check (R1.4) pending — first two 200 k blocks after 2 M.*
 
-*Launch failure (2026-09-27T23:14, `training-runner`): all four crashed at checkpoint restore, before any training step — `FileNotFoundError: no checkpoint steps found under '…/models/2000021'`. The R1.4 command (and the results section) pass `models/<step dir>`, but `restore_rppo_training_state` (`src/utils/checkpoint_restore.py`) expects the CheckpointManager root, i.e. the run's `models/` directory, and restores its latest step (here the 2 M checkpoint in each run). Corrected form: `--load-checkpoint results/JAX_RecurrentPPO/<run dir>/models`. Not relaunched pending the user's go. The WandB runs were reopened for ~1 min with no training data logged; empty result dirs `20260927-2312xx_<tag>/` were left behind.*
+*Launch failure (2026-09-27T23:14, `training-runner`): all four crashed at checkpoint restore, before any training step — `FileNotFoundError: no checkpoint steps found under '…/models/2000021'`. The R1.4 command (and the results section) pass `models/<step dir>`, but `restore_rppo_training_state` (`src/utils/checkpoint_restore.py`) expects the CheckpointManager root, i.e. the run's `models/` directory, and restores its latest step (here the 2 M checkpoint in each run). Corrected form: `--load-checkpoint results/JAX_RecurrentPPO/<run dir>/models`. Relaunched 23:25 with the `models/` form (approved correction); all four restored their 2 M checkpoint and resumed near 2,000,000 episodes of a 5,000,000 budget. The WandB runs were reopened for ~1 min with no training data logged; empty result dirs `20260927-2312xx_<tag>/` were left behind.*
 
 #### 4.9.1 Configs to Produce
 
@@ -1249,7 +1249,7 @@ needs a second seed before it can lead the next study. Everything in 4.1–4.9 s
 /home/vncuser/miniconda3/envs/grid_world_pain/bin/python train.py \
   --config <env config from 4.9.1> \
   --agent_config configs/models/recurrent_ppo/nmn_input_site_grid_gaenorm/nmngaenorm_t1none.yaml \
-  --load-checkpoint results/JAX_RecurrentPPO/<run dir>/models/<highest episode-numbered checkpoint dir, ≥ 2000000> \
+  --load-checkpoint results/JAX_RecurrentPPO/<run dir>/models \
   --episodes 5000000 --device cuda:<gpu> --log-interval 10 \
   --wandb-resume-id <the run's WandB id> \
   --tag "<same tag>" --wandb-name "<same tag>" \
@@ -1257,7 +1257,10 @@ needs a second seed before it can lead the next study. Everything in 4.1–4.9 s
 ```
 
   (C1b adds `--seed 43`.) Checkpoints are saved every 200,000 episodes as episode-numbered
-  directories under `models/`. **Seam check, before reading any extended value:** survival steps in the
+  directories under `models/`. *(Corrected 2026-09-27 by `training-runner`: the command originally passed
+  `models/<highest episode-numbered checkpoint dir>`, which crashed at restore — the rPPO restorer,
+  `src/utils/checkpoint_restore.py`, takes the `models/` folder itself (the checkpoint-manager root)
+  and loads its highest step, which is the 2 M checkpoint when nothing later exists.)* **Seam check, before reading any extended value:** survival steps in the
   first two logged 200 k-episode blocks after the resume are within the pre-resume block's value ± 5 %;
   a break goes to `bug-curator` / `senior-developer` (Known Bugs: rPPO resume H1 fixed; B5 "restored
   memory + fresh worlds" affects the first post-resume window only). Extended worlds are then judged on
@@ -1496,8 +1499,11 @@ the trained agent's.
    and job type; ≈ 2 GPU-h each on a 3090.
 2. **Extension to 5 M episodes (R1.4)** — three of seven worlds are flagged (not more than half), so
    **C3, C4, C5 and both reference runs C1a, C1b** are resumed with the R1.4 command from their 2 M
-   checkpoints: C1a `models/2000052`, C1b `models/2000065` (+ `--seed 43`), C3 `models/2000166`,
-   C4 `models/2000021`, C5 `models/2000145`, each with `--wandb-resume-id` = its WandB id from 4.9.
+   checkpoints (C1a `models/2000052`, C1b `models/2000065` (+ `--seed 43`), C3 `models/2000166`,
+   C4 `models/2000021`, C5 `models/2000145`), each with `--wandb-resume-id` = its WandB id from 4.9.
+   *(Corrected 2026-09-27: `--load-checkpoint` takes the run's `models/` folder, not the step directory;
+   the restorer picks the highest step, which is the 2 M checkpoint named here. The step-directory form
+   crashed at restore — see the §4.9 launch-failure note.)*
    Seam check (R1.4) before reading any extended value; extended worlds judged on 4.9–5.0 M against
    the extended reference on 4.9–5.0 M. Roughly 2.5 × the 2 M cost for these five runs.
 
