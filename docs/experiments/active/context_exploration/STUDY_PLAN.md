@@ -1680,22 +1680,32 @@ applied again, now against today's world at 5 M.
 - **Today's world still passes every test at 5 M**; it survives about 6 % longer than at 2 M
   (240 against 227 steps), so the survival bar rose with it (80 % line: 192 steps).
 - **The many-small-food 20 × 20 world (C4) passes all five tests and has stopped climbing**
-  (211 steps, 0.88 of today's). It is now "trained-balanced relative to today", but two values sit
+  (211 steps, 0.88 of today's). Final verdict, conditional on the resume seam (last bullet): it is
+  "trained-balanced relative to today", but two values sit
   inside the pre-registered borderline band (eating takes 14.8 % of time against a 10 % floor; hiding
   when injured is 2.4 times more likely, against a floor of 2), so it needs a second seed before it can
   go forward.
 - **The few-food 20 × 20 world (C3) learned to eat after all** (0.05 bites per episode before 1.8 M,
   about 15 by 5 M) and now passes the time-split, eat-and-hide and hide-when-fed tests, but it **fails
   survival** (151 steps, 0.63 of today's) and **its deaths are dominated by starvation** (64 % of late
-  deaths). Final verdict: not balanced. It had by now received 1.5 times the training steps today's world
+  deaths). Final verdict, conditional on the resume seam (last bullet): not balanced. It had by now received 1.5 times the training steps today's world
   had at 2 M, so the "too few updates" excuse from 2 M no longer covers the gap.
 - **The simulation is still not trustworthy for choosing worlds** (2 of 6 worlds agree; it was too
   pessimistic about one 10 × 10 world and, now decided, too optimistic about C3).
 - **Nothing goes forward yet.** Three worlds are candidates for the modulator comparison, each pending a
   second-seed run: the 10 × 10 smell-range-3 world (first), the 10 × 10 smell-range-5 world, and C4.
-- **Caveat:** the pre-registered continuity check at the resume point fails *literally* for C3 and C4,
-  because both were still climbing; a row-by-row look shows no jump at the resume point. That reading
-  is stated below and flagged for `bug-curator`; the verdicts above assume it holds.
+- **Single seed:** every C3 and C4 number is one training run (n = 1). The two runs of today's world
+  now differ by 5.2 steps; C3's shortfall (41 steps under the survival bar) is far outside that, C4's
+  pass (19 steps over) is about 3.7 such gaps — comfortable but single-seed, and C4's two borderline
+  values are exactly what its second-seed run has to decide.
+- **Why "final, conditional on the resume seam":** the pre-registered continuity check at the point
+  where training was resumed (2 M) fails *literally* for C3 and C4, because both were still climbing; a
+  row-by-row look shows no jump at the resume point, but that look was chosen after the check failed.
+  Proceeding is still safe: C3 fails survival by 41 steps, and C4 passes by 19 steps with its survival
+  and both borderline values flat from 2.4 M to 5.0 M — a resume artefact does not produce a
+  2.6-million-episode plateau, so both verdicts survive any hidden jump smaller than the row-to-row
+  noise (≈ 5 steps). C4's second-seed run is a fresh 5 M run with no resume, so it doubles as the seam
+  control. The rule's limitation is recorded as an open Known Bugs row.
 
 ### Methods
 
@@ -1718,7 +1728,10 @@ applied again, now against today's world at 5 M.
   the resume point, so C1b's and C3's last rows sit at 4,996,065 / 4,996,166 although both logs print
   "Training complete" at their 5 M checkpoint. The first run of the script called C3 "invalid" for that
   reason; the check now accepts a last row within one logging interval of 5 M. Their read-out window is
-  therefore (4.9 M, 4.996 M]. No verdict depended on anything else in that first run.
+  therefore (4.9 M, 4.996 M] — 96,000 episodes rather than 100,000 (C1a's last row at 5,000,052 shows
+  the missing row is a logging-vs-termination race, not a shortfall in training). The logging interval
+  is declared in the manifest (`log_every_episodes: 4000`, verified from row spacing:
+  (4,996,166 − 2,004,166) / 4,000 = 748 exactly). No verdict depended on anything else in that first run.
 - The 2 M replication gate (R1.6 L4) is not re-applied at 5 M (it has no 5 M target).
 
 ### Run validity
@@ -1783,13 +1796,13 @@ criterion is withheld** (R1.2). The reference's eat ratio fell from 6.80 at 2 M 
 far above 2) — report only. Full per-row-mean ratios, felt-injury and warm ratios, early-death shares
 and all-death causes are in the tmp read-out.
 
-### Per-world verdicts (final)
+### Per-world verdicts (final, conditional on the resume seam)
 
 | Run | 1 time split | 2 eat & hide | 3 absolute (report) | 3-fwd | 4 survival | 5 hide among fed | Borderline (within band) | Verdict at 5 M | Verdict at 2 M |
 |---|---|---|---|---|---|---|---|---|---|
 | C1a / C1b | pass | pass | pass | pass | pass | pass | — | reference | reference |
-| C3 | pass | pass | FAIL | **FAIL** (starvation 0.642 > 0.600) | **FAIL** (0.63) | pass | eating 0.103, hide 2.04, 3-fwd 0.642, hide-fed 2.31 | **not trained-balanced** (survival fails by 41 steps, far outside any band) | withheld (still learning) |
-| C4 | pass | pass | pass | pass | pass (0.88) | pass | eating 0.148 vs 0.10 (band 0.05); hide 2.43 vs 2.0 (band 0.5) | **trained-balanced relative to today; borderline → seed 43 before forwarding** | withheld (still learning) |
+| C3 | pass | pass | FAIL | **FAIL** (starvation 0.642 > 0.600) | **FAIL** (0.63) | pass | eating 0.103, hide 2.04, 3-fwd 0.642, hide-fed 2.31 | **not trained-balanced** — final, conditional on the seam (survival fails by 41 steps, far outside any band) | withheld (still learning) |
+| C4 | pass | pass | pass | pass | pass (0.88) | pass | eating 0.148 vs 0.10 (band 0.05); hide 2.43 vs 2.0 (band 0.5) | **trained-balanced relative to today** — final, conditional on the seam; borderline → seed 43 before forwarding | withheld (still learning) |
 
 C4's dominant late-death cause (injury 0.52) is now below the reference line with room (0.08); at 2 M it
 was 0.576 and borderline. Survival borderline: C4 19.0 steps above the line against a band of 9.6
@@ -1832,7 +1845,9 @@ pass (1) or fail (0); no criterion withheld.
 
 **Outcome: nothing goes forward yet.** If all three seed-43 runs confirm, the modulator comparison gets
 exactly its cap of three worlds, in the order C6, C2, C4. C4's seed-43 run has to be judged at the budget
-its verdict was reached at: a fresh 5 M run on a 20 × 20 grid (the 2 M → 5 M continuation alone took ≈ 7 h, against ≈ 2 h
+its verdict was reached at: a fresh 5 M run with no resume — which therefore doubles as the control for
+the resume seam, and will be the study's first fresh-vs-resumed comparison (to be stated at its
+read-out) — on a 20 × 20 grid (the 2 M → 5 M continuation alone took ≈ 7 h, against ≈ 2 h
 for the 10 × 10 seed-43 runs); that is for the user to approve.
 
 ### Analysis — how the extended runs evolved
@@ -1880,8 +1895,10 @@ Full 25-block tables for every key are in the tmp read-out.
 ### Conclusions
 
 - **Hypothesis for the extended worlds** (the simulation's "balanced" call holds once training has had
-  time): **holds for C4, fails for C3.** C4 is trained-balanced relative to today at 5 M on one seed,
-  borderline on two quantities; C3 is not balanced at 5 M (survival 0.63 of today, starvation 64 % of
+  time): **holds for C4, fails for C3** — both final, conditional on the resume seam (C3's 41-step
+  survival shortfall and C4's 19-step pass with flat borderline values from 2.4 M make either verdict
+  robust to any jump smaller than row-to-row noise). C4 is trained-balanced relative to today at 5 M on
+  one seed (n = 1), borderline on two quantities; C3 is not balanced at 5 M (survival 0.63 of today, starvation 64 % of
   late deaths) even with more environment steps than today's world had at 2 M.
 - **The simulation's trust verdict is unchanged** (not trustworthy; 2 of 6), and its optimism about the
   large, food-poor grid is now a decided finding rather than one hedged by the step-count confound.
@@ -1897,7 +1914,11 @@ Full 25-block tables for every key are in the tmp read-out.
   A trend-adjusted or row-level seam check would be the fix for future extensions; no code defect is
   suspected. The small first-rows dip after resume in all four runs (1–7 steps, recovered within
   ≈ 12,000 episodes) is consistent with Known Bugs B5 and worth adding as an observation to that row.
-- **Needs the user's go:** seed-43 runs `C6b`, `C2b` (2 M) and `C4b` (5 M on a 20 × 20 grid; the 3 M continuation alone took ≈ 7 h).
+- **Plan-reviewer feedback applied (2026-09-28):** M1 (verdicts labelled "final, conditional on the
+  seam" throughout, with the margin argument), L1 (96 k windows), L2 (`log_every_episodes` declared in
+  the manifest), L3 (diary row), O1 (clause for the C4b read-out), O2 (n = 1 in the plain-words verdict).
+- **Needs the user's go:** seed-43 runs `C6b`, `C2b` (2 M) and `C4b` (5 M on a 20 × 20 grid; the 3 M continuation alone took ≈ 7 h). `C4b` runs fresh from episode 0, so it is also the seam control for C4's conditional verdict.
+- **`bug-curator` row filed** before any further extension (plan-reviewer M1): open row "resume-continuity check fails on still-improving runs" in Known Bugs (commit `a47075a1`).
 - **Manifest status column (4.9)** still reads "running" for the four extension rows; owned by
   `training-runner` / `experiment-designer`, not edited here.
 - No new metric needed.

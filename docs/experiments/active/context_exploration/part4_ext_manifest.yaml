@@ -12,6 +12,7 @@ readout_fraction: 0.02          # = readout_window / episodes (kept for the scri
 readout_window: 100000
 still_learning_window: 200000
 block_size: 200000
+log_every_episodes: 4000       # episode-row logging interval, counted from the (resume) start; verified from row spacing
 seam: {at: 2000000, block: 200000, tol: 0.05}
 calibration:
   max_nutrition: 200.0
