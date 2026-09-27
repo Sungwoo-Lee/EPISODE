@@ -185,6 +185,10 @@ if not NEW_RULES_VALIDATED and page.count("simulator-only") < 2:
     fail.append("B1-B5 are not validated against the real environment yet, so the page must say its new-rule "
                 "numbers are simulator-only (in the figure method and the limits section)")
 
+# An unclosed <section> silently nests every following section; only the heading gap shows it.
+if page.count("<section") != page.count("</section>"):
+    fail.append(f"<section> opened {page.count('<section')} times but closed {page.count('</section>')} times")
+
 left = re.findall(r"__[A-Z][A-Z0-9_:]*__|\{\{[^}]+\}\}", page)
 if left:
     fail.append(f"unsubstituted tokens remain: {sorted(set(left))[:6]}")

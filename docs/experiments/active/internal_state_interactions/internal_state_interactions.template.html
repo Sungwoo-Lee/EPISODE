@@ -14,6 +14,8 @@ __HOUSE_STYLE__
   /* Column floors must SUM to less than the 688px text column, or the table scrolls on a desktop. */
   table.wide { min-width: 585px; }
   table.wide td:nth-child(1), table.wide th:nth-child(1) { min-width: 150px; }
+  /* F34: the 220 px last-column floor is for the data tables' "why" prose; a numeric wide table drops it */
+  table.datatable.wide td:last-child, table.datatable.wide th:last-child { min-width: 0; }
   table.cluetable { min-width: 560px; }
   table.cluetable td, table.cluetable th { padding: 9px 8px; }
   table.cluetable td:first-child { min-width: 170px; }
@@ -26,8 +28,9 @@ __HOUSE_STYLE__
   p.kind-planner { border-color: var(--accent); color: var(--accent-text); }
   /* dense figures keep a legible floor on a phone and scroll sideways, with a measured cue.
      F65: floor = canvas px x 9 / smallest label px = 2207 x 9 / 29 = 685 (s4, the widest canvas;
-     s3 672, s5 675), so smallest labels render at >= 9 px -- not a round number */
-  .figscroll img { min-width: 690px; }
+     s3 672, s5 675, b1 675, b2 666), so smallest labels render at >= 9 px. It must stay <= the 688 px
+     column, or every figure shows a scroll cue on a desktop (F32 amendment) */
+  .figscroll img { min-width: 685px; }
   p.kind-manipulation { border-color: var(--warn); color: var(--warn); }
   /* lists: the house sheet has no list rule (F61 family) -- paragraph rhythm, modest indent */
   ol, ul { margin: 0; padding-left: 1.4em; } li + li { margin-top: 6px; }
@@ -38,9 +41,10 @@ __HOUSE_STYLE__
 
 <section class="col">
   <h1>Interactions Between Internal States</h1>
-  <p class="lede">A planning study before any training. Using the body's own rules and an ideal planner,
-  it asks which level-05 settings make the best action depend on several body states at once — food
-  energy, injury and body temperature together — and which do not.</p>
+  <p class="lede">A planning study before training. Using the body's own rules and an ideal planner, it
+  asks which level-05 settings give a <em>balanced</em> world — where hiding, eating and warming each
+  matter and the best action depends on food energy, injury and body temperature together — and what the
+  coming training runs should measure to find one.</p>
 </section>
 
 <section class="col">
@@ -48,47 +52,233 @@ __HOUSE_STYLE__
 
 <p>Our trained agents learned a simple habit: when injured, hide and rest. That habit is right whatever
 the agent's hunger or temperature, so an ordinary network learns it as well as a neuromodulated one. A
-modulator — a side network that rescales the agent's brain according to its body state — should help
-when the best action depends on <strong>combinations</strong> of body states: injured <em>and</em>
-hungry, injured <em>and</em> cold.</p>
+modulator — a side network that rescales the agent's brain according to its body state — should help when
+the best action depends on <strong>combinations</strong> of body states: injured <em>and</em> hungry,
+injured <em>and</em> cold.</p>
 
-<p>Five new body rules are being built (B1–B5), and three existing settings could be changed (A1, A4,
-A5). Before spending training time, this page asks: <strong>for which settings does the best action
-depend on more than one body state at once?</strong> It does not train anything. It copies the body's
-rules into a small simulator, reduces level 05 to five places, and computes the best choice in every body
-state with an ideal planner. Everything here describes what an ideal agent would do — a guide for choosing
-worlds, not evidence about trained agents.</p>
-
-<div class="callout warn">
-  <p class="eyebrow">Corrected on 26 September 2026</p>
-  <p>The first version of this page put food a median of <strong>2</strong> steps away. The measurement
-  counted the hiding predators' places as food items; real food is a median of <strong>4</strong> steps
-  away. Everything below is re-run with the corrected distance, and three conclusions changed. Healing that
-  needs food (B5), shown before as the strongest change in episodes without a warm bush (+5.4), now does
-  nothing there (+0.1). The fewer-bushes world, which passed the rule before, no longer does. And healing
-  that costs food (B3), shown before as small (+0.1 to +1.1), is now the largest of the rules in the
-  training batch (+3.1 and +3.2). Today's own value moved too: 11.9 points instead of 13.6 (17.1 and 4.3
-  without and with a warm bush, instead of 18.1 and 7.2).</p>
-</div>
+<p>New body rules were built to make hunger and temperature matter more, so that recovering from injury is
+no longer the only thing that counts. But pushed too far, the agent would simply forage or warm up all the
+time, hiding would collapse, and the world would be one-sided again in the other direction. What is wanted
+is a <strong>balanced</strong> world. This page asks where that balance lies, using an ideal planner on a
+simplified copy of level 05 — and turns the answer into what the training runs, with ordinary agents only,
+should measure. The planner is a guide for where to look; trained agents decide.</p>
 
 <div class="callout">
   <p class="eyebrow">The answer, in one paragraph</p>
-  <p>The biggest thing keeping today's level 05 simple is still a <strong>bush on a fire ring</strong>: in
-  the 41 % of episodes that have one, "go and rest in the warm bush" is best almost everywhere, and the
-  combination gain is 4.3 points against 17.1 without one. <strong>No single change passes the rule</strong>
-  fixed before the data (5 points above today). The largest are fewer bushes (up to +3.7, almost all of it
-  by breaking the warm bush's dominance) and <strong>healing that costs food (B3)</strong> at 1 or 2 food
-  per point healed (+3.1 and +3.2); B3's gain holds at tie margins 0 and 0.5 but disappears at the wider
-  margin and when the planner looks further ahead, and most of it comes from episodes with a warm bush.
-  Healing that needs food (B5) adds +1.6, all of it in episodes with a warm bush. Warmth that costs food
-  (A1), scarcer food (A4) and injury that speeds cooling (B4) stay within the noise at the rule's reading
-  (A4 and B4 lower the gain at the wider margin and the longer horizon); only healing that needs warmth
-  (B2) clearly makes the best choice <em>simpler</em>.</p>
+  <p>In today's level 05, the ideal agent's <strong>time is already balanced</strong>: it hides, warms up
+  and eats in a good share of steps, and each need drives its own behaviour (hungry agents eat 3.6 times as
+  often as fed ones, injured agents hide 8.3 times as often). That holds in 21 of the 29 worlds tested (Figures 1 and 2); the other 8 all
+  change predator pressure — with predators halved, hiding becomes too rare, and with predators doubled,
+  hunger and injury stop driving their own behaviour — so balance has a window along predator pressure, not
+  along food pressure. Two things are not balanced and no setting fixes them in the planner.
+  <strong>Deaths are one-sided</strong>: once predators strike as single large hits — some lethal — injury
+  causes 94–100 % of deaths after the first 20 steps, in every world. And <strong>no setting raises how much
+  the best choice depends on combinations of body states</strong> past the bar of 9.3 points: at the
+  pre-registered reading no change adds more than +0.7, and at a longer planning horizon the best is +5.0
+  (all four rules of the training experiment); stronger predators lower it by about 5.5, because hiding then
+  wins everywhere. Real ordinary agents
+  in the pilot runs differ from the planner in one useful way: they also starve (38 % of deaths in plain
+  level 05), and the food-draining rules shift deaths from predators toward hunger — something only training
+  can measure.</p>
+</div>
+
+<div class="callout warn">
+  <p class="eyebrow">Two corrections to earlier versions</p>
+  <p>26 September: the first version put food a median of 2 steps away, because the measurement counted
+  the hiding predators' places as food; food is 4 steps away, and the single-rule results (second half of
+  this page) are the re-run. 27 September: a question arose whether the eating cost was left out — it was
+  not (the simulator nets +5 per bite, then −1 per step, so an eating step gains +4; checked against the
+  real environment). The "less food per bite" setting of the training experiment (bite 4) therefore halves
+  the gain per eating step, from +4 to +2.</p>
 </div>
 </section>
 
 <section class="col">
-<h2><span class="num">02</span> How it works</h2>
+<h2><span class="num">02</span> Everything in the environment that can tip the balance</h2>
+
+<p>Before choosing what to vary, every setting that can change how costly, urgent or dangerous eating,
+hiding, warming or moving is was listed — 109 of them, with their level-05 values and whether the planner
+models them (<code>docs/<wbr>experiments/<wbr>active/<wbr>internal_state_interactions/<wbr>BALANCE_SETTINGS_INVENTORY.md</code>).
+The ones that matter most and were <em>not</em> in the planner's first version:</p>
+<ul>
+  <li><b>Predator hits are single, sometimes lethal events.</b> A predator hit does 15 to 120 injury;
+  in the level-05 recordings 4 % of all hits (and 10 % of hits of 15 or more) kill an unhurt agent outright. The planner used to see only an average cost per step.</li>
+  <li><b>Food runs out.</b> An item allows 12 bites, then reappears elsewhere, so the agent must search
+  again. The planner's food never ran out.</li>
+  <li><b>Injury is felt late.</b> The agent does not see its injury, only a smoothed, delayed signal; a
+  starting injury is not felt at all on the first step. The planner knows its injury exactly — the main
+  limit of this page.</li>
+  <li><b>No place holds body temperature at 0.</b> The warm ring settles the body at +5.9°, open ground at
+  a lethal −20°; staying near 0 means moving back and forth. The fire cell itself kills by heat in two or
+  three steps.</li>
+  <li>Smaller ones: a hit lands over three steps and blocks healing meanwhile; the agent can start anywhere,
+  even on a fire; fire, rock and bush look identical; moving costs no extra food.</li>
+</ul>
+</section>
+
+<section class="col">
+<h2><span class="num">03</span> What changed in the planner, and how balance is judged</h2>
+
+<p>Two of those were added, each checked before use: food runs out (after each bite, a 1-in-12 chance the
+item moves and the trip must be paid again; the rollouts show 0.083 moves per bite, as intended), and
+predator hits are drawn per activity from the level-05 training recordings — outside cover, a hit comes on
+5.6 % of eating steps, 2.7 % of moving steps and 0.2 % of resting steps, and 2 %, 5 % and 19 % of those hits
+are lethal. With both switched off, the new planner reproduces the earlier results exactly.</p>
+
+<p>A world counts as <strong>balanced</strong> if it meets five criteria written down before any result
+was read (study plan, Revisions 2–2b), on the map without a warm bush — the common one, and the only one
+once bushes are kept away from fires:</p>
+<ol>
+  <li><b>Time.</b> No activity takes more than 70 % of steps; hiding, warming and eating each take at least 10 %.</li>
+  <li><b>Each need drives its own behaviour.</b> Hungry agents eat at least twice as often as fed ones;
+  badly injured agents hide at least twice as often as barely injured ones; "warm up" is the best choice at
+  least twice as often when cold as when warm.</li>
+  <li><b>Deaths.</b> No single cause accounts for more than 60 % of deaths after the first 20 steps.</li>
+  <li><b>Survival.</b> At least 80 % of today's.</li>
+  <li><b>Injury still drives hiding</b> among well-fed agents (at least twice as often).</li>
+</ol>
+<p>A sixth asks whether the best choice depends on combinations more than today, by a margin that survives
+how "equally good" choices are counted (9.3 points on this map).</p>
+</section>
+
+<section class="col">
+<h2><span class="num">04</span> Which worlds are balanced?</h2>
+
+<figure>
+  <p class="cue" hidden>Wider than the screen — scroll sideways, or click the figure to open it full size.</p>
+  <div class="scroll figscroll"><img data-fig="b1_balance_worlds" alt="Four panels, one row per world. Time shares cluster between 10 and 45 percent for hiding, warming, eating and elsewhere in almost every world. Need ratios for eating and hiding sit between about 3 and 50, warming per decision near 1000. Survival sits near 55 percent and deaths after step 20 near 35 percent, with all four rules and doubled predators worst. Combination gain versus today sits within about 3 points of zero for every world, far left of the 9.3-point line; doubled predators and a weaker bush sit lowest."></div>
+  <p class="zoomhint">Click the figure to open it full size.</p>
+  __KIND:b1_balance_worlds__
+  <figcaption>
+    <span><b>Figure 1 — time and needs are already balanced; deaths and combinations are not, in any
+    world.</b> Criteria 1, 2 and 5 pass for today's level 05 and for most single changes: hiding 15 %,
+    warming 27 %, eating 20 % of steps; hungry agents eat 3.6 times as often as fed ones, injured ones hide
+    8.3 times as often. Injury causes 94–100 % of deaths after step 20 in every world (criterion 3 fails
+    everywhere; some starvation appears in 8 worlds, at most 6 % of late deaths). No world moves the
+    combination gain by more than +0.7 points; a weaker bush (−3.4), healing that uses up food (−3.2) and
+    doubled predators (−5.5) lower it. All four rules of the training experiment together halve the ideal
+    agent's survival (57 % → 31 %).</span>
+    <span><b>Axes.</b> Vertical, all panels: one row per world, named by the one setting changed from today.
+    Panel 1, horizontal: share of steps in each activity, percent (dotted lines at 10 and 70 %). Panel 2,
+    horizontal: how much more often each behaviour happens when its need is present than when absent, times,
+    on a log scale (dotted line at 2). Panel 3, horizontal: share of starts that survive 500 steps (dots)
+    and that die after step 20 (crosses), percent. Panel 4, horizontal: combination gain minus today's, in
+    points (dotted line: the bar of 9.3).</span>
+    __DATA:b1_balance_worlds__
+    <span><b>How it is computed.</b> For each world the planner is solved by value iteration — every
+    state's value repeatedly replaced by the best one-step reward plus the discounted value of where that
+    choice leads — on the map without a warm bush, with food that runs out and predator hits drawn per
+    activity. The ideal policy is then followed from 2,000 random training-style starts for 500 steps, and
+    every step is counted: where the agent is, what it does, and its body state. The need ratios compare the
+    share of steps spent eating when food energy is below 60 with the share when it is 100 or more, and the
+    share of steps in cover at injury 60 or more with the share at 20 or less; the warming ratio compares
+    how often "warm up" is the best choice at −5° or colder with how often at 0° or warmer. Deaths in the
+    first 20 steps are left out of the death criterion, since those starts cannot be saved. <b>What this
+    figure does not show:</b> anything a trained agent does — the planner knows its injury exactly and never
+    makes a mistake, which is why it rarely starves once past the first steps; the longer-horizon check
+    (discount 0.99; section 05); and the map with a warm bush, where the warm bush absorbs "warm up", so the
+    warming ratio cannot be computed there (reported in the study files).</span>
+  </figcaption>
+</figure>
+</section>
+
+<section class="col">
+<h2><span class="num">05</span> Does balance peak at a middle food pressure?</h2>
+
+<figure>
+  <p class="cue" hidden>Wider than the screen — scroll sideways, or click the figure to open it full size.</p>
+  <div class="scroll figscroll"><img data-fig="b2_pressure_grid" alt="Three panels against food energy per bite from 3 to 10, one line each for predator hits halved, as measured and doubled. Left: combination gain versus today stays between minus 1 and plus 1 for halved and measured hits and near minus 5.5 for doubled hits, far below the dotted 9.3 line, with no peak. Middle: steps eating fall from about 42 percent at bite 3 to 11 percent at bite 10 for all three. Right: survival is about 73 percent with halved hits, 50 to 61 with measured hits and 16 to 42 with doubled hits."></div>
+  <p class="zoomhint">Click the figure to open it full size.</p>
+  __KIND:b2_pressure_grid__
+  <figcaption>
+    <span><b>Figure 2 — no peak: food pressure changes how much the agent eats, not how much its choices
+    depend on combinations; predator pressure lowers it.</b> From 10 food per bite down to 3, eating rises
+    from 11 % to 42 % of steps, but the combination gain moves by less than two points at any predator level.
+    With predators doubled it drops about 5.5 points everywhere, and survival falls to 16–42 %. Balance has
+    a window along predator pressure instead: halved predators make hiding too rare (below 10 % of steps),
+    doubled predators break "each need drives its own behaviour".</span>
+    <span><b>Axes.</b> Horizontal, all panels: food energy per bite before the eating cost (today 6, grey
+    band). Vertical, left: combination gain minus today's, in points (dotted line: the bar of 9.3); middle:
+    share of steps spent eating, percent; right: share of starts surviving 500 steps, percent. Lines:
+    predator hit odds halved (dotted), as measured (solid), doubled (dashed).</span>
+    __DATA:b2_pressure_grid__
+    <span><b>How it is computed.</b> Eighteen worlds — six values of food per bite times three levels of
+    predator hit odds — are each solved as in Figure 1 on the map without a warm bush, and the ideal policy
+    is followed from 2,000 starts. The combination gain is measured on the planner's best choices at
+    training start states: how much better the best choice is predicted by knowing two body states than
+    by knowing the single most useful one, in points of accuracy; today's value (18.5 on this map) is
+    subtracted. Halving or doubling the predator odds is a diagnostic, not a setting — no single config key
+    does it. <b>What this figure does not show:</b> strengths between the tested values, other axes (trip to
+    food, bites per item and the coupling rules are in Figure 1), and trained agents.</span>
+  </figcaption>
+</figure>
+</section>
+
+<section class="col">
+<p><b>Two checks that do not change the verdict.</b> Planning further ahead (discount 0.99 instead of the
+agents' 0.95) raises some worlds more: all four rules of the training experiment +5.0, healing slower when
+hungry +4.6, a weaker bush +4.2 — still under the bar. The bar itself is high because single predator hits
+make many choices nearly equally good: today's gain is 16.2, 18.5 or 9.1 points depending on how close two
+choices must be to count as a tie, and the bar takes that spread. With the widest tie margin, two
+halved-predator worlds with plenty of food (8 and 10 per bite) would pass (+11.2, +10.9). And the warming
+criterion is nearly empty for an ideal agent: it almost never gets cold, so "warm up is best when cold, not
+when warm" passes by default, and the same ratio measured over time (share of steps on a warm cell when cold
+vs warm) is only 1.14 today.</p>
+</section>
+
+<section class="col">
+<h2><span class="num">06</span> What real agents die of</h2>
+
+<p>The planner rarely starves once past its first steps, so it cannot judge criterion 3. Real ordinary
+agents can. The pilot runs of the training experiment (2 million episodes each, no modulator) end like this
+(final logging window of each run; "other" means cold, heat or over-eating):</p>
+__TABLE:b3_real_deaths__
+<p>In plain level 05, injury causes 57–59 % of deaths and starvation most of the rest — just inside the 60 %
+line. The food-draining rules move deaths toward hunger (injury share 45–52 % with "cold or hot uses up
+food" and "less food per bite"); healing that uses up food at its strongest (2 food per point) moves them
+the other way (66 %; the picked 0.5, at 61 %, is within the noise). One run per world means a spread of
+about ±3–4 points — two strengths of "healing slower when hungry" land at 56 % and 63 % — so only the
+food-draining shift clearly stands out. Still, the rules <em>do</em> change what kills a real agent, which
+the planner cannot show. Built from each pilot's own
+logged termination counts by <code>scripts/<wbr>analysis/<wbr>studies/<wbr>internal_state_interactions/<wbr>b3_real_deaths.py</code>;
+one run per world, one logging window each.</p>
+</section>
+
+<section class="col">
+<h2><span class="num">07</span> What the training runs should measure</h2>
+
+<p>The planner says time and needs are balanced but cannot see mistakes, felt injury or real predators.
+The balance search should therefore train <strong>ordinary agents only</strong> across settings, and judge
+each world with the same criteria, measured on the agents themselves:</p>
+<ol>
+  <li><b>Time split</b> — share of steps hiding in a bush, on a warm cell, eating, elsewhere. Can be counted
+  during training.</li>
+  <li><b>Each need drives its own behaviour</b> — eating when hungry vs fed, hiding when badly vs barely
+  injured. Countable during training from the body state and the action at each step; injury measured both
+  as true injury and as the felt signal. Being on a warm cell when cold vs warm is logged but, decided now,
+  <b>not</b> a pass/fail criterion: an agent that keeps its temperature steady is rarely cold, so the
+  ratio is near 1 even for the ideal agent (1.14 today).</li>
+  <li><b>What it dies of</b> — already logged.</li>
+  <li><b>Survival steps</b> — already logged.</li>
+  <li><b>Combinations</b> — the hiding gap among hungry vs fed agents during training; the full combination
+  measure (does knowing two body states predict the choice better than one) from recorded episodes after
+  training.</li>
+</ol>
+<p>The thresholds of section 03 carry over as a starting point, except warming as above; deaths, which the
+planner cannot judge, become the most informative criterion in training. The planner also says where to
+sweep: predator pressure, where balance has a window, alongside food pressure. The implementation — which counters to
+add to training logging, their cost, and tests — is the next plan.</p>
+</section>
+
+<section class="col">
+<h3 class="group">The first study: one rule at a time</h3>
+<p>The sections below are the earlier version of this study (corrected 26 September): the same planner
+without food running out or single predator hits, asking which one-at-a-time change makes the best action
+depend most on combinations of body states.</p>
+</section>
+
+<section class="col">
+<h2><span class="num">08</span> How it works</h2>
 
 <ol>
   <li><b>The body, copied exactly.</b> A small program repeats the environment's body update line by line:
@@ -135,7 +325,7 @@ no choice wins in more than 80 % of starting states while another than "rest in 
 
 <section class="col">
 <h3 class="group">The rules one at a time</h3>
-<h2><span class="num">03</span> What each new rule does on its own</h2>
+<h2><span class="num">09</span> What each new rule does on its own</h2>
 
 <figure>
   <p class="cue" hidden>Wider than the screen — scroll sideways, or click the figure to open it full size.</p>
@@ -143,7 +333,7 @@ no choice wins in more than 80 % of starting states while another than "rest in 
   <p class="zoomhint">Click the figure to open it full size.</p>
   __KIND:s1_single_rules__
   <figcaption>
-    <span><b>Figure 1 — each rule links two body states; the strength of the link is a setting.</b> Healing
+    <span><b>Figure 3 — each rule links two body states; the strength of the link is a setting.</b> Healing
     can be made to depend on temperature (a) or food energy (b); injury can speed cooling (c); healing can
     cost food (d), as can staying warm (e). A random start temperature (f) stays safe from a fire's first
     step up to a start of about +9.8°; level 05 uses −10 to +5.</span>
@@ -163,7 +353,7 @@ no choice wins in more than 80 % of starting states while another than "rest in 
     in the cold; and the fire step from the environment's own temperature update with the hot-corner fire cell of the
     mechanics plan (79.7°; the median fire cell on real resets is 77.3°). The simulator's copy of today's rules was checked against the real
     environment on 4,000 random states before any of this was drawn. <b>What this figure does not show:</b>
-    how the rules combine, or what an agent would choose — sections 04–06 do that. The five new rules were
+    how the rules combine, or what an agent would choose — sections 10–12 do that. The five new rules were
     checked against their implementation once it landed (commit <code>79cf90ef</code>): on 4,000 random states
     at mid values, at the sweep's extremes and in the alternative modes, the largest difference was 0.00002 and
     every death was decided identically.</span>
@@ -173,7 +363,7 @@ no choice wins in more than 80 % of starting states while another than "rest in 
 
 <section class="col">
 <h3 class="group">What an ideal agent would do</h3>
-<h2><span class="num">04</span> Which settings make the best choice depend on combinations</h2>
+<h2><span class="num">10</span> Which settings make the best choice depend on combinations</h2>
 
 <p>Each world changes one setting from today's level 05 (with its new random starting temperature). Today's
 world already has some combination dependence: knowing two body states predicts the ideal choice 11.9
@@ -185,7 +375,7 @@ points better than knowing the best single one. The question is which settings r
   <p class="zoomhint">Click the figure to open it full size.</p>
   __KIND:s3_worlds__
   <figcaption>
-    <span><b>Figure 2 — a bush on a fire ring makes the best choice simple; no single change clears the rule,
+    <span><b>Figure 4 — a bush on a fire ring makes the best choice simple; no single change clears the rule,
     and the largest gains come from the warm-bush episodes.</b> Today the combination gain is 17.1 points
     without a warm bush and 4.3 with one (11.9 pooled). Fewer bushes (a trip of 8) reaches 15.6 pooled —
     −0.4 without a warm bush, +9.6 with one — and spreads the best choices across hiding, warming and eating
@@ -214,13 +404,13 @@ points better than knowing the best single one. The question is which settings r
     learns — an ideal planner knows its injury exactly and plans perfectly; the reduced world's predators are
     an average cost, not attacks, and its food never runs out, which makes eating look cheaper than it is and
     so, if anything, under-rates the scarce-food worlds; food is a median of 4 steps away (the first version
-    of this page used 2). Section 07 (item 4) explains why the fewer-bushes worlds are read against a lower warm-bush share.</span>
+    of this page used 2). Section 13 (item 4) explains why the fewer-bushes worlds are read against a lower warm-bush share.</span>
   </figcaption>
 </figure>
 </section>
 
 <section class="col">
-<h2><span class="num">05</span> What the best choices look like</h2>
+<h2><span class="num">11</span> What the best choices look like</h2>
 
 <p>The maps below show the planner's best choice for every combination of food energy and injury, at three
 body temperatures. Where a boundary between colours runs diagonally, or moves from one temperature to the
@@ -232,7 +422,7 @@ next, the choice depends on more than one body state.</p>
   <p class="zoomhint">Click the figure to open it full size.</p>
   __KIND:s4_choice_maps__
   <figcaption>
-    <span><b>Figure 3 — cold overrides everything today; when healing costs food, how fed the agent is decides
+    <span><b>Figure 5 — cold overrides everything today; when healing costs food, how fed the agent is decides
     between warming up and hiding even in the cold.</b> Today at −8° the best choice is to warm up almost
     everywhere. With healing that costs food (1 or 2 per point), an injured agent with plenty of food rests in
     cover even at −8°, and the edge between the two runs diagonally: the more injured it is, the less food
@@ -244,7 +434,7 @@ next, the choice depends on more than one body state.</p>
     temperature −8°, −3° and +3°. Rows: today's level 05 and the three worlds with the highest combination gain
     (fewer bushes with a trip of 8; healing that costs 2 and 1 food per point); none passes the rule. Colours: the best choice; pale cells are ties.</span>
     __DATA:s4_choice_maps__
-    <span><b>How it is computed.</b> These are the planner's solutions from Figure 2, read on the map without
+    <span><b>How it is computed.</b> These are the planner's solutions from Figure 4, read on the map without
     a bush on a fire ring (the more common map, 59 % of episodes) at open ground, at the three grid
     temperatures shown. Each cell is one grid state of food energy (steps of 4) and injury (steps of 4); its
     colour is the choice category with the highest long-run value, and it is drawn pale when the second-best
@@ -258,7 +448,7 @@ next, the choice depends on more than one body state.</p>
 </section>
 
 <section class="col">
-<h2><span class="num">06</span> Does the ranking depend on the analysis's own choices?</h2>
+<h2><span class="num">12</span> Does the ranking depend on the analysis's own choices?</h2>
 
 <figure>
   <p class="cue" hidden>Wider than the screen — scroll sideways, or click the figure to open it full size.</p>
@@ -266,7 +456,7 @@ next, the choice depends on more than one body state.</p>
   <p class="zoomhint">Click the figure to open it full size.</p>
   __KIND:s5_robustness__
   <figcaption>
-    <span><b>Figure 4 — fewer bushes leads under every variant; healing that costs food holds only at the
+    <span><b>Figure 6 — fewer bushes leads under every variant; healing that costs food holds only at the
     rule's own reading.</b> The fewer-bushes worlds stay 1–7 points above today at every tie margin and
     6–9 points above at the longer horizon. Healing that costs food (1 or 2 per point) is +2.7 to +3.8 at
     margins 0 and 0.5, but −1.9 to −0.7 at margin 2 and +1.7 and −0.7 at the longer horizon. Healing that
@@ -294,7 +484,7 @@ next, the choice depends on more than one body state.</p>
 </section>
 
 <section class="col">
-<h2><span class="num">07</span> What this suggests for the level-05 variants</h2>
+<h2><span class="num">13</span> What this suggests for the level-05 variants</h2>
 
 <p>Since the first version of this page, the training plan changed: every combination of four rules —
 healing that needs food (B5), healing that costs food (B3), warmth that costs food (A1) and scarcer food
@@ -307,13 +497,13 @@ Read with the corrected food distance, the planner says:</p>
   clearance around each burning fire).</li>
   <li><b>B3, healing costs food — the largest of the four rules in the training batch, but fragile</b>
   (+3.1 and +3.2 pooled at 1 and 2 food per point; +0.4 and −0.3 at 0.25 and 0.5). It is inside the noise
-  band on the common map, and it disappears at the wider tie margin and the longer horizon. Figure 3 shows
+  band on the common map, and it disappears at the wider tie margin and the longer horizon. Figure 5 shows
   what it changes: how fed the agent is decides between warming up and hiding.</li>
   <li><b>B5, healing needs food — small</b> (+1.6 pooled at floors 0 and 0.2, all from episodes with a warm
   bush; +0.1 at 0.5). The first version of this page ranked it first; that came from the wrong food
   distance.</li>
   <li><b>A5, fewer bushes — below the rule</b> (+1.8 to +3.7 pooled), almost all of it on the warm-bush
-  map. Figure 2 pools its maps at today's 41 % warm-bush share, but a sparse world has fewer warm bushes:
+  map. Figure 4 pools its maps at today's 41 % warm-bush share, but a sparse world has fewer warm bushes:
   about 8 % of episodes with one bush, since 7.8 % of bushes sit on a fire ring in real resets. Reweighted
   to that share, trips of 6 and 8 steps score 15.1–16.5 — about what today's world itself scores at the same
   share (16.1). So fewer bushes work by removing warm bushes, the same lever as item 1, not through the
@@ -335,8 +525,10 @@ A1 and A4 slightly negative). The sixteen worlds keep today's bush placement, so
 in them. Worlds combining two or more rules were not solved here.</p>
 
 
+</section>
+
 <section class="col">
-<h2><span class="num">08</span> What this page cannot say</h2>
+<h2><span class="num">14</span> What this page cannot say</h2>
 
 <div class="callout warn">
   <p class="eyebrow">The binding limit</p>
@@ -366,9 +558,10 @@ in them. Worlds combining two or more rules were not solved here.</p>
 </section>
 
 <section class="col">
-<h2><span class="num">09</span> How to reproduce this</h2>
+<h2><span class="num">15</span> How to reproduce this</h2>
 <ul>
-  <li>Study plan with its pre-registered rule and both review rounds: <code>docs/<wbr>experiments/<wbr>active/<wbr>internal_state_interactions/<wbr>STUDY_PLAN.md</code></li>
+  <li>Settings inventory: <code>docs/<wbr>experiments/<wbr>active/<wbr>internal_state_interactions/<wbr>BALANCE_SETTINGS_INVENTORY.md</code></li>
+  <li>Study plan with its pre-registered rule and its review rounds (balance study: Revisions 2–2b): <code>docs/<wbr>experiments/<wbr>active/<wbr>internal_state_interactions/<wbr>STUDY_PLAN.md</code></li>
   <li>Simulator, validation, measurements, planner, sweep and one script per figure: <code>scripts/<wbr>analysis/<wbr>studies/<wbr>internal_state_interactions/</code></li>
   <li>Outputs, all under <code>results/<wbr>analysis/<wbr>internal_state_interactions/</code>:
     <ul>
@@ -376,6 +569,8 @@ in them. Worlds combining two or more rules were not solved here.</p>
       <li><code>world_measurements.json</code> and <code>bush_trip_estimate.json</code> — the measured world</li>
       <li><code>sweep_food4/</code> — one solution per world, food 4 steps away (the page's numbers); <code>sweep/</code> — the first run, food 2 steps away, kept for the correction</li>
       <li><code>reading_rule.json</code> — the rule applied to every world</li>
+      <li><code>balance/</code> — the balance sweep (one solution per world and map, with and without single predator hits, and at discount 0.99), and <code>balance/<wbr>balance_rule.json</code> — the balance criteria applied</li>
+      <li><code>validation_balance.json</code> — the checks of the new planner parts</li>
     </ul></li>
   <li>The body rules being implemented: <code>docs/<wbr>develop/<wbr>active/<wbr>thermal/<wbr>STATE_DEPENDENT_BODY_MECHANICS.md</code></li>
 </ul>
