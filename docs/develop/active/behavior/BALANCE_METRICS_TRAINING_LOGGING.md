@@ -8,7 +8,7 @@ last_updated: 2026-09-27
 
 # Balance metrics logged during rPPO training, plus a post-hoc companion
 
-> **Status**: PLANNED, Revision 1 (plan-reviewer findings addressed; awaiting re-review and user decisions D1–D3; no code written)
+> **Status**: IMPLEMENTED and VERIFIED (2026-09-27; merged into `v4.0` at `fce9beea`; Part C dropped by user decision D3). Revision 1 of the plan below.
 > **Opened**: 2026-09-27
 > **Related**: [[STUDY_PLAN]] (internal-state interaction study, Revisions 2, 2a and 2b: the balance measures and criteria) · study page `internal_state_interactions.template.html` §03 ("how balance is judged") and §07 ("what the training runs should measure") · [[BALANCE_SETTINGS_INVENTORY]] · [[WANDB_METRICS_REFERENCE]] · [[behavior_measure_toolkit_v1_plan]] (the last metric family added to this same logging loop) · [[TRAJECTORY_COLLECTION_PIPELINE]] · Known Bugs rows: *contemporaneous binning* (3 instances), *reconstructed felt-pain leak*, *rPPO continual stage swap keeps stage-0 metric accumulators*
 
@@ -813,14 +813,92 @@ the device part is within this node's run-to-run noise.
 
 ## Verification Report
 
-> **Verified by**:
-> **Date**:
+> **Verified by**: senior-developer
+> **Date**: 2026-09-27
+> **Scope**: commits `3c7e5d78`, `89f3cb78`, `ded540bf`, `fce9beea`, `269d15c7` (diff base `e993549f`, the `v4.0` tip before the fast-forward). All checks re-run by the verifier on **CPU only** (`JAX_PLATFORMS=cpu`, host docker-102); no lab GPU was used.
+
+**Verdict in plain words.** The build matches the approved plan, including the three user
+decisions (required switch, configurable early-death cut-off, offline script dropped). The central
+claim holds on independent re-run: turning the balance logging on or off does not change training
+by a single bit. Two process notes (a GPU benchmark run on a GPU that hosts a live training run,
+and stale commit SHAs in the report table) do not affect the code. Nothing blocks.
+
+**Diff scale.** 18 files, +1293 / −48 against `e993549f`. Every file is in the plan's File Changes
+(or is the plan / regenerated `INDEX.md`); no out-of-scope file; no disproportionate hunk
+(`train.py` +82, trainer +55, new module 321, tests ~620). No `src/environment/*`, no
+`scripts/`, no `CONFIG_CRITICAL_SETTINGS.md` change (correct: a logging switch is not a registry
+setting).
 
 | File | Change | Status | Notes |
 |------|--------|:------:|-------|
-| | | | |
+| `src/behavior/balance_metrics.py` | new, 38 counters, `step_counts`, `window_log`, `late_death_log`, `calibration_record`, two resolvers | ✅ | Pooled ratio-of-sums (`np.sum` of per-episode counts, then one division); share/ratio/gap omitted on an empty bin, `N` keys always emitted; ratio omitted when the "off" share is 0; `elsewhere = ¬(bush∨warm∨eat)`; late/early split `l ≤ cut-off` vs `>`; late/early shares over **all** window episodes, cause shares among late deaths. Resolvers: `get_mandatory` + strict type (bool; non-negative non-bool int). `calibration_record` reads `params` by attribute, no default. |
+| `src/models/recurrent_ppo_trainer.py` | `BalanceStepInfo`, `StepInfo.balance` (no default), required keyword `balance_metrics`, reads in `scan_fn` | ✅ | Body state from the carry `state` — the exact state `get_observation` is called on at the top of `scan_fn`; landing cell from `next_state` **before** the auto-reset `select_done`. Felt = `sense_interoceptive_nociception` (the same function `get_observation` uses, `sensor.py:494`), noise-free, `× max_injury` inverts its `/ max_injury`. Warm = `cell > setpoint`; near_fire = `cell > thermal_default_temp_high & ~warm`. No key drawn, nothing reaches the loss. |
+| `train.py` | `PPOConfig.balance_metrics` (no default), resolvers, host counters, stage-swap wipe, calibration, emit | ✅ | Keys read only for `RecurrentPPO`; other algorithms set `False` explicitly with a comment. One `+=` of `[B,K]` per t; row copied on done and zeroed on reset; stage swap zeroes counters **after** `params` is rebound, records `balance_calibration_stage_<k>`, and `ep_window.buf` is already cleared there, so no stage-0 counts leak into stage-1 rows. Thermal/felt flags are read from the current `params` at every use. Calibration also written at start and on continual-resume rebuild. |
+| `configs/train/recurrent_ppo.yaml` | `balance_metrics: true`, `balance_early_death_max_steps: 20` | ✅ | See "Launch-path check" below. |
+| `configs/train/default.yaml` | comment only | ✅ | No value, as planned. |
+| `docs/environment/CONFIG_GUIDE.md` §7, `02_config_schema.md` | key rows + absent-from-default rationale | ✅ | Maintenance contract met in the same commit. |
+| `docs/develop/active/behavior/WANDB_METRICS_REFERENCE.md` | "Balance metrics (rPPO)" section | ✅ | Contains pooled-sum rule + long-episode weighting, window-total `N`, 12-step felt under-read, near-fire report-only, calibration record, training- vs evaluation-policy caveat. |
+| `tests/behavior/test_balance_metrics.py`, `tests/models/test_balance_metrics_parity.py`, `tests/training/test_continual_bm_transition.py` (T10) | T1–T11 | ✅ | T7 matches A4 as rewritten in Rev 1. T10 thermal-on→off pair replaced (Deviation 3): `train.py` rejects continual stages that differ in modality, so the planned pair cannot be built; off-flag suppression is covered by T6. Accepted. |
+| `tests/fixtures/balance_metrics/*` | golden + generator | ✅ | Independently re-derived, see below. |
+| `tests/models/test_{mc_fixed,mc_raw,gae_norm}_mode.py` | signature-only edits | ✅ | `balance_metrics=False` added; no assertion changed. |
+| Plan doc + `docs/develop/INDEX.md` | report, checkpoints, index regen | ⚠️ | The Files table cites pre-rebase SHAs (`cbf8a02e`, `0bb857be`, `7b1cf5cb`); the landed commits are `3c7e5d78`, `89f3cb78`, `ded540bf`. The header status line still read "PLANNED" (updated by this verification). |
 
-**Conclusion**:
+**Independent checks (verifier, CPU).**
+
+| Claim | How it was checked | Result |
+|---|---|---|
+| Switch off = pre-change program | T1 re-run; **plus** the golden re-generated from scratch on the pre-change commit `e993549f` (a `git archive` export, not the shared tree, using the pre-change `collect_trajectories` signature) and compared with the committed `pre_change_rollout.npz` | T1 passes; the re-generated golden matches the committed one **70 / 70 arrays bitwise** (so the fixture is a real pre-change capture, not a post-change echo) |
+| Switch on changes nothing | T2 re-run (3 jitted `train_iteration`s, level-05, thermal + felt asserted); **plus** one rollout with the switch on, `balance` stripped, compared with the pre-change golden | T2 passes; switch-on rollout matches the pre-change golden **70 / 70 bitwise** |
+| Pre-step state / post-step outcome (A2) | Mutation test in scratch copies of `HEAD`: nutrition read swapped to `next_state`; separately, injury read swapped to `next_state` | T3 fails on both mutations (`eat_hungry`, `bush_inj_hi_true` assertions) — the test pins the convention |
+| Balance + parity + unit tests | `pytest tests/models/test_balance_metrics_parity.py tests/behavior/test_balance_metrics.py` | 13 passed |
+| Suites | `pytest tests/models tests/behavior tests/training` | 230 passed, 3 pre-existing failures (below), and T10 passed when run as `JAX_PLATFORMS=cpu` (see note 2) |
+| 20 pre-existing failures | The same 20 test IDs run on the `e993549f` export (with the two gitignored `*_legacy.npz` modulation fixtures copied in) and on `HEAD` | **All 20 fail on `e993549f`** (`test_modulation_input_slice::…breakdown…`, `test_continual_bm_transition::…no_crash`, `test_continual_resume_rebuild::…rebuilds…`, and 17 `test_channel_names_match_configs[level05_body_interactions/factors/*]`); the identical 17-config set fails on `HEAD` (430 passed, 13 skipped). Pre-existing, not caused by this change. |
+
+**Launch-path check (is `recurrent_ppo.yaml` the right and only home for the two keys?).** Yes.
+- *Single-config runs*: `train.py` merges `configs/train/recurrent_ppo.yaml` whenever the agent
+  config's top-level `agent.algorithm` is `RecurrentPPO` (every tracked rPPO agent config declares it
+  directly — checked with the same `Config.load_yaml` peek `train.py` uses). The merge is a deep merge,
+  so an experiment `--config` with its own `logging:` block cannot drop the keys; no tracked config
+  outside `configs/train/` has a `logging:` block.
+- *Continual runs*: `_build_continual_schedule` deep-copies the base config **after** that merge into
+  every stage, so every stage carries both keys; T10 exercises this through a real `train.py`
+  subprocess and passes.
+- *level05_body_interactions restarts*: the launches (e.g. the w1111 world with the t16quad modulator
+  agent, the one live on node 102) use plain `train.py --config … --agent_config …`; resume adds
+  `--load-checkpoint` and reads the **live** config tree, not a frozen run copy. Replaying the
+  `train.py` merge order for that launch gives `balance_metrics=True`, cut-off 20, calibration
+  `max_nutrition 200, max_injury 100, setpoint 0, open-ground upper edge −29, thermal and felt on`.
+  So a restarted run will start logging `Episode/Bal_*` partway through its history (plan A9(d),
+  expected), and will not crash on a missing key.
+- *Missing key*: without `recurrent_ppo.yaml` the resolver raises `ValueError` (checked).
+
+**Speed.** GPU +2.4 % (0.2792 → 0.2860 s/it), CPU +0.4 %, host 1.4–3.4 ms/iteration. Below the 5 %
+discussion line. The GPU figure is noisy because it shared the card with a live run (see note 1);
+the CPU figure and the host timing agree that the true cost is small. **⚠️ small regression
+accepted** (above the plan's "< 1 %" estimate, below every threshold).
+
+**Notes (none blocking).**
+1. **Plan condition A9(c) was not followed and is not listed under Deviations.** The GPU parity and
+   speed runs used node 102 GPU 1, which hosts the live `level05_body_interactions` run (w1111 world,
+   t16quad modulator, seed 42). The two processes are separate and JAX pre-allocation is off, so the
+   live run's results are not affected, but it was slowed for the benchmark's duration and the
+   benchmark itself is noisier for it. Future benchmarks: a GPU with no live claimant (gpu-status +
+   diary).
+2. **Test brittleness (low).** T10 and the two pre-existing continual subprocess tests assert that
+   the word "Traceback" is absent from `train.py`'s output. With `CUDA_VISIBLE_DEVICES=""` set, the
+   JAX CUDA plugin logs a harmless traceback at import, so they fail for an environment reason; with
+   `JAX_PLATFORMS=cpu` alone they pass. Worth a one-line fix by whoever next touches those tests.
+3. **`results/` backup skipped** per the user's merge-back rule (size could not be measured in
+   50 min); the merge was `--ff-only`, which moves tracked files only. Accepted.
+4. Follow-ups already listed in the report stand: `bug-curator` to record the 20 pre-existing
+   failures (confirmed pre-existing above); `experiment-designer` hand-off for the study-page
+   back-link and the training- vs evaluation-policy caveat.
+
+**Conclusion**: ✅ **Verified.** Implementation matches the plan and user decisions; the
+bit-identical claim is independently confirmed against a golden re-generated on the pre-change
+commit; timing, felt injury, warm / near-fire, pooling and calibration match the plan; the keys
+reach every rPPO launch path including continual and the level-05 body-interaction restarts; the 20
+failures are pre-existing. Two process notes (GPU shared with a live run; stale SHAs) recorded.
 
 ---
 
