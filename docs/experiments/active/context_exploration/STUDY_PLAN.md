@@ -1097,3 +1097,69 @@ Example (C4):
 **When / where.** Not before the running level-05 runs free their GPUs, after the pre-launch PI
 consultation and the user's go. Mid-tier cards (RTX 3090), packed node by node. Compute: 10 × 10 about
 2 h per run on a 3090 (level-05 pilots); 15 × 15 / 20 × 20 plausibly 3–6 h; total about 25–35 GPU-hours.
+
+## Feedback from plan-reviewer — Part 4 design (Revision 3, commit `ff37eff5`), before launch
+
+**Verdict: SOUND WITH CONCERNS.** No Critical finding; five Moderate, four Low, five open assumptions.
+Nothing here needs code. Every item is a sentence in this section or a pre-launch check.
+
+**In plain words.** The eight training runs are well specified and every number the criteria need
+is actually logged. The risks are in how the verdicts will be *read*: the deaths criterion sits within a
+few points of its line for today's world, so the forward rule can predictably end in "nothing goes
+forward" with no rule for what happens then; the trust verdict on the simulation can blame the
+simulation for a criterion that simply does not transfer to trained agents; and the fixed episode
+budget gives worlds that die sooner less training, which leans the survival comparison toward
+confirming the simulation. On the budget question the evidence supports **2 M episodes for all eight
+runs** plus a concrete extension path — not 5 M for the larger grids alone.
+
+Severity legend: 🔴 Critical = fix before going further · 🟡 Moderate = likely costs a re-run ·
+🟢 Low = cosmetic · ❓ Open = an assumption nobody has verified yet.
+
+### Findings
+
+| # | Sev | Where | Issue | Suggested fix | Owner |
+|---|---|---|---|---|---|
+| M1 | 🟡 | 4.4 crit. 3, 4.6 | The three level-05 pilots (`LEVEL05_BODY_INTERACTIONS.md` §6, P0a–c) put injury at ≈ 57–59 % of **all** deaths; criterion 3 is judged on deaths **after step 20** (`Bal_LateDeath_*`, `balance_metrics.py:297-320`), and removing early deaths moves the injury share in a direction nobody has measured. Seed spread on cause shares in those pilots is ≈ 1 point (starvation 0.261–0.268), so 57–59 vs 60 is not sampling noise, but it is inside the recount's reach. If the reference fails 3, 4.6 says every "fails 3 only" world is reported, not forwarded — a predictable dead end with no rule for the next step, and "no threshold moves after the data are read" forbids fixing it later. | Pre-register now, one of: (a) criterion 3 is judged **relative to the reference** — a world fails 3 only if its dominant late-death cause exceeds max(60 %, the reference's own share); or (b) criterion 3 is pass/fail in the agreement table but **report-only for forwarding**. Say which. | experiment-designer |
+| M2 | 🟡 | 4.5 summary rule | Trustworthiness counts criteria 1, 2, 5 against the simulation even when the reference itself fails them in training (4.6's last bullet admits that case). Criterion 1's `Bal_TimeWarm ≥ 10 %` is the likely one: the balance study found the ideal agent holds temperature like a thermostat, and the metrics plan's A4 says diagonal cells near the fire count as "elsewhere". If the reference fails a criterion, 0 / 6 agreement would read as "simulation not trustworthy" when the criterion is what did not transfer. | Gate: a criterion the reference fails in training is **excluded** from the agreement count for every world (verdict withheld for it); the summary is then stated over the remaining criteria. | experiment-designer |
+| M3 | 🟡 | 4.4 env steps, 4.5 direction | A per-episode budget gives fewer gradient updates to worlds that die sooner: at the simulation's ratios the edge worlds get ≈ 35 % fewer environment steps than the reference for the same 2 M episodes. That leans criterion 4 toward confirming the simulation's edge failure and against ever finding it "too pessimistic". The per-1,000-steps "death-rate view" is 1,000 ÷ mean survival steps — the same number rearranged, not an independent view. | State the update-count confound and its direction next to the agreement table; report the step ratio per world; drop or relabel the death-rate view. | experiment-designer |
+| M4 | 🟡 | 4.3 budget, 4.4 still-learning | **2 M vs 5 M.** Level 05 at 2 M rises ≈ 2.5 % over the last fifth (P0a tenths 220, 225 → 228), so the > 5 % flag would *not* fire — yet the Wave-2 10 M run shows ≈ 10 % still to come (230 at 1.8 M → 252 at 10 M). The flag catches steep learning, not incomplete learning; harsher 10 × 10 pilots sit at the line (P08 + 4.2 %, P09 + 5.8 % over the last tenth). No 15 × 15 / 20 × 20 training exists in the project (wiki and experiments checked), so grid-size learning speed is unmeasured. **5 M for the larger grids only is the one option the evidence argues against**: criterion 4 would compare a 5 M world against a 2 M reference (the reference alone gains ≈ 5 % by 5 M), and the agreement table would mix budgets across arms. | Keep 2 M for all eight (matched to the reference and to the P0 pilots). Pre-register the extension as a command, not an intention: `--load-checkpoint <2 M checkpoint> --episodes 5000000 --wandb-resume-id <id>`, **the reference extended alongside any extended world**, and a one-off check that the resumed survival curve is continuous across the 2 M seam (Known Bugs: rPPO resume H1 FIXED; B5 "restored memory + fresh worlds" OPEN-latent, first post-resume window only). If 5 M is chosen, it is 5 M for all eight (≈ 2.5 × ≈ 65–90 GPU-h). Also say the flag compares two 200 k-episode windows (1.6–1.8 vs 1.8–2.0 M) and that "not still learning" means "not steeply", not "converged". | experiment-designer / user |
+| M5 | 🟡 | 4.3 borderline, 4.6 priority | An edge world passing criterion 4 on one seed would be a ≥ 15-point simulation miss and, by 4.6, would **lead** the modulator comparison — on n = 1. The borderline test uses the reference's two-seed gap, which under-estimates the spread (one |Δ| from two seeds is below 0.4 σ a quarter of the time; the level-05 review's M1 said the same). | Any world whose trained criterion-4 verdict **disagrees with the simulation** gets a seed-43 run before forwarding, borderline or not; give the borderline band a floor (e.g. 5 points on shares / ratios, 5 % relative on survival) in addition to the seed gap. | experiment-designer |
+| L1 | 🟢 | 4.2 last para, 4.5 | "Sim criterion 3 fails in every world" is false for the Revision-2 table: nine rows read `11101` (pass 1, 2, 3, 5; fail only survival — e.g. `g15r8f1to4b12_od` 14.9, `g15r5f2to4b12_od` 17.1, `g20r8f2to6b12_od` 17.4 steps). It is true for the seven chosen worlds, and the chosen set itself checks out against the table (the four longest searches among `11011` worlds are 11.8 / 11.5 / 9.4 / 9.3; the 9.7-step world is `11001`). The "a third such world … 20.5" aside is incomplete (`g20r3f4to16b12_od` 19.7 and the four `11101` worlds also miss only 4) — the pick is unchanged. | Reword to "in all seven chosen worlds"; note that the simulation does pass criterion 3 in four `_od` worlds that miss only survival, in case a criterion-3-passing comparator is wanted later. | experiment-designer |
+| L2 | 🟢 | 4.4 window | Episode rows overlap: smoothing 5,000 / interval 4,000 episodes (`configs/train/recurrent_ppo.yaml:53,56`), so "difference of `Episode/Number`" (4,000) ≠ `Episode/_window_n` (5,000) and summed `Bal_N_*` counters count each episode ≈ 1.25 ×. Ratios of pooled sums are unaffected in steady state; summed `N` must not be quoted as an episode count. A ratio omitted in one row (zero bin, A6) is not the failure condition — a zero **pooled** denominator is. | Say which weighting is used (the P0 pilots used `_window_n`), and state the pooled-zero rule. | experiment-designer |
+| L3 | 🟢 | 4.9.2 pre-flight | Add the top-level `seed:` to the saved-config discriminators for C1b (Known Bugs 2026-09-04: the nested copy always reads 42). Add "first Episode row carries ≥ 49 `Episode/Bal_*` keys" — 4.8's merge replay is a re-derivation; the row is what the system produced. `timesteps` is logged on iteration rows and `Episode/*` against `Episode/Number` (`train.py:1052-1055`); say how the two are joined (nearest `_step`). | Three lines in 4.9.2. | training-runner / experiment-designer |
+| L4 | 🟢 | 4.3 reference | C1a / C1b are seed-42 / 43 twins of the P0a / P0b level-05 pilots (228.3 / 225.8 survival steps at 2 M, same agent config, same world; HEAD differs by the balance-metrics merge whose golden test reported unchanged dynamics). That is a free replication gate on the trainer before any world is judged. | Pre-register: C1a within ± 3 × 1.5 of 228.3 and C1b of 225.8; a miss stops the read-out and goes to `senior-developer` as code drift. | experiment-designer |
+
+### Criterion computability (checked against the code, not the plan)
+
+Every key the five criteria and the still-learning flag need is emitted by `window_log` / `late_death_log`
+(`src/behavior/balance_metrics.py:230-320`) and `_emit_episode_row` (`train.py:1590-1650`): the four
+time shares (+ `TimeNearFire`, `TimeWarm` present because thermal is on), `EatRatio`, `HideRatio_True`,
+`HideRatio_True_Fed`, `WarmRatio`, the `N_*` counters for pooling, `EarlyDeathShare`, `LateDeathShare`,
+`LateDeath_{Starvation,Overeating,Injury,Thermal}`, `Episode/Steps`, `Episode/Number`, `_window_n`,
+`timesteps`. Late-death counts per row are `LateDeathShare × _window_n`. Nothing is "not measured in training".
+
+### Open assumptions
+
+- ❓ O1 The reference's **late** injury share: unknown; the direction of the early-death recount decides M1.
+- ❓ O2 How fast a 20 × 20 world learns per episode: unmeasured anywhere in the project (M4).
+- ❓ O3 The rPPO resume path has not been exercised in this study family since the H1 fix (M4).
+- ❓ O4 Whether a trained agent spends ≥ 10 % of steps on a warm cell (`Bal_TimeWarm`): the criteria have never been applied to a trained agent; the reference run is the first test (M2).
+- ❓ O5 20 × 20 wall-clock (4 × entities per step) is a guess; no run is cut short, so this is cost, not validity.
+
+### Passes with nothing to report
+
+Departure from Revision 1 is disclosed (4.1) and the selection rule reproduces from the Revision-2 table.
+Survival steps is the metric throughout; reward is never read. Budget is passed on the CLI (`--episodes`).
+No data-loss hazard (no git operation in the plan). Registry change-log entry for `sensor_radius` is in
+the same commit; nothing under `scripts/` changes. Known Bugs: the cross-batch level hazard is honoured
+by an in-batch reference; the stale saved seed / budget copy is covered by L3; nothing unrecorded found.
+Observation width 58 in every world, no new sensor; mechanical YAML validation is `env-config-reviewer`'s
+(not yet run on the new folder as far as `docs/reviews/` shows). Pass 7 skipped (not an analysis verdict).
+
+### Cost of being wrong
+
+Misjudging a world costs ≈ 25–35 GPU-hours and a day. The expensive failures are the two that are free
+to fix now: forwarding a single-seed, simulation-disagreeing pass into a ≥ 3-seed modulator comparison
+(weeks), or a predictable "nothing passes criterion 3" that returns the decision with no rule attached.
+
+Reviewed by: plan-reviewer (2026-09-27, on `ff37eff5`)
