@@ -4334,3 +4334,23 @@ cd /media/nas01/projects/Interoceptive-AI/grid_world_pain
   --episodes 2000000 --seed 43 --device cuda:1 --log-interval 10 \
   --tag "rppo_ctxexp_lvl05ref_t1none_s43" --wandb-name "rppo_ctxexp_lvl05ref_t1none_s43" \
   --wandb-group "context_exploration" --wandb-job-type "pilot"
+
+# context_exploration Part 4 — C7 (102:1), C2 (113:1), C6 (112:1)
+/home/vncuser/miniconda3/envs/grid_world_pain/bin/python train.py \
+  --config configs/environment/experiment/context_exploration/g15r8f1to2b36.yaml \
+  --agent_config configs/models/recurrent_ppo/nmn_input_site_grid_gaenorm/nmngaenorm_t1none.yaml \
+  --episodes 2000000 --device cuda:1 --log-interval 10 \
+  --tag "rppo_ctxexp_g15r8f1to2b36_t1none_s42" --wandb-name "rppo_ctxexp_g15r8f1to2b36_t1none_s42" \
+  --wandb-group "context_exploration" --wandb-job-type "pilot"
+/home/vncuser/miniconda3/envs/grid_world_pain/bin/python train.py \
+  --config configs/environment/experiment/context_exploration/g10r5f1to2b36.yaml \
+  --agent_config configs/models/recurrent_ppo/nmn_input_site_grid_gaenorm/nmngaenorm_t1none.yaml \
+  --episodes 2000000 --device cuda:1 --log-interval 10 \
+  --tag "rppo_ctxexp_g10r5f1to2b36_t1none_s42" --wandb-name "rppo_ctxexp_g10r5f1to2b36_t1none_s42" \
+  --wandb-group "context_exploration" --wandb-job-type "pilot"
+/home/vncuser/miniconda3/envs/grid_world_pain/bin/python train.py \
+  --config configs/environment/experiment/context_exploration/g10r3f1to2b36.yaml \
+  --agent_config configs/models/recurrent_ppo/nmn_input_site_grid_gaenorm/nmngaenorm_t1none.yaml \
+  --episodes 2000000 --device cuda:1 --log-interval 10 \
+  --tag "rppo_ctxexp_g10r3f1to2b36_t1none_s42" --wandb-name "rppo_ctxexp_g10r3f1to2b36_t1none_s42" \
+  --wandb-group "context_exploration" --wandb-job-type "pilot"
