@@ -8,7 +8,7 @@ last_updated: 2026-09-27
 
 # Balance metrics logged during rPPO training, plus a post-hoc companion
 
-> **Status**: PLANNED (awaiting plan review and user approval; no code written)
+> **Status**: PLANNED, Revision 1 (plan-reviewer findings addressed; awaiting re-review and user decisions D1–D3; no code written)
 > **Opened**: 2026-09-27
 > **Related**: [[STUDY_PLAN]] (internal-state interaction study, Revisions 2, 2a and 2b: the balance measures and criteria) · study page `internal_state_interactions.template.html` §03 ("how balance is judged") and §07 ("what the training runs should measure") · [[BALANCE_SETTINGS_INVENTORY]] · [[WANDB_METRICS_REFERENCE]] · [[behavior_measure_toolkit_v1_plan]] (the last metric family added to this same logging loop) · [[TRAJECTORY_COLLECTION_PIPELINE]] · Known Bugs rows: *contemporaneous binning* (3 instances), *reconstructed felt-pain leak*, *rPPO continual stage swap keeps stage-0 metric accumulators*
 
@@ -38,6 +38,38 @@ These counts are read from data the rollout already produces, so training itself
 change, and a test proves this. A separate offline script computes the one measure that
 cannot be counted during training: whether knowing two body states predicts the agent's choice
 better than knowing one. It reads recorded episodes.
+
+---
+
+## Revision 1 (2026-09-27): response to the plan review
+
+The first draft was reviewed adversarially and judged not ready (feedback appended at the end
+of this doc; full report in [[plan_balance_metrics_training_logging]]). The blocking problem was
+procedural: the draft said "merge back when the tests are green" without protecting the
+untracked training outputs in `results/` or saying what to do if the merge conflicts. The rest
+were definitional gaps. This revision changes the plan as follows; the user decisions D1–D3
+stay open.
+
+| Review finding | Change in this revision | Where |
+|---|---|---|
+| 🔴 Merge-back with no data snapshot and no conflict rule | New merge-back procedure: rebase inside the worktree, snapshot `results/`, fast-forward-only merge, **stop and hand back on any conflict** | A9(a), new "Merge-back procedure", Checkpoints 1 and 11 |
+| 🟡 T7 contradicts the warm-cell definition | T7 rewritten to agree with A4 (cell above setpoint, independent of body) | Part B, T7 |
+| 🟡 Warm-cell rule never tested on the cooler diagonal | A4 states the gap; new `near_fire` counter and `Bal_TimeNearFire` key; how it relates to criterion 1 is stated | A4, counter table, keys, criterion mapping |
+| 🟡 T1/T2 run on a world with no thermal and no felt injury | T1, T2 and Checkpoint 4 run on a level-05-derived world with thermal and interoceptive nociception on | Part B, Checkpoint 4 |
+| 🟡 Level-05 thresholds applied silently in every world | The calibration (max nutrition, max injury, every absolute bin edge) is written into the run's logged config at start and on each stage swap, read from `params` and the module constants, no defaults | A5, `train.py` changes, C3 |
+| 🟡 C4 caveat must reach the study page | Added to the experiment-designer hand-off | Part D |
+| 🟢 Worktree location | `.claude/worktrees/balance_metrics` (project convention, gitignored) | A9(a) |
+| ❓ Late-death denominator; level-05 episode cap | Denominator = all episodes in the window (study Rev 2b N5). Level 05 inherits `max_steps: 500` from the default environment config, the same 500-step horizon the planner used, so the 5 % gate transfers | A7 |
+| ❓ Felt injury reads zero at episode start | Stated for the analyzer (level 05 starts injury uniformly in 0–100) | A3, Part D |
+| ❓ Pooling weights long episodes | Named next to the ratio-of-sums rule | A6 |
+
+**Study plan Revision 2c, recorded here.** The study pre-registered, after this plan was first
+drafted, that in training the **warming** part of criterion 2 is logged but **not pass/fail**
+(a well-regulated agent is rarely cold, so the over-time ratio sits near 1 even for the ideal
+agent). Criterion 2 in training is therefore eating ratio ≥ 2 and hiding ratio ≥ 2, with both
+true and felt injury reported and **true injury deciding** the hiding criterion. The criterion
+mapping below follows this. Warming time share (`Bal_TimeWarm`) is a separate matter: it feeds
+criterion 1 (time split), which remains pass/fail.
 
 ---
 
@@ -110,6 +142,16 @@ an agent that starts badly injured *feels* nothing for its first few steps. Thos
 into the felt "≤ 20" bin. That is what the agent experiences, and it is exactly the true-vs-felt
 difference the study wants to see.
 
+**What the analyzer must be told (Rev 1).** The buffer covers the last
+`interoceptive_kernel_length` = 12 steps, so the felt value under-reads for roughly the first
+12 steps of **every** episode, not only badly injured starts. Level 05 inherits
+`random_start_injury: true` with start injury uniform in 0–100 (from level 03), so a large share
+of episode starts are truly injured but felt as barely injured. This inflates
+`Bal_N_InjLo_Felt` at episode starts by construction and pulls `Bal_HideRatio_Felt` down for a
+reason unrelated to the policy. The plan keeps these steps (it is what the agent feels, and true
+injury decides the criterion under Rev 2c) and does not add an exclusion window. The
+sentence goes into the metrics reference (Part D) and into the module docstring.
+
 ### A4. "Warm cell": proposed definition and justification
 
 **Proposal:** a step counts as *on a warm cell* when the temperature of the cell the agent lands
@@ -123,6 +165,34 @@ on is above the body-temperature setpoint:
 | Physically meaningful | With `k_exchange`/`k_loss` the body settles at about ⅔ of the cell temperature (inventory §D). A cell above the setpoint is exactly a cell where staying pushes the body above the setpoint. |
 | Edge case stated | The fire cell itself (≈ 77 °C, lethal in 2–3 steps) also counts as warm. Its step share is negligible, and it is kept rather than special-cased. |
 
+**Gap stated (Rev 1): the diagonal cells were never in the planner's world.** "Matches the
+planner exactly" is true only for the cells the planner modelled. Its world has two cell
+temperatures, open ground at −30 °C and the fire ring at +8.8 °C (`planner.py:9-10, 35-37`), and
+the study plan (E5) says the cooler diagonal cells around the fire are not modelled. So the rule
+`cell > setpoint` was never exercised on a ≈ −16 °C diagonal cell. Under this plan a trained agent
+parked on the diagonal does **not** count as warm: its body settles near ⅔ × −16 ≈ −10.7 °C,
+which lands in the cold bin, and its steps fall into `elsewhere`. The definition is kept,
+because "the cell pushes the body above its setpoint" is the physically right meaning of
+warming up. What changes is that the diagonal becomes visible instead of silently folded into
+`elsewhere`:
+
+- **New counter `near_fire`**: the step lands on a cell that the fire heats but that is still at
+  or below the setpoint,
+  `params.thermal_default_temp_high < cell_t ≤ params.temperature_setpoint`.
+  `thermal_default_temp_high` is the upper edge of the per-episode open-ground temperature
+  range (−29 °C in level 05), so any cell above it has received heat from a fire. Outside the
+  blur radius the field equals the open-ground value exactly, so the ring of `near_fire` cells is
+  finite. It is a property of the cell only, like `warm`, and it may overlap with `bush`. It is
+  disjoint from `warm` by construction. Its steps that are neither bush nor eating stay in `elsewhere` (the `elsewhere`
+  definition is unchanged).
+- **How it feeds criterion 1 (time split, each activity ≥ 10 % of time).** The pre-registered
+  warm-up share is `Bal_TimeWarm` alone, and that key decides criterion 1. `Bal_TimeNearFire` is
+  reported beside it and is **not** added to it. If a run fails criterion 1 on warming while
+  `Bal_TimeWarm + Bal_TimeNearFire` would pass, the analyzer reports the case in words ("the
+  agent warms on the cooler diagonal, not on the ring") and routes a possible re-definition to
+  the user and `experiment-designer`. It does not re-score the run.
+- **Checkpoint 6** prints how many cells of one level-05 reset fall in each class (warm,
+  near_fire, open), so the extent of the ring is checked on the real field, not assumed.
 `thermal_field` holds raw °C (`state.py:85-89`; `[0, 0]` when thermal is off). When thermal is
 off (a static flag), the warm fields and keys are simply absent.
 
@@ -149,6 +219,18 @@ off (a static flag), the warm fields and keys are simply absent.
   measurement definitions, and letting them vary per run would make runs incomparable.
   Changing one is a code change with a plan. They are absolute units calibrated to the level-05
   family (max nutrition 200, max injury 100); the metrics reference must say so.
+- **Calibration recorded with every run (Rev 1).** The switch is on for every rPPO run in every
+  world, but the bins only mean what the study means in a level-05-scaled body. So each run
+  writes the calibration it was measured under into its logged config, where it cannot be lost:
+  `wandb.config.update({"balance_calibration": {...}}, allow_val_change=True)` at run start, and
+  again on every continual-learning stage swap under `balance_calibration_stage_<k>`. The block
+  holds `max_nutrition` and `max_injury` **read from the live `params`** (never a default), and
+  every absolute bin edge **read from the module constants** (`HUNGRY_LT`, `FED_GE`,
+  `COMB_FED_LO`, `COMB_FED_HI`, `INJ_HI_GE`, `INJ_LO_LE`, `COLD_LE`, `WARM_GE`,
+  `EARLY_DEATH_MAX_LEN`), plus `temperature_setpoint` and `thermal_default_temp_high` when
+  thermal is on. The same block is printed to stdout, so it also lands in the run log. Nothing
+  is skipped or rescaled when a world differs from level 05: the numbers are recorded, and the
+  analyzer judges comparability from them. The post-hoc JSON (C3) carries the same block.
 
 ### A6. Zero denominators
 
@@ -160,6 +242,11 @@ existing `_append_per_measure_mean` pattern (`train.py:1413-1419`), which skips 
 **denominator step counts are always logged**, including 0, so an absent ratio can be told
 apart from a bug.
 
+**Assumption named (Rev 1).** Pooling step counts weights long-lived episodes more heavily. The
+planner pooled fixed-horizon rollouts, whereas training episodes end at different times, so the
+same ratio-of-sums convention averages over a different mixture of episodes. This is not wrong,
+but it is a difference the metrics reference states next to the rule.
+
 ### A7. Death causes and survival: reuse, do not duplicate
 
 `Episode/Term_*` and `Episode/Steps` already exist and are not touched. **One gap:** the
@@ -168,6 +255,22 @@ The existing Term_* shares cannot be split by early versus late after the fact, 
 window aggregates them. Proposed, and **pending user decision D2**: six derived keys computed
 at emit time from the `l` and `termination_reason` already in every `ep_data`. They need no
 new counters and no new device data.
+
+**Denominators (Rev 1, per study Rev 2b N5).** `Bal_LateDeathShare` = number of window episodes
+that died (reason codes 2–5) at length ≥ 21, divided by **all** episodes in the window,
+including episodes truncated at the step cap and episodes that died early. This is the
+quantity the 5 % gate is pre-registered on ("after excluding deaths in the first 20 steps").
+`Bal_EarlyDeathShare` uses the same all-episodes denominator. The four
+`Bal_LateDeath_{cause}` keys are shares **among late deaths** (denominator = late deaths) and
+are not emitted when there are none.
+
+**Episode cap checked (2026-09-27).** None of the level-03, -04 or -05 configs overrides
+`environment.max_steps`, so level 05 inherits `max_steps: 500` from
+`configs/environment/default.yaml:7`. The planner's balance rollout also runs 500 steps
+(`rollout_balance(..., max_steps=500, ..., early=20)`, `planner.py:427`). The 5 % gate was
+calibrated on the same horizon and transfers. A world with a different cap would change the
+share of episodes that can die late; the calibration block (A5) does not record `max_steps`,
+because it is already in the run's logged environment config.
 
 ### A8. Out of scope (checked)
 
@@ -199,9 +302,11 @@ new counters and no new device data.
    process references, so there is no lazy-import hazard.
 
 **Conditions.**
-- **(a)** Implement in a separate `git worktree` outside the repo directory, not in the shared
-  working tree. Merge back when the tests are green. Other parallel sessions launch new runs
-  from the shared tree, and a half-edited `train.py` there is the one real hazard.
+- **(a)** Implement in a separate `git worktree` at `.claude/worktrees/balance_metrics` (the
+  project's convention; gitignored at `.gitignore:51`, and on the NAS so it survives a container
+  restart), not in the shared working tree. Other parallel sessions launch new runs from the
+  shared tree, and a half-edited `train.py` there is the one real hazard. Merge back **only** by
+  the procedure below.
 - **(b)** Do not `git checkout` an older commit in the shared tree to produce the golden
   fixture in T1. Use the worktree.
 - **(c)** Run the speed benchmark on a GPU that the 32 runs are not using. Check with the
@@ -210,6 +315,28 @@ new counters and no new device data.
   (metrics on). T2 shows training dynamics are identical, but their WandB history would gain
   `Episode/Bal_*` keys partway through the run. If a run must stay byte-for-byte on its launch
   commit, relaunch it from a worktree pinned to that commit.
+
+#### Merge-back procedure (Rev 1; the review's Critical finding)
+
+`train.py` is edited by parallel sessions most days, so a conflict at merge time is the likely
+case, and a conflicted merge followed by cleanup is how `results/` was lost once. The developer
+follows these steps in order and records each command's outcome in the Implementation Report:
+
+1. **Rebase inside the worktree**, never in the shared tree, onto the current `v4.0` tip (same
+   repository, so no fetch is needed): `git -C .claude/worktrees/balance_metrics rebase v4.0`.
+2. **Conflict rule.** If the rebase reports any conflict: `git rebase --abort` in the worktree,
+   **stop**, and hand back to the user with the list of conflicted files. Do not resolve
+   conflicts by hand without the user, and do not retry with a different strategy.
+3. After a clean rebase, rerun the full test list (Part B) in the worktree. Red → stop.
+4. **Snapshot** the untracked data in the shared tree, immediately before merging:
+   `cp -a results /tmp/results-bk-$(date +%s)` (run from the repo root). Record the path.
+5. **Fast-forward only**, in the shared tree (which is on `v4.0`):
+   `git merge --ff-only balance_metrics`, with git wrapped in `timeout` inside a retry loop
+   per CLAUDE.md. If it refuses because `v4.0` moved since step 1, return to step 1 once; if it
+   refuses because an uncommitted change from another session touches a file in the branch
+   ("would be overwritten"), **stop and hand back**. Never `git stash`, `git checkout -f`,
+   `git reset`, or `git clean` (with or without `-x`) to make the merge go through.
+6. Remove the worktree with `git worktree remove` only after the merge landed.
 
 Those 32 runs will **not** carry the online balance keys. Judging them requires the post-hoc
 script (Part C) on trajectory-store collections of their checkpoints, with the policy caveat in
@@ -258,8 +385,9 @@ info ──► ate_food, agent_in_bush (existing)       ─┘        │  (vect
 | 17–20 | `n_cold`, `warm_cold`, `n_warmT`, `warm_warmT` | pre-step T ≤ −5 (and on warm cell); T ≥ 0 (and on warm cell) |
 | 21–28 | `{n,bush}_inj_{hi,lo}_true_{hungry,fed}` | the hiding counters 9–12 restricted to hungry (N < 60) / fed (80 ≤ N ≤ 160) |
 | 29–36 | same with `_felt` | |
+| 37 | `near_fire` | lands on a fire-heated cell at or below the setpoint (A4, Rev 1); overlaps `bush` and `eat`, never `warm`; the rest falls in `elsewhere` |
 
-K = 37. When thermal is off, counters 2, 17–20 are identically 0 and their keys are not
+K = 38. When thermal is off, counters 2, 17–20 and 37 are identically 0 and their keys are not
 emitted. `elsewhere` is then "not bush and not eating". When interoceptive nociception is off,
 the `_felt` counters are 0 and their keys are not emitted. Both flags are read from `params`
 (static) and are recomputed on a stage swap (see the Known Bugs "stage swap keeps stage-0
@@ -273,20 +401,20 @@ must say so.
 
 | Family | Keys |
 |---|---|
-| Time split | `Episode/Bal_TimeBush`, `Episode/Bal_TimeWarm`, `Episode/Bal_TimeEat`, `Episode/Bal_TimeElsewhere` |
+| Time split | `Episode/Bal_TimeBush`, `Episode/Bal_TimeWarm`, `Episode/Bal_TimeEat`, `Episode/Bal_TimeElsewhere`, `Episode/Bal_TimeNearFire` (report-only, Rev 1) |
 | Eating vs hunger | `Episode/Bal_EatShare_Hungry`, `Episode/Bal_EatShare_Fed`, `Episode/Bal_EatRatio`, `Episode/Bal_N_Hungry`, `Episode/Bal_N_Fed` |
 | Hiding vs injury (S ∈ `True`, `Felt`) | `Episode/Bal_BushShare_InjHi_{S}`, `Episode/Bal_BushShare_InjLo_{S}`, `Episode/Bal_HideRatio_{S}`, `Episode/Bal_N_InjHi_{S}`, `Episode/Bal_N_InjLo_{S}` |
 | Warming vs temperature | `Episode/Bal_WarmShare_Cold`, `Episode/Bal_WarmShare_Warm`, `Episode/Bal_WarmRatio`, `Episode/Bal_N_Cold`, `Episode/Bal_N_Warm` |
 | Combination (S × F ∈ `Hungry`, `Fed`) | `Episode/Bal_BushShare_InjHi_{S}_{F}`, `Episode/Bal_BushShare_InjLo_{S}_{F}`, `Episode/Bal_HideGap_{S}_{F}` (= Hi − Lo), `Episode/Bal_HideRatio_{S}_{F}`, `Episode/Bal_N_InjHi_{S}_{F}`, `Episode/Bal_N_InjLo_{S}_{F}` |
-| Late deaths (D2, if approved) | `Episode/Bal_EarlyDeathShare` (share of episodes dying at length ≤ 20), `Episode/Bal_LateDeathShare` (share dying at length ≥ 21: the 5 % gate), `Episode/Bal_LateDeath_{Starvation,Overeating,Injury,Thermal}` (cause shares **among late deaths**) |
+| Late deaths (D2, if approved) | `Episode/Bal_EarlyDeathShare` (episodes dying at length ≤ 20 ÷ all window episodes), `Episode/Bal_LateDeathShare` (episodes dying at length ≥ 21 ÷ **all** window episodes, truncations included: the 5 % gate, Rev 2b N5), `Episode/Bal_LateDeath_{Starvation,Overeating,Injury,Thermal}` (cause shares **among late deaths**) |
 
 Criterion mapping, for the analyzer:
 
 | Study criterion | Keys |
 |---|---|
-| 1, time | `Bal_Time*` |
-| 2, drive: eat and hide ratio ≥ 2 | `Bal_EatRatio`, `Bal_HideRatio_True` (true injury decides; `_Felt` reported); `Bal_WarmRatio` is logged but not pass/fail in training (Rev 2c, which landed while this plan was drafted and agrees with it) |
-| 3, deaths | `Bal_LateDeath*` |
+| 1, time (each activity ≥ 10 %) | `Bal_TimeBush`, `Bal_TimeWarm`, `Bal_TimeEat` decide; `Bal_TimeNearFire` is report-only and is not added to `Bal_TimeWarm` (A4) |
+| 2, drive: eat and hide ratio ≥ 2 | `Bal_EatRatio`, `Bal_HideRatio_True` (true injury decides; `_Felt` reported, with the A3 start-of-episode caveat); `Bal_WarmRatio` is logged but not pass/fail in training (study Rev 2c) |
+| 3, deaths (late deaths ≤ 5 % of all episodes; no cause dominates) | `Bal_LateDeathShare`, `Bal_LateDeath_*` |
 | 4, survival | existing `Episode/Steps` |
 | 5, fed hiding ≥ 2× | `Bal_HideRatio_True_Fed` |
 | Combination during training | `Bal_HideGap_*` |
@@ -301,21 +429,26 @@ Criterion mapping, for the analyzer:
   timing convention (pre-step body state versus post-step outcome).
 - Constants: `HUNGRY_LT = 60.0`, `FED_GE = 100.0`, `COMB_FED_LO, COMB_FED_HI = 80.0, 160.0`,
   `INJ_HI_GE = 60.0`, `INJ_LO_LE = 20.0`, `COLD_LE = -5.0`, `WARM_GE = 0.0`,
-  `EARLY_DEATH_MAX_LEN = 20`, `COUNTER_NAMES` (the 37 above, in order), `K = len(COUNTER_NAMES)`.
+  `EARLY_DEATH_MAX_LEN = 20`, `COUNTER_NAMES` (the 38 above, in order), `K = len(COUNTER_NAMES)`.
+- `calibration_record(params, *, thermal_on) -> dict` (Rev 1): returns the A5 block. Reads
+  `params.max_nutrition`, `params.max_injury` and, when thermal is on,
+  `params.temperature_setpoint` and `params.thermal_default_temp_high` by attribute access
+  (an `AttributeError` is the failure, never a default), and the bin edges from the constants.
 - `resolve_balance_metrics_flag(config) -> bool`: `config.get_mandatory('logging.episode.balance_metrics')`,
   which raises `ValueError` unless the value is a real `bool`. No default.
-- `step_counts(nutrition, injury, felt_injury, body_temp, on_warm_cell, ate_food, in_bush, *, thermal_on, felt_on) -> np.ndarray[..., K] uint8`.
+- `step_counts(nutrition, injury, felt_injury, body_temp, on_warm_cell, near_fire, ate_food, in_bush, *, thermal_on, felt_on) -> np.ndarray[..., K] uint8`.
   All inputs have the same leading shape (`[T, B]` in training, `[n]` post-hoc). `felt_injury`,
-  `body_temp` and `on_warm_cell` may be `None` exactly when their flag is off. Assert this; do
+  `body_temp`, `on_warm_cell` and `near_fire` may be `None` exactly when their flag is off. Assert this; do
   not substitute a value.
 - `window_log(counts_list: list[np.ndarray[K]], *, thermal_on, felt_on) -> dict[str, float]`:
   sums the counts, then emits the keys in the table, applying the A6 rules.
 - `late_death_log(lengths, reasons) -> dict[str, float]` (D2). Reason codes 2–5 are deaths,
-  per `episode_metrics.py:40-44`. Cause shares are not emitted when there are 0 late deaths.
+  per `episode_metrics.py:40-44`. Early and late shares use all window episodes as the
+  denominator (A7). Cause shares are among late deaths and are not emitted when there are 0.
 
 ##### `src/models/recurrent_ppo_trainer.py`
 
-- `:7-26`: add a new NamedTuple `BalanceStepInfo(nutrition, injury, felt_injury, body_temp, on_warm_cell)`.
+- `:7-26`: add a new NamedTuple `BalanceStepInfo(nutrition, injury, felt_injury, body_temp, on_warm_cell, near_fire)`.
   Unused fields are `None`, per the static flags. Add a field `balance: Any` to `StepInfo`
   (required, **no default**) and set it explicitly at `:309-328`.
 - `:231`: `collect_trajectories(..., return_mode="MC", *, balance_metrics: bool)`, a required
@@ -329,11 +462,13 @@ if balance_metrics:   # static Python bool — resolved at trace time
     if env_params.thermal_enabled:
         cell_t = jax.vmap(lambda f, p: f[p[0], p[1]])(next_state.thermal_field, next_state.agent_pos)
         on_warm = cell_t > env_params.temperature_setpoint
+        near_fire = (cell_t > env_params.thermal_default_temp_high) & ~on_warm   # A4, Rev 1
         body_t = state.body_temp
     else:
-        on_warm = body_t = None
+        on_warm = near_fire = body_t = None
     balance = BalanceStepInfo(nutrition=state.nutrition, injury=state.injury_level,
-                              felt_injury=felt, body_temp=body_t, on_warm_cell=on_warm)
+                              felt_injury=felt, body_temp=body_t, on_warm_cell=on_warm,
+                              near_fire=near_fire)
 else:
     balance = None
 ```
@@ -341,7 +476,7 @@ else:
   `state` is the pre-step carry and `next_state` is pre-reset. Import
   `sense_interoceptive_nociception` next to `get_observation` (`:234`). The developer confirms
   that the params field names (`interoceptive_nociception_enabled`, `thermal_enabled`,
-  `temperature_setpoint`, `max_injury`) are static or traced as used in `sensor.py:492` and
+  `temperature_setpoint`, `thermal_default_temp_high` (`state.py:392`), `max_injury`) are static or traced as used in `sensor.py:492` and
   `core.py:473`. A Python `if` on a traced value would raise at trace time, which is a
   detectable failure.
 - `train_iteration` (`:407`): pass `balance_metrics=config.balance_metrics`.
@@ -363,6 +498,11 @@ else:
   row in the reset block (`:1816-1826`).
 - Stage-transition wipe (`:1627-1654`): `episode_balance[:] = 0`, and recompute
   `bal_thermal_on` / `bal_felt_on` from the new `params`.
+- **Calibration record (A5, Rev 1).** When `ppo_config.balance_metrics` is true: after
+  `wandb.init` and before the first iteration, `wandb.config.update({"balance_calibration":
+  calibration_record(params, thermal_on=...)}, allow_val_change=True)` and print the same dict.
+  On each stage swap, the same call under key `balance_calibration_stage_<k>` from the new
+  stage's `params`. When `WANDB_MODE` is disabled the print is the record.
 - `_emit_episode_row` (`:1546-1593`): when any episode in `eps` has `'bal_counts'`, call
   `ep_log.update(window_log([ep['bal_counts'] for ep in eps if 'bal_counts' in ep], ...))`.
   With D2, also `ep_log.update(late_death_log(...))` from `ep['l']` and `ep['termination_reason']`.
@@ -392,16 +532,17 @@ guide row says so.
 
 | # | Test | Proves | Fails when |
 |---|---|---|---|
-| T1 | `tests/models/test_balance_metrics_parity.py::test_off_matches_pre_change_golden` | Switch off gives outputs identical to today's code | Any bitwise difference in `collect_trajectories` outputs (all `Transition` fields, final state, key, bootstrap value) versus `tests/fixtures/balance_metrics/pre_change_rollout.npz`. The fixture is generated on the pre-change commit, in a worktree, with the tiny GRU fixture used by `tests/models/test_mc_fixed_mode.py:225-236`, a fixed key and 8 steps on CPU. A small generator script is committed next to it and records the commit SHA inside the npz. |
-| T2 | `…::test_train_iteration_on_vs_off_bitwise` | Metrics on does not change training | A jitted `train_iteration` run for 3 iterations from identical model, optimizer, key and env state, on and off. Any bitwise difference in losses, every parameter leaf, optimizer state, env state, key, or any shared `Transition` field fails the test. |
+| T1 | `tests/models/test_balance_metrics_parity.py::test_off_matches_pre_change_golden` | Switch off gives outputs identical to today's code | Any bitwise difference in `collect_trajectories` outputs (all `Transition` fields, final state, key, bootstrap value) versus `tests/fixtures/balance_metrics/pre_change_rollout.npz`. The fixture is generated on the pre-change commit, in a worktree, with the tiny GRU network of `tests/models/test_mc_fixed_mode.py:225-236` but on a **level-05-derived world with thermal and interoceptive nociception both on** (Rev 1): the level-05 config loaded through the trainer's own loader, with only `num_envs` reduced (e.g. 4); a fixed key and 8 steps on CPU. The test asserts `params.thermal_enabled` and `params.interoceptive_nociception_enabled` are true before comparing, so a silently thermal-off fixture fails. A small generator script is committed next to it and records the commit SHA inside the npz. |
+| T2 | `…::test_train_iteration_on_vs_off_bitwise` | Metrics on does not change training | Same level-05-derived world as T1, thermal and interoceptive nociception on (asserted), so the "on" path really traces the felt, warm-cell and near-fire reads (Rev 1). A jitted `train_iteration` run for 3 iterations from identical model, optimizer, key and env state, on and off. The test also asserts that `step_info.balance.felt_injury`, `.on_warm_cell` and `.near_fire` are arrays, not `None`, in the "on" run. Any bitwise difference in losses, every parameter leaf, optimizer state, env state, key, or any shared `Transition` field fails the test. |
 | T3 | `tests/behavior/test_balance_metrics.py::test_pre_step_state_is_binned` | The A2 convention in the **real** `scan_fn` | A tiny thermal config with the eat action. The agent is placed on food at N = 59 and eats (post-step N ≈ 63), so the step must count in `eat_hungry`. The agent is placed in a bush at I = 61 and rests (post-step I ≈ 56), so the step must count in `bush_inj_hi_true`. Both fail if post-step state is used. |
 | T4 | `…::test_window_ratio_is_ratio_of_sums` | A6 pooling | Episode 1 is hungry for 1 step and ate; episode 2 is hungry for 99 steps and never ate. The pooled share is 0.01, while the mean of per-episode ratios would be 0.5. |
 | T5 | `…::test_zero_denominator_omits_share_ratio_but_logs_N` | A6 | A share, ratio or gap key is present with an empty bin, or an `N` key is absent. |
 | T6 | `…::test_thermal_off_and_felt_off_emit_no_keys` | Static gating | Any `Warm*`, `TimeWarm` or `*_Felt*` key is emitted with its flag off. |
-| T7 | `…::test_warm_cell_uses_cell_not_body` | A4 | A −16 °C cell with a −14 °C body counts as warm. |
+| T7 | `…::test_warm_cell_uses_cell_not_body` | A4 (rewritten in Rev 1 to agree with it) | Two cases, setpoint 0 °C, open-ground upper edge −29 °C. (a) A −16 °C cell with a −20 °C body (the cell is warmer than the body): must count as **not warm** and as `near_fire`. (b) A +8.8 °C cell with a +10 °C body (the cell is cooler than the body): must count as **warm** and not `near_fire`. Fails if either case is scored by comparing cell with body. Plus (c) a −30 °C cell: neither warm nor `near_fire`. |
 | T8 | `…::test_elsewhere_is_complement` and `…::test_late_death_partition` | Definitions | `elsewhere` is not equal to `¬(bush ∨ warm ∨ eat)`; episode length 20 is not counted as early, or length 21 as late. |
 | T9 | `…::test_flag_is_mandatory` | No fallback | `resolve_balance_metrics_flag` on a config without the key, or with a non-bool value, does not raise `ValueError`. |
-| T10 | Extend `tests/training/test_continual_bm_transition.py` (subprocess `train.py`, 2 stages) with the balance switch on, **including a thermal-on → thermal-off stage pair** | Stage-swap wipe and flag recompute | Crash, or a warm key emitted after the swap to thermal off. |
+| T10 | Extend `tests/training/test_continual_bm_transition.py` (subprocess `train.py`, 2 stages) with the balance switch on, **including a thermal-on → thermal-off stage pair** | Stage-swap wipe, flag recompute, per-stage calibration record | Crash, a warm or near-fire key emitted after the swap to thermal off, or no `balance_calibration_stage_1` record in the run's stdout. |
+| T11 | `…::test_calibration_record_reads_params` (Rev 1) | A5 | The record does not carry `params.max_nutrition` / `max_injury` of a params object set to non-level-05 values (e.g. 150, 80), or is missing any bin-edge constant, or returns a value when `max_injury` is absent from params (must raise). |
 
 **Existing tests to update** (a signature change, not a behaviour change):
 - `tests/models/test_mc_fixed_mode.py`, `tests/models/test_mc_raw_mode.py` and
@@ -433,7 +574,7 @@ never guessed.
 | Nutrition, true injury | columns `nutrition`, `injury_level` (state at t) | snapshot `nutrition`, `injury_level` |
 | Body temperature | **not a column** (user deferred it). Recovered from `obs_true` at the `"Body Temperature"` slice. Offset comes from `get_observation_breakdown(params)`. `sensor.py:479-488` appends `state.body_temp` in **raw °C** when `thermal_enabled and thermal_body_temp_observable`. **Verified in source 2026-09-27.** If `body_temp_observable` is false, the script exits with an error (no fallback). | snapshot `body_temp` (`eval_recording.py:66-67`) |
 | Felt injury | `obs_true` `"Interoceptive Nociception"` slice × `max_injury` | `true_obs` same slice (`eval_recording.py:80-100`) |
-| Warm cell at row t | Thermoception block, **centre element** (offset 0 of the diamond, `sensor.py:65-90`), plus body temperature when `thermal.relative` is true (`default.yaml:594`). The store holds no `thermal_field`. | snapshot `thermal_field[agent_row, agent_col]` |
+| Warm cell / near fire at row t | Thermoception block, **centre element** (offset 0 of the diamond, `sensor.py:65-90`), plus body temperature when `thermal.relative` is true (`default.yaml:594`). The store holds no `thermal_field`. | snapshot `thermal_field[agent_row, agent_col]` |
 | Ate / in bush | `ate_food` (arriving at t), `agent_in_bush` (state at t) | per-step fields of the recording |
 
 **Timing (contemporaneous-binning guard).** Store rows are "state at t" and the action
@@ -461,6 +602,7 @@ therefore:
   200 permutations. The null is the gain expected from bin count alone.
 
 **C3. Outputs.** A JSON with the Part A keys (same names, with a `posthoc_` provenance field),
+the A5 calibration block from `calibration_record` on the run's own params,
 the combination block (single and pair accuracies, gain, CI, null quantiles, per injury
 source), row counts used / available per quantity (guide §11's "how much data" rule), and the
 run IDs and store paths.
@@ -485,24 +627,24 @@ which policy produced it.
 
 | Doc | Change |
 |---|---|
-| `docs/develop/active/behavior/WANDB_METRICS_REFERENCE.md` | New section, "Balance metrics (rPPO)": every `Episode/Bal_*` key, its definition, the ratio-of-sums rule, window-total `N` keys, the zero-denominator rule, noise-free felt injury, absolute-unit thresholds, and the training-policy versus eval-policy caveat. Bump `last_updated`. |
+| `docs/develop/active/behavior/WANDB_METRICS_REFERENCE.md` | New section, "Balance metrics (rPPO)": every `Episode/Bal_*` key, its definition, the ratio-of-sums rule and its long-episode weighting (A6), window-total `N` keys, the zero-denominator rule, noise-free felt injury **and its ≈ 12-step zero start that inflates `Bal_N_InjLo_Felt` (A3)**, absolute-unit thresholds and where the per-run calibration record lives (A5), the diagonal-cell gap and `Bal_TimeNearFire` being report-only (A4), the late-death denominators (A7), and the training-policy versus eval-policy caveat. Bump `last_updated`. |
 | `docs/environment/CONFIG_GUIDE.md` §7 | A table row for `logging.episode.balance_metrics` (`default.yaml`: absent by design; `recurrent_ppo.yaml`: `true`), with the reason it is absent from `default.yaml`. |
 | `docs/environment/02_config_schema.md` (`training:` block around `:376`) | Add the `logging.episode.balance_metrics` line under the configs/train layer notes. |
 | `docs/environment/SCRIPTS_DEPENDENCY_MAP.md` | Row for `scripts/analysis/balance_posthoc.py`: HAND + TEST, `parents[2]`, imports `src.behavior.balance_metrics` and `scripts/analysis/core/*`. |
 | `docs/environment/CONFIG_CRITICAL_SETTINGS.md` | **No entry.** A logging switch is not a registry setting (checked 2026-09-27: the registry lists no `logging.*` keys). The verifier confirms that no registry setting changed. |
-| Study docs (owned by `experiment-designer`) | Hand-off: a back-link from [[STUDY_PLAN]] and page §07 to this plan. Not written here, because `docs/experiments/` is outside this role's write scope. |
+| Study docs (owned by `experiment-designer`) | Hand-off, sequenced **after** the merge lands: a back-link from [[STUDY_PLAN]] and page §07 to this plan; page §07 states the C4 caveat (online numbers are from the exploring training policy, post-hoc numbers from the greedy evaluation policy; never pooled or thresholded interchangeably) and the A4 rule that `Bal_TimeNearFire` is report-only. Not written here, because `docs/experiments/` is outside this role's write scope. |
 
 ### Cost estimate
 
 | Item | Estimate | Basis |
 |---|---|---|
-| Extra device output per rollout | ≈ 17 B/step × `T·B` = 17 × 128 × 128 ≈ **0.28 MB** | 4 × float32 + 1 bool per step; T = `agent.sequence_length` (128), B = `training.num_envs` (128 in `recurrent_ppo.yaml`) |
+| Extra device output per rollout | ≈ 18 B/step × `T·B` = 18 × 128 × 128 ≈ **0.29 MB** | 4 × float32 + 2 bool per step; T = `agent.sequence_length` (128), B = `training.num_envs` (128 in `recurrent_ppo.yaml`) |
 | Device→host transfer | same 0.28 MB/iteration | alongside the existing StepInfo transfer (`train.py:1705`) |
 | Extra jitted compute | one 12-tap dot product (felt) + one gather (cell temp) per env-step | negligible next to the network forward |
 | Host masks | `[T,B,K]` uint8 ≈ **0.6 MB** transient; ~40 vectorised ops over 16 k elements once per iteration (≲ 1 ms) | |
 | Host accumulate | **one** `+=` of a `[B,K]` array per `t` → 128 ops/iteration (≲ 1 ms) | one op per t instead of K ops per t (design choice) |
-| Rolling window | 5000 episodes × 37 × int32 ≈ **0.74 MB** | `smoothing_episodes` 5000 |
-| Emit | a stack-and-sum of 5000×37 per emitted row (every 4000 episodes), a few ms | |
+| Rolling window | 5000 episodes × 38 × int32 ≈ **0.76 MB** | `smoothing_episodes` 5000 |
+| Emit | a stack-and-sum of 5000×38 per emitted row (every 4000 episodes), a few ms | |
 | Compile | one extra trace when on; the off path compiles exactly as today | |
 
 **Expected step-time change: < 1 %.** The developer **measures** it (checkpoint 7). Per the
@@ -532,21 +674,25 @@ verification protocol, more than 5 % needs discussion and more than 15 % blocks 
 
 ## Checkpoints
 
-- [ ] 1. Worktree created outside the repo directory. T1 golden generated **there, on the
-  pre-change commit** (SHA recorded in the npz and in the Implementation Report). No checkout
-  in the shared tree.
-- [ ] 2. `balance_metrics.py` unit tests T4–T9 green before any trainer edit.
+- [ ] 1. Worktree created at `.claude/worktrees/balance_metrics` on a new branch
+  `balance_metrics` cut from the current `v4.0` tip. T1 golden generated **there, on the
+  pre-change commit**, on the level-05-derived world (SHA recorded in the npz and in the
+  Implementation Report). No checkout in the shared tree.
+- [ ] 2. `balance_metrics.py` unit tests T4–T9 and T11 green before any trainer edit.
 - [ ] 3. `StepInfo.balance is None` when off, confirmed by printing `jax.tree_util.tree_structure(trajectories.step_info)` off vs on. T1 green.
-- [ ] 4. T2 green on CPU. Then on one free GPU: 20 iterations on the level-05 world, **off vs
-  off** first. If off-vs-off is not bitwise on GPU (XLA GPU reductions can be
+- [ ] 4. T2 green on CPU, on the level-05-derived world with thermal and interoceptive
+  nociception on (asserted in the test). Then on one free GPU: 20 iterations on the level-05
+  world, **off vs off** first. If off-vs-off is not bitwise on GPU (XLA GPU reductions can be
   nondeterministic), report that and compare on vs off against the off-vs-off spread instead
   of bitwise.
 - [ ] 5. T3 green, and fails when the pre-step reads are temporarily swapped to `next_state`
   (red-green demonstration recorded in the report).
 - [ ] 6. CPU smoke: `train.py` with the level-05 world, 4 envs, `WANDB_MODE=offline`, enough
   episodes for 2 emitted rows. The offline run file contains the `Episode/Bal_*` keys, the time
-  shares sum to at least 1 (they overlap) with `TimeElsewhere` ≤ 1, and no share is outside
-  [0, 1].
+  shares sum to at least 1 (they overlap) with `TimeElsewhere` ≤ 1, `TimeNearFire` ≤
+  `TimeElsewhere + TimeBush + TimeEat`, and no share is outside [0, 1]. The stdout shows the calibration
+  block (max nutrition 200, max injury 100, all bin edges). Also print the cell counts per class
+  (warm / near_fire / open) for one level-05 reset (A4).
 - [ ] 7. Speed: same free GPU, same world, 128 envs, 300 iterations after a 20-iteration
   warm-up, off vs on. Report s/it both ways and host-loop time.
 - [ ] 8. T10 green (stage swap, thermal on → off).
@@ -555,6 +701,9 @@ verification protocol, more than 5 % needs discussion and more than 15 % blocks 
   They are not expected to match (C4), but a gross mismatch is flagged.
 - [ ] 10. Docs in Part D updated. `regen_dev_index.py` run. `SCRIPTS_DEPENDENCY_MAP.md` row
   present.
+- [ ] 11. Merge-back by the A9 procedure: rebase in the worktree (on conflict: abort, stop,
+  hand back), tests re-run green, `results/` snapshot path recorded, `git merge --ff-only`
+  succeeded, worktree removed. Any refusal is reported, never forced.
 
 ## Implementation Report
 
