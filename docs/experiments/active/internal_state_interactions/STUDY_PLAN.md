@@ -455,3 +455,27 @@ demoted after the data, which makes the "balanced" set larger than the pre-regis
 the ordinary-agent training to settings chosen on a softer rule.
 
 Reviewed by: plan-reviewer
+
+### Revision 2b (2026-09-27) — answers to the confirming pass (`7a6311d6`), before any Revision-2 result
+
+- **N1 (warming ratio fails today by geometry — the ideal agent holds temperature like a thermostat).**
+  Pre-registered now: the rollout warming ratio (b) becomes **report-only**. Criterion 2 is replaced by
+  (a) eating ratio ≥ 2, (c) hiding ratio ≥ 2, and (b′) the **per-decision** warming measure from the
+  planner's choice map: the share of training start states where "warm up" is the best choice at
+  body temperature ≤ −5 °C, divided by that share at ≥ 0 °C; (b′) ≥ 2. No further change to criterion 2
+  after results are read.
+- **N2 (validation checks as written fail by design).** Replaced by: (i) E2 collapsed to its per-activity
+  mean reproduces a per-activity mean-field model exactly, and E2 pooled over activities is within 5 %
+  of the E2-off result for the baseline; (ii) relocation events per bite ≈ 1/12 in the rollouts (not
+  bites per visit, which measures the leave-when-sated choice); (iii) E2's per-activity mean damage per
+  step, computed as total damage ÷ steps from the recordings directly, matches the bin model's
+  probability × mean size within 5 % (two computations on one data set, stated as a consistency check,
+  not an independent validation).
+- **N3.** Each E2 bin's value is its measured mean hit size; the ≥ 100 bin is lethal (injury clipped at 100).
+- **N4.** The "never a warm bush" grid worlds equal the primary-map solves of the "allowed" ones; they are
+  computed once and reused, and stated so.
+- **N5.** The 5 % deaths gate in criterion 3 applies after excluding deaths in the first 20 steps; any
+  ratio with a zero denominator is "not computable" and fails its criterion.
+- **N6.** Trip 8 / bites 12 and trip 4 / bites 6 must give the same result (same trip ÷ bites); a free
+  consistency check, reported.
+- Open (❓): the thermostat finding predates E2; it is re-checked on the first E2 baseline and reported.
