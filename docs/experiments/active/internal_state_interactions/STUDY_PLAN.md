@@ -234,3 +234,157 @@ the ranking inverts on the majority map. Callout and §07 must report the per-ma
 batch is chosen. Full table: [[plan_internal_state_interactions]] § "Analysis-verdict review".
 
 Reviewed by: plan-reviewer
+
+---
+
+## Revision 2 (2026-09-27) — the balance study, written before any Revision-2 result was read
+
+### Question, in plain words
+
+The first version of this study asked which single rule makes the best action depend on
+combinations of body states. The user reframed the goal: the new body rules exist to **lower the
+weight of injury recovery by raising the weight of the other needs** — but if food or temperature
+become too important, the agent just forages or warms all the time, hiding collapses, and the
+world is as one-sided as before in the other direction. What is wanted is a **balanced** world:
+hiding, eating and warming each matter in a good share of situations, no single danger causes most
+deaths, and which action is best depends on how injured, hungry and cold the agent is at once.
+The expected shape is an inverted U: as food/temperature pressure rises, combination dependence
+rises, peaks, then falls as one need takes over. This revision (a) finds where the balanced region
+lies in the simulation, over the settings that shape it, and (b) turns the findings into the
+balance metrics and criteria that real (ordinary-agent-only) training will be judged by. The
+simulation guides where to look; trained agents decide (user, 2026-09-27).
+
+Every setting that can shift the balance is listed in [[BALANCE_SETTINGS_INVENTORY]] (109 settings,
+with level-05 values and whether the simulator models them). A correction from the user
+discussion: the simulator **did** include the eating cost (net +5 per bite, then −1 per step, so an
+eating step nets +4; validated against `update_body`) — the error was the parent session describing
+the "less food per bite" pick as "6 → 4 per bite" instead of "+4 → +2 per eating step".
+
+### What changes in the simulator (each validated or measured before use)
+
+The inventory's unmodeled settings most likely to move the balance, and what is done about each:
+
+| # | Setting | Change | Source of numbers |
+|---|---|---|---|
+| E1 | Food runs out after 12 bites and reappears elsewhere | After each bite, with probability 1/12 the item moves: the agent is back at open ground and must pay the food trip again (a geometric stand-in with the same mean of 12 bites; the "bites left" state is not tracked) | config (`max_consumption 12`, `regeneration_delay 0`) |
+| E2 | Predator and ambusher hits are single large events, not a steady average | Outside cover, each step carries a probability of a hit whose size is drawn from the measured hit-size distribution (summarised by 5 quantiles); the planner averages its value over the outcomes, so an injured agent faces a real chance of a lethal hit | Wave-2 level-05 recordings: per-step hit probability resting / not resting outside a bush, and the size distribution of hits (`damage > 0`) |
+| E3 | Healing is blocked while a hit lands (3 steps) | Not modeled; stated as a limit (it slightly understates the cost of being hit) | — |
+| E4 | Injury is felt late and smoothed | Not modeled (the planner knows its injury); stated as the main limit. It belongs to the trained-agent test | — |
+| E5 | Food may sit on a warm ring; the cooler diagonal cell near a fire | Not modeled; stated | — |
+| E6 | Start position anywhere; 500-step limit | Rollouts start at open ground and run 500 steps, as before | — |
+
+The existing mean-field hazard stays available as a check: every Revision-2 world is also solved
+with E2 off, so the effect of the modelling change itself is visible.
+
+### Balance measures (computed per world, pooled over the two maps as before)
+
+From the planner's solution at training start states (as before):
+- **B-choice** — share of start states where each choice (rest in cover, eat, warm up, stay in the open) is best.
+- **B-comb** — combination gain (as before).
+
+From rollouts of the ideal policy (2,000 training-style starts per map, 500 steps):
+- **B-time** — share of steps spent in each activity: in cover, eating, warming (at the ring), elsewhere.
+- **B-need** — share of steps on which each need is the largest part of the drive: hunger `|S − 100|`, injury `I`, temperature `|T|·100/15`.
+- **B-death** — share of deaths by cause: starvation, over-eating, injury, cold, heat.
+- **B-surv** — survival share (as before).
+- **B-hide** — injury-driven hiding: among well-fed states (food 80–160), steps in cover when injury ≥ 60 vs when injury ≤ 20; and the same gap among hungry states (food < 60) — the "combination" version of hiding.
+
+### Balance criteria (pre-registered; a world is **balanced** only if all hold)
+
+1. **B-time:** no activity takes more than 70 % of steps, and cover, eating and warming each take at least 10 %.
+2. **B-need:** each of hunger, injury and temperature is the largest need on at least 15 % of steps.
+3. **B-death:** no single cause accounts for more than 60 % of deaths (if at least 5 % of starts die).
+4. **B-surv:** survival at least 80 % of today's level 05 under the same simulator.
+5. **B-hide:** among well-fed states, hiding at high injury is at least twice hiding at low injury (injury still drives hiding).
+6. **B-comb:** combination gain above today's by more than twice the noise floor (re-measured on a finer grid with E1–E2 on).
+
+A world meeting 1–5 but not 6 is "balanced but not combinational"; a world meeting 6 but failing
+1–3 is "combinational but one-sided". Both are reported. No threshold moves after results are read.
+
+### What is swept
+
+Today's level 05 (with B1) under E1–E2 is the baseline. Axes, each with today's value and a range
+that crosses from "injury dominates" to "food/temperature dominates":
+
+| Pressure | Setting | Values |
+|---|---|---|
+| Food | energy per bite (gross; eating cost 1 stays) | 6 (today), 5, 4, 3 |
+| Food | trip to food (steps) | 4 (today, measured), 6, 8 |
+| Food | bites per item | 12 (today), 6 |
+| Injury | hit probability outside cover | ×0.5, ×1 (today), ×2 |
+| Injury | healing in a bush (multiplier) | 25 (today), 10 |
+| Temperature | bush on a fire ring | allowed (41 % of episodes, today) / never (bush-fire clearance on) |
+| Temperature | cooling rate scale | 0.25 (today), 0.5 |
+| Coupling | the four rules of the running 16-world experiment, at their picked strengths (hungry healing floor 0; healing costs 0.5 food per point; cold/heat costs food at rate 2; gross food per bite 4) | on / off, one at a time and all four |
+
+Design: one axis at a time from the baseline (≈ 20 worlds), then a **2-D grid of food pressure ×
+injury pressure** (energy per bite 6/5/4/3 × hit probability ×0.5/×1/×2 = 12 worlds) at both bush-
+fire settings (24 worlds) — the grid is where the inverted U, if any, shows. Every world is solved
+on both maps (warm bush / none) at discount 0.95 and, as a check, 0.99. About 50–60 worlds; each
+takes minutes on 16 processes.
+
+### Deliverables
+
+1. The study page *Interactions Between Internal States* updated: a new lead section on balance (the
+   inverted-U question, the measures, where the balanced region lies, and which settings move it),
+   the inventory summarised, the first version's single-rule results kept as the second section, and
+   the correction box extended.
+2. A short "what the trained-agent metrics should measure" section: which of the B-measures can be
+   logged during training, which need recorded episodes, and proposed thresholds — the input to the
+   metric implementation plan that follows this study (owner: senior-developer).
+
+### Validation before any result is read
+
+- E1 and E2 change only the planner's world model, not the body update (bodysim stays validated).
+- E2's numbers are measured and written to `world_measurements.json` before the sweep runs; the
+  measurement reads the Wave-2 level-05 recordings of **both** agents and reports each separately.
+- With E1 and E2 switched off, the new code must reproduce the Revision-1 corrected sweep
+  (`sweep_food4/`) exactly for the baseline and three other worlds.
+
+### Limits stated in advance
+
+The planner knows its injury exactly (E4), sees predators only as measured hit odds (no chasing,
+no escape by running), and uses the Wave-2 runs' hit odds, which came from agents that started at
+0 °C and were not trained under these settings. The simulation locates candidate balanced settings;
+the ordinary-agent training that follows is what tests them.
+
+## Feedback from plan-reviewer — Revision 2 (the balance study), before any Revision-2 result
+
+**Verdict: NOT READY** (2026-09-27). Two Critical findings, both cheap to fix; eight Moderate; full
+table with the measured evidence: [[plan_balance_study]] (`docs/reviews/plan_balance_study.md`).
+
+**In plain language.** The study's idea and its measurement discipline are sound, but two pieces
+must change before the sweep runs. First, balance criterion 2 — "each need is the largest part of
+the drive on at least 15 % of steps" — is decided by the map, not by the settings: no cell lets
+the body settle at 0 °C (the warm ring settles it at +5.9 °C, which the drive weighs as 39 units),
+so a healed, fed agent always has temperature as its largest need, and injury can be the largest
+need on 15 % of a 500-step rollout only in a world hostile enough to fail the survival, cover and
+hiding criteria. The set is likely unsatisfiable, and it is a reward-shaped measure besides. Drop
+it, or make it behavioural or relative to today's world, and show one world can pass before using
+it as a gate. Second, E2 as written (five quantiles of one pooled hit-size distribution) drops the
+lethal tail it exists to model: measured on the first Wave-2 block, 61 % of hits outside cover are
+rock scrapes of 1–5 points and only 3.9 % are 100 or more, so the 10–90 % quantiles run 1.7 to
+66 and no hit kills below ~34 injury. Hit odds also differ by activity in the direction that
+decides eat-versus-hide (eating steps: 0.056 per step, mean hit 11; moving: 0.027, mean 27;
+resting: 0.0018, mean 72). Use fixed size bins with a ≥ 100 bin (or per source), per activity,
+from both agents, and assert the mean-field hazard is reproduced.
+
+**Moderate, to settle before the page is read:** "warming = at the ring" is never best on the
+warm-bush map (the warm bush dominates the ring), so criterion 1's thresholds depend on the map
+mix and the two bush-fire settings are judged against different effective thresholds — count
+overlapping shares or apply criteria per map (M1, and the same for B-hide, M7); B-death's cause
+shares will be dominated by start-doomed deaths near the 5 % gate — exclude early deaths and
+report counts (M2); B-comb lost its 5-point floor while the tie margin alone moves today's gain
+2.6 points against a 1.0-point grid floor — restore it (M3); the food axis has today at one end,
+so an inverted U cannot be shown — add gross 8 and 10, and note that bites-per-item and
+trip-to-food are one effective axis in the geometric model (M4); the E1/E2-off reproduction guards
+the shared path only — add E2-collapsed-to-mean ≡ E2-off, mean bites per visit ≈ 12, and
+both-agent agreement (M5); the hit-probability axis has no config knob — name the knobs and the
+mapping, or call it diagnostic (M6); new modules need scripts-dependency-map rows in the same
+commit (M8). Open: which agent's hazard numbers are used; true vs felt injury in the trained-agent
+metrics; hazard is place-independent although eating steps are hit twice as often as moving steps.
+
+**What flips the verdict:** criterion 2 replaced or dropped, and E2 respecified as above, in this
+plan, before the sweep runs.
+
+Reviewed by: plan-reviewer
