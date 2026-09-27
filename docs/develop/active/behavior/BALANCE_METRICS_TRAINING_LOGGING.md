@@ -808,3 +808,20 @@ a definitional error that no rerun fixes, only a re-definition and a re-read of 
 **Cost of being wrong.** If the snapshot step fails silently, the cost is zero on a clean fast-forward (the likely case) and a missing rollback on the one path the procedure already tells the developer to stop on; the procedure's stop rules, not the snapshot, are what actually protect `results/`. Nothing in Revision 1 can produce a wrong study conclusion that the first review did not already close.
 
 *Reviewed by: plan-reviewer*
+
+## User decisions (2026-09-27, recorded by the parent session)
+
+- **D1 — switch:** a required config switch (read with `config.get_mandatory`, no default); stated in every
+  maintained config and the stand-alone configs that train rPPO.
+- **D2 — late deaths:** yes, add death-cause counts that exclude early deaths, **with the early-step cut-off
+  configurable** (a required key alongside the switch; level-05 value 20, matching the study plan). Read
+  only when the switch is on.
+- **D3 — offline "choice" script: dropped from this plan.** User: "this should be analyzed, not a metric to
+  confirm." The two-states-versus-one measure belongs to a later analysis, not to training logging; remove
+  Part D's script from the scope (keep the note on felt injury for the analyzer).
+- **Merge-back backup:** measure the size of `results/` first; back it up to a location outside the repo if
+  it fits; if not, skip the copy and record why in the implementation report (the fast-forward-only merge
+  moves tracked files only). Never start the merge after a failed copy.
+- Plan-reviewer confirming pass: SOUND WITH CONCERNS (`cc6b7a23`); its two Low notes apply (`near_fire`
+  covers the whole heated ring; no fetch needed only while nobody pushes the branch).
+- **Status: approved for implementation.**
