@@ -1372,3 +1372,68 @@ If the pick rule mis-selects (M1, M3) or the base ladder drifts under the study 
   plain-level-05 ordinary run (`w0000_ordinary`) before the full runs, as the tooling does.
 - **Collection:** final checkpoint only, 1,000,000 episodes per run, seed_base 1,000,000 (paired with
   Wave 2); the §4.4 time-course cadence is deferred to a later step.
+
+## Feedback from plan-reviewer (analysis verdict, §7)
+
+**Verdict: SUPPORTED WITH CAVEATS** (2026-09-28, reviewed against commits `6eb8b253` and `512acb91`).
+
+Severity legend: 🔴 Critical = fix before going further · 🟡 Moderate = likely costs a re-run · 🟢 Low = cosmetic · ❓ Open = an assumption nobody has verified yet.
+
+**In plain words.** The screen asked whether any of the four body rules makes the neuromodulated agent's
+behaviour diverge from the ordinary agent's, and found that none does. That conclusion is supported by
+the numbers as registered: every one of the 15 effects on the agent-to-agent gap sits inside even the
+looser noise margin, on every measure, and the pre-registered criterion (the simultaneous margin, SME)
+was applied as written with no post-hoc softening. Two things must **not** be claimed from this data:
+that "the modulator survives longer" as a property of the architecture, and that the primary measure
+detects "eats first when hurt and hungry" in the sense the design registered.
+
+### What passes (checked, not assumed)
+
+- **Lenth arithmetic reproduces exactly.** I recomputed all 15 contrasts, PSE, ME and SME for every
+  series (gap, modulated, ordinary × 7 measures) from `results/analysis/level05_body_interactions/factorial_effects.json`
+  with independent code; all 21 series match, and the gap series has 0 effects above ME on every measure.
+- **Pairing and tags.** All 32 collection-spec labels, store directory names and WandB `tag` fields agree
+  (0 mismatches); the script also refuses a mis-mapped id (`factorial_effects.py`, tag-vs-run-dir guard).
+- **Survival steps only.** `pilot_pick.py:57` reads `Episode/Steps`, `Number`, `_window_n`, `Term_Starvation`;
+  no reward key anywhere in the four scripts.
+- **Run inventory complete.** 32 of 32 rows of §3.0b are in the verdict; none dropped, none partial
+  (`"partial": false`, all WandB statuses `ok`, all stores 200/200 blocks).
+- **Pre-registration honoured.** The fixed contrasts (hungry < 60, fed ≥ 100, injury 0–20 vs 60–100),
+  the ≥ 200-step rule (smallest cell 1.55 M), the SME criterion for "noted", the collapse line
+  (0.60 × w0000, no cell below 72.7 %) and the all-null reading of the sign pattern are the §4 rules as
+  written. The felt-injury low bin was changed to "exactly 0" before any complete store was read,
+  for a structural reason (52 % of steps at 0), and disclosed.
+- **Prior art.** Known Bugs "contemporaneous-binning" class (registry row on `hiding_drivers.py:214`)
+  is not walked into: measure 1 is a state co-occurrence (bush at t, body at t) by definition, and
+  measure 3 correctly reads `ate_food` at t+1. Nothing new for `bug-curator`.
+
+### Findings
+
+| # | Sev | Where | Issue | Suggested fix | Owner |
+|---|---|---|---|---|---|
+| A1 | 🟡 | §4.1 M1, §7.8 flag 1 | The measure's construct premise fails in the data. M1 ≈ +0.22 in the unchanged world is not "eats first when hurt": it is a baseline offset — unhurt-and-hungry agents sit in a bush 43 % of the time versus 22 % unhurt-and-fed (`figure_data/dose_tables.json`, w0000 ordinary, bin 0–10), so the hungry curve has less headroom to rise. The §4.6 known-input check that was registered to catch exactly this ("expected ≈ 0", to run "before the factorial finishes") was skipped. The **null on the gap stands** — both agents carry the same offset and their dose curves overlap — but any sentence saying M1 measured nutrition-dependent hiding in the registered sense is unsupported until the Wave-2 check is run and M1's baseline understood. | Run the §4.6 check on the Wave-2 level-05 stores (an hour); rewrite §7.0's first paragraph to say the gap is null *on a measure whose zero point is not yet calibrated*. | experiment-analyzer |
+| A2 | 🟡 | §7.0, §7.5, §7.7 survival row | 16/16 is one initialisation pair, not 16 replicates. `train.py:1152-1153` derives `model_key` and `env_key` from `PRNGKey(seed)` with no dependence on the world config, and the factors do not change the observation layout, so every ordinary run starts from the same weights and the same first resets, and likewise every modulated run. The modulated config also adds a FiLM network at four sites (`models/config.yaml` diff: `type: FiLM`, `mod_hidden_size: 16`, sites encoder/rnn/actor/critic) — extra parameters. The stage-1 seed SD of survival is 1.5 steps (§6.1), so the SD of a one-run-minus-one-run gap is ≈ 2.1; the gaps of 1.9–5.8 are 1–3 such SDs. What the design licenses: "with this seed pairing the modulated agent survived about 1.6 % longer in all 16 worlds, and no rule changed that lead." What it does not: "the modulator improves survival" (init, capacity and seed are all confounded), or any mechanism (§5 row "performance without mechanism" already says so). | Add one sentence to §7.0 and §7.7 naming the shared-init confound and the 2.1-step yardstick; if the lead matters, 3 seeds of w0000 for both agents (~6 runs) settles it before anyone cites it. | experiment-analyzer (wording); pi (whether to replicate) |
+| A3 | 🟢 | §7.8 flag 2 | The non-monotone cover curve does **not** make the null uninformative. Recomputing the gap effects from the dose tables with the high range moved to the peak (40–60), to 60–80, or to 80–100 gives 0 effects above ME in every case (max effect 0.038–0.040 against ME 0.043–0.057), and the two agents' share of high-range steps lying in 80–100 is identical (fed 0.377 vs 0.380; hungry 0.340 vs 0.340), so no composition (Simpson-type) artefact. | Record this robustness line under flag 2 so the reader does not have to redo it. | experiment-analyzer |
+| A4 | 🟢 | §7.3 per-agent table, §7.8 flag 4 | Lenth's sparsity assumption (most effects noise) fails when 5–7 of 15 per-agent effects are real; the tiny per-agent PSEs (0.0035, 0.007) are artefacts of that. The doc already labels those lists descriptive. | Do not carry per-agent "noted" counts into any summary or page. | experiment-analyzer |
+| A5 | 🟢 | §7.1 | Tooling tests on partial stores (00:30–00:39, `*_PARTIAL.json`) showed M1 values of other runs before the 01:47 freeze. The freeze itself is uncontaminated (quantiles of the reference run only) and the "low = 0" decision was structural, but say so in one clause. | Add "(partial-store tooling tests had been viewed; the cut-points depend only on the reference run)" to the frozen-cut-points bullet. | experiment-analyzer |
+
+### Open assumptions (❓)
+
+- **O1. Power.** ME on the M1 gap is 0.047, about a fifth of the unchanged-world baseline. The corrected
+  simulation itself predicted only +1.6 to +3.1 planner points against a ±3.2 band (§2.2.1), i.e. it never
+  predicted a large effect. The null is therefore *consistent with* the simulation's small-effect prediction;
+  it is not evidence against transfer, and §7.0 rightly says so.
+- **O2. Endpoint only.** The §4.4 behaviour time course and the §4.3 across-checkpoint spread were
+  deferred, so a gap effect present mid-training and gone by 10 M would be missed. Not load-bearing
+  for a final-checkpoint null, but it is the one way the null could be wrong in kind rather than in size.
+- **O3. Store convention.** All behaviour measures rest on the decision-row convention (state at t, `ate_food`
+  at t+1, `_common.py`) matching `TRAJECTORY_STORE_SCHEMA.md` §1. Read, not tested here; `code-reviewer`'s object.
+
+### Cost of being wrong
+
+No compute is at stake in the null itself — the screen launches nothing. The risk is a sentence in a
+paper: "the modulator survives longer" from one initialisation pair (A2), or "M1 measures eat-first
+behaviour" from a measure whose zero point was never calibrated (A1). Both are a wording change plus
+about an hour of Wave-2 sanity checking; leaving them costs credibility, not GPU time.
+
+*Reviewed by: plan-reviewer*
