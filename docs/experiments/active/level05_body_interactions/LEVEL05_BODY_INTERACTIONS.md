@@ -1081,3 +1081,14 @@ The metric is survival steps throughout and reward is never read (§2.3, §4.1).
 If the pick rule mis-selects (M1, M3) or the base ladder drifts under the study (M7), the ~510 GPU-hour factorial answers a different question than the one registered for at least one factor, and that factor's half must be rerun (~250 GPU-hours, about a day on the cluster). M2 and M4 cost no compute but would turn a chance "noted" effect into a claimed confirmation. There is no data-loss exposure in this plan.
 
 *Reviewed by: plan-reviewer*
+
+## Pre-analysis decision (2026-09-28, parent session; before any complete-store result is read)
+
+- **Felt-injury low range.** In the first shards, about 54 % of steps have felt injury exactly 0 (the felt
+  signal starts at 0 each episode and stays there while unhurt), so the pre-registered "bottom fifth" of felt
+  injury cannot be formed: the low bin is **felt injury = 0**, which is disclosed with its share of steps.
+  **True injury (0–20 vs 60–100) remains the deciding contrast** for measure 1, as in the internal-state
+  study's Revision 2c; the felt-injury version is reported alongside. Cut-points are frozen from the
+  plain-level-05 ordinary run (`w0000_ordinary`) before the full runs, as the tooling does.
+- **Collection:** final checkpoint only, 1,000,000 episodes per run, seed_base 1,000,000 (paired with
+  Wave 2); the §4.4 time-course cadence is deferred to a later step.
