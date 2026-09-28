@@ -1337,3 +1337,35 @@ wording is struck through (~~like this~~), not deleted. No config, schedule or s
 | O5 | Recorded as user decision **D8**: the branches need not wait for runs 1–2 to reach 14 M (`L_Forage` cannot change; the 11 M checkpoints exist); waiting now costs ≈ 1.5–2 h, not 8 h | 3.7.6, 6.3 item 10 |
 
 Signed: experiment-designer
+
+### Addendum from plan-reviewer (re-check of Revision 2a, commit `e67ed196`, 2026-09-28)
+
+**Verdict: SOUND WITH CONCERNS** — the exit condition is met. R1 is resolved in 5.1 before rows 23–24
+launch: the common-reference companion (dip in absolute steps against the lower of the two agents'
+first-visit levels; recovery to 0.9 × that level, in episodes and environment steps) is pre-registered,
+the H-dip vote needs both readings and the H-rec vote all four, and failure mode 7.11 records a
+disagreeing switch as "not counted". I recomputed the Winter example independently from the WandB rows
+with the read-out script's own functions: shared target 144.7 steps, ordinary recovers at **28,000**
+episodes, modulated at **40,000** — the sign reverses exactly as stated; zero-shot survival 129.4 /
+138.4 confirmed. The rule is conservative in both directions (for the lower-plateau agent the two
+readings coincide), which is the right shape for a screen.
+
+R2–R7 wording confirmed: the Winter trajectory table matches the data at every column (152.9 … 198.0;
+132.3 … 160.8); "3 of 4 clauses met, provisional" is the honest Pilot 2 label and the sweep is now a
+launch gate; the R4 asymmetry statements and interfering-episode reporting are right; the branch
+start-up lines in 6.3 match `train.py:1559-1580`; the 7.4 citation and "best window" are struck; manifest
+statuses updated; D8 is a fair statement of O5.
+
+Remaining concerns (none blocks launch):
+- 🟢 6.3 item 5 line (a): the restore prints the step as `  -> Restored N model param leaves + optimizer
+  state (checkpoint step 11000025).` (`src/utils/checkpoint_restore.py:60`), not as a `[RESUME]` line;
+  name that line so the runner looks for the right one. Owner: experiment-designer.
+- ❓ O7: the companion is registered but not yet implemented (`pilot_readout.py` reads own-reference only);
+  the `developer` hand-off must land before the first P3 stage ends (≈ 6–7 h after launch at Winter's
+  pilot throughput). Nothing is lost if it slips — the rows are logged — but the first switch would be
+  read late. Owner: senior-developer → developer.
+- ❓ O1–O4 from the Revision 2 feedback stand unchanged.
+
+Cost of being wrong now: a wrong label or a late read, not a wrong claim and not a rerun.
+
+Reviewed by: plan-reviewer

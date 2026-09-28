@@ -80,3 +80,16 @@ R1 resolved in 5.1 before P3 (rows 23–24) launches. Then: SOUND WITH CONCERNS,
 concerns.
 
 Reviewed by: plan-reviewer
+
+## Re-check of Revision 2a (commit `e67ed196`)
+
+**Verdict: SOUND WITH CONCERNS.** Exit condition met: the common-reference companion for dip and
+recovery is pre-registered in 5.1 before any main run launches, with the both-readings vote rule and
+failure mode 7.11. Independent recomputation from the WandB rows confirms the Winter example (shared
+target 144.7 steps; recovery 28,000 vs 40,000 episodes, sign reversed). R2–R7 wording verified against
+the data and `train.py`. Remaining: one Low (checklist line (a) names a `[RESUME]` line where the trainer
+prints `-> Restored ... (checkpoint step N)`) and one Open (the companion is not yet implemented in the
+analysis code; hand-off to `developer` before the first P3 stage ends). Details in the plan doc's
+"Addendum from plan-reviewer (re-check of Revision 2a)".
+
+Reviewed by: plan-reviewer
