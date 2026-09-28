@@ -4773,3 +4773,53 @@ cd /media/nas01/projects/Interoceptive-AI/grid_world_pain
 #   --episodes 11500000 --checkpoint-frequency 100000 --seed 42 --device cuda:1 \
 #   --tag rppo_cw_scout_fog_scout_b_t16quad_s42 --wandb-name rppo_cw_scout_fog_scout_b_t16quad_s42 \
 #   --wandb-group continual_worlds --wandb-job-type pilot
+# ---------------------------------------------------------------------------
+# 2026-09-29 — continual-worlds MAIN branches, manifest rows 19-24 (user go 2026-09-29, design doc 3.7.7).
+# Continual schedule mode (--configs-dir + --continual-schedule; no --episodes, budget = last boundary).
+# Each loads its agent's branch-point copy (Forage pilot step 11000025 ordinary / 11000022 modulated).
+# Pre-flight: run 14 'Training complete'; branch copies byte-identical to sources, latest_step = copied
+# step; 107/108/109 GPUs free, no train.py, NAS mounted, JAX GPU-compile OK (0.9.0.1); no src/train.py
+# change since Pilot 2; schedules env-config-reviewed GO WITH NOTES. --seed 42 per manifest (record only).
+# ---------------------------------------------------------------------------
+# Run 23: rppo_cw_p3_t1none_s42 — node 107, cuda:0
+# /home/vncuser/miniconda3/envs/grid_world_pain/bin/python train.py --configs-dir configs/continual/continual_worlds/p3_winter_famine_stages \
+#   --continual-schedule configs/continual/continual_worlds/p3_winter_famine.yaml \
+#   --agent_config configs/models/recurrent_ppo/nmn_input_site_grid_gaenorm/nmngaenorm_t1none.yaml \
+#   --load-checkpoint results/JAX_RecurrentPPO/cw_branchpoint_forage_t1none_s42/models \
+#   --seed 42 --device cuda:0 --tag rppo_cw_p3_t1none_s42 --wandb-name rppo_cw_p3_t1none_s42 \
+#   --wandb-group continual_worlds --wandb-job-type prod
+# Run 24: rppo_cw_p3_t16quad_s42 — node 107, cuda:1
+# /home/vncuser/miniconda3/envs/grid_world_pain/bin/python train.py --configs-dir configs/continual/continual_worlds/p3_winter_famine_stages \
+#   --continual-schedule configs/continual/continual_worlds/p3_winter_famine.yaml \
+#   --agent_config configs/models/recurrent_ppo/nmn_input_site_grid_gaenorm/nmngaenorm_t16quad_ALL.yaml \
+#   --load-checkpoint results/JAX_RecurrentPPO/cw_branchpoint_forage_t16quad_s42/models \
+#   --seed 42 --device cuda:1 --tag rppo_cw_p3_t16quad_s42 --wandb-name rppo_cw_p3_t16quad_s42 \
+#   --wandb-group continual_worlds --wandb-job-type prod
+# Run 19: rppo_cw_p1_danger_scout_a_famine_t1none_s42 — node 108, cuda:0
+# /home/vncuser/miniconda3/envs/grid_world_pain/bin/python train.py --configs-dir configs/continual/continual_worlds/p1_danger_scout_a_famine_stages \
+#   --continual-schedule configs/continual/continual_worlds/p1_danger_scout_a_famine.yaml \
+#   --agent_config configs/models/recurrent_ppo/nmn_input_site_grid_gaenorm/nmngaenorm_t1none.yaml \
+#   --load-checkpoint results/JAX_RecurrentPPO/cw_branchpoint_forage_t1none_s42/models \
+#   --seed 42 --device cuda:0 --tag rppo_cw_p1_danger_scout_a_famine_t1none_s42 --wandb-name rppo_cw_p1_danger_scout_a_famine_t1none_s42 \
+#   --wandb-group continual_worlds --wandb-job-type prod
+# Run 20: rppo_cw_p1_danger_scout_a_famine_t16quad_s42 — node 108, cuda:1
+# /home/vncuser/miniconda3/envs/grid_world_pain/bin/python train.py --configs-dir configs/continual/continual_worlds/p1_danger_scout_a_famine_stages \
+#   --continual-schedule configs/continual/continual_worlds/p1_danger_scout_a_famine.yaml \
+#   --agent_config configs/models/recurrent_ppo/nmn_input_site_grid_gaenorm/nmngaenorm_t16quad_ALL.yaml \
+#   --load-checkpoint results/JAX_RecurrentPPO/cw_branchpoint_forage_t16quad_s42/models \
+#   --seed 42 --device cuda:1 --tag rppo_cw_p1_danger_scout_a_famine_t16quad_s42 --wandb-name rppo_cw_p1_danger_scout_a_famine_t16quad_s42 \
+#   --wandb-group continual_worlds --wandb-job-type prod
+# Run 21: rppo_cw_p2_fog_scout_b_danger_scout_a_t1none_s42 — node 109, cuda:0
+# /home/vncuser/miniconda3/envs/grid_world_pain/bin/python train.py --configs-dir configs/continual/continual_worlds/p2_fog_scout_b_danger_scout_a_stages \
+#   --continual-schedule configs/continual/continual_worlds/p2_fog_scout_b_danger_scout_a.yaml \
+#   --agent_config configs/models/recurrent_ppo/nmn_input_site_grid_gaenorm/nmngaenorm_t1none.yaml \
+#   --load-checkpoint results/JAX_RecurrentPPO/cw_branchpoint_forage_t1none_s42/models \
+#   --seed 42 --device cuda:0 --tag rppo_cw_p2_fog_scout_b_danger_scout_a_t1none_s42 --wandb-name rppo_cw_p2_fog_scout_b_danger_scout_a_t1none_s42 \
+#   --wandb-group continual_worlds --wandb-job-type prod
+# Run 22: rppo_cw_p2_fog_scout_b_danger_scout_a_t16quad_s42 — node 109, cuda:1
+# /home/vncuser/miniconda3/envs/grid_world_pain/bin/python train.py --configs-dir configs/continual/continual_worlds/p2_fog_scout_b_danger_scout_a_stages \
+#   --continual-schedule configs/continual/continual_worlds/p2_fog_scout_b_danger_scout_a.yaml \
+#   --agent_config configs/models/recurrent_ppo/nmn_input_site_grid_gaenorm/nmngaenorm_t16quad_ALL.yaml \
+#   --load-checkpoint results/JAX_RecurrentPPO/cw_branchpoint_forage_t16quad_s42/models \
+#   --seed 42 --device cuda:1 --tag rppo_cw_p2_fog_scout_b_danger_scout_a_t16quad_s42 --wandb-name rppo_cw_p2_fog_scout_b_danger_scout_a_t16quad_s42 \
+#   --wandb-group continual_worlds --wandb-job-type prod
