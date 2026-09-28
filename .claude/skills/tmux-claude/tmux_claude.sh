@@ -122,6 +122,53 @@ cmd_new() {  # new <tmux-session-name> [display-name]
   verify "$t"
 }
 
+cmd_recent() {  # recent [n]  — recent conversations, newest first, with title, where it runs, last user message
+  "$PY" - "$TRANSCRIPTS" "$SESS_DIR" "${1:-20}" <<'EOF'
+import json, os, glob, time, sys
+tdir, sdir, n = sys.argv[1], sys.argv[2], int(sys.argv[3])
+live = {}
+for f in glob.glob(os.path.join(sdir, '*.json')):
+    try: d = json.load(open(f))
+    except Exception: continue
+    if os.path.exists('/proc/%d' % d['pid']):
+        live[d['sessionId']] = (d.get('tmux') or d.get('kind') or 'running').split(':@')[0]
+shown = 0
+for f in sorted(glob.glob(os.path.join(tdir, '*.jsonl')), key=os.path.getmtime, reverse=True):
+    sid = os.path.basename(f)[:-6]; title = None; last = None; nuser = 0
+    for line in open(f):
+        try: d = json.loads(line)
+        except Exception: continue
+        if d.get('type') == 'custom-title': title = d.get('customTitle')
+        if d.get('type') == 'user' and not (d.get('isSidechain') or d.get('isMeta') or d.get('isCompactSummary')):
+            c = d['message'].get('content')
+            t = c if isinstance(c, str) else ' '.join(x.get('text', '') for x in c if isinstance(x, dict) and x.get('type') == 'text')
+            t = (t or '').strip()
+            if t and not t.startswith(('<', 'This session is being continued', '[Request interrupted')):
+                last = t; nuser += 1
+    if nuser == 0: continue
+    print(f"{time.strftime('%m-%d %H:%M', time.localtime(os.path.getmtime(f)))} | {sid} | {live.get(sid, 'asleep'):<16} | "
+          f"{(title or '')[:28]:<28} | {nuser:>3} msgs | {(last or '').replace(chr(10), ' ')[:70]}")
+    shown += 1
+    if shown >= n: break
+EOF
+}
+
+cmd_wake() {  # wake <session-id> <tmux-session-name>  — resume an existing conversation in a new tmux session
+  local sid="$1" name="$2" f
+  f=$(ls "$TRANSCRIPTS"/"$sid"*.jsonl 2>/dev/null | head -1); [ -n "$f" ] || die "no conversation matching $sid"
+  sid=$(basename "$f" .jsonl)
+  for j in "$SESS_DIR"/*.json; do
+    if grep -q "\"$sid\"" "$j" && kill -0 "$(basename "$j" .json)" 2>/dev/null; then
+      die "conversation $sid is already running (pid $(basename "$j" .json)) — use restart on its pane instead"
+    fi
+  done
+  tmux has-session -t "=$name" 2>/dev/null && die "tmux session '$name' already exists"
+  tmux new-session -d -s "$name" -c "$PROJECT_DIR"
+  local t; t=$(tmux list-panes -t "=$name" -F '#{session_name}:#{window_index}.#{pane_index}' | head -1)
+  tmux send-keys -t "$t" "cd $PROJECT_DIR && claude $CLAUDE_FLAGS --resume $sid --remote-control" Enter
+  verify "$t"
+}
+
 cmd_kill() {  # kill <target> [--force]  — exit claude, then close the pane
   local t="$1" pid
   pid=$(claude_pid "$t")
@@ -139,7 +186,9 @@ case "${1:-}" in
   last)    cmd_last "${2:?target or session id}" "${3:-6}" ;;
   verify)  verify "${2:?target}" ;;
   restart) cmd_restart "${2:?target}" "${3:-}" ;;
+  recent)  cmd_recent "${2:-20}" ;;
+  wake)    cmd_wake "${2:?session id (prefix ok)}" "${3:?tmux session name}" ;;
   new)     cmd_new "${2:?tmux session name}" "${3:-}" ;;
   kill)    cmd_kill "${2:?target}" "${3:-}" ;;
-  *) echo "usage: $0 {list|peek T [n]|last T|ID [n]|verify T|restart T [--force]|new NAME [display]|kill T [--force]}"; exit 1 ;;
+  *) echo "usage: $0 {list|recent [n]|wake ID NAME|peek T [n]|last T|ID [n]|verify T|restart T [--force]|new NAME [display]|kill T [--force]}"; exit 1 ;;
 esac

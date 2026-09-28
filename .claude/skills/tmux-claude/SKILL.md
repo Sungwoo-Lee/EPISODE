@@ -1,6 +1,6 @@
 ---
 name: tmux-claude
-description: "Inspect and control the Claude Code sessions the user runs inside tmux (they use tmux instead of `claude bg` because bg sessions sleep after an hour idle). Use for: listing tmux sessions/panes and which Claude conversation runs in each; peeking at a pane's screen; reading the latest user/assistant messages of a pane's conversation; restarting (rebooting) a pane's Claude so it resumes the SAME conversation; creating a new tmux session with a new Claude; terminating a pane's Claude. Every start/restart runs in the project directory with `--permission-mode bypassPermissions` and Remote Control, and is VERIFIED to have Remote Control on. Trigger on /tmux-claude, 'list the tmux sessions', 'what is running in tmux', 'restart/reboot the <name> session', 'open a new tmux claude session', 'kill/terminate window N', 'what did I last say in <pane>'."
+description: "Inspect and control the Claude Code sessions the user runs inside tmux (they use tmux instead of `claude bg` because bg sessions sleep after an hour idle). Use for: listing tmux sessions/panes and which Claude conversation runs in each; peeking at a pane's screen; reading the latest user/assistant messages of a pane's conversation; restarting (rebooting) a pane's Claude so it resumes the SAME conversation; creating a new tmux session with a new Claude; waking an asleep (not running) Claude conversation into a new tmux session; terminating a pane's Claude. Every start/restart runs in the project directory with `--permission-mode bypassPermissions` and Remote Control, and is VERIFIED to have Remote Control on. Trigger on /tmux-claude, 'list the tmux sessions', 'what is running in tmux', 'restart/reboot the <name> session', 'open a new tmux claude session', 'kill/terminate window N', 'what did I last say in <pane>', 'recent sessions', 'wake up the <title> session'."
 ---
 
 # /tmux-claude — drive Claude sessions living in tmux
@@ -11,6 +11,8 @@ All mechanics are in `tmux_claude.sh` next to this file. Run it; don't re-implem
 ```
 S=.claude/skills/tmux-claude/tmux_claude.sh
 $S list                          # every pane: claude PID, session id, name, status, Remote Control
+$S recent [n]                    # recent Claude conversations, newest first: title, where running ('asleep' = none), last user msg
+$S wake   <session-id> <tmux-name># resume an asleep conversation in a NEW tmux session (id prefix ok), then verify
 $S peek   <target> [lines]       # what the pane shows right now (menus, pending questions)
 $S last   <target|session-id> [n]# last n user/assistant messages from the conversation transcript
 $S restart <target> [--force]    # /exit, then relaunch resuming the SAME conversation, then verify
