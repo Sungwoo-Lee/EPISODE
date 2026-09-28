@@ -4747,3 +4747,16 @@ cd /media/nas01/projects/Interoceptive-AI/grid_world_pain
 #   --episodes 11500000 --checkpoint-frequency 100000 --seed 42 --device cuda:0 \
 #   --tag rppo_cw_scout_fog_scout_b_t1none_s42_r2 --wandb-name rppo_cw_scout_fog_scout_b_t1none_s42_r2 \
 #   --wandb-group continual_worlds --wandb-job-type pilot
+# ---------------------------------------------------------------------------
+# 2026-09-28 — Revision 1b scout row 42: MODULATED agent (t16quad) in Danger-A, pairing row 37
+# (ordinary agent at ~123-130 survival, on the survivable line). Identical to row 37 except agent
+# config, CK_M checkpoint, device and tag. Pre-flight: 109 GPUs idle (Pilot 1 Winter finished), no
+# train.py, NAS mounted, JAX GPU-compile check OK; env config GO WITH NOTES (2026-09-28).
+# ---------------------------------------------------------------------------
+# Run 42: rppo_cw_scout_danger_scout_a_t16quad_s42 — node 109, cuda:0
+# /home/vncuser/miniconda3/envs/grid_world_pain/bin/python train.py --config configs/environment/experiment/continual_worlds/danger_scout_a_15x15.yaml \
+#   --agent_config configs/models/recurrent_ppo/nmn_input_site_grid_gaenorm/nmngaenorm_t16quad_ALL.yaml \
+#   --load-checkpoint results/JAX_RecurrentPPO/20260927-053059_rppo_l05body_w0000_t16quad_s42/models \
+#   --episodes 11500000 --checkpoint-frequency 100000 --seed 42 --device cuda:0 \
+#   --tag rppo_cw_scout_danger_scout_a_t16quad_s42 --wandb-name rppo_cw_scout_danger_scout_a_t16quad_s42 \
+#   --wandb-group continual_worlds --wandb-job-type pilot

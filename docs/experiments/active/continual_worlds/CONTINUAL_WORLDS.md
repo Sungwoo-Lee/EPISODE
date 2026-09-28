@@ -517,7 +517,10 @@ Home legs (27–30) after their Nursery leg ends (27–28 only if Pilot 3 passed
 | 40-r2 | running | Scout Fog-A (Fog-soft + smell 5) — relaunch of 40 | `rppo_cw_scout_fog_scout_a_t1none_s42_r2` | continual_worlds | pilot | 42 | 107 | cuda:1 | 2026-09-28T19:27:55 | `n1zmj65i` | `logs/20260928_192755.log` |
 | 41 | abandoned — node 114 hung during compile ~19:09; if 114 recovers, kill any rppo_cw_scout_ processes there (relaunched as `_r2`, next row) | Scout Fog-B (smell 3, no noise) | `rppo_cw_scout_fog_scout_b_t1none_s42` | continual_worlds | pilot | 42 | 114 | cuda:2 | 2026-09-28T19:08:27 | `h4772olp` | `logs/20260928_190827.log` |
 | 41-r2 | running | Scout Fog-B (smell 3, no noise) — relaunch of 41 | `rppo_cw_scout_fog_scout_b_t1none_s42_r2` | continual_worlds | pilot | 42 | 110 | cuda:0 | 2026-09-28T19:28:03 | `pvzvl7bm` | `logs/20260928_192803.log` |
+| 42 | running | Scout Danger-A, modulated agent (pairs row 37) | `rppo_cw_scout_danger_scout_a_t16quad_s42` | continual_worlds | pilot | 42 | 109 | cuda:0 | 2026-09-28T20:54:17 | `35fobtmf` | `logs/20260928_205417.log` |
 
+Row 42 (added 2026-09-28 at the user's request) is the modulated-agent twin of row 37 — Danger-A is
+the candidate replacement closest to the survivable line, and a replacement world needs both agents.
 Rows 37–41 (Revision 1b) are **exploratory scouts, not pre-registered**: ordinary agent only, read
 descriptively with the survivable rule; they do not overturn the dropped worlds' verdicts.
 
@@ -560,6 +563,7 @@ the ordinary / modulated pre-trained `models/` directories (3.4). `BP_O` / `BP_M
 | 39 | `CW/danger_scout_c_15x15.yaml` (Revision 1b) | T1 | `CK_O` | 11500000 |
 | 40 | `CW/fog_scout_a_15x15.yaml` (Revision 1b) | T1 | `CK_O` | 11500000 |
 | 41 | `CW/fog_scout_b_15x15.yaml` (Revision 1b) | T1 | `CK_O` | 11500000 |
+| 42 | `CW/danger_scout_a_15x15.yaml` (Revision 1b) | T16 | `CK_M` | 11500000 |
 
 Rows 31–36 use exactly the flags of rows 3–12 (the Pilot 1 command in 4.2 with the world file and
 tag swapped): `--load-checkpoint` the same pre-trained `CK_O` / `CK_M`, `--episodes 13000000
