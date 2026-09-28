@@ -1,0 +1,4 @@
+inventory settings on the fixed side (food energy, injury, body temperature, interoception, reward)|33|62|53.2|level-05 balance-settings inventory, sections A-H; one row per setting
+inventory settings on the changing side (layout, food supply, danger, climate, sensing)|25|62|40.3|the design may change any of these; which ones each world changes is Figure 2
+inventory rows left out of both sides|4|62|6.5|not environment settings: No cell settles the body at 0; Agent can step onto a fire; agent.gamma; return mode / entropy
+body fields compared across the 8 resolved world configs|63|63|100.0|load_env_config -> load_env_params (the trainer's path); every one identical in all 8 worlds, including the two boundary items

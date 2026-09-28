@@ -1,0 +1,5 @@
+main sequences read from schedule files|3|3|100.0|configs/continual/continual_worlds/*.yaml boundaries + their stage folders' extends: targets
+Pilot 2 sequences|2|2|100.0|source: design doc plan-review row F1 (no pilot schedule file yet)
+Pilot 1 single-switch runs (one per new concept)|6|6|100.0|concepts from design doc section 3.6; budget --episodes 11,000,000 from the manifest row for the pilots
+Pilot 3 from-scratch run length (episodes)|2,000,000|2,000,000|100.0|manifest row for the Nursery legs; drawn on its own counter from 0
+stage blocks drawn / of which second visits|10|32|31.2|a second visit = a world already visited earlier in the same run

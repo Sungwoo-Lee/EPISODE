@@ -1,0 +1,129 @@
+<title>Continual Worlds</title>
+__HOUSE_STYLE__
+<style>
+  /* REQUIRED OVERRIDE (House Style Sheet, F11 amendment): on this project's pages blue, orange and green
+     mean rest in cover, warm up and eat; these figures use ink and greys, plus one accent (red) for a single highlight per figure,
+     and the chrome is kept off those three hues so a reader never reads the page accent as a choice. */
+  :root { --accent: #3f5b7a; --accent-text: #35506e; --warn: #7a5340; }
+  :root { --f-head: 'Pretendard', system-ui, -apple-system, "Segoe UI", sans-serif;
+          --f-mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace; }
+  figure, figcaption { min-width: 0; }
+  /* floors must sum under the 688px column with the widest numeric columns: 160 + 2 x 130 (13-digit
+     counts, nowrap) + 75 + 190 = 685 px, so tables fit a desktop and scroll only on narrow screens
+     (F24 amendment, F35) */
+  table.datatable td:last-child, table.datatable th:last-child { min-width: 190px; }
+  table.datatable td:first-child, table.datatable th:first-child { min-width: 160px; }
+  /* align-self: a flex child is blockified and stretched, so inline-block alone renders a full-width bar */
+  p.kind { display: inline-block; align-self: flex-start; margin: 0 0 6px; padding: 2px 9px; border-radius: 3px;
+           font-size: 12.5px; letter-spacing: .02em; border: 1px solid var(--rule); color: var(--ink-2); }
+  p.kind-design { border-color: var(--ink-2); color: var(--ink-2); border-style: dashed; }
+  /* F65: floor = canvas px x 9 / smallest label px. Every figure's smallest text is 9.5 pt at 220 dpi
+     (29.0 px) and page/_common.save() refuses a canvas wider than 2209 px, so 685 px keeps it at >= 9 px.
+     It must stay <= the 688 px column, or every figure shows a scroll cue on a desktop (F32 amendment). */
+  .figscroll img { min-width: 685px; }
+  ol, ul { margin: 0; padding-left: 1.4em; } li + li { margin-top: 6px; }
+</style>
+
+<div class="wrap">
+
+<section class="col">
+  <h1>Continual Worlds</h1>
+  <p class="lede"><!-- PROSE:lede --></p>
+</section>
+
+<section class="col">
+<h2><span class="num">01</span> What this experiment asks</h2>
+<!-- PROSE:asks -->
+<div class="callout">
+  <p class="eyebrow">Status</p>
+  <p><!-- PROSE:status --></p>
+</div>
+</section>
+<section class="col">
+<h2><span class="num">02</span> The body stays, the world changes</h2>
+<p><!-- PROSE:body_intro --></p>
+
+<figure>
+  <p class="cue" hidden>Wider than the screen — scroll sideways, or click the figure to open it full size.</p>
+  <div class="scroll figscroll"><img data-fig="p1_body_vs_world" alt="Schematic with two columns of boxes. Left, solid boxes, fixed in every world: food energy, injury, body temperature, interoception and reward, each with the number of level-05 settings it holds; food energy per bite and bush healing are marked in red as boundary items kept fixed. Right, dashed boxes, changing between worlds: layout, food supply, danger, climate and sensing."></div>
+  <p class="zoomhint">Click the figure to open it full size.</p>
+  __KIND:p1_body_vs_world__
+  <figcaption>
+    <span><b>Figure 1 — <!-- PROSE:p1_body_vs_world_title --></b> <!-- PROSE:p1_body_vs_world_lead --></span>
+    <span><b>Axes.</b> <!-- PROSE:p1_body_vs_world_axes --></span>
+    __DATA:p1_body_vs_world__
+    <span><b>How it is computed.</b> <!-- PROSE:p1_body_vs_world_method --> <b>What this figure does not show:</b> <!-- PROSE:p1_body_vs_world_not_shown --></span>
+  </figcaption>
+</figure>
+</section>
+<section class="col">
+<h2><span class="num">03</span> Eight worlds, side by side</h2>
+<p><!-- PROSE:matrix_intro --></p>
+
+<figure>
+  <p class="cue" hidden>Wider than the screen — scroll sideways, or click the figure to open it full size.</p>
+  <div class="scroll figscroll"><img data-fig="p2_concept_matrix" alt="Table-like grid with one row per concept world (Nursery, Home, Forage, Danger, Famine, Winter, Fog, Harsh) and twelve columns of external factors such as grid size, smell range, food items, hunting predators and sensing noise. Each cell shows the value read from that world's config; grey shading marks factors harder than Home, hatching marks factors easier than Home."></div>
+  <p class="zoomhint">Click the figure to open it full size.</p>
+  __KIND:p2_concept_matrix__
+  <figcaption>
+    <span><b>Figure 2 — <!-- PROSE:p2_concept_matrix_title --></b> <!-- PROSE:p2_concept_matrix_lead --></span>
+    <span><b>Axes.</b> <!-- PROSE:p2_concept_matrix_axes --></span>
+    __DATA:p2_concept_matrix__
+    <span><b>How it is computed.</b> <!-- PROSE:p2_concept_matrix_method --> <b>What this figure does not show:</b> <!-- PROSE:p2_concept_matrix_not_shown --></span>
+  </figcaption>
+</figure>
+</section>
+<section class="col">
+<h2><span class="num">04</span> What the worlds look like</h2>
+<p><!-- PROSE:layouts_intro --></p>
+
+<figure>
+  <p class="cue" hidden>Wider than the screen — scroll sideways, or click the figure to open it full size.</p>
+  <div class="scroll figscroll"><img data-fig="p3_concept_layouts" alt="Eight small grid maps, one example episode start per concept world, all drawn at the same cell size so the 10 by 10, 15 by 15 and 20 by 20 worlds differ visibly in size. Symbols mark food, bushes, fires with warm ground shaded grey, rocks, hunting predators, hidden ambushers and the agent's start."></div>
+  <p class="zoomhint">Click the figure to open it full size.</p>
+  __KIND:p3_concept_layouts__
+  <figcaption>
+    <span><b>Figure 3 — <!-- PROSE:p3_concept_layouts_title --></b> <!-- PROSE:p3_concept_layouts_lead --></span>
+    <span><b>Axes.</b> <!-- PROSE:p3_concept_layouts_axes --></span>
+    __DATA:p3_concept_layouts__
+    <span><b>How it is computed.</b> <!-- PROSE:p3_concept_layouts_method --> <b>What this figure does not show:</b> <!-- PROSE:p3_concept_layouts_not_shown --></span>
+  </figcaption>
+</figure>
+</section>
+<section class="col">
+<h2><span class="num">05</span> The run plan</h2>
+<p><!-- PROSE:plan_intro --></p>
+
+<figure>
+  <p class="cue" hidden>Wider than the screen — scroll sideways, or click the figure to open it full size.</p>
+  <div class="scroll figscroll"><img data-fig="p4_sequences" alt="Timeline chart. Rows are the planned runs: six single-switch pilots, two short A-B-A-B pilots, a from-scratch Nursery pilot on its own narrow axis, and the three main sequences P1 to P3. Horizontal axis is the episode counter in millions from 10 to 20; each block is one stage labelled by its world, with a consistent grey or hatch per world and a red bar under every second visit."></div>
+  <p class="zoomhint">Click the figure to open it full size.</p>
+  __KIND:p4_sequences__
+  <figcaption>
+    <span><b>Figure 4 — <!-- PROSE:p4_sequences_title --></b> <!-- PROSE:p4_sequences_lead --></span>
+    <span><b>Axes.</b> <!-- PROSE:p4_sequences_axes --></span>
+    __DATA:p4_sequences__
+    <span><b>How it is computed.</b> <!-- PROSE:p4_sequences_method --> <b>What this figure does not show:</b> <!-- PROSE:p4_sequences_not_shown --></span>
+  </figcaption>
+</figure>
+</section>
+<section class="col">
+<h2><span class="num">06</span> What will be measured</h2>
+<!-- PROSE:measures -->
+</section>
+<section class="col">
+<h2><span class="num">07</span> Open decisions</h2>
+<!-- PROSE:decisions -->
+</section>
+<section class="col">
+<h2><span class="num">08</span> How to reproduce this</h2>
+<ul>
+  <li>Design, pre-registration and launch manifest: <code>docs/<wbr>experiments/<wbr>active/<wbr>continual_worlds/<wbr>CONTINUAL_WORLDS.md</code></li>
+  <li>Concept worlds: <code>configs/<wbr>environment/<wbr>experiment/<wbr>continual_worlds/</code>; schedules and stage folders: <code>configs/<wbr>continual/<wbr>continual_worlds/</code></li>
+  <li>This page: <code>scripts/<wbr>analysis/<wbr>studies/<wbr>continual_worlds/<wbr>page/</code> — one script per figure (<code>p1_body_vs_world.py</code>, <code>p2_concept_matrix.py</code>, <code>p3_concept_layouts.py</code>, <code>p4_sequences.py</code>), <code>build_page.py</code></li>
+</ul>
+<p><!-- PROSE:style_departures --></p>
+</section>
+
+</div>
+__HOUSE_SCRIPT__
