@@ -1,0 +1,7 @@
+# EXPERIMENTAL, NOT MAINTAINED (CLAUDE.md "Config maintenance scope"): a concept world of the
+# continual-worlds study, docs/experiments/active/continual_worlds/CONTINUAL_WORLDS.md.
+#
+# HOME (10 x 10): level 05, the campfire world, UNCHANGED. It is the world the two pre-trained
+# agents spent 10 M episodes in. This file exists so every concept has a name in one folder (the
+# forgetting-matrix evaluation battery and the fresh-seed Home leg point here); it overrides nothing.
+extends: environment/experiment/basic/05-campfire_thermal_10x10
