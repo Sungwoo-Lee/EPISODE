@@ -509,11 +509,11 @@ Home legs (27–30) after their Nursery leg ends (27–28 only if Pilot 3 passed
 | 34 | running | Pilot 1s Fog-soft | `rppo_cw_pilot1s_fog_soft_t16quad_s42` | continual_worlds | pilot | 42 | 104 | cuda:1 | 2026-09-28T16:28:58 | `il157bos` | `logs/20260928_162858.log` (shared with row 33; clean copy `wandb/run-20260928_162915-il157bos/files/output.log`) |
 | 35 | running | Pilot 1s Harsh-soft | `rppo_cw_pilot1s_harsh_soft_t1none_s42` | continual_worlds | pilot | 42 | 103 | cuda:0 | 2026-09-28T16:20:25 | `dxkzhykp` | `logs/20260928_162025.log` |
 | 36 | running | Pilot 1s Harsh-soft | `rppo_cw_pilot1s_harsh_soft_t16quad_s42` | continual_worlds | pilot | 42 | 103 | cuda:1 | 2026-09-28T16:20:26 | `hjktbwln` | `logs/20260928_162026.log` |
-| 37 | planned (exploratory scout) | Scout Danger-A (3–5 hunters, Home-like persistence) | `rppo_cw_scout_danger_scout_a_t1none_s42` | continual_worlds | pilot | 42 | — | — | — | — | — |
-| 38 | planned (exploratory scout) | Scout Danger-B (2–4 hunters) | `rppo_cw_scout_danger_scout_b_t1none_s42` | continual_worlds | pilot | 42 | — | — | — | — | — |
-| 39 | planned (exploratory scout) | Scout Danger-C (3–5 hunters + smell 8) | `rppo_cw_scout_danger_scout_c_t1none_s42` | continual_worlds | pilot | 42 | — | — | — | — | — |
-| 40 | planned (exploratory scout) | Scout Fog-A (Fog-soft + smell 5) | `rppo_cw_scout_fog_scout_a_t1none_s42` | continual_worlds | pilot | 42 | — | — | — | — | — |
-| 41 | planned (exploratory scout) | Scout Fog-B (smell 3, no noise) | `rppo_cw_scout_fog_scout_b_t1none_s42` | continual_worlds | pilot | 42 | — | — | — | — | — |
+| 37 | running | Scout Danger-A (3–5 hunters, Home-like persistence) | `rppo_cw_scout_danger_scout_a_t1none_s42` | continual_worlds | pilot | 42 | 105 | cuda:0 | 2026-09-28T19:07:59 | `yhezxekl` | `logs/20260928_190759.log` |
+| 38 | running | Scout Danger-B (2–4 hunters) | `rppo_cw_scout_danger_scout_b_t1none_s42` | continual_worlds | pilot | 42 | 105 | cuda:1 | 2026-09-28T19:08:06 | `59wq3jqj` | `logs/20260928_190807.log` |
+| 39 | launched, UNVERIFIED (node 114 hung mid-compile ~19:11) | Scout Danger-C (3–5 hunters + smell 8) | `rppo_cw_scout_danger_scout_c_t1none_s42` | continual_worlds | pilot | 42 | 114 | cuda:0 | 2026-09-28T19:08:13 | `4k8wgp8j` | `logs/20260928_190814.log` |
+| 40 | launched, UNVERIFIED (node 114 hung mid-compile ~19:11) | Scout Fog-A (Fog-soft + smell 5) | `rppo_cw_scout_fog_scout_a_t1none_s42` | continual_worlds | pilot | 42 | 114 | cuda:1 | 2026-09-28T19:08:20 | `zm73ti5c` | `logs/20260928_190821.log` |
+| 41 | launched, UNVERIFIED (node 114 hung mid-compile ~19:11) | Scout Fog-B (smell 3, no noise) | `rppo_cw_scout_fog_scout_b_t1none_s42` | continual_worlds | pilot | 42 | 114 | cuda:2 | 2026-09-28T19:08:27 | `h4772olp` | `logs/20260928_190827.log` |
 
 Rows 37–41 (Revision 1b) are **exploratory scouts, not pre-registered**: ordinary agent only, read
 descriptively with the survivable rule; they do not overturn the dropped worlds' verdicts.

@@ -4676,3 +4676,46 @@ cd /media/nas01/projects/Interoceptive-AI/grid_world_pain
 #   --episodes 10000000 --checkpoint-frequency 100000 --seed 43 --device cuda:1 \
 #   --tag rppo_cw_home_t16quad_s43 --wandb-name rppo_cw_home_t16quad_s43 \
 #   --wandb-group continual_worlds --wandb-job-type prod
+# ---------------------------------------------------------------------------
+# 2026-09-28 — continual-worlds Revision 1b exploratory scouts (rows 37-41), ORDINARY agent only.
+# Plan: docs/experiments/active/continual_worlds/CONTINUAL_WORLDS.md §4 (manifest) / §4.1 (row 37 full
+# command). Same flags as rows 31/33/35 with the scout world, --episodes 11500000 and tag swapped.
+# --seed 42 / --checkpoint-frequency 100000 PLAN-SPECIFIED (manifest §4.1). env-config-reviewer
+# GO WITH NOTES 2026-09-28. Launched via CIFS-bypass /tmp scripts + run_command.py --no-tail,
+# spaced >= 5 s apart so each gets its own log.
+# ---------------------------------------------------------------------------
+# Run 37: rppo_cw_scout_danger_scout_a_t1none_s42 — node 105, cuda:0
+# /home/vncuser/miniconda3/envs/grid_world_pain/bin/python train.py --config configs/environment/experiment/continual_worlds/danger_scout_a_15x15.yaml \
+#   --agent_config configs/models/recurrent_ppo/nmn_input_site_grid_gaenorm/nmngaenorm_t1none.yaml \
+#   --load-checkpoint results/JAX_RecurrentPPO/20260927-053057_rppo_l05body_w0000_t1none_s42/models \
+#   --episodes 11500000 --checkpoint-frequency 100000 --seed 42 --device cuda:0 \
+#   --tag rppo_cw_scout_danger_scout_a_t1none_s42 --wandb-name rppo_cw_scout_danger_scout_a_t1none_s42 \
+#   --wandb-group continual_worlds --wandb-job-type pilot
+# Run 38: rppo_cw_scout_danger_scout_b_t1none_s42 — node 105, cuda:1
+# /home/vncuser/miniconda3/envs/grid_world_pain/bin/python train.py --config configs/environment/experiment/continual_worlds/danger_scout_b_15x15.yaml \
+#   --agent_config configs/models/recurrent_ppo/nmn_input_site_grid_gaenorm/nmngaenorm_t1none.yaml \
+#   --load-checkpoint results/JAX_RecurrentPPO/20260927-053057_rppo_l05body_w0000_t1none_s42/models \
+#   --episodes 11500000 --checkpoint-frequency 100000 --seed 42 --device cuda:1 \
+#   --tag rppo_cw_scout_danger_scout_b_t1none_s42 --wandb-name rppo_cw_scout_danger_scout_b_t1none_s42 \
+#   --wandb-group continual_worlds --wandb-job-type pilot
+# Run 39: rppo_cw_scout_danger_scout_c_t1none_s42 — node 114, cuda:0
+# /home/vncuser/miniconda3/envs/grid_world_pain/bin/python train.py --config configs/environment/experiment/continual_worlds/danger_scout_c_15x15.yaml \
+#   --agent_config configs/models/recurrent_ppo/nmn_input_site_grid_gaenorm/nmngaenorm_t1none.yaml \
+#   --load-checkpoint results/JAX_RecurrentPPO/20260927-053057_rppo_l05body_w0000_t1none_s42/models \
+#   --episodes 11500000 --checkpoint-frequency 100000 --seed 42 --device cuda:0 \
+#   --tag rppo_cw_scout_danger_scout_c_t1none_s42 --wandb-name rppo_cw_scout_danger_scout_c_t1none_s42 \
+#   --wandb-group continual_worlds --wandb-job-type pilot
+# Run 40: rppo_cw_scout_fog_scout_a_t1none_s42 — node 114, cuda:1
+# /home/vncuser/miniconda3/envs/grid_world_pain/bin/python train.py --config configs/environment/experiment/continual_worlds/fog_scout_a_15x15.yaml \
+#   --agent_config configs/models/recurrent_ppo/nmn_input_site_grid_gaenorm/nmngaenorm_t1none.yaml \
+#   --load-checkpoint results/JAX_RecurrentPPO/20260927-053057_rppo_l05body_w0000_t1none_s42/models \
+#   --episodes 11500000 --checkpoint-frequency 100000 --seed 42 --device cuda:1 \
+#   --tag rppo_cw_scout_fog_scout_a_t1none_s42 --wandb-name rppo_cw_scout_fog_scout_a_t1none_s42 \
+#   --wandb-group continual_worlds --wandb-job-type pilot
+# Run 41: rppo_cw_scout_fog_scout_b_t1none_s42 — node 114, cuda:2
+# /home/vncuser/miniconda3/envs/grid_world_pain/bin/python train.py --config configs/environment/experiment/continual_worlds/fog_scout_b_15x15.yaml \
+#   --agent_config configs/models/recurrent_ppo/nmn_input_site_grid_gaenorm/nmngaenorm_t1none.yaml \
+#   --load-checkpoint results/JAX_RecurrentPPO/20260927-053057_rppo_l05body_w0000_t1none_s42/models \
+#   --episodes 11500000 --checkpoint-frequency 100000 --seed 42 --device cuda:2 \
+#   --tag rppo_cw_scout_fog_scout_b_t1none_s42 --wandb-name rppo_cw_scout_fog_scout_b_t1none_s42 \
+#   --wandb-group continual_worlds --wandb-job-type pilot
