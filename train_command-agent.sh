@@ -4605,3 +4605,24 @@ cd /media/nas01/projects/Interoceptive-AI/grid_world_pain
 #   --episodes 13000000 --checkpoint-frequency 100000 --seed 42 --device cuda:1 \
 #   --tag "rppo_cw_pilot1s_harsh_soft_t16quad_s42" --wandb-name "rppo_cw_pilot1s_harsh_soft_t16quad_s42" \
 #   --wandb-group "continual_worlds" --wandb-job-type "pilot"
+# ---------------------------------------------------------------------------
+# 2026-09-28 — continual-worlds Revision 1a re-pilots, Fog-soft (rows 33, 34)
+# Precondition met: original Fog pilots (rows 9-10) finished and FAIL the survivable rule for both
+# agents (final 93.6 / 94.3 steps vs pass lines 124.9 / 126.7). Same flags as rows 31/32/35/36.
+# --seed / --checkpoint-frequency 100000 PLAN-SPECIFIED (manifest §4.1). env-config-reviewer GO
+# on fog_soft 2026-09-28. Launched via CIFS-bypass /tmp scripts + run_command.py --no-tail.
+# ---------------------------------------------------------------------------
+# Run 33: rppo_cw_pilot1s_fog_soft_t1none_s42 — node 104, cuda:0
+# /home/vncuser/miniconda3/envs/grid_world_pain/bin/python train.py --config configs/environment/experiment/continual_worlds/fog_soft_15x15.yaml \
+#   --agent_config configs/models/recurrent_ppo/nmn_input_site_grid_gaenorm/nmngaenorm_t1none.yaml \
+#   --load-checkpoint results/JAX_RecurrentPPO/20260927-053057_rppo_l05body_w0000_t1none_s42/models \
+#   --episodes 13000000 --checkpoint-frequency 100000 --seed 42 --device cuda:0 \
+#   --tag "rppo_cw_pilot1s_fog_soft_t1none_s42" --wandb-name "rppo_cw_pilot1s_fog_soft_t1none_s42" \
+#   --wandb-group "continual_worlds" --wandb-job-type "pilot"
+# Run 34: rppo_cw_pilot1s_fog_soft_t16quad_s42 — node 104, cuda:1
+# /home/vncuser/miniconda3/envs/grid_world_pain/bin/python train.py --config configs/environment/experiment/continual_worlds/fog_soft_15x15.yaml \
+#   --agent_config configs/models/recurrent_ppo/nmn_input_site_grid_gaenorm/nmngaenorm_t16quad_ALL.yaml \
+#   --load-checkpoint results/JAX_RecurrentPPO/20260927-053059_rppo_l05body_w0000_t16quad_s42/models \
+#   --episodes 13000000 --checkpoint-frequency 100000 --seed 42 --device cuda:1 \
+#   --tag "rppo_cw_pilot1s_fog_soft_t16quad_s42" --wandb-name "rppo_cw_pilot1s_fog_soft_t16quad_s42" \
+#   --wandb-group "continual_worlds" --wandb-job-type "pilot"
