@@ -10,7 +10,10 @@ wandb_tag: "rppo_cw_*"
 
 # Continual worlds: an A-B-A-B test of the modulator with a stationary body
 
-> **Status (2026-09-28, Revision 1):** DESIGNED, configs written and loader-validated, **nothing
+> **Status (2026-09-28, Revision 1a):** pilots 1–18 **running** since 13:16; an interim read-out
+> failed three worlds (Danger, Fog, Harsh) for both agents, so their softened versions are configured
+> and six re-pilot runs (rows 31–36) are **planned, not launched** (see the Revision 1a box below).
+> *Revision 1 status, kept for the record:* DESIGNED, configs written and loader-validated, **nothing
 > launched**. The next step is the three **pilots** (section 3.6, 18 runs), which are ready to
 > launch once `env-config-reviewer` has passed the changed worlds and the parent has assigned nodes.
 > The main runs wait for the pilots: their stage lengths are computed from Pilot 1 by a rule fixed
@@ -44,6 +47,43 @@ wandb_tag: "rppo_cw_*"
 >   Danger hunters 2–3 → **5–7**, ambushers 6–12 → **14–27**, bushes 8–12 → **18–27**; Famine and
 >   Winter hunters 0–1 → **0–2**; Fog hunters 1–2 → **2–5**; Harsh hunters 1–2 → **2–5**, bushes 2–4 →
 >   **5–9**. Loads, observation width, 1,000-reset placement and schedule builds re-run (6.1).
+
+> **Revision 1a (2026-09-28, evening) — three worlds proved too hard; each gets its one softening
+> step and a re-pilot.** Pilots 1–18 were launched at 13:16 (manifest rows 1–18). An **interim**
+> read-out (runs still training, so every number below is **provisional until the runs end**) shows
+> that in three of the new worlds **neither** agent survives long enough to pass the pre-registered
+> survivable rule (3.6: survival over the last 200,000 episodes at least half of the agent's own
+> Home level, i.e. ≥ 124.9 steps for the ordinary agent and ≥ 126.7 for the modulated one):
+>
+> | World | Ordinary agent (last 200k, steps) | Modulated agent | Curve | Verdict | The one pre-named softening step (3.6) |
+> |---|---|---|---|---|---|
+> | Danger | 76.8 | 76.8 | flat | both fail | hunting predators 5–7 → **3–5** per episode |
+> | Fog | 92.2 | 92.0 | flat | both fail | perceptual noise halved: smell σ 0.3 → **0.15**, sight σ 0.2 → **0.1** (smell range 3 and the 3× sight blur unchanged) |
+> | Harsh | 82.6 | 82.1 | flat | both fail | food items 1–2 → **2–4** per episode |
+>
+> The runs were 1.2–1.8 M of 3 M episodes in, with under 2 h left, and none of the curves was still
+> rising. Because both agents fail, 3.6 applies its rule: soften **once** by the pre-named step and
+> re-pilot; if the softened world fails again it is dropped and the user chooses its replacement.
+> The softened worlds are new files next to the originals (`*_soft_15x15.yaml`, 4.1); each `extends:`
+> its original and changes only that one step, so the body (level 05) and the 58-number observation
+> are unchanged (check C11, 6.1). The six re-pilot runs are **Pilot 1s**, manifest rows **31–36**,
+> planned, not launched. If the original run's final read-out (after it ends) reverses a verdict, the
+> matching re-pilot rows are cancelled rather than run.
+>
+> Other interim Pilot 1 / Pilot 3 read-outs, recorded here, **nothing changed**:
+> - **Forage** carries the pre-registered **"too easy to be a distinct world"** flag: both agents
+>   reach ≈ 475 of the 500-step episode cap (ordinary 475.0, modulated 474.0). This is expected for
+>   the deliberately safe first stage, was shown to the user, and Forage is not changed.
+> - **Winter, modulated agent is borderline**: 138.1 steps against its 126.7 line (ordinary 154.3);
+>   it passes today, but by a margin small enough that the final read-out must confirm it.
+> - **Famine** passes for both agents (205.4 / 202.7).
+> - **Pilot 3 (Nursery from scratch) passes provisionally** on every pre-registered row for both
+>   agents (survival 375.0 / 359.5 ≥ 200; bites 64.9 / 60.8 ≥ 15; eat ratio, hide ratio, time warm
+>   and thermal late-death share all inside their thresholds; no collapse).
+>
+> Source: `scripts/analysis/studies/continual_worlds/pilot_readout.py` → 
+> `results/analysis/continual_worlds/pilot_readout.json` (full print
+> `tmp/20260928_pilot_readout_run2.log`).
 
 ## 1. Question
 
@@ -411,6 +451,15 @@ Home legs (27–30) after their Nursery leg ends (27–28 only if Pilot 3 passed
 | 28 | planned (after 18, if Pilot 3 passes) | Home leg | `rppo_cw_home_t16quad_s43` | continual_worlds | prod | 43 | — | — | — | — | — |
 | 29 | planned (after 25) | Home leg | `rppo_cw_home_t1none_s44` | continual_worlds | prod | 44 | — | — | — | — | — |
 | 30 | planned (after 26) | Home leg | `rppo_cw_home_t16quad_s44` | continual_worlds | prod | 44 | — | — | — | — | — |
+| 31 | planned (Revision 1a re-pilot) | Pilot 1s Danger-soft | `rppo_cw_pilot1s_danger_soft_t1none_s42` | continual_worlds | pilot | 42 | — | — | — | — | — |
+| 32 | planned (Revision 1a re-pilot) | Pilot 1s Danger-soft | `rppo_cw_pilot1s_danger_soft_t16quad_s42` | continual_worlds | pilot | 42 | — | — | — | — | — |
+| 33 | planned (Revision 1a re-pilot) | Pilot 1s Fog-soft | `rppo_cw_pilot1s_fog_soft_t1none_s42` | continual_worlds | pilot | 42 | — | — | — | — | — |
+| 34 | planned (Revision 1a re-pilot) | Pilot 1s Fog-soft | `rppo_cw_pilot1s_fog_soft_t16quad_s42` | continual_worlds | pilot | 42 | — | — | — | — | — |
+| 35 | planned (Revision 1a re-pilot) | Pilot 1s Harsh-soft | `rppo_cw_pilot1s_harsh_soft_t1none_s42` | continual_worlds | pilot | 42 | — | — | — | — | — |
+| 36 | planned (Revision 1a re-pilot) | Pilot 1s Harsh-soft | `rppo_cw_pilot1s_harsh_soft_t16quad_s42` | continual_worlds | pilot | 42 | — | — | — | — | — |
+
+Rows 31–36 (Revision 1a) are judged by the same survivable rule and plateau rule as Pilot 1 (3.6,
+3.3) and, if they pass, their `T` replaces the failed original's in the `L_X` computation for P1–P3.
 
 **Compute (rough, to be replaced by Pilot 1's measured throughput):** level 05 ran 10 M episodes in
 19.4 h on 10 × 10. Assuming 15 × 15 / 20 × 20 are 1.3–2× slower: Pilot 1 ≈ 8–12 h per 3 M run and
@@ -440,6 +489,13 @@ the ordinary / modulated pre-trained `models/` directories (3.4). `BP_O` / `BP_M
 | 23, 24 | `CS/p3_winter_famine_stages/` + `CS/p3_winter_famine.yaml` (regenerated) | T1, T16 | `BP_O`, `BP_M` | none |
 | 25, 26 | `CW/nursery_10x10.yaml` | T1, T16 | scratch | 2000000 |
 | 27–30 | `CW/home_10x10.yaml` | as its Nursery leg | its Nursery leg's `models/` | 10000000 |
+| 31, 32 | `CW/danger_soft_15x15.yaml` (Revision 1a) | T1, T16 | `CK_O`, `CK_M` | 13000000 |
+| 33, 34 | `CW/fog_soft_15x15.yaml` (Revision 1a) | T1, T16 | `CK_O`, `CK_M` | 13000000 |
+| 35, 36 | `CW/harsh_soft_15x15.yaml` (Revision 1a) | T1, T16 | `CK_O`, `CK_M` | 13000000 |
+
+Rows 31–36 use exactly the flags of rows 3–12 (the Pilot 1 command in 4.2 with the world file and
+tag swapped): `--load-checkpoint` the same pre-trained `CK_O` / `CK_M`, `--episodes 13000000
+--checkpoint-frequency 100000 --seed 42`, `--wandb-group continual_worlds --wandb-job-type pilot`.
 
 Each stage file is a one-line `extends:` of its concept file, so every visit to a concept is the
 identical world. Checkpoints every 100,000 episodes everywhere (schedules set it per stage; single-
@@ -589,6 +645,7 @@ axis per sequence. Pilot 1 figures show all six worlds' Home → X curves with `
 | C8 | All five schedules (P1–P3 provisional, Pilot 2a/2b) built by `train._build_continual_schedule` itself | pass: 5 stages each; Pilot 2 boundaries `[11M … 15M]`, P1–P3 `[12M … 20M]` (placeholders); restored counters 10,000,046 / 10,000,021 map to stage 0; a counter just past the first boundary maps to stage 1; every stage resolves to its concept world with width 58 and the expected hunter slots (Forage 0 first in every schedule) |
 | C9 | Smoke runs before Revision 1 | S-A (ordinary checkpoint through six grid-size / roster / noise switches) pass; S-B (Nursery → Home as one continual run) crashes as Known Bug A2 predicts → two-leg pre-training; S-C (modulated checkpoint, Forage → Danger) pass. Pilot 2 repeats S-A's path on GPU with the Revision 1 counts |
 | C10 | Branch-point mechanism: one step directory copied with `config.yaml` into a fresh `models/` dir | the checkpoint manager returns that step as the latest (tested on step 9,800,027 of the ordinary pre-trained run in scratch space) |
+| C11 | Revision 1a softened worlds: each loaded through `load_env_config` → `load_env_params` next to its original and every `EnvParams` field compared | pass. **Fog-soft:** 1 of 208 fields differs, `noise_sigmas` (smell 0.3 → 0.15, sight 0.2 → 0.1). **Danger-soft:** only `animal_count_low/high` (hunters [5, 7] → [3, 5]); every other differing field is a per-slot array or index that is 2 slots shorter (12 → 10), with per-entry values identical. **Harsh-soft:** only `res_count_low/high` (food [1, 2] → [2, 4]); the rest are per-slot arrays 2 slots longer (29 → 31), per-entry values identical. No body, thermal, interoception or reward field differs. Observation width 58 on all six (real `ParallelEnv.reset`) |
 
 ### 6.2 Blockers and hand-offs
 
