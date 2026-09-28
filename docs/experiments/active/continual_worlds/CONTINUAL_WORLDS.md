@@ -10,7 +10,12 @@ wandb_tag: "rppo_cw_*"
 
 # Continual worlds: an A-B-A-B test of the modulator with a stationary body
 
-> **Status (2026-09-28, Revision 2 — post-pilot plan update):** the pilots are read out (Revision 2
+> **Status (2026-09-28, Revision 2a — answers the plan-reviewer's Revision 2 gate):** one analysis
+> rule is added before anything main launches (box below); **Winter ↔ Famine is still the only ready
+> sequence**, now also waiting on the Pilot 2 closure (run 14 ending, one forgetting-sweep test).
+> Nothing new is launched by this revision.
+>
+> *Revision 2 status, kept for the record:* the pilots are read out (Revision 2
 > box below). **One sequence, Winter ↔ Famine, is ready** to launch once the Forage runs have finished
 > and the pre-launch checklist (6.3) passes; **the other two need the user's decision** on replacement
 > worlds (3.7.6). Nothing new is launched by this revision.
@@ -31,6 +36,24 @@ wandb_tag: "rppo_cw_*"
 > the May continual probe this design replicates at scale [[NMN_CONTINUAL_DOUBLE_RETURN_PROBE]] ·
 > balance logging [[BALANCE_METRICS_TRAINING_LOGGING]] · curriculum lessons in the LLM wiki
 > (`curriculum_learning`: plasticity loss, negative transfer).
+
+> **Revision 2a (2026-09-28, late night) — a fairer yardstick for "who adapts faster", in plain
+> words.** Two of the four "did the modulator help?" measures — how far survival drops right after a
+> switch into a world, and how long it takes to climb back — were defined against **each agent's own**
+> settled level in that world. The pilots showed why that is unfair: in the cold world (Winter) the two
+> agents started out almost equal right after the switch (129 vs 138 survival steps), but the ordinary
+> agent later settled much higher (198 vs 161). Measured against its own higher target, the ordinary
+> agent "took" 132,000 episodes to recover and the modulated agent 40,000 — a 3× "win" for the
+> modulator that is really just "the modulated agent's target was lower". Measured against **one
+> shared target** (90 % of the lower of the two settled levels), the order **reverses**: 28,000 vs
+> 40,000 episodes. So, fixed **before** any main run launches: dip and recovery are now read **both
+> ways** — against each agent's own level and against a shared level — and a vote counts for the
+> modulator only if **both readings agree** (5.1, new paragraph "Common-reference companion"). The
+> "return" and "forgetting" measures are already absolute survival steps and are unchanged. Also
+> corrected: Winter did **not** simply level off for the modulated agent (it peaked, then slid 8.5 %;
+> 3.7.1); the pipeline trial is **3 of 4 checks passed, provisional** (3.7.5); the launch checklist now
+> names the log lines a branch really prints (6.3); a new user decision D8 asks whether the branches
+> must wait for the Forage runs to finish (3.7.6). Response table at the bottom of this doc.
 
 > **Revision 2 (2026-09-28, night) — what the pilots found and what happens next, in plain words.**
 > Before the long runs, short trial runs ("pilots") checked each new world: can our two pre-trained
@@ -201,6 +224,12 @@ Plain names first; the symbols are only shorthand used in the tables below.
 - **Faster recovery (H-rec).** After each switch, the modulated agent needs less training to climb
   back to 90 % of the reference level — counted **both** in episodes and in environment steps (5.1);
   the vote counts only if both units agree.
+- *Revision 2a addition (pre-registered before any main run):* H-dip and H-rec are each read twice —
+  against the agent's **own** reference level (as above) and against a **common** reference shared by
+  both agents (the lower of the two agents' reference levels; 5.1). The H-dip vote counts only if the
+  modulated-minus-ordinary difference is favourable under both readings; the H-rec vote only if it is
+  favourable under all four readings (own / common × episodes / environment steps). Otherwise that
+  switch's vote is "not counted" (7.11).
 - **Better return (H-ret).** On the second visit to a world, the modulated agent gains more (or
   loses less) relative to its first visit than the ordinary agent does. "Second visit better than
   first" means something was kept, not relearned.
@@ -514,7 +543,7 @@ Every number below is **final** (run ended) unless marked *provisional*.
 
 | Scout | What changes vs the original world | Ordinary | Modulated | `T` ord / mod | Reading |
 |---|---|---|---|---|---|
-| Danger-A | 3–5 hunters with Home's chase persistence (notice at 3–5 cells, stamina 30–150, give up at 1.5) | 122.6 (best window 130.1) / 11.1 bites | 131.0 / 12.6 bites | 384k / 260k | **one agent only**: modulated passes by 4.3 steps; ordinary misses by 2.3 on the last window although its best window cleared the line |
+| Danger-A | 3–5 hunters with Home's chase persistence (notice at 3–5 cells, stamina 30–150, give up at 1.5) | 122.6 ~~(best window 130.1)~~ / 11.1 bites | 131.0 / 12.6 bites | 384k / 260k | **one agent only**: modulated passes by 4.3 steps; ordinary misses by 2.3 on the last window ~~although its best window cleared the line~~ *(Rev 2a, R6: the best window is not a 3.6 criterion)* |
 | Danger-B | 2–4 hunters, Danger's own persistence | 104.6 | — | 248k / — | fail |
 | Danger-C | 3–5 hunters + smell range 8 | 90.0 | — | 224k / — | fail |
 | Fog-A | Fog-soft + smell range 5 | 110.5 | — | 348k / — | fail |
@@ -532,6 +561,23 @@ is one seed of a Home → Winter switch, so it is a description of this initiali
 about the modulator; it is shown to the user before P3 launches because P3 spends 6 M of its 8 M
 episodes in Winter.
 
+*Revision 2a addition (R2) — the Winter curves over time, not just their endpoints.* Trailing
+200,000-episode mean survival (steps) at points of the 3 M-episode pilot:
+
+| Episodes since switch | 0.5 M | 1.0 M | 1.5 M | 2.0 M | 2.5 M | 2.75 M | 3.0 M (end) | Best window |
+|---|---|---|---|---|---|---|---|---|
+| Ordinary | 152.9 | 149.3 | 182.6 | 184.3 | 200.2 | 195.8 | **198.0** | 205.6 at 2.67 M |
+| Modulated | 132.3 | 147.4 | 149.8 | 146.4 | 162.4 | 153.1 | **160.8** | **175.7 at 2.54 M** |
+
+The modulated agent **peaked at 175.7 and ended 8.5 % lower (160.8)**, outside the 5 % band the plateau
+rule uses; the ordinary agent ended 3.7 % below its best (inside the band). Part of the 37-step gap is
+therefore a late decline of the modulated agent (the gap between best windows is 30 steps), and the
+first-visit reference `R_Winter` in P3 may be measured on a **falling or oscillating** curve rather than a
+flat one. This is carried into the results as a "reference on a non-monotonic curve" note, and it is
+evidence **for** decision D6's *look first* option (3.7.6). Zero-shot survival right after the switch
+(first 20,000 episodes) was similar: ordinary 129.4, modulated 138.4 steps — the basis of the 5.1
+common-reference example.
+
 #### 3.7.2 Stage lengths (rule of 3.3, applied)
 
 Per world X: `L_X = min(3 M, max(1 M, 1.5 × max(T_ord, T_mod)))`, rounded up to 100,000 episodes.
@@ -544,12 +590,26 @@ Per world X: `L_X = min(3 M, max(1 M, 1.5 × max(T_ord, T_mod)))`, rounded up to
 | Danger-A (scout) | 1.5 × 384k = 576k | 1,000,000 (floor) |
 | Fog-B (scout) | 1.5 × 480k = 720k | 1,000,000 (floor) |
 
-Winter hits the cap, but it did level off: its `T` (2.448 M / 2.456 M) falls 52k / 44k episodes
+Winter hits the cap~~, but it did level off~~ *(Rev 2a: overstated — see the correction below)*: its `T` (2.448 M / 2.456 M) falls 52k / 44k episodes
 before the pilot's last 500,000 episodes, so the "not plateaued" fallback of 3.3 (which needs `T` inside
 the last 500,000, i.e. > 2.5 M) does **not** fire. Its return visits are therefore **not** marked "below plateau"; the 3 M visit
 still sits only 1.2× `T` rather than the intended 1.5×, so `R_Winter` (last 200,000 episodes of the first
 visit, 2.8–3.0 M) is measured with a thinner post-plateau margin than the rule aimed for — stated here,
 carried into the results.
+
+*Revision 2a correction (R2):* "it did level off" above overstates. What is true is narrower: the plateau
+rule's `T` (the **first** window within 5 % of the best) falls before the last 500,000 episodes, so the
+3.3 fallback correctly does not fire and `L_Winter` = 3 M stands. The modulated curve itself did not stay
+flat after `T` — it peaked at 2.54 M and ended 8.5 % lower (trajectory in 3.7.1). No rule changes.
+
+*Revision 2a note (R4) — unequal interference in P3.* Because stage length is set per world (3.3), P3's
+two returns are not symmetric: the **Famine return** (stage 5) follows **3 M** episodes of Winter, while
+the **Winter return** (stage 4) follows only **1 M** of Famine. The four switch votes therefore carry
+unequal amounts of interfering training, and in the forgetting matrix (5.3) "forgetting of Famine" and
+"forgetting of Winter" are **not** measured after matched amounts of other-world training. The heavier
+interference also lands on Famine, the world where the pilots show no difference between agents
+(214.1 / 213.6). The schedule is the same for both agents, so this is not an agent confound, and the rule
+is applied as pre-registered — **no rule change**; the asymmetry is reported (5.2, 5.3).
 
 Per candidate pair (throughput from the Home → X pilots, `ep/h` ordinary / modulated; branch nodes may
 differ):
@@ -604,9 +664,14 @@ dropped worlds and must not be launched.
 **Why the replacements need the user, not the rule.**
 1. **Danger-A is "one agent only".** Under 3.6, a world where exactly one agent fails is reported to the
    user before any main run, not adopted automatically. The ordinary agent's last window is 122.6 against
-   124.9 (its best window, 130.1, cleared the line). Danger-A appears in **both** replacement sequences, so
-   if the ordinary agent struggles there, two of three sequences carry it (failure mode 7.4: the verdict
-   is then computed with and without those sequences).
+   124.9 ~~(its best window, 130.1, cleared the line)~~. Danger-A appears in **both** replacement sequences, so
+   if the ordinary agent struggles there, two of three sequences carry it ~~(failure mode 7.4: the verdict
+   is then computed with and without those sequences)~~.
+   *Revision 2a (R6):* the struck citation was wrong — failure mode 7.4 triggers on an agent collapsing
+   below 0.6 × its own reference during a visit, a different condition — and the best window is not a
+   3.6 criterion (only the last 200,000 episodes are). Stated on its own instead: **if Danger-A sequences
+   are run, the section 2 verdict is computed twice, with and without every sequence that contains
+   Danger-A**, because Danger-A passed the survivable rule for one agent only; both are reported.
 2. **Exploratory origin.** Danger-A and Fog-B come from a five-scout ladder read after seeing the
    pre-registered worlds fail; picking the variants that passed is a selection step. The support rule of
    section 2 stays unchanged, but a result from P1/P2-replacement is reported as resting on worlds chosen
@@ -634,6 +699,13 @@ P1- and P2-replacement share Danger-A.
   checkpoint + 50). **Not exercised:** the forgetting-matrix sweep on a real continual run (no sweep spec
   or output exists) and the restore-into-a-later-stage path that the branches use (Pilot 2 started in
   stage 0). Both are in the 6.3 checklist.
+  *Revision 2a relabel (R3):* "pipeline pass" above overstates. Against the four pre-registered pass
+  clauses of 3.6 the status is **3 of 4 clauses met — provisional**: stage switches at their boundaries
+  (met), no traceback (met), 10 checkpoints per stage (met), forgetting-matrix sweep produces a full matrix
+  on a real continual run (**not yet run**) — and run 14 has not yet finished (at 14.61 M of 15 M at
+  23:45, ≈ 17 min left). Pilot 2 is declared passed only when run 14 ends with the same signs **and** the
+  sweep has run once on a finished Pilot 2 run (run 15; a developer is running it now). Both are gates for
+  the branches (6.3 items 4 and 7), not "at the latest before their first stage ends".
 - **Pilot 3 — pass, both agents** (seed-43 Nursery legs): survival 414.3 / 417.4 (≥ 200), bites 75.8 / 76.6,
   eat ratio 13.4 / 17.1, hide ratio 2.96 / 3.03, time warm 0.21 / 0.21, thermal late-death share 0.04 /
   0.03; first competent window ends at 384k / 364k; no collapse. The seed-44 Nursery legs (rows 25–26) are
@@ -654,6 +726,7 @@ P1- and P2-replacement share Danger-A.
 | D5 | P2 replacement | Fog-B ↔ Danger-A (draft) / new Danger variant + pilot / drop P2 | user's call |
 | D6 | Winter finding (modulated lower, more thermal deaths) | proceed / look first (e.g. `trajectory-story` read of both agents in Winter) | proceed — both pass; reported as a finding |
 | D7 | P5 (Harsh ↔ Forage), later | drop / replace Harsh | defer |
+| D8 *(Rev 2a, from plan-reviewer O5)* | Must the branches wait for the Forage runs (1–2) to reach 14 M? | wait (the pre-registered wording of 3.3 / 3.7.3 asks for the full curve) / waive | **waive is defensible, user's call.** 3.7.3 shows `L_Forage` cannot leave the 1 M floor (it would need a 200k window above 498 of a 500-step cap), so runs 1–2 only confirm a number that cannot change; the branch checkpoints at 11 M already exist and are not touched by further training. The cost of waiting is now small (at 23:45 run 1 was at 12.35 M, run 2 at 11.94 M: ≈ 1.5–2 h left, not the 8 h stated in Revision 2). Waiving is a departure from the written rule and would be recorded as such |
 
 ## 4. Launch Manifest
 
@@ -671,52 +744,57 @@ Pilot 3 passed, so rows 25–26 are unblocked.
 
 | Run | Status | Cell | Tag (= wandb-name) | wandb-group | wandb-job-type | Seed | Node | GPU | Launched at | WandB run ID | Log path |
 |-----|--------|------|--------------------|-------------|----------------|------|------|-----|-------------|--------------|----------|
-| 1 | running | Pilot 1 Forage (= main stage 1) | `rppo_cw_pilot1_forage_t1none_s42` | continual_worlds | pilot | 42 | 106 | cuda:0 | 2026-09-28T13:16:42 | `6sf68was` | `logs/20260928_131642.log` |
-| 2 | running | Pilot 1 Forage (= main stage 1) | `rppo_cw_pilot1_forage_t16quad_s42` | continual_worlds | pilot | 42 | 106 | cuda:1 | 2026-09-28T13:16:46 | `e78og819` | `logs/20260928_131646.log` |
-| 3 | running | Pilot 1 Danger | `rppo_cw_pilot1_danger_t1none_s42` | continual_worlds | pilot | 42 | 107 | cuda:0 | 2026-09-28T13:16:50 | `7e8rr45p` | `logs/20260928_131650.log` |
-| 4 | running | Pilot 1 Danger | `rppo_cw_pilot1_danger_t16quad_s42` | continual_worlds | pilot | 42 | 107 | cuda:1 | 2026-09-28T13:16:53 | `gwkhnlpl` | `logs/20260928_131653.log` |
-| 5 | running | Pilot 1 Famine | `rppo_cw_pilot1_famine_t1none_s42` | continual_worlds | pilot | 42 | 108 | cuda:0 | 2026-09-28T13:16:56 | `p0ev5nbw` | `logs/20260928_131656.log` |
-| 6 | running | Pilot 1 Famine | `rppo_cw_pilot1_famine_t16quad_s42` | continual_worlds | pilot | 42 | 108 | cuda:1 | 2026-09-28T13:17:00 | `lf5tquew` | `logs/20260928_131700.log` |
-| 7 | running | Pilot 1 Winter | `rppo_cw_pilot1_winter_t1none_s42` | continual_worlds | pilot | 42 | 109 | cuda:0 | 2026-09-28T13:17:04 | `s85qrj65` | `logs/20260928_131704.log` |
-| 8 | running | Pilot 1 Winter | `rppo_cw_pilot1_winter_t16quad_s42` | continual_worlds | pilot | 42 | 109 | cuda:1 | 2026-09-28T13:17:07 | `4bapjjog` | `logs/20260928_131707.log` |
-| 9 | running | Pilot 1 Fog | `rppo_cw_pilot1_fog_t1none_s42` | continual_worlds | pilot | 42 | 110 | cuda:0 | 2026-09-28T13:17:11 | `nealqwms` | `logs/20260928_131711.log` |
-| 10 | running | Pilot 1 Fog | `rppo_cw_pilot1_fog_t16quad_s42` | continual_worlds | pilot | 42 | 110 | cuda:1 | 2026-09-28T13:17:14 | `4rkcrqzp` | `logs/20260928_131714.log` |
-| 11 | running | Pilot 1 Harsh | `rppo_cw_pilot1_harsh_t1none_s42` | continual_worlds | pilot | 42 | 111 | cuda:0 | 2026-09-28T13:17:18 | `cssu3qc3` | `logs/20260928_131718.log` |
-| 12 | running | Pilot 1 Harsh | `rppo_cw_pilot1_harsh_t16quad_s42` | continual_worlds | pilot | 42 | 111 | cuda:1 | 2026-09-28T13:17:22 | `xbpq1y9s` | `logs/20260928_131722.log` |
-| 13 | running | Pilot 2a shakedown | `rppo_cw_pilot2a_t1none_s42` | continual_worlds | pilot | 42 | 112 | cuda:0 | 2026-09-28T13:17:26 | `tdpz3ju7` | `logs/20260928_131726.log` |
-| 14 | running | Pilot 2a shakedown | `rppo_cw_pilot2a_t16quad_s42` | continual_worlds | pilot | 42 | 112 | cuda:1 | 2026-09-28T13:17:30 | `si97t2j5` | `logs/20260928_131730.log` |
-| 15 | running | Pilot 2b shakedown | `rppo_cw_pilot2b_t1none_s42` | continual_worlds | pilot | 42 | 113 | cuda:0 | 2026-09-28T13:17:34 | `rygfw76a` | `logs/20260928_131734.log` |
-| 16 | running | Pilot 2b shakedown | `rppo_cw_pilot2b_t16quad_s42` | continual_worlds | pilot | 42 | 113 | cuda:1 | 2026-09-28T13:17:38 | `zjsdfoyq` | `logs/20260928_131738.log` |
-| 17 | running | Pilot 3 Nursery (= seed-43 leg) | `rppo_cw_nursery_t1none_s43` | continual_worlds | pilot | 43 | 102 | cuda:0 | 2026-09-28T13:17:41 | `98tm6jxe` | `logs/20260928_131741.log` |
-| 18 | running | Pilot 3 Nursery (= seed-43 leg) | `rppo_cw_nursery_t16quad_s43` | continual_worlds | pilot | 43 | 102 | cuda:1 | 2026-09-28T13:17:45 | `q3ni07j6` | `logs/20260928_131745.log` |
+| 1 | running (at 23:45 Rev 2a) | Pilot 1 Forage (= main stage 1) | `rppo_cw_pilot1_forage_t1none_s42` | continual_worlds | pilot | 42 | 106 | cuda:0 | 2026-09-28T13:16:42 | `6sf68was` | `logs/20260928_131642.log` |
+| 2 | running (at 23:45 Rev 2a) | Pilot 1 Forage (= main stage 1) | `rppo_cw_pilot1_forage_t16quad_s42` | continual_worlds | pilot | 42 | 106 | cuda:1 | 2026-09-28T13:16:46 | `e78og819` | `logs/20260928_131646.log` |
+| 3 | finished ("Training complete", checked 23:45 Rev 2a) | Pilot 1 Danger | `rppo_cw_pilot1_danger_t1none_s42` | continual_worlds | pilot | 42 | 107 | cuda:0 | 2026-09-28T13:16:50 | `7e8rr45p` | `logs/20260928_131650.log` |
+| 4 | finished ("Training complete", checked 23:45 Rev 2a) | Pilot 1 Danger | `rppo_cw_pilot1_danger_t16quad_s42` | continual_worlds | pilot | 42 | 107 | cuda:1 | 2026-09-28T13:16:53 | `gwkhnlpl` | `logs/20260928_131653.log` |
+| 5 | finished ("Training complete", checked 23:45 Rev 2a) | Pilot 1 Famine | `rppo_cw_pilot1_famine_t1none_s42` | continual_worlds | pilot | 42 | 108 | cuda:0 | 2026-09-28T13:16:56 | `p0ev5nbw` | `logs/20260928_131656.log` |
+| 6 | finished ("Training complete", checked 23:45 Rev 2a) | Pilot 1 Famine | `rppo_cw_pilot1_famine_t16quad_s42` | continual_worlds | pilot | 42 | 108 | cuda:1 | 2026-09-28T13:17:00 | `lf5tquew` | `logs/20260928_131700.log` |
+| 7 | finished ("Training complete", checked 23:45 Rev 2a) | Pilot 1 Winter | `rppo_cw_pilot1_winter_t1none_s42` | continual_worlds | pilot | 42 | 109 | cuda:0 | 2026-09-28T13:17:04 | `s85qrj65` | `logs/20260928_131704.log` |
+| 8 | finished ("Training complete", checked 23:45 Rev 2a) | Pilot 1 Winter | `rppo_cw_pilot1_winter_t16quad_s42` | continual_worlds | pilot | 42 | 109 | cuda:1 | 2026-09-28T13:17:07 | `4bapjjog` | `logs/20260928_131707.log` |
+| 9 | finished ("Training complete", checked 23:45 Rev 2a) | Pilot 1 Fog | `rppo_cw_pilot1_fog_t1none_s42` | continual_worlds | pilot | 42 | 110 | cuda:0 | 2026-09-28T13:17:11 | `nealqwms` | `logs/20260928_131711.log` |
+| 10 | finished ("Training complete", checked 23:45 Rev 2a) | Pilot 1 Fog | `rppo_cw_pilot1_fog_t16quad_s42` | continual_worlds | pilot | 42 | 110 | cuda:1 | 2026-09-28T13:17:14 | `4rkcrqzp` | `logs/20260928_131714.log` |
+| 11 | finished ("Training complete", checked 23:45 Rev 2a) | Pilot 1 Harsh | `rppo_cw_pilot1_harsh_t1none_s42` | continual_worlds | pilot | 42 | 111 | cuda:0 | 2026-09-28T13:17:18 | `cssu3qc3` | `logs/20260928_131718.log` |
+| 12 | finished ("Training complete", checked 23:45 Rev 2a) | Pilot 1 Harsh | `rppo_cw_pilot1_harsh_t16quad_s42` | continual_worlds | pilot | 42 | 111 | cuda:1 | 2026-09-28T13:17:22 | `xbpq1y9s` | `logs/20260928_131722.log` |
+| 13 | finished ("Training complete", checked 23:45 Rev 2a) | Pilot 2a shakedown | `rppo_cw_pilot2a_t1none_s42` | continual_worlds | pilot | 42 | 112 | cuda:0 | 2026-09-28T13:17:26 | `tdpz3ju7` | `logs/20260928_131726.log` |
+| 14 | running (at 23:45 Rev 2a) | Pilot 2a shakedown | `rppo_cw_pilot2a_t16quad_s42` | continual_worlds | pilot | 42 | 112 | cuda:1 | 2026-09-28T13:17:30 | `si97t2j5` | `logs/20260928_131730.log` |
+| 15 | finished ("Training complete", checked 23:45 Rev 2a) | Pilot 2b shakedown | `rppo_cw_pilot2b_t1none_s42` | continual_worlds | pilot | 42 | 113 | cuda:0 | 2026-09-28T13:17:34 | `rygfw76a` | `logs/20260928_131734.log` |
+| 16 | finished ("Training complete", checked 23:45 Rev 2a) | Pilot 2b shakedown | `rppo_cw_pilot2b_t16quad_s42` | continual_worlds | pilot | 42 | 113 | cuda:1 | 2026-09-28T13:17:38 | `zjsdfoyq` | `logs/20260928_131738.log` |
+| 17 | finished ("Training complete", checked 23:45 Rev 2a) | Pilot 3 Nursery (= seed-43 leg) | `rppo_cw_nursery_t1none_s43` | continual_worlds | pilot | 43 | 102 | cuda:0 | 2026-09-28T13:17:41 | `98tm6jxe` | `logs/20260928_131741.log` |
+| 18 | finished ("Training complete", checked 23:45 Rev 2a) | Pilot 3 Nursery (= seed-43 leg) | `rppo_cw_nursery_t16quad_s43` | continual_worlds | pilot | 43 | 102 | cuda:1 | 2026-09-28T13:17:45 | `q3ni07j6` | `logs/20260928_131745.log` |
 | 19 | pending user approval (Rev 2 draft; D4) | P1-replacement branch Danger-A ↔ Famine, ordinary | `rppo_cw_p1_danger_scout_a_famine_t1none_s42` | continual_worlds | prod | 42 | — | — | — | — | — |
 | 20 | pending user approval (Rev 2 draft; D4) | P1-replacement branch Danger-A ↔ Famine, modulated | `rppo_cw_p1_danger_scout_a_famine_t16quad_s42` | continual_worlds | prod | 42 | — | — | — | — | — |
 | 21 | pending user approval (Rev 2 draft; D5) | P2-replacement branch Fog-B ↔ Danger-A, ordinary | `rppo_cw_p2_fog_scout_b_danger_scout_a_t1none_s42` | continual_worlds | prod | 42 | — | — | — | — | — |
 | 22 | pending user approval (Rev 2 draft; D5) | P2-replacement branch Fog-B ↔ Danger-A, modulated | `rppo_cw_p2_fog_scout_b_danger_scout_a_t16quad_s42` | continual_worlds | prod | 42 | — | — | — | — | — |
-| 23 | ready (Rev 2) — launch after 6.3 checklist + user go | P3 branch Winter ↔ Famine, ordinary | `rppo_cw_p3_t1none_s42` | continual_worlds | prod | 42 | — | — | — | — | — |
-| 24 | ready (Rev 2) — launch after 6.3 checklist + user go | P3 branch Winter ↔ Famine, modulated | `rppo_cw_p3_t16quad_s42` | continual_worlds | prod | 42 | — | — | — | — | — |
+| 23 | ready (Rev 2) — launch after 6.3 checklist + user go; *Rev 2a:* items 1–7 and 9 (Pilot 2 closed) | P3 branch Winter ↔ Famine, ordinary | `rppo_cw_p3_t1none_s42` | continual_worlds | prod | 42 | — | — | — | — | — |
+| 24 | ready (Rev 2) — launch after 6.3 checklist + user go; *Rev 2a:* items 1–7 and 9 (Pilot 2 closed) | P3 branch Winter ↔ Famine, modulated | `rppo_cw_p3_t16quad_s42` | continual_worlds | prod | 42 | — | — | — | — | — |
 | 25 | planned — unblocked (Pilot 3 passed) | Nursery leg | `rppo_cw_nursery_t1none_s44` | continual_worlds | prod | 44 | — | — | — | — | — |
 | 26 | planned — unblocked (Pilot 3 passed) | Nursery leg | `rppo_cw_nursery_t16quad_s44` | continual_worlds | prod | 44 | — | — | — | — | — |
-| 27 | running | Home leg | `rppo_cw_home_t1none_s43` | continual_worlds | prod | 43 | 102 | cuda:0 | 2026-09-28T17:14:41 | `6gc2tok9` | `logs/20260928_171441.log` |
-| 28 | running | Home leg | `rppo_cw_home_t16quad_s43` | continual_worlds | prod | 43 | 102 | cuda:1 | 2026-09-28T18:02:28 | `cmnof24a` | `logs/20260928_180229.log` |
+| 27 | running (at 23:45 Rev 2a) | Home leg | `rppo_cw_home_t1none_s43` | continual_worlds | prod | 43 | 102 | cuda:0 | 2026-09-28T17:14:41 | `6gc2tok9` | `logs/20260928_171441.log` |
+| 28 | running (at 23:45 Rev 2a) | Home leg | `rppo_cw_home_t16quad_s43` | continual_worlds | prod | 43 | 102 | cuda:1 | 2026-09-28T18:02:28 | `cmnof24a` | `logs/20260928_180229.log` |
 | 29 | planned (after 25) | Home leg | `rppo_cw_home_t1none_s44` | continual_worlds | prod | 44 | — | — | — | — | — |
 | 30 | planned (after 26) | Home leg | `rppo_cw_home_t16quad_s44` | continual_worlds | prod | 44 | — | — | — | — | — |
-| 31 | running | Pilot 1s Danger-soft | `rppo_cw_pilot1s_danger_soft_t1none_s42` | continual_worlds | pilot | 42 | 101 | cuda:0 | 2026-09-28T16:20:23 | `ww9ck47l` | `logs/20260928_162023.log` |
-| 32 | running | Pilot 1s Danger-soft | `rppo_cw_pilot1s_danger_soft_t16quad_s42` | continual_worlds | pilot | 42 | 101 | cuda:1 | 2026-09-28T16:20:24 | `kgvn98p5` | `logs/20260928_162024.log` |
-| 33 | running | Pilot 1s Fog-soft | `rppo_cw_pilot1s_fog_soft_t1none_s42` | continual_worlds | pilot | 42 | 104 | cuda:0 | 2026-09-28T16:28:58 | `ruudv8i6` | `logs/20260928_162858.log` (shared with row 34; clean copy `wandb/run-20260928_162915-ruudv8i6/files/output.log`) |
-| 34 | running | Pilot 1s Fog-soft | `rppo_cw_pilot1s_fog_soft_t16quad_s42` | continual_worlds | pilot | 42 | 104 | cuda:1 | 2026-09-28T16:28:58 | `il157bos` | `logs/20260928_162858.log` (shared with row 33; clean copy `wandb/run-20260928_162915-il157bos/files/output.log`) |
-| 35 | running | Pilot 1s Harsh-soft | `rppo_cw_pilot1s_harsh_soft_t1none_s42` | continual_worlds | pilot | 42 | 103 | cuda:0 | 2026-09-28T16:20:25 | `dxkzhykp` | `logs/20260928_162025.log` |
-| 36 | running | Pilot 1s Harsh-soft | `rppo_cw_pilot1s_harsh_soft_t16quad_s42` | continual_worlds | pilot | 42 | 103 | cuda:1 | 2026-09-28T16:20:26 | `hjktbwln` | `logs/20260928_162026.log` |
-| 37 | running | Scout Danger-A (3–5 hunters, Home-like persistence) | `rppo_cw_scout_danger_scout_a_t1none_s42` | continual_worlds | pilot | 42 | 105 | cuda:0 | 2026-09-28T19:07:59 | `yhezxekl` | `logs/20260928_190759.log` |
-| 38 | running | Scout Danger-B (2–4 hunters) | `rppo_cw_scout_danger_scout_b_t1none_s42` | continual_worlds | pilot | 42 | 105 | cuda:1 | 2026-09-28T19:08:06 | `59wq3jqj` | `logs/20260928_190807.log` |
+| 31 | finished ("Training complete", checked 23:45 Rev 2a) | Pilot 1s Danger-soft | `rppo_cw_pilot1s_danger_soft_t1none_s42` | continual_worlds | pilot | 42 | 101 | cuda:0 | 2026-09-28T16:20:23 | `ww9ck47l` | `logs/20260928_162023.log` |
+| 32 | finished ("Training complete", checked 23:45 Rev 2a) | Pilot 1s Danger-soft | `rppo_cw_pilot1s_danger_soft_t16quad_s42` | continual_worlds | pilot | 42 | 101 | cuda:1 | 2026-09-28T16:20:24 | `kgvn98p5` | `logs/20260928_162024.log` |
+| 33 | finished ("Training complete", checked 23:45 Rev 2a) | Pilot 1s Fog-soft | `rppo_cw_pilot1s_fog_soft_t1none_s42` | continual_worlds | pilot | 42 | 104 | cuda:0 | 2026-09-28T16:28:58 | `ruudv8i6` | `logs/20260928_162858.log` (shared with row 34; clean copy `wandb/run-20260928_162915-ruudv8i6/files/output.log`) |
+| 34 | finished ("Training complete", checked 23:45 Rev 2a) | Pilot 1s Fog-soft | `rppo_cw_pilot1s_fog_soft_t16quad_s42` | continual_worlds | pilot | 42 | 104 | cuda:1 | 2026-09-28T16:28:58 | `il157bos` | `logs/20260928_162858.log` (shared with row 33; clean copy `wandb/run-20260928_162915-il157bos/files/output.log`) |
+| 35 | finished ("Training complete", checked 23:45 Rev 2a) | Pilot 1s Harsh-soft | `rppo_cw_pilot1s_harsh_soft_t1none_s42` | continual_worlds | pilot | 42 | 103 | cuda:0 | 2026-09-28T16:20:25 | `dxkzhykp` | `logs/20260928_162025.log` |
+| 36 | finished ("Training complete", checked 23:45 Rev 2a) | Pilot 1s Harsh-soft | `rppo_cw_pilot1s_harsh_soft_t16quad_s42` | continual_worlds | pilot | 42 | 103 | cuda:1 | 2026-09-28T16:20:26 | `hjktbwln` | `logs/20260928_162026.log` |
+| 37 | finished ("Training complete", checked 23:45 Rev 2a) | Scout Danger-A (3–5 hunters, Home-like persistence) | `rppo_cw_scout_danger_scout_a_t1none_s42` | continual_worlds | pilot | 42 | 105 | cuda:0 | 2026-09-28T19:07:59 | `yhezxekl` | `logs/20260928_190759.log` |
+| 38 | finished ("Training complete", checked 23:45 Rev 2a) | Scout Danger-B (2–4 hunters) | `rppo_cw_scout_danger_scout_b_t1none_s42` | continual_worlds | pilot | 42 | 105 | cuda:1 | 2026-09-28T19:08:06 | `59wq3jqj` | `logs/20260928_190807.log` |
 | 39 | abandoned — node 114 hung during compile ~19:09; if 114 recovers, kill any rppo_cw_scout_ processes there (relaunched as `_r2`, next row) | Scout Danger-C (3–5 hunters + smell 8) | `rppo_cw_scout_danger_scout_c_t1none_s42` | continual_worlds | pilot | 42 | 114 | cuda:0 | 2026-09-28T19:08:13 | `4k8wgp8j` | `logs/20260928_190814.log` |
-| 39-r2 | running | Scout Danger-C (3–5 hunters + smell 8) — relaunch of 39 | `rppo_cw_scout_danger_scout_c_t1none_s42_r2` | continual_worlds | pilot | 42 | 107 | cuda:0 | 2026-09-28T19:27:46 | `fv0sdsvh` | `logs/20260928_192746.log` |
+| 39-r2 | finished ("Training complete", checked 23:45 Rev 2a) | Scout Danger-C (3–5 hunters + smell 8) — relaunch of 39 | `rppo_cw_scout_danger_scout_c_t1none_s42_r2` | continual_worlds | pilot | 42 | 107 | cuda:0 | 2026-09-28T19:27:46 | `fv0sdsvh` | `logs/20260928_192746.log` |
 | 40 | abandoned — node 114 hung during compile ~19:09; if 114 recovers, kill any rppo_cw_scout_ processes there (relaunched as `_r2`, next row) | Scout Fog-A (Fog-soft + smell 5) | `rppo_cw_scout_fog_scout_a_t1none_s42` | continual_worlds | pilot | 42 | 114 | cuda:1 | 2026-09-28T19:08:20 | `zm73ti5c` | `logs/20260928_190821.log` |
-| 40-r2 | running | Scout Fog-A (Fog-soft + smell 5) — relaunch of 40 | `rppo_cw_scout_fog_scout_a_t1none_s42_r2` | continual_worlds | pilot | 42 | 107 | cuda:1 | 2026-09-28T19:27:55 | `n1zmj65i` | `logs/20260928_192755.log` |
+| 40-r2 | finished ("Training complete", checked 23:45 Rev 2a) | Scout Fog-A (Fog-soft + smell 5) — relaunch of 40 | `rppo_cw_scout_fog_scout_a_t1none_s42_r2` | continual_worlds | pilot | 42 | 107 | cuda:1 | 2026-09-28T19:27:55 | `n1zmj65i` | `logs/20260928_192755.log` |
 | 41 | abandoned — node 114 hung during compile ~19:09; if 114 recovers, kill any rppo_cw_scout_ processes there (relaunched as `_r2`, next row) | Scout Fog-B (smell 3, no noise) | `rppo_cw_scout_fog_scout_b_t1none_s42` | continual_worlds | pilot | 42 | 114 | cuda:2 | 2026-09-28T19:08:27 | `h4772olp` | `logs/20260928_190827.log` |
-| 41-r2 | running | Scout Fog-B (smell 3, no noise) — relaunch of 41 | `rppo_cw_scout_fog_scout_b_t1none_s42_r2` | continual_worlds | pilot | 42 | 110 | cuda:0 | 2026-09-28T19:28:03 | `pvzvl7bm` | `logs/20260928_192803.log` |
-| 42 | running | Scout Danger-A, modulated agent (pairs row 37) | `rppo_cw_scout_danger_scout_a_t16quad_s42` | continual_worlds | pilot | 42 | 109 | cuda:0 | 2026-09-28T20:54:17 | `35fobtmf` | `logs/20260928_205417.log` |
-| 43 | running | Scout Fog-B, modulated agent (pairs row 41-r2) | `rppo_cw_scout_fog_scout_b_t16quad_s42` | continual_worlds | pilot | 42 | 109 | cuda:1 | 2026-09-28T21:01:05 | `v9qvx2p3` | `logs/20260928_210105.log` |
+| 41-r2 | finished ("Training complete", checked 23:45 Rev 2a) | Scout Fog-B (smell 3, no noise) — relaunch of 41 | `rppo_cw_scout_fog_scout_b_t1none_s42_r2` | continual_worlds | pilot | 42 | 110 | cuda:0 | 2026-09-28T19:28:03 | `pvzvl7bm` | `logs/20260928_192803.log` |
+| 42 | finished ("Training complete", checked 23:45 Rev 2a) | Scout Danger-A, modulated agent (pairs row 37) | `rppo_cw_scout_danger_scout_a_t16quad_s42` | continual_worlds | pilot | 42 | 109 | cuda:0 | 2026-09-28T20:54:17 | `35fobtmf` | `logs/20260928_205417.log` |
+| 43 | finished ("Training complete", checked 23:45 Rev 2a) | Scout Fog-B, modulated agent (pairs row 41-r2) | `rppo_cw_scout_fog_scout_b_t16quad_s42` | continual_worlds | pilot | 42 | 109 | cuda:1 | 2026-09-28T21:01:05 | `v9qvx2p3` | `logs/20260928_210105.log` |
+
+*Revision 2a (R7), statuses checked 23:45 against each log's "Training complete" line:* rows 3–13,
+15–18, 31–38, 39-r2 / 40-r2 / 41-r2, 42 and 43 **finished**; rows 39–41 **abandoned** (node 114);
+still **running**: 1 (12.35 M of 14 M), 2 (11.94 M of 14 M), 14 (14.61 M of 15 M), 27 (7.15 M of 10 M),
+28 (5.51 M of 10 M). Row 13 is finished (the Revision 2 text already said so).
 
 Row 42 (added 2026-09-28 at the user's request) is the modulated-agent twin of row 37 — Danger-A is
 the candidate replacement closest to the survivable line, and a replacement world needs both agents.
@@ -871,12 +949,64 @@ episodes of X's first visit**. For every switch into a visit v of X:
 The first rows after a switch are partial windows (the trainer clears its rolling window at a switch);
 rows are weighted by `Episode/_window_n` and rows under 1,000 episodes are skipped.
 
+**Common-reference companion (Revision 2a, 2026-09-28; pre-registered before any main run launched —
+plan-reviewer R1).** The dip and recovery above are relative to each agent's **own** `R_X`. When the two
+agents settle at different levels in X, those readings partly measure "whose settled level is lower"
+rather than "who adapts faster". Each is therefore also computed against one reference shared by both
+agents of the same sequence:
+
+- `R_X,common` = min(`R_X,ord`, `R_X,mod`) — the lower of the two agents' first-visit reference levels for
+  world X (same windows as `R_X`).
+- **Dip, common reference** = `R_X,common` − (mean survival over the first 20,000 episodes of visit v), in
+  **absolute survival steps** (also shown as a fraction of `R_X,common`). Because the reference is shared,
+  the modulated-minus-ordinary difference is simply the difference in post-switch survival, sign
+  reversed: negative (smaller dip) favours the modulator.
+- **Recovery, common reference** = training after the switch until the 20,000-episode running mean first
+  reaches **0.9 × `R_X,common`**, in episodes **and** environment steps, censored at `L_X` as above.
+
+**Vote rule (amends section 2 for H-dip and H-rec only).** The H-dip vote for a switch counts only if the
+modulated-minus-ordinary difference has the favourable sign under **both** the own-reference and the
+common-reference reading. The H-rec vote counts only if it is favourable under **all four** readings
+(own / common reference × episodes / environment steps). A switch whose readings disagree is recorded as
+"not counted" (7.11) — the same device the episodes-vs-environment-steps rule (F3, 7.9) already uses.
+Each reading has an opposite bias — the own-reference reading favours the agent with the lower plateau,
+the common-reference reading the agent with the higher level overall — so requiring agreement removes
+the plateau-level artefact in both directions. **Return and forgetting need no companion**: both are
+already differences in absolute survival steps (return: return-visit level − first-visit level of the
+same agent; forgetting: 5.3), and are unchanged.
+
+*Why, with the pilot example (descriptive; the pilots are Home → X switches, not votes).* In the Winter
+pilot the two agents started almost equal right after the switch (first 20,000 episodes: ordinary 129.4,
+modulated 138.4 steps) but settled 37 steps apart (198.0 vs 160.8). Own-reference recovery then reads
+**132,000 vs 40,000 episodes** (20.7 M vs 5.7 M environment steps) — a 3× apparent advantage for the
+modulator produced by the lower target (0.9 × 198.0 = 178 vs 0.9 × 160.8 = 145). Against the common
+target 0.9 × 160.8 = 145, recovery reads **28,000 vs 40,000 episodes** (3.9 M vs 5.7 M environment
+steps): the sign **reverses**. Under the Revision 2 rule, P3 (6 M of its 8 M episodes in Winter) would
+have counted this artefact as a modulator win; under Revision 2a it is "not counted". In Danger-A the
+levels are ordered the other way (ordinary lower), so the own-reference bias there would run against
+the modulator — the companion guards both directions.
+
+*Implementation hand-off (named; no code changed by this revision).* The common-reference readings are
+**not** computed by `scripts/analysis/studies/continual_worlds/pilot_readout.py` today (its
+`analyse_sequence` computes dip and recovery against each run's own `R_X` only), and the main analysis
+does not exist yet. **`developer`** (via the `feature-workflow`, `senior-developer` plans) adds: per
+sequence, pairing of the ordinary and modulated runs, `R_X,common`, the common-reference dip (steps and
+fraction) and recovery (episodes and environment steps), and the four-reading vote per switch — before
+the first P3 stage ends (14 M), so the first real switch is read with the rule as registered here. The
+Winter numbers above were computed with the script's own `scan` / `Series` / `recovery` functions and a
+fixed target of 0.9 × 160.8.
+
 ### 5.2 Modulator comparison
 
 For every switch measure, the **modulated-minus-ordinary difference** (dip and recovery: negative
 favours the modulator; return: positive). Reported per switch (4 per sequence), per sequence and
 pooled across the 3 sequences, always next to the noise yardstick (5.5). The support / refute rule is
 section 2's.
+
+*Revision 2a (R4):* for every switch, the number of episodes (and environment steps) of other-world
+training since that world's previous visit is printed next to its return value. In P3 this is 3 M
+episodes of Winter before the Famine return and 1 M of Famine before the Winter return (3.7.2), so the
+two returns are not read as equally tested.
 
 ### 5.3 Forgetting matrix (no training)
 
@@ -891,6 +1021,12 @@ per-episode SD of 100–150). **Forgetting of world X at stage k** = survival on
 latest visit − survival on X at the end of stage k, with its CI from the two cells' standard errors.
 **H-forget "beyond noise"** = the modulated and ordinary forgetting values' 95 % CIs do not overlap.
 The sweep spec is written after the branches exist; Pilot 2 tests it once on a real continual run.
+
+*Revision 2a (R4):* every forgetting value is reported next to the **number of interfering episodes**
+(and environment steps) between the two checkpoints it compares. With per-world stage lengths the
+forgetting of Famine and of Winter in P3 are not measured after matched amounts of interference (3 M vs
+1 M episodes), so forgetting is compared **between agents within a world**, never across worlds as if
+matched. No rule change.
 
 ### 5.4 Plasticity and balance (logged; descriptive)
 
@@ -968,11 +1104,20 @@ axis per sequence. Pilot 1 figures show all six worlds' Home → X curves with `
 - Live GPU state (diary + `pgrep`, not only `nvidia-smi`) and NAS mount on each node.
 - First stage switch of each continual run: `[STAGE] 0:01_forage -> 1:02_...` and no traceback; for
   a branch, the `[RESUME]` line naming stage 1.
+  *Revision 2a correction (R5):* the first half applies to runs that start in stage 0 (Pilot 2), **not to
+  the branches**. A branch restores into stage 1 and prints **no** `[STAGE] 0:01_forage -> 1:...` line.
+  Its expected start-up lines are, in this order: `[RESUME] Checkpoint 'stage' field (0) != schedule-derived
+  stage (1) ... trusting the schedule.` — **expected, not a fault** (the checkpoint was saved in Forage,
+  stage 0; the trainer rebuilds the schedule's stage, the fixed Known Bug H2) — then `[RESUME] Stage
+  1:02_winter environment rebuilt` (P3; the stage-1 world's name for other sequences). The first `[STAGE]`
+  line of a P3 branch is `1:02_winter -> 2:03_famine` at ≈ 14 M episodes.
 - Before the branches: repeat C8 on the regenerated schedules and C10 on the real branch-point copy;
   the smoke path S-A is re-run on the launch node if HEAD has moved since Pilot 2.
 
 **Remaining pre-launch checklist for the branches (Revision 2).** P3 launches when 1–7 are done and the
 user has said go; P1 / P2 additionally need the user's decision (3.7.6) and item 8.
+*Revision 2a:* P3 launches when items 1–7 and 9 are done (item 1 unless waived under D8, item 10) and
+the user has said go.
 
 1. **Forage runs 1–2 end at 14 M** (ETA ≈ 8 h) → re-run the read-out and confirm `T_Forage` still gives
    `L_Forage` = 1 M, hence `B0` = 11 M (3.7.3). If it changed, regenerate the schedules first.
@@ -986,13 +1131,29 @@ user has said go; P1 / P2 additionally need the user's decision (3.7.6) and item
    conditions updated for Rev 2: Home, Forage, Famine, Winter, Danger-A, Fog-B instead of the dropped
    worlds, subject to D4 / D5) and run it once on a finished Pilot 2 run (e.g. run 15) to confirm a full
    matrix comes out.
+   *Revision 2a (R3):* this is a gate **before the branches launch** — the "or at the latest before their
+   first stage ends" wording above is withdrawn. Run 15 is finished and its checkpoints exist; a developer
+   is running the sweep on it now. Pilot 2 is "3 of 4 clauses met, provisional" until it produces a full
+   matrix (3.7.5).
 5. **Restore-into-a-later-stage path.** Pilot 2 started in stage 0; the branches start in stage 1 from a
    restored counter. At launch, check the first log lines: `[RESUME]` at the copied step, the run in stage
    1 (`02_winter` for P3) from its first iteration, and no traceback through the first checkpoint.
+   *Revision 2a (R5), exact lines for `training-runner`:* (a) `[RESUME]` at step 11,000,025 (ordinary) /
+   11,000,022 (modulated); (b) `[RESUME] Checkpoint 'stage' field (0) != schedule-derived stage (1) ...
+   trusting the schedule.` — **expected; do not relaunch on it**; (c) `[RESUME] Stage 1:02_winter
+   environment rebuilt`; (d) **no** `[STAGE] 0 -> 1` line — do not wait for one; the first `[STAGE]` line
+   is `1:02_winter -> 2:03_famine` at ≈ 14 M episodes; (e) no traceback through the first checkpoint.
+   A missing (c), or a `[STAGE] 0:01_forage -> ...` line, **is** a fault: stop the run.
 6. **Live GPU state** (diary + `pgrep`, not only `nvidia-smi`) and NAS mount on each node; node 114 is not
    used until it answers SSH (it hung during the scout launch).
 7. **Run 14** (Pilot 2a, modulated) finishes its last stage (≈ 1.3 h) with the same pass signs as runs 13,
    15, 16 — closes the Pilot 2 pipeline verdict.
+   *Revision 2a:* at 23:45 run 14 was at 14.61 M of 15 M (≈ 17 min left). Items 4 and 7 together close
+   Pilot 2 (3.7.5).
+9. *(Revision 2a, R1)* The common-reference companion (5.1) is registered in this doc before launch —
+   **done by this revision**. Its implementation in the analysis code (`developer` hand-off, 5.1) is
+   needed before the first P3 stage ends (≈ 14 M), not before launch.
+10. *(Revision 2a, D8)* Item 1 applies unless the user waives it (3.7.6 D8).
 8. (P1 / P2 only) the user's decision D4 / D5; if a new Danger variant is chosen, its two-agent pilot first.
 
 ## 7. Failure-mode catalog (decided in advance)
@@ -1009,6 +1170,7 @@ user has said go; P1 / P2 additionally need the user's decision (3.7.6) and item
 | 7.8 | A Pilot 1 world has not plateaued by the pilot's end | `L_X` = 3 M cap, returns in X marked "below plateau" (3.3) |
 | 7.9 | Recovery favours the modulator in episodes but not in environment steps (or the reverse) | the H-rec vote is not counted for that switch (5.1) |
 | 7.10 | Pilot 3 fails | the seed-43 Nursery leg is not used; user decides Nursery's fate before runs 25–30 |
+| 7.11 *(Rev 2a)* | Dip or recovery favours the modulator under the own-reference reading but not under the common-reference reading (or the reverse) | that switch's H-dip / H-rec vote is not counted (5.1); both readings are reported. If this happens on most switches of a sequence, the sequence's verdict rests on return and forgetting only, and is worded so |
 
 ## 8. Metrics requested (optional, for the user)
 
@@ -1022,7 +1184,7 @@ If accepted, route through `feature-workflow` before launch; none blocks the pil
 
 ## 9. Decisions (all taken 2026-09-28; user: "follow your recommendations")
 
-*Revision 2 adds open decisions D1–D7 for the user (3.7.6); none is taken yet.*
+*Revision 2 adds open decisions D1–D7 for the user (3.7.6); none is taken yet. Revision 2a adds D8.*
 
 1. B1: no-code workaround accepted (no per-predator distance curves).
 2. Fog: 3× blur + smell/sight noise accepted in place of vision range 1.
@@ -1157,3 +1319,21 @@ Severity legend: 🔴 Critical = fix before going further · 🟡 Moderate = lik
 **Cost of being wrong:** if R1 stands and P3 (plus any Danger-A sequence) launches, the runs' data are fine but the two pre-registered adaptation votes are contaminated by a plateau-level difference the pilot already measures at 3×, and amending the rule after seeing P3 would be post-hoc — a headline claim that would not survive review, on the study's longest sequence. R2 / R3 cost a wrong label, not a run. Nothing here risks data loss (the only file operation is a read-only `cp -a` into a new directory).
 
 Reviewed by: plan-reviewer
+
+### Response from experiment-designer (Revision 2a, 2026-09-28)
+
+All seven findings addressed in the doc; changed text is marked *Revision 2a* in place and replaced
+wording is struck through (~~like this~~), not deleted. No config, schedule or script was changed.
+
+| # | Resolution | Where |
+|---|---|---|
+| R1 🔴 | Common-reference companion pre-registered for dip (absolute steps against min(`R_X,ord`, `R_X,mod`), also as a fraction) and recovery (to 0.9 × min(`R_X,ord`, `R_X,mod`), episodes and environment steps). H-dip vote needs the favourable sign under own **and** common reference; H-rec under all four readings. Return and forgetting unchanged (already absolute). Winter pilot shown as motivation: own-reference recovery 132k vs 40k episodes, common-reference **28k vs 40k** (sign reverses) from near-equal zero-shot survival 129.4 vs 138.4. New failure mode 7.11. **Hand-off to `developer`** (via `feature-workflow`): implement the companion in `pilot_readout.py`'s sequence analysis and in the main analysis, before the first P3 stage ends | Rev 2a box, 2, 5.1, 7.11, 6.3 item 9 |
+| R2 🟡 | "Levelled off" struck; Winter trailing-200k trajectory added (modulated peak 175.7 at 2.54 M → 160.8 at the end, −8.5 %; ordinary 205.6 → 198.0, −3.7 %); `R_Winter` may sit on a falling curve — carried into results; stated as evidence for D6 *look first* | 3.7.1, 3.7.2 |
+| R3 🟡 | Pilot 2 relabelled "3 of 4 clauses met, provisional" until run 14 ends and the forgetting sweep runs once on run 15 (in progress by a developer); the sweep is now a gate before the branches | 3.7.5, 6.3 items 4, 7 |
+| R4 🟡 | P3 asymmetry stated (Famine return after 3 M Winter; Winter return after 1 M Famine; forgetting not at matched times); interfering-episode counts reported next to every return and forgetting value; no rule change | 3.7.2, 5.2, 5.3 |
+| R5 🟡 | Branch start-up lines named exactly (`[RESUME] Checkpoint 'stage' field (0) != schedule-derived stage (1) ... trusting the schedule.` expected, then `[RESUME] Stage 1:02_winter environment rebuilt`); no `[STAGE] 0 -> 1` line; first `[STAGE]` is 1 → 2 at ≈ 14 M. Checked against `train.py:1559-1580` | 6.3 first bullet, item 5 |
+| R6 🟢 | 7.4 citation struck; the with / without-Danger-A verdict stated on its own (one-agent-only survivable); "best window 130.1" struck as a criterion | 3.7.1 scout table, 3.7.4 point 1 |
+| R7 🟢 | Manifest statuses updated from the logs (23:45): 3–13, 15–18, 31–38, the three `_r2` rows, 42, 43 finished; 39–41 abandoned; 1, 2, 14, 27, 28 running | 4 |
+| O5 | Recorded as user decision **D8**: the branches need not wait for runs 1–2 to reach 14 M (`L_Forage` cannot change; the 11 M checkpoints exist); waiting now costs ≈ 1.5–2 h, not 8 h | 3.7.6, 6.3 item 10 |
+
+Signed: experiment-designer
