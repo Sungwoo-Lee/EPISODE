@@ -4571,3 +4571,37 @@ cd /media/nas01/projects/Interoceptive-AI/grid_world_pain
 #   --episodes 2000000 --checkpoint-frequency 100000 --seed 43 --device cuda:1 \
 #   --tag "rppo_cw_nursery_t16quad_s43" --wandb-name "rppo_cw_nursery_t16quad_s43" \
 #   --wandb-group "continual_worlds" --wandb-job-type "pilot"
+# ---------------------------------------------------------------------------
+# 2026-09-28 — continual-worlds Revision 1a re-pilots (rows 31, 32, 35, 36; Fog rows 33-34 NOT launched)
+# Plan: docs/experiments/active/continual_worlds/CONTINUAL_WORLDS.md §4 (manifest) / §4.1 (rows 31-36 =
+# rows 3-12 flags with world + tag swapped). --seed / --checkpoint-frequency 100000 PLAN-SPECIFIED.
+# env-config-reviewer GO 2026-09-28. Launched via CIFS-bypass /tmp scripts + run_command.py --no-tail.
+# ---------------------------------------------------------------------------
+# Run 31: rppo_cw_pilot1s_danger_soft_t1none_s42 — node 101, cuda:0
+# /home/vncuser/miniconda3/envs/grid_world_pain/bin/python train.py --config configs/environment/experiment/continual_worlds/danger_soft_15x15.yaml \
+#   --agent_config configs/models/recurrent_ppo/nmn_input_site_grid_gaenorm/nmngaenorm_t1none.yaml \
+#   --load-checkpoint results/JAX_RecurrentPPO/20260927-053057_rppo_l05body_w0000_t1none_s42/models \
+#   --episodes 13000000 --checkpoint-frequency 100000 --seed 42 --device cuda:0 \
+#   --tag "rppo_cw_pilot1s_danger_soft_t1none_s42" --wandb-name "rppo_cw_pilot1s_danger_soft_t1none_s42" \
+#   --wandb-group "continual_worlds" --wandb-job-type "pilot"
+# Run 32: rppo_cw_pilot1s_danger_soft_t16quad_s42 — node 101, cuda:1
+# /home/vncuser/miniconda3/envs/grid_world_pain/bin/python train.py --config configs/environment/experiment/continual_worlds/danger_soft_15x15.yaml \
+#   --agent_config configs/models/recurrent_ppo/nmn_input_site_grid_gaenorm/nmngaenorm_t16quad_ALL.yaml \
+#   --load-checkpoint results/JAX_RecurrentPPO/20260927-053059_rppo_l05body_w0000_t16quad_s42/models \
+#   --episodes 13000000 --checkpoint-frequency 100000 --seed 42 --device cuda:1 \
+#   --tag "rppo_cw_pilot1s_danger_soft_t16quad_s42" --wandb-name "rppo_cw_pilot1s_danger_soft_t16quad_s42" \
+#   --wandb-group "continual_worlds" --wandb-job-type "pilot"
+# Run 35: rppo_cw_pilot1s_harsh_soft_t1none_s42 — node 103, cuda:0
+# /home/vncuser/miniconda3/envs/grid_world_pain/bin/python train.py --config configs/environment/experiment/continual_worlds/harsh_soft_15x15.yaml \
+#   --agent_config configs/models/recurrent_ppo/nmn_input_site_grid_gaenorm/nmngaenorm_t1none.yaml \
+#   --load-checkpoint results/JAX_RecurrentPPO/20260927-053057_rppo_l05body_w0000_t1none_s42/models \
+#   --episodes 13000000 --checkpoint-frequency 100000 --seed 42 --device cuda:0 \
+#   --tag "rppo_cw_pilot1s_harsh_soft_t1none_s42" --wandb-name "rppo_cw_pilot1s_harsh_soft_t1none_s42" \
+#   --wandb-group "continual_worlds" --wandb-job-type "pilot"
+# Run 36: rppo_cw_pilot1s_harsh_soft_t16quad_s42 — node 103, cuda:1
+# /home/vncuser/miniconda3/envs/grid_world_pain/bin/python train.py --config configs/environment/experiment/continual_worlds/harsh_soft_15x15.yaml \
+#   --agent_config configs/models/recurrent_ppo/nmn_input_site_grid_gaenorm/nmngaenorm_t16quad_ALL.yaml \
+#   --load-checkpoint results/JAX_RecurrentPPO/20260927-053059_rppo_l05body_w0000_t16quad_s42/models \
+#   --episodes 13000000 --checkpoint-frequency 100000 --seed 42 --device cuda:1 \
+#   --tag "rppo_cw_pilot1s_harsh_soft_t16quad_s42" --wandb-name "rppo_cw_pilot1s_harsh_soft_t16quad_s42" \
+#   --wandb-group "continual_worlds" --wandb-job-type "pilot"

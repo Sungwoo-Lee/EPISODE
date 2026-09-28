@@ -451,12 +451,12 @@ Home legs (27–30) after their Nursery leg ends (27–28 only if Pilot 3 passed
 | 28 | planned (after 18, if Pilot 3 passes) | Home leg | `rppo_cw_home_t16quad_s43` | continual_worlds | prod | 43 | — | — | — | — | — |
 | 29 | planned (after 25) | Home leg | `rppo_cw_home_t1none_s44` | continual_worlds | prod | 44 | — | — | — | — | — |
 | 30 | planned (after 26) | Home leg | `rppo_cw_home_t16quad_s44` | continual_worlds | prod | 44 | — | — | — | — | — |
-| 31 | planned (Revision 1a re-pilot) | Pilot 1s Danger-soft | `rppo_cw_pilot1s_danger_soft_t1none_s42` | continual_worlds | pilot | 42 | — | — | — | — | — |
-| 32 | planned (Revision 1a re-pilot) | Pilot 1s Danger-soft | `rppo_cw_pilot1s_danger_soft_t16quad_s42` | continual_worlds | pilot | 42 | — | — | — | — | — |
+| 31 | running | Pilot 1s Danger-soft | `rppo_cw_pilot1s_danger_soft_t1none_s42` | continual_worlds | pilot | 42 | 101 | cuda:0 | 2026-09-28T16:20:23 | `ww9ck47l` | `logs/20260928_162023.log` |
+| 32 | running | Pilot 1s Danger-soft | `rppo_cw_pilot1s_danger_soft_t16quad_s42` | continual_worlds | pilot | 42 | 101 | cuda:1 | 2026-09-28T16:20:24 | `kgvn98p5` | `logs/20260928_162024.log` |
 | 33 | planned (Revision 1a re-pilot) | Pilot 1s Fog-soft | `rppo_cw_pilot1s_fog_soft_t1none_s42` | continual_worlds | pilot | 42 | — | — | — | — | — |
 | 34 | planned (Revision 1a re-pilot) | Pilot 1s Fog-soft | `rppo_cw_pilot1s_fog_soft_t16quad_s42` | continual_worlds | pilot | 42 | — | — | — | — | — |
-| 35 | planned (Revision 1a re-pilot) | Pilot 1s Harsh-soft | `rppo_cw_pilot1s_harsh_soft_t1none_s42` | continual_worlds | pilot | 42 | — | — | — | — | — |
-| 36 | planned (Revision 1a re-pilot) | Pilot 1s Harsh-soft | `rppo_cw_pilot1s_harsh_soft_t16quad_s42` | continual_worlds | pilot | 42 | — | — | — | — | — |
+| 35 | running | Pilot 1s Harsh-soft | `rppo_cw_pilot1s_harsh_soft_t1none_s42` | continual_worlds | pilot | 42 | 103 | cuda:0 | 2026-09-28T16:20:25 | `dxkzhykp` | `logs/20260928_162025.log` |
+| 36 | running | Pilot 1s Harsh-soft | `rppo_cw_pilot1s_harsh_soft_t16quad_s42` | continual_worlds | pilot | 42 | 103 | cuda:1 | 2026-09-28T16:20:26 | `hjktbwln` | `logs/20260928_162026.log` |
 
 Rows 31–36 (Revision 1a) are judged by the same survivable rule and plateau rule as Pilot 1 (3.6,
 3.3) and, if they pass, their `T` replaces the failed original's in the `L_X` computation for P1–P3.
