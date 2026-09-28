@@ -1124,3 +1124,36 @@ Reviewed by: plan-reviewer
 | F9 | Entropy windows cut by `stage/index` on the iteration stream | 5.4 |
 
 Signed: experiment-designer
+
+## Feedback from plan-reviewer (Revision 2, 2026-09-28, against commit `bc2d32d3`)
+
+**Verdict on the plan: NOT READY** — one Critical finding, cheap to fix, no rerun involved: the
+pre-registered dip and recovery measures compare each agent with *its own* first-visit level, and the
+pilots now show the two agents level off 37 steps apart in Winter (198 vs 161), so in P3 those two
+votes would measure "how much lower is your plateau" rather than "how fast do you adapt". Adding a
+common-reference companion reading to 5.1 **before** P3 launches flips this to SOUND WITH CONCERNS.
+**Verdict on the pilot read-out: SUPPORTED WITH CAVEATS** — every per-world verdict, stage length,
+the 11 M branch point and the Pilot 3 pass follow the pre-registered rules and match the read-out
+data; the caveats are two overstated labels ("Pilot 2 pass", "Winter levelled off").
+No goalpost was moved silently: the scouts are labelled exploratory everywhere, the drafts say DO NOT
+LAUNCH in the files themselves, and per-world stage length and 11 M are what 3.3 / 3.4 say.
+Full report with evidence: `docs/reviews/plan_continual_worlds_rev2.md`.
+
+Severity legend: 🔴 Critical = fix before going further · 🟡 Moderate = likely costs a re-run ·
+🟢 Low = cosmetic · ❓ Open = an assumption nobody has verified yet.
+
+| # | Sev | Location | Issue | Suggested fix | Owner |
+|---|---|---|---|---|---|
+| R1 | 🔴 | 5.1, 2 (H-dip, H-rec), 3.7.1 Winter finding | Dip and recovery are relative to each agent's own `R_X`. The Winter pilot shows the artefact directly: zero-shot survival after the Home → Winter switch was similar (ordinary ≈ 129, modulated ≈ 138 steps), yet "recovery" reads 132k vs 40k episodes only because the targets differ (0.9 × 198 = 178 vs 0.9 × 161 = 145). In Danger-A the bias runs the other way (ordinary lower). Two of the four votes therefore track plateau level, not adaptation speed; with "3 of 4 measures" as the support rule this can manufacture or hide a verdict. | Before launch, pre-register in 5.1 a common-reference companion for both measures (dip in absolute steps, or against the lower of the two agents' `R_X`; recovery to 0.9 × min(`R_X,ord`, `R_X,mod`)) and make the H-dip / H-rec vote require the favourable sign under **both** the own- and common-reference readings — the same device F3 used for episodes vs environment steps. Return and forgetting are absolute already and need nothing. | experiment-designer |
+| R2 | 🟡 | 3.7.2 ("it did level off"), 3.7.1 Winter finding, D6 | The modulated Winter curve is not flat: its trailing 200k mean peaks at 175.7 (2.54 M) and ends at 160.8, 8.5 % below — outside the 5 % plateau band (ordinary: 205.6 → 198.0, inside). The 3.3 fallback correctly does not fire (`T` is the *first* crossing), but the sentence overstates, the 37-step gap is partly a late decline (30 steps at the best windows), and `R_Winter` (2.8–3.0 M of the first visit) may be measured on a falling curve. | Reword; put the trailing-window trajectory in the Winter finding (project rule: temporal evolution, not endpoints); carry a "reference on a non-monotonic curve" note into results. This is evidence for D6's *look first* option. | experiment-designer |
+| R3 | 🟡 | 3.7.5 "Pilot 2 — pipeline pass" | The pre-registered pass (3.6) has four clauses; two are unmet — run 14 is still in stage 5 and the forgetting-matrix sweep has never run. Verified clauses: 4 `[STAGE]` lines per run at 3–186 episodes drift, 0 tracebacks, 51 checkpoints, 3 of 4 runs "Training complete". 6.3 item 4's "or at the latest before their first stage ends" loosens the gate. | Label it "3 of 4 clauses met, provisional"; run the sweep on run 15 before the branches launch (checkpoints exist; nothing waits on training). | experiment-designer |
+| R4 | 🟡 | 3.7.2, 5.2, 5.3 | Per-world lengths make P3 lopsided: the Famine return follows 3 M of Winter, the Winter return only 1 M of Famine, so the four switch votes carry unequal interference, the forgetting matrix's "matched times" are not matched across the two worlds, and the heavy-interference return lands on the world where the pilots show no agent difference (214 / 214). Same schedule for both agents, so not an agent confound; the rule is pre-registered and correctly applied. | State it in 5.2 / 5.3; report forgetting next to the number of interfering episodes; no rule change. | experiment-designer / experiment-analyzer |
+| R5 | 🟡 | 6.3 (first bullet, item 5), 4.2 | The branch restore path is sound in code (`train.py:1559-1580` rebuilds the stage-1 world unconditionally — the fixed Known Bug H2) but the checklist names lines that will not appear and omits one that will: a branch prints `[RESUME] Checkpoint 'stage' field (0) != schedule-derived stage (1) ... trusting the schedule.` **before** `[RESUME] Stage 1:02_winter environment rebuilt`, and prints **no** `[STAGE] 0:01_forage -> 1:...` line at start. A runner reading the mismatch line as a fault, or waiting for a `[STAGE]` line, costs a relaunch. | Name the mismatch line as expected; drop the first-switch expectation for branches (the first `[STAGE]` is 1 → 2 at 14 M). | experiment-designer → training-runner |
+| R6 | 🟢 | 3.7.4 point 1 | Cites failure mode 7.4 for Danger-A, but 7.4 triggers on survival < 0.6 × an agent's own `R_X` during a visit — a different condition; "best window 130.1 cleared the line" is not a 3.6 criterion. | State the with / without computation for Danger-A sequences on its own; keep "best window" out of the verdict sentence. | experiment-designer |
+| R7 | 🟢 | 4 manifest | Rows 3–12 and 31–43 still read "running" though the section says every number is final. | Update statuses. | experiment-designer |
+
+**Open assumptions (❓):** (O1) Winter's time to plateau from Forage ≈ from Home — if slower, `R_Winter` sits below plateau for both agents (3.3 caveat). (O2) Replacement-world verdicts rest on 1.5 M-episode reads where the pre-registered pilots used 3 M; curves are flat after ≈ 0.4 M, so probably robust — say so. (O3) One seed per arm everywhere; yardstick (c) exists only after the main runs. (O4) Node 114 times out on SSH now; the abandoned rows 39–41 never wrote data (wandb files untouched since 19:08, results dirs hold only `config.yaml`), so there is no collision — kill them if 114 returns live. (O5) Runs 1–2 hold node 106 for ≈ 8–11 h only to confirm an `L_Forage` that 3.7.3 proves cannot change; the pre-registered wording requires the wait, the user may waive it. (O6) No commit has touched `train.py` / `src/` since the 13:16 launch, so the "re-run S-A if HEAD moved" item is currently moot.
+
+**Cost of being wrong:** if R1 stands and P3 (plus any Danger-A sequence) launches, the runs' data are fine but the two pre-registered adaptation votes are contaminated by a plateau-level difference the pilot already measures at 3×, and amending the rule after seeing P3 would be post-hoc — a headline claim that would not survive review, on the study's longest sequence. R2 / R3 cost a wrong label, not a run. Nothing here risks data loss (the only file operation is a read-only `cp -a` into a new directory).
+
+Reviewed by: plan-reviewer
