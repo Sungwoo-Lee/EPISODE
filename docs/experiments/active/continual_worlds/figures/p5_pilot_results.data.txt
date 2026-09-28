@@ -1,0 +1,7 @@
+runs: pre-registered worlds|12|12|100.0|every run of this group in the read-out; value = its last 200,000 episodes
+runs: softened once, re-piloted|6|6|100.0|every run of this group in the read-out; value = its last 200,000 episodes
+runs: scouts (not pre-registered)|7|7|100.0|every run of this group in the read-out; value = its last 200,000 episodes; 3 of them are relaunches whose abandoned first attempts the read-out leaves out
+runs: fresh agents, seed 43|4|4|100.0|every run of this group in the read-out; value = its last 200,000 episodes
+runs: A-B-A-B pipeline checks (Pilot 2)|0|4|0.0|not drawn: they change world at every stage, so no single-world level exists; they are a plumbing check, not evidence
+points still training (drawn hollow)|4|29|13.8|values from runs that had not ended when the read-out was written; may still move
+points below their line (drawn red)|16|29|55.2|pilot worlds: half the agent's own Home survival; Nursery: 200 steps; Home after Nursery: 95% of the seed-42 Home level

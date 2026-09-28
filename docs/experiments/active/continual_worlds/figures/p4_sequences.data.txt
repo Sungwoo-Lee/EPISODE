@@ -1,5 +1,4 @@
-main sequences read from schedule files|3|3|100.0|configs/continual/continual_worlds/*.yaml boundaries + their stage folders' extends: targets
-Pilot 2 sequences|2|2|100.0|source: pilot schedule files
-Pilot 1 single-switch runs (one per new concept)|6|6|100.0|concepts from design doc section 3.6; budgets from section 3.6 (Forage to 14,000,000, others to 13,000,000 episodes)
-Pilot 3 from-scratch run length (episodes)|2,000,000|2,000,000|100.0|manifest row for the Nursery legs; drawn on its own counter from 0
-stage blocks drawn / of which second visits|10|32|31.2|a second visit = a world already visited earlier in the same run
+sequences drawn from design doc 3.7.4|3|3|100.0|status (ready / draft) from the doc's table, cross-checked against each schedule file's header
+schedule files left out (must not launch)|0|2|0.0|the original P1 and P2 files; they use worlds the pilots dropped (3.7.4)
+Pilot 2 pipeline-check runs drawn|2|2|100.0|what actually ran; its stages are too short to count as evidence
+stage blocks drawn / of which second visits|10|25|40.0|a second visit = a world already visited earlier in the same run

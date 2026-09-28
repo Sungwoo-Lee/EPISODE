@@ -18,6 +18,7 @@ __HOUSE_STYLE__
   p.kind { display: inline-block; align-self: flex-start; margin: 0 0 6px; padding: 2px 9px; border-radius: 3px;
            font-size: 12.5px; letter-spacing: .02em; border: 1px solid var(--rule); color: var(--ink-2); }
   p.kind-design { border-color: var(--ink-2); color: var(--ink-2); border-style: dashed; }
+  p.kind-training { border-color: var(--accent); color: var(--accent-text); }
   /* F65: floor = canvas px x 9 / smallest label px. Every figure's smallest text is 9.5 pt at 220 dpi
      (29.0 px) and page/_common.save() refuses a canvas wider than 2209 px, so 685 px keeps it at >= 9 px.
      It must stay <= the 688 px column, or every figure shows a scroll cue on a desktop (F32 amendment). */
@@ -29,7 +30,7 @@ __HOUSE_STYLE__
 
 <section class="col">
   <h1>Continual Worlds</h1>
-  <p class="lede">A plan, before any training: keep the agent's body rules exactly the same while the outside world changes from stage to stage, and test whether the neuromodulated agent copes with those changes better than the ordinary agent.</p>
+  <p class="lede">A plan, now updated with its pilot results: keep the agent's body rules exactly the same while the outside world changes from stage to stage, and test whether the neuromodulated agent copes with those changes better than the ordinary agent.</p>
 </section>
 
 <section class="col">
@@ -45,10 +46,13 @@ state is a context that means the same thing everywhere — exactly the kind of 
 keep its skills when the world around it changes.</p>
 <div class="callout">
   <p class="eyebrow">Status</p>
-  <p><strong>Status: plan only — nothing is trained yet.</strong> Eight world concepts, three
-A-B-A-B sequences and three pilot sets are designed, configured and checked (every world loads, keeps the
-body identical to level 05, and gives the agent the same 58 inputs). The pilots are ready to launch after
-the user's feedback on this page; the main sequences follow once the pilots have set each stage's length.</p>
+  <p><strong>Status (28 September, late evening): the pilots are read out; no main run has started.</strong>
+Short trial runs tested each new world with both agents. Two worlds pass — scarce food (Famine) and cold
+with a single fire (Winter) — and three were dropped after failing twice: crowded with hunters (Danger),
+foggy (Fog) and cold, hungry and hunted at once (Harsh). One sequence, <strong>Winter ↔ Famine</strong>,
+is ready to launch; two replacement sequences, built from worlds found by extra exploratory runs, are
+drafts that need the user's approval. Before anything launches, the switching trial still has one check
+to pass (the memory test, section 07) and the user has open decisions (section 09).</p>
 </div>
 </section>
 <section class="col">
@@ -137,37 +141,95 @@ in a bush.</p>
 modulated agents behave almost the same. So the warm-up is <strong>pre-training</strong>: every sequence starts
 from the two agents already trained for 10 million episodes in Home (one ordinary, one modulated, from the
 16-world study). Each continues with a single Forage stage — learning to search on a big map — and then
-alternates between two worlds, A → B → A → B, so each world is visited twice. Three sequences are planned,
-in priority order: <strong>P1 Danger ↔ Famine</strong> (the same body rules demand opposite behaviour: hide
-vs. search), <strong>P2 Fog ↔ Danger</strong> (the same predators, sensed well or poorly) and
-<strong>P3 Winter ↔ Famine</strong> (two needs competing for the agent's time).</p>
-<p>Before them come three pilots. <strong>Pilot 1</strong> switches each pre-trained agent once into a single
-new world and trains it until it levels off, to measure how long each world needs and whether it is
-survivable. <strong>Pilot 2</strong> runs P1 and P2 with short stages as a pipeline check. <strong>Pilot 3</strong>
-trains fresh agents in Nursery, to see whether the easy world teaches eating, hiding and warming quickly —
-the start of extra pre-trained seeds for a fully replicated version later.</p>
+alternates between two worlds, A → B → A → B, so each world is visited twice. Forage is trained once per
+agent, and every sequence <strong>branches from the same Forage checkpoint at 11 million episodes</strong>
+(one million episodes after the pre-trained counter), so all sequences start from identical weights.</p>
+<p>How long each visit lasts was set from the pilots by a rule written down before they ran: 1.5 times the
+time the slower agent needed to level off in that world, at least 1 million and at most 3 million episodes.
+That gives <strong>Winter 3 million</strong> episodes per visit (the agents levelled off late there, so it hits
+the cap) and <strong>1 million</strong> for Forage, Famine, Danger-A and Fog-B (all levelled off early, so they
+get the floor). The three sequences are now:</p>
+<ul>
+  <li><strong>P3 Winter ↔ Famine</strong> — two needs competing for the agent's time; exactly as planned, and
+  <strong>ready</strong>. 8 million episodes after the branch.</li>
+  <li><strong>P1 replacement: Danger-A ↔ Famine</strong> — hide vs. search, with a Danger world whose hunters
+  give up as quickly as Home's. <strong>Draft, pending the user's approval.</strong></li>
+  <li><strong>P2 replacement: Fog-B ↔ Danger-A</strong> — Fog without sensor noise against the same softer
+  Danger. <strong>Draft, pending the user's approval.</strong></li>
+</ul>
+<p>The original P1 (Danger ↔ Famine) and P2 (Fog ↔ Danger) lost their worlds in the pilots and will not be
+run. The short switching trial (Pilot 2) did run them, one million episodes per stage, purely as a check that
+the machinery works; it is drawn at the top of Figure 4 because that is what ran.</p>
 
 <figure>
   <p class="cue" hidden>Wider than the screen — scroll sideways, or click the figure to open it full size.</p>
-  <div class="scroll figscroll"><img data-fig="p4_sequences" alt="Timeline chart. Rows are the planned runs: six single-switch pilots, two short A-B-A-B pilots, a from-scratch Nursery pilot on its own narrow axis, and the three main sequences P1 to P3. Horizontal axis is the episode counter in millions from 10 to 20; each block is one stage labelled by its world, with a consistent grey or hatch per world and a red bar under every second visit."></div>
+  <div class="scroll figscroll"><img data-fig="p4_sequences" alt="Timeline chart with five rows: the two short switching trials that ran (Pilot 2a, 2b), the ready sequence P3 Winter-Famine, and the two draft replacement sequences P1 and P2. Horizontal axis is the episode counter in millions from 10 to 19; each block is one stage labelled by its world, with a consistent grey or hatch per world, a dashed branch line at 11 million and a red bar under every second visit. The status of each row is written on the right."></div>
   <p class="zoomhint">Click the figure to open it full size.</p>
   __KIND:p4_sequences__
   <figcaption>
-    <span><b>Figure 4 — three pilots first, then three A-B-A-B sequences starting from the pre-trained agents.</b> Pilot 1 measures each world on its own; Pilot 2 checks the switching end to end; Pilot 3 trains fresh agents in Nursery. The main sequences visit each of their two worlds twice; the red bars mark the second visits, where a modulator that keeps its skills should recover faster.</span>
-    <span><b>Axes.</b> Horizontal: training progress in millions of episodes — for all runs except Pilot 3, the episode counter continued from the pre-trained agents' 10 million (dashed line); Pilot 3 has its own short axis starting from zero. Vertical: one row per planned run type. Each block is one stage, labelled by its world with a consistent grey or hatch; red bars mark second visits.</span>
+    <span><b>Figure 4 — the run plan after the pilots: one sequence ready, two drafts waiting for approval.</b> Every sequence starts with the shared Forage stage and branches at 11 million episodes (dashed line). P3 spends 3 million episodes on each Winter visit and 1 million on each Famine visit; the drafts use 1 million per visit. The two short switching trials at the top already ran, as a plumbing check. Red bars mark the second visits, where a modulator that keeps its skills should recover faster.</span>
+    <span><b>Axes.</b> Horizontal: the episode counter in millions of episodes, continuing from the pre-trained agents' 10 million; the dashed line at 11 million is where the sequences branch from the shared Forage run. Vertical: one row per run type; its status (ran, ready, or draft) is written at the right. Each block is one stage, labelled by its world with a consistent grey or hatch; red bars mark second visits.</span>
     __DATA:p4_sequences__
-    <span><b>How it is computed.</b> The script reads the stage boundaries of each sequence from its schedule file — the same file the trainer reads — and the pilot budgets from the design document. Every pilot and sequence is run once with the ordinary agent and once with the modulated agent, each continuing from its own pre-trained weights. The main sequences' stages are drawn at a placeholder 2 million episodes: their real lengths are set after Pilot 1 by a rule written down in advance — for each world, 1.5 times the longer of the two agents' time to level off, at least 1 million and at most 3 million episodes. 'Levelled off' means the survival averaged over the last 200,000 episodes is within 5 % of the best such average in the run. Stage lengths are counted in episodes because that is what the trainer supports; the number of environment steps in each stage is recorded as well, because an agent that survives longer takes more training steps per episode. <b>What this figure does not show:</b> the evaluation runs at the end of each stage (section 07), and the later sequences (P1 in reversed order; Harsh ↔ Forage).</span>
+    <span><b>How it is computed.</b> The script reads the stage boundaries of each sequence from its schedule file — the same file the trainer reads — and the world of each stage from that sequence's stage files. Which sequences appear, and whether each is ready or a draft, comes from the design document's table of revised sequences; the script checks that each schedule file's own header says the same thing, and stops if they disagree. The original P1 and P2 files, which the document marks as not to be launched, are left out; any other schedule file missing from the table also stops the script, so nothing can silently drop off the figure. Stage lengths follow the pre-registered rule: for each world, 1.5 times the longer of the two agents' time to level off in its pilot, at least 1 million and at most 3 million episodes. "Levelled off" means the survival averaged over the last 200,000 episodes is first within 5 % of the best such average in the run. Every sequence is run once with the ordinary agent and once with the modulated agent. <b>What this figure does not show:</b> the pilot results behind the stage lengths (Figure 5); the tests without training at the end of each stage (section 08); and the later sequences (P1 in reversed order; Harsh ↔ Forage, which lost Harsh).</span>
   </figcaption>
 </figure>
 </section>
 <section class="col">
-<h2><span class="num">07</span> What will be measured</h2>
+<h2><span class="num">07</span> What the pilots showed</h2>
+<p>Before the long runs, each new world got a trial: both pre-trained agents were moved from Home into that
+world alone and trained for up to 3 million episodes (Forage 4 million). A world counts as survivable if,
+over the last 200,000 episodes, each agent stays alive at least half as long as it did in Home — 124.9 steps
+for the ordinary agent, 126.7 for the modulated one — and eats at least one bite per episode.</p>
+<ul>
+  <li><b>Famine and Winter pass for both agents</b>, so the sequence Winter ↔ Famine survives intact. Forage
+  passes easily — both agents reach almost the 500-step episode limit — and carries the planned "too easy to
+  be a distinct world" flag; that is expected for the safe first stage.</li>
+  <li><b>Danger, Fog and Harsh fail for both agents, twice.</b> Each was softened once by the step named in
+  advance (fewer hunters, half the sensor noise, more food) and failed again, so by the rule they are dropped.
+  Deaths there came mostly from injury and starvation, in similar shares: the agents could neither avoid the danger
+  nor find enough food.</li>
+  <li><b>Scouting runs — extra, not planned in advance — point at the cause.</b> In Danger it is how
+  <em>persistent</em> the hunters are, not how many: hunters that give up as quickly as Home's (Danger-A)
+  bring the agents close to the line, while fewer but persistent hunters (Danger-B) or a longer smell range
+  (Danger-C) do not. In Fog it is the <em>sensor noise</em>, not the short smell range: without noise (Fog-B)
+  both agents pass; a longer smell range with half the noise (Fog-A) does not. Danger-A passes for the
+  modulated agent only (131.0 steps); the ordinary agent falls just short (122.6). These are single runs,
+  so they are options for the user, not results.</li>
+  <li><b>The Nursery warm-up works.</b> Fresh agents trained from scratch in Nursery pass every skill check —
+  surviving, eating, hiding when hurt, warming — and then reach Home's competence level within about a
+  million Home episodes (those Home runs are still training).</li>
+  <li><b>The switching machinery works, with one check left.</b> The short A-B-A-B trial passed 3 of its 4
+  checks: every world switch happened on time, no run crashed, and every stage saved its 10 checkpoints. The
+  fourth — the memory test, which replays each stage's final agent in the other worlds without training —
+  has not yet run on a finished trial, and must pass before the sequences start.</li>
+  <li><b>Winter: the modulated agent is weaker there.</b> It settles at 160.8 steps against the ordinary
+  agent's 198.0 and dies of cold or heat more often. It also peaked at 175.7 and then slid about 8.5 %,
+  while the ordinary agent stayed near its best. This is one run of one pair of agents, so it is a finding
+  to look at, not evidence about the modulator — but it matters, because P3 spends 6 of its 8 million
+  episodes in Winter.</li>
+</ul>
+
+<figure>
+  <p class="cue" hidden>Wider than the screen — scroll sideways, or click the figure to open it full size.</p>
+  <div class="scroll figscroll"><img data-fig="p5_pilot_results" alt="Dot chart with one row per pilot world, grouped as pre-registered worlds (Forage, Famine, Winter, Danger, Fog, Harsh), softened re-pilots, scouts (Danger-A, B, C, Fog-A, B) and the fresh seed-43 agents (Nursery, then Home). Horizontal axis is survival in steps from 0 to 500. A circle marks the ordinary agent and a diamond the modulated agent; short grey ticks mark each agent's pass line; red markers are below their line and hollow markers come from runs still training. A verdict for each row is written at the right."></div>
+  <p class="zoomhint">Click the figure to open it full size.</p>
+  __KIND:p5_pilot_results__
+  <figcaption>
+    <span><b>Figure 5 — Famine and Winter pass; Danger, Fog and Harsh fail twice and are dropped; two scouted variants come close or pass.</b> Each row is one world; the circle is the ordinary agent, the diamond the modulated one. Red points are below the agent's pass line (grey tick). In the pre-registered worlds the two agents sit close together everywhere except Winter, where the modulated agent ends clearly lower. The fresh agents trained in Nursery clear their lines by a wide margin.</span>
+    <span><b>Axes.</b> Horizontal: survival, in steps alive per episode, averaged over each run's last 200,000 episodes; it starts at zero, and an episode can last at most 500 steps. Vertical: one row per world, in four groups — the worlds planned in advance, their once-softened versions, the exploratory scouts, and the fresh seed-43 agents. The text at the right is each row's verdict under its rule.</span>
+    __DATA:p5_pilot_results__
+    <span><b>How it is computed.</b> A read-out script goes through every pilot run's training log and, for each run, averages survival (steps alive per episode) over its last 200,000 episodes; this figure only reads that script's saved output and types no number. The grey tick is the line that run had to clear under the rule written before the pilots. For a world trial it is half of that agent's own survival in Home, so the two agents' lines differ slightly (124.9 and 126.7 steps). For the Nursery runs from scratch it is 200 steps, but the row's verdict also needs every skill check — eating, hiding, warming — to pass. For the Home runs after Nursery it is the competence gate, 95 % of the same kind of agent's Home survival in the original training. A world passes only if both agents clear their lines; one softening step is allowed before a world is dropped. Hollow points come from runs still training when the read-out was written, so they may still move. The scouts are exploratory: they were designed after the planned worlds failed, three of them were run with the ordinary agent only, and each is a single run. <b>What this figure does not show:</b> how survival changed during training (the Winter peak and slide is in the text above); what the agents died of; bites eaten; and anything about the sequences themselves, none of which has started.</span>
+  </figcaption>
+</figure>
+</section>
+<section class="col">
+<h2><span class="num">08</span> What will be measured</h2>
 <p>Survival — steps alive per episode — is the only performance measure; reward is never used. For every
 switch into a world, four things are compared between the modulated and the ordinary agent, all written down
 before any training:</p>
 <ul>
   <li><b>Dip:</b> how far survival falls in the first 20,000 episodes after the switch, relative to that world's
-  own level (its last 200,000 episodes on the first visit).</li>
+  level for the same agent (its last 200,000 episodes on the first visit).</li>
   <li><b>Recovery:</b> how much training it takes to climb back to 90 % of that level — counted in episodes
   <em>and</em> in environment steps, and only counted if both agree.</li>
   <li><b>Return:</b> on the second visit, how much better the agent does than on the first. Better on the return
@@ -175,44 +237,93 @@ before any training:</p>
   <li><b>Forgetting:</b> at the end of each stage the agent is tested, without training, in every other world of
   its sequence (2,000 episodes each), giving a "what does it still know" table.</li>
 </ul>
+<p><b>A shared yardstick for dip and recovery</b> (added 28 September, before any main run). Dip and recovery
+as defined above are measured against each agent's <em>own</em> settled level, and the Winter pilot showed why
+that alone is unfair. Right after the switch the two agents were almost level (129 and 138 steps), but the
+ordinary agent later settled much higher (198 against 161). Measured against its own higher target, the
+ordinary agent took 132,000 episodes to climb back to 90 % of it and the modulated agent 40,000 — a threefold
+"win" for the modulator that only reflects its lower target. Against one shared target, 90 % of the
+<em>lower</em> of the two settled levels (145 steps), the order reverses: 28,000 against 40,000 episodes. So dip
+and recovery are now read both ways, and a switch counts for the modulator only when both readings agree
+(for recovery, in episodes and in environment steps as well); a switch whose readings disagree is recorded as
+"not counted". Return and forgetting are already plain differences in survival steps and are unchanged.</p>
 <p>The modulator counts as helping only if, in at least two of the three sequences, at least three of the four
-measures favour it and at least one clearly exceeds noise. A small earlier probe (May) found exactly this
-pattern — the modulated agent recovered faster on returns and forgot less — so this is a replication at a much
-larger scale. The body-balance numbers and how random the agent's choices are (a sign of how easily it can still
-learn) are logged at every stage.</p>
+measures favour it and at least one clearly exceeds noise. With only one sequence ready today, whether that
+rule can be met depends on the user's decisions D4 and D5 below. A small earlier probe (May) found exactly
+this pattern — the modulated agent recovered faster on returns and forgot less — so this is a replication at a
+much larger scale. The body-balance numbers and how random the agent's choices are (a sign of how easily it can
+still learn) are logged at every stage.</p>
 </section>
 <section class="col">
-<h2><span class="num">08</span> Open decisions</h2>
+<h2><span class="num">09</span> Open decisions</h2>
 <p><b>Decided</b> (user, 2026-09-28, "follow your recommendations"):</p>
 <ul>
   <li>Body rules fixed in every stage; energy per bite and bush healing fixed too.</li>
   <li>Warm-up = the existing pre-trained Home agents; Nursery with one slow, weak predator for fresh seeds.</li>
-  <li>Sequences P1–P3 now; P4 (reversed order) and P5 (Harsh ↔ Forage) later.</li>
-  <li>Forage run once per agent and the three sequences branched from it.</li>
+  <li>Forage run once per agent and every sequence branched from it.</li>
   <li>Fog uses heavier blur and sensor noise instead of a narrower view (a narrower view would change the
   agent's number of inputs, which the trainer refuses); Winter's fire slightly cooler so the first step onto it
   is survivable; Famine uses one or two food items that take 30 steps to reappear.</li>
   <li>A known trainer bug with predator counts between stages is avoided by starting every sequence with Forage
   (no hunters); the cost is that per-predator distance curves are not logged.</li>
 </ul>
-<p><b>Open — for the user:</b></p>
+<p><b>Open — for the user</b> (each with the design's recommendation):</p>
 <ul>
-  <li>Approve launching the pilots (18 runs).</li>
-  <li>Every run of an agent starts from the same pre-trained weights, so the main sequences are "one starting
-  pair, three world pairs", not independent replicates. The fresh Nursery → Home seeds fix this later; is the
-  first round acceptable on that basis?</li>
-  <li>Harsh is close to the edge: a first step onto its fire leaves the body 0.6 °C below the heat-death line.
-  Fine for a pilot; revisit before Harsh enters a sequence.</li>
+  <li><b>D1 · How long is a visit?</b> Per world, as written in advance (Winter 3 million, Famine 1 million:
+  P3 runs 8 million episodes after the branch), or per pair (Famine visits also 3 million: 12 million, about
+  8–10 hours more per run). <em>Recommended: per world.</em></li>
+  <li><b>D2 · Where do the sequences branch?</b> At 11 million episodes, the rule's value, or at 14 million,
+  where the Forage trial ends. <em>Recommended: 11 million</em> — the checkpoints exist, and it avoids 3
+  million extra episodes in a world flagged too easy.</li>
+  <li><b>D3 · Launch P3 now or wait?</b> Launch it once the pre-launch checks pass, or wait for the P1 and P2
+  decisions. <em>Recommended: now</em> — P3 is exactly as planned and independent of the others.</li>
+  <li><b>D4 · What replaces P1?</b> Danger-A ↔ Famine (the draft), Fog-B ↔ Famine, a new Danger variant one
+  step easier than Danger-A with its own trial, or nothing. <em>The user's call</em>; Fog-B ↔ Famine is the
+  only option where both worlds pass for both agents.</li>
+  <li><b>D5 · What replaces P2?</b> Fog-B ↔ Danger-A (the draft), a new Danger variant with its own trial, or
+  drop P2. <em>The user's call.</em> If Danger-A is used, the verdict is computed with and without every
+  sequence that contains it, because only one agent passed there.</li>
+  <li><b>D6 · The Winter finding.</b> Proceed, or look first — for example, read both agents' Winter episodes
+  step by step. <em>Recommended: proceed</em>, since both pass; the modulated agent's peak-then-slide is an
+  argument for looking first.</li>
+  <li><b>D7 · The later Harsh ↔ Forage sequence.</b> Harsh was dropped, so it cannot run as designed: drop it
+  or replace Harsh. <em>Recommended: decide later.</em></li>
+  <li><b>D8 · Must the sequences wait for the Forage trials to finish?</b> The written rule asks for the full
+  Forage curve, but the Forage visit length cannot leave its 1-million floor and the 11-million checkpoints
+  already exist; waiting costs about 1.5–2 hours. <em>Waiving is defensible; the user's call</em>, and a
+  waiver would be recorded as a departure from the written rule.</li>
+</ul>
+<p>Still true: every run of an agent starts from the same pre-trained weights, so the sequences are "one
+starting pair, several world pairs", not independent replicates. The fresh Nursery → Home agents are the
+start of the fix.</p>
+</section>
+<section class="col">
+<h2><span class="num">10</span> Corrections to the first version of this page</h2>
+<ul>
+  <li>The main sequences' stages were drawn at a placeholder <b>2 million episodes</b>. The pilots set the real
+  lengths: 3 million per Winter visit, 1 million per visit to Forage, Famine, Danger-A and Fog-B.</li>
+  <li>The sequences were drawn branching after a 2-million-episode Forage stage; they branch at <b>11 million</b>,
+  one million episodes into Forage.</li>
+  <li><b>P1 (Danger ↔ Famine) and P2 (Fog ↔ Danger)</b> were planned as the first two sequences. Danger and Fog
+  were dropped, so both are replaced by drafts waiting for approval, and P3 is now the only ready sequence.</li>
+  <li>The page said Harsh was close to the edge and should be revisited before it entered a sequence. Harsh
+  failed twice and was dropped.</li>
+  <li>Dip and recovery were defined only against each agent's own level; they are now also read against a
+  shared level (section 08).</li>
+  <li>The pilots were described as three sets, ready to launch. They ran, and grew: six softened re-pilots and
+  seven exploratory scout runs were added after three worlds failed.</li>
 </ul>
 </section>
 <section class="col">
-<h2><span class="num">09</span> How to reproduce this</h2>
+<h2><span class="num">11</span> How to reproduce this</h2>
 <ul>
   <li>Design, pre-registration and launch manifest: <code>docs/<wbr>experiments/<wbr>active/<wbr>continual_worlds/<wbr>CONTINUAL_WORLDS.md</code></li>
   <li>Concept worlds: <code>configs/<wbr>environment/<wbr>experiment/<wbr>continual_worlds/</code>; schedules and stage folders: <code>configs/<wbr>continual/<wbr>continual_worlds/</code></li>
-  <li>This page: <code>scripts/<wbr>analysis/<wbr>studies/<wbr>continual_worlds/<wbr>page/</code> — one script per figure (<code>p1_body_vs_world.py, p2_concept_matrix.py, p3_concept_layouts.py, p4_sequences.py</code>), <code>build_page.py</code></li>
+  <li>This page: <code>scripts/<wbr>analysis/<wbr>studies/<wbr>continual_worlds/<wbr>page/</code> — one script per figure (<code>p1_body_vs_world.py, p2_concept_matrix.py, p3_concept_layouts.py, p4_sequences.py, p5_pilot_results.py</code>), <code>build_page.py</code></li>
+  <li>Pilot read-out script (the numbers behind Figure 5 and section 07): <code>scripts/<wbr>analysis/<wbr>studies/<wbr>continual_worlds/<wbr>pilot_readout.py</code></li>
+  <li>Its saved output, which Figures 4 and 5 read: <code>results/<wbr>analysis/<wbr>continual_worlds/<wbr>pilot_readout.json</code></li>
 </ul>
-<p>Departures from the House Style Sheet, as on the project's other analysis pages: the chrome accent and warning hues are moved off the figure palette; headings use Pretendard; a small evidence-kind badge sits above each caption; wide tables sit in scroll boxes. The figures use greys and hatching, with red only for the boundary settings (Figure 1) and the second visits (Figure 4); fires are drawn as dark stars.</p>
+<p>Departures from the House Style Sheet, as on the project's other analysis pages: the chrome accent and warning hues are moved off the figure palette; headings use Pretendard; a small evidence-kind badge sits above each caption; wide tables sit in scroll boxes. The figures use greys and hatching, with red only for the boundary settings (Figure 1), the second visits (Figure 4) and points below their pass line (Figure 5); fires are drawn as dark stars. Figures 1–4 carry a dashed "design" badge; Figure 5, the page's one results figure, carries a solid "training logs" badge.</p>
 </section>
 
 </div>

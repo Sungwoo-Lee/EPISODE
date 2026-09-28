@@ -1,7 +1,8 @@
 """Shared paths and helpers for the 'Continual Worlds' PLANNING page (docs/experiments/active/
-continual_worlds/CONTINUAL_WORLDS.md). Nothing on this page is a result: every figure is drawn from the
-design's configs (the eight concept worlds under configs/environment/experiment/continual_worlds/ and
-the three schedules under configs/continual/continual_worlds/) and from the design doc itself.
+continual_worlds/CONTINUAL_WORLDS.md). Figures 1-4 are design figures, drawn from the design's configs
+(the concept worlds under configs/environment/experiment/continual_worlds/ and the schedules under
+configs/continual/continual_worlds/) and from the design doc itself. The pilot-results figure (p5) is the
+one results figure: it reads results/analysis/continual_worlds/pilot_readout.json (kind "training").
 
 Same house pattern as scripts/analysis/studies/level05_body_interactions/page/_common.py (record_kind,
 record_samples, save with the text guards and the phone-floor check). This folder sits FOUR levels
@@ -25,9 +26,12 @@ DOC = os.path.join(ROOT, "docs/experiments/active/continual_worlds/CONTINUAL_WOR
 FIG = os.path.join(ROOT, "docs/experiments/active/continual_worlds/figures")
 WORLD_DIR = os.path.join(ROOT, "configs/environment/experiment/continual_worlds")
 SCHED_DIR = os.path.join(ROOT, "configs/continual/continual_worlds")
+READOUT = os.path.join(ROOT, "results/analysis/continual_worlds/pilot_readout.json")
 INVENTORY = os.path.join(ROOT, "docs/experiments/active/internal_state_interactions/BALANCE_SETTINGS_INVENTORY.md")
 
-KIND = {"design": "design — settings and plan, no results yet"}
+KIND = {"design": "design — settings and plan, no results yet",
+        # same wording family as the level-05 page's "training" kind
+        "training": "training logs — pilot runs, last 200,000 episodes, one seed"}
 
 # The eight concepts, in the order the design doc's concept table uses (section 3.2). The file for each
 # is found by its stem prefix, so the grid size in the file name is never typed here.
