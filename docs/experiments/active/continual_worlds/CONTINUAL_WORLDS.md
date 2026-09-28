@@ -10,7 +10,11 @@ wandb_tag: "rppo_cw_*"
 
 # Continual worlds: an A-B-A-B test of the modulator with a stationary body
 
-> **Status (2026-09-28, Revision 1a):** pilots 1–18 **running** since 13:16; an interim read-out
+> **Status (2026-09-28, Revision 1b):** the softened Danger, Fog and Harsh worlds (rows 31–36) still
+> fail at the interim read-out, so the pre-registered rule drops them and their replacement goes to
+> the user; an exploratory, not-pre-registered scouting ladder (five ordinary-agent runs, rows 37–41,
+> **planned, not launched**) gives the user options (Revision 1b box below).
+> *Revision 1a status, kept for the record:* pilots 1–18 **running** since 13:16; an interim read-out
 > failed three worlds (Danger, Fog, Harsh) for both agents, so their softened versions are configured
 > and six re-pilot runs (rows 31–36) are **planned, not launched** (see the Revision 1a box below).
 > *Revision 1 status, kept for the record:* DESIGNED, configs written and loader-validated, **nothing
@@ -84,6 +88,54 @@ wandb_tag: "rppo_cw_*"
 > Source: `scripts/analysis/studies/continual_worlds/pilot_readout.py` → 
 > `results/analysis/continual_worlds/pilot_readout.json` (full print
 > `tmp/20260928_pilot_readout_run2.log`).
+
+> **Revision 1b (2026-09-28, late evening) — an EXPLORATORY scouting ladder for Danger and Fog.
+> NOT pre-registered; it does not change any verdict.** A refreshed interim read-out shows that the
+> once-softened worlds (rows 31–36, about 2 M of their 3 M episodes in, curves flat) **still fail** the
+> survivable rule for both agents (ordinary / modulated, last-200k survival in steps; pass lines 124.9 /
+> 126.7): Danger-soft 91.6 / 91.2, Fog-soft 113.6 / 110.6, Harsh-soft 93.5 / 94.5. The pre-registered
+> rule (3.6) therefore stands: **each of these worlds is dropped and its sequence goes to the user
+> for replacement** — that decision is the user's, and nothing below makes it for them. (Numbers are
+> interim until the runs end, as in Revision 1a.)
+>
+> *Why scout anyway.* Danger sits in sequences P1 and P2, so dropping it removes two of the three
+> sequences. Deaths in all three softened worlds split roughly **45 % injury / 40–45 % starvation** —
+> starvation is large even where food density is Home-like. Our reading (a hypothesis, not a result):
+> the short smell range (5 cells; Fog 3) plus heavy predator pressure keeps the agent from foraging.
+> Famine is the contrast: the same smell range 5 and even less food (1–2 items), but only 0–2 hunters
+> that give up quickly — and it passes at ≈ 210 steps. So the scouts vary **predator persistence,
+> predator count, smell range and noise**, one or two at a time, to show the user which factor makes
+> the world survivable. They are options for the replacement decision, nothing more.
+>
+> | Scout | What changes vs the original world | Question it answers |
+> |---|---|---|
+> | Danger-scout-A | hunters 5–7 → 3–5 (as Danger-soft) **and** Home's hunting style: notice the agent from 3–5 cells (Danger 5–9), chase stamina 30–150 (Danger 100–200), give up at 1.5 (Danger 2.0) | Is it how *persistent* the hunters are, rather than how many? |
+> | Danger-scout-B | hunters 5–7 → 2–4; Danger's own detection and chase | Is one more step down in count enough? |
+> | Danger-scout-C | hunters 3–5 (as Danger-soft) + smell range 5 → 8 | Is finding food under threat the bottleneck? |
+> | Fog-scout-A | Fog-soft (noise halved) + smell range 3 → 5 | Does a longer smell range rescue Fog? |
+> | Fog-scout-B | Fog's smell range 3 and 3× sight blur, but **no perceptual noise at all** | Is it the short range or the noise? (read against Fog and Fog-soft) |
+>
+> Harsh comes later in the sequences (stage 5), so it is not scouted now. Everything else — the body
+> (level 05), the 58-number observation, vision range — is unchanged (check C12, 6.1). "Smell range"
+> is the olfactory radius (`sensory.sensor_radius`), which does not change the observation width.
+>
+> *Runs.* Ordinary agent only, from the seed-42 pre-trained Home checkpoint, 1.5 M episodes each
+> (`--episodes 11500000`; Pilot 1 plateaus came at 0.2–0.9 M), otherwise the flags of rows 3–12;
+> job type `pilot`; manifest rows **37–41**, planned. *Reading (descriptive, not a gate):* the same
+> survivable rule on the last 200,000 episodes, reported per scout with the death split (injury /
+> starvation) and bites per episode, plus the survival curve over training. A scout that passes with
+> the ordinary agent is a *candidate* only; a world the user adopts from it still needs the modulated
+> agent's pilot before it enters a sequence. One seed, one agent: no claim beyond "this variant looks
+> survivable / not" is drawn from these runs.
+>
+> Other interim observations, recorded, **nothing changed**:
+> - **Winter, modulated agent recovered to pass**: 156 steps against its 126.7 line (ordinary 205);
+>   Revision 1a's borderline note is resolved pending the final read-out.
+> - **Seed-43 Home legs** (rows 27–28, started from the Nursery warm-up) reached ≈ 238 steps of
+>   survival within ≈ 1 M Home episodes — already at the Home competence gate (237.3 ordinary /
+>   240.7 modulated).
+>
+> Source: `results/analysis/continual_worlds/pilot_readout.json` (refreshed 2026-09-28).
 
 ## 1. Question
 
@@ -457,6 +509,14 @@ Home legs (27–30) after their Nursery leg ends (27–28 only if Pilot 3 passed
 | 34 | running | Pilot 1s Fog-soft | `rppo_cw_pilot1s_fog_soft_t16quad_s42` | continual_worlds | pilot | 42 | 104 | cuda:1 | 2026-09-28T16:28:58 | `il157bos` | `logs/20260928_162858.log` (shared with row 33; clean copy `wandb/run-20260928_162915-il157bos/files/output.log`) |
 | 35 | running | Pilot 1s Harsh-soft | `rppo_cw_pilot1s_harsh_soft_t1none_s42` | continual_worlds | pilot | 42 | 103 | cuda:0 | 2026-09-28T16:20:25 | `dxkzhykp` | `logs/20260928_162025.log` |
 | 36 | running | Pilot 1s Harsh-soft | `rppo_cw_pilot1s_harsh_soft_t16quad_s42` | continual_worlds | pilot | 42 | 103 | cuda:1 | 2026-09-28T16:20:26 | `hjktbwln` | `logs/20260928_162026.log` |
+| 37 | planned (exploratory scout) | Scout Danger-A (3–5 hunters, Home-like persistence) | `rppo_cw_scout_danger_scout_a_t1none_s42` | continual_worlds | pilot | 42 | — | — | — | — | — |
+| 38 | planned (exploratory scout) | Scout Danger-B (2–4 hunters) | `rppo_cw_scout_danger_scout_b_t1none_s42` | continual_worlds | pilot | 42 | — | — | — | — | — |
+| 39 | planned (exploratory scout) | Scout Danger-C (3–5 hunters + smell 8) | `rppo_cw_scout_danger_scout_c_t1none_s42` | continual_worlds | pilot | 42 | — | — | — | — | — |
+| 40 | planned (exploratory scout) | Scout Fog-A (Fog-soft + smell 5) | `rppo_cw_scout_fog_scout_a_t1none_s42` | continual_worlds | pilot | 42 | — | — | — | — | — |
+| 41 | planned (exploratory scout) | Scout Fog-B (smell 3, no noise) | `rppo_cw_scout_fog_scout_b_t1none_s42` | continual_worlds | pilot | 42 | — | — | — | — | — |
+
+Rows 37–41 (Revision 1b) are **exploratory scouts, not pre-registered**: ordinary agent only, read
+descriptively with the survivable rule; they do not overturn the dropped worlds' verdicts.
 
 Rows 31–36 (Revision 1a) are judged by the same survivable rule and plateau rule as Pilot 1 (3.6,
 3.3) and, if they pass, their `T` replaces the failed original's in the `L_X` computation for P1–P3.
@@ -492,10 +552,29 @@ the ordinary / modulated pre-trained `models/` directories (3.4). `BP_O` / `BP_M
 | 31, 32 | `CW/danger_soft_15x15.yaml` (Revision 1a) | T1, T16 | `CK_O`, `CK_M` | 13000000 |
 | 33, 34 | `CW/fog_soft_15x15.yaml` (Revision 1a) | T1, T16 | `CK_O`, `CK_M` | 13000000 |
 | 35, 36 | `CW/harsh_soft_15x15.yaml` (Revision 1a) | T1, T16 | `CK_O`, `CK_M` | 13000000 |
+| 37 | `CW/danger_scout_a_15x15.yaml` (Revision 1b) | T1 | `CK_O` | 11500000 |
+| 38 | `CW/danger_scout_b_15x15.yaml` (Revision 1b) | T1 | `CK_O` | 11500000 |
+| 39 | `CW/danger_scout_c_15x15.yaml` (Revision 1b) | T1 | `CK_O` | 11500000 |
+| 40 | `CW/fog_scout_a_15x15.yaml` (Revision 1b) | T1 | `CK_O` | 11500000 |
+| 41 | `CW/fog_scout_b_15x15.yaml` (Revision 1b) | T1 | `CK_O` | 11500000 |
 
 Rows 31–36 use exactly the flags of rows 3–12 (the Pilot 1 command in 4.2 with the world file and
 tag swapped): `--load-checkpoint` the same pre-trained `CK_O` / `CK_M`, `--episodes 13000000
 --checkpoint-frequency 100000 --seed 42`, `--wandb-group continual_worlds --wandb-job-type pilot`.
+
+Rows 37–41 use the same Pilot 1 command with the ordinary agent config (`T1`) and `CK_O` only,
+`--episodes 11500000` (1.5 M episodes past the restored ≈ 10 M counter), the scout world file, and
+tag = wandb-name `rppo_cw_scout_<world>_t1none_s42`; `--checkpoint-frequency 100000 --seed 42
+--wandb-group continual_worlds --wandb-job-type pilot` unchanged. Row 37 in full:
+
+```bash
+$PY train.py --config configs/environment/experiment/continual_worlds/danger_scout_a_15x15.yaml \
+  --agent_config configs/models/recurrent_ppo/nmn_input_site_grid_gaenorm/nmngaenorm_t1none.yaml \
+  --load-checkpoint results/JAX_RecurrentPPO/20260927-053057_rppo_l05body_w0000_t1none_s42/models \
+  --episodes 11500000 --checkpoint-frequency 100000 --seed 42 --device cuda:0 \
+  --tag rppo_cw_scout_danger_scout_a_t1none_s42 --wandb-name rppo_cw_scout_danger_scout_a_t1none_s42 \
+  --wandb-group continual_worlds --wandb-job-type pilot
+```
 
 Each stage file is a one-line `extends:` of its concept file, so every visit to a concept is the
 identical world. Checkpoints every 100,000 episodes everywhere (schedules set it per stage; single-
@@ -646,6 +725,7 @@ axis per sequence. Pilot 1 figures show all six worlds' Home → X curves with `
 | C9 | Smoke runs before Revision 1 | S-A (ordinary checkpoint through six grid-size / roster / noise switches) pass; S-B (Nursery → Home as one continual run) crashes as Known Bug A2 predicts → two-leg pre-training; S-C (modulated checkpoint, Forage → Danger) pass. Pilot 2 repeats S-A's path on GPU with the Revision 1 counts |
 | C10 | Branch-point mechanism: one step directory copied with `config.yaml` into a fresh `models/` dir | the checkpoint manager returns that step as the latest (tested on step 9,800,027 of the ordinary pre-trained run in scratch space) |
 | C11 | Revision 1a softened worlds: each loaded through `load_env_config` → `load_env_params` next to its original and every `EnvParams` field compared | pass. **Fog-soft:** 1 of 208 fields differs, `noise_sigmas` (smell 0.3 → 0.15, sight 0.2 → 0.1). **Danger-soft:** only `animal_count_low/high` (hunters [5, 7] → [3, 5]); every other differing field is a per-slot array or index that is 2 slots shorter (12 → 10), with per-entry values identical. **Harsh-soft:** only `res_count_low/high` (food [1, 2] → [2, 4]); the rest are per-slot arrays 2 slots longer (29 → 31), per-entry values identical. No body, thermal, interoception or reward field differs. Observation width 58 on all six (real `ParallelEnv.reset`) |
+| C12 | Revision 1b scout worlds: each loaded through `load_env_config` → `load_env_params` and every `EnvParams` field (208) compared with its original | pass. **Danger-scout-A:** hunters [5, 7] → [3, 5], detection [5, 9] → [3, 5], chase stamina [100, 200] → [30, 150], lose-interest 2.0 → 1.5 (Home's resolved values: stamina [30, 150], lose-interest 1.5, detection [1, 7]); against Danger-soft only the detection / stamina / lose-interest arrays differ. **Danger-scout-B:** hunters [5, 7] → [2, 4]; per-hunter values identical. **Danger-scout-C:** hunters [5, 7] → [3, 5] and `sensor_radius` 5 → 8; against Danger-soft only `sensor_radius`. Every other Danger-scout difference is a per-slot array or index 2–3 slots shorter (12 → 10 / 9), per-entry values identical. **Fog-scout-A:** `sensor_radius` 3 → 5 and `noise_sigmas` smell 0.3 → 0.15, sight 0.2 → 0.1 (against Fog-soft: only `sensor_radius`). **Fog-scout-B:** only `perceptual_noise_enabled` True → False (disabled rather than σ 0, because the enabled path also clips every channel; Home runs with it disabled). No body, thermal, interoception or reward field differs; observation width 58 on all five (real `ParallelEnv.reset`) |
 
 ### 6.2 Blockers and hand-offs
 
