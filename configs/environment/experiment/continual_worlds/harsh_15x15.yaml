@@ -3,8 +3,12 @@
 #
 # HARSH (15 x 15, documented for the later P5 sequence): cold, hungry, exposed and hunted
 #
-# Ambient about -35, 1-2 food items, only 2-4 bushes, 1-2 hunting predators, smell range 8.
+# Ambient about -35, 1-2 food items, only 5-9 bushes, 2-5 hunting predators (brief 2-4 / 1-2, x2.25), smell range 8.
 # Ambushers, fires, rocks at level-05 density.
+#
+# PER-CELL DENSITY (Revision 1, 2026-09-28): every count is set against HOME's per-cell density
+# (level 05 on 100 cells); a count the concept brief gave in Home-grid terms is scaled by area
+# (x2.25 at 15 x 15, round-half-up), so the concept's pressure holds per cell. Design doc 3.2.
 #
 # STATIONARY BY CONSTRUCTION: this file changes only the EXTERNAL world. Every body rule, the
 # interoceptive channels, the reward, max_steps and the observation layout (58 numbers) are
@@ -63,8 +67,8 @@ environment:
   - class: predator
     behaviour: hunt
     tag: pred
-    count_low: 1
-    count_high: 2
+    count_low: 2
+    count_high: 5
     properties: [0.0, 0.7, 0.5, 0.0, 0.0]
     properties_std: [0.0, 0.3, 0.3, 0.0, 0.0]
     visual_properties: [1.0]
@@ -160,8 +164,8 @@ environment:
     visual_properties: [1.0]
     visual_properties_std: [0.0]
   - name: bush
-    count_low: 2
-    count_high: 4
+    count_low: 5
+    count_high: 9
     area:
     - [1, 1]
     - [15, 15]

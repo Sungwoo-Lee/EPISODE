@@ -10,15 +10,40 @@ wandb_tag: "rppo_cw_*"
 
 # Continual worlds: an A-B-A-B test of the modulator with a stationary body
 
-> **Status (2026-09-28):** DESIGNED, configs written and loader-validated, **nothing launched**.
-> Two launch blockers are open (section 6.2): the survivability pilots have not run, and the user
-> must choose how to handle a known trainer bug that crashes a run when the number of animals
-> changes between stages. Awaiting `plan-reviewer`, `env-config-reviewer` and the user.
+> **Status (2026-09-28, Revision 1):** DESIGNED, configs written and loader-validated, **nothing
+> launched**. The next step is the three **pilots** (section 3.6, 18 runs), which are ready to
+> launch once `env-config-reviewer` has passed the changed worlds and the parent has assigned nodes.
+> The main runs wait for the pilots: their stage lengths are computed from Pilot 1 by a rule fixed
+> in advance (3.3), and they branch from Pilot 1's Forage runs (3.4).
 > **Related:** level-05 factorial (source of the two pre-trained agents) [[LEVEL05_BODY_INTERACTIONS]] ·
 > larger / less observable worlds and their search times [[STUDY_PLAN]] (context exploration) ·
-> earlier continual probe [[NMN_CONTINUAL_DOUBLE_RETURN_PROBE]] · balance logging
-> [[BALANCE_METRICS_TRAINING_LOGGING]] · curriculum lessons in the LLM wiki
+> the May continual probe this design replicates at scale [[NMN_CONTINUAL_DOUBLE_RETURN_PROBE]] ·
+> balance logging [[BALANCE_METRICS_TRAINING_LOGGING]] · curriculum lessons in the LLM wiki
 > (`curriculum_learning`: plasticity loss, negative transfer).
+
+> **Revision 1 (2026-09-28)** — resolves the plan-reviewer's findings F1–F9 (bottom of this doc) and
+> the user's decisions ("follow your recommendations"):
+> - **Decisions taken:** the no-code workaround for the animal-count trainer bug is accepted (no
+>   per-predator distance curves); Fog = sight blurred 3× plus smell/sight noise; Winter fire heat
+>   factor 10; Famine = 1–2 food items regrowing after 30 steps; **Forage is trained once per agent
+>   and the three sequences branch from it** (3.4).
+> - **Pilots replaced (F1):** Pilot 1 = each new world once from the Home agent, both agents (12
+>   runs); Pilot 2 = two short A-B-A-B pipeline shakedowns, both agents (4 runs); Pilot 3 = the
+>   Nursery world from scratch, both agents, with a pass criterion (2 runs). New schedule files for
+>   Pilot 2. Manifest rewritten (section 4).
+> - **Rules pre-registered:** plateau and stage length, with a fallback and a 3 M cap (F2, 3.3);
+>   recovery counted in episodes **and** environment steps, both must agree (F3, 5.1); noise yardstick
+>   is a floor plus the within-visit checkpoint spread (F4, 5.5); forgetting evaluation at 2,000
+>   episodes per cell with a non-overlapping-CI rule (F5, 5.3); the May probe cited and this study
+>   positioned as its replication at scale (F6, sections 1–2); verdict wording "one initialisation
+>   pair, three world-pairs" (F7); project interpreter in commands (F8); entropy windows cut on the
+>   iteration stream (F9).
+> - **Entity counts re-derived per cell (coordinator, figure build):** the 15 × 15 worlds had copied
+>   some counts from the brief without scaling by area, so Danger was *less* dangerous per cell than
+>   Home. Every count is now set against Home's density per cell (3.2, new density table). Changed:
+>   Danger hunters 2–3 → **5–7**, ambushers 6–12 → **14–27**, bushes 8–12 → **18–27**; Famine and
+>   Winter hunters 0–1 → **0–2**; Fog hunters 1–2 → **2–5**; Harsh hunters 1–2 → **2–5**, bushes 2–4 →
+>   **5–9**. Loads, observation width, 1,000-reset placement and schedule builds re-run (6.1).
 
 ## 1. Question
 
@@ -26,29 +51,30 @@ Our agents live in a grid world and must keep three body quantities in range: ho
 how injured they are, and how warm they are. Two agents are compared throughout: an **ordinary**
 recurrent agent, and the same agent with a **modulator** (a small side network that reads the
 senses and rescales the main network's layers, loosely modelled on how neuromodulators such as
-noradrenaline retune the brain). So far the modulator has only been tested in one world at a
-time, where it gives at most a small survival edge.
+noradrenaline retune the brain). In a single fixed world the modulator gives at most a small
+survival edge.
 
 The literature on neuromodulation says its main pay-off should appear when the **world keeps
-changing and old worlds come back**: switching from world A to world B and back to A, the
-modulated system should lose less when the world switches, recover faster, and be better on the
-second visit to A than on the first.
+changing and old worlds come back**. The project already has one small positive result of this
+kind: in May, a probe alternated a hunting predator with a harmless one (active, passive, active,
+passive, active), and the modulated agent survived about 107–132 steps longer on the returns to the
+hunting world. That probe was tiny (1,500-episode stages, one seed, one kind of change). This
+experiment asks whether the result **holds at scale and across several kinds of world change**.
 
-This experiment builds exactly that test with one strict rule: **the body never changes.** Hunger,
-injury, healing, body temperature and what the agent feels from inside its body obey identical
-rules in every world. Only the outside world changes: grid size, how far smells carry, how many
-hunters there are and how persistent they are, how scarce food is, how cold it is, how noisy the
-senses are. So the body's signals mean the same thing everywhere and can act as a stable reference
-for the modulator.
+One strict rule: **the body never changes.** Hunger, injury, healing, body temperature and what the
+agent feels from inside its body obey identical rules in every world. Only the outside world
+changes: grid size, how far smells carry, how many hunters there are and how persistent they are,
+how scarce food is, how cold it is, how noisy the senses are. So the body's signals mean the same
+thing everywhere and can act as a stable reference for the modulator.
 
-Each agent starts from its already-trained self (10 million episodes in the standard campfire world,
-"Home"), visits a large safe foraging world once ("Forage"), then alternates between two harsher
-worlds A and B four times (A, B, A, B), 2 million episodes per world. Three A/B pairs are run now:
-**dangerous vs. scarce food**, **foggy vs. dangerous**, **winter vs. scarce food**. The primary
-measure is **survival steps** per episode; the headline question is whether the modulated agent's
-**dips on switching are smaller, its recoveries faster, and its returns better** than the ordinary
-agent's. With one seed per agent this is a **screen**: it can show a pattern worth replicating, not
-confirm one.
+Each agent starts from its already-trained self (10 million episodes in the standard campfire
+world, "Home"), learns a large safe foraging world once ("Forage"), then alternates between two
+harsher worlds A and B four times (A, B, A, B). Three A/B pairs: **dangerous vs. scarce food**,
+**foggy vs. dangerous**, **winter vs. scarce food**. The measure is **survival steps** per episode;
+the question is whether the modulated agent's **dips on switching are smaller, its recoveries
+faster, and its returns better** than the ordinary agent's. With one starting pair of agents, a
+positive result says "this initialisation pair, in three world-pairs", not "the modulator"; fresh
+seeds (3.5) are the route to the general claim.
 
 ## 2. Hypotheses and predicted outcomes (pre-registered)
 
@@ -56,28 +82,39 @@ Plain names first; the symbols are only shorthand used in the tables below.
 
 - **Smaller dip (H-dip).** On each switch into a world, the modulated agent's survival falls less
   below that world's reference level than the ordinary agent's does.
-- **Faster recovery (H-rec).** After each switch, the modulated agent needs fewer episodes to climb
-  back to 90 % of the reference level.
+- **Faster recovery (H-rec).** After each switch, the modulated agent needs less training to climb
+  back to 90 % of the reference level — counted **both** in episodes and in environment steps (5.1);
+  the vote counts only if both units agree.
 - **Better return (H-ret).** On the second visit to a world, the modulated agent gains more (or
-  loses less) relative to its first visit than the ordinary agent does. This is the A-B-A-B
-  signature: "second visit better than first" means something was kept, not relearned.
+  loses less) relative to its first visit than the ordinary agent does. "Second visit better than
+  first" means something was kept, not relearned.
 - **Less forgetting (H-forget).** Tested without training: a checkpoint taken at the end of a stage,
   played in the *other* worlds of its sequence, keeps more of its earlier survival for the modulated
   agent (forgetting matrix, 5.3).
 
+**Relation to the May probe (replication targets).** The May double-return probe
+([[NMN_CONTINUAL_DOUBLE_RETURN_PROBE]]) found the modulated agent ahead on the **returns** and
+forgetting less, and found that "how deep is the dip" was an ill-posed measure there — the
+difference lived in **how fast** survival came back, not in the first-window depth. H-ret and
+H-forget are therefore this study's **replication targets**, and H-rec is expected to carry more
+signal than H-dip. The May probe also measured ±4.4 steps of seed-to-seed noise on a harder world;
+that number is reported next to every difference here (5.5).
+
 **What would support the modulator (in advance):** in at least **2 of the 3 sequences**, the
-modulated-minus-ordinary difference has the favourable sign on **at least 3 of the 4 switch measures**
-(dip, recovery, return, forgetting) **and** at least one of those differences exceeds the
-pre-registered noise yardstick (5.5). Predicted shape: the difference is small or absent on the
-first visit to A and B (both agents learning a new world) and appears on the **returns** (stages 4
-and 5), where a mechanism that keeps world-specific settings should pay off.
+modulated-minus-ordinary difference has the favourable sign on **at least 3 of the 4 switch
+measures** (dip, recovery, return, forgetting) **and** at least one of those differences is beyond
+noise (5.5 for dip / recovery / return, 5.3 for forgetting). The three sequences share one starting
+pair of agents (same weights, optimizer state and random key) and share worlds (P1 and P3 both use
+Famine, P1 and P2 both use Danger), so they are **not** three independent votes: a support verdict
+is worded **"one initialisation pair, three world-pairs"**. Predicted shape: the difference is small
+or absent on the first visit to A and B and appears on the **returns** (stages 4 and 5).
 
 **What would refute it (in advance):** in at least 2 of the 3 sequences, the differences have mixed
-or unfavourable signs, or all lie inside the noise yardstick. A **null** is also recorded if both
-agents show no dip at all (the switches are too easy to tell anything apart; failure mode 7.2).
+or unfavourable signs, or all lie inside noise. A **null** is also recorded if both agents show no
+dip at all (failure mode 7.2).
 
-**Not claimed either way:** any mechanism. A modulated advantage here shows the model *does* better
-under switching; *why* needs the later analyses (modulator activity per world).
+**Not claimed either way:** any mechanism, and anything about the modulator in general beyond this
+initialisation pair.
 
 ## 3. Experimental design
 
@@ -85,8 +122,9 @@ under switching; *why* needs the later analyses (modulator activity per world).
 
 Every concept world `extends:` the level-05 campfire world and overrides **only** external keys.
 Verified on the live loader (6.1, check C2): all 8 world configs resolve to the **same** body,
-thermal-body, interoception and reward parameters as level 05 (the only differing fields are
-per-animal arrays whose length changes with the animal count, and the external noise table in Fog).
+thermal-body, interoception and reward parameters as level 05 (the only differing fields are the
+per-entity arrays whose length changes with the counts, grid size, smell range, ambient and fire
+settings, and Fog's external noise table).
 
 | Body item | Value (level 05) | Keys (inherited, never overridden) |
 |---|---|---|
@@ -103,84 +141,125 @@ per-animal arrays whose length changes with the animal count, and the external n
 ### 3.2 The concept worlds (external only)
 
 All worlds keep the **58-number observation**: senses are never removed, only their range, blur or
-noise changes; temperature sensing is always on. Placement boxes are widened to the grid and counts
-of anything not named are level 05's counts scaled by area (factor (G/10)², rounding rule of the
-context-exploration generator, which validated 15 × 15 and 20 × 20 placement). "Density" below means
-that scaling. Search time to the nearest food (from the context-exploration Part 3 reset study, mean
-steps): 15 × 15 at density with smell 5 ≈ **9.7**; 1–2 items at smell 5 ≈ 51; at smell 8 ≈ 23; at
-smell 3 with density food ≈ 20.5.
+noise changes; temperature sensing is always on. Within every A ↔ B pair both worlds are 15 × 15, so
+grid size changes once (Forage → A) and never on the alternation being measured; the agents have no
+absolute-position sensor (`location_sensor: false`), so grid size is not a direct cue either.
 
-| Concept | Grid | Smell range | Food (items, bites, regrow delay) | Hunting predators | Ambushers | Bushes | Fires | Temperature | Other |
-|---|---|---|---|---|---|---|---|---|---|
-| **Nursery** (fresh pre-training only) | 10 | 20 | 4–6, 12, 0 | exactly 1; moves every 3rd step; notices at 3–4 cells; hit 15–45 | 0–2 | 8–12 (may sit by fires) | 2–3 | ambient ≈ −30 (as level 05) | rocks 6–12, rabbits 0–2 |
-| **Home** | 10 | 20 | level 05 unchanged: food 1–4, predators 0–2, ambushers 2–12, bushes 4–10, fires 1–3 | | | | | | |
-| **Forage** | 20 | 5 | 4–8, 12, 0 | none | 0–2 | 16–40 | 4–12 | ≈ −30 | rocks 24–48, rabbits 0–5 (pinned, see 6.2) |
-| **Danger** | 15 | 5 | 2–9, 12, 0 | 2–3; notice at 5–9 cells (L05 1–7); stamina 100–200 (L05 30–150); lose-interest 2.0 (L05 1.5); hit 15–120 | 6–12 | 8–12 | 2–7 | ≈ −30 | rocks 14–27, rabbits 0–5 |
-| **Famine** | 15 | 5 | **1–2**, 12, **30 steps** | 0–1 | 5–27 | 9–23 | 2–7 | ≈ −30 | rocks 14–27, rabbits 0–5 |
-| **Winter** | 15 | 5 | 2–9, 12, 0 | 0–1 | 5–27 | 9–23, **none within 3 cells of the fire** | **exactly 1**, ratio 10 | **≈ −40** | rocks 14–27, rabbits 0–5 |
-| **Fog** | 15 | **3** | 2–9, 12, 0 | 1–2 | 5–27 | 9–23 | 2–7 | ≈ −30 | sight blurred 3× (see below); noise on smell σ 0.3 and sight σ 0.2 only |
-| **Harsh** (later, P5) | 15 | 8 | **1–2**, 12, 0 | 1–2 | 5–27 | **2–4** | 2–7 | **≈ −35** | rocks 14–27, rabbits 0–5 |
+**Per-cell density rule (Revision 1).** Home (level 05, 100 cells) is the reference. Every count
+is set so the concept's pressure holds **per cell**: a count the concept brief gave in Home-grid
+terms is scaled by area (×2.25 at 15 × 15, ×4 at 20 × 20, round half up; the context-exploration
+generator's rule), and anything the concept does not name is at Home's density. Three things are
+deliberately **not** scaled because scarcity *is* the concept: Forage's food (a sparse, large world
+to search), Famine's and Harsh's food (1–2 items, user decision), and Winter's single fire. Rabbits
+stay 0–5 in every main-run world (5 slots, needed by the trainer-bug workaround, 6.2 B1).
 
-Config keys per concept (all under `environment:` unless stated): `height`/`width`; `sensory.sensor_radius`;
-food `count_low/high`, `max_consumption`, `regeneration_delay`; hunting predator entry
-(`class: predator`) `count_low/high`, `move_interval`, `detection_range`, `max_stamina`,
-`lose_interest_multiplier`, `damage` — absent in Forage; ambusher (`hiding_predator` resource)
-`count_low/high`; `campfire` / `rock` / `bush` `count_low/high` and `area`; campfire
-`temperature_ratio` (Winter only, see below); `thermal.default_temp` (Winter [−41, −39], Harsh
-[−36, −34]); `thermal.bush_min_fire_distance` 3 (Winter only); Fog adds
-`sensory.visual_blur_radial_scale` 1.5 and a `perceptual_noise` block (enabled, every modality
-`mode: constant`, σ 0 except olfaction 0.3 and visual 0.2).
+**Counts** (range per episode):
 
-**Three departures from the brief, each forced by a measured constraint:**
+| Concept | Grid | Smell | Food (items, bites, regrow) | Hunting predators | Ambushers | Bushes | Fires | Rocks | Rabbits | Ambient | Other |
+|---|---|---|---|---|---|---|---|---|---|---|---|
+| **Nursery** (fresh pre-training only) | 10 | 20 | 4–6, 12, 0 | exactly 1; moves every 3rd step; notices at 3–4 cells; hit 15–45 | 0–2 | 8–12 (may sit by fires) | 2–3 | 6–12 | 0–2 | ≈ −30 | |
+| **Home** (reference) | 10 | 20 | 1–4, 12, 0 | 0–2 | 2–12 | 4–10 | 1–3 | 6–12 | 0–2 | ≈ −30 | level 05 unchanged |
+| **Forage** | 20 | 5 | 4–8, 12, 0 | none | 0–2 | 16–40 | 4–12 | 24–48 | 0–5 | ≈ −30 | |
+| **Danger** | 15 | 5 | 2–9, 12, 0 | **5–7**; notice at 5–9 cells (L05 1–7); stamina 100–200 (L05 30–150); lose-interest 2.0 (L05 1.5); hit 15–120 | **14–27** | 18–27 | 2–7 | 14–27 | 0–5 | ≈ −30 | |
+| **Famine** | 15 | 5 | **1–2**, 12, **30 steps** | 0–2 | 5–27 | 9–23 | 2–7 | 14–27 | 0–5 | ≈ −30 | |
+| **Winter** | 15 | 5 | 2–9, 12, 0 | 0–2 | 5–27 | 9–23, **none within 3 cells of the fire** | **exactly 1**, heat factor 10 | 14–27 | 0–5 | **≈ −40** | |
+| **Fog** | 15 | **3** | 2–9, 12, 0 | 2–5 | 5–27 | 9–23 | 2–7 | 14–27 | 0–5 | ≈ −30 | sight blurred 3×; noise on smell σ 0.3, sight σ 0.2 |
+| **Harsh** (later, P5) | 15 | 8 | **1–2**, 12, 0 | 2–5 | 5–27 | **5–9** | 2–7 | 14–27 | 0–5 | **≈ −35** | |
+
+**Per-cell density** — mean number placed per 100 cells, measured on 1,000 real resets per world
+(6.1 C3); in brackets, the ratio to Home where the concept departs from it on purpose:
+
+| Concept | Food | Hunters | Ambushers | Bushes (shelter) | Fires (heat) | Rocks | Rabbits | Intended pressure |
+|---|---|---|---|---|---|---|---|---|
+| Home | 2.46 | 0.98 | 7.24 | 7.01 | 2.01 | 8.98 | 1.01 | reference |
+| Nursery | 4.99 (2×) | 1.00 (slow, short-sighted) | 1.02 (0.14×) | 9.97 (1.4×) | 2.49 | 8.98 | 1.01 | easier than Home everywhere |
+| Forage | 1.51 (0.6×, by design) | 0 | 0.26 (0.04×) | 7.03 | 2.00 | 9.10 | 0.62 | safe; food sparse in a big world |
+| Danger | 2.44 | **2.66 (2.7×)** | **9.16 (1.3×)** | 10.03 (1.4×) | 2.00 | 9.00 | 1.08 | many more, longer-chasing hunters and more ambushers per cell |
+| Famine | **0.66 (0.27×)**, slow regrowth | 0.44 (0.45×) | 7.01 | 7.06 | 2.00 | 9.00 | 1.08 | food scarce; threat below Home so hunger dominates |
+| Winter | 2.44 | 0.44 (0.45×) | 7.01 | 7.06 | **0.44 (0.22×)**, none beside a bush | 9.00 | 1.08 | cold; one heat source; threat below Home |
+| Fog | 2.44 | 1.55 (1.6×) | 7.01 | 7.06 | 2.00 | 9.00 | 1.08 | short noisy senses; threat slightly above Home |
+| Harsh | **0.66 (0.27×)** | 1.55 (1.6×) | 7.01 | **3.10 (0.44×)** | 2.00 | 9.00 | 1.08 | cold, hungry, exposed and hunted at once |
+
+Config keys per concept (all under `environment:` unless stated): `height`/`width`;
+`sensory.sensor_radius`; food `count_low/high`, `max_consumption`, `regeneration_delay`; hunting
+predator entry (`class: predator`) `count_low/high`, `move_interval`, `detection_range`,
+`max_stamina`, `lose_interest_multiplier`, `damage` — absent in Forage; ambusher (`hiding_predator`
+resource) `count_low/high`; `campfire` / `rock` / `bush` `count_low/high` and `area`; campfire
+`temperature_ratio` (Winter only); `thermal.default_temp` (Winter [−41, −39], Harsh [−36, −34]);
+`thermal.bush_min_fire_distance` 3 (Winter only); Fog adds `sensory.visual_blur_radial_scale` 1.5 and
+a `perceptual_noise` block (enabled, every modality `mode: constant`, σ 0 except olfaction 0.3 and
+visual 0.2). Search time to the nearest food (context-exploration Part 3 reset study, mean steps):
+15 × 15 at density with smell 5 ≈ 9.7; 1–2 items at smell 5 ≈ 51; at smell 8 ≈ 23; smell 3 with
+density food ≈ 20.5.
+
+**Three departures from the brief, each forced by a measured constraint (all accepted by the user):**
 
 1. **Fog cannot have vision range 1.** Vision range changes the observation width (58 → 50) and the
-   trainer's curriculum check refuses such a schedule (`train.py` stage validation: `obs_dim` and the
-   modality fingerprint, which includes `visual_sensor_range`). Fog instead blurs sight along each
-   line of sight three times more than level 05 (`visual_blur_radial_scale` 0.5 → 1.5; a continuous
-   value, deliberately not fingerprinted), so distance becomes vague while direction stays. Noise
-   uses `constant` mode, not level 06's injury-scaled mode, because noise that grows with injury would
-   be a body rule, and body rules are stationary here.
-2. **Winter's fire ratio is 10, not level 05's 11.** A fire is `ratio × |ambient|` hot. At −40 with
-   ratio 11, the first step from the warm ring onto the fire reached **+15.65** on 1,000 real resets
-   — instant death, breaking level 05's own design target ("first step onto a fire is survivable",
-   level 05 measures +10.9…+12.3). At ratio 10 the worst case is **+11.73** and only the **4 cells
-   beside the fire** are survivable to stand in (level 05: ≈ 16 cells). Tested ratios: 11 → 15.65,
-   10 → 11.73, 9.5 → 9.78, 9 → 7.83, 8.25 → 4.90.
-3. **Famine has no edge band.** A spawn area is a single rectangle; a band along all four walls needs
-   several food entries, and independent per-entry counts would allow episodes with **no food at all**.
-   The brief's fallback ("fewer items") is used: 1–2 items anywhere, regrowing 30 steps after being
-   eaten out (level 05: instantly).
+   trainer's curriculum check refuses such a schedule (`obs_dim` and the modality fingerprint, which
+   includes `visual_sensor_range`). Fog instead blurs sight along each line of sight three times more
+   than level 05 (`visual_blur_radial_scale` 0.5 → 1.5; continuous, not fingerprinted), plus noise on
+   smell and sight. Noise uses `constant` mode, not level 06's injury-scaled mode, because noise that
+   grows with injury would be a body rule.
+2. **Winter's fire heat factor is 10, not level 05's 11.** A fire is `ratio × |ambient|` hot. At −40
+   with ratio 11 the first step from the warm ring onto the fire reached **+15.65** on 1,000 real
+   resets — instant death. At 10 the worst case is **+11.73** and only the 4 cells beside the fire are
+   survivable to stand in (level 05: ≈ 16 cells). Tested: 11 → 15.65, 10 → 11.73, 9.5 → 9.78,
+   9 → 7.83, 8.25 → 4.90.
+3. **Famine has no edge band.** A spawn area is a single rectangle; a band along all four walls
+   needs several food entries with independent counts, which would allow episodes with no food. The
+   fallback is used: 1–2 items anywhere, regrowing 30 steps after being eaten out (level 05:
+   instantly).
 
-**A known risk, stated in advance:** in context-exploration Part 4, agents trained **from scratch** on
-15 × 15 or 20 × 20 worlds with 1–2 food items **never learned to eat** within 2 M episodes. Famine and
-Harsh sit exactly there. Our agents start already able to eat, which may or may not carry over — the
-survivability pilots (3.6) decide it before any main run.
+**A known risk, stated in advance:** in context-exploration Part 4, agents trained **from scratch**
+on 15 × 15 or 20 × 20 worlds with 1–2 food items never learned to eat within 2 M episodes. Famine
+and Harsh sit exactly there. Our agents start already able to eat; Pilot 1 decides whether that
+carries over. Danger at 2.7× Home's hunter density with long chases may be too hard; Pilot 1 decides
+that too, with a pre-named softening step (3.6).
 
-### 3.3 Sequences, stage length and why 2 M
+### 3.3 Sequences and the stage-length rule (pre-registered)
 
 | Sequence | Stage 1 | 2 (A) | 3 (B) | 4 (A again) | 5 (B again) | Now / later |
 |---|---|---|---|---|---|---|
-| **P1** Danger ↔ Famine | Forage | Danger | Famine | Danger | Famine | now |
-| **P2** Fog ↔ Danger | Forage | Fog | Danger | Fog | Danger | now |
-| **P3** Winter ↔ Famine | Forage | Winter | Famine | Winter | Famine | now |
+| **P1** Danger ↔ Famine | Forage | Danger | Famine | Danger | Famine | after pilots |
+| **P2** Fog ↔ Danger | Forage | Fog | Danger | Fog | Danger | after pilots |
+| **P3** Winter ↔ Famine | Forage | Winter | Famine | Winter | Famine | after pilots |
 | P4 Famine ↔ Danger (P1 reversed: order control) | Forage | Famine | Danger | Famine | Danger | later |
-| P5 Harsh ↔ Forage | Forage | Harsh | Forage | Harsh | Forage | later (configs for Harsh exist) |
+| P5 Harsh ↔ Forage | Forage | Harsh | Forage | Harsh | Forage | later |
 
-The pre-trained agent's 10 M episodes in Home **are** the Home stage; Home is not repeated inside the
-run. It still appears in the forgetting matrix (the pre-trained checkpoint is row 0).
+The pre-trained agent's 10 M episodes in Home **are** the Home stage. Home still appears in the
+forgetting matrix (the pre-trained checkpoint is row 0).
 
-**2,000,000 episodes per stage** (10 M per run), because:
-- In context exploration, today's world from scratch reached 227 survival steps at 2 M and only
-  240 at 5 M (+6 %); a world the agent can learn at all is essentially learned within 2 M.
-- The 1 M-episode pilots (3.6) show the within-world learning curve from the Home agent; if a pilot
-  is still climbing > 5 % over its last fifth at 1 M, that is recorded and 2 M remains the default
-  (not extended), because every stage must be the same length for the dip/recovery comparisons.
-- Longer stages would push each 10 M run past ~2 days of GPU time per run (level-05 10 M took 19.4 h
-  on 10 × 10; 15 × 15 / 20 × 20 are slower, to be measured by the pilots) with no measurement gain:
-  the recovery window of interest is the first few hundred thousand episodes after each switch.
-- Equal stages keep the four switch points comparable.
+**Plateau (defined on each Pilot 1 run, per agent, per world).** Survival is `Episode/Steps_mean`.
+For every logged episode row at episode *e* (counted from the switch into the world), the trailing
+mean is the mean survival over episodes (*e* − 200,000, *e*], weighting each row by the episodes it
+covers (Δ `Episode/Number`). The run's **best window** is the largest trailing mean anywhere in the
+pilot. **Time to plateau `T`** = the first *e* at which the trailing mean is within 5 % of the best
+window (≥ 0.95 × best). `T` is reported in **episodes** and in **environment steps** (the sum of
+Δ episodes × `Episode/Steps_mean` from the switch to *e*).
 
-### 3.4 Starting agents and the shared-start confound
+**Stage length (per concept X, same for both agents):**
+`L_X = min(3,000,000, max(1,000,000, 1.5 × max(T_X,ordinary, T_X,modulated)))`, rounded up to a
+multiple of 100,000, in episodes (the trainer's boundaries are episode counts; the environment-step
+equivalent is reported for every stage, F3). Every visit to X lasts `L_X`, so first visit and return
+are always the same length and both agents see the same schedule.
+- **Why 1.5 × the slower agent:** the reference level `R_X` (5.1) is the last 200,000 episodes of
+  the first visit; it must sit after both agents have levelled off, with margin.
+- **Why a 1 M floor:** below it, the 200,000-episode reference window and the recovery window
+  overlap.
+- **Why a 3 M cap:** 5 stages × 3 M is the most a run can take and stay inside ~3 GPU-days on
+  15 × 15 (throughput measured by Pilot 1; level 05 10 M took 19.4 h on 10 × 10).
+- **Fallback — no plateau by the pilot's end.** If `T_X` falls in the last 500,000 episodes of a
+  pilot (still climbing when the pilot ended), X is marked **"not plateaued"**: `L_X` = the 3 M cap,
+  and every return measure in X carries the note "below plateau". It is not extended past the cap.
+  If X also fails the survivable rule (3.6), the softening step applies instead.
+- **Caveat carried forward:** the pilots switch **Home → X**; the main runs switch Forage → A and
+  A ↔ B. Only the plateau time and the survivability verdict transfer from the pilots; the pilots'
+  dips are *not* the main runs' dips.
+
+The schedule files for P1–P3 are regenerated from the `L_X` values once Pilot 1 is analysed; the
+2 M-per-stage boundaries in them today are **placeholders** and are marked PROVISIONAL in the files.
+
+### 3.4 Starting agents, branching, and the shared-start confound
 
 | Agent | Pre-trained run (level-05 factorial, all-rules-off world) | Final checkpoint | Agent config |
 |---|---|---|---|
@@ -189,257 +268,351 @@ run. It still appears in the forgetting matrix (the pre-trained checkpoint is ro
 
 Their final Home survival (factorial §7): 249.8 (ordinary) and 253.4 (modulated) steps.
 
-**Confound (stated):** all three runs of an agent start from the **same weights, the same optimizer
-state and the same random-number key** (`--load-checkpoint` restores the key, so `--seed` does not
-change the run). P1–P3 therefore differ only in their worlds from stage 2 on; their **stage-1
-(Forage) segments are near-duplicates** of each other, differing only by GPU non-determinism. That
-makes the three Forage segments a free measurement of the run-to-run noise floor (5.5), but it also
-means the 3 sequences are **not** 3 independent replicates of the agent comparison, and the ordinary
-and modulated agents differ in initialisation, capacity and seed as well as in the modulator
-(factorial plan-review finding A2). The fresh-seed pre-trainings (3.5) exist to remove this later.
+**Branching (user decision).** Forage is trained **once per agent**, and it is Pilot 1's Forage run
+(runs 1–2): same checkpoint, same world, same key, so it *is* the main runs' stage 1. Once `L_Forage`
+is known, the branch point is the first checkpoint of that run at or after episode counter
+`B0 = 10,000,000 + L_Forage` (checkpoints every 100,000; `L` is a multiple of 100,000, so it is the
+checkpoint of the iteration that crossed `B0`). Because the trainer restores the **latest** checkpoint
+in a directory, the step directory is copied (read-only copy, nothing moved or deleted) with the run's
+`config.yaml` into `results/JAX_RecurrentPPO/cw_branchpoint_forage_<agent>_s42/models/`; each of the
+three sequences then loads it with `--load-checkpoint`. The restored counter is ≥ `B0`, so each branch
+starts directly in stage 2 (A); the Forage stage stays in the schedule file because the trainer sizes
+its per-animal logging buffers from stage 0 before the restore, which is what keeps the workaround
+for the animal-count bug valid (6.2 B1). Verified: a copied single step directory is what the
+checkpoint manager returns as the latest step (6.1 C10).
+
+**Confound (stated):** all three branches of an agent start from the **same weights, optimizer
+state and random key**, so P1–P3 are not three independent replicates of the agent comparison, and
+the ordinary and modulated agents differ in initialisation, capacity and seed as well as in the
+modulator (factorial plan-review finding A2). Hence the "one initialisation pair, three world-pairs"
+wording (section 2) and the fresh-seed pre-training (3.5). Branching removes the three near-duplicate
+Forage copies, and with them the old noise yardstick (a); nothing is lost (5.5).
 
 ### 3.5 Fresh pre-training for the replicated version (2 more seeds per agent)
 
 For each agent and seeds **43** and **44**: **Nursery for 2,000,000 episodes, then Home until the
-episode counter reaches 10,000,000** (8 M Home episodes). Four pre-trainings, each run as **two
-consecutive single-world runs** (a Nursery leg, then a Home leg that loads the Nursery leg's final
-checkpoint), not as one two-stage continual run, because Nursery has one hunting-predator slot and
-Home has two, and that roster change crashes the continual trainer today (6.2, blocker B1; verified
-by smoke run S-B).
+episode counter reaches 10,000,000** (8 M Home episodes), as **two consecutive single-world runs**
+(Nursery leg, then a Home leg that loads the Nursery leg's final checkpoint), because Nursery has one
+hunting-predator slot and Home two, and that roster change crashes the continual trainer (6.2 B1;
+smoke run S-B). **The seed-43 Nursery legs are Pilot 3** (runs 17–18): if Pilot 3 passes they
+continue as production legs; if it fails they are not used and the user decides how to change
+Nursery.
 
-Why these lengths:
-- **Nursery 2 M:** the curriculum study found easy levels learned within ~0.2 M episodes and that
-  long over-training on easy levels hurt later learning (plasticity loss, LLM-wiki
-  `curriculum_learning`); 2 M is ample for the basics (eat, hide when hurt, warm up) without
-  lingering. It is also the stage length used everywhere else here.
-- **Home to 10 M total:** it gives the fresh seeds the same total experience and the same episode
-  counter as the seed-42 pair, so the three schedules in 4.1 serve them unchanged (their boundaries
-  are absolute counter values, 3.3).
+- **Nursery 2 M:** the curriculum study found easy levels learned within ~0.2 M episodes and that long
+  over-training on easy levels hurt later learning (plasticity loss); 2 M is ample for the basics
+  without lingering.
+- **Home to 10 M total:** the fresh seeds get the same total experience and episode counter as the
+  seed-42 pair. They later need their own Forage run to the same `B0` before branching.
 - **Competence gate (pre-registered):** a fresh Home leg counts as competent when, over its last
   200,000 episodes, mean survival is **≥ 95 % of the same agent type's seed-42 Home level** (ordinary
   ≥ 237.3, modulated ≥ 240.7) **and** it rose < 5 % over its last fifth. If it fails at 10 M, it is
-  reported, not extended silently (extension would move the counter and needs new schedule files).
+  reported, not extended silently.
 
-### 3.6 Survivability pilots (before any main run)
+### 3.6 Pilots (before any main run)
 
-One pilot per new concept (Forage, Danger, Famine, Winter, Fog, Harsh): the **ordinary** pre-trained
-agent, loaded from its Home checkpoint, trained **1,000,000 episodes** in that single world
-(six runs). Pre-registered **survivable rule**, on the pilot's last 200,000 episodes:
+All pilots: `wandb-job-type` = `pilot`; both agents; checkpoints every 100,000 episodes; balance
+metrics (`Episode/Bal_*`) are logged by the current trainer (the pre-trained runs predate them).
 
-1. mean survival ≥ **50 % of the ordinary agent's Home level** (≥ 124.9 steps), **and**
-2. mean bites per episode ≥ **1.0** (it still forages; the from-scratch failure mode was ≈ 0.02).
+**Pilot 1 — one new world each, from the Home agent (12 runs; also the main runs' Forage stage).**
+Each pre-trained agent is loaded from its Home checkpoint and trained in one new world only:
+Forage for 4,000,000 episodes (counter to 14,000,000), Danger, Famine, Winter, Fog and Harsh for
+3,000,000 each (counter to 13,000,000). Runs go to full length (the plateau rule needs the whole
+curve; Forage must pass `B0`); a run is stopped early only under failure mode 7.1. It measures, per
+world and per agent: the Home → X zero-shot dip (first 20,000 episodes vs. Home level), the time to
+plateau `T` (3.3), the survivability verdict, and throughput (iterations/s, recorded in the manifest).
 
-A concept that fails is softened **once**, by one pre-named step, and re-piloted; if it fails again it
-is dropped and its sequence replaced by the user:
+*Survivable rule (per world, on each agent's last 200,000 pilot episodes):*
+1. mean survival ≥ **50 % of that agent's Home level** (ordinary ≥ 124.9, modulated ≥ 126.7 steps), and
+2. mean `Episode/FoodEaten` ≥ **1.0** bite per episode (the from-scratch failure mode was ≈ 0.02).
+
+A world passes if **both** agents pass. If exactly one agent fails, that is reported to the user as
+a finding before any main run (not softened automatically). If both fail, the world is softened
+**once** by its pre-named step and re-piloted; if it fails again it is dropped and its sequence
+replaced by the user:
 
 | Concept | One softening step if it fails |
 |---|---|
 | Forage | food 4–8 → 6–12 |
-| Danger | hunting predators 2–3 → 1–2 |
+| Danger | hunting predators 5–7 → 3–5 (still 1.8× Home per cell) |
 | Famine | regrow delay 30 → 10 steps |
-| Winter | ambient −40 → −35 (fire ratio re-checked for the first-step target) |
+| Winter | ambient −40 → −35 (fire heat factor re-checked for the first-step target) |
 | Fog | noise σ halved (smell 0.15, sight 0.1) |
 | Harsh | food 1–2 → 2–4 |
 
-A concept that passes with survival ≥ 95 % of Home **and** a first-20K-episode dip < 5 % is flagged
-**"too easy to be a distinct world"** and shown to the user; it is not changed automatically.
+A world that passes with both agents ≥ 95 % of Home **and** a Home → X dip < 5 % is flagged **"too
+easy to be a distinct world"** and shown to the user; it is not changed automatically.
+
+**Pilot 2 — pipeline shakedown, NOT evidence (4 runs).** Pilot 2a: Home (pre-trained) → Forage →
+Danger → Famine → Danger → Famine; Pilot 2b: Home → Forage → Fog → Danger → Fog → Danger; 1,000,000
+episodes per stage, both agents. It exercises, on GPU and the real checkpoints: four stage switches
+with changing grid size and animal counts, the checkpoint cadence at stage ends, `stage/index` rows,
+and the forgetting-matrix sweep on a real continual run (the sweep's per-condition `--config`
+bypasses `eval_rollout`'s refusal of a continual run's stage-0 `config.yaml`; tested here once).
+1 M per stage is below the within-world plateau, so **its dips, recoveries and returns are not read
+as evidence** for or against the modulator and are not pooled with the main runs. *Pass:* every run
+completes all five stages with a `[STAGE]` line per switch, no traceback, 10 checkpoints per stage,
+and the forgetting sweep produces a full matrix for one run.
+
+**Pilot 3 — Nursery from scratch (2 runs; the seed-43 Nursery legs of 3.5).** Both agents, seed 43,
+2,000,000 episodes. *Pass criterion (pre-registered), per agent, on the leg's last 200,000 episodes:*
+
+| Skill | Measure (WandB key) | Threshold |
+|---|---|---|
+| Survives | mean `Episode/Steps_mean` | ≥ 200 steps (Home-trained agents: ≈ 250 in the harder Home) |
+| Eats | mean `Episode/FoodEaten` and `Episode/Bal_EatRatio` (eating share when hungry ÷ when fed) | ≥ 15 bites per episode **and** ratio ≥ 2 |
+| Hides when hurt | `Episode/Bal_HideRatio_True` (bush share when truly injured ÷ when not) | ≥ 2 |
+| Warms | `Episode/Bal_TimeWarm` (share of steps on a warm cell) and `Episode/Bal_LateDeath_Thermal` (cold/heat share of late deaths) | ≥ 0.10 **and** ≤ 0.25 |
+| Does not collapse | 200,000-episode trailing survival after the first window that meets all rows above | never below 0.8 × that window's value |
+
+"Within N episodes" is N = 2,000,000; the first 200,000-episode window meeting all rows is reported as
+the time to competence. Pass = all rows met on the last window. Fail → the leg is not used for
+production and the user chooses (soften Nursery, or pre-train in Home alone).
 
 ## 4. Launch Manifest
 
 All rows: `wandb-group` = `continual_worlds`. Tag = wandb-name. Scheme:
-`rppo_cw_<cell>_<agent>_s<seed>`, agent ∈ {`t1none` ordinary, `t16quad` modulated}. The seed of the
-main runs is the pre-trained pair's seed (42); `--seed 42` is passed for the record, the restored key
-governs.
+`rppo_cw_<cell>_<agent>_s<seed>`, agent ∈ {`t1none` ordinary, `t16quad` modulated}. Seed 42 rows load
+the pre-trained pair; `--seed 42` is passed for the record, the restored key governs. Node / GPU are
+assigned by the parent (candidate nodes 106–112, 102, 113; pack node-first).
 
-**Launch order:** pilots (runs 1–6) → pilot verdicts + user go → main runs (7–12) and fresh
-pre-training Nursery legs (13–16) → Home legs (17–20) after their Nursery leg ends.
+**Launch order:** pilots (runs 1–18, all at once) → pilot verdicts, `L_X` computed, P1–P3 schedules
+regenerated, branch-point copies made, user go → branches (19–24) and seed-44 Nursery legs (25–26) →
+Home legs (27–30) after their Nursery leg ends (27–28 only if Pilot 3 passed).
 
 | Run | Status | Cell | Tag (= wandb-name) | wandb-group | wandb-job-type | Seed | Node | GPU | Launched at | WandB run ID | Log path |
 |-----|--------|------|--------------------|-------------|----------------|------|------|-----|-------------|--------------|----------|
-| 1 | planned | pilot Forage | `rppo_cw_pilot_forage_t1none_s42` | continual_worlds | pilot | 42 | — | — | — | — | — |
-| 2 | planned | pilot Danger | `rppo_cw_pilot_danger_t1none_s42` | continual_worlds | pilot | 42 | — | — | — | — | — |
-| 3 | planned | pilot Famine | `rppo_cw_pilot_famine_t1none_s42` | continual_worlds | pilot | 42 | — | — | — | — | — |
-| 4 | planned | pilot Winter | `rppo_cw_pilot_winter_t1none_s42` | continual_worlds | pilot | 42 | — | — | — | — | — |
-| 5 | planned | pilot Fog | `rppo_cw_pilot_fog_t1none_s42` | continual_worlds | pilot | 42 | — | — | — | — | — |
-| 6 | planned | pilot Harsh | `rppo_cw_pilot_harsh_t1none_s42` | continual_worlds | pilot | 42 | — | — | — | — | — |
-| 7 | planned | P1 ordinary | `rppo_cw_p1_t1none_s42` | continual_worlds | prod | 42 | — | — | — | — | — |
-| 8 | planned | P1 modulated | `rppo_cw_p1_t16quad_s42` | continual_worlds | prod | 42 | — | — | — | — | — |
-| 9 | planned | P2 ordinary | `rppo_cw_p2_t1none_s42` | continual_worlds | prod | 42 | — | — | — | — | — |
-| 10 | planned | P2 modulated | `rppo_cw_p2_t16quad_s42` | continual_worlds | prod | 42 | — | — | — | — | — |
-| 11 | planned | P3 ordinary | `rppo_cw_p3_t1none_s42` | continual_worlds | prod | 42 | — | — | — | — | — |
-| 12 | planned | P3 modulated | `rppo_cw_p3_t16quad_s42` | continual_worlds | prod | 42 | — | — | — | — | — |
-| 13 | planned | Nursery leg | `rppo_cw_nursery_t1none_s43` | continual_worlds | prod | 43 | — | — | — | — | — |
-| 14 | planned | Nursery leg | `rppo_cw_nursery_t1none_s44` | continual_worlds | prod | 44 | — | — | — | — | — |
-| 15 | planned | Nursery leg | `rppo_cw_nursery_t16quad_s43` | continual_worlds | prod | 43 | — | — | — | — | — |
-| 16 | planned | Nursery leg | `rppo_cw_nursery_t16quad_s44` | continual_worlds | prod | 44 | — | — | — | — | — |
-| 17 | planned | Home leg (after 13) | `rppo_cw_home_t1none_s43` | continual_worlds | prod | 43 | — | — | — | — | — |
-| 18 | planned | Home leg (after 14) | `rppo_cw_home_t1none_s44` | continual_worlds | prod | 44 | — | — | — | — | — |
-| 19 | planned | Home leg (after 15) | `rppo_cw_home_t16quad_s43` | continual_worlds | prod | 43 | — | — | — | — | — |
-| 20 | planned | Home leg (after 16) | `rppo_cw_home_t16quad_s44` | continual_worlds | prod | 44 | — | — | — | — | — |
+| 1 | planned | Pilot 1 Forage (= main stage 1) | `rppo_cw_pilot1_forage_t1none_s42` | continual_worlds | pilot | 42 | — | — | — | — | — |
+| 2 | planned | Pilot 1 Forage (= main stage 1) | `rppo_cw_pilot1_forage_t16quad_s42` | continual_worlds | pilot | 42 | — | — | — | — | — |
+| 3 | planned | Pilot 1 Danger | `rppo_cw_pilot1_danger_t1none_s42` | continual_worlds | pilot | 42 | — | — | — | — | — |
+| 4 | planned | Pilot 1 Danger | `rppo_cw_pilot1_danger_t16quad_s42` | continual_worlds | pilot | 42 | — | — | — | — | — |
+| 5 | planned | Pilot 1 Famine | `rppo_cw_pilot1_famine_t1none_s42` | continual_worlds | pilot | 42 | — | — | — | — | — |
+| 6 | planned | Pilot 1 Famine | `rppo_cw_pilot1_famine_t16quad_s42` | continual_worlds | pilot | 42 | — | — | — | — | — |
+| 7 | planned | Pilot 1 Winter | `rppo_cw_pilot1_winter_t1none_s42` | continual_worlds | pilot | 42 | — | — | — | — | — |
+| 8 | planned | Pilot 1 Winter | `rppo_cw_pilot1_winter_t16quad_s42` | continual_worlds | pilot | 42 | — | — | — | — | — |
+| 9 | planned | Pilot 1 Fog | `rppo_cw_pilot1_fog_t1none_s42` | continual_worlds | pilot | 42 | — | — | — | — | — |
+| 10 | planned | Pilot 1 Fog | `rppo_cw_pilot1_fog_t16quad_s42` | continual_worlds | pilot | 42 | — | — | — | — | — |
+| 11 | planned | Pilot 1 Harsh | `rppo_cw_pilot1_harsh_t1none_s42` | continual_worlds | pilot | 42 | — | — | — | — | — |
+| 12 | planned | Pilot 1 Harsh | `rppo_cw_pilot1_harsh_t16quad_s42` | continual_worlds | pilot | 42 | — | — | — | — | — |
+| 13 | planned | Pilot 2a shakedown | `rppo_cw_pilot2a_t1none_s42` | continual_worlds | pilot | 42 | — | — | — | — | — |
+| 14 | planned | Pilot 2a shakedown | `rppo_cw_pilot2a_t16quad_s42` | continual_worlds | pilot | 42 | — | — | — | — | — |
+| 15 | planned | Pilot 2b shakedown | `rppo_cw_pilot2b_t1none_s42` | continual_worlds | pilot | 42 | — | — | — | — | — |
+| 16 | planned | Pilot 2b shakedown | `rppo_cw_pilot2b_t16quad_s42` | continual_worlds | pilot | 42 | — | — | — | — | — |
+| 17 | planned | Pilot 3 Nursery (= seed-43 leg) | `rppo_cw_nursery_t1none_s43` | continual_worlds | pilot | 43 | — | — | — | — | — |
+| 18 | planned | Pilot 3 Nursery (= seed-43 leg) | `rppo_cw_nursery_t16quad_s43` | continual_worlds | pilot | 43 | — | — | — | — | — |
+| 19 | planned (after pilots) | P1 branch, ordinary | `rppo_cw_p1_t1none_s42` | continual_worlds | prod | 42 | — | — | — | — | — |
+| 20 | planned (after pilots) | P1 branch, modulated | `rppo_cw_p1_t16quad_s42` | continual_worlds | prod | 42 | — | — | — | — | — |
+| 21 | planned (after pilots) | P2 branch, ordinary | `rppo_cw_p2_t1none_s42` | continual_worlds | prod | 42 | — | — | — | — | — |
+| 22 | planned (after pilots) | P2 branch, modulated | `rppo_cw_p2_t16quad_s42` | continual_worlds | prod | 42 | — | — | — | — | — |
+| 23 | planned (after pilots) | P3 branch, ordinary | `rppo_cw_p3_t1none_s42` | continual_worlds | prod | 42 | — | — | — | — | — |
+| 24 | planned (after pilots) | P3 branch, modulated | `rppo_cw_p3_t16quad_s42` | continual_worlds | prod | 42 | — | — | — | — | — |
+| 25 | planned (after pilots) | Nursery leg | `rppo_cw_nursery_t1none_s44` | continual_worlds | prod | 44 | — | — | — | — | — |
+| 26 | planned (after pilots) | Nursery leg | `rppo_cw_nursery_t16quad_s44` | continual_worlds | prod | 44 | — | — | — | — | — |
+| 27 | planned (after 17, if Pilot 3 passes) | Home leg | `rppo_cw_home_t1none_s43` | continual_worlds | prod | 43 | — | — | — | — | — |
+| 28 | planned (after 18, if Pilot 3 passes) | Home leg | `rppo_cw_home_t16quad_s43` | continual_worlds | prod | 43 | — | — | — | — | — |
+| 29 | planned (after 25) | Home leg | `rppo_cw_home_t1none_s44` | continual_worlds | prod | 44 | — | — | — | — | — |
+| 30 | planned (after 26) | Home leg | `rppo_cw_home_t16quad_s44` | continual_worlds | prod | 44 | — | — | — | — | — |
+
+**Compute (rough, to be replaced by Pilot 1's measured throughput):** level 05 ran 10 M episodes in
+19.4 h on 10 × 10. Assuming 15 × 15 / 20 × 20 are 1.3–2× slower: Pilot 1 ≈ 8–12 h per 3 M run and
+≈ 14–24 h for Forage 4 M; Pilot 2 ≈ 13–20 h per run; Pilot 3 ≈ 4 h. 18 GPUs, one run each.
 
 ### 4.1 Configs to Produce
 
-Env configs are all under `configs/environment/experiment/continual_worlds/`; continual schedules
-under `configs/continual/continual_worlds/`. `T1` = `configs/models/recurrent_ppo/nmn_input_site_grid_gaenorm/nmngaenorm_t1none.yaml`,
-`T16` = `.../nmngaenorm_t16quad_ALL.yaml` (unchanged, the pre-trained agents' own configs).
-`CK_O` / `CK_M` = the ordinary / modulated pre-trained `models/` directories (3.4).
+`CW` = `configs/environment/experiment/continual_worlds/`; `CS` = `configs/continual/continual_worlds/`.
+`T1` = `configs/models/recurrent_ppo/nmn_input_site_grid_gaenorm/nmngaenorm_t1none.yaml`, `T16` =
+`.../nmngaenorm_t16quad_ALL.yaml` (unchanged; the pre-trained agents' own configs). `CK_O` / `CK_M` =
+the ordinary / modulated pre-trained `models/` directories (3.4). `BP_O` / `BP_M` =
+`results/JAX_RecurrentPPO/cw_branchpoint_forage_{t1none,t16quad}_s42/models` (made after Pilot 1, 3.4).
 
-| Run | Env config (single world) or stage dir + schedule | Agent | Starts from | Episode flag |
+| Run | Env config (single world) or stage dir + schedule | Agent | Starts from | `--episodes` |
 |-----|---|---|---|---|
-| 1–6 | `forage_20x20` / `danger_15x15` / `famine_15x15` / `winter_15x15` / `fog_15x15` / `harsh_15x15` `.yaml` | T1 | `CK_O` | `--episodes 11000000` (≈ 1 M after the restored 10,000,046) |
-| 7, 8 | `p1_danger_famine_stages/` + `p1_danger_famine.yaml` | T1, T16 | `CK_O`, `CK_M` | none (schedule sets 20,000,000) |
-| 9, 10 | `p2_fog_danger_stages/` + `p2_fog_danger.yaml` | T1, T16 | `CK_O`, `CK_M` | none |
-| 11, 12 | `p3_winter_famine_stages/` + `p3_winter_famine.yaml` | T1, T16 | `CK_O`, `CK_M` | none |
-| 13–16 | `nursery_10x10.yaml` | T1, T1, T16, T16 | scratch | `--episodes 2000000` |
-| 17–20 | `home_10x10.yaml` | as its Nursery leg | its Nursery leg's `models/` | `--episodes 10000000` |
+| 1, 2 | `CW/forage_20x20.yaml` | T1, T16 | `CK_O`, `CK_M` | 14000000 |
+| 3, 4 | `CW/danger_15x15.yaml` | T1, T16 | `CK_O`, `CK_M` | 13000000 |
+| 5, 6 | `CW/famine_15x15.yaml` | T1, T16 | `CK_O`, `CK_M` | 13000000 |
+| 7, 8 | `CW/winter_15x15.yaml` | T1, T16 | `CK_O`, `CK_M` | 13000000 |
+| 9, 10 | `CW/fog_15x15.yaml` | T1, T16 | `CK_O`, `CK_M` | 13000000 |
+| 11, 12 | `CW/harsh_15x15.yaml` | T1, T16 | `CK_O`, `CK_M` | 13000000 |
+| 13, 14 | `CS/pilot2a_danger_famine_stages/` + `CS/pilot2a_danger_famine.yaml` (boundaries 11 M … 15 M) | T1, T16 | `CK_O`, `CK_M` | none (schedule) |
+| 15, 16 | `CS/pilot2b_fog_danger_stages/` + `CS/pilot2b_fog_danger.yaml` (boundaries 11 M … 15 M) | T1, T16 | `CK_O`, `CK_M` | none (schedule) |
+| 17, 18 | `CW/nursery_10x10.yaml` | T1, T16 | scratch | 2000000 |
+| 19, 20 | `CS/p1_danger_famine_stages/` + `CS/p1_danger_famine.yaml` (**regenerated after Pilot 1**) | T1, T16 | `BP_O`, `BP_M` | none |
+| 21, 22 | `CS/p2_fog_danger_stages/` + `CS/p2_fog_danger.yaml` (regenerated) | T1, T16 | `BP_O`, `BP_M` | none |
+| 23, 24 | `CS/p3_winter_famine_stages/` + `CS/p3_winter_famine.yaml` (regenerated) | T1, T16 | `BP_O`, `BP_M` | none |
+| 25, 26 | `CW/nursery_10x10.yaml` | T1, T16 | scratch | 2000000 |
+| 27–30 | `CW/home_10x10.yaml` | as its Nursery leg | its Nursery leg's `models/` | 10000000 |
 
 Each stage file is a one-line `extends:` of its concept file, so every visit to a concept is the
-identical world. The three schedules are identical: boundaries `[12M, 14M, 16M, 18M, 20M]` on the
-restored episode counter, checkpoint every 100,000 episodes (20 per stage).
+identical world. Checkpoints every 100,000 episodes everywhere (schedules set it per stage; single-
+world runs pass `--checkpoint-frequency 100000`); the rPPO train config keeps all checkpoints.
 
 ### 4.2 Launch commands (for `training-runner`, via `run_command.py`, after the user's go)
 
+`PY=/home/vncuser/miniconda3/envs/grid_world_pain/bin/python`, run from the repo root. `--episodes`
+is refused in continual mode (the schedule's last boundary is the budget); `--log-interval` is ignored
+by these configs, so it is not passed.
+
 ```bash
-# pilots (run 1 shown; runs 2-6 change the world file and the tag)
-python train.py --config configs/environment/experiment/continual_worlds/forage_20x20.yaml \
+# Pilot 1 (run 3 shown; runs 1-12 change world file, agent config, checkpoint dir, --episodes, tag)
+$PY train.py --config configs/environment/experiment/continual_worlds/danger_15x15.yaml \
   --agent_config configs/models/recurrent_ppo/nmn_input_site_grid_gaenorm/nmngaenorm_t1none.yaml \
   --load-checkpoint results/JAX_RecurrentPPO/20260927-053057_rppo_l05body_w0000_t1none_s42/models \
-  --episodes 11000000 --seed 42 --device cuda:0 --tag rppo_cw_pilot_forage_t1none_s42 \
-  --wandb-name rppo_cw_pilot_forage_t1none_s42 --wandb-group continual_worlds --wandb-job-type pilot
+  --episodes 13000000 --checkpoint-frequency 100000 --seed 42 --device cuda:0 \
+  --tag rppo_cw_pilot1_danger_t1none_s42 --wandb-name rppo_cw_pilot1_danger_t1none_s42 \
+  --wandb-group continual_worlds --wandb-job-type pilot
 
-# main (run 8 shown)
-python train.py --configs-dir configs/continual/continual_worlds/p1_danger_famine_stages \
-  --continual-schedule configs/continual/continual_worlds/p1_danger_famine.yaml \
+# Pilot 2 (run 14 shown; 2b swaps in pilot2b_fog_danger)
+$PY train.py --configs-dir configs/continual/continual_worlds/pilot2a_danger_famine_stages \
+  --continual-schedule configs/continual/continual_worlds/pilot2a_danger_famine.yaml \
   --agent_config configs/models/recurrent_ppo/nmn_input_site_grid_gaenorm/nmngaenorm_t16quad_ALL.yaml \
   --load-checkpoint results/JAX_RecurrentPPO/20260927-053059_rppo_l05body_w0000_t16quad_s42/models \
+  --seed 42 --device cuda:0 --tag rppo_cw_pilot2a_t16quad_s42 --wandb-name rppo_cw_pilot2a_t16quad_s42 \
+  --wandb-group continual_worlds --wandb-job-type pilot
+
+# Pilot 3 (run 17 shown; run 18 uses the T16 agent config and tag)
+$PY train.py --config configs/environment/experiment/continual_worlds/nursery_10x10.yaml \
+  --agent_config configs/models/recurrent_ppo/nmn_input_site_grid_gaenorm/nmngaenorm_t1none.yaml \
+  --episodes 2000000 --checkpoint-frequency 100000 --seed 43 --device cuda:0 \
+  --tag rppo_cw_nursery_t1none_s43 --wandb-name rppo_cw_nursery_t1none_s43 \
+  --wandb-group continual_worlds --wandb-job-type pilot
+
+# Branch (run 20 shown; after Pilot 1 analysis, schedule regeneration and the branch-point copy)
+$PY train.py --configs-dir configs/continual/continual_worlds/p1_danger_famine_stages \
+  --continual-schedule configs/continual/continual_worlds/p1_danger_famine.yaml \
+  --agent_config configs/models/recurrent_ppo/nmn_input_site_grid_gaenorm/nmngaenorm_t16quad_ALL.yaml \
+  --load-checkpoint results/JAX_RecurrentPPO/cw_branchpoint_forage_t16quad_s42/models \
   --seed 42 --device cuda:0 --tag rppo_cw_p1_t16quad_s42 --wandb-name rppo_cw_p1_t16quad_s42 \
   --wandb-group continual_worlds --wandb-job-type prod
 
-# fresh pre-training (run 13, then run 17 when 13 has finished)
-python train.py --config configs/environment/experiment/continual_worlds/nursery_10x10.yaml \
+# Home leg (run 27 shown; after run 17 has finished and passed)
+$PY train.py --config configs/environment/experiment/continual_worlds/home_10x10.yaml \
   --agent_config configs/models/recurrent_ppo/nmn_input_site_grid_gaenorm/nmngaenorm_t1none.yaml \
-  --episodes 2000000 --seed 43 --device cuda:0 --tag rppo_cw_nursery_t1none_s43 \
-  --wandb-name rppo_cw_nursery_t1none_s43 --wandb-group continual_worlds --wandb-job-type prod
-python train.py --config configs/environment/experiment/continual_worlds/home_10x10.yaml \
-  --agent_config configs/models/recurrent_ppo/nmn_input_site_grid_gaenorm/nmngaenorm_t1none.yaml \
-  --load-checkpoint results/JAX_RecurrentPPO/<run-13 dir>/models \
-  --episodes 10000000 --seed 43 --device cuda:0 --tag rppo_cw_home_t1none_s43 \
-  --wandb-name rppo_cw_home_t1none_s43 --wandb-group continual_worlds --wandb-job-type prod
+  --load-checkpoint results/JAX_RecurrentPPO/<run-17 dir>/models \
+  --episodes 10000000 --checkpoint-frequency 100000 --seed 43 --device cuda:0 \
+  --tag rppo_cw_home_t1none_s43 --wandb-name rppo_cw_home_t1none_s43 \
+  --wandb-group continual_worlds --wandb-job-type prod
 ```
-
-`--episodes` is refused in continual mode (the schedule's last boundary is the budget). `--log-interval`
-is ignored by these configs (two-level logging block), so it is not passed.
 
 ## 5. Analysis plan (pre-specified)
 
 Survival steps per episode is the only performance measure. Reward is not used for any verdict.
-All curves are read from each run's local WandB episode rows (`Episode/Number`, survival,
-`stage/index`), never end-of-training snapshots alone.
+Curves are read from each run's WandB episode rows (`Episode/Number`, `Episode/Steps_mean`,
+`Episode/_window_n`, `stage/index`) over the whole run, never from end-of-training snapshots alone.
 
 ### 5.1 Reference level and the three switch measures
 
 For each world X in a sequence, its **reference level** `R_X` = mean survival over the **last 200,000
-episodes of X's first visit**. For every switch into a visit v of world X:
+episodes of X's first visit**. For every switch into a visit v of X:
 
-- **Dip** = 1 − (mean survival over the first 20,000 episodes of visit v) / `R_X`. On a first visit
-  this is zero-shot transfer from the previous world; on a return it is what was kept.
-- **Recovery** = episodes after the switch until the 20,000-episode running mean first reaches
-  **0.9 × `R_X`** (censored at 2,000,000 if never; censored values are reported as "not recovered").
+- **Dip** = 1 − (mean survival over the first 20,000 episodes of visit v) / `R_X`.
+- **Recovery** = training after the switch until the 20,000-episode running mean first reaches
+  **0.9 × `R_X`**, reported in **two units**: episodes, and environment steps (sum of Δ episodes ×
+  `Episode/Steps_mean` from the switch). Censored at `L_X` if never reached ("not recovered"). The
+  trainer updates once per fixed block of environment steps, so an agent that survives longer gets
+  more updates per episode; counting in episodes alone would favour whichever agent already survives
+  longer. **The H-rec vote counts only if the modulated-minus-ordinary difference has the favourable
+  sign in both units.** The number of training iterations per stage is reported for every run.
 - **Return** (visits 4 and 5 only) = (mean over the last 200,000 episodes of the return visit) − `R_X`,
-  and the change in dip and recovery from first visit to return.
-- The **previous stage's end level** (last 200,000 episodes of the stage before the switch, in its own
-  world) is reported alongside every switch for context.
+  plus the change in dip and recovery from first visit to return.
+- The previous stage's end level (its last 200,000 episodes) is reported next to every switch.
 
-The first logged rows after a switch are partial windows (the trainer clears its rolling episode
-window at a stage switch); the analysis uses rows' `Episode/_window_n` to weight or skip rows under
-1,000 episodes.
+The first rows after a switch are partial windows (the trainer clears its rolling window at a switch);
+rows are weighted by `Episode/_window_n` and rows under 1,000 episodes are skipped.
 
 ### 5.2 Modulator comparison
 
-For every switch measure, the **modulated-minus-ordinary difference** (for dip and recovery, a
-negative difference favours the modulator; for return, positive). Reported per switch (4 per
-sequence), per sequence and pooled across the 3 sequences, always next to the noise yardstick (5.5).
-The support/refute rule is section 2's.
+For every switch measure, the **modulated-minus-ordinary difference** (dip and recovery: negative
+favours the modulator; return: positive). Reported per switch (4 per sequence), per sequence and
+pooled across the 3 sequences, always next to the noise yardstick (5.5). The support / refute rule is
+section 2's.
 
 ### 5.3 Forgetting matrix (no training)
 
-Checkpoints: the pre-trained start (row 0) and the **stage-end checkpoint** of each of the 5 stages
-(the first checkpoint saved at or after each boundary; it is saved at the end of the iteration that
-crossed the boundary, before the next iteration switches the world). Each is evaluated on **all eight
-concept worlds** (Nursery, Home, Forage, Danger, Famine, Winter, Fog, Harsh) for **500 episodes**,
-with the eval sweep driver (`scripts/eval/dwell_sweep/run_sweep.py`, `probe:
-configs/environment/experiment/continual_worlds`, `conditions:` the eight file stems, `algo: rppo`).
-The sweep spec is written after the main runs exist (it needs their result paths). Entries: mean
-survival steps with 95 % CI. **Forgetting of world X at stage k** = survival on X at the end of X's
-latest visit − survival on X at the end of stage k. Secondary: all 100 checkpoints at 50 episodes for
-a within-stage trace, if cluster time allows.
+Checkpoints: the pre-trained start (row 0), the Forage branch point (row 1, shared by the three
+branches of an agent) and the **stage-end checkpoint** of stages 2–5 (the first checkpoint at or after
+each boundary; saved at the end of the iteration that crossed it, before the world switches). Each is
+evaluated on **all eight concept worlds** for **2,000 episodes** with the eval sweep driver
+(`scripts/eval/dwell_sweep/run_sweep.py`, `probe: configs/environment/experiment/continual_worlds`,
+`conditions:` the eight file stems, `algo: rppo`, **`episodes: 2000` set explicitly** — the key's
+default is 30). Entries: mean survival steps with 95 % CI (≈ ±5 steps at 2,000 episodes for a
+per-episode SD of 100–150). **Forgetting of world X at stage k** = survival on X at the end of X's
+latest visit − survival on X at the end of stage k, with its CI from the two cells' standard errors.
+**H-forget "beyond noise"** = the modulated and ordinary forgetting values' 95 % CIs do not overlap.
+The sweep spec is written after the branches exist; Pilot 2 tests it once on a real continual run.
 
 ### 5.4 Plasticity and balance (logged; descriptive)
 
-- **Policy entropy** (`loss/entropy`) per stage: mean over the stage and over the first and last
-  200,000 episodes; a stage-over-stage decline in within-visit learning speed (recovery) together with
-  falling entropy is read as plasticity loss.
-- **Balance metrics** already logged per episode (time shares in bush / on warm cell / eating,
-  need-driven rates, cause-of-death shares; [[BALANCE_METRICS_TRAINING_LOGGING]]) per stage, first vs.
-  last 200,000 episodes, and first visit vs. return. Descriptive only; no verdict rests on them.
-- The same modulated-minus-ordinary difference is reported for entropy and the balance shares.
+- **Policy entropy** (`loss/entropy`) is on the **iteration** stream, not the episode rows; its stage
+  windows are cut by `stage/index` on that stream, and "first / last 200,000 episodes of a stage" is
+  mapped to iterations through the episode counter logged alongside. A decline in recovery speed
+  over stages together with falling entropy is read as plasticity loss.
+- **Balance metrics** logged per episode (time shares in bush / on warm cell / eating, need-driven
+  ratios, cause-of-death shares; [[BALANCE_METRICS_TRAINING_LOGGING]]) per stage, first vs. last
+  200,000 episodes, first visit vs. return. Descriptive only.
+- The modulated-minus-ordinary difference is reported for entropy and the balance shares.
 
-### 5.5 Noise yardstick
+### 5.5 Noise yardstick (a floor, not an estimate)
 
-With one seed per agent, differences are judged against: (a) the spread of the **three
-near-duplicate Forage segments** of each agent (P1–P3 stage 1; GPU non-determinism only, a lower
-bound on noise), and (b) the factorial's seed SD of survival at level 05 (1.5 steps, so ≈ 2.1 steps for
-a difference of two single runs). A modulated-minus-ordinary difference counts as "beyond noise" only
-if it exceeds **2 × the larger of (a) and (b)**, on the survival scale of that world.
+With one starting pair, noise cannot be measured properly; two stand-ins are used and the verdict
+says so:
+
+- **(b) Seed floor:** the level-05 factorial's seed SD of survival (1.5 steps at ≈ 250), i.e. ≈ 2.1
+  steps for a difference of two single runs. It was measured in Home, not in these worlds, so it is a
+  **floor**.
+- **(c) Within-visit checkpoint spread:** for each agent and visit, the SD of the non-overlapping
+  200,000-episode window means over the visit's post-plateau part (from `T_X` to the end of the
+  visit); for a difference, √2 × the larger of the two agents' SDs.
+
+A modulated-minus-ordinary difference counts as "beyond noise" only if it exceeds **2 × the larger of
+(b) and (c)** in that world's survival units. The May probe's ±4.4-step seed spread is printed next to
+every difference for scale. The old yardstick (a) (three near-duplicate Forage copies) no longer
+exists after branching and is dropped.
 
 ### 5.6 Temporal evolution
 
-Every figure is a curve over training episodes with the stage boundaries marked: survival (20,000-
-episode running mean), entropy, balance shares, both agents on one axis per sequence.
+Every figure is a curve over training episodes (and, for recovery, environment steps) with stage
+boundaries marked: survival (20,000-episode running mean), entropy, balance shares, both agents on one
+axis per sequence. Pilot 1 figures show all six worlds' Home → X curves with `T` marked.
 
 ## 6. Pre-launch checks
 
-### 6.1 Verified now (2026-09-28, read-only, project interpreter, CPU)
+### 6.1 Verified (2026-09-28, read-only, project interpreter, CPU)
 
 | # | Check | Result |
 |---|---|---|
-| C1 | All 8 new world configs load through `load_env_config` → `load_env_params` (the trainer's path) | pass |
-| C2 | Observation width 58 on every world (breakdown sum and a real `ParallelEnv.reset`); modality fingerprint identical to level 05; body / thermal-body / interoception / reward fields identical to level 05 | pass (only per-animal array lengths and Fog's external noise table differ) |
-| C3 | 1,000 real resets per world: every placed type spans its allowed area to within 1 cell; no item of a type whose area excludes (0,0) sits there; every drawn fire placed inside its inset area and ≥ 4 from other fires (checks from `make_worlds.py`) | pass on all 8 generated worlds; mean fires placed = mean drawn (e.g. Forage 8.01, Winter 1.00) |
-| C4 | Thermal: every reset has ≥ 1 survivable cell; worst first step from the warm ring onto a fire < +15 | pass: worst +12.4 (Home 12.29, Harsh 14.37, Winter 11.73 at ratio 10); at ratio 11 Winter fails (+15.65), hence 3.2 departure 2 |
-| C5 | Hunting-predator / rabbit slot counts per world | Home 2/2, Nursery 1/2, Forage 0/5, Danger 3/5, Famine 1/5, Winter 1/5, Fog 2/5, Harsh 2/5 |
-| C6 | Pre-trained checkpoints exist and are final | ordinary 10,000,046; modulated 10,000,021 (log: "Training complete") |
-| C8 | The three real schedules, built by `train._build_continual_schedule` itself | 5 stages each, boundaries `[12M … 20M]`; the restored counters 10,000,046 / 10,000,021 map to stage 0; every stage resolves to its concept world. Note: on the continual path the noise table is listed alphabetically (the schedule builder deep-copies the base through `yaml.dump`), on a bare load in file order; every noise value stays attached to the same named sense, and lookups are by name, so Fog's noise is the same either way |
-| C7 | The two stale stage tests (Known Bugs row "8-wide vision") | still fail exactly as recorded: `'visual_properties' has length 8 but visual_vector_size is 1` in both `test_continual_bm_transition.py` and `test_continual_resume_rebuild.py` |
-| S-A | Smoke run: the ordinary pre-trained checkpoint loaded into a 6-stage continual run Forage 20×20 → Danger → Famine → Winter → Fog → Danger 15×15 (CPU, WandB off, scratch output) | **pass**: restored 27 parameter leaves + optimizer at episode 10,000,046; Stage 0 world rebuilt after restore; five switches (grid 20 → 15, hunting-predator slots 0 → 3 → 1 → 1 → 2 → 3, noise off → on → off) each recompiled and trained on; `Training complete`, exit 0. Dumped stage configs carry each world's grid / smell range / noise |
-| S-B | Smoke run: fresh Nursery → Home as one continual run (hunting-predator slots 1 → 2) | **crash, as predicted by Known Bug A2**: at the Nursery → Home switch, `train.py:1825` `ValueError: non-broadcastable output operand with shape (128,1) doesn't match the broadcast shape (128,2)`. Hence the two-leg pre-training (3.5) |
-| S-C | Smoke run: the modulated checkpoint loaded into Forage → Danger | **pass**: modulated checkpoint restored at 10,000,021; Forage → Danger switch trained on; exit 0 |
+| C1 | All 8 world configs load through `load_env_config` → `load_env_params` (the trainer's path) | pass (re-run after Revision 1) |
+| C2 | Observation width 58 on every world (real `ParallelEnv.reset`); body / thermal-body / interoception / reward fields identical to level 05 | pass (re-run after Revision 1): every differing field is external — per-entity arrays, grid, smell range, ambient and fire settings, Fog's noise table and blur |
+| C3 | 1,000 real resets per world: every placed type spans its allowed area to within 1 cell; nothing at (0,0) where excluded; every drawn fire inside its inset and ≥ 4 from other fires; **mean placed = mean drawn for every type** | pass on all 8 (re-run after Revision 1), e.g. Danger hunters 5.98, ambushers 20.62, bushes 22.57; Winter fires 1.00. Per-cell table in 3.2 is from this run |
+| C4 | Thermal: every reset has ≥ 1 survivable cell; worst first step from the warm ring onto a fire < +15 | pass before Revision 1 (worst +12.4; Winter 11.73 at factor 10). Revision 1 changed no fire count, heat factor or ambient, so the thermal field is unchanged by construction |
+| C5 | Hunting-predator / rabbit slot counts per world | Home 2/2, Nursery 1/2, Forage 0/5, **Danger 7/5, Famine 2/5, Winter 2/5, Fog 5/5, Harsh 5/5** (Revision 1) |
+| C6 | Pre-trained checkpoints exist and are final | ordinary 10,000,046; modulated 10,000,021 |
+| C7 | The two stale stage tests (Known Bugs row "8-wide vision") | still fail as recorded (hand-off in 6.2) |
+| C8 | All five schedules (P1–P3 provisional, Pilot 2a/2b) built by `train._build_continual_schedule` itself | pass: 5 stages each; Pilot 2 boundaries `[11M … 15M]`, P1–P3 `[12M … 20M]` (placeholders); restored counters 10,000,046 / 10,000,021 map to stage 0; a counter just past the first boundary maps to stage 1; every stage resolves to its concept world with width 58 and the expected hunter slots (Forage 0 first in every schedule) |
+| C9 | Smoke runs before Revision 1 | S-A (ordinary checkpoint through six grid-size / roster / noise switches) pass; S-B (Nursery → Home as one continual run) crashes as Known Bug A2 predicts → two-leg pre-training; S-C (modulated checkpoint, Forage → Danger) pass. Pilot 2 repeats S-A's path on GPU with the Revision 1 counts |
+| C10 | Branch-point mechanism: one step directory copied with `config.yaml` into a fresh `models/` dir | the checkpoint manager returns that step as the latest (tested on step 9,800,027 of the ordinary pre-trained run in scratch space) |
 
 ### 6.2 Blockers and hand-offs
 
-- **B1 — roster-size change between stages (Known Bugs A2, open).** The trainer sizes its per-animal
-  distance accumulators from the **first** stage's number of hunting-predator and rabbit slots and
-  never resizes them. A later stage with **more** slots crashes; fewer slots silently mislabels.
-  This design stays clear of it without code changes: every main-run stage has **5 rabbit slots**
-  (Forage's rabbits pinned at 0–5 instead of density 0–8), and stage 1 (Forage) has **no hunting
-  predator**, so per-predator distance logging is off for the whole run (the nearest-predator distance
-  and all survival / balance logging are unaffected). The cost: no per-predator distance curves. The
-  fresh pre-training avoids it by running Nursery and Home as two runs. **Decision for the user:**
-  accept this, or have `developer` fix A2 first (per-stage resizing) to regain the per-predator curves.
-- **B2 — pilots not yet run.** No main run launches before runs 1–6 pass (3.6).
-- **Hand-off to `developer` (via `senior-developer`):** fix the two stale continual tests (C7) — shrink
-  their inline stage worlds' `visual_properties` to the default vector width or pin the width. Until
-  fixed, the continual stage-switch and resume paths have no passing regression test; smoke runs S-A…S-C
-  are this design's substitute, not a replacement.
+- **B1 — roster-size change between stages (Known Bugs A2) — workaround accepted by the user.** The
+  trainer sizes its per-animal distance buffers from stage 0 and never resizes them. Every
+  continual run here (Pilot 2, the branches) has Forage (no hunting predator, 5 rabbit slots) as stage
+  0 and 5 rabbit slots in every stage, so per-predator distance logging is off and nothing crashes.
+  Cost: no per-predator distance curves. Pilot 1 and Pilot 3 are single-world runs and unaffected.
+- **B2 — pilots not yet run.** No branch launches before Pilot 1 is analysed, `L_X` computed and the
+  P1–P3 schedule files regenerated and re-built (C8 repeated).
+- **Hand-off to `developer` (via `senior-developer`):** fix the two stale continual tests (C7). Until
+  fixed, the continual stage-switch and resume paths have no passing regression test; the smoke runs
+  and Pilot 2 are this design's substitute.
 - **Known and accepted:** Known Bugs B5 (a resumed single-world run pairs restored recurrent memory
-  with fresh worlds for its first window) affects the first rows of pilots and Home legs only; the
-  continual path re-initialises memory correctly.
+  with fresh worlds for its first window) affects the first rows of the Pilot 1 runs and Home legs.
 
 ### 6.3 Still to check at launch (`training-runner` / `env-config-reviewer`)
 
-- `env-config-reviewer` pre-flight on all files in 4.1 (not yet run).
-- Live GPU state and NAS mount on the chosen nodes; checkpoint directories readable from the node.
-- First stage switch of each main run: log line `[STAGE] 0:01_forage -> 1:02_...` and no traceback.
+- `env-config-reviewer` pre-flight on the five changed worlds and the two new Pilot 2 schedules.
+- Live GPU state (diary + `pgrep`, not only `nvidia-smi`) and NAS mount on each node.
+- First stage switch of each continual run: `[STAGE] 0:01_forage -> 1:02_...` and no traceback; for
+  a branch, the `[RESUME]` line naming stage 1.
+- Before the branches: repeat C8 on the regenerated schedules and C10 on the real branch-point copy;
+  the smoke path S-A is re-run on the launch node if HEAD has moved since Pilot 2.
 
 ## 7. Failure-mode catalog (decided in advance)
 
@@ -447,30 +620,33 @@ episode running mean), entropy, balance shares, both agents on one axis per sequ
 |---|---|---|
 | 7.1 | NaN / value explosion in one run | that run is invalid, relaunched once from its last good checkpoint; not evidence about the modulator |
 | 7.2 | Neither agent dips at any switch (dip < 5 % everywhere) | the worlds are not distinct enough; null for this design, not for the hypothesis |
-| 7.3 | A world is never recovered (censored) for both agents | that world is too hard at 2 M; its switch measures are reported but excluded from the support/refute count |
+| 7.3 | A world is never recovered (censored) for both agents | its switch measures are reported but excluded from the support / refute count |
 | 7.4 | Only one agent collapses in a world (survival < 0.6 × its `R_X` for the whole visit) | reported and marked; the verdict is computed with and without that sequence |
-| 7.5 | Late stages learn more slowly for both agents (recovery on return slower than first visit) | plasticity loss, recorded as a result in its own right (5.4); not a design flaw |
+| 7.5 | Late stages learn more slowly for both agents | plasticity loss, recorded as a result (5.4); not a design flaw |
 | 7.6 | Differences all within the noise yardstick | null for this screen; the fresh-seed replication decides |
-| 7.7 | A stage switch crashes | run invalid; resume from its last checkpoint after the fix (the resume path rebuilds the right stage world) |
+| 7.7 | A stage switch crashes | run invalid; resume from its last checkpoint after the fix |
+| 7.8 | A Pilot 1 world has not plateaued by the pilot's end | `L_X` = 3 M cap, returns in X marked "below plateau" (3.3) |
+| 7.9 | Recovery favours the modulator in episodes but not in environment steps (or the reverse) | the H-rec vote is not counted for that switch (5.1) |
+| 7.10 | Pilot 3 fails | the seed-43 Nursery leg is not used; user decides Nursery's fate before runs 25–30 |
 
 ## 8. Metrics requested (optional, for the user)
 
 | Metric | Why now | Where it'd live | Cost |
 |---|---|---|---|
-| Per-stage modulator activity (mean and spread of the FiLM scale and shift per site, per stage) | the "why" behind any H-dip / H-ret effect; logged once per stage window | `train.py` rPPO logging, `mod_info` already returned by the train step | cheap |
+| Per-stage modulator activity (mean and spread of the FiLM scale and shift per site, per stage) | the "why" behind any H-dip / H-ret effect | `train.py` rPPO logging, `mod_info` already returned by the train step | cheap |
 | Per-predator distance curves across roster changes | lost under B1's workaround | `train.py` continual stage switch (A2 fix) | cheap |
+| Cumulative environment steps on the episode rows | makes F3's step-unit recovery exact rather than reconstructed | `train.py` `_emit_episode_row` (`global_step`) | cheap |
 
-If accepted, route through `feature-workflow` before launch; neither blocks the design.
+If accepted, route through `feature-workflow` before launch; none blocks the pilots.
 
-## 9. Open decisions for the user
+## 9. Decisions (all taken 2026-09-28; user: "follow your recommendations")
 
-1. **B1:** accept the no-code workaround (no per-predator distance curves) or fix Known Bug A2 first.
-2. **Fog's sight:** vision range 1 is impossible at width 58; accept "3× blur + noise" as Fog's sight change?
-3. **Winter's fire:** accept fire ratio 10 (first step onto the fire survivable, 4 warm cells) instead of 11?
-4. **Famine:** accept "1–2 items, regrowing after 30 steps, anywhere" in place of the edge band?
-5. **Forage is repeated in all three runs of an agent** (near-identical copies). Alternative: run Forage
-   once per agent and branch P1–P3 from its end checkpoint (saves 8 M episodes of GPU time, but the
-   three branches must wait for Forage to finish and the noise-floor measurement 5.5a is lost).
+1. B1: no-code workaround accepted (no per-predator distance curves).
+2. Fog: 3× blur + smell/sight noise accepted in place of vision range 1.
+3. Winter: fire heat factor 10 accepted.
+4. Famine: 1–2 items, regrowing after 30 steps, anywhere, accepted.
+5. Forage once per agent, sequences branch from it (3.4).
+6. Pilots: the three-pilot set of 3.6.
 
 ## 10. Results
 
@@ -549,3 +725,19 @@ cannot be re-read. If F3 is left as is, the headline "recovers faster" claim car
 bias in the modulator's favour and would not survive a referee. Nothing here risks data loss.
 
 Reviewed by: plan-reviewer
+
+### Response from experiment-designer (Revision 1, 2026-09-28)
+
+| # | Resolution | Where |
+|---|---|---|
+| F1 | Pilots replaced by the requested three-pilot set (18 rows); Pilot 2 schedules and stage folders added; Pilot 3 is the seed-43 Nursery legs, stated | 3.6, 4, 4.1, `configs/continual/continual_worlds/pilot2{a,b}_*` |
+| F2 | Plateau, per-concept stage length (1.5 × slower agent, 1 M floor, 3 M cap), no-plateau fallback pre-registered; P1–P3 boundaries marked provisional in the files | 3.3, 7.8 |
+| F3 | Recovery in episodes and environment steps; H-rec vote needs both; iterations per stage reported | 2, 5.1, 7.9 |
+| F4 | Yardstick stated as a floor; within-visit checkpoint spread added; (a) dropped with branching; May ±4.4 printed alongside | 5.5 |
+| F5 | 2,000 episodes per cell, `episodes: 2000` explicit; non-overlapping 95 % CIs for H-forget | 5.3 |
+| F6 | May probe cited in section 1; replication framing and "recovery speed over dip depth" lesson in section 2 | 1, 2 |
+| F7 | Verdict wording "one initialisation pair, three world-pairs" | 1, 2, 3.4 |
+| F8 | Project interpreter in every command | 4.2 |
+| F9 | Entropy windows cut by `stage/index` on the iteration stream | 5.4 |
+
+Signed: experiment-designer

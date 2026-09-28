@@ -5,11 +5,15 @@
 #
 # Ambient about -40 (level 05: about -30), exactly ONE fire, and no bush within Manhattan distance
 # 3 of the fire (thermal.bush_min_fire_distance 3), so the agent cannot hide and warm at once.
-# 0-1 hunting predators. Food 2-9, ambushers/rocks/bushes at level-05 density; smell range 5.
+# 0-2 hunting predators (brief 0-1 in Home-grid terms, x2.25). Food 2-9, ambushers/rocks/bushes at level-05 density; smell range 5.
 # Fire temperature_ratio 10 (level 05: 11; fire = ratio x |ambient| = about 400). At 11 the
 # first step from the ring onto the fire reached +15.65 on 1,000 real resets (death at +15), breaking
 # level 05's 'first step onto a fire is survivable' target; at 10 the worst case is +11.73, inside
 # level 05's own +10.9..+12.3 band, and only the 4 cells beside the fire are survivable to stand in.
+#
+# PER-CELL DENSITY (Revision 1, 2026-09-28): every count is set against HOME's per-cell density
+# (level 05 on 100 cells); a count the concept brief gave in Home-grid terms is scaled by area
+# (x2.25 at 15 x 15, round-half-up), so the concept's pressure holds per cell. Design doc 3.2.
 #
 # STATIONARY BY CONSTRUCTION: this file changes only the EXTERNAL world. Every body rule, the
 # interoceptive channels, the reward, max_steps and the observation layout (58 numbers) are
@@ -69,7 +73,7 @@ environment:
     behaviour: hunt
     tag: pred
     count_low: 0
-    count_high: 1
+    count_high: 2
     properties: [0.0, 0.7, 0.5, 0.0, 0.0]
     properties_std: [0.0, 0.3, 0.3, 0.0, 0.0]
     visual_properties: [1.0]

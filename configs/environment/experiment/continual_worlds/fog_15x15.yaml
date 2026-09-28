@@ -7,8 +7,12 @@
 # (visual_blur_radial_scale 1.5, level 05: 0.5) -- NOT vision range 1, which would change the
 # observation width (58) and is refused by the curriculum check -- and perceptual noise ON for
 # smell (sigma 0.3) and sight (sigma 0.2) only, at a constant level. Every interoceptive channel,
-# touch, pain, temperature and proprioception stay exact. 1-2 hunting predators. Food 2-9;
+# touch, pain, temperature and proprioception stay exact. 2-5 hunting predators (brief 1-2, x2.25). Food 2-9;
 # ambushers, fires, rocks, bushes at level-05 density.
+#
+# PER-CELL DENSITY (Revision 1, 2026-09-28): every count is set against HOME's per-cell density
+# (level 05 on 100 cells); a count the concept brief gave in Home-grid terms is scaled by area
+# (x2.25 at 15 x 15, round-half-up), so the concept's pressure holds per cell. Design doc 3.2.
 #
 # STATIONARY BY CONSTRUCTION: this file changes only the EXTERNAL world. Every body rule, the
 # interoceptive channels, the reward, max_steps and the observation layout (58 numbers) are
@@ -67,8 +71,8 @@ environment:
   - class: predator
     behaviour: hunt
     tag: pred
-    count_low: 1
-    count_high: 2
+    count_low: 2
+    count_high: 5
     properties: [0.0, 0.7, 0.5, 0.0, 0.0]
     properties_std: [0.0, 0.3, 0.3, 0.0, 0.0]
     visual_properties: [1.0]
