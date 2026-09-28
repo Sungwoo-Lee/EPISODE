@@ -2,7 +2,7 @@
 # pre-trained Home -> Forage -> FOG-B -> DANGER-A -> FOG-B -> DANGER-A
 # Design doc: docs/experiments/active/continual_worlds/CONTINUAL_WORLDS.md (Revision 2; sections 3.3, 3.4).
 #
-# *** DRAFT -- PENDING USER APPROVAL. DO NOT LAUNCH. ***
+# *** READY (user approved 2026-09-29; design doc 3.7.7, decisions D4 / D5). ***
 # The pre-registered world it replaces was dropped by the pilot rule (design doc 3.6). The replacement
 # world(s) come from an EXPLORATORY scouting ladder that was not pre-registered (design doc Revision
 # 1b / 2), so adopting them is the user's decision. Fog-B passes for both agents (131.6 / 135.3); Danger-A passes for the modulated agent only

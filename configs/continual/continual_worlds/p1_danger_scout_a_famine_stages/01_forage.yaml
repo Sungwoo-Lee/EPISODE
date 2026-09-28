@@ -1,6 +1,6 @@
 # Continual-worlds sequence P1-replacement (DANGER-A <-> FAMINE), stage 1 of 5 -- Forage (once: leaves Home, enters the new-world family).
-# DRAFT -- PENDING USER APPROVAL (Revision 2, 2026-09-28): this sequence replaces a dropped world with a world
-# found by the exploratory scouting ladder (design doc Revision 2). Do not launch until the user approves it.
+# READY (user approved 2026-09-29; design doc 3.7.7) -- Revision 2, 2026-09-28: this sequence replaces a dropped world with a world
+# found by the exploratory scouting ladder (design doc Revision 2). Approved by the user 2026-09-29.
 # Design: docs/experiments/active/continual_worlds/CONTINUAL_WORLDS.md. Schedule: configs/continual/continual_worlds/p1_danger_scout_a_famine.yaml.
 # The whole world is the concept file named below; this stage file adds nothing, so every
 # visit to a concept is the SAME world (one stage file per stage because train.py reads one

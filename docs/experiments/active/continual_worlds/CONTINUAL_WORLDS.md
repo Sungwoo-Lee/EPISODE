@@ -3,7 +3,7 @@ title: "Continual worlds: does the modulator help an agent move between worlds w
 topic: continual_worlds
 status: active
 created: 2026-09-28
-last_updated: 2026-09-28
+last_updated: 2026-09-29
 phase: continual / A-B-A-B structure (user framing 2026-09-28)
 wandb_tag: "rppo_cw_*"
 ---
@@ -653,8 +653,8 @@ lessons in the LLM wiki warn that long over-training on an easy stage costs plas
 | Sequence | Stages 2–5 | Status | Schedule |
 |---|---|---|---|
 | **P3** Winter ↔ Famine (as pre-registered) | Winter, Famine, Winter, Famine | **READY** — both worlds pass for both agents; launch after 6.3 and the user's go | `configs/continual/continual_worlds/p3_winter_famine.yaml` + `p3_winter_famine_stages/` (regenerated) |
-| **P1-replacement** Danger-A ↔ Famine (replaces P1 Danger ↔ Famine) | Danger-A, Famine, Danger-A, Famine | **DRAFT — pending user approval** | `configs/continual/continual_worlds/p1_danger_scout_a_famine.yaml` + `_stages/` |
-| **P2-replacement** Fog-B ↔ Danger-A (replaces P2 Fog ↔ Danger) | Fog-B, Danger-A, Fog-B, Danger-A | **DRAFT — pending user approval** | `configs/continual/continual_worlds/p2_fog_scout_b_danger_scout_a.yaml` + `_stages/` |
+| **P1-replacement** Danger-A ↔ Famine (replaces P1 Danger ↔ Famine) | Danger-A, Famine, Danger-A, Famine | ~~DRAFT — pending user approval~~ **approved 2026-09-29 (D4, 3.7.7)** | `configs/continual/continual_worlds/p1_danger_scout_a_famine.yaml` + `_stages/` |
+| **P2-replacement** Fog-B ↔ Danger-A (replaces P2 Fog ↔ Danger) | Fog-B, Danger-A, Fog-B, Danger-A | ~~DRAFT — pending user approval~~ **approved 2026-09-29 (D5, 3.7.7)** | `configs/continual/continual_worlds/p2_fog_scout_b_danger_scout_a.yaml` + `_stages/` |
 | P4 (P1 reversed, order control) | — | later; follows whatever replaces P1 | none |
 | P5 Harsh ↔ Forage | — | **cannot run as designed** (Harsh dropped); user decides later | none |
 
@@ -728,6 +728,53 @@ P1- and P2-replacement share Danger-A.
 | D7 | P5 (Harsh ↔ Forage), later | drop / replace Harsh | defer |
 | D8 *(Rev 2a, from plan-reviewer O5)* | Must the branches wait for the Forage runs (1–2) to reach 14 M? | wait (the pre-registered wording of 3.3 / 3.7.3 asks for the full curve) / waive | **waive is defensible, user's call.** 3.7.3 shows `L_Forage` cannot leave the 1 M floor (it would need a 200k window above 498 of a 500-step cap), so runs 1–2 only confirm a number that cannot change; the branch checkpoints at 11 M already exist and are not touched by further training. The cost of waiting is now small (at 23:45 run 1 was at 12.35 M, run 2 at 11.94 M: ≈ 1.5–2 h left, not the 8 h stated in Revision 2). Waiving is a departure from the written rule and would be recorded as such |
 
+#### 3.7.7 Decisions (user, 2026-09-29)
+
+*Appended 2026-09-29; the pre-registered text above is unchanged. Taken by the user through a structured
+question on the open decisions of 3.7.6.*
+
+**In plain words.** The user approved the plan as recommended: each world keeps its own stage length, the
+sequences branch from the Forage run at 11 million episodes without waiting for that run to finish, the
+Winter ↔ Famine sequence launches as soon as the remaining pre-launch checks pass, and the two sequences
+whose original worlds failed the pilots are replaced by the scout worlds that passed (the softer-hunting
+Danger variant and the noise-free Fog variant). The Winter observation (modulated agent ending lower)
+is carried as a caveat, not investigated first.
+
+| # | Decision | Taken |
+|---|---|---|
+| D1 | Stage length per world or per pair | **per world** (as pre-registered in 3.3). P3 boundaries stay `[11M, 14M, 15M, 18M, 19M]` |
+| D2 | Branch point | **11 M** (`B0` by the 3.4 rule; branch checkpoints 11,000,025 / 11,000,022) |
+| D8 | Wait for Forage runs 1–2 to reach 14 M before branching | **waived.** Recorded as a departure from the written wording of 3.3 / 3.7.3 ("the full curve"); justification in 3.7.3 / D8 (`L_Forage` cannot leave the 1 M floor). The read-out is still re-run when runs 1–2 end and the confirmation reported; if `L_Forage` ever changed, any branch already launched is reported as launched on a waived rule |
+| D3 | Launch P3 now or together with P1 / P2 | **now**, as soon as the 6.3 checklist items that gate it are done |
+| D4 | P1 replacement | **Danger-A ↔ Famine** (rows 19–20). Carries the three caveats of 3.7.4 (one-agent-only world; exploratory origin; thin margins) and the with / without-Danger-A verdict of 3.7.4 item 1 |
+| D5 | P2 replacement | **Fog-B ↔ Danger-A** (rows 21–22). Same caveats |
+| D6 | Winter finding: proceed or look first | **proceed** ("launch now" chosen over "look at Winter first"). The finding (3.7.1: modulated 160.8 vs 198.0 steps, more cold/heat deaths, a late decline after a 175.7 peak) is a **caveat** carried into the P3 results: `R_Winter` may sit on a falling curve, and any P3 H-dip / H-rec reading involving Winter is reported next to it |
+| D7 | P5 Harsh ↔ Forage | **not asked; deferred** |
+
+**Pre-registered scoring choices (before any main run).** Two choices made in the read-out code
+(`scripts/analysis/studies/continual_worlds/pilot_readout.py`, commit `a72eb943`, function `_vote`) that
+the text of 5.1 / 7.9 / 7.11 did not fix are adopted here as part of the analysis plan:
+
+- **(a) A recovery tie is not favourable.** If both agents recover in the same logged row (episodes are
+  resolved only to the 4,000-episode logging interval), that reading is a tie; a vote with any tied reading
+  is **"not counted (tie)"** — named as a tie, not as a 7.9 / 7.11 disagreement (those are checked between
+  untied readings only).
+- **(b) Unanimous against the modulator counts.** When every reading (own / common reference × episodes /
+  environment steps) favours the ordinary agent, the vote is **unfavourable** and counts against the
+  modulator in section 2's tally, symmetrically with the all-favourable case.
+
+**Known reporting issue (follow-up for the script owner, `developer`).** In `pilot_readout.json`, the
+field `survivable.survival_line` for the seed-43 **Home legs** (rows 27–28) is computed with the
+world-pilot rule (half of the Home level). That rule does not govern those runs: a Home leg is judged by
+the **competence gate of 3.5** (237.3 ordinary / 240.7 modulated, plus the "rose < 5 % over the last
+fifth" condition). The field is to be ignored for rows 27–30 until the script labels or omits it; no
+verdict in this doc uses it.
+
+**Effect on the manifest and configs.** Rows 19–24 are "ready — pending pre-launch checklist" (section 4).
+The P1- and P2-replacement schedule files and their stage folders have their header comments changed from
+"DRAFT — pending user approval / do not launch" to "READY (user approved 2026-09-29)"; boundaries and stage
+files are unchanged, so the `env-config-reviewer` GO WITH NOTES on them still holds.
+
 ## 4. Launch Manifest
 
 All rows: `wandb-group` = `continual_worlds`. Tag = wandb-name. Scheme:
@@ -741,6 +788,8 @@ Home legs (27–30) after their Nursery leg ends (27–28 only if Pilot 3 passed
 *Revision 2:* P3 (rows 23–24) is ready after the 6.3 checklist and the user's go; P1 / P2 (rows 19–22)
 wait for the user's replacement decision (3.7.6) and carry new tags naming their replacement worlds;
 Pilot 3 passed, so rows 25–26 are unblocked.
+*2026-09-29 (3.7.7):* the user approved D1–D6 and D8; rows 19–24 are all "ready — pending pre-launch
+checklist" (6.3) with the tags below.
 
 | Run | Status | Cell | Tag (= wandb-name) | wandb-group | wandb-job-type | Seed | Node | GPU | Launched at | WandB run ID | Log path |
 |-----|--------|------|--------------------|-------------|----------------|------|------|-----|-------------|--------------|----------|
@@ -762,12 +811,12 @@ Pilot 3 passed, so rows 25–26 are unblocked.
 | 16 | finished ("Training complete", checked 23:45 Rev 2a) | Pilot 2b shakedown | `rppo_cw_pilot2b_t16quad_s42` | continual_worlds | pilot | 42 | 113 | cuda:1 | 2026-09-28T13:17:38 | `zjsdfoyq` | `logs/20260928_131738.log` |
 | 17 | finished ("Training complete", checked 23:45 Rev 2a) | Pilot 3 Nursery (= seed-43 leg) | `rppo_cw_nursery_t1none_s43` | continual_worlds | pilot | 43 | 102 | cuda:0 | 2026-09-28T13:17:41 | `98tm6jxe` | `logs/20260928_131741.log` |
 | 18 | finished ("Training complete", checked 23:45 Rev 2a) | Pilot 3 Nursery (= seed-43 leg) | `rppo_cw_nursery_t16quad_s43` | continual_worlds | pilot | 43 | 102 | cuda:1 | 2026-09-28T13:17:45 | `q3ni07j6` | `logs/20260928_131745.log` |
-| 19 | pending user approval (Rev 2 draft; D4) | P1-replacement branch Danger-A ↔ Famine, ordinary | `rppo_cw_p1_danger_scout_a_famine_t1none_s42` | continual_worlds | prod | 42 | — | — | — | — | — |
-| 20 | pending user approval (Rev 2 draft; D4) | P1-replacement branch Danger-A ↔ Famine, modulated | `rppo_cw_p1_danger_scout_a_famine_t16quad_s42` | continual_worlds | prod | 42 | — | — | — | — | — |
-| 21 | pending user approval (Rev 2 draft; D5) | P2-replacement branch Fog-B ↔ Danger-A, ordinary | `rppo_cw_p2_fog_scout_b_danger_scout_a_t1none_s42` | continual_worlds | prod | 42 | — | — | — | — | — |
-| 22 | pending user approval (Rev 2 draft; D5) | P2-replacement branch Fog-B ↔ Danger-A, modulated | `rppo_cw_p2_fog_scout_b_danger_scout_a_t16quad_s42` | continual_worlds | prod | 42 | — | — | — | — | — |
-| 23 | ready (Rev 2) — launch after 6.3 checklist + user go; *Rev 2a:* items 1–7 and 9 (Pilot 2 closed) | P3 branch Winter ↔ Famine, ordinary | `rppo_cw_p3_t1none_s42` | continual_worlds | prod | 42 | — | — | — | — | — |
-| 24 | ready (Rev 2) — launch after 6.3 checklist + user go; *Rev 2a:* items 1–7 and 9 (Pilot 2 closed) | P3 branch Winter ↔ Famine, modulated | `rppo_cw_p3_t16quad_s42` | continual_worlds | prod | 42 | — | — | — | — | — |
+| 19 | ready — pending pre-launch checklist (approved 2026-09-29, D4) | P1-replacement branch Danger-A ↔ Famine, ordinary | `rppo_cw_p1_danger_scout_a_famine_t1none_s42` | continual_worlds | prod | 42 | — | — | — | — | — |
+| 20 | ready — pending pre-launch checklist (approved 2026-09-29, D4) | P1-replacement branch Danger-A ↔ Famine, modulated | `rppo_cw_p1_danger_scout_a_famine_t16quad_s42` | continual_worlds | prod | 42 | — | — | — | — | — |
+| 21 | ready — pending pre-launch checklist (approved 2026-09-29, D5) | P2-replacement branch Fog-B ↔ Danger-A, ordinary | `rppo_cw_p2_fog_scout_b_danger_scout_a_t1none_s42` | continual_worlds | prod | 42 | — | — | — | — | — |
+| 22 | ready — pending pre-launch checklist (approved 2026-09-29, D5) | P2-replacement branch Fog-B ↔ Danger-A, modulated | `rppo_cw_p2_fog_scout_b_danger_scout_a_t16quad_s42` | continual_worlds | prod | 42 | — | — | — | — | — |
+| 23 | ready — pending pre-launch checklist (user go 2026-09-29, D3; 6.3) | P3 branch Winter ↔ Famine, ordinary | `rppo_cw_p3_t1none_s42` | continual_worlds | prod | 42 | — | — | — | — | — |
+| 24 | ready — pending pre-launch checklist (user go 2026-09-29, D3; 6.3) | P3 branch Winter ↔ Famine, modulated | `rppo_cw_p3_t16quad_s42` | continual_worlds | prod | 42 | — | — | — | — | — |
 | 25 | planned — unblocked (Pilot 3 passed) | Nursery leg | `rppo_cw_nursery_t1none_s44` | continual_worlds | prod | 44 | — | — | — | — | — |
 | 26 | planned — unblocked (Pilot 3 passed) | Nursery leg | `rppo_cw_nursery_t16quad_s44` | continual_worlds | prod | 44 | — | — | — | — | — |
 | 27 | running (at 23:45 Rev 2a) | Home leg | `rppo_cw_home_t1none_s43` | continual_worlds | prod | 43 | 102 | cuda:0 | 2026-09-28T17:14:41 | `6gc2tok9` | `logs/20260928_171441.log` |
@@ -829,8 +878,8 @@ Rev 2: from step 11,000,025 of run 1 / step 11,000,022 of run 2, 3.7.3).
 | 13, 14 | `CS/pilot2a_danger_famine_stages/` + `CS/pilot2a_danger_famine.yaml` (boundaries 11 M … 15 M) | T1, T16 | `CK_O`, `CK_M` | none (schedule) |
 | 15, 16 | `CS/pilot2b_fog_danger_stages/` + `CS/pilot2b_fog_danger.yaml` (boundaries 11 M … 15 M) | T1, T16 | `CK_O`, `CK_M` | none (schedule) |
 | 17, 18 | `CW/nursery_10x10.yaml` | T1, T16 | scratch | 2000000 |
-| 19, 20 | **Rev 2 draft, pending approval:** `CS/p1_danger_scout_a_famine_stages/` + `CS/p1_danger_scout_a_famine.yaml` (boundaries 11 M … 15 M). *The original `CS/p1_danger_famine*` uses the dropped Danger world — do not launch.* | T1, T16 | `BP_O`, `BP_M` | none |
-| 21, 22 | **Rev 2 draft, pending approval:** `CS/p2_fog_scout_b_danger_scout_a_stages/` + `CS/p2_fog_scout_b_danger_scout_a.yaml` (boundaries 11 M … 15 M). *The original `CS/p2_fog_danger*` uses the dropped worlds — do not launch.* | T1, T16 | `BP_O`, `BP_M` | none |
+| 19, 20 | **Rev 2, approved 2026-09-29 (D4):** `CS/p1_danger_scout_a_famine_stages/` + `CS/p1_danger_scout_a_famine.yaml` (boundaries 11 M … 15 M). *The original `CS/p1_danger_famine*` uses the dropped Danger world — do not launch.* | T1, T16 | `BP_O`, `BP_M` | none |
+| 21, 22 | **Rev 2, approved 2026-09-29 (D5):** `CS/p2_fog_scout_b_danger_scout_a_stages/` + `CS/p2_fog_scout_b_danger_scout_a.yaml` (boundaries 11 M … 15 M). *The original `CS/p2_fog_danger*` uses the dropped worlds — do not launch.* | T1, T16 | `BP_O`, `BP_M` | none |
 | 23, 24 | `CS/p3_winter_famine_stages/` + `CS/p3_winter_famine.yaml` (**regenerated, Rev 2:** `[11M, 14M, 15M, 18M, 19M]`) | T1, T16 | `BP_O`, `BP_M` | none |
 | 25, 26 | `CW/nursery_10x10.yaml` | T1, T16 | scratch | 2000000 |
 | 27–30 | `CW/home_10x10.yaml` | as its Nursery leg | its Nursery leg's `models/` | 10000000 |
@@ -906,7 +955,7 @@ cp -a $R/20260928-131651_rppo_cw_pilot1_forage_t16quad_s42/models/11000022 \
       $R/20260928-131651_rppo_cw_pilot1_forage_t16quad_s42/models/config.yaml $R/cw_branchpoint_forage_t16quad_s42/models/
 
 # Branch (run 24 shown = P3, modulated; run 23 uses the T1 agent config, BP_O and its tag.
-# Rows 19-22 use the same command with their draft schedule + stage dir and tag, ONLY after the user approves.)
+# Rows 19-22 use the same command with their schedule + stage dir and tag (approved 2026-09-29, 3.7.7).)
 $PY train.py --configs-dir configs/continual/continual_worlds/p3_winter_famine_stages \
   --continual-schedule configs/continual/continual_worlds/p3_winter_famine.yaml \
   --agent_config configs/models/recurrent_ppo/nmn_input_site_grid_gaenorm/nmngaenorm_t16quad_ALL.yaml \
@@ -1156,6 +1205,21 @@ the user has said go.
 10. *(Revision 2a, D8)* Item 1 applies unless the user waives it (3.7.6 D8).
 8. (P1 / P2 only) the user's decision D4 / D5; if a new Danger variant is chosen, its two-agent pilot first.
 
+**Checklist status, 2026-09-29 (after the user's decisions, 3.7.7).** Applies to all branches, rows 19–24.
+
+| Item | Status |
+|---|---|
+| 1 Forage runs reach 14 M | **waived for launch** (D8); the read-out is re-run and the confirmation reported when runs 1–2 end |
+| 3 `env-config-reviewer` pre-flight on the schedules | **done — GO WITH NOTES** (P3 and the P1- / P2-replacement schedules; only header comments changed since) |
+| Plan review of Revision 2a | **done — SOUND WITH CONCERNS** (addendum at the end of this doc) |
+| 9 Common-reference analysis (5.1) | **done** — implemented in the read-out script, commit `a72eb943` |
+| 8 User decisions D4 / D5 (and D1–D3, D6, D8) | **done** (3.7.7) |
+| 4 Forgetting-matrix sweep run once on a finished Pilot 2 run | **in progress** (driver committed `9b0f753d`; a full matrix not yet seen) — gates the branches |
+| 7 Run 14 finishes | **remaining** — at 00:12 on 2026-09-29 its log showed 14.81 M of 15 M, no "Training complete" yet |
+| 2 Branch-point copies + C10 on the real copies | **remaining** |
+| 6 Live GPU state (diary + `pgrep`) and NAS mount per node | **remaining** (at launch) |
+| 5 Restore-into-stage-1 log lines | **at launch** (exact lines in item 5) |
+
 ## 7. Failure-mode catalog (decided in advance)
 
 | # | Outcome | Reading |
@@ -1185,6 +1249,7 @@ If accepted, route through `feature-workflow` before launch; none blocks the pil
 ## 9. Decisions (all taken 2026-09-28; user: "follow your recommendations")
 
 *Revision 2 adds open decisions D1–D7 for the user (3.7.6); none is taken yet. Revision 2a adds D8.*
+*2026-09-29: D1–D6 and D8 taken by the user, D7 deferred — see 3.7.7.*
 
 1. B1: no-code workaround accepted (no per-predator distance curves).
 2. Fog: 3× blur + smell/sight noise accepted in place of vision range 1.
