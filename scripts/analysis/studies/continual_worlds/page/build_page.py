@@ -197,5 +197,7 @@ die()
 # six and drew every em dash as "â€”"; the layout checkers inject a charset, so they could never see it.
 page = '<meta charset="utf-8">\n' + page
 assert page.startswith('<meta charset="utf-8">')
+# F67: a <p> opened inside an open <p> leaves empty flex items that each cost a gap
+assert not re.search(r"<p>\s*<p[ >]", page) and not re.search(r"<p>\s*</p>", page), "nested or empty <p> (format register F67)"
 open(OUT, "w").write(page)
 print(f"wrote {os.path.relpath(OUT, ROOT)}  ({len(page)/1e6:.2f} MB, {len(seen_nums)} figures)")

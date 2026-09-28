@@ -2195,3 +2195,26 @@ counts differ. A page's top-level sections all share one parent.
 the vertical gap to the previous sibling of its section is the same number (here 52 px, or the group-heading
 value where an `h3.group` precedes it). Found on "Interactions Between Internal States", 2026-09-27; the
 builder now asserts the count (18/18).
+
+### F67 — a nested `<p>` inside a flex column: the parser's phantom paragraphs each cost a gap
+
+**What a reader saw.** One section's heading-to-prose and prose-to-figure spacing at twice the
+page's rhythm — 36 px where every other section had 18 — at every viewport width.
+
+**Cause.** The template carried `<p><p>…</p><p>…</p></p>` (a prose placeholder wrapped in `<p>` was
+filled with text that brought its own `<p>` tags). HTML has no error for this: the parser closes the
+outer `<p>` the moment the inner one opens, leaving an empty `<p>` before the first paragraph and
+another after the stray `</p>`. Both are zero-height, but `.col` is a flex column with `gap:18px`, and
+a zero-height flex item still takes its gap.
+
+**Why nothing caught it.** The layout checker's zero-height test looks for elements *with text*;
+these have none. Nothing overlaps, clips or overflows. A source read sees a paragraph inside a
+paragraph and reads it as one paragraph. Only measuring the gaps, or comparing the section
+against its neighbours in the render, shows it.
+
+**Rule.** The builder fails when a `<p` opens inside an open `<p>`, and when any empty `<p>`
+survives into the output.
+
+**How to verify a fix.** `document.querySelectorAll('.col > p:empty').length === 0`, and for every
+section the H2-to-next-sibling gap equals the column gap. Found on "Continual Worlds",
+2026-09-28, first format gate.

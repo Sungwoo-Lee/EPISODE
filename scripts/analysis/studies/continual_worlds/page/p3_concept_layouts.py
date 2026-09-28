@@ -40,7 +40,7 @@ R = {c: reset(P[c]) for c in C.CONCEPTS}
 Gmax = max(r["G"][1] for r in R.values())
 Hmax = max(r["G"][0] for r in R.values())
 MARK = {"food": dict(marker="o", ms=5.2, mfc=house.INK, mec=house.INK, label="food"),
-        "fire": dict(marker="*", ms=9.5, mfc=C.ACCENT, mec=C.ACCENT, label="fire"),
+        "fire": dict(marker="*", ms=9.5, mfc=house.INK, mec=house.INK, label="fire"),
         "rock": dict(marker="D", ms=4.2, mfc=house.INK_2, mec=house.INK_2, label="rock (hurts)"),
         "hunter": dict(marker="^", ms=7.0, mfc=house.INK, mec="white", label="hunting predator"),
         "ambusher": dict(marker="x", ms=5.0, mfc="none", mec=house.INK_2, mew=1.3, label="ambusher (hidden from the agent)"),

@@ -64,7 +64,7 @@ def factors(p):
     fr = entry_range(p, "obs", fire)
     ratio = np.unique(np.asarray(p.obs_temp_ratio_high)[fire])
     out["fires"] = (rng(*fr) + ("" if ratio.size == 1 and ratio[0] == float(np.asarray(P[C.REFERENCE].obs_temp_ratio_high).max())
-                                else f"\nratio {ratio.max():g}"), np.mean(fr) / cells, -1)
+                                else f"\nheat ×{ratio.max():g}"), np.mean(fr) / cells, -1)
     t = (float(p.thermal_default_temp_low), float(p.thermal_default_temp_high))
     out["ambient temperature"] = (rng(*t).replace("\u2013", " to ") + "\n°C", np.mean(t), -1)
     h = entry_range(p, "animal", hunt)

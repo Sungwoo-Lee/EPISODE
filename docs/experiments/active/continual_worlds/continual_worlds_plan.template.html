@@ -12,6 +12,7 @@ __HOUSE_STYLE__
      counts, nowrap) + 75 + 190 = 685 px, so tables fit a desktop and scroll only on narrow screens
      (F24 amendment, F35) */
   table.datatable td:last-child, table.datatable th:last-child { min-width: 190px; }
+  table.datatable td:last-child { overflow-wrap: anywhere; }
   table.datatable td:first-child, table.datatable th:first-child { min-width: 160px; }
   /* align-self: a flex child is blockified and stretched, so inline-block alone renders a full-width bar */
   p.kind { display: inline-block; align-self: flex-start; margin: 0 0 6px; padding: 2px 9px; border-radius: 3px;
@@ -28,20 +29,60 @@ __HOUSE_STYLE__
 
 <section class="col">
   <h1>Continual Worlds</h1>
-  <p class="lede"><!-- PROSE:lede --></p>
+  <p class="lede">A plan, before any training: keep the agent's body rules exactly the same while the outside world changes from stage to stage, and test whether the neuromodulated agent copes with those changes better than the ordinary agent.</p>
 </section>
 
 <section class="col">
 <h2><span class="num">01</span> What this experiment asks</h2>
-<!-- PROSE:asks -->
+<p>The modulator is a small side network that rescales the agent's brain according to its body state
+— how hungry, hurt and cold it is. So far it has been compared with an ordinary agent one world at a time,
+and in that setting the two agents behave almost the same. The neuromodulation literature reports its main
+benefit elsewhere: in <strong>continual learning</strong>, where the task changes back and forth
+(A → B → A → B) and a modulated network forgets less and relearns faster. This plan tests that idea with a
+twist that comes from the user's own view of the problem: the <strong>body's rules never change</strong>,
+only the world does. Hunger, injury and temperature keep their own dynamics in every world, so the body
+state is a context that means the same thing everywhere — exactly the kind of signal a modulator could use to
+keep its skills when the world around it changes.</p>
 <div class="callout">
   <p class="eyebrow">Status</p>
-  <p><!-- PROSE:status --></p>
+  <p><strong>Status: plan only — nothing is trained yet.</strong> Eight world concepts, three
+A-B-A-B sequences and three pilot sets are designed, configured and checked (every world loads, keeps the
+body identical to level 05, and gives the agent the same 58 inputs). The pilots are ready to launch after
+the user's feedback on this page; the main sequences follow once the pilots have set each stage's length.</p>
 </div>
 </section>
 <section class="col">
-<h2><span class="num">02</span> The body stays, the world changes</h2>
-<p><!-- PROSE:body_intro --></p>
+<h2><span class="num">02</span> How we got here</h2>
+<p>This plan grew out of a long working conversation. The steps that led to it:</p>
+<ol>
+  <li><b>New body rules, one world at a time.</b> Four rules linking hunger, injury and temperature were built and
+  switched on in all 16 combinations; each world trained an ordinary and a modulated agent. The rules changed
+  behaviour a lot, but for both agents equally: no combination made the modulator's behaviour depend on body
+  state more (<em>Body Rules and the Modulator</em>, a null result).</li>
+  <li><b>What makes a world balanced.</b> A planning simulation found that the agent's time is already split
+  between hiding, eating and warming, that no food setting makes choices depend more on combinations of body
+  states, and that deaths in the simulation are almost all from predators — while real agents also starve
+  (<em>Interactions Between Internal States</em>).</li>
+  <li><b>Hidden danger and exploration.</b> Today's agents react to predators they can smell and ignore
+  unsmellable ambushers — but knowing the ambusher count is worth nothing, while knowing the predator count is
+  worth about 5 points of survival. A short smell range hides predators and makes finding food a search; on a
+  10 × 10 map with a 3-cell smell range the agent still thrived, while very sparse food on big maps left fresh
+  agents unable to learn to eat.</li>
+  <li><b>The idea.</b> The user proposed moving to continual learning, where the neuromodulation literature reports
+  its main effect, with one constraint that follows from the project's view of internal states: the body's
+  rules stay fixed and only the world changes. The world concepts, the Nursery (the user asked for one slow
+  predator there, so hiding can be learned), the larger maps with short smell range, the pre-trained warm-up and
+  the A-B-A-B priority order were all settled in that conversation.</li>
+</ol>
+</section>
+
+<section class="col">
+<h2><span class="num">03</span> The body stays, the world changes</h2>
+<p>Every setting of the environment was sorted into two groups. The body group is fixed in
+all eight worlds and matches today's level 05 exactly; the world group is what the eight worlds vary. Two
+settings sit on the boundary — they belong to things in the world but act directly on the body — and are kept
+fixed so the body's arithmetic never changes: the energy in one bite of food, and how much faster injury heals
+in a bush.</p>
 
 <figure>
   <p class="cue" hidden>Wider than the screen — scroll sideways, or click the figure to open it full size.</p>
@@ -49,16 +90,16 @@ __HOUSE_STYLE__
   <p class="zoomhint">Click the figure to open it full size.</p>
   __KIND:p1_body_vs_world__
   <figcaption>
-    <span><b>Figure 1 — <!-- PROSE:p1_body_vs_world_title --></b> <!-- PROSE:p1_body_vs_world_lead --></span>
-    <span><b>Axes.</b> <!-- PROSE:p1_body_vs_world_axes --></span>
+    <span><b>Figure 1 — the body's rules are the same in every world; only the outside changes.</b> Five groups of settings define the body — food energy, injury, body temperature, what the agent feels of its body, and the reward — and are identical in all eight worlds. Five groups define the world — layout, food supply, danger, climate and sensing — and are what the worlds vary.</span>
+    <span><b>Axes.</b> This is a diagram, not a chart: there are no axes. Left column (solid boxes): the setting groups held fixed, each with the number of level-05 settings it holds. Right column (dashed boxes): the groups the worlds vary. Red diamonds mark the two boundary settings kept fixed.</span>
     __DATA:p1_body_vs_world__
-    <span><b>How it is computed.</b> <!-- PROSE:p1_body_vs_world_method --> <b>What this figure does not show:</b> <!-- PROSE:p1_body_vs_world_not_shown --></span>
+    <span><b>How it is computed.</b> The groups come from the project's inventory of every level-05 setting that can shift the balance between the agent's needs (109 settings, each with its value and effect). Each setting was assigned to the body if it changes how food energy, injury or body temperature evolve, what the agent senses of them, or how reward is computed; and to the world if it changes where things are, how many there are, how dangerous or cold the surroundings are, or how well the agent senses them. The counts beside each box are the number of settings in that group. The figure script then loads all eight world configs exactly as training does and compares 63 body fields across them; it stops with an error if any body field differs between two worlds, so the left column is checked, not just claimed. The two boundary settings — energy per bite and bush healing speed — were debated and kept fixed because changing them would change the body's arithmetic, even though they are properties of food and bushes. <b>What this figure does not show:</b> the individual settings inside each box (they are in the design document's section 3.1 and the inventory); and anything about how the agents behave.</span>
   </figcaption>
 </figure>
 </section>
 <section class="col">
-<h2><span class="num">03</span> Eight worlds, side by side</h2>
-<p><!-- PROSE:matrix_intro --></p>
+<h2><span class="num">04</span> Eight worlds, side by side</h2>
+<p>Each world is a combination of pressures, named for the need it pushes hardest. Home is today's level 05 and the reference for every comparison.</p>
 
 <figure>
   <p class="cue" hidden>Wider than the screen — scroll sideways, or click the figure to open it full size.</p>
@@ -66,16 +107,16 @@ __HOUSE_STYLE__
   <p class="zoomhint">Click the figure to open it full size.</p>
   __KIND:p2_concept_matrix__
   <figcaption>
-    <span><b>Figure 2 — <!-- PROSE:p2_concept_matrix_title --></b> <!-- PROSE:p2_concept_matrix_lead --></span>
-    <span><b>Axes.</b> <!-- PROSE:p2_concept_matrix_axes --></span>
+    <span><b>Figure 2 — each world is a named combination of pressures; Home is the reference.</b> Nursery is easy, with one slow, weak predator so hiding can be learned safely. Forage is a large map with a short smell range and no hunters, where finding food is the task. Danger crowds the map with hunters and hidden ambushers; Famine starves it; Winter chills it; Fog blurs and adds noise to what the agent senses; Harsh combines cold, scarce food and scarce cover.</span>
+    <span><b>Axes.</b> Rows: the eight worlds, Home outlined as the reference. Columns: the external factors — grid size (cells), smell range (cells), food items, how fast eaten food reappears, bushes, fires, ambient temperature (°C), hunting predators and how far they see (cells), how often they move and how long they chase (steps), ambushers, rocks, sensing noise. Cell text: the value in that world's configuration. Where a world's fire is weaker than Home's, the fires cell adds “heat ×N”: a fire reaches N times the (absolute) outside temperature; Home's is ×11. Shading: grey is harder than Home, hatching is easier; darker grey is much harder.</span>
     __DATA:p2_concept_matrix__
-    <span><b>How it is computed.</b> <!-- PROSE:p2_concept_matrix_method --> <b>What this figure does not show:</b> <!-- PROSE:p2_concept_matrix_not_shown --></span>
+    <span><b>How it is computed.</b> The figure script loads every world exactly as the trainer does and reads each factor from the resulting settings, so no value on the chart is typed by hand. Counts of things on the map are ranges: each episode draws a number between the two ends. Because the worlds differ in size (10 × 10, 15 × 15 and 20 × 20 cells), the shading compares counts per cell, not raw counts — a 15 × 15 world has 2.25 times Home's area, so it needs 2.25 times Home's count just to be equally crowded. This matters: the first draft of the worlds had fewer ambushers per cell in Danger than in Home, and the counts were re-derived per cell before this page. Forage's food is deliberately sparser per cell than Home's, so that searching matters there. Temperatures are the open ground's; fires warm the cells around them. The script also asserts that all body settings are identical across the eight rows. <b>What this figure does not show:</b> how hard each world is for a trained agent — that is what the pilots measure; and the settings shared by all worlds.</span>
   </figcaption>
 </figure>
 </section>
 <section class="col">
-<h2><span class="num">04</span> What the worlds look like</h2>
-<p><!-- PROSE:layouts_intro --></p>
+<h2><span class="num">05</span> What the worlds look like</h2>
+<p>One example start of each world, drawn to the same cell size so the map sizes can be compared directly.</p>
 
 <figure>
   <p class="cue" hidden>Wider than the screen — scroll sideways, or click the figure to open it full size.</p>
@@ -83,16 +124,28 @@ __HOUSE_STYLE__
   <p class="zoomhint">Click the figure to open it full size.</p>
   __KIND:p3_concept_layouts__
   <figcaption>
-    <span><b>Figure 3 — <!-- PROSE:p3_concept_layouts_title --></b> <!-- PROSE:p3_concept_layouts_lead --></span>
-    <span><b>Axes.</b> <!-- PROSE:p3_concept_layouts_axes --></span>
+    <span><b>Figure 3 — the worlds differ in size, crowding and warmth at a glance.</b> Forage is four times Home's area with fires and cover scattered widely; Danger is crowded with hunters and ambushers; Winter has a single fire; Famine and Harsh have one or two food items on a large map.</span>
+    <span><b>Axes.</b> Each panel is one world's grid, one square per cell, at the same scale in every panel; there are no numeric axes. Symbols: bushes (cover), food, fires with the ground they warm shaded grey, rocks, hunting predators, ambushers (drawn here, but invisible to the agent) and the agent's start.</span>
     __DATA:p3_concept_layouts__
-    <span><b>How it is computed.</b> <!-- PROSE:p3_concept_layouts_method --> <b>What this figure does not show:</b> <!-- PROSE:p3_concept_layouts_not_shown --></span>
+    <span><b>How it is computed.</b> Each world is reset once by the real environment code, with the same random seed for every world, and the positions of everything on the map are drawn as the environment placed them. The grey shading under fires is the environment's own temperature map, saturating at 10 °C. Because every world uses the same seed, the five 15 × 15 worlds share many positions and differ only where their settings differ — which makes the comparison between them easier to read, but means each panel is one example, not a typical layout. Every episode draws new counts and positions. The script checks that everything lies inside the grid, that no object was parked at the corner cell by the placement fallback, and that every drawn fire was placed. <b>What this figure does not show:</b> how layouts vary between episodes; animals' movement; and what the agent senses — ambushers are shown but the agent cannot sense them.</span>
   </figcaption>
 </figure>
 </section>
 <section class="col">
-<h2><span class="num">05</span> The run plan</h2>
-<p><!-- PROSE:plan_intro --></p>
+<h2><span class="num">06</span> The run plan</h2>
+<p>Training a new agent to competence takes about 10 million episodes, and until that point the ordinary and
+modulated agents behave almost the same. So the warm-up is <strong>pre-training</strong>: every sequence starts
+from the two agents already trained for 10 million episodes in Home (one ordinary, one modulated, from the
+16-world study). Each continues with a single Forage stage — learning to search on a big map — and then
+alternates between two worlds, A → B → A → B, so each world is visited twice. Three sequences are planned,
+in priority order: <strong>P1 Danger ↔ Famine</strong> (the same body rules demand opposite behaviour: hide
+vs. search), <strong>P2 Fog ↔ Danger</strong> (the same predators, sensed well or poorly) and
+<strong>P3 Winter ↔ Famine</strong> (two needs competing for the agent's time).</p>
+<p>Before them come three pilots. <strong>Pilot 1</strong> switches each pre-trained agent once into a single
+new world and trains it until it levels off, to measure how long each world needs and whether it is
+survivable. <strong>Pilot 2</strong> runs P1 and P2 with short stages as a pipeline check. <strong>Pilot 3</strong>
+trains fresh agents in Nursery, to see whether the easy world teaches eating, hiding and warming quickly —
+the start of extra pre-trained seeds for a fully replicated version later.</p>
 
 <figure>
   <p class="cue" hidden>Wider than the screen — scroll sideways, or click the figure to open it full size.</p>
@@ -100,29 +153,66 @@ __HOUSE_STYLE__
   <p class="zoomhint">Click the figure to open it full size.</p>
   __KIND:p4_sequences__
   <figcaption>
-    <span><b>Figure 4 — <!-- PROSE:p4_sequences_title --></b> <!-- PROSE:p4_sequences_lead --></span>
-    <span><b>Axes.</b> <!-- PROSE:p4_sequences_axes --></span>
+    <span><b>Figure 4 — three pilots first, then three A-B-A-B sequences starting from the pre-trained agents.</b> Pilot 1 measures each world on its own; Pilot 2 checks the switching end to end; Pilot 3 trains fresh agents in Nursery. The main sequences visit each of their two worlds twice; the red bars mark the second visits, where a modulator that keeps its skills should recover faster.</span>
+    <span><b>Axes.</b> Horizontal: training progress in millions of episodes — for all runs except Pilot 3, the episode counter continued from the pre-trained agents' 10 million (dashed line); Pilot 3 has its own short axis starting from zero. Vertical: one row per planned run type. Each block is one stage, labelled by its world with a consistent grey or hatch; red bars mark second visits.</span>
     __DATA:p4_sequences__
-    <span><b>How it is computed.</b> <!-- PROSE:p4_sequences_method --> <b>What this figure does not show:</b> <!-- PROSE:p4_sequences_not_shown --></span>
+    <span><b>How it is computed.</b> The script reads the stage boundaries of each sequence from its schedule file — the same file the trainer reads — and the pilot budgets from the design document. Every pilot and sequence is run once with the ordinary agent and once with the modulated agent, each continuing from its own pre-trained weights. The main sequences' stages are drawn at a placeholder 2 million episodes: their real lengths are set after Pilot 1 by a rule written down in advance — for each world, 1.5 times the longer of the two agents' time to level off, at least 1 million and at most 3 million episodes. 'Levelled off' means the survival averaged over the last 200,000 episodes is within 5 % of the best such average in the run. Stage lengths are counted in episodes because that is what the trainer supports; the number of environment steps in each stage is recorded as well, because an agent that survives longer takes more training steps per episode. <b>What this figure does not show:</b> the evaluation runs at the end of each stage (section 07), and the later sequences (P1 in reversed order; Harsh ↔ Forage).</span>
   </figcaption>
 </figure>
 </section>
 <section class="col">
-<h2><span class="num">06</span> What will be measured</h2>
-<!-- PROSE:measures -->
+<h2><span class="num">07</span> What will be measured</h2>
+<p>Survival — steps alive per episode — is the only performance measure; reward is never used. For every
+switch into a world, four things are compared between the modulated and the ordinary agent, all written down
+before any training:</p>
+<ul>
+  <li><b>Dip:</b> how far survival falls in the first 20,000 episodes after the switch, relative to that world's
+  own level (its last 200,000 episodes on the first visit).</li>
+  <li><b>Recovery:</b> how much training it takes to climb back to 90 % of that level — counted in episodes
+  <em>and</em> in environment steps, and only counted if both agree.</li>
+  <li><b>Return:</b> on the second visit, how much better the agent does than on the first. Better on the return
+  means something was kept, not relearned.</li>
+  <li><b>Forgetting:</b> at the end of each stage the agent is tested, without training, in every other world of
+  its sequence (2,000 episodes each), giving a "what does it still know" table.</li>
+</ul>
+<p>The modulator counts as helping only if, in at least two of the three sequences, at least three of the four
+measures favour it and at least one clearly exceeds noise. A small earlier probe (May) found exactly this
+pattern — the modulated agent recovered faster on returns and forgot less — so this is a replication at a much
+larger scale. The body-balance numbers and how random the agent's choices are (a sign of how easily it can still
+learn) are logged at every stage.</p>
 </section>
 <section class="col">
-<h2><span class="num">07</span> Open decisions</h2>
-<!-- PROSE:decisions -->
+<h2><span class="num">08</span> Open decisions</h2>
+<p><b>Decided</b> (user, 2026-09-28, "follow your recommendations"):</p>
+<ul>
+  <li>Body rules fixed in every stage; energy per bite and bush healing fixed too.</li>
+  <li>Warm-up = the existing pre-trained Home agents; Nursery with one slow, weak predator for fresh seeds.</li>
+  <li>Sequences P1–P3 now; P4 (reversed order) and P5 (Harsh ↔ Forage) later.</li>
+  <li>Forage run once per agent and the three sequences branched from it.</li>
+  <li>Fog uses heavier blur and sensor noise instead of a narrower view (a narrower view would change the
+  agent's number of inputs, which the trainer refuses); Winter's fire slightly cooler so the first step onto it
+  is survivable; Famine uses one or two food items that take 30 steps to reappear.</li>
+  <li>A known trainer bug with predator counts between stages is avoided by starting every sequence with Forage
+  (no hunters); the cost is that per-predator distance curves are not logged.</li>
+</ul>
+<p><b>Open — for the user:</b></p>
+<ul>
+  <li>Approve launching the pilots (18 runs).</li>
+  <li>Every run of an agent starts from the same pre-trained weights, so the main sequences are "one starting
+  pair, three world pairs", not independent replicates. The fresh Nursery → Home seeds fix this later; is the
+  first round acceptable on that basis?</li>
+  <li>Harsh is close to the edge: a first step onto its fire leaves the body 0.6 °C below the heat-death line.
+  Fine for a pilot; revisit before Harsh enters a sequence.</li>
+</ul>
 </section>
 <section class="col">
-<h2><span class="num">08</span> How to reproduce this</h2>
+<h2><span class="num">09</span> How to reproduce this</h2>
 <ul>
   <li>Design, pre-registration and launch manifest: <code>docs/<wbr>experiments/<wbr>active/<wbr>continual_worlds/<wbr>CONTINUAL_WORLDS.md</code></li>
   <li>Concept worlds: <code>configs/<wbr>environment/<wbr>experiment/<wbr>continual_worlds/</code>; schedules and stage folders: <code>configs/<wbr>continual/<wbr>continual_worlds/</code></li>
-  <li>This page: <code>scripts/<wbr>analysis/<wbr>studies/<wbr>continual_worlds/<wbr>page/</code> — one script per figure (<code>p1_body_vs_world.py</code>, <code>p2_concept_matrix.py</code>, <code>p3_concept_layouts.py</code>, <code>p4_sequences.py</code>), <code>build_page.py</code></li>
+  <li>This page: <code>scripts/<wbr>analysis/<wbr>studies/<wbr>continual_worlds/<wbr>page/</code> — one script per figure (<code>p1_body_vs_world.py, p2_concept_matrix.py, p3_concept_layouts.py, p4_sequences.py</code>), <code>build_page.py</code></li>
 </ul>
-<p><!-- PROSE:style_departures --></p>
+<p>Departures from the House Style Sheet, as on the project's other analysis pages: the chrome accent and warning hues are moved off the figure palette; headings use Pretendard; a small evidence-kind badge sits above each caption; wide tables sit in scroll boxes. The figures use greys and hatching, with red only for the boundary settings (Figure 1) and the second visits (Figure 4); fires are drawn as dark stars.</p>
 </section>
 
 </div>

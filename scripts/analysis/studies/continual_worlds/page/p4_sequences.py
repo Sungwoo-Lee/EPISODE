@@ -75,20 +75,23 @@ else:
         pilot2[f"Pilot 2{'ab'[i]} ({tag}'s worlds)"] = [(c, st, en) for (c, _, _), st, en in zip(src, [b[0] - L] + b[:-1], b)]
     p2_source = "design doc plan-review row F1 (no pilot schedule file yet)"
 
-# ---- Pilot 1 and Pilot 3 from the design doc -----------------------------------------------------
-sec = re.search(r"One pilot per new concept \(([^)]+)\)", doc)
-assert sec, "design doc section 3.6 pilot list not found"
-p1_concepts = [c.strip() for c in sec.group(1).split(",")]
-row = re.search(r"^\| 1–6 \|.*?--episodes (\d+)", doc, re.M)
-assert row, "manifest row for the pilot runs (1–6) not found"
-p1_end = int(row.group(1))
-nur = re.search(r"^\| 13–16 \| `(\w+)\.yaml`.*?--episodes (\d+)", doc, re.M)
-assert nur, "manifest row for the Nursery legs (13–16) not found"
+# ---- Pilot 1 and Pilot 3 from the design doc (Revision 1, section 3.6 and the run-command table) --
+m_f = re.search(r"Forage for ([\d,]+) episodes \(counter to ([\d,]+)\)", doc)
+m_o = re.search(r"([A-Z][a-z]+(?:, [A-Z][a-z]+)* and [A-Z][a-z]+) for\s+([\d,]+) each \(counter to ([\d,]+)\)", doc)
+assert m_f and m_o, "design doc section 3.6 Pilot 1 budgets not found"
+toint = lambda x: int(x.replace(",", ""))
+p1_budget = {"Forage": toint(m_f.group(2))}
+for c in re.split(r", | and ", m_o.group(1)):
+    p1_budget[c.strip()] = toint(m_o.group(3))
+p1_concepts = list(p1_budget)
+p1_end = max(p1_budget.values())
+nur = re.search(r"^\| 17, 18 \| `CW/(\w+)\.yaml` \|.*?\| scratch \| (\d+) \|", doc, re.M)
+assert nur, "run-command row for Pilot 3 (17, 18) not found"
 nur_concept = [c for c in C.CONCEPTS if nur.group(1).startswith(c.lower() + "_")][0]
 p3_end = int(nur.group(2))
 
 # ---- rows, top to bottom -------------------------------------------------------------------------
-rows = [(f"Pilot 1 · {c}", [(c, first, p1_end)]) for c in p1_concepts]
+rows = [(f"Pilot 1 · {c}", [(c, first, p1_budget[c])]) for c in p1_concepts]
 rows += list(pilot2.items())
 rows += [("Pilot 3 · from scratch", "left")]
 rows += [(f"{k} (main)", v) for k, v in main.items()]
@@ -149,7 +152,7 @@ rec = [dict(what="main sequences read from schedule files", used=len(main), tota
             note="configs/continual/continual_worlds/*.yaml boundaries + their stage folders' extends: targets"),
        dict(what="Pilot 2 sequences", used=len(pilot2), total=len(pilot2), note=f"source: {p2_source}"),
        dict(what="Pilot 1 single-switch runs (one per new concept)", used=len(p1_concepts), total=len(p1_concepts),
-            note=f"concepts from design doc section 3.6; budget --episodes {p1_end:,} from the manifest row for the pilots"),
+            note=f"concepts from design doc section 3.6; budgets from section 3.6 (Forage to {p1_budget['Forage']:,}, others to {min(p1_budget.values()):,} episodes)"),
        dict(what="Pilot 3 from-scratch run length (episodes)", used=p3_end, total=p3_end,
             note=f"manifest row for the {nur_concept} legs; drawn on its own counter from 0"),
        dict(what="stage blocks drawn / of which second visits", used=n_ret, total=n_blocks,
