@@ -117,22 +117,34 @@ def check_doc(text: str) -> None:
 
 
 def parse_manifest(text: str) -> list[dict]:
-    """Rows of the section-4 launch-manifest table that carry a WandB id."""
+    """Rows of the section-4 launch-manifest table that carry a WandB id.
+
+    Run ids are "<n>" or a relaunch "<n>-r<k>". When relaunches of <n> exist, only the latest one
+    (highest k) is kept: the original / earlier attempts were abandoned (e.g. a hung node)."""
     sec = text.split("## 4. Launch Manifest", 1)[1].split("### 4.1", 1)[0]
     runs = []
     for line in sec.splitlines():
         c = [x.strip() for x in line.strip().strip("|").split("|")]
-        if len(c) != 12 or not c[0].isdigit():
+        m = re.fullmatch(r"(\d+)(?:-r(\d+))?", c[0]) if c else None
+        if len(c) != 12 or not m:
             continue
         wid = c[10].strip("`")
         if not re.fullmatch(r"[a-z0-9]{8}", wid):
             continue
-        runs.append({"run": int(c[0]), "status": c[1], "cell": c[2], "tag": c[3].strip("`"),
-                     "seed": int(c[6]), "node": c[7], "gpu": c[8], "wandb_id": wid,
-                     "log": c[11].strip("`")})
+        logs = re.findall(r"`([^`]+)`", c[11]) or [c[11]]
+        runs.append({"run": c[0], "base": int(m.group(1)), "attempt": int(m.group(2) or 1),
+                     "status": c[1], "cell": c[2], "tag": c[3].strip("`"),
+                     "seed": int(c[6]), "node": c[7], "gpu": c[8], "wandb_id": wid, "log": logs[0]})
     if not runs:
         raise ValueError("no manifest rows with a WandB id found in section 4")
-    return runs
+    latest = {}
+    for r in runs:
+        if r["base"] not in latest or r["attempt"] > latest[r["base"]]["attempt"]:
+            latest[r["base"]] = r
+    superseded = [r["run"] for r in runs if latest[r["base"]] is not r]
+    if superseded:
+        print(f"[manifest] superseded by a relaunch, not read: {', '.join(superseded)}", file=sys.stderr)
+    return [r for r in runs if latest[r["base"]] is r]
 
 
 def parse_home_numbers(text: str) -> dict:
@@ -344,7 +356,9 @@ def read_run(m: dict, doc_home: dict) -> dict:
     if arg(args, "--tag") != m["tag"]:
         raise ValueError(f"run {m['run']}: launch --tag {arg(args, '--tag')} != manifest {m['tag']}")
     rows, meta = scan(wdir)
-    log = open(_abs(m["log"]), errors="replace").read() if os.path.exists(_abs(m["log"])) else ""
+    own = os.path.join(wdir, "files", "output.log")      # per-run stdout copy; never shared
+    lp = own if os.path.exists(own) else _abs(m["log"])
+    log = open(lp, errors="replace").read() if os.path.exists(lp) else ""
     d = {**m, "wandb_dir": os.path.relpath(wdir, ROOT), "finished": "Training complete" in log[-20000:],
          "log_found": bool(log), "agent": next((v for k, v in AGENT_KIND.items() if k in m["tag"]), "?"),
          "n_rows": len(rows)}
@@ -538,28 +552,35 @@ def stage_lengths(runs: list[dict]) -> dict:
     for d in runs:
         if d.get("kind") != "world":
             continue
-        cell = re.sub(r"_(t1none|t16quad)_s\d+$", "", d["tag"])
+        cell = re.sub(r"_(t1none|t16quad)_s\d+(_r\d+)?$", "", d["tag"])
         groups.setdefault(cell, {})[d["agent"]] = d
     out = {}
     for cell, g in groups.items():
         Ts = {a: (x["plateau"] or {}).get("T_ep") for a, x in g.items()}
         stat = {a: (x["plateau"] or {}).get("status") for a, x in g.items()}
-        if set(g) != {"ordinary", "modulated"} or None in Ts.values():
-            out[cell] = {"L_X": None, "T": Ts, "note": "needs both agents with >= 200k episodes"}
+        if None in Ts.values() or not g:
+            out[cell] = {"L_X": None, "T": Ts, "note": "needs >= 200k episodes"}
             continue
+        single = set(g) != {"ordinary", "modulated"}
         if any(s == "not plateaued" for s in stat.values()):
             L, note = L_MAX, "not plateaued -> 3 M cap (3.3 fallback)"
         else:
             raw = min(L_MAX, max(L_MIN, L_MULT * max(Ts.values())))
             L, note = math.ceil(raw / L_ROUND) * L_ROUND, ""
         prov = any(not x["finished"] for x in g.values())
-        out[cell] = {"L_X": L, "T": Ts, "T_status": stat, "provisional": prov,
+        if single:   # e.g. ordinary-only scouts: L_X from the one agent, verdict per agent
+            note = (note + "; " if note else "") + f"single agent ({', '.join(g)}) - not the two-agent rule"
+        out[cell] = {"L_X": L, "T": Ts, "T_status": stat, "provisional": prov, "single_agent": single,
+                     "per_agent_survivable": {a: (x.get("survivable") or {}).get("pass") for a, x in g.items()},
+                     "per_agent_line": {a: (x.get("survivable") or {}).get("survival_line") for a, x in g.items()},
                      "note": note or ("provisional (runs still training)" if prov else "final"),
                      "too_easy": all(x.get("frac_of_home") is not None and x["frac_of_home"] >= TOO_EASY_FRAC
                                      and x.get("dip_vs_home") is not None and x["dip_vs_home"] < TOO_EASY_DIP
                                      for x in g.values()),
-                     "survivable_both": all((x.get("survivable") or {}).get("pass") for x in g.values()),
-                     "survivable_one_only": sum(bool((x.get("survivable") or {}).get("pass")) for x in g.values()) == 1}
+                     "survivable_both": (not single) and all((x.get("survivable") or {}).get("pass") for x in g.values()),
+                     "survivable_one_only": (not single) and sum(bool((x.get("survivable") or {}).get("pass")) for x in g.values()) == 1}
+        if prov and single:
+            out[cell]["note"] += "; provisional (run still training)"
     return out
 
 
@@ -581,7 +602,7 @@ def render(runs, L, homes) -> str:
                    f"  (doc {h['doc_value']}, match {h.get('doc_match', 'n/a')})  last-200k {h['level_last200k']:.2f}"
                    f"  -> survivable line {SURVIVABLE_FRAC * h['level_last10pct']:.1f}")
     out.append("")
-    hdr = (f"{'run':>3} {'tag':<34} {'done':>6} {'eta_h':>5} {'S_200k':>6} {'best':>6} {'T(ep)':>6} {'T(Msteps)':>9} "
+    hdr = (f"{'run':>5} {'tag':<42} {'done':>6} {'eta_h':>5} {'S_200k':>6} {'best':>6} {'T(ep)':>6} {'T(Msteps)':>9} "
            f"{'plateau':<13} {'dip':>7} {'rec(ep)':>7} {'rec(Mst)':>8} {'bites':>6} {'%home':>6} {'surv':>5}  deaths inj/starv/therm/cap")
     out.append("PILOT 1 - one world from the Home agent (dip = first 20k vs Home level; recovery = to 0.9 x current trailing-200k)")
     out.append(hdr)
@@ -593,13 +614,15 @@ def render(runs, L, homes) -> str:
         sv = d["survivable"] or {}
         rec_ep = "cens." if r.get("censored") else k_(r.get("ep"))
         rec_st = "-" if r.get("env_steps") is None else f"{r['env_steps'] / 1e6:.2f}"
-        out.append(f"{d['run']:>3} {d['tag']:<34} {k_(d['episodes_done']):>6} {f(d['eta_h'], 1):>5} {f(d['S_trailing200k']):>6} "
+        out.append(f"{d['run']:>5} {d['tag']:<42} {k_(d['episodes_done']):>6} {f(d['eta_h'], 1):>5} {f(d['S_trailing200k']):>6} "
                    f"{f(p.get('best')):>6} {k_(p.get('T_ep')):>6} {f(p.get('T_env_steps', None) and p['T_env_steps'] / 1e6, 2):>9} "
                    f"{(p.get('status') or '-') + ('^' if p.get('in_last_500k') and not d['finished'] else ''):<13} "
                    f"{f(d['dip_vs_home'], pct=True):>7} {rec_ep:>7} {rec_st:>8} "
                    f"{f(d['bites_trailing200k']):>6} {f(d.get('frac_of_home'), 2):>6} "
                    f"{('-' if not sv else ('PASS' if sv['pass'] else 'FAIL')) + ('*' if sv and sv['provisional'] else ''):>5}  "
                    + "/".join(f(d["deaths_trailing200k"][c], 2) for c in ("Injury", "Starvation", "Thermal", "MaxSteps")))
+    if not any(d.get("kind") == "world" for d in runs):
+        out.append("  (no single-world runs in this selection)")
     out.append("  (* = provisional, run still training; ^ = T lies in the last 500k of the data so far, i.e. the 3.3")
     out.append("   'not plateaued' test would fire if the run ended now; dip > 0 means worse than Home; deaths = share of")
     out.append("   episodes ending by injury / starvation / cold-heat / reaching the 500-step cap, last 200k)")
@@ -607,9 +630,12 @@ def render(runs, L, homes) -> str:
     out.append("PILOT 1 - proposed stage length L_X = min(3M, max(1M, 1.5 x max(T_ord, T_mod))), ceil 100k")
     for cell, x in L.items():
         T = x["T"]
-        out.append(f"  {cell:<26} T_ord {k_(T.get('ordinary')):>6}  T_mod {k_(T.get('modulated')):>6}  L_X {k_(x['L_X']):>6}  "
+        out.append(f"  {cell.removeprefix('rppo_cw_'):<28} T_ord {k_(T.get('ordinary')):>6}  T_mod {k_(T.get('modulated')):>6}  L_X {k_(x['L_X']):>6}  "
                    f"[{x['note']}]" + ("  TOO-EASY FLAG" if x.get("too_easy") else "")
-                   + ("  SURVIVABLE: both" if x.get("survivable_both") else
+                   + ("  SURVIVABLE (" + ", ".join(f"{a} vs {f(x['per_agent_line'][a])}: " + ("PASS" if v else "FAIL")
+                                                   for a, v in x["per_agent_survivable"].items()) + ")"
+                      if x.get("single_agent") else
+                      "  SURVIVABLE: both" if x.get("survivable_both") else
                       "  SURVIVABLE: ONE AGENT ONLY" if x.get("survivable_one_only") else
                       "  SURVIVABLE: neither" if "survivable_both" in x else ""))
     out.append("")
@@ -631,6 +657,8 @@ def render(runs, L, homes) -> str:
                        f"{f(s['dip'], pct=True):>7} {f(s['dip_vs_prev_end'], pct=True):>7} "
                        f"{'cens.' if r.get('censored') else k_(r.get('ep')):>7} {f(r.get('env_steps') and r['env_steps'] / 1e6, 2):>8} "
                        f"{f(s['bites_last200k']):>6} {f(s.get('iterations'), 0):>6} {f(rt.get('level_minus_R')):>7}")
+    if not any(d.get("kind") == "sequence" for d in runs):
+        out.append("  (no sequence runs in this selection)")
     out.append("")
     out.append("PILOT 3 - from scratch, pass criterion on the last 200k (value / threshold / pass)")
     for d in runs:
@@ -652,6 +680,8 @@ def render(runs, L, homes) -> str:
         out.append(f"    competence: {('first competent 200k window ends at ' + k_(comp['competent_at_ep']) + ', S ' + f(comp['competent_window_S']) + ', min trailing after ' + f(comp['min_trailing_after']) + (' COLLAPSED' if comp['collapsed'] else ' no collapse')) if comp else 'no window meets all rows yet'}")
         pp = d["p3_pass"]
         out.append(f"    PILOT 3 VERDICT: {'PASS' if pp['pass'] else 'FAIL'}{' (provisional)' if pp['provisional'] else ''}")
+    if not any(d.get("kind") == "scratch" for d in runs):
+        out.append("  (no from-scratch runs in this selection)")
     other = [d for d in runs if d.get("kind") not in ("world", "sequence", "scratch")]
     for d in other:
         out.append(f"  run {d['run']} {d['tag']}: {d.get('kind')}")
@@ -662,14 +692,19 @@ def main():
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     ap.add_argument("--design-doc", required=True, help="CONTINUAL_WORLDS.md (manifest + pre-registered rules)")
     ap.add_argument("--json-out", required=True)
-    ap.add_argument("--runs", type=int, nargs="*", help="restrict to these manifest run numbers")
+    ap.add_argument("--runs", nargs="*", help="restrict to these manifest run ids, e.g. 13 39-r2 "
+                    "(a bare number also selects its latest relaunch)")
     a = ap.parse_args()
     text = open(_abs(a.design_doc)).read()
     check_doc(text)
     doc_home = parse_home_numbers(text)
     man = parse_manifest(text)
     if a.runs:
-        man = [m for m in man if m["run"] in set(a.runs)]
+        want = set(a.runs)
+        man = [m for m in man if m["run"] in want or str(m["base"]) in want]
+        found = {m["run"] for m in man} | {str(m["base"]) for m in man}
+        if want - found:
+            raise ValueError(f"--runs not in the manifest (or superseded by a relaunch): {sorted(want - found)}")
     runs = [read_run(m, doc_home) for m in man]
     L = stage_lengths(runs)
     print(render(runs, L, _HOME_CACHE))
