@@ -4626,3 +4626,22 @@ cd /media/nas01/projects/Interoceptive-AI/grid_world_pain
 #   --episodes 13000000 --checkpoint-frequency 100000 --seed 42 --device cuda:1 \
 #   --tag "rppo_cw_pilot1s_fog_soft_t16quad_s42" --wandb-name "rppo_cw_pilot1s_fog_soft_t16quad_s42" \
 #   --wandb-group "continual_worlds" --wandb-job-type "pilot"
+# ---------------------------------------------------------------------------
+# 2026-09-28 — 5x5 video-ladder pilots (one-off, no plan_doc). Configs committed b96a3693,
+# env-config-reviewer: forage READY WITH CONCERNS (design-only), slow_predator_bush READY.
+# Mirrors rppo_bq2cover_lvl00_t1none_s42 flag set; --seed / --num-envs / --checkpoint-frequency
+# CONFIG-OWNED (not passed). Short runs for agent-playing videos; user stops early.
+# Launched via CIFS-bypass /tmp scripts + run_command.py --no-tail.
+# ---------------------------------------------------------------------------
+# Run 1: rppo_ladder_forage5x5_t1none_s42 — node 105, cuda:1
+# /home/vncuser/miniconda3/envs/grid_world_pain/bin/python train.py --config configs/environment/experiment/basic/forage_5x5.yaml \
+#   --agent_config configs/models/recurrent_ppo/nmn_input_site_grid_gaenorm/nmngaenorm_t1none.yaml \
+#   --episodes 1000000 --device cuda:1 --log-interval 10 \
+#   --tag rppo_ladder_forage5x5_t1none_s42 --wandb-name rppo_ladder_forage5x5_t1none_s42 \
+#   --wandb-group video_ladder_5x5 --wandb-job-type pilot
+# Run 2: rppo_ladder_slowpredbush5x5_t1none_s42 — node 105, cuda:0
+# /home/vncuser/miniconda3/envs/grid_world_pain/bin/python train.py --config configs/environment/experiment/basic/slow_predator_bush_5x5.yaml \
+#   --agent_config configs/models/recurrent_ppo/nmn_input_site_grid_gaenorm/nmngaenorm_t1none.yaml \
+#   --episodes 1000000 --device cuda:0 --log-interval 10 \
+#   --tag rppo_ladder_slowpredbush5x5_t1none_s42 --wandb-name rppo_ladder_slowpredbush5x5_t1none_s42 \
+#   --wandb-group video_ladder_5x5 --wandb-job-type pilot
