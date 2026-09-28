@@ -4719,3 +4719,31 @@ cd /media/nas01/projects/Interoceptive-AI/grid_world_pain
 #   --episodes 11500000 --checkpoint-frequency 100000 --seed 42 --device cuda:2 \
 #   --tag rppo_cw_scout_fog_scout_b_t1none_s42 --wandb-name rppo_cw_scout_fog_scout_b_t1none_s42 \
 #   --wandb-group continual_worlds --wandb-job-type pilot
+# ---------------------------------------------------------------------------
+# 2026-09-28 — RELAUNCH of Revision 1b scouts rows 39-41 as `_r2` (node 114 hung during XLA
+# compile ~19:09; SSH banner timeouts; the 114 copies are abandoned/possibly zombie). Commands are
+# IDENTICAL to rows 39-41 above except --device, and --tag/--wandb-name carry a `_r2` suffix so
+# they cannot collide with any surviving 114 process. Pre-flight: 107/110 GPUs idle, no train.py,
+# NAS mounted, JAX GPU-compile check OK. CIFS-bypass /tmp scripts + run_command.py --no-tail, >=5 s apart.
+# ---------------------------------------------------------------------------
+# Run 39 r2: rppo_cw_scout_danger_scout_c_t1none_s42_r2 — node 107, cuda:0
+# /home/vncuser/miniconda3/envs/grid_world_pain/bin/python train.py --config configs/environment/experiment/continual_worlds/danger_scout_c_15x15.yaml \
+#   --agent_config configs/models/recurrent_ppo/nmn_input_site_grid_gaenorm/nmngaenorm_t1none.yaml \
+#   --load-checkpoint results/JAX_RecurrentPPO/20260927-053057_rppo_l05body_w0000_t1none_s42/models \
+#   --episodes 11500000 --checkpoint-frequency 100000 --seed 42 --device cuda:0 \
+#   --tag rppo_cw_scout_danger_scout_c_t1none_s42_r2 --wandb-name rppo_cw_scout_danger_scout_c_t1none_s42_r2 \
+#   --wandb-group continual_worlds --wandb-job-type pilot
+# Run 40 r2: rppo_cw_scout_fog_scout_a_t1none_s42_r2 — node 107, cuda:1
+# /home/vncuser/miniconda3/envs/grid_world_pain/bin/python train.py --config configs/environment/experiment/continual_worlds/fog_scout_a_15x15.yaml \
+#   --agent_config configs/models/recurrent_ppo/nmn_input_site_grid_gaenorm/nmngaenorm_t1none.yaml \
+#   --load-checkpoint results/JAX_RecurrentPPO/20260927-053057_rppo_l05body_w0000_t1none_s42/models \
+#   --episodes 11500000 --checkpoint-frequency 100000 --seed 42 --device cuda:1 \
+#   --tag rppo_cw_scout_fog_scout_a_t1none_s42_r2 --wandb-name rppo_cw_scout_fog_scout_a_t1none_s42_r2 \
+#   --wandb-group continual_worlds --wandb-job-type pilot
+# Run 41 r2: rppo_cw_scout_fog_scout_b_t1none_s42_r2 — node 110, cuda:0
+# /home/vncuser/miniconda3/envs/grid_world_pain/bin/python train.py --config configs/environment/experiment/continual_worlds/fog_scout_b_15x15.yaml \
+#   --agent_config configs/models/recurrent_ppo/nmn_input_site_grid_gaenorm/nmngaenorm_t1none.yaml \
+#   --load-checkpoint results/JAX_RecurrentPPO/20260927-053057_rppo_l05body_w0000_t1none_s42/models \
+#   --episodes 11500000 --checkpoint-frequency 100000 --seed 42 --device cuda:0 \
+#   --tag rppo_cw_scout_fog_scout_b_t1none_s42_r2 --wandb-name rppo_cw_scout_fog_scout_b_t1none_s42_r2 \
+#   --wandb-group continual_worlds --wandb-job-type pilot
