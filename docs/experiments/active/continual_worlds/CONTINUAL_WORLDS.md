@@ -447,7 +447,7 @@ Home legs (27–30) after their Nursery leg ends (27–28 only if Pilot 3 passed
 | 24 | planned (after pilots) | P3 branch, modulated | `rppo_cw_p3_t16quad_s42` | continual_worlds | prod | 42 | — | — | — | — | — |
 | 25 | planned (after pilots) | Nursery leg | `rppo_cw_nursery_t1none_s44` | continual_worlds | prod | 44 | — | — | — | — | — |
 | 26 | planned (after pilots) | Nursery leg | `rppo_cw_nursery_t16quad_s44` | continual_worlds | prod | 44 | — | — | — | — | — |
-| 27 | planned (after 17, if Pilot 3 passes) | Home leg | `rppo_cw_home_t1none_s43` | continual_worlds | prod | 43 | — | — | — | — | — |
+| 27 | running | Home leg | `rppo_cw_home_t1none_s43` | continual_worlds | prod | 43 | 102 | cuda:0 | 2026-09-28T17:14:41 | `6gc2tok9` | `logs/20260928_171441.log` |
 | 28 | planned (after 18, if Pilot 3 passes) | Home leg | `rppo_cw_home_t16quad_s43` | continual_worlds | prod | 43 | — | — | — | — | — |
 | 29 | planned (after 25) | Home leg | `rppo_cw_home_t1none_s44` | continual_worlds | prod | 44 | — | — | — | — | — |
 | 30 | planned (after 26) | Home leg | `rppo_cw_home_t16quad_s44` | continual_worlds | prod | 44 | — | — | — | — | — |

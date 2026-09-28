@@ -4645,3 +4645,18 @@ cd /media/nas01/projects/Interoceptive-AI/grid_world_pain
 #   --episodes 1000000 --device cuda:0 --log-interval 10 \
 #   --tag rppo_ladder_slowpredbush5x5_t1none_s42 --wandb-name rppo_ladder_slowpredbush5x5_t1none_s42 \
 #   --wandb-group video_ladder_5x5 --wandb-job-type pilot
+# ---------------------------------------------------------------------------
+# 2026-09-28 — continual_worlds manifest row 27: seed-43 Home leg, ordinary agent (Path A,
+# plan_doc docs/experiments/active/continual_worlds/CONTINUAL_WORLDS.md §4.2). Loads run 17's
+# final Nursery checkpoint (2,000,002 eps; Pilot 3 passed) and continues to 10,000,000 in Home
+# (= level 05). --seed 43 / --checkpoint-frequency 100000 are PLANNED deviations from
+# config-owned values (manifest); restored PRNG key governs. Node 102, cuda:0.
+# Launched via CIFS-bypass /tmp script + run_command.py --no-tail.
+# ---------------------------------------------------------------------------
+# /home/vncuser/miniconda3/envs/grid_world_pain/bin/python train.py \
+#   --config configs/environment/experiment/continual_worlds/home_10x10.yaml \
+#   --agent_config configs/models/recurrent_ppo/nmn_input_site_grid_gaenorm/nmngaenorm_t1none.yaml \
+#   --load-checkpoint results/JAX_RecurrentPPO/20260928-131756_rppo_cw_nursery_t1none_s43/models \
+#   --episodes 10000000 --checkpoint-frequency 100000 --seed 43 --device cuda:0 \
+#   --tag rppo_cw_home_t1none_s43 --wandb-name rppo_cw_home_t1none_s43 \
+#   --wandb-group continual_worlds --wandb-job-type prod
