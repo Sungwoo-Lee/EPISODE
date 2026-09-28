@@ -1,37 +1,41 @@
 # Continual schedule -- continual-worlds sequence P3: pre-trained Home -> Forage -> WINTER -> FAMINE -> WINTER -> FAMINE
-# Design doc: docs/experiments/active/continual_worlds/CONTINUAL_WORLDS.md (section 3.3).
+# Design doc: docs/experiments/active/continual_worlds/CONTINUAL_WORLDS.md (sections 3.3, 3.4; Revision 2).
 #
-# *** PROVISIONAL (Revision 1, 2026-09-28) -- DO NOT LAUNCH FROM THESE BOUNDARIES. ***
-# (1) Stage lengths are set AFTER Pilot 1 by the pre-registered rule in design doc 3.3:
-#     length of concept X = min(3,000,000, 1.5 x the larger of the two agents' time-to-plateau in X,
-#     rounded up to 100,000). This file is regenerated from those numbers; the 2 M values below are
-#     placeholders only.
-# (2) BRANCHING: Forage is trained ONCE per agent (it is Pilot 1's Forage run) and each sequence
-#     starts from that run's checkpoint at the Forage boundary (first value below) via
-#     --load-checkpoint. The restored counter is >= that boundary, so the run starts in stage 02; the
-#     Forage stage 01 stays in the schedule on purpose -- train.py sizes the per-animal distance
-#     accumulators from stage 0 BEFORE the restore, and Forage (no hunting predator, 5 rabbit
-#     slots) is what keeps the later roster changes clear of Known Bug A2 (design doc 6.2, B1).
+# READY (Revision 2, 2026-09-28) -- boundaries regenerated from Pilot 1 by the pre-registered rule of
+# design doc 3.3: L_X = min(3,000,000, max(1,000,000, 1.5 x max(T_X,ordinary, T_X,modulated))),
+# rounded up to 100,000, per concept X; every visit to X lasts L_X.
+#   Forage  T 200k / 200k        -> L 1,000,000 (floor)   [T final in practice; confirm at run end, doc Rev 2]
+#   Winter  T 2,448k / 2,456k    -> L 3,000,000 (cap)
+#   Famine  T 452k / 484k        -> L 1,000,000 (floor)
+# Branch point B0 = 10,000,000 + L_Forage = 11,000,000 (design doc 3.4).
+#
+# BRANCHING: Forage is trained ONCE per agent (Pilot 1's Forage runs, manifest rows 1-2) and each
+# sequence starts from that run's first checkpoint at or after B0 (ordinary step 11,000,025;
+# modulated step 11,000,022), copied read-only into
+# results/JAX_RecurrentPPO/cw_branchpoint_forage_<agent>_s42/models and loaded with --load-checkpoint.
+# The restored counter is >= the first boundary, so the run starts directly in stage 02 (Winter).
+# The Forage stage 01 stays in the schedule on purpose -- train.py sizes the per-animal distance
+# accumulators from stage 0 BEFORE the restore, and Forage (no hunting predator, 5 rabbit slots) is
+# what keeps the later roster changes clear of Known Bug A2 (design doc 6.2, B1). Every stage has
+# 5 rabbit slots for the same reason.
 #
 # Stages (alphabetical in configs/continual/continual_worlds/p3_winter_famine_stages/):
-#   01 forage_20x20   Forage, once
-#   02 winter_15x15   A (first visit)      03 famine_15x15   B (first visit)
-#   04 winter_15x15   A (return)           05 famine_15x15   B (return)
+#   01 forage_20x20   Forage, once (ends at B0 = 11 M; already trained by Pilot 1)
+#   02 winter_15x15   A (first visit)   11 M -> 14 M   (3 M)
+#   03 famine_15x15   B (first visit)   14 M -> 15 M   (1 M)
+#   04 winter_15x15   A (return)        15 M -> 18 M   (3 M)
+#   05 famine_15x15   B (return)        18 M -> 19 M   (1 M)
+# 8 M episodes after the branch point.
 #
-# EPISODE COUNTER OFFSET -- READ BEFORE EDITING. Every run of this schedule starts from a pre-trained
-# checkpoint loaded with --load-checkpoint, which restores the episode counter (10,000,046 for the
-# ordinary agent, 10,000,021 for the modulated agent of the level-05 factorial). Boundaries are
-# CUMULATIVE episode counts on that restored counter (train.py ContinualSchedule.stage_for_episode),
-# so they start above 10,000,000. A schedule whose first boundary were 2,000,000 would put the
-# restored run past its final boundary and it would exit at once. Stage 01 is therefore 46 / 21
-# episodes shorter than 2 M for the two agents (0.002 %); stage switches happen at iteration
-# granularity anyway (tens of episodes of drift per switch, train.py stage-transition block).
-# The fresh-seed pre-training legs end at >= 10,000,000 episodes too, so this file serves them unchanged.
+# EPISODE COUNTER OFFSET -- READ BEFORE EDITING. Boundaries are CUMULATIVE episode counts on the
+# restored counter (train.py ContinualSchedule.stage_for_episode), so they start above 10,000,000.
+# Stage switches happen at iteration granularity (tens of episodes of drift per switch).
+# The fresh-seed pre-training legs end at >= 10,000,000 episodes too, so this file serves them
+# unchanged once they have their own Forage run to B0.
 #
-# 2,000,000 episodes per stage (5 stages, 10 M episodes per run; design doc section 3.3 justifies it).
-# Checkpoint every 100,000 episodes -> 20 per stage. The first checkpoint at or after each boundary
-# is saved at the end of the iteration that crossed it, BEFORE the next iteration switches the world,
-# so it is the exact stage-end model used by the forgetting matrix (section 5.3).
+# Checkpoint every 100,000 episodes -> 30 per Winter stage, 10 per Famine stage. The first checkpoint
+# at or after each boundary is saved at the end of the iteration that crossed it, BEFORE the next
+# iteration switches the world, so it is the exact stage-end model used by the forgetting matrix (5.3).
 continual:
-  episode_boundaries: [12000000, 14000000, 16000000, 18000000, 20000000]
+  episode_boundaries: [11000000, 14000000, 15000000, 18000000, 19000000]
   checkpoint_frequencies: [100000, 100000, 100000, 100000, 100000]

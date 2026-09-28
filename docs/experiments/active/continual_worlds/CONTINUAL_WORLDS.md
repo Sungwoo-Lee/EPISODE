@@ -10,7 +10,11 @@ wandb_tag: "rppo_cw_*"
 
 # Continual worlds: an A-B-A-B test of the modulator with a stationary body
 
-> **Status (2026-09-28, Revision 1b):** the softened Danger, Fog and Harsh worlds (rows 31–36) still
+> **Status (2026-09-28, Revision 2 — post-pilot plan update):** the pilots are read out (Revision 2
+> box below). **One sequence, Winter ↔ Famine, is ready** to launch once the Forage runs have finished
+> and the pre-launch checklist (6.3) passes; **the other two need the user's decision** on replacement
+> worlds (3.7.6). Nothing new is launched by this revision.
+> *Revision 1b status, kept for the record:* the softened Danger, Fog and Harsh worlds (rows 31–36) still
 > fail at the interim read-out, so the pre-registered rule drops them and their replacement goes to
 > the user; an exploratory, not-pre-registered scouting ladder (five ordinary-agent runs, rows 37–41,
 > **planned, not launched**) gives the user options (Revision 1b box below).
@@ -27,6 +31,26 @@ wandb_tag: "rppo_cw_*"
 > the May continual probe this design replicates at scale [[NMN_CONTINUAL_DOUBLE_RETURN_PROBE]] ·
 > balance logging [[BALANCE_METRICS_TRAINING_LOGGING]] · curriculum lessons in the LLM wiki
 > (`curriculum_learning`: plasticity loss, negative transfer).
+
+> **Revision 2 (2026-09-28, night) — what the pilots found and what happens next, in plain words.**
+> Before the long runs, short trial runs ("pilots") checked each new world: can our two pre-trained
+> agents — the ordinary one and the one with the modulator — survive there at all, and how long do
+> they take to level off? **Two worlds pass for both agents:** the scarce-food world (Famine) and the
+> cold world with a single fire (Winter). **Three worlds fail for both agents even after their one
+> pre-planned softening step** — the world with many hunters (Danger), the foggy world (Fog) and the
+> cold-hungry-hunted world (Harsh) — so, by the rule written before the pilots, they are **dropped**.
+> That leaves one of the three planned alternating sequences intact: **Winter ↔ Famine**. Its stage
+> lengths now follow from the pre-registered rule (each Winter visit 3 million episodes, each Famine
+> visit 1 million) and its schedule file is **ready**. The other two sequences lost their Danger
+> world (one also its Fog world). Extra scouting runs, **not planned in advance**, found two
+> survivable variants — a Danger world whose hunters give up as quickly as Home's ("Danger-A") and a
+> Fog world without sensory noise ("Fog-B"). We **draft** two replacement sequences from them, but
+> they **need the user's approval**: Danger-A is survivable for the modulated agent only (the
+> ordinary agent falls just short, 122.6 against a 124.9-step line), and both variants were found by
+> exploring, not pre-registered. The pipeline trial and the from-scratch warm-up world both passed.
+> Two places where the pre-registered rules differ from the working assumption at writing time
+> (stage length set per world, not per pair; branch point at 11 M episodes, not 14 M) are listed as
+> user decisions (3.7.6). Details: section 3.7.
 
 > **Revision 1 (2026-09-28)** — resolves the plan-reviewer's findings F1–F9 (bottom of this doc) and
 > the user's decisions ("follow your recommendations"):
@@ -350,6 +374,8 @@ are always the same length and both agents see the same schedule.
 
 The schedule files for P1–P3 are regenerated from the `L_X` values once Pilot 1 is analysed; the
 2 M-per-stage boundaries in them today are **placeholders** and are marked PROVISIONAL in the files.
+*Revision 2:* P3 regenerated (`[11M, 14M, 15M, 18M, 19M]`); P1 and P2 lost their Danger / Fog worlds and
+are replaced by drafts pending the user's approval (3.7).
 
 ### 3.4 Starting agents, branching, and the shared-start confound
 
@@ -460,6 +486,175 @@ and the forgetting sweep produces a full matrix for one run.
 the time to competence. Pass = all rows met on the last window. Fail → the leg is not used for
 production and the user chooses (soften Nursery, or pre-train in Home alone).
 
+### 3.7 Post-pilot verdicts and the revised sequences (Revision 2, 2026-09-28)
+
+**What this section settles.** It applies the pre-registered pilot rules (3.3 stage length, 3.6
+survivable rule) to the final pilot numbers, says which sequences can run, and lists what the user
+must decide. All survival numbers are **mean survival steps per episode over each run's last 200,000
+episodes** (the pass line is half of the agent's own Home level: 124.9 ordinary / 126.7 modulated;
+bites ≥ 1.0 per episode). Source: `scripts/analysis/studies/continual_worlds/pilot_readout.py` →
+`results/analysis/continual_worlds/pilot_readout.json`, full print `tmp/20260928_pilot_readout_run4.log`.
+Every number below is **final** (run ended) unless marked *provisional*.
+
+#### 3.7.1 Per-world verdicts
+
+| World | Ordinary: survival / bites | Modulated: survival / bites | Deaths, ordinary (injury / starvation / cold-heat / reached 500-step cap) | Plateau `T` ord / mod | Verdict (3.6) |
+|---|---|---|---|---|---|
+| Forage | 478.1 / 93.5 *prov.* | 477.4 / 93.3 *prov.* | 0.00 / 0.04 / 0.00 / 0.95 | 200k / 200k *prov.* | **pass**, "too easy to be a distinct world" flag (expected for the safe first stage; not changed). Runs continue to 14 M (ETA ≈ 8 h) |
+| Famine | 214.1 / 28.0 | 213.6 / 27.8 | 0.31 / 0.53 / 0.01 / 0.15 | 452k / 484k | **pass, both** |
+| Winter | 198.0 / 31.1 | 160.8 / 24.4 | 0.30 / 0.15 / 0.32 / 0.23 (modulated 0.26 / 0.13 / **0.44** / 0.18) | 2,448k / 2,456k | **pass, both** — see the Winter finding below |
+| Danger | 77.8 / 2.3 | 77.8 / 2.2 | 0.40 / 0.45 / 0.15 / 0.00 | 388k / 200k | fail, both |
+| Danger-soft (3–5 hunters) | 90.5 / 4.1 | 92.3 / 4.3 | 0.43 / 0.45 / 0.12 / 0.00 | 216k / 204k | fail, both again → **Danger DROPPED** |
+| Fog | 93.6 / 6.5 | 94.3 / 6.4 | 0.56 / 0.37 / 0.06 / 0.00 | 844k / 836k | fail, both |
+| Fog-soft (noise halved) | 113.3 / 9.8 | 114.7 / 9.8 | 0.55 / 0.39 / 0.04 / 0.01 | 596k / 864k | fail, both again → **Fog DROPPED** |
+| Harsh | 82.8 / 3.9 | 80.6 / 3.6 | 0.47 / 0.46 / 0.07 / 0.00 | 200k / 200k | fail, both |
+| Harsh-soft (food 2–4) | 94.3 / 7.0 | 97.1 / 7.5 | 0.55 / 0.37 / 0.07 / 0.01 | 332k / 200k | fail, both again → **Harsh DROPPED** (it was only in the later sequence P5) |
+
+**Exploratory scouts (Revision 1b; NOT pre-registered; 1.5 M episodes each; read descriptively).**
+
+| Scout | What changes vs the original world | Ordinary | Modulated | `T` ord / mod | Reading |
+|---|---|---|---|---|---|
+| Danger-A | 3–5 hunters with Home's chase persistence (notice at 3–5 cells, stamina 30–150, give up at 1.5) | 122.6 (best window 130.1) / 11.1 bites | 131.0 / 12.6 bites | 384k / 260k | **one agent only**: modulated passes by 4.3 steps; ordinary misses by 2.3 on the last window although its best window cleared the line |
+| Danger-B | 2–4 hunters, Danger's own persistence | 104.6 | — | 248k / — | fail |
+| Danger-C | 3–5 hunters + smell range 8 | 90.0 | — | 224k / — | fail |
+| Fog-A | Fog-soft + smell range 5 | 110.5 | — | 348k / — | fail |
+| Fog-B | Fog's smell range 3 and 3× sight blur, **no perceptual noise** | 131.6 / 12.5 bites | 135.3 / 13.1 bites | 384k / 480k | **pass, both** (margins 6.7 / 8.6 steps) |
+
+*What the ladder suggests (a pattern from single runs, not a result):* in Danger it is the hunters'
+**persistence**, not their number, that kills (fewer persistent hunters, Danger-B, 104.6, does worse than
+the same count as soft Danger with Home-like persistence, Danger-A, 122.6; a longer smell range,
+Danger-C, does not help); in Fog it is the **noise**, not the short range (removing noise, Fog-B, passes;
+a longer smell range with halved noise, Fog-A, does not).
+
+**Winter finding (reported, not a verdict).** Both agents pass Winter, but the modulated agent ends
+clearly lower (160.8 vs 198.0 steps) and dies of cold or heat more often (44 % vs 32 % of episodes). This
+is one seed of a Home → Winter switch, so it is a description of this initialisation pair, not evidence
+about the modulator; it is shown to the user before P3 launches because P3 spends 6 M of its 8 M
+episodes in Winter.
+
+#### 3.7.2 Stage lengths (rule of 3.3, applied)
+
+Per world X: `L_X = min(3 M, max(1 M, 1.5 × max(T_ord, T_mod)))`, rounded up to 100,000 episodes.
+
+| World | 1.5 × slower `T` | `L_X` |
+|---|---|---|
+| Forage | 1.5 × 200k = 300k | **1,000,000** (floor) — *provisional until runs 1–2 end; robustness in 3.7.3* |
+| Famine | 1.5 × 484k = 726k | **1,000,000** (floor) |
+| Winter | 1.5 × 2,456k = 3,684k | **3,000,000** (cap) |
+| Danger-A (scout) | 1.5 × 384k = 576k | 1,000,000 (floor) |
+| Fog-B (scout) | 1.5 × 480k = 720k | 1,000,000 (floor) |
+
+Winter hits the cap, but it did level off: its `T` (2.448 M / 2.456 M) falls 52k / 44k episodes
+before the pilot's last 500,000 episodes, so the "not plateaued" fallback of 3.3 (which needs `T` inside
+the last 500,000, i.e. > 2.5 M) does **not** fire. Its return visits are therefore **not** marked "below plateau"; the 3 M visit
+still sits only 1.2× `T` rather than the intended 1.5×, so `R_Winter` (last 200,000 episodes of the first
+visit, 2.8–3.0 M) is measured with a thinner post-plateau margin than the rule aimed for — stated here,
+carried into the results.
+
+Per candidate pair (throughput from the Home → X pilots, `ep/h` ordinary / modulated; branch nodes may
+differ):
+
+| Sequence | Stage lengths A / B | Boundaries (episode counter) | Episodes after the branch | Est. wall time ord / mod |
+|---|---|---|---|---|
+| **P3** Winter ↔ Famine | 3 M / 1 M | `[11M, 14M, 15M, 18M, 19M]` | 8 M | ≈ 16 h / 18 h |
+| P1-replacement Danger-A ↔ Famine | 1 M / 1 M | `[11M, 12M, 13M, 14M, 15M]` | 4 M | ≈ 7 h / 8 h |
+| P2-replacement Fog-B ↔ Danger-A | 1 M / 1 M | `[11M, 12M, 13M, 14M, 15M]` | 4 M | ≈ 5 h / 6 h |
+| (alternative, no file) Fog-B ↔ Famine | 1 M / 1 M | `[11M, 12M, 13M, 14M, 15M]` | 4 M | ≈ 6 h / 8 h |
+
+**Per world, not per pair.** 3.3 fixes `L_X` **per world** ("every visit to X lasts `L_X`"); the
+plan-reviewer's F2 had suggested one length per pair (1.5 × the largest `T` over both worlds), and
+Revision 1 adopted the per-world form instead (Response to F2). Under a per-pair rule only P3 changes:
+Famine visits would also last 3 M, boundaries `[11M, 14M, 17M, 20M, 23M]`, 12 M episodes after the branch
+(≈ 24 h / 29 h). The files follow the pre-registered per-world rule; switching is a one-line edit
+(decision D1, 3.7.6).
+
+#### 3.7.3 The branch point B0
+
+By 3.4, `B0 = 10,000,000 + L_Forage` = **11,000,000**, not the 14,000,000 at which the Forage pilots end
+(14 M was the pilot's length, chosen so the pilot would certainly pass any `B0` the rule could give).
+The branch checkpoints already exist (checkpoints are every 100,000 episodes and all are kept): the first
+at or after 11 M is **step 11,000,025** (ordinary, run 1) and **step 11,000,022** (modulated, run 2). The
+trainer's own schedule builder maps both restored counters to stage 1 (the first A-world), 6.1 C13.
+
+*Why `L_Forage` = 1 M is safe to use before the Forage runs end.* `T` is the first full 200,000-episode
+window within 5 % of the best window. The earliest window already reads 473.4 (ordinary) / 472.2
+(modulated), and every window up to 666,000 episodes is at least that. For `L_Forage` to leave the 1 M
+floor, `T` would have to exceed 666,667 episodes, which needs a best window above 473.4 / 0.95 = 498.3
+(497.0 modulated) — within 2 steps of the 500-step episode cap, against a flat 478 for the last 1.5 M
+episodes. The pre-registered wording still requires the full curve, so the value is **confirmed when runs
+1–2 end** (6.3); if it ever changed, the schedules are regenerated before any branch launches.
+
+If the user prefers to branch at 14 M instead (decision D2), every boundary in the three files moves up
+by 3 M and the Forage stage becomes 4 M long (more training in the "too easy" world; the curriculum
+lessons in the LLM wiki warn that long over-training on an easy stage costs plasticity).
+
+#### 3.7.4 Revised sequence proposal
+
+| Sequence | Stages 2–5 | Status | Schedule |
+|---|---|---|---|
+| **P3** Winter ↔ Famine (as pre-registered) | Winter, Famine, Winter, Famine | **READY** — both worlds pass for both agents; launch after 6.3 and the user's go | `configs/continual/continual_worlds/p3_winter_famine.yaml` + `p3_winter_famine_stages/` (regenerated) |
+| **P1-replacement** Danger-A ↔ Famine (replaces P1 Danger ↔ Famine) | Danger-A, Famine, Danger-A, Famine | **DRAFT — pending user approval** | `configs/continual/continual_worlds/p1_danger_scout_a_famine.yaml` + `_stages/` |
+| **P2-replacement** Fog-B ↔ Danger-A (replaces P2 Fog ↔ Danger) | Fog-B, Danger-A, Fog-B, Danger-A | **DRAFT — pending user approval** | `configs/continual/continual_worlds/p2_fog_scout_b_danger_scout_a.yaml` + `_stages/` |
+| P4 (P1 reversed, order control) | — | later; follows whatever replaces P1 | none |
+| P5 Harsh ↔ Forage | — | **cannot run as designed** (Harsh dropped); user decides later | none |
+
+The original P1 / P2 files (`p1_danger_famine*`, `p2_fog_danger*`) are left untouched; they use the
+dropped worlds and must not be launched.
+
+**Why the replacements need the user, not the rule.**
+1. **Danger-A is "one agent only".** Under 3.6, a world where exactly one agent fails is reported to the
+   user before any main run, not adopted automatically. The ordinary agent's last window is 122.6 against
+   124.9 (its best window, 130.1, cleared the line). Danger-A appears in **both** replacement sequences, so
+   if the ordinary agent struggles there, two of three sequences carry it (failure mode 7.4: the verdict
+   is then computed with and without those sequences).
+2. **Exploratory origin.** Danger-A and Fog-B come from a five-scout ladder read after seeing the
+   pre-registered worlds fail; picking the variants that passed is a selection step. The support rule of
+   section 2 stays unchanged, but a result from P1/P2-replacement is reported as resting on worlds chosen
+   after the pilots.
+3. **Thin margins.** Danger-A (modulated +4.3 steps) and Fog-B (+6.7 / +8.6) sit just above the line; a
+   switch dip of 20–30 % will take them well below it, so recovery there may be censored more often
+   (failure mode 7.3).
+
+**Alternatives for the user.** (a) **Fog-B ↔ Famine** (drops Danger from the study altogether; both worlds
+pass both agents; no file yet, one-minute generation). (b) **A Danger variant one notch easier than
+Danger-A** (e.g. Danger-A's Home-like hunting with 2–4 hunters) so that both agents pass — needs its own
+two-agent pilot (≈ 1.5 M episodes, ≈ 2–3 h) before it enters a sequence. (c) **Run P3 alone now** and
+decide P1/P2 after its first stages.
+
+**Sharing between sequences (carried into the verdict wording).** All sequences branch from the same
+Forage checkpoint per agent ("one initialisation pair", 3.4). P3 and P1-replacement share Famine;
+P1- and P2-replacement share Danger-A.
+
+#### 3.7.5 Pilot 2 (pipeline) and Pilot 3 (Nursery), Home legs
+
+- **Pilot 2 — pipeline pass** (not evidence; its dips and returns are not read). Runs 13, 15, 16 completed
+  all five stages; run 14 (2a, modulated) is in its last stage (14.44 M of 15 M, ETA ≈ 1.3 h). Every
+  `[STAGE]` switch fired at the first iteration past its boundary (drift 3–186 episodes), no traceback in
+  any log, and every completed stage holds **10 checkpoints** (51 per finished run = the restore-time
+  checkpoint + 50). **Not exercised:** the forgetting-matrix sweep on a real continual run (no sweep spec
+  or output exists) and the restore-into-a-later-stage path that the branches use (Pilot 2 started in
+  stage 0). Both are in the 6.3 checklist.
+- **Pilot 3 — pass, both agents** (seed-43 Nursery legs): survival 414.3 / 417.4 (≥ 200), bites 75.8 / 76.6,
+  eat ratio 13.4 / 17.1, hide ratio 2.96 / 3.03, time warm 0.21 / 0.21, thermal late-death share 0.04 /
+  0.03; first competent window ends at 384k / 364k; no collapse. The seed-44 Nursery legs (rows 25–26) are
+  therefore unblocked.
+- **Seed-43 Home legs** (rows 27–28, *provisional*, still training): 246.6 / 248.0 steps after 4.86 M /
+  3.28 M Home episodes (counter 6.86 M / 5.28 M of 10 M), already above the competence gate (237.3 /
+  240.7, 3.5). The gate is judged formally at the counter of 10 M (≈ 4 h / 8 h), together with its
+  "rose < 5 % over the last fifth" condition.
+
+#### 3.7.6 Open decisions for the user
+
+| # | Decision | Options | Recommendation |
+|---|---|---|---|
+| D1 | Stage length per world (pre-registered) or per pair | per world: P3 = 8 M after branch; per pair: P3 = 12 M, Famine visits 3 M | **per world** — it is what 3.3 pre-registered and what the read-out script computes; per pair costs ≈ 8–10 h more per run |
+| D2 | Branch point | 11 M (rule, 3.4) or 14 M (end of the Forage pilot) | **11 M** — the rule's value; checkpoints exist; avoids 3 M extra episodes in a world flagged too easy |
+| D3 | Launch P3 now (after 6.3) or wait for P1/P2 decisions | now / together | **now** — P3 is fully pre-registered and independent |
+| D4 | P1 replacement | Danger-A ↔ Famine (draft) / Fog-B ↔ Famine / new Danger variant + pilot / none | user's call; if speed matters, Fog-B ↔ Famine is the only option where both worlds pass both agents |
+| D5 | P2 replacement | Fog-B ↔ Danger-A (draft) / new Danger variant + pilot / drop P2 | user's call |
+| D6 | Winter finding (modulated lower, more thermal deaths) | proceed / look first (e.g. `trajectory-story` read of both agents in Winter) | proceed — both pass; reported as a finding |
+| D7 | P5 (Harsh ↔ Forage), later | drop / replace Harsh | defer |
+
 ## 4. Launch Manifest
 
 All rows: `wandb-group` = `continual_worlds`. Tag = wandb-name. Scheme:
@@ -470,6 +665,9 @@ assigned by the parent (candidate nodes 106–112, 102, 113; pack node-first).
 **Launch order:** pilots (runs 1–18, all at once) → pilot verdicts, `L_X` computed, P1–P3 schedules
 regenerated, branch-point copies made, user go → branches (19–24) and seed-44 Nursery legs (25–26) →
 Home legs (27–30) after their Nursery leg ends (27–28 only if Pilot 3 passed).
+*Revision 2:* P3 (rows 23–24) is ready after the 6.3 checklist and the user's go; P1 / P2 (rows 19–22)
+wait for the user's replacement decision (3.7.6) and carry new tags naming their replacement worlds;
+Pilot 3 passed, so rows 25–26 are unblocked.
 
 | Run | Status | Cell | Tag (= wandb-name) | wandb-group | wandb-job-type | Seed | Node | GPU | Launched at | WandB run ID | Log path |
 |-----|--------|------|--------------------|-------------|----------------|------|------|-----|-------------|--------------|----------|
@@ -491,14 +689,14 @@ Home legs (27–30) after their Nursery leg ends (27–28 only if Pilot 3 passed
 | 16 | running | Pilot 2b shakedown | `rppo_cw_pilot2b_t16quad_s42` | continual_worlds | pilot | 42 | 113 | cuda:1 | 2026-09-28T13:17:38 | `zjsdfoyq` | `logs/20260928_131738.log` |
 | 17 | running | Pilot 3 Nursery (= seed-43 leg) | `rppo_cw_nursery_t1none_s43` | continual_worlds | pilot | 43 | 102 | cuda:0 | 2026-09-28T13:17:41 | `98tm6jxe` | `logs/20260928_131741.log` |
 | 18 | running | Pilot 3 Nursery (= seed-43 leg) | `rppo_cw_nursery_t16quad_s43` | continual_worlds | pilot | 43 | 102 | cuda:1 | 2026-09-28T13:17:45 | `q3ni07j6` | `logs/20260928_131745.log` |
-| 19 | planned (after pilots) | P1 branch, ordinary | `rppo_cw_p1_t1none_s42` | continual_worlds | prod | 42 | — | — | — | — | — |
-| 20 | planned (after pilots) | P1 branch, modulated | `rppo_cw_p1_t16quad_s42` | continual_worlds | prod | 42 | — | — | — | — | — |
-| 21 | planned (after pilots) | P2 branch, ordinary | `rppo_cw_p2_t1none_s42` | continual_worlds | prod | 42 | — | — | — | — | — |
-| 22 | planned (after pilots) | P2 branch, modulated | `rppo_cw_p2_t16quad_s42` | continual_worlds | prod | 42 | — | — | — | — | — |
-| 23 | planned (after pilots) | P3 branch, ordinary | `rppo_cw_p3_t1none_s42` | continual_worlds | prod | 42 | — | — | — | — | — |
-| 24 | planned (after pilots) | P3 branch, modulated | `rppo_cw_p3_t16quad_s42` | continual_worlds | prod | 42 | — | — | — | — | — |
-| 25 | planned (after pilots) | Nursery leg | `rppo_cw_nursery_t1none_s44` | continual_worlds | prod | 44 | — | — | — | — | — |
-| 26 | planned (after pilots) | Nursery leg | `rppo_cw_nursery_t16quad_s44` | continual_worlds | prod | 44 | — | — | — | — | — |
+| 19 | pending user approval (Rev 2 draft; D4) | P1-replacement branch Danger-A ↔ Famine, ordinary | `rppo_cw_p1_danger_scout_a_famine_t1none_s42` | continual_worlds | prod | 42 | — | — | — | — | — |
+| 20 | pending user approval (Rev 2 draft; D4) | P1-replacement branch Danger-A ↔ Famine, modulated | `rppo_cw_p1_danger_scout_a_famine_t16quad_s42` | continual_worlds | prod | 42 | — | — | — | — | — |
+| 21 | pending user approval (Rev 2 draft; D5) | P2-replacement branch Fog-B ↔ Danger-A, ordinary | `rppo_cw_p2_fog_scout_b_danger_scout_a_t1none_s42` | continual_worlds | prod | 42 | — | — | — | — | — |
+| 22 | pending user approval (Rev 2 draft; D5) | P2-replacement branch Fog-B ↔ Danger-A, modulated | `rppo_cw_p2_fog_scout_b_danger_scout_a_t16quad_s42` | continual_worlds | prod | 42 | — | — | — | — | — |
+| 23 | ready (Rev 2) — launch after 6.3 checklist + user go | P3 branch Winter ↔ Famine, ordinary | `rppo_cw_p3_t1none_s42` | continual_worlds | prod | 42 | — | — | — | — | — |
+| 24 | ready (Rev 2) — launch after 6.3 checklist + user go | P3 branch Winter ↔ Famine, modulated | `rppo_cw_p3_t16quad_s42` | continual_worlds | prod | 42 | — | — | — | — | — |
+| 25 | planned — unblocked (Pilot 3 passed) | Nursery leg | `rppo_cw_nursery_t1none_s44` | continual_worlds | prod | 44 | — | — | — | — | — |
+| 26 | planned — unblocked (Pilot 3 passed) | Nursery leg | `rppo_cw_nursery_t16quad_s44` | continual_worlds | prod | 44 | — | — | — | — | — |
 | 27 | running | Home leg | `rppo_cw_home_t1none_s43` | continual_worlds | prod | 43 | 102 | cuda:0 | 2026-09-28T17:14:41 | `6gc2tok9` | `logs/20260928_171441.log` |
 | 28 | running | Home leg | `rppo_cw_home_t16quad_s43` | continual_worlds | prod | 43 | 102 | cuda:1 | 2026-09-28T18:02:28 | `cmnof24a` | `logs/20260928_180229.log` |
 | 29 | planned (after 25) | Home leg | `rppo_cw_home_t1none_s44` | continual_worlds | prod | 44 | — | — | — | — | — |
@@ -539,7 +737,8 @@ Rows 31–36 (Revision 1a) are judged by the same survivable rule and plateau ru
 `T1` = `configs/models/recurrent_ppo/nmn_input_site_grid_gaenorm/nmngaenorm_t1none.yaml`, `T16` =
 `.../nmngaenorm_t16quad_ALL.yaml` (unchanged; the pre-trained agents' own configs). `CK_O` / `CK_M` =
 the ordinary / modulated pre-trained `models/` directories (3.4). `BP_O` / `BP_M` =
-`results/JAX_RecurrentPPO/cw_branchpoint_forage_{t1none,t16quad}_s42/models` (made after Pilot 1, 3.4).
+`results/JAX_RecurrentPPO/cw_branchpoint_forage_{t1none,t16quad}_s42/models` (made after Pilot 1, 3.4;
+Rev 2: from step 11,000,025 of run 1 / step 11,000,022 of run 2, 3.7.3).
 
 | Run | Env config (single world) or stage dir + schedule | Agent | Starts from | `--episodes` |
 |-----|---|---|---|---|
@@ -552,9 +751,9 @@ the ordinary / modulated pre-trained `models/` directories (3.4). `BP_O` / `BP_M
 | 13, 14 | `CS/pilot2a_danger_famine_stages/` + `CS/pilot2a_danger_famine.yaml` (boundaries 11 M … 15 M) | T1, T16 | `CK_O`, `CK_M` | none (schedule) |
 | 15, 16 | `CS/pilot2b_fog_danger_stages/` + `CS/pilot2b_fog_danger.yaml` (boundaries 11 M … 15 M) | T1, T16 | `CK_O`, `CK_M` | none (schedule) |
 | 17, 18 | `CW/nursery_10x10.yaml` | T1, T16 | scratch | 2000000 |
-| 19, 20 | `CS/p1_danger_famine_stages/` + `CS/p1_danger_famine.yaml` (**regenerated after Pilot 1**) | T1, T16 | `BP_O`, `BP_M` | none |
-| 21, 22 | `CS/p2_fog_danger_stages/` + `CS/p2_fog_danger.yaml` (regenerated) | T1, T16 | `BP_O`, `BP_M` | none |
-| 23, 24 | `CS/p3_winter_famine_stages/` + `CS/p3_winter_famine.yaml` (regenerated) | T1, T16 | `BP_O`, `BP_M` | none |
+| 19, 20 | **Rev 2 draft, pending approval:** `CS/p1_danger_scout_a_famine_stages/` + `CS/p1_danger_scout_a_famine.yaml` (boundaries 11 M … 15 M). *The original `CS/p1_danger_famine*` uses the dropped Danger world — do not launch.* | T1, T16 | `BP_O`, `BP_M` | none |
+| 21, 22 | **Rev 2 draft, pending approval:** `CS/p2_fog_scout_b_danger_scout_a_stages/` + `CS/p2_fog_scout_b_danger_scout_a.yaml` (boundaries 11 M … 15 M). *The original `CS/p2_fog_danger*` uses the dropped worlds — do not launch.* | T1, T16 | `BP_O`, `BP_M` | none |
+| 23, 24 | `CS/p3_winter_famine_stages/` + `CS/p3_winter_famine.yaml` (**regenerated, Rev 2:** `[11M, 14M, 15M, 18M, 19M]`) | T1, T16 | `BP_O`, `BP_M` | none |
 | 25, 26 | `CW/nursery_10x10.yaml` | T1, T16 | scratch | 2000000 |
 | 27–30 | `CW/home_10x10.yaml` | as its Nursery leg | its Nursery leg's `models/` | 10000000 |
 | 31, 32 | `CW/danger_soft_15x15.yaml` (Revision 1a) | T1, T16 | `CK_O`, `CK_M` | 13000000 |
@@ -620,12 +819,21 @@ $PY train.py --config configs/environment/experiment/continual_worlds/nursery_10
   --tag rppo_cw_nursery_t1none_s43 --wandb-name rppo_cw_nursery_t1none_s43 \
   --wandb-group continual_worlds --wandb-job-type pilot
 
-# Branch (run 20 shown; after Pilot 1 analysis, schedule regeneration and the branch-point copy)
-$PY train.py --configs-dir configs/continual/continual_worlds/p1_danger_famine_stages \
-  --continual-schedule configs/continual/continual_worlds/p1_danger_famine.yaml \
+# Branch-point copy (Rev 2; once per agent, read-only copy, nothing moved or deleted; 3.4, 3.7.3)
+R=results/JAX_RecurrentPPO
+mkdir -p $R/cw_branchpoint_forage_t1none_s42/models $R/cw_branchpoint_forage_t16quad_s42/models
+cp -a $R/20260928-131647_rppo_cw_pilot1_forage_t1none_s42/models/11000025 \
+      $R/20260928-131647_rppo_cw_pilot1_forage_t1none_s42/models/config.yaml $R/cw_branchpoint_forage_t1none_s42/models/
+cp -a $R/20260928-131651_rppo_cw_pilot1_forage_t16quad_s42/models/11000022 \
+      $R/20260928-131651_rppo_cw_pilot1_forage_t16quad_s42/models/config.yaml $R/cw_branchpoint_forage_t16quad_s42/models/
+
+# Branch (run 24 shown = P3, modulated; run 23 uses the T1 agent config, BP_O and its tag.
+# Rows 19-22 use the same command with their draft schedule + stage dir and tag, ONLY after the user approves.)
+$PY train.py --configs-dir configs/continual/continual_worlds/p3_winter_famine_stages \
+  --continual-schedule configs/continual/continual_worlds/p3_winter_famine.yaml \
   --agent_config configs/models/recurrent_ppo/nmn_input_site_grid_gaenorm/nmngaenorm_t16quad_ALL.yaml \
   --load-checkpoint results/JAX_RecurrentPPO/cw_branchpoint_forage_t16quad_s42/models \
-  --seed 42 --device cuda:0 --tag rppo_cw_p1_t16quad_s42 --wandb-name rppo_cw_p1_t16quad_s42 \
+  --seed 42 --device cuda:0 --tag rppo_cw_p3_t16quad_s42 --wandb-name rppo_cw_p3_t16quad_s42 \
   --wandb-group continual_worlds --wandb-job-type prod
 
 # Home leg (run 27 shown; after run 17 has finished and passed)
@@ -736,6 +944,7 @@ axis per sequence. Pilot 1 figures show all six worlds' Home → X curves with `
 | C10 | Branch-point mechanism: one step directory copied with `config.yaml` into a fresh `models/` dir | the checkpoint manager returns that step as the latest (tested on step 9,800,027 of the ordinary pre-trained run in scratch space) |
 | C11 | Revision 1a softened worlds: each loaded through `load_env_config` → `load_env_params` next to its original and every `EnvParams` field compared | pass. **Fog-soft:** 1 of 208 fields differs, `noise_sigmas` (smell 0.3 → 0.15, sight 0.2 → 0.1). **Danger-soft:** only `animal_count_low/high` (hunters [5, 7] → [3, 5]); every other differing field is a per-slot array or index that is 2 slots shorter (12 → 10), with per-entry values identical. **Harsh-soft:** only `res_count_low/high` (food [1, 2] → [2, 4]); the rest are per-slot arrays 2 slots longer (29 → 31), per-entry values identical. No body, thermal, interoception or reward field differs. Observation width 58 on all six (real `ParallelEnv.reset`) |
 | C12 | Revision 1b scout worlds: each loaded through `load_env_config` → `load_env_params` and every `EnvParams` field (208) compared with its original | pass. **Danger-scout-A:** hunters [5, 7] → [3, 5], detection [5, 9] → [3, 5], chase stamina [100, 200] → [30, 150], lose-interest 2.0 → 1.5 (Home's resolved values: stamina [30, 150], lose-interest 1.5, detection [1, 7]); against Danger-soft only the detection / stamina / lose-interest arrays differ. **Danger-scout-B:** hunters [5, 7] → [2, 4]; per-hunter values identical. **Danger-scout-C:** hunters [5, 7] → [3, 5] and `sensor_radius` 5 → 8; against Danger-soft only `sensor_radius`. Every other Danger-scout difference is a per-slot array or index 2–3 slots shorter (12 → 10 / 9), per-entry values identical. **Fog-scout-A:** `sensor_radius` 3 → 5 and `noise_sigmas` smell 0.3 → 0.15, sight 0.2 → 0.1 (against Fog-soft: only `sensor_radius`). **Fog-scout-B:** only `perceptual_noise_enabled` True → False (disabled rather than σ 0, because the enabled path also clips every channel; Home runs with it disabled). No body, thermal, interoception or reward field differs; observation width 58 on all five (real `ParallelEnv.reset`) |
+| C13 | Revision 2 schedules (P3 regenerated; P1- / P2-replacement drafts) built by `train._build_continual_schedule` itself, plus the trainer's own stage checks (observation width, action count, sensor-modality fingerprint, copied from `train.py`) | pass on all three: 5 stages each; P3 `[11M, 14M, 15M, 18M, 19M]`, drafts `[11M … 15M]`; restored counters 11,000,025 / 11,000,022 map to stage 1 (the first A-world), 10,999,999 to stage 0; width 58, 6 actions and an identical fingerprint in every stage. **Known Bug A2 slot check:** stage 0 (Forage) has 0 hunting-predator slots, so per-predator distance logging is off for the whole run; later stages have 2 (Winter, Famine) or 5 (Danger-A, Fog-B) hunter slots, which is safe only because stage 0 has none; rabbit slots are 5 in every stage (= stage 0), which the per-rabbit accumulator requires. No noise in any Rev 2 stage (Fog-B has it disabled) |
 
 ### 6.2 Blockers and hand-offs
 
@@ -745,7 +954,8 @@ axis per sequence. Pilot 1 figures show all six worlds' Home → X curves with `
   0 and 5 rabbit slots in every stage, so per-predator distance logging is off and nothing crashes.
   Cost: no per-predator distance curves. Pilot 1 and Pilot 3 are single-world runs and unaffected.
 - **B2 — pilots not yet run.** No branch launches before Pilot 1 is analysed, `L_X` computed and the
-  P1–P3 schedule files regenerated and re-built (C8 repeated).
+  P1–P3 schedule files regenerated and re-built (C8 repeated). *Revision 2:* done for P3 (C13); P1 / P2
+  blocked on the user's replacement decision (3.7.6).
 - **Hand-off to `developer` (via `senior-developer`):** fix the two stale continual tests (C7). Until
   fixed, the continual stage-switch and resume paths have no passing regression test; the smoke runs
   and Pilot 2 are this design's substitute.
@@ -760,6 +970,30 @@ axis per sequence. Pilot 1 figures show all six worlds' Home → X curves with `
   a branch, the `[RESUME]` line naming stage 1.
 - Before the branches: repeat C8 on the regenerated schedules and C10 on the real branch-point copy;
   the smoke path S-A is re-run on the launch node if HEAD has moved since Pilot 2.
+
+**Remaining pre-launch checklist for the branches (Revision 2).** P3 launches when 1–7 are done and the
+user has said go; P1 / P2 additionally need the user's decision (3.7.6) and item 8.
+
+1. **Forage runs 1–2 end at 14 M** (ETA ≈ 8 h) → re-run the read-out and confirm `T_Forage` still gives
+   `L_Forage` = 1 M, hence `B0` = 11 M (3.7.3). If it changed, regenerate the schedules first.
+2. **Branch-point copies** of step 11,000,025 (ordinary) / 11,000,022 (modulated) with `config.yaml`
+   (command in 4.2), then C10 on the real copies (the checkpoint manager's latest step = the copied step).
+3. **`env-config-reviewer` pre-flight** on the regenerated P3 schedule and its stage folder (and, once
+   approved, the two draft schedules and the Danger-A / Fog-B world files they use).
+4. **Forgetting-matrix sweep, first real use.** Pilot 2 did not exercise it (no sweep spec or output
+   exists). Before the branches — or at the latest before their first stage ends — write the sweep spec
+   (5.3: `probe: configs/environment/experiment/continual_worlds`, `algo: rppo`, `episodes: 2000`,
+   conditions updated for Rev 2: Home, Forage, Famine, Winter, Danger-A, Fog-B instead of the dropped
+   worlds, subject to D4 / D5) and run it once on a finished Pilot 2 run (e.g. run 15) to confirm a full
+   matrix comes out.
+5. **Restore-into-a-later-stage path.** Pilot 2 started in stage 0; the branches start in stage 1 from a
+   restored counter. At launch, check the first log lines: `[RESUME]` at the copied step, the run in stage
+   1 (`02_winter` for P3) from its first iteration, and no traceback through the first checkpoint.
+6. **Live GPU state** (diary + `pgrep`, not only `nvidia-smi`) and NAS mount on each node; node 114 is not
+   used until it answers SSH (it hung during the scout launch).
+7. **Run 14** (Pilot 2a, modulated) finishes its last stage (≈ 1.3 h) with the same pass signs as runs 13,
+   15, 16 — closes the Pilot 2 pipeline verdict.
+8. (P1 / P2 only) the user's decision D4 / D5; if a new Danger variant is chosen, its two-agent pilot first.
 
 ## 7. Failure-mode catalog (decided in advance)
 
@@ -787,6 +1021,8 @@ axis per sequence. Pilot 1 figures show all six worlds' Home → X curves with `
 If accepted, route through `feature-workflow` before launch; none blocks the pilots.
 
 ## 9. Decisions (all taken 2026-09-28; user: "follow your recommendations")
+
+*Revision 2 adds open decisions D1–D7 for the user (3.7.6); none is taken yet.*
 
 1. B1: no-code workaround accepted (no per-predator distance curves).
 2. Fog: 3× blur + smell/sight noise accepted in place of vision range 1.
