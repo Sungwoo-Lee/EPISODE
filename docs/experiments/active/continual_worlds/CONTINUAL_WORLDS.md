@@ -518,9 +518,11 @@ Home legs (27–30) after their Nursery leg ends (27–28 only if Pilot 3 passed
 | 41 | abandoned — node 114 hung during compile ~19:09; if 114 recovers, kill any rppo_cw_scout_ processes there (relaunched as `_r2`, next row) | Scout Fog-B (smell 3, no noise) | `rppo_cw_scout_fog_scout_b_t1none_s42` | continual_worlds | pilot | 42 | 114 | cuda:2 | 2026-09-28T19:08:27 | `h4772olp` | `logs/20260928_190827.log` |
 | 41-r2 | running | Scout Fog-B (smell 3, no noise) — relaunch of 41 | `rppo_cw_scout_fog_scout_b_t1none_s42_r2` | continual_worlds | pilot | 42 | 110 | cuda:0 | 2026-09-28T19:28:03 | `pvzvl7bm` | `logs/20260928_192803.log` |
 | 42 | running | Scout Danger-A, modulated agent (pairs row 37) | `rppo_cw_scout_danger_scout_a_t16quad_s42` | continual_worlds | pilot | 42 | 109 | cuda:0 | 2026-09-28T20:54:17 | `35fobtmf` | `logs/20260928_205417.log` |
+| 43 | running | Scout Fog-B, modulated agent (pairs row 41-r2) | `rppo_cw_scout_fog_scout_b_t16quad_s42` | continual_worlds | pilot | 42 | 109 | cuda:1 | 2026-09-28T21:01:05 | `v9qvx2p3` | `logs/20260928_210105.log` |
 
 Row 42 (added 2026-09-28 at the user's request) is the modulated-agent twin of row 37 — Danger-A is
 the candidate replacement closest to the survivable line, and a replacement world needs both agents.
+Row 43 (added 2026-09-28 at the user's request) is the modulated-agent twin of row 41-r2 (Fog-B), whose ordinary agent passes the survivable line.
 Rows 37–41 (Revision 1b) are **exploratory scouts, not pre-registered**: ordinary agent only, read
 descriptively with the survivable rule; they do not overturn the dropped worlds' verdicts.
 
@@ -564,6 +566,7 @@ the ordinary / modulated pre-trained `models/` directories (3.4). `BP_O` / `BP_M
 | 40 | `CW/fog_scout_a_15x15.yaml` (Revision 1b) | T1 | `CK_O` | 11500000 |
 | 41 | `CW/fog_scout_b_15x15.yaml` (Revision 1b) | T1 | `CK_O` | 11500000 |
 | 42 | `CW/danger_scout_a_15x15.yaml` (Revision 1b) | T16 | `CK_M` | 11500000 |
+| 43 | `CW/fog_scout_b_15x15.yaml` (Revision 1b) | T16 | `CK_M` | 11500000 |
 
 Rows 31–36 use exactly the flags of rows 3–12 (the Pilot 1 command in 4.2 with the world file and
 tag swapped): `--load-checkpoint` the same pre-trained `CK_O` / `CK_M`, `--episodes 13000000
