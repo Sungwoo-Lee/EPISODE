@@ -4,6 +4,13 @@
 Design: docs/experiments/active/continual_worlds/CONTINUAL_WORLDS.md (Revision 1)
   3.3 plateau + stage-length rule, 3.6 pilots (survivable rule, "too easy" flag, Pilot 3 pass
   criterion), 5.1 dip / recovery / return, 4 run manifest.
+  Revision 2a (5.1, 2, 7.9, 7.11): common-reference companion. Ordinary and modulated runs are paired by
+  tag with the agent token and any relaunch suffix removed (sequence / world + seed, e.g.
+  rppo_cw_p3_s42); for each switch of a pair, R_common = min(R_ord, R_mod), dip against R_common in
+  survival steps (and as a fraction), recovery to 0.9 x R_common in episodes and env steps, and the
+  votes: H-dip counts only if own AND common favour the same agent, H-rec only if all four
+  (own / common x episodes / env steps) do; otherwise "not counted". Pilot pairs are descriptive;
+  a vote role is given only to sequence pairs launched as wandb-job-type `prod`.
 
 Run-agnostic: the run list is parsed from the design doc's section-4 manifest table (every row with a
 WandB id), and each run is classified from its OWN launch arguments (wandb-metadata.json):
@@ -50,7 +57,7 @@ import numpy as np
 ROOT = os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "..", ".."))
 
 # =============================================================================================
-# PRE-REGISTERED CONSTANTS - every value cites CONTINUAL_WORLDS.md (Revision 1). check_doc()
+# PRE-REGISTERED CONSTANTS - every value cites CONTINUAL_WORLDS.md (Revision 1; common reference Rev 2a). check_doc()
 # asserts that each one still appears verbatim in the doc text, so a doc revision fails loudly.
 # =============================================================================================
 PLATEAU_WINDOW = 200_000        # 3.3  trailing mean over (e - 200,000, e]
@@ -100,6 +107,14 @@ DOC_PATTERNS = [  # (regex that must match the design doc, what it pins)
     (r"`Episode/Bal_HideRatio_True`.*\| ≥ 2 \|", "P3 HideRatio_True"),
     (r"≥ 0\.10 \*\*and\*\* ≤ 0\.25", "P3 TimeWarm / LateDeath_Thermal"),
     (r"never below 0\.8 × that window's value", "P3_COLLAPSE_FRAC"),
+    # Revision 2a common-reference companion (5.1, 2, 7.11)
+    (r"`R_X,common` = min\(`R_X,ord`, `R_X,mod`\)", "COMMON_REF = min(R_ord, R_mod)"),
+    (r"in\s+\*\*absolute survival steps\*\* \(also shown as a fraction of `R_X,common`\)", "common dip in steps + fraction"),
+    (r"reaches \*\*0\.9 × `R_X,common`\*\*, in episodes \*\*and\*\* environment steps", "common recovery, both units"),
+    (r"favourable sign under \*\*both\*\* the own-reference and the\s+common-reference reading", "H-dip vote: 2 readings"),
+    (r"favourable under \*\*all four\*\* readings\s+\(own / common reference × episodes / environment steps\)", "H-rec vote: 4 readings"),
+    (r"\| 7\.11 \*\(Rev 2a\)\* \|", "failure mode 7.11"),
+    (r"\| 7\.3 \| A world is never recovered \(censored\) for both agents", "failure mode 7.3"),
 ]
 DEATH_CAUSES = ("Injury", "Starvation", "Thermal", "Overeating", "MaxSteps")   # Episode/Term_* (descriptive)
 AGENT_KIND = {"t1none": "ordinary", "t16quad": "modulated"}   # 3.4 / 4 tag scheme
@@ -134,7 +149,7 @@ def parse_manifest(text: str) -> list[dict]:
         logs = re.findall(r"`([^`]+)`", c[11]) or [c[11]]
         runs.append({"run": c[0], "base": int(m.group(1)), "attempt": int(m.group(2) or 1),
                      "status": c[1], "cell": c[2], "tag": c[3].strip("`"),
-                     "seed": int(c[6]), "node": c[7], "gpu": c[8], "wandb_id": wid, "log": logs[0]})
+                     "job_type": c[5], "seed": int(c[6]), "node": c[7], "gpu": c[8], "wandb_id": wid, "log": logs[0]})
     if not runs:
         raise ValueError("no manifest rows with a WandB id found in section 4")
     latest = {}
@@ -300,14 +315,22 @@ def recovery(ser: Series, R: float | None, censor: float | None):
     for e, v in ser.trailing(DIP_WINDOW):
         if v >= RECOVERY_FRAC * R:
             return {"ep": e - ser.start, "env_steps": ser.steps_to(e), "censored": False}
-    return {"ep": None, "env_steps": None, "censored": True,
+    return {"ep": None, "env_steps": None, "censored": True, "censor_at": censor,
             "note": "not recovered" + (f" by {censor:,.0f}" if censor else " yet")}
 
 
-def dip(ser: Series, ref: float | None):
-    if ref is None or ser.last - ser.start < DIP_WINDOW:
+def first_window(ser: Series):
+    """Mean survival over the first 20,000 episodes after the switch (5.1), or None if not yet reached."""
+    if ser.last - ser.start < DIP_WINDOW:
         return None
-    return 1 - ser.S(ser.start, ser.start + DIP_WINDOW) / ref
+    return ser.S(ser.start, ser.start + DIP_WINDOW)
+
+
+def dip(ser: Series, ref: float | None):
+    s0 = first_window(ser)
+    if ref is None or s0 is None:
+        return None
+    return 1 - s0 / ref
 
 
 def last_level(ser: Series, key="Episode/Steps"):
@@ -325,6 +348,7 @@ def throughput(rows: list[dict], start: float):
 
 # ------------------------------------------------------------------------------------ runs ---
 _HOME_CACHE: dict = {}
+_SERIES: dict = {}   # (run, stage or None) -> (Series of that switch, censor length or None); not written to JSON
 
 
 def home_level(load_ckpt: str, doc_home: dict) -> dict:
@@ -411,7 +435,10 @@ def analyse_world(d, rows, budget):
     d["dip_vs_home"] = dip(ser, home)
     R = d["S_trailing200k"]
     d["R_X"] = R
+    d["S_first20k"] = first_window(ser)
+    d["dip_vs_R"] = dip(ser, R)
     d["recovery_to_0.9R"] = recovery(ser, R, None if not d["finished"] else length)
+    _SERIES[(d["run"], None)] = (ser, None if not d["finished"] else length)
     if R is not None:
         surv = R >= SURVIVABLE_FRAC * home
         bites = d["bites_trailing200k"] is not None and d["bites_trailing200k"] >= SURVIVABLE_BITES
@@ -528,7 +555,9 @@ def analyse_sequence(d, rows, args, meta):
         else:
             st["R_X"], st["R_X_provisional"] = first_R.get(name), name not in first_R
         R = st["R_X"]
+        st["S_first20k"] = first_window(ser)
         st["dip"] = dip(ser, R)
+        _SERIES[(d["run"], k)] = (ser, st["length"] if done else None)
         st["dip_vs_prev_end"] = dip(ser, prev_end)
         st["recovery_to_0.9R"] = recovery(ser, R, st["length"] if done else None)
         st["plateau"] = plateau(ser)
@@ -584,6 +613,153 @@ def stage_lengths(runs: list[dict]) -> dict:
     return out
 
 
+# ------------------------------------------------------- common-reference companion (Rev 2a) ---
+def pair_key(tag: str) -> str:
+    """Sequence/world + seed, with the agent token and a relaunch suffix removed:
+    rppo_cw_p3_t16quad_s42 -> rppo_cw_p3_s42; rppo_cw_scout_fog_scout_b_t1none_s42_r2 -> ..._fog_scout_b_s42."""
+    return re.sub(r"_(t1none|t16quad)(?=_s\d+$)", "", re.sub(r"_r\d+$", "", tag))
+
+
+def _sign(diff):
+    """modulated-minus-ordinary difference; negative favours the modulator (dip, recovery)."""
+    if diff is None:
+        return "pending"
+    return "modulated" if diff < 0 else "ordinary" if diff > 0 else "tie"
+
+
+def _rec_sign(r_ord, r_mod, unit, prog_ord, prog_mod):
+    """Sign of a recovery difference in `unit` ('ep' | 'env_steps'), handling censoring. A run that has
+    not recovered yet still loses to one that recovered in less than it has trained so far."""
+    if r_ord is None or r_mod is None:
+        return "pending", None
+    vo, vm = r_ord.get(unit), r_mod.get(unit)
+    if vo is not None and vm is not None:
+        return _sign(vm - vo), vm - vo
+    if vo is None and vm is None:
+        final = r_ord.get("censor_at") is not None and r_mod.get("censor_at") is not None
+        return ("both censored" if final else "pending"), None
+    if vm is not None:          # ordinary censored
+        return ("modulated" if r_ord.get("censor_at") is not None or prog_ord[unit] >= vm else "pending"), None
+    return ("ordinary" if r_mod.get("censor_at") is not None or prog_mod[unit] >= vo else "pending"), None
+
+
+def _vote(signs: dict, ref_pairs, unit_pairs) -> dict:
+    """ref_pairs: (own, common) reading keys that must agree (7.11); unit_pairs: (episodes, env steps) keys
+    that must agree (7.9). A vote counts only when every reading has the same sign."""
+    vals = list(signs.values())
+    if "pending" in vals:
+        v, why = "pending", "a reading is not available yet"
+    elif "both censored" in vals:
+        v, why = "excluded", "7.3: never recovered by either agent"
+    elif all(x == "modulated" for x in vals):
+        v, why = "favourable", "all readings favour the modulator"
+    elif all(x == "ordinary" for x in vals):
+        v, why = "unfavourable", "all readings favour the ordinary agent"
+    else:
+        # A tie (equal values; recovery in episodes is resolved only to the 4,000-episode logging
+        # interval) is not a favourable sign, so the vote is not counted; it is named as a tie rather
+        # than as a 7.9 / 7.11 disagreement, which are checked between untied readings only.
+        why = []
+        split = lambda pairs: any(signs[a] != signs[b] and "tie" not in (signs[a], signs[b]) for a, b in pairs)
+        if split(ref_pairs):
+            why.append("7.11: own vs common reference disagree")
+        if split(unit_pairs):
+            why.append("7.9: episodes vs environment steps disagree")
+        if "tie" in vals:
+            why.append("tie: " + ", ".join(k for k, x in signs.items() if x == "tie"))
+        v, why = "not counted", "; ".join(why) or "readings disagree"
+    return {"vote": v, "reason": why}
+
+
+def _switch(ser_o, ser_m, x_o, x_m, R_o, R_m, rec_o, rec_m) -> dict:
+    """One switch of one pair. x_* = the run/stage dict carrying S_first20k and the own dip."""
+    (so, co), (sm, cm) = ser_o, ser_m
+    Rc = None if R_o is None or R_m is None else min(R_o, R_m)
+    out = {"R_ord": R_o, "R_mod": R_m, "R_common": Rc,
+           "S_first20k": {"ordinary": x_o.get("S_first20k"), "modulated": x_m.get("S_first20k")}}
+    dc = {}
+    for a, ser, x in (("ordinary", so, x_o), ("modulated", sm, x_m)):
+        s0 = x.get("S_first20k")
+        dc[a] = None if Rc is None or s0 is None else {"steps": Rc - s0, "frac": 1 - s0 / Rc}
+    out["dip_common"] = dc
+    rc = {"ordinary": recovery(so, Rc, co), "modulated": recovery(sm, Rc, cm)}
+    out["recovery_common"] = rc
+    out["recovery_own"] = {"ordinary": rec_o, "modulated": rec_m}
+    own_dip = {"ordinary": x_o.get("_own_dip"), "modulated": x_m.get("_own_dip")}
+    out["dip_own"] = own_dip
+    # --- readings: modulated - ordinary, negative favours the modulator ---
+    d_own = None if None in own_dip.values() else own_dip["modulated"] - own_dip["ordinary"]
+    d_com = None if None in dc.values() else dc["modulated"]["steps"] - dc["ordinary"]["steps"]
+    dip_r = {"own": {"diff_frac": d_own, "sign": _sign(d_own)},
+             "common": {"diff_steps": d_com, "sign": _sign(d_com)}}
+    prog = lambda ser: {"ep": ser.last - ser.start, "env_steps": float(ser.cum_steps[-1]) if len(ser.cum_steps) else 0.0}
+    po, pm = prog(so), prog(sm)
+    rec_r = {}
+    for ref, (ro, rm) in (("own", (rec_o, rec_m)), ("common", (rc["ordinary"], rc["modulated"]))):
+        for unit, lab in (("ep", "ep"), ("env_steps", "steps")):
+            sg, diff = _rec_sign(ro, rm, unit, po, pm)
+            rec_r[f"{ref}_{lab}"] = {"diff": diff, "sign": sg}
+    out["dip_readings"], out["rec_readings"] = dip_r, rec_r
+    out["H_dip"] = _vote({k: v["sign"] for k, v in dip_r.items()}, [("own", "common")], [])
+    out["H_rec"] = _vote({k: v["sign"] for k, v in rec_r.items()},
+                         [("own_ep", "common_ep"), ("own_steps", "common_steps")],
+                         [("own_ep", "own_steps"), ("common_ep", "common_steps")])
+    return out
+
+
+def common_reference(runs: list[dict]) -> list[dict]:
+    """5.1 Revision 2a: pair ordinary + modulated runs of the same sequence / world and seed, and read
+    every switch against the shared reference R_common = min(R_ord, R_mod) next to each own reference."""
+    groups = {}
+    for d in runs:
+        if d.get("kind") not in ("world", "sequence") or d["agent"] not in ("ordinary", "modulated"):
+            continue
+        g = groups.setdefault((d["kind"], pair_key(d["tag"])), {})
+        if d["agent"] in g:
+            raise ValueError(f"pair {pair_key(d['tag'])}: two {d['agent']} runs ({g[d['agent']]['run']}, {d['run']})")
+        g[d["agent"]] = d
+    out = []
+    for (kind, key), g in sorted(groups.items()):
+        if set(g) != {"ordinary", "modulated"}:
+            continue      # single-agent scout: no pair, nothing to compare
+        o, m = g["ordinary"], g["modulated"]
+        role = ("vote" if kind == "sequence" and o["job_type"] == m["job_type"] == "prod"
+                else "descriptive (pilot; not a vote)")
+        pr = {"pair": key, "kind": kind, "role": role, "runs": {"ordinary": o["run"], "modulated": m["run"]},
+              "switches": []}
+        if kind == "world":
+            if (o["run"], None) not in _SERIES or (m["run"], None) not in _SERIES:
+                continue
+            o["_own_dip"], m["_own_dip"] = o.get("dip_vs_R"), m.get("dip_vs_R")
+            sw = _switch(_SERIES[(o["run"], None)], _SERIES[(m["run"], None)], o, m, o["R_X"], m["R_X"],
+                         o["recovery_to_0.9R"], m["recovery_to_0.9R"])
+            sw.update({"switch": "loaded -> " + re.sub(r"^rppo_cw_|_s\d+$", "", key), "stage": None, "visit": 1,
+                       "loaded_from": {"ordinary": (o.get("home") or {}).get("tag"),
+                                       "modulated": (m.get("home") or {}).get("tag")},
+                       "provisional": not (o["finished"] and m["finished"])})
+            o.pop("_own_dip"), m.pop("_own_dip")
+            pr["switches"].append(sw)
+        else:
+            so, sm = o["stages"], m["stages"]
+            if [(s["world"], s["to"]) for s in so] != [(s["world"], s["to"]) for s in sm]:
+                raise ValueError(f"pair {key}: the two runs have different schedules")
+            for a, b in zip(so, sm):
+                k = a["stage"]
+                if (o["run"], k) not in _SERIES or (m["run"], k) not in _SERIES:
+                    continue
+                a["_own_dip"], b["_own_dip"] = a.get("dip"), b.get("dip")
+                sw = _switch(_SERIES[(o["run"], k)], _SERIES[(m["run"], k)], a, b, a["R_X"], b["R_X"],
+                             a["recovery_to_0.9R"], b["recovery_to_0.9R"])
+                a.pop("_own_dip"), b.pop("_own_dip")
+                prev = so[k - 1]["world"] if k > 0 else "start"
+                sw.update({"switch": f"{prev} -> {a['world']}", "stage": k, "visit": a["visit"],
+                           "provisional": bool(a["R_X_provisional"] or b["R_X_provisional"]
+                                               or a["status"] != "complete" or b["status"] != "complete")})
+                pr["switches"].append(sw)
+        out.append(pr)
+    return out
+
+
 # ------------------------------------------------------------------------------------ render --
 def f(x, n=1, pct=False):
     if x is None:
@@ -595,7 +771,41 @@ def k_(x):
     return "-" if x is None else f"{x / 1e3:,.0f}k"
 
 
-def render(runs, L, homes) -> str:
+def render_common(pairs) -> str:
+    out = ["COMMON-REFERENCE COMPANION (5.1 Rev 2a) - per switch: own reference R_X of each agent vs shared "
+           "R_common = min(R_ord, R_mod)",
+           "  S20k = mean survival over the first 20k episodes after the switch; dip own = 1 - S20k/R_own; dip common ="
+           " R_common - S20k (steps)",
+           "  recovery = episodes (k) / env steps (M) until the 20k running mean reaches 0.9 x reference; "
+           "votes: H-dip needs own+common agreement, H-rec all four (7.9 / 7.11)"]
+    if not pairs:
+        out.append("  (no ordinary + modulated pairs in this selection)")
+    for pr in pairs:
+        out.append(f"  pair {pr['pair']} ({pr['kind']}; runs ord {pr['runs']['ordinary']} / mod {pr['runs']['modulated']}; {pr['role']})")
+        for sw in pr["switches"]:
+            def rec(r):
+                if not r:
+                    return "-"
+                if r.get("censored"):
+                    return "cens." + ("" if r.get("censor_at") else "(open)")
+                return f"{k_(r['ep'])}/{r['env_steps'] / 1e6:.1f}M"
+            S, dc, do = sw["S_first20k"], sw["dip_common"], sw["dip_own"]
+            out.append(f"    {sw['switch']:<24} v{sw['visit']}{' (provisional)' if sw['provisional'] else ''}  "
+                       f"R ord {f(sw['R_ord'])} mod {f(sw['R_mod'])} common {f(sw['R_common'])}  S20k ord {f(S['ordinary'])} mod {f(S['modulated'])}")
+            out.append(f"      dip own    ord {f(do['ordinary'], pct=True)} mod {f(do['modulated'], pct=True)}   "
+                       f"dip common ord {f((dc['ordinary'] or {}).get('steps'))} ({f((dc['ordinary'] or {}).get('frac'), pct=True)}) "
+                       f"mod {f((dc['modulated'] or {}).get('steps'))} ({f((dc['modulated'] or {}).get('frac'), pct=True)})")
+            ro, rc = sw["recovery_own"], sw["recovery_common"]
+            out.append(f"      recovery own ord {rec(ro['ordinary'])} mod {rec(ro['modulated'])}   "
+                       f"common (to {f(sw['R_common'] and RECOVERY_FRAC * sw['R_common'])}) ord {rec(rc['ordinary'])} mod {rec(rc['modulated'])}")
+            ds = " ".join(f"{k}={v['sign']}" for k, v in sw["dip_readings"].items())
+            rs = " ".join(f"{k}={v['sign']}" for k, v in sw["rec_readings"].items())
+            out.append(f"      H-dip: {sw['H_dip']['vote'].upper()} ({sw['H_dip']['reason']}) [{ds}]")
+            out.append(f"      H-rec: {sw['H_rec']['vote'].upper()} ({sw['H_rec']['reason']}) [{rs}]")
+    return "\n".join(out)
+
+
+def render(runs, L, homes, pairs) -> str:
     out = ["HOME REFERENCE (pre-trained runs; level = last 10 % of training, as factorial 7.2 / design 3.4)"]
     for h in homes.values():
         out.append(f"  {h['tag']:<34} wandb {os.path.basename(h['wandb_dir'])[-8:]}  level {h['level_last10pct']:.2f}"
@@ -682,6 +892,8 @@ def render(runs, L, homes) -> str:
         out.append(f"    PILOT 3 VERDICT: {'PASS' if pp['pass'] else 'FAIL'}{' (provisional)' if pp['provisional'] else ''}")
     if not any(d.get("kind") == "scratch" for d in runs):
         out.append("  (no from-scratch runs in this selection)")
+    out.append("")
+    out.append(render_common(pairs))
     other = [d for d in runs if d.get("kind") not in ("world", "sequence", "scratch")]
     for d in other:
         out.append(f"  run {d['run']} {d['tag']}: {d.get('kind')}")
@@ -707,9 +919,11 @@ def main():
             raise ValueError(f"--runs not in the manifest (or superseded by a relaunch): {sorted(want - found)}")
     runs = [read_run(m, doc_home) for m in man]
     L = stage_lengths(runs)
-    print(render(runs, L, _HOME_CACHE))
+    pairs = common_reference(runs)
+    print(render(runs, L, _HOME_CACHE, pairs))
     os.makedirs(os.path.dirname(_abs(a.json_out)), exist_ok=True)
-    json.dump({"design_doc": a.design_doc, "home": _HOME_CACHE, "runs": runs, "stage_lengths": L},
+    json.dump({"design_doc": a.design_doc, "home": _HOME_CACHE, "runs": runs, "stage_lengths": L,
+               "common_reference": pairs},
               open(_abs(a.json_out), "w"), indent=1, default=float)
     print(f"\nwrote {a.json_out}")
 
