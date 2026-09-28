@@ -479,3 +479,73 @@ If accepted, route through `feature-workflow` before launch; neither blocks the 
 ## 11. Conclusions
 
 *(blank until the runs finish)*
+
+## Feedback from plan-reviewer
+
+**Verdict: SOUND WITH CONCERNS** (2026-09-28, reviewed against commit `95b34d01`, before any launch).
+The A-B-A-B design is measurable in survival steps only, its refutation rule is written down in
+advance, its configs resolve through the trainer's own loader, and the stage-switch path was
+exercised end to end by real smoke runs. What is not ready is the **pilot phase as committed**:
+the manifest names six ordinary-only 1 M-episode pilots (§3.6, §4 rows 1–6), while the pilots
+the user asked to launch now are (Pilot 1) a single switch from the Home agent into each of the
+six new worlds for **both** agents, up to 3–4 M episodes, to measure the dip, the time to level off
+and survival; (Pilot 2) short 1 M-per-stage A-B-A-B runs of P1 and P2 for both agents; and
+(Pilot 3) Nursery from scratch for both agents. None of those is in the doc, no schedule file
+exists for Pilot 2, and the rule that turns "time to level off" into a stage length is not yet
+written down. That is doc-and-config work (an hour, `experiment-designer`), not a flaw in the
+science, but launching from the manifest as it stands would launch the wrong pilots. No Critical
+finding: no `docs/reviews/` file is written.
+
+Severity legend: 🔴 Critical = fix before going further · 🟡 Moderate = likely costs a re-run ·
+🟢 Low = cosmetic · ❓ Open = an assumption nobody has verified yet.
+
+### Findings
+
+| # | Sev | Location | Issue | Suggested fix | Owner |
+|---|---|---|---|---|---|
+| F1 | 🟡 | §3.6, §4 rows 1–6, §4.1 | The committed pilots (ordinary only, 1 M, `--episodes 11000000`) are not the pilots requested. Pilot 1 needs 12 rows (both agents; `--episodes 13000000`–`14000000` on the restored counter), Pilot 2 needs two new schedule files with boundaries `[11M, 12M, 13M, 14M, 15M]` and their stage folders (4 rows), Pilot 3 is manifest rows 13 and 15 as written (Nursery legs, seed 43) — say so, or use a dedicated seed so the pilot is not also a production leg. | Rewrite §3.6 and the manifest to the three-pilot set before `training-runner` is spawned; add the Pilot 2 schedules under `configs/continual/continual_worlds/`. | experiment-designer |
+| F2 | 🟡 | §3.3, §3.6 (stage-length rule) | "Stage length = 1.5 × time to plateau" has no pre-registered definition of *plateau*, no rule for combining the two worlds of a pair (and the two agents), no fallback if a pilot has not levelled off by 3–4 M, and no feasibility cap. A 3 M plateau gives 4.5 M stages and 22.5 M-episode main runs — 4–5 GPU-days each at 15 × 15 speed (§3.3's own 2-day ceiling would be breached). Also: the pilots switch **Home → X**; the main runs switch Forage → A and A ↔ B, so the pilot's dip is not the main run's dip — only the plateau time and the survivability verdict transfer. | Pre-register: plateau = first episode at which the 20 000-episode running mean stays within 5 % of the pilot's last-200 000 mean for the rest of the pilot; stage length = 1.5 × the **largest** plateau over both worlds and both agents of the pair, rounded up to 100 000 and **capped at 3 M** (3 × 5 = 15 M episodes on top of 10 M); if a world has not levelled off by the pilot's end, that is a survivability fail (§3.6 softening step), not a longer stage. Schedules are regenerated from that number, so §4.1's `[12M…20M]` are provisional and must be marked so. | experiment-designer |
+| F3 | 🟡 | §5.1 Recovery, §2 H-rec | Stages and recovery are counted in **episodes**, but the trainer updates per iteration of fixed environment steps (`num_envs × num_steps`), so an agent that survives longer gets **more gradient updates per 20 000 episodes**. Recovery-in-episodes therefore favours whichever agent already survives longer — the same agent H-dip favours — a systematic bias, not noise. It also makes a 2 M-episode stage in a 120-step world half the training of one in a 250-step world. | Report every recovery time in both units: episodes and cumulative environment steps (reconstructible per row as Σ `Episode/Steps_mean × window episodes`; `global_step` is not on the episode rows). Make the H-rec vote require the favourable sign in **both** units. Keep episode-based boundaries (the trainer supports nothing else) but state the per-stage update count in the results. | experiment-designer (rule); experiment-analyzer (extraction) |
+| F4 | 🟡 | §5.5 Noise yardstick | Yardstick (b) is the **Home** seed SD (1.5 steps at ~250 survival) applied to Danger / Famine / Winter / Fog, where nobody has measured seed spread and where the earlier continual probe saw ±4.4 steps on a harder world. Yardstick (a) (three near-duplicate Forage segments) measures GPU non-determinism only. A 5-step Famine gap can clear "2 × the larger" and still be seed noise. | Say the yardstick is a floor, not an estimate; add the across-checkpoint spread of the 200 000-episode window means within a visit (the factorial's own device) as yardstick (c); and, if Open decision 5 is taken (branch from one Forage run), drop (a) with nothing lost. | experiment-designer |
+| F5 | 🟡 | §5.3 Forgetting matrix | 500 evaluation episodes per cell gives a 95 % CI of roughly ±9–13 survival steps (per-episode survival SD is ~100–150 in these worlds), so the matrix cannot resolve differences at the §5.5 scale, and H-forget's vote in the §2 rule has no noise criterion of its own. The sweep spec's episode count is the `episodes:` key (default 30), so it must be set explicitly. | Set `episodes: 2000` (evaluation is cheap: one model build per checkpoint) and pre-register H-forget's "beyond noise" as non-overlapping CIs. | experiment-designer |
+| F6 | 🟡 | §1 ("So far the modulator has only been tested in one world at a time"), §2 | Prior art: [[NMN_CONTINUAL_DOUBLE_RETURN_PROBE]] (2026-05) already ran a 5-stage A-B-A-B-A external-world switch (active ↔ passive predator; body unchanged) and reported the modulated agent ~107–132 steps ahead on the return stages, less forgetting confirmed, and the dip predicate found ill-posed. This design is a **replication at scale** of that positive (tiny 1 500-episode stages, MC returns, single seed then) with a stationary-body framing — say so, and let the pre-registered prediction inherit its lesson that the dip lives in recovery speed, not depth. As written the doc contradicts a result the project already has. | Rewrite the §1 sentence; add one paragraph in §2 positioning H-ret / H-forget as the replication targets and the earlier ±4.4-step noise. | experiment-designer |
+| F7 | 🟡 | §2 support rule | "2 of 3 sequences" counts sequences as independent votes; §3.4 already says they are not (same weights, same optimizer state, same key; P1 and P3 share Famine, P1 and P2 share Danger). A single lucky initialisation pairing wins 3 of 3. | Keep the rule but state that its support verdict is "one initialisation pair, three world-pairs"; the fresh-seed replication (§3.5) is the only route to "the modulator". | experiment-designer |
+| F8 | 🟢 | §4.2 | Launch commands read `python train.py`; the project runs `/home/vncuser/miniconda3/envs/grid_world_pain/bin/python`. The runner's script owns the interpreter, but the doc should not show the wrong one. | Replace the interpreter. | experiment-designer |
+| F9 | 🟢 | §5.4 | `loss/entropy` is on the iteration stream, not the episode rows; "per stage, first / last 200 000 episodes" needs the iteration → episode mapping. | Say the entropy windows are cut by `stage/index` on the iteration stream. | experiment-analyzer |
+
+### Verified — claims I tried to break and could not
+
+- **A2 workaround holds.** `train.py:1410-1415` sizes the per-animal accumulators from stage 0; `train.py:1773` never puts `dist_per_predator` into the info dict when `num_predator_for_log == 0`, so a Forage-first run never touches the crashing line (`train.py:1825`). The behaviour-measure toolkit is off (`behavior_measures.enabled: false` in the pre-trained runs' saved config), so nothing else is sized from stage 0. Cost is exactly what §6.2 says: no per-predator distance curves. Nearest-predator distance (`dist_to_pred`), survival, food eaten and the balance counters come from the current stage's environment.
+- **Grid size is not a direct cue.** The pre-trained agents have `location_sensor: false` (saved config), so no absolute-position channel rescales with the grid; walls are only seen within vision range 2. And within every A ↔ B pair both worlds are 15 × 15 — the grid changes once (Forage → A) and never on the alternation being measured. Good property; state it in §3.2.
+- **Stage-end checkpoint claim** (§5.3): the transition check runs at the top of an iteration (`train.py:1663`) and the checkpoint scheduler at the bottom (`train.py:2601`); boundaries are multiples of 100 000, so the first checkpoint at or after a boundary is the crossing iteration's, saved before the world switches. One extra checkpoint is written at the first iteration after a restore (`last_checkpoint_save` starts at 0) — harmless, it is row 0.
+- **Restore picks the right checkpoint** — `mngr.latest_step()` (numeric), not a string sort; S-A/S-C confirm 10 000 046 / 10 000 021.
+- **Fog's noise table** lists all 12 modalities in `default.yaml`'s order; `env-config-reviewer` owns the mechanical obs ↔ noise check.
+- **Episode-vs-checkpoint arithmetic**: `--episodes` is the absolute counter (`train.py:1656`), so `--episodes 11000000` on a 10 000 046 restore is ≈ 1 M more; Nursery 2 M → Home `--episodes 10000000` lands the fresh seeds on the same counter the schedules assume.
+- Registry change-log entry present (CONFIG_CRITICAL_SETTINGS.md, 2026-09-28); no `scripts/` change; no schema change; no destructive git step anywhere in the plan.
+
+### Can the pilots answer "is it working as expected"?
+
+- **Pilot 1 (single switch, both agents, 3–4 M)** answers survivability, plateau time and the Home → X zero-shot dip, per world and per agent. It does **not** measure the main run's dips (different source world) and, with the same weights and key as the main runs, its Forage segment is a near-copy of main-run stage 1. Worth it, provided F2's plateau rule is written first — otherwise the number it produces has no consumer.
+- **Pilot 2 (1 M-per-stage A-B-A-B, both agents)** is a **pipeline shakedown**, not a science pilot: four GPU stage switches on the real checkpoints, checkpoint cadence, `stage/index` rows, the forgetting-matrix sweep on a real continual run (`eval_rollout` refuses stage-0 `config.yaml` for continual runs — the sweep's per-condition `--config` bypasses it; test that once here). By §3.3's own argument 1 M is below plateau, so its return-visit numbers must not be read as evidence. Frame it that way in the doc.
+- **Pilot 3 (Nursery from scratch, both agents)** has no pass criterion — only the Home leg has one (§3.5). Pre-register one (e.g. last-200 000 survival and bites ≥ 1, no collapse), otherwise the leg cannot fail.
+
+### Assumptions the conclusion rests on
+
+| Assumption | Status |
+|---|---|
+| The pre-trained pair is competent enough that Famine / Harsh do not reproduce context-exploration's "never learns to eat" | unverified — that is what Pilot 1 tests (good) |
+| Seed noise in the new worlds is of the Home order (1.5 steps) | unverified; F4 |
+| 15 × 15 / 20 × 20 throughput keeps a 10–15 M-episode run under ~2–3 days | unverified; Pilot 1 measures it — record it/s in the manifest |
+| `nmngaenorm_t1none.yaml` is the no-modulator baseline (not a one-site modulator) | verified via the level-05 factorial's own labelling; not re-derived here |
+| The three smoke runs (S-A … S-C) ran on the same code as the launch will | unverified — HEAD moves; re-run S-A once on the launch node before run 7 |
+| GPU non-determinism is small relative to seed noise | untested; the three Forage copies will show it, or branching removes the question |
+
+### Cost of being wrong
+
+If the pilots launch from the manifest as committed, the cost is one day of six wrong 1 M runs
+and a second pilot round. If the stage length is set without F2's rule, the cost is twelve
+10–20 M-episode main runs (2–5 GPU-days each) whose return-visit measure sits below plateau and
+cannot be re-read. If F3 is left as is, the headline "recovers faster" claim carries a built-in
+bias in the modulator's favour and would not survive a referee. Nothing here risks data loss.
+
+Reviewed by: plan-reviewer
