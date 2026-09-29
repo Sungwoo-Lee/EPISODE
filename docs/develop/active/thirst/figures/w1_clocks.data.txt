@@ -1,0 +1,2 @@
+hydration steps computed|201|201|100.0|every step 0-200 of the planned rule, exact
+cold clock (quoted)|600|600|100.0|real level-05 resets at shipped values, CONFIG_CRITICAL_SETTINGS 2026-09-19

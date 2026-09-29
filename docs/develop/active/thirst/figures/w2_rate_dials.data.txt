@@ -1,0 +1,2 @@
+drain values evaluated|341|341|100.0|a regular grid 0.3-2.0; exact arithmetic
+gain values evaluated|401|401|100.0|a regular grid 1-21 at drain 0.625; exact arithmetic
