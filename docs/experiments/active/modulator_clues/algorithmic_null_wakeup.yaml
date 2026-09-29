@@ -114,6 +114,27 @@ b2_headline_curves:
   - freeze.gain
   - freeze.offset
 
+# b2_family_bound — the numbers of the comment above, machine-readable, so that the per-run
+# caveat --summarise prints next to every wake point is built from these keys and not typed by
+# hand. Descriptive only: no key is a decision constant, and none gates or changes a reading.
+# Provenance: Monte Carlo of the registered guard (noise_k 3, final_k 3, noise window
+# max(ceil(N/3), 6), SD of consecutive differences with ddof 1), applied to curves of pure
+# independent Gaussian noise; 4,000,000 curves per length (1,000,000 for the AR(1) rows);
+# numpy default_rng seed 20260930; run 2026-09-30 by experiment-designer before --summarise.
+# The driver should assert family_size == len(b2_headline_curves) * len(runs) (17 x 19 = 323).
+b2_family_bound:
+  false_pass_rate_per_curve:          # P(guard passes on a curve with no real change), by curve length
+    "51": 0.00256                     # level-05, anchored curves (step 0 + 50 checkpoints)
+    "50": 0.00259                     # level-05, unanchored curves (grad_share.total, update_size)
+    "16": 0.0178                      # May 01_active, anchored
+    "15": 0.0177                      # May 01_active, unanchored
+  family_size: 323                    # 17 headline curves x 19 runs
+  expected_false_wake_points:
+    independent_noise: 1.6            # sum of the rates above over the 323 curves
+    ar1_phi_0_3: 4.3                  # same, with AR(1) noise, phi = 0.3
+  stated_target: 0.1                  # the rules' noise_k comment: below 0.1 across the family
+  target_met: false                   # registered 2026-09-30; noise_k not moved (revision_policy)
+
 # out_root (set 2026-09-30 at Checkpoint R.2): the same root as the other manifests of this study;
 # outputs go to <out_root>/<name>/. The Checkpoint 4.0 plateau table was written there by
 # `--out-root` before this key existed, so the location does not change.
