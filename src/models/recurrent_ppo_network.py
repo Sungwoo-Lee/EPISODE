@@ -174,13 +174,23 @@ class ObservationEncoder(nnx.Module):
         else:
             self.monolith = nnx.Linear(input_dim, hidden_size, rngs=rngs)
 
-    def __call__(self, x, unimodal_ln=None, multimodal_ln=None, flat_ln=None):
-        """Standard forward pass (no modulation). Optional LayerNorm on pre-activations."""
+    def __call__(self, x, unimodal_ln=None, multimodal_ln=None, flat_ln=None, acts=None):
+        """Standard forward pass (no modulation). Optional LayerNorm on pre-activations.
+
+        `acts`: optional plain dict. When given, named intermediates are written into it
+        (analysis only, see ActorCriticRNN.forward_with_activations). When None, the traced
+        program is exactly the one without the argument: every capture is a Python-level
+        `if`, so no op is added.
+        """
         if self.mode != 'hierarchical':
             x_proj = self.monolith(x)
             if flat_ln is not None:
                 x_proj = flat_ln(x_proj)
-            return jax.nn.relu(x_proj)
+            out = jax.nn.relu(x_proj)
+            if acts is not None:
+                acts["enc.raw"] = x_proj
+                acts["enc.out"] = out
+            return out
         
         batch_shape = x.shape[:-1]
         x_padded = jnp.zeros(batch_shape + (len(self.names), self.max_in), dtype=x.dtype)
@@ -193,19 +203,32 @@ class ObservationEncoder(nnx.Module):
         encoded_all = self.unimodal_grouped(x_padded)
         if unimodal_ln is not None:
             encoded_all = jax.vmap(unimodal_ln, in_axes=-2, out_axes=-2)(encoded_all)
+        if acts is not None:
+            acts["enc.uni.raw"] = encoded_all
         encoded_all = jax.nn.relu(encoded_all)
+        if acts is not None:
+            acts["enc.uni.out"] = encoded_all
 
         # Phase 2: Multimodal Hub
         mm_in = encoded_all.reshape(batch_shape + (-1,))
         mm_latent = self.multimodal_hub(mm_in)
         if multimodal_ln is not None:
             mm_latent = multimodal_ln(mm_latent)
-        return jax.nn.relu(mm_latent)
+        out = jax.nn.relu(mm_latent)
+        if acts is not None:
+            acts["enc.raw"] = mm_latent
+            acts["enc.out"] = out
+        return out
 
     def forward_with_modulation(self, x, mod_output, modulation_type: str,
                                 unimodal_ln=None, multimodal_ln=None,
-                                flat_ln=None):
-        """Hierarchical forward pass with multi-stage modulation (Injection A)."""
+                                flat_ln=None, acts=None):
+        """Hierarchical forward pass with multi-stage modulation (Injection A).
+
+        `acts`: optional plain dict for named intermediates (see `__call__`). `*.mod` is the
+        tensor after modulation and before the activation; for "Multiplicative" (a gate
+        applied after the ReLU) `*.mod` is the gated output and equals `*.out`.
+        """
         # --- Flat mode ---
         if self.mode != 'hierarchical':
             x_proj = self.monolith(x)
@@ -214,11 +237,18 @@ class ObservationEncoder(nnx.Module):
             if modulation_type == "PreActivation":
                 gamma = jax.nn.sigmoid(mod_output.z_unimodal)
                 beta = mod_output.z_unimodal_add
-                return jax.nn.relu(x_proj * gamma + beta)
+                x_mod = x_proj * gamma + beta
+                out = jax.nn.relu(x_mod)
             elif modulation_type == "FiLM":
-                return jax.nn.relu(mod_output.z_unimodal * x_proj + mod_output.z_unimodal_add)
+                x_mod = mod_output.z_unimodal * x_proj + mod_output.z_unimodal_add
+                out = jax.nn.relu(x_mod)
             else:  # Multiplicative
-                return jax.nn.relu(x_proj) * jax.nn.sigmoid(mod_output.z_unimodal)
+                x_mod = out = jax.nn.relu(x_proj) * jax.nn.sigmoid(mod_output.z_unimodal)
+            if acts is not None:
+                acts["enc.raw"] = x_proj
+                acts["enc.mod"] = x_mod
+                acts["enc.out"] = out
+            return out
 
         # --- Hierarchical mode ---
         batch_shape = x.shape[:-1]
@@ -232,18 +262,25 @@ class ObservationEncoder(nnx.Module):
         encoded_all = self.unimodal_grouped(x_padded)
         if unimodal_ln is not None:
             encoded_all = jax.vmap(unimodal_ln, in_axes=-2, out_axes=-2)(encoded_all)
+        if acts is not None:
+            acts["enc.uni.raw"] = encoded_all
 
         if modulation_type == "PreActivation":
             gamma1 = jax.nn.sigmoid(mod_output.z_unimodal)
             beta1 = mod_output.z_unimodal_add
-            encoded_all = jax.nn.relu(encoded_all * gamma1[..., None, :] + beta1[..., None, :])
+            uni_mod = encoded_all * gamma1[..., None, :] + beta1[..., None, :]
+            encoded_all = jax.nn.relu(uni_mod)
         elif modulation_type == "FiLM":
             gamma1 = mod_output.z_unimodal
             beta1 = mod_output.z_unimodal_add
-            encoded_all = jax.nn.relu(gamma1[..., None, :] * encoded_all + beta1[..., None, :])
+            uni_mod = gamma1[..., None, :] * encoded_all + beta1[..., None, :]
+            encoded_all = jax.nn.relu(uni_mod)
         else:  # Multiplicative
             gamma1 = jax.nn.sigmoid(mod_output.z_unimodal)
-            encoded_all = jax.nn.relu(encoded_all) * gamma1[..., None, :]
+            encoded_all = uni_mod = jax.nn.relu(encoded_all) * gamma1[..., None, :]
+        if acts is not None:
+            acts["enc.uni.mod"] = uni_mod
+            acts["enc.uni.out"] = encoded_all
 
         # Phase 2: Multimodal Hub + Modulation
         mm_in = encoded_all.reshape(batch_shape + (-1,))
@@ -254,14 +291,21 @@ class ObservationEncoder(nnx.Module):
         if modulation_type == "PreActivation":
             gamma2 = jax.nn.sigmoid(mod_output.z_multimodal)
             beta2 = mod_output.z_multimodal_add
-            return jax.nn.relu(mm_latent * gamma2 + beta2)
+            mm_mod = mm_latent * gamma2 + beta2
+            out = jax.nn.relu(mm_mod)
         elif modulation_type == "FiLM":
             gamma2 = mod_output.z_multimodal
             beta2 = mod_output.z_multimodal_add
-            return jax.nn.relu(gamma2 * mm_latent + beta2)
+            mm_mod = gamma2 * mm_latent + beta2
+            out = jax.nn.relu(mm_mod)
         else:  # Multiplicative
             gamma2 = jax.nn.sigmoid(mod_output.z_multimodal)
-            return jax.nn.relu(mm_latent) * gamma2
+            out = mm_mod = jax.nn.relu(mm_latent) * gamma2
+        if acts is not None:
+            acts["enc.raw"] = mm_latent
+            acts["enc.mod"] = mm_mod
+            acts["enc.out"] = out
+        return out
 
 
 class ActorCriticRNN(nnx.Module):
@@ -486,7 +530,35 @@ class ActorCriticRNN(nnx.Module):
         x: jnp.ndarray,
         h: Any,
     ) -> Tuple[jnp.ndarray, jnp.ndarray, Any]:
+        """Forward pass for a single step. See `_forward` for the arguments and returns."""
+        return self._forward(x, h, None)
+
+    def forward_with_activations(self, x: jnp.ndarray, h: Any):
+        """Same computation as `__call__`, plus a dict of named intermediate tensors.
+
+        Analysis only (docs/develop/active/neuromodulation/ALGORITHMIC_NULL_ANALYSIS_TOOLING.md,
+        File Changes §1). Adds no parameter, draws no RNG and writes no module state: the
+        dict is a plain Python object returned to the caller, so it is safe inside
+        `nnx.jit` + `jax.lax.scan` and never reaches a checkpoint.
+
+        Returns (logits, value, h_new, mod_info, acts). Keys (a `.mod` key exists only when
+        that site's FiLM is enabled): enc.uni.raw / enc.uni.mod / enc.uni.out (hierarchical
+        encoder only), enc.raw / enc.mod / enc.out, rnn.state (the carry), rnn.raw /
+        rnn.mod / rnn.out (the emitted output before FiLM / after FiLM / fed to the heads),
+        actor.raw / actor.mod / actor.out, critic.raw / critic.mod / critic.out, logits,
+        value.
+        """
+        acts = {}
+        logits, value, h_new, mod_info = self._forward(x, h, acts)
+        acts["logits"], acts["value"] = logits, value
+        return logits, value, h_new, mod_info, acts
+
+    def _forward(self, x, h, acts):
         """Forward pass for a single step.
+
+        `acts` is None (the training / inference path) or a plain dict that receives named
+        intermediates. Every capture is a Python-level `if acts is not None`, so with
+        `acts=None` the traced program is op-for-op the pre-capture one.
 
         Args:
             x: Observation, shape (..., input_dim).
@@ -522,36 +594,55 @@ class ActorCriticRNN(nnx.Module):
                     x, mod_output, self.modulation_type,
                     unimodal_ln=getattr(self, 'mod_unimodal_ln', None),
                     multimodal_ln=getattr(self, 'mod_multimodal_ln', None),
-                    flat_ln=getattr(self, 'mod_flat_ln', None)
+                    flat_ln=getattr(self, 'mod_flat_ln', None),
+                    acts=acts,
                 )
             else:
                 x_proj = self.obs_encoder(
                     x,
                     unimodal_ln=getattr(self, 'mod_unimodal_ln', None),
                     multimodal_ln=getattr(self, 'mod_multimodal_ln', None),
-                    flat_ln=getattr(self, 'mod_flat_ln', None)
+                    flat_ln=getattr(self, 'mod_flat_ln', None),
+                    acts=acts,
                 )
 
             # SITE: rnn — either the legacy internal gate bias (§5.1a) or FiLM on
             # the cell's emitted output.
             if self.rnn_type == "LSTM":
                 h_new, x_h = self.rnn_cell(task_h, x_proj)
+                if acts is not None:
+                    acts["rnn.raw"] = x_h
             elif self._uses_gate_bias:
                 h_new, x_h = self.rnn_cell(task_h, x_proj, gate_bias=mod_output.z_memory)
+                if acts is not None:
+                    acts["rnn.raw"] = x_h
             else:
                 h_new, x_h = self.rnn_cell(task_h, x_proj)
+                if acts is not None:
+                    acts["rnn.raw"] = x_h
                 if self.site_rnn:      # rnn_mechanism == "activation"
                     # D5: modulate the EMITTED output only. `h_new` (the carry) is
                     # deliberately left untouched — scaling the carry re-creates the
                     # double-gating pathology that §5.1 flags as Critical. No
                     # nonlinearity: x_h is already an activation.
                     x_h = mod_output.z_rnn * x_h + mod_output.z_rnn_add
+                    if acts is not None:
+                        acts["rnn.mod"] = x_h
+            if acts is not None:
+                acts["rnn.state"] = h_new
+                acts["rnn.out"] = x_h
 
             # SITE: actor — pre-activation FiLM on the single hidden layer
             a_pre = self.actor_fc1(x_h)
+            if acts is not None:
+                acts["actor.raw"] = a_pre
             if self.site_actor:
                 a_pre = mod_output.z_actor * a_pre + mod_output.z_actor_add
+                if acts is not None:
+                    acts["actor.mod"] = a_pre
             a_h = self._activate(a_pre)
+            if acts is not None:
+                acts["actor.out"] = a_h
             logits = self.actor_fc2(a_h)
 
             # INJECTION C: Bounded Temperature (§5.3) — now opt-in (A3)
@@ -560,9 +651,15 @@ class ActorCriticRNN(nnx.Module):
 
             # SITE: critic — pre-activation FiLM on the single hidden layer
             c_pre = self.critic_fc1(x_h)
+            if acts is not None:
+                acts["critic.raw"] = c_pre
             if self.site_critic:
                 c_pre = mod_output.z_critic * c_pre + mod_output.z_critic_add
+                if acts is not None:
+                    acts["critic.mod"] = c_pre
             c_h = self._activate(c_pre)
+            if acts is not None:
+                acts["critic.out"] = c_h
             value = self.critic_fc2(c_h)
 
             h_combined_new = (h_new, mod_h_new)
@@ -574,19 +671,29 @@ class ActorCriticRNN(nnx.Module):
                 x,
                 unimodal_ln=getattr(self, 'mod_unimodal_ln', None),
                 multimodal_ln=getattr(self, 'mod_multimodal_ln', None),
-                flat_ln=getattr(self, 'mod_flat_ln', None)
+                flat_ln=getattr(self, 'mod_flat_ln', None),
+                acts=acts,
             )
 
             if self.rnn_type == "LSTM":
                 h_new, x_h = self.rnn_cell(h, x_proj)
             else:
                 h_new, x_h = self.rnn_cell(h, x_proj)
+            if acts is not None:
+                acts["rnn.state"] = h_new
+                acts["rnn.raw"] = x_h
+                acts["rnn.out"] = x_h
 
-            a_h = self._activate(self.actor_fc1(x_h))
+            a_pre = self.actor_fc1(x_h)
+            a_h = self._activate(a_pre)
             logits = self.actor_fc2(a_h)
 
-            c_h = self._activate(self.critic_fc1(x_h))
+            c_pre = self.critic_fc1(x_h)
+            c_h = self._activate(c_pre)
             value = self.critic_fc2(c_h)
+            if acts is not None:
+                acts["actor.raw"], acts["actor.out"] = a_pre, a_h
+                acts["critic.raw"], acts["critic.out"] = c_pre, c_h
 
             return logits, value, h_new, None
 
