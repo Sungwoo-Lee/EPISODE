@@ -96,6 +96,7 @@ from src.utils.config import get_default_config, Config, dump_config_yaml
 from src.utils.checkpoint_restore import restore_rppo_training_state
 from src.utils.async_render import new_render_state, poll_render, drain_render
 from src.utils.provenance import write_provenance
+from src.utils.init_keys import trainer_init_keys
 
 # Orbax
 import orbax.checkpoint as ocp
@@ -1149,8 +1150,10 @@ def main():
     # 5. Training Setup
     if args.debug: print(f"[DEBUG] Phase 5: Training Setup...", flush=True)
     env = ParallelEnv(params)
-    key = jax.random.PRNGKey(seed)
-    key, model_key, env_key = jax.random.split(key, 3)
+    # One shared key recipe (src/utils/init_keys.py; tooling plan R4-6): the analysis
+    # rebuild of a run's untrained network calls the same function. Changing it changes
+    # the starting network of every later run and breaks the rebuild of every earlier one.
+    key, env_key, init_key = trainer_init_keys(seed)
 
     if args.debug: print(f"[DEBUG] Performing initial environment reset for {num_envs} envs...", flush=True)
     env_state, obs = env.reset(env_key, num_envs)
@@ -1204,7 +1207,6 @@ def main():
     # 6. Algorithm Initialization
     if args.debug: print(f"[DEBUG] Phase 6: Algorithm Initialization ({algorithm})...", flush=True)
     if algorithm == "RecurrentPPO":
-        key, init_key = jax.random.split(key)
         
         # Read parity options from config
         rnn_type = config.get_mandatory('agent.rnn_type')
@@ -1287,7 +1289,6 @@ def main():
         
 
     elif algorithm == "DQN":
-        key, init_key = jax.random.split(key)
         fc_layers = config.get_mandatory('agent.fc_layers')
         model = DQNNetwork(input_dim, action_dim, fc_layers, rngs=nnx.Rngs(init_key))
         target_model = DQNNetwork(input_dim, action_dim, fc_layers, rngs=nnx.Rngs(init_key))
@@ -1309,7 +1310,6 @@ def main():
         num_steps = args.num_steps or config.get_mandatory('agent.num_steps')
 
     elif algorithm == "DRQN":
-        key, init_key = jax.random.split(key)
         fc_layers = config.get_mandatory('agent.fc_layers')
         recurrent_layers = config.get_mandatory('agent.recurrent_layers')
         hidden_size = recurrent_layers[0] # NNX LSTM/GRU use single hidden size
@@ -1339,7 +1339,6 @@ def main():
         num_steps = args.num_steps or config.get_mandatory('agent.num_steps')
 
     elif algorithm == "PPO":
-        key, init_key = jax.random.split(key)
         
         activation = config.get_mandatory('agent.activation')
         return_mode = config.get_mandatory('agent.return_mode')

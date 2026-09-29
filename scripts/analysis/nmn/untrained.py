@@ -4,14 +4,11 @@ Plain-language purpose: two analyses need the network as it was before any train
 wake-up measures (B2) start their curves at step 0, and the similarity analysis (A1/A3) uses
 untrained networks as a floor ("how similar are two networks that learned nothing?") and to
 check that the ordinary and modulated agents of one seed begin from identical main-network
-weights. No step-0 checkpoint is saved, so the network is rebuilt along train.py's own key
-chain, which is NOT the obvious one:
-
-    key = PRNGKey(seed)                                  # train.py:1152
-    key, model_key, env_key = split(key, 3)              # train.py:1153 — model_key is never used
-    env.reset(env_key, num_envs)                         # train.py:1156
-    key, init_key = split(key)                           # train.py:1207
-    ActorCriticRNN(..., rngs=nnx.Rngs(init_key), ...)    # train.py:1241-1245
+weights. No step-0 checkpoint is saved, so the network is rebuilt from train.py's own key
+recipe, `src/utils/init_keys.trainer_init_keys(seed)`, which train.py itself calls (tooling
+plan R4-6; this file must not copy the chain, and a source test checks it holds no
+`jax.random.split`). The chain is NOT the obvious one: of PRNGKey(seed) split 3 ways, the
+middle key is never used, and the network is built from `init_key`, a second split.
 
 `seed` is the run's saved top-level `seed:` (KNOWN_BUGS line 114: the nested training.seed is
 stale), cross-checked against the `--seed` launch argument in the run's local WandB metadata.
@@ -79,7 +76,6 @@ def run_seed(run_dir) -> int:
 def build(run_dir, seed: int | None = None):
     """(model, env_params) of the run at step 0. `seed=None` uses the run's own (checked)
     seed; another value builds the same architecture from another seed (reference networks)."""
-    import jax
     from flax import nnx
 
     from src.environment.config_loader import Config, load_env_params
@@ -87,6 +83,7 @@ def build(run_dir, seed: int | None = None):
     from src.environment.sensor import get_observation_breakdown
     from src.models.modulation_compat import translate_legacy_modulation_config
     from src.models.recurrent_ppo_network import ActorCriticRNN
+    from src.utils.init_keys import trainer_init_keys
 
     run_dir = Path(run_dir)
     cfg_path = str(run_dir / "models" / "config.yaml")
@@ -104,9 +101,7 @@ def build(run_dir, seed: int | None = None):
     mod = translate_legacy_modulation_config(mod, source=cfg_path)
 
     seed = run_seed(run_dir) if seed is None else int(seed)
-    key = jax.random.PRNGKey(seed)
-    key, _model_key, _env_key = jax.random.split(key, 3)     # train.py:1153
-    key, init_key = jax.random.split(key)                    # train.py:1207
+    _, _, init_key = trainer_init_keys(seed)                 # train.py's own recipe (R4-6)
     model = ActorCriticRNN(
         input_dim=input_dim, action_dim=action_dim, hidden_size=agent_cfg["hidden_size"],
         rngs=nnx.Rngs(init_key), rnn_type=agent_cfg["rnn_type"],
