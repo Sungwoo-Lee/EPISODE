@@ -938,12 +938,12 @@ This belongs in a separate plan with a speed measurement. It would make B2's per
 
 - [x] **0.1** Strict `load_agent` succeeds for all 32 level-05 runs at their store checkpoints, and for all six May-replication runs at the latest checkpoint. The list is pasted into the Implementation Report. — **Done 2026-09-30 (developer):** 32/32 level-05 runs load strictly at their store checkpoints, and all 32 store/model observation breakdowns are equal; 6/6 May runs load at their latest checkpoint (D = 52). List in the Implementation Report.
 - [x] **0.2** The May replication's five stage files: the env sections of `01/03/05_active` are identical to `config.yaml`'s; `02/04_passive` differ only in `environment.entities` (besides `agent`/`tag`/`wandb`). — **Done, with one finding:** env sections of `01/03/05_active` equal `config.yaml`; `02/04_passive` differ only in `environment.entities`. But for the s43 and s44 runs every later stage file also differs in top-level `seed` (42, not 43/44). See Implementation Report, Deviation 1.
-- [ ] **R.1** `experiment-designer`'s revised rules file (with `parameters:` and `B2`) and the wake-up manifest are committed, and all four manifests pin the rules file's current sha256. Record the file paths, commit shas and commit times. Record the `generated_utc` of the first `run_similarity` / `run_decoding` output of any manifest and of the first `run_wakeup` output, and show each is **later** than the rules commit. (Verifier checks both from `git log` and the output `manifest.json`.)
+- [ ] **R.1** `experiment-designer`'s revised rules file (with `parameters:` and `B2`) and the wake-up manifest are committed, and all four manifests pin the rules file's current sha256. Record the file paths, commit shas and commit times. Record the `generated_utc` of the first `run_similarity` / `run_decoding` output of any manifest and of the first `run_wakeup` output, and show each is **later** than the rules commit. (Verifier checks both from `git log` and the output `manifest.json`.) — **Partly done 2026-09-30 (developer, Stage 3):** first real `run_similarity` output (pilot) generated 2026-09-29T20:33:11Z = 05:33 KST, first `run_decoding` 05:44 KST; the rules commit `872b0e04` is 00:47 KST, so both are later. The `run_wakeup` half belongs to Stage 4.
 - [ ] **R.2** `experiment-designer` has read the evaluator's fixture table (`tests/analysis/test_nmn_decision_rules.py`, the "rules — logic" cases) and signed in the Implementation Report that each row is the rules' intended reading. The signature's commit time precedes the first real `run_similarity` / `run_decoding` / `run_wakeup` output. Any row the designer rejects is a rules revision (reason 1 of the rules' `revision_policy`) or a code fix, before any number exists.
 - [x] **R4.1** — **Done 2026-09-30 (developer, commit `2d54453d`):** RTX 3090 `highest` 1.376e-7 (passes), `default` 2.628e-4 (fails 1e-5). A planted failure aborts with no output directory. The smoke store's manifest records `highest` / RTX 3090 / 1.376e-7. Mode-change and card-change resumes (edited, and real 3090→4090) are refused with nothing written. The `recorded` replay agrees on 100 % (1,396,946 rows). The GPU worker needed `JAX_PLATFORMS=cuda,cpu` for continual runs (Deviation R4-a). Details in the Implementation Report. *(gates the May collection)* Collector tests of R4-1 and R4-7 pass, including the planted self-test failure and the missing-section raise. On an RTX 3090-class GPU, paste `float32_matmul_selftest("default")` (must exceed `FLOAT32_MATMUL_MAX_REL_ERR`) and `float32_matmul_selftest("highest")` (must not). A one-block smoke collection of one May run, on the card class chosen for the collection, into a throw-away `--out-root`, writes a manifest with `matmul_precision: highest`, a `compute_device_kind` and the self-test value; paste them. The commit sha of this change is recorded; every May store's `collection_git_sha` must be at or after it (checked at 6.1).
-- [ ] **R4.2** Reader tests of R4-1 pass. The pilot manifest, with its two precision keys unchanged (and the R4-2 keys added), reruns Stage 2 on an Ampere/Ada GPU and reproduces Checkpoint 2.2: 0 disagreements for both agents.
-- [ ] **R4.3** Loading a manifest with a verdict layer, `logits` or `value` marked `headline_only` raises. A unit test shows `final:prev` is replayed only on `active` and `stage_end:3:prev` only on `passive`, read from `parameters.A4.drift_pairs`. For the first May manifest, the expected bytes (printed before the first replay) and the measured bytes are pasted.
-- [ ] **R4.4** On the pilot, the chain-assertion JSON carries the per-quarter maximum; paste it. The sampled-vs-full check is per row against `tool_checks.buffer_index_rel_tol`: unplanted, it passes (value pasted); with the kept rows' slots shifted by one step, it fails at ≥ 10× the tolerance (value pasted).
+- [x] **R4.2** Reader tests of R4-1 pass. The pilot manifest, with its two precision keys unchanged (and the R4-2 keys added), reruns Stage 2 on an Ampere/Ada GPU and reproduces Checkpoint 2.2: 0 disagreements for both agents. — **Done 2026-09-30 (developer):** reader tests pass (`test_nmn_probe_set.py`, `test_nmn_run_activations_manifest.py`, `test_nmn_stage3_drivers.py`). The pilot reran on an RTX 4090 with its two precision keys unchanged: 0 disagreements for both agents (1,302,481 and 1,320,905 rows). Per-capture JSONs carry `stores_device` and `replay_device_kind`.
+- [x] **R4.3** Loading a manifest with a verdict layer, `logits` or `value` marked `headline_only` raises. A unit test shows `final:prev` is replayed only on `active` and `stage_end:3:prev` only on `passive`, read from `parameters.A4.drift_pairs`. For the first May manifest, the expected bytes (printed before the first replay) and the measured bytes are pasted. — **Done 2026-09-30 (developer):** `test_a_verdict_layer_marked_headline_only_raises` (rnn.state, logits, value), `test_capture_plan_prev_only_on_its_drift_probe_and_headline_layers_once` (78 captures from the evidence shape). First May manifest (interim): expected 14.182 GB, measured 14.182 GB.
+- [x] **R4.4** On the pilot, the chain-assertion JSON carries the per-quarter maximum; paste it. The sampled-vs-full check is per row against `tool_checks.buffer_index_rel_tol`: unplanted, it passes (value pasted); with the kept rows' slots shifted by one step, it fails at ≥ 10× the tolerance (value pasted). — **Done 2026-09-30 (developer):** pilot chain `rnn.state` per quarter 4.9e-6 / 2.4e-6 / 2.8e-6 / 2.1e-6 (ordinary) and 3.7e-6 / 3.7e-6 / 4.6e-6 / 3.1e-6 (modulated); sampled-vs-full per row max 1.18e-5 against 1e-3 (unplanted, passes); planted one-step shift ≥ 0.105 (≥ 100× the tolerance, fails as required).
 - [ ] **R4.5** `decision_rules.load is rules_pin.load`; `decision_rules.py` imports neither `hashlib` nor `yaml`; `require_clean(pinned)` raises on a dirty fixture.
 - [x] **R4.6** — **Done 2026-09-30 (developer, `18e1e5f0`, `52a671a9`):** golden keys (seeds 42–44, recorded on `a236ccf5`) identical after the edit; `test_nmn_untrained` 4/4 bitwise; 8/8 jaxpr hashes identical (trivially); Checkpoint 4.4 second half 22/22 own-seed closest, shas pasted (two May s44 launch-race mismatches, benign). Golden keys for seeds 42–44 recorded on the pre-edit commit (sha stated) and `tests/utils/test_init_keys.py` passes. `tests/analysis/test_nmn_untrained.py` still passes (bitwise against `train.main()`). Checkpoint 1.3's 8 jaxpr hashes are identical before and after. Checkpoint 4.4's second half is then run on all 22 runs of R4-6, with each run's `wandb-metadata.json` `git.commit` and `provenance.json` `training_git_sha` pasted beside it.
 - [x] **1.1** Record the golden parameter hashes on the **unmodified** commit (state its sha) *before* editing the network. — **Done:** recorded on `872b0e04` (network file unmodified) before the edit. Hashes in the Implementation Report and in the test.
@@ -952,8 +952,8 @@ This belongs in a separate plan with a speed measurement. It would make B2's per
 - [x] **2.1** Pilot probe built from the pilot manifest's `n_per_store`. Its data counts (episodes per store, **distinct `episode_seed` groups**, rows kept, predator-valid rows, truncated episodes) are printed and saved. The group count meets gate G6 (`n_groups × test_frac ≥` the held-out minimum); a deliberately small `n_per_store` (e.g. 1,000) is shown to raise. The one-pass row-index assertions pass. — **Done:** 10,000 episodes (5,000 per store), 5,000 distinct `episode_seed` groups, 1,000 expected held-out groups against the G6 minimum of 500. A deliberately small probe (20 per store) raises. One-pass row-index assertions pass. Counts in the Implementation Report.
 - [x] **2.2** Self-replay agreement = 100% for each agent of the pair on its own store (near-ties within gate G1's allowance, read from `parameters:`). Step-discontinuous alignment on sampled rows = 100%, including on action-change rows. Shift-by-one < 95% overall and < 5% on action-change rows, with both numbers recorded (≥ 95% overall = inconclusive, stop). Cross-agent agreement is recorded. — **Done:** self-replay is 100% on all decision rows for both agents (1,302,481 and 1,320,905 rows; 0 disagreements), but only when the check runs in each store's own matmul mode (Deviation 2). Step-discontinuous alignment is 100% on all sampled rows and on action-change rows. Shift-by-one agreement is 0.5105 / 0.5163 overall and 0.0 on change rows. Cross-agent agreement is recorded.
 - [x] **2.3** Chain assertions pass on both real pilot checkpoints for every row of the §4 table that applies. The max deviation per assertion is pasted. — **Done:** every applicable row passes on both real checkpoints (13 keys ordinary, 18 modulated). The largest deviation is 4.93e-6 (`rnn.state`), against G2's 1e-5.
-- [ ] **3.1** `tests/analysis/test_nmn_representation.py` and `test_nmn_decision_rules.py` pass, including the leakage, clock, bootstrap, sha-mismatch, no-literal and parameter-coverage tests.
-- [ ] **3.2** Positive and negative controls within gate G4's bounds (input-layer satiation R², shuffled-target R²; values pasted with the bounds read from `parameters:`). Same-agent CKA `isclose(1, atol=tool_checks.self_similarity_atol)`. The pilot's outputs carry `verdict_words_allowed: false` and contain no `evaluate_*` result.
+- [x] **3.1** `tests/analysis/test_nmn_representation.py` and `test_nmn_decision_rules.py` pass, including the leakage, clock, bootstrap, sha-mismatch, no-literal and parameter-coverage tests. — **Done 2026-09-30 (developer):** `test_nmn_representation.py` + `test_nmn_draw_stats.py` 34/34, `test_nmn_decision_rules.py` 139/139 (no-literal, coverage, perturbation with the five driver-consumed parameters moved off `READ_NOT_YET_USED`).
+- [x] **3.2** Positive and negative controls within gate G4's bounds (input-layer satiation R², shuffled-target R²; values pasted with the bounds read from `parameters:`). Same-agent CKA `isclose(1, atol=tool_checks.self_similarity_atol)`. The pilot's outputs carry `verdict_words_allowed: false` and contain no `evaluate_*` result. — **Done 2026-09-30 (developer, pilot):** input satiation R² 0.9920 against the G4 minimum 0.99; shuffled R² ≤ 0.0168 against the maximum 0.02; same-agent CKA deviation 0.0 against 1e-12. Outputs carry `verdict_words_allowed: false`, `evaluation: null`, and no verdict word (grep 0).
 - [x] **3.3** **Shared start on the May replication (rules `A3.precondition_shared_start`; re-review R12).** For each of seeds 42, 43 and 44: `untrained.build` on the May ordinary run and on the May modulated run of that seed gives **identical** main-network parameters (every array, bitwise), and the modulator is the only extra subtree. Six runs, three comparisons, each array count and result pasted. Weights only, CPU; it needs `untrained.py` (Stage 4) and runs before any A3 evaluation. — **Done early (requested), all three seeds:** 27 of 27 main-network arrays are bitwise identical for seeds 42, 43 and 44, and the modulator (33 arrays) is the only extra subtree. `untrained.build` equals `train.main()`'s own construction bitwise on 4 runs.
 - [ ] **3.4** Page builds with the pilot figures. The builder **refuses** a deliberately broken copy of the template (missing Axes; a 120-word howto; an inline `<svg>`; a stray file in `figures/algorithmic_null/`; a figure whose `decision_rules` hash differs from HEAD), and **ignores** a stray file in the parent `figures/`. Show the refusals.
 - [ ] **4.0** **Survival plateau before any rollout (Revision 3; the third review's open question).** `run_wakeup --measures plateau` on the wake-up manifest, CPU only, for all 19 runs (16 level-05 modulated, 3 May modulated `01_active`). Paste the per-run table: `t_plateau` (checkpoint index and episode), `m₀`, `m_final`, σ_Δ, guard margin `|m_final − m₀| / (noise_k·σ_Δ)`, NaN reason. The w0000 row must reproduce the reviewer's reading (plateau at checkpoint 13); a different value is a disagreement to resolve before going on, not a rounding. **Any NaN plateau stops Stage 4** before the timing gate: the list goes to the user and `experiment-designer`.
@@ -1492,6 +1492,155 @@ Implemented by: developer
 - changing the manifest's 51-point rate to 0.0421 changes the caveat written by a synthetic `--summarise` run (the per-point caveat and the document-level one), while the May curve keeps its 16-point rate.
 
 The existing end-to-end test now checks each written caveat against the manifest rate for that curve's length.
+
+Implemented by: developer
+
+### Stage 3 drivers, Revision-4 reader items, pilot and interim runs (2026-09-30, 04:10–07:55)
+
+**Summary.** Two new analysis programs now exist. `run_similarity` compares every pair of agents layer by layer, and `run_decoding` reads hunger, injury, predator distance and remaining survival time out of each layer, next to a clock-only baseline. Both run on the level-05 pilot and on the interim May probe. The pilot prints numbers only, under the rules' label "tool validation — the two agents share seed 42; not evidence". A grep of every pilot output finds no verdict word. Every pilot control behaves as the plan requires. On the interim probe, every gate passes except G6 for remaining survival time: 92 % of the probe's episodes reach the step cap, so too few death-ended episodes remain. Every interim verdict word carries the registered prefix "provisional — end of stage 1 of 5". Two findings need a decision; they are under Deviations.
+
+**Commits** (all pushed to `v4.0`): `c0f332b9` (drivers, reader items, tests), `4a611c6d` (R4-4), `ba2035ce` (inner-CV speed-up, interim manifest keys), `e64c84ff` (descriptive layers on their own file), `2acd8cd8` (every written verdict word prefixed; Deviation S3-h).
+
+**Files.**
+| File | Change |
+|---|---|
+| `scripts/analysis/nmn/run_similarity.py` | New. A1: linear CKA and cross-network linear predictivity for every verdict layer and pair. The bootstrap resamples `episode_seed` groups jointly across all agents and pairs. Reference rows are the raw input and each untrained network against the trained agents of its own seed. Descriptive layers (ordinary vs modulated pairs only) are written to `similarity_descriptive.*`, after the verdict output. Where verdict words are allowed, G5 exclusions come first, then `evaluate_A1` and `evaluate_A3`. |
+| `scripts/analysis/nmn/run_decoding.py` | New. A2: ridge read-outs, the per-time-step clock, the excess over it, the G4 control inputs and reference rows. Where verdict words are allowed, `evaluate_A2`. |
+| `scripts/analysis/nmn/driver_io.py` | New, **not listed in File Changes** (Deviation S3-a). Shared plumbing for both drivers: manifest keys, the rules pin and policy, reading `run_activations` output, the rules' pair sets, gates G1–G3 from the capture reports, the G4 inputs, the survival and G5 block, the A3 shared-start check, output stamps, and the verdict-word guard. |
+| `scripts/analysis/nmn/draw_stats.py` | New, **not listed** (Deviation S3-a). Bootstrap draws of CKA and R² computed from per-group sums, tested equal to `representation.*` to 1e-10. |
+| `scripts/analysis/nmn/run_activations.py` | Revision-4 reader items, listed below. |
+| `scripts/analysis/nmn/probe_set.py` | `store_meta` gains `matmul_precision` and `compute_device_kind` (`None` when absent). `load` refuses a probe built before Revision 4. |
+| `scripts/analysis/nmn/teacher_forced.py` | R4-4 per-row buffer check, per-quarter maxima and the planted shift. `SITE_OF` removed (R4-7 item 3). |
+| `scripts/analysis/nmn/representation.py` | `fit_ridge`'s inner-CV scoring computed from Gram matrices (Deviation S3-b, flagged for review). |
+| `tests/analysis/test_nmn_stage3_drivers.py`, `test_nmn_draw_stats.py`, `nmn_synthetic.py` (new); `test_nmn_decision_rules.py`, `test_nmn_probe_set.py`, `test_nmn_representation.py` (extended) | See Tests. |
+| `docs/experiments/active/modulator_clues/algorithmic_null_pilot.yaml`, `algorithmic_null_mayrep_interim.yaml` | Developer-owned keys only; every designer-owned key is byte-identical. See below. |
+| `docs/environment/SCRIPTS_DEPENDENCY_MAP.md` | Rows for the 4 new files; updated rows for `probe_set`, `teacher_forced`, `untrained`, `run_activations`, `decision_rules`, `representation`, `wandb_history`. |
+
+**Revision-4 reader items (R4-1, R4-2), done.**
+- `probe_set` copies each store's `matmul_precision` and `compute_device_kind` into `store_meta`. `run_activations` resolves `store_matmul_precision` from them.
+- `run_activations` runs `collect_trajectories.assert_float32_matmul("highest")` before reading anything. It writes the value and the replay card into `manifest.json`: 1.320e-7 on the RTX 4090, against the limit 1e-5.
+- Each capture JSON has a `stores_device` entry per store (check mode, recorded mode, store card) and `replay_device_kind` (Checkpoint R4.2).
+- R4-2:
+  - `layers[].keep` and `headline_capture` are mandatory.
+  - `check_keep` raises if a verdict layer, `logits` or `value` is not `every_capture`.
+  - `capture_plan` replays a `:prev` selector only on its `parameters.A4.drift_pairs` probe; a `:prev` selector that no drift pair names raises. `headline_only` layers are kept only at the headline capture.
+  - Every ordinary run's untrained network is captured on every probe, with the `every_capture` layers only.
+  - Expected and measured bytes are printed.
+- Also R4-4 (Deviation S3-c) and R4-7 item 3.
+
+**Parameters the drivers now consume** (moved off `READ_NOT_YET_USED`; the perturbation test now shows each one changes an output of a driver step):
+- `gates.G5.stage`: the stage whose S and bites enter G5 (`driver_io.survival_block`).
+- `common.survival.window_episodes`: the S_k window (`wandb_history.stage_level` in `survival_block`).
+- `A3.survival_stage_by_status.evidence` and `.interim`: the stage of the A3 survival difference.
+- `common.split.test_frac`: the probe split (`driver_io.make_splits`).
+
+The other three entries (`B2.f`, `B2.literal_f`, `B2.lag_coincident_max_intervals`) belong to `run_wakeup`, the Stage 4 developer's file. They were not touched here; that developer's uncommitted change to the same test addresses them.
+
+**Manifest keys added** (developer-owned):
+- Pilot: `keep` on every layer, `headline_capture: {final, w0000_pair_final}`, `comparisons: auto`, `probe_split: {seed: 20260930, bootstrap_seed: 20260931}`, `min_rows_per_column: 20` and `tool_checks.buffer_index_rel_tol: 1.0e-3`.
+- Interim: the six `stage_end:0` store paths, `rows_per_episode: 5`, `seed`, and `store_matmul_precision: [recorded ×6]`, plus the same keys as the pilot.
+- `bootstrap_seed` is a key the plan's schema lacks. The bootstrap needs a seed, and a derived one would be a typed number.
+- **Not added:** the evidence manifest's keys. They go in when its stores exist; its `headline_capture` should be `{final, active}` (R4-2).
+
+**Tests.**
+- `tests/analysis/ -k nmn -m "not integration"`: **290 passed** at `c0f332b9`.
+- After the later commits: `test_nmn_stage3_drivers.py` 18/18, `test_nmn_representation.py` + `test_nmn_draw_stats.py` 34/34, `tests/models/test_capture_activations.py` 31/31 (uses `chain_deviations`), `test_nmn_decision_rules.py` 139/139, `test_nmn_probe_set.py` + `test_nmn_run_activations_manifest.py` 15/15.
+- End-to-end on synthetic captures against the real pinned rules:
+  - **Interim:** G5 from synthetic WandB rows. A1, A2 and A3 are evaluated, and every word starts with the rules' prefix. Every output carries the rules sha256 and commit, the git sha and the status. Every fit reports its penalty and grid-edge flag.
+  - **Pilot:** every decision and gate function is monkeypatched to raise, and the drivers still complete. Outputs carry the label and "no verdict is drawn", and grep finds no verdict word.
+- R4.3: the capture plan built from the evidence manifest shape gives 78 captures, with `final:prev` only on `active` and `stage_end:3:prev` only on `passive`.
+- Controls on synthetic data: satiation decodes from the input at R² > 0.99; shuffled targets stay ≤ 0.02; CKA falls below predictivity under a per-unit gain.
+
+**Dry run on a tiny slice** (tmp only; `tmp/20260930_042912_stage3_slice/`, 150 episodes per pilot store). The harness lowered only the probe build's G6 floor to a fixture value of 5, and the slice manifest used `min_rows_per_column: 5`. The data statement of `similarity.json`:
+- `rules` {file, sha256 `4c8508af…`, commit `872b0e04`}, `git_sha`, `git_dirty`, `evidence_status: pilot`, `label` (the rules' pilot label), `verdict_statement: "no verdict is drawn"`.
+- `rows` per cell: used / available / %, distinct groups, held-out groups per repeat, refused layers.
+- `split` {n_repeats 5, test_frac 0.2, seed}; `bootstrap` {2000 per repeat, 10,000 pooled, interval [0.05, 0.95], seed, unit}.
+- `ridge` {fits 380, **fits_at_grid_edge 8**, the list with each fit's penalty and edge, grid 19 values 1e-2…1e7, inner_folds 5}; `statistics` (definitions).
+
+`decoding.json` adds rows per quantity with the reason for each exclusion, held-out rows dropped for lack of a clock value, held-out groups per repeat, and the controls with their G4 bounds. Grep: 0 verdict words.
+
+**Pilot** (`results/analysis/algorithmic_null/algorithmic_null_pilot/`; tool validation, shared seed 42, not evidence; no verdict is drawn)
+- **Capture** (node 102 GPU 1, RTX 4090, `4a611c6d`).
+  - Checkpoint R4.2 reproduced: self-replay has 0 disagreements for both agents (1,302,481 and 1,320,905 decision rows).
+  - Step alignment is 1.0 on all rows and on change rows. Shift-by-one is 0.510 / 0.516 overall and 0.0 on change rows.
+  - Chain maximum 4.93e-6. Untrained reference captured.
+  - Expected = measured = 1.796 GB.
+- **Checkpoint R4.4.**
+  - The chain check's `rnn.state` per-quarter maxima are 4.9e-6, 2.4e-6, 2.8e-6, 2.1e-6 (ordinary) and 3.7e-6, 3.7e-6, 4.6e-6, 3.1e-6 (modulated). There is no growth with t.
+  - The buffer check grows with t, as predicted: 1.8e-6, 2.0e-6, 8.1e-6, 1.18e-5 (modulated). Its maximum per-row value is 1.18e-5 against the tolerance 1e-3.
+  - The planted one-step slot shift gives ≥ 0.105 (untrained) and ≥ 0.46 (trained): over 100× the tolerance.
+- **Drivers** (`ba2035ce`, `git_dirty: false`; similarity generated 20:33:11Z = 05:33 KST, decoding 05:44 KST, both after the rules commit, 00:47 KST, and the R.2 signature, 04:08 KST; Checkpoints R.1 and R.2).
+
+  | Control (plan) | Required | Pilot | Behaves? |
+  |---|---|---|---|
+  | An agent against itself: same-agent CKA | = 1 within 1e-12 | deviation 0.0 on all 5 layers, all 3 agents | yes |
+  | Input-layer satiation decode (G4 positive) | ≥ 0.99 | 0.9920 | yes, narrowly |
+  | Shuffled targets (G4 negative) | ≤ 0.02 each | satiation 0.0017, injury −0.00004, predator 0.0019, steps remaining 0.0168 | yes; steps remaining is closest to the bound |
+  | Groups in both folds | none | none | yes |
+  | Untrained weights | informative gate not computable (one ordinary run, no UNTRAINED pair) | untrained vs trained, same seed: CKA 0.04–0.16, predictivity 0.16–0.31. The trained pair: CKA 0.59–0.85, predictivity 0.66–0.76. Untrained layers decode satiation at R² 0.08–0.12, trained 0.39–0.89 | the reference sits far below the trained pair on every layer, as a floor should |
+  | G6 held-out groups | ≥ 500 | 1,000 per repeat (A1; satiation, injury); predator 634–669; steps remaining 716–756 | yes |
+
+  Pilot A1 numbers (ordinary vs modulated, seed 42; point [5 %, 95 %]):
+
+  | Layer | CKA | Predictivity (min of both directions) |
+  |---|---|---|
+  | enc.out | 0.587 [0.580, 0.595] | 0.729 [0.717, 0.741] |
+  | rnn.state | 0.825 [0.822, 0.829] | 0.683 [0.676, 0.690] |
+  | rnn.out | 0.666 [0.660, 0.672] | 0.692 [0.686, 0.697] |
+  | actor.out | 0.666 [0.658, 0.672] | 0.663 [0.651, 0.673] |
+  | critic.out | 0.853 [0.847, 0.858] | 0.756 [0.725, 0.776] |
+
+  Internal consistency: the descriptive `rnn.raw~rnn.raw` equals `rnn.state` (GRU output = carry), and `rnn.raw~rnn.mod` equals `rnn.out`. Ridge fits: 410 in similarity, 55 at an edge. None is a verdict-layer or reference fit; all are descriptive, at the lowest penalty (least-squares end). In decoding, 11 of 400 fits are at the lowest edge.
+- The pilot `similarity.json` predates `e64c84ff`: its descriptive layers are inline rather than in `similarity_descriptive.json`. The numbers are unaffected.
+
+**Interim** (`results/analysis/algorithmic_null/algorithmic_null_mayrep_interim/`; status interim, every verdict word prefixed "provisional — end of stage 1 of 5"). The final `similarity.json` and `decoding.json` were written at `2acd8cd8` (`git_dirty: false`, generated 21:50:20Z = 06:50 KST). A first run at `e64c84ff` gave identical numbers. The rerun only fixed unprefixed internal word fields (S3-h). A grep of the evaluation finds no verdict word without the prefix, and the CSVs have none at all. `similarity_descriptive.*` (reported only) is still computing in the background at hand-off (about 2.5 h; `tmp/20260930_065020_stage3_interim_similarity_rerun.log`).
+- **Capture** (RTX 4090):
+  - 9 captures (6 agents at `stage_end:0` plus 3 untrained), all tool checks pass.
+  - Self-replay, `recorded` mode = `highest` on all 6 stores (RTX 3090): 0 hard disagreements. There are 0–2 near-tie disagreements per agent in 2.34–2.35 M rows, inside G1's allowance.
+  - Alignment 1.0 / 1.0; shift-by-one 0.39–0.50 overall and 0.0 on change rows.
+  - Chain maximum 3.2e-6; buffer maximum 3.0e-6; planted shift ≥ 0.063.
+  - **Checkpoint R4.3 bytes: expected 14.182 GB, measured 14.182 GB.**
+- **Probe:** 30,000 episodes, 5,000 groups, 148,528 kept rows. **27,541 of 30,000 episodes (92 %) are truncated**; only 1,155 groups hold a death-ended episode.
+- **Gates:** G1 ✓ G2 ✓ G3 ✓ G4 ✓ (input satiation 0.9922; shuffled ≤ 0.0006, steps remaining −0.072) G5 ✓ (all 6 enter: S_1 464.1–467.6, bites 89.5–90.2; yardstick complete) G6 ✓ bootstrap, and ✓ for every quantity **except `steps_remaining`: 210–238 held-out groups < 500 → "blocked by gate G6"**.
+- **A2 (decoding)** — study: **provisional — end of stage 1 of 5: undetermined**.
+  - satiation: undetermined. rnn.state is "undetermined at 3 seeds"; the other 4 layers match.
+  - injury_level: undetermined, one-layer difference (not counted) at enc.out. Only 1 of 3 ordinary seeds beats the clock there, while all 3 modulated seeds do.
+  - nearest_predator_manhattan: undetermined, one-layer difference (not counted) at actor.out (gap −0.045 > spread 0.044).
+  - steps_remaining: blocked by gate G6.
+- **A1 / A3:** see below.
+
+- **A1 (similarity)** at `stage_end:0` / `active_stage0end`. Gates G1–G6 ✓ for A1 (1,000 held-out groups per repeat), and G5's yardstick is complete (3 + 3 seeds). The informative gate passes on every layer and statistic. **Study verdict: provisional — end of stage 1 of 5: different**. The layers that read different are enc.out, rnn.state, rnn.out and actor.out. critic.out is undetermined at 3 seeds. The remedy is not triggered (1 undetermined layer < 3).
+
+  | Layer | Verdict (prefixed) | Predictivity: OO band [L, U] / MO_diff (6) / MO_diff-mean 90 % | CKA: OO band / MO_diff range | MM qualifier |
+  |---|---|---|---|---|
+  | enc.out | different | [0.885, 0.895] / 0.836–0.855, all below L / [0.844, 0.852] | [0.922, 0.942] / 0.859–0.891 | yes |
+  | rnn.state | different | [0.791, 0.799] / 0.759–0.774, all below L / [0.766, 0.771] | [0.917, 0.923] / 0.880–0.912 | yes |
+  | rnn.out | different | [0.791, 0.799] / 0.756–0.765 / [0.757, 0.763] | [0.917, 0.923] / 0.811–0.872 | yes |
+  | actor.out | different | [0.772, 0.786] / 0.731–0.758 / [0.743, 0.751] | [0.799, 0.840] / 0.696–0.796 | no |
+  | critic.out | undetermined at 3 seeds | [0.845, 0.878] / 0.820–0.858, 2 of 6 below L / [0.832, 0.855] | [0.885, 0.942] / 0.811–0.918 | — |
+
+  The differences are small in size: MO_diff sits about 0.02–0.05 below the OO band in predictivity. They are consistent: all 6 MO_diff pairs fall below L on 4 layers. On rnn.state and rnn.out, the **UNTRAINED band lies above the OO band** (predictivity [0.802, 0.820] vs [0.791, 0.799]). Untrained networks fed the same inputs are more alike than trained ordinary agents are. The registered informative gate tests only overlap, so these statistics count as informative.
+- **A3 (seed-yardstick pattern).** Shared start: `untrained.build` gives 27/27 identical main-network arrays for seeds 42, 43 and 44, and `modulator` is the only extra subtree (precondition holds). Survival at stage 1: modulated minus ordinary = +1.79 steps; SE_k 0.83 is floored to 3.6; inside 2 × 3.6 → survival the same. E (the same-seed excess) holds on no layer. **Study reading: provisional — end of stage 1 of 5: (c) different processing, same outcome** (4 of 5 layers; critic.out reads "none of the three patterns (undetermined at 3 seeds)").
+- Ridge fits: 1,650, of which 7 are at an edge, all at the lowest penalty and all in reference rows (untrained or input), none in a verdict pair. Same-agent CKA deviation is 0.0 on every layer.
+- **Caution for the reader of this interim verdict (not a code defect; for `experiment-designer` / `math-reviewer`).** Held-out R² is variance-weighted over output units. That makes the weighting of units change under a per-unit rescaling of the *predicted* layer, even though each unit's R² does not. §E's "unchanged by any invertible linear map" holds for the predicting side, and for the target side only when prediction is perfect. With imperfect prediction, the modulator's per-unit gains on the modulated agent's `X.mod`-derived layers could move the weighted average. rnn.state is not modulated (D5) and still reads different, so this cannot be the whole story. Whether the registered statistic should be the unweighted mean of per-unit R² is a rules question. I have not computed any alternative.
+
+**Deviations and flags.**
+- **S3-a. Two library files not in File Changes.** They are `driver_io.py` and `draw_stats.py`, split out for the same reason as `rules_pin.py`. `draw_stats` exists because the rules' 2,000-draw joint bootstrap, recomputed row by row, would take hours per cell on a May probe. It is tested equal to `representation`'s statistics, which still give every point estimate.
+- **S3-b. `representation.fit_ridge` changed (reviewed code).** Each penalty's inner-fold R² is computed as `1 − (‖R‖² − 2⟨Zv'R, c⟩ + ⟨c, Zv'Zv c⟩)/SST`, the same quantity, without forming predictions. New tests show it equals the direct scoring to 1e-9 on tall, wide, collinear, rare-unit and one-output inputs, with the same chosen penalty. One pilot fit went from 2.05 s to 0.67 s. Without it, the interim A1 was about 3 h and the evidence run about 10× that. **Please have `code-reviewer` look at it.**
+- **S3-c. R4-4 implemented (not in my brief).** The pilot capture failed on the RTX 4090 at the old G2-held sampled-vs-full check (1.18e-5 > 1e-5), exactly the length-dependent quantity R4-4 moves to a per-row tool check. It is implemented as the reviewed plan specifies: `tool_checks.buffer_index_rel_tol: 1.0e-3`, per-quarter reporting, and a planted shift reported in every capture. The chain assertions are unchanged.
+- **S3-d. The primary cell** of an evidence status is read from the rules' `evidence_status.<status>.primary_checkpoint` / `primary_probe_world`. A status without them (interim, pilot) must have exactly one cell, else the driver raises. A1, A2 and A3 verdicts are read only at that cell. Other cells' A1 statistics are computed (for A4) but not evaluated. **A4 is not built.**
+- **S3-e. G4 control.** Run on the raw input (symlog of the observation); the "shuffle across episodes" hands each episode's kept-row values to another episode, slot by slot. **Scope choices:** reference rows, descriptive layers for MO pairs only, and untrained-vs-trained references for the same seed only. Descriptive comparisons are point estimates, not bootstrapped.
+- **S3-f (finding, needs a decision). The ridge standardisation blows up on rarely active ReLU units.**
+  - A unit active on a handful of training rows has a tiny training-fold standard deviation. On held-out rows where it is active, the standardised value is huge.
+  - Seen three times: on the 150-episode slice (ordinary `critic.out`: one repeat R² −4,100; 36 dead and 38 < 1 %-active units); on the interim reference row untrained `ordinary_s42` `enc.out` → `steps_remaining` (R² −58.4; 7 % of rows); and as a widened interval on pilot `critic.out`.
+  - It hit no verdict-bearing number on the pilot or the interim. It is a property of `representation.fit_ridge`'s standardisation (the rules say A2 is "standardised on the training fold"). A remedy is a tool or rules decision for `senior-developer` / `experiment-designer`, for example a floor on the standardisation scale or excluding near-constant columns. It is not something I changed.
+- **S3-g (finding). G6 for `steps_remaining` fails at the interim** because the agents survive to the step cap on 92 % of episodes. This is registered handling ("blocked by gate G6"), not a defect. At the evidence stage, check the final-checkpoint stores' truncation share before relying on this quantity.
+- **S3-h (fixed before the final interim outputs).** The evaluator's internal unprefixed word maps (`layer_words`, `pattern_words`, `profile_words`) and the per-statistic `word` fields were first written unprefixed. The drivers now drop the maps, prefix every `word` field, and `guard_prefixed` refuses an unprefixed verdict word. The interim outputs were regenerated.
+- **CPU note.** On this shared node, NumPy/BLAS at full thread count stalled (13 min on one layer at ~1,300 % CPU). Runs use `OMP_NUM_THREADS=OPENBLAS_NUM_THREADS=8`.
+
+**GPU use.** Node 102 GPU 1 (RTX 4090, local), about 04:30–05:45, logged in the diary. The 110–112 training runs were not touched.
+
+**Known-bug pass.** `grep -i 'ridge\|standardis\|similarity\|decod\|probe' KNOWN_BUGS.md`: no row. S3-f is a new estimator hazard; name `bug-curator` to record it.
 
 Implemented by: developer
 
