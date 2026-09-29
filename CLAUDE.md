@@ -63,7 +63,7 @@ in words**, with units, repeating across figures rather than assuming the reader
 figure declares **how much data it used** — used / available / percentage per subset, with a reason,
 emitted by the figure script and never typed by hand; and every **"How it is computed"** block is
 written for a colleague who was not in the room, roughly 150–250 words, with any statistical term
-glossed where it appears.
+glossed where it appears. A **summary report** (take-home cards linking into detailed reports) follows guide §13 instead; those three live on the detailed figures it links to.
 
 **Plan review (proactive):** whenever a plan gets drafted — an implementation / bug-fix / refactor plan from `senior-developer`, or an experiment design + configs from `experiment-designer` — spawn [`plan-reviewer`](.claude/agents/plan-reviewer.md) **before the user approves it**. It runs an adversarial advance failure check: steps with no failure-detectable check, verification that exercises the same code path suspected of being broken, unstated critical assumptions, silent violations of project rules (fallback defaults, reward-based evaluation, unpaired maintenance-contract doc updates), data-loss hazards, and collisions with already-known bugs. Findings come back inline with a one-line verdict (`SOUND` / `SOUND WITH CONCERNS` / `NOT READY`); it writes `docs/reviews/plan_<topic>.md` only when it finds a 🔴 Critical finding. Distinct from `code-reviewer` (reviews code after it exists) and from `senior-developer`'s Verification Protocol (its plan-adherence check) (checks adherence after implementation) — this gate runs on the plan itself, while changing it is still free.
 

@@ -3,7 +3,7 @@ title: Artifact generation guide — what went wrong and what to do instead
 topic: meta
 status: active
 created: 2026-08-26
-last_updated: 2026-09-14
+last_updated: 2026-09-29
 ---
 
 # Artifact generation guide
@@ -191,7 +191,7 @@ adapt only the colour tokens, and check the page actually defines every token th
 
 ### 2.7 Figures come from Python scripts, never from the page (2026-09-14)
 
-**An artifact page does not draw its own figures.** No chart, plot, diagram of data or annotated
+**An artifact page does not draw its own figures.** (One stated exception: the story diagram on a summary report, §13c.) No chart, plot, diagram of data or annotated
 figure is written in the page's HTML — not as inline `<svg>`, not as CSS bars, not as a `<canvas>`
 script. Every figure is produced by a Python script that saves it to files, and the page builder
 embeds the file.
@@ -627,3 +627,114 @@ The flex-`<li>` marker loss in §12b belongs in the format register as a member 
 family (a `display` change silently altering an element's box type and taking a rendered
 feature with it). It is recorded here because the register had a parallel session's
 uncommitted work in it at the time of writing; **add it there when that file is free.**
+
+---
+
+## 13. Summary reports — the second kind of artifact page (2026-09-29)
+
+Everything above describes a **detailed report**: the full analysis, every figure with its axes,
+its data accounting and its method block. That page is right for a colleague checking the work and
+wrong for a reader who wants the answer in two minutes. A **summary report** is the companion page
+for that reader: a handful of take-home messages in plain words, each one linking to the exact figure
+in the detailed report that backs it. It says nothing the detailed reports do not already say; its job
+is to select, translate and point.
+
+### 13a. Scope — one study, many detailed reports
+
+A summary covers **one study** and may draw on **several detailed reports** (the hiding study's
+summary draws on the million-episode drivers page, the modulator comparison and the settings atlas).
+The page lists its source reports near the top as numbered references (①, ②, ③ …), each linked to
+its published URL, and every later citation uses those numbers.
+
+A summary never contains a finding that is absent from its sources. If a take-home needs a number the
+detailed report does not show, the detailed report gets the figure first.
+
+### 13b. Layout — story diagram, then claim cards
+
+Fixed order, chosen from three rendered mockups (2026-09-29):
+
+1. **Purpose** — the house `PURPOSE` block: what was asked, why, and the one-line answer, plus the
+   numbered list of source reports.
+2. **01 How the study unfolded** — a small flow diagram: the question → the experiments (one node per
+   source report) → the findings (one node per card, bordered in its verdict colour) → what is next.
+3. **02 Take-home messages** — **3 to 6 claim cards** in a responsive grid. Each card carries, in order:
+   a verdict chip (§13d); a one-sentence headline; the key number, large; two or three plain sentences
+   on what it means; a thumbnail of the backing figure; and a **Detail →** link naming the report and
+   figure (`① Fig 7 — same response, opposite consequence`).
+4. **Still open** — what the study did not settle, in plain words, linked to where it is tracked.
+5. **Words used on this page** — the glossary of §13e.
+
+More than six cards means the study has not been summarised yet; fewer than three means it needs no
+summary page.
+
+### 13c. Figures and deep links
+
+- **Thumbnails reuse the detailed report's own figure** — the same script-drawn PNG, embedded as it is
+  and opening full size with the §2.6 viewer. No new figure is drawn for a summary: a redrawn "simpler"
+  version is a second copy of the evidence that can drift from the first. The builder takes the
+  figure from the detailed report's figure script output, never from a screenshot.
+- **The link lands on the figure, not the page.** Every figure in a detailed report that a summary
+  cites carries a stable anchor, `id="fig-<stem>"`, where `<stem>` is the figure script's stem (the
+  same key as `data-fig`, §Mechanics in `publish-page`). Figure *numbers* move when a page is
+  revised; stems do not. A detailed page without anchors is retrofitted when a summary first cites
+  it — add the ids, rebuild, republish, then build the summary.
+- **Diagram exception to §2.7.** The story diagram is drawn in the page's HTML/CSS (boxes and arrows,
+  as in the mockup), because it is a map of the study, not a figure of data: it has no axes, no numbers
+  that a script computes, and nothing to regenerate from data. The exception covers **only** that
+  diagram. Any node that shows a measured value must quote it exactly as the card below it does, and
+  anything with axes is still a script figure.
+
+### 13d. Verdict labels — a fixed set of four
+
+| chip | meaning | colour token |
+|---|---|---|
+| **Supported** | the detailed report's evidence backs the claim | `--ok` |
+| **Not supported** | the test was run and the claim failed | `--danger` |
+| **Mixed** / **has a cost** | true, with a qualification the card states | `--accent` |
+| **Open** | not yet tested, or the evidence does not decide | `--warn` |
+
+Same label, same colour, on every summary page. A chip must match the verdict the detailed report
+itself gives — a summary does not upgrade "suggestive" to "Supported". The same colours border the
+matching nodes in the story diagram.
+
+### 13e. Language — plain words, glossed where unavoidable
+
+The summary is written for a reader with no context, which is the CLAUDE.md documentation-framing
+rule at its strictest:
+
+- **Banned outright** on the page: run IDs, config paths, symbolic predicate names (`H₁a`, `Δ_SS`),
+  Greek-letter parameters and code identifiers. They belong on the detailed report.
+- **Everything else is plain English.** Where a technical term cannot be avoided — *modulator*,
+  *percentage points*, *survival steps* — gloss it in one clause where it first appears on a card,
+  and list it in **Words used on this page**. The glossary holds only terms that actually appear on
+  the page.
+- The §1 vocabulary rules still apply: project terms keep their config meaning, and the explanandum
+  is never used as a description (nociception, not "pain").
+
+### 13f. What is inherited, and what is not
+
+Inherited unchanged: the House Style Sheet (§0a), §1 terminology, §2.6 full-size viewer, §7 claims
+(a card headline is an interpretive claim and must be falsifiable), the format gate
+(`artifact-format-reviewer`), and the publish/diary steps.
+
+**Not required on a summary:** the §11 caption, data-accounting and "How it is computed" blocks. They
+live on the detailed figure the card links to, which is the point of the link. A summary card that
+starts growing a method block is a sign the detailed report is missing one.
+
+### 13g. Where it lives
+
+The page's HTML and its builder sit in `docs/experiments/summaries/`, next to the markdown study
+summaries that `summarize-study` writes, under git so a later session can republish to the same URL.
+
+### 13h. Summary checklist
+
+- [ ] Source reports listed and numbered in the Purpose block, each linked
+- [ ] Story diagram present; one node per source report and per card; node values match the cards
+- [ ] 3–6 claim cards, each with chip, headline, number, plain explanation, thumbnail, Detail link
+- [ ] Every chip is one of the four labels and matches the detailed report's own verdict
+- [ ] Every thumbnail is the detailed report's figure file, not a redraw
+- [ ] Every Detail link resolves to an `id="fig-<stem>"` anchor on the published detailed page
+- [ ] No run IDs, config paths, symbols or code identifiers anywhere on the page
+- [ ] Every unavoidable term glossed on first use and listed in "Words used on this page"
+- [ ] Nothing on the page that is absent from the source reports
+- [ ] Format gate passed

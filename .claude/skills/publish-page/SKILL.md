@@ -48,6 +48,17 @@ page ships.
 If a rule in either document is wrong or has been overtaken, say so and fix the document. Do not
 work around it silently; the value of both files is that they are believed.
 
+## Step 0b — which kind of page?
+
+| kind | for | rules |
+|---|---|---|
+| **Detailed report** (default) | the full analysis: every figure with axes, data accounting and method block | the whole guide, §11 enforced at build |
+| **Summary report** | take-home messages for a reader with no context, across one study's detailed reports | guide **§13**: story diagram → 3–6 claim cards, fixed four verdict chips, plain words, thumbnails reused from the detailed figures, every claim deep-linked to `#fig-<stem>` on its detailed page |
+
+A summary is built **after** its detailed reports are published, and each cited detailed figure must
+carry its `id="fig-<stem>"` anchor first (§13c) — retrofit and republish the detailed page if not.
+Read §13 in full before building one; its checklist (§13h) replaces §11 for the summary itself.
+
 ## Step 1 — design
 
 **Load the `artifact-design` skill.** Required before writing the file, every time. It calibrates
