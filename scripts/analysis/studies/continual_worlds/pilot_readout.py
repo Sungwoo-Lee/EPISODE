@@ -416,6 +416,67 @@ def home_level(load_ckpt: str, doc_home: dict) -> dict:
     return out
 
 
+_BRANCH_CACHE: dict = {}
+
+
+def _models_dir(load_ckpt: str) -> str:
+    p = _abs(load_ckpt.rstrip("/"))
+    return p if os.path.basename(p) == "models" else os.path.join(p, "models")
+
+
+def _has_tag_run(load_ckpt: str) -> bool:
+    rdir = os.path.basename(os.path.dirname(_models_dir(load_ckpt)))
+    tag = re.sub(r"^\d{8}-\d{6}_", "", rdir)
+    try:
+        find_wandb_by_tag(tag, rdir[:8] if re.match(r"^\d{8}-", rdir) else None)
+        return True
+    except ValueError:
+        return False
+
+
+def branch_point(load_ckpt: str) -> dict:
+    """3.4 / 3.7.3 branch-point copy: a results dir that no run was launched with, holding ONE copied step
+    dir + the source run's config.yaml. The source is found from the data, not from a name: the results
+    dir whose models/<same step> exists, whose config.yaml is byte-identical, and whose step dir has the
+    same files with the same sizes. Exactly one match is required. The reference is the source run's
+    trailing 200k level ending at the copied step (= the episode counter of that checkpoint)."""
+    import filecmp
+    mdir = _models_dir(load_ckpt)
+    if mdir in _BRANCH_CACHE:
+        return _BRANCH_CACHE[mdir]
+    steps = [x for x in os.listdir(mdir) if x.isdigit() and os.path.isdir(os.path.join(mdir, x))]
+    cfg = os.path.join(mdir, "config.yaml")
+    if len(steps) != 1 or not os.path.exists(cfg):
+        raise ValueError(f"{mdir}: no wandb run has its tag and it is not a one-step branch-point copy "
+                         f"(steps {steps}, config.yaml {os.path.exists(cfg)})")
+    step = steps[0]
+    sig = lambda d: sorted((f, os.path.getsize(os.path.join(d, f))) for f in os.listdir(d))
+    mine = sig(os.path.join(mdir, step))
+    hits = []
+    for cand in glob.glob(os.path.join(ROOT, "results", "*", "*", "models", step)):
+        cm = os.path.dirname(cand)
+        if os.path.realpath(cm) == os.path.realpath(mdir) or not os.path.exists(os.path.join(cm, "config.yaml")):
+            continue
+        if filecmp.cmp(cfg, os.path.join(cm, "config.yaml"), shallow=False) and sig(cand) == mine:
+            hits.append(cm)
+    if len(hits) != 1:
+        raise ValueError(f"{mdir}: branch-point source not unique (step {step}; matches {hits})")
+    src_rdir = os.path.basename(os.path.dirname(hits[0]))
+    tag = re.sub(r"^\d{8}-\d{6}_", "", src_rdir)
+    wdir = find_wandb_by_tag(tag, src_rdir[:8] if re.match(r"^\d{8}-", src_rdir) else None)
+    rows, _ = scan(wdir)
+    ser = Series(rows, rows[0]["Episode/Number"] - rows[0]["Episode/_window_n"])
+    e = float(step)
+    if e - ser.start < LEVEL_WINDOW or ser.last < e:
+        raise ValueError(f"{mdir}: source run {tag} has no full 200k window ending at {e:,.0f}")
+    out = {"copy_dir": os.path.relpath(mdir, ROOT), "step": int(step), "source_results_dir": src_rdir,
+           "source_tag": tag, "source_wandb_dir": os.path.relpath(wdir, ROOT),
+           "reference": ser.S(e - LEVEL_WINDOW, e), "reference_window": [e - LEVEL_WINDOW, e],
+           "matched_on": "step dir name + byte-identical config.yaml + same step-dir files and sizes"}
+    _BRANCH_CACHE[mdir] = out
+    return out
+
+
 def read_run(m: dict, doc_home: dict) -> dict:
     wdir = wandb_dir(m["wandb_id"])
     args = launch_args(wdir)
@@ -436,7 +497,12 @@ def read_run(m: dict, doc_home: dict) -> dict:
               "episodes_done": rows[-1]["Episode/Number"] - start,
               "ep_per_hour": throughput(rows, start)})
     ckpt = arg(args, "--load-checkpoint")
-    d["home"] = home_level(ckpt, doc_home) if ckpt else None
+    # a loaded checkpoint is either a pre-trained run (its tag has a wandb folder: Home reference) or a
+    # branch-point copy (3.4; no run has its tag: reference = the source run's level at the copied step)
+    d["branch_point"] = branch_point(ckpt) if ckpt and not _has_tag_run(ckpt) else None
+    d["home"] = home_level(ckpt, doc_home) if ckpt and not d["branch_point"] else None
+    if d["branch_point"] and not arg(args, "--continual-schedule"):
+        raise ValueError(f"run {m['run']}: a branch-point copy loaded by a single-world run is not handled")
     if arg(args, "--continual-schedule"):
         d["kind"] = "sequence"
         analyse_sequence(d, rows, args, meta)
@@ -590,7 +656,8 @@ def analyse_sequence(d, rows, args, meta):
         raise ValueError(f"run {d['run']}: {len(names)} stage files vs {len(bounds)} boundaries")
     d["budget_counter"] = bounds[-1]
     d["eta_h"] = None if d["finished"] else _eta(d, bounds[-1])
-    home = d["home"]["level_last10pct"] if d["home"] else None
+    home = (d["home"]["level_last10pct"] if d["home"] else
+            d["branch_point"]["reference"] if d.get("branch_point") else None)   # pre-switch level, first switch
     its = {}
     for si, it in meta["iterations"]:
         its.setdefault(si, []).append(it)
@@ -822,7 +889,24 @@ def common_reference(runs: list[dict]) -> list[dict]:
                 sw.update({"switch": f"{prev} -> {a['world']}", "stage": k, "visit": a["visit"],
                            "provisional": bool(a["R_X_provisional"] or b["R_X_provisional"]
                                                or a["status"] != "complete" or b["status"] != "complete")})
+                if a["visit"] > 1:   # 5.1 return = return-visit level - R_X, per agent; positive diff favours the modulator
+                    ro, rm = (a.get("return") or {}).get("level_minus_R"), (b.get("return") or {}).get("level_minus_R")
+                    diff = None if ro is None or rm is None else rm - ro
+                    sw["return"] = {"ordinary": ro, "modulated": rm, "diff": diff,
+                                    "sign": _sign(None if diff is None else -diff)}
                 pr["switches"].append(sw)
+            # per-sequence tally of the switch votes (section 2 counts measures, not switches: how the per-switch
+            # votes combine into one sign per measure is not fixed by the doc, so only the tally is given)
+            t = {"H_dip": {}, "H_rec": {}, "return": {}}
+            for sw in pr["switches"]:
+                for m_, v in (("H_dip", sw["H_dip"]["vote"]), ("H_rec", sw["H_rec"]["vote"])):
+                    t[m_][v] = t[m_].get(v, 0) + 1
+                if "return" in sw:
+                    v = {"modulated": "favourable", "ordinary": "unfavourable"}.get(sw["return"]["sign"], sw["return"]["sign"])
+                    t["return"][v] = t["return"].get(v, 0) + 1
+            pr["tally"] = t
+            # provisional until every stage after the first is complete in both runs (a branch never runs stage 0)
+            pr["provisional"] = any(s_["status"] != "complete" for s_ in so[1:] + sm[1:])
         out.append(pr)
     return out
 
@@ -929,7 +1013,7 @@ def _stage_by_num(d, k):
 
 def mayrep_run(d: dict) -> dict:
     """5.1 / 5.5 per-run quantities for one replication run (a from-scratch 5-stage sequence)."""
-    if d.get("kind") != "sequence" or d.get("home") is not None:
+    if d.get("kind") != "sequence" or d.get("home") is not None or d.get("branch_point"):
         return {"run": d["run"], "tag": d["tag"], "note": f"not a from-scratch sequence ({d.get('kind')})"}
     worlds = [s["world"] for s in d["stages"]]
     want = [MR_ACTIVE, MR_PASSIVE, MR_ACTIVE, MR_PASSIVE, MR_ACTIVE]
@@ -1214,6 +1298,13 @@ def render_common(pairs) -> str:
             rs = " ".join(f"{k}={v['sign']}" for k, v in sw["rec_readings"].items())
             out.append(f"      H-dip: {sw['H_dip']['vote'].upper()} ({sw['H_dip']['reason']}) [{ds}]")
             out.append(f"      H-rec: {sw['H_rec']['vote'].upper()} ({sw['H_rec']['reason']}) [{rs}]")
+            if "return" in sw:
+                r_ = sw["return"]
+                out.append(f"      return (level - R_X): ord {f(r_['ordinary'])} mod {f(r_['modulated'])}  diff {f(r_['diff'])}  -> {r_['sign']}")
+        if "tally" in pr:
+            out.append(f"    tally{' (provisional)' if pr['provisional'] else ''}: " + "; ".join(
+                f"{m_} " + ", ".join(f"{k}={v}" for k, v in sorted(x.items())) for m_, x in pr["tally"].items() if x)
+                + "; forgetting: forgetting matrix (5.3), not in this read-out")
     return "\n".join(out)
 
 
@@ -1266,6 +1357,10 @@ def render(runs, L, homes, pairs) -> str:
         if d.get("kind") != "sequence":
             continue
         out.append(f"  run {d['run']} {d['tag']}  done {k_(d['episodes_done'])}  eta {f(d['eta_h'], 1)} h")
+        bp = d.get("branch_point")
+        if bp:
+            out.append(f"    branched from {bp['source_tag']} step {bp['step']:,} (copy {bp['copy_dir']}; matched on "
+                       f"{bp['matched_on']}); pre-switch level = its last 200k to the step: {f(bp['reference'])}")
         out.append(f"    {'st':>2} {'world':<8} {'v':>1} {'status':<28} {'level':>6} {'R_X':>6} {'prevEnd':>7} {'dip':>7} {'dipPrev':>7} "
                    f"{'rec(ep)':>7} {'rec(Mst)':>8} {'bites':>6} {'iters':>6} {'return':>7}")
         for s in d["stages"]:
@@ -1363,7 +1458,8 @@ def main():
     else:
         L = stage_lengths(runs)
         print(render(runs, L, _HOME_CACHE, pairs))
-        json.dump({"design_doc": a.design_doc, "home": _HOME_CACHE, "home_leg_gate": HOME_GATE, "runs": runs,
+        json.dump({"design_doc": a.design_doc, "home": _HOME_CACHE, "branch_points": _BRANCH_CACHE,
+                   "home_leg_gate": HOME_GATE, "runs": runs,
                    "stage_lengths": L, "common_reference": pairs},
                   open(_abs(a.json_out), "w"), indent=1, default=float)
     print(f"\nwrote {a.json_out}")
