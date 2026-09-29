@@ -840,3 +840,30 @@ All five third-review findings owned by this plan are closed in the body; the pe
 Stages 0, 1, 2 and 5 are unchanged in substance. The only possible touch on in-flight work is the File Changes §8 addendum, which applies only if Stage 2 code validates `evidence_status`. T5 (the rules' "no sustained crossing" outcome, then its fixture row) and T8 (the stage-boundary assertion in `run_wakeup`) belong to `experiment-designer` and `developer`.
 
 — *senior-developer, 2026-09-30*
+
+## Feedback from plan-reviewer — confirmation of Revision 3 + rules `4c8508af…` (2026-09-30)
+
+**Verdict: Stage 4 may start once its prerequisites exist.** Checked against the files at HEAD (`2327141a`, `872b0e04`, `bd3d1f65`), not against the Revision 3 table. T1–T4, T6, T7 closed in the plan body; T5 closed on the rules side (text at rules l.645–647 and l.658, revision entry `T5_no_sustained_crossing`); the May design §5 note is in (`MAY_DOUBLE_RETURN_REPLICATION.md:362-369`); the rules hash `4c8508af…` recomputes at HEAD and is pinned in all four manifests. No Critical, so no review file and no diary row.
+
+Severity legend: 🔴 Critical = fix before going further · 🟡 Moderate = likely costs a re-run · 🟢 Low = cosmetic · ❓ Open = an assumption nobody has verified yet.
+
+| # | State | Where verified | Residue |
+|---|---|---|---|
+| T1 | closed | §B2 "Sampling: every checkpoint" (level-05 N = 51 / 50, May N = 16 / 15); Staging Stage 4 check column; §Stage 4 budget (2,600 / 860, 10–20 GPU-h); §8 "no sparse-measure point-set key … raises"; §11 `run_wakeup` grid assertion and `--measures plateau` gate; Checkpoint 4.0 (any NaN plateau stops before the timing gate; w0000 must reproduce checkpoint 13 or it is a disagreement); 4.5 "no measure is thinned" | none |
+| T2 | closed | §B2 Points, §7 `stage_level` (`delta_episode_number` / `window_n`, other raises), Checkpoint 4.6 (weighting read from the pinned file, direct equality to `pilot_readout`, `window_n` printed beside) | none |
+| T3 | closed | §6 `require_clean` follows `verdict_words_allowed`, `verdict_policy` raises on unknown status; §8 enum = the rules' keys; §9 figures print `label` via `verdict_policy`; §6 tests include `b2_wakeup` accepted + dirty-file block. Checked the rules: `label` exists for `pilot` and `b2_wakeup` only, `verdict_prefix` for `interim` only, as §9 says | none |
+| T4 | closed | §11 `t_cross` keyword list includes `noise_window_divisor` with a fixture row that fails on a typed 3 (window 26 > 25.5 → NaN); §6 no-literal test names `wakeup.py`; `remedy.*` reported by `study_reading_A1` with no exemption list; A4 lists and `G5.stage` read from `parameters:` with the 1-based translation | none |
+| T5 | closed (rules); fixture row **not yet in §11's table** | rules l.645–647, l.658; plan l.113 says the developer adds it | 🟢 The §11 fixture table is what R.2 signs; add the row ("last three points 0, 0, 1 → NaN, reason `no sustained crossing`", signed and plateau alike) to §11 now so the developer does not have to find it in the Revision 3 table. Owner: senior-developer (one line). |
+| T6 | closed | stale "25 points / window 9" gone | none |
+| T7 | closed | Stage 4b check column names Checkpoint 3.3 for seeds 42, 43, 44 | none |
+| T8 | open (Low), correctly assigned | plan l.113 assigns the "next checkpoint after the last listed May stage-0 checkpoint has a different saved stage" assertion to the developer, but §11 `run_wakeup` does not state it — the only spec the developer reads | 🟢 One clause in §11 `run_wakeup`. Owner: senior-developer. Not a Stage 4 gate. |
+
+**Wake-up manifest comment (l.54–55).** `algorithmic_null_wakeup.yaml:54-55` still says "Remaining schema keys (out_root, rollout sizes, **the sparse-measure point set**, …) are added by developer." This is not a stale description; it is an instruction to the developer to add the one key that §8 and §11 now say must make `run_wakeup` raise. 🟡 **Fix before Stage 4** — one comment edit by `experiment-designer` (the manifest is designer-owned; nothing pins its hash, so no re-pin is needed). If left, the developer's own manifest additions fail the driver's first load, which costs a confused hour, not a wrong result.
+
+**Addendum (in-flight Stage 2) — safe to absorb, nothing to invalidate.** Working tree at review time: only `src/models/recurrent_ppo_network.py` modified (Stage 1). No Stage 2 file exists yet (`scripts/analysis/nmn/` has no `probe_set.py`, `teacher_forced.py` or `run_activations.py`), and `evidence_status` appears nowhere under `scripts/`, `tests/` or `src/`. So the addendum's condition ("if Stage 2 code already validates `evidence_status`") is currently false; the developer simply builds Stage 2 against §8 as revised. Stages 0, 1 and 5 are untouched by Revision 3.
+
+**Between Stage 3 and Stage 4's start**, other than Checkpoint R.2: (1) the manifest comment above (designer, one line); (2) the §11 fixture row for T5, since R.2 signs that table (senior-developer, one line); (3) Stage 4's own prerequisites as the plan already lists them — `untrained.py` for Checkpoint 3.3 / 4.4, Checkpoint 4.0 before any rollout, the timing gate before the sweep. Nothing else.
+
+**Cost of being wrong.** No data loss and no training relaunch. If the manifest comment is left, the cost is one confused developer hour. If the T5 row is omitted from the signed table, R.2 signs a table missing one branch and the first real curve that hits it is judged by unsigned code — a text fix, but one that should land before R.2, not after.
+
+Reviewed by: plan-reviewer, 2026-09-30 (confirmation of Revision 3)
