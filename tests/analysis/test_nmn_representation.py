@@ -186,3 +186,97 @@ def test_bootstrap_resamples_groups_not_rows():
             vals = np.unique(w[g == s])
             assert len(vals) == 1                        # every row of the seed, both stores
         assert w.sum() == 100 * 12                       # 100 groups drawn, 12 rows each
+
+
+def test_score_against_clock_masks_both_and_counts():
+    """L3: one call scores the layer and the clock on the SAME rows (rows with no clock value
+    dropped from both, with their bootstrap multiplicities) and returns how many were dropped."""
+    g, t, sp = _clock_setup()
+    t = t.copy()
+    t[sp.test[:7]] = 999                                  # never in the training fold
+    y = np.cos(t / 4.0) + np.random.default_rng(9).normal(0, 0.3, len(t))
+    X = np.c_[y + np.random.default_rng(10).normal(0, 0.5, len(t)), np.eye(30)[t % 30]]
+    cm = rep.clock_baseline(t, y, sp.train)
+    m = rep.fit_ridge(X[sp.train], y[sp.train], g[sp.train], alphas=ALPHAS, inner_folds=3)
+    w = np.random.default_rng(11).integers(0, 3, len(sp.test)).astype(float)
+    r_layer, r_clock, dropped = rep.score_against_clock(m, cm, X, y, t, sp.test, w)
+    keep = ~np.isin(sp.test, sp.test[:7])
+    assert dropped == 7
+    assert r_layer == rep.heldout_r2(m, X, y, sp.test[keep], w[keep])
+    assert r_clock == rep.clock_r2(cm, t, y, sp.test[keep], w[keep])
+    r_l0, r_c0, d0 = rep.score_against_clock(m, cm, X, y, t, sp.test)
+    assert d0 == 7 and r_c0 == rep.clock_r2(cm, t, y, rep.clock_mask(cm, t, sp.test))
+
+
+def _svd_path(Z, Yc, alphas):
+    U, s, Vt = np.linalg.svd(Z, full_matrices=False)
+    return [Vt.T @ ((s / (s ** 2 + a))[:, None] * (U.T @ Yc)) for a in alphas]
+
+
+@pytest.mark.parametrize("collinear", [False, True])
+def test_gram_ridge_path_equals_svd(collinear):
+    """L6: for rows >> columns the ridge path comes from the d x d Gram matrix; it must give the
+    SVD's coefficients (also with two nearly duplicate units, the ill-conditioned case)."""
+    rng = np.random.default_rng(12)
+    Z = rng.normal(size=(5000, 24))
+    if collinear:
+        Z[:, 5] = Z[:, 4] + 1e-4 * rng.normal(size=5000)
+    Z = (Z - Z.mean(0)) / Z.std(0)
+    Y = Z @ rng.normal(size=(24, 3)) + rng.normal(size=(5000, 3))
+    Yc = Y - Y.mean(0)
+    assert Z.shape[0] >= rep.GRAM_ROW_RATIO * Z.shape[1]          # the Gram branch runs
+    for a, gram, svd in zip(ALPHAS, rep._ridge_path(Z, Yc, ALPHAS), _svd_path(Z, Yc, ALPHAS)):
+        assert np.allclose(Z @ gram, Z @ svd, rtol=0, atol=1e-8 * np.abs(Z @ svd).max())
+        if not collinear:
+            assert np.allclose(gram, svd, rtol=1e-9, atol=1e-12)
+
+
+# ------------------------------------------------------------- ridge grid (registered)
+def _edge_problem():
+    rng = np.random.default_rng(0)
+    n, d = 600, 40
+    X = rng.normal(size=(n, d))
+    return rng, X, np.repeat(np.arange(n // 10), 10)
+
+
+@pytest.mark.parametrize("case,alphas,expect", [
+    ("clean signal, grid too strong", [1e2, 1e3, 1e4], "lowest"),
+    ("pure noise, grid too weak", [1e-3, 1e-2, 1e-1], "highest"),
+    ("noisy signal, optimum inside", [1e-2, 1e0, 1e2, 1e4, 1e6], None),
+])
+def test_alpha_at_grid_edge_is_flagged(case, alphas, expect):
+    """Designer (e5f29367): when a fit's inner-CV penalty lands on either end of the registered
+    grid, the fit records it (the grid is never widened after a number is seen). Synthetic
+    fits whose optimum lies below / above the grid are flagged; an interior optimum is not."""
+    rng, X, g = _edge_problem()
+    y = {"lowest": X @ rng.normal(size=40) + 1e-3 * rng.normal(size=600),
+         "highest": rng.normal(size=600),
+         None: X @ (0.3 * rng.normal(size=40)) + 2 * rng.normal(size=600)}[expect]
+    m = rep.fit_ridge(X, y, g, alphas=alphas, inner_folds=5)
+    assert m.alpha_at_edge == expect
+    assert m.alpha == {"lowest": alphas[0], "highest": alphas[-1]}.get(expect, m.alpha)
+    assert rep.fit_ridge(X, y, g, alphas=[1.0], inner_folds=5).alpha_at_edge is None
+
+
+MANIFESTS = ["algorithmic_null_pilot.yaml", "algorithmic_null_mayrep_interim.yaml",
+             "algorithmic_null_mayrep.yaml"]
+
+
+@pytest.mark.parametrize("name", MANIFESTS)
+def test_ridge_settings_from_the_real_manifests(name):
+    import yaml
+    man = yaml.safe_load(open(os.path.join(os.path.dirname(__file__), "..", "..", "docs",
+                                           "experiments", "active", "modulator_clues", name)))
+    s = rep.ridge_settings(man)
+    assert s["inner_folds"] == 5 and len(s["alphas"]) == 19
+    assert s["alphas"][0] == pytest.approx(1e-2) and s["alphas"][-1] == pytest.approx(1e7)
+
+
+def test_ridge_settings_are_required():
+    ok = {"ridge_alphas": [0.1, 1.0], "inner_folds": 5}
+    assert rep.ridge_settings(ok) == {"alphas": [0.1, 1.0], "inner_folds": 5}
+    for bad in ({"inner_folds": 5}, {"ridge_alphas": [0.1]}, {**ok, "ridge_alphas": []},
+                {**ok, "ridge_alphas": [1.0, 0.1]}, {**ok, "ridge_alphas": [0.0, 1.0]},
+                {**ok, "inner_folds": 1}, {**ok, "inner_folds": 5.0}):
+        with pytest.raises(ValueError):
+            rep.ridge_settings(bad)

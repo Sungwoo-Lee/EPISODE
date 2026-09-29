@@ -19,7 +19,11 @@ This module holds the statistics only; it decides nothing and holds no threshold
   groups per draw, shared by every agent and pair (rules common.bootstrap).
 
 Every size (repeats, test fraction, alpha grid, inner folds, number of draws, seeds) is a
-required argument; the drivers read them from the pinned rules' `parameters:` and the manifest.
+required argument; the drivers read them from the pinned rules' `parameters:` and the manifest
+(`ridge_settings` reads the manifest's required `ridge_alphas` and `inner_folds`). Every fit
+records the penalty its inner cross-validation chose and whether it sits on either END of the
+grid (`RidgeMap.alpha_at_edge`): the grid is registered and never widened after a number is
+seen, so an edge choice is reported in the data statement, not acted on.
 
 Plan: docs/develop/active/neuromodulation/ALGORITHMIC_NULL_ANALYSIS_TOOLING.md, File Changes §6,
 §A1/A3/A4 statistics, §A2 decoding.
@@ -85,7 +89,8 @@ class RidgeMap:
     x_scale: np.ndarray
     y_mean: np.ndarray
     coef: np.ndarray           # (d_in, d_out)
-    alpha: float
+    alpha: float               # the penalty used (chosen by inner CV when the grid has > 1)
+    alpha_at_edge: str | None  # "lowest" / "highest" when the CV choice is an end of the grid
 
     def predict(self, X) -> np.ndarray:
         Z = (np.asarray(X, np.float64) - self.x_mean) / self.x_scale
@@ -99,8 +104,23 @@ def _standardise(X):
     return mu, sd
 
 
+# Tool setting (not a rule constant): with at least this many rows per column, the ridge path
+# is solved from the d x d Gram matrix Z'Z instead of the n x d SVD (same coefficients, tested;
+# no n x d U matrix in memory, which at ~1e6 held-in rows x 256 units is 2 GB of float64).
+GRAM_ROW_RATIO = 10
+
+
 def _ridge_path(Z, Yc, alphas):
-    """Ridge coefficients for every alpha from one SVD of the standardised inputs."""
+    """Ridge coefficients for every alpha from one decomposition of the standardised inputs:
+    (Z'Z + a I)^-1 Z'Y. Tall Z (rows >= GRAM_ROW_RATIO x columns): eigendecomposition of the
+    Gram matrix Z'Z = V diag(s^2) V', giving V diag(1 / (s^2 + a)) V' Z'Y. Otherwise the thin
+    SVD Z = U diag(s) V', giving V diag(s / (s^2 + a)) U'Y. The two are the same algebra."""
+    n, d = Z.shape
+    if n >= GRAM_ROW_RATIO * d:
+        ev, V = np.linalg.eigh(Z.T @ Z)
+        ev = np.clip(ev, 0.0, None)                 # round-off can leave tiny negatives
+        VtZtY = V.T @ (Z.T @ Yc)
+        return [V @ ((1.0 / (ev + a))[:, None] * VtZtY) for a in alphas]
     U, s, Vt = np.linalg.svd(Z, full_matrices=False)
     UtY = U.T @ Yc
     return [Vt.T @ ((s / (s ** 2 + a))[:, None] * UtY) for a in alphas]
@@ -122,10 +142,30 @@ def r2_weighted(Y, P, weights=None) -> float:
     return float("nan") if sst == 0 else 1.0 - sse / sst
 
 
+def ridge_settings(manifest: dict) -> dict:
+    """The ridge estimator settings from an analysis manifest: `ridge_alphas` (the registered
+    penalty grid, a non-empty strictly increasing list of positive numbers) and `inner_folds`
+    (grouped CV folds for choosing the penalty, an integer >= 2). Both are required keys; a
+    missing or malformed one raises (no default, no CLI override)."""
+    for k in ("ridge_alphas", "inner_folds"):
+        if k not in manifest:
+            raise ValueError(f"manifest: mandatory key {k!r} is missing")
+    a, k = manifest["ridge_alphas"], manifest["inner_folds"]
+    if not isinstance(a, list) or not a or not all(
+            isinstance(v, (int, float)) and not isinstance(v, bool) and v > 0 for v in a) \
+            or any(y <= x for x, y in zip(a, a[1:])):
+        raise ValueError(f"manifest: ridge_alphas must be a strictly increasing list of positive "
+                         f"numbers, got {a!r}")
+    if not isinstance(k, int) or isinstance(k, bool) or k < 2:
+        raise ValueError(f"manifest: inner_folds must be an integer >= 2, got {k!r}")
+    return {"alphas": [float(v) for v in a], "inner_folds": k}
+
+
 def fit_ridge(X, Y, groups, *, alphas, inner_folds: int) -> RidgeMap:
     """Ridge from X to Y (standardisation of X and centring of Y fitted on these rows only),
     alpha chosen from `alphas` by episode-grouped K-fold CV inside these rows (held-out
-    variance-weighted R^2), then refitted on all of them."""
+    variance-weighted R^2), then refitted on all of them. `alpha_at_edge` records a choice at
+    the lowest or highest grid value (None for an interior choice or a one-value grid)."""
     from sklearn.model_selection import GroupKFold
     X = np.asarray(X, np.float64)
     Y = np.asarray(Y, np.float64)
@@ -141,13 +181,15 @@ def fit_ridge(X, Y, groups, *, alphas, inner_folds: int) -> RidgeMap:
             Zv = (X[va] - mu) / sd
             for i, c in enumerate(coefs):
                 score[i] += r2_weighted(Y[va], Zv @ c + ym)
-        alpha = alphas[int(np.argmax(score))]
+        best = int(np.argmax(score))
+        alpha = alphas[best]
+        edge = "lowest" if best == 0 else ("highest" if best == len(alphas) - 1 else None)
     else:
-        alpha = alphas[0]
+        alpha, edge = alphas[0], None
     mu, sd = _standardise(X)
     ym = Y.mean(axis=0)
     coef = _ridge_path((X - mu) / sd, Y - ym, [alpha])[0]
-    return RidgeMap(x_mean=mu, x_scale=sd, y_mean=ym, coef=coef, alpha=alpha)
+    return RidgeMap(x_mean=mu, x_scale=sd, y_mean=ym, coef=coef, alpha=alpha, alpha_at_edge=edge)
 
 
 def fit_maps(X, Y, groups, splits: list[Split], *, alphas, inner_folds: int,
@@ -200,6 +242,19 @@ def clock_mask(means: ClockMeans, t, rows) -> np.ndarray:
     rows = np.asarray(rows)
     _, ok = clock_predict(means, np.asarray(t)[rows])
     return rows[ok]
+
+
+def score_against_clock(m: RidgeMap, means: ClockMeans, X, y, t, rows, weights=None
+                        ) -> tuple[float, float, int]:
+    """The layer's and the clock's held-out R^2 on the SAME rows (rules A2.clock_baseline):
+    held-out rows whose time step has no training row have no clock value and are dropped
+    from both scores; their bootstrap multiplicities (`weights`, aligned with `rows`) are
+    dropped with them. Returns (r2_layer, r2_clock, n_dropped)."""
+    rows = np.asarray(rows)
+    _, ok = clock_predict(means, np.asarray(t)[rows])
+    kept = rows[ok]
+    w = None if weights is None else np.asarray(weights, np.float64)[ok]
+    return (heldout_r2(m, X, y, kept, w), clock_r2(means, t, y, kept, w), int((~ok).sum()))
 
 
 def clock_r2(means: ClockMeans, t, y, rows, weights=None) -> float:
