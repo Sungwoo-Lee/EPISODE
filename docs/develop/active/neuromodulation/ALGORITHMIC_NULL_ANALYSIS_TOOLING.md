@@ -8,7 +8,7 @@ last_updated: 2026-09-30
 
 # Analysis tooling for "What Both Agents Compute"
 
-> **Status**: PLANNED, **Revision 1** (2026-09-29) after `plan-reviewer` returned NOT READY. Awaiting re-review, then user approval. Nothing is implemented.
+> **Status**: PLANNED, **Revision 2** (2026-09-30) after `plan-reviewer`'s re-review returned NOT READY (Revision 1: 2026-09-29). Awaiting re-review, then user approval. Nothing is implemented.
 > **Opened**: 2026-09-29
 > **Related**: the published plan page [[algorithmic_null]] (`docs/experiments/active/modulator_clues/algorithmic_null.template.html`), its running list [[ALGORITHMIC_NULL_TODO]], the evidence file [[CROSS_STUDY_NULL_DOSSIER]], the three-seed May replication design [[MAY_DOUBLE_RETURN_REPLICATION]], the earlier gradient audit [[TRAINING_HEALTH_AUDIT]], the collection pipeline [[TRAJECTORY_COLLECTION_PIPELINE]], the saved-config compatibility plan [[SAVED_RUN_CONFIG_COMPAT]], the modulation-site refactor [[MODULATION_SITE_REFACTOR]]. Review: [[plan_algorithmic_null_tooling]] (`docs/reviews/plan_algorithmic_null_tooling.md`).
 
@@ -25,7 +25,9 @@ last_updated: 2026-09-30
 - Measures of when, during training, the modulator starts to matter.
 - Figure checks for the page builder.
 
-**What changed in this revision.** A reviewer found two ways the tools could print a wrong sentence without any error, and several weaker checks. First, the "modulator wakes up at checkpoint *k*" measure could report "awake from the start" for a quantity that shrinks over training, and a random checkpoint for one that ends where it began. It now follows the direction of the change, and it refuses to name a checkpoint when the change is within noise. It also starts from the untrained network, not the first saved checkpoint. Second, nothing fixed in advance what counts as "the two agents compute the same thing". That rule is now written by `experiment-designer` before any similarity number exists. The tools read it and never hard-code it. With no rule on file, they print numbers but no verdict. The full response to each finding is in §Revision 1.
+**What changed in Revision 1.** A reviewer found two ways the tools could print a wrong sentence without any error. The "modulator wakes up at checkpoint *k*" measure could misfire on quantities that shrink or that end where they began; it now follows the direction of the change, refuses to name a checkpoint when the change is within noise, and starts from the untrained network. And nothing fixed in advance what counts as "the two agents compute the same thing"; `experiment-designer` has since written those rules down, before any number exists (§Revision 1).
+
+**What changed in Revision 2.** The rules now exist as a separate file, and the reviewer found that this plan and that file described different tools. This plan now adopts the file's design. Every analysis manifest pins the rules file by its fingerprint (a sha256 hash), the pilot included. The rules stay in plain words; the tooling turns each rule's logic into tested code and takes every number from a `parameters:` list inside the rules file, so no threshold is typed into a script. The plan also now computes five inputs the rules need and it did not produce: three untrained reference networks (one per ordinary seed), within-stage drift for the across-worlds analysis, survival and food intake from the training logs, the rules' "clock-only" baseline, and the rules' bootstrap. It also sizes the probes so there are enough independent episodes (§Revision 2).
 
 **Why now.** One pair of agents from an earlier 16-world study already has stored episodes and loads under current code, so the tools can be built and checked on it today. A second study is still training: a replication of a May experiment with three seeds of each agent. It is the only design that can say whether two agents are "the same" by more than two ordinary agents from different seeds are. The plan is staged, so partial results reach the page before that training ends.
 
@@ -53,10 +55,43 @@ last_updated: 2026-09-30
 - The untrained-network key (above): `split(PRNGKey(seed), 3)` alone is not enough; the second split is needed.
 - The review's fingerprint list (`environment`, `sensory`, `body`, `thermal`, `perceptual_noise`) is used. The plan adds one rule: any *other* top-level key that differs between the stage file and `config.yaml`, apart from `agent`, `tag` and `wandb`, is an error rather than silently kept. A future stage file that changes `training.*` would otherwise pass unnoticed.
 - `stage_end:<k>` is redefined as **the last saved checkpoint whose saved `stage` field equals *k***, not "the first checkpoint at or after boundary *k*". `eval_rollout._resolve_continual_stage_config` documents that a checkpoint's recorded stage can lag the boundary by one. Under the old rule, the checkpoint just past boundary *k* could still be a stage-*k* checkpoint, or it could be the first of stage *k*+1.
-- **Which manifest holds the rules.** Two manifests are meant, and they are different files:
+- **Which manifest holds the rules.** *[Superseded by Revision 2, R1: the rules live in their own file, pinned by `decision_rules: {file, sha256}` in every manifest. The text below is kept as history.]* Two manifests are meant, and they are different files:
   - **May replication (evidence):** `docs/experiments/active/modulator_clues/algorithmic_null_mayrep.yaml`, a new file. The May design doc has no analysis-manifest YAML (its launch manifest is a table in [[MAY_DOUBLE_RETURN_REPLICATION]]), so this file is the one that governs these analyses. `decision_rules` goes here, and `experiment-designer` owns that block.
   - **Pilot:** `docs/experiments/active/modulator_clues/algorithmic_null_pilot.yaml`, a new file with `decision_rules_ref: null`. The pilot compares two agents that share seed 42 and has no seed yardstick, so no rule can apply to it. It prints numbers and no verdict.
   - **Not a target:** `docs/experiments/active/level05_body_interactions/analysis_manifest.yaml` is the *schema precedent* and the source of the level-05 WandB ids. It belongs to the level-05 store scripts, which would never read a `decision_rules` block placed there. If `experiment-designer` has already put the block elsewhere, `decision_rules_ref` points at it, so no content has to move (File Changes §8).
+
+---
+
+## Revision 2 — response to plan-reviewer's re-review (2026-09-30)
+
+The re-review ([[plan_algorithmic_null_tooling]] §Re-review) ruled for this plan on all four earlier disagreements. All four are kept:
+- the untrained network's key comes from `init_key` (`train.py:1207`);
+- the rules live in a separate file;
+- `stage_end:<k>` is the last checkpoint whose saved stage is *k*;
+- the fingerprint is strict.
+
+The blocking finding was that this plan and `experiment-designer`'s rules file described different tooling. **The designer's shape is the one kept.**
+
+| # | Finding | Disposition | Where |
+|---|---|---|---|
+| R1 🔴 | Plan ↔ rules contract mismatch (key name, pilot handling, hash scope, machine-readable vs prose rules) | **Adopted the designer's contract.** Every manifest, the pilot and the new wake-up manifest included, carries `decision_rules: {file, sha256}`, a whole-file hash checked at load (mismatch raises). The pilot's no-verdict status is the registered rule `evidence_status.pilot.verdict_words_allowed: false`. `decision_rules_ref` and the `reads`/`outcomes` block are **dropped**. Rules stay prose. The evaluator implements each rule's logic in code with fixture tests, reads **every** numeric constant from the rules file's `parameters:` block, and is checked by a test that finds no numeric literal but 0 and 1 in it. `experiment-designer` signs off the fixture table before any real number is computed (new Checkpoint R.2) | §E, File Changes §6, §8, §9, §10, Stage R, Checkpoints R.1, R.2 |
+| R2 🔴 | Untrained references: rules pin the wrong key recipe; plan built two arbitrary keys | **Plan side fixed.** The reference set is `untrained.build` on **every ordinary run's own seed** (three for the May replication, so three pairs). `untrained_reference_keys` is dropped. The pilot has one ordinary run, so it has no untrained pair and no informative gate; it has no verdict either. The rules' recipe text is the designer's to correct | §A1/A3/A4 statistics, File Changes §8 |
+| R3 🔴 | Wake-up parameters unregistered; §B2 contradicted itself | **Plan side fixed.** Every wake-up value, the headline mode included, is read from `parameters.B2` of the sha-pinned rules file; the B2 runs from `experiment-designer`'s new `algorithmic_null_wakeup.yaml`, which pins the rules file (any B2 value it also states must match). Stage 4 waits for both to be committed. The plan no longer names a headline. §B2 now follows the rules' `B2` section, including its lag and across-worlds reading, and the plan samples the sparse measures densely enough for the rules' noise window | §B2, File Changes §8, §11, Stage R, Checkpoint R.1 |
+| R4 🟡 | A4 within-stage drift has no checkpoints and no computation | **Fixed.** New selectors `stage_end:<k>:prev` and `final:prev` (the checkpoint just before, which must have the same saved stage). `d_a` and the movement gate are computed as the rules state | §A4, File Changes §5, §6, Checkpoint 5.1 |
+| R5 🟡 | Survival difference (A3 pattern c) and gate G5 inputs not produced | **Fixed.** `wandb_history.stage_level` reads survival and food bites per run and stage from the local WandB binary (folder resolved by tag). `run_similarity` computes the 3-seed survival difference with the May design's floored standard error, and G5 per run. Both go into the driver JSON. The windowed means are cross-checked against the May replication's own readout (`pilot_readout.py`) | §A3, File Changes §7, §8, Checkpoint 4.6 |
+| R6 🟡 | A2 clock baseline and excess differ from the rules | **Fixed to the rules.** The clock is the per-time-step mean of the training fold. The excess is `R² − R²_clock`, with the bootstrap 5th percentile of the excess. The one-hot ridge on `t` bins, `t_bin_width`, and the `R²(layer ⊕ t) − R²(t)` form are removed | §A2, File Changes §6 |
+| R7 🟡 | Bootstrap: 200 over episodes vs the rules' procedure | **Adopted the rules' procedure.** `bootstrap_n` comes from the manifest and must meet the rules' minimum. The unit is the `episode_seed` group. Ridge maps are fixed per split repeat, and draws are joint across all agents and pairs | §A1/A3/A4 statistics, File Changes §6 |
+| R8 🟡 | Shared `seed_base` collapses the pooled probe to `n_per_store` groups | **Fixed.** Stated, and the probe uses the manifest's `n_per_store`. `probe_set.build` asserts and prints the distinct group count, and fails below what gate G6 needs | §Probe sets, File Changes §4, Checkpoint 2.1 |
+| R11–R13 (plan side) | Checkpoint 3.3 did not name the study | **Fixed.** 3.3 runs on the May configs for seeds 42, 43 and 44 | Checkpoint 3.3 |
+
+R9, R10, R11 (rule text), R13 (the May design sentence) and the TODO wording are `experiment-designer`'s. The designer's in-progress rules revision (seen in the working tree on 2026-09-30, not yet committed) adds B2 logic beyond this plan's Revision 1: a noise window of `max(ceil(N/3), min_noise_points + 1)` points, a separate `literal_f`, lag, and a sign-test reading across worlds. §B2 follows it, and File Changes §11 plans the sampling it requires. This plan writes nothing under `docs/experiments/`.
+
+**Points in the designer's contract this plan cannot implement as written.** Each is listed so that the designer can settle it in the rules revision, before any number exists. Until then, the evaluator raises on the case rather than choosing.
+1. **G3 has no near-tie allowance.** G1 allows near-ties (margin < 1e-4 on ≤ 0.1% of rows); G3 requires 100% with no allowance, on the same kind of rows. As written, one near-tie among the sampled rows blocks every verdict. The plan applies G1's allowance to G3 only if the rules say so.
+2. **Clock baseline at an unseen time step.** The per-time-step mean is undefined for a held-out row whose `t` has no row in the training fold (likely only in the long tail of `steps_remaining` on death-only episodes). The plan excludes such rows from the layer score and the clock score alike, and counts them in the data statement. The rules should say whether that is the registered handling.
+3. **Bootstrap count per repeat or in total.** "`bootstrap_n ≥ 1000`" with "pooling the draws of the 5 repeats" can mean 1,000 per repeat (5,000 pooled) or 1,000 pooled. The plan draws `bootstrap_n` **per repeat** (it meets G6 under either reading); the rules should say which.
+4. **Structural counts as parameters.** The rules contain counts inside their logic (`floor(n/3)`, "≥ 2 of 3 seeds", "≥ 2 of 5 layers", "≥ 3 of 5 layers", the split repeats and fraction, the stage analysed per evidence status). The designer's in-progress `parameters:` block covers most of them. Any left in prose only is found by the no-literal test (File Changes §6); the developer then stops and asks the designer.
+5. **Survival row weighting is named two ways.** The rules' B2 `x_grid`, and the May design §5 text that A3 pattern (c) points to, weight rows by `Episode/_window_n`. The code that computes the May verdict, `pilot_readout.Series`, weights by the increase in `Episode/Number`. Training logs overlapping rolling windows, so the two estimators differ. The rules should name one weighting for A3/G5 survival and one for B2 (a `parameters:` entry). The tooling implements both and takes the choice from the rules. Until the rules name one, `stage_level` and `interval_means` raise.
 
 ---
 
@@ -151,22 +186,17 @@ Linear CKA is unchanged by rotations and by a uniform rescaling, but **not by pe
 
 Linear CKA stays as the headline measure because it is the page's stated method. The two are reported side by side on every layer.
 
-**Who decides what "the same computation" means (reviewer finding 2).** This plan does **not** set any threshold for:
-- "the two agents compute the same thing" (A3);
-- "the two agents' decoding profiles match" (A2);
-- "the two agents' processing moves together across worlds" (A4).
+**Who decides what "the same computation" means (reviewer finding 2; contract per re-review R1).** This plan sets **no** threshold and **no** verdict wording for A1–A4. Both live in `experiment-designer`'s pre-registered rules file, `docs/experiments/active/modulator_clues/algorithmic_null_decision_rules.yaml`. The rules are prose for logic. Every number they use lives in the file's `parameters:` block, which the designer adds.
 
-Those rules are pre-registered by `experiment-designer` in a `decision_rules` block. The block goes in the May-replication analysis manifest, `docs/experiments/active/modulator_clues/algorithmic_null_mayrep.yaml` (§Revision 1 says why that file). The tooling's obligations:
-1. **Read, never hard-code.** Every number and every verdict label comes from the block. No threshold or verdict string appears in `scripts/`.
-2. **Refuse a verdict without a rule.** If the manifest's `decision_rules_ref` is `null`, or the referenced block is absent, every figure and driver output carries numbers only. The data statement then says: *"No pre-registered decision rule is on file for this comparison, so no verdict is drawn."* The verdict field in the driver JSON is `null`.
-3. **Prove the order.** On an `interim` or `evidence` manifest, the driver refuses to run if the rules file has uncommitted changes. It stamps the file's last commit sha and the sha256 of the canonicalised block into every output. The page builder refuses any figure whose stamped block hash differs from the block at HEAD, so a rule edited after results exist cannot sit silently beside them.
-4. **Implement only what is written.** The rule evaluator implements exactly the condition forms that appear in the committed block, each with a unit test on a fixture block of made-up values marked "test fixture, not the study's rule". Any condition form it does not implement raises `ValueError`, naming the form.
+**The contract (the designer's shape; this plan implements it):**
+1. **Pin.** Every analysis manifest carries the mandatory key `decision_rules: {file, sha256}`, where `sha256` is the hash of the **whole file**. This includes the pilot and the wake-up manifest. At load, the tooling hashes the file and compares; a mismatch raises `ValueError`. There is no `null` form and no fallback.
+2. **What each evidence status may say comes from the rules.** `evidence_status.<status>.verdict_words_allowed` decides whether any verdict word is written. For the pilot it is `false`: the drivers do not call the decision functions at all, and every data statement carries the rules' own pilot `label` ("tool validation — the two agents share seed 42; not evidence") plus "no verdict is drawn". For `interim`, every verdict word carries the rules' `verdict_prefix`.
+3. **Logic in code, numbers from `parameters:`.** `decision_rules.py` implements each rule's logic as a function: gates G1–G6, then A1, A2, A3, A4, and the study-level readings. Each function's docstring quotes the rule text it implements, verbatim. Every numeric constant is read from `parameters:` by name. A test parses the module's syntax tree and fails on any numeric literal other than 0 and 1, so a threshold cannot be typed into code. A second test loads the real rules file and checks that every `parameters:` entry is read by some function, and every entry a function reads exists. The key names are the designer's.
+4. **A case the prose does not cover raises.** If the inputs reach a combination that no rule assigns (for example "predictivity same, CKA uninformative" before the designer's R10 revision), the evaluator raises `ValueError` and names the case. It never picks an outcome.
+5. **The reading is signed off before any number exists.** The fixture tests set out, per rule, input → expected outcome on made-up values marked "test fixture, not the study's rule". `experiment-designer` reads that table and signs it in this plan's Implementation Report (Checkpoint R.2) **before** the first real `run_similarity`, `run_decoding` or `run_wakeup` output. That sign-off is what registers the code's reading of the prose.
+6. **Prove the order.** On an `interim` or `evidence` manifest, the driver refuses to run if the rules file has uncommitted changes (`require_clean`). Every output is stamped with the rules file path, its sha256 and its last commit sha. The page builder refuses a figure whose stamped sha256 differs from the file at HEAD.
 
-**Contract the evaluator needs from the block.** This is the shape only; it sets no thresholds, and `experiment-designer` may extend it. Per analysis (`A2`, `A3`, `A4`) the block gives:
-- `reads`: which statistics the rule uses, from those the drivers emit (`cka`, `predictivity_r2_ab`, `predictivity_r2_ba`, their bootstrap intervals, the cell labels of the A3 triangle);
-- `outcomes`: an ordered list of `{label, condition}` pairs, where the first match wins and the last pair is the fall-through outcome.
-
-If the committed block does not fit this shape, the developer stops and asks `experiment-designer`. The developer does not reshape the block.
+Lists the rules fix, such as `common.verdict_layers`, are also read from the file. The drivers assert that every verdict layer appears in the manifest's `layers`.
 
 ### F. Predator identity (A2)
 
@@ -191,7 +221,8 @@ The numbers below are **line numbers in `KNOWN_BUGS.md`**, not row ids.
 
 ```
  analysis manifest (YAML: runs, checkpoints, stores, probe sizes, evidence_status,
-                    decision_rules_ref → experiment-designer's decision_rules block)
+                    decision_rules: {file, sha256} → experiment-designer's rules file,
+                    whose parameters: block holds every number the rules use)
         │
         ├─► probe_set.py ── ONE pass over the store parquet → one row-index array
         │                   → obs, next action, targets all indexed by that array
@@ -204,7 +235,8 @@ The numbers below are **line numbers in `KNOWN_BUGS.md`**, not row ids.
         │
         ├─► representation.py (pure numpy/sklearn): linear CKA, linear predictivity,
         │        episode-grouped ridge probes
-        │   decision_rules.py (pure python): load + hash + evaluate the pre-registered block
+        │   decision_rules.py (pure python): load + sha256-check the rules file; gates G1–G6
+        │        and A1–A4 logic in code, every constant from its parameters: block
         │        run_similarity.py (A1, A3, A4)   run_decoding.py (A2)
         │
         └─► wakeup.py (pure numpy) + untrained.py + grad_probe.py + wandb_history.py
@@ -259,9 +291,9 @@ A `.mod` key is present only when that site is enabled. The comparison drivers p
 - `dims.D` must equal the model's `input_dim`.
 - `schema_version == 1`.
 
-**Action agreement.** Computed on every replay. If the replayed checkpoint is the store's generating checkpoint (`manifest.checkpoint_path` resolves to the same directory), the replay **fails** on any mismatch whose top-two logit margin is ≥ `1e-4`, or if near-ties exceed 0.1% of rows. Otherwise the agreement is recorded as a statistic: how often the other agent would have chosen the same action is itself an A1-adjacent result.
+**Action agreement.** Computed on every replay. If the replayed checkpoint is the store's generating checkpoint (`manifest.checkpoint_path` resolves to the same directory), the replay **fails** on any mismatch whose top-two logit margin is at or above gate G1's near-tie margin, or if near-ties exceed G1's maximum share of rows (both from `parameters:`; the rules as written say `1e-4` and 0.1%). Otherwise the agreement is recorded as a statistic: how often the other agent would have chosen the same action is itself an A1-adjacent result.
 
-**Probe sets.** A probe set is `n_episodes_per_store` episodes drawn from each listed store, starting at block 0 so only the first shard is read.
+**Probe sets.** A probe set is `n_per_store` episodes drawn from each listed store, starting at block 0 so only the first shard is read.
 - **One pass, one row index (finding 4).** `probe_set.build` reads each shard **once** with pyarrow. From that read it builds a single row-index array `rows = (store_id, episode_seed, t)`. Everything is then gathered with that same array object: `obs`, the full `obs_noised` sequences for replay, `action_next = action[t+1]`, and every target. Nothing is re-read or re-sorted between them.
 - Asserted at build time:
   - within each episode, `t` runs `0..T−1`, strictly increasing and contiguous;
@@ -278,62 +310,101 @@ Rows are subsampled per episode (`rows_per_episode`, seeded), and the whole epis
 
 For **the May replication**, the probe for a world pools an equal number of episodes from all six agents' stores in that world. Every agent is judged on the same inputs, and no agent's own behaviour dominates. Results are also broken down by source store as a sensitivity check. The **pilot** pools the pair's two stores.
 
+**Group count (re-review R8).** All six May stores, and both pilot stores, are collected with the same `seed_base` (1,000,000). The first `n_per_store` episodes of every store therefore carry the **same** `episode_seed` values: the same reset draw, followed by different trajectories. The rules make each `episode_seed` one group, for the split and for the bootstrap (`common.grouping_unit`). So a pooled probe has only `n_per_store` distinct groups, not six times that. The held-out fold holds a fraction `test_frac` of them, and gate G6 requires at least a minimum number per held-out fold (both numbers come from `parameters:`; the rules as written say 20% and 500). So `n_per_store` must be at least `min_test_groups / test_frac` (2,500 as written). The value is the manifest's `probes[].n_per_store`, set by `experiment-designer`; it is never a default. Block 0 of every store holds 5,000 episodes, so one shard per store still suffices. `probe_set.build`:
+- computes the number of distinct `episode_seed` groups and prints it, with the per-store episode counts;
+- raises before any replay if `distinct_groups × test_frac < min_test_groups`;
+- records `n_groups` in `probe_<id>.json`.
+
+**Size.** A May probe is `6 × n_per_store` episodes (15,000 at 2,500), replayed through every agent and checkpoint that needs it (A4: six agents × seven checkpoints × two probes, plus three untrained networks). Only `rows_per_episode` rows per episode are kept, so the activation files scale with `6 × n_per_store × rows_per_episode × layer width`. The developer sets `rows_per_episode`, computes the expected bytes before the first May run, and records the measured bytes.
+
+After the split, `run_similarity` and `run_decoding` assert the actual held-out group count of every repeat against the same minimum (gate G6), so a rounding in the split cannot slip under it. **Per quantity, after that quantity's exclusions** (as the designer's G6 revision states): the predator-distance target keeps only groups with a valid row, and the `steps_remaining` headline keeps only groups with at least one death-ended episode. A group count below the minimum for one quantity blocks that quantity ("blocked by gate G6"), and the count is printed.
+
 **Alignment controls (finding 4).** Computed by `teacher_forced` on the **sampled rows through the probe's row index**, so they test the same indexing the targets use:
 
 | Control | Computed as | Required |
 |---|---|---|
 | **Step-discontinuous alignment** | `argmax(acts.logits[row]) == action_next[row]` on the generating agent's own store | 100% (the near-tie allowance of the action-agreement rule only) |
 | Same, on **action-change rows only** (`action[t] ≠ action[t+1]`) | as above | 100% |
-| **Shift-by-one** | `argmax(acts.logits[row]) == action[t]` (the action that *arrived* at *t*, one row early) | **< 95%** overall, and **< 5%** on action-change rows. On those rows a correct alignment gives 0% by construction. If the overall number is ≥ 95%, the control is **inconclusive**, not passed: stop and report, because the agent's action runs are too long for it to discriminate |
+| **Shift-by-one** | `argmax(acts.logits[row]) == action[t]` (the action that *arrived* at *t*, one row early) | below gate G3's maximum overall (`parameters:`; 95% as written), and below `tool_checks.shift_change_rows_max` (a plan-level stop, 5%) on action-change rows. On those rows a correct alignment gives 0% by construction. If the overall number reaches G3's maximum, the control is **inconclusive**, not passed: stop and report, because the agent's action runs are too long for it to discriminate |
 
 The satiation input-layer R² stays as a positive control for the target *values*, not for alignment: satiation drops by a fixed step each tick, so it cannot detect a one-row shift.
 
 **A1 / A3 / A4 statistics.**
 - Linear CKA uses the feature-space form ‖YᵀX‖²_F / (‖XᵀX‖_F‖YᵀY‖_F) on column-centred float64 features.
-- Linear predictivity is ridge with the α-grid chosen by episode-grouped CV inside the training fold, reporting held-out R² (variance-weighted over output units) in both directions.
-- Uncertainty comes from 200 bootstrap resamples **over episodes**.
+- Linear predictivity is ridge with the α-grid chosen by episode-grouped CV inside the training fold. It reports held-out R² (variance-weighted over output units) in both directions, and the rules' mutual value `P(A,B) = min(R²(A→B), R²(B→A))`, averaged over the split repeats.
+- **Bootstrap (re-review R7; the rules' `common.bootstrap`, adopted as written).**
+  - The resampling unit is the **`episode_seed` group**: all rows of that reset draw, from every store in the pooled probe.
+  - The number of draws is the manifest's `bootstrap_n`, asserted at load to be at least the rules' G6 minimum. It is drawn **per split repeat** (see §Revision 2, point 3).
+  - **Joint.** Each draw is one resample of groups, applied to every agent and every pair at once. So pair-to-pair and agent-to-agent comparisons are paired.
+  - **Predictivity: fixed maps.** For each split repeat (the rules' number of repeats and test fraction, grouped by `episode_seed`; one split object shared by every agent), the ridge maps are fitted **once**, on the training fold, and held fixed. Each draw resamples that repeat's **held-out** groups with replacement and recomputes held-out R² from the fixed maps. The draws of all repeats are pooled into one distribution.
+  - **CKA** has no fitted map. Each draw resamples groups over the whole probe and recomputes CKA.
+  - Intervals are the rules' percentiles (`interval`, from `parameters:`). The band `[L, U]` (`seed_band`) and every "bootstrap distribution of the MO_diff mean" are computed from the same joint draws: per draw, the mean over the pairs entered, then its percentiles.
 - **Reference rows** make a number readable:
   - the probe's raw input (symlog of `obs`);
-  - two *untrained* networks of the same architecture built from different keys (the floor for "similar by construction");
-  - same-agent same-checkpoint (`isclose(…, 1.0, atol=1e-12)`; a check, not a result).
-- **A3 triangle** (May replication, per layer): ordinary–ordinary across seeds (3 pairs), modulated–modulated across seeds (3), modulated–ordinary same seed (3), modulated–ordinary different seeds (6). The fair comparison for "the same computation" is **modulated–ordinary at different seeds vs ordinary–ordinary at different seeds**. The same-seed cell measures what the shared start (D11) contributes. The rule that turns these cells into words is `decision_rules.A3` (§E), not this plan.
-- **A4**: for each agent, CKA/predictivity between consecutive stage-end checkpoints on a fixed world probe (both worlds), i.e. how far its processing moves per stage. The quantities emitted are (i) the correlation across stage transitions between paired agents' movement, and (ii) modulated–ordinary similarity per stage against that stage's seed yardstick. Whether that counts as "moving together" is `decision_rules.A4`.
+  - **untrained networks (re-review R2): `untrained.build` on every ordinary run in the manifest, each with that run's own seed.** For the May replication that is three networks (seeds 42, 43, 44), giving the rules' three UNTRAINED pairs. They set the informative gate: per layer and statistic, the ordinary-vs-ordinary band must not overlap their envelope. The pilot has one ordinary run, so one untrained network and **no** untrained pair. Its informative gate is not computable, which is moot because the pilot has no verdict. The untrained networks are replayed on the probe like any agent, with chain assertions and without the self-replay check (they generated no store);
+  - same-agent same-checkpoint (`isclose(…, 1.0, atol=tool_checks.self_similarity_atol)`; a check, not a result).
+- **G5 exclusions come first.** A run that fails gate G5 (below) is dropped before any pair set is formed. `n` (the number of MO_diff pairs) and every count are recomputed, as the rules require. Below the rules' minimum number of seeds per arm, every verdict reads "undetermined — yardstick incomplete".
+- **A3 triangle** (May replication, per layer): ordinary–ordinary across seeds (3 pairs), modulated–modulated across seeds (3), modulated–ordinary same seed (3), modulated–ordinary different seeds (6). The fair comparison for "the same computation" is **modulated–ordinary at different seeds vs ordinary–ordinary at different seeds**. The same-seed cell measures what the shared start (D11) contributes. `decision_rules.evaluate_A3` turns these cells into a pattern (§E).
+- **Survival and food-intake inputs (re-review R5).** A3 pattern (c) versus (c′) depends on whether the two agents' survival differs, and gate G5 on each run's stage-1 competence. Neither is in the activations; both come from the training logs.
+  - Read by `wandb_history.stage_level` (File Changes §7) from each run's local WandB binary. The folder is resolved from the run's saved top-level `tag:` in `models/config.yaml`, with exactly one match required.
+  - Per run and stage *k* (0-based `stage/index`): `S_k`, the mean of `Episode/Steps` over the last `window` episodes of the stage, and the same mean of `Episode/FoodEaten`. Row weighting follows the rules (§Revision 2, point 5); rows with `Episode/_window_n` below a minimum are skipped. `window`, that minimum, and the weighting come from `parameters:`. This is the May design's §5.1 quantity. The stage must be complete; otherwise the value is `null`, pattern (c)/(c′) reads "survival not available", and the rules assign "none".
+  - **G5 per run:** `S_0 ≥` the survival minimum **and** food bites `≥` the bite minimum (stage 1, `01_active`).
+  - **Survival difference** for the stage whose end is analysed (the rules name it per evidence status: stage 5, `stage/index` 4, for `evidence`; stage 1, `stage/index` 0, for `interim`): `mean_diff = mean(S_k, modulated seeds) − mean(S_k, ordinary seeds)`. `SE_k = sqrt(sd_ord²/n_ord + sd_mod²/n_mod)` (sample SD) and `SE_used = max(SE_k, SE_floor)`. "Survival the same" is `|mean_diff| ≤ multiplier × SE_used`. The floor and the multiplier come from `parameters:` (3.6 steps and 2 in the May design §5.2).
+  - All of it is written into the `run_similarity` driver JSON (`survival: {per_run, per_arm, mean_diff, se_raw, se_used, floored, same}`, `gate_G5: {per_run, pass}`), which the evaluator reads.
+  - **Cross-check.** `stage_level` is an independent implementation of a quantity that `scripts/analysis/studies/continual_worlds/pilot_readout.py` already computes for the May verdict. Checkpoint 4.6 requires the two to agree on every run.
+- **A4** (re-review R4), per agent and verdict layer, on both world probes:
+  - **movement** `m = 1 − P(a at stage_end:k, a at stage_end:k+1)` for the four transitions (`final` stands for the end of the last stage), on each of the two probes: an 8-entry profile;
+  - **within-stage drift** `d_a`, the mean of two values: `1 − P(a at final:prev, a at final)` on the active probe, and `1 − P(a at stage_end:3:prev, a at stage_end:3)` on the passive probe. `:prev` is the checkpoint just before, in the same saved stage (File Changes §5). The episode gap of each `:prev` pair is recorded; the rules describe it as 100,000 episodes;
+  - **movement gate:** per draw, `mean(profile) − d_a`; an arm moves if, for at least the rules' number of its seeds, the bootstrap lower percentile of that difference is above 0;
+  - **co-movement** `r(a, b)`, the Pearson correlation of two agents' profiles, from the same joint draws, judged by A1's per-statistic rule with the OO pairs as yardstick;
+  - the A1 layer verdict at each of the five stage ends, each on its own world's probe (active for stage ends 0, 2 and `final`; passive for 1 and 3). So the A1 machinery, including the untrained references, runs on both probes.
+  - `decision_rules.evaluate_A4` reads all of these.
 
 **A2 decoding.**
-- Ridge regression (standardisation fitted on the training fold only).
-- Split by **`episode_seed` alone** with `GroupShuffleSplit` (80/20, 5 repeats, fixed seed), so the **same split is used for every agent** on a probe and comparisons are paired. In the pooled May probe, one `episode_seed` appears in all six stores: the same reset, with different trajectories. Grouping by seed alone keeps one world draw out of both folds. **Do not group by `(store, episode_seed)`**, because that leaks the draw (finding 12).
+- Ridge regression (standardisation fitted on the training fold only). The score is held-out R², the mean over the split repeats shared by all agents, with the bootstrap above.
+- Split by **`episode_seed` alone** with `GroupShuffleSplit` (the rules' number of repeats and test fraction, a manifest seed), so the **same split is used for every agent** on a probe and comparisons are paired. In the pooled May probe, one `episode_seed` appears in all six stores: the same reset, with different trajectories. Grouping by seed alone keeps one world draw out of both folds. **Do not group by `(store, episode_seed)`**, because that leaks the draw (finding 12).
 - An assertion that no `episode_seed` appears in both folds.
 - Targets: `satiation`, `injury_level`, `nearest_predator_manhattan` (valid rows only), `steps_remaining`.
-- **`steps_remaining` (finding 9).**
-  - **The headline excludes truncated episodes.** An episode cut off at `max_steps = 500` has a censored remaining lifetime, and `steps_remaining = 500 − t` is then just a clock. 33.5% of pilot episodes are truncated (measured by the reviewer on shard 0 of both w0000 stores). The all-episodes version is kept as a sensitivity row. The exclusion biases the headline toward shorter lives, and the data statement says so.
-  - **A time-only baseline** is reported beside every layer, and drawn as a reference line on each layer's panel. It is the held-out R² of ridge on a one-hot basis of `t` (bins of `t_bin_width` steps, a mandatory manifest key), i.e. the best a pure clock can do.
-  - Per layer, the tools also report the **excess over the clock**, R²(layer ⊕ t-basis) − R²(t-basis), and the R² of decoding `t` itself from the layer, so a reader sees how much of the layer's "prospects" signal is time.
-- Controls: the input layer (a **positive control**: satiation is itself an observation channel, the `Satiation` sensor, so R² at the input must be ≈ 1; if not, target values are wrong), and **shuffled targets across episodes** (a negative control: R² ≤ ~0). Row alignment is checked separately (Alignment controls, above).
-- Whether two agents' profiles "match" is `decision_rules.A2`.
+- **`steps_remaining` (finding 9).** **The headline excludes truncated episodes.** An episode cut off at `max_steps = 500` has a censored remaining lifetime, and `steps_remaining = 500 − t` is then just a clock. 33.5% of pilot episodes are truncated (measured by the reviewer on shard 0 of both w0000 stores). The all-episodes version is kept as a sensitivity row that decides nothing. The exclusion biases the headline toward shorter lives, and the data statement says so.
+- **Clock baseline (re-review R6; the rules' `A2.clock_baseline`, adopted as written).** `R²_clock` is the held-out R² of predicting the target from the time step alone, **fitted as the per-time-step mean of the target on the training fold**: for each `t` present in the training fold, the mean of the target over training rows at that `t`. It is scored on the same held-out rows and splits as the layers, for every target. It depends only on the probe, so it is one number per target and split, shared by every agent. It is drawn as a reference line on each layer's panel.
+  - A held-out row whose `t` has no training row has no clock prediction. Such rows are dropped from the layer score and the clock score alike, and counted in the data statement (§Revision 2, point 2).
+  - The earlier one-hot ridge on `t` bins, the `t_bin_width` key, and the `R²(layer ⊕ t) − R²(t)` column are **removed**.
+- **Excess over the clock** (the rules' `beats_clock`): per agent, target and layer, `excess = R² − R²_clock`. Its bootstrap distribution uses the same joint draws: the clock's R² is recomputed on each draw's resampled held-out groups, from the same fixed per-step means. The reported numbers are the point excess and its lower bootstrap percentile. The margin and the percentile come from `parameters:`, and "beats the clock" is decided only in `decision_rules.evaluate_A2`.
+- Controls: the input layer (a **positive control**: satiation is itself an observation channel, the `Satiation` sensor, so R² at the input must meet gate G4's minimum; if not, target values are wrong), and **shuffled targets across episodes** (a negative control: R² at or below G4's maximum). Row alignment is checked separately (Alignment controls, above).
+- Whether two agents' profiles "match" is `decision_rules.evaluate_A2`.
 
 **B2 wake-up.**
 
 | Measure | Source | Resolution | Untrained anchor (step 0) |
 |---|---|---|---|
 | total-loss gradient share | local WandB, `modulator/grad_norm`² / `loss/grad_norm`² | log points, binned to checkpoint intervals | no (first log point ≈ iteration 50) |
-| per-term gradient share | `grad_probe.py` at every 5th checkpoint | checkpoints | **yes** (probe on the untrained network with a freshly initialised optimiser, which is exactly the trainer's state at step 0) |
+| per-term gradient share | `grad_probe.py` at the sampled points (below: every 5th checkpoint plus a dense final third; May: every checkpoint) | checkpoints | **yes** (probe on the untrained network with a freshly initialised optimiser, which is exactly the trainer's state at step 0) |
 | relative update size | `ckpt_io.load_params` at consecutive checkpoints, modulator vs main | checkpoint intervals | **yes** (first interval is untrained → first checkpoint) |
 | contextual fraction ρ | `replay.rollout` (greedy, fixed seeds 90 000+) → `mod_distribution.variance_split` per site | checkpoints | **yes** |
 | gain swing | `spectral_bound` (weights only) | checkpoints | **yes** |
-| freeze cost | `freeze.apply_freeze` (gain frozen, offset frozen, separately) + `replay.rollout` + `freeze.paired_differences` | every 5th checkpoint | **yes** |
-| survival (for the plateau) | local WandB `Episode/Steps` weighted by `Episode/_window_n` (the `survival_tenths.py` convention) | log points | n/a |
+| freeze cost | `freeze.apply_freeze` (gain frozen, offset frozen, separately) + `replay.rollout` + `freeze.paired_differences` | as the per-term share | **yes** |
+| survival (for the plateau) | local WandB `Episode/Steps`, binned per checkpoint interval (`wandb_history.interval_means`) | checkpoint intervals | no (first binned point) |
 
-**Wake-up definition (finding 1).** For a measure *m* sampled at training points `x_0 < x_1 < … < x_n`:
-- `m₀` is the value at the **untrained network** (`x_0 = 0`, labelled "step 0" on the x-axis) where the anchor column above says yes. Otherwise it is the first available point, and the output says which.
-- `m_final` is the mean of the last `final_k` points (mandatory, 3).
-- `d = sign(m_final − m₀)`, the direction of the net change.
-- **Noise band.** σ_Δ is the standard deviation of consecutive differences `m_{i+1} − m_i` over the **final third** of the points (at least `min_noise_points` differences, a mandatory key; otherwise NaN, reason "too few points to estimate noise"). The band half-width is `noise_k · σ_Δ` (`noise_k` mandatory).
-- **Minimum-change guard.** If `|m_final − m₀| ≤ noise_k · σ_Δ`, the result is `t_wake = NaN`, reason "net change within the measure's own noise band". A checkpoint is never returned in that case.
-- **Signed crossing** (`threshold_mode: fraction_of_rise`, the headline, as the TODO now defines it): `t_wake` is the first `x_i` with `d·(m_i − m₀) ≥ f·|m_final − m₀|` that holds for `sustain` consecutive points (`f`, `sustain` mandatory; f = 0.5). The output records `d` as `rising` or `falling`.
-- **The literal definition stays beside it** (`fraction_of_final`): the first `x_i` with `m_i ≥ f·m_final`. It is flagged `degenerate: true` whenever `m₀` already satisfies it (the known trap: the gain swing starts at ≈ 61% of its final value), or whenever `d` is `falling` (the literal rule has no meaning for a falling measure).
-- `t_plateau` uses the same signed rule with f = 0.9 on trailing-window survival.
+**Where the wake-up rule and numbers come from (re-review R3).** The B2 rule is registered in the rules file's `B2` section (written by `experiment-designer`), and every B2 number lives in `parameters.B2` of that sha-pinned file. This plan fixes **no value** and does **not** choose the headline; `parameters.B2.threshold_mode_headline` does. The B2 runs are listed in the wake-up manifest, `docs/experiments/active/modulator_clues/algorithmic_null_wakeup.yaml`, which pins the rules file like every other manifest. If that manifest also states any B2 value, it must equal `parameters.B2` (mismatch raises). `wakeup.py` has no defaults; `run_wakeup` passes every value explicitly. Stage 4 does not start until the rules revision and the wake-up manifest are committed (Stage R). The summary below follows the rules' `B2` section; where the two differ, the rules win and the code follows them.
 
-The report always shows both definitions and the guard's verdict. **Which one the page headlines, and the value of `noise_k`, are fixed in the manifest by `experiment-analyzer` / `experiment-designer`, not by this plan.** The developer's fixture manifest uses clearly-labelled test values only.
+**Wake-up definition (finding 1; rules `B2`).**
+- **Points.** The run's saved checkpoints (episode count), plus step 0, the untrained network, for the measures marked anchorable above. A measure logged more often than checkpoints (total-loss gradient share, survival) is first averaged within each checkpoint interval `(x_{i−1}, x_i]`. Survival rows are weighted and skipped as the rules' `x_grid` states (see §Revision 2, point 5). So `sustain`, `final_k` and the noise band mean the same for every curve.
+- `m₀` is the step-0 value where anchorable; otherwise the first available point, and the output says which. For survival, `m₀` is its first binned point.
+- `m_final` is the mean of the last `final_k` points. `d = sign(m_final − m₀)`, recorded as `rising` or `falling`.
+- **Noise band.** σ_Δ is the standard deviation of consecutive differences over the **noise window**: the last `max(ceil(N/3), min_noise_points + 1)` points, `N` counting step 0. If that window would exceed `noise_window_max_fraction × N` points, the result is NaN, reason "too few points to estimate noise".
+- **Minimum-change guard.** If `|m_final − m₀| ≤ noise_k · σ_Δ`, the result is NaN, reason "net change within the measure's own noise band". A checkpoint is never named in that case.
+- **Signed crossing** (`fraction_of_rise`): `t_wake` is the first `x_i` with `d·(m_i − m₀) ≥ f·|m_final − m₀|` that holds at `sustain` consecutive points (`x_i` is the first of them).
+- **Literal crossing** (`fraction_of_final`, always beside, never headlined): the first `x_i` with `m_i ≥ literal_f·m_final`, flagged `degenerate: true` when `m₀` already satisfies it (the known trap: the gain swing starts at ≈ 61% of its final value) or when `d` is `falling`.
+- **Plateau.** `t_plateau` is the signed rule, guard and `sustain` applied to binned survival with fraction `plateau_f`.
+- **Lag.** `lag = t_wake − t_plateau` in episodes; `|lag| ≤ lag_coincident_max_intervals` checkpoint intervals reads "coincident"; NaN if either time is NaN.
+- **Reading per measure across the 16 level-05 worlds.** `n_def` = runs with a defined lag. `k*` = the smallest `k` with `P(Binomial(n_def, ½) ≥ k) ≤ sign_test_alpha`. "late" if at least `k*` runs have lag above the coincidence band, "early" if at least `k*` below, otherwise "undetermined across worlds". The three May seeds are reported as "agree" or "do not agree" and decide nothing alone. This reading is evaluated in `decision_rules.evaluate_B2`, with the same no-literal and fixture-sign-off discipline as A1–A4.
+
+**Sampling of the sparse measures (the rules' `known_consequence`, a tooling decision).** Per-term gradient share and freeze cost were planned at every 5th checkpoint. That gives too few points for the rules' noise window: level-05 would have 11 points, May `01_active` 4. The constants are not relaxed. Instead:
+- **level-05:** step 0, every 5th checkpoint, **and every checkpoint in the last third of the run** (checkpoints 34–50). That is about 25 points; the window is 9 points, all consecutive checkpoints, well within `noise_window_max_fraction`;
+- **May `01_active`:** **every** checkpoint (15, plus step 0).
+`run_wakeup` computes `N` and the window for each curve before sampling, and refuses to start a measure whose planned point set cannot meet the window. This is decided now, before any curve exists.
+
+Both definitions and the guard's verdict are always reported. The wake-up tests (File Changes §11) use their own fixture values, marked as such.
 
 For continual runs, B2 uses **`01_active` only** (episodes 0–1.5 M, the only stage trained from scratch), with the stage-local final value.
 
@@ -352,14 +423,14 @@ The new helper `untrained.build(run_dir)` follows this key chain, and builds the
 | Stage | When | Work | Verifiable check (must pass to proceed) |
 |---|---|---|---|
 | **0 — preflight** | now, CPU, no code change | Strict `load_agent` on every run in both manifests. Key-level diff of the May replication's stage files. Read `observation_breakdown` from one store of each study | All loads pass. Active stages' env sections equal `config.yaml`'s. Store/model breakdown equal. Result recorded in the Implementation Report |
-| **R — decision rules on file** | **before Stage 3**; owner `experiment-designer` | `decision_rules` block committed in `algorithmic_null_mayrep.yaml` (or wherever `decision_rules_ref` points) | Commit sha and time recorded (Checkpoint R.1). The time **precedes** the `generated_utc` of the first `run_similarity` / `run_decoding` output of **any** manifest, pilot included. The pilot's same-seed numbers are exactly the kind of number a post-hoc threshold would be fitted to |
+| **R — rules on file** | **before Stages 3 and 4**; owner `experiment-designer` | (a) The rules file `algorithmic_null_decision_rules.yaml`, revised with its `parameters:` block and `B2` section, committed, and every manifest re-pinned to its sha256 in the same commit. (b) The wake-up manifest `algorithmic_null_wakeup.yaml` committed. (c) The designer's sign-off of the evaluator's fixture table (after Stage 3's unit tests exist, before any real output) | Commit sha and time recorded (Checkpoint R.1). The rules commit **precedes** the `generated_utc` of the first `run_similarity` / `run_decoding` output of **any** manifest, pilot included, and of the first `run_wakeup` output. The sign-off precedes the first real `run_similarity` / `run_decoding` output (Checkpoint R.2). The pilot's same-seed numbers are exactly the kind of number a post-hoc threshold would be fitted to |
 | **1 — capture switch** | now | File Changes §1–2 | `tests/models/test_capture_activations.py` passes. **The jaxpr of the training loss gradient and of `get_action_and_value_nnx` is textually identical before and after** (Checkpoint 1.3, method tested on 2026-09-29). The golden parameter hash is unchanged. Existing `tests/models/` pass |
-| **2 — replay + pilot probe** | now | §3–4. Probe on the level-05 **w0000 pair** (1,000 episodes from block 0 of each store) | Each agent on its **own** store: 100% action agreement (near-tie allowance only). Alignment controls pass at their numeric bounds. Chain assertions pass on the real checkpoints. Same-agent CKA ≈ 1 (atol 1e-12) |
-| **3 — pilot A1/A2 + figures** | after Stage R | §6, §8–9. Figures `an01`–`an03` in *pilot* mode. Builder §11 checks (§10) | Unit tests pass. Positive control: satiation R² at the input ≥ 0.99. Negative control: shuffled R² ≤ 0.02. Untrained networks built with the pair's seed have **identical main-network parameters** for both agent types (confirms the shared start). Page builds. `artifact-format-reviewer` passes. Every pilot figure's data statement says **"tool validation — the two agents share seed 42; not evidence"** (from `evidence_status: pilot`) **and** "no verdict is drawn" (from `decision_rules_ref: null`) |
-| **4 — B2 on existing runs** | now, in parallel with 3 | §7, §11. All 16 level-05 modulated runs, plus May-replication **`01_active`** for the three modulated runs | Untrained anchor verified (Checkpoint 4.4). Gradient probe inside the sanity band (Checkpoint 4.2). Freeze equivalence: `freeze.verify_freeze_equivalence` passes before each sweep. ρ closure identity (asserted in `mod_distribution`) holds. Timing gate (§Stage 4 budget) passed before the full sweep |
-| **4b — early yardstick (optional)** | after Stage R | Collect the **`stage_end:0`** checkpoint (end of `01_active`) of all six May-replication runs (world = stage 0 = `config.yaml`, correct with the current collector), 10,000 episodes each, **one spec per run with an explicit step** through `run_collection.py`. Then A1/A3 at the end of `01_active` | As Stage 2 for every store. A3 figure in *interim* mode ("end of `01_active`, stage 1 of 5"); verdict only through `decision_rules` |
+| **2 — replay + pilot probe** | now | §3–4. Probe on the level-05 **w0000 pair** (`n_per_store` episodes from block 0 of each store, the pilot manifest's value; ≥ 2,500 under the rules as written, §Probe sets) | Distinct group count printed and above the G6 floor. Each agent on its **own** store: 100% action agreement (near-tie allowance only). Alignment controls pass at their numeric bounds. Chain assertions pass on the real checkpoints. Same-agent CKA ≈ 1 (`tool_checks.self_similarity_atol`) |
+| **3 — pilot A1/A2 + figures** | after Stage R (a) and (c) | §6, §8–9. Figures `an01`–`an03` in *pilot* mode. Builder §11 checks (§10) | Unit tests pass, including the no-literal and parameter-coverage tests. Controls meet gate G4's bounds (read from `parameters:`). Page builds. `artifact-format-reviewer` passes. Every pilot figure's data statement carries the rules' pilot label (**"tool validation — the two agents share seed 42; not evidence"**) **and** "no verdict is drawn", because the rules set `verdict_words_allowed: false` for the pilot; the decision functions are never called |
+| **4 — B2 on existing runs** | after Stage R (a), (b) and (c), in parallel with 3 | §7, §11, driven by the wake-up manifest. All 16 level-05 modulated runs, plus May-replication **`01_active`** for the three modulated runs | Wake-up values equal the rules' `B2` section. Untrained anchor verified (Checkpoint 4.4). Shared start verified on the May configs (Checkpoint 3.3). Gradient probe inside the sanity band (Checkpoint 4.2). Freeze equivalence: `freeze.verify_freeze_equivalence` passes before each sweep. ρ closure identity (asserted in `mod_distribution`) holds. Timing gate (§Stage 4 budget) passed before the full sweep |
+| **4b — early yardstick (optional)** | after Stage R | Collect the **`stage_end:0`** checkpoint (end of `01_active`) of all six May-replication runs (world = stage 0 = `config.yaml`, correct with the current collector), 10,000 episodes each, **one spec per run with an explicit step** through `run_collection.py`. Then A1/A3 at the end of `01_active`, with stage-1 survival and G5 from the logs (§A3) | As Stage 2 for every store. Stage-1 survival cross-check passes (Checkpoint 4.6). A3 figure in *interim* mode; every verdict word carries the rules' interim prefix ("provisional — end of stage 1 of 5") |
 | **5 — collector continual-awareness** | now, so it is ready when training ends | §5 | New tests in `tests/test_trajectory_collection.py` pass. On a real May-replication run, `stage_end:0` and `stage_end:3` resolve to checkpoints whose saved `stage` is 0 and 3, and the `stage_end:3` world has `detection_range: 0` |
-| **6 — May replication, full** | after training | Launch collection of `final` + `stage_end:3` (end of `04_passive`) for all six runs via the finished-runs-only launcher with the six logs **named** (§12). Then A1–A4 and B2 `01_active` are final | Every store validates (`validate_store_structure/shapes/draws`). Each store's `resolved_env_config.environment` equals its stage file's. Action agreement 100% per generating agent. The figures switch to `evidence_status: evidence` |
+| **6 — May replication, full** | after training | Launch collection of `final` + `stage_end:3` (end of `04_passive`) for all six runs via the finished-runs-only launcher with the six logs **named** (§12). Then A1–A4 (activations at `stage_end:0..3`, `final`, `stage_end:3:prev` and `final:prev` on both world probes; the `:prev` checkpoints need no stores of their own) and B2 `01_active` are final | Every store validates (`validate_store_structure/shapes/draws`). Each store's `resolved_env_config.environment` equals its stage file's. Action agreement 100% per generating agent. The figures switch to `evidence_status: evidence` |
 
 What the page can carry when:
 - **After Stage 3:** pilot A1/A2 figures, labelled as tool validation, no verdicts.
@@ -370,12 +441,12 @@ What the page can carry when:
 **Stage 4 budget (the reviewer's open question).** Work items:
 - update size and swing: weights only, 16 × 51 + 3 × 16 points, CPU, minutes;
 - ρ: one 128-episode greedy rollout per point, ≈ 16 × 51 + 3 × 16 ≈ **864 rollouts**;
-- freeze cost: every 5th checkpoint plus step 0, 3 conditions (live, gain frozen, offset frozen), ≈ 16 × 11 × 3 + 3 × 4 × 3 ≈ **564 rollouts**;
-- gradient probe: every 5th checkpoint plus step 0, ≈ 16 × 11 + 3 × 4 ≈ **188 probes**. Each probe is `warmup_iters` + 1 training-shaped iterations with 128 envs × 128 steps, and 4 updates.
+- freeze cost: the sampled points (§B2: ≈ 25 per level-05 run, 16 per May run), 3 conditions (live, gain frozen, offset frozen), ≈ 16 × 25 × 3 + 3 × 16 × 3 ≈ **1,344 rollouts**;
+- gradient probe: the same points, ≈ 16 × 25 + 3 × 16 ≈ **448 probes**. Each probe is `warmup_iters` + 1 training-shaped iterations with 128 envs × 128 steps, and 4 updates.
 
-Scale: 128 episodes × ≤ 500 steps is 500 sequential scan steps at batch 128. Level-05 training ran ≈ 143 episodes/s including updates, so one probe iteration is well under a second once compiled. The sweep is **compile-dominated**: a few jit compilations per run (one per model structure and rollout shape), not per checkpoint. The estimate is **≈ 3–6 GPU-hours in total**, run as two worker processes on the **two GPUs of one low-tier node** (RTX 2080 Ti class, per [LAB_NODE_GPU_SPEC](../../../environment/LAB_NODE_GPU_SPEC.md); routine small-network work), so **≤ 4 h wall-clock**. The node is chosen from `gpu-status` plus the diary, pack-node-first. This is an estimate, so it is gated:
+Scale: 128 episodes × ≤ 500 steps is 500 sequential scan steps at batch 128. Level-05 training ran ≈ 143 episodes/s including updates, so one probe iteration is well under a second once compiled. The sweep is **compile-dominated**: a few jit compilations per run (one per model structure and rollout shape), not per checkpoint. The estimate is **≈ 6–12 GPU-hours in total** (Revision 2: the denser sampling roughly doubles it), run as two worker processes on the **two GPUs of one low-tier node** (RTX 2080 Ti class, per [LAB_NODE_GPU_SPEC](../../../environment/LAB_NODE_GPU_SPEC.md); routine small-network work), so **≤ 6 h wall-clock**. The node is chosen from `gpu-status` plus the diary, pack-node-first. This is an estimate, so it is gated:
 - **Timing gate:** before the full sweep, time one run × 3 checkpoints × every measure, and record seconds per item in the Implementation Report. Extrapolate.
-- If the extrapolation exceeds **8 h wall-clock**, thin ρ to every 2nd checkpoint. Decide and record this *before* the full sweep, never after seeing results.
+- If the extrapolation exceeds **8 h wall-clock**, spread the sweep over a second node's GPUs (pack-node-first). **No measure is thinned**: thinning changes `N`, the noise window and what `sustain` means, all of which are registered. Decide and record this *before* the full sweep.
 
 ### File Changes
 
@@ -429,7 +500,8 @@ def _forward(self, x, h, acts):                  # body of today's __call__ (l.5
   - uses decision rows `0..T−1` (the `read_decision_rows` convention in `scripts/analysis/studies/level05_body_interactions/_common.py`);
   - builds the single row-index array and gathers `obs`, `action_next` and all targets through it (§Probe sets);
   - derives targets (§F for predators, via the manifest's `animal_classes` and the episode `animal_active`);
-  - writes `probe_<id>.npz` and `probe_<id>.json` (sources, counts, sha256 of the row index).
+  - counts the distinct `episode_seed` groups, prints them with the per-store episode counts, and raises if `n_groups × test_frac` is below gate G6's held-out minimum (re-review R8, §Probe sets). `test_frac` and the minimum come from `parameters:`, passed in by the driver;
+  - writes `probe_<id>.npz` and `probe_<id>.json` (sources, counts, `n_groups`, sha256 of the row index).
 - `teacher_forced.replay(agent, probe, layers, batch_size) -> Activations` plus the agreement report and the alignment controls (§Design). The npz is keyed by layer name and carries the probe hash.
 - **Run-time chain assertions on the real checkpoint (finding 3).** Every capture checks a batch of `assert_n_episodes` whole episodes (mandatory key), using **consecutive** rows so that `h_prev` is available. Every captured key is recomputed from its upstream neighbour with the model's own submodules, eagerly and outside the scan. Let `x̃ = symlog(obs)` and γ, β the per-step values from the returned `mod_info` (FiLM; for `PreActivation`/`Multiplicative` the corresponding sigmoid forms):
 
@@ -447,11 +519,13 @@ def _forward(self, x, h, acts):                  # body of today's __call__ (l.5
   | `logits == actor_fc2(actor.out)` (`/ temperature` if the temperature site is on); `value == critic_fc2(critic.out)` | always |
   | `argmax(logits[t]) == stored action[t+1]` | generating agent (the only link to stored ground truth) |
 
-  Tolerance: `max|Δ| ≤ 1e-5·max(1, max|reference|)` in float32. The recomputation is a separate XLA program, so bitwise equality is not expected. Every assertion's max deviation is written into the activation file's JSON. Any failure aborts the capture. Because each key is checked against its neighbour, a single key bound to the wrong tensor fails at least one row of this table.
+  Tolerance: `max|Δ| ≤ tol · max(1, max|reference|)` in float32, with `tol` = gate G2's reconstruction tolerance from `parameters:` (1e-5 in the designer's revision). The recomputation is a separate XLA program, so bitwise equality is not expected. Every assertion's max deviation is written into the activation file's JSON. Any failure aborts the capture. Because each key is checked against its neighbour, a single key bound to the wrong tensor fails at least one row of this table.
 
 #### 5. `scripts/eval/traj_collect/collect_trajectories.py` — continual-aware collection
 
 - `resolve_checkpoint(run_dir, which)` accepts `stage_end:<k>`: **the last saved checkpoint whose saved `stage` field equals *k*** (0-based; reuse `continual_forgetting_matrix.read_saved_stage`). If no checkpoint has stage *k*, it raises. For a run with no `schedule.yaml`, `stage_end:<k>` raises.
+- **`:prev` selectors (re-review R4).** `stage_end:<k>:prev` is the saved checkpoint immediately before `stage_end:<k>` in numeric step order. `final:prev` is the one immediately before `final`. Each **must have the same saved `stage`** as the checkpoint it precedes, so both lie inside one stage; otherwise, or if there is no earlier checkpoint, it raises. `final:prev` on a non-continual run is allowed (no stage check; there is only one stage). The resolver returns the episode gap between the pair, which the A4 driver records.
+- This one resolver is the only checkpoint-selector implementation. The analysis drivers (`run_activations`, `untrained`, `run_wakeup`) import it, so the collector and the analysis can never disagree on what `stage_end:3:prev` means.
 - For a run with `schedule.yaml`, the collector resolves the checkpoint's own stage file (via `_resolve_continual_stage_config`) and builds the **dict that is fingerprinted and stored as `resolved_env_config`** as follows (finding 8):
   1. start from a deep copy of `config.yaml`;
   2. replace its **world sections** `environment`, `sensory`, `body`, `thermal`, `perceptual_noise` with the stage file's;
@@ -466,6 +540,7 @@ def _forward(self, x, h, acts):                  # body of today's __call__ (l.5
 
 **Tests** (`tests/test_trajectory_collection.py`, extended), on a synthetic continual `models/` fixture (`schedule.yaml`, `config.yaml`, a stage-0 file identical to it, a passive stage-1 file with a different `environment` and a different `tag`/`wandb` and no `agent`, and checkpoint dirs with saved `stage` values including a lagging one):
 - `stage_end:1` resolves to the last stage-1 checkpoint; a lagging checkpoint (episode past the boundary, saved `stage` still 0) is counted as stage 0; no stage-2 checkpoint → `stage_end:2` raises;
+- `stage_end:1:prev` resolves to the checkpoint before it; a fixture where only one stage-1 checkpoint exists (so the one before it is stage 0) → `stage_end:1:prev` raises; `final:prev` resolves, and raises on a fixture whose second-to-last checkpoint has a different saved stage;
 - **(i)** a stage-0 checkpoint of the continual fixture gets the **same `env_fp`** as the non-continual path would give for the same `config.yaml`;
 - **(ii)** a passive-stage checkpoint gets a **different `env_fp`**, so its store lands in a different directory;
 - **(iii)** the manifest's `resolved_env_config["environment"]` equals the stage file's `environment`, and its `seed`/`tag` equal `config.yaml`'s;
@@ -476,8 +551,13 @@ No existing store belongs to a continual run (the reviewer checked: none under `
 
 #### 6. `scripts/analysis/nmn/representation.py` + `scripts/analysis/nmn/decision_rules.py` — new, pure numpy / sklearn / python
 
-- `representation.py`: `linear_cka(X, Y)`, `linear_predictivity(X, Y, groups, split)`, `ridge_probe(X, y, groups, split)`, `time_baseline(t, y, groups, split, bin_width)`, `episode_split(groups, n_repeats, test_frac, seed)` (asserts disjointness), `bootstrap_over_groups(fn, groups, n)`. Everything in float64.
-- `decision_rules.py`: `load(ref) -> (block | None, sha256, commit_sha)`, `require_clean(path)` (raises on uncommitted changes when `evidence_status ∈ {interim, evidence}`), `evaluate(block, analysis, stats) -> label | None`. It implements only the condition forms present in the committed block (§E) and raises on any other.
+- `representation.py`: `linear_cka(X, Y)`, `fit_predictivity_maps(X, Y, split) -> maps` and `heldout_r2(maps, X, Y, rows)` (so a map is fitted once per split repeat and scored on any resample of held-out rows, re-review R7), `ridge_probe(X, y, split)` (same fit/score separation), `clock_baseline(t, y, split) -> per-step means` and `clock_r2(means, t, y, rows)` (the rules' per-time-step training-fold mean; rows whose `t` has no training row are returned as a mask so every scorer drops them alike, re-review R6), `episode_split(groups, n_repeats, test_frac, seed)` (asserts disjointness), `joint_group_bootstrap(groups, split, n, seed) -> draws` (one set of resampled held-out group indices per repeat and draw, shared by every agent and pair). Everything in float64. No threshold lives here.
+- `decision_rules.py` (the contract of §E):
+  - `load(manifest) -> Rules`: reads `decision_rules.file`, computes the whole-file sha256, raises `ValueError` if it differs from `decision_rules.sha256`; returns the parsed rules, the `parameters:` mapping, the sha256 and the file's last commit sha;
+  - `require_clean(path)`: raises on uncommitted changes when `evidence_status ∈ {interim, evidence}`;
+  - `verdict_policy(rules, evidence_status) -> (allowed, prefix, label)`, straight from `evidence_status.<status>`;
+  - gate functions `gate_G1` … `gate_G6`, and `evaluate_A1`, `evaluate_A2`, `evaluate_A3`, `evaluate_A4`, `evaluate_B2` (the across-worlds reading), `study_reading_*`: each takes the driver's statistics and `parameters`, returns an outcome word from the rules' own vocabulary (or "blocked by gate <id>", "undetermined — yardstick incomplete"), and raises on any input combination the rules do not assign. Docstrings quote the rule text verbatim;
+  - survival helpers for A3 and G5: `survival_difference(S_by_arm, params)` (mean difference, `SE_k`, `SE_used = max(SE_k, floor)`, the "same" test) and `gate_G5(per_run, params)`.
 
 **Tests** (`tests/analysis/test_nmn_representation.py`, `tests/analysis/test_nmn_decision_rules.py`):
 - `isclose(CKA(X,X), 1, atol=1e-12)`;
@@ -485,8 +565,12 @@ No existing store belongs to a continual run (the reviewer checked: none under `
 - **CKA drops under a per-unit rescaling** (documents the motivating caveat);
 - predictivity ≈ 1 under a per-unit rescaling and under a random invertible map, and ≈ 0 for independent noise;
 - **leakage test:** a feature that encodes the episode identity plus a per-episode constant target gives high R² under a row-level split and ≈ 0 under `episode_split`;
-- **clock test:** a feature equal to `t` scores the time baseline's R² on `steps_remaining` and ≈ 0 excess over it;
-- rules: `ref = null` → `evaluate` returns `None` and the figure-side formatter emits the "no verdict" sentence; a fixture block evaluates to the expected labels; an unknown condition form raises; `require_clean` raises on a dirty fixture file.
+- **clock tests:** (a) a target that is an arbitrary nonlinear function of `t` alone gets `R²_clock` ≈ 1; (b) a layer equal to the one-hot of `t` has excess `R² − R²_clock` ≈ 0; (c) a layer equal to the target plus small noise, on a target independent of `t`, has excess > 0 and `R²_clock` ≈ 0; (d) a held-out row at a `t` absent from the training fold is masked for layer and clock alike;
+- **bootstrap tests:** the maps are fitted exactly once per repeat (a counting stub); every draw uses the same resampled groups for all agents (paired: the draw-wise difference of two identical agents is exactly 0); groups, not rows, are resampled (a probe with two stores sharing seeds resamples both stores' rows of a seed together);
+- **rules — contract:** a manifest whose pinned sha256 differs from the file raises; the pilot policy yields `allowed = false` and the drivers do not call any `evaluate_*`; the interim policy prefixes every word; `require_clean` raises on a dirty fixture file;
+- **rules — logic:** for every rule, a fixture table (input statistics → expected outcome) covering every outcome branch, the G5-exclusion recount (n = 4 MO_diff pairs), and at least one uncovered combination that must raise. Parameters are a fixture dict marked "test fixture, not the study's rule". **This table is what `experiment-designer` signs at Checkpoint R.2**;
+- **rules — no constants in code:** a test walks `decision_rules.py`'s syntax tree and fails on any numeric literal other than 0 and 1;
+- **rules — coverage:** against the real rules file, every `parameters:` entry is read by some function (via a recording mapping), and a fixture run that exercises every function reads no missing entry.
 
 #### 7. `scripts/analysis/nmn/wandb_history.py` — new
 
@@ -497,21 +581,34 @@ No existing store belongs to a continual run (the reviewer checked: none under `
   - *Level-05 runs:* loss records carry `iteration`, `timesteps`, `_step`, but **no** `Episode/Number`. Each is followed by an episode row with the **same `timesteps`** value. So the episode count is the `Episode/Number` of the episode row whose `timesteps` equals the loss record's, compared as floats (the binary writes `374374400` on one and `3.743744e+08` on the other).
   - Unmatched records are counted and reported, never interpolated. The join never converts `iteration` to episodes by arithmetic.
 - `wandb_dir_for` is reused through `importlib` (the `survival_tenths.py` precedent).
+- **`interval_means(wandb_dir, key, edges, weighting, min_window_n)`**: the per-checkpoint-interval means B2 needs (§B2 points).
+- **`stage_level(wandb_dir, stage_index, key, window, min_window_n, weighting) -> (value | None, info)`** (re-review R5). Episode rows of that `stage/index`, in `Episode/Number` order; each row weighted per `weighting` — `episode_increment` (the increase in `Episode/Number` since the previous row, the convention of `pilot_readout.Series`, which computes the May verdict) or `window_n` (`Episode/_window_n`, the wording of the May design §5 and of the rules' B2 `x_grid`); rows whose `Episode/_window_n` is below `min_window_n` skipped. `weighting` is a required argument, taken from the rules (§Revision 2, point 5); both values are always reported side by side. Returns the weighted mean over the last `window` episodes of the stage, or `None` (with the reason in `info`) when the stage is incomplete or has fewer than `window` episodes. `info` records the rows used and skipped. Called for `Episode/Steps` (survival) and `Episode/FoodEaten` (bites). `window` and `min_window_n` are passed in by the caller from `parameters:`; this module holds no default.
+- The run's WandB folder is found by `resolve_by_tag(<saved top-level tag: in models/config.yaml>)`; the tag is never taken from a manifest label.
+
+**Tests** (`tests/analysis/test_nmn_stage_level.py`): on a synthetic row list, the weighting, the `min_window_n` skip, the last-`window` cut and the incomplete-stage `None` each give a hand-computed value; marked slow, the Checkpoint 4.6 cross-check against `pilot_readout.py` on the six real May runs.
 
 #### 8. `scripts/analysis/nmn/run_activations.py`, `run_similarity.py`, `run_decoding.py` — new drivers
 
-Each takes `--manifest <yaml>`. Outputs go under `results/analysis/algorithmic_null/<manifest name>/` (JSON + CSV + npz), each with a `manifest.json` recording the git sha, the input manifest, the probe hashes, the package versions, and **`decision_rules: {ref, sha256, commit} | null`**.
+Each takes `--manifest <yaml>`. Outputs go under `results/analysis/algorithmic_null/<manifest name>/` (JSON + CSV + npz), each with a `manifest.json` recording the git sha, the input manifest, the probe hashes, the package versions, and **`decision_rules: {file, sha256, commit}`**, plus the evidence status and whether verdict words were allowed.
+
+`run_similarity.py` also reads survival and bites through `wandb_history.stage_level` for every run, computes gate G5 per run and the survival difference for the analysed stage (§A3 statistics), and writes both into its driver JSON before evaluating anything. G5 exclusions are applied before any pair set is formed.
 
 **Manifest schema (all keys mandatory; `null` is an explicit value, a missing key is a `ValueError`):**
 - `name`, `evidence_status` (`pilot|interim|evidence`), `out_root`;
-- `decision_rules_ref: {path, key} | null`. The May manifest's default is `{path: <this file>, key: decision_rules}`. The block itself is owned by `experiment-designer`; the developer never writes or edits it;
-- `runs: [{label, path, tag, log, checkpoints: [final | <int> | stage_end:<k>]}]`, where `tag` is used for WandB resolution and `log` for the launcher;
-- `probes: [{id, stores: [<store dir>], n_per_store, rows_per_episode, seed}]`;
-- `layers: [{key, flatten: none | senses_x_units}]`, `comparisons` (`auto` = every pair of runs, or an explicit list);
-- `bootstrap_n`, `probe_split: {n_repeats, test_frac, seed}`, `ridge_alphas`, `untrained_reference_keys`, `min_rows_per_column`, `t_bin_width`, `assert_n_episodes`;
-- `wakeup: {threshold_mode_headline, f, sustain, final_k, noise_k, min_noise_points}` (B2 manifests only; values set by `experiment-designer`/`experiment-analyzer`).
+- **`decision_rules: {file, sha256}`** (re-review R1). Written and re-pinned by `experiment-designer` only; the developer never edits it;
+- `runs: [{label, path, checkpoints: [final | final:prev | <int> | stage_end:<k> | stage_end:<k>:prev]}]`. Arm, seed and WandB tag are read from each run's saved `models/config.yaml` (top-level `seed:`, `tag:`, `agent.modulation.type`), not from the manifest;
+- `probes: [{id, stores: [<store dir>], n_per_store, rows_per_episode, seed}]`. **`n_per_store` is set by `experiment-designer`** and checked against gate G6 at build time (R8);
+- `layers: [{key, flatten: none | senses_x_units}]` (must include every `common.verdict_layers` entry of the rules), `comparisons` (`auto` = every pair of runs, or an explicit list);
+- **`bootstrap_n`**, set by `experiment-designer`, asserted against G6's minimum at load (R7);
+- `probe_split: {seed}` — the number of repeats and the test fraction are rule constants and come from `parameters:`;
+- `ridge_alphas`, `min_rows_per_column`, `assert_n_episodes`;
+- `tool_checks: {shift_change_rows_max, self_similarity_atol}` — the plan's own abort tolerances that no gate covers, which decide no verdict (a failed check aborts the run). They live in the manifest so that no number sits in a script.
 
-The two manifests are `docs/experiments/active/modulator_clues/algorithmic_null_pilot.yaml` (with `decision_rules_ref: null`) and `docs/experiments/active/modulator_clues/algorithmic_null_mayrep.yaml`. The developer writes every section to this schema **except `decision_rules` and the `wakeup` values**. The precedent is `docs/experiments/active/level05_body_interactions/analysis_manifest.yaml`, and the `_req` / `load_manifest` pattern of `scripts/analysis/studies/level05_body_interactions/_common.py`. `experiment-designer` reviews both manifests. If the designer created `algorithmic_null_mayrep.yaml` first with only the rules block, the developer adds the other sections around it and leaves that block byte-identical (its sha256 is checked).
+Removed from the Revision 1 schema: `decision_rules_ref`, `untrained_reference_keys` (R2: the untrained references are `untrained.build` on every ordinary run in `runs`), `t_bin_width` (R6), `probe_split.n_repeats` / `test_frac`, and the runs' `tag` / `log` fields.
+
+**The wake-up manifest** (`algorithmic_null_wakeup.yaml`, written by `experiment-designer`, re-review R3): `name`, `evidence_status`, `out_root`, `decision_rules: {file, sha256}`, `runs` (as above), plus the Stage 4 sampling keys the developer adds (`rollout_episodes`, `rollout_seed_base`, `warmup_iters`, and the sparse-measure point set of §B2). Every B2 constant comes from `parameters.B2` of the rules file; any B2 value the manifest also states must equal it.
+
+**Who writes what.** The four manifests are `algorithmic_null_pilot.yaml`, `algorithmic_null_mayrep_interim.yaml`, `algorithmic_null_mayrep.yaml` and `algorithmic_null_wakeup.yaml`, all in `docs/experiments/active/modulator_clues/`. `experiment-designer` owns `decision_rules`, `evidence_status`, `runs` (including the `:prev` checkpoints in the evidence manifest), `n_per_store` and `bootstrap_n`. The developer adds the remaining keys listed above, leaving every designer-owned key byte-identical, and `experiment-designer` reviews the result. The precedent is `docs/experiments/active/level05_body_interactions/analysis_manifest.yaml`, and the `_req` / `load_manifest` pattern of `scripts/analysis/studies/level05_body_interactions/_common.py`.
 
 #### 9. Figure scripts — new, `scripts/analysis/studies/modulator_clues/an0N_*.py`
 
@@ -519,8 +616,9 @@ One script per figure: `an01_similarity_layers` (A1, CKA and predictivity per la
 - calls `house.apply()` first and sets no colour or font of its own;
 - saves via `house.save(fig, "docs/experiments/active/modulator_clues/figures/algorithmic_null/<stem>")`. The page has **its own subfolder** (finding 7); the other page's 111 files in `figures/` are never read, listed or touched;
 - writes `<stem>.data.txt`: used / available / % per subset, with a reason, **computed from the driver outputs**. Examples: probe rows used per store; predator-distance rows kept vs rows in episodes with no predator; truncated episodes excluded from the `steps_remaining` headline; checkpoints sampled out of the available ones; wake-up NaN reasons;
-- prefixes the data statement with its `evidence_status` label;
-- writes a `decision_rules:` line, either `<sha256> @ <commit>` or `none — no verdict is drawn`, and draws a verdict label only from `decision_rules.evaluate`.
+- prefixes the data statement with the rules' wording for its evidence status: the pilot `label`, or the interim `verdict_prefix`;
+- writes a `decision_rules: <file> <sha256> @ <commit>` line on every figure, the pilot included;
+- draws a verdict word only from the `evaluate_*` result in the driver JSON; when the rules forbid verdict words for the status, it writes "no verdict is drawn" instead.
 
 Scripts before Stage 6 run on pilot, interim or partial manifests. The same scripts rerun on the evidence manifest.
 
@@ -539,7 +637,7 @@ Four adjustments:
 - **Require that eyebrow text** to be exactly "How it is computed".
 - **Pull the house figure viewer** (`<div class="lb fit" id="lb" …</script>`) into a `{{HOUSE_VIEWER}}` token (guide 2.6), next to the existing `{{HOUSE_SCRIPT}}`.
 
-Plus one new check: **decision-rule consistency.** Every figure's `data.txt` `decision_rules:` line must match the block at HEAD (sha256), or read `none — no verdict is drawn`. A mismatch is refused.
+Plus one new check: **decision-rule consistency.** Every figure's `data.txt` must carry a `decision_rules:` line whose sha256 equals the rules file's sha256 at HEAD. A missing line or a mismatch is refused.
 
 Replace the current blanket refusal (l.83–85) with these per-figure checks. Keep the F54, citation and token checks as they are.
 
@@ -547,8 +645,8 @@ The template's text and figure blocks are **content, not tooling**: `experiment-
 
 #### 11. `scripts/analysis/nmn/wakeup.py`, `untrained.py`, `grad_probe.py`, `run_wakeup.py` — new
 
-- **`wakeup.py`** (pure numpy): `t_cross(x, m, *, mode, f, sustain, final_k, noise_k, min_noise_points, m0=None) -> Result(t, direction, reason, degenerate, m0, m_final, sigma_delta)`, `trailing_survival(...)`, `lag(...)`. `t` is a float step or `NaN`; `reason` is `None` or a sentence.
-  **Tests** (`tests/analysis/test_nmn_wakeup.py`) use synthetic curves over 50 checkpoints (x = 1…50) plus a step-0 anchor, with fixed-seed Gaussian noise σ = 0.01 and test values `f = 0.5`, `sustain = 2`, `final_k = 3`, `noise_k = 3`, `min_noise_points = 5`. Expected outputs:
+- **`wakeup.py`** (pure numpy): `t_cross(x, m, *, mode, f, sustain, final_k, noise_k, min_noise_points, noise_window_max_fraction, m0=None)` (every keyword required; the noise window per §B2), `lag(t_wake, t_plateau, interval, coincident_max_intervals)` -> Result(t, direction, reason, degenerate, m0, m_final, sigma_delta, window_points)`. The across-worlds reading (binomial `k*`) is `decision_rules.evaluate_B2`, not here. `t` is a float step or `NaN`; `reason` is `None` or a sentence.
+  **Tests** (`tests/analysis/test_nmn_wakeup.py`) use synthetic curves over 50 checkpoints (x = 1…50) plus a step-0 anchor, with fixed-seed Gaussian noise σ = 0.01 and **test fixture values** (not read from the rules file) `f = 0.5`, `sustain = 2`, `final_k = 3`, `noise_k = 3`, `min_noise_points = 5`, `noise_window_max_fraction = 0.5`. Expected outputs:
 
   | Curve | `fraction_of_rise` (signed) | `fraction_of_final` (literal) |
   |---|---|---|
@@ -558,9 +656,12 @@ The template's text and figure blocks are **content, not tooling**: `experiment-
   | **flat in noise**: 0.5 + noise throughout | `NaN`, same reason | `degenerate: true` |
   | **initial-value trap**: 0.61 → 1.0, midpoint 20 | `t ∈ [19, 21]` | `t = 0`, `degenerate: true` |
   | **non-monotone rise**: clean rise with a single one-checkpoint spike past threshold at 8 | `t ∈ [19, 21]` (spike rejected by `sustain`) | same |
-  | **too few points**: 6 checkpoints | `NaN`, reason "too few points to estimate noise" | — |
+  | **too few points**: 6 checkpoints plus step 0 (window 6 > 0.5 × 7) | `NaN`, reason "too few points to estimate noise" | — |
+  | **dense-tail sampling**: the clean rise sampled at step 0, every 5th checkpoint and every checkpoint from 34 | `t ∈ [19, 21]` (window within bounds) | — |
 
-- **`untrained.py`**: `build(run_dir) -> (model, env_params)` along the key chain in §B2. It reads `seed` from the saved top level and cross-checks the `--seed` launch argument; a mismatch raises. The verification harness is `tests/analysis/test_nmn_untrained.py::test_matches_train_py_construction`. It is marked slow, and it runs the trainer's own `main()` up to network construction, as described in §B2. It is run for one ordinary and one modulated run of each study and recorded at Checkpoint 4.4.
+  Plus `lag` cases (late, early, coincident at exactly the band edge, NaN input) and, in `test_nmn_decision_rules.py`, `evaluate_B2` fixtures: `k*` for `n_def` = 16 and a small `n_def` where no `k` qualifies (→ "undetermined across worlds").
+
+- **`untrained.py`**: `build(run_dir) -> (model, env_params)` along the key chain in §B2. It serves both the B2 step-0 anchor and the A1 untrained reference networks (one per ordinary run, re-review R2). It reads `seed` from the saved top level and cross-checks the `--seed` launch argument; a mismatch raises. The verification harness is `tests/analysis/test_nmn_untrained.py::test_matches_train_py_construction`. It is marked slow, and it runs the trainer's own `main()` up to network construction, as described in §B2. It is run for one ordinary and one modulated run of each study and recorded at Checkpoint 4.4.
 - **`grad_probe.py`** (finding 5): at a checkpoint (or at the untrained network):
   - restore `model` **and `optimizer`** strictly from the checkpoint payload. At step 0, use a freshly initialised optimiser built as `train.py` builds it;
   - warm up the environment for `warmup_iters` rollouts without updates, because checkpoints carry no `env_state`;
@@ -568,7 +669,7 @@ The template's text and figure blocks are **content, not tooling**: `experiment-
   - **(a) per-term split:** on the first update, `nnx.grad` of `policy_loss`, `vf_coef·value_loss` and `ent_coef·entropy_loss` separately, reporting `‖∇_mod‖²`, `‖∇_all‖²` and the share per term;
   - **(b) like-for-like with the log:** on a **throw-away deep copy** of model and optimiser, call the trainer's own `update_step` `K_epochs` times on that batch, exactly as `train_iteration` l.583–586 does, and report the mean of its returned `grad_norm` and `mod_grad_norm`. This is the quantity `train.py` l.1919–1923 logs. The copy is discarded, and the checkpoint on disk is opened read-only.
   - The output states: "(a) is the first update only (ratio = 1, before any in-iteration parameter change) and is biased upward relative to the log; (b) is the log's own definition; the world was re-warmed, not restored."
-- **`run_wakeup.py --manifest --measures {grad_share,grad_probe,update_size,rho,swing,freeze}`**. It reuses `replay`, `mod_distribution`, `spectral_bound`, `freeze` and `ckpt_io` unchanged, and adds the step-0 point through `untrained.build` for the measures marked in §B2.
+- **`run_wakeup.py --manifest <wake-up manifest> --measures {grad_share,grad_probe,update_size,rho,swing,freeze}`**. It loads the manifest with `decision_rules.load` (sha256 check), asserts the `wakeup:` values against the rules' `B2` section, and passes every wake-up value to `wakeup.t_cross` explicitly (`wakeup.py` has no defaults). It reuses `replay`, `mod_distribution`, `spectral_bound`, `freeze` and `ckpt_io` unchanged, and adds the step-0 point through `untrained.build` for the measures marked in §B2.
 
 #### 12. Spec + launcher
 
@@ -598,9 +699,9 @@ Add rows for every new file:
 
 Update the rows for:
 - `replay.py` (now imports `scripts.eval.eval_rollout`);
-- `collect_trajectories.py` (now imports `eval_rollout` and the stage-reading logic);
+- `collect_trajectories.py` (now imports `eval_rollout` and the stage-reading logic; its `resolve_checkpoint` gains new callers `run_activations.py`, `untrained.py`, `run_wakeup.py`);
 - `eval_rollout.py` / `continual_forgetting_matrix.py` (new callers);
-- `pilot_pick.py` and `continual_worlds/pilot_readout.py` (precedents factored, not imported; note only if imported);
+- `pilot_pick.py` and `continual_worlds/pilot_readout.py` (precedents factored, not imported by the tools; `pilot_readout.py` is imported by the Checkpoint 4.6 cross-check test, `tests/analysis/test_nmn_stage_level.py`, which is a new caller);
 - `launch_collection.py` (new `--logs` flag);
 - `build_algorithmic_null_page.py` (now reads `figures/algorithmic_null/` and runs the §11 checks).
 
@@ -622,23 +723,25 @@ This belongs in a separate plan with a speed measurement. It would make B2's per
 
 - [ ] **0.1** Strict `load_agent` succeeds for all 32 level-05 runs at their store checkpoints, and for all six May-replication runs at the latest checkpoint. The list is pasted into the Implementation Report.
 - [ ] **0.2** The May replication's five stage files: the env sections of `01/03/05_active` are identical to `config.yaml`'s; `02/04_passive` differ only in `environment.entities` (besides `agent`/`tag`/`wandb`).
-- [ ] **R.1** `experiment-designer`'s `decision_rules` block is committed. Record its file, commit sha and commit time. Record the `generated_utc` of the first `run_similarity`/`run_decoding` output of any manifest, and show it is **later**. (Verifier checks both from `git log` and the output `manifest.json`.)
+- [ ] **R.1** `experiment-designer`'s revised rules file (with `parameters:` and `B2`) and the wake-up manifest are committed, and all four manifests pin the rules file's current sha256. Record the file paths, commit shas and commit times. Record the `generated_utc` of the first `run_similarity` / `run_decoding` output of any manifest and of the first `run_wakeup` output, and show each is **later** than the rules commit. (Verifier checks both from `git log` and the output `manifest.json`.)
+- [ ] **R.2** `experiment-designer` has read the evaluator's fixture table (`tests/analysis/test_nmn_decision_rules.py`, the "rules — logic" cases) and signed in the Implementation Report that each row is the rules' intended reading. The signature's commit time precedes the first real `run_similarity` / `run_decoding` / `run_wakeup` output. Any row the designer rejects is a rules revision (reason 1 of the rules' `revision_policy`) or a code fix, before any number exists.
 - [ ] **1.1** Record the golden parameter hashes on the **unmodified** commit (state its sha) *before* editing the network.
 - [ ] **1.2** `tests/models/test_capture_activations.py` passes. All of `tests/models/` passes.
 - [ ] **1.3** **Jaxpr identity (the speed gate).** Method, tested on 2026-09-29 on a synthetic 8-input / 16-hidden model: `g, s = nnx.split(model)`; wrap `f(s, x, h) = get_action_and_value_nnx(nnx.merge(g, s), x, h, key, eval_mode=False)` and `L(s, b) = ppo_loss_fn(nnx.merge(g, s), b, 0.2, 0.01, 0.5)[0]`. Hash `str(jax.make_jaxpr(f)(s, x, h))` and `str(jax.make_jaxpr(jax.grad(L))(s, per_env_batch))`, where `per_env_batch` is a `PPOBatch` of one env (`obs (T, D)`, `h_init` unbatched), matching the trainer's `vmap` over envs. Three separate processes gave identical hashes for the ordinary and a four-site FiLM `activation` model, for both functions. For this checkpoint, run it on the real ordinary and t16quad agent blocks, before and after the change; the `diff` must be empty. **Positive control:** a throw-away edit inserting `x = x * 1.0` into `_forward` must change the hash (then revert it), which shows the check can fail. Paste commands and hashes. A 200-iteration timing on one node is optional.
-- [ ] **2.1** Pilot probe built. Its data counts (episodes per store, rows kept, predator-valid rows, truncated episodes) are printed and saved. The one-pass row-index assertions pass.
-- [ ] **2.2** Self-replay agreement = 100% for each agent of the pair on its own store (near-ties ≤ 0.1% of rows, margin < 1e-4). Step-discontinuous alignment on sampled rows = 100%, including on action-change rows. Shift-by-one < 95% overall and < 5% on action-change rows, with both numbers recorded (≥ 95% overall = inconclusive, stop). Cross-agent agreement is recorded.
+- [ ] **2.1** Pilot probe built from the pilot manifest's `n_per_store`. Its data counts (episodes per store, **distinct `episode_seed` groups**, rows kept, predator-valid rows, truncated episodes) are printed and saved. The group count meets gate G6 (`n_groups × test_frac ≥` the held-out minimum); a deliberately small `n_per_store` (e.g. 1,000) is shown to raise. The one-pass row-index assertions pass.
+- [ ] **2.2** Self-replay agreement = 100% for each agent of the pair on its own store (near-ties within gate G1's allowance, read from `parameters:`). Step-discontinuous alignment on sampled rows = 100%, including on action-change rows. Shift-by-one < 95% overall and < 5% on action-change rows, with both numbers recorded (≥ 95% overall = inconclusive, stop). Cross-agent agreement is recorded.
 - [ ] **2.3** Chain assertions pass on both real pilot checkpoints for every row of the §4 table that applies. The max deviation per assertion is pasted.
-- [ ] **3.1** `tests/analysis/test_nmn_representation.py` and `test_nmn_decision_rules.py` pass, including the leakage and clock tests.
-- [ ] **3.2** Positive control: input-layer satiation R² ≥ 0.99. Shuffled-target R² ≤ 0.02. Same-agent CKA `isclose(1, atol=1e-12)`.
-- [ ] **3.3** Untrained ordinary vs untrained t16quad, built from the same key: main-network parameters identical, with the modulator the only extra subtree.
+- [ ] **3.1** `tests/analysis/test_nmn_representation.py` and `test_nmn_decision_rules.py` pass, including the leakage, clock, bootstrap, sha-mismatch, no-literal and parameter-coverage tests.
+- [ ] **3.2** Positive and negative controls within gate G4's bounds (input-layer satiation R², shuffled-target R²; values pasted with the bounds read from `parameters:`). Same-agent CKA `isclose(1, atol=tool_checks.self_similarity_atol)`. The pilot's outputs carry `verdict_words_allowed: false` and contain no `evaluate_*` result.
+- [ ] **3.3** **Shared start on the May replication (rules `A3.precondition_shared_start`; re-review R12).** For each of seeds 42, 43 and 44: `untrained.build` on the May ordinary run and on the May modulated run of that seed gives **identical** main-network parameters (every array, bitwise), and the modulator is the only extra subtree. Six runs, three comparisons, each array count and result pasted. Weights only, CPU; it needs `untrained.py` (Stage 4) and runs before any A3 evaluation.
 - [ ] **3.4** Page builds with the pilot figures. The builder **refuses** a deliberately broken copy of the template (missing Axes; a 120-word howto; an inline `<svg>`; a stray file in `figures/algorithmic_null/`; a figure whose `decision_rules` hash differs from HEAD), and **ignores** a stray file in the parent `figures/`. Show the refusals.
 - [ ] **4.1** `tests/analysis/test_nmn_wakeup.py` passes with every row of the §11 expected-output table.
 - [ ] **4.2** `wandb_history.resolve_by_tag` reproduces §C's six folders. The gradient probe's **(b) full-iteration mean** of `modulator/grad_norm` lies within the 5th–95th percentile of logged values in a ±1-checkpoint window on ≥ 5 checkpoints per run, for ≥ 3 runs. This is a **sanity band**, not a proof of correctness: the world is re-warmed, and the log is one iteration's sample. Also record (a)/(b) side by side.
 - [ ] **4.3** `freeze.verify_freeze_equivalence` passes for every run and checkpoint swept.
 - [ ] **4.4** Untrained anchor: `test_matches_train_py_construction` passes (bitwise) for one ordinary and one modulated run of each study. For every B2 run, the own-seed reconstruction is closer to the first saved checkpoint than the reconstructions for two other seeds (cosine similarities recorded).
+- [ ] **4.6** **Survival and bites cross-check (R5).** For all six May-replication runs, `wandb_history.stage_level` on stage 1 (`stage/index` 0) with `weighting = episode_increment` gives `S_1` and bites that equal `pilot_readout.py`'s May-replication readout for the same run to within 1e-9 relative (`tests/analysis/test_nmn_stage_level.py`, marked slow, reads the local binaries). The `window_n`-weighted values are pasted beside them, with the weighting the rules chose marked. The G5 pass/fail and the survival difference in the interim driver JSON are pasted. The same check is repeated on stage 5 after training.
 - [ ] **4.5** Stage 4 timing gate: seconds per item recorded, extrapolated wall-clock stated, and the thinning decision (if any) recorded before the full sweep.
-- [ ] **5.1** Collector tests pass, including fingerprint tests (i)–(iii). On a real May-replication run, `stage_end:0` and `stage_end:3` resolve to checkpoints whose saved `stage` equals 0 and 3, and the `stage_end:3` world has `detection_range: 0`.
+- [ ] **5.1** Collector tests pass, including fingerprint tests (i)–(iii) and the `:prev` tests. On a real May-replication run, `stage_end:0` and `stage_end:3` resolve to checkpoints whose saved `stage` equals 0 and 3, and the `stage_end:3` world has `detection_range: 0`. After training, `stage_end:3:prev` and `final:prev` resolve to checkpoints with the same saved stage as their successors, and their episode gaps are recorded.
 - [ ] **6.1** After collection: all 12 stores validate. Each store's world is correct. Self-replay agreement is 100% for all 12.
 - [ ] **6.2** `SCRIPTS_DEPENDENCY_MAP.md` and `traj_collect/README.md` are updated in the same commits as the files they describe.
 
@@ -687,3 +790,11 @@ The three open assumptions are closed or budgeted: the `make_jaxpr` capture was 
 **Verdict: NOT READY**, for a cheaper reason than before. The first pass's two Criticals are substantively closed, and the plan is right on all four points where it departed from the review (untrained key from `train.py:1207`, rules location, `stage_end:<k>` semantics, fingerprint strictness — the last verified on the s42 stage files). What blocks is that **this plan and the designer's rules file do not describe the same tooling**: the plan's `decision_rules_ref: {path, key} | null` + machine-readable `reads`/`outcomes` contract vs. the manifests' `decision_rules: {file, sha256}` + prose rules (the plan instructs the developer to stop on exactly this); the rules pin the *wrong* untrained-key recipe (the first review's, `split(PRNGKey(seed), 3)`) and need three reference networks, not two arbitrary keys; and the wake-up thresholds (`noise_k`, `sustain`, `min_noise_points`, headline mode) are still in no manifest, with no B2 manifest on file. Moderates: A4's within-stage drift needs `:prev` checkpoints the manifests do not list and a `d_a` the plan does not compute; A3 pattern (c) and gate G5 need survival / food-bite inputs the plan does not produce; A2's clock baseline and excess are defined differently here and in the rules; bootstrap 200 vs ≥ 1,000 over `episode_seed` groups; the pooled probe has only `n_per_store` distinct groups (shared `seed_base`), so `n_per_store ≥ 2500` is needed for gate G6. Full table, owners and exit conditions in [[plan_algorithmic_null_tooling]] §Re-review.
 
 — *plan-reviewer, 2026-09-30*
+
+## Response from senior-developer (Revision 2, 2026-09-30)
+
+All thirteen re-review findings with a plan side are closed in the body; the per-finding table is §Revision 2. The four points the re-review ruled in this plan's favour are kept unchanged. The designer's contract is adopted as the one kept: `decision_rules: {file, sha256}` in every manifest (pilot and wake-up included), the pilot's no-verdict status read from `verdict_words_allowed: false`, rules as prose, logic in code with fixture tests signed off by `experiment-designer` (new Checkpoint R.2), every number from `parameters:`, enforced by a no-literal test and a coverage test. The `decision_rules_ref` design and the `reads`/`outcomes` block are gone.
+
+Five points in the contract cannot be implemented exactly as written and are handed to `experiment-designer` for the rules revision, before any number exists (§Revision 2, "Points in the designer's contract…"): G3 has no near-tie allowance; the clock baseline is undefined at a time step absent from the training fold; `bootstrap_n` per repeat or pooled; any structural count left in prose must become a `parameters:` entry; and survival row weighting is named two ways (`_window_n` in the rules and the May design text, the increase in `Episode/Number` in the code that computes the May verdict). Until settled, the evaluator raises on each rather than choosing.
+
+— *senior-developer, 2026-09-30*
