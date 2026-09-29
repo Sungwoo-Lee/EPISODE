@@ -1644,6 +1644,34 @@ The other three entries (`B2.f`, `B2.literal_f`, `B2.lag_coincident_max_interval
 
 Implemented by: developer
 
+### `--summarise` reads B2 outputs stamped with the pre-revision rules sha, through a verified lineage check (2026-09-30)
+
+**In plain words.** The decision rules were revised (commit `47b91611`, new sha `5ef6f731…`). The revision touches the A1, A2 and G4 rules only. Every B2 point file of the running sweep is stamped with the old sha `4c8508af…`, so `--summarise` would have refused the whole sweep. It now accepts an old-sha file only when the revision says B2 did not change, **and** the tool confirms that claim itself by comparing the old file with the current one.
+
+**Rule (`run_wakeup.rules_lineage`).** A point file stamped with a sha other than the current one is accepted only if all three conditions hold:
+- (a) the current rules' **latest** `revisions` entry names that sha as `sha256_before`;
+- (b) that entry says `b2_changed: false`, exactly (a missing key is refused);
+- (c) the old file is found in the git history of the rules file **by its sha256**, and its `B2`, `parameters.B2` and `evidence_status` are equal to the current ones after a YAML parse.
+
+Otherwise it refuses as before, and the error now names which condition failed. On the real history the check finds commit `872b0e04` and all three sections are identical. It is accepted.
+
+**Addition not in the request: flagged for review.** The plateau table (`plateau.json`) carries the old sha too, and `main` compared it before `--summarise` could run, so `--summarise` would still have refused. I applied the same check to it, **for `--summarise` only**. It also compares `common.survival_level` and `parameters.common.survival`, because the plateau is computed with those. That makes it stricter than the point-file rule, not looser, and both are identical on the real history. The GPU sweep path still refuses any sha mismatch. So **a worker restarted from the current manifest would refuse the existing point files and the plateau table.** Resuming the current sweep that way would need a decision first.
+
+**Output.** `b2_reading.json` gains `rules_lineage`:
+- `point_files.<old sha>`: the verification record (revision date, `sections_changed`, `b2_changed`, `old_file_commit`, per-section `identical`, reason), the file count, and the list of accepted files, relative to the output directory;
+- `plateau`: the plateau table's verification record, or null when its sha is current.
+
+**Tests.** `pytest tests/analysis/test_nmn_run_wakeup.py test_nmn_ckpt_io.py test_nmn_decision_rules.py test_nmn_wakeup.py` → 199 passed, 2 failed.
+- The two failures are `test_nmn_decision_rules::test_parameter_coverage_real_rules` and `::test_every_parameter_is_used_not_merely_read`. They are caused by the revision's new `parameters.common.predictor_columns.min_active_fraction`, which no code reads yet. They fail identically with the previous `run_wakeup.py` (`b9c9ca84`), so they are **not from this change**. The A1 tooling owner has to implement P1.
+- New tests, all passing:
+  - accepted when all three conditions hold (real git history; the plateau section set too);
+  - refused when `b2_changed` is true, or missing;
+  - refused when the claim is false. A forged "old" file whose B2 prose differs, or whose `parameters.B2.noise_k` differs, is refused. When only `parameters.common.survival` differs, the points are accepted but the plateau table is refused;
+  - refused for an unrelated sha, and for a named sha that is absent from git;
+  - a synthetic `--summarise` with old-sha point files succeeds and records all 67 files and the verification. With an unrelated sha it raises.
+
+Implemented by: developer
+
 ## Verification Report
 
 > **Verified by**:

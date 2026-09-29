@@ -265,6 +265,82 @@ def per_run_wake_point(r: dict, caveat: str) -> dict:
             "caveat": caveat}
 
 
+# ------------------------------------------------------------------ rules lineage ----------
+# A B2 output stamped with an earlier rules sha is accepted by --summarise ONLY when the current
+# rules' latest revision entry names that sha as `sha256_before` and says `b2_changed: false`,
+# AND this check verifies the claim itself: the old file, found in git by its sha256, has the
+# B2 section, parameters.B2 and evidence_status equal (after YAML parse) to the current ones.
+# The plateau table is also read through common.survival_level and parameters.common.survival
+# (dr.survival_settings), so those two are compared as well for it.
+LINEAGE_SECTIONS_POINTS = ("B2", "parameters.B2", "evidence_status")
+LINEAGE_SECTIONS_PLATEAU = LINEAGE_SECTIONS_POINTS + ("common.survival_level",
+                                                       "parameters.common.survival")
+
+
+def _git_versions(rel_path: str):
+    """(commit, file bytes) for every commit that touched `rel_path`, newest first."""
+    commits = subprocess.run(["git", "-C", _ROOT, "log", "--format=%H", "--", rel_path],
+                             capture_output=True, text=True, timeout=120).stdout.split()
+    for c in commits:
+        r = subprocess.run(["git", "-C", _ROOT, "show", f"{c}:{rel_path}"], capture_output=True,
+                           timeout=120)
+        if r.returncode == 0:
+            yield c, r.stdout
+
+
+_MISSING = object()
+
+
+def _section(rules: dict, dotted: str):
+    node = rules
+    for k in dotted.split("."):
+        if not isinstance(node, dict) or k not in node:
+            return _MISSING
+        node = node[k]
+    return node
+
+
+def rules_lineage(rules_path: str, current_rules: dict, current_sha: str, old_sha: str,
+                  sections=LINEAGE_SECTIONS_POINTS, versions=None) -> dict:
+    """Whether an output stamped with `old_sha` may be read under the current rules. Returns
+    {accepted, reason, ...the evidence}; never raises for a refusal (the caller does).
+    `versions`: iterable of (commit, bytes) to search for the old file (default: git history
+    of `rules_path`)."""
+    import hashlib
+    res = {"old_sha256": old_sha, "current_sha256": current_sha, "sections_compared": list(sections),
+           "accepted": False}
+    revs = current_rules.get("revisions") or []
+    latest = revs[-1] if revs else {}
+    res.update({"revision_date": latest.get("date"), "sections_changed": latest.get("sections_changed"),
+                "b2_changed": latest.get("b2_changed")})
+    if latest.get("sha256_before") != old_sha:
+        res["reason"] = (f"the current rules' latest revision does not name {old_sha[:12]} as "
+                         f"sha256_before (it names {str(latest.get('sha256_before'))[:12]})")
+        return res
+    if latest.get("b2_changed") is not False:
+        res["reason"] = f"the latest revision says b2_changed: {latest.get('b2_changed')!r}"
+        return res
+    found = None
+    for commit, data in (versions if versions is not None else _git_versions(rules_path)):
+        if hashlib.sha256(data).hexdigest() == old_sha:
+            found = (commit, data)
+            break
+    if found is None:
+        res["reason"] = f"no version of {rules_path} in git has sha256 {old_sha[:12]}"
+        return res
+    res["old_file_commit"] = found[0]
+    old = yaml.safe_load(found[1])["decision_rules"]
+    same = {sec: (_section(old, sec) is not _MISSING and
+                  _section(old, sec) == _section(current_rules, sec)) for sec in sections}
+    res["identical"] = same
+    if not all(same.values()):
+        res["reason"] = (f"the claim b2_changed: false is false: {sorted(k for k, v in same.items() if not v)} "
+                         f"differ between {old_sha[:12]} (commit {found[0][:8]}) and the current rules")
+        return res
+    res.update({"accepted": True, "reason": "verified: " + ", ".join(sections) + " identical"})
+    return res
+
+
 def compile_cache_status() -> dict:
     """Whether JAX's persistent compile cache is active in this process (set by the launcher's
     JAX_COMPILATION_CACHE_DIR; performance only, identical programs and numbers)."""
@@ -860,9 +936,18 @@ def main(argv=None) -> int:
         if not pf.exists():
             raise ValueError("GPU measures need the plateau table first (--measures plateau)")
         prev = json.loads(pf.read_text())
-        if prev["decision_rules"]["sha256"] != pinned.sha256 or \
-                prev["manifest"] != os.path.relpath(man_path, _ROOT):
+        plateau_lineage = None
+        if prev["manifest"] != os.path.relpath(man_path, _ROOT):
             raise ValueError("plateau table was computed for another manifest or rules file")
+        if prev["decision_rules"]["sha256"] != pinned.sha256:
+            # only --summarise may read an earlier-sha table, and only through the lineage check
+            if args.summarise:
+                plateau_lineage = rules_lineage(pinned.path, pinned.rules, pinned.sha256,
+                                                prev["decision_rules"]["sha256"],
+                                                LINEAGE_SECTIONS_PLATEAU)
+            if not (plateau_lineage and plateau_lineage["accepted"]):
+                raise ValueError("plateau table was computed for another manifest or rules file"
+                                 + (f": {plateau_lineage['reason']}" if plateau_lineage else ""))
         if prev["nan_plateau_runs"]:
             raise ValueError(f"NaN plateau in {prev['nan_plateau_runs']}: GPU measures refused")
         labels = [r["label"] for r in man["runs"]]
@@ -872,7 +957,8 @@ def main(argv=None) -> int:
             raise ValueError(f"--runs {unknown}: not in the manifest")
         sweep_measures = {m for m in gpu if m != "grad_share"}   # grad_share reads logs only
         if args.summarise:
-            return summarise(man, man_path, out, stamp, rstamp, prev, grids, B2, pinned, policy, dr)
+            return summarise(man, man_path, out, stamp, rstamp, prev, grids, B2, pinned, policy, dr,
+                             plateau_lineage=plateau_lineage)
         if args.timing is not None:
             if len(sel) != 1 or args.timing < 1:
                 raise ValueError("--timing needs exactly one run (--runs) and K >= 1")
@@ -944,9 +1030,11 @@ def run_sites(run: dict) -> list:
                          .to_dict()["agent"])
 
 
-def summarise(man, man_path, out, stamp, rstamp, plateau, grids, B2, pinned, policy, dr) -> int:
+def summarise(man, man_path, out, stamp, rstamp, plateau, grids, B2, pinned, policy, dr,
+              plateau_lineage=None) -> int:
     """Curves, crossings, lags and the across-worlds reading (CPU), from the point files and
-    the logs. Needs every GPU measure at every point of every run."""
+    the logs. Needs every GPU measure at every point of every run. A point file stamped with an
+    earlier rules sha is read only if `rules_lineage` accepts that sha (recorded in the output)."""
     from scripts.analysis.nmn import wandb_history as wh
     need = {"grad_probe", "update_size", "rho", "swing", "freeze"}
     registered = list(_req(man, "b2_headline_curves"))
@@ -961,6 +1049,7 @@ def summarise(man, man_path, out, stamp, rstamp, plateau, grids, B2, pinned, pol
         check_sites(r["label"], sites[r["label"]], registered)
     plat = {r["label"]: r for r in plateau["runs"]}
     per_run, readings = {}, {}
+    lineage, accepted_old = {}, {}
     for r in man["runs"]:
         label, cks = r["label"], [int(c) for c in r["checkpoints"]]
         pts = {}
@@ -970,7 +1059,13 @@ def summarise(man, man_path, out, stamp, rstamp, plateau, grids, B2, pinned, pol
                 raise ValueError(f"{label}: point file {pf} missing; the sweep is incomplete")
             rec = json.loads(pf.read_text())
             if rec["rules_sha256"] != rstamp["sha256"]:
-                raise ValueError(f"{pf}: computed under another rules file")
+                old = rec["rules_sha256"]
+                if old not in lineage:
+                    lineage[old] = rules_lineage(pinned.path, pinned.rules, pinned.sha256, old)
+                if not lineage[old]["accepted"]:
+                    raise ValueError(f"{pf}: computed under another rules file "
+                                     f"({lineage[old]['reason']})")
+                accepted_old.setdefault(old, []).append(os.path.relpath(pf, out))
             miss = need - set(rec["measures"]) - ({"update_size"} if x == 0 else set())
             if miss:
                 raise ValueError(f"{pf}: missing measures {sorted(miss)}")
@@ -1016,6 +1111,14 @@ def summarise(man, man_path, out, stamp, rstamp, plateau, grids, B2, pinned, pol
            "headline_curves": registered,
            "per_run_caveat": caveat(),
            "b2_family_bound": fb,
+           "rules_lineage": {
+               "statement": "outputs stamped with an earlier rules sha, read only after the lineage "
+                            "check (latest revision names the sha as sha256_before, says "
+                            "b2_changed: false, and the listed sections of the old file, found in "
+                            "git by its sha256, are identical to the current ones)",
+               "point_files": {o: {"verification": lineage[o], "n_files": len(accepted_old[o]),
+                                   "files": accepted_old[o]} for o in accepted_old},
+               "plateau": plateau_lineage},
            "reading": b2,
            "sanity_band": {l: {"n_inside": per_run[l]["sanity_band"]["n_inside"],
                                "n_checked": per_run[l]["sanity_band"]["n_checked"]}

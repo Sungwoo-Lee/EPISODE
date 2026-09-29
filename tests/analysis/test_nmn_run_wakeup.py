@@ -240,7 +240,8 @@ def _noisy_pts(cks, sites, rng):
     return pts
 
 
-def _synthetic_summarise(tmp_path, monkeypatch, registered=None, sites_by_run=None, bound=None):
+def _synthetic_summarise(tmp_path, monkeypatch, registered=None, sites_by_run=None, bound=None,
+                         point_sha=None):
     """Runs run_wakeup.summarise end to end on synthetic curves (one level-05-style run and one
     May-style run), with the real pinned rules and the real B2 settings. No real data is read."""
     import json
@@ -264,7 +265,7 @@ def _synthetic_summarise(tmp_path, monkeypatch, registered=None, sites_by_run=No
         for x, M in _noisy_pts(r["checkpoints"], sites, rng).items():
             pf = rw.point_path(out, r["label"], x)
             pf.parent.mkdir(parents=True, exist_ok=True)
-            pf.write_text(json.dumps({"rules_sha256": rstamp["sha256"], "measures": M}))
+            pf.write_text(json.dumps({"rules_sha256": point_sha or rstamp["sha256"], "measures": M}))
     plateau = {"runs": [{"label": r["label"], "n_points": len(r["checkpoints"]),
                          "t_plateau_episode": float(r["checkpoints"][len(r["checkpoints"]) // 4])}
                         for r in runs]}
@@ -498,3 +499,105 @@ def test_changed_rate_in_the_manifest_changes_the_printed_caveat(tmp_path, monke
     # the May run's 16-point curve keeps its own rate
     m = doc["per_run_wake_points"]["may_syn"]["rho.rnn"]["caveat"]
     assert f"{100 * real['16']:.3g} %" in m
+
+
+# ------------------------------------ rules lineage (rules revision 47b91611, sha 5ef6f731) ----
+OLD_SHA = "4c8508af14b62f55954a3663c4bb844b5857139a2fcef85cee9a618cfcf9fae0"
+RULES = "docs/experiments/active/modulator_clues/algorithmic_null_decision_rules.yaml"
+
+
+def _pinned():
+    from scripts.analysis.nmn import decision_rules as dr
+    return dr.load(rw.load_manifest(MAN))
+
+
+def _old_bytes():
+    import subprocess
+    return subprocess.run(["git", "-C", ROOT, "show", f"872b0e04:{RULES}"], capture_output=True,
+                          check=True).stdout
+
+
+def test_lineage_accepted_when_all_three_hold():
+    P = _pinned()
+    r = rw.rules_lineage(P.path, P.rules, P.sha256, OLD_SHA)      # real git history
+    assert r["accepted"] is True and r["old_file_commit"].startswith("872b0e04")
+    assert r["identical"] == {"B2": True, "parameters.B2": True, "evidence_status": True}
+    assert rw.rules_lineage(P.path, P.rules, P.sha256, OLD_SHA,
+                            rw.LINEAGE_SECTIONS_PLATEAU)["accepted"] is True
+
+
+def test_lineage_refused_when_b2_changed_is_true():
+    import copy
+    P = _pinned()
+    rules = copy.deepcopy(P.rules)
+    rules["revisions"][-1]["b2_changed"] = True
+    r = rw.rules_lineage(P.path, rules, P.sha256, OLD_SHA)
+    assert r["accepted"] is False and "b2_changed: True" in r["reason"]
+    del rules["revisions"][-1]["b2_changed"]                      # a missing claim is no claim
+    assert rw.rules_lineage(P.path, rules, P.sha256, OLD_SHA)["accepted"] is False
+
+
+def _forged_old(edit):
+    """An 'old' rules file = the real old file with `edit` applied to its parsed B2 material,
+    and a current rules mapping whose latest revision names ITS sha with b2_changed: false (a
+    false claim)."""
+    import copy
+    import hashlib
+    P = _pinned()
+    old = yaml.safe_load(_old_bytes())
+    edit(old["decision_rules"])
+    data = yaml.safe_dump(old).encode()
+    sha = hashlib.sha256(data).hexdigest()
+    rules = copy.deepcopy(P.rules)
+    rules["revisions"][-1]["sha256_before"] = sha
+    return P, rules, sha, [("f" * 40, data)]
+
+
+def test_lineage_refused_when_the_claim_is_false():
+    def b2_text(d):
+        d["B2"]["plateau"] = d["B2"]["plateau"] + " (edited)"
+    P, rules, sha, versions = _forged_old(b2_text)
+    r = rw.rules_lineage(P.path, rules, P.sha256, sha, versions=versions)
+    assert r["accepted"] is False and "is false" in r["reason"] and r["identical"]["B2"] is False
+
+    def b2_param(d):
+        d["parameters"]["B2"]["noise_k"] = 2
+    P, rules, sha, versions = _forged_old(b2_param)
+    r = rw.rules_lineage(P.path, rules, P.sha256, sha, versions=versions)
+    assert r["accepted"] is False and r["identical"]["parameters.B2"] is False
+
+    def survival(d):                   # B2 untouched: points accepted, the plateau table not
+        d["parameters"]["common"]["survival"]["min_window_n"] = 1
+    P, rules, sha, versions = _forged_old(survival)
+    assert rw.rules_lineage(P.path, rules, P.sha256, sha, versions=versions)["accepted"] is True
+    r = rw.rules_lineage(P.path, rules, P.sha256, sha, rw.LINEAGE_SECTIONS_PLATEAU, versions)
+    assert r["accepted"] is False and r["identical"]["parameters.common.survival"] is False
+
+
+def test_lineage_refused_for_an_unrelated_sha():
+    P = _pinned()
+    r = rw.rules_lineage(P.path, P.rules, P.sha256, "0" * 64)
+    assert r["accepted"] is False and "sha256_before" in r["reason"]
+    # named but absent from git: refused too
+    import copy
+    rules = copy.deepcopy(P.rules)
+    rules["revisions"][-1]["sha256_before"] = "0" * 64
+    r = rw.rules_lineage(P.path, rules, P.sha256, "0" * 64, versions=[("f" * 40, b"x")])
+    assert r["accepted"] is False and "no version" in r["reason"]
+
+
+def test_summarise_reads_old_sha_points_through_the_lineage_and_records_them(tmp_path, monkeypatch):
+    import json
+    rc, out = _synthetic_summarise(tmp_path, monkeypatch, point_sha=OLD_SHA)
+    assert rc == 0
+    lin = json.loads((out / "b2_reading.json").read_text())["rules_lineage"]
+    rec = lin["point_files"][OLD_SHA]
+    assert rec["verification"]["accepted"] is True
+    assert rec["verification"]["old_file_commit"].startswith("872b0e04")
+    assert rec["n_files"] == 51 + 16 == len(rec["files"])
+    assert "points/l05_syn/0.json" in rec["files"]
+
+
+def test_summarise_refuses_points_under_an_unrelated_sha(tmp_path, monkeypatch):
+    with pytest.raises(ValueError, match="another rules file.*sha256_before"):
+        _synthetic_summarise(tmp_path, monkeypatch, point_sha="0" * 64)
