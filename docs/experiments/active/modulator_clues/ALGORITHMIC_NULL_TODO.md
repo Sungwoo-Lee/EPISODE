@@ -221,6 +221,32 @@ They are listed by name in the perturbation test, which fails if any of them sta
 output; that list is not a gap in this table. Rules sha `4c8508af…`, unchanged. **This signature
 unblocks the level-05 pilot.**
 
+**B2 headline family, registered 2026-09-30 (before `run_wakeup --summarise`; no wake-up curve
+seen).** 17 headline curves per run (19 runs, 323 curves):
+
+- the logged total-loss gradient share;
+- the per-term gradient shares (policy, value, entropy);
+- the modulator's relative update size (no step-0 point);
+- rho and swing of the gain at each of the five sites;
+- the gain freeze and the offset freeze.
+
+Everything else is descriptive. The list and its principle are in `algorithmic_null_wakeup.yaml`
+(`b2_headline_curves`), not in the rules: a rules edit would change the sha stamped on every
+point file of the running sweep, and `--summarise` refuses such files.
+
+**Stated plainly:** `noise_k` = 3 does not meet its own stated target. The rules' comment treats
+the noise SD as known, but each curve estimates it from its own last points. Simulated:
+
+- about 2.6e-3 false passes per level-05 curve and 1.8e-2 per May curve;
+- about 1.6 expected false wake points across the family (about 4 with mild autocorrelation),
+  against the target of under 0.1.
+
+No constant moves. As a result, single per-run wake points are not evidence that a measure
+changed. The registered across-worlds sign test stays protected: a flat measure needs at least
+5 of 16 guard passes, which has a chance of order 1e-9 to 1e-4 per measure, before any reading
+exists. The rules' `noise_k` comment is to be corrected in the next rules revision that is
+needed for another reason.
+
 **The developer's four marked readings.**
 
 - **B2, level-05 "undetermined" → May seeds "do not agree" (rows 2 and 10): confirmed.** "Agree"

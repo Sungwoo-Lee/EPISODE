@@ -46,6 +46,74 @@ wakeup:
   sign_test_alpha: 0.05
   sign_test_null_p: 0.5
 
+# ---------------------------------------------------------------------------------------------
+# b2_headline_curves (registered 2026-09-30 by experiment-designer, while the GPU sweep was
+# running and BEFORE `run_wakeup --summarise` had run: no wake-up curve, crossing, lag or reading
+# existed or had been looked at). These are the curves that get the headline crossing, the lag
+# and the across-worlds sign-test reading. Every other stored curve is DESCRIPTIVE (values kept,
+# no reading). --summarise must read this list and raise if its own headline set differs, and
+# must raise if a run's enabled FiLM sites differ from the five named here (checked equal on
+# level-05 w0000 and May s42).
+#
+# Principle: one headline curve per measure the rules' B2 question names (total-loss gradient
+# share, per-term gradient share, relative update size, contextual fraction rho, gain swing,
+# freeze cost). Each is taken at the resolution the rules' `noise_k` principle already counted:
+# per site for rho and swing, per loss term for the gradient share, gain and offset separately
+# for the freeze.
+#   - rho and swing use the GAIN only. "Gain swing" is the rules' own term, and the gain is the
+#     multiplicative channel that sets how strongly the modulator reshapes a layer. The offset's
+#     rho and swing stay descriptive. The offset's functional role is covered by freeze.offset.
+#   - The total-loss share is the logged one (grad_share.total), because the rules' measure is the
+#     trainer's own. The probe's first-update total and full-iteration shares are descriptive (the
+#     latter is the Checkpoint 4.2 sanity band).
+#   - Update size is the modulator's own relative step. The main network's step and the
+#     modulator/main ratio are descriptive. Update size has no step-0 point (a step needs two
+#     points), so its m0 is its first available point, as rules B2.definition allows; the output
+#     says so.
+# Family: 17 curves per run x 19 runs = 323 headline curves.
+#
+# False-alarm bound, recomputed for this family (not a constant; nothing is moved). The `noise_k`
+# comment in the rules computed ~2.4e-4 false "it changed" passes per curve, 0.07 across ~300
+# curves. That arithmetic treated the noise SD sigma_delta as KNOWN. It is ESTIMATED from the
+# curve's own end: 16 differences on level-05, 5 on May. Simulated with independent Gaussian
+# noise and the registered rule (4e6 curves per length):
+#   - level-05 (51 / 50 points): 2.6e-3 per curve;
+#   - May (16 / 15 points): 1.8e-2 per curve;
+#   - expected false wake points across the 323 curves: 1.6;
+#   - with mild autocorrelated wobble (AR(1) phi 0.3): about 4.3.
+# So noise_k = 3 does NOT meet the stated target (below 0.1 across the family), for this family or
+# for the ~300 the rules assumed. The shortfall is an error in the original arithmetic, not a
+# result of the family size. noise_k stays 3 (revision_policy: no constant moves).
+# Consequence, registered now:
+#   (i) No single run's wake point is evidence on its own that a measure changed. Across the
+#       family, about 1–4 of them are expected from noise alone.
+#   (ii) The registered reading is the across-worlds sign test, and it is protected. For a
+#       measure that does not change, a reading needs at least 5 of the 16 level-05 curves to
+#       pass the guard before any k* exists, and then all on one side. The chance of 5 passes is
+#       5e-10 per measure with independent noise and 6e-5 with phi 0.5; the same-side
+#       requirement then multiplies by at most 1/16.
+#   (iii) The May seeds' "agree / do not agree" rests on single curves at 16 points (1.8 % false
+#       pass each). It stays descriptive, as the rules already say.
+# ---------------------------------------------------------------------------------------------
+b2_headline_curves:
+  - grad_share.total
+  - grad_probe.first_update.policy
+  - grad_probe.first_update.value
+  - grad_probe.first_update.entropy
+  - update_size.modulator
+  - rho.encoder_unimodal
+  - rho.encoder_multimodal
+  - rho.rnn
+  - rho.actor
+  - rho.critic
+  - swing.encoder_unimodal
+  - swing.encoder_multimodal
+  - swing.rnn
+  - swing.actor
+  - swing.critic
+  - freeze.gain
+  - freeze.offset
+
 # out_root (set 2026-09-30 at Checkpoint R.2): the same root as the other manifests of this study;
 # outputs go to <out_root>/<name>/. The Checkpoint 4.0 plateau table was written there by
 # `--out-root` before this key existed, so the location does not change.
