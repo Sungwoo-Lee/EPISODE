@@ -23,6 +23,7 @@ superseded_by: null
 > - Sister design (meta side, same overnight launch window): [`NMN_META_2x3_MIXTURE_PROBE.md`](NMN_META_2x3_MIXTURE_PROBE.md)
 > - Anchor diagnosis: [`NMN_PERFORMANCE_DIAGNOSIS_v8.md`](../../../develop/active/diagnosis/NMN_PERFORMANCE_DIAGNOSIS_v8.md)
 > - Mechanism finding behind the new agent config (`temp_clip = [0.5, 5.0]`): memory insight `20260509_1410_nmn_temp_head_natural_target_3_to_5`
+> - **Follow-up (2026-09-29): the 3-seed replication this doc asks for (6.3 item 1), redesigned under the project's current body, senses and agents:** [[MAY_DOUBLE_RETURN_REPLICATION]] (`docs/experiments/active/continual_worlds/MAY_DOUBLE_RETURN_REPLICATION.md`). Its section 3.2 re-derives this probe's true active/passive predator switch from the saved run configs.
 
 > **One-line scope.** Two cells (modulated vs. unmodulated, single seed each) on a 5-stage abrupt active->passive->active->passive->active predator schedule. Tests whether the FiLM modulator attenuates the post-switch survival dip and resists catastrophic forgetting on the return stages. Sister experiment to the meta 2x3 probe — together they answer "is the architecture broken or is the v8 question hard?".
 

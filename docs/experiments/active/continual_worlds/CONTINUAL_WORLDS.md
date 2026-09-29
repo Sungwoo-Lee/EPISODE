@@ -34,6 +34,7 @@ wandb_tag: "rppo_cw_*"
 > **Related:** level-05 factorial (source of the two pre-trained agents) [[LEVEL05_BODY_INTERACTIONS]] ·
 > larger / less observable worlds and their search times [[STUDY_PLAN]] (context exploration) ·
 > the May continual probe this design replicates at scale [[NMN_CONTINUAL_DOUBLE_RETURN_PROBE]] ·
+> its direct 3-seed from-scratch replication under today's settings (separate design, 2026-09-29) [[MAY_DOUBLE_RETURN_REPLICATION]] ·
 > balance logging [[BALANCE_METRICS_TRAINING_LOGGING]] · curriculum lessons in the LLM wiki
 > (`curriculum_learning`: plasticity loss, negative transfer).
 
