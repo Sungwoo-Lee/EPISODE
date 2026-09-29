@@ -12,20 +12,32 @@ How it works:
   1. Reads the run's OWN saved schedule (`<run>/models/schedule.yaml`, written by
      train.py) -- boundaries + stage names. `--schedule` (the source YAML) is optional
      and only cross-checked against it.
-  2. Stage-end checkpoint of stage k = the first saved checkpoint at or after boundary k
+  2. With --start-checkpoint, a stage whose boundary is <= the start checkpoint's step
+     (a run branched from a pre-trained checkpoint via --load-checkpoint, e.g. at the end
+     of stage 0) gets no row of its own: the 'start' row is its end.
+     Stage-end checkpoint of stage k = the first saved checkpoint at or after boundary k
      (saved at the end of the iteration that crossed it, before the world switches).
      Its saved `stage` field is read back and must equal k -- otherwise the run is not
      where we think it is and the script stops.
   3. Worlds = the distinct stage names with the numeric prefix stripped
      (`02_fog`, `04_fog` -> `fog`), in first-visit order. Each world is evaluated with
      the run's saved per-stage config (`stage_XX_<name>.yaml`); every visit of the same
-     world must have a byte-identical saved config.
+     world must have an identical saved config in every world-defining section (the
+     run-identity sections in RUN_IDENTITY_KEYS -- seed, tag, wandb.*, ... which train.py
+     stamps onto stage 0 only -- are ignored). The run's seed is read from
+     `models/config.yaml`.
   4. Per checkpoint, ONE `scripts/eval/eval_rollout.py --config-list --batched` process
      evaluates every world (model built + checkpoint restored once). Passing the saved
      stage configs explicitly is what bypasses eval_rollout's continual auto-resolution,
      which only fires for the stage-0 `config.yaml`. The same seeds (0..N-1) are used in
      every cell, so cells are paired.
   5. Reads `episodes/*.npz` `length` per cell and writes `<out>.json` + `<out>.csv`.
+  6. Optional `--extra-world NAME=PATH` (repeatable) adds columns for worlds OUTSIDE the
+     run's schedule, evaluated with the given source YAML (resolved through `extends:`).
+     An extra world whose NAME equals one of the run's own worlds is NOT re-evaluated: the
+     saved stage config stays authoritative, and the source YAML is only cross-checked
+     against it (every key the source defines must equal the saved value) -- so one
+     battery of --extra-world flags can be passed to every run of a study.
 
 Re-running with the same --scratch-dir reuses finished cells (a cell is finished when
 its eval_rollout metadata.json exists with n_episodes == N).
@@ -35,13 +47,15 @@ Usage:
       --run-dir results/JAX_RecurrentPPO/<ts>_<tag> \\
       --start-checkpoint results/JAX_RecurrentPPO/<pretrain_run>/models \\
       --episodes 2000 --device gpu \\
-      --output-prefix results/analysis/continual_worlds/forgetting_<label>
+      --output-prefix results/analysis/continual_worlds/forgetting_<label> \\
+      [--extra-world home=configs/environment/experiment/continual_worlds/home_10x10.yaml ...]
 """
 import argparse
 import csv
 import json
 import re
 import subprocess
+import sys
 import time
 from pathlib import Path
 
@@ -51,6 +65,13 @@ import yaml
 REPO_ROOT = Path(__file__).resolve().parents[2]  # scripts/eval/<this> -> repo root
 PY = "/home/vncuser/miniconda3/envs/grid_world_pain/bin/python"
 EVAL_ROLLOUT = REPO_ROOT / "scripts" / "eval" / "eval_rollout.py"
+sys.path.insert(0, str(REPO_ROOT))
+from src.environment.config_loader import load_env_config  # noqa: E402  (resolves `extends:`)
+
+# Top-level keys that identify the RUN, not the world: train.py stamps the CLI seed / tag /
+# wandb.* onto stage 0's saved config only (and merges the agent config into it), so two
+# visits of the same world can differ here without being different worlds.
+RUN_IDENTITY_KEYS = ("seed", "tag", "wandb", "training", "agent", "logging", "visualization")
 
 
 def _abs(p):
@@ -101,6 +122,13 @@ def resolve_rows(run_dir, start_ckpt):
         rows.append({"label": "start", "trained_through": "pre-trained start",
                      "checkpoint": str(sp), "step": int(sp.name), "saved_stage": None})
     for k, (b, name) in enumerate(zip(bounds, names)):
+        if rows and rows[0]["label"] == "start" and rows[0]["step"] >= b:
+            # The run was branched (--load-checkpoint) at or after this boundary: stage k
+            # ended before the run started, so its end IS the start checkpoint.
+            rows[0].setdefault("also_end_of", []).append(name)
+            print(f"stage {k} '{name}' (boundary {b}) ended at/before the start checkpoint "
+                  f"(step {rows[0]['step']}); the 'start' row stands for its end.")
+            continue
         after = [s for s in steps if s >= b]
         if not after:
             raise ValueError(f"No checkpoint at or after boundary {b} (end of stage {k} "
@@ -125,13 +153,63 @@ def resolve_worlds(run_dir, stage_names):
             raise ValueError(f"Saved stage config {cfg} not found.")
         if world in worlds:
             first = worlds[world]
-            if cfg.read_bytes() != Path(first["config"]).read_bytes():
+            a, b = _world_sections(first["config"]), _world_sections(cfg)
+            if a != b:
+                diff = sorted(k for k in set(a) | set(b) if a.get(k) != b.get(k))
                 raise ValueError(f"World '{world}' visited twice with different saved configs: "
-                                 f"{first['config']} vs {cfg}.")
+                                 f"{first['config']} vs {cfg} differ on {diff[:10]}.")
             first["stages"].append(k)
         else:
-            worlds[world] = {"world": world, "config": str(cfg), "stages": [k]}
+            worlds[world] = {"world": world, "config": str(cfg), "stages": [k],
+                             "source": "saved_stage_config"}
     return list(worlds.values())
+
+
+def _flat(d, prefix=""):
+    out = {}
+    for k, v in d.items():
+        if isinstance(v, dict):
+            out.update(_flat(v, f"{prefix}{k}."))
+        else:
+            out[f"{prefix}{k}"] = v
+    return out
+
+
+def _world_sections(path):
+    d = yaml.safe_load(Path(path).read_text())
+    return _flat({k: v for k, v in d.items() if k not in RUN_IDENTITY_KEYS})
+
+
+def add_extra_worlds(worlds, specs):
+    """Append `--extra-world NAME=PATH` columns; a NAME that is one of the run's own
+    worlds is cross-checked against its saved stage config and not added twice."""
+    if not specs:
+        return worlds
+    own = {w["world"]: w for w in worlds}
+    seen = set()
+    for spec in specs:
+        if "=" not in spec:
+            raise ValueError(f"--extra-world {spec!r}: expected NAME=PATH.")
+        name, path = spec.split("=", 1)
+        if name in seen:
+            raise ValueError(f"--extra-world {name!r} given twice.")
+        seen.add(name)
+        path = _abs(path)
+        if not path.exists():
+            raise ValueError(f"--extra-world {name}: {path} not found.")
+        src = _flat(load_env_config(str(path)).to_dict())
+        if name in own:
+            saved = _flat(load_env_config(own[name]["config"]).to_dict())
+            diff = [k for k in src if saved.get(k, "<missing>") != src[k]]
+            if diff:
+                raise ValueError(f"--extra-world {name}: {path} disagrees with the run's saved "
+                                 f"stage config {own[name]['config']} on {diff[:10]}.")
+            own[name]["source_yaml_checked"] = str(path)
+            print(f"extra world '{name}' is a run world: using saved stage config "
+                  f"(source YAML {path} agrees on all {len(src)} keys)")
+            continue
+        worlds.append({"world": name, "config": str(path), "stages": [], "source": "extra"})
+    return worlds
 
 
 def cell_dir(scratch, row, world):
@@ -178,8 +256,8 @@ def summarise(d, n_eps):
     if len(files) != n_eps:
         raise ValueError(f"{ep_dir}: {len(files)} episode files, expected {n_eps}.")
     lengths = np.array([int(np.load(f)["length"]) for f in files], dtype=np.float64)
-    cfg = yaml.safe_load(Path(meta["config_resolved"]).read_text())
-    max_steps = int(cfg["environment"]["max_steps"])
+    cfg = load_env_config(meta["config_resolved"])  # an --extra-world YAML may use `extends:`
+    max_steps = int(cfg.get_mandatory("environment.max_steps"))
     n = len(lengths)
     mean, sd = float(lengths.mean()), float(lengths.std(ddof=1))
     se = sd / np.sqrt(n)
@@ -202,6 +280,9 @@ def main():
                     help="Optional pre-trained start (models/ root -> latest step, or a step dir); "
                          "adds a 'start' row.")
     ap.add_argument("--device", required=True, choices=["cpu", "gpu"])
+    ap.add_argument("--extra-world", action="append", default=[], metavar="NAME=PATH",
+                    help="Repeatable. Also evaluate every checkpoint row in this world (source "
+                         "YAML). A NAME equal to a run world keeps the saved stage config.")
     ap.add_argument("--scratch-dir", default=None,
                     help="Per-episode eval output (default <output-prefix>_scratch).")
     args = ap.parse_args()
@@ -216,9 +297,10 @@ def main():
         for k in ("episode_boundaries", "checkpoint_frequencies"):
             if src[k] != sched[k]:
                 raise ValueError(f"--schedule {k} {src[k]} != run's saved {sched[k]}.")
-    worlds = resolve_worlds(run_dir, sched["stage_names"])
+    worlds = add_extra_worlds(resolve_worlds(run_dir, sched["stage_names"]), args.extra_world)
 
-    print(f"run: {run_dir}")
+    run_seed = yaml.safe_load((run_dir / "models" / "config.yaml").read_text())["seed"]
+    print(f"run: {run_dir}  (seed {run_seed})")
     print(f"worlds: {[w['world'] for w in worlds]}")
     for r in rows:
         print(f"row {r['label']}: step {r['step']} (saved stage {r['saved_stage']})")
@@ -240,6 +322,7 @@ def main():
         "what": "Forgetting matrix: mean survival steps of the frozen agent (no training) per "
                 "(checkpoint row x world). Survival = episode length, capped at max_steps.",
         "run_dir": str(run_dir.relative_to(REPO_ROOT)) if REPO_ROOT in run_dir.parents else str(run_dir),
+        "run_seed": run_seed,
         "schedule": sched, "episodes_per_cell": args.episodes,
         "seeds": f"0..{args.episodes - 1} (identical in every cell)",
         "rows": rows, "worlds": worlds, "cells": cells,
