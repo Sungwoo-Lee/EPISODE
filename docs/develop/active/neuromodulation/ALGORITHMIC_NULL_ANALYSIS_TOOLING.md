@@ -8,7 +8,7 @@ last_updated: 2026-09-30
 
 # Analysis tooling for "What Both Agents Compute"
 
-> **Status**: PLANNED, **Revision 3** (2026-09-30) after `plan-reviewer`'s third review returned NOT READY for Stage 4 only (Revision 1: 2026-09-29; Revision 2: 2026-09-30). Stages 0, 1, 2 and 5 are being implemented by `developer` against Revision 2; Revision 3 does not change their substance (§Revision 3). Stage 4 awaits re-review.
+> **Status**: PLANNED, **Revision 4** (2026-09-30): decisions raised by the Stage 0–2/5 Implementation Report and the code review of those stages (§Revision 4). Stages 0, 1, 2 and 5 are implemented (Implementation Report). Revision 3 (2026-09-30) answered `plan-reviewer`'s third review; Revision 4 awaits `plan-reviewer`. The R4-1 collector change must land before the May-replication collection.
 > **Opened**: 2026-09-29
 > **Related**: the published plan page [[algorithmic_null]] (`docs/experiments/active/modulator_clues/algorithmic_null.template.html`), its running list [[ALGORITHMIC_NULL_TODO]], the evidence file [[CROSS_STUDY_NULL_DOSSIER]], the three-seed May replication design [[MAY_DOUBLE_RETURN_REPLICATION]], the earlier gradient audit [[TRAINING_HEALTH_AUDIT]], the collection pipeline [[TRAJECTORY_COLLECTION_PIPELINE]], the saved-config compatibility plan [[SAVED_RUN_CONFIG_COMPAT]], the modulation-site refactor [[MODULATION_SITE_REFACTOR]]. Review: [[plan_algorithmic_null_tooling]] (`docs/reviews/plan_algorithmic_null_tooling.md`).
 
@@ -30,6 +30,8 @@ last_updated: 2026-09-30
 **What changed in Revision 2.** The rules now exist as a separate file, and the reviewer found that this plan and that file described different tools. This plan now adopts the file's design. Every analysis manifest pins the rules file by its fingerprint (a sha256 hash), the pilot included. The rules stay in plain words; the tooling turns each rule's logic into tested code and takes every number from a `parameters:` list inside the rules file, so no threshold is typed into a script. The plan also now computes five inputs the rules need and it did not produce: three untrained reference networks (one per ordinary seed), within-stage drift for the across-worlds analysis, survival and food intake from the training logs, the rules' "clock-only" baseline, and the rules' bootstrap. It also sizes the probes so there are enough independent episodes (§Revision 2).
 
 **What changed in Revision 3.** The reviewer found one way the wake-up measure could print a wrong sentence. Two of its six measures were to be sampled only at every fifth saved checkpoint early in training, which is where the modulator wakes up. A measure that truly woke at the same time as survival levelled off would then be reported up to four checkpoints *late*, on every world alike, and the across-worlds count would turn that rounding into a finding. Every wake-up measure is now sampled at every checkpoint, which roughly doubles the wake-up sweep. The sweep also now starts with a cheap check on the training logs that every run's survival actually levels off at a nameable checkpoint. The rest are wording fixes that align the plan with the committed rules (§Revision 3).
+
+**What changed in Revision 4.** Building the first stages showed that a recorded episode replays exactly only in the arithmetic mode it was recorded in, and graphics cards differ in their default mode. Every future store is now recorded in full 32-bit arithmetic and says so. The plan also cuts the saved layer activity from about 200 GB to about 43 GB by keeping only what the pre-registered rules read, makes the trainer and the analysis share one recipe for each run's starting network, and fixes a few smaller points (§Revision 4).
 
 **Why now.** One pair of agents from an earlier 16-world study already has stored episodes and loads under current code, so the tools can be built and checked on it today. A second study is still training: a replication of a May experiment with three seeds of each agent. It is the only design that can say whether two agents are "the same" by more than two ordinary agents from different seeds are. The plan is staged, so partial results reach the page before that training ends.
 
@@ -111,6 +113,177 @@ The third review ([[plan_algorithmic_null_tooling]] §Third review) found that t
 | T7 🟢 | Stage 4b's check column did not name Checkpoint 3.3 | **Fixed** | Staging (Stage 4b) |
 
 Not mine and not changed here: **T5** (the "guard passes but no point is sustained" outcome) is a rules revision by `experiment-designer`, then a fixture row the developer adds to §11's table with the reason text the rules register. **T8** (the driver also asserts that the checkpoint after the last listed May stage-0 checkpoint has a different saved stage) is the developer's, in `run_wakeup`.
+
+---
+
+## Revision 4 — decisions raised by the Stage 0–2/5 Implementation Report (2026-09-30)
+
+**What this settles.** The developer's report (end of this doc, §Deviations) raised five points that have to be fixed before the May replication's episodes are recorded. That collection can start around 08:30 on 2026-09-30, when training ends.
+1. **Arithmetic mode.** A recorded episode replays exactly only in the arithmetic mode it was recorded in. RTX 3090-class cards multiply by default in a reduced-precision format (TF32); older cards do not. No store says which one it used. From now on, every store is recorded in full 32-bit arithmetic, checks this at start-up, and names its mode and card in its manifest.
+2. **Storage.** Saving every layer of every agent at every checkpoint would take about 200 GB. Saving only what the pre-registered rules read takes about 43 GB.
+3. **Rules loader.** The small rules-loading file the developer added becomes part of the plan, and it is the only loader.
+4. **A check near its tolerance.** The layer-consistency check itself does not accumulate error along an episode. One side comparison did; it is re-specified. The registered tolerance does not change.
+5. **A wrong sentence** about the last row of an episode is removed.
+6. **Untrained networks.** The code that rebuilds each run's starting network copies the trainer's random-key recipe instead of sharing it, so a future change to the trainer would silently rebuild old runs wrong. Both now call one shared function, and every run the analysis uses is checked.
+7. Four small review items.
+
+**Order.** Only R4-1 (collector side) and the R4-7 collector item gate the collection. The rest gate the first May *analysis* run, not the collection.
+
+| # | Point | Decision | Where |
+|---|---|---|---|
+| R4-1 | Store precision (decided by the parent session) | Collect in full float32 with TF32 off, verified by a start-up self-test. Record the mode and GPU model in the manifest, and guard both on resume. The replay reads the recorded mode; every kept activation is float32 | below; File Changes §4, §5, §8; Checkpoints R4.1, R4.2, 6.1 |
+| R4-2 | Activation storage | Verdict layers at every capture. Descriptive layers only at one headline capture. A `:prev` checkpoint only on its drift-pair probe | below; File Changes §8; Checkpoint R4.3 |
+| R4-3 | `rules_pin.py` not in File Changes | Listed (§14). One loader: `decision_rules.py` imports it | File Changes §6, §13, §14; Checkpoint R4.5 |
+| R4-4 | G2 margin | The chain check recomputes one step from the captured previous state, so it is already length-independent; unchanged. The sampled-vs-full comparison is the length-dependent one and not a G2 quantity; it becomes a per-row tool check with a planted control | File Changes §4; Checkpoint R4.4 |
+| R4-5 | "`action_next` at `t = T−1` is masked" | Removed: row T exists, so nothing is masked | §Probe sets |
+| R4-6 | `untrained.build` re-derives `train.py`'s key chain (`code-reviewer` 🟡) | One shared helper used by the trainer and `untrained.build`, pinned by golden keys; the per-run check runs on every run the analysis uses, with its launch git sha | below; File Changes §15; Checkpoints R4.6, 4.4 |
+| R4-7 | Small review items | Docstring, a `del` that becomes a raise, a dead constant, a Stage 3 note | below |
+
+### R4-1 Store precision
+
+**Collector** (`scripts/eval/traj_collect/collect_trajectories.py`):
+- **New `float32_matmul_selftest(precision: str) -> float`.** Under `jax.default_matmul_precision(precision)`, it runs a jitted `jnp.dot` of two fixed float32 matrices on JAX's default device and returns `max|C − C₆₄| / max|C₆₄|` against the numpy float64 product. The matrices are 256×512 and 512×256, uniform in [−1, 1], from `np.random.default_rng(0)`.
+- **New module constant `FLOAT32_MATMUL_MAX_REL_ERR = 1e-5`.** Its comment states the basis. Float32 accumulation over 512 terms gives about 1e-7 relative error. TF32 (10-bit mantissa inputs) gives about 1e-4 to 1e-3. The constant sits at least 10× from each. It is a tool guard, not a study parameter. The measured values in both modes are recorded at Checkpoint R4.1.
+- **The mode is forced for the whole run.** `main()` runs its whole body inside `with jax.default_matmul_precision("highest"):`. It uses a context, not a global `jax.config.update`, so an in-process test caller does not inherit it.
+  - The first statement inside the context is `rel = float32_matmul_selftest("highest")`. It raises `RuntimeError`, naming the device, when `rel > FLOAT32_MATMUL_MAX_REL_ERR`. This happens before any store directory exists.
+  - There is **no CLI flag**. The mode is not a choice, and a flag would be a second route to TF32.
+- **Three new manifest fields.** `build_manifest` gains three required keyword arguments and writes:
+  - `matmul_precision`: the value read back from JAX's config inside the context, not a typed literal. It must equal `"highest"`.
+  - `compute_device_kind`: `jax.devices()[0].device_kind`, for example `"NVIDIA GeForce RTX 3090"` or `"cpu"`.
+  - `matmul_selftest_max_rel_err`: `rel`.
+- **Resume guard** (`src/utils/trajectory_store.py`): add `matmul_precision` and `compute_device_kind` to `MANIFEST_GUARDED_FIELDS`, with a comment citing this revision. Consequences:
+  - A store can never mix modes or card models across resumed workers.
+  - Resuming a store written before this change raises through `_req`, because its manifest lacks the keys, and nothing is written. This is correct: mixing an unrecorded mode with float32 is exactly the hazard. No completed store needs resuming.
+  - The May spec (§12: 10,000 episodes, `shard_episodes: 5000`, `blocks_per_cell: 2`) puts each store in one worklist cell, so one worker on one card writes it. A future multi-cell GPU collection across card models would be refused, loudly.
+- **No `SCHEMA_VERSION` bump.** The schema doc's "fixed key list" (§3) is the columns. Manifest fields have been added without a bump before (`training_git_sha` and siblings, commit `0edb2bd6`). The manifest-field table and the "Manifest guard" list in `docs/environment/TRAJECTORY_STORE_SCHEMA.md` are updated in the same commit.
+- **Unchanged:** `collect_worker.sh` and `run_collection.py`. The per-node compile cache is safe, because the matmul precision is part of the lowered program. The self-test would catch a stale TF32 program anyway.
+
+**Collector tests** (`tests/test_trajectory_collection.py`):
+- A collection on the existing CPU fixture writes the three fields, with `matmul_precision == "highest"` and `compute_device_kind == jax.devices()[0].device_kind`.
+- A resume raises and writes nothing in three cases: the store manifest's `matmul_precision` edited to `"default"`; `compute_device_kind` edited; a manifest lacking both keys.
+- **The self-test can fail** (CPU-runnable): monkeypatch the product to add 1e-4 relative noise, and `main` raises before any store directory is created.
+- `test_schema_doc_matches_code` still passes.
+
+**Reader** (`probe_set.py`, `run_activations.py`, `teacher_forced.py`):
+- `probe_set` copies each store's `matmul_precision` and `compute_device_kind` into `store_meta`. A missing field becomes `None`. That absence is how a store from before Revision 4 is recognised; it is never filled with a default.
+- **`probes[].store_matmul_precision` stays mandatory, one entry per store, in the order of `stores`.** Accepted entries:
+  - `recorded`: use the store manifest's `matmul_precision`. Raises if the store records none.
+  - `highest` or `default`: accepted **only** for a store whose manifest records no mode (a legacy store). On a store that records a mode, an explicit value must equal the recorded one, or it raises.
+
+  So the pilot's `[highest, default]` keeps working unchanged, and the May manifests write `recorded` for every store.
+- **`capture_matmul_precision` stays mandatory**, but its only accepted value is now `highest` (it was `highest | default`); the pilot already uses it. So every kept activation, every chain assertion and the cross-agent agreement are computed in float32.
+- `run_activations` calls `float32_matmul_selftest("highest")` once at start. It imports the function from the collector module, which it already imports for `resolve_checkpoint_info`. It writes the value and the replay device kind into its `manifest.json`, and raises above the constant.
+- Each activation JSON records, per store, the resolved check mode, the store's `compute_device_kind` and the replay device kind. For every May store the check mode equals the capture mode, so the existing code skips its second pass (`teacher_forced.py:272`), and self-replay and capture are one pass.
+- **Why a float32 store replays on any card.** Two cards computing in float32 differ only in reduction order: about 1e-7 relative on the logits. That can flip only rows whose top-two margin is below G1's near-tie margin (1e-4), and G1 already allows those. A replay device that silently ran TF32 fails G1 loudly, as the pilot showed.
+- **Reader tests** (`tests/analysis/test_nmn_probe_set.py`, or a new `tests/analysis/test_nmn_run_activations_manifest.py`): the resolution cases above (`recorded` on a recording store; `recorded` on a legacy store raises; a matching explicit value; a conflicting explicit value raises; an explicit value on a legacy store), plus `capture_matmul_precision: default` raises.
+
+### R4-2 Activation storage
+
+**Which statistics need row-level activations kept on disk.** Every rules statistic that compares or decodes layers needs them: A1 (CKA and predictivity), A2 (decoding and the clock baseline), A3 (built from A1's pair statistics), A4 (movement and drift) and G4. G4's input-layer control reads the probe file. There are three reasons:
+1. The bootstrap resamples `episode_seed` groups jointly across all agents and pairs, so each draw needs every agent's rows of the drawn groups.
+2. Predictivity and decoding maps are fitted once per split repeat, then scored on every resample. That is two passes over the same rows.
+3. CKA's centring depends on which rows are drawn.
+
+Streaming would need sufficient statistics per group. A 128×128 cross-product per group and pair holds 16,384 numbers. The raw activations it would replace hold 640 per group and agent (5 rows × 128 units), so streaming would be 25× larger. Keeping rows is therefore the smallest form. G1–G3 are computed during replay and need nothing kept. B2 uses rollouts, not stored activations.
+
+**What is kept.** This is the smallest design the rules allow. `n_per_store` (5,000) and the five verdict layers are unchanged, and `rows_per_episode` stays 5, the value the pilot was built and checked with.
+1. **At every capture:** the verdict layers `enc.out`, `rnn.state`, `rnn.out`, `actor.out` and `critic.out` (5 × 128 units), plus logits and value. About 2.6 KB per row.
+2. **Only at the headline capture:** the descriptive layers, meaning the `.raw` / `.mod` keys and `enc.uni.*`. The rules list them as descriptive, used to find where a difference arises at the A1 headline.
+   - The capture is set by the manifest's `headline_capture`. Evidence manifest: `{checkpoint: final, probe: active}`. Interim: `null` (verdict layers only). Pilot: `{checkpoint: final, probe: w0000_pair_final}`, so its output does not change.
+   - Untrained networks keep verdict layers only, because the rules pair UNTRAINED on `X.out` and `rnn.state`.
+   - The raw-input reference comes from the probe file, not from each agent's capture.
+3. **A `:prev` checkpoint is replayed only on its drift pair's probe:** `final:prev` on active and `stage_end:3:prev` on passive, read from `parameters.A4.drift_pairs`. Every other selector is replayed on every probe.
+
+**Size.** Upper bound: 150,000 kept rows per probe (30,000 episodes × 5; the pilot kept 4.86 per episode), so one verdict capture is about 0.39 GB.
+
+| Part | Count | Size |
+|---|---|---|
+| Evidence manifest, verdict layers | 6 agents × (5 stage ends × 2 probes + 2 `:prev`) = 72, plus 3 untrained × 2 probes = 6, so 78 captures | ≈ 30 GB |
+| Evidence manifest, descriptive layers at the headline | 3 modulated × 2.6 GB + 3 ordinary × 1.7 GB | ≈ 13 GB |
+| **Evidence manifest, total** | | **≈ 43 GB** (≈ 200 GB if everything were kept) |
+| Interim manifest | 9 verdict captures | ≈ 3.5 GB |
+
+Probe files stay as now, about 2 GB per May probe.
+
+Float16 storage is rejected. It adds about 5e-4 relative error to the statistics' inputs, 50× the float32 tolerance of G2.
+
+**Manifest keys** (developer-owned, mandatory, §8):
+- `layers[].keep: every_capture | headline_only`. Every verdict layer, `logits` and `value` must be `every_capture`, or the load raises.
+- `headline_capture: {checkpoint, probe} | null`.
+
+`run_activations` prints the expected bytes for the whole manifest before the first replay, and the measured total after the last. Both go in the Implementation Report.
+
+### R4-4 G2 margin
+
+The report gives two numbers, and they measure different things. The report's stated cause (error accumulating over up to 500 recurrent steps) is **wrong for the first** and right only for the second; `code-reviewer` reached the same reading independently (Stages 0–2/5 review, 2026-09-30).
+
+**Chain assertions (largest 4.93e-6, `rnn.state`): already length-independent. No change.**
+- Each tensor is recomputed from its *captured* upstream neighbour at the same step. `rnn.state[t]` is recomputed from the captured `rnn.state[t−1]` (`teacher_forced._chain`, l.147–152: `h_prev = concat(h_init, acts["rnn.state"][:-1])`).
+- So no rounding difference passes from one step to the next. Each row's deviation is a one-step difference between two compilations of the same arithmetic (kernel choice and fusion), bounded by a few float32 ULPs of that step's operands whatever `t` is. Longer episodes add rows, not accumulation. The May network has the same widths (128) and runs in the same mode, so the one-step bound is the same.
+- The check's form stays exactly as implemented (block normaliser, G2's formula). The only addition is a diagnostic: the capture JSON reports the maximum deviation in each quarter of the checked length, so the absence of growth with `t` is shown on data rather than argued.
+- **Rules hand-off: not needed, in this plan's reading.** `code-reviewer` suggested that `experiment-designer` register a relative tolerance for recurrent tensors. Since the only G2 quantity is per-step, this plan does not ask for it. If `experiment-designer` decides otherwise, the change must be committed before the first May capture (the rules' `revision_policy`). This plan writes nothing in the rules file.
+
+**Sampled-vs-full comparison (largest 8.3e-6): length-dependent, and not a G2 quantity.**
+- It compares the kept rows of the 2,500-episode replay with a separate full replay of 8 episodes. These are two independent recurrences from `h0`, so a rounding difference at step 1 is carried through the memory to step 500.
+- The rules' G2 lists only the neighbour reconstructions (logits, value, `rnn.state`, `X.mod`). The code held this extra check to G2's number (`teacher_forced.py:435`).
+- The comparison exists to catch a buffer written into the wrong (step, episode) slot. Such an error moves a value by the change between steps, orders of magnitude above rounding.
+- **Change: a separate tool check, `tool_checks.buffer_index_rel_tol: 1.0e-3`, computed per row.** It is a developer-owned manifest key, like `shift_change_rows_max`, and decides no verdict. Per row means `max_j |Δ_ij| / max(1, max_j |ref_ij|)` for each kept row `i`, then the maximum over rows, so neither the normaliser nor the error is pooled across a probe of any length. The capture JSON reports it per quarter of the episode length as well.
+  - **Planted positive control on the pilot:** shift the kept rows' slots by one step. The check must fail, with a deviation at least 10× the tool tolerance, and the value is recorded.
+  - Basis for 1e-3: at least 100× above the observed rounding, and, as the control must confirm, at least 10× below a one-step slot error.
+- This is a third, redundant guard on slot indexing, so moving it off G2's number removes no protection. The exact guards are the buffer-vs-index argmax check (1.0) and the step-discontinuous alignment (100 % on action-change rows). A key bound to the wrong tensor is caught by the chain assertions, which stay at 1e-5.
+
+**For `plan-reviewer`:** this moves a check that the code, not the rules, held to G2's number, so the move should be reviewed.
+
+### R4-3 `rules_pin.py`: one loader
+
+- `scripts/analysis/nmn/rules_pin.py` joins File Changes as §14, as built in Stage 2 (commit `e38a2b2f`).
+- `decision_rules.py` (Stage 3) imports `load`, `param` and `evidence_policy` from it and defines no loader of its own. Where §6 says `decision_rules.load`, read `rules_pin.load`. Where it says `verdict_policy(rules, evidence_status)`, read `rules_pin.evidence_policy(pinned, status)`, which returns the same `verdict_words_allowed` / `prefix` / `label` mapping.
+- §6's `require_clean` moves into `rules_pin` as `require_clean(pinned)`. It raises when `pinned.dirty`. This is fail-closed: `load` already sets `dirty=True` when git cannot be read.
+- **Tests:** `decision_rules.load is rules_pin.load`, and `decision_rules.py` imports neither `hashlib` nor `yaml`. The contract tests of §6 (sha mismatch, status not in the rules, dirty file) target `rules_pin`.
+- The no-literal test does not cover `rules_pin.py`: it evaluates no rule, and its one literal is a subprocess timeout. The coverage test counts reads made through `rules_pin.param`.
+- `SCRIPTS_DEPENDENCY_MAP.md` already has its row (added with Stage 2). When Stage 3 lands, its caller column gains `decision_rules.py`.
+
+### R4-6 One key recipe for the untrained networks
+
+**The problem (`code-reviewer`, 🟡).** `untrained.build` (`scripts/analysis/nmn/untrained.py:106–109`) copies `train.py`'s key chain (`train.py:1152–1153`, then `:1207`) instead of calling it. Its bitwise test (`tests/analysis/test_nmn_untrained.py`) proves the two agree at HEAD only. If `train.py`'s chain ever changes, runs launched before the change would be rebuilt with the new chain, and the test would still pass.
+
+**Change.**
+- **New `src/utils/init_keys.py` with one function, `trainer_init_keys(seed) -> (key, env_key, init_key)`.** It is exactly today's chain:
+  ```python
+  key = jax.random.PRNGKey(seed)
+  key, _model_key, env_key = jax.random.split(key, 3)   # _model_key: never used (Revision 1)
+  key, init_key = jax.random.split(key)
+  return key, env_key, init_key
+  ```
+  It lives in `src/` rather than `train.py`, because importing `train.py` runs its argv pre-parser and sets environment variables at import time.
+- **`train.py`.**
+  - l.1152–1153 become `key, env_key, init_key = trainer_init_keys(seed)`.
+  - The four algorithm branches drop their own `key, init_key = jax.random.split(key)` (l.1207 RecurrentPPO, l.1290 DQN, l.1312 DRQN, l.1342 PPO).
+  - This is value-preserving. Nothing reads `key` between l.1153 and those splits (checked with grep), and every branch makes the same split, so all three keys are bit-identical to today's for every algorithm.
+  - The docstring states that changing the function changes the starting network of every run launched after, and breaks the rebuild of every run launched before.
+- **`untrained.build`** replaces its two split lines with `_, _, init_key = trainer_init_keys(seed)`.
+- **Tests** (`tests/utils/test_init_keys.py`, new):
+  - **golden keys:** the raw `uint32` data of `key`, `env_key` and `init_key` for seeds 42, 43 and 44, recorded on the commit **before** the edit (state its sha in the test);
+  - `untrained.py` contains no `jax.random.split` (source check), so the recipe cannot be copied back in.
+
+  The existing integration test `test_nmn_untrained.py` (bitwise against `train.main()`'s own construction) must still pass.
+- **Training program unchanged.** Keys are inputs to the traced programs, not part of them. Still, run Checkpoint 1.3's jaxpr-hash method (`tmp/20260930_stage1_hashes.py`) on the 4 real agent blocks before and after; all 8 hashes must be identical. No speed run is needed if they are.
+- **`KNOWN_BUGS.md` l.114 (stale nested seed) is unaffected:** the helper takes the seed the trainer already resolved.
+
+**Checkpoint 4.4, second half, on every run.** The check is that the own-seed rebuild is closer to the run's first saved checkpoint than the rebuilds for two other seeds. It now runs on **every** run on which `untrained.build` is called, not a sample:
+- the 6 May runs (UNTRAINED references for the 3 ordinary runs, and the B2 step-0 anchor for the 3 modulated runs);
+- the 16 level-05 modulated runs (B2 anchors).
+
+That is 22 runs. Each row records the run's launch git sha from `wandb-metadata.json` (`git.commit`, folder found through `wandb_history.resolve_by_tag`) beside `training_git_sha` from `models/provenance.json`; the two must agree. A run launched before the commit that introduces `trainer_init_keys` is still covered, because the helper reproduces today's chain bit for bit (golden test). A run that fails the closeness check stops the analysis that uses its untrained network; the list goes to the user and `experiment-designer`. The plan does not decide an exclusion.
+
+### R4-7 Small review items
+
+1. **`forward_with_activations` docstring** (`src/models/recurrent_ppo_network.py`): add that equality with `__call__` is bitwise on CPU. On GPU it holds to ≤ 1e-6 relative with identical argmax, because XLA may fuse the two programs differently. The test's tolerance clause already allows for this. Docstring only; the jaxpr is unchanged.
+2. **`continual_resolved_config`** (`collect_trajectories.py:297–298`): a world section present in `config.yaml` but absent from the stage file is now a `ValueError` naming the section and the stage file. Today the section is silently deleted, which would record a different world than the one trained. Add a test (a stage file without `thermal` raises).
+   - **Safe for the collection:** on 2026-09-30 at 02:30, all five world sections are present in `config.yaml` and all five stage files of all six May runs (checked by script).
+   - This touches the collector, so it lands with R4-1, before the collection.
+3. **Remove the unused `SITE_OF`** (`teacher_forced.py:35`).
+4. **Stage 3 note.** Under the capture mode (float32), the pilot's modulated agent agrees with its own TF32-recorded store on 0.9981 of rows. Any pilot statistic keyed to the *stored* action therefore inherits that 0.2 % mismatch; the pilot figures state it in their data statement. It does not arise for May stores, which are recorded in float32 (R4-1).
 
 ---
 
@@ -317,7 +490,7 @@ A `.mod` key is present only when that site is enabled. The comparison drivers p
 - Asserted at build time:
   - within each episode, `t` runs `0..T−1`, strictly increasing and contiguous;
   - the row count per episode equals the episode table's `T`;
-  - `action_next` at `t = T−1` is masked out (there is no next row).
+  - `action_next[t] == action[t+1]` for every `t` in `0..T−1`. Row `T` (the terminal state) exists in the store, so it supplies `action_next` for `t = T−1`, and nothing is masked (Revision 4, R4-5).
 - It stores:
   - `obs` at the sampled rows;
   - the full `obs_noised` sequences needed for replay;
@@ -452,7 +625,7 @@ The new helper `untrained.build(run_dir)` follows this key chain, and builds the
 | **4 — B2 on existing runs** | after Stage R (a), (b) and (c), in parallel with 3 | §7, §11, driven by the wake-up manifest. All 16 level-05 modulated runs, plus May-replication **`01_active`** for the three modulated runs. **Order:** the survival plateau for all 19 runs first (CPU, logs only), then the timing gate, then the GPU sweep with every measure at every checkpoint | **Survival plateau defined for all 19 runs before any rollout (Checkpoint 4.0).** Every measure's grid is the manifest's full checkpoint list (plus step 0 where anchorable). Wake-up values equal the rules' `B2` section. Untrained anchor verified (Checkpoint 4.4). Shared start verified on the May configs (Checkpoint 3.3). Gradient probe inside the sanity band (Checkpoint 4.2). Freeze equivalence: `freeze.verify_freeze_equivalence` passes before each sweep. ρ closure identity (asserted in `mod_distribution`) holds. Timing gate (§Stage 4 budget) passed before the full sweep |
 | **4b — early yardstick (optional)** | after Stage R | Collect the **`stage_end:0`** checkpoint (end of `01_active`) of all six May-replication runs (world = stage 0 = `config.yaml`, correct with the current collector), 10,000 episodes each, **one spec per run with an explicit step** through `run_collection.py`. Then A1/A3 at the end of `01_active`, with stage-1 survival and G5 from the logs (§A3) | As Stage 2 for every store. **Checkpoint 3.3 passed for all three seeds (42, 43, 44)**: the shared start that A3's same-seed reading relies on. Stage-1 survival cross-check passes (Checkpoint 4.6). A3 figure in *interim* mode; every verdict word carries the rules' interim prefix ("provisional — end of stage 1 of 5") |
 | **5 — collector continual-awareness** | now, so it is ready when training ends | §5 | New tests in `tests/test_trajectory_collection.py` pass. On a real May-replication run, `stage_end:0` and `stage_end:3` resolve to checkpoints whose saved `stage` is 0 and 3, and the `stage_end:3` world has `detection_range: 0` |
-| **6 — May replication, full** | after training | Launch collection of `final` + `stage_end:3` (end of `04_passive`) for all six runs via the finished-runs-only launcher with the six logs **named** (§12). Then A1–A4 (activations at `stage_end:0..3`, `final`, `stage_end:3:prev` and `final:prev` on both world probes; the `:prev` checkpoints need no stores of their own) and B2 `01_active` are final | Every store validates (`validate_store_structure/shapes/draws`). Each store's `resolved_env_config.environment` equals its stage file's. Action agreement 100% per generating agent. The figures switch to `evidence_status: evidence` |
+| **6 — May replication, full** | after training, **and after Checkpoint R4.1** (Revision 4: every store in full float32, recorded in its manifest; this applies to the Stage 4b stores too) | Launch collection of `final` + `stage_end:3` (end of `04_passive`) for all six runs via the finished-runs-only launcher with the six logs **named** (§12). Then A1–A4 (activations at `stage_end:0..3`, `final`, `stage_end:3:prev` and `final:prev` on both world probes; the `:prev` checkpoints need no stores of their own) and B2 `01_active` are final | Every store validates (`validate_store_structure/shapes/draws`). Each store's `resolved_env_config.environment` equals its stage file's. Action agreement 100% per generating agent. The figures switch to `evidence_status: evidence` |
 
 What the page can carry when:
 - **After Stage 3:** pilot A1/A2 figures, labelled as tool validation, no verdicts.
@@ -544,6 +717,8 @@ def _forward(self, x, h, acts):                  # body of today's __call__ (l.5
 
   Tolerance: `max|Δ| ≤ tol · max(1, max|reference|)` in float32, with `tol` = gate G2's reconstruction tolerance from `parameters:` (1e-5 in the designer's revision). The recomputation is a separate XLA program, so bitwise equality is not expected. Every assertion's max deviation is written into the activation file's JSON. Any failure aborts the capture. Because each key is checked against its neighbour, a single key bound to the wrong tensor fails at least one row of this table.
 
+**Revision 4 amendments to §4** (details in §Revision 4): the chain check's form is unchanged, and its JSON gains the per-quarter maximum (R4-4). The sampled-vs-full comparison is held to `tool_checks.buffer_index_rel_tol`, per row, with a planted off-by-one control (R4-4). The store's matmul mode is resolved as in R4-1 (`recorded`, or an explicit value for a legacy store), and `capture_matmul_precision` must be `highest`. `run_activations` runs the float32 self-test at start (R4-1). Only the layers the manifest marks for a capture are kept (R4-2). The unused `SITE_OF` goes (R4-7).
+
 #### 5. `scripts/eval/traj_collect/collect_trajectories.py` — continual-aware collection
 
 - `resolve_checkpoint(run_dir, which)` accepts `stage_end:<k>`: **the last saved checkpoint whose saved `stage` field equals *k*** (0-based; reuse `continual_forgetting_matrix.read_saved_stage`). If no checkpoint has stage *k*, it raises. For a run with no `schedule.yaml`, `stage_end:<k>` raises.
@@ -559,6 +734,7 @@ def _forward(self, x, h, acts):                  # body of today's __call__ (l.5
 - `apply_saved_config_compat` and `assert_scene_unambiguous` run on that dict.
 - **No schema change:** no new column, `SCHEMA_VERSION` stays 1. `train_config_mtime` keeps reading `config.yaml`.
 - Non-continual runs: behaviour unchanged, verified by the existing tests.
+- **Revision 4 (R4-1, R4-7), before the May collection:** `main()` runs under `jax.default_matmul_precision("highest")` after `float32_matmul_selftest` passes. The manifest gains `matmul_precision`, `compute_device_kind` and `matmul_selftest_max_rel_err`, and the first two join `MANIFEST_GUARDED_FIELDS` in `src/utils/trajectory_store.py`. `docs/environment/TRAJECTORY_STORE_SCHEMA.md` §2 is updated in the same commit, with no `SCHEMA_VERSION` bump. A world section missing from a stage file raises instead of being deleted. Tests as listed in R4-1 and R4-7.
 - `run_collection.py` passes the checkpoint string through unchanged (l.167). Confirm its spec validation accepts `stage_end:<k>`.
 
 **Tests** (`tests/test_trajectory_collection.py`, extended), on a synthetic continual `models/` fixture (`schedule.yaml`, `config.yaml`, a stage-0 file identical to it, a passive stage-1 file with a different `environment` and a different `tag`/`wandb` and no `agent`, and checkpoint dirs with saved `stage` values including a lagging one):
@@ -575,7 +751,7 @@ No existing store belongs to a continual run (the reviewer checked: none under `
 #### 6. `scripts/analysis/nmn/representation.py` + `scripts/analysis/nmn/decision_rules.py` — new, pure numpy / sklearn / python
 
 - `representation.py`: `linear_cka(X, Y)`, `fit_predictivity_maps(X, Y, split) -> maps` and `heldout_r2(maps, X, Y, rows)` (so a map is fitted once per split repeat and scored on any resample of held-out rows, re-review R7), `ridge_probe(X, y, split)` (same fit/score separation), `clock_baseline(t, y, split) -> per-step means` and `clock_r2(means, t, y, rows)` (the rules' per-time-step training-fold mean; rows whose `t` has no training row are returned as a mask so every scorer drops them alike, re-review R6), `episode_split(groups, n_repeats, test_frac, seed)` (asserts disjointness), `joint_group_bootstrap(groups, split, n, seed) -> draws` (one set of resampled held-out group indices per repeat and draw, shared by every agent and pair). Everything in float64. No threshold lives here.
-- `decision_rules.py` (the contract of §E):
+- `decision_rules.py` (the contract of §E). **Revision 4 (R4-3):** the loader is `rules_pin.load` (§14), imported, not reimplemented; `verdict_policy` is `rules_pin.evidence_policy`; `require_clean(pinned)` lives in `rules_pin`.
   - `load(manifest) -> Rules`: reads `decision_rules.file`, computes the whole-file sha256, raises `ValueError` if it differs from `decision_rules.sha256`; returns the parsed rules, the `parameters:` mapping, the sha256 and the file's last commit sha;
   - `require_clean(path)`: raises on uncommitted changes. The drivers call it whenever `evidence_status.<status>.verdict_words_allowed` is true in the loaded rules (today `interim`, `evidence` and `b2_wakeup`), never on a hard-coded status list (Revision 3, T3);
   - `verdict_policy(rules, evidence_status) -> (allowed, prefix, label)`, straight from `evidence_status.<status>`; `prefix` and `label` are `None` where the rules give none. A status that is not a key of the rules' `evidence_status` mapping raises;
@@ -627,7 +803,8 @@ Each takes `--manifest <yaml>`. Outputs go under `results/analysis/algorithmic_n
 - **`bootstrap_n`**, set by `experiment-designer`, asserted against G6's minimum at load (R7);
 - `probe_split: {seed}` — the number of repeats and the test fraction are rule constants and come from `parameters:`;
 - `ridge_alphas`, `min_rows_per_column`, `assert_n_episodes`;
-- `tool_checks: {shift_change_rows_max, self_similarity_atol}` — the plan's own abort tolerances that no gate covers, which decide no verdict (a failed check aborts the run). They live in the manifest so that no number sits in a script.
+- `tool_checks: {shift_change_rows_max, self_similarity_atol, buffer_index_rel_tol}` — the plan's own abort tolerances that no gate covers, which decide no verdict (a failed check aborts the run). They live in the manifest so that no number sits in a script. (`buffer_index_rel_tol`: Revision 4, R4-4.)
+- **Revision 4 keys (developer-owned, mandatory):** `capture_matmul_precision` (only `highest`) and `probes[].store_matmul_precision` (per store: `recorded`, or `highest` / `default` for a store whose manifest records no mode), R4-1; `layers[].keep: every_capture | headline_only` and `headline_capture: {checkpoint, probe} | null`, R4-2. A `:prev` selector is replayed only on the probe its `parameters.A4.drift_pairs` entry names (R4-2).
 
 **Addendum (in-flight Stage 2; Revision 3, T3).** Stage 2 is being implemented against Revision 2, which wrote the enum as `pilot|interim|evidence`. If the Stage 2 code already validates `evidence_status` (for example in a manifest loader used by `probe_set` or `run_activations`), replace that fixed list with the check above and add the `b2_wakeup` case to its test. If Stage 2 does not validate the status, nothing in Stage 2 changes. Nothing else in Stages 0, 1, 2 or 5 is affected by Revision 3.
 
@@ -725,6 +902,8 @@ Add rows for every new file:
 - `teacher_forced.py`, `probe_set.py`, `representation.py`, `decision_rules.py`, `wandb_history.py`, `wakeup.py`, `untrained.py`, `grad_probe.py`, `run_activations.py`, `run_similarity.py`, `run_decoding.py`, `run_wakeup.py`: callers, depth, and `src/` imports. `teacher_forced.py`, `untrained.py` and `grad_probe.py` join `replay.py` as the `nmn/` files that import `src/`. `untrained.py`'s test imports `train` (repo root).
 - the six `an0N_*.py` figure scripts.
 
+Also (Revision 4): `rules_pin.py` (already mapped with Stage 2; its callers gain `decision_rules.py` in Stage 3, R4-3), and `run_activations.py` (now imports `float32_matmul_selftest` from `collect_trajectories.py`, R4-1). `untrained.py`'s row gains its import of `src/utils/init_keys.py` (R4-6).
+
 Update the rows for:
 - `replay.py` (now imports `scripts.eval.eval_rollout`);
 - `collect_trajectories.py` (now imports `eval_rollout` and the stage-reading logic; its `resolve_checkpoint` gains new callers `run_activations.py`, `untrained.py`, `run_wakeup.py`);
@@ -735,7 +914,15 @@ Update the rows for:
 
 Also update `scripts/eval/traj_collect/README.md` (a `stage_end:<k>` selector and continual worlds, one short section).
 
-**Not touched:** `train.py`, `recurrent_ppo_trainer.py`, `neuromodulator.py`, `ckpt_io.py`, `mod_distribution.py`, `freeze.py`, `spectral_bound.py`, `run_*` legacy drivers, the trajectory-store schema, `configs/environment/`, and the level-05 `analysis_manifest.yaml`. No config key is added to any training config, so neither `CONFIG_GUIDE.md` nor `CONFIG_CRITICAL_SETTINGS.md` changes.
+**Not touched:** `train.py` *(touched in Revision 4, R4-6: the key-chain helper only, value-preserving, jaxpr identical)*, `recurrent_ppo_trainer.py`, `neuromodulator.py`, `ckpt_io.py`, `mod_distribution.py`, `freeze.py`, `spectral_bound.py`, `run_*` legacy drivers, the trajectory-store schema's columns and `SCHEMA_VERSION` (Revision 4 adds three manifest fields only, R4-1), `configs/environment/`, and the level-05 `analysis_manifest.yaml`. No config key is added to any training config, so neither `CONFIG_GUIDE.md` nor `CONFIG_CRITICAL_SETTINGS.md` changes.
+
+#### 14. `scripts/analysis/nmn/rules_pin.py` — added in Stage 2 (Revision 4, R4-3)
+
+The one loader of the pinned rules file: `load(manifest) -> PinnedRules` (whole-file sha256 against the manifest's pin, mismatch raises; returns `rules`, `parameters`, `commit`, `dirty`), `param(parameters, dotted)` (missing entry raises), `evidence_policy(pinned, status)` (a status the rules do not define raises), and, from Revision 4, `require_clean(pinned)`. `decision_rules.py`, `run_activations.py`, `run_similarity.py`, `run_decoding.py` and `run_wakeup.py` read the rules only through it. Tests as in R4-3.
+
+#### 15. `src/utils/init_keys.py` — new; `train.py` and `untrained.py` call it (Revision 4, R4-6)
+
+`trainer_init_keys(seed) -> (key, env_key, init_key)`, today's chain unchanged. `train.py` l.1152–1153 call it, and the four per-algorithm `key, init_key = jax.random.split(key)` lines (l.1207, 1290, 1312, 1342) are removed. `untrained.build` calls it instead of re-deriving. New `tests/utils/test_init_keys.py` (golden keys recorded before the edit for seeds 42–44, plus the source check on `untrained.py`). Checkpoint 1.3's jaxpr hashes are re-run before and after.
 
 ### Deferred (not in scope; needs its own approval)
 
@@ -753,6 +940,12 @@ This belongs in a separate plan with a speed measurement. It would make B2's per
 - [x] **0.2** The May replication's five stage files: the env sections of `01/03/05_active` are identical to `config.yaml`'s; `02/04_passive` differ only in `environment.entities` (besides `agent`/`tag`/`wandb`). — **Done, with one finding:** env sections of `01/03/05_active` equal `config.yaml`; `02/04_passive` differ only in `environment.entities`. But for the s43 and s44 runs every later stage file also differs in top-level `seed` (42, not 43/44). See Implementation Report, Deviation 1.
 - [ ] **R.1** `experiment-designer`'s revised rules file (with `parameters:` and `B2`) and the wake-up manifest are committed, and all four manifests pin the rules file's current sha256. Record the file paths, commit shas and commit times. Record the `generated_utc` of the first `run_similarity` / `run_decoding` output of any manifest and of the first `run_wakeup` output, and show each is **later** than the rules commit. (Verifier checks both from `git log` and the output `manifest.json`.)
 - [ ] **R.2** `experiment-designer` has read the evaluator's fixture table (`tests/analysis/test_nmn_decision_rules.py`, the "rules — logic" cases) and signed in the Implementation Report that each row is the rules' intended reading. The signature's commit time precedes the first real `run_similarity` / `run_decoding` / `run_wakeup` output. Any row the designer rejects is a rules revision (reason 1 of the rules' `revision_policy`) or a code fix, before any number exists.
+- [ ] **R4.1** *(gates the May collection)* Collector tests of R4-1 and R4-7 pass, including the planted self-test failure and the missing-section raise. On an RTX 3090-class GPU, paste `float32_matmul_selftest("default")` (must exceed `FLOAT32_MATMUL_MAX_REL_ERR`) and `float32_matmul_selftest("highest")` (must not). A one-block smoke collection of one May run, on the card class chosen for the collection, into a throw-away `--out-root`, writes a manifest with `matmul_precision: highest`, a `compute_device_kind` and the self-test value; paste them. The commit sha of this change is recorded; every May store's `collection_git_sha` must be at or after it (checked at 6.1).
+- [ ] **R4.2** Reader tests of R4-1 pass. The pilot manifest, with its two precision keys unchanged (and the R4-2 keys added), reruns Stage 2 on an Ampere/Ada GPU and reproduces Checkpoint 2.2: 0 disagreements for both agents.
+- [ ] **R4.3** Loading a manifest with a verdict layer, `logits` or `value` marked `headline_only` raises. A unit test shows `final:prev` is replayed only on `active` and `stage_end:3:prev` only on `passive`, read from `parameters.A4.drift_pairs`. For the first May manifest, the expected bytes (printed before the first replay) and the measured bytes are pasted.
+- [ ] **R4.4** On the pilot, the chain-assertion JSON carries the per-quarter maximum; paste it. The sampled-vs-full check is per row against `tool_checks.buffer_index_rel_tol`: unplanted, it passes (value pasted); with the kept rows' slots shifted by one step, it fails at ≥ 10× the tolerance (value pasted).
+- [ ] **R4.5** `decision_rules.load is rules_pin.load`; `decision_rules.py` imports neither `hashlib` nor `yaml`; `require_clean(pinned)` raises on a dirty fixture.
+- [ ] **R4.6** Golden keys for seeds 42–44 recorded on the pre-edit commit (sha stated) and `tests/utils/test_init_keys.py` passes. `tests/analysis/test_nmn_untrained.py` still passes (bitwise against `train.main()`). Checkpoint 1.3's 8 jaxpr hashes are identical before and after. Checkpoint 4.4's second half is then run on all 22 runs of R4-6, with each run's `wandb-metadata.json` `git.commit` and `provenance.json` `training_git_sha` pasted beside it.
 - [x] **1.1** Record the golden parameter hashes on the **unmodified** commit (state its sha) *before* editing the network. — **Done:** recorded on `872b0e04` (network file unmodified) before the edit. Hashes in the Implementation Report and in the test.
 - [x] **1.2** `tests/models/test_capture_activations.py` passes. All of `tests/models/` passes. — **Done:** 31 passed in `test_capture_activations.py`. `tests/models/`: 231 passed, 1 failed. The failure (`test_hand_computed_breakdown_matches_the_live_environment`) is an environment-breakdown test that the network edit does not touch.
 - [x] **1.3** **Jaxpr identity (the speed gate).** Method, tested on 2026-09-29 on a synthetic 8-input / 16-hidden model: `g, s = nnx.split(model)`; wrap `f(s, x, h) = get_action_and_value_nnx(nnx.merge(g, s), x, h, key, eval_mode=False)` and `L(s, b) = ppo_loss_fn(nnx.merge(g, s), b, 0.2, 0.01, 0.5)[0]`. Hash `str(jax.make_jaxpr(f)(s, x, h))` and `str(jax.make_jaxpr(jax.grad(L))(s, per_env_batch))`, where `per_env_batch` is a `PPOBatch` of one env (`obs (T, D)`, `h_init` unbatched), matching the trainer's `vmap` over envs. Three separate processes gave identical hashes for the ordinary and a four-site FiLM `activation` model, for both functions. For this checkpoint, run it on the real ordinary and t16quad agent blocks, before and after the change; the `diff` must be empty. **Positive control:** a throw-away edit inserting `x = x * 1.0` into `_forward` must change the hash (then revert it), which shows the check can fail. Paste commands and hashes. A 200-iteration timing on one node is optional. — **Done:** 8/8 jaxpr hashes are identical before and after the edit (4 real agent blocks × 2 functions). The planted `x = x * 1.0` changes 8/8, so the check can fail.
@@ -771,7 +964,7 @@ This belongs in a separate plan with a speed measurement. It would make B2's per
 - [ ] **4.6** **Survival and bites cross-check (R5; Revision 3, T2).** For all six May-replication runs, `wandb_history.stage_level` on stage 1 (`stage/index` 0) with `weighting` = the rules' `parameters.common.survival.row_weight` (`delta_episode_number`), read from the pinned file rather than typed into the test, gives `S_1` and bites that equal `pilot_readout.py`'s May-replication readout for the same run to within 1e-9 relative (`tests/analysis/test_nmn_stage_level.py`, marked slow, reads the local binaries). Because the registered weighting is `pilot_readout.Series`'s own, this is a direct equality check. The `window_n`-weighted values are pasted beside them as a diagnostic. The G5 pass/fail and the survival difference in the interim driver JSON are pasted. The same check is repeated on stage 5 after training.
 - [ ] **4.5** Stage 4 timing gate: seconds per item recorded, extrapolated wall-clock stated for the every-checkpoint sweep, and the second-node decision (spread over a second node's GPUs if the extrapolation exceeds 8 h) recorded before the full sweep. No measure is thinned (Revision 3, T1).
 - [x] **5.1** Collector tests pass, including fingerprint tests (i)–(iii) and the `:prev` tests. On a real May-replication run, `stage_end:0` and `stage_end:3` resolve to checkpoints whose saved `stage` equals 0 and 3, and the `stage_end:3` world has `detection_range: 0`. After training, `stage_end:3:prev` and `final:prev` resolve to checkpoints with the same saved stage as their successors, and their episode gaps are recorded. — **Partly done:** 7 new collector tests pass. On real runs, `stage_end:0` resolves to saved stage 0 with a stage-1 successor (3 runs), and `stage_end:1` resolves to the `02_passive` world with `detection_range` 0. The `stage_end:3` check waits for the end of training: stage 3 is still running, and the resolver correctly refuses it.
-- [ ] **6.1** After collection: all 12 stores validate. Each store's world is correct. Self-replay agreement is 100% for all 12.
+- [ ] **6.1** After collection: all 12 stores validate. Each store's world is correct. Every store's manifest records `matmul_precision: highest`, a `compute_device_kind` and a self-test value at or below the constant, with a `collection_git_sha` at or after the R4.1 commit (Revision 4). Self-replay agreement is 100% for all 12, with `store_matmul_precision: recorded`.
 - [x] **6.2** `SCRIPTS_DEPENDENCY_MAP.md` and `traj_collect/README.md` are updated in the same commits as the files they describe. — **Stages 2 and 5 part done:** the map and README were updated in the same commits (`38b13a4f`, `e38a2b2f`).
 
 ## Implementation Report
