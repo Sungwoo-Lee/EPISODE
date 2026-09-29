@@ -234,7 +234,13 @@ Non-blocking: the "why" of A2 row 3 says the gap is 0.083. It is 0.090 (0.61 −
   evidence manifests, with its principle stated in the pilot manifest. **`ridge_alphas`** (the
   penalty grid, still missing from every manifest) is the same kind of choice. The developer must
   set it, with a stated principle, before the first real fit, and must not change it after a pilot
-  number is seen.
+  number is seen. *Set 2026-09-30 (coordinator request, before any fit):* `ridge_alphas` =
+  19 values from 10^-2 to 10^7 in half-decade steps, in the same three manifests. Principle
+  (full text in the pilot manifest): inputs are standardised, so a direction is shrunk by half
+  when its correlation-matrix eigenvalue equals alpha / n. Across inner-fold sizes of about 3e4
+  to a few 1e5 rows, the grid runs from least squares to shrinking all but the largest few
+  directions. It is wide, not tuned. A chosen alpha that lands on an end of the grid is reported,
+  never used to move the grid.
 - **Wake-up manifest `out_root`** = `results/analysis/algorithmic_null`: the directory that
   already holds the Checkpoint 4.0 table. The table is keyed to the manifest path and the rules
   sha, and neither changed, so it stays valid.
