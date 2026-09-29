@@ -119,6 +119,18 @@ def _word(policy: Policy, w: str) -> str:
     return f"{policy.prefix}: {w}" if policy.prefix else w
 
 
+def _finite(what: str, *values) -> None:
+    """A non-finite summary (NaN or infinity, e.g. from a failed fit or an empty bootstrap
+    draw) is a data defect, not a statistic: the rules assign it no outcome, so it raises
+    rather than falling through a comparison (every comparison with NaN is False) into some
+    verdict word. Each value may be a number or a (nested) sequence of numbers."""
+    for v in values:
+        a = np.asarray(v, dtype=float)
+        if not np.all(np.isfinite(a)):
+            raise ValueError(f"{what}: non-finite input {v!r}; the rules assign no outcome to a "
+                             f"missing statistic")
+
+
 def _gate_word(gates: dict, yardstick_complete: bool) -> str | None:
     """'a failed gate blocks every verdict word; the output reads "blocked by gate <id>"'.
     G5 below its minimum instead reads "undetermined — yardstick incomplete"."""
@@ -282,6 +294,7 @@ def gate_G6(stats: dict, P) -> dict:
 # ------------------------------------------------------------- summaries from draws --------
 def _quantiles(draws, P) -> tuple[float, float]:
     lo, hi = param(P, "common.bootstrap_interval")
+    _finite("bootstrap draws", draws)
     q = np.quantile(np.asarray(draws, dtype=float), [float(lo), float(hi)])
     return float(q[0]), float(q[1])
 
@@ -331,6 +344,8 @@ def per_statistic(s: dict, P) -> dict:
     undetermined_at_3_seeds: 'every other case.'
 
     s: {band: (L, U), mo_diff: [points], mo_diff_mean_q: (lo, hi)}."""
+    _finite("A1 per-statistic summary (band, mo_diff, mo_diff_mean_q)", s["band"], s["mo_diff"],
+            s["mo_diff_mean_q"])
     L, U = (float(v) for v in s["band"])
     pts = [float(v) for v in s["mo_diff"]]
     n = len(pts)
@@ -352,6 +367,7 @@ def statistic_verdict(s: dict, P) -> dict:
     s additionally holds untrained_band (L_untr, U_untr); None (no UNTRAINED pair) raises."""
     if s.get("untrained_band") is None:
         raise ValueError("no UNTRAINED pairs: the informative gate is not computable")
+    _finite("A1 informative gate (band, untrained_band)", s["band"], s["untrained_band"])
     L, U = (float(v) for v in s["band"])
     Lu, Uu = (float(v) for v in s["untrained_band"])
     if L <= Uu and Lu <= U:
@@ -372,6 +388,9 @@ def layer_verdict(pred: str, cka: str) -> str:
         return SAME if cka == SAME else SAME_LINEAR
     return {DIFFERENT: DIFFERENT, UNDETERMINED: UNDETERMINED,
             UNINFORMATIVE_STAT: UNINFORMATIVE_LAYER}[pred]
+
+
+A1_LAYER_WORDS = (SAME, SAME_LINEAR, DIFFERENT, UNDETERMINED, UNINFORMATIVE_LAYER)
 
 
 def counts_as_same(word: str) -> bool:
@@ -452,6 +471,7 @@ def _seed_need(n_arm: int, rule_min: int, P) -> int:
 def beats_clock(agent: dict, P) -> bool:
     """A2.beats_clock: 'R^2 - R^2_clock >= parameters.A2.beats_clock_margin_r2 AND the bootstrap
     lower-quantile of that excess is > 0.' agent: {excess, excess_q_lo}."""
+    _finite("A2 beats_clock (excess, excess_q_lo)", agent["excess"], agent["excess_q_lo"])
     return (float(agent["excess"]) >= float(param(P, "A2.beats_clock_margin_r2"))
             and float(agent["excess_q_lo"]) > 0)
 
@@ -471,6 +491,8 @@ def a2_layer(ordinary: list, modulated: list, P) -> dict:
     Each agent: {r2, r2_q: (lo, hi), excess, excess_q_lo}."""
     if len(ordinary) < 1 or len(modulated) < 1:
         raise ValueError("A2: an arm has no agent")
+    _finite("A2 layer (r2, r2_q per agent)", [a["r2"] for a in ordinary + modulated],
+            [a["r2_q"] for a in ordinary + modulated])
     ro = [float(a["r2"]) for a in ordinary]
     rm = [float(a["r2"]) for a in modulated]
     width = float(np.mean([float(a["r2_q"][1]) - float(a["r2_q"][0]) for a in ordinary]))
@@ -558,6 +580,7 @@ def survival_difference(S_by_arm: dict, P) -> dict:
     o, m = S_by_arm["ordinary"], S_by_arm["modulated"]
     if any(v is None for v in list(o) + list(m)):
         return {"available": False, "same": None}
+    _finite("survival difference (S_k per seed)", o, m)
     o, m = np.asarray(o, float), np.asarray(m, float)
     if len(o) <= 1 or len(m) <= 1:
         raise ValueError("survival difference needs at least two seeds per arm (sample SD)")
@@ -575,6 +598,8 @@ def same_seed_excess(v: dict, precondition: bool) -> bool:
     point estimate AND exceeds U, AND the bootstrap lower-quantile of the MO_same mean exceeds
     the upper-quantile of the MO_diff mean.' A3.precondition_shared_start: 'If any seed is not
     identical, E is treated as not holding.'"""
+    _finite("A3 same-seed excess (mo_same, mo_diff, U, quantiles)", v["mo_same"], v["mo_diff"],
+            v["U"], v["mo_same_mean_q_lo"], v["mo_diff_mean_q_hi"])
     if not precondition:
         return False
     ms, md = [float(x) for x in v["mo_same"]], [float(x) for x in v["mo_diff"]]
@@ -589,7 +614,12 @@ def a3_pattern(a1_word: str, E: bool, survival: dict) -> str:
     hold'; b+: 'A1 layer verdict same AND E holds'; c: 'A1 layer verdict different AND E does
     not hold AND survival is the same'; c': '... AND the survival difference is beyond';
     none: 'every other case — A1 undetermined or uninformative without E, a blocked gate, or
-    survival not available for pattern (c).'"""
+    survival not available for pattern (c).'
+
+    `a1_word` must be an A1 layer verdict word (A1_LAYER_WORDS, unprefixed); anything else
+    (a typo, a prefixed or a gate word) raises rather than falling into "none"."""
+    if a1_word not in A1_LAYER_WORDS:
+        raise ValueError(f"A3: {a1_word!r} is not an A1 layer verdict word {A1_LAYER_WORDS}")
     if counts_as_same(a1_word):
         return A3_BPLUS if E else A3_B
     if E:
@@ -618,22 +648,27 @@ def evaluate_A3(inputs: dict, P, *, policy: Policy, verdict_layers, gates: dict,
 
     inputs: {layer: {a1_verdict, mo_same: [points], mo_diff: [points], U,
     mo_same_mean_q_lo, mo_diff_mean_q_hi}}; survival as `survival_difference` returns for the
-    stage survival_stage_index(P, status). A blocked gate or an incomplete yardstick gives
-    pattern "none" with the reason in `blocked`."""
+    stage survival_stage_index(P, status).
+
+    A failed gate or an incomplete yardstick: rules section 2, 'a failed gate blocks every
+    verdict word; the output reads "blocked by gate <id>"', and G5, 'every A1-A4 verdict is
+    "undetermined — yardstick incomplete"'. Every layer pattern and the study reading then carry
+    that word (as in A1, A2 and A4), never a pattern name; `blocked` repeats it (Checkpoint R.2,
+    designer item 1)."""
     _check_policy(policy, b2=False)
     _check_layers(inputs, verdict_layers)
     gw = _gate_word(gates, yardstick_complete)
     layers, words = {}, {}
     for k, v in inputs.items():
         if gw:
-            w, E = A3_NONE, None
+            w, E = gw, None
         else:
             E = same_seed_excess(v, precondition_shared_start)
             w = a3_pattern(v["a1_verdict"], E, survival)
         layers[k] = {"pattern": _word(policy, w), "E": E, "blocked": gw}
         words[k] = w
     return {"layers": layers, "pattern_words": words,
-            "study": {"reading": _word(policy, _study_pattern(words, P)), "blocked": gw},
+            "study": {"reading": _word(policy, gw or _study_pattern(words, P)), "blocked": gw},
             "precondition_shared_start": precondition_shared_start, "survival": survival}
 
 
@@ -654,6 +689,7 @@ def arm_moves(q_lo: list, P) -> bool:
     """A4.movement_gate: 'An arm moves at a layer if, for at least
     parameters.A4.movement_min_seeds of its 3 seeds (common.two_modulated_seeds: both), the
     bootstrap lower-quantile of (mean movement - d_a) is > 0.'"""
+    _finite("A4 movement (lower quantile per seed)", q_lo)
     need = _seed_need(len(q_lo), int(param(P, "A4.movement_min_seeds")), P)
     return sum(float(q) > 0 for q in q_lo) >= need
 

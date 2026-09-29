@@ -54,3 +54,55 @@ def test_grid_is_the_checkpoint_list_with_step0_when_anchorable():
         rw.assert_curve_grid(run, "freeze", np.array([0, 10, 30]))
     with pytest.raises(AssertionError):
         rw.assert_curve_grid(run, "plateau", np.array([0, 10, 20, 30]))
+
+
+def test_out_root_is_required(tmp_path):
+    """out_root is a required manifest key (set by the designer at R.2); there is no
+    --out-root CLI argument to fall back on."""
+    man = yaml.safe_load(open(MAN))
+    del man["out_root"]
+    with pytest.raises(ValueError, match="out_root"):
+        rw.load_manifest(_write(tmp_path, man))
+    with pytest.raises(SystemExit):
+        rw.main(["--manifest", MAN, "--measures", "plateau", "--out-root", str(tmp_path)])
+
+
+def _scan_result(stages, truncated):
+    rows = [{"Episode/Number": 1.0, "stage/index": float(s)} for s in stages]
+    return {"rows": rows, "exit_code": None, "file": "synthetic.wandb", "truncated": truncated}
+
+
+def test_truncated_read_needs_a_later_stage(monkeypatch):
+    """O1: a half-written trailing record is accepted only for a continual run whose stage
+    read (stage 0) is followed by logged rows of a later stage; otherwise the run stops."""
+    from scripts.analysis.nmn import wandb_history as wh
+    monkeypatch.setattr(wh, "scan", lambda d, allow_truncated: _scan_result([0, 0, 1], "AssertionError"))
+    assert rw.read_scanned("may", "d", 0)["truncated"] == "AssertionError"
+    monkeypatch.setattr(wh, "scan", lambda d, allow_truncated: _scan_result([0, 0], "AssertionError"))
+    with pytest.raises(RuntimeError, match="no later stage"):
+        rw.read_scanned("may", "d", 0)
+    monkeypatch.setattr(wh, "scan", lambda d, allow_truncated: _scan_result([], "AssertionError"))
+    with pytest.raises(RuntimeError):
+        rw.read_scanned("l05", "d", None)              # a non-continual run: never accepted
+    monkeypatch.setattr(wh, "scan", lambda d, allow_truncated: _scan_result([0], None))
+    assert rw.read_scanned("l05", "d", None)["truncated"] is None
+
+
+def test_plateau_is_numbered_on_the_run_scale():
+    """O2: the plateau curve is unanchored (array index 0 = checkpoint 1); the table's
+    t_plateau_checkpoint is wakeup.position(t), i.e. index + 1, the scale every lag uses."""
+    from scripts.analysis.nmn import wakeup
+    B2 = {"threshold_mode_headline": "fraction_of_rise", "plateau_f": 0.9, "sustain": 2,
+          "final_k": 3, "noise_k": 3, "min_noise_points": 5, "noise_window_divisor": 3,
+          "noise_window_max_fraction": 0.5}                       # test fixture values
+    surv = {"row_weight": "delta_episode_number", "min_window_n": 1000}
+    rng = np.random.default_rng(0)
+    rows = [{"Episode/Number": 4000.0 * (i + 1), "Episode/_window_n": 4000.0,
+             "Episode/Steps": 100 + 100 * min(1.0, (i + 1) / 200) + rng.normal(0, 1)}
+            for i in range(750)]
+    cks = [100000 * (i + 1) for i in range(30)]
+    r, m, info = rw.plateau_crossing("synthetic", rows, rw.grid_x({"checkpoints": cks}, False),
+                                     B2, surv)
+    assert r.anchored is False and r.index is not None
+    assert wakeup.position(r.t, cks) == r.index + 1 == cks.index(int(r.t)) + 1
+    assert info["start_counter"] == 0.0 and len(m) == 30

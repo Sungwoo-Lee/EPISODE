@@ -27,8 +27,11 @@ Notation used in the inputs
   mo_same            the modulated-vs-ordinary, same-seed pair values (3, or 2)
 
 Besides the tables: contract tests (sha pin, what each evidence status may say, dirty rules
-file), the no-numeric-literal test over decision_rules.py and wakeup.py, and the parameter
-coverage test against the real rules file.
+file); for decision_rules.py and wakeup.py, the no-numeric-literal test (which also refuses a
+number hidden in a string, float("0.05")) and an import allow-list; the parameter coverage test
+against the real rules file (every entry is read); and the parameter PERTURBATION test (every
+entry, nudged, changes some output, so it is used and not merely read; the few entries whose
+consumer is a driver not written yet are listed by name as "read, not yet used").
 
 Plan: docs/develop/active/neuromodulation/ALGORITHMIC_NULL_ANALYSIS_TOOLING.md, File Changes §6,
 Checkpoints 3.1 and R.2.
@@ -427,7 +430,7 @@ A2_LAYER_ROWS = [
      "input": ([_ag(v, NOBEAT) for v in (0.50, 0.52, 0.54)],
                [_ag(v, NOBEAT) for v in (0.51, 0.53, 0.52)]), "expect": "match — absent in both"},
     {"case": "different: one side and a wide gap",
-     "why": "modulated 0.60/0.62/0.61 all above every ordinary; gap 0.083 > 0.04",
+     "why": "modulated 0.60/0.62/0.61 all above every ordinary; gap 0.090 > 0.04",
      "input": (ORD, [_ag(0.60), _ag(0.62), _ag(0.61)]), "expect": "different"},
     {"case": "gap wide but sides overlap",
      "why": "modulated 0.45/0.62/0.65: gap 0.053 > 0.04 but 0.45 lies below the ordinary values",
@@ -547,12 +550,19 @@ A3_ROWS = [
     {"case": "two modulated seeds", "why": "2 same-seed pairs, 4 different-seed pairs, E holds",
      "input": ("same", {**E_YES, "mo_same": [0.97, 0.96], "mo_diff": [0.85, 0.86, 0.84, 0.88]},
                True, SURV_SAME), "expect": dr.A3_BPLUS},
+    {"case": "A1 word not in the rules' vocabulary",
+     "why": "'similar' is no A1 layer verdict: stop rather than read it as 'none'",
+     "input": ("similar", E_NO, True, SURV_SAME), "expect": "RAISES"},
 ]
 
 
 @pytest.mark.parametrize("row", A3_ROWS, ids=lambda r: r["case"])
 def test_A3_pattern(row):
     a1, v, pre, surv = row["input"]
+    if row["expect"] == "RAISES":
+        with pytest.raises(ValueError):
+            dr.a3_pattern(a1, dr.same_seed_excess(v, pre), surv)
+        return
     assert dr.a3_pattern(a1, dr.same_seed_excess(v, pre), surv) == row["expect"]
 
 
@@ -568,13 +578,35 @@ def test_A3_study(row):
     assert dr._study_pattern(dict(zip(LAYERS, row["input"])), P) == row["expect"]
 
 
-def test_A3_blocked_gate_reads_none_with_reason():
+# TABLE 7c — A3 when a gate blocks (Checkpoint R.2, designer item 1): the pattern words are
+# replaced by the gate's word on every layer and in the study reading, as in A1, A2 and A4
+A3_GATE_ROWS = [
+    {"case": "A3 gate failed",
+     "why": "G1 failed: every A3 layer pattern and the study reading read 'blocked by gate G1'",
+     "input": {"gates": {**ALL_PASS, "G1": False}, "yardstick": True, "policy": EVID},
+     "expect": "blocked by gate G1"},
+    {"case": "A3 yardstick incomplete",
+     "why": "G5 left too few seeds: every A3 layer pattern and the study reading read "
+            "'undetermined — yardstick incomplete'",
+     "input": {"gates": ALL_PASS, "yardstick": False, "policy": EVID},
+     "expect": "undetermined — yardstick incomplete"},
+    {"case": "A3 gate failed, interim",
+     "why": "under 'interim' the gate word carries the prefix like every other word",
+     "input": {"gates": {**ALL_PASS, "G1": False}, "yardstick": True, "policy": INTERIM},
+     "expect": "provisional — end of stage 1 of 5: blocked by gate G1"},
+]
+
+
+@pytest.mark.parametrize("row", A3_GATE_ROWS, ids=lambda r: r["case"])
+def test_A3_gate_word(row):
+    x = row["input"]
     inp = {k: {"a1_verdict": "same", **E_NO} for k in LAYERS}
-    r = dr.evaluate_A3(inp, P, policy=EVID, verdict_layers=LAYERS,
-                       gates={**ALL_PASS, "G1": False}, yardstick_complete=True,
-                       precondition_shared_start=True, survival=SURV_SAME)
-    assert all(v["pattern"] == dr.A3_NONE and v["blocked"] == "blocked by gate G1"
-               for v in r["layers"].values())
+    r = dr.evaluate_A3(inp, P, policy=x["policy"], verdict_layers=LAYERS, gates=x["gates"],
+                       yardstick_complete=x["yardstick"], precondition_shared_start=True,
+                       survival=SURV_SAME)
+    assert all(v["pattern"] == row["expect"] for v in r["layers"].values())
+    assert r["study"]["reading"] == row["expect"]
+    assert all(v["E"] is None for v in r["layers"].values())
 
 
 # TABLE 8 — survival difference for A3 pattern (c) (modulated minus ordinary, steps)
@@ -720,6 +752,84 @@ def test_B2(row):
 
 
 # =============================================================================================
+# TABLE 11 — a missing (non-finite) summary statistic. A NaN from a failed fit or an empty
+# bootstrap draw is a data defect, not a statistic: the rules give it no outcome, so every
+# rule family STOPS rather than letting the NaN fall into some verdict word.
+# =============================================================================================
+NAN = float("nan")
+NONFINITE_ROWS = [
+    {"case": "A1 NaN summary -> RAISES", "family": "A1 one statistic",
+     "why": "one MO_diff pair's value is NaN (its fit failed)",
+     "input": _stat([0.85, NAN, 0.84, 0.88, 0.87, 0.83], (0.84, 0.87)), "expect": "RAISES"},
+    {"case": "A1 NaN yardstick edge -> RAISES", "family": "A1 informative gate",
+     "why": "the untrained band's upper edge is NaN",
+     "input": _stat([0.85] * 6, (0.84, 0.87), untrained=(0.20, NAN)), "expect": "RAISES"},
+    {"case": "A2 NaN summary -> RAISES", "family": "A2 one quantity, one layer",
+     "why": "one ordinary agent's decoding R^2 is NaN",
+     "input": ([_ag(0.50), _ag(NAN), _ag(0.54)], [_ag(0.51), _ag(0.53), _ag(0.52)]),
+     "expect": "RAISES"},
+    {"case": "A2 NaN clock excess -> RAISES", "family": "A2 beats the clock",
+     "why": "the 5th percentile of one agent's excess over the clock is NaN",
+     "input": (ORD, [_ag(0.51), _ag(0.53, {"excess": 0.2, "excess_q_lo": NAN}), _ag(0.52)]),
+     "expect": "RAISES"},
+    {"case": "A3 NaN summary -> RAISES", "family": "A3 same-seed excess",
+     "why": "one same-seed pair's value is NaN",
+     "input": {**E_YES, "mo_same": [0.97, NAN, 0.98]}, "expect": "RAISES"},
+    {"case": "A3 NaN survival -> RAISES", "family": "A3 survival difference",
+     "why": "one seed's stage survival is NaN (not None, which means 'not available')",
+     "input": {"ordinary": [200, NAN, 210], "modulated": [206, 211, 216]}, "expect": "RAISES"},
+    {"case": "A4 NaN summary -> RAISES", "family": "A4 movement",
+     "why": "one modulated seed's movement 5th percentile is NaN",
+     "input": [0.1, NAN, 0.15], "expect": "RAISES"},
+    {"case": "bootstrap NaN draw -> RAISES", "family": "summaries from bootstrap draws",
+     "why": "one bootstrap draw of an ordinary pair is NaN",
+     "input": "draws", "expect": "RAISES"},
+]
+
+
+def _run_nonfinite(row):
+    fam, x = row["family"], row["input"]
+    if fam.startswith("A1"):
+        return dr.statistic_verdict(x, P)
+    if fam == "A2 one quantity, one layer" or fam == "A2 beats the clock":
+        return dr.a2_layer(*x, P)
+    if fam == "A3 same-seed excess":
+        return dr.same_seed_excess(x, True)
+    if fam == "A3 survival difference":
+        return dr.survival_difference(x, P)
+    if fam == "A4 movement":
+        return dr.arm_moves(x, P)
+    draws = np.full(50, 0.8)
+    draws[7] = NAN
+    pairs = {s: {f"{s}{i}": {"point": 0.8, "draws": draws if s == "OO" else np.full(50, 0.8)}
+                 for i in range(n)} for s, n in (("OO", 3), ("MO_diff", 6), ("UNTRAINED", 3))}
+    return dr.summarise_pairs(pairs, P)
+
+
+@pytest.mark.parametrize("row", NONFINITE_ROWS, ids=lambda r: r["case"])
+def test_nonfinite_summary_raises(row):
+    with pytest.raises(ValueError, match="non-finite"):
+        _run_nonfinite(row)
+
+
+def test_nonfinite_through_the_evaluators():
+    """The same NaN reaches the raise through evaluate_A1/A2/A4 (not only the leaf functions)."""
+    bad = _stat([0.85, NAN, 0.84, 0.88, 0.87, 0.83], (0.84, 0.87))
+    with pytest.raises(ValueError, match="non-finite"):
+        dr.evaluate_A1(_a1([bad] * 5), P, policy=EVID, verdict_layers=LAYERS, gates=ALL_PASS,
+                       yardstick_complete=True)
+    nan_l = {"ordinary": [_ag(0.50), _ag(NAN), _ag(0.54)], "modulated": MATCH_L["modulated"]}
+    with pytest.raises(ValueError, match="non-finite"):
+        dr.evaluate_A2(_a2(_allq([nan_l] * 5)), P, policy=EVID, quantities=QUANTITIES,
+                       verdict_layers=LAYERS, gates=ALL_PASS, yardstick_complete=True)
+    inp = {"layout": dr.a4_layout(P), "layers": {k: _a4(MOVE, [0.1, NAN, 0.2], TOGETHER,
+                                                         ["same"] * 5) for k in LAYERS}}
+    with pytest.raises(ValueError, match="non-finite"):
+        dr.evaluate_A4(inp, P, policy=EVID, verdict_layers=LAYERS, gates=ALL_PASS,
+                       yardstick_complete=True)
+
+
+# =============================================================================================
 # Contract tests (§E): pin, evidence status, order
 # =============================================================================================
 def _real_pinned():
@@ -823,6 +933,43 @@ def test_no_numeric_literals(mod):
     assert not bad, f"{mod}: numeric literals other than 0 and 1: {bad}"
 
 
+@pytest.mark.parametrize("mod", ["decision_rules.py", "wakeup.py"])
+def test_no_number_hidden_in_a_string(mod):
+    """float("0.05") / int("3") would pass the literal test above: refuse any float(<str>) or
+    int(<str>) call on a string constant (math.nan / math.inf are the spelled-out forms)."""
+    path = os.path.join(ROOT, "scripts", "analysis", "nmn", mod)
+    bad = [n.lineno for n in ast.walk(ast.parse(open(path).read()))
+           if isinstance(n, ast.Call) and isinstance(n.func, ast.Name)
+           and n.func.id in ("float", "int", "complex")
+           and any(isinstance(a, ast.Constant) and isinstance(a.value, str) for a in n.args)]
+    assert not bad, f"{mod}: number parsed from a string constant at lines {bad}"
+
+
+ALLOWED_IMPORTS = {"__future__", "math", "dataclasses", "numpy", "scripts.analysis.nmn.rules_pin"}
+
+
+@pytest.mark.parametrize("mod", ["decision_rules.py", "wakeup.py"])
+def test_import_allow_list(mod):
+    """Only these imports, so no number can come in from another module (a constants file, a
+    config, the rules file read a second way). `from scripts.analysis.nmn import rules_pin`
+    counts as scripts.analysis.nmn.rules_pin. No dynamic import either."""
+    tree = ast.parse(open(os.path.join(ROOT, "scripts", "analysis", "nmn", mod)).read())
+    got = set()
+    for n in ast.walk(tree):
+        if isinstance(n, ast.Import):
+            got |= {a.name for a in n.names}
+        elif isinstance(n, ast.ImportFrom):
+            if n.module == "scripts.analysis.nmn":
+                got |= {f"{n.module}.{a.name}" for a in n.names}
+            else:
+                got.add(n.module)
+        elif isinstance(n, ast.Call) and isinstance(n.func, (ast.Name, ast.Attribute)):
+            name = n.func.id if isinstance(n.func, ast.Name) else n.func.attr
+            assert name not in ("__import__", "import_module", "exec", "eval"), \
+                f"{mod}: dynamic import / eval at line {n.lineno}"
+    assert got <= ALLOWED_IMPORTS, f"{mod}: imports outside the allow-list: {sorted(got - ALLOWED_IMPORTS)}"
+
+
 # =============================================================================================
 # Parameter coverage against the REAL rules file: every parameters entry is read by some
 # function, and no function reads an entry the file lacks (no exemption list).
@@ -894,13 +1041,188 @@ def test_parameter_coverage_real_rules():
     assert seen - leaves == set()
 
 
+# =============================================================================================
+# Parameter PERTURBATION against the real rules file: coverage above proves every entry is
+# READ; this proves it is USED. Each entry is nudged on a copy (every other entry unchanged);
+# the inputs are built from the UNPERTURBED values, sitting on the rules' edges, and at least
+# one recorded decision output must change (a changed verdict, count, band, or a raise). The
+# settings readers (split_settings, b2_settings, ...) are not outputs: an entry counts only
+# where a decision function or an existing driver step consumes it.
+# =============================================================================================
+from scripts.analysis.nmn import run_wakeup as rw  # noqa: E402
+
+# Entries read today whose consumer is a driver not written yet. Each must NOT change any
+# output (checked, so the list cannot go stale): when the driver lands, move the entry out.
+READ_NOT_YET_USED = {
+    "gates.G5.stage": "run_similarity: picks the stage whose S and bites enter G5",
+    "common.split.test_frac": "run_similarity / run_decoding: representation.episode_split",
+    "common.survival.window_episodes": "run_similarity: wandb_history.stage_level window",
+    "A3.survival_stage_by_status.evidence": "run_similarity: stage of the survival difference",
+    "A3.survival_stage_by_status.interim": "run_similarity: stage of the survival difference",
+    "B2.f": "run_wakeup GPU measures (headline wake point), not implemented yet",
+    "B2.literal_f": "run_wakeup GPU measures (literal 50 % of final, beside), not implemented yet",
+    "B2.lag_coincident_max_intervals": "run_wakeup lag reading (wakeup.lag), after the GPU measures",
+}
+_ALTERNATIVE = {"delta_episode_number": "window_n", "fraction_of_rise": "fraction_of_final"}
+
+
+def _nudges(v):
+    """Candidate perturbations of one entry (a leaf passes if ANY changes an output)."""
+    if isinstance(v, bool):
+        return [not v]
+    if isinstance(v, int):
+        return [v + 1, v - 1, v * 2]
+    if isinstance(v, float):
+        return [v * 1.1, v * 0.9, v * 2, v / 2]
+    if isinstance(v, str):
+        return [_ALTERNATIVE[v]] if v in _ALTERNATIVE else [v + "_perturbed"]
+    if isinstance(v, list):
+        out = [v[::-1], v[:-1]]
+        if v and all(isinstance(e, (int, float)) and not isinstance(e, bool) for e in v):
+            out += [[e * 1.1 if i == j else e for i, e in enumerate(v)] for j in range(len(v))]
+            out += [[e * 0.9 if i == j else e for i, e in enumerate(v)] for j in range(len(v))]
+        return [o for o in out if o != v]
+    raise TypeError(f"no perturbation for {v!r}")
+
+
+def _set(d, dotted, value):
+    import copy
+    d = copy.deepcopy(d)
+    node = d
+    parts = dotted.split(".")
+    for p in parts[:-1]:
+        node = node[p]
+    node[parts[-1]] = value
+    return d
+
+
+def _norm(x):
+    if isinstance(x, dict):
+        return {k: _norm(v) for k, v in sorted(x.items()) if k != "stage_index"}
+    if isinstance(x, (list, tuple)):
+        return [_norm(v) for v in x]
+    if isinstance(x, (np.floating, float)):
+        return repr(float(x))
+    if isinstance(x, np.ndarray):
+        return [_norm(v) for v in x.tolist()]
+    if isinstance(x, np.integer):
+        return int(x)
+    if hasattr(x, "as_dict"):
+        return _norm(x.as_dict())
+    return x
+
+
+def _survival_rows(base):
+    """Synthetic WandB episode rows for 16 checkpoints of 100,000 episodes, logged every 4,000
+    episodes: survival rises then levels off, with a two-checkpoint excursion early (so
+    `sustain` matters), rows at exactly the registered _window_n minimum (so min_window_n
+    matters) and window sizes unlike the 4,000-episode step (so the row weighting matters)."""
+    wmin = float(base["common"]["survival"]["min_window_n"])
+    rows, rng = [], np.random.default_rng(11)
+    for i in range(400):
+        e = 4000.0 * (i + 1)
+        c = e / 100000.0
+        level = 100 + 80 * (1 - np.exp(-c / 3.0)) + (60 if 2.0 < c <= 4.0 else 0.0)
+        wn = wmin if i % 5 == 1 else (4000.0 if i == 0 else 2500.0 + 50 * (i % 7))
+        rows.append({"Episode/Number": e, "Episode/_window_n": wn,
+                     "Episode/Steps": float(level + rng.normal(0, 6.0) + (25 if i % 5 == 1 else 0))})
+    return rows, np.arange(1, 17, dtype=float) * 100000.0
+
+
+def _decisions(Pr, base):
+    """Every decision function and existing driver step, with inputs built from `base` on the
+    rules' edges and the (possibly perturbed) parameters `Pr`. Returns the recorded outputs; a
+    raise is recorded as its type."""
+    g, c = base["gates"], base["common"]
+    n = 1_000_000
+    tie = int(round(g["G1"]["near_tie_fraction_max"] * n))
+    calls = {
+        "G1": lambda: dr.gate_G1(_g1(n, 0, tie, margin=g["G1"]["near_tie_logit_margin"]), Pr),
+        "G2": lambda: dr.gate_G2({"x": {"max_abs_dev": g["G2"]["reconstruction_rel_tol"],
+                                        "max_abs_ref": 0.5}}, Pr),
+        "G3": lambda: dr.gate_G3({"alignment": _g1(n, 0, tie, margin=g["G1"]["near_tie_logit_margin"]),
+                                  "shift_control_agreement": 0.9}, Pr),
+        "G4": lambda: dr.gate_G4({"input_satiation_r2": g["G4"]["input_satiation_r2_min"],
+                                  "shuffled_r2": {"q": g["G4"]["shuffled_r2_max"]},
+                                  "groups_disjoint": True}, Pr),
+        "G5": lambda: dr.gate_G5(_runs([g["G5"]["stage1_survival_min_steps"], 210, 205],
+                                       [100, 208, 204],
+                                       ord_b=[g["G5"]["stage1_food_bites_min"], 5.0, 5.0]), Pr),
+        "G6": lambda: dr.gate_G6({"bootstrap_n": g["G6"]["bootstrap_n_min"],
+                                  "test_groups": {"q": [g["G6"]["test_fold_groups_min"]] * c["split"]["n_repeats"]}}, Pr),
+    }
+    rng = np.random.default_rng(0)
+    pairs = {s: {f"{s}{i}": {"point": 0.8, "draws": rng.normal(0.8, 0.01, 200)} for i in range(k)}
+             for s, k in (("OO", 3), ("MM", 3), ("MO_diff", 6), ("MO_same", 3), ("UNTRAINED", 3))}
+    calls["summaries"] = lambda: dr.summarise_pairs(pairs, Pr)
+    two_below = _stat([0.79, 0.78, 0.85, 0.86, 0.84, 0.83], (0.81, 0.85))
+    calls["A1"] = lambda: dr.evaluate_A1(_a1([two_below] * 2 + [UND_S] * 3), Pr, policy=EVID,
+                                         verdict_layers=LAYERS, gates=ALL_PASS, yardstick_complete=True)
+    m = base["A2"]["beats_clock_margin_r2"]
+    edge = {"excess": m, "excess_q_lo": 0.01}
+    mod2 = [_ag(0.51, edge), _ag(0.53, edge), _ag(0.52, NOBEAT)]
+    lays = [DIFF_L] * base["A2"]["differs_min_layers"] + [{"ordinary": ORD, "modulated": mod2}] + \
+        [MATCH_L] * (5 - base["A2"]["differs_min_layers"] - 1)
+    calls["A2"] = lambda: dr.evaluate_A2(_a2(_allq(lays)), Pr, policy=EVID, quantities=QUANTITIES,
+                                         verdict_layers=LAYERS, gates=ALL_PASS, yardstick_complete=True)
+    floor, mult = c["survival"]["se_floor_steps"], c["survival"]["se_multiplier"]
+    calls["survival"] = lambda: dr.survival_difference(
+        {"ordinary": [200, 200.5, 201], "modulated": [200.5 + mult * floor, 201 + mult * floor,
+                                                      201.5 + mult * floor]}, Pr)
+    k = base["study_reading"]["min_layers"]
+    a3_in = {L: {"a1_verdict": ("same" if i < k else "different"), **E_NO} for i, L in enumerate(LAYERS)}
+    calls["A3"] = lambda: dr.evaluate_A3(a3_in, Pr, policy=EVID, verdict_layers=LAYERS, gates=ALL_PASS,
+                                         yardstick_complete=True, precondition_shared_start=True,
+                                         survival=SURV_SAME)
+    seq = list(base["A4"]["stage_sequence"])
+    base_layout = dr.a4_layout(base)
+    calls["A4"] = lambda: dr.evaluate_A4(
+        {"layout": base_layout, "layers": {L: {"movement": {"ordinary": [0.1, 0.2, -0.1],
+                                                             "modulated": [0.1, 0.2, -0.1]},
+                                               "co_movement": TOGETHER,
+                                               "stage_end_a1": {c_: "same" for c_ in seq}}
+                                           for L in LAYERS}},
+        Pr, policy=EVID, verdict_layers=LAYERS, gates=ALL_PASS, yardstick_complete=True)
+    calls["B2"] = lambda: dr.evaluate_B2(_b(late=12, coin=4), ["late"] * 3, Pr, policy=B2POL)
+    rows, x = _survival_rows(base)
+    calls["plateau"] = lambda: rw.plateau_crossing("synthetic", rows, x, dr.b2_settings(Pr),
+                                                   dr.survival_settings(Pr))
+    out = {}
+    for name, f in calls.items():
+        try:
+            out[name] = _norm(f())
+        except (ValueError, TypeError, KeyError, ZeroDivisionError, AssertionError) as e:
+            out[name] = f"raises {type(e).__name__}"
+    return out
+
+
+def test_every_parameter_is_used_not_merely_read():
+    real = _real_pinned().parameters
+    base_out = _decisions(real, real)
+    assert not any(isinstance(v, str) and v.startswith("raises") for v in base_out.values()), \
+        f"the unperturbed exercise must not raise: {base_out}"
+    unused, stale = [], []
+    for leaf in sorted(_leaves(real)):
+        v = rules_pin.param(real, leaf)
+        changed = [nv for nv in _nudges(v) if _decisions(_set(real, leaf, nv), real) != base_out]
+        if leaf in READ_NOT_YET_USED:
+            if changed:
+                stale.append(leaf)
+        elif not changed:
+            unused.append(leaf)
+    assert not unused, f"parameters read but never change an output: {unused}"
+    assert not stale, (f"now used, remove from READ_NOT_YET_USED: {stale}")
+    assert set(READ_NOT_YET_USED) <= _leaves(real)
+
+
 def test_b2_settings_are_the_wakeup_keywords():
     s = dr.b2_settings(_real_pinned().parameters)
     kw = {k: s[k] for k in ("f", "sustain", "final_k", "noise_k", "min_noise_points",
                             "noise_window_divisor", "noise_window_max_fraction")}
     x = np.arange(51, dtype=float)
     m = 1 / (1 + np.exp(-(x - 20) / 1.5))
-    assert 19 <= wakeup.t_cross(x, m, mode=s["threshold_mode_headline"], anchored=True, **kw).t <= 21
+    assert 19 <= wakeup.t_cross(x, m, mode=s["threshold_mode_headline"], anchored=True,
+                                label="synthetic / logistic", **kw).t <= 21
 
 
 # =============================================================================================
@@ -915,8 +1237,10 @@ TABLES = [
     ("5. A2 one quantity, one layer (ordinary R^2 0.50/0.52/0.54)", A2_LAYER_ROWS),
     ("6. A2 profile and study", A2_PROFILE_ROWS),
     ("7. A3 pattern per layer (U = 0.90)", A3_ROWS), ("7b. A3 study reading", A3_STUDY_ROWS),
+    ("7c. A3 under a blocking gate", A3_GATE_ROWS),
     ("8. Survival difference (A3 pattern c)", SURVIVAL_ROWS),
     ("9. A4 across worlds", A4_ROWS), ("10. B2 across 16 worlds", B2_ROWS),
+    ("11. A missing (non-finite) summary", NONFINITE_ROWS),
 ]
 
 

@@ -14,7 +14,12 @@ skeleton of that driver. What it does today:
   plan T8). A manifest carrying any per-measure point set raises;
 - `--measures plateau` (CPU, local WandB logs only): survival binned per checkpoint interval
   with the registered row weighting, then the registered signed crossing with `plateau_f`,
-  per run; writes the Checkpoint 4.0 table. It names no wake-up verdict.
+  per run; writes the Checkpoint 4.0 table. It names no wake-up verdict. The plateau
+  checkpoint is a POSITION on the run's one scale (`wakeup.position`: the i-th entry of the
+  manifest's `checkpoints` = i, 1-based; step 0 = 0), the scale every lag is read on. A run's
+  WandB binary that is still being written may end in a half-written record; the scan then
+  stops there, and the run is accepted only if a later stage has logged rows (so the stage
+  read is complete). `wandb_truncated` records which runs were read that way.
 
 Every GPU measure (grad_share, grad_probe, update_size, rho, swing, freeze) refuses to start
 unless a plateau table exists for the same manifest and rules sha256 with no NaN plateau, and
@@ -24,7 +29,9 @@ fixture table (Checkpoint R.2).
 Usage (CPU):
   /home/vncuser/miniconda3/envs/grid_world_pain/bin/python scripts/analysis/nmn/run_wakeup.py \\
       --manifest docs/experiments/active/modulator_clues/algorithmic_null_wakeup.yaml \\
-      --measures plateau --out-root results/analysis/algorithmic_null
+      --measures plateau
+
+Outputs go to <manifest out_root>/<manifest name>/ (out_root is a required manifest key).
 
 Plan: docs/develop/active/neuromodulation/ALGORITHMIC_NULL_ANALYSIS_TOOLING.md, File Changes §11,
 §B2, Checkpoint 4.0.
@@ -56,10 +63,10 @@ GPU_MEASURES = tuple(m for m in MEASURES if m != "plateau")
 # anchorable at step 0 (the untrained network), plan §B2 table
 ANCHORABLE = {"plateau": False, "grad_share": False, "grad_probe": True, "update_size": True,
               "rho": True, "swing": True, "freeze": True}
-TOP_KEYS = {"name", "evidence_status", "decision_rules", "wakeup", "runs"}
+TOP_KEYS = {"name", "evidence_status", "decision_rules", "wakeup", "runs", "out_root"}
 # developer-owned Stage 4 keys (plan §8); any other top-level key is refused, so a
 # per-measure point set cannot hide in the manifest
-OPTIONAL_KEYS = {"out_root", "rollout_episodes", "rollout_seed_base", "warmup_iters"}
+OPTIONAL_KEYS = {"rollout_episodes", "rollout_seed_base", "warmup_iters"}
 RUN_KEYS = {"label", "path", "checkpoints"}
 SURVIVAL_KEY = "Episode/Steps"
 
@@ -157,33 +164,61 @@ def assert_curve_grid(run: dict, measure: str, x) -> None:
                              f"manifest's checkpoint grid")
 
 
-def plateau_row(run: dict, grid: dict, B2: dict, surv: dict) -> dict:
-    """Survival binned per checkpoint interval, then t_cross with plateau_f (rules B2.plateau:
-    'the same signed rule, guard and sustain applied to survival ... m0 for survival is its
-    first binned point')."""
+def plateau_crossing(label: str, rows: list, x, B2: dict, surv: dict):
+    """The pure half of the plateau (rules B2.plateau: 'the same signed rule, guard and sustain
+    applied to survival ... m0 for survival is its first binned point'): survival binned per
+    checkpoint interval from the rows' own start counter with the registered row weighting,
+    then t_cross with plateau_f. Returns (Result, binned curve, binning info)."""
     from scripts.analysis.nmn import wakeup, wandb_history as wh
-    tag = wh.run_tag(_abs(run["path"]))
-    wdir = wh.resolve_by_tag(tag)
-    scanned = wh.scan(wdir, allow_truncated=False)
-    rows = wh.episode_rows(scanned, grid["stage_index"])
     start = wh.start_counter(rows)
-    x = grid_x(run, ANCHORABLE["plateau"])
-    edges = np.concatenate([[start], x])
+    edges = np.concatenate([[start], np.asarray(x, float)])
     m, info = wh.interval_means(rows, SURVIVAL_KEY, edges, surv["row_weight"],
                                 surv["min_window_n"])
-    assert_curve_grid(run, "plateau", x)
     r = wakeup.t_cross(x, m, mode=B2["threshold_mode_headline"], f=B2["plateau_f"],
                        sustain=B2["sustain"], final_k=B2["final_k"], noise_k=B2["noise_k"],
                        min_noise_points=B2["min_noise_points"],
                        noise_window_divisor=B2["noise_window_divisor"],
                        noise_window_max_fraction=B2["noise_window_max_fraction"],
-                       anchored=False)
+                       anchored=ANCHORABLE["plateau"], label=f"{label} / plateau")
+    return r, m, {**info, "start_counter": start}
+
+
+def read_scanned(label: str, wdir, stage_index) -> dict:
+    """The run's WandB rows. A half-written trailing record (a run still training) is accepted
+    only when the stage read is `stage_index` of a continual run and a LATER stage has logged
+    rows, which establishes that the stage is complete; otherwise it raises."""
+    from scripts.analysis.nmn import wandb_history as wh
+    scanned = wh.scan(wdir, allow_truncated=True)
+    if scanned["truncated"]:
+        later = stage_index is not None and any(
+            wh.STAGE in r and int(r[wh.STAGE]) > stage_index for r in scanned["rows"])
+        if not later:
+            raise RuntimeError(f"run {label}: {scanned['file']} ends in an unreadable record "
+                               f"({scanned['truncated']}) and no later stage establishes that the "
+                               f"stage read is complete")
+    return scanned
+
+
+def plateau_row(run: dict, grid: dict, B2: dict, surv: dict) -> dict:
+    """Survival plateau of one run (Checkpoint 4.0 table row)."""
+    from scripts.analysis.nmn import wakeup, wandb_history as wh
+    tag = wh.run_tag(_abs(run["path"]))
+    wdir = wh.resolve_by_tag(tag)
+    scanned = read_scanned(run["label"], wdir, grid["stage_index"])
+    rows = wh.episode_rows(scanned, grid["stage_index"])
+    x = grid_x(run, ANCHORABLE["plateau"])
+    assert_curve_grid(run, "plateau", x)
+    r, m, info = plateau_crossing(run["label"], rows, x, B2, surv)
+    pos = wakeup.position(r.t, run["checkpoints"]) if r.index is not None else None
+    if pos is not None and pos != r.index + 1:      # unanchored: array index 0 = checkpoint 1
+        raise AssertionError(f"run {run['label']}: position {pos} != index + 1 = {r.index + 1}")
     return {"label": run["label"], "tag": tag, "wandb_dir": os.path.relpath(wdir, _ROOT),
+            "wandb_truncated": scanned["truncated"],
             "n_points": len(x), "window_points": r.window_points,
-            "t_plateau_checkpoint": (r.index + 1) if r.index is not None else None,
+            "t_plateau_checkpoint": pos,
             "t_plateau_episode": r.t, "direction": r.direction, "m0": r.m0,
             "m_final": r.m_final, "sigma_delta": r.sigma_delta, "guard_margin": r.guard_margin,
-            "nan_reason": r.reason, "start_counter": start, "binning": info,
+            "nan_reason": r.reason, "start_counter": info.pop("start_counter"), "binning": info,
             "curve": [float(v) for v in m], "grid": grid}
 
 
@@ -191,8 +226,6 @@ def main(argv=None) -> int:
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     ap.add_argument("--manifest", required=True)
     ap.add_argument("--measures", nargs="+", required=True, choices=MEASURES)
-    ap.add_argument("--out-root", default=None,
-                    help="required when the manifest has no out_root; must equal it otherwise")
     args = ap.parse_args(argv)
     if set(args.measures) == {"plateau"}:
         os.environ["JAX_PLATFORMS"] = "cpu"          # plateau reads logs; orbax stage reads on CPU
@@ -208,12 +241,7 @@ def main(argv=None) -> int:
     B2 = dr.b2_settings(P)
     check_wakeup_block(man, B2)
     surv = dr.survival_settings(P)
-    if man.get("out_root") is None and args.out_root is None:
-        raise ValueError("no output location: the manifest has no out_root; pass --out-root")
-    if man.get("out_root") is not None and args.out_root is not None \
-            and _abs(man["out_root"]) != _abs(args.out_root):
-        raise ValueError("--out-root differs from the manifest's out_root")
-    out = _abs(man.get("out_root") or args.out_root) / man["name"]
+    out = _abs(man["out_root"]) / man["name"]
     out.mkdir(parents=True, exist_ok=True)
     stamp = {"decision_rules": {"file": pinned.path, "sha256": pinned.sha256,
                                 "commit": pinned.commit},
@@ -253,6 +281,11 @@ def main(argv=None) -> int:
                             "row_weight": surv["row_weight"],
                             "min_window_n": surv["min_window_n"]},
                "statement": "survival plateau per run (Checkpoint 4.0); no wake-up reading",
+               "checkpoint_numbering": "t_plateau_checkpoint is 1-based: the i-th entry of the "
+                                       "run's manifest `checkpoints` list is checkpoint i (step 0, "
+                                       "the untrained anchor, would be 0). Every lag compares "
+                                       "positions on this one scale (wakeup.position).",
+               "wandb_truncated_runs": [r["label"] for r in rows if r["wandb_truncated"]],
                "nan_plateau_runs": nan_runs, "runs": rows,
                "elapsed_s": round(time.time() - t0, 1)}
         (out / "plateau.json").write_text(json.dumps(doc, indent=1))
