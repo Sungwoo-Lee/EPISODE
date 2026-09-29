@@ -162,6 +162,18 @@ decision_rules:
             parameters.common.survival.row_weight = delta_episode_number, so G5 here equals the
             May analysis's own gate. The prose/code mismatch in the May design is reported to the
             user, not changed here.
+    - date: "2026-09-30"
+      numbers_seen: >
+        none (same state as the entries above: no wake-up tool exists in scripts/analysis/nmn/, so
+        no B2 curve had been computed; plan-reviewer's third review, T5, raised the case).
+      changes:
+        - id: T5_no_sustained_crossing
+          reason: >
+            (1) Undefined case. B2 named no result when the guard passes but no checkpoint crosses
+            the threshold at `sustain` consecutive points (e.g. the change sits in the last point
+            alone). Under the tooling contract the evaluator would raise and abort the sweep. It
+            now returns NaN with reason "no sustained crossing" (headline_wake_point; plateau
+            inherits it). No threshold or constant changed.
 
   # ---------------------------------------------------------------------------------------------
   # 1. What each evidence status may say
@@ -630,7 +642,12 @@ decision_rules:
       at which d * (m_i - m0) >= parameters.B2.f * |m_final - m0| and that holds at
       parameters.B2.sustain consecutive points (x_i is the first of them). In words: the first
       checkpoint where the measure has covered half of its rise from the untrained network, in the
-      direction it actually moves, and stays there.
+      direction it actually moves, and stays there. No sustained crossing: if the guard passes but
+      no x_i satisfies the condition at parameters.B2.sustain consecutive points, the result is NaN
+      with reason "no sustained crossing" (the evaluator does not raise). Example: a change
+      concentrated in the last point (last three values 0, 0, 1 with final_k = 3: m_final = 1/3,
+      threshold 1/6, only the last point crosses; the last point can never be t_wake when
+      sustain >= 2).
     literal_beside: >
       fraction_of_final: the first x_i with m_i >= parameters.B2.literal_f * m_final. Always reported
       beside the headline, never headlined; flagged degenerate when m0 already satisfies it or when
@@ -638,6 +655,7 @@ decision_rules:
     plateau: >
       t_plateau = the same signed rule, guard and sustain applied to survival (Episode/Steps, binned
       as in x_grid) with fraction parameters.B2.plateau_f. m0 for survival is its first binned point.
+      Its NaN cases are the same, with the same reasons (including "no sustained crossing").
     lag: >
       lag = t_wake - t_plateau, in episodes. Positive = the modulator wakes after survival has
       levelled off. |lag| <= parameters.B2.lag_coincident_max_intervals checkpoint intervals reads
