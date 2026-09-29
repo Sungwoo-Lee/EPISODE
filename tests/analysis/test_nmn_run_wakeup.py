@@ -201,3 +201,169 @@ def test_measure_reading_uses_positions_and_the_headline_mode():
     assert rw.measure_reading("t", curve, cks, cks[5], B2)["lag"]["reading"] == "late"
     assert rw.measure_reading("t", curve, cks, cks[9], B2)["lag"]["reading"] == "early"
     assert r["beside_mode"] == "fraction_of_final"
+
+
+# ------------------------------------------- registered B2 headline family (commit 322a5966) --
+SITES5 = ["encoder_unimodal", "encoder_multimodal", "rnn", "actor", "critic"]
+# every word a per-run wake point must not carry: the B2 reading and May words, and the per-run
+# lag words that feed only the across-worlds sign test
+VERDICT_WORDS = {"late", "early", "coincident", "undetermined across worlds", "agree",
+                 "do not agree"}
+
+
+def test_real_manifest_registers_the_17_curve_family():
+    man = rw.load_manifest(MAN)
+    reg = man["b2_headline_curves"]
+    assert len(reg) == 17 == len(set(reg))
+    assert rw.registered_sites(reg) == sorted(SITES5)
+
+
+def _noisy_pts(cks, sites, rng):
+    """Synthetic point files on the run's grid: a logistic rise plus small noise per curve,
+    so the registered guard sees a real change and a defined wake point."""
+    pts = {}
+    n = len(cks)
+    for i, x in enumerate([0] + cks):
+        def v():
+            return float(1 / (1 + np.exp(-(i - n / 2))) + rng.normal(0, 0.01))
+        M = {"grad_probe": {"first_update": {t: {"share": v(), "mod_sq": 1.0}
+                                             for t in ("policy", "value", "entropy", "total")},
+                            "full_iteration": {"share": v(), "mod_grad_norm_mean": 1.0}},
+             "rho": {"rho": {s: {"gamma": {"rho": v()}, "beta": {"rho": v()}} for s in sites}},
+             "swing": {s: {"gamma_swing_mean": v(), "beta_swing_mean": v()} for s in sites},
+             "freeze": {"freeze_gain": {"mean_diff": -v()}, "freeze_offset": {"mean_diff": -v()},
+                        "live_survival_mean": v(), "freeze_equivalence": {"exact": True}}}
+        if x:
+            M["update_size"] = {"mod_rel": v(), "main_rel": 1.0, "mod_over_main": 1.0}
+        pts[x] = M
+    return pts
+
+
+def _synthetic_summarise(tmp_path, monkeypatch, registered=None, sites_by_run=None):
+    """Runs run_wakeup.summarise end to end on synthetic curves (one level-05-style run and one
+    May-style run), with the real pinned rules and the real B2 settings. No real data is read."""
+    import json
+    from scripts.analysis.nmn import decision_rules as dr, rules_pin, wandb_history as wh
+    real = rw.load_manifest(MAN)
+    pinned = dr.load(real)
+    policy = dr.verdict_policy(pinned, real["evidence_status"])
+    B2 = dr.b2_settings(pinned.parameters)
+    rstamp = rules_pin.stamp(pinned)
+    rng = np.random.default_rng(0)
+    runs = [{"label": "l05_syn", "path": "syn/l05", "checkpoints": [1000 * (i + 1) for i in range(50)]},
+            {"label": "may_syn", "path": "syn/may", "checkpoints": [1000 * (i + 1) for i in range(15)]}]
+    man = {**real, "runs": runs,
+           "b2_headline_curves": list(real["b2_headline_curves"] if registered is None else registered)}
+    out = tmp_path / "out"
+    for r in runs:
+        sites = (sites_by_run or {}).get(r["label"], SITES5)
+        for x, M in _noisy_pts(r["checkpoints"], sites, rng).items():
+            pf = rw.point_path(out, r["label"], x)
+            pf.parent.mkdir(parents=True, exist_ok=True)
+            pf.write_text(json.dumps({"rules_sha256": rstamp["sha256"], "measures": M}))
+    plateau = {"runs": [{"label": r["label"], "n_points": len(r["checkpoints"]),
+                         "t_plateau_episode": float(r["checkpoints"][len(r["checkpoints"]) // 4])}
+                        for r in runs]}
+    grids = {"l05_syn": {"continual": False, "stage_index": None},
+             "may_syn": {"continual": True, "stage_index": 0}}
+    monkeypatch.setattr(rw, "run_sites",
+                        lambda r: list((sites_by_run or {}).get(r["label"], SITES5)))
+    monkeypatch.setattr(wh, "run_tag", lambda p: "syn")
+    monkeypatch.setattr(wh, "resolve_by_tag", lambda t: "syn")
+    monkeypatch.setattr(rw, "read_scanned", lambda *a: {"rows": []})
+
+    def share(run, scanned, stage_index):
+        x = rw.grid_x(run, False)
+        m = [float(1 / (1 + np.exp(-(i - len(x) / 2))) + rng.normal(0, 0.01)) for i in range(len(x))]
+        return x, m, {"rows_per_interval": [1] * len(x)}, (x.copy(), np.ones(len(x)))
+
+    monkeypatch.setattr(rw, "grad_share_curve", share)
+    stamp = {"decision_rules": rstamp, "evidence_status": policy.status}
+    rc = rw.summarise(man, MAN, out, stamp, rstamp, plateau, grids, B2, pinned, policy, dr)
+    return rc, out
+
+
+def _strings(o):
+    if isinstance(o, dict):
+        for k, v in o.items():
+            yield k
+            yield from _strings(v)
+    elif isinstance(o, list):
+        for v in o:
+            yield from _strings(v)
+    elif isinstance(o, str):
+        yield o
+
+
+def test_summarise_headline_missing_curve_raises(tmp_path, monkeypatch):
+    reg = [n for n in yaml.safe_load(open(MAN))["b2_headline_curves"] if n != "freeze.offset"]
+    with pytest.raises(ValueError, match=r"differs from b2_headline_curves.*freeze\.offset"):
+        _synthetic_summarise(tmp_path, monkeypatch, registered=reg)
+
+
+def test_summarise_headline_extra_curve_raises(tmp_path, monkeypatch):
+    reg = yaml.safe_load(open(MAN))["b2_headline_curves"] + ["freeze.live_survival"]
+    with pytest.raises(ValueError, match=r"differs from b2_headline_curves.*freeze\.live_survival"):
+        _synthetic_summarise(tmp_path, monkeypatch, registered=reg)
+
+
+def test_duplicate_headline_name_is_refused(tmp_path):
+    man = yaml.safe_load(open(MAN))
+    man["b2_headline_curves"].append("freeze.gain")
+    with pytest.raises(ValueError, match="distinct"):
+        rw.load_manifest(_write(tmp_path, man))
+
+
+def test_summarise_sixth_site_raises(tmp_path, monkeypatch):
+    with pytest.raises(ValueError, match=r"may_syn: enabled FiLM sites .* differ from the 5"):
+        _synthetic_summarise(tmp_path, monkeypatch,
+                             sites_by_run={"may_syn": SITES5 + ["extra_site"]})
+    assert not (tmp_path / "out" / "curves").exists()      # raised before anything was written
+
+
+def test_summarise_per_run_output_carries_caveat_and_no_verdict_word(tmp_path, monkeypatch):
+    import json
+    rc, out = _synthetic_summarise(tmp_path, monkeypatch)
+    assert rc == 0
+    doc = json.loads((out / "b2_reading.json").read_text())
+    assert doc["headline_curves"] == yaml.safe_load(open(MAN))["b2_headline_curves"]
+    per_run = [doc["per_run_wake_points"]] + [
+        json.loads((out / "curves" / f"{l}.json").read_text())["wake_points"]
+        for l in ("l05_syn", "may_syn")]
+    defined = 0
+    for block in per_run:
+        points = [p for run in (block.values() if "caveat" not in next(iter(block.values()))
+                                else [block]) for p in run.values()]
+        assert len(points) in (17, 34)
+        for p in points:
+            assert p["caveat"] == rw.PER_RUN_CAVEAT
+            assert "reading" not in p["lag"]
+            defined += p["lag"]["delta_positions"] is not None
+            for s in _strings(p):
+                if s == rw.PER_RUN_CAVEAT:
+                    continue
+                assert s.strip().lower() not in VERDICT_WORDS, s
+    assert defined > 0                       # the test sees real per-run wake points
+    cav = rw.PER_RUN_CAVEAT
+    assert "No single run's wake point counts as evidence" in cav
+    assert "0.26 %" in cav and "1.8 %" in cav and "16 level-05 worlds" in cav
+    import re
+    assert not re.search(r"\b(late|early|coincident|agree|undetermined)\b", cav, re.I)
+    # the across-worlds reading keeps its words; the May seeds are marked descriptive
+    for b in doc["reading"].values():
+        assert b["reading"] in ("late", "early", "undetermined across worlds")
+        assert b["may_status"].startswith("descriptive")
+
+
+def test_compile_cache_status_reports_the_launch_setting(tmp_path):
+    import jax
+    before = jax.config.jax_compilation_cache_dir
+    try:
+        jax.config.update("jax_compilation_cache_dir", None)
+        assert rw.compile_cache_status()["active"] is False
+        (tmp_path / "entry").write_text("x")
+        jax.config.update("jax_compilation_cache_dir", str(tmp_path))
+        st = rw.compile_cache_status()
+        assert st["active"] is True and st["dir"] == str(tmp_path) and st["entries_at_start"] == 1
+    finally:
+        jax.config.update("jax_compilation_cache_dir", before)

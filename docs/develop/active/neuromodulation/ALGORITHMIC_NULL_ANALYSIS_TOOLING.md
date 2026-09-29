@@ -1379,6 +1379,64 @@ A diagnosis with `jax_log_compiles` (`tmp/20260930_wakeup_compile_diag.py`, `log
 
 Implemented by: developer
 
+### `--summarise` reads the registered B2 headline family; the compile cache is recorded (2026-09-30, while the sweep runs)
+
+**In plain words.** `experiment-designer` registered which 17 curves per run get the headline wake-up reading (manifest key `b2_headline_curves`, commit `322a5966`), together with a warning: a single run's wake point can come from noise alone more often than the rules intended. This change makes the summary step use that registered list and refuse to run if its own list, or any run's set of modulated layers, differs from it. Every per-run wake point is now written as numbers only, with the warning beside it in words. The sweep also now logs whether the compile cache that made it fast is switched on, and the exact launch settings are recorded below, because they existed only in a throw-away launcher script.
+
+**Changes (`scripts/analysis/nmn/run_wakeup.py`, `tests/analysis/test_nmn_run_wakeup.py`).**
+1. `b2_headline_curves` is a known top-level manifest key. When present, it must be a non-empty list of distinct names, otherwise `load_manifest` raises. `--summarise` requires it through `_req`, so a manifest without it raises there.
+2. `--summarise` reads the registered list. For each run, `check_headline_set` compares the curves the code marks as headline with the list and raises on any difference in names or count. The sites are part of the names (`rho.<site>`, `swing.<site>`), so they are covered too. The code's own set still decides which curves are computed as headline. The registration is a check against it, not a replacement for it.
+3. `registered_sites` takes the sites from the list's `rho.*` and `swing.*` entries, which must match each other. `check_sites` raises if a run's enabled FiLM sites, read from its saved agent config (`run_sites` → `spectral_bound.enabled_sites`), differ from them. All 19 runs are checked **before anything is written**, and each run's curves are then built from its own sites.
+4. **The registered consequence, in the output.** `PER_RUN_CAVEAT` states that no single run's wake point counts as evidence that a measure changed, with the false-pass rate per curve: 0.26 % on level-05 and 1.8 % on May, about 1–4 expected false wake points across 323 curves. It also states that only the sign test across the 16 level-05 worlds carries a reading, and that the May seeds stay descriptive.
+   - Every per-run wake point (`curves/<label>.json` → `wake_points`, `b2_reading.json` → `per_run_wake_points`, which replaces `per_run_lag`) carries that caveat.
+   - It carries the crossings and the lag as numbers only: lag in episodes, `pos_wake`, `pos_plateau`, `delta_positions`.
+   - The per-run `late` / `early` / `coincident` word is **not written**. It is still computed internally, and only feeds `evaluate_B2`.
+   - The across-worlds reading keeps its words. Each measure's entry gains `may_status: "descriptive …"`, and the document gains `headline_curves` and `per_run_caveat`.
+   - `b2_reading.csv` is unchanged.
+5. `compile_cache_status()` reads `jax.config` (cache dir, min entry size, min compile time, and entries at start). The GPU sweep and `--timing` print it and write it into their stamp (`_done.json`, `timing/<label>.json`).
+
+**Launch command and environment of the running sweep** (read on 2026-09-30 from `/proc/<pid>/{cmdline,environ}` on node 101, pids 1576024/1576030 for GPU 0 and 1576069/1576075 for GPU 1; read-only, the processes were not touched). The launcher is `tmp/20260930_wakeup_sweep.sh`, which is gitignored, so its content is reproduced here:
+```bash
+# via run_command.py, one worker per GPU (GPU and RUNS set in the command's environment):
+./run_command.py 101 "GPU=0 RUNS='l05_w0000_modulated l05_w0001_modulated l05_w0010_modulated l05_w0011_modulated l05_w0100_modulated l05_w0101_modulated l05_w0110_modulated l05_w0111_modulated mayrep_modulated_s42 mayrep_modulated_s43' bash /media/nas01/projects/Interoceptive-AI/grid_world_pain/tmp/20260930_wakeup_sweep.sh"
+./run_command.py 101 "GPU=1 RUNS='l05_w1000_modulated l05_w1001_modulated l05_w1010_modulated l05_w1011_modulated l05_w1100_modulated l05_w1101_modulated l05_w1110_modulated l05_w1111_modulated mayrep_modulated_s44' bash /media/nas01/projects/Interoceptive-AI/grid_world_pain/tmp/20260930_wakeup_sweep.sh"
+
+# tmp/20260930_wakeup_sweep.sh
+cd /media/nas01/projects/Interoceptive-AI/grid_world_pain || exit 1
+NODE=$(hostname)                                   # docker-101 on node 101
+export CUDA_VISIBLE_DEVICES=${GPU:?}
+export JAX_PLATFORMS=cuda,cpu
+export XLA_PYTHON_CLIENT_PREALLOCATE=false
+export JAX_COMPILATION_CACHE_DIR="/tmp/jaxcache_wakeup_$NODE"   # = /tmp/jaxcache_wakeup_docker-101 (node-local, 19 MB at 06:10)
+export JAX_PERSISTENT_CACHE_MIN_ENTRY_SIZE_BYTES=0 JAX_PERSISTENT_CACHE_MIN_COMPILE_TIME_SECS=0
+mkdir -p "$JAX_COMPILATION_CACHE_DIR"
+git -C . log -1 --format='code at %H %s'
+nvidia-smi --query-gpu=index,name --format=csv
+/home/vncuser/miniconda3/envs/grid_world_pain/bin/python scripts/analysis/nmn/run_wakeup.py \
+  --manifest docs/experiments/active/modulator_clues/algorithmic_null_wakeup.yaml \
+  --measures grad_probe update_size rho swing freeze --runs ${RUNS:?}
+echo "exit $?"
+```
+The two `JAX_PERSISTENT_CACHE_MIN_*=0` settings matter. JAX's default minimum compile time is 1 s, and at that default the short rollout programs would not be cached. The running sweep, launched at `f3291b93`, predates `compile_cache_status`, so its `_done.json` files carry no `compile_cache` field. The environment above is the record for it.
+
+**Tests** (synthetic curves only; no real point file, log or checkpoint is read; `--summarise` was **not** run on real data; the sweep's output directory was not touched).
+- `JAX_PLATFORMS=cpu pytest tests/analysis/test_nmn_run_wakeup.py tests/analysis/test_nmn_decision_rules.py tests/analysis/test_nmn_wakeup.py` → **185 passed** (12 s). `test_nmn_run_wakeup.py` alone: 20 passed, 7 of them new.
+- The new tests drive `summarise` end to end on a synthetic level-05-style run (50 checkpoints) and a May-style run (15), with the real pinned rules, policy and B2 settings. Only the WandB log read, the grad-share curve and the site read are monkeypatched.
+  - A headline curve missing from the registered list (`freeze.offset`) raises. An extra one (`freeze.live_survival`) raises. A duplicate name is refused at manifest load.
+  - A sixth site on the May run raises before `curves/` exists.
+  - The per-run output (both files) carries the caveat on every wake point. It has no `reading` key in the lag, and no string equal to a verdict word (`late`, `early`, `coincident`, `undetermined across worlds`, `agree`, `do not agree`). The caveat itself contains none of those words, and at least one per-run wake point is defined, so the check sees real wake points.
+  - `compile_cache_status` reports off, then on with the right directory and entry count.
+- Against the pre-change module (HEAD copy in `tmp/20260930_prefix_wakeup/`), 9 tests fail. The first reason is that `load_manifest` refuses the registered manifest, which is item 1 of the request. The old summary also wrote the per-run `late` / `early` / `coincident` word under `readings` and `per_run_lag`.
+
+**Speed check.** Skipped. `--summarise` is a CPU post-processing step, and the only change on the sweep path is one `jax.config` read plus one `listdir` per worker start, nothing per point.
+
+**Deviations / notes for review.**
+- `per_run_lag` in `b2_reading.json` is renamed `per_run_wake_points`, and `readings` in `curves/<label>.json` is renamed `wake_points`. No other code reads either (grep of `scripts/`, `src/`, `tests/`).
+- The caveat's numbers (0.26 %, 1.8 %, 323, 1–4) are copied from the manifest's comment block. They are not a machine-readable key, so a change there must be mirrored in `PER_RUN_CAVEAT` by hand.
+- Known-bug pass: `KNOWN_BUGS.md` row "The teacher-forced replay recompiles on every rollout…" says the cache is "not present in `run_wakeup.py` at `e956d3a5`". It is still set by the launcher, not by `run_wakeup`, but it is now logged and stamped, and the launch settings are recorded above. **For `bug-curator`:** update that row's workaround note to point here.
+
+Implemented by: developer
+
 ## Verification Report
 
 > **Verified by**:

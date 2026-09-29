@@ -39,7 +39,13 @@ What it does:
   B2.literal_f), the lag against the plateau (B2.lag_coincident_max_intervals, on grid
   positions), the Checkpoint 4.2 sanity band, and per headline measure
   decision_rules.evaluate_B2: the sign test across the 16 level-05 worlds, with the three May
-  seeds reported only as agree / do not agree. Writes curves/, b2_reading.json and .csv.
+  seeds reported only as agree / do not agree. The headline set is the manifest's registered
+  `b2_headline_curves` (raises if the computed set differs in names or count, or if a run's
+  FiLM sites differ from the registered ones). Per-run wake points are written as numbers only,
+  each with the registered caveat (PER_RUN_CAVEAT) and no late / early / coincident word.
+  Writes curves/, b2_reading.json and .csv.
+- the GPU sweep and --timing log whether JAX's persistent compile cache is active
+  (JAX_COMPILATION_CACHE_DIR, set by the launcher) and stamp it into their outputs.
 
 Usage:
   JAX_PLATFORMS=cpu  python scripts/analysis/nmn/run_wakeup.py --manifest M --measures plateau
@@ -91,9 +97,23 @@ SANITY_Q = (0.05, 0.95)
 TOP_KEYS = {"name", "evidence_status", "decision_rules", "wakeup", "runs", "out_root"}
 # developer-owned Stage 4 keys (plan §8); any other top-level key is refused, so a
 # per-measure point set cannot hide in the manifest
-OPTIONAL_KEYS = {"rollout_episodes", "rollout_seed_base", "warmup_iters"}
+OPTIONAL_KEYS = {"rollout_episodes", "rollout_seed_base", "warmup_iters",
+                 # the designer's registered B2 headline family (commit 322a5966); required by
+                 # --summarise, which raises if the headline set it computes differs from it
+                 "b2_headline_curves"}
 RUN_KEYS = {"label", "path", "checkpoints"}
 SURVIVAL_KEY = "Episode/Steps"
+# The consequence registered with `b2_headline_curves` (wake-up manifest, commit 322a5966): the
+# per-curve false-pass rate of the registered guard, with the noise SD estimated from the curve's
+# own end, is far above the original target. Written in words next to every per-run wake point.
+PER_RUN_CAVEAT = (
+    "Descriptive only. No single run's wake point counts as evidence that a measure changed: "
+    "the registered guard (noise_k = 3, noise SD estimated from the curve's own end) passes a "
+    "curve that does not change about 0.26 % of the time on a level-05 curve (51 / 50 points) "
+    "and 1.8 % on a May curve (16 / 15 points), well above the original target, so about 1-4 "
+    "false wake points are expected across the 323 headline curves from noise alone. Only the "
+    "across-worlds sign test over the 16 level-05 worlds carries a reading; the three May seeds "
+    "stay descriptive. Registered with b2_headline_curves in the wake-up manifest.")
 
 
 def _np(o):
@@ -148,7 +168,67 @@ def load_manifest(path) -> dict:
             raise ValueError(f"run {r['label']}: checkpoints must be a list of saved steps (<int>)")
         if any(b <= a for a, b in zip(cks, cks[1:])):
             raise ValueError(f"run {r['label']}: checkpoints must be strictly increasing")
+    if "b2_headline_curves" in man:
+        hc = man["b2_headline_curves"]
+        if not isinstance(hc, list) or not hc or \
+                not all(isinstance(n, str) and n for n in hc) or len(set(hc)) != len(hc):
+            raise ValueError("manifest.b2_headline_curves must be a non-empty list of distinct "
+                             "curve names")
     return man
+
+
+def registered_sites(registered: list) -> list:
+    """The FiLM sites the registered headline set names: the <site> of its `rho.<site>` and
+    `swing.<site>` curves, which must name the same sites."""
+    rho = sorted(n.split(".", 1)[1] for n in registered if n.startswith("rho."))
+    swing = sorted(n.split(".", 1)[1] for n in registered if n.startswith("swing."))
+    if rho != swing or not rho:
+        raise ValueError(f"b2_headline_curves: rho sites {rho} and swing sites {swing} must be "
+                         f"the same non-empty set")
+    return rho
+
+
+def check_sites(label: str, sites, registered: list) -> None:
+    """A run's enabled FiLM sites must be exactly the sites the registered headline set lists."""
+    want = registered_sites(registered)
+    if sorted(sites) != want or len(sites) != len(set(sites)):
+        raise ValueError(f"run {label}: enabled FiLM sites {sorted(sites)} differ from the "
+                         f"{len(want)} registered in b2_headline_curves {want}")
+
+
+def check_headline_set(label: str, curves: dict, registered: list) -> None:
+    """The headline curves the code computes must equal the registered family exactly: same
+    names, same count (sites are part of the names)."""
+    got = sorted(n for n, c in curves.items() if c["headline"])
+    want = sorted(registered)
+    if got != want:
+        raise ValueError(f"run {label}: computed headline set ({len(got)} curves) differs from "
+                         f"b2_headline_curves ({len(want)}): missing from the registration "
+                         f"{sorted(set(got) - set(want))}, registered but not computed "
+                         f"{sorted(set(want) - set(got))}")
+
+
+def per_run_wake_point(r: dict) -> dict:
+    """One run's wake point as written out: the crossings and the lag in NUMBERS (episodes and
+    checkpoint positions) with the registered caveat beside them. The lag's late / early /
+    coincident word is not written for a single run; it feeds only the across-worlds sign test."""
+    return {"headline_mode": r["headline_mode"], "headline": r["headline"],
+            "beside_mode": r["beside_mode"], "beside": r["beside"],
+            "lag": {k: v for k, v in r["lag"].items() if k != "reading"},
+            "caveat": PER_RUN_CAVEAT}
+
+
+def compile_cache_status() -> dict:
+    """Whether JAX's persistent compile cache is active in this process (set by the launcher's
+    JAX_COMPILATION_CACHE_DIR; performance only, identical programs and numbers)."""
+    import jax
+    d = jax.config.jax_compilation_cache_dir
+    st = {"active": bool(d), "dir": d or None,
+          "min_entry_size_bytes": jax.config.jax_persistent_cache_min_entry_size_bytes,
+          "min_compile_time_secs": jax.config.jax_persistent_cache_min_compile_time_secs}
+    if d:
+        st["entries_at_start"] = len(os.listdir(d)) if os.path.isdir(d) else 0
+    return st
 
 
 def check_wakeup_block(man: dict, settings: dict) -> None:
@@ -736,6 +816,8 @@ def main(argv=None) -> int:
             return timing(man, sel[0], grids, out, rstamp, stamp, sweep_measures, args.timing)
         import jax
         stamp["device"] = str(jax.devices()[0].device_kind)
+        stamp["compile_cache"] = compile_cache_status()
+        print(f"[run_wakeup] persistent compile cache: {stamp['compile_cache']}", flush=True)
         print(f"[run_wakeup] sweep {sorted(sweep_measures)} on {stamp['device']} for {sel}",
               flush=True)
         for r in man["runs"]:
@@ -756,6 +838,8 @@ def timing(man, label, grids, out, rstamp, stamp, want, k) -> int:
     extrapolated to the full every-checkpoint sweep of every run. Writes timing/<label>.json
     only; the timed points are never written as point files, so they cannot become a curve."""
     import jax
+    stamp = {**stamp, "compile_cache": compile_cache_status()}
+    print(f"[run_wakeup] persistent compile cache: {stamp['compile_cache']}", flush=True)
     run = [r for r in man["runs"] if r["label"] == label][0]
     cks = list(run["checkpoints"])
     idx = sorted({round(i * (len(cks) - 1) / max(k - 1, 1)) for i in range(k)})
@@ -788,12 +872,23 @@ def timing(man, label, grids, out, rstamp, stamp, want, k) -> int:
     return 0
 
 
+def run_sites(run: dict) -> list:
+    """The FiLM sites a run's saved agent config switches on."""
+    from src.environment.config_loader import Config
+    from scripts.analysis.nmn.spectral_bound import enabled_sites
+    return enabled_sites(Config.load_yaml(str(_abs(run["path"]) / "models" / "config.yaml"))
+                         .to_dict()["agent"])
+
+
 def summarise(man, man_path, out, stamp, rstamp, plateau, grids, B2, pinned, policy, dr) -> int:
     """Curves, crossings, lags and the across-worlds reading (CPU), from the point files and
     the logs. Needs every GPU measure at every point of every run."""
     from scripts.analysis.nmn import wandb_history as wh
-    from scripts.analysis.nmn.spectral_bound import enabled_sites
     need = {"grad_probe", "update_size", "rho", "swing", "freeze"}
+    registered = list(_req(man, "b2_headline_curves"))
+    sites = {r["label"]: run_sites(r) for r in man["runs"]}
+    for r in man["runs"]:                      # every run's sites, before anything is written
+        check_sites(r["label"], sites[r["label"]], registered)
     plat = {r["label"]: r for r in plateau["runs"]}
     per_run, readings = {}, {}
     for r in man["runs"]:
@@ -816,9 +911,8 @@ def summarise(man, man_path, out, stamp, rstamp, plateau, grids, B2, pinned, pol
         scanned = read_scanned(label, wh.resolve_by_tag(wh.run_tag(_abs(r["path"]))),
                                grids[label]["stage_index"])
         xs, ms, sh_info, logged = grad_share_curve(r, scanned, grids[label]["stage_index"])
-        from src.environment.config_loader import Config
-        agent_cfg = Config.load_yaml(str(_abs(r["path"]) / "models" / "config.yaml")).to_dict()["agent"]
-        curves = run_curves(r, pts, enabled_sites(agent_cfg), (xs, ms))
+        curves = run_curves(r, pts, sites[label], (xs, ms))
+        check_headline_set(label, curves, registered)
         t_pl = float(plat[label]["t_plateau_episode"])
         rd = {name: measure_reading(f"{label} / {name}", c, cks, t_pl, B2)
               for name, c in curves.items() if c["headline"]}
@@ -831,7 +925,9 @@ def summarise(man, man_path, out, stamp, rstamp, plateau, grids, B2, pinned, pol
         (out / "curves").mkdir(parents=True, exist_ok=True)
         (out / "curves" / f"{label}.json").write_text(json.dumps(
             {**stamp, "label": label, "t_plateau_episode": t_pl, **per_run[label],
-             "readings": rd}, indent=1, default=_np))
+             "per_run_caveat": PER_RUN_CAVEAT,
+             "wake_points": {n: per_run_wake_point(v) for n, v in rd.items()}},
+            indent=1, default=_np))
     names = sorted({n for rd in readings.values() for n in rd})
     b2 = {}
     for n in names:
@@ -839,16 +935,21 @@ def summarise(man, man_path, out, stamp, rstamp, plateau, grids, B2, pinned, pol
                if n in readings[l] and not per_run[l]["continual"]]
         may = [readings[l][n]["lag"]["reading"] for l in readings
                if n in readings[l] and per_run[l]["continual"]]
-        b2[n] = dr.evaluate_B2(l05, may, pinned.parameters, policy=policy)
+        b2[n] = {**dr.evaluate_B2(l05, may, pinned.parameters, policy=policy),
+                 "may_status": "descriptive (the May seeds carry no reading of their own)"}
     doc = {**stamp, "measure": "b2_reading",
            "generated_utc": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
            "statement": "B2 wake-up reading per measure: level-05 worlds by the sign test; the May "
-                        "seeds reported only as agree / do not agree",
+                        "seeds reported only as agree / do not agree (descriptive). Per-run wake "
+                        "points below are numbers only, each with the registered caveat.",
+           "headline_curves": registered,
+           "per_run_caveat": PER_RUN_CAVEAT,
            "reading": b2,
            "sanity_band": {l: {"n_inside": per_run[l]["sanity_band"]["n_inside"],
                                "n_checked": per_run[l]["sanity_band"]["n_checked"]}
                            for l in per_run},
-           "per_run_lag": {l: {n: readings[l][n]["lag"] for n in readings[l]} for l in readings}}
+           "per_run_wake_points": {l: {n: per_run_wake_point(readings[l][n]) for n in readings[l]}
+                                   for l in readings}}
     (out / "b2_reading.json").write_text(json.dumps(doc, indent=1, default=_np))
     with open(out / "b2_reading.csv", "w", newline="") as f:
         w = csv.writer(f)
