@@ -7,6 +7,10 @@ agreed. Evidence and reasoning behind them:
 [[20260929_nmn_null_algorithmic_film_conditions]],
 [[20260929_nmn_null_algorithmic_rl_side]].
 
+Tooling plan for the analyses below: [[ALGORITHMIC_NULL_ANALYSIS_TOOLING]]
+(`docs/develop/active/neuromodulation/`). Published page: "What Both Agents Compute",
+`algorithmic_null.html` in this folder.
+
 ## Break the shared starting point
 
 **Why.** Across very different worlds the modulated-minus-ordinary gap is not scattered
@@ -58,6 +62,12 @@ Metrics, per run, over training (built run-agnostic so any modulated run can be 
       survival reaches 90% of its final value. **Lag = t_wake − t_plateau.** A positive lag
       means the modulator wakes after learning has levelled off, so it structurally cannot
       speed learning.
+
+      *Revised 2026-09-29:* "50% of its final value" is met at the first checkpoint by any
+      measure that starts above half its final value (the gain swing starts near 61%). The
+      headline wake-up point is therefore **the checkpoint where a measure has covered 50% of
+      its rise from the first checkpoint's value to the final value**; the literal version is
+      computed and reported beside it.
 
 Compare across arms: MC vs GAE_NORM (MC agents lean on the modulator ~2x more), and
 body-only vs all-senses modulators. The same metrics are the success criterion for the
