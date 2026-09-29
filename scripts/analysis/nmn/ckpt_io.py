@@ -247,12 +247,14 @@ def load_params(models_dir: str | os.PathLike, step: int,
             f"{sorted({e['key_metadata'][0]['key'] for e in md.values()})}"
         )
 
-    cpu = jax.local_devices(backend="cpu")[0]
+    # Restored straight to host numpy arrays, so no JAX device is requested at all. The
+    # earlier form asked for the CPU backend (`jax.local_devices(backend="cpu")`), which does
+    # not exist in a process started with JAX_PLATFORMS=cuda: every GPU analysis job reaching
+    # this reader crashed with "Unknown backend cpu" (Known Bugs, "GPU analysis jobs that
+    # expose only the CUDA device crash"; fixed 2026-09-30, tooling plan Stage 4). The values
+    # are the saved float32 bytes either way; the result was converted to numpy regardless.
     restore_args = jax.tree_util.tree_map(
-        lambda _x: ocp.ArrayRestoreArgs(
-            restore_type=jax.Array,
-            sharding=jax.sharding.SingleDeviceSharding(cpu)),
-        target)
+        lambda _x: ocp.RestoreArgs(restore_type=np.ndarray), target)
     restored = ocp.PyTreeCheckpointer().restore(
         step_dir / "default",
         args=ocp.args.PyTreeRestore(item=target, restore_args=restore_args,
