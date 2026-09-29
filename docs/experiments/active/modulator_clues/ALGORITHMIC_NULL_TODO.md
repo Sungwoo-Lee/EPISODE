@@ -196,6 +196,31 @@ land and pass. The designer then checks only the new row names and expected verd
 Non-blocking: the "why" of A2 row 3 says the gap is 0.083. It is 0.090 (0.61 − 0.52). The verdict
 ("different") is right.
 
+**FINAL SIGNATURE — R.2 SIGNED (2026-09-30, `experiment-designer`).** Checked against commits
+`99758d7f`, `af52af92` and `8c9bca5a`, with all 291 tests in `tests/analysis/` passing. Every one
+of the 117 rows of `test_nmn_decision_rules.py` gives the verdict the rules intend, and so do the
+B2 rows of `test_nmn_wakeup.py`. The three rejections are implemented as specified:
+
+- the A3 gate word (table 7c: `blocked by gate G1`, `undetermined — yardstick incomplete`, and
+  the interim prefix on both);
+- a non-finite curve point raises, naming the run, the measure and the checkpoint;
+- lag is counted on one checkpoint-position scale (anchored and unanchored curves at the same
+  checkpoint → coincident, one apart → coincident, two apart → late; the jittered-grid rows).
+
+Also accepted:
+
+- table 11: every non-finite summary raises. In A3's survival, NaN means a failed computation
+  and raises; `None` means "not available" and gives no pattern, as the rules say;
+- table 7 row 14: an unknown A1 word raises;
+- the registered-constant plateau row, "no sustained crossing" (guard margins 2.96 and 1.66);
+- the ridge-grid edge flag;
+- A2 row 3's text, now 0.090.
+
+Eight parameters are read but not yet used, because the drivers that use them are not written.
+They are listed by name in the perturbation test, which fails if any of them starts changing an
+output; that list is not a gap in this table. Rules sha `4c8508af…`, unchanged. **This signature
+unblocks the level-05 pilot.**
+
 **The developer's four marked readings.**
 
 - **B2, level-05 "undetermined" → May seeds "do not agree" (rows 2 and 10): confirmed.** "Agree"
