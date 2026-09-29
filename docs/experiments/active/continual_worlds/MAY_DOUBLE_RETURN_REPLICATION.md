@@ -290,12 +290,12 @@ node's GPUs before moving to the next.
 
 | Run | Status | Cell | Tag (= wandb-name) | wandb-group | wandb-job-type | Seed | Node | GPU | Launched at | WandB run ID | Log path |
 |-----|--------|------|--------------------|-------------|----------------|------|------|-----|-------------|--------------|----------|
-| M1 | ready — pending reviews | ordinary | `rppo_cw_mayrep_t1none_s42` | continual_worlds | prod | 42 | — | — | — | — | — |
-| M2 | ready — pending reviews | modulated | `rppo_cw_mayrep_t16quad_s42` | continual_worlds | prod | 42 | — | — | — | — | — |
-| M3 | ready — pending reviews | ordinary | `rppo_cw_mayrep_t1none_s43` | continual_worlds | prod | 43 | — | — | — | — | — |
-| M4 | ready — pending reviews | modulated | `rppo_cw_mayrep_t16quad_s43` | continual_worlds | prod | 43 | — | — | — | — | — |
-| M5 | ready — pending reviews | ordinary | `rppo_cw_mayrep_t1none_s44` | continual_worlds | prod | 44 | — | — | — | — | — |
-| M6 | ready — pending reviews | modulated | `rppo_cw_mayrep_t16quad_s44` | continual_worlds | prod | 44 | — | — | — | — | — |
+| M1 | running | ordinary | `rppo_cw_mayrep_t1none_s42` | continual_worlds | prod | 42 | 110 | cuda:0 | 2026-09-29T15:36:06 | ftqkqmzb | logs/20260929_153606.log |
+| M2 | running | modulated | `rppo_cw_mayrep_t16quad_s42` | continual_worlds | prod | 42 | 110 | cuda:1 | 2026-09-29T15:36:14 | n7htz71a | logs/20260929_153614.log |
+| M3 | running | ordinary | `rppo_cw_mayrep_t1none_s43` | continual_worlds | prod | 43 | 111 | cuda:0 | 2026-09-29T15:36:23 | 8c5kmmj2 | logs/20260929_153623.log |
+| M4 | running | modulated | `rppo_cw_mayrep_t16quad_s43` | continual_worlds | prod | 43 | 111 | cuda:1 | 2026-09-29T15:36:32 | rfxw1g7x | logs/20260929_153632.log |
+| M5 | running | ordinary | `rppo_cw_mayrep_t1none_s44` | continual_worlds | prod | 44 | 112 | cuda:0 | 2026-09-29T15:36:41 | 0ojcf4d8 | logs/20260929_153641.log |
+| M6 | running | modulated | `rppo_cw_mayrep_t16quad_s44` | continual_worlds | prod | 44 | 112 | cuda:1 | 2026-09-29T15:36:50 | 5er602ge | logs/20260929_153650.log |
 
 Tags are unique here and do not collide with any `rppo_cw_*` tag in [[CONTINUAL_WORLDS]] (the
 `mayrep` token appears nowhere else).

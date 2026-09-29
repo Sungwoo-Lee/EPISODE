@@ -4823,3 +4823,47 @@ cd /media/nas01/projects/Interoceptive-AI/grid_world_pain
 #   --load-checkpoint results/JAX_RecurrentPPO/cw_branchpoint_forage_t16quad_s42/models \
 #   --seed 42 --device cuda:1 --tag rppo_cw_p2_fog_scout_b_danger_scout_a_t16quad_s42 --wandb-name rppo_cw_p2_fog_scout_b_danger_scout_a_t16quad_s42 \
 #   --wandb-group continual_worlds --wandb-job-type prod
+# ---------------------------------------------------------------------------
+# 2026-09-29 — May double-return replication, manifest rows M1-M6
+# (docs/experiments/active/continual_worlds/MAY_DOUBLE_RETURN_REPLICATION.md; env-config-reviewer GO WITH NOTES,
+# plan-reviewer SOUND WITH CONCERNS — analysis-only findings; user decisions 8.1).
+# From scratch, continual schedule mode (no --episodes; budget = last boundary 5.1M). Code commit 0ebd09b9.
+# Pre-flight: 110/111/112 both GPUs idle, no train.py / continual_forgetting_matrix.py, NAS mounted,
+# JAX GPU-compile OK (0.9.0.1). Node 107 (P3) and 114 excluded per caller.
+# ---------------------------------------------------------------------------
+# Run M1: rppo_cw_mayrep_t1none_s42 — node 110, cuda:0
+# /home/vncuser/miniconda3/envs/grid_world_pain/bin/python train.py --configs-dir configs/continual/continual_worlds/may_replication_stages \
+#   --continual-schedule configs/continual/continual_worlds/may_replication.yaml \
+#   --agent_config configs/models/recurrent_ppo/nmn_input_site_grid_gaenorm/nmngaenorm_t1none.yaml \
+#   --seed 42 --device cuda:0 --tag rppo_cw_mayrep_t1none_s42 --wandb-name rppo_cw_mayrep_t1none_s42 \
+#   --wandb-group continual_worlds --wandb-job-type prod
+# Run M2: rppo_cw_mayrep_t16quad_s42 — node 110, cuda:1
+# /home/vncuser/miniconda3/envs/grid_world_pain/bin/python train.py --configs-dir configs/continual/continual_worlds/may_replication_stages \
+#   --continual-schedule configs/continual/continual_worlds/may_replication.yaml \
+#   --agent_config configs/models/recurrent_ppo/nmn_input_site_grid_gaenorm/nmngaenorm_t16quad_ALL.yaml \
+#   --seed 42 --device cuda:1 --tag rppo_cw_mayrep_t16quad_s42 --wandb-name rppo_cw_mayrep_t16quad_s42 \
+#   --wandb-group continual_worlds --wandb-job-type prod
+# Run M3: rppo_cw_mayrep_t1none_s43 — node 111, cuda:0
+# /home/vncuser/miniconda3/envs/grid_world_pain/bin/python train.py --configs-dir configs/continual/continual_worlds/may_replication_stages \
+#   --continual-schedule configs/continual/continual_worlds/may_replication.yaml \
+#   --agent_config configs/models/recurrent_ppo/nmn_input_site_grid_gaenorm/nmngaenorm_t1none.yaml \
+#   --seed 43 --device cuda:0 --tag rppo_cw_mayrep_t1none_s43 --wandb-name rppo_cw_mayrep_t1none_s43 \
+#   --wandb-group continual_worlds --wandb-job-type prod
+# Run M4: rppo_cw_mayrep_t16quad_s43 — node 111, cuda:1
+# /home/vncuser/miniconda3/envs/grid_world_pain/bin/python train.py --configs-dir configs/continual/continual_worlds/may_replication_stages \
+#   --continual-schedule configs/continual/continual_worlds/may_replication.yaml \
+#   --agent_config configs/models/recurrent_ppo/nmn_input_site_grid_gaenorm/nmngaenorm_t16quad_ALL.yaml \
+#   --seed 43 --device cuda:1 --tag rppo_cw_mayrep_t16quad_s43 --wandb-name rppo_cw_mayrep_t16quad_s43 \
+#   --wandb-group continual_worlds --wandb-job-type prod
+# Run M5: rppo_cw_mayrep_t1none_s44 — node 112, cuda:0
+# /home/vncuser/miniconda3/envs/grid_world_pain/bin/python train.py --configs-dir configs/continual/continual_worlds/may_replication_stages \
+#   --continual-schedule configs/continual/continual_worlds/may_replication.yaml \
+#   --agent_config configs/models/recurrent_ppo/nmn_input_site_grid_gaenorm/nmngaenorm_t1none.yaml \
+#   --seed 44 --device cuda:0 --tag rppo_cw_mayrep_t1none_s44 --wandb-name rppo_cw_mayrep_t1none_s44 \
+#   --wandb-group continual_worlds --wandb-job-type prod
+# Run M6: rppo_cw_mayrep_t16quad_s44 — node 112, cuda:1
+# /home/vncuser/miniconda3/envs/grid_world_pain/bin/python train.py --configs-dir configs/continual/continual_worlds/may_replication_stages \
+#   --continual-schedule configs/continual/continual_worlds/may_replication.yaml \
+#   --agent_config configs/models/recurrent_ppo/nmn_input_site_grid_gaenorm/nmngaenorm_t16quad_ALL.yaml \
+#   --seed 44 --device cuda:1 --tag rppo_cw_mayrep_t16quad_s44 --wandb-name rppo_cw_mayrep_t16quad_s44 \
+#   --wandb-group continual_worlds --wandb-job-type prod
