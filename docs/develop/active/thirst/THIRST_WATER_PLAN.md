@@ -637,3 +637,72 @@ Same node, same seed, CPU and one GPU. Measure 64 envs × 300 jitted vmapped `ja
 | | | | |
 
 **Conclusion**: —
+
+---
+
+## Feedback from `math-reviewer` (2026-09-29, reviewed at commit `c7cb7e54`)
+
+### Verdict, in plain language
+
+The arithmetic this plan rests on holds, checked against the code in `src/environment/` rather than the plan's description of it. Standing away from the pond, hydration falls from the comfortable level (100 of 200) to zero in **exactly 160 steps**; standing on the pond it climbs to the fatal ceiling in **exactly 20 steps**; a half-empty agent refills in 10 steps and a quarter-full one in 15. All four numbers were reproduced with a single-precision (float32) recurrence and every intermediate value is exact, so a test can pin the death step as a whole number with no tolerance. The order of operations the plan proposes (drain, then drink, then one clip, then the death test on the clipped value) is the order the nutrition axis actually uses today, so "drink and drain in the same step" nets out to +5 as claimed, and there is no off-by-one against the food clock (100 steps, reproduced the same way). The smell weighting of one quarter per pond cell does what it is meant to: from any cell the agent can stand on off the pond, a 2×2 pond smells within 5 % of a single item sitting at the pond's middle, and within 3 % from about three cells away or more; the food-channel reading is always quieter than one food at the nearest pond cell (33–46 % of it). The fourth drive axis is an exact mirror of the hunger axis at the shipped numbers and stays a correct mirror if the hydration range is ever changed. **Nothing here blocks implementation.**
+
+Four things need correcting before the tests are written or the numbers are quoted elsewhere: one smell test in §T4 will fail as written (it compares a 2×2 pond with a 1×1 pond, but a 1×1 pond cannot sit where the 2×2's middle is); the "trips per episode" column of the clock table is wrong for both food and water (one well-timed pond visit covers a whole 500-step episode); the random-start sentence miscounts (half, not a quarter, of episodes start within 50 units of an end); and the cold-clock range cited is from before the thermal retune.
+
+**Severity legend:** 🔴 Critical = fix before going further · 🟡 Moderate = likely costs a re-run · 🟢 Low = cosmetic · ❓ Open = an assumption nobody has verified yet.
+
+### Findings
+
+| # | Severity | Where | Issue | Correction |
+|---|---|---|---|---|
+| M1 | 🟡 Moderate | §T4, fourth smell bullet ("a 2×2 pond's far-field total equals, within that tolerance, a 1×1 pond's with the same `p`") | The tolerance inherited from the previous bullet is 3 %. A 1×1 pond occupies a grid cell; a 2×2 pond's centroid is at a half-cell. With the 1×1 placed on the 2×2's top-left cell (the only natural "same place"), the two readings differ by **6.8–8.5 %** at every cell whose centroid distance is ≥ 8 on the 10×10 grid (γ = 1), so the test as specified **fails on correct code**. | Put the 1×1 comparison source at the 2×2's centroid (fractional coordinates; `sense_resource` takes float positions and the kernel is `1/d`), or compare against the analytic `f(d̄)` as the third bullet already does, or widen this bullet's tolerance to ≥ 10 %. |
+| M2 | 🟡 Moderate | Clock table, "Share of 500-step cap" column, and the sentence "a 500-step episode needs at least three pond visits" | Wrong for both rows. **Water:** one visit suffices — walk 153 steps (W = 4.375), drink 39 steps (W = 199.375, still under the ceiling), walk 318 more: 510 steps > cap. The minimum is **one** pond visit; a cautious agent needs two. **Food:** one item nets `food_nutrition_gain − eating_nutrition_cost = 6 − 1 = +5` nutrition (`default.yaml:176-177`, not overridden on the ladder), so refilling the 100-step clock is 20 items and a 500-step episode needs **80 items**, not "5 trips". The clocks themselves (100 / 160 / 20) are right; only the trip column is wrong. | Replace with: "at least one pond visit per episode is unavoidable; a refill from near-empty to near-full is ~39 on-pond steps" and state the food figure in items (80) or drop it. The design conclusion ("the pond cannot be ignored") survives. |
+| M3 | 🟢 Low | "Random start hydration" paragraph | "About a quarter of episodes then start within 50 units of an end." For `U[0, 200]`: `P(W < 50) + P(W > 150) = 0.5`. A quarter is the share within **25** units of an end. | Change the number to half, or the width to 25. |
+| M4 | 🟢 Low | Clock table, Cold row | "74–127 across the per-episode world baseline range (§D14)" is the **pre-retune** table (world −28..−22, `k_loss` 0.01, cooling 0.3). At the shipped values (world −31..−29, `k_loss` 0.02, warming 2.0 / cooling 0.25) the critical-settings change log (2026-09-19) measured **86–99** on 600 real resets; "~92" is that band's midpoint. | Cite 86–99 from `CONFIG_CRITICAL_SETTINGS.md` (2026-09-19 entry). |
+| M5 | ❓ Open | §A3 near-field table and the first two §T4 smell bullets | The two rows are correct **at the centre olfaction cell** (offset index 0 of the 5-cell diamond). The other four sampled cells read differently — e.g. the pond's diagonal neighbour reads `0.489` (sum ÷ 4), a value not in the table. Not an error, but the test must say which of the 25 olfaction entries it pins. | Add "centre cell, olfaction index 0" to the T4 assertions. |
+| M6 | ❓ Open | §D1: `start_hydration` validated `0 < start < max`, but `start_hydration_low` may be `0.0` | `jax.random.uniform` draws on `[low, high)`, so a random start can be exactly `0.0` and dies on step 1 with reason 6, while a fixed `start_hydration: 0` is refused at load. This mirrors nutrition (`start_nutrition_low: 0`) and is internally consistent, but the two validations disagree about whether a dead-on-arrival start is legal. | One sentence in D1 saying the random draw may include the floor, or set `low > 0` if a step-1 death is unwanted. |
+
+### What was checked and holds
+
+**1. Water clock (§"Target-first water clock").** With `d = 0.625 = 5/8` and `g = 5.625 = 45/8`, every hydration value on the fixed-start paths is a multiple of `1/8` below `2^8`, which needs 11 significant bits — well inside float32's 24 — so the recurrence
+
+$$
+W_{k+1} = \operatorname{clip}\!\big(W_k - d + g\,[\text{on pond}],\; 0,\; 200\big)
+$$
+
+is exact at every step. Reproduced in numpy float32: away from the pond from 100, `W ≤ 0` first at **k = 160** (`W_160 = 0.0` exactly); on the pond from 100, `W ≥ 200` first at **k = 20**; refill 50 → 100 in **10**, 25 → 100 in **15**; a start at 195 dies on its **first** on-pond step (`195 − 0.625 + 5.625 = 200`). The food clock reproduced the same way (`N_{k+1} = clip(N_k − 1, 0, 200)` from 100) dies at **k = 100**, so "step k" means the same thing on both axes: the k-th `jax_step` call after reset.
+
+**2. Order of operations, against `update_body` as coded.** Nutrition today (`core.py`, "Nutrition Dynamics" block) is: linear decay → optional thermoregulatory drain → refill on `info['ate_food']` → **one** clip to `[0, max]` → death tests `new_nutrition <= 0` and `new_nutrition >= max_nutrition` on the **clipped** value, both folded into `done` inside `update_body`, and `jax_step` stamps the reason from the same predicates. The plan's `clip(W − d + g·drank, 0, max)` → `dehydrated = W' <= 0` / `overdrank = W' >= max` → `done |= …` is this order term for term. `info['ate_food']` is computed from the post-move position, so `info['drank'] = any(water_pos == new_agent_pos)` is the matching convention. There is no "drain, die, then drink" path and no off-by-one.
+
+**3. Smell normalisation (§A3), against `sense_resource` as coded.** The kernel is `f(d) = 1/(d^γ + 1e-10)` with `f = 0.5^{−γ} = 2` on-source, γ = 1, radius 20 (never binding on a 10×10 grid, whose largest agent-to-centroid distance is 10.6). Both table rows reproduce exactly at the centre cell: on a pond cell `(2 + 1 + 1 + 1/√2)/4 = 1.17678`, beside the pond `(1 + 1/2 + 1/√2 + 1/√5)/4 = 0.66358`; food-channel readings `0.588` and `0.332`. **"Equals one item at the centroid" is asymptotic, not exact**, and the plan's wording ("≈", "far field") is right. To leading order, for a pond with cell-centre covariance `Σ`,
+
+$$
+\frac{1}{n}\sum_{c\in P} f(\lVert c-x\rVert) \;=\; f(\bar d) \;+\; \tfrac{1}{2}\,\operatorname{tr}\!\big(\nabla^2 f\,\Sigma\big) \;+\; O(\bar d^{-4}),
+\qquad \Sigma_{2\times2} = \tfrac{1}{4} I,\quad \Delta\!\left(\tfrac{1}{r}\right) = \tfrac{1}{r^{3}} \text{ in 2-D},
+$$
+
+so the relative excess is about `1/(8 d̄²)`: 3.1 % at `d̄ = 2`, 1.4 % at 3, 0.2 % at 8, always positive (Jensen; `1/r` is convex, so the pond reads slightly louder than a point at its middle). Measured over every off-pond cell of the 10×10 grid with the pond at the default candidate `(1,1)`: +4.9 % at the eight edge-adjacent cells (`d̄ = 1.58`), +3.7 % at the four diagonal cells (2.12), ≤ 3 % at every cell with `d̄ ≥ 2.55`, ≤ 1.1 % for `d̄ ≥ 3`, and ≤ **0.18 %** for `d̄ ≥ 8` (12 cells). The T4 "within 3 % at distance ≥ 8" assertion therefore passes with a wide margin; it would pass from 2.55 on. The mix vector interacts linearly and as intended: the per-cell vector is `[0.125, 0, 0, 0, 0.125]` (exact in float32), and the far-field sum is `[0.5, 0, 0, 0, 0.5]·f(d̄)` — half a food on the food channel, half on channel 4, total strength 1.0 — so a 2×2 pond is not 4× louder than one food. "Quieter than one food up close" is true everywhere, not just up close: the food-channel reading divided by one food at the nearest pond cell is 0.33 (beside), 0.35 (diagonal), 0.40 (grid centre), 0.46 (far corner); the quietness comes from the 0.5 mix weight and from the centroid being farther than the nearest cell, and the `1/n` weight is what stops the count of cells from adding to it.
+
+**4. Drive axis (§A1, §D4.3).** `calculate_drive` as coded is `‖[S − S_set, I, (T − T_set)·range_S/max_T]‖` with `range_S = max(setpoint, max_satiation − setpoint) = max(100, 100) = 100` and `max_injury = 100`, so each existing axis is exactly 100 drive units from its own death (`death_penalty = 100`). The proposed `w_axis = (W − W_set)·range_S/range_W` with `range_W = max(100, 200 − 100) = 100` has factor `100/100 = 1.0` exactly in float32, so `w_axis = W − 100` with no rounding. Checked: drive is 0 at the joint setpoint; `W = 0` alone and `W = 200` alone each give exactly 100, the same as `S = 0`, `I = 100` or `T = 15` alone. **When `max_hydration ≠ max_satiation` the scale still holds**: at `max_W = 100, W_set = 50` the factor is 2 and a full-scale deviation is again 100 (one hydration unit then costs two satiation units, and the same 0.625 drain costs 1.25 drive units per step). At `max_W = 300, W_set = 100` only the far end reaches 100 (the floor is 50) — the same asymmetry satiation itself would show off-centre, which is what "mirror" means; W3 (setpoint in the middle) is what makes both ends equal. Reward is `prev_drive − curr_drive − death_penalty·[real death]`, with pre-step `state.hydration` in the first call and post-step `W'` in the second, the pairing satiation and body temperature already use. `info['drive_thirst']` divide-first matches `drive_hunger`. One consequence worth knowing, inherited from the Euclidean form rather than introduced here: with the other axes at setpoint, a thirst step costs 0.625 reward against hunger's 1.0 (the slower clock is proportionally less urgent per step), and when another axis is already far off the marginal cost of a thirst step is tiny (`0.0039` when satiation is 50 units off).
+
+**5. Other equations.** (a) Agent-start repair (§D4.5): `P(c) = 1/N + (k/N)·1/(N−k) = 1/(N−k)` for every non-pond cell — correct, given the permutation stream is independent of the first draw (a `fold_in` of `agent_key` is). The respawn repair is the same argument restricted to the spawn area. (b) Capacity check (§D1): earlier slots hold at most one cell each, so `|A_i| − max_t |pond(t) ∩ A_i| ≥ k_i + 1` guarantees a free in-area non-pond cell at scan position `k_i`; the level-06 numbers (campfire `36 − 1 = 35 ≥ 21`, others `100 − 4 = 96 ≥ 45`) follow from the stated areas. (c) Center mode on 10×10 with a 2×2 block: `((10−2)//2, (10−2)//2) = (4, 4)`, block rows/cols 4–5, contains array `(4, 4)` — as the plan says. (d) Default candidates YAML `[2,2] … [8,8]` → array rows/cols 1–2 and 7–8, inside margin 1 (`1 ≥ 1`, `9 ≤ 9`). (e) `Hydration = W / max_hydration` reads 0.5 at the setpoint, and `Satiation` is coded as `state.satiation / params.max_satiation` (`sensor.py:476`), so the two observations are normalised the same way. (f) Reasons 6 and 7 come from mutually exclusive predicates (`W' ≤ 0` and `W' ≥ 200` cannot both hold), so their stamping order is immaterial.
+
+### Numbers computed for this review
+
+| Quantity | Value | How |
+|---|---|---|
+| Dehydration step from 100, resting away | 160 | float32 recurrence, exact at every step |
+| Over-drinking step from 100, on pond | 20 | same |
+| Refill 50 → 100 / 25 → 100 | 10 / 15 | same |
+| Food clock from 100 | 100 | same recurrence with cost 1.0 |
+| Longest survival with one pond visit | 510 steps (walk 153, drink 39, walk 318) | integer search over visit timing |
+| Smell, on a pond cell (sum ÷ 4) | 1.17678 | real kernel, centre cell |
+| Smell, beside the pond (sum ÷ 4) | 0.66358 | same |
+| Smell, diagonal neighbour (sum ÷ 4) | 0.48877 | same |
+| Pond vs. one source at the centroid | +4.9 % (d̄ 1.58), +3.7 % (2.12), ≤ 3 % for d̄ ≥ 2.55, ≤ 0.18 % for d̄ ≥ 8 | all 96 off-pond cells of the 10×10 grid |
+| Pond vs. a 1×1 pond on the top-left cell, d̄ ≥ 8 | 6.8–8.5 % | same (basis of M1) |
+| Drive, one axis at full scale (S, I, T or W) | 100.0 each | 4-axis norm with `range_S/range_W` |
+| Share of `U[0,200]` starts within 50 of an end | 0.5 | (basis of M3) |
+
+**Conclusion:** the plan's equations are correct and match the code they mirror; fix M1 before writing T4, correct the M2 trip counts before the table is quoted anywhere, and the two Low items when the doc is next touched.
+
+Reviewed by: math-reviewer
