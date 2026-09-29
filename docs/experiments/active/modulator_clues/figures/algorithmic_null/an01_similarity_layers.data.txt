@@ -1,0 +1,15 @@
+status: interim — every verdict word carries the prefix "provisional — end of stage 1 of 5"; verdict words come only from decision_rules.evaluate_* Rules note: computed under the rules before the 2026-09-30 revision (P1_rare_predictor_columns, P2_predictivity_gain_invariance_wording); reported with that sha, as the revision requires. The current rules file is 5ef6f731d15e.
+decision_rules: docs/experiments/active/modulator_clues/algorithmic_null_decision_rules.yaml 4c8508af14b62f55954a3663c4bb844b5857139a2fcef85cee9a618cfcf9fae0 @ 872b0e04cc2cb2c4c9e79fb50a39ac852c162b67
+source: results/analysis/algorithmic_null/algorithmic_null_mayrep_interim/similarity.json (generated 2026-09-29T21:50:20Z, run_similarity)
+row: probe rows (sampled steps)|148,528|148,528|100.0|the same sampled rows of the same stored episodes are fed to every agent
+row: held-out episode groups, smallest split repeat|1,000|5,000|20.0|one group = one episode_seed (every store's copy of that reset); gate G6 needs at least 500 held out
+row: training runs entered after gate G5|6|6|100.0|a run that fails stage-1 competence is dropped before any pair is formed
+row: ordinary–ordinary pairs|3|3|100.0|every pair the rules form is drawn
+row: modulated–ordinary pairs, different seeds|6|6|100.0|every pair the rules form is drawn
+row: modulated–modulated pairs|3|3|100.0|every pair the rules form is drawn
+row: untrained–untrained pairs|3|3|100.0|every pair the rules form is drawn
+row: modulated–ordinary pairs, same seed|0|3|0.0|not drawn here: the same-seed comparison is Figure an03
+row: verdict layers|5|5|100.0|a layer is refused when its probe has too few rows per column
+row: drawn statistics with a non-finite bootstrap draw|0|150|0.0|count of non-finite draws summed over drawn pair entries; a non-finite draw leaves that interval undrawn
+row: ridge fits at the edge of the penalty grid|7|1,650|0.4|flagged by the driver; listed in the output
+row: bootstrap draws per interval|2,000|2,000|100.0|CKA; predictivity pools 10000 over the split repeats; resampling unit: episode_seed group, joint across all agents and pairs

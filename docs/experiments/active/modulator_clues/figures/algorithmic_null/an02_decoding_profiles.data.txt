@@ -1,0 +1,19 @@
+status: interim — every verdict word carries the prefix "provisional — end of stage 1 of 5"; verdict words come only from decision_rules.evaluate_* Rules note: computed under the rules before the 2026-09-30 revision (P1_rare_predictor_columns, P2_predictivity_gain_invariance_wording); reported with that sha, as the revision requires. The current rules file is 5ef6f731d15e.
+decision_rules: docs/experiments/active/modulator_clues/algorithmic_null_decision_rules.yaml 4c8508af14b62f55954a3663c4bb844b5857139a2fcef85cee9a618cfcf9fae0 @ 872b0e04cc2cb2c4c9e79fb50a39ac852c162b67
+source: results/analysis/algorithmic_null/algorithmic_null_mayrep_interim/decoding.json (generated 2026-09-29T21:50:20Z, run_decoding)
+row: satiation: probe rows used|148,528|148,528|100.0|every kept row
+row: satiation: held-out episode groups, smallest split repeat|1,000|500|200.0|at or above gate G6's minimum (the 'available' column)
+row: satiation: held-out rows without a clock value, summed over repeats|0|148,528|0.0|dropped from the layer score and the clock score alike
+row: injury_level: probe rows used|148,528|148,528|100.0|every kept row
+row: injury_level: held-out episode groups, smallest split repeat|1,000|500|200.0|at or above gate G6's minimum (the 'available' column)
+row: injury_level: held-out rows without a clock value, summed over repeats|0|148,528|0.0|dropped from the layer score and the clock score alike
+row: nearest_predator_manhattan: probe rows used|148,528|148,528|100.0|rows with an active predator only
+row: nearest_predator_manhattan: held-out episode groups, smallest split repeat|1,000|500|200.0|at or above gate G6's minimum (the 'available' column)
+row: nearest_predator_manhattan: held-out rows without a clock value, summed over repeats|0|148,528|0.0|dropped from the layer score and the clock score alike
+row: steps_remaining: probe rows used|10,823|148,528|7.3|episodes that ended in death only (truncated episodes' remaining time is censored); this biases the headline toward shorter lives
+row: steps_remaining: held-out episode groups, smallest split repeat|210|500|42.0|BLOCKED: below gate G6's minimum; drawn as blocked, no R²
+row: steps_remaining: held-out rows without a clock value, summed over repeats|43|10,823|0.4|dropped from the layer score and the clock score alike
+row: trained agents drawn|6|6|100.0|every trained agent of the output
+row: untrained reference networks drawn|0|3|0.0|in the output, not drawn here: A2 compares the trained agents
+row: quantities drawn as blocked by gate G6|1|4|25.0|steps_remaining
+row: all-episode steps_remaining (sensitivity row)|0|1|0.0|not drawn: it decides nothing and truncated episodes make it a clock

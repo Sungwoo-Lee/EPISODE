@@ -1,0 +1,12 @@
+status: interim — every verdict word carries the prefix "provisional — end of stage 1 of 5"; verdict words come only from decision_rules.evaluate_* Rules note: computed under the rules before the 2026-09-30 revision (P1_rare_predictor_columns, P2_predictivity_gain_invariance_wording); reported with that sha, as the revision requires. The current rules file is 5ef6f731d15e.
+decision_rules: docs/experiments/active/modulator_clues/algorithmic_null_decision_rules.yaml 4c8508af14b62f55954a3663c4bb844b5857139a2fcef85cee9a618cfcf9fae0 @ 872b0e04cc2cb2c4c9e79fb50a39ac852c162b67
+source: results/analysis/algorithmic_null/algorithmic_null_mayrep_interim/similarity.json (generated 2026-09-29T21:50:20Z, run_similarity)
+row: OO pairs|3|3|100.0|ordinary pairs at different seeds: the yardstick
+row: MO_diff pairs|6|6|100.0|modulated vs ordinary at different seeds
+row: MO_same pairs|3|3|100.0|modulated vs ordinary at the same seed (shared start)
+row: MM pairs|3|3|100.0|modulated pairs at different seeds
+row: probe rows (sampled steps)|148,528|148,528|100.0|the same rows for every agent
+row: probe episodes that reach the step cap|27,541|30,000|91.8|step cap 500, read from the runs' saved configs; survival is compared near this ceiling
+row: runs with a stage survival value|6|6|100.0|mean Episode/Steps over the stage's last window of the training log
+row: training-log rows in the survival window, per run (first run)|50|375|13.3|window 200,000 episodes, rows weighted by delta_episode_number
+row: same-seed pairs with a verified shared start|3|3|100.0|main-network weights bitwise identical at the same seed (Checkpoint 3.3)

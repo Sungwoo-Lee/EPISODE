@@ -200,8 +200,48 @@ FiLM:       h = ReLU( &gamma;(c)&middot;(W_x&middot;x + b) + &beta;(c) )</pre>
       <dt>Reads as</dt><dd>High similarity beyond the seed yardstick (A3): the agents represent the world
       the same way. High only within the same seed: inherited from the shared start.</dd>
     </dl>
-    <div class="slot"><b>Planned figure.</b> A layer-by-layer similarity matrix, modulated against
-    ordinary, beside the ordinary-against-ordinary matrix for different seeds.</div>
+    <figure>
+      <img data-fig="an01_similarity_layers" alt="Five rows, one per network layer, each with two panels of horizontal dot strips: pairs of ordinary agents, modulated-versus-ordinary pairs at different seeds with their mean, pairs of modulated agents, and pairs of untrained networks, against a shaded ordinary-versus-ordinary band. The left column prints each layer's verdict text.">
+      <p class="zoomhint">Click the figure to view it full size</p>
+      <figcaption>
+        <span><b>Figure A1 &mdash; How alike two agents' layers are, pair by pair.</b></span>
+        <span><b>Axes.</b> Horizontal, left panel of each row: mutual linear predictivity, the held-out R&sup2; (fraction of variance explained, 0 to 1, no unit) of the weaker of the two directions in which one agent's layer linearly predicts the other's. Horizontal, right panel: linear CKA, a 0-to-1 similarity of the two layers' geometry. Vertical: no quantity; the rows inside each panel are, top to bottom, ordinary&ndash;ordinary pairs, modulated&ndash;ordinary pairs at different seeds, the bootstrap interval of their mean, modulated&ndash;modulated pairs and untrained&ndash;untrained pairs. Each panel has its own horizontal range; no axis starts at zero.</span>
+        {{DATA:an01_similarity_layers}}
+      </figcaption>
+      <p class="prov">Reproduce: <code>python scripts/analysis/studies/modulator_clues/an01_similarity_layers.py</code></p>
+      <div class="howto">
+        <p class="eyebrow">How it is computed</p>
+        <p>Every stored episode of the probe is replayed through each agent with its memory reset at the first step, so all agents see exactly the same inputs, and a few steps per episode are kept. For every pair of agents and every layer, a ridge regression, a linear map with a penalty that keeps it from overfitting, is fitted on some episodes and scored on episodes it never saw, in both directions; the figure shows the weaker direction, which is the registered statistic. CKA compares the two layers without fitting anything. Each horizontal line is a bootstrap interval: the pairs' scores recomputed on resampled groups of episodes, 5th to 95th percentile. The shaded band is the range spanned by the three ordinary&ndash;ordinary pairs, the yardstick for how alike two independently trained ordinary agents are. The words in the left column are printed verbatim from the pre-registered decision rules' evaluator, with the prefix that marks an interim reading at the end of the first of five training stages. The figure does not show where inside a layer the agents differ, and it does not show the same-seed pairs, which are Figure A3.</p>
+      </div>
+    </figure>
+    <figure>
+      <img data-fig="an04_similarity_robustness" alt="A grid of dot-strip panels: one row per layer, one column per scoring variant. Each panel has three strips, the weaker direction, ordinary to modulated, and modulated to ordinary, with ordinary pairs in blue and modulated-ordinary pairs in orange.">
+      <p class="zoomhint">Click the figure to view it full size</p>
+      <figcaption>
+        <span><b>Figure A1b &mdash; Whether the gap survives other ways of scoring it.</b></span>
+        <span><b>Axes.</b> Horizontal: held-out R&sup2; (fraction of variance explained, no unit) of a linear map from one agent's layer to the other's. Vertical: no quantity; three strips per panel, top to bottom, the weaker of the two directions, ordinary predicting modulated, and modulated predicting ordinary. Columns: scoring variants; rows: layers. Each panel has its own horizontal range.</span>
+        {{DATA:an04_similarity_robustness}}
+      </figcaption>
+      <p class="prov">Reproduce: <code>python scripts/analysis/studies/modulator_clues/an04_similarity_robustness.py</code></p>
+      <div class="howto">
+        <p class="eyebrow">How it is computed</p>
+        <p>The registered similarity score takes the weaker of two directions of linear prediction, which could hide a direction-specific artefact. This figure breaks the score apart. It shows each direction on its own, including the supporting read registered with the rules: how well the modulated agent's layer predicts the ordinary agent's, the one direction that a fixed per-unit gain from the modulator cannot change. Each column recomputes the scores a different way: as registered; without predictor units that are active on almost no rows, which can make the fit unstable; with a floor on the scale used to standardise each unit; and as a plain average over units instead of weighting each unit by its variance. A difference between the two agents that appears in every column, in both directions, is unlikely to be an artefact of any one scoring choice. None of these columns decides anything: they are descriptive checks written beside the verdict, and the verdict remains the one in Figure A1. The scores come from the same stored episodes, the same held-out split and the same pairs as Figure A1. The figure does not show bootstrap intervals, only point values averaged over the split repeats.</p>
+      </div>
+    </figure>
+    <figure>
+      <img data-fig="an03_seed_yardstick" alt="Left, five panels of dot strips per layer comparing ordinary pairs, modulated-ordinary pairs at different seeds, modulated-ordinary pairs at the same seed, and modulated pairs. Right, the six runs' survival near a line at the step cap, and the survival difference with a narrow and a wide error bar.">
+      <p class="zoomhint">Click the figure to view it full size</p>
+      <figcaption>
+        <span><b>Figure A3 &mdash; Same seed against different seeds, and the survival that goes with it.</b></span>
+        <span><b>Axes.</b> Left panels, horizontal: mutual linear predictivity, the held-out R&sup2; (no unit) of the weaker prediction direction between two agents' layers; vertical: the four kinds of pair, labelled on the axis. Top right, horizontal: the two kinds of agent; vertical: survival in steps, averaged over the last episodes of the stage in the training log, with the episode step cap drawn as a line. Bottom right, horizontal: modulated minus ordinary survival in steps; vertical: the two error bars. No axis starts at zero.</span>
+        {{DATA:an03_seed_yardstick}}
+      </figcaption>
+      <p class="prov">Reproduce: <code>python scripts/analysis/studies/modulator_clues/an03_seed_yardstick.py</code></p>
+      <div class="howto">
+        <p class="eyebrow">How it is computed</p>
+        <p>A modulated agent and an ordinary agent trained with the same seed start from identical main-network weights, which was checked array by array. If they end up alike only when they share a seed, the likeness was inherited from that start rather than forced by the task. The left panels therefore place four kinds of pair side by side for every layer, using the same statistic and bootstrap intervals as Figure A1. The text above each panel is the evaluator's pattern for that layer, printed verbatim, together with whether the same-seed pairs stand out above all different-seed pairs, which the rules call the same-seed excess. The pattern also depends on whether the two agents survive equally long, so the right panels show survival. Two facts qualify that comparison. Most of the probe's episodes reach the step cap, so survival is measured close to a ceiling. And the pre-registered test widens the standard error, the expected size of chance differences between the two arms' means, to a registered floor: the difference lies inside the floored band but outside the raw one. The figure does not show why the patterns arise.</p>
+      </div>
+    </figure>
   </div>
 
   <div class="plan" id="a2">
@@ -217,8 +257,34 @@ FiLM:       h = ReLU( &gamma;(c)&middot;(W_x&middot;x + b) + &beta;(c) )</pre>
       <dt>Reads as</dt><dd>Matching profiles: the same information is present in the same places. A
       mismatch shows where the modulated agent holds information differently.</dd>
     </dl>
-    <div class="slot"><b>Planned figure.</b> Decoding accuracy for each quantity across layers, one line
-    per agent, with the seed-to-seed range shaded.</div>
+    <figure>
+      <img data-fig="an02_decoding_profiles" alt="Four panels. Three show held-out R-squared across six layers from the raw input to the critic, one thin line per agent in blue or orange, shaded seed ranges and a dashed clock baseline. The fourth, survival steps remaining, is a grey box stating it is blocked by a gate.">
+      <p class="zoomhint">Click the figure to view it full size</p>
+      <figcaption>
+        <span><b>Figure A2 &mdash; Where each agent holds hunger, injury, predator distance and remaining lifetime.</b></span>
+        <span><b>Axes.</b> Horizontal: the layer read, from the raw network input to the critic's hidden layer; categories, not a scale. Vertical: held-out R&sup2;, the fraction of the quantity's variance a linear readout recovers on episodes it never saw (1 = perfect, 0 = no better than the average, negative = worse). Each panel has its own vertical range. The dashed line is the clock baseline in the same unit.</span>
+        {{DATA:an02_decoding_profiles}}
+      </figcaption>
+      <p class="prov">Reproduce: <code>python scripts/analysis/studies/modulator_clues/an02_decoding_profiles.py</code></p>
+      <div class="howto">
+        <p class="eyebrow">How it is computed</p>
+        <p>Every stored episode of the probe is replayed through each agent, and a ridge readout, a linear map with a penalty against overfitting, is trained to recover one quantity from one layer. It is trained on some episodes and scored on others, split by episode rather than by step, because neighbouring steps are nearly identical and a step-level split would inflate every score. The same splits are used for every agent, so the lines are directly comparable. The dashed line is what the time step alone can predict, fitted as the average of the quantity at each step; a layer that barely beats it holds little beyond a clock. Remaining survival uses only episodes that ended in death, because an episode cut off at the step cap has no known remaining lifetime; so few such episodes remain that the rules' minimum number of held-out episode groups is not met, and the panel shows that it is blocked instead of a number. The words in each title are the evaluator's, verbatim. The figure does not show the untrained networks or the all-episode version of remaining survival, which decides nothing.</p>
+      </div>
+    </figure>
+    <figure>
+      <img data-fig="an06_pilot_controls" alt="A table titled tool validation, shared seed 42, not evidence, listing eleven controls with where each is registered, its bound, and its value for the ordinary and the modulated pilot agent.">
+      <p class="zoomhint">Click the figure to view it full size</p>
+      <figcaption>
+        <span><b>Figure P &mdash; The tool checks, run on one pair of agents that share a seed.</b></span>
+        <span><b>Axes.</b> None: this is a table drawn as an image. Rows are controls; columns are where the bound is registered, the bound, and each pilot agent's value. Agreement values are fractions from 0 to 1; deviations are relative (no unit); R&sup2; is a fraction of variance explained.</span>
+        {{DATA:an06_pilot_controls}}
+      </figcaption>
+      <p class="prov">Reproduce: <code>python scripts/analysis/studies/modulator_clues/an06_pilot_controls.py</code></p>
+      <div class="howto">
+        <p class="eyebrow">How it is computed</p>
+        <p>Before any comparison of agents can be trusted, the tools that produce it must be shown to work. The pilot runs every analysis on one pair from an earlier study, an ordinary and a modulated agent that share seed 42, which is why its numbers are never evidence about the agents. Each row is one check. Replaying a stored episode through the agent that generated it must reproduce every stored action. The rows the analysis reads must line up with the step they claim, and shifting them by one step must break that agreement, which proves the check can fail. The captured layer activity must reconstruct the network's own outputs. The kept rows must equal a full replay, and the same comparison with rows deliberately planted one step off must fail by a wide margin. An agent compared with itself must score exactly 1. A readout must recover hunger from the raw input, since hunger is observed directly, and must fail on shuffled targets. The bounds are the ones the drivers read from the pre-registered rules and the manifest; the table prints them beside the values. The figure says nothing about whether the two agents are alike.</p>
+      </div>
+    </figure>
   </div>
 
   <div class="plan" id="a3">
@@ -308,8 +374,20 @@ FiLM:       h = ReLU( &gamma;(c)&middot;(W_x&middot;x + b) + &beta;(c) )</pre>
       <dt>Also</dt><dd>The success test for B1's stronger start: it should pull the wake-up earlier. If the
       lag shrinks but learning speed does not change, late wake-up was not the cause.</dd>
     </dl>
-    <div class="slot"><b>Planned figure.</b> The four measures over training beside the survival curve,
-    with the wake-up and plateau points marked.</div>
+    <figure>
+      <img data-fig="an05_wakeup" alt="A grid of small line charts over ten million training episodes: survival with plateau points, then seventeen modulator measures, each with one grey line per level-05 world and orange wake points. Below, a dot plot of each run's wake point minus its survival plateau per measure, with a shaded coincidence band and the reading text for each measure.">
+      <p class="zoomhint">Click the figure to view it full size</p>
+      <figcaption>
+        <span><b>Figure B2 &mdash; When the modulator starts to matter, measured seventeen ways.</b></span>
+        <span><b>Axes.</b> Small panels, horizontal: training episodes, in millions; vertical: the measure named in the panel title, each on its own scale (survival in steps; gradient shares and contextual fractions from 0 to 1; relative update size as a ratio; gain swing in gain units; freeze cost in survival steps). Lower panel, horizontal: a run's wake point minus its survival plateau, counted in saved checkpoints; vertical: the measures, as categories.</span>
+        {{DATA:an05_wakeup}}
+      </figcaption>
+      <p class="prov">Reproduce: <code>python scripts/analysis/studies/modulator_clues/an05_wakeup.py</code></p>
+      <div class="howto">
+        <p class="eyebrow">How it is computed</p>
+        <p>Each modulated training run was reloaded at every saved checkpoint and at its untrained start. At each point the analysis measured how much of the learning signal reaches the modulator, how much its weights change, how much of its output follows the situation rather than staying fixed, how large its gain swings are, and how much survival is lost when its gain or its offset is frozen. For each run and measure, a pre-registered rule names the wake point: the first checkpoint where the measure has made half of its total change and stays there, provided that change is larger than the curve's own noise. Survival from the training log gives the plateau, the checkpoint where survival reaches 90% of its rise. The lower panel shows each run's wake point minus its plateau, in checkpoints; the shaded band is where the two count as coincident. The text on the right is the reading across worlds from a sign test over the level-05 worlds, printed verbatim; no single run's point carries a word, because the registered caveat below says one run's wake point can arise from noise alone. The seeds of the May replication are shown only as lags.</p>
+      </div>
+    </figure>
   </div>
   </div>
 </section>
@@ -375,5 +453,7 @@ FiLM:       h = ReLU( &gamma;(c)&middot;(W_x&middot;x + b) + &beta;(c) )</pre>
 </footer>
 
 </div>
+
+{{HOUSE_VIEWER}}
 
 {{HOUSE_SCRIPT}}
