@@ -69,3 +69,51 @@ Data note: newer runs (Wave 1/2, level-05 factorial, May replication) have 50 ch
 and load at HEAD; the site × input grid agents need Stage 1 of the saved-config compat
 plan first. Gradient-share and update-size metrics need training logs — if the trainer
 does not log them, they apply to future runs only.
+
+## Do the two agents converge on the same computation? (CKA + decoding profiles)
+
+**Why.** Across very different worlds the modulated and ordinary agents come out not just
+similar but pinned together. Read positively: both may converge on the same information
+processing, fixed by the world's structure rather than the architecture. Understanding
+that shared computation comes first; it is what a helpful modulator would have to add to.
+
+Two measures, on identical inputs:
+
+- **CKA** (Kornblith et al. 2019): are two layers' similarity structures the same?
+- **Decoding profiles**: do both agents encode hunger, injury, predator distance and value
+  (survival steps remaining) equally well, and in the same layers?
+
+Feasibility (checked 2026-09-29):
+
+- **Have:** trajectory stores record `obs_noised`, the exact observation the policy saw, so
+  one stored episode can be fed to *both* agents (memory reset at t=0) for row-aligned
+  activations. Ground-truth targets per step: `satiation`/`nutrition`, `injury_level`,
+  agent and animal positions and states (→ predator distance), episode end (→ survival
+  steps remaining). Paired stores that load at HEAD: level-05 factorial (16 pairs), Wave
+  1/2 levels, B_olf_only grids. The forward pass already returns the memory state
+  (`task_h`). `sklearn` and `pyarrow` are in the env.
+- **Missing:**
+  - [ ] **Opt-in capture of intermediate layers** in `src/models/recurrent_ppo_network.py`
+        — encoder output, GRU output, actor and critic hidden layers, and for modulated
+        agents both **pre- and post-FiLM** — with a test that enabling it changes no
+        output. (`senior-developer` → `developer`.)
+  - [ ] **Teacher-forced replay**: feed a stored observation sequence through an agent
+        instead of rolling out the environment (extends `scripts/analysis/nmn/replay.py`).
+  - [ ] **CKA and decoding scripts.** Probe train/test split **by episode, never by time
+        step** (consecutive steps leak). Pair linear CKA with a rescaling-robust measure
+        (SVCCA or cross-network linear predictivity): linear CKA is not invariant to
+        per-unit rescaling, which is exactly what the modulator's large constant gain does.
+  - [ ] **Seed yardstick.** Compare modulated-vs-ordinary similarity against
+        ordinary-vs-ordinary across *different* seeds. The only loadable multi-seed design
+        for both arms is the **May replication** (`rppo_cw_mayrep_t1none/t16quad_s42/43/44`,
+        launched 2026-09-29 15:36, still training). Its stages are different worlds, so it
+        also answers whether the two agents' processing moves together across worlds.
+
+Sequence:
+
+- [ ] Build and validate the tooling on a **level-05 pair** (a tool pilot, not evidence:
+      the pair shares a seed, so it has no yardstick).
+- [ ] When the May replication finishes: collect stores for all six agents and run the full
+      comparison layer by layer, stage by stage.
+- [ ] If Stage 1 of the saved-config compat plan is approved: extend to the site × input
+      grid, whose body-only arms add a contrast.
