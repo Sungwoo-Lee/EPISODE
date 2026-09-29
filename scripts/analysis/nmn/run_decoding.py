@@ -272,8 +272,9 @@ def main(argv=None) -> int:
         gates = {**{k: v for k, v in dio.capture_gates(reps, P).items()
                     if k != "generating_captures"}, "G4": dr.gate_G4(c["g4_controls"], P)}
         doc.update({"gate_G5": surv["gate_G5"], "survival_per_run": surv["per_run"],
-                    "evaluation": evaluate(c, P, policy, verdict_layers, quantities, gates,
-                                           surv["gate_G5"], int(man["bootstrap_n"]))})
+                    "evaluation": dio.finalize_evaluation(
+                        evaluate(c, P, policy, verdict_layers, quantities, gates,
+                                 surv["gate_G5"], int(man["bootstrap_n"])), policy)})
     else:
         doc["evaluation"] = None
     doc["cell"] = c

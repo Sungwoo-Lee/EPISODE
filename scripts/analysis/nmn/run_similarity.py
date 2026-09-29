@@ -412,8 +412,9 @@ def main(argv=None) -> int:
         doc.update({"survival": surv["survival"], "gate_G5": surv["gate_G5"],
                     "survival_per_run": surv["per_run"], "shared_start": start,
                     "gates": gates, "g4_controls": g4,
-                    "evaluation": evaluate(pc, P, policy, verdict_layers, gates,
-                                           surv["gate_G5"], surv["survival"], start)})
+                    "evaluation": dio.finalize_evaluation(
+                        evaluate(pc, P, policy, verdict_layers, gates, surv["gate_G5"],
+                                 surv["survival"], start), policy)})
     else:
         doc["evaluation"] = None
     heads = [(c, c.pop("_descriptive_args")) for c in cells_res]

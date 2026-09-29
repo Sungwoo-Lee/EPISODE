@@ -124,10 +124,52 @@ def guard_no_verdict_words(text: str, policy, where: str) -> None:
                          f"but the output contains {hits}")
 
 
+def finalize_evaluation(ev, policy):
+    """The evaluation as it is written: the evaluator's internal unprefixed word maps
+    (`layer_words`, `pattern_words`, `profile_words`, `reading_words`) are dropped, and every
+    remaining `word` field carries the rules' verdict_prefix (rules evidence_status: "Every
+    verdict word carries the prefix")."""
+    if isinstance(ev, dict):
+        out = {}
+        for k, v in ev.items():
+            if k.endswith("_words"):
+                continue
+            if k == "word" and isinstance(v, str) and policy.prefix \
+                    and not v.startswith(policy.prefix + ": "):
+                v = f"{policy.prefix}: {v}"
+            out[k] = finalize_evaluation(v, policy)
+        return out
+    if isinstance(ev, list):
+        return [finalize_evaluation(v, policy) for v in ev]
+    return ev
+
+
+def guard_prefixed(ev, policy, where: str) -> None:
+    """Where the rules give a verdict_prefix, refuse any string value in the evaluation that
+    carries a verdict word without starting with the prefix."""
+    if not policy.prefix:
+        return
+
+    def walk(x, path):
+        if isinstance(x, dict):
+            for k, v in x.items():
+                walk(v, f"{path}.{k}")
+        elif isinstance(x, list):
+            for i, v in enumerate(x):
+                walk(v, f"{path}[{i}]")
+        elif isinstance(x, str) and VERDICT_WORDS.search(x) \
+                and not x.startswith(policy.prefix + ": "):
+            raise ValueError(f"{where}: {path} = {x!r} carries a verdict word without the "
+                             f"rules' prefix {policy.prefix!r}")
+    walk(ev, "evaluation")
+
+
 def write_outputs(out: Path, stem: str, doc: dict, csv_rows: list, policy) -> None:
     """Write <stem>.json and <stem>.csv after the verdict-word guard has passed on both."""
     import csv
     import io
+    if doc.get("evaluation") is not None:
+        guard_prefixed(doc["evaluation"], policy, f"{stem}.json")
     js = json.dumps(doc, indent=1, default=_jsonable)
     buf = io.StringIO()
     if csv_rows:

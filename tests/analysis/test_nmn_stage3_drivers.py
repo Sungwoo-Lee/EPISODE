@@ -126,6 +126,40 @@ def test_interim_outputs_are_stamped_and_evaluated(interim_run):
     assert set(q["fits"][0]) == {"alpha", "alpha_at_edge"} and len(q["fits"]) == 5
 
 
+def _strings(x):
+    if isinstance(x, dict):
+        for v in x.values():
+            yield from _strings(v)
+    elif isinstance(x, list):
+        for v in x:
+            yield from _strings(v)
+    elif isinstance(x, str):
+        yield x
+
+
+def test_interim_every_verdict_word_carries_the_prefix(interim_run):
+    """Rules evidence_status.interim: every verdict word carries the prefix — including the
+    per-statistic words; the evaluator's internal unprefixed word maps are not written."""
+    out, pinned = interim_run
+    prefix = pinned.rules["evidence_status"]["interim"]["verdict_prefix"]
+    for stem in ("similarity", "decoding"):
+        ev = json.loads((out / f"{stem}.json").read_text())["evaluation"]
+        assert not any(k.endswith("_words") for k in json.dumps(ev).split('"') if k)
+        bad = [x for x in _strings(ev) if dio.VERDICT_WORDS.search(x)
+               and not x.startswith(prefix + ": ")]
+        assert not bad, bad[:5]
+
+
+def test_guard_prefixed_refuses_an_unprefixed_word():
+    pinned = _pinned()
+    interim = dr.verdict_policy(pinned, "interim")
+    with pytest.raises(ValueError, match="without the rules' prefix"):
+        dio.guard_prefixed({"A1": {"x": {"word": "different"}}}, interim, "t")
+    fixed = dio.finalize_evaluation({"layer_words": {"a": "same"}, "x": {"word": "same"}}, interim)
+    assert fixed == {"x": {"word": interim.prefix + ": same"}}
+    dio.guard_prefixed(fixed, interim, "t")
+
+
 def test_interim_statistics_behave(interim_run):
     """Controls on the synthetic probe: satiation (an observed channel) decodes from the raw
     input; shuffled targets do not; clock-free quantities have clock R^2 near 0; CKA of a
