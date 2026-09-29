@@ -100,7 +100,8 @@ the same output root overwrote episode-for-episode with no warning:
    therefore a different directory. Two configs can no longer collide on one path.
 2. **Manifest guard.** On resume the collector recompares `schema_version`, `env_fp`,
    `seed_base`, `n_episodes`, `shard_episodes`, `obs_precision`, `dims`, `max_steps`,
-   `checkpoint_path`, `device` and `restore_check`. **Any mismatch is a hard `ValueError`
+   `checkpoint_path`, `device`, `restore_check`, `matmul_precision` and
+   `compute_device_kind`. **Any mismatch is a hard `ValueError`
    and nothing is written.**
    (A git-SHA difference is a loud warning, not a failure — code legitimately moves
    between collection sessions.)
@@ -128,6 +129,7 @@ recoverable by re-running shards. Fields:
 | `max_steps`, `action_dim`, `policy_mode` | rollout parameters (`policy_mode` is always `deterministic_argmax`) |
 | `seed_base`, `n_episodes`, `shard_episodes`, `batch_size`, `device` | the episode population and how it was produced; **every resolved value is recorded, defaulted or not** |
 | `obs_precision` | `float16` or `float32` — see §5 |
+| `matmul_precision`, `compute_device_kind`, `matmul_selftest_max_rel_err` | the matmul arithmetic the store was recorded in (added 2026-09-30, tooling plan `ALGORITHMIC_NULL_ANALYSIS_TOOLING` Revision 4, R4-1). The collector runs the whole collection under `jax.default_matmul_precision("highest")` (full float32 on every device; no CLI flag) and aborts at start-up, before any store directory exists, if a float32 matmul self-test exceeds `FLOAT32_MATMUL_MAX_REL_ERR = 1e-5` relative error. `matmul_precision` is the mode read back from JAX's config (always `"highest"`), `compute_device_kind` is `jax.devices()[0].device_kind` (e.g. `"NVIDIA GeForce RTX 3090"`, `"cpu"`) and `matmul_selftest_max_rel_err` is the measured self-test value. The first two are manifest-guarded: one store never mixes modes or card models, and a store written before these fields existed cannot be resumed. An episode replays exactly (argmax-identical) only in the arithmetic it was recorded in. **`matmul_precision: highest` does not mean identical to training arithmetic**: training on an Ampere/Ada card (RTX 3090/4090/6000 Ada) ran its matmuls, including the environment's visual-PSF matmuls, in TF32, so a `highest` store's episode population is not bit-the-same as the training-time one, in the same sense a store collected on an RTX 2080 Ti never was. Stores collected before 2026-09-30 lack all three fields; their mode is recoverable only from the collection worklist's node |
 | `scene_format`, `scene_ambiguous` | which scene block the loader used, and whether the ambiguity guard was overridden (§6) |
 | `restore_check` | `"strict"` (the checkpoint's own structure was compared against the rebuilt model) or `"weak_allowed"` (the operator passed `--allow-weak-restore-check`, so that comparison may have been skipped — treat the agent's architecture as unverified) |
 | `collection_git_sha`, `collected_at` | provenance of the *collection* |

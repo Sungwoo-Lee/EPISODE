@@ -43,6 +43,36 @@ NO_VERDICT = "no verdict is drawn"
 # jax.default_matmul_precision names. "default" is TF32 on an Ampere/Ada GPU and full float32
 # on a Turing GPU or the CPU; "highest" is full float32 everywhere (teacher_forced.replay).
 PRECISIONS = ("highest", "default")
+# Revision 4 (R4-1): every kept activation is computed in full float32, so the capture mode
+# accepts only "highest". A store's check mode is `recorded` (read from the store manifest's
+# `matmul_precision`, written by the collector since 2026-09-30) or, only for an older store
+# that records no mode, an explicit PRECISIONS name.
+CAPTURE_PRECISIONS = ("highest",)
+STORE_PRECISION_ENTRIES = ("recorded",) + PRECISIONS
+
+
+def resolve_store_precision(entry: str, recorded, store: str) -> str:
+    """The matmul mode to self-replay `store` in, from its manifest entry.
+
+    `recorded` is the store manifest's `matmul_precision` (None for a store collected before
+    Revision 4; that absence is never filled with a default). `entry` = "recorded" uses it and
+    raises if the store records none. An explicit "highest"/"default" is accepted for a legacy
+    store, and on a recording store only when it equals the recorded mode."""
+    if entry not in STORE_PRECISION_ENTRIES:
+        raise ValueError(f"store_matmul_precision entry {entry!r} for {store} must be one of "
+                         f"{STORE_PRECISION_ENTRIES}")
+    if entry == "recorded":
+        if recorded is None:
+            raise ValueError(f"store_matmul_precision 'recorded' for {store}, but its manifest "
+                             f"records no matmul_precision (collected before Revision 4). "
+                             f"Give its collection mode explicitly ({PRECISIONS}).")
+        if recorded not in PRECISIONS:
+            raise ValueError(f"{store}: manifest matmul_precision {recorded!r} not in {PRECISIONS}")
+        return recorded
+    if recorded is not None and entry != recorded:
+        raise ValueError(f"store_matmul_precision {entry!r} for {store} conflicts with the "
+                         f"mode its manifest records ({recorded!r}); use 'recorded'.")
+    return entry
 FLATTEN = {"enc.uni.raw": "senses_x_units", "enc.uni.mod": "senses_x_units",
            "enc.uni.out": "senses_x_units"}
 
@@ -64,8 +94,10 @@ def load_manifest(path) -> dict:
     for k in ("name", "evidence_status", "out_root", "decision_rules", "runs", "probes",
               "layers", "assert_n_episodes", "tool_checks", "capture_matmul_precision"):
         _req(man, k)
-    if man["capture_matmul_precision"] not in PRECISIONS:
-        raise ValueError(f"capture_matmul_precision must be one of {PRECISIONS}")
+    if man["capture_matmul_precision"] not in CAPTURE_PRECISIONS:
+        raise ValueError(f"capture_matmul_precision must be one of {CAPTURE_PRECISIONS} "
+                         f"(Revision 4, R4-1: every kept activation is full float32), got "
+                         f"{man['capture_matmul_precision']!r}")
     _req(man["tool_checks"], "shift_change_rows_max", "manifest.tool_checks")
     for p in man["probes"]:
         for k in ("id", "stores", "n_per_store", "rows_per_episode", "seed",
@@ -74,9 +106,9 @@ def load_manifest(path) -> dict:
         if not p["stores"]:
             raise ValueError(f"probe {p['id']}: no stores listed")
         if (len(p["store_matmul_precision"]) != len(p["stores"])
-                or any(x not in PRECISIONS for x in p["store_matmul_precision"])):
+                or any(x not in STORE_PRECISION_ENTRIES for x in p["store_matmul_precision"])):
             raise ValueError(f"probe {p['id']}: store_matmul_precision must list one of "
-                             f"{PRECISIONS} per store, in the order of `stores`")
+                             f"{STORE_PRECISION_ENTRIES} per store, in the order of `stores`")
     for r in man["runs"]:
         for k in ("label", "path", "checkpoints"):
             _req(r, k, f"manifest.runs[{r.get('label')}]")
@@ -151,8 +183,7 @@ def main(argv=None) -> int:
     run_meta["versions"] = {"jax": jax.__version__, "flax": flax.__version__,
                             "numpy": np.__version__, "device": str(jax.devices()[0])}
 
-    probes = {}
-    pdefs = {p["id"]: p for p in man["probes"]}
+    probes, check_modes = {}, {}
     for pdef in man["probes"]:
         pid = pdef["id"]
         pj = out / "probes" / f"probe_{pid}.json"
@@ -172,8 +203,16 @@ def main(argv=None) -> int:
             probe_set.save(probe, out / "probes")
             print(f"[run_activations] probe {pid}: built in {time.time() - t0:.0f}s", flush=True)
         probes[pid] = probe
+        from src.utils.trajectory_store import read_manifest
+        smans = [read_manifest(sm["store"]) for sm in probe.store_meta]
+        check_modes[pid] = [resolve_store_precision(e, m.get("matmul_precision"), sm["store"])
+                            for e, m, sm in zip(pdef["store_matmul_precision"], smans,
+                                                probe.store_meta)]
         run_meta["probes"][pid] = {"row_index_sha256": probe.row_sha256, "counts": probe.counts,
-                                   "npz_bytes": (out / "probes" / f"probe_{pid}.npz").stat().st_size}
+                                   "npz_bytes": (out / "probes" / f"probe_{pid}.npz").stat().st_size,
+                                   "store_check_precision": check_modes[pid],
+                                   "store_compute_device_kind": [m.get("compute_device_kind")
+                                                                 for m in smans]}
     if args.probes_only:
         (out / "manifest.json").write_text(json.dumps(run_meta, indent=1, default=str))
         return 0
@@ -206,7 +245,7 @@ def main(argv=None) -> int:
                     assert_n_episodes=int(man["assert_n_episodes"]),
                     store_id_of_agent=(gen[0] if gen else None),
                     capture_precision=man["capture_matmul_precision"],
-                    check_precision=(pdefs[pid]["store_matmul_precision"][gen[0]] if gen else None))
+                    check_precision=(check_modes[pid][gen[0]] if gen else None))
                 stem = f"acts_{run['label']}__{info['step']}__{pid}"
                 nbytes = teacher_forced.save_activations(out / f"{stem}.npz", acts, probe.row_sha256)
                 rep.update({"run_label": run["label"], "run_path": str(run["path"]),

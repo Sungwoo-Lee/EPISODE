@@ -110,7 +110,8 @@ never produce a mixed population.
 
 If the manifest of an existing store disagrees with what you are about to write
 (`env_fp`, `seed_base`, `n_episodes`, `shard_episodes`, `obs_precision`, `dims`,
-`max_steps`, `checkpoint_path`, `schema_version`), the collector raises and writes
+`max_steps`, `checkpoint_path`, `schema_version`, `device`, `restore_check`,
+`matmul_precision`, `compute_device_kind`), the collector raises and writes
 **nothing**.
 
 ## Validate
@@ -143,13 +144,29 @@ Set them **together**; the driver derives both from `device` unless both are giv
 explicitly, and writes the resolved values into `_manifest.json`.
 
 > **GPU limitation — multi-GPU fan-out does NOT work today.** The worker exports
-> `JAX_PLATFORMS=cuda` but sets no `CUDA_VISIBLE_DEVICES`, and the spec has no GPU-index
+> `JAX_PLATFORMS=cuda,cpu` but sets no `CUDA_VISIBLE_DEVICES`, and the spec has no GPU-index
 > field, so every GPU worker on a node lands on **GPU 0**. Only reachable with
 > `device: gpu`; the default is `cpu`, where this does not arise.
 
 `device` is a **manifest-guarded** field: a store started on CPU cannot be resumed on GPU.
 Bit-level results are lowering-dependent (schema doc §5), so a mixed-device store would
 hold bit-inconsistent blocks for what the manifest claims is one homogeneous population.
+
+**Matmul precision is forced, not chosen** (2026-09-30, tooling plan
+`ALGORITHMIC_NULL_ANALYSIS_TOOLING` Revision 4, R4-1). JAX's default float32 matmul is TF32
+on RTX 3090/4090/6000 Ada cards and full float32 on the 2080 Ti and the CPU, and a store
+replays argmax-exactly only in the mode it was recorded in. So `collect_trajectories.py`
+runs the whole collection under `jax.default_matmul_precision("highest")` and aborts at
+start-up, before any store directory exists, when a float32 matmul self-test exceeds
+`FLOAT32_MATMUL_MAX_REL_ERR` (1e-5). There is no CLI flag. The manifest records
+`matmul_precision`, `compute_device_kind` (the card model) and the self-test value; the
+first two are resume-guarded, so a store cannot be resumed on a different card model — and
+a store written before this change cannot be resumed at all. (`NVIDIA_TF32_OVERRIDE=0` is
+*not* a substitute: measured on an RTX 3090 it leaves XLA's default-mode matmul in TF32.)
+
+The GPU worker exposes `JAX_PLATFORMS=cuda,cpu`, not `cuda` alone: a continual run's
+`stage_end:<k>` selector reads each checkpoint's saved `stage` onto a CPU device and fails
+with "Unknown backend cpu" otherwise. The default device is still the GPU.
 
 Before any GPU launch, consult [`docs/environment/LAB_NODE_GPU_SPEC.md`](../../../docs/environment/LAB_NODE_GPU_SPEC.md)
 for which GPU indices exist on the target node and check live occupancy with

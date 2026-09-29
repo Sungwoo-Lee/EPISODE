@@ -78,6 +78,16 @@ def _base_cfg() -> dict:
     return cfg
 
 
+def _precision_kw() -> dict:
+    """The three manifest fields Revision 4 (R4-1) made mandatory, as the collector's
+    main() supplies them: the mode read back inside its full-float32 context, this
+    process's device kind, and a measured self-test value."""
+    import jax
+    import collect_trajectories as ct
+    return dict(matmul_precision="highest", compute_device_kind=jax.devices()[0].device_kind,
+                matmul_selftest_max_rel_err=ct.float32_matmul_selftest("highest"))
+
+
 def _random_policy(params):
     """A randomly-initialised rPPO policy of the right shape — see the module docstring
     for why the rollout tests do not restore a checkpoint."""
@@ -127,7 +137,7 @@ def collect(store_root: Path, cfg: dict, *, episodes=8, obs_precision="float16",
         ckpt_step=0, dims=dims, seed_base=seed_base, n_episodes=episodes,
         shard_episodes=shard, batch_size=batch, device="cpu",
         obs_precision=obs_precision, scene_format=scene_format,
-        scene_ambiguous=scene_ambiguous)
+        scene_ambiguous=scene_ambiguous, **_precision_kw())
 
     if (store_dir / ts.MANIFEST_NAME).exists():
         ts.assert_manifest_compatible(store_dir, manifest)
@@ -1317,7 +1327,7 @@ def test_seed_space_cliff_is_refused():
     kw = dict(cfg=cfg, params=params, run_dir=REAL_RUN, ckpt_dir=REAL_RUN / "models" / "0",
               ckpt_step=0, dims=ct.env_dims(params), shard_episodes=5000, batch_size=1024,
               device="cpu", obs_precision="float32", scene_format="entities",
-              scene_ambiguous=False)
+              scene_ambiguous=False, **_precision_kw())
     with pytest.raises(ValueError, match=r"2\*\*31"):
         ct.build_manifest(seed_base=2 ** 31 - 10, n_episodes=1000, **kw)
     with pytest.raises(ValueError, match=r"2\*\*31"):
@@ -1339,7 +1349,7 @@ def test_max_steps_beyond_int16_is_refused():
             cfg=cfg, params=params, run_dir=REAL_RUN, ckpt_dir=REAL_RUN / "models" / "0",
             ckpt_step=0, dims=ct.env_dims(params), seed_base=0, n_episodes=10,
             shard_episodes=5000, batch_size=1024, device="cpu", obs_precision="float32",
-            scene_format="entities", scene_ambiguous=False)
+            scene_format="entities", scene_ambiguous=False, **_precision_kw())
 
 
 def test_manifest_carries_training_provenance(tmp_path):
@@ -1365,7 +1375,7 @@ def test_manifest_carries_training_provenance(tmp_path):
     kw = dict(cfg=cfg, params=params, ckpt_dir=REAL_RUN / "models" / "0", ckpt_step=0,
               dims=ct.env_dims(params), seed_base=0, n_episodes=10, shard_episodes=5000,
               batch_size=1024, device="cpu", obs_precision="float32",
-              scene_format="entities", scene_ambiguous=False)
+              scene_format="entities", scene_ambiguous=False, **_precision_kw())
 
     # (a) pre-stamp run — null sentinel, and NOT an error.
     assert not (REAL_RUN / "models" / "provenance.json").exists(), (
@@ -1705,3 +1715,151 @@ def test_cw_stage_file_changing_training_raises(tmp_path):
     cfg = yaml.safe_load((run / "models" / "config.yaml").read_text())
     with pytest.raises(ValueError, match="training"):
         ct.continual_resolved_config(run, run / "models" / "500", cfg, quiet=True)
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# Revision 4 (tooling plan ALGORITHMIC_NULL_ANALYSIS_TOOLING): R4-1 store precision and
+# the R4-7 missing-world-section raise
+# ══════════════════════════════════════════════════════════════════════════════
+#
+# These run the collector's real main() end to end on a CURRENT-schema continual run (the
+# May replication, seed 42, ordinary agent) at its end-of-stage-0 checkpoint, because the
+# file's old reference run no longer loads (KNOWN_BUGS: "tests/test_trajectory_collection.py
+# is partly red"). Gitignored NAS data: they skip when the run is absent.
+
+MAY_RUN = _ROOT / "results" / "JAX_RecurrentPPO" / "20260929-153635_rppo_cw_mayrep_t1none_s42"
+
+
+def _r41_argv(out_root: Path, episodes: int = 4) -> list:
+    if not (MAY_RUN / "models" / "config.yaml").exists():
+        pytest.skip(f"{MAY_RUN} not present (gitignored NAS data)")
+    return ["--run", str(MAY_RUN), "--checkpoint", "stage_end:0", "--out-root", str(out_root),
+            "--episodes", str(episodes), "--seed-base", "1000000", "--shard-episodes",
+            str(episodes), "--batch-size", str(episodes), "--obs-precision", "float32",
+            "--device", "cpu", "--quiet"]
+
+
+def _only_store(out_root: Path) -> Path:
+    stores = [p.parent for p in out_root.glob("*/*/*/" + ts.MANIFEST_NAME)]
+    assert len(stores) == 1, stores
+    return stores[0]
+
+
+@pytest.fixture(scope="module")
+def r41_store(tmp_path_factory):
+    """One tiny store written by the collector's real main()."""
+    import collect_trajectories as ct
+    out = tmp_path_factory.mktemp("r41") / "root"
+    assert ct.main(_r41_argv(out)) == 0
+    return _only_store(out)
+
+
+def test_r41_selftest_passes_under_highest_on_this_device():
+    import collect_trajectories as ct
+    rel = ct.float32_matmul_selftest("highest")
+    assert 0.0 < rel <= ct.FLOAT32_MATMUL_MAX_REL_ERR, rel
+
+
+def test_r41_collection_writes_the_three_precision_fields(r41_store):
+    import jax
+    import collect_trajectories as ct
+    m = ts.read_manifest(r41_store)
+    assert m["matmul_precision"] == "highest"
+    assert m["compute_device_kind"] == jax.devices()[0].device_kind
+    assert 0.0 < m["matmul_selftest_max_rel_err"] <= ct.FLOAT32_MATMUL_MAX_REL_ERR
+    assert {"matmul_precision", "compute_device_kind"} <= set(ts.MANIFEST_GUARDED_FIELDS)
+    # the mode is a context, not a global: the caller does not inherit it
+    assert jax.config.jax_default_matmul_precision is None
+
+
+def test_r41_identical_resume_is_accepted(r41_store):
+    """Companion to the refusals below: an unchanged rerun is a no-op, not an error."""
+    import collect_trajectories as ct
+    before = _snapshot(r41_store)
+    assert ct.main(_r41_argv(r41_store.parents[2])) == 0
+    assert _snapshot(r41_store) == before
+
+
+@pytest.mark.parametrize("case", ["mode_changed", "card_changed", "legacy_no_fields"])
+def test_r41_resume_across_mode_or_card_is_refused_and_writes_nothing(
+        tmp_path, r41_store, case):
+    import shutil
+    import collect_trajectories as ct
+    out = tmp_path / "root"
+    shutil.copytree(r41_store.parents[2], out)
+    store = _only_store(out)
+    mp = store / ts.MANIFEST_NAME
+    m = json.loads(mp.read_text())
+    if case == "mode_changed":
+        m["matmul_precision"] = "default"
+    elif case == "card_changed":
+        m["compute_device_kind"] = "NVIDIA GeForce RTX 2080 Ti"
+    else:
+        for k in ("matmul_precision", "compute_device_kind", "matmul_selftest_max_rel_err"):
+            m.pop(k)
+    mp.write_text(json.dumps(m, indent=2, sort_keys=True))
+    # a missing block, so a resume that got through WOULD write something
+    for p in store.glob("*.parquet"):
+        p.unlink()
+    before = _snapshot(store)
+    with pytest.raises(ValueError, match="Manifest mismatch|required key"):
+        ct.main(_r41_argv(out))
+    assert _snapshot(store) == before, "a refused resume must modify NO file"
+
+
+def test_r41_planted_selftest_failure_aborts_before_any_store_dir(tmp_path, monkeypatch):
+    """The self-test can fail: 1e-4 relative noise on the product (TF32-sized) makes main()
+    raise before any store directory exists."""
+    import collect_trajectories as ct
+    real = ct._matmul_product
+    rng = np.random.default_rng(1)
+
+    def noisy(a, b):
+        c = real(a, b)
+        return c * (1.0 + 1e-4 * rng.standard_normal(c.shape).astype(np.float32))
+
+    monkeypatch.setattr(ct, "_matmul_product", noisy)
+    assert ct.float32_matmul_selftest("highest") > ct.FLOAT32_MATMUL_MAX_REL_ERR
+    out = tmp_path / "root"
+    with pytest.raises(RuntimeError, match="self-test failed"):
+        ct.main(_r41_argv(out))
+    assert not out.exists(), "the self-test must fire before anything is created on disk"
+
+
+def test_r41_build_manifest_refuses_a_non_highest_mode():
+    import collect_trajectories as ct
+    from src.environment.config_loader import load_env_params
+    if not (MAY_RUN / "models" / "config.yaml").exists():
+        pytest.skip(f"{MAY_RUN} not present (gitignored NAS data)")
+    cfg = yaml.safe_load((MAY_RUN / "models" / "config.yaml").read_text())
+    params = load_env_params(Config(copy.deepcopy(cfg)))
+    kw = dict(cfg=cfg, params=params, run_dir=MAY_RUN, ckpt_dir=MAY_RUN / "models" / "0",
+              ckpt_step=0, dims=ct.env_dims(params), seed_base=0, n_episodes=10,
+              shard_episodes=5000, batch_size=1024, device="cpu", obs_precision="float32",
+              scene_format="entities", scene_ambiguous=False,
+              compute_device_kind="cpu", matmul_selftest_max_rel_err=1e-6)
+    with pytest.raises(ValueError, match="matmul_precision"):
+        ct.build_manifest(matmul_precision="default", **kw)
+    with pytest.raises(ValueError, match="FLOAT32_MATMUL_MAX_REL_ERR"):
+        ct.build_manifest(matmul_precision="highest",
+                          **dict(kw, matmul_selftest_max_rel_err=2e-4))
+    assert ct.build_manifest(matmul_precision="highest", **kw)["matmul_precision"] == "highest"
+
+
+def test_r47_stage_file_missing_a_world_section_raises(tmp_path):
+    """R4-7: a world section in config.yaml but absent from the stage file used to be
+    silently deleted (recording a different world than the one trained); now it raises,
+    naming the section and the stage file."""
+    import collect_trajectories as ct
+    run = _cw_run(tmp_path, _CW_A)
+    models = run / "models"
+    for name in ("config.yaml", "stage_00_01_active.yaml", "stage_02_03_active.yaml"):
+        c = yaml.safe_load((models / name).read_text())
+        c["thermal"] = {"enabled": True}
+        (models / name).write_text(yaml.safe_dump(c))
+    cfg = yaml.safe_load((models / "config.yaml").read_text())
+    # companion: a stage file carrying every section resolves
+    resolved, _ = ct.continual_resolved_config(run, models / "200", cfg, quiet=True)
+    assert resolved["thermal"] == {"enabled": True}
+    with pytest.raises(ValueError, match=r"'thermal'.*stage_01_02_passive\.yaml"):
+        ct.continual_resolved_config(run, models / "500", cfg, quiet=True)

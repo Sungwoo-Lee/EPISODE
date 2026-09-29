@@ -73,6 +73,68 @@ DEFAULT_SHARD_EPISODES = 5000
 DEFAULT_BATCH_SIZE = {"cpu": 1024, "gpu": 8192}
 
 
+# ── Matmul precision (tooling plan ALGORITHMIC_NULL_ANALYSIS_TOOLING, Revision 4, R4-1) ──
+#
+# A recorded episode replays exactly only in the arithmetic mode it was recorded in, and
+# JAX's DEFAULT float32 matmul on an Ampere/Ada GPU (RTX 3090 / 4090 / 6000 Ada) is TF32
+# (10-bit mantissa inputs), while a Turing GPU or the CPU computes full float32. So every
+# collection runs under `jax.default_matmul_precision("highest")` (full float32 on every
+# device), checked at start-up by `float32_matmul_selftest`, and the manifest records the
+# mode, the card model and the measured self-test value. There is deliberately NO CLI
+# flag: the mode is not a choice, and a flag would be a second route back to TF32.
+#
+# Basis of the tolerance (a tool guard, not a study parameter): the self-test's relative
+# error, max|C - C64| / max|C64| for a 256x512 . 512x256 product, is ~1e-7 for float32
+# accumulation on a GPU and ~1e-4 to 1e-3 under TF32. Measured on 2026-09-30 (plan-reviewer,
+# Revision 4 review): RTX 4090 `highest` 1.32e-7, `default` 2.63e-4; CPU `highest` =
+# `default` 9.13e-7 (the CPU reference value). 1e-5 is ~26x below TF32, ~76x above GPU
+# float32, and ~11x above CPU float32. The RTX 3090 values are in Checkpoint R4.1 of the plan.
+FLOAT32_MATMUL_MAX_REL_ERR = 1e-5
+COLLECTION_MATMUL_PRECISION = "highest"
+
+
+def _matmul_product(a: np.ndarray, b: np.ndarray) -> np.ndarray:
+    """One jitted float32 `jnp.dot` on JAX's default device, traced under whatever
+    `jax.default_matmul_precision` is in force. A fresh function object per call, so no
+    jit-cache entry traced under another mode is reused. (A test monkeypatches this seam to
+    plant a failure.)"""
+    import jax
+    import jax.numpy as jnp
+    return np.asarray(jax.jit(lambda x, y: jnp.dot(x, y))(a, b))
+
+
+def float32_matmul_selftest(precision: str) -> float:
+    """Relative error of a float32 matmul under `precision`, against numpy float64.
+
+    Returns max|C - C64| / max|C64| for fixed 256x512 and 512x256 float32 matrices, uniform
+    in [-1, 1] from `np.random.default_rng(0)`. Compare with FLOAT32_MATMUL_MAX_REL_ERR:
+    full float32 lands ~1e-7, TF32 ~1e-4.
+    """
+    import jax
+    rng = np.random.default_rng(0)
+    a = rng.uniform(-1.0, 1.0, (256, 512)).astype(np.float32)
+    b = rng.uniform(-1.0, 1.0, (512, 256)).astype(np.float32)
+    ref = a.astype(np.float64) @ b.astype(np.float64)
+    with jax.default_matmul_precision(precision):
+        c = _matmul_product(a, b)
+    return float(np.max(np.abs(np.asarray(c, dtype=np.float64) - ref)) / np.max(np.abs(ref)))
+
+
+def assert_float32_matmul(precision: str = COLLECTION_MATMUL_PRECISION) -> float:
+    """Run the self-test and raise RuntimeError, naming the device, above the tolerance."""
+    import jax
+    rel = float32_matmul_selftest(precision)
+    if not rel <= FLOAT32_MATMUL_MAX_REL_ERR:
+        d = jax.devices()[0]
+        raise RuntimeError(
+            f"float32 matmul self-test failed on {d.platform}:{d.device_kind}: relative error "
+            f"{rel:.3e} under jax.default_matmul_precision({precision!r}) exceeds "
+            f"FLOAT32_MATMUL_MAX_REL_ERR = {FLOAT32_MATMUL_MAX_REL_ERR:.0e}. This device is "
+            "not multiplying in full float32 (TF32?), so a store recorded here would not "
+            "replay exactly. Nothing has been written.")
+    return rel
+
+
 # ── Provenance ────────────────────────────────────────────────────────────────
 
 def _git_sha() -> str:
@@ -296,7 +358,12 @@ def continual_resolved_config(run_dir: Path, ckpt_dir: Path, base_cfg: dict,
         if sec in stage_cfg:
             out[sec] = copy.deepcopy(stage_cfg[sec])
         elif sec in out:
-            del out[sec]
+            # Revision 4, R4-7: deleting the section would record a different world than
+            # the one trained (the trainer does not drop a section a stage file omits).
+            raise ValueError(
+                f"World section {sec!r} is present in {models / 'config.yaml'} but absent "
+                f"from the stage file {stage_path}. Refusing to guess which world this "
+                f"stage trained in.")
     other = sorted(k for k in set(base_cfg) | set(stage_cfg)
                    if k not in WORLD_SECTIONS and k not in STAGE_FILE_EXEMPT
                    and base_cfg.get(k) != stage_cfg.get(k))
@@ -518,9 +585,23 @@ def build_manifest(*, cfg, params, run_dir: Path, ckpt_dir: Path, ckpt_step: int
                    dims: dict, seed_base: int, n_episodes: int, shard_episodes: int,
                    batch_size: int, device: str, obs_precision: str,
                    scene_format: str, scene_ambiguous: bool,
+                   matmul_precision: str, compute_device_kind: str,
+                   matmul_selftest_max_rel_err: float,
                    restore_check: str = "strict",
                    pre_v31_sensor_keys: list | None = None) -> dict:
     """Everything a future reader needs and cannot recover from the shards."""
+    # Revision 4, R4-1: `matmul_precision` is the value READ BACK from JAX's config inside
+    # main()'s context, not a typed literal; anything but "highest" is a bug in the caller.
+    if matmul_precision != COLLECTION_MATMUL_PRECISION:
+        raise ValueError(
+            f"matmul_precision = {matmul_precision!r}; a store is only ever collected under "
+            f"{COLLECTION_MATMUL_PRECISION!r} (full float32). See FLOAT32_MATMUL_MAX_REL_ERR.")
+    if not compute_device_kind:
+        raise ValueError("compute_device_kind is required (jax.devices()[0].device_kind)")
+    if not float(matmul_selftest_max_rel_err) <= FLOAT32_MATMUL_MAX_REL_ERR:
+        raise ValueError(
+            f"matmul_selftest_max_rel_err = {matmul_selftest_max_rel_err!r} exceeds "
+            f"FLOAT32_MATMUL_MAX_REL_ERR = {FLOAT32_MATMUL_MAX_REL_ERR:.0e}")
     # int16 columns (`t`, `rest_streak`, `res_cons_count`, and the animal/resource timers)
     # are written with `astype`, which WRAPS silently rather than raising.  max_steps is
     # the quantity that bounds all of them.
@@ -565,6 +646,10 @@ def build_manifest(*, cfg, params, run_dir: Path, ckpt_dir: Path, ckpt_step: int
         "shard_episodes": int(shard_episodes),
         "batch_size": int(batch_size),
         "device": device,
+        # Revision 4, R4-1: the arithmetic the store was recorded in (both guarded on resume).
+        "matmul_precision": matmul_precision,
+        "compute_device_kind": str(compute_device_kind),
+        "matmul_selftest_max_rel_err": float(matmul_selftest_max_rel_err),
         "policy_mode": "deterministic_argmax",
         "obs_precision": obs_precision,
         "collection_git_sha": _git_sha(),
@@ -858,7 +943,25 @@ def parse_args(argv=None):
 
 
 def main(argv=None) -> int:
+    """Parse, then run the WHOLE collection under full-float32 matmuls (Revision 4, R4-1).
+
+    A context rather than a global `jax.config.update`, so an in-process caller (a test)
+    does not inherit the mode. The self-test is the first thing inside it: a device that
+    does not multiply in full float32 aborts before any store directory exists."""
     args = parse_args(argv)
+    import jax
+    with jax.default_matmul_precision(COLLECTION_MATMUL_PRECISION):
+        rel = assert_float32_matmul(COLLECTION_MATMUL_PRECISION)
+        mode = jax.config.jax_default_matmul_precision
+        if mode != COLLECTION_MATMUL_PRECISION:
+            raise RuntimeError(f"jax_default_matmul_precision reads back {mode!r} inside the "
+                               f"{COLLECTION_MATMUL_PRECISION!r} context")
+        return _collect(args, matmul_precision=mode,
+                        compute_device_kind=jax.devices()[0].device_kind, selftest_rel=rel)
+
+
+def _collect(args, *, matmul_precision: str, compute_device_kind: str,
+             selftest_rel: float) -> int:
     run_dir = args.run.resolve()
 
     ckpt_dir, ckpt_step = resolve_checkpoint(run_dir, args.checkpoint)
@@ -934,6 +1037,8 @@ def main(argv=None) -> int:
         obs_precision=args.obs_precision, scene_format=scene_format,
         scene_ambiguous=scene_ambiguous,
         restore_check="weak_allowed" if args.allow_weak_restore_check else "strict",
+        matmul_precision=matmul_precision, compute_device_kind=compute_device_kind,
+        matmul_selftest_max_rel_err=selftest_rel,
     )
 
     if (store_dir / ts.MANIFEST_NAME).exists():
@@ -960,8 +1065,9 @@ def main(argv=None) -> int:
     todo = [b for b in range(lo, hi) if b not in done_blocks]
     if not args.quiet:
         print(f"[collect] store={store_dir}\n[collect] blocks {lo}:{hi} — "
-              f"{len(todo)} to do, {len(set(range(lo, hi)) & done_blocks)} already complete",
-              flush=True)
+              f"{len(todo)} to do, {len(set(range(lo, hi)) & done_blocks)} already complete\n"
+              f"[collect] matmul_precision={matmul_precision} device_kind={compute_device_kind} "
+              f"selftest_rel_err={selftest_rel:.3e}", flush=True)
 
     t_start = time.time()
     n_done = 0

@@ -92,7 +92,7 @@ def load_spec(path: Path) -> dict:
         raise ValueError(f"device must be 'cpu' or 'gpu', got {device!r}")
     # The two knobs move in OPPOSITE directions and must be set together (plan §D7);
     # derive both from `device` unless both are given explicitly.
-    # NOTE (device: gpu limitation): the worker exports JAX_PLATFORMS=cuda but sets no
+    # NOTE (device: gpu limitation): the worker exports JAX_PLATFORMS=cuda,cpu but sets no
     # CUDA_VISIBLE_DEVICES, so every GPU worker lands on GPU 0 and the spec has no way to
     # name an index. Multi-GPU fan-out does NOT work today. Only reachable with
     # `device: gpu`; the default is cpu. Consult docs/environment/LAB_NODE_GPU_SPEC.md

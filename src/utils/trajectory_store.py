@@ -472,6 +472,15 @@ MANIFEST_GUARDED_FIELDS = (
     # --allow-weak-restore-check).  Guarded so a store cannot be half one and half the
     # other, and recorded so a reader can see which regime produced it.
     "restore_check",
+    # The matmul arithmetic and the card model (tooling plan
+    # ALGORITHMIC_NULL_ANALYSIS_TOOLING, Revision 4, R4-1). An episode replays exactly only
+    # in the arithmetic it was recorded in (TF32 vs full float32 flips argmax at small logit
+    # margins), and two card models may reduce in a different order, so a store must not mix
+    # either across resumed workers. A store written before these fields existed lacks them
+    # and is refused on resume by `_req` — deliberately: mixing an unrecorded mode with
+    # full float32 is exactly the hazard.
+    "matmul_precision",
+    "compute_device_kind",
 )
 
 

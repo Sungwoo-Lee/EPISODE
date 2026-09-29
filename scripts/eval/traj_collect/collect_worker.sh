@@ -49,7 +49,13 @@ runcollect() {
   # GPU 0. Multi-GPU fan-out does NOT work today. Only reachable with `device: gpu`; the
   # default is cpu. Consult docs/environment/LAB_NODE_GPU_SPEC.md before using it.
   if [ "$device" = "gpu" ]; then
-    export JAX_PLATFORMS=cuda XLA_PYTHON_CLIENT_PREALLOCATE=false
+    # `cuda,cpu`, not `cuda`: a continual run's checkpoint selector reads each checkpoint's
+    # saved `stage` onto a CPU device (continual_forgetting_matrix.read_saved_stage), which
+    # raises "Unknown backend cpu" when only cuda is exposed (found 2026-09-30, Checkpoint
+    # R4.1 of ALGORITHMIC_NULL_ANALYSIS_TOOLING). JAX's default device is still the GPU.
+    # No NVIDIA_TF32_OVERRIDE: measured on an RTX 3090 it does not change XLA's matmul mode
+    # (the collector forces full float32 itself and checks it with a start-up self-test).
+    export JAX_PLATFORMS=cuda,cpu XLA_PYTHON_CLIENT_PREALLOCATE=false
     unset XLA_FLAGS
   else
     export JAX_PLATFORMS=cpu
