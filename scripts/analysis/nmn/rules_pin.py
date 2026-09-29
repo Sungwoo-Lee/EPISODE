@@ -82,6 +82,15 @@ def param(parameters: dict, dotted: str):
     return node
 
 
+def require_clean(pinned: PinnedRules) -> None:
+    """Raise when the rules file has uncommitted changes (or git could not be read: `load`
+    then sets dirty=True, so this fails closed). Drivers call it whenever the status allows
+    verdict words (tooling plan Revision 4, R4-3)."""
+    if pinned.dirty:
+        raise ValueError(f"rules file {pinned.path} has uncommitted changes (or git could not "
+                         f"be read); a status that allows verdict words needs the committed rules")
+
+
 def evidence_policy(pinned: PinnedRules, status: str) -> dict:
     """`evidence_status.<status>` from the rules. Valid statuses are exactly the keys the
     rules define (tooling plan Revision 3, T3); anything else raises."""
