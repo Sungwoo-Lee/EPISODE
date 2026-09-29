@@ -9,7 +9,7 @@ aliases: [thirst_water_plan]
 
 # Water and thirst: a fixed pond per episode and a two-sided hydration axis
 
-> **Status**: DRAFT (plan only; nothing here is built). Frontmatter says `active` because the develop-index validator accepts only `active` / `superseded` / `archive`, and `draft` would fail it. The same goes for the folder: `thirst` is not a registered topic, so the doc is filed under `env_entities`. Adding a topic means editing `scripts/claude/regen_dev_index.py`, which this plan may not do.
+> **Status**: DRAFT, Revision 1 (plan only; nothing here is built). Revision 1 answers the plan-reviewer and math-reviewer blocks at the end of this file. Frontmatter says `active` because the develop-index validator accepts only `active` / `superseded` / `archive`, and `draft` would fail it. The same goes for the folder: `thirst` is not a registered topic, so the doc is filed under `env_entities`. Adding a topic means editing `scripts/claude/regen_dev_index.py`, which this plan may not do.
 > **Opened**: 2026-09-29
 > **Related**: [[thermal_implementation_plan]] (method template: staged, byte-parity first) · [[warming_cooling_rate_scales]] (target-first calibration template) · [[STATE_DEPENDENT_BODY_MECHANICS]] (the parity-fixture and saved-config-compat pattern reused here) · [[BUSH_FIRE_CLEARANCE]] (placement post-pass pattern) · [[RENDERER_LAYOUT_REDESIGN]] (owner of the episode-video dashboard) · [[SAVED_RUN_CONFIG_COMPAT]] · Known Bugs registry: `docs/develop/active/issues/KNOWN_BUGS.md` (rows cited in §A11)
 > **Decision record**: user alignment session 2026-09-29, `tmp/20260929_173459_thirst_alignment.md` (gitignored; its decisions table is copied verbatim below)
@@ -153,6 +153,8 @@ Consumers of the codes, found by grep:
 | `src/utils/trajectory_store.py:140-175` | column docstrings list codes 1–5 | text only |
 | `check_env.py:35-36` | printed legend | text only |
 | `scripts/eval/eval_rollout.py:121, 273, 471` | stores the integer per episode | none: 6/7 flow through as integers |
+| `scripts/analysis/ladder/lad03_how_it_ends.py` | hard-codes three outcomes (step limit, starved, predator); registry row ~#116 already notes that it never checks its shares sum to 1 | **out of scope, noted.** Any level-06 or level-07 run read through it silently drops codes 6/7 from the shares. Ask `bug-curator` to extend row ~#116 |
+| `scripts/analysis/studies/context_exploration/part4_readout.py:440` | reads `Term_Starvation / Term_Injury / Term_Thermal` columns only | **out of scope, noted.** It will not show thirst deaths |
 | `src/utils/eval_recording.py::_snapshot_state` | recordings store **state snapshots only; no termination reason** | add `hydration` / `water_pos` snapshot fields. A recording's cause of death is derivable from the snapshot (`hydration` at 0 or max on the final frame). Adding a stored reason is out of scope; see Open items |
 
 **Registry row ~#494** (the termination reason is unreliable when a body system is switched off: the injury code fires even with injury disabled) is the latent class to avoid. Codes 6 and 7 are stamped **only** inside the water gate, from the returned predicates. A water-off world has no hydration at all (`state.hydration is None`, §D2), so it cannot stamp them, and §T3 asserts over real rollouts of levels 00–05 that no reason outside `{0…5}` ever appears.
@@ -202,7 +204,7 @@ Grep over the tree, excluding gitignored data directories:
 | `docs/experiments/active/basic_levels_q2_default/BASIC_LEVELS_Q2_DEFAULT.md:82` | obs-width table row | append a dated note row for 06 (59) and 07 (59); do not rewrite the historical row |
 | `docs/develop/active/refactors/RENDERER_LAYOUT_REDESIGN.md`, `docs/develop/active/thermal/WARMING_COOLING_RATE_SCALES.md`, `docs/develop/active/issues/diag_fable5_20260704/fix_plan_h1h2h3_resume_config.md`, `docs/experiments/active/behavior_measures/thermal_probe_battery_bush_hiding.md`, `docs/reviews/…`, `docs/llm_wiki/…`, `docs/develop/active/meta/code_graph_benchmark/…`, `configs/…/archive/…` | historical | **untouched** |
 
-**A naming hazard the rename creates.** Analysis scripts label past runs of the noise world as `lvl06`, for example `scripts/analysis/studies/modulator_clues/_inj.py:15-20` and `scripts/analysis/studies/injury_dependence/run_manipulations.py:42-48`. Those labels are tied to run IDs trained on the **old** level 06, and renaming them would falsify history, so they stay. From this change on, "level 06" means the pond world in configs and the noise world in those scripts. The plan requires a one-line entry in the critical-settings change log (§D7) naming this, so an analyst reading `lvl06` checks the run date.
+**A naming hazard the rename creates.** Analysis scripts label past runs of the noise world as `lvl06`, for example `scripts/analysis/studies/modulator_clues/_inj.py:15-20` and `scripts/analysis/studies/injury_dependence/run_manipulations.py:42-48`. Those labels are tied to run IDs trained on the **old** level 06, and renaming them would falsify history, so they stay. Two more text labels go stale the same way and also stay: `scripts/analysis/nmn/run_mod_distribution.py:145` ("ON at basic level 06") and `scripts/analysis/studies/internal_state_reward/f04_thermal_scale.py:59` ("only basic/05 and basic/06 switch the temperature system on"; 07 now does too). From this change on, "level 06" means the pond world in configs and the noise world in those scripts. The plan requires a one-line entry in the critical-settings change log (§D7) naming this, so an analyst reading `lvl06` checks the run date.
 
 ### A11. Known-bug rows this plan relies on (from `docs/develop/active/issues/KNOWN_BUGS.md`)
 
@@ -247,16 +249,16 @@ Grep over the tree, excluding gitignored data directories:
 
 | Clock | What kills | Rate | Steps setpoint → death | Arithmetic | Share of 500-step cap |
 |---|---|---|---|---|---|
-| Food | starvation, `N <= 0` | −1.0 / step (`body.metabolic_cost`) | **100** | 100 / 1.0 | 20 % → ≥ 5 feeding trips per full episode |
-| Cold | body temp < −15 away from a fire | shipped cooling 0.25× | **~92** (alignment note). The thermal calibration measured 74–127 across the per-episode world baseline range (`WARMING_COOLING_RATE_SCALES.md` §D14) | quoted, not re-derived here | ~18 % |
-| **Water** | dehydration, `W <= 0` | **−0.625 / step** | **160** | 100 / 0.625 | 32 % → ≥ 3 drinking trips per full episode |
+| Food | starvation, `N <= 0` | −1.0 / step (`body.metabolic_cost`) | **100** | 100 / 1.0 | 20 %. Each eaten item nets +5 (gain 6 − eating cost 1), so refilling 100 steps of clock is ~20 items and a full 500-step episode ~80 items |
+| Cold | body temp < −15 away from a fire | shipped: world −31..−29, `k_loss` 0.02, warming 2.0 / cooling 0.25 | **~92**: the midpoint of **86–99**, measured on 600 real resets at shipped values (`CONFIG_CRITICAL_SETTINGS.md` change log, 2026-09-19) | quoted, not re-derived here | ~18 % |
+| **Water** | dehydration, `W <= 0` | **−0.625 / step** | **160** | 100 / 0.625 | 32 %. **At least one pond visit per episode is unavoidable**, and one well-timed visit can cover a whole episode: walk 153 steps, drink 39 (to 199.375), walk 318 = 510 steps. A cautious agent needs two |
 | Water, upper end | over-drinking, `W >= 200`, standing on the pond | **+5.0 / step net** | **20** | (200 − 100) / (5.625 − 0.625) | — |
 | Refill 50 → 100 | on the pond | +5.0 net | 10 | 50 / 5 | — |
 | Refill 25 → 100 | on the pond | +5.0 net | 15 | 75 / 5 | — |
 
-Water is the slowest clock (decision 8). It is still short enough that a 500-step episode needs at least three pond visits, so the pond cannot be ignored.
+Water is the slowest clock (decision 8). It is still short enough that every full episode needs at least one pond visit, and a refill from near-empty to near-full takes about 39 steps standing on the pond. So the pond cannot be ignored, and filling up means a long, exposed stay.
 
-**Random start hydration** (mirroring level 03's nutrition draw of `[0, 200]`): level 06 turns it on over the full reachable span `[0, 200]`. About a quarter of episodes then start within 50 units of an end. One that starts at 195 and walks onto the pond dies on its first step there, which is the same property the nutrition draw already has. This is a call; see "Calls".
+**Random start hydration** (mirroring level 03's nutrition draw of `[0, 200]`): level 06 turns it on over the full reachable span `[0, 200]`. **Half** of episodes then start within 50 units of an end, and a quarter within 25. One that starts at 195 and walks onto the pond dies on its first step there, which is the same property the nutrition draw already has. **Policy-independent early deaths:** with drain 0.625, a fraction `0.625·k/200` of episodes is dead of thirst by step k whatever the agent does. That is about **5 % by step 16** and about 16 % by step 50, before a pond can plausibly be reached. Level 03's nutrition draw has the same property at `1.0·k/200`. Survival steps is the project's metric, so this is surfaced as a user call below. This is a call; see "Calls".
 
 ---
 
@@ -300,7 +302,7 @@ step:  respawn: if on pond ─► first non-pond in-area cell of permutation(fol
 | `water.hydration_setpoint` | `100.0` | inherited | enabled | `0 <= setpoint <= max` (same guard as nutrition, `config_loader.py:~2510-2530`) |
 | `water.start_hydration` | `100.0` | inherited | enabled **and** `random_start_hydration` false | `0 < start < max` (a start at either end is dead on arrival) |
 | `water.random_start_hydration` | `false` | `true` | enabled | bool |
-| `water.start_hydration_low` / `water.start_hydration_high` | `0.0` / `200.0` | `0.0` / `200.0` | enabled **and** random flag true | `0 <= low <= high <= max` |
+| `water.start_hydration_low` / `water.start_hydration_high` | `0.0` / `200.0` | `0.0` / `200.0` | enabled **and** random flag true | `0 <= low <= high <= max`. **The random draw may land exactly on the floor.** `jax.random.uniform` samples `[low, high)`, so `low = 0.0` can give 0.0, which dies on step 1 with reason 6, while a fixed `start_hydration` of 0 is refused. This mirrors `start_nutrition_low: 0` and is accepted; set `low > 0` if a step-1 death is unwanted |
 | `water.drain_per_step` | `0.625` | inherited | enabled | ≥ 0 |
 | `water.drink_gain_per_step` | `5.625` | inherited | enabled | ≥ 0 |
 | `water.properties` | `[0.5, 0.0, 0.0, 0.0, 0.5]` | inherited | enabled | length == `sensory.vector_size`, each in `[0, 1]`. Spelled `properties` like entities, never `property` (the env-config-reviewer's known `property` vs `properties` trap) |
@@ -374,8 +376,9 @@ Water-off sentinels: `False, 0, 0, (), 0.0, 0.0, 0.0, False, 0.0, 0.0, 0.0, 0.0,
    - `EnvState(..., hydration=jnp.float32(hydration0), water_pos=water_pos)`. Water-off: the two fields are not passed, so they stay `None`.
 6. **`jax_step`**:
    - respawn (after `res_pos_after_reg`, under the gate): for respawned slots whose new cell is a pond cell, replace it with the first in-area non-pond cell of a per-slot permutation drawn from `fold_in(respawn_key, _WATER_RESPAWN_KEY)`, vmapped over slots (split that fold-in key `num_res` ways; it is a new stream, so this is not a widening). This excludes pond cells only; it adds no general occupancy check, which is pre-existing behaviour and out of scope.
+   - **Named fallback if the per-slot permutations cost too much (§S).** Draw **one** permutation of `H·W` per step from the same fold-in key. The k-th respawning slot that needs a repair (ranked by slot index with a cumulative sum over the "needs repair" mask) takes the k-th cell of that permutation that is in its area and off the pond. At level 06 every resource shares one full-grid area, so "k-th valid cell" is a single `cumsum` over the permutation. Where areas differ, the loader refuses the fallback with a named error. Both variants live under the static water gate, so the water-off graph is untouched either way. The developer implements the per-slot version first and switches only if §S measures level 06 more than 5 % slower than level 05 with the respawn repair as the dominant cost (profile it to show that).
    - `info['drank'] = jnp.any(jnp.all(state.water_pos == new_agent_pos, axis=-1))`, under the gate.
-   - `update_body` returns an **11th element** `water_out`: `None` when off; `(new_hydration, dehydrated, overdrank)` when on. Callers that index 0–9 are unaffected (the "append, never insert" rule from `starved`).
+   - `update_body` returns an **11th element** `water_out`: `None` when off; `(new_hydration, dehydrated, overdrank)` when on. **Extend the ten-name unpack at `core.py:~1099`** (`new_satiation, …, done, starved = update_body(...)`) **to eleven names** (`…, done, starved, water_out`). That unpack is the one production caller, and leaving it at ten raises `ValueError: too many values to unpack` on every world. The test and script callers index or slice the tuple (`test_body_mechanics_units.py:139/428`, `test_thermal_rate_scales.py:192/218`, `scripts/analysis/studies/internal_state_interactions/validate.py:121` uses `out[:9]`), so they are unaffected. This follows the "append, never insert" rule set by `starved`.
    - reason chain: after `if params.thermal_enabled: reason = where(thermal_death, 5, reason)`, add `if params.water_enabled: reason = where(dehydrated, 6, reason); reason = where(overdrank, 7, reason)`.
    - drive: pass `hydration=state.hydration` / `hydration=new_hydration` **only** under the gate (a separate call form, so the off path's call is textually today's).
    - `info['drive_thirst'] = ((W'/range_W) − (W_set/range_W))**2` under the gate (divide-first, A1).
@@ -397,7 +400,7 @@ TERMINATION_REASONS = ((1, "MaxSteps"), (2, "Starvation"), (3, "Overeating"),
                        (4, "Injury"), (5, "Thermal"), (6, "Dehydration"), (7, "Overdrinking"))
 ```
 
-`episode_finalise_episode` and `episode_wandb_keys` are built from it (the key count goes 21 → 23; update the module docstring). `train.py` (4 sites), `dreamer_srl_main.py` (1 site) and `balance_metrics._DEATH_CAUSES` (codes ≥ 2) import it and stop carrying literals. On water-off runs this logs two always-zero keys, the same as `Term_Thermal` does on thermal-off runs today.
+`episode_finalise_episode` and `episode_wandb_keys` are built from it (the key count goes 21 → 23; update the module docstring). The module-level `_TERM_*` constants (`episode_metrics.py:40-45`) and the one-hot lines at `:234-238` are **derived from `TERMINATION_REASONS`** (or deleted), so that they do not become a sixth copy. `train.py` (4 sites), `dreamer_srl_main.py` (1 site) and `balance_metrics._DEATH_CAUSES` (codes ≥ 2) import it and stop carrying literals. On water-off runs this logs two always-zero keys, the same as `Term_Thermal` does on thermal-off runs today.
 
 ### D7. Configs
 
@@ -505,9 +508,11 @@ After each commit, the gate is **no module worse than its T0 line**, except the 
 - Imports the generator (`sys.path` insert, as `test_body_mechanics_parity.py` does). A missing fixture or config **fails**, never skips (the lesson in wiki `20260909_1402_parity_gates_green_without_comparing`).
 - For `default.yaml` and levels 00–05, replay the fixture's seeds and assert **byte-identical**: every pre-existing state leaf, `obs` clean and noisy, reward, done, `termination_reason`, every pre-existing `info` key, **and the three jaxpr SHAs**.
 - Also assert that `state.hydration is None`, `state.water_pos is None` and that `info` has no `drank` / `drive_thirst` keys.
-- **Case "old noise world"**: the new 07 loaded through `load_env_config` with `water.enabled` forced to `false` **in memory** must equal the fixture's pre-change `06-sensory_noise` rollouts byte for byte. This is the proof that the ladder rewire changed nothing except water. One exception is allowed: the display-only `olfactory_channel_names`, which never reaches `EnvParams`, so the comparison is unaffected.
+- **Case "old noise world"**: the new 07 loaded through `load_env_config` with `water.enabled` forced to `false` **in memory** must equal the fixture's pre-change `06-sensory_noise` rollouts byte for byte. This is the proof that the ladder rewire changed nothing except water. The display-only `olfactory_channel_names` differ, but they never reach `EnvParams` (grep: only `eval_recording.py` reads them), so the comparison is unaffected.
+  - **What this case asserts: rollouts AND the three jaxpr SHAs.** At 07 the noise modality list gains `Hydration` (13 entries instead of 12) and `noise_modes[12]` becomes 1 instead of the pad 0. `noise_modality_order` is static and unused by `jax_step` / `jax_reset` / `update_body`; `noise_modes` is a traced input of unchanged shape. So both rollouts and SHAs are expected equal.
+  - If the rollouts match but a SHA differs, record it in the Implementation Report as a **finding**, with the jaxpr diff. Do not re-baseline, and do not treat it as a parity break of the rollouts.
 - **Contrast half** (this is what fails on pre-change code): the same world with `water.enabled: true` must change the rollout **and** the `jax_step` / `jax_reset` / `update_body` jaxprs.
-- **Coverage assert**: the fixture must contain at least one death of each kind those worlds can produce (starvation, injury, thermal, over-eating if reached), so parity covers terminal steps. The generator reports coverage, and the test fails if a kind is missing when the pre-change world produces it.
+- **Coverage assert, with the expected sets hard-coded in the test** (not derived from the fixture, which would be circular): levels 00–04 and `default.yaml` must contain termination codes `{1, 2, 4}`; level 05 and the pre-change noise world `{1, 2, 4, 5}`. Code 3 (over-eating) is added to a world's set only if the C1 count table shows it. The generator writes a per-world, per-code count table into the fixture README. **If a required code is absent at C1, extend seeds or steps before freezing the fixture.** Never shrink the expected set to fit the data.
 - The existing gates `test_body_mechanics_parity.py`, `test_bush_fire_clearance.py`, `test_thermal_parity.py`, `test_thermal_reward_gate.py`, `test_metabolic_coupling.py`, `test_thermal_rate_scales.py`, `test_visual_parity.py`, `test_unified_parity.py`, `test_extero_noc_parity.py`, `test_two_sided_nutrition.py` and `test_directional_sensors.py` must stay green **with zero fixture edits**. They read fixtures captured before this plan, so they are independent evidence.
 
 ### T2. Placement — `tests/env/test_water_placement.py` (new)
@@ -519,7 +524,7 @@ Each case uses real `jax_reset` / `jax_step` outputs, never a re-derivation thro
   - `water_pos` equals one candidate's block every time;
   - candidate frequencies pass a chi-square uniformity test at p > 0.001 (the draw is uniform);
   - **no active resource, animal or obstacle occupies a pond cell**;
-  - every active entity lies inside its own spawn area (the #117 guard, which also catches a (0,0) fallback);
+  - every active entity lies inside its own spawn area. **This assertion, not the load-time capacity check, is the guard against the (0,0) fallback (~#117) for campfires**: the capacity check ignores `min_fire_separation: 4`, and three separated fires in a 36-cell area, one corner of which a pond can take, is exactly where the fallback could fire;
   - the agent is never on a pond cell at reset.
 - **Random mode, 2,000 resets**: every top-left lies inside the margin, and the empirical support equals the analytically enumerated set.
 - **Center mode**: `water_pos` is identical across seeds.
@@ -545,14 +550,14 @@ Each case uses real `jax_reset` / `jax_step` outputs, never a re-derivation thro
 
 - Level 06 breakdown order equals `[Satiation, Body Temperature, Hydration, Interoceptive Nociception, Extero Nociception, Thermoception, Olfaction, Collision, Proprioception, Visual]`, total 59. `get_observation` does not raise.
 - The Hydration column equals `state.hydration / 200` on real steps (clean obs).
-- **Noise uses the hydration slot**: level 06 with noise enabled in memory and hydration `sigma: 0.5, mode: constant`, 2,000 steps. The sample std of the (unclipped-region) noise on that column is within 10 % of 0.5, and other columns keep their own sigmas.
-- **Level 07 is clean on hydration** (~#371): resolved `noise_sigmas[order.index("Hydration")] == 0.0`, from the loaded params, not the YAML.
+- **Noise uses the hydration slot**: level 06 with noise enabled in memory and a hydration override of `mode: constant, sigma: 0.5, clip_min: -10.0, clip_max: 10.0`, over 2,000 steps. The wide clip is required: the default `[0, 1]` clip around a value near 0.5 would clip about a third of the draws and give a std of about 0.39. The sample std of `obs_noisy − obs_clean` on the Hydration column must be within 10 % of 0.5, and on another column (Satiation) must match that modality's own sigma, which shows the lookup went to the hydration slot and not a neighbour.
+- **Level 07 is clean on hydration** (~#371): resolved `noise_sigmas[order.index("Hydration")] == 0.0`, from the loaded params, not the YAML. This asserts **hydration only**. It does not mean "all interoception is clean": today's noise level never sets `body_temperature`'s sigma, which is inherited from `default.yaml`. That hole predates this plan and is out of scope (listed in Open items).
 - `build_sensory_viz` and `evaluation_core._sensor_stat_columns` accept a level-06 observation, and the slices after Hydration are unshifted: the column counts match the breakdown.
-- **Smell equations (A3)**, computed by numpy in the test:
-  - the agent on a pond corner: water's contribution to channel 0 at the centre olfaction cell equals `0.5 × (2 + 1 + 1 + 1/√2)/4`;
-  - beside the pond equals `0.5 × (1 + 1/2 + 1/√2 + 1/√5)/4`;
-  - at distance ≥ 8 the pond's contribution is within 3 % of a single source of `p` at the centroid;
-  - a 2×2 pond's far-field total equals, within that tolerance, a 1×1 pond's with the same `p`. That is the not-4×-louder claim.
+- **Smell equations (A3)**, computed by numpy in the test. Every assertion pins the **centre sampling cell of the olfaction diamond, channel 0**: flattened olfaction index 0, which is Olfaction offset 0 (the agent's own cell) × channel 0. The other four cells of the diamond read other values (e.g. 0.489 × 0.5 at the pond's diagonal neighbour) and are not pinned.
+  - the agent on a pond corner: water's contribution equals `0.5 × (2 + 1 + 1 + 1/√2)/4`;
+  - the agent beside the pond equals `0.5 × (1 + 1/2 + 1/√2 + 1/√5)/4`;
+  - at centroid distance ≥ 8 the pond's contribution is within 3 % of the **analytic single-source value** `0.5 · f(d̄)`, with `d̄` measured to the pond's **fractional** centroid (e.g. `(1.5, 1.5)` for the candidate at array `(1, 1)`). math-reviewer measured ≤ 0.18 %;
+  - **not-4×-louder**: the same comparison against a single source of `p` placed at the fractional centroid through `sense_resource` itself (it accepts float positions). It must not be compared with a 1×1 pond on a grid cell, which cannot sit at a half-cell centroid and differs by 6.8–8.5 % on correct code (math-reviewer M1).
 - **Vision**: pond cells raise the "Visible" channel where the pond is in the diamond. With water off the visual output is unchanged (covered by T1).
 
 ### T5. Ladder loads through the trainer's path — `tests/env/test_ladder_worlds_load.py` (new)
@@ -561,7 +566,7 @@ For each of the eight files `basic/00` … `basic/07`: `load_env_config` → `lo
 
 - Assert `sum(breakdown) == [44, 44, 52, 52, 52, 58, 59, 59][i]`.
 - Assert `water_enabled == [F, F, F, F, F, F, T, T][i]` and `perceptual_noise_enabled` true only for 07.
-- Assert the file set is exactly those eight names, so an unplanned new rung or a missed rename fails.
+- Assert that the files in `configs/environment/experiment/basic/` whose names match `^0[0-9]-` are exactly those eight, so an unplanned new rung or a missed rename fails. The folder also holds two non-rung worlds, `forage_5x5.yaml` and `slow_predator_bush_5x5.yaml`, which the assertion ignores.
 - It **fails on C0** (no 06-pond, no 07).
 
 ### T6. Agents build against the new width
@@ -575,7 +580,7 @@ For each of the eight files `basic/00` … `basic/07`: `load_env_config` → `lo
 Same node, same seed, CPU and one GPU. Measure 64 envs × 300 jitted vmapped `jax_step` calls, 3 reps, before (C0 worktree) and after:
 
 - **level 05 must be within run-to-run spread** (its graph is unchanged);
-- level 06 against level 05 at the after tip: the expected cost is small (one extra 4-source smell pool at 5 cells, 4 extra visual entities, one equality test). Anything over 5 % is discussed in the report; over 15 % blocks.
+- level 06 against level 05 at the after tip: the expected cost is small (one extra 4-source smell pool at 5 cells, 4 extra visual entities, one equality test, and the respawn repair). Anything over 5 % is discussed in the report. Over 15 % blocks **until the named fallback in §D4.6 (one shared permutation per step) has been tried and re-measured**. If it still exceeds 15 % after the fallback, stop and report to the user.
 
 ### Reviews to run on the implementation
 
@@ -600,7 +605,7 @@ Same node, same seed, CPU and one GPU. Measure 64 envs × 300 jitted vmapped `ja
 
 1. **Frontmatter status and topic.** `status: active` with a DRAFT banner, and `topic: env_entities`, because `draft` and `thirst` fail the develop-index validator and registering them means editing a script.
 2. **Numbers chosen by the calibration**: drain **0.625**, gain **5.625** (160-step dehydration, 20-step over-drinking, net +5 refill). They are exact in float32 so the death step is an integer a test can pin. Targets W5 and W6 (refill and over-drink windows) are this plan's proposal, not a user statement.
-3. **Level 06 randomises the start hydration over `[0, 200]`**, mirroring the nutrition draw. The alternative is a fixed start at 100.
+3. **⚠ Level 06 randomises the start hydration over `[0, 200)`**, mirroring the nutrition draw. **Consequence for the survival metric: about 5 % of episodes are dead of thirst by step 16, and about 16 % by step 50, whatever the agent does**, and half of all episodes start within 50 units of a lethal end. Alternatives: a fixed start at 100, or a narrower range such as `[50, 150]`. Please decide.
 4. **Channel labels at level 06**: channel 4 becomes `Odour C (water-leaning)`, and channel 0 stays `Food` with qualifier `shared with water`. The rename is **not** made in `default.yaml`, where channel 4 is still tree-only. The old renderer's hard-coded `TREE` token is left alone.
 5. **No over-drinking on/off flag.** Over-drinking death is always on when water is on. Nutrition has `overeating_death`; adding the mirror key is one line if wanted.
 6. **No "hydration hidden" flag.** Hydration is always observed when water is on. The dashboard still gets a hidden twin row, so adding the flag later needs no renderer change.
@@ -618,7 +623,37 @@ Same node, same seed, CPU and one GPU. Measure 64 envs × 300 jitted vmapped `ja
 - A thirst ↔ body-temperature coupling switch (EVAAA couples them), off by default, as a later plan.
 - Whether the neuromodulator's interoceptive input should include Hydration. Inputs are named per config, so nothing changes silently.
 - The `lvl06` label collision in historical analysis scripts (A10).
+- Level 07's noise block does not state a sigma for `body_temperature` (inherited from `default.yaml`), so "interoception clean" is not fully true there. This predates the plan (plan-reviewer assumption 6).
+- `lad03_how_it_ends.py` and `part4_readout.py` will not show codes 6/7 (A6). Ask `bug-curator` to extend row ~#116.
 - Back-links: this doc links to the thermal, renderer and compat plans, but they do not link back yet. Adding those back-links edits other owners' docs, so it is left to them.
+
+---
+
+## Revision 1 — response to review (2026-09-29)
+
+Both reviews are appended below, unedited. The math review found the equations correct and asked for four fixes. The plan review was **SOUND WITH CONCERNS**: nothing blocking, and six Moderate items that would each have halted an unattended run or weakened a gate. Every finding is addressed in the body; none is rejected.
+
+| Finding | What changed | Where |
+|---|---|---|
+| plan-reviewer M1 (unpack) | The ten-name unpack at `core.py:~1099` is extended to eleven; the test callers are named as unaffected | §D4.6 |
+| plan-reviewer M2 (nine files in `basic/`) | T5 asserts only the `^0[0-9]-` files equal the eight rungs | §T5 |
+| plan-reviewer M3 (clipped σ) | Noise test widens the clip to ±10 and checks a neighbour column's own sigma | §T4 |
+| plan-reviewer M4 (circular coverage) | Expected death-code sets hard-coded per world; extend seeds or steps at C1 if a code is absent | §T1 |
+| plan-reviewer M5 (no speed fallback) | Fallback named: one shared permutation per step, the k-th repair takes the k-th valid cell; the 15 % gate blocks only after it has been tried | §D4.6, §S |
+| plan-reviewer M6 (analysis consumers) | `lad03_how_it_ends.py` and `part4_readout.py:440` added as out-of-scope rows; `bug-curator` to extend ~#116 | §A6, Open items |
+| plan-reviewer L1 | Two more stale labels added to the naming note | §A10 |
+| plan-reviewer L2 | Index regenerated; see the commit note for what was committed | — |
+| plan-reviewer L3 | `episode_metrics._TERM_*` derived from the shared constant | §D6 |
+| plan-reviewer assumption 3 | The "07 with water off" case asserts rollouts **and** jaxpr SHAs; a SHA-only mismatch is reported as a finding, not a parity break | §T1 |
+| plan-reviewer assumption 4 | T2's 2,000-reset in-area assertion is named as the (0,0) guard for campfires | §T2 |
+| plan-reviewer assumption 5 | Early thirst deaths (~5 % by step 16) are quantified and surfaced as user call #3 | clock section, Calls |
+| plan-reviewer assumption 6 | "Clean on hydration" is stated to mean hydration only; the `body_temperature` hole is an open item | §T4, Open items |
+| math-reviewer M1 | Far-field test compares against a source at the fractional centroid, or the analytic value; never a 1×1 pond on a cell | §T4 |
+| math-reviewer M2 | Trips column corrected: water needs at least one visit (two if cautious); food ~20 items per 100-step refill, ~80 per episode | clock table |
+| math-reviewer M3 | "A quarter within 50" corrected to half (a quarter within 25) | clock section |
+| math-reviewer M4 | Cold clock cited as 86–99 at shipped values (2026-09-19 change log) | clock table |
+| math-reviewer M5 | T4 pins olfaction index 0 (centre cell, channel 0) | §T4 |
+| math-reviewer M6 | D1 notes that the random start can draw exactly 0.0 | §D1 |
 
 ---
 
