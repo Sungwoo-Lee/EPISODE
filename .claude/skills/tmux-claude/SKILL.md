@@ -10,7 +10,7 @@ All mechanics are in `tmux_claude.sh` next to this file. Run it; don't re-implem
 
 ```
 S=.claude/skills/tmux-claude/tmux_claude.sh
-$S list                          # every pane: claude PID, session id, name, status, Remote Control
+$S list                          # every pane: claude PID, session id, name, status, Remote Control (ON/OFF), TASK from the session board
 $S recent [n]                    # recent Claude conversations, newest first: title, where running ('asleep' = none), last user msg
 $S wake   <session-id> <tmux-name># resume an asleep conversation in a NEW tmux session (id prefix ok), then verify
 $S peek   <target> [lines]       # what the pane shows right now (menus, pending questions)
@@ -44,6 +44,17 @@ $S verify <target>               # re-check bypass mode + Remote Control (turns 
    and tell the user if it changed.
 7. **One of the panes is probably you.** `list` shows this session too. Never restart or kill your
    own pane.
+
+## Test launches
+
+`new`, `wake` and `restart` read two optional environment variables, meant for throwaway test sessions:
+
+- `TMUX_CLAUDE_EXTRA`: extra `claude` flags, e.g. `"--model haiku --settings tmp/session_board_test_settings.json"`.
+- `TMUX_CLAUDE_ENV`: environment assignments put before `claude`, e.g. `"SESSION_BOARD_DIR=/abs/path/tmp/board_test"`.
+
+Both are expanded unquoted, so they can hold several flags, but a single value that itself contains spaces
+cannot be passed. The script prints only whether Remote Control is on; the bridge ID is in
+`~/.claude/sessions/<pid>.json` if needed.
 
 ## Notes
 

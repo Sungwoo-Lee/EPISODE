@@ -3,12 +3,12 @@ title: "Session board — live 'who is working on what' shared across parallel C
 topic: meta
 status: active
 created: 2026-09-29
-last_updated: 2026-09-29
+last_updated: 2026-09-30
 ---
 
 # Session board
 
-> **Status**: PLANNED (awaiting user approval)
+> **Status**: IMPLEMENTED, tested on isolated sessions; review fixes applied 2026-09-30; live rollout NOT done yet (pending user approval)
 > **Opened**: 2026-09-29
 > **Related**: tmux-claude skill (`.claude/skills/tmux-claude/SKILL.md`), diary skill (`.claude/skills/diary/SKILL.md`)
 
@@ -262,3 +262,29 @@ The live sessions were not touched. The hooks were loaded only through `claude -
 **Accepted deviations**: the heartbeat is written at most every 5 min rather than on every hook, to spare the NAS writes. The `files` entries use key `t` rather than `last_edit`. Overhead was timed over 20 calls rather than 100. File paths are not passed through `clean()`, which is low risk. The note-age reminder is skipped while the task is unset.
 
 Verified by: senior-developer
+
+
+---
+
+## Revision 2: fixes from the second review round (2026-09-30)
+
+Three reviewers ran: code-reviewer, senior-developer (plan adherence, signed section above) and plan-reviewer (rollout step). All their findings are applied. The live rollout is still not done.
+
+| # | Finding (who) | Change |
+|---|---|---|
+| F1 | A session busy at rollout never gets the full board or instructions: its first hook is `PostToolUse`, which quietly wrote `seen` (senior-dev, plan-reviewer, code-reviewer) | A main agent with no `seen` file is **onboarded by that tool hook** (full board + instructions). A sub-agent whose parent is not onboarded stays silent and writes nothing. |
+| F2 | The size cap replaced the whole message, instructions included, once 2–3 or more cards were live; a long collision warning was lost the same way (all three) | `wrap()` cuts **card lines only** and always keeps the instructions. The one-time full board gets `FULL_CAP` 3000 characters; per-change messages keep 1500; collision warnings have their own `WARN_CAP` 800. The "N more lines" line is budgeted at its real length. |
+| F3 | No rollback lever that is independent of settings reload and git (plan-reviewer) | **Kill switch**: `touch claude_data/board/OFF` makes every hook return at its next run. |
+| F4 | A lost-update race: a hook's card write could revert a concurrent `task`/`note` (code-reviewer) | The card is re-read right before saving, keeping `task`/`note`/`note_set` from the fresh copy. |
+| F5 | Dead cards stayed for 7 days and slowed every read (code-reviewer) | `sweep()` removes cards and `seen` files of dead local sessions. It runs at SessionStart and at most hourly from the prompt hook. "Ended" is still reported, from the reader's own `seen` copy. |
+| F6 | The PID-namespace ID alone can coincide across machines (code-reviewer) | `pid_domain` = `/etc/machine-id` + namespace. |
+| F7 | Smaller items (code-reviewer) | Absolute script path in the instructions (the Bash cwd can drift), named once as `BOARD` to save space. Empty `task`/`note` are rejected. Card text is cleaned again when rendered. The onboarding prompt starts the reminder clock (no duplicate reminder). |
+| F8 | tmux-claude `SKILL.md` did not document the new options (senior-dev) | Documented `TMUX_CLAUDE_EXTRA`, `TMUX_CLAUDE_ENV`, the TASK column and the ON/OFF RC column. |
+| F9 | Test gaps (code-reviewer) | "Never fails" now runs the interpreter **without** `\|\| true` and asserts empty stderr. New tests: `task`/`note`/`task-of` commands, empty-argument rejection, the concurrent-write race, `/clear`, the hourly reminder, sweep, onboarding by a tool hook, sub-agent before parent, idle session at rollout, instructions surviving 12 live cards, a long warning being cut rather than replaced, the kill switch, a foreign-machine heartbeat. **45 passed.** |
+
+**Rollout checklist**, to do in the same commit as the `.claude/settings.json` edit:
+- amend the scripts dependency map's §2 intro sentence ("no `settings.json` invokes any of these") and its two `session_board.py` rows;
+- set this doc's Status line;
+- rollback is `touch claude_data/board/OFF` first, then revert the settings commit.
+
+**Still open before rollout** (plan-reviewer): check that an already-running session actually reloads an edited project `settings.json` (the hot-reload canary).
