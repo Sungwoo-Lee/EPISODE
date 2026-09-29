@@ -508,12 +508,20 @@ def point_path(out: Path, label: str, x: int) -> Path:
     return out / "points" / label / f"{int(x)}.json"
 
 
+PROVENANCE_KEYS = ("git_sha", "git_dirty", "evidence_status", "device")
+
+
 def sweep_run(ctx: RunContext, want: set, out: Path, stamp: dict, points=None,
-              write_points: bool = True) -> list:
+              write_points: bool = True, prov: dict | None = None) -> list:
     """Compute every wanted GPU measure at every point of the run's grid (or at `points`, the
     timing mode's subset, which never writes point files). Resumable: a point file already
     holding a measure (for the same rules sha256 and settings) is not recomputed.
+    Every written point record carries `prov` (PROVENANCE_KEYS: code sha, dirty flag, evidence
+    status, device), so a point file separated from its run's `_done.json` keeps its provenance;
+    resuming a point written at another code sha raises.
     Returns [(x, seconds per measure, measures)]."""
+    if write_points and (prov is None or set(prov) != set(PROVENANCE_KEYS)):
+        raise ValueError(f"point files need provenance {PROVENANCE_KEYS}, got {prov}")
     label, cks = ctx.run["label"], list(ctx.run["checkpoints"])
     grid = [0] + cks
     todo = grid if points is None else list(points)
@@ -525,6 +533,9 @@ def sweep_run(ctx: RunContext, want: set, out: Path, stamp: dict, points=None,
         rec = json.loads(pf.read_text()) if (write_points and pf.exists()) else {}
         if rec and (rec.get("rules_sha256") != stamp["sha256"] or rec.get("settings") != settings):
             raise ValueError(f"{pf}: computed under other rules or settings; move it away first")
+        if rec and "git_sha" in rec and rec["git_sha"] != prov["git_sha"]:
+            raise ValueError(f"{pf}: written at code {rec['git_sha'][:8]}, this sweep runs "
+                             f"{prov['git_sha'][:8]}; move it away first")
         need = {m for m in want if m not in rec.get("measures", {})}
         if "update_size" in need and x == 0:
             need.discard("update_size")            # no interval ends at step 0
@@ -567,7 +578,7 @@ def sweep_run(ctx: RunContext, want: set, out: Path, stamp: dict, points=None,
                 meas["grad_probe"] = measure_grad_probe(ctx, agent)
                 t_point["grad_probe"] = time.time() - t0
             rec = {"label": label, "x": int(x), "rules_sha256": stamp["sha256"],
-                   "settings": settings, "measures": meas,
+                   **(prov or {}), "settings": settings, "measures": meas,
                    "seconds": {**rec.get("seconds", {}), **t_point},
                    "generated_utc": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")}
             if write_points:
@@ -648,18 +659,20 @@ def grad_share_curve(run: dict, scanned: dict, stage_index) -> tuple:
         sel = (e1 > lo) & (e1 <= hi)
         counts.append(int(sel.sum()))
         m.append(float(ratio[sel].mean()) if sel.any() else math.nan)
-    return x, m, {**info, "rows_per_interval": counts}, (e1, v1)
+    return x, m, {**info, "rows_per_interval": counts, "start_counter": float(edges[0])}, (e1, v1)
 
 
-def sanity_band(run: dict, pts: dict, logged: tuple, q_lo: float, q_hi: float) -> dict:
+def sanity_band(run: dict, pts: dict, logged: tuple, q_lo: float, q_hi: float,
+                start: float) -> dict:
     """Checkpoint 4.2: the probe's (b) full-iteration mean of mod_grad_norm against the logged
-    modulator/grad_norm values in a +-1-checkpoint window around each checkpoint. A sanity
-    band, not a correctness proof."""
+    modulator/grad_norm values in a +-1-checkpoint window around each checkpoint. The first
+    window opens at `start`, the episode rows' start counter (wandb_history.start_counter, as
+    grad_share_curve bins). A sanity band, not a correctness proof."""
     cks = [int(c) for c in run["checkpoints"]]
     e, v = logged
     rows = []
     for i, c in enumerate(cks):
-        lo = cks[i - 1] if i > 0 else 0
+        lo = cks[i - 1] if i > 0 else start
         hi = cks[i + 1] if i + 1 < len(cks) else cks[i]
         w = v[(e > lo) & (e <= hi)]
         b = pts[c]["measures"]["grad_probe"]["full_iteration"]["mod_grad_norm_mean"]
@@ -737,7 +750,10 @@ def main(argv=None) -> int:
     stamp = {"decision_rules": rstamp,
              "evidence_status": policy.status, "label": policy.label,
              "manifest": os.path.relpath(man_path, _ROOT), "git_sha": _git("rev-parse", "HEAD"),
-             "git_dirty": bool(_git("status", "--porcelain", "--", "scripts/analysis/nmn")),
+             # every path on the measures' code path: the trainer and network (src/),
+             # train.py (the probe's PPOConfig is checked against it) and this package
+             "git_dirty": bool(_git("status", "--porcelain", "--", "src/", "train.py",
+                                    "scripts/analysis/nmn")),
              "python": platform.python_version()}
     print(f"[run_wakeup] {man['name']}: {policy.status} — {policy.label}; rules {pinned.path} "
           f"{pinned.sha256[:12]} @ {(pinned.commit or 'uncommitted')[:8]}", flush=True)
@@ -825,7 +841,8 @@ def main(argv=None) -> int:
                 continue
             t0 = time.time()
             ctx = RunContext(r, grids[r["label"]], man)
-            sweep_run(ctx, sweep_measures, out, rstamp)
+            sweep_run(ctx, sweep_measures, out, rstamp,
+                      prov={k: stamp[k] for k in PROVENANCE_KEYS})
             (out / "points" / r["label"] / "_done.json").write_text(json.dumps(
                 {**stamp, "measures": sorted(sweep_measures), "elapsed_s": round(time.time() - t0, 1),
                  "generated_utc": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")}))
@@ -916,7 +933,7 @@ def summarise(man, man_path, out, stamp, rstamp, plateau, grids, B2, pinned, pol
         t_pl = float(plat[label]["t_plateau_episode"])
         rd = {name: measure_reading(f"{label} / {name}", c, cks, t_pl, B2)
               for name, c in curves.items() if c["headline"]}
-        band = sanity_band(r, pts, logged, SANITY_Q[0], SANITY_Q[1])
+        band = sanity_band(r, pts, logged, SANITY_Q[0], SANITY_Q[1], sh_info["start_counter"])
         eq = [pts[x]["measures"]["freeze"]["freeze_equivalence"]["exact"] for x in pts]
         per_run[label] = {"continual": grids[label]["continual"], "curves": curves,
                           "grad_share_info": sh_info, "sanity_band": band,

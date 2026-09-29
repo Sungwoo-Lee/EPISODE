@@ -1437,6 +1437,40 @@ The two `JAX_PERSISTENT_CACHE_MIN_*=0` settings matter. JAX's default minimum co
 
 Implemented by: developer
 
+### Stage 4 code-review items (2026-09-30, while the sweep runs)
+
+**In plain words.** The code review of the Stage 4 code kept the running sweep, and asked for five small fixes. This section records them. Each point file now names the code version, evidence status and GPU that produced it. The "uncommitted changes" flag now also watches the trainer and `train.py`. The first sanity-band window starts where logging starts. The gradient probe refuses a model without a modulator. The checkpoint-reader test now proves the fixed reader returns the same bytes as the old one.
+
+1. 🟡 **Provenance in every point record.** `sweep_run` takes `prov` (`PROVENANCE_KEYS` = `git_sha`, `git_dirty`, `evidence_status`, `device`) and writes it into each point record. Writing a point without it raises. Resuming a point that was written at another code sha also raises.
+   - New back-fill script `scripts/analysis/nmn/backfill_point_provenance.py` copies those fields from each run's `_done.json` into point files that lack them, and adds `provenance_backfilled`.
+   - Metadata only: every other field is checked unchanged after each atomic write.
+   - It refuses unless **every** run has its `_done.json`, and on a rules-sha or provenance disagreement. The default is a dry run; `--write` writes.
+   - **Not run.** At 06:25 the sweep had finished 3 of 19 runs, and neither log shows `exit`. The dry run refuses as designed and lists the 16 runs without `_done.json`.
+   - To run after both `logs/20260930_051845.log` and `logs/20260930_051847.log` show `exit 0`:
+     `python scripts/analysis/nmn/backfill_point_provenance.py --manifest docs/experiments/active/modulator_clues/algorithmic_null_wakeup.yaml --write`.
+   - `SCRIPTS_DEPENDENCY_MAP.md` has a new row for the script.
+   - Caveat: a point written by the old code has no `git_sha`, so if a worker were restarted on the new code, the resume check could not catch a code change on it. The back-fill closes that gap once it has run.
+2. **`git_dirty`** is now computed over `src/ train.py scripts/analysis/nmn`.
+3. 🟢 **`sanity_band`** takes `start`, the episode rows' start counter. `grad_share_curve` now returns it as `info["start_counter"]`, and the first window opens there instead of at 0.
+4. 🟢 **`grad_probe._per_term_sq_norms`** raises if the gradient has no `modulator` subtree, using the same key test as the trainer. Its docstring says "modulated runs only". The real-checkpoint probe test still passes, so `in` behaves as expected on `nnx.State`.
+5. 🟢 **`test_nmn_ckpt_io.py`** gains a golden sha256 over the flattened leaves: path, dtype, shape and bytes, sorted by path. The value `26fc3f85…74ac` covers 60 leaves and 667,543 floats of l05 w0000 at 200019. It was recorded by running `ckpt_io.py` at `18e1e5f0` (the parent of `0dc6095e`) from a scratch copy on CPU. The current reader gives the same digest.
+
+**The caveat's numbers are still copied from the manifest's comment.** No manifest key holds the per-curve false-pass rates (0.26 % / 1.8 %), the family size (323) or the expected false wake points (1–4), so `--summarise` cannot build `PER_RUN_CAVEAT` from them, and I have not invented a key. **Request for `experiment-designer`:** register these values as a machine-readable key beside `b2_headline_curves`, for example a mapping holding the per-curve false-pass rate for level-05 and for May, the family size and the expected false wake points. `run_wakeup` would then read them with `_req`, assemble the caveat, and check the family size against `len(b2_headline_curves) × len(runs)`.
+
+**Tests** (CPU, synthetic except the gitignored-checkpoint tests):
+- `pytest tests/analysis/test_nmn_run_wakeup.py test_nmn_ckpt_io.py test_nmn_decision_rules.py test_nmn_wakeup.py` → **191 passed**.
+- `test_nmn_grad_probe.py` → **3 passed** (65 s, including the real-checkpoint probe).
+- New tests:
+  - a point record carries provenance; a write without it raises; a resume across code shas raises;
+  - the back-fill refuses without `_done.json`, copies exactly the provenance and leaves everything else unchanged, is idempotent, and raises on a disagreement;
+  - the sanity band's first window opens at the start counter;
+  - the `git_dirty` pathspec covers the probe's code;
+  - the pre-fix golden digest.
+
+**Speed check.** Skipped. The only sweep-path change is a few more keys in each point JSON.
+
+Implemented by: developer
+
 ## Verification Report
 
 > **Verified by**:

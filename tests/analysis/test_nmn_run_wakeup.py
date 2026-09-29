@@ -186,6 +186,7 @@ def test_grad_share_curve_bins_rows_by_interval():
     assert m[1] == pytest.approx(((1 / 4) ** 2 + (3 / 4) ** 2) / 2)
     assert m[2] == pytest.approx(1.0)
     assert info["rows_per_interval"] == [1, 2, 1]
+    assert info["start_counter"] == 0.0
 
 
 def test_measure_reading_uses_positions_and_the_headline_mode():
@@ -275,7 +276,7 @@ def _synthetic_summarise(tmp_path, monkeypatch, registered=None, sites_by_run=No
     def share(run, scanned, stage_index):
         x = rw.grid_x(run, False)
         m = [float(1 / (1 + np.exp(-(i - len(x) / 2))) + rng.normal(0, 0.01)) for i in range(len(x))]
-        return x, m, {"rows_per_interval": [1] * len(x)}, (x.copy(), np.ones(len(x)))
+        return x, m, {"rows_per_interval": [1] * len(x), "start_counter": 0.0}, (x.copy(), np.ones(len(x)))
 
     monkeypatch.setattr(rw, "grad_share_curve", share)
     stamp = {"decision_rules": rstamp, "evidence_status": policy.status}
@@ -367,3 +368,81 @@ def test_compile_cache_status_reports_the_launch_setting(tmp_path):
         assert st["active"] is True and st["dir"] == str(tmp_path) and st["entries_at_start"] == 1
     finally:
         jax.config.update("jax_compilation_cache_dir", before)
+
+
+# ------------------------------------------------------------- code review of Stage 4 -----
+class _Ctx:
+    """Minimal RunContext stand-in for sweep_run: step 0 only, swing only."""
+    def __init__(self):
+        self.run = {"label": "syn", "checkpoints": [10, 20]}
+        self.episodes, self.seed_base, self.warmup_iters = 4, 90000, 1
+
+    def agent(self, x):
+        return object()
+
+    def params(self, x, agent=None):
+        return {}
+
+
+PROV = {"git_sha": "a" * 40, "git_dirty": False, "evidence_status": "b2_wakeup",
+        "device": "synthetic"}
+
+
+def test_point_records_carry_provenance(tmp_path, monkeypatch):
+    import json
+    monkeypatch.setattr(rw, "measure_swing", lambda ctx, params: {"rnn": {}})
+    stamp = {"sha256": "r" * 64}
+    with pytest.raises(ValueError, match="provenance"):
+        rw.sweep_run(_Ctx(), {"swing"}, tmp_path, stamp, points=[0])
+    rw.sweep_run(_Ctx(), {"swing"}, tmp_path, stamp, points=[0], prov=PROV)
+    rec = json.loads(rw.point_path(tmp_path, "syn", 0).read_text())
+    assert {k: rec[k] for k in rw.PROVENANCE_KEYS} == PROV
+    # resuming a point written at another code sha raises
+    with pytest.raises(ValueError, match="written at code"):
+        rw.sweep_run(_Ctx(), {"swing", "rho"}, tmp_path, stamp, points=[0],
+                     prov={**PROV, "git_sha": "b" * 40})
+
+
+def test_backfill_copies_provenance_from_done_and_changes_nothing_else(tmp_path):
+    import json
+    from scripts.analysis.nmn import backfill_point_provenance as bf
+    d = tmp_path / "points" / "syn"
+    d.mkdir(parents=True)
+    old = {"label": "syn", "x": 0, "rules_sha256": "r" * 64, "settings": {"a": 1},
+           "measures": {"swing": {"rnn": {"gamma_swing_mean": 1.5}}}, "seconds": {"load": 1.0},
+           "generated_utc": "t"}
+    (d / "0.json").write_text(json.dumps(old))
+    with pytest.raises(RuntimeError, match="_done.json"):     # sweep may still be writing
+        bf.plan_backfill(tmp_path, ["syn"])
+    (d / "_done.json").write_text(json.dumps({**PROV, "decision_rules": {"sha256": "r" * 64},
+                                              "measures": ["swing"]}))
+    todo = bf.plan_backfill(tmp_path, ["syn"])
+    assert len(todo) == 1
+    assert bf.apply_backfill(todo, "test") == 1
+    new = json.loads((d / "0.json").read_text())
+    assert {k: new[k] for k in rw.PROVENANCE_KEYS} == PROV
+    assert {k: new[k] for k in old} == old and new["provenance_backfilled"] == "test"
+    assert bf.plan_backfill(tmp_path, ["syn"]) == []           # idempotent
+    new["device"] = "other"
+    (d / "0.json").write_text(json.dumps(new))
+    with pytest.raises(ValueError, match="differs from"):
+        bf.plan_backfill(tmp_path, ["syn"])
+
+
+def test_sanity_band_first_window_opens_at_the_start_counter():
+    cks = [10, 20, 30]
+    pts = {c: {"measures": {"grad_probe": {"full_iteration": {"mod_grad_norm_mean": 1.0},
+                                           "first_update": {"total": {"mod_sq": 1.0}}}}}
+           for c in cks}
+    e = np.array([2.0, 7.0, 15.0])            # episode 2 lies before a start counter of 5
+    v = np.array([100.0, 1.0, 1.0])
+    band = rw.sanity_band({"checkpoints": cks}, pts, (e, v), 0.05, 0.95, start=5.0)
+    assert band["rows"][0]["logged_n"] == 2 and band["rows"][0]["inside"] is True
+    assert rw.sanity_band({"checkpoints": cks}, pts, (e, v), 0.05, 0.95,
+                          start=0.0)["rows"][0]["logged_n"] == 3
+
+
+def test_git_dirty_covers_the_probe_code_path():
+    import inspect
+    src = inspect.getsource(rw.main)
+    assert '"src/", "train.py",' in src and '"scripts/analysis/nmn"' in src

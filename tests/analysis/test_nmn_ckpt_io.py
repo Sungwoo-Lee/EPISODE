@@ -45,3 +45,31 @@ def test_load_params_requests_no_device(monkeypatch):
     assert len(got) == len(ref) == 60
     assert all(isinstance(g, np.ndarray) and g.dtype == np.float32 for g in got)
     assert all(np.array_equal(g, r) for g, r in zip(got, ref))
+
+
+# Golden checksum of the flattened leaves (sorted path, dtype, shape, bytes) of RUN @ STEP as
+# read by the PRE-fix reader: `ckpt_io.py` at 18e1e5f0 (the parent of the fix 0dc6095e), run
+# from a scratch copy on CPU on 2026-09-30. 60 leaves, 667,543 floats.
+PREFIX_SHA256 = "26fc3f85f33365fd027fd9257ad940018a4141197793980e6b2a4999087574ac"
+
+
+def _digest(d):
+    import hashlib
+
+    def flat(d, pre=""):
+        out = []
+        for k in sorted(d):
+            out += flat(d[k], f"{pre}/{k}") if isinstance(d[k], dict) else [(f"{pre}/{k}", np.asarray(d[k]))]
+        return out
+    h, f = hashlib.sha256(), flat(d)
+    for k, a in f:
+        h.update(k.encode()); h.update(str(a.dtype).encode()); h.update(str(a.shape).encode())
+        h.update(np.ascontiguousarray(a).tobytes())
+    return h.hexdigest(), len(f), sum(a.size for _, a in f)
+
+
+def test_load_params_same_bytes_as_the_prefix_read():
+    if not (RUN / str(STEP)).is_dir():
+        pytest.skip("run not present (gitignored)")
+    from scripts.analysis.nmn import ckpt_io
+    assert _digest(ckpt_io.load_params(RUN, STEP)) == (PREFIX_SHA256, 60, 667543)

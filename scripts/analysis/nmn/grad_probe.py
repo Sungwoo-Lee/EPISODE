@@ -112,7 +112,8 @@ def restore_optimizer(models_dir, step: int, model, optimizer, num_envs: int) ->
 
 def _per_term_sq_norms(model, batch, config):
     """||grad||^2 over all parameters and over the modulator, per loss term, plus the norm of
-    their sum (the total-loss gradient), at `model`'s current parameters. Mirrors
+    their sum (the total-loss gradient), at `model`'s current parameters. Modulated runs
+    only (raises if the gradient has no `modulator` subtree). Mirrors
     `update_step.batch_loss_wrapped`: the loss is vmapped over environments and each aux term
     is averaged over them."""
     import jax
@@ -137,6 +138,9 @@ def _per_term_sq_norms(model, batch, config):
     out, grads = {}, []
     for j, t in enumerate(TERMS):
         g = nnx.grad(term_loss(j, coefs[t]))(model)
+        if "modulator" not in g:       # the trainer guards the same key ('modulator' in grads)
+            raise ValueError("gradient probe: the model has no modulator; the probe measures "
+                             "the modulator's share and is for modulated runs only")
         grads.append(g)
         out[f"{t}_all_sq"] = optax.global_norm(g) ** 2
         out[f"{t}_mod_sq"] = optax.global_norm(g["modulator"]) ** 2
