@@ -149,10 +149,13 @@ def pilot_run(tmp_path_factory):
     pinned = _pinned()
     two = SIX[:2]
     syn.write_capture_dir(tmp / "synth", two, n_groups=300, width=8, rules_sha=pinned.sha256,
-                          selector="final")
+                          selector="final", headline_extra={"rnn.raw": 8, "enc.uni.out": 8})
     man = yaml.safe_load(_manifest(tmp, "pilot", two, 300).read_text())
     for r in man["runs"]:
         r["checkpoints"] = ["final"]
+    man["headline_capture"] = {"checkpoint": "final", "probe": "p"}
+    man["layers"] += [{"key": "rnn.raw", "flatten": "none", "keep": "headline_only"},
+                      {"key": "enc.uni.out", "flatten": "senses_x_units", "keep": "headline_only"}]
     (tmp / "pilot.yaml").write_text(yaml.safe_dump(man))
 
     def forbidden(*a, **k):
@@ -181,6 +184,13 @@ def test_pilot_is_numbers_only_with_the_label(pilot_run):
         for ext in ("json", "csv"):
             text = (out / f"{stem}.{ext}").read_text()
             assert not dio.VERDICT_WORDS.search(text), dio.VERDICT_WORDS.findall(text)
+    desc = json.loads((out / "similarity_descriptive.json").read_text())
+    assert set(desc["descriptive"]) == {"ordinary_s42|modulated_s42 rnn.raw~rnn.raw",
+                                        "ordinary_s42|modulated_s42 enc.uni.out~enc.uni.out"}
+    assert desc["decision_rules"]["sha256"] == pinned.sha256 and desc["label"] == label
+    for ext in ("json", "csv"):
+        text = (out / f"similarity_descriptive.{ext}").read_text()
+        assert not dio.VERDICT_WORDS.search(text), dio.VERDICT_WORDS.findall(text)
     sim = json.loads((out / "similarity.json").read_text())
     assert list(sim["cells"][0]["pair_sets"]["MO_same"]) == ["ordinary_s42|modulated_s42"]
     ref = sim["cells"][0]["layers"]["rnn.state"]["reference"]

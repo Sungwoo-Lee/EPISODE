@@ -194,16 +194,16 @@ def analyse_cell(caps, man, P, cell, agents, verdict_layers, *, primary: bool,
                 ref[f"input|{n}"] = {"cka": rep.linear_cka(xin, x), **_pred_point(
                     xin, x, groups, splits, rs, fits, f"{sel}/{pid}/{key}/input|{n}")}
             for u in [n for n in agents if agents[n]["untrained"]]:
-                for t in [n for n in agents if not agents[n]["untrained"]]:
+                # how far training moved each agent of that seed from the shared start
+                for t in [n for n in agents if not agents[n]["untrained"]
+                          and agents[n]["seed"] == agents[u]["seed"]]:
                     ref[f"{u}|{t}"] = {"cka": rep.linear_cka(X[u], X[t]), **_pred_point(
                         X[u], X[t], groups, splits, rs, fits, f"{sel}/{pid}/{key}/{u}|{t}")}
             lay["reference"] = ref
         out["layers"][key] = lay
         log(f"  [{sel} / {pid}] {key}: {sum(len(v) for v in sets.values())} pairs, "
             f"{time.time() - t0:.0f}s")
-    if headline:
-        out["descriptive"] = descriptive(caps, agents, pid, sets, groups, splits, rs, fits,
-                                         n_rows, mrc, log)
+    out["_descriptive_args"] = (pid, sets, groups, splits, rs, n_rows, mrc) if headline else None
     out["ridge_fits"] = {"n": fits.n, "at_grid_edge": fits.edge,
                          "grid": {"n_values": len(rs["alphas"]), "lowest": rs["alphas"][0],
                                   "highest": rs["alphas"][-1]},
@@ -218,12 +218,14 @@ def _pred_point(Xa, Xb, groups, splits, rs, fits, where) -> dict:
 
 def descriptive(caps, agents, pid, sets, groups, splits, rs, fits, n_rows, mrc, log) -> dict:
     """Rules common.descriptive_layers at the headline capture (points only, never
-    verdict-bearing): for every trained pair, X.raw with X.raw, X.mod with X.mod and
-    enc.uni.out with enc.uni.out where both have the key, and for ordinary vs modulated pairs
-    ordinary X.raw with modulated X.mod (after the gain and offset)."""
+    verdict-bearing), for every ordinary vs modulated pair (MO_same, MO_diff): ordinary X.raw
+    with modulated X.raw (before the gain and offset) and with modulated X.mod (after it), and
+    the per-sense layers (enc.uni.*, flattened) the same way, plus enc.uni.out with
+    enc.uni.out."""
     from scripts.analysis.nmn import representation as rep
     out = {}
-    trained = [(p, ab) for s, v in sets.items() if s != "UNTRAINED" for p, ab in v.items()]
+    trained = [(p, ab) for s, v in sets.items() if s in ("MO_same", "MO_diff")
+               for p, ab in v.items()]
     for pname, (a, b) in trained:
         A, B = agents[a], agents[b]
         ka = caps.keys(A["label"], A["selector"], pid)
@@ -414,11 +416,27 @@ def main(argv=None) -> int:
                                            surv["gate_G5"], surv["survival"], start)})
     else:
         doc["evaluation"] = None
+    heads = [(c, c.pop("_descriptive_args")) for c in cells_res]
     doc["cells"] = cells_res
     doc["data_statement"] = data_statement(stamp, man, cells_res, P)
     doc["elapsed_s"] = round(time.time() - t0, 1)
     dio.write_outputs(caps.out, "similarity", _strip_draws(doc), csv_rows(cells_res), policy)
     print(f"[run_similarity] wrote {caps.out / 'similarity.json'} ({doc['elapsed_s']}s)", flush=True)
+    for c, args in heads:        # descriptive layers: reported only, written after the verdicts
+        if args is None:
+            continue
+        pid, sets, groups, splits, rs, n_rows, mrc = args
+        fits = _Fits()
+        desc = descriptive(caps, c["agents"], pid, sets, groups, splits, rs, fits, n_rows, mrc,
+                           _log)
+        ddoc = {**stamp, "driver": "run_similarity", "analysis": "A1 descriptive layers "
+                "(reported only; they localise where a difference arises)",
+                "cell": [c["checkpoint"], c["probe"]], "descriptive": desc,
+                "ridge_fits": {"n": fits.n, "at_grid_edge": fits.edge}}
+        dio.write_outputs(caps.out, "similarity_descriptive", ddoc,
+                          [{"comparison": k, **{kk: vv for kk, vv in v.items()}}
+                           for k, v in desc.items() if "refused" not in v], policy)
+        print(f"[run_similarity] wrote {caps.out / 'similarity_descriptive.json'}", flush=True)
     for c in cells_res:
         for key, lay in c["layers"].items():
             for stat in ("cka", "predictivity"):
