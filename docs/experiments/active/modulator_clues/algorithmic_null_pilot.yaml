@@ -37,11 +37,56 @@ probes:
       - results/trajectories_l05body/20260927-053057_rppo_l05body_w0000_t1none_s42/10000046/a1179698aa
       - results/trajectories_l05body/20260927-053059_rppo_l05body_w0000_t16quad_s42/10000021/2ef4474a8f
     n_per_store: 5000
-    # rows_per_episode, seed: added by developer (tooling plan §8).
+    # Developer-owned (tooling plan §8): 5 kept rows per episode -> ~50,000 rows, enough for the
+    # 1152-column per-sense layers (enc.uni.*) at any min_rows_per_column up to ~40; every step
+    # of every episode is still replayed so the memory is exact. seed fixes which rows are kept.
+    rows_per_episode: 5
+    seed: 20260930
+    # Float32 matmul mode each store was COLLECTED under, in the order of `stores`; the self-replay
+    # checks (gates G1, G3) run in it. Ordinary store: collected on node 101 (RTX 2080 Ti, no TF32)
+    # -> full float32 = "highest". Modulated store: node 106 (RTX 3090) -> JAX default = TF32 =
+    # "default"; needs an Ampere/Ada GPU to reproduce. Source: the collection worklists under
+    # results/trajectories_l05body/_scratch/level05_body_interactions_b0{1,2}/_worklists/. Measured
+    # 2026-09-30 on 40 episodes: 100 % self-agreement in the listed mode, 99.80 % in the other.
+    store_matmul_precision: [highest, default]
 
 # Remaining keys of the tooling plan's manifest schema (§8) are added by developer when the tooling
 # exists. Until then this file fails to load, as it should (no defaults). The pilot has one
 # ordinary run, hence no UNTRAINED pair and no informative gate (rules evidence_status.pilot).
+
+# ---------------------------------------------------------------------------------------------
+# Developer-owned keys (tooling plan §8), added with Stage 2 (2026-09-30). The Stage 3 keys
+# (comparisons, probe_split, ridge_alphas, min_rows_per_column) are added with Stage 3.
+# ---------------------------------------------------------------------------------------------
+out_root: results/analysis/algorithmic_null
+# Matmul mode of every kept activation and of the chain assertions: full float32 for every agent,
+# so no agent's layers carry another's device rounding.
+capture_matmul_precision: highest
+# Episodes whose every step is recomputed link by link on the real checkpoint (chain assertions).
+assert_n_episodes: 8
+# The plan's own abort tolerances that no gate covers; they decide no verdict.
+tool_checks:
+  shift_change_rows_max: 0.05     # shift-by-one agreement on action-change rows (0 % if aligned)
+  self_similarity_atol: 1.0e-12   # same-agent CKA must equal 1 within this (float64)
+layers:
+  - {key: enc.uni.raw, flatten: senses_x_units}
+  - {key: enc.uni.mod, flatten: senses_x_units}
+  - {key: enc.uni.out, flatten: senses_x_units}
+  - {key: enc.raw, flatten: none}
+  - {key: enc.mod, flatten: none}
+  - {key: enc.out, flatten: none}
+  - {key: rnn.state, flatten: none}
+  - {key: rnn.raw, flatten: none}
+  - {key: rnn.mod, flatten: none}
+  - {key: rnn.out, flatten: none}
+  - {key: actor.raw, flatten: none}
+  - {key: actor.mod, flatten: none}
+  - {key: actor.out, flatten: none}
+  - {key: critic.raw, flatten: none}
+  - {key: critic.mod, flatten: none}
+  - {key: critic.out, flatten: none}
+  - {key: logits, flatten: none}
+  - {key: value, flatten: none}
 
 runs:
   - {label: ordinary_s42, path: results/JAX_RecurrentPPO/20260927-053057_rppo_l05body_w0000_t1none_s42, checkpoints: [final]}

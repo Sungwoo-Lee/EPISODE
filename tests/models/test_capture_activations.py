@@ -203,3 +203,41 @@ def test_ordinary_rnn_raw_is_state():
         model, x, model.initial_state(3))
     assert np.array_equal(np.asarray(acts["rnn.raw"]), np.asarray(acts["rnn.state"]))
     assert np.array_equal(np.asarray(acts["rnn.out"]), np.asarray(acts["rnn.raw"]))
+
+
+# ── Reconstruction chain (the run-time assertions of scripts/analysis/nmn/teacher_forced.py,
+#    here on synthetic weights; Stage 2 runs the same function on real checkpoints) ───────
+RECON_TOL = 1e-5     # test fixture value; the run-time tolerance is the rules' gate G2
+
+
+def _full_capture(model, T=6, B=3, D=10):
+    from scripts.analysis.nmn.teacher_forced import _scan_full
+    obs = 3.0 * jax.random.normal(jax.random.PRNGKey(3), (T, B, D))
+    acts, mod = nnx.jit(_scan_full)(model, obs, model.initial_state(B))
+    return obs, acts, mod
+
+
+@pytest.mark.parametrize("name", list(CONFIGS))
+def test_capture_chain_reconstruction(name):
+    from scripts.analysis.nmn.teacher_forced import chain_deviations
+    model = _build(**CONFIGS[name])
+    obs, acts, mod = _full_capture(model, D=CONFIGS[name]["D"])
+    dev = chain_deviations(model, obs, acts, mod)
+    # every captured key except the input is checked against its neighbour
+    assert set(dev) == set(acts), sorted(set(dev) ^ set(acts))
+    bad = {k: v for k, v in dev.items() if not v <= RECON_TOL}
+    assert not bad, (name, bad)
+
+
+@pytest.mark.parametrize("swap", [("enc.raw", "enc.out"), ("rnn.state", "rnn.out"),
+                                  ("actor.raw", "critic.raw"), ("actor.mod", "actor.raw")])
+def test_capture_chain_catches_a_mislabelled_key(swap):
+    """A key bound to the wrong tensor must fail at least one link (the check can fail)."""
+    from scripts.analysis.nmn.teacher_forced import chain_deviations
+    model = _build(**CONFIGS["t16quad_film_activation"])
+    obs, acts, mod = _full_capture(model)
+    acts = dict(acts)
+    a, b = swap
+    acts[a], acts[b] = acts[b], acts[a]
+    dev = chain_deviations(model, obs, acts, mod)
+    assert max(dev.values()) > 1e-2, (swap, dev)

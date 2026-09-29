@@ -60,12 +60,16 @@ class LoadedAgent:
     step: int             # which checkpoint was restored
     obs_breakdown: dict
     action_dim: int
+    env_config_path: str  # the file the world was built from (a stage file for continual runs)
 
 
 def load_agent(models_dir, step: int | None = None) -> LoadedAgent:
     """Rebuild the agent described by a run's own saved config and restore `step`.
 
-    `step=None` restores the last checkpoint.
+    `step=None` restores the last checkpoint. For a continual run (`models/schedule.yaml`
+    present) the WORLD (`env_params`) is built from the checkpoint's own stage file, chosen
+    by the `stage` saved in the checkpoint (`eval_rollout._resolve_continual_stage_config`);
+    the agent block always comes from `config.yaml`, the only file that carries it.
     """
     import jax
     import orbax.checkpoint as ocp
@@ -84,11 +88,30 @@ def load_agent(models_dir, step: int | None = None) -> LoadedAgent:
 
     cfg_path = os.path.join(models_dir, "config.yaml")
     cfg = Config.load_yaml(cfg_path)
+
+    steps = ckpt_io.list_steps(models_dir)
+    step = steps[-1] if step is None else int(step)
+    if step not in steps:
+        raise ValueError(f"checkpoint step {step} not among the {len(steps)} saved "
+                         f"under {models_dir}")
+
+    # Continual runs: the world of the checkpoint's own stage (tooling plan
+    # ALGORITHMIC_NULL_ANALYSIS_TOOLING, File Changes §3). None for a non-continual run.
+    env_cfg_path = cfg_path
+    if os.path.exists(os.path.join(models_dir, "schedule.yaml")):
+        from scripts.eval.eval_rollout import _resolve_continual_stage_config
+        env_cfg_path = _resolve_continual_stage_config(
+            cfg_path, os.path.join(models_dir, str(step)), quiet=True)
+        if env_cfg_path is None:
+            raise ValueError(f"{models_dir}: schedule.yaml present but no stage config "
+                             f"resolved for step {step}")
+    print(f"[replay] world built from {env_cfg_path}")
+    env_cfg = cfg if env_cfg_path == cfg_path else Config.load_yaml(env_cfg_path)
     # Saved-config compat (STATE_DEPENDENT_BODY_MECHANICS C0): era keys go into a deep
     # copy used only to build env params; `cfg` (read for the agent block) is untouched.
-    _cfg_load = copy.deepcopy(cfg.to_dict())
+    _cfg_load = copy.deepcopy(env_cfg.to_dict())
     print(f"[replay] saved-config compat supplied: "
-          f"{apply_saved_config_compat(_cfg_load, source=cfg_path)}")
+          f"{apply_saved_config_compat(_cfg_load, source=env_cfg_path)}")
     env_params = load_env_params(Config(_cfg_load))
     obs_breakdown = get_observation_breakdown(env_params)
     input_dim = sum(obs_breakdown.values())
@@ -109,12 +132,6 @@ def load_agent(models_dir, step: int | None = None) -> LoadedAgent:
         modulation_config=modulation_cfg,
         observation_breakdown=obs_breakdown, encoding_config=agent_cfg,
     )
-
-    steps = ckpt_io.list_steps(models_dir)
-    step = steps[-1] if step is None else int(step)
-    if step not in steps:
-        raise ValueError(f"checkpoint step {step} not among the {len(steps)} saved "
-                         f"under {models_dir}")
 
     current = nnx.state(model)
     dev = jax.local_devices()[0]
@@ -147,7 +164,8 @@ def load_agent(models_dir, step: int | None = None) -> LoadedAgent:
         treedef, [by_path[str(k)] for k, _ in flat_current]))
 
     return LoadedAgent(model=model, env_params=env_params, agent_cfg=agent_cfg,
-                       step=step, obs_breakdown=obs_breakdown, action_dim=action_dim)
+                       step=step, obs_breakdown=obs_breakdown, action_dim=action_dim,
+                       env_config_path=str(env_cfg_path))
 
 
 def _scan_body(model, env_params, states0, h0, max_steps: int):
