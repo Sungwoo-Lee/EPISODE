@@ -22,9 +22,18 @@ decision_rules:
 #     5000 distinct episode_seed groups (not 30000): ~1000 per held-out fold before exclusions,
 #     leaving margin for G6 (>= 500 per fold, per quantity) after the steps_remaining headline
 #     drops groups whose six trajectories were all truncated.
+#   inner_folds: 5 — ridge-penalty cross-validation folds; reason in algorithmic_null_pilot.yaml.
+#   headline_capture: {checkpoint: "stage_end:0", probe: active_stage0end} (decided 2026-09-30 at
+#     Checkpoint R.2; plan-reviewer Revision 4 item R4-2). The descriptive layers (before/after the
+#     gain and offset, per-sense layers) are kept at the one interim capture. They decide no
+#     verdict; they say WHERE a difference arises (rules common.descriptive_layers), and the rules
+#     apply to the interim "unchanged", so an interim "different" must be localisable like an
+#     evidence one. Cost ~13 GB at one capture.
 # The UNTRAINED references are untrained.build on each of the three ordinary runs below.
 # ---------------------------------------------------------------------------------------------
 bootstrap_n: 2000
+inner_folds: 5
+headline_capture: {checkpoint: "stage_end:0", probe: active_stage0end}
 probes:
   - id: active_stage0end
     stores: []        # the six stage_end:0 stores (tooling plan Stage 4b); filled when collected

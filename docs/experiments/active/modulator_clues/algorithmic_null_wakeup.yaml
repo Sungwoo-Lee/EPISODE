@@ -46,12 +46,17 @@ wakeup:
   sign_test_alpha: 0.05
   sign_test_null_p: 0.5
 
+# out_root (set 2026-09-30 at Checkpoint R.2): the same root as the other manifests of this study;
+# outputs go to <out_root>/<name>/. The Checkpoint 4.0 plateau table was written there by
+# `--out-root` before this key existed, so the location does not change.
+out_root: results/analysis/algorithmic_null
+
 # checkpoints: explicit saved steps, in the tooling plan's `<int>` selector form. level-05: all 50
 # saved checkpoints of each run. May: the 15 checkpoints whose saved `stage` field is 0 (01_active),
 # read from each checkpoint's payload on 2026-09-30 (continual_forgetting_matrix.read_saved_stage);
 # the next checkpoint of each run is already stage 1. The driver re-checks the saved stage and
 # raises on a mismatch. Step 0 (the untrained network, untrained.build) is added by the driver for
-# the anchorable measures. Remaining schema keys (out_root, rollout sizes, ...) are added by
+# the anchorable measures. Remaining schema keys (rollout sizes, ...) are added by
 # developer. There is NO per-measure point set: every measure is sampled on this one checkpoint
 # grid (plan Revision 3, T1), and run_wakeup raises if a manifest carries one.
 runs:

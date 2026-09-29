@@ -29,8 +29,17 @@ decision_rules:
 #     only if both of its trajectories were truncated, which is 26.4 % of the groups of block 0
 #     (a property of the stores, not a statistic under test). 5000 -> ~3680 groups -> ~736 per fold;
 #     the reviewer's minimum of 2500 would give ~368 and fail G6.
+#   inner_folds: 5 (set 2026-09-30 at Checkpoint R.2, before any real ridge fit) — the number of
+#     internal cross-validation folds, grouped by episode_seed, used inside each training fold to
+#     choose the ridge penalty (A1 predictivity, A2 decoding). Principle: the inner split mirrors
+#     the outer one (test_frac 0.2 = one fifth held out), and it keeps every inner validation fold
+#     large: here the steps_remaining headline's ~3680 groups leave ~2944 in a training fold,
+#     ~589 per inner fold (above G6's 500-group floor for a held-out fold); 10 folds would give
+#     ~294. It decides no verdict and is not a rules constant. Same value in every manifest of
+#     this study; not to be moved after a pilot number is seen.
 # ---------------------------------------------------------------------------------------------
 bootstrap_n: 2000
+inner_folds: 5
 probes:
   - id: w0000_pair_final
     stores:

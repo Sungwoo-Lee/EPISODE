@@ -24,9 +24,11 @@ decision_rules:
 #   Checkpoints: stage_end:0..3 and final for A1–A4, plus stage_end:3:prev and final:prev (the
 #     checkpoint immediately before the last checkpoint of that stage; raise if none) for A4's
 #     within-stage drift (rules A4.within_stage_drift).
+#   inner_folds: 5 — ridge-penalty cross-validation folds; reason in algorithmic_null_pilot.yaml.
 # The UNTRAINED references are untrained.build on each of the three ordinary runs below.
 # ---------------------------------------------------------------------------------------------
 bootstrap_n: 2000
+inner_folds: 5
 probes:
   - id: active
     stores: []        # the six final-checkpoint stores (hunting world); filled when collected

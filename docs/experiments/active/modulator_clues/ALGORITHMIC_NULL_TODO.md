@@ -157,3 +157,100 @@ Sequence:
       comparison layer by layer, stage by stage.
 - [ ] If Stage 1 of the saved-config compat plan is approved: extend to the site × input
       grid, whose body-only arms add a contrast.
+
+## Checkpoint R.2 — designer sign-off of the evaluator's reading (2026-09-30)
+
+**What this is.** The decision rules are written in words. The code that applies them
+(`scripts/analysis/nmn/decision_rules.py` and `wakeup.py`) was checked against those words on
+made-up inputs, one row per case, in `tests/analysis/test_nmn_decision_rules.py` and
+`tests/analysis/test_nmn_wakeup.py`. This sign-off, by the rules' author (`experiment-designer`),
+is what registers the code's reading. It came before any similarity, decoding or wake-up result
+existed. The rules file is **unchanged** (sha `4c8508af…`), so no manifest was re-pinned.
+
+**Verdict: REJECTED, pending two code fixes.** All 105 table rows give the verdict the rules
+intend. Two behaviours outside the table do not. When both fixes land with the rows specified
+below, and those rows pass, the sign-off takes effect with no further designer review.
+
+1. **A3 under a failed gate or an incomplete yardstick (developer's reading 2: rejected).** The
+   code writes the pattern as "none of the three patterns (undetermined at 3 seeds)" and names
+   the gate in a separate field. Section 2 of the rules says a failed gate blocks *every* verdict
+   word and the output reads "blocked by gate <id>". Gate G5 says every A1–A4 verdict reads
+   "undetermined — yardstick incomplete". "Undetermined at 3 seeds" blames the seed count, and
+   the remedy that follows from that is more seeds, which is wrong for a gate failure. The A3 text
+   lists "a blocked gate" under *none* to say that a blocked layer is never given a pattern. It
+   does not choose the word. **Correct reading:** under a failed gate, every A3 layer pattern and
+   the A3 study reading are "blocked by gate <id>". With an incomplete yardstick they are
+   "undetermined — yardstick incomplete". Both carry the interim prefix under `interim`. This
+   matches A1, A2 and A4. Rows to add: "A3 gate failed" → `blocked by gate G1` (layers and study);
+   "A3 yardstick incomplete" → `undetermined — yardstick incomplete` (layers and study).
+2. **A curve with a non-finite point (`wakeup.py`, reason "curve holds a non-finite point").**
+   The rules assign no outcome to this case. The code returns NaN, which silently drops the run
+   from `n_def` and moves the sign test's threshold. Under the tooling contract ("a combination the
+   prose does not assign raises"), and for the same reason as G5 below, a missing point is a data
+   defect, not a result. **Correct reading:** raise `ValueError` naming the run, the measure and
+   the checkpoint. Row to add: a curve with one NaN point → RAISES.
+
+Non-blocking: the "why" of A2 row 3 says the gap is 0.083. It is 0.090 (0.61 − 0.52). The verdict
+("different") is right.
+
+**The developer's four marked readings.**
+
+- **B2, level-05 "undetermined" → May seeds "do not agree" (rows 2 and 10): confirmed.** "Agree"
+  needs a side to agree with. With no level-05 side, the condition fails. The May seeds decide
+  nothing, and the report prints their own per-seed lag readings next to the word, so it is never
+  read as a contradiction.
+- **A3 failed gate → "none …" with the gate in a separate field: rejected** (item 1 above).
+- **G5, a run with no stage-1 survival raises: confirmed.** A missing value is not a failed
+  competence test. Excluding the run would turn a data gap into an exclusion, and possibly into
+  "yardstick incomplete", without anyone seeing it. A run that truly never finished stage 1 is
+  taken out of the manifest by a visible, committed edit. (This differs from A3's survival, which
+  the rules explicitly let be "not available" → no pattern (c).)
+- **The literal "50 % of final" skips the noise guard: confirmed.** It applies `sustain`, so a
+  single one-checkpoint excursion never names a point (plan §11's non-monotone row, "same"). It
+  applies neither the guard nor the too-few-points refusal. It is never headlined, and its output
+  carries the headline's σ_Δ and guard margin beside it.
+
+**Designer decisions.**
+
+- **"No sustained crossing" (rules T5): acceptable, and no rules-text change.** The branch is
+  *reachable* under the registered constants, contrary to the note in the test file. It is reached
+  only by a see-saw at the very end of the curve. Example on the 51-point level-05 grid: the curve
+  sits just under half its rise, then the last three points are 1.0, 0.49 and 1.51 (net rise 1.0).
+  The guard passes (margin 1.06), and no two consecutive points reach half. On the 16-point May
+  grid it cannot be reached: the see-saw alone makes the noise band wider than the rise. The
+  behaviour is right either way (NaN with a reason, never an exception). Suggested (not
+  required): add this curve as a fixture row under the registered constants, beside the
+  `noise_k = 1` row.
+- **`inner_folds` = 5, in the manifests, not in the rules.** This is the number of grouped
+  cross-validation folds used to choose the ridge penalty. It is an estimator setting like
+  `bootstrap_n`, `n_per_store` and `ridge_alphas`, not a constant of any decision rule, so a rules
+  revision (and the re-pin that comes with it) is not warranted. It is set in the pilot, interim and
+  evidence manifests, with its principle stated in the pilot manifest. **`ridge_alphas`** (the
+  penalty grid, still missing from every manifest) is the same kind of choice. The developer must
+  set it, with a stated principle, before the first real fit, and must not change it after a pilot
+  number is seen.
+- **Wake-up manifest `out_root`** = `results/analysis/algorithmic_null`: the directory that
+  already holds the Checkpoint 4.0 table. The table is keyed to the manifest path and the rules
+  sha, and neither changed, so it stays valid.
+- **Interim `headline_capture` = `{checkpoint: "stage_end:0", probe: active_stage0end}`:
+  confirmed** (plan-reviewer Revision 4, R4-2). The rules apply to the interim "unchanged", and
+  the descriptive layers exist to show *where* a difference arises. An interim "different" that
+  cannot be localised would be unexplainable. The descriptive layers decide no verdict, and the
+  cost is about 13 GB. Note that the probe id is `active_stage0end`, not `active`.
+
+**Recorded outside the table.** A1 study, remedy: the count covers "undetermined" layers only (not
+"uninformative"), and it is reported even when the study reads "different". A3 study reading:
+(b) and (b+) are separate patterns, so 2 × (b) + 2 × (b+) + 1 other reads "mixed across layers",
+with each layer listed. The refutation section already counts either pattern as support. Both
+readings are literal and accepted. Suggested extra rows: an A1 study with one "uninformative"
+layer and no "different" layer (→ undetermined), and A4 with co-movement "together", one stage
+end "different" and none "same" (→ undetermined).
+
+**Ordering, for the record.** The Checkpoint 4.0 plateau table (survival only, no wake-up
+measure, no lag, no decision function called, no verdict word) was produced on 2026-09-30 02:44,
+before this sign-off, with the user's explicit authorisation. The designer has not read its
+values. It uses no rule this sign-off changes: the plateau goes through the same crossing rule,
+and only the non-finite-input fix touches it, which turns a NaN plateau into an exception. Its
+`nan_plateau_runs` list is the check. That list is empty (checked at sign-off; no other field was
+read), so the table stands. The first
+wake-up, similarity or decoding output must still come after the code fixes above.
