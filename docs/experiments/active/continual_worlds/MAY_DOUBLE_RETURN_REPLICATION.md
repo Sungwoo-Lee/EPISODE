@@ -20,6 +20,29 @@ develop_link: docs/experiments/active/hypervigilance/NMN_CONTINUAL_DOUBLE_RETURN
 > the larger continual study this sits beside, whose analysis rules it borrows: [[CONTINUAL_WORLDS]] ·
 > the level-05 world whose body it keeps: [[LEVEL05_BODY_INTERACTIONS]].
 
+> **Revision (pre-data, 2026-09-29).** These edits answer the plan-reviewer's findings (end of
+> this doc). They were made while runs M1–M6 were being launched, **before any result existed
+> or was looked at**, so they are still pre-registration. Replaced text is ~~struck through~~
+> and left in place; new text is marked *[rev 2026-09-29]*. No config, schedule or training
+> setting changed. In plain words:
+> - **Verdict labels (5.1, 5.3; reviewer M2).** "Forgets less" is not independent of "comes back
+>   better": it equals the return lead minus the stage-1 lead. A new **Mixed** verdict covers
+>   "some readings for the modulator, some against"; **Reversed** now needs the ordinary agent
+>   to be clearly ahead on at least one return.
+> - **Which window decides "as large as May's" (5.1, 5.4; M3).** The May-sized comparison uses
+>   May's own window, the last 10 % of each stage; the 200,000-episode window is reported next
+>   to it. The 5.3 verdict still uses the 200,000-episode window.
+> - **Noise floor (5.2; M4).** A difference must beat twice a between-seed error that is never
+>   taken below about 3.6 steps (derived from May's seed noise), so a lucky, tiny spread across
+>   three seeds cannot make a few-step difference count.
+> - **Small fixes.** The logged survival key is `Episode/Steps` (L1); the lower critic learning
+>   rate in May is listed as an agent difference (L2); the real May run folders are cited (L4);
+>   the seed of a run is read from its stage-0 saved config only (3.5; M1); the collapse check
+>   and the two-collapsed-pairs case are defined (7.6); a null inside noise is worded
+>   "underpowered null" (7.7; O3).
+> - **Still open (not a doc edit):** the zero-shot driver of 5.6 refuses this schedule until
+>   the `developer` fix of M1 lands. That blocks only the post-training test, not training.
+
 ## 1. Question
 
 In May 2026 the project ran one small experiment that favoured the **modulator**. The modulator
@@ -69,9 +92,11 @@ the tables of section 5.
 **What counts as replicated (in advance).** The rules are written out in 5.3. In short, the
 May result is **replicated** if the modulated agent is ahead on **both** returns **and** forgets
 less on both returns. "Ahead" means the favourable sign in at least **2 of the 3** seed pairs,
-**and** a mean difference larger than twice its between-seed standard error. The result is
+**and** a mean difference larger than twice its between-seed standard error *[rev 2026-09-29:
+that error is never taken below a noise floor of about 3.6 steps, 5.2]*. The result is
 **not replicated** if the differences have the wrong sign in most pairs or sit inside seed noise.
-It is **reversed** if the ordinary agent is clearly ahead. Magnitude is compared with May's
+It is **reversed** if the ordinary agent is clearly ahead *[rev 2026-09-29: on at least one
+return; a result with readings on both sides is **mixed**, 5.3]*. Magnitude is compared with May's
 separately (5.4), because today's body gives different absolute survival levels.
 
 **Predicted shape.** Little or no difference in stage 1 (May: +11) or in the harmless stages
@@ -106,7 +131,13 @@ pin a width. Verified: both agents build and train against 52 (6.1, V4).
 ### 3.2 What mimics May: the outside world and the predator switch
 
 Every May value below is read from the May run's **saved** stage configs
-(`results/JAX_RecurrentPPO/20260511-174837_rppo_nmn_cont_dr_mod_s0_r2/models/stage_0*.yaml`),
+~~(`results/JAX_RecurrentPPO/20260511-174837_rppo_nmn_cont_dr_mod_s0_r2/models/stage_0*.yaml`),~~
+*[rev 2026-09-29: the folder first cited is an aborted launch with no checkpoints. The real May
+runs are `results/JAX_RecurrentPPO/20260511-175843_rppo_nmn_cont_dr_mod_s0_r2/` (modulated,
+WandB `8eorbxhq`) and `results/JAX_RecurrentPPO/20260511-180151_rppo_nmn_cont_dr_unmod_s0_r2/`
+(ordinary, WandB `lrzvg8k6`), files `models/stage_0*.yaml`. All four May folders' saved configs
+are byte-identical (plan-reviewer L4), so no value below changes. The config-file header
+comments still cite the old folder; they are left alone because the runs were launching.]*
 not from `configs/continual/nmn_double_return_stages/`. The saved files are the ground truth:
 they are what the trainer read, and the stage files have since been touched by later
 schema work. May's `default.yaml` had no `entities:` block yet (added 2026-06-16, `e2333593`),
@@ -194,7 +225,10 @@ Both agents are today's ordinary / modulated pair (the continual-worlds study's)
 exact pair: May's modulated agent was `recurrent_ppo_nmn_film_g1_tempceil5.yaml` (FiLM with a
 policy-temperature head clipped to [0.5, 5], MC returns), and May's analysis found that the
 temperature head moved at every boundary. Today's modulated agent cannot reproduce that
-mechanism. A positive result here is therefore about **today's** modulator. Open question Q2 (section 8) is
+mechanism. *[rev 2026-09-29: two further agent differences are shared by **both** arms, so they
+are not arm-vs-arm confounds, but they are reasons a non-replication may not be interpretable
+as a failure of May's result: returns MC → GAE_NORM, and critic learning rate `lr_critic`
+0.0001 (May) → 0.0005 (today).]* A positive result here is therefore about **today's** modulator. Open question Q2 (section 8) is
 whether to add May's agent as a third arm.
 
 **From scratch, May's schedule unchanged.** Both agents start from random weights, as in May.
@@ -243,7 +277,7 @@ defaults, the schedule and stage files below, and the same code commit (recorded
 | **H2**: continual resume ran the wrong stage's world (fixed) | only if a run is resumed | runs start at episode 0; if one must be resumed after a crash, the runner checks the `[RESUME] Stage k:...` rebuild line |
 | **B5**: single-config resume pairs restored memory with fresh worlds | single-config path only | not applicable (continual path) |
 | Stale continual tests (8-wide vision) | the continual stage-switch and resume paths have no passing regression test | the same five-stage switch path ran cleanly on GPU in continual-worlds Pilot 2 (2026-09-28, both agents); the first `[STAGE]` line of each run is checked at 1.5 M (6.3) |
-| Stale nested `training.seed` copy in saved configs | misread hazard | the runner reads the **top-level** `seed:` of each saved config, not `training.seed` |
+| Stale nested `training.seed` copy in saved configs | misread hazard | ~~the runner reads the **top-level** `seed:` of each saved config, not `training.seed`~~ *[rev 2026-09-29, plan-reviewer M1]* a run's seed is read **only** from the top-level `seed:` of `models/config.yaml` (= stage 0). The trainer stamps the CLI seed, tag and WandB names into stage 0's config object only, so the saved `stage_01`–`stage_04` files carry the base config's seed (42) whatever `--seed` was: for seeds 43 and 44 they read `seed: 42`. Never read the seed from a later stage file or from `training.seed` |
 | Spawn-area-full parks an entity at (0,0) | a crowded quadrant could silently misplace | measured: 0 entities outside their area and 0 stacked, 1,000 resets per world (V5) |
 | **New, not in the registry:** patrol clip off-by-one | a quadrant-restricted animal can reach row/column 6 (1-indexed), i.e. a 6 × 6 box | present identically in May's code (`8bd8f10f`, the same `_parse_area` + inclusive `clip`), so the replication **matches** May; handed to `bug-curator` to record (7) |
 
@@ -313,7 +347,8 @@ Six GPUs in parallel means about 15 h wall time, plus node variance.
 
 ## 5. Analysis plan (pre-specified)
 
-The measure is survival steps per episode (`Episode/Steps_mean`) over the whole run, read from
+The measure is survival steps per episode (~~`Episode/Steps_mean`~~ *[rev 2026-09-29: the logged
+key is `Episode/Steps`, the per-row mean; plan-reviewer L1]*) over the whole run, read from
 WandB episode rows (`Episode/Number`, `Episode/_window_n`, `stage/index`). Rows are weighted by
 `Episode/_window_n`, and rows under 1,000 episodes are skipped, as in [[CONTINUAL_WORLDS]] 5.1.
 Reward is never used. The analysis reuses
@@ -336,7 +371,7 @@ active world's reference level is `R_A = S_1`.
 |---|---|---|
 | Return advantage `D_k` (k = 3, 5) | `S_k(mod) − S_k(ord)` within a seed pair; also the difference of the two agents' 3-seed means | +106.9 (k=3), +132.5 (k=5) |
 | Forgetting `F_k` (k = 3, 5) | `S_k − S_1` per run (absolute steps; negative = forgot) | −51.9 / −147.7 (k=3); −46.2 / −167.5 (k=5) |
-| Forgetting advantage `G_k` | `F_k(mod) − F_k(ord)` (positive favours the modulator) | +95.8, +121.3 |
+| Forgetting advantage `G_k` | `F_k(mod) − F_k(ord)` (positive favours the modulator). *[rev 2026-09-29, plan-reviewer M2]* Algebraically `G_k = D_k − D_1`: it is the return advantage minus the stage-1 advantage, **not** a reading independent of `D_k`. It is favourable when the modulator's lead on the return exceeds its stage-1 lead | +95.8, +121.3 |
 | Dip, own reference (k = 3, 5) | 1 − (mean survival over the first 20,000 episodes of stage k) / `R_A` (own) | May reported ~equal dips on a different window (200 episodes, min) |
 | Dip, common reference | `R_A,common − first-20k mean`, in steps, with `R_A,common` = min(`R_A` ord, `R_A` mod) of the seed pair | — |
 | Recovery | episodes **and** environment steps after the switch until the 20,000-episode running mean first reaches 0.9 × `R_A` (own) and 0.9 × `R_A,common`; censored at 700,000 | "mod climbs back within one window; ord plateaus" (qualitative) |
@@ -344,7 +379,10 @@ active world's reference level is `R_A = S_1`.
 | Stage-1 level `S_1` and passive levels `S_2`, `S_4` | context and gates | 289.5 / 278.3; 485.9 / 487.9; 495.1 / 492.3 |
 
 Also reported for comparison with May's tables: the **May-style tail mean**, the mean over the
-last 10 % of each stage's episodes (the window May's analyzer used).
+last 10 % of each stage's episodes (the window May's analyzer used). *[rev 2026-09-29,
+plan-reviewer M3]* It is written `T_k` (150,000 episodes in stage 1, 70,000 in stages 3 and 5);
+`D_k`, `F_k` and `S_1` recomputed on `T_k` instead of `S_k` carry the suffix "(tail)". `T_k` is
+what decides the May comparison of 5.4; `S_k` decides the verdict of 5.3.
 
 ### 5.2 Noise yardstick
 
@@ -356,20 +394,54 @@ significance test, which is why it is always combined with the per-pair sign cou
 every difference is also printed next to May's ±4.4-step seed spread and the level-05 seed SD
 (1.5 steps).
 
+*[rev 2026-09-29, plan-reviewer M4]* **Noise floor.** An SD estimated from three values is
+itself very uncertain (roughly ±50 %), so a lucky, small spread could make a few-step difference
+look "beyond noise". The SE used in every `2 × SE` test on a quantity in steps is therefore
+floored at a value derived from May's measured seed noise, σ = 4.4 steps (the ±4.4-step
+seed-to-seed noise from the May temperature-clip rerun, read here as a per-agent SD):
+
+$$
+\text{SE}_{\text{floor}} = \sqrt{\frac{\sigma^2}{3} + \frac{\sigma^2}{3}} = \sigma\sqrt{2/3} = 4.4 \times 0.816 \approx 3.6 \text{ steps}
+$$
+
+That is the SE of a difference between two 3-seed means when each agent's seeds scatter with SD
+4.4. For a difference of **changes** between two stage levels (`G_k`, and `ZA_j` of 5.6), each
+per-run value is itself a difference of two levels, so its variance doubles:
+`4.4 × sqrt(4/3) ≈ 5.1` steps. The rule is `SE_used = max(SE_k, floor)` with floor 3.6 for
+`D_k` and the common-reference dip, 5.1 for `G_k` and `ZA_j`. The own-reference dip is a
+fraction and gets no floor. In effect, no step-valued difference smaller than about 7 steps
+(10 steps for `G_k`, `ZA_j`) can ever count as favourable or unfavourable.
+
+**Why a floor and not a separate minimum effect (e.g. 10 steps).** The floor comes from a
+measured quantity; a minimum effect would be a second, freely chosen constant. The floor already
+works as a minimum effect (2 × 3.6 ≈ 7 steps; 2 × 5.1 ≈ 10 steps). The floor is conservative
+here: May's world was harder, and today's level-05 seed SD is 1.5 steps, so real SEs are
+expected at or below it. The floor does **not** fix the opposite case, an unluckily large SD
+hiding a real effect. That case is covered by the "underpowered null" wording of 7.7.
+
 ### 5.3 Verdict rules (locked)
 
 **H-ret, per return k ∈ {3, 5}:** *favourable* if `D_k > 0` in **≥ 2 of 3** seed pairs **and**
 the mean difference `> 2 × SE_k`. *Unfavourable* if `D_k < 0` in ≥ 2 of 3 pairs **and** the mean
-difference `< −2 × SE_k`. Otherwise *inside noise*.
+difference `< −2 × SE_k`. Otherwise *inside noise*. *[rev 2026-09-29: `SE_k` here and below is
+the floored SE of 5.2.]*
 
-**H-forget, per return:** the same rule on `G_k`.
+**H-forget, per return:** the same rule on `G_k`. *[rev 2026-09-29: recall `G_k = D_k − D_1`
+(5.1). An unfavourable H-forget with a favourable H-ret means "ahead on the return, but by less
+than in stage 1", not "the ordinary agent is ahead".]*
 
 | Overall verdict | Condition |
 |---|---|
 | **Replicated** | H-ret favourable on **both** returns **and** H-forget favourable on **both** returns |
 | **Partly replicated** | at least one of the four readings favourable, none unfavourable |
-| **Not replicated** | no favourable reading and no unfavourable reading beyond noise |
-| **Reversed** | any H-ret or H-forget reading unfavourable (the ordinary agent clearly ahead) |
+| ~~**Not replicated**~~ | ~~no favourable reading and no unfavourable reading beyond noise~~ |
+| ~~**Reversed**~~ | ~~any H-ret or H-forget reading unfavourable (the ordinary agent clearly ahead)~~ |
+| **Mixed** *[rev 2026-09-29]* | at least one of the four readings favourable **and** at least one unfavourable (e.g. modulator ahead on both returns, but by less than its stage-1 lead, so H-forget unfavourable) |
+| **Reversed** *[rev 2026-09-29]* | no reading favourable **and** H-ret unfavourable on at least one return (the ordinary agent clearly ahead on a return) |
+| **Not replicated** *[rev 2026-09-29]* | no reading favourable **and** H-ret unfavourable on neither return. An unfavourable H-forget alone is reported beside it as "the modulator lost its stage-1 lead". Worded per 7.7 when every difference is inside noise |
+
+*[rev 2026-09-29]* The rows are checked in the order Replicated, Partly replicated, Mixed,
+Reversed, Not replicated; the five are mutually exclusive and cover every outcome.
 
 **H-dip** (predicted equal, as in May): *equal* if, on both switches (into stages 3 and 5), the
 mean dip difference is inside 2 × SE under **both** the own and the common reading. A dip
@@ -400,6 +472,14 @@ ceiling. The comparison is made on scale-free readings:
 A replicated effect counts as **May-sized** if its normalised return advantage is at least half
 of May's (≥ 19 % at k=3 and ≥ 24 % at k=5). Otherwise it is "replicated in direction, smaller
 than May". Both are reported with the absolute numbers next to them.
+
+*[rev 2026-09-29, plan-reviewer M3]* **Which window decides.** Every reading in this table,
+and the May-sized test, is computed on the **May-style tail `T_k`** (last 10 % of each stage,
+5.1), because that is the window May's own numbers came from. Reason: on a return stage where
+one agent is still recovering, the wider 200,000-episode window pulls that agent's level down,
+so "not May-sized" could come from the window rather than the effect. The same readings on the
+200,000-episode `S_k` are reported in a second column for reference and do not decide
+anything here. The overall verdict of 5.3 stays on `S_k`.
 
 ### 5.5 Gates and descriptive checks
 
@@ -453,7 +533,8 @@ world):
 | `ZA_j` (j = 2, 4) | `Z_j(mod) − Z_j(ord)` | positive favours the modulator (it lost less) |
 
 **Rule (H-zeroshot, secondary).** For each j, *favourable* if `ZA_j > 0` in **≥ 2 of 3** seed
-pairs **and** the mean `ZA_j > 2 × SE` (between-seed SE, as in 5.2). *Unfavourable* is the
+pairs **and** the mean `ZA_j > 2 × SE` (between-seed SE, as in 5.2; *[rev 2026-09-29] floored
+at 5.1 steps*). *Unfavourable* is the
 mirror case. Otherwise it is *inside noise*. A per-pair difference is also marked "beyond eval
 noise" when the two cells' 95 % CIs, combined, do not include 0. H-zeroshot is reported **next
 to** the overall verdict of 5.3 and does **not** change it: the verdict stays pinned to May's own
@@ -505,8 +586,8 @@ numbers above are their printed output.
 | 7.3 | Stage-1 gate fails for ≥ 2 runs of one agent | inconclusive; propose the 3.0 M fallback (3.4) |
 | 7.4 | Passive stages not easier than stage 1 for both agents | the switch does not reproduce May's easy / hard contrast under today's body; report; the verdict is still computed but worded "switch weaker than May's" |
 | 7.5 | Neither agent drops at harmless → hunting (own dip < 5 % on both switches) | the worlds are not distinct enough under today's body and senses; **null for this design**, not a refutation of May |
-| 7.6 | One run of an agent collapses (return < 0.6 × its `R_A` for the whole stage) while its seed-mates do not | reported; verdict computed with and without that seed pair |
-| 7.7 | All differences inside noise | "not replicated" under today's settings; May's single-seed result stands as a May-conditions observation only |
+| 7.6 | One run of an agent collapses (return < 0.6 × its `R_A` for the whole stage) while its seed-mates do not | reported; verdict computed with and without that seed pair. *[rev 2026-09-29]* **Collapse, defined:** on return stage k, the **best** 20,000-episode running mean anywhere in the stage stays below 0.6 × that run's own `R_A` (= `S_1`); read only for completed stages. **Scope:** applies only when exactly one run of an agent collapses on that return. If 2 or 3 runs of the **same** agent collapse, collapse is that agent's behaviour (May's ordinary agent collapsed into starvation): it is kept as data and no without-version is computed. **Without-version:** the 5.3 rule on the remaining pairs; with 2 pairs left, favourable needs the sign in **both** pairs and the mean difference beyond 2 × the floored SE. **Two collapsed pairs** (one ordinary and one modulated run collapse, in different seed pairs): only one pair remains, so no without-version verdict is computed; that pair's signs are reported descriptively. **Headline:** always the all-3-pair verdict. It is marked "fragile (rests on collapsed runs)" if the without-version gives a different verdict, or if two pairs contain a collapsed run |
+| 7.7 | All differences inside noise | ~~"not replicated" under today's settings; May's single-seed result stands as a May-conditions observation only~~ *[rev 2026-09-29, plan-reviewer O3]* verdict label "Not replicated" (5.3), worded as an **underpowered null**: three seeds cannot tell an effect of this size from seed noise under today's settings. It is **not** evidence that the effect is absent. A real effect of 15–30 steps, far smaller than May's 107–132, could sit here. May's single-seed result stands as a May-conditions observation only. A more-seeds follow-up is the named next step, not a verdict |
 | 7.8 | Modulated agent clearly worse on returns | "reversed"; a real finding under today's settings (either a May seed fluke or a consequence of the changed body, senses or agent) |
 | 7.9 | Recovery censored (never reaches 0.9 × `R_A` in 700k) for both agents | H-rec reported but not counted for that switch |
 
