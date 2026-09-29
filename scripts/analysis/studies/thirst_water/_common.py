@@ -19,7 +19,7 @@ FIG = os.path.join(ROOT, "docs/develop/active/thirst/figures")
 
 KIND = {"calculation": "calculation — exact arithmetic from the planned rules, no simulation",
         "simulation": "simulation — planned rules with a scripted agent, no trained agent, no predators",
-        "mockup": "rendering — the episode dashboard drawing a hand-built level-06 state"}
+        "mockup": "mock-up — the episode dashboard drawing a real level-05 frame with a hand-built pond and hydration"}
 
 # One colour per activity / cause, shared by every figure.
 ACT_COLOURS = {"walking to water": house.BLUE, "drinking": "#7fb2e5",

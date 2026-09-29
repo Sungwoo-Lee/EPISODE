@@ -2259,3 +2259,27 @@ class the page owns (`ul.plainlist`).
 
 **Verifying a fix:** for each selector in the page's own `<style>`, count matches in the rendered
 DOM; any zero is this defect.
+
+### F69 — `overflow-wrap:anywhere` on inline code collapses a table column's min-content, so identifiers are torn mid-token at every width
+
+**What a reader saw** (2026-09-29, *Water at Level 06*, first format gate): a three-column settings
+table at 1440 px rendering `environment.max_st` / `eps`, `water.max_hydratio` / `n`,
+`water.drain_per_st` / `ep` — nine of fourteen config keys split mid-token, in a 167 px column
+beside a 354 px prose column with room to spare.
+
+**Cause:** F8's `code{overflow-wrap:anywhere}` is right for a path in a paragraph, but `anywhere` —
+unlike `break-word` — also lowers the element's **min-content** to a single glyph. Auto table layout
+sizes columns from min/max-content, so the key column claims nothing beyond its header and the prose
+column takes the slack; the browser then breaks at the first character that fits.
+
+**Why neither review method caught it:** the rule is the register's own; nothing overflows or
+overlaps, and a torn identifier in a mono chip looks like deliberate wrapping unless the reader knows
+the key.
+
+**Rule:** inside table cells, code chips use `overflow-wrap:break-word` (min-content stays at the
+longest unbreakable run, so the column grows), and the page builder inserts `<wbr>` after `.`, `_`
+and `/` inside them so the genuinely long keys can still break at a boundary. Keep `anywhere` for
+prose chips only.
+
+**Verifying a fix:** for every `td code`, assert `getClientRects().length === 1` at the widest
+viewport, or that each line break falls immediately after `.`, `_` or `/`.

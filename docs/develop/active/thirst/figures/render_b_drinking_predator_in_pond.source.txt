@@ -1,0 +1,1 @@
+python docs/develop/active/thirst/figures/make_render_frames.py (from the repo root; needs the rendering session's dashboard changes, uncommitted until its audit gate clears)

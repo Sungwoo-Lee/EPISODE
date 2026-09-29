@@ -62,7 +62,10 @@ for stem in stems:
         src = os.path.join(FIGS, f"{stem}.source.txt")
         if not os.path.exists(src):
             fail.append(f"{stem}: no {stem}.source.txt naming the command that rendered it"); continue
-        block += f'<p class="prov">Rendered by: <code>{open(src).read().strip()}</code></p>'
+        srctxt = open(src).read().strip()
+        if "PENDING" in srctxt and not os.environ.get("THIRST_ALLOW_PENDING"):
+            fail.append(f"{stem}: {stem}.source.txt still says PENDING - get the render command first")
+        block += f'<p class="prov">Rendered by: <code>{srctxt}</code></p>'
     else:
         block += (f'<p class="prov">Drawn by <code>scripts/<wbr>analysis/<wbr>studies/<wbr>thirst_water/<wbr>{stem}.py</code>⁠, '
                   f'which also writes <code>figures/<wbr>{stem}.data.txt</code>⁠ — the table above.</p>')
@@ -86,6 +89,20 @@ for stem in stems:
             fail.append(f"{stem}: no vector companion {stem}.svg")
     b64 = base64.b64encode(open(png, "rb").read()).decode()
     page = re.sub(rf'(<img data-fig="{re.escape(stem)}")', rf'\1 src="data:image/png;base64,{b64}"', page, count=1)
+
+# --- register F69: code chips in table cells break only after . _ / (never mid-identifier) -----
+def _chip(m):
+    return "<code>" + re.sub(r"(?<!<wbr>)([._/])(?!<wbr>)", r"\1<wbr>", m.group(1)) + "</code>"
+page = re.sub(r"<td([^>]*)>(.*?)</td>",
+              lambda m: f"<td{m.group(1)}>" + re.sub(r"<code>(.*?)</code>", _chip, m.group(2), flags=re.S) + "</td>",
+              page, flags=re.S)
+
+# --- script-emitted table fragments (numbers never typed into the template) -------------------
+for m in set(re.findall(r"__TABLE:([a-z0-9_]+)__", page)):
+    tf = os.path.join(FIGS, f"{m}.html")
+    if not os.path.exists(tf):
+        fail.append(f"table fragment {m}.html missing - run its script"); continue
+    page = page.replace(f"__TABLE:{m}__", open(tf).read())
 
 seen = []
 for m in re.finditer(r"<figure>.*?</figure>", page, re.S):

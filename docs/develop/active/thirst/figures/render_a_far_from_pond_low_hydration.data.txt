@@ -1,0 +1,2 @@
+frames from the recorded episode|1|336|0.3|real level-05 recording: ordinary agent (t1none), final checkpoint, episode 2, seed 8217; step 59 of the real episode; hydration set to 34 of 200
+synthetic fields added to that frame|4|4|100.0|pond position, hydration value, the 200 maximum, one Hydration observation equal to hydration/200 (noise off)

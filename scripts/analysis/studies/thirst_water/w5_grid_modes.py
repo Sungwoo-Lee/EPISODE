@@ -10,7 +10,7 @@ from _sw import SW, META
 
 house = C.house; house.apply()
 G = META["grids"]; E = META["E"]
-MODES = [("list", house.BLUE, "o"), ("random", house.ORANGE, "s"), ("center", house.GREEN, "^")]
+MODES = [("list", house.INK, "o"), ("random", "#6e747e", "s"), ("center", "#a7acb5", "^")]   # neutral: blue/green/orange mean water/food/fire
 fig, ax = plt.subplots(1, 2, figsize=(10.2, 4.1))
 for m, col, mk in MODES:
     k = [SW["grid_mode"][f"{g}|{m}"] for g in G]; s = [SW["grid_mode_search"][f"{g}|{m}"] for g in G]
@@ -18,7 +18,7 @@ for m, col, mk in MODES:
     ax[0].plot(G, [100 * v["survive"] for v in s], color=col, marker=mk, ms=4.5, lw=1.4, ls="--", label=f"{m}, must find it")
     ax[1].plot(G, [100 * v["share"]["walking to water"] for v in k], color=col, marker=mk, ms=4.5, lw=1.8)
     ax[1].plot(G, [100 * v["share"]["walking to water"] for v in s], color=col, marker=mk, ms=4.5, lw=1.4, ls="--")
-ax[0].plot(G, [100 * SW["no_water"][str(g)]["survive"] for g in G], color="#8a8f99", lw=1.6, ls=":", label="no water (reference)")
+ax[0].plot(G, [100 * SW["no_water"][str(g)]["survive"] for g in G], color=house.BLUE, lw=1.4, ls=":", label="no water (reference)")
 for a in ax:
     a.axvline(10, color="#d4d6dc", lw=6, zorder=0); a.set_xlabel("grid size (cells per side)"); a.set_xticks(G)
 ax[0].set_ylim(40, 100); ax[0].set_ylabel("lasts 500 steps (% of episodes)")

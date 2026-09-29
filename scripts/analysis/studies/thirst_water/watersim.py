@@ -188,7 +188,8 @@ def run(W: World, E=2000, seed=0, record_track=False):
     alive = np.ones(E, bool); life = np.full(E, W.steps); cause = np.zeros(E, int)
     goal = np.full(E, -1)            # -1 camp, 0 water, 1 food, 2 warm
     act = np.zeros((E, len(ACTS)))
-    visits = np.zeros(E); on_pond_prev = pond[np.arange(E), pos[:, 0], pos[:, 1]]
+    visits = np.zeros(E); drinks = np.zeros(E); drink_steps = np.zeros(E); arr_sum = np.zeros(E)
+    on_pond_prev = pond[np.arange(E), pos[:, 0], pos[:, 1]]
     ar = np.arange(E)
     track = [] if record_track else None
 
@@ -269,7 +270,12 @@ def run(W: World, E=2000, seed=0, record_track=False):
                      np.where(goal == 2, 4, 5)))
         a = np.where((goal == 0) & on_pond, 1, a)
         np.add.at(act, (ar[alive], a[alive]), 1)
-        visits += alive & on_pond & ~on_pond_prev; on_pond_prev = on_pond
+        entry = alive & on_pond & ~on_pond_prev
+        visits += entry
+        dentry = entry & (goal == 0)                     # a deliberate drink, not a walk-through
+        drinks += dentry; arr_sum += np.where(dentry, Wv, 0.0)
+        drink_steps += alive & on_pond & (goal == 0)
+        on_pond_prev = on_pond
         if record_track:
             track.append(dict(W=Wv.copy(), N=N.copy(), T=T.copy(), goal=goal.copy(), on_pond=on_pond.copy(),
                               alive=alive.copy()))
@@ -284,7 +290,8 @@ def run(W: World, E=2000, seed=0, record_track=False):
         if not alive.any():
             break
     share = act / np.maximum(act.sum(1, keepdims=True), 1)
-    res = dict(life=life, cause=cause, share=share, visits=visits, W0=W0, pond_tl=pond_tl,
+    res = dict(life=life, cause=cause, share=share, visits=visits, drinks=drinks, drink_steps=drink_steps,
+               arr_sum=arr_sum, W0=W0, pond_tl=pond_tl,
                first_found=first_found, known_at_end=known, E=E)
     if record_track:
         res["track"] = track

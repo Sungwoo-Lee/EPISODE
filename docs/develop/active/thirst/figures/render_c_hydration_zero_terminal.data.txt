@@ -1,0 +1,2 @@
+frames from the recorded episode|1|336|0.3|real level-05 recording: ordinary agent (t1none), final checkpoint, episode 2, seed 8217; step 333, the last step with no injury and no predator adjacent; the episode is truncated there and hydration set to 0
+synthetic fields added to that frame|4|4|100.0|pond position, hydration value, the 200 maximum, one Hydration observation equal to hydration/200 (noise off)

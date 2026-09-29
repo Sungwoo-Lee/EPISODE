@@ -10,6 +10,8 @@ Settings (each 2,000 episodes, seed fixed per setting so reruns reproduce):
   *_search     the same with search=True: the agent must find the pond each episode (watersim docstring)
   no_water     reference: the same world with water inert (drain 0, gain 0, start 100) per grid size
                (`python sweep.py --no-water-only` adds just this key to an existing sweep.json)
+  margin       the scripted agent's own timing: slack margin {25, 50, 100} x grid {10,14,20}, knows / must find
+               (plan-reviewer finding 1: the must-find numbers depend on it)
   start        the level-06 design point with per-episode start hydration kept (for the start figure)
 """
 import json, os, sys, time
@@ -30,7 +32,10 @@ def summary(res):
     on = res["share"]
     walk_w, drink = on[:, 0], on[:, 1]
     v = np.maximum(res["visits"], 1)
-    return dict(mean_life=float(life.mean()), survive=float((cz == 0).mean()),
+    nd = res["drinks"].sum()
+    return dict(drinks=float(res["drinks"].mean()), walkthroughs=float((res["visits"] - res["drinks"]).mean()),
+                steps_per_drink=float(res["drink_steps"].sum() / max(nd, 1)),
+                arrival_W=float(res["arr_sum"].sum() / max(nd, 1)),mean_life=float(life.mean()), survive=float((cz == 0).mean()),
                 causes=S.cause_shares(res),
                 share={a: float(on[:, i].mean()) for i, a in enumerate(S.ACTS)},
                 steps_per_visit=float(np.mean((drink * life)[res["visits"] > 0] / v[res["visits"] > 0])),
@@ -70,6 +75,9 @@ def main():
                                 for d in DRAINS for g in GRIDS}
     print("drain_grid_search", round(time.time() - t0))
     out["no_water"] = no_water()
+    out["margin"] = {f"{mg}|{g}|{sr}": summary(S.run(S.World(grid=g, margin=float(mg), search=sr), E, seed=13))
+                     for mg in (25, 50, 100) for g in (10, 14, 20) for sr in (False, True)}
+    print("margin", round(time.time() - t0))
     r = S.run(S.World(), E=20000, seed=15)
     out["start"] = dict(W0=r["W0"].round(3).tolist(), life=r["life"].tolist(), cause=r["cause"].tolist())
     json.dump(out, open(os.path.join(C.OUT, "sweep.json"), "w"))

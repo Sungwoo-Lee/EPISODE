@@ -27,12 +27,12 @@ for cz in C.CAUSE_ORDER[1:]:
     if v.max() < 0.05:
         continue
     b.bar(x, v, bottom=bottom, color=C.CAUSE_COLOURS[cz], width=0.7, label=cz); bottom += v
-b.set_xticks(x); b.set_xticklabels([f"{d:.2f}".rstrip("0").rstrip(".") if d != 0.3125 else ".31" for d in D], rotation=60); b.set_ylabel("episodes that die (%)")
+b.set_xticks(x); b.set_xticklabels([f"{d:g}" for d in D], rotation=90); b.set_ylabel("episodes that die (%)")
 b.set_ylim(0, 10); b.legend(loc="upper left", fontsize=10.5)
 c = ax[2]
-c.plot(D, [k["visits"] for k in known], color=house.BLUE, marker="o", ms=4.5, lw=1.8, label="visits per episode")
-c.plot(D, [k["steps_per_visit"] / 5 for k in known], color=house.ORANGE, marker="s", ms=4.5, lw=1.8, label="steps per visit / 5")
-c.set_ylim(0, 6); c.set_ylabel("count"); c.legend(loc="upper left", fontsize=10.5)
+c.plot(D, [k["drinks"] for k in known], color=house.BLUE, marker="o", ms=4.5, lw=1.8, label="drinking visits per episode")
+c.plot(D, [k["steps_per_drink"] / 5 for k in known], color="#6e747e", marker="s", ms=4.5, lw=1.8, label="steps per drinking visit / 5")
+c.set_ylim(0, 8); c.set_ylabel("count"); c.legend(loc="upper left", fontsize=10.5)
 for a_ in ax:
     a_.set_xlabel("drain per step away from water")
 for a_ in (ax[0], ax[2]):

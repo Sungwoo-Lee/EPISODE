@@ -15,8 +15,8 @@ import watersim as S
 
 house = C.house; house.apply()
 GRIDS = list(range(8, 21))
-MODES = [("list", house.BLUE, "o", "list (4 candidates)"), ("random", house.ORANGE, "s", "random"),
-         ("center", house.GREEN, "^", "center")]
+MODES = [("list", house.INK, "o", "list (4 candidates)"), ("random", "#6e747e", "s", "random"),
+         ("center", "#a7acb5", "^", "center")]   # neutral: blue/green/orange mean water/food/fire on this page
 stats = {}; n_pairs = 0
 for m, *_ in MODES:
     for G in GRIDS:

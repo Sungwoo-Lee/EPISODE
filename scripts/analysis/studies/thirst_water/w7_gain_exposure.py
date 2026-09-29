@@ -14,11 +14,11 @@ A, E = META["gains"], META["E"]
 fig, ax = plt.subplots(1, 2, figsize=(10.2, 3.9))
 for d, ls, mk in ((0.625, "-", "o"), (1.0, "--", "s")):
     v = [SW["drain_gain"][f"{d}|{a}"] for a in A]
-    ax[0].plot(A, [x["steps_per_visit"] for x in v], color=house.BLUE, ls=ls, marker=mk, ms=4.5, lw=1.8, label=f"drain {d:g}")
+    ax[0].plot(A, [x["steps_per_drink"] for x in v], color=house.BLUE, ls=ls, marker=mk, ms=4.5, lw=1.8, label=f"drain {d:g}")
     ax[1].plot(A, [100 * x["survive"] for x in v], color=house.INK, ls=ls, marker=mk, ms=4.5, lw=1.8, label=f"drain {d:g}")
 for a in ax:
     a.axvline(5.625, color="#d4d6dc", lw=6, zorder=0); a.set_xlabel("gain per step standing on the pond"); a.legend(fontsize=10)
-ax[0].set_ylim(0, 70); ax[0].set_ylabel("steps on the pond per visit")
+ax[0].set_ylim(0, 70); ax[0].set_ylabel("steps on the pond per drinking visit")
 ax[1].set_ylim(30, 100); ax[1].set_ylabel("lasts 500 steps (% of episodes)")
 fig.tight_layout(w_pad=2.0)
 C.assert_no_text_overlap(fig); C.assert_min_text_px(fig)
