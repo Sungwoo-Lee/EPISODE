@@ -38,12 +38,60 @@ ridge_alphas: [1.0e-2, 3.16228e-2, 1.0e-1, 3.16228e-1, 1.0, 3.16228, 1.0e+1, 3.1
 headline_capture: {checkpoint: "stage_end:0", probe: active_stage0end}
 probes:
   - id: active_stage0end
-    stores: []        # the six stage_end:0 stores (tooling plan Stage 4b); filled when collected
+    # the six stage_end:0 stores (tooling plan Stage 4b), in the order of `runs`; collected
+    # 2026-09-30 (commit 10915349, full float32, RTX 3090, self-test 1.376e-7)
+    stores:
+      - results/trajectories_cw_mayrep/20260929-153635_rppo_cw_mayrep_t1none_s42/1500006/3fc70ed8e4
+      - results/trajectories_cw_mayrep/20260929-153644_rppo_cw_mayrep_t16quad_s42/1500011/373102b903
+      - results/trajectories_cw_mayrep/20260929-153652_rppo_cw_mayrep_t1none_s43/1500000/24a2b1cbbe
+      - results/trajectories_cw_mayrep/20260929-153702_rppo_cw_mayrep_t16quad_s43/1500012/299fd8a879
+      - results/trajectories_cw_mayrep/20260929-153712_rppo_cw_mayrep_t1none_s44/1500018/b56f985516
+      - results/trajectories_cw_mayrep/20260929-153723_rppo_cw_mayrep_t16quad_s44/1500008/c6ce29da2e
     n_per_store: 5000
-    # rows_per_episode, seed: added by developer (tooling plan §8).
+    # Developer-owned (tooling plan §8, added 2026-09-30): 5 kept rows per episode, the value the
+    # pilot was built and checked with (Revision 4, R4-2); seed fixes which rows are kept. Every
+    # store records its matmul mode (Revision 4, R4-1), so each self-replay check reads it.
+    rows_per_episode: 5
+    seed: 20260930
+    store_matmul_precision: [recorded, recorded, recorded, recorded, recorded, recorded]
 
 # Remaining keys of the tooling plan's manifest schema (§8) are added by developer when the tooling
 # exists. Until then this file fails to load, as it should (no defaults).
+
+# ---------------------------------------------------------------------------------------------
+# Developer-owned keys (tooling plan §8, Revision 4), added 2026-09-30 before any interim number
+# existed; the same values as the pilot manifest (reasons there). Designer-owned keys above are
+# unchanged.
+# ---------------------------------------------------------------------------------------------
+out_root: results/analysis/algorithmic_null
+capture_matmul_precision: highest
+assert_n_episodes: 8
+tool_checks:
+  shift_change_rows_max: 0.05
+  self_similarity_atol: 1.0e-12
+  buffer_index_rel_tol: 1.0e-3
+layers:
+  - {key: enc.uni.raw, flatten: senses_x_units, keep: headline_only}
+  - {key: enc.uni.mod, flatten: senses_x_units, keep: headline_only}
+  - {key: enc.uni.out, flatten: senses_x_units, keep: headline_only}
+  - {key: enc.raw, flatten: none, keep: headline_only}
+  - {key: enc.mod, flatten: none, keep: headline_only}
+  - {key: enc.out, flatten: none, keep: every_capture}
+  - {key: rnn.state, flatten: none, keep: every_capture}
+  - {key: rnn.raw, flatten: none, keep: headline_only}
+  - {key: rnn.mod, flatten: none, keep: headline_only}
+  - {key: rnn.out, flatten: none, keep: every_capture}
+  - {key: actor.raw, flatten: none, keep: headline_only}
+  - {key: actor.mod, flatten: none, keep: headline_only}
+  - {key: actor.out, flatten: none, keep: every_capture}
+  - {key: critic.raw, flatten: none, keep: headline_only}
+  - {key: critic.mod, flatten: none, keep: headline_only}
+  - {key: critic.out, flatten: none, keep: every_capture}
+  - {key: logits, flatten: none, keep: every_capture}
+  - {key: value, flatten: none, keep: every_capture}
+comparisons: auto
+probe_split: {seed: 20260930, bootstrap_seed: 20260931}
+min_rows_per_column: 20
 
 runs:
   - {label: ordinary_s42,  path: results/JAX_RecurrentPPO/20260929-153635_rppo_cw_mayrep_t1none_s42,  checkpoints: ["stage_end:0"]}

@@ -161,6 +161,25 @@ def ridge_settings(manifest: dict) -> dict:
     return {"alphas": [float(v) for v in a], "inner_folds": k}
 
 
+def _cv_scores(Zv, Yv, ym, coefs) -> np.ndarray:
+    """Held-out variance-weighted R^2 of every penalty's coefficients on one inner validation
+    fold: exactly `r2_weighted(Yv, Zv @ c + ym)` for each c, computed without forming the
+    predictions. With R = Yv - ym, G = Zv'Zv and A = Zv'R,
+    SSE(c) = ||R||^2 - 2 <A, c> + <c, G c>, and SST is about the fold's own mean, as in
+    r2_weighted. Cost per penalty is d^2 * q instead of n * d * q (tests/analysis/
+    test_nmn_representation.py checks it against the direct computation)."""
+    R = Yv - ym
+    sst = float(((Yv - Yv.mean(axis=0)) ** 2).sum())
+    G = Zv.T @ Zv
+    A = Zv.T @ R
+    rr = float((R ** 2).sum())
+    out = np.empty(len(coefs))
+    for i, c in enumerate(coefs):
+        sse = rr - 2.0 * float((A * c).sum()) + float((c * (G @ c)).sum())
+        out[i] = float("nan") if sst == 0 else 1.0 - sse / sst
+    return out
+
+
 def fit_ridge(X, Y, groups, *, alphas, inner_folds: int) -> RidgeMap:
     """Ridge from X to Y (standardisation of X and centring of Y fitted on these rows only),
     alpha chosen from `alphas` by episode-grouped K-fold CV inside these rows (held-out
@@ -178,9 +197,7 @@ def fit_ridge(X, Y, groups, *, alphas, inner_folds: int) -> RidgeMap:
             mu, sd = _standardise(X[tr])
             ym = Y[tr].mean(axis=0)
             coefs = _ridge_path((X[tr] - mu) / sd, Y[tr] - ym, alphas)
-            Zv = (X[va] - mu) / sd
-            for i, c in enumerate(coefs):
-                score[i] += r2_weighted(Y[va], Zv @ c + ym)
+            score += _cv_scores((X[va] - mu) / sd, Y[va], ym, coefs)
         best = int(np.argmax(score))
         alpha = alphas[best]
         edge = "lowest" if best == 0 else ("highest" if best == len(alphas) - 1 else None)

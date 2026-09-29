@@ -46,6 +46,10 @@ if _ROOT not in sys.path:
 
 import numpy as np  # noqa: E402
 
+
+def _log(*a):
+    print(*a, flush=True)
+
 SENSITIVITY = "steps_remaining_all"       # decides nothing; reported beside the headline
 INPUT = "raw_input"                      # the reference row: symlog of the observation
 
@@ -107,7 +111,7 @@ def score_layer(X, cp, groups, rs, fits, where, P) -> dict:
             "excess_q_lo": elo, "excess_q_hi": ehi, "nonfinite_draws": n1 + n2, "fits": fit}
 
 
-def analyse_cell(caps, man, P, cell, agents, verdict_layers, quantities, log=print) -> dict:
+def analyse_cell(caps, man, P, cell, agents, verdict_layers, quantities, log=_log) -> dict:
     """Every A2 statistic of one cell. Pure statistics: no rule."""
     from scripts.analysis.nmn import driver_io as dio
     from scripts.analysis.nmn import representation as rep

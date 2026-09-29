@@ -280,3 +280,54 @@ def test_ridge_settings_are_required():
                 {**ok, "inner_folds": 1}, {**ok, "inner_folds": 5.0}):
         with pytest.raises(ValueError):
             rep.ridge_settings(bad)
+
+
+# ------------------------------------------------ inner-CV scoring without predictions ------
+def _direct_scores(X, Y, groups, alphas, inner_folds):
+    """The inner-CV scores as fit_ridge computed them before 2026-09-30 (predictions formed
+    for every penalty and scored with r2_weighted): the reference for the Gram form."""
+    from sklearn.model_selection import GroupKFold
+    Y = Y[:, None] if Y.ndim == 1 else Y
+    score = np.zeros(len(alphas))
+    for tr, va in GroupKFold(n_splits=inner_folds).split(X, groups=groups):
+        mu, sd = rep._standardise(X[tr])
+        ym = Y[tr].mean(axis=0)
+        coefs = rep._ridge_path((X[tr] - mu) / sd, Y[tr] - ym, alphas)
+        Zv = (X[va] - mu) / sd
+        for i, c in enumerate(coefs):
+            score[i] += rep.r2_weighted(Y[va], Zv @ c + ym)
+    return score
+
+
+@pytest.mark.parametrize("case", ["tall", "wide", "collinear", "rare_units", "one_output"])
+def test_cv_scores_equal_direct_scoring(case):
+    """fit_ridge's inner-CV scores (Gram form) equal the direct predict-and-score form, so the
+    chosen penalty is the same: tall and wide inputs, near-duplicate columns, and rarely active
+    units whose training-fold standard deviation is tiny (the ReLU case)."""
+    from sklearn.model_selection import GroupKFold
+    rng = np.random.default_rng({"tall": 0, "wide": 1, "collinear": 2, "rare_units": 3,
+                                 "one_output": 4}[case])
+    n, d = (600, 12) if case != "wide" else (60, 40)
+    groups = np.repeat(np.arange(n // 3), 3)
+    X = rng.normal(size=(n, d))
+    if case == "collinear":
+        X[:, 1] = X[:, 0] + 1e-6 * rng.normal(size=n)
+    if case == "rare_units":
+        X[:, :3] = 0.0
+        X[rng.choice(n, 4, replace=False), :3] = rng.random((4, 3))
+    W = rng.normal(size=(d, 1 if case == "one_output" else 5))
+    Y = X @ W + rng.normal(size=(n, W.shape[1]))
+    alphas = [1e-2, 1e-1, 1.0, 10.0, 1e2, 1e3]
+    ref = _direct_scores(X, Y, groups, alphas, 3)
+    got = np.zeros(len(alphas))
+    for tr, va in GroupKFold(n_splits=3).split(X, groups=groups):
+        mu, sd = rep._standardise(X[tr])
+        Yt = Y if Y.ndim > 1 else Y[:, None]
+        ym = Yt[tr].mean(axis=0)
+        coefs = rep._ridge_path((X[tr] - mu) / sd, Yt[tr] - ym, alphas)
+        got += rep._cv_scores((X[va] - mu) / sd, Yt[va], ym, coefs)
+    finite = np.isfinite(ref)
+    assert np.array_equal(finite, np.isfinite(got))
+    assert np.allclose(got[finite], ref[finite], rtol=1e-9, atol=1e-9 * np.abs(ref[finite]).max())
+    m = rep.fit_ridge(X, Y, groups, alphas=alphas, inner_folds=3)
+    assert m.alpha == alphas[int(np.argmax(ref))]

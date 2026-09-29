@@ -44,6 +44,10 @@ if _ROOT not in sys.path:
 
 import numpy as np  # noqa: E402
 
+
+def _log(*a):
+    print(*a, flush=True)
+
 DESCRIPTIVE_SITES = ("enc.uni", "enc", "rnn", "actor", "critic")
 
 
@@ -125,7 +129,7 @@ def predictivity(Xa, Xb, groups, splits, boots, rs, fits, where, *, with_draws=T
 
 
 def analyse_cell(caps, man, P, cell, agents, verdict_layers, *, primary: bool,
-                 headline: bool, log=print) -> dict:
+                 headline: bool, log=_log) -> dict:
     """Every A1 statistic of one (checkpoint, probe) cell. Pure statistics: no rule."""
     from scripts.analysis.nmn import draw_stats as ds
     from scripts.analysis.nmn import driver_io as dio
