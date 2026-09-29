@@ -1,0 +1,379 @@
+<title>What Both Agents Compute</title>
+{{HOUSE_STYLE}}
+<style>
+/* Page-specific, and a stated departure from the House Style Sheet (guide 0a): the sheet has no
+   component for an analysis that is planned but not yet run. This page is mostly such plans, so it
+   adds one: a dashed panel with a status marker. Dashed = "not measured yet"; the four status
+   markers carry their meaning in words, and the border hue only repeats it. Every colour is a
+   house token. Class names are checked by the builder not to collide with any house class (F54). */
+.plan { border:1px dashed var(--rule); background:var(--ground); padding:20px 22px;
+  display:flex; flex-direction:column; gap:12px; min-width:0; }
+.plan-top { display:flex; align-items:baseline; gap:8px 14px; flex-wrap:wrap; }
+.plan-top h3 { flex:1 1 200px; }
+.plan-id { font-family:var(--f-head); font-size:13px; font-weight:700; color:var(--accent-text);
+  letter-spacing:.07em; }
+.pstat { font-family:var(--f-head); font-size:11.5px; font-weight:600; letter-spacing:.08em;
+  text-transform:uppercase; color:var(--ink); border:1px solid var(--rule); border-left-width:4px;
+  padding:2px 8px; white-space:nowrap; }
+.pstat.wait { border-left-color:var(--warn); }
+.pstat.build { border-left-color:var(--accent); }
+.pstat.decide { border-left-color:var(--danger); }
+.pstat.ready { border-left-color:var(--ok); }
+.plan dl { gap:8px 18px; }
+.plan dt { color:var(--ink-2); }
+.slot { border:1px dashed var(--rule); background:var(--surface); padding:14px 16px;
+  font-size:14.5px; color:var(--ink-2); }
+.slot b { color:var(--ink); }
+table.evidence { min-width:440px; }
+table.twocol { min-width:400px; }
+.plans { display:flex; flex-direction:column; gap:22px; }
+.ledger { display:grid; grid-template-columns:1fr 1fr; gap:18px; }
+@media (max-width:700px) { .ledger { grid-template-columns:1fr; } }
+.ledger ul, ul.plainlist { margin:0; padding-left:1.3em; display:flex; flex-direction:column; gap:6px; }
+.refnote { font-size:14px; color:var(--ink-3); }
+ol.refs { list-style:none; padding-left:0; margin:0; display:flex; flex-direction:column; gap:12px; }
+ol.refs li { display:grid; grid-template-columns:2.9em 1fr; gap:0 8px; align-items:start; min-width:0;
+  scroll-margin-top:24px; }
+ol.refs .rnum { font-family:var(--f-mono); font-size:12px; color:var(--accent-text); background:var(--pick);
+  text-align:center; font-variant-numeric:tabular-nums; }
+ol.refs .rnum::before { content:"["; } ol.refs .rnum::after { content:"]"; }
+ol.refs .rbody { display:flex; flex-direction:column; gap:2px; min-width:0; }
+ol.refs .rmeta, ol.refs .rprov { font-size:14px; color:var(--ink-2); overflow-wrap:anywhere; }
+ol.refs li:target { background:var(--pick); box-shadow:0 0 0 6px var(--pick); }
+ol.refs li:target .rnum { background:var(--accent); color:var(--ground); }
+a.cite { font-family:var(--f-mono); font-size:.72em; line-height:0; vertical-align:super; text-decoration:none;
+  color:var(--accent-text); background:var(--pick); padding:.18em .34em; white-space:nowrap; margin-left:2px; }
+a.cite::before { content:"["; } a.cite::after { content:"]"; }
+</style>
+
+<div class="wrap">
+
+<header class="col">
+  <p class="eyebrow">grid_world_pain &middot; neuromodulated vs ordinary agent &middot; plan, results pending</p>
+  <h1>What Both Agents Compute</h1>
+  <p class="lede">For a month the agent with a neuromodulator and the agent without one have come out
+  almost identical in every world we built. Before designing a better modulator, this page asks what
+  computation the two agents share, and only then why the modulator adds nothing to it.</p>
+</header>
+
+<section class="col">
+  <h2><span class="num">PURPOSE</span>Why this page exists</h2>
+  <p>The long-term goal is to find a neuromodulator that actually helps an agent. Across a month of
+  comparisons in many different worlds, the modulated and ordinary agents have come out almost the same
+  every time. That consistency is too tight to be noise: it points to both architectures converging on
+  the same way of processing information, shaped more by the structure of the world than by the network
+  design. So it is not enough to treat the result as a failed hypothesis and try another modulator at
+  random. A modulator can only help by adding something the network does not already compute, and right
+  now we do not know what that shared computation is.</p>
+  <div class="callout">
+    <p class="eyebrow">The two questions, in this order</p>
+    <p><strong>First:</strong> what computation does every architecture converge on in these worlds?</p>
+    <p><strong>Then:</strong> why does the modulator not help?</p>
+  </div>
+  <p>This page collects the evidence behind that reordering, the algorithmic explanations a review of
+  the literature turned up, and the measurements planned to answer both questions. <strong>No new
+  analysis has been run yet.</strong> The planned sections below say what will be measured, on which
+  data, and what each outcome would mean. Most of them wait on a training run that started on
+  2026-09-29.</p>
+</section>
+
+<hr>
+
+<section class="col">
+  <h2><span class="num">01</span>A month of near-identical results</h2>
+  <p>About 200 training runs compared the two agents. The <strong>ordinary agent</strong> is a recurrent
+  network trained with PPO. The <strong>modulated agent</strong> is the same network plus a small side
+  network, the neuromodulator, which at every step sends each unit in up to four places of the main
+  network a gain (a multiplier) and an offset (an added amount). Performance is always measured in
+  survival steps: how long the agent stays alive.</p>
+  <h4>What the comparisons found</h4>
+  <p class="cue" hidden>&larr; wider than the screen &mdash; scroll it sideways; the right-hand columns are cut off</p>
+  <div class="scroll"><table class="evidence">
+    <thead><tr><th>Comparison</th><th class="n">Runs</th><th>Seeds per cell</th><th>Modulated minus ordinary</th></tr></thead>
+    <tbody>
+      <tr><td>Where the modulator writes &times; what it reads, Monte-Carlo returns</td><td class="n">16</td><td>1</td><td>mean +1.7 steps (sd 2.2); five ordinary seeds span 4.5</td></tr>
+      <tr><td>Same grid, the other return estimator (GAE_NORM)</td><td class="n">16</td><td>1</td><td>mean &minus;0.2 steps (range &minus;3.0 to +2.5)</td></tr>
+      <tr><td>Same grid, wider smell field, both return modes</td><td class="n">32</td><td>1</td><td>behaviour: ordinary agent inside the modulated spread in 12 of 12 checks</td></tr>
+      <tr><td>Curriculum levels, Waves 1 and 2</td><td class="n">28</td><td>1</td><td>+6.8 to &minus;3.1 steps across levels</td></tr>
+      <tr><td>Level-05 body-rules factorial, 16 worlds</td><td class="n">32</td><td>1</td><td>+3.6 steps, the same sign in 16 of 16 worlds</td></tr>
+      <tr class="pick"><td>May probe, older agent, alternating predator</td><td class="n">2</td><td>1</td><td>+107 and +132 steps; the only large positive, unreplicated</td></tr>
+      <tr><td>May replication, from scratch</td><td class="n">6</td><td>3</td><td>training started 2026-09-29</td></tr>
+    </tbody>
+  </table></div>
+  <p class="foot">From the cross-study dossier (see the footer). Most cells are one run per agent, so on
+  its own each null only rules out differences larger than roughly 5 to 15 survival steps.</p>
+  <div class="callout">
+    <p class="eyebrow">What the pattern says</p>
+    <p>If a real but modest difference were hidden by noise, the gaps between independently trained
+    agents would scatter: sometimes clearly positive, sometimes clearly negative, about as far apart as
+    two ordinary agents with different seeds. They do not scatter. They stay pinned near zero across
+    worlds that differ a great deal, and in the 16-world factorial the gap has the same sign every time.
+    That is the signature of something systematic making the two agents come out the same.</p>
+  </div>
+</section>
+
+<hr>
+
+<section class="col">
+  <h2><span class="num">02</span>Four candidate reasons the agents come out the same</h2>
+  <p>A review of this project's runs, code and the FiLM and reinforcement-learning literature it holds
+  produced four explanations. They are not exclusive. Each is a claim the planned measurements can
+  test.</p>
+
+  <h3>1. The two agents start from the same place</h3>
+  <p>The main network's layers are built before the modulator (in <code>src/models/recurrent_ppo_network.py</code>,
+  the encoder at line 400, the actor and critic at lines 424&ndash;429, the modulator at line 458), and
+  the ordering is kept deliberately so the random-number stream is unchanged. With the same seed, the
+  modulated agent's main network therefore starts with exactly the ordinary agent's weights and sees the
+  same stream of environments. The modulator's gain starts near 1 (1 &plusmn; 0.3) and its offset near 0,
+  so at the start it barely changes anything. Small, clipped PPO updates can then keep both runs in the
+  same solution.</p>
+
+  <h3>2. The worlds ask for threshold shifts, which an ordinary network already has</h3>
+  <p>Internal states (hunger, injury, temperature) do act as task variables here: the reward is the
+  change in homeostatic drive, so what counts as rewarding depends on the agent's needs, in the sense
+  of Keramati and Gutkin{{CITE:keramati}}. But the kind of task family matters. An ordinary network
+  receives the internal state as an input, and that adds a context-dependent amount to each unit:</p>
+  <p class="cue" hidden>&larr; wider than the screen &mdash; scroll it sideways; the right-hand end is cut off</p>
+  <pre>ordinary:   h = ReLU( W_x&middot;x + W_c&middot;c + b )
+FiLM:       h = ReLU( &gamma;(c)&middot;(W_x&middot;x + b) + &beta;(c) )</pre>
+  <p>With the gain &gamma; fixed at 1 the two are the same: feeding the condition in as an input is FiLM
+  without the gain{{CITE:perez}}. An added amount moves the point at which a unit switches on, which is
+  a threshold shift (a hungrier agent approaches fainter food, an injured one hides sooner). The gain
+  does something different: it changes <em>how strongly</em> a sense drives a unit, which is what is
+  needed when a need must change <em>which</em> senses matter. The behaviour measured in ordinary agents
+  so far looks mostly like threshold shifts. The ordinary agent's memory is also a GRU, whose gates
+  already multiply its state by functions of its inputs, internal state included.</p>
+  <p>Three more properties make these worlds easy for an ordinary network. The needs rise and fall many
+  times within every episode, so every training batch contains every context and there is no
+  interference between them to relieve. The internal state is visible at every step, so there is no
+  hidden context to infer. And the published cases where FiLM beats a plain network all involve a regime
+  that changes which behaviour is correct, such as a task switch or a hidden context. The one large
+  positive result here came from the May probe, whose predator alternated between dangerous and
+  harmless phases.</p>
+
+  <h3>3. Training gives the modulator no reason to carry context, and it wakes up late</h3>
+  <p>One optimiser updates every parameter, modulator included, with the same learning rate
+  (gradient clip 0.5, then Adam at 5&times;10<sup>&minus;4</sup>), no weight decay and no objective of its
+  own. The critic's error also trains the modulator. The main network is roughly 100 times larger and
+  absorbs the body-related part of the learning signal first. Two measured facts fit this. Only about 15%
+  of the modulator's gain variation follows the situation; the rest is a fixed per-unit setting the main
+  network could have learned itself. And its share of the gradient grows over training, reaching 40&ndash;75%
+  in some arms only by the end. A part that starts working only in the second half of training can shape
+  the final solution but cannot shorten the early climb, where a faster-learning advantage would appear.</p>
+
+  <h3>4. The measurements could not see the kind of gain FiLM usually gives</h3>
+  <p>Every comparison so far used final performance. In reinforcement learning, FiLM's reported advantage
+  is mostly faster learning, and learning speed has not been measured here with seeds.</p>
+
+  <div class="callout warn">
+    <p class="eyebrow">A puzzle any explanation has to fit</p>
+    <p>Freezing a trained modulated agent's modulation at its own average costs it 47 to 180 of about 200
+    survival steps (measured on modulators reading every sense, and not at every site). Yet the modulated
+    agent trained end to end does no better than an ordinary one. The reading that fits both: training
+    routes part of the same solution through the modulator, so freezing it removes a working part, not
+    a benefit.</p>
+  </div>
+</section>
+
+<hr>
+
+<section class="col">
+  <h2><span class="num">03</span>Question 1: what do the two agents compute?</h2>
+  <p>If the two agents converge on the same information processing, the evidence should show it at the
+  level of their internal activity, not only their scores. Two measures, both run on identical inputs:
+  one stored episode is fed to both agents, with their memory reset at the first step, so every
+  activation is paired with the other agent's activation at the same moment.</p>
+
+  <div class="plans">
+  <div class="plan" id="a1">
+    <div class="plan-top"><span class="plan-id">A1</span><h3>Layer similarity (CKA)</h3><span class="pstat build">Needs tooling</span></div>
+    <p>Centred kernel alignment{{CITE:kornblith}} asks whether two layers arrange the same set of inputs
+    in the same way: whether inputs that look alike to one agent's layer also look alike to the other's.
+    It compares layers of different networks without needing their units to line up.</p>
+    <dl>
+      <dt>Layers</dt><dd>Encoder output, memory state, memory output, actor and critic hidden layers; for
+      the modulated agent both before and after the gain and offset are applied.</dd>
+      <dt>Caution</dt><dd>Linear CKA ignores rotations and uniform scaling but not per-unit rescaling,
+      which is exactly what the modulator's large fixed gain does. It is paired with a rescaling-robust
+      measure (SVCCA{{CITE:raghu}}, or how well one agent's layer linearly predicts the other's).</dd>
+      <dt>Reads as</dt><dd>High similarity beyond the seed yardstick (A3): the agents represent the world
+      the same way. High only within the same seed: inherited from the shared start.</dd>
+    </dl>
+    <div class="slot"><b>Planned figure.</b> A layer-by-layer similarity matrix, modulated against
+    ordinary, beside the ordinary-against-ordinary matrix for different seeds.</div>
+  </div>
+
+  <div class="plan" id="a2">
+    <div class="plan-top"><span class="plan-id">A2</span><h3>Decoding profiles</h3><span class="pstat build">Needs tooling</span></div>
+    <p>A small linear readout is trained to recover a quantity from each layer. How well it succeeds,
+    layer by layer, is that agent's decoding profile.</p>
+    <dl>
+      <dt>Quantities</dt><dd>Hunger (<code>satiation</code>), injury (<code>injury_level</code>), distance to
+      the nearest predator, and value, measured as survival steps remaining in the episode.</dd>
+      <dt>Caution</dt><dd>Readouts are trained and tested on different <em>episodes</em>, never on
+      different steps of the same episode, because neighbouring steps are nearly identical and a
+      step-level split inflates every score.</dd>
+      <dt>Reads as</dt><dd>Matching profiles: the same information is present in the same places. A
+      mismatch shows where the modulated agent holds information differently.</dd>
+    </dl>
+    <div class="slot"><b>Planned figure.</b> Decoding accuracy for each quantity across layers, one line
+    per agent, with the seed-to-seed range shaded.</div>
+  </div>
+
+  <div class="plan" id="a3">
+    <div class="plan-top"><span class="plan-id">A3</span><h3>Seed yardstick</h3><span class="pstat wait">Waiting on training</span></div>
+    <p>A similarity between the modulated and ordinary agent means little on its own. It is judged
+    against the similarity between two ordinary agents trained from different seeds.</p>
+    <p class="cue" hidden>&larr; wider than the screen &mdash; scroll it sideways; the right-hand columns are cut off</p>
+    <div class="scroll"><table class="twocol">
+      <thead><tr><th>Pattern</th><th>Reading</th></tr></thead>
+      <tbody>
+        <tr><td>modulated (seed 42) is closer to ordinary (seed 42) than ordinary seeds 42 and 43 are to each other</td><td>inherited from the shared start</td></tr>
+        <tr><td>all three distances about equal</td><td>the task forces one kind of solution</td></tr>
+        <tr><td>modulated&ndash;ordinary distance larger than the seed distance, same score</td><td>different processing, same outcome</td></tr>
+      </tbody>
+    </table></div>
+    <dl>
+      <dt>Data</dt><dd>The May replication: 3 seeds of each agent, started 2026-09-29 and still training.
+      It is the only design on disk with several seeds of both agents that loads under current code.</dd>
+    </dl>
+  </div>
+
+  <div class="plan" id="a4">
+    <div class="plan-top"><span class="plan-id">A4</span><h3>Across worlds</h3><span class="pstat wait">Waiting on training</span></div>
+    <p>How far each agent's processing moves between worlds, and whether the two agents move together.
+    If both change a great deal from world to world while staying close to each other, their shared
+    processing tracks the world rather than the architecture.</p>
+    <dl>
+      <dt>Data</dt><dd>The May replication's stages, which are different worlds. The level-05 factorial has
+      16 worlds but every pair there shares seed 42, so it cannot separate the two explanations on its
+      own.</dd>
+    </dl>
+  </div>
+  </div>
+
+  <h4>What Question 1 needs before it can run</h4>
+  <div class="col stages">
+    <div class="stage"><div class="s">1</div><div class="b"><div class="t">Capture intermediate layers</div><div class="d">An opt-in path in the network that returns each layer's activity, with a test that switching it on changes no output.</div></div></div>
+    <div class="stage"><div class="s">2</div><div class="b"><div class="t">Replay stored episodes through an agent</div><div class="d">Trajectory stores already hold the exact observation the policy saw at each step (<code>obs_noised</code>) and the true hunger, injury and positions, so no new data collection is needed for existing runs.</div></div></div>
+    <div class="stage"><div class="s">3</div><div class="b"><div class="t">Write the similarity and decoding scripts</div><div class="d">Episode-level splits; a rescaling-robust measure beside CKA.</div></div></div>
+    <div class="stage"><div class="s">4</div><div class="b"><div class="t">Pilot on a level-05 pair</div><div class="d">A test of the tools, not evidence: that pair shares a seed.</div></div></div>
+    <div class="stage"><div class="s">5</div><div class="b"><div class="t">Run on the May replication</div><div class="d">All six agents, layer by layer, stage by stage.</div></div></div>
+  </div>
+</section>
+
+<hr>
+
+<section class="col">
+  <h2><span class="num">04</span>Question 2: why does the modulator not help?</h2>
+  <p>These test the first and third candidate reasons directly. They come second because their
+  results are easier to read once Question 1 has said what the two agents share.</p>
+
+  <div class="plans">
+  <div class="plan" id="b1">
+    <div class="plan-top"><span class="plan-id">B1</span><h3>Break the shared start</h3><span class="pstat decide">Needs a decision</span></div>
+    <p>Two ways to stop the modulated agent from beginning as a copy of the ordinary one.</p>
+    <ul class="plainlist">
+      <li>Train modulated agents whose main network starts from a <strong>different seed</strong> than
+      their paired ordinary agent.</li>
+      <li>Or keep the same seed but give the modulator a <strong>stronger start</strong>: output heads
+      initialised to zero so the gain is exactly 1 and the offset exactly 0, plus a learning rate of its
+      own so its early updates are not swamped.</li>
+    </ul>
+    <dl>
+      <dt>Reads as</dt><dd>If the gaps then scatter at the size of ordinary seed-to-seed differences, the
+      shared start produced the identical results. If they stay pinned near zero, the equivalence is real.</dd>
+    </dl>
+  </div>
+
+  <div class="plan" id="b2">
+    <div class="plan-top"><span class="plan-id">B2</span><h3>When the modulator wakes up</h3><span class="pstat build">Needs tooling</span></div>
+    <p>Four measures of when the modulator starts to matter during training, because each can mislead on
+    its own:</p>
+    <p class="cue" hidden>&larr; wider than the screen &mdash; scroll it sideways; the right-hand columns are cut off</p>
+    <div class="scroll"><table class="twocol">
+      <thead><tr><th>Measure</th><th>What it answers</th></tr></thead>
+      <tbody>
+        <tr><td>Share of the gradient reaching the modulator, split by loss term</td><td>How much of the learning signal it receives</td></tr>
+        <tr><td>Size of its weight updates relative to its weights, against the main network's</td><td>How fast it actually changes (Adam rescales gradients, so the share alone can mislead)</td></tr>
+        <tr><td>How much its output varies with the situation, at each checkpoint</td><td>When its output starts responding</td></tr>
+        <tr><td>Cost of freezing it, at a subset of checkpoints</td><td>When it becomes something the network relies on</td></tr>
+      </tbody>
+    </table></div>
+    <dl>
+      <dt>Summary</dt><dd><strong>Wake-up lag</strong>: the checkpoint at which a measure reaches half its
+      final value, minus the checkpoint at which survival reaches 90% of its final value. A positive lag
+      means the modulator wakes after learning has levelled off, so it cannot speed learning up.</dd>
+      <dt>Also</dt><dd>The success test for B1's stronger start: it should pull the wake-up earlier. If the
+      lag shrinks but learning speed does not change, late wake-up was not the cause.</dd>
+    </dl>
+    <div class="slot"><b>Planned figure.</b> The four measures over training beside the survival curve,
+    with the wake-up and plateau points marked.</div>
+  </div>
+  </div>
+</section>
+
+<hr>
+
+<section class="col">
+  <h2><span class="num">05</span>Where things stand</h2>
+  <div class="ledger">
+    <div class="col">
+      <h4>Established</h4>
+      <ul>
+        <li>No modulated-vs-ordinary difference beyond seed noise in about 200 runs.</li>
+        <li>The gaps are pinned near zero across very different worlds, not scattered.</li>
+        <li>The modulator is active and relied on inside a trained agent.</li>
+        <li>Both agents start from the same main-network weights under the same seed.</li>
+        <li>The modulator has no training signal or learning rate of its own.</li>
+      </ul>
+    </div>
+    <div class="col">
+      <h4>Open</h4>
+      <ul>
+        <li>Whether the two agents compute the same thing internally (A1&ndash;A4).</li>
+        <li>Whether the shared start explains the identical results (B1).</li>
+        <li>When the modulator begins to matter during training (B2).</li>
+        <li>Whether the modulator learns faster than it performs; learning speed is unmeasured.</li>
+      </ul>
+    </div>
+  </div>
+  <h4>Discussed, not yet planned</h4>
+  <ul class="plainlist">
+    <li>Train a plain network to imitate a modulated agent's recorded behaviour: if the copy matches it,
+    the modulator added nothing a plain network cannot represent.</li>
+    <li>Re-read existing runs for learning speed: area under the learning curve and time to a threshold.</li>
+    <li>Controls never run: the same freeze applied to an ordinary agent; how many units are permanently
+    switched off; whether the modulator's varying gain follows the agent's internal state.</li>
+    <li>A world-conflict measure: how often identical external situations call for different actions
+    depending on internal state.</li>
+    <li>Give the modulator its own training signal, such as predicting changes in the body.</li>
+    <li>A two-by-two design: internal-state signals hidden from the main network or visible to it,
+    crossed with a stable or an alternating world.</li>
+  </ul>
+</section>
+
+<hr>
+
+<section class="col">
+  <h2><span class="num">06</span>Sources</h2>
+  <p class="refnote">Each entry says how this page used it.</p>
+  {{REFS}}
+</section>
+
+<hr>
+
+<footer class="col">
+  <p class="eyebrow">Provenance</p>
+  <p class="foot">Evidence: <code>docs/experiments/active/modulator_clues/CROSS_STUDY_NULL_DOSSIER.md</code>.
+  Reviews: <code>docs/project/critiques/20260929_nmn_null_algorithmic_film_conditions.md</code> and
+  <code>docs/project/critiques/20260929_nmn_null_algorithmic_rl_side.md</code>. The plan's source of
+  truth: <code>docs/experiments/active/modulator_clues/ALGORITHMIC_NULL_TODO.md</code>.</p>
+  <p class="foot">Rebuild with <code>python scripts/analysis/studies/modulator_clues/build_algorithmic_null_page.py</code>.
+  No figures yet; every planned figure will be drawn by a script and embedded.</p>
+</footer>
+
+</div>
+
+{{HOUSE_SCRIPT}}
