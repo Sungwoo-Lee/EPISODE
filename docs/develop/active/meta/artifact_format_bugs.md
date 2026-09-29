@@ -2232,3 +2232,30 @@ an absolutely-positioned flex child takes its static position at the container's
 `display:none` or `display:contents` — 18 px / **navigation does nothing**. Verify a fix by measuring
 the anchored figure's gap to its previous sibling; it must equal the unanchored figures' gap.
 
+### F68 — a page-specific selector scoped to a scaffold element the house body does not contain
+
+**Saw:** on the "What Both Agents Compute" plan page, three lists sitting on browser-default
+margins and a 40px indent beside two lists that were styled. The "Discussed, not yet planned"
+heading stood 35px above its list where the matching "Open" heading one screen earlier stood 18px
+above its own; bullets were indented twice as deep; a reference list opened with a 34px hole.
+
+**Cause:** the page's rule was written `.ledger ul, main ul, main ol` — an idiomatic selector —
+but a House Style page has no `<main>`: its scaffold is `.wrap > section.col` (F61). Only the
+`.ledger` half matched anything. The rest of the rule bound to nothing, silently.
+
+**Why neither review method catches it:** the CSS is valid and reads as correct; nothing
+overflows, nothing is clipped, and every list still renders. F28's orphan-class audit cannot see
+it either, because it compares classes *used* against classes *defined* — a selector that
+matches no element is not an orphan class, it is a rule with no target.
+
+**Rule:** a page's own selectors must each match at least one element in the built DOM. Scope page
+rules to the page's own classes rather than to structural elements borrowed from other page
+shells. Where a builder appends page CSS, it should assert
+`document.querySelectorAll(sel).length > 0` for every page selector — the inverse of F28.
+
+**A trap met while fixing it:** the obvious repair, `.col > ul`, names the house class `.col` and
+was refused by the page builder's F54 collision guard. The fix that satisfies both rules is a
+class the page owns (`ul.plainlist`).
+
+**Verifying a fix:** for each selector in the page's own `<style>`, count matches in the rendered
+DOM; any zero is this defect.
