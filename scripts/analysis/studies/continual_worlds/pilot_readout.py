@@ -36,11 +36,30 @@ Windows: "trailing 200k at e" = rows in (e - 200k, e] of the same stage; it coun
 Partial runs: every number that depends on the run's end (plateau T, R_X, survivable verdict, L_X,
 Pilot 3 pass) is computed on the data so far and marked provisional.
 
+Home legs (3.5): manifest rows whose Cell is "Home leg" (fresh seeds 43 / 44, loaded from their Nursery
+leg) are judged by the 3.5 competence gate (95 % of the same agent type's seed-42 Home level, asserted
+against the doc's 237.3 / 240.7, plus a rise < 5 % over the leg's last fifth) under `survivable`, not by
+the 3.6 world-pilot rule (half of the loaded leg's level), and are left out of the 3.3 stage-length rule.
+
+--study mayrep: the May double-return replication
+(docs/experiments/active/continual_worlds/MAY_DOUBLE_RETURN_REPLICATION.md). Runs are the manifest rows
+M1-M6 with a WandB id (none yet -> "no runs launched yet", still writes the JSON). Per run: S_k (last
+200k of each of the 5 stages), May-style tail mean (last 10 %), stage-1 competence gate + convergence
+(5.5), own dip / recovery on the returns (stages 3, 5), F_k = S_k - S_1, H = S_5 - S_3, deaths; per pair
+the common-reference companion above (R_A,common, H-rec four-reading vote); then the 5.3 three-seed rule
+(favourable sign in >= 2 of 3 pairs AND |mean(mod) - mean(ord)| > 2 x between-seed SE) for H-ret and
+H-forget, the overall verdict, H-dip / H-rec / H-hyper, and the 5.4 comparison with May (normalised
+advantage vs 38 % / 48 %, "May-sized" = at least half). Every threshold is asserted against that doc's
+text (check_mayrep_doc).
+
 Usage:
   /home/vncuser/miniconda3/envs/grid_world_pain/bin/python \
       scripts/analysis/studies/continual_worlds/pilot_readout.py \
       --design-doc docs/experiments/active/continual_worlds/CONTINUAL_WORLDS.md \
       --json-out results/analysis/continual_worlds/pilot_readout.json
+  ... pilot_readout.py --study mayrep \
+      --design-doc docs/experiments/active/continual_worlds/MAY_DOUBLE_RETURN_REPLICATION.md \
+      --json-out results/analysis/continual_worlds/mayrep_readout.json
 """
 from __future__ import annotations
 
@@ -131,16 +150,17 @@ def check_doc(text: str) -> None:
                          "- update the constant block and DOC_PATTERNS together")
 
 
-def parse_manifest(text: str) -> list[dict]:
+def parse_manifest(text: str, id_prefix: str = "", allow_empty: bool = False) -> list[dict]:
     """Rows of the section-4 launch-manifest table that carry a WandB id.
 
-    Run ids are "<n>" or a relaunch "<n>-r<k>". When relaunches of <n> exist, only the latest one
-    (highest k) is kept: the original / earlier attempts were abandoned (e.g. a hung node)."""
+    Run ids are "<prefix><n>" or a relaunch "<prefix><n>-r<k>" (prefix "" in CONTINUAL_WORLDS.md, "M" in
+    MAY_DOUBLE_RETURN_REPLICATION.md). When relaunches of <n> exist, only the latest one (highest k) is
+    kept: the original / earlier attempts were abandoned (e.g. a hung node)."""
     sec = text.split("## 4. Launch Manifest", 1)[1].split("### 4.1", 1)[0]
     runs = []
     for line in sec.splitlines():
         c = [x.strip() for x in line.strip().strip("|").split("|")]
-        m = re.fullmatch(r"(\d+)(?:-r(\d+))?", c[0]) if c else None
+        m = re.fullmatch(re.escape(id_prefix) + r"(\d+)(?:-r(\d+))?", c[0]) if c else None
         if len(c) != 12 or not m:
             continue
         wid = c[10].strip("`")
@@ -150,7 +170,7 @@ def parse_manifest(text: str) -> list[dict]:
         runs.append({"run": c[0], "base": int(m.group(1)), "attempt": int(m.group(2) or 1),
                      "status": c[1], "cell": c[2], "tag": c[3].strip("`"),
                      "job_type": c[5], "seed": int(c[6]), "node": c[7], "gpu": c[8], "wandb_id": wid, "log": logs[0]})
-    if not runs:
+    if not runs and not allow_empty:
         raise ValueError("no manifest rows with a WandB id found in section 4")
     latest = {}
     for r in runs:
@@ -160,6 +180,26 @@ def parse_manifest(text: str) -> list[dict]:
     if superseded:
         print(f"[manifest] superseded by a relaunch, not read: {', '.join(superseded)}", file=sys.stderr)
     return [r for r in runs if latest[r["base"]] is r]
+
+
+def parse_home_gate(text: str) -> dict:
+    """3.5 competence gate of a fresh Home leg: >= <frac> x the same agent type's seed-42 Home level (3.4)
+    over the last 200k episodes AND a rise < <rise> over the leg's last fifth. The product is asserted
+    against the gate values the doc prints (237.3 / 240.7)."""
+    n = re.sub(r"\s+", " ", text)
+    m = re.search(r"mean survival is \*\*≥ (\d+) % of the same agent type's seed-42 Home level\*\* "
+                  r"\(ordinary ≥ ([\d.]+), modulated ≥ ([\d.]+)\) \*\*and\*\* it rose < (\d+) % over its last fifth", n)
+    h = re.search(r"final Home survival \(factorial §7\): ([\d.]+) \(ordinary\) and ([\d.]+) \(modulated\)", n)
+    if not m or not h:
+        raise ValueError("3.5 Home-leg competence gate (or the 3.4 seed-42 Home levels) not found")
+    frac = int(m.group(1)) / 100
+    out = {"frac": frac, "rise_max": int(m.group(4)) / 100, "line": {}}
+    for a, lvl, printed in (("ordinary", h.group(1), m.group(2)), ("modulated", h.group(2), m.group(3))):
+        line = frac * float(lvl)
+        if abs(line - float(printed)) > HOME_ASSERT_TOL:
+            raise AssertionError(f"3.5 gate {a}: {frac} x {lvl} = {line:.2f} != printed {printed}")
+        out["line"][a] = {"seed42_home_level": float(lvl), "line": line, "doc_printed": float(printed)}
+    return out
 
 
 def parse_home_numbers(text: str) -> dict:
@@ -348,6 +388,8 @@ def throughput(rows: list[dict], start: float):
 
 # ------------------------------------------------------------------------------------ runs ---
 _HOME_CACHE: dict = {}
+HOME_GATE: dict = {}   # 3.5 competence gate, set in main() (continual-worlds study only)
+HOME_LEG_CELL = "Home leg"   # manifest 'Cell' of the fresh-seed Home legs (3.5), judged by HOME_GATE
 _SERIES: dict = {}   # (run, stage or None) -> (Series of that switch, censor length or None); not written to JSON
 
 
@@ -439,6 +481,13 @@ def analyse_world(d, rows, budget):
     d["dip_vs_R"] = dip(ser, R)
     d["recovery_to_0.9R"] = recovery(ser, R, None if not d["finished"] else length)
     _SERIES[(d["run"], None)] = (ser, None if not d["finished"] else length)
+    if d["cell"] == HOME_LEG_CELL:
+        # A fresh-seed Home leg (3.5) is NOT a world pilot: its pass line is the 3.5 competence gate
+        # (95 % of the same agent type's seed-42 Home level), not half of the loaded (Nursery) leg's level.
+        # d["home"] / dip_vs_home / frac_of_home refer to the loaded Nursery leg (descriptive only).
+        d["survivable"] = home_leg_gate(d, ser, length)
+        d["frac_of_home"] = None if R is None else R / d["home"]["level_last10pct"]
+        return
     if R is not None:
         surv = R >= SURVIVABLE_FRAC * home
         bites = d["bites_trailing200k"] is not None and d["bites_trailing200k"] >= SURVIVABLE_BITES
@@ -447,6 +496,24 @@ def analyse_world(d, rows, budget):
         d["frac_of_home"] = R / home
     else:
         d["survivable"] = None
+
+
+def home_leg_gate(d, ser, length):
+    """3.5: last-200k survival >= gate line AND rise < rise_max over the leg's last fifth
+    (trailing-200k level now vs the trailing-200k level one fifth of the leg earlier)."""
+    g = HOME_GATE["line"][d["agent"]]
+    S = d["S_trailing200k"]
+    back = ser.last - length / 5
+    S_before = ser.S(back - LEVEL_WINDOW, back) if back - LEVEL_WINDOW >= ser.start else None
+    rise = None if S is None or not S_before else S / S_before - 1
+    out = {"rule": "3.5 Home-leg competence gate", "survival_line": g["line"],
+           "seed42_home_level": g["seed42_home_level"], "gate_frac": HOME_GATE["frac"],
+           "survival_pass": S is not None and S >= g["line"],
+           "rise_last_fifth": rise, "rise_max": HOME_GATE["rise_max"],
+           "rise_pass": rise is not None and rise < HOME_GATE["rise_max"],
+           "provisional": not d["finished"]}
+    out["pass"] = out["survival_pass"] and out["rise_pass"]
+    return out
 
 
 def analyse_scratch(d, rows, budget):
@@ -579,7 +646,7 @@ def analyse_sequence(d, rows, args, meta):
 def stage_lengths(runs: list[dict]) -> dict:
     groups = {}
     for d in runs:
-        if d.get("kind") != "world":
+        if d.get("kind") != "world" or d["cell"] == HOME_LEG_CELL:   # Home legs: 3.5 gate, not 3.3 / 3.6
             continue
         cell = re.sub(r"_(t1none|t16quad)_s\d+(_r\d+)?$", "", d["tag"])
         groups.setdefault(cell, {})[d["agent"]] = d
@@ -760,6 +827,351 @@ def common_reference(runs: list[dict]) -> list[dict]:
     return out
 
 
+# ------------------------------------------------ May double-return replication (MAYREP doc 5) ---
+# Pre-registered in docs/experiments/active/continual_worlds/MAY_DOUBLE_RETURN_REPLICATION.md (5.1-5.5, 7).
+# check_mayrep_doc() asserts every value below against that doc's text (whitespace-normalised).
+MR_ID_PREFIX = "M"                        # 4   manifest rows M1-M6
+MR_ACTIVE, MR_PASSIVE = "active", "passive"   # 4.1 stage files 01_active ... 05_active
+MR_RETURNS = (3, 5)                       # 2 / 5.1  returns of the hunting predator (1-indexed stages)
+MR_PASSIVE_STAGES = (2, 4)                # 5.5 "Survival in stages 2 and 4 is above S_1"
+MR_CENSOR = 700_000                       # 5.1 recovery censored at 700,000 (= stage 3 / 5 length)
+MR_GATE_S1, MR_GATE_BITES = 150.0, 1.0    # 5.5 stage-1 competence gate
+MR_GATE_FAIL_RUNS = 2                     # 5.5 >= 2 failing runs of one agent -> inconclusive
+MR_CONV_SPAN, MR_CONV_FLAG = 300_000, 0.10    # 5.5 rise of the trailing 200k over the last 300k of stage 1
+MR_SE_MULT, MR_MIN_PAIRS = 2.0, 2         # 5.2 / 5.3 |mean| > 2 x SE and favourable sign in >= 2 of 3 pairs
+MR_N_PAIRS = 3                            # 3.4 seeds 42, 43, 44
+MR_TAIL_FRAC = 0.10                       # 5.1 May-style tail mean = last 10 % of each stage
+MR_NULL_DIP = 0.05                        # 7.5 own dip < 5 % on both switches -> null for this design
+MR_COLLAPSE = 0.6                         # 7.6 return < 0.6 x R_A for the whole stage
+MR_MAY = {"D": {3: 106.9, 5: 132.5}, "S1": {"modulated": 289.5, "ordinary": 278.3},   # 2 / 5.1
+          "norm_adv": {3: 0.38, 5: 0.48}, "forget_ratio": {3: 0.35, 5: 0.28}}         # 5.4
+MR_MAY_SIZED_FRAC = 0.5                   # 5.4 "at least half of May's (>= 19 % at k=3 and >= 24 % at k=5)"
+MR_MAY_SIZED_PRINTED = {3: 0.19, 5: 0.24}
+
+MAYREP_PATTERNS = [
+    (r"\*\*last 200,000 episodes of stage k\*\*", "LEVEL_WINDOW (S_k)"),
+    (r"first 20,000 episodes of stage k", "DIP_WINDOW"),
+    (r"0\.9 × `R_A` \(own\) and 0\.9 × `R_A,common`; censored at 700,000", "RECOVERY_FRAC, MR_CENSOR"),
+    (r"rows under 1,000 episodes are skipped", "MIN_WINDOW_N"),
+    (r"`S_1 ≥ 150` steps", "MR_GATE_S1"),
+    (r"mean `Episode/FoodEaten ≥ 1\.0` bite per episode", "MR_GATE_BITES"),
+    (r"If \*\*2 or more runs of one agent\*\* fail", "MR_GATE_FAIL_RUNS"),
+    (r"rise in the 200,000-episode trailing mean over the last 300,000 episodes of stage 1\. More than 10 % is flagged",
+     "MR_CONV_SPAN / MR_CONV_FLAG"),
+    (r"`SE_k = sqrt\(sd_k\(ord\)²/3 \+ sd_k\(mod\)²/3\)`", "SE formula"),
+    (r"\*favourable\* if `D_k > 0` in \*\*≥ 2 of 3\*\* seed pairs \*\*and\*\* the mean difference `> 2 × SE_k`\. "
+     r"\*Unfavourable\* if `D_k < 0` in ≥ 2 of 3 pairs \*\*and\*\* the mean difference `< −2 × SE_k`", "H-ret rule"),
+    (r"\*\*H-forget, per return:\*\* the same rule on `G_k`", "H-forget rule"),
+    (r"\| \*\*Replicated\*\* \| H-ret favourable on \*\*both\*\* returns \*\*and\*\* H-forget favourable on \*\*both\*\* returns \|",
+     "overall: replicated"),
+    (r"\| \*\*Partly replicated\*\* \| at least one of the four readings favourable, none unfavourable \|", "overall: partly"),
+    (r"\| \*\*Reversed\*\* \| any H-ret or H-forget reading unfavourable", "overall: reversed"),
+    (r"mean dip difference is inside 2 × SE under \*\*both\*\* the own and the common reading", "H-dip rule"),
+    (r"the number of favourable pairs out of 3 per switch", "H-rec count"),
+    (r"favourable if `H\(mod\) ≥ 0` and `H\(ord\) < 0` in ≥ 2 of 3 pairs", "H-hyper rule"),
+    (r"`mean D_k / mean S_1\(ord\)` \| 38 % \(k=3\), 48 % \(k=5\)", "May normalised advantage"),
+    (r"at least half of May's \(≥ 19 % at k=3 and ≥ 24 % at k=5\)", "May-sized"),
+    (r"`mean F_k\(mod\) / mean F_k\(ord\)` \| 0\.35 \(k=3\), 0\.28 \(k=5\)", "May forgetting ratio"),
+    (r"\+106\.9 \(k=3\), \+132\.5 \(k=5\)", "May D_k"),
+    (r"\| 289\.5 / 278\.3;", "May S_1 (mod / ord)"),
+    (r"the mean over the last 10 % of each stage's episodes", "MR_TAIL_FRAC"),
+    (r"Survival in stages 2 and 4 is above `S_1` for both agents", "switch is real (7.4)"),
+    (r"own dip < 5 % on both switches", "MR_NULL_DIP (7.5)"),
+    (r"return < 0\.6 × its `R_A` for the whole stage", "MR_COLLAPSE (7.6)"),
+    (r"\| 3 \| active \(first return\) \| 3\.0 M → 3\.7 M \| 0\.7 M \|", "stage 3 length"),
+    (r"\| 5 \| active \(second return\) \| 4\.4 M → 5\.1 M \| 0\.7 M \|", "stage 5 length"),
+]
+
+
+def check_mayrep_doc(text: str) -> None:
+    n = re.sub(r"\s+", " ", text)
+    missing = [what for pat, what in MAYREP_PATTERNS if not re.search(pat, n)]
+    if missing:
+        raise ValueError(f"replication doc no longer states the pre-registered constants: {missing} "
+                         "- update the MR_* block and MAYREP_PATTERNS together")
+    for k in MR_RETURNS:   # the printed percentages follow from the printed May numbers
+        if round(MR_MAY["D"][k] / MR_MAY["S1"]["ordinary"], 2) != MR_MAY["norm_adv"][k]:
+            raise AssertionError(f"May normalised advantage k={k}: {MR_MAY['D'][k]}/{MR_MAY['S1']['ordinary']} "
+                                 f"!= {MR_MAY['norm_adv'][k]}")
+        if abs(MR_MAY_SIZED_FRAC * MR_MAY["norm_adv"][k] - MR_MAY_SIZED_PRINTED[k]) > 0.005:
+            raise AssertionError(f"May-sized line k={k} != printed {MR_MAY_SIZED_PRINTED[k]}")
+
+
+def _agg_rule(vals: dict, diffs: list) -> dict:
+    """5.2 / 5.3. vals = {agent: [per-seed value]}; diffs = per-pair modulated-minus-ordinary.
+    mean difference = mean(mod) - mean(ord); SE = sqrt(sd_ord^2/n_ord + sd_mod^2/n_mod), sample SD."""
+    o, m = [v for v in vals["ordinary"] if v is not None], [v for v in vals["modulated"] if v is not None]
+    diffs = [x for x in diffs if x is not None]
+    out = {"n_ord": len(o), "n_mod": len(m), "n_pairs": len(diffs), "pair_diffs": diffs,
+           "n_pairs_pos": sum(x > 0 for x in diffs), "n_pairs_neg": sum(x < 0 for x in diffs),
+           "mean_ord": float(np.mean(o)) if o else None, "mean_mod": float(np.mean(m)) if m else None}
+    if len(o) < 2 or len(m) < 2:
+        out.update(mean_diff=None, se=None, verdict="pending", note="needs >= 2 seeds per agent")
+        return out
+    md = float(np.mean(m) - np.mean(o))
+    se = float(math.sqrt(np.var(o, ddof=1) / len(o) + np.var(m, ddof=1) / len(m)))
+    out.update(mean_diff=md, se=se, beyond_noise=abs(md) > MR_SE_MULT * se)
+    if out["n_pairs_pos"] >= MR_MIN_PAIRS and md > MR_SE_MULT * se:
+        v = "favourable"
+    elif out["n_pairs_neg"] >= MR_MIN_PAIRS and md < -MR_SE_MULT * se:
+        v = "unfavourable"
+    else:
+        v = "inside noise"
+    out["verdict"] = v
+    return out
+
+
+def _stage_by_num(d, k):
+    """Stage k (1-indexed) of a run, or None."""
+    st = d.get("stages") or []
+    return st[k - 1] if len(st) >= k and st[k - 1]["status"] != "not reached" else None
+
+
+def mayrep_run(d: dict) -> dict:
+    """5.1 / 5.5 per-run quantities for one replication run (a from-scratch 5-stage sequence)."""
+    if d.get("kind") != "sequence" or d.get("home") is not None:
+        return {"run": d["run"], "tag": d["tag"], "note": f"not a from-scratch sequence ({d.get('kind')})"}
+    worlds = [s["world"] for s in d["stages"]]
+    want = [MR_ACTIVE, MR_PASSIVE, MR_ACTIVE, MR_PASSIVE, MR_ACTIVE]
+    if worlds != want:
+        raise ValueError(f"run {d['run']}: schedule {worlds} != the design's {want}")
+    for k in MR_RETURNS:
+        if d["stages"][k - 1]["length"] != MR_CENSOR:
+            raise ValueError(f"run {d['run']}: stage {k} length {d['stages'][k - 1]['length']} != {MR_CENSOR}")
+    out = {"run": d["run"], "tag": d["tag"], "agent": d["agent"], "seed": d["seed"], "finished": d["finished"],
+           "episodes_done": d.get("episodes_done"), "eta_h": d.get("eta_h"), "stages": {}}
+    for k in range(1, 6):
+        s = _stage_by_num(d, k)
+        if s is None:
+            out["stages"][k] = {"status": "not reached"}
+            continue
+        ser, _ = _SERIES[(d["run"], k - 1)]
+        done = s["status"] == "complete"
+        x = {"world": s["world"], "status": s["status"], "complete": done,
+             "S": s["level_last200k"], "bites": s["bites_last200k"],
+             "tail10": ser.S(s["to"] - MR_TAIL_FRAC * s["length"], s["to"]) if done else None,
+             "deaths_last200k": {c: last_level(ser, "Episode/Term_" + c) for c in DEATH_CAUSES}}
+        if k in MR_RETURNS:
+            x["S_first20k"], x["dip_own"], x["recovery_own"] = s["S_first20k"], s["dip"], s["recovery_to_0.9R"]
+            R = s["R_X"]
+            run20 = [v for _, v in ser.trailing(DIP_WINDOW)]
+            x["max_20k_running"] = max(run20) if run20 else None
+            x["collapsed"] = (None if R is None or not run20 else
+                              bool(max(run20) < MR_COLLAPSE * R) if done else None)
+        out["stages"][k] = x
+    st = out["stages"]
+    S = {k: st[k].get("S") for k in st}
+    comp = {k: st[k].get("complete", False) for k in st}
+    # stage-1 competence gate (5.5)
+    if S.get(1) is not None:
+        g = {"S1": S[1], "bites": st[1]["bites"], "S1_pass": S[1] >= MR_GATE_S1,
+             "bites_pass": st[1]["bites"] is not None and st[1]["bites"] >= MR_GATE_BITES, "provisional": not comp[1]}
+        g["pass"] = g["S1_pass"] and g["bites_pass"]
+        ser1, _ = _SERIES[(d["run"], 0)]
+        if ser1.last - ser1.start >= MR_CONV_SPAN + LEVEL_WINDOW:
+            a = ser1.S(ser1.last - MR_CONV_SPAN - LEVEL_WINDOW, ser1.last - MR_CONV_SPAN)
+            rise = S[1] / a - 1 if a else None
+            g["convergence"] = {"rise_last_300k": rise, "still_climbing": rise is not None and rise > MR_CONV_FLAG}
+        else:
+            g["convergence"] = None
+    else:
+        g = None
+    out["gate"] = g
+    both = lambda a, b: None if S.get(a) is None or S.get(b) is None else S[a] - S[b]
+    out["F"] = {k: both(k, 1) for k in MR_RETURNS}            # forgetting S_k - S_1
+    out["H"] = both(5, 3)                                     # second-return change
+    out["switch_real"] = {k: (None if S.get(k) is None or S.get(1) is None else S[k] > S[1]) for k in MR_PASSIVE_STAGES}
+    out["provisional"] = not all(comp.get(k) for k in range(1, 6))
+    return out
+
+
+def mayrep_aggregate(runs: list[dict], pairs: list[dict]) -> dict:
+    per = [mayrep_run(d) for d in runs if d.get("kind") == "sequence"]
+    per = [p for p in per if "stages" in p]
+    by = {"ordinary": [p for p in per if p["agent"] == "ordinary"], "modulated": [p for p in per if p["agent"] == "modulated"]}
+    seeds = sorted({p["seed"] for p in per})
+    pair_of = {s: {a: next((p for p in by[a] if p["seed"] == s), None) for a in by} for s in seeds}
+    full_pairs = {s: v for s, v in pair_of.items() if None not in v.values()}
+    Sk = lambda p, k: p["stages"][k].get("S")
+    vals = lambda fn: {a: [fn(p) for p in by[a]] for a in by}
+    pdiff = lambda fn: [None if fn(v["modulated"]) is None or fn(v["ordinary"]) is None
+                        else fn(v["modulated"]) - fn(v["ordinary"]) for v in full_pairs.values()]
+    res = {"n_runs": len(per), "seeds": seeds, "complete_pairs": sorted(full_pairs), "per_run": per}
+    # --- gate (5.5)
+    fails = {a: [p["run"] for p in by[a] if p["gate"] and not p["gate"]["pass"]] for a in by}
+    gate_prov = any(p["gate"] is None or p["gate"]["provisional"] for p in per)
+    res["gate"] = {"failing_runs": fails, "provisional": gate_prov or len(per) < 2 * MR_N_PAIRS,
+                   "inconclusive": any(len(v) >= MR_GATE_FAIL_RUNS for v in fails.values()),
+                   "still_climbing": [p["run"] for p in per if p["gate"] and (p["gate"].get("convergence") or {}).get("still_climbing")]}
+    # --- H-ret / H-forget (5.3)
+    res["H_ret"] = {k: _agg_rule(vals(lambda p, k=k: Sk(p, k)), pdiff(lambda p, k=k: Sk(p, k))) for k in MR_RETURNS}
+    res["H_forget"] = {k: _agg_rule(vals(lambda p, k=k: p["F"][k]), pdiff(lambda p, k=k: p["F"][k])) for k in MR_RETURNS}
+    # a reading is provisional while stage 1 or k of any run is unfinished, or fewer than 3 full pairs exist
+    prov_k = {k: len(full_pairs) < MR_N_PAIRS or any(not p["stages"][j].get("complete") for p in per for j in (1, k))
+              for k in MR_RETURNS}
+    for k in MR_RETURNS:
+        res["H_ret"][k]["provisional"] = res["H_forget"][k]["provisional"] = prov_k[k]
+    four = [res["H_ret"][k]["verdict"] for k in MR_RETURNS] + [res["H_forget"][k]["verdict"] for k in MR_RETURNS]
+    if "pending" in four:
+        overall = "pending"
+    elif "unfavourable" in four:
+        overall = "reversed"
+    elif all(v == "favourable" for v in four):
+        overall = "replicated"
+    elif "favourable" in four:
+        overall = "partly replicated"
+    else:
+        overall = "not replicated"
+    prov = any(p["provisional"] for p in per) or len(full_pairs) < MR_N_PAIRS
+    if res["gate"]["inconclusive"]:
+        overall = "inconclusive (stage 1 too short; 3.0 M stage-1 fallback, 3.4)"
+    # --- 7.4 / 7.5 / 7.6 checks
+    means = lambda k: {a: _mean([Sk(p, k) for p in by[a]]) for a in by}
+    s1 = means(1)
+    sw = {k: {a: (None if means(k)[a] is None or s1[a] is None else means(k)[a] > s1[a]) for a in by} for k in MR_PASSIVE_STAGES}
+    res["switch_real"] = {"per_stage_agent_mean": sw,
+                          "weaker_than_may": any(v is False for x in sw.values() for v in x.values())}
+    dmean = {k: {a: _mean([p["stages"][k].get("dip_own") for p in by[a]]) for a in by} for k in MR_RETURNS}
+    res["null_no_drop"] = {"mean_own_dip": dmean,
+                           "fires": all(v is not None and v < MR_NULL_DIP for x in dmean.values() for v in x.values())
+                           if all(v is not None for x in dmean.values() for v in x.values()) else None}
+    coll = {k: [p["run"] for p in per if p["stages"][k].get("collapsed")] for k in MR_RETURNS}
+    res["collapse"] = {"runs": coll}
+    for k, rr in coll.items():   # 7.6: verdict numbers without the collapsed run's pair (2-pair rule not in the doc)
+        for r in rr:
+            s = next(p["seed"] for p in per if p["run"] == r)
+            keep = {x: v for x, v in full_pairs.items() if x != s}
+            d_ = [Sk(v["modulated"], k) - Sk(v["ordinary"], k) for v in keep.values() if Sk(v["modulated"], k) is not None and Sk(v["ordinary"], k) is not None]
+            res["collapse"].setdefault("without_pair", []).append(
+                {"stage": k, "run": r, "seed": s, "D_pair_diffs": d_,
+                 "note": "numbers only: the doc does not state a 2-pair threshold"})
+    res["overall"] = {"verdict": overall, "provisional": prov,
+                      "wording": "switch weaker than May's (7.4)" if res["switch_real"]["weaker_than_may"] else None,
+                      "null_7_5": res["null_no_drop"]["fires"]}
+    # --- H-dip (5.3): own (fraction) and common (steps) per switch
+    com = {(pr["pair"], sw_["stage"]): sw_ for pr in pairs for sw_ in pr["switches"]}
+    hd = {}
+    for k in MR_RETURNS:
+        own = _agg_rule(vals(lambda p, k=k: p["stages"][k].get("dip_own")), pdiff(lambda p, k=k: p["stages"][k].get("dip_own")))
+        cv = {"ordinary": [], "modulated": []}
+        cd = []
+        for s, v in full_pairs.items():
+            x = com.get((pair_key(v["ordinary"]["tag"]), k - 1))
+            dc = (x or {}).get("dip_common") or {}
+            for a in cv:
+                cv[a].append((dc.get(a) or {}).get("steps"))
+            cd.append(None if not dc.get("ordinary") or not dc.get("modulated")
+                      else dc["modulated"]["steps"] - dc["ordinary"]["steps"])
+        common = _agg_rule(cv, cd)
+        for r in (own, common):
+            r.pop("verdict", None)
+        if own["mean_diff"] is None or common["mean_diff"] is None:
+            lab = "pending"
+        elif not own["beyond_noise"] and not common["beyond_noise"]:
+            lab = "equal"
+        elif own["beyond_noise"] and common["beyond_noise"] and own["mean_diff"] < 0 and common["mean_diff"] < 0:
+            lab = "smaller for the modulator beyond noise (new finding beyond May)"
+        elif own["beyond_noise"] and common["beyond_noise"] and own["mean_diff"] > 0 and common["mean_diff"] > 0:
+            lab = "larger for the modulator beyond noise"
+        else:
+            lab = "not equal under one reading only"
+        hd[k] = {"own_frac": own, "common_steps": common, "label": lab, "provisional": prov_k[k]}
+    res["H_dip"] = {"per_return": hd, "equal_both": (None if any(v["label"] == "pending" for v in hd.values())
+                                                     else all(v["label"] == "equal" for v in hd.values()))}
+    # --- H-rec (5.3; secondary): four-reading vote per pair and switch
+    hr = {}
+    for k in MR_RETURNS:
+        votes = {}
+        for s, v in full_pairs.items():
+            x = com.get((pair_key(v["ordinary"]["tag"]), k - 1))
+            votes[s] = (x or {}).get("H_rec", {"vote": "pending", "reason": "switch not reached"})
+        hr[k] = {"votes": votes, "n_favourable": sum(v["vote"] == "favourable" for v in votes.values()),
+                 "n_unfavourable": sum(v["vote"] == "unfavourable" for v in votes.values()), "of": MR_N_PAIRS}
+    res["H_rec"] = hr
+    # --- H-hyper (5.3; secondary)
+    hh = {s: (None if v["modulated"]["H"] is None or v["ordinary"]["H"] is None
+              else v["modulated"]["H"] >= 0 and v["ordinary"]["H"] < 0) for s, v in full_pairs.items()}
+    res["H_hyper"] = {"per_pair": hh, "n_favourable": sum(bool(x) for x in hh.values()),
+                      "verdict": ("pending" if not hh or None in hh.values() else
+                                  "favourable" if sum(hh.values()) >= MR_MIN_PAIRS else "not favourable")}
+    # --- 5.4 comparison with May
+    cmp_ = {}
+    for k in MR_RETURNS:
+        md, s1o = res["H_ret"][k]["mean_diff"], s1["ordinary"]
+        fo, fm = _mean([p["F"][k] for p in by["ordinary"]]), _mean([p["F"][k] for p in by["modulated"]])
+        na = None if md is None or not s1o else md / s1o
+        cmp_[k] = {"norm_adv": na, "may_norm_adv": MR_MAY["norm_adv"][k],
+                   "may_sized_line": MR_MAY_SIZED_FRAC * MR_MAY["norm_adv"][k],
+                   "share_of_may": None if na is None else na / MR_MAY["norm_adv"][k],
+                   "forget_ratio": None if fo is None or fm is None or fo == 0 else fm / fo,
+                   "may_forget_ratio": MR_MAY["forget_ratio"][k], "mean_D": md, "may_D": MR_MAY["D"][k]}
+    sized = all(cmp_[k]["norm_adv"] is not None and cmp_[k]["norm_adv"] >= cmp_[k]["may_sized_line"] for k in MR_RETURNS)
+    res["may_comparison"] = {"per_return": cmp_, "S1_mean": s1,
+                             "H_mean": {a: _mean([p["H"] for p in by[a]]) for a in by}, "may_H_sign": {"modulated": "+", "ordinary": "-"},
+                             "passive_mean": {k: means(k) for k in MR_PASSIVE_STAGES},
+                             "size": ("May-sized" if sized else "replicated in direction, smaller than May")
+                             if overall == "replicated" else "n/a (not replicated)" if overall != "pending" else "pending"}
+    return res
+
+
+def _mean(xs):
+    xs = [x for x in xs if x is not None]
+    return float(np.mean(xs)) if xs else None
+
+
+def render_mayrep(runs, res) -> str:
+    out = ["MAY DOUBLE-RETURN REPLICATION (MAY_DOUBLE_RETURN_REPLICATION.md 5) - survival steps per episode",
+           "  S_k = mean over the last 200k episodes of stage k (1 active, 2 passive, 3 active = 1st return, 4 passive, "
+           "5 active = 2nd return); F_k = S_k - S_1"]
+    if not res["n_runs"]:
+        out.append("  no runs launched yet (no manifest row M1-M6 carries a WandB id)")
+        return "\n".join(out)
+    out.append(f"  {'run':>3} {'tag':<28} {'done':>6} {'S1':>6} {'S2':>6} {'S3':>6} {'S4':>6} {'S5':>6} {'F3':>7} {'F5':>7} "
+               f"{'H':>6} {'dip3':>7} {'dip5':>7} {'gate':>6} {'climb':>7}")
+    for p in res["per_run"]:
+        st = p["stages"]
+        g = p["gate"] or {}
+        conv = (g.get("convergence") or {}).get("rise_last_300k")
+        out.append(f"  {p['run']:>3} {p['tag']:<28} {k_(p['episodes_done']):>6} "
+                   + " ".join(f"{f(st[k].get('S')) + ('*' if st[k].get('S') is not None and not st[k].get('complete') else ''):>6}" for k in range(1, 6))
+                   + f" {f(p['F'][3]):>7} {f(p['F'][5]):>7} {f(p['H']):>6} {f(st[3].get('dip_own'), pct=True):>7} {f(st[5].get('dip_own'), pct=True):>7} "
+                   f"{('-' if not g else 'PASS' if g['pass'] else 'FAIL') + ('*' if g and g['provisional'] else ''):>6} {f(conv, pct=True):>7}")
+    out.append("  (* = stage still in progress; gate = S_1 >= 150 and >= 1.0 bite; climb = rise of the trailing 200k over the last 300k of stage 1)")
+    g = res["gate"]
+    out.append(f"  stage-1 gate: failing runs ord {g['failing_runs']['ordinary'] or '-'} mod {g['failing_runs']['modulated'] or '-'}"
+               f"{'  -> INCONCLUSIVE' if g['inconclusive'] else ''}{' (provisional)' if g['provisional'] else ''}"
+               f"; still climbing (> 10 %): {g['still_climbing'] or '-'}")
+
+    def rule(name, r):
+        return (f"  {name:<14} mean ord {f(r['mean_ord'])} mod {f(r['mean_mod'])}  diff {f(r['mean_diff'])} +- SE {f(r['se'])} "
+                f"(2SE {f(r['se'] and MR_SE_MULT * r['se'])})  pairs + {r['n_pairs_pos']} / - {r['n_pairs_neg']} of {r['n_pairs']} "
+                f"{[round(x, 1) for x in r['pair_diffs']]}  -> {r['verdict'].upper()}{' (provisional)' if r['provisional'] else ''}")
+    for k in MR_RETURNS:
+        out.append(rule(f"H-ret  k={k}", res["H_ret"][k]))
+        out.append(rule(f"H-fgt  k={k}", res["H_forget"][k]))
+    o = res["overall"]
+    out.append(f"  OVERALL (5.3): {o['verdict'].upper()}{' (provisional)' if o['provisional'] else ''}"
+               f"{'; ' + o['wording'] if o['wording'] else ''}{'; 7.5 null for this design (no drop)' if o['null_7_5'] else ''}")
+    for k, v in res["H_dip"]["per_return"].items():
+        out.append(f"  H-dip  k={k}   own diff {f(v['own_frac']['mean_diff'], pct=True)} (2SE {f(v['own_frac']['se'] and MR_SE_MULT * v['own_frac']['se'], pct=True)})"
+                   f"  common diff {f(v['common_steps']['mean_diff'])} steps (2SE {f(v['common_steps']['se'] and MR_SE_MULT * v['common_steps']['se'])})"
+                   f"  -> {v['label']}{' (provisional)' if v['provisional'] else ''}")
+    for k, v in res["H_rec"].items():
+        out.append(f"  H-rec  k={k}   favourable pairs {v['n_favourable']} of {v['of']} (unfavourable {v['n_unfavourable']}): "
+                   + ", ".join(f"s{s} {x['vote']}" for s, x in v["votes"].items()))
+    out.append(f"  H-hyper       favourable pairs {res['H_hyper']['n_favourable']} -> {res['H_hyper']['verdict']}")
+    c = res["may_comparison"]
+    for k, v in c["per_return"].items():
+        out.append(f"  vs May k={k}   mean D / mean S_1(ord) = {f(v['norm_adv'], pct=True)} (May {100 * v['may_norm_adv']:.0f}%, "
+                   f"May-sized line {100 * v['may_sized_line']:.0f}%, share of May {f(v['share_of_may'], 2)})  "
+                   f"forgetting ratio mod/ord {f(v['forget_ratio'], 2)} (May {v['may_forget_ratio']})")
+    out.append(f"  size: {c['size']}; H mean mod {f(c['H_mean']['modulated'])} / ord {f(c['H_mean']['ordinary'])} (May + / -); "
+               f"passive means S2 {c['passive_mean'][2]} S4 {c['passive_mean'][4]}")
+    if any(res["collapse"]["runs"].values()):
+        out.append(f"  7.6 collapsed runs: {res['collapse']['runs']}")
+    return "\n".join(out)
+
+
 # ------------------------------------------------------------------------------------ render --
 def f(x, n=1, pct=False):
     if x is None:
@@ -817,7 +1229,7 @@ def render(runs, L, homes, pairs) -> str:
     out.append("PILOT 1 - one world from the Home agent (dip = first 20k vs Home level; recovery = to 0.9 x current trailing-200k)")
     out.append(hdr)
     for d in runs:
-        if d.get("kind") != "world":
+        if d.get("kind") != "world" or d["cell"] == HOME_LEG_CELL:
             continue
         p = d["plateau"] or {}
         r = d["recovery_to_0.9R"] or {}
@@ -870,6 +1282,18 @@ def render(runs, L, homes, pairs) -> str:
     if not any(d.get("kind") == "sequence" for d in runs):
         out.append("  (no sequence runs in this selection)")
     out.append("")
+    legs = [d for d in runs if d.get("kind") == "world" and d["cell"] == HOME_LEG_CELL]
+    out.append("HOME LEGS (fresh seeds, 3.5) - competence gate: last-200k survival >= gate x seed-42 Home level of "
+               "the same agent type, and rise < max over the leg's last fifth")
+    for d in legs:
+        g = d["survivable"]
+        out.append(f"  run {d['run']:>3} {d['tag']:<30} done {k_(d['episodes_done'])}  eta {f(d['eta_h'], 1)} h  "
+                   f"S_200k {f(d['S_trailing200k'])} vs line {f(g['survival_line'])} ({g['gate_frac']:.2f} x {g['seed42_home_level']})"
+                   f"  rise last fifth {f(g['rise_last_fifth'], pct=True)} (< {100 * g['rise_max']:.0f}%)  "
+                   f"-> {'PASS' if g['pass'] else 'FAIL'}{' (provisional)' if g['provisional'] else ''}")
+    if not legs:
+        out.append("  (no Home legs in this selection)")
+    out.append("")
     out.append("PILOT 3 - from scratch, pass criterion on the last 200k (value / threshold / pass)")
     for d in runs:
         if d.get("kind") != "scratch":
@@ -902,15 +1326,24 @@ def render(runs, L, homes, pairs) -> str:
 
 def main():
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
-    ap.add_argument("--design-doc", required=True, help="CONTINUAL_WORLDS.md (manifest + pre-registered rules)")
+    ap.add_argument("--design-doc", required=True, help="CONTINUAL_WORLDS.md (manifest + pre-registered rules), or "
+                    "MAY_DOUBLE_RETURN_REPLICATION.md with --study mayrep")
     ap.add_argument("--json-out", required=True)
+    ap.add_argument("--study", choices=("continual_worlds", "mayrep"), default="continual_worlds",
+                    help="mayrep = the May double-return replication (manifest rows M1-M6, 5.3 three-seed rule)")
     ap.add_argument("--runs", nargs="*", help="restrict to these manifest run ids, e.g. 13 39-r2 "
                     "(a bare number also selects its latest relaunch)")
     a = ap.parse_args()
     text = open(_abs(a.design_doc)).read()
-    check_doc(text)
-    doc_home = parse_home_numbers(text)
-    man = parse_manifest(text)
+    if a.study == "mayrep":
+        check_mayrep_doc(text)
+        doc_home = {}
+        man = parse_manifest(text, id_prefix=MR_ID_PREFIX, allow_empty=True)
+    else:
+        check_doc(text)
+        doc_home = parse_home_numbers(text)
+        HOME_GATE.update(parse_home_gate(text))
+        man = parse_manifest(text)
     if a.runs:
         want = set(a.runs)
         man = [m for m in man if m["run"] in want or str(m["base"]) in want]
@@ -918,13 +1351,21 @@ def main():
         if want - found:
             raise ValueError(f"--runs not in the manifest (or superseded by a relaunch): {sorted(want - found)}")
     runs = [read_run(m, doc_home) for m in man]
-    L = stage_lengths(runs)
     pairs = common_reference(runs)
-    print(render(runs, L, _HOME_CACHE, pairs))
     os.makedirs(os.path.dirname(_abs(a.json_out)), exist_ok=True)
-    json.dump({"design_doc": a.design_doc, "home": _HOME_CACHE, "runs": runs, "stage_lengths": L,
-               "common_reference": pairs},
-              open(_abs(a.json_out), "w"), indent=1, default=float)
+    if a.study == "mayrep":
+        res = mayrep_aggregate(runs, pairs)
+        print(render_mayrep(runs, res))
+        if runs:
+            print("\n" + render_common(pairs))
+        json.dump({"design_doc": a.design_doc, "study": "mayrep", "runs": runs, "common_reference": pairs,
+                   "mayrep": res}, open(_abs(a.json_out), "w"), indent=1, default=float)
+    else:
+        L = stage_lengths(runs)
+        print(render(runs, L, _HOME_CACHE, pairs))
+        json.dump({"design_doc": a.design_doc, "home": _HOME_CACHE, "home_leg_gate": HOME_GATE, "runs": runs,
+                   "stage_lengths": L, "common_reference": pairs},
+                  open(_abs(a.json_out), "w"), indent=1, default=float)
     print(f"\nwrote {a.json_out}")
 
 
