@@ -27,9 +27,13 @@ decision_rules:
 #   inner_folds: 5 — ridge-penalty cross-validation folds; reason in algorithmic_null_pilot.yaml.
 # The UNTRAINED references are untrained.build on each of the three ordinary runs below.
 #   ridge_alphas: the same 19-value grid; reason in algorithmic_null_pilot.yaml.
+#   headline_capture: {checkpoint: final, probe: active} (set 2026-09-30; plan R4-2). The capture
+#     that keeps the descriptive layers is the rules' primary one: evidence.primary_checkpoint
+#     final on evidence.primary_probe_world active (the hunting-world probe, id `active` below).
 # ---------------------------------------------------------------------------------------------
 bootstrap_n: 2000
 inner_folds: 5
+headline_capture: {checkpoint: final, probe: active}
 ridge_alphas: [1.0e-2, 3.16228e-2, 1.0e-1, 3.16228e-1, 1.0, 3.16228, 1.0e+1, 3.16228e+1, 1.0e+2, 3.16228e+2, 1.0e+3, 3.16228e+3, 1.0e+4, 3.16228e+4, 1.0e+5, 3.16228e+5, 1.0e+6, 3.16228e+6, 1.0e+7]
 probes:
   - id: active
