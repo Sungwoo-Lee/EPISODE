@@ -11,10 +11,10 @@ develop_link: docs/experiments/active/hypervigilance/NMN_CONTINUAL_DOUBLE_RETURN
 
 # May double-return replication, under today's settings
 
-> **Status (2026-09-29): DESIGNED. Configs are written and validated with the trainer's own
-> loader. Nothing is launched.** Before launch it needs an `env-config-reviewer` pre-flight, a
-> `plan-reviewer` pass on this design, the user's answers to the open questions (section 8), and
-> a GPU assignment.
+> **Status (2026-09-29): DESIGNED; user decisions taken (8.1). Configs are written and validated
+> with the trainer's own loader. Nothing is launched.** Manifest rows M1–M6 are **ready, pending
+> reviews**: they still need an `env-config-reviewer` pre-flight, a `plan-reviewer` pass on this
+> design, and a GPU assignment.
 >
 > **Related:** the May probe being replicated: [[NMN_CONTINUAL_DOUBLE_RETURN_PROBE]] ·
 > the larger continual study this sits beside, whose analysis rules it borrows: [[CONTINUAL_WORLDS]] ·
@@ -256,12 +256,12 @@ node's GPUs before moving to the next.
 
 | Run | Status | Cell | Tag (= wandb-name) | wandb-group | wandb-job-type | Seed | Node | GPU | Launched at | WandB run ID | Log path |
 |-----|--------|------|--------------------|-------------|----------------|------|------|-----|-------------|--------------|----------|
-| M1 | planned | ordinary | `rppo_cw_mayrep_t1none_s42` | continual_worlds | prod | 42 | — | — | — | — | — |
-| M2 | planned | modulated | `rppo_cw_mayrep_t16quad_s42` | continual_worlds | prod | 42 | — | — | — | — | — |
-| M3 | planned | ordinary | `rppo_cw_mayrep_t1none_s43` | continual_worlds | prod | 43 | — | — | — | — | — |
-| M4 | planned | modulated | `rppo_cw_mayrep_t16quad_s43` | continual_worlds | prod | 43 | — | — | — | — | — |
-| M5 | planned | ordinary | `rppo_cw_mayrep_t1none_s44` | continual_worlds | prod | 44 | — | — | — | — | — |
-| M6 | planned | modulated | `rppo_cw_mayrep_t16quad_s44` | continual_worlds | prod | 44 | — | — | — | — | — |
+| M1 | ready — pending reviews | ordinary | `rppo_cw_mayrep_t1none_s42` | continual_worlds | prod | 42 | — | — | — | — | — |
+| M2 | ready — pending reviews | modulated | `rppo_cw_mayrep_t16quad_s42` | continual_worlds | prod | 42 | — | — | — | — | — |
+| M3 | ready — pending reviews | ordinary | `rppo_cw_mayrep_t1none_s43` | continual_worlds | prod | 43 | — | — | — | — | — |
+| M4 | ready — pending reviews | modulated | `rppo_cw_mayrep_t16quad_s43` | continual_worlds | prod | 43 | — | — | — | — | — |
+| M5 | ready — pending reviews | ordinary | `rppo_cw_mayrep_t1none_s44` | continual_worlds | prod | 44 | — | — | — | — | — |
+| M6 | ready — pending reviews | modulated | `rppo_cw_mayrep_t16quad_s44` | continual_worlds | prod | 44 | — | — | — | — | — |
 
 Tags are unique here and do not collide with any `rppo_cw_*` tag in [[CONTINUAL_WORLDS]] (the
 `mayrep` token appears nowhere else).
@@ -420,11 +420,49 @@ than May". Both are reported with the absolute numbers next to them.
   agent's 3-seed mean. Recovery is also plotted against environment steps. Policy entropy
   (`loss/entropy`, iteration stream, cut by `stage/index`) is shown per stage. For the modulated
   arm, the logged modulator summaries are shown around each boundary: descriptive only.
-- **Optional, not in the verdict: zero-shot retention.** The stage-2-end and stage-4-end
-  checkpoints are played in the active world for 2,000 episodes with no training, using the eval
-  sweep driver (`probe: configs/environment/experiment/continual_worlds`, condition
-  `may_active_10x10`, `algo: rppo`, `episodes: 2000`). This measures how much hunting-world
-  skill is left before any retraining. It is run only if the user wants it (8, Q5).
+- **Zero-shot retention: pre-registered, adopted by the user 2026-09-29 (8.1).** The
+  full rule is in 5.6.
+
+### 5.6 Zero-shot retention test (pre-registered 2026-09-29; no training)
+
+**What it asks, in plain words.** Freeze each agent at the end of every stage and let it play
+the hunting world with no learning at all. How much of its hunting-world survival is left after
+a harmless stage, before any retraining can repair it? This separates **forgetting** (what the
+harmless stage erased) from **relearning speed** (what the training-curve measures in 5.1 mix
+in).
+
+**How.** For every run, after it finishes, run
+`scripts/eval/continual_forgetting_matrix.py --run-dir <run> --episodes 2000 --device gpu
+--output-prefix results/analysis/continual_worlds/mayrep_forgetting_<tag>`. The driver takes
+the stage-end checkpoint of each of the 5 stages. That is the first checkpoint at or after
+each boundary, and its saved `stage` field must equal the stage index or the driver stops.
+The driver evaluates each checkpoint in both worlds of the run's own saved schedule (`active`,
+`passive`; the stage-name prefixes are stripped), using the run's saved stage configs, for
+2,000 episodes per cell. Seeds 0–1,999 are used in every cell, so cells are paired. No
+`--start-checkpoint` is passed, because the runs start from scratch. Each cell's measure is
+mean survival steps with a 95 % CI (about ±5 steps at 2,000 episodes). The driver never reads
+reward.
+
+**Pre-registered quantities** (`A_k` = survival of the stage-k-end checkpoint in the active
+world):
+
+| Symbol | Definition | Reads |
+|---|---|---|
+| `Z_2` | `A_2 − A_1` | hunting skill lost during the first harmless stage (1.5 M episodes) |
+| `Z_4` | `A_4 − A_3` | hunting skill lost during the second harmless stage (0.7 M) |
+| `ZA_j` (j = 2, 4) | `Z_j(mod) − Z_j(ord)` | positive favours the modulator (it lost less) |
+
+**Rule (H-zeroshot, secondary).** For each j, *favourable* if `ZA_j > 0` in **≥ 2 of 3** seed
+pairs **and** the mean `ZA_j > 2 × SE` (between-seed SE, as in 5.2). *Unfavourable* is the
+mirror case. Otherwise it is *inside noise*. A per-pair difference is also marked "beyond eval
+noise" when the two cells' 95 % CIs, combined, do not include 0. H-zeroshot is reported **next
+to** the overall verdict of 5.3 and does **not** change it: the verdict stays pinned to May's own
+training-curve measures, so the replication can be compared like for like. Descriptive only: the
+passive-world column (whether hunting-stage training costs harmless-world survival) and
+`A_5 − A_3` (whether the second return is kept better than the first).
+
+**When.** After all six runs finish. It needs only the finished checkpoints and one GPU per run,
+at about 10 cells × 2,000 episodes.
 
 ## 6. Pre-launch checks
 
@@ -480,8 +518,24 @@ numbers above are their printed output.
 | Q2 | Add May's own modulated agent (FiLM g1 with the policy-temperature head) as a third arm? It would need a GAE_NORM/current-senses twin of `recurrent_ppo_nmn_film_g1_tempceil5.yaml` | no (default; 6 runs) / yes (+3 runs; new agent config) | **no for now**: the question is whether today's modulator shows the effect; if it does not, the temperature arm is the obvious next step |
 | Q3 | Predator and rabbit smell identical (May's "sameProp") or today's Home odours (`[0, .7, .5]` vs `[0, .5, .7]`, which let smell tell them apart)? | identical (default) / Home odours | **identical**: it is what makes May's switch a behaviour-reading problem; with Home odours the passive predator is identifiable by smell and the task changes |
 | Q4 | The continual-worlds read-out script computes the per-run readings, but only finds runs listed in the continual-worlds manifest and has no three-seed rule (5); extend it? | `developer` hand-off before 1.5 M / analyzer does it ad hoc | **hand-off**, so the pre-registered own/common readings and the 5.3 rule are computed by the same code |
-| Q5 | Run the optional zero-shot retention evaluation (5.5)? | yes / no | yes, it is cheap (4 checkpoints × 6 runs × 2,000 episodes) |
+| Q5 | Run the optional zero-shot retention evaluation (5.5)? | yes / no | yes, it is cheap (5 checkpoints × 2 worlds × 6 runs × 2,000 episodes) |
 | Q6 | "temp" in your request: thermal body temperature (dropped here) or May's policy-temperature setting (not present in today's agent)? | — | this design reads it as **thermal**; Q2 covers the other reading |
+
+### 8.1 Decisions (user, 2026-09-29)
+
+*Appended 2026-09-29; the questions above are kept unchanged for the record.*
+
+| # | Decision |
+|---|---|
+| Q1 | **Bushes stay today's refuge** (animals cannot enter), as designed |
+| Q2 | **No third arm** with May's modulated agent (policy-temperature head). Stays 6 runs |
+| Q3 | **Predator and rabbits smell identical**, as in May, as designed |
+| Q4 | The analysis-script extension (run discovery from this doc's manifest + the three-seed rule of 5.3) goes to a **`developer`**, arranged by the user; needed before the first switch at 1.5 M episodes |
+| Q5 | **Yes**, the zero-shot retention test is included and pre-registered in 5.6 (every stage-end checkpoint, frozen, played in the active world; `scripts/eval/continual_forgetting_matrix.py`) |
+| Q6 | "temp" meant **body temperature**, so **thermal off stands** (3.3) |
+
+Effect: manifest rows M1–M6 move to "ready, pending reviews" (`env-config-reviewer`
+pre-flight + `plan-reviewer`). No config file changes.
 
 ## 9. Hand-offs
 
@@ -492,8 +546,9 @@ numbers above are their printed output.
   `_wander_step` clip to it inclusively, so a patrol area of `[[1,1],[5,5]]` lets an animal reach
   cell 6). It is not fixed here: fixing it would make this replication **differ** from May.
 - `training-runner`: the 6 launches (4.2) after the user's go.
-- `experiment-analyzer`: sections 10–11 after training, then `plan-reviewer` on the verdict,
-  then `pi`.
+- `developer` (arranged by the user, Q4): extend the read-out script before 1.5 M episodes.
+- `experiment-analyzer`: sections 10–11 after training, including the 5.6 zero-shot run, then
+  `plan-reviewer` on the verdict, then `pi`.
 
 ## 10. Results
 
