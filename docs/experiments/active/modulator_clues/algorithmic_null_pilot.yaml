@@ -92,25 +92,39 @@ assert_n_episodes: 8
 tool_checks:
   shift_change_rows_max: 0.05     # shift-by-one agreement on action-change rows (0 % if aligned)
   self_similarity_atol: 1.0e-12   # same-agent CKA must equal 1 within this (float64)
+# Revision 4 (R4-2): the five verdict layers (rules common.verdict_layers), logits and value are
+# kept at every capture; the descriptive layers (.raw / .mod keys, enc.uni.*) only at
+# headline_capture. The pilot has one checkpoint and one probe, so its output is unchanged.
+headline_capture: {checkpoint: final, probe: w0000_pair_final}
 layers:
-  - {key: enc.uni.raw, flatten: senses_x_units}
-  - {key: enc.uni.mod, flatten: senses_x_units}
-  - {key: enc.uni.out, flatten: senses_x_units}
-  - {key: enc.raw, flatten: none}
-  - {key: enc.mod, flatten: none}
-  - {key: enc.out, flatten: none}
-  - {key: rnn.state, flatten: none}
-  - {key: rnn.raw, flatten: none}
-  - {key: rnn.mod, flatten: none}
-  - {key: rnn.out, flatten: none}
-  - {key: actor.raw, flatten: none}
-  - {key: actor.mod, flatten: none}
-  - {key: actor.out, flatten: none}
-  - {key: critic.raw, flatten: none}
-  - {key: critic.mod, flatten: none}
-  - {key: critic.out, flatten: none}
-  - {key: logits, flatten: none}
-  - {key: value, flatten: none}
+  - {key: enc.uni.raw, flatten: senses_x_units, keep: headline_only}
+  - {key: enc.uni.mod, flatten: senses_x_units, keep: headline_only}
+  - {key: enc.uni.out, flatten: senses_x_units, keep: headline_only}
+  - {key: enc.raw, flatten: none, keep: headline_only}
+  - {key: enc.mod, flatten: none, keep: headline_only}
+  - {key: enc.out, flatten: none, keep: every_capture}
+  - {key: rnn.state, flatten: none, keep: every_capture}
+  - {key: rnn.raw, flatten: none, keep: headline_only}
+  - {key: rnn.mod, flatten: none, keep: headline_only}
+  - {key: rnn.out, flatten: none, keep: every_capture}
+  - {key: actor.raw, flatten: none, keep: headline_only}
+  - {key: actor.mod, flatten: none, keep: headline_only}
+  - {key: actor.out, flatten: none, keep: every_capture}
+  - {key: critic.raw, flatten: none, keep: headline_only}
+  - {key: critic.mod, flatten: none, keep: headline_only}
+  - {key: critic.out, flatten: none, keep: every_capture}
+  - {key: logits, flatten: none, keep: every_capture}
+  - {key: value, flatten: none, keep: every_capture}
+
+# Stage 3 keys (tooling plan §8), developer-owned, added 2026-09-30 before any similarity or
+# decoding number existed. comparisons: every pair of runs. probe_split.seed fixes the
+# episode_seed-grouped split (and the across-episode shuffle of the G4 negative control);
+# bootstrap_seed fixes the joint group bootstrap. min_rows_per_column: a layer is refused unless
+# the rows it is scored on number at least 20 x its columns (the 1152-column enc.uni.* layers
+# need ~23,000 rows; this probe keeps ~48,600), so no underdetermined ridge is fitted.
+comparisons: auto
+probe_split: {seed: 20260930, bootstrap_seed: 20260931}
+min_rows_per_column: 20
 
 runs:
   - {label: ordinary_s42, path: results/JAX_RecurrentPPO/20260927-053057_rppo_l05body_w0000_t1none_s42, checkpoints: [final]}

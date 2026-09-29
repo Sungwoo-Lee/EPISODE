@@ -1050,15 +1050,15 @@ def test_parameter_coverage_real_rules():
 # where a decision function or an existing driver step consumes it.
 # =============================================================================================
 from scripts.analysis.nmn import run_wakeup as rw  # noqa: E402
+from scripts.analysis.nmn import driver_io as dio  # noqa: E402
+from tests.analysis import nmn_synthetic as syn  # noqa: E402
 
 # Entries read today whose consumer is a driver not written yet. Each must NOT change any
 # output (checked, so the list cannot go stale): when the driver lands, move the entry out.
+# (gates.G5.stage, common.split.test_frac, common.survival.window_episodes and
+# A3.survival_stage_by_status.{evidence,interim} left this list with the Stage 3 drivers: their
+# steps driver_io.survival_block and driver_io.make_splits are exercised in _decisions.)
 READ_NOT_YET_USED = {
-    "gates.G5.stage": "run_similarity: picks the stage whose S and bites enter G5",
-    "common.split.test_frac": "run_similarity / run_decoding: representation.episode_split",
-    "common.survival.window_episodes": "run_similarity: wandb_history.stage_level window",
-    "A3.survival_stage_by_status.evidence": "run_similarity: stage of the survival difference",
-    "A3.survival_stage_by_status.interim": "run_similarity: stage of the survival difference",
     "B2.f": "run_wakeup GPU measures (headline wake point), not implemented yet",
     "B2.literal_f": "run_wakeup GPU measures (literal 50 % of final, beside), not implemented yet",
     "B2.lag_coincident_max_intervals": "run_wakeup lag reading (wakeup.lag), after the GPU measures",
@@ -1184,6 +1184,13 @@ def _decisions(Pr, base):
                                            for L in LAYERS}},
         Pr, policy=EVID, verdict_layers=LAYERS, gates=ALL_PASS, yardstick_complete=True)
     calls["B2"] = lambda: dr.evaluate_B2(_b(late=12, coin=4), ["late"] * 3, Pr, policy=B2POL)
+    # Stage 3 driver steps (run_similarity / run_decoding): the survival and G5 inputs of A3,
+    # for both statuses that read a survival stage, and the probe split's held-out groups
+    runs = syn.scanned_runs()
+    calls["survival_block_evidence"] = lambda: dio.survival_block(runs, Pr, "evidence")
+    calls["survival_block_interim"] = lambda: dio.survival_block(runs, Pr, "interim")
+    grp = np.repeat(np.arange(400), 3)
+    calls["probe_split"] = lambda: dio.split_counts(dio.make_splits(grp, Pr, 0), grp)
     rows, x = _survival_rows(base)
     calls["plateau"] = lambda: rw.plateau_crossing("synthetic", rows, x, dr.b2_settings(Pr),
                                                    dr.survival_settings(Pr))

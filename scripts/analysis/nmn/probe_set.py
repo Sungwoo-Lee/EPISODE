@@ -183,7 +183,12 @@ def build(probe_id: str, stores: list, n_per_store: int, rows_per_episode: int, 
                            "run_path": man["run_path"], "D": int(man["dims"]["D"]),
                            "episodes_taken": n_per_store, "blocks_read": used,
                            "animal_classes": man["animal_classes"],
-                           "policy_mode": man["policy_mode"], "obs_precision": man["obs_precision"]})
+                           "policy_mode": man["policy_mode"], "obs_precision": man["obs_precision"],
+                           # Revision 4 (R4-1): the collection's matmul mode and card. None marks
+                           # a store collected before Revision 4 (the field is absent); it is
+                           # never filled with a default.
+                           "matmul_precision": man.get("matmul_precision"),
+                           "compute_device_kind": man.get("compute_device_kind")})
     if len({json.dumps(b, sort_keys=True) for b in breakdowns}) != 1:
         raise ValueError(f"probe {probe_id}: stores differ in observation breakdown {breakdowns}")
 
@@ -279,6 +284,10 @@ def load(out_dir, probe_id: str) -> Probe:
               action_next_all=z["action_next_all"], action_cur_all=z["action_cur_all"],
               t_all=z["t_all"], rows=z["rows"], targets=targets, counts=meta["counts"])
     p.row_sha256 = row_index_sha256(p)
+    for sm in p.store_meta:
+        if "matmul_precision" not in sm or "compute_device_kind" not in sm:
+            raise ValueError(f"probe {probe_id}: built before Revision 4 (its store_meta lacks "
+                             f"matmul_precision / compute_device_kind); rebuild it")
     if p.row_sha256 != meta["row_index_sha256"]:
         raise ValueError(f"probe {probe_id}: row index sha256 {p.row_sha256} != recorded "
                          f"{meta['row_index_sha256']}")

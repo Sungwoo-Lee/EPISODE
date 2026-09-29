@@ -87,6 +87,24 @@ def test_saved_probe_round_trip_and_tamper(probe, tmp_path):
         probe_set.load(tmp_path, "t")
 
 
+def test_store_precision_fields_copied_none_for_legacy_stores(probe, tmp_path):
+    """Revision 4 (R4-1): store_meta carries each store's matmul_precision and
+    compute_device_kind; the level-05 stores predate Revision 4, so both are None (never a
+    default). A saved probe whose store_meta lacks the fields (built before Revision 4) is
+    refused on load."""
+    from scripts.analysis.nmn import probe_set
+    for sm in probe.store_meta:
+        assert "matmul_precision" in sm and "compute_device_kind" in sm
+        assert sm["matmul_precision"] is None and sm["compute_device_kind"] is None
+    probe_set.save(probe, tmp_path)
+    meta = json.loads((tmp_path / "probe_t.json").read_text())
+    for sm in meta["store_meta"]:
+        del sm["matmul_precision"]
+    (tmp_path / "probe_t.json").write_text(json.dumps(meta))
+    with pytest.raises(ValueError, match="before Revision 4"):
+        probe_set.load(tmp_path, "t")
+
+
 def test_rules_pin_and_policy(tmp_path):
     from scripts.analysis.nmn import rules_pin
     man = yaml.safe_load(PILOT.read_text())
