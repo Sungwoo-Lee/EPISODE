@@ -167,9 +167,12 @@ made-up inputs, one row per case, in `tests/analysis/test_nmn_decision_rules.py`
 is what registers the code's reading. It came before any similarity, decoding or wake-up result
 existed. The rules file is **unchanged** (sha `4c8508af…`), so no manifest was re-pinned.
 
-**Verdict: REJECTED, pending two code fixes.** All 105 table rows give the verdict the rules
-intend. Two behaviours outside the table do not. When both fixes land with the rows specified
-below, and those rows pass, the sign-off takes effect with no further designer review.
+**Verdict: the 105 existing rows are SIGNED; final R.2 is HELD.** All 105 rows give the verdict
+the rules intend. Two behaviours outside the table do not (items 1 and 2 below). Code review
+(relayed by the coordinator on 2026-09-30) is also adding rows: non-finite summary → RAISES in
+every A1–A4 function, a registered-constant "no sustained crossing" plateau row, and lag
+coincidence counted on checkpoint positions. R.2 becomes final when items 1 and 2 and those rows
+land and pass. The designer then checks only the new row names and expected verdicts.
 
 1. **A3 under a failed gate or an incomplete yardstick (developer's reading 2: rejected).** The
    code writes the pattern as "none of the three patterns (undetermined at 3 seeds)" and names
@@ -212,15 +215,18 @@ Non-blocking: the "why" of A2 row 3 says the gap is 0.083. It is 0.090 (0.61 −
 
 **Designer decisions.**
 
-- **"No sustained crossing" (rules T5): acceptable, and no rules-text change.** The branch is
-  *reachable* under the registered constants, contrary to the note in the test file. It is reached
-  only by a see-saw at the very end of the curve. Example on the 51-point level-05 grid: the curve
-  sits just under half its rise, then the last three points are 1.0, 0.49 and 1.51 (net rise 1.0).
-  The guard passes (margin 1.06), and no two consecutive points reach half. On the 16-point May
-  grid it cannot be reached: the see-saw alone makes the noise band wider than the rise. The
-  behaviour is right either way (NaN with a reason, never an exception). Suggested (not
-  required): add this curve as a fixture row under the registered constants, beside the
-  `noise_k = 1` row.
+- **"No sustained crossing" (rules T5): the rule text stands; no note is needed. The branch is
+  live.** The test file calls it unreachable, and my first check agreed for the headline (f = 0.5),
+  where only an end-of-curve see-saw reaches it (on the 51-point grid: a plateau just under half,
+  then 1.0, 0.49, 1.51, guard margin 1.06; not reachable on the 16-point May grid). Code review
+  corrected this for the **plateau** rule (`plateau_f` = 0.9). There the swing that defeats
+  `sustain` is only about 0.15 of the rise, so a realistic survival curve reaches it. Re-checked
+  here: survival that levels off at 0.85 of its range, then jumps once at the last checkpoint,
+  returns "no sustained crossing" with the guard passing (margin 2.96 on 50 points, 1.66 on 15).
+  Consequence: a run whose survival is still stepping up at its last checkpoint has an undefined
+  plateau. Under Checkpoint 4.0 that stops the GPU sweep and goes to the user, which is the
+  intended handling. The current table has no NaN plateau. The registered-constant fixture row that
+  code review is adding is the right row.
 - **`inner_folds` = 5, in the manifests, not in the rules.** This is the number of grouped
   cross-validation folds used to choose the ridge penalty. It is an estimator setting like
   `bootstrap_n`, `n_per_store` and `ridge_alphas`, not a constant of any decision rule, so a rules
@@ -237,6 +243,34 @@ Non-blocking: the "why" of A2 row 3 says the gap is 0.083. It is 0.090 (0.61 −
   the descriptive layers exist to show *where* a difference arises. An interim "different" that
   cannot be localised would be unexplainable. The descriptive layers decide no verdict, and the
   cost is about 13 GB. Note that the probe id is `active_stage0end`, not `active`.
+
+**Registered at code review's request (implicit choices, now explicit).**
+
+- **Held-out R²** (A1 predictivity, A2 decoding, the clock baseline) is computed with the total
+  sum of squares about the **held-out** rows' own mean (sklearn `r2_score`), variance-weighted over
+  output units where there are several. This is the standard out-of-sample R². The layer score and
+  the clock score share the same held-out rows and the same sum of squares, so the sign of the
+  excess (R² − R²_clock) does not depend on this choice. The a-priori margin
+  `beats_clock_margin_r2` = 0.05 is in units of this R², and it was meant for this definition. In a
+  bootstrap draw, the mean is that draw's resampled held-out rows.
+- **Wake-up noise σ_Δ** is the sample SD of the consecutive differences, with ddof = 1. The rule
+  says "SD"; ddof = 1 is the unbiased-variance form. It makes the guard very slightly wider than
+  the ddof = 0 form, the conservative direction for the false-wake bound `noise_k` was set
+  against.
+- **Non-finite summaries raise** in every A1–A4 function (code review). Endorsed: a failed fit must
+  never become a verdict word. It is the same principle as item 2, which still applies separately
+  to `wakeup.py`'s curve input.
+- **Lag coincidence on checkpoint positions** (code review): endorsed, because it implements "|lag|
+  ≤ `lag_coincident_max_intervals` checkpoint intervals (the resolution of the checkpoint grid)"
+  as written, with level-05 spacings that jitter by tens of episodes. **Condition:** both
+  positions are ordinals on one scale, the checkpoint's number in the run's manifest list
+  (first checkpoint = 1). An anchored wake-up curve has step 0 at array index 0, while the
+  plateau curve has no anchor and starts at checkpoint 1. So the positions must be converted, not
+  taken as raw array indices (the plateau table already reports `index + 1`). Row to add: an
+  anchored wake-up curve and an unanchored plateau that cross at the same checkpoint → "coincident".
+  Late / early still take their sign from the lag in episodes, which is still reported.
+- `mm_qualifier` is read from the predictivity summary only: endorsed, since predictivity decides
+  the layer verdict.
 
 **Recorded outside the table.** A1 study, remedy: the count covers "undetermined" layers only (not
 "uninformative"), and it is reported even when the study reads "different". A3 study reading:
