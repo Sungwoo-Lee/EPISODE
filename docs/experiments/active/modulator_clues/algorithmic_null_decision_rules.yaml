@@ -1,0 +1,400 @@
+# =====================================================================================================
+# PRE-REGISTERED DECISION RULES — "What Both Agents Compute" (analyses A1–A4)
+# =====================================================================================================
+#
+# QUESTION. Do the agent with a neuromodulator and the ordinary agent end up computing the same thing
+# inside, or do they only reach the same survival by different internal routes? The page
+# "What Both Agents Compute" (algorithmic_null.html, this folder) plans four analyses to answer it:
+#   A1  layer similarity    — are the two agents' layers interchangeable, layer by layer?
+#   A2  decoding profiles   — can hunger, injury, distance to the predator and survival steps
+#                             remaining be read out of the same layers, equally well?
+#   A3  seed yardstick      — is modulated-vs-ordinary similarity as high as the similarity between
+#                             two ordinary agents trained from different seeds, and does sharing a
+#                             seed (the same starting weights) explain it?
+#   A4  across worlds       — when the world switches between a hunting and a harmless predator, does
+#                             each agent's processing change, and do the two change together?
+#
+# WHY THIS FILE EXISTS. The answer steers the research direction: understand the shared computation
+# first, then design a modulator that adds something to it. A threshold chosen after the figures are
+# seen turns that answer into whatever the figures show. So every rule below — the yardstick, the
+# statistic, the threshold, the outcome that refutes convergence — was written on 2026-09-29, BEFORE
+# any similarity, decoding or yardstick number existed (no tool that computes one had been written).
+#
+# HEADLINE OF THE RULES. Every modulated-vs-ordinary number is judged against how alike two ORDINARY
+# agents from DIFFERENT seeds are (the "seed yardstick"). With 3 seeds per agent there are only three
+# such ordinary pairs, so the rules allow — and expect — the answer "undetermined at 3 seeds". "Same"
+# here means "not distinguishable from seed-to-seed variation at 3 seeds", never "proven identical".
+# The pilot (one level-05 pair sharing one seed) gets NO verdict word at all: it only tests the tools.
+#
+# WHO READS IT. The analysis drivers (plan: docs/develop/active/neuromodulation/
+# ALGORITHMIC_NULL_ANALYSIS_TOOLING.md) read this file through the mandatory `decision_rules` key of
+# every analysis manifest in this study, check its sha256, and print the file path, its sha256, the
+# manifest's evidence status and the verdict on every figure's data statement.
+#
+# Origin: plan-reviewer finding 2 (docs/reviews/plan_algorithmic_null_tooling.md). Author:
+# experiment-designer, 2026-09-29. Survival steps only; reward is never used.
+# =====================================================================================================
+
+decision_rules:
+  registered_on: "2026-09-29"
+  registered_before_any_result: true      # no similarity / decoding / yardstick number existed
+  analyses: [A1, A2, A3, A4]
+
+  # ---------------------------------------------------------------------------------------------
+  # 0. Changing these rules
+  # ---------------------------------------------------------------------------------------------
+  revision_policy: >
+    Any edit changes this file's sha256, which every manifest pins, so an edit is visible in git
+    and forces the manifests to be re-pinned in the same commit. An edit must append an entry to
+    `revisions` below with date, reason, and whether any pilot, interim or evidence number had been
+    seen. Permitted reasons: (1) a statistic cannot be computed as written (a tool defect or an
+    undefined case); (2) a gate or control fails and the rule must say how that case reads.
+    NOT permitted: moving a threshold, a layer list, a quantity or a pattern boundary because of a
+    magnitude seen in the pilot, the interim or the evidence run. A post-data change of that kind is
+    reported as exploratory, next to the verdict computed under the rules as registered.
+  revisions: []
+
+  # ---------------------------------------------------------------------------------------------
+  # 1. What each evidence status may say
+  # ---------------------------------------------------------------------------------------------
+  evidence_status:
+    pilot:
+      # The level-05 pair (world w0000, ordinary and modulated, BOTH seed 42). One same-seed pair,
+      # zero ordinary-ordinary pairs: there is no yardstick, so no reading is possible.
+      verdict_words_allowed: false
+      label: "tool validation — the two agents share seed 42; not evidence"
+      rule: >
+        The pilot yields NO verdict word (no same / different / undetermined, no A3 pattern, no A4
+        reading). It is a test of the tools: replay agreement, controls, reconstruction checks, and
+        that every statistic computes. Its numbers are never quoted as evidence on the page or in
+        any doc, never pooled with the May replication, and never used to set or move a threshold
+        here. The drivers refuse to run the decision functions when evidence_status is pilot.
+    interim:
+      # Stage 4b: the six May-replication agents at the end of their first stage (checkpoint
+      # stage_end:0, 1.5 M episodes, the hunting world), agents at ~85–90 % of plateau.
+      verdict_words_allowed: true
+      verdict_prefix: "provisional — end of stage 1 of 5"
+      rule: >
+        All rules below apply unchanged. Every verdict word carries the prefix. An interim verdict
+        never overrides, and is never averaged with, the evidence verdict. If the two disagree,
+        both are reported, worded as "changed between the end of stage 1 and the end of training".
+    evidence:
+      # Stage 6: the six May-replication agents at their final checkpoint (end of 05_active, the
+      # hunting world) and, for A4, at every stage end.
+      verdict_words_allowed: true
+      primary_checkpoint: final
+      primary_probe_world: active
+      why_final_is_primary: >
+        The question is about trained agents. The end of stage 1 is ~85–90 % of plateau (May
+        replication design §3.4), so a difference there may be a difference in progress, not in
+        computation.
+
+  # ---------------------------------------------------------------------------------------------
+  # 2. Gates — a failed gate blocks every verdict word; the output reads "blocked by gate <id>"
+  # ---------------------------------------------------------------------------------------------
+  gates:
+    G1_self_replay: >
+      Each agent replayed on its own store: argmax action at row t equals the stored action at
+      row t+1 on 100 % of rows, except near-ties (top-two logit margin < 1e-4) on at most 0.1 %.
+    G2_reconstruction: >
+      The run-time reconstruction assertions on the real checkpoints pass (plan-reviewer finding
+      3): logits from actor.out, value from critic.out, rnn.state from the GRU step, and
+      X.mod == gain * X.raw + offset at every enabled site.
+    G3_alignment: >
+      action[t+1] decoded from logits[t] agrees on 100 % of rows; the shift-by-one control agrees
+      on < 95 % (plan-reviewer finding 4).
+    G4_controls: >
+      Input-layer satiation R^2 >= 0.99 (satiation is an observed channel); shuffled-across-episode
+      targets give R^2 <= 0.02 for every quantity; no episode group appears in both folds.
+    G5_competence: >
+      A run enters only if it passes the May replication's stage-1 competence gate (design §5.5:
+      stage-1 survival >= 150 steps and >= 1.0 food bite per episode). Minimum after exclusions:
+      all 3 ordinary seeds (3 ordinary-ordinary pairs) and >= 2 modulated seeds. Below that, every
+      A1–A4 verdict is "undetermined — yardstick incomplete".
+    G6_sizes: >
+      bootstrap_n >= 1000; every held-out fold holds >= 500 episode groups; the probe split is the
+      same object for every agent on a probe.
+
+  # ---------------------------------------------------------------------------------------------
+  # 3. Common definitions
+  # ---------------------------------------------------------------------------------------------
+  common:
+    verdict_layers:
+      # The tensors the next stage of each network actually receives. Fixed now; no layer is added
+      # to or dropped from the verdict after results are seen.
+      - enc.out      # encoder output (after LayerNorm, and FiLM for the modulated agent, then ReLU)
+      - rnn.state    # GRU memory carry (never modulated)
+      - rnn.out      # memory output fed to the heads (after FiLM for the modulated agent)
+      - actor.out    # actor hidden layer after activation
+      - critic.out   # critic hidden layer after activation
+    descriptive_layers:
+      # Reported, never verdict-bearing: they localise WHERE a difference arises.
+      - "ordinary X.raw vs modulated X.raw (before the gain and offset)"
+      - "ordinary X.raw vs modulated X.mod (after the gain and offset, before the activation)"
+      - "enc.uni.* per-sense layers (flattening decided in the tooling plan)"
+      - "raw input (symlog of the observation), as a reference row"
+
+    agents: "3 ordinary (O42, O43, O44) and 3 modulated (M42, M43, M44), May replication"
+    pair_sets:
+      OO: "ordinary vs ordinary, different seeds — 3 pairs. THE SEED YARDSTICK."
+      MM: "modulated vs modulated, different seeds — 3 pairs. Reported; qualifier only (A1)."
+      MO_diff: "modulated vs ordinary, different seeds — 6 pairs. THE FAIR TEST of 'same computation'."
+      MO_same: "modulated vs ordinary, same seed number — 3 pairs. Measures the shared start (A3)."
+      UNTRAINED: >
+        untrained ordinary networks built with each ordinary seed's own model key (train.py's
+        split(PRNGKey(seed), 3) derivation), different seeds — 3 pairs. The floor for "similar by
+        construction", because both agents see the same inputs.
+
+    probe: >
+      Per world, a pooled probe of an equal number of episodes from each of the six agents' stores
+      in that world. Every agent is replayed on every probe episode with memory reset at t = 0, so
+      all activations are row-aligned. Rows are decision rows 0..T-1.
+
+    grouping_unit: >
+      episode_seed. In the pooled probe the same episode_seed occurs in up to six stores (same
+      reset draw, different trajectories); all of them form ONE group, both for the train/test
+      split and for the bootstrap, so a reset draw never sits on both sides.
+
+    bootstrap:
+      unit: episode_seed group
+      n_min: 1000
+      joint: >
+        One resample of groups per draw, applied to every agent and every pair at once (all agents
+        see the same probe), so pair-to-pair comparisons are paired.
+      interval: [0.05, 0.95]    # a 90 % percentile interval
+      what_it_covers: >
+        Which episodes happened to be sampled into the probe. It does NOT cover seed-to-seed
+        variation; that is carried only by the spread across the OO pairs, which is why the rules
+        below combine an interval condition with a count over pairs.
+      predictivity_detail: >
+        The ridge maps are fitted once per split repeat (5 repeats, 80/20 by group) and held fixed;
+        the bootstrap resamples the held-out groups and recomputes held-out R^2. Split-to-split
+        variation enters by pooling the bootstrap draws of the 5 repeats.
+
+    seed_band: >
+      For a statistic s on a layer: L = the lowest 5th-percentile bootstrap value among the 3 OO
+      pairs; U = the highest 95th-percentile value among them. [L, U] is the range ordinary-agent
+      similarity occupies across seeds, widened by probe-sampling noise.
+
+    measured_spreads_used: >
+      No seed-to-seed spread of any representational similarity or decoding score has ever been
+      measured in this project (the one earlier CKA design, NMN_META_2x3_MIXTURE_PROBE, was one seed
+      per cell and chose its 0.05 margin a priori). So the representational band is estimated
+      from the three OO pairs themselves and is not floored by an outside number. Where survival
+      enters (A3 pattern c), the project's measured survival seed spread is used: May's 4.4-step
+      seed SD, giving the May replication design's floored standard error of 3.6 steps (design
+      §5.2); today's level-05 stage-1 seed SD is 1.5 steps (LEVEL05_BODY_INTERACTIONS §6.1).
+
+  # ---------------------------------------------------------------------------------------------
+  # 4. A1 — layer similarity (linear CKA and cross-network linear predictivity), per verdict layer
+  # ---------------------------------------------------------------------------------------------
+  A1:
+    statistics:
+      cka: "linear CKA, feature-space form, column-centred float64 (symmetric)."
+      predictivity: >
+        mutual linear predictivity P(A,B) = min( R^2(A->B), R^2(B->A) ): ridge from one agent's
+        layer to the other's, held-out R^2 variance-weighted over output units, mean over the 5
+        split repeats. The minimum is used so "interchangeable" requires BOTH directions; the two
+        directional values are reported beside it.
+      primary: predictivity   # invariant to per-unit rescaling, i.e. to the modulator's fixed gain
+    pairing: "X.out with X.out, and rnn.state with rnn.state, for every pair in OO, MM, MO_diff, MO_same."
+    informative_gate: >
+      Per layer and statistic, the OO band [L, U] must not overlap the 90 % envelope of the three
+      UNTRAINED pairs. If it overlaps, ordinary agents are no more (or less) alike after training
+      than untrained networks fed the same inputs, and the layer reads "uninformative — no verdict".
+    per_statistic_verdict:
+      # n = number of MO_diff pairs that entered (6 with all seeds; 4 if one modulated seed failed G5)
+      same: >
+        at most floor(n/3) of the n MO_diff point estimates lie below L (at most 2 of 6), AND the
+        5th percentile of the bootstrap distribution of the MO_diff mean is >= L.
+        MO_diff values above U also count as same, flagged "closer than two ordinary seeds".
+      different: >
+        ALL n MO_diff point estimates lie below L, AND the 95th percentile of the bootstrap
+        distribution of the MO_diff mean is < L.
+      undetermined_at_3_seeds: "every other case. A legal outcome, not a failure."
+      why_these_counts: >
+        If modulated and ordinary agents were draws from one population, the 3 OO and 6 MO_diff
+        values would be exchangeable. Then "all 6 MO_diff below every OO point" happens with
+        probability 1/84 (1.2 %) per layer (<= 6 % across the 5 layers), and "at most 2 of 6 below
+        the lowest OO point" happens with probability ~0.76. The band edge L sits below the lowest
+        OO point, so both figures are conservative for "different". The pairs share agents, so
+        these are approximations, stated for scale, not p-values. 3 seeds can call "different"
+        only when separation is complete; a partial separation reads undetermined.
+    layer_verdict:
+      # predictivity decides; CKA qualifies (CKA alone can flag a pure per-unit gain, which the
+      # network absorbs for free — tooling plan §E)
+      - "predictivity same AND CKA same                          -> same"
+      - "predictivity same AND CKA different or undetermined     -> same up to a linear re-weighting (counts as same)"
+      - "predictivity different (any CKA)                        -> different"
+      - "predictivity undetermined                               -> undetermined at 3 seeds"
+      - "predictivity uninformative                              -> uninformative (no verdict)"
+    mm_qualifier: >
+      If the whole MM band lies below L (the highest MM 95th percentile < L), every "different"
+      verdict carries "modulated agents also differ among themselves more than ordinary agents do".
+      It does not change the verdict word.
+    study_verdict:
+      same: "all 5 verdict layers read same (either form)."
+      different: "at least 1 verdict layer reads different; the layers are listed."
+      undetermined: "otherwise."
+
+  # ---------------------------------------------------------------------------------------------
+  # 5. A2 — decoding profiles, per quantity and verdict layer
+  # ---------------------------------------------------------------------------------------------
+  A2:
+    quantities:
+      satiation: "hunger, the satiation level (also an observed channel: the positive control)."
+      injury_level: "true injury (the agent observes only felt injury through a kernel)."
+      nearest_predator_manhattan: "Manhattan distance to the nearest active predator; rows with no active predator excluded and counted."
+      steps_remaining: >
+        survival steps remaining, T - t. HEADLINE uses episodes that ended in death only; episodes
+        truncated at the 500-step cap are excluded, because their remaining time is censored and
+        equals 500 - t, a pure clock (plan-reviewer finding 9). The all-episode variant is reported
+        and decides nothing.
+    score: >
+      per agent, quantity and layer: held-out R^2 of a ridge readout (standardised on the training
+      fold), mean over the 5 split repeats shared by all agents; bootstrap as in common.bootstrap.
+    clock_baseline: >
+      R^2_clock = held-out R^2 of predicting the quantity from the time step alone, fitted as the
+      per-time-step mean on the training fold (the best any clock-only readout can do), on the same
+      rows and splits. It depends only on the probe, so it is the same number for every agent.
+      Reported beside every layer, with the raw-input R^2.
+    beats_clock: >
+      an agent encodes the quantity at a layer only if R^2 - R^2_clock >= 0.05 AND the bootstrap
+      5th percentile of that excess is > 0. The 0.05 floor (5 % of variance) was fixed now and only
+      stops a trivially small excess from counting. A layer whose value (steps_remaining) readout
+      does not beat the clock does not count as encoding value, whatever its R^2.
+    arm_encodes: "an arm encodes the quantity at a layer if >= 2 of its 3 seeds beat the clock."
+    per_layer_comparison:
+      spread_O: >
+        range (max - min) of the 3 ordinary agents' R^2 point estimates, floored at the mean width
+        of their bootstrap 90 % intervals, so a lucky narrow spread cannot make everything differ.
+      gap: "mean R^2 of the modulated seeds minus mean R^2 of the ordinary seeds."
+      match: >
+        |gap| <= spread_O AND both arms agree on arm_encodes (both encode, or neither: the latter
+        reads "match — absent in both").
+      different: >
+        (all modulated R^2 values lie on the same side of all ordinary R^2 values AND |gap| >
+        spread_O) OR (all 3 seeds of one arm beat the clock and 0 of the other arm's do).
+      undetermined_at_3_seeds: "every other case."
+      why: >
+        Under exchangeability, 3 modulated values all on one side of 3 ordinary values happens with
+        probability 2/20 = 0.10; requiring the gap to exceed the ordinary range as well cuts that
+        roughly in half per layer.
+    profile_verdict_per_quantity:
+      matching: "all 5 verdict layers match."
+      differs: >
+        at least 2 of the 5 verdict layers are different. A single differing layer is reported as
+        "one-layer difference (not counted)", because 4 quantities x 5 layers = 20 comparisons make
+        one chance difference likely.
+      undetermined: "otherwise."
+    study_verdict:
+      matching: "all 4 quantities matching."
+      differs: "any quantity differs; the quantities and layers are listed."
+      undetermined: "otherwise."
+
+  # ---------------------------------------------------------------------------------------------
+  # 6. A3 — the three-pattern reading of the page, per verdict layer (predictivity; CKA reported)
+  # ---------------------------------------------------------------------------------------------
+  A3:
+    precondition_shared_start: >
+      Pattern (a) is assignable only if it is VERIFIED, on the May replication's two agent configs
+      and seeds 42/43/44, that the untrained modulated agent's main network is parameter-for-
+      parameter identical to the untrained ordinary agent's at the same seed (the tooling plan's
+      Checkpoint 3.3, run on these configs). NOTE: the tooling plan says it is identical (the
+      modulator is built last, D11); the May replication design §3.4 says "the two agents with
+      the same seed number get different initial weights". These conflict; the check decides.
+      If not identical, E is treated as not holding (same-seed pairs are then just more
+      different-start pairs), pattern (a) cannot occur, and MO_same is reported descriptively.
+    same_seed_excess_E: >
+      E holds if all 3 MO_same point estimates exceed every MO_diff point estimate AND exceed U,
+      AND the bootstrap 5th percentile of the MO_same mean exceeds the 95th percentile of the
+      MO_diff mean. (Under exchangeability of the 9 MO values, the 3 same-seed pairs being the top
+      3 happens with probability 1/84.)
+    patterns:
+      a_inherited_from_shared_start: "E holds AND the A1 layer verdict is NOT same (the agents are alike only when they share a seed)."
+      b_task_forces_one_solution: "A1 layer verdict same AND E does not hold (all distances about equal)."
+      b_plus_one_solution_with_same_seed_excess: "A1 layer verdict same AND E holds. Counts as convergence; the same-seed excess is reported."
+      c_different_processing_same_outcome: >
+        A1 layer verdict different AND E does not hold AND survival is the same: the mean survival
+        difference (modulated minus ordinary, 3-seed means, window and floored SE of the May
+        replication design §5.1–5.2) is inside 2 x SE_used, for the stage whose end is analysed
+        (evidence: stage 5 at the final checkpoint; interim: stage 1).
+      c_prime_different_processing_different_outcome: "A1 layer verdict different AND E does not hold AND the survival difference is beyond 2 x SE_used."
+      none: >
+        every other case — A1 undetermined or uninformative without E, a blocked gate, or survival
+        not available for pattern (c). Written "none of the three patterns (undetermined at 3
+        seeds)", never forced into a pattern.
+      order: "exactly one pattern per layer; the conditions above are mutually exclusive and cover every case."
+    study_reading: "the pattern held by >= 3 of the 5 verdict layers; otherwise 'mixed across layers', listed per layer."
+
+  # ---------------------------------------------------------------------------------------------
+  # 7. A4 — moving together across worlds, per verdict layer
+  # ---------------------------------------------------------------------------------------------
+  A4:
+    data: >
+      Activations of all six agents at every stage-end checkpoint (stage_end:0..3 and final =
+      end of stage 4, 0-based; saved names 01_active .. 05_active), each replayed on BOTH world
+      probes (active world from the final stores, passive world from the stage_end:3 stores).
+    movement: >
+      For agent a, transition k -> k+1 (4 transitions) and probe w (2 worlds):
+      m = 1 - P(a at stage_end:k, a at stage_end:k+1), P the mutual predictivity of A1 on that layer.
+      Each agent has an 8-entry movement profile.
+    within_stage_drift: >
+      d_a = mean of 1 - P between the last two checkpoints (100,000 episodes apart) inside the same
+      stage, for the final stage (active probe) and for stage 04_passive (passive probe).
+    movement_gate: >
+      An arm moves at a layer if, for >= 2 of its 3 seeds, the bootstrap 5th percentile of
+      (mean movement - d_a) is > 0. If either arm does not move, A4 reads "no measurable movement
+      across worlds — undetermined".
+    co_movement_statistic: >
+      r(a,b) = Pearson correlation of two agents' 8-entry movement profiles, bootstrapped jointly.
+      Yardstick: the 3 OO pairs; test: the 6 MO_diff pairs.
+    thresholds: >
+      "together" / "independent" / "undetermined" apply A1.per_statistic_verdict unchanged to r:
+      together = same (at most floor(n/3) MO_diff r below L and the MO_diff mean's 5th percentile
+      >= L); independent = different (all MO_diff r below L and the mean's 95th percentile < L).
+    verdict:
+      move_together: >
+        movement gate passed AND co-movement "together" AND the A1 layer verdict is not different
+        at any of the five stage ends (each on its own world's probe).
+      move_independently: >
+        movement gate passed AND (co-movement "independent" OR the A1 layer verdict is same at one
+        stage end and different at another).
+      undetermined_at_3_seeds: "every other case."
+    study_reading: "the reading held by >= 3 of the 5 verdict layers; otherwise 'mixed across layers'."
+
+  # ---------------------------------------------------------------------------------------------
+  # 8. Refutation — written before the data. What would count AGAINST "the two agents converge on
+  #    the same computation". "Undetermined at 3 seeds" refutes nothing and confirms nothing.
+  # ---------------------------------------------------------------------------------------------
+  refutation:
+    A1: >
+      In at least one of the five main layers (encoder output, memory state, memory output, actor
+      hidden, critic hidden), every modulated agent is less linearly interchangeable with every
+      ordinary agent of a different seed than even the least-alike pair of ordinary agents is
+      with each other, by more than the wobble from which episodes were sampled.
+    A2: >
+      For hunger, injury, distance to the predator, or survival steps remaining, all three
+      modulated agents read that quantity out better (or all three worse) than all three ordinary
+      agents, by more than the ordinary agents differ among themselves, in at least two of the five
+      layers; or one agent type carries it beyond what the clock alone gives in all three seeds and
+      the other in none.
+    A3: >
+      Pattern (c) or (c'): agents from different seeds are further apart than ordinary seeds are,
+      and sharing a seed does not bring them together — same survival by different processing, or
+      different processing altogether. Pattern (a) does not refute convergence but removes the
+      support for it: the two agents are alike only because they started from the same weights.
+    A4: >
+      The way each agent's processing changes between the hunting and the harmless world follows
+      the other agent type's changes less closely, for every modulated-ordinary pair, than one
+      ordinary seed's changes follow another's; or the two agent types are alike at the end of one
+      stage and different at the end of another.
+    pilot: "The pilot can neither refute nor support convergence. It has no yardstick."
+    what_would_support_convergence: >
+      A1 same in all five layers, A2 matching for all four quantities, A3 pattern (b) or (b+), and
+      A4 move together (or no measurable movement). Even then the claim is "no difference that 3
+      seeds can resolve", not identity.
+    remedy_if_undetermined: >
+      Named now, decided by the user later: if A1 is undetermined in 3 or more of the 5 layers,
+      the remedy is two more seeds per agent type (45, 46), giving 10 ordinary-ordinary pairs.
+      These rules then apply unchanged, with n and the counts recomputed as written.

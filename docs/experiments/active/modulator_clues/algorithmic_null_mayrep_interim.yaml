@@ -1,0 +1,28 @@
+# Analysis manifest — "What Both Agents Compute", May replication INTERIM (Stage 4b of the tooling plan).
+# The six agents at the end of their first stage (stage_end:0 = end of 01_active, 1.5 M episodes,
+# hunting world), 3 seeds per agent type. Verdicts are allowed but every word carries
+# "provisional — end of stage 1 of 5" and never overrides the evidence manifest
+# (decision_rules.evidence_status.interim). Design: continual_worlds/MAY_DOUBLE_RETURN_REPLICATION.md.
+name: algorithmic_null_mayrep_interim
+evidence_status: interim
+# ---------------------------------------------------------------------------------------------
+# decision_rules (MANDATORY). Pins the pre-registered rules, written 2026-09-29 before any
+# number existed. The drivers must: read the file, check its sha256 equals the value below
+# (mismatch -> ValueError), and print path + sha256 + evidence_status on every data statement.
+# ---------------------------------------------------------------------------------------------
+decision_rules:
+  file: docs/experiments/active/modulator_clues/algorithmic_null_decision_rules.yaml
+  sha256: b4e10d81380ea0db27058dc5f37284c6551e1969ee107f71a6e95a536c57a6fd
+
+# The remaining keys of the tooling plan's manifest schema (§8: out_root, probes, layers,
+# comparisons, bootstrap_n [>= 1000, rules gate G6], probe_split, ridge_alphas,
+# untrained_reference_keys) are added by developer when the tooling exists. Until then this
+# file fails to load, as it should (no defaults).
+
+runs:
+  - {label: ordinary_s42,  path: results/JAX_RecurrentPPO/20260929-153635_rppo_cw_mayrep_t1none_s42,  checkpoints: ["stage_end:0"]}
+  - {label: modulated_s42, path: results/JAX_RecurrentPPO/20260929-153644_rppo_cw_mayrep_t16quad_s42, checkpoints: ["stage_end:0"]}
+  - {label: ordinary_s43,  path: results/JAX_RecurrentPPO/20260929-153652_rppo_cw_mayrep_t1none_s43,  checkpoints: ["stage_end:0"]}
+  - {label: modulated_s43, path: results/JAX_RecurrentPPO/20260929-153702_rppo_cw_mayrep_t16quad_s43, checkpoints: ["stage_end:0"]}
+  - {label: ordinary_s44,  path: results/JAX_RecurrentPPO/20260929-153712_rppo_cw_mayrep_t1none_s44,  checkpoints: ["stage_end:0"]}
+  - {label: modulated_s44, path: results/JAX_RecurrentPPO/20260929-153723_rppo_cw_mayrep_t16quad_s44, checkpoints: ["stage_end:0"]}

@@ -1,0 +1,29 @@
+# Analysis manifest — "What Both Agents Compute", May replication EVIDENCE (Stage 6 of the tooling plan).
+# The six agents (3 seeds per agent type) at every stage end. Primary verdict: final checkpoint
+# (end of 05_active, hunting world) on the active-world probe. A4 uses all five stage ends
+# replayed on both world probes; stage_end:<k> is 0-based (stage_end:3 = end of 04_passive).
+# Design: continual_worlds/MAY_DOUBLE_RETURN_REPLICATION.md. Agent roles (arm, seed) are read from
+# each run's own models/config.yaml top-level keys, not from these labels.
+name: algorithmic_null_mayrep
+evidence_status: evidence
+# ---------------------------------------------------------------------------------------------
+# decision_rules (MANDATORY). Pins the pre-registered rules, written 2026-09-29 before any
+# number existed. The drivers must: read the file, check its sha256 equals the value below
+# (mismatch -> ValueError), and print path + sha256 + evidence_status on every data statement.
+# ---------------------------------------------------------------------------------------------
+decision_rules:
+  file: docs/experiments/active/modulator_clues/algorithmic_null_decision_rules.yaml
+  sha256: b4e10d81380ea0db27058dc5f37284c6551e1969ee107f71a6e95a536c57a6fd
+
+# The remaining keys of the tooling plan's manifest schema (§8: out_root, probes, layers,
+# comparisons, bootstrap_n [>= 1000, rules gate G6], probe_split, ridge_alphas,
+# untrained_reference_keys) are added by developer when the tooling exists. Until then this
+# file fails to load, as it should (no defaults).
+
+runs:
+  - {label: ordinary_s42,  path: results/JAX_RecurrentPPO/20260929-153635_rppo_cw_mayrep_t1none_s42,  checkpoints: ["stage_end:0", "stage_end:1", "stage_end:2", "stage_end:3", final]}
+  - {label: modulated_s42, path: results/JAX_RecurrentPPO/20260929-153644_rppo_cw_mayrep_t16quad_s42, checkpoints: ["stage_end:0", "stage_end:1", "stage_end:2", "stage_end:3", final]}
+  - {label: ordinary_s43,  path: results/JAX_RecurrentPPO/20260929-153652_rppo_cw_mayrep_t1none_s43,  checkpoints: ["stage_end:0", "stage_end:1", "stage_end:2", "stage_end:3", final]}
+  - {label: modulated_s43, path: results/JAX_RecurrentPPO/20260929-153702_rppo_cw_mayrep_t16quad_s43, checkpoints: ["stage_end:0", "stage_end:1", "stage_end:2", "stage_end:3", final]}
+  - {label: ordinary_s44,  path: results/JAX_RecurrentPPO/20260929-153712_rppo_cw_mayrep_t1none_s44,  checkpoints: ["stage_end:0", "stage_end:1", "stage_end:2", "stage_end:3", final]}
+  - {label: modulated_s44, path: results/JAX_RecurrentPPO/20260929-153723_rppo_cw_mayrep_t16quad_s44, checkpoints: ["stage_end:0", "stage_end:1", "stage_end:2", "stage_end:3", final]}

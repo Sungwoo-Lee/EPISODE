@@ -1,0 +1,24 @@
+# Analysis manifest — "What Both Agents Compute", PILOT (tool validation, Stage 3 of the tooling plan).
+# One level-05 pair, world w0000 (no body-rule changes), ordinary and modulated, BOTH seed 42.
+# It has no seed yardstick, so under the pre-registered rules it yields NO verdict word:
+# decision_rules.evidence_status.pilot. Every figure reads
+# "tool validation — the two agents share seed 42; not evidence".
+name: algorithmic_null_pilot
+evidence_status: pilot
+# ---------------------------------------------------------------------------------------------
+# decision_rules (MANDATORY). Pins the pre-registered rules, written 2026-09-29 before any
+# number existed. The drivers must: read the file, check its sha256 equals the value below
+# (mismatch -> ValueError), and print path + sha256 + evidence_status on every data statement.
+# ---------------------------------------------------------------------------------------------
+decision_rules:
+  file: docs/experiments/active/modulator_clues/algorithmic_null_decision_rules.yaml
+  sha256: b4e10d81380ea0db27058dc5f37284c6551e1969ee107f71a6e95a536c57a6fd
+
+# The remaining keys of the tooling plan's manifest schema (§8: out_root, probes, layers,
+# comparisons, bootstrap_n [>= 1000, rules gate G6], probe_split, ridge_alphas,
+# untrained_reference_keys) are added by developer when the tooling exists. Until then this
+# file fails to load, as it should (no defaults).
+
+runs:
+  - {label: ordinary_s42, path: results/JAX_RecurrentPPO/20260927-053057_rppo_l05body_w0000_t1none_s42, checkpoints: [final]}
+  - {label: modulated_s42, path: results/JAX_RecurrentPPO/20260927-053059_rppo_l05body_w0000_t16quad_s42, checkpoints: [final]}

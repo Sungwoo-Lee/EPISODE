@@ -119,6 +119,19 @@ Feasibility (checked 2026-09-29):
         launched 2026-09-29 15:36, still training). Its stages are different worlds, so it
         also answers whether the two agents' processing moves together across worlds.
 
+**Decision rules, pre-registered 2026-09-29 before any number existed**
+(`algorithmic_null_decision_rules.yaml` in this folder; pinned by sha256 in the three analysis
+manifests `algorithmic_null_pilot.yaml`, `algorithmic_null_mayrep_interim.yaml`,
+`algorithmic_null_mayrep.yaml`). In short: every modulated-vs-ordinary number is judged against
+how alike two ordinary agents from different seeds are. With 3 seeds per agent, "undetermined at 3
+seeds" is a legal answer; "same" means "no difference 3 seeds can resolve", not identity. The
+level-05 pilot pair gives no verdict at all (it shares one seed, so it has no yardstick). Each
+analysis states in advance, in words, the result that would refute "the two agents converge on
+the same computation". Open item the rules expose: the tooling plan says a modulated and an
+ordinary agent with the same seed start from identical main-network weights, while the May
+replication design (§3.4) says they do not; the shared-start reading (A3 pattern a) waits on that
+check.
+
 Sequence:
 
 - [ ] Build and validate the tooling on a **level-05 pair** (a tool pilot, not evidence:
