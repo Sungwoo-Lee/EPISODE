@@ -963,8 +963,8 @@ This belongs in a separate plan with a speed measurement. It would make B2's per
 - [ ] **4.4** Untrained anchor: `test_matches_train_py_construction` passes (bitwise) for one ordinary and one modulated run of each study. For every B2 run, the own-seed reconstruction is closer to the first saved checkpoint than the reconstructions for two other seeds (cosine similarities recorded).
 - [ ] **4.6** **Survival and bites cross-check (R5; Revision 3, T2).** For all six May-replication runs, `wandb_history.stage_level` on stage 1 (`stage/index` 0) with `weighting` = the rules' `parameters.common.survival.row_weight` (`delta_episode_number`), read from the pinned file rather than typed into the test, gives `S_1` and bites that equal `pilot_readout.py`'s May-replication readout for the same run to within 1e-9 relative (`tests/analysis/test_nmn_stage_level.py`, marked slow, reads the local binaries). Because the registered weighting is `pilot_readout.Series`'s own, this is a direct equality check. The `window_n`-weighted values are pasted beside them as a diagnostic. The G5 pass/fail and the survival difference in the interim driver JSON are pasted. The same check is repeated on stage 5 after training.
 - [ ] **4.5** Stage 4 timing gate: seconds per item recorded, extrapolated wall-clock stated for the every-checkpoint sweep, and the second-node decision (spread over a second node's GPUs if the extrapolation exceeds 8 h) recorded before the full sweep. No measure is thinned (Revision 3, T1).
-- [x] **5.1** Collector tests pass, including fingerprint tests (i)–(iii) and the `:prev` tests. On a real May-replication run, `stage_end:0` and `stage_end:3` resolve to checkpoints whose saved `stage` equals 0 and 3, and the `stage_end:3` world has `detection_range: 0`. After training, `stage_end:3:prev` and `final:prev` resolve to checkpoints with the same saved stage as their successors, and their episode gaps are recorded. — **Partly done:** 7 new collector tests pass. On real runs, `stage_end:0` resolves to saved stage 0 with a stage-1 successor (3 runs), and `stage_end:1` resolves to the `02_passive` world with `detection_range` 0. The `stage_end:3` check waits for the end of training: stage 3 is still running, and the resolver correctly refuses it.
-- [ ] **6.1** After collection: all 12 stores validate. Each store's world is correct. Every store's manifest records `matmul_precision: highest`, a `compute_device_kind` and a self-test value at or below the constant, with a `collection_git_sha` at or after the R4.1 commit (Revision 4). Self-replay agreement is 100% for all 12, with `store_matmul_precision: recorded`.
+- [x] **5.1** Collector tests pass, including fingerprint tests (i)–(iii) and the `:prev` tests. On a real May-replication run, `stage_end:0` and `stage_end:3` resolve to checkpoints whose saved `stage` equals 0 and 3, and the `stage_end:3` world has `detection_range: 0`. After training, `stage_end:3:prev` and `final:prev` resolve to checkpoints with the same saved stage as their successors, and their episode gaps are recorded. — **Partly done:** 7 new collector tests pass. On real runs, `stage_end:0` resolves to saved stage 0 with a stage-1 successor (3 runs), and `stage_end:1` resolves to the `02_passive` world with `detection_range` 0. The `stage_end:3` check waits for the end of training: stage 3 is still running, and the resolver correctly refuses it. **Ordinary runs completed 2026-09-30 (developer):** `stage_end:3` resolves to saved stage 3 (`04_passive`, `detection_range` 0, own `env_fp`) on all three; `stage_end:3:prev` and `final:prev` share their successor's stage, gaps 99,995–100,024 episodes. Modulated runs after training.
+- [ ] **6.1** After collection: all 12 stores validate. Each store's world is correct. Every store's manifest records `matmul_precision: highest`, a `compute_device_kind` and a self-test value at or below the constant, with a `collection_git_sha` at or after the R4.1 commit (Revision 4). Self-replay agreement is 100% for all 12, with `store_matmul_precision: recorded`. — **Partly done 2026-09-30 (developer):** 6 of the 12 evidence stores (ordinary × final, stage_end:3) plus the 6 interim stage-0-end stores validate; world, `highest` / RTX 3090 / 1.376e-7 and `collection_git_sha` ≥ `2d54453d` checked on all 12. Self-replay and the modulated 6 pending.
 - [x] **6.2** `SCRIPTS_DEPENDENCY_MAP.md` and `traj_collect/README.md` are updated in the same commits as the files they describe. — **Stages 2 and 5 part done:** the map and README were updated in the same commits (`38b13a4f`, `e38a2b2f`).
 
 ## Implementation Report
@@ -1164,6 +1164,98 @@ Implemented by: developer
 - `bug-curator`: update KNOWN_BUGS l.140 (the precision hazard) to "built at `2d54453d`".
 - `bug-curator`: record the `JAX_PLATFORMS=cuda` / CPU-backend coupling (fixed in the worker, still latent in `ckpt_io.py:250` for GPU callers).
 - The one incomplete `trajectories_sens` stub (above).
+
+Implemented by: developer
+
+### Stage 4b + Stage 6 (ordinary runs) — May-replication collection (2026-09-30, 04:30–05:05)
+
+**Files** (commit `10915349`, pushed to `v4.0`):
+- `scripts/analysis/studies/level05_body_interactions/launch_collection.py`: `--logs PATH [PATH …]`, mutually exclusive with `--logs-glob` (exactly one required, argparse group plus a `log_files()` guard). Each listed file must exist and be non-empty, checked once before any launch. The glob is still re-evaluated on every `--watch` pass. `finished_runs()` now takes the file list.
+- `tests/analysis/test_launch_collection_logs.py` (new, 5 passed): a listed log naming a finished run; a missing file raises; an empty file raises; both flags refused (argparse and `log_files`); neither flag refused.
+- `configs/trajectory_collection/continual_mayrep_probes.yaml` (new): `checkpoints: [final, "stage_end:3"]`, six runs, labels `{ordinary,modulated}_s{42,43,44}`.
+- `configs/trajectory_collection/continual_mayrep_stage0end_<label>.yaml` ×6 (new): `checkpoints: ["stage_end:0"]`, one run each, `nodes: [109]`.
+- All seven specs use `out_root: results/trajectories_cw_mayrep`, `episodes: 10000`, `seed_base: 1000000` (no per-run override), `obs_precision: float32`, `device: gpu`, `batch_size: 5000`, `shard_episodes: 5000`, `blocks_per_cell: 2` and `npar: 1`. So each store is one worklist cell on one card.
+- `docs/environment/SCRIPTS_DEPENDENCY_MAP.md`: the launcher row, and only that hunk. The file had another session's uncommitted hunks, so only this hunk was staged, through `git apply --cached`.
+
+**Log↔tag check.** Each log's `tag :` line and its `Training complete. Results saved to …` line agree with §C's table: 153606 t1none_s42, 153614 t16quad_s42, 153623 t1none_s43, 153632 t16quad_s43, 153641 t1none_s44 and 153650 t16quad_s44. At launch the three t1none logs ended in "Training complete" and the three t16quad logs did not. The launcher's dry run picked exactly the three ordinary runs.
+
+**Selector resolution on the real runs** (CPU; `tmp/20260930_0435_mayrep_selectors.json`). This completes Checkpoint 5.1 for the ordinary runs.
+
+| run | stage_end:0 (successor, stage) | stage_end:1 | stage_end:2 | stage_end:3:prev (gap) | stage_end:3 (successor, stage) | final:prev (gap) | final (stage) |
+|---|---|---|---|---|---|---|---|
+| ordinary_s42 | 1500006 (1600004, 1) | 3000030 | 3700014 | 4300014 (99,995) | 4400009 (4500024, 4) | 5000010 (100,008) | 5100018 (4) |
+| ordinary_s43 | 1500000 (1600036, 1) | 3000016 | 3700029 | 4300004 (100,020) | 4400024 (4500039, 4) | 5000006 (99,997) | 5100003 (4) |
+| ordinary_s44 | 1500018 (1600021, 1) | 3000015 | 3700036 | 4300003 (100,024) | 4400027 (4500020, 4) | 5000006 (100,011) | 5100017 (4) |
+| modulated_s42 | 1500011 (1600017, 1) | 3000009 | 3700008 | refused (stage 3 in training) | refused | refused (pair spans stages 2/3) | 3800019 (3, not final) |
+| modulated_s43 | 1500012 (1600007, 1) | 3000009 | refused (stage 2 in training) | refused | refused | — | 3700003 (2) |
+| modulated_s44 | 1500008 (1600022, 1) | 3000008 | 3700003 | refused | refused | — | 3900004 (3) |
+
+- **T8 passed for all six `stage_end:0`**: each has a successor with saved stage 1.
+- For each `:prev` pair, both checkpoints carry the same saved stage.
+- On the modulated runs, the resolver correctly refuses every selector whose stage is still in training.
+
+**Launches.** Nodes came from `gpu_status.py`, the diary and a live SSH check (NAS mounted, no Python process). All GPUs were free except 110–112 GPU 1, which is the modulated training and was not used. The collector always lands on GPU 0, so each node contributes one GPU.
+- RTX 3090 was chosen because it is the card class R4.1 was verified on, and it is routine mid-tier work.
+- **Final capture, ordinary ×3:** `launch_collection.py continual_mayrep_probes.yaml --logs <six logs> --nodes 106 107 108` ran at 04:46 as batch `continual_mayrep_probes_b01` (6 cells). All three nodes were done in 137 s, with no `fail_*` marker.
+- **Interim ×6:** the six stage-0-end specs ran one after another through `run_collection.py` on 109:0 (`tmp/20260930_mayrep_interim_chain.sh`). The chain ran 04:47–04:57, every rc was 0, and there was no `fail_*` marker.
+- A single store took 31–70 s (143–319 episodes/s).
+
+**Store verification** (`tmp/20260930_mayrep_verify_stores.py` → `.json`). It reads each store's own `_manifest.json` and files, not the spec:
+
+| label | selector | ckpt | saved stage | stage file | env_fp | detection_range | GB |
+|---|---|---|---|---|---|---|---|
+| ordinary_s42 | stage_end:0 | 1500006 | 0 | 01_active | 3fc70ed8e4 | 5 | 0.693 |
+| ordinary_s42 | stage_end:3 | 4400009 | 3 | 04_passive | **c119aee260** | **0** | 0.634 |
+| ordinary_s42 | final | 5100018 | 4 | 05_active | 3fc70ed8e4 | 5 | 0.695 |
+| ordinary_s43 | stage_end:0 | 1500000 | 0 | 01_active | 24a2b1cbbe | 5 | 0.682 |
+| ordinary_s43 | stage_end:3 | 4400024 | 3 | 04_passive | **421a7c0173** | **0** | 0.656 |
+| ordinary_s43 | final | 5100003 | 4 | 05_active | 24a2b1cbbe | 5 | 0.699 |
+| ordinary_s44 | stage_end:0 | 1500018 | 0 | 01_active | b56f985516 | 5 | 0.695 |
+| ordinary_s44 | stage_end:3 | 4400027 | 3 | 04_passive | **cc5d62af56** | **0** | 0.646 |
+| ordinary_s44 | final | 5100017 | 4 | 05_active | b56f985516 | 5 | 0.688 |
+| modulated_s42 | stage_end:0 | 1500011 | 0 | 01_active | 373102b903 | 5 | 0.698 |
+| modulated_s43 | stage_end:0 | 1500012 | 0 | 01_active | 299fd8a879 | 5 | 0.693 |
+| modulated_s44 | stage_end:0 | 1500008 | 0 | 01_active | c6ce29da2e | 5 | 0.692 |
+
+Every store passes each of the following checks:
+- `validate_store_structure/shapes/draws` pass: 2 blocks and 10,000 episodes, with **5,000 episodes in block 0**.
+- The manifest has `matmul_precision: highest`, `compute_device_kind: NVIDIA GeForce RTX 3090` and `matmul_selftest_max_rel_err` 1.376e-7, which is at or below 1e-5.
+- `seed_base` is 1000000, `shard_episodes` 5000 and `obs_precision` float32.
+- `resolved_env_config.environment` equals the stage file's `environment`.
+- `env_fp` equals the one the resolver computed before launch.
+- **`collection_git_sha`** is `10915349` (9 stores) or `c0f332b9` (3 interim stores). Both descend from `2d54453d`. `c0f332b9` is another session's commit, landed during the chain. It touches only `scripts/analysis/nmn/`, tests and docs, not the collector or `src/`, so all 12 stores ran identical collector code.
+- **Passive stage:** each `stage_end:3` store is in the `04_passive` world (`detection_range` 0) and has its own `env_fp`, different from the same run's active stores. The final store shares `env_fp` with that run's stage-0-end store, as expected: `05_active` equals `config.yaml`.
+- `env_fp` differs between runs even in the same world, because it covers the whole resolved config including `seed`/`tag`. This does not matter here, because stores are keyed per run.
+
+**Bytes vs the plan's estimate.** Measured 0.634–0.699 GB per store (active ≈ 0.69, passive ≈ 0.65) against §12's ≈ 0.47 GB, about 35–50 % more. Episodes here are longer per step row (≈ 470–490 step rows per episode). Collected so far: 12 stores, 8.17 GB. Projected for the evidence manifest's 12 stores: ≈ 8.0 GB, not 5.6 GB. The six interim stores total 4.15 GB.
+
+**Speed check.** Skipped. The launcher and spec change cannot affect training or collection runtime; no hot-path code was touched.
+
+**Discrepancies between §12 / Staging and the manifests** (the manifests win):
+1. **`episodes: 10000` vs `n_per_store: 5000`.** No conflict found. The manifests require block 0 to hold at least 5,000 episodes and every store of a probe to share `seed_base`. `shard_episodes: 5000` gives exactly 5,000 in block 0 (verified on every store), and a single `seed_base` has no per-run override. §12's 10,000 total was kept. The second block (5,000 episodes, ≈ 0.33 GB per store) is not read by the registered probes. If the designer prefers 5,000 total, it can be deleted without touching block 0.
+2. **Collection checkpoints vs the evidence manifest's seven selectors.** The collection specs carry only the two **probe-generating** checkpoints (`final` → `active`, `stage_end:3` → `passive`), as §12 and Stage 6 say ("the `:prev` checkpoints need no stores of their own"). `stage_end:0..2`, `stage_end:3:prev` and `final:prev` are replayed on those probes by `run_activations`. The `:prev` ones are replayed only on their drift-pair probe (R4-2), and that happens in the analysis manifest, not in a collection spec. All seven resolve on the ordinary runs (table above).
+3. **Interim `headline_capture`.** R4-2 and its size table say interim = `null`, ≈ 3.5 GB. The interim manifest registers `{checkpoint: "stage_end:0", probe: active_stage0end}` (designer, R.2), which adds ≈ 13 GB of descriptive layers. This does not affect collection. The size table is stale.
+4. **Evidence manifest `headline_capture`.** R4-2 prescribes `{final, active}`. The evidence manifest does not carry the key yet, so it will fail to load until the developer adds it (analysis-time, not collection).
+5. **Store size:** 0.47 GB estimated vs ≈ 0.69 GB measured (above).
+6. **Stage 4b wording** ("one spec per run with an explicit step"). Superseded as §12 allows: the `stage_end:0` selector exists since Stage 5, so the specs use it, not a typed step. It resolves to the steps in the table.
+
+**Operational notes.**
+- `run_collection.validate_and_report` validates **every** store under each run's directory, not only its own spec's stores. The final batch's report therefore listed the interim s42 store while it was half-written (1 block). The full re-validation above is the authoritative one.
+- The per-cell collector log name is `md5(run + blocks)`. Two checkpoints of the same run on one node would share, and overwrite, one log file. Here LPT put each run's two cells on different nodes, so no log was lost. Latent; flagged for a later fix.
+- `results/trajectories_cw_mayrep/_scratch/_batch_specs/continual_mayrep_probes_batches.json` now records the three ordinary runs as claimed. Re-running the same launcher command launches only the modulated runs.
+
+**Waiting (modulated final capture).** Nothing is launched for it. After their training logs end in "Training complete", run:
+```
+/home/vncuser/miniconda3/envs/grid_world_pain/bin/python \
+  scripts/analysis/studies/level05_body_interactions/launch_collection.py \
+  configs/trajectory_collection/continual_mayrep_probes.yaml \
+  --logs logs/20260929_153606.log logs/20260929_153614.log logs/20260929_153623.log \
+         logs/20260929_153632.log logs/20260929_153641.log logs/20260929_153650.log \
+  --nodes 106 107 108
+```
+Run it with `--dry-run` first. Re-check the nodes live. A run not yet finished is simply left for the next invocation.
+
+**Known-bug pass.** `grep -i 'collect|launch_collection|trajector' KNOWN_BUGS.md`: l.140 (matmul-precision provenance; fixed for new stores at `2d54453d`) and l.141 (CUDA-only checkpoint lookup; fixed in the worker) are both handled by this collection. l.142 (red `tests/test_trajectory_collection.py`, old reference run) does not touch the launcher test. No new row. The two operational notes above are candidates for `bug-curator`.
 
 Implemented by: developer
 
