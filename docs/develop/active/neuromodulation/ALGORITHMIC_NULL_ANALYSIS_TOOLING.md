@@ -1471,6 +1471,30 @@ Implemented by: developer
 
 Implemented by: developer
 
+### The per-run caveat built from `b2_family_bound` (2026-09-30)
+
+**In plain words.** The caveat printed next to every per-run wake point used to carry numbers copied by hand from a manifest comment. `experiment-designer` has since registered those numbers as manifest keys (commit `ecf8fbe6`). The summary now builds the caveat from those keys and refuses to run if the registered family size disagrees with the manifest. This closes the request made in the previous section.
+
+- **Manifest key.** `b2_family_bound` is now an accepted top-level key. `--summarise` requires it.
+- **Validation (`check_family_bound`).** It raises unless:
+  - every key is present, and each rate is in [0, 1] under a numeric curve-length key;
+  - `family_size == len(b2_headline_curves) × len(runs)`, which is 17 × 19 = 323 on the real manifest.
+  - It runs before anything is written.
+- **The caveat itself.** `family_caveat` replaces the removed `PER_RUN_CAVEAT` constant. Every value in it comes from the keys, except `noise_k`, which is taken from the rules' B2 block, and the level-05 / May run counts, which are counted from the runs themselves.
+  - Each per-run wake point quotes the rate registered for its own curve's number of points (51 / 50 / 16 / 15). A curve length with no registered rate raises.
+  - The document-level `per_run_caveat` lists every length's rate, and `b2_reading.json` also carries the `b2_family_bound` block itself.
+  - No number remains hand-typed in `run_wakeup.py`: a grep for `0.26`, `1.8` and `323` finds nothing.
+
+**Tests.** `pytest tests/analysis/test_nmn_run_wakeup.py test_nmn_ckpt_io.py test_nmn_decision_rules.py test_nmn_wakeup.py` → **195 passed**. New tests:
+- the real manifest's bound matches 17 × 19;
+- a family size of 322, or 18 runs against 323, raises;
+- each length picks its own rate, and a 17-point curve raises;
+- changing the manifest's 51-point rate to 0.0421 changes the caveat written by a synthetic `--summarise` run (the per-point caveat and the document-level one), while the May curve keeps its 16-point rate.
+
+The existing end-to-end test now checks each written caveat against the manifest rate for that curve's length.
+
+Implemented by: developer
+
 ## Verification Report
 
 > **Verified by**:

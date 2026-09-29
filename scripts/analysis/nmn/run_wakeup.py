@@ -42,7 +42,9 @@ What it does:
   seeds reported only as agree / do not agree. The headline set is the manifest's registered
   `b2_headline_curves` (raises if the computed set differs in names or count, or if a run's
   FiLM sites differ from the registered ones). Per-run wake points are written as numbers only,
-  each with the registered caveat (PER_RUN_CAVEAT) and no late / early / coincident word.
+  each with the registered caveat (built from the manifest's `b2_family_bound`, the rate
+  picked by the curve's number of points; family_size must equal len(b2_headline_curves) x runs) and no
+  late / early / coincident word.
   Writes curves/, b2_reading.json and .csv.
 - the GPU sweep and --timing log whether JAX's persistent compile cache is active
   (JAX_COMPILATION_CACHE_DIR, set by the launcher) and stamp it into their outputs.
@@ -100,20 +102,17 @@ TOP_KEYS = {"name", "evidence_status", "decision_rules", "wakeup", "runs", "out_
 OPTIONAL_KEYS = {"rollout_episodes", "rollout_seed_base", "warmup_iters",
                  # the designer's registered B2 headline family (commit 322a5966); required by
                  # --summarise, which raises if the headline set it computes differs from it
-                 "b2_headline_curves"}
+                 "b2_headline_curves",
+                 # its false-alarm bound, machine-readable (commit ecf8fbe6); required by
+                 # --summarise, which builds the per-run caveat from it
+                 "b2_family_bound"}
 RUN_KEYS = {"label", "path", "checkpoints"}
 SURVIVAL_KEY = "Episode/Steps"
-# The consequence registered with `b2_headline_curves` (wake-up manifest, commit 322a5966): the
-# per-curve false-pass rate of the registered guard, with the noise SD estimated from the curve's
-# own end, is far above the original target. Written in words next to every per-run wake point.
-PER_RUN_CAVEAT = (
-    "Descriptive only. No single run's wake point counts as evidence that a measure changed: "
-    "the registered guard (noise_k = 3, noise SD estimated from the curve's own end) passes a "
-    "curve that does not change about 0.26 % of the time on a level-05 curve (51 / 50 points) "
-    "and 1.8 % on a May curve (16 / 15 points), well above the original target, so about 1-4 "
-    "false wake points are expected across the 323 headline curves from noise alone. Only the "
-    "across-worlds sign test over the 16 level-05 worlds carries a reading; the three May seeds "
-    "stay descriptive. Registered with b2_headline_curves in the wake-up manifest.")
+# The per-run caveat is built from the manifest's `b2_family_bound` block (experiment-designer,
+# commit ecf8fbe6): the guard's false-pass rate per curve, by curve length, the family size and
+# the expected false wake points. No number of it is typed here.
+FAMILY_BOUND_KEYS = {"false_pass_rate_per_curve", "family_size", "expected_false_wake_points",
+                     "stated_target", "target_met"}
 
 
 def _np(o):
@@ -208,14 +207,62 @@ def check_headline_set(label: str, curves: dict, registered: list) -> None:
                          f"{sorted(set(want) - set(got))}")
 
 
-def per_run_wake_point(r: dict) -> dict:
+def check_family_bound(man: dict) -> dict:
+    """The manifest's `b2_family_bound`, validated: every key present, one rate in [0, 1] per
+    curve length, and family_size == len(b2_headline_curves) x number of runs."""
+    fb = _req(man, "b2_family_bound")
+    for k in FAMILY_BOUND_KEYS:
+        _req(fb, k, "manifest.b2_family_bound")
+    rates = fb["false_pass_rate_per_curve"]
+    if not rates or not all(str(k).isdigit() and isinstance(v, (int, float)) and 0 <= v <= 1
+                            for k, v in rates.items()):
+        raise ValueError("b2_family_bound.false_pass_rate_per_curve: {<curve length>: rate in "
+                         "[0, 1]} expected")
+    for k in ("independent_noise", "ar1_phi_0_3"):
+        _req(fb["expected_false_wake_points"], k, "manifest.b2_family_bound.expected_false_wake_points")
+    want = len(_req(man, "b2_headline_curves")) * len(man["runs"])
+    if fb["family_size"] != want:
+        raise ValueError(f"b2_family_bound.family_size {fb['family_size']} != "
+                         f"len(b2_headline_curves) x runs = {want}")
+    return fb
+
+
+def _pct(v: float) -> str:
+    return f"{100 * v:.3g} %"
+
+
+def family_caveat(fb: dict, noise_k, n_level05: int, n_may: int, n_points=None) -> str:
+    """The registered caveat in words, from `b2_family_bound`. With `n_points`, the rate quoted
+    is that curve length's (raises if the manifest has none for it); without, every length's."""
+    rates = {int(k): float(v) for k, v in fb["false_pass_rate_per_curve"].items()}
+    if n_points is None:
+        rate = "with probability " + ", ".join(f"{_pct(rates[n])} ({n} points)"
+                                               for n in sorted(rates, reverse=True))
+    else:
+        if int(n_points) not in rates:
+            raise ValueError(f"b2_family_bound has no false-pass rate for a {n_points}-point "
+                             f"curve (lengths {sorted(rates)})")
+        rate = f"on this {int(n_points)}-point curve with probability {_pct(rates[int(n_points)])}"
+    ex = fb["expected_false_wake_points"]
+    return (f"Descriptive only. No single run's wake point counts as evidence that a measure "
+            f"changed: the registered guard (noise_k = {noise_k}, noise SD estimated from the "
+            f"curve's own end) passes a curve that does not change {rate}. About "
+            f"{ex['independent_noise']} (independent noise) to {ex['ar1_phi_0_3']} (AR(1) noise, "
+            f"phi 0.3) false wake points are expected across the {fb['family_size']} headline "
+            f"curves from noise alone; the stated target was below {fb['stated_target']} "
+            f"({'met' if fb['target_met'] else 'not met'}). Only the across-worlds sign test over "
+            f"the {n_level05} level-05 worlds carries a reading; the {n_may} May seeds stay "
+            f"descriptive. Values from b2_family_bound in the wake-up manifest.")
+
+
+def per_run_wake_point(r: dict, caveat: str) -> dict:
     """One run's wake point as written out: the crossings and the lag in NUMBERS (episodes and
     checkpoint positions) with the registered caveat beside them. The lag's late / early /
     coincident word is not written for a single run; it feeds only the across-worlds sign test."""
     return {"headline_mode": r["headline_mode"], "headline": r["headline"],
             "beside_mode": r["beside_mode"], "beside": r["beside"],
             "lag": {k: v for k, v in r["lag"].items() if k != "reading"},
-            "caveat": PER_RUN_CAVEAT}
+            "caveat": caveat}
 
 
 def compile_cache_status() -> dict:
@@ -903,6 +950,12 @@ def summarise(man, man_path, out, stamp, rstamp, plateau, grids, B2, pinned, pol
     from scripts.analysis.nmn import wandb_history as wh
     need = {"grad_probe", "update_size", "rho", "swing", "freeze"}
     registered = list(_req(man, "b2_headline_curves"))
+    fb = check_family_bound(man)
+    n_l05 = sum(not grids[r["label"]]["continual"] for r in man["runs"])
+    n_may = len(man["runs"]) - n_l05
+
+    def caveat(n_points=None):
+        return family_caveat(fb, B2["noise_k"], n_l05, n_may, n_points)
     sites = {r["label"]: run_sites(r) for r in man["runs"]}
     for r in man["runs"]:                      # every run's sites, before anything is written
         check_sites(r["label"], sites[r["label"]], registered)
@@ -942,8 +995,9 @@ def summarise(man, man_path, out, stamp, rstamp, plateau, grids, B2, pinned, pol
         (out / "curves").mkdir(parents=True, exist_ok=True)
         (out / "curves" / f"{label}.json").write_text(json.dumps(
             {**stamp, "label": label, "t_plateau_episode": t_pl, **per_run[label],
-             "per_run_caveat": PER_RUN_CAVEAT,
-             "wake_points": {n: per_run_wake_point(v) for n, v in rd.items()}},
+             "per_run_caveat": caveat(),
+             "wake_points": {n: per_run_wake_point(v, caveat(len(curves[n]["x"])))
+                             for n, v in rd.items()}},
             indent=1, default=_np))
     names = sorted({n for rd in readings.values() for n in rd})
     b2 = {}
@@ -960,12 +1014,14 @@ def summarise(man, man_path, out, stamp, rstamp, plateau, grids, B2, pinned, pol
                         "seeds reported only as agree / do not agree (descriptive). Per-run wake "
                         "points below are numbers only, each with the registered caveat.",
            "headline_curves": registered,
-           "per_run_caveat": PER_RUN_CAVEAT,
+           "per_run_caveat": caveat(),
+           "b2_family_bound": fb,
            "reading": b2,
            "sanity_band": {l: {"n_inside": per_run[l]["sanity_band"]["n_inside"],
                                "n_checked": per_run[l]["sanity_band"]["n_checked"]}
                            for l in per_run},
-           "per_run_wake_points": {l: {n: per_run_wake_point(readings[l][n]) for n in readings[l]}
+           "per_run_wake_points": {l: {n: per_run_wake_point(
+               readings[l][n], caveat(len(per_run[l]["curves"][n]["x"]))) for n in readings[l]}
                                    for l in readings}}
     (out / "b2_reading.json").write_text(json.dumps(doc, indent=1, default=_np))
     with open(out / "b2_reading.csv", "w", newline="") as f:

@@ -240,7 +240,7 @@ def _noisy_pts(cks, sites, rng):
     return pts
 
 
-def _synthetic_summarise(tmp_path, monkeypatch, registered=None, sites_by_run=None):
+def _synthetic_summarise(tmp_path, monkeypatch, registered=None, sites_by_run=None, bound=None):
     """Runs run_wakeup.summarise end to end on synthetic curves (one level-05-style run and one
     May-style run), with the real pinned rules and the real B2 settings. No real data is read."""
     import json
@@ -255,6 +255,9 @@ def _synthetic_summarise(tmp_path, monkeypatch, registered=None, sites_by_run=No
             {"label": "may_syn", "path": "syn/may", "checkpoints": [1000 * (i + 1) for i in range(15)]}]
     man = {**real, "runs": runs,
            "b2_headline_curves": list(real["b2_headline_curves"] if registered is None else registered)}
+    man["b2_family_bound"] = {**real["b2_family_bound"],
+                              "family_size": len(man["b2_headline_curves"]) * len(runs),
+                              **(bound or {})}
     out = tmp_path / "out"
     for r in runs:
         sites = (sites_by_run or {}).get(r["label"], SITES5)
@@ -332,24 +335,27 @@ def test_summarise_per_run_output_carries_caveat_and_no_verdict_word(tmp_path, m
         json.loads((out / "curves" / f"{l}.json").read_text())["wake_points"]
         for l in ("l05_syn", "may_syn")]
     defined = 0
+    import re
     for block in per_run:
         points = [p for run in (block.values() if "caveat" not in next(iter(block.values()))
                                 else [block]) for p in run.values()]
         assert len(points) in (17, 34)
         for p in points:
-            assert p["caveat"] == rw.PER_RUN_CAVEAT
+            cav = p["caveat"]
+            assert cav.startswith("Descriptive only. No single run's wake point counts as evidence")
+            # the rate quoted is the one registered for this curve's length
+            n = cav.split("on this ")[1].split("-point")[0]
+            rate = yaml.safe_load(open(MAN))["b2_family_bound"]["false_pass_rate_per_curve"][n]
+            assert f"{100 * rate:.3g} %" in cav
+            assert "1 level-05 worlds" in cav and "1 May seeds stay descriptive" in cav
+            assert not re.search(r"\b(late|early|coincident|agree|undetermined)\b", cav, re.I)
             assert "reading" not in p["lag"]
             defined += p["lag"]["delta_positions"] is not None
             for s in _strings(p):
-                if s == rw.PER_RUN_CAVEAT:
+                if s == cav:
                     continue
                 assert s.strip().lower() not in VERDICT_WORDS, s
     assert defined > 0                       # the test sees real per-run wake points
-    cav = rw.PER_RUN_CAVEAT
-    assert "No single run's wake point counts as evidence" in cav
-    assert "0.26 %" in cav and "1.8 %" in cav and "16 level-05 worlds" in cav
-    import re
-    assert not re.search(r"\b(late|early|coincident|agree|undetermined)\b", cav, re.I)
     # the across-worlds reading keeps its words; the May seeds are marked descriptive
     for b in doc["reading"].values():
         assert b["reading"] in ("late", "early", "undetermined across worlds")
@@ -446,3 +452,49 @@ def test_git_dirty_covers_the_probe_code_path():
     import inspect
     src = inspect.getsource(rw.main)
     assert '"src/", "train.py",' in src and '"scripts/analysis/nmn"' in src
+
+
+# ------------------------------------------------- b2_family_bound (commit ecf8fbe6) -------
+def test_real_manifest_family_bound_matches_the_family():
+    man = rw.load_manifest(MAN)
+    fb = rw.check_family_bound(man)
+    assert fb["family_size"] == 17 * 19 == len(man["b2_headline_curves"]) * len(man["runs"])
+
+
+def test_family_size_mismatch_raises(tmp_path):
+    man = yaml.safe_load(open(MAN))
+    man["b2_family_bound"]["family_size"] = 322
+    with pytest.raises(ValueError, match="family_size 322"):
+        rw.check_family_bound(rw.load_manifest(_write(tmp_path, man)))
+    man = yaml.safe_load(open(MAN))
+    man["runs"] = man["runs"][:18]
+    with pytest.raises(ValueError, match="= 306"):
+        rw.check_family_bound(man)
+
+
+def test_caveat_rate_is_picked_by_curve_length_and_unknown_length_raises():
+    fb = yaml.safe_load(open(MAN))["b2_family_bound"]
+    r = fb["false_pass_rate_per_curve"]
+    for n in ("51", "50", "16", "15"):
+        assert f"{100 * r[n]:.3g} %" in rw.family_caveat(fb, 3, 16, 3, int(n))
+    with pytest.raises(ValueError, match="17-point"):
+        rw.family_caveat(fb, 3, 16, 3, 17)
+
+
+def test_changed_rate_in_the_manifest_changes_the_printed_caveat(tmp_path, monkeypatch):
+    import json
+    real = yaml.safe_load(open(MAN))["b2_family_bound"]["false_pass_rate_per_curve"]
+    _, out = _synthetic_summarise(tmp_path / "a", monkeypatch)
+    changed = {**real, "51": 0.0421}
+    _, out2 = _synthetic_summarise(tmp_path / "b", monkeypatch,
+                                   bound={"false_pass_rate_per_curve": changed})
+    a = json.loads((out / "curves" / "l05_syn.json").read_text())["wake_points"]["rho.rnn"]["caveat"]
+    b = json.loads((out2 / "curves" / "l05_syn.json").read_text())["wake_points"]["rho.rnn"]["caveat"]
+    assert f"{100 * real['51']:.3g} %" in a and "4.21 %" not in a
+    assert "4.21 %" in b and a != b
+    doc = json.loads((out2 / "b2_reading.json").read_text())
+    assert "4.21 % (51 points)" in doc["per_run_caveat"]
+    assert "4.21 %" in doc["per_run_wake_points"]["l05_syn"]["rho.rnn"]["caveat"]
+    # the May run's 16-point curve keeps its own rate
+    m = doc["per_run_wake_points"]["may_syn"]["rho.rnn"]["caveat"]
+    assert f"{100 * real['16']:.3g} %" in m
