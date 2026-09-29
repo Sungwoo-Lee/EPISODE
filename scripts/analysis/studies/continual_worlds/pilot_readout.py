@@ -912,8 +912,9 @@ def common_reference(runs: list[dict]) -> list[dict]:
 
 
 # ------------------------------------------------ May double-return replication (MAYREP doc 5) ---
-# Pre-registered in docs/experiments/active/continual_worlds/MAY_DOUBLE_RETURN_REPLICATION.md (5.1-5.5, 7).
-# check_mayrep_doc() asserts every value below against that doc's text (whitespace-normalised).
+# Pre-registered in docs/experiments/active/continual_worlds/MAY_DOUBLE_RETURN_REPLICATION.md (5.1-5.5, 7),
+# including its pre-data revision of 2026-09-29 (commit 6d3d42ec: Mixed verdict, SE floor, tail window for
+# the May comparison, collapse rule). check_mayrep_doc() asserts every value below against that doc's text.
 MR_ID_PREFIX = "M"                        # 4   manifest rows M1-M6
 MR_ACTIVE, MR_PASSIVE = "active", "passive"   # 4.1 stage files 01_active ... 05_active
 MR_RETURNS = (3, 5)                       # 2 / 5.1  returns of the hunting predator (1-indexed stages)
@@ -923,10 +924,14 @@ MR_GATE_S1, MR_GATE_BITES = 150.0, 1.0    # 5.5 stage-1 competence gate
 MR_GATE_FAIL_RUNS = 2                     # 5.5 >= 2 failing runs of one agent -> inconclusive
 MR_CONV_SPAN, MR_CONV_FLAG = 300_000, 0.10    # 5.5 rise of the trailing 200k over the last 300k of stage 1
 MR_SE_MULT, MR_MIN_PAIRS = 2.0, 2         # 5.2 / 5.3 |mean| > 2 x SE and favourable sign in >= 2 of 3 pairs
+                                          #   (7.6: with 2 pairs left, "both" pairs = the same count of 2)
 MR_N_PAIRS = 3                            # 3.4 seeds 42, 43, 44
-MR_TAIL_FRAC = 0.10                       # 5.1 May-style tail mean = last 10 % of each stage
+MR_SIGMA = 4.4                            # 5.2 rev: May's seed noise, read as a per-agent SD
+MR_FLOOR_D = 3.6                          # 5.2 rev: SE floor for D_k and the common-reference dip = 4.4 sqrt(2/3)
+MR_FLOOR_G = 5.1                          # 5.2 rev: SE floor for G_k (and ZA_j) = 4.4 sqrt(4/3); own dip: no floor
+MR_TAIL_FRAC = 0.10                       # 5.1 May-style tail T_k = last 10 % of each stage (decides 5.4)
 MR_NULL_DIP = 0.05                        # 7.5 own dip < 5 % on both switches -> null for this design
-MR_COLLAPSE = 0.6                         # 7.6 return < 0.6 x R_A for the whole stage
+MR_COLLAPSE = 0.6                         # 7.6 best 20k running mean in the return stage < 0.6 x own R_A
 MR_MAY = {"D": {3: 106.9, 5: 132.5}, "S1": {"modulated": 289.5, "ordinary": 278.3},   # 2 / 5.1
           "norm_adv": {3: 0.38, 5: 0.48}, "forget_ratio": {3: 0.35, 5: 0.28}}         # 5.4
 MR_MAY_SIZED_FRAC = 0.5                   # 5.4 "at least half of May's (>= 19 % at k=3 and >= 24 % at k=5)"
@@ -943,13 +948,25 @@ MAYREP_PATTERNS = [
     (r"rise in the 200,000-episode trailing mean over the last 300,000 episodes of stage 1\. More than 10 % is flagged",
      "MR_CONV_SPAN / MR_CONV_FLAG"),
     (r"`SE_k = sqrt\(sd_k\(ord\)²/3 \+ sd_k\(mod\)²/3\)`", "SE formula"),
+    (r"σ = 4\.4 steps", "MR_SIGMA"),
+    (r"`4\.4 × sqrt\(4/3\) ≈ 5\.1` steps", "MR_FLOOR_G derivation"),
+    (r"`SE_used = max\(SE_k, floor\)` with floor 3\.6 for `D_k` and the common-reference dip, 5\.1 for `G_k` and "
+     r"`ZA_j`\. The own-reference dip is a fraction and gets no floor", "MR_FLOOR_D / MR_FLOOR_G"),
     (r"\*favourable\* if `D_k > 0` in \*\*≥ 2 of 3\*\* seed pairs \*\*and\*\* the mean difference `> 2 × SE_k`\. "
      r"\*Unfavourable\* if `D_k < 0` in ≥ 2 of 3 pairs \*\*and\*\* the mean difference `< −2 × SE_k`", "H-ret rule"),
     (r"\*\*H-forget, per return:\*\* the same rule on `G_k`", "H-forget rule"),
     (r"\| \*\*Replicated\*\* \| H-ret favourable on \*\*both\*\* returns \*\*and\*\* H-forget favourable on \*\*both\*\* returns \|",
      "overall: replicated"),
     (r"\| \*\*Partly replicated\*\* \| at least one of the four readings favourable, none unfavourable \|", "overall: partly"),
-    (r"\| \*\*Reversed\*\* \| any H-ret or H-forget reading unfavourable", "overall: reversed"),
+    (r"\| \*\*Mixed\*\* \*\[rev 2026-09-29\]\* \| at least one of the four readings favourable \*\*and\*\* at least one unfavourable",
+     "overall: mixed"),
+    (r"\| \*\*Reversed\*\* \*\[rev 2026-09-29\]\* \| no reading favourable \*\*and\*\* H-ret unfavourable on at least one return",
+     "overall: reversed"),
+    (r"\| \*\*Not replicated\*\* \*\[rev 2026-09-29\]\* \| no reading favourable \*\*and\*\* H-ret unfavourable on neither "
+     r"return\. An unfavourable H-forget alone is reported beside it as \"the modulator lost its stage-1 lead\"",
+     "overall: not replicated"),
+    (r"checked in the order Replicated, Partly replicated, Mixed, Reversed, Not replicated", "verdict order"),
+    (r"worded as an \*\*underpowered null\*\*", "7.7 wording"),
     (r"mean dip difference is inside 2 × SE under \*\*both\*\* the own and the common reading", "H-dip rule"),
     (r"the number of favourable pairs out of 3 per switch", "H-rec count"),
     (r"favourable if `H\(mod\) ≥ 0` and `H\(ord\) < 0` in ≥ 2 of 3 pairs", "H-hyper rule"),
@@ -959,9 +976,21 @@ MAYREP_PATTERNS = [
     (r"\+106\.9 \(k=3\), \+132\.5 \(k=5\)", "May D_k"),
     (r"\| 289\.5 / 278\.3;", "May S_1 (mod / ord)"),
     (r"the mean over the last 10 % of each stage's episodes", "MR_TAIL_FRAC"),
+    (r"It is written `T_k` \(150,000 episodes in stage 1, 70,000 in stages 3 and 5\)", "T_k"),
+    (r"Every reading in this table, and the May-sized test, is computed on the \*\*May-style tail `T_k`\*\*",
+     "5.4 on T_k"),
+    (r"The overall verdict of 5\.3 stays on `S_k`", "5.3 on S_k"),
     (r"Survival in stages 2 and 4 is above `S_1` for both agents", "switch is real (7.4)"),
     (r"own dip < 5 % on both switches", "MR_NULL_DIP (7.5)"),
-    (r"return < 0\.6 × its `R_A` for the whole stage", "MR_COLLAPSE (7.6)"),
+    (r"the \*\*best\*\* 20,000-episode running mean anywhere in the stage stays below 0\.6 × that run's own `R_A` "
+     r"\(= `S_1`\); read only for completed stages", "MR_COLLAPSE (7.6)"),
+    (r"If 2 or 3 runs of the \*\*same\*\* agent collapse, collapse is that agent's behaviour", "7.6 same-agent"),
+    (r"with 2 pairs left, favourable needs the sign in \*\*both\*\* pairs and the mean difference beyond 2 × the floored SE",
+     "7.6 without-version"),
+    (r"\*\*Two collapsed pairs\*\* \(one ordinary and one modulated run collapse, in different seed pairs\): only one "
+     r"pair remains, so no without-version verdict is computed", "7.6 two collapsed pairs"),
+    (r"marked \"fragile \(rests on collapsed runs\)\" if the without-version gives a different verdict, or if two "
+     r"pairs contain a collapsed run", "7.6 fragile"),
     (r"\| 3 \| active \(first return\) \| 3\.0 M → 3\.7 M \| 0\.7 M \|", "stage 3 length"),
     (r"\| 5 \| active \(second return\) \| 4\.4 M → 5\.1 M \| 0\.7 M \|", "stage 5 length"),
 ]
@@ -979,22 +1008,28 @@ def check_mayrep_doc(text: str) -> None:
                                  f"!= {MR_MAY['norm_adv'][k]}")
         if abs(MR_MAY_SIZED_FRAC * MR_MAY["norm_adv"][k] - MR_MAY_SIZED_PRINTED[k]) > 0.005:
             raise AssertionError(f"May-sized line k={k} != printed {MR_MAY_SIZED_PRINTED[k]}")
+    for floor, var in ((MR_FLOOR_D, 2 / 3), (MR_FLOOR_G, 4 / 3)):   # the floors follow from sigma = 4.4
+        if abs(MR_SIGMA * math.sqrt(var) - floor) > 0.05:
+            raise AssertionError(f"SE floor {floor} != {MR_SIGMA} x sqrt({var:.3f})")
 
 
-def _agg_rule(vals: dict, diffs: list) -> dict:
+def _agg_rule(vals: dict, diffs: list, floor: float | None = None) -> dict:
     """5.2 / 5.3. vals = {agent: [per-seed value]}; diffs = per-pair modulated-minus-ordinary.
-    mean difference = mean(mod) - mean(ord); SE = sqrt(sd_ord^2/n_ord + sd_mod^2/n_mod), sample SD."""
+    mean difference = mean(mod) - mean(ord); SE = sqrt(sd_ord^2/n_ord + sd_mod^2/n_mod), sample SD;
+    SE_used = max(SE, floor) (5.2 rev; floor None = no floor, e.g. the own-reference dip fraction)."""
     o, m = [v for v in vals["ordinary"] if v is not None], [v for v in vals["modulated"] if v is not None]
     diffs = [x for x in diffs if x is not None]
     out = {"n_ord": len(o), "n_mod": len(m), "n_pairs": len(diffs), "pair_diffs": diffs,
            "n_pairs_pos": sum(x > 0 for x in diffs), "n_pairs_neg": sum(x < 0 for x in diffs),
-           "mean_ord": float(np.mean(o)) if o else None, "mean_mod": float(np.mean(m)) if m else None}
+           "mean_ord": float(np.mean(o)) if o else None, "mean_mod": float(np.mean(m)) if m else None,
+           "se_floor": floor}
     if len(o) < 2 or len(m) < 2:
-        out.update(mean_diff=None, se=None, verdict="pending", note="needs >= 2 seeds per agent")
+        out.update(mean_diff=None, se_raw=None, se=None, verdict="pending", note="needs >= 2 seeds per agent")
         return out
     md = float(np.mean(m) - np.mean(o))
-    se = float(math.sqrt(np.var(o, ddof=1) / len(o) + np.var(m, ddof=1) / len(m)))
-    out.update(mean_diff=md, se=se, beyond_noise=abs(md) > MR_SE_MULT * se)
+    raw = float(math.sqrt(np.var(o, ddof=1) / len(o) + np.var(m, ddof=1) / len(m)))
+    se = max(raw, floor) if floor is not None else raw
+    out.update(mean_diff=md, se_raw=raw, se=se, floored=se > raw, beyond_noise=abs(md) > MR_SE_MULT * se)
     if out["n_pairs_pos"] >= MR_MIN_PAIRS and md > MR_SE_MULT * se:
         v = "favourable"
     elif out["n_pairs_neg"] >= MR_MIN_PAIRS and md < -MR_SE_MULT * se:
@@ -1033,19 +1068,24 @@ def mayrep_run(d: dict) -> dict:
         done = s["status"] == "complete"
         x = {"world": s["world"], "status": s["status"], "complete": done,
              "S": s["level_last200k"], "bites": s["bites_last200k"],
-             "tail10": ser.S(s["to"] - MR_TAIL_FRAC * s["length"], s["to"]) if done else None,
+             "T": ser.S(s["to"] - MR_TAIL_FRAC * s["length"], s["to"]) if done else None,   # May-style tail T_k
              "deaths_last200k": {c: last_level(ser, "Episode/Term_" + c) for c in DEATH_CAUSES}}
         if k in MR_RETURNS:
             x["S_first20k"], x["dip_own"], x["recovery_own"] = s["S_first20k"], s["dip"], s["recovery_to_0.9R"]
             R = s["R_X"]
             run20 = [v for _, v in ser.trailing(DIP_WINDOW)]
             x["max_20k_running"] = max(run20) if run20 else None
-            x["collapsed"] = (None if R is None or not run20 else
-                              bool(max(run20) < MR_COLLAPSE * R) if done else None)
+            # 7.6 rev: collapsed if the BEST 20k running mean of the completed return stage < 0.6 x own R_A (= S_1)
+            x["collapsed"] = (bool(max(run20) < MR_COLLAPSE * R) if done and R is not None and run20 else None)
         out["stages"][k] = x
     st = out["stages"]
-    S = {k: st[k].get("S") for k in st}
     comp = {k: st[k].get("complete", False) for k in st}
+    for w in ("S", "T"):
+        v = {k: st[k].get(w) for k in st}
+        both = lambda a, b: None if v.get(a) is None or v.get(b) is None else v[a] - v[b]
+        out["F" if w == "S" else "F_tail"] = {k: both(k, 1) for k in MR_RETURNS}   # forgetting X_k - X_1
+        out["H" if w == "S" else "H_tail"] = both(5, 3)                            # second-return change
+    S = {k: st[k].get("S") for k in st}
     # stage-1 competence gate (5.5)
     if S.get(1) is not None:
         g = {"S1": S[1], "bites": st[1]["bites"], "S1_pass": S[1] >= MR_GATE_S1,
@@ -1061,12 +1101,47 @@ def mayrep_run(d: dict) -> dict:
     else:
         g = None
     out["gate"] = g
-    both = lambda a, b: None if S.get(a) is None or S.get(b) is None else S[a] - S[b]
-    out["F"] = {k: both(k, 1) for k in MR_RETURNS}            # forgetting S_k - S_1
-    out["H"] = both(5, 3)                                     # second-return change
     out["switch_real"] = {k: (None if S.get(k) is None or S.get(1) is None else S[k] > S[1]) for k in MR_PASSIVE_STAGES}
     out["provisional"] = not all(comp.get(k) for k in range(1, 6))
     return out
+
+
+def _mean(xs):
+    xs = [x for x in xs if x is not None]
+    return float(np.mean(xs)) if xs else None
+
+
+def _mr_verdict(per: list[dict], seeds) -> dict:
+    """5.3 on S_k for the runs of the given seeds: H-ret (floor 3.6) and H-forget (G_k, floor 5.1) per return,
+    then the overall label, checked in the order Replicated, Partly replicated, Mixed, Reversed, Not replicated."""
+    by = {a: [p for p in per if p["agent"] == a and p["seed"] in seeds] for a in ("ordinary", "modulated")}
+    pairs = [(o, next((m for m in by["modulated"] if m["seed"] == o["seed"]), None)) for o in by["ordinary"]]
+    pairs = [(o, m) for o, m in pairs if m is not None]
+    vals = lambda fn: {a: [fn(p) for p in by[a]] for a in by}
+    pdiff = lambda fn: [None if fn(m) is None or fn(o) is None else fn(m) - fn(o) for o, m in pairs]
+    ret = {k: _agg_rule(vals(lambda p, k=k: p["stages"][k].get("S")), pdiff(lambda p, k=k: p["stages"][k].get("S")),
+                        MR_FLOOR_D) for k in MR_RETURNS}
+    fgt = {k: _agg_rule(vals(lambda p, k=k: p["F"][k]), pdiff(lambda p, k=k: p["F"][k]), MR_FLOOR_G) for k in MR_RETURNS}
+    four = [ret[k]["verdict"] for k in MR_RETURNS] + [fgt[k]["verdict"] for k in MR_RETURNS]
+    notes = []
+    if "pending" in four:
+        label = "pending"
+    elif all(v == "favourable" for v in four):
+        label = "replicated"
+    elif "favourable" in four and "unfavourable" not in four:
+        label = "partly replicated"
+    elif "favourable" in four:
+        label = "mixed"
+    elif any(ret[k]["verdict"] == "unfavourable" for k in MR_RETURNS):
+        label = "reversed"
+    else:
+        label = "not replicated"
+        if any(fgt[k]["verdict"] == "unfavourable" for k in MR_RETURNS):
+            notes.append("the modulator lost its stage-1 lead")
+        if all(v == "inside noise" for v in four):
+            notes.append("underpowered null (7.7): three seeds cannot tell an effect of this size from seed noise; "
+                         "not evidence that the effect is absent")
+    return {"seeds": sorted(seeds), "n_pairs": len(pairs), "H_ret": ret, "H_forget": fgt, "label": label, "notes": notes}
 
 
 def mayrep_aggregate(runs: list[dict], pairs: list[dict]) -> dict:
@@ -1076,7 +1151,6 @@ def mayrep_aggregate(runs: list[dict], pairs: list[dict]) -> dict:
     seeds = sorted({p["seed"] for p in per})
     pair_of = {s: {a: next((p for p in by[a] if p["seed"] == s), None) for a in by} for s in seeds}
     full_pairs = {s: v for s, v in pair_of.items() if None not in v.values()}
-    Sk = lambda p, k: p["stages"][k].get("S")
     vals = lambda fn: {a: [fn(p) for p in by[a]] for a in by}
     pdiff = lambda fn: [None if fn(v["modulated"]) is None or fn(v["ordinary"]) is None
                         else fn(v["modulated"]) - fn(v["ordinary"]) for v in full_pairs.values()]
@@ -1087,66 +1161,69 @@ def mayrep_aggregate(runs: list[dict], pairs: list[dict]) -> dict:
     res["gate"] = {"failing_runs": fails, "provisional": gate_prov or len(per) < 2 * MR_N_PAIRS,
                    "inconclusive": any(len(v) >= MR_GATE_FAIL_RUNS for v in fails.values()),
                    "still_climbing": [p["run"] for p in per if p["gate"] and (p["gate"].get("convergence") or {}).get("still_climbing")]}
-    # --- H-ret / H-forget (5.3)
-    res["H_ret"] = {k: _agg_rule(vals(lambda p, k=k: Sk(p, k)), pdiff(lambda p, k=k: Sk(p, k))) for k in MR_RETURNS}
-    res["H_forget"] = {k: _agg_rule(vals(lambda p, k=k: p["F"][k]), pdiff(lambda p, k=k: p["F"][k])) for k in MR_RETURNS}
-    # a reading is provisional while stage 1 or k of any run is unfinished, or fewer than 3 full pairs exist
+    # --- 5.3 on all pairs (the headline)
+    allv = _mr_verdict(per, set(full_pairs))
+    res["H_ret"], res["H_forget"] = allv["H_ret"], allv["H_forget"]
     prov_k = {k: len(full_pairs) < MR_N_PAIRS or any(not p["stages"][j].get("complete") for p in per for j in (1, k))
               for k in MR_RETURNS}
     for k in MR_RETURNS:
         res["H_ret"][k]["provisional"] = res["H_forget"][k]["provisional"] = prov_k[k]
-    four = [res["H_ret"][k]["verdict"] for k in MR_RETURNS] + [res["H_forget"][k]["verdict"] for k in MR_RETURNS]
-    if "pending" in four:
-        overall = "pending"
-    elif "unfavourable" in four:
-        overall = "reversed"
-    elif all(v == "favourable" for v in four):
-        overall = "replicated"
-    elif "favourable" in four:
-        overall = "partly replicated"
-    else:
-        overall = "not replicated"
-    prov = any(p["provisional"] for p in per) or len(full_pairs) < MR_N_PAIRS
+    # --- 7.6 collapse: exactly one collapsed run of an agent on a return -> with / without that pair;
+    #     >= 2 of the same agent -> that agent's behaviour, kept as data; two excluded pairs -> descriptive only
+    coll = {k: {a: [p for p in by[a] if p["stages"][k].get("collapsed")] for a in by} for k in MR_RETURNS}
+    excl = {}
+    for k in MR_RETURNS:
+        for a, rr in coll[k].items():
+            if len(rr) == 1 and rr[0]["seed"] in full_pairs:
+                excl.setdefault(rr[0]["seed"], []).append(f"{rr[0]['run']} ({a}, stage {k})")
+    cres = {"runs": {k: {a: [p["run"] for p in rr] for a, rr in c.items()} for k, c in coll.items()},
+            "kept_as_agent_behaviour": {k: [a for a, rr in c.items() if len(rr) >= 2] for k, c in coll.items()},
+            "excluded_pairs": excl, "without_version": None, "fragile": False}
+    if len(excl) == 1:
+        wo = _mr_verdict(per, set(full_pairs) - set(excl))
+        cres["without_version"] = {"seeds": wo["seeds"], "label": wo["label"], "notes": wo["notes"],
+                                   "H_ret": {k: {x: wo["H_ret"][k][x] for x in ("mean_diff", "se", "n_pairs_pos", "n_pairs_neg", "verdict")} for k in MR_RETURNS},
+                                   "H_forget": {k: {x: wo["H_forget"][k][x] for x in ("mean_diff", "se", "n_pairs_pos", "n_pairs_neg", "verdict")} for k in MR_RETURNS}}
+        cres["fragile"] = wo["label"] != allv["label"]
+    elif len(excl) >= 2:
+        left = [s for s in full_pairs if s not in excl]
+        cres["remaining_pair_signs"] = {s: {f"D{k}": (lambda v: None if v["modulated"]["stages"][k].get("S") is None or v["ordinary"]["stages"][k].get("S") is None
+                                                        else v["modulated"]["stages"][k]["S"] - v["ordinary"]["stages"][k]["S"])(full_pairs[s])
+                                            for k in MR_RETURNS} for s in left}
+        cres["fragile"] = True
+        cres["note"] = "two collapsed pairs: no without-version verdict (7.6); remaining pair descriptive only"
+    res["collapse"] = cres
+    overall = allv["label"]
     if res["gate"]["inconclusive"]:
         overall = "inconclusive (stage 1 too short; 3.0 M stage-1 fallback, 3.4)"
-    # --- 7.4 / 7.5 / 7.6 checks
-    means = lambda k: {a: _mean([Sk(p, k) for p in by[a]]) for a in by}
+    prov = any(p["provisional"] for p in per) or len(full_pairs) < MR_N_PAIRS
+    # --- 7.4 / 7.5 checks
+    means = lambda k, w="S": {a: _mean([p["stages"][k].get(w) for p in by[a]]) for a in by}
     s1 = means(1)
     sw = {k: {a: (None if means(k)[a] is None or s1[a] is None else means(k)[a] > s1[a]) for a in by} for k in MR_PASSIVE_STAGES}
     res["switch_real"] = {"per_stage_agent_mean": sw,
                           "weaker_than_may": any(v is False for x in sw.values() for v in x.values())}
     dmean = {k: {a: _mean([p["stages"][k].get("dip_own") for p in by[a]]) for a in by} for k in MR_RETURNS}
+    known = all(v is not None for x in dmean.values() for v in x.values())
     res["null_no_drop"] = {"mean_own_dip": dmean,
-                           "fires": all(v is not None and v < MR_NULL_DIP for x in dmean.values() for v in x.values())
-                           if all(v is not None for x in dmean.values() for v in x.values()) else None}
-    coll = {k: [p["run"] for p in per if p["stages"][k].get("collapsed")] for k in MR_RETURNS}
-    res["collapse"] = {"runs": coll}
-    for k, rr in coll.items():   # 7.6: verdict numbers without the collapsed run's pair (2-pair rule not in the doc)
-        for r in rr:
-            s = next(p["seed"] for p in per if p["run"] == r)
-            keep = {x: v for x, v in full_pairs.items() if x != s}
-            d_ = [Sk(v["modulated"], k) - Sk(v["ordinary"], k) for v in keep.values() if Sk(v["modulated"], k) is not None and Sk(v["ordinary"], k) is not None]
-            res["collapse"].setdefault("without_pair", []).append(
-                {"stage": k, "run": r, "seed": s, "D_pair_diffs": d_,
-                 "note": "numbers only: the doc does not state a 2-pair threshold"})
-    res["overall"] = {"verdict": overall, "provisional": prov,
+                           "fires": all(v < MR_NULL_DIP for x in dmean.values() for v in x.values()) if known else None}
+    res["overall"] = {"verdict": overall, "provisional": prov, "notes": allv["notes"],
+                      "fragile": cres["fragile"],
                       "wording": "switch weaker than May's (7.4)" if res["switch_real"]["weaker_than_may"] else None,
                       "null_7_5": res["null_no_drop"]["fires"]}
-    # --- H-dip (5.3): own (fraction) and common (steps) per switch
+    # --- H-dip (5.3): own (fraction, no floor) and common (steps, floor 3.6) per switch
     com = {(pr["pair"], sw_["stage"]): sw_ for pr in pairs for sw_ in pr["switches"]}
     hd = {}
     for k in MR_RETURNS:
         own = _agg_rule(vals(lambda p, k=k: p["stages"][k].get("dip_own")), pdiff(lambda p, k=k: p["stages"][k].get("dip_own")))
-        cv = {"ordinary": [], "modulated": []}
-        cd = []
+        cv, cd = {"ordinary": [], "modulated": []}, []
         for s, v in full_pairs.items():
-            x = com.get((pair_key(v["ordinary"]["tag"]), k - 1))
-            dc = (x or {}).get("dip_common") or {}
+            dc = (com.get((pair_key(v["ordinary"]["tag"]), k - 1)) or {}).get("dip_common") or {}
             for a in cv:
                 cv[a].append((dc.get(a) or {}).get("steps"))
             cd.append(None if not dc.get("ordinary") or not dc.get("modulated")
                       else dc["modulated"]["steps"] - dc["ordinary"]["steps"])
-        common = _agg_rule(cv, cd)
+        common = _agg_rule(cv, cd, MR_FLOOR_D)
         for r in (own, common):
             r.pop("verdict", None)
         if own["mean_diff"] is None or common["mean_diff"] is None:
@@ -1165,10 +1242,8 @@ def mayrep_aggregate(runs: list[dict], pairs: list[dict]) -> dict:
     # --- H-rec (5.3; secondary): four-reading vote per pair and switch
     hr = {}
     for k in MR_RETURNS:
-        votes = {}
-        for s, v in full_pairs.items():
-            x = com.get((pair_key(v["ordinary"]["tag"]), k - 1))
-            votes[s] = (x or {}).get("H_rec", {"vote": "pending", "reason": "switch not reached"})
+        votes = {s: (com.get((pair_key(v["ordinary"]["tag"]), k - 1)) or {}).get(
+                     "H_rec", {"vote": "pending", "reason": "switch not reached"}) for s, v in full_pairs.items()}
         hr[k] = {"votes": votes, "n_favourable": sum(v["vote"] == "favourable" for v in votes.values()),
                  "n_unfavourable": sum(v["vote"] == "unfavourable" for v in votes.values()), "of": MR_N_PAIRS}
     res["H_rec"] = hr
@@ -1178,40 +1253,43 @@ def mayrep_aggregate(runs: list[dict], pairs: list[dict]) -> dict:
     res["H_hyper"] = {"per_pair": hh, "n_favourable": sum(bool(x) for x in hh.values()),
                       "verdict": ("pending" if not hh or None in hh.values() else
                                   "favourable" if sum(hh.values()) >= MR_MIN_PAIRS else "not favourable")}
-    # --- 5.4 comparison with May
-    cmp_ = {}
-    for k in MR_RETURNS:
-        md, s1o = res["H_ret"][k]["mean_diff"], s1["ordinary"]
-        fo, fm = _mean([p["F"][k] for p in by["ordinary"]]), _mean([p["F"][k] for p in by["modulated"]])
-        na = None if md is None or not s1o else md / s1o
-        cmp_[k] = {"norm_adv": na, "may_norm_adv": MR_MAY["norm_adv"][k],
-                   "may_sized_line": MR_MAY_SIZED_FRAC * MR_MAY["norm_adv"][k],
-                   "share_of_may": None if na is None else na / MR_MAY["norm_adv"][k],
-                   "forget_ratio": None if fo is None or fm is None or fo == 0 else fm / fo,
-                   "may_forget_ratio": MR_MAY["forget_ratio"][k], "mean_D": md, "may_D": MR_MAY["D"][k]}
-    sized = all(cmp_[k]["norm_adv"] is not None and cmp_[k]["norm_adv"] >= cmp_[k]["may_sized_line"] for k in MR_RETURNS)
-    res["may_comparison"] = {"per_return": cmp_, "S1_mean": s1,
-                             "H_mean": {a: _mean([p["H"] for p in by[a]]) for a in by}, "may_H_sign": {"modulated": "+", "ordinary": "-"},
-                             "passive_mean": {k: means(k) for k in MR_PASSIVE_STAGES},
-                             "size": ("May-sized" if sized else "replicated in direction, smaller than May")
-                             if overall == "replicated" else "n/a (not replicated)" if overall != "pending" else "pending"}
+
+    # --- 5.4 comparison with May: decided on the tail T_k; the same readings on S_k as a reference column
+    def may_cols(w):
+        F, H = ("F_tail", "H_tail") if w == "T" else ("F", "H")
+        s1o = means(1, w)["ordinary"]
+        col = {}
+        for k in MR_RETURNS:
+            mk = means(k, w)
+            md = None if mk["modulated"] is None or mk["ordinary"] is None else mk["modulated"] - mk["ordinary"]
+            fo, fm = _mean([p[F][k] for p in by["ordinary"]]), _mean([p[F][k] for p in by["modulated"]])
+            na = None if md is None or not s1o else md / s1o
+            col[k] = {"mean_D": md, "norm_adv": na, "share_of_may": None if na is None else na / MR_MAY["norm_adv"][k],
+                      "forget_ratio": None if fo is None or fm is None or fo == 0 else fm / fo}
+        return {"per_return": col, "S1_ord_mean": s1o,
+                "H_mean": {a: _mean([p[H] for p in by[a]]) for a in by},
+                "passive_mean": {k: means(k, w) for k in MR_PASSIVE_STAGES}}
+    tail, ref = may_cols("T"), may_cols("S")
+    sized = all(tail["per_return"][k]["norm_adv"] is not None and
+                tail["per_return"][k]["norm_adv"] >= MR_MAY_SIZED_FRAC * MR_MAY["norm_adv"][k] for k in MR_RETURNS)
+    res["may_comparison"] = {
+        "decides": "tail T_k (last 10 % of each stage)", "tail": tail, "reference_200k": ref,
+        "may": {"norm_adv": MR_MAY["norm_adv"], "may_sized_line": {k: MR_MAY_SIZED_FRAC * MR_MAY["norm_adv"][k] for k in MR_RETURNS},
+                "forget_ratio": MR_MAY["forget_ratio"], "D": MR_MAY["D"], "H_sign": {"modulated": "+", "ordinary": "-"}},
+        "size": ("May-sized" if sized else "replicated in direction, smaller than May") if overall == "replicated"
+                else "pending" if overall == "pending" else "n/a (not replicated)"}
     return res
-
-
-def _mean(xs):
-    xs = [x for x in xs if x is not None]
-    return float(np.mean(xs)) if xs else None
 
 
 def render_mayrep(runs, res) -> str:
     out = ["MAY DOUBLE-RETURN REPLICATION (MAY_DOUBLE_RETURN_REPLICATION.md 5) - survival steps per episode",
            "  S_k = mean over the last 200k episodes of stage k (1 active, 2 passive, 3 active = 1st return, 4 passive, "
-           "5 active = 2nd return); F_k = S_k - S_1"]
+           "5 active = 2nd return); F_k = S_k - S_1; T_k = May-style tail (last 10 % of stage k)"]
     if not res["n_runs"]:
         out.append("  no runs launched yet (no manifest row M1-M6 carries a WandB id)")
         return "\n".join(out)
     out.append(f"  {'run':>3} {'tag':<28} {'done':>6} {'S1':>6} {'S2':>6} {'S3':>6} {'S4':>6} {'S5':>6} {'F3':>7} {'F5':>7} "
-               f"{'H':>6} {'dip3':>7} {'dip5':>7} {'gate':>6} {'climb':>7}")
+               f"{'H':>6} {'dip3':>7} {'dip5':>7} {'gate':>6} {'climb':>7}  T1/T3/T5")
     for p in res["per_run"]:
         st = p["stages"]
         g = p["gate"] or {}
@@ -1219,23 +1297,36 @@ def render_mayrep(runs, res) -> str:
         out.append(f"  {p['run']:>3} {p['tag']:<28} {k_(p['episodes_done']):>6} "
                    + " ".join(f"{f(st[k].get('S')) + ('*' if st[k].get('S') is not None and not st[k].get('complete') else ''):>6}" for k in range(1, 6))
                    + f" {f(p['F'][3]):>7} {f(p['F'][5]):>7} {f(p['H']):>6} {f(st[3].get('dip_own'), pct=True):>7} {f(st[5].get('dip_own'), pct=True):>7} "
-                   f"{('-' if not g else 'PASS' if g['pass'] else 'FAIL') + ('*' if g and g['provisional'] else ''):>6} {f(conv, pct=True):>7}")
-    out.append("  (* = stage still in progress; gate = S_1 >= 150 and >= 1.0 bite; climb = rise of the trailing 200k over the last 300k of stage 1)")
+                   f"{('-' if not g else 'PASS' if g['pass'] else 'FAIL') + ('*' if g and g['provisional'] else ''):>6} {f(conv, pct=True):>7}  "
+                   + "/".join(f(st[k].get("T")) for k in (1, 3, 5)))
+    out.append("  (* = stage still in progress; gate = S_1 >= 150 and >= 1.0 bite; climb = rise of the trailing 200k over the "
+               "last 300k of stage 1; T_k only for completed stages)")
     g = res["gate"]
     out.append(f"  stage-1 gate: failing runs ord {g['failing_runs']['ordinary'] or '-'} mod {g['failing_runs']['modulated'] or '-'}"
                f"{'  -> INCONCLUSIVE' if g['inconclusive'] else ''}{' (provisional)' if g['provisional'] else ''}"
                f"; still climbing (> 10 %): {g['still_climbing'] or '-'}")
 
     def rule(name, r):
-        return (f"  {name:<14} mean ord {f(r['mean_ord'])} mod {f(r['mean_mod'])}  diff {f(r['mean_diff'])} +- SE {f(r['se'])} "
-                f"(2SE {f(r['se'] and MR_SE_MULT * r['se'])})  pairs + {r['n_pairs_pos']} / - {r['n_pairs_neg']} of {r['n_pairs']} "
-                f"{[round(x, 1) for x in r['pair_diffs']]}  -> {r['verdict'].upper()}{' (provisional)' if r['provisional'] else ''}")
+        return (f"  {name:<14} mean ord {f(r['mean_ord'])} mod {f(r['mean_mod'])}  diff {f(r['mean_diff'])} +- SE {f(r['se'])}"
+                f"{' (floored ' + f(r['se_floor']) + ', raw ' + f(r['se_raw']) + ')' if r.get('floored') else ''} "
+                f"pairs + {r['n_pairs_pos']} / - {r['n_pairs_neg']} of {r['n_pairs']} "
+                f"{[round(x, 1) for x in r['pair_diffs']]}  -> {r['verdict'].upper()}{' (provisional)' if r.get('provisional') else ''}")
     for k in MR_RETURNS:
         out.append(rule(f"H-ret  k={k}", res["H_ret"][k]))
         out.append(rule(f"H-fgt  k={k}", res["H_forget"][k]))
     o = res["overall"]
     out.append(f"  OVERALL (5.3): {o['verdict'].upper()}{' (provisional)' if o['provisional'] else ''}"
-               f"{'; ' + o['wording'] if o['wording'] else ''}{'; 7.5 null for this design (no drop)' if o['null_7_5'] else ''}")
+               f"{'; FRAGILE (rests on collapsed runs)' if o['fragile'] else ''}"
+               + "".join("; " + x for x in o["notes"])
+               + (f"; {o['wording']}" if o["wording"] else "") + ("; 7.5 null for this design (no drop)" if o["null_7_5"] else ""))
+    c7 = res["collapse"]
+    if any(v for x in c7["runs"].values() for v in x.values()):
+        out.append(f"  7.6 collapsed runs {c7['runs']}; kept as agent behaviour {c7['kept_as_agent_behaviour']}; "
+                   f"excluded pairs {c7['excluded_pairs']}")
+        if c7["without_version"]:
+            out.append(f"      without-version (seeds {c7['without_version']['seeds']}): {c7['without_version']['label'].upper()}")
+        if c7.get("note"):
+            out.append(f"      {c7['note']}; remaining pair D: {c7.get('remaining_pair_signs')}")
     for k, v in res["H_dip"]["per_return"].items():
         out.append(f"  H-dip  k={k}   own diff {f(v['own_frac']['mean_diff'], pct=True)} (2SE {f(v['own_frac']['se'] and MR_SE_MULT * v['own_frac']['se'], pct=True)})"
                    f"  common diff {f(v['common_steps']['mean_diff'])} steps (2SE {f(v['common_steps']['se'] and MR_SE_MULT * v['common_steps']['se'])})"
@@ -1245,14 +1336,15 @@ def render_mayrep(runs, res) -> str:
                    + ", ".join(f"s{s} {x['vote']}" for s, x in v["votes"].items()))
     out.append(f"  H-hyper       favourable pairs {res['H_hyper']['n_favourable']} -> {res['H_hyper']['verdict']}")
     c = res["may_comparison"]
-    for k, v in c["per_return"].items():
-        out.append(f"  vs May k={k}   mean D / mean S_1(ord) = {f(v['norm_adv'], pct=True)} (May {100 * v['may_norm_adv']:.0f}%, "
-                   f"May-sized line {100 * v['may_sized_line']:.0f}%, share of May {f(v['share_of_may'], 2)})  "
-                   f"forgetting ratio mod/ord {f(v['forget_ratio'], 2)} (May {v['may_forget_ratio']})")
-    out.append(f"  size: {c['size']}; H mean mod {f(c['H_mean']['modulated'])} / ord {f(c['H_mean']['ordinary'])} (May + / -); "
-               f"passive means S2 {c['passive_mean'][2]} S4 {c['passive_mean'][4]}")
-    if any(res["collapse"]["runs"].values()):
-        out.append(f"  7.6 collapsed runs: {res['collapse']['runs']}")
+    for k in MR_RETURNS:
+        t, r = c["tail"]["per_return"][k], c["reference_200k"]["per_return"][k]
+        out.append(f"  vs May k={k}   tail: mean D / mean T_1(ord) = {f(t['norm_adv'], pct=True)} (May {100 * MR_MAY['norm_adv'][k]:.0f}%, "
+                   f"May-sized line {100 * c['may']['may_sized_line'][k]:.0f}%, share of May {f(t['share_of_may'], 2)}), "
+                   f"forgetting ratio {f(t['forget_ratio'], 2)} (May {MR_MAY['forget_ratio'][k]})   "
+                   f"[200k ref: {f(r['norm_adv'], pct=True)}, ratio {f(r['forget_ratio'], 2)}]")
+    out.append(f"  size (decided on the tail): {c['size']}; H tail mean mod {f(c['tail']['H_mean']['modulated'])} / ord "
+               f"{f(c['tail']['H_mean']['ordinary'])} (May + / -); passive tail means "
+               + "; ".join(f"T{k} ord {f(v['ordinary'])} mod {f(v['modulated'])}" for k, v in c["tail"]["passive_mean"].items()))
     return "\n".join(out)
 
 
