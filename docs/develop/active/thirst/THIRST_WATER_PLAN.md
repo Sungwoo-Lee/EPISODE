@@ -793,3 +793,10 @@ Every claim below was verified against the live code or by running it, not taken
 If the six Moderate items go in as written, the unattended run halts three times (C3 on the unpack, C4/T4 on the clipped σ, C5 on the nine-file set) — each an hour or two, no wrong conclusion, no data at risk. The one silent failure is M4: a coverage gate that cannot fail leaves terminal-step parity unproven for whichever death kind the fixture happens to lack, which only bites when a later change touches the death path. Nothing here changes a training result or a claim.
 
 *Reviewed by: plan-reviewer*
+
+---
+
+## User decisions after Revision 1 (2026-09-29)
+
+- **Call 1 — random start hydration at level 06: KEEP the full 0–200 draw.** User's rationale, verbatim in substance: the full range exists so the agent experiences *every* internal-state condition during training, because the downstream experiment environment manipulates internal states directly and must test the agent in all of them. The ~5 % by step 16 / ~16 % by step 50 policy-independent thirst deaths are accepted as the cost of that coverage. Analyses reporting survival steps on level 06 should state this and, where it matters, report survival conditional on start hydration.
+- **Implementation: NOT approved yet.** The user wants an artifact for this topic first; implementation waits for that.
