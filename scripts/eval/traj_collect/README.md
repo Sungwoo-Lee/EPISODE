@@ -57,6 +57,30 @@ manifest so every reader inherits the caveat.
 
 Output lands at `<out-root>/<run_tag>/<ckpt_step>/<env_fp>/`.
 
+## Continual (multi-stage) runs — `stage_end:<k>` and the stage's own world
+
+A run whose `models/` holds `schedule.yaml` was trained on a sequence of worlds, and its
+`config.yaml` is only the **first** world. For such a run the collector builds the world
+from the checkpoint's **own stage file** (`models/stage_<k>_<name>.yaml`, chosen by the
+`stage` field saved in the checkpoint), keeping `agent`, `seed`, `tag`, `wandb` from
+`config.yaml`. That dict is what is fingerprinted, so a store of a passive-stage checkpoint
+lands in a different `<env_fp>` directory than a store of an active-stage one. A stage file
+that differs from `config.yaml` in any other top-level key (e.g. `training`) is refused.
+Non-continual runs are unchanged.
+
+Checkpoint selectors (`--checkpoint`, and the spec's `checkpoints:` list, passed through):
+
+| Selector | Meaning |
+|---|---|
+| `final` / `<int>` | as before (numeric maximum / that step) |
+| `stage_end:<k>` | continual only: the **last** checkpoint whose saved `stage` is `k` (0-based). The next checkpoint must exist and carry another stage, so a stage still in training, and the last stage, are refused (use `final`) |
+| `stage_end:<k>:prev` | the checkpoint just before `stage_end:<k>`; must have the same saved stage |
+| `final:prev` | the checkpoint just before `final`; on a continual run, same saved stage |
+
+Selection reads each checkpoint's saved `stage` (about 1 s per checkpoint, cached per
+process). One implementation, `resolve_checkpoint_info`, serves the collector and the
+analysis drivers. Plan: `docs/develop/active/neuromodulation/ALGORITHMIC_NULL_ANALYSIS_TOOLING.md` §5.
+
 ## Run a spec across nodes
 
 ```bash

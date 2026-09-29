@@ -1560,3 +1560,148 @@ def test_dry_run_does_not_delete_completion_markers(tmp_path):
     rc.main([str(p), "--dry-run"])
     assert live.exists(), "--dry-run must be inert with respect to a live collection"
     assert live.read_text() == "a live collection finished this node"
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# Continual runs — stage-aware checkpoint selectors and world (tooling plan
+# docs/develop/active/neuromodulation/ALGORITHMIC_NULL_ANALYSIS_TOOLING.md, File Changes §5)
+# ══════════════════════════════════════════════════════════════════════════════
+
+_CW_CONFIG = {
+    "seed": 43, "tag": "cw_fixture_s43", "wandb": {"project": "p", "name": "stage0"},
+    "agent": {"hidden_size": 8, "modulation": {"type": None}},
+    "environment": {"max_steps": 500, "entities": {"predator": {"detection_range": 4}}},
+    "sensory": {"visual": {"enabled": True}},
+    "training": {"num_envs": 8},
+}
+
+
+def _cw_run(tmp_path: Path, ckpts: list[tuple[int, int]], name="run",
+            passive_extra: dict | None = None) -> Path:
+    """A synthetic continual run: schedule.yaml, config.yaml, three stage files (stage 0
+    identical to config.yaml; stage 1 a passive world with a different environment, tag,
+    wandb and a stale seed 42 and no agent block, as the May replication's later stage
+    files are) and orbax checkpoints carrying only the `stage` payload field."""
+    import orbax.checkpoint as ocp
+    run = tmp_path / name
+    models = run / "models"
+    models.mkdir(parents=True)
+    (models / "schedule.yaml").write_text(yaml.safe_dump({"continual": {
+        "episode_boundaries": [300, 600, 900], "checkpoint_frequencies": [100, 100, 100],
+        "stage_names": ["01_active", "02_passive", "03_active"]}}))
+    (models / "config.yaml").write_text(yaml.safe_dump(_CW_CONFIG))
+    (models / "stage_00_01_active.yaml").write_text(yaml.safe_dump(_CW_CONFIG))
+    passive = copy.deepcopy(_CW_CONFIG)
+    passive.pop("agent")
+    passive.update(seed=42, tag="stage_passive", wandb={"project": "p", "name": "stage1"})
+    passive["environment"]["entities"]["predator"]["detection_range"] = 0
+    passive.update(passive_extra or {})
+    (models / "stage_01_02_passive.yaml").write_text(yaml.safe_dump(passive))
+    active2 = copy.deepcopy(_CW_CONFIG)
+    active2.pop("agent")
+    active2.update(seed=42, tag="stage_active2")
+    (models / "stage_02_03_active.yaml").write_text(yaml.safe_dump(active2))
+    mngr = ocp.CheckpointManager(str(models.resolve()))
+    for step, stage in ckpts:
+        mngr.save(step, args=ocp.args.StandardSave({"stage": np.int32(stage)}))
+    mngr.wait_until_finished()
+    return run
+
+
+# (step, saved stage). 310 lies past boundary 300 but was saved as stage 0 (the lag the
+# stage switch at iteration start produces).
+_CW_A = [(100, 0), (200, 0), (310, 0), (400, 1), (500, 1), (610, 2), (700, 2)]
+
+
+def test_cw_stage_end_counts_saved_stage_not_boundary(tmp_path):
+    import collect_trajectories as ct
+    run = _cw_run(tmp_path, _CW_A)
+    i0 = ct.resolve_checkpoint_info(run, "stage_end:0")
+    assert (i0["step"], i0["saved_stage"]) == (310, 0)          # the lagging one is stage 0
+    assert (i0["successor"], i0["successor_stage"]) == (400, 1)  # T8: next has another stage
+    i1 = ct.resolve_checkpoint_info(run, "stage_end:1")
+    assert (i1["step"], i1["saved_stage"]) == (500, 1)
+    assert ct.resolve_checkpoint(run, "stage_end:1") == (run / "models" / "500", 500)
+
+
+def test_cw_stage_end_raises_without_that_stage_or_without_an_end(tmp_path):
+    import collect_trajectories as ct
+    run = _cw_run(tmp_path, [(100, 0), (200, 0), (300, 1), (400, 1)])
+    with pytest.raises(ValueError, match="no checkpoint has saved stage 2"):
+        ct.resolve_checkpoint_info(run, "stage_end:2")
+    # stage 1 is the newest stage: it has no end yet (T8: the successor must exist)
+    with pytest.raises(ValueError, match="no end yet"):
+        ct.resolve_checkpoint_info(run, "stage_end:1")
+
+
+def test_cw_prev_selectors(tmp_path):
+    import collect_trajectories as ct
+    run = _cw_run(tmp_path, _CW_A)
+    p = ct.resolve_checkpoint_info(run, "stage_end:1:prev")
+    assert (p["step"], p["saved_stage"], p["prev_of"], p["episode_gap"]) == (400, 1, 500, 100)
+    f = ct.resolve_checkpoint_info(run, "final:prev")
+    assert (f["step"], f["prev_of"], f["episode_gap"]) == (610, 700, 90)
+    # only one stage-1 checkpoint: the one before it is stage 0 -> raise
+    run_c = _cw_run(tmp_path, [(100, 0), (200, 0), (300, 1), (400, 2), (500, 2)], name="c")
+    assert ct.resolve_checkpoint_info(run_c, "stage_end:1")["step"] == 300
+    with pytest.raises(ValueError, match="inside one stage"):
+        ct.resolve_checkpoint_info(run_c, "stage_end:1:prev")
+    # final:prev across a stage change raises
+    run_d = _cw_run(tmp_path, [(100, 0), (200, 1)], name="d")
+    with pytest.raises(ValueError, match="inside one stage"):
+        ct.resolve_checkpoint_info(run_d, "final:prev")
+    with pytest.raises(ValueError, match="no checkpoint before"):
+        ct.resolve_checkpoint_info(_cw_run(tmp_path, [(100, 0)], name="e"), "final:prev")
+
+
+def test_cw_selectors_on_a_non_continual_run(tmp_path):
+    import collect_trajectories as ct
+    run = _cw_run(tmp_path, [(100, 0), (250, 0)])
+    (run / "models" / "schedule.yaml").unlink()
+    assert ct.resolve_checkpoint(run, "final") == (run / "models" / "250", 250)
+    f = ct.resolve_checkpoint_info(run, "final:prev")       # allowed: one stage only
+    assert (f["step"], f["saved_stage"], f["episode_gap"]) == (100, None, 150)
+    with pytest.raises(ValueError, match="needs a continual run"):
+        ct.resolve_checkpoint_info(run, "stage_end:0")
+    with pytest.raises(ValueError, match="Unknown checkpoint selector"):
+        ct.resolve_checkpoint_info(run, "stage_end")
+
+
+def test_cw_fingerprint_i_stage0_equals_the_non_continual_path(tmp_path):
+    import collect_trajectories as ct
+    run = _cw_run(tmp_path, _CW_A)
+    cfg = yaml.safe_load((run / "models" / "config.yaml").read_text())
+    resolved, stage_path = ct.continual_resolved_config(
+        run, run / "models" / "200", cfg, quiet=True)
+    assert stage_path.endswith("stage_00_01_active.yaml")
+    assert resolved == cfg
+    assert ts.env_fingerprint(resolved) == ts.env_fingerprint(cfg)
+
+
+def test_cw_fingerprint_ii_iii_passive_stage_world(tmp_path):
+    import collect_trajectories as ct
+    run = _cw_run(tmp_path, _CW_A)
+    cfg = yaml.safe_load((run / "models" / "config.yaml").read_text())
+    stage_file = yaml.safe_load((run / "models" / "stage_01_02_passive.yaml").read_text())
+    resolved, stage_path = ct.continual_resolved_config(
+        run, run / "models" / "500", cfg, quiet=True)
+    assert stage_path.endswith("stage_01_02_passive.yaml")
+    # (ii) a different world -> a different store directory
+    assert ts.env_fingerprint(resolved) != ts.env_fingerprint(cfg)
+    # (iii) the world is the stage file's; run identity is config.yaml's (the stale stage
+    # seed 42 is NOT taken)
+    assert resolved["environment"] == stage_file["environment"]
+    assert resolved["environment"]["entities"]["predator"]["detection_range"] == 0
+    assert (resolved["seed"], resolved["tag"], resolved["wandb"], resolved["agent"]) == (
+        cfg["seed"], cfg["tag"], cfg["wandb"], cfg["agent"])
+    # the lagging stage-0 checkpoint past the boundary stays in the stage-0 world
+    lag, lag_path = ct.continual_resolved_config(run, run / "models" / "310", cfg, quiet=True)
+    assert lag_path.endswith("stage_00_01_active.yaml") and lag == cfg
+
+
+def test_cw_stage_file_changing_training_raises(tmp_path):
+    import collect_trajectories as ct
+    run = _cw_run(tmp_path, _CW_A, passive_extra={"training": {"num_envs": 16}})
+    cfg = yaml.safe_load((run / "models" / "config.yaml").read_text())
+    with pytest.raises(ValueError, match="training"):
+        ct.continual_resolved_config(run, run / "models" / "500", cfg, quiet=True)

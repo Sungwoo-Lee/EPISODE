@@ -42,6 +42,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import re
 import sys
 import time
 import warnings
@@ -124,27 +125,192 @@ def read_training_provenance(run_dir: Path) -> dict:
 # ── Checkpoint selection (plan §D9) ───────────────────────────────────────────
 
 def resolve_checkpoint(run_dir: Path, which: str) -> tuple[Path, int]:
-    """Resolve `final` or an explicit step to a checkpoint directory.
+    """Resolve a checkpoint selector to a checkpoint directory. See
+    `resolve_checkpoint_info` for the selectors; this returns only (dir, step)."""
+    info = resolve_checkpoint_info(run_dir, which)
+    return info["ckpt_dir"], info["step"]
 
-    NUMERIC SORT IS MANDATORY.  The rPPO run used to size this pipeline has 591
+
+# Continual runs (tooling plan ALGORITHMIC_NULL_ANALYSIS_TOOLING, File Changes §5).
+_STAGE_END_RE = re.compile(r"^stage_end:(\d+)(:prev)?$")
+_SAVED_STAGES_CACHE: dict = {}
+
+
+def _checkpoint_steps(models: Path) -> list[int]:
+    """NUMERIC SORT IS MANDATORY.  The rPPO run used to size this pipeline has 591
     checkpoint directories with names like `100145`, `10100043`, `59100070`.  They are
     not zero-padded, so a LEXICOGRAPHIC maximum picks `9900021` — the wrong directory,
-    silently, with no error anywhere downstream.
-    """
-    models = run_dir / "models"
+    silently, with no error anywhere downstream."""
     if not models.is_dir():
-        raise ValueError(f"No models/ directory under {run_dir}")
+        raise ValueError(f"No models/ directory at {models}")
     steps = sorted(int(p.name) for p in models.iterdir() if p.is_dir() and p.name.isdigit())
     if not steps:
         raise ValueError(f"No numerically-named checkpoint directories under {models}")
-    if which == "final":
+    return steps
+
+
+def is_continual(run_dir: Path) -> bool:
+    """A continual (multi-stage) run is one whose `models/` holds `schedule.yaml`."""
+    return (Path(run_dir) / "models" / "schedule.yaml").exists()
+
+
+def saved_stages(models: Path, steps: list[int]) -> dict[int, int]:
+    """The `stage` field train.py saved in each checkpoint's payload (ground truth; the
+    stage recomputed from the episode boundaries can lag by one, see
+    eval_rollout._resolve_continual_stage_config). Read once per (models dir, step) per
+    process, through `continual_forgetting_matrix.read_saved_stage`."""
+    from scripts.eval.continual_forgetting_matrix import read_saved_stage
+    models = Path(models).resolve()
+    out = {}
+    for s in steps:
+        key = (str(models), int(s))
+        if key not in _SAVED_STAGES_CACHE:
+            _SAVED_STAGES_CACHE[key] = int(read_saved_stage(models, int(s)))
+        out[int(s)] = _SAVED_STAGES_CACHE[key]
+    return out
+
+
+def resolve_checkpoint_info(run_dir: Path, which: str) -> dict:
+    """Resolve a checkpoint selector. The ONLY selector implementation: the analysis
+    drivers import it, so the collector and the analysis cannot disagree.
+
+    Selectors:
+      `final`               the last checkpoint (numeric sort).
+      `<int>`               that step.
+      `final:prev`          the checkpoint immediately before `final`; on a continual run
+                            it must carry the same saved stage as `final`.
+      `stage_end:<k>`       continual runs only: the LAST checkpoint whose saved `stage`
+                            equals k (0-based, the value train.py stores). A checkpoint
+                            just past boundary k can still be a stage-k checkpoint (the
+                            stage switch runs at iteration start); counting by saved stage
+                            makes it the end of stage k, as it should be. The checkpoint
+                            after it must EXIST and carry a DIFFERENT saved stage (T8): a
+                            stage still being trained has no end yet, and the last stage's
+                            end is `final`.
+      `stage_end:<k>:prev`  the checkpoint immediately before `stage_end:<k>`; it must
+                            carry the same saved stage k.
+
+    Returns {selector, ckpt_dir, step, saved_stage (None on a non-continual run),
+    successor, successor_stage, prev_of, episode_gap}. Checkpoint directory names are
+    episode counts (train.py saves at `total_episodes_completed`), so `episode_gap` is the
+    step difference of a `:prev` pair.
+    """
+    run_dir = Path(run_dir)
+    models = run_dir / "models"
+    steps = _checkpoint_steps(models)
+    continual = is_continual(run_dir)
+    info = {"selector": which, "saved_stage": None, "successor": None,
+            "successor_stage": None, "prev_of": None, "episode_gap": None}
+
+    m = _STAGE_END_RE.match(str(which))
+    if which in ("final", "final:prev"):
         step = max(steps)                      # int(), NOT lexicographic max()
+        prev = which == "final:prev"
+    elif m:
+        if not continual:
+            raise ValueError(f"Selector {which!r} needs a continual run, but {models} has "
+                             f"no schedule.yaml.")
+        k, prev = int(m.group(1)), m.group(2) is not None
+        stages = saved_stages(models, steps)
+        order = [stages[s] for s in steps]
+        if any(b < a for a, b in zip(order, order[1:])):
+            raise ValueError(f"{models}: saved stages are not non-decreasing in step order "
+                             f"({list(zip(steps, order))}); refusing to pick a stage end.")
+        with_k = [s for s in steps if stages[s] == k]
+        if not with_k:
+            raise ValueError(f"{models}: no checkpoint has saved stage {k} "
+                             f"(saved stages present: {sorted(set(order))}).")
+        step = with_k[-1]
+        later = [s for s in steps if s > step]
+        if not later:
+            raise ValueError(
+                f"{models}: the last checkpoint with saved stage {k} ({step}) is the newest "
+                f"checkpoint, so stage {k} has no end yet (still training) or it is the last "
+                f"stage. Use `final` for the end of the last stage of a finished run.")
+        info["successor"], info["successor_stage"] = later[0], stages[later[0]]
+        if stages[later[0]] == k:          # cannot happen given with_k[-1]; kept as the T8 guard
+            raise ValueError(f"{models}: checkpoint {later[0]} after stage_end:{k} ({step}) "
+                             f"still has saved stage {k}.")
     else:
-        step = int(which)
+        try:
+            step = int(which)
+        except ValueError:
+            raise ValueError(
+                f"Unknown checkpoint selector {which!r}: expected final, final:prev, an "
+                f"integer step, stage_end:<k> or stage_end:<k>:prev.") from None
         if step not in steps:
             raise ValueError(f"Checkpoint step {step} not found under {models} "
                              f"(have {len(steps)} steps, max {max(steps)})")
-    return models / str(step), step
+        prev = False
+
+    if prev:
+        idx = steps.index(step)
+        if idx == 0:
+            raise ValueError(f"{models}: {which!r} — no checkpoint before {step}.")
+        before = steps[idx - 1]
+        if continual:
+            st = saved_stages(models, [before, step])
+            if st[before] != st[step]:
+                raise ValueError(
+                    f"{models}: {which!r} — checkpoint {before} has saved stage "
+                    f"{st[before]} but {step} has {st[step]}; a :prev pair must lie "
+                    f"inside one stage.")
+        info["prev_of"], info["episode_gap"] = step, step - before
+        step = before
+
+    if continual:
+        info["saved_stage"] = saved_stages(models, [step])[step]
+    info["ckpt_dir"], info["step"] = models / str(step), step
+    return info
+
+
+def continual_resolved_config(run_dir: Path, ckpt_dir: Path, base_cfg: dict,
+                              quiet: bool = False) -> tuple[dict, str]:
+    """The config dict a continual run's checkpoint is collected in (finding 8).
+
+    Start from a deep copy of `config.yaml` (`base_cfg`), replace its WORLD sections with
+    the checkpoint's own stage file (resolved by `eval_rollout._resolve_continual_stage_config`
+    from the checkpoint's saved `stage`), and keep `agent`, `seed`, `tag`, `wandb` and
+    everything else from `config.yaml`. Any OTHER top-level key that differs between the
+    stage file and `config.yaml` raises: the world must not change without the
+    fingerprint knowing.
+
+    `seed` is exempt from that check and kept from `config.yaml` (the run's own seed, read
+    from the top level per KNOWN_BUGS line 114): the May replication's later stage files
+    carry `seed: 42` for the seed-43/44 runs because the launch-time `--seed` override is
+    applied to stage 0 only (found in Stage 0 of the tooling plan, 2026-09-30).
+
+    Returns (resolved dict, stage file path).
+    """
+    import copy
+    from scripts.eval.eval_rollout import _resolve_continual_stage_config
+    models = Path(run_dir).resolve() / "models"
+    stage_path = _resolve_continual_stage_config(str(models / "config.yaml"),
+                                                 str(Path(ckpt_dir).resolve()), quiet=quiet)
+    if stage_path is None:
+        raise ValueError(f"{models}: expected a continual run (schedule.yaml present) but "
+                         f"the stage resolver returned nothing.")
+    stage_cfg = yaml.safe_load(Path(stage_path).read_text())
+    out = copy.deepcopy(base_cfg)
+    for sec in WORLD_SECTIONS:
+        if sec in stage_cfg:
+            out[sec] = copy.deepcopy(stage_cfg[sec])
+        elif sec in out:
+            del out[sec]
+    other = sorted(k for k in set(base_cfg) | set(stage_cfg)
+                   if k not in WORLD_SECTIONS and k not in STAGE_FILE_EXEMPT
+                   and base_cfg.get(k) != stage_cfg.get(k))
+    if other:
+        raise ValueError(
+            f"Stage file {stage_path} differs from {models / 'config.yaml'} in top-level "
+            f"key(s) {other}, outside the world sections {list(WORLD_SECTIONS)} and the "
+            f"run-identity keys {list(STAGE_FILE_EXEMPT)}. The collector fingerprints the "
+            f"world only; a stage that changes anything else must be handled explicitly.")
+    return out, str(stage_path)
+
+
+WORLD_SECTIONS = ("environment", "sensory", "body", "thermal", "perceptual_noise")
+STAGE_FILE_EXEMPT = ("agent", "tag", "wandb", "seed")
 
 
 # ── Policy seam (plan File Changes) ───────────────────────────────────────────
@@ -702,6 +868,14 @@ def main(argv=None) -> int:
                          "the run's OWN resolved config, never configs/.")
     with open(cfg_path) as f:
         cfg = yaml.safe_load(f)
+    if is_continual(run_dir):
+        # A continual run's config.yaml is the stage-0 world. Collect the checkpoint in its
+        # OWN stage's world (tooling plan ALGORITHMIC_NULL_ANALYSIS_TOOLING §5); this dict is
+        # what is fingerprinted and stored as `resolved_env_config`.
+        cfg, stage_path = continual_resolved_config(run_dir, ckpt_dir, cfg, quiet=args.quiet)
+        if not args.quiet:
+            print(f"[collect] continual run: checkpoint {ckpt_step} collected in the world "
+                  f"of {stage_path}")
 
     # Ordering matters: the scene guard runs BEFORE params are built, so an ambiguous
     # run cannot get far enough to create a store directory.
