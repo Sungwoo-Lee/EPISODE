@@ -2218,3 +2218,17 @@ survives into the output.
 **How to verify a fix.** `document.querySelectorAll('.col > p:empty').length === 0`, and for every
 section the H2-to-next-sibling gap equals the column gap. Found on "Continual Worlds",
 2026-09-28, first format gate.
+
+**F67 note (2026-09-29) — figure anchors.** Guide §13c first prescribed the deep-link anchor as an
+empty `<div class="fig-anchor" id="fig-<stem>">` before each `<figure>`. On every page whose `.col`
+spaces by `gap`, that zero-height div took a gap: anchored figures sat 36 px below their predecessor,
+unanchored ones 18 px (measured at 390 and 1440 on five pages; a page spacing by margins was
+unaffected). Forms tested in Chrome, gap / where `#fig-…` navigation lands:
+empty div before the figure — 36 px / correct; **`id` on the `<img>` — 18 px / correct (adopted)**;
+div as first child inside `<figure>` with `position:absolute` — 18 px / correct;
+`margin-bottom:-18px` — 18 px / correct but couples to the gap value;
+div before the figure with `position:absolute` — 18 px / **wrong: lands at the section top**, because
+an absolutely-positioned flex child takes its static position at the container's start;
+`display:none` or `display:contents` — 18 px / **navigation does nothing**. Verify a fix by measuring
+the anchored figure's gap to its previous sibling; it must equal the unanchored figures' gap.
+

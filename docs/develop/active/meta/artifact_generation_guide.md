@@ -678,6 +678,21 @@ summary page.
   same key as `data-fig`, §Mechanics in `publish-page`). Figure *numbers* move when a page is
   revised; stems do not. A detailed page without anchors is retrofitted when a summary first cites
   it — add the ids, rebuild, republish, then build the summary.
+  **Put the id on the figure's `<img>`, right after its `data-fig`** —
+  `<img data-fig="<stem>" id="fig-<stem>" …>` — not on the `<figure>` tag and not on an extra element.
+  Both wrong forms were tried on the first retrofit (2026-09-29). An `id` on the `<figure>` tag broke
+  page builders that match the literal `<figure>`: two failed their numbering check, and two others
+  built "successfully" while silently skipping the §11 checks on exactly the anchored figures. An
+  empty `<div id>` before the figure is a zero-height flex item, and in the house `.col`
+  (`display:flex; gap:18px`) it still costs a gap, doubling the space above the figure — register F67
+  (see its 2026-09-29 note for the other forms tested and why `position:absolute` is a trap).
+  Keeping `data-fig` first keeps every builder's `<img data-fig="…"` pattern intact. After a
+  retrofit, diff the rebuilt page against the previous build: only the anchored `<img>` lines may
+  change, and the embedded images must be byte-identical.
+- **When the evidence is not a script figure.** Some detailed pages carry their key result in a
+  table, or (pages older than §2.7) draw figures in the browser, so there is no PNG to reuse. Such a
+  card has **no thumbnail** and links to the section or element anchor that holds the evidence
+  (an existing `id` on the page is fine). It never gets a redrawn stand-in.
 - **Diagram exception to §2.7.** The story diagram is drawn in the page's HTML/CSS (boxes and arrows,
   as in the mockup), because it is a map of the study, not a figure of data: it has no axes, no numbers
   that a script computes, and nothing to regenerate from data. The exception covers **only** that
@@ -723,8 +738,14 @@ starts growing a method block is a sign the detailed report is missing one.
 
 ### 13g. Where it lives
 
-The page's HTML and its builder sit in `docs/experiments/summaries/`, next to the markdown study
-summaries that `summarize-study` writes, under git so a later session can republish to the same URL.
+The page's template and built HTML sit in `docs/experiments/summaries/<topic>/`, next to the markdown
+study summaries that `summarize-study` writes, under git so a later session can republish to the same
+URL. Every summary is built by the one shared builder,
+`scripts/analysis/summary_page/build_summary.py <template> <output>`, which copies thumbnails from
+the detailed pages by `data-fig`, verifies each Detail link's anchor exists, and refuses to write the
+page when a §13h item that can be checked mechanically fails (card count, chip labels, banned tokens,
+glossary terms not on the page). The worked example is
+`docs/experiments/summaries/modulator_summary/`.
 
 ### 13h. Summary checklist
 
