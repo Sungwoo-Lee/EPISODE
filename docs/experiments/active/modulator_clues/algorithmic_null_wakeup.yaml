@@ -51,8 +51,9 @@ wakeup:
 # read from each checkpoint's payload on 2026-09-30 (continual_forgetting_matrix.read_saved_stage);
 # the next checkpoint of each run is already stage 1. The driver re-checks the saved stage and
 # raises on a mismatch. Step 0 (the untrained network, untrained.build) is added by the driver for
-# the anchorable measures. Remaining schema keys (out_root, rollout sizes, the sparse-measure point
-# set, ...) are added by developer.
+# the anchorable measures. Remaining schema keys (out_root, rollout sizes, ...) are added by
+# developer. There is NO per-measure point set: every measure is sampled on this one checkpoint
+# grid (plan Revision 3, T1), and run_wakeup raises if a manifest carries one.
 runs:
   - label: l05_w0000_modulated
     path: results/JAX_RecurrentPPO/20260927-053059_rppo_l05body_w0000_t16quad_s42
