@@ -7,7 +7,10 @@ PROJECT_DIR=/media/nas01/projects/Interoceptive-AI/grid_world_pain
 PY=/home/vncuser/miniconda3/envs/grid_world_pain/bin/python
 SESS_DIR="$HOME/.claude/sessions"
 TRANSCRIPTS="$HOME/.claude/projects/-media-nas01-projects-Interoceptive-AI-grid-world-pain"
-CLAUDE_FLAGS="--permission-mode bypassPermissions"
+# Optional, for test sessions: TMUX_CLAUDE_EXTRA adds claude flags (e.g. "--model haiku --settings tmp/x.json"),
+# TMUX_CLAUDE_ENV prefixes environment assignments (e.g. "SESSION_BOARD_DIR=tmp/board_test").
+CLAUDE_FLAGS="--permission-mode bypassPermissions ${TMUX_CLAUDE_EXTRA:-}"
+ENV_PREFIX="${TMUX_CLAUDE_ENV:+${TMUX_CLAUDE_ENV} }"
 
 die() { echo "ERROR: $*" >&2; exit 1; }
 
@@ -26,7 +29,7 @@ sess_field() {
 }
 
 cmd_list() {
-  printf '%-22s %-9s %-38s %-26s %-8s %s\n' TARGET PID SESSION_ID NAME STATUS REMOTE_CONTROL
+  printf '%-22s %-9s %-38s %-26s %-8s %-8s %s\n' TARGET PID SESSION_ID NAME STATUS RC "TASK (session board)"
   tmux list-panes -a -F '#{session_name}:#{window_index}.#{pane_index}' 2>/dev/null | while read -r t; do
     local pid; pid=$(claude_pid "$t")
     if [ -z "$pid" ]; then
@@ -34,8 +37,9 @@ cmd_list() {
       continue
     fi
     local rc; rc=$(sess_field "$pid" bridgeSessionId)
-    printf '%-22s %-9s %-38s %-26s %-8s %s\n' "$t" "$pid" "$(sess_field "$pid" sessionId)" \
-      "$(sess_field "$pid" name)" "$(sess_field "$pid" status)" "$([ -n "$rc" ] && echo "ON ($rc)" || echo OFF)"
+    local task; task=$("$PY" "$PROJECT_DIR/scripts/claude/session_board.py" task-of "$pid" 2>/dev/null)
+    printf '%-22s %-9s %-38s %-26s %-8s %-8s %s\n' "$t" "$pid" "$(sess_field "$pid" sessionId)" \
+      "$(sess_field "$pid" name)" "$(sess_field "$pid" status)" "$([ -n "$rc" ] && echo ON || echo OFF)" "${task:--}"
   done
 }
 
@@ -106,7 +110,7 @@ cmd_restart() {  # restart <target> [--force]  — exit and resume the same conv
   pid=$(claude_pid "$t"); [ -n "$pid" ] || die "no claude running in $t"
   SESSION_ID=$(sess_field "$pid" sessionId); [ -n "$SESSION_ID" ] || die "cannot find session id for pid $pid"
   exit_claude "$t" "${2:-}"
-  tmux send-keys -t "$t" "cd $PROJECT_DIR && claude $CLAUDE_FLAGS --resume $SESSION_ID --remote-control" Enter
+  tmux send-keys -t "$t" "cd $PROJECT_DIR && ${ENV_PREFIX}claude $CLAUDE_FLAGS --resume $SESSION_ID --remote-control" Enter
   verify "$t"
 }
 
@@ -115,7 +119,7 @@ cmd_new() {  # new <tmux-session-name> [display-name]
   tmux has-session -t "=$name" 2>/dev/null && die "tmux session '$name' already exists"
   tmux new-session -d -s "$name" -c "$PROJECT_DIR"
   local t; t=$(tmux list-panes -t "=$name" -F '#{session_name}:#{window_index}.#{pane_index}' | head -1)
-  local cmd="cd $PROJECT_DIR && claude $CLAUDE_FLAGS"
+  local cmd="cd $PROJECT_DIR && ${ENV_PREFIX}claude $CLAUDE_FLAGS"
   [ -n "$disp" ] && cmd+=" --name $(printf %q "$disp")"
   tmux send-keys -t "$t" "$cmd --remote-control" Enter
   sleep 3
@@ -167,7 +171,7 @@ cmd_wake() {  # wake <session-id> <tmux-session-name>  — resume an existing co
   tmux has-session -t "=$name" 2>/dev/null && die "tmux session '$name' already exists"
   tmux new-session -d -s "$name" -c "$PROJECT_DIR"
   local t; t=$(tmux list-panes -t "=$name" -F '#{session_name}:#{window_index}.#{pane_index}' | head -1)
-  tmux send-keys -t "$t" "cd $PROJECT_DIR && claude $CLAUDE_FLAGS --resume $sid --remote-control" Enter
+  tmux send-keys -t "$t" "cd $PROJECT_DIR && ${ENV_PREFIX}claude $CLAUDE_FLAGS --resume $sid --remote-control" Enter
   verify "$t"
 }
 

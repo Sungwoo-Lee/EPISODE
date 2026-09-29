@@ -224,3 +224,20 @@ Every finding in [plan_session_board](../../../reviews/plan_session_board.md) is
 | R10 ❓ | The wrapper needed `jq` to parse JSON. | Removed together with the wrapper (R1). |
 
 **File Changes, revised:** `scripts/claude/session_board_hook.sh` is removed. `tests/claude/test_session_board.py` becomes `tests/scripts/test_session_board.py`. Also added: `tmp/session_board_test_settings.json`, the untracked scratch settings used for the pre-rollout test.
+
+---
+
+## Test results — isolated Haiku sessions (2026-09-29)
+
+The live sessions were not touched. The hooks were loaded only through `claude --settings tmp/session_board_test_settings.json`, using a separate board directory (`SESSION_BOARD_DIR=tmp/board_test`). There were two Haiku test sessions, A and B, launched with the tmux-claude skill. Every check below was read from **B's own transcript** (the `hook_additional_context` attachments Claude Code recorded), not by re-running the script.
+
+| Check | Result |
+|---|---|
+| Unit tests `tests/scripts/test_session_board.py` | 33 passed. Two real bugs were found and fixed: (1) the snapshot lacked `session_id`, so a card briefly missing mid-rename was reported "ended" (review finding R3); (2) the unset-task reminder fired on the first prompt right after the SessionStart text had already said it. |
+| SessionStart gives the full board | ✅ B got A's card at startup. |
+| Prompt gives the changes only | ✅ B's next prompt got A's new task, the file it edited and its note, in one line. |
+| Warning before editing another session's file | ✅ `⚠ "Board test A" … edited /tmp/board_test/shared.txt 0 min ago (task: …)`, and **the edit still went through** (warn, don't block). |
+| Mid-turn delivery during a long tool loop | ✅ A changed its card at about 12:45:50. B, busy with tool calls, got the change at 12:48:49, attached to a tool result. The other tool calls added nothing. The first attempt did not run because Claude Code refuses a plain foreground `sleep`, so the retry waited in Python instead. |
+| Session ended | ✅ After A exited, B's next prompt got `"Board test A" ended (its note is gone)`. |
+| Overhead | 49 ms mean per `PostToolUse` call on the fast path (20 calls, NAS). This is at the 50 ms target. |
+| Not yet exercised live | `/compact` and `/clear` resend, sub-agent path (covered by unit tests only), a session already running at rollout getting the full board on its first prompt (Verification step 4, which is done at rollout). |
