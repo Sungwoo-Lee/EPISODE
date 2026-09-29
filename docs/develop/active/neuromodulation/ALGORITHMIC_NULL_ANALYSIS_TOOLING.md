@@ -945,7 +945,7 @@ This belongs in a separate plan with a speed measurement. It would make B2's per
 - [ ] **R4.3** Loading a manifest with a verdict layer, `logits` or `value` marked `headline_only` raises. A unit test shows `final:prev` is replayed only on `active` and `stage_end:3:prev` only on `passive`, read from `parameters.A4.drift_pairs`. For the first May manifest, the expected bytes (printed before the first replay) and the measured bytes are pasted.
 - [ ] **R4.4** On the pilot, the chain-assertion JSON carries the per-quarter maximum; paste it. The sampled-vs-full check is per row against `tool_checks.buffer_index_rel_tol`: unplanted, it passes (value pasted); with the kept rows' slots shifted by one step, it fails at ≥ 10× the tolerance (value pasted).
 - [ ] **R4.5** `decision_rules.load is rules_pin.load`; `decision_rules.py` imports neither `hashlib` nor `yaml`; `require_clean(pinned)` raises on a dirty fixture.
-- [ ] **R4.6** Golden keys for seeds 42–44 recorded on the pre-edit commit (sha stated) and `tests/utils/test_init_keys.py` passes. `tests/analysis/test_nmn_untrained.py` still passes (bitwise against `train.main()`). Checkpoint 1.3's 8 jaxpr hashes are identical before and after. Checkpoint 4.4's second half is then run on all 22 runs of R4-6, with each run's `wandb-metadata.json` `git.commit` and `provenance.json` `training_git_sha` pasted beside it.
+- [x] **R4.6** — **Done 2026-09-30 (developer, `18e1e5f0`, `52a671a9`):** golden keys (seeds 42–44, recorded on `a236ccf5`) identical after the edit; `test_nmn_untrained` 4/4 bitwise; 8/8 jaxpr hashes identical (trivially); Checkpoint 4.4 second half 22/22 own-seed closest, shas pasted (two May s44 launch-race mismatches, benign). Golden keys for seeds 42–44 recorded on the pre-edit commit (sha stated) and `tests/utils/test_init_keys.py` passes. `tests/analysis/test_nmn_untrained.py` still passes (bitwise against `train.main()`). Checkpoint 1.3's 8 jaxpr hashes are identical before and after. Checkpoint 4.4's second half is then run on all 22 runs of R4-6, with each run's `wandb-metadata.json` `git.commit` and `provenance.json` `training_git_sha` pasted beside it.
 - [x] **1.1** Record the golden parameter hashes on the **unmodified** commit (state its sha) *before* editing the network. — **Done:** recorded on `872b0e04` (network file unmodified) before the edit. Hashes in the Implementation Report and in the test.
 - [x] **1.2** `tests/models/test_capture_activations.py` passes. All of `tests/models/` passes. — **Done:** 31 passed in `test_capture_activations.py`. `tests/models/`: 231 passed, 1 failed. The failure (`test_hand_computed_breakdown_matches_the_live_environment`) is an environment-breakdown test that the network edit does not touch.
 - [x] **1.3** **Jaxpr identity (the speed gate).** Method, tested on 2026-09-29 on a synthetic 8-input / 16-hidden model: `g, s = nnx.split(model)`; wrap `f(s, x, h) = get_action_and_value_nnx(nnx.merge(g, s), x, h, key, eval_mode=False)` and `L(s, b) = ppo_loss_fn(nnx.merge(g, s), b, 0.2, 0.01, 0.5)[0]`. Hash `str(jax.make_jaxpr(f)(s, x, h))` and `str(jax.make_jaxpr(jax.grad(L))(s, per_env_batch))`, where `per_env_batch` is a `PPOBatch` of one env (`obs (T, D)`, `h_init` unbatched), matching the trainer's `vmap` over envs. Three separate processes gave identical hashes for the ordinary and a four-site FiLM `activation` model, for both functions. For this checkpoint, run it on the real ordinary and t16quad agent blocks, before and after the change; the `diff` must be empty. **Positive control:** a throw-away edit inserting `x = x * 1.0` into `_forward` must change the hash (then revert it), which shows the check can fail. Paste commands and hashes. A 200-iteration timing on one node is optional. — **Done:** 8/8 jaxpr hashes are identical before and after the edit (4 real agent blocks × 2 functions). The planted `x = x * 1.0` changes 8/8, so the check can fail.
@@ -960,9 +960,9 @@ This belongs in a separate plan with a speed measurement. It would make B2's per
 - [ ] **4.1** `tests/analysis/test_nmn_wakeup.py` passes with every row of the §11 expected-output table.
 - [ ] **4.2** `wandb_history.resolve_by_tag` reproduces §C's six folders. The gradient probe's **(b) full-iteration mean** of `modulator/grad_norm` lies within the 5th–95th percentile of logged values in a ±1-checkpoint window on ≥ 5 checkpoints per run, for ≥ 3 runs. This is a **sanity band**, not a proof of correctness: the world is re-warmed, and the log is one iteration's sample. Also record (a)/(b) side by side.
 - [ ] **4.3** `freeze.verify_freeze_equivalence` passes for every run and checkpoint swept.
-- [ ] **4.4** Untrained anchor: `test_matches_train_py_construction` passes (bitwise) for one ordinary and one modulated run of each study. For every B2 run, the own-seed reconstruction is closer to the first saved checkpoint than the reconstructions for two other seeds (cosine similarities recorded).
+- [x] **4.4** — **Done 2026-09-30 (developer):** bitwise 4/4 (one ordinary + one modulated per study); own-seed rebuild closest on all 22 runs (cosines in the Implementation Report). Untrained anchor: `test_matches_train_py_construction` passes (bitwise) for one ordinary and one modulated run of each study. For every B2 run, the own-seed reconstruction is closer to the first saved checkpoint than the reconstructions for two other seeds (cosine similarities recorded).
 - [ ] **4.6** **Survival and bites cross-check (R5; Revision 3, T2).** For all six May-replication runs, `wandb_history.stage_level` on stage 1 (`stage/index` 0) with `weighting` = the rules' `parameters.common.survival.row_weight` (`delta_episode_number`), read from the pinned file rather than typed into the test, gives `S_1` and bites that equal `pilot_readout.py`'s May-replication readout for the same run to within 1e-9 relative (`tests/analysis/test_nmn_stage_level.py`, marked slow, reads the local binaries). Because the registered weighting is `pilot_readout.Series`'s own, this is a direct equality check. The `window_n`-weighted values are pasted beside them as a diagnostic. The G5 pass/fail and the survival difference in the interim driver JSON are pasted. The same check is repeated on stage 5 after training.
-- [ ] **4.5** Stage 4 timing gate: seconds per item recorded, extrapolated wall-clock stated for the every-checkpoint sweep, and the second-node decision (spread over a second node's GPUs if the extrapolation exceeds 8 h) recorded before the full sweep. No measure is thinned (Revision 3, T1).
+- [x] **4.5** — **Done 2026-09-30 (developer):** RTX 2080 Ti, 26.4 s/point with the per-node compile cache warm → 6.4 GPU-h, ≈ 3.2 h on one 2-GPU node (≈ 3.5–4 h with one compile per world). Decision before the sweep: one node (101), no second node, nothing thinned. Stage 4 timing gate: seconds per item recorded, extrapolated wall-clock stated for the every-checkpoint sweep, and the second-node decision (spread over a second node's GPUs if the extrapolation exceeds 8 h) recorded before the full sweep. No measure is thinned (Revision 3, T1).
 - [x] **5.1** Collector tests pass, including fingerprint tests (i)–(iii) and the `:prev` tests. On a real May-replication run, `stage_end:0` and `stage_end:3` resolve to checkpoints whose saved `stage` equals 0 and 3, and the `stage_end:3` world has `detection_range: 0`. After training, `stage_end:3:prev` and `final:prev` resolve to checkpoints with the same saved stage as their successors, and their episode gaps are recorded. — **Partly done:** 7 new collector tests pass. On real runs, `stage_end:0` resolves to saved stage 0 with a stage-1 successor (3 runs), and `stage_end:1` resolves to the `02_passive` world with `detection_range` 0. The `stage_end:3` check waits for the end of training: stage 3 is still running, and the resolver correctly refuses it. **Ordinary runs completed 2026-09-30 (developer):** `stage_end:3` resolves to saved stage 3 (`04_passive`, `detection_range` 0, own `env_fp`) on all three; `stage_end:3:prev` and `final:prev` share their successor's stage, gaps 99,995–100,024 episodes. Modulated runs after training.
 - [ ] **6.1** After collection: all 12 stores validate. Each store's world is correct. Every store's manifest records `matmul_precision: highest`, a `compute_device_kind` and a self-test value at or below the constant, with a `collection_git_sha` at or after the R4.1 commit (Revision 4). Self-replay agreement is 100% for all 12, with `store_matmul_precision: recorded`. — **Partly done 2026-09-30 (developer):** 6 of the 12 evidence stores (ordinary × final, stage_end:3) plus the 6 interim stage-0-end stores validate; world, `highest` / RTX 3090 / 1.376e-7 and `collection_git_sha` ≥ `2d54453d` checked on all 12. Self-replay and the modulated 6 pending.
 - [x] **6.2** `SCRIPTS_DEPENDENCY_MAP.md` and `traj_collect/README.md` are updated in the same commits as the files they describe. — **Stages 2 and 5 part done:** the map and README were updated in the same commits (`38b13a4f`, `e38a2b2f`).
@@ -1256,6 +1256,126 @@ Every store passes each of the following checks:
 Run it with `--dry-run` first. Re-check the nodes live. A run not yet finished is simply left for the next invocation.
 
 **Known-bug pass.** `grep -i 'collect|launch_collection|trajector' KNOWN_BUGS.md`: l.140 (matmul-precision provenance; fixed for new stores at `2d54453d`) and l.141 (CUDA-only checkpoint lookup; fixed in the worker) are both handled by this collection. l.142 (red `tests/test_trajectory_collection.py`, old reference run) does not touch the launcher test. No new row. The two operational notes above are candidates for `bug-curator`.
+
+Implemented by: developer
+
+### Stage 4 GPU measures, R4-6 and the CUDA-only checkpoint reader (2026-09-30, 04:05–05:55)
+
+**In plain words.** The wake-up analysis (B2) can now measure, at every saved checkpoint of every run and at the untrained network, how much of each training update reaches the modulator, how fast its weights move, how much its output varies with the situation, how large its gain swing is, and how much survival it costs to freeze it. The full sweep over all 19 runs was started on node 101 at 05:19 after every pre-launch gate passed. The trainer and the analysis now build a run's starting network from one shared key recipe, pinned by golden keys. The checkpoint reader no longer crashes in GPU-only jobs.
+
+**Commits (all pushed to `v4.0`).** `18e1e5f0` R4-6 · `0dc6095e` `ckpt_io` fix + map rows · `52a671a9` Checkpoint 4.4 closeness function · `f3291b93` Stage 4 GPU measures. The `SCRIPTS_DEPENDENCY_MAP.md` rows for `grad_probe.py` / `run_wakeup.py` / `rules_pin.stamp` / the reused modules were written by me but landed inside the parallel Stage 3 commit `c0f332b9` (that commit staged the whole map file); they describe `f3291b93`.
+
+**Files.**
+- `src/utils/init_keys.py` (new): `trainer_init_keys(seed) -> (key, env_key, init_key)`, today's chain. `train.py` calls it at the old l.1152–1153; the four per-algorithm `key, init_key = jax.random.split(key)` lines are gone. `untrained.build` calls it (no copied chain). `untrained.py` also gained `closeness_to_first_checkpoint` (Checkpoint 4.4 second half).
+- `scripts/analysis/nmn/ckpt_io.py`: `load_params` restores with `ocp.RestoreArgs(restore_type=np.ndarray)`, requesting no JAX device.
+- `scripts/analysis/nmn/grad_probe.py` (new): strict restore of model + optimiser for a chosen step (the payload train.py saves); fresh optimiser at step 0; `warmup_iters` rollouts with no update; then the trainer's own `train_iteration` (nnx.jit, config static) on `nnx.clone` copies, with the module's `update_step` wrapped for the probe so the first update also differentiates `policy`, `vf_coef·value`, `ent_coef·entropy`. Reports (a) the first-update per-term shares and (b) the `K_epochs` mean of the trainer's own `grad_norm` / `mod_grad_norm`, with the plan's sanity-band sentence.
+- `scripts/analysis/nmn/run_wakeup.py`: the GPU sweep (resumable per-point JSON, `--runs` per worker), `--timing K`, `--summarise`; `rules_pin.stamp` on every output; `JAX_PLATFORMS=cuda,cpu` required for GPU measures (the T8 grid check reads continual stages on the CPU backend).
+- `scripts/analysis/nmn/rules_pin.py`: `stamp(pinned)`.
+- `docs/experiments/active/modulator_clues/algorithmic_null_wakeup.yaml`: the three developer keys of §8, `rollout_episodes: 128`, `rollout_seed_base: 90000`, `warmup_iters: 8`, with their basis in comments. Designer-owned keys untouched; the file is not sha-pinned.
+- Tests: `tests/utils/test_init_keys.py` (new), `tests/analysis/test_nmn_ckpt_io.py` (new), `tests/analysis/test_nmn_grad_probe.py` (new), additions to `test_nmn_run_wakeup.py`, `test_nmn_untrained.py`, `test_nmn_decision_rules.py` (perturbation test).
+
+**What `run_wakeup` measures (one grid per run: the manifest's checkpoints, plus step 0 where anchorable).** Headline curves get the crossing, the lag and the across-worlds reading; every other number is stored in the point files as a descriptive value.
+
+| Curve (headline) | Source | Grid |
+|---|---|---|
+| `grad_share.total` | log: `(modulator/grad_norm / loss/grad_norm)²` per row, unweighted mean per checkpoint interval | checkpoints |
+| `grad_probe.first_update.{policy,value,entropy}` | probe (a) | step 0 + checkpoints |
+| `update_size.modulator` | `‖Δθ_mod‖ / ‖θ_mod(prev)‖` between consecutive points; first interval = untrained → checkpoint 1 | checkpoints |
+| `rho.<site>` (5 sites) | contextual fraction of the **gain**, 128-episode greedy rollout | step 0 + checkpoints |
+| `swing.<site>` (5 sites) | spectral_bound `gamma_swing_mean` | step 0 + checkpoints |
+| `freeze.gain`, `freeze.offset` | mean paired survival change, frozen − live, same 128 seeds | step 0 + checkpoints |
+
+Descriptive only: probe (a) total share and (b) full-iteration share, `update_size.main` / `.mod_over_main`, offset rho and swing per site, live survival. The reading per curve is `measure_reading`: the headline mode (`fraction_of_rise`, `B2.f`), the literal mode beside (`B2.literal_f`), and the lag on grid positions (`B2.lag_coincident_max_intervals`); then `decision_rules.evaluate_B2` per headline curve (sign test over the 16 level-05 worlds; the three May seeds only "agree" / "do not agree"). The per-measure point set is refused at load (unchanged), and every curve's x is asserted equal to the run's grid.
+
+**R4-6 evidence (Checkpoint R4.6).**
+- Golden keys recorded on `a236ccf5`, before the edit (`train.py` last changed at `89f3cb78`; the recording script `tmp/20260930_r46_golden_keys.py` asserted train.py's own chain text first; output `tmp/20260930_r46_golden_keys_before.json`). After the edit, `trainer_init_keys` gives identical raw `uint32` data (`tests/utils/test_init_keys.py`, 5 passed):
+
+  | seed | key | env_key | init_key |
+  |---|---|---|---|
+  | 42 | 1012194634, 3152801799 | 2465931498, 255383827 | 1705926158, 899080142 |
+  | 43 | 449051237, 3616999620 | 1512537201, 2531556346 | 3471251761, 3587158380 |
+  | 44 | 2001052130, 3307961423 | 1637027069, 3739161765 | 1548230112, 2157066771 |
+
+- The test also checks, on the syntax tree (docstrings excluded), that `untrained.py` calls `trainer_init_keys` and no `jax.random.split` / `PRNGKey`, and that `train.py` holds neither old split line.
+- `test_nmn_untrained.py::test_matches_train_py_construction` (bitwise against `train.main()`): 4/4 after the edit (27/60/27/60 arrays).
+- Checkpoint 1.3 jaxpr hashes (`tmp/20260930_stage1_hashes.py`, outputs `tmp/20260930_stage1_hashes_r46_{before,after}.json`): **8/8 identical** (4 agent blocks × action and loss-gradient programs); the 4 parameter hashes are identical too. As the reviewer said, these are trivially equal because the keys are inputs, not program; the golden keys are the real evidence.
+- The six May training runs were not touched. No speed run: the programs are identical.
+
+**Checkpoint 4.4, second half, on all 22 runs** (`tmp/20260930_cp44_closeness.py`, output `tmp/20260930_cp44_closeness.json`). Cosine similarity of the flattened main-network parameters (27 arrays, modulator excluded) to the run's first saved checkpoint, strict load. **Own seed closest in 22/22.**
+
+| run | seed | first ckpt | cos own | cos other | cos other | wandb `git.commit` | provenance `git_sha` |
+|---|---|---|---|---|---|---|---|
+| cw_mayrep_t1none_s42 | 42 | 100025 | 0.9633 | 43: 0.0608 | 44: 0.0638 | 0ebd09b9 | 0ebd09b9 |
+| cw_mayrep_t16quad_s42 | 42 | 100033 | 0.9590 | 43: 0.0606 | 44: 0.0634 | 0ebd09b9 | 0ebd09b9 |
+| cw_mayrep_t1none_s43 | 43 | 100069 | 0.9640 | 42: 0.0609 | 44: 0.0628 | 0ebd09b9 | 0ebd09b9 |
+| cw_mayrep_t16quad_s43 | 43 | 100034 | 0.9585 | 42: 0.0601 | 44: 0.0628 | 0ebd09b9 | 0ebd09b9 |
+| cw_mayrep_t1none_s44 | 44 | 100055 | 0.9634 | 42: 0.0634 | 43: 0.0632 | **6d3d42ec** | **0ebd09b9** |
+| cw_mayrep_t16quad_s44 | 44 | 100021 | 0.9616 | 42: 0.0635 | 43: 0.0627 | **c6f33eb3** | **6d3d42ec** |
+| l05body_w0000_t16quad | 42 | 200019 | 0.9640 | 43: 0.0514 | 44: 0.0532 | f00f6c61 | f00f6c61 |
+| l05body_w0001_t16quad | 42 | 200095 | 0.9613 | 43: 0.0511 | 44: 0.0529 | f00f6c61 | f00f6c61 |
+| l05body_w0010_t16quad | 42 | 200091 | 0.9654 | 43: 0.0512 | 44: 0.0530 | f00f6c61 | f00f6c61 |
+| l05body_w0011_t16quad | 42 | 200133 | 0.9617 | 43: 0.0507 | 44: 0.0534 | f00f6c61 | f00f6c61 |
+| l05body_w0100_t16quad | 42 | 200028 | 0.9604 | 43: 0.0512 | 44: 0.0527 | f00f6c61 | f00f6c61 |
+| l05body_w0101_t16quad | 42 | 200281 | 0.9599 | 43: 0.0507 | 44: 0.0530 | f00f6c61 | f00f6c61 |
+| l05body_w0110_t16quad | 42 | 200171 | 0.9658 | 43: 0.0516 | 44: 0.0530 | f00f6c61 | f00f6c61 |
+| l05body_w0111_t16quad | 42 | 200228 | 0.9679 | 43: 0.0516 | 44: 0.0533 | f00f6c61 | f00f6c61 |
+| l05body_w1000_t16quad | 42 | 200103 | 0.9632 | 43: 0.0514 | 44: 0.0532 | f00f6c61 | f00f6c61 |
+| l05body_w1001_t16quad | 42 | 200166 | 0.9604 | 43: 0.0512 | 44: 0.0530 | f00f6c61 | f00f6c61 |
+| l05body_w1010_t16quad | 42 | 200144 | 0.9643 | 43: 0.0514 | 44: 0.0527 | f00f6c61 | f00f6c61 |
+| l05body_w1011_t16quad | 42 | 200258 | 0.9668 | 43: 0.0518 | 44: 0.0528 | f00f6c61 | f00f6c61 |
+| l05body_w1100_t16quad | 42 | 200050 | 0.9591 | 43: 0.0508 | 44: 0.0529 | f00f6c61 | f00f6c61 |
+| l05body_w1101_t16quad | 42 | 200046 | 0.9633 | 43: 0.0514 | 44: 0.0534 | f00f6c61 | f00f6c61 |
+| l05body_w1110_t16quad | 42 | 200209 | 0.9625 | 43: 0.0509 | 44: 0.0532 | f00f6c61 | f00f6c61 |
+| l05body_w1111_t16quad | 42 | 200062 | 0.9650 | 43: 0.0511 | 44: 0.0537 | f00f6c61 | f00f6c61 |
+
+The provenance file's key is `git_sha` (the plan says `training_git_sha`, which is the store-manifest name). **Two May s44 runs disagree** (bold). Both were launched at 15:37 while parallel sessions committed `6d3d42ec` (15:37:19) and `c6f33eb3` (15:37:28); `provenance.json` and WandB read HEAD seconds apart. `git diff --stat 0ebd09b9 c6f33eb3 -- train.py src/models/ src/utils/` is empty, so all three commits train identically. Per the reviewer's R4-6 note, recorded and not a stop; the closeness check passes for both.
+
+**`ckpt_io` fix (Known Bugs row "GPU analysis jobs that expose only the CUDA device crash…").** Reproduced first: `JAX_PLATFORMS=cuda` → `RuntimeError: Unknown backend cpu. Available backends are ['cuda']`. After the fix, the 667,543 restored floats (l05 w0000 t16quad @ 200019) are bit-identical to the old CPU read under `cpu`, `cuda` and `cuda,cpu`. Regression test `tests/analysis/test_nmn_ckpt_io.py` makes every device query raise; run against the pre-fix module (HEAD copy in `tmp/20260930_ckptio_prefix/`) it fails with that error, and it passes now. **Still latent elsewhere:** `scripts/eval/continual_forgetting_matrix.read_saved_stage` makes the same CPU request (reached by the `stage_end:<k>` resolver). `run_wakeup` therefore refuses GPU measures unless `cpu` is in `JAX_PLATFORMS`, and the collector worker already exports `cuda,cpu`.
+
+**Timing gate (Checkpoint 4.5)**, one level-05 run (w0000), step 0 + checkpoints 1, 25 and 50, every GPU measure, node 101 GPU 0 (RTX 2080 Ti). Outputs `results/analysis/algorithmic_null/algorithmic_null_wakeup/timing/l05_w0000_modulated.json`; cold-cache copy `tmp/20260930_timing_coldcache.json`.
+
+| Run | Per point (load / weights / rollouts / probe) | Projection, 864 points |
+|---|---|---|
+| 1. no compile cache | ~115 s steady (probe 61 s, rollouts 30 s) | 27.9 GPU-h → 13.9 h on 2 GPUs |
+| 2. per-node compile cache, cold | points 3–4: 2.5 / 0.3 / 7.5 / 17 s | (average skewed by compiles) |
+| 3. cache warm | **26.4 s** (2.1 / 0.2 / 6.7 / 15.8 s) | **6.4 GPU-h → 3.2 h on one 2-GPU node** |
+
+A diagnosis with `jax_log_compiles` (`tmp/20260930_wakeup_compile_diag.py`, `logs/20260930_045546.log`) showed the cost was compilation, not compute. Each rollout recompiles about 9 s, because `replay.rollout` builds a fresh `nnx.jit` per call. The probe's `train_iteration` recompiles about 50 s at every new checkpoint, with identical shapes and argument mapping, while a repeat call on the same checkpoint takes 2.3 s. The fix is the collector's own convention: a per-node persistent XLA compile cache (`JAX_COMPILATION_CACHE_DIR=/tmp/jaxcache_wakeup_$NODE`), set in the launcher. It is a performance setting only: identical programs, identical numbers. Each new world still compiles once, about 4 min, adding roughly 40 min per worker. **Decision, recorded before the sweep: one node (101, both GPUs), no second node, nothing thinned.** Expected wall-clock is about 3.5–4 h.
+
+**Sanity on the timed values and on the first finished run** (not a reading; `tmp/20260930_summary_dryrun.{py,log}`):
+- Per-term gradients sum to the trainer's own first-update norm within 2.2e-7 relative.
+- `freeze.verify_freeze_equivalence` is exact at every point, 51/51 on w0000 (Checkpoint 4.3 so far).
+- Probe (b) is inside the logged 5th–95th percentile band (±1 checkpoint) at **46 of 50** w0000 checkpoints (Checkpoint 4.2 needs ≥ 5 per run on ≥ 3 runs).
+- The summary path (`grad_share_curve`, `run_curves`, `measure_reading`, `sanity_band`, `evaluate_B2`) runs on real w0000 data. The plateau reproduces checkpoint 13.
+
+**Sweep launched (05:19)** at `f3291b93`, `git_dirty: false`. Node 101, logged in the diary. Script `tmp/20260930_wakeup_sweep.sh` (via `run_command.py`).
+- GPU 0 (`logs/20260930_051845.log`): w0000–w0111 + May s42, s43.
+- GPU 1 (`logs/20260930_051847.log`): w1000–w1111 + May s44.
+- Each worker finished its first run in about 25 min with no error; point files are under `…/algorithmic_null_wakeup/points/<label>/`.
+- A CPU pass through every measure on May s42 (step 0 + checkpoint 1) ran clean beforehand. Its CPU timing file was moved to `tmp/20260930_timing_may_s42_cpu_smoke.json`.
+- **After both workers print `exit 0`:** `run_wakeup.py --manifest <wake-up manifest> --measures grad_share grad_probe update_size rho swing freeze --summarise` (CPU) writes `curves/`, `b2_reading.{json,csv}` and the Checkpoint 4.2 band per run.
+
+**Tests.**
+- Affected files: 187 passed (`test_nmn_decision_rules`, `test_nmn_run_wakeup`, `test_nmn_grad_probe` incl. the real-checkpoint probe, `test_nmn_wakeup`, `test_nmn_ckpt_io`, `test_init_keys`).
+- Full `tests/analysis` + `tests/utils`: 332 passed (`tmp/20260930_stage4_tests_full.log`).
+- Integration: `test_nmn_untrained` 4/4 + the closeness test.
+- The perturbation test now uses `B2.f`, `B2.literal_f` and `B2.lag_coincident_max_intervals` through `run_wakeup.measure_reading`. The three are off `READ_NOT_YET_USED`, which is now empty.
+
+**Deviations and choices for review.**
+1. **`update_size` is not anchored.** It measures an interval, so its first value is untrained → checkpoint 1 (what the plan's "anchorable: yes" buys it). Its curve has one point per checkpoint (N = 50 / 15, window 17 / 6, within bounds), and `m0` is that first interval.
+2. **Probe `balance_metrics` is always off.** The switch only adds read-only logging fields that the loss never uses. Level-05 saved configs predate the key (`get_mandatory` raised).
+3. **The headline curve set is my reading of the rules' "per-site rho and swing, per-term shares, gain/offset freeze"** (plus the plan's total-loss share and update size): gain only for rho and swing, `gamma_swing_mean` for swing (not `_max`), freeze cost = mean paired `frozen − live`. That is 17 curves per run. The offset and other variants are stored, so changing the set needs no GPU rerun. **`experiment-designer` should confirm the set before the summary is read**, because the family size enters the rules' false-positive bound (`noise_k` principle: ~15 families).
+4. **Per-node persistent compile cache** in the launcher (above). Not a code change; the collector already uses it.
+5. **`PPOConfig` copy.** `grad_probe.PPOConfig` is a field-for-field copy of train.py's, because importing train.py runs its argv pre-parser. A test compares the field list against train.py's syntax tree.
+6. **Probe per-term split via a temporary wrapper of `recurrent_ppo_trainer.update_step`**, so the batch is the trainer's own. The coupling (train_iteration resolving `update_step` as a module global) is recorded in the map row.
+7. **Sanity-band quantiles `(0.05, 0.95)` are a constant in `run_wakeup`** (`SANITY_Q`), taken from Checkpoint 4.2's text. It is a tool check that decides no reading, so it is not in the rules file.
+8. The timing projection formula averages all non-first points, so it overstates while the cache is cold. Run 3 (cache warm) is the number used.
+
+**Not done.** `--summarise` (waits for the sweep); Checkpoint 4.2's run count and 4.3 on all runs (the same); R4.2 / R4.3 / R4.4 (the parallel Stage 3 developer's).
+
+**Known-bug pass.** `grep` of `KNOWN_BUGS.md` for recompile / compile cache / freeze / grad_norm / wake-up / init_key / balance_metrics: no collision (the Dreamer recompile rows are another stack). **For `bug-curator`:**
+- (i) the row "GPU analysis jobs that expose only the CUDA device crash…" is **FIXED in `ckpt_io.py` at `0dc6095e`**, with regression test `tests/analysis/test_nmn_ckpt_io.py`. The same CPU request remains in `continual_forgetting_matrix.read_saved_stage`; it is mitigated by `JAX_PLATFORMS=cuda,cpu` in the collector worker and `run_wakeup`, but not fixed.
+- (ii) Candidate new row: `replay.rollout` recompiles on every call (a fresh `nnx.jit` per call, about 9 s on a 2080 Ti). It costs time only; the persistent compile cache hides it. Owner `bug-curator` to decide.
 
 Implemented by: developer
 
