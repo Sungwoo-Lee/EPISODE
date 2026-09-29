@@ -23,7 +23,7 @@ evidence_status: b2_wakeup
 # ---------------------------------------------------------------------------------------------
 decision_rules:
   file: docs/experiments/active/modulator_clues/algorithmic_null_decision_rules.yaml
-  sha256: 4c8508af14b62f55954a3663c4bb844b5857139a2fcef85cee9a618cfcf9fae0
+  sha256: 5ef6f731d15ebac2f13917e6bf801b607c2b0834e59d52b13f273aae37e1bdc1
 
 # ---------------------------------------------------------------------------------------------
 # wakeup (the tooling plan's §8 block). Every value equals decision_rules.parameters.B2 in the

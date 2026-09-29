@@ -247,6 +247,27 @@ changed. The registered across-worlds sign test stays protected: a flat measure 
 exists. The rules' `noise_k` comment is to be corrected in the next rules revision that is
 needed for another reason.
 
+**Rules revision P1/P2, 2026-09-30, before the evidence run (sha `4c8508af…` → `5ef6f731…`).**
+Three reviews of the interim output found two defects in the registered statistics. Both bias
+against the interim's "different", so the interim verdict stands as computed under `4c8508af…`.
+
+- **P1: rare predictor columns.** In every ridge fit, a predictor unit active on fewer than 1 % of
+  a fit's training rows is dropped, and the count is recorded per fit. Target units are never
+  dropped. This is new rule `common.predictor_columns` with the new constant
+  `parameters.common.predictor_columns.min_active_fraction` = 0.01.
+- **P2: wording only.** Predictivity is exactly invariant to the modulator's per-unit gain only
+  in the modulated → ordinary direction. That direction is now the reported "supporting read";
+  it decides nothing. The `noise_k` comment is corrected to the recomputed family bound.
+
+The B2 section and its parameters are unchanged, verified against the old file in git. The
+revision entry records `sha256_before` and `b2_changed: false` so that the B2 point files already
+computed under `4c8508af…` can be accepted by an explicit lineage check (developer).
+
+**Note for the evidence reading (not a rule change).** On the memory layers (`rnn.state`,
+`rnn.out`), linear predictivity has a compressed range. Untrained GRUs are near-linear filters of
+the same input, so even untrained networks predict each other well. CKA shows the scale of any
+difference there.
+
 **The developer's four marked readings.**
 
 - **B2, level-05 "undetermined" → May seeds "do not agree" (rows 2 and 10): confirmed.** "Agree"

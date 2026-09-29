@@ -174,6 +174,68 @@ decision_rules:
             alone). Under the tooling contract the evaluator would raise and abort the sweep. It
             now returns NaN with reason "no sustained crossing" (headline_wake_point; plateau
             inherits it). No threshold or constant changed.
+    - date: "2026-09-30"
+      sha256_before: 4c8508af14b62f55954a3663c4bb844b5857139a2fcef85cee9a618cfcf9fae0   # committed in 872b0e04
+      sections_changed: [common.predictor_columns, A1.statistics, A2.score, gates.G4_controls, parameters.common.predictor_columns]
+      b2_changed: false     # the parsed `B2` mapping and `parameters.B2` are identical to sha256_before
+                            # (only a YAML comment under parameters.B2 is corrected, see P2 below)
+      numbers_seen: >
+        INTERIM numbers existed and had been read: the interim A1-A4 outputs (six May-replication
+        agents at the end of stage 1) were computed under sha256_before and reviewed by
+        plan-reviewer (verdict gate: supported with caveats), math-reviewer and code-reviewer.
+        The designer did not open the interim outputs. The designer was told only what the
+        reviews state: the two defects below, that both bias AGAINST an interim "different",
+        that the fix of P1 moves every interim verdict-layer value by less than 0.003 and changes
+        no interim verdict word, that on critic.out 40-57 of 128 units are active on fewer than
+        1 % of rows in BOTH arms, and that such units widen intervals by up to 0.035 per fit. The
+        pilot's tool-validation numbers and the B2 plateau table existed; the B2 sweep was
+        running; no B2 reading and no evidence-stage number existed.
+      changes:
+        - id: P1_rare_predictor_columns
+          reason: >
+            (1) A statistic that cannot be computed meaningfully as written. A predictor unit that
+            is active on k of the n training rows is standardised on the training fold to a scale
+            of about sqrt(k/n) of its active values. On held-out rows where it is active, its
+            standardised value is therefore about sqrt(n/k) times its typical size (x10 at 1 %,
+            x30 at 0.1 %). Ridge cannot bound this: after standardisation the rare column has the
+            same norm as any informative column, so the penalty shrinks it no more than the rest.
+            A single such column can dominate a held-out prediction (a held-out R^2 of -4,100 was
+            observed in review) and it takes over the inner-CV penalty choice. The rule
+            "standardised on the training fold" is then not a usable statistic. A floor on the
+            scale would not repair it, because every training-fold scale of a rare unit shrinks
+            as sqrt(k/n). New rule common.predictor_columns, with one new constant
+            (parameters.common.predictor_columns.min_active_fraction = 0.01).
+            WHY THIS IS NOT TUNED TO THE INTERIM:
+              (a) it removes a defect of the estimator, found by reading the mechanism, and it
+                  acts identically on both arms, on every pair set and on the untrained
+                  networks;
+              (b) the defect biases toward "same", i.e. against the interim's "different". The
+                  reviews show the fix moves the interim verdict layers by < 0.003 and changes no
+                  word, so it does not create, remove or move any interim verdict;
+              (c) the constant comes from the mechanism, not from a magnitude. At 1 % a held-out
+                  activation is already about 10 times its training-fold scale, and above 1 % a
+                  unit is active on at least ~100 of the probe's training rows at every layer
+                  (tens of thousands of rows per fit);
+              (d) the interim verdict stands as computed under sha256_before and is reported with
+                  that sha. Any interim recomputation under this revision is reported beside it,
+                  never in its place.
+        - id: P2_predictivity_gain_invariance_wording
+          reason: >
+            Wording only (the statistic and the verdict are unchanged). A1.statistics.primary said
+            predictivity is invariant to per-unit rescaling, i.e. to the modulator's fixed gain.
+            That is true only for a gain on the PREDICTOR layer, which the training-fold
+            standardisation absorbs exactly. It is not true for a gain on the TARGET layer. The
+            variance-weighted held-out R^2 weights target units by their variance, so a per-unit
+            gain g_j re-weights them by g_j^2:
+            R^2_vw(g) = sum_j g_j^2 SST_j R^2_j / sum_k g_k^2 SST_k (math-reviewer), which can go
+            up or down. Hence only the modulated->ordinary direction (the modulated layer as
+            predictor) is exactly gain-invariant. The comment is corrected, and that direction is
+            named the SUPPORTING READ: reported beside the mutual minimum, deciding nothing. In
+            the same edit, the YAML comment under parameters.B2.noise_k is corrected. Its false-
+            alarm arithmetic treated sigma_delta as known. Registered 2026-09-30 in
+            algorithmic_null_wakeup.yaml (b2_family_bound, before any B2 reading): with
+            sigma_delta estimated, about 1.6 false wake points are expected across the 323-curve
+            family, and the stated target is NOT met. The value noise_k = 3 is unchanged.
 
   # ---------------------------------------------------------------------------------------------
   # 1. What each evidence status may say
@@ -244,7 +306,8 @@ decision_rules:
     G4_controls: >
       Input-layer satiation R^2 >= parameters.gates.G4.input_satiation_r2_min (satiation is an
       observed channel); shuffled-across-episode targets give R^2 <= parameters.gates.G4.shuffled_r2_max
-      for every quantity; no episode group appears in both folds.
+      for every quantity; no episode group appears in both folds. These control fits admit
+      predictor columns per common.predictor_columns, like every other ridge fit.
     G5_competence: >
       A run enters only if it passes the May replication's stage-1 competence gate (design §5.5):
       S_k (common.survival_level) with k = parameters.gates.G5.stage, the first stage, >=
@@ -313,6 +376,21 @@ decision_rules:
       reset draw, different trajectories); all of them form ONE group, both for the train/test
       split and for the bootstrap, so a reset draw never sits on both sides.
 
+    predictor_columns: >
+      Column admission for every ridge fit of this study: A1 predictivity in both directions, A2
+      decoding, the G4 controls, and the inner cross-validation that chooses the ridge penalty
+      inside each of them. A PREDICTOR column (one unit of the layer used as the input of the fit)
+      is admitted only if it is active on at least
+      parameters.common.predictor_columns.min_active_fraction of the TRAINING-fold rows of that
+      fit. Active means its value is not exactly zero. Columns that are never exactly zero (e.g.
+      the GRU state, the raw-input row) are therefore always admitted. Admission is decided once
+      per split repeat, on the outer training fold, before standardisation. The same admitted set
+      is used for the inner cross-validation, the refit and every held-out score and bootstrap
+      draw of that repeat; held-out rows never influence it. Target columns (the layer or quantity
+      being predicted) are never dropped. The data statement records, per fit (agent or pair,
+      layer, direction, split repeat), how many columns were dropped out of how many. If a fit
+      has no admitted column, the statistic cannot be computed: the evaluator stops (raises),
+      and no verdict word is produced. (Registered 2026-09-30, revision P1.)
     split: >
       Group-wise train/test split by episode_seed, parameters.common.split.n_repeats repeats, test
       fraction parameters.common.split.test_frac, one fixed seed; the same split objects for every
@@ -373,8 +451,21 @@ decision_rules:
         mutual linear predictivity P(A,B) = min( R^2(A->B), R^2(B->A) ): ridge from one agent's
         layer to the other's, held-out R^2 variance-weighted over output units, mean over the
         split repeats. The minimum is used so "interchangeable" requires BOTH directions; the two
-        directional values are reported beside it.
-      primary: predictivity   # invariant to per-unit rescaling, i.e. to the modulator's fixed gain
+        directional values are reported beside it. Predictor columns follow
+        common.predictor_columns.
+      primary: predictivity
+        # Why predictivity decides. A per-unit gain on the PREDICTOR layer is absorbed exactly by
+        # the training-fold standardisation, so R^2(modulated -> ordinary) is invariant to the
+        # modulator's fixed per-unit gain. A gain on the TARGET layer is not absorbed. The
+        # variance-weighted R^2 re-weights target units by g_j^2,
+        # R^2_vw(g) = sum_j g_j^2 SST_j R^2_j / sum_k g_k^2 SST_k, so R^2(ordinary -> modulated),
+        # and with it the mutual minimum, can move either way under a pure gain. CKA is not
+        # invariant to either. (Corrected 2026-09-30, revision P2; the text before claimed
+        # invariance for the statistic as a whole.)
+      supporting_read: >
+        R^2(modulated -> ordinary), the one direction exactly invariant to the modulator's per-unit
+        gain, is reported beside the mutual minimum for every MO pair as the supporting read. It
+        decides nothing: every verdict uses the minimum, as registered.
     pairing: "X.out with X.out, and rnn.state with rnn.state, for every pair in OO, MM, MO_diff, MO_same, UNTRAINED."
     informative_gate: >
       Per layer and statistic, compute the UNTRAINED band [L_untr, U_untr] by the seed_band
@@ -434,8 +525,8 @@ decision_rules:
         are excluded, because their remaining time is censored and equals cap - t, a pure clock
         (plan-reviewer finding 9). The all-episode variant is reported and decides nothing.
     score: >
-      per agent, quantity and layer: held-out R^2 of a ridge readout (standardised on the training
-      fold), mean over the split repeats shared by all agents; bootstrap as in common.bootstrap.
+      per agent, quantity and layer: held-out R^2 of a ridge readout (predictor columns admitted
+      per common.predictor_columns, then standardised on the training fold), mean over the split repeats shared by all agents; bootstrap as in common.bootstrap.
     clock_baseline: >
       R^2_clock = held-out R^2 of predicting the quantity from the time step alone, fitted as the
       per-time-step mean on the training fold (the best any clock-only readout can do), on the same
@@ -715,6 +806,10 @@ decision_rules:
       split:
         n_repeats: 5
         test_frac: 0.2
+      predictor_columns:
+        min_active_fraction: 0.01          # common.predictor_columns (revision P1): a column active on < 1 % of
+                                           # training rows is dropped. Principle: at 1 % a held-out activation
+                                           # is already ~sqrt(1/0.01) = 10 x its training-fold scale.
       survival:
         window_episodes: 200000            # S_k window: last 200,000 episodes of stage k (May design §5.1)
         row_weight: delta_episode_number   # episodes each WandB row adds (pilot_readout.Series; CONTINUAL_WORLDS 3.3)
@@ -754,14 +849,16 @@ decision_rules:
         # final_k principle: average enough end points to cut point noise by sqrt(3) while staying a
         # small part of the shortest curve (3 of the 15 checkpoints of May 01_active, 3 of 50 in level-05).
       noise_k: 3
-        # noise_k principle: keep the expected number of false wake points across the WHOLE B2 family
-        # below 0.1. If a measure does not change and its points carry independent noise of SD s, then
-        # sigma_delta = sqrt(2) s and the net change m_final - m0 has SD s * sqrt(1 + 1/3)
-        # = 0.816 sigma_delta. noise_k = 3 puts the guard at 3 / 0.816 = 3.67 SD of that null change:
-        # a two-sided false "it changed" rate of about 2.4e-4 per curve, 0.07 expected across ~300
-        # curves (about 15 curve families — per-site rho and swing, per-term shares, gain/offset
-        # freeze — x 19 runs). Caveat, stated now: positively autocorrelated wobble makes sigma_delta
-        # understate a curve's level noise, so the real rate is higher than this bound.
+        # noise_k principle (as registered): keep the expected number of false wake points across the
+        # WHOLE B2 family below 0.1. The arithmetic first given here (~2.4e-4 per curve, 0.07 across
+        # ~300 curves) treated sigma_delta as KNOWN. It is estimated from the curve's own last
+        # points (16 differences on level-05, 5 on May). Simulated with the registered rule
+        # (algorithmic_null_wakeup.yaml, b2_family_bound, registered before any B2 reading): about
+        # 2.6e-3 false passes per level-05 curve and 1.8e-2 per May curve, about 1.6 expected across
+        # the 323 headline curves, more with autocorrelated wobble. The target is NOT met. noise_k
+        # is not moved (revision_policy). Single per-run wake points are therefore not evidence on
+        # their own; the across-worlds sign test remains protected (see the manifest). Comment
+        # corrected 2026-09-30, revision P2.
       sustain: 2
         # sustain principle: the smallest value that stops a single one-checkpoint excursion from
         # naming the wake point (the tooling plan's "non-monotone rise" fixture), while keeping every
