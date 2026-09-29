@@ -123,8 +123,11 @@ cmd_new() {  # new <tmux-session-name> [display-name]
   [ -n "$disp" ] && cmd+=" --name $(printf %q "$disp")"
   tmux send-keys -t "$t" "$cmd --remote-control" Enter
   sleep 3
-  # First launch in a directory may show a trust prompt; accept it.
-  if tmux capture-pane -p -t "$t" | grep -qi 'trust this folder\|Do you trust'; then tmux send-keys -t "$t" Enter; fi
+  # First launch in an untrusted directory shows a trust prompt whose DEFAULT is "No, exit":
+  # move to "Yes, I trust this folder" before confirming.
+  if tmux capture-pane -p -t "$t" | grep -qi 'trust this folder\|Do you trust'; then
+    tmux send-keys -t "$t" Down; sleep 1; tmux send-keys -t "$t" Enter
+  fi
   verify "$t"
 }
 

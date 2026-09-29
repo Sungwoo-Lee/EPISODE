@@ -288,3 +288,7 @@ Three reviewers ran: code-reviewer, senior-developer (plan adherence, signed sec
 - rollback is `touch claude_data/board/OFF` first, then revert the settings commit.
 
 **Still open before rollout** (plan-reviewer): check that an already-running session actually reloads an edited project `settings.json` (the hot-reload canary).
+
+### Hot-reload check (2026-09-30), the last open item before rollout
+
+A Haiku session ran in a scratch folder outside the repo, with its own `.claude/settings.json` (`{}`, no hooks) and its own board directory. While it was in the middle of a tool loop, the hooks were written into that settings file (01:02:25). The **running** session picked them up without a restart: its card appeared at 01:02:41, and its transcript shows the full board plus instructions delivered by `PostToolUse:Bash`, which is the Revision 2 onboarding path for a busy session. This matches the hooks reference. It was tested on this build only (2.1.28x); the live sessions span 2.1.280–284.
