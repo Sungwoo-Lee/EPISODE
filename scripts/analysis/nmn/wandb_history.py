@@ -38,6 +38,11 @@ _ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", ".."
 
 NUM, WN, STAGE, TS = "Episode/Number", "Episode/_window_n", "stage/index", "timesteps"
 WEIGHTINGS = ("delta_episode_number", "window_n")
+# pilot_readout.analyse_sequence's own stage-row selection (l.667): stage k's rows are those with
+# stage/index == k and lo < Episode/Number <= hi + 4000, because a stage's last logged row may sit
+# up to one logging step past the schedule boundary. Mirrored here, not re-chosen; Checkpoint 4.6
+# (tests/analysis/test_nmn_stage_level.py) checks the result equals pilot_readout's on real runs.
+BOUNDARY_SLACK_EPISODES = 4000
 
 _TAG_INDEX: dict[str, dict[str, list[str]]] = {}
 
@@ -84,7 +89,13 @@ def scan(wandb_dir, allow_truncated: bool) -> dict:
     """All history rows of the binary, parsed to floats where possible, plus whether the run
     wrote an exit record (it finished) and its exit code.
 
-    Returns {"rows": [dict], "exit_code": int | None, "file": str}."""
+    A run still being written can end in a half-written record. With `allow_truncated` the
+    scan stops there and says so in `truncated` (the error text), but only when the unreadable
+    record is in the file's last block (the datastore's own in-progress test); an unreadable
+    record earlier in the file is corruption and raises either way. The CALLER decides whether
+    the rows it needs are complete (e.g. a later stage has logged rows).
+
+    Returns {"rows": [dict], "exit_code": int | None, "file": str, "truncated": str | None}."""
     from wandb.proto import wandb_internal_pb2 as pb
     from wandb.sdk.internal import datastore
 
@@ -93,18 +104,20 @@ def scan(wandb_dir, allow_truncated: bool) -> dict:
         raise ValueError(f"{wandb_dir}: expected one run-*.wandb, found {files}")
     ds = datastore.DataStore()
     ds.open_for_scan(files[0])
-    rows, exit_code = [], None
+    rows, exit_code, truncated = [], None, None
     while True:
         try:
             data = ds.scan_data()
-        except Exception as e:  # a run still being written can end mid-record
-            if allow_truncated:
+            if data is None:
                 break
-            raise RuntimeError(f"{files[0]}: unreadable record ({e})") from e
-        if data is None:
-            break
-        rec = pb.Record()
-        rec.ParseFromString(data)
+            rec = pb.Record()
+            rec.ParseFromString(data)
+        except Exception as e:  # a run still being written can end mid-record
+            if allow_truncated and ds.in_last_block():
+                truncated = f"{type(e).__name__}: {e}"
+                break
+            raise RuntimeError(f"{files[0]}: unreadable record ({type(e).__name__}: {e})"
+                               f"{'' if ds.in_last_block() else ' before the last block'}") from e
         rtype = rec.WhichOneof("record_type")
         if rtype == "exit":
             exit_code = int(rec.exit.exit_code)
@@ -121,7 +134,7 @@ def scan(wandb_dir, allow_truncated: bool) -> dict:
             if isinstance(v, (int, float)) and not isinstance(v, bool):
                 r[k] = float(v)
         rows.append(r)
-    return {"rows": rows, "exit_code": exit_code, "file": files[0]}
+    return {"rows": rows, "exit_code": exit_code, "file": files[0], "truncated": truncated}
 
 
 def episode_rows(scanned: dict, stage_index: int | None) -> list[dict]:
@@ -201,35 +214,50 @@ def interval_means(rows: list[dict], key: str, edges, weighting: str,
     return means, info
 
 
-def stage_level(scanned: dict, stage_index: int, key: str, window: float, min_window_n: float,
-                weighting: str, stage_start: float) -> tuple[float | None, dict]:
+def stage_rows(scanned: dict, stage_index: int, bounds) -> list[dict]:
+    """Stage k's episode rows exactly as pilot_readout.analyse_sequence selects them:
+    stage/index == k AND lo < Episode/Number <= hi + BOUNDARY_SLACK_EPISODES, where
+    bounds = (lo, hi) is the stage's schedule boundary pair (lo = the previous stage's hi, or
+    the run's start counter for stage 0). Sorted by Episode/Number."""
+    lo, hi = (float(b) for b in bounds)
+    if not hi > lo:
+        raise ValueError(f"stage bounds {bounds}: hi must exceed lo")
+    return [r for r in episode_rows(scanned, stage_index)
+            if lo < r[NUM] <= hi + BOUNDARY_SLACK_EPISODES]
+
+
+def stage_level(scanned: dict, stage_index: int, bounds, key: str, window: float,
+                min_window_n: float, weighting: str) -> tuple[float | None, dict]:
     """S_k-style level: the weighted mean of `key` over the last `window` episodes of stage
     `stage_index` (rows in (last - window, last], `last` the last counted row), the May
     design's §5.1 quantity and `pilot_readout.last_level`.
 
-    `stage_start` is the episode counter at which the stage began (the schedule boundary; for
-    the first stage of a run from scratch, `start_counter`). The stage must be complete: a
-    later stage has logged rows, or the run wrote a zero exit code. Otherwise, or with fewer
-    than `window` episodes, the value is None and `info["reason"]` says why."""
-    rows = episode_rows(scanned, stage_index)
+    `bounds` = (lo, hi), the stage's schedule boundaries (pilot_readout's `lo`, `hi`). Rows are
+    selected by `stage_rows` and weighted from `lo` (the series starts at lo, as
+    `pilot_readout.Series(srows, lo)`). The stage must be complete: a later stage has logged
+    rows, or the run wrote a zero exit code. Otherwise, or with fewer than `window` episodes,
+    the value is None and `info["reason"]` says why."""
+    lo, hi = (float(b) for b in bounds)
+    rows = stage_rows(scanned, stage_index, bounds)
     info = {"rows": len(rows), "weighting": weighting, "window": window,
-            "min_window_n": min_window_n, "stage_start": stage_start}
+            "min_window_n": min_window_n, "bounds": [lo, hi]}
     later = any(STAGE in r and int(r[STAGE]) > stage_index for r in scanned["rows"])
     finished = scanned["exit_code"] == 0
     info["complete"] = bool(later or finished)
     if not rows:
-        info["reason"] = f"no episode rows for stage/index {stage_index}"
+        info["reason"] = f"no episode rows for stage/index {stage_index} in ({lo:,.0f}, {hi:,.0f}]"
         return None, info
     if not info["complete"]:
         info["reason"] = "stage not complete (no later stage logged, no clean exit)"
         return None, info
-    kept = weighted(rows, stage_start, weighting, min_window_n)
+    kept = weighted(rows, lo, weighting, min_window_n)
     e = np.array([k[0] for k in kept])
     w = np.array([k[1] for k in kept])
-    last = float(e[-1]) if len(e) else stage_start
+    last = float(e[-1]) if len(e) else lo
     info["last_episode"] = last
-    if last - stage_start < window:
-        info["reason"] = f"stage holds {last - stage_start:,.0f} < window {window:,.0f} episodes"
+    info["reached_boundary"] = last >= hi - BOUNDARY_SLACK_EPISODES    # pilot_readout's `done`
+    if last - lo < window:
+        info["reason"] = f"stage holds {last - lo:,.0f} < window {window:,.0f} episodes"
         return None, info
     v = np.array([k[2].get(key, np.nan) for k in kept])
     m = (e > last - window) & (e <= last) & ~np.isnan(v)
