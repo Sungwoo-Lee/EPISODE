@@ -113,3 +113,26 @@ def r2_draws(Y, P, row_group, counts) -> np.ndarray:
     sst = syy - (sy ** 2).sum(axis=1) / W
     with np.errstate(invalid="ignore", divide="ignore"):
         return np.where(sst == 0, np.nan, 1.0 - sse / sst)
+
+
+def r2_unit_mean_draws(Y, P, row_group, counts) -> tuple[np.ndarray, np.ndarray]:
+    """Per draw, the UNWEIGHTED mean over output units of each unit's held-out R^2 (a
+    descriptive robustness column, not a registered statistic: unlike the variance-weighted
+    R^2 it is unchanged by a per-unit rescaling of the predicted layer). Units whose held-out
+    values are constant in a draw (SST = 0) have no R^2 and are left out of that draw's mean.
+    Returns (means, units_left_out_per_draw)."""
+    Y = np.asarray(Y, np.float64)
+    P = np.asarray(P, np.float64)
+    Y = Y[:, None] if Y.ndim == 1 else Y
+    P = P[:, None] if P.ndim == 1 else P
+    row_group = np.asarray(row_group)
+    G = counts.shape[1]
+    W = counts @ _group_sum(np.ones(len(row_group)), row_group, G)
+    sy = counts @ _group_sum(Y, row_group, G)
+    syy = counts @ _group_sum(Y ** 2, row_group, G)
+    sse = counts @ _group_sum((Y - P) ** 2, row_group, G)
+    sst = syy - sy ** 2 / W[:, None]
+    ok = sst > 1e-12 * np.maximum(syy, 1.0)          # float guard: constant units only
+    with np.errstate(invalid="ignore", divide="ignore"):
+        r2 = np.where(ok, 1.0 - sse / np.where(ok, sst, 1.0), np.nan)
+    return np.nanmean(r2, axis=1), (~ok).sum(axis=1)

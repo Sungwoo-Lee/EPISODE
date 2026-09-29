@@ -52,16 +52,17 @@ DESCRIPTIVE_SITES = ("enc.uni", "enc", "rnn", "actor", "critic")
 
 
 def _q(draws, P) -> tuple:
-    """(lower, upper) bootstrap-interval quantiles (parameters.common.bootstrap_interval) of the
-    finite draws, and the count of non-finite draws (reported, never dropped silently)."""
+    """(lower, upper) bootstrap-interval quantiles (parameters.common.bootstrap_interval) and the
+    count of non-finite draws. Any non-finite draw makes both quantiles None (reported null; a
+    verdict function then raises on it), never quantiles of the finite subset."""
     from scripts.analysis.nmn import decision_rules as dr
     lo, hi = dr.param(P, "common.bootstrap_interval")
     d = np.asarray(draws, float)
-    fin = d[np.isfinite(d)]
-    if not fin.size:
-        return None, None, int(d.size)
-    q = np.quantile(fin, [float(lo), float(hi)])
-    return float(q[0]), float(q[1]), int(d.size - fin.size)
+    bad = int((~np.isfinite(d)).sum())
+    if bad:                      # never quantiles of a silently thinned distribution
+        return None, None, bad
+    q = np.quantile(d, [float(lo), float(hi)])
+    return float(q[0]), float(q[1]), 0
 
 
 def agents_of_cell(caps, man, cell, entered, roles) -> dict:
@@ -86,14 +87,17 @@ class _Fits:
     """Records every ridge fit's chosen penalty and grid-edge flag for the data statement."""
 
     def __init__(self):
-        self.n, self.edge = 0, []
+        self.n, self.edge, self.columns = 0, [], []
 
     def add(self, where: str, maps, first: int = 0) -> list:
         """`maps` are the fits of split repeats first, first + 1, ..."""
         out = []
         for i, m in enumerate(maps, start=first):
             self.n += 1
-            out.append({"alpha": m.alpha, "alpha_at_edge": m.alpha_at_edge})
+            out.append({"alpha": m.alpha, "alpha_at_edge": m.alpha_at_edge,
+                        "n_columns": m.n_columns, "n_dropped": m.n_dropped})
+            self.columns.append({"fit": f"{where} repeat {i}", "n_columns": m.n_columns,
+                                 "n_dropped": m.n_dropped})
             if m.alpha_at_edge:
                 self.edge.append({"fit": f"{where} repeat {i}", "alpha": m.alpha,
                                   "edge": m.alpha_at_edge})
@@ -107,7 +111,8 @@ def predictivity(Xa, Xb, groups, splits, boots, rs, fits, where, *, with_draws=T
     from scripts.analysis.nmn import representation as rep
     res = {}
     for d, (X, Y) in (("ab", (Xa, Xb)), ("ba", (Xb, Xa))):
-        maps = rep.fit_maps(X, Y, groups, splits, alphas=rs["alphas"], inner_folds=rs["inner_folds"])
+        maps = rep.fit_maps(X, Y, groups, splits, alphas=rs["alphas"], inner_folds=rs["inner_folds"],
+                            fitter=rs["fitter"])
         pts, draws = [], []
         for i, (s, m) in enumerate(zip(splits, maps)):
             P_ = m.predict(X[s.test])
@@ -125,6 +130,8 @@ def predictivity(Xa, Xb, groups, splits, boots, rs, fits, where, *, with_draws=T
     if with_draws:
         out["draws"] = np.concatenate([np.minimum(a, b) for a, b in
                                        zip(res["ab"]["draws"], res["ba"]["draws"])])
+        out["draws_ab"] = np.concatenate(res["ab"]["draws"])
+        out["draws_ba"] = np.concatenate(res["ba"]["draws"])
     return out
 
 
@@ -138,7 +145,7 @@ def analyse_cell(caps, man, P, cell, agents, verdict_layers, *, primary: bool,
     probe = caps.probes[pid]
     groups = probe.row_seed
     n_rows = int(groups.size)
-    rs = rep.ridge_settings(man)
+    rs = dio.ridge(man, P)
     B = int(man["bootstrap_n"])
     bseed = int(man["probe_split"]["bootstrap_seed"])
     atol = float(man["tool_checks"]["self_similarity_atol"])
@@ -150,7 +157,16 @@ def analyse_cell(caps, man, P, cell, agents, verdict_layers, *, primary: bool,
     cka_rg = ds.row_positions(groups, ug)
     sets = dio.pair_sets(agents, man["comparisons"])
     fits = _Fits()
-    out = {"checkpoint": sel, "probe": pid, "primary": primary, "headline": headline,
+    lag = {}
+    for sname, pairs in sets.items():             # cross-agent row alignment, trained pairs
+        if sname == "UNTRAINED":
+            continue
+        for pname, (a, b) in pairs.items():
+            A, B_ = agents[a], agents[b]
+            lag[pname] = dio.row_lag_control(caps.layer(A["label"], A["selector"], pid, "logits"),
+                                             caps.layer(B_["label"], B_["selector"], pid, "logits"),
+                                             float(man["tool_checks"]["row_lag_min_gap"]), pname)
+    out = {"checkpoint": sel, "probe": pid, "row_lag_control": lag, "primary": primary, "headline": headline,
            "agents": agents, "pair_sets": {k: list(v) for k, v in sets.items()},
            "rows_used": n_rows, "rows_available": n_rows,
            "groups": int(np.unique(groups).size),
@@ -187,6 +203,11 @@ def analyse_cell(caps, man, P, cell, agents, verdict_layers, *, primary: bool,
                 lo, hi, nan = _q(pr["draws"], P)
                 lay["predictivity"][pname] = {"pair_set": sname, **pr, "q_lo": lo, "q_hi": hi,
                                               "nonfinite_draws": nan}
+                if sname in ("MO_same", "MO_diff"):       # rules A1.statistics.supporting_read
+                    slo, shi, snan = _q(pr["draws_ba"], P)
+                    lay["predictivity"][pname]["supporting_read_modulated_to_ordinary"] = {
+                        "r2": pr["r2_ba"], "q_lo": slo, "q_hi": shi, "nonfinite_draws": snan,
+                        "note": "reported beside the mutual minimum; it decides nothing"}
         if primary:          # reference rows: raw input, and untrained vs trained (points only)
             ref = {}
             xin = dio.symlog(probe.obs_all[probe.rows])
@@ -205,6 +226,10 @@ def analyse_cell(caps, man, P, cell, agents, verdict_layers, *, primary: bool,
             f"{time.time() - t0:.0f}s")
     out["_descriptive_args"] = (pid, sets, groups, splits, rs, n_rows, mrc) if headline else None
     out["ridge_fits"] = {"n": fits.n, "at_grid_edge": fits.edge,
+                         "predictor_columns": {
+                             "min_active_fraction": rs["min_active_fraction"],
+                             "fits_with_dropped_columns": sum(c["n_dropped"] > 0 for c in fits.columns),
+                             "per_fit": fits.columns},
                          "grid": {"n_values": len(rs["alphas"]), "lowest": rs["alphas"][0],
                                   "highest": rs["alphas"][-1]},
                          "inner_folds": rs["inner_folds"]}
@@ -295,7 +320,8 @@ def evaluate(cell_res, P, policy, verdict_layers, gates, g5, survival, start) ->
 
 def _strip_draws(obj):
     if isinstance(obj, dict):
-        return {k: _strip_draws(v) for k, v in obj.items() if k != "draws"}
+        return {k: _strip_draws(v) for k, v in obj.items()
+                if k not in ("draws", "draws_ab", "draws_ba")}
     if isinstance(obj, list):
         return [_strip_draws(v) for v in obj]
     return obj
@@ -342,6 +368,11 @@ def data_statement(stamp, man, cells_res, P) -> dict:
                       "interval": list(dr.param(P, "common.bootstrap_interval")),
                       "seed": man["probe_split"]["bootstrap_seed"],
                       "unit": "episode_seed group, joint across all agents and pairs"},
+        "predictor_columns": {
+            "min_active_fraction": fits[0]["predictor_columns"]["min_active_fraction"] if fits else None,
+            "fits_with_dropped_columns": sum(f["predictor_columns"]["fits_with_dropped_columns"]
+                                             for f in fits),
+            "per_fit": "cells[].ridge_fits.predictor_columns.per_fit (dropped / total per fit)"},
         "ridge": {"fits": sum(f["n"] for f in fits),
                   "fits_at_grid_edge": sum(len(f["at_grid_edge"]) for f in fits),
                   "at_grid_edge": [e for f in fits for e in f["at_grid_edge"]],
@@ -376,6 +407,7 @@ def main(argv=None) -> int:
           f"{stamp['verdict_statement']}; rules {pinned.path} {pinned.sha256[:12]} @ "
           f"{(pinned.commit or 'uncommitted')[:8]}", flush=True)
     caps = dio.Captures(man, pinned)
+    stamp["captures_rules_sha256"] = caps.rules_sha
     roles = caps.meta["roles"]
     all_cells = dio.cells(caps, man)
     primary = dio.primary_cell(pinned, policy.status, all_cells)
@@ -398,12 +430,16 @@ def main(argv=None) -> int:
            "primary_cell": list(primary), "not_built": "A4 (movement, drift, co-movement)"}
     if policy.allowed:
         pc = next(c for c in cells_res if c["primary"])
+        refused = {k: v for k, v in pc["refused_layers"].items() if k in verdict_layers}
+        if refused:
+            raise ValueError(f"verdict layers refused at the primary cell, cannot evaluate: "
+                             f"{refused}")
         reps = [caps.reports[(a["label"], a["selector"], primary[1])]
                 for a in pc["agents"].values()]
         from scripts.analysis.nmn import representation as rep  # noqa: F401
         probe = caps.probes[primary[1]]
         splits = dio.make_splits(probe.row_seed, P, int(man["probe_split"]["seed"]))
-        g4 = dio.g4_controls(probe, splits, man, dio.quantities(pinned))
+        g4 = dio.g4_controls(probe, splits, man, dio.quantities(pinned), P)
         g6 = dr.gate_G6({"bootstrap_n": man["bootstrap_n"],
                          "test_groups": {"predictivity": pc["test_groups_per_repeat"]}}, P)
         gates = {**{k: v for k, v in dio.capture_gates(reps, P).items() if k != "generating_captures"},
@@ -433,7 +469,8 @@ def main(argv=None) -> int:
         ddoc = {**stamp, "driver": "run_similarity", "analysis": "A1 descriptive layers "
                 "(reported only; they localise where a difference arises)",
                 "cell": [c["checkpoint"], c["probe"]], "descriptive": desc,
-                "ridge_fits": {"n": fits.n, "at_grid_edge": fits.edge}}
+                "ridge_fits": {"n": fits.n, "at_grid_edge": fits.edge,
+                               "predictor_columns": fits.columns}}
         dio.write_outputs(caps.out, "similarity_descriptive", ddoc,
                           [{"comparison": k, **{kk: vv for kk, vv in v.items()}}
                            for k, v in desc.items() if "refused" not in v], policy)

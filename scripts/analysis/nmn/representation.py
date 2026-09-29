@@ -91,6 +91,8 @@ class RidgeMap:
     coef: np.ndarray           # (d_in, d_out)
     alpha: float               # the penalty used (chosen by inner CV when the grid has > 1)
     alpha_at_edge: str | None  # "lowest" / "highest" when the CV choice is an end of the grid
+    n_columns: int | None = None    # predictor columns offered (fit_admitted)
+    n_dropped: int | None = None    # of which not admitted (rules common.predictor_columns)
 
     def predict(self, X) -> np.ndarray:
         Z = (np.asarray(X, np.float64) - self.x_mean) / self.x_scale
@@ -193,11 +195,18 @@ def fit_ridge(X, Y, groups, *, alphas, inner_folds: int) -> RidgeMap:
     alphas = [float(a) for a in alphas]
     if len(alphas) > 1:
         score = np.zeros(len(alphas))
-        for tr, va in GroupKFold(n_splits=inner_folds).split(X, groups=groups):
+        for k, (tr, va) in enumerate(GroupKFold(n_splits=inner_folds).split(X, groups=groups)):
             mu, sd = _standardise(X[tr])
             ym = Y[tr].mean(axis=0)
             coefs = _ridge_path((X[tr] - mu) / sd, Y[tr] - ym, alphas)
-            score += _cv_scores((X[va] - mu) / sd, Y[va], ym, coefs)
+            fold = _cv_scores((X[va] - mu) / sd, Y[va], ym, coefs)
+            if not np.all(np.isfinite(fold)):
+                # a NaN score (the target is constant on this validation fold, SST = 0) would
+                # make argmax silently pick the first penalty; the choice is undefined, so stop
+                raise ValueError(f"fit_ridge: inner fold {k} gives non-finite CV scores "
+                                 f"(target constant on the validation fold, SST = 0); the "
+                                 f"penalty cannot be chosen")
+            score += fold
         best = int(np.argmax(score))
         alpha = alphas[best]
         edge = "lowest" if best == 0 else ("highest" if best == len(alphas) - 1 else None)
@@ -207,6 +216,37 @@ def fit_ridge(X, Y, groups, *, alphas, inner_folds: int) -> RidgeMap:
     ym = Y.mean(axis=0)
     coef = _ridge_path((X - mu) / sd, Y - ym, [alpha])[0]
     return RidgeMap(x_mean=mu, x_scale=sd, y_mean=ym, coef=coef, alpha=alpha, alpha_at_edge=edge)
+
+
+def admitted_columns(X_train, min_active_fraction: float) -> np.ndarray:
+    """Rules common.predictor_columns (revision P1): a predictor column is admitted only if it is
+    non-zero on at least `min_active_fraction` of the TRAINING-fold rows (decided before
+    standardisation). Columns never exactly zero are always admitted."""
+    X_train = np.asarray(X_train)
+    return (X_train != 0).mean(axis=0) >= float(min_active_fraction)
+
+
+def fit_admitted(X, Y, groups, *, alphas, inner_folds: int, min_active_fraction: float) -> RidgeMap:
+    """`fit_ridge` on the admitted predictor columns of these (outer training-fold) rows only.
+    The admitted set is decided once here, so the inner cross-validation, the refit, every
+    held-out score and every bootstrap draw of the repeat use the same columns. Target columns
+    are never dropped. The returned map carries full-width parameters with zero weight on the
+    dropped columns (so `predict` takes the whole layer), and records n_columns / n_dropped.
+    No admitted column raises: the statistic cannot be computed."""
+    X = np.asarray(X, np.float64)
+    keep = admitted_columns(X, min_active_fraction)
+    if not keep.any():
+        raise ValueError(f"no predictor column is non-zero on at least {min_active_fraction} of "
+                         f"the training rows ({X.shape[1]} columns offered); the statistic "
+                         f"cannot be computed (rules common.predictor_columns)")
+    m = fit_ridge(X[:, keep], Y, groups, alphas=alphas, inner_folds=inner_folds)
+    d = X.shape[1]
+    mean = np.zeros(d)
+    scale = np.ones(d)
+    coef = np.zeros((d, m.coef.shape[1]))
+    mean[keep], scale[keep], coef[keep] = m.x_mean, m.x_scale, m.coef
+    return RidgeMap(x_mean=mean, x_scale=scale, y_mean=m.y_mean, coef=coef, alpha=m.alpha,
+                    alpha_at_edge=m.alpha_at_edge, n_columns=int(d), n_dropped=int((~keep).sum()))
 
 
 def fit_maps(X, Y, groups, splits: list[Split], *, alphas, inner_folds: int,

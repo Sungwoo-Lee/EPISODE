@@ -79,6 +79,7 @@ def load_manifest(path) -> dict:
     for k in ("seed", "bootstrap_seed"):
         _req(man["probe_split"], k, "manifest.probe_split")
     _req(man["tool_checks"], "self_similarity_atol", "manifest.tool_checks")
+    _req(man["tool_checks"], "row_lag_min_gap", "manifest.tool_checks")
     c = man["comparisons"]
     if c != "auto" and not (isinstance(c, list) and all(isinstance(p, list) and len(p) == 2
                                                          for p in c)):
@@ -100,12 +101,14 @@ def open_rules(man: dict):
     return pinned, policy
 
 
-def stamp(pinned, policy, man_path) -> dict:
-    """The fields every output carries."""
+def stamp(pinned, policy, man_path, captures_rules_sha=None) -> dict:
+    """The fields every output carries (`captures_rules_sha`: the rules the reused layer
+    captures were taken under, when that differs from the pinned rules)."""
     return {"decision_rules": {"file": pinned.path, "sha256": pinned.sha256,
                                "commit": pinned.commit},
+            "captures_rules_sha256": captures_rules_sha,
             "git_sha": _git("rev-parse", "HEAD"),
-            "git_dirty": bool(_git("status", "--porcelain", "--", "scripts/analysis/nmn")),
+            "git_dirty": bool(_git("status", "--porcelain")),      # whole tree
             "evidence_status": policy.status, "label": policy.label,
             "verdict_prefix": policy.prefix, "verdict_words_allowed": policy.allowed,
             "verdict_statement": (NO_VERDICT if not policy.allowed
@@ -144,15 +147,23 @@ def finalize_evaluation(ev, policy):
     return ev
 
 
-def guard_prefixed(ev, policy, where: str) -> None:
-    """Where the rules give a verdict_prefix, refuse any string value in the evaluation that
-    carries a verdict word without starting with the prefix."""
+# Stamp fields that quote the rules' own wording about the status; they are the only strings
+# of an output allowed to carry a verdict-vocabulary word without the prefix.
+PREFIX_EXEMPT_KEYS = ("verdict_prefix", "label", "verdict_statement")
+
+
+def guard_prefixed(doc, policy, where: str) -> None:
+    """Where the rules give a verdict_prefix, refuse any string value ANYWHERE in the written
+    document (not only its evaluation) that carries a verdict word without starting with the
+    prefix, except the values of the stamp keys in PREFIX_EXEMPT_KEYS."""
     if not policy.prefix:
         return
 
     def walk(x, path):
         if isinstance(x, dict):
             for k, v in x.items():
+                if k in PREFIX_EXEMPT_KEYS:
+                    continue
                 walk(v, f"{path}.{k}")
         elif isinstance(x, list):
             for i, v in enumerate(x):
@@ -161,15 +172,23 @@ def guard_prefixed(ev, policy, where: str) -> None:
                 and not x.startswith(policy.prefix + ": "):
             raise ValueError(f"{where}: {path} = {x!r} carries a verdict word without the "
                              f"rules' prefix {policy.prefix!r}")
-    walk(ev, "evaluation")
+    walk(doc, "")
 
 
 def write_outputs(out: Path, stem: str, doc: dict, csv_rows: list, policy) -> None:
     """Write <stem>.json and <stem>.csv after the verdict-word guard has passed on both."""
     import csv
     import io
-    if doc.get("evaluation") is not None:
-        guard_prefixed(doc["evaluation"], policy, f"{stem}.json")
+    target = out / f"{stem}.json"
+    if target.exists():         # an output computed under other rules is never overwritten
+        old = json.loads(target.read_text()).get("decision_rules", {}).get("sha256")
+        new = doc.get("decision_rules", {}).get("sha256")
+        if old != new:
+            raise ValueError(f"{target} was computed under rules sha256 {old}; this run pins "
+                             f"{new}. It is never overwritten: recompute under a manifest with "
+                             f"another name (reported beside, never in place of, it)")
+    guard_prefixed(json.loads(json.dumps(doc, default=_jsonable)), policy, f"{stem}.json")
+    guard_prefixed(csv_rows, policy, f"{stem}.csv")
     js = json.dumps(doc, indent=1, default=_jsonable)
     buf = io.StringIO()
     if csv_rows:
@@ -205,10 +224,18 @@ class Captures:
         if not mf.exists():
             raise ValueError(f"{mf}: no run_activations output for this manifest")
         self.meta = json.loads(mf.read_text())
-        if self.meta["decision_rules"]["sha256"] != pinned.sha256:
-            raise ValueError(f"{mf}: captured under rules sha256 "
-                             f"{self.meta['decision_rules']['sha256']}, the manifest pins "
-                             f"{pinned.sha256}; re-run run_activations")
+        self.rules_sha = self.meta["decision_rules"]["sha256"]
+        if self.rules_sha != pinned.sha256:
+            # The capture step reads the rules only through the numbers it records in
+            # gates_read (G1, G2, G3, the G6 group floor and the split fraction). Captures made
+            # under another rules version are reused only if every one of those numbers is
+            # identical under the pinned rules; the outputs record both shas.
+            now = capture_rule_numbers(pinned.parameters)
+            if self.meta.get("gates_read") != now:
+                raise ValueError(f"{mf}: captured under rules sha256 {self.rules_sha}, the "
+                                 f"manifest pins {pinned.sha256}, and the capture's rule numbers "
+                                 f"{self.meta.get('gates_read')} differ from the pinned "
+                                 f"{now}; re-run run_activations")
         bad = [c["stem"] for c in self.meta["captures"] if c["failures"]]
         if bad:
             raise ValueError(f"captures with failed tool checks: {bad}")
@@ -234,6 +261,18 @@ class Captures:
     def layer(self, label, selector, probe, key) -> np.ndarray:
         """One captured layer (rows x columns, float64); only that array is read."""
         return np.asarray(self._npz(label, selector, probe)[key], np.float64)
+
+
+def capture_rule_numbers(P) -> dict:
+    """The rules numbers run_activations uses and records as `gates_read`, read from `P`."""
+    from scripts.analysis.nmn import rules_pin
+    return {"G1": {k: float(rules_pin.param(P, f"gates.G1.{k}")) for k in
+                   ("action_agreement_min", "near_tie_logit_margin", "near_tie_fraction_max")},
+            "G2": float(rules_pin.param(P, "gates.G2.reconstruction_rel_tol")),
+            "G3": {k: float(rules_pin.param(P, f"gates.G3.{k}")) for k in
+                   ("alignment_agreement_min", "shift_control_agreement_max")},
+            "G6_test_fold_groups_min": int(rules_pin.param(P, "gates.G6.test_fold_groups_min")),
+            "split_test_frac": float(rules_pin.param(P, "common.split.test_frac"))}
 
 
 def cells(caps: Captures, man: dict) -> list[tuple[str, str]]:
@@ -320,6 +359,28 @@ def capture_gates(reports: list[dict], P) -> dict:
     return {"G1": all(g1), "G2": all(g2), "G3": all(g3), "generating_captures": gen}
 
 
+def row_lag_control(logits_a, logits_b, min_gap: float, pair: str) -> dict:
+    """Cross-agent row alignment (code review): two agents replayed on the same kept rows choose
+    the same action far more often at the same row (lag 0) than one row apart (lag +1 / -1 in
+    the kept-row order). If a buffer or index misaligned one agent's rows, lag 0 would fall to
+    the lagged level. A failing check: raises unless lag 0 exceeds both lags by `min_gap`
+    (manifest tool_checks.row_lag_min_gap). Same-agent CKA cannot see this: it is 1 by
+    construction."""
+    a = np.argmax(np.asarray(logits_a), axis=1)
+    b = np.argmax(np.asarray(logits_b), axis=1)
+    lag0 = float(np.mean(a == b))
+    plus = float(np.mean(a[:-1] == b[1:]))
+    minus = float(np.mean(a[1:] == b[:-1]))
+    out = {"lag0": lag0, "lag_plus1": plus, "lag_minus1": minus,
+           "gap": lag0 - max(plus, minus), "min_gap": float(min_gap)}
+    if not out["gap"] >= min_gap:
+        raise RuntimeError(f"row-lag control failed for {pair}: action agreement at lag 0 "
+                           f"{lag0:.4f} vs lag +1 {plus:.4f} / -1 {minus:.4f} (gap "
+                           f"{out['gap']:.4f} < row_lag_min_gap {min_gap}); rows may be "
+                           f"misaligned between the two captures")
+    return out
+
+
 def symlog(x):
     x = np.asarray(x, np.float64)
     return np.sign(x) * np.log(np.abs(x) + 1.0)
@@ -363,14 +424,38 @@ def split_counts(splits, groups, rows=None) -> list[int]:
     return [int(np.unique(groups[s.test[keep[s.test]]]).size) for s in splits]
 
 
-def g4_controls(probe, splits, man: dict, quantities) -> dict:
+def ridge(man: dict, P) -> dict:
+    """The ridge settings of every fit: the manifest's registered grid and inner folds, and the
+    fitter, representation.fit_admitted with the rules' predictor-column admission
+    (parameters.common.predictor_columns.min_active_fraction; revision P1)."""
+    from functools import partial
+    from scripts.analysis.nmn import decision_rules as dr
+    from scripts.analysis.nmn import representation as rep
+    rs = rep.ridge_settings(man)
+    frac = float(dr.param(P, "common.predictor_columns.min_active_fraction"))
+    rs["min_active_fraction"] = frac
+    rs["fitter"] = partial(rep.fit_admitted, min_active_fraction=frac)
+    return rs
+
+
+def admitted_counts(X_train, P) -> dict:
+    """{n_columns, n_dropped} the admission rule gives for these training rows (a driver step,
+    also exercised by the parameter-perturbation test)."""
+    from scripts.analysis.nmn import decision_rules as dr
+    from scripts.analysis.nmn import representation as rep
+    keep = rep.admitted_columns(X_train, float(dr.param(
+        P, "common.predictor_columns.min_active_fraction")))
+    return {"n_columns": int(keep.size), "n_dropped": int((~keep).sum())}
+
+
+def g4_controls(probe, splits, man: dict, quantities, P) -> dict:
     """The G4 inputs on the probe's raw input (symlog of the observation at the kept rows): the
     held-out R^2 of satiation (a positive control: satiation is an observed channel), and of
     each quantity with its values shuffled across episodes (a negative control: whole episodes'
     values are handed to other episodes, slot by slot). Mean over the split repeats. Also
     whether any group sits in both folds."""
     from scripts.analysis.nmn import representation as rep
-    rs = rep.ridge_settings(man)
+    rs = ridge(man, P)
     groups = probe.row_seed
     X = symlog(probe.obs_all[probe.rows])
     rng = np.random.default_rng(int(man["probe_split"]["seed"]))
@@ -387,10 +472,11 @@ def g4_controls(probe, splits, man: dict, quantities) -> dict:
         for s in splits:
             tr = np.intersect1d(s.train, rows)
             te = np.intersect1d(s.test, rows)
-            m = rep.fit_ridge(X[tr], y[tr], groups[tr], alphas=rs["alphas"],
-                              inner_folds=rs["inner_folds"])
+            m = rs["fitter"](X[tr], y[tr], groups[tr], alphas=rs["alphas"],
+                             inner_folds=rs["inner_folds"])
             vals.append(rep.heldout_r2(m, X, y, te))
-            alphas.append({"alpha": m.alpha, "alpha_at_edge": m.alpha_at_edge})
+            alphas.append({"alpha": m.alpha, "alpha_at_edge": m.alpha_at_edge,
+                           "n_columns": m.n_columns, "n_dropped": m.n_dropped})
         return float(np.mean(vals)), vals, alphas
 
     sat, sat_rep, sat_a = mean_r2(target(probe, "satiation"), np.arange(ep.size))

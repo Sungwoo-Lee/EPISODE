@@ -1030,6 +1030,18 @@ def _exercise(Pr):
                                    "stage_end_a1": {c: "same" for c in seq}} for k in LAYERS}},
                    Pr, policy=EVID, verdict_layers=LAYERS, gates=ALL_PASS, yardstick_complete=True)
     dr.evaluate_B2(_b(late=12, coin=4), ["late"] * 3, Pr, policy=B2POL)
+    from scripts.analysis.nmn import driver_io as _dio
+    _dio.admitted_counts(_admission_X(), Pr)
+
+
+def _admission_X():
+    """Test fixture: predictor columns active on 0.5 %, 0.95 %, 1.05 %, 1.2 %, 2 % and 50 % of
+    20,000 training rows, around the registered 1 % admission threshold."""
+    n = 20000
+    X = np.zeros((n, 6))
+    for j, f in enumerate([0.005, 0.0095, 0.0105, 0.012, 0.02, 0.5]):
+        X[: int(round(f * n)), j] = 1.0
+    return X
 
 
 def test_parameter_coverage_real_rules():
@@ -1188,6 +1200,8 @@ def _decisions(Pr, base):
     calls["survival_block_interim"] = lambda: dio.survival_block(runs, Pr, "interim")
     grp = np.repeat(np.arange(400), 3)
     calls["probe_split"] = lambda: dio.split_counts(dio.make_splits(grp, Pr, 0), grp)
+    # the predictor-column admission every ridge fit applies (rules revision P1)
+    calls["admission"] = lambda: dio.admitted_counts(_admission_X(), Pr)
     rows, x = _survival_rows(base)
     calls["plateau"] = lambda: rw.plateau_crossing("synthetic", rows, x, dr.b2_settings(Pr),
                                                    dr.survival_settings(Pr))

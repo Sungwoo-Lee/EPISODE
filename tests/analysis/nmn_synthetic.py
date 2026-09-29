@@ -93,7 +93,10 @@ def write_capture_dir(out: Path, runs: list[dict], *, n_groups: int, width: int,
         acts = {}
         for j, k in enumerate(VERDICT + ["logits", "value"]):
             w = 6 if k == "logits" else (1 if k == "value" else width)
-            M = np.random.default_rng(1000 * r["seed"] + j + (7 if kind == "untrained" else 0)
+            # logits share one map across agents (so agents choose alike, as trained agents do,
+            # and the row-lag control has something to separate); other layers differ per agent
+            M = np.random.default_rng(j if k == "logits" else
+                                      1000 * r["seed"] + j + (7 if kind == "untrained" else 0)
                                       ).normal(size=(6, w))
             a = lat @ M + 0.3 * rng.normal(size=(rows.size, w))
             if r["arm"] == "modulated" and mod_gain:

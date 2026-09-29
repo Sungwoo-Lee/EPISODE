@@ -93,7 +93,7 @@ def score_layer(X, cp, groups, rs, fits, where, P) -> dict:
     y = cp["y"]
     pts, clk, r2d, exd, fit = [], [], [], [], []
     for i, p in enumerate(cp["parts"]):
-        m = rep.fit_ridge(X[p["train"]], y[p["train"]], groups[p["train"]], alphas=rs["alphas"],
+        m = rs["fitter"](X[p["train"]], y[p["train"]], groups[p["train"]], alphas=rs["alphas"],
                           inner_folds=rs["inner_folds"])
         fit += fits.add(where, [m], first=i)
         pr = m.predict(X[p["test"]])[:, 0]
@@ -119,14 +119,14 @@ def analyse_cell(caps, man, P, cell, agents, verdict_layers, quantities, log=_lo
     sel, pid = cell
     probe = caps.probes[pid]
     groups = probe.row_seed
-    rs = rep.ridge_settings(man)
+    rs = dio.ridge(man, P)
     splits = dio.make_splits(groups, P, int(man["probe_split"]["seed"]))
     boots = rep.joint_group_bootstrap(groups, splits, int(man["bootstrap_n"]),
                                       int(man["probe_split"]["bootstrap_seed"]))
     fits = _Fits()
     n = int(groups.size)
     out = {"checkpoint": sel, "probe": pid, "agents": agents, "quantities": {},
-           "g4_controls": dio.g4_controls(probe, splits, man, quantities)}
+           "g4_controls": dio.g4_controls(probe, splits, man, quantities, P)}
     xin = dio.symlog(probe.obs_all[probe.rows])
     cps = {}
     for q in list(quantities) + [SENSITIVITY]:
@@ -154,6 +154,10 @@ def analyse_cell(caps, man, P, cell, agents, verdict_layers, quantities, log=_lo
                     X, cp, groups, rs, fits, f"{sel}/{pid}/{q}/{name}/{key}", P)
             log(f"  [{sel} / {pid}] {name} {key}: {time.time() - t0:.0f}s")
     out["ridge_fits"] = {"n": fits.n, "at_grid_edge": fits.edge,
+                         "predictor_columns": {
+                             "min_active_fraction": rs["min_active_fraction"],
+                             "fits_with_dropped_columns": sum(c["n_dropped"] > 0 for c in fits.columns),
+                             "per_fit": fits.columns},
                          "grid": {"n_values": len(rs["alphas"]), "lowest": rs["alphas"][0],
                                   "highest": rs["alphas"][-1]},
                          "inner_folds": rs["inner_folds"]}
@@ -167,6 +171,11 @@ def evaluate(cell_res, P, policy, verdict_layers, quantities, gates, g5, bootstr
         q: cell_res["quantities"][q]["held_out_groups_per_repeat"] for q in quantities}}, P)
     gates = {**gates, "G6": bool(g6["bootstrap_ok"])}
     trained = {n: a for n, a in cell_res["agents"].items() if not a["untrained"]}
+    refused = [f"{q}/{n}/{k}: {cell_res['quantities'][q]['agents'][n][k]['refused']}"
+               for q in quantities for n in trained for k in verdict_layers
+               if "refused" in cell_res["quantities"][q]["agents"][n][k]]
+    if refused:
+        raise ValueError(f"verdict-layer read-outs refused, cannot evaluate: {refused}")
     inputs = {}
     for q in quantities:
         qa = cell_res["quantities"][q]["agents"]
@@ -223,6 +232,8 @@ def data_statement(stamp, man, c, P) -> dict:
                       "interval": list(dr.param(P, "common.bootstrap_interval")),
                       "seed": man["probe_split"]["bootstrap_seed"],
                       "unit": "episode_seed group, joint across all agents and quantities"},
+        "predictor_columns": {k: v for k, v in rf["predictor_columns"].items() if k != "per_fit"}
+        | {"per_fit": "cell.ridge_fits.predictor_columns.per_fit (dropped / total per fit)"},
         "ridge": {"fits": rf["n"], "fits_at_grid_edge": len(rf["at_grid_edge"]),
                   "at_grid_edge": rf["at_grid_edge"], "grid": rf["grid"],
                   "inner_folds": rf["inner_folds"]},
@@ -254,6 +265,7 @@ def main(argv=None) -> int:
           f"{stamp['verdict_statement']}; rules {pinned.path} {pinned.sha256[:12]} @ "
           f"{(pinned.commit or 'uncommitted')[:8]}", flush=True)
     caps = dio.Captures(man, pinned)
+    stamp["captures_rules_sha256"] = caps.rules_sha
     roles = caps.meta["roles"]
     cell = dio.primary_cell(pinned, policy.status, dio.cells(caps, man))
 

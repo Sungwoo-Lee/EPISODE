@@ -331,3 +331,76 @@ def test_cv_scores_equal_direct_scoring(case):
     assert np.allclose(got[finite], ref[finite], rtol=1e-9, atol=1e-9 * np.abs(ref[finite]).max())
     m = rep.fit_ridge(X, Y, groups, alphas=alphas, inner_folds=3)
     assert m.alpha == alphas[int(np.argmax(ref))]
+
+
+def test_fit_ridge_raises_when_an_inner_fold_has_a_constant_target():
+    """SST = 0 on a validation fold gives a NaN score; the penalty choice is undefined, so
+    fit_ridge raises instead of letting argmax pick the first penalty."""
+    rng = np.random.default_rng(0)
+    groups = np.repeat(np.arange(30), 4)
+    X = rng.normal(size=(120, 3))
+    y = np.ones(120)
+    with pytest.raises(ValueError, match="non-finite CV scores"):
+        rep.fit_ridge(X, y, groups, alphas=[0.1, 1.0], inner_folds=3)
+
+
+def test_per_unit_gain_on_the_predicted_layer_changes_the_variance_weighted_r2():
+    """Documents a property of the registered statistic (math review): with IMPERFECT
+    prediction, a per-unit gain on the PREDICTED layer changes the variance-weighted held-out
+    R^2 (it re-weights the units), while every unit's own R^2 is unchanged. A per-unit gain on
+    the PREDICTING layer changes nothing (standardisation absorbs it). One penalty value, so
+    the penalty choice cannot differ between the cases."""
+    rng = np.random.default_rng(5)
+    n, d, q = 3000, 8, 4
+    groups = np.repeat(np.arange(n // 3), 3)
+    X = rng.normal(size=(n, d))
+    W = rng.normal(size=(d, q))
+    Y = X @ W + rng.normal(size=(n, q)) * np.array([0.3, 1.0, 3.0, 10.0])   # unequal fit per unit
+    gain = np.array([10.0, 3.0, 1.0, 0.1])
+    tr, te = np.arange(0, 2400), np.arange(2400, n)
+
+    def scores(Xs, Ys):
+        m = rep.fit_ridge(Xs[tr], Ys[tr], groups[tr], alphas=[1.0], inner_folds=3)
+        P = m.predict(Xs[te])
+        unit = [rep.r2_weighted(Ys[te, j], P[:, j]) for j in range(q)]
+        return rep.r2_weighted(Ys[te], P), np.array(unit)
+
+    w0, u0 = scores(X, Y)
+    w1, u1 = scores(X, Y * gain)                     # gain on the predicted side
+    w2, u2 = scores(X * gain.repeat(2), Y)           # gain on the predicting side
+    assert np.allclose(u0, u1, atol=1e-10)           # each unit's R^2 is unchanged
+    assert abs(w1 - w0) > 0.1                        # the weighted average moves
+    assert abs(w2 - w0) < 1e-10 and np.allclose(u0, u2, atol=1e-10)
+
+
+# ------------------------------------------------ rules common.predictor_columns (P1) ------
+def test_fit_admitted_drops_rare_columns_decided_on_training_rows_only():
+    rng = np.random.default_rng(1)
+    n = 2000
+    groups = np.repeat(np.arange(n // 4), 4)
+    X = np.maximum(rng.normal(size=(n, 6)), 0)           # ReLU-like, ~50 % active
+    X[:, 0] = 0.0
+    X[rng.choice(n, 5, replace=False), 0] = 3.0          # 0.25 % active: dropped
+    X[:, 1] = 0.0
+    X[rng.choice(n, 40, replace=False), 1] = 1.0         # 2 % active: admitted
+    Y = X[:, 2:4] @ np.array([[1.0, 0.5], [0.2, -1.0]]) + 0.1 * rng.normal(size=(n, 2))
+    m = rep.fit_admitted(X, Y, groups, alphas=[0.1, 1.0], inner_folds=3, min_active_fraction=0.01)
+    assert (m.n_columns, m.n_dropped) == (6, 1)
+    assert np.all(m.coef[0] == 0)
+    ref = rep.fit_ridge(X[:, 1:], Y, groups, alphas=[0.1, 1.0], inner_folds=3)
+    assert np.allclose(m.predict(X), ref.predict(X[:, 1:]), atol=1e-12)
+    # a held-out row where the dropped unit fires does not move the prediction
+    Xh = X[:3].copy()
+    Xh[:, 0] = 50.0
+    assert np.allclose(m.predict(Xh), ref.predict(Xh[:, 1:]), atol=1e-12)
+    # targets are never dropped, however rare
+    m2 = rep.fit_admitted(Y, X[:, :2], groups, alphas=[1.0], inner_folds=3, min_active_fraction=0.01)
+    assert m2.coef.shape == (2, 2)
+
+
+def test_fit_admitted_with_no_admitted_column_raises():
+    X = np.zeros((200, 3))
+    X[0] = 1.0                                           # 0.5 % active: below 1 %
+    with pytest.raises(ValueError, match="cannot be computed"):
+        rep.fit_admitted(X, np.arange(200.0), np.arange(200) // 2, alphas=[1.0], inner_folds=2,
+                         min_active_fraction=0.01)

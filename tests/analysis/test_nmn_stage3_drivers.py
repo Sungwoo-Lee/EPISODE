@@ -59,7 +59,7 @@ def _manifest(tmp: Path, status: str, runs: list, n_groups: int) -> Path:
            "layers": [{"key": k, "flatten": "none", "keep": "every_capture"} for k in keys],
            "assert_n_episodes": 1,
            "tool_checks": {"shift_change_rows_max": 0.05, "self_similarity_atol": 1e-12,
-                           "buffer_index_rel_tol": 1e-3},
+                           "buffer_index_rel_tol": 1e-3, "row_lag_min_gap": 0.1},
            "capture_matmul_precision": "highest", "headline_capture": None,
            "bootstrap_n": 1000, "inner_folds": 3, "ridge_alphas": [0.01, 1.0, 100.0],
            "probe_split": {"seed": 1, "bootstrap_seed": 2}, "min_rows_per_column": 20,
@@ -121,9 +121,9 @@ def test_interim_outputs_are_stamped_and_evaluated(interim_run):
     assert len(sim["cells"][0]["pair_sets"]["MO_diff"]) == 6
     for v in pr.values():
         for f in v["fits_ab"] + v["fits_ba"]:
-            assert set(f) == {"alpha", "alpha_at_edge"}
+            assert set(f) == {"alpha", "alpha_at_edge", "n_columns", "n_dropped"}
     q = dec["cell"]["quantities"]["satiation"]["agents"]["ordinary_s42"]["rnn.state"]
-    assert set(q["fits"][0]) == {"alpha", "alpha_at_edge"} and len(q["fits"]) == 5
+    assert set(q["fits"][0]) == {"alpha", "alpha_at_edge", "n_columns", "n_dropped"} and len(q["fits"]) == 5
 
 
 def _strings(x):
@@ -150,11 +150,18 @@ def test_interim_every_verdict_word_carries_the_prefix(interim_run):
         assert not bad, bad[:5]
 
 
-def test_guard_prefixed_refuses_an_unprefixed_word():
+def test_guard_prefixed_walks_the_whole_document():
+    """The guard covers every string of the written document, not only the evaluation; only the
+    stamp keys verdict_prefix / label / verdict_statement are exempt."""
     pinned = _pinned()
     interim = dr.verdict_policy(pinned, "interim")
     with pytest.raises(ValueError, match="without the rules' prefix"):
-        dio.guard_prefixed({"A1": {"x": {"word": "different"}}}, interim, "t")
+        dio.guard_prefixed({"evaluation": {"A1": {"x": {"word": "different"}}}}, interim, "t")
+    with pytest.raises(ValueError, match="without the rules' prefix"):
+        dio.guard_prefixed({"cells": [{"note": "the two agents are the same"}]}, interim, "t")
+    dio.guard_prefixed({"verdict_statement": "verdict words come only from ...",
+                        "label": "undetermined label text", "verdict_prefix": interim.prefix,
+                        "data_statement": {"label": "same"}}, interim, "t")
     fixed = dio.finalize_evaluation({"layer_words": {"a": "same"}, "x": {"word": "same"}}, interim)
     assert fixed == {"x": {"word": interim.prefix + ": same"}}
     dio.guard_prefixed(fixed, interim, "t")
@@ -382,3 +389,108 @@ def test_buffer_index_tolerance_is_mandatory(tmp_path):
     p.write_text(yaml.safe_dump(man))
     with pytest.raises(ValueError, match="buffer_index_rel_tol"):
         ra.load_manifest(p)
+
+
+
+# ------------------------------------------------------------- cross-agent row-lag control -----
+def test_row_lag_control_passes_aligned_and_fails_shifted_rows():
+    rng = np.random.default_rng(0)
+    common = rng.normal(size=(2000, 6))
+    la = common + 0.3 * rng.normal(size=common.shape)
+    lb = common + 0.3 * rng.normal(size=common.shape)
+    ok = dio.row_lag_control(la, lb, 0.1, "a|b")
+    assert ok["lag0"] > 0.6 and ok["gap"] > 0.3
+    with pytest.raises(RuntimeError, match="row-lag control failed"):
+        dio.row_lag_control(la, np.roll(lb, 1, axis=0), 0.1, "a|b")
+
+
+def test_row_lag_control_ran_on_every_trained_pair(interim_run):
+    out, _ = interim_run
+    c = json.loads((out / "similarity.json").read_text())["cells"][0]
+    trained = [p for s, v in c["pair_sets"].items() if s != "UNTRAINED" for p in v]
+    assert sorted(c["row_lag_control"]) == sorted(trained) and len(trained) == 15
+    assert all(v["gap"] >= v["min_gap"] for v in c["row_lag_control"].values())
+
+
+def test_a_refused_readout_raises_before_evaluation():
+    from scripts.analysis.nmn import run_decoding as rd
+    cell = {"agents": {"o": {"untrained": False, "arm": "ordinary"}},
+            "quantities": {q: {"agents": {"o": {k: {"refused": "too few rows"} for k in syn.VERDICT}},
+                               "held_out_groups_per_repeat": [600] * 5}
+                           for q in ["satiation"]}}
+    with pytest.raises(ValueError, match="refused, cannot evaluate"):
+        rd.evaluate(cell, _pinned().parameters, dr.verdict_policy(_pinned(), "interim"),
+                    syn.VERDICT, ["satiation"], {}, {"yardstick_complete": True}, 2000)
+
+
+
+# ---------------------------------------- rules revision P1: admission, supporting read ------
+def test_admission_is_recorded_and_the_supporting_read_is_reported(interim_run):
+    out, pinned = interim_run
+    sim = json.loads((out / "similarity.json").read_text())
+    frac = pinned.parameters["common"]["predictor_columns"]["min_active_fraction"]
+    assert sim["data_statement"]["predictor_columns"]["min_active_fraction"] == frac
+    per_fit = sim["cells"][0]["ridge_fits"]["predictor_columns"]["per_fit"]
+    assert per_fit and all({"fit", "n_columns", "n_dropped"} <= set(r) for r in per_fit)
+    pr = sim["cells"][0]["layers"]["rnn.state"]["predictivity"]
+    for name, v in pr.items():
+        sup = v.get("supporting_read_modulated_to_ordinary")
+        if v["pair_set"] in ("MO_same", "MO_diff"):
+            assert sup["r2"] == v["r2_ba"] and name.startswith("ordinary")
+            assert sup["q_lo"] <= sup["r2"] <= sup["q_hi"]
+        else:
+            assert sup is None
+    dec = json.loads((out / "decoding.json").read_text())
+    assert dec["data_statement"]["predictor_columns"]["min_active_fraction"] == frac
+
+
+def test_an_output_under_other_rules_is_never_overwritten(tmp_path):
+    pinned = _pinned()
+    pol = dr.verdict_policy(pinned, "pilot")
+    (tmp_path / "similarity.json").write_text(json.dumps({"decision_rules": {"sha256": "old"}}))
+    with pytest.raises(ValueError, match="never overwritten"):
+        dio.write_outputs(tmp_path, "similarity", {"decision_rules": {"sha256": "new"}}, [], pol)
+    dio.write_outputs(tmp_path, "similarity", {"decision_rules": {"sha256": "old"}}, [], pol)
+
+
+def test_captures_under_other_rules_reused_only_if_their_rule_numbers_agree(tmp_path):
+    pinned = _pinned()
+    syn.write_capture_dir(tmp_path / "synth", SIX[:2], n_groups=50, width=4, rules_sha="other")
+    man = yaml.safe_load(_manifest(tmp_path, "pilot", SIX[:2], 50).read_text())
+    meta = json.loads((tmp_path / "synth" / "manifest.json").read_text())
+    meta["gates_read"] = dio.capture_rule_numbers(pinned.parameters)
+    (tmp_path / "synth" / "manifest.json").write_text(json.dumps(meta))
+    assert dio.Captures(man, pinned).rules_sha == "other"
+    meta["gates_read"]["G2"] = 1.0
+    (tmp_path / "synth" / "manifest.json").write_text(json.dumps(meta))
+    with pytest.raises(ValueError, match="re-run run_activations"):
+        dio.Captures(man, pinned)
+
+
+# --------------------------------------------------------- robustness columns (descriptive) -----
+def test_robustness_columns_reproduce_the_registered_value_and_are_labelled(interim_run):
+    out, pinned = interim_run
+    from scripts.analysis.nmn import run_similarity_robustness as rob
+    man = out.parent / "interim.yaml"
+    mp = pytest.MonkeyPatch()
+    mp.setattr(dio, "read_survival", lambda man, roles: syn.scanned_runs())
+    assert rob.main(["--manifest", str(man), "--workers", "2"]) == 0
+    mp.undo()
+    doc = json.loads((out / "similarity_robustness.json").read_text())
+    assert doc["status_of_these_numbers"] == "descriptive — not a registered statistic"
+    assert doc["decision_rules"]["sha256"] == pinned.sha256 and "evaluation" not in doc
+    sim = json.loads((out / "similarity.json").read_text())
+    for layer in syn.VERDICT:
+        reg = sim["cells"][0]["layers"][layer]["predictivity"]
+        rows = doc["layers"][layer]["pairs"]
+        assert set(rows) == {p for p, v in reg.items() if v["pair_set"] != "UNTRAINED"}
+        for pname, rec in rows.items():
+            for v in ("admitted", "all_columns"):   # no rare column in the fixture: both equal
+                assert abs(rec["variants"][v]["weighted_mutual"]["point"] - reg[pname]["point"]) < 1e-10
+            if rec["pair_set"] in ("MO_diff", "MO_same"):
+                sup = reg[pname]["supporting_read_modulated_to_ordinary"]["r2"]
+                assert abs(rec["variants"]["admitted"]["weighted_b_to_a"]["point"] - sup) < 1e-10
+        summ = doc["layers"][layer]["summary"]["admitted/weighted"]
+        assert len(summ["MM_mutual_points"]) == 3 and len(summ["MO_diff_mutual_points"]) == 6
+    text = (out / "similarity_robustness.csv").read_text()
+    assert "descriptive — not a registered statistic" in text
