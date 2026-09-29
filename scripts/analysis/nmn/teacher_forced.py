@@ -32,11 +32,6 @@ from pathlib import Path
 
 import numpy as np
 
-SITE_OF = {"enc.uni": ("z_unimodal", "z_unimodal_add"), "enc": ("z_multimodal", "z_multimodal_add"),
-           "rnn": ("z_rnn", "z_rnn_add"), "actor": ("z_actor", "z_actor_add"),
-           "critic": ("z_critic", "z_critic_add")}
-
-
 # ───────────────────────────────── scans (must be entered through nnx.jit) ──
 def _scan_sampled(model, obs, slots, h0, keys: tuple, n_slots: int):
     """Scan over time; write the requested layers only at sampled (t, episode) slots.
@@ -175,19 +170,44 @@ def _chain(model, obs, acts, mod):
     return out
 
 
-def chain_deviations(model, obs, acts, mod) -> dict:
-    """{assertion: max|recomputed - captured| / max(1, max|captured|)} over (T, B, ...).
-    `obs` is (T, B, D) raw observations; `acts`, `mod` from `_scan_full` on the same batch
-    (initial memory at t = 0). Runs as its own nnx.jit program."""
+def chain_deviations_per_step(model, obs, acts, mod) -> dict:
+    """{assertion: (T,) array}: per step t, max over (B, ...) of |recomputed - captured|,
+    divided by the BLOCK normaliser max(1, max|captured|) over the whole (T, B, ...) block.
+    Runs as its own nnx.jit program."""
     import jax.numpy as jnp
     from flax import nnx
 
     def f(m, obs, acts, mod):
         pairs = _chain(m, obs, acts, mod)
-        return {k: jnp.max(jnp.abs(r - c)) / jnp.maximum(1.0, jnp.max(jnp.abs(c)))
-                for k, (r, c) in pairs.items()}
+        return {k: jnp.max(jnp.abs(r - c).reshape(r.shape[0], -1), axis=1)
+                / jnp.maximum(1.0, jnp.max(jnp.abs(c))) for k, (r, c) in pairs.items()}
     dev = nnx.jit(f)(model, obs, acts, mod)
-    return {k: float(v) for k, v in dev.items()}
+    return {k: np.asarray(v, np.float64) for k, v in dev.items()}
+
+
+def chain_deviations(model, obs, acts, mod) -> dict:
+    """{assertion: max|recomputed - captured| / max(1, max|captured|)} over (T, B, ...).
+    `obs` is (T, B, D) raw observations; `acts`, `mod` from `_scan_full` on the same batch
+    (initial memory at t = 0). Runs as its own nnx.jit program."""
+    return {k: float(v.max()) for k, v in chain_deviations_per_step(model, obs, acts, mod).items()}
+
+
+def quarters(values, pos, length) -> list:
+    """Max of `values` within each quarter of [0, length): quarter q holds pos with
+    floor(4 * pos / length) == q (tooling plan R4-4: shows whether a deviation grows with t).
+    None for an empty quarter."""
+    values, pos = np.asarray(values, float), np.asarray(pos, float)
+    q = np.minimum((4 * pos / np.asarray(length, float)).astype(int), 3)
+    return [float(values[q == i].max()) if np.any(q == i) else None for i in range(4)]
+
+
+def buffer_index_deviation(ref: np.ndarray, got: np.ndarray) -> np.ndarray:
+    """Per kept row i: max_j |got_ij - ref_ij| / max(1, max_j |ref_ij|) (tooling plan R4-4,
+    `tool_checks.buffer_index_rel_tol`): neither the normaliser nor the error is pooled across
+    rows, so the value does not depend on how long the probe's episodes are."""
+    ref = np.asarray(ref, np.float64).reshape(len(ref), -1)
+    got = np.asarray(got, np.float64).reshape(len(got), -1)
+    return np.max(np.abs(got - ref), axis=1) / np.maximum(1.0, np.max(np.abs(ref), axis=1))
 
 
 # ─────────────────────────────────────────────────────────────── replay ──
@@ -207,6 +227,7 @@ def _near_tie_rule(agree, margin, *, min_agree, tie_margin, tie_frac_max):
 
 def replay(agent, probe, layers: list, *, batch_size: int, is_generating: bool, g1: dict,
            g3: dict, g2_tol: float, shift_change_rows_max: float, assert_n_episodes: int,
+           buffer_index_rel_tol: float,
            store_id_of_agent: int | None, capture_precision: str,
            check_precision: str | None) -> tuple[dict, dict]:
     """Replay every probe episode through `agent` (scripts.analysis.nmn.replay.LoadedAgent).
@@ -279,7 +300,8 @@ def replay(agent, probe, layers: list, *, batch_size: int, is_generating: bool, 
     report["capture_precision"], report["check_precision"] = capture_precision, check_precision
     with jax.default_matmul_precision(capture_precision):
         _chain_section(model, probe, acts_rows, keys, row_ep, row_t, report,
-                       assert_n_episodes=assert_n_episodes, g2_tol=g2_tol)
+                       assert_n_episodes=assert_n_episodes, g2_tol=g2_tol,
+                       buffer_index_rel_tol=buffer_index_rel_tol)
     return acts_rows, report
 
 
@@ -389,7 +411,7 @@ def _checks(probe, acts_rows, keys, skipped, n_slots, amax_all, margin_all, amax
 
 
 def _chain_section(model, probe, acts_rows, keys, row_ep, row_t, report, *, assert_n_episodes,
-                   g2_tol):
+                   g2_tol, buffer_index_rel_tol):
     """Chain assertions on `assert_n_episodes` whole episodes, plus sampled-vs-full capture."""
     import jax.numpy as jnp
     from flax import nnx
@@ -412,28 +434,46 @@ def _chain_section(model, probe, acts_rows, keys, row_ep, row_t, report, *, asse
     valid = np.arange(Tc)[:, None] < probe.ep_T[chk][None, :]
     # Steps past an episode's end run on zero inputs; they are still network evaluations,
     # so the chain must hold there too, and every step of the (Tc, n) block is checked.
-    dev = chain_deviations(model, obs_j, full_acts, full_mod)
+    per_t = chain_deviations_per_step(model, obs_j, full_acts, full_mod)
+    dev = {k: float(v.max()) for k, v in per_t.items()}
     report["chain_assertions"] = {
         "episodes": [int(probe.ep_seed[e]) for e in chk], "episode_store": probe.ep_store[chk].tolist(),
         "episode_steps": int(valid.sum()), "steps_checked_incl_padding": int(valid.size),
         "tolerance (gate G2)": g2_tol,
         "max_rel_deviation": dev,
+        # R4-4 diagnostic: the maximum in each quarter of the checked length (steps 0..Tc-1)
+        "max_rel_deviation_per_quarter_of_checked_length": {
+            k: quarters(v, np.arange(Tc), Tc) for k, v in per_t.items()},
         "pass": bool(all(v <= g2_tol for v in dev.values()))}
     if not report["chain_assertions"]["pass"]:
         bad = {k: v for k, v in dev.items() if v > g2_tol}
         report["failures"].append(f"chain assertions {bad}")
-    # the kept rows of these episodes must equal the full capture (same tensors, two programs)
+    # The kept rows of these episodes must equal the full capture (same tensors, two separate
+    # recurrences from h0, so rounding carried through the memory grows with t). Tooling plan
+    # R4-4: a per-row tool check against tool_checks.buffer_index_rel_tol, not G2's number; it
+    # guards against a buffer written into the wrong (step, episode) slot. A planted one-step
+    # slot shift is reported beside it (Checkpoint R4.4: it must exceed the tolerance).
     rows_in = np.flatnonzero(np.isin(row_ep, chk))
-    col = {int(e): j for j, e in enumerate(chk)}
-    cap_dev = {}
+    col = np.array([{int(e): j for j, e in enumerate(chk)}[int(e)] for e in row_ep[rows_in]])
+    t_in = row_t[rows_in]
+    T_in = probe.ep_T[row_ep[rows_in]]
+    t_shift = np.where(t_in + 1 < T_in, t_in + 1, t_in - 1)
+    cap_dev, cap_q, planted = {}, {}, {}
     for k in keys:
         full = np.asarray(full_acts[k]).reshape(Tc, chk.size, -1)
-        ref = full[row_t[rows_in], [col[int(e)] for e in row_ep[rows_in]]]
-        got = acts_rows[k][rows_in]
-        cap_dev[k] = float(np.max(np.abs(ref - got)) / max(1.0, float(np.max(np.abs(ref)))))
-    report["sampled_vs_full_capture_max_rel_deviation"] = cap_dev
-    if any(v > g2_tol for v in cap_dev.values()):
-        report["failures"].append("sampled-row capture differs from the full capture")
+        d = buffer_index_deviation(full[t_in, col], acts_rows[k][rows_in])
+        cap_dev[k] = float(d.max())
+        cap_q[k] = quarters(d, t_in, T_in)
+        planted[k] = float(buffer_index_deviation(full[t_shift, col], acts_rows[k][rows_in]).max())
+    report["sampled_vs_full_capture"] = {
+        "tolerance (tool_checks.buffer_index_rel_tol)": buffer_index_rel_tol,
+        "rows_checked": int(rows_in.size),
+        "max_per_row_rel_deviation": cap_dev,
+        "per_quarter_of_episode_length": cap_q,
+        "planted_one_step_slot_shift_max_per_row_rel_deviation": planted}
+    if any(v > buffer_index_rel_tol for v in cap_dev.values()):
+        report["failures"].append("sampled-row capture differs from the full capture "
+                                  "(tool_checks.buffer_index_rel_tol)")
 
 
 def save_activations(path, acts_rows: dict, probe_sha: str):

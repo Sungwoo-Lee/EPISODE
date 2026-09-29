@@ -100,6 +100,7 @@ def load_manifest(path) -> dict:
                          f"(Revision 4, R4-1: every kept activation is full float32), got "
                          f"{man['capture_matmul_precision']!r}")
     _req(man["tool_checks"], "shift_change_rows_max", "manifest.tool_checks")
+    _req(man["tool_checks"], "buffer_index_rel_tol", "manifest.tool_checks")
     for p in man["probes"]:
         for k in ("id", "stores", "n_per_store", "rows_per_episode", "seed",
                   "store_matmul_precision"):
@@ -379,6 +380,7 @@ def main(argv=None) -> int:
             agent, probe, c["layers"], batch_size=args.batch_size, is_generating=bool(gen),
             g1=g1, g3=g3, g2_tol=g2_tol,
             shift_change_rows_max=float(man["tool_checks"]["shift_change_rows_max"]),
+            buffer_index_rel_tol=float(man["tool_checks"]["buffer_index_rel_tol"]),
             assert_n_episodes=int(man["assert_n_episodes"]),
             store_id_of_agent=(gen[0] if gen else None),
             capture_precision=man["capture_matmul_precision"],

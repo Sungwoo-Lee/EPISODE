@@ -58,7 +58,8 @@ def _manifest(tmp: Path, status: str, runs: list, n_groups: int) -> Path:
                        "store_matmul_precision": ["recorded"] * len(runs)}],
            "layers": [{"key": k, "flatten": "none", "keep": "every_capture"} for k in keys],
            "assert_n_episodes": 1,
-           "tool_checks": {"shift_change_rows_max": 0.05, "self_similarity_atol": 1e-12},
+           "tool_checks": {"shift_change_rows_max": 0.05, "self_similarity_atol": 1e-12,
+                           "buffer_index_rel_tol": 1e-3},
            "capture_matmul_precision": "highest", "headline_capture": None,
            "bootstrap_n": 1000, "inner_folds": 3, "ridge_alphas": [0.01, 1.0, 100.0],
            "probe_split": {"seed": 1, "bootstrap_seed": 2}, "min_rows_per_column": 20,
@@ -308,3 +309,32 @@ def test_pilot_manifest_loads_for_stage3():
     man = dio.load_manifest(PILOT)
     assert man["headline_capture"] == {"checkpoint": "final", "probe": "w0000_pair_final"}
     ra.check_keep(man, _pinned().rules["common"]["verdict_layers"])
+
+
+# ------------------------------------------------------------ R4-4 sampled-vs-full check -----
+def test_buffer_index_deviation_is_per_row():
+    """Each row is normalised by its own reference maximum: a row with large values does not
+    dilute a small row's error, and a one-slot shift of a changing signal is caught."""
+    from scripts.analysis.nmn import teacher_forced as tf
+    ref = np.array([[0.1, 0.2], [100.0, 50.0]])
+    got = ref + np.array([[0.05, 0.0], [0.0, 0.0]])
+    d = tf.buffer_index_deviation(ref, got)
+    assert np.allclose(d, [0.05, 0.0])            # row 0: 0.05 / max(1, 0.2)
+    t = np.arange(50, dtype=float)
+    sig = np.stack([np.sin(t / 3), np.cos(t / 5)], axis=1)
+    assert tf.buffer_index_deviation(sig[1:], sig[:-1]).max() > 0.1
+
+
+def test_quarters_of_a_length():
+    from scripts.analysis.nmn import teacher_forced as tf
+    assert tf.quarters([1, 2, 3, 4, 5], [0, 3, 5, 9, 10], 12) == [1.0, 3.0, None, 5.0]
+    assert tf.quarters([1.0], [0], [8]) == [1.0, None, None, None]
+
+
+def test_buffer_index_tolerance_is_mandatory(tmp_path):
+    man = yaml.safe_load(PILOT.read_text())
+    del man["tool_checks"]["buffer_index_rel_tol"]
+    p = tmp_path / "m.yaml"
+    p.write_text(yaml.safe_dump(man))
+    with pytest.raises(ValueError, match="buffer_index_rel_tol"):
+        ra.load_manifest(p)
