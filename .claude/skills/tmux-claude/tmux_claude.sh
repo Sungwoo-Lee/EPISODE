@@ -45,7 +45,9 @@ cmd_peek() {  # peek <target> [lines]
 
 cmd_last() {  # last <target|session-id> [n]  — last n user/assistant messages from the transcript
   local sid="$1"
-  if [[ ! "$sid" =~ ^[0-9a-f-]{36}$ ]]; then
+  if [[ "$sid" =~ ^[0-9a-f-]{6,36}$ ]] && ls "$TRANSCRIPTS/$sid"*.jsonl >/dev/null 2>&1; then
+    sid=$(basename "$(ls "$TRANSCRIPTS/$sid"*.jsonl | head -1)" .jsonl)
+  else
     local pid; pid=$(claude_pid "$1"); [ -n "$pid" ] || die "no claude in $1"
     sid=$(sess_field "$pid" sessionId)
   fi
