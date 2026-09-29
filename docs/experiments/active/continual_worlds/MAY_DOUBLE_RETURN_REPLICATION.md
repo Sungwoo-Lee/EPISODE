@@ -359,6 +359,14 @@ The measure is survival steps per episode (~~`Episode/Steps_mean`~~ *[rev 2026-0
 key is `Episode/Steps`, the per-row mean; plan-reviewer L1]*) over the whole run, read from
 WandB episode rows (`Episode/Number`, `Episode/_window_n`, `stage/index`). Rows are weighted by
 `Episode/_window_n`, and rows under 1,000 episodes are skipped, as in [[CONTINUAL_WORLDS]] 5.1.
+*[note 2026-09-30, plan-reviewer T2 (`docs/reviews/plan_algorithmic_null_tooling.md`, third
+review): this sentence does not match the code that computes this study's verdict.
+`pilot_readout.Series` (`pilot_readout.py:296-308`) weights each row by the episodes it adds —
+the increase in `Episode/Number` since the previous row — and uses `Episode/_window_n` only for
+the 1,000-episode skip. Logged rows are overlapping rolling windows, so the two weightings differ.
+Recorded here, not changed: the registered rule text above stands as written, and the verdict
+will be computed by the code as it is. The algorithmic-null decision rules name the code's
+estimator (`row_weight: delta_episode_number`).]*
 Reward is never used. The analysis reuses
 `scripts/analysis/studies/continual_worlds/pilot_readout.py` (`scan` / `Series` / `recovery`,
 and its own / common-reference `_vote`, commit `a72eb943`). Its per-stage logic is general: it
