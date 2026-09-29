@@ -241,3 +241,24 @@ The live sessions were not touched. The hooks were loaded only through `claude -
 | Session ended | ✅ After A exited, B's next prompt got `"Board test A" ended (its note is gone)`. |
 | Overhead | 49 ms mean per `PostToolUse` call on the fast path (20 calls, NAS). This is at the 50 ms target. |
 | Not yet exercised live | `/compact` and `/clear` resend, sub-agent path (covered by unit tests only), a session already running at rollout getting the full board on its first prompt (Verification step 4, which is done at rollout). |
+
+---
+
+## Feedback from senior-developer — plan-adherence verification of commit 115f8f5e (2026-09-29)
+
+**Verdict: implementation matches the design and Revision 1 on almost every item, but two gaps should be fixed before the rollout to `.claude/settings.json`.** Neither can break a session (the never-fail guarantee holds); both would make the rollout quietly less useful than the design promises.
+
+**Fix before rollout**
+
+1. **The 1,500-character cap removes the instructions.** `wrap()` replaces the *whole* message when it is too long. The instructions alone are 829 characters, the frame header is 74, and one typical card is about 300. So with three or more other live sessions (six are expected at rollout), the SessionStart message and the "no `seen` file" full board both collapse to "Many board changes — run show". The session is then never taught the `task`, `note` and `show` commands. Fix: cap only the board part, or shorten each card, and always keep the instructions.
+2. **A session that is mid-turn at rollout never gets the full board.** If the first hook such a session fires is `PostToolUse`, the missing-`seen` branch of `on_post_tool` (the sub-agent-inherit path) writes a snapshot silently. When `agent_id` is None it copies from itself, so it falls back to `snapshot()`. The next `UserPromptSubmit` then finds a `seen` file and sends only deltas. The session never sees the existing cards or the instructions, only the hourly "no task" reminder. That contradicts the Rollout section and Verification step 4. Fix: in that branch, when `agent is None`, write nothing and return, so the next prompt takes the full-board path. Add a unit test for it.
+
+**Should fix**
+
+3. The tmux-claude `SKILL.md` was listed in File Changes but was not updated. It should document `TMUX_CLAUDE_EXTRA`, `TMUX_CLAUDE_ENV` and the TASK column. The RC column also no longer prints the `bridgeSessionId`, which was not requested and should be stated or reverted.
+4. The `SCRIPTS_DEPENDENCY_MAP.md` row flags that the §2 intro sentence ("no `settings.json` invokes any of these") must be amended at rollout, but the Rollout section here does not list that step. Add it to the rollout checklist, so whoever edits `settings.json` also edits the map.
+5. This doc's status line still says "PLANNED (awaiting user approval)". Change it to something like "IMPLEMENTED — rollout pending".
+
+**Accepted deviations**: the heartbeat is written at most every 5 min rather than on every hook, to spare the NAS writes. The `files` entries use key `t` rather than `last_edit`. Overhead was timed over 20 calls rather than 100. File paths are not passed through `clean()`, which is low risk. The note-age reminder is skipped while the task is unset.
+
+Verified by: senior-developer
