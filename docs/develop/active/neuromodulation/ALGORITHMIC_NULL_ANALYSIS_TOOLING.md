@@ -463,3 +463,16 @@ This belongs in a separate plan with a speed measurement. It would make B2's per
 | | | | |
 
 **Conclusion**:
+
+---
+
+## Feedback from plan-reviewer
+
+**Verdict (2026-09-29): NOT READY** — two Critical findings, both cheap to fix before any code is written. Full table, assumption list and exit conditions in [[plan_algorithmic_null_tooling]] (`docs/reviews/plan_algorithmic_null_tooling.md`).
+
+1. 🔴 **Wake-up definition has silent degenerate cases** (§B2, §11). `fraction_of_rise` reports checkpoint 0 for any measure that *falls* over training, and a noise-driven checkpoint for any measure that ends near where it started; `sustain` cures neither. `m₀` is also the first *saved* checkpoint (200 k / 100 k episodes), not the untrained network. Fix: signed crossing in the direction of change, a minimum-change guard that returns NaN with a reason, an untrained-network anchor for the measures where it is computable, and both degenerate curves in `test_nmn_wakeup.py`.
+2. 🔴 **No pre-registered rule for "same computation"** before Stage 3 / 4b figures are seen. `experiment-designer` writes a mandatory `decision_rules` block into the May manifest (threshold against the ordinary–ordinary yardstick, and the refutation outcome in words) before Stage 3 runs.
+
+Moderate: run-time reconstruction assertions on real checkpoints so every captured key is chained to its neighbour (the argmax check cannot see side outputs); a step-discontinuous alignment control (satiation R² is blind to a one-row shift); the gradient probe is not like-for-like with the logged mean-over-updates; the `1536*` WandB glob matches 2 of 6 May runs; the new builder's "unused figures" check collides with the 111 files the other page keeps in the same `figures/`; specify which dict the continual collector fingerprints and test it; make the censored-excluded `steps_remaining` the headline with a `t`-only baseline. Low: paths for the analysis manifest and `_common`, 0/1-based stage naming, group key for the pooled probe, CKA "exactly 1.0", `enc.uni.*` flattening.
+
+— *plan-reviewer, 2026-09-29*
