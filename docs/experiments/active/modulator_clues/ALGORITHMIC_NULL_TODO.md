@@ -25,6 +25,14 @@ ordinary agent's weights, sees the same environment stream, and FiLM starts near
 basin. Test whether the identical results come from that shared start or from a real
 equivalence.
 
+**Verified 2026-09-30 on the May replication's seed-42 pair** (resolving a question the
+decision-rules author raised): both untrained agents built from one key through the replay /
+trainer recipe share **27 of 27 main-network parameter arrays exactly**; both use a plain
+`GRUCell`; the only extra parameters are the modulator's 33. The trainer's key splits before
+model construction (`train.py` ~l.1152-1207) do not depend on the arm, so the environment
+stream is shared as well. The May design (§3.4) says only that both agents "start from random
+weights" and does not contradict this.
+
 - [ ] **Train modulated agents whose main network starts from a different seed than their
       paired ordinary agent.** If the gaps then scatter at the size of ordinary
       seed-to-seed variation, the shared start produced the identical results; if they
