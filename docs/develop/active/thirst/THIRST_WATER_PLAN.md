@@ -1,0 +1,639 @@
+---
+title: "Water and thirst: a fixed pond per episode and a two-sided hydration axis"
+topic: env_entities
+status: active
+created: 2026-09-29
+last_updated: 2026-09-29
+aliases: [thirst_water_plan]
+---
+
+# Water and thirst: a fixed pond per episode and a two-sided hydration axis
+
+> **Status**: DRAFT (plan only; nothing here is built). Frontmatter says `active` because the develop-index validator accepts only `active` / `superseded` / `archive`, and `draft` would fail it. The same goes for the folder: `thirst` is not a registered topic, so the doc is filed under `env_entities`. Adding a topic means editing `scripts/claude/regen_dev_index.py`, which this plan may not do.
+> **Opened**: 2026-09-29
+> **Related**: [[thermal_implementation_plan]] (method template: staged, byte-parity first) · [[warming_cooling_rate_scales]] (target-first calibration template) · [[STATE_DEPENDENT_BODY_MECHANICS]] (the parity-fixture and saved-config-compat pattern reused here) · [[BUSH_FIRE_CLEARANCE]] (placement post-pass pattern) · [[RENDERER_LAYOUT_REDESIGN]] (owner of the episode-video dashboard) · [[SAVED_RUN_CONFIG_COMPAT]] · Known Bugs registry: `docs/develop/active/issues/KNOWN_BUGS.md` (rows cited in §A11)
+> **Decision record**: user alignment session 2026-09-29, `tmp/20260929_173459_thirst_alignment.md` (gitignored; its decisions table is copied verbatim below)
+
+---
+
+## Context
+
+The agent in this grid world keeps its body in range. Today it tracks hunger, injury and, in the campfire world, body temperature. This plan adds a fourth need: **thirst**. It also adds **water** to drink.
+
+Water is different from food. Food items are scattered, get eaten up and come back somewhere else. Water is **one pond per episode**: a small block of cells, 2×2 by default. The pond never runs dry and never moves during the episode. It moves **between** episodes, though. The agent can smell and see which way things lie, so a pond in the same place every episode would turn into a memorised route. Each episode draws the pond from a short list of candidate spots in the config, or at random, or at the grid centre.
+
+Standing on a pond cell drinks, on every step. Drinking too much is fatal, just as drinking too little is. Hydration mirrors the nutrition axis rebuilt on 2026-09-22: it drains a little each step, has its comfortable level in the **middle** of its range, and kills at either end. Predators may walk into the pond, so the pond is also an ambush point where thirst has to be traded against danger.
+
+**What the plan claims.**
+
+- Every world that does not switch water on stays **byte-for-byte the same**: same random numbers, same observations, same rewards. The plan requires parity tests that prove this against rollouts recorded before any code change.
+- A new ladder level, **06 "pond + thirst"**, is added on top of the campfire world.
+- The current noise level is renamed from 06 to **07** and now sits on top of the pond world.
+
+The Analysis section checks every mechanism against the code as it stands today. The previous (thermal) plan's assumptions about the code were wrong at every stage, so none are taken on trust here.
+
+---
+
+## Settled decisions (user, 2026-09-29) — copied verbatim, not reopened
+
+| # | Decision | Chosen |
+|---|---|---|
+| 1 | Placement modes | `placement: list | random | center`; list = candidate locations in config, one drawn per episode |
+| 2 | Pond shape/count | ONE pond per episode, multi-cell block (e.g. 2x2); list entries = top-left cell |
+| 3 | Thirst dynamics | MIRROR NUTRITION: linear drain per step, drinking refills; two-sided axis, setpoint in the middle, death at W<=0 and W>=max (like overeating_death since 09-22) |
+| 4 | Vision | Do not worry: current default visual sensor is ONE channel ("Visible"); pond just writes into it |
+| 5 | Smell | KEEP 5 olfactory dims. Water property vector mixes Food + Tree dims, e.g. [0.5,0,0,0,0.5] (Tree dim is dead in maintained levels: tree count 0). Per-cell weight scaled so a 2x2 pond is not 4x louder than one food. Rename Tree channel label (e.g. "Odour C"). User: deliberately LESS clear than EVAAA; water and food share info. |
+| 6 | Drinking | Pond cells WALKABLE; drink every step standing on a pond cell; pond never disappears. Over-drinking death is the brake. |
+| 7 | Ladder | NEW level 06 = campfire world + pond (extends 05); 06-sensory_noise renumbers to 07 |
+| 8 | Water clock | SLOWER than food: ~150-200 steps setpoint->death (food 100, cold ~92; episode cap 500) |
+| 9 | Predators | Animals walk into the pond freely (watering-hole ambush; thirst-vs-danger trade) |
+
+**Defaults assumed by the alignment note (user may override; this plan implements them as written):**
+
+- Hydration is **observable**, like satiation: one observation dimension, always present when water is on.
+- The water term enters the homeostatic drive (and therefore the reward) **the same way satiation does**.
+- The pond location is drawn **uniformly** from the list each episode.
+- Every other entity (food, fires, rocks, bushes, hiding predators, animals) and the agent's start are placed **after** the pond and **never on it**.
+- Thirst is **not** coupled to body temperature. A later off-by-default switch, in the style of `thermal.metabolic_coupling`, is possible but is not part of this plan.
+
+---
+
+## Analysis
+
+Each subsection states what the code does today (file:line at `81d28c36`), then what that means for water. Line numbers drift; the developer re-locates by the quoted code, not by the number.
+
+### A1. The template being mirrored: the two-sided nutrition axis (commit `379ec8fc`)
+
+- `update_body` (`src/environment/core.py:155-541`) owns every body variable. Nutrition decays linearly (`new_nutrition = prev_nutrition - params.metabolic_cost`), refills on `info['ate_food']`, and is clipped once to `[0, max_nutrition]`. Death is folded into `done` **inside `update_body`**, both ends, the upper end under the static `params.overeating_death` gate (`core.py:~430-440`).
+- `jax_step` stamps the termination label from the **same predicate** under the same static gate (`core.py:~1110-1125`). That is the fix for registry row "Over-eating never ended the episode…" (KNOWN_BUGS ~#192). Row ~#160 records the design guard that goes with it: compute the death test once in `update_body`, return it, and never re-derive it in `jax_step`.
+- The drive (`calculate_drive`, `core.py:72-127`) is a Euclidean norm in **satiation units**. A second physical axis is rescaled by `range_S / range_axis`, where `range_S = satiation_deviation_range(params) = max(setpoint, max_satiation - setpoint)` (`core.py:49-70`). At shipped values `range_S = 100`, so every axis sits exactly 100 drive units from its own death, and that equals `death_penalty` (100). **The water axis must keep this property.**
+- The thermal-off path of `calculate_drive` is the pre-thermal expression **verbatim**, reached by a static `if params.thermal_enabled:`. Water follows the same rule: a new static branch **before** the thermal branch, so the water-off path falls through to today's code unchanged.
+- The logged `info['drive_hunger']` is written divide-first (`(S/range_S) - (setpoint/range_S)`) because the natural form differs by up to 2 ULP on half the axis. `info['drive_thirst']` uses the same divide-first form.
+
+### A2. Reset, placement and the PRNG stream (`jax_reset`, `core.py:1707-2260`)
+
+- The outer split is **5-way and byte-locked**: `key, agent_key, placement_key, body_key, property_key = jax.random.split(key, 5)`. Every later feature added streams with `jax.random.fold_in(<existing key>, <unique constant>)` instead of widening a split. Constants in use: `0xAE1`, `0x7150A1`, `0xA77AC7`, `0xC0A1–0xC0A3`, `0x7EE7`, `0xF00D`, `0xB05E`, and `999` for observation noise. **Water uses fold-in only**, with new constants `0xD81` (pond draw), `0xD82` (agent-start repair), `0xD83` (respawn repair) and `0xD84` (random start hydration). Grep confirms none of them is taken at the time of writing. The developer re-greps before committing.
+- **Agent start** (`core.py:1731-1732`): `random_pos = randint(agent_key, (2,), 0, [H, W])`, drawn over the **whole grid** with **no** check against entities. The agent can start on a food, a bush or a hiding predator today. So "never on the pond" needs new code. It cannot be had by reordering.
+- **Entity placement**: every maintained ladder world uses `placement.mode: per_entity`. This was measured by loading levels 00–06 through the trainer's loader. In that mode each entity samples a cell in its own spawn area, and then `resolve_overlaps_global` (`core.py:1328-1422`) runs **one** permutation and walks it, moving each entity whose cell is already taken to the first free in-area cell. Its occupancy mask starts **all-False** (`occupancy = jnp.zeros(total_cells, …)`). Seeding that mask with the pond cells is the cheapest correct exclusion: zero extra draws, and the pond is treated as already occupied.
+- Two optional **post-passes** use `relocate_blocked_entities` (`core.py:1425-1495`): food-to-fire distance (D3) and bush-to-fire clearance. Each rebuilds its occupancy **from entity positions only** (`occupancy = zeros.at[flat0].set(True)`), so either pass could move a food or bush **onto** a pond cell. Both are off at every maintained level (`thermal.food_min_fire_distance: 0`, `thermal.bush_min_fire_distance: 0` in `configs/environment/default.yaml:~519, ~530`). This plan refuses water together with either pass at load time (§D3). Proving pond-aware feasibility for those passes is not needed for any world this plan ships.
+- The `per_type` mode (`core.py:~1948-1981`, `place_in_area`) also starts from an all-False occupancy mask. No maintained world uses it, and water is refused with it at load (§D3).
+- **Registry row ~#117** ("An entity whose spawn area is full is silently parked at cell (0,0)…"): both `resolve_overlaps_global` and `relocate_blocked_entities` fall back to flat index 0 with nothing raised. A pond takes up to `h·w` cells and makes that fallback more reachable, so this plan adds a **load-time capacity check** (§D3). The pond's own location is never computed by those functions. It comes from a table validated at load, so **pond placement cannot fall back; an infeasible pond configuration raises `ValueError` at load**.
+- **Respawn** (`jax_step`, `core.py:~925-935`): a consumed resource respawns at `randint(res_keys[i], (2,), area[:2], area[2:])`, uniform in its area with **no** occupancy check. A respawning food or hiding predator can land on a pond cell. It needs the same "replace if on the pond" repair as the agent start (§D4).
+- **Body init** (`core.py:~2005-2040`): `body_key1, body_key2, body_key3 = split(body_key, 3)`. `body_key1` is taken by random start body temperature (B1), `body_key2` by random start nutrition, `body_key3` by random start injury. Random start hydration needs its own `fold_in(body_key, 0xD84)`.
+- **Registry row ~#94** (`body.start_satiation` is a dead knob): the loader reads it and nothing in `core.py` uses it. `jax_reset` sets `nutrition = params.start_nutrition` and derives satiation from that. Water must not repeat this: `water.start_hydration` must be the value `jax_reset` writes into `state.hydration` when the random start is off, and a test must fail if it is not (§T3).
+
+### A3. Olfaction, and a smell normalisation consistent with the existing falloff
+
+`sense_resource` (`src/environment/sensor.py:5-28`) is the one smell kernel. For a sampling point `x` it sums, over a pool of sources, `property_i · f(d_i)`, masked by `active_i` and `d_i <= sensor_radius`:
+
+$$
+f(d) = \begin{cases} 0.5^{-\gamma} & d < 0.001 \\ \dfrac{1}{d^{\gamma} + 10^{-10}} & \text{otherwise} \end{cases}
+$$
+
+Here `γ` = `sensory.decay_power` (1.0, registry setting) and `d` is Euclidean. `_sense_olfaction_at` (`sensor.py:30-41`) adds the three pools in the fixed order **res + animal + obs**, and the docstring notes that this order is bit-identical to older code. With `olfactory_grid_range: 1` (default) the field is sampled at a 5-cell diamond, so Olfaction is 25 dims.
+
+**Pond smell.** A pond is a fourth pool of `n = h·w` sources, one per cell, each carrying the **per-cell** vector `p / n`, where `p` is the configured water vector (`[0.5, 0, 0, 0, 0.5]`):
+
+$$
+S_{\text{water}}(x) = \sum_{c \in P} \frac{p}{n}\, f\big(\lVert c - x \rVert\big), \qquad n = |P| = h\,w
+$$
+
+- **It uses the same `f`.** The kernel is `sense_resource` itself, called on the pond cells, so the distance falloff, the on-source rule and the radius mask cannot drift from what food uses.
+- **Far field.** When `‖x − c‖ ≫` the pond's size, `f` is nearly equal over the cells and `S ≈ p · f(d̄)`: exactly one source of vector `p` at the pond's centroid. **A 2×2 pond smells like one item of total strength 1.0 (0.5 on the food channel, 0.5 on channel 4), not four.** For comparison, one food's `p` is `[1, 0, 0, 0, 0]`.
+- **Near field**, `γ = 1`, 2×2 pond, per channel with weight 0.5:
+
+  | Agent position | Sum of `f` over 4 cells ÷ 4 | Smell on food channel | One food at same spot (ch 0) |
+  |---|---|---|---|
+  | on a pond corner cell | (2 + 1 + 1 + 1/√2)/4 = **1.177** | 0.5 × 1.177 = 0.588 | on-source: 2.0 |
+  | beside the pond (distance 1 to nearest cell) | (1 + 1/2 + 1/√2 + 1/√5)/4 = **0.664** | 0.332 | distance 1: 1.0 |
+
+  So the pond is **quieter** than one food up close and equal far away. That is intended: the user asked for it to be less clear than EVAAA, with water and food sharing information. `math-reviewer` should check these two rows independently (§T4 pins them in a test, computed by numpy, not by the env).
+- **Ordering and parity.** The water term is added **after** the obs pool, inside a static `if params.water_enabled:`. With water off the three-pool sum is not touched, so accumulation is bit-identical.
+- **No per-episode jitter.** Water carries no `properties_std`. The vector is a static config constant (§D1).
+
+**Channel labels live in two places, and neither is the observation.**
+1. `sensory.olfactory_channel_names` in the config (`configs/environment/default.yaml:~263-268`, currently `Food / Odour A / Odour B / Bush / Tree`). The production video dashboard reads this through `channel_display_from_config` (`src/utils/eval_recording.py:~120`). It is display only, and the recording writer requires exactly `vector_size` entries.
+2. A hard-coded list `['FOOD', 'AN-A', 'AN-B', 'BUSH', 'TREE']` in `sensor.build_sensory_viz` (`sensor.py:645`). This is read by the **old** renderer only (`renderer.py`), which is frozen pending retirement ([[RENDERER_LAYOUT_REDESIGN]] Revision 30).
+
+The rename is done **in the pond world's config** (level 06, inherited by 07). It is not done in `default.yaml`, because in every non-water world channel 4 really is tree-only. This is a call made in this plan; see "Calls" at the end. The old renderer's hard-coded `TREE` token is left alone (frozen file). Water worlds render through the new dashboard.
+
+### A4. Vision
+
+`sense_visual` (`sensor.py:288-405`) concatenates `[res, animal, obs]` positions, properties, masks and sight-blockers. It builds a weight matrix (a Gaussian point-spread, since `visual_blur_enabled: true`), multiplies it by the properties, then clamps at 1.0 (`visual_value_mode: clamp`). At the default `visual_vector_size: 1` every entity writes 1.0 into the single "Visible" channel.
+
+For water, each pond cell is appended as one more visual entity **after** the obstacles (static gate). It has visual vector `water.visual_properties` (`[1.0]`), is always active, has visual mask 0 ("none", always visible) and does not block sight. **Pond cells are not per-cell normalised in vision.** Vision reports presence per cell, so a 2×2 pond looks like a 2×2 block of "something is here", the same way four rocks would. Decision 4 asks for nothing more.
+
+### A5. Observation layout, breakdown and noise — three places that must agree
+
+- `get_observation` (`sensor.py:454-559`) appends named blocks and **raises** if the name order differs from `get_observation_breakdown` (`sensor.py:561-617`). The breakdown feeds every name-keyed consumer: the stats CSV (`src/utils/evaluation_core.py::_sensor_stat_columns`, which raises on an unknown name), `build_sensory_viz` (raises on an unknown name, `sensor.py:~725`), the dashboard panel registry, and the rPPO modulator input slicer (`src/models/recurrent_ppo_network.py:27`, resolved by name).
+- **Hydration goes directly after "Body Temperature" and before "Interoceptive Nociception".** That keeps the directly-delivered levels contiguous (Satiation, Body Temperature, Hydration) ahead of the delayed percept, as body temperature did. The value is `hydration / max_hydration`, in `[0, 1]`, reading 0.5 at the setpoint. Satiation is normalised the same way.
+- **Perceptual noise** (`sensor.py:407-452`) looks each breakdown name up in `params.noise_modality_order`, which the loader builds from the YAML key order of `perceptual_noise.modalities` via `_YAML_KEY_TO_SENSOR_NAME` (`config_loader.py:~2859-2884`). An unknown YAML key raises at load. A breakdown name with no modality raises a bare `KeyError` inside the jit trace, and the thermal plan recorded that failure as naming neither the config nor the fix. So:
+  - add `"hydration": "Hydration"` to `_YAML_KEY_TO_SENSOR_NAME`;
+  - add a `hydration:` block to `default.yaml`'s modalities **at the end of the list** (after `location`). Lookups are by name, so appending leaves **every existing noise index unchanged**, and the jitted noise code bakes in no shifted constant;
+  - add a load-time check: `water.enabled` true without a `hydration` modality raises a named `ValueError`.
+- **The noise arrays are padded to 13 slots** (`_NOISE_SLOTS = 13`, `config_loader.py:~2916`). Today 12 are used, so **hydration takes the last free slot.** No widening is needed, but the next modality after this one must widen the pad. The plan requires a comment saying so.
+- **Observation noise draws** use `normal(fold_in(state.key, 999), obs.shape)`. With water off the shape is unchanged, so the noise is byte-identical. With water on the width grows by 1, which is a different world anyway.
+- **Measured widths today** (resolved through `load_env_config` + `load_env_params`, CPU): levels 00/01 = 44, 02/03/04 = 52, 05 = 58, current 06 (noise) = 58. After this plan: new 06 = **59**, new 07 = **59**.
+- **Obs-size flow to the agents.** rPPO takes `obs_dim` from a probe observation's shape (`train.py:~877`) and builds per-modality encoders from the breakdown (`recurrent_ppo_network.py:149-164`). dreamer_srl probes `obs_dim` and **asserts** it equals the breakdown total (`src/algorithms/dreamer_srl/dreamer_srl_main.py:~745-760`). Neither needs code for a new width. Both need the breakdown to be right, and §T6 builds both against level 06.
+- **Curriculum modality fingerprint** (`train.py:~808-870`, mirrored in `dreamer_srl_main.py:~820-845`): recomputed at run time and never persisted, so appending a field breaks no saved run. Add `p.water_enabled` (defence in depth, since the width changes too).
+
+### A6. Death, labels and where death causes go
+
+Termination codes are an integer chain in `jax_step` (`core.py:~1105-1125`): 0 alive, 1 step limit, 2 starvation, 3 over-eating, 4 injury, 5 thermal. **Later assignments win**; thermal sits after truncation so a thermal death on the final step reports 5. This plan adds **6 = dehydration** and **7 = over-drinking**, stamped **after** thermal, inside a static `if params.water_enabled:`, from the predicates `update_body` returns.
+
+Consumers of the codes, found by grep:
+
+| Consumer | What it does | Change |
+|---|---|---|
+| `src/models/recurrent_ppo_trainer.py:~464, 484, 516, 542, 555` | real death = `termination_reason >= 2` | **none needed**: 6 and 7 are ≥ 2. Pinned by a test (§T3) |
+| `src/algorithms/dreamer_srl/dreamer_srl_main.py:~1719` | truncation = `reason == 1` | none needed |
+| `src/behavior/episode_metrics.py:40-45, 234-238, 258-277` | `Episode/Term_*` one-hot (sheeprl bridge path) | add `Term_Dehydration`, `Term_Overdrinking` |
+| `train.py:1628, 2176, 2382, 2535`; `dreamer_srl_main.py:1248` | five **copies** of the literal `[(1,'MaxSteps'),…,(5,'Thermal')]` | replace all five with one shared constant (§D6) |
+| `src/behavior/balance_metrics.py:75` | `_DEATH_CAUSES` | import the shared constant |
+| `src/utils/trajectory_store.py:140-175` | column docstrings list codes 1–5 | text only |
+| `check_env.py:35-36` | printed legend | text only |
+| `scripts/eval/eval_rollout.py:121, 273, 471` | stores the integer per episode | none: 6/7 flow through as integers |
+| `src/utils/eval_recording.py::_snapshot_state` | recordings store **state snapshots only; no termination reason** | add `hydration` / `water_pos` snapshot fields. A recording's cause of death is derivable from the snapshot (`hydration` at 0 or max on the final frame). Adding a stored reason is out of scope; see Open items |
+
+**Registry row ~#494** (the termination reason is unreliable when a body system is switched off: the injury code fires even with injury disabled) is the latent class to avoid. Codes 6 and 7 are stamped **only** inside the water gate, from the returned predicates. A water-off world has no hydration at all (`state.hydration is None`, §D2), so it cannot stamp them, and §T3 asserts over real rollouts of levels 00–05 that no reason outside `{0…5}` ever appears.
+
+### A7. State shape and why the water-off graph can stay identical
+
+`EnvState` and `EnvParams` are `flax.struct.dataclass`es (`src/environment/state.py:30-113, 115-511`). Existing parity gates compare **jaxpr SHA-1s** of `jax_step`, `jax_reset` and `update_body`: `tests/env/test_body_mechanics_parity.py::test_jaxpr_sha_identical` and `tests/env/test_bush_fire_clearance.py`, via `scripts/fixtures/generate_body_mechanics_parity_fixture.py::jaxpr_shas`, which passes params **traced**. Any new traced leaf renumbers those strings (the body-mechanics plan made every new field static for this reason).
+
+- **New `EnvState` fields default to `None`.** `None` is an empty pytree, so a water-off state has exactly today's leaves and today's jaxpr. `update_body` already returns `starved = None` on off-paths for the same reason (`core.py:~176-181`). Code that reads `state.hydration` on a water-off world then gets `None` and fails loudly, the same idea as `thermal_field` being a `[0, 0]` array. Fixture code that iterates `dataclasses.fields(state)` and calls `np.asarray` already skips non-numeric dtypes (`scripts/fixtures/generate_metabolic_coupling_fixture.py:66-77`: `None` → object dtype → skipped).
+- **New `EnvParams` fields are all static** (`pytree_node=False`). Arrays are held as tuples (the pond top-left table, the smell and visual vectors). Floats are static like the body-mechanics floats. The price is a recompile per distinct water setting, which is acceptable because these are not swept inside a run.
+- **Consequence the plan relies on and must verify (§T1):** for every water-off world the jaxpr SHAs of all three functions are unchanged. If the developer finds that impossible, **stop and report**. Do not re-baseline those gates.
+
+### A8. The renderer
+
+Production episode videos have come from the new dashboard package (`src/environment/dashboard/`) since the user opened the retirement gate on 2026-09-18 ([[RENDERER_LAYOUT_REDESIGN]] Revisions 29–30, [[EVAL_RENDERER_SWITCHOVER]]). The old `renderer.py` stays on disk until two or three training runs have produced their videos through the new path. The dashboard:
+
+- places vitals rows from a declarative registry (`dashboard/panels.py:~512-570`). Each row pairs an **observed** face with a **hidden** twin (the observed-versus-hidden rule, registry row ~#128 / D10);
+- sizes panels from `min_size` functions, where a height mismatch between registry and painter is a live known defect (row ~#130);
+- has a process-global icon cache that can make frame comparisons depend on test order (row ~#129);
+- still has open layout defects on the old renderer (row ~#126).
+
+**This plan does not patch the old renderer** beyond one change. It adds a `"Hydration"` branch to `build_sensory_viz` (required anyway: without it that function raises for a water world, and the dashboard also calls it). The pond, the hydration row and the renamed smell label are drawn **only in the dashboard**, under that package's own rules (§D8), and the frame-audit instruments are the gate.
+
+### A9. EVAAA reference, and deliberate departures
+
+`vendor/evaaa/evaaa_unity/Assets/Scripts/Agent/InteroceptiveAgent.cs`: `waterLevelRange` (L102), death when out of range (L585), drink on a `water`/`pond` tag via the **eat** interaction (L531-540), and `WaterUpdate` (L850-859), a rate that is a weighted sum of all three body levels plus a coupling term, scaled by `Time.fixedDeltaTime`. Departures, all deliberate per the decisions table:
+
+1. **Linear drain**, not coupled to food or temperature.
+2. **Drinking is automatic** on every step on a pond cell. There is no drink action and no new action dimension, so `action_dim` stays 6.
+3. **The pond moves between episodes** (EVAAA's is fixed), because this grid world's senses reveal direction.
+4. **Smell shares channels with food**, so it is less clear than EVAAA by design.
+
+### A10. The 06 → 07 rename: which files actually reference `06-sensory_noise`
+
+Grep over the tree, excluding gitignored data directories:
+
+| File | Reference | Action |
+|---|---|---|
+| `configs/environment/experiment/basic/06-sensory_noise_10x10.yaml` | the file itself | `git mv` → `07-sensory_noise_10x10.yaml`; `extends:` → the new 06; header note; explicit hydration noise (§D7) |
+| `tests/env/test_dashboard_layout.py:65, 615` | ladder world list; one test pins the noise world | repoint to 07; add the new 06 to the list |
+| `tests/env/test_config_layer_silent_failures_20260723.py:49-52` | path constant `_NOISE_05` | repoint to 07; add Hydration to the "interoception clean" assertion |
+| `tests/env/test_truncation_not_death.py:31, 42` | **comments only** (the test loads level 04) | untouched: historical note |
+| `scripts/eval/make_render_fixture_recordings.py:71, 77, 231` | `NOISE_WORLD` constant + comments | repoint to 07; add a `POND_WORLD` for the renderer checkpoint |
+| `configs/environment/experiment/behavior_probes/thermal/generate_thermal_probes.py:61` | `NOISE_SRC` (copies the noise block as raw YAML) | repoint to 07. Re-running it would now copy a `hydration:` noise entry into probe configs. That is harmless (water is off in those worlds) but is a text change to regenerated probes; tell `experiment-designer`, who owns them |
+| `train_command-agent.sh:685, 4069` (live) and `:671, 1045, 1153, 1229, 4179` (comments / historical records) | launch lines | repoint the **two live** `--config` lines. Leave historical comment blocks as launched |
+| `docs/environment/SCRIPTS_DEPENDENCY_MAP.md:232` | `make_render_fixture_recordings.py` row | update the path; add the new generator row (§D9) |
+| `docs/experiments/active/basic_levels_q2_default/BASIC_LEVELS_Q2_DEFAULT.md:82` | obs-width table row | append a dated note row for 06 (59) and 07 (59); do not rewrite the historical row |
+| `docs/develop/active/refactors/RENDERER_LAYOUT_REDESIGN.md`, `docs/develop/active/thermal/WARMING_COOLING_RATE_SCALES.md`, `docs/develop/active/issues/diag_fable5_20260704/fix_plan_h1h2h3_resume_config.md`, `docs/experiments/active/behavior_measures/thermal_probe_battery_bush_hiding.md`, `docs/reviews/…`, `docs/llm_wiki/…`, `docs/develop/active/meta/code_graph_benchmark/…`, `configs/…/archive/…` | historical | **untouched** |
+
+**A naming hazard the rename creates.** Analysis scripts label past runs of the noise world as `lvl06`, for example `scripts/analysis/studies/modulator_clues/_inj.py:15-20` and `scripts/analysis/studies/injury_dependence/run_manipulations.py:42-48`. Those labels are tied to run IDs trained on the **old** level 06, and renaming them would falsify history, so they stay. From this change on, "level 06" means the pond world in configs and the noise world in those scripts. The plan requires a one-line entry in the critical-settings change log (§D7) naming this, so an analyst reading `lvl06` checks the run date.
+
+### A11. Known-bug rows this plan relies on (from `docs/develop/active/issues/KNOWN_BUGS.md`)
+
+| Row (approx. line) | What it says, in brief | How this plan uses it |
+|---|---|---|
+| ~#94 | `body.start_satiation` is loaded and never used | `water.start_hydration` must be written at reset; §T3 fails if inert |
+| ~#117 | full spawn area → entity silently parked at (0,0) | load-time capacity check; runtime test that no active entity leaves its area or sits on the pond (§T2); pond itself raises at load, never falls back |
+| ~#123 | saved run configs stop loading when a key becomes mandatory | `water.enabled` gets a `_ERA_KEYS` row in `saved_config_compat.py` (§D5) |
+| ~#124 | backward-compat test skips every ladder world | this plan adds its own loader test over levels 00–07 (§T5) |
+| ~#126, #128, #129, #130 | dashboard defects: overlap, observed-vs-hidden, icon cache, panel geometry | renderer work goes through the dashboard's rules and audit (§D8, C6) |
+| ~#132, #133, #134 | known-red tests (archived-config pin; 17 factor fragments; 3 hard-coded 8-wide-vision tests) | recorded as the inherited baseline (§T0); they must not halt implementation |
+| ~#160 | compute a death test once in `update_body`, never re-derive in `jax_step` | hydration death predicates are returned, and `jax_step` reads them |
+| ~#192 | over-eating label without a death | the same one-predicate rule for codes 6/7 |
+| ~#371 | a noise config claimed clean interoception but inherited 10× noise | level 07 sets hydration sigma **0.0 explicitly** |
+| ~#494 | termination code unreliable when a body system is off | codes 6/7 cannot exist on a water-off world; asserted over rollouts |
+
+`bug-curator` was not consulted; the rows above were read directly at the line numbers the requester supplied. After implementation, ask `bug-curator` to record any new rows (for example the naming hazard in §A10 if it bites).
+
+---
+
+## Target-first water clock (calibration)
+
+**Targets, stated before any numbers are solved:**
+
+| # | Target | Source |
+|---|---|---|
+| W1 | Setpoint → dehydration death, standing away from water: **150–200 steps** | decision 8 |
+| W2 | Death at both ends, judged on the raw clipped value: `W <= 0` and `W >= max` | decision 3 |
+| W3 | Setpoint at the **middle** of `[0, max]`, so each end is the same distance from comfort | decision 3 |
+| W4 | Full-scale water deviation weighs the same drive as full-scale hunger (100 units = `death_penalty`) | A1 invariant |
+| W5 | A thirsty agent refills to the setpoint in **roughly 10–20 steps** on the pond: long enough that the pond is an exposed place to wait, short enough that it is a trip, not a camp | derived from decision 9 (ambush trade); proposed here, user may move it |
+| W6 | Over-drinking from the setpoint takes **roughly 15–25 steps** of continuous standing: reachable, so it is a real brake (decision 6), but avoidable by stepping off. Every cell of a 2×2 pond touches its edge, so one move always exits | derived from decision 6; proposed here |
+| W7 | Arithmetic **exact in float32**, so death steps are integers a test can pin without tolerance | engineering |
+
+**Solving.** Mirror nutrition's axis: `max_hydration = 200`, `hydration_setpoint = 100` (W3, W4: `range_W = max(100, 200 − 100) = 100`, so the drive scale factor `range_S / range_W = 1` and one hydration unit costs one satiation unit). Then:
+
+- W1 with W7: drain `d` with `100 / d ∈ [150, 200]` and `d` exactly representable. **`d = 0.625` (= 5/8)** gives `100 / 0.625 = 160` steps exactly.
+- W5 / W6 with W7: gain per step on the pond `g`, net `g − d` per step. **`g = 5.625` (= 45/8)** gives a net of **+5.0 exactly**. Refilling from 50 to 100 takes 10 steps, from 25 takes 15 (W5). Over-drinking from 100 takes `100 / 5 = 20` steps (W6).
+- Order within a step, mirroring nutrition: `W' = clip(W − d + g·on_pond, 0, max)`. Drain and refill both happen before the single clip, so a step on the pond is net +5 and never "drain, die, then drink".
+
+**Clock table (every value from setpoint, `death_penalty = 100`, episode cap 500):**
+
+| Clock | What kills | Rate | Steps setpoint → death | Arithmetic | Share of 500-step cap |
+|---|---|---|---|---|---|
+| Food | starvation, `N <= 0` | −1.0 / step (`body.metabolic_cost`) | **100** | 100 / 1.0 | 20 % → ≥ 5 feeding trips per full episode |
+| Cold | body temp < −15 away from a fire | shipped cooling 0.25× | **~92** (alignment note). The thermal calibration measured 74–127 across the per-episode world baseline range (`WARMING_COOLING_RATE_SCALES.md` §D14) | quoted, not re-derived here | ~18 % |
+| **Water** | dehydration, `W <= 0` | **−0.625 / step** | **160** | 100 / 0.625 | 32 % → ≥ 3 drinking trips per full episode |
+| Water, upper end | over-drinking, `W >= 200`, standing on the pond | **+5.0 / step net** | **20** | (200 − 100) / (5.625 − 0.625) | — |
+| Refill 50 → 100 | on the pond | +5.0 net | 10 | 50 / 5 | — |
+| Refill 25 → 100 | on the pond | +5.0 net | 15 | 75 / 5 | — |
+
+Water is the slowest clock (decision 8). It is still short enough that a 500-step episode needs at least three pond visits, so the pond cannot be ignored.
+
+**Random start hydration** (mirroring level 03's nutrition draw of `[0, 200]`): level 06 turns it on over the full reachable span `[0, 200]`. About a quarter of episodes then start within 50 units of an end. One that starts at 195 and walks onto the pond dies on its first step there, which is the same property the nutrition draw already has. This is a call; see "Calls".
+
+---
+
+## Implementation Plan
+
+### Design
+
+**One gate.** A new top-level config block `water:` with a mandatory `enabled` key, the same pattern as `thermal.enabled` (no fallback). Every other water key is **conditional-mandatory**: read with `config.get_mandatory(...)` only inside `if water_enabled:` in the loader. When the gate is off, the loader fills `EnvParams` with inert sentinels and **reads no other water key**, so a water-off config may omit them. Every consumer in `core.py` / `sensor.py` is behind a **static** `if params.water_enabled:`.
+
+**Data flow per episode.**
+
+```
+load:  water block ──► validate ──► static top-left table T (list | random | center)
+reset: k_pond = fold_in(placement_key, 0xD81) ─► idx ~ U{0..|T|-1} ─► water_pos = T[idx] + offsets(h,w)
+       pond mask ─► seeded into resolve_overlaps_global occupancy (entities never on pond)
+       agent start: if on pond ─► first non-pond cell of permutation(fold_in(agent_key, 0xD82))
+       hydration0 = start_hydration  | U[low, high] via fold_in(body_key, 0xD84)
+step:  respawn: if on pond ─► first non-pond in-area cell of permutation(fold_in(respawn_key, 0xD83), i)
+       on_pond = any(water_pos == new_agent_pos)          → info['drank']
+       update_body: W' = clip(W − d + g·drank, 0, max); dehydrated = W' <= 0; overdrank = W' >= max
+                    done |= dehydrated | overdrank ; return (W', dehydrated, overdrank)
+       jax_step:    reason 6 / 7 from the returned predicates (after thermal's 5)
+       drive:       extra axis (W − W_set)·range_S/range_W
+       obs:         "Hydration" = W / max after Body Temperature; smell pool 4; visual entities appended
+```
+
+**Placement modes, one code path.** All three modes reduce at load time to a **static table of top-left cells** `T`, stored in 0-based array coordinates. Reset draws `idx = randint(k_pond, (), 0, len(T))` and looks the cell up. `center` has `|T| = 1`. The draw still happens, and it costs nothing observable because it is a fold-in stream.
+
+**Coordinate convention: 1-based in YAML, like every other coordinate in these configs.** Measured on the resolved level-06 params: YAML `start_pos: [5, 5]` loads as array `(4, 4)`. Spawn areas are written 1-based inclusive (`_apply_edge_margin`, `config_loader.py:375-400`) and load as 0-based half-open, so `[[1, 1], [10, 10]]` is the **whole** 10×10 grid, `[0, 0, 10, 10]`. `generate_thermal_probes.py:64` states the same rule: config `[R, C]` is array `(R−1, C−1)`. So a `water.candidates` entry `[r, c]` is 1-based, and the loader subtracts 1. The rest of this plan quotes blocks in **array** coordinates unless it says "YAML".
+
+### D1. Config schema — every new key (all under `water:`)
+
+| YAML path | `default.yaml` value | Level 06 value | Read when | Validation (at load, `ValueError` naming the key) |
+|---|---|---|---|---|
+| `water.enabled` | `false` | `true` | **always (mandatory)** | bool |
+| `water.placement` | `list` | `list` | enabled | one of `list`, `random`, `center` |
+| `water.size` | `[2, 2]` | inherited | enabled | two ints ≥ 1 |
+| `water.candidates` | `[[2, 2], [2, 8], [8, 2], [8, 8]]` (YAML, 1-based top-left) | inherited | enabled **and** placement == list | non-empty; list of `[r, c]` ints, 1-based like `start_pos`; no duplicates; each block inside the grid and inside `edge_margin`; none covers `environment.start_pos` when `environment.random_start_pos` is false |
+| `water.edge_margin` | `1` | inherited | enabled | int ≥ 0; applies to **all three modes** (below) |
+| `water.max_hydration` | `200.0` | inherited | enabled | > 0 |
+| `water.hydration_setpoint` | `100.0` | inherited | enabled | `0 <= setpoint <= max` (same guard as nutrition, `config_loader.py:~2510-2530`) |
+| `water.start_hydration` | `100.0` | inherited | enabled **and** `random_start_hydration` false | `0 < start < max` (a start at either end is dead on arrival) |
+| `water.random_start_hydration` | `false` | `true` | enabled | bool |
+| `water.start_hydration_low` / `water.start_hydration_high` | `0.0` / `200.0` | `0.0` / `200.0` | enabled **and** random flag true | `0 <= low <= high <= max` |
+| `water.drain_per_step` | `0.625` | inherited | enabled | ≥ 0 |
+| `water.drink_gain_per_step` | `5.625` | inherited | enabled | ≥ 0 |
+| `water.properties` | `[0.5, 0.0, 0.0, 0.0, 0.5]` | inherited | enabled | length == `sensory.vector_size`, each in `[0, 1]`. Spelled `properties` like entities, never `property` (the env-config-reviewer's known `property` vs `properties` trap) |
+| `water.visual_properties` | `[1.0]` | inherited | enabled | length == `sensory.visual_vector_size`, each ≥ 0 |
+| `perceptual_noise.modalities.hydration` | `{mode: state_dependent, sigma: 0.1, injury_noise_scale: 1.5, clip_min: 0.0, clip_max: 1.0}`, **appended last** | inherited from default (noise off at 06) | when noise is enabled and water is on | must exist when `water.enabled` (named `ValueError`) |
+
+The default candidates are the four quadrant blocks of the 10×10 world, array rows/cols 1–2 and 7–8. That respects `edge_margin: 1`, which excludes the border ring of array rows/cols 0 and 9. None of them covers YAML `[5, 5]`, the default `start_pos` (array `(4, 4)`). Candidate values are experiment design; `experiment-designer` may change them for level 06 in the same change without touching code.
+
+**Placement validation, per mode (all at load, `ValueError` naming the mode, the offending cell and the grid):**
+
+- Rules are stated in **array** coordinates, after the loader's 1-based → 0-based conversion. Block for top-left `(r, c)` = rows `r … r+h−1`, cols `c … c+w−1`. "Inside grid" = `0 <= r`, `r + h <= H`, same for columns. "Inside margin `m`" = `m <= r` and `r + h <= H − m`, same for columns. That is the same inset `_apply_edge_margin` applies to obstacle areas.
+- **list**: every candidate inside grid and margin; no duplicates (a duplicate silently doubles one location's probability); if `random_start_pos` is false, no candidate's block contains `start_pos`.
+- **random**: `T` = every `(r, c)` inside grid and margin, minus those whose block contains `start_pos` when `random_start_pos` is false. `|T| = 0` → `ValueError` ("grid too small for a h×w pond with margin m"). `candidates` is **not read**.
+- **center**: `T = {((H − h) // 2, (W − w) // 2)}`, floor for odd remainders (documented). Must be inside the margin and must not contain a fixed `start_pos`, else `ValueError`. **Note**: on the default 10×10, center = array rows/cols 4–5, which **contains the default `start_pos`** (YAML `[5, 5]` = array `(4, 4)`). That is legal only because `random_start_pos: true` at every ladder level (measured); a fixed-start center world is refused.
+- **Refused combinations** (named `ValueError`): `placement.mode: per_type` with water on; `thermal.food_min_fire_distance > 0` or `thermal.bush_min_fire_distance > 0` with water on (§A2; lift later with a pond-aware feasibility proof if a world needs it).
+- **Capacity check (registry ~#117)**: `resolve_overlaps_global` visits slots in the fixed concat order `[res, pred, obs, neutral]` (`core.py:~1832`), and each earlier slot occupies at most one cell. So for slot `i` at scan position `k_i` (0-based) with **post-inset** spawn area `A_i`, require `|A_i| − max over t in T of |pond(t) ∩ A_i| >= k_i + 1`. When that holds, the scan always finds a free, in-area, non-pond cell and the (0,0) fallback cannot fire from the pond. A check against the total slot count would be simpler, but it **wrongly refuses level 06** (campfire area 25 cells < 45 slots).
+  - **Level 06, computed from the resolved config.** Spawn areas were measured on today's level-06 params: every resource, animal and non-campfire obstacle area is `[0, 0, 10, 10]` (100 cells), and the campfire's is `[2, 2, 8, 8]` (36 cells) after its `edge_margin: 2`. Scan order: food 4 + hiding predator 12 (positions 0–15), predator 2 (16–17), campfire 3 (18–20), rock 12 (21–32), tree 0, bush 10 (33–42), rabbit 2 (43–44).
+  - Campfire: every default candidate touches the 36-cell area in exactly one corner cell, so the largest overlap is 1, and 36 − 1 = 35 ≥ 21. Passes.
+  - Every other slot: 100 − 4 = 96 ≥ 45. Passes.
+  - The fire-separation rule (`thermal.min_fire_separation`) tightens fire placement further. That is pre-existing and not covered by this check, and the plan does not claim otherwise.
+
+### D2. `src/environment/state.py`
+
+```python
+# EnvState — APPEND at the very end (after `last_action`), both with default None:
+    # Water (THIRST_WATER_PLAN). None on every water-off world: None is an empty
+    # pytree, so the state has exactly the pre-water leaves and every jaxpr built
+    # over it is unchanged (tests/env/test_water_parity.py pins the SHAs). A read on
+    # a water-off world therefore gets None and fails loudly, like thermal_field's
+    # [0, 0] shape trick.
+    hydration: Optional[jnp.ndarray] = None   # [] float32
+    water_pos: Optional[jnp.ndarray] = None   # [h*w, 2] int32, fixed for the episode
+
+# EnvParams — new STATIC fields (pytree_node=False), grouped with a header comment:
+    water_enabled: bool
+    water_block_h: int
+    water_block_w: int
+    water_topleft_table: tuple            # ((r, c), ...) — validated at load, never empty when enabled
+    water_max_hydration: float
+    water_hydration_setpoint: float
+    water_start_hydration: float
+    water_random_start_hydration: bool
+    water_start_hydration_low: float
+    water_start_hydration_high: float
+    water_drain: float
+    water_drink_gain: float
+    water_cell_property: tuple            # properties / (h*w), length vector_size (A3 normalisation)
+    water_visual_property: tuple          # length visual_vector_size (NOT normalised, A4)
+```
+
+Water-off sentinels: `False, 0, 0, (), 0.0, 0.0, 0.0, False, 0.0, 0.0, 0.0, 0.0, (), ()`. Flax requires defaulted fields to come after every non-default field; the two `EnvState` fields go last for that reason. If `Optional` and default `None` are not accepted by the installed flax, **stop and report**. Do not switch to zero-size arrays, which would change the jaxpr.
+
+### D3. `src/environment/config_loader.py`
+
+1. In `load_env_params`, next to the thermal gate (`~1650-1661`): `_water_on = bool(config.get_mandatory('water.enabled'))`. Inside `if _water_on:` read every D1 key with `get_mandatory`, validate (D1 rules, per-mode placement, refused combinations, capacity check), build `water_topleft_table` and `water_cell_property = tuple(p / (h*w))`. Else set the sentinels and read nothing else.
+2. `_YAML_KEY_TO_SENSOR_NAME` (`~2859`): add `"hydration": "Hydration"`, with a comment that it and the `default.yaml` block are mutually blocking and must land together (the existing comment pattern).
+3. `_parse_noise_config` (`~2885-2957`): no logic change. Extend the `_NOISE_SLOTS` comment to say hydration took the 13th and last slot, so the next modality must widen `EnvParams.noise_*`.
+4. After noise parse, if `_water_on` and `"Hydration" not in noise_modality_order`, raise `ValueError("water.enabled needs a perceptual_noise.modalities.hydration entry …")`.
+
+### D4. `src/environment/core.py`
+
+1. **Constants** next to `_THERMAL_*_KEY` (`~1554`): `_WATER_POND_KEY = 0xD81`, `_WATER_AGENT_KEY = 0xD82`, `_WATER_RESPAWN_KEY = 0xD83`, `_WATER_START_KEY = 0xD84`, with the same uniqueness comment.
+2. **Helper** `water_deviation_range(params)` = `max(setpoint, max_hydration − setpoint)`, mirroring `satiation_deviation_range`.
+3. **`calculate_drive(satiation, injury, params, body_temp=None, hydration=None)`**: new static branch **first**. If `params.water_enabled` and `hydration is None`, raise a named `ValueError`. Build axes `[satiation, injury]`, append the thermal axis if thermal is on (the same expression as today), then append `w_axis = (hydration − W_set) * (range_S / range_W)`. Targets are `[setpoint, 0, (0), 0]`, and the result is the norm. **The existing thermal-on and thermal-off paths below it are not edited.**
+4. **`resolve_overlaps_global(…, pre_occupied=None)`**: new keyword. Under `if pre_occupied is not None:` (static) the initial `occupancy = pre_occupied`. The off path is unchanged.
+5. **`jax_reset`**, all under `if params.water_enabled:`:
+   - before "# 1. Agent Position": `T = jnp.asarray(params.water_topleft_table)`; `idx = jax.random.randint(jax.random.fold_in(placement_key, _WATER_POND_KEY), (), 0, T.shape[0])`; `water_pos = T[idx] + offsets` (static `offsets` from `h, w`); `pond_flat` / `pond_mask[H*W]`.
+   - after `agent_pos` is computed: `on = pond_mask[agent_pos flat]`; `perm = jax.random.permutation(fold_in(agent_key, _WATER_AGENT_KEY), H*W)`; first `perm` entry with `~pond_mask`; `agent_pos = where(on, that cell, agent_pos)`. That is uniform over non-pond cells (A2 derivation: `P(c) = 1/N + (k/N)·1/(N−k) = 1/(N−k)`).
+   - `per_entity` branch: pass `pre_occupied=pond_mask` to `resolve_overlaps_global`.
+   - body: `hydration0 = uniform(fold_in(body_key, _WATER_START_KEY), (), low, high)` if the random flag is set, else `params.water_start_hydration`.
+   - `EnvState(..., hydration=jnp.float32(hydration0), water_pos=water_pos)`. Water-off: the two fields are not passed, so they stay `None`.
+6. **`jax_step`**:
+   - respawn (after `res_pos_after_reg`, under the gate): for respawned slots whose new cell is a pond cell, replace it with the first in-area non-pond cell of a per-slot permutation drawn from `fold_in(respawn_key, _WATER_RESPAWN_KEY)`, vmapped over slots (split that fold-in key `num_res` ways; it is a new stream, so this is not a widening). This excludes pond cells only; it adds no general occupancy check, which is pre-existing behaviour and out of scope.
+   - `info['drank'] = jnp.any(jnp.all(state.water_pos == new_agent_pos, axis=-1))`, under the gate.
+   - `update_body` returns an **11th element** `water_out`: `None` when off; `(new_hydration, dehydrated, overdrank)` when on. Callers that index 0–9 are unaffected (the "append, never insert" rule from `starved`).
+   - reason chain: after `if params.thermal_enabled: reason = where(thermal_death, 5, reason)`, add `if params.water_enabled: reason = where(dehydrated, 6, reason); reason = where(overdrank, 7, reason)`.
+   - drive: pass `hydration=state.hydration` / `hydration=new_hydration` **only** under the gate (a separate call form, so the off path's call is textually today's).
+   - `info['drive_thirst'] = ((W'/range_W) − (W_set/range_W))**2` under the gate (divide-first, A1).
+   - `new_state = state._replace(..., **({'hydration': new_hydration} if water_enabled else {}))`. `water_pos` carries through untouched.
+7. **`update_body`**: after the thermal block, `if params.water_enabled:` compute `new_W = jnp.clip(state.hydration − params.water_drain + jnp.where(info['drank'], params.water_drink_gain, 0.0), 0.0, params.water_max_hydration)`; `dehydrated = new_W <= 0.0`; `overdrank = new_W >= params.water_max_hydration`; `done = where(dehydrated | overdrank, True, done)`; `water_out = (new_W, dehydrated, overdrank)`. Else `water_out = None`. Update the docstring's return description.
+
+### D5. `src/environment/saved_config_compat.py`
+
+- New era constant `_ERA_WATER = "THIRST_WATER_PLAN C2 (<commit date>)"` and row `"water.enabled": (False, _ERA_WATER, "static `if params.water_enabled` everywhere in core/sensor; false = no water leaves, no water ops (tests/env/test_water_parity.py)")`.
+- `apply_saved_config_compat`: add `to_supply.extend(_check_block(cfg, "water", source))`, always, like the body block. A saved config without a `water` block gets `water.enabled: false`, logged. No other water key is supplied, because none is read when the gate is off.
+- Update the module docstring's list of eras.
+
+### D6. Termination-reason names: one shared constant
+
+`src/behavior/episode_metrics.py` is pure numpy and already holds the codes, so it gets:
+
+```python
+TERMINATION_REASONS = ((1, "MaxSteps"), (2, "Starvation"), (3, "Overeating"),
+                       (4, "Injury"), (5, "Thermal"), (6, "Dehydration"), (7, "Overdrinking"))
+```
+
+`episode_finalise_episode` and `episode_wandb_keys` are built from it (the key count goes 21 → 23; update the module docstring). `train.py` (4 sites), `dreamer_srl_main.py` (1 site) and `balance_metrics._DEATH_CAUSES` (codes ≥ 2) import it and stop carrying literals. On water-off runs this logs two always-zero keys, the same as `Term_Thermal` does on thermal-off runs today.
+
+### D7. Configs
+
+1. **`configs/environment/default.yaml`**: add the `water:` block (D1 values, `enabled: false`) with a header comment in the thermal block's style: gate mandatory, everything else conditional-mandatory, no entity-list entries (list-replace hazard). Append the `hydration:` noise modality **last**, with a comment that it is at the end so no existing index moves.
+2. **New `configs/environment/experiment/basic/06-pond_thirst_10x10.yaml`**: `extends: environment/experiment/basic/05-campfire_thermal_10x10`. Plain-language header (purpose, what it adds, composition). Contents:
+   - `water: {enabled: true, random_start_hydration: true, start_hydration_low: 0.0, start_hydration_high: 200.0}`, everything else inherited;
+   - `sensory.olfactory_channel_names` redeclared in full: `{Food, "shared with water"}`, `{Odour A, predator-leaning}`, `{Odour B, neutral-leaning}`, `{Bush, ""}`, `{Odour C, water-leaning}`. It must be redeclared whole (lists replace wholesale; §A3).
+   - It does **not** redeclare `obstacles:`, so the `blocks_animals` list-replace trap does not arise.
+3. **`git mv configs/environment/experiment/basic/06-sensory_noise_10x10.yaml configs/environment/experiment/basic/07-sensory_noise_10x10.yaml`**, then edit:
+   - `extends: environment/experiment/basic/06-pond_thirst_10x10`;
+   - header note "RE-LEVELED 2026-09-29 … THE WORLD CHANGED: now also carries the pond and thirst";
+   - under `perceptual_noise.modalities` add `hydration: {mode: "constant", sigma: 0.0, injury_noise_scale: 0.0}` next to the other clean interoceptive channels (registry ~#371: the sigma is stated, not inherited).
+4. **Every stand-alone full config and inline test config that lacks an `extends:` gains `water: {enabled: false}`.** The grep at plan time (`^thermal:` or inline `'thermal': {` without `extends:`) found:
+   - `configs/verification/{observability_gates_S1..S4, olfaction_parity_neutral, olfaction_parity_predator}.yaml`
+   - `configs/continual/nmn_double_return_stages/01..05_*.yaml`
+   - `tests/fixtures/trajectory_collection/dual_format_config.yaml`
+   - inline configs in `tests/environment/test_behavior_measures.py`, `tests/environment/test_per_tag_distance_logging.py`, `tests/env/{test_behaviour_validation, test_body_temperature_observation, test_bush_blocks_animals, test_disengage_on_contact, test_distributional_yaml, test_entities_schema, test_inactive_animal_offgrid, test_inclusive_integer_range_sampling, test_initial_state_ranges, test_int_distributional_sampling, test_no_recompile, test_per_episode_count, test_per_episode_logging, test_per_episode_sampling, test_predator_jump, test_thermal_reward_gate, test_visual_properties}.py`, `tests/scripts/{test_eval_stochastic_key_distinct, test_parallel_eval_step0_seeding}.py`
+   - `scripts/eval/make_render_fixture_recordings.py` if it builds a raw config.
+
+   **The authoritative list is whatever raises `water.enabled is required but missing` when each module is run.** The grep above is the starting point, not a proof.
+5. **`tests/env/fixtures/frozen_parity_worlds/environment__default.yaml`**: add `water: {enabled: false}` plus a row in its README's "Mandatory keys added after the freeze" table (allowed: mandatory and provably inert, proven by `test_unified_parity.py` staying green).
+6. **`tests/env/fixtures/saved_run_configs/*.yaml`**: **not edited**. These are frozen runs; compat supplies the key (D5).
+7. **Archived configs** (`configs/environment/experiment/archive/`): **not migrated**, per project policy.
+8. **`configs/environment/experiment/level05_body_interactions/factors/*.yaml`**: these fragments have no `extends:` and no `thermal:` block, so they are not full worlds (row ~#133). Not edited.
+
+### D8. Renderer (episode-video dashboard) — built under [[RENDERER_LAYOUT_REDESIGN]]'s rules
+
+These are requirements. Painter detail follows that plan's conventions, and its owner or `visual-design-reviewer` may adjust colours and glyphs.
+
+1. `src/environment/sensor.py::build_sensory_viz`: add `"Hydration"` to the `("Satiation", "Nutrition", "Injury", "Interoceptive Nociception")` intensity-tile group. That group is picked up by name, and without this branch the function raises for every water world.
+2. `src/environment/dashboard/episode.py`: `VIZ_NAME["Hydration"] = "Hydration"`; a vitals row `("hydration", "Hydration", …)` whose **true** value is `state.hydration / max_hydration` and whose **observed** value comes from the sense only if `self.has("Hydration")`, with a setpoint mark at 0.5.
+3. `src/environment/dashboard/panels.py`: a `PanelSpec(key="hydration", group="vitals", order=55, kind="vital_row", breakdown_names=("Hydration",), present=lambda ctx: ctx.water and ctx.observed("Hydration"), …)` and its `hydration_hidden` twin (`ctx.water and not ctx.observed("Hydration")`). The twin keeps the observed-vs-hidden rule (~#128) intact for any future config that hides hydration. `LayoutContext.from_params` gains `water = bool(params.water_enabled)`.
+4. **Arena and minimap**: the pond is drawn as **ground cover** on its cells, under occupants. That is the redesign's "variant H" (terrain as ground cover, occupants in slots on top). A predator standing in the pond therefore stays visible. The snapshot carries `water_pos` (below).
+5. `src/utils/eval_recording.py::_snapshot_state`: `if getattr(state, 'hydration', None) is not None: snap['hydration'] = float(...)`; the same for `water_pos` (`np.asarray`). Old recordings lack both keys and render as before.
+6. **Smell label**: nothing to code. The dashboard reads `sensory.olfactory_channel_names` from the run's config (D7.2).
+7. **Old renderer (`renderer.py`)**: no drawing change (frozen, retiring). Requirement: rendering a level-06 recording through it must **not raise**. Missing pond and hydration on that path are accepted and must be stated in its module docstring.
+8. **Gates for this checkpoint**:
+   - `tests/env/test_dashboard_layout.py` with levels 06 and 07 added. The packer must fit the vitals card with the extra row at the fixed canvas; the known ~#130 height mismatch is exactly what could bite here, so check the rendered frame, not the registry.
+   - a level-06 recording made with `scripts/eval/make_render_fixture_recordings.py` (`POND_WORLD`) and rendered;
+   - `scripts/eval/render_layout_audit.py` over that frame, no new findings.
+   - Run layout tests in their own process (icon-cache hazard ~#129).
+
+### D9. Scripts and fixtures
+
+- **New** `scripts/fixtures/generate_water_parity_fixture.py`: the same shape as `generate_body_mechanics_parity_fixture.py`, whose `rollout_world`, `jaxpr_shas` and `_leaf_name` it **imports**, so there is one copy of the rollout loop. `--src-root` is required with no default, and it refuses a tree with uncommitted `src/` or `configs/` changes. Worlds: `configs/environment/default.yaml` and `basic/00–05`, plus `basic/06-sensory_noise_10x10.yaml` under its **pre-change** name. Seeds 0–15 × 300 auto-resetting steps (the `MAX_T` / `SEEDS` of the body-mechanics generator). It records every `EnvState` leaf by path, the observation with and without noise, reward, done, `termination_reason`, every `info` key, and the three jaxpr SHAs. Output: `tests/env/fixtures/water_parity/pre_change_rollouts.npz` + `README.md` naming the source commit SHA and command.
+- `scripts/eval/make_render_fixture_recordings.py`: `NOISE_WORLD` → 07; new `POND_WORLD` → 06.
+- `configs/environment/experiment/behavior_probes/thermal/generate_thermal_probes.py`: `NOISE_SRC` → 07 (A10).
+- `scripts/verification/verify_noise.py` builds an `EnvState` by hand. It needs **no** change because the new fields default to `None`; §C2 confirms by running it.
+
+### D10. Documentation, same change as the code (maintenance contracts)
+
+| Doc | Change | Commit |
+|---|---|---|
+| `docs/environment/CONFIG_GUIDE.md` | new `water:` gate section (conditional-mandatory pattern, list-replace note for `candidates`, placement modes); Maintenance Contract item 4 note that the parity gate for this change is `test_water_parity.py` | C2 |
+| `docs/environment/02_config_schema.md` | every D1 key with type, default, "read when" | C2 |
+| `docs/environment/CONFIG_CRITICAL_SETTINGS.md` | registry rows `water.enabled`, `water.drain_per_step`, `water.drink_gain_per_step`, `water.max_hydration` / `water.hydration_setpoint`, `water.placement` / `candidates`; **dated change-log entry** (what, why, blast radius: water-off worlds byte-identical, measured; level 06 new; old 06 → 07 and the world changed; the `lvl06` naming hazard in analysis scripts) | C2 (entries), C5 (ladder part of the log entry) |
+| `docs/environment/SCRIPTS_DEPENDENCY_MAP.md` | row for `generate_water_parity_fixture.py` (HAND + TEST IMPORT; imports from the body-mechanics generator; a move must update `tests/env/test_water_parity.py`'s `sys.path`); the `make_render_fixture_recordings.py` row gets the 07 path + `POND_WORLD`; the body-mechanics generator row gains "also imported by `generate_water_parity_fixture.py`" | C0, C5 |
+| `docs/environment/05_body_homeostasis.md`, `06_reward_and_termination.md`, `03_entity_placement.md`, `09_sensors_and_observation.md`, `10_perceptual_noise.md`, `01_state_and_params.md`, `ENVIRONMENT_SUMMARY.md`, `TRAJECTORY_STORE_SCHEMA.md` (codes 6/7), `WANDB_METRICS_REFERENCE.md` (two new keys) | describe what the code does | C2–C4 |
+| `docs/develop/active/behavior/WANDB_METRICS_REFERENCE.md` | two new keys | C4 |
+| `docs/experiments/active/basic_levels_q2_default/BASIC_LEVELS_Q2_DEFAULT.md` | dated note row (A10) | C5 |
+
+### Commit sequence
+
+| Commit | Content | Must be true before moving on |
+|---|---|---|
+| **C0** | generator script + SCRIPTS map row; **no env change**. Record the baseline test run (§T0) in the Implementation Report | the generator runs clean against a detached worktree of C0 |
+| **C1** | the fixture from `--src-root=<worktree of C0>` + README pinning the C0 SHA | fixture file committed; the generator refused a dirty tree when tried |
+| **C2** | schema + inert plumbing: `state.py`, loader (gate, validation, sentinels), `default.yaml` block + noise modality, compat era, every stand-alone/inline config gains `enabled: false`, frozen-world row, CONFIG_GUIDE / 02_schema / critical registry. **Water cannot yet be switched on** (the loader raises "not implemented" if `enabled: true`) | §T1 parity green on all worlds; every previously green module still green |
+| **C3** | mechanics: placement, hydration, drive, death, labels, obs, smell, vision; tests T2–T4 | T1 still green; T2–T4 green; they **fail on C2** (checked by running them there) |
+| **C4** | logging fan-out: shared reason constant, episode/balance metrics, train.py / dreamer sites, snapshot fields, CSV and viz branches, fingerprints, docs | T3's metric-key test green |
+| **C5** | ladder: new 06, `git mv` 06 → 07 + edits, reference updates (A10), T5 | T5 green; T1's "07 with water off = pre-change 06" case green |
+| **C6** | dashboard rendering (D8) | D8 gates |
+| **C7** | speed measurement + Implementation Report | §S |
+
+Each commit uses an explicit pathspec, one coherent change per commit.
+
+---
+
+## Tests and verification
+
+**Test-suite rule**: never run `tests/env/` as one process (XLA core dumps; backend drift). Run **per module**:
+
+```bash
+cd /media/nas01/projects/Interoceptive-AI/grid_world_pain
+for f in tests/env/test_*.py; do
+  echo "== $f"; JAX_PLATFORMS=cpu /home/vncuser/miniconda3/envs/grid_world_pain/bin/python -m pytest -q "$f" 2>&1 | tail -3
+done | tee tmp/$(date +%Y%m%d_%H%M%S)_thirst_suite.txt
+```
+
+The same loop covers `tests/environment/`, `tests/models/`, `tests/training/` and `tests/scripts/`. `tests/env/conftest.py` pins CPU for `tests/env/`; the other directories need `JAX_PLATFORMS=cpu` set explicitly as above.
+
+### T0. Baseline (C0, before any env change)
+
+Run the loop on C0 and record per-module pass/fail/skip counts in the Implementation Report. **Inherited known reds, recorded, not fixed, not blocking:**
+
+- `tests/env/test_channel_names_match_configs.py`: 17 failures on the level-05 factor fragments (~#133). After C5 it also sweeps the new 06 and 07, and **those two must pass**.
+- `tests/models/test_modulation_input_slice.py::test_hand_computed_breakdown_matches_the_live_environment`, `tests/training/test_continual_bm_transition.py::test_continual_bm_stage_transition_no_crash`, `tests/training/test_continual_resume_rebuild.py::test_continual_resume_rebuilds_stage_env` (~#134).
+- `tests/env/test_inactive_animal_offgrid.py::test_allactive_config_no_offgrid_parking` (~#132).
+- `tests/env/test_backward_compat_configs.py` is green while skipping every ladder world (~#124). Treat it as providing no evidence; T5 replaces it for this plan.
+
+After each commit, the gate is **no module worse than its T0 line**, except the changes this plan names.
+
+### T1. Byte-parity when water is off — `tests/env/test_water_parity.py` (new)
+
+- Imports the generator (`sys.path` insert, as `test_body_mechanics_parity.py` does). A missing fixture or config **fails**, never skips (the lesson in wiki `20260909_1402_parity_gates_green_without_comparing`).
+- For `default.yaml` and levels 00–05, replay the fixture's seeds and assert **byte-identical**: every pre-existing state leaf, `obs` clean and noisy, reward, done, `termination_reason`, every pre-existing `info` key, **and the three jaxpr SHAs**.
+- Also assert that `state.hydration is None`, `state.water_pos is None` and that `info` has no `drank` / `drive_thirst` keys.
+- **Case "old noise world"**: the new 07 loaded through `load_env_config` with `water.enabled` forced to `false` **in memory** must equal the fixture's pre-change `06-sensory_noise` rollouts byte for byte. This is the proof that the ladder rewire changed nothing except water. One exception is allowed: the display-only `olfactory_channel_names`, which never reaches `EnvParams`, so the comparison is unaffected.
+- **Contrast half** (this is what fails on pre-change code): the same world with `water.enabled: true` must change the rollout **and** the `jax_step` / `jax_reset` / `update_body` jaxprs.
+- **Coverage assert**: the fixture must contain at least one death of each kind those worlds can produce (starvation, injury, thermal, over-eating if reached), so parity covers terminal steps. The generator reports coverage, and the test fails if a kind is missing when the pre-change world produces it.
+- The existing gates `test_body_mechanics_parity.py`, `test_bush_fire_clearance.py`, `test_thermal_parity.py`, `test_thermal_reward_gate.py`, `test_metabolic_coupling.py`, `test_thermal_rate_scales.py`, `test_visual_parity.py`, `test_unified_parity.py`, `test_extero_noc_parity.py`, `test_two_sided_nutrition.py` and `test_directional_sensors.py` must stay green **with zero fixture edits**. They read fixtures captured before this plan, so they are independent evidence.
+
+### T2. Placement — `tests/env/test_water_placement.py` (new)
+
+Each case uses real `jax_reset` / `jax_step` outputs, never a re-derivation through the loader's own table.
+
+- **Load-time refusals**, one test each, each asserting that the message names the key: candidate off the grid; candidate inside `edge_margin`; duplicate candidate; empty list; center block inside the margin; center or candidate covering a fixed `start_pos` with `random_start_pos: false`; random mode on a grid too small (`|T| = 0`); `placement.mode: per_type`; `food_min_fire_distance > 0` / `bush_min_fire_distance > 0` with water; capacity check failing (a 5×5 world packed with entities); `properties` length ≠ `vector_size`; missing `hydration` noise modality; `start_hydration` at 0 or at max.
+- **Runtime, level 06, 2,000 resets** (seeds 0–1999):
+  - `water_pos` equals one candidate's block every time;
+  - candidate frequencies pass a chi-square uniformity test at p > 0.001 (the draw is uniform);
+  - **no active resource, animal or obstacle occupies a pond cell**;
+  - every active entity lies inside its own spawn area (the #117 guard, which also catches a (0,0) fallback);
+  - the agent is never on a pond cell at reset.
+- **Random mode, 2,000 resets**: every top-left lies inside the margin, and the empirical support equals the analytically enumerated set.
+- **Center mode**: `water_pos` is identical across seeds.
+- **Respawn**: a level-06 world with `max_consumption: 1` for food (in memory), 5,000 random-action steps. No active resource ever sits on a pond cell.
+- **Predators may enter**: a scripted scenario puts a hunting predator next to the pond with the agent across it, and the predator's path includes a pond cell within N steps (decision 9 holds, and the pond is not accidentally an obstacle).
+
+### T3. Hydration dynamics and death — `tests/env/test_hydration_dynamics.py` (new)
+
+**Oracle.** A numpy float32 recurrence written in the test, `W = np.clip(np.float32(W) - np.float32(d) + np.float32(g) * on, 0, max)`. It is independent of `core.py`.
+
+- **Controlled world**: `default.yaml` + water on, with in-memory overrides `with_nutrition: false`, no animals and no resources. Nutrition must be off because food's 100-step clock would kill first. Pond at a known candidate.
+  - Agent parked far from the pond, rest action every step, start 100: `done` first true at **step 160**, `termination_reason == 6` on that step and **on no earlier step**. It matches the oracle exactly.
+  - Agent on a pond cell, rest action every step, start 100: `done` first at **step 20**, reason 7, matching the oracle.
+  - Refill from 50 → 100 in 10 on-pond steps (oracle).
+- **`start_hydration` is live** (~#94): `start_hydration: 37` → `jax_reset(...).hydration == 37.0`. Random start: 500 resets lie inside `[low, high]` and are not all equal.
+- **One predicate** (~#160 / ~#192): 200 random-policy episodes on level 06. For every step, `reason in {6, 7}` ⇒ `done`, and `done` with `W' <= 0` ⇒ `reason == 6` unless a later code wins (7 only). The count of label-without-death must be **0**.
+- **Water-off worlds never stamp 6/7** (~#494): 50 episodes each on levels 00–05, where every observed reason must be in `{0, …, 5}`.
+- **Real death reaches the trainers**: a unit check that the rPPO trainer's real-death mask (`termination_reason >= 2`) is 1 for codes 6 and 7. Drive a real step that dies of dehydration through the trainer's mask expression.
+- **Drive / reward**: on level 06, `reward` equals `prev_drive − curr_drive (− death_penalty on death)` where the drives are computed in the test by numpy from `(S, I, T, W)` with the A1 scales. At the setpoint (`S = 100, I = 0, T = 0, W = 100`) the drive is 0. A pure water deviation of 100 gives a drive of 100.
+- **Metric keys**: `episode_finalise_episode(reason=6)` sets `Episode/Term_Dehydration = 1`; `episode_wandb_keys()` has 23 keys; `train.py` and `dreamer_srl_main.py` have no literal `(5, 'Thermal')` left (grep assert).
+
+### T4. Observation, noise and smell — `tests/env/test_water_observation.py` (new)
+
+- Level 06 breakdown order equals `[Satiation, Body Temperature, Hydration, Interoceptive Nociception, Extero Nociception, Thermoception, Olfaction, Collision, Proprioception, Visual]`, total 59. `get_observation` does not raise.
+- The Hydration column equals `state.hydration / 200` on real steps (clean obs).
+- **Noise uses the hydration slot**: level 06 with noise enabled in memory and hydration `sigma: 0.5, mode: constant`, 2,000 steps. The sample std of the (unclipped-region) noise on that column is within 10 % of 0.5, and other columns keep their own sigmas.
+- **Level 07 is clean on hydration** (~#371): resolved `noise_sigmas[order.index("Hydration")] == 0.0`, from the loaded params, not the YAML.
+- `build_sensory_viz` and `evaluation_core._sensor_stat_columns` accept a level-06 observation, and the slices after Hydration are unshifted: the column counts match the breakdown.
+- **Smell equations (A3)**, computed by numpy in the test:
+  - the agent on a pond corner: water's contribution to channel 0 at the centre olfaction cell equals `0.5 × (2 + 1 + 1 + 1/√2)/4`;
+  - beside the pond equals `0.5 × (1 + 1/2 + 1/√2 + 1/√5)/4`;
+  - at distance ≥ 8 the pond's contribution is within 3 % of a single source of `p` at the centroid;
+  - a 2×2 pond's far-field total equals, within that tolerance, a 1×1 pond's with the same `p`. That is the not-4×-louder claim.
+- **Vision**: pond cells raise the "Visible" channel where the pond is in the diamond. With water off the visual output is unchanged (covered by T1).
+
+### T5. Ladder loads through the trainer's path — `tests/env/test_ladder_worlds_load.py` (new)
+
+For each of the eight files `basic/00` … `basic/07`: `load_env_config` → `load_env_params` → `jax_reset` → 5 `jax_step`s.
+
+- Assert `sum(breakdown) == [44, 44, 52, 52, 52, 58, 59, 59][i]`.
+- Assert `water_enabled == [F, F, F, F, F, F, T, T][i]` and `perceptual_noise_enabled` true only for 07.
+- Assert the file set is exactly those eight names, so an unplanned new rung or a missed rename fails.
+- It **fails on C0** (no 06-pond, no 07).
+
+### T6. Agents build against the new width
+
+- rPPO: build the network with level 06's breakdown and run one forward pass. Then a CPU smoke run: `train.py` on level 06 with the smallest budget the CLI allows, which must reach its first log line.
+- dreamer_srl: a smoke run on level 06, passing `--episodes` / `--log-interval` on the CLI (the single-config budget gotcha in the auto-memory). The `obs_dim == breakdown` assertion must pass.
+- A curriculum pre-flight with stage 0 = level 05 and stage 1 = level 06 **must refuse** (fingerprint and width), and 06 → 07 must pass the fingerprint check.
+
+### S. Speed (C7)
+
+Same node, same seed, CPU and one GPU. Measure 64 envs × 300 jitted vmapped `jax_step` calls, 3 reps, before (C0 worktree) and after:
+
+- **level 05 must be within run-to-run spread** (its graph is unchanged);
+- level 06 against level 05 at the after tip: the expected cost is small (one extra 4-source smell pool at 5 cells, 4 extra visual entities, one equality test). Anything over 5 % is discussed in the report; over 15 % blocks.
+
+### Reviews to run on the implementation
+
+`code-reviewer` (PRNG discipline, static gates, None leaves, vmap over None), `math-reviewer` (A3 smell rows, the drive axis, the clock arithmetic), `env-config-reviewer` (levels 06/07, noise ↔ breakdown sync, mandatory keys, the critical-settings entry). Then `senior-developer` verification against this plan.
+
+---
+
+## Checkpoints
+
+- [ ] **C0** Baseline suite recorded per module; generator committed; the SCRIPTS map row added.
+- [ ] **C1** Fixture generated from a detached worktree of the C0 SHA; README names the SHA and command; the generator refused a dirty tree when tried.
+- [ ] **C2** `water.enabled` missing → `ValueError` naming the key (test). T1 green for all worlds including the jaxpr SHAs. `scripts/verification/verify_noise.py` still runs. Every T0-green module still green. Registry and change-log entry present in the same commit.
+- [ ] **C3** T2, T3 and T4 green, and each **fails when run on C2** (record the failing count). T1 still green.
+- [ ] **C4** No literal termination-name list left in `train.py` / `dreamer_srl_main.py` (grep). A level-06 eval rollout's `termination_reason` column contains codes from `{1,…,7}` only.
+- [ ] **C5** `git log --follow` on `07-sensory_noise_10x10.yaml` shows the old history. T5 green. The "07 with water off = pre-change 06" parity case green. `test_channel_names_match_configs.py` passes on 06 and 07.
+- [ ] **C6** Dashboard gates (D8.8) pass on a real level-06 recording. The old renderer renders the same recording without raising.
+- [ ] **C7** Speed table filled; the three reviewers' verdicts linked.
+
+---
+
+## Calls made in this plan that the user should know about
+
+1. **Frontmatter status and topic.** `status: active` with a DRAFT banner, and `topic: env_entities`, because `draft` and `thirst` fail the develop-index validator and registering them means editing a script.
+2. **Numbers chosen by the calibration**: drain **0.625**, gain **5.625** (160-step dehydration, 20-step over-drinking, net +5 refill). They are exact in float32 so the death step is an integer a test can pin. Targets W5 and W6 (refill and over-drink windows) are this plan's proposal, not a user statement.
+3. **Level 06 randomises the start hydration over `[0, 200]`**, mirroring the nutrition draw. The alternative is a fixed start at 100.
+4. **Channel labels at level 06**: channel 4 becomes `Odour C (water-leaning)`, and channel 0 stays `Food` with qualifier `shared with water`. The rename is **not** made in `default.yaml`, where channel 4 is still tree-only. The old renderer's hard-coded `TREE` token is left alone.
+5. **No over-drinking on/off flag.** Over-drinking death is always on when water is on. Nutrition has `overeating_death`; adding the mirror key is one line if wanted.
+6. **No "hydration hidden" flag.** Hydration is always observed when water is on. The dashboard still gets a hidden twin row, so adding the flag later needs no renderer change.
+7. **Refused combinations** (instead of new placement proofs): water with the `per_type` placement mode, and water with either fire-distance placement pass.
+8. **`edge_margin` applies to all three modes.** A list candidate inside the margin is refused rather than silently allowed.
+9. **Termination code precedence**: codes 6/7 are stamped after thermal's 5. If an agent dies of cold and thirst on the same step it is labelled a water death; `done` is the same either way.
+10. **A shared termination-names constant** replaces five duplicated literal lists. That is a small refactor beyond "add two codes", taken because adding the codes to five copies is how the lists drift.
+11. **Hydration noise modality appended last** in the noise list (not next to satiation), so no existing noise index moves. It takes the 13th and last padded slot.
+12. **`water.candidates` are 1-based in YAML** (loader subtracts 1), because every other coordinate in these configs (`start_pos`, spawn `area`) is 1-based. A 0-based list would be the one exception and would be misread.
+
+## Open items (not in this plan)
+
+- Recordings store no termination reason. A dying frame shows the hydration value, but the cause is not stored. Add one only if a qualitative read needs it.
+- The trajectory store and `traj_scan` record no body temperature today and would record no hydration. That is a separate plan if analyses need it.
+- A thirst ↔ body-temperature coupling switch (EVAAA couples them), off by default, as a later plan.
+- Whether the neuromodulator's interoceptive input should include Hydration. Inputs are named per config, so nothing changes silently.
+- The `lvl06` label collision in historical analysis scripts (A10).
+- Back-links: this doc links to the thermal, renderer and compat plans, but they do not link back yet. Adding those back-links edits other owners' docs, so it is left to them.
+
+---
+
+## Implementation Report
+
+> **Implemented by**: —
+> **Date**: —
+
+## Verification Report
+
+> **Verified by**: —
+> **Date**: —
+
+| File | Change | Status | Notes |
+|------|--------|:------:|-------|
+| | | | |
+
+**Conclusion**: —
