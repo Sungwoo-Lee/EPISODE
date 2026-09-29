@@ -35,6 +35,9 @@ Usage
       scripts/analysis/studies/level05_body_interactions/launch_collection.py \
       configs/trajectory_collection/level05_body_interactions.yaml \
       --logs-glob 'logs/20260927_053*.log' --nodes 106 107 108 [--dry-run] [--watch 600]
+
+    `--logs PATH [PATH ...]` replaces `--logs-glob` (exactly one of the two) when the logs must be
+    named one by one, e.g. the May replication (configs/trajectory_collection/continual_mayrep_probes.yaml).
 """
 from __future__ import annotations
 
@@ -60,10 +63,32 @@ SSH_OPTS = ["-p", "1800", "-o", "BatchMode=yes", "-o", "ConnectTimeout=5"]
 DONE_RE = re.compile(r"Training complete\. Results saved to (\S+)")
 
 
-def finished_runs(logs_glob: str) -> set[str]:
+def log_files(logs_glob: str | None = None, logs: list | None = None) -> list[Path]:
+    """The training logs to read: EXACTLY one of a repo-relative glob or an explicit list.
+
+    `--logs` names files one by one (the May replication, tooling plan File Changes §12): each
+    must exist and be non-empty, otherwise ValueError, because a typo'd or empty log would
+    silently make its run look "not finished" and the launcher would skip it forever.
+    """
+    if (logs_glob is None) == (logs is None):
+        raise ValueError("give exactly one of --logs-glob or --logs")
+    if logs_glob is not None:
+        return [Path(f) for f in glob.glob(str(PROJECT_ROOT / logs_glob))]
+    out = []
+    for f in logs:
+        p = Path(f) if Path(f).is_absolute() else PROJECT_ROOT / f
+        if not p.is_file():
+            raise ValueError(f"--logs: {f} does not exist")
+        if p.stat().st_size == 0:
+            raise ValueError(f"--logs: {f} is empty (0 bytes); it names no run")
+        out.append(p)
+    return out
+
+
+def finished_runs(files: list[Path]) -> set[str]:
     """Run-dir basenames whose training log reports completion."""
     done = set()
-    for f in glob.glob(str(PROJECT_ROOT / logs_glob)):
+    for f in files:
         with open(f, "rb") as fh:
             fh.seek(0, 2)
             fh.seek(max(0, fh.tell() - 4096))
@@ -97,13 +122,17 @@ def main(argv=None) -> int:
     ap = argparse.ArgumentParser(description=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("spec", type=Path)
-    ap.add_argument("--logs-glob", required=True,
+    lg = ap.add_mutually_exclusive_group(required=True)
+    lg.add_argument("--logs-glob",
                     help="training logs (repo-relative glob) whose tails name finished runs")
+    lg.add_argument("--logs", nargs="+", metavar="PATH",
+                    help="training logs named one by one (each must exist and be non-empty)")
     ap.add_argument("--nodes", nargs="+", required=True, help="nodes this launcher may use")
     ap.add_argument("--dry-run", action="store_true")
     ap.add_argument("--watch", type=int, default=0,
                     help="re-check every N seconds until every spec run is claimed (0 = once)")
     a = ap.parse_args(argv)
+    a.log_files = log_files(a.logs_glob, a.logs)     # --logs checked once, before any launch
 
     while True:
         pending = launch_once(a)
@@ -132,7 +161,7 @@ def launch_once(a) -> int:
         mark = out_root / "_scratch" / b["name"] / "_run_markers"
         busy |= {n for n in b["nodes"] if not (mark / f"done_{n}").exists()}
 
-    fin = finished_runs(a.logs_glob)
+    fin = finished_runs(a.log_files if a.logs is not None else log_files(a.logs_glob))
     all_runs = raw["runs"]
     todo = [r for r in all_runs if Path(r["path"]).name in fin
             and Path(r["path"]).name not in claimed]
