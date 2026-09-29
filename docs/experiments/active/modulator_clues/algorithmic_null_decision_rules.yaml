@@ -38,8 +38,10 @@
 #     analysis and one for the gates), each with fixture tests.
 #   - Every NUMERIC CONSTANT the logic uses lives in ONE machine-readable block, `parameters:`
 #     (section 9). The prose refers to constants by their `parameters.` path and states none of its
-#     own. No constant is hard-coded in the tooling. Numbers inside a `why*` field are explanatory
-#     arithmetic (e.g. a chance probability), not constants, and are never read.
+#     own. No constant is hard-coded in the tooling. Numbers inside a `why*` field or marked
+#     "(Explanatory ...)" are arithmetic for the reader (e.g. a chance probability), never read.
+#     Counts that follow from a list — 5 verdict layers, 4 quantities, 3 seeds per arm, 6 MO_diff
+#     pairs — are derived from that list or from the manifest's runs, not constants.
 #   - Where a manifest key duplicates a parameter (bootstrap_n, probe_split, wakeup.*), the driver
 #     checks it against `parameters:` and raises on a mismatch or on a value below a floor.
 #   - Verdict words are suppressed exactly when the manifest's evidence_status has
@@ -125,6 +127,41 @@ decision_rules:
             start is updated: the design's sentence was wrong and is corrected (May design §3.4,
             2026-09-30); the seed-42 pair was verified identical. The rule itself is unchanged: the
             check must still pass on all three seeds.
+    - date: "2026-09-30"
+      numbers_seen: "none (same state as the entry above; the tooling plan's Revision 2 raised these points)."
+      changes:
+        - id: plan_point_1_G3_near_ties
+          reason: >
+            (1) Undefined case. G3 required 100 % agreement with no near-tie allowance, so one
+            near-tie row (a tie between two actions, not an indexing error) would block every
+            verdict. G3 now uses G1's near-tie allowance and constants, unchanged.
+        - id: plan_point_2_unseen_clock_step
+          reason: >
+            (1) Undefined case. The per-time-step clock mean does not exist for a held-out row whose
+            time step has no training-fold row. Such rows are excluded from the layer score and the
+            clock score alike, counted in the data statement, and G6 is counted after the exclusion.
+        - id: plan_point_3_bootstrap_count
+          reason: >
+            (1) Ambiguous. bootstrap_n is now the number of draws PER split repeat; the pooled
+            distribution holds n_repeats x bootstrap_n draws. The G6 floor applies to bootstrap_n.
+        - id: plan_point_4_structural_counts
+          reason: >
+            Wording only. Two counts left in prose ("at least 1 verdict layer", "all 3 May seeds")
+            are reworded as "any" / "every". Constants still inside prose moved to parameters,
+            values unchanged: the stage A3 pattern (c) reads (A3.survival_stage_by_status: 5 at
+            evidence, 1 at interim), G5's stage (gates.G5.stage = 1), A4's checkpoint sequence,
+            probes and drift pairs (A4.stage_sequence / probes / drift_pairs), B2's final-third
+            divisor (B2.noise_window_divisor = 3) and the sign test's null probability
+            (B2.sign_test_null_p = 1/2). Counts that follow from a list are derived (header).
+        - id: plan_point_5_survival_row_weight
+          reason: >
+            (1) Undefined. Survival rows were named as weighted by Episode/_window_n (May design §5
+            prose), while the code that computes the May verdict (pilot_readout.Series) weights each
+            row by the episodes it adds, delta Episode/Number, because logged rows are overlapping
+            rolling windows. The rules now name one estimator for A3, G5 and B2:
+            parameters.common.survival.row_weight = delta_episode_number, so G5 here equals the
+            May analysis's own gate. The prose/code mismatch in the May design is reported to the
+            user, not changed here.
 
   # ---------------------------------------------------------------------------------------------
   # 1. What each evidence status may say
@@ -187,15 +224,19 @@ decision_rules:
       |Δ| <= parameters.gates.G2.reconstruction_rel_tol * max(1, max|reference|).
     G3_alignment: >
       action[t+1] decoded from logits[t] agrees on at least
-      parameters.gates.G3.alignment_agreement_min of rows; the shift-by-one control agrees on fewer
-      than parameters.gates.G3.shift_control_agreement_max of rows (plan-reviewer finding 4).
+      parameters.gates.G3.alignment_agreement_min of rows, with the same near-tie allowance as G1
+      (rows with top-two logit margin < parameters.gates.G1.near_tie_logit_margin may disagree, on
+      at most parameters.gates.G1.near_tie_fraction_max of rows); the shift-by-one control agrees
+      on fewer than parameters.gates.G3.shift_control_agreement_max of rows (plan-reviewer
+      finding 4).
     G4_controls: >
       Input-layer satiation R^2 >= parameters.gates.G4.input_satiation_r2_min (satiation is an
       observed channel); shuffled-across-episode targets give R^2 <= parameters.gates.G4.shuffled_r2_max
       for every quantity; no episode group appears in both folds.
     G5_competence: >
       A run enters only if it passes the May replication's stage-1 competence gate (design §5.5):
-      S_1 (common.survival_level of stage 1) >= parameters.gates.G5.stage1_survival_min_steps and
+      S_k (common.survival_level) with k = parameters.gates.G5.stage, the first stage, >=
+      parameters.gates.G5.stage1_survival_min_steps and
       mean Episode/FoodEaten over the same window >= parameters.gates.G5.stage1_food_bites_min.
       Minimum after exclusions: parameters.gates.G5.min_ordinary_seeds ordinary seeds (all 3, i.e.
       3 ordinary-ordinary pairs) and parameters.gates.G5.min_modulated_seeds modulated seeds. Below
@@ -268,6 +309,10 @@ decision_rules:
     bootstrap:
       unit: episode_seed group
       n_min: "parameters.gates.G6.bootstrap_n_min"
+      count: >
+        The manifest's bootstrap_n is the number of draws PER split repeat; the pooled distribution
+        used for every quantile holds n_repeats x bootstrap_n draws. For statistics with no split
+        (CKA), bootstrap_n draws in total.
       joint: >
         One resample of groups per draw, applied to every agent and every pair at once (all agents
         see the same probe), so pair-to-pair comparisons are paired.
@@ -289,9 +334,11 @@ decision_rules:
 
     survival_level: >
       S_k for a run = the mean of Episode/Steps over the last parameters.common.survival.window_episodes
-      episodes of stage k, WandB episode rows weighted by Episode/_window_n, rows with
-      Episode/_window_n below parameters.common.survival.min_window_n skipped (May replication
-      design §5 and §5.1). The survival difference is modulated minus ordinary of the means over
+      episodes of stage k, from WandB episode rows, each row weighted per
+      parameters.common.survival.row_weight (delta_episode_number = the episodes the row adds,
+      the increase in Episode/Number since the previous row — the estimator of the May analysis
+      code, pilot_readout.Series), rows with Episode/_window_n below
+      parameters.common.survival.min_window_n skipped (May replication design §5 and §5.1). The survival difference is modulated minus ordinary of the means over
       the seeds that entered; SE_k = sqrt(sd_k(ord)^2 / n_ord + sd_k(mod)^2 / n_mod) (design §5.2);
       SE_used = max(SE_k, parameters.common.survival.se_floor_steps).
 
@@ -358,7 +405,7 @@ decision_rules:
       It does not change the verdict word.
     study_verdict:
       same: "all 5 verdict layers read same (either form)."
-      different: "at least 1 verdict layer reads different; the layers are listed."
+      different: "any verdict layer reads different; the layers are listed."
       undetermined: "otherwise."
 
   # ---------------------------------------------------------------------------------------------
@@ -381,7 +428,9 @@ decision_rules:
       R^2_clock = held-out R^2 of predicting the quantity from the time step alone, fitted as the
       per-time-step mean on the training fold (the best any clock-only readout can do), on the same
       rows and splits. It depends only on the probe, so it is the same number for every agent.
-      Reported beside every layer, with the raw-input R^2.
+      Reported beside every layer, with the raw-input R^2. A held-out row whose time step has no
+      row in the training fold has no clock value: it is excluded from the layer score and the
+      clock score alike, and counted in the data statement (G6 is counted after this exclusion).
     beats_clock: >
       an agent encodes the quantity at a layer only if R^2 - R^2_clock >= parameters.A2.beats_clock_margin_r2
       AND the bootstrap lower-quantile of that excess is > 0. The margin was fixed a priori and only
@@ -447,8 +496,8 @@ decision_rules:
       c_different_processing_same_outcome: >
         A1 layer verdict different AND E does not hold AND survival is the same: the survival
         difference of common.survival_level is inside parameters.common.survival.se_multiplier x
-        SE_used, for the stage whose end is analysed (evidence: stage 5 at the final checkpoint;
-        interim: stage 1).
+        SE_used, for the stage given by parameters.A3.survival_stage_by_status for the manifest's
+        evidence status (the stage whose end is analysed).
       c_prime_different_processing_different_outcome: >
         A1 layer verdict different AND E does not hold AND the survival difference is beyond
         parameters.common.survival.se_multiplier x SE_used.
@@ -472,13 +521,15 @@ decision_rules:
       the checkpoints `stage_end:3:prev` and `final:prev` (the checkpoint immediately before the
       last checkpoint of that stage) for the within-stage drift.
     movement: >
-      For agent a, transition k -> k+1 (4 transitions) and probe w (2 worlds):
-      m = 1 - P(a at stage_end:k, a at stage_end:k+1), P the mutual predictivity of A1 on that layer.
-      Each agent has an 8-entry movement profile.
+      For agent a, each consecutive pair of checkpoints in parameters.A4.stage_sequence (4
+      transitions) and each probe in parameters.A4.probes (2 worlds):
+      m = 1 - P(a at checkpoint j, a at checkpoint j+1), P the mutual predictivity of A1 on that
+      layer. Each agent has an 8-entry movement profile.
     within_stage_drift: >
-      d_a = mean of two values: 1 - P(a at final:prev, a at final) on the active probe, and
-      1 - P(a at stage_end:3:prev, a at stage_end:3) on the passive probe. (Each pair is one
-      checkpoint interval apart inside one stage.)
+      d_a = mean over the entries of parameters.A4.drift_pairs of 1 - P(a at prev, a at checkpoint)
+      on that entry's probe: final:prev -> final on the active probe, stage_end:3:prev ->
+      stage_end:3 on the passive probe. (Each pair is one checkpoint interval apart inside one
+      stage.)
     movement_gate: >
       An arm moves at a layer if, for at least parameters.A4.movement_min_seeds of its 3 seeds
       (common.two_modulated_seeds: both), the bootstrap lower-quantile of (mean movement - d_a) is
@@ -557,15 +608,17 @@ decision_rules:
       Points are the run's saved checkpoints (episode count), plus step 0 = the untrained network
       (built by `untrained.build`) for the measures the tooling plan marks as anchorable. A
       measure logged more often than checkpoints (total-loss gradient share; survival) is first
-      averaged within each checkpoint interval (x_{i-1}, x_i] — survival weighted by
-      Episode/_window_n, rows with Episode/_window_n below parameters.common.survival.min_window_n
-      skipped — so sustain, final_k and the noise band mean the same thing for every curve.
+      averaged within each checkpoint interval (x_{i-1}, x_i] — survival rows weighted per
+      parameters.common.survival.row_weight, rows with Episode/_window_n below
+      parameters.common.survival.min_window_n skipped — so sustain, final_k and the noise band
+      mean the same thing for every curve.
     definition: >
       m0 = value at step 0 where anchorable, otherwise the first available point (the output says
       which). m_final = mean of the last parameters.B2.final_k points. d = sign(m_final - m0), the
       direction the measure actually moves (recorded as rising / falling). Noise: sigma_delta = SD
       of consecutive differences m_{i+1} - m_i over the noise window = the last
-      max(ceil(N/3), parameters.B2.min_noise_points + 1) points of the curve (N points including
+      max(ceil(N / parameters.B2.noise_window_divisor), parameters.B2.min_noise_points + 1) points
+      of the curve (N points including
       step 0). If that window would exceed parameters.B2.noise_window_max_fraction x N points, the
       result is NaN with reason "too few points to estimate noise". (The SD of differences is not
       inflated by a steady trend, only by wobble, so a curve still rising slowly at the end does
@@ -592,12 +645,12 @@ decision_rules:
     reading_per_measure: >
       Over the 16 level-05 runs (16 worlds, one seed each; this asks whether a timing holds across
       worlds, not across seeds): n_def = runs with a defined lag (coincident runs included in n_def,
-      counted as neither late nor early). k* = the smallest k with P(Binomial(n_def, 1/2) >= k)
+      counted as neither late nor early). k* = the smallest k with P(Binomial(n_def, parameters.B2.sign_test_null_p) >= k)
       <= parameters.B2.sign_test_alpha. "late" if at least k* runs have lag above the coincidence
       band; "early" if at least k* runs have lag below it; otherwise "undetermined across worlds"
-      (also when no k <= n_def satisfies the condition). The 3 May seeds are reported separately as
-      "agree" (all 3 defined and on the side of the level-05 reading) or "do not agree"; they decide
-      nothing on their own.
+      (also when no k <= n_def satisfies the condition). The May seeds are reported separately as
+      "agree" (every May seed defined and on the side of the level-05 reading) or "do not agree";
+      they decide nothing on their own.
     refutation: >
       The explanation "the modulator cannot speed learning because it wakes up late" is refuted for
       a measure that reads "early": it becomes active before survival levels off, yet (as already
@@ -631,6 +684,7 @@ decision_rules:
         input_satiation_r2_min: 0.99
         shuffled_r2_max: 0.02
       G5:
+        stage: 1                           # S_k of the first stage (1-based, May design naming)
         stage1_survival_min_steps: 150     # May design §5.5
         stage1_food_bites_min: 1.0         # mean Episode/FoodEaten per episode, May design §5.5
         min_ordinary_seeds: 3
@@ -645,6 +699,7 @@ decision_rules:
         test_frac: 0.2
       survival:
         window_episodes: 200000            # S_k window: last 200,000 episodes of stage k (May design §5.1)
+        row_weight: delta_episode_number   # episodes each WandB row adds (pilot_readout.Series; CONTINUAL_WORLDS 3.3)
         min_window_n: 1000                 # WandB rows with Episode/_window_n below this are skipped (May design §5)
         se_floor_steps: 3.6                # May design §5.2: 4.4 * sqrt(2/3)
         se_multiplier: 2                   # "inside / beyond 2 x SE_used"
@@ -654,8 +709,17 @@ decision_rules:
       beats_clock_margin_r2: 0.05
       arm_min_seeds: 2                     # of 3 (both, under common.two_modulated_seeds)
       differs_min_layers: 2                # of 5
+    A3:
+      survival_stage_by_status:            # 1-based stage number k of S_k (May design naming)
+        evidence: 5
+        interim: 1
     A4:
       movement_min_seeds: 2                # of 3 (both, under common.two_modulated_seeds)
+      stage_sequence: ["stage_end:0", "stage_end:1", "stage_end:2", "stage_end:3", "final"]
+      probes: [active, passive]
+      drift_pairs:
+        - {prev: "final:prev", checkpoint: final, probe: active}
+        - {prev: "stage_end:3:prev", checkpoint: "stage_end:3", probe: passive}
     study_reading:
       min_layers: 3                        # of 5 (A3, A4 study readings)
     remedy:
@@ -688,9 +752,11 @@ decision_rules:
         # min_noise_points principle: the SD of k differences has a relative standard error of about
         # 1 / sqrt(2 (k - 1)); k = 5 is the smallest count that brings it to about 1/3 (0.35), so the
         # guard's width is known to within about a third.
+      noise_window_divisor: 3              # base noise window = last ceil(N / 3) points (the final third)
       noise_window_max_fraction: 0.5
         # principle: noise is estimated at the END of the curve, not over the climb; at most the later
         # half of the curve counts as "the end". Normally the window is the last third (ceil(N/3));
         # it grows toward half only when a third holds fewer than min_noise_points differences.
       lag_coincident_max_intervals: 1     # the checkpoint grid's resolution: |lag| <= 1 interval = coincident
       sign_test_alpha: 0.05                # per-measure binomial sign test across the 16 level-05 worlds
+      sign_test_null_p: 0.5                # under "no systematic timing", late and early equally likely
