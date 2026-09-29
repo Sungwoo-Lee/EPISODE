@@ -855,6 +855,12 @@ class Finding:
 #: instrument is the defect §R23.1 removed; measure the new instrument and give it its own.
 SURVIVAL_MIN = 0.98
 
+#: The `gid` the dashboard stamps on GROUND COVER (a pond): drawn on a square's
+#: ground and under its occupants. Held here as a literal because this audit may
+#: not import the renderer it measures (§D5.2); `tests/env/test_dashboard_water.py`
+#: pins it equal to `dashboard.cells.GROUND_COVER_GID`.
+GROUND_COVER_GID = "ground_cover"
+
 #: Ink area share of a square at which an element IS the floor — the square's own ground
 #: fill — rather than something standing on it. Measured area, never a painter's say-so.
 #:
@@ -1235,13 +1241,23 @@ def cell_overdraw(probe: "FrameProbe", arena_axes: str, occupancy: dict,
         ink = {k: (v & square) for k, v in ink_full.items()}
 
         # Classify the arena's elements: floor, outline, or token — by MEASUREMENT.
-        tokens, floors = [], []
+        tokens, floors, ground_cover = [], [], []
         for e in cands:
             if e.axes_name != arena_axes:
                 continue
             m = ink[id(e.artist)]
             n = int(m.sum())
             if n == 0:
+                continue
+            # GROUND COVER (a pond, THIRST_WATER_PLAN D8) is DECLARED by the painter,
+            # not measured: it is not a creature, so it is kept out of the occupant
+            # count exactly as an overlay is -- and, like an overlay, it stays in the
+            # OCCLUDER set. The declaration buys no amnesty: ground cover painted over
+            # a token is refused below with ZERO tolerance, and a real occupant
+            # mis-tagged as ground cover leaves its kind uncounted, which the
+            # kinds-versus-components check then reports.
+            if e.artist.get_gid() == GROUND_COVER_GID:
+                ground_cover.append(e)
                 continue
             # An occupant belongs to exactly ONE square: slots are computed inside the
             # square and the keyline is inset so a token never reaches the square's edge.
@@ -1316,6 +1332,20 @@ def cell_overdraw(probe: "FrameProbe", arena_axes: str, occupancy: dict,
             m = ink[id(e.artist)]
             if m.any():
                 last[m] = idx
+
+        # Ground cover may NEVER be the last thing painted on an occupant's pixels.
+        # Stricter than the survival floor (which tolerates up to 2% loss): the tag
+        # that keeps ground cover out of the occupant count must not also let it
+        # cover one.
+        gc_ids = {id(e.artist) for e in ground_cover}
+        for idx in np.unique(last[token_ink]):
+            if idx >= 0 and id(cands[int(idx)].artist) in gc_ids:
+                hit = token_ink & (last == idx)
+                findings.append(Finding(
+                    "cell_overdraw",
+                    "ground cover is painted OVER an occupant here; ground cover must "
+                    "be composed under every occupant (tolerance is ZERO pixels)",
+                    cands[int(idx)].label, where, int(hit.sum()), _mask_bbox(hit)))
 
         # (a') and (b'), scoped to L(p) — asserted only where reading them can FAIL.
         for idx in np.unique(last[token_ink]):

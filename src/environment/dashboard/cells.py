@@ -208,6 +208,13 @@ CHEVRON_FLOOR_PX = 6.0
 
 #: Depth, pinned. Strictly increasing, and every arena overlay is below tokens.
 GROUND_Z = 1.0
+#: The `gid` a painter stamps on GROUND COVER -- something drawn on a square's
+#: ground and under its occupants, like a pond. The pixel audit reads this tag
+#: to keep ground cover out of its occupant count (it is not a creature), while
+#: still refusing any frame where ground cover is painted OVER an occupant. The
+#: audit may not import this package, so it holds its own copy of the string;
+#: `tests/env/test_dashboard_water.py` pins the two together.
+GROUND_COVER_GID = "ground_cover"
 OUTLINE_Z = 3.0         # an overlay on a square (no longer drawn by the arena)
 FOOTPRINT_Z = 3.5       # a sense's diamond footprint
 TOKEN_Z = 5.0

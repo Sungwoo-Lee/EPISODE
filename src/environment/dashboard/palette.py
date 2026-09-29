@@ -130,6 +130,13 @@ OLF_STOPS = ("#EDF7F5", "#7CCBBD", "#14907F", "#0B4F47")     # teal: smell only
 VIS_STOPS = ("#EFF1F4", "#A3ACBA", "#556072", "#1C2330")     # slate: vision only
 TERRAIN_FILL = ("#DCEBD2", "#EFE4C9", "#E6E4DD")             # grass / sand / plain
 OFF_WORLD = "#FFFFFF"
+#: A pond square. Drawn as an INSET on the square's ground, under every token,
+#: so the square's own temperature colour still shows as a rim and an animal
+#: standing in the water stays visible on top of it. Deliberately a SATURATED
+#: azure with white wave strokes: the temperature scale's cold end is the soft
+#: periwinkle `TEMP_COLD` below, and a flat pale blue here would read as "cold
+#: ground" in any thermal world. The waves, not the hue alone, carry "water".
+WATER, WATER_EDGE, WATER_WAVE = "#2F7FD6", "#1F5FA6", "#FFFFFF"
 
 # -- temperature ------------------------------------------------------------
 TEMP_COLD, TEMP_COOL, TEMP_NEUTRAL = "#9FBCE6", "#D3E1F2", "#F3F2EE"

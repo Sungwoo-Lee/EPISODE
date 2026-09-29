@@ -225,6 +225,10 @@ class LayoutContext:
     #: legacy signal and is keyed off this TOP-LEVEL value, never off a missing
     #: per-sense entry -- see `ChannelDisplay.from_meta`.
     channel_display: Mapping[str, object] | None = None
+    #: Does this world have a pond and a hydration state? Decided by the caller
+    #: from the RECORDING (see `from_params`), because recordings can exist
+    #: before the environment's `water_enabled` flag does.
+    water: bool = False
     #: Built displays, per sense, built ON DEMAND. Deliberately lazy: an eager
     #: per-sense build raises on a vision-off configured recording, whose payload
     #: legitimately has no `Visual` entry. Only senses this world actually
@@ -233,7 +237,7 @@ class LayoutContext:
 
     @classmethod
     def from_params(cls, params, action_recorded: bool = True,
-                    channel_display=None) -> "LayoutContext":
+                    channel_display=None, water: bool | None = None) -> "LayoutContext":
         """Build a context from resolved environment params.
 
         ``params`` comes from ``load_env_params(load_env_config(path))`` -- the
@@ -245,6 +249,19 @@ class LayoutContext:
 
         breakdown = dict(get_observation_breakdown(params))
         thermal = bool(_recording_flag(params, "thermal_enabled") or False)
+        # WATER IS KEYED ON THE RECORDING, and checked against params when params
+        # can answer. The dashboard had to draw a pond before the environment
+        # could make one (THIRST_WATER_PLAN D8), so the caller passes what the
+        # recording carries. Once `water_enabled` exists on params the two must
+        # agree: a recording that disagrees with its own world is a bug in one of
+        # them, and drawing either answer would hide which.
+        declared = getattr(params, "water_enabled", None)
+        if water is None:
+            water = bool(declared) if declared is not None else False
+        elif declared is not None and bool(declared) != bool(water):
+            raise ValueError(
+                f"the recording says water={bool(water)} but params.water_enabled="
+                f"{bool(declared)}; a recording must agree with its own world")
         olf_channels = 5
         if "Olfaction" in breakdown:
             cells = _diamond_cells(int(getattr(params, "olfactory_grid_range", 0)))
@@ -267,6 +284,7 @@ class LayoutContext:
             real_available=real_available(params),
             action_recorded=action_recorded,
             channel_display=channel_display,
+            water=bool(water),
         )
 
     # -- derived -----------------------------------------------------------
@@ -568,6 +586,21 @@ PANELS: tuple[PanelSpec, ...] = (
         breakdown_names=("Body Temperature",),
         present=lambda ctx: ctx.thermal,
         kind_of=lambda ctx: "temp_row" if ctx.observed("Body Temperature") else "hidden_state",
+        min_size=_vital_row_size,
+    ),
+    # Hydration follows body temperature, as it does in the observation vector
+    # (THIRST_WATER_PLAN A5). Observed row and hidden twin, the same rule as the
+    # other body states, so a config that hides hydration still shows it is real.
+    PanelSpec(
+        key="hydration", group="vitals", order=55, kind="vital_row",
+        breakdown_names=("Hydration",),
+        present=lambda ctx: ctx.water and ctx.observed("Hydration"),
+        min_size=_vital_row_size,
+    ),
+    PanelSpec(
+        key="hydration_hidden", group="vitals", order=55, kind="hidden_state",
+        breakdown_names=(),
+        present=lambda ctx: ctx.water and not ctx.observed("Hydration"),
         min_size=_vital_row_size,
     ),
     # -- world ---------------------------------------------------------------

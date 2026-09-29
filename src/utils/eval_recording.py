@@ -65,6 +65,14 @@ def _snapshot_state(state) -> Dict[str, Any]:
         snap['thermal_field'] = np.asarray(state.thermal_field)
     if getattr(state, 'body_temp', None) is not None:
         snap['body_temp'] = float(state.body_temp)
+    # Water (THIRST_WATER_PLAN D8.5). `water_pos` lists EVERY pond cell,
+    # shape [h*w, 2]; the dashboard draws exactly those. Both keys are absent
+    # from every recording made before water existed, and the dashboard keys
+    # its pond and hydration row on their presence -- so those render as before.
+    if getattr(state, 'hydration', None) is not None:
+        snap['hydration'] = float(state.hydration)
+    if getattr(state, 'water_pos', None) is not None:
+        snap['water_pos'] = np.asarray(state.water_pos)
     return snap
 
 

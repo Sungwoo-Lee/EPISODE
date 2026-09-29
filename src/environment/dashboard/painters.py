@@ -257,6 +257,13 @@ def build_vitals(dash, ax, w, h, rows):
             val = dash.fit(ax, x, y + 30, "value", cw)
             if row["kind"] == "bar":
                 set_v = bar(ax, x, y + 40, cw, 6, row["colour"])
+                if row.get("setpoint") is not None:
+                    # A two-sided state (death at both ends) marks its setpoint,
+                    # in the same thin grey the temperature gauge uses for its
+                    # own, drawn under the noise-free tick so a value reads on top.
+                    sp = x + cw * float(row["setpoint"])
+                    ax.plot([sp, sp], [y + 37, y + 49], color=P.INK3,
+                            lw=1 * PT, zorder=3.5)
 
                 def upd(v, key=key, val=val, set_v=set_v):
                     q = key(v)
@@ -346,6 +353,16 @@ def build_minimap(dash, ax, w, h):
                                     cell - 2, cell - 2, 3, P.TRACK, z=1,
                                     alpha=0.75 if dash.scale is not None else None)
 
+    # The pond on the map: a flat water inset over the square's ground and under
+    # every mark, the same layer rule as the grid view. Only built for water.
+    wet_marks = {}
+    if dash.water:
+        for r in range(hh):
+            for c in range(ww):
+                wet_marks[(r, c)] = rrect(gax, c * cell + 2.5, r * cell + 2.5,
+                                          cell - 5, cell - 5, 3, P.WATER, z=1.5,
+                                          visible=False)
+
     obs_names = list(params.obstacle_names)
     obs_type = [int(t) for t in np.asarray(params.obs_type)]
     obs = [rrect(gax, 0, 0, cell * 0.56, cell * 0.56, 2,
@@ -383,6 +400,10 @@ def build_minimap(dash, ax, w, h):
         st = v.state
         for (r, c), g in grounds.items():
             g.set_facecolor(dash.ground_colour(r, c))
+        if wet_marks:
+            wet = dash.pond_cells(v)
+            for rc, p in wet_marks.items():
+                p.set_visible(rc in wet)
         for p, core, pos in zip(obs, cores, np.asarray(st.obs_pos)):
             p.set_visible(inside(pos))
             cx, cy = centre(pos)
@@ -464,8 +485,42 @@ def build_arena(dash, ax, w, h):
     ax.set_xlim(0, n * cell)
     ax.set_ylim(n * cell, 0)
 
+    # THE POND IS GROUND COVER, NOT AN OCCUPANT. It is drawn as an inset on the
+    # square's ground -- above the temperature fill, below every token -- so an
+    # animal standing in the water is drawn on top of it and stays visible, and
+    # the square's temperature still shows as a rim around the water. Built only
+    # when the recording carries water, so every other recording gets exactly
+    # the artists it had before.
+    ponds = {}
+    if dash.water:
+        m = cell * 0.09
+        span = np.linspace(-0.26, 0.26, 24)
+        for i in range(n):
+            for j in range(n):
+                cx, cy = (j + 0.5) * cell, (i + 0.5) * cell
+                pond = rrect(ax, cx - cell / 2 + m, cy - cell / 2 + m,
+                             cell - 2 * m, cell - 2 * m, 10, P.WATER,
+                             P.WATER_EDGE, 1.5, z=C.GROUND_Z + 0.1)
+                pond.set_gid(C.GROUND_COVER_GID)
+                waves = []
+                for dy in (-0.10, 0.10):
+                    xs = cx + span * cell
+                    ys = cy + dy * cell + 0.035 * cell * np.sin(span * 2 * np.pi / 0.26)
+                    ln, = ax.plot(xs, ys, color=P.WATER_WAVE, lw=2.2 * PT,
+                                  solid_capstyle="round", zorder=C.GROUND_Z + 0.2)
+                    ln.set_gid(C.GROUND_COVER_GID)
+                    waves.append(ln)
+                for a in (pond, *waves):
+                    a.set_visible(False)
+                ponds[(i, j)] = (pond, waves)
+
     def upd(v):
         r0, c0 = dash.view_origin(v)
+        wet = dash.pond_cells(v) if ponds else frozenset()
+        for (i, j), (pond, waves) in ponds.items():
+            on = (r0 + i, c0 + j) in wet
+            for a in (pond, *waves):
+                a.set_visible(on)
         # What the grid view is SHOWING, declared on the axes so the pixel audit
         # can divide this panel into the right world squares instead of assuming
         # it holds the whole world. Read by `render_layout_audit.arena_view`.

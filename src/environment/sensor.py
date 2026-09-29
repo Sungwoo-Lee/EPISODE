@@ -695,7 +695,8 @@ def build_sensory_viz(obs, state, params, true_obs=None):
             viz.append({'name': 'Body Temperature', 'value': bt_obs,
                         'true_value': bt_true, 'type': 'temperature'})
 
-        elif sensor_name in ("Satiation", "Nutrition", "Injury", "Interoceptive Nociception"):
+        elif sensor_name in ("Satiation", "Nutrition", "Injury", "Hydration",
+                             "Interoceptive Nociception"):
             s_obs = float(obs[ptr])
             s_true = float(true_obs[t_ptr]) if true_obs is not None else s_obs
             ptr += dim; t_ptr += dim

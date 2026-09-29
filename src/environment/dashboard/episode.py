@@ -65,6 +65,7 @@ VIZ_NAME = {
     "Satiation": "Satiation",
     "Nutrition": "Nutrition",
     "Injury": "Injury",
+    "Hydration": "Hydration",
     "Interoceptive Nociception": "Intero Nociception",
     "Body Temperature": "Body Temperature",
     "Extero Nociception": "Extero Nociception",
@@ -171,7 +172,14 @@ class EpisodeRenderer:
         # recording written before channel names existed -- which is the legacy
         # signal the whole labelling path branches on.
         self.channel_display = channel_display
-        self.ctx = LayoutContext.from_params(params, channel_display=channel_display)
+        # Water is read off the RECORDING: a snapshot carrying the pond or the
+        # hydration level. That is what lets the dashboard draw water before the
+        # environment's own flag exists, and `from_params` checks the two agree
+        # once it does. Old recordings carry neither key and draw as before.
+        first = self.snapshots[0] if self.snapshots else {}
+        self.water = ("water_pos" in first) or ("hydration" in first)
+        self.ctx = LayoutContext.from_params(params, channel_display=channel_display,
+                                             water=self.water)
         check_completeness(self.ctx)
         self.layout: Layout = pack_or_explain(self.ctx)
         self.cell_px = self.layout.cell_px
@@ -230,6 +238,24 @@ class EpisodeRenderer:
 
     def has(self, name) -> bool:
         return name in self.breakdown
+
+    def pond_cells(self, v) -> frozenset:
+        """The world squares the pond covers this step, as (row, col).
+
+        The recording lists EVERY cell of the block (`water_pos`, shape
+        `[h*w, 2]`, THIRST_WATER_PLAN D2), so the painter draws exactly those
+        and needs no block size. A 1-D value is refused rather than guessed at:
+        a single top-left cell would silently draw a one-square pond.
+        """
+        wp = getattr(v.state, "water_pos", None)
+        if wp is None:
+            return frozenset()
+        a = np.asarray(wp)
+        if a.ndim != 2 or a.shape[-1] != 2:
+            raise ValueError(
+                f"water_pos must list every pond cell as shape [N, 2]; got shape "
+                f"{a.shape}. A single top-left cell cannot say how big the pond is.")
+        return frozenset((int(r), int(c)) for r, c in a)
 
     def ground_colour(self, r, c):
         if self.thermal_field is None:
@@ -388,6 +414,24 @@ class EpisodeRenderer:
                 obs=((lambda v: float(v.sense("Body Temperature", "value")))
                      if self.has("Body Temperature") else None),
                 true=lambda v: float(v.body_temp),
+            ))
+        hk = next((k for k in ("hydration", "hydration_hidden") if k in placed), None)
+        if hk is not None:
+            # No default maximum: a hydration value without its scale cannot be
+            # drawn honestly, and guessing 200 would draw a wrong bar silently.
+            if not hasattr(self.params, "water_max_hydration"):
+                raise ValueError(
+                    "this recording carries hydration but its params have no "
+                    "'water_max_hydration'; the bar needs the maximum to be drawn")
+            hmx = float(self.params.water_max_hydration)
+            rows.append(dict(
+                key=hk, label="Hydration", kind="bar", colour=P.STATE,
+                y=placed[hk].y - card.y,
+                obs=((lambda v: float(v.sense("Hydration", "intensity")))
+                     if self.has("Hydration") else None),
+                true=lambda v, mx=hmx: float(v.state.hydration) / mx,
+                # Two-sided axis: death at both ends, the setpoint in the middle.
+                setpoint=0.5,
             ))
         for r in rows:
             r["true_head"] = "Noise-free" if noise else "True"
