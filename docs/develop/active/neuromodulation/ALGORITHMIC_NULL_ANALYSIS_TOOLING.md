@@ -1445,7 +1445,7 @@ Implemented by: developer
    - New back-fill script `scripts/analysis/nmn/backfill_point_provenance.py` copies those fields from each run's `_done.json` into point files that lack them, and adds `provenance_backfilled`.
    - Metadata only: every other field is checked unchanged after each atomic write.
    - It refuses unless **every** run has its `_done.json`, and on a rules-sha or provenance disagreement. The default is a dry run; `--write` writes.
-   - **Not run.** At 06:25 the sweep had finished 3 of 19 runs, and neither log shows `exit`. The dry run refuses as designed and lists the 16 runs without `_done.json`.
+   - **Not run.** At 06:05 the sweep had finished 3 of 19 runs, and neither log shows `exit`. The dry run refuses as designed and lists the 16 runs without `_done.json`.
    - To run after both `logs/20260930_051845.log` and `logs/20260930_051847.log` show `exit 0`:
      `python scripts/analysis/nmn/backfill_point_provenance.py --manifest docs/experiments/active/modulator_clues/algorithmic_null_wakeup.yaml --write`.
    - `SCRIPTS_DEPENDENCY_MAP.md` has a new row for the script.
