@@ -7,23 +7,42 @@
 name: algorithmic_null_mayrep
 evidence_status: evidence
 # ---------------------------------------------------------------------------------------------
-# decision_rules (MANDATORY). Pins the pre-registered rules, written 2026-09-29 before any
-# number existed. The drivers must: read the file, check its sha256 equals the value below
+# decision_rules (MANDATORY). Pins the pre-registered rules, written 2026-09-29 and revised
+# 2026-09-30 (see its `revisions`), both before any number existed. The drivers must: read the file, check its sha256 equals the value below
 # (mismatch -> ValueError), and print path + sha256 + evidence_status on every data statement.
 # ---------------------------------------------------------------------------------------------
 decision_rules:
   file: docs/experiments/active/modulator_clues/algorithmic_null_decision_rules.yaml
-  sha256: b4e10d81380ea0db27058dc5f37284c6551e1969ee107f71a6e95a536c57a6fd
+  sha256: 3ec728262c32151f60ac99efc728981fef008a98de002f8d3fc9f3ddc3380d8b
 
-# The remaining keys of the tooling plan's manifest schema (§8: out_root, probes, layers,
-# comparisons, bootstrap_n [>= 1000, rules gate G6], probe_split, ridge_alphas,
-# untrained_reference_keys) are added by developer when the tooling exists. Until then this
-# file fails to load, as it should (no defaults).
+# ---------------------------------------------------------------------------------------------
+# Designer-owned values (plan-reviewer re-review R4, R7, R8); reasons in algorithmic_null_pilot.yaml.
+# The developer completes the other schema keys around them and leaves these values unchanged.
+#   n_per_store: 5000 per probe (whole first shard; the collection spec writes 5000 episodes per
+#     shard). All stores of a probe share seed_base, so each pooled probe holds 5000 distinct
+#     episode_seed groups (not 30000); see the interim manifest.
+#   Checkpoints: stage_end:0..3 and final for A1–A4, plus stage_end:3:prev and final:prev (the
+#     checkpoint immediately before the last checkpoint of that stage; raise if none) for A4's
+#     within-stage drift (rules A4.within_stage_drift).
+# The UNTRAINED references are untrained.build on each of the three ordinary runs below.
+# ---------------------------------------------------------------------------------------------
+bootstrap_n: 2000
+probes:
+  - id: active
+    stores: []        # the six final-checkpoint stores (hunting world); filled when collected
+    n_per_store: 5000
+  - id: passive
+    stores: []        # the six stage_end:3 stores (harmless world, 04_passive); filled when collected
+    n_per_store: 5000
+    # rows_per_episode, seed: added by developer (tooling plan §8).
+
+# Remaining keys of the tooling plan's manifest schema (§8) are added by developer when the tooling
+# exists. Until then this file fails to load, as it should (no defaults).
 
 runs:
-  - {label: ordinary_s42,  path: results/JAX_RecurrentPPO/20260929-153635_rppo_cw_mayrep_t1none_s42,  checkpoints: ["stage_end:0", "stage_end:1", "stage_end:2", "stage_end:3", final]}
-  - {label: modulated_s42, path: results/JAX_RecurrentPPO/20260929-153644_rppo_cw_mayrep_t16quad_s42, checkpoints: ["stage_end:0", "stage_end:1", "stage_end:2", "stage_end:3", final]}
-  - {label: ordinary_s43,  path: results/JAX_RecurrentPPO/20260929-153652_rppo_cw_mayrep_t1none_s43,  checkpoints: ["stage_end:0", "stage_end:1", "stage_end:2", "stage_end:3", final]}
-  - {label: modulated_s43, path: results/JAX_RecurrentPPO/20260929-153702_rppo_cw_mayrep_t16quad_s43, checkpoints: ["stage_end:0", "stage_end:1", "stage_end:2", "stage_end:3", final]}
-  - {label: ordinary_s44,  path: results/JAX_RecurrentPPO/20260929-153712_rppo_cw_mayrep_t1none_s44,  checkpoints: ["stage_end:0", "stage_end:1", "stage_end:2", "stage_end:3", final]}
-  - {label: modulated_s44, path: results/JAX_RecurrentPPO/20260929-153723_rppo_cw_mayrep_t16quad_s44, checkpoints: ["stage_end:0", "stage_end:1", "stage_end:2", "stage_end:3", final]}
+  - {label: ordinary_s42,  path: results/JAX_RecurrentPPO/20260929-153635_rppo_cw_mayrep_t1none_s42,  checkpoints: ["stage_end:0", "stage_end:1", "stage_end:2", "stage_end:3:prev", "stage_end:3", "final:prev", final]}
+  - {label: modulated_s42, path: results/JAX_RecurrentPPO/20260929-153644_rppo_cw_mayrep_t16quad_s42, checkpoints: ["stage_end:0", "stage_end:1", "stage_end:2", "stage_end:3:prev", "stage_end:3", "final:prev", final]}
+  - {label: ordinary_s43,  path: results/JAX_RecurrentPPO/20260929-153652_rppo_cw_mayrep_t1none_s43,  checkpoints: ["stage_end:0", "stage_end:1", "stage_end:2", "stage_end:3:prev", "stage_end:3", "final:prev", final]}
+  - {label: modulated_s43, path: results/JAX_RecurrentPPO/20260929-153702_rppo_cw_mayrep_t16quad_s43, checkpoints: ["stage_end:0", "stage_end:1", "stage_end:2", "stage_end:3:prev", "stage_end:3", "final:prev", final]}
+  - {label: ordinary_s44,  path: results/JAX_RecurrentPPO/20260929-153712_rppo_cw_mayrep_t1none_s44,  checkpoints: ["stage_end:0", "stage_end:1", "stage_end:2", "stage_end:3:prev", "stage_end:3", "final:prev", final]}
+  - {label: modulated_s44, path: results/JAX_RecurrentPPO/20260929-153723_rppo_cw_mayrep_t16quad_s44, checkpoints: ["stage_end:0", "stage_end:1", "stage_end:2", "stage_end:3:prev", "stage_end:3", "final:prev", final]}

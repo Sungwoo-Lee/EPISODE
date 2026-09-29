@@ -3,7 +3,7 @@ title: "May double-return replication: does the modulated agent still come back 
 topic: continual_worlds
 status: active
 created: 2026-09-29
-last_updated: 2026-09-29
+last_updated: 2026-09-30
 phase: continual / replication of the May 2026 probe
 wandb_tag: "rppo_cw_mayrep_{t1none,t16quad}_s{42,43,44}"
 develop_link: docs/experiments/active/hypervigilance/NMN_CONTINUAL_DOUBLE_RETURN_PROBE.md
@@ -256,8 +256,16 @@ start from a pre-trained level-05 agent is **not** used: those agents have a 58-
 (thermal on), and a warm start would remove the "learn it from scratch" condition May had.
 
 **Seeds.** 3 per agent (42, 43, 44), 6 runs. A seed is paired across agents only for bookkeeping.
-The two agents with the same seed number get different initial weights, so pairs are **not**
-matched units. The rules in 5.3 therefore use both a per-pair sign count and a between-seed error.
+~~The two agents with the same seed number get different initial weights, so pairs are **not**
+matched units.~~ *[Corrected 2026-09-30, experiment-designer — the struck sentence was false.]*
+The two agents with the same seed number start from **identical** main-network weights: the
+modulator is built after the main network, so it does not disturb the random stream, and the
+environment stream is shared too. Verified on the seed-42 pair: 27 of 27 main-network parameter
+arrays identical, the modulator's 33 arrays the only extra ones
+([[ALGORITHMIC_NULL_TODO]], 2026-09-30). Same-seed pairs are therefore matched on their start.
+The rules in 5.3 are unchanged: they use both a per-pair sign count and a between-seed error. The
+between-seed error ignores the shared start, which can only make it larger than a paired error
+when paired agents are positively correlated, so it stays conservative.
 Three seeds is the project minimum. It is enough here because May's effect (107–132 steps) was
 roughly 50 times the level-05 seed SD (about 1.5–2 steps). If the effect has shrunk toward seed noise,
 3 seeds will read as "not replicated" rather than falsely positive (5.3).

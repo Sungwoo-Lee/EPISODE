@@ -1,0 +1,71 @@
+# Analysis manifest — B2 "When does the modulator wake up?" (tooling plan Stage 4, run_wakeup.py).
+#
+# Plain language. For each measure of the modulator's activity over training (how much of the
+# gradient it takes, how fast its weights move, how much its output varies with the situation, how
+# large its gain swing is, how much survival it costs to freeze it), find the point where the
+# measure has covered half of its change from the untrained network to the end of training, in the
+# direction it actually moves; then ask whether that is before or after the agent's survival levels
+# off. If the modulator only wakes up after learning has levelled off, it cannot make learning
+# faster — one candidate reason the modulated agent does not learn faster than the ordinary one.
+#
+# Runs: the 16 level-05 body-interaction modulated agents (one per world, seed 42, all 50
+# checkpoints) and the 3 May-replication modulated agents (seeds 42-44), first stage (01_active)
+# only — the only stage trained from scratch — with a stage-local final value.
+#
+# Registered 2026-09-30, BEFORE Stage 4 runs: no wake-up tool exists yet (scripts/analysis/nmn has no
+# wakeup.py or untrained.py at this commit) and no B2 curve has been computed or seen.
+name: algorithmic_null_wakeup
+evidence_status: b2_wakeup
+# ---------------------------------------------------------------------------------------------
+# decision_rules (MANDATORY). The drivers read the file, check its sha256 equals the value below
+# (mismatch -> ValueError), apply section B2 of the rules, and print path + sha256 +
+# evidence_status on every data statement.
+# ---------------------------------------------------------------------------------------------
+decision_rules:
+  file: docs/experiments/active/modulator_clues/algorithmic_null_decision_rules.yaml
+  sha256: 3ec728262c32151f60ac99efc728981fef008a98de002f8d3fc9f3ddc3380d8b
+
+# ---------------------------------------------------------------------------------------------
+# wakeup (the tooling plan's §8 block). Every value equals decision_rules.parameters.B2 in the
+# pinned rules file, where each is justified from a stated principle; the driver checks equality
+# and raises on any mismatch. Headline: fraction_of_rise = "50 % of the rise from the untrained
+# network, in the direction the measure moves"; the literal "50 % of final" is reported beside it.
+# ---------------------------------------------------------------------------------------------
+wakeup:
+  threshold_mode_headline: fraction_of_rise
+  f: 0.5
+  literal_f: 0.5
+  plateau_f: 0.9
+  final_k: 3
+  noise_k: 3
+  sustain: 2
+  min_noise_points: 5
+  noise_window_max_fraction: 0.5
+  lag_coincident_max_intervals: 1
+  sign_test_alpha: 0.05
+
+# checkpoints: `all` = every saved checkpoint; "stage:0" = every checkpoint whose saved `stage`
+# field is 0 (01_active; 15 expected for s42, 100,033 .. 1,500,011 episodes — the driver
+# reads each checkpoint's saved stage, never the episode count). Step 0 (the
+# untrained network, untrained.build) is added by the driver for the anchorable measures.
+# Remaining schema keys (out_root, measures, rollout sizes, ...) are added by developer.
+runs:
+  - {label: l05_w0000_modulated, path: results/JAX_RecurrentPPO/20260927-053059_rppo_l05body_w0000_t16quad_s42, checkpoints: all}
+  - {label: l05_w0001_modulated, path: results/JAX_RecurrentPPO/20260927-053108_rppo_l05body_w0001_t16quad_s42, checkpoints: all}
+  - {label: l05_w0010_modulated, path: results/JAX_RecurrentPPO/20260927-053117_rppo_l05body_w0010_t16quad_s42, checkpoints: all}
+  - {label: l05_w0011_modulated, path: results/JAX_RecurrentPPO/20260927-053125_rppo_l05body_w0011_t16quad_s42, checkpoints: all}
+  - {label: l05_w0100_modulated, path: results/JAX_RecurrentPPO/20260927-053133_rppo_l05body_w0100_t16quad_s42, checkpoints: all}
+  - {label: l05_w0101_modulated, path: results/JAX_RecurrentPPO/20260927-053141_rppo_l05body_w0101_t16quad_s42, checkpoints: all}
+  - {label: l05_w0110_modulated, path: results/JAX_RecurrentPPO/20260927-053150_rppo_l05body_w0110_t16quad_s42, checkpoints: all}
+  - {label: l05_w0111_modulated, path: results/JAX_RecurrentPPO/20260927-053158_rppo_l05body_w0111_t16quad_s42, checkpoints: all}
+  - {label: l05_w1000_modulated, path: results/JAX_RecurrentPPO/20260927-053205_rppo_l05body_w1000_t16quad_s42, checkpoints: all}
+  - {label: l05_w1001_modulated, path: results/JAX_RecurrentPPO/20260927-053214_rppo_l05body_w1001_t16quad_s42, checkpoints: all}
+  - {label: l05_w1010_modulated, path: results/JAX_RecurrentPPO/20260927-053225_rppo_l05body_w1010_t16quad_s42, checkpoints: all}
+  - {label: l05_w1011_modulated, path: results/JAX_RecurrentPPO/20260927-053235_rppo_l05body_w1011_t16quad_s42, checkpoints: all}
+  - {label: l05_w1100_modulated, path: results/JAX_RecurrentPPO/20260927-053243_rppo_l05body_w1100_t16quad_s42, checkpoints: all}
+  - {label: l05_w1101_modulated, path: results/JAX_RecurrentPPO/20260927-053324_rppo_l05body_w1101_t16quad_s42, checkpoints: all}
+  - {label: l05_w1110_modulated, path: results/JAX_RecurrentPPO/20260927-053530_rppo_l05body_w1110_t16quad_s42, checkpoints: all}
+  - {label: l05_w1111_modulated, path: results/JAX_RecurrentPPO/20260927-053530_rppo_l05body_w1111_t16quad_s42, checkpoints: all}
+  - {label: mayrep_modulated_s42, path: results/JAX_RecurrentPPO/20260929-153644_rppo_cw_mayrep_t16quad_s42, checkpoints: "stage:0"}
+  - {label: mayrep_modulated_s43, path: results/JAX_RecurrentPPO/20260929-153702_rppo_cw_mayrep_t16quad_s43, checkpoints: "stage:0"}
+  - {label: mayrep_modulated_s44, path: results/JAX_RecurrentPPO/20260929-153723_rppo_cw_mayrep_t16quad_s44, checkpoints: "stage:0"}

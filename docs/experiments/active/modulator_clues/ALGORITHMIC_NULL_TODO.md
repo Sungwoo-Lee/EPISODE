@@ -30,8 +30,11 @@ decision-rules author raised): both untrained agents built from one key through 
 trainer recipe share **27 of 27 main-network parameter arrays exactly**; both use a plain
 `GRUCell`; the only extra parameters are the modulator's 33. The trainer's key splits before
 model construction (`train.py` ~l.1152-1207) do not depend on the arm, so the environment
-stream is shared as well. The May design (§3.4) says only that both agents "start from random
-weights" and does not contradict this.
+stream is shared as well. *[Corrected 2026-09-30, experiment-designer:]* the May design §3.4
+**did** contradict this — its "Seeds" paragraph said "the two agents with the same seed number
+get different initial weights". That sentence was wrong and is now corrected there with a dated
+note (plan-reviewer re-review R13). Seeds 43 and 44 are still to be checked (decision rules A3
+precondition).
 
 - [ ] **Train modulated agents whose main network starts from a different seed than their
       paired ordinary agent.** If the gaps then scatter at the size of ordinary
@@ -74,8 +77,14 @@ Metrics, per run, over training (built run-agnostic so any modulated run can be 
       *Revised 2026-09-29:* "50% of its final value" is met at the first checkpoint by any
       measure that starts above half its final value (the gain swing starts near 61%). The
       headline wake-up point is therefore **the checkpoint where a measure has covered 50% of
-      its rise from the first checkpoint's value to the final value**; the literal version is
-      computed and reported beside it.
+      its rise from the untrained network's value (or, for a measure with no untrained value,
+      the first available point) to the final value, in the direction the measure actually
+      moves**; the literal version is computed and reported beside it.
+
+      *Registered 2026-09-30 (before any wake-up number):* the rule, its noise guard and every
+      constant (`noise_k` 3, `sustain` 2, `min_noise_points` 5, `final_k` 3, plateau at 90% of
+      the survival rise) are section B2 + `parameters.B2` of
+      `algorithmic_null_decision_rules.yaml`; runs in `algorithmic_null_wakeup.yaml`.
 
 Compare across arms: MC vs GAE_NORM (MC agents lean on the modulator ~2x more), and
 body-only vs all-senses modulators. The same metrics are the success criterion for the

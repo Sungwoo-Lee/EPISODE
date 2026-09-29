@@ -6,18 +6,42 @@
 name: algorithmic_null_pilot
 evidence_status: pilot
 # ---------------------------------------------------------------------------------------------
-# decision_rules (MANDATORY). Pins the pre-registered rules, written 2026-09-29 before any
-# number existed. The drivers must: read the file, check its sha256 equals the value below
+# decision_rules (MANDATORY). Pins the pre-registered rules, written 2026-09-29 and revised
+# 2026-09-30 (see its `revisions`), both before any number existed. The drivers must: read the file, check its sha256 equals the value below
 # (mismatch -> ValueError), and print path + sha256 + evidence_status on every data statement.
 # ---------------------------------------------------------------------------------------------
 decision_rules:
   file: docs/experiments/active/modulator_clues/algorithmic_null_decision_rules.yaml
-  sha256: b4e10d81380ea0db27058dc5f37284c6551e1969ee107f71a6e95a536c57a6fd
+  sha256: 3ec728262c32151f60ac99efc728981fef008a98de002f8d3fc9f3ddc3380d8b
 
-# The remaining keys of the tooling plan's manifest schema (§8: out_root, probes, layers,
-# comparisons, bootstrap_n [>= 1000, rules gate G6], probe_split, ridge_alphas,
-# untrained_reference_keys) are added by developer when the tooling exists. Until then this
-# file fails to load, as it should (no defaults).
+# ---------------------------------------------------------------------------------------------
+# Designer-owned values (plan-reviewer re-review R7, R8). The developer completes the other keys
+# of the tooling plan's manifest schema around them and leaves these values unchanged.
+#   bootstrap_n: 2000 — above the rules' floor (parameters.gates.G6.bootstrap_n_min = 1000).
+#     Principle: the Monte Carlo error of a 5th/95th-percentile tail at B draws is about
+#     sqrt(0.05 * 0.95 / B) = 0.5 percentage points at B = 2000 (0.7 at 1000), small next to the
+#     percentile it estimates. Same value in every manifest of this study.
+#   n_per_store: 5000 — the whole first shard of each store (block 0 holds 5000 episodes,
+#     episode_seed 1000000..1004999, identical in both stores: checked 2026-09-30). Both stores share
+#     seed_base, so the pooled probe holds 5000 DISTINCT episode_seed groups, not 10000. Gate G6
+#     needs >= 500 groups per held-out fold (test_frac 0.2 -> >= 2500 groups) for EVERY quantity
+#     after its exclusions. The steps_remaining headline drops truncated episodes; a group is lost
+#     only if both of its trajectories were truncated, which is 26.4 % of the groups of block 0
+#     (a property of the stores, not a statistic under test). 5000 -> ~3680 groups -> ~736 per fold;
+#     the reviewer's minimum of 2500 would give ~368 and fail G6.
+# ---------------------------------------------------------------------------------------------
+bootstrap_n: 2000
+probes:
+  - id: w0000_pair_final
+    stores:
+      - results/trajectories_l05body/20260927-053057_rppo_l05body_w0000_t1none_s42/10000046/a1179698aa
+      - results/trajectories_l05body/20260927-053059_rppo_l05body_w0000_t16quad_s42/10000021/2ef4474a8f
+    n_per_store: 5000
+    # rows_per_episode, seed: added by developer (tooling plan §8).
+
+# Remaining keys of the tooling plan's manifest schema (§8) are added by developer when the tooling
+# exists. Until then this file fails to load, as it should (no defaults). The pilot has one
+# ordinary run, hence no UNTRAINED pair and no informative gate (rules evidence_status.pilot).
 
 runs:
   - {label: ordinary_s42, path: results/JAX_RecurrentPPO/20260927-053057_rppo_l05body_w0000_t1none_s42, checkpoints: [final]}
