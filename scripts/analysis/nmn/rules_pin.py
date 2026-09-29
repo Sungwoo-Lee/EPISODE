@@ -102,3 +102,10 @@ def evidence_policy(pinned: PinnedRules, status: str) -> dict:
     if "verdict_words_allowed" not in pol:
         raise ValueError(f"rules evidence_status.{status} has no verdict_words_allowed")
     return pol
+
+
+def stamp(pinned: PinnedRules) -> dict:
+    """What every driver output records about the rules it was computed under:
+    {file, sha256, commit}. The page builder refuses a figure whose sha256 differs from the
+    file at HEAD (tooling plan §E point 6)."""
+    return {"file": pinned.path, "sha256": pinned.sha256, "commit": pinned.commit}

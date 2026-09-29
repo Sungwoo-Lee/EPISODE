@@ -1059,9 +1059,6 @@ from tests.analysis import nmn_synthetic as syn  # noqa: E402
 # A3.survival_stage_by_status.{evidence,interim} left this list with the Stage 3 drivers: their
 # steps driver_io.survival_block and driver_io.make_splits are exercised in _decisions.)
 READ_NOT_YET_USED = {
-    "B2.f": "run_wakeup GPU measures (headline wake point), not implemented yet",
-    "B2.literal_f": "run_wakeup GPU measures (literal 50 % of final, beside), not implemented yet",
-    "B2.lag_coincident_max_intervals": "run_wakeup lag reading (wakeup.lag), after the GPU measures",
 }
 _ALTERNATIVE = {"delta_episode_number": "window_n", "fraction_of_rise": "fraction_of_final"}
 
@@ -1194,6 +1191,15 @@ def _decisions(Pr, base):
     rows, x = _survival_rows(base)
     calls["plateau"] = lambda: rw.plateau_crossing("synthetic", rows, x, dr.b2_settings(Pr),
                                                    dr.survival_settings(Pr))
+    # run_wakeup's per-measure reading (B2.f, B2.literal_f, B2.lag_coincident_max_intervals):
+    # an anchored logistic over step 0 + 16 checkpoints crossing half its rise at checkpoint 8,
+    # read against a plateau at checkpoint 7, one checkpoint interval away (the coincidence edge)
+    cks = [100000.0 * i for i in range(1, 17)]
+    xg = [0.0] + cks
+    curve = {"x": xg, "m": [float(1 / (1 + np.exp(-(v / 100000.0 - 8.0)))) for v in xg],
+             "anchored": True}
+    calls["reading"] = lambda: rw.measure_reading("synthetic", curve, cks, cks[6],
+                                                  dr.b2_settings(Pr))
     out = {}
     for name, f in calls.items():
         try:

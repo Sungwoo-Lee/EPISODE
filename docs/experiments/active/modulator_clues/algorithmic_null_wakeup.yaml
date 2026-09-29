@@ -51,6 +51,20 @@ wakeup:
 # `--out-root` before this key existed, so the location does not change.
 out_root: results/analysis/algorithmic_null
 
+# Stage 4 sampling keys (developer-owned, tooling plan §8; added 2026-09-30 by developer, before
+# any GPU point was computed). They set HOW each point is measured, never which points exist.
+# rollout_episodes / rollout_seed_base: the greedy rollout of rho and of the freeze cost, one
+#   episode per seed rollout_seed_base ... +rollout_episodes-1, the same seeds at every point
+#   and in every condition (paired); the plan's §B2 table ("fixed seeds 90 000+") and budget
+#   ("one 128-episode greedy rollout per point").
+# warmup_iters: rollouts of agent.sequence_length (128) steps with no update before the
+#   gradient probe's one training iteration, because checkpoints carry no environment state.
+#   8 x 128 = 1,024 steps = two full-length (500-step) episodes, so the probe's batch comes
+#   from a world of mixed episode ages rather than 128 fresh starts.
+rollout_episodes: 128
+rollout_seed_base: 90000
+warmup_iters: 8
+
 # checkpoints: explicit saved steps, in the tooling plan's `<int>` selector form. level-05: all 50
 # saved checkpoints of each run. May: the 15 checkpoints whose saved `stage` field is 0 (01_active),
 # read from each checkpoint's payload on 2026-09-30 (continual_forgetting_matrix.read_saved_stage);
