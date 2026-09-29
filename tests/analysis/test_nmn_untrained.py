@@ -79,3 +79,16 @@ def test_matches_train_py_construction(name, tmp_path, monkeypatch):
     bad = [k for k in want if not np.array_equal(want[k], got[k])]
     assert not bad, (name, bad[:5])
     print(f"{name}: {len(want)} parameter arrays equal bitwise to train.py's construction")
+
+
+@pytest.mark.integration
+def test_own_seed_rebuild_is_closest_to_first_checkpoint():
+    """Checkpoint 4.4 second half (R4-6) on one run; all 22 are in the Implementation Report."""
+    from scripts.analysis.nmn import untrained
+    run = _REPO / RUNS["l05_t16quad_w0000"]
+    if not (run / "models" / "config.yaml").exists():
+        pytest.skip(f"{run} not present (gitignored)")
+    res = untrained.closeness_to_first_checkpoint(run, [43, 44])
+    assert res["own_closest"], res
+    with pytest.raises(ValueError):
+        untrained.closeness_to_first_checkpoint(run, [42, 43])   # own seed among the others

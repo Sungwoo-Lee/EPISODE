@@ -117,3 +117,41 @@ def param_arrays(model) -> dict:
     from flax import nnx
     flat, _ = jax.tree_util.tree_flatten_with_path(nnx.state(model, nnx.Param))
     return {jax.tree_util.keystr(k): np.asarray(v) for k, v in flat}
+
+
+def main_arrays(model) -> dict:
+    """param_arrays without the modulator subtree: the main network the closeness check
+    compares (the modulator exists only in modulated runs)."""
+    return {k: v for k, v in param_arrays(model).items() if not k.startswith("['modulator']")}
+
+
+def _cosine(a: dict, b: dict) -> float:
+    import numpy as np
+    if set(a) != set(b):
+        raise ValueError(f"parameter sets differ: {sorted(set(a) ^ set(b))[:5]}")
+    for k in a:
+        if a[k].shape != b[k].shape:
+            raise ValueError(f"{k}: shape {a[k].shape} != {b[k].shape}")
+    x = np.concatenate([np.ravel(a[k]).astype(np.float64) for k in sorted(a)])
+    y = np.concatenate([np.ravel(b[k]).astype(np.float64) for k in sorted(b)])
+    return float(x @ y / (np.linalg.norm(x) * np.linalg.norm(y)))
+
+
+def closeness_to_first_checkpoint(run_dir, other_seeds) -> dict:
+    """Checkpoint 4.4, second half (tooling plan R4-6): the own-seed rebuild must be closer
+    (cosine similarity of the flattened main-network parameters) to the run's FIRST saved
+    checkpoint than the rebuilds for each of `other_seeds` are. Evidence that the rebuild is
+    the run's own starting network, from saved state rather than from the trainer's code.
+    The first checkpoint is restored strictly (`replay.load_agent`)."""
+    from scripts.analysis.nmn import ckpt_io, replay
+    run_dir = Path(run_dir)
+    own = run_seed(run_dir)
+    others = [int(s) for s in other_seeds]
+    if own in others or len(set(others)) != len(others) or not others:
+        raise ValueError(f"other_seeds {others} must be distinct and exclude the run's seed {own}")
+    first = ckpt_io.list_steps(run_dir / "models")[0]
+    ref = main_arrays(replay.load_agent(run_dir / "models", first).model)
+    cos = {s: _cosine(main_arrays(build(run_dir, seed=s)[0]), ref) for s in [own] + others}
+    return {"seed": own, "first_checkpoint": int(first), "n_main_arrays": len(ref),
+            "cosine": {str(s): c for s, c in cos.items()},
+            "own_closest": bool(all(cos[own] > cos[s] for s in others))}
