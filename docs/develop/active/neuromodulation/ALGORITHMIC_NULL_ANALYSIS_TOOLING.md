@@ -940,7 +940,7 @@ This belongs in a separate plan with a speed measurement. It would make B2's per
 - [x] **0.2** The May replication's five stage files: the env sections of `01/03/05_active` are identical to `config.yaml`'s; `02/04_passive` differ only in `environment.entities` (besides `agent`/`tag`/`wandb`). — **Done, with one finding:** env sections of `01/03/05_active` equal `config.yaml`; `02/04_passive` differ only in `environment.entities`. But for the s43 and s44 runs every later stage file also differs in top-level `seed` (42, not 43/44). See Implementation Report, Deviation 1.
 - [ ] **R.1** `experiment-designer`'s revised rules file (with `parameters:` and `B2`) and the wake-up manifest are committed, and all four manifests pin the rules file's current sha256. Record the file paths, commit shas and commit times. Record the `generated_utc` of the first `run_similarity` / `run_decoding` output of any manifest and of the first `run_wakeup` output, and show each is **later** than the rules commit. (Verifier checks both from `git log` and the output `manifest.json`.)
 - [ ] **R.2** `experiment-designer` has read the evaluator's fixture table (`tests/analysis/test_nmn_decision_rules.py`, the "rules — logic" cases) and signed in the Implementation Report that each row is the rules' intended reading. The signature's commit time precedes the first real `run_similarity` / `run_decoding` / `run_wakeup` output. Any row the designer rejects is a rules revision (reason 1 of the rules' `revision_policy`) or a code fix, before any number exists.
-- [ ] **R4.1** *(gates the May collection)* Collector tests of R4-1 and R4-7 pass, including the planted self-test failure and the missing-section raise. On an RTX 3090-class GPU, paste `float32_matmul_selftest("default")` (must exceed `FLOAT32_MATMUL_MAX_REL_ERR`) and `float32_matmul_selftest("highest")` (must not). A one-block smoke collection of one May run, on the card class chosen for the collection, into a throw-away `--out-root`, writes a manifest with `matmul_precision: highest`, a `compute_device_kind` and the self-test value; paste them. The commit sha of this change is recorded; every May store's `collection_git_sha` must be at or after it (checked at 6.1).
+- [x] **R4.1** — **Done 2026-09-30 (developer, commit `2d54453d`):** RTX 3090 `highest` 1.376e-7 (passes), `default` 2.628e-4 (fails 1e-5). A planted failure aborts with no output directory. The smoke store's manifest records `highest` / RTX 3090 / 1.376e-7. Mode-change and card-change resumes (edited, and real 3090→4090) are refused with nothing written. The `recorded` replay agrees on 100 % (1,396,946 rows). The GPU worker needed `JAX_PLATFORMS=cuda,cpu` for continual runs (Deviation R4-a). Details in the Implementation Report. *(gates the May collection)* Collector tests of R4-1 and R4-7 pass, including the planted self-test failure and the missing-section raise. On an RTX 3090-class GPU, paste `float32_matmul_selftest("default")` (must exceed `FLOAT32_MATMUL_MAX_REL_ERR`) and `float32_matmul_selftest("highest")` (must not). A one-block smoke collection of one May run, on the card class chosen for the collection, into a throw-away `--out-root`, writes a manifest with `matmul_precision: highest`, a `compute_device_kind` and the self-test value; paste them. The commit sha of this change is recorded; every May store's `collection_git_sha` must be at or after it (checked at 6.1).
 - [ ] **R4.2** Reader tests of R4-1 pass. The pilot manifest, with its two precision keys unchanged (and the R4-2 keys added), reruns Stage 2 on an Ampere/Ada GPU and reproduces Checkpoint 2.2: 0 disagreements for both agents.
 - [ ] **R4.3** Loading a manifest with a verdict layer, `logits` or `value` marked `headline_only` raises. A unit test shows `final:prev` is replayed only on `active` and `stage_end:3:prev` only on `passive`, read from `parameters.A4.drift_pairs`. For the first May manifest, the expected bytes (printed before the first replay) and the measured bytes are pasted.
 - [ ] **R4.4** On the pilot, the chain-assertion JSON carries the per-quarter maximum; paste it. The sampled-vs-full check is per row against `tool_checks.buffer_index_rel_tol`: unplanted, it passes (value pasted); with the kept rows' slots shifted by one step, it fails at ≥ 10× the tolerance (value pasted).
@@ -1114,6 +1114,59 @@ I grepped `KNOWN_BUGS.md` directly.
 
 Implemented by: developer
 
+### Revision 4 — R4-1 (collector side + minimal reader) and R4-7 item 2 (2026-09-30, 02:40–03:10)
+
+**Commit `2d54453d`** (pushed to `v4.0`). Every May store's `collection_git_sha` must be at or after it (Checkpoint 6.1).
+
+**Files.**
+- `scripts/eval/traj_collect/collect_trajectories.py`: `FLOAT32_MATMUL_MAX_REL_ERR = 1e-5` with its basis and the CPU reference value (9.13e-7) in the comment; `_matmul_product` (the test seam) and `float32_matmul_selftest(precision)` as specified; `assert_float32_matmul`, which raises `RuntimeError` naming the device. `main()` is now parse, then `with jax.default_matmul_precision("highest"):` self-test, read back `jax.config.jax_default_matmul_precision`, then `_collect(...)` (the old body). No CLI flag. `build_manifest` takes three required kwargs and raises when the mode is not `highest` or the self-test value is above the constant. R4-7: a missing world section now raises `ValueError` naming the section and the stage file.
+- `src/utils/trajectory_store.py`: `matmul_precision` and `compute_device_kind` added to `MANIFEST_GUARDED_FIELDS`, with a comment.
+- `scripts/eval/traj_collect/collect_worker.sh`: GPU branch `JAX_PLATFORMS=cuda,cpu` (Deviation R4-a). There is no `NVIDIA_TF32_OVERRIDE` (Deviation R4-b).
+- `scripts/analysis/nmn/run_activations.py`: `resolve_store_precision(entry, recorded, store)`; entries `recorded | highest | default`; `capture_matmul_precision` accepts only `highest`; the resolved check modes and each store's `compute_device_kind` are written into `manifest.json`. The resolution runs once per probe, before any replay.
+- Tests: `tests/test_trajectory_collection.py` (8 `build_manifest` call sites via `_precision_kw()`, plus 9 new tests), new `tests/analysis/test_nmn_run_activations_manifest.py` (10 tests).
+- Docs, same commit: `TRAJECTORY_STORE_SCHEMA.md` (guard list, and a manifest-field row that includes the reviewer's sentence that `highest` does not mean identical to training arithmetic), `traj_collect/README.md`, `SCRIPTS_DEPENDENCY_MAP.md` (rows for `collect_worker.sh`, `collect_trajectories.py`, `run_activations.py`). The `run_collection.py` comment was updated.
+
+**Tests.**
+- New collector tests: 9/9 pass. They run the real `main()` on CPU on a current-schema May run (s42 ordinary, `stage_end:0`), because the file's reference run no longer loads (KNOWN_BUGS l.141). Covered: the three fields written; an identical resume is a no-op; a resume is refused, with every file unchanged, for a mode edited to `default`, a card edited, and a manifest lacking the fields; a planted 1e-4 relative-noise self-test failure makes `main()` raise with no `--out-root` created; `build_manifest` refuses `default` and an above-constant value; R4-7 (a stage file without `thermal` raises; the companion stage with it resolves).
+- Whole file: before 33 passed / 33 failed / 8 errors (`tmp/20260930_r41_tests_baseline.log`); after 42 / 33 / 8 (`tmp/20260930_r41_tests_after.log`). The failing set is identical (`diff` of the two lists is empty), all the pre-existing `visual_value_mode` class. `test_schema_doc_matches_code` passes.
+- Reader: `test_nmn_run_activations_manifest.py` 10/10, `test_nmn_probe_set.py` 4/4. The pilot manifest loads unchanged (`[highest, default]`).
+
+**Checkpoint R4.1 on node 106 GPU 0 (RTX 3090).** Script `tmp/20260930_r41_gpu106.sh`, output `tmp/20260930_r41_gpu106.out`.
+
+| Check | Result |
+|---|---|
+| `float32_matmul_selftest("highest")` | **1.376e-7**, passes (≤ 1e-5) |
+| `float32_matmul_selftest("default")` | **2.628e-4**, fails the 1e-5 check, as it must (TF32) |
+| Planted self-test failure through `main()` on the 3090 | `RuntimeError` "self-test failed on gpu:NVIDIA GeForce RTX 3090: relative error 2.767e-04 …"; the `--out-root` does not exist afterwards |
+| One-block smoke collection: May s42 modulated (`rppo_cw_mayrep_t16quad_s42`), `stage_end:0` = step 1,500,011, 3,000 episodes, through `collect_worker.sh` with `device: gpu` | manifest `matmul_precision: "highest"`, `compute_device_kind: "NVIDIA GeForce RTX 3090"`, `matmul_selftest_max_rel_err: 1.3761e-07`, `device: gpu`, env_fp `373102b903` (the `01_active` world). The store is under `tmp/20260930_r41_smoke/root/`. |
+| Resume across a mode change (the store copy's manifest set to `default`) | refused: "matmul_precision: store has 'default', this run wants 'highest'"; nothing written |
+| Resume across a card change, edited (manifest says RTX 2080 Ti, run on the 3090) | refused; nothing written |
+| Resume across a card change, **real** (the 3090 store resumed on node 102's RTX 4090) | refused: "compute_device_kind: store has 'NVIDIA GeForce RTX 3090', this run wants 'NVIDIA GeForce RTX 4090'"; nothing written (`tmp/20260930_r41_card_real_4090.json`) |
+| Identical resume on the 3090 | "0 to do, 1 already complete"; no-op |
+| Replay through `teacher_forced` via `run_activations` with `store_matmul_precision: [recorded]` (manifest `tmp/20260930_r41_replay_manifest.yaml`) | check mode resolved to `highest`; G1 self-agreement **1,396,946 / 1,396,946 decision rows (100 %)**, 0 disagreements, 0 near-tie; step-discontinuous alignment 14,833 / 14,833; `failures = []` |
+
+**Speed check** (same 3090, same run, checkpoint, 3,000 episodes and batch; script `tmp/20260930_r41_gpu106_speed.sh`, output `tmp/20260930_r41_gpu106_speed.out`). The "before" is TF32 (`_collect` called outside the context). TF32 gave 73.7 and 74.2 eps/s. The new `highest` path gave 80.3 and 81.9 eps/s. That is **about 9 % faster, not slower**. I did not investigate why. The rollout is not matmul-bound, and the difference is consistent across both pairs.
+
+**Incomplete stores per known root, before merge** (the reviewer's ❓). Script `tmp/20260930_r41_incomplete_stores.py`, output `tmp/20260930_r41_incomplete_stores.json`. It walks each `results/trajectories*` root exactly `<root>/<run>/<ckpt>/<env_fp>/` with one `scandir` per directory; there is no recursive search. Result: 265 stores in 14 roots, and 264 are complete. **One is incomplete:** `results/trajectories_sens/20260826-144838_sens_A_baseline_n114g0/10000063/085a28834a` has 0 of 1 blocks: a manifest-only stub from 2026-08-26 with no precision fields. It can no longer be resumed and must be re-collected into a fresh `--out-root` if anyone needs it. No other store is stranded.
+
+**R4-7 safety check** (the reviewer asked for it by name). Script `tmp/20260930_r47_may_world_sections.py`, output `tmp/20260930_r47_may_world_sections.json`. It resolves the six May runs by the `tag` in their saved `config.yaml`. For each run it checks `config.yaml` and all five `stage_*.yaml`: 36 of 36 files carry all five world sections (`environment`, `sensory`, `body`, `thermal`, `perceptual_noise`), with `_ok: true`.
+
+**Deviations.**
+- **R4-a (blocker found and fixed): the GPU worker could not collect any continual checkpoint.**
+  - The first smoke run died in every cell with `RuntimeError: Unknown backend cpu`, raised in `continual_forgetting_matrix.read_saved_stage` (`jax.local_devices(backend="cpu")`). The worker's GPU branch exported `JAX_PLATFORMS=cuda`, so the Stage 5 `stage_end:<k>` selector had no CPU backend.
+  - Stage 5 was only exercised on CPU, so this was latent. **Every May GPU cell at 08:30 would have failed.**
+  - Fix: the worker exports `JAX_PLATFORMS=cuda,cpu`. JAX's default device stays the GPU (the manifest records the 3090). This is `collect_worker.sh`, which the plan listed as unchanged, so it is flagged here. `scripts/analysis/nmn/ckpt_io.py:250` makes the same CPU-backend request; any GPU driver that reaches it needs `cpu` exposed too.
+- **R4-b: `NVIDIA_TF32_OVERRIDE=0` was measured and dropped.** On the 3090, `default` gave 2.628e-4 with the variable and without it, so it does not change XLA's matmul mode. Shipping it would have given false assurance.
+- **R4-c: the new collector tests use a May run, not the reference fixture.** The plan says "on the existing CPU fixture", but that fixture cannot load (KNOWN_BUGS l.141, several eras of missing keys). The tests skip when the May run is absent.
+- **Reader, minimal by instruction.** Not done from the plan's reader list: `probe_set` copying the fields into `store_meta` (`run_activations` reads the store manifest directly instead); the start-up self-test in `run_activations`; and the per-capture JSON device fields. These gate Checkpoint R4.2, not the collection.
+
+**Follow-ups.**
+- `bug-curator`: update KNOWN_BUGS l.140 (the precision hazard) to "built at `2d54453d`".
+- `bug-curator`: record the `JAX_PLATFORMS=cuda` / CPU-backend coupling (fixed in the worker, still latent in `ckpt_io.py:250` for GPU callers).
+- The one incomplete `trajectories_sens` stub (above).
+
+Implemented by: developer
+
 ## Verification Report
 
 > **Verified by**:
@@ -1203,3 +1256,63 @@ Severity legend: 🔴 Critical = fix before going further · 🟡 Moderate = lik
 **Cost of being wrong.** No data loss and no training relaunch. If the manifest comment is left, the cost is one confused developer hour. If the T5 row is omitted from the signed table, R.2 signs a table missing one branch and the first real curve that hits it is judged by unsigned code — a text fix, but one that should land before R.2, not after.
 
 Reviewed by: plan-reviewer, 2026-09-30 (confirmation of Revision 3)
+
+## Feedback from plan-reviewer — Revision 4 (2026-09-30, 02:40)
+
+**Verdict: SOUND WITH CONCERNS. R4-1 and the R4-7 collector fix are GO now** — nothing found blocks the developer from starting them before the 08:30 collection. No Critical finding, so no review file is written. Legend: 🔴 Critical = fix before going further · 🟡 Moderate = likely costs a re-run · 🟢 Low = cosmetic · ❓ Open = an assumption nobody has verified yet.
+
+Scope: R4-1…R4-7 and Checkpoints R4.1–R4.6 only; earlier revisions stand as reviewed.
+
+### R4-1 store precision — closed (GO)
+
+Checked against JAX 0.9.0.1 as installed, not from memory:
+- **Coverage.** `lax.canonicalize_precision` reads `config.default_matmul_precision.value` at *trace* time whenever an op is called with `precision=None`, so the mode is baked into every `dot_general` in the jaxpr — inside `scan`, `vmap` and `nnx.jit` alike, and in the environment's own visual-PSF matmuls (`src/environment/sensor.py:243–244, 281, 393`), which do run inside the rollout. No file under `src/`, `scripts/` or `train.py` passes an explicit `precision=` to any matmul-class op, so nothing opts out; the collector has no threads that could trace outside the context; the GPU worker branch unsets `XLA_FLAGS`. Reading `jax.config.jax_default_matmul_precision` inside the context returns `"highest"` on this version (verified), so the manifest read-back works as written.
+- **Self-test soundness, measured** (256×512 · 512×256, rng 0, metric as specified): local RTX 4090 `highest` **1.32e-7**, `default` **2.63e-4**; CPU `highest` = `default` **9.13e-7**. The 1e-5 constant is therefore 26× below TF32 and 76× above GPU float32 — but only **11×** above CPU float32, tighter than the plan's "~1e-7 for float32" suggests. Still a valid detector; paste both R4.1 numbers as planned and state the CPU value beside the constant's comment.
+- **End-to-end confirmation already exists:** the pilot replayed the 2080 Ti (native float32) store on a 3090 under `highest` at 100 % agreement, so the mode switch demonstrably reaches the network's matmuls on Ampere. Checkpoint 6.1's 100 % self-replay on all 12 May stores is the final check.
+- **Resume guard.** Legitimate: the May spec puts each store in one worklist cell on one card, and the guard is the same philosophy as the existing `device` guard. A worker relaunched on a different card class is refused, which is the intended behaviour; there are seven 3090 nodes, so same-class relaunch is easy.
+- **Running training and existing stores:** untouched. Legacy stores are read with `store_matmul_precision: highest|default` explicitly; the pilot manifest keeps working.
+
+| Sev | Where | Issue | Fix / owner |
+|---|---|---|---|
+| ❓ | R4-1 resume guard | "No completed store needs resuming" is asserted, not shown. A recursive scan of `results/trajectories*` for stores with fewer completed blocks than `n_episodes/shard_episodes` timed out on the NAS during this review. | Before merging, list incomplete stores per root (iterate the known store dirs, not `**`). If any exists, note that it can no longer be resumed and must be re-collected. `developer` |
+| 🟢 | `build_manifest` signature | Three new required kwargs break eight test call sites (`tests/test_trajectory_collection.py:125, 1322–1385`, most through one `kw` dict). Mechanical. | Update once; `developer` |
+| 🟢 | Data statement | A store collected under `highest` computes the environment's visual PSF in full float32, whereas training on Ampere/Ada computed it in TF32 (the sensor docstring says ~3 decimal digits). The episode population is therefore not bit-the-same as training-time, in the same sense a 2080 Ti store already was not. Not a registered claim; worth one sentence in the schema doc's manifest-field text so nobody later reads `matmul_precision: highest` as "identical to training". | `developer`, same commit as the schema doc update |
+| 🟢 | `run_collection.py`/worker | Optional second layer: `export NVIDIA_TF32_OVERRIDE=0` in the worker's GPU branch (driver-level TF32 off). Not a CLI flag, so it does not reopen the escape hatch; redundant if XLA honours HIGHEST, which the self-test proves. | `developer`, optional |
+| 🟢 | Known Bugs l.140 | The precision-hazard row reads "remedy decided, not built"; update to "built at <sha>" when R4.1 passes. | `bug-curator` |
+
+### R4-7 collector fix (item 2) — closed (GO)
+The missing-section raise is the right direction (loud rather than silently recording a different world). The "all five sections present in all five stage files of all six May runs, checked by script" claim needs its script and output named in the Implementation Report so it is inspectable, not re-derived. Items 1, 3, 4: closed, nothing to add.
+
+### R4-2 activation storage — closed for every verdict-bearing statistic; one 🟡 on reporting
+Checked against the rules `4c8508af…`: A1 pairs verdict layers only; A2 decodes verdict layers (G4's input reference comes from the probe file); A3 is A1 plus UNTRAINED pairs on `X.out` / `rnn.state` (verdict layers); A4 movement needs verdict layers at all five stage ends on both probes (`every_capture`) and within-stage drift needs `:prev` only on the probe its `drift_pairs` entry names — exactly what R4-2 keeps. G1–G3 are computed in replay; G6 counts groups. The rules' `evidence.primary_checkpoint: final` / `primary_probe_world: active` matches the evidence `headline_capture`. The kept set starves no registered comparison.
+
+| Sev | Where | Issue | Fix / owner |
+|---|---|---|---|
+| 🟡 | R4-2, interim manifest `headline_capture: null` | The rules say of `interim`: "All rules below apply unchanged." Descriptive layers are reported-only, so this decides no verdict, but with `null` the interim report has no "where the difference arises" localisation at all, and an interim A1 `different` would be unexplainable at the layer-site level. Cost of keeping them at one interim capture is ~13 GB. | Either set the interim `headline_capture` to `{checkpoint: stage_end:0, probe: active}`, or state in the plan and the interim data statement that the interim omits descriptive layers. `senior-developer`; `experiment-designer` to confirm which |
+| 🟢 | R4-2 | A4 applies the A1 layer verdict at *every* stage end; a `different` at a non-headline stage end will also have no descriptive localisation. Acceptable, but say so once in the A4 figure's data statement. | `senior-developer` |
+
+### R4-4 G2 margin — closed; **not** a loosening of a registered gate
+Read against the rules text (`G2_reconstruction`, l.232–236): the gate lists "logits from actor.out, value from critic.out, rnn.state from the GRU step, and X.mod == gain·X.raw + offset" — the neighbour reconstructions only. The plan's own §4, which the rules cite for the tolerance, likewise describes only the chain ("each key is checked against its neighbour"). The sampled-vs-full comparison was never in either; it was a developer-added check the code held to `g2_tol` (`teacher_forced.py:435`). Moving it to a developer-owned tool tolerance changes no registered quantity, and the chain check is verifiably one-step (`teacher_forced.py:147–152` recomputes from the *captured* previous state). No `revisions` entry is needed. The 1e-3 basis (≥100× above the observed 8.3e-6, ≥10× below a one-step slot error) is stated, and the planted shift control shows the check can fail. Two exact guards on slot indexing remain.
+
+| Sev | Where | Issue | Fix / owner |
+|---|---|---|---|
+| ❓ | R4-4 chain check, `rnn.state` at 4.93e-6 vs 1e-5 | One-step deviation this large is plausibly XLA-GPU's approximate `tanh`/`logistic` differing between two fusions, not accumulation — consistent with the plan — but its size depends on the activation regime of the *trained* network, so a May network could sit 2× higher and cross 1e-5 by compilation noise alone. The plan is right **not** to widen G2 now (the `revision_policy` forbids moving a threshold on a pilot magnitude). If it fails on May, the honest path is reason (2): the gate blocks, a revision says how a compilation-noise failure reads, and the verdict is reported beside it. Say this in the plan so nobody improvises at that moment. | `senior-developer` (one sentence); `experiment-designer` is not asked to act now |
+| 🟢 | R4-4 | A pre-data tooling change that is *not* a threshold move: recompute the chain on the same device with fast-math approximations off (an `XLA_FLAGS` toggle in the chain program only) and see whether 4.93e-6 drops. Optional. | `developer` |
+
+### R4-6 shared key recipe — closed; no risk to the running jobs
+- Value-preserving, verified on `train.py`: between l.1153 and each branch's split (l.1207, 1290, 1312, 1342) the only use of `key` is `env.reset(env_key, …)` at l.1156; `model_key` is unused; every branch's first act is the same split. The golden-key test pinned to the pre-edit sha is the real proof. The Checkpoint 1.3 jaxpr hashes are trivially identical (keys are inputs, not program), so do not present them as evidence for R4-6 — the plan already half-says this.
+- Running May jobs: Python holds the compiled module; the trainer's only subprocess (`scripts/eval/experiment_eval_checkpoint.py`) imports `run_sweep`, not `train`. A crash-and-resume runs the edited `train.py`, restores `key` from the checkpoint (l.1543), and rebuilds the env from it — same bits either way. `src/utils/init_keys.py` is additive.
+
+| Sev | Where | Issue | Fix / owner |
+|---|---|---|---|
+| 🟢 | Checkpoint 4.4 second half | "`git.commit` and `training_git_sha` must agree" has no stated outcome for disagreement (a dirty launch tree or a missing WandB git field). Say: record both; the closeness check decides; a disagreement is reported, not a stop. | `senior-developer` |
+
+### R4-3, R4-5 — closed
+One loader, tests that `decision_rules.load is rules_pin.load` and no `hashlib`/`yaml` import — sufficient. `SCRIPTS_DEPENDENCY_MAP.md` row exists. R4-5 is a corrected sentence with the test already asserting `action_next[t] == action[t+1]`.
+
+### Passes with nothing to report
+Project rules (no fallback defaults: `_req` and mandatory manifest keys throughout; survival-step metric unaffected; conda path in the worker; schema doc updated in-commit with `test_schema_doc_matches_code`); side effects (no `git clean`, no branch moves, no results writes outside a throw-away `--out-root` for R4.1); ordering (R4-1 + R4-7(2) gate collection; the rest gate analysis); prior art (Known Bugs l.139/140/162 consulted, no collision; l.140 to be updated by `bug-curator`).
+
+**Cost of being wrong.** If R4-1 is wrong in the way I looked for (an op escaping `highest`), the cost is one 5.6 GB, ~1-hour May collection re-run, and it cannot pass silently: Checkpoint 6.1's 100 % self-replay fails. If the interim `headline_capture: null` stands, the cost is an interim page that cannot say where a difference sits — a reporting gap, not a wrong verdict. No data-loss hazard in any R4 item.
+
+Reviewed by: plan-reviewer, 2026-09-30 (Revision 4)
