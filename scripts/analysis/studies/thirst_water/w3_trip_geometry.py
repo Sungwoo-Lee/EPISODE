@@ -32,7 +32,8 @@ fig, ax = plt.subplots(1, 2, figsize=(10.2, 4.0))
 for m, col, mk, lab in MODES:
     med = [stats[(m, G)][0] for G in GRIDS]; lo = [stats[(m, G)][1] for G in GRIDS]; hi = [stats[(m, G)][2] for G in GRIDS]
     ax[0].plot(GRIDS, med, color=col, marker=mk, ms=4.5, lw=1.8, label=lab)
-    ax[0].fill_between(GRIDS, lo, hi, color=col, alpha=0.10, lw=0)
+    if m == "list":                          # shade only the planned mode; one band stays attributable
+        ax[0].fill_between(GRIDS, lo, hi, color=col, alpha=0.10, lw=0, label="list: 10-90 % range")
     ax[1].plot(GRIDS, [stats[(m, G)][3] for G in GRIDS], color=col, marker=mk, ms=4.5, lw=1.8, label=lab)
 for a in ax:
     a.axvline(10, color="#d4d6dc", lw=6, zorder=0); a.set_xlabel("grid size (cells per side)"); a.set_xticks(GRIDS[::2])

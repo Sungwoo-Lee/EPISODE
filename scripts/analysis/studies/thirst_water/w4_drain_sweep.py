@@ -18,7 +18,7 @@ a = ax[0]
 a.plot(D, [100 * k["survive"] for k in known], color=house.INK, marker="o", ms=4.5, lw=1.8, label="knows the pond")
 a.plot(D, [100 * k["survive"] for k in search], color=house.INK, marker="s", ms=4.5, lw=1.8, ls="--", label="must find it")
 base = 100 * SW["no_water"]["10"]["survive"]
-a.axhline(base, color="#8a8f99", lw=1.2, ls=":", label="no water (reference)")
+a.axhline(base, color=house.BLUE, lw=1.4, ls=":", label="no water (reference)")
 a.set_ylim(80, 100); a.set_ylabel("lasts 500 steps (% of episodes)")
 a.legend(loc="lower left", fontsize=10.5)
 b = ax[1]; bottom = np.zeros(len(D)); x = np.arange(len(D))

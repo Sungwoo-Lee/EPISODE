@@ -16,7 +16,7 @@ for g in (10, 14, 20):
         rows.append(f'<tr><td>{g} × {g}</td><td>{lab}</td>' + "".join(f'<td class="n">{x:.0f} %</td>' for x in v)
                     + f'<td class="n">{100 * SW["no_water"][str(g)]["survive"]:.0f} %</td></tr>')
 html = ('<p class="cue" hidden>Wider than the screen — scroll sideways.</p><div class="scroll">'
-        '<table class="datatable wide"><thead><tr><th>grid</th><th>agent</th><th class="n">margin 25 (figures)</th>'
+        '<table class="datatable wide margin"><thead><tr><th>grid</th><th>agent</th><th class="n">margin 25 (figures)</th>'
         '<th class="n">margin 50</th><th class="n">margin 100</th><th class="n">no water</th></tr></thead><tbody>'
         + "".join(rows) + '</tbody></table></div>'
         '<p class="prov">Emitted by <code>scripts/<wbr>analysis/<wbr>studies/<wbr>thirst_water/<wbr>t1_margin.py</code>'

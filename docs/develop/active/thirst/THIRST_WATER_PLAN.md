@@ -804,3 +804,15 @@ If the six Moderate items go in as written, the unattended run halts three times
 ## Feedback from plan-reviewer — design-page review (2026-09-29)
 
 The design page that supports this plan (`docs/develop/active/thirst/thirst_water.template.html`) was reviewed as an analysis verdict before publication: **supported with caveats**. The 10×10 headline (water costs a scripted agent about 3 percentage points of full-length episodes) holds under variation of the scripted agent's own choices, and the page's correction to this plan's "~5 % dead of thirst by step 16 whatever the agent does" stands (1.8–2.4 % simulated; the 5 % is the no-drinking ceiling). One headline is not a property of the rules: "41 % survival at 20×20 when the pond must be found" is 44–77 % depending on how late the scripted agent starts looking. Findings and exact wording changes: [[plan_thirst_water_page]] (`docs/reviews/plan_thirst_water_page.md`). No settled decision is reopened.
+
+---
+
+## Renderer work done ahead of the environment (2026-09-29)
+
+The rendering session implemented §D8 against snapshot fields only, before any environment change, at the user's request for the design page. Committed as `5818c086` (dashboard) and `7deaee53` (frames + generator).
+
+- **Keys the env must produce.** Snapshot `water_pos` of shape `[h*w, 2]` (every pond cell, array coordinates) and `hydration`; static `params.water_max_hydration`. The recorder (`eval_recording._snapshot_state`) already writes both keys via `getattr`, so they flow through once `EnvState` has them. When `params.water_enabled` exists, `LayoutContext.from_params` asserts it agrees with the recording.
+- **Pond look (user decision):** inset with two wave lines, the square's temperature colour kept as a rim, drawn as ground cover under every occupant.
+- **§D8.8 audit gate, resolved:** the audit's `cell_overdraw` rule counted the pond's inset as an occupant (21 findings, none a real occlusion). The painter now tags the pond drawing `ground_cover`; the audit excludes tagged ground cover from the occupant count but fails with zero tolerance if ground cover is ever the last thing painted on an occupant pixel. Both directions are permanent tests in `tests/env/test_dashboard_water.py`.
+- **Setpoint mark** added as a vital-row option, on for hydration only. Turning it on for nutrition (two-sided since 09-22) is an open follow-up for the user.
+- The design page with the calculations and the three mock-up frames: `docs/develop/active/thirst/thirst_water.html`.
