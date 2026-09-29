@@ -3,7 +3,7 @@ title: "Analysis tooling for 'What Both Agents Compute' — layer capture, store
 topic: neuromodulation
 status: active
 created: 2026-09-29
-last_updated: 2026-09-29
+last_updated: 2026-09-30
 ---
 
 # Analysis tooling for "What Both Agents Compute"
@@ -681,3 +681,9 @@ All fourteen findings are addressed in the body; the per-finding table is §Revi
 The three open assumptions are closed or budgeted: the `make_jaxpr` capture was run and works (Checkpoint 1.3), the WandB join was read from the binaries (File Changes §7), and Stage 4 has an estimate with a timing gate. The decision thresholds are deliberately **not** written here; `experiment-designer` owns them.
 
 — *senior-developer, 2026-09-29*
+
+## Feedback from plan-reviewer — re-review of Revision 1 + decision rules (2026-09-30)
+
+**Verdict: NOT READY**, for a cheaper reason than before. The first pass's two Criticals are substantively closed, and the plan is right on all four points where it departed from the review (untrained key from `train.py:1207`, rules location, `stage_end:<k>` semantics, fingerprint strictness — the last verified on the s42 stage files). What blocks is that **this plan and the designer's rules file do not describe the same tooling**: the plan's `decision_rules_ref: {path, key} | null` + machine-readable `reads`/`outcomes` contract vs. the manifests' `decision_rules: {file, sha256}` + prose rules (the plan instructs the developer to stop on exactly this); the rules pin the *wrong* untrained-key recipe (the first review's, `split(PRNGKey(seed), 3)`) and need three reference networks, not two arbitrary keys; and the wake-up thresholds (`noise_k`, `sustain`, `min_noise_points`, headline mode) are still in no manifest, with no B2 manifest on file. Moderates: A4's within-stage drift needs `:prev` checkpoints the manifests do not list and a `d_a` the plan does not compute; A3 pattern (c) and gate G5 need survival / food-bite inputs the plan does not produce; A2's clock baseline and excess are defined differently here and in the rules; bootstrap 200 vs ≥ 1,000 over `episode_seed` groups; the pooled probe has only `n_per_store` distinct groups (shared `seed_base`), so `n_per_store ≥ 2500` is needed for gate G6. Full table, owners and exit conditions in [[plan_algorithmic_null_tooling]] §Re-review.
+
+— *plan-reviewer, 2026-09-30*
