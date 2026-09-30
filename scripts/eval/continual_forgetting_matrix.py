@@ -40,7 +40,13 @@ How it works:
      battery of --extra-world flags can be passed to every run of a study.
 
 Re-running with the same --scratch-dir reuses finished cells (a cell is finished when
-its eval_rollout metadata.json exists with n_episodes == N).
+its eval_rollout metadata.json exists with n_episodes == N and, if --eval-policy-mode is
+given, the same eval_policy_mode).
+
+Policy: --eval-policy-mode deterministic (argmax, "greedy") or stochastic (sampled, as in
+training) overrides every world config's behavior_measures.eval_policy_mode; omitted, each
+saved config's own value is used (deterministic in every current config). The mode used
+is recorded per cell (`eval_policy_mode` column).
 
 Usage:
   /home/vncuser/miniconda3/envs/grid_world_pain/bin/python scripts/eval/continual_forgetting_matrix.py \\
@@ -221,11 +227,13 @@ def find_meta(d):
     return metas[0] if len(metas) == 1 else None
 
 
-def run_checkpoint(row, worlds, scratch, n_eps, device):
+def run_checkpoint(row, worlds, scratch, n_eps, device, policy_mode=None):
     pending = []
     for w in worlds:
         m = find_meta(cell_dir(scratch, row, w))
-        if m is None or json.loads(m.read_text()).get("n_episodes") != n_eps:
+        meta = json.loads(m.read_text()) if m is not None else {}
+        if (m is None or meta.get("n_episodes") != n_eps
+                or (policy_mode is not None and meta.get("eval_policy_mode") != policy_mode)):
             pending.append(w)
     if not pending:
         print(f"  {row['label']}: all cells already done, reusing", flush=True)
@@ -238,6 +246,8 @@ def run_checkpoint(row, worlds, scratch, n_eps, device):
     cmd = [PY, str(EVAL_ROLLOUT), "--config-list", str(cl), "--checkpoint", row["checkpoint"],
            "--eval-n-episodes", str(n_eps), "--eval-seeds", *map(str, range(n_eps)),
            "--batched", "--device", device, "--quiet"]
+    if policy_mode is not None:
+        cmd += ["--eval-policy-mode", policy_mode]
     t0 = time.time()
     with open(log, "w") as f:
         rc = subprocess.run(cmd, stdout=f, stderr=subprocess.STDOUT, cwd=REPO_ROOT).returncode
@@ -283,6 +293,10 @@ def main():
     ap.add_argument("--extra-world", action="append", default=[], metavar="NAME=PATH",
                     help="Repeatable. Also evaluate every checkpoint row in this world (source "
                          "YAML). A NAME equal to a run world keeps the saved stage config.")
+    ap.add_argument("--eval-policy-mode", default=None, choices=["deterministic", "stochastic"],
+                    help="Override every world config's behavior_measures.eval_policy_mode "
+                         "(deterministic = argmax/greedy, stochastic = sampled). Omitted: the "
+                         "saved configs' own value.")
     ap.add_argument("--scratch-dir", default=None,
                     help="Per-episode eval output (default <output-prefix>_scratch).")
     args = ap.parse_args()
@@ -308,7 +322,8 @@ def main():
     t_all = time.time()
     wall = {}
     for r in rows:
-        wall[r["label"]] = run_checkpoint(r, worlds, scratch, args.episodes, args.device)
+        wall[r["label"]] = run_checkpoint(r, worlds, scratch, args.episodes, args.device,
+                                         args.eval_policy_mode)
 
     cells = []
     for r in rows:
@@ -325,6 +340,7 @@ def main():
         "run_seed": run_seed,
         "schedule": sched, "episodes_per_cell": args.episodes,
         "seeds": f"0..{args.episodes - 1} (identical in every cell)",
+        "eval_policy_mode_requested": args.eval_policy_mode,
         "rows": rows, "worlds": worlds, "cells": cells,
         "eval_wall_clock_s_per_row": wall, "total_wall_clock_s": time.time() - t_all,
         "scratch_dir": str(scratch),
