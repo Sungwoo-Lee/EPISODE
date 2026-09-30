@@ -124,3 +124,97 @@ def write_capture_dir(out: Path, runs: list[dict], *, n_groups: int, width: int,
     (out / "manifest.json").write_text(json.dumps({
         "decision_rules": {"sha256": rules_sha}, "captures": captures, "roles": roles,
         "probes": {probe_id: {"row_index_sha256": probe.row_sha256}}}))
+
+
+A4_SELECTORS = ["stage_end:0", "stage_end:1", "stage_end:2", "stage_end:3:prev", "stage_end:3",
+                "final:prev", "final"]
+STAGE_NAMES = ["01_active", "02_passive", "03_active", "04_passive", "05_active"]
+
+
+def write_a4_capture_dir(out: Path, runs: list[dict], run_root: Path, *, n_groups: int, width: int,
+                         rules_sha: str, seed: int = 0) -> None:
+    """A run_activations output for an A4 manifest: probes `active` and `passive` over the SAME
+    episode_seed groups, every run captured at every A4 selector (a `:prev` only on its drift
+    pair's probe) and its untrained network on both probes. A layer at stage end j is
+    lat @ (M0 + j * D) + noise, so every agent moves across stage ends and drifts little within
+    one. Also writes each run's models/schedule.yaml under `run_root` (the stage names)."""
+    from scripts.analysis.nmn import probe_set, teacher_forced
+    rng = np.random.default_rng(seed)
+    S, T, D = len(runs), 6, 4
+    captures, roles, probes_meta = [], {}, {}
+    for r in runs:
+        (run_root / r["label"] / "models").mkdir(parents=True, exist_ok=True)
+        (run_root / r["label"] / "models" / "schedule.yaml").write_text(
+            f"continual:\n  stage_names: {STAGE_NAMES}\n")
+        roles[r["label"]] = {"seed": r["seed"], "tag": r["label"], "arm": r["arm"],
+                             "modulation_type": None if r["arm"] == "ordinary" else "FiLM"}
+    pos = {"stage_end:0": 0.0, "stage_end:1": 1.0, "stage_end:2": 2.0, "stage_end:3:prev": 2.9,
+           "stage_end:3": 3.0, "final:prev": 3.9, "final": 4.0, "untrained": -3.0}
+    for pid in ("active", "passive"):
+        ep_seed = np.tile(1_000_000 + np.arange(n_groups), S)
+        ep_store = np.repeat(np.arange(S), n_groups)
+        E = ep_seed.size
+        ep_T = np.full(E, T, np.int64)
+        ep_trunc = rng.random(E) < 0.3
+        ep_off = np.arange(E, dtype=np.int64) * T
+        obs_all = rng.normal(size=(E * T, D)).astype(np.float32)
+        t_all = np.tile(np.arange(T), E)
+        rows = ep_off + rng.integers(0, T, E)
+        lat = rng.normal(size=(rows.size, 6))
+        obs_all[rows, 0] = np.sign(lat[:, 0]) * np.expm1(np.abs(lat[:, 0]))
+        targets = {"satiation": lat[:, 0].astype(np.float64),
+                   "injury_level": lat[:, 1] + 0.1 * rng.normal(size=rows.size),
+                   "nearest_predator_manhattan": np.abs(lat[:, 2]) * 5,
+                   "predator_valid": rng.random(rows.size) < 0.7,
+                   "steps_remaining": (T - t_all[rows]).astype(np.float64) + lat[:, 3],
+                   "truncated": ep_trunc}
+        probe = probe_set.Probe(
+            probe_id=pid, stores=[f"<store {r['label']} {pid}>" for r in runs],
+            store_meta=[{"store": f"<store {r['label']} {pid}>", "checkpoint_path": "<ckpt>", "D": D,
+                         "matmul_precision": "highest", "compute_device_kind": "cpu"} for r in runs],
+            ep_store=ep_store, ep_seed=ep_seed, ep_T=ep_T, ep_truncated=ep_trunc, ep_offset=ep_off,
+            obs_all=obs_all, action_next_all=np.zeros(E * T, np.int64),
+            action_cur_all=np.zeros(E * T, np.int64), t_all=t_all, rows=rows, targets=targets,
+            counts={"distinct_episode_seed_groups": n_groups})
+        probe.row_sha256 = probe_set.row_index_sha256(probe)
+        probe_set.save(probe, out / "probes")
+        probes_meta[pid] = {"row_index_sha256": probe.row_sha256}
+        gen_sel = "final" if pid == "active" else "stage_end:3"
+        for r in runs:
+            sels = [s for s in A4_SELECTORS if not s.endswith(":prev")
+                    or (s == "final:prev" and pid == "active")
+                    or (s == "stage_end:3:prev" and pid == "passive")]
+            kinds = [(s, "trained") for s in sels]
+            if r["arm"] == "ordinary":
+                kinds.append(("untrained", "untrained"))
+            for sel, kind in kinds:
+                acts = {}
+                for j, k in enumerate(VERDICT + ["logits", "value"]):
+                    w = 6 if k == "logits" else (1 if k == "value" else width)
+                    base = np.random.default_rng(j if k == "logits" else 1000 * r["seed"] + j
+                                                 ).normal(size=(6, w))
+                    move = np.random.default_rng(77 + j + 1000 * r["seed"]).normal(size=(6, w))
+                    M = base if k == "logits" else base + 0.6 * pos[sel] * move
+                    a = lat @ M + 0.3 * rng.normal(size=(rows.size, w))
+                    if r["arm"] == "modulated" and k != "logits":
+                        a = a * np.linspace(0.5, 3.0, w)
+                    acts[k] = a.astype(np.float32)
+                stem = f"acts_{r['label']}__{sel.replace(':', '_')}__{pid}"
+                teacher_forced.save_activations(out / f"{stem}.npz", acts, probe.row_sha256)
+                rep = {"run_label": r["label"], "selector": sel, "probe": pid, "kind": kind,
+                       "activations_file": f"{stem}.npz", "failures": [],
+                       "chain_assertions": {"max_rel_deviation": {k: 1e-7 for k in acts}}}
+                if sel == gen_sel and kind == "trained":
+                    n = n_groups * T
+                    rep["gate_G1_self_agreement"] = {"rows": n, "disagree_not_near_tie": 0,
+                                                     "disagree_near_tie": 0}
+                    rep["alignment_controls"] = {
+                        "step_discontinuous_all": {"rows": n // T, "disagree_not_near_tie": 0,
+                                                   "disagree_near_tie": 0},
+                        "shift_by_one_all_rows_with_t_ge_1": 0.5}
+                (out / f"{stem}.json").write_text(json.dumps(rep))
+                captures.append({"stem": stem, "label": r["label"], "kind": kind, "selector": sel,
+                                 "probe": pid, "failures": []})
+    (out / "manifest.json").write_text(json.dumps({
+        "decision_rules": {"sha256": rules_sha}, "captures": captures, "roles": roles,
+        "probes": probes_meta}))

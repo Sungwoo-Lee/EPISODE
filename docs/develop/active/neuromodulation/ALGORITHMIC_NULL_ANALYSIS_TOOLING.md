@@ -924,6 +924,19 @@ The one loader of the pinned rules file: `load(manifest) -> PinnedRules` (whole-
 
 `trainer_init_keys(seed) -> (key, env_key, init_key)`, today's chain unchanged. `train.py` l.1152–1153 call it, and the four per-algorithm `key, init_key = jax.random.split(key)` lines (l.1207, 1290, 1312, 1342) are removed. `untrained.build` calls it instead of re-deriving. New `tests/utils/test_init_keys.py` (golden keys recorded before the edit for seeds 42–44, plus the source check on `untrained.py`). Checkpoint 1.3's jaxpr hashes are re-run before and after.
 
+#### 16. `scripts/analysis/nmn/run_across_worlds.py` — new (A4 driver; added 2026-09-30 at the coordinator's go, after the evidence run)
+
+- Computes the inputs `decision_rules.evaluate_A4` reads, exactly as §A1/A3/A4 statistics (A4) and the rules' `A4` section define them:
+  - **movement:** `m = 1 − P(a at c_i, a at c_{i+1})` with P the A1 mutual predictivity (`run_similarity.predictivity`, rules-admitted columns), for each consecutive pair of `parameters.A4.stage_sequence` on each probe of `parameters.A4.probes`, giving an 8-entry profile per agent and layer;
+  - **within-stage drift:** `d_a` over `parameters.A4.drift_pairs`;
+  - **movement gate:** per seed, the bootstrap lower quantile of mean movement − `d_a`;
+  - **co-movement:** per-draw Pearson r of two agents' profiles, summarised with `summarise_pairs` (OO yardstick, MO_diff test);
+  - **the A1 layer verdict at each stage end** on its own world's probe. The world is read from each run's saved `schedule.yaml` stage name. The primary cell is taken from the manifest's `similarity.json` (same rules sha asserted); the other four cells are computed with `run_similarity.analyse_cell` and `evaluate_A1`.
+- **Joint draws across worlds:** one split and bootstrap per probe with the manifest's seeds, and both probes must split their groups identically (asserted). Draw k therefore resamples the same `episode_seed` groups on both probes.
+- **Gates** (tooling reading; the rules define G1/G3 only for an agent replayed on its own store). For a stage-end cell: G1 and G3 come from the store-generating captures on the same probe, G2 from every capture used, G4 from the probe's controls, G6 from the cell's and each movement probe's held-out groups, and G5 study-wide.
+- **Outputs:** `across_worlds.{json,csv}` beside the manifest's other outputs, stamped (rules sha and commit, git sha, evidence status). An output under other rules is never overwritten.
+- **Tests:** `tests/analysis/test_nmn_across_worlds.py`. The signed A4 fixture table (TABLE 9) goes through the driver's `evaluate`; a synthetic two-world end-to-end run checks the stamp, layout, own-world cells, gates and profile shapes; one movement entry equals a direct `predictivity` call.
+
 ### Deferred (not in scope; needs its own approval)
 
 **Trainer logging for future runs.** Two quantities:
