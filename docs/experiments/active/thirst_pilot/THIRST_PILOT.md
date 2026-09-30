@@ -477,3 +477,40 @@ have them.
   modulated `nl1h2j21`)
 - WandB metric definitions: `docs/develop/active/behavior/WANDB_METRICS_REFERENCE.md`
 - Trajectory store columns: `docs/environment/TRAJECTORY_STORE_SCHEMA.md`
+
+---
+
+## Feedback from plan-reviewer
+
+*2026-10-01, on commit `9d969d04`. Full report: [[plan_thirst_pilot]]
+(`docs/reviews/plan_thirst_pilot.md`). Severity legend: 🔴 Critical = fix before going further ·
+🟡 Moderate = likely costs a re-run · 🟢 Low = cosmetic · ❓ Open = an assumption nobody has verified yet.*
+
+**Verdict: NOT READY — one Critical, cheap to fix.** The launch path (§2.5) held up under attack:
+the gate inspects the process's own import state, the static scan for bare imports is clean
+(indented lazy imports included), every child process locates the repo from its own file, and no
+persistent JAX cache exists. Death-cause consumers, the drinking-step rule and the level-05
+like-for-like claim all check out (details in the report).
+
+| # | Severity | Where | Issue → fix |
+|---|---|---|---|
+| C1 | 🔴 | §2.5 outputs table + warning box | All outputs land in the worktree's gitignored `results/`, `wandb/`, `logs/`. `git worktree remove` deletes ignored files **without** `--force`, and a worktree exists to be removed after merge. The plan warns but has no step, destination or owner. → User names a destination outside any worktree; then either launch with `--results-dir <dest>/JAX_RecurrentPPO/<ts>_<TAG>` (`train.py:446`, used as given) and `--log <dest>/…`, or add a numbered post-run copy step the runner executes when each run finishes. Diary row at launch: "worktree `thirst` holds live training outputs — do not remove". |
+| M1 | 🟡 | §2.7 P4 | `Time/sps_env` is `global_step / seconds since start` (`train.py:2003`) — a running mean, not a rate; the median of it is biased by compile/warm-up and by run length, which differs between the two arms. → Use Δ`timesteps` / Δ`_runtime` between the 50 % row and the last row (or the last-row value); read the reference speeds the same way. |
+| M2 | 🟡 | §2.7 P5(c)(d), §5 row 1 | (d) asserts WandB metadata values never observed for a worktree launch; a format quibble would stop a valid run. (c) tolerates `git_dirty: unknown` but not `git_sha: unknown`, though the same 10 s timeout applies. → Gate on (a)(b)(c)(e); (d) informational until the first `wandb-metadata.json` is read; an unknown sha falls back to the manifest HEAD + (a). |
+| M3 | 🟡 | §2.7 P1 pass line | "≤ half of the first tenth" does not subtract the floor of unavoidable thirst deaths (~2–3 %); if the first-tenth share is modest the target sits within 2–3 points of the floor and a well-drinking agent can fail. → State the floor (measure it from the 0.4 M store) and use "≤ 0.10 and ≤ max(0.5 × first tenth, floor + 0.03)". |
+| L1–L5 | 🟢 | P5(a) "first line" → "contains"; §4.2 checkpoint keys are actual episode counts (`train.py:2625`), say "nearest"; the ≥ 80 % drank clause is 100 % by construction, label it integrity; the §4.2 reader needs a `SCRIPTS_DEPENDENCY_MAP.md` row if under `scripts/`, and seeds 43/44 must be read from top-level `seed:` / provenance `argv`, never `training.seed` (Known Bugs, stale seed copy); the worktree's `run_command.py` default log dir is its own folder, not the shared one. |
+
+**Open assumptions**: A1 WandB `program`/`root` for a worktree launch; A2 `git` present on every
+node; A3 a finished run's `models/` has a key ≥ 2,000,000; A4 P4 folds in the reset-rate cost of
+shorter episodes, separate it if the 15 % flag trips; A5 the ±6 control band is ~2 s.d. if the
+true seed s.d. is 3, not 1.5 (accepted, a flag costs a pause); A6 the reference S values came from
+WandB sampled history — read both arms the same way.
+
+**Cost of being wrong**: the Critical is a data-loss risk, not a wrong-conclusion risk — a routine
+worktree cleanup after merge would erase ~20 GPU-hours and the stored episodes. The Moderates cost
+at most one falsely stopped run or a mis-sized speed/drinking read-out.
+
+**To flip the verdict**: named destination + copy or `--results-dir` step (C1); (d) informational
+(M2); windowed speed rate (M1); floor in the drinking pass line (M3).
+
+— plan-reviewer
