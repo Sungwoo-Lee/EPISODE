@@ -127,7 +127,20 @@ REFUSALS = {
     "properties_length": (_set_water(properties=[0.5, 0.5]), r"water\.properties"),
     "properties_range": (_set_water(properties=[1.5, 0, 0, 0, 0]), r"water\.properties"),
     "visual_properties_length": (_set_water(visual_properties=[1.0, 1.0]), r"water\.visual_properties"),
-    "missing_hydration_noise": (_mut(_no_hydration_noise), r"perceptual_noise\.modalities\.hydration"),
+    # Level 06 has perceptual noise OFF, so this also pins the fix-batch decision that the
+    # entry is required whatever the noise switch, with the reason in the message.
+    "missing_hydration_noise": (_mut(_no_hydration_noise),
+                                r"perceptual_noise\.modalities\.hydration.*even when perceptual_noise\.enabled is false"),
+    # Fix batch 2026-09-30: the two gates must be real YAML booleans; a quoted "false" is
+    # a non-empty string and used to switch the feature ON.
+    "water_gate_quoted_false": (_set_water(enabled="false"), r"water\.enabled must be true or false"),
+    "water_gate_int": (_set_water(enabled=1), r"water\.enabled must be true or false"),
+    "thermal_gate_quoted_false": (_mut(lambda d: d["thermal"].update(enabled="false")),
+                                  r"thermal\.enabled must be true or false"),
+    "thermal_gate_int": (_mut(lambda d: d["thermal"].update(enabled=0)), r"thermal\.enabled must be true or false"),
+    # Code review finding 4: a pond over the whole grid leaves no cell for a random start.
+    "pond_covers_whole_grid": (_set_water(size=[10, 10], edge_margin=0, placement="center"),
+                               r"water\.size \[10, 10\] covers the whole 10x10 grid"),
     "start_hydration_zero": (_set_water(random_start_hydration=False, start_hydration=0.0),
                              r"water\.start_hydration"),
     "start_hydration_max": (_set_water(random_start_hydration=False, start_hydration=200.0),

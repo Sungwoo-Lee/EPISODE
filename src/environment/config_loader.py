@@ -1658,7 +1658,13 @@ def load_env_params(config: Config) -> EnvParams:
     # prevent — it would let a config with a misspelled `thermal:` block train
     # as if thermal were off, and it is also what would make the lazy config
     # migration unsafe (IMPLEMENTATION_PLAN.md, F6).
-    _thermal_on = bool(config.get_mandatory('thermal.enabled'))
+    _thermal_on = config.get_mandatory('thermal.enabled')
+    if not isinstance(_thermal_on, bool):
+        # A quoted "false" is a non-empty string, so bool() of it is True: the gate
+        # must be a real YAML boolean (THIRST_WATER_PLAN fix batch 2026-09-30).
+        raise ValueError(
+            f"thermal.enabled must be true or false (a YAML boolean, unquoted); got "
+            f"{_thermal_on!r}.")
     if _thermal_on:
         _th_sigma = float(config.get_mandatory('thermal.sigma'))
         if _th_sigma <= 0.0:
@@ -1966,7 +1972,13 @@ def load_env_params(config: Config) -> EnvParams:
     # by `_load_water` just before EnvParams is built, where the spawn areas and
     # the start position it validates against are known. When the gate is off no
     # other water key is read, so a water-off config may omit them.
-    _water_on = bool(config.get_mandatory('water.enabled'))
+    _water_on = config.get_mandatory('water.enabled')
+    if not isinstance(_water_on, bool):
+        # A quoted "false" is a non-empty string, so bool() of it is True: the gate
+        # must be a real YAML boolean (THIRST_WATER_PLAN fix batch 2026-09-30).
+        raise ValueError(
+            f"water.enabled must be true or false (a YAML boolean, unquoted); got "
+            f"{_water_on!r}.")
 
     _vis_v = config.get('sensory.visual_vector_size')
     visual_vector_size: int = int(_vis_v) if _vis_v is not None else 8
@@ -2672,12 +2684,20 @@ def load_env_params(config: Config) -> EnvParams:
         # The observation gains a "Hydration" block, and apply_perceptual_noise looks
         # every breakdown name up in the modality order. Without the entry that
         # lookup is a bare KeyError inside a jit trace naming neither key nor fix.
+        # Required even when perceptual_noise.enabled is false (fix batch 2026-09-30,
+        # decision recorded in THIRST_WATER_PLAN): noise is switched on by a child
+        # config (level 07 extends the noise-off level 06), so a parent without the
+        # entry would only fail in its child; every other modality is listed
+        # regardless of the switch too.
         if "Hydration" not in _noise_fields["noise_modality_order"]:
             raise ValueError(
                 "water.enabled: true needs a perceptual_noise.modalities.hydration entry "
                 "(the observation gains a Hydration dimension and the noise code looks "
-                "every observation block up by name). configs/environment/default.yaml "
-                "carries one; a config that replaces `modalities` wholesale must too.")
+                "every observation block up by name). The entry is required even when "
+                "perceptual_noise.enabled is false: a child config that switches noise on "
+                "(as level 07 does on level 06) inherits the table, and every modality "
+                "is listed whatever the switch. configs/environment/default.yaml carries "
+                "one; a config that replaces `modalities` wholesale must too.")
     else:
         _water_fields = dict(_WATER_OFF)
 
@@ -2955,6 +2975,15 @@ def _load_water(config, *, height, width, start_pos, random_start_pos, vector_si
     margin = config.get_mandatory('water.edge_margin')
     if not isinstance(margin, int) or isinstance(margin, bool) or margin < 0:
         raise ValueError(f"water.edge_margin must be an integer >= 0; got {margin!r}.")
+
+    # A random agent start is drawn over the whole grid and moved off the pond by
+    # jax_reset; with no pond-free cell that move would silently land on the pond at
+    # cell (0, 0) (the KNOWN_BUGS ~#117 shape). Refuse it here (code review finding 4).
+    if random_start_pos and h * w >= H * W:
+        raise ValueError(
+            f"water.size {[h, w]} covers the whole {H}x{W} grid, leaving no pond-free cell "
+            "for the random agent start (environment.random_start_pos: true). Shrink "
+            "water.size.")
 
     fixed_start = None if random_start_pos else (int(start_pos[0]), int(start_pos[1]))
 
