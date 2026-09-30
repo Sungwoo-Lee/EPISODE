@@ -3,7 +3,7 @@ title: "Continual worlds: does the modulator help an agent move between worlds w
 topic: continual_worlds
 status: active
 created: 2026-09-28
-last_updated: 2026-09-29
+last_updated: 2026-09-30
 phase: continual / A-B-A-B structure (user framing 2026-09-28)
 wandb_tag: "rppo_cw_*"
 ---
@@ -1872,5 +1872,63 @@ Remaining concerns (none blocks launch):
 - ❓ O1–O4 from the Revision 2 feedback stand unchanged.
 
 Cost of being wrong now: a wrong label or a late read, not a wrong claim and not a rerun.
+
+Reviewed by: plan-reviewer
+
+## Feedback from plan-reviewer (analysis-verdict gate on §10–§11, commit `d4f6e0cf`, 2026-09-30)
+
+**Verdict: NOT SUPPORTED BY THE EVIDENCE SHOWN — as labelled.** A statement about the argument, not a
+claim that the opposite is true; the same data, relabelled, would be SUPPORTED WITH CAVEATS. Full
+review with the findings table, the answers to the six questions asked, and the exit condition:
+[[plan_continual_worlds_main_verdict]] (`docs/reviews/plan_continual_worlds_main_verdict.md`).
+
+In plain words: the analysis is careful and its caveats are all present, but the label a reader
+carries away — "SUPPORT (fragile)" — is not what the registered rule returns. Two Critical points:
+
+1. **The registered rule is not decisive here, and the label was picked from the clause that
+   supports.** Whether the foraging world (learned before the alternation) counts as a world of the
+   sequence for the forgetting vote is defensible either way — §3.3 lists it as stage 1; §2 names May's
+   forgetting on the *alternating* worlds as the replication target. Count it and the support clause
+   fires (2 of 3). Leave it out and §2's **refutation** clause fires (P1 mixed under every rule; P2 then
+   has one beyond-noise difference and it is *against* the modulator) — under every combination rule,
+   including R5-without-Forage, which 10.9 omits (P1 A/B forgetting sums to +14.4; P2 loses its only
+   beyond-noise entry). Honest headline: **"registered rule not decisive; hinge = the H-forget entry
+   set"**, both clauses at equal weight. Owner: `experiment-analyzer`.
+2. **"Coped better with the first switch (smaller drop, faster climb back)" is mostly a head start the
+   starting checkpoint already has, and the doc's own data show it.** The forgetting matrix's `start`
+   row plays the two branch checkpoints frozen in every world: the modulated one survives longer
+   zero-shot in all seven — Winter 114.3 vs 132.8 (+18.5 of the +24.5 first-20k gap), Danger-A +3.9 (of
+   +4.5), Fog-B +2.0 (of +5.2). Recovery inherits it (starting 24 steps closer to 0.9·R reaches it sooner
+   without adapting faster). What the data support is *"the modulated branch checkpoint generalises
+   better zero-shot to unseen worlds, by 2–18 steps, for this one pair"*. Owner: `experiment-analyzer`.
+
+Moderate (details and fixes in the review file): §3.4's "differ in initialisation, capacity and seed"
+is wrong — both are seed 42 and start from bitwise-identical main-network weights (parallel study,
+verified 2026-09-30), so the shared start is the confound and §11.5's same-seed fresh pairs will not
+break it (owner `experiment-designer`, with plan-v2 step 11's cross-seed pairing) · the Winter
+beyond-noise threshold is 2·√2·SD of **two** 200k windows (SD 7.99) applied to a 20k quantity that
+swings 60–210 within the visit, and Winter recovery is a first crossing on that oscillating curve ·
+the Forage-retention headline hides P1's reversal on its second Danger-A visit (+6.2 against), appears
+only after Winter/Danger-A stages, rests on 4 of 7 votes per sequence from one shared checkpoint at
+ceiling (95.6 % capped), and has an unexcluded alternative (less specialisation to the hard world ⇒ more
+generic foraging kept) · greedy-mode matrices: the diagonal check verifies each agent's level, not the
+between-agent gap — re-run `P3 end_02_winter × forage` sampled for both agents before −112 travels
+(owner `developer`) · the tie rule's parenthetical also admits "Δ < one logging interval = tie" (P3
+Winter return own-episodes Δ = 3,991 → P3 H-rec flips favourable; no verdict change; add to 10.9), and
+H-dip has no tie rule at all (+0.4 and −1.6-step dips are full votes).
+
+On the six questions asked: (a) R1 is a fair literal reading and R5 agrees with it; R2 is the script's
+bug, R3 stricter than registered, R4 the predicted shape — so "4 of 5 alternatives disagree" overstates
+the *combination-rule* fragility and understates the *entry-set* hinge. (b) The tie correction is right
+and conservative. (c) Forage-in-forgetting is registered-consistent but so is its exclusion; picked, not
+invented. (d) Greedy: stated, wrong check for a between-agent claim. (e) §3.4 is wrong in the way that
+matters for the next design; the Forage ceiling does not void the drops but voids any baseline
+comparison. (f) The first-entry claim does not survive as an adaptation claim.
+
+**Exit condition to SUPPORTED WITH CAVEATS:** relabel (1), reword the first-entry conclusion (2),
+correct §3.4. No rerun. **Cost of being wrong:** no compute — a label already in a commit subject and
+headed for the cross-study dossier and a PI call, which would steer the seed-43/44 replication toward
+a design that cannot separate the modulator from its shared start, and turn a one-pair zero-shot
+generalisation difference into a paper claim about continual adaptation.
 
 Reviewed by: plan-reviewer
