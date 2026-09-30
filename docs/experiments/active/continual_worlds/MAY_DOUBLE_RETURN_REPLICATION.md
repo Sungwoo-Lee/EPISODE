@@ -11,6 +11,12 @@ develop_link: docs/experiments/active/hypervigilance/NMN_CONTINUAL_DOUBLE_RETURN
 
 # May double-return replication, under today's settings
 
+> **Status (2026-09-30): FINISHED AND ANALYSED.** All six runs completed the five stages. The
+> pre-registered verdict is **not replicated (an underpowered null)**: the modulated agent was not
+> measurably better when the hunter came back. Today's world is too easy to show an effect: in
+> 90–97 % of episodes both agents survive to the 500-step limit. Results in §10, conclusions and
+> next steps in §11. The status note below is the design-time record and is kept unchanged.
+
 > **Status (2026-09-29): DESIGNED; user decisions taken (8.1). Configs are written and validated
 > with the trainer's own loader. Nothing is launched.** Manifest rows M1–M6 are **ready, pending
 > reviews**: they still need an `env-config-reviewer` pre-flight, a `plan-reviewer` pass on this
@@ -298,12 +304,12 @@ node's GPUs before moving to the next.
 
 | Run | Status | Cell | Tag (= wandb-name) | wandb-group | wandb-job-type | Seed | Node | GPU | Launched at | WandB run ID | Log path |
 |-----|--------|------|--------------------|-------------|----------------|------|------|-----|-------------|--------------|----------|
-| M1 | running | ordinary | `rppo_cw_mayrep_t1none_s42` | continual_worlds | prod | 42 | 110 | cuda:0 | 2026-09-29T15:36:06 | ftqkqmzb | logs/20260929_153606.log |
-| M2 | running | modulated | `rppo_cw_mayrep_t16quad_s42` | continual_worlds | prod | 42 | 110 | cuda:1 | 2026-09-29T15:36:14 | n7htz71a | logs/20260929_153614.log |
-| M3 | running | ordinary | `rppo_cw_mayrep_t1none_s43` | continual_worlds | prod | 43 | 111 | cuda:0 | 2026-09-29T15:36:23 | 8c5kmmj2 | logs/20260929_153623.log |
-| M4 | running | modulated | `rppo_cw_mayrep_t16quad_s43` | continual_worlds | prod | 43 | 111 | cuda:1 | 2026-09-29T15:36:32 | rfxw1g7x | logs/20260929_153632.log |
-| M5 | running | ordinary | `rppo_cw_mayrep_t1none_s44` | continual_worlds | prod | 44 | 112 | cuda:0 | 2026-09-29T15:36:41 | 0ojcf4d8 | logs/20260929_153641.log |
-| M6 | running | modulated | `rppo_cw_mayrep_t16quad_s44` | continual_worlds | prod | 44 | 112 | cuda:1 | 2026-09-29T15:36:50 | 5er602ge | logs/20260929_153650.log |
+| M1 | finished | ordinary | `rppo_cw_mayrep_t1none_s42` | continual_worlds | prod | 42 | 110 | cuda:0 | 2026-09-29T15:36:06 | ftqkqmzb | logs/20260929_153606.log |
+| M2 | finished | modulated | `rppo_cw_mayrep_t16quad_s42` | continual_worlds | prod | 42 | 110 | cuda:1 | 2026-09-29T15:36:14 | n7htz71a | logs/20260929_153614.log |
+| M3 | finished | ordinary | `rppo_cw_mayrep_t1none_s43` | continual_worlds | prod | 43 | 111 | cuda:0 | 2026-09-29T15:36:23 | 8c5kmmj2 | logs/20260929_153623.log |
+| M4 | finished | modulated | `rppo_cw_mayrep_t16quad_s43` | continual_worlds | prod | 43 | 111 | cuda:1 | 2026-09-29T15:36:32 | rfxw1g7x | logs/20260929_153632.log |
+| M5 | finished | ordinary | `rppo_cw_mayrep_t1none_s44` | continual_worlds | prod | 44 | 112 | cuda:0 | 2026-09-29T15:36:41 | 0ojcf4d8 | logs/20260929_153641.log |
+| M6 | finished | modulated | `rppo_cw_mayrep_t16quad_s44` | continual_worlds | prod | 44 | 112 | cuda:1 | 2026-09-29T15:36:50 | 5er602ge | logs/20260929_153650.log |
 
 Tags are unique here and do not collide with any `rppo_cw_*` tag in [[CONTINUAL_WORLDS]] (the
 `mayrep` token appears nowhere else).
@@ -649,11 +655,389 @@ pre-flight + `plan-reviewer`). No config file changes.
 
 ## 10. Results
 
-*(to be filled after training)*
+*Written 2026-09-30 by `experiment-analyzer` (plan `tmp/20260930_continual_analysis_plan_v2.md`,
+step 7). Order: the registered verdict first, then the ceiling label, then the post-data exploratory
+readings. Nothing in sections 1–9 was changed to write this.*
+
+### 10.0 Verdict in plain words
+
+> **What May claimed.** In May 2026, one training run per agent suggested that the modulated agent
+> (the one with a small side network that rescales the main network, loosely like a neuromodulator)
+> copes much better when a hunting predator returns after a harmless phase: about **107 and 132
+> more survival steps per episode** on the two returns, and about 70 % less loss of what it had
+> learned.
+>
+> **What we found.** Three seeds per agent, today's body and senses, May's schedule. The modulated
+> agent was ahead by **1.5 steps** on each return (out of about 470). That is far inside the
+> pre-registered noise band (a difference had to exceed about 7 steps). It lost no less than the
+> ordinary agent (−0.3 steps). Both agents dipped by the same amount when the hunter came back
+> (7–9 %) and recovered within the first measurement window. **Verdict: not replicated, worded as
+> an underpowered null.** Three seeds could not separate an effect of this size from seed-to-seed
+> noise. It does **not** show that May's effect is absent.
+>
+> **Why the null says little about May's effect size.** Today's world is too easy. Bushes are now
+> refuges the predator cannot enter, injuries heal 25 times faster there, and smell now carries
+> direction. So even the *hunting* stages end with **90–93 % of episodes at the 500-step limit**
+> (96–97 % in the harmless stages). The ordinary agent already averaged about 469 steps on the
+> returns, so no agent could have beaten it by more than about 31 steps. May's effect, measured
+> the same way, would need about 177. The survival test had no room to show it. One reading does
+> have room: the frozen-agent retention test (10.5). Frozen at the end of a harmless stage, agents
+> reach the limit in only 29–48 % of hunting-world episodes. That test also shows no modulator
+> advantage (both lose about 140 steps). It is a different measure from May's, so it narrows the
+> picture without settling it.
+>
+> **Two hints worth a proper test (exploratory, chosen after seeing the data; not findings).**
+> (1) In every hunting stage, **fewer modulated-agent episodes ended in death**, in all three seed
+> pairs: 0.5 to 0.8 percentage points fewer, out of about 7–10 %. The same edge is present in
+> stage 1, before any switch, so if real it is a general edge in the hunting world, not May's
+> "comes back better". (2) **Learning from scratch in stage 1 was faster for the modulated agent in
+> all three seeds.** It averaged 21 steps more over the first 100,000 episodes and 44 more over the
+> first 300,000. At episode 200,000 its level was about 100 steps higher. The parallel study "What
+> Both Agents Compute" had listed learning speed as never measured with seeds. Both hints need a
+> pre-registered test before anyone may call them findings.
+
+### 10.1 Registered verdict (rules of 5.3)
+
+Survival is the mean over the last 200,000 episodes of each stage (`S_k`). Differences are
+modulated minus ordinary, per seed pair (42, 43, 44). The SE is the between-seed SE with the
+pre-registered floor (5.2).
+
+| Reading | Stage | Ordinary mean | Modulated mean | Per-pair differences (s42, s43, s44) | Mean diff | SE used (raw) | 2 × SE | Rule result |
+|---|---|---|---|---|---|---|---|---|
+| Better return (H-ret, `D_3`) | 3, first return | 468.6 | 470.2 | +2.6, −0.4, +2.4 (2 of 3 > 0) | **+1.5** | 3.6 (0.9) | 7.2 | inside noise |
+| Better return (H-ret, `D_5`) | 5, second return | 470.9 | 472.3 | +2.6, +0.5, +1.3 (3 of 3 > 0) | **+1.5** | 3.6 (0.7) | 7.2 | inside noise |
+| Less forgetting (H-forget, `G_3`) | 3 | `F_3` +3.7 | `F_3` +3.4 | +0.6, −0.4, −1.0 (1 of 3 > 0) | **−0.3** | 5.1 (0.6) | 10.2 | inside noise |
+| Less forgetting (H-forget, `G_5`) | 5 | `F_5` +5.9 | `F_5` +5.6 | +0.6, +0.5, −2.2 (2 of 3 > 0) | **−0.3** | 5.1 (0.7) | 10.2 | inside noise |
+
+**Overall (5.3): not replicated.** No reading is favourable, and neither return is unfavourable.
+Every difference is inside noise, so per 7.7 the verdict is worded as an **underpowered null**. All
+four readings used the floor: the raw between-seed SEs (0.6–0.9 steps) were smaller than it. The
+verdict is not fragile: no run collapsed (7.6).
+
+Note the forgetting values are **positive**. On the training curve both agents did **better** on
+each return than at the end of stage 1 (+3 to +6 steps). The 200,000-episode window sees no
+forgetting at all to compare.
+
+**Per-run levels** (`S_k`, steps; `F_k = S_k − S_1`; `H = S_5 − S_3`; `T` = May-style tail, last 10 %
+of the stage):
+
+| Run | Agent | Seed | S1 | S2 (harmless) | S3 (return 1) | S4 (harmless) | S5 (return 2) | F3 | F5 | H | T1 / T3 / T5 |
+|---|---|---|---|---|---|---|---|---|---|---|---|
+| M1 | ordinary | 42 | 465.4 | 485.4 | 468.9 | 486.4 | 471.0 | +3.5 | +5.6 | +2.2 | 465.8 / 469.4 / 471.4 |
+| M2 | modulated | 42 | 467.4 | 484.6 | 471.4 | 485.1 | 473.6 | +4.1 | +6.2 | +2.2 | 467.4 / 471.2 / 474.0 |
+| M3 | ordinary | 43 | 465.4 | 484.7 | 469.6 | 485.4 | 470.8 | +4.2 | +5.4 | +1.2 | 466.1 / 470.3 / 470.8 |
+| M4 | modulated | 43 | 465.4 | 481.8 | 469.2 | 477.7 | 471.3 | +3.9 | +5.9 | +2.0 | 464.7 / 469.6 / 470.8 |
+| M5 | ordinary | 44 | 464.1 | 484.5 | 467.4 | 484.1 | 470.8 | +3.3 | +6.7 | +3.4 | 464.2 / 466.9 / 471.0 |
+| M6 | modulated | 44 | 467.6 | 485.3 | 469.8 | 485.0 | 472.1 | +2.3 | +4.6 | +2.3 | 467.5 / 469.6 / 472.8 |
+
+### 10.2 Secondary registered readings and failure-mode checks
+
+| Reading | Result | Detail |
+|---|---|---|
+| Equal dip (H-dip, predicted null) | **equal**, as May | Own-reference dip on return 1: ordinary 7.1 %, modulated 8.7 % (diff +1.6 points, 2 × SE 3.0). Return 2: 3.6 % vs 5.0 % (diff +1.3, 2 × SE 1.8). Common-reference dips 32.8 vs 38.6 steps (diff +5.9, 2 × SE 15.3) and 16.9 vs 21.5 (diff +4.5, 2 × SE 10.3). Numerically the modulator dips slightly **more**, but inside noise on all four readings |
+| Faster recovery (H-rec) | **0 of 3** favourable pairs on both returns | Return 1: s42 not counted (tie), s43 unfavourable, s44 not counted. Return 2: all three not counted. Every run reached 90 % of its stage-1 level in the **first** 20,000-episode window after the switch (one exception: M4 on return 1, 24,000), so the logging grid cannot separate the agents; ties are "not counted" (5.3) |
+| Second return at least as good (H-hyper) | **not favourable** (0 of 3 pairs) | `H` is positive for **both** agents in every run (+1.2 to +3.4). The ordinary agent never declines, so May's pattern (modulated +, ordinary −) cannot occur |
+| Stage-1 competence gate (5.5, 7.3) | **pass**, all 6 runs | `S_1` 464–468 (threshold 150); about 90 bites per episode (threshold 1). No run still climbing (rise over the last 300k: +0.3 to +0.7 %) |
+| Switch is real (7.4) | **yes** | Harmless stages 482–486 vs hunting stages 464–473, for both agents |
+| No drop at the switch (7.5) | **did not fire** | Mean own dip into return 1 is 7.1 % / 8.7 %, above the 5 % line (return 2: 3.6 % / 5.0 %) |
+| Collapse (7.6) | **none** | No run's best 20k running mean on a return fell below 0.6 × its `S_1` |
+
+### 10.3 Comparison with May's numbers (5.4)
+
+Computed on May's own window, the last 10 % of each stage (decides, per 5.4). The 200,000-episode
+values are in brackets for reference.
+
+| Reading | May | Replication |
+|---|---|---|
+| Normalised return advantage `mean D_k / mean S_1(ord)` | 38 % (k=3), 48 % (k=5) | **+0.3 %** (k=3; [+0.3 %]), **+0.3 %** (k=5; [+0.3 %]) — about 1/100 of May's; the May-sized line was 19 % / 24 % |
+| Forgetting ratio `mean F_k(mod) / mean F_k(ord)` | 0.35 (k=3), 0.28 (k=5) | 1.02 (k=3; [0.93]), 1.04 (k=5; [0.94]). Neither agent forgot on this measure (both `F_k` > 0), so the ratio has no meaning here |
+| Sign of `H` (mod / ord) | + / − | + / + (tail means +2.4 / +2.2) |
+| Passive stages near the 500-step cap, both agents | yes (486–495) | yes: tail means 484.5 / 484.2 (stage 2), 484.9 / 484.4 (stage 4) |
+| Stage-1 level `S_1` (context) | 289.5 (mod) / 278.3 (ord) | 466.8 / 465.0 |
+
+"May-sized" is n/a because the result did not replicate. The last row shows the key difference.
+May's hunting world left the agents about 210 steps below the cap. Today's leaves them about 35
+below. The largest normalised advantage today's hunting stage allows is (500 − 469) / 465 ≈ 7 %,
+below the 19 % May-sized line. **The May-sized comparison could not have been met in this world,
+whatever the modulator did.**
+
+### 10.4 Ceiling check (read-only label, post-data; plan step 4)
+
+Share of episodes that reached the 500-step limit (`Episode/Term_MaxSteps`) over the last 200,000
+episodes of each stage. A stage is labelled **ceiling-limited** at ≥ 80 %. This label was chosen
+after the data were seen. It changes no rule. It says how much a survival difference *could* show.
+
+| Run | Stage 1 | Stage 2 | Stage 3 | Stage 4 | Stage 5 |
+|---|---|---|---|---|---|
+| M1 ordinary s42 | 90.5 % | 96.7 % | 91.7 % | 97.0 % | 92.6 % |
+| M2 modulated s42 | 91.3 % | 96.6 % | 92.6 % | 96.7 % | 93.4 % |
+| M3 ordinary s43 | 90.4 % | 96.6 % | 91.9 % | 96.8 % | 92.5 % |
+| M4 modulated s43 | 90.9 % | 95.9 % | 91.9 % | 95.2 % | 92.9 % |
+| M5 ordinary s44 | 90.2 % | 96.5 % | 91.5 % | 96.5 % | 92.5 % |
+| M6 modulated s44 | 91.5 % | 96.6 % | 92.2 % | 96.7 % | 93.0 % |
+
+**Every stage of every run is ceiling-limited**, so every training-curve survival reading above
+carries that label. This agrees with the parallel study "What Both Agents Compute"
+(`docs/experiments/active/modulator_clues/`, page `algorithmic_null.html`). It read the same six
+runs at the end of training and found +1.46 steps (floored SE 3.6), with about 94 % of episodes at
+the cap. Our registered `D_5` (+1.46 on the 200k window) is the same number.
+
+### 10.5 Zero-shot retention test (5.6, registered secondary; reported next to the verdict, does not change it)
+
+Each stage-end checkpoint was frozen and played for 2,000 episodes in each world. `A_k` is its
+mean survival in the hunting world. Registered analysis: greedy actions. The sampled-action run is
+a robustness check. Source: `results/analysis/continual_worlds/retention_mayrep_readout.json`
+(commit `16de3d1a`).
+
+Hunting-world survival of the frozen checkpoints (greedy; share of episodes at the cap in brackets):
+
+| Run | A_1 (end st. 1) | A_2 (after harmless 1) | A_3 (end return 1) | A_4 (after harmless 2) | A_5 (end return 2) | Z_2 = A_2 − A_1 | Z_4 = A_4 − A_3 |
+|---|---|---|---|---|---|---|---|
+| ordinary s42 | 473.0 [93] | 340.5 [37] | 476.1 [93] | 355.4 [44] | 478.4 [95] | −132.5 | −120.7 |
+| modulated s42 | 471.9 [92] | 334.6 [37] | 477.6 [94] | 333.0 [37] | 476.8 [94] | −137.3 | −144.6 |
+| ordinary s43 | 468.6 [91] | 311.0 [30] | 471.5 [92] | 307.1 [29] | 476.8 [94] | −157.6 | −164.4 |
+| modulated s43 | 472.1 [92] | 321.1 [35] | 473.9 [93] | 327.5 [37] | 475.6 [94] | −151.0 | −146.4 |
+| ordinary s44 | 471.1 [91] | 327.2 [38] | 472.8 [93] | 333.0 [36] | 477.0 [94] | −143.9 | −139.8 |
+| modulated s44 | 468.5 [92] | 331.0 [41] | 470.6 [92] | 366.6 [48] | 476.4 [94] | −137.5 | −104.0 |
+
+| Reading | Per pair (s42, s43, s44) | Mean `ZA_j` | SE used | Rule result (greedy) | Sampled actions |
+|---|---|---|---|---|---|
+| `ZA_2` (lost less in harmless stage 1) | −4.8, +6.6, +6.4 | +2.7 | 8.6 | inside noise | +6.5 (SE 6.9), inside noise |
+| `ZA_4` (lost less in harmless stage 2) | −23.9\*, +18.0\*, +35.9\* | +10.0 | 18.8 | inside noise | +9.7 (SE 22.2), inside noise |
+
+\* The pair's difference is beyond evaluation noise on its own (combined 95 % CIs exclude 0).
+
+**Reading.** Both agents lose about **140 hunting-world steps** per harmless stage when frozen:
+mean `Z_2` −144.7 (ordinary) vs −141.9 (modulated), mean `Z_4` −141.6 vs −131.7. That is a
+forgetting ratio of 0.98 and 0.93, against May's 0.35 / 0.28 on its training curve. On the
+second harmless stage the three pairs each differ for real, but **in opposite directions**: two
+favour the modulator, one (s42) the ordinary agent. So the second-stage difference depends on the
+seed, not the agent. The harmless-world column is 476–491 for every checkpoint: training on the
+hunting world does not cost harmless-world survival.
+
+**Why this test matters for the ceiling argument.** The frozen checkpoints after a harmless stage
+reach the cap in only **29–48 %** of hunting-world episodes, so `Z_2` and `Z_4` have room to
+differ. Read post hoc, the plausible range of the mean `ZA_4` reaches about +48 steps
+(mean + 2 × SE), and that of `ZA_2` about +20. A May-sized forgetting advantage on this scale
+(65–72 % less of a ~143-step loss, roughly 90–100 steps) would lie well outside both. **Caveat:**
+this is a different measure from May's. May measured forgetting on the training curve, where
+learning continues, not on frozen agents. So it does not refute May. It does mean the null is not
+*only* a ceiling artefact: where there was room, forgetting looked the same for both agents.
+
+**The training curve hides forgetting almost entirely.** Frozen agents lose about 140 steps. On
+the training curve, the first 20,000 episodes of a return average only 17–39 steps below the
+stage-1 level (10.6), and the 200,000-episode window shows none (`F_k` > 0). The agents relearn
+the hunting world within about the first 20,000 episodes (about 9 million steps), faster than the
+training-curve measures of 5.1 can resolve.
+
+### 10.6 Temporal evolution
+
+Survival, 20,000-episode window ending at the point shown. Agent mean of 3 seeds, per-seed values
+in brackets (s42, s43, s44). Source: `tmp/20260930_mayrep_temporal.json`.
+
+**Stage 1 (hunting world, from scratch).**
+
+| Episodes into stage | Ordinary | Modulated |
+|---|---|---|
+| 20k | 29.4 (28.6, 32.4, 27.1) | 38.0 (37.0, 34.4, 42.6) |
+| 100k | 135.5 (154.6, 113.0, 139.0) | 194.2 (176.0, 222.6, 184.0) |
+| 200k | 267.2 (273.8, 247.7, 280.0) | 369.2 (318.6, 402.3, 386.7) |
+| 300k | 402.5 (436.4, 399.2, 372.0) | 425.0 (424.1, 424.2, 426.6) |
+| 500k | 443.5 (451.0, 444.6, 434.9) | 453.9 (456.3, 451.3, 454.1) |
+| 1.0M | 461.6 (460.6, 462.4, 461.9) | 464.1 (463.6, 462.9, 465.7) |
+| end (1.5M) | 466.1 (467.9, 466.9, 463.6) | 468.1 (468.8, 467.9, 467.7) |
+
+Shape: a fast rise to about 400 in the first 300,000 episodes, then a slow approach to the cap.
+The modulated agent leads during the rise. By about 500,000 episodes both are within about 10
+steps of each other, and from 1.0 M the gap is inside the ceiling-compressed noise. The seed-42 pair
+reverses at 300k (436.4 vs 424.1), so the lead is not uniform along the curve.
+
+**Returns (hunting world after a harmless stage).**
+
+| Episodes into stage | Return 1 ordinary | Return 1 modulated | Return 2 ordinary | Return 2 modulated |
+|---|---|---|---|---|
+| 20k | 432.2 (434.4, 431.0, 431.2) | 426.4 (437.0, 411.9, 430.2) | 448.0 (449.1, 449.1, 445.9) | 443.5 (442.2, 436.0, 452.3) |
+| 100k | 463.6 | 462.0 | 467.3 | 467.3 |
+| 300k | 467.0 | 467.5 | 470.3 | 469.9 |
+| end (700k) | 468.8 (470.0, 470.3, 466.0) | 470.0 (470.1, 470.0, 469.9) | 471.4 (472.3, 471.7, 470.3) | 471.7 (473.7, 469.4, 472.0) |
+
+Shape: a small drop in the first window, back within about 5 steps of the final level by 100,000
+episodes, then flat against the cap. Return 2 dips about half as much as return 1 for both agents.
+No agent ever plateaus below the other on a return, which is where May's effect lived. Harmless
+stages sit flat at 482–487 from the first window. One exception: modulated seed 43 slips to
+475.8 in the last window of stage 2 and to 482.4 at the end of stage 4 (visible in its lower
+`S_2`, `S_4` and in its frozen harmless-world value of 476.5).
+
+**Causes of death** (last 200k, share of all episodes; agent ranges over seeds):
+
+| Stage | Ordinary: injury / starvation | Modulated: injury / starvation |
+|---|---|---|
+| 1 hunting | 3.5–3.7 % / 5.7–6.2 % | 3.3–3.5 % / 5.0–5.6 % |
+| 2 harmless | 1.0–1.2 % / 2.2–2.3 % | 0.9–1.3 % / 2.5–2.8 % |
+| 3 return 1 | 3.2–3.7 % / 4.4–5.4 % | 2.9–3.1 % / 4.3–5.2 % |
+| 4 harmless | 0.9–1.1 % / 2.1–2.5 % | 0.8–1.1 % / 2.3–3.8 % |
+| 5 return 2 | 2.9–3.5 % / 3.9–4.6 % | 2.8–3.0 % / 3.8–4.3 % |
+
+No over-eating and no thermal deaths. Starvation is the larger cause in every stage, but only
+about 5 % of episodes. May's ordinary agent's collapse into starvation on the returns (68–72 %) has
+no counterpart. Both agents eat about 90–96 bites per episode.
+
+Not produced here: the 5.5 plots (all six runs on one axis, recovery against environment steps,
+policy entropy per stage, modulator summaries around each boundary). The tables above stand in
+for the survival curve. The plots belong on the planned results page (plan step 10).
+
+### 10.7 Exploratory, post-data readings (no verdict)
+
+**Label.** These outcomes were chosen on 2026-09-30, **after** the survival results were seen, to
+find signals that the cap does not hide (plan step 5). They use the 5.2 seed-pair aggregation with
+**no** noise floor. About 20 such comparisons were printed (death rate × 5 stages, two
+early-learning areas × 4 stages, recovery × 4 stages, plus stage 1). A few will clear 2 × SE by
+chance, so none of this is a finding. Each item is a hypothesis for a pre-registered test.
+
+**E1 — Death rate per episode** (1 − share at cap, last 200k), modulated minus ordinary:
+
+| Stage | Ordinary | Modulated | Per pair (s42, s43, s44), points | Mean diff ± SE | Favours |
+|---|---|---|---|---|---|
+| 1 hunting | 9.6 % | 8.8 % | −0.74, −0.47, −1.26 | −0.8 ± 0.2 | modulated, all 3 pairs, > 2 SE |
+| 2 harmless | 3.4 % | 3.6 % | +0.13, +0.63, −0.06 | +0.2 ± 0.2 | ordinary, inside noise |
+| 3 return 1 | 8.3 % | 7.8 % | −0.86, −0.02, −0.72 | −0.5 ± 0.2 | modulated, all 3 pairs, > 2 SE |
+| 4 harmless | 3.3 % | 3.8 % | +0.28, +1.61, −0.27 | +0.5 ± 0.5 | ordinary, inside noise |
+| 5 return 2 | 7.5 % | 6.9 % | −0.80, −0.41, −0.50 | −0.6 ± 0.1 | modulated, all 3 pairs, > 2 SE |
+
+Reading: in the hunting world the modulated agent dies in about 6–9 % fewer episodes, relative to
+the ordinary agent's rate, consistently across pairs. Three cautions:
+- This is the same data as the survival mean, viewed as a proportion. It matches the small, same-sign
+  `D_k` (+1.5 steps). It is not an independent confirmation.
+- The edge is as large in **stage 1** as on the returns (`D_1` per pair: +2.0, 0.0, +3.5). So it is
+  not May's "comes back better" effect, and the registered forgetting readings are null.
+- Same-seed agents start from identical main-network weights (3.4), so pair-to-pair consistency
+  partly reflects a shared start.
+
+**E2 — Learning speed from scratch (stage 1).**
+
+| Measure | Ordinary (s42, s43, s44) | Modulated (s42, s43, s44) | Per pair diff | Mean diff (SE) |
+|---|---|---|---|---|
+| Mean survival over the first 100k episodes | 84.1, 80.1, 82.2 | 100.5, 109.2, 99.8 | +16.5, +29.1, +17.6 | **+21.0** (3.2) |
+| Mean survival over the first 300k episodes | 233.1, 205.1, 216.7 | 255.6, 278.3, 254.2 | +22.5, +73.2, +37.4 | **+44.4** (11.3) |
+| 20k-window level at 200k episodes | 273.8, 247.7, 280.0 | 318.6, 402.3, 386.7 | +44.8, +154.6, +106.7 | **+102.0** (27.5) |
+| Episodes to reach 90 % of own final level | 260k, 360k, 348k | 280k, 292k, 288k | +20k, −68k, −60k | 2 of 3 faster |
+
+Reading: the modulated agent's early climb is faster in all three pairs on the area measures, by
+about 25 % over the first 100,000 episodes. The time-to-threshold measure agrees in two pairs of
+three: s42's modulated agent got there 20,000 episodes later. This is a learning-speed reading
+**far from the cap**, where survival has room. The parallel study notes that "FiLM's advantage in
+RL is mostly learning speed, yet the modulated agent does not learn faster"
+(`ALGORITHMIC_NULL_TODO.md`, "Measure when the modulator wakes up"). Its results page says learning
+speed "has not been measured with seeds" (its candidate 4). This is the first three-seed look, and
+it points the other way. It is still one post-hoc look at one world.
+
+**E3 — Relearning speed after a switch (stages 2–5).** Inside noise throughout. The largest mean
+difference in survival over the first 100k episodes after a switch is −1.9 steps (return 1); over
+the first 300k it is −0.8. The only reading beyond 2 × SE is the common-reference recovery into
+harmless stage 2 (−21.7 episodes of ~20,000, all 3 pairs). It is a logging-grid effect, not a
+behaviour. After the first stage, learning-speed differences are at most 1.9 steps, well inside
+the ceiling.
 
 ## 11. Conclusions
 
-*(to be filled after training)*
+### 11.1 Summary
+
+1. **Registered verdict: not replicated, an underpowered null (5.3, 7.7).** On both returns of the
+   hunter the modulated agent was ahead by 1.5 steps (floor-based noise band ±7.2). It forgot no
+   less (−0.3 steps, band ±10.2). The dip was equal, recovery was a tie at the logging resolution,
+   and the second return was no better. No failure mode fired: the stage-1 gate passed, the
+   switch was real, both agents dropped at the switch, and nothing collapsed.
+2. **The world, not the agent, limits what this can say.** Every stage of every run is 90–97 %
+   capped. May's hunting world left agents at about 280 steps. Today's leaves them at about 466,
+   so a May-sized advantage (38–48 % of stage-1 survival) could not have been measured. This
+   matches the parallel study's end-of-training reading of the same runs (+1.46 steps, ~94 %
+   capped).
+3. **Where there was room, there was still no May-like effect.** The frozen-agent retention test
+   is not at the ceiling after a harmless stage (29–48 % capped). It shows both agents losing
+   about 140 hunting-world steps per harmless stage, with no consistent difference. The one set of
+   individually real pair differences (second harmless stage) splits 2 to 1 in sign. That is a
+   different measure from May's training-curve forgetting, so it bounds rather than refutes May.
+4. **Two exploratory hints** (post-data, not findings): a lower death rate for the modulated agent
+   in every hunting stage (all 3 pairs, including stage 1), and faster learning from scratch in
+   stage 1 (all 3 pairs on area measures; 2 of 3 on time to threshold).
+
+Answer to the question of section 1: **under today's body, senses and agents, the modulated agent
+did not come back measurably better after the hunter returned.** But this world could only have
+shown a much smaller effect than May's, so the answer is "not shown here", not "not there".
+May's single-seed result stands as a May-conditions observation only. Per O2, this also concerns
+**today's** modulator (no policy-temperature head), not May's.
+
+### 11.2 Caveats
+
+- **Ceiling.** Every training-curve reading is ceiling-limited (10.4). The noise floor makes it
+  worse: the largest difference the world allows (~31 steps) is only about 4 times the smallest
+  one the rule can count (~7).
+- **Shared start within a pair.** Same-seed agents start from identical main-network weights.
+  This was verified on this replication's seed-42 pair by the parallel study (27 of 27 arrays). For
+  seeds 43 and 44 it follows from the same code path but has **not been checked**
+  (`ALGORITHMIC_NULL_TODO.md`). The three pairs differ from each other, so the between-seed SE is
+  a real three-start estimate. But the per-pair sign counts (and E1's "3 of 3") are counts over
+  matched starts, not independent agents.
+- **Weighting.** Survival means weight rows by episodes added, not by `Episode/_window_n` as 5 says.
+  This is recorded in the 5 note (plan-reviewer T2). The verdict is what the code computes.
+- **Recovery resolution.** Nearly every recovery lands in the first 20,000-episode logged row, so
+  H-rec is mostly ties by construction. Frozen agents show a ~140-step loss that the training
+  curve repairs inside that first window (10.5). The 5.1 recovery measure is too coarse for this
+  world.
+- **Exploratory outcomes** were chosen after the data and are uncorrected for about 20 comparisons.
+  E1 is the same data as the (null) survival mean. E2 is one world and three pairs.
+- **Agent differences from May** shared by both arms (GAE_NORM returns, critic learning rate
+  0.0005 vs 0.0001, no temperature head) remain reasons a null may not transfer to May's setting
+  (3.4, O2).
+
+### 11.3 What to do next (for the user and `experiment-designer`; nothing launched)
+
+1. **A world with room above the cap.** Re-run the double return where the hunting stage leaves the
+   ordinary agent well below 500 (May: ~280). Screen candidate worlds with the ordinary agent
+   first. Target a stage-1 cap share under about 50 %. Levers: permeable bushes (May's), weaker bush
+   healing, May's `decay_power` 2.0, a pouncing predator. A longer episode cap would also give
+   room, but it changes the task. This is the parallel study's "task with room above the step
+   cap".
+2. **Learning speed with seeds as a pre-registered primary outcome.** Register area under the
+   survival curve over the first 100k / 300k episodes and episodes-to-threshold, for learning
+   from scratch and after each switch. Set the noise rule in advance. The hint E2 comes from this
+   study's stage 1 and is exactly the gap the parallel study lists as candidate 4. Hand it to its
+   dossier (plan step 9).
+3. **Cross-seed pairs.** Pair each modulated agent with an ordinary agent from a *different*
+   main-network seed, or add an arm with a different seed. Then the pair comparison is no longer
+   anchored to one shared start. Check seeds 43 and 44 for identical starts either way.
+4. **More seeds only after 1.** Adding seeds in this world cannot rescue a comparison the cap
+   compresses. The 7.7 "more-seeds follow-up" pays only once the world has room.
+5. **Frozen-agent retention stays in any rerun.** It was the only registered measure with room here
+   and the only one that sees forgetting at all. Consider making it co-primary.
+6. **If death rate (E1) is to be tested,** pre-register it for the hunting stages, including stage
+   1, with a between-seed rule and cross-seed pairs, since it currently rides on matched starts.
+
+### 11.4 Metrics requested
+
+| Metric | Why now | Where it'd live | Cost |
+|---|---|---|---|
+| Finer early-stage logging after a stage switch: survival per 2,000-episode block for the first 50,000 episodes of each stage | Recovery (H-rec) ties by construction because both agents are back within the first 20,000-episode logged window; the ~140-step frozen-agent loss is repaired inside it | `train.py` episode logging, gated on "within N episodes of a stage boundary" | cheap (a few extra scalar rows per switch) |
+| Share of episodes at the cap per logging row, written as its own key | The ceiling check reads `Episode/Term_MaxSteps`, which works, but a named cap-share key would let every read-out flag ceiling-limited windows without study-specific code | trainer episode-summary block | cheap |
+
+### 11.5 Related issues and hand-offs
+
+- `plan-reviewer`: review of this verdict (plan step 8), then `pi` (section 9).
+- Cross-study dossier `docs/experiments/active/modulator_clues/CROSS_STUDY_NULL_DOSSIER.md`: append the
+  verdict, the ceiling label and hints E1/E2 (plan step 9, signed, append-only).
+- Shared-start check for seeds 43/44: open item in `ALGORITHMIC_NULL_TODO.md`.
+- No new bug found. The patrol off-by-one (3.5) stands as handed to `bug-curator` and affects both
+  arms equally.
+
+### 11.6 Sources
+
+| What | Where |
+|---|---|
+| Registered read-out, ceiling check, exploratory outcomes | `results/analysis/continual_worlds/mayrep_readout.json`, text `tmp/20260930_mayrep_readout.txt` (script `scripts/analysis/studies/continual_worlds/pilot_readout.py --study mayrep`, commit `c4772791`) |
+| Zero-shot retention (greedy + sampled) | `results/analysis/continual_worlds/retention_mayrep_readout.json`, log `tmp/20260930_retention_mayrep_readout.log` (commit `16de3d1a`) |
+| Temporal table (10.6) | `tmp/20260930_mayrep_temporal.json` (20k-window means from `pilot_readout.scan` / `Series` on the six local WandB folders) |
+| Working notes | `tmp/20260930_183000_mayrep_step7.md` |
+| Parallel study's end-of-training reading and learning-speed gap | `docs/experiments/active/modulator_clues/algorithmic_null.template.html` ("What Both Agents Compute"), `ALGORITHMIC_NULL_TODO.md` |
 
 ## Feedback from plan-reviewer
 
