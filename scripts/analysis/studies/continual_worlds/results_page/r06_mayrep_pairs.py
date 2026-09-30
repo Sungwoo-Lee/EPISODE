@@ -22,7 +22,7 @@ MAY = M["may_comparison"]["may"]
 S1 = M["may_comparison"]["reference_200k"]["S1_ord_mean"]
 READ = [("H_ret", "3", "better return, first return"), ("H_ret", "5", "better return, second return"),
         ("H_forget", "3", "less forgetting, first return"), ("H_forget", "5", "less forgetting, second return")]
-SEEDM = {0: "o", 1: "s", 2: "^"}
+SEEDM = {i: C.SEED_MARKER[s] for i, s in enumerate((42, 43, 44))}
 
 fig = plt.figure(figsize=(9.9, 5.6))
 axA = fig.add_axes([0.25, 0.25, 0.36, 0.62])
@@ -35,7 +35,7 @@ for y, (key, k, lab) in zip(ys, READ):
     axA.plot([-band, band], [y, y], color=C.BAND, lw=9, solid_capstyle="butt", zorder=1)
     axA.plot([-2 * r["se_raw"], 2 * r["se_raw"]], [y - 0.28] * 2, color=C.GREY, lw=1.4, zorder=2)
     for i, d in enumerate(r["pair_diffs"]):
-        axA.plot([d], [y + 0.12], SEEDM[i], ms=5.2, mfc=house.PAPER, mec=house.INK, mew=1.1, zorder=3)
+        axA.plot([d], [y + 0.30 - 0.09 * i], SEEDM[i], ms=5.2, mfc=house.PAPER, mec=house.INK, mew=1.1, zorder=3)
     axA.plot([r["mean_diff"]], [y], "D", ms=7, color=house.INK, zorder=4)
 axA.axvline(0, color=C.GREY, lw=0.9)
 axA.set_yticks(ys); axA.set_yticklabels([l for *_, l in READ], fontsize=C.SMALLEST_PT)
@@ -49,7 +49,7 @@ yb = np.array([1, 0])
 for y, k in zip(yb, ("3", "5")):
     axB.barh(y + 0.17, MAY["D"][k], height=0.3, color=C.GREY)
     axB.barh(y - 0.17, M["H_ret"][k]["mean_diff"], height=0.3, color=house.INK)
-    axB.plot([MAY["may_sized_line"][k] * S1] * 2, [y - 0.4, y + 0.4], color=house.INK, lw=1.3, ls=(0, (3, 2)))
+    axB.plot([MAY["may_sized_line"][k] * S1] * 2, [y - 0.4, y + 0.4], color=C.GREY, lw=1.4, ls="-.")
 axB.set_yticks(yb); axB.set_yticklabels(["first\nreturn", "second\nreturn"], fontsize=C.SMALLEST_PT)
 axB.set_xlim(0, 150); axB.set_xticks([0, 50, 100, 150]); axB.set_ylim(-0.6, 1.6)
 axB.grid(axis="x", visible=True); axB.grid(axis="y", visible=False)
@@ -57,13 +57,13 @@ axB.set_xlabel("return advantage, steps", fontsize=C.SMALLEST_PT + 1)
 axB.set_title("(b) for scale: May vs the replication", fontsize=C.SMALLEST_PT + 1.5, loc="left", pad=8)
 C.assert_ticks_dont_collide(axB, "x")
 h = [Line2D([], [], marker="D", ms=7, color=house.INK, ls="none", label="mean of the 3 pairs"),
-     Line2D([], [], marker="o", ms=5.2, mfc=house.PAPER, mec=house.INK, ls="none", label="seed 42"),
-     Line2D([], [], marker="s", ms=5.2, mfc=house.PAPER, mec=house.INK, ls="none", label="seed 43"),
-     Line2D([], [], marker="^", ms=5.2, mfc=house.PAPER, mec=house.INK, ls="none", label="seed 44"),
+     Line2D([], [], marker=C.SEED_MARKER[42], ms=5.6, mfc=house.PAPER, mec=house.INK, ls="none", label="seed 42"),
+     Line2D([], [], marker=C.SEED_MARKER[43], ms=5.6, mfc=house.PAPER, mec=house.INK, ls="none", label="seed 43"),
+     Line2D([], [], marker=C.SEED_MARKER[44], ms=5.6, mfc=house.PAPER, mec=house.INK, ls="none", label="seed 44"),
      Patch(color=C.BAND, label="registered noise band (± 2 × floored SE)"),
      Line2D([], [], color=C.GREY, lw=1.4, label="± 2 × raw SE between seeds"),
      Patch(color=C.GREY, label="(b) May, one run per agent"), Patch(color=house.INK, label="(b) replication mean"),
-     Line2D([], [], color=house.INK, lw=1.3, ls=(0, (3, 2)), label="(b) 'May-sized' line")]
+     Line2D([], [], color=C.GREY, lw=1.4, ls="-.", label="(b) 'May-sized' line")]
 fig.legend(handles=h, loc="lower center", ncol=3, frameon=False, fontsize=C.SMALLEST_PT + 0.5,
            bbox_to_anchor=(0.5, 0.0), handlelength=1.6, columnspacing=1.2)
 

@@ -66,7 +66,7 @@ for ax, xl, t in ((axA, "training episodes (thousands)", "(a) against episodes")
     ax.set_title(t, fontsize=C.SMALLEST_PT + 1.5, loc="left", pad=8)
     ax.tick_params(axis="x", pad=7)
 axA.set_xlim(0, EP_MAX / 1e3); axB.set_xlim(0, ST_MAX / 1e6)
-axA.axvline(100, color=house.INK, lw=0.9, ls=(0, (3, 2))); axB.axvline(10, color=house.INK, lw=0.9, ls=(0, (3, 2)))
+axA.axvline(100, color=C.GREY, lw=1.2, ls="-."); axB.axvline(10, color=C.GREY, lw=1.2, ls="-.")
 axA.set_ylabel("survival (steps per episode)", fontsize=C.SMALLEST_PT + 1)
 axB.set_yticklabels([])
 for ax in (axA, axB):
@@ -76,7 +76,7 @@ h = [Line2D([], [], color=C.ORD, lw=2, label="ordinary agent"), Line2D([], [], c
      Line2D([], [], color=house.INK, lw=1.4, ls=LS[43], label="seed 43"),
      Line2D([], [], color=house.INK, lw=1.4, ls=LS[44], label="seed 44"),
      Line2D([], [], color=C.GREY, lw=2.2, label="500-step cap"),
-     Line2D([], [], color=house.INK, lw=0.9, ls=(0, (3, 2)), label="end of the early window (100k episodes / 10M steps)")]
+     Line2D([], [], color=C.GREY, lw=1.2, ls="-.", label="end of the early window (100k episodes / 10M steps)")]
 fig.legend(handles=h, loc="lower center", ncol=4, frameon=False, fontsize=C.SMALLEST_PT + 0.3,
            bbox_to_anchor=(0.5, 0.0), handlelength=2.0, columnspacing=1.2)
 

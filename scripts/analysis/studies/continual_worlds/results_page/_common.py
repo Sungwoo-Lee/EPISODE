@@ -65,6 +65,9 @@ KIND = {"training": "training logs — survival while learning, sampled actions"
 ORD, MOD = house.BLUE, house.ORANGE          # agent colours (sibling page convention)
 AGENT_LABEL = {"ordinary": "ordinary agent", "modulated": "modulated agent"}
 AGENT_COL = {"ordinary": ORD, "modulated": MOD}
+# Seed markers: shapes no other encoding on the page uses (circle = sampled actions, square = most-likely
+# action, triangle = first 20k, diamond = means) -- format register F11 third amendment.
+SEED_MARKER = {42: "h", 43: "X", 44: "P"}
 GREY = "#8a8f99"
 BAND = "#e4e6e3"                             # a noise band's fill
 SMALLEST_PT = 9.5                            # every hand-set text size; ticks are 11 pt

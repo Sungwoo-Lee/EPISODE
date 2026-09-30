@@ -42,7 +42,7 @@ for y, w in zip(ya, worlds):
     for a, off in (("ordinary", 0.13), ("modulated", -0.13)):
         m, lo, hi = start[a][w]
         axA.plot([lo, hi], [y + off] * 2, color=C.AGENT_COL[a], lw=1.6, alpha=0.55)
-        axA.plot([m], [y + off], "o", ms=6, color=C.AGENT_COL[a])
+        axA.plot([m], [y + off], "s", ms=5.6, color=C.AGENT_COL[a])   # square = most-likely action, as in (b), (c)
 axA.set_yticks(ya); axA.set_yticklabels([C.WORLD[w] + (" (trained)" if w == "forage" else "") for w in worlds],
                                          fontsize=C.SMALLEST_PT)
 axA.set_xlim(0, 500); axA.set_xticks([0, 100, 200, 300, 400, 500])
@@ -66,7 +66,7 @@ for s in ("P1", "P2", "P3"):
 yb = np.arange(len(fv))[::-1]
 MEAS = [("diff_Z_greedy", "head start: checkpoint it arrives with, most-likely action", "s", house.PAPER),
         ("diff_Z_samp", "start level: first ~4,000 training episodes", "o", house.PAPER),
-        ("diff_S20", "first 20,000 episodes (the registered window)", "o", house.INK),
+        ("diff_S20", "first 20,000 episodes (the registered window)", "^", house.INK),
         ("diff_gain20", "gain over its own start (first 20k minus start level)", "D", C.GREY)]
 OFF = [0.27, 0.09, -0.09, -0.27]
 for y, (lab, z) in zip(yb, fv):
@@ -94,7 +94,7 @@ for y, c in zip(yc, cells):
     for mode, o, mk in (("greedy", 0.14, "s"), ("sampled", -0.14, "o")):
         g = c[f"gap_modulated_minus_ordinary_{mode}"]["unpaired"]
         axC.plot([g["ci95_lo"], g["ci95_hi"]], [y + o] * 2, color=house.INK, lw=1.4)
-        axC.plot([g["diff"]], [y + o], mk, ms=6, mec=house.INK, mfc=house.PAPER if mode == "greedy" else house.INK, mew=1.3)
+        axC.plot([g["diff"]], [y + o], mk, ms=6, mec=house.INK, mfc=house.PAPER, mew=1.3)
 axC.axvline(0, color=C.GREY, lw=0.9)
 axC.set_yticks(yc); axC.set_yticklabels([CELLNAME[(c["row"], c["world"])] for c in cells], fontsize=C.SMALLEST_PT)
 axC.set_xlim(-20, 130); axC.set_xticks([0, 25, 50, 75, 100, 125])
@@ -104,11 +104,11 @@ axC.set_xlabel("modulated minus ordinary, steps (bar = 95 % interval)", fontsize
 axC.set_title("(c) re-check with sampled actions: P3 checkpoints", fontsize=C.SMALLEST_PT + 1.5, loc="left", pad=8)
 C.assert_ticks_dont_collide(axC, "x")
 
-h = [Line2D([], [], marker="o", ms=6, color=C.ORD, ls="none", label="(a) ordinary"),
-     Line2D([], [], marker="o", ms=6, color=C.MOD, ls="none", label="(a) modulated"),
-     Line2D([], [], marker="s", ms=5.6, mec=house.INK, mfc=house.PAPER, ls="none", label="(b, c) most-likely action"),
-     Line2D([], [], marker="o", ms=5.6, mec=house.INK, mfc=house.PAPER, ls="none", label="(b) start level, sampled"),
-     Line2D([], [], marker="o", ms=5.6, mec=house.INK, mfc=house.INK, ls="none", label="(b) first 20k  ·  (c) sampled"),
+h = [Line2D([], [], marker="s", ms=5.6, color=C.ORD, ls="none", label="(a) ordinary"),
+     Line2D([], [], marker="s", ms=5.6, color=C.MOD, ls="none", label="(a) modulated"),
+     Line2D([], [], marker="s", ms=5.6, mec=house.INK, mfc=house.PAPER, ls="none", label="most-likely action (b head start, c)"),
+     Line2D([], [], marker="o", ms=5.6, mec=house.INK, mfc=house.PAPER, ls="none", label="sampled actions (b start level, c)"),
+     Line2D([], [], marker="^", ms=5.6, mec=house.INK, mfc=house.INK, ls="none", label="(b) first 20,000 episodes"),
      Line2D([], [], marker="D", ms=5.6, mec=house.INK, mfc=C.GREY, ls="none", label="(b) gain over own start")]
 fig.legend(handles=h, loc="lower center", ncol=3, frameon=False, fontsize=C.SMALLEST_PT + 0.5,
            bbox_to_anchor=(0.5, 0.0), handlelength=1.2, columnspacing=1.2)

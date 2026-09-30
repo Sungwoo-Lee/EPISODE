@@ -67,13 +67,13 @@ for i, (y, r) in enumerate(zip(ys, rows)):
     axB.plot([-sw["dip_own_diff_pp"]], [y], "o", ms=6.5, mfc=house.PAPER, mec=house.INK, mew=1.4, zorder=3)
     ro, rm = sw["rec_common_ep"]
     oo, om = sw["rec_own_ep"]
-    for (u, v), mk in (((ro, rm), "o"), ((oo, om), "s")):
+    for (u, v), mk in (((ro, rm), "o"), ((oo, om), "v")):
         dx = (u - v) / 1e3
         shown = min(dx, 145)
-        axC.plot([shown], [y], mk, ms=6 if mk == "o" else 5.2, color=house.INK,
+        axC.plot([shown], [y], mk, ms=6, color=house.INK,
                  mfc=C.GREY if mk == "o" else house.PAPER, mew=1.3, zorder=3)
         if dx > 145:
-            axC.text(141, y + 0.33, f"{dx:.0f} →", ha="right", va="bottom", fontsize=C.SMALLEST_PT, color=house.INK)
+            axC.text(141, y - 0.2, f"{dx:.0f} →", ha="right", va="top", fontsize=C.SMALLEST_PT, color=house.INK)
     axV.text(0.02, y, VOTE[sw["dip_vote"]] + ("*" if bn else ""), ha="left", va="center",
              fontsize=C.SMALLEST_PT + 0.5, color=house.INK, transform=axV.get_yaxis_transform())
     axV.text(0.55, y, VOTE[sw["rec_vote_literal"]], ha="left", va="center",
@@ -108,7 +108,7 @@ ret_bn = 0
 for y, r in zip(yr, ret):
     R = r["sw"]["return"]
     axR.plot([-R["yard"]["thr"], R["yard"]["thr"]], [y, y], color=C.BAND, lw=7, solid_capstyle="butt", zorder=1)
-    axR.plot([R["diff"]], [y], "D", ms=6, color=house.INK, mfc=house.INK if R["beyond_noise"] else house.PAPER,
+    axR.plot([R["diff"]], [y], "o", ms=6.5, color=house.INK, mfc=house.INK if R["beyond_noise"] else house.PAPER,
              mew=1.4, zorder=3)
     ret_bn += R["beyond_noise"]
     axV2.text(0.02, y, VOTE[R["vote"]] + ("*" if R["beyond_noise"] else ""), ha="left", va="center",
@@ -129,7 +129,7 @@ axV2.set_title("(vote)", fontsize=C.SMALLEST_PT + 1.5, loc="left", pad=8)
 
 h = [Line2D([], [], marker="o", ms=6.5, color=house.INK, mfc=house.PAPER, ls="none", label="difference inside noise"),
      Line2D([], [], marker="o", ms=6.5, color=house.INK, ls="none", label="beyond noise (also * on the vote)"),
-     Line2D([], [], marker="s", ms=5.2, color=house.INK, mfc=house.PAPER, ls="none", label="(c) own level"),
+     Line2D([], [], marker="v", ms=6, color=house.INK, mfc=house.PAPER, ls="none", label="(c) own level"),
      Line2D([], [], marker="o", ms=6, color=house.INK, mfc=C.GREY, ls="none", label="(c) shared level (no yardstick)"),
      Patch(color=C.BAND, label="noise yardstick, ± per row")]
 fig.legend(handles=h, loc="lower center", ncol=3, frameon=False, fontsize=C.SMALLEST_PT + 0.5,

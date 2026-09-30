@@ -49,6 +49,19 @@ seq_cmap = LinearSegmentedColormap.from_list("greys", ["#fbfbfa", "#b9bdc2", "#3
 div = LinearSegmentedColormap.from_list("ordmod", [C.ORD, "#ffffff", C.MOD])
 DLIM = 120
 
+
+def _lum(rgb):
+    """WCAG relative luminance of an sRGB colour (0-1 floats)."""
+    c = [v / 12.92 if v <= 0.03928 else ((v + 0.055) / 1.055) ** 2.4 for v in rgb[:3]]
+    return 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2]
+
+
+def ink_on(rgba):
+    """Cell text colour with the better contrast against the cell: white or ink (format gate, 2026-09-30)."""
+    from matplotlib.colors import to_rgb
+    L = _lum(rgba); Li = _lum(to_rgb(house.INK))
+    return "white" if (1.05) / (L + 0.05) > (L + 0.05) / (Li + 0.05) else house.INK
+
 fig = plt.figure(figsize=(9.9, 11.0))
 gs = fig.add_gridspec(3, 3, hspace=0.95, wspace=0.08, left=0.17, right=0.995, top=0.9, bottom=0.14)
 n_beyond, n_diff = 0, 0
@@ -64,8 +77,10 @@ for r, s in enumerate(("P1", "P2", "P3")):
                 for j in range(d.shape[1]):
                     bn = abs(d[i, j]) > noise[i, j]
                     n_beyond += bn; n_diff += 1
-                    ax.text(j, i, C.fmt(d[i, j], 0, sign=True) + ("*" if bn else ""), ha="center", va="center",
-                            fontsize=C.SMALLEST_PT, color=house.INK, fontweight="semibold" if bn else "normal")
+                    txt = "0" if round(d[i, j]) == 0 else C.fmt(d[i, j], 0, sign=True)   # never "-0" / "+0"
+                    ax.text(j, i, txt + ("*" if bn else ""), ha="center", va="center", fontsize=C.SMALLEST_PT,
+                            color=ink_on(div((np.clip(d[i, j], -DLIM, DLIM) + DLIM) / (2 * DLIM))),
+                            fontweight="semibold" if bn else "normal")
             ttl = "modulated − ordinary"
         else:
             m = M[s, key]
@@ -73,7 +88,7 @@ for r, s in enumerate(("P1", "P2", "P3")):
             for i in range(m.shape[0]):
                 for j in range(m.shape[1]):
                     ax.text(j, i, f"{m[i, j]:.0f}", ha="center", va="center", fontsize=C.SMALLEST_PT,
-                            color="white" if m[i, j] > 300 else house.INK)
+                            color=ink_on(seq_cmap(m[i, j] / 500)))
             ttl = C.AGENT_LABEL[key]
         if c_ == 0:
             p = ax.get_position()

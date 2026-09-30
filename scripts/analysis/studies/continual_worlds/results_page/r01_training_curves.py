@@ -57,7 +57,7 @@ for s, ax in axes.items():
         if i % 2 == 1:
             ax.axvspan(x0, x1, color=house.BG_SOFT, lw=0, zorder=0)
         if i:
-            ax.axvline(x0, color=C.GREY, lw=0.9, ls=(0, (3, 2)), zorder=1)
+            ax.axvline(x0, color=C.GREY, lw=1.0, zorder=1)
         lab = C.WORLD[st["world"]] + ("\nreturn" if st["visit"] == 2 else "\nfirst visit")
         ax.text((x0 + x1) / 2, YMAX * 0.985, lab, ha="center", va="top", fontsize=C.SMALLEST_PT, color=house.INK)
         lens.append(x1)
@@ -74,7 +74,7 @@ for s in ("P1", "P3"):
 axes["P2"].set_yticklabels([])
 h = [Line2D([], [], color=C.ORD, lw=2, label="ordinary agent"),
      Line2D([], [], color=C.MOD, lw=2, label="modulated agent"),
-     Line2D([], [], color=C.GREY, lw=0.9, ls=(0, (3, 2)), label="world switch")]
+     Line2D([], [], color=C.GREY, lw=1.0, label="world switch")]
 fig.legend(handles=h, loc="lower center", ncol=3, frameon=False, fontsize=C.SMALLEST_PT + 0.5,
            bbox_to_anchor=(0.5, 0.0), handlelength=2.0)
 

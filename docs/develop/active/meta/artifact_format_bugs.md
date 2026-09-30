@@ -2314,3 +2314,30 @@ returns nothing. At 390 px, every element it returns is preceded by a `.cue`.
   closed, and the click times out. Open every ancestor first.
 - The layout checker's default pass reports overlaps for summaries of nested closed details. F19's
   "a summary is painted when its details is closed" holds only when every *ancestor* details is open.
+
+### F11, third amendment — "one meaning per colour" also covers marker shapes and line styles
+
+**What a reader saw** (2026-09-30, *Continual Worlds: Results*, first format gate). In one figure a
+filled circle meant "first 20,000 training episodes" in panel (b) and "sampled actions" in panel (c).
+Across the page a dashed line meant "seed 43" in three figures, "May-sized advantage" in two others
+and "end of the early window" in a third. Each legend was correct for its own panel or figure; the
+reader, carrying a shape or a dash from one panel to the next, read the wrong thing.
+
+**Why it was missed.** F11 and its amendments were written about colour. The figure guards check
+text size, placement and overlap, and F64 checks that a shared legend covers every plotted series —
+none asks whether one glyph or dash pattern carries two meanings. A screenshot scan reads each legend
+in place, which is exactly where each one is right.
+
+**Rule.** Within a figure and across the figures of one page, each marker shape, fill and line style
+carries one meaning, as each colour does. Encodings that repeat on a page (seeds, agents, policy mode,
+reference lines) are fixed once in the page's shared figure module; reference and threshold lines use
+a style no data series uses (here: grey dash-dot for reference lines, solid/dashed/dotted reserved for
+seeds). Where two meanings must share a shape, separate them by a second channel the legend names
+(fill or colour) and say so in the caption.
+
+**How to verify.** List every legend entry of every figure on the page as (shape or line style, fill,
+colour) → label; any key that maps to two different labels is this defect. Then read each figure's
+caption for style words ("dashed", "filled", "circle") and check each against that list.
+Found on *Continual Worlds: Results*, 2026-09-30 (gate findings 2–3); fixed there by making circles
+mean sampled actions and squares most-likely actions in every panel, and moving every reference line
+to grey dash-dot.
