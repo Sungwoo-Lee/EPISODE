@@ -65,6 +65,7 @@ details.primer-sub { border-top:1px solid var(--line); padding:12px 0 4px; min-w
 details.primer-sub > summary { font-weight:600; cursor:pointer; color:var(--ink); }
 .primer-body { display:flex; flex-direction:column; gap:12px; padding-top:12px; min-width:0; }
 .primer-body pre { overflow-x:auto; font-size:13px; }
+table.prose2 td { overflow-wrap:break-word; }
 </style>
 
 <div class="wrap">
@@ -272,8 +273,10 @@ FiLM:       h = ReLU( &gamma;(c)&middot;(W_x&middot;x + b) + &beta;(c) )</pre>
   compares unit to unit; both compare whole layers.</p>
   <p>The raw material is the same for both. Every agent is replayed on the <strong>same</strong>
   recorded moments, so row i means the same moment for every agent. For one layer:</p>
-  <pre>X : n &times; p     agent A's activity   (n moments, p units)
-Y : n &times; q     agent B's activity   (same n moments, q units)</pre>
+  <p class="cue" hidden>&larr; wider than the screen &mdash; scroll it sideways</p>
+  <pre>X : n &times; p   agent A's activity
+Y : n &times; q   agent B's activity
+n = moments (shared), p and q = units</pre>
   <p>The n rows are single time steps pooled from many probe episodes, not one continuous series. The
   order of rows plays no part; episodes matter only for keeping training rows apart from held-out rows.
   In this study n is 5,000 and p = q = 128.</p>
@@ -289,10 +292,15 @@ Y : n &times; q     agent B's activity   (same n moments, q units)</pre>
     <div class="stage"><div class="s">3</div><div class="b"><div class="t">Both directions; keep the smaller</div><div class="d">Repeat with B predicting A. The smaller of the two is the pair's predictivity, because &ldquo;interchangeable&rdquo; has to hold both ways.</div></div></div>
     <div class="stage"><div class="s">4</div><div class="b"><div class="t">Repeat and resample</div><div class="d">The split into training and held-out episodes is redone 5 times and the score averaged; episodes are resampled 2,000 times per split to give the score its uncertainty.</div></div></div>
   </div>
-  <pre>W        = (X&#7488;X + &lambda;I)&#8315;&sup1; X&#7488;Y                    p &times; q   (one column per unit of B)
-R&sup2;(A&rarr;B) = 1 &minus; &Sigma;&#11388; SSE&#11388; / &Sigma;&#11388; SST&#11388;                  = &Sigma;&#11388; (SST&#11388; / &Sigma;&#8342; SST&#8342;) &middot; R&sup2;&#11388;
-P(A,B)   = min( R&sup2;(A&rarr;B), R&sup2;(B&rarr;A) )</pre>
-  <p class="foot">SSE&#11388; is unit j's squared prediction error on held-out moments; SST&#11388; is its
+  <p class="cue" hidden>&larr; wider than the screen &mdash; scroll it sideways</p>
+  <pre>W = (X&#7488;X + &lambda;I)&#8315;&sup1; X&#7488;Y
+    size p &times; q, one column per unit of B
+
+R&sup2;(A&rarr;B) = 1 &minus; &Sigma;_j SSE_j / &Sigma;_j SST_j
+         = &Sigma;_j (SST_j / &Sigma;_k SST_k) &middot; R&sup2;_j
+
+P(A,B) = min( R&sup2;(A&rarr;B), R&sup2;(B&rarr;A) )</pre>
+  <p class="foot">SSE_j is unit j's squared prediction error on held-out moments; SST_j is its
   variance around its mean. A plain, unweighted mean of the per-unit R&sup2; is shown in Figure A1b
   as a check; on the actor and critic it is unusable, because units that fire on a fraction of a
   percent of moments have unstable R&sup2; values (one missed spike can push a unit to &minus;7).</p>
@@ -321,8 +329,8 @@ P(A,B)   = min( R&sup2;(A&rarr;B), R&sup2;(B&rarr;A) )</pre>
   <div class="primer-body">
   <p><strong>The Frobenius norm is &ldquo;length&rdquo; for a table of numbers.</strong> Line every
   entry up into one long list and take its ordinary Pythagorean length:
-  <code>&#8214;M&#8214;_F = &radic;(&Sigma; M&#8336;&#8348;&sup2;)</code>. For example, the table
-  <code>[[3, 4], [0, 0]]</code> has length &radic;(9 + 16) = 5. CKA uses it to measure the angle between
+  <code style="white-space:nowrap">&#8214;M&#8214;_F&nbsp;=&nbsp;&radic;(&Sigma;&nbsp;M_ab&sup2;)</code>. For example, the table
+  <code>[[3,&nbsp;4],&nbsp;[0,&nbsp;0]]</code> has length &radic;(9 + 16) = 5. CKA uses it to measure the angle between
   two tables.</p>
   <div class="col stages">
     <div class="stage"><div class="s">0</div><div class="b"><div class="t">Inputs</div><div class="d"><code>X</code>: n &times; p, network A. <code>Y</code>: n &times; q, network B. Same moments, same order.</div></div></div>
@@ -332,9 +340,12 @@ P(A,B)   = min( R&sup2;(A&rarr;B), R&sup2;(B&rarr;A) )</pre>
     <div class="stage"><div class="s">4</div><div class="b"><div class="t">Denominator: the two lengths</div><div class="d"><code>&#8214;K&#8214;_F</code> and <code>&#8214;L&#8214;_F</code>, two numbers. Dividing by them cancels how large each network's activity is, so only the direction of each table counts.</div></div></div>
     <div class="stage"><div class="s">5</div><div class="b"><div class="t">CKA is the cosine between the two tables</div><div class="d">A number from 0 to 1: 1 when the tables point the same way, lower as they disagree.</div></div></div>
   </div>
-  <pre>CKA(X, Y) = &Sigma;&#8336;&#8348; K&#8336;&#8348; L&#8336;&#8348;  /  ( &#8214;K&#8214;_F &middot; &#8214;L&#8214;_F )                          two n &times; n tables
+  <p class="cue" hidden>&larr; wider than the screen &mdash; scroll it sideways</p>
+  <pre>CKA = &Sigma;_ab K_ab L_ab / (&#8214;K&#8214;_F &middot; &#8214;L&#8214;_F)
+    (two n &times; n tables)
 
-          = &#8214;Y&#7488;X&#8214;_F&sup2;  /  ( &#8214;X&#7488;X&#8214;_F &middot; &#8214;Y&#7488;Y&#8214;_F )                          q &times; p,  p &times; p,  q &times; q</pre>
+    = &#8214;Y&#7488;X&#8214;_F&sup2; / (&#8214;X&#7488;X&#8214;_F &middot; &#8214;Y&#7488;Y&#8214;_F)
+    (q &times; p, p &times; p and q &times; q)</pre>
   <p>The second line is the same number (the trace of a product can be cycled), computed from much
   smaller matrices: with n = 5,000 and 128 units, 128 &times; 128 instead of two tables of 25 million
   entries. The code uses it.</p>
@@ -421,7 +432,7 @@ P(A,B)   = min( R&sup2;(A&rarr;B), R&sup2;(B&rarr;A) )</pre>
   <div class="primer-body">
   <p>For a reader who knows fMRI, the setup maps almost one to one:</p>
   <p class="cue" hidden>&larr; wider than the screen &mdash; scroll it sideways</p>
-  <div class="scroll"><table class="twocol">
+  <div class="scroll"><table class="prose2">
     <thead><tr><th>This study</th><th>fMRI</th></tr></thead>
     <tbody>
       <tr><td>two agents, A and B</td><td>two subjects</td></tr>
@@ -437,8 +448,10 @@ P(A,B)   = min( R&sup2;(A&rarr;B), R&sup2;(B&rarr;A) )</pre>
   same information. For centred patterns, the squared Euclidean distance between two moments is built
   from K, and K can be recovered from the distances by double centring (the step classical
   multidimensional scaling uses):</p>
-  <pre>D&#8336;&#8348; = &#8214;x&#8336; &minus; x&#8348;&#8214;&sup2; = K&#8336;&#8336; + K&#8348;&#8348; &minus; 2 K&#8336;&#8348;
-K   = &minus;&frac12; H D H ,      H = I &minus; (1/n) 1 1&#7488;       (n &times; n)</pre>
+  <p class="cue" hidden>&larr; wider than the screen &mdash; scroll it sideways</p>
+  <pre>D_ab = &#8214;x_a &minus; x_b&#8214;&sup2; = K_aa + K_bb &minus; 2 K_ab
+K = &minus;&frac12; H D H
+H = I &minus; (1/n) 1 1&#7488;    (n &times; n)</pre>
   <p>So linear CKA is RSA with three specific choices: Euclidean geometry on centred activity (so the
   size of each response matters, where RSA often uses correlation distance), all n &times; n entries
   including the diagonal (RSA usually uses the upper triangle only), and a cosine to compare the two

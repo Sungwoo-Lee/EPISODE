@@ -2290,3 +2290,27 @@ viewport, or that each line break falls immediately after `.`, `_` or `/`.
 - **Why both review methods missed it.** A static review sees a correct `td code` rule. The token is not inside a `<code>` element, and it arrives from a `.data.txt` file at build time, not from the template.
 - **Rule.** The page builder chip-wraps path- and identifier-like tokens in every emitted data-statement cell, and runs them through the same `<wbr>`-after-`/ . _` pass as prose chips. Data-statement columns get a readable `min-width`.
 - **Verifying a fix.** At 1440 px, every `.scroll` box satisfies `scrollWidth === clientWidth` and its cue is hidden.
+
+### F70 — a scroll container outside the cue system clips silently
+
+**What a reader saw.** The maths `<pre>` blocks in the "What Both Agents Compute" primer were cut off
+mid-token on the right at every width (672 and 766 px of content in a 647 px column), with no sign
+that they scroll. Every table and figure on the page had a "wider than the screen" cue; these boxes
+did not.
+
+**Why both review methods missed it.** The geometry checker exempts content that overflows its own
+scroll container. The cue script handles only elements preceded by a `.cue`. A static review reads
+`overflow-x:auto` as "handled".
+
+**Rule.** Every scroll container on a page (`.scroll`, `pre`, anything with `overflow-x:auto`) is
+preceded by a `.cue`, and maths blocks are reflowed so that no line exceeds the desktop column.
+
+**Verifying a fix.** With every `<details>` open, at 1440 px:
+`[...document.querySelectorAll('*')].filter(e => getComputedStyle(e).overflowX === 'auto' && e.scrollWidth > e.clientWidth)`
+returns nothing. At 390 px, every element it returns is preceded by a `.cue`.
+
+**Tool notes from the same gate.**
+- `check_artifact_interactions.py` aborts on nested `<details>`: it clicks a summary whose parent is
+  closed, and the click times out. Open every ancestor first.
+- The layout checker's default pass reports overlaps for summaries of nested closed details. F19's
+  "a summary is painted when its details is closed" holds only when every *ancestor* details is open.
