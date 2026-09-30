@@ -44,11 +44,12 @@ _ARCHIVE_2X2 = os.path.join(
 )
 # The sensory-noise world. Named `_NOISE_05` for the level it was when Bug 4 was fixed;
 # the ladder-inheritance fix of 2026-09-16 re-leveled it to 06 (and re-parented it onto the
-# campfire thermal world). The three interoceptive channels this file checks are declared
-# in the noise config itself, so the re-parenting does not touch them.
+# campfire thermal world), and THIRST_WATER_PLAN (2026-09-30) re-leveled it to 07 on top of
+# the pond world. The interoceptive channels this file checks are declared in the noise
+# config itself, so the re-parenting does not touch them.
 _NOISE_05 = os.path.join(
     _ROOT, "configs", "environment", "experiment", "basic",
-    "06-sensory_noise_10x10.yaml",
+    "07-sensory_noise_10x10.yaml",
 )
 
 
@@ -168,7 +169,8 @@ def test_bug4_interoception_clean_in_05_config():
     params = load_env_params(load_env_config(_NOISE_05))
     order = list(params.noise_modality_order)
 
-    for sensor_name in ("Satiation", "Interoceptive Nociception", "Extero Nociception"):
+    for sensor_name in ("Satiation", "Interoceptive Nociception", "Extero Nociception",
+                        "Hydration"):
         assert sensor_name in order, f"{sensor_name!r} missing from noise_modality_order"
         idx = order.index(sensor_name)
         sigma = float(params.noise_sigmas[idx])

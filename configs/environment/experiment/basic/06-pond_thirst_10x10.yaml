@@ -1,0 +1,55 @@
+# Basic curriculum — 06-pond_thirst_10x10
+# ---------------------------------------------------------------------------
+# NEW 2026-09-30 (docs/develop/active/thirst/THIRST_WATER_PLAN.md). The previous level 06,
+# `06-sensory_noise_10x10.yaml`, was renamed to 07 on the same day and now extends THIS
+# file. Anything trained or recorded under the old "level 06" name is the NOISE world, not
+# this one — check the run date before reading an `lvl06` label.
+#
+# PURPOSE (plain language): the campfire world of level 05 plus a fourth need, THIRST, and
+# one POND to drink from. The pond is a 2x2 block of walkable cells that never runs dry and
+# never moves during an episode; each episode it sits at one of four spots (the quadrant
+# blocks of the grid), drawn uniformly, so its place cannot become a memorised route.
+# Standing on a pond cell drinks, every step. Hydration drains 0.625 per step and is
+# comfortable in the MIDDLE of [0, 200]: resting away from water kills in 160 steps
+# (dehydration), and standing in the pond from the comfortable level kills in 20 steps
+# (over-drinking). Predators walk into the pond freely, so it is also an ambush point where
+# thirst has to be traded against danger.
+#
+# WHAT THIS LEVEL ADDS (everything else is level 05, inherited):
+#   - `water.enabled: true`, with every other water setting inherited from
+#     configs/environment/default.yaml's `water:` block (placement `list` over the four
+#     quadrant candidates, size 2x2, edge margin 1, drain 0.625, drink gain 5.625, max 200,
+#     setpoint 100, smell [0.5, 0, 0, 0, 0.5] per pond, vision [1.0] per cell).
+#   - A RANDOM START HYDRATION drawn uniformly from [0, 200), mirroring level 03's random
+#     start nutrition. User decision (2026-09-29): the full range is kept so the agent
+#     meets every internal-state condition during training. Consequence for survival
+#     numbers: a small share of episodes dies of thirst early whatever the agent does (an
+#     upper bound of ~5 % by step 16; the design page simulated 1.8-2.4 %). Report survival
+#     conditional on start hydration where it matters.
+#   - OBSERVATION grows by one number, "Hydration" (hydration / 200, 0.5 at the comfortable
+#     level), right after Body Temperature: 59 numbers instead of 58.
+#   - Termination codes 6 (dehydration) and 7 (over-drinking) become possible.
+#   - SMELL: the pond smells on the food channel and channel 4, each pond cell carrying a
+#     quarter of the vector, so from afar the pond smells like ONE item, not four. Channel 4
+#     is renamed "Odour C (water-leaning)" below; channel 0 stays "Food", now shared with
+#     water. Deliberately less clear than a dedicated water channel (user decision).
+#
+# It does NOT redeclare `obstacles:` (lists replace wholesale, so a partial list here would
+# drop level 05's campfires or the bush `blocks_animals` flag).
+extends: environment/experiment/basic/05-campfire_thermal_10x10
+
+water:
+  enabled: true
+  random_start_hydration: true
+  start_hydration_low: 0.0
+  start_hydration_high: 200.0
+
+sensory:
+  # Display names only (the episode video reads them; the environment never does). A list,
+  # so it is redeclared in full.
+  olfactory_channel_names:
+    - {name: "Food",    qualifier: "shared with water"}
+    - {name: "Odour A", qualifier: "predator-leaning"}
+    - {name: "Odour B", qualifier: "neutral-leaning"}
+    - {name: "Bush",    qualifier: ""}
+    - {name: "Odour C", qualifier: "water-leaning"}

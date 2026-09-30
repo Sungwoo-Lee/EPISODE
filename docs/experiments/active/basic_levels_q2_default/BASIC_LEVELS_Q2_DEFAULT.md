@@ -80,6 +80,8 @@ pre-flight discriminator — a run whose banner prints the wrong number loaded t
 | `04-jump_attack_10x10` | **52** | the two earlier neuromodulator grids' world, at width 27 |
 | `05-campfire_thermal_10x10` | **58** | adds Body Temperature 1 + Thermoception 5 |
 | `06-sensory_noise_10x10` | **58** | |
+| *(note, 2026-09-30)* `06-pond_thirst_10x10` | **59** | NEW level 06 ([[thirst_water_plan]]): the campfire world plus a pond and thirst; adds Hydration 1. Not part of this study |
+| *(note, 2026-09-30)* `07-sensory_noise_10x10` | **59** | the noise level above, RENAMED 06 → 07 and re-parented onto the pond world. This study's `06-sensory_noise` runs (width 58) used the pre-rename world |
 
 A run printing **27** loaded an archived eight-channel config and is void.
 

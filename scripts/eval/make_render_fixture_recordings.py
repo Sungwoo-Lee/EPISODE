@@ -74,7 +74,11 @@ DEFAULT_OUT = "results/render_audit/recordings"
 # campfires and body temperature — so fixtures recorded before that date are a different
 # world, not a different name for the same one.
 CAMPFIRE = BASIC_PREFIX + "05-campfire_thermal_10x10.yaml"
-NOISE_WORLD = BASIC_PREFIX + "06-sensory_noise_10x10.yaml"
+# Re-leveled again 2026-09-30 (THIRST_WATER_PLAN): the noise world is now level 07 and sits
+# on the NEW level 06, the pond world (campfire world + pond + thirst), so noise-world cells
+# now carry the pond and a Hydration row too. POND_WORLD is level 06 itself (cell W1).
+NOISE_WORLD = BASIC_PREFIX + "07-sensory_noise_10x10.yaml"
+POND_WORLD = BASIC_PREFIX + "06-pond_thirst_10x10.yaml"
 
 # Where override values that reproduce an archived world were copied from, AS TEXT.
 _LADDER = "configs/environment/experiment/archive/sensory_ladder/"

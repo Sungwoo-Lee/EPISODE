@@ -62,7 +62,8 @@ MAINTAINED = [
     "configs/environment/experiment/basic/03-random_init_10x10.yaml",
     "configs/environment/experiment/basic/04-jump_attack_10x10.yaml",
     "configs/environment/experiment/basic/05-campfire_thermal_10x10.yaml",
-    "configs/environment/experiment/basic/06-sensory_noise_10x10.yaml",
+    "configs/environment/experiment/basic/06-pond_thirst_10x10.yaml",
+    "configs/environment/experiment/basic/07-sensory_noise_10x10.yaml",
 ]
 
 #: The campfire temperature world -- matrix cell M4. Its observation lacks
@@ -612,7 +613,7 @@ def test_the_action_badge_sits_in_the_arena_title_strip_and_clears_the_grid():
 # --------------------------------------------------------------------------
 def test_real_available_is_identical_for_two_contexts_of_one_run():
     """Every episode of a run shares params, so the REAL slot cannot move."""
-    params = _params("configs/environment/experiment/basic/06-sensory_noise_10x10.yaml")
+    params = _params("configs/environment/experiment/basic/07-sensory_noise_10x10.yaml")
     a = LayoutContext.from_params(params)
     b = LayoutContext.from_params(params)
     assert a.real_available == b.real_available

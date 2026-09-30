@@ -52,6 +52,7 @@ FIXTURE = os.path.join(_REPO, G.OUT_REL)
 # basic/06-sensory_noise; after the ladder rename it is basic/07 (water forced off below).
 _BASIC = os.path.join("configs", "environment", "experiment", "basic")
 CURRENT_PATH = dict(G.WORLDS)
+CURRENT_PATH["noise06"] = os.path.join(_BASIC, "07-sensory_noise_10x10.yaml")
 
 # Termination codes each world MUST show across its two variants, HARD-CODED (plan §T1,
 # reviewer M4): deriving them from the fixture would be circular. 1 step limit,

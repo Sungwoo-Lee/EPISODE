@@ -681,8 +681,9 @@ cd /media/nas01/projects/Interoceptive-AI/grid_world_pain
 # check passed jax 0.9.0.1).
 # CIFS-bypass: launched via /tmp script — this file is the audit record.
 # ---------------------------------------------------------------------------
+# NOTE 2026-09-30 (THIRST_WATER_PLAN): --config below repointed 06-sensory_noise -> 07-sensory_noise (the file was renamed and now sits on the pond world); the 2026-07-03 run used the old 06 file.
 /home/vncuser/miniconda3/envs/grid_world_pain/bin/python train.py \
-  --config configs/environment/experiment/basic/06-sensory_noise_10x10.yaml \
+  --config configs/environment/experiment/basic/07-sensory_noise_10x10.yaml \
   --agent_config configs/models/recurrent_ppo/recurrent_ppo.yaml \
   --num-envs 16 --episodes 10000000 --checkpoint-frequency 100000 \
   --device cuda:0 --log-interval 50 \
@@ -4065,8 +4066,9 @@ cd /media/nas01/projects/Interoceptive-AI/grid_world_pain
 # Representative active command (run 14 — level 06, modulated arm, node 108 cuda:1).
 # The other thirteen differ only in --config, --agent_config, --device and the tag pair.
 # ---------------------------------------------------------------------------
+# NOTE 2026-09-30 (THIRST_WATER_PLAN): --config below repointed 06-sensory_noise -> 07-sensory_noise (the file was renamed and now sits on the pond world, width 59); the run recorded above used the old 06 file (width 58).
 /home/vncuser/miniconda3/envs/grid_world_pain/bin/python train.py \
-  --config configs/environment/experiment/basic/06-sensory_noise_10x10.yaml \
+  --config configs/environment/experiment/basic/07-sensory_noise_10x10.yaml \
   --agent_config configs/models/recurrent_ppo/nmn_input_site_grid_gaenorm/nmngaenorm_t16quad_ALL.yaml \
   --episodes 10000000 --device cuda:1 --log-interval 10 \
   --tag "rppo_basicq2_lvl06_t16quad_s42" --wandb-name "rppo_basicq2_lvl06_t16quad_s42" \

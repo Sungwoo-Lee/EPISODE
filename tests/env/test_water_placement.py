@@ -46,12 +46,12 @@ def _release_compiled_programs():
     jax.clear_caches()
 
 
+LVL06 = os.path.join(_BASIC, "06-pond_thirst_10x10.yaml")
+
+
 def _lvl06_dict():
-    """Level 06 (the pond world): the campfire world with water on."""
-    d = copy.deepcopy(load_env_config(LVL05).to_dict())
-    d["water"].update(enabled=True, random_start_hydration=True,
-                      start_hydration_low=0.0, start_hydration_high=200.0)
-    return d
+    """Level 06, the pond world, resolved as the trainer resolves it."""
+    return copy.deepcopy(load_env_config(LVL06).to_dict())
 
 
 def _params(d):

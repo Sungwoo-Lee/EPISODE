@@ -1,5 +1,16 @@
-# Basic curriculum — 06-sensory_noise_10x10
+# Basic curriculum — 07-sensory_noise_10x10
 # ---------------------------------------------------------------------------
+# RE-LEVELED 2026-09-30 (docs/develop/active/thirst/THIRST_WATER_PLAN.md): this file was
+# `06-sensory_noise_10x10.yaml` and extended level 05 (the campfire world). It is now level
+# 07 and extends the NEW level 06 (`06-pond_thirst_10x10.yaml`: the campfire world plus a
+# pond and thirst). THE WORLD CHANGED: it now also carries the pond and thirst — one more
+# observation number (Hydration, 59 in all), one more smell pool, codes 6/7 — on top of
+# everything below. Anything trained or recorded under the old `06-sensory_noise` name is a
+# DIFFERENT world from this file. Analysis scripts that label past runs of the noise world
+# `lvl06` keep that label (they name runs trained on the old file); check the run date.
+# Hydration noise is set to sigma 0.0 EXPLICITLY below, so interoception stays clean.
+#
+# (Older history of this file, kept as written:)
 # RE-LEVELED 2026-09-16: this file was `05-sensory_noise_10x10.yaml` and extended level 04
 # directly. It is now level 06 and extends the new level 05 (the campfire thermal world),
 # so that each rung of the ladder inherits the rung below it. THE WORLD CHANGED: it now
@@ -68,7 +79,7 @@
 # is true, including channels with sigma 0.0. default.yaml's thermal clip bounds were
 # derived with >2x headroom on both ends precisely so they cannot bind (the measured field
 # peak is +151.9 against a +400 ceiling), so the clip passes the signal through unchanged.
-extends: environment/experiment/basic/05-campfire_thermal_10x10
+extends: environment/experiment/basic/06-pond_thirst_10x10
 
 perceptual_noise:
   enabled: true
@@ -89,7 +100,13 @@ perceptual_noise:
       mode: "constant"
       sigma: 0.0
       injury_noise_scale: 0.0
-    # --- THREAT channel: clear when healthy, heavily degraded when injured (the lever) ---
+    # Hydration (level 06's thirst) is interoception too: stated clean HERE, not inherited
+    # (KNOWN_BUGS ~#371: a noise world that claimed clean interoception inherited 10x noise).
+    hydration:
+      mode: "constant"
+      sigma: 0.0
+      injury_noise_scale: 0.0
+# --- THREAT channel: clear when healthy, heavily degraded when injured (the lever) ---
     olfaction:
       mode: "state_dependent"
       sigma: 0.15

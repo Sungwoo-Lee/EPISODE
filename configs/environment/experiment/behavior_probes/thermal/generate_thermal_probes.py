@@ -58,7 +58,7 @@ from src.environment.config_loader import (                          # noqa: E40
 SRC_DIR = 'configs/environment/experiment/behavior_probes/core/avoidance'
 OUT_ROOT = 'configs/environment/experiment/behavior_probes/thermal'
 GEN = f'{OUT_ROOT}/generate_thermal_probes.py'
-NOISE_SRC = 'configs/environment/experiment/basic/06-sensory_noise_10x10.yaml'
+NOISE_SRC = 'configs/environment/experiment/basic/07-sensory_noise_10x10.yaml'  # renamed from 06 on 2026-09-30
 DOC = 'docs/experiments/active/behavior_measures/thermal_probe_battery_bush_hiding.md'
 
 # Config coordinates are 1-indexed against the numpy array: config [R, C] is array

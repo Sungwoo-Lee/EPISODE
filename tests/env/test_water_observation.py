@@ -55,12 +55,12 @@ def _params(d):
     return load_env_params(Config(copy.deepcopy(d)))
 
 
+LVL06 = os.path.join(_BASIC, "06-pond_thirst_10x10.yaml")
+
+
 def _lvl06_dict():
-    """Level 06 (the pond world): the campfire world with water on."""
-    d = copy.deepcopy(load_env_config(LVL05).to_dict())
-    d["water"].update(enabled=True, random_start_hydration=True,
-                      start_hydration_low=0.0, start_hydration_high=200.0)
-    return d
+    """Level 06, the pond world, resolved as the trainer resolves it."""
+    return copy.deepcopy(load_env_config(LVL06).to_dict())
 
 
 def _offset(bd, name):
@@ -222,3 +222,16 @@ def test_pond_cells_light_the_visual_channel():
     for k in pond_cells:
         assert near[k] > far[k] + 0.1, (k, near[k], far[k])
     assert near.sum() > far.sum()
+
+
+# ── level 07: hydration noise is stated clean (C5) ────────────────────────────
+
+def test_level07_hydration_noise_is_clean():
+    """KNOWN_BUGS ~#371: read from the LOADED params, not the YAML. Hydration only -- the
+    noise rung does not state a body_temperature sigma (inherited 0.0; an older, separate
+    open item)."""
+    p = load_env_params(load_env_config(os.path.join(_BASIC, "07-sensory_noise_10x10.yaml")))
+    assert p.perceptual_noise_enabled and p.water_enabled
+    order = list(p.noise_modality_order)
+    i = order.index("Hydration")
+    assert float(p.noise_sigmas[i]) == 0.0 and int(p.noise_modes[i]) == 1
