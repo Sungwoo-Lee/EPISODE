@@ -1878,6 +1878,58 @@ Implemented by: developer
 
 Implemented by: developer
 
+### A4 (across worlds) on the evidence manifest (2026-09-30, 11:26–13:05)
+
+**Summary.** The A4 driver (`run_across_worlds.py`, commits `c22516cc` and `ad77f39e`) was built and tested, then code-reviewed (`docs/reviews/code_a4_across_worlds.md`: safe to run, both tooling readings sound; M1, M2, L1–L4 and O1 applied). It ran on CPU with 4 workers. **`evaluate_A4`, verbatim: every layer and the study read `blocked by gate G4`.** The failed gate is G4's positive control on the **passive** world's probe. It is not a code or data defect. The movement and co-movement numbers were computed and are reported below. They decide nothing.
+
+**Why G4 fails on the passive probe** (`tmp/20260930_a4_g4_passive_diagnostic.txt`).
+- The registered positive control reads satiation from the probe's raw input, defined as the symlog of the observation, and requires R² ≥ 0.99.
+  - Active probe: 0.9922 (passes).
+  - **Passive probe: 0.98932 (fails by 0.0007).**
+- The observed satiation channel is an exact linear rescaling of the stored satiation: satiation / 200, linear R² 1.00000 on both worlds. So the target values are right.
+- The shortfall comes from the symlog, a nonlinear transform. On that one column alone, R² is 0.991 on the active world and 0.986 on the passive world, where satiation is spread differently.
+- The shuffled controls pass (≤ 0.0034). `steps_remaining` shuffled is −238, the rare-death subset's known standardisation blow-up; it passes the ≤ 0.02 bound.
+- **For `experiment-designer`:** this is a gate that fails where the rule has to say how the case reads, which is reason (2) of the rules' `revision_policy`. The tooling changes nothing.
+
+**Other gates.**
+- G1, G2 (the `:prev` captures included), G3 and G6 pass for every cell and both movement probes.
+- G5: all 6 runs enter.
+- G4 passes on the active-world cells and fails on the passive-world cells (stage_end:1, stage_end:3).
+
+**A1 at each stage end on its own world (verbatim):**
+- **stage_end:0 / active:** enc.out different; rnn.state and rnn.out uninformative (no verdict); actor.out different; critic.out undetermined at 3 seeds.
+- **stage_end:2 / active and final / active:** enc.out, actor.out and critic.out different; rnn.state and rnn.out uninformative (no verdict).
+- **stage_end:1 / passive and stage_end:3 / passive:** blocked by gate G4 on every layer.
+
+**Movement gate inputs** (per seed: mean movement minus within-stage drift, with the bootstrap 5th percentile; every seed of both arms is above 0 on every layer):
+
+| Layer | Ordinary seeds (q_lo) | Modulated seeds (q_lo) |
+|---|---|---|
+| enc.out | +0.074, +0.098, +0.090 | +0.118, +0.110, +0.085 |
+| rnn.state | +0.149, +0.170, +0.153 | +0.206, +0.181, +0.178 |
+| rnn.out | +0.149, +0.170, +0.153 | +0.173, +0.144, +0.153 |
+| actor.out | +0.161, +0.172, +0.165 | +0.197, +0.155, +0.160 |
+| critic.out | +0.110, +0.115, +0.104 | +0.090, +0.103, +0.072 |
+
+**Co-movement r** (Pearson correlation of the 8-entry movement profiles):
+
+| Layer | OO band [L, U] | MO_diff points | MO_diff mean, 90 % interval | MM points |
+|---|---|---|---|---|
+| enc.out | [0.748, 0.974] | 0.477–0.898 | [0.599, 0.784] | 0.738–0.809 |
+| rnn.state | [0.936, 0.995] | 0.874–0.947 | [0.899, 0.915] | 0.828–0.966 |
+| rnn.out | [0.936, 0.995] | 0.810–0.906 | [0.843, 0.867] | 0.867–0.982 |
+| actor.out | [0.989, 0.999] | 0.949–0.982 | [0.951, 0.969] | 0.858–0.977 |
+| critic.out | [0.948, 0.993] | 0.756–0.966 | [0.833, 0.909] | 0.913–0.960 |
+
+**Provenance and fits.**
+- Output: `results/analysis/algorithmic_null/algorithmic_null_mayrep/across_worlds.{json,csv}`, stamped with rules `5ef6f731` and code `ad77f39e`. `git_dirty` is true only because of another session's uncommitted page files.
+- The reused final/active A1 records `similarity.json`'s own git sha (`194db302`), dirty flag and captures sha, which is checked equal.
+- Fits: 3,000 movement fits, 3 at a grid edge, 1,800 with dropped predictor columns.
+- The co-movement profile note (review O1) is in the data statement.
+- Summary: `tmp/20260930_evidence_a4_summary.txt`.
+
+Implemented by: developer
+
 ## Verification Report
 
 > **Verified by**:
