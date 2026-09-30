@@ -49,11 +49,13 @@ a.cite::before { content:"["; } a.cite::after { content:"]"; }
 <div class="wrap">
 
 <header class="col">
-  <p class="eyebrow">grid_world_pain &middot; neuromodulated vs ordinary agent &middot; plan, results pending</p>
+  <p class="eyebrow">grid_world_pain &middot; neuromodulated vs ordinary agent &middot; first results, reviewed</p>
   <h1>What Both Agents Compute</h1>
   <p class="lede">For a month the agent with a neuromodulator and the agent without one have come out
   almost identical in every world we built. Before designing a better modulator, this page asks what
-  computation the two agents share, and only then why the modulator adds nothing to it.</p>
+  computation the two agents share, and only then why the modulator adds nothing to it. The first
+  answers are in: at the layers the modulator acts on, the two agents are less alike than two
+  ordinary agents are, while surviving equally well.</p>
 </header>
 
 <section class="col">
@@ -71,10 +73,32 @@ a.cite::before { content:"["; } a.cite::after { content:"]"; }
     <p><strong>Then:</strong> why does the modulator not help?</p>
   </div>
   <p>This page collects the evidence behind that reordering, the algorithmic explanations a review of
-  the literature turned up, and the measurements planned to answer both questions. <strong>No new
-  analysis has been run yet.</strong> The planned sections below say what will be measured, on which
-  data, and what each outcome would mean. Most of them wait on a training run that started on
-  2026-09-29.</p>
+  the literature turned up, and the measurements made to answer both questions. The comparison ran on
+  six freshly trained agents, three of each kind, trained on the same three random seeds.
+  Every verdict word on the page comes from decision rules written down before any number existed, and
+  two independent reviews checked what the page may claim from them.</p>
+  <div class="callout">
+    <p class="eyebrow">Headline so far</p>
+    <p>To judge whether two agents are alike inside, we check how well one agent's layer activity
+    predicts the other's on the same inputs, and compare that with the range spanned by pairs of
+    ordinary agents trained from different seeds (the <em>ordinary band</em>). At the end of training
+    the modulated agent's encoder output, actor hidden layer and critic hidden layer are less
+    interchangeable with an ordinary agent's than two ordinary agents are with each other (all 6 pairs
+    below the ordinary band, both directions on the encoder and actor), while both survive equally
+    well. Modulated agents are also less interchangeable with each other than ordinary agents are.
+    Whether the difference reaches the memory the modulator never touches, the test cannot say.</p>
+    <p>All three layers that differ are places where the modulator applies its gain and offset, so
+    they receive its input by construction. The finding is that the agents are <strong>different at
+    the layers the modulator acts on</strong>, not that the main network learned a different function.
+    Survival is equal but measured at a ceiling: both agents reach the 500-step episode limit in about
+    94&nbsp;% of episodes.</p>
+  </div>
+  <p>On Question 2, when the modulator starts to matter during training was measured in 16 worlds.
+  Some of its measures make half of their change before the agent's survival levels off; a measure
+  of the size of its weights makes half of its growth after, as the main network's own weights do.
+  The pre-registered test therefore points both ways (section 04). Freezing its modulation after
+  survival levels off costs about 31&ndash;33 survival steps in all 16 worlds (a descriptive number, not a
+  registered test). Section 05 says what this changes for the search for a helpful modulator.</p>
 </section>
 
 <hr>
@@ -97,7 +121,7 @@ a.cite::before { content:"["; } a.cite::after { content:"]"; }
       <tr><td>Curriculum levels, Waves 1 and 2</td><td class="n">28</td><td>1</td><td>+6.8 to &minus;3.1 steps across levels</td></tr>
       <tr><td>Level-05 body-rules factorial, 16 worlds</td><td class="n">32</td><td>1</td><td>+3.6 steps, the same sign in 16 of 16 worlds</td></tr>
       <tr class="pick"><td>May probe, older agent, alternating predator</td><td class="n">2</td><td>1</td><td>+107 and +132 steps; the only large positive, unreplicated</td></tr>
-      <tr><td>May replication, from scratch</td><td class="n">6</td><td>3</td><td>training started 2026-09-29</td></tr>
+      <tr><td>May replication, from scratch</td><td class="n">6</td><td>3</td><td>+1.46 steps at the end of training (floored standard error 3.6); both near the 500-step cap</td></tr>
     </tbody>
   </table></div>
   <p class="foot">From the cross-study dossier (see the footer). Most cells are one run per agent, so on
@@ -152,7 +176,7 @@ FiLM:       h = ReLU( &gamma;(c)&middot;(W_x&middot;x + b) + &beta;(c) )</pre>
   positive result here came from the May probe, whose predator alternated between dangerous and
   harmless phases.</p>
 
-  <h3>3. Training gives the modulator no reason to carry context, and it wakes up late</h3>
+  <h3>3. Training gives the modulator no reason to carry context, and it may wake up late</h3>
   <p>One optimiser updates every parameter, modulator included, with the same learning rate
   (gradient clip 0.5, then Adam at 5&times;10<sup>&minus;4</sup>), no weight decay and no objective of its
   own. The critic's error also trains the modulator. The main network is roughly 100 times larger and
@@ -160,7 +184,9 @@ FiLM:       h = ReLU( &gamma;(c)&middot;(W_x&middot;x + b) + &beta;(c) )</pre>
   of the modulator's gain variation follows the situation; the rest is a fixed per-unit setting the main
   network could have learned itself. And its share of the gradient grows over training, reaching 40&ndash;75%
   in some arms only by the end. A part that starts working only in the second half of training can shape
-  the final solution but cannot shorten the early climb, where a faster-learning advantage would appear.</p>
+  the final solution but cannot shorten the early climb, where a faster-learning advantage would appear.
+  This was a candidate when the page was planned; section 04 (B2) reports what the timing measurement
+  found, and it does not settle the question either way.</p>
 
   <h3>4. The measurements could not see the kind of gain FiLM usually gives</h3>
   <p>Every comparison so far used final performance. In reinforcement learning, FiLM's reported advantage
@@ -181,13 +207,25 @@ FiLM:       h = ReLU( &gamma;(c)&middot;(W_x&middot;x + b) + &beta;(c) )</pre>
 <section class="col">
   <h2><span class="num">03</span>Question 1: what do the two agents compute?</h2>
   <p>If the two agents converge on the same information processing, the evidence should show it at the
-  level of their internal activity, not only their scores. Two measures, both run on identical inputs:
-  one stored episode is fed to both agents, with their memory reset at the first step, so every
-  activation is paired with the other agent's activation at the same moment.</p>
+  level of their internal activity, not only their scores. The measures all run on identical inputs:
+  one stored episode is fed to every agent, with its memory reset at the first step, so every
+  activation is paired with the other agent's activation at the same moment. The data are the May
+  replication: three ordinary and three modulated agents trained from scratch through five stages
+  (different worlds), read at the end of training in the final world, where a predator is active.
+  A reading taken at the end of the first stage was also made and is shown beside it as interim.</p>
+  <div class="callout">
+    <p class="eyebrow">Answer so far</p>
+    <p>The two agents do not converge on interchangeable activity at the layers the modulator acts on:
+    at the encoder, actor and critic they are further apart than two ordinary agents from different
+    seeds, while surviving equally well (A1, A3). They hold the same information in broadly the same
+    places, with hunger slightly less linearly readable from the modulated agent's encoder output and
+    memory state (A2). Whether their memories differ, the registered test cannot say. Whether they
+    move together from world to world (A4) is still being built.</p>
+  </div>
 
   <div class="plans">
   <div class="plan" id="a1">
-    <div class="plan-top"><span class="plan-id">A1</span><h3>Layer similarity (CKA)</h3><span class="pstat build">Needs tooling</span></div>
+    <div class="plan-top"><span class="plan-id">A1</span><h3>Layer similarity</h3><span class="pstat ready">Measured, reviewed</span></div>
     <p>Centred kernel alignment{{CITE:kornblith}} asks whether two layers arrange the same set of inputs
     in the same way: whether inputs that look alike to one agent's layer also look alike to the other's.
     It compares layers of different networks without needing their units to line up.</p>
@@ -199,7 +237,45 @@ FiLM:       h = ReLU( &gamma;(c)&middot;(W_x&middot;x + b) + &beta;(c) )</pre>
       measure (SVCCA{{CITE:raghu}}, or how well one agent's layer linearly predicts the other's).</dd>
       <dt>Reads as</dt><dd>High similarity beyond the seed yardstick (A3): the agents represent the world
       the same way. High only within the same seed: inherited from the shared start.</dd>
+      <dt>Registered statistic</dt><dd>Mutual linear predictivity: how much of one agent's layer activity
+      a linear map from the other agent's layer recovers on held-out episodes, taking the weaker of the
+      two directions. CKA is reported beside it and decides nothing.</dd>
     </dl>
+    <h4>Result, end of training</h4>
+    <p class="cue" hidden>&larr; wider than the screen &mdash; scroll it sideways; the right-hand columns are cut off</p>
+    <div class="scroll"><table class="evidence">
+      <thead><tr><th>Layer</th><th>Modulator acts here?</th><th>End of training</th><th>End of stage 1 (interim)</th></tr></thead>
+      <tbody>
+        <tr><td>Encoder output</td><td>yes</td><td>different: all 6 modulated&ndash;ordinary pairs below the ordinary band, both directions</td><td>different</td></tr>
+        <tr><td>Memory state (carried from step to step)</td><td>no; only its input is modulated upstream</td><td>no verdict (the test cannot tell trained from untrained networks here)</td><td>different</td></tr>
+        <tr><td>Memory output</td><td>yes</td><td>no verdict (same reason)</td><td>different</td></tr>
+        <tr><td>Actor hidden layer</td><td>yes</td><td>different: all 6 pairs below the band, both directions</td><td>different</td></tr>
+        <tr><td>Critic hidden layer</td><td>yes</td><td>different: all 6 pairs below the band</td><td>undetermined</td></tr>
+      </tbody>
+    </table></div>
+    <p class="foot">Interim readings are provisional by rule; the end-of-training reading is the verdict.
+    Encoder and critic also carry the rules' qualifier that modulated agents differ among themselves
+    more than ordinary agents do; in words, the modulated&ndash;modulated pairs sit below the ordinary
+    band on every layer.</p>
+    <ul class="plainlist">
+      <li><strong>The three layers that differ are all places where the modulator acts.</strong> Each
+      receives the modulator's gain and offset by construction, so the result says the agents are
+      different at the layers the modulator acts on. It does not say the main network learned a
+      different function.</li>
+      <li><strong>Critic:</strong> different; the modulated critic carries activity the ordinary critic
+      cannot predict, and keeps more of its units active (58&ndash;66 vs 37&ndash;48 of 128).</li>
+      <li><strong>Memory:</strong> on the memory layers the registered test cannot tell trained from
+      untrained networks, so it gives no verdict; the secondary measure (CKA, reported, not
+      verdict-bearing) puts modulated-vs-ordinary below the ordinary band on all 6 pairs there too.</li>
+      <li><strong>Why the memory reading changed between stage 1 and the end.</strong> The memory
+      layers read "different" at the end of stage 1 and "no verdict" at the end of training. That is a
+      change in a gate, not in the agents: the rules refuse a verdict where untrained networks score as
+      high as trained ones, and between the two points the ordinary band moved up until it touched the
+      untrained band. The critic moved the other way, from "undetermined" to "different".</li>
+      <li><strong>Other ways of scoring it</strong> (Figure A1b, descriptive): the direction a fixed
+      per-unit gain cannot change, modulated predicting ordinary, is below every ordinary pair for all
+      6 pairs on the encoder, both memory layers and the actor; on the critic it overlaps.</li>
+    </ul>
     <figure>
       <img data-fig="an01_similarity_layers" alt="Five rows, one per network layer, each with two panels of horizontal dot strips: pairs of ordinary agents, modulated-versus-ordinary pairs at different seeds with their mean, pairs of modulated agents, and pairs of untrained networks, against a shaded ordinary-versus-ordinary band. The left column prints each layer's verdict text.">
       <p class="zoomhint">Click the figure to view it full size</p>
@@ -245,7 +321,7 @@ FiLM:       h = ReLU( &gamma;(c)&middot;(W_x&middot;x + b) + &beta;(c) )</pre>
   </div>
 
   <div class="plan" id="a2">
-    <div class="plan-top"><span class="plan-id">A2</span><h3>Decoding profiles</h3><span class="pstat build">Needs tooling</span></div>
+    <div class="plan-top"><span class="plan-id">A2</span><h3>Decoding profiles</h3><span class="pstat ready">Measured, reviewed</span></div>
     <p>A small linear readout is trained to recover a quantity from each layer. How well it succeeds,
     layer by layer, is that agent's decoding profile.</p>
     <dl>
@@ -257,6 +333,20 @@ FiLM:       h = ReLU( &gamma;(c)&middot;(W_x&middot;x + b) + &beta;(c) )</pre>
       <dt>Reads as</dt><dd>Matching profiles: the same information is present in the same places. A
       mismatch shows where the modulated agent holds information differently.</dd>
     </dl>
+    <h4>Result, end of training</h4>
+    <ul class="plainlist">
+      <li><strong>Hunger</strong> (registered reading: differs): hunger is slightly less linearly readable
+      from the modulated agent's encoder output and memory state (R&sup2; lower by ~0.02); both agents
+      encode it at every layer, far above the clock baseline.</li>
+      <li><strong>Injury</strong> (registered reading: undetermined): descriptively, the modulated
+      agent's encoder output holds the body's injury level better (R&sup2; higher by about 0.22). That
+      is one layer, and the rules do not count a one-layer difference.</li>
+      <li><strong>Distance to the nearest predator</strong> (undetermined): a one-layer difference at the
+      critic, not counted.</li>
+      <li><strong>Survival steps remaining</strong>: blocked by gate G6. Only episodes that end in death
+      have a known remaining lifetime, and too few of them remain for the minimum number of held-out
+      episode groups the rules require.</li>
+    </ul>
     <figure>
       <img data-fig="an02_decoding_profiles" alt="Four panels. Three show held-out R-squared across six layers from the raw input to the critic, one thin line per agent in blue or orange, shaded seed ranges and a dashed clock baseline. The fourth, survival steps remaining, is a grey box stating it is blocked by a gate.">
       <p class="zoomhint">Click the figure to view it full size</p>
@@ -288,7 +378,7 @@ FiLM:       h = ReLU( &gamma;(c)&middot;(W_x&middot;x + b) + &beta;(c) )</pre>
   </div>
 
   <div class="plan" id="a3">
-    <div class="plan-top"><span class="plan-id">A3</span><h3>Seed yardstick</h3><span class="pstat wait">Waiting on training</span></div>
+    <div class="plan-top"><span class="plan-id">A3</span><h3>Seed yardstick</h3><span class="pstat ready">Measured, reviewed</span></div>
     <p>A similarity between the modulated and ordinary agent means little on its own. It is judged
     against the similarity between two ordinary agents trained from different seeds.</p>
     <p class="cue" hidden>&larr; wider than the screen &mdash; scroll it sideways; the right-hand columns are cut off</p>
@@ -301,13 +391,23 @@ FiLM:       h = ReLU( &gamma;(c)&middot;(W_x&middot;x + b) + &beta;(c) )</pre>
       </tbody>
     </table></div>
     <dl>
-      <dt>Data</dt><dd>The May replication: 3 seeds of each agent, started 2026-09-29 and still training.
-      It is the only design on disk with several seeds of both agents that loads under current code.</dd>
+      <dt>Data</dt><dd>The May replication: 3 seeds of each agent, trained to the end of all five stages.
+      It is the only design on disk with several seeds of both agents that loads under current code.
+      Same-seed agents were checked to start from bitwise identical main-network weights.</dd>
     </dl>
+    <h4>Result, end of training</h4>
+    <p>Pattern (c), <strong>different processing, same outcome, at the ceiling</strong>: both agents
+    reach the 500-step cap in about 94&nbsp;% of episodes; the 1.5-step gap is inside the registered
+    seed-noise floor. The same-seed pairs are no closer than different-seed pairs, so the difference
+    is not an inheritance from the shared start. Pattern (c) holds on exactly 3 of 5 layers (encoder,
+    actor, critic), the minimum the rules require; the two memory layers get no verdict ("none of the
+    three patterns"), because A1 gives none there. The results are in Figure A3 above.</p>
   </div>
 
   <div class="plan" id="a4">
-    <div class="plan-top"><span class="plan-id">A4</span><h3>Across worlds</h3><span class="pstat wait">Waiting on training</span></div>
+    <div class="plan-top"><span class="plan-id">A4</span><h3>Across worlds</h3><span class="pstat build">Being built</span></div>
+    <p class="slot"><b>Status:</b> the analysis is being built and is not yet on this page. The
+    activity it needs was captured at every stage end during the evidence run.</p>
     <p>How far each agent's processing moves between worlds, and whether the two agents move together.
     If both change a great deal from world to world while staying close to each other, their shared
     processing tracks the world rather than the architecture.</p>
@@ -319,13 +419,13 @@ FiLM:       h = ReLU( &gamma;(c)&middot;(W_x&middot;x + b) + &beta;(c) )</pre>
   </div>
   </div>
 
-  <h4>What Question 1 needs before it can run</h4>
+  <h4>How Question 1 was run</h4>
   <div class="col stages">
-    <div class="stage"><div class="s">1</div><div class="b"><div class="t">Capture intermediate layers</div><div class="d">An opt-in path in the network that returns each layer's activity, with a test that switching it on changes no output.</div></div></div>
-    <div class="stage"><div class="s">2</div><div class="b"><div class="t">Replay stored episodes through an agent</div><div class="d">Trajectory stores already hold the exact observation the policy saw at each step (<code>obs_noised</code>) and the true hunger, injury and positions, so no new data collection is needed for existing runs.</div></div></div>
-    <div class="stage"><div class="s">3</div><div class="b"><div class="t">Write the similarity and decoding scripts</div><div class="d">Episode-level splits; a rescaling-robust measure beside CKA.</div></div></div>
-    <div class="stage"><div class="s">4</div><div class="b"><div class="t">Pilot on a level-05 pair</div><div class="d">A test of the tools, not evidence: that pair shares a seed.</div></div></div>
-    <div class="stage"><div class="s">5</div><div class="b"><div class="t">Run on the May replication</div><div class="d">All six agents, layer by layer, stage by stage.</div></div></div>
+    <div class="stage"><div class="s">1</div><div class="b"><div class="t">Capture intermediate layers &mdash; done</div><div class="d">An opt-in path in the network returns each layer's activity, with a test that switching it on changes no output.</div></div></div>
+    <div class="stage"><div class="s">2</div><div class="b"><div class="t">Replay stored episodes through an agent &mdash; done</div><div class="d">Trajectory stores hold the exact observation the policy saw at each step (<code>obs_noised</code>) and the true hunger, injury and positions; every agent reproduces its own stored actions on replay.</div></div></div>
+    <div class="stage"><div class="s">3</div><div class="b"><div class="t">Similarity and decoding scripts &mdash; done</div><div class="d">Episode-level splits; a rescaling-robust measure as the registered statistic, CKA beside it.</div></div></div>
+    <div class="stage"><div class="s">4</div><div class="b"><div class="t">Pilot on a level-05 pair &mdash; done</div><div class="d">A test of the tools, not evidence: that pair shares a seed (Figure P).</div></div></div>
+    <div class="stage"><div class="s">5</div><div class="b"><div class="t">Run on the May replication &mdash; done for the end of training; the across-worlds step (A4) is being built</div><div class="d">All six agents, layer by layer; the stage-by-stage activity is captured and waits for A4.</div></div></div>
   </div>
 </section>
 
@@ -334,11 +434,14 @@ FiLM:       h = ReLU( &gamma;(c)&middot;(W_x&middot;x + b) + &beta;(c) )</pre>
 <section class="col">
   <h2><span class="num">04</span>Question 2: why does the modulator not help?</h2>
   <p>These test the first and third candidate reasons directly. They come second because their
-  results are easier to read once Question 1 has said what the two agents share.</p>
+  results are easier to read once Question 1 has said what the two agents share. B2 has been measured
+  and reviewed; B1 needs new training and a decision to launch it.</p>
 
   <div class="plans">
   <div class="plan" id="b1">
     <div class="plan-top"><span class="plan-id">B1</span><h3>Break the shared start</h3><span class="pstat decide">Needs a decision</span></div>
+    <p class="slot"><b>Status:</b> needs a decision. Either option means training new agents; nothing
+    has been launched.</p>
     <p>Two ways to stop the modulated agent from beginning as a copy of the ordinary one.</p>
     <ul class="plainlist">
       <li>Train modulated agents whose main network starts from a <strong>different seed</strong> than
@@ -354,9 +457,10 @@ FiLM:       h = ReLU( &gamma;(c)&middot;(W_x&middot;x + b) + &beta;(c) )</pre>
   </div>
 
   <div class="plan" id="b2">
-    <div class="plan-top"><span class="plan-id">B2</span><h3>When the modulator wakes up</h3><span class="pstat build">Needs tooling</span></div>
-    <p>Four measures of when the modulator starts to matter during training, because each can mislead on
-    its own:</p>
+    <div class="plan-top"><span class="plan-id">B2</span><h3>When the modulator starts to matter</h3><span class="pstat ready">Measured, reviewed</span></div>
+    <p>Four kinds of measure of when the modulator starts to matter during training, because each can
+    mislead on its own. They were read on 16 worlds of the level-05 body-rules factorial (one seed
+    each, 50 saved checkpoints) and, descriptively, on the three modulated May-replication seeds.</p>
     <p class="cue" hidden>&larr; wider than the screen &mdash; scroll it sideways; the right-hand columns are cut off</p>
     <div class="scroll"><table class="twocol">
       <thead><tr><th>Measure</th><th>What it answers</th></tr></thead>
@@ -368,12 +472,54 @@ FiLM:       h = ReLU( &gamma;(c)&middot;(W_x&middot;x + b) + &beta;(c) )</pre>
       </tbody>
     </table></div>
     <dl>
-      <dt>Summary</dt><dd><strong>Wake-up lag</strong>: the checkpoint at which a measure reaches half its
-      final value, minus the checkpoint at which survival reaches 90% of its final value. A positive lag
-      means the modulator wakes after learning has levelled off, so it cannot speed learning up.</dd>
+      <dt>Summary</dt><dd><strong>Wake-up lag</strong>: the wake point minus the survival plateau, in
+      checkpoints. The wake point is the first checkpoint at which a measure has covered half of its
+      change from the untrained network's value to its final value, in the direction it actually moves,
+      and stays there; no point is named when that change is within the curve's own
+      checkpoint-to-checkpoint noise. The plateau is the checkpoint at which survival has covered 90% of
+      its rise. A lag within one checkpoint either way counts as coincident. Across worlds, a sign test
+      reads each measure as "late", "early" or "undetermined". (An earlier draft used half of the
+      final value; that version was withdrawn because several measures start above half their final
+      value, so it would be met at the very first checkpoint.)</dd>
+      <dt>Refutation</dt><dd>As registered: a measure reading "early" refutes the explanation "the
+      modulated agent does not learn faster because the modulator wakes up late"; a measure reading
+      "late" supports it. "Undetermined" does neither. The rules do not combine measures.</dd>
       <dt>Also</dt><dd>The success test for B1's stronger start: it should pull the wake-up earlier. If the
       lag shrinks but learning speed does not change, late wake-up was not the cause.</dd>
     </dl>
+    <h4>Result</h4>
+    <ul class="plainlist">
+      <li><strong>Gain swing, late.</strong> The weights-only ceiling on how far the modulator could
+      move each gain (the gain swing) grows throughout training, roughly linearly, so the point where it
+      has made half of its rise comes after the survival plateau in all 16 worlds (the three May seeds
+      agree). Five sites, one measure. The main network's own total weight norm, read with the same
+      rule, is also "late" in all 16 worlds, so this reading reflects how weight norms grow in this
+      trainer, not a late awakening of the modulator.</li>
+      <li><strong>Contextual fraction, early.</strong> The share of the modulator's gain signal that
+      varies with the situation (rho) is lower at the end of training than at the untrained network, at
+      the encoder and recurrent sites in all 16 worlds; half of that fall is complete by the first saved
+      checkpoints, well before survival levels off ("early" in 15&ndash;16 of 16). At the actor and
+      critic sites no consistent timing is found.</li>
+      <li><strong>Update size and gradient probes.</strong> The modulator's relative step per
+      checkpoint interval is roughly constant (&asymp; 0.10) across training; where its small net
+      change clears the noise guard, its half-point is early. The share of the entropy-term gradient
+      reaching the modulator rises from near zero at the untrained network to 8&ndash;37&nbsp;% by the
+      first saved checkpoint (early, 12 of 12 defined). The policy- and value-term shares from the
+      single-batch probe are too noisy for the timing rule (no reading), as is the logged total
+      share.</li>
+      <li><strong>Freeze cost, no timing reading.</strong> Freezing the gain or the offset at its
+      time-averaged value gives no timing reading: the cost's checkpoint-to-checkpoint wobble
+      (11&ndash;28 survival steps) is as large as its net change over training, so the rule names no
+      wake point in 15 of 16 worlds. This says nothing about the size of the cost. Descriptively, after
+      the plateau the frozen agent survives fewer steps in every world (mean &minus;33 steps for the
+      gain, &minus;31 for the offset, against roughly 250 live); no test of that difference was
+      registered.</li>
+      <li><strong>The registered refutation, both ways.</strong> Here the modulator's realised output
+      (rho at three sites), its entropy-gradient share and its update size read "early", which refutes
+      the late-wake explanation for those measures; only the weights-only gain-swing ceiling reads
+      "late", which supports it. The rules do not combine measures, so no single timing verdict
+      exists.</li>
+    </ul>
     <figure>
       <img data-fig="an05_wakeup" alt="A grid of small line charts over ten million training episodes: survival with plateau points, then seventeen modulator measures, each with one grey line per level-05 world and orange wake points. Below, a dot plot of each run's wake point minus its survival plateau per measure, with a shaded coincidence band and the reading text for each measure.">
       <p class="zoomhint">Click the figure to view it full size</p>
@@ -395,14 +541,49 @@ FiLM:       h = ReLU( &gamma;(c)&middot;(W_x&middot;x + b) + &beta;(c) )</pre>
 <hr>
 
 <section class="col">
-  <h2><span class="num">05</span>Where things stand</h2>
+  <h2><span class="num">05</span>What this changes for the modulator question</h2>
+  <p>The final goal is a modulator that helps. Three results bear on it directly; each is stated here
+  only as far as the reviews allow.</p>
+  <ul class="plainlist">
+    <li><strong>The modulator changes what its own sites carry.</strong> At the encoder, actor and
+    critic, where it applies its gain and offset, the modulated agent's activity is less interchangeable
+    with an ordinary agent's than two ordinary agents' are with each other (A1, A3). Whether anything
+    downstream of those sites, such as the memory state, differs is not established.</li>
+    <li><strong>It is relied on.</strong> Freezing the modulation at its time-averaged value after
+    survival has levelled off costs about 31&ndash;33 survival steps in 16 of 16 worlds, against roughly
+    250 live (descriptive, not a registered test).</li>
+    <li><strong>"No benefit" is partly a measurement limit.</strong> In the May replication both agents
+    reach the 500-step episode limit in about 94&nbsp;% of episodes, so survival cannot show an
+    advantage that lies above the cap.</li>
+  </ul>
+  <div class="callout warn">
+    <p class="eyebrow">Unregistered interpretation</p>
+    <p>Taken together, these fit a modulator that is not idle: it changes the activity at the layers it
+    acts on and the trained agent depends on it, yet the agent's survival does not improve. Two
+    readings remain open and no registered test separates them: the modulator may take over part of a
+    solution the ordinary network also reaches, or it may add something the capped survival measure
+    cannot see. The next measurements that would bear on this are A4 (whether the two agents move
+    together across worlds), B1 (breaking the shared start), and a task with room above the step cap
+    or with learning speed as the outcome.</p>
+  </div>
+</section>
+
+<hr>
+
+<section class="col">
+  <h2><span class="num">06</span>Where things stand</h2>
   <div class="ledger">
     <div class="col">
       <h4>Established</h4>
       <ul>
-        <li>No modulated-vs-ordinary difference beyond seed noise in about 200 runs.</li>
+        <li>No modulated-vs-ordinary survival difference beyond seed noise in about 200 runs.</li>
         <li>The gaps are pinned near zero across very different worlds, not scattered.</li>
-        <li>The modulator is active and relied on inside a trained agent.</li>
+        <li>At the end of training, the modulated agent is different at the layers the modulator acts on
+        (encoder, actor, critic), with equal survival at the ceiling (A1, A3).</li>
+        <li>Both agents hold hunger, injury and predator distance at every layer; hunger is slightly less
+        linearly readable from the modulated encoder output and memory state (A2).</li>
+        <li>The modulator is relied on inside a trained agent: freezing it costs survival in every
+        world measured.</li>
         <li>Both agents start from the same main-network weights under the same seed.</li>
         <li>The modulator has no training signal or learning rate of its own.</li>
       </ul>
@@ -410,10 +591,11 @@ FiLM:       h = ReLU( &gamma;(c)&middot;(W_x&middot;x + b) + &beta;(c) )</pre>
     <div class="col">
       <h4>Open</h4>
       <ul>
-        <li>Whether the two agents compute the same thing internally (A1&ndash;A4).</li>
-        <li>Whether the shared start explains the identical results (B1).</li>
-        <li>When the modulator begins to matter during training (B2).</li>
-        <li>Whether the modulator learns faster than it performs; learning speed is unmeasured.</li>
+        <li>Whether the memory layers differ: the registered test gives no verdict there.</li>
+        <li>Whether the two agents' processing moves together across worlds (A4, being built).</li>
+        <li>Whether the shared start explains the identical results (B1, needs a decision).</li>
+        <li>Whether the modulator wakes up late: the registered measures point both ways (B2).</li>
+        <li>Whether the modulated agent learns faster than the ordinary one; learning speed has not been measured with seeds.</li>
       </ul>
     </div>
   </div>
@@ -435,7 +617,7 @@ FiLM:       h = ReLU( &gamma;(c)&middot;(W_x&middot;x + b) + &beta;(c) )</pre>
 <hr>
 
 <section class="col">
-  <h2><span class="num">06</span>Sources</h2>
+  <h2><span class="num">07</span>Sources</h2>
   <p class="refnote">Each entry says how this page used it.</p>
   {{REFS}}
 </section>
@@ -448,8 +630,14 @@ FiLM:       h = ReLU( &gamma;(c)&middot;(W_x&middot;x + b) + &beta;(c) )</pre>
   Reviews: <code>docs/project/critiques/20260929_nmn_null_algorithmic_film_conditions.md</code> and
   <code>docs/project/critiques/20260929_nmn_null_algorithmic_rl_side.md</code>. The plan's source of
   truth: <code>docs/experiments/active/modulator_clues/ALGORITHMIC_NULL_TODO.md</code>.</p>
+  <p class="foot">Results: the evidence run and its reports are in
+  <code>docs/develop/active/neuromodulation/ALGORITHMIC_NULL_ANALYSIS_TOOLING.md</code> (Stage 6); outputs
+  under <code>results/analysis/algorithmic_null/</code>. Decision rules:
+  <code>docs/experiments/active/modulator_clues/algorithmic_null_decision_rules.yaml</code>. Verdict reviews:
+  the plan-reviewer's analysis-verdict gates in the tooling plan, and
+  <code>docs/reviews/plan_b2_wakeup_verdict.md</code> for the wake-up timing.</p>
   <p class="foot">Rebuild with <code>python scripts/analysis/studies/modulator_clues/build_algorithmic_null_page.py</code>.
-  No figures yet; every planned figure will be drawn by a script and embedded.</p>
+  Every figure is drawn by its own script (named under each figure) and embedded as a file.</p>
 </footer>
 
 </div>
