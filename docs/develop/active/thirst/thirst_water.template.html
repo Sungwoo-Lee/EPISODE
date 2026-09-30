@@ -483,8 +483,8 @@ so the episodes are driven by a <strong>seeded random policy</strong>, and the f
     0.5. Centre, the agent's 5 × 5 view and the whole 10 × 10 world; right and bottom, the other senses.</span>
     __DATA:render_a_far_from_pond_low_hydration__
     <span><b>How it is computed.</b> The rendering session recorded 400 level-06 episodes with the project's
-    fixture recorder (the level-06 test world, recorded as shipped), in two batches seeded 11 and 23, with a
-    random policy choosing each action. Its frame script then searched those episodes for three kinds of moment
+    fixture recorder (the level-06 test world, recorded as shipped), in two batches seeded 11 and 23 (the seed in each frame's title is that episode's own reset seed, drawn
+    from its batch), with a random policy choosing each action. Its frame script then searched those episodes for three kinds of moment
     and drew each through the new dashboard. This frame is step 74 of episode 260, chosen as a moment with the
     agent at least four squares from the pond and hydration low while the episode continues. Every number and
     map in it is the environment's own output: hydration is the true body value, and because level 06 delivers
