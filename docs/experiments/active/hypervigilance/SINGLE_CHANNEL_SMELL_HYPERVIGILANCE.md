@@ -784,3 +784,12 @@ the tooling plan. No config change is needed to launch.
 | N4 | Accepted: match `hv1ch_` / full tags, never `*hv1ch*`. | §3, §5.6 item 2 |
 | N5 | Accepted: refutation bound stated for the predicted side of either sign. | §5.3 stage 2 |
 | O5–O7 | Noted; pre-flight 3 (ladder drift) is to be run, not assumed, if the wave splits across days. | — |
+
+### Pre-flight check 3 — saved-config comparison (2026-10-01, parent session)
+
+All 18 saved `models/config.yaml` files (H01–H16 and the seed-42 controls C01/C02) were compared key by key.
+The only differences are the intended ones: `environment.entities` (three values = the three smell worlds),
+top-level `seed` (42/43/44), the agent's `agent.modulation.*` block (ordinary vs modulated), and
+`logging.episode.balance_metrics` / `balance_early_death_max_steps`, which are absent from the two
+2026-09-27 controls and present in the new runs (logging only; commit 89f3cb78, parity-tested).
+No other environment, training or reward key differs. Pass.
