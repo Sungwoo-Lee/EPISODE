@@ -1002,30 +1002,39 @@ def jax_step(state: EnvState, action: int, params: EnvParams) -> tuple[EnvState,
     # Only update position IF respawn_mask is true for that resource
     res_pos_after_reg = jnp.where(respawn_mask[:, None], new_potential_pos, state.res_pos)
 
-    # Water: a respawn that landed on a pond cell is moved to the first in-area,
-    # non-pond cell of a per-slot permutation (THIRST_WATER_PLAN §D4.6). A NEW stream
-    # via fold_in(respawn_key, _WATER_RESPAWN_KEY), split per slot: no existing draw
-    # moves. Excludes pond cells only (no general occupancy check, as before). The
-    # load-time capacity check guarantees every area keeps a non-pond cell.
+    # Water: a respawn that landed on a pond cell is moved to a cell drawn uniformly
+    # from its own spawn area minus the pond (THIRST_WATER_PLAN §D4.6). A NEW stream,
+    # fold_in(respawn_key, _WATER_RESPAWN_KEY), so no existing draw moves. Excludes pond
+    # cells only (no general occupancy check, as before).
+    #
+    # HOW, and why not a permutation. Number the area's cells row-major 0..n_A-1; the
+    # pond's cells inside the area have ranks e_1..e_m (m <= h*w). Draw u uniformly in
+    # [0, n_A - m) and take v = the u-th rank that is not a pond rank, found by the
+    # fixed point v = u + #{e_j <= v} (monotone from v = u; exact after at most m + 1
+    # rounds, so h*w rounds always suffice). Exactly uniform over area-minus-pond, and it
+    # touches only the h*w pond cells, never every grid cell. Measured at §S (64 envs x
+    # 300 steps, level 06 vs level 05): a permutation per slot cost -21 % on GPU, one
+    # shared permutation -22 %, a Gumbel draw over all cells -14 % on GPU but -59 % on
+    # CPU. The load-time capacity check guarantees n_A - m >= 1.
     if params.water_enabled and num_res > 0:
-        _H, _W = params.height, params.width
-        _pond = jnp.zeros(_H * _W, dtype=jnp.bool_).at[
-            state.water_pos[:, 0] * _W + state.water_pos[:, 1]].set(True)
-        _flat = res_pos_after_reg[:, 0] * _W + res_pos_after_reg[:, 1]
-        _needs = respawn_mask & _pond[jnp.clip(_flat, 0, _H * _W - 1)]
-        _rows = jnp.arange(_H * _W) // _W
-        _cols = jnp.arange(_H * _W) % _W
-
-        def _repair(rk, area):
-            perm = jax.random.permutation(rk, _H * _W)
-            ok = ((_rows >= area[0]) & (_rows < area[2]) & (_cols >= area[1])
-                  & (_cols < area[3]) & ~_pond)
-            cell = perm[jnp.argmax(ok[perm])]
-            return jnp.stack([cell // _W, cell % _W]).astype(res_pos_after_reg.dtype)
-
-        _rep_keys = jax.random.split(jax.random.fold_in(respawn_key, _WATER_RESPAWN_KEY),
-                                     num_res)
-        _repaired = jax.vmap(_repair)(_rep_keys, params.res_spawn_area)
+        _a = params.res_spawn_area                                          # [R, 4]
+        _wA = _a[:, 3] - _a[:, 1]
+        _nA = (_a[:, 2] - _a[:, 0]) * _wA
+        _pr, _pc = state.water_pos[:, 0], state.water_pos[:, 1]             # [P]
+        _in = ((_pr[None] >= _a[:, 0:1]) & (_pr[None] < _a[:, 2:3])
+               & (_pc[None] >= _a[:, 1:2]) & (_pc[None] < _a[:, 3:4]))      # [R, P]
+        _e = jnp.where(_in, (_pr[None] - _a[:, 0:1]) * _wA[:, None]
+                       + (_pc[None] - _a[:, 1:2]), _nA[:, None])            # pond ranks
+        _u = jax.random.randint(jax.random.fold_in(respawn_key, _WATER_RESPAWN_KEY),
+                                (num_res,), 0, jnp.maximum(_nA - _in.sum(-1), 1))
+        _v = _u
+        for _ in range(state.water_pos.shape[0]):                           # static: h*w
+            _v = _u + (_e <= _v[:, None]).sum(-1)
+        _repaired = jnp.stack([_a[:, 0] + _v // _wA, _a[:, 1] + _v % _wA],
+                              axis=-1).astype(res_pos_after_reg.dtype)
+        _needs = respawn_mask & jnp.any(
+            jnp.all(res_pos_after_reg[:, None, :] == state.water_pos[None], axis=-1),
+            axis=-1)
         res_pos_after_reg = jnp.where(_needs[:, None], _repaired, res_pos_after_reg)
 
     # Re-sample chemical property for respawned resources

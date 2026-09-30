@@ -590,14 +590,14 @@ Same node, same seed, CPU and one GPU. Measure 64 envs × 300 jitted vmapped `ja
 
 ## Checkpoints
 
-- [ ] **C0** Baseline suite recorded per module; generator committed; the SCRIPTS map row added.
-- [ ] **C1** Fixture generated from a detached worktree of the C0 SHA; README names the SHA and command; the generator refused a dirty tree when tried.
-- [ ] **C2** `water.enabled` missing → `ValueError` naming the key (test). T1 green for all worlds including the jaxpr SHAs. `scripts/verification/verify_noise.py` still runs. Every T0-green module still green. Registry and change-log entry present in the same commit.
-- [ ] **C3** T2, T3 and T4 green, and each **fails when run on C2** (record the failing count). T1 still green.
-- [ ] **C4** No literal termination-name list left in `train.py` / `dreamer_srl_main.py` (grep). A level-06 eval rollout's `termination_reason` column contains codes from `{1,…,7}` only.
-- [ ] **C5** `git log --follow` on `07-sensory_noise_10x10.yaml` shows the old history. T5 green. The "07 with water off = pre-change 06" parity case green. `test_channel_names_match_configs.py` passes on 06 and 07.
-- [ ] **C6** Dashboard gates (D8.8) pass on a real level-06 recording. The old renderer renders the same recording without raising.
-- [ ] **C7** Speed table filled; the three reviewers' verdicts linked.
+- [x] **C0** Baseline suite recorded per module; generator committed; the SCRIPTS map row added. — `359d192a`; T0 in the Implementation Report.
+- [x] **C1** Fixture generated from a detached worktree of the C0 SHA; README names the SHA and command; the generator refused a dirty tree when tried. — `b9c4b569`; refusal exit 1 listing the dirty files.
+- [x] **C2** `water.enabled` missing → `ValueError` naming the key (test). T1 green for all worlds including the jaxpr SHAs. `scripts/verification/verify_noise.py` still runs. Every T0-green module still green. Registry and change-log entry present in the same commit. — `21200553`; T1 41 passed; every module at its T0 line. `verify_noise.py` does NOT run, but fails identically on the pre-change commit (11 older EnvState fields missing; decision 5).
+- [x] **C3** T2, T3 and T4 green, and each **fails when run on C2** (record the failing count). T1 still green. — `7d2443d4`; on C2: placement 7 failed + 3 errors, hydration 10 failed, observation 8 failed; T1 43/43.
+- [x] **C4** No literal termination-name list left in `train.py` / `dreamer_srl_main.py` (grep). A level-06 eval rollout's `termination_reason` column contains codes from `{1,…,7}` only. — `2af12e4d`; the grep is asserted in a test. The codes check ran on 200 real random-policy level-06 episodes (T3), not through `eval_rollout.py`, which needs a trained level-06 checkpoint (none exists).
+- [x] **C5** `git log --follow` on `07-sensory_noise_10x10.yaml` shows the old history. T5 green. The "07 with water off = pre-change 06" parity case green. `test_channel_names_match_configs.py` passes on 06 and 07. — `9db9b3ac`; `--follow` reaches `b093023e`; rollouts AND jaxpr SHAs equal.
+- [x] **C6** Dashboard gates (D8.8) pass on a real level-06 recording. The old renderer renders the same recording without raising. — `87ad70be`; 0 new audit findings, 0 cell findings; both renderers render all 81 frames.
+- [x] **C7** Speed table filled; the three reviewers' verdicts linked. — speed table in the Implementation Report (level 06 vs 05: −12.6 % GPU, −7.4 % CPU, after the respawn-repair rewrite of decision 13). Reviews NOT yet run: `code-reviewer`, `math-reviewer`, `env-config-reviewer` are the next step (the parent spawns them).
 
 ---
 
@@ -659,8 +659,237 @@ Both reviews are appended below, unedited. The math review found the equations c
 
 ## Implementation Report
 
-> **Implemented by**: —
-> **Date**: —
+> **Implemented by**: developer
+> **Date**: 2026-09-30
+> **Where**: branch `v5.0`, worktree `.claude/worktrees/thirst`. Nothing pushed, nothing merged into `v4.0` / `develop` / `main`.
+
+### In plain words
+
+Water and thirst are in the environment. Every world that leaves `water.enabled` off (all
+of them except levels 06 and 07) behaves exactly as before: the same random numbers,
+observations, rewards, endings and traced graphs, compared byte for byte with rollouts
+recorded from the commit before any change. With water on, each episode has one 2×2 pond
+at one of four spots, the agent has a hydration level that falls 0.625 per step and rises
++5 net per step on the pond, and it dies at either end (code 6 dehydration after exactly
+160 steps away from water, code 7 over-drinking after exactly 20 steps in the pond from the
+comfortable level). The ladder has eight rungs: the new 06 is the campfire world plus the
+pond, and the noise rung moved to 07 on top of it. The renderer work done earlier by the
+rendering session now runs on real level-06 recordings.
+
+### Commits
+
+| Checkpoint | Commit | Content |
+|---|---|---|
+| C0 | `359d192a` | water parity fixture generator + scripts-map rows |
+| C1 | `b9c4b569` | fixture from a detached worktree of `359d192a` (its `src/` and `configs/` equal `711bdc22`) + README with the code-count table |
+| C2 | `21200553` | schema + inert plumbing, gate off everywhere; docs (CONFIG_GUIDE §3.10, 02 schema, critical settings) |
+| C3 | `7d2443d4` | mechanics: placement, drinking, drive, deaths 6/7, senses; T2–T4; environment docs |
+| C4 | `2af12e4d` | shared termination-reason constant, metrics, fingerprints, schema doc |
+| C5 | `9db9b3ac` | ladder: new 06, `git mv` 06 → 07, references, T5 |
+| C6 | `87ad70be` | dashboard gates on a real level-06 recording; renderer contract fixes |
+| C7 | (this commit) | respawn-repair rewrite after the speed check (decision 13), repair test, speed table, this report |
+
+### What changed, per checkpoint
+
+- **C0/C1.** `scripts/fixtures/generate_water_parity_fixture.py` imports the body-mechanics
+  generator's rollout loop, action rule and jaxpr hashing (one copy). Worlds: `default.yaml`,
+  basic 00–05 and the noise rung under its old name. Fixture: 13 MB (decision 1 explains the
+  extra `__trunc` variants). The generator refused a tree with uncommitted `src/`/`configs/`
+  changes (exit 1, listing them).
+- **C2.** `EnvState.hydration` / `water_pos` default `None`; 14 static `EnvParams` fields;
+  `config_loader._load_water` (all D1 validation, the three placement modes resolved to a
+  0-based top-left table, refusals, capacity check); `hydration` noise modality appended
+  last (13th and last padded slot); `saved_config_compat` era supplying `water.enabled:
+  false`; `water: {enabled: false}` in every stand-alone config and inline test base
+  (continual, verification, frozen parity world + README row, test fixtures). C2 refused
+  `enabled: true` ("not implemented yet").
+- **C3.** `core.py`: pond draw (`0xD81`), overlap scan pre-occupied by the pond, agent start
+  repair (`0xD82`), start hydration (`0xD84`), respawn repair (`0xD83`), `info['drank']`,
+  11-element `update_body`, reasons 6/7 after thermal from the returned predicates, fourth
+  drive axis in a static branch before the thermal one, `info['drive_thirst']`.
+  `sensor.py`: Hydration observation, fourth smell pool, pond visual entities.
+  `evaluation_core`: `intero_hydration` CSV column. `state.py`: `EnvParams.__setstate__`
+  (decision 8).
+- **C4.** `TERMINATION_REASONS` in `episode_metrics.py` (23 WandB keys), imported by
+  `train.py` (4 sites), the dreamer trainer and `balance_metrics` (whose death mask now
+  counts every listed code); `water_enabled` in both curriculum fingerprints; trajectory
+  store column text + regenerated `TRAJECTORY_STORE_SCHEMA.md`; `check_env.py` legend;
+  the dreamer trainer's hard-coded `sys.path` (decision 10).
+- **C5.** New `06-pond_thirst_10x10.yaml`; `git mv` to `07-sensory_noise_10x10.yaml`,
+  re-parented, hydration sigma 0.0 stated; the two live `train_command-agent.sh` lines
+  (with dated notes), `generate_thermal_probes.py`, `make_render_fixture_recordings.py`
+  (`NOISE_WORLD`, `POND_WORLD`), the dashboard-layout and silent-failures tests; T5; dated
+  entries in CONFIG_CRITICAL_SETTINGS (incl. the `lvl06` naming hazard) and
+  BASIC_LEVELS_Q2_DEFAULT; scripts-map row.
+- **C6.** Cell `W1` (level 06) recorded; §D8.8 audit; `renderer.py` docstring; two
+  contract fixes (decisions 8, 9).
+
+### Tests
+
+**T0 baseline** (C0 tree, one process per module; `tmp/20260930_T0_baseline`,
+`tmp/20260930_T0_extra`). 86 modules in the plan's five directories, 52 more in
+`tests/{algorithms,analysis,behavior,utils}` and `tests/*.py`. Pre-existing reds, none
+touched by this change:
+
+| Module | T0 |
+|---|---|
+| `tests/env/test_channel_names_match_configs.py` | 25 failed — `test_every_maintained_config_can_write_a_recording` over `configs/continual/continual_worlds/*` and `level05_body_interactions/factors/*` (missing `sensory.visual_value_mode`) |
+| `tests/models/test_modulation_input_slice.py` | 5 failed (incl. ~#134) |
+| `tests/models/test_modulation_sites.py` | 4 failed (golden files) |
+| `tests/training/test_continual_bm_transition.py`, `test_continual_resume_rebuild.py` | 1 failed each (~#134) |
+| `tests/environment/test_behavior_measures.py` | 1 failed (`visual_properties` required at V=1) |
+| `tests/scripts/test_evaluation_model_rebuild.py` | 4 failed (same cause) |
+| `tests/scripts/test_context_dependence_b0.py` | 1 failed (NaN rest rate) |
+| `tests/scripts/test_dreamer_srl_offline_wm_test.py` | 1 error (same `visual_properties` cause) |
+| `tests/algorithms/dreamer_srl/*` | checkpoint 7 errors, eval_recording 4 errors, eval_rollout 3 errors, eval_rollout_batched 5 errors, eval_telemetry 1 error, eval_telemetry_wandb 2 failed, eval_video_smoke 2 failed, render_upload 1 failed, continual_resume_rebuild 1 failed |
+| `tests/test_trajectory_collection.py` | 3 failed |
+
+`test_inactive_animal_offgrid.py` (plan ~#132) was **green** at T0 (3 passed).
+`test_backward_compat_configs.py` skips every ladder world, as ~#124 says (T5 replaces it).
+
+**New tests** (final tree): T1 `test_water_parity.py` 43 · T2 `test_water_placement.py` 38 ·
+T3 `test_hydration_dynamics.py` 17 · T4 `test_water_observation.py` 9 · T5
+`test_ladder_worlds_load.py` 9 — all passing. On C2 (before the mechanics): placement 7
+failed + 3 errors, hydration 10 failed, observation 8 failed, ladder 3 failed. Diagnostics:
+candidate χ² 4.29 over 2,000 resets; 128–130 respawns in 5,000 steps; the repair test
+(decision 13) χ² 0.1 / 9.9 and it fails with the repair disabled; a hunting predator's path
+(1,0)→(1,1)→(1,2)→(1,3) crosses the pond; noise std 0.500 on Hydration (σ 0.5) and 0.049 on
+Satiation (σ 0.05); 14 dehydration deaths and 0 over-drinking deaths in 200 random-policy
+episodes (over-drinking is exercised by the controlled test, death at step 20).
+
+**Per-checkpoint suites.** C2: all 86 modules at their T0 line (dashboard_water and
+saved_config_compat +1 new test each). C3: all 138 modules at T0 except
+`tests/test_provenance.py` (decision 12, intermittent). C4/C5/C6: every module that imports the touched
+code at T0 or better. **Final (C7) full run, 143 modules (`tmp/20260930_final`): no module
+worse than T0.** 130 identical to T0 (every pre-existing red unchanged); 8 better
+(channel-names +1 pass for 06/07; dashboard layout +3; maintained-worlds bush +1;
+saved-config compat +1; and `test_dashboard_frames` 13, `test_dashboard_water` 15,
+`test_render_audit_controls` 68 and `test_render_recordings_v2` 8 now run instead of
+skipping, because this worktree has the `M4`/`W1` recordings); 5 new modules green;
+`test_provenance` 12/12 on this run.
+
+**T6.** `train.py` (rPPO) on level 06 builds and trains: "Observation Dim: 59 (… Body
+Temperature=1, Hydration=1 …)", 74 iterations, exit 0. dreamer_srl on level 06:
+`obs_dim=59`, the `obs_dim == breakdown` assertion passed, exit 0 (too short for gradient
+steps). Curriculum pre-flight: 05 → 06 refused ("changes obs_dim (58 -> 59)"; the width
+check fires before the fingerprint), 06 → 07 accepted.
+
+**C6 gates.** Real level-06 recording (cell `W1`, 2 episodes, 13 + 68 steps; snapshots
+carry `water_pos` and `hydration`). Dashboard frames at steps 0 and 67 audited against the
+same frames with water removed: 0 new findings, 0 `cell_*` findings, hydration row inside
+the vitals card. Both `render_recordings_v2.py` and the frozen `render_recordings.py` render
+every frame. `test_dashboard_layout.py` covers 06/07 (126 passed). With the `M4` fixture
+copied into this worktree's gitignored `results/`, `test_dashboard_water.py` 15/15 and
+`test_dashboard_frames.py` 13/13 (both partly skipped at T0 for lack of it).
+
+### Speed (§S)
+
+`tmp/20260930_speed_check.py`: 64 envs × 300 `jax_step` calls, vmapped, inside one jitted
+`lax.scan` per rep, 5 reps, seed 0, median env-steps/s; RTX 4090 (GPU 0) and the shared
+CPU; before (`/tmp` worktree of `359d192a`) and after interleaved.
+
+| World | Backend | Before | After | Change |
+|---|---|---|---|---|
+| level 05 | GPU | 928–933k | 924–934k | −0.3 % (within spread; its graph is byte-identical) |
+| level 05 | CPU | 28.6–29.5k | 29.0–29.2k | 0 % (within spread) |
+| level 06 vs level 05 (after) | GPU | — | 814k vs 932k | **−12.6 %** |
+| level 06 vs level 05 (after) | CPU | — | 26.9k vs 29.0k | **−7.4 %** |
+
+Both are under the 15 % block and over the 5 % discussion line. How the level-06 cost was
+found and cut is decision 13. With the respawn repair removed entirely, level 06 costs
+−2.8 % (GPU) and 0 % (CPU), so the remaining cost is the repair.
+
+### Decisions made during implementation (numbered)
+
+1. **Termination-code coverage needed a short-clock variant.** Every shipped world has
+   `max_steps: 500` and the shared random policy never lives that long (0 step-limit endings
+   in 16 seeds × 2,000 steps), so the plan's 16 × 300 budget can never contain code 1. Each
+   world also gets `<world>__trunc` with `environment.max_steps: 30` in memory (8 seeds ×
+   150 steps), recorded and replayed identically. Coverage is the union; the expected sets
+   are hard-coded as planned. Code 3 never occurs, so it is in no set.
+2. **Fixture source**: the C0 commit `359d192a` (`src/` and `configs/` identical to
+   `711bdc22`, verified by diff).
+3. **Archived configs were not migrated.** Live tests that read archived raw configs
+   (unified parity, visual parity, the thermal suites, extero-noc parity, distributional and
+   per-episode logging, per-entity info, body-temperature observation, thermal reward gate)
+   supply `water: {enabled: false}` in memory at their load point, with a comment. The
+   body-mechanics change had edited those archive files instead; project policy now forbids
+   that.
+4. **Drift checks** in the body-mechanics and bush-clearance parity tests ignore the new
+   `water` block and `hydration` noise entry (test edit; no fixture edited).
+5. **`scripts/verification/verify_noise.py` does not run** — it fails identically on the
+   pre-change commit (11 older `EnvState` fields missing). Not fixed (out of scope).
+6. **T1's contrast half** ("water on changes rollout and all three jaxprs") landed at C3:
+   at C2 the loader refused water on by design.
+7. **The stats-CSV Hydration column** landed at C3 (T4 needs it), not C4.
+8. **`EnvParams.__setstate__`** (C3). Recordings pickle `EnvParams` into `run_meta.pkl`;
+   `get_observation_breakdown` now reads `water_enabled`, so every pre-water recording
+   raised `AttributeError` when rendered (measured on a params pickle from `359d192a`). The
+   water-off sentinels are filled on unpickle (one table, `state.WATER_OFF_FIELDS`, also used
+   by the loader). Confirmed by `test_dashboard_frames.py` 13/13 on old recordings.
+9. **Dashboard contract fixes** (C6, `dashboard/episode.py`, one guard): the "no default
+   maximum" check also refuses `water_max_hydration <= 0`, because the field now always
+   exists (0.0 when off) and the old `hasattr` test could no longer fire. The rendering
+   session's tests: "params cannot say" became "a pre-water params pickle renders as
+   water-off"; the hidden-twin case drops Hydration from the breakdown by hand; the
+   integration helper sets `water_enabled=True` when it injects a pond. No field or key the
+   dashboard reads was renamed.
+10. **`dreamer_srl_main.py` hard-coded `sys.path.insert(0, '<shared folder>')`** replaced by
+    the repo root derived from the file (same path in the shared folder). In any git
+    worktree the literal made the trainer import the shared folder's `src`.
+11. **Editable install**: the conda env maps `src` to the shared folder, and modules under
+    `tests/algorithms/` (no `__init__.py` above them) resolved part of `src` there, in T0 as
+    well. Those modules were re-run with baseline and final both on their own trees; all 27
+    match.
+12. **`tests/test_provenance.py`** fails on a dirty worktree here: `git status` takes ~28 s on
+    this NAS and the provenance helper times out at 10 s, returning "unknown". Its killed
+    `git status` left 0-byte `index.lock` files three times; each was removed only when empty
+    and more than 10 minutes old (CLAUDE.md rule). Environmental and intermittent: it
+    passed 12/12 in the final full run.
+13. **Respawn repair rewritten after the speed check.** The plan's per-slot permutations
+    cost −21 % (GPU); its named fallback, one shared permutation, cost −22 % (the sort is the
+    cost, not the batching); a Gumbel-max draw −14 % GPU but −59 % CPU; a cumsum draw −16 % /
+    −15 %. Shipped: draw `u` uniformly over the allowed ranks and skip the pond's ranks with
+    the fixed point `v = u + #{pond ranks ≤ v}` — exactly uniform over area minus pond, touches
+    only the h·w pond cells, per-slot areas allowed (no new load restriction), −12.6 % GPU /
+    −7.4 % CPU. New test `test_respawn_repair_is_uniform_over_area_minus_pond` (fails with the
+    repair disabled). This is a deviation from the named fallback's form, for the reason
+    measured above; the water-off graph is untouched either way.
+14. **Test-side corrections**: Hydration column compared at 1e-6 relative (XLA folds `/200`
+    into a reciprocal multiply); `drive_thirst` normalised by `range_W` = 100 as the plan says;
+    the per_type refusal tested on a thermal-off world (the campfire world refuses per_type
+    earlier on its own); the visual contrast pins the diamond cells that are pond cells.
+15. **Speed harness** times a jitted `lax.scan` of the 300 steps rather than 300 Python
+    calls: per-call timing on this shared machine ranged 21k–54k between reps.
+16. **Render fixture `W1` is not loosened**: the demonstration loosening is refused by the
+    thermal structure check since the 2026-09-19 retune (`M4` fails the same way;
+    pre-existing).
+
+### For the rendering session
+
+- Field and key names are exactly as the dashboard reads them: snapshot `water_pos`
+  `[h·w, 2]` and `hydration`; `params.water_enabled`, `params.water_max_hydration`;
+  observation block "Hydration" directly after "Body Temperature".
+- Two small edits to your code: the `water_max_hydration <= 0` guard in
+  `dashboard/episode.py`, and three test adjustments in `test_dashboard_water.py`
+  (decision 9). `EnvParams.__setstate__` keeps pre-water recordings rendering.
+- `make_render_fixture_recordings.py` has cell `W1` (level 06, unloosened). The
+  demonstration loosening no longer loads (decision 16); M3/M4/M4b/M6b are affected.
+- The old renderer's docstring now states it draws neither pond nor hydration.
+
+### Follow-ups (not done here)
+
+- Reviews: `code-reviewer`, `math-reviewer`, `env-config-reviewer`, then `senior-developer`
+  verification.
+- `bug-curator`: extend row ~#116 (codes 6/7 dropped by `lad03_how_it_ends.py` /
+  `part4_readout.py`); consider rows for the editable-install mixing (decision 11), the
+  provenance timeout leaving index locks (decision 12), `verify_noise.py` (decision 5), the
+  loosening refused by the structure check (decision 16), and pre-thermal recordings, whose
+  pickled params lack `thermal_*` fields (the same class as decision 8, older).
+- `dreamer_srl_main.py:~516` and `eval.py:~551` still hard-code the shared-folder
+  `_project_root` (not touched).
+- `experiment-designer`: re-running `generate_thermal_probes.py` now copies a `hydration`
+  noise entry into the probes (harmless; water is off there).
 
 ## Verification Report
 

@@ -686,8 +686,12 @@ anything else, under a static gate, and keeps everything else off it:
    (0, 0) fallback (KNOWN_BUGS ~#117) out of reach because of the pond.
 3. **Agent.** A start on a pond cell moves to the first non-pond cell of a permutation from
    `fold_in(agent_key, 0xD82)` — uniform over the non-pond cells.
-4. **Respawn** (`jax_step`). A resource that respawns onto a pond cell moves to the first
-   in-area, non-pond cell of a per-slot permutation from `fold_in(respawn_key, 0xD83)`.
+4. **Respawn** (`jax_step`). A resource that respawns onto a pond cell moves to a cell
+   drawn uniformly from its spawn area minus the pond, with one integer per slot from
+   `fold_in(respawn_key, 0xD83)`: `u` in `[0, |area| − |pond ∩ area|)`, then the u-th
+   non-pond rank via the fixed point `v = u + #{pond ranks ≤ v}`. It touches only the
+   pond's cells; per-slot permutations (the plan's first form) cost 21 % of level 06's
+   GPU step throughput and a Gumbel draw 59 % on CPU (THIRST_WATER_PLAN §S).
 
 Refused with water on: `placement.mode: per_type`, `thermal.food_min_fire_distance > 0`,
 `thermal.bush_min_fire_distance > 0` (those second passes rebuild occupancy from entity

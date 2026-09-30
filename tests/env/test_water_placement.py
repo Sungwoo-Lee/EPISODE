@@ -329,3 +329,39 @@ def test_a_hunting_predator_walks_into_the_pond():
         path.append(tuple(int(v) for v in np.asarray(s.animal_pos[k])))
     print(f"[predator] path {path}")
     assert any(c in pond for c in path), f"predator never entered the pond: {path}"
+
+
+@pytest.mark.parametrize("area,allowed_n", [
+    ((1, 1, 4, 3), 2),    # rows 1-3, cols 1-2: 6 cells, 4 of them pond -> (3,1), (3,2)
+    ((0, 0, 4, 4), 12),   # rows 0-3, cols 0-3: 16 cells with the pond inside -> 12 cells
+])
+def test_respawn_repair_is_uniform_over_area_minus_pond(area, allowed_n):
+    """Force every resource to respawn on every step into an area that overlaps the pond
+    (pond at array rows/cols 1-2). The raw draw lands on the pond often; after the repair
+    every respawn is inside the area, off the pond, and the cells are hit uniformly."""
+    d = _lvl06_dict()
+    d["water"]["candidates"] = [[2, 2]]
+    p = _params(d)
+    n = p.res_type.shape[0]
+    p = p.replace(res_spawn_area=jnp.tile(jnp.asarray(area, dtype=p.res_spawn_area.dtype), (n, 1)))
+    r0, c0, r1, c1 = area
+    allowed = {(r, c) for r in range(r0, r1) for c in range(c0, c1)} - _block(1, 1)
+    assert len(allowed) == allowed_n
+
+    def one(key):
+        s = core.jax_reset(p, key)
+        s = s._replace(res_active=jnp.zeros_like(s.res_active),
+                       res_reg_timer=jnp.zeros_like(s.res_reg_timer),
+                       res_allocated=jnp.ones_like(s.res_allocated))
+        s2, _, _, _ = core.jax_step(s, jnp.asarray(4, dtype=jnp.int32), p)
+        return s2.res_pos
+    pos = np.asarray(jax.jit(jax.vmap(one))(jax.vmap(jax.random.PRNGKey)(jnp.arange(400))))
+    cells = [tuple(int(v) for v in rc) for rc in pos.reshape(-1, 2)]
+    assert set(cells) <= allowed, f"respawns outside area-minus-pond: {sorted(set(cells) - allowed)[:5]}"
+    counts = np.array([cells.count(c) for c in sorted(allowed)])
+    exp = len(cells) / len(allowed)
+    chi2 = float(((counts - exp) ** 2 / exp).sum())
+    from scipy.stats import chi2 as _chi2
+    print(f"[repair] area {area}: {len(cells)} respawns over {len(allowed)} cells, chi2 {chi2:.1f}")
+    assert set(cells) == allowed
+    assert _chi2.sf(chi2, len(allowed) - 1) > 0.001, counts
