@@ -64,20 +64,6 @@ def _base_params():
     return load_env_params(cfg)
 
 
-class _WithoutWaterFlag:
-    """A params stand-in that cannot say whether its world has water (every EnvParams
-    has carried `water_enabled` since THIRST_WATER_PLAN C2; this keeps the
-    recording-keyed path covered for params objects that lack it)."""
-
-    def __init__(self, params):
-        self._params = params
-
-    def __getattr__(self, name):
-        if name == "water_enabled":
-            raise AttributeError(name)
-        return getattr(self._params, name)
-
-
 def test_params_now_carry_the_water_flag():
     """The environment shipped the flag (THIRST_WATER_PLAN C2): a water-off world says so."""
     params = _base_params()
@@ -87,12 +73,24 @@ def test_params_now_carry_the_water_flag():
         P.LayoutContext.from_params(params, water=True)
 
 
-def test_water_comes_from_the_recording_when_params_cannot_say():
-    params = _WithoutWaterFlag(_base_params())
-    assert not hasattr(params, "water_enabled")
-    assert P.LayoutContext.from_params(params, water=True).water is True
-    assert P.LayoutContext.from_params(params, water=False).water is False
-    assert P.LayoutContext.from_params(params).water is False
+def test_a_params_pickle_from_before_water_renders_as_water_off():
+    """Recordings pickle EnvParams into run_meta.pkl. One written before the water fields
+    existed must still build a layout -- as a world without water. (Before
+    EnvParams.__setstate__ filled the missing fields, `get_observation_breakdown` raised
+    AttributeError on every such recording.) Simulated by unpickling a state dict with the
+    water fields removed, which is exactly what an old pickle carries."""
+    import pickle
+    from src.environment.sensor import get_observation_breakdown
+    from src.environment.state import EnvParams
+    params = _base_params()
+    old_state = {k: v for k, v in params.__dict__.items() if not k.startswith("water_")}
+    old = EnvParams.__new__(EnvParams)
+    old.__setstate__(old_state)
+    assert old.water_enabled is False and old.water_max_hydration == 0.0
+    assert get_observation_breakdown(old) == get_observation_breakdown(params)
+    assert P.LayoutContext.from_params(old).water is False
+    round_trip = pickle.loads(pickle.dumps(params))
+    assert round_trip.water_enabled is False
 
 
 def test_a_recording_that_disagrees_with_its_world_raises():
@@ -130,6 +128,11 @@ def _ctx(water, observed):
     ctx = P.LayoutContext.from_params(params, water=water)
     if observed:
         ctx = dataclasses.replace(ctx, breakdown={**ctx.breakdown, "Hydration": 1})
+    else:
+        # With water on, the real breakdown always carries Hydration (the plan has no
+        # "hydration hidden" flag yet); drop it by hand to exercise the hidden twin.
+        ctx = dataclasses.replace(
+            ctx, breakdown={k: v for k, v in ctx.breakdown.items() if k != "Hydration"})
     return ctx
 
 

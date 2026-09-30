@@ -121,6 +121,27 @@ class EnvState:
     def _replace(self, **kwargs):
         return self.replace(**kwargs)
 
+# The water-off values of every EnvParams water field (THIRST_WATER_PLAN §D2). ONE copy:
+# config_loader fills them when `water.enabled` is false, and EnvParams.__setstate__ fills
+# them into an EnvParams pickled before the water fields existed.
+WATER_OFF_FIELDS = dict(
+    water_enabled=False,
+    water_block_h=0,
+    water_block_w=0,
+    water_topleft_table=(),
+    water_max_hydration=0.0,
+    water_hydration_setpoint=0.0,
+    water_start_hydration=0.0,
+    water_random_start_hydration=False,
+    water_start_hydration_low=0.0,
+    water_start_hydration_high=0.0,
+    water_drain=0.0,
+    water_drink_gain=0.0,
+    water_cell_property=(),
+    water_visual_property=(),
+)
+
+
 @struct.dataclass
 class EnvParams:
     # Grid
@@ -547,3 +568,19 @@ class EnvParams:
 
     def _replace(self, **kwargs):
         return self.replace(**kwargs)
+
+    def __setstate__(self, state):
+        """Unpickle, filling the water fields an older pickle does not carry.
+
+        Recordings pickle the run's EnvParams into `run_meta.pkl`
+        (src/utils/eval_recording.py::write_run_meta), and the renderer rebuilds the
+        observation layout from it. A pickle written before THIRST_WATER_PLAN has no
+        water fields, and `get_observation_breakdown` reads `water_enabled`, so without
+        this every pre-water recording would stop rendering. The world such a pickle
+        describes IS the water-off world, so the water-off sentinels are its true values,
+        not a guess. Only missing water fields are filled; nothing else is touched.
+        """
+        state = dict(state)
+        for k, v in WATER_OFF_FIELDS.items():
+            state.setdefault(k, v)
+        self.__dict__.update(state)

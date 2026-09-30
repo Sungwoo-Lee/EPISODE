@@ -177,7 +177,8 @@ def _sensor_stat_columns(sensor_name, dim, params, prefix):
         # names no temperature unit anywhere, and inventing one is exactly the
         # kind of made-up convention the project rules forbid.
         names = [f"{prefix}intero_body_temp"]
-    elif sensor_name in ("Satiation", "Nutrition", "Injury"):
+    elif sensor_name in ("Satiation", "Nutrition", "Injury", "Hydration"):
+        # Hydration (THIRST_WATER_PLAN) is a [0,1] fraction like its neighbours.
         names = [f"{prefix}intero_{sensor_name.lower()}"]
     elif sensor_name == "Collision":
         coll_offsets = get_visual_offsets(params.sensor_range)

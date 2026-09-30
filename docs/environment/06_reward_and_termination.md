@@ -288,6 +288,8 @@ FAQ: Is the death penalty also applied on truncation? **Yes.** `done = done_from
 | 3 | Overeating | `new_nutrition >= params.max_nutrition` | Yes (via `update_body`) | Only set if `params.overeating_death=True`. **Changed 2026-09-22**: this used to be `new_satiation >= max_satiation` and set the label WITHOUT ever setting `done` — a no-op recorded as a latent bug from 2026-06-09. Both the label and `done` now read the same nutrition predicate under the same static gate, so a reason-3 label without a death is structurally impossible. |
 | 4 | Injury | `new_injury >= params.max_injury` | Yes (via `update_body`) | No `with_injury` guard in `jax_step` — see note below |
 | 5 | Thermal | `new_body_temp` outside `[params.min_temperature, params.max_temperature]` | Yes (via `update_body`) | Only set if `params.thermal_enabled=True`; the body-temperature recurrence is in [05_body_homeostasis.md](05_body_homeostasis.md). Reused unchanged by the 2026-09-26 body mechanics (B1 random start, B4 injury-boosted heat exchange) — no new code |
+| 6 | Dehydration | `new_hydration <= 0.0` — the `dehydrated` predicate `update_body` returns in `water_out` | Yes (via `update_body`) | Only set if `params.water_enabled=True` (2026-09-30, [[thirst_water_plan]]). Stamped AFTER thermal's 5, so on a step that is both a thermal and a thirst death the label is the water one; `done` is the same either way. A water-off world has no hydration and can never produce it |
+| 7 | Over-drinking | `new_hydration >= params.water_max_hydration` — the `overdrank` predicate from `water_out` | Yes (via `update_body`) | Only set if `params.water_enabled=True`. Mutually exclusive with 6 (one value cannot be at both ends). Same one-predicate rule as over-eating: the label and `done` read the same returned value, so a label without a death is structurally impossible |
 
 **Nutrition is a two-sided axis (since 2026-09-22).** It runs 0–200 with the homeostatic
 setpoint at **100**, the middle, so BOTH ends are lethal and symmetric: code 2 at
@@ -448,6 +450,16 @@ There is no separate truncation boolean in the step output. To distinguish trunc
 | `damage > 0` when `with_injury=False` | `with_injury=False` branch in `update_body` | `update_body` line 115 | 1 or 0 (not 4) |
 | `next_step >= params.max_steps` | — | `jax_step` (truncated) | 1 |
 | `new_nutrition >= params.max_nutrition` (overeating_death=True) | `params.with_nutrition` **and** `params.overeating_death` | `update_body` (same predicate) | 3 |
+| `new_hydration <= 0.0` | `params.water_enabled` (static) | `update_body` (returned `dehydrated`) | 6 |
+| `new_hydration >= params.water_max_hydration` | `params.water_enabled` (static) | `update_body` (returned `overdrank`) | 7 |
+
+**Water adds a fourth drive axis** when `water_enabled`: `calculate_drive` appends
+`(hydration − water_hydration_setpoint) · range_S / range_W` with
+`range_W = max(setpoint, max_hydration − setpoint)` (100 at the shipped 100 / 200), in a static
+branch placed before the thermal one, so every water-off world keeps the pre-water drive
+verbatim. The reward pairs PRE-step hydration in the previous drive with POST-step hydration
+in the current one, like every other axis. `info['drive_thirst']` is the squared normalised
+deviation (divide-first, like `drive_hunger`) and exists only when water is on.
 
 ---
 

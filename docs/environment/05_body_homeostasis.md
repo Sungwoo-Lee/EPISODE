@@ -689,6 +689,40 @@ existing labels.
 
 ---
 
+## Hydration (water / thirst, 2026-09-30)
+
+[[thirst_water_plan]]. With `water.enabled: true` the body gains a fourth level, **hydration**
+`W` on `[0, water_max_hydration]` (shipped `[0, 200]`, setpoint 100 in the middle). One pond
+per episode (see [03_entity_placement.md](03_entity_placement.md), "The pond"); standing on any
+pond cell after the move drinks (`info['drank']`, set by `jax_step` from the post-move cell,
+the convention `ate_food` uses). In `update_body`, after the thermal block, under a static
+`if params.water_enabled:`:
+
+```python
+new_hydration = clip(W - water_drain + where(drank, water_drink_gain, 0), 0, water_max_hydration)
+dehydrated = new_hydration <= 0.0                    # reason 6
+overdrank  = new_hydration >= water_max_hydration    # reason 7
+done = where(dehydrated | overdrank, True, done)
+water_out = (new_hydration, dehydrated, overdrank)   # 11th return value; None when off
+```
+
+Drain and refill both land before the ONE clip (as for nutrition), so a pond step is net
+`+5.0` at the shipped `0.625` / `5.625` and never "drain, die, then drink". Death is judged on
+the clipped value at both ends, folded into `done` here, and `jax_step` stamps reasons 6 / 7
+from the returned predicates only (never re-derived). At the shipped values, exact in float32:
+setpoint → dehydration in **160** steps away from water, setpoint → over-drinking in **20**
+on the pond, refill 50 → 100 in **10** (`tests/env/test_hydration_dynamics.py`).
+
+**Reset.** `water.start_hydration` is the value `jax_reset` writes (it is live, unlike the
+dead `body.start_satiation`, KNOWN_BUGS ~#94), or a uniform draw on
+`[start_hydration_low, start_hydration_high)` from `fold_in(body_key, 0xD84)` when
+`random_start_hydration` is on (level 06: `[0, 200)`).
+
+**Drive.** A fourth axis `(W − water_hydration_setpoint) · range_S / range_W`, with
+`range_W = max(setpoint, max − setpoint)`; at the shipped values the factor is exactly 1, so
+a full-scale water deviation is 100 drive units, like full-scale hunger. Not coupled to body
+temperature (a later, off-by-default switch is possible).
+
 ## Metabolic Cost
 
 `metabolic_cost` (default 1.0) is deducted from nutrition every step, unconditionally — it applies even when the agent is resting (`core.py:52`). Resting does not pause metabolism; it only activates injury recovery.

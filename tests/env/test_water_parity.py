@@ -183,3 +183,41 @@ def test_fixture_coverage(fx, world):
         seen |= {int(c) for c, n in fx[f"{var}._codes"] if n > 0}
     missing = EXPECTED_CODES[world] - seen
     assert not missing, f"{world}: fixture never shows termination code(s) {sorted(missing)}"
+
+
+# ── 2. contrast: water ON changes the rollout AND all three graphs ────────────
+
+def _water_on_shas(params):
+    """jaxpr SHA-1s like the generator's `jaxpr_shas`, with `drank` in update_body's info
+    (a water-on update_body reads it; the generator's info dict predates the key)."""
+    state0 = core.jax_reset(params, jax.random.PRNGKey(0))
+    act = jnp.asarray(REST, dtype=jnp.int32)
+    step_jp = jax.make_jaxpr(lambda s, a, p: core.jax_step(s, a, p))(state0, act, params)
+    reset_jp = jax.make_jaxpr(lambda p, k: core.jax_reset(p, k))(params, jax.random.PRNGKey(0))
+    info = {"ate_food": jnp.array(False), "damage": jnp.array(0.0, dtype=jnp.float32),
+            "rested": jnp.array(True), "drank": jnp.array(False)}
+    ub_jp = jax.make_jaxpr(lambda s, i, p, pos: core.update_body(s, i, p, pos))(
+        state0, info, params, state0.agent_pos)
+
+    def sha(x):
+        return hashlib.sha1(str(x).encode("utf-8")).hexdigest()
+    return {"jax_step": sha(step_jp), "jax_reset": sha(reset_jp), "update_body": sha(ub_jp)}
+
+
+@pytest.mark.parametrize("world", ["lvl05", "default"])
+def test_contrast_water_on_changes_rollout_and_graphs(fx, world):
+    d = _world_dict(world)
+    d["water"]["enabled"] = True
+    p = _params(d)
+    assert p.water_enabled is True
+    shas = _water_on_shas(p)
+    for fn in ("jax_step", "jax_reset", "update_body"):
+        assert shas[fn] != str(fx[f"{world}._jaxpr_sha.{fn}"]), (
+            f"{world}: water on did not change the {fn} jaxpr -- it is not wired in, so "
+            "the off-path equality proves nothing")
+    arrays = G.roll_variant(jax, jnp, core, get_observation, p, (0, 1), 60)
+    assert "s0.state.hydration" in arrays
+    common = [k for k in arrays if f"{world}.{k}" in fx]
+    assert any(fx[f"{world}.{k}"].shape != arrays[k].shape
+               or not np.array_equal(fx[f"{world}.{k}"][:len(arrays[k])], arrays[k])
+               for k in common), f"{world}: water on left the rollout identical"

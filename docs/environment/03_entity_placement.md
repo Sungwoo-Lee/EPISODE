@@ -669,6 +669,32 @@ The default is `'per_entity'` when the key is absent. An invalid value raises `A
 
 ---
 
+## The pond (water, 2026-09-30)
+
+[[thirst_water_plan]]. With `water.enabled: true`, `jax_reset` places one `h × w` pond before
+anything else, under a static gate, and keeps everything else off it:
+
+1. **Where.** The loader resolves `water.placement` (`list` / `random` / `center`) to a static
+   table of top-left cells (`params.water_topleft_table`, 0-based array coordinates; YAML
+   candidates are 1-based). Reset draws one index with
+   `randint(fold_in(placement_key, 0xD81), (), 0, len(table))` and adds the block offsets:
+   `state.water_pos` (`[h·w, 2]`). The pond's own position can never fall back to (0, 0).
+2. **Entities.** `resolve_overlaps_global(..., pre_occupied=pond_mask)`: the occupancy mask
+   starts with the pond cells set, so an entity sampled onto the pond moves to the first free
+   in-area cell of the scan's single permutation. Zero extra draws. A load-time **capacity
+   check** (`|A| − max overlap >= scan position + 1` for every slot) keeps the scan's silent
+   (0, 0) fallback (KNOWN_BUGS ~#117) out of reach because of the pond.
+3. **Agent.** A start on a pond cell moves to the first non-pond cell of a permutation from
+   `fold_in(agent_key, 0xD82)` — uniform over the non-pond cells.
+4. **Respawn** (`jax_step`). A resource that respawns onto a pond cell moves to the first
+   in-area, non-pond cell of a per-slot permutation from `fold_in(respawn_key, 0xD83)`.
+
+Refused with water on: `placement.mode: per_type`, `thermal.food_min_fire_distance > 0`,
+`thermal.bush_min_fire_distance > 0` (those second passes rebuild occupancy from entity
+positions only). Animals are NOT kept off the pond: it is walkable, and a predator may walk in
+(the watering-hole ambush). All four steps are fold-in streams, so no existing draw moves and
+every water-off world places exactly as before (`tests/env/test_water_parity.py`).
+
 ## Random Start Conditions
 
 Controlled by static boolean flags in `EnvParams`:

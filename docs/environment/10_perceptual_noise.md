@@ -398,6 +398,15 @@ For each modality: observation dimensions, enabling condition, noise formula, an
 | Proprioception | `params.action_dim` | `params.proprioception_enabled` | constant | 0.05 | 0.0 | [0, 1] | — |
 | Visual | `(2·vr²+2·vr+1)·8` | `params.visual_sensor_enabled` | state_dependent | 0.2 | 1.5 | [0, 100] | `state.injury_level` |
 | Location | 2 | `params.location_sensor_enabled` | constant | 0.01 | 0.0 | [-1, 1] | — |
+| Hydration | 1 | `params.water_enabled` | state_dependent | 0.1 | 1.5 | [0, 1] | `state.injury_level` |
+
+**Hydration (2026-09-30, [[thirst_water_plan]])** is the 13th modality, appended **last** in
+`default.yaml`'s `modalities` so no existing index moved (lookups are by name). It takes the
+last of the 13 padded slots: the next modality must widen `_NOISE_SLOTS` and `EnvParams.noise_*`
+together. The entry exists in every world's order (it is parsed from `default.yaml`) but is
+only looked up when the breakdown contains "Hydration", i.e. when water is on; the loader
+refuses `water.enabled: true` without it. The level-07 noise rung sets it to sigma 0.0
+explicitly (interoception stays clean there).
 
 `sr` = `params.sensor_range` (collision diamond radius); `vr` = `params.visual_sensor_range`.
 

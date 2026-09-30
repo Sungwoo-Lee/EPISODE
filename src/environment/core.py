@@ -69,7 +69,20 @@ def satiation_deviation_range(params):
     return jnp.maximum(params.setpoint, params.max_satiation - params.setpoint)
 
 
-def calculate_drive(satiation, injury, params, body_temp=None):
+def water_deviation_range(params):
+    """`range_W` — the furthest hydration can get from its own setpoint.
+
+    The mirror of `satiation_deviation_range`: hydration lives on
+    `[0, water_max_hydration]` and is pulled toward `water_hydration_setpoint`, so
+    the axis's deviation scale is `max(setpoint, max - setpoint)`. At the shipped
+    200 / 100 it is 100, the same as `range_S`, so one hydration unit costs one
+    satiation unit of drive (THIRST_WATER_PLAN §A1, target W4).
+    """
+    return jnp.maximum(params.water_hydration_setpoint,
+                       params.water_max_hydration - params.water_hydration_setpoint)
+
+
+def calculate_drive(satiation, injury, params, body_temp=None, hydration=None):
     """Calculates homeostatic drive (Euclidean distance to setpoint).
 
     Two axes today (satiation, injury); three when thermal is on. The split is a
@@ -104,7 +117,37 @@ def calculate_drive(satiation, injury, params, body_temp=None):
     setpoint is its ceiling.
 
     `body_temp` is required when thermal is on and ignored when it is off.
+
+    WATER (THIRST_WATER_PLAN §D4.3). When `params.water_enabled` a fourth axis is
+    appended, `(hydration - W_set) * range_S / range_W`, so a full-scale water
+    deviation weighs the same drive as full-scale hunger. It is a separate static
+    branch placed FIRST, so the thermal-on and thermal-off paths below it are the
+    pre-water expressions untouched and every water-off world traces the same
+    graph. `hydration` is required when water is on and ignored when it is off.
     """
+    if params.water_enabled:
+        if hydration is None:
+            raise ValueError(
+                "calculate_drive: hydration is required when water.enabled is true "
+                "(it is the fourth homeostatic axis). Pass state.hydration / the "
+                "post-step hydration at the call site.")
+        _range_S = satiation_deviation_range(params)
+        axes = [satiation, injury]
+        targets = [params.setpoint, 0.0]
+        if params.thermal_enabled:
+            if body_temp is None:
+                raise ValueError(
+                    "calculate_drive: body_temp is required when thermal.enabled is true "
+                    "(it is the third homeostatic axis). Pass state.body_temp / the "
+                    "post-step body temperature at the call site.")
+            axes.append((body_temp - params.temperature_setpoint)
+                        * (_range_S / params.max_temperature))
+            targets.append(0.0)
+        axes.append((hydration - params.water_hydration_setpoint)
+                    * (_range_S / water_deviation_range(params)))
+        targets.append(0.0)
+        current = jnp.stack(axes, axis=-1)
+        return jnp.linalg.norm(current - jnp.array(targets), axis=-1)
     if params.thermal_enabled:
         # Third axis in satiation units (see the docstring). `max_temperature` is
         # the deviation scale: it is the distance from the setpoint at which the
@@ -167,7 +210,7 @@ def update_body(state: EnvState, info: dict, params: EnvParams, new_agent_pos: j
 
     Returns:
         (satiation, nutrition, injury, injury_buffer, nociception_history,
-         rest_streak, body_temp, thermal_death, done, starved)
+         rest_streak, body_temp, thermal_death, done, starved, water_out)
 
         `starved` (index 9, APPENDED so positional readers of indices 0-8 are
         unaffected) is the starvation predicate `jax_step` must use for reason 2.
@@ -182,6 +225,13 @@ def update_body(state: EnvState, info: dict, params: EnvParams, new_agent_pos: j
         `thermal_death` is returned separately because `jax_step` needs the
         specific cause to emit termination reason 5; recomputing the same
         out-of-range predicate at the call site would be a second copy of it.
+
+        `water_out` (index 10, APPENDED — the same "append, never insert" rule
+        `starved` set) is `None` when water is off (an empty pytree, so the
+        off-path jaxpr is unchanged) and `(new_hydration, dehydrated, overdrank)`
+        when it is on. The two predicates are folded into `done` HERE and are the
+        ONLY source of termination reasons 6 / 7 in `jax_step` (KNOWN_BUGS ~#160:
+        compute a death test once, never re-derive it at the call site).
     """
     prev_nutrition = state.nutrition
     prev_injury = state.injury_level
@@ -537,7 +587,27 @@ def update_body(state: EnvState, info: dict, params: EnvParams, new_agent_pos: j
         new_body_temp = state.body_temp
         thermal_death = jnp.array(False)
 
-    return new_satiation, new_nutrition, new_injury, new_buffer, new_nociception_history, new_rest_streak, new_body_temp, thermal_death, done, starved
+    # --- Hydration (THIRST_WATER_PLAN §D4.7) ---
+    #   W' = clip(W - drain + gain * [drank], 0, max_hydration)
+    # Drain and refill both land before the ONE clip, mirroring nutrition, so a step
+    # on the pond is net +5 at the shipped values and never "drain, die, then drink".
+    # Death at BOTH ends, judged on the clipped value: W' <= 0 (dehydration, reason 6)
+    # and W' >= max (over-drinking, reason 7). `info['drank']` is set by jax_step from
+    # the POST-move cell, the convention `ate_food` uses. STATIC gate: a water-off
+    # world traces none of this and returns None.
+    if params.water_enabled:
+        new_hydration = jnp.clip(
+            state.hydration - params.water_drain
+            + jnp.where(info['drank'], params.water_drink_gain, 0.0),
+            0.0, params.water_max_hydration)
+        dehydrated = new_hydration <= 0.0
+        overdrank = new_hydration >= params.water_max_hydration
+        done = jnp.where(jnp.logical_or(dehydrated, overdrank), True, done)
+        water_out = (new_hydration, dehydrated, overdrank)
+    else:
+        water_out = None
+
+    return new_satiation, new_nutrition, new_injury, new_buffer, new_nociception_history, new_rest_streak, new_body_temp, thermal_death, done, starved, water_out
 
 def update_resources(res_active, res_reg_timer, res_cons_count, params,
                      res_allocated=None):
@@ -932,6 +1002,32 @@ def jax_step(state: EnvState, action: int, params: EnvParams) -> tuple[EnvState,
     # Only update position IF respawn_mask is true for that resource
     res_pos_after_reg = jnp.where(respawn_mask[:, None], new_potential_pos, state.res_pos)
 
+    # Water: a respawn that landed on a pond cell is moved to the first in-area,
+    # non-pond cell of a per-slot permutation (THIRST_WATER_PLAN §D4.6). A NEW stream
+    # via fold_in(respawn_key, _WATER_RESPAWN_KEY), split per slot: no existing draw
+    # moves. Excludes pond cells only (no general occupancy check, as before). The
+    # load-time capacity check guarantees every area keeps a non-pond cell.
+    if params.water_enabled and num_res > 0:
+        _H, _W = params.height, params.width
+        _pond = jnp.zeros(_H * _W, dtype=jnp.bool_).at[
+            state.water_pos[:, 0] * _W + state.water_pos[:, 1]].set(True)
+        _flat = res_pos_after_reg[:, 0] * _W + res_pos_after_reg[:, 1]
+        _needs = respawn_mask & _pond[jnp.clip(_flat, 0, _H * _W - 1)]
+        _rows = jnp.arange(_H * _W) // _W
+        _cols = jnp.arange(_H * _W) % _W
+
+        def _repair(rk, area):
+            perm = jax.random.permutation(rk, _H * _W)
+            ok = ((_rows >= area[0]) & (_rows < area[2]) & (_cols >= area[1])
+                  & (_cols < area[3]) & ~_pond)
+            cell = perm[jnp.argmax(ok[perm])]
+            return jnp.stack([cell // _W, cell % _W]).astype(res_pos_after_reg.dtype)
+
+        _rep_keys = jax.random.split(jax.random.fold_in(respawn_key, _WATER_RESPAWN_KEY),
+                                     num_res)
+        _repaired = jax.vmap(_repair)(_rep_keys, params.res_spawn_area)
+        res_pos_after_reg = jnp.where(_needs[:, None], _repaired, res_pos_after_reg)
+
     # Re-sample chemical property for respawned resources
     noise = jax.random.normal(property_key, shape=params.res_property.shape)
     new_sampled_prop = jnp.clip(params.res_property + params.res_property_std * noise, 0.0, 1.0)
@@ -1095,8 +1191,13 @@ def jax_step(state: EnvState, action: int, params: EnvParams) -> tuple[EnvState,
         'hit_predator': jnp.any(at_damaging),
         'hit_neutral': jnp.any(at_neutral_pre) if state.animal_pos.shape[0] > 0 else jnp.array(False),
     }
-    
-    new_satiation, new_nutrition, new_injury, next_injury_buffer, next_nociception_history, new_rest_streak, new_body_temp, thermal_death, done, starved = update_body(state, info, params, new_agent_pos)
+    # Water: drinking is standing on a pond cell after the move, every step. Read by
+    # update_body; added only when water is on, so the water-off info dict is
+    # structurally identical to the pre-water one.
+    if params.water_enabled:
+        info['drank'] = jnp.any(jnp.all(state.water_pos == new_agent_pos, axis=-1))
+
+    new_satiation, new_nutrition, new_injury, next_injury_buffer, next_nociception_history, new_rest_streak, new_body_temp, thermal_death, done, starved, water_out = update_body(state, info, params, new_agent_pos)
     # `done` here is REAL DEATH only (starvation / over-eating / injury / thermal). update_body does not know
     # about the step clock, so it never fires on a timeout. Capture it BEFORE the truncation merge
     # below so the death_penalty can be gated on real death and NOT on surviving to the step limit.
@@ -1135,7 +1236,15 @@ def jax_step(state: EnvState, action: int, params: EnvParams) -> tuple[EnvState,
     # override injury already gets on the line above.
     if params.thermal_enabled:
         reason = jnp.where(thermal_death, 5, reason)
-    
+    # 6 = dehydration, 7 = over-drinking: stamped AFTER thermal (later assignments
+    # win), ONLY inside the static water gate and ONLY from the predicates update_body
+    # folded into `done` — so a water-off world cannot produce them (KNOWN_BUGS ~#494)
+    # and a label can never appear on a step the episode survived (~#160 / ~#192).
+    if params.water_enabled:
+        new_hydration, dehydrated, overdrank = water_out
+        reason = jnp.where(dehydrated, 6, reason)
+        reason = jnp.where(overdrank, 7, reason)
+
     info['termination_reason'] = reason
     # `done` below is the EPISODE-END flag: real death OR timeout. It is used ONLY for episode reset,
     # hidden-state reset, and boundary bookkeeping. It must NOT gate the death_penalty — surviving to
@@ -1189,10 +1298,18 @@ def jax_step(state: EnvState, action: int, params: EnvParams) -> tuple[EnvState,
         # the previous drive, POST-step for the current one — the same pairing the
         # satiation / injury arguments already use, so the reward stays exactly
         # `prev_drive - curr_drive` over one consistent state transition.
-        prev_drive = calculate_drive(state.satiation, state.injury_level, params,
-                                     state.body_temp)
-        curr_drive = calculate_drive(new_satiation, new_injury, params,
-                                     new_body_temp)
+        if params.water_enabled:
+            # Fourth axis: PRE-step hydration for the previous drive, POST-step for
+            # the current one, the pairing every other axis uses.
+            prev_drive = calculate_drive(state.satiation, state.injury_level, params,
+                                         state.body_temp, hydration=state.hydration)
+            curr_drive = calculate_drive(new_satiation, new_injury, params,
+                                         new_body_temp, hydration=new_hydration)
+        else:
+            prev_drive = calculate_drive(state.satiation, state.injury_level, params,
+                                         state.body_temp)
+            curr_drive = calculate_drive(new_satiation, new_injury, params,
+                                         new_body_temp)
         reward_homeostatic = prev_drive - curr_drive
         # Death penalty gated on REAL DEATH only (starvation / over-eating / injury /
         # thermal), NOT on `done`. Over-eating reaches this gate for the first time on
@@ -1229,6 +1346,12 @@ def jax_step(state: EnvState, action: int, params: EnvParams) -> tuple[EnvState,
     if params.thermal_enabled:
         info['drive_thermal'] = jnp.power(
             (new_body_temp - params.temperature_setpoint) / params.max_temperature, 2)
+    # Same convention as drive_hunger (squared normalised deviation, written
+    # divide-first). Emitted only when water is on; read it with `.get`.
+    if params.water_enabled:
+        _range_W = water_deviation_range(params)
+        info['drive_thirst'] = jnp.power(
+            (new_hydration / _range_W) - (params.water_hydration_setpoint / _range_W), 2)
     info['metabolic_drain'] = params.metabolic_cost
     info['event_collided'] = just_collided
     
@@ -1321,7 +1444,10 @@ def jax_step(state: EnvState, action: int, params: EnvParams) -> tuple[EnvState,
         key=key,
         last_action=jnp.array(action, dtype=jnp.int32),
     )
-    
+    # `water_pos` carries through untouched (fixed for the episode).
+    if params.water_enabled:
+        new_state = new_state._replace(hydration=new_hydration)
+
     return new_state, reward, done, info
 
 
@@ -1333,6 +1459,7 @@ def resolve_overlaps_global(
     key: jax.random.PRNGKey,
     is_fire: jnp.ndarray = None,
     min_fire_separation: int = 0,
+    pre_occupied: jnp.ndarray = None,
 ) -> jnp.ndarray:
     """Resolve entity position overlaps via single-pass sequential scan.
 
@@ -1360,10 +1487,19 @@ def resolve_overlaps_global(
     its own spawn area, with nothing raised. Tightening `valid` makes that more
     reachable, which is why `test_fires_respect_min_separation` also asserts
     that every fire lands inside its own area.
+
+    `pre_occupied` (THIRST_WATER_PLAN §D4.4): a `[H*W]` bool mask of cells that are
+    taken before the scan starts — the pond. An entity sampled onto one moves, and
+    no entity is moved onto one. Zero extra draws. `None` (a static choice) keeps
+    the all-False start and the pre-water graph. The load-time capacity check keeps
+    the (0, 0) fallback above unreachable because of the pond.
     """
     num_entities = all_positions.shape[0]
     total_cells = grid_height * grid_width
-    occupancy = jnp.zeros(total_cells, dtype=jnp.bool_)
+    if pre_occupied is None:
+        occupancy = jnp.zeros(total_cells, dtype=jnp.bool_)
+    else:
+        occupancy = pre_occupied
     global_perm = jax.random.permutation(key, total_cells)
     cell_rows = jnp.arange(total_cells) // grid_width
     cell_cols = jnp.arange(total_cells) % grid_width
@@ -1555,6 +1691,14 @@ _THERMAL_FIELD_KEY = 0x7EE7   # field build (default_temp, spots, per-slot ratio
 _THERMAL_FOOD_KEY = 0xF00D    # D3's second placement pass
 _THERMAL_BUSH_KEY = 0xB05E    # bush-to-fire clearance pass (BUSH_FIRE_CLEARANCE)
 
+# Water fold-in constants (THIRST_WATER_PLAN §A2). Unique across the file (see the
+# list above, plus 0xC0A1..3, 0xA77AC7 and 999 for observation noise), so no existing
+# stream moves; every use sits inside a STATIC `if params.water_enabled:`.
+_WATER_POND_KEY = 0xD81      # which candidate top-left this episode (placement_key)
+_WATER_AGENT_KEY = 0xD82     # agent-start repair off the pond (agent_key)
+_WATER_RESPAWN_KEY = 0xD83   # respawn repair off the pond (respawn_key)
+_WATER_START_KEY = 0xD84     # random start hydration (body_key)
+
 
 def heat_source_mask(temperature, ratio_low, ratio_high):
     """THE definition of "heat source", used everywhere one is needed.
@@ -1727,9 +1871,35 @@ def jax_reset(params: EnvParams, key: jax.random.PRNGKey) -> EnvState:
     # Derive per-episode animal sampling key without disturbing existing streams.
     animal_episode_key = jax.random.fold_in(property_key, 0xAE1)
 
+    # 0. Water: the pond for this episode (THIRST_WATER_PLAN §D4.5). Drawn from the
+    # load-validated top-left table with a fold-in of the ORIGINAL placement_key (it is
+    # re-split below), so no existing stream moves. STATIC gate.
+    if params.water_enabled:
+        _H, _W = params.height, params.width
+        _table = jnp.asarray(params.water_topleft_table, dtype=jnp.int32)       # [K, 2]
+        _idx = jax.random.randint(jax.random.fold_in(placement_key, _WATER_POND_KEY),
+                                  (), 0, _table.shape[0])
+        _offs = jnp.asarray([(r, c) for r in range(params.water_block_h)
+                             for c in range(params.water_block_w)], dtype=jnp.int32)
+        water_pos = _table[_idx][None, :] + _offs                               # [h*w, 2]
+        pond_mask = jnp.zeros(_H * _W, dtype=jnp.bool_).at[
+            water_pos[:, 0] * _W + water_pos[:, 1]].set(True)
+        assert params.placement_mode == 'per_entity', \
+            "water needs placement.mode per_entity (the loader refuses per_type)"
+
     # 1. Agent Position
     random_pos = jax.random.randint(agent_key, (2,), 0, jnp.array([params.height, params.width]))
     agent_pos = jnp.where(params.random_start_pos, random_pos, params.start_pos)
+    if params.water_enabled:
+        # Never start on the pond: a start on a pond cell moves to the first non-pond
+        # cell of a permutation from an independent fold-in stream — uniform over the
+        # non-pond cells, P(c) = 1/N + (k/N)/(N-k) = 1/(N-k).
+        _on = pond_mask[agent_pos[0] * _W + agent_pos[1]]
+        _perm = jax.random.permutation(jax.random.fold_in(agent_key, _WATER_AGENT_KEY),
+                                       _H * _W)
+        _free = _perm[jnp.argmax(~pond_mask[_perm])]
+        agent_pos = jnp.where(
+            _on, jnp.stack([_free // _W, _free % _W]).astype(agent_pos.dtype), agent_pos)
 
     # Per-episode count-range activation masks (NEW — PER_EPISODE_ENV_VARIANCE),
     # drawn in §7b below. Defined here, unchanged, so the bush-clearance pass
@@ -1875,10 +2045,19 @@ def jax_reset(params: EnvParams, key: jax.random.PRNGKey) -> EnvState:
             ])
 
         if all_positions.shape[0] > 0:
-            all_positions = resolve_overlaps_global(
-                all_positions, all_spawn_areas, params.height, params.width, resolve_key,
-                is_fire=_is_fire_concat, min_fire_separation=_min_fire_sep,
-            )
+            if params.water_enabled:
+                # The pond is occupied before the scan starts, so no entity is placed
+                # on it (zero extra draws).
+                all_positions = resolve_overlaps_global(
+                    all_positions, all_spawn_areas, params.height, params.width, resolve_key,
+                    is_fire=_is_fire_concat, min_fire_separation=_min_fire_sep,
+                    pre_occupied=pond_mask,
+                )
+            else:
+                all_positions = resolve_overlaps_global(
+                    all_positions, all_spawn_areas, params.height, params.width, resolve_key,
+                    is_fire=_is_fire_concat, min_fire_separation=_min_fire_sep,
+                )
 
             # D3 — "no food within M of a fire" needs a SECOND pass: the scan
             # order is [res, pred, obs, neutral], so no fire exists in the
@@ -2034,6 +2213,23 @@ def jax_reset(params: EnvParams, key: jax.random.PRNGKey) -> EnvState:
             maxval=params.thermal_start_body_temp_high)
     else:
         body_temp0 = params.temperature_setpoint
+
+    # Water: start hydration. `water.start_hydration` IS the value written here when the
+    # random start is off (KNOWN_BUGS ~#94: body.start_satiation is loaded and never
+    # used; this one is live, pinned by tests/env/test_hydration_dynamics.py). The random
+    # draw uses its own fold-in of body_key; body_key1..3 are taken.
+    if params.water_enabled:
+        if params.water_random_start_hydration:
+            hydration0 = jax.random.uniform(
+                jax.random.fold_in(body_key, _WATER_START_KEY), (),
+                minval=params.water_start_hydration_low,
+                maxval=params.water_start_hydration_high)
+        else:
+            hydration0 = params.water_start_hydration
+        _water_state = dict(hydration=jnp.asarray(hydration0, dtype=jnp.float32),
+                            water_pos=water_pos)
+    else:
+        _water_state = {}   # hydration / water_pos stay None: no new leaves
 
     injury_buffer = jnp.zeros(params.smoothing_duration)
     nociception_history_buffer = jnp.zeros(params.interoceptive_kernel_length)
@@ -2253,6 +2449,7 @@ def jax_reset(params: EnvParams, key: jax.random.PRNGKey) -> EnvState:
         terminated=jnp.array(False, dtype=jnp.bool_),
         key=key,
         last_action=jnp.array(4 if params.rest_action_enabled else 5, dtype=jnp.int32),
+        **_water_state,
     )
 
     return state

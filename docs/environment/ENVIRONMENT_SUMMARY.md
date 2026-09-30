@@ -132,6 +132,8 @@ Authoritative sensor order (from `get_observation_breakdown()` in `sensor.py`).
 | `[0]` | Injury | `injury_observable` | 1 | `[0, 1]` |
 | `[1]` | Nutrition | `nutrition_observable` | 1 | `[0, 1]` |
 | `[2]` | Satiation | Always | 1 | `[0, 1]` |
+| `+1` | Body Temperature | `thermal_enabled` and `thermal_body_temp_observable` | 1 | raw degrees |
+| `+1` | Hydration | `water_enabled` (2026-09-30) | 1 | `[0, 1]` |
 | `[3]` | Interoceptive Nociception | `interoceptive_nociception_enabled` | 1 | `[0, 1]` |
 | `[4]` | Extero Nociception | `nociception_enabled` | 1 | `[0, 1]` |
 | `[5:5+V]` | Olfaction | `olfactory_enabled` | V=`olfactory_vector_size` | `[0, ∞)` |
@@ -143,7 +145,7 @@ Authoritative sensor order (from `get_observation_breakdown()` in `sensor.py`).
 Default config observation dimension (all sensors enabled, `r=1`, `vis_r=0`, `action_dim=6`):
 - 1 + 1 + 1 + 1 + 5 + 5 + 6 + 8 + 0 = **28 dims** (location disabled by default)
 
-Olfaction pools 3 chemical signals: `res_chem + animal_chem + obs_chem` (resources, all animals unified, obstacles). The perceptual-noise system has 12 configured modalities; noise arrays are zero-padded to a fixed static shape of 13 for JIT stability (`state.py:222–226`). `interoceptive_nociception` sits at index 3 in the modality order. `injury` and `nutrition` noise are silenced by default (σ_base=0.0). See [10](10_perceptual_noise.md).
+Olfaction pools 3 chemical signals: `res_chem + animal_chem + obs_chem` (resources, all animals unified, obstacles), plus a fourth — the pond, one source per cell carrying `water.properties / (h·w)` — when `water_enabled` ([[thirst_water_plan]]; see [05](05_body_homeostasis.md) "Hydration" and [09](09_sensors_and_observation.md) "Water in the senses"). The perceptual-noise system has 12 configured modalities; noise arrays are zero-padded to a fixed static shape of 13 for JIT stability (`state.py:222–226`). `interoceptive_nociception` sits at index 3 in the modality order. `injury` and `nutrition` noise are silenced by default (σ_base=0.0). See [10](10_perceptual_noise.md).
 
 ---
 

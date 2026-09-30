@@ -18,7 +18,7 @@ import numpy as np
 import jax.numpy as jnp
 from dataclasses import dataclass
 from typing import Tuple
-from src.environment.state import EnvParams
+from src.environment.state import EnvParams, WATER_OFF_FIELDS
 
 from src.utils.config import Config
 import warnings
@@ -2678,10 +2678,6 @@ def load_env_params(config: Config) -> EnvParams:
                 "(the observation gains a Hydration dimension and the noise code looks "
                 "every observation block up by name). configs/environment/default.yaml "
                 "carries one; a config that replaces `modalities` wholesale must too.")
-        # C2 of the plan lands the schema only; the mechanics arrive in C3.
-        raise ValueError(
-            "water.enabled: true is not implemented yet (THIRST_WATER_PLAN C2 lands the "
-            "config schema only).")
     else:
         _water_fields = dict(_WATER_OFF)
 
@@ -2908,26 +2904,8 @@ def load_env_params(config: Config) -> EnvParams:
 
 _WATER_PLACEMENTS = ('list', 'random', 'center')
 
-# The water-off sentinels, in EnvParams field order. Every consumer of these fields
-# sits behind a static `if params.water_enabled:`, so none is ever read when the gate
-# is off; the values are chosen so that nothing traced could use them by accident
-# (an empty top-left table, zero-size blocks).
-_WATER_OFF = dict(
-    water_enabled=False,
-    water_block_h=0,
-    water_block_w=0,
-    water_topleft_table=(),
-    water_max_hydration=0.0,
-    water_hydration_setpoint=0.0,
-    water_start_hydration=0.0,
-    water_random_start_hydration=False,
-    water_start_hydration_low=0.0,
-    water_start_hydration_high=0.0,
-    water_drain=0.0,
-    water_drink_gain=0.0,
-    water_cell_property=(),
-    water_visual_property=(),
-)
+# The water-off sentinels: ONE copy, in state.py (EnvParams.__setstate__ uses it too).
+_WATER_OFF = WATER_OFF_FIELDS
 
 
 def _water_block_cells(r, c, h, w):

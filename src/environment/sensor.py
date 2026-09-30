@@ -33,12 +33,23 @@ def _sense_olfaction_at(point, state: EnvState, params: EnvParams):
     Kept as three separate sense_resource calls summed in the original order
     (res + animal + obs) so float accumulation is bit-identical to pre-DIRECTIONAL_SENSORS.
     """
-    return (sense_resource(point, state.res_pos, state.res_active,
-                           state.res_property_sampled, params.sensor_radius, params.sensor_decay)
-            + sense_resource(point, state.animal_pos, state.animal_active,
-                             state.animal_property_sampled, params.sensor_radius, params.sensor_decay)
-            + sense_resource(point, state.obs_pos, state.obs_active,
-                             state.obs_property_sampled, params.sensor_radius, params.sensor_decay))
+    total = (sense_resource(point, state.res_pos, state.res_active,
+                            state.res_property_sampled, params.sensor_radius, params.sensor_decay)
+             + sense_resource(point, state.animal_pos, state.animal_active,
+                              state.animal_property_sampled, params.sensor_radius, params.sensor_decay)
+             + sense_resource(point, state.obs_pos, state.obs_active,
+                              state.obs_property_sampled, params.sensor_radius, params.sensor_decay))
+    # Water (THIRST_WATER_PLAN §A3): a fourth pool, one source per pond cell, each
+    # carrying properties / (h*w), through the SAME kernel. Added AFTER the three
+    # pools under a static gate, so the water-off sum is bit-identical.
+    if params.water_enabled:
+        n = state.water_pos.shape[0]
+        total = total + sense_resource(
+            point, state.water_pos, jnp.ones(n, dtype=jnp.bool_),
+            jnp.broadcast_to(jnp.asarray(params.water_cell_property, dtype=jnp.float32),
+                             (n, len(params.water_cell_property))),
+            params.sensor_radius, params.sensor_decay)
+    return total
 
 
 def sense_olfaction_cells(state: EnvState, params: EnvParams):
@@ -371,6 +382,19 @@ def sense_visual(agent_pos, state: EnvState, params: EnvParams):
     parts_props.append(obs_props)
     parts_mask.append(params.obs_visual_mask)
     parts_blocks.append(params.obs_blocks_sight)
+    if params.water_enabled:
+        # Water (THIRST_WATER_PLAN §A4): one visual entity per pond cell, appended AFTER
+        # the obstacles: always active, always visible (mask 0), never blocks sight,
+        # NOT normalised (vision reports presence per cell).
+        n_w = state.water_pos.shape[0]
+        parts_pos.append(state.water_pos)
+        parts_active.append(jnp.ones(n_w, dtype=jnp.bool_))
+        parts_props.append(jnp.broadcast_to(
+            jnp.asarray(params.water_visual_property, dtype=jnp.float32), (n_w, V)))
+        parts_mask.append(jnp.zeros(n_w, dtype=params.obs_visual_mask.dtype))
+        parts_blocks.append(jnp.zeros(n_w, dtype=params.obs_blocks_sight.dtype))
+        all_pos = jnp.concatenate(parts_pos, axis=0)
+        all_active = jnp.concatenate(parts_active, axis=0)
     all_props = jnp.concatenate(parts_props, axis=0)  # [Total_E, V]
     all_mask = jnp.concatenate(parts_mask, axis=0)    # [Total_E] int
     all_blocks = jnp.concatenate(parts_blocks, axis=0)  # [Total_E] bool
@@ -487,6 +511,13 @@ def get_observation(state: EnvState, params: EnvParams, apply_noise=True):
     if params.thermal_enabled and params.thermal_body_temp_observable:
         obs_parts.append(("Body Temperature", jnp.array([state.body_temp])))
 
+    # 3c. Hydration — interoceptive, delivered directly, normalised like Satiation
+    #     (0.5 at the setpoint). After Body Temperature, before the delayed percept,
+    #     keeping the directly-delivered levels contiguous (THIRST_WATER_PLAN §A5).
+    if params.water_enabled:
+        obs_parts.append(("Hydration",
+                          jnp.array([state.hydration / params.water_max_hydration])))
+
     # 4. Interoceptive Nociception — interoceptive
     #    (Tonic — delayed function of hidden injury, or passthrough if convolution disabled)
     if params.interoceptive_nociception_enabled:
@@ -576,7 +607,11 @@ def get_observation_breakdown(params: EnvParams):
     # names rather than widths (this block and the next are both width 1).
     if params.thermal_enabled and params.thermal_body_temp_observable:
         breakdown["Body Temperature"] = 1
-    # 4. Interoceptive Nociception — interoceptive (delayed/passthrough injury)
+    # 3c. Hydration — MUST stay at the same position as the matching append in
+    # get_observation above (it raises if the two orders disagree).
+    if params.water_enabled:
+        breakdown["Hydration"] = 1
+# 4. Interoceptive Nociception — interoceptive (delayed/passthrough injury)
     if params.interoceptive_nociception_enabled:
         breakdown["Interoceptive Nociception"] = 1
     # 5. Extero Nociception — exteroceptive

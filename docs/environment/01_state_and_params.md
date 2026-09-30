@@ -568,6 +568,28 @@ These are derived on access; they are not stored struct fields. Consumers should
 
 ---
 
+## Water fields (2026-09-30)
+
+[[thirst_water_plan]]. Two `EnvState` fields, appended LAST with default `None`
+(flax requires defaulted fields after every non-default one):
+
+| Field | Shape / dtype | Water off | Water on |
+|---|---|---|---|
+| `hydration` | `[]` float32 | `None` | the hydration level; written at reset from `water.start_hydration` or the random draw, updated in `update_body` |
+| `water_pos` | `[h·w, 2]` int32 | `None` | every pond cell (array coordinates), fixed for the episode |
+
+`None` is an empty pytree, so a water-off state has exactly the pre-water leaves and every
+jaxpr over it is unchanged (pinned by `tests/env/test_water_parity.py`). Code that reads
+either field on a water-off world gets `None` and fails loudly.
+
+Fourteen **static** (`pytree_node=False`) `EnvParams` fields: `water_enabled`,
+`water_block_h`, `water_block_w`, `water_topleft_table` (tuple of 0-based top-left cells),
+`water_max_hydration`, `water_hydration_setpoint`, `water_start_hydration`,
+`water_random_start_hydration`, `water_start_hydration_low`, `water_start_hydration_high`,
+`water_drain`, `water_drink_gain`, `water_cell_property` (`properties / (h·w)`, a tuple) and
+`water_visual_property` (a tuple). Inert sentinels (`False / 0 / 0.0 / ()`) when the gate is
+off. Keys and validation: [02_config_schema.md](02_config_schema.md), "Water".
+
 ## Pytree Registration & Flax struct.dataclass
 
 Flax `@struct.dataclass` automatically registers both classes as JAX pytrees. This means:

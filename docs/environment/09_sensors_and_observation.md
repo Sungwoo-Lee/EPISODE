@@ -29,10 +29,11 @@ Sensors appear in the vector in the exact order listed below. Sensors toggled of
 | 2 | Nutrition | `nutrition_observable` | 1 | `[0, 1]` | `nutrition / max_nutrition` |
 | 3 | Satiation | Always on | 1 | `[0, 1]` | `satiation / max_satiation` |
 | 4 | Body Temperature | `thermal_enabled` AND `thermal_body_temp_observable` | 1 | `[min_temperature, max_temperature]` in **raw degrees** — the one row not normalised to a fixed interval | `body_temp` |
+| 4b | Hydration | `water_enabled` | 1 | `[0, 1]` (0.5 at the setpoint) | `hydration / water_max_hydration` (2026-09-30, [[thirst_water_plan]]) |
 | 5 | Interoceptive Nociception | `interoceptive_nociception_enabled` | 1 | `[0, 1]` | Convolved (delayed) injury trace, or direct `injury/max_injury` in passthrough mode |
 | 6 | Extero Nociception | `nociception_enabled` | 1 | `[0, 1]` | Max intensity among current painful contacts |
 | 7 | Thermoception | `thermal_enabled` | `2r²+2r+1` (`r = thermal_grid_range`) | `(-∞, ∞)` | `thermal_field[cell] − body_temp` over a Manhattan diamond; OOB cells **clamp** |
-| 8 | Olfaction | `olfactory_enabled` | `vector_size` (typically 5) | `[0, ∞)` | Σ property·decay(dist)·active over **3** entity pools: resources + unified animals + obstacles |
+| 8 | Olfaction | `olfactory_enabled` | `vector_size` (typically 5) | `[0, ∞)` | Σ property·decay(dist)·active over **3** entity pools: resources + unified animals + obstacles — plus a **4th, the pond**, when `water_enabled` (see "Water in the senses" below) |
 | 9 | Collision | Always on | `2r²+2r+1` | `{0, 1}` | Binary Manhattan diamond (OOB or blocking obstacle) |
 | 10 | Proprioception | `proprioception_enabled` | `action_dim` | `{0, 1}` | One-hot of last action taken |
 | 11 | Visual | `visual_sensor_enabled` | `(2r²+2r+1)×8` | `{0, 1}` | 8-channel Manhattan diamond (terrain + entity type) |
@@ -996,6 +997,25 @@ the constant did not. The eleven configs pinning `decay_power: 2.0` therefore re
 than 2.0 on-source.
 
 ---
+
+## Water in the senses (2026-09-30)
+
+When `params.water_enabled` ([[thirst_water_plan]]), three things change, each behind a static
+gate so a water-off observation is byte-identical to the pre-water one
+(`tests/env/test_water_parity.py`):
+
+- **Hydration** (row 4b above): one number, `hydration / water_max_hydration`, directly after
+  Body Temperature and before Interoceptive Nociception, keeping the directly-delivered body
+  levels contiguous. The width grows by 1 (level 06: 59). Noise modality `hydration`.
+- **Olfaction**: a fourth pool, one source per pond cell, each carrying
+  `water.properties / (h·w)` (shipped `[0.125, 0, 0, 0, 0.125]` per cell), summed through the
+  same `sense_resource` kernel AFTER the three existing pools. From afar the 2×2 pond smells
+  like ONE source of `[0.5, 0, 0, 0, 0.5]` at its centre (within 3 % from about three cells);
+  up close it is quieter than one food (on a pond corner the food channel reads
+  `0.5 × 1.177 = 0.588`, against 2.0 on a food). Pinned in `tests/env/test_water_observation.py`.
+- **Vision**: one entity per pond cell, appended after the obstacles: always active, visual
+  mask 0 (always visible), never blocks sight, property `water.visual_properties` (not
+  normalised — vision reports presence per cell, like four rocks would).
 
 ## Clarifications / FAQ
 
