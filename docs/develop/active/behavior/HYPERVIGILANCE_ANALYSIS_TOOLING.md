@@ -578,7 +578,7 @@ blocker to be discussed before merge.
 (`7ec62720`). Full report: [[plan_hypervigilance_analysis_tooling]]
 (`docs/reviews/plan_hypervigilance_analysis_tooling.md`).*
 
-**Verdict: NOT READY** — one Critical, six Moderate, three Low. The design (one `scent_spec` for
+**Verdict: NOT READY** — one Critical, five Moderate (R6 resolved by study Revision 3 `86ce3119` mid-review), three Low. The design (one `scent_spec` for
 three layouts, refusing others; every new number in a new file; a reproduce-before-read gate) is
 sound and the two-channel byte-identity argument holds. The block is in the gate's own reference.
 
@@ -592,7 +592,7 @@ Severity legend: 🔴 Critical = fix before going further · 🟡 Moderate = lik
 | R3 | 🟡 | §6 population regex | A `_r2` relaunch (study §5.7) never matches and the failed run's dir does; also not run-agnostic. | Manifest JSON with a status column; refuse ambiguous seeds; test the `_s42` + `_s42_r2` case. | `senior-developer` |
 | R4 | 🟡 | §6 `--max-blocks`, C8/C10 | `hiding_drivers.py` and `collect_arm_data.py` have no block limit and `scan.sweep` asserts full step counts; smoke mode has no implementation path. | List the shard-limit change (golden-gated files, default off) or drop smoke mode and re-budget C8/C10. | `senior-developer` |
 | R5 | 🟡 | §6 S1; study S1 | In the control the statistic is orthogonal to strength; in the treated worlds it *is* strength, so S1's Δ (a tested outcome) compares identity × injury against identity × injury + strength × injury. Dropping the collinear intensity terms is right; the reference arm is not like-for-like. | Compute an S1 matched control reading (channel 1, channel 2 as covariate); write `statistic_equals_intensity` into `readings.json`; designer registers which reference S1 uses before C10. | `senior-developer` → `experiment-designer` |
-| R6 | 🟡 | Q2–Q4 | Primary variants (S2 bins, S1 estimator, S3 row) must be registered before the first treated store is read, or they are post hoc. | Gate C10 on a dated study revision naming them; anchor the choice in `verdict.py`. | `experiment-designer` |
+| R6 | resolved | Q2–Q4 | Primary variants (S2 bins, S1 estimator, S3 row) had to be registered before the first treated store is read. **Study Revision 3 (`86ce3119`, pre-data) registers them**: population sextiles, weighted-LS slope, deciding row (same row = a01 reproduction). | Cite Revision 3 as the anchor source; anchor the three choices in `verdict.py`. | `senior-developer` |
 | R7 | 🟡 | §6 sweeps, §8 | `_ladder.OUT_ROOT` defaults to the **live** `results/analysis/ladder` when `LADDER_OUT_ROOT` is unset; `<population>/ladderstyle` reads as a relative path. | Assert the root is set and under `results/analysis/hypervigilance/` before spawning; spell the absolute path. | `senior-developer` |
 | R8–R10 | 🟢 | §7 anchors, §9 tests, §5, C2 | Anchor text `|Δ|` vs `\|Δ\|`; restrict anchors to §5.2–5.3 (the doc quotes superseded rules in its feedback sections); no test for `fit_glms(layout="single")`; `aimed_response.py`'s bare `hiding_drivers` import needs its dir on `sys.path`; C2 via the project interpreter. | wording / one test | `senior-developer` |
 
@@ -604,6 +604,6 @@ definitions; A3 the C01/C02 re-collection lands before `hvsmell` is swept; A4 S6
 (R3); a verdict map scored on a superseded S4 rule (R2). No raw-data loss; R7 is the only path to
 losing re-derivable live aggregates.
 
-**What flips it:** R1, R2, R3, R4, R7 in this plan; R5–R6 registered by the designer before C10.
+**What flips it:** R1, R2, R3, R4, R7 in this plan; R5 registered by the designer before C10 (R6 already is).
 
 *Reviewed by: plan-reviewer*
