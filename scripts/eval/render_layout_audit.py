@@ -353,6 +353,10 @@ TITLE_TABLE = {
     "SATIATION": "Satiation",
     "NUTRITION": "Nutrition",
     "INJURY": "Injury",
+    # The thirst plan's body state (THIRST_WATER_PLAN D8): the dashboard draws a
+    # "Hydration" row whenever the world observes it. Without this entry the row is
+    # plainly on screen and `panel_absent` still reports the modality missing.
+    "HYDRATION": "Hydration",
     "INTERO NOC": "Interoceptive Nociception",
     "INTEROCEPTIVE NOCICEPTION": "Interoceptive Nociception",
     "INOC": "Interoceptive Nociception",

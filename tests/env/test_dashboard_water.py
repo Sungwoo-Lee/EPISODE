@@ -350,3 +350,42 @@ def test_ground_cover_painted_OVER_the_agent_is_refused():
     hits = [f for f in _audit_pond_frame(mutate_over=True)
             if f.rule == "cell_overdraw" and "ground cover" in f.detail]
     assert hits, "ground cover drawn over an occupant was not reported"
+
+
+@pytest.mark.skipif(not _have("W1"), reason=_MISSING)
+@pytest.mark.integration
+def test_a_REAL_level_06_frame_passes_the_audit():
+    """THE D8.8 GATE ON A GENUINE WATER WORLD, not a level-05 world with water bolted on.
+
+    The pond test above audits M4, whose own recording does not OBSERVE Hydration, so the
+    audit's "every observed modality has a panel title" rule had nothing to check there.
+    On a real level-06 recording it does: the Hydration row is drawn, and the audit must
+    be able to read its title back. It could not until `TITLE_TABLE` learned the name --
+    the row was plainly on screen and the audit reported it absent.
+    """
+    from src.environment.dashboard import EpisodeRenderer
+    from src.utils.eval_recording import load_episode, load_run_meta
+
+    rec = FIXTURES / "W1" / "W1"
+    meta = load_run_meta(rec)
+    assert meta["params"].water_enabled, "W1 must be the level-06 pond world"
+    fi = audit.load_inputs(rec, 0, episode=0)
+    payload = load_episode(sorted(rec.glob("episode_*.rec.gz"))[0])
+    r = EpisodeRenderer(meta["params"], meta["icon_config"], payload, title="W1 audit",
+                        action_map=meta.get("action_map"),
+                        channel_display=meta.get("channel_display"))
+    try:
+        frame = r.frame(0)
+        saved = audit.render_capture
+        audit.render_capture = lambda _r, _fi, _f=frame, _g=r.fig: (_f, _g)
+        try:
+            findings, probe, _ = audit.audit_frame(fi, "dashboard", arena_axes="arena",
+                                                  cell_axes="arena")
+        finally:
+            audit.render_capture = saved
+        probe.close()
+    finally:
+        r.close()
+    bad = [(f.rule, f.a) for f in findings
+           if f.rule == "panel_absent" or f.rule.startswith("cell_")]
+    assert bad == [], bad
