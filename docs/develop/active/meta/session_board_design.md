@@ -8,7 +8,7 @@ last_updated: 2026-09-30
 
 # Session board
 
-> **Status**: IMPLEMENTED, tested on isolated sessions; review fixes applied 2026-09-30; live rollout NOT done yet (pending user approval)
+> **Status**: LIVE since 2026-09-30 (hooks in `.claude/settings.json`, user-approved). Kill switch: `touch claude_data/board/OFF`
 > **Opened**: 2026-09-29
 > **Related**: tmux-claude skill (`.claude/skills/tmux-claude/SKILL.md`), diary skill (`.claude/skills/diary/SKILL.md`)
 

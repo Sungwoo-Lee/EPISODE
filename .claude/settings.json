@@ -1,5 +1,53 @@
 {
   "worktree": {
     "bgIsolation": "none"
+  },
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "timeout": 5,
+            "command": "/home/vncuser/miniconda3/envs/grid_world_pain/bin/python \"$CLAUDE_PROJECT_DIR/scripts/claude/session_board.py\" hook SessionStart || true"
+          }
+        ]
+      }
+    ],
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "timeout": 5,
+            "command": "/home/vncuser/miniconda3/envs/grid_world_pain/bin/python \"$CLAUDE_PROJECT_DIR/scripts/claude/session_board.py\" hook UserPromptSubmit || true"
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "Edit|Write|NotebookEdit|MultiEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "timeout": 5,
+            "command": "/home/vncuser/miniconda3/envs/grid_world_pain/bin/python \"$CLAUDE_PROJECT_DIR/scripts/claude/session_board.py\" hook PreToolUse || true"
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "timeout": 5,
+            "command": "/home/vncuser/miniconda3/envs/grid_world_pain/bin/python \"$CLAUDE_PROJECT_DIR/scripts/claude/session_board.py\" hook PostToolUse || true"
+          }
+        ]
+      }
+    ]
   }
 }
