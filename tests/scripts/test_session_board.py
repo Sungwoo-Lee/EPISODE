@@ -339,3 +339,17 @@ def test_expired_card_swept_is_reported_quiet_not_ended(board, capsys, monkeypat
     sb.sweep()
     assert not sb.card_path("A").exists()
     assert '"Sess A" went quiet' in hook("UserPromptSubmit", {"session_id": "B"}, b.pid, capsys, monkeypatch)
+
+
+# ------------------------------------------------------------------ worktrees share the main board (2026-09-30)
+def test_main_repo_resolves_worktree_to_main_checkout(tmp_path):
+    main = tmp_path / "main"
+    (main / ".git" / "worktrees" / "wt1").mkdir(parents=True)
+    wt = tmp_path / "wt1"
+    wt.mkdir()
+    (wt / ".git").write_text(f"gitdir: {main}/.git/worktrees/wt1\n")
+    assert sb.main_repo(wt) == main
+    assert sb.main_repo(main) == main                      # the main checkout itself: .git is a directory
+    odd = tmp_path / "sub"; odd.mkdir(); (odd / ".git").write_text("gitdir: /somewhere/else/modules/x\n")
+    assert sb.main_repo(odd) == odd                        # submodule-style pointer: left alone
+    assert sb.main_repo(tmp_path / "nope") == tmp_path / "nope"

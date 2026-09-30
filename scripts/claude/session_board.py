@@ -20,7 +20,23 @@ import time
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parents[2]
-BOARD = Path(os.environ.get("SESSION_BOARD_DIR") or REPO / "claude_data" / "board")
+
+
+def main_repo(repo):
+    """The main checkout, also when running inside a git worktree (whose .git is a file
+    `gitdir: <main>/.git/worktrees/<name>`), so every worktree shares one board."""
+    try:
+        dotgit = repo / ".git"
+        if dotgit.is_file():
+            gitdir = Path(dotgit.read_text().split("gitdir:", 1)[1].strip())
+            if gitdir.parent.name == "worktrees" and gitdir.parents[1].name == ".git":
+                return gitdir.parents[2]
+    except Exception:
+        pass
+    return repo
+
+
+BOARD = Path(os.environ.get("SESSION_BOARD_DIR") or main_repo(REPO) / "claude_data" / "board")
 CARDS, SEEN = BOARD / "cards", BOARD / "seen"
 REGISTRY = Path.home() / ".claude" / "sessions"
 PY = "/home/vncuser/miniconda3/envs/grid_world_pain/bin/python"

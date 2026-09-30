@@ -296,3 +296,11 @@ A Haiku session ran in a scratch folder outside the repo, with its own `.claude/
 ### 7-day expiry of inactive live cards (2026-09-30, user request)
 
 The earlier 7-day sweep deleted **any** card file untouched for 7 days, live or not. So an idle-but-running session silently vanished: other sessions were never told, and it came back with its task wiped and a confusing "task now: (cleared)". Now **no hook activity for 7 days is an explicit expiry**. `alive()` = process alive **and** not expired. Readers are told once, `"X" went quiet (no activity for 7+ days)`, and the card is swept like an ended one. If the session is used again, it rejoins as `NEW` with an empty task and note (its old task is stale), and the usual reminder asks it to set one. Tests: 47 passed.
+
+### Worktrees share the main board (2026-09-30)
+
+**Found by a live test:** a Claude session started inside a git worktree runs that worktree's own checked-out copy of the script, via `$CLAUDE_PROJECT_DIR`. The copy computed `REPO` as the worktree, so it wrote to the worktree's own empty `claude_data/board/`, a **separate board** invisible to everyone else. **Fix:** `main_repo()` follows the worktree's `.git` file (`gitdir: <main>/.git/worktrees/<name>`) back to the main checkout, so every worktree uses `<main>/claude_data/board/`. Verified live: a Haiku session in a throwaway detached worktree created its card on the main board (7 → 8 cards; the worktree's own board stayed empty). 48 tests pass.
+
+**Caveat:** a worktree runs the script version **it** checked out. Worktrees created from a commit **before** this fix still write to a separate board. Create dev worktrees from a commit that includes it.
+
+**Still not covered by the board:** a worktree session's "editing" paths are relative to its own tree. The same relative path edited in the main tree and in a worktree raises the warning, which is useful as an early merge-conflict signal, but the warning does not say which tree.
