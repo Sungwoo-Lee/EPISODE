@@ -242,7 +242,7 @@ FiLM:       h = ReLU( &gamma;(c)&middot;(W_x&middot;x + b) + &beta;(c) )</pre>
     seeds, while surviving equally well (A1, A3). They hold the same information in broadly the same
     places, with hunger slightly less linearly readable from the modulated agent's encoder output and
     memory state (A2). Whether their memories differ, the registered test cannot say. Whether they
-    move together from world to world (A4) is still being built.</p>
+    move together from world to world (A4) was measured but gets no verdict: a registered data-quality check failed on one world (see A4).</p>
   </div>
 
   <div class="plans">
@@ -432,9 +432,8 @@ FiLM:       h = ReLU( &gamma;(c)&middot;(W_x&middot;x + b) + &beta;(c) )</pre>
   </div>
 
   <div class="plan" id="a4">
-    <div class="plan-top"><span class="plan-id">A4</span><h3>Across worlds</h3><span class="pstat build">Being built</span></div>
-    <p class="slot"><b>Status:</b> the analysis is being built and is not yet on this page. The
-    activity it needs was captured at every stage end during the evidence run.</p>
+    <div class="plan-top"><span class="plan-id">A4</span><h3>Across worlds</h3><span class="pstat wait">Measured &mdash; no verdict</span></div>
+    <p class="slot"><b>Status:</b> computed on all six agents at every stage end, and <b>blocked by gate G4</b>, so the registered rules allow no verdict on any layer. G4 is a check that the analysis can recover what the network is directly given: hunger (satiation) is one of the agent's own sensor readings, so a fit from the raw input must reach R&sup2; &ge; 0.99. On the passive world (the stages where the predator does not hunt) it reached 0.989; on the active world 0.992. The margin is small, but the threshold was registered before the data existed, and it is not moved after seeing the result. The data are not at fault: the stored hunger values match the sensor exactly. The shortfall comes from the check's own registered input step, a signed-log transform that costs more accuracy on the passive world, where hunger values are spread differently. Deciding how that case should read needs a revision of the rules, which is a decision for the study owner; until then the movement numbers carry no verdict and are not shown.</p>
     <p>How far each agent's processing moves between worlds, and whether the two agents move together.
     If both change a great deal from world to world while staying close to each other, their shared
     processing tracks the world rather than the architecture.</p>
@@ -452,7 +451,7 @@ FiLM:       h = ReLU( &gamma;(c)&middot;(W_x&middot;x + b) + &beta;(c) )</pre>
     <div class="stage"><div class="s">2</div><div class="b"><div class="t">Replay stored episodes through an agent &mdash; done</div><div class="d">Trajectory stores hold the exact observation the policy saw at each step (<code>obs_noised</code>) and the true hunger, injury and positions; every agent reproduces its own stored actions on replay.</div></div></div>
     <div class="stage"><div class="s">3</div><div class="b"><div class="t">Similarity and decoding scripts &mdash; done</div><div class="d">Episode-level splits; a rescaling-robust measure as the registered statistic, CKA beside it.</div></div></div>
     <div class="stage"><div class="s">4</div><div class="b"><div class="t">Pilot on a level-05 pair &mdash; done</div><div class="d">A test of the tools, not evidence: that pair shares a seed (Figure P).</div></div></div>
-    <div class="stage"><div class="s">5</div><div class="b"><div class="t">Run on the May replication &mdash; done for the end of training; the across-worlds step (A4) is being built</div><div class="d">All six agents, layer by layer; the stage-by-stage activity is captured and waits for A4.</div></div></div>
+    <div class="stage"><div class="s">5</div><div class="b"><div class="t">Run on the May replication &mdash; done for the end of training and for the across-worlds step (A4, blocked by gate G4)</div><div class="d">All six agents, layer by layer, at every stage end.</div></div></div>
   </div>
 </section>
 
@@ -595,7 +594,7 @@ FiLM:       h = ReLU( &gamma;(c)&middot;(W_x&middot;x + b) + &beta;(c) )</pre>
     see; or the modulated agents may simply be a more variable family of solutions, since they differ
     from each other as much as from ordinary agents (the A1 qualifier), which the first two readings do
     not explain. The next measurements that would bear on this are A4 (whether the two agents move
-    together across worlds), B1 (breaking the shared start), and a task with room above the step cap
+    together across worlds; measured, but blocked by a registered data-quality gate), B1 (breaking the shared start), and a task with room above the step cap
     or with learning speed as the outcome.</p>
   </div>
 </section>
@@ -624,7 +623,7 @@ FiLM:       h = ReLU( &gamma;(c)&middot;(W_x&middot;x + b) + &beta;(c) )</pre>
       <h4>Open</h4>
       <ul>
         <li>Whether the memory layers differ: the registered test gives no verdict there.</li>
-        <li>Whether the two agents' processing moves together across worlds (A4, being built).</li>
+        <li>Whether the two agents' processing moves together across worlds: A4 ran, but its registered input check failed on the passive world (0.989 against 0.99), so it gives no verdict.</li>
         <li>Whether the shared start explains the identical results (B1, needs a decision).</li>
         <li>Whether the modulator wakes up late: the registered measures point both ways (B2).</li>
         <li>Whether the modulated agent learns faster than the ordinary one; learning speed has not been measured with seeds.</li>
