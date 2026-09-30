@@ -8,7 +8,7 @@ row: ordinary–ordinary pairs|3|3|100.0|every pair the rules form is drawn
 row: modulated–ordinary pairs, different seeds|6|6|100.0|every pair the rules form is drawn
 row: modulated–modulated pairs|3|3|100.0|every pair the rules form is drawn
 row: untrained–untrained pairs|3|3|100.0|every pair the rules form is drawn
-row: modulated–ordinary pairs, same seed|0|3|0.0|not drawn here: the same-seed comparison is Figure an03
+row: modulated–ordinary pairs, same seed|0|3|0.0|not drawn here: the same-seed comparison is Figure A3
 row: verdict layers|5|5|100.0|a layer is refused when its probe has too few rows per column
 row: drawn statistics with a non-finite bootstrap draw|0|150|0.0|count of non-finite draws summed over drawn pair entries; a non-finite draw leaves that interval undrawn
 row: ridge fits at the edge of the penalty grid|0|1,650|0.0|flagged by the driver; listed in the output

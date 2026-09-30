@@ -212,7 +212,7 @@ def main():
         rows.append(dict(what=what, used=n, total=n, note="every pair the rules form is drawn"))
     ms = sets.get("MO_same", [])
     rows.append(dict(what="modulated–ordinary pairs, same seed", used=0, total=len(ms),
-                     note="not drawn here: the same-seed comparison is Figure an03"))
+                     note="not drawn here: the same-seed comparison is Figure A3"))
     ref = cell.get("refused_layers") or {}
     rows.append(dict(what="verdict layers", used=len(layers), total=len(layers) + len(ref),
                      note="a layer is refused when its probe has too few rows per column"))
