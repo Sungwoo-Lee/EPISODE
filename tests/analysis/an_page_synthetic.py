@@ -82,7 +82,8 @@ HEADLINE = ["grad_share.total", "grad_probe.first_update.policy", "update_size.m
 
 
 def write_wakeup(folder: str, n_l05: int = 3, n_may: int = 2) -> str:
-    """b2_reading.json + curves/<run>.json + plateau.json, in run_wakeup --summarise's schema."""
+    """b2_reading.json + curves/<run>.json + plateau.json (run_wakeup --summarise's schema), and
+    points/<run>/*.json holding the update_size block the an05 control reads."""
     os.makedirs(os.path.join(folder, "curves"), exist_ok=True)
     st = {**stamp("b2_wakeup"), "label": "synthetic wake-up fixture"}
     for k in ("verdict_prefix", "verdict_words_allowed", "verdict_statement"):
@@ -99,6 +100,13 @@ def write_wakeup(folder: str, n_l05: int = 3, n_may: int = 2) -> str:
             m = list(1 - np.exp(-np.arange(len(x)) / 5.0))
             curves[name] = {"x": [float(v) for v in x], "m": m, "measure": name.split(".")[0],
                             "anchored": anch, "headline": True}
+        pdir = os.path.join(folder, "points", label)       # the control reads main_prev_norm
+        os.makedirs(pdir, exist_ok=True)
+        json.dump({"x": 0, "measures": {}}, open(os.path.join(pdir, "0.json"), "w"))
+        for i, c in enumerate(cks):
+            json.dump({"x": c, "measures": {"update_size": {
+                "interval": [0 if i == 0 else cks[i - 1], c], "main_prev_norm": 70.0 + 5.0 * i}}},
+                open(os.path.join(pdir, f"{c}.json"), "w"))
         t_pl = float(cks[5])
         wake = {}
         for name in HEADLINE:
