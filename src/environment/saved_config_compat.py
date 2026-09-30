@@ -34,8 +34,11 @@ This module is the FIRST SLICE of the plan
 session), created by ``docs/develop/active/thermal/STATE_DEPENDENT_BODY_MECHANICS.md``
 (commit C0). It follows that plan's module path, function name and refusal rules so the
 owner can extend it rather than replace it. ``_ERA_KEYS`` holds the keys of more than one
-era: the six keys of the body-mechanics change, and the bush-to-fire clearance key of
-``docs/develop/active/thermal/BUSH_FIRE_CLEARANCE.md``. The owner adds the Stage 1/2 rows
+era: the six keys of the body-mechanics change, the bush-to-fire clearance key of
+``docs/develop/active/thermal/BUSH_FIRE_CLEARANCE.md``, and the water gate
+``water.enabled`` of ``docs/develop/active/thirst/THIRST_WATER_PLAN.md`` (supplied as
+``false`` to every saved config without a ``water`` block; no other water key is read
+when the gate is off, so none is supplied). The owner adds the Stage 1/2 rows
 (``thermal.enabled``, the sensory keys) and the manifest ``saved_config_compat`` field.
 
 All-or-none is checked per (block, era), not per block. The keys of one era arrived
@@ -62,6 +65,7 @@ _CONFIGS_DIR = (Path(__file__).resolve().parents[2] / "configs").resolve()
 
 _ERA_BODY_MECHANICS = "STATE_DEPENDENT_BODY_MECHANICS C2 (2026-09-26)"
 _ERA_BUSH = "BUSH_FIRE_CLEARANCE C2 (2026-09-26)"
+_ERA_WATER = "THIRST_WATER_PLAN C2 (2026-09-30)"
 
 # dotted key -> (value that reproduces the pre-change behaviour, era, branch that makes it inert)
 _ERA_KEYS = {
@@ -94,10 +98,17 @@ _ERA_KEYS = {
         0, _ERA_BUSH,
         "static `if params.thermal_bush_min_fire_distance > 0` in core.jax_reset; 0 = the "
         "bush pass is not traced (tests/env/test_bush_fire_clearance.py parity)."),
+    # --- water block (always): a run saved before water existed had no pond ---------
+    "water.enabled": (
+        False, _ERA_WATER,
+        "static `if params.water_enabled` everywhere in core/sensor; false = no water "
+        "leaves (EnvState.hydration / water_pos stay None), no water ops, and no other "
+        "water key is read (tests/env/test_water_parity.py)."),
 }
 
-# Parity instruments: tests/env/test_body_mechanics_parity.py (body-mechanics era) and
-# tests/env/test_bush_fire_clearance.py (bush-clearance era).
+# Parity instruments: tests/env/test_body_mechanics_parity.py (body-mechanics era),
+# tests/env/test_bush_fire_clearance.py (bush-clearance era) and
+# tests/env/test_water_parity.py (water era).
 
 
 def _era_groups(block: str) -> list[tuple[str, tuple[str, ...]]]:
@@ -168,6 +179,8 @@ def apply_saved_config_compat(cfg: dict, *, source: str) -> list[str]:
       (d) the thermal keys are supplied only when the saved ``thermal.enabled`` is true.
           A config lacking ``thermal.enabled`` altogether (a pre-thermal run) gets none of
           them, and the loader fails on ``thermal.enabled`` as it does today.
+      (e) ``water.enabled`` is supplied as ``false`` whenever it is absent (every run
+          saved before the water plan); no other water key is supplied or needed.
 
     Logs one WARNING line naming every key supplied, its value and ``source``.
     Returns the sorted list of keys supplied (callers print it).
@@ -190,6 +203,9 @@ def apply_saved_config_compat(cfg: dict, *, source: str) -> list[str]:
 
     # --- body block (always) ---
     to_supply.extend(_check_block(cfg, "body", source))
+
+    # --- water block (always): only the gate is supplied; nothing else is read off ---
+    to_supply.extend(_check_block(cfg, "water", source))
 
     for k in to_supply:
         _set(cfg, k, _ERA_KEYS[k][0])

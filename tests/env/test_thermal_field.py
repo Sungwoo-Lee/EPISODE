@@ -46,7 +46,10 @@ THERMAL_PARITY_FIXTURES = os.path.join(_ROOT, "tests", "env", "fixtures", "therm
 # ── config helpers ────────────────────────────────────────────────────────────
 
 def _campfire_dict():
-    return copy.deepcopy(yaml.safe_load(open(THERMAL_CONFIG)))
+    d = copy.deepcopy(yaml.safe_load(open(THERMAL_CONFIG)))
+    # Archived raw input: not migrated for the water gate (project policy); supplied in memory, `false` = the pre-water world (THIRST_WATER_PLAN).
+    d.setdefault("water", {"enabled": False})
+    return d
 
 
 def _campfire_entry(d):

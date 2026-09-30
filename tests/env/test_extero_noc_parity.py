@@ -61,6 +61,8 @@ def _load_params():
     """Load the parity-reference config."""
     with open(_PARITY_CFG) as f:
         d = yaml.safe_load(f)
+    # Archived raw input: not migrated for the water gate (project policy); supplied in memory, `false` = the pre-water world (THIRST_WATER_PLAN).
+    d.setdefault("water", {"enabled": False})
     with warnings.catch_warnings():
         warnings.simplefilter("ignore", DeprecationWarning)
         return load_env_params(Config(d))

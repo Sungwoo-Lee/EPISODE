@@ -239,6 +239,10 @@ def _thermal_only_config(cell_temp, max_steps=500):
     trusting this docstring.
     """
     d = copy.deepcopy(yaml.safe_load(open(THERMAL_CONFIG)))
+    # THERMAL_CONFIG is an ARCHIVED raw input, not migrated when a key becomes mandatory
+    # (project policy): supply the water gate (THIRST_WATER_PLAN) in memory. `false` is
+    # the pre-water world byte for byte.
+    d.setdefault("water", {"enabled": False})
     d["thermal"]["use_object_sources"] = False
     d["thermal"]["use_random_spots"] = False
     d["thermal"]["default_temp"] = [float(cell_temp), float(cell_temp)]

@@ -85,6 +85,8 @@ BODY_TEMP = 7.5   # deliberately non-zero: it separates "reads zero" from
 
 def _params(path, mutate=None):
     d = copy.deepcopy(yaml.safe_load(open(path)))
+    # Archived raw input: not migrated for the water gate (project policy); supplied in memory, `false` = the pre-water world (THIRST_WATER_PLAN).
+    d.setdefault("water", {"enabled": False})
     if mutate is not None:
         mutate(d)
     return load_env_params(Config(d))

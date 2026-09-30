@@ -286,6 +286,55 @@ stages becoming unrunnable.
 
 ---
 
+## Water (the pond and thirst)
+
+One pond per episode (an `h × w` block of walkable cells, fixed within the episode, redrawn
+between episodes) and a two-sided **hydration** axis that drains every step, refills on every
+step spent on a pond cell, and kills at both ends (reason 6 dehydration, 7 over-drinking).
+Plan: [[thirst_water_plan]]. Workflow notes: `CONFIG_GUIDE.md` §3.10.
+
+### `water:` keys
+
+Parsed by `config_loader._load_water`, which runs just before `EnvParams` is built (it needs
+the resolved spawn areas and start position). Every `EnvParams` water field is **static**
+(`pytree_node=False`); arrays are held as tuples. With `enabled: false` the loader reads no
+other key and fills the sentinels `False / 0 / 0.0 / ()`.
+
+| Key | EnvParams field | Read when | Validation (`ValueError` naming the key) | Meaning |
+|---|---|---|---|---|
+| `enabled` | `water_enabled` | **always** (mandatory) | — | master gate, no fallback |
+| `placement` | (resolves `water_topleft_table`) | enabled | `list` / `random` / `center` | how the pond's top-left is chosen each episode |
+| `size` | `water_block_h`, `water_block_w` | enabled | two ints `>= 1` | `[rows, cols]` of the pond |
+| `candidates` | (resolves `water_topleft_table`) | enabled and `placement: list` | non-empty; `[r, c]` ints, **1-based**; no duplicates; block inside the grid and inside `edge_margin`; must not cover a fixed `start_pos` | candidate top-left cells, one drawn uniformly per episode |
+| `edge_margin` | — (used at load) | enabled | int `>= 0` | border ring the pond may not touch, all three modes |
+| `max_hydration` | `water_max_hydration` | enabled | finite, `> 0` | top of the axis; `W >= max` is fatal |
+| `hydration_setpoint` | `water_hydration_setpoint` | enabled | `0 <= set <= max` | the comfortable level (drive target) |
+| `start_hydration` | `water_start_hydration` | enabled and the random flag false | `0 < start < max` | fixed start; written into `state.hydration` at reset |
+| `random_start_hydration` | `water_random_start_hydration` | enabled | bool | draw the start uniformly on `[low, high)` |
+| `start_hydration_low` / `_high` | `water_start_hydration_low/high` | enabled and the random flag true | `0 <= low <= high <= max` | draw range; `low = 0` can land exactly on the floor (dies on step 1) |
+| `drain_per_step` | `water_drain` | enabled | finite, `>= 0` | lost every step |
+| `drink_gain_per_step` | `water_drink_gain` | enabled | finite, `>= 0` | gained on every step ending on a pond cell (before the single clip) |
+| `properties` | `water_cell_property` (= `properties / (h·w)`) | enabled | length `sensory.vector_size`, each in `[0, 1]` | smell vector of the whole pond; per cell it is divided by the cell count |
+| `visual_properties` | `water_visual_property` | enabled | length `sensory.visual_vector_size`, each `>= 0` | written by every pond cell into the visual channel(s); not normalised |
+
+`water_topleft_table` holds the resolved top-left cells in **0-based array coordinates**:
+`list` → the candidates minus 1; `random` → every top-left inside the margin (minus any
+covering a fixed start); `center` → `((H − h) // 2, (W − w) // 2)`. `jax_reset` draws one
+index into it per episode (fold-in stream `0xD81`).
+
+**Refused combinations**: `environment.placement.mode: per_type`;
+`thermal.food_min_fire_distance > 0`; `thermal.bush_min_fire_distance > 0`; a missing
+`perceptual_noise.modalities.hydration`; a failing **capacity check** — for every entity slot at
+overlap-scan position `k` (order `[res, pred, obs, neutral]`) with post-inset area `A`,
+`|A| − max over ponds |pond ∩ A| >= k + 1`.
+
+**Coupled state and observation.** `EnvState.hydration` (`[]` float32) and `EnvState.water_pos`
+(`[h·w, 2]` int32, every pond cell) are `None` when water is off. When on, the observation
+gains **"Hydration"** (`hydration / max_hydration`) directly after "Body Temperature", and the
+info dict gains `drank` and `drive_thirst`.
+
+---
+
 ## Overview — what this document is about
 
 This document describes how a YAML configuration file is translated into the typed `EnvParams` data structure that the JAX-based GridWorld uses at runtime. The translation is performed by `load_env_params(config)` in `src/environment/config_loader.py`.
@@ -1296,7 +1345,16 @@ sensory.interoceptive_kernel_length    sensory.interoceptive_kernel_tau
 visualization.local_view_size
 
 thermal.enabled
+water.enabled
 ```
+
+**Water conditional keys** (2026-09-30, [[thirst_water_plan]]): only when `water.enabled` is
+true: `water.placement`, `water.size`, `water.edge_margin`, `water.max_hydration`,
+`water.hydration_setpoint`, `water.random_start_hydration`, `water.drain_per_step`,
+`water.drink_gain_per_step`, `water.properties`, `water.visual_properties`; additionally
+`water.candidates` only when `placement` is `list`, `water.start_hydration` only when the random
+flag is false, `water.start_hydration_low` / `_high` only when it is true. See the "Water"
+section above for validation.
 
 **Conditional-mandatory — read ONLY when `thermal.enabled` is true:**
 
@@ -1611,15 +1669,20 @@ YAML key → sensor name mapping (`config_loader.py:944–955`):
 | `injury` | `"Injury"` | 0 |
 | `nutrition` | `"Nutrition"` | 1 |
 | `satiation` | `"Satiation"` | 2 |
-| `interoceptive_nociception` | `"Interoceptive Nociception"` | 3 |
-| `extero_nociception` | `"Extero Nociception"` | 4 |
-| `olfaction` | `"Olfaction"` | 5 |
-| `collision` | `"Collision"` | 6 |
-| `proprioception` | `"Proprioception"` | 7 |
-| `visual` | `"Visual"` | 8 |
-| `location` | `"Location"` | 9 |
+| `body_temperature` | `"Body Temperature"` | 3 |
+| `interoceptive_nociception` | `"Interoceptive Nociception"` | 4 |
+| `extero_nociception` | `"Extero Nociception"` | 5 |
+| `thermoception` | `"Thermoception"` | 6 |
+| `olfaction` | `"Olfaction"` | 7 |
+| `collision` | `"Collision"` | 8 |
+| `proprioception` | `"Proprioception"` | 9 |
+| `visual` | `"Visual"` | 10 |
+| `location` | `"Location"` | 11 |
+| `hydration` | `"Hydration"` | 12 — appended last (2026-09-30) so no index above moved |
 
-12 modalities defined (+ 1 spare slot = 13 total). `sensor.py` builds `modality_map = {name: i for i, name in enumerate(params.noise_modality_order)}` at observation-assembly time.
+13 modalities defined — all 13 padded slots are used. The next modality must widen the pad
+and `EnvParams.noise_*` together (the loader raises a named error otherwise). A world with
+water on must carry the `hydration` entry (refused at load otherwise). `sensor.py` builds `modality_map = {name: i for i, name in enumerate(params.noise_modality_order)}` at observation-assembly time.
 
 Per-modality optional keys (defaults apply when absent):
 
@@ -1637,7 +1700,7 @@ Detail: see `docs/environment/10_perceptual_noise.md`.
 
 ### Implementation: `_parse_noise_config`
 
-`_parse_noise_config` is a compact function that builds five parallel JAX arrays from the flat `perceptual_noise.modalities` YAML dict. It is called at the very end of `load_env_params` and its return dict is splatted directly into the `EnvParams` constructor with `**_parse_noise_config(config)`.
+`_parse_noise_config` is a compact function that builds five parallel JAX arrays from the flat `perceptual_noise.modalities` YAML dict. It is called near the end of `load_env_params` (as `_noise_fields = _parse_noise_config(config)`, just before the water block, which checks the parsed order for a `"Hydration"` entry) and its return dict is splatted into the `EnvParams` constructor with `**_noise_fields`.
 
 `Source: src/environment/config_loader.py:944–1002`
 
@@ -2054,7 +2117,10 @@ def load_env_params(config: Config) -> EnvParams:
 
         # Perceptual Noise Configuration
         perceptual_noise_enabled=config.get('perceptual_noise.enabled', False),
-        **_parse_noise_config(config)
+        **_noise_fields,          # = _parse_noise_config(config), parsed just above
+
+        # Water / thirst (sentinels when water.enabled is false)
+        **_water_fields,          # = _load_water(...) or _WATER_OFF
 ```
 
 > **API notes — the host–device boundary in full**

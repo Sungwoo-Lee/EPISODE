@@ -166,6 +166,8 @@ def _make_v4_config() -> str:
           location_areas: []
           placement:
             mode: per_entity
+        water:
+          enabled: false   # mandatory gate (THIRST_WATER_PLAN), no pond
         thermal:
           enabled: false   # mandatory gate, no fallback default
         sensory:
@@ -293,6 +295,8 @@ def _make_v4_config_with_noise() -> str:
           location_areas: []
           placement:
             mode: per_entity
+        water:
+          enabled: false   # mandatory gate (THIRST_WATER_PLAN), no pond
         thermal:
           enabled: false   # mandatory gate, no fallback default
         sensory:
@@ -452,6 +456,8 @@ def _base_yaml_v4_resource_missing_vp() -> str:
           location_areas: []
           placement:
             mode: per_entity
+        water:
+          enabled: false   # mandatory gate (THIRST_WATER_PLAN), no pond
         thermal:
           enabled: false   # mandatory gate, no fallback default
         sensory:

@@ -80,7 +80,8 @@ diff <(git show f02e76b9:configs/environment/default.yaml) \
      <(tail -n +49 tests/env/fixtures/frozen_parity_worlds/environment__default.yaml)
 ```
 
-which must show **only** the `body.recovery_in_bush_multiplier` block and nothing else.
+which must show **only** the `body.recovery_in_bush_multiplier` block and the two-line
+`water:` gate (added 2026-09-30) and nothing else.
 
 ## Mandatory keys added after the freeze
 
@@ -95,6 +96,7 @@ tests fail.
 | Date | Key | Value | Why it is inert |
 |---|---|---|---|
 | 2026-09-15 | `body.recovery_in_bush_multiplier` | `1.0` | Gates a **trace-time Python `if`** in `core.py::update_body` (the field is `struct.field(pytree_node=False)`), so at `1.0` the branch emits no operation and the graph is character-for-character the pre-feature one. Pinned by `tests/env/test_recovery_in_bush.py::test_multiplier_one_is_graph_identical`. Commit B2 of [[BUSH_REFUGE_AND_LOCATION_DEPENDENT_RECOVERY]]. |
+| 2026-09-30 | `water.enabled` (in `environment__default.yaml`) | `false` | The water gate. Every water consumer in `core.py` / `sensor.py` sits behind a **static** `if params.water_enabled:` (a `pytree_node=False` field), and with the gate off the loader reads no other water key, `EnvState.hydration` / `water_pos` stay `None` (an empty pytree) and the observation is unchanged. Pinned by `tests/env/test_water_parity.py` (rollouts + jaxpr SHAs against a pre-change fixture) and by `tests/env/test_unified_parity.py` staying green on this file. Commit C2 of [[thirst_water_plan]]. |
 
 **What is still forbidden**: changing any value that already exists in these files, re-syncing
 them to the live tree, or regenerating their fixtures. If a future mandatory key is *not*

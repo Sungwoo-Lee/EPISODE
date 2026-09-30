@@ -159,6 +159,9 @@ def _load_params(config_path: str):
     with warnings.catch_warnings():
         warnings.simplefilter("ignore", DeprecationWarning)
         cfg = _resolve_extends(config_path, frozenset())
+        # Archived raw input: not migrated for the water gate (project policy); supplied in memory, `false` = the pre-water world (THIRST_WATER_PLAN).
+        if "water" not in cfg.to_dict():
+            cfg = Config({**cfg.to_dict(), "water": {"enabled": False}})
         return load_env_params(cfg)
 
 

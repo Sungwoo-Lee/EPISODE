@@ -347,6 +347,8 @@ sensory:
 # wholesale, so an obstacle entry here would silently propagate to every layered
 # config that does not declare its own `obstacles:` block. The campfire lives in
 # the example config under configs/environment/experiment/thermal/ instead.
+water:
+  enabled: false   # THIRST_WATER_PLAN: mandatory gate; no pond in this world
 thermal:
   enabled: false            # gate; every key below is read ONLY when true
 

@@ -64,11 +64,32 @@ def _base_params():
     return load_env_params(cfg)
 
 
-def test_water_comes_from_the_recording_when_params_cannot_say():
+class _WithoutWaterFlag:
+    """A params stand-in that cannot say whether its world has water (every EnvParams
+    has carried `water_enabled` since THIRST_WATER_PLAN C2; this keeps the
+    recording-keyed path covered for params objects that lack it)."""
+
+    def __init__(self, params):
+        self._params = params
+
+    def __getattr__(self, name):
+        if name == "water_enabled":
+            raise AttributeError(name)
+        return getattr(self._params, name)
+
+
+def test_params_now_carry_the_water_flag():
+    """The environment shipped the flag (THIRST_WATER_PLAN C2): a water-off world says so."""
     params = _base_params()
-    assert not hasattr(params, "water_enabled"), (
-        "params now carry water_enabled; this case exists for the window before "
-        "the environment shipped and should be revisited")
+    assert params.water_enabled is False
+    assert P.LayoutContext.from_params(params).water is False
+    with pytest.raises(ValueError, match="agree"):
+        P.LayoutContext.from_params(params, water=True)
+
+
+def test_water_comes_from_the_recording_when_params_cannot_say():
+    params = _WithoutWaterFlag(_base_params())
+    assert not hasattr(params, "water_enabled")
     assert P.LayoutContext.from_params(params, water=True).water is True
     assert P.LayoutContext.from_params(params, water=False).water is False
     assert P.LayoutContext.from_params(params).water is False
@@ -102,6 +123,10 @@ def _ctx(water, observed):
     import dataclasses
     from src.environment.config_loader import load_env_config, load_env_params
     params = load_env_params(load_env_config(str(LEVEL_05)))
+    if water:
+        # The params must agree with the recording (from_params checks it now that
+        # EnvParams carries the flag): level 05 with the water gate switched on.
+        params = params.replace(water_enabled=True, water_max_hydration=200.0)
     ctx = P.LayoutContext.from_params(params, water=water)
     if observed:
         ctx = dataclasses.replace(ctx, breakdown={**ctx.breakdown, "Hydration": 1})

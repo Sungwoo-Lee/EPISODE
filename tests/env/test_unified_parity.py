@@ -148,6 +148,13 @@ def test_parity(config_path, slug, has_fixture):
     # Load new-code params
     with open(config_path) as f:
         cfg_dict = yaml.safe_load(f)
+    # Archived configs are NOT migrated when a key becomes mandatory (project policy),
+    # so the water gate (THIRST_WATER_PLAN, 2026-09-30) is supplied here, IN MEMORY, for
+    # an archived world without a `water` block -- the same value saved_config_compat
+    # supplies to frozen run configs. `false` is the pre-water world byte for byte
+    # (tests/env/test_water_parity.py), so the comparison below still means what it did.
+    if "/archive/" in config_path.replace(os.sep, "/") and "water" not in cfg_dict:
+        cfg_dict["water"] = {"enabled": False}
     try:
         config = Config(cfg_dict)
         params = load_env_params(config)

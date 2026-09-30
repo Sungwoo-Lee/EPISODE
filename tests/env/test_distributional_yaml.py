@@ -77,6 +77,8 @@ body:
   eating_reward_penalty: 0.0
 # Thermal system OFF — `thermal.enabled` is a mandatory gate with no fallback
 # default (docs/develop/active/thermal/IMPLEMENTATION_PLAN.md, F6).
+water:
+  enabled: false   # THIRST_WATER_PLAN: mandatory gate; no pond in this world
 thermal:
   enabled: false
 
@@ -201,7 +203,10 @@ def dist_params():
     """Load 02-entities-distributional.yaml once for all field tests."""
     with warnings.catch_warnings():
         warnings.simplefilter("ignore", DeprecationWarning)
-        return load_env_params(Config.load_yaml(_DISTRIBUTIONAL_CONFIG))
+        d = Config.load_yaml(_DISTRIBUTIONAL_CONFIG).to_dict()
+        # Archived raw input: not migrated for the water gate (project policy); supplied in memory, `false` = the pre-water world (THIRST_WATER_PLAN).
+        d.setdefault("water", {"enabled": False})
+        return load_env_params(Config(d))
 
 
 class TestDistributionalConfig:

@@ -106,6 +106,8 @@ body:
   overeating_death: false
 # Thermal system OFF — `thermal.enabled` is a mandatory gate with no fallback
 # default (docs/develop/active/thermal/IMPLEMENTATION_PLAN.md, F6).
+water:
+  enabled: false   # THIRST_WATER_PLAN: mandatory gate; no pond in this world
 thermal:
   enabled: false
 

@@ -152,6 +152,11 @@ def test_no_unrelated_config_drift(fx, world):
     cfg, _ = _world(world)
     now = copy.deepcopy(cfg.to_dict())
     now.get("thermal", {}).pop("bush_min_fire_distance", None)
+    # Added later by THIRST_WATER_PLAN, inert with water off (its own parity gate is
+    # tests/env/test_water_parity.py): the `water` block and the hydration noise entry
+    # appended to perceptual_noise.modalities.
+    now.pop("water", None)
+    now.get("perceptual_noise", {}).get("modalities", {}).pop("hydration", None)
     assert "bush_min_fire_distance" not in stamped.get("thermal", {}), (
         "the fixture was recorded from code that already had the key: not pre-change")
     if now != stamped:

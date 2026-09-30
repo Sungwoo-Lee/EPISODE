@@ -1959,6 +1959,15 @@ def load_env_params(config: Config) -> EnvParams:
         # curriculum fingerprint sees on every non-thermal config.
         _th_body_temp_observable = False
 
+    # ── Water / thirst gate (THIRST_WATER_PLAN §D3) ───────────────────────────
+    # `water.enabled` is MANDATORY, like `thermal.enabled` and for the same reason:
+    # a fallback on a gating key would let a misspelled `water:` block train as if
+    # water were off. Every other water key is conditional-mandatory and is read
+    # by `_load_water` just before EnvParams is built, where the spawn areas and
+    # the start position it validates against are known. When the gate is off no
+    # other water key is read, so a water-off config may omit them.
+    _water_on = bool(config.get_mandatory('water.enabled'))
+
     _vis_v = config.get('sensory.visual_vector_size')
     visual_vector_size: int = int(_vis_v) if _vis_v is not None else 8
 
@@ -2641,6 +2650,41 @@ def load_env_params(config: Config) -> EnvParams:
         _hunger_low, _hunger_high, _hunger_floor = 0.0, 100.0, 0.0
         _overfull_floor, _overfull_start = 1.0, 150.0
 
+    # ── Water / thirst (THIRST_WATER_PLAN §D1, §D3) ───────────────────────────
+    _noise_fields = _parse_noise_config(config)
+    if _water_on:
+        _np_animal_sa = np.asarray(animal_spawn_area).reshape(-1, 4)
+        _scan_areas = (
+            [tuple(a) for a in np.asarray(res_spawn_area).reshape(-1, 4)]
+            + [tuple(_np_animal_sa[i]) for i in predator_indices]
+            + [tuple(a) for a in np.asarray(obs_spawn_area).reshape(-1, 4)]
+            + [tuple(_np_animal_sa[i]) for i in neutral_indices])
+        _water_fields = _load_water(
+            config, height=height, width=width,
+            start_pos=np.asarray(config.get_mandatory('environment.start_pos')) - 1,
+            random_start_pos=bool(config.get_mandatory('environment.random_start_pos')),
+            vector_size=int(config.get_mandatory('sensory.vector_size')),
+            visual_vector_size=visual_vector_size,
+            placement_mode=placement_mode,
+            food_min_fire_distance=_th_food_min_dist,
+            bush_min_fire_distance=_th_bush_min_dist,
+            spawn_areas_scan_order=_scan_areas)
+        # The observation gains a "Hydration" block, and apply_perceptual_noise looks
+        # every breakdown name up in the modality order. Without the entry that
+        # lookup is a bare KeyError inside a jit trace naming neither key nor fix.
+        if "Hydration" not in _noise_fields["noise_modality_order"]:
+            raise ValueError(
+                "water.enabled: true needs a perceptual_noise.modalities.hydration entry "
+                "(the observation gains a Hydration dimension and the noise code looks "
+                "every observation block up by name). configs/environment/default.yaml "
+                "carries one; a config that replaces `modalities` wholesale must too.")
+        # C2 of the plan lands the schema only; the mechanics arrive in C3.
+        raise ValueError(
+            "water.enabled: true is not implemented yet (THIRST_WATER_PLAN C2 lands the "
+            "config schema only).")
+    else:
+        _water_fields = dict(_WATER_OFF)
+
     return EnvParams(
         height=height,
         width=width,
@@ -2853,7 +2897,240 @@ def load_env_params(config: Config) -> EnvParams:
 
         # Perceptual Noise Configuration
         perceptual_noise_enabled=config.get('perceptual_noise.enabled', False),
-        **_parse_noise_config(config)
+        **_noise_fields,
+
+        # Water / thirst (sentinels when water.enabled is false)
+        **_water_fields,
+    )
+
+
+# ── Water / thirst (THIRST_WATER_PLAN §D1, §D3) ──────────────────────────────
+
+_WATER_PLACEMENTS = ('list', 'random', 'center')
+
+# The water-off sentinels, in EnvParams field order. Every consumer of these fields
+# sits behind a static `if params.water_enabled:`, so none is ever read when the gate
+# is off; the values are chosen so that nothing traced could use them by accident
+# (an empty top-left table, zero-size blocks).
+_WATER_OFF = dict(
+    water_enabled=False,
+    water_block_h=0,
+    water_block_w=0,
+    water_topleft_table=(),
+    water_max_hydration=0.0,
+    water_hydration_setpoint=0.0,
+    water_start_hydration=0.0,
+    water_random_start_hydration=False,
+    water_start_hydration_low=0.0,
+    water_start_hydration_high=0.0,
+    water_drain=0.0,
+    water_drink_gain=0.0,
+    water_cell_property=(),
+    water_visual_property=(),
+)
+
+
+def _water_block_cells(r, c, h, w):
+    """Array cells of the h x w block whose top-left is (r, c)."""
+    return {(r + dr, c + dc) for dr in range(h) for dc in range(w)}
+
+
+def _load_water(config, *, height, width, start_pos, random_start_pos, vector_size,
+                visual_vector_size, placement_mode, food_min_fire_distance,
+                bush_min_fire_distance, spawn_areas_scan_order):
+    """Read, validate and resolve the `water:` block. Called only when the gate is on.
+
+    Returns the EnvParams water fields. Every key is read with `get_mandatory`
+    (conditional-mandatory under `water.enabled`, CONFIG_GUIDE.md §5); every refusal is
+    a `ValueError` naming the key. Placement is resolved HERE to a static table of
+    top-left cells in 0-based ARRAY coordinates, so `jax_reset` only draws an index into
+    it: the pond's own location can never fall back to cell (0, 0) (KNOWN_BUGS ~#117).
+
+    `start_pos` is the 0-based array start; `spawn_areas_scan_order` is the post-inset
+    `[min_r, min_c, max_r, max_c)` area of every entity slot in the fixed order
+    `resolve_overlaps_global` visits them (`[res, pred, obs, neutral]`).
+    """
+    H, W = int(height), int(width)
+
+    # ── refused combinations (plan §D1, "Refused combinations") ──
+    if placement_mode != 'per_entity':
+        raise ValueError(
+            f"water.enabled: true is not supported with environment.placement.mode: "
+            f"{placement_mode!r}. The pond is kept free by seeding the occupancy mask of "
+            "the per_entity overlap scan; the per_type mode never consults it. Use "
+            "placement.mode: per_entity.")
+    if int(food_min_fire_distance) > 0 or int(bush_min_fire_distance) > 0:
+        raise ValueError(
+            "water.enabled: true cannot be combined with thermal.food_min_fire_distance > 0 "
+            "or thermal.bush_min_fire_distance > 0 (got "
+            f"{food_min_fire_distance} / {bush_min_fire_distance}): those second placement "
+            "passes rebuild occupancy from entity positions only and could move a food or "
+            "a bush onto the pond. Set both to 0.")
+
+    # ── block size and margin ──
+    size = config.get_mandatory('water.size')
+    if (not isinstance(size, (list, tuple)) or len(size) != 2
+            or not all(isinstance(v, int) and not isinstance(v, bool) and v >= 1
+                       for v in size)):
+        raise ValueError(f"water.size must be [rows, cols], two integers >= 1; got {size!r}.")
+    h, w = int(size[0]), int(size[1])
+    margin = config.get_mandatory('water.edge_margin')
+    if not isinstance(margin, int) or isinstance(margin, bool) or margin < 0:
+        raise ValueError(f"water.edge_margin must be an integer >= 0; got {margin!r}.")
+
+    fixed_start = None if random_start_pos else (int(start_pos[0]), int(start_pos[1]))
+
+    def inside_margin(r, c):
+        return (margin <= r and r + h <= H - margin
+                and margin <= c and c + w <= W - margin)
+
+    def covers_start(r, c):
+        return fixed_start is not None and fixed_start in _water_block_cells(r, c, h, w)
+
+    # ── placement → static top-left table (array coordinates) ──
+    placement = config.get_mandatory('water.placement')
+    if placement not in _WATER_PLACEMENTS:
+        raise ValueError(
+            f"water.placement must be one of {list(_WATER_PLACEMENTS)}; got {placement!r}.")
+    grid = f"{H}x{W} grid"
+    if placement == 'list':
+        cands = config.get_mandatory('water.candidates')
+        if not isinstance(cands, (list, tuple)) or len(cands) == 0:
+            raise ValueError(
+                f"water.candidates must be a non-empty list of [row, col] top-left cells "
+                f"(1-based, like environment.start_pos); got {cands!r}.")
+        table = []
+        for i, cand in enumerate(cands):
+            if (not isinstance(cand, (list, tuple)) or len(cand) != 2
+                    or not all(isinstance(v, int) and not isinstance(v, bool) for v in cand)):
+                raise ValueError(
+                    f"water.candidates[{i}] must be [row, col] integers (1-based); got "
+                    f"{cand!r}.")
+            r, c = int(cand[0]) - 1, int(cand[1]) - 1
+            if not (0 <= r and r + h <= H and 0 <= c and c + w <= W):
+                raise ValueError(
+                    f"water.candidates[{i}] = {list(cand)} (1-based) puts the {h}x{w} pond "
+                    f"off the {grid}.")
+            if not inside_margin(r, c):
+                raise ValueError(
+                    f"water.candidates[{i}] = {list(cand)} (1-based) puts the {h}x{w} pond "
+                    f"inside water.edge_margin={margin} of the {grid}.")
+            if (r, c) in table:
+                raise ValueError(
+                    f"water.candidates[{i}] = {list(cand)} is a duplicate; a repeated "
+                    "candidate silently doubles that location's probability.")
+            if covers_start(r, c):
+                raise ValueError(
+                    f"water.candidates[{i}] = {list(cand)} (1-based) covers the fixed "
+                    f"environment.start_pos (random_start_pos is false).")
+            table.append((r, c))
+    elif placement == 'random':
+        table = [(r, c) for r in range(H) for c in range(W)
+                 if 0 <= r and r + h <= H and 0 <= c and c + w <= W
+                 and inside_margin(r, c) and not covers_start(r, c)]
+        if not table:
+            raise ValueError(
+                f"water.placement: random has no legal location: the {grid} is too small "
+                f"for a {h}x{w} pond with water.edge_margin={margin}"
+                + (" that avoids the fixed environment.start_pos" if fixed_start else "")
+                + ".")
+    else:  # center
+        r, c = (H - h) // 2, (W - w) // 2
+        if not (0 <= r and r + h <= H and 0 <= c and c + w <= W) or not inside_margin(r, c):
+            raise ValueError(
+                f"water.placement: center puts the {h}x{w} pond at array ({r}, {c}), inside "
+                f"water.edge_margin={margin} of the {grid} (or off it).")
+        if covers_start(r, c):
+            raise ValueError(
+                f"water.placement: center puts the {h}x{w} pond at array ({r}, {c}), which "
+                "covers the fixed environment.start_pos (random_start_pos is false).")
+        table = [(r, c)]
+
+    # ── capacity check (KNOWN_BUGS ~#117; plan §D1) ──
+    # resolve_overlaps_global visits slots in the fixed scan order, and every earlier
+    # slot holds at most one cell. So slot i at scan position k finds a free, in-area,
+    # non-pond cell iff |A_i| - max_t |pond(t) ∩ A_i| >= k + 1. When this holds the
+    # scan's (0, 0) fallback cannot be reached because of the pond.
+    ponds = [_water_block_cells(r, c, h, w) for r, c in table]
+    for k, area in enumerate(spawn_areas_scan_order):
+        r0, c0, r1, c1 = (int(v) for v in area)
+        cells = {(r, c) for r in range(r0, r1) for c in range(c0, c1)}
+        worst = max(len(p & cells) for p in ponds)
+        if len(cells) - worst < k + 1:
+            raise ValueError(
+                f"water: capacity check failed for the entity slot at placement scan "
+                f"position {k} (spawn area rows {r0}..{r1 - 1}, cols {c0}..{c1 - 1}, "
+                f"{len(cells)} cells): with the pond covering up to {worst} of them, "
+                f"{len(cells) - worst} cells remain for {k + 1} slots. Enlarge the area, "
+                "move water.candidates, or shrink water.size.")
+
+    # ── hydration axis ──
+    max_h = float(config.get_mandatory('water.max_hydration'))
+    if not (np.isfinite(max_h) and max_h > 0.0):
+        raise ValueError(f"water.max_hydration must be finite and > 0; got {max_h}.")
+    setpoint = float(config.get_mandatory('water.hydration_setpoint'))
+    if not (0.0 <= setpoint <= max_h):
+        raise ValueError(
+            f"water.hydration_setpoint must satisfy 0 <= setpoint <= max_hydration "
+            f"({max_h}); got {setpoint}.")
+    rand_start = config.get_mandatory('water.random_start_hydration')
+    if not isinstance(rand_start, bool):
+        raise ValueError(
+            f"water.random_start_hydration must be true or false; got {rand_start!r}.")
+    if rand_start:
+        low = float(config.get_mandatory('water.start_hydration_low'))
+        high = float(config.get_mandatory('water.start_hydration_high'))
+        if not (0.0 <= low <= high <= max_h):
+            raise ValueError(
+                f"water.start_hydration_low/high must satisfy 0 <= low <= high <= "
+                f"max_hydration ({max_h}); got low={low}, high={high}.")
+        start = setpoint     # never read when the random start is on
+    else:
+        start = float(config.get_mandatory('water.start_hydration'))
+        if not (0.0 < start < max_h):
+            raise ValueError(
+                f"water.start_hydration must satisfy 0 < start < max_hydration ({max_h}): "
+                f"a start at either end is dead on arrival; got {start}.")
+        low, high = 0.0, 0.0  # never read when the random start is off
+    drain = float(config.get_mandatory('water.drain_per_step'))
+    if not (np.isfinite(drain) and drain >= 0.0):
+        raise ValueError(f"water.drain_per_step must be finite and >= 0; got {drain}.")
+    gain = float(config.get_mandatory('water.drink_gain_per_step'))
+    if not (np.isfinite(gain) and gain >= 0.0):
+        raise ValueError(f"water.drink_gain_per_step must be finite and >= 0; got {gain}.")
+
+    # ── senses ──
+    props = config.get_mandatory('water.properties')
+    if (not isinstance(props, (list, tuple)) or len(props) != int(vector_size)
+            or not all(0.0 <= float(v) <= 1.0 for v in props)):
+        raise ValueError(
+            f"water.properties must list sensory.vector_size ({vector_size}) values, each "
+            f"in [0, 1]; got {props!r}.")
+    vis = config.get_mandatory('water.visual_properties')
+    if (not isinstance(vis, (list, tuple)) or len(vis) != int(visual_vector_size)
+            or not all(float(v) >= 0.0 for v in vis)):
+        raise ValueError(
+            f"water.visual_properties must list sensory.visual_vector_size "
+            f"({visual_vector_size}) values, each >= 0; got {vis!r}.")
+    n = h * w
+    return dict(
+        water_enabled=True,
+        water_block_h=h,
+        water_block_w=w,
+        water_topleft_table=tuple(table),
+        water_max_hydration=max_h,
+        water_hydration_setpoint=setpoint,
+        water_start_hydration=start,
+        water_random_start_hydration=rand_start,
+        water_start_hydration_low=low,
+        water_start_hydration_high=high,
+        water_drain=drain,
+        water_drink_gain=gain,
+        # §A3: each of the n pond cells carries p / n, so the pond smells like ONE
+        # source of vector p in the far field, not n of them.
+        water_cell_property=tuple(float(v) / n for v in props),
+        # §A4: NOT normalised. Vision reports presence per cell.
+        water_visual_property=tuple(float(v) for v in vis),
     )
 
 _YAML_KEY_TO_SENSOR_NAME = {
@@ -2881,6 +3158,12 @@ _YAML_KEY_TO_SENSOR_NAME = {
     "proprioception":            "Proprioception",
     "visual":                    "Visual",
     "location":                  "Location",
+    # Hydration (THIRST_WATER_PLAN §A5). This entry and the `hydration:` block in
+    # configs/environment/default.yaml are MUTUALLY BLOCKING and must land in the
+    # same change, like body_temperature / thermoception above. The config block
+    # is appended LAST in `modalities`, so no existing noise index moves; lookups
+    # are by name, and load_env_params refuses water.enabled without it.
+    "hydration":                 "Hydration",
 }
 
 def _parse_noise_config(config: Config):
@@ -2912,7 +3195,9 @@ def _parse_noise_config(config: Config):
     # every lookup (by name, via `modality_map`) still handles correctly. What
     # breaks is that EnvParams array shapes start varying with the config again.
     # Worth a named error rather than a shrug — the Body Temperature modality
-    # (2026-09-14) took the 12th of the 13 slots.
+    # (2026-09-14) took the 12th of the 13 slots, and Hydration
+    # (THIRST_WATER_PLAN, 2026-09-30) took the 13th and LAST. The next modality
+    # must widen the pad and EnvParams.noise_* together.
     _NOISE_SLOTS = 13   # the padded width EnvParams declares for the noise arrays
     if len(noise_modality_order) > _NOISE_SLOTS:
         raise ValueError(

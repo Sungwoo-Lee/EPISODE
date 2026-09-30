@@ -605,6 +605,53 @@ thermal:
   # as two configs under experiment/archive/thermal/, so no file is edited between runs.
   body_temp_observable: true
 
+# ── Water and thirst (docs/develop/active/thirst/THIRST_WATER_PLAN.md) ──────────
+# ONE pond per episode: an h x w block of walkable cells that never runs dry and
+# never moves during the episode, redrawn between episodes. Standing on a pond cell
+# drinks, every step. Hydration drains linearly, has its comfortable level in the
+# MIDDLE of [0, max_hydration] and kills at BOTH ends (dehydration W <= 0, reason 6;
+# over-drinking W >= max, reason 7), mirroring the two-sided nutrition axis.
+#
+# `enabled` is the gate and is MANDATORY (no fallback). Every other key here is
+# CONDITIONAL-MANDATORY: read only when `enabled` is true, so a water-off config
+# may omit them. Off = the pre-water environment byte for byte
+# (tests/env/test_water_parity.py).
+#
+# No entity list lives here: `candidates` is a list, and lists REPLACE wholesale
+# under `extends:`, so a child that sets it must restate every candidate it wants.
+water:
+  enabled: false
+  # How the pond's top-left cell is chosen each episode:
+  #   list   - uniformly from `candidates`
+  #   random - uniformly over every top-left that fits inside `edge_margin`
+  #   center - the grid centre, ((H - h) // 2, (W - w) // 2), fixed
+  placement: list
+  size: [2, 2]                  # [rows, cols] of the pond block
+  # Top-left cells, 1-BASED like environment.start_pos and spawn areas (the loader
+  # subtracts 1). Read only when placement is `list`. These are the four quadrant
+  # blocks of the 10x10 world (array rows/cols 1-2 and 7-8).
+  candidates: [[2, 2], [2, 8], [8, 2], [8, 8]]
+  edge_margin: 1                # border ring the pond may not touch, all three modes
+  # Hydration axis. Setpoint in the middle so each end is equally far from comfort;
+  # at these values one hydration unit costs one satiation unit of drive.
+  max_hydration: 200.0
+  hydration_setpoint: 100.0
+  start_hydration: 100.0        # read only when random_start_hydration is false; 0 < start < max
+  random_start_hydration: false
+  start_hydration_low: 0.0      # read only when random_start_hydration is true
+  start_hydration_high: 200.0   # uniform draw on [low, high); low 0.0 can die on step 1
+  # Calibrated in the plan's "Target-first water clock", exact in float32:
+  # setpoint -> dehydration 100 / 0.625 = 160 steps away from water; on the pond the
+  # net is +5.0 per step, so setpoint -> over-drinking in 20 steps, refill 50 -> 100 in 10.
+  drain_per_step: 0.625
+  drink_gain_per_step: 5.625
+  # Smell: 5 olfactory channels, shared with food (channel 0) and channel 4. Each
+  # pond cell carries properties / (rows * cols), so the pond smells like ONE item
+  # of this vector from afar, not h*w of them.
+  properties: [0.5, 0.0, 0.0, 0.0, 0.5]
+  # Vision: every pond cell writes this into the visual channel(s); not normalised.
+  visual_properties: [1.0]
+
 visualization:
   local_view_size: 5
 
@@ -645,7 +692,7 @@ behavior_measures:
 
 perceptual_noise:
   enabled: false
-  # Key order here is the single source of truth for noise array indices (0-11).
+  # Key order here is the single source of truth for noise array indices (0-12).
   # config_loader.py reads this order; sensor.py consumes it via params.noise_modality_order.
   modalities:
     injury:          # index 0
@@ -755,4 +802,12 @@ perceptual_noise:
       sigma: 0.01
       injury_noise_scale: 0.0
       clip_min: -1.0       # Normalized to [-1, 1]
+      clip_max: 1.0
+    hydration:       # index 12 — APPENDED LAST (THIRST_WATER_PLAN) so no index above
+                     # moves; lookups are by name. Takes the 13th and last padded
+                     # noise slot. Only a water world has a Hydration observation.
+      mode: "state_dependent"
+      sigma: 0.1
+      injury_noise_scale: 1.5
+      clip_min: 0.0
       clip_max: 1.0

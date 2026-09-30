@@ -23,6 +23,8 @@ def test_per_entity_info_keys_present_and_finite():
     config = Config.load_yaml(
         "configs/environment/experiment/archive/hypervigilance/01-interoNocicept_sameProp.yaml"
     )
+    # Archived raw input: not migrated for the water gate (project policy); supplied in memory, `false` = the pre-water world (THIRST_WATER_PLAN).
+    config = Config({**config.to_dict(), "water": {"enabled": False}})
     params = load_env_params(config)
     key = jax.random.PRNGKey(0)
     state = jax_reset(params, key)

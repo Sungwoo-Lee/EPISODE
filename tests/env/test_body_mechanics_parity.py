@@ -62,8 +62,11 @@ assert len(NEW_KEYS) == 15
 # Keys added by LATER changes, inert at their shipped value, that the resolved level-05
 # config now carries but this fixture predates. Dropped only in the drift check; their own
 # off-parity is proved elsewhere. bush_min_fire_distance: BUSH_FIRE_CLEARANCE
-# (tests/env/test_bush_fire_clearance.py).
-LATER_INERT_KEYS = ("thermal.bush_min_fire_distance",)
+# (tests/env/test_bush_fire_clearance.py). `water` (the whole block, gate off) and the
+# appended `perceptual_noise.modalities.hydration` entry: THIRST_WATER_PLAN
+# (tests/env/test_water_parity.py).
+LATER_INERT_KEYS = ("thermal.bush_min_fire_distance", "water",
+                    "perceptual_noise.modalities.hydration")
 
 CONTRAST_SEEDS = (0, 1, 2, 3)
 
@@ -108,10 +111,15 @@ def _world_dict(world):
 
 
 def _drop(d, dotted_keys):
+    """Remove each dotted key (any depth; a bare name drops a whole block)."""
     d = copy.deepcopy(d)
     for k in dotted_keys:
-        blk, key = k.split(".")
-        d.get(blk, {}).pop(key, None)
+        *parents, key = k.split(".")
+        node = d
+        for p in parents:
+            node = node.get(p, {}) if isinstance(node, dict) else {}
+        if isinstance(node, dict):
+            node.pop(key, None)
     return d
 
 

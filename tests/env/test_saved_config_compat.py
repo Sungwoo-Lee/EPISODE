@@ -14,7 +14,8 @@ The two fixtures are verbatim copies of real Wave 1 and Wave 2 level-05 saved co
 (`tests/env/fixtures/saved_run_configs/`). A missing fixture FAILS, never skips.
 
 What is pinned here:
-  (i)   both fixtures load through the shim, which supplies exactly the seven keys;
+  (i)   both fixtures load through the shim, which supplies exactly the seven keys plus
+        the water gate `water.enabled: false` (THIRST_WATER_PLAN);
   (ii)  the raw load of each fixture raises the missing-key error (the reason the shim
         exists -- unconditional, not dependent on which commit runs it);
   (iii) a `source` under `configs/` is refused;
@@ -51,6 +52,7 @@ _SEVEN = sorted([
     "body.healing_nutrition_cost",
     "body.healing_nutrition_dependence",
     "thermal.bush_min_fire_distance",   # BUSH_FIRE_CLEARANCE era
+    "water.enabled",                    # THIRST_WATER_PLAN era (always supplied when absent)
 ])
 # A path outside configs/ -- the saved-run shape. Never read; only resolved.
 _SAVED_SOURCE = os.path.join(_REPO, "results", "JAX_RecurrentPPO", "x", "models", "config.yaml")
@@ -83,8 +85,8 @@ def _get(cfg, dotted):
 
 
 @pytest.mark.parametrize("name", _FIXTURES)
-def test_fixture_loads_through_shim_with_exactly_seven_keys(name):
-    """(i) Positive half: the shim supplies exactly the seven keys and the world builds."""
+def test_fixture_loads_through_shim_with_exactly_the_era_keys(name):
+    """(i) Positive half: the shim supplies exactly the era keys and the world builds."""
     raw, path = _load_fixture(name)
     cfg_load = copy.deepcopy(raw)
     supplied = apply_saved_config_compat(cfg_load, source=path)
@@ -140,6 +142,7 @@ def test_present_keys_are_not_overwritten():
                           healing_warm_sensitivity=0.05, injury_heat_exchange_gain=1.0,
                           bush_min_fire_distance=3)
     cfg["body"].update(healing_nutrition_cost=0.5, healing_nutrition_dependence=True)
+    cfg["water"] = {"enabled": False}
     before = copy.deepcopy(cfg)
     assert apply_saved_config_compat(cfg, source=_SAVED_SOURCE) == []
     assert cfg == before
@@ -181,7 +184,8 @@ def test_thermal_off_config_gets_only_body_keys():
     cfg = copy.deepcopy(raw)
     cfg["thermal"]["enabled"] = False
     assert apply_saved_config_compat(cfg, source=_SAVED_SOURCE) == [
-        "body.healing_nutrition_cost", "body.healing_nutrition_dependence"]
+        "body.healing_nutrition_cost", "body.healing_nutrition_dependence",
+        "water.enabled"]
     assert "random_start_body_temp" not in cfg["thermal"]
 
 
@@ -191,7 +195,8 @@ def test_pre_thermal_config_gets_no_thermal_keys():
     cfg = copy.deepcopy(raw)
     del cfg["thermal"]
     assert apply_saved_config_compat(cfg, source=_SAVED_SOURCE) == [
-        "body.healing_nutrition_cost", "body.healing_nutrition_dependence"]
+        "body.healing_nutrition_cost", "body.healing_nutrition_dependence",
+        "water.enabled"]
     assert "thermal" not in cfg
 
 
@@ -206,6 +211,7 @@ def test_supplied_values_are_the_inert_values():
     assert _get(cfg, "body.healing_nutrition_cost") == 0.0
     assert _get(cfg, "body.healing_nutrition_dependence") is False
     assert _get(cfg, "thermal.bush_min_fire_distance") == 0
+    assert _get(cfg, "water.enabled") is False
 
 
 # --- BUSH_FIRE_CLEARANCE C0: all-or-none is checked per (block, era), not per block ------
@@ -226,7 +232,7 @@ def test_body_mechanics_era_config_gets_only_the_bush_key():
     cfg["thermal"].update(_BODY_MECH_THERMAL)
     cfg["body"].update(healing_nutrition_cost=0.0, healing_nutrition_dependence=False)
     assert apply_saved_config_compat(cfg, source=_SAVED_SOURCE) == [
-        "thermal.bush_min_fire_distance"]
+        "thermal.bush_min_fire_distance", "water.enabled"]
     assert cfg["thermal"]["bush_min_fire_distance"] == 0
 
 
@@ -254,9 +260,25 @@ def test_era_grouping_is_generic(monkeypatch):
     cfg = copy.deepcopy(raw)
     cfg["thermal"].update(_BODY_MECH_THERMAL, bush_min_fire_distance=0)
     cfg["body"].update(healing_nutrition_cost=0.0, healing_nutrition_dependence=False)
+    cfg["water"] = {"enabled": False}
     assert compat.apply_saved_config_compat(copy.deepcopy(cfg), source=_SAVED_SOURCE) == [
         "thermal.synthetic_a", "thermal.synthetic_b"]
 
     cfg["thermal"]["synthetic_a"] = 1.5
     with pytest.raises(ValueError, match="thermal block carries.*SYNTHETIC era"):
         compat.apply_saved_config_compat(cfg, source=_SAVED_SOURCE)
+
+
+# --- THIRST_WATER_PLAN C2: the water gate ----------------------------------------------
+
+def test_pre_water_config_gets_only_the_water_gate():
+    """A run saved after every earlier era but before water: exactly `water.enabled: false`
+    is supplied, no other water key, and the world builds with water off."""
+    raw, _ = _load_fixture(_FIXTURES[1])
+    cfg = copy.deepcopy(raw)
+    cfg["thermal"].update(_BODY_MECH_THERMAL, bush_min_fire_distance=0)
+    cfg["body"].update(healing_nutrition_cost=0.0, healing_nutrition_dependence=False)
+    assert "water" not in cfg
+    assert apply_saved_config_compat(cfg, source=_SAVED_SOURCE) == ["water.enabled"]
+    assert cfg["water"] == {"enabled": False}
+    assert load_env_params(Config(cfg)).water_enabled is False

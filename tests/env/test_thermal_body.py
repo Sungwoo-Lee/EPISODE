@@ -74,6 +74,8 @@ def _uniform_field_config(cell_temp, max_steps=500):
     assertion would ever be reached.
     """
     d = copy.deepcopy(yaml.safe_load(open(THERMAL_CONFIG)))
+    # Archived raw input: not migrated for the water gate (project policy); supplied in memory, `false` = the pre-water world (THIRST_WATER_PLAN).
+    d.setdefault("water", {"enabled": False})
     d["thermal"]["use_object_sources"] = False
     d["thermal"]["use_random_spots"] = False
     d["thermal"]["default_temp"] = [float(cell_temp), float(cell_temp)]

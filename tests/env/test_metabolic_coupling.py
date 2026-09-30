@@ -89,7 +89,10 @@ def _load(path_or_dict):
     if isinstance(path_or_dict, dict):
         return load_env_params(Config(path_or_dict))
     with open(path_or_dict) as fh:
-        return load_env_params(Config(yaml.safe_load(fh)))
+        d = yaml.safe_load(fh)
+        # Archived raw input: not migrated for the water gate (project policy); supplied in memory, `false` = the pre-water world (THIRST_WATER_PLAN).
+        d.setdefault("water", {"enabled": False})
+        return load_env_params(Config(d))
 
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -217,6 +220,8 @@ def _uniform_field_config(coupling, rate=2.0, max_steps=500):
       off. The closed form carries `metabolic_cost` explicitly instead.
     """
     d = copy.deepcopy(yaml.safe_load(open(THERMAL_CONFIG)))
+    # Archived raw input: not migrated for the water gate (project policy); supplied in memory, `false` = the pre-water world (THIRST_WATER_PLAN).
+    d.setdefault("water", {"enabled": False})
     d["thermal"]["use_object_sources"] = False
     d["thermal"]["use_random_spots"] = False
     d["thermal"]["default_temp"] = [0.0, 0.0]

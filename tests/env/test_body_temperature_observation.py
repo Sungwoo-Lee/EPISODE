@@ -86,7 +86,13 @@ NAME = "Body Temperature"
 # ── helpers ───────────────────────────────────────────────────────────────────
 
 def _dict(path):
-    return copy.deepcopy(yaml.safe_load(open(path)))
+    d = copy.deepcopy(yaml.safe_load(open(path)))
+    # The two campfire worlds are ARCHIVED raw inputs, which are not migrated when a key
+    # becomes mandatory (project policy); the water gate (THIRST_WATER_PLAN) is supplied
+    # here in memory. `false` is the pre-water world byte for byte.
+    if "water" not in d:
+        d["water"] = {"enabled": False}
+    return d
 
 
 def _params(path, mutate=None):

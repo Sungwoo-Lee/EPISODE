@@ -95,7 +95,10 @@ _REST_INFO = {
 def _campfire_dict():
     """The live archived campfire world (thermal ON), as a raw dict."""
     with open(CAMPFIRE_CONFIG) as fh:
-        return yaml.safe_load(fh)
+        d = yaml.safe_load(fh)
+    # Archived raw input: not migrated for the water gate (project policy); supplied in memory, `false` = the pre-water world (THIRST_WATER_PLAN).
+    d.setdefault("water", {"enabled": False})
+    return d
 
 
 def _uniform(cell, **thermal_overrides):

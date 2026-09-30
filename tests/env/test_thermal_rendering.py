@@ -71,6 +71,8 @@ def _still_thermal_world():
     to an entity having walked.
     """
     d = copy.deepcopy(yaml.safe_load(open(THERMAL_CONFIG)))
+    # Archived raw input: not migrated for the water gate (project policy); supplied in memory, `false` = the pre-water world (THIRST_WATER_PLAN).
+    d.setdefault("water", {"enabled": False})
     d["environment"]["entities"] = []
     d["environment"]["obstacles"] = [
         o for o in d["environment"]["obstacles"] if o.get("name") == "campfire"]

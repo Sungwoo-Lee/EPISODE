@@ -1,3 +1,5 @@
+from typing import Optional
+
 import jax.numpy as jnp
 import jax
 import numpy as np
@@ -107,6 +109,14 @@ class EnvState:
 
     # Proprioception
     last_action: jnp.ndarray      # [] (int32 action index)
+
+    # Water (THIRST_WATER_PLAN). None on every water-off world: None is an empty
+    # pytree, so the state has exactly the pre-water leaves and every jaxpr built
+    # over it is unchanged (tests/env/test_water_parity.py pins the SHAs). A read on
+    # a water-off world therefore gets None and fails loudly, like thermal_field's
+    # [0, 0] shape trick. Defaulted fields must come last (flax dataclass rule).
+    hydration: Optional[jnp.ndarray] = None   # [] float32
+    water_pos: Optional[jnp.ndarray] = None   # [h*w, 2] int32, every pond cell, fixed for the episode
 
     def _replace(self, **kwargs):
         return self.replace(**kwargs)
@@ -485,6 +495,34 @@ class EnvParams:
     # means the obs_dim check already catches a mismatch.
     # Inert (False) whenever `thermal_enabled` is False.
     thermal_body_temp_observable: bool = struct.field(pytree_node=False)
+
+    # ── Water / thirst (THIRST_WATER_PLAN §D2) ───────────────────────────────
+    # `water_enabled` is the gate (`water.enabled`, mandatory); every other field is
+    # read from the config only when it is true, and is an inert sentinel otherwise
+    # (False / 0 / 0.0 / ()). ALL STATIC (pytree_node=False): a traced leaf would
+    # renumber the jaxpr of every water-off world, which the parity gate forbids.
+    # Arrays are held as tuples for the same reason. Price: one recompile per
+    # distinct water setting, which is not swept inside a run.
+    water_enabled: bool = struct.field(pytree_node=False)
+    water_block_h: int = struct.field(pytree_node=False)
+    water_block_w: int = struct.field(pytree_node=False)
+    # ((r, c), ...) top-left cells, 0-based ARRAY coordinates, validated at load and
+    # never empty when enabled. jax_reset draws one index into it per episode.
+    water_topleft_table: tuple = struct.field(pytree_node=False)
+    water_max_hydration: float = struct.field(pytree_node=False)
+    water_hydration_setpoint: float = struct.field(pytree_node=False)
+    water_start_hydration: float = struct.field(pytree_node=False)
+    water_random_start_hydration: bool = struct.field(pytree_node=False)
+    water_start_hydration_low: float = struct.field(pytree_node=False)
+    water_start_hydration_high: float = struct.field(pytree_node=False)
+    water_drain: float = struct.field(pytree_node=False)          # hydration lost per step
+    water_drink_gain: float = struct.field(pytree_node=False)     # gained per step on a pond cell
+    # `water.properties` / (h*w): each pond cell smells of p/n, so the pond reads as
+    # ONE source of vector p in the far field (plan §A3). Length vector_size.
+    water_cell_property: tuple = struct.field(pytree_node=False)
+    # `water.visual_properties`, NOT normalised (vision reports presence per cell,
+    # plan §A4). Length visual_vector_size.
+    water_visual_property: tuple = struct.field(pytree_node=False)
 
     # ── Legacy @property aliases (B3 fix — kept for one release cycle) ────────
     # These accessors allow code that reads `params.predator_tags` / `params.neutral_tags`

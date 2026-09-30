@@ -536,6 +536,84 @@ animals move.
 
 ---
 
+### 3.10 Water and thirst — the pond and the hydration axis (`water:`)
+
+[[thirst_water_plan]] (`docs/develop/active/thirst/THIRST_WATER_PLAN.md`). One **pond** per
+episode: an `h × w` block of walkable cells (2×2 by default) that never runs dry and never
+moves during the episode, redrawn between episodes. Standing on a pond cell drinks, every
+step. **Hydration** drains linearly, has its comfortable level in the **middle** of
+`[0, max_hydration]`, and kills at **both** ends: dehydration (`W <= 0`, termination reason
+**6**) and over-drinking (`W >= max_hydration`, reason **7**), the same shape as the two-sided
+nutrition axis.
+
+**The gate and the read pattern.** `water.enabled` is **mandatory** (no fallback; a missing key
+raises `ValueError` naming it). Every other key is **conditional-mandatory**: read with
+`get_mandatory` only when the gate is true, so a water-off config may omit the rest. With the
+gate off the loader reads nothing else, every water consumer in `core.py` / `sensor.py` sits
+behind a static `if params.water_enabled:`, and `EnvState.hydration` / `water_pos` stay `None`
+— the world is the pre-water environment byte for byte (`tests/env/test_water_parity.py`).
+
+| Key | Read when | `default.yaml` |
+|---|---|---|
+| `water.enabled` | **always** | `false` |
+| `water.placement` | enabled | `list` (`list` / `random` / `center`) |
+| `water.size` | enabled | `[2, 2]` |
+| `water.candidates` | enabled **and** placement `list` | `[[2, 2], [2, 8], [8, 2], [8, 8]]` |
+| `water.edge_margin` | enabled | `1` (all three modes) |
+| `water.max_hydration` / `hydration_setpoint` | enabled | `200.0` / `100.0` |
+| `water.random_start_hydration` | enabled | `false` |
+| `water.start_hydration` | enabled **and** the random flag false | `100.0` (`0 < start < max`) |
+| `water.start_hydration_low` / `_high` | enabled **and** the random flag true | `0.0` / `200.0` |
+| `water.drain_per_step` / `drink_gain_per_step` | enabled | `0.625` / `5.625` |
+| `water.properties` | enabled | `[0.5, 0.0, 0.0, 0.0, 0.5]` (length `sensory.vector_size`) |
+| `water.visual_properties` | enabled | `[1.0]` (length `sensory.visual_vector_size`) |
+| `perceptual_noise.modalities.hydration` | whenever noise is parsed; **required** when water is on | appended **last** |
+
+**Placement modes** all reduce, at load, to a static table of top-left cells; `jax_reset` draws
+one index per episode, so the pond's own position can never fall back to cell (0, 0).
+
+- `list` — uniformly from `candidates`. **Coordinates are 1-based** like `environment.start_pos`
+  and spawn areas; the loader subtracts 1. Refused: an empty list, a duplicate (it would
+  silently double one location's probability), a block off the grid or inside `edge_margin`,
+  a block covering a fixed `start_pos` (when `random_start_pos` is false).
+- `random` — uniformly over every top-left whose block fits inside `edge_margin` (minus those
+  covering a fixed start). Refused if none exists. `candidates` is not read.
+- `center` — `((H − h) // 2, (W − w) // 2)`, floor for odd remainders. On the default 10×10 it
+  contains the default `start_pos`, which is legal only because every ladder world has
+  `random_start_pos: true`.
+
+**`candidates` is a list, so it REPLACES wholesale under `extends:`** (§1): a child that sets it
+must restate every candidate it wants.
+
+**Other load-time refusals.** Water with `environment.placement.mode: per_type`, or with
+`thermal.food_min_fire_distance > 0` / `thermal.bush_min_fire_distance > 0` (those passes
+rebuild occupancy from entity positions only and could move an entity onto the pond). A
+**capacity check** guards the silent (0, 0) fallback of the overlap scan (KNOWN_BUGS ~#117):
+for every entity slot at scan position `k` with spawn area `A`, `|A| − max over ponds of
+|pond ∩ A| >= k + 1`. Water without a `hydration` noise modality is refused by name.
+
+**Where water shows up.** One observation dimension, **"Hydration"** = `hydration /
+max_hydration` (0.5 at the setpoint), directly after Body Temperature and before Interoceptive
+Nociception — so the observation widens by 1 (level 06 is 59). A fourth olfactory pool (each
+pond cell smells of `properties / (h·w)`, so the pond reads as one source from afar), and one
+visual entity per pond cell (not normalised). A fourth drive axis `(W − W_set) ·
+range_S / range_W`, so a full-scale water deviation weighs the same as full-scale hunger.
+Info keys `drank` and `drive_thirst` exist only when water is on (read them with `.get`).
+
+**The noise slot.** `hydration` is **appended last** in `perceptual_noise.modalities`, so no
+existing noise index moves (lookups are by name). It takes the **13th and last** padded slot:
+the next modality must widen `_NOISE_SLOTS` and `EnvParams.noise_*` together.
+
+**Saved run configs.** `saved_config_compat` supplies `water.enabled: false` to any saved
+config without a `water` block (era "THIRST_WATER_PLAN C2"); nothing else is needed, since no
+other water key is read when the gate is off.
+
+**Curricula.** Turning water on widens the observation by one, so the `obs_dim` check rejects a
+curriculum that mixes water and non-water stages; `water_enabled` is also in the modality
+fingerprint. A water curriculum is water throughout.
+
+---
+
 ---
 
 ## 4. How to author a new config (worked example)
@@ -744,7 +822,7 @@ An earlier revision of this split enforced `logging.episode.smoothing_episodes` 
 1. **Update `configs/environment/default.yaml`** — add/rename the key with its explicit value and update its inline comment.
 2. **Update this guide AND [02_config_schema.md](02_config_schema.md)** — keep the workflow guide and the deep key reference in step with the code.
 3. **Add or extend a test** that exercises the new/changed behaviour (and proves a missing/invalid value raises, for mandatory keys).
-4. **Keep the parity gate green** (`tests/env/test_unified_parity.py`, `tests/env/test_visual_parity.py`) — or, if the change deliberately alters observations, regenerate fixtures on a pre-change commit and say so explicitly.
+4. **Keep the parity gate green** (`tests/env/test_unified_parity.py`, `tests/env/test_visual_parity.py`) — or, if the change deliberately alters observations, regenerate fixtures on a pre-change commit and say so explicitly. Feature-specific gates join these for their own change: for the water / thirst change (2026-09-30) it is `tests/env/test_water_parity.py` (every water-off world against a pre-change fixture, rollouts and jaxpr SHAs).
 
 **The agents below are bound to READ this guide before any config work and to UPDATE it (and `02_config_schema.md`) in the same change whenever the schema or system changes:**
 
