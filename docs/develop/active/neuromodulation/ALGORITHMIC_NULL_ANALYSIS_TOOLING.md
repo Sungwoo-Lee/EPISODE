@@ -933,7 +933,11 @@ The one loader of the pinned rules file: `load(manifest) -> PinnedRules` (whole-
   - **co-movement:** per-draw Pearson r of two agents' profiles, summarised with `summarise_pairs` (OO yardstick, MO_diff test);
   - **the A1 layer verdict at each stage end** on its own world's probe. The world is read from each run's saved `schedule.yaml` stage name. The primary cell is taken from the manifest's `similarity.json` (same rules sha asserted); the other four cells are computed with `run_similarity.analyse_cell` and `evaluate_A1`.
 - **Joint draws across worlds:** one split and bootstrap per probe with the manifest's seeds, and both probes must split their groups identically (asserted). Draw k therefore resamples the same `episode_seed` groups on both probes.
-- **Gates** (tooling reading; the rules define G1/G3 only for an agent replayed on its own store). For a stage-end cell: G1 and G3 come from the store-generating captures on the same probe, G2 from every capture used, G4 from the probe's controls, G6 from the cell's and each movement probe's held-out groups, and G5 study-wide.
+- **Gates** (tooling reading, ruled sound in `docs/reviews/code_a4_across_worlds.md`; the rules define G1/G3 only for an agent replayed on its own store).
+  - stage_end:3/passive and final/active are store-generating cells, so their G1/G3 are their own.
+  - For stage_end:0/active, stage_end:1/passive and stage_end:2/active, G1 and G3 come from the store-generating captures on the same probe.
+  - G2 comes from every capture used, the `:prev` captures included; G4 from the probe's controls; G6 from each cell's and each movement probe's held-out groups; G5 is study-wide.
+  - The reused `similarity.json` provenance (git sha, dirty flag, time, captures sha) is recorded, and a captures mismatch raises (review M2). A dirty flag is recorded, not refused (O2).
 - **Outputs:** `across_worlds.{json,csv}` beside the manifest's other outputs, stamped (rules sha and commit, git sha, evidence status). An output under other rules is never overwritten.
 - **Tests:** `tests/analysis/test_nmn_across_worlds.py`. The signed A4 fixture table (TABLE 9) goes through the driver's `evaluate`; a synthetic two-world end-to-end run checks the stamp, layout, own-world cells, gates and profile shapes; one movement entry equals a direct `predictivity` call.
 

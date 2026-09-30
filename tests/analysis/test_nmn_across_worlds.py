@@ -110,6 +110,11 @@ def test_a4_output_is_stamped_and_complete(a4_run):
                                        "final": "active"}
     cells = doc["stage_end_cells"]
     assert cells["final"]["source"] == "similarity.json"
+    rs = cells["final"]["reused_stamp"]                                    # code review M2
+    assert set(rs) == {"git_sha", "git_dirty", "generated_utc", "captures_rules_sha256"}
+    assert rs["captures_rules_sha256"] == pinned.sha256
+    assert doc["data_statement"]["reused_primary_cell"]["final"] == rs
+    assert "co_movement_profile_note" in doc["data_statement"] and doc["gates_prev_captures_G2"]
     assert all(cells[s]["source"] == "computed here" for s in cells if s != "final")
     assert all(cells[s]["cell"][1] == doc["stage_end_worlds"][s] for s in cells)
     assert all(v for c in cells.values() for v in c["gates"].values())
@@ -121,7 +126,8 @@ def test_a4_output_is_stamped_and_complete(a4_run):
     for key in syn.VERDICT:
         for n, a in doc["layers"][key]["agents"].items():
             assert len(a["profile"]) == 8 and len(a["entries"]) == 10
-            assert a["q_lo"] is not None and a["mean_movement_minus_drift"] > 0   # fixture moves
+            assert a["q_lo"] > 0 and a["mean_movement_minus_drift"] > 0   # fixture moves (M1)
+        assert ev["layers"][key]["moves"] == {"ordinary": True, "modulated": True}
         assert len(doc["layers"][key]["co_movement"]["OO"]) == 3
         assert len(doc["layers"][key]["co_movement"]["MO_diff"]) == 6
     assert (out / "across_worlds.csv").exists()
@@ -145,3 +151,7 @@ def test_a4_movement_entry_equals_a_direct_predictivity(a4_run):
     ent = [e for e in doc["layers"]["rnn.state"]["agents"]["modulated_s43"]["entries"]
            if e["from"] == "stage_end:1" and e["to"] == "stage_end:2" and e["probe"] == "passive"]
     assert len(ent) == 1 and abs(ent[0]["movement"] - (1 - pr["point"])) < 1e-12
+    from scripts.analysis.nmn.run_similarity import _q
+    lo, hi, _ = _q(1 - pr["draws"], P)           # the sign of the draws path (code review M1)
+    assert abs(ent[0]["q_lo"] - lo) < 1e-12 and abs(ent[0]["q_hi"] - hi) < 1e-12
+    assert lo < 1 - pr["point"] < hi

@@ -17,10 +17,12 @@ joint: both probes hold the same episode_seed groups (asserted), so draw k of ev
 either probe, resamples the same groups. The A1 cell at the primary checkpoint is read from
 this manifest's similarity.json (same rules sha asserted), not recomputed.
 
-Gates (tooling reading, stated in the output): G1 and G3 exist only for an agent replayed on its
-own store, so for a stage-end cell they are taken from the store-generating captures on the
-same world's probe; G2 from every capture used; G4 from the probe's controls; G6 from each
-cell's and each movement probe's held-out groups; G5 study-wide.
+Gates (tooling reading, stated in the output; ruled sound in docs/reviews/code_a4_across_worlds.md):
+G1 and G3 exist only for an agent replayed on its own store. The stage_end:3 / passive and
+final / active cells are store-generating cells; for stage_end:0 / active, stage_end:1 / passive
+and stage_end:2 / active they are taken from the store-generating captures on the same world's
+probe. G2 from every capture used, the `:prev` captures included; G4 from the probe's controls;
+G6 from each cell's and each movement probe's held-out groups; G5 study-wide.
 
 Outputs: across_worlds.{json,csv} beside the manifest's other outputs (driver_io.write_outputs
 never overwrites an output computed under other rules).
@@ -96,7 +98,7 @@ def movement_entries(layout: dict) -> list[tuple[str, str, str, str]]:
 
 def agent_layer(key: str, name: str) -> dict:
     """Movement and drift of one agent at one layer: point and joint draws per entry."""
-    from scripts.analysis.nmn.run_similarity import _Fits, predictivity
+    from scripts.analysis.nmn.run_similarity import _Fits, _q, predictivity
     st = _STATE
     caps, agents, splits, boots, rs, layout = (st[k] for k in (
         "caps", "agents", "splits", "boots", "rs", "layout"))
@@ -108,8 +110,11 @@ def agent_layer(key: str, name: str) -> dict:
         Xa = caps.layer(lab, a, pid, key)
         Xb = caps.layer(lab, b, pid, key)
         pr = predictivity(Xa, Xb, g, splits[pid], boots[pid], rs, fits, f"{name}/{key}/{a}->{b}/{pid}")
+        md = 1.0 - pr["draws"]
+        lo, hi, bad = _q(md, st["P"])
         ent.append({"kind": kind, "from": a, "to": b, "probe": pid, "P": pr["point"],
-                    "movement": 1.0 - pr["point"], "draws": 1.0 - pr["draws"],
+                    "movement": 1.0 - pr["point"], "draws": md, "q_lo": lo, "q_hi": hi,
+                    "nonfinite_draws": bad,
                     "fits_ab": pr["fits_ab"], "fits_ba": pr["fits_ba"]})
     return {"agent": name, "layer": key, "entries": ent, "fits": fits.n,
             "fits_at_grid_edge": fits.edge, "predictor_columns": fits.columns}
@@ -246,7 +251,9 @@ def main(argv=None) -> int:
         g4[pid] = dio.g4_controls(caps.probes[pid], splits[pid], man, dio.quantities(pinned), P)
     ref = layout["probes"][0]
     for pid in layout["probes"][1:]:
-        if not all(np.array_equal(a.test_groups, b.test_groups) for a, b in zip(splits[ref], splits[pid])):
+        if not (all(np.array_equal(a.test_groups, b.test_groups)
+                    for a, b in zip(splits[ref], splits[pid]))
+                and all(np.array_equal(x, y) for x, y in zip(boots[ref], boots[pid]))):
             raise ValueError(f"probes {ref} and {pid} split their groups differently; the A4 draws "
                              f"would not be joint")
     t0 = time.time()
@@ -254,7 +261,13 @@ def main(argv=None) -> int:
     # A1 at every stage end on its own world: the primary cell from similarity.json, the others here
     primary = dio.primary_cell(pinned, policy.status, dio.cells(caps, man)) if policy.allowed else None
     sim_path = caps.out / "similarity.json"
+    bad = set(worlds.values()) - set(layout["probes"])
+    if bad:
+        raise ValueError(f"stage-end worlds {sorted(bad)} are not parameters.A4.probes {layout['probes']}")
     cells = {sel: (sel, worlds[sel]) for sel in layout["stage_sequence"]}
+    if primary is not None and cells[layout["stage_sequence"][-1]] != primary:
+        raise ValueError(f"the last stage end's cell {cells[layout['stage_sequence'][-1]]} is not the "
+                         f"rules' primary cell {primary}")
     todo = [c for c in cells.values() if c != primary]
     cell_agents = {c: agents_of_cell(caps, man, c, entered, roles) for c in todo}
     _STATE.update(caps=caps, man=man, P=P, verdict_layers=verdict_layers, cell_agents=cell_agents,
@@ -273,7 +286,13 @@ def main(argv=None) -> int:
             sim = json.loads(sim_path.read_text())
             if sim["decision_rules"]["sha256"] != pinned.sha256 or tuple(sim["primary_cell"]) != c:
                 raise ValueError(f"{sim_path}: not this rules sha / primary cell; run run_similarity first")
+            if sim.get("captures_rules_sha256") != caps.rules_sha:
+                raise ValueError(f"{sim_path}: computed on captures of rules "
+                                 f"{sim.get('captures_rules_sha256')}, these captures are "
+                                 f"{caps.rules_sha}; not the same captures")
             stage_end[sel] = {"cell": list(c), "source": "similarity.json", "gates": sim["gates"],
+                              "reused_stamp": {k: sim.get(k) for k in (
+                                  "git_sha", "git_dirty", "generated_utc", "captures_rules_sha256")},
                               "a1_words": a1_words(sim["evaluation"]["A1"], policy)}
             continue
         res = cell_res[c]
@@ -339,9 +358,24 @@ def main(argv=None) -> int:
         layers[key] = lay
     doc = {**stamp, "driver": "run_across_worlds", "analysis": "A4 (movement across worlds)",
            "layout": layout, "stage_end_worlds": worlds, "gate_G5": g5,
-           "gates_reading": "G1/G3 of a stage-end cell from the store-generating captures on the "
-                            "same probe; G2 every capture used; G4 per probe; G6 per cell and per "
-                            "movement probe; G5 study-wide",
+           "gates_reading": "stage_end:3/passive and final/active are store-generating cells "
+                            "(G1/G3 their own); for stage_end:0/active, stage_end:1/passive and "
+                            "stage_end:2/active, G1/G3 from the store-generating captures on the "
+                            "same probe; G2 every capture used, :prev included; G4 per probe; G6 "
+                            "per cell and per movement probe; G5 study-wide",
+           "data_statement": {
+               "rules": stamp["decision_rules"], "git_sha": stamp["git_sha"],
+               "git_dirty": stamp["git_dirty"], "evidence_status": stamp["evidence_status"],
+               "verdict_statement": stamp["verdict_statement"],
+               "reused_primary_cell": {s: e.get("reused_stamp") for s, e in stage_end.items()
+                                       if e.get("reused_stamp")},
+               "co_movement_profile_note": (
+                   "each of the 4 transitions enters the 8-entry profile twice (once per world "
+                   "probe), and the transitions span unequal training lengths (1.5 M, then "
+                   "0.7 M episodes each), so every agent's profile may share one dominant shape; "
+                   "the ordinary-ordinary yardstick absorbs the level of that shared structure, "
+                   "not the resolution it leaves for a modulated-ordinary contrast (code review "
+                   "O1)")},
            "stage_end_cells": {
                sel: {k: v for k, v in e.items() if k != "a1_words"}
                | {"a1_layer_verdicts": None if e["a1_words"] is None else {
@@ -360,6 +394,12 @@ def main(argv=None) -> int:
            "elapsed_s": round(time.time() - t0, 1)}
     if policy.allowed:
         gates = {g: all(stage_end[s]["gates"][g] for s in stage_end) for g in ("G1", "G2", "G3", "G4", "G6")}
+        prev_g2 = all(dr.gate_G2({k: {"max_abs_dev": v, "max_abs_ref": 0.0} for k, v in
+                                  caps.reports[(trained[n]["label"], str(d["prev"]), d["probe"])]
+                                  ["chain_assertions"]["max_rel_deviation"].items()}, P)[0]
+                      for n in trained for d in layout["drift_pairs"])
+        gates["G2"] = gates["G2"] and prev_g2
+        doc["gates_prev_captures_G2"] = prev_g2
         gates["G6"] = gates["G6"] and all(v["bootstrap_ok"] and all(v["per_key"].values())
                                           for v in g6_probe.values())
         doc["gates"] = gates
