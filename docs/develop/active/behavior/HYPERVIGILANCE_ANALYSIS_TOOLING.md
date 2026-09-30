@@ -8,7 +8,7 @@ last_updated: 2026-10-01
 
 # Hypervigilance analysis tooling
 
-> **Status**: IMPLEMENTED (awaiting `senior-developer` verification; one flagged deviation), **Revision 2 (2026-10-01)** — Revision 1 after `plan-reviewer` NOT READY, re-check SOUND WITH CONCERNS (`8646c0ce`); Revision 2 folds the re-check's N1–N4 in ([Revision 2 amendments](#revision-2-amendments-n1n4)). See [Revision log](#revision-log).
+> **Status**: IMPLEMENTED + VERIFIED (2026-10-01, senior-developer; printed-rounding opt-in accepted — see [Verification Report](#verification-report)), **Revision 2 (2026-10-01)** — Revision 1 after `plan-reviewer` NOT READY, re-check SOUND WITH CONCERNS (`8646c0ce`); Revision 2 folds the re-check's N1–N4 in ([Revision 2 amendments](#revision-2-amendments-n1n4)). See [Revision log](#revision-log).
 > **Opened**: 2026-10-01
 > **Study text this plan is checked against:** study Revision 4 (commit `39420f2c`), which contains Revisions 2 (`7ec62720`) and 3 (`86ce3119`).
 > **Author**: senior-developer
@@ -876,14 +876,87 @@ Level 06 minus level 05 (study §5.5, descriptive, never pooled): P1 −0.94 / �
 
 ## Verification Report
 
-> **Verified by**: —
-> **Date**: —
+> **Verified by**: senior-developer
+> **Date**: 2026-10-01
+> **Commits verified**: `98c88163`, `ba12760a`, `96105d15`, `1fb3e523`, `e04a6ca0` (base `8646c0ce`)
 
-| File | Change | Status | Notes |
-|------|--------|:------:|-------|
-| | | | |
+### In plain terms
 
-**Conclusion**: —
+The tooling matches the plan. The two published numbers that the gate could not match directly
+really were produced by rounding twice, so the opt-in that accepts them is **accepted** (decision below).
+The yardstick (how much the results vary from one training seed to the next) is computed as the plan
+says, and it was frozen before any new hypervigilance store existed. The verdict script and the
+population builder both refuse to work on the new study until its runs are complete and collected.
+The analysis sweeps that ran on node 102 slowed the two training runs there (H15 and H16) for about
+twenty minutes; both runs are healthy and still making progress.
+
+### Decision: `--printed-rounding via-producer-2dp` — ACCEPTED
+
+I checked the claim against the original producer code and the published reference files. None of the
+numbers below came from the new code path.
+
+- **Clue page, Figure A3 caption "−1.9 and +0.3".** I recomputed the fourteen `hide_s` values with the
+  clue page's own `_common.ladder()` and `_ladder.proximity_effect`, from the reference aggregates the page
+  was built on. The blind-world aggregates were written 2026-09-14, before the caption commit `d29beb56`
+  (2026-09-24). The maximum is **+0.246331** (blind world, modulated agent). No value is at or above 0.25,
+  so direct 1-dp rounding gives "+0.2". `a4_hypervigilance.py`'s last line prints every value as
+  `f"{v:+.2f}"`, which gives "+0.25", and "+0.25" read as 1 dp is "+0.3". The caption's "+0.3" can only
+  come from that 2-dp printout.
+- **a01 page, rabbit extreme rows, bottom "Hides 14.9 %".** I recomputed it from the Aug-25 a01
+  `aggregate.npz` (read-only), using `n_rab == 1`, `rab_predatorness < −0.2`, and pooled
+  `bush_steps / n_steps`. The result is **14.950054855634155**. `supplementary/curves.py` writes
+  `(100*dw).round(2)` into `a01_curves.json`, which gives 14.95. The float 14.95 is stored as
+  14.94999999999999928946, so `f"{14.95:.1f}"` = "14.9". The same script's stdout prints
+  `f"{raw:.1f}"` = "15.0", so the page's "14.9" cannot have come from stdout. It came from the JSON's
+  2-dp value. The top row (22.5628 → 22.56 → "22.6") agrees under both rules.
+- **The rule is narrow.** `printed_match` tries direct rounding first. It accepts a 1-dp figure within
+  0.05 of the 2-dp value only after direct rounding fails. That test adds acceptance only when the 2-dp
+  value sits exactly on an `x.x5` point. Otherwise the only 1-dp value within 0.05 is the direct rounding.
+  The stamp `_golden_assembly_pass.json` records the mode and lists exactly the two checks above under
+  `checks_needing_the_2dp_rule`. The other 23 checks pass directly or exactly. `core/golden.py` is
+  unchanged (`git diff 8646c0ce HEAD` is empty for it, `src/` and `configs/`).
+- **Condition of acceptance.** The decision covers these two checks and no others. If a future assembly
+  re-run lists any other check under `checks_needing_the_2dp_rule`, treat it as a new failure that
+  needs its own decision. (Optional hardening, not blocking: `readings.require_stamps` could refuse a stamp
+  whose list differs from these two.)
+- **Strictly correct captions**, for the page owners and not a gate matter: "+0.2" on the clue page and
+  "15.0 %" on a01. Neither changes any finding.
+
+### Checks
+
+| Item | Status | Notes |
+|---|:---:|---|
+| Diff scope (`git diff --stat 8646c0ce HEAD`) | ✅ | 20 files, +3180/−97; every code/test/doc file is in File Changes. `collect_hiding_drivers.py`, `rabbit_avoidance.py`, `falsealarm.py`, `core/scan.py`, `core/store.py`, `core/golden.py`, `src/` and `configs/` are untouched. The study doc and diary changes in the range are other commits (designer `4d1804b2`, diary `0268fa5b`), not this implementation. |
+| `scripts/analysis/core/env.py` | ✅ | `ScentSpec`/`scent_spec`; `smell_channels` is a two-channel-only wrapper (line 198). C1 equivalence (168 runs, 0 disagreements) recorded. |
+| `scripts/analysis/hiding_drivers.py` | ✅ | Local copy removed; `quasi_binomial_fit` at module level (247); `fit_glms(D, out_dir, *, layout)` (272); `scent.json` written; `summary.json` unchanged (G3 byte-identical). |
+| `scripts/analysis/figures/_common.py` | ✅ | Delegates to `core/env`. |
+| `scripts/analysis/studies/sensor_ladder/collect_arm_data.py` | ✅ | `scent_spec`; `accumulate_sensitivity` pure function; separate `<arm>_sensitivity.json`; CLI unchanged. |
+| `scripts/analysis/aimed_response.py` | ✅ | No `--max-blocks`; both distance rows. |
+| `studies/hypervigilance/make_population.py` | ✅ | Live refusal on the real study doc today: "C01 … is marked completed but has no store under results/trajectories_hvsmell", and no file written. The stale-`running` refusal, the not-yet-collected `running` acceptance, `--checkpoint-nearest` per run, and the backtick-aware parser are unit-tested. |
+| `studies/hypervigilance/readings.py` | ✅ | `--checkpoint` dropped (N3); two-stamp gate; out-root guard. Both stamps' recorded sha256s equal the **committed** files. The stamps were written at HEAD `98c88163` with a dirty tree, before the code commits, but the hashes, not HEAD, are what gate, and they match. |
+| `studies/hypervigilance/verdict.py` | ✅ | Live: an empty hv population refuses "population incomplete — no readings for seeds (42, 43, 44) in [all six world × agent]"; readings assembled before the freeze are refused; a re-freeze is refused ("exists and is frozen"); the yardstick md5 is unchanged afterwards. The 31 anchors still pass on the study doc **after** the designer's post-implementation edit `4d1804b2`. |
+| `studies/hypervigilance/golden_check.py` | ✅ | Sweep tier 15/15; assembly tier 25/25 under the accepted opt-in (2 via the rule, 23 direct/exact). |
+| Frozen yardstick | ✅ | `yardstick.json` frozen 02:07:42, read-only; `results/trajectories_hvsmell` does not exist even now. Recomputed independently: P1 and P2 for all five cmp10m seeds from the ladder grids with `_ladder.proximity_effect` equal the readings; SDs are `ddof=1` sample SDs and match (P1 0.5127, P2 0.1459, P2d 0.1607, S1 matched 0.2535, S1 plain 0.2244, S2 0.1374); S2 per nat = per unit ÷ 2.222 (2.5089 → 1.1290); the readings' sha256s recorded in the yardstick equal the files on disk. |
+| Tests | ✅ | Rerun by the verifier: `tests/analysis/` **471 passed**, 0 failed (689 s, `taskset -c 16-19 nice -n 19`, BLAS threads 4). The new tests exercise the plan's named cases: S4/absolute-sign bounds hand-computed, the power table reproduced, anchors refused on a changed threshold and on a feedback-only quotation, `_s42` + `_s42_r2`, stale status, the 8000033/8000043 checkpoints, the output-root guard. The planted-defect log `tmp/20261001_planted_defects.log` is recorded, but I did not re-run it. |
+| Docs (`SCRIPTS_DEPENDENCY_MAP.md`, `supplementary/README.md`) | ✅ | New and amended rows present; successor line under `falsealarm.py`. |
+| Speed (C11) | ⚠️ small regression accepted | `collect_arm_data.py` +6.2 % / +6.5 %, paired and concurrent on the same node, twice, outputs REPRODUCED against each other. It is above the 5 % discussion line and below the 15 % blocker. It is analysis-only (no training path) and inside the plan's own < 10 % expectation. |
+| H15/H16 on node 102 | ⚠️ healthy, brief slowdown | Logs `20261001_002510` (hv1chm ordinary s44) and `002515` (hv1chm modulated s44) are progressing at 29 % / 23 % as of 03:20, with no error/traceback/NaN. Throughput per 10 minutes was ≈ 240 / 185 steps/s at steady state. It dropped to ≈ 162–175 / 127–141 around **01:35–01:50** (tail of the golden sweeps, start of the readings, test suite). It recovered by 01:55 and stayed flat through the 01:55–03:13 readings period. The net cost is a few minutes of training time. Running on the training node went against the hand-off; the developer recorded it as a deviation, and the reason is sound: the lab nodes' environments lack `statsmodels`. |
+
+### Notes (non-blocking)
+
+1. The Implementation Report says the yardstick "refuses any re-freeze (tested)". There is no unit test
+   for that, and none for verdict's "population incomplete" refusal. I verified both live (above). Adding
+   the two small tests would stop a regression in these gates from going unnoticed.
+2. For `experiment-designer`: at a true effect exactly equal to the minimum, the re-stated power is
+   ≈ 61 % whatever the SD (P1 at SD 0.51 and P2 at SD 0.15 give identical 0.60865 with the fixed RNG seed).
+   Once the seeds separate, "established" hinges on the estimated |Δ| clearing the minimum, which is a coin
+   flip at effect = minimum. The smaller yardstick SDs raise power only for effects above the minimum.
+3. Node environment drift (no `statsmodels`/`pytest`, different `pyarrow`), as the developer flagged, for
+   `bug-curator`.
+
+**Conclusion**: VERIFIED. The implementation matches Revision 2. The printed-rounding opt-in is accepted
+for exactly the two double-rounded published values. C10 remains open by design until the hv stores are
+collected.
 
 ## Feedback from plan-reviewer
 
