@@ -1,16 +1,27 @@
-"""Mock-up frames for the thirst artifact: a REAL level-05 episode, with a
-SYNTHETIC pond and hydration injected, rendered through the real dashboard.
+"""Dashboard frames for the thirst artifact, from REAL level-06 recordings.
 
-What is real: the world, every entity's position at every step, the agent's
-actions, the olfaction/vision/thermal observations.
-What is synthetic: the pond's position (one fixed 2x2 block for the whole
-episode, as the env will do), the hydration values, `water_max_hydration=200`,
-and one "Hydration" observation dimension inserted at THIRST_WATER_PLAN A5's
-offset (directly after Body Temperature) carrying hydration/200 (noise off).
-NOT recomputed: the smell maps. They are the recording's level-05 smell, with
-the level-06 channel LABELS applied.
+Everything in these frames is the environment's own output: the pond's position,
+hydration, the smell maps (including the pond's odour), vision, temperature, and
+the cause of death. There is no trained level-06 agent yet, so the episodes are
+driven by the project's fixture recorder with a SEEDED RANDOM POLICY -- the agent's
+movements are not learned behaviour, and the frames say so in their title.
+
+The recordings are regenerated, not stored (they live under gitignored tmp/). Two
+batches, because a random walker rarely stands in the pond with a predator beside it
+and is not dying, so frame (b) needs the larger pool:
+
+    python scripts/eval/make_render_fixture_recordings.py --cells W1 \\
+        --episodes 80 --max-steps 300 --seed 11 \\
+        --out tmp/20260930_thirst_real/recordings --no-report
+    python scripts/eval/make_render_fixture_recordings.py --cells W1 \\
+        --episodes 320 --max-steps 300 --seed 23 \\
+        --out tmp/20260930_thirst_real/recordings_more --no-report
+
+This script then SEARCHES those episodes for three real moments and renders them:
+  (a) the agent far from the pond with low hydration,
+  (b) the agent standing in the pond with a predator next to it,
+  (c) an episode that ENDED because hydration reached zero (a real thirst death).
 """
-import copy
 import os
 import sys
 from pathlib import Path
@@ -24,172 +35,100 @@ ROOT = Path(__file__).resolve().parents[5]   # docs/develop/active/thirst/figure
 sys.path.insert(0, str(ROOT))
 
 import imageio.v2 as iio
-import src.environment.sensor as S
 from src.environment.dashboard import EpisodeRenderer
 from src.environment.state import select_by_class
 from src.utils.eval_recording import load_episode, load_run_meta
 
-REC = ROOT / "results/JAX_RecurrentPPO/20260921-114858_rppo_basicq2_lvl05_t1none_s42/recordings/10000058"
-EPISODE = "episode_000002.rec.gz"
-OUT = ROOT / "docs/develop/active/thirst/figures"
-MAXH = 200.0
-EDGE = 1   # plan D1: edge_margin 1 -- pond rows/cols 1..8 on a 10x10 world
+RECS = [ROOT / "tmp/20260930_thirst_real/recordings/W1/W1",
+        ROOT / "tmp/20260930_thirst_real/recordings_more/W1/W1"]
+OUT = Path(__file__).resolve().parent
+MAX_STEPS = 300
+for REC in RECS:
+    if not REC.is_dir():
+        sys.exit(f"recordings missing at {REC}; regenerate them with the commands in this "
+                 f"script's docstring (they are gitignored and not stored)")
 
-meta = load_run_meta(REC)
-params = copy.copy(meta["params"])
-object.__setattr__(params, "water_max_hydration", MAXH)
-object.__setattr__(params, "water_enabled", True)
-payload = load_episode(REC / EPISODE)
-snaps = payload["snapshots"]
-T = len(snaps)
-H, W = int(params.height), int(params.width)
+meta = load_run_meta(RECS[0])
+params = meta["params"]
+assert params.water_enabled, "W1 must be the water world (level 06)"
+MAXH = float(params.water_max_hydration)
 is_pred = np.asarray(select_by_class(params, "predator")).astype(bool)
+eps = [e for REC in RECS for e in sorted(REC.glob("episode_*.rec.gz"))]
 
 
-def blocked(t):
-    """Cells no pond may cover: obstacles and active resources (plan: every
-    other entity is placed after the pond and never on it)."""
-    s = snaps[t]
-    cells = {tuple(map(int, p)) for p in np.asarray(s["obs_pos"])}
-    act = np.asarray(s["res_active"])
-    cells |= {tuple(map(int, p)) for i, p in enumerate(np.asarray(s["res_pos"])) if act[i]}
-    return cells
+def cheb(a, b):
+    return max(abs(int(a[0]) - int(b[0])), abs(int(a[1]) - int(b[1])))
 
 
-def block(r, c):
-    return [(r, c), (r, c + 1), (r + 1, c), (r + 1, c + 1)]
+def pond_of(s):
+    return [tuple(map(int, p)) for p in np.asarray(s["water_pos"])]
 
 
-def legal(r, c):
-    return EDGE <= r and r + 1 <= H - 1 - EDGE and EDGE <= c and c + 1 <= W - 1 - EDGE
+best = {"a": None, "b": None, "c": None}
+for ep in eps:
+    pay = load_episode(ep)
+    snaps = pay["snapshots"]
+    T = len(snaps)
+    for t, s in enumerate(snaps):
+        a = tuple(map(int, s["agent_pos"]))
+        pond = pond_of(s)
+        h = float(s["hydration"]) / MAXH
+        d = min(cheb(a, p) for p in pond)
+        preds = [tuple(map(int, q)) for k, q in enumerate(np.asarray(s["animal_pos"])) if is_pred[k]]
+        # (a) far from water and THIRSTY, but clearly alive: not the last step, injury
+        # not lethal, hydration low but off the zero boundary. Ranking by "thirstiest"
+        # drove an earlier version onto hydration 0.0 one step before death -- a death
+        # frame, not a thirsty one -- so aim at ~15% of the maximum instead.
+        inj_a = float(s["injury_level"]) / float(params.max_injury)
+        if d >= 4 and 0.08 < h < 0.3 and inj_a < 0.5 and t < T - 1:
+            key = (abs(h - 0.15),)
+            if best["a"] is None or key < best["a"][0]:
+                best["a"] = (key, ep, t)
+        # (b) standing in the pond, a predator within one square (both in the pond is
+        # best). Drinking, not dying: never the episode's last step, injury not
+        # lethal, and hydration clear of BOTH death boundaries -- death sits at 0 AND
+        # at the maximum, so a full reading here would be an over-drinking death. An
+        # earlier version ranked higher hydration as better and picked exactly that.
+        inj = float(s["injury_level"]) / float(params.max_injury)
+        if a in pond and t < T - 1 and inj < 0.5 and 0.05 < h < 0.95:
+            near = [q for q in preds if cheb(q, a) <= 1]
+            if near:
+                key = (-sum(q in pond for q in near), abs(h - 0.5))
+                if best["b"] is None or key < best["b"][0]:
+                    best["b"] = (key, ep, t)
+    # (c) the episode ENDED (not cut at the step cap) with hydration at zero, and its
+    # injury clearly NOT lethal, so the frame shows one cause of death, not two.
+    # Injury is on a 0..max_injury scale (100 here), NOT 0..1 -- an earlier version
+    # compared the raw value against 1.0 and rejected every real thirst death.
+    last = snaps[-1]
+    inj = float(last["injury_level"]) / float(params.max_injury)
+    if T < MAX_STEPS and float(last["hydration"]) <= 1e-6 and inj < 0.5:
+        key = (inj, -T)                      # least injured, then the longest
+        if best["c"] is None or key < best["c"][0]:
+            best["c"] = (key, ep, T - 1)
 
+missing = [k for k, v in best.items() if v is None]
+if missing:
+    sys.exit(f"no real moment found for frame(s) {missing}; record more episodes")
 
-# --- (b): a step where a predator is next to the agent, both fit one 2x2 pond ---
-fixed_blocked = set().union(*(blocked(t) for t in range(T)))   # never cover any of them, any step
-choice = None
-for t in range(T):
-    a = tuple(map(int, snaps[t]["agent_pos"]))
-    for k, p in enumerate(np.asarray(snaps[t]["animal_pos"])):
-        if not is_pred[k]:
-            continue
-        p = tuple(map(int, p))
-        if p == a or max(abs(p[0] - a[0]), abs(p[1] - a[1])) != 1:
-            continue
-        for r in range(min(a[0], p[0]) - 1, max(a[0], p[0]) + 1):
-            for c in range(min(a[1], p[1]) - 1, max(a[1], p[1]) + 1):
-                cells = block(r, c)
-                if legal(r, c) and a in cells and p in cells \
-                        and not (set(cells) & fixed_blocked):
-                    choice = (t, r, c, a, p)
-                    break
-            if choice:
-                break
-        if choice:
-            break
-    if choice:
-        break
-if choice is None:
-    sys.exit("no step puts a predator next to the agent inside a legal pond block")
-tb, pr, pc, a_b, p_b = choice
-pond = np.array(block(pr, pc), dtype=np.int32)       # [4, 2], every cell, like D2
-
-# --- (a): a step where the agent is far from that pond ---
-def dist_to_pond(t):
-    a = np.asarray(snaps[t]["agent_pos"])
-    return min(max(abs(int(a[0]) - r), abs(int(a[1]) - c)) for r, c in pond)
-ta = max((t for t in range(T) if t != tb), key=lambda t: (dist_to_pond(t) >= 4, -abs(t - tb) * 0, dist_to_pond(t)))
-# --- (c): a CLEAN thirst death. The episode's real final step is a predator
-# kill (injury 1.00), so using it would show two lethal causes at once. Pick
-# instead the latest step with no injury, no predator within one square, and
-# the agent at least 3 squares from the pond; the episode is then TRUNCATED
-# there so the step counter reads k/k. Both facts are stated in the reply.
-def pred_near(t):
-    a = np.asarray(snaps[t]['agent_pos'])
-    for k, q in enumerate(np.asarray(snaps[t]['animal_pos'])):
-        if is_pred[k] and max(abs(int(q[0]) - int(a[0])), abs(int(q[1]) - int(a[1]))) <= 1:
-            return True
-    return False
-clean = [t for t in range(T) if t not in (ta, tb)
-         and float(snaps[t]['injury_level']) == 0.0 and not pred_near(t)
-         and dist_to_pond(t) >= 3]
-if not clean:
-    sys.exit('no clean step for a thirst-death frame')
-tc = max(clean)
-
-HYD = {ta: 34.0, tb: 104.0, tc: 0.0}   # scripted; stated in the reply
-
-# --- inject into every snapshot (pond is fixed per episode) ---
-for t, s in enumerate(snaps):
-    s["water_pos"] = pond
-    s["hydration"] = float(HYD.get(t, 100.0))
-
-# --- one "Hydration" observation dim, directly after Body Temperature (A5) ---
-orig_breakdown = S.get_observation_breakdown
-
-
-def breakdown_with_hydration(p):
-    out = {}
-    for k, v in orig_breakdown(p).items():
-        out[k] = v
-        if k == "Body Temperature":
-            out["Hydration"] = 1
-    return out
-
-
-bd = orig_breakdown(params)
-offset = 0
-for k, v in bd.items():
-    offset += v
-    if k == "Body Temperature":
-        break
-obs = np.asarray(payload["obs"], dtype=np.float32)
-hcol = np.array([snaps[t]["hydration"] / MAXH for t in range(T)], dtype=np.float32)[:, None]
-payload["obs"] = np.concatenate([obs[:, :offset], hcol, obs[:, offset:]], axis=1)
-S.get_observation_breakdown = breakdown_with_hydration
-
-# --- level-06 channel labels (smell), per the thirst session ---
-names = lambda xs: [{"name": n, "qualifier": q} for n, q in xs]
-display = {
-    "Olfaction": {"names": names([
-        ("Food", "shared with water"), ("Odour A", "predator-leaning"),
-        ("Odour B", "neutral-leaning"), ("Bush", ""), ("Odour C", "water-leaning")]),
-        "groups": []},
-    "Visual": {"names": names([("Visible", "")]), "groups": []},
-}
-
-OUT.mkdir(parents=True, exist_ok=True)
-r = EpisodeRenderer(params, meta["icon_config"], payload,
-                    title="MOCK-UP · synthetic pond + hydration",
-                    action_map=meta.get("action_map"), channel_display=display)
-try:
-    for tag, t, what in (("a", ta, "far_from_pond_low_hydration"),
-                         ("b", tb, "drinking_predator_in_pond")):
-        path = OUT / f"render_{tag}_{what}.png"
+names = {"a": "render_a_far_from_pond_low_hydration",
+         "b": "render_b_drinking_predator_in_pond",
+         "c": "render_c_hydration_zero_terminal"}
+for tag in ("a", "b", "c"):
+    _key, ep, t = best[tag]
+    pay = load_episode(ep)
+    r = EpisodeRenderer(params, meta["icon_config"], pay,
+                        title="Level 06 · random policy (no trained agent yet)",
+                        action_map=meta.get("action_map"),
+                        channel_display=meta.get("channel_display"))
+    try:
+        path = OUT / f"{names[tag]}.png"
         iio.imwrite(path, r.frame(t))
-        a = tuple(map(int, snaps[t]["agent_pos"]))
-        print(f"{path.relative_to(ROOT)}  step={t}  agent={a}  "
-              f"hydration={snaps[t]['hydration']:.0f}/200  dist_to_pond={dist_to_pond(t)}")
-finally:
-    r.close()
-
-# --- (c) from a payload TRUNCATED at tc, so the counter reads tc/tc ---
-trunc = dict(payload)
-trunc['snapshots'] = snaps[:tc + 1]
-trunc['obs'] = payload['obs'][:tc + 1]
-trunc['actions'] = np.asarray(payload['actions'])[:tc + 1]
-trunc['rewards'] = np.asarray(payload['rewards'])[:tc + 1]
-rc = EpisodeRenderer(params, meta['icon_config'], trunc,
-                     title='MOCK-UP · synthetic pond + hydration',
-                     action_map=meta.get('action_map'), channel_display=display)
-try:
-    path = OUT / 'render_c_hydration_zero_terminal.png'
-    iio.imwrite(path, rc.frame(tc))
-    a = tuple(map(int, snaps[tc]['agent_pos']))
-    print(f"{path.relative_to(ROOT)}  step={tc} (episode truncated here; real end {T-1})  "
-          f"agent={a}  hydration={snaps[tc]['hydration']:.0f}/200  "
-          f"injury={float(snaps[tc]['injury_level']):.2f}  dist_to_pond={dist_to_pond(tc)}")
-finally:
-    rc.close()
-    S.get_observation_breakdown = orig_breakdown
-print(f"pond top-left (array)={pr, pc}  cells={[tuple(x) for x in pond]}  "
-      f"frame-b predator at {p_b}, agent at {a_b}  obs width {obs.shape[1]} -> {payload['obs'].shape[1]}")
+    finally:
+        r.close()
+    s = pay["snapshots"][t]
+    a = tuple(map(int, s["agent_pos"]))
+    print(f"{path.relative_to(ROOT)}  {ep.parent.parent.parent.name}/{ep.name} step {t}/{len(pay['snapshots']) - 1}  "
+          f"agent={a}  pond={pond_of(s)[0]}+  hydration={float(s['hydration']):.1f}/{MAXH:.0f}  "
+          f"injury={float(s['injury_level']):.1f}/{float(params.max_injury):.0f}  "
+          f"start hydration={float(pay['snapshots'][0]['hydration']):.1f}")
