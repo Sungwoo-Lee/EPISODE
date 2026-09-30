@@ -13,7 +13,7 @@ Design rules for scripts in this folder:
   * anything the script conditions on, excludes, or knows to be biased is stated in its docstring
 """
 from __future__ import annotations
-import glob, json, os
+import glob, json, os, sys
 import numpy as np
 import pyarrow.parquet as pq
 import yaml
@@ -54,16 +54,10 @@ def slot_layout(cfg: dict) -> dict:
                 n_res=len(food) + len(amb))
 
 
-def smell_channels(cfg: dict) -> tuple[int, int]:
-    """The two olfactory channels that separate predators from neutrals, derived not assumed."""
-    ent = cfg["environment"]["entities"]
-    pm = np.mean([e["properties"] for e in ent if e["class"] == "predator"], axis=0)
-    nm = np.mean([e["properties"] for e in ent if e["class"] != "predator"], axis=0)
-    d = np.asarray(pm) - np.asarray(nm)
-    a, b = int(np.argmax(d)), int(np.argmin(d))
-    if a == b or d[a] <= 0 or d[b] >= 0:
-        raise SystemExit("this run's config does not separate predator and neutral odour")
-    return a, b
+# `smell_channels` lived here as a third copy (no caller); it now delegates to the one inference in
+# scripts/analysis/core/env.py (hypervigilance tooling plan, 2026-10-01).
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "core"))
+from env import smell_channels, scent_spec  # noqa: E402,F401
 
 
 def nociception_kernel(cfg: dict) -> np.ndarray:

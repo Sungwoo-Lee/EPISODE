@@ -44,6 +44,41 @@ STEP_COLS = ["episode_seed", "t", "agent_in_bush", "injury_level", "nutrition", 
              "ate_food", "agent_row", "agent_col", "animal_row", "animal_col"]
 
 
+def new_sensitivity() -> dict:
+    z2 = lambda a, b: np.zeros((a, b))
+    return {"rd_no0_bush": z2(L.DIST_MAX, 4), "rd_no0_tot": z2(L.DIST_MAX, 4),
+            "rab_on_cell": np.zeros(4), "rab_steps": np.zeros(4),
+            "rdpf_bush": z2(L.DIST_MAX, 4), "rdpf_tot": z2(L.DIST_MAX, 4),
+            "rdcpf_bush": z2(L.DIST_MAX, 4), "rdcpf_tot": z2(L.DIST_MAX, 4)}
+
+
+def accumulate_sensitivity(S, y, drab_prev, dpred_prev, ib, cb, hr):
+    """Study S6 (plan-review M3). Rows are chosen steps of episodes with >=1 rabbit (mask hr).
+
+    (a) a rabbit ON the agent's square (drab_prev == 0): counted per start-injury quarter, and the
+        rd grid rebuilt WITHOUT those rows (the main grid clips them into the 1-2 bin);
+    (b) predator-free rows (dpred_prev > 2; inf = no live predator counts as free): rd and rdc grids.
+    Uses np.bincount on flattened (dist_bin * 4 + inj_bin) indices, not np.add.at, to keep the
+    sweep fast. Distance binning is the main grids' own `clip(d, 1, DIST_MAX) - 1`.
+    """
+    n = L.DIST_MAX * 4
+    y, drab_prev, dpred_prev = y[hr], drab_prev[hr], dpred_prev[hr]
+    ib, cb = ib[hr], cb[hr]
+    drb = np.clip(drab_prev, 1, L.DIST_MAX).astype(int) - 1
+    on = drab_prev == 0
+    S["rab_on_cell"] += np.bincount(ib[on], minlength=4)
+    S["rab_steps"] += np.bincount(ib, minlength=4)
+    k = drb * 4 + ib
+    kc = drb * 4 + cb
+    no0, pf = ~on, dpred_prev > 2
+    S["rd_no0_bush"] += np.bincount(k[no0], weights=y[no0], minlength=n).reshape(L.DIST_MAX, 4)
+    S["rd_no0_tot"] += np.bincount(k[no0], minlength=n).reshape(L.DIST_MAX, 4)
+    S["rdpf_bush"] += np.bincount(k[pf], weights=y[pf], minlength=n).reshape(L.DIST_MAX, 4)
+    S["rdpf_tot"] += np.bincount(k[pf], minlength=n).reshape(L.DIST_MAX, 4)
+    S["rdcpf_bush"] += np.bincount(kc[pf], weights=y[pf], minlength=n).reshape(L.DIST_MAX, 4)
+    S["rdcpf_tot"] += np.bincount(kc[pf], minlength=n).reshape(L.DIST_MAX, 4)
+
+
 def build(arm: str, run: str, verbose: bool = True, stores: list[str] | None = None) -> dict:
     """Scan one run and write its aggregate.
 
@@ -58,7 +93,7 @@ def build(arm: str, run: str, verbose: bool = True, stores: list[str] | None = N
     lay = ENV.slot_layout(cfg)
     P, R = lay["pred"], lay["neutral"]
     na = lay["n_animal"]
-    ch1, ch2 = ENV.smell_channels(cfg)
+    spec = ENV.scent_spec(cfg)
 
     stores = L.arm_stores(arm) if stores is None else list(stores)
     st = STORE.open_run(stores, EP_COLS)
@@ -71,8 +106,8 @@ def build(arm: str, run: str, verbose: bool = True, stores: list[str] | None = N
 
     pa, rb = act[:, P], act[:, R]
     mean_over = lambda X, M: np.where(M.sum(1) > 0, (X * M).sum(1) / np.maximum(M.sum(1), 1), np.nan)
-    pred_olf = mean_over(prop[:, P, ch1] + prop[:, P, ch2], pa)
-    rab_olf = mean_over(prop[:, R, ch1] + prop[:, R, ch2], rb)
+    pred_olf = mean_over(spec.intensity(prop[:, P]), pa)
+    rab_olf = mean_over(spec.intensity(prop[:, R]), rb)
     # A THIRD of episodes contain no predator and a third no rabbit. They have no "distance to the
     # nearest predator" and no "how strongly it smelled", so they must be dropped from any grid
     # conditioned on those. Left in, np.digitize files every NaN into the TOP bin and np.clip files
@@ -98,6 +133,7 @@ def build(arm: str, run: str, verbose: bool = True, stores: list[str] | None = N
     OLF = {"rab_bush": z2(4, 4), "rab_tot": z2(4, 4),
            "pred_bush": z2(4, 4), "pred_tot": z2(4, 4)}
     edges = {}
+    S = new_sensitivity()
 
     def collect(fr, acc, fi):
         gi, gidx = fr.episode_id, fr.episodes
@@ -135,6 +171,7 @@ def build(arm: str, run: str, verbose: bool = True, stores: list[str] | None = N
         np.add.at(G["pdc_tot"],  (dpb[hp], cb[hp]), 1.0)
         np.add.at(G["rdc_bush"], (drb[hr], cb[hr]), y[hr])
         np.add.at(G["rdc_tot"],  (drb[hr], cb[hr]), 1.0)
+        accumulate_sensitivity(S, y, drab[prev], dpred[prev], ib, cb, hr)
         np.add.at(G["dw_inj"], ib, y);   np.add.at(G["dwt_inj"], ib, 1.0)
         np.add.at(G["dw_nut"], nb, y);   np.add.at(G["dwt_nut"], nb, 1.0)
         np.add.at(G["dw_carried"], cb, y); np.add.at(G["dwt_carried"], cb, 1.0)
@@ -182,6 +219,13 @@ def build(arm: str, run: str, verbose: bool = True, stores: list[str] | None = N
            "grids": {k: v.tolist() for k, v in G.items()},
            "odour": {k: v.tolist() for k, v in OLF.items()}}
     L.save_json(arm, out)
+    # Study S6 lands in a SEPARATE file so `<arm>.json` / `<arm>_episodes.npz` keep their exact key
+    # sets (golden products).
+    L.save_json(f"{arm}_sensitivity", {
+        "arm": arm, "run": run, "stores": stores, "n_episodes": int(nep),
+        "seed_range": [int(seed.min()), int(seed.max())], "scent": spec.as_dict(),
+        "near_pred_free": "dpred > 2 on the deciding row (inf = no live predator counts as free)",
+        "grids": {k: v.tolist() for k, v in S.items()}})
     return out
 
 
