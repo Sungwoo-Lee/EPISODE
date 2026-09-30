@@ -10,15 +10,33 @@ wandb_tag: "rppo_cw_*"
 
 # Continual worlds: an A-B-A-B test of the modulator with a stationary body
 
-> **Results (2026-09-29, `experiment-analyzer`) — in plain words.** All six main runs finished (three
-> alternating sequences — hunters ↔ scarce food, fog ↔ hunters, cold ↔ scarce food — each with the ordinary and the
-> modulated agent, one seed each). Read the most literal way, the rule written in advance counts as **support** for
-> the modulator in 2 of the 3 sequences. The support is **fragile**: the rule never said how the per-switch votes
-> combine, and four of the five other reasonable ways of combining them give "not supported". What carries it is the
-> modulated agent's **smaller drop on first entering a new, harder world** (largest in the cold world) and its **better
-> memory of the foraging world learned before the alternation** — not better returns or less forgetting on the
-> alternating worlds, which is what the May probe found and what this study was built to replicate. Every result is a
-> single-seed first read for one pair of starting agents. Full results and caveats: section 10; conclusions: section 11.
+> **Results — revision after verdict review (2026-09-30, `experiment-analyzer`) — in plain words.** Two agents, one
+> ordinary and one with a modulator (a small side network that rescales the main network), learned a safe foraging
+> world and then went back and forth four times between two harder worlds — hunters ↔ scarce food, fog ↔ hunters,
+> cold ↔ scarce food — one run per agent per sequence, all six finished. **The rule written in advance does not decide
+> the question.** Whether the modulated agent "forgot less" depends on whether the foraging world (learned before the
+> back-and-forth) counts: counted, the rule says *supported* in 2 of 3 sequences; left out, so that only the alternating
+> worlds count, the rule's *refutation* clause fires instead. Both readings are defensible from the design; neither was
+> fixed before the data. What the data do show: the modulated agent's starting checkpoint already plays unseen worlds
+> better **before any training there** (by 2–18 steps), which explains most of its smaller drop on first entering a new
+> world — measured from its own start, it does not improve faster; it lost less foraging skill after cold- and
+> hunter-world training (the largest case confirmed with sampled actions; one shared starting point); returns and
+> forgetting on the alternating worlds show no difference beyond noise in the modulator's favour, so the May probe's
+> large return advantage is not reproduced. One seed; both agents' pre-training began from identical main-network weights. Details: section 10 (revised verdict
+> 10.8, exploratory head-start check 10.11); conclusions: section 11. An independent review of the first write-up is
+> linked at the end of the doc.
+
+> *Superseded 2026-09-29 results box, kept for the record (struck: its "support (fragile)" label and its first-entry
+> reading did not survive the verdict review):*
+> ~~**Results (2026-09-29, `experiment-analyzer`) — in plain words.** All six main runs finished (three~~
+> ~~alternating sequences — hunters ↔ scarce food, fog ↔ hunters, cold ↔ scarce food — each with the ordinary and the~~
+> ~~modulated agent, one seed each). Read the most literal way, the rule written in advance counts as **support** for~~
+> ~~the modulator in 2 of the 3 sequences. The support is **fragile**: the rule never said how the per-switch votes~~
+> ~~combine, and four of the five other reasonable ways of combining them give "not supported". What carries it is the~~
+> ~~modulated agent's **smaller drop on first entering a new, harder world** (largest in the cold world) and its **better~~
+> ~~memory of the foraging world learned before the alternation** — not better returns or less forgetting on the~~
+> ~~alternating worlds, which is what the May probe found and what this study was built to replicate. Every result is a~~
+> ~~single-seed first read for one pair of starting agents. Full results and caveats: section 10; conclusions: section 11.~~
 
 > **Status (2026-09-28, Revision 2a — answers the plan-reviewer's Revision 2 gate):** one analysis
 > rule is added before anything main launches (box below); **Winter ↔ Famine is still the only ready
@@ -1275,6 +1293,37 @@ If accepted, route through `feature-workflow` before launch; none blocks the pil
 section was changed except a pointer box at the top of the doc. Every verdict here is a **single-seed first
 read**: one ordinary and one modulated run per sequence, all six branching from the same pair of agents.*
 
+> **Revision after verdict review, 2026-09-30 — the verdict in plain words.** An independent review of the first
+> write-up (below, kept with its unsupported passages struck) found that its label, "fragile support", picked one of two
+> outcomes the pre-registered rule allows. Revised:
+>
+> **The rule written in advance does not decide this study.** It has a clause for "supported" and a clause for
+> "refuted", and on these data it reaches **both**, depending on whether the forgetting of the **foraging world** —
+> learned *before* the back-and-forth began — counts. Count it: the modulator is supported in 2 of 3 sequences.
+> Leave it out and only the alternating worlds count — the ones the May probe was about and this study was built to
+> replicate: the rule's refutation clause fires instead (hunters ↔ scarce food mixed, and there the modulated agent
+> actually forgot *more*, 14 steps in total though each entry is inside noise; fog ↔ hunters with no favourable difference beyond noise and one
+> difference beyond noise *against* the modulator). The design justifies both readings, and neither was fixed before
+> the data were seen. So the verdict is **not decided**, and the hinge is which worlds count in the forgetting vote
+> (10.8).
+>
+> **What the data do show.** (1) The modulated agent's checkpoint plays unseen worlds better **before any training in
+> them**, by 2–18 steps (cold world 133 vs 114). Most of its apparent "smaller drop on first entry" is this head start
+> (18.5 of the 24.5 steps in the cold world), and measured from its own starting level it does **not** improve faster
+> after a switch (better in 2 of 6 first visits, worse in 4; exploratory, 10.11). (2) It lost less of its foraging skill
+> after cold-world and hunter-world training — but this rests on one shared starting checkpoint at the survival ceiling,
+> reverses once (hunter world, second visit) and shows up only after those two worlds; its largest case (after the cold
+> world, 114 steps) holds with sampled as well as greedy actions, and at that point the modulated agent is not worse in
+> the cold world itself, so "it just specialised less" does not explain it (10.5). (3) On returns
+> and on forgetting of the alternating worlds, nothing distinguishes the two agents; May's 107–132-step return advantage
+> is not reproduced.
+>
+> **Scope.** One seed; the two agents' pre-training began from the same main-network weights (the modulator was the
+> only difference at initialisation), and all three sequences branch from the same pair of pre-trained checkpoints — a
+> first read of **one starting pair**, not of the modulator.
+>
+> *Superseded 2026-09-29 box, kept for the record:*
+>
 > **Verdict in plain words.**
 >
 > **What was tested.** Two agents — an ordinary recurrent agent and the same agent with a modulator (a side
@@ -1285,28 +1334,33 @@ read**: one ordinary and one modulated run per sequence, all six branching from 
 > does the modulated agent's survival **drop less** right after a switch, **climb back faster**, do better on
 > the **return** visit, and **forget less** of a world while it trains in another?
 >
-> **Answer: a fragile, rule-dependent pass of the pre-registered support rule — and not the May pattern.**
-> Read the most literal way (10.2), the rule written in advance is **met**: in 2 of the 3 sequences (fog ↔ hunters
-> and cold ↔ scarce food) three of the four measures favour the modulator and at least one favourable difference is
-> beyond noise. But the pass is **fragile**. The beyond-noise differences behind it are the modulator's smaller drop on
-> first entering the cold world and its better memory of the **foraging world** — the world both agents learned
-> *before* the alternation began — not anything on the alternating worlds themselves. And the pass disappears under four
-> of the five other reasonable ways of combining the per-switch votes (10.9). In the wording the design requires: **one
-> initialisation pair, three world-pairs, one seed — weak, rule-dependent support, not evidence about the modulator in
-> general.**
+> ~~**Answer: a fragile, rule-dependent pass of the pre-registered support rule — and not the May pattern.**~~
+> ~~Read the most literal way (10.2), the rule written in advance is **met**: in 2 of the 3 sequences (fog ↔ hunters~~
+> ~~and cold ↔ scarce food) three of the four measures favour the modulator and at least one favourable difference is~~
+> ~~beyond noise. But the pass is **fragile**. The beyond-noise differences behind it are the modulator's smaller drop on~~
+> ~~first entering the cold world and its better memory of the **foraging world** — the world both agents learned~~
+> ~~*before* the alternation began — not anything on the alternating worlds themselves. And the pass disappears under four~~
+> ~~of the five other reasonable ways of combining the per-switch votes (10.9). In the wording the design requires: **one~~
+> ~~initialisation pair, three world-pairs, one seed — weak, rule-dependent support, not evidence about the modulator in~~
+> ~~general.**~~
+> *[Struck 2026-09-30: the rule reaches both its support and its refutation clause; the hinge is the forgetting
+> entry set, not the combination rule — 10.8 revised verdict, 10.9 R7.]*
 >
-> **Where the modulator does look better:** on the **first entry into a new, harder world** it falls less and
-> climbs back sooner — in all three sequences. The largest case is the cold world: in its first 20,000
-> episodes there the modulated agent survived 133 steps against 109 for the ordinary agent (+24.5 steps,
-> just beyond this study's noise yardstick). **Where it does not:** once both agents have seen a world, the
+> ~~**Where the modulator does look better:** on the **first entry into a new, harder world** it falls less and~~
+> ~~climbs back sooner — in all three sequences. The largest case is the cold world: in its first 20,000~~
+> ~~episodes there the modulated agent survived 133 steps against 109 for the ordinary agent (+24.5 steps,~~
+> ~~just beyond this study's noise yardstick).~~
+> *[Struck 2026-09-30: mostly the starting checkpoint's zero-shot head start (18.5 of 24.5 steps in the cold world), not
+> adaptation — 10.11; the yardstick it clears is a two-window SD — 10.3 revision.]* **Where it does not:** once both agents have seen a world, the
 > switches back into it cost both agents about the same, and the returns differ by −4 to +11 steps — none
 > beyond noise in the modulator's favour, one beyond noise against it. In May, the modulated agent was
 > 107–132 steps ahead on returns and forgot far less; nothing that large appears here. Forgetting is mixed:
 > on the alternating worlds themselves the forgetting differences are small (−8 to +8 steps) and all inside
 > noise — favouring the modulator in the fog sequence, the ordinary agent in the hunter ↔ scarce-food sequence, and split
 > in the cold sequence. What the modulated agent clearly kept better is the **foraging world**: after 3 M episodes of
-> cold-world training it had lost 63 steps of foraging survival, the ordinary agent 175 (beyond noise at one or more
-> checkpoints in every sequence).
+> cold-world training it had lost 63 steps of foraging survival, the ordinary agent 175 ~~(beyond noise at one or more
+> checkpoints in every sequence)~~ *[qualified 2026-09-30: reverses at P1's second hunter-world visit, appears only after
+> cold/hunter stages, one shared ceiling-level starting cell; the largest cell holds with sampled actions — 10.5 revision]*.
 >
 > **Caveats that travel with every sentence above:** one seed per agent; the three sequences share the
 > same starting agents, so they are not independent votes; the hunter and fog worlds were chosen by
@@ -1409,6 +1463,23 @@ Everywhere else both agents were above the recovery line in the first 20,000-epi
 floor. The modulator recovers faster on all three first entries (by 64k, 36k and 112k episodes on the common target;
 28k, 40k and 484k on the own targets) and slower on the Winter return (by 8k episodes on the common target).
 
+*Revision after verdict review, 2026-09-30 (reviewer M2, M5, C2).*
+- **The one beyond-noise dip is thin.** The first Winter entry (−24.5 steps against a threshold of 22.6) is the only
+  dip beyond noise, and that threshold is 2 × √2 × the SD of just **two** 200,000-episode windows (195.2 and 183.9 →
+  SD 7.99). It is also a 200k-scale spread applied to a 20k-window quantity that swings between ≈ 60 and ≈ 210 steps
+  within the same visit (10.6). Clearing a two-number floor by 1.9 steps is close to a coin flip, so **the Winter dip
+  cannot carry the "beyond noise" clause on its own**.
+- **Recovery in Winter has the same weakness.** The Winter recovery readings (84k vs 196k episodes on the common target;
+  36k–40k on the return) are the first time an oscillating curve crosses a line. The D6 "oscillating curve" caveat,
+  already applied to R, applies to these readings too.
+- **Two dip votes are inside 2 steps.** H-dip has no registered tie rule, so +0.4 (P1 stage 4, unfavourable) and −1.6
+  (P3 stage 2, favourable) count as full votes (P3 stage 4, +0.9, is not counted for another reason). Dropping them
+  leaves the dip sign unchanged in every sequence, but "favourable dip in every sequence" rests on differences that,
+  apart from the first Winter entry, are all inside the noise yardstick.
+- **First-entry dips are mostly a head start.** On a first entry the modulated agent starts from a checkpoint that already
+  plays the new world better, before any training there (10.11). The first-20k differences above are not adaptation
+  differences.
+
 ### 10.4 Return visits
 
 Return = (survival over the last 200,000 episodes of the return visit) − the same agent's own reference R;
@@ -1443,11 +1514,16 @@ on X at the end of stage k (positive = forgot); the modulator is favoured when i
 *Deviations from 5.3, stated:* (1) the evaluation plays the policy **greedily** (most-likely action) while
 the training curves are sampled; on its own world every stage-end cell is 2–18 steps (typically 7–12) above
 the training-log survival of the same checkpoint (diagonal check, `tmp/20260929_forgetting_diag_check_all.log`,
-script commit `c6f33eb3`). Matrix values are therefore used **only** within the matrix and between agents,
+~~script commit `c6f33eb3`~~ *[corrected 2026-09-30, reviewer L1: `c6f33eb3` is the commit that last changed the
+matrix script; the cells themselves record the repository head at evaluation time — `0b9bc250` / `225f9db3` for P1 and
+P2, and ten commits made between 17:14 and 21:01 on 2026-09-29 (`711b2abb` … `ba42cb98`) for P3. All descend from `c6f33eb3`, and
+none of them changes `continual_forgetting_matrix.py`, `eval_rollout.py` or `src/`]*). Matrix values are therefore used **only** within the matrix and between agents,
 never next to training-curve numbers; forgetting is a within-agent difference on one scale, so it stays
 comparable between agents. (2) Row 0 (the pre-trained Home checkpoint) is not in the matrix; the first row
 is the Forage branch point itself (step 11,000,025 ordinary / 11,000,022 modulated; 5.3's row 1), shared by
-the three sequences of an agent. Stage-end rows are named by the world trained in that stage. Home is not a world of any sequence, so no vote uses it. (3) Seven worlds, not eight (Danger, Fog,
+the three sequences of an agent. *[Added 2026-09-30, reviewer L1: 5.3 lists row 0; leaving it out is conservative for
+the modulator, since the one descriptive Home reading we have favours it (168.6 vs 201.1 after the first Winter visit,
+below).]* Stage-end rows are named by the world trained in that stage. Home is not a world of any sequence, so no vote uses it. (3) Seven worlds, not eight (Danger, Fog,
 Harsh were dropped; Danger-A and Fog-B added; Nursery included).
 
 **P1 Danger-A ↔ Famine** (worlds of the sequence; forgetting in steps, 95 % CI)
@@ -1500,6 +1576,36 @@ its foraging skill after the first hard world (P1: loses 85 vs 108 steps; P3: 63
 distinct world" (3.6), so these entries are not independent across sequences. *Descriptive, not voted:* Home (not a
 world of any sequence) shows the same direction after the first Winter visit (deterministic Home survival 168.6 ordinary
 vs 201.1 modulated at the end of stage 2 of P3).
+
+*Revision after verdict review, 2026-09-30 (reviewer M3, M4) — what the Forage result does and does not show.*
+- **Not in every sequence without exception.** In P1 the Forage advantage **reverses** at the end of the second Danger-A
+  visit (stage 4: +81.0 vs +74.8 forgotten, +6.2 against the modulator, inside noise).
+- **Only after some worlds.** The four beyond-noise Forage entries all sit at checkpoints that end a **Winter** or
+  **Danger-A** stage (P1 stage 2; P2 stages 3 and 5; P3 stage 2). After Fog-B or Famine stages no Forage entry is beyond
+  noise (−12.2 at best, P2 stage 4), and after Famine both agents are back within 9 steps of their Forage level.
+- **It dominates the tally.** Forage supplies 4 of the 7 forgetting votes in every sequence, so the forgetting sign
+  under R1 is mostly a Forage sign (compare "A/B worlds only" under each table).
+- **One shared, capped starting cell.** All three sequences measure Forage forgetting from the **same** branch-point
+  checkpoint per agent, and that checkpoint is at the ceiling in Forage (478.8 vs 479.4 steps; 95.6 % of episodes of
+  both agents hit the 500-step cap). The drops can be compared, but there is no room to compare baseline Forage
+  competence, and the three sequences' Forage entries are not independent.
+- **An alternative that is weakened but not excluded.** The agent that specialises *less* to the hard world may simply
+  keep more of its generic foraging policy. The training curve fits it in Winter (the modulated agent's last-200k level
+  there is lower, 174.7 vs 195.2), but the checkpoints that end the Winter stage do not: played in Winter they are level
+  greedy (215.1 vs 213.1) and the modulated one is *ahead* with sampled actions (215.2 vs 204.6, +10.6; 95 % CI of the
+  paired difference +3.1 to +18.1, unpaired −1.7 to +22.8). In Danger-A the training-curve levels do not show weaker
+  specialisation either (modulated R 126.3 vs 122.0 in P1, 130.4 vs 127.5 in P2). So at the checkpoint where the
+  largest Forage gap is measured, the modulated agent kept more foraging skill **without** being worse in the hard
+  world. The alternative survives only in the weaker form "the two agents reached equal Winter competence by different
+  routes, one of which overwrote less of Forage", which is not separable from "protection" here.
+- **Greedy vs sampled (reviewer M4) — checked for the headline cell.** Every value in these tables comes from greedy
+  (most-likely-action) play, and the diagonal check verifies each agent's level, not the between-agent gap. ~~The headline
+  Forage entry (P3, end of Winter: −112.1) is therefore **greedy only; a sampled-action check of that cell for both
+  agents is pending** (`developer`, reviewer M4) and this number should not travel without it.~~ *[Updated 2026-09-30:]*
+  the `developer` re-ran the key cells with **sampled** actions for both agents (2,000 episodes each, same seeds;
+  `results/analysis/continual_worlds/sampled_check_p3.json`). The gap survives: the end-of-Winter checkpoints played in Forage survive 306.0 (ordinary) vs 419.9
+  (modulated) steps, **+113.9 [95 % CI +103.4, +124.5]** sampled against +112.7 greedy; the branch checkpoints tie in
+  Forage under both modes (≈ 479). The other P1/P2 Forage entries and all A/B entries remain greedy only.
 
 *Matched times (R4).* In P3 the Famine entry is measured after **3 M** interfering Winter episodes and the two Winter
 entries after **1 M** Famine episodes; each is compared between agents only, never across worlds.
@@ -1568,7 +1674,9 @@ What the curves show:
 | P2 Fog-B ↔ Danger-A | **favourable** (3 / 0 / 1) | **favourable** (1 / 0 / 3) | not favourable (1 / 1) | **favourable** (6 / 1) | 3 of 4 | forgetting — Forage entries only | **yes** |
 | P3 Winter ↔ Famine | **favourable** (3 / 0 / 1) | not favourable (1 / 1 / 2 ties) | **favourable** (2 / 0) | **favourable** (5 / 2) | 3 of 4 | dip (first Winter entry, 24.5 vs 22.6); forgetting — Forage after Winter | **yes** |
 
-**Section 2 verdict under R1: SUPPORT — 2 of 3 sequences meet the criterion.** Worded as registered: *one
+~~**Section 2 verdict under R1: SUPPORT — 2 of 3 sequences meet the criterion.**~~ *[Struck 2026-09-30 after the
+verdict review — the table above is correct, but "SUPPORT" is one of two outcomes the registered rule reaches; see the
+revised verdict at the end of this subsection.]* Worded as registered: *one
 initialisation pair, three world-pairs*. What carries it: in P2 the only beyond-noise differences are Forage-forgetting
 entries; in P3 the first-entry Winter dip (which clears its threshold by 1.9 steps) and Forage forgetting. No
 favourable difference on the alternating worlds' returns or forgetting is beyond noise. The predicted shape ("small or
@@ -1579,6 +1687,29 @@ entries.
 modulated agent only, so the verdict is also computed without P1 and P2. That leaves P3 alone, and one
 sequence cannot meet "2 of 3": **the without-Danger-A verdict is "not supported" by construction**; P3 on its
 own reads 3 of 4 measures favourable with two beyond-noise differences (it meets its per-sequence criterion on its own).
+
+**Revised verdict (revision after verdict review, 2026-09-30): the registered rule is NOT DECISIVE on these data.**
+Section 2 has a support clause and a refutation clause. On these data **each of them is reached**, depending on one
+question the design answers both ways: *does the foraging world (Forage) — learned before the alternation began — count
+as a world of the sequence in the forgetting vote?* §3.3 lists Forage as stage 1 of every sequence, which says yes; §2
+names May's forgetting on the **alternating** worlds as the replication target, which says no. Both readings are
+registered-consistent; neither was chosen before the data were seen.
+
+| | Forage **counted** in the forgetting vote (R1, R5) | Forage **not counted** (R6, R7) |
+|---|---|---|
+| P1 Danger-A ↔ Famine | 2 of 4 favourable → mixed | 2 of 4 favourable → mixed (A/B forgetting sums to +14.4 steps **against**) |
+| P2 Fog-B ↔ Danger-A | 3 of 4 favourable; beyond noise only via Forage entries → **meets support** | 3 of 4 favourable, but **no favourable difference beyond noise**; its only beyond-noise difference (Danger-A return, −4.3) is **against** → meets the refutation clause |
+| P3 Winter ↔ Famine | 3–4 of 4 favourable; beyond noise via the Winter dip and Forage → **meets support** | 3–4 of 4 favourable; beyond noise via the Winter dip alone (M2: a two-window floor, cleared by 1.9 steps) → meets support, thinly |
+| **Section 2 outcome** | **support clause met** (P2, P3) | **refutation clause met** (P1, P2) under every combination rule |
+
+(Here "mixed" is read as "fewer than 3 of the 4 measures favourable" and "all inside noise" as "no favourable difference
+beyond noise"; that is the reading under which §2's two clauses do not overlap.) If the Winter dip is not allowed to
+carry the beyond-noise clause on its own (M2), P3 also drops out when Forage is not counted, and no sequence meets
+support. **The hinge is the forgetting entry set, not the combination rule**: R1 and R5 (both with Forage) agree on
+support; R6 and R7 (both without) agree on not-supported / refutation; R2 and R3 were never registered-literal (the
+script's tie bug and a stricter-than-registered unanimity rule), and R4 is the predicted *shape*, not the rule. The
+previous wording "four of five alternatives disagree" overstated the combination-rule fragility and understated this
+entry-set hinge. Wording as required: *one initialisation pair, three world-pairs, one seed — registered rule not decisive.*
 
 ### 10.9 Sensitivity to the combination rule
 
@@ -1593,6 +1724,16 @@ favourable either way). "BN" = which favourable measure supplies the beyond-nois
 | R4 | return visits only (switches into the second visit; forgetting on A / B only) | − 0 0 − → 0 | + 0 0 + → 2 | + − + + → 3, no BN | NOT SUPPORTED |
 | R5 | sum of signed effects per reading across the sequence (Rev 2a agreement applied to the sums) | + + − + → 3, BN forgetting (Forage) | + + − + → 3, BN forgetting (Forage) | + + + + → 4, BN dip, forgetting | **SUPPORT** (all three) |
 | R6 | as R1, forgetting on the alternating worlds A / B only (Forage excluded) | + + 0 − → 2 | + + 0 + → 3, **no BN** | + 0 + + → 3, BN dip | NOT SUPPORTED (P3 only) |
+| R7 *(added 2026-09-30)* | as R5, forgetting on A / B only (Forage excluded) | + + − − → 2 (A/B forgetting sums to **+14.4 against**) | + + − + → 3, **no BN** (its only beyond-noise difference, the Danger-A return −4.3, is against) | + + + + → 4, BN dip only | NOT SUPPORTED (P3 only) |
+| R8 *(added 2026-09-30)* | as R1, and a recovery reading whose episode difference is below one 4,000-episode logging interval is also a tie (the second reading 3.7.7 (a)'s parenthetical admits) | + + 0 − → 2 | + + 0 + → 3, BN forgetting (Forage) | + **+** + + → 4 (Winter return: own-reference 36,059 vs 40,050, Δ 3,991 → tie; H-rec becomes 1 / 0 / 3 → favourable), BN dip, forgetting (Forage) | SUPPORT (P2, P3) — no change |
+
+*Revision after verdict review, 2026-09-30.* R7 and R8 are added. R8 changes only P3's recovery sign and no verdict. R7
+completes the Forage-excluded pair: with R6 it shows that **no combination rule gives support once Forage is left out of
+the forgetting vote**, and that without Forage P1 is mixed and P2 has no favourable difference beyond noise — §2's
+refutation clause (10.8, revised verdict). The *Reading* paragraph below (2026-09-29) framed the fragility as a matter
+of the combination rule; the entry set is the real hinge. The sentence "The one robust pattern across all six rules is a
+favourable dip in every sequence" stands as arithmetic, but per 10.3 (revision) and 10.11 that dip is mostly a head
+start plus sub-noise votes.
 
 *Reading.* The two rules that give support (R1, R5) both need the **Forage** forgetting entries for P2's beyond-noise
 clause; remove them (R6) and P2 drops out. Scoring the recovery ties as the script does (R2) or requiring unanimity (R3)
@@ -1624,11 +1765,113 @@ were pre-trained for 10 M episodes and spend 1–3 M episodes per visit; a retur
 another world may simply be too easy for either agent to forget much. The from-scratch 3-seed replication of
 May under today's settings ([[MAY_DOUBLE_RETURN_REPLICATION]]) is the direct test of that.
 
+*Revision after verdict review, 2026-09-30 (C2):* the "Dip depth" row above reads "first-entry dips smaller for the
+modulator"; per 10.11 that is mostly a zero-shot head start, not a smaller drop caused by adapting. May's "dip depth
+equal" is compared here with a quantity that mixes starting level and adaptation.
+
+### 10.11 Head start vs adaptation on first entries (EXPLORATORY, post-data — added 2026-09-30)
+
+*Not pre-registered. Added after the verdict review showed that the first-entry advantage was not separated from the
+starting checkpoints' zero-shot difference (reviewer C2). Nothing here enters the section-2 vote.*
+
+**The head start.** The forgetting matrix's first row plays the two branch-point checkpoints — frozen, before any
+training in the new world, greedy actions, 2,000 episodes each — in every world. The modulated checkpoint survives
+longer in **all seven** worlds:
+
+| World | Ordinary | Modulated | Difference |
+|---|---|---|---|
+| Forage (trained) | 478.8 | 479.4 | +0.6 (both at the 500-step cap in 95.6 % of episodes) |
+| Winter | 114.3 | 132.8 | **+18.5** (sampled actions: 117.5 vs 137.3, +19.7 [95 % CI +9.2, +30.2]) |
+| Nursery | 199.1 | 212.5 | +13.4 |
+| Famine | 161.5 | 166.9 | +5.4 |
+| Danger-A | 30.3 | 34.2 | +3.9 |
+| Home | 172.6 | 175.8 | +3.2 |
+| Fog-B | 38.3 | 40.3 | +2.0 |
+
+Against the first-20k gaps credited to the switch (Winter +24.5, Danger-A +4.5, Fog-B +5.2), the head start accounts for
+18.5, 3.9 and 2.0 steps. The Home lead (+3.2 here) is the same one the level-05 factorial flagged as not licensed as a
+modulator effect.
+
+**Early learning measured from each agent's own start.** Two post-data measures, each read from the training log
+(sampled actions, same scale as the registered measures):
+- **Start level** = mean survival in the first logged row after the switch (≈ 4,000 episodes, ≈ 28 training
+  iterations — close to, but not strictly, zero-shot). The greedy matrix cell of the checkpoint that ended the previous
+  stage is shown next to it for scale.
+- **Gain** = first-20k mean survival minus the agent's own start level: how much it improved over its first 20,000
+  episodes, whatever it started from.
+- **Half-gap time** = episodes until a logged row first closes half of the gap between the agent's own start level and
+  the common recovery line (0.9 × the lower reference level). "n/a" = the agent started above the line.
+
+Modulated minus ordinary; positive start and gain differences favour the modulator:
+
+| Seq | First visit into | Start level diff (sampled, first 4k) | Start diff (greedy matrix) | First-20k diff (registered) | **Gain diff** | Half-gap time, ord / mod (k episodes) |
+|---|---|---|---|---|---|---|
+| P1 | Forage → Danger-A | +5.2 | +3.9 | +4.5 | **−0.6** | 48 / 52 |
+| P1 | Danger-A → Famine | +5.2 | +9.2 | +5.9 | **+0.7** | 8 / 8 |
+| P2 | Forage → Fog-B | +2.0 | +2.0 | +5.2 | **+3.2** | 56 / 40 |
+| P2 | Fog-B → Danger-A | +10.4 | +11.4 | +3.0 | **−7.4** | 8 / n/a |
+| P3 | Forage → Winter | +29.4 | +18.5 | +24.5 | **−4.9** | 140 / 68 |
+| P3 | Winter → Famine | +14.0 | +41.3 | +1.6 | **−12.4** | 8 / n/a |
+
+What this shows:
+- **The modulated agent starts ahead on every first visit** — by 2 to 29 steps in the first 4,000 episodes, by 2 to 41
+  steps in greedy play of the checkpoint it arrives with — and its first-20k advantage never exceeds its sampled start
+  lead by more than 3.2 steps (Winter: 6.0 steps above the greedy start lead, 4.9 below the sampled one).
+- **It does not improve faster from its own start.** Its gain over the first 20,000 episodes is larger in 2 of the 6
+  first visits (Fog-B +3.2, Famine in P1 +0.7) and smaller in 4 (−0.6 to −12.4); in Winter both curves are *falling*
+  over the first 20k (ordinary +2.6, modulated −2.3 steps of gain).
+- **Fog-B is the one first entry where an edge beyond the head start shows**: gain +3.2 and half-gap 16k episodes
+  sooner, matching the 50k-offset lead of 21 steps in 10.6 while the start difference is only 2.0.
+- **Winter's half-gap time (68k vs 140k) favours the modulator but is not evidence of faster adaptation**: the modulated
+  agent had less than half the gap to close (≈ 22 vs ≈ 51 steps to the line), and the reading is the first crossing of a
+  single 4,000-episode row on a curve that swings by ±60 steps (M2).
+
+These measures were chosen after the data were seen, on one seed, with no noise yardstick of their own; they can
+**undercut** the registered first-entry reading, but not replace it with a new positive claim. What the data support is:
+**the modulated branch checkpoint generalises better zero-shot to unseen worlds, by 2–18 steps at the start of the
+alternation, for this one pair of agents** — not that the modulated agent adapts faster after a switch.
+
+Source: `tmp/20260930_cw_zeroshot_relative.py` → `tmp/20260930_cw_zeroshot_relative.json` (the registered first-20k
+values are reproduced exactly); start row from `results/analysis/continual_worlds/forgetting_p3_{t1none,t16quad}.json`.
+
 ## 11. Conclusions
 
 ### 11.1 Summary
 
-Three A-B-A-B sequences, one ordinary and one modulated run each, all six finished. **Under the most literal
+**Revision after verdict review, 2026-09-30.** Three A-B-A-B sequences, one ordinary and one modulated run each, all six
+finished. **The pre-registered rule is not decisive on these data** (10.8, revised verdict). Its support clause is met
+(2 of 3 sequences) if the foraging world — learned before the alternation — counts in the forgetting vote; its
+refutation clause is met (P1 mixed, P2 without any favourable difference beyond noise and one against) if only the
+alternating worlds count, under every combination rule (10.9, R6 and R7). The design supports both entry sets and
+neither was fixed in advance; which one applies is the hinge, and it is a decision for the fresh-seed design, not for
+this analysis.
+
+What the data show, at the weight they bear:
+1. **A zero-shot head start, not faster adaptation.** The modulated branch-point checkpoint survives longer than the
+   ordinary one in every unseen world before any training there — by 2–18 steps (Winter 132.8 vs 114.3) — and it
+   arrives ahead at every first visit. That head start accounts for most of the first-20k advantage the first write-up
+   credited to "coping with the switch" (Winter 18.5 of 24.5 steps; Danger-A 3.9 of 4.5; Fog-B 2.0 of 5.2). Measured
+   from each agent's own starting level (exploratory, post-data, 10.11), the modulated agent improves more over its
+   first 20,000 episodes in 2 of 6 first visits and less in 4; only Fog-B shows an edge beyond the head start
+   (+3.2 steps). The one first-entry dip beyond noise (Winter) clears a two-window yardstick by 1.9 steps on an
+   oscillating curve (10.3 revision).
+2. **Less loss of foraging skill after cold- and hunter-world stages** (up to 112 steps greedy; the largest cell,
+   after the first Winter stage, confirmed with sampled actions at +113.9 steps [+103.4, +124.5]) — at that checkpoint
+   the modulated agent is not worse in Winter itself (sampled +10.6), so it is not simply "less specialised". But the
+   effect comes from one shared checkpoint at the survival ceiling, reverses once (P1, second hunter-world visit, +6.2
+   against), is absent after fog or scarce-food stages, and rests on one starting pair (10.5 revision). This is the
+   study's clearest beyond-noise difference, and it is about the world learned **before** the alternation, not the
+   alternating worlds the design targeted.
+3. **No difference on the alternating worlds.** Returns differ by −4.3 to +10.5 steps (one beyond noise, against the
+   modulator); forgetting of the alternating worlds differs by −8.4 to +7.9 steps, all inside noise, with the sign
+   varying by sequence. May's 107–132-step return advantage is not reproduced, and the predicted shape ("appears on the
+   returns") did not occur.
+
+The cold-world caveat (D6) reproduced: the modulated agent settles lower there over the reference window (174.7 vs 195.2).
+
+*First write-up (2026-09-29), kept for the record, struck:*
+
+~~Three A-B-A-B sequences, one ordinary and one modulated run each, all six finished. **Under the most literal
 reading of the pre-registered rule the modulator is supported — in 2 of 3 sequences (fog ↔ hunters, cold ↔ scarce
 food) — but only as "one initialisation pair, three world-pairs", on a single seed, and only under that reading**: the
 combination of per-switch votes was not fixed in advance, and four of the five other reasonable combination rules give
@@ -1640,35 +1883,58 @@ themselves — the returns and their forgetting, where May's probe found a 107�
 within noise of each other, the sign varies by sequence, and one return is beyond noise against the modulator. The
 registered prediction ("small on first visits, appears on the returns") is the reverse of what was seen. The cold-world
 caveat (D6) reproduced: the modulated agent settles lower there (174.7 vs 195.2) and is still 10 steps behind in absolute
-survival on its return, even though its gain over its own first visit is larger.
+survival on its return, even though its gain over its own first visit is larger.~~
 
 ### 11.2 What this does and does not say
 
-- It says: **for this one pair of starting agents**, across three world pairs, the modulated agent coped
+- ~~It says: **for this one pair of starting agents**, across three world pairs, the modulated agent coped
   better with the **first** switch into an unfamiliar harder world (smaller drop, faster climb back), most
-  clearly in the cold world.
+  clearly in the cold world.~~ *[Struck 2026-09-30, reviewer C2: this is mostly a zero-shot head start (10.11).]*
+- *(Revised 2026-09-30.)* It says: **for this one pair of starting agents**, the modulated branch checkpoint generalises
+  better zero-shot to unseen worlds, by 2–18 steps; and after cold- and hunter-world training it kept more of the
+  foraging world, with the qualifications in 10.5. It does **not** say that the modulated agent adapts faster after a
+  switch, and it does not return a registered verdict either way (10.8).
 - It does not say: that the modulator protects what was learned (returns and forgetting are mixed and small),
   or anything about the modulator in general (one initialisation pair, one seed per arm; sequences share
   agents and worlds), or any mechanism.
 - It depends on a scoring choice made after the data (10.2 ii) and on correcting the script's tie handling to
-  the registered rule (10.2 i); both are visible in 10.9.
+  the registered rule (10.2 i); both are visible in 10.9. *(2026-09-30:)* The decisive post-data choice is the
+  forgetting entry set (with or without Forage), not the combination rule; the second tie reading (Δ below one logging
+  interval, R8) changes no verdict.
 
 ### 11.3 Limitations
 
 - **Single-seed first read.** One run per agent per sequence; the noise yardstick is a floor built from
   within-run spread (5.5), not seed-to-seed variance. The three sequences share the same starting weights,
   optimizer state and random key (3.4).
+- **One shared start, no yardstick for it (added 2026-09-30, reviewer M1).** §3.4 states that the two agents "differ in
+  initialisation, capacity and seed as well as in the modulator". That is not so: both are seed 42, and a parallel study
+  verified that same-seed ordinary and modulated agents built by the trainer's recipe start from **bitwise-identical
+  main-network weights** (27 of 27 arrays) with a shared environment stream ([[ALGORITHMIC_NULL_TODO]], 2026-09-30;
+  checked on the May replication's untrained seed-42 pair — the level-05 runs these agents come from use the same
+  recipe but were not separately checked). The two pre-trained agents here therefore most likely began their 10 M
+  Home episodes from one shared initialisation. The confound is the opposite shape: one shared start, perturbed only by
+  the modulator, with no measure of how far *any* perturbation of
+  that start would drift in these worlds. The zero-shot head start (10.11) is a property of this one pair and cannot
+  be attributed to the modulator without that yardstick. §3.4 belongs to `experiment-designer`, who owns the correction.
+- **Two-window yardstick in Winter (M2).** Winter's noise threshold is built from two 200k windows (SD 7.99) and applied
+  to a 20k quantity that swings 60–210 steps; Winter recovery is a first crossing on that curve.
+- **Forage at ceiling (M3).** 95.6 % of both agents' Forage episodes hit the 500-step cap at the branch point, so
+  Forage forgetting has no baseline comparison and all its entries share that one cell.
 - **Exploratory worlds.** Danger-A and Fog-B were found by scouting after the registered worlds failed
   (3.7.4); Danger-A passed the survivable rule for the modulated agent only.
 - **Winter reference on an oscillating curve (D6).** The modulated agent settled lower in Winter over the
   reference window (174.7 vs 195.2), as in the pilot, but its last 20,000 episodes of that visit read 211.0 (ordinary
-  196.7) and its end-of-visit checkpoint plays Winter as well as the ordinary one's (greedy evaluation 215.1 vs 213.1).
+  196.7) and its end-of-visit checkpoint plays Winter as well as the ordinary one's (greedy evaluation 215.1 vs 213.1; *added
+  2026-09-30:* sampled 215.2 vs 204.6).
   `R_Winter,mod` is therefore a point on a swinging curve; own-reference dip and recovery and the return measure are
   all referenced to it, and the common-reference readings inherit it through `R_common`.
 - **Unequal interference in P3 (R4).** The Famine return follows 3 M Winter episodes, the Winter return 1 M
   Famine episodes; forgetting of Famine at the end of stage 4 is after 3 M interfering episodes, forgetting
   of Winter at stages 3 and 5 after 1 M. Compared between agents within a world only.
-- **Deterministic evaluation** in the forgetting matrix vs sampled training (10.5).
+- **Deterministic evaluation** in the forgetting matrix vs sampled training (10.5). *(2026-09-30:)* the diagonal check
+  verifies each agent's level, not the between-agent gap; the −112-step Forage headline was re-checked with sampled
+  actions and holds (+113.9 steps, M4); the other matrix entries remain greedy only.
 - **Recovery floor.** On most switches both agents were above the recovery line within the first 20,000
   episodes, so H-rec carries information on first entries and the Winter return only.
 
@@ -1686,14 +1952,34 @@ survival on its return, even though its gain over its own first visit is larger.
   votes combine into one sign per measure (10.2 ii), (b) the forgetting entry set (with or without Forage),
   (c) a common-reference companion for the return measure (10.4), and (d) whether the forgetting matrix
   plays the policy deterministically or sampled. The manifest statuses of rows 19–24 are stale ("running").
+- *(Added 2026-09-30, after the verdict review; done the same day.)* **`developer`:** the P3 sampled-action re-check
+  (reviewer M4) is done — `results/analysis/continual_worlds/sampled_check_p3.json`; Forage gap +113.9 sampled vs +112.7 greedy, zero-shot Winter gap +19.7 vs
+  +18.5. The matrix script's policy-mode option was uncommitted in the working tree when this revision was written.
+- *(Added 2026-09-30.)* **`experiment-designer`:** correct §3.4's confound statement with a dated note (same seed,
+  bitwise-identical main-network initialisation, shared environment stream — worth confirming directly on the two
+  level-05 runs; reviewer M1), and add to the fresh-seed
+  pre-registration (e) the forgetting entry set as an explicit decision (it decided this verdict), (f) a zero-shot
+  baseline for every first entry (the matrix start row, sampled) so that dip and recovery can be read relative to it,
+  (g) a dip tie rule, and (h) the cross-seed controls in 11.5.
 
 ### 11.5 Recommended next experiments
 
-1. **Fresh seeds (3.5)** — the only route from "one initialisation pair" to a claim; with the scoring
-   choices above pre-registered first.
-2. **First-entry effect as its own hypothesis.** The only consistent signal is on first contact with a new
+1. ~~**Fresh seeds (3.5)** — the only route from "one initialisation pair" to a claim; with the scoring
+   choices above pre-registered first.~~ *[Revised 2026-09-30, reviewer M1:]* **Fresh seeds with cross-seed
+   controls.** 3.5's plan (seeds 43/44, same-seed ordinary/modulated pairs) re-creates the shared start and cannot on
+   its own separate the modulator from the starting weights. The replication needs (a) **ordinary-42 vs ordinary-43/44
+   in these worlds** as the noise yardstick for how far two starts drift with no modulator involved, and (b)
+   **cross-seed pairs** (e.g. ordinary-43 vs modulated-44) alongside the same-seed pairs — as step 11 of the updated
+   analysis plan (`tmp/20260930_continual_analysis_plan_v2.md`) already proposes. Scoring choices (11.4) pre-registered
+   first.
+2. ~~**First-entry effect as its own hypothesis.** The only consistent signal is on first contact with a new
    world; a design that measures many first entries (several unseen worlds from one checkpoint, several
-   seeds) tests it directly rather than as a side-effect of an A-B-A-B schedule.
+   seeds) tests it directly rather than as a side-effect of an A-B-A-B schedule.~~ *[Revised 2026-09-30, reviewer C2:]*
+   **Zero-shot generalisation as its own question.** What this study found on first entries is a zero-shot head start
+   of one checkpoint pair. Whether a modulated agent generalises better to unseen worlds is cheap to test without any
+   training: play several seeds' pre-trained checkpoints (both agents, and ordinary vs ordinary across seeds as the
+   yardstick) in the unseen worlds, sampled and greedy. Only if that difference is seed-stable is an adaptation-speed
+   design (many first entries, measured relative to the zero-shot level) worth running.
 3. **May replication under today's settings** ([[MAY_DOUBLE_RETURN_REPLICATION]]) — decides whether May's
    return/forgetting advantage was specific to its tiny from-scratch stages.
 4. **A trajectory-level read of Winter (D6 "look first", still open)** — why the modulated agent climbs
@@ -1932,3 +2218,26 @@ a design that cannot separate the modulator from its shared start, and turn a on
 generalisation difference into a paper claim about continual adaptation.
 
 Reviewed by: plan-reviewer
+
+### Response from experiment-analyzer (revision after verdict review, 2026-09-30)
+
+In plain words: the verdict is relabelled from "support (fragile)" to **"registered rule not decisive"**, and the
+first-entry claim is reworded to a zero-shot generalisation difference of this one starting pair. No run was repeated.
+Pre-registered text (sections 1–9) is untouched; changed passages in §10–§11 and the two results boxes are struck, not
+deleted, and every addition is dated.
+
+| # | What changed | Where |
+|---|---|---|
+| C1 | Verdict relabelled "registered rule NOT DECISIVE"; support and refutation clauses shown side by side at equal weight; hinge named (the forgetting entry set, Forage in or out); R7 (sum rule without Forage: P1 A/B forgetting +14.4 against, P2 loses its only beyond-noise entry → not supported under every rule) added | top box, §10 box, 10.8 revised verdict, 10.9, 11.1 |
+| C2 | First-entry claim reworded to "the modulated branch checkpoint generalises better zero-shot to unseen worlds, by 2–18 steps, for this one pair"; start-row table added; exploratory post-data measures relative to each agent's own start (gain over the first 20k: modulator better in 2 of 6 first visits, worse in 4; only Fog-B shows an edge beyond the head start) | new 10.11, 10.3 note, 10.10 note, 11.1–11.2, 11.5 item 2 |
+| M1 | Named in 11.3 and 11.5: shared initialisation (verified on the May seed-42 pair, same recipe; not separately checked on the level-05 runs), no yardstick; replication must add ordinary-42 vs ordinary-43/44 and cross-seed pairs. §3.4 itself left to `experiment-designer` | 11.3, 11.4, 11.5 item 1 |
+| M2 | Two-window yardstick and oscillating Winter curve stated for dip and recovery; the Winter dip cannot carry the beyond-noise clause alone | 10.3 note, 10.8, 11.3 |
+| M3 | P1 reversal (+6.2), after-which-worlds pattern, Forage = 4 of 7 votes from one shared ceiling-level cell (95.6 % capped), "less specialisation" alternative named — then weakened by the M4 sampled cell (the end-of-Winter modulated checkpoint is not worse in Winter) but not excluded | 10.5 note, 11.1 |
+| M4 | Sampled-action re-run by `developer` (`results/analysis/continual_worlds/sampled_check_p3.json`): Forage gap after the first Winter stage +113.9 [+103.4, +124.5] sampled vs +112.7 greedy; zero-shot Winter gap +19.7 [+9.2, +30.2] vs +18.5; end-of-Winter checkpoints in Winter +10.6 sampled, +2.0 greedy — which weakens the "less specialisation" alternative of M3. One pair only | 10.5 note, 10.11 table, top box, §10 box, 11.1, 11.3, 11.4 |
+| M5 | R8 row (Δ below one logging interval = tie: P3 recovery flips favourable, no verdict change); sub-2-step dip votes named | 10.9, 10.3 note |
+| L1 | Commit citation corrected (cells carry the repository head at evaluation time, all descendants of `c6f33eb3` with no eval-code change); row-0 omission stated as conservative. Manifest statuses of rows 19–24 still stale — `experiment-designer` / `training-runner` own them | 10.5, 11.4 |
+
+Working files: `tmp/20260930_1800_cw_verdict_revision.md`, `tmp/20260930_cw_sensitivity_extra.{py,json}`,
+`tmp/20260930_cw_zeroshot_relative.{py,json,log}`.
+
+Signed: experiment-analyzer
