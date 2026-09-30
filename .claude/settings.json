@@ -8,8 +8,8 @@
         "hooks": [
           {
             "type": "command",
-            "timeout": 5,
-            "command": "/home/vncuser/miniconda3/envs/grid_world_pain/bin/python \"$CLAUDE_PROJECT_DIR/scripts/claude/session_board.py\" hook SessionStart || true"
+            "timeout": 10,
+            "command": "/home/vncuser/miniconda3/envs/grid_world_pain/bin/python -S \"$CLAUDE_PROJECT_DIR/scripts/claude/session_board.py\" hook SessionStart || true"
           }
         ]
       }
@@ -19,8 +19,8 @@
         "hooks": [
           {
             "type": "command",
-            "timeout": 5,
-            "command": "/home/vncuser/miniconda3/envs/grid_world_pain/bin/python \"$CLAUDE_PROJECT_DIR/scripts/claude/session_board.py\" hook UserPromptSubmit || true"
+            "timeout": 10,
+            "command": "/home/vncuser/miniconda3/envs/grid_world_pain/bin/python -S \"$CLAUDE_PROJECT_DIR/scripts/claude/session_board.py\" hook UserPromptSubmit || true"
           }
         ]
       }
@@ -32,7 +32,7 @@
           {
             "type": "command",
             "timeout": 5,
-            "command": "/home/vncuser/miniconda3/envs/grid_world_pain/bin/python \"$CLAUDE_PROJECT_DIR/scripts/claude/session_board.py\" hook PreToolUse || true"
+            "command": "/home/vncuser/miniconda3/envs/grid_world_pain/bin/python -S \"$CLAUDE_PROJECT_DIR/scripts/claude/session_board.py\" hook PreToolUse || true"
           }
         ]
       }
@@ -44,7 +44,7 @@
           {
             "type": "command",
             "timeout": 5,
-            "command": "/home/vncuser/miniconda3/envs/grid_world_pain/bin/python \"$CLAUDE_PROJECT_DIR/scripts/claude/session_board.py\" hook PostToolUse || true"
+            "command": "/home/vncuser/miniconda3/envs/grid_world_pain/bin/python -S \"$CLAUDE_PROJECT_DIR/scripts/claude/session_board.py\" hook PostToolUse || true"
           }
         ]
       }
