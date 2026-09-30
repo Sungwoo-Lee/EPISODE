@@ -1,0 +1,16 @@
+{
+ "winter_dip": "24.5",
+ "winter_thr": "22.6",
+ "winter_margin": "1.9",
+ "p2_ret": "−4.3",
+ "p2_ret_thr": "4.2",
+ "ret_min": "−4.3",
+ "ret_max": "+10.5",
+ "winter_ret_ord": "215.8",
+ "winter_ret_mod": "205.8",
+ "n_dip_beyond": "1",
+ "n_ret_beyond": "1",
+ "n_read": "18",
+ "n_beyond": "2",
+ "yard_floor": "2.1"
+}
