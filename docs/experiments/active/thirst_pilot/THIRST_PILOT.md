@@ -72,6 +72,17 @@ declined the optional training-log counters and assigned the nodes.
 | A2 (git on nodes) | `which git` is added to the pre-flight (§3.2). |
 | A4 (reset cost) | Added to P4: if the 15 % flag trips, reset-rate cost is separated from water-op cost before concluding. |
 
+**Re-check of Revision 1 (SOUND WITH CONCERNS), folded in at analysis time only.** The launch
+commands (§2.5) and the run table (§3) are unchanged.
+
+| Finding | Change |
+|---|---|
+| R1 | §4.2: the per-step pond cross-check, with params built from the run's saved config through `apply_sensor_compat` |
+| R2 | P1 floor: "cannot reach" = ceil(1.6 × start hydration) ≤ distance − 1 |
+| R3 | P5(d): expect `root` = the worktree |
+| R4 | §4.4: `v4.0` batch tools exclude `*l06pilot*` until merge |
+| R5 | No change. The modulated agent on an 11 GB card is covered by the runner's post-launch check. |
+
 ---
 
 ## 2. Design
@@ -294,11 +305,14 @@ P0a: 51, 88, 140, 174, 200, 206, 214, 220, 225, 228.
 
 **P1: both agents learn to drink.** Read per run.
 - *Floor* (measured before judging, from the 0.4 M store, §4.2): the share of episodes that
-  **cannot** reach water before dying of thirst whatever the policy does. That is, their no-drink
-  deadline (1.6 × start hydration, in steps) is no longer than the grid distance from the start
-  cell to the nearest cell of that episode's pond. The floor depends only on the episode's start
-  and not on the policy, so any store measures it. It is a lower bound: it ignores detours forced
-  by obstacles and predators.
+  **cannot** reach water before dying of thirst whatever the policy does. Precisely: an episode
+  cannot reach water when **ceil(1.6 × start hydration) ≤ d − 1**. Here d is the Manhattan
+  distance (moves are 4-neighbour) from the start cell to the nearest cell of that episode's pond.
+  The bound is d − 1, not d, because the drink on the arrival step is added before the death
+  test (`core.py:599-604`). An episode whose deadline equals the distance therefore survives by
+  arriving on that step (re-check R2). The floor depends only on the episode's start and not on
+  the policy, so any store measures it. It is a lower bound: it ignores detours forced by
+  obstacles and predators.
 - *Pass (Revision 1):* the dehydration share (`Episode/Term_Dehydration`) in the last tenth
   (1.8–2.0 M) is **≤ 0.10 and ≤ max(0.5 × first-tenth share, floor + 0.03)**, **and** the
   per-episode drinking-bout count rises from the 0.4 M store to the 2.0 M store.
@@ -361,9 +375,9 @@ informational (Revision 1).
   `"unknown"` sha or branch falls back to the manifest's recorded HEAD plus (a), and does not
   invalidate the run. `git_dirty: "unknown"` is accepted.
 - (d) *Informational until observed.* WandB run metadata: `program`, `root` and the commit. These
-  values come from WandB's own detection and have never been observed for a worktree launch. With
-  `WANDB_DIR` pointing at the shared folder, `root` may well name the shared folder rather than the
-  worktree. After the first run, the runner reads its `wandb-metadata.json`, records the observed
+  values come from WandB's own detection and have never been observed for a worktree launch.
+  **Expected: `root` = the worktree**, because WandB detects it from the working directory's git
+  checkout, and `WANDB_DIR` only moves the files (re-check R3). After the first run, the runner reads its `wandb-metadata.json`, records the observed
   values here, and from then on only the commit (= (c)'s sha) is compared. A mismatch is reported,
   but it does not stop a run that passes (a)–(c) and (e).
 - (e) The saved `models/config.yaml` and the WandB config show `water.enabled: true` on level 06
@@ -489,10 +503,23 @@ the pond's location:
 - **no-drink deadline** = 1.6 × start hydration, in steps;
 - **cause of death** = `termination_reason` 1–7, all seven reported;
 - **pond cells** (needed only for P1's floor): the store does not record the pond. The reader
-  recomputes it by resetting the level-06 environment with the episode's `episode_seed`, using the
-  collector's own key recipe. The recomputation is checked on every episode: the recomputed start
-  cell must equal the store's `agent_row` / `agent_col` at t = 0. If any episode fails, the floor is
-  not reported.
+  recomputes it by resetting the environment with the episode's `episode_seed`, using the
+  collector's own key recipe. **The environment parameters are built exactly as the collector
+  builds them**: the run's own saved `models/config.yaml`, passed through `apply_sensor_compat`
+  (`collect_trajectories.py:963-1000`). They are never built from the worktree's level-06 YAML,
+  which could have drifted from what the run trained on. Two checks, both over **every**
+  episode (re-check R1):
+  1. the recomputed start cell equals the store's `agent_row` / `agent_col` at t = 0. This proves
+     the seed → key recipe and the grid, but not the pond: the start cell depends on the pond only
+     in the ≈ 4 % of episodes whose raw draw lands on a pond cell;
+  2. **the per-step pond check, which is what validates the pond.** For every step t → t+1 of
+     every episode, "hydration rose from t to t+1" must hold **exactly when** the store's
+     `agent_row` / `agent_col` at t+1 is a recomputed pond cell. Drinking means standing on a pond
+     cell after the move (`core.py:1201`), and hydration rises only then (`core.py:599-604`). The
+     check must hold in both directions, with zero exceptions.
+
+  If either check fails on any step or any episode, the recomputed ponds are wrong. The floor is
+  then **not reported**, and P1 is judged on its other clauses only, with that stated.
 
 This needs a small reader over existing columns (no new collection code). Its first check is a
 known-input test: a synthetic hydration trace with 2 bouts must return 2. If the reader is placed
@@ -523,6 +550,13 @@ They silently drop codes 6 and 7:
 
 Also, no `v4.0` tool from the shared folder may read these runs. The sum-to-1 check in P2 is the
 safeguard against any dropped code.
+
+**Caution for everyone else, until `v5.0` is merged (re-check R4).** The seven pilot run folders
+sit in the shared `results/JAX_RecurrentPPO/` beside every other run. Their saved configs carry a
+`water:` block and a 59-wide observation that the shared folder's `v4.0` code does not know. A
+`v4.0` loader that meets them will refuse them or misread them. Any batch tool that globs that
+folder from the shared folder, such as dwell sweeps, trajectory collection specs or result
+refreshes, should **exclude `*l06pilot*`** until `v5.0` is merged.
 
 ---
 
