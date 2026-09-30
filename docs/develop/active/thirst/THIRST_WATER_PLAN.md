@@ -891,6 +891,66 @@ found and cut is decision 13. With the respawn repair removed entirely, level 06
 - `experiment-designer`: re-running `generate_thermal_probes.py` now copies a `hydration`
   noise entry into the probes (harmless; water is off there).
 
+### Fix batch (2026-09-30)
+
+After verification the user approved fixing every open item ("fix all now"). Each fix
+is one commit, pushed to `origin/v5.0`. No field the dashboard reads was renamed.
+
+| # | Fix | Commit |
+|---|---|---|
+| 1 | `water.enabled` and `thermal.enabled` must be real YAML booleans; anything else (a quoted `"false"`, `0`, `1`) is a named `ValueError`. Four new refusal cases in `test_water_placement.py`. No shipped config (maintained or archived) uses a non-boolean gate (grep). | `2c52e29c` |
+| 2 | Stale noise counts: `ENVIRONMENT_SUMMARY.md` (the olfaction paragraph also said `interoceptive_nociception` was index 3; it is 4), the FAQ ("no spare remains"), `10_perceptual_noise.md` (index table rebuilt from the loader's resolved 13-entry order, 0–12) and the `02_config_schema.md` FAQ ("10 + 3 spare"). | `2193bfaf` |
+| 3 | Dreamer `_project_root` in `dreamer_srl_main.py` and `eval.py` now derived from the file (three levels up), like the `sys.path` insert. `SCRIPTS_DEPENDENCY_MAP.md` render-caller row updated (`eval.py:546` → `:554`). Other literal shared-folder paths found and **not** changed: `run_command.py`, `terminate_command.py` (launcher `PROJECT_ROOT`: the remote-launch contract), `train_command-agent.sh`, `scripts/lab/launch_{ladder_arm,sensory_arm,sheeprl}.sh` (launchers that `cd` to the shared folder by design, since runs launch through `run_command.py`), `sync-agent-data.sh`, `sync-antigravity.sh`, `save_snapshot.py` (ad hoc). None is under `src/`. Changing where lab launches run is the user's call. | `4f8791e6` |
+| 4 | `core.py` `assert` on `placement_mode` → static `ValueError`. | `7e876ae8` |
+| 5 | A pond covering the whole grid with `random_start_pos: true` is refused at load (`h·w >= H·W`), so the agent-start fix-up can no longer land on the pond at (0, 0). New refusal case. | `2c52e29c` |
+| 6 | **Decision: keep the requirement** that a water world has a `perceptual_noise.modalities.hydration` entry even when noise is off, and say why in the error. Reason: noise is switched on by a child config (level 07 extends the noise-off level 06), so dropping the requirement would move the failure from the parent to its child; every other modality is also listed whatever the switch. The refusal test now matches the new explanation. | `2c52e29c` |
+| 7 | `EnvParams.__setstate__` is all-or-none: when all 14 water fields are missing they are filled with water-off values and one WARNING line is logged; when only some are missing it raises, naming them. Three tests in `test_saved_config_compat.py`. | `fc0e5d8e` |
+| 8 | Re-indented the `sensor.py` breakdown comment and the level-07 THREAT-channel comment; level 06's header notes that smell channel 4 is shared with `tree` (count 0 in every maintained level). | `7e876ae8` |
+| 9 | Single-draw respawn on water worlds (decision 17 below). | `a12d22e8` |
+
+**Pre-fix / post-fix of the new tests.** The gate cases (1), the whole-grid pond (5) and
+the partial-pickle and warning cases (7) could not pass on the old code: a quoted
+`"false"` loaded as on, the whole-grid pond reached the capacity check with a different
+message, and the old hook filled a partial set silently with no log line. All pass now.
+The respawn uniformity test was confirmed to **fail** (2 of 2 cases) with the water
+branch replaced by the plain area draw, then restored.
+
+17. **Respawn on water worlds: one draw instead of draw-then-repair** (fix batch item 9;
+    the verifier's suggestion under item A). Water worlds have no pre-change recording to
+    match, so the respawn draws one integer per slot, from that slot's own respawn key
+    (`res_keys`), uniformly over "spawn area minus pond" with the same rank-skip fixed
+    point as decision 13. The raw cell draw and the second stream `fold_in(respawn_key,
+    0xD83)` are gone from water worlds; `0xD83` is retired and not reused. Water-off
+    worlds keep the raw draw exactly (T1 43/43, rollouts and jaxprs). Same harness as
+    decision 13 (`tmp/20260930_speed_check.py`: 64 envs × 300 steps, jitted `lax.scan`,
+    5 reps, median, seed 0), RTX 4090 GPU 0 and the shared CPU, the two versions
+    interleaved over 2 rounds (`tmp/20260930_fixbatch/speed_{gpu,cpu}.log`):
+
+    | Backend | Level 05 | Level 06, draw-then-repair (decision 13) | Level 06, single draw |
+    |---|---|---|---|
+    | GPU | 930k steps/s | 812–816k (**−12.6 %**) | 838–840k (**−9.8 %**) |
+    | CPU | 29.3–29.7k | 27.1–27.2k (**−7.7 %**) | 34.4–34.7k (**+17.4 %**) |
+
+    **Kept: the single draw** (faster on both backends: +3.1 % GPU, +27 % CPU over
+    draw-then-repair). On CPU level 06 is now faster than level 05. The number of
+    episode endings in the timed rollout is identical between the two versions (16,898
+    done-steps), so the gain is in the compiled step, not in what the rollout does; the
+    likely source is that the water branch no longer runs the water-off raw draw
+    (`randint(key, (2,), area_lo, area_hi)` per slot), which appears to be expensive on
+    CPU. Not investigated further. The same form would presumably speed up water-off
+    worlds too, but it would change their random draws and break parity, so it is not
+    proposed here. The GPU cost of a water world falls from 12.6 % to 9.8 %, still
+    above the plan's 5 % discussion line.
+
+**Tests after the batch** (final tree, one process per module, CPU):
+`test_water_parity` 43 · `test_water_placement` 43 · `test_hydration_dynamics` 17 ·
+`test_water_observation` 9 · `test_ladder_worlds_load` 9 · `test_saved_config_compat` 25 ·
+`test_no_recompile` 3 · `test_dashboard_frames` 13 · `test_dashboard_water` 16, all
+passing (`tmp/20260930_fixbatch/final_*.log`). The Dreamer files were byte-compiled; no
+Dreamer run was launched (in the shared folder the derived path equals the old literal).
+
+Implemented by: developer
+
 ## Verification Report
 
 > **Verified by**: senior-developer
