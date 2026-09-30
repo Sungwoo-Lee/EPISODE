@@ -4867,3 +4867,124 @@ cd /media/nas01/projects/Interoceptive-AI/grid_world_pain
 #   --agent_config configs/models/recurrent_ppo/nmn_input_site_grid_gaenorm/nmngaenorm_t16quad_ALL.yaml \
 #   --seed 44 --device cuda:1 --tag rppo_cw_mayrep_t16quad_s44 --wandb-name rppo_cw_mayrep_t16quad_s44 \
 #   --wandb-group continual_worlds --wandb-job-type prod
+# ---------------------------------------------------------------------------
+# 2026-10-01 — Single-channel smell hypervigilance, manifest rows H01-H16
+# (docs/experiments/active/hypervigilance/SINGLE_CHANNEL_SMELL_HYPERVIGILANCE.md §3; env-config-reviewer GO on
+# all three worlds; plan-reviewer SOUND WITH CONCERNS on Revision 1, doc-only fixes pending).
+# Main checkout, branch v4.0, HEAD 29eeea02def0164df6df104006a43b5c12044763; ladder commit b96a3693ec7e04f9ed07f6b3c8ea172628024976.
+# Seed-42 rows pass no --seed (config-owned, as C01/C02); seed 43/44 rows pass --seed per manifest.
+# Pre-flight: 102/106-112 both GPUs idle, no train.py, NAS mounted, JAX 0.9.0.1 GPU-compile OK, diary claims released.
+# Launched via /tmp mirror scripts (CIFS bypass), run_command.py --no-tail, >=4 s apart.
+# ---------------------------------------------------------------------------
+# Run H01: rppo_hv1ch_t1none_s42 — node 106, cuda:0
+# /home/vncuser/miniconda3/envs/grid_world_pain/bin/python train.py \
+#   --config configs/environment/experiment/hypervigilance/single_channel_smell_l05.yaml \
+#   --agent_config configs/models/recurrent_ppo/nmn_input_site_grid_gaenorm/nmngaenorm_t1none.yaml \
+#   --episodes 10000000 --device cuda:0 --log-interval 10 \
+#   --tag "rppo_hv1ch_t1none_s42" --wandb-name "rppo_hv1ch_t1none_s42" \
+#   --wandb-group "hv_single_channel_smell" --wandb-job-type "prod"
+# Run H02: rppo_hv1ch_t16quad_s42 — node 106, cuda:1
+# /home/vncuser/miniconda3/envs/grid_world_pain/bin/python train.py \
+#   --config configs/environment/experiment/hypervigilance/single_channel_smell_l05.yaml \
+#   --agent_config configs/models/recurrent_ppo/nmn_input_site_grid_gaenorm/nmngaenorm_t16quad_ALL.yaml \
+#   --episodes 10000000 --device cuda:1 --log-interval 10 \
+#   --tag "rppo_hv1ch_t16quad_s42" --wandb-name "rppo_hv1ch_t16quad_s42" \
+#   --wandb-group "hv_single_channel_smell" --wandb-job-type "prod"
+# Run H03: rppo_hv1ch_t1none_s43 — node 107, cuda:0
+# /home/vncuser/miniconda3/envs/grid_world_pain/bin/python train.py \
+#   --config configs/environment/experiment/hypervigilance/single_channel_smell_l05.yaml \
+#   --agent_config configs/models/recurrent_ppo/nmn_input_site_grid_gaenorm/nmngaenorm_t1none.yaml \
+#   --episodes 10000000 --device cuda:0 --log-interval 10 \
+#   --tag "rppo_hv1ch_t1none_s43" --wandb-name "rppo_hv1ch_t1none_s43" \
+#   --wandb-group "hv_single_channel_smell" --wandb-job-type "prod" --seed 43
+# Run H04: rppo_hv1ch_t16quad_s43 — node 107, cuda:1
+# /home/vncuser/miniconda3/envs/grid_world_pain/bin/python train.py \
+#   --config configs/environment/experiment/hypervigilance/single_channel_smell_l05.yaml \
+#   --agent_config configs/models/recurrent_ppo/nmn_input_site_grid_gaenorm/nmngaenorm_t16quad_ALL.yaml \
+#   --episodes 10000000 --device cuda:1 --log-interval 10 \
+#   --tag "rppo_hv1ch_t16quad_s43" --wandb-name "rppo_hv1ch_t16quad_s43" \
+#   --wandb-group "hv_single_channel_smell" --wandb-job-type "prod" --seed 43
+# Run H05: rppo_hv1ch_t1none_s44 — node 108, cuda:0
+# /home/vncuser/miniconda3/envs/grid_world_pain/bin/python train.py \
+#   --config configs/environment/experiment/hypervigilance/single_channel_smell_l05.yaml \
+#   --agent_config configs/models/recurrent_ppo/nmn_input_site_grid_gaenorm/nmngaenorm_t1none.yaml \
+#   --episodes 10000000 --device cuda:0 --log-interval 10 \
+#   --tag "rppo_hv1ch_t1none_s44" --wandb-name "rppo_hv1ch_t1none_s44" \
+#   --wandb-group "hv_single_channel_smell" --wandb-job-type "prod" --seed 44
+# Run H06: rppo_hv1ch_t16quad_s44 — node 108, cuda:1
+# /home/vncuser/miniconda3/envs/grid_world_pain/bin/python train.py \
+#   --config configs/environment/experiment/hypervigilance/single_channel_smell_l05.yaml \
+#   --agent_config configs/models/recurrent_ppo/nmn_input_site_grid_gaenorm/nmngaenorm_t16quad_ALL.yaml \
+#   --episodes 10000000 --device cuda:1 --log-interval 10 \
+#   --tag "rppo_hv1ch_t16quad_s44" --wandb-name "rppo_hv1ch_t16quad_s44" \
+#   --wandb-group "hv_single_channel_smell" --wandb-job-type "prod" --seed 44
+# Run H07: rppo_hv2ch_t1none_s43 — node 109, cuda:0
+# /home/vncuser/miniconda3/envs/grid_world_pain/bin/python train.py \
+#   --config configs/environment/experiment/hypervigilance/two_channel_smell_l05_control.yaml \
+#   --agent_config configs/models/recurrent_ppo/nmn_input_site_grid_gaenorm/nmngaenorm_t1none.yaml \
+#   --episodes 10000000 --device cuda:0 --log-interval 10 \
+#   --tag "rppo_hv2ch_t1none_s43" --wandb-name "rppo_hv2ch_t1none_s43" \
+#   --wandb-group "hv_single_channel_smell" --wandb-job-type "prod" --seed 43
+# Run H08: rppo_hv2ch_t16quad_s43 — node 109, cuda:1
+# /home/vncuser/miniconda3/envs/grid_world_pain/bin/python train.py \
+#   --config configs/environment/experiment/hypervigilance/two_channel_smell_l05_control.yaml \
+#   --agent_config configs/models/recurrent_ppo/nmn_input_site_grid_gaenorm/nmngaenorm_t16quad_ALL.yaml \
+#   --episodes 10000000 --device cuda:1 --log-interval 10 \
+#   --tag "rppo_hv2ch_t16quad_s43" --wandb-name "rppo_hv2ch_t16quad_s43" \
+#   --wandb-group "hv_single_channel_smell" --wandb-job-type "prod" --seed 43
+# Run H09: rppo_hv2ch_t1none_s44 — node 110, cuda:0
+# /home/vncuser/miniconda3/envs/grid_world_pain/bin/python train.py \
+#   --config configs/environment/experiment/hypervigilance/two_channel_smell_l05_control.yaml \
+#   --agent_config configs/models/recurrent_ppo/nmn_input_site_grid_gaenorm/nmngaenorm_t1none.yaml \
+#   --episodes 10000000 --device cuda:0 --log-interval 10 \
+#   --tag "rppo_hv2ch_t1none_s44" --wandb-name "rppo_hv2ch_t1none_s44" \
+#   --wandb-group "hv_single_channel_smell" --wandb-job-type "prod" --seed 44
+# Run H10: rppo_hv2ch_t16quad_s44 — node 110, cuda:1
+# /home/vncuser/miniconda3/envs/grid_world_pain/bin/python train.py \
+#   --config configs/environment/experiment/hypervigilance/two_channel_smell_l05_control.yaml \
+#   --agent_config configs/models/recurrent_ppo/nmn_input_site_grid_gaenorm/nmngaenorm_t16quad_ALL.yaml \
+#   --episodes 10000000 --device cuda:1 --log-interval 10 \
+#   --tag "rppo_hv2ch_t16quad_s44" --wandb-name "rppo_hv2ch_t16quad_s44" \
+#   --wandb-group "hv_single_channel_smell" --wandb-job-type "prod" --seed 44
+# Run H11: rppo_hv1chm_t1none_s42 — node 111, cuda:0
+# /home/vncuser/miniconda3/envs/grid_world_pain/bin/python train.py \
+#   --config configs/environment/experiment/hypervigilance/matched_strength_smell_l05.yaml \
+#   --agent_config configs/models/recurrent_ppo/nmn_input_site_grid_gaenorm/nmngaenorm_t1none.yaml \
+#   --episodes 10000000 --device cuda:0 --log-interval 10 \
+#   --tag "rppo_hv1chm_t1none_s42" --wandb-name "rppo_hv1chm_t1none_s42" \
+#   --wandb-group "hv_single_channel_smell" --wandb-job-type "prod"
+# Run H12: rppo_hv1chm_t16quad_s42 — node 111, cuda:1
+# /home/vncuser/miniconda3/envs/grid_world_pain/bin/python train.py \
+#   --config configs/environment/experiment/hypervigilance/matched_strength_smell_l05.yaml \
+#   --agent_config configs/models/recurrent_ppo/nmn_input_site_grid_gaenorm/nmngaenorm_t16quad_ALL.yaml \
+#   --episodes 10000000 --device cuda:1 --log-interval 10 \
+#   --tag "rppo_hv1chm_t16quad_s42" --wandb-name "rppo_hv1chm_t16quad_s42" \
+#   --wandb-group "hv_single_channel_smell" --wandb-job-type "prod"
+# Run H13: rppo_hv1chm_t1none_s43 — node 112, cuda:0
+# /home/vncuser/miniconda3/envs/grid_world_pain/bin/python train.py \
+#   --config configs/environment/experiment/hypervigilance/matched_strength_smell_l05.yaml \
+#   --agent_config configs/models/recurrent_ppo/nmn_input_site_grid_gaenorm/nmngaenorm_t1none.yaml \
+#   --episodes 10000000 --device cuda:0 --log-interval 10 \
+#   --tag "rppo_hv1chm_t1none_s43" --wandb-name "rppo_hv1chm_t1none_s43" \
+#   --wandb-group "hv_single_channel_smell" --wandb-job-type "prod" --seed 43
+# Run H14: rppo_hv1chm_t16quad_s43 — node 112, cuda:1
+# /home/vncuser/miniconda3/envs/grid_world_pain/bin/python train.py \
+#   --config configs/environment/experiment/hypervigilance/matched_strength_smell_l05.yaml \
+#   --agent_config configs/models/recurrent_ppo/nmn_input_site_grid_gaenorm/nmngaenorm_t16quad_ALL.yaml \
+#   --episodes 10000000 --device cuda:1 --log-interval 10 \
+#   --tag "rppo_hv1chm_t16quad_s43" --wandb-name "rppo_hv1chm_t16quad_s43" \
+#   --wandb-group "hv_single_channel_smell" --wandb-job-type "prod" --seed 43
+# Run H15: rppo_hv1chm_t1none_s44 — node 102, cuda:0
+# /home/vncuser/miniconda3/envs/grid_world_pain/bin/python train.py \
+#   --config configs/environment/experiment/hypervigilance/matched_strength_smell_l05.yaml \
+#   --agent_config configs/models/recurrent_ppo/nmn_input_site_grid_gaenorm/nmngaenorm_t1none.yaml \
+#   --episodes 10000000 --device cuda:0 --log-interval 10 \
+#   --tag "rppo_hv1chm_t1none_s44" --wandb-name "rppo_hv1chm_t1none_s44" \
+#   --wandb-group "hv_single_channel_smell" --wandb-job-type "prod" --seed 44
+# Run H16: rppo_hv1chm_t16quad_s44 — node 102, cuda:1
+# /home/vncuser/miniconda3/envs/grid_world_pain/bin/python train.py \
+#   --config configs/environment/experiment/hypervigilance/matched_strength_smell_l05.yaml \
+#   --agent_config configs/models/recurrent_ppo/nmn_input_site_grid_gaenorm/nmngaenorm_t16quad_ALL.yaml \
+#   --episodes 10000000 --device cuda:1 --log-interval 10 \
+#   --tag "rppo_hv1chm_t16quad_s44" --wandb-name "rppo_hv1chm_t16quad_s44" \
+#   --wandb-group "hv_single_channel_smell" --wandb-job-type "prod" --seed 44
