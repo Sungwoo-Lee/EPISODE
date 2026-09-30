@@ -1,0 +1,72 @@
+# EXPERIMENTAL, NOT MAINTAINED (CLAUDE.md "Config maintenance scope"): the MATCHED-STRENGTH world of
+# the single-channel smell hypervigilance study (added in Revision 1, 2026-09-30),
+#   docs/experiments/active/hypervigilance/SINGLE_CHANNEL_SMELL_HYPERVIGILANCE.md  (§2.2, §2.3)
+#
+# PURPOSE (plain language): make predator and rabbit exactly as HARD TO TELL APART as in the
+# single-channel world, but exactly as EASY TO NOTICE as in level 05. Both animals now smell of the
+# SAME odour mix -- equal parts odour A and odour B -- so the ratio of A to B says nothing about
+# which animal it is (as in the single-channel world: no distance-proof identity cue). The only
+# difference between the classes is strength: predator 0.67 + 0.67, rabbit 0.53 + 0.53, each
+# number jittered per episode with SD 0.3 exactly as in level 05.
+#
+# WHY TWO RECEPTOR CHANNELS AND NOT LITERALLY ONE: one channel is capped at 1.0 by the sampler
+# (`core.py:2046` clips to [0, 1]), while an average level-05 animal smells 1.18 in total. No
+# single-channel setting can reach that; e.g. predator 1.0 / rabbit 0.8 reaches 0.82 on average and
+# clips half the predators at 1.0. Carrying the one odour on two channels with the same recipe for
+# both classes restores the strength while carrying no identity in the ratio.
+#
+# MATCHING (2 M simulated draws, clipping included; design doc §2.2):
+#   mean total odour, average over classes: 1.178   (level 05: 1.176; single-channel: 0.588)
+#   separability of one animal's recipe, d': 0.652  (single-channel: 0.661; level 05: 0.936)
+#   predator values clipped at 1.0: 13.5 % per channel; rabbit clipped at 0: 3.9 % per channel
+# The class difference a - b = 0.14 per channel is set so that d' = sqrt(2) * 0.14 / 0.3 = 0.66
+# equals the single-channel world's 0.2 / 0.3; the class mean a + b = 1.2 equals level 05's.
+#
+# WHAT CHANGES vs basic/05 (verified on the trainer's loader, EnvParams diffed field by field):
+# ONLY `animal_property` (the SD is level 05's [0, 0.3, 0.3, 0, 0], unchanged). Observation width 58.
+#
+# The whole `entities:` list is restated because `Config.merge` replaces lists wholesale; both
+# entries are copied VERBATIM from basic/04-jump_attack_10x10.yaml with only the `properties` line
+# edited. If basic/04's entities change, re-copy before any new launch and re-run the diff.
+# No critical-settings registry value changes.
+extends: environment/experiment/basic/05-campfire_thermal_10x10
+
+environment:
+  entities:
+    - class: "predator"
+      behaviour: "hunt"
+      tag: "pred"
+      count_low: 0
+      count_high: 2
+      properties: [0.0, 0.67, 0.67, 0.0, 0.0]     # level 05: [0.0, 0.7, 0.5, 0.0, 0.0]
+      properties_std: [0.0, 0.3, 0.3, 0.0, 0.0]   # = level 05
+      visual_properties: [1.0]
+      visual_properties_std: [0.0]
+      move_interval: [1, 1]
+      damage: [15.0, 120.0]
+      attack_delay: [1, 3]
+      nociception_intensity: 0.9
+      spawn_area: [[1, 1], [10, 10]]
+      patrol_area: [[1, 1], [10, 10]]
+      detection_range: [1, 7]
+      max_stamina: [30, 150]
+      stamina_recovery_rate: [1, 1]
+      hunt_stamina_threshold: [0.7, 0.7]
+      lose_interest_multiplier: [1.5, 1.5]
+      attack_range: [2, 3]
+      attack_success_rate: 0.5
+    - class: "neutral"
+      behaviour: "wander"
+      tag: "rabbit"
+      count_low: 0
+      count_high: 2
+      properties: [0.0, 0.53, 0.53, 0.0, 0.0]     # level 05: [0.0, 0.5, 0.7, 0.0, 0.0]
+      properties_std: [0.0, 0.3, 0.3, 0.0, 0.0]   # = level 05
+      visual_properties: [1.0]
+      visual_properties_std: [0.0]
+      move_interval: [1, 1]
+      damage: [0.0, 0.0]
+      attack_delay: [0, 0]
+      nociception_intensity: 0.1
+      spawn_area: [[1, 1], [10, 10]]
+      patrol_area: [[1, 1], [10, 10]]

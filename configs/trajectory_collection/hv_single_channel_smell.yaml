@@ -1,35 +1,37 @@
-# Trajectory stores for the SINGLE-CHANNEL SMELL hypervigilance study (10 new runs: 6 single-channel
-# + 4 two-channel control, 10 M episodes each).
-# Design: docs/experiments/active/hypervigilance/SINGLE_CHANNEL_SMELL_HYPERVIGILANCE.md §3, §4.
+# Trajectory stores for the SINGLE-CHANNEL SMELL hypervigilance study -- 18 stores: 16 new runs
+# (6 single-channel + 6 matched-strength + 4 two-channel control, 10 M episodes each) plus the
+# RE-COLLECTION of the two existing seed-42 control runs.
+# Design: docs/experiments/active/hypervigilance/SINGLE_CHANNEL_SMELL_HYPERVIGILANCE.md §3, §5
+# (Revision 1, 2026-09-30).
 #
-# THE `runs:` PATHS ARE PLACEHOLDERS UNTIL LAUNCH. A training run's directory name is
+# THE 16 NEW `runs:` PATHS ARE PLACEHOLDERS UNTIL LAUNCH. A training run's directory name is
 # `<launch timestamp>_<tag>`, and the timestamp exists only once the runner has launched it.
 # `run_collection.py` refuses any path without a `models/config.yaml`, so this file FAILS
-# validation until every `FILL_AT_LAUNCH` is replaced with the real directory -- that is the
-# intended guard (a store collected against the wrong run cannot be undone). The runner (or whoever
-# fills the manifest's Log-path column) replaces them.
+# validation until every `FILL_AT_LAUNCH` is replaced with the real directory -- the intended guard
+# (a store collected against the wrong run cannot be undone).
 #
-# NOT LISTED, ALREADY COLLECTED: the seed-42 control pair. Its stores were collected by the
-# level-05 factorial spec (configs/trajectory_collection/level05_body_interactions.yaml, labels
-# w0000_ordinary / w0000_modulated) under results/trajectories_l05body/, with EXACTLY the
-# scientific keys below (1,000,000 episodes, seed_base 1,000,000, float32, final checkpoint).
-# Its saved config resolves to the same 208 EnvParams fields as two_channel_smell_l05_control.yaml
-# (checked 2026-09-30 on the live loader). The analysis reads both roots.
+# SEED-42 CONTROL (C01 / C02) IS RE-COLLECTED HERE (Revision 1, plan-review M2). Its existing stores
+# under results/trajectories_l05body/ were collected on 2026-09-28, before commit 2d54453d forced
+# full-float32 matmuls in the collector; their manifests carry no `matmul_precision`. Known Bugs:
+# a store replays exactly only under the matmul mode it was collected in (~99.8 % action agreement
+# across modes). Re-collecting them into this study's root with the current collector puts all
+# twelve control/treatment stores on one collector setting. The l05body stores are NOT touched and
+# are NOT read by this study. Both runs keep all 50 checkpoints; `final` = 10000046 / 10000021.
 #
 # Launch AFTER training, through the finished-runs-only wrapper (idempotent; takes only runs whose
 # log ends "Training complete"):
 #   /home/vncuser/miniconda3/envs/grid_world_pain/bin/python \
 #     scripts/analysis/studies/level05_body_interactions/launch_collection.py \
 #     configs/trajectory_collection/hv_single_channel_smell.yaml \
-#     --logs <the 10 training logs from the design doc's manifest> --nodes <live-free nodes>
+#     --logs <the 16 new training logs + logs/20260927_053050.log logs/20260927_053055.log> \
+#     --nodes <live-free nodes>
 #
 # Every scientific key is copied from level05_body_interactions.yaml. Do not change any of them:
-# seed_base is what makes episode i present the same reset draws to every run of this study AND to
-# the seed-42 control stores (and, within one training seed, the same channel-1 odour draw to the
-# single-channel and the control agent).
+# seed_base is what makes episode i present the same reset draws to every run of this study (and,
+# within one training seed, the same underlying odour draws to all three worlds).
 name: hv_single_channel_smell
 algo: rppo
-out_root: results/trajectories_hv1ch
+out_root: results/trajectories_hvsmell   # holds all three worlds (was `_hv1ch` before Revision 1; nothing collected yet)
 episodes: 1000000
 seed_base: 1000000         # LOAD-BEARING - identical to l05body / Wave 1 / Wave 2
 checkpoints: [final]
@@ -51,3 +53,11 @@ runs:
   - {label: hv2ch_modulated_s43, path: results/JAX_RecurrentPPO/FILL_AT_LAUNCH_rppo_hv2ch_t16quad_s43}
   - {label: hv2ch_ordinary_s44,  path: results/JAX_RecurrentPPO/FILL_AT_LAUNCH_rppo_hv2ch_t1none_s44}
   - {label: hv2ch_modulated_s44, path: results/JAX_RecurrentPPO/FILL_AT_LAUNCH_rppo_hv2ch_t16quad_s44}
+  - {label: hv1chm_ordinary_s42, path: results/JAX_RecurrentPPO/FILL_AT_LAUNCH_rppo_hv1chm_t1none_s42}
+  - {label: hv1chm_modulated_s42, path: results/JAX_RecurrentPPO/FILL_AT_LAUNCH_rppo_hv1chm_t16quad_s42}
+  - {label: hv1chm_ordinary_s43, path: results/JAX_RecurrentPPO/FILL_AT_LAUNCH_rppo_hv1chm_t1none_s43}
+  - {label: hv1chm_modulated_s43, path: results/JAX_RecurrentPPO/FILL_AT_LAUNCH_rppo_hv1chm_t16quad_s43}
+  - {label: hv1chm_ordinary_s44, path: results/JAX_RecurrentPPO/FILL_AT_LAUNCH_rppo_hv1chm_t1none_s44}
+  - {label: hv1chm_modulated_s44, path: results/JAX_RecurrentPPO/FILL_AT_LAUNCH_rppo_hv1chm_t16quad_s44}
+  - {label: hv2ch_ordinary_s42,  path: results/JAX_RecurrentPPO/20260927-053057_rppo_l05body_w0000_t1none_s42}    # C01, re-collection
+  - {label: hv2ch_modulated_s42, path: results/JAX_RecurrentPPO/20260927-053059_rppo_l05body_w0000_t16quad_s42}   # C02, re-collection

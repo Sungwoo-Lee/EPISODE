@@ -11,7 +11,7 @@
 # is how strong channel 1 is, which also depends on distance -- the classes overlap more.
 #
 # WHAT CHANGES vs basic/05 (verified on the trainer's own loader, EnvParams diffed field by field;
-# see the design doc §3.2): ONLY `animal_property` and `animal_property_std`, and only in the
+# see the design doc §2.3): ONLY `animal_property` and `animal_property_std`, and only in the
 # channel-2 column (predator 0.5 -> 0, rabbit 0.7 -> 0; SD 0.3 -> 0 for both). Observation width is
 # unchanged (58): the smell vector stays 5 numbers wide; channel 2 simply reads 0 everywhere,
 # because nothing else in this world emits on it.
