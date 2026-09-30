@@ -16,6 +16,8 @@ FAILS LOUDLY, rather than writing a partial page, on:
                                                                                   - guide 11b
   * a "How it is computed" block missing, mislabelled, or outside 150-250 words   - guide 11c
   * a figure with no generating script beside this builder, or no PNG / SVG / PDF / data.txt
+  * a data-statement row whose used count exceeds its available count, or a cell with an
+    unbreakable run over 40 characters (paths in cells are chip-wrapped with <wbr>, F69 amendment)
   * a data statement with no `decision_rules:` line, a rules file other than the page's, or a sha
     that is neither the current rules file nor a registered revision's `sha256_before`
   * a data statement marked TEST INPUT (a synthetic or partial source), unless --preview
@@ -143,8 +145,44 @@ def parse_data(stem: str, path: str) -> dict:
     return d
 
 
+#: A path or dotted identifier in an emitted cell (register F69 amendment): letters, digits and
+#: `_ . / * -`, with at least one `/`, `.` or `_` and at least `CHIP_MIN` characters. Shorter tokens
+#: are left as text; they cannot widen a column.
+PATHLIKE = re.compile(r"(?<![\w&#;])[A-Za-z0-9_*\-]+(?:[/._][A-Za-z0-9_*\-]+)+")
+CHIP_MIN = 16
+UNBREAKABLE_MAX = 40           # longest run a data-statement cell may hold with no break opportunity
+
+
+def chip_cell(text: str) -> str:
+    """Escape one emitted cell, and wrap every long path-like token in a code chip with a break
+    opportunity after each `/`, `.` and `_` - the rule prose chips already follow (F69). Plain text
+    passed through untouched is what let a path force a 907 px table into a 642 px box."""
+    def one(m):
+        tok = m.group(0)
+        if len(tok) < CHIP_MIN or not re.search(r"[A-Za-z]", tok):
+            return tok
+        return "<code>" + re.sub(r"([/._])", r"\1<wbr>", tok) + "</code>"
+    return PATHLIKE.sub(one, html.escape(text, quote=False))
+
+
+def unbreakable(cell_html: str) -> list:
+    """Runs of text with no break opportunity (whitespace or <wbr>) longer than UNBREAKABLE_MAX."""
+    text = re.sub(r"<wbr>", " ", cell_html)
+    text = html.unescape(re.sub(r"<[^>]+>", "", text))
+    return [t for t in text.split() if len(t) > UNBREAKABLE_MAX]
+
+
+def number(s: str):
+    try:
+        return float(s.replace(",", ""))
+    except ValueError:
+        return None
+
+
 def render_data(stem: str, d: dict, note: str) -> str:
-    """The data statement as a caption block: status and provenance in words, then the table."""
+    """The data statement as a caption block: status and provenance in words, then the table.
+    Refuses a row whose used count exceeds its available count, and any cell that holds a run of
+    more than UNBREAKABLE_MAX characters with no break opportunity."""
     rfile, sha, commit = d["rules"]
     esc = html.escape
     status = d["status"].split(" Rules note:")[0].rstrip(".")   # the builder states the verified note
@@ -153,13 +191,23 @@ def render_data(stem: str, d: dict, note: str) -> str:
             f'Read from <code>{esc(d["source"].split(" (")[0])}</code>'
             f'{esc(" (" + d["source"].split(" (", 1)[1]) if " (" in d["source"] else ""}; '
             f'counts emitted by <code>{stem}.py</code>.</span>')
-    rows = "".join(f'<tr><td>{esc(w)}</td><td class="n">{esc(u)}</td><td class="n">{esc(t)}</td>'
-                   f'<td class="n">{esc(p)}{"" if p == "n/a" else "%"}</td><td>{esc(n)}</td></tr>'
-                   for w, u, t, p, n in d["rows"])
+    rows = []
+    for w, u, t, p, n in d["rows"]:
+        nu, nt = number(u), number(t)
+        if nu is not None and nt is not None and nu > nt:
+            fail(f"{stem}: data row '{w}' uses {u} of {t} available; 'available' must be the pool "
+                 f"the used count came from (put a threshold in the why column)")
+        cw, cn = chip_cell(w), chip_cell(n)
+        long = unbreakable(cw) + unbreakable(cn)
+        if long:
+            fail(f"{stem}: data-statement cell holds an unbreakable run over {UNBREAKABLE_MAX} "
+                 f"characters: {long}")
+        rows.append(f'<tr><td>{cw}</td><td class="n">{esc(u)}</td><td class="n">{esc(t)}</td>'
+                    f'<td class="n">{esc(p)}{"" if p == "n/a" else "%"}</td><td>{cn}</td></tr>')
     return (head + '<p class="cue" hidden>&larr; wider than the screen &mdash; scroll it sideways; '
-            'the right-hand columns are cut off</p><div class="scroll"><table class="wide"><thead><tr>'
+            'the right-hand columns are cut off</p><div class="scroll"><table class="wide datause"><thead><tr>'
             '<th>subset</th><th class="n">used</th><th class="n">available</th><th class="n">share</th>'
-            f'<th>why</th></tr></thead><tbody>{rows}</tbody></table></div>')
+            f'<th>why</th></tr></thead><tbody>{"".join(rows)}</tbody></table></div>')
 
 
 def main(argv=None):

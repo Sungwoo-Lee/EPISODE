@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8" standalone="no"?>
 <!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN"
   "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
-<svg xmlns:xlink="http://www.w3.org/1999/xlink" width="812.16pt" height="450.154153pt" viewBox="0 0 812.16 450.154153" xmlns="http://www.w3.org/2000/svg" version="1.1">
+<svg xmlns:xlink="http://www.w3.org/1999/xlink" width="768.96pt" height="475.975622pt" viewBox="0 0 768.96 475.975622" xmlns="http://www.w3.org/2000/svg" version="1.1">
  <metadata>
   <rdf:RDF xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:cc="http://creativecommons.org/ns#" xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
    <cc:Work>
@@ -20,9 +20,9 @@
  </defs>
  <g id="figure_1">
   <g id="patch_1">
-   <path d="M 0 450.154153 
-L 812.16 450.154153 
-L 812.16 0 
+   <path d="M 0 475.975622 
+L 768.96 475.975622 
+L 768.96 0 
 L 0 0 
 z
 " style="fill: #fbfbfa"/>
@@ -30,8 +30,8 @@ z
   <g id="axes_1">
    <g id="patch_2">
     <path d="M 10.08 372.829469 
-L 802.08 372.829469 
-L 802.08 30.685469 
+L 758.88 372.829469 
+L 758.88 30.685469 
 L 10.08 30.685469 
 z
 " style="fill: #fbfbfa"/>
@@ -40,253 +40,255 @@ z
    <g id="matplotlib.axis_2"/>
    <g id="line2d_1">
     <path d="M 10.08 51.214109 
-L 802.08 51.214109 
-" clip-path="url(#p92e94d0a0e)" style="fill: none; stroke: #dcdedb; stroke-width: 0.8; stroke-linecap: round"/>
+L 758.88 51.214109 
+" clip-path="url(#pdcc48c2e5e)" style="fill: none; stroke: #dcdedb; stroke-width: 0.8; stroke-linecap: round"/>
    </g>
    <g id="line2d_2">
     <path d="M 10.08 80.140829 
-L 802.08 80.140829 
-" clip-path="url(#p92e94d0a0e)" style="fill: none; stroke: #dcdedb; stroke-width: 0.8; stroke-linecap: round"/>
+L 758.88 80.140829 
+" clip-path="url(#pdcc48c2e5e)" style="fill: none; stroke: #dcdedb; stroke-width: 0.8; stroke-linecap: round"/>
    </g>
    <g id="line2d_3">
     <path d="M 10.08 109.067549 
-L 802.08 109.067549 
-" clip-path="url(#p92e94d0a0e)" style="fill: none; stroke: #dcdedb; stroke-width: 0.8; stroke-linecap: round"/>
+L 758.88 109.067549 
+" clip-path="url(#pdcc48c2e5e)" style="fill: none; stroke: #dcdedb; stroke-width: 0.8; stroke-linecap: round"/>
    </g>
    <g id="line2d_4">
     <path d="M 10.08 137.994269 
-L 802.08 137.994269 
-" clip-path="url(#p92e94d0a0e)" style="fill: none; stroke: #dcdedb; stroke-width: 0.8; stroke-linecap: round"/>
+L 758.88 137.994269 
+" clip-path="url(#pdcc48c2e5e)" style="fill: none; stroke: #dcdedb; stroke-width: 0.8; stroke-linecap: round"/>
    </g>
    <g id="line2d_5">
     <path d="M 10.08 166.920989 
-L 802.08 166.920989 
-" clip-path="url(#p92e94d0a0e)" style="fill: none; stroke: #dcdedb; stroke-width: 0.8; stroke-linecap: round"/>
+L 758.88 166.920989 
+" clip-path="url(#pdcc48c2e5e)" style="fill: none; stroke: #dcdedb; stroke-width: 0.8; stroke-linecap: round"/>
    </g>
    <g id="line2d_6">
     <path d="M 10.08 195.847709 
-L 802.08 195.847709 
-" clip-path="url(#p92e94d0a0e)" style="fill: none; stroke: #dcdedb; stroke-width: 0.8; stroke-linecap: round"/>
+L 758.88 195.847709 
+" clip-path="url(#pdcc48c2e5e)" style="fill: none; stroke: #dcdedb; stroke-width: 0.8; stroke-linecap: round"/>
    </g>
    <g id="line2d_7">
     <path d="M 10.08 224.774429 
-L 802.08 224.774429 
-" clip-path="url(#p92e94d0a0e)" style="fill: none; stroke: #dcdedb; stroke-width: 0.8; stroke-linecap: round"/>
+L 758.88 224.774429 
+" clip-path="url(#pdcc48c2e5e)" style="fill: none; stroke: #dcdedb; stroke-width: 0.8; stroke-linecap: round"/>
    </g>
    <g id="line2d_8">
     <path d="M 10.08 253.701149 
-L 802.08 253.701149 
-" clip-path="url(#p92e94d0a0e)" style="fill: none; stroke: #dcdedb; stroke-width: 0.8; stroke-linecap: round"/>
+L 758.88 253.701149 
+" clip-path="url(#pdcc48c2e5e)" style="fill: none; stroke: #dcdedb; stroke-width: 0.8; stroke-linecap: round"/>
    </g>
    <g id="line2d_9">
     <path d="M 10.08 282.627869 
-L 802.08 282.627869 
-" clip-path="url(#p92e94d0a0e)" style="fill: none; stroke: #dcdedb; stroke-width: 0.8; stroke-linecap: round"/>
+L 758.88 282.627869 
+" clip-path="url(#pdcc48c2e5e)" style="fill: none; stroke: #dcdedb; stroke-width: 0.8; stroke-linecap: round"/>
    </g>
    <g id="line2d_10">
     <path d="M 10.08 311.554589 
-L 802.08 311.554589 
-" clip-path="url(#p92e94d0a0e)" style="fill: none; stroke: #dcdedb; stroke-width: 0.8; stroke-linecap: round"/>
+L 758.88 311.554589 
+" clip-path="url(#pdcc48c2e5e)" style="fill: none; stroke: #dcdedb; stroke-width: 0.8; stroke-linecap: round"/>
    </g>
    <g id="line2d_11">
     <path d="M 10.08 340.481309 
-L 802.08 340.481309 
-" clip-path="url(#p92e94d0a0e)" style="fill: none; stroke: #dcdedb; stroke-width: 0.8; stroke-linecap: round"/>
+L 758.88 340.481309 
+" clip-path="url(#pdcc48c2e5e)" style="fill: none; stroke: #dcdedb; stroke-width: 0.8; stroke-linecap: round"/>
    </g>
    <g id="text_1">
-    <text style="font-weight: 600; font-size: 11px; font-family: 'Pretendard', 'system-ui', 'DejaVu Sans', sans-serif; text-anchor: start; fill: #4e545e" x="14.04" y="38.462812" transform="rotate(-0 14.04 38.462812)">control</text>
+    <text style="font-weight: 600; font-size: 11px; font-family: 'Pretendard', 'system-ui', 'DejaVu Sans', sans-serif; text-anchor: start; fill: #4e545e" x="13.824" y="38.462812" transform="rotate(-0 13.824 38.462812)">control</text>
    </g>
    <g id="text_2">
-    <text style="font-weight: 600; font-size: 11px; font-family: 'Pretendard', 'system-ui', 'DejaVu Sans', sans-serif; text-anchor: start; fill: #4e545e" x="406.08" y="38.839219" transform="rotate(-0 406.08 38.839219)">registered in</text>
+    <text style="font-weight: 600; font-size: 11px; font-family: 'Pretendard', 'system-ui', 'DejaVu Sans', sans-serif; text-anchor: start; fill: #4e545e" x="384.48" y="38.839219" transform="rotate(-0 384.48 38.839219)">registered in</text>
    </g>
    <g id="text_3">
-    <text style="font-weight: 600; font-size: 11px; font-family: 'Pretendard', 'system-ui', 'DejaVu Sans', sans-serif; text-anchor: start; fill: #4e545e" x="509.04" y="38.462812" transform="rotate(-0 509.04 38.462812)">bound</text>
+    <text style="font-weight: 600; font-size: 11px; font-family: 'Pretendard', 'system-ui', 'DejaVu Sans', sans-serif; text-anchor: start; fill: #4e545e" x="481.824" y="38.462812" transform="rotate(-0 481.824 38.462812)">bound</text>
    </g>
    <g id="text_4">
-    <text style="font-weight: 600; font-size: 11px; font-family: 'Pretendard', 'system-ui', 'DejaVu Sans', sans-serif; text-anchor: start; fill: #4e545e" x="612" y="38.839219" transform="rotate(-0 612 38.839219)">ordinary</text>
+    <text style="font-weight: 600; font-size: 11px; font-family: 'Pretendard', 'system-ui', 'DejaVu Sans', sans-serif; text-anchor: start; fill: #4e545e" x="579.168" y="38.839219" transform="rotate(-0 579.168 38.839219)">ordinary</text>
    </g>
    <g id="text_5">
-    <text style="font-weight: 600; font-size: 11px; font-family: 'Pretendard', 'system-ui', 'DejaVu Sans', sans-serif; text-anchor: start; fill: #4e545e" x="707.04" y="38.462812" transform="rotate(-0 707.04 38.462812)">modulated</text>
+    <text style="font-weight: 600; font-size: 11px; font-family: 'Pretendard', 'system-ui', 'DejaVu Sans', sans-serif; text-anchor: start; fill: #4e545e" x="669.024" y="38.462812" transform="rotate(-0 669.024 38.462812)">modulated</text>
    </g>
    <g id="text_6">
-    <text style="font-size: 11px; font-family: 'Pretendard', 'system-ui', 'DejaVu Sans', sans-serif; text-anchor: start; fill: #16181d" x="14.04" y="64.489706" transform="rotate(-0 14.04 64.489706)">Self-replay: action agreement on the agent's own store</text>
+    <text style="font-size: 11px; font-family: 'Pretendard', 'system-ui', 'DejaVu Sans', sans-serif; text-anchor: start; fill: #16181d" x="13.824" y="64.489706" transform="rotate(-0 13.824 64.489706)">Self-replay: action agreement on the agent's own store</text>
    </g>
    <g id="text_7">
-    <text style="font-size: 11px; font-family: 'Pretendard', 'system-ui', 'DejaVu Sans', sans-serif; text-anchor: start; fill: #16181d" x="406.08" y="64.231894" transform="rotate(-0 406.08 64.231894)">gate G1</text>
+    <text style="font-size: 11px; font-family: 'Pretendard', 'system-ui', 'DejaVu Sans', sans-serif; text-anchor: start; fill: #16181d" x="384.48" y="64.231894" transform="rotate(-0 384.48 64.231894)">gate G1</text>
    </g>
    <g id="text_8">
-    <text style="font-size: 11px; font-family: 'Pretendard', 'system-ui', 'DejaVu Sans', sans-serif; text-anchor: start; fill: #16181d" x="509.04" y="64.123612" transform="rotate(-0 509.04 64.123612)">≥ 1</text>
+    <text style="font-size: 11px; font-family: 'Pretendard', 'system-ui', 'DejaVu Sans', sans-serif; text-anchor: start; fill: #16181d" x="481.824" y="64.123612" transform="rotate(-0 481.824 64.123612)">≥ 1</text>
    </g>
    <g id="text_9">
-    <text style="font-size: 11px; font-family: 'Pretendard', 'system-ui', 'DejaVu Sans', sans-serif; text-anchor: start; fill: #16181d" x="612" y="64.123612" transform="rotate(-0 612 64.123612)">1</text>
+    <text style="font-size: 11px; font-family: 'Pretendard', 'system-ui', 'DejaVu Sans', sans-serif; text-anchor: start; fill: #16181d" x="579.168" y="64.123612" transform="rotate(-0 579.168 64.123612)">1</text>
    </g>
    <g id="text_10">
-    <text style="font-size: 11px; font-family: 'Pretendard', 'system-ui', 'DejaVu Sans', sans-serif; text-anchor: start; fill: #16181d" x="707.04" y="64.123612" transform="rotate(-0 707.04 64.123612)">1</text>
+    <text style="font-size: 11px; font-family: 'Pretendard', 'system-ui', 'DejaVu Sans', sans-serif; text-anchor: start; fill: #16181d" x="669.024" y="64.123612" transform="rotate(-0 669.024 64.123612)">1</text>
    </g>
    <g id="text_11">
-    <text style="font-size: 11px; font-family: 'Pretendard', 'system-ui', 'DejaVu Sans', sans-serif; text-anchor: start; fill: #16181d" x="14.04" y="93.297832" transform="rotate(-0 14.04 93.297832)">Aligned rows: logits' action = next stored action</text>
+    <text style="font-size: 11px; font-family: 'Pretendard', 'system-ui', 'DejaVu Sans', sans-serif; text-anchor: start; fill: #16181d" x="13.824" y="93.297832" transform="rotate(-0 13.824 93.297832)">Aligned rows: logits' action = next stored action</text>
    </g>
    <g id="text_12">
-    <text style="font-size: 11px; font-family: 'Pretendard', 'system-ui', 'DejaVu Sans', sans-serif; text-anchor: start; fill: #16181d" x="406.08" y="93.158614" transform="rotate(-0 406.08 93.158614)">gate G3</text>
+    <text style="font-size: 11px; font-family: 'Pretendard', 'system-ui', 'DejaVu Sans', sans-serif; text-anchor: start; fill: #16181d" x="384.48" y="93.158614" transform="rotate(-0 384.48 93.158614)">gate G3</text>
    </g>
    <g id="text_13">
-    <text style="font-size: 11px; font-family: 'Pretendard', 'system-ui', 'DejaVu Sans', sans-serif; text-anchor: start; fill: #16181d" x="509.04" y="93.050332" transform="rotate(-0 509.04 93.050332)">≥ 1</text>
+    <text style="font-size: 11px; font-family: 'Pretendard', 'system-ui', 'DejaVu Sans', sans-serif; text-anchor: start; fill: #16181d" x="481.824" y="93.050332" transform="rotate(-0 481.824 93.050332)">≥ 1</text>
    </g>
    <g id="text_14">
-    <text style="font-size: 11px; font-family: 'Pretendard', 'system-ui', 'DejaVu Sans', sans-serif; text-anchor: start; fill: #16181d" x="612" y="93.050332" transform="rotate(-0 612 93.050332)">1</text>
+    <text style="font-size: 11px; font-family: 'Pretendard', 'system-ui', 'DejaVu Sans', sans-serif; text-anchor: start; fill: #16181d" x="579.168" y="93.050332" transform="rotate(-0 579.168 93.050332)">1</text>
    </g>
    <g id="text_15">
-    <text style="font-size: 11px; font-family: 'Pretendard', 'system-ui', 'DejaVu Sans', sans-serif; text-anchor: start; fill: #16181d" x="707.04" y="93.050332" transform="rotate(-0 707.04 93.050332)">1</text>
+    <text style="font-size: 11px; font-family: 'Pretendard', 'system-ui', 'DejaVu Sans', sans-serif; text-anchor: start; fill: #16181d" x="669.024" y="93.050332" transform="rotate(-0 669.024 93.050332)">1</text>
    </g>
    <g id="text_16">
-    <text style="font-size: 11px; font-family: 'Pretendard', 'system-ui', 'DejaVu Sans', sans-serif; text-anchor: start; fill: #16181d" x="14.04" y="122.224552" transform="rotate(-0 14.04 122.224552)">  same, action-change rows only</text>
+    <text style="font-size: 11px; font-family: 'Pretendard', 'system-ui', 'DejaVu Sans', sans-serif; text-anchor: start; fill: #16181d" x="13.824" y="122.224552" transform="rotate(-0 13.824 122.224552)">  same, action-change rows only</text>
    </g>
    <g id="text_17">
-    <text style="font-size: 11px; font-family: 'Pretendard', 'system-ui', 'DejaVu Sans', sans-serif; text-anchor: start; fill: #16181d" x="406.08" y="122.085334" transform="rotate(-0 406.08 122.085334)">gate G3</text>
+    <text style="font-size: 11px; font-family: 'Pretendard', 'system-ui', 'DejaVu Sans', sans-serif; text-anchor: start; fill: #16181d" x="384.48" y="122.085334" transform="rotate(-0 384.48 122.085334)">gate G3</text>
    </g>
    <g id="text_18">
-    <text style="font-size: 11px; font-family: 'Pretendard', 'system-ui', 'DejaVu Sans', sans-serif; text-anchor: start; fill: #16181d" x="509.04" y="121.977052" transform="rotate(-0 509.04 121.977052)">≥ 1</text>
+    <text style="font-size: 11px; font-family: 'Pretendard', 'system-ui', 'DejaVu Sans', sans-serif; text-anchor: start; fill: #16181d" x="481.824" y="121.977052" transform="rotate(-0 481.824 121.977052)">≥ 1</text>
    </g>
    <g id="text_19">
-    <text style="font-size: 11px; font-family: 'Pretendard', 'system-ui', 'DejaVu Sans', sans-serif; text-anchor: start; fill: #16181d" x="612" y="121.977052" transform="rotate(-0 612 121.977052)">1</text>
+    <text style="font-size: 11px; font-family: 'Pretendard', 'system-ui', 'DejaVu Sans', sans-serif; text-anchor: start; fill: #16181d" x="579.168" y="121.977052" transform="rotate(-0 579.168 121.977052)">1</text>
    </g>
    <g id="text_20">
-    <text style="font-size: 11px; font-family: 'Pretendard', 'system-ui', 'DejaVu Sans', sans-serif; text-anchor: start; fill: #16181d" x="707.04" y="121.977052" transform="rotate(-0 707.04 121.977052)">1</text>
+    <text style="font-size: 11px; font-family: 'Pretendard', 'system-ui', 'DejaVu Sans', sans-serif; text-anchor: start; fill: #16181d" x="669.024" y="121.977052" transform="rotate(-0 669.024 121.977052)">1</text>
    </g>
    <g id="text_21">
-    <text style="font-size: 11px; font-family: 'Pretendard', 'system-ui', 'DejaVu Sans', sans-serif; text-anchor: start; fill: #16181d" x="14.04" y="151.269866" transform="rotate(-0 14.04 151.269866)">Shifted by one row (must NOT agree)</text>
+    <text style="font-size: 11px; font-family: 'Pretendard', 'system-ui', 'DejaVu Sans', sans-serif; text-anchor: start; fill: #16181d" x="13.824" y="151.269866" transform="rotate(-0 13.824 151.269866)">Shifted by one row (must NOT agree)</text>
    </g>
    <g id="text_22">
-    <text style="font-size: 11px; font-family: 'Pretendard', 'system-ui', 'DejaVu Sans', sans-serif; text-anchor: start; fill: #16181d" x="406.08" y="151.012054" transform="rotate(-0 406.08 151.012054)">gate G3</text>
+    <text style="font-size: 11px; font-family: 'Pretendard', 'system-ui', 'DejaVu Sans', sans-serif; text-anchor: start; fill: #16181d" x="384.48" y="151.012054" transform="rotate(-0 384.48 151.012054)">gate G3</text>
    </g>
    <g id="text_23">
-    <text style="font-size: 11px; font-family: 'Pretendard', 'system-ui', 'DejaVu Sans', sans-serif; text-anchor: start; fill: #16181d" x="509.04" y="150.903772" transform="rotate(-0 509.04 150.903772)">&lt; 0.95</text>
+    <text style="font-size: 11px; font-family: 'Pretendard', 'system-ui', 'DejaVu Sans', sans-serif; text-anchor: start; fill: #16181d" x="481.824" y="150.903772" transform="rotate(-0 481.824 150.903772)">&lt; 0.95</text>
    </g>
    <g id="text_24">
-    <text style="font-size: 11px; font-family: 'Pretendard', 'system-ui', 'DejaVu Sans', sans-serif; text-anchor: start; fill: #16181d" x="612" y="150.903772" transform="rotate(-0 612 150.903772)">0.5105</text>
+    <text style="font-size: 11px; font-family: 'Pretendard', 'system-ui', 'DejaVu Sans', sans-serif; text-anchor: start; fill: #16181d" x="579.168" y="150.903772" transform="rotate(-0 579.168 150.903772)">0.5105</text>
    </g>
    <g id="text_25">
-    <text style="font-size: 11px; font-family: 'Pretendard', 'system-ui', 'DejaVu Sans', sans-serif; text-anchor: start; fill: #16181d" x="707.04" y="150.903772" transform="rotate(-0 707.04 150.903772)">0.5163</text>
+    <text style="font-size: 11px; font-family: 'Pretendard', 'system-ui', 'DejaVu Sans', sans-serif; text-anchor: start; fill: #16181d" x="669.024" y="150.903772" transform="rotate(-0 669.024 150.903772)">0.5163</text>
    </g>
    <g id="text_26">
-    <text style="font-size: 11px; font-family: 'Pretendard', 'system-ui', 'DejaVu Sans', sans-serif; text-anchor: start; fill: #16181d" x="14.04" y="180.077992" transform="rotate(-0 14.04 180.077992)">  same, action-change rows only</text>
+    <text style="font-size: 11px; font-family: 'Pretendard', 'system-ui', 'DejaVu Sans', sans-serif; text-anchor: start; fill: #16181d" x="13.824" y="180.077992" transform="rotate(-0 13.824 180.077992)">  same, action-change rows only</text>
    </g>
    <g id="text_27">
-    <text style="font-size: 11px; font-family: 'Pretendard', 'system-ui', 'DejaVu Sans', sans-serif; text-anchor: start; fill: #16181d" x="406.08" y="179.830492" transform="rotate(-0 406.08 179.830492)">tool check</text>
+    <text style="font-size: 11px; font-family: 'Pretendard', 'system-ui', 'DejaVu Sans', sans-serif; text-anchor: start; fill: #16181d" x="384.48" y="179.830492" transform="rotate(-0 384.48 179.830492)">tool check</text>
    </g>
    <g id="text_28">
-    <text style="font-size: 11px; font-family: 'Pretendard', 'system-ui', 'DejaVu Sans', sans-serif; text-anchor: start; fill: #16181d" x="509.04" y="179.830492" transform="rotate(-0 509.04 179.830492)">&lt; 0.05</text>
+    <text style="font-size: 11px; font-family: 'Pretendard', 'system-ui', 'DejaVu Sans', sans-serif; text-anchor: start; fill: #16181d" x="481.824" y="179.830492" transform="rotate(-0 481.824 179.830492)">&lt; 0.05</text>
    </g>
    <g id="text_29">
-    <text style="font-size: 11px; font-family: 'Pretendard', 'system-ui', 'DejaVu Sans', sans-serif; text-anchor: start; fill: #16181d" x="612" y="179.830492" transform="rotate(-0 612 179.830492)">0</text>
+    <text style="font-size: 11px; font-family: 'Pretendard', 'system-ui', 'DejaVu Sans', sans-serif; text-anchor: start; fill: #16181d" x="579.168" y="179.830492" transform="rotate(-0 579.168 179.830492)">0</text>
    </g>
    <g id="text_30">
-    <text style="font-size: 11px; font-family: 'Pretendard', 'system-ui', 'DejaVu Sans', sans-serif; text-anchor: start; fill: #16181d" x="707.04" y="179.830492" transform="rotate(-0 707.04 179.830492)">0</text>
+    <text style="font-size: 11px; font-family: 'Pretendard', 'system-ui', 'DejaVu Sans', sans-serif; text-anchor: start; fill: #16181d" x="669.024" y="179.830492" transform="rotate(-0 669.024 179.830492)">0</text>
    </g>
    <g id="text_31">
-    <text style="font-size: 11px; font-family: 'Pretendard', 'system-ui', 'DejaVu Sans', sans-serif; text-anchor: start; fill: #16181d" x="14.04" y="209.004712" transform="rotate(-0 14.04 209.004712)">Layer capture rebuilds the outputs: max rel. deviation</text>
+    <text style="font-size: 11px; font-family: 'Pretendard', 'system-ui', 'DejaVu Sans', sans-serif; text-anchor: start; fill: #16181d" x="13.824" y="209.004712" transform="rotate(-0 13.824 209.004712)">Layer capture rebuilds the outputs: max rel. deviation</text>
    </g>
    <g id="text_32">
-    <text style="font-size: 11px; font-family: 'Pretendard', 'system-ui', 'DejaVu Sans', sans-serif; text-anchor: start; fill: #16181d" x="406.08" y="208.865494" transform="rotate(-0 406.08 208.865494)">gate G2</text>
+    <text style="font-size: 11px; font-family: 'Pretendard', 'system-ui', 'DejaVu Sans', sans-serif; text-anchor: start; fill: #16181d" x="384.48" y="208.865494" transform="rotate(-0 384.48 208.865494)">gate G2</text>
    </g>
    <g id="text_33">
-    <text style="font-size: 11px; font-family: 'Pretendard', 'system-ui', 'DejaVu Sans', sans-serif; text-anchor: start; fill: #16181d" x="509.04" y="208.757212" transform="rotate(-0 509.04 208.757212)">≤ 1.0e-05</text>
+    <text style="font-size: 11px; font-family: 'Pretendard', 'system-ui', 'DejaVu Sans', sans-serif; text-anchor: start; fill: #16181d" x="481.824" y="208.757212" transform="rotate(-0 481.824 208.757212)">≤ 1.0e-05</text>
    </g>
    <g id="text_34">
-    <text style="font-size: 11px; font-family: 'Pretendard', 'system-ui', 'DejaVu Sans', sans-serif; text-anchor: start; fill: #16181d" x="612" y="208.757212" transform="rotate(-0 612 208.757212)">4.9e-06</text>
+    <text style="font-size: 11px; font-family: 'Pretendard', 'system-ui', 'DejaVu Sans', sans-serif; text-anchor: start; fill: #16181d" x="579.168" y="208.757212" transform="rotate(-0 579.168 208.757212)">4.9e-06</text>
    </g>
    <g id="text_35">
-    <text style="font-size: 11px; font-family: 'Pretendard', 'system-ui', 'DejaVu Sans', sans-serif; text-anchor: start; fill: #16181d" x="707.04" y="208.757212" transform="rotate(-0 707.04 208.757212)">4.6e-06</text>
+    <text style="font-size: 11px; font-family: 'Pretendard', 'system-ui', 'DejaVu Sans', sans-serif; text-anchor: start; fill: #16181d" x="669.024" y="208.757212" transform="rotate(-0 669.024 208.757212)">4.6e-06</text>
    </g>
    <g id="text_36">
-    <text style="font-size: 11px; font-family: 'Pretendard', 'system-ui', 'DejaVu Sans', sans-serif; text-anchor: start; fill: #16181d" x="14.04" y="238.050026" transform="rotate(-0 14.04 238.050026)">Sampled rows = full replay: max rel. deviation</text>
+    <text style="font-size: 11px; font-family: 'Pretendard', 'system-ui', 'DejaVu Sans', sans-serif; text-anchor: start; fill: #16181d" x="13.824" y="238.050026" transform="rotate(-0 13.824 238.050026)">Sampled rows = full replay: max rel. deviation</text>
    </g>
    <g id="text_37">
-    <text style="font-size: 11px; font-family: 'Pretendard', 'system-ui', 'DejaVu Sans', sans-serif; text-anchor: start; fill: #16181d" x="406.08" y="237.683932" transform="rotate(-0 406.08 237.683932)">tool check</text>
+    <text style="font-size: 11px; font-family: 'Pretendard', 'system-ui', 'DejaVu Sans', sans-serif; text-anchor: start; fill: #16181d" x="384.48" y="237.683932" transform="rotate(-0 384.48 237.683932)">tool check</text>
    </g>
    <g id="text_38">
-    <text style="font-size: 11px; font-family: 'Pretendard', 'system-ui', 'DejaVu Sans', sans-serif; text-anchor: start; fill: #16181d" x="509.04" y="237.683932" transform="rotate(-0 509.04 237.683932)">≤ 0.001</text>
+    <text style="font-size: 11px; font-family: 'Pretendard', 'system-ui', 'DejaVu Sans', sans-serif; text-anchor: start; fill: #16181d" x="481.824" y="237.683932" transform="rotate(-0 481.824 237.683932)">≤ 0.001</text>
    </g>
    <g id="text_39">
-    <text style="font-size: 11px; font-family: 'Pretendard', 'system-ui', 'DejaVu Sans', sans-serif; text-anchor: start; fill: #16181d" x="612" y="237.683932" transform="rotate(-0 612 237.683932)">4.3e-06</text>
+    <text style="font-size: 11px; font-family: 'Pretendard', 'system-ui', 'DejaVu Sans', sans-serif; text-anchor: start; fill: #16181d" x="579.168" y="237.683932" transform="rotate(-0 579.168 237.683932)">4.3e-06</text>
    </g>
    <g id="text_40">
-    <text style="font-size: 11px; font-family: 'Pretendard', 'system-ui', 'DejaVu Sans', sans-serif; text-anchor: start; fill: #16181d" x="707.04" y="237.683932" transform="rotate(-0 707.04 237.683932)">1.2e-05</text>
+    <text style="font-size: 11px; font-family: 'Pretendard', 'system-ui', 'DejaVu Sans', sans-serif; text-anchor: start; fill: #16181d" x="669.024" y="237.683932" transform="rotate(-0 669.024 237.683932)">1.2e-05</text>
    </g>
    <g id="text_41">
-    <text style="font-size: 11px; font-family: 'Pretendard', 'system-ui', 'DejaVu Sans', sans-serif; text-anchor: start; fill: #16181d" x="14.04" y="266.976746" transform="rotate(-0 14.04 266.976746)">  same, rows planted one step off (must fail)</text>
+    <text style="font-size: 11px; font-family: 'Pretendard', 'system-ui', 'DejaVu Sans', sans-serif; text-anchor: start; fill: #16181d" x="13.824" y="266.976746" transform="rotate(-0 13.824 266.976746)">  same, rows planted one step off (must fail)</text>
    </g>
    <g id="text_42">
-    <text style="font-size: 11px; font-family: 'Pretendard', 'system-ui', 'DejaVu Sans', sans-serif; text-anchor: start; fill: #16181d" x="406.08" y="266.610652" transform="rotate(-0 406.08 266.610652)">tool check</text>
+    <text style="font-size: 11px; font-family: 'Pretendard', 'system-ui', 'DejaVu Sans', sans-serif; text-anchor: start; fill: #16181d" x="384.48" y="266.610652" transform="rotate(-0 384.48 266.610652)">tool check</text>
    </g>
    <g id="text_43">
-    <text style="font-size: 11px; font-family: 'Pretendard', 'system-ui', 'DejaVu Sans', sans-serif; text-anchor: start; fill: #16181d" x="509.04" y="266.610652" transform="rotate(-0 509.04 266.610652)">&gt; 0.001</text>
+    <text style="font-size: 11px; font-family: 'Pretendard', 'system-ui', 'DejaVu Sans', sans-serif; text-anchor: start; fill: #16181d" x="481.824" y="266.610652" transform="rotate(-0 481.824 266.610652)">&gt; 0.001</text>
    </g>
    <g id="text_44">
-    <text style="font-size: 11px; font-family: 'Pretendard', 'system-ui', 'DejaVu Sans', sans-serif; text-anchor: start; fill: #16181d" x="612" y="266.610652" transform="rotate(-0 612 266.610652)">0.4603</text>
+    <text style="font-size: 11px; font-family: 'Pretendard', 'system-ui', 'DejaVu Sans', sans-serif; text-anchor: start; fill: #16181d" x="579.168" y="266.610652" transform="rotate(-0 579.168 266.610652)">0.4603</text>
    </g>
    <g id="text_45">
-    <text style="font-size: 11px; font-family: 'Pretendard', 'system-ui', 'DejaVu Sans', sans-serif; text-anchor: start; fill: #16181d" x="707.04" y="266.610652" transform="rotate(-0 707.04 266.610652)">0.4641</text>
+    <text style="font-size: 11px; font-family: 'Pretendard', 'system-ui', 'DejaVu Sans', sans-serif; text-anchor: start; fill: #16181d" x="669.024" y="266.610652" transform="rotate(-0 669.024 266.610652)">0.4641</text>
    </g>
    <g id="text_46">
-    <text style="font-size: 11px; font-family: 'Pretendard', 'system-ui', 'DejaVu Sans', sans-serif; text-anchor: start; fill: #16181d" x="14.04" y="296.633935" transform="rotate(-0 14.04 296.633935)">Same agent vs itself: |similarity − 1|, worst layer</text>
+    <text style="font-size: 11px; font-family: 'Pretendard', 'system-ui', 'DejaVu Sans', sans-serif; text-anchor: start; fill: #16181d" x="13.824" y="296.633935" transform="rotate(-0 13.824 296.633935)">Same agent vs itself: |similarity − 1|, worst layer</text>
    </g>
    <g id="text_47">
-    <text style="font-size: 11px; font-family: 'Pretendard', 'system-ui', 'DejaVu Sans', sans-serif; text-anchor: start; fill: #16181d" x="406.08" y="295.537372" transform="rotate(-0 406.08 295.537372)">tool check</text>
+    <text style="font-size: 11px; font-family: 'Pretendard', 'system-ui', 'DejaVu Sans', sans-serif; text-anchor: start; fill: #16181d" x="384.48" y="295.537372" transform="rotate(-0 384.48 295.537372)">tool check</text>
    </g>
    <g id="text_48">
-    <text style="font-size: 11px; font-family: 'Pretendard', 'system-ui', 'DejaVu Sans', sans-serif; text-anchor: start; fill: #16181d" x="509.04" y="295.537372" transform="rotate(-0 509.04 295.537372)">≤ 1.0e-12</text>
+    <text style="font-size: 11px; font-family: 'Pretendard', 'system-ui', 'DejaVu Sans', sans-serif; text-anchor: start; fill: #16181d" x="481.824" y="295.537372" transform="rotate(-0 481.824 295.537372)">≤ 1.0e-12</text>
    </g>
    <g id="text_49">
-    <text style="font-size: 11px; font-family: 'Pretendard', 'system-ui', 'DejaVu Sans', sans-serif; text-anchor: start; fill: #16181d" x="612" y="295.537372" transform="rotate(-0 612 295.537372)">0</text>
+    <text style="font-size: 11px; font-family: 'Pretendard', 'system-ui', 'DejaVu Sans', sans-serif; text-anchor: start; fill: #16181d" x="579.168" y="295.537372" transform="rotate(-0 579.168 295.537372)">0</text>
    </g>
    <g id="text_50">
-    <text style="font-size: 11px; font-family: 'Pretendard', 'system-ui', 'DejaVu Sans', sans-serif; text-anchor: start; fill: #16181d" x="707.04" y="295.537372" transform="rotate(-0 707.04 295.537372)">0</text>
+    <text style="font-size: 11px; font-family: 'Pretendard', 'system-ui', 'DejaVu Sans', sans-serif; text-anchor: start; fill: #16181d" x="669.024" y="295.537372" transform="rotate(-0 669.024 295.537372)">0</text>
    </g>
    <g id="text_51">
-    <text style="font-size: 11px; font-family: 'Pretendard', 'system-ui', 'DejaVu Sans', sans-serif; text-anchor: start; fill: #16181d" x="14.04" y="324.830186" transform="rotate(-0 14.04 324.830186)">Hunger read from the raw input (probe-wide)</text>
+    <text style="font-size: 11px; font-family: 'Pretendard', 'system-ui', 'DejaVu Sans', sans-serif; text-anchor: start; fill: #16181d" x="13.824" y="324.830186" transform="rotate(-0 13.824 324.830186)">Hunger read from the raw input (probe-wide)</text>
    </g>
    <g id="text_52">
-    <text style="font-size: 11px; font-family: 'Pretendard', 'system-ui', 'DejaVu Sans', sans-serif; text-anchor: start; fill: #16181d" x="406.08" y="324.572374" transform="rotate(-0 406.08 324.572374)">gate G4</text>
+    <text style="font-size: 11px; font-family: 'Pretendard', 'system-ui', 'DejaVu Sans', sans-serif; text-anchor: start; fill: #16181d" x="384.48" y="324.572374" transform="rotate(-0 384.48 324.572374)">gate G4</text>
    </g>
    <g id="text_53">
-    <text style="font-size: 11px; font-family: 'Pretendard', 'system-ui', 'DejaVu Sans', sans-serif; text-anchor: start; fill: #16181d" x="509.04" y="324.464092" transform="rotate(-0 509.04 324.464092)">≥ 0.99</text>
+    <text style="font-size: 11px; font-family: 'Pretendard', 'system-ui', 'DejaVu Sans', sans-serif; text-anchor: start; fill: #16181d" x="481.824" y="324.464092" transform="rotate(-0 481.824 324.464092)">≥ 0.99</text>
    </g>
    <g id="text_54">
-    <text style="font-size: 11px; font-family: 'Pretendard', 'system-ui', 'DejaVu Sans', sans-serif; text-anchor: start; fill: #16181d" x="612" y="324.464092" transform="rotate(-0 612 324.464092)">0.992</text>
+    <text style="font-size: 11px; font-family: 'Pretendard', 'system-ui', 'DejaVu Sans', sans-serif; text-anchor: start; fill: #16181d" x="579.168" y="324.464092" transform="rotate(-0 579.168 324.464092)">0.992</text>
    </g>
    <g id="text_55">
-    <text style="font-size: 11px; font-family: 'Pretendard', 'system-ui', 'DejaVu Sans', sans-serif; text-anchor: start; fill: #16181d" x="707.04" y="324.464092" transform="rotate(-0 707.04 324.464092)">0.992</text>
+    <text style="font-size: 11px; font-family: 'Pretendard', 'system-ui', 'DejaVu Sans', sans-serif; text-anchor: start; fill: #16181d" x="669.024" y="324.464092" transform="rotate(-0 669.024 324.464092)">0.992</text>
    </g>
    <g id="text_56">
-    <text style="font-size: 11px; font-family: 'Pretendard', 'system-ui', 'DejaVu Sans', sans-serif; text-anchor: start; fill: #16181d" x="14.04" y="353.756906" transform="rotate(-0 14.04 353.756906)">Shuffled targets, worst quantity (probe-wide)</text>
+    <text style="font-size: 11px; font-family: 'Pretendard', 'system-ui', 'DejaVu Sans', sans-serif; text-anchor: start; fill: #16181d" x="13.824" y="353.756906" transform="rotate(-0 13.824 353.756906)">Shuffled targets, worst quantity (probe-wide)</text>
    </g>
    <g id="text_57">
-    <text style="font-size: 11px; font-family: 'Pretendard', 'system-ui', 'DejaVu Sans', sans-serif; text-anchor: start; fill: #16181d" x="406.08" y="353.499094" transform="rotate(-0 406.08 353.499094)">gate G4</text>
+    <text style="font-size: 11px; font-family: 'Pretendard', 'system-ui', 'DejaVu Sans', sans-serif; text-anchor: start; fill: #16181d" x="384.48" y="353.499094" transform="rotate(-0 384.48 353.499094)">gate G4</text>
    </g>
    <g id="text_58">
-    <text style="font-size: 11px; font-family: 'Pretendard', 'system-ui', 'DejaVu Sans', sans-serif; text-anchor: start; fill: #16181d" x="509.04" y="353.390812" transform="rotate(-0 509.04 353.390812)">≤ 0.02</text>
+    <text style="font-size: 11px; font-family: 'Pretendard', 'system-ui', 'DejaVu Sans', sans-serif; text-anchor: start; fill: #16181d" x="481.824" y="353.390812" transform="rotate(-0 481.824 353.390812)">≤ 0.02</text>
    </g>
    <g id="text_59">
-    <text style="font-size: 11px; font-family: 'Pretendard', 'system-ui', 'DejaVu Sans', sans-serif; text-anchor: start; fill: #16181d" x="612" y="353.390812" transform="rotate(-0 612 353.390812)">0.0168</text>
+    <text style="font-size: 11px; font-family: 'Pretendard', 'system-ui', 'DejaVu Sans', sans-serif; text-anchor: start; fill: #16181d" x="579.168" y="353.390812" transform="rotate(-0 579.168 353.390812)">0.0168</text>
    </g>
    <g id="text_60">
-    <text style="font-size: 11px; font-family: 'Pretendard', 'system-ui', 'DejaVu Sans', sans-serif; text-anchor: start; fill: #16181d" x="707.04" y="353.390812" transform="rotate(-0 707.04 353.390812)">0.0168</text>
+    <text style="font-size: 11px; font-family: 'Pretendard', 'system-ui', 'DejaVu Sans', sans-serif; text-anchor: start; fill: #16181d" x="669.024" y="353.390812" transform="rotate(-0 669.024 353.390812)">0.0168</text>
    </g>
    <g id="text_61">
     <text style="font-weight: 600; font-size: 15px; font-family: 'Pretendard', 'system-ui', 'DejaVu Sans', sans-serif; text-anchor: start; fill: #16181d" x="10.08" y="20.685469" transform="rotate(-0 10.08 20.685469)">TOOL VALIDATION — SHARED SEED 42 — NOT EVIDENCE</text>
    </g>
   </g>
   <g id="text_62">
-   <text style="font-size: 11px; font-family: 'Pretendard', 'system-ui', 'DejaVu Sans', sans-serif; fill: #4e545e" transform="translate(18 397.961512)">evidence status: pilot — "tool validation — the two agents share seed 42; not evidence"; no verdict is drawn</text>
-   <text style="font-size: 11px; font-family: 'Pretendard', 'system-ui', 'DejaVu Sans', sans-serif; fill: #4e545e" transform="translate(18 411.265153)">decision rules sha256 4c8508af14b6 @ 872b0e04 — computed under the rules before the 2026-09-30 revision (P1_rare_predictor_columns,</text>
-   <text style="font-size: 11px; font-family: 'Pretendard', 'system-ui', 'DejaVu Sans', sans-serif; fill: #4e545e" transform="translate(18 424.460512)">P2_predictivity_gain_invariance_wording); reported with that sha, as the revision requires. The current rules file is 5ef6f731d15e.</text>
-   <text style="font-size: 11px; font-family: 'Pretendard', 'system-ui', 'DejaVu Sans', sans-serif; fill: #4e545e" transform="translate(18 437.764153)">Agents: ordinary_s42 and modulated_s42 (level-05 world w0000). Probe-wide rows are one number for the probe, repeated in both columns.</text>
+   <text style="font-size: 11px; font-family: 'Pretendard', 'system-ui', 'DejaVu Sans', sans-serif; fill: #4e545e" transform="translate(17.568 397.961512)">evidence status: pilot — "tool validation — the two agents share seed 42; not evidence"; no verdict is drawn</text>
+   <text style="font-size: 11px; font-family: 'Pretendard', 'system-ui', 'DejaVu Sans', sans-serif; fill: #4e545e" transform="translate(17.568 411.265153)">decision rules sha256 4c8508af14b6 @ 872b0e04 — computed under the rules before the 2026-09-30 revision</text>
+   <text style="font-size: 11px; font-family: 'Pretendard', 'system-ui', 'DejaVu Sans', sans-serif; fill: #4e545e" transform="translate(17.568 424.406114)">(P1_rare_predictor_columns, P2_predictivity_gain_invariance_wording); reported with that sha, as the revision</text>
+   <text style="font-size: 11px; font-family: 'Pretendard', 'system-ui', 'DejaVu Sans', sans-serif; fill: #4e545e" transform="translate(17.568 437.709755)">requires. The current rules file is 5ef6f731d15e.</text>
+   <text style="font-size: 11px; font-family: 'Pretendard', 'system-ui', 'DejaVu Sans', sans-serif; fill: #4e545e" transform="translate(17.568 450.894802)">Agents: ordinary_s42 and modulated_s42 (level-05 world w0000). Probe-wide rows are one number for the probe, repeated</text>
+   <text style="font-size: 11px; font-family: 'Pretendard', 'system-ui', 'DejaVu Sans', sans-serif; fill: #4e545e" transform="translate(17.568 463.704216)">in both columns.</text>
   </g>
  </g>
  <defs>
-  <clipPath id="p92e94d0a0e">
-   <rect x="10.08" y="30.685469" width="792" height="342.144"/>
+  <clipPath id="pdcc48c2e5e">
+   <rect x="10.08" y="30.685469" width="748.8" height="342.144"/>
   </clipPath>
  </defs>
 </svg>

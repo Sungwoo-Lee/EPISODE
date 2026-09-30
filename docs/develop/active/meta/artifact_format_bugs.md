@@ -2283,3 +2283,10 @@ prose chips only.
 
 **Verifying a fix:** for every `td code`, assert `getClientRects().length === 1` at the widest
 viewport, or that each line break falls immediately after `.`, `_` or `/`.
+
+**Amendment (2026-09-30, "What Both Agents Compute"):**
+- **What the reader saw.** A figure's data table was cut off at desktop width: 907 px of table in a 642 px box, with the scroll cue showing on a desktop. The SUBSET column was crushed to one word per line.
+- **Cause.** The figure script emitted a path (`results/analysis/.../similarity.json`) as *plain text* into a data-statement WHY cell. Plain text never reaches the code-chip rules above: neither `td code` wrapping nor the builder's `<wbr>` pass applies. So that one token set the column's min-content, 539 px.
+- **Why both review methods missed it.** A static review sees a correct `td code` rule. The token is not inside a `<code>` element, and it arrives from a `.data.txt` file at build time, not from the template.
+- **Rule.** The page builder chip-wraps path- and identifier-like tokens in every emitted data-statement cell, and runs them through the same `<wbr>`-after-`/ . _` pass as prose chips. Data-statement columns get a readable `min-width`.
+- **Verifying a fix.** At 1440 px, every `.scroll` box satisfies `scrollWidth === clientWidth` and its cue is hidden.

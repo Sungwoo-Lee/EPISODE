@@ -73,9 +73,9 @@ def main():
     layers = list(cell["layers"])
 
     house.apply()
-    fig = plt.figure(figsize=(11.0, 2.05 * len(layers) + 2.4))
+    fig = plt.figure(figsize=(10.4, 2.05 * len(layers) + 2.4))
     gs = fig.add_gridspec(len(layers), 2, width_ratios=[1.55, 1.0], wspace=0.32, hspace=0.9,
-                          left=0.03, right=0.99, top=0.93, bottom=0.25)
+                          left=0.17, right=0.99, top=0.93, bottom=0.25)
     for r, layer in enumerate(layers):
         ax = fig.add_subplot(gs[r, 0])
         pts = cell["layers"][layer]["predictivity"]
@@ -103,7 +103,7 @@ def main():
             title = w + e
         else:
             title = doc["verdict_statement"]
-        ax.set_title(f"{layer}: " + C.wrap(title, 70), fontsize=house.FS_LABEL, color=house.INK,
+        ax.set_title(f"{layer}: " + C.wrap(title, 52), fontsize=house.FS_LABEL, color=house.INK,
                      loc="left", pad=6)
         if r == len(layers) - 1:
             ax.set_xlabel("held-out R², smaller of the two directions", fontsize=house.FS_LABEL)

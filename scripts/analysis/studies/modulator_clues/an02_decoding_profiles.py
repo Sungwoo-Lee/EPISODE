@@ -16,6 +16,7 @@ agents' own R^2 values as the driver wrote them.
 
     python scripts/analysis/studies/modulator_clues/an02_decoding_profiles.py [--source ...] [--out ...]
 """
+import json
 import os
 import sys
 
@@ -42,10 +43,18 @@ def main():
     g6 = int(C.param(rules, "gates.G6.test_fold_groups_min"))
     ev = ((doc.get("evaluation") or {}).get("A2") or {}).get("quantities") or {}
     agents = {k: v for k, v in cell["agents"].items() if not v.get("untrained")}
+    # the pool each held-out split drew from: every episode group, or for the steps_remaining
+    # headline only groups with a death-ended episode (probe record, written by probe_set)
+    probe = json.load(open(os.path.join(os.path.dirname(os.path.abspath(a.source)), "probes",
+                                        f"probe_{cell['probe']}.json")))
+    cnt = probe["counts"]
+    pools = {"*": (int(cnt["distinct_episode_seed_groups"]), "all episode groups in the probe"),
+             "steps_remaining": (int(cnt["groups_with_a_death_ended_episode"]),
+                                 "episode groups with a death-ended episode")}
     untrained = [k for k, v in cell["agents"].items() if v.get("untrained")]
 
     house.apply()
-    fig, axs = plt.subplots(2, 2, figsize=(11.0, 9.6))
+    fig, axs = plt.subplots(2, 2, figsize=(10.4, 9.6))
     fig.subplots_adjust(left=0.07, right=0.99, top=0.9, bottom=0.27, hspace=0.75, wspace=0.18)
     rows, blocked = [], []
     layers = None
@@ -94,9 +103,11 @@ def main():
             ax.set_ylabel("held-out R²", fontsize=house.FS_LABEL)
         rows.append(dict(what=f"{q}: probe rows used", used=Q["rows_used"], total=Q["rows_available"],
                          note=doc["data_statement"]["rows_per_quantity"][q]["reason"]))
+        pool = pools.get(q, pools["*"])
         rows.append(dict(what=f"{q}: held-out episode groups, smallest split repeat", used=min_groups,
-                         total=g6, note=("BLOCKED: below gate G6's minimum; drawn as blocked, no R²"
-                                         if is_blocked else "at or above gate G6's minimum (the 'available' column)")))
+                         total=pool[0], note=(f"of {pool[1]}; gate G6 requires at least {g6} held out: "
+                                              + ("BLOCKED, drawn as blocked, no R\u00b2" if is_blocked
+                                                 else "met"))))
         drop = sum(Q.get("rows_dropped_no_clock_per_repeat", []))
         rows.append(dict(what=f"{q}: held-out rows without a clock value, summed over repeats", used=drop,
                          total=Q["rows_used"], note="dropped from the layer score and the clock score alike"))

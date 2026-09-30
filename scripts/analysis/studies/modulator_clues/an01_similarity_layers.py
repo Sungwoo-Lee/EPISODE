@@ -82,7 +82,7 @@ def main():
     a1 = (ev.get("A1") or {}).get("layers") or {}
 
     house.apply()
-    fig = plt.figure(figsize=(11.0, 3.0 * len(layers) + 1.6))
+    fig = plt.figure(figsize=(10.0, 3.0 * len(layers) + 1.6))
     gs = fig.add_gridspec(len(layers), 3, width_ratios=[1.05, 1.5, 1.5], wspace=0.22, hspace=0.6,
                           left=0.01, right=0.99, top=0.95, bottom=0.12)
     nonfinite, entries = 0, 0
@@ -103,7 +103,7 @@ def main():
         else:
             body = doc["verdict_statement"]
         tx.set_title(head, fontsize=house.FS_BODY, color=house.INK, loc="left", pad=6)
-        tx.text(0.0, 1.0, "\n".join(C.wrap(p, 33) for p in body.split("\n")), ha="left",
+        tx.text(0.0, 1.0, "\n".join(C.wrap(p, 30) for p in body.split("\n")), ha="left",
                 va="top", fontsize=house.FS_LABEL, color=house.INK_2, linespacing=1.2)
         for k, (stat, title) in enumerate(STATS):
             ax = fig.add_subplot(gs[r, k + 1])

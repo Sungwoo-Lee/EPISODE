@@ -112,7 +112,8 @@ def test_missing_axes_sentence_is_refused(page):
 
 def test_short_howto_is_refused(page):
     t = page["tpl"].read_text()
-    blk = re.search(r'<figure>\s*<img data-fig="an02_decoding_profiles".*?</figure>', t, re.S).group(0)
+    blk = re.search(r'<figure>(?:(?!</figure>).)*?data-fig="an02_decoding_profiles".*?</figure>',
+                    t, re.S).group(0)
     para = re.search(r'<p class="eyebrow">How it is computed</p>\s*<p>(.*?)</p>', blk, re.S).group(1)
     short = " ".join(para.split()[:120])
     page["tpl"].write_text(t.replace(para, short, 1))
@@ -202,3 +203,27 @@ def test_rules_note_refuses_an_unregistered_sha():
     import _an_common as C
     with pytest.raises(SystemExit):
         C.rules_note({"decision_rules": {"sha256": "f" * 64}})
+
+
+# ------------------------------------------------------------------ emitted-cell rules (F69) -----
+def _row(p, stem, cells):
+    f = p["figs"] / f"{stem}.data.txt"
+    f.write_text(f.read_text().rstrip("\n") + "\nrow: " + "|".join(cells) + "\n")
+
+
+def test_a_path_in_a_why_cell_is_chip_wrapped_with_break_points(page):
+    _row(page, "an03_seed_yardstick", ["x", "1", "2", "50.0",
+                                       "from results/analysis/algorithmic_null/algorithmic_null_mayrep_interim/similarity.json"])
+    build(page)
+    html = page["out"].read_text()
+    assert "<code>results/<wbr>analysis/<wbr>algorithmic_<wbr>null/" in html
+
+
+def test_an_unbreakable_run_in_a_cell_is_refused(page):
+    _row(page, "an03_seed_yardstick", ["x", "1", "2", "50.0", "A" * 45])
+    refused(page, r"unbreakable run over 40")
+
+
+def test_used_above_available_is_refused(page):
+    _row(page, "an03_seed_yardstick", ["held-out groups", "1,000", "500", "200.0", "gate minimum"])
+    refused(page, r"uses 1,000 of 500 available")

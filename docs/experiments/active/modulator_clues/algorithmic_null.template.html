@@ -44,6 +44,18 @@ ol.refs li:target .rnum { background:var(--accent); color:var(--ground); }
 a.cite { font-family:var(--f-mono); font-size:.72em; line-height:0; vertical-align:super; text-decoration:none;
   color:var(--accent-text); background:var(--pick); padding:.18em .34em; white-space:nowrap; margin-left:2px; }
 a.cite::before { content:"["; } a.cite::after { content:"]"; }
+/* Figure data statements, emitted by the builder: the subset and why columns keep a readable width,
+   and the code chips the builder puts around paths break only at the <wbr> it inserts after / . _
+   (register F69 and its amendment). */
+table.datause td:first-child { min-width:10em; }
+table.datause td:last-child { min-width:14em; }
+table.datause td code { overflow-wrap:break-word; }
+/* A figure keeps a 640 px width floor inside its scroll box, so its labels stay at or above 9 px on
+   a phone (register F65); 640 px fits the 642 px panel column, so on a desktop nothing scrolls. The
+   cue before the box is toggled by the house measured-overflow script. */
+.figscroll img { min-width:640px; }
+/* The section-03 verdict table has four prose columns: a floor, with its own scroll cue. */
+table.verdicts { min-width:520px; }
 </style>
 
 <div class="wrap">
@@ -253,7 +265,7 @@ FiLM:       h = ReLU( &gamma;(c)&middot;(W_x&middot;x + b) + &beta;(c) )</pre>
     </dl>
     <h4>Result, end of training</h4>
     <p class="cue" hidden>&larr; wider than the screen &mdash; scroll it sideways; the right-hand columns are cut off</p>
-    <div class="scroll"><table class="evidence">
+    <div class="scroll"><table class="evidence verdicts">
       <thead><tr><th>Layer</th><th>Modulator acts here?</th><th>End of training</th><th>End of stage 1 (interim)</th></tr></thead>
       <tbody>
         <tr><td>Encoder output</td><td>yes</td><td>different: all 6 modulated&ndash;ordinary pairs below the ordinary band, both directions</td><td>different</td></tr>
@@ -287,7 +299,8 @@ FiLM:       h = ReLU( &gamma;(c)&middot;(W_x&middot;x + b) + &beta;(c) )</pre>
       6 pairs on the encoder, both memory layers and the actor; on the critic it overlaps.</li>
     </ul>
     <figure>
-      <img data-fig="an01_similarity_layers" alt="Five rows, one per network layer, each with two panels of horizontal dot strips: pairs of ordinary agents, modulated-versus-ordinary pairs at different seeds with their mean, pairs of modulated agents, and pairs of untrained networks, against a shaded ordinary-versus-ordinary band. The left column prints each layer's verdict text.">
+      <p class="cue" hidden>&larr; wider than the screen &mdash; scroll it sideways, or click it to open it full size</p>
+      <div class="scroll figscroll"><img data-fig="an01_similarity_layers" alt="Five rows, one per network layer, each with two panels of horizontal dot strips: pairs of ordinary agents, modulated-versus-ordinary pairs at different seeds with their mean, pairs of modulated agents, and pairs of untrained networks, against a shaded ordinary-versus-ordinary band. The left column prints each layer's verdict text."></div>
       <p class="zoomhint">Click the figure to view it full size</p>
       <figcaption>
         <span><b>Figure A1 &mdash; How alike two agents' layers are, pair by pair.</b></span>
@@ -301,7 +314,8 @@ FiLM:       h = ReLU( &gamma;(c)&middot;(W_x&middot;x + b) + &beta;(c) )</pre>
       </div>
     </figure>
     <figure>
-      <img data-fig="an04_similarity_robustness" alt="A grid of dot-strip panels: one row per layer, one column per scoring variant. Each panel has three strips, the weaker direction, ordinary to modulated, and modulated to ordinary, with ordinary pairs in blue and modulated-ordinary pairs in orange.">
+      <p class="cue" hidden>&larr; wider than the screen &mdash; scroll it sideways, or click it to open it full size</p>
+      <div class="scroll figscroll"><img data-fig="an04_similarity_robustness" alt="A grid of dot-strip panels: one row per layer, one column per scoring variant. Each panel has three strips, the weaker direction, ordinary to modulated, and modulated to ordinary, with ordinary pairs in blue and modulated-ordinary pairs in orange."></div>
       <p class="zoomhint">Click the figure to view it full size</p>
       <figcaption>
         <span><b>Figure A1b &mdash; Whether the gap survives other ways of scoring it.</b></span>
@@ -315,7 +329,8 @@ FiLM:       h = ReLU( &gamma;(c)&middot;(W_x&middot;x + b) + &beta;(c) )</pre>
       </div>
     </figure>
     <figure>
-      <img data-fig="an03_seed_yardstick" alt="Left, five panels of dot strips per layer comparing ordinary pairs, modulated-ordinary pairs at different seeds, modulated-ordinary pairs at the same seed, and modulated pairs. Right, the six runs' survival near a line at the step cap, and the survival difference with a narrow and a wide error bar.">
+      <p class="cue" hidden>&larr; wider than the screen &mdash; scroll it sideways, or click it to open it full size</p>
+      <div class="scroll figscroll"><img data-fig="an03_seed_yardstick" alt="Left, five panels of dot strips per layer comparing ordinary pairs, modulated-ordinary pairs at different seeds, modulated-ordinary pairs at the same seed, and modulated pairs. Right, the six runs' survival near a line at the step cap, and the survival difference with a narrow and a wide error bar."></div>
       <p class="zoomhint">Click the figure to view it full size</p>
       <figcaption>
         <span><b>Figure A3 &mdash; Same seed against different seeds, and the survival that goes with it.</b></span>
@@ -358,7 +373,8 @@ FiLM:       h = ReLU( &gamma;(c)&middot;(W_x&middot;x + b) + &beta;(c) )</pre>
       episode groups the rules require.</li>
     </ul>
     <figure>
-      <img data-fig="an02_decoding_profiles" alt="Four panels. Three show held-out R-squared across six layers from the raw input to the critic, one thin line per agent in blue or orange, shaded seed ranges and a dashed clock baseline. The fourth, survival steps remaining, is a grey box stating it is blocked by a gate.">
+      <p class="cue" hidden>&larr; wider than the screen &mdash; scroll it sideways, or click it to open it full size</p>
+      <div class="scroll figscroll"><img data-fig="an02_decoding_profiles" alt="Four panels. Three show held-out R-squared across six layers from the raw input to the critic, one thin line per agent in blue or orange, shaded seed ranges and a dashed clock baseline. The fourth, survival steps remaining, is a grey box stating it is blocked by a gate."></div>
       <p class="zoomhint">Click the figure to view it full size</p>
       <figcaption>
         <span><b>Figure A2 &mdash; Where each agent holds hunger, injury, predator distance and remaining lifetime.</b></span>
@@ -372,7 +388,8 @@ FiLM:       h = ReLU( &gamma;(c)&middot;(W_x&middot;x + b) + &beta;(c) )</pre>
       </div>
     </figure>
     <figure>
-      <img data-fig="an06_pilot_controls" alt="A table titled tool validation, shared seed 42, not evidence, listing eleven controls with where each is registered, its bound, and its value for the ordinary and the modulated pilot agent.">
+      <p class="cue" hidden>&larr; wider than the screen &mdash; scroll it sideways, or click it to open it full size</p>
+      <div class="scroll figscroll"><img data-fig="an06_pilot_controls" alt="A table titled tool validation, shared seed 42, not evidence, listing eleven controls with where each is registered, its bound, and its value for the ordinary and the modulated pilot agent."></div>
       <p class="zoomhint">Click the figure to view it full size</p>
       <figcaption>
         <span><b>Figure P &mdash; The tool checks, run on one pair of agents that share a seed.</b></span>
@@ -531,7 +548,8 @@ FiLM:       h = ReLU( &gamma;(c)&middot;(W_x&middot;x + b) + &beta;(c) )</pre>
       exists.</li>
     </ul>
     <figure>
-      <img data-fig="an05_wakeup" alt="A grid of small line charts over ten million training episodes: survival with plateau points, then seventeen modulator measures, each with one grey line per level-05 world and orange wake points. Below, a dot plot of each run's wake point minus its survival plateau per measure, with a shaded coincidence band and the reading text for each measure.">
+      <p class="cue" hidden>&larr; wider than the screen &mdash; scroll it sideways, or click it to open it full size</p>
+      <div class="scroll figscroll"><img data-fig="an05_wakeup" alt="A grid of small line charts over ten million training episodes: survival with ringed plateau points, then seventeen modulator measures, each with one grey line per level-05 world and dark wake points. Below, a dot plot of each run's wake point minus its survival plateau per measure, with a shaded coincidence band and the reading text for each measure."></div>
       <p class="zoomhint">Click the figure to view it full size</p>
       <figcaption>
         <span><b>Figure B2 &mdash; When the modulator starts to matter, measured seventeen ways.</b></span>
@@ -541,7 +559,7 @@ FiLM:       h = ReLU( &gamma;(c)&middot;(W_x&middot;x + b) + &beta;(c) )</pre>
       <p class="prov">Reproduce: <code>python scripts/analysis/studies/modulator_clues/an05_wakeup.py</code></p>
       <div class="howto">
         <p class="eyebrow">How it is computed</p>
-        <p>Each modulated training run was reloaded at every saved checkpoint and at its untrained start. At each point the analysis measured how much of the learning signal reaches the modulator, how much its weights change, how much of its output follows the situation rather than staying fixed, how large its gain swings are, and how much survival is lost when its gain or its offset is frozen. For each run and measure, a pre-registered rule names the wake point: the first checkpoint where the measure has made half of its total change and stays there, provided that change is larger than the curve's own noise. Survival from the training log gives the plateau, the checkpoint where survival reaches 90% of its rise. The lower panel shows each run's wake point minus its plateau, in checkpoints; the shaded band is where the two count as coincident. The text on the right is the reading across worlds from a sign test over the level-05 worlds, printed verbatim; no single run's point carries a word, because the registered caveat below says one run's wake point can arise from noise alone. The seeds of the May replication are shown only as lags. One panel and one row are not registered: the main network's own weight norm, put through the same rule as a control, shows how any steadily growing weight norm reads.</p>
+        <p>Each modulated training run was reloaded at every saved checkpoint and at its untrained start. At each point the analysis measured how much of the learning signal reaches the modulator, how much its weights change, how much of its output follows the situation rather than staying fixed, how large its gain swings are, and how much survival is lost when its gain or its offset is frozen. For each run and measure, a pre-registered rule names the wake point: the first checkpoint where the measure has made half of its total change and stays there, provided that change is larger than the curve's own noise. Survival from the training log gives the plateau, the checkpoint where survival reaches 90% of its rise. The lower panel shows each run's wake point minus its plateau, in checkpoints; the shaded band is where the two count as coincident. The text on the right is the reading across worlds from a sign test over the level-05 worlds, printed verbatim; no single run's point carries a word, because the registered caveat below says one run's wake point can arise from noise alone. The seeds of the May replication are shown only as lags. One panel and one row are not registered: the main network's own weight norm, put through the same rule as a control, shows how any steadily growing weight norm reads. The figure does not show whether any cost or difference is statistically significant; no such test was registered.</p>
       </div>
     </figure>
   </div>

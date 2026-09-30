@@ -5,8 +5,8 @@ WHAT IS PLOTTED.
     training log) with each run's survival plateau marked, then one panel per registered headline
     wake-up measure (17 as registered: total-loss gradient share, per-term gradient shares, relative
     update size, contextual fraction rho and gain swing per modulated site, freeze cost of the gain
-    and of the offset). One thin line per level-05 world; the orange dot is that run's wake point
-    under the headline rule. Horizontal: training episodes (millions). Each panel has its own
+    and of the offset). One thin line per level-05 world; the dark dot is that run's wake point
+    under the headline rule, and a ring marks a plateau. Horizontal: training episodes (millions). Each panel has its own
     vertical scale. After the swing panels, one extra panel: the DESCRIPTIVE CONTROL (below).
   * Bottom, the lag summary: per measure, each run's wake point minus its survival plateau, in
     checkpoint positions (the registered lag scale); the shaded band is the rules' coincidence
@@ -61,14 +61,14 @@ DEFAULT = os.path.join(C.RESULTS, "algorithmic_null_wakeup", "b2_reading.json")
 NCOL = 4
 CONTROL = "main-network weight norm"
 CTRL_TAG = "descriptive control — not registered"
-ROW_IN = 0.62                                  # lag-panel inches per measure: three 11-pt lines
+ROW_IN = 0.78                                  # lag-panel inches per measure: three 11-pt lines
 
 
 def counts(r: dict) -> str:
     """The sign test's counts in words. k* is None when no number of worlds can reach the test's
     alpha, which with n_def = 0 simply means no world has a defined lag."""
     base = f"{r['n_late']} late, {r['n_early']} early of {r['n_def']}"
-    return base + ("; too few for the test" if r["k_star"] is None else f"; needs {r['k_star']}")
+    return base + ("; too few to test" if r["k_star"] is None else f"; needs {r['k_star']}")
 
 
 def directions(ds: list) -> str:
@@ -162,11 +162,12 @@ def main():
     top_h = 2.3 * n_rows                     # small multiples
     gap = 1.0                                # between the small multiples' x labels and the lag title
     H = 0.3 + top_h + gap + lag_h + below
-    fig = plt.figure(figsize=(11.0, H))
+    fig = plt.figure(figsize=(10.4, H))
     # two grids, so the tall lag panel does not inflate the small multiples' spacing
     gs = fig.add_gridspec(n_rows, NCOL, hspace=0.85, wspace=0.28, left=0.07, right=0.99,
                           top=1 - 0.3 / H, bottom=(below + lag_h + gap) / H)
-    gl = fig.add_gridspec(1, NCOL, wspace=0.28, left=0.07, right=0.99,
+    gl = fig.add_gridspec(1, NCOL, wspace=0.28, left=0.26, right=0.99,   # room for the row labels
+                         
                           top=(below + lag_h) / H, bottom=below / H)
     panels = [fig.add_subplot(gs[i // NCOL, i % NCOL]) for i in range(n_small)]
     for i in range(n_small, n_rows * NCOL):
@@ -181,8 +182,8 @@ def main():
         ax.plot(np.array(run_x) / 1e6, p["curve"], color=house.INK_2, lw=0.8, alpha=0.55)
         if math.isfinite(p["t_plateau_episode"]):
             y = p["curve"][run_x.index(p["t_plateau_episode"])]
-            ax.plot(p["t_plateau_episode"] / 1e6, y, "o", color=C.ORD, ms=4.5)
-    ax.set_title("survival (steps); blue = plateau", fontsize=house.FS_LABEL, color=house.INK,
+            ax.plot(p["t_plateau_episode"] / 1e6, y, "o", mfc=house.PAPER, mec=house.INK, mew=1.4, ms=5)
+    ax.set_title("survival (steps); ring = plateau", fontsize=house.FS_LABEL, color=house.INK,
                  loc="left", pad=5)
     n_def_pts = n_all = 0
     reasons = {}
@@ -200,7 +201,9 @@ def main():
         for lab in l05:
             c = curves[lab]["curves"][name]
             ax.plot(np.array(c["x"]) / 1e6, c["m"], color=house.INK_2, lw=0.8, alpha=0.55)
-        ax.set_title(name, fontsize=house.FS_LABEL, color=house.INK, loc="left", pad=5)
+        # a long dotted name breaks at its last dot, so it cannot run into the next panel
+        t = name if len(name) <= 24 else ".\n".join(name.rsplit(".", 1))
+        ax.set_title(t, fontsize=house.FS_LABEL, color=house.INK, loc="left", pad=5)
         for lab in labels:
             h = wp[lab][name]["headline"]
             n_all += 1
@@ -208,7 +211,7 @@ def main():
                 n_def_pts += 1
                 if lab in l05:
                     c = curves[lab]["curves"][name]
-                    ax.plot(h["t"] / 1e6, c["m"][c["x"].index(h["t"])], "o", color=C.MOD, ms=4.5)
+                    ax.plot(h["t"] / 1e6, c["m"][c["x"].index(h["t"])], "o", color=house.INK, ms=4.5)
             else:
                 reasons[h["reason"]] = reasons.get(h["reason"], 0) + 1
     for ax in panels:
@@ -226,7 +229,7 @@ def main():
     ys = np.arange(len(rows_lag))[::-1]
     from matplotlib.transforms import blended_transform_factory
     row_tf = blended_transform_factory(tx.transAxes, lg.transData)   # text on the lag rows
-    lg.axvspan(-band, band, color=C.ORD, alpha=0.14, lw=0)
+    lg.axvspan(-band, band, color=house.RULE, alpha=0.45, lw=0)
     lg.axvline(0, color=house.RULE, lw=1)
     n_lag_pts = 0
     first_swing = swing_names[0] if swing_names else None
@@ -265,12 +268,12 @@ def main():
                 if name in freeze_cost and freeze_cost[name]:
                     fc = freeze_cost[name]
                     lines.append(f"not registered: post-plateau cost {np.mean(fc):+.0f} steps, "
-                                 f"below 0 in {sum(v < 0 for v in fc)}/{len(fc)}")
+                                 f"< 0 in {sum(v < 0 for v in fc)}/{len(fc)}")
                 if name == first_swing and swing_r:
                     lines.append(f"{len(swing_names)} sites, one measure: within-run r "
                                  f"{min(swing_r):.2f}–{max(swing_r):.2f}")
                 txt = "\n".join(lines)
-        tx.text(0.0, y, "\n".join(C.wrap(t, 66) for t in txt.split("\n")), transform=row_tf,
+        tx.text(0.0, y, "\n".join(C.wrap(t, 54) for t in txt.split("\n")), transform=row_tf,
                 ha="left", va="center", fontsize=house.FS_LABEL,
                 color=house.INK_2 if is_ctrl else house.INK, linespacing=1.1)
     lg.set_yticks(ys)
@@ -281,12 +284,12 @@ def main():
     lg.set_xlabel("wake point minus survival plateau (checkpoint positions)", fontsize=house.FS_LABEL)
     lg.set_title("lag per run; shaded = coincidence band", fontsize=house.FS_LABEL, color=house.INK,
                  loc="left", pad=5)
-    tx.set_title("across-worlds reading (level-05 sign test), then descriptive facts",
+    tx.set_title("sign-test reading, then descriptive facts",
                  fontsize=house.FS_LABEL, color=house.INK, loc="left", pad=5)
     from matplotlib.lines import Line2D
     hs = [Line2D([], [], color=house.INK_2, lw=1, label="one level-05 world"),
-          Line2D([], [], marker="o", ls="", color=C.MOD, label="wake point (headline rule)"),
-          Line2D([], [], marker="o", ls="", color=C.ORD, label="survival plateau"),
+          Line2D([], [], marker="o", ls="", color=house.INK, label="wake point (headline rule)"),
+          Line2D([], [], marker="o", ls="", mfc=house.PAPER, mec=house.INK, mew=1.4, label="survival plateau"),
           Line2D([], [], marker="o", ls="", color=house.INK_2, label="lag, level-05 world"),
           Line2D([], [], marker="D", ls="", color=C.MOD, label="lag, May seed"),
           Line2D([], [], marker="s", ls="", color=house.INK, label=f"{CONTROL}: {CTRL_TAG}")]

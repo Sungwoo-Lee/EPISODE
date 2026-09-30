@@ -112,7 +112,7 @@ def main():
 
     house.apply()
     n = len(rows)
-    fig = plt.figure(figsize=(11.0, 0.42 * n + 3.3))
+    fig = plt.figure(figsize=(10.4, 0.42 * n + 3.3))
     ax = C.blank(fig.add_axes([0.0, 0.3, 1.0, 0.6]))
     cols = (0.005, 0.50, 0.63, 0.76, 0.88)
     head = ("control", "registered in", "bound", "ordinary", "modulated")

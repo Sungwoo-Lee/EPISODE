@@ -53,7 +53,7 @@ RESULTS = os.path.join(ROOT, "results/analysis/algorithmic_null")
 RULES = "docs/experiments/active/modulator_clues/algorithmic_null_decision_rules.yaml"
 #: Registered driver outputs are written under RESULTS by a manifest committed under MANIFESTS.
 MANIFESTS = "docs/experiments/active/modulator_clues/"
-COLUMN_PX = 688                                        # this page's text column (figguards default)
+COLUMN_PX = 642                                        # the page's .plan panel column, measured
 
 ORD, MOD, UNTR = house.BLUE, house.ORANGE, house.TEXT_LIGHT   # ordinary / modulated / untrained
 ARM_NAME = {"ordinary": "ordinary agent", "modulated": "modulated agent"}
@@ -249,7 +249,7 @@ def footer(fig, doc: dict, test: bool, extra: str = "", width: int = 150, y: flo
                  + (f" — {note}" if note else ""))
     if extra:
         lines.append(extra)
-    txt = "\n".join(wrap(l, width) for l in lines)
+    txt = "\n".join(wrap(l, min(width, 118)) for l in lines)    # 118 chars stay inside 10.4 in
     fig.text(0.01, y, txt, ha="left", va="top", fontsize=house.FS_LABEL, color=house.INK_2,
              linespacing=1.35)
 
@@ -258,6 +258,15 @@ def finish(fig, stem: str, out: str):
     assert_no_text_overlap(fig)
     assert_min_text_px(fig, column_px=COLUMN_PX)
     house.save(fig, os.path.join(out, stem), column_px=COLUMN_PX)
+    # house.check_floor measures the NOMINAL figure width; bbox_inches="tight" can grow the saved
+    # canvas past it (a wide footer did), and the page shows the saved PNG. Check that one.
+    from PIL import Image
+    w = Image.open(os.path.join(out, f"{stem}.png")).size[0]
+    px = house.FS_LABEL * house.plt.rcParams["savefig.dpi"] / 72.0 * COLUMN_PX / w
+    if px < 9.0:
+        raise SystemExit(f"{stem}: the saved PNG is {w} px wide, so its smallest label is {px:.1f} px "
+                         f"in the {COLUMN_PX} px column (floor 9 px); narrow the figure or its footer")
+    print(f"  {stem}: saved PNG {w} px -> smallest label {px:.1f} px at {COLUMN_PX} px")
 
 
 def pct(used, total) -> str:
