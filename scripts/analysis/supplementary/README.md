@@ -10,6 +10,7 @@ Each is a single sweep of the step table for one specific question.
 | `prox_full.py` | Hiding given a predator / rabbit / neither nearby, same-step **and lagged** | Finding 1 |
 | `curves.py` | Dose-response of hiding and survival against every randomised factor | Ranking, findings 2-4 |
 | `falsealarm.py` | Is the rabbit-scent response *aimed* at the rabbit, or diffuse? | Finding 2 |
+| ↳ | run-agnostic successor: `scripts/analysis/aimed_response.py` (2026-10-01; this archived script is unchanged) | |
 | `crux.py` | Injury gradient conditioned on predator proximity and recent damage | Finding 3 |
 | `injwin.py` | Start-injury effect inside the window where the wound is still live, unconditional | Finding 3 |
 | `timectrl.py` | Hiding by elapsed-time bin x injury / nutrition, to test temporal confounding | Findings 3-4 |
