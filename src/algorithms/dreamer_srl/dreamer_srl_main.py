@@ -35,11 +35,17 @@ import optax
 from flax import nnx
 from tqdm import tqdm
 
-# Project imports
-sys.path.insert(0, '/media/nas01/projects/Interoceptive-AI/grid_world_pain')
+# Project imports. The repo root is derived from this file's location (three levels up
+# from src/algorithms/dreamer_srl/), not hard-coded: the literal shared-folder path made
+# every git worktree import the SHARED folder's `src` instead of its own (found while
+# adding the shared termination-reason constant, THIRST_WATER_PLAN C4). In the shared
+# folder itself the two are the same path.
+import os as _os  # noqa: E402
+sys.path.insert(0, _os.path.abspath(_os.path.join(_os.path.dirname(__file__), "..", "..", "..")))
 from src.utils.config import Config, dump_config_yaml as _dump_config_yaml
 from src.environment.config_loader import load_env_params, load_env_config
 from src.environment.wrapper import ParallelEnv
+from src.behavior.episode_metrics import TERMINATION_REASONS
 from src.algorithms.dreamer_srl.agent import build_agent
 from src.algorithms.dreamer_srl.buffers import (
     EnvIndependentSequentialReplayBuffer,
@@ -844,6 +850,8 @@ def main() -> None:
             # reasoning that puts injury_observable / nutrition_observable in
             # this tuple.
             p.thermal_body_temp_observable,
+            # Water (THIRST_WATER_PLAN): see train.py's twin of this tuple.
+            p.water_enabled,
             # NOT fingerprinted, deliberately: visual_blur_radial_scale /
             # _anisotropy / _sigma_floor are continuous, and fingerprinting floats
             # would forbid legitimate schedules. Same pre-existing choice applies
@@ -1245,7 +1253,7 @@ def main() -> None:
                 "Episode/HidingPredatorHits":      float(np.mean([ep['hit_hiding_predator']       for ep in eps])),
             })
             term_reasons = [ep['termination_reason'] for ep in eps]
-            for code, name in [(1, 'MaxSteps'), (2, 'Starvation'), (3, 'Overeating'), (4, 'Injury'), (5, 'Thermal')]:
+            for code, name in TERMINATION_REASONS:
                 ep_log[f"Episode/Term_{name}"] = float(np.mean([1.0 if r == code else 0.0 for r in term_reasons]))
 
             from src.utils.episode_logging import append_per_tag_means

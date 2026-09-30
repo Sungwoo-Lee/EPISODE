@@ -176,7 +176,7 @@ One row per `(episode, t)`, `t ∈ [0, T]`, sorted by `(episode_seed, t)`.
 | 18 | `hit_hiding_predator` | `bool` | arriving (False at t=0) | info['hit_hiding_predator'] |
 | 19 | `event_collided` | `bool` | arriving (False at t=0) | info['event_collided'] |
 | 20 | `agent_in_bush` | `bool` | state at t | info['agent_in_bush'] for t>=1; recomputed at reset for t=0 (plan §D8) |
-| 21 | `termination_reason` | `int8` | arriving (0 except final row) | info['termination_reason']; 0=active, 1=max_steps, 2=starvation, 3=overeating, 4=injury, 5=thermal |
+| 21 | `termination_reason` | `int8` | arriving (0 except final row) | info['termination_reason']; 0=active, 1=max_steps, 2=starvation, 3=overeating, 4=injury, 5=thermal, 6=dehydration, 7=overdrinking |
 | 22 | `animal_row` | `list<int16>[A]` | state at t | state.animal_pos[:,0] |
 | 23 | `animal_col` | `list<int16>[A]` | state at t | state.animal_pos[:,1] |
 | 24 | `animal_state` | `list<int8>[A]` | state at t | state.animal_state — 0=PATROL, 1=HUNT, 2=RETURN |
@@ -220,7 +220,7 @@ position within its own range.
 | 2 | `episode_index` | `int64` | 0 … n_episodes-1 |
 | 3 | `block_id` | `int32` | shard block this episode belongs to |
 | 4 | `length` | `int32` | T (environment steps; the step record has T+1 rows) |
-| 5 | `termination_reason` | `int8` | terminal code (never 0) — 1=max_steps, 2=starvation, 3=overeating, 4=injury, 5=thermal. Stores written before the temperature system carry codes 1-4 only; readers must not assume the absence of 5 means the run had thermal off |
+| 5 | `termination_reason` | `int8` | terminal code (never 0) — 1=max_steps, 2=starvation, 3=overeating, 4=injury, 5=thermal, 6=dehydration, 7=overdrinking. Stores written before the temperature system carry codes 1-4 only, and before the water system codes 1-5 only; readers must not assume the absence of a code means that system was off |
 | 6 | `reward_sum` | `float32` | sum of `reward` over the episode — data, not the evaluation metric; survival steps (`length`) is the metric |
 | 7 | `animal_active` | `list<bool>[A]` | realised draw — which animal slots exist this episode |
 | 8 | `animal_detect_sampled` | `list<int32>[A]` | realised draw — HUNT-trigger sight range |

@@ -270,3 +270,29 @@ def test_reward_is_the_four_axis_drive_difference():
     got, want = np.array(rows).T
     assert np.allclose(got, want, atol=2e-3), f"max |diff| {np.abs(got - want).max()}"
     assert n_death > 0
+
+
+# ── metric keys (C4) ──────────────────────────────────────────────────────────
+
+def test_thirst_deaths_have_their_own_metric_keys():
+    """One shared list of termination names; codes 6 and 7 get Term_Dehydration /
+    Term_Overdrinking; no trainer carries its own literal copy of the list any more."""
+    from src.behavior.balance_metrics import _DEATH_CAUSES, late_death_log
+    from src.behavior.episode_metrics import (TERMINATION_REASONS, episode_finalise_episode,
+                                              episode_wandb_keys, make_episode_state)
+    assert (6, "Dehydration") in TERMINATION_REASONS and (7, "Overdrinking") in TERMINATION_REASONS
+    keys = episode_wandb_keys()
+    assert len(keys) == 23 and len(set(keys)) == 23
+    st = make_episode_state(1)
+    for code, name in ((6, "Dehydration"), (7, "Overdrinking")):
+        out = episode_finalise_episode(st, 0, code)
+        assert out[f"Episode/Term_{name}"] == 1.0
+        assert sum(v for k, v in out.items() if k.startswith("Episode/Term_")) == 1.0
+        assert set(out) == set(keys)
+    assert dict(_DEATH_CAUSES)[6] == "Dehydration" and dict(_DEATH_CAUSES)[7] == "Overdrinking"
+    bal = late_death_log([30, 30, 30, 30], [6, 7, 1, 2], early_death_max_steps=20)
+    assert bal["Episode/Bal_LateDeathShare"] == 0.75
+    assert bal["Episode/Bal_LateDeath_Dehydration"] == pytest.approx(1 / 3)
+    for rel in ("train.py", os.path.join("src", "algorithms", "dreamer_srl", "dreamer_srl_main.py")):
+        src = open(os.path.join(_REPO, rel)).read()
+        assert "(5, 'Thermal')" not in src and '(5, "Thermal")' not in src, rel

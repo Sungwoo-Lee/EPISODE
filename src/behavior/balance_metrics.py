@@ -71,8 +71,11 @@ INJ_LO_LE = 20.0      # barely injured: I <= 20                     (Rev 2a C1(c
 COLD_LE = -5.0        # cold body: T <= -5 degC                     (Rev 2b (b'))
 WARM_GE = 0.0         # warm body: T >= 0 degC                      (Rev 2b (b'))
 
-# Reason codes (core.py jnp.where chain; src/behavior/episode_metrics.py).
-_DEATH_CAUSES = ((2, "Starvation"), (3, "Overeating"), (4, "Injury"), (5, "Thermal"))
+# Reason codes (core.py jnp.where chain). Every code >= 2 is a real death; the names
+# come from the one shared list in src/behavior/episode_metrics.py.
+from src.behavior.episode_metrics import TERMINATION_REASONS  # noqa: E402
+
+_DEATH_CAUSES = tuple((c, n) for c, n in TERMINATION_REASONS if c >= 2)
 
 _HIDE = ("n_inj_hi", "bush_inj_hi", "n_inj_lo", "bush_inj_lo")
 COUNTER_NAMES = (
@@ -298,7 +301,7 @@ def late_death_log(lengths: Iterable[int], reasons: Iterable[int], *,
                    early_death_max_steps: int) -> dict:
     """Early / late death shares over ALL window episodes (plan A7, study Rev 2b N5).
 
-    A death is reason code 2-5. Early = death at length <= `early_death_max_steps`;
+    A death is any reason code >= 2 in `_DEATH_CAUSES` (2-7). Early = death at length <= `early_death_max_steps`;
     late = death at a longer length. `Bal_EarlyDeathShare` / `Bal_LateDeathShare` divide
     by all window episodes (truncations and early deaths included). The four cause
     shares are among late deaths and are omitted when there are none.
@@ -307,7 +310,7 @@ def late_death_log(lengths: Iterable[int], reasons: Iterable[int], *,
     r = np.asarray(list(reasons), dtype=np.int64)
     if l.size == 0:
         return {}
-    death = (r >= 2) & (r <= 5)
+    death = np.isin(r, [c for c, _ in _DEATH_CAUSES])
     early = death & (l <= early_death_max_steps)
     late = death & (l > early_death_max_steps)
     n_late = int(late.sum())

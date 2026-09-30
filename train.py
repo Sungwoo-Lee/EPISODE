@@ -77,6 +77,7 @@ from src.environment.sensor import get_observation, get_observation_breakdown
 from src.environment.core import jax_step
 from src.models.recurrent_ppo_network import ActorCriticRNN
 from src.models.recurrent_ppo_trainer import train_iteration, validate_return_mode
+from src.behavior.episode_metrics import TERMINATION_REASONS
 from src.behavior.balance_metrics import (
     K as BALANCE_K,
     calibration_record as balance_calibration_record,
@@ -865,6 +866,10 @@ def main():
             # reasoning that puts injury_observable / nutrition_observable in
             # this tuple.
             p.thermal_body_temp_observable,
+            # Water (THIRST_WATER_PLAN): adds the Hydration observation dim, a smell
+            # pool and visual entities. The obs_dim check already catches it (width
+            # +1); fingerprinted as defence in depth, like the flag above.
+            p.water_enabled,
             # NOT fingerprinted, deliberately: visual_blur_radial_scale /
             # _anisotropy / _sigma_floor are continuous, and fingerprinting floats
             # would forbid legitimate schedules. Same pre-existing choice applies
@@ -1624,7 +1629,7 @@ def main():
             })
             # Termination reason distribution (fraction of episodes ending each way)
             term_reasons = [ep['termination_reason'] for ep in eps]
-            for code, name in [(1, 'MaxSteps'), (2, 'Starvation'), (3, 'Overeating'), (4, 'Injury'), (5, 'Thermal')]:
+            for code, name in TERMINATION_REASONS:
                 ep_log[f"Episode/Term_{name}"] = np.mean([1.0 if r == code else 0.0 for r in term_reasons])
             # Per-tag fan-out
             _append_per_tag_means(ep_log, eps, neutral_tags,
@@ -2172,7 +2177,7 @@ def main():
                                 })
                                 # Termination reason distribution
                                 term_reasons = [ep['termination_reason'] for ep in iteration_episodes]
-                                for code, name in [(1, 'MaxSteps'), (2, 'Starvation'), (3, 'Overeating'), (4, 'Injury'), (5, 'Thermal')]:
+                                for code, name in TERMINATION_REASONS:
                                     ep_logs[f"Episode/Term_{name}"] = np.mean([1.0 if r == code else 0.0 for r in term_reasons])
                                 # Per-tag fan-out (Site 3: DQN)
                                 _append_per_tag_means(ep_logs, iteration_episodes, neutral_tags,
@@ -2378,7 +2383,7 @@ def main():
                                 })
                                 # Termination reason distribution
                                 term_reasons = [ep['termination_reason'] for ep in iteration_episodes]
-                                for code, name in [(1, 'MaxSteps'), (2, 'Starvation'), (3, 'Overeating'), (4, 'Injury'), (5, 'Thermal')]:
+                                for code, name in TERMINATION_REASONS:
                                     ep_logs[f"Episode/Term_{name}"] = np.mean([1.0 if r == code else 0.0 for r in term_reasons])
                                 # Per-tag fan-out (Site 4: DRQN)
                                 _append_per_tag_means(ep_logs, iteration_episodes, neutral_tags,
@@ -2531,7 +2536,7 @@ def main():
                                 })
                                 # Termination reason distribution
                                 term_reasons = [ep['termination_reason'] for ep in iteration_episodes]
-                                for code, name in [(1, 'MaxSteps'), (2, 'Starvation'), (3, 'Overeating'), (4, 'Injury'), (5, 'Thermal')]:
+                                for code, name in TERMINATION_REASONS:
                                     ep_logs[f"Episode/Term_{name}"] = np.mean([1.0 if r == code else 0.0 for r in term_reasons])
                                 # Per-tag fan-out (Site 5: PPO non-recurrent)
                                 _append_per_tag_means(ep_logs, iteration_episodes, neutral_tags,

@@ -1,4 +1,4 @@
-"""Per-episode scalar accumulators for the 21 Episode/* WandB keys.
+"""Per-episode scalar accumulators for the 23 Episode/* WandB keys.
 
 Mirrors the pattern of src/behavior/accumulators.py and
 src/behavior/distance_aggregator.py.  Pure numpy — no JAX, no PyTorch.
@@ -13,13 +13,14 @@ API:
                               cumulative completed episodes across resets.
   episode_step_update()     — accumulate per-step scalars.
   episode_finalise_episode() — compute final Episode/* dict at episode done.
-  episode_wandb_keys()      — return the 21 WandB key strings (stable order).
+  episode_wandb_keys()      — return the 23 WandB key strings (stable order).
 
 Key mapping (JAX info dict → WandB key):
   reward                   → Episode/Reward (sum), Episode/Reward_Min, Episode/Reward_Max
   step_count (incremented) → Episode/Steps
   episode_counter          → Episode/Number
-  termination_reason       → Episode/Term_{MaxSteps,Starvation,Overeating,Injury,Thermal} (one-hot)
+  termination_reason       → Episode/Term_{MaxSteps,Starvation,Overeating,Injury,Thermal,
+                             Dehydration,Overdrinking} (one-hot; names from TERMINATION_REASONS)
   damage                   → Episode/TotalDamage
   damage_predator          → Episode/DamagePredator
   damage_hiding_predator   → Episode/DamageDanger  (renamed at boundary)
@@ -37,12 +38,14 @@ from dataclasses import dataclass, field
 
 import numpy as np
 
-# Termination reason codes (matches core.py jnp.where chain)
-_TERM_MAX_STEPS   = 1
-_TERM_STARVATION  = 2
-_TERM_OVEREATING  = 3
-_TERM_INJURY      = 4
-_TERM_THERMAL     = 5   # body temperature left [min_temperature, max_temperature]
+# Termination reason codes and their WandB names — THE one copy (THIRST_WATER_PLAN §D6).
+# Matches the jnp.where chain in core.jax_step. train.py (4 sites), the dreamer_srl
+# trainer and balance_metrics import it; do not restate the list anywhere else, which is
+# how copies drift. 5 = body temperature left [min_temperature, max_temperature];
+# 6 = hydration reached 0; 7 = hydration reached water.max_hydration.
+TERMINATION_REASONS = ((1, "MaxSteps"), (2, "Starvation"), (3, "Overeating"),
+                       (4, "Injury"), (5, "Thermal"), (6, "Dehydration"),
+                       (7, "Overdrinking"))
 
 
 @dataclass
@@ -231,11 +234,8 @@ def episode_finalise_episode(
     out['Episode/Number'] = float(state.episode_counter[i])
 
     # Termination one-hot
-    out['Episode/Term_MaxSteps']  = 1.0 if r == _TERM_MAX_STEPS  else 0.0
-    out['Episode/Term_Starvation']= 1.0 if r == _TERM_STARVATION else 0.0
-    out['Episode/Term_Overeating']= 1.0 if r == _TERM_OVEREATING else 0.0
-    out['Episode/Term_Injury']    = 1.0 if r == _TERM_INJURY      else 0.0
-    out['Episode/Term_Thermal']   = 1.0 if r == _TERM_THERMAL     else 0.0
+    for code, name in TERMINATION_REASONS:
+        out[f'Episode/Term_{name}'] = 1.0 if r == code else 0.0
 
     # Damage
     out['Episode/TotalDamage']    = float(state.total_damage[i])
@@ -256,7 +256,7 @@ def episode_finalise_episode(
 
 
 def episode_wandb_keys() -> list:
-    """Return the 21 WandB key strings emitted by this module (stable order).
+    """Return the 23 WandB key strings emitted by this module (stable order).
 
     Used by the sheeprl aggregator to register metrics at startup.
     """
@@ -268,12 +268,8 @@ def episode_wandb_keys() -> list:
         # Episode meta
         'Episode/Steps',
         'Episode/Number',
-        # Termination one-hot flags
-        'Episode/Term_MaxSteps',
-        'Episode/Term_Starvation',
-        'Episode/Term_Overeating',
-        'Episode/Term_Injury',
-        'Episode/Term_Thermal',
+        # Termination one-hot flags (from TERMINATION_REASONS)
+        *(f'Episode/Term_{name}' for _code, name in TERMINATION_REASONS),
         # Damage
         'Episode/TotalDamage',
         'Episode/DamagePredator',

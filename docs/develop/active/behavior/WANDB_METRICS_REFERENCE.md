@@ -3,7 +3,7 @@ title: WandB Metrics Reference
 topic: behavior
 status: active
 created: 2026-03-09
-last_updated: 2026-09-27
+last_updated: 2026-09-30
 ---
 
 # WandB Metrics Reference
@@ -73,6 +73,8 @@ At the end of each training iteration, **all episodes that completed during that
 | `Episode/MeanDistFood` | Mean of per-episode mean distances | Double-averaged: per-step → per-episode → per-iteration |
 | `Episode/Term_Injury` | Fraction of N episodes ending in injury | e.g., 8 of 10 episodes → 0.80 |
 | `Episode/Term_Thermal` | Fraction of N episodes ending in a thermal death (frozen or overheated) | Always 0.0 unless `thermal.enabled=true` |
+| `Episode/Term_Dehydration` | Fraction of N episodes ending in dehydration (hydration reached 0) | Always 0.0 unless `water.enabled=true` |
+| `Episode/Term_Overdrinking` | Fraction of N episodes ending in over-drinking (hydration reached `water.max_hydration`) | Always 0.0 unless `water.enabled=true` |
 
 #### Practical example
 
@@ -115,6 +117,10 @@ Logged whenever episodes complete during an iteration. See above for aggregation
 | `Episode/Term_Overeating` | float | binary (1 if reason==3) | Fraction of episodes ending in overeating (stomach > capacity) |
 | `Episode/Term_MaxSteps` | float | binary (1 if reason==1) | Fraction of episodes reaching maximum episode length |
 | `Episode/Term_Thermal` | float | binary (1 if reason==5) | Fraction of episodes ending in a thermal death — body temperature outside `[thermal.min_temperature, thermal.max_temperature]`. Emitted on every run; identically 0.0 when the temperature system is off |
+| `Episode/Term_Dehydration` | float | binary (1 if reason==6) | Fraction of episodes ending in dehydration — hydration fell to 0 (THIRST_WATER_PLAN, 2026-09-30). Emitted on every run; identically 0.0 when `water.enabled` is false |
+| `Episode/Term_Overdrinking` | float | binary (1 if reason==7) | Fraction of episodes ending in over-drinking — hydration reached `water.max_hydration`. Emitted on every run; identically 0.0 when water is off |
+
+The `Term_*` names come from ONE constant, `src/behavior/episode_metrics.py::TERMINATION_REASONS`, imported by `train.py`, the dreamer_srl trainer and `balance_metrics`; do not restate the list elsewhere.
 | `timesteps` | int | — | Global environment step counter |
 | `iteration` | int | — | Training iteration counter |
 
@@ -180,7 +186,7 @@ Added 2026-09-27 by [[BALANCE_METRICS_TRAINING_LOGGING]] for the internal-state 
 | Hiding vs injury (`S` = `True`, `Felt`) | `Bal_BushShare_InjHi_S`, `Bal_BushShare_InjLo_S`, `Bal_HideRatio_S`, `Bal_N_InjHi_S`, `Bal_N_InjLo_S` | Share of steps in a bush among badly injured (`I ≥ 60`) and barely injured (`I ≤ 20`) steps; ratio = injured ÷ barely injured. **True injury decides** the study's hiding criterion; felt is reported beside it. |
 | Warming vs body temperature | `Bal_WarmShare_Cold`, `Bal_WarmShare_Warm`, `Bal_WarmRatio`, `Bal_N_Cold`, `Bal_N_Warm` | Share of steps on a warm cell among cold (`T ≤ −5 °C`) and warm (`T ≥ 0 °C`) steps. Logged, **not pass/fail** in training (study Rev 2c). |
 | Combination (`F` = `Hungry` `N < 60`, `Fed` `80 ≤ N ≤ 160`) | `Bal_BushShare_InjHi_S_F`, `Bal_BushShare_InjLo_S_F`, `Bal_HideGap_S_F`, `Bal_HideRatio_S_F`, `Bal_N_InjHi_S_F`, `Bal_N_InjLo_S_F` | The hiding measures restricted to hungry / fed steps. `HideGap` = injured share − barely-injured share. `Bal_HideRatio_True_Fed` is the study's "fed hiding ≥ 2×" criterion. |
-| Deaths | `Bal_EarlyDeathShare`, `Bal_LateDeathShare`, `Bal_LateDeath_{Starvation,Overeating,Injury,Thermal}` | Early = death (reason codes 2–5) at episode length ≤ `logging.episode.balance_early_death_max_steps` (20); late = longer. Early and late shares divide by **all** window episodes, step-cap truncations included (the study's 5 % late-death gate). Cause shares are **among late deaths** and are absent when there are none. |
+| Deaths | `Bal_EarlyDeathShare`, `Bal_LateDeathShare`, `Bal_LateDeath_{Starvation,Overeating,Injury,Thermal,Dehydration,Overdrinking}` | Early = death (reason codes 2–7; 6 and 7 since the water plan, 2026-09-30) at episode length ≤ `logging.episode.balance_early_death_max_steps` (20); late = longer. Early and late shares divide by **all** window episodes, step-cap truncations included (the study's 5 % late-death gate). Cause shares are **among late deaths** and are absent when there are none. |
 
 **Rules a reader needs.**
 
