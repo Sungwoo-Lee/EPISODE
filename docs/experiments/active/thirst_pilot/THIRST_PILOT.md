@@ -1,0 +1,479 @@
+---
+title: "Level 06 (pond + thirst) training pilot: is the new world learnable and sane?"
+topic: thirst_pilot
+status: active
+created: 2026-10-01
+last_updated: 2026-10-01
+wandb_tag: "rppo_l06pilot_*"
+develop_link: docs/develop/active/thirst/THIRST_WATER_PLAN.md
+---
+
+# Level 06 (pond + thirst) training pilot
+
+> **Status**: DESIGNED — nothing launched. No new config files are needed (§3.1).
+> **Branch**: `v5.0`, worktree `.claude/worktrees/thirst`. Water exists only there. Every launch
+> runs the worktree's code, from the worktree (§2.5).
+> **Related**: [[THIRST_WATER_PLAN]] (how water and thirst were built and verified) ·
+> [[thirst_water]] (design page with the simulated difficulty) · [[LEVEL05_BODY_INTERACTIONS]]
+> (source of the level-05 reference runs) · [[BASIC_LEVELS_Q2_DEFAULT]] (the ladder)
+
+---
+
+## 1. Question
+
+The grid world now has a fourth body need, **thirst**, and **one pond per episode** to drink from.
+The new ladder level 06 adds them to the campfire world of level 05. Hydration drains slowly.
+Resting away from water kills in 160 steps. Drinking too much also kills: standing on the pond for
+20 steps from the comfortable level is fatal. The pond is out in the open, so drinking means
+exposure to predators.
+
+The research reason for water is that the right action now depends on **combinations** of body
+states (thirsty *and* hungry *and* cold *and* hurt). That is where an agent with a neuromodulator
+(a small side network that rescales the main network according to what the body feels) should
+beat an ordinary agent. **This pilot does not test that comparison.** It checks that the world is
+fit for it. It trains the ordinary and the modulated agent for a short budget and asks five
+things:
+
+1. **Do both agents learn to drink?** Deaths from thirst should fall over training, and pond
+   visits should rise.
+2. **How do agents die by the end?** Is any single cause of death, such as thirst or
+   over-drinking, absurdly dominant?
+3. **How long do they survive** compared with the same agents in the level-05 world at the same
+   budget? Existing level-05 runs serve as the reference, so they are not re-run.
+4. **What does water cost in real training speed?** The bare environment is 9.8 % slower on a
+   GPU. The question is how much of that reaches a whole training run.
+5. **Did the runs really execute the new code?** The shared project folder is on the older
+   branch, which has no water. A run that silently imported it would be invalid.
+
+Each question has a pass line and a flag line fixed in advance (§2.7). A flag means "stop and show
+the user". It does not mean "the world is broken". No outcome of this pilot is a claim about the
+modulator.
+
+---
+
+## 2. Design
+
+### 2.1 Runs
+
+| Factor | Values | Why |
+|---|---|---|
+| World | level 06 (pond + thirst); level 05 (campfire, no water) as a **same-code control**, one run | The control is the only clean throughput reference (same code, same card, same time; §2.7 P4). It also checks that level-05 training still reproduces on `v5.0` (P5b). |
+| Agent | ordinary (`t1none`: no modulator); modulated (`t16quad`: FiLM modulator writing to encoder, recurrent core, actor and critic, reading every sensor) | The matched pair used in every recent level-05 run (§2.2) |
+| Seed | 42, 43, 44 on level 06; 42 on the control | 3 seeds is the project minimum. It also gives the seed spread on level 06 that the later modulator comparison needs to size itself. |
+
+In total there are **7 runs**: 2 agents × 3 seeds on level 06, plus 1 control.
+
+### 2.2 Agent configs: a change from the pair named in the request
+
+The request named `recurrent_ppo_nmn_het_unmod.yaml` / `recurrent_ppo_nmn_het_film_g1.yaml`. Both
+build and train at width 59 (checked 2026-10-01, CPU smoke on level 06, exit 0). **They are not the
+current matched pair, though.** They come from the May noise-heterogeneity sweep: Monte-Carlo
+returns, and a FiLM modulator on encoder and recurrent core only, with the legacy gate-bias
+operator and temperature on.
+
+Every level-05 run since the input × site grid uses
+`nmn_input_site_grid_gaenorm/nmngaenorm_t1none.yaml` (ordinary) and `nmngaenorm_t16quad_ALL.yaml`
+(modulated). That covers Wave 2 of [[BASIC_LEVELS_Q2_DEFAULT]], the three level-05 pilots and the
+32-run factorial of [[LEVEL05_BODY_INTERACTIONS]]. The two files are identical except for
+`modulation` (GAE_NORM returns, γ = 0.95). **Question 3 needs a like-for-like level-05 reference,
+and only this pair has one.** Using the older pair would mean training new level-05 references
+too.
+
+Both were checked on level 06 (CPU smoke, 300 episodes, exit 0):
+- `t1none` prints `Observation Dim: 59 (… Body Temperature=1, Hydration=1 …)` and
+  `Neuromodulation: DISABLED (baseline)`;
+- `t16quad` prints the same width and
+  `Neuromodulation: ENABLED (type=FiLM, … sites=[encoder,rnn,actor,critic], rnn_mechanism=activation, temperature=off)`.
+
+The modulator's `input_sensors: "all"` is width-agnostic. The header comment's "27 of the 27
+observation numbers" is stale text, not a value that is read.
+
+**If the user prefers the older pair**, the pilot still runs. Question 3 then has no reference and
+two more level-05 runs are needed.
+
+### 2.3 Budget
+
+**2,000,000 training episodes per run**, the same as the three unchanged level-05 pilots (P0a–c in
+[[LEVEL05_BODY_INTERACTIONS]] §3.0). The same budget makes question 3 a direct comparison, over the
+same episode window, with the same agent and the same launch flags. At level 05 the ordinary agent
+reaches about 90 % of its 2 M value by 1.4 M episodes (tenths below). So 2 M is long enough to see
+whether drinking is learned, and short enough to be a pilot.
+
+Nothing in the trainer is keyed to the episode budget: no learning-rate or entropy schedule
+(checked in the plan review appended to [[LEVEL05_BODY_INTERACTIONS]]). A 2 M run is therefore the first 2 M episodes of
+any longer run with the same seed.
+
+### 2.4 Controls (pinned)
+
+- **World:** level 06 = `basic/06-pond_thirst_10x10.yaml` as committed on `v5.0`. It is level 05
+  plus water. The pond is 2×2, at one of the four quadrant spots drawn per episode. Drain is 0.625
+  per step, net drink +5 per step, maximum 200, setpoint 100. Start hydration is random over
+  [0, 200) (user decision 2026-09-29). The observation has 59 numbers.
+- **Level-05 ladder unchanged since the references:** `git diff 8187c570 HEAD` touches only
+  `default.yaml` (the `water:` block, switched off; byte-parity is proven by the plan's 43/43
+  parity tests) and `configs/train/` (balance metrics logging, which is documented as training-
+  bit-identical on or off). `basic/03`, `04` and `05` are untouched.
+- **Launch flags** as the level-05 pilots: `--episodes 2000000 --log-interval 10`. Seed 42 is
+  config-owned. Seeds 43/44 pass `--seed` (flagged deviation, as P0b/P0c did). `num_envs` (128) and
+  `checkpoint_frequency` (200,000 episodes → 10 checkpoints, all kept) are config-owned.
+- **Hardware:** the throughput pair (runs 1 and 7) share **one node, both GPUs, same card model,
+  launched within a minute of each other**. The other rows are placed pack-node-first. The
+  references ran on RTX 3090 (P0a–c, `w0000 m`) and RTX 2080 Ti (`w0000 o`).
+
+### 2.5 Launch path: running `v5.0` code from the worktree
+
+**The problem.** Three things point at the shared folder, which is on `v4.0` and has no water:
+the header of `train_command-agent.sh` does `cd /media/nas01/projects/Interoceptive-AI/grid_world_pain`,
+`run_command.py`'s default log directory is `<shared>/logs/`, and the conda env has an editable
+install whose `.pth` puts `<shared>/src` on `sys.path`.
+
+**What was checked (2026-10-01).**
+- `src` has no `__init__.py`: it is a namespace package. With the working directory at the
+  worktree root, `src.__path__` is exactly `[<worktree>/src]`, and `src.__file__` is `None`. So
+  "log `src.__file__`" **cannot** serve as the check. The gate below checks `src.__path__`.
+- The editable `.pth` adds `<shared>/src` itself. That makes `environment`, `models`, `utils` and
+  the rest importable as **bare** top-level names from the shared folder. A scan of `train.py`,
+  `src/` and `scripts/eval/` found no bare import of those names. Everything goes through `src.`.
+  So `python train.py` from the worktree imports only worktree code. The mixing the developer saw
+  was in `tests/algorithms/`, which the trainer does not run.
+- The trainer's subprocesses (checkpoint video render) and `provenance.py` find the repo root from
+  their own `__file__`. They follow the worktree.
+- The gate was tested both ways. From the worktree it prints `OK` (1,939 modules checked, none from
+  the shared `src/`). With `PYTHONPATH=<shared root>` forced, it exits 1:
+  `src resolves to [<worktree>/src, <shared>/src]`.
+
+**No launcher change is needed.** The runner already launches through a unique `/tmp` script on
+the node (its CIFS-bypass rule). For this pilot, that script (a) `cd`s into the **worktree**, not
+the shared folder, (b) runs the gate, then (c) runs `train.py`. `run_command.py` is used unchanged
+from the worktree, with `--log` pointing into the worktree. Neither `run_command.py` nor any
+shared-folder script is edited.
+
+**The `/tmp` launch script, per row** (fill in `<GPU>`, `<ENV_CFG>`, `<AGENT_CFG>`, `<SEED_FLAG>`,
+`<TAG>` from §3 and §3.1):
+
+```bash
+#!/bin/bash
+set -euo pipefail
+WT=/media/nas01/projects/Interoceptive-AI/grid_world_pain/.claude/worktrees/thirst
+PY=/home/vncuser/miniconda3/envs/grid_world_pain/bin/python
+cd "$WT"
+# --- v5.0 code-origin gate (THIRST_PILOT §2.5). CPU-only; never touches the GPU. ---
+JAX_PLATFORMS=cpu "$PY" - <<'PYEOF'
+import os, sys, subprocess
+WT = os.path.realpath(os.getcwd())
+SHARED_SRC = "/media/nas01/projects/Interoceptive-AI/grid_world_pain/src/"
+def fail(msg): sys.exit(f"[v5-gate] FAIL: {msg}")
+sys.argv = ["train.py"]
+import src
+paths = [os.path.realpath(p) for p in src.__path__]
+if paths != [os.path.join(WT, "src")]: fail(f"src resolves to {paths}")
+import train  # train.py's whole import graph; main() is guarded by __name__ == "__main__"
+bad = sorted({os.path.realpath(m.__file__) for m in list(sys.modules.values())
+              if getattr(m, "__file__", None) and os.path.realpath(m.__file__).startswith(SHARED_SRC)})
+if bad: fail(f"modules loaded from the shared folder: {bad[:5]}")
+from src.environment.state import EnvParams
+if "water_enabled" not in EnvParams.__dataclass_fields__: fail("imported code has no water")
+br = subprocess.run(["git", "rev-parse", "--abbrev-ref", "HEAD"], capture_output=True,
+                    text=True, cwd=WT, timeout=120).stdout.strip()
+if br != "v5.0": fail(f"worktree branch is {br!r}")
+print(f"[v5-gate] OK src={paths[0]} branch={br} train={os.path.realpath(train.__file__)} "
+      f"modules={len(sys.modules)}", flush=True)
+PYEOF
+exec "$PY" train.py \
+  --config <ENV_CFG> \
+  --agent_config <AGENT_CFG> \
+  --episodes 2000000 --device cuda:<GPU> --log-interval 10 <SEED_FLAG> \
+  --tag <TAG> --wandb-name <TAG> \
+  --wandb-group thirst_pilot --wandb-job-type pilot
+```
+
+The gate runs in stdin mode (`python -`). That puts the working directory first on `sys.path`, the
+same as `python train.py` does for the script's own directory. **Do not** save the gate as a file
+elsewhere and run it by path: `sys.path[0]` would then be that file's directory and `import src`
+would fail.
+
+**Launch call** (from the worktree, once per row; the runner's usual `--no-tail`, no local
+`timeout`):
+
+```bash
+./run_command.py --no-tail \
+  --log /media/nas01/projects/Interoceptive-AI/grid_world_pain/.claude/worktrees/thirst/logs/<YYYYmmdd_HHMMSS>_<TAG>.log \
+  <NODE> "bash $TMP_SCRIPT"
+```
+
+**Audit record.** The runner appends the commented command block for each row to the
+**worktree's** `train_command-agent.sh`, which is tracked on `v5.0`. It never edits the shared
+folder's copy. It must **not** copy that file's header `cd` into the `/tmp` script. The `/tmp`
+script above is complete as written.
+
+**Where outputs land, and why the worktree.**
+
+| Output | Location | Why |
+|---|---|---|
+| Checkpoints, saved config, provenance | `<worktree>/results/JAX_RecurrentPPO/<ts>_<TAG>/` (gitignored) | `train.py` writes `results/…` relative to the working directory. This is the only choice that does not write into the shared folder (the session's hard rule). It also keeps 59-wide runs next to the only code that can read them. The `v4.0` tools in the shared folder do not know water. |
+| Local WandB binaries | `<worktree>/wandb/` (gitignored) | WandB writes under the working directory |
+| nohup log | `<worktree>/logs/` (gitignored) | via `run_command.py --log` |
+
+⚠️ **Data-loss hazard to remember.** `git worktree remove` deletes the worktree folder, and with it
+these gitignored outputs. Before the worktree is ever removed, copy
+`results/JAX_RecurrentPPO/*l06pilot*`, `wandb/` and `logs/` somewhere safe. That is the user's
+call, and the timing is up to them.
+
+### 2.6 Confounds and limits
+
+| Confound | Affects | Severity | Handling |
+|---|---|---|---|
+| Level-05 references ran on older code (`4209024d`, `f00f6c61`), without balance metrics | Q3 survival, Q4 speed | Low for survival (the level-05 world and training path are unchanged, §2.4). High for speed | Q4 uses only the same-code control pair. The historical speed is secondary. |
+| Card model differs across rows | Q4 | High if uncontrolled | Q4 reads only the pair on one node |
+| Random start hydration kills some episodes early whatever the agent does (simulated 1.8–2.4 %; upper bound ~5 % by step 16) | Q1, Q2, Q3 | Medium | Early (≤ 20 steps) and late deaths are reported apart (`Bal_EarlyDeathShare` / `Bal_LateDeath_*`). Survival is also reported by start-hydration band (§4.3). |
+| WandB survival comes from the exploring **training** policy; stored episodes come from the greedy policy | Q2, Q3 | Medium | Never pooled. The references are training-policy windows, so Q3's primary number is too. |
+| `w0000 m` is a single seed | Q3 (modulated) | Medium | The modulated comparison is descriptive; the ordinary agent carries Q3 |
+| Two runs per node share CPU and NAS | Q4 | Low | Both members of the pair share the same load |
+
+### 2.7 Predictions and pre-registered criteria
+
+**Level-05 reference values** (read 2026-10-01 from WandB sampled history, `_window_n`-weighted,
+episodes 1.8–2.0 M; the analyzer re-reads them exactly):
+
+| Run (level 05, 2 M episodes) | Survival S | Starvation | Injury | Thermal | Step limit | Speed (env steps/s) |
+|---|---|---|---|---|---|---|
+| P0a ordinary s42 (3090) | 228.3 | 0.264 | 0.431 | 0.033 | 0.273 | 43.8 k |
+| P0b ordinary s43 (3090) | 225.8 | 0.261 | 0.439 | 0.030 | 0.270 | 42.6 k |
+| P0c ordinary s44 (3090) | 228.6 | 0.268 | 0.433 | 0.029 | 0.270 | 44.3 k |
+| `w0000` ordinary s42, first 2 M of 10 M (2080 Ti) | 227.8 | 0.283 | 0.415 | 0.032 | 0.270 | 33.0 k |
+| `w0000` modulated s42, first 2 M of 10 M (3090) | 228.4 | 0.265 | 0.435 | 0.029 | 0.272 | 35.0 k |
+
+Ordinary agent: S_05 = **227.6**, seed s.d. **1.5** (P0a–c). Survival by tenth of training (0–2 M),
+P0a: 51, 88, 140, 174, 200, 206, 214, 220, 225, 228.
+
+**P1: both agents learn to drink.** Read per run.
+- *Pass:* the dehydration share (`Episode/Term_Dehydration`) in the last tenth (1.8–2.0 M) is **at
+  most half** its first-tenth value **and at most 0.10**. Also, in the final-checkpoint store
+  (§4.2), **≥ 80 %** of episodes that outlive their own no-drink deadline drank at least once. The
+  deadline is 1.6 × start hydration, in steps; an episode can pass it only by drinking, so this is
+  close to a consistency check. The substantive part is that the per-episode drinking-bout count
+  rises from the 0.4 M store to the 2.0 M store.
+- *Prediction:* last-tenth dehydration share 0.03–0.08 (the early-death floor plus a few late
+  misses). Late dehydration (`Bal_LateDeath_Dehydration`) falls monotonically after the first two
+  tenths. The design page's scripted agent made about 1.7 pond visits per episode; a trained agent
+  should be within a factor of 2 of that.
+- *Flag:* any run fails the pass line, **or** the dehydration share is still flat over the last
+  three tenths while above 0.10.
+
+**P2: no absurdly dominant cause of death.** Mean over seeds, per agent, last tenth; all seven
+`Term_*` shares.
+- *Flag (any one):* a single cause > **0.60** of all episodes (the largest at level 05 is injury,
+  0.43); dehydration > **0.25**; over-drinking > **0.10**; or the seven shares do not sum to 1 ± 0.01
+  (a dropped code).
+- *Prediction:* injury stays the largest cause (0.35–0.45). Starvation 0.2–0.3. Dehydration
+  0.03–0.12. Over-drinking < 0.02: it needs 20 unbroken steps on the pond from the setpoint, and one
+  move always exits. Step limit below level 05's 0.27.
+
+**P3: survival against level 05.** S_06 = the `_window_n`-weighted mean of `Episode/Steps` over
+1.8–2.0 M, mean over 3 seeds, compared with S_05 (ordinary 227.6; modulated 228.4).
+- *Prediction:* S_06 is **5–25 % below** S_05 (about 171–216 steps). The scripted agent lost 3
+  points of full-length episodes to water. A learning agent pays more, in exposure, detours, a
+  fourth clock and early thirst deaths. Seed spread on level 06 stays below 3 % of S_06.
+- *Flag, too hard:* S_06 < **0.5 × S_05** (< 114 steps).
+- *Flag, water does not bite:* S_06 ≥ S_05 − 2 steps **and** P1's pond-visit count is below 1 per
+  episode.
+- *Not converged* (reported, not a flag): the last-tenth S exceeds the ninth-tenth S by more than
+  2 %.
+- The modulated-minus-ordinary difference on level 06 is reported, with its seed spread, as
+  **descriptive only**.
+
+**P4: training-speed cost.** Median `Time/sps_env` over the run, excluding the first 5 % of rows
+(compile and warm-up). Ratio = run 1 (level 06) / run 7 (level 05), same node and card.
+- *Prediction:* level 06 is **0–10 % slower**. An rPPO iteration spends much of its time in the
+  network update, not the environment, so less than the full 9.8 % bare-env cost should reach
+  training.
+- *Flag:* > **15 %** slower, the plan's own block line for the bare environment.
+- *Secondary, reported:* hours per 2 M episodes. This also depends on episode length, which differs
+  between worlds. Also the modulated/ordinary speed ratio on level 06.
+
+**P5: the runs executed `v5.0` code.** Every run must pass all of the checks below. A run that
+fails any of them is **invalid**: it is stopped and not analysed, whatever its numbers.
+- (a) The log's first line is `[v5-gate] OK src=<worktree>/src branch=v5.0 …`.
+- (b) The banner prints `Observation Dim: 59 (… Hydration=1 …)` on level 06 and `58` (no
+  Hydration) on the control.
+- (c) `models/provenance.json` shows `branch: v5.0` and `git_sha` equal to the launch commit the
+  runner records in the manifest. (`git_dirty` may read `"unknown"`: `git status` can exceed the
+  helper's 10 s timeout on this NAS.)
+- (d) WandB run metadata: `program` = `<worktree>/train.py`, `root` = `<worktree>`, and the commit
+  equals (c)'s sha.
+- (e) The saved `models/config.yaml` and the WandB config show `water.enabled: true` on level 06
+  and `false` on the control. On level 06, `Episode/Term_Dehydration` is non-zero in at least one
+  logged window.
+
+**P5b: level 05 still trains the same on `v5.0`** (control run 7).
+- *Pass:* S_ctl lies within **228.3 ± 6** steps, which is P0a (same seed, same world) ± about 4 seed
+  s.d.
+- *Flag:* outside that band. That would mean the training path changed under level 05, and every
+  level-06 versus level-05 comparison would be suspect until explained.
+
+---
+
+## 3. Launch Manifest
+
+| Run | Status | Cell | Tag (= wandb-name) | wandb-group | wandb-job-type | Seed | Node | GPU | Launched at | WandB run ID | Log path |
+|---|---|---|---|---|---|---|---|---|---|---|---|
+| 1 | planned | L06 ordinary (throughput pair A) | `rppo_l06pilot_t1none_s42` | thirst_pilot | pilot | 42 | — | — | — | — | — |
+| 2 | planned | L06 ordinary | `rppo_l06pilot_t1none_s43` | thirst_pilot | pilot | 43 | — | — | — | — | — |
+| 3 | planned | L06 ordinary | `rppo_l06pilot_t1none_s44` | thirst_pilot | pilot | 44 | — | — | — | — | — |
+| 4 | planned | L06 modulated | `rppo_l06pilot_t16quad_s42` | thirst_pilot | pilot | 42 | — | — | — | — | — |
+| 5 | planned | L06 modulated | `rppo_l06pilot_t16quad_s43` | thirst_pilot | pilot | 43 | — | — | — | — | — |
+| 6 | planned | L06 modulated | `rppo_l06pilot_t16quad_s44` | thirst_pilot | pilot | 44 | — | — | — | — | — |
+| 7 | planned | L05 control, `v5.0` code (throughput pair B) | `rppo_l06pilot_l05ctl_t1none_s42` | thirst_pilot | pilot | 42 | — | — | — | — | — |
+
+All seven tags are unique. No WandB run name contains `l06pilot` and the group `thirst_pilot` is
+unused (WandB API query, 2026-10-01). The worktree's `results/` holds no run directories. The
+branch is not written into names: it is recorded in `provenance.json` and in WandB metadata, and
+the group `thirst_pilot` exists only on `v5.0`. In the Log-path cell the runner also records
+`git rev-parse HEAD` of the worktree at launch, for P5c/d.
+
+### 3.1 Configs (all existing; none produced)
+
+| Run | Env config | Agent config | `<SEED_FLAG>` |
+|---|---|---|---|
+| 1 | `configs/environment/experiment/basic/06-pond_thirst_10x10.yaml` | `configs/models/recurrent_ppo/nmn_input_site_grid_gaenorm/nmngaenorm_t1none.yaml` | *(none; config-owned 42)* |
+| 2 | same as 1 | same as 1 | `--seed 43` |
+| 3 | same as 1 | same as 1 | `--seed 44` |
+| 4 | `configs/environment/experiment/basic/06-pond_thirst_10x10.yaml` | `configs/models/recurrent_ppo/nmn_input_site_grid_gaenorm/nmngaenorm_t16quad_ALL.yaml` | *(none)* |
+| 5 | same as 4 | same as 4 | `--seed 43` |
+| 6 | same as 4 | same as 4 | `--seed 44` |
+| 7 | `configs/environment/experiment/basic/05-campfire_thermal_10x10.yaml` | `configs/models/recurrent_ppo/nmn_input_site_grid_gaenorm/nmngaenorm_t1none.yaml` | *(none)* |
+
+The level-06 config was reviewed by `env-config-reviewer` during implementation
+(`docs/reviews/env_config_review_thirst_water.md`: two 🟡, no 🔴). Since then it has changed only
+in comments. No registry setting changes, so no `CONFIG_CRITICAL_SETTINGS.md` entry is needed.
+
+### 3.2 For the training-runner
+
+- **GPUs:** 7, one per run. **Runs 1 and 7 must be the two GPUs of one node** (same card model),
+  launched back to back. The others are placed pack-node-first. Mid-tier cards (3090) match the
+  references. 2080 Ti works too (`w0000 o` trained on one) but is about 30 % slower.
+- **Per-run budget:** `--episodes 2000000`, `--log-interval 10`, 10 checkpoints (every 200 k).
+- **Expected wall time on a 3090:** ordinary about 2–3 h (level-05 pilots took 2.1–2.2 h), modulated
+  about 2.5–3.5 h (the modulated agent runs about 20 % fewer env steps/s). On a 2080 Ti add about
+  30 %. Total about 20 GPU-hours.
+- **Pre-flight additions** to the runner's usual checks: NAS mounted on the node **and**
+  `/media/nas01/projects/Interoceptive-AI/grid_world_pain/.claude/worktrees/thirst/train.py`
+  readable from the node. `git rev-parse --abbrev-ref HEAD` in the worktree prints `v5.0`, and the
+  worktree tree is clean (so the provenance sha describes the code).
+- **Post-launch (after the usual 3–8 min wait):** check P5 (a) and (b) in the log. Check (c) once
+  `models/provenance.json` exists. Record the WandB run ID and the HEAD sha in the manifest.
+
+---
+
+## 4. Analysis plan (pre-specified)
+
+### 4.1 Training-log reads (WandB; primary for P1–P4)
+
+- Every `Episode/*` value is a rolling-window mean. Windows are combined weighted by
+  `Episode/_window_n` and selected by `Episode/Number`, as in [[LEVEL05_BODY_INTERACTIONS]] §2.3.
+  Reward is never read.
+- **Temporal evolution (mandatory):** tenth-by-tenth (200 k-episode bins) series for
+  `Episode/Steps`, all seven `Term_*`, `Bal_EarlyDeathShare`, `Bal_LateDeath_Dehydration`,
+  `Bal_LateDeath_Overdrinking`, and the existing balance keys (`Bal_TimeBush`, `Bal_TimeEat`,
+  `Bal_TimeWarm`, and the hiding and eating ratios), both agents, per seed and seed-mean.
+- **Throughput:** `Time/sps_env` (step rows, a different row set from `Episode/*`), median after
+  the first 5 % of rows.
+- **Local binaries** for the pilot are in `<worktree>/wandb/`. The reference runs can be read
+  through the WandB API.
+
+### 4.2 Stored episodes (greedy policy; P1 pond visits, P3 by start hydration)
+
+With the worktree's `scripts/eval/traj_collect/collect_trajectories.py`, run **from the worktree**
+on CPU, per run: checkpoints at about **0.4 M, 1.2 M and 2.0 M** episodes. Use `--episodes 10000`,
+`--obs-precision float32` and a fixed `--seed-base` shared by all runs. Out-root:
+`<worktree>/results/analysis/thirst_pilot/`. Measure the first store's size before running the rest.
+
+The store's noise-free observation (`obs_true`) carries **Hydration** (hydration / 200, the
+column after Body Temperature in the 59-wide layout). That gives everything P1 and P3 need without
+the pond's location:
+- **start hydration** = 200 × `obs_true[Hydration]` at t = 0;
+- a **drinking step** is a step where hydration rises. Only the pond raises it: the net is +5 per
+  step on the pond and −0.625 everywhere else. A **bout** is a run of consecutive drinking steps;
+- **no-drink deadline** = 1.6 × start hydration, in steps;
+- **cause of death** = `termination_reason` 1–7, all seven reported.
+
+This needs a small reader over existing columns (no new collection code). Its first check is a
+known-input test: a synthetic hydration trace with 2 bouts must return 2.
+
+### 4.3 Reported tables
+
+1. Per run and per agent mean: S_06 (last tenth), the Q3 ratio to S_05, the not-converged flag, and
+   seed s.d.
+2. All seven death shares, last tenth, training policy. The same from the 2.0 M store, greedy
+   policy, in a separate column and never pooled.
+3. Drinking bouts per episode and steps per bout, by checkpoint. Share of past-deadline episodes
+   that drank.
+4. Survival by start-hydration band (0–50, 50–100, 100–150, 150–200) from the 2.0 M store (user
+   decision 2026-09-29: report survival conditional on start hydration).
+5. P4 speed ratio. P5 checklist per run. P5b control band.
+
+### 4.4 Tools that must not be used here
+
+They silently drop codes 6 and 7:
+- `scripts/analysis/ladder/lad03_how_it_ends.py` hard-codes three outcomes (step limit, starved,
+  predator) and never checks that its shares sum to 1;
+- `scripts/analysis/studies/context_exploration/part4_readout.py:440` reads only
+  `Term_Starvation / Term_Injury / Term_Thermal`;
+- `scripts/analysis/studies/level05_body_interactions/pilot_pick.py` reads survival and starvation
+  only. Its S read-out is fine, but it cannot answer P2.
+
+Also, no `v4.0` tool from the shared folder may read these runs. The sum-to-1 check in P2 is the
+safeguard against any dropped code.
+
+---
+
+## 5. Failure-mode catalogue (decided in advance)
+
+| Outcome | Reading |
+|---|---|
+| P5 fails for a run | The run is **invalid**, not a result. Stop it and fix the launch path. It is never analysed. |
+| NaN or value explosion in one seed | That run is bad. Report it. If the same agent's other two seeds are healthy, the question is answered with 2 seeds and the fact is stated. If it happens in 2 or more seeds of one agent on level 06 but not on the control, flag a possible water-specific instability to the user. |
+| Dehydration falls but is still > 0.10 and still falling at 2 M | "Not converged", not "not learnable". Report the slope. The user decides whether to extend (a resumed run with `--load-checkpoint` is possible because all checkpoints are kept). |
+| Over-drinking > 0.10 | A world-design flag: the brake is too easy to hit (W6 set 20 steps as "reachable but avoidable"). Report it with the bout-length distribution. The user decides whether to retune. No retune happens inside this pilot. |
+| Survival of the level-06 ordinary agent above level 05 | The "water does not bite" flag is checked with the pond-visit count. A small positive difference with normal drinking is noise. |
+| Control run outside 228.3 ± 6 | Stop interpreting level 06 against level 05 until explained. Route to `senior-developer`. |
+| Speed cost > 15 % | Report to the user. It is the user's call (they accepted 9.8 % bare-env). |
+| One agent learns to drink and the other does not | Report as observed. It is not evidence about the modulator: the pilot is not powered or designed for that. |
+
+---
+
+## 6. Metrics requested (optional, the user decides)
+
+Launching does **not** depend on these. §4.2 answers P1 from stored episodes. They would put
+drinking in the training logs, over time, for this pilot and for every later water experiment.
+
+| Metric | Why now | Where it would live | Cost |
+|---|---|---|---|
+| `Bal_TimePond`: share of the window's steps on a pond cell | P1's "pond visits rising" would be read continuously, not at 3 stored checkpoints | `src/behavior/balance_metrics.py` (time-split family, next to `Bal_TimeEat`) | cheap (scalar per window) |
+| `Bal_DrinkShare_Thirsty`, `Bal_DrinkShare_Sated`, `Bal_DrinkRatio`, `Bal_N_Thirsty`, `Bal_N_Sated`: drinking share among thirsty steps (hydration below a low bin) and sated steps (at or above the setpoint), read before the step; this mirrors `Bal_EatShare_*` | This is the state-dependent drinking measure the later modulator comparison will need. Having it in the pilot tells whether drinking tracks thirst at all at 2 M. | same file; the thirst bins go into the `balance_calibration` block | cheap |
+
+If accepted, these go through `feature-workflow` (`senior-developer` → `developer`) **before**
+launch, and the launch uses the new commit. If they are added after launch, these runs will not
+have them.
+
+---
+
+## 7. Results
+
+*(to be filled after training)*
+
+## 8. Conclusions
+
+*(to be filled after training)*
+
+---
+
+## Links
+
+- Implementation plan and reports: `docs/develop/active/thirst/THIRST_WATER_PLAN.md` ([[THIRST_WATER_PLAN]])
+- Design page: `docs/develop/active/thirst/thirst_water.html`
+- Level-05 references: `docs/experiments/active/level05_body_interactions/LEVEL05_BODY_INTERACTIONS.md`
+  §3.0 (P0a `nz0o6b70`, P0b `p4tlq5fq`, P0c `qwrtf2x5`) and §3.0b (`w0000` ordinary `dg1ry2be`,
+  modulated `nl1h2j21`)
+- WandB metric definitions: `docs/develop/active/behavior/WANDB_METRICS_REFERENCE.md`
+- Trajectory store columns: `docs/environment/TRAJECTORY_STORE_SCHEMA.md`
