@@ -9,7 +9,7 @@ wandb_tag: rppo_hv1ch / rppo_hv1chm / rppo_hv2ch
 
 # Single-channel smell: rabbit–predator confusion and hypervigilance
 
-> **Status**: PRE-REGISTERED, **Revision 1 (2026-09-30, pre-launch)** — a third world added (matched smell strength) and the decision rule rewritten after plan review (see [Revision 1](#revision-1) and [Response to plan-reviewer](#response-to-plan-reviewer)). Configs written and validated on the trainer's own loader; **nothing launched**.
+> **Status**: PRE-REGISTERED, **Revision 2 (2026-10-01, pre-data; Revision 1 2026-09-30, pre-launch)** — a third world added (matched smell strength) and the decision rule rewritten after plan review (see [Revision 1](#revision-1) and [Response to plan-reviewer](#response-to-plan-reviewer)). Configs written and validated on the trainer's own loader; runs launching from 2026-10-01 (see the manifest); Revision 2 was written before any result existed.
 > **Date**: 2026-09-30
 > **Author**: experiment-designer
 > **Base pages**: *What makes this agent hide?* ([[a01_hiding_drivers]], `docs/experiments/active/trajectory_factors/a01_hiding_drivers.html`) — where the scent false alarm and the aimed rabbit response were first measured; *Modulator clues* (`docs/experiments/active/modulator_clues/modulator_clues.html`) — where hypervigilance was re-analysed on the project's definition (commit `d29beb56`) and found absent under assigned injury.
@@ -92,9 +92,9 @@ decision rules in §5.3):
 
 | Contrast | Worlds | What changes | What is held |
 |---|---|---|---|
-| **B — identifiability** (primary for the hypothesis) | matched-strength − control | tell-apart-ability: d′ 0.94 → 0.65, ratio cue removed | average total animal smell (1.18 vs 1.18) |
-| **A — single-channel** (the original manipulation) | single-channel − control | tell-apart-ability **and** strength (1.18 → 0.59) | everything else |
-| **C — strength** (the detection decomposition) | single-channel − matched-strength | total animal smell (0.59 vs 1.18) | tell-apart-ability (d′ 0.66 vs 0.65, no ratio cue in either) |
+| **B — identifiability** (primary for the hypothesis) | matched-strength − control | tell-apart-ability: d′ 0.94 → 0.65, ratio cue removed | average total animal smell (1.18 vs 1.18) — per class **not** held: rabbit −11 % (1.05), predator +10 % (1.30) |
+| **A — single-channel** (the original manipulation) | single-channel − control | tell-apart-ability **and** strength (1.18 → 0.59; rabbit −58 %, predator −42 %) | everything else |
+| **C — strength** (the detection decomposition; **two-sided, descriptive**, §5.3) | single-channel − matched-strength | total animal smell (0.59 vs 1.18) | tell-apart-ability (d′ 0.66 vs 0.65, no ratio cue in either); **not** held: one receptor channel vs two |
 
 A ≈ B + C (the two need not add exactly). Claims about *identifiability* rest on contrast B; claims
 about *the single-channel manipulation* rest on A; C says how much of A is detection.
@@ -217,9 +217,14 @@ unchanged.
 1. **Detection vs identification.** In the single-channel world, total animal odour halves, so
    animals are harder to *notice* as well as to *identify*. Detection loss pushes the rabbit
    proximity effect **down** (a close rabbit is less noticeable) while confusion pushes it **up**,
-   so contrast A can cancel. The matched-strength world removes this by design for contrast B;
-   contrast C measures it; the predator proximity effect and the killed-by-predator share (§5.2,
-   S4) are the direct readouts.
+   so contrast A can cancel. The matched-strength world **reduces** this for contrast B — to a
+   rabbit 11 % weaker and a predator 10 % stronger than in the control, against 58 % / 42 % weaker
+   in the single-channel world — but does not remove it: the class-average is matched, the rabbit's
+   own strength is not (inherent once the ratio carries no identity). The residual works
+   **against** H₁a on B (a weaker rabbit lowers P1), so an established B is conservative, while a
+   B null carries a small residual detection component and is reported with it. Contrast C
+   describes the strength effect; the predator proximity effect and the killed-by-predator share
+   (§5.2, S4, read with sign) are the direct readouts.
 2. **Strength carries class in both treated worlds.** Once the ratio says nothing, a rabbit's
    predator-likeness *is* its odour strength. In the control the two are orthogonal (a01 found
    both matter). §5.2 S2 adds a matched reading on the same variable in the control.
@@ -273,6 +278,9 @@ the Log-path cell it also records `git rev-parse HEAD` and
 All sixteen new tags are unique and none matches an existing directory under
 `results/JAX_RecurrentPPO/` (checked 2026-09-30: zero hits for `hv1ch` / `hv1chm` / `hv2ch`).
 C01/C02 keep their own tags and group; the analysis finds them by run directory.
+**Tag matching (Revision 2):** `rppo_hv1ch_` is a prefix of `rppo_hv1chm_`, so a `*hv1ch*` glob
+also catches the matched-strength runs. Every script, directory check and WandB filter matches the
+single-channel runs on `hv1ch_` (with the trailing underscore) or on the full tag.
 
 **Top-up rows (launched only if §5.3 triggers them; tags fixed now):**
 `rppo_{hv1ch,hv1chm,hv2ch}_{t1none,t16quad}_s{45,46}` — for the agent and the worlds of the
@@ -382,7 +390,7 @@ criterion for Q1/Q2: the prediction is only that survival is **lower** in both t
 | **S1** (the missing piece, *e*) | **Scent × injury interaction** — does the rabbit-scent false alarm grow with the assigned wound? | Episodes with **no predator and exactly one rabbit** (11.1 % of episodes in the seed-42 control store, ≈ 110 k per run — any hiding driven by that rabbit's scent is a pure false alarm). Outcome: bush share over the first 25 chosen steps. (i) **Quarter contrast:** the slope of that share on the rabbit's scent evidence (pp per nat, §2.2) in the top start-injury quarter minus the bottom quarter. (ii) **Model:** quasi-binomial GLM (the `hiding_drivers.fit_glms` framework) with scent evidence, start injury, their product, and the M1 exogenous covariates (start nutrition, bushes, rocks, food, ambush predators, spawn distance to bush); the product term reported in pp per nat per 100 injury. Repeated on one-predator-one-rabbit episodes as a sensitivity check. Prediction: larger in both treated worlds. |
 | **S2** | **Scent false alarm** (the a01 ladder) — hiding and survival as a function of the rabbit's randomised scent. | `hiding_drivers.py`: univariate rabbit scent (pp per nat and pp per SD) and model M3 (one predator + one rabbit). Plus the a01 extreme-row table (hiding, food per step, starved, killed, survival steps) for the rabbit's bottom vs top sixth of scent evidence **within each world**. Scent statistic: `x1 − x2` in the control (existing definition, unchanged), `x1` single-channel, `x1 + x2` matched. **Matched reading:** in the control, the same ladder on channel 1 alone with channel 2 as a covariate. |
 | **S3** | **Aimed response** — does predator-like rabbit scent raise hiding specifically when *that rabbit* is near? | The a01 three-way split on one-predator-one-rabbit episodes (nothing near / predator near / rabbit near), rabbit-like vs predator-like groups defined on the **shared evidence scale** (log-likelihood ratio < 0 vs ≥ +0.67): control `x1 − x2 < 0` vs `≥ 0.3` (a01's thresholds, unchanged); single-channel `x1 < 0.6` vs `≥ 0.9`; matched `x1 + x2 < 1.2` vs `≥ 1.63`. Group sizes reported. |
-| **S4** | **Predator response (detection readout)** — proximity effect for the predator (`pd` grids), killed-by-predator share, and the **confusion index** = rabbit proximity effect ÷ predator proximity effect. | Same sweep. "S4 unchanged" (used by the verdict map) = the predator proximity effect's difference from control is not established in either direction under §5.3 **and** its magnitude is below 3 pp. |
+| **S4** | **Predator response (detection readout)** — proximity effect for the predator (`pd` grids), killed-by-predator share, and the **confusion index** = rabbit proximity effect ÷ predator proximity effect. | Same sweep. **Read with sign** (Revision 2): only a *falling* predator proximity effect signals detection loss; on contrast B a rise is the expected consequence of the predator's +10 % strength and triggers nothing. **"S4 did not fall"** (used by the verdict map) = the one-sided 95 % lower confidence bound (Welch) of the predator proximity effect's Δ lies above −3 pp — the same bound construction as §5.3's refutation — evaluated at the stage at which the primary outcome was decided (3 v 3 or 5 v 5). Otherwise "S4 may have fallen". |
 | **S5** | **Observational injury readings** — the same P2/P2d shifts on the injury the agent carries at that moment. | `hiding_shift(d, "rdc")`; `rabbit_avoidance.py` `current.near_share_shift`. Reported, never decisive (a currently injured agent was usually just attacked). |
 | **S6** | **Sensitivity readings for the proximity sweep** (plan-review M3) | (a) the count and share of steps with a rabbit **on the agent's own square** per run, and P1/P2 recomputed with distance 0 removed from the near bin; (b) a **predator-free variant** of P1 and P2 using only steps with no predator within 2 squares (`dpred > 2`). The same §5.3 comparison is reported for both. If a primary verdict does not survive either reading, the verdict is reported with that caveat in its first sentence. |
 
@@ -392,6 +400,14 @@ For each agent separately, each contrast (A, B, C; §2.1) and each outcome `Y`:
 `Δ(Y) = mean(Y over the treated world's seeds) − mean(Y over the reference world's seeds)`, shown
 with the per-seed values, the between-seed SD of each world, and the per-seed paired differences.
 
+**The two-stage rule below applies to contrasts A and B only.** Contrast C (single-channel −
+matched) has no single predicted direction — detection loss predicts it negative on P1, while the
+one-vs-two-channel difference it also carries has no predicted sign — so C is **two-sided and
+descriptive** (Revision 2): its Δ, per-seed values and 95 % interval are always reported; it is
+never "established" at 3 v 3 (two-sided complete separation there is only p = 0.10); and if the
+top-up has added seeds 45/46 to both of its worlds, a two-sided Mann–Whitney U ≤ 2 (p ≈ 0.03)
+at 5 v 5 is reported as "C clearly non-zero". C triggers no top-up of its own.
+
 **Stage 1 — three seeds (3 v 3).** *Established* if all three treated seeds lie beyond all three
 reference seeds in the predicted direction (one-sided exact permutation p = 0.05) **and** `|Δ|` is
 at least the minimum effect. **Anything else** — including a result that looks like a refutation —
@@ -399,9 +415,11 @@ goes to stage 2 for that agent, contrast and outcome.
 
 **Stage 2 — one top-up to five seeds (5 v 5, seeds 45 and 46 added in both worlds of the
 contrast).** *Established* if one-sided Mann–Whitney U ≤ 4 (p < 0.05) in the predicted direction
-**and** `|Δ|` ≥ the minimum effect. *Refuted* if the one-sided 95 % upper confidence bound of `Δ`
-(Welch) is **below the minimum effect** — i.e. the data positively rule out an effect of the
-registered size — or if U ≤ 4 holds in the **opposite** direction. *Not established* otherwise. No
+**and** `|Δ|` ≥ the minimum effect. *Refuted* if the one-sided 95 % confidence bound of `Δ`
+(Welch) **on the predicted side** — the upper bound for a + prediction, the lower bound for a −
+prediction (P2d, survival) — **falls short of the minimum effect** (below +min for +, above −min
+for −), i.e. the data positively rule out an effect of the registered size in the predicted
+direction; or if U ≤ 4 holds in the **opposite** direction. *Not established* otherwise. No
 further top-up. "Refuted" exists only at stage 2.
 
 | Outcome | Predicted sign | Minimum effect |
@@ -435,8 +453,9 @@ minimum sizes it confirms roughly one true effect in two (one in three for P2 if
 as the noisiest measured spread) and leaves the rest "not established"; it wrongly refutes a true
 minimum effect about 1 time in 20. The two-look rule (3 v 3, then 5 v 5) puts the false-positive
 rate per outcome at 1–7 % rather than exactly 5 %. The top-up is the **expected** path for P2 at
-realistic effects. Across two agents, three contrasts and two primary outcomes there are twelve
-tests; a single "established" among them is not a finding on its own (see the verdict map).
+realistic effects. Across two agents, two tested contrasts (A, B) and two primary outcomes there
+are eight tests; a single "established" among them is not a finding on its own (see the verdict
+map).
 
 Before any hv run is read, the same sweep is run on the five `cmp10m` plain-agent seeds (§5.5) and
 their between-seed SDs are frozen into §4 as the study's own yardstick. They are used to re-state
@@ -450,9 +469,9 @@ manipulation; "final" = after stage 2 where stage 2 ran):
 | established | established | **Hypothesis supported** on that contrast: harder-to-tell-apart smell → more confusion → more injury-dependent rabbit avoidance. On contrast B this is a statement about identifiability; on A only about the single-channel manipulation. |
 | established | **refuted** (at stage 2) | **Confusion without (more) hypervigilance**: the agent confuses the animals more, and an injury amplification of the registered size is ruled out. The only row that licenses "confusion alone is not sufficient". |
 | established | not established | **Confusion established; its injury dependence undetermined.** No claim about hypervigilance either way. |
-| refuted, **and S4 unchanged** | any | **No extra confusion** at the registered size: identity is recovered another way (movement, per sameProp) or the scent is not used. Q2 is reported but not attributed to confusion. |
-| refuted or not established, **S4 changed** | any | **Not separable from detection loss** (expected mainly on contrast A): read contrasts B and C before any statement about confusion. |
-| not established, S4 unchanged | any | **Undetermined.** Reported as such, with the power table. |
+| refuted, **and S4 did not fall** | any | **No extra confusion** at the registered size: identity is recovered another way (movement, per sameProp) or the scent is not used. Q2 is reported but not attributed to confusion. On contrast B, stated with the residual rabbit −11 % (§2.5 item 1). |
+| refuted or not established, **S4 may have fallen** | any | **Not separable from detection loss** (expected mainly on contrast A): read contrast B and the sign of C before any statement about confusion. A *rising* S4 never lands here. |
+| not established, S4 did not fall | any | **Undetermined.** Reported as such, with the power table. |
 
 **Absolute sign of P2 (replaces the earlier "positive in all three seeds" clause).** Whether a
 treated world shows hypervigilance *in absolute terms* is reported separately from the contrast:
@@ -461,11 +480,22 @@ bound is not above 0, the reading is "the treated world weakens the wounded agen
 rabbits, without producing injury-dependent avoidance of it" — a supported contrast, not
 hypervigilance.
 
-**Across the three contrasts (per agent):** B established and C not → the effect is
-identifiability. A established, B not established and C established → the single-channel effect is
-largely detection, not confusion. B established and A not → strength loss masks confusion in the
-single-channel world (the cancellation of §2.5 item 1). The two agents are not pooled; "supported
-in both agents" is the strongest statement allowed.
+**Across the three contrasts (per agent; Revision 2, in terms of the sign of C on P1):**
+
+- **B established, |C| < 3 pp** → the effect is identifiability, and halving the smell strength
+  does not change it.
+- **B established, A not, C ≤ −3 pp** → strength loss lowers P1 in the single-channel world and
+  masks the confusion there (the cancellation of §2.5 item 1).
+- **A established, B not established, C ≥ +3 pp** → the single-channel effect is not explained by
+  identifiability; it comes from what separates the single-channel from the matched world at equal
+  identifiability — weaker smell *raising* P1, or the one-vs-two-channel difference — and is
+  reported as such, not as confusion.
+- **A established, B established, C of either sign** → both manipulations raise confusion; C is
+  reported as the size of the strength component.
+
+C here is its point estimate with its 95 % interval (descriptive, above); "clearly non-zero" is
+added only where the top-up made the 5 v 5 test possible. The two agents are not pooled;
+"supported in both agents" is the strongest statement allowed.
 
 ### 5.4 Temporal evolution (mandatory)
 
@@ -494,8 +524,10 @@ in both agents" is the strongest statement allowed.
 The runs and the collection need nothing new. The analysis does; the user routes it through
 `feature-workflow` (`senior-developer` plans → `developer` implements) before the analysis.
 
-1. **`smell_channels()` refuses both treated configs.** Both copies
-   (`scripts/analysis/hiding_drivers.py:81` and `scripts/analysis/core/env.py:73`) require one
+1. **`smell_channels()` refuses both treated configs.** All **three** copies
+   (`scripts/analysis/hiding_drivers.py:81`, `scripts/analysis/core/env.py:73` and
+   `scripts/analysis/figures/_common.py:57` — the merge is recorded at `core/env.py:9`; the third
+   was missed before Revision 2) require one
    channel where predators exceed rabbits *and* one where rabbits exceed predators. In the
    single-channel world the second does not exist; in the matched world predators exceed rabbits on
    *both* channels. `hiding_drivers.py` and `collect_arm_data.py` (P1, P2, S2, S4) stop with
@@ -503,7 +535,9 @@ The runs and the collection need nothing new. The analysis does; the user routes
    difference (control), single channel, sum over the equally-signed channels (matched) — plus the
    log-likelihood-ratio scale factor of §2.2. The two-channel result must stay byte-identical (the
    `collect_arm_data` golden gate). `rabbit_avoidance.py` (P2d, S5) does not use it and runs as is.
-2. **A study driver** that runs the sweep on the 18 runs, applies §5.3 (both stages), and writes the
+2. **A study driver** (selecting runs by full tag or `hv1ch_` / `hv1chm_` / `hv2ch_` with the
+   trailing underscore, never `*hv1ch*`) that runs the sweep on the 18 runs, applies §5.3 (both
+   stages for A and B; the two-sided descriptive reading for C), and writes the
    per-seed table; plus a run-agnostic version of the a01 aimed split (S3) — the archived
    `supplementary/falsealarm.py` hard-codes the a01 store and slots.
 3. **S1** (scent × injury) is new code: episode filter, early-window share, the quarter contrast
@@ -574,6 +608,15 @@ animal_property_std  all  [0,0.3,0.3,0,0]   all  [0,0.3,0,0,0]      all  [0,0.3,
   the new root `results/trajectories_hvsmell/`; S6 sensitivity readings and two confounds added;
   clipping table extended (predator channel 1 at 1.0: 15.9 %); launches ≥ 2 s apart; wording fixes.
   Nothing launched before or during this revision.
+- **2026-10-01 — Revision 2, pre-data** (experiment-designer), after the `plan-reviewer` re-check
+  of Revision 1 (SOUND WITH CONCERNS, commit `29eeea02`). Written while the runs were being
+  launched and **before any result existed**; no decision rule was changed after seeing data.
+  Changes: contrast C made two-sided and descriptive, and the "across the three contrasts"
+  paragraph rewritten in terms of C's sign (N1); "removes the detection confound" reworded to
+  "reduces it to rabbit −11 % / predator +10 %", S4 read with sign so only a falling S4 triggers the
+  detection row, and "S4 did not fall" defined with the same one-sided 95 % bound as the refutation
+  rule (N2); third `smell_channels` copy added to the tooling list (N3); tag-glob note (N4);
+  refutation bound worded for either predicted sign (N5); test count 12 → 8 (C no longer tested).
 
 ---
 
@@ -728,3 +771,16 @@ hazard.
 the tooling plan. No config change is needed to launch.
 
 *Reviewed by: plan-reviewer*
+
+## Response to plan-reviewer re-check (Revision 2)
+
+*experiment-designer, 2026-10-01, pre-data (runs launching; no result exists).*
+
+| # | Response | Where |
+|---|---|---|
+| N1 | Accepted, the "cleanest" option: C is two-sided and descriptive, never established at 3 v 3, "clearly non-zero" only via two-sided 5 v 5 U ≤ 2 when the top-up exists; the across-contrasts paragraph is rewritten on the sign of C (≤ −3 pp: strength loss masks confusion; ≥ +3 pp: not identifiability; \|C\| < 3 pp: strength irrelevant). | §2.1 table, §5.3 |
+| N2 | Accepted: "reduces the confound to rabbit −11 % / predator +10 % (vs −58 % / −42 %)"; the residual works against H₁a on B; S4 read with sign (a rise triggers nothing); "S4 did not fall" = one-sided 95 % lower bound of Δ above −3 pp at the deciding stage. | §2.1, §2.5 item 1, §5.2 S4, §5.3 verdict map |
+| N3 | Accepted: `scripts/analysis/figures/_common.py:57` added to the tooling list. | §5.6 item 1 |
+| N4 | Accepted: match `hv1ch_` / full tags, never `*hv1ch*`. | §3, §5.6 item 2 |
+| N5 | Accepted: refutation bound stated for the predicted side of either sign. | §5.3 stage 2 |
+| O5–O7 | Noted; pre-flight 3 (ladder drift) is to be run, not assumed, if the wave splits across days. | — |
