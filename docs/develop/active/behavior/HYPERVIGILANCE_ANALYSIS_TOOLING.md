@@ -8,11 +8,12 @@ last_updated: 2026-10-01
 
 # Hypervigilance analysis tooling
 
-> **Status**: PLANNED (not implemented; awaiting `plan-reviewer`, then user approval)
+> **Status**: PLANNED, **Revision 1 (2026-10-01)** after `plan-reviewer` NOT READY — see [Revision log](#revision-log) and [Response to plan-reviewer](#response-to-plan-reviewer). Not implemented; awaiting re-review, then user approval.
 > **Opened**: 2026-10-01
+> **Study text this plan is checked against:** study Revision 4 (commit `39420f2c`), which contains Revisions 2 (`7ec62720`) and 3 (`86ce3119`).
 > **Author**: senior-developer
 > **Related**: [[SINGLE_CHANNEL_SMELL_HYPERVIGILANCE]] (the study this serves; its §5.6 lists the tooling it needs, and both plan-reviewer passes at its end carry the findings N3/N4 and M3 this plan implements) · [[a01_hiding_drivers]] ("What makes this agent hide?", whose scent readings are re-done here) · the modulator-clues page `docs/experiments/active/modulator_clues/modulator_clues.html` ("Injury, Behaviour and the Modulator", whose Figure A3 hypervigilance reading is re-done here) · [[TRAJECTORY_COLLECTION_PIPELINE]] (where the stores come from) · `docs/environment/SCRIPTS_DEPENDENCY_MAP.md` (updated by this change)
-> **Back-link owed:** the study doc's §5.6 should link here. That doc is owned by `experiment-designer`; this plan does not edit it (see Hand-off).
+> **Back-link:** study §5.6 and header link here (added in study Revision 3). Review: [[plan_hypervigilance_analysis_tooling]].
 
 ---
 
@@ -103,7 +104,7 @@ gate (A4) stay byte-for-byte.
 | P1, P2, S4, S5 (hiding) | proximity effect and its injury shift | `collect_arm_data` `rd/rdc/pd` grids + `_ladder.proximity_effect`; `a4_hypervigilance.hiding_shift` | none beyond the smell fix; `hiding_shift` is re-stated (a4 is a figure script with plotting side effects on import, so it cannot be imported) |
 | P2d, S5 (distance) | rabbit-within-2 share, injury shift | `rabbit_avoidance.py` | none |
 | Survival, terminations | mean episode length; termination shares | `collect_arm_data` JSON `mean_survival`, `term_pct` | none |
-| S1 | scent × injury, no-predator exactly-one-rabbit episodes, first 25 steps | per-episode early bush share exists in `collect_arm_data`'s `<arm>_episodes.npz` (`bush_early`, `steps_early`, `inj0`, `n_pred`, `n_rab`); rabbit scent and M1 covariates exist in `hiding_drivers`'s `aggregate.npz` | **new post-processing**: join the two per-episode files by episode seed (both sorted by seed, same population — asserted equal), then quarter contrast + GLM. No new sweep. |
+| S1 | scent × injury, no-predator exactly-one-rabbit episodes, first 25 steps | per-episode early bush share exists in `collect_arm_data`'s `<arm>_episodes.npz` (`bush_early`, `steps_early`, `inj0`, `n_pred`, `n_rab`); rabbit scent and M1 covariates exist in `hiding_drivers`'s `aggregate.npz` | **new post-processing**: join the two per-episode files by episode seed (both sorted by seed, same population — asserted equal), then quarter contrast + GLM. No new sweep. **Plus (Rev 1, R5) a matched control reading** in the difference layout: channel 1 as the statistic, channel 2 as a covariate — see A6. |
 | S2 | scent ladder, M3, extreme rows, control matched reading | `hiding_drivers` CSVs; extreme rows were computed by the archived `supplementary/curves.py` from a tmp file | **new post-processing** from `aggregate.npz` |
 | S3 | aimed split (nothing / predator / rabbit near) × rabbit-like vs predator-like | archived `supplementary/falsealarm.py`, hard-codes the a01 store, slots `[0,1]/[2,3]`, seed base, a tmp npz | **new run-agnostic sweep** `aimed_response.py` |
 | S6 (a) | rabbit on the agent's own square: count, share, P1/P2 without it | `collect_arm_data.py:124` clips distance 0 into the near bin | **new accumulators** in the same sweep, written to a **separate** file |
@@ -123,8 +124,17 @@ designer call (Open questions Q2, Q4).
 |---|---|---|---|
 | G1 ladder (existing refactor gate) | `collect_arm_data` output for three sensor-ladder arms | `results/_golden_prerefactor_20260904/` | `core/golden.py` REPRODUCED (tier 1 bit-exact, tier 2 rtol 1e-12), as when `--manifest` was added (dependency map row for `collect_arm_data.py`) |
 | G2 clue page Figure A3 | `collect_arm_data --manifest` on two Wave cells: `w2_lvl05_control` and `w1_lvl06_modulated` (level 06 = injury-gated smell noise) | `results/analysis/basicq2_integrated/ladderstyle/<cell>.json` + `_episodes.npz` | golden.py REPRODUCED; `hiding_shift(rd)`, `(rdc)`, `(pd)` equal on candidate vs reference; min/max of the fourteen published `hide_s` values (the twelve Wave cells plus the two blind cells a4 reads) round to the caption's **−1.9** and **+0.3**; `rabbit_avoidance.py` rerun on `w2_lvl05_control` equals `results/analysis/basicq2_integrated/rabbit_avoidance/w2_lvl05_control.json` |
-| G3 a01 page | `hiding_drivers` aggregate on the a01 store (the resting-bonus arm `20260810-185749_rppo_restprem_a01_n106`) | `results/analysis/hiding_drivers/<a01>/aggregate.npz` | golden.py REPRODUCED; fit-stage CSVs **byte-identical** to the pre-change script's fit on the same cache |
-| G3 published values (printed precision) | computed from the G3 candidate + a new `aimed_response.py` sweep on the a01 store (same-row distances) | a01 doc Finding 2 and ranking table | univariate scent effect +1.6 pp/SD (rabbit), +1.7 (predator); extreme rows rabbit hides 14.9 % / 22.6 %, survived 193.3 / 175.6 steps; predator hides 29.7 % / 35.0 %, survived 88.9 / 115.4; aimed split +8.0 / +6.4 / **+23.1** pp, rabbit-near hiding 26.7 % → 49.8 %, time near rabbit 13.0 % vs 14.3 % |
+| G3 a01 page — code identity (Rev 1, R1) | `hiding_drivers` aggregate + CSVs from the **new** code on the a01 store (the resting-bonus arm `20260810-185749_rppo_restprem_a01_n106`), written to scratch | a **freshly regenerated reference**: the **base commit's** `hiding_drivers.py` (`git show <BASE>:scripts/analysis/hiding_drivers.py`, `<BASE>` = the commit the developer starts from, recorded in the stamp) run on the same store into `_golden_scratch/g3_reference/` | golden.py REPRODUCED on `aggregate.npz` (tier 1 bit-exact, tier 2 rtol 1e-12, key sets equal); `univariate.csv`, `multivariate.csv`, `summary.json` **byte-identical** (`cmp`) |
+| G3 published values (printed precision) | computed from the G3 **candidate** aggregate + a new `aimed_response.py` sweep on the a01 store (same-row distances); the univariate scent effects additionally read from the **Aug-25 published** `results/analysis/hiding_drivers/<a01>/univariate.csv` | a01 doc Finding 2 and ranking table | univariate scent effect +1.6 pp/SD (rabbit; CSV `dpp_per_sd` 1.6117), +1.7 (predator; 1.7154) — both in the candidate and in the Aug-25 CSV; extreme rows rabbit hides 14.9 % / 22.6 %, survived 193.3 / 175.6 steps; predator hides 29.7 % / 35.0 %, survived 88.9 / 115.4; aimed split +8.0 / +6.4 / **+23.1** pp, rabbit-near hiding 26.7 % → 49.8 %, time near rabbit 13.0 % vs 14.3 % |
+
+**Why G3's reference is regenerated (Rev 1, R1).** The existing a01 `aggregate.npz` (written
+2026-08-25 14:39) predates commit `01fe5701` (20:41 the same day), which added six columns
+(`pred_/rab_olf_ch1/ch2`, `pred_/rab_olf_intensity`, `pred_detect_max/min`) and made `fit_glms` read
+two of them. `core/golden.py` counts a candidate-only key as MISSING and fails on it, so no current
+code — changed or not — can reproduce that file, and the old `fit_glms` raises `KeyError` on it. The
+reference is therefore produced by the unchanged code at the base commit on the same store. The Aug-25
+files are used only for the published-value check at printed precision. **`core/golden.py` is not
+changed**; no key is ignored, no tolerance widened.
 
 The extreme-row columns *Food per step*, *Starved*, *Killed* are printed on the a01 page but their
 producing code is not in the repo (`curves.py` computes only hiding and survival). The gate checks them
@@ -135,24 +145,54 @@ by `collect_arm_data.py --manifest` → `a4_hypervigilance.py`, `rabbit_avoidanc
 (clue page, controlled scenes) reads evaluation-probe histories, not trajectory stores; it has no smell
 dependence and nothing here changes it (Q5).
 
-### A5. Rule constants that must match the study text (§5.3, §5.2)
+### A5. Rule constants that must match the study text (Rev 1: rewritten against study Revisions 2–3)
+
+Source: study §5.2 and §5.3 **as of Revision 3** (`86ce3119`). Every row is anchored by `verdict.py`
+to the study's own sentence, copied verbatim from the study (not from this table), inside the
+§5.2–§5.3 slice only (R8).
 
 | Constant | Value | Where in the study |
 |---|---|---|
 | P1 predicted sign / minimum | + / 3 pp | §5.3 outcomes table |
 | P2 predicted sign / minimum | + / 2 pp | same |
-| P2d predicted sign / minimum | − / 1 pp; decides nothing alone | same |
-| S1 predicted sign / minimum | + / 2 pp per nat | same |
-| Stage 1 | 3 v 3, complete separation in predicted direction (one-sided exact p = 0.05) and \|Δ\| ≥ minimum; anything else → stage 2 | §5.3 Stage 1 |
-| Stage 2 | 5 v 5, one-sided Mann–Whitney U ≤ 4 and \|Δ\| ≥ min → established; one-sided 95 % Welch bound of Δ on the predicted side short of the minimum, or U ≤ 4 the other way → refuted; else not established | §5.3 Stage 2 (+ N5 wording) |
-| Contrast C (single-channel − matched) | **two-sided, descriptive**; 5 v 5 two-sided U ≤ 2 reported; never "established" at stage 1 | **user instruction 2026-10-01; plan-reviewer N1 — not yet in the study text** |
-| S4 "unchanged" | predator proximity effect Δ not established either way **and** \|Δ\| < 3 pp | §5.2 S4 (N2(b)/(c) propose a revision — not yet in the text) |
-| S3 groups | rabbit-like LLR < 0, predator-like LLR ≥ +0.67 (= 2/3 nat: control `x1−x2 ≥ 0.3`, single `x1 ≥ 0.9`, matched `x1+x2 ≥ 1.63`) | §5.2 S3 |
+| P2d predicted sign / minimum | − / 1 pp; decides nothing alone; H₁b needs P2 established and P2d's Δ of the predicted sign | same |
+| S1 predicted sign / minimum | + / 2 pp per nat (quarter contrast) | same |
+| Survival | − ; Δ with its 95 % interval, no threshold, no decision | same |
+| Scope of the two-stage rule | contrasts **A and B only** | §5.3 "The two-stage rule below applies to contrasts A and B only." |
+| Stage 1 | 3 v 3; established iff complete separation in the predicted direction (one-sided exact p = 0.05) and \|Δ\| ≥ minimum; anything else → stage 2 | §5.3 Stage 1 |
+| Stage 2 | 5 v 5; established iff one-sided U ≤ 4 in the predicted direction and \|Δ\| ≥ min; refuted iff the one-sided 95 % Welch bound **on the predicted side** (upper for +, lower for −) falls short of the minimum (below +min / above −min), or U ≤ 4 in the opposite direction; else not established; no further top-up | §5.3 Stage 2 (Revision 2, N5) |
+| Contrast C (single-channel − matched) | **two-sided, descriptive** (Revision 2, N1): Δ, per-seed values, 95 % interval always; never "established"; at 5 v 5 (both worlds topped up) two-sided U ≤ 2 → "C clearly non-zero"; triggers no top-up of its own | §5.3 paragraph before Stage 1 |
+| **C-sign classification on P1** (Rev 1, R2) | per agent: (i) B established and \|C\| < 3 pp → "identifiability; strength-halving does not change it"; (ii) B established, A not, C ≤ −3 pp → "strength loss masks confusion in 1ch"; (iii) A established, B not established, C ≥ +3 pp → "1ch effect not explained by identifiability"; (iv) A and B established, any C → "both raise confusion; C = size of the strength component"; any other combination → "no registered cross-contrast reading". C is its point estimate | §5.3 "Across the three contrasts" (Revision 2) |
+| **S4 "did not fall"** (Rev 1, R2) | one-sided 95 % Welch **lower** bound of the predator proximity effect's Δ **> −3 pp**, evaluated at the stage at which the primary outcome (the P1 of that agent × contrast) was decided (3 v 3 or 5 v 5); otherwise "S4 may have fallen". Read with sign: a rising S4 never triggers the detection row | §5.2 S4 (Revision 2, N2) |
+| Verdict map | six rows, labels copied verbatim; rows 4–6 use "S4 did not fall" / "S4 may have fallen" | §5.3 verdict map |
+| Absolute sign of P2 | treated-world mean P2 and its one-sided 95 % lower bound (t, n−1 df); if P2's Δ is established and that bound is not > 0 → the "weakens the wounded agent's boldness" reading | §5.3 "Absolute sign of P2" |
+| S1 reference arm | the tested Δ uses the **matched control reading** (channel 1, channel 2 as covariate, 2.22 nats per unit); plain `x1 − x2` reading descriptive; matched decides if they disagree | §5.2 S1 (Revision 4) |
+| S1 primary estimator | weighted least-squares slope (pp per nat, weights = early step count) within the top and bottom start-injury quarters; contrast = top − bottom; the quasi-binomial product term is descriptive | §5.2 S1 (Revision 3, Q3) |
 | S1 window | first 25 chosen steps | §5.2 S1 |
+| S2 extreme rows | within-world population sextiles of the rabbit's statistic over that world's exactly-one-rabbit episodes; each row reports its mean evidence in nats; cut points identical for every run of a world (**asserted**); a01 fixed bins (`< −0.2`, `≥ 0.6`) in the control only | §5.2 S2 (Revision 3, Q2) |
+| S3 groups | rabbit-like LLR < 0, predator-like LLR ≥ +0.67 (implemented as 2/3 nat: control `x1−x2 ≥ 0.3`, single `x1 ≥ 0.9`, matched `x1+x2 ≥ 1.6286`) | §5.2 S3 |
+| S3 distance row | primary = deciding row (`t−1`); same row = sensitivity and a01 reproduction | §5.2 S3 (Revision 3, Q4) |
 
-The rows in bold are the reason for **precondition P0** below: the verdict script anchors every
-constant to the study text, and the contrast-C rule has no text to anchor to until the designer folds
-plan-review N1 (and N2, N5) into §5.3.
+Precondition P0 of the first draft (the study text lacking N1/N2/N5) is **satisfied**: Revision 2
+carries all three and Revision 3 registers the three primary-variant choices.
+
+### A6. S1's control reference is not like-for-like (Rev 1, R5)
+
+In the control world the statistic `x1 − x2` is independent of total strength `x1 + x2` (equal-spread
+independent jitter), so the control's scent × injury slope measures an identity-only effect. In both
+treated worlds the statistic *is* strength, so their slope is identity × injury **plus** any
+strength × injury response. The per-nat rescaling equalises ideal-observer evidence, not this. The
+tooling therefore also computes an **S1 matched control reading** in the difference layout — statistic
+= the rabbit's channel 1 (`rab_olf_ch1`), with channel 2 (`rab_olf_ch2`) as a covariate, on the
+single-channel evidence scale (channel 1 alone has means 0.7 / 0.5 and SD 0.3, so `k` = 2.222 per unit,
+midpoint 0.6, identical to the single-channel world) — through the same quarter-contrast and GLM code.
+Every S1 reading records `statistic_equals_intensity` (true in both treated worlds and in the matched
+control reading, false in the plain control reading). **Registered by study Revision 4 (`39420f2c`,
+pre-data):** S1's tested Δ uses the **matched** control reading; the plain control reading is reported
+beside it as descriptive ("identity-only reference"), with its own Δ; if the two disagree on whether Δ
+clears 2 pp per nat, both appear in the result's first sentence and the matched one decides; on
+contrast B the residual strength-per-nat difference (0.64 vs 0.45 units of strength per nat) is stated
+with every S1 result. `verdict.py` anchors this.
 
 ---
 
@@ -169,12 +209,15 @@ store(s) ─┬─► hiding_drivers.py        → glm/aggregate.npz, univariate
           ├─► rabbit_avoidance.py      → rabbit_avoidance.json                          (unchanged)
           └─► aimed_response.py (NEW)  → aimed_response.json                            (S3)
                           │
-     studies/hypervigilance/readings.py (NEW) — resolves a named population, runs the four sweeps
-     (subprocess, guarded cache), assembles readings.json per run (P1…S6 + data accounting)
+     studies/hypervigilance/make_population.py (NEW) — population.json with a status column
+     studies/hypervigilance/readings.py (NEW) — reads population.json (completed cells only), runs the
+     four sweeps (subprocess, guarded cache, asserted output root), assembles readings.json per run
+     (P1…S6 + data accounting)
                           │
      studies/hypervigilance/verdict.py (NEW) — §5.3 over readings.json of a population;
      anchors its constants to the study text; needs the seed yardstick first
-     studies/hypervigilance/golden_check.py (NEW) — G1–G3; on pass writes a stamp that
+     studies/hypervigilance/golden_check.py (NEW) — G1–G3 (G3 against a reference regenerated
+     by the base commit's hiding_drivers.py); on pass writes a stamp that
      readings.py requires (hashes of the analysis sources) before it will read any population
 ```
 
@@ -191,15 +234,12 @@ behaviour on two-channel configs is unchanged). No page build, no figures. No Wa
 reading (§5.4.1 is `experiment-analyzer`'s, via `wandb-analysis`). No re-analysis of the archived
 supplementary scripts beyond the S3 port.
 
-### Precondition P0 (blocks only Checkpoint C9)
+### Precondition P0 — satisfied (Rev 1)
 
-`experiment-designer` folds plan-review **N1** (contrast C two-sided and descriptive), **N2** (S4 read
-with sign on contrast B; "unchanged" defined by a bound) and **N5** (refutation bound "on the predicted
-side") into study §5.3/§5.2 as a dated revision. `verdict.py` is implemented and unit-tested against a
-fixture copy of the text meanwhile; its anchor list is finalised against the revised text, and C9 (the
-anchor check on the real study doc passes) cannot be ticked before that revision lands. If the designer
-decides differently from the user's "C two-sided descriptive", the discrepancy goes back to the user;
-the developer does not pick.
+The first draft blocked Checkpoint C9 on the study absorbing plan-review N1/N2/N5. Study Revision 2
+(`7ec62720`) did, and Revision 3 (`86ce3119`) registered the S1 estimator, the S2 sextiles and the S3
+deciding row (A5). The last open registration — which control reference S1's Δ uses — was made by study Revision 4
+(`39420f2c`): the matched control reading (A6).
 
 ### File Changes
 
@@ -311,85 +351,112 @@ def accumulate_sensitivity(S, y, drab_prev, dpred_prev, ib, cb, hr):
 
 Run-agnostic port of `supplementary/falsealarm.py` (study S3; §5.6 item 2).
 
-- CLI: `--run`, `--store-root` (nargs+, required), `--checkpoint`, `--out` (required), `--max-blocks`.
-- Layout from `core/env.slot_layout` + `scent_spec` on the run's saved config; stores via
-  `hiding_drivers.find_stores`; the sweep via `core/store.open_run` + `core/scan.sweep` (the guarded
-  scan: seed contiguity, shard alignment, reset-row handling, `fr.prev`).
+- **Imports (Rev 1, R9):** at the top, `sys.path.insert(0, HERE)` and
+  `sys.path.insert(0, os.path.join(HERE, "core"))` with `HERE = os.path.dirname(os.path.abspath(__file__))`
+  (i.e. `scripts/analysis/`), then `from hiding_drivers import find_stores` and
+  `import env as ENV, store as STORE, scan as SCAN`. `hiding_drivers.py` has a `__main__` guard and no
+  import-time side effects, so the import is safe. Recorded in the dependency-map row.
+- CLI: `--run`, `--store-root` (nargs+, required), `--checkpoint`, `--out` (required). **No
+  `--max-blocks`** (Rev 1, R4: `core/scan.sweep` asserts full step counts; smoke mode is dropped).
+- Layout from `ENV.slot_layout` + `ENV.scent_spec` on the run's saved config; stores via `find_stores`;
+  the sweep via `STORE.open_run` + `SCAN.sweep` (the guarded scan: seed contiguity, shard alignment,
+  reset-row handling, `fr.prev`).
 - Episodes: exactly one predator and one rabbit (`animal_active`). Rabbit statistic from
   `animal_property_sampled` → LLR. Groups: `RABBIT_LIKE_BELOW_NATS = 0.0`,
   `PREDATOR_LIKE_AT_NATS = 2/3` (study "≥ +0.67"; 2/3 is the value that maps exactly to a01's `0.3` in the
   control: `0.3 × 0.4/0.18 = 2/3`). The statistic-space thresholds actually used are written to the output.
 - Per chosen step: state = predator within 2 (Chebyshev, live) → "predator near"; else rabbit within 2 →
-  "rabbit near"; else "nothing near" (a01 precedence). Computed **twice in the one sweep**: distances on
-  the same row (`same_row`, a01's convention, used by the golden) and on the deciding row (`prev_row`,
-  study §5 convention).
+  "rabbit near"; else "nothing near" (a01 precedence). Computed **twice in the one sweep**:
+  `prev_row` (distances on the deciding row `t−1`; **primary**, study Revision 3 Q4) and `same_row`
+  (row `t`, a01's convention; sensitivity reading and the G3 reproduction).
 - Output JSON: spec, thresholds (nats and statistic space), group episode counts, per group × state:
   steps, bush steps, bush share; per-state differences (pp); time share per state; `NEAR = 2`;
   run/stores/seed range; data accounting (episodes used / available with the filter named).
 
 #### 6. `scripts/analysis/studies/hypervigilance/readings.py` — NEW (three levels deep: `ROOT` walks four `..`)
 
-Per-run assembly over a **named population**; run-agnostic (any run whose store and saved config exist).
+Per-run assembly over a **population manifest**; run-agnostic (any run whose store and saved config
+exist, including the next study's).
 
-- `--population {hvsmell, basicq2, l05body_w0000, cmp10m, a01}`, `--labels` (subset), `--checkpoint`,
-  `--stage {sweep, assemble, all}`, `--reuse-cache`, `--max-blocks N` (smoke: writes under
-  `results/analysis/hypervigilance/_smoke/`, never the real root).
-- **Population resolution** (one function per population, returning cells
-  `{label, run, stores, world, agent, seed, level, wave}`; refuses a missing or ambiguous match):
-  - `hvsmell`: run dirs matching exactly
-    `^\d{8}-\d{6}_rppo_(hv1ch|hv1chm|hv2ch)_(t1none|t16quad)_s(\d+)$` (anchored, so `hv1ch` never matches
-    `hv1chm` — plan-review N4) plus the two seed-42 controls
-    `20260927-053057_rppo_l05body_w0000_t1none_s42` / `20260927-053059_rppo_l05body_w0000_t16quad_s42`
-    as world `hv2ch`; stores under `results/trajectories_hvsmell/`.
-  - `basicq2`: Waves 1 and 2, levels 03–06, both agents, stores in `results/trajectories_basicq2_w{1,2}/`
-    (levels 04–06 must resolve to the same store dirs as `results/analysis/basicq2_integrated/_manifest.json`
-    — asserted).
-  - `l05body_w0000`: the two older seed-42 stores in `results/trajectories_l05body/` (study §5.5: numerics
-    comparison only).
-  - `cmp10m`: the five `rppo_cmp10m_gaenorm_s42…s46` stores in `results/trajectories_nmngae/` (seed yardstick).
-  - `a01`: the a01 run and its store (golden use).
-- **Ground-truth checks per cell** (fail = refuse that cell): the saved config's top-level `seed` equals
-  the tag's seed; the inferred layout matches the world (`hv2ch`, `basicq2`, `cmp10m`, `a01` →
-  `difference`; `hv1ch` → `single`; `hv1chm` → `sum`); and **from the store itself**, on the first
-  episodes shard: every `animal_property_sampled` channel outside the spec's emitting set is exactly 0
-  for active animals, and the per-class empirical means of the emitting channels are recorded (verifies
-  the store came from the world the config says).
-- **Golden stamp gate:** refuses every population except `a01` unless
+- **CLI:** `--manifest <population.json>` (required), `--labels` (subset), `--checkpoint`,
+  `--stage {check, sweep, assemble, all}`, `--reuse-cache`, `--out-root` (required; must resolve under
+  `<ROOT>/results/analysis/hypervigilance/`). **No `--max-blocks` / smoke mode** (Rev 1, R4 — dropped
+  rather than adding a shard limit to the golden-gated `core/scan`, `hiding_drivers.py` and
+  `collect_arm_data.py`; see C8/C10 for the re-budget). Stage `check` reads only the saved config and the
+  first episodes shard — no step sweep — and is the cheap first look at a new store.
+- **Population manifest (Rev 1, R3)** — JSON, one entry per cell:
+  `{label, run, stores, world, agent, seed, level, wave, status}`; `status` ∈ {`completed`, `running`,
+  `failed`, `planned`}. Written by the companion `make_population.py` (§6b). `readings.py` reads **only
+  `completed`** cells; it refuses the manifest if any `(world, agent, seed, level, wave)` key has more
+  than one `completed` entry, or if a `completed` entry's run dir has no `models/config.yaml` or no
+  store. A tag-regex cross-check (full tag, anchored, optional `_r\d+` relaunch suffix:
+  `^\d{8}-\d{6}_(?P<tag>rppo_(hv1ch|hv1chm|hv2ch)_(t1none|t16quad)_s(\d+))(_r\d+)?$`, never `*hv1ch*` —
+  study Revision 2 N4) must agree with the entry's `world/agent/seed`; disagreement = refuse.
+- **Ground-truth checks per cell** (stage `check`, and repeated at the start of `sweep`; fail = refuse
+  that cell): the saved config's top-level `seed` equals the manifest's seed; the inferred layout matches
+  the world (`hv2ch`, `basicq2`, `cmp10m`, `a01` → `difference`; `hv1ch` → `single`; `hv1chm` → `sum`);
+  **from the store itself**, on the first episodes shard: every `animal_property_sampled` channel outside
+  the spec's emitting set is exactly 0 for active animals, and the per-class empirical means of the
+  emitting channels are recorded (verifies the store came from the world the config says).
+- **Golden stamp gate:** refuses every manifest whose population is not `a01` unless
   `results/analysis/hypervigilance/_golden_pass.json` exists and its recorded sha256 of each analysis
   source (`core/env.py`, `core/scan.py`, `core/store.py`, `hiding_drivers.py`, `collect_arm_data.py`,
-  `ladder/_ladder.py`, `rabbit_avoidance.py`, `aimed_response.py`, `readings.py`) equals the current file.
+  `ladder/_ladder.py`, `rabbit_avoidance.py`, `aimed_response.py`, `make_population.py`, `readings.py`)
+  equals the current file.
   Any edit to those files re-requires the golden check.
-- **Sweeps** (stage `sweep`; `subprocess.run([sys.executable, …], cwd=ROOT, check=True)`, one cell at a
-  time — the NAS is the bottleneck): `hiding_drivers.py --out <cell>/glm`; `collect_arm_data.py
-  --manifest <cell manifest>` with `LADDER_OUT_ROOT=<population>/ladderstyle`; `rabbit_avoidance.py`;
-  `aimed_response.py`. Output root `results/analysis/hypervigilance/<population>/<label>/`
-  (`/ckpt_<N>/` when `--checkpoint` is given, for the §5.4 time course).
-  **Stale-cache guard** (the trap `run_hiding_drivers.py` documents): refuse if any output exists unless
-  `--reuse-cache`; with it, require each JSON's recorded `run`/`stores` to equal the requested ones and
-  `aggregate.npz["seed"]` to equal `<label>_episodes.npz["seed"]`.
+- **Output-root guard (Rev 1, R7), before any subprocess is spawned:** `OUT = realpath(--out-root)`
+  must start with `realpath(<ROOT>/results/analysis/hypervigilance) + os.sep`; the child environment is
+  a copy of `os.environ` with `LADDER_OUT_ROOT` **set explicitly** to the absolute
+  `<OUT>/<label>/ladderstyle`, and the driver asserts that value is absolute, under `OUT`, and not
+  `realpath(<ROOT>/results/analysis/ladder)`. `_ladder.OUT_ROOT` otherwise defaults to the live
+  sensor-ladder root (`_ladder.py:35`). `hiding_drivers.py` gets absolute `--out` and `--cache`;
+  `rabbit_avoidance.py` / `aimed_response.py` absolute `--out`. Same guard in `golden_check.py` with
+  `_golden_scratch/` as the required parent.
+- **Sweeps** (stage `sweep`; `subprocess.run([sys.executable, …], cwd=ROOT, env=child_env, check=True)`,
+  one cell at a time — the NAS is the bottleneck): `hiding_drivers.py`; `collect_arm_data.py --manifest
+  <cell manifest>` (the one-cell `{label: {run, stores}}` JSON it already accepts); `rabbit_avoidance.py`;
+  `aimed_response.py`. Outputs under `<OUT>/<label>/` (`/ckpt_<N>/` when `--checkpoint` is given, for the
+  §5.4 time course). **Stale-cache guard** (the trap `run_hiding_drivers.py` documents): refuse if any
+  output exists unless `--reuse-cache`; with it, require each JSON's recorded `run`/`stores` to equal the
+  requested ones and `aggregate.npz["seed"]` to equal `<label>_episodes.npz["seed"]`.
 - **Assembly** (stage `assemble`) → `<label>/readings.json`:
+  - `scent`: the `ScentSpec` fields and **`statistic_equals_intensity`** at run level (Rev 1, R5;
+    false for `difference`, true for `single`/`sum`); each S1 sub-reading carries its own copy of the flag
+    (study Revision 4: true in the treated worlds and in the matched control reading, false in the plain
+    control reading).
   - `survival`: mean steps, termination shares (from the ladder JSON).
   - `P1` = `proximity_effect(rd_bush, rd_tot)`; `P2` = `hiding_shift(rd)` =
     `proximity_effect(..., (3,)) − proximity_effect(..., (0,))` (re-stated one-liner, identical to
-    `a4_hypervigilance.py`); `P2d` = `rabbit_avoidance` `start.near_share_shift`.
+    `a4_hypervigilance.py:34-36`, which cannot be imported: it draws a figure at import); `P2d` =
+    `rabbit_avoidance` `start.near_share_shift`.
   - `S1` (no predator, exactly one rabbit): episodes joined by seed (assert equal seed arrays);
     early bush share = `bush_early / steps_early`; LLR = `spec.llr(rab_predatorness)`.
-    (i) quarter contrast: within start-injury quarters 0 and 3 (edges 25/50/75), weighted least-squares
-    slope of the share on LLR (weights `steps_early`) × 100 → pp per nat; contrast = q3 − q0; per-quarter
-    slopes and episode counts reported. (ii) GLM: `quasi_binomial_fit` with `Y = bush_early`,
-    `L = steps_early`, regressors LLR, start injury, LLR × start injury, start nutrition, bushes, rocks,
-    food, ambush predators, spawn distance to bush; product term reported as
-    `coef × p̄(1−p̄) × 100 × 100` (pp per nat per 100 injury) with its SE. Repeated on
-    one-predator-one-rabbit episodes (sensitivity). Estimator choice for (i): Q3.
+    (i) **primary** (study Revision 3 Q3): within start-injury quarters 0 and 3 (edges 25/50/75),
+    weighted least-squares slope of the share (pp) on LLR (nats), weights `steps_early`; contrast =
+    q3 − q0 in pp per nat; per-quarter slopes and episode counts reported. (ii) descriptive GLM:
+    `quasi_binomial_fit` with `Y = bush_early`, `L = steps_early`, regressors LLR, start injury,
+    LLR × start injury, start nutrition, bushes, rocks, food, ambush predators, spawn distance to bush;
+    product term reported as `coef × p̄(1−p̄) × 100 × 100` (pp per nat per 100 injury) with its SE.
+    Both repeated on one-predator-one-rabbit episodes (sensitivity).
+    (iii) **matched control reading** (Rev 1, R5; `difference` layout only; A6): the same (i) and (ii)
+    with the statistic replaced by the rabbit's channel 1 on the single-channel evidence scale
+    (`k` = 0.2/0.09, midpoint 0.6, derived from the config's channel-1 means and SD, not typed) and
+    `rab_olf_ch2` added as a covariate — in (i) as a second regressor of the same weighted least squares
+    in each quarter, in (ii) as a GLM term. Written as `S1.matched_control` (the registered reference for
+    the tested Δ, study Revision 4); the plain reading is `S1.plain`.
   - `S2`: univariate rabbit (and predator) scent from `glm/univariate.csv`: pp per unit, **÷ k → pp per
     nat**, pp per SD, n; M3 row(s) from `multivariate.csv`; extreme rows on exactly-one-rabbit episodes
     (and exactly-one-predator for the predator table) — *hides* = pooled `bush_steps / n_steps`, *food
     per step* = `n_ate / n_steps`, *starved* / *killed* = termination shares, *survived* = mean
-    `n_steps` — for (a) within-world population sextiles of the statistic (defined in every world) and
-    (b) in the `difference` layout only, a01's fixed bins `< −0.2`, `≥ 0.6`; control matched reading
-    (`difference` only): `quasi_binomial_fit` on exactly-one-rabbit episodes with `rab_olf_ch1` and
-    `rab_olf_ch2`, reporting the channel-1 coefficient per unit and per SD.
-  - `S3`: the `aimed_response.json` summary (both distance rows; group sizes).
+    `n_steps` — (a) **primary** (Revision 3 Q2): within-world population sextiles of the statistic, each
+    row with its mean evidence in nats, the cut points written to the output; (b) `difference` only:
+    a01's fixed bins `< −0.2`, `≥ 0.6`; control matched reading (`difference` only):
+    `quasi_binomial_fit` on exactly-one-rabbit episodes with `rab_olf_ch1` and `rab_olf_ch2`, reporting
+    the channel-1 coefficient per unit, per nat and per SD. **Cross-run assertion** (study S2: "the tool
+    asserts this"): after assembling a population, the sextile cut points must be identical across all
+    `completed` runs of the same world; a mismatch refuses the population.
+  - `S3`: the `aimed_response.json` summary (both distance rows, `prev_row` labelled primary; group
+    sizes).
   - `S4`: `proximity_effect(pd_bush, pd_tot)`, killed-by-predator share, confusion index = P1 ÷ S4.
   - `S5`: `hiding_shift(rdc)`; `rabbit_avoidance` `current.near_share_shift`.
   - `S6`: rabbit-on-square steps and share of rabbit-episode steps; P1/P2 without distance 0; P1/P2
@@ -400,52 +467,114 @@ Per-run assembly over a **named population**; run-agnostic (any run whose store 
     emitted by code — the artifact guide's data-accounting requirement is met at the source.
   - `code`: git HEAD, dirty flag, and the source sha256s.
 
+#### 6b. `scripts/analysis/studies/hypervigilance/make_population.py` — NEW (Rev 1, R3)
+
+Writes the population manifest JSON `readings.py` reads. Sources, one flag each:
+
+- `--from-study-doc <md> --store-root <root>`: parses the study's **Launch Manifest** table (the ground
+  truth for status; columns *Run, Status, Cell, Tag, Seed, … Log path*). Status = the cell's first word,
+  lower-cased (`completed (not relaunched; …)` → `completed`). Run dir = the `run dir` path in the *Log
+  path* cell; a row with no run dir is `planned`. For the hv study this yields the 16 H-rows and C01/C02
+  (world `hv2ch`), and any future `_r2` relaunch row the runner adds.
+- `--from-ladder-manifest <json> --world basicq2`: wraps an existing `{label: {run, stores}}` file
+  (e.g. `results/analysis/basicq2_integrated/_manifest.json`) plus Wave 1/2 level-03 cells found under
+  `results/trajectories_basicq2_w{1,2}/`, all `completed`.
+- `--runs <dir> ... --world <w> --store-root <root>`: explicit list, all `completed` (cmp10m, a01,
+  l05body_w0000).
+
+In every mode, stores are resolved with `hiding_drivers.find_stores` (refuses several checkpoints
+without `--checkpoint`). Output: `results/analysis/hypervigilance/<population>/population.json`, with the
+source and its sha256 recorded. `make_population.py` never decides between two candidates for one seed;
+it writes both and `readings.py` refuses.
+
 #### 7. `scripts/analysis/studies/hypervigilance/verdict.py` — NEW
 
-- Modes: `--yardstick` (population `cmp10m`: between-seed SD of P1, P2, P2d, S1, S2-univariate per nat →
-  `results/analysis/hypervigilance/cmp10m/yardstick.json`, plus the power table re-stated with those SDs);
-  default (population `hvsmell` → `results/analysis/hypervigilance/hvsmell/verdict.{json,md}`).
-  The default mode **refuses** unless `yardstick.json` exists (study §5.3: the yardstick is frozen before
-  any hv run is read).
-- `RULES` constant block (A5) and `DOC_ANCHORS`: for each constant, the exact study sentence/table row
-  it comes from. On start the script reads the study doc, collapses every whitespace run to one space
-  (the study wraps lines mid-sentence), and refuses with the list of missing anchors if any is absent.
-  It also imports `aimed_response.PREDATOR_LIKE_AT_NATS` and `readings`'s early window and anchors them.
+- Modes: `--yardstick --manifest <cmp10m population.json>`: between-seed SD of P1, P2, P2d, S1,
+  S2-univariate per nat → `results/analysis/hypervigilance/cmp10m/yardstick.json`, plus the power table
+  re-stated with those SDs. Default `--manifest <hvsmell population.json>` →
+  `results/analysis/hypervigilance/hvsmell/verdict.{json,md}`. The default mode **refuses** unless
+  `yardstick.json` exists (study §5.3: the yardstick is frozen before any hv run is read).
+- **Post-hoc seed-noise line (Rev 1, reviewer A1):** beside every frozen yardstick SD, the verdict prints
+  the between-seed SD of the same outcome in the hv **control** world (`hv2ch`, three seeds per agent),
+  labelled "post hoc — not used by the rule". It is never fed into the rule or the power table.
+- `RULES` constant block (A5) and `DOC_ANCHORS` (Rev 1, R8): for each constant, the exact study text it
+  comes from, **copied verbatim from the study file** (the study writes `|Δ|`; this plan's tables escape
+  it as `\|Δ\|` — do not copy from the plan). On start the script reads the study doc, keeps only the
+  slice from the line `### 5.2 Secondary outcomes` up to the line `### 5.4 Temporal evolution` (the doc's
+  feedback and response sections quote superseded rules and must not satisfy an anchor), collapses every
+  whitespace run to one space, and refuses with the list of missing anchors if any is absent. Anchored,
+  at least: the four minimum-effect rows; "applies to contrasts A and B only"; the Stage 1 and Stage 2
+  sentences incl. "on the predicted side"; C's "two-sided and descriptive" and "U ≤ 2"; the four
+  "Across the three contrasts" bullets (C-sign 3 pp); the S4 "did not fall" sentence ("lies above −3 pp",
+  "at which the primary outcome was decided"); the six verdict-map row labels; the absolute-sign
+  sentence; S1's weighted-least-squares and 25-step text; S2's "population sextiles"; S3's "≥ +0.67" and
+  "deciding row". It imports `aimed_response.PREDATOR_LIKE_AT_NATS` and `readings.EARLY` and checks them
+  against their anchors.
 - Per agent (ordinary, modulated — never pooled) × contrast × outcome (P1, P2, P2d, S1, S4, survival):
   per-seed values, world means, between-seed SDs, paired per-seed differences (secondary), Δ, and:
-  - 3 v 3 → stage 1; not established → listed in `top_up_required` with the two worlds and seeds 45/46.
-  - 5 v 5 → stage 2 (U with ties counted ½; one-sided Welch bound with Welch–Satterthwaite df).
-  - Any other seed count, or a NaN seed value → `not evaluable under §5.3` (no invented rule).
-  - Contrast C → descriptive fields only (Δ, sign, two-sided U ≤ 2 flag at 5 v 5); never "established".
+  - **Contrasts A and B:** 3 v 3 → stage 1; not established → listed in `top_up_required` with the two
+    worlds and seeds 45/46. 5 v 5 → stage 2 (U with ties counted ½; one-sided Welch bound, Welch–
+    Satterthwaite df, on the predicted side). Any other seed count, or a NaN seed value → `not evaluable
+    under §5.3` (no invented rule).
+  - **Contrast C:** descriptive only — Δ, per-seed values, two-sided 95 % Welch interval; at 5 v 5 in
+    both worlds the two-sided U ≤ 2 flag "C clearly non-zero"; never "established"; never in
+    `top_up_required`.
   - P2d decides nothing alone; `H1b` flag = P2 established and P2d Δ of the predicted sign.
   - Survival: Δ with a 95 % Welch interval, no decision.
+  - **S4 condition (Rev 1, R2):** for each agent × contrast (A, B), the stage at which that P1 was
+    decided (1 if established at 3 v 3, else 2 if the 5 v 5 data exist) fixes the seed set; on it,
+    "S4 did not fall" iff the one-sided 95 % Welch **lower** bound of the predator proximity effect's Δ
+    is **> −3 pp**; else "S4 may have fallen". If P1 is still pending the top-up, S4 is "pending".
   - Verdict-map row per agent × contrast (A, B) from P1/P2 finals and the S4 condition, using the
-    study's six row labels verbatim; absolute-sign reading of P2 (treated-world mean, one-sided 95 %
-    lower bound, t with n−1 df).
+    study's six row labels verbatim.
+  - **C-sign classification (Rev 1, R2):** per agent, the five cases of A5 on P1 (B/A final statuses and
+    C's point estimate against ±3 pp), with C's interval printed beside it.
+  - Absolute-sign reading of P2 per treated world (mean, one-sided 95 % lower bound, t with n−1 df) and
+    the "weakens boldness" flag when P2's Δ is established and the bound is not > 0.
   - S6 re-runs of P1/P2 through the same rule, reported beside the primary (study S6).
+  - S1's Δ against both control references (A6, study Revision 4): the **matched** reference decides
+    (anchored: "the tested Δ uses the **matched-control reading**"); the plain one is printed beside it as
+    "identity-only reference, descriptive"; if exactly one of the two clears 2 pp per nat, the output
+    flags "references disagree" for the first sentence; on contrast B the 0.64-vs-0.45
+    strength-per-nat note is attached.
 - Descriptive context (study §5.5): within-wave level 06 minus level 05 P1 and P2 per agent, from the
   `basicq2` readings, printed beside the contrasts; never pooled, never decided.
 - `power(effect, sd, n_draws, rng_seed)` Monte-Carlo of the two-stage rule (used by the test and by
   the yardstick re-statement).
 
-#### 8. `scripts/analysis/studies/hypervigilance/golden_check.py` — NEW
+#### 8. `scripts/analysis/studies/hypervigilance/golden_check.py` — NEW (Rev 1: G3 reference regenerated, R1)
 
 Runs G1–G3 (A4) into `results/analysis/hypervigilance/_golden_scratch/` (never a live output root; the
-golden README forbids pointing a port at the live root), shells out to `core/golden.py` for every
-file comparison and requires `REPRODUCED`, then checks the published values of A4 at their printed
-precision. The pre-change fit for the CSV byte-identity check runs from
-`git show <base-commit>:scripts/analysis/hiding_drivers.py` written to the scratch dir, on the **same**
-`aggregate.npz`. Prints a table of every check; on all-pass writes `_golden_pass.json` (date, HEAD,
-source sha256s, per-check result). Any failure: no stamp, non-zero exit.
+golden README forbids pointing a port at the live root) with the R7 output-root guard (§6), shells out
+to `core/golden.py` for every file comparison and requires `REPRODUCED`, then checks the published values
+of A4 at their printed precision.
+
+- `--base <commit>` (required): the commit the implementation starts from (the developer records it in
+  the Implementation Report). G3 reference: `git show <base>:scripts/analysis/hiding_drivers.py` →
+  `_golden_scratch/g3_reference/hiding_drivers_base.py`, run from `ROOT` (it is cwd-relative) with
+  `--run <a01 run> --store-root results/trajectories --out <scratch>/g3_reference --cache
+  <scratch>/g3_reference/aggregate.npz`. G3 candidate: the current `hiding_drivers.py` into
+  `<scratch>/g3_candidate`. Compare `aggregate.npz` with `golden.py`; `cmp` the three CSV/JSON products.
+  The base script is run once; if `<scratch>/g3_reference/aggregate.npz` exists, `--reuse-reference`
+  must be passed and the stamp records that the reference was reused with its sha256.
+- Published values: from the G3 candidate aggregate (extreme rows), `aimed_response.py` on the a01 store
+  (`same_row`), and the Aug-25 `univariate.csv` (read-only) for the univariate scent rows.
+- `core/golden.py` is invoked unchanged; `golden_check.py` never filters keys out of either side.
+- Prints a table of every check; on all-pass writes `_golden_pass.json` (date, HEAD, `--base`, source
+  sha256s, per-check result). Any failure: no stamp, non-zero exit.
 
 #### 9. Tests (new or extended, `tests/analysis/`)
+
+Run with `/home/vncuser/miniconda3/envs/grid_world_pain/bin/python -m pytest …` (R10).
 
 | File | Tests (each must fail on the pre-change code or on a planted defect) |
 |---|---|
 | `test_core_env.py` (extend) | the three study layouts (literal dicts copied from study §2.1 / Appendix B) → `layout`, `channels`, `midpoint` (0 / 0.6 / 1.2), `llr_scale` (0.4/0.18, 0.2/0.09, 0.28/0.18 exact; 2.22 / 2.22 / 1.56 at 2 dp); `statistic` on a small array is bit-identical to `x[...,a] − x[...,b]` in the difference layout; refusals: equal classes (existing test kept), two channels both predator-leaning but unequal (ratio informative), rabbit stronger on the only channel, three emitting channels with mixed signs, unequal class spreads, missing `properties_std`; `smell_channels` returns `(1, 2)` on the control and raises on single and sum. **Fails today**: `scent_spec` does not exist. |
+| `test_hiding_drivers_layout.py` (new, Rev 1 R8) | `fit_glms` on a small synthetic `D` (a few thousand episodes, all keys `aggregate` writes) with `layout="single"` and `rab_olf_intensity == rab_predatorness`: runs without a singular-matrix failure, and the univariate and M2/M3 outputs contain no `*_olf_intensity` term; with `layout="difference"` they do. `fit_glms` without `layout=` raises `TypeError`. |
 | `test_hv_sensitivity.py` (new) | `accumulate_sensitivity` known answer on hand-built rows: distance-0 rows counted per quarter and absent from `rd_no0`; a row with a predator at distance 2 absent from `rdpf`, at distance 3 present, with no predator (inf) present; `aimed_response`'s state classifier gives predator-near precedence; statistic thresholds from 2/3 nat = 0.3 / 0.9 / 1.6286 for the three layouts. |
-| `test_hv_readings.py` (new) | S1 quarter contrast recovers a planted slope difference (synthetic episodes, q3 slope 5 pp/nat, q0 1 pp/nat → 4 ± 0.3); GLM product term has the planted sign; the seed-join assertion fires on misaligned arrays; population regex: `…_rppo_hv1chm_t1none_s42` is **not** matched as world `hv1ch`; world/layout mismatch refused; golden-stamp gate refuses on a changed source hash. |
-| `test_hv_verdict.py` (new) | stage 1: complete separation with \|Δ\| ≥ min → established; separation with \|Δ\| < min → top-up; one overlapping seed → top-up; stage 2: U matches `scipy.stats.mannwhitneyu` on random data; U ≤ 4 + min → established; Welch bound short of min → refuted; U ≤ 4 in the opposite direction → refuted; predicted-negative outcome (P2d) uses the lower side; contrast C is never "established"; 4 v 4 → "not evaluable"; anchor check refuses a `tmp_path` copy of the study doc with "**3 pp**" changed to "**2 pp**"; `power()` reproduces the study's power table rows within ±3 points at 40,000 draws, fixed seed: P1 +3 pp / SD 1.4 → 59 % established overall, 5 % wrongly refuted; P1 0 → < 1 % false positive, 92 % correctly refuted; P2 +2 pp / SD 1.5 → 51 %; P2 0 / SD 2.67 → 7 % false positive, 27 % correctly refuted. (That table was computed by the designer and independently reproduced by plan-reviewer; matching it is evidence the implementation is the rule the study registered, not a re-derivation of this code.) |
+| `test_hv_readings.py` (new) | S1 quarter contrast recovers a planted slope difference (synthetic episodes, q3 slope 5 pp/nat, q0 1 pp/nat → 4 ± 0.3); the matched-control variant recovers a planted channel-1 slope while channel 2 carries a separate planted effect; GLM product term has the planted sign; the seed-join assertion fires on misaligned arrays; `statistic_equals_intensity` false / true / true for the three layouts; S2 sextile cross-run assertion fires when one run's cut points differ; world/layout mismatch refused; golden-stamp gate refuses on a changed source hash; **output-root guard** refuses `--out-root results/analysis/ladder`, a relative path, and a path outside `results/analysis/hypervigilance/` (R7). |
+| `test_hv_population.py` (new, Rev 1 R3) | `make_population` on a `tmp_path` markdown manifest + fake run dirs (each with `models/config.yaml` and a store dir): rows `…_rppo_hv1ch_t1none_s42` status `failed` and `…_rppo_hv1ch_t1none_s42_r2` status `completed` → the cell resolves to the `_r2` run and its store; both `completed` → `readings` refuses as ambiguous; a `…_rppo_hv1chm_t1none_s42` dir is never classified as world `hv1ch`; `completed (not relaunched; stores re-collected)` parses as `completed`; a `planned` row with no run dir is skipped; regex/entry disagreement refused. |
+| `test_hv_verdict.py` (new) | stage 1: complete separation with \|Δ\| ≥ min → established; separation with \|Δ\| < min → top-up; one overlapping seed → top-up; stage 2: U matches `scipy.stats.mannwhitneyu` on random data; U ≤ 4 + min → established; Welch bound short of min → refuted; U ≤ 4 in the opposite direction → refuted; predicted-negative outcome (P2d) uses the lower side; contrast C is never "established" and never in `top_up_required`; 4 v 4 → "not evaluable". **S4 bound (R2), hand-computed:** predator-effect seeds treated [−1, −2, −3] vs reference [0, 0, 0]: Δ = −2, SE = 1/√3 = 0.5774, df = 2, t₀.₉₅ = 2.920, lower bound −3.686 → "S4 may have fallen"; treated [0, −1, −2]: lower bound −2.686 → "did not fall"; the bound is taken on the stage-2 seed set when P1 was decided at stage 2. **Absolute-sign bound (R2):** P2 seeds [1, 2, 3] → mean 2, lower bound 0.314 → above 0; [−1, 0, 1] → −1.686 → not above 0, and with an established Δ flags "weakens boldness". **C-sign:** one case per bullet plus "no registered reading". **Anchors (R8):** refuses a `tmp_path` copy of the study doc with the §5.3 "**3 pp**" changed to "**2 pp**"; also refuses a copy where the §5.3 text is removed but the same sentence survives in a feedback section (slice restriction). `power()` reproduces the study's power table within ±3 points at 40,000 draws, fixed seed: P1 +3 pp / SD 1.4 → 59 % established overall, 5 % wrongly refuted; P1 0 → < 1 % false positive, 92 % correctly refuted; P2 +2 pp / SD 1.5 → 51 %; P2 0 / SD 2.67 → 7 % false positive, 27 % correctly refuted. (That table was computed by the designer and independently reproduced by plan-reviewer; matching it is evidence the implementation is the registered rule, not a re-derivation of this code.) |
 
 Unit tests must not read the 1 M-episode stores; the store-scale checks are the golden check and the
 checkpoints below.
@@ -454,21 +583,28 @@ checkpoints below.
 
 - `docs/environment/SCRIPTS_DEPENDENCY_MAP.md` (Maintenance Contract — files added under `scripts/`):
   - **new rows**: `scripts/analysis/aimed_response.py` (one level deep, cwd-relative like
-    `rabbit_avoidance.py`; imports `hiding_drivers` and `core/{env,store,scan}`; subprocess callee of
-    `readings.py`; unit-tested by `test_hv_sensitivity.py`); `scripts/analysis/studies/hypervigilance/`
-    `readings.py`, `verdict.py`, `golden_check.py` (**three** levels deep, `ROOT` walks four `..` — the §0
-    depth hazard; `readings.py` subprocess-invokes `hiding_drivers.py`, `collect_arm_data.py`,
-    `rabbit_avoidance.py`, `aimed_response.py` with `sys.executable`; `verdict.py` reads the study doc and
-    imports `readings`/`aimed_response` constants; `golden_check.py` shells out to `core/golden.py` and
-    `git show`); the three new test files as callers.
+    `rabbit_avoidance.py`; `sys.path`-inserts its own directory and `core/`, imports `hiding_drivers`
+    (`find_stores`) and `core/{env,store,scan}`; subprocess callee of `readings.py` and
+    `golden_check.py`; unit-tested by `test_hv_sensitivity.py`); `scripts/analysis/studies/hypervigilance/`
+    `make_population.py`, `readings.py`, `verdict.py`, `golden_check.py` (**three** levels deep, `ROOT`
+    walks four `..` — the §0 depth hazard; `readings.py` subprocess-invokes `hiding_drivers.py`,
+    `collect_arm_data.py`, `rabbit_avoidance.py`, `aimed_response.py` with `sys.executable` and an
+    explicit absolute `LADDER_OUT_ROOT`; `make_population.py` reads the study doc's Launch Manifest and
+    imports `hiding_drivers.find_stores`; `verdict.py` reads the study doc's §5.2–§5.3 and imports
+    `readings`/`aimed_response` constants; `golden_check.py` shells out to `core/golden.py`, to
+    `git show <base>:scripts/analysis/hiding_drivers.py`, and to the three sweeps); the five new test
+    files as callers.
   - **amended rows**: `core/env.py` (adds `scent_spec`; `smell_channels` is now a two-channel-only wrapper;
     new importers `hiding_drivers.py`, `figures/_common.py`, `aimed_response.py`, `readings.py`);
     `hiding_drivers.py` (the row at line 285 says it "imports only numpy/pyarrow/yaml/statsmodels/scipy" —
     it now `sys.path`-inserts `scripts/analysis/core` and imports `env`; `aggregate` takes a `ScentSpec`;
     `fit_glms` requires `layout=`; new module-level `quasi_binomial_fit`; writes `scent.json`; new
-    subprocess caller `readings.py`, new importer `aimed_response.py`); `collect_arm_data.py` (writes
-    `<arm>_sensitivity.json`; uses `scent_spec`; new subprocess caller `readings.py`);
-    `rabbit_avoidance.py` (new subprocess caller `readings.py`); and the "Last updated" line.
+    subprocess callers `readings.py`, `golden_check.py` (which also runs the base-commit copy); new
+    importers `aimed_response.py`, `make_population.py`; new test caller
+    `test_hiding_drivers_layout.py`); `collect_arm_data.py` (writes `<arm>_sensitivity.json`; uses
+    `scent_spec`; new subprocess callers `readings.py`, `golden_check.py`; **its CLI is unchanged — no
+    block limit was added**, R4); `rabbit_avoidance.py` (new subprocess callers `readings.py`,
+    `golden_check.py`); and the "Last updated" line.
 - `scripts/analysis/supplementary/README.md`: one line under the `falsealarm.py` row — "run-agnostic
   successor: `scripts/analysis/aimed_response.py`"; the archived script itself is not changed.
 - This plan's Implementation Report.
@@ -482,53 +618,51 @@ checkpoints below.
   `core/env.smell_channels` (from `git show`) and the new `scent_spec` agree — every config the old
   function accepted is `difference` with the same `(a, b)`, every config it refused is refused. Report the
   count per layout. Any disagreement → stop.
-- [ ] **C2 — Unit tests.** `pytest tests/analysis/test_core_env.py tests/analysis/test_hv_*.py` green;
-  the full `tests/analysis/` suite still green. Each new test was seen to fail once against the pre-change
-  code or a planted defect (record which).
-- [ ] **C3 — CSV identity from the lifted fit (cheap, no sweep).** Run the fit stage of the old and new
-  `hiding_drivers.py` on a copy of the existing a01 `aggregate.npz`: `univariate.csv` and
-  `multivariate.csv` byte-identical (`cmp`).
+- [ ] **C2 — Unit tests.** `/home/vncuser/miniconda3/envs/grid_world_pain/bin/python -m pytest
+  tests/analysis/test_core_env.py tests/analysis/test_hiding_drivers_layout.py tests/analysis/test_hv_*.py`
+  green; the full `tests/analysis/` suite still green. Each new test was seen to fail once against the
+  pre-change code or a planted defect (record which).
+- [ ] **C3 — G3 reference regenerated (Rev 1, R1; one full a01 sweep, not cheap).** `golden_check.py
+  --base <BASE>` runs the base commit's `hiding_drivers.py` on the a01 store into
+  `_golden_scratch/g3_reference/`. Record its wall-clock and the reference `aggregate.npz` key count
+  (expected 41 = the 35 of the Aug-25 file + the six `01fe5701` columns; state the actual number).
 - [ ] **C4 — G1 ladder gate.** Three sensor-ladder arms, `REPRODUCED` on JSON and npz.
 - [ ] **C5 — G2 clue page.** Both Wave cells `REPRODUCED`; `hiding_shift` values equal; the fourteen
   published `hide_s` values span −1.9 … +0.3; `rabbit_avoidance` rerun equal.
-- [ ] **C6 — G3 a01.** Aggregate `REPRODUCED`; published values match at printed precision. If *food per
-  step*, *starved* or *killed* do not match with the definitions in File Changes §6, **stop and report**
-  the definition tried and both values — do not search for a definition that fits.
-- [ ] **C7 — Golden stamp written** only after C4–C6 all pass (`golden_check.py` exit 0).
-- [ ] **C8 — Smoke on existing stores.** `readings.py --population basicq2 --labels w2_lvl05_control
-  --max-blocks 2` completes; `readings.json` has every reading or a NaN with a reason; accounting rows
-  present. Then the full `basicq2` and `cmp10m` populations (these are the combined page's existing-store
-  inputs and the study's yardstick).
-- [ ] **C9 — Anchors on the real study doc** (after precondition P0): `verdict.py --yardstick` runs on
-  `cmp10m`; the anchor check passes on the revised study doc.
-- [ ] **C10 — First treated store (after collection starts).** On the first `hv1ch` and the first
-  `hv1chm` store: `readings.py --population hvsmell --labels <one each> --max-blocks 2` reports layouts
-  `single` / `sum`, the store-side check finds channel 2 exactly 0 for every active animal in `hv1ch`,
-  and the recorded empirical class means sit near study §2.2's clipped means (predator/rabbit total
-  0.68/0.50 single-channel, 1.30/1.05 matched). This is the first time the new layouts touch real data;
-  it is a check on the tooling, not a reading of results.
-- [ ] **C11 — Timing.** Wall-clock of `collect_arm_data.py` on `w2_lvl05_control` before (from the G2
-  run of the pre-change code, or a separate run) and after the S6 accumulators; and of one full
-  `readings.py` cell. Record both.
+- [ ] **C6 — G3 a01.** New-code aggregate `REPRODUCED` against the C3 reference; `univariate.csv`,
+  `multivariate.csv`, `summary.json` byte-identical to the reference's; published values match at printed
+  precision (candidate and Aug-25 CSV both give +1.6 / +1.7). If *food per step*, *starved* or *killed* do
+  not match with the definitions in File Changes §6, **stop and report** the definition tried and both
+  values — do not search for a definition that fits. `core/golden.py` unchanged (`git diff` empty).
+- [ ] **C7 — Golden stamp written** only after C3–C6 all pass (`golden_check.py` exit 0).
+- [ ] **C8 — First full cell on existing stores (Rev 1, R4: no smoke mode).** `make_population.py` for
+  `basicq2`; `readings.py --stage check` on all cells (seconds each); then `--stage all --labels
+  w2_lvl05_control` — four full sweeps of one 1 M-episode store; record the wall-clock (it sets the budget
+  for the rest). `readings.json` has every reading or a NaN with a reason; accounting rows present. Then
+  the full `basicq2` and `cmp10m` populations (the combined page's existing-store inputs and the study's
+  yardstick), run serially.
+- [ ] **C9 — Anchors on the real study doc.** `verdict.py --yardstick` runs on `cmp10m`; the anchor check
+  passes on the study doc as of Revision 4 (`39420f2c`) or later; the post-hoc hv-control SD line is
+  present and labelled.
+- [ ] **C10 — First treated store (after collection starts).**
+  `make_population.py --from-study-doc` for `hvsmell`; `readings.py --stage check --labels <first hv1ch>
+  <first hv1chm>` reports layouts `single` / `sum`, finds channel 2 exactly 0 for every active animal in
+  `hv1ch`, and records empirical class means near study §2.2's clipped means (predator/rabbit total
+  0.68/0.50 single-channel, 1.30/1.05 matched). Only then `--stage all` on those two cells. This is the
+  first time the new layouts touch real data; it is a check on the tooling, not a reading of results.
+- [ ] **C11 — Timing.** Wall-clock of `collect_arm_data.py` on `w2_lvl05_control` before (the pre-change
+  code's G2 run) and after the S6 accumulators; and of one full `readings.py` cell (C8). Record both.
 
 **Speed.** Analysis-only change, no training path touched. The only hot-loop addition is S6 in
 `collect_arm_data`; with `np.bincount` it should cost well under 10 %. A slowdown above 15 % on C11 is a
 blocker to be discussed before merge.
 
-## Open questions (for `experiment-designer`; the tooling computes every variant, so none blocks implementation except P0)
+## Open questions
 
-- **Q1 (= P0).** Fold plan-review N1/N2/N5 into study §5.3 (contrast C two-sided and descriptive; S4 read
-  with sign on contrast B and "unchanged" defined by a bound; refutation bound on the predicted side).
-- **Q2.** S2 "bottom vs top sixth" in the treated worlds: a01's sixths were fixed bins of the scent
-  *range*, which cannot be carried to the single-channel world (its range tops out below a01's top bin
-  on the evidence scale). Tooling reports within-world population sextiles everywhere, plus a01's bins
-  in the control. Which is registered?
-- **Q3.** S1 quarter-contrast slope: tooling uses a weighted least-squares slope of the early bush share
-  on scent evidence (direct percentage points). The alternative is the quasi-binomial slope linearised at
-  each quarter's own hiding rate, which lets a rate difference between quarters leak into the contrast.
-  Confirm.
-- **Q4.** S3 distances: same row (a01, needed for the golden) or deciding row (study §5 preamble)?
-  Tooling reports both.
+- **Q1–Q4 — answered** by study Revisions 2–3 (A5). Kept here for the record: contrast C two-sided and
+  descriptive; S4 by the one-sided lower bound above −3 pp; S2 within-world sextiles; S1 weighted least
+  squares; S3 deciding row primary.
+- **Q6 — answered** by study Revision 4 (`39420f2c`): S1's tested Δ uses the matched control reading.
 - **Q5 (for the user).** The clue page's controlled-scene figure (D3) reads evaluation-probe runs, not
   trajectory stores; nothing in the hv study produces them and the study did not pre-register them.
   Re-doing D3 on the hv runs needs scene evaluations on their checkpoints — a separate compute job and
@@ -547,12 +681,31 @@ blocker to be discussed before merge.
 
 ## Hand-off
 
-1. `plan-reviewer` reviews this plan before the user approves it.
-2. `experiment-designer`: P0 (study Revision 2 with N1/N2/N5), Q2–Q4, and the back-link from study §5.6
-   to this plan.
+1. `plan-reviewer` re-checks Revision 1 before the user approves it.
+2. `experiment-designer`: nothing outstanding (Q1–Q4 answered by study Revisions 2–3, Q6 by Revision 4).
 3. `developer` implements; `code-reviewer` optional (no JAX; NumPy/statsmodels only).
 4. `senior-developer` verifies against this plan.
 5. `experiment-analyzer` reads results only after C7 (golden stamp) and C9 (yardstick) are ticked.
+
+## Revision log
+
+- **2026-10-01 — first draft** (senior-developer, commit `27d63da3`).
+- **2026-10-01 — Revision 1** (senior-developer), after `plan-reviewer` NOT READY
+  ([[plan_hypervigilance_analysis_tooling]], commits `62242241`, `92c7f2b8`). No code exists yet. Changes:
+  G3 reference regenerated from the base commit's `hiding_drivers.py`, Aug-25 files kept for the
+  printed-precision check only, C3 re-budgeted as one full sweep, `golden.py` untouched (R1); A5 rewritten
+  against study Revisions 2–3, P0 marked satisfied, S4 "did not fall" = one-sided 95 % Welch lower bound
+  above −3 pp at the deciding stage, C-sign classification added, tests for the S4 and absolute-sign bounds
+  (R2); population resolution through a manifest JSON with a status column, new `make_population.py`,
+  `_s42` + `_s42_r2` test (R3); smoke mode dropped instead of adding a block limit to golden-gated files,
+  new `--stage check`, C8/C10 re-budgeted (R4); S1 matched control reading and
+  `statistic_equals_intensity` (R5, A6; the designer registered the matched reference in study Revision 4,
+  `39420f2c`, while this revision was being written, and the plan follows it); Revision 3 cited for the
+  three primary-variant choices, deciding row primary in S3, S2 sextile cross-run assertion (R6); explicit
+  absolute `LADDER_OUT_ROOT` and output-root guard with a test (R7); anchors copied verbatim from the study
+  and restricted to its §5.2–§5.3 slice, `fit_glms(layout="single")` test (R8); `aimed_response.py`
+  import path stated (R9); pytest via the project interpreter (R10); post-hoc hv-control seed SD printed
+  beside the frozen yardstick (reviewer A1).
 
 ## Implementation Report
 
@@ -607,3 +760,24 @@ losing re-derivable live aggregates.
 **What flips it:** R1, R2, R3, R4, R7 in this plan; R5 registered by the designer before C10 (R6 already is).
 
 *Reviewed by: plan-reviewer*
+
+## Response to plan-reviewer
+
+*senior-developer, 2026-10-01, Revision 1. Each finding and where it now lives.*
+
+| # | Response | Where |
+|---|---|---|
+| R1 | Accepted. G3's reference is produced by the base commit's `hiding_drivers.py` on the a01 store (one full sweep into scratch); the new code's aggregate is compared with `golden.py` unchanged and the three CSV/JSON products with `cmp`. The Aug-25 files serve only the printed-precision check. C3 is now that sweep, not a "cheap" refit. | A4 G3 rows + paragraph; File Changes §8; C3, C6, C7 |
+| R2 | Accepted. A5 rewritten against Revisions 2–3; P0 satisfied; S4 = one-sided 95 % Welch lower bound of Δ above −3 pp on the seed set of the stage that decided P1; C-sign classification (\|C\| < 3 / ≤ −3 / ≥ +3 pp) with the "no registered reading" fallback; hand-computed tests for the S4 bound and the absolute-sign bound. | A5; Precondition P0; §7; §9 `test_hv_verdict.py` |
+| R3 | Accepted. `make_population.py` writes a manifest with a status column (from the study's Launch Manifest for hvsmell); `readings.py` reads `completed` cells only, refuses two completed candidates for one key, and keeps the anchored tag regex (with an optional `_r\d+` suffix) as a cross-check. Test covers `_s42` failed + `_s42_r2` completed, and both completed. | §6, §6b; §9 `test_hv_population.py` |
+| R4 | Smoke mode dropped (and `--max-blocks` removed from `aimed_response.py`); no change to the golden-gated sweeps or `core/scan`. A cheap `--stage check` (config + first episodes shard) replaces the smoke look; C8/C10 are full-cell runs with recorded wall-clock. | §5, §6; C8, C10; §10 |
+| R5 | Accepted. S1 matched control reading (channel 1 on the single-channel evidence scale, channel 2 as covariate, same estimator code); `statistic_equals_intensity` in every `readings.json`; study Revision 4 (`39420f2c`) registered the matched reference as deciding; `verdict.py` anchors that, reports the plain reference as descriptive, and flags disagreement. | A3, A6; §6 S1 (iii); §7; Q6 |
+| R6 | Cited: Revision 3 is the anchor source for the S2 sextiles, the S1 weighted-least-squares slope and the S3 deciding row; all three anchored; S2 cut-point equality across runs of a world asserted. | A5; §5; §6 S2; §7 |
+| R7 | Accepted. `--out-root` must resolve under `results/analysis/hypervigilance/`; the child env sets `LADDER_OUT_ROOT` explicitly to an absolute path under it and the driver refuses the live ladder root; same in `golden_check.py` under `_golden_scratch/`; tested. | §6 output-root guard; §8; §9 `test_hv_readings.py` |
+| R8 | Anchors copied verbatim from the study, searched in the §5.2–§5.3 slice only; a test proves a quotation in a feedback section cannot satisfy an anchor; `fit_glms(layout="single")` test added. | §7; §9 `test_hiding_drivers_layout.py`, `test_hv_verdict.py` |
+| R9 | `aimed_response.py` inserts its own directory and `core/` on `sys.path`; recorded in the map row. | §5; §10 |
+| R10 | Fixed. | §9 header; C2 |
+| A1 | The verdict prints the hv control world's own three-seed SD beside each frozen yardstick SD, labelled post hoc and never used by the rule. | §7 |
+| A2 | Unchanged: mismatch on food/starved/killed is reported, not tuned. | C6 |
+| A3 | `readings.py --stage check` refuses a cell whose store is missing, and C10 starts with the hvsmell population built from the study manifest, so a not-yet-collected C01/C02 store is refused rather than substituted. | §6; C10 |
+| A4 | Measured at C11; > 15 % is a blocker. | C11 |
