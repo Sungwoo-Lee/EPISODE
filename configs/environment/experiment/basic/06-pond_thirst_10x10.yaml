@@ -33,6 +33,9 @@
 #     quarter of the vector, so from afar the pond smells like ONE item, not four. Channel 4
 #     is renamed "Odour C (water-leaning)" below; channel 0 stays "Food", now shared with
 #     water. Deliberately less clear than a dedicated water channel (user decision).
+#     Channel 4 is also the `tree` channel (tree.properties [0, 0, 0, 0, 1.0]); trees have
+#     count 0 in every maintained level, so today only the pond emits on it. A water world
+#     that gives trees a count mixes the two sources on one channel.
 #
 # It does NOT redeclare `obstacles:` (lists replace wholesale, so a partial list here would
 # drop level 05's campfires or the bush `blocks_animals` flag).

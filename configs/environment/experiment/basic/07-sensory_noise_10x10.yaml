@@ -106,7 +106,7 @@ perceptual_noise:
       mode: "constant"
       sigma: 0.0
       injury_noise_scale: 0.0
-# --- THREAT channel: clear when healthy, heavily degraded when injured (the lever) ---
+    # --- THREAT channel: clear when healthy, heavily degraded when injured (the lever) ---
     olfaction:
       mode: "state_dependent"
       sigma: 0.15

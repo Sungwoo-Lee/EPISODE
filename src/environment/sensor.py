@@ -611,7 +611,7 @@ def get_observation_breakdown(params: EnvParams):
     # get_observation above (it raises if the two orders disagree).
     if params.water_enabled:
         breakdown["Hydration"] = 1
-# 4. Interoceptive Nociception — interoceptive (delayed/passthrough injury)
+    # 4. Interoceptive Nociception — interoceptive (delayed/passthrough injury)
     if params.interoceptive_nociception_enabled:
         breakdown["Interoceptive Nociception"] = 1
     # 5. Extero Nociception — exteroceptive

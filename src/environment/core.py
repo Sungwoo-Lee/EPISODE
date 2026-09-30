@@ -1893,8 +1893,10 @@ def jax_reset(params: EnvParams, key: jax.random.PRNGKey) -> EnvState:
         water_pos = _table[_idx][None, :] + _offs                               # [h*w, 2]
         pond_mask = jnp.zeros(_H * _W, dtype=jnp.bool_).at[
             water_pos[:, 0] * _W + water_pos[:, 1]].set(True)
-        assert params.placement_mode == 'per_entity', \
-            "water needs placement.mode per_entity (the loader refuses per_type)"
+        if params.placement_mode != 'per_entity':   # static; the loader refuses it first
+            raise ValueError(
+                f"water.enabled: true is not supported with environment.placement.mode: "
+                f"{params.placement_mode!r}. Use placement.mode: per_entity.")
 
     # 1. Agent Position
     random_pos = jax.random.randint(agent_key, (2,), 0, jnp.array([params.height, params.width]))
