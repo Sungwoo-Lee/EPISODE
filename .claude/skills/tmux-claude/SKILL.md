@@ -56,6 +56,17 @@ Both are expanded unquoted, so they can hold several flags, but a single value t
 cannot be passed. The script prints only whether Remote Control is on; the bridge ID is in
 `~/.claude/sessions/<pid>.json` if needed.
 
+## Typing into a pane
+
+Before sending a message with `tmux send-keys`, check whether the text after `❯` on the prompt line is
+Claude's greyed-out **suggestion** or a **draft the user typed**. Typing replaces a suggestion, but it is
+appended to a draft and then sent together with it. Check with
+`tmux capture-pane -e -p -t <target> | grep -a '❯' | tail -1 | cat -v`: text wrapped in `^[[2m` (dim) is a
+suggestion. Anything else is the user's draft, so don't type into that pane; ask the user. Send
+messages with `send-keys -l "<text>"` (literal), then `Enter` separately. Start the message with who is
+sending it (e.g. `[From the Admin session, on the user's instruction]`), so the receiving session knows
+it didn't come from the user directly.
+
 ## Notes
 
 - Two panes can hold the same line of work: a conversation that was `/compact`ed and resumed
