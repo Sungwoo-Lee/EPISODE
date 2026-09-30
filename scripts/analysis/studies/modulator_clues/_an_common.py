@@ -299,3 +299,33 @@ def write_data(stem: str, out: str, doc: dict, source: str, test: bool, rows: li
     with open(os.path.join(out, f"{stem}.data.txt"), "w") as fh:
         fh.write("\n".join(lines) + "\n")
     print(f"  wrote {rel(os.path.join(out, stem + '.data.txt'))} ({len(rows)} rows)")
+
+
+# ------------------------------------------------------------------------------ primer -----
+#: Status line of a primer figure: a toy example drawn to explain a method. It reads no driver
+#: output and carries no verdict, so it has no decision-rules sha; the builder accepts this status
+#: only for a figure placed inside the page's primer block.
+ILLUSTRATION = ("illustration — toy numbers made by the script to explain a method; "
+                "not a study result and not read from any analysis output")
+
+
+def write_illustration(stem: str, out: str, source: str, rows: list[dict]):
+    """<stem>.data.txt for a primer figure: the same row format as `write_data`, with the
+    illustration status and `decision_rules: none (illustration)`."""
+    if not rows:
+        raise SystemExit(f"{stem}: a figure must declare how much data it used (guide 11b)")
+    lines = [f"status: {ILLUSTRATION}", "decision_rules: none (illustration)", f"source: {source}"]
+    for r in rows:
+        cells = [str(r["what"]), f"{r['used']:,}", f"{r['total']:,}", pct(r["used"], r["total"]),
+                 str(r["note"])]
+        if any("|" in c or "\n" in c for c in cells):
+            raise SystemExit(f"{stem}: a data cell holds '|' or a newline: {cells}")
+        lines.append("row: " + "|".join(cells))
+    with open(os.path.join(out, f"{stem}.data.txt"), "w") as fh:
+        fh.write("\n".join(lines) + "\n")
+    print(f"  wrote {rel(os.path.join(out, stem + '.data.txt'))} ({len(rows)} rows)")
+
+
+def illustration_footer(fig, y: float = 0.0):
+    fig.text(0.01, y, "ILLUSTRATION — toy numbers chosen to explain the method; not a study result",
+             ha="left", va="top", fontsize=house.FS_LABEL, color=house.INK_2)

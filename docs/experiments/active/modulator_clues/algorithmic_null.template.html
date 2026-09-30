@@ -56,6 +56,15 @@ table.datause td code { overflow-wrap:break-word; }
 .figscroll img { min-width:640px; }
 /* The section-03 verdict table has four prose columns: a floor, with its own scroll cue. */
 table.verdicts { min-width:520px; }
+/* The primer: a stated addition to the house sheet, which has no collapsible component. Folded by
+   default so the results stay first; each part opens on its own. Every colour is a house token. */
+details.primer { border:1px solid var(--rule); background:var(--surface); padding:14px 18px; min-width:0; }
+details.primer > summary { font-family:var(--f-head); font-weight:600; font-size:16px; cursor:pointer;
+  color:var(--ink); }
+details.primer-sub { border-top:1px solid var(--line); padding:12px 0 4px; min-width:0; }
+details.primer-sub > summary { font-weight:600; cursor:pointer; color:var(--ink); }
+.primer-body { display:flex; flex-direction:column; gap:12px; padding-top:12px; min-width:0; }
+.primer-body pre { overflow-x:auto; font-size:13px; }
 </style>
 
 <div class="wrap">
@@ -245,12 +254,244 @@ FiLM:       h = ReLU( &gamma;(c)&middot;(W_x&middot;x + b) + &beta;(c) )</pre>
     move together from world to world (A4) was measured but gets no verdict: a registered data-quality check failed on one world (see A4).</p>
   </div>
 
+  <!-- PRIMER START -->
+  <details class="primer">
+  <summary>Primer: how the two similarity measures work &mdash; toy examples, the maths, and the fMRI analogy</summary>
+  <div class="primer-body">
+  <p>Figure A1 scores how alike two agents' layers are in two ways, linear predictivity and CKA. This
+  primer builds both from toy examples small enough to check by hand. Each part opens on its own. The
+  toy numbers are made up to explain the methods; none of them is a result of this study.</p>
+
+  <details class="primer-sub">
+  <summary>1. The problem: two networks' units do not line up</summary>
+  <div class="primer-body">
+  <p>Say two agents both track hunger (h) and danger (d) in a two-unit layer. Agent A stores
+  <code>[h, d]</code>; agent B stores <code>[h+d, h&minus;d]</code>. They hold exactly the same
+  information, yet unit 1 of A looks nothing like unit 1 of B. Which unit carries what, how quantities
+  are mixed, and how strongly each unit responds are arbitrary outcomes of training. So neither method
+  compares unit to unit; both compare whole layers.</p>
+  <p>The raw material is the same for both. Every agent is replayed on the <strong>same</strong>
+  recorded moments, so row i means the same moment for every agent. For one layer:</p>
+  <pre>X : n &times; p     agent A's activity   (n moments, p units)
+Y : n &times; q     agent B's activity   (same n moments, q units)</pre>
+  <p>The n rows are single time steps pooled from many probe episodes, not one continuous series. The
+  order of rows plays no part; episodes matter only for keeping training rows apart from held-out rows.
+  In this study n is 5,000 and p = q = 128.</p>
+  </div>
+  </details>
+
+  <details class="primer-sub">
+  <summary>2. Linear predictivity: can one layer be rebuilt from the other? (decides the verdict)</summary>
+  <div class="primer-body">
+  <div class="col stages">
+    <div class="stage"><div class="s">1</div><div class="b"><div class="t">Fit q regressions at once</div><div class="d">Each of B's q units gets its own weight vector, predicted from all p units of A. Stacked side by side they form one matrix, solved by ridge regression (least squares with a small penalty &lambda; that keeps the weights stable). The q fits share the same input and <strong>one</strong> &lambda; for the whole layer, chosen from 19 candidates by cross-validation inside the training episodes.</div></div></div>
+    <div class="stage"><div class="s">2</div><div class="b"><div class="t">Score on episodes the fit never saw, pooled over units</div><div class="d">Sum every unit's squared error and every unit's variance, then take one ratio. That equals a weighted mean of the q per-unit R&sup2; values, each weighted by how much its unit varies, so a nearly silent unit counts for almost nothing.</div></div></div>
+    <div class="stage"><div class="s">3</div><div class="b"><div class="t">Both directions; keep the smaller</div><div class="d">Repeat with B predicting A. The smaller of the two is the pair's predictivity, because &ldquo;interchangeable&rdquo; has to hold both ways.</div></div></div>
+    <div class="stage"><div class="s">4</div><div class="b"><div class="t">Repeat and resample</div><div class="d">The split into training and held-out episodes is redone 5 times and the score averaged; episodes are resampled 2,000 times per split to give the score its uncertainty.</div></div></div>
+  </div>
+  <pre>W        = (X&#7488;X + &lambda;I)&#8315;&sup1; X&#7488;Y                    p &times; q   (one column per unit of B)
+R&sup2;(A&rarr;B) = 1 &minus; &Sigma;&#11388; SSE&#11388; / &Sigma;&#11388; SST&#11388;                  = &Sigma;&#11388; (SST&#11388; / &Sigma;&#8342; SST&#8342;) &middot; R&sup2;&#11388;
+P(A,B)   = min( R&sup2;(A&rarr;B), R&sup2;(B&rarr;A) )</pre>
+  <p class="foot">SSE&#11388; is unit j's squared prediction error on held-out moments; SST&#11388; is its
+  variance around its mean. A plain, unweighted mean of the per-unit R&sup2; is shown in Figure A1b
+  as a check; on the actor and critic it is unusable, because units that fire on a fraction of a
+  percent of moments have unstable R&sup2; values (one missed spike can push a unit to &minus;7).</p>
+  <p>Why both directions matter shows in the toy scores below: when B knows something A does not,
+  B rebuilds A perfectly but A cannot rebuild B, and only the minimum catches it.</p>
+  <figure>
+    <p class="cue" hidden>&larr; wider than the screen &mdash; scroll it sideways, or click it to open it full size</p>
+    <div class="scroll figscroll"><img data-fig="pr02_toy_scores" alt="Grouped horizontal bars for five toy relationships between network A holding hunger and danger and five versions of network B. For each, four bars: R-squared predicting B from A, predicting A from B, their minimum, and linear CKA. Only the rescaled case lowers CKA alone; only the case where B knows more lowers the minimum."></div>
+    <p class="zoomhint">Click the figure to view it full size</p>
+    <figcaption>
+      <span><b>Figure P1 &mdash; The two measures on five toy relationships.</b></span>
+      <span><b>Axes.</b> Horizontal: the score, 0 to 1 with no unit, where 1 means the two layers match fully; for the R&sup2; bars it is the fraction of variance explained. Vertical: no quantity; one group of four bars per toy version of network B, named by what its units hold (h hunger, d danger, p a third quantity A does not have).</span>
+      {{DATA:pr02_toy_scores}}
+    </figcaption>
+    <p class="prov">Reproduce: <code>python scripts/analysis/studies/modulator_clues/pr02_toy_scores.py</code></p>
+    <div class="howto">
+      <p class="eyebrow">How it is computed</p>
+      <p>The script draws 2,000 toy moments in which hunger, danger and a third quantity are independent random numbers between 0 and 1. Network A's layer is the two columns hunger and danger. Each version of network B is built from the same moments: an exact copy; a mixture of the two quantities; each unit multiplied by its own factor, 3 and 0.5, which is what a modulator's per-unit gain does; the copy plus the third quantity; and a copy with danger squared. For each version the script fits an ordinary least-squares regression, a straight-line map with an intercept, from A to B and from B to A, and computes R&sup2;, the fraction of B's variance the map recovers, pooled over units so that each unit counts by its variance. The dark bar is the smaller of the two directions, the statistic that decides in this study. CKA is computed from the same two tables without fitting anything. Unlike the study, the toy scores the fit on the rows it was fitted on and uses no penalty: with at most three predictors and 2,000 rows, the difference is negligible. The figure does not show how the scores behave on real network layers, which have 128 units and far noisier structure.</p>
+    </div>
+  </figure>
+  </div>
+  </details>
+
+  <details class="primer-sub">
+  <summary>3. CKA step by step: comparing who-looks-like-whom tables</summary>
+  <div class="primer-body">
+  <p><strong>The Frobenius norm is &ldquo;length&rdquo; for a table of numbers.</strong> Line every
+  entry up into one long list and take its ordinary Pythagorean length:
+  <code>&#8214;M&#8214;_F = &radic;(&Sigma; M&#8336;&#8348;&sup2;)</code>. For example, the table
+  <code>[[3, 4], [0, 0]]</code> has length &radic;(9 + 16) = 5. CKA uses it to measure the angle between
+  two tables.</p>
+  <div class="col stages">
+    <div class="stage"><div class="s">0</div><div class="b"><div class="t">Inputs</div><div class="d"><code>X</code>: n &times; p, network A. <code>Y</code>: n &times; q, network B. Same moments, same order.</div></div></div>
+    <div class="stage"><div class="s">1</div><div class="b"><div class="t">Centre each unit</div><div class="d">Subtract each unit's mean over the n moments. Sizes are unchanged: n &times; p and n &times; q.</div></div></div>
+    <div class="stage"><div class="s">2</div><div class="b"><div class="t">Build each network's similarity table</div><div class="d"><code>K = X X&#7488;</code> is (n &times; p)(p &times; n) = <strong>n &times; n</strong>; <code>L = Y Y&#7488;</code> is (n &times; q)(q &times; n) = <strong>n &times; n</strong>. Entry (a, b) is the dot product of moments a and b: positive when both deviate from the average in the same direction, negative when in opposite directions. p and q are used up here, so the two tables have the same size even when p &ne; q.</div></div></div>
+    <div class="stage"><div class="s">3</div><div class="b"><div class="t">Numerator: agreement</div><div class="d">Multiply matching entries of K and L and add all n &times; n products: one number. It grows when the tables agree in sign and size, and shrinks when they disagree in sign.</div></div></div>
+    <div class="stage"><div class="s">4</div><div class="b"><div class="t">Denominator: the two lengths</div><div class="d"><code>&#8214;K&#8214;_F</code> and <code>&#8214;L&#8214;_F</code>, two numbers. Dividing by them cancels how large each network's activity is, so only the direction of each table counts.</div></div></div>
+    <div class="stage"><div class="s">5</div><div class="b"><div class="t">CKA is the cosine between the two tables</div><div class="d">A number from 0 to 1: 1 when the tables point the same way, lower as they disagree.</div></div></div>
+  </div>
+  <pre>CKA(X, Y) = &Sigma;&#8336;&#8348; K&#8336;&#8348; L&#8336;&#8348;  /  ( &#8214;K&#8214;_F &middot; &#8214;L&#8214;_F )                          two n &times; n tables
+
+          = &#8214;Y&#7488;X&#8214;_F&sup2;  /  ( &#8214;X&#7488;X&#8214;_F &middot; &#8214;Y&#7488;Y&#8214;_F )                          q &times; p,  p &times; p,  q &times; q</pre>
+  <p>The second line is the same number (the trace of a product can be cycled), computed from much
+  smaller matrices: with n = 5,000 and 128 units, 128 &times; 128 instead of two tables of 25 million
+  entries. The code uses it.</p>
+  <p>In Figure P2, network A puts three moments at three points. B1 is A rotated and B2 is A rotated
+  and enlarged: their tables are A's table or a multiple of it, so CKA is 1. B3 stretches one unit and
+  squeezes the other. It holds exactly A's information, since each unit can be scaled back, but the
+  m1&ndash;m2 pair now dominates the table, and CKA falls to 0.81. That is the modulator's per-unit gain
+  in miniature, and it is why CKA does not decide the verdict. B4 merges two moments that A kept apart,
+  a real change in what the network distinguishes, and CKA falls further.</p>
+  <figure>
+    <p class="cue" hidden>&larr; wider than the screen &mdash; scroll it sideways, or click it to open it full size</p>
+    <div class="scroll figscroll"><img data-fig="pr01_cka_toy_geometry" alt="Five columns: network A and four versions of network B. Top row: three labelled points in a two-unit activity space. Bottom row: the three-by-three table of dot products between moments, with printed values and each table's Frobenius length. Column titles give CKA with A: 1.00, 1.00, 1.00, 0.81 and 0.60."></div>
+    <p class="zoomhint">Click the figure to view it full size</p>
+    <figcaption>
+      <span><b>Figure P2 &mdash; What CKA compares, on three moments and two units.</b></span>
+      <span><b>Axes.</b> Top row: horizontal is the activity of unit 1 and vertical the activity of unit 2, in the toy's arbitrary activity units; the grey cross marks zero. Bottom row: rows and columns are the three moments m1, m2 and m3; each cell prints the dot product of the two moments' centred activity, and its shading shows the entry's size regardless of sign.</span>
+      {{DATA:pr01_cka_toy_geometry}}
+    </figcaption>
+    <p class="prov">Reproduce: <code>python scripts/analysis/studies/modulator_clues/pr01_cka_toy_geometry.py</code></p>
+    <div class="howto">
+      <p class="eyebrow">How it is computed</p>
+      <p>Network A places three moments at fixed points chosen by hand, so that each point sits in a different direction from the centre. The four versions of network B are built from A: B1 turns the whole picture a quarter turn; B2 does the same and makes everything five times larger; B3 multiplies unit 1 by 3 and unit 2 by 0.5, the kind of per-unit rescaling a modulator's gain applies; B4 moves the first two moments onto the same point, so the network no longer tells them apart. For each layer the script subtracts each unit's mean over the three moments, then fills the table with the dot product of every pair of moments: large and positive when two moments sit in the same direction from the centre, negative when they sit in opposite directions. The number under each table is its Frobenius length, the square root of the sum of its squared entries. CKA with A is the sum of the products of matching entries of the two tables, divided by the product of their lengths: the cosine of the angle between the two tables read as long lists of numbers. The figure does not show predictivity, which is trivially perfect with three moments and two units.</p>
+    </div>
+  </figure>
+  </div>
+  </details>
+
+  <details class="primer-sub">
+  <summary>4. From scores to the word printed on a panel of Figure A1</summary>
+  <div class="primer-body">
+  <p>A score alone means little: 0.85 can be high for one layer and low for another. So every score is
+  read against the same yardsticks, computed on the same moments:</p>
+  <ul class="plainlist">
+    <li><strong>The ordinary band [L, U]:</strong> the range spanned by the 3 pairs of ordinary agents
+    trained from different seeds, with their bootstrap uncertainty. It says how alike two agents of the
+    <em>same</em> design get.</li>
+    <li><strong>The test pairs:</strong> the 6 modulated-versus-ordinary pairs at different seeds.</li>
+    <li><strong>The untrained floor:</strong> pairs of untrained networks fed the same moments. If the
+    ordinary band overlaps it, training made agents no more alike than chance wiring does, the test
+    cannot discriminate, and the statistic reads &ldquo;uninformative&rdquo;.</li>
+  </ul>
+  <p>Each panel gets its word by the rule in Figure P3. If the two designs were really one population,
+  all 6 test pairs would land below every ordinary pair about 1 time in 84.</p>
+  <figure>
+    <p class="cue" hidden>&larr; wider than the screen &mdash; scroll it sideways, or click it to open it full size</p>
+    <div class="scroll figscroll"><img data-fig="pr03_verdict_rule" alt="Three made-up panels in the style of Figure A1, titled different, same and undetermined at 3 seeds. Each shows three blue ordinary pairs inside a shaded band with a dashed left edge L, six orange modulated-versus-ordinary pairs, and an orange bar for their mean's interval."></div>
+    <p class="zoomhint">Click the figure to view it full size</p>
+    <figcaption>
+      <span><b>Figure P3 &mdash; How one panel earns its word.</b></span>
+      <span><b>Axes.</b> Horizontal: a similarity score, higher meaning more alike, in the units of whichever statistic the panel shows (no unit for either). Vertical: no quantity; rows are, top to bottom, the ordinary pairs, the modulated-versus-ordinary pairs, and the interval of those pairs' mean.</span>
+      {{DATA:pr03_verdict_rule}}
+    </figcaption>
+    <p class="prov">Reproduce: <code>python scripts/analysis/studies/modulator_clues/pr03_verdict_rule.py</code></p>
+    <div class="howto">
+      <p class="eyebrow">How it is computed</p>
+      <p>The positions are invented, one panel per word the registered rule can give; the script checks each panel against the rule as the rules file states it and refuses to draw a panel whose toy values would read differently. In the study, the blue dots are the three pairs of ordinary agents trained from different seeds, and the shaded band runs from the lowest to the highest end of their bootstrap intervals, the ranges their scores take when the episodes are resampled; its left edge is L. The orange dots are the six pairs of one modulated and one ordinary agent from different seeds, and the orange bar is the 5th-to-95th percentile range of those six pairs' mean across the resamples. A panel reads &ldquo;different&rdquo; when all six dots and the whole bar sit left of L. It reads &ldquo;same&rdquo; when at most two of the six dots sit left of L and the whole bar sits at or right of L. Everything in between reads &ldquo;undetermined at 3 seeds&rdquo;, a legal outcome rather than a failure: three seeds can only call a difference when the separation is complete. The figure does not show the untrained floor or the gate that turns a panel &ldquo;uninformative&rdquo;.</p>
+    </div>
+  </figure>
+  <p><strong>Two panels per layer, one verdict.</strong> Each layer has a predictivity panel and a CKA
+  panel, and each earns its own word. A fixed table then combines them, and predictivity's word sets
+  the layer verdict:</p>
+  <p class="cue" hidden>&larr; wider than the screen &mdash; scroll it sideways</p>
+  <div class="scroll"><table class="twocol">
+    <thead><tr><th>Predictivity panel</th><th>CKA panel</th><th>Layer verdict</th></tr></thead>
+    <tbody>
+      <tr><td>same</td><td>same</td><td>same</td></tr>
+      <tr><td>same</td><td>different, undetermined or uninformative</td><td>same, up to a re-weighting of units</td></tr>
+      <tr><td>different</td><td>any</td><td>different</td></tr>
+      <tr><td>undetermined</td><td>any</td><td>undetermined at 3 seeds</td></tr>
+      <tr><td>uninformative</td><td>any</td><td>uninformative &mdash; no verdict</td></tr>
+    </tbody>
+  </table></div>
+  <p>Worked example, the memory state row of Figure A1: the predictivity panel reads
+  &ldquo;uninformative&rdquo; (the grey untrained pairs sit inside the ordinary band), the CKA panel reads
+  &ldquo;different&rdquo; (all six orange dots left of the band), and the layer verdict is
+  &ldquo;uninformative (no verdict)&rdquo;. CKA's word is shown but does not count. That is the whole
+  meaning of &ldquo;CKA decides nothing&rdquo;: if it decided, a panel could read &ldquo;different&rdquo;
+  only because the modulator rescales units, as B3 in Figure P2 does.</p>
+  </div>
+  </details>
+
+  <details class="primer-sub">
+  <summary>5. The fMRI analogy, and the maths that connects them</summary>
+  <div class="primer-body">
+  <p>For a reader who knows fMRI, the setup maps almost one to one:</p>
+  <p class="cue" hidden>&larr; wider than the screen &mdash; scroll it sideways</p>
+  <div class="scroll"><table class="twocol">
+    <thead><tr><th>This study</th><th>fMRI</th></tr></thead>
+    <tbody>
+      <tr><td>two agents, A and B</td><td>two subjects</td></tr>
+      <tr><td>units of one layer (p, q)</td><td>voxels of one region; no voxel-to-voxel correspondence across subjects</td></tr>
+      <tr><td>moments (the n rows)</td><td>trials or conditions (first-level beta patterns)</td></tr>
+      <tr><td>every agent replayed on the same recorded moments</td><td>every subject shown the same trials</td></tr>
+      <tr><td>the n &times; n table K</td><td>a trial-by-trial similarity matrix, as in representational similarity analysis (RSA){{CITE:kriegeskorte}}</td></tr>
+      <tr><td>CKA</td><td>comparing two subjects' similarity matrices: cross-subject RSA</td></tr>
+      <tr><td>linear predictivity</td><td>a cross-validated linear map from one subject's voxels to another's, in the spirit of hyperalignment{{CITE:haxby}}</td></tr>
+    </tbody>
+  </table></div>
+  <p><strong>The mathematical connection.</strong> An RSA dissimilarity matrix and the table K carry the
+  same information. For centred patterns, the squared Euclidean distance between two moments is built
+  from K, and K can be recovered from the distances by double centring (the step classical
+  multidimensional scaling uses):</p>
+  <pre>D&#8336;&#8348; = &#8214;x&#8336; &minus; x&#8348;&#8214;&sup2; = K&#8336;&#8336; + K&#8348;&#8348; &minus; 2 K&#8336;&#8348;
+K   = &minus;&frac12; H D H ,      H = I &minus; (1/n) 1 1&#7488;       (n &times; n)</pre>
+  <p>So linear CKA is RSA with three specific choices: Euclidean geometry on centred activity (so the
+  size of each response matters, where RSA often uses correlation distance), all n &times; n entries
+  including the diagonal (RSA usually uses the upper triangle only), and a cosine to compare the two
+  tables (RSA often uses a rank correlation). Linear CKA is also the same quantity as the RV coefficient
+  of multivariate statistics{{CITE:robert}}.</p>
+  <p>Linear predictivity is closer to hyperalignment, with two differences: hyperalignment maps subjects
+  into a common space with a rotation, while predictivity allows any linear map, which also absorbs a
+  rescaling of individual voxels (units); and predictivity is scored on held-out trials, like a
+  cross-validated encoding model whose features are the other subject's voxels.</p>
+  <p>What each is blind to follows from the maths. CKA is unchanged by rotations and by one overall
+  scale, but not by rescaling units one at a time. Predictivity is unchanged by any invertible linear
+  change of the predicting layer's units, because the fitted map can undo it.</p>
+  </div>
+  </details>
+
+  <details class="primer-sub">
+  <summary>6. Does the score not depend on which moments were used?</summary>
+  <div class="primer-body">
+  <p>It does. Like an RSA result, CKA and predictivity describe two networks <em>on a given set of
+  moments</em>, and a different set would give different absolute values. The study does not try to
+  remove that; it makes the moment set cancel out of the comparison, in four ways:</p>
+  <ul class="plainlist">
+    <li><strong>Identical moments for every pair.</strong> All six agents are replayed frame by frame on
+    the same recorded episodes, so any difference between two tables comes from the networks, not the
+    inputs.</li>
+    <li><strong>A relative yardstick.</strong> The verdict compares modulated-versus-ordinary pairs with
+    ordinary-versus-ordinary pairs scored on the same moments. Whatever the moment set does to the
+    scores, it does to both groups, as in asking whether between-group subject pairs are less similar
+    than within-group pairs on the same stimuli.</li>
+    <li><strong>An untrained floor.</strong> Untrained networks fed the same moments show how much
+    similarity the inputs alone produce; a layer where trained agents are no more alike than that gets
+    no verdict.</li>
+    <li><strong>Measured sampling uncertainty.</strong> Resampling whole episodes 2,000 times shows how
+    far each score moves under a different sample from the same kind of moments.</li>
+  </ul>
+  <p>What remains is a real limit: this removes dependence on <em>which sample</em> of moments, not on
+  <em>what kind</em>. The probe is the agents' own behaviour in these worlds, where about 94% of episodes
+  run to the step cap. A probe made of near-death moments, or from another world, could read
+  differently. The claim is &ldquo;different on the situations these agents actually meet&rdquo;, not
+  &ldquo;different in general&rdquo;. A4 was the planned check across worlds; it is blocked by its gate.</p>
+  </div>
+  </details>
+  </div>
+  </details>
+  <!-- PRIMER END -->
+
   <div class="plans">
   <div class="plan" id="a1">
     <div class="plan-top"><span class="plan-id">A1</span><h3>Layer similarity</h3><span class="pstat ready">Measured, reviewed</span></div>
     <p>Centred kernel alignment{{CITE:kornblith}} asks whether two layers arrange the same set of inputs
     in the same way: whether inputs that look alike to one agent's layer also look alike to the other's.
     It compares layers of different networks without needing their units to line up.</p>
+    <p class="foot">New to these measures? The primer just above this card builds both from toy examples.</p>
     <dl>
       <dt>Layers</dt><dd>Encoder output, memory state, memory output, actor and critic hidden layers; for
       the modulated agent both before and after the gain and offset are applied.</dd>
