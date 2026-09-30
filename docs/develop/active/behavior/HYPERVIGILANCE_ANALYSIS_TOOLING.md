@@ -571,3 +571,39 @@ blocker to be discussed before merge.
 | | | | |
 
 **Conclusion**: —
+
+## Feedback from plan-reviewer
+
+*2026-10-01, on commit `27d63da3`, checked against the study doc as it stands after Revision 2
+(`7ec62720`). Full report: [[plan_hypervigilance_analysis_tooling]]
+(`docs/reviews/plan_hypervigilance_analysis_tooling.md`).*
+
+**Verdict: NOT READY** — one Critical, six Moderate, three Low. The design (one `scent_spec` for
+three layouts, refusing others; every new number in a new file; a reproduce-before-read gate) is
+sound and the two-channel byte-identity argument holds. The block is in the gate's own reference.
+
+Severity legend: 🔴 Critical = fix before going further · 🟡 Moderate = likely costs a re-run ·
+🟢 Low = cosmetic · ❓ Open = an assumption nobody has verified yet.
+
+| # | Sev | Where | Issue (short) | Fix | Owner |
+|---|---|---|---|---|---|
+| R1 | 🔴 | A4 G3, §8, C3/C6/C7 | The a01 `aggregate.npz` reference (2026-08-25 14:39) predates commit `01fe5701` (20:41 the same day), which added `*_olf_ch1/ch2`, `*_olf_intensity`, `pred_detect_max/min`; `golden.py:130` counts a candidate-only key as MISSING, so G3 cannot pass for any current code, and C3's "cheap" old-vs-new fit `KeyError`s on the old code. The C7 stamp — which every population waits on — is therefore unreachable as written. | Regenerate the G3 reference with the base commit's `hiding_drivers.py` (one a01 sweep into the scratch dir), compare against that; keep the Aug-25 CSV only for the printed-precision check; never teach `golden.py` to ignore extra keys. | `senior-developer` |
+| R2 | 🟡 | A5, P0, Q1, §7 | Revision 2 already carries N1/N2/N5; A5's S4 rule ("not established either way and \|Δ\| < 3 pp") differs from the registered one (one-sided 95 % Welch lower bound of Δ above −3 pp, at the deciding stage); the C-sign classification (\|C\| < 3 / ≤ −3 / ≥ +3 pp) is missing from `verdict.py`. | Rewrite A5 against Revision 2, mark P0 satisfied, add the C-sign reading and tests for the S4 bound and absolute-sign bound. | `senior-developer` |
+| R3 | 🟡 | §6 population regex | A `_r2` relaunch (study §5.7) never matches and the failed run's dir does; also not run-agnostic. | Manifest JSON with a status column; refuse ambiguous seeds; test the `_s42` + `_s42_r2` case. | `senior-developer` |
+| R4 | 🟡 | §6 `--max-blocks`, C8/C10 | `hiding_drivers.py` and `collect_arm_data.py` have no block limit and `scan.sweep` asserts full step counts; smoke mode has no implementation path. | List the shard-limit change (golden-gated files, default off) or drop smoke mode and re-budget C8/C10. | `senior-developer` |
+| R5 | 🟡 | §6 S1; study S1 | In the control the statistic is orthogonal to strength; in the treated worlds it *is* strength, so S1's Δ (a tested outcome) compares identity × injury against identity × injury + strength × injury. Dropping the collinear intensity terms is right; the reference arm is not like-for-like. | Compute an S1 matched control reading (channel 1, channel 2 as covariate); write `statistic_equals_intensity` into `readings.json`; designer registers which reference S1 uses before C10. | `senior-developer` → `experiment-designer` |
+| R6 | 🟡 | Q2–Q4 | Primary variants (S2 bins, S1 estimator, S3 row) must be registered before the first treated store is read, or they are post hoc. | Gate C10 on a dated study revision naming them; anchor the choice in `verdict.py`. | `experiment-designer` |
+| R7 | 🟡 | §6 sweeps, §8 | `_ladder.OUT_ROOT` defaults to the **live** `results/analysis/ladder` when `LADDER_OUT_ROOT` is unset; `<population>/ladderstyle` reads as a relative path. | Assert the root is set and under `results/analysis/hypervigilance/` before spawning; spell the absolute path. | `senior-developer` |
+| R8–R10 | 🟢 | §7 anchors, §9 tests, §5, C2 | Anchor text `|Δ|` vs `\|Δ\|`; restrict anchors to §5.2–5.3 (the doc quotes superseded rules in its feedback sections); no test for `fit_glms(layout="single")`; `aimed_response.py`'s bare `hiding_drivers` import needs its dir on `sys.path`; C2 via the project interpreter. | wording / one test | `senior-developer` |
+
+❓ Open: A1 the cmp10m yardstick's fairness for worlds with a different rabbit percept (print the hv
+control arm's own seed SD beside it, labelled post hoc); A2 the extreme-row food/starved/killed
+definitions; A3 the C01/C02 re-collection lands before `hvsmell` is swept; A4 S6 cost < 10 %.
+
+**Cost of being wrong:** a lost day and a loosened golden gate (R1); a failed run read as a seed
+(R3); a verdict map scored on a superseded S4 rule (R2). No raw-data loss; R7 is the only path to
+losing re-derivable live aggregates.
+
+**What flips it:** R1, R2, R3, R4, R7 in this plan; R5–R6 registered by the designer before C10.
+
+*Reviewed by: plan-reviewer*
