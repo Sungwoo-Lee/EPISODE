@@ -548,7 +548,9 @@ def _render_and_upload(
     Returns:
         Path to the consolidated MP4, or None if render failed.
     """
-    _project_root = '/media/nas01/projects/Interoceptive-AI/grid_world_pain'
+    # Repo root derived from this file (src/algorithms/dreamer_srl/ -> three up), so a run
+    # launched from a worktree renders with its own script, not the shared folder's.
+    _project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", ".."))
     render_script = os.path.join(_project_root, 'scripts', 'eval', 'render_recordings_v2.py')
     consolidated = os.path.join(results_dir, 'videos_v2', f'eval_{checkpoint_pct}.mp4')
 

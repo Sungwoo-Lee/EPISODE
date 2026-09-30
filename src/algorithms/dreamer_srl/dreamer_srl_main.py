@@ -518,7 +518,10 @@ def main() -> None:
     # top, then the experiment config.  Mirrors train.py:L295-L367.
     # -----------------------------------------------------------------------
     import os as _os
-    _project_root = '/media/nas01/projects/Interoceptive-AI/grid_world_pain'
+    # Repo root derived from this file (src/algorithms/dreamer_srl/ -> three up), like the
+    # sys.path insert at the top: the literal shared-folder path sent a worktree run's
+    # results, continual-schedule configs and train/eval defaults to the SHARED folder.
+    _project_root = _os.path.abspath(_os.path.join(_os.path.dirname(__file__), "..", "..", ".."))
     from src.utils.config import get_default_config
 
     # --- Mutual-exclusion guard + curriculum schedule build ---
