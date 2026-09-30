@@ -964,7 +964,7 @@ This belongs in a separate plan with a speed measurement. It would make B2's per
 - [ ] **4.6** **Survival and bites cross-check (R5; Revision 3, T2).** For all six May-replication runs, `wandb_history.stage_level` on stage 1 (`stage/index` 0) with `weighting` = the rules' `parameters.common.survival.row_weight` (`delta_episode_number`), read from the pinned file rather than typed into the test, gives `S_1` and bites that equal `pilot_readout.py`'s May-replication readout for the same run to within 1e-9 relative (`tests/analysis/test_nmn_stage_level.py`, marked slow, reads the local binaries). Because the registered weighting is `pilot_readout.Series`'s own, this is a direct equality check. The `window_n`-weighted values are pasted beside them as a diagnostic. The G5 pass/fail and the survival difference in the interim driver JSON are pasted. The same check is repeated on stage 5 after training.
 - [x] **4.5** — **Done 2026-09-30 (developer):** RTX 2080 Ti, 26.4 s/point with the per-node compile cache warm → 6.4 GPU-h, ≈ 3.2 h on one 2-GPU node (≈ 3.5–4 h with one compile per world). Decision before the sweep: one node (101), no second node, nothing thinned. Stage 4 timing gate: seconds per item recorded, extrapolated wall-clock stated for the every-checkpoint sweep, and the second-node decision (spread over a second node's GPUs if the extrapolation exceeds 8 h) recorded before the full sweep. No measure is thinned (Revision 3, T1).
 - [x] **5.1** Collector tests pass, including fingerprint tests (i)–(iii) and the `:prev` tests. On a real May-replication run, `stage_end:0` and `stage_end:3` resolve to checkpoints whose saved `stage` equals 0 and 3, and the `stage_end:3` world has `detection_range: 0`. After training, `stage_end:3:prev` and `final:prev` resolve to checkpoints with the same saved stage as their successors, and their episode gaps are recorded. — **Partly done:** 7 new collector tests pass. On real runs, `stage_end:0` resolves to saved stage 0 with a stage-1 successor (3 runs), and `stage_end:1` resolves to the `02_passive` world with `detection_range` 0. The `stage_end:3` check waits for the end of training: stage 3 is still running, and the resolver correctly refuses it. **Ordinary runs completed 2026-09-30 (developer):** `stage_end:3` resolves to saved stage 3 (`04_passive`, `detection_range` 0, own `env_fp`) on all three; `stage_end:3:prev` and `final:prev` share their successor's stage, gaps 99,995–100,024 episodes. Modulated runs after training.
-- [ ] **6.1** After collection: all 12 stores validate. Each store's world is correct. Every store's manifest records `matmul_precision: highest`, a `compute_device_kind` and a self-test value at or below the constant, with a `collection_git_sha` at or after the R4.1 commit (Revision 4). Self-replay agreement is 100% for all 12, with `store_matmul_precision: recorded`. — **Partly done 2026-09-30 (developer):** 6 of the 12 evidence stores (ordinary × final, stage_end:3) plus the 6 interim stage-0-end stores validate; world, `highest` / RTX 3090 / 1.376e-7 and `collection_git_sha` ≥ `2d54453d` checked on all 12. Self-replay and the modulated 6 pending.
+- [x] **6.1** After collection: all 12 stores validate. Each store's world is correct. Every store's manifest records `matmul_precision: highest`, a `compute_device_kind` and a self-test value at or below the constant, with a `collection_git_sha` at or after the R4.1 commit (Revision 4). Self-replay agreement is 100% for all 12, with `store_matmul_precision: recorded`. — **Partly done 2026-09-30 (developer):** 6 of the 12 evidence stores (ordinary × final, stage_end:3) plus the 6 interim stage-0-end stores validate; world, `highest` / RTX 3090 / 1.376e-7 and `collection_git_sha` ≥ `2d54453d` checked on all 12. Self-replay and the modulated 6 pending. — **Done 2026-09-30 (developer, evidence run):** all 12 stores validate (world, `highest` / RTX 3090 / 1.38e-7, sha after `2d54453d`); self-replay 100 % for all 12 in the evidence capture (78/78 captures, no tool-check failure).
 - [x] **6.2** `SCRIPTS_DEPENDENCY_MAP.md` and `traj_collect/README.md` are updated in the same commits as the files they describe. — **Stages 2 and 5 part done:** the map and README were updated in the same commits (`38b13a4f`, `e38a2b2f`).
 
 ## Implementation Report
@@ -1782,6 +1782,82 @@ Implemented by: developer
 **Report wording corrected.** S3-f now says the hazard is present on critic.out, a verdict layer (up to 0.035 per fit, penalty unstable), though it changed no word.
 
 **Not done.** There is no separate recomputation of the interim A1–A3 verdicts under `5ef6f731`; the robustness admitted column gives the recomputed numbers, and moving them into an evaluation would need a separately named manifest. A4 is not built.
+
+Implemented by: developer
+
+### Stage 6: evidence run on the May replication (2026-09-30, 09:15–11:05)
+
+**Summary.** All 12 final-capture stores are valid. The evidence manifest ran end to end under rules `5ef6f731…`: capture, A1 similarity, A2 decoding, the A3 inputs and the robustness columns. A4 is not built, so it did not run. Every gate passes, except G6 for remaining survival time. **Evaluator output, verbatim:**
+- A1: `different` (enc.out, actor.out, critic.out); rnn.state and rnn.out `uninformative (no verdict)`.
+- A3: `(c) different processing, same outcome`.
+- A2: `differs` (satiation).
+
+**Store validation** (`tmp/20260930_evidence_verify_stores.py`, output `.json`). Every one of the 12 stores (6 × `final`, 6 × `stage_end:3`) passes each of these checks:
+- `validate_store_structure/shapes/draws`; 10,000 episodes, 5,000 in block 0;
+- `matmul_precision: highest`, RTX 3090, self-test 1.38e-7;
+- `obs_precision` float32, `seed_base` 1,000,000;
+- `collection_git_sha` (`10915349` ordinary, `53dc745c` modulated) descends from `2d54453d`;
+- the selector resolves to the store's own checkpoint (`final`: saved stage 4, `05_active`; `stage_end:3`: saved stage 3, `04_passive`);
+- the world equals the stage file (predator detection range 5 in the active stores, 0 in the passive ones).
+
+**Commit `194db302`:** the evidence manifest's developer keys (store paths, same values as pilot/interim; designer keys unchanged). `run_similarity` now computes only the primary and headline cell (`final` / `active`). The other 9 cells serve A4 only and are listed as not computed.
+
+**Capture** (node 102 GPU 1, RTX 4090, 09:28–09:45; claimed and released in the diary):
+- 78 captures (6 agents × 5 stage ends × 2 probes, 2 `:prev` each on its drift-pair probe only, and 3 untrained × 2 probes).
+- Every tool check passes, including 100 % self-replay (G1) for all 12 stores. **Checkpoint 6.1 met.**
+- Expected = measured = 40.742 GB. Self-test 1.32e-7.
+
+**Outputs** (`results/analysis/algorithmic_null/algorithmic_null_mayrep/`; rules `5ef6f731` @ `47b91611`; code `194db302`; `git_dirty: true` only because of another session's uncommitted page files). The files are `similarity.*`, `decoding.*` and `similarity_robustness.*`. `similarity_descriptive.*` is still computing in the background at hand-off. Summaries: `tmp/20260930_evidence_{similarity,decoding}_summary.txt`, `tmp/20260930_evidence_robustness_table.txt`.
+
+**Gates.**
+- G1–G4 pass (input satiation R² 0.9922; shuffled R² ≤ 0.0016).
+- G5 passes: all 6 runs enter, so the yardstick is complete.
+- G6 passes (1,000 held-out groups per repeat) for A1 and for every A2 quantity **except `steps_remaining`**: 150–182 groups against 500, so it reads "blocked by gate G6".
+- Shared start holds for seeds 42–44. Survival at stage 5 (modulated minus ordinary): +1.46 steps, standard error 0.67 floored to 3.6, so survival is the same.
+- Row-lag control: agreement 0.575–0.741 at lag 0, at most 0.241 one row apart.
+
+**A1 and A3 per layer (verbatim):**
+
+| Layer | A1 verdict | predictivity / CKA | A3 pattern |
+|---|---|---|---|
+| enc.out | different (+ MM qualifier) | different (6/6 below L) / different | (c) different processing, same outcome |
+| rnn.state | uninformative (no verdict) | uninformative — no verdict / different | none of the three patterns (undetermined at 3 seeds) |
+| rnn.out | uninformative (no verdict) | uninformative — no verdict / different | none of the three patterns (undetermined at 3 seeds) |
+| actor.out | different | different (6/6 below L) / undetermined at 3 seeds | (c) different processing, same outcome |
+| critic.out | different (+ MM qualifier) | different (6/6 below L) / different | (c) different processing, same outcome |
+
+- **Study:** A1 different (enc.out, actor.out, critic.out; remedy not triggered). A3 (c), on 3 of 5 layers.
+- **Why rnn.state and rnn.out read uninformative:** the untrained predictivity band [0.805, 0.823] overlaps the ordinary band [0.799, 0.818], so the registered informative gate blocks those two statistics.
+- **Predictivity bands** (OO [L, U] / MO_diff):
+  - enc.out: [0.890, 0.906] / 0.843–0.858;
+  - actor.out: [0.779, 0.806] / 0.737–0.768;
+  - critic.out: [0.849, 0.891] / 0.767–0.816.
+- **Supporting read** (modulated → ordinary, MO_diff): enc.out 0.848–0.870, rnn.state 0.772–0.791, rnn.out 0.773–0.793, actor.out 0.737–0.772, critic.out 0.829–0.872.
+
+**A2 (verbatim):** study `differs` (satiation).
+- satiation `differs`: enc.out and rnn.state `different`, other layers `match`.
+- injury_level `undetermined`, one-layer difference (not counted) at enc.out.
+- nearest_predator_manhattan `undetermined`, one-layer difference (not counted) at critic.out.
+- steps_remaining `blocked by gate G6`.
+
+**Robustness** (descriptive — not a registered statistic; weighted R²; the `admitted` column reproduces the registered numbers to ≤ 1.1e-16):
+
+| Layer | OO range (both directions) | MO_diff modulated→ordinary | MO_diff ordinary→modulated | MM mutual | MO_diff mutual | OO mutual |
+|---|---|---|---|---|---|---|
+| enc.out | [0.890, 0.913] | 0.848–0.870 | 0.843–0.864 | 0.855–0.858 | 0.843–0.858 | [0.890, 0.906] |
+| rnn.state | [0.799, 0.826] | 0.772–0.791 | 0.764–0.787 | 0.755–0.761 | 0.764–0.777 | [0.799, 0.818] |
+| rnn.out | [0.799, 0.826] | 0.773–0.793 | 0.757–0.771 | 0.777–0.785 | 0.757–0.771 | [0.799, 0.818] |
+| actor.out | [0.779, 0.813] | 0.737–0.771 | 0.742–0.772 | 0.758–0.775 | 0.737–0.768 | [0.779, 0.806] |
+| critic.out | [0.849, 0.905] | 0.829–0.872 | 0.767–0.816 | 0.814–0.834 | 0.767–0.816 | [0.849, 0.891] |
+
+- **The verdict-gate caveat holds on every layer:** MM mutual points lie below the ordinary band, beside the MO pairs. The whole MM bootstrap range lies below L on enc.out and critic.out (the MM qualifier), and the upper end reaches past L on actor.out (0.782 vs 0.779).
+- The modulated → ordinary direction (the gain-invariant one) lies below the lowest OO value for all 6 pairs on enc.out, rnn.state, rnn.out and actor.out. On critic.out it overlaps (0.829–0.872 vs 0.849).
+- Columns dropped per fit under P1: enc.out 10–39, rnn 0, actor.out 25–54, critic.out 62–91 of 128.
+- On critic.out, `all_columns` differs from `admitted` by up to 0.21 (MM mutual 0.603–0.845 without admission): the rare-unit hazard is large at the final checkpoint.
+- The floored scale sits close to `admitted`.
+- The unweighted per-unit mean is unusable on actor.out and critic.out (rare target units; intervals reach −8 and −39).
+
+**Not done:** A4 (not built); the 9 non-primary cells (they wait for A4); no page text.
 
 Implemented by: developer
 
