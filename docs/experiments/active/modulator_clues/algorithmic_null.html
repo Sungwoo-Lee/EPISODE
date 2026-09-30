@@ -248,9 +248,10 @@ a.cite::before { content:"["; } a.cite::after { content:"]"; }
   <h2><span class="num">PURPOSE</span>Why this page exists</h2>
   <p>The long-term goal is to find a neuromodulator that actually helps an agent. Across a month of
   comparisons in many different worlds, the modulated and ordinary agents have come out almost the same
-  every time. That consistency is too tight to be noise: it points to both architectures converging on
-  the same way of processing information, shaped more by the structure of the world than by the network
-  design. So it is not enough to treat the result as a failed hypothesis and try another modulator at
+  every time. That consistency is too tight to be noise. This page started from the premise that both
+  architectures converge on the same way of processing information, shaped more by the structure of
+  the world than by the network design; section 03 tests that premise, and at the layers the modulator
+  acts on it does not hold. So it is not enough to treat the result as a failed hypothesis and try another modulator at
   random. A modulator can only help by adding something the network does not already compute, and right
   now we do not know what that shared computation is.</p>
   <div class="callout">
@@ -262,7 +263,7 @@ a.cite::before { content:"["; } a.cite::after { content:"]"; }
   the literature turned up, and the measurements made to answer both questions. The comparison ran on
   six freshly trained agents, three of each kind, trained on the same three random seeds.
   Every verdict word on the page comes from decision rules written down before any number existed, and
-  two independent reviews checked what the page may claim from them.</p>
+  two review passes checked what the page may claim from them.</p>
   <div class="callout">
     <p class="eyebrow">Headline so far</p>
     <p>To judge whether two agents are alike inside, we check how well one agent's layer activity
@@ -272,7 +273,8 @@ a.cite::before { content:"["; } a.cite::after { content:"]"; }
     interchangeable with an ordinary agent's than two ordinary agents are with each other (all 6 pairs
     below the ordinary band, both directions on the encoder and actor), while both survive equally
     well. Modulated agents are also less interchangeable with each other than ordinary agents are.
-    Whether the difference reaches the memory the modulator never touches, the test cannot say.</p>
+    Whether the difference reaches the memory layers, the test cannot say: neither the carried memory
+    state, which the modulator does not act on directly, nor the memory output, which it does.</p>
     <p>All three layers that differ are places where the modulator applies its gain and offset, so
     they receive its input by construction. The finding is that the agents are <strong>different at
     the layers the modulator acts on</strong>, not that the main network learned a different function.
@@ -282,9 +284,10 @@ a.cite::before { content:"["; } a.cite::after { content:"]"; }
   <p>On Question 2, when the modulator starts to matter during training was measured in 16 worlds.
   Some of its measures make half of their change before the agent's survival levels off; a measure
   of the size of its weights makes half of its growth after, as the main network's own weights do.
-  The pre-registered test therefore points both ways (section 04). Freezing its modulation after
-  survival levels off costs about 31&ndash;33 survival steps in all 16 worlds (a descriptive number, not a
-  registered test). Section 05 says what this changes for the search for a helpful modulator.</p>
+  The pre-registered test therefore points both ways (section 04). Freezing either its gain or its
+  offset at its time-averaged value after survival levels off costs survival in all 16 worlds: on
+  average 33 steps for the gain and 31 for the offset out of roughly 250, with per-world means from 11
+  to 54 (a descriptive number, not a registered test). Section 05 says what this changes for the search for a helpful modulator.</p>
 </section>
 
 <hr>
@@ -331,8 +334,8 @@ a.cite::before { content:"["; } a.cite::after { content:"]"; }
   test.</p>
 
   <h3>1. The two agents start from the same place</h3>
-  <p>The main network's layers are built before the modulator (in <code>src/<wbr>models/<wbr>recurrent_<wbr>ppo_<wbr>network.py</code>,
-  the encoder at line 400, the actor and critic at lines 424&ndash;429, the modulator at line 458), and
+  <p>The main network's layers are built before the modulator (in <code>src/<wbr>models/<wbr>recurrent_<wbr>ppo_<wbr>network.py</code>:
+  first the encoder, then the actor and critic, then the modulator), and
   the ordering is kept deliberately so the random-number stream is unchanged. With the same seed, the
   modulated agent's main network therefore starts with exactly the ordinary agent's weights and sees the
   same stream of environments. The modulator's gain starts near 1 (1 &plusmn; 0.3) and its offset near 0,
@@ -369,10 +372,14 @@ FiLM:       h = ReLU( &gamma;(c)&middot;(W_x&middot;x + b) + &beta;(c) )</pre>
   absorbs the body-related part of the learning signal first. Two measured facts fit this. Only about 15%
   of the modulator's gain variation follows the situation; the rest is a fixed per-unit setting the main
   network could have learned itself. And its share of the gradient grows over training, reaching 40&ndash;75%
-  in some arms only by the end. A part that starts working only in the second half of training can shape
+  in some arms only by the end (in the September grid; the level-05 logged share gives no timing
+  reading, section 04). A part that starts working only in the second half of training can shape
   the final solution but cannot shorten the early climb, where a faster-learning advantage would appear.
-  This was a candidate when the page was planned; section 04 (B2) reports what the timing measurement
-  found, and it does not settle the question either way.</p>
+  This was a candidate when the page was planned. Section 04 (B2) reports what the timing measurement
+  found: the measures of what the modulator actually outputs read "early", which under the registered
+  rule refutes the late-wake explanation for those measures; only the weights-only ceiling on its gain
+  reads "late", and the main network's own weights read "late" by the same rule. The rules do not
+  combine measures, so no single timing verdict exists.</p>
 
   <h3>4. The measurements could not see the kind of gain FiLM usually gives</h3>
   <p>Every comparison so far used final performance. In reinforcement learning, FiLM's reported advantage
@@ -380,11 +387,14 @@ FiLM:       h = ReLU( &gamma;(c)&middot;(W_x&middot;x + b) + &beta;(c) )</pre>
 
   <div class="callout warn">
     <p class="eyebrow">A puzzle any explanation has to fit</p>
-    <p>Freezing a trained modulated agent's modulation at its own average costs it 47 to 180 of about 200
-    survival steps (measured on modulators reading every sense, and not at every site). Yet the modulated
-    agent trained end to end does no better than an ordinary one. The reading that fits both: training
-    routes part of the same solution through the modulator, so freezing it removes a working part, not
-    a benefit.</p>
+    <p>Freezing a trained modulated agent's modulation at its own average cost it up to 180 of about
+    200 survival steps in the September single-site modulators (one site frozen at a time; costs ranged
+    from near zero at some sites to 180, gain average about 63). The level-05 agents in section 04,
+    modulated at all four places, lose a smaller but consistent 31&ndash;33 of roughly 250 steps when
+    the gain, or in a separate test the offset, is frozen at every site at once; the two tests differ
+    in agents, worlds and protocol, so the sizes are not comparable. Yet the modulated agent trained end
+    to end does no better than an ordinary one. One reading that fits both: training routes part of the
+    same solution through the modulator, so freezing it removes a working part, not a benefit.</p>
   </div>
 </section>
 
@@ -584,7 +594,7 @@ FiLM:       h = ReLU( &gamma;(c)&middot;(W_x&middot;x + b) + &beta;(c) )</pre>
     <h4>Result, end of training</h4>
     <p>Pattern (c), <strong>different processing, same outcome, at the ceiling</strong>: both agents
     reach the 500-step cap in about 94&nbsp;% of episodes; the 1.5-step gap is inside the registered
-    seed-noise floor. The same-seed pairs are no closer than different-seed pairs, so the difference
+    seed-noise floor (3.6), though outside the raw standard error (0.7). The same-seed pairs are no closer than different-seed pairs, so the difference
     is not an inheritance from the shared start. Pattern (c) holds on exactly 3 of 5 layers (encoder,
     actor, critic), the minimum the rules require; the two memory layers get no verdict ("none of the
     three patterns"), because A1 gives none there. The results are in Figure A3 above.</p>
@@ -731,13 +741,15 @@ FiLM:       h = ReLU( &gamma;(c)&middot;(W_x&middot;x + b) + &beta;(c) )</pre>
   <p>The final goal is a modulator that helps. Three results bear on it directly; each is stated here
   only as far as the reviews allow.</p>
   <ul class="plainlist">
-    <li><strong>The modulator changes what its own sites carry.</strong> At the encoder, actor and
+    <li><strong>The modulator's own sites are different.</strong> At the encoder, actor and
     critic, where it applies its gain and offset, the modulated agent's activity is less interchangeable
     with an ordinary agent's than two ordinary agents' are with each other (A1, A3). Whether anything
     downstream of those sites, such as the memory state, differs is not established.</li>
-    <li><strong>It is relied on.</strong> Freezing the modulation at its time-averaged value after
-    survival has levelled off costs about 31&ndash;33 survival steps in 16 of 16 worlds, against roughly
-    250 live (descriptive, not a registered test).</li>
+    <li><strong>Freezing it costs survival.</strong> Freezing either the gain or the offset at its
+    time-averaged value after survival has levelled off shortens survival in 16 of 16 worlds, on average
+    33 steps (gain) and 31 (offset) against roughly 250 live, per-world means from 11 to 54
+    (descriptive, not a registered test; the same freeze has never been applied to an ordinary agent as
+    a control).</li>
     <li><strong>"No benefit" is partly a measurement limit.</strong> In the May replication both agents
     reach the 500-step episode limit in about 94&nbsp;% of episodes, so survival cannot show an
     advantage that lies above the cap.</li>
@@ -745,10 +757,12 @@ FiLM:       h = ReLU( &gamma;(c)&middot;(W_x&middot;x + b) + &beta;(c) )</pre>
   <div class="callout warn">
     <p class="eyebrow">Unregistered interpretation</p>
     <p>Taken together, these fit a modulator that is not idle: it changes the activity at the layers it
-    acts on and the trained agent depends on it, yet the agent's survival does not improve. Two
+    acts on and the trained agent depends on it, yet the agent's survival does not improve. Three
     readings remain open and no registered test separates them: the modulator may take over part of a
-    solution the ordinary network also reaches, or it may add something the capped survival measure
-    cannot see. The next measurements that would bear on this are A4 (whether the two agents move
+    solution the ordinary network also reaches; it may add something the capped survival measure cannot
+    see; or the modulated agents may simply be a more variable family of solutions, since they differ
+    from each other as much as from ordinary agents (the A1 qualifier), which the first two readings do
+    not explain. The next measurements that would bear on this are A4 (whether the two agents move
     together across worlds), B1 (breaking the shared start), and a task with room above the step cap
     or with learning speed as the outcome.</p>
   </div>
@@ -768,8 +782,8 @@ FiLM:       h = ReLU( &gamma;(c)&middot;(W_x&middot;x + b) + &beta;(c) )</pre>
         (encoder, actor, critic), with equal survival at the ceiling (A1, A3).</li>
         <li>Both agents hold hunger, injury and predator distance at every layer; hunger is slightly less
         linearly readable from the modulated encoder output and memory state (A2).</li>
-        <li>The modulator is relied on inside a trained agent: freezing it costs survival in every
-        world measured.</li>
+        <li>Freezing the modulator's gain or offset costs survival in every world measured
+        (descriptive; no registered test, and no matching lesion on an ordinary agent).</li>
         <li>Both agents start from the same main-network weights under the same seed.</li>
         <li>The modulator has no training signal or learning rate of its own.</li>
       </ul>
