@@ -308,3 +308,34 @@ def test_foreign_machine_card_uses_heartbeat(board, capsys, monkeypatch):
     assert sb.alive(sb.read_json(sb.card_path("A")))
     set_field("A", updated=time.time() - 3600)
     assert not sb.alive(sb.read_json(sb.card_path("A")))
+
+
+# ------------------------------------------------------------------ 7-day expiry of live-but-inactive cards (2026-09-30)
+def test_quiet_live_session_expires_and_rejoins_clean(board, capsys, monkeypatch):
+    a, b = board("A", "Sess A"), board("B", "Sess B")
+    hook("SessionStart", {"session_id": "A", "source": "startup"}, a.pid, capsys, monkeypatch)
+    hook("SessionStart", {"session_id": "B", "source": "startup"}, b.pid, capsys, monkeypatch)
+    set_field("A", task="old work", note="old note", updated=time.time() - sb.EXPIRE - 60)
+    card = sb.read_json(sb.card_path("A"))
+    assert sb.process_alive(card) and not sb.alive(card)          # process still running, card expired
+    out = hook("UserPromptSubmit", {"session_id": "B"}, b.pid, capsys, monkeypatch)
+    assert '"Sess A" went quiet' in out and "ended" not in out
+    assert "Sess A" not in "\n".join(sb.full_board("B"))
+    # A comes back: fresh card without the stale task; B sees it rejoin
+    hook("UserPromptSubmit", {"session_id": "A"}, a.pid, capsys, monkeypatch)
+    card = sb.read_json(sb.card_path("A"))
+    assert card["task"] == "" and card["note"] == "" and sb.alive(card)
+    assert '• NEW "Sess A"' in hook("UserPromptSubmit", {"session_id": "B"}, b.pid, capsys, monkeypatch)
+
+
+def test_expired_card_swept_is_reported_quiet_not_ended(board, capsys, monkeypatch):
+    a, b = board("A", "Sess A"), board("B", "Sess B")
+    hook("SessionStart", {"session_id": "A", "source": "startup"}, a.pid, capsys, monkeypatch)
+    hook("SessionStart", {"session_id": "B", "source": "startup"}, b.pid, capsys, monkeypatch)
+    set_field("A", updated=time.time() - sb.EXPIRE - 60)
+    seen = sb.read_json(sb.seen_path("B"))
+    seen["cards"]["A"]["updated"] = time.time() - sb.EXPIRE - 60
+    sb.write_json(sb.seen_path("B"), seen)
+    sb.sweep()
+    assert not sb.card_path("A").exists()
+    assert '"Sess A" went quiet' in hook("UserPromptSubmit", {"session_id": "B"}, b.pid, capsys, monkeypatch)

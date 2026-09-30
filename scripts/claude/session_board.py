@@ -35,6 +35,7 @@ FOREIGN_LIVE = 30 * 60       # card from another pid namespace: live if updated 
 NAG_EVERY = 3600
 NOTE_STALE = 12 * 3600
 SWEEP_AGE = 7 * 86400
+EXPIRE = 7 * 86400            # a live session with no hook activity this long drops off the board
 OUT_CAP = 1500                # per-change messages
 FULL_CAP = 3000               # one-time full board + instructions (session start / onboarding)
 WARN_CAP = 800                # PreToolUse collision warnings
@@ -145,11 +146,18 @@ def alive(c, dom=None):
     dom = dom or pid_domain()
     if c.get("pid_domain") != dom:
         return time.time() - c.get("updated", 0) < FOREIGN_LIVE
+    return process_alive(c) and not expired(c)
+
+
+def process_alive(c):
     pid = c.get("pid")
     if not pid or proc_start(pid) != c.get("proc_start"):
         return False
-    reg_sid = registry(pid).get("sessionId")
-    return reg_sid in (None, c.get("session_id"))
+    return registry(pid).get("sessionId") in (None, c.get("session_id"))
+
+
+def expired(c):
+    return time.time() - c.get("updated", 0) > EXPIRE
 
 
 def live_files(c):
@@ -161,6 +169,8 @@ def upsert_own(sid, pid, touch_file=None, force=False):
     """Create/refresh this session's card. Returns the card."""
     p = card_path(sid)
     c = read_json(p) or {"session_id": sid, "started": time.time(), "task": "", "note": "", "files": []}
+    if expired(c):
+        c.update(task="", note="", note_set=None, files=[])
     reg = registry(pid) if pid else {}
     changed = force or touch_file is not None or time.time() - c.get("updated", 0) >= HEARTBEAT
     c.update(pid=pid, proc_start=proc_start(pid) if pid else None, pid_domain=pid_domain(),
@@ -172,9 +182,10 @@ def upsert_own(sid, pid, touch_file=None, force=False):
         c["files"] = ([{"path": touch_file, "t": time.time()}] + live_files({"files": files}))[:FILES_MAX]
     if changed or not p.exists():
         fresh = read_json(p) or {}
-        for k in ("task", "note", "note_set"):
-            if k in fresh:
-                c[k] = fresh[k]
+        if not expired(fresh):
+            for k in ("task", "note", "note_set"):
+                if k in fresh:
+                    c[k] = fresh[k]
         c["updated"] = time.time()
         write_json(p, c)
     return c
@@ -250,7 +261,8 @@ def delta(sid, seen_cards):
             if alive(old, dom):
                 new_seen[k] = old
                 continue
-        lines.append(f'• "{clean(old.get("name"), 60)}" ended' + (" (its note is gone)" if old.get("note") else ""))
+        why = "went quiet (no activity for 7+ days)" if process_alive(c or old) and expired(c or old) else "ended"
+        lines.append(f'• "{clean(old.get("name"), 60)}" {why}' + (" (its note is gone)" if old.get("note") else ""))
     return lines, new_seen
 
 

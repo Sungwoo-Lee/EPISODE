@@ -292,3 +292,7 @@ Three reviewers ran: code-reviewer, senior-developer (plan adherence, signed sec
 ### Hot-reload check (2026-09-30), the last open item before rollout
 
 A Haiku session ran in a scratch folder outside the repo, with its own `.claude/settings.json` (`{}`, no hooks) and its own board directory. While it was in the middle of a tool loop, the hooks were written into that settings file (01:02:25). The **running** session picked them up without a restart: its card appeared at 01:02:41, and its transcript shows the full board plus instructions delivered by `PostToolUse:Bash`, which is the Revision 2 onboarding path for a busy session. This matches the hooks reference. It was tested on this build only (2.1.28x); the live sessions span 2.1.280–284.
+
+### 7-day expiry of inactive live cards (2026-09-30, user request)
+
+The earlier 7-day sweep deleted **any** card file untouched for 7 days, live or not. So an idle-but-running session silently vanished: other sessions were never told, and it came back with its task wiped and a confusing "task now: (cleared)". Now **no hook activity for 7 days is an explicit expiry**. `alive()` = process alive **and** not expired. Readers are told once, `"X" went quiet (no activity for 7+ days)`, and the card is swept like an ended one. If the session is used again, it rejoins as `NEW` with an empty task and note (its old task is stale), and the usual reminder asks it to set one. Tests: 47 passed.
