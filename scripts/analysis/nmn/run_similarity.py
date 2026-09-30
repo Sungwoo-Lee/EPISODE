@@ -422,12 +422,18 @@ def main(argv=None) -> int:
         start = dio.shared_start(man, roles)
     t0 = time.time()
     cells_res = []
-    for cell in all_cells:
+    # Only the primary cell (and the headline cell, if another) carries an A1 / A3 reading; the
+    # other stage-end cells serve A4 alone, which is not built, so they are listed, not computed.
+    todo = [c for c in all_cells if c == primary or c == head]
+    skipped = [list(c) for c in all_cells if c not in todo]
+    for cell in todo:
         agents = agents_of_cell(caps, man, cell, entered, roles)
         cells_res.append(analyse_cell(caps, man, P, cell, agents, verdict_layers,
                                       primary=(cell == primary), headline=(cell == head)))
     doc = {**stamp, "driver": "run_similarity", "analysis": "A1 (and A3 inputs)",
-           "primary_cell": list(primary), "not_built": "A4 (movement, drift, co-movement)"}
+           "primary_cell": list(primary), "not_built": "A4 (movement, drift, co-movement)",
+           "cells_not_computed": {"cells": skipped,
+                                  "reason": "their A1 statistics serve A4 only, which is not built"}}
     if policy.allowed:
         pc = next(c for c in cells_res if c["primary"])
         refused = {k: v for k, v in pc["refused_layers"].items() if k in verdict_layers}
