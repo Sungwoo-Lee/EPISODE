@@ -781,3 +781,35 @@ losing re-derivable live aggregates.
 | A2 | Unchanged: mismatch on food/starved/killed is reported, not tuned. | C6 |
 | A3 | `readings.py --stage check` refuses a cell whose store is missing, and C10 starts with the hvsmell population built from the study manifest, so a not-yet-collected C01/C02 store is refused rather than substituted. | §6; C10 |
 | A4 | Measured at C11; > 15 % is a blocker. | C11 |
+
+## Feedback from plan-reviewer — re-check of Revision 1
+
+*2026-10-01, on commit `fac1964d`, against study Revision 4 (`39420f2c`). Full addendum:
+[[plan_hypervigilance_analysis_tooling]] (`docs/reviews/plan_hypervigilance_analysis_tooling.md`, "Addendum").*
+
+**Verdict: SOUND WITH CONCERNS.** R1, R2, R3, R4, R7, R8–R10 resolved and independently re-verified;
+R5 registered (study §5.2 S1, inside the anchor slice); A1 addressed. The base commit is well-defined
+(`hiding_drivers.py` unchanged since `5cadbfdb`, self-contained, runs standalone), the G3 comparison
+exercises the changed `difference`-layout paths against a reference that contains none of them,
+`summary.json` carries no path or timestamp, and the a01 run has exactly one store — the Aug-25
+aggregate matches it 100 % on length and termination. No Critical remains.
+
+Severity legend: 🔴 Critical = fix before going further · 🟡 Moderate = likely costs a re-run ·
+🟢 Low = cosmetic · ❓ Open = an assumption nobody has verified yet.
+
+| # | Sev | Where | Issue (short) | Fix | Owner |
+|---|---|---|---|---|---|
+| N1 | 🟡 | §6b; study §3 | Nobody is named to flip the Launch Manifest's `running` → `completed`; `readings.py` reads `completed` only, so a stale table yields an empty/partial population. | Name the owner (the collecting session); `make_population.py` refuses a `running` row that has a final checkpoint and a store ("stale status") — never auto-promotes; test. | `senior-developer` · `experiment-designer` |
+| N2 | 🟡 | §6 stamp hash list | `readings.py`/`make_population.py` are hashed, so every edit to the assembly script re-requires G1–G3 (≈ nine full 1 M-episode sweeps). | Two tiers: sweep-tier stamp over the sweep sources with cached candidate outputs; assembly-tier stamp over `readings.py`/`make_population.py` re-deriving the published values from the cache in seconds. | `senior-developer` |
+| N3 | 🟡 | §6 `--checkpoint`; §6b; study §5.4 | Checkpoint numbers are per run (spec: `final` 10000046 / 10000021; late specs 8000033 vs 8000043), so a population-wide `--checkpoint N` cannot build the mandatory §5.4 time course. | `checkpoint` and `store_root` per cell in `population.json`; `make_population.py --checkpoint-nearest N`; `readings.py` reads it from the manifest. Test with 8000033 / 8000043. | `senior-developer` |
+| N4 | 🟢 | §6b parser | Free-prose Log-path cells; a stray `|` mis-aligns rows silently. | Backtick-aware splitter; refuse a row with the wrong column count. | `senior-developer` |
+
+❓ A5: the serial sweep budget (≈ 37 cells × four sweeps, one cell at a time) may be days; state the
+estimate after C8 and ask the user about parallel cells if one cell exceeds about an hour.
+
+**Cost of being wrong:** a finished wave sitting unread (N1); a nominal rather than real golden
+guarantee (N2); a hand-edited time course reading the wrong store (N3). No training run, no raw data.
+
+**What would make this SOUND:** N1–N3 in one text revision; N4 optional; N2 may be accepted knowingly.
+
+*Reviewed by: plan-reviewer*

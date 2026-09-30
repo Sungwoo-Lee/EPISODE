@@ -66,3 +66,49 @@ If R1 stands, the first `golden_check.py` run fails with dozens of MISSING keys 
 Fix R1 (regenerate the G3 reference from the base commit's `hiding_drivers.py`, re-budget C3), R2 (rewrite A5/P0 against Revisions 2–3, add the S4 bound and C-sign classification), R3 (manifest-driven population resolution with status), R4 (either list the shard-limit change or drop smoke mode), and R7 (assert the output root). R5 is a registration decision for `experiment-designer` that must land before C10, not before implementation; R6 is already closed by Revision 3.
 
 *Reviewed by: plan-reviewer*
+
+---
+
+## Addendum — re-check of plan Revision 1 (`fac1964d`) against study Revision 4 (`39420f2c`)
+
+*2026-10-01, plan-reviewer.*
+
+### Verdict: SOUND WITH CONCERNS
+
+In plain terms: every exit condition of the first pass is met. The gate's reference is now produced by the unchanged code at the commit the developer starts from, run on the same store, so a failure of the gate can only come from the change itself; the verdict script is checked against the study's current rule; a relaunched run is picked up from the study's own launch table; the un-implementable "quick look" mode is gone; the live output root is guarded. No Critical remains. Three new Moderate concerns come from the revision itself — who keeps the launch table's status column true, how often the whole gate has to be re-run while the assembly script is being written, and one checkpoint number for a whole population when every run saves at a different count — and none blocks implementation; each is a paragraph in the plan.
+
+Severity legend: 🔴 Critical = fix before going further · 🟡 Moderate = likely costs a re-run · 🟢 Low = cosmetic · ❓ Open = an assumption nobody has verified yet.
+
+### Exit conditions — status
+
+| # | Status | How it was checked |
+|---|---|---|
+| R1 | **Resolved.** | G3 reference = `git show <BASE>:scripts/analysis/hiding_drivers.py` run on the a01 store into scratch; `golden.py` untouched; C3 re-budgeted as a full sweep. **Base commit is well-defined:** `hiding_drivers.py` at any base at or after `5cadbfdb` (2026-09-23, its last change) is byte-identical to today's file, and that file is self-contained (own `slot_layout`/`smell_channels`/`find_stores`; no `core/` import), so it runs standalone from `ROOT`. **The comparison exercises the changed paths:** the candidate runs the new `aggregate` (the `difference` branch of `ScentSpec.statistic`/`intensity`), the lifted `quasi_binomial_fit`, `fit_glms(layout="difference")` and the `scent.json` write, against a reference that contains none of that — non-circular. `summary.json` (`cross_tabs`, `hiding_drivers.py:330-350`) holds only counts and rates, no path or timestamp, so the `cmp` byte-identity is feasible. The a01 run has exactly one store (`results/trajectories/…_a01_n106/100000039/c83d5c26ff/`), so `find_stores` needs no `--checkpoint`; the Aug-25 aggregate matches that store 100 % on episode length and termination over the first shard, so the published-value check reads the right population. The `single`/`sum` branches remain covered by unit tests and C10 only — inherent, no published ground truth exists. |
+| R2 | **Resolved.** | A5 matches study §5.2 S4 / §5.3 as of Revision 4 (S4 = one-sided 95 % Welch lower bound > −3 pp on the seed set of the stage that decided P1; C-sign four cases + fallback). The hand-computed test values check out: treated [−1,−2,−3] vs [0,0,0] → Δ −2, SE 0.5774, Welch df 2 (reference variance 0), t₀.₉₅ 2.920, bound −3.686; [0,−1,−2] → −2.686; P2 [1,2,3] → 0.314; [−1,0,1] → −1.686. |
+| R3 | **Resolved.** | `make_population.py --from-study-doc` + status column; `readings.py` reads `completed` only, refuses two completed candidates per key; regex allows `(_r\d+)?`; test covers `_s42` failed + `_s42_r2` completed. See N1 for the status column's upkeep. |
+| R4 | **Resolved.** | Smoke mode dropped; `--stage check` (config + first episodes shard) added; C8/C10 full cells with recorded wall-clock. See ❓ A5 on the budget. |
+| R5 | **Registered.** | Study §5.2 S1 (line 390) now carries "the tested Δ uses the **matched-control reading**" inside the §5.2–§5.4 anchor slice, and the outcomes table row names it. The 0.64-vs-0.45 strength-per-nat note lives only in Appendix C (Revision 4 changelog) — informational, not anchored; fine. The matched reading's scale (channel 1 means 0.7/0.5, SD 0.3 → k 2.222, midpoint 0.6) is derived from the config, as the plan says. |
+| R7 | **Resolved.** | `realpath` guard under `results/analysis/hypervigilance/`, explicit absolute `LADDER_OUT_ROOT`, refuses the live ladder root, tested. |
+| R8–R10 | **Resolved.** | Anchors verbatim from the study, sliced `### 5.2` → `### 5.4`, quotation-in-feedback test; `test_hiding_drivers_layout.py`; import path stated; interpreter path in C2. |
+| A1 | **Addressed.** | Post-hoc hv-control SD printed beside the frozen yardstick, never fed to the rule. |
+
+### New findings (Revision 1)
+
+| # | Sev | Location | Issue | Suggested fix | Owner |
+|---|---|---|---|---|---|
+| N1 | 🟡 | §6b `--from-study-doc`; study §3 Launch Manifest | **Nobody is named to keep the Status column true.** The study says the runner fills Node/GPU/Launched/WandB/Log path — not that anyone flips `running` → `completed` when training ends (H01–H16 read `running` today; C01/C02's `completed (…)` was typed by the designer). `readings.py` reads `completed` cells only, so a stale table silently yields an empty or partial population — reported as "not evaluable", not silent, but a whole wave could sit unread. | Name the owner (the session that runs the collection flips the row, since collection is what makes a cell readable). Add a disk-consistency check to `make_population.py`: a `running` row whose run dir holds a final checkpoint **and** a store under `--store-root` → refuse with "stale status", never auto-promote; a `completed` row with no store → refuse (already planned). Test both. | `senior-developer` (check) · `experiment-designer` (owner named in §3) |
+| N2 | 🟡 | §6 golden stamp (hash list includes `readings.py`, `make_population.py`) | **Every edit to the assembly script re-requires the whole gate.** G1–G3 is ≈ nine full 1 M-episode sweeps (three ladder arms; two Wave cells × two sweeps; two a01 aggregates + one `aimed_response`) — hours per iteration — and `readings.py` is the file that will be edited most while its readings are being written. As designed, the developer either batches edits (fine) or skips the re-check (the incentive the stamp exists to remove). | Two tiers with the same guarantee: a **sweep tier** whose stamp hashes only the files that can change a sweep product (`core/env.py`, `scan.py`, `store.py`, `hiding_drivers.py`, `collect_arm_data.py`, `_ladder.py`, `rabbit_avoidance.py`, `aimed_response.py`) and caches the candidate outputs under `_golden_scratch/` keyed by those hashes; an **assembly tier** that re-derives the published values (extreme rows, `hiding_shift`, aimed split) from the cached candidate outputs in seconds and hashes `readings.py`/`make_population.py`. `readings.py` requires both stamps. | `senior-developer` |
+| N3 | 🟡 | §6 `--checkpoint` (population-wide CLI flag); §6b `find_stores` "refuses several checkpoints without `--checkpoint`"; study §5.4 | **Checkpoint numbers are per run, so one CLI value cannot resolve a population's time course.** The collection spec itself says `final` = 10000046 / 10000021 for C01/C02, and the existing late-checkpoint specs list 8000033 vs 8000043 for two runs at "the same" 8 M point. The study's §5.4 time course (mandatory) needs four extra stores per run; the late-checkpoint convention writes them to a separate root (`results/trajectories_basicq2_late`), so the final-store population is unaffected — but the time-course population cannot be built with `--checkpoint N`. | Put `checkpoint` (and `store_root`) per cell in `population.json`; `make_population.py --checkpoint-nearest N` picks, per run, the saved checkpoint closest to N and records the actual number; `readings.py` reads it from the manifest and drops the CLI flag. Test: two fake runs with checkpoints 8000033 / 8000043 resolve to their own dirs for N = 8 000 000. | `senior-developer` |
+| N4 | 🟢 | §6b `--from-study-doc` parser | The Log-path cell is free prose with backticked paths separated by ` · `; a future edit that adds a `|` inside a cell breaks every row after it. Parse with a markdown-table splitter that respects backticks, and refuse a row whose column count is off rather than mis-aligning silently. | one guard | `senior-developer` |
+
+❓ **A5 (new):** the serial sweep budget. C8 measures one cell; with ≈ 14 basicq2 + 5 cmp10m + 18 hvsmell cells × four sweeps run one cell at a time, the plan may be looking at days, not hours, before the yardstick and the first treated reading exist. Not a defect — but the plan should state the estimate after C8 and, if a cell exceeds about an hour, ask the user whether cells on different store directories may run in parallel (the "NAS is the bottleneck" claim is asserted, not measured).
+
+### Cost of being wrong (this pass)
+
+If N1 stands, a finished wave sits unread — or, worse, a top-up decision is taken on a partial population that the verdict correctly labels "not evaluable" but a reader skims. If N2 stands, the golden re-check gets skipped in practice and the byte-identity guarantee is only nominal. If N3 stands, the §5.4 time course is built by hand-editing checkpoint numbers per run, which is where a wrong store gets read as the wrong training point. None costs a training run; none touches raw data.
+
+### What would make this SOUND
+
+N1–N3 as one revision of the plan text (no code exists yet), N4 optional. The user may accept N2 as a workflow risk knowingly.
+
+*Reviewed by: plan-reviewer*
