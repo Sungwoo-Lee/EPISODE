@@ -459,10 +459,34 @@ checkpoint manager returns as the latest step (6.1 C10).
 
 **Confound (stated):** all three branches of an agent start from the **same weights, optimizer
 state and random key**, so P1–P3 are not three independent replicates of the agent comparison, and
-the ordinary and modulated agents differ in initialisation, capacity and seed as well as in the
-modulator (factorial plan-review finding A2). Hence the "one initialisation pair, three world-pairs"
+~~the ordinary and modulated agents differ in initialisation, capacity and seed as well as in the
+modulator (factorial plan-review finding A2)~~ *[struck 2026-09-30, see the correction below]*. Hence the "one initialisation pair, three world-pairs"
 wording (section 2) and the fresh-seed pre-training (3.5). Branching removes the three near-duplicate
 Forage copies, and with them the old noise yardstick (a); nothing is lost (5.5).
+
+**Correction (2026-09-30, `experiment-designer`; plan-review finding M1 on the results, [[plan_continual_worlds_main_verdict]]).**
+The struck sentence was wrong about initialisation and seed. Checked directly: the two pre-trained agents
+began their 10 M Home episodes from **the same starting network**.
+- **Shared.** Both runs are seed 42 (saved config and launch argument agree). Rebuilding each run's untrained
+  network with the trainer's own construction code gives **bitwise-identical main-network weights: 27 of 27
+  arrays, 640,903 parameters**. The trainer's starting random keys (the first world's reset key and the
+  training-loop key) are identical, and the saved environment sections of the two runs are equal, so the
+  environment stream starts the same way. It diverges only once the two policies act differently.
+- **Different.** Only the modulator: one extra parameter subtree in the modulated agent (33 arrays, 26,640
+  parameters, about 4 % on top of the main network), and whatever it does to learning from step 1 on.
+- **Consequence.** The study has **one initialisation pair**, not two independent agents: every between-agent
+  difference is "the same start, perturbed by adding a modulator", and nothing here measures how far the same
+  start drifts under *any* perturbation in these worlds (an ordinary agent from a different seed, say). No
+  noise yardstick for that drift exists in this study. The head start on first entries (10.11) and every vote in
+  10.8 are properties of this pair. Section 11.5 item 1 lists the controls a replication needs.
+- **Method.** The same check as the parallel study's shared-start test on the May replication
+  ([[ALGORITHMIC_NULL_ANALYSIS_TOOLING]], "Checkpoint 3.3"), which uses `scripts/analysis/nmn/untrained.py` (`build`,
+  `run_seed`), itself tested bitwise against `train.py`'s construction. Script
+  `tmp/20260930_cw_shared_start_l05.py`, output `tmp/20260930_cw_shared_start_l05.json`, CPU. Control: the same
+  architecture built from seed 142 matches only 15 of the 27 arrays (the constant-initialised biases and LayerNorm
+  scales), so the comparison can fail. Assumption: the construction code at launch (2026-09-27) equals today's; the
+  key recipe is pinned by golden keys recorded before it was refactored (`tests/utils/test_init_keys.py`), and no
+  step-0 checkpoint exists to check this more directly.
 
 ### 3.5 Fresh pre-training for the replicated version (2 more seeds per agent)
 
@@ -822,57 +846,64 @@ checklist" (6.3) with the tags below.
 
 | Run | Status | Cell | Tag (= wandb-name) | wandb-group | wandb-job-type | Seed | Node | GPU | Launched at | WandB run ID | Log path |
 |-----|--------|------|--------------------|-------------|----------------|------|------|-----|-------------|--------------|----------|
-| 1 | running (at 23:45 Rev 2a) | Pilot 1 Forage (= main stage 1) | `rppo_cw_pilot1_forage_t1none_s42` | continual_worlds | pilot | 42 | 106 | cuda:0 | 2026-09-28T13:16:42 | `6sf68was` | `logs/20260928_131642.log` |
-| 2 | running (at 23:45 Rev 2a) | Pilot 1 Forage (= main stage 1) | `rppo_cw_pilot1_forage_t16quad_s42` | continual_worlds | pilot | 42 | 106 | cuda:1 | 2026-09-28T13:16:46 | `e78og819` | `logs/20260928_131646.log` |
-| 3 | finished ("Training complete", checked 23:45 Rev 2a) | Pilot 1 Danger | `rppo_cw_pilot1_danger_t1none_s42` | continual_worlds | pilot | 42 | 107 | cuda:0 | 2026-09-28T13:16:50 | `7e8rr45p` | `logs/20260928_131650.log` |
-| 4 | finished ("Training complete", checked 23:45 Rev 2a) | Pilot 1 Danger | `rppo_cw_pilot1_danger_t16quad_s42` | continual_worlds | pilot | 42 | 107 | cuda:1 | 2026-09-28T13:16:53 | `gwkhnlpl` | `logs/20260928_131653.log` |
-| 5 | finished ("Training complete", checked 23:45 Rev 2a) | Pilot 1 Famine | `rppo_cw_pilot1_famine_t1none_s42` | continual_worlds | pilot | 42 | 108 | cuda:0 | 2026-09-28T13:16:56 | `p0ev5nbw` | `logs/20260928_131656.log` |
-| 6 | finished ("Training complete", checked 23:45 Rev 2a) | Pilot 1 Famine | `rppo_cw_pilot1_famine_t16quad_s42` | continual_worlds | pilot | 42 | 108 | cuda:1 | 2026-09-28T13:17:00 | `lf5tquew` | `logs/20260928_131700.log` |
-| 7 | finished ("Training complete", checked 23:45 Rev 2a) | Pilot 1 Winter | `rppo_cw_pilot1_winter_t1none_s42` | continual_worlds | pilot | 42 | 109 | cuda:0 | 2026-09-28T13:17:04 | `s85qrj65` | `logs/20260928_131704.log` |
-| 8 | finished ("Training complete", checked 23:45 Rev 2a) | Pilot 1 Winter | `rppo_cw_pilot1_winter_t16quad_s42` | continual_worlds | pilot | 42 | 109 | cuda:1 | 2026-09-28T13:17:07 | `4bapjjog` | `logs/20260928_131707.log` |
-| 9 | finished ("Training complete", checked 23:45 Rev 2a) | Pilot 1 Fog | `rppo_cw_pilot1_fog_t1none_s42` | continual_worlds | pilot | 42 | 110 | cuda:0 | 2026-09-28T13:17:11 | `nealqwms` | `logs/20260928_131711.log` |
-| 10 | finished ("Training complete", checked 23:45 Rev 2a) | Pilot 1 Fog | `rppo_cw_pilot1_fog_t16quad_s42` | continual_worlds | pilot | 42 | 110 | cuda:1 | 2026-09-28T13:17:14 | `4rkcrqzp` | `logs/20260928_131714.log` |
-| 11 | finished ("Training complete", checked 23:45 Rev 2a) | Pilot 1 Harsh | `rppo_cw_pilot1_harsh_t1none_s42` | continual_worlds | pilot | 42 | 111 | cuda:0 | 2026-09-28T13:17:18 | `cssu3qc3` | `logs/20260928_131718.log` |
-| 12 | finished ("Training complete", checked 23:45 Rev 2a) | Pilot 1 Harsh | `rppo_cw_pilot1_harsh_t16quad_s42` | continual_worlds | pilot | 42 | 111 | cuda:1 | 2026-09-28T13:17:22 | `xbpq1y9s` | `logs/20260928_131722.log` |
-| 13 | finished ("Training complete", checked 23:45 Rev 2a) | Pilot 2a shakedown | `rppo_cw_pilot2a_t1none_s42` | continual_worlds | pilot | 42 | 112 | cuda:0 | 2026-09-28T13:17:26 | `tdpz3ju7` | `logs/20260928_131726.log` |
-| 14 | running (at 23:45 Rev 2a) | Pilot 2a shakedown | `rppo_cw_pilot2a_t16quad_s42` | continual_worlds | pilot | 42 | 112 | cuda:1 | 2026-09-28T13:17:30 | `si97t2j5` | `logs/20260928_131730.log` |
-| 15 | finished ("Training complete", checked 23:45 Rev 2a) | Pilot 2b shakedown | `rppo_cw_pilot2b_t1none_s42` | continual_worlds | pilot | 42 | 113 | cuda:0 | 2026-09-28T13:17:34 | `rygfw76a` | `logs/20260928_131734.log` |
-| 16 | finished ("Training complete", checked 23:45 Rev 2a) | Pilot 2b shakedown | `rppo_cw_pilot2b_t16quad_s42` | continual_worlds | pilot | 42 | 113 | cuda:1 | 2026-09-28T13:17:38 | `zjsdfoyq` | `logs/20260928_131738.log` |
-| 17 | finished ("Training complete", checked 23:45 Rev 2a) | Pilot 3 Nursery (= seed-43 leg) | `rppo_cw_nursery_t1none_s43` | continual_worlds | pilot | 43 | 102 | cuda:0 | 2026-09-28T13:17:41 | `98tm6jxe` | `logs/20260928_131741.log` |
-| 18 | finished ("Training complete", checked 23:45 Rev 2a) | Pilot 3 Nursery (= seed-43 leg) | `rppo_cw_nursery_t16quad_s43` | continual_worlds | pilot | 43 | 102 | cuda:1 | 2026-09-28T13:17:45 | `q3ni07j6` | `logs/20260928_131745.log` |
-| 19 | running | P1-replacement branch Danger-A ↔ Famine, ordinary | `rppo_cw_p1_danger_scout_a_famine_t1none_s42` | continual_worlds | prod | 42 | 108 | cuda:0 | 2026-09-29T00:39:59 | `6jz5xgtf` | `logs/20260929_003959.log` |
-| 20 | running | P1-replacement branch Danger-A ↔ Famine, modulated | `rppo_cw_p1_danger_scout_a_famine_t16quad_s42` | continual_worlds | prod | 42 | 108 | cuda:1 | 2026-09-29T00:40:06 | `f6sqgsgg` | `logs/20260929_004006.log` |
-| 21 | running | P2-replacement branch Fog-B ↔ Danger-A, ordinary | `rppo_cw_p2_fog_scout_b_danger_scout_a_t1none_s42` | continual_worlds | prod | 42 | 109 | cuda:0 | 2026-09-29T00:40:12 | `7szjx34t` | `logs/20260929_004012.log` |
-| 22 | running | P2-replacement branch Fog-B ↔ Danger-A, modulated | `rppo_cw_p2_fog_scout_b_danger_scout_a_t16quad_s42` | continual_worlds | prod | 42 | 109 | cuda:1 | 2026-09-29T00:40:18 | `r96fgv4u` | `logs/20260929_004018.log` |
-| 23 | running | P3 branch Winter ↔ Famine, ordinary | `rppo_cw_p3_t1none_s42` | continual_worlds | prod | 42 | 107 | cuda:0 | 2026-09-29T00:39:47 | `qdnh5rzy` | `logs/20260929_003947.log` |
-| 24 | running | P3 branch Winter ↔ Famine, modulated | `rppo_cw_p3_t16quad_s42` | continual_worlds | prod | 42 | 107 | cuda:1 | 2026-09-29T00:39:53 | `q6j9pu1o` | `logs/20260929_003953.log` |
+| 1 | finished ("Training complete", checked 2026-09-30) | Pilot 1 Forage (= main stage 1) | `rppo_cw_pilot1_forage_t1none_s42` | continual_worlds | pilot | 42 | 106 | cuda:0 | 2026-09-28T13:16:42 | `6sf68was` | `logs/20260928_131642.log` |
+| 2 | finished ("Training complete", checked 2026-09-30) | Pilot 1 Forage (= main stage 1) | `rppo_cw_pilot1_forage_t16quad_s42` | continual_worlds | pilot | 42 | 106 | cuda:1 | 2026-09-28T13:16:46 | `e78og819` | `logs/20260928_131646.log` |
+| 3 | finished ("Training complete", checked 2026-09-30) | Pilot 1 Danger | `rppo_cw_pilot1_danger_t1none_s42` | continual_worlds | pilot | 42 | 107 | cuda:0 | 2026-09-28T13:16:50 | `7e8rr45p` | `logs/20260928_131650.log` |
+| 4 | finished ("Training complete", checked 2026-09-30) | Pilot 1 Danger | `rppo_cw_pilot1_danger_t16quad_s42` | continual_worlds | pilot | 42 | 107 | cuda:1 | 2026-09-28T13:16:53 | `gwkhnlpl` | `logs/20260928_131653.log` |
+| 5 | finished ("Training complete", checked 2026-09-30) | Pilot 1 Famine | `rppo_cw_pilot1_famine_t1none_s42` | continual_worlds | pilot | 42 | 108 | cuda:0 | 2026-09-28T13:16:56 | `p0ev5nbw` | `logs/20260928_131656.log` |
+| 6 | finished ("Training complete", checked 2026-09-30) | Pilot 1 Famine | `rppo_cw_pilot1_famine_t16quad_s42` | continual_worlds | pilot | 42 | 108 | cuda:1 | 2026-09-28T13:17:00 | `lf5tquew` | `logs/20260928_131700.log` |
+| 7 | finished ("Training complete", checked 2026-09-30) | Pilot 1 Winter | `rppo_cw_pilot1_winter_t1none_s42` | continual_worlds | pilot | 42 | 109 | cuda:0 | 2026-09-28T13:17:04 | `s85qrj65` | `logs/20260928_131704.log` |
+| 8 | finished ("Training complete", checked 2026-09-30) | Pilot 1 Winter | `rppo_cw_pilot1_winter_t16quad_s42` | continual_worlds | pilot | 42 | 109 | cuda:1 | 2026-09-28T13:17:07 | `4bapjjog` | `logs/20260928_131707.log` |
+| 9 | finished ("Training complete", checked 2026-09-30) | Pilot 1 Fog | `rppo_cw_pilot1_fog_t1none_s42` | continual_worlds | pilot | 42 | 110 | cuda:0 | 2026-09-28T13:17:11 | `nealqwms` | `logs/20260928_131711.log` |
+| 10 | finished ("Training complete", checked 2026-09-30) | Pilot 1 Fog | `rppo_cw_pilot1_fog_t16quad_s42` | continual_worlds | pilot | 42 | 110 | cuda:1 | 2026-09-28T13:17:14 | `4rkcrqzp` | `logs/20260928_131714.log` |
+| 11 | finished ("Training complete", checked 2026-09-30) | Pilot 1 Harsh | `rppo_cw_pilot1_harsh_t1none_s42` | continual_worlds | pilot | 42 | 111 | cuda:0 | 2026-09-28T13:17:18 | `cssu3qc3` | `logs/20260928_131718.log` |
+| 12 | finished ("Training complete", checked 2026-09-30) | Pilot 1 Harsh | `rppo_cw_pilot1_harsh_t16quad_s42` | continual_worlds | pilot | 42 | 111 | cuda:1 | 2026-09-28T13:17:22 | `xbpq1y9s` | `logs/20260928_131722.log` |
+| 13 | finished ("Training complete", checked 2026-09-30) | Pilot 2a shakedown | `rppo_cw_pilot2a_t1none_s42` | continual_worlds | pilot | 42 | 112 | cuda:0 | 2026-09-28T13:17:26 | `tdpz3ju7` | `logs/20260928_131726.log` |
+| 14 | finished ("Training complete", checked 2026-09-30) | Pilot 2a shakedown | `rppo_cw_pilot2a_t16quad_s42` | continual_worlds | pilot | 42 | 112 | cuda:1 | 2026-09-28T13:17:30 | `si97t2j5` | `logs/20260928_131730.log` |
+| 15 | finished ("Training complete", checked 2026-09-30) | Pilot 2b shakedown | `rppo_cw_pilot2b_t1none_s42` | continual_worlds | pilot | 42 | 113 | cuda:0 | 2026-09-28T13:17:34 | `rygfw76a` | `logs/20260928_131734.log` |
+| 16 | finished ("Training complete", checked 2026-09-30) | Pilot 2b shakedown | `rppo_cw_pilot2b_t16quad_s42` | continual_worlds | pilot | 42 | 113 | cuda:1 | 2026-09-28T13:17:38 | `zjsdfoyq` | `logs/20260928_131738.log` |
+| 17 | finished ("Training complete", checked 2026-09-30) | Pilot 3 Nursery (= seed-43 leg) | `rppo_cw_nursery_t1none_s43` | continual_worlds | pilot | 43 | 102 | cuda:0 | 2026-09-28T13:17:41 | `98tm6jxe` | `logs/20260928_131741.log` |
+| 18 | finished ("Training complete", checked 2026-09-30) | Pilot 3 Nursery (= seed-43 leg) | `rppo_cw_nursery_t16quad_s43` | continual_worlds | pilot | 43 | 102 | cuda:1 | 2026-09-28T13:17:45 | `q3ni07j6` | `logs/20260928_131745.log` |
+| 19 | finished ("Training complete", checked 2026-09-30) | P1-replacement branch Danger-A ↔ Famine, ordinary | `rppo_cw_p1_danger_scout_a_famine_t1none_s42` | continual_worlds | prod | 42 | 108 | cuda:0 | 2026-09-29T00:39:59 | `6jz5xgtf` | `logs/20260929_003959.log` |
+| 20 | finished ("Training complete", checked 2026-09-30) | P1-replacement branch Danger-A ↔ Famine, modulated | `rppo_cw_p1_danger_scout_a_famine_t16quad_s42` | continual_worlds | prod | 42 | 108 | cuda:1 | 2026-09-29T00:40:06 | `f6sqgsgg` | `logs/20260929_004006.log` |
+| 21 | finished ("Training complete", checked 2026-09-30) | P2-replacement branch Fog-B ↔ Danger-A, ordinary | `rppo_cw_p2_fog_scout_b_danger_scout_a_t1none_s42` | continual_worlds | prod | 42 | 109 | cuda:0 | 2026-09-29T00:40:12 | `7szjx34t` | `logs/20260929_004012.log` |
+| 22 | finished ("Training complete", checked 2026-09-30) | P2-replacement branch Fog-B ↔ Danger-A, modulated | `rppo_cw_p2_fog_scout_b_danger_scout_a_t16quad_s42` | continual_worlds | prod | 42 | 109 | cuda:1 | 2026-09-29T00:40:18 | `r96fgv4u` | `logs/20260929_004018.log` |
+| 23 | finished ("Training complete", checked 2026-09-30) | P3 branch Winter ↔ Famine, ordinary | `rppo_cw_p3_t1none_s42` | continual_worlds | prod | 42 | 107 | cuda:0 | 2026-09-29T00:39:47 | `qdnh5rzy` | `logs/20260929_003947.log` |
+| 24 | finished ("Training complete", checked 2026-09-30) | P3 branch Winter ↔ Famine, modulated | `rppo_cw_p3_t16quad_s42` | continual_worlds | prod | 42 | 107 | cuda:1 | 2026-09-29T00:39:53 | `q6j9pu1o` | `logs/20260929_003953.log` |
 | 25 | planned — unblocked (Pilot 3 passed) | Nursery leg | `rppo_cw_nursery_t1none_s44` | continual_worlds | prod | 44 | — | — | — | — | — |
 | 26 | planned — unblocked (Pilot 3 passed) | Nursery leg | `rppo_cw_nursery_t16quad_s44` | continual_worlds | prod | 44 | — | — | — | — | — |
-| 27 | running (at 23:45 Rev 2a) | Home leg | `rppo_cw_home_t1none_s43` | continual_worlds | prod | 43 | 102 | cuda:0 | 2026-09-28T17:14:41 | `6gc2tok9` | `logs/20260928_171441.log` |
-| 28 | running (at 23:45 Rev 2a) | Home leg | `rppo_cw_home_t16quad_s43` | continual_worlds | prod | 43 | 102 | cuda:1 | 2026-09-28T18:02:28 | `cmnof24a` | `logs/20260928_180229.log` |
+| 27 | finished ("Training complete", checked 2026-09-30) | Home leg | `rppo_cw_home_t1none_s43` | continual_worlds | prod | 43 | 102 | cuda:0 | 2026-09-28T17:14:41 | `6gc2tok9` | `logs/20260928_171441.log` |
+| 28 | finished ("Training complete", checked 2026-09-30) | Home leg | `rppo_cw_home_t16quad_s43` | continual_worlds | prod | 43 | 102 | cuda:1 | 2026-09-28T18:02:28 | `cmnof24a` | `logs/20260928_180229.log` |
 | 29 | planned (after 25) | Home leg | `rppo_cw_home_t1none_s44` | continual_worlds | prod | 44 | — | — | — | — | — |
 | 30 | planned (after 26) | Home leg | `rppo_cw_home_t16quad_s44` | continual_worlds | prod | 44 | — | — | — | — | — |
-| 31 | finished ("Training complete", checked 23:45 Rev 2a) | Pilot 1s Danger-soft | `rppo_cw_pilot1s_danger_soft_t1none_s42` | continual_worlds | pilot | 42 | 101 | cuda:0 | 2026-09-28T16:20:23 | `ww9ck47l` | `logs/20260928_162023.log` |
-| 32 | finished ("Training complete", checked 23:45 Rev 2a) | Pilot 1s Danger-soft | `rppo_cw_pilot1s_danger_soft_t16quad_s42` | continual_worlds | pilot | 42 | 101 | cuda:1 | 2026-09-28T16:20:24 | `kgvn98p5` | `logs/20260928_162024.log` |
-| 33 | finished ("Training complete", checked 23:45 Rev 2a) | Pilot 1s Fog-soft | `rppo_cw_pilot1s_fog_soft_t1none_s42` | continual_worlds | pilot | 42 | 104 | cuda:0 | 2026-09-28T16:28:58 | `ruudv8i6` | `logs/20260928_162858.log` (shared with row 34; clean copy `wandb/run-20260928_162915-ruudv8i6/files/output.log`) |
-| 34 | finished ("Training complete", checked 23:45 Rev 2a) | Pilot 1s Fog-soft | `rppo_cw_pilot1s_fog_soft_t16quad_s42` | continual_worlds | pilot | 42 | 104 | cuda:1 | 2026-09-28T16:28:58 | `il157bos` | `logs/20260928_162858.log` (shared with row 33; clean copy `wandb/run-20260928_162915-il157bos/files/output.log`) |
-| 35 | finished ("Training complete", checked 23:45 Rev 2a) | Pilot 1s Harsh-soft | `rppo_cw_pilot1s_harsh_soft_t1none_s42` | continual_worlds | pilot | 42 | 103 | cuda:0 | 2026-09-28T16:20:25 | `dxkzhykp` | `logs/20260928_162025.log` |
-| 36 | finished ("Training complete", checked 23:45 Rev 2a) | Pilot 1s Harsh-soft | `rppo_cw_pilot1s_harsh_soft_t16quad_s42` | continual_worlds | pilot | 42 | 103 | cuda:1 | 2026-09-28T16:20:26 | `hjktbwln` | `logs/20260928_162026.log` |
-| 37 | finished ("Training complete", checked 23:45 Rev 2a) | Scout Danger-A (3–5 hunters, Home-like persistence) | `rppo_cw_scout_danger_scout_a_t1none_s42` | continual_worlds | pilot | 42 | 105 | cuda:0 | 2026-09-28T19:07:59 | `yhezxekl` | `logs/20260928_190759.log` |
-| 38 | finished ("Training complete", checked 23:45 Rev 2a) | Scout Danger-B (2–4 hunters) | `rppo_cw_scout_danger_scout_b_t1none_s42` | continual_worlds | pilot | 42 | 105 | cuda:1 | 2026-09-28T19:08:06 | `59wq3jqj` | `logs/20260928_190807.log` |
+| 31 | finished ("Training complete", checked 2026-09-30) | Pilot 1s Danger-soft | `rppo_cw_pilot1s_danger_soft_t1none_s42` | continual_worlds | pilot | 42 | 101 | cuda:0 | 2026-09-28T16:20:23 | `ww9ck47l` | `logs/20260928_162023.log` |
+| 32 | finished ("Training complete", checked 2026-09-30) | Pilot 1s Danger-soft | `rppo_cw_pilot1s_danger_soft_t16quad_s42` | continual_worlds | pilot | 42 | 101 | cuda:1 | 2026-09-28T16:20:24 | `kgvn98p5` | `logs/20260928_162024.log` |
+| 33 | finished ("Training complete", checked 2026-09-30) | Pilot 1s Fog-soft | `rppo_cw_pilot1s_fog_soft_t1none_s42` | continual_worlds | pilot | 42 | 104 | cuda:0 | 2026-09-28T16:28:58 | `ruudv8i6` | `logs/20260928_162858.log` (shared with row 34; clean copy `wandb/run-20260928_162915-ruudv8i6/files/output.log`) |
+| 34 | finished ("Training complete", checked 2026-09-30) | Pilot 1s Fog-soft | `rppo_cw_pilot1s_fog_soft_t16quad_s42` | continual_worlds | pilot | 42 | 104 | cuda:1 | 2026-09-28T16:28:58 | `il157bos` | `logs/20260928_162858.log` (shared with row 33; clean copy `wandb/run-20260928_162915-il157bos/files/output.log`) |
+| 35 | finished ("Training complete", checked 2026-09-30) | Pilot 1s Harsh-soft | `rppo_cw_pilot1s_harsh_soft_t1none_s42` | continual_worlds | pilot | 42 | 103 | cuda:0 | 2026-09-28T16:20:25 | `dxkzhykp` | `logs/20260928_162025.log` |
+| 36 | finished ("Training complete", checked 2026-09-30) | Pilot 1s Harsh-soft | `rppo_cw_pilot1s_harsh_soft_t16quad_s42` | continual_worlds | pilot | 42 | 103 | cuda:1 | 2026-09-28T16:20:26 | `hjktbwln` | `logs/20260928_162026.log` |
+| 37 | finished ("Training complete", checked 2026-09-30) | Scout Danger-A (3–5 hunters, Home-like persistence) | `rppo_cw_scout_danger_scout_a_t1none_s42` | continual_worlds | pilot | 42 | 105 | cuda:0 | 2026-09-28T19:07:59 | `yhezxekl` | `logs/20260928_190759.log` |
+| 38 | finished ("Training complete", checked 2026-09-30) | Scout Danger-B (2–4 hunters) | `rppo_cw_scout_danger_scout_b_t1none_s42` | continual_worlds | pilot | 42 | 105 | cuda:1 | 2026-09-28T19:08:06 | `59wq3jqj` | `logs/20260928_190807.log` |
 | 39 | abandoned — node 114 hung during compile ~19:09; if 114 recovers, kill any rppo_cw_scout_ processes there (relaunched as `_r2`, next row) | Scout Danger-C (3–5 hunters + smell 8) | `rppo_cw_scout_danger_scout_c_t1none_s42` | continual_worlds | pilot | 42 | 114 | cuda:0 | 2026-09-28T19:08:13 | `4k8wgp8j` | `logs/20260928_190814.log` |
-| 39-r2 | finished ("Training complete", checked 23:45 Rev 2a) | Scout Danger-C (3–5 hunters + smell 8) — relaunch of 39 | `rppo_cw_scout_danger_scout_c_t1none_s42_r2` | continual_worlds | pilot | 42 | 107 | cuda:0 | 2026-09-28T19:27:46 | `fv0sdsvh` | `logs/20260928_192746.log` |
+| 39-r2 | finished ("Training complete", checked 2026-09-30) | Scout Danger-C (3–5 hunters + smell 8) — relaunch of 39 | `rppo_cw_scout_danger_scout_c_t1none_s42_r2` | continual_worlds | pilot | 42 | 107 | cuda:0 | 2026-09-28T19:27:46 | `fv0sdsvh` | `logs/20260928_192746.log` |
 | 40 | abandoned — node 114 hung during compile ~19:09; if 114 recovers, kill any rppo_cw_scout_ processes there (relaunched as `_r2`, next row) | Scout Fog-A (Fog-soft + smell 5) | `rppo_cw_scout_fog_scout_a_t1none_s42` | continual_worlds | pilot | 42 | 114 | cuda:1 | 2026-09-28T19:08:20 | `zm73ti5c` | `logs/20260928_190821.log` |
-| 40-r2 | finished ("Training complete", checked 23:45 Rev 2a) | Scout Fog-A (Fog-soft + smell 5) — relaunch of 40 | `rppo_cw_scout_fog_scout_a_t1none_s42_r2` | continual_worlds | pilot | 42 | 107 | cuda:1 | 2026-09-28T19:27:55 | `n1zmj65i` | `logs/20260928_192755.log` |
+| 40-r2 | finished ("Training complete", checked 2026-09-30) | Scout Fog-A (Fog-soft + smell 5) — relaunch of 40 | `rppo_cw_scout_fog_scout_a_t1none_s42_r2` | continual_worlds | pilot | 42 | 107 | cuda:1 | 2026-09-28T19:27:55 | `n1zmj65i` | `logs/20260928_192755.log` |
 | 41 | abandoned — node 114 hung during compile ~19:09; if 114 recovers, kill any rppo_cw_scout_ processes there (relaunched as `_r2`, next row) | Scout Fog-B (smell 3, no noise) | `rppo_cw_scout_fog_scout_b_t1none_s42` | continual_worlds | pilot | 42 | 114 | cuda:2 | 2026-09-28T19:08:27 | `h4772olp` | `logs/20260928_190827.log` |
-| 41-r2 | finished ("Training complete", checked 23:45 Rev 2a) | Scout Fog-B (smell 3, no noise) — relaunch of 41 | `rppo_cw_scout_fog_scout_b_t1none_s42_r2` | continual_worlds | pilot | 42 | 110 | cuda:0 | 2026-09-28T19:28:03 | `pvzvl7bm` | `logs/20260928_192803.log` |
-| 42 | finished ("Training complete", checked 23:45 Rev 2a) | Scout Danger-A, modulated agent (pairs row 37) | `rppo_cw_scout_danger_scout_a_t16quad_s42` | continual_worlds | pilot | 42 | 109 | cuda:0 | 2026-09-28T20:54:17 | `35fobtmf` | `logs/20260928_205417.log` |
-| 43 | finished ("Training complete", checked 23:45 Rev 2a) | Scout Fog-B, modulated agent (pairs row 41-r2) | `rppo_cw_scout_fog_scout_b_t16quad_s42` | continual_worlds | pilot | 42 | 109 | cuda:1 | 2026-09-28T21:01:05 | `v9qvx2p3` | `logs/20260928_210105.log` |
+| 41-r2 | finished ("Training complete", checked 2026-09-30) | Scout Fog-B (smell 3, no noise) — relaunch of 41 | `rppo_cw_scout_fog_scout_b_t1none_s42_r2` | continual_worlds | pilot | 42 | 110 | cuda:0 | 2026-09-28T19:28:03 | `pvzvl7bm` | `logs/20260928_192803.log` |
+| 42 | finished ("Training complete", checked 2026-09-30) | Scout Danger-A, modulated agent (pairs row 37) | `rppo_cw_scout_danger_scout_a_t16quad_s42` | continual_worlds | pilot | 42 | 109 | cuda:0 | 2026-09-28T20:54:17 | `35fobtmf` | `logs/20260928_205417.log` |
+| 43 | finished ("Training complete", checked 2026-09-30) | Scout Fog-B, modulated agent (pairs row 41-r2) | `rppo_cw_scout_fog_scout_b_t16quad_s42` | continual_worlds | pilot | 42 | 109 | cuda:1 | 2026-09-28T21:01:05 | `v9qvx2p3` | `logs/20260928_210105.log` |
 
 *Revision 2a (R7), statuses checked 23:45 against each log's "Training complete" line:* rows 3–13,
 15–18, 31–38, 39-r2 / 40-r2 / 41-r2, 42 and 43 **finished**; rows 39–41 **abandoned** (node 114);
 still **running**: 1 (12.35 M of 14 M), 2 (11.94 M of 14 M), 14 (14.61 M of 15 M), 27 (7.15 M of 10 M),
 28 (5.51 M of 10 M). Row 13 is finished (the Revision 2 text already said so).
+
+*2026-09-30 (experiment-designer, reviewer M1 follow-up):* every row's log re-checked for its "Training complete"
+line (rows 33–34 in their clean WandB copies). Rows 1–24, 27–28, 31–38, 39-r2 / 40-r2 / 41-r2, 42 and 43 are
+**finished**, including the main runs 19–24 (P1-replacement, P2-replacement, P3). Rows 39–41 stay **abandoned**
+(node 114; no "Training complete" line). Rows 25–26 and 29–30 (seed-44 Nursery and Home legs) were **never
+launched** — no log or results folder carries their tags — and stay planned; before any launch they are subject
+to the cross-seed checklist in 11.5 item 1.
 
 Row 42 (added 2026-09-28 at the user's request) is the modulated-agent twin of row 37 — Danger-A is
 the candidate replacement closest to the survivable line, and a replacement world needs both agents.
@@ -1912,7 +1943,7 @@ survival on its return, even though its gain over its own first visit is larger.
   verified that same-seed ordinary and modulated agents built by the trainer's recipe start from **bitwise-identical
   main-network weights** (27 of 27 arrays) with a shared environment stream ([[ALGORITHMIC_NULL_TODO]], 2026-09-30;
   checked on the May replication's untrained seed-42 pair — the level-05 runs these agents come from use the same
-  recipe but were not separately checked). The two pre-trained agents here therefore most likely began their 10 M
+  recipe but were not separately checked; *confirmed directly 2026-09-30, 27 of 27 bitwise, see the 3.4 correction*). The two pre-trained agents here therefore most likely began their 10 M
   Home episodes from one shared initialisation. The confound is the opposite shape: one shared start, perturbed only by
   the modulator, with no measure of how far *any* perturbation of
   that start would drift in these worlds. The zero-shot head start (10.11) is a property of this one pair and cannot
@@ -1951,7 +1982,8 @@ survival on its return, even though its gain over its own first visit is larger.
 - **`experiment-designer`:** before the fresh-seed replication (3.5) runs, pre-register (a) how per-switch
   votes combine into one sign per measure (10.2 ii), (b) the forgetting entry set (with or without Forage),
   (c) a common-reference companion for the return measure (10.4), and (d) whether the forgetting matrix
-  plays the policy deterministically or sampled. The manifest statuses of rows 19–24 are stale ("running").
+  plays the policy deterministically or sampled. ~~The manifest statuses of rows 19–24 are stale ("running").~~
+  *(Done 2026-09-30: statuses re-checked against the logs, section 4.)*
 - *(Added 2026-09-30, after the verdict review; done the same day.)* **`developer`:** the P3 sampled-action re-check
   (reviewer M4) is done — `results/analysis/continual_worlds/sampled_check_p3.json`; Forage gap +113.9 sampled vs +112.7 greedy, zero-shot Winter gap +19.7 vs
   +18.5. The matrix script's policy-mode option was uncommitted in the working tree when this revision was written.
@@ -1984,6 +2016,17 @@ survival on its return, even though its gain over its own first visit is larger.
    return/forgetting advantage was specific to its tiny from-scratch stages.
 4. **A trajectory-level read of Winter (D6 "look first", still open)** — why the modulated agent climbs
    faster early yet settles lower, with more cold/heat deaths.
+
+**Pre-launch checklist for any replication of this study (appended 2026-09-30, `experiment-designer`, reviewer M1).**
+Same-seed ordinary/modulated pairs share their starting network (3.4 correction), so a replication does not go to
+`training-runner` until its design includes:
+- [ ] **Noise yardstick:** ordinary-42 against ordinary-43 and ordinary-44, run through the same worlds and schedule,
+  so that "how far do two different starts drift with no modulator involved" is measured in these worlds.
+- [ ] **Cross-seed pairs:** ordinary-*a* against modulated-*b* with *a* ≠ *b* (for example ordinary-43 vs modulated-44),
+  read beside the same-seed pairs, so the modulator effect is not confounded with the shared start.
+- [ ] **Shared start verified** for every same-seed pair used, with the 3.4 method (27 of 27 main-network arrays
+  bitwise), and the pair's launch code version recorded.
+- [ ] The scoring choices of 11.4 (a)–(h) pre-registered before any run is read.
 
 ### 11.6 Metrics requested
 
