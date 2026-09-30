@@ -282,3 +282,49 @@ def test_pre_water_config_gets_only_the_water_gate():
     assert apply_saved_config_compat(cfg, source=_SAVED_SOURCE) == ["water.enabled"]
     assert cfg["water"] == {"enabled": False}
     assert load_env_params(Config(cfg)).water_enabled is False
+
+
+# ── EnvParams.__setstate__: pre-water pickles (fix batch 2026-09-30) ─────────────────
+
+def _level05_params():
+    from src.environment.config_loader import load_env_config
+    return load_env_params(load_env_config(os.path.join(
+        _REPO, "configs", "environment", "experiment", "basic",
+        "05-campfire_thermal_10x10.yaml")))
+
+
+def test_pre_water_pickle_fills_all_water_fields_and_warns(caplog):
+    """A pickle with NO water field is a pre-water recording: every field gets its
+    water-off value and one warning line is logged."""
+    import logging
+    from src.environment.state import EnvParams, WATER_OFF_FIELDS
+    params = _level05_params()
+    old_state = {k: v for k, v in params.__dict__.items() if k not in WATER_OFF_FIELDS}
+    old = EnvParams.__new__(EnvParams)
+    with caplog.at_level(logging.WARNING, logger="src.environment.state"):
+        old.__setstate__(old_state)
+    for k, v in WATER_OFF_FIELDS.items():
+        assert getattr(old, k) == v, k
+    warns = [r for r in caplog.records if "predates the water fields" in r.getMessage()]
+    assert len(warns) == 1
+
+
+def test_partial_water_pickle_is_refused_naming_the_missing_fields():
+    """A pickle with SOME water fields is from no known version: refused, not filled."""
+    from src.environment.state import EnvParams
+    params = _level05_params()
+    state = {k: v for k, v in params.__dict__.items()
+             if k not in ("water_drain", "water_drink_gain")}
+    old = EnvParams.__new__(EnvParams)
+    with pytest.raises(ValueError, match=r"missing: \['water_drain', 'water_drink_gain'\]"):
+        old.__setstate__(state)
+
+
+def test_current_pickle_round_trips_without_warning(caplog):
+    import logging
+    import pickle
+    params = _level05_params()
+    with caplog.at_level(logging.WARNING, logger="src.environment.state"):
+        rt = pickle.loads(pickle.dumps(params))
+    assert rt.water_enabled is False
+    assert not [r for r in caplog.records if "predates the water fields" in r.getMessage()]

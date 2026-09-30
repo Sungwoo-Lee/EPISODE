@@ -1,3 +1,4 @@
+import logging
 from typing import Optional
 
 import jax.numpy as jnp
@@ -578,9 +579,21 @@ class EnvParams:
         water fields, and `get_observation_breakdown` reads `water_enabled`, so without
         this every pre-water recording would stop rendering. The world such a pickle
         describes IS the water-off world, so the water-off sentinels are its true values,
-        not a guess. Only missing water fields are filled; nothing else is touched.
+        not a guess. All-or-none, like saved_config_compat's eras: when EVERY water field
+        is missing they are all filled and one warning line is logged; when only SOME are
+        missing the pickle is from no known era, so it raises naming the missing fields.
+        Nothing else is touched.
         """
         state = dict(state)
-        for k, v in WATER_OFF_FIELDS.items():
-            state.setdefault(k, v)
+        missing = [k for k in WATER_OFF_FIELDS if k not in state]
+        if len(missing) == len(WATER_OFF_FIELDS):
+            logging.getLogger(__name__).warning(
+                "EnvParams pickle predates the water fields (THIRST_WATER_PLAN); filled "
+                "all %d with their water-off values.", len(missing))
+            state.update(WATER_OFF_FIELDS)
+        elif missing:
+            raise ValueError(
+                f"EnvParams pickle carries only some of the water fields; missing: "
+                f"{missing}. A pre-water pickle has none of them and a current one has all; "
+                "a partial set is from no known version and is not filled in.")
         self.__dict__.update(state)
