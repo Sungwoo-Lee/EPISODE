@@ -9,7 +9,7 @@ wandb_tag: rppo_hv1ch / rppo_hv1chm / rppo_hv2ch
 
 # Single-channel smell: rabbit–predator confusion and hypervigilance
 
-> **Status**: PRE-REGISTERED, **Revision 3 (2026-10-01, pre-data; Revision 2 same day, pre-data; Revision 1 2026-09-30, pre-launch)** — a third world added (matched smell strength) and the decision rule rewritten after plan review (see [Revision 1](#revision-1) and [Response to plan-reviewer](#response-to-plan-reviewer)). Configs written and validated on the trainer's own loader; runs launching from 2026-10-01 (see the manifest); Revision 2 was written before any result existed.
+> **Status**: PRE-REGISTERED, **Revision 4 (2026-10-01, pre-data; Revisions 2–3 same day, pre-data; Revision 1 2026-09-30, pre-launch)** — a third world added (matched smell strength) and the decision rule rewritten after plan review (see [Revision 1](#revision-1) and [Response to plan-reviewer](#response-to-plan-reviewer)). Configs written and validated on the trainer's own loader; runs launching from 2026-10-01 (see the manifest); Revision 2 was written before any result existed.
 > **Date**: 2026-09-30
 > **Author**: experiment-designer
 > **Base pages**: *What makes this agent hide?* ([[a01_hiding_drivers]], `docs/experiments/active/trajectory_factors/a01_hiding_drivers.html`) — where the scent false alarm and the aimed rabbit response were first measured; *Modulator clues* (`docs/experiments/active/modulator_clues/modulator_clues.html`) — where hypervigilance was re-analysed on the project's definition (commit `d29beb56`) and found absent under assigned injury.
@@ -387,7 +387,7 @@ criterion for Q1/Q2: the prediction is only that survival is **lower** in both t
 
 | ID | What | Definition |
 |---|---|---|
-| **S1** (the missing piece, *e*) | **Scent × injury interaction** — does the rabbit-scent false alarm grow with the assigned wound? | Episodes with **no predator and exactly one rabbit** (11.1 % of episodes in the seed-42 control store, ≈ 110 k per run — any hiding driven by that rabbit's scent is a pure false alarm). Outcome: bush share over the first 25 chosen steps. (i) **Quarter contrast — the primary estimator (Revision 3):** within the top start-injury quarter and within the bottom quarter separately, a weighted least-squares slope of the episode's early bush share (in pp) on the rabbit's scent evidence (nats, §2.2), weights = the episode's early step count; the contrast is top slope minus bottom slope, in pp per nat — the unit of the §5.3 minimum effect. (ii) **Model — descriptive only:** quasi-binomial GLM (the `hiding_drivers.fit_glms` framework) with scent evidence, start injury, their product, and the M1 exogenous covariates (start nutrition, bushes, rocks, food, ambush predators, spawn distance to bush); the product term reported in pp per nat per 100 injury. Repeated on one-predator-one-rabbit episodes as a sensitivity check. Prediction: larger in both treated worlds. |
+| **S1** (the missing piece, *e*) | **Scent × injury interaction** — does the rabbit-scent false alarm grow with the assigned wound? | Episodes with **no predator and exactly one rabbit** (11.1 % of episodes in the seed-42 control store, ≈ 110 k per run — any hiding driven by that rabbit's scent is a pure false alarm). Outcome: bush share over the first 25 chosen steps. (i) **Quarter contrast — the primary estimator (Revision 3):** within the top start-injury quarter and within the bottom quarter separately, a weighted least-squares slope of the episode's early bush share (in pp) on the rabbit's scent evidence (nats, §2.2), weights = the episode's early step count; the contrast is top slope minus bottom slope, in pp per nat — the unit of the §5.3 minimum effect. (ii) **Model — descriptive only:** quasi-binomial GLM (the `hiding_drivers.fit_glms` framework) with scent evidence, start injury, their product, and the M1 exogenous covariates (start nutrition, bushes, rocks, food, ambush predators, spawn distance to bush); the product term reported in pp per nat per 100 injury. Repeated on one-predator-one-rabbit episodes as a sensitivity check. Prediction: larger in both treated worlds. **Reference arm (Revision 4):** the tested Δ uses the **matched-control reading** of the control world — the same quarter contrast with the rabbit's channel 1 as the scent variable and its channel 2 as a covariate, converted to pp per nat (2.22 nats per unit of channel 1) — because in both treated worlds the scent statistic *is* odour strength, and channel 1 at fixed channel 2 is the control's only reading with the same identity-plus-strength composition. The plain control reading (`x1 − x2`, identity only) is reported beside it as descriptive, with Δ against it, and every S1 reading carries the tooling's `statistic_equals_intensity` flag. |
 | **S2** | **Scent false alarm** (the a01 ladder) — hiding and survival as a function of the rabbit's randomised scent. | `hiding_drivers.py`: univariate rabbit scent (pp per nat and pp per SD) and model M3 (one predator + one rabbit). Plus the a01 extreme-row table (hiding, food per step, starved, killed, survival steps) for the rabbit's bottom vs top sixth of scent evidence **within each world** — **registered (Revision 3): within-world population sextiles** of the rabbit's scent statistic over that world's exactly-one-rabbit evaluation episodes (cut points per world; they are the same for every run of a world, because the evaluation reset draws depend only on the episode seed and the world — the tool asserts this), each row also reporting its mean scent evidence in nats; a01's fixed range bins (`< −0.2`, `≥ 0.6`) are reported in the control only, for continuity with the base page. Scent statistic: `x1 − x2` in the control (existing definition, unchanged), `x1` single-channel, `x1 + x2` matched. **Matched reading:** in the control, the same ladder on channel 1 alone with channel 2 as a covariate. |
 | **S3** | **Aimed response** — does predator-like rabbit scent raise hiding specifically when *that rabbit* is near? | The a01 three-way split on one-predator-one-rabbit episodes (nothing near / predator near / rabbit near), rabbit-like vs predator-like groups defined on the **shared evidence scale** (log-likelihood ratio < 0 vs ≥ +0.67): control `x1 − x2 < 0` vs `≥ 0.3` (a01's thresholds, unchanged); single-channel `x1 < 0.6` vs `≥ 0.9`; matched `x1 + x2 < 1.2` vs `≥ 1.63`. Group sizes reported. **Distance row (Revision 3):** primary = the **deciding row** (distances on row `t−1`, the bush state after the chosen action on row `t`), as for P1/P2 and the §5 preamble; the **same-row** reading (row `t` for both, as a01's `falsealarm.py` did) is the sensitivity reading and the one used to reproduce a01's published split. |
 | **S4** | **Predator response (detection readout)** — proximity effect for the predator (`pd` grids), killed-by-predator share, and the **confusion index** = rabbit proximity effect ÷ predator proximity effect. | Same sweep. **Read with sign** (Revision 2): only a *falling* predator proximity effect signals detection loss; on contrast B a rise is the expected consequence of the predator's +10 % strength and triggers nothing. **"S4 did not fall"** (used by the verdict map) = the one-sided 95 % lower confidence bound (Welch) of the predator proximity effect's Δ lies above −3 pp — the same bound construction as §5.3's refutation — evaluated at the stage at which the primary outcome was decided (3 v 3 or 5 v 5). Otherwise "S4 may have fallen". |
@@ -427,7 +427,7 @@ further top-up. "Refuted" exists only at stage 2.
 | P1 rabbit proximity effect | + | **3 pp** |
 | P2 causal injury shift, hiding | + | **2 pp** |
 | P2d causal injury shift, distance | − | 1 pp (read with P2: H₁b needs P2 established and P2d's Δ of the predicted sign; P2d alone decides nothing) |
-| S1 scent × injury (quarter contrast) | + | 2 pp per nat of scent evidence |
+| S1 scent × injury (quarter contrast; reference = the control's matched reading, §5.2 S1) | + | 2 pp per nat of scent evidence |
 | Survival | − | reported with its 95 % interval; no threshold |
 
 **Power, stated plainly** (Monte-Carlo, 40,000 draws per row, normal seeds, this rule; seed SDs
@@ -644,6 +644,25 @@ animal_property_std  all  [0,0.3,0.3,0,0]   all  [0,0.3,0,0,0]      all  [0,0.3,
     choice; same-row distance already includes the effect of the chosen move). Same-row is the
     sensitivity reading and the a01 reproduction.
   - Cross-link to the tooling plan added (header, §5.6).
+- **2026-10-01 — Revision 4, pre-data** (experiment-designer), after the analysis-tooling review
+  (`docs/reviews/plan_hypervigilance_analysis_tooling.md`, finding R5). Runs training, **no
+  trajectory store exists**; registered before the first treated store is read.
+  - **S1's tested Δ uses the control's matched reading** (channel 1 as the scent variable, channel 2
+    as a covariate, same quarter contrast and WLS estimator, pp per nat), not the plain control
+    reading. Reason: in the control the scent statistic `x1 − x2` is orthogonal to odour strength,
+    so the plain slope is identity × injury only; in both treated worlds the statistic *is*
+    strength, so their slope is identity × injury **plus** strength × injury (an injured agent
+    responding more to any stronger smell). Against the plain control, Δ would count strength ×
+    injury as an effect of the world. Raising channel 1 at fixed channel 2 moves identity evidence
+    by 2.22 nats and strength by 1 unit per unit — exactly the single-channel world's composition,
+    and close to the matched world's (1.56 nats per unit strength, i.e. 0.64 vs 0.45 units of
+    strength per nat); that residual difference is stated with every contrast-B S1 result.
+  - **The plain control reading is reported, descriptive only**: its own quarter contrast and the
+    treated-minus-plain Δ, labelled "identity-only reference". If the two references disagree on
+    whether Δ clears 2 pp per nat, the S1 result is reported with both in its first sentence and
+    the registered (matched) one decides.
+  - Every S1 reading carries `statistic_equals_intensity` (true in both treated worlds and in the
+    matched control reading, false in the plain control reading), as the tooling writes it.
 
 ---
 
