@@ -240,6 +240,14 @@ CELLS: dict[str, Cell] = {
                "Body Temperature and Thermoception. Recorded under the demonstration "
                "loosening",
                provenance=_CAMPFIRE_PROVENANCE + " " + _DEMO_LOOSENING_NOTE),
+    # THIRST_WATER_PLAN §D8.8: a real level-06 recording (pond + thirst), the input the
+    # dashboard gates and the old-renderer "does not raise" check run on. Generated only
+    # when named (`--cells W1`). NOT loosened: on 2026-09-30 the demonstration loosening
+    # above is refused by the thermal structure check (it predates the 2026-09-19 thermal
+    # retune; M4/M4b fail the same way), so W1 is the shipped level-06 world as is.
+    "W1": Cell(POND_WORLD, {},
+               "the level-06 pond world as shipped: a 2x2 pond (ground cover), a Hydration "
+               "row after Body Temperature, water on the smell channels"),
     "M4b": Cell(CAMPFIRE,
                 dict(_DEMO_LOOSENING, **{"thermal.body_temp_observable": False}),
                 "M4 with body temperature removed from the observation, so the temperature "

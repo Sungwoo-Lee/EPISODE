@@ -3,6 +3,12 @@ JAX Environment Renderer.
 
 Provides rendering utilities that convert JAX EnvState to RGB frames for visualization.
 Works with the JAX-native environment without requiring the PyTorch GridWorld class.
+
+WATER WORLDS (THIRST_WATER_PLAN §D8.7, 2026-09-30). This renderer is frozen pending
+retirement and draws NEITHER the pond NOR the hydration level: a level-06/07 recording
+renders here without raising (checked on a real level-06 recording), but with no pond on
+the map and no hydration row, and channel 4 of smell keeps its hard-coded "TREE" label.
+Water worlds are drawn by the episode dashboard (src/environment/dashboard/).
 """
 import os
 import numpy as np

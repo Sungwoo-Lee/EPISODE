@@ -208,6 +208,10 @@ def _renderer(water_pos=None, hydration=None, max_h=200.0):
     params = copy.copy(meta["params"])
     if max_h is not None:
         object.__setattr__(params, "water_max_hydration", max_h)
+    if water_pos is not None or hydration is not None:
+        # Since THIRST_WATER_PLAN C2 every EnvParams carries `water_enabled` (M4's pickle
+        # unpickles as False), and the renderer checks it agrees with the recording.
+        object.__setattr__(params, "water_enabled", True)
     payload = load_episode(sorted(rec.glob("episode_*.rec.gz"))[1])
     for s in payload["snapshots"]:
         if water_pos is not None:

@@ -419,10 +419,15 @@ class EpisodeRenderer:
         if hk is not None:
             # No default maximum: a hydration value without its scale cannot be
             # drawn honestly, and guessing 200 would draw a wrong bar silently.
-            if not hasattr(self.params, "water_max_hydration"):
+            # Since THIRST_WATER_PLAN C2 every EnvParams carries the field, at the
+            # water-off sentinel 0.0 when water is off, so a missing maximum now shows
+            # up as a non-positive one.
+            if (not hasattr(self.params, "water_max_hydration")
+                    or float(self.params.water_max_hydration) <= 0.0):
                 raise ValueError(
-                    "this recording carries hydration but its params have no "
-                    "'water_max_hydration'; the bar needs the maximum to be drawn")
+                    "this recording carries hydration but its params have no usable "
+                    "'water_max_hydration' (missing or <= 0); the bar needs the maximum "
+                    "to be drawn")
             hmx = float(self.params.water_max_hydration)
             rows.append(dict(
                 key=hk, label="Hydration", kind="bar", colour=P.STATE,
