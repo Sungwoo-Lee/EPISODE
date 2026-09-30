@@ -1633,7 +1633,7 @@ The other three entries (`B2.f`, `B2.literal_f`, `B2.lag_coincident_max_interval
 - **S3-f (finding, needs a decision). The ridge standardisation blows up on rarely active ReLU units.**
   - A unit active on a handful of training rows has a tiny training-fold standard deviation. On held-out rows where it is active, the standardised value is huge.
   - Seen three times: on the 150-episode slice (ordinary `critic.out`: one repeat R² −4,100; 36 dead and 38 < 1 %-active units); on the interim reference row untrained `ordinary_s42` `enc.out` → `steps_remaining` (R² −58.4; 7 % of rows); and as a widened interval on pilot `critic.out`.
-  - It hit no verdict-bearing number on the pilot or the interim. It is a property of `representation.fit_ridge`'s standardisation (the rules say A2 is "standardised on the training fold"). A remedy is a tool or rules decision for `senior-developer` / `experiment-designer`, for example a floor on the standardisation scale or excluding near-constant columns. It is not something I changed.
+  - *(Corrected after review, 2026-09-30.)* The hazard **is present on a verdict layer**: critic.out, where 40–57 of 128 units are active on fewer than 1 % of rows in both arms. There it moves a fit's value by up to 0.035 and makes the chosen penalty unstable across repeats. It changed no interim verdict word. The earlier sentence ("it hit no verdict-bearing number") was wrong. It is a property of `representation.fit_ridge`'s standardisation. It is now handled by the registered rules revision P1 (`common.predictor_columns`, rules sha `5ef6f731…`), implemented at `525deec9` (see the review follow-up below). The registered interim verdict stands as computed under `4c8508af…`.
 - **S3-g (finding). G6 for `steps_remaining` fails at the interim** because the agents survive to the step cap on 92 % of episodes. This is registered handling ("blocked by gate G6"), not a defect. At the evidence stage, check the final-checkpoint stores' truncation share before relying on this quantity.
 - **S3-h (fixed before the final interim outputs).** The evaluator's internal unprefixed word maps (`layer_words`, `pattern_words`, `profile_words`) and the per-statistic `word` fields were first written unprefixed. The drivers now drop the maps, prefix every `word` field, and `guard_prefixed` refuses an unprefixed verdict word. The interim outputs were regenerated.
 - **CPU note.** On this shared node, NumPy/BLAS at full thread count stalled (13 min on one layer at ~1,300 % CPU). Runs use `OMP_NUM_THREADS=OPENBLAS_NUM_THREADS=8`.
@@ -1724,6 +1724,64 @@ Implemented by: developer
 **Not done.** Not published; `artifact-format-reviewer` not run; nothing committed for an04/an05 figure files (their real inputs do not exist).
 
 **Known-bug pass.** `grep` of `KNOWN_BUGS.md` for the builder, the figure scripts, `.data.txt`, `house.save` and `figguards`: no row matches.
+
+Implemented by: developer
+
+### Review follow-up: rules revision P1, code/math-review fixes, robustness columns (2026-09-30, 08:00–09:10)
+
+**Summary.** The registered column-admission rule (rules `5ef6f731…`, revision P1) now governs every ridge fit. The review fixes are in. A descriptive robustness pass on the interim probe shows how the A1 numbers depend on the estimator's choices. No verdict, rule or evaluator logic was changed. The registered interim verdict (`similarity.json`, `decoding.json`, rules `4c8508af…`) is untouched, and the drivers now refuse to overwrite an output computed under another rules sha. The interim A1–A3 were **not** re-evaluated under the new rules. The robustness pass gives the recomputed numbers, beside the original ones.
+
+**Commit `525deec9`** (pushed):
+- **P1 in code.** `representation.admitted_columns` and `fit_admitted` wrap the unchanged `fit_ridge`. Admission is decided on the outer training rows before standardisation, and the same set is used for inner CV, refit, held-out scores and draws. Targets are never dropped. If no column is admitted, the fit raises (the message has no verdict word). The rule is used by every A1 (both directions), A2, G4, reference and descriptive fit. Dropped/total is recorded per fit in the data statements.
+- **Supporting read.** `supporting_read_modulated_to_ordinary` (R², 90 % interval) sits beside the mutual minimum for every MO pair. It decides nothing.
+- **Reusing captures across rules versions.** Captures made under another rules sha are reused only if every rules number the capture step recorded (`gates_read`) is identical. Both shas are stamped (`captures_rules_sha256`).
+- **Code review:**
+  - a cross-agent row-lag control, a failing check against `tool_checks.row_lag_min_gap: 0.1` (added to the pilot and interim manifests);
+  - `guard_prefixed` walks the whole document, except the stamp keys `verdict_prefix`, `label` and `verdict_statement`;
+  - `_q` reports null on any non-finite draw;
+  - whole-tree `git_dirty`;
+  - a refused verdict layer raises before evaluation;
+  - unequal group sizes in the `draw_stats` fixture.
+- **Math review:** `fit_ridge` raises on a non-finite inner-fold score; a noisy-target per-unit-gain test documents the variance-weighting property.
+- **New descriptive driver** `run_similarity_robustness.py`.
+- **Tests:** `test_nmn_stage3_drivers.py` 27/27; `test_nmn_decision_rules.py` 139/139 (coverage and perturbation now pass with `common.predictor_columns.min_active_fraction` read and used); representation, draw_stats, probe_set, run_activations manifest, run_wakeup and stage_level: 239 passed.
+
+**Robustness columns** (`results/analysis/algorithmic_null/algorithmic_null_mayrep_interim/similarity_robustness.{json,csv}`; "descriptive — not a registered statistic"). They were computed under rules `5ef6f731`, using captures from `4c8508af`, the registered 5-repeat split and the 2,000-draw joint bootstrap. Generated 23:32Z. Full table: `tmp/20260930_stage3_robustness_table.txt`.
+- **Checks.**
+  - `all_columns` reproduces every original interim mutual value to ≤ 1.1e-16.
+  - Row-lag control: agreement 0.661–0.758 at lag 0, at most 0.236 one row apart; minimum gap 0.437.
+- **How far the registered numbers move under P1** (admitted minus original, mutual predictivity, all 15 trained pairs):
+
+  | Layer | Max \|Δ\| | Columns dropped per fit |
+  |---|---|---|
+  | enc.out | 0.0034 (all Δ ≤ 0) | 3–14 of 128 |
+  | rnn.state | 0.0000 | 0 |
+  | rnn.out | 0.0000 | 0 |
+  | actor.out | 0.0008 | 5–15 |
+  | critic.out | 0.0055 | 48–65 |
+
+  The reviews predicted < 0.003 on the four layers that read different. enc.out is slightly above that, at 0.0034.
+- **Per direction** (weighted R², rules-admitted fits):
+
+  | Layer | OO range (both directions) | MO_diff modulated→ordinary | MO_diff ordinary→modulated | MM (both directions) |
+  |---|---|---|---|---|
+  | enc.out | [0.881, 0.895] | 0.853–0.866 | 0.834–0.854 | 0.851–0.878 |
+  | rnn.state | [0.791, 0.802] | 0.768–0.774 | 0.759–0.774 | 0.759–0.772 |
+  | rnn.out | [0.791, 0.802] | 0.768–0.774 | 0.756–0.765 | 0.779–0.786 |
+  | actor.out | [0.771, 0.793] | 0.738–0.758 | 0.730–0.767 | 0.754–0.783 |
+  | critic.out | [0.837, 0.879] | 0.816–0.853 | 0.843–0.862 | 0.861–0.881 |
+
+  On the four layers that read different, all 6 MO_diff modulated→ordinary values lie below the lowest OO value (the math review's reading holds). **MM pairs sit near MO pairs, not near OO pairs.** MM mutual is below the OO mutual range on enc.out (0.851–0.867 vs OO [0.881, 0.893]), rnn.state (0.759–0.770 vs [0.791, 0.799]) and rnn.out (0.779–0.784 vs [0.791, 0.799]). It overlaps the bottom of the OO range on actor.out (0.754–0.779 vs [0.771, 0.785]). MO_diff mutual on the same layers is 0.834–0.854, 0.759–0.774, 0.756–0.765 and 0.730–0.758.
+- **Floored scale** (median unit SD) changes the weighted values by ≤ 0.006 from `all_columns`; it is identical to 3 decimals except critic.out ordinary→modulated.
+- **Unweighted per-unit R² mean.**
+  - rnn.state: OO [0.755, 0.771]; MO_diff 0.731–0.738; MM 0.728–0.731.
+  - enc.out: OO [0.767, 0.784]; MO 0.62–0.67; MM 0.645–0.676.
+  - rnn.out: OO [0.755, 0.769]; MO_diff 0.679–0.703; MM 0.729–0.739.
+  - **On actor.out and critic.out it is unstable** (OO intervals reaching −1.2 and −7.5). Target units that are rarely active have near-zero held-out variance, so their per-unit R² can be hugely negative. The admission rule never drops targets, so this column is not interpretable on those two layers.
+
+**Report wording corrected.** S3-f now says the hazard is present on critic.out, a verdict layer (up to 0.035 per fit, penalty unstable), though it changed no word.
+
+**Not done.** There is no separate recomputation of the interim A1–A3 verdicts under `5ef6f731`; the robustness admitted column gives the recomputed numbers, and moving them into an evaluation would need a separately named manifest. A4 is not built.
 
 Implemented by: developer
 
