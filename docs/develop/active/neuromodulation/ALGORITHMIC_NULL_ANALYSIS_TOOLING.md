@@ -1980,3 +1980,11 @@ Nothing here needs a rerun before publication as provisional.
 **Cost of being wrong.** If "different" is an artefact I missed, the cost is one provisional sentence at stage 1 of 5 that the evidence run at the final checkpoint overwrites under the same rules — no relaunch, no data loss, and the registered interim status already forbids it overriding the evidence verdict. If the alternative reading (progress, not computation) is right and the page says "shows different processing", the cost is a wrong framing steering the research direction for the weeks until the evidence run.
 
 Reviewed by: plan-reviewer, 2026-09-30 (analysis-verdict gate, interim)
+
+## Feedback from plan-reviewer — analysis-verdict gate on the B2 wake-up reading (2026-09-30)
+
+**NOT SUPPORTED BY THE EVIDENCE SHOWN** for the two interpretive sentences drafted for the page; the per-measure reading table itself is correctly computed and may be shown verbatim. Full review, findings table, allowed wording and exit conditions: [[plan_b2_wakeup_verdict]] (`docs/reviews/plan_b2_wakeup_verdict.md`).
+
+In one paragraph: every rho curve is *falling* from the untrained anchor (the contextual fraction shrinks early; it does not "form"); the gain swing is a weights-only ceiling that grows near-linearly, and the main network's own total weight norm reads "late" in 16/16 worlds under the identical registered rule (computed from the stored `update_size.*_prev_norm` points), so "late" is what weight norms do here, not evidence of a late awakening; "freezing costs nothing" is a magnitude claim drawn from a timing rule — the freeze cost is negative after the plateau in 16/16 worlds (≈ −33 steps gain, −31 offset, against ≈ 250 live). Five swing readings are one fact. Three Critical findings, all text-fixable; the swing control needs the norm curves added to `run_curves` (CPU, no GPU rerun). Owners named in the review.
+
+Reviewed by: plan-reviewer, 2026-09-30 (analysis-verdict gate, B2)
