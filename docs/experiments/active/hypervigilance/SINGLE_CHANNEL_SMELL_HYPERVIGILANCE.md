@@ -442,3 +442,43 @@ animal_property_std  all      [0, 0.3, 0.3, 0, 0] -> [0, 0.3, 0, 0, 0]
 
 - 2026-09-30 — designed (experiment-designer); configs and collection spec written; validated on
   the live loader; nothing launched.
+
+---
+
+## Feedback from plan-reviewer
+
+*2026-09-30, on commit `71b7480a`. Full report with the simulation numbers:
+[[plan_single_channel_smell_hypervigilance]] (`docs/reviews/plan_single_channel_smell_hypervigilance.md`).*
+
+**Verdict: NOT READY** — one Critical, four Moderate. Nothing wrong with the two worlds or the
+collection spec; the block is in §5.3 and the verdict map, which is fixable in this document alone.
+
+Severity legend: 🔴 Critical = fix before going further · 🟡 Moderate = likely costs a re-run ·
+🟢 Low = cosmetic · ❓ Open = an assumption nobody has verified yet.
+
+| # | Sev | Where | Issue | Suggested fix |
+|---|---|---|---|---|
+| C1 | 🔴 | §5.3 rule + verdict map rows 2 and 4 | **The Q2 rule cannot be met at its own minimum effect, and the verdict map turns the resulting "inconclusive" into a substantive claim.** Simulating the plan's own numbers (control P2 ≈ −1.8 pp, minimum effect +2 pp, seed SD 1.05 / 1.5 / 2.67 pp from the 2026-09-21 registry entry): P2 "established" 16 / 13 / 9 %, "inconclusive" ~80 %, "refuted" 4 / 9 / 13 %. P1 at a true +3 pp with SD 1.4: established 45 %, inconclusive 51 %. The 5 v 5 top-up (U ≤ 4 + minimum effect) has 45 % (SD 1.5) to 26 % (SD 2.67) power on P2 and 50 % on P1. Verdict-map row 2 reads "P1 established, P2 refuted **/ inconclusive**" as *confusion without hypervigilance — confusion alone is not sufficient*, so the most probable outcome of a TRUE minimum effect is the study's flagship negative claim. Separately, a 3 v 3 "refuted" (4–13 % at the true minimum effect) is exempt from the top-up. | (a) Row 2 fires only on P2 **refuted after the top-up**; P2 inconclusive → "not established", never a reading. (b) Print the power numbers in §5.3 so the reader knows 3 v 3 is a screen. (c) Either 5 v 5 up front (≈ 267 GPU-h) or make a 3 v 3 refutation also trigger the top-up. (d) Reconsider "positive in all three seeds": at −1.8 + 2 = +0.2 pp expected, the sign clause alone passes ≈ 50 %³ of the time. Owner: `experiment-designer`. |
+| M1 | 🟡 | §3 pre-flight discriminator 2 (`training.seed`) | `train.py:612` writes `--seed` to the **top-level** `seed` key and `:786` reads it back from there; `training.seed` is the `configs/train/default.yaml` value (42) and is never updated. The saved C01 config carries both (`training.seed: 42` line 433, `seed: 42` line 438). For the eight seeded rows the check fails whether the launch was right or wrong, so it discriminates nothing. | Check top-level `seed` in `models/config.yaml` and the `Seed:` banner line (`train.py:1144`). Owner: `experiment-designer` → `training-runner`. |
+| M2 | 🟡 | §2.4, §5.5, collection spec header | The seed-42 control stores were collected 2026-09-28 00:25 / 00:59 KST (manifest `collected_at`), **before** commit `2d54453d` (2026-09-30) forced full-float32 matmuls in the collector; their manifests carry no `matmul_precision` / `compute_device_kind`. Known Bugs row "A trajectory store replays exactly only under the matmul precision mode it was collected in": 99.8 % action agreement across modes. The ten new stores will be full-float32, so one control seed carries a 0.2 %-of-actions perturbation the other two do not. | Re-collect C01/C02 into `results/trajectories_hv1ch/` with the current collector (2 × 1 M episodes) — add two rows to the spec, drop the two-root special case. Owner: `experiment-designer`. |
+| M3 | 🟡 | P1 / P2 as computed by `collect_arm_data.py:123-133` | Two base-page caveats are not carried into §2.5. (a) `np.clip(drab, 1, DIST_MAX) − 1` files a rabbit **on the agent's cell** into the NEAR bin; bushes block animals, so a distance-0 row can never be a hiding row — the near-bin bush share is diluted by each world's rabbit-contact rate (Known Bugs, OPEN: "Chasing rabbit stays glued to the agent after contact", `core.py:629`). A world in which the agent contacts rabbits less gets a higher P1 mechanically — the predicted direction. (b) The `rd` grid has **no predator-near exclusion** (only `has_r` episodes), so rows with a predator also within 2 cells count toward the rabbit proximity effect; any S4 change bleeds into P1. | In the tooling plan that is already required for `smell_channels`, add as pre-registered sensitivity readings: a distance-0 row count per world (or an extra bin), and a predator-free variant of P1/P2 (`dpred > 2`). Primary stays as is for comparability. Owner: `experiment-designer` (pre-register) → `senior-developer` (tooling plan). |
+| M4 | 🟡 | Verdict map row 3 | Detection loss and confusion push P1 in **opposite** directions (rabbit total odour 1.18 → 0.50 makes a near rabbit less noticeable, P1 ↓; confusion, P1 ↑), so a P1 null can be cancellation. The failure-mode catalog handles a falling S4, but row 3 reads P1-refuted as "no extra confusion" unconditionally. | Row 3 reads "no extra confusion" only if the predator proximity effect (S4) is unchanged; otherwise "not separable from detection loss". Owner: `experiment-designer`. |
+| L1 | 🟢 | Config comments, §5.3 row 5, §5.5 | `single_channel_smell_l05.yaml` cites "design doc §3.2"; the validation is §2.3. Verdict row 5 "H₁b met but shift not positive in all seeds" is self-contradictory (H₁b includes the sign clause). §5.5 calls `cmp10m` "no smell direction" — its saved config has the same 0.7/0.5 vs 0.5/0.7 two-channel layout; what differs is grid-range-0 smell and 8-channel vision. `out_root: results/trajectories_hv1ch` also holds the 2ch controls. | Wording only. |
+
+**Assumptions the plan rests on (❓ Open unless marked verified):**
+
+- *Verified:* the LLR identity in §2.2 (`2.22·(x1−x2)` vs `2.22·(x1−0.6)`); `smell_channels` raises `SystemExit` on the single-channel config (argmin lands on a zero column, `d[b] >= 0`); the launch wrapper `train_command-new.sh` `cd`s to the main tree, which is on `v4.0` at `71b7480a` — the thirst work sits in the isolated worktree `.claude/worktrees/thirst` on `v5.0` and does not touch it; `8187c570` (`bush_min_fire_distance`) landed 00:34 on 2026-09-27, before the 05:30 control launch; `89f3cb78` (balance metrics, 16:21) is logging only; C01/C02 keep all 50 checkpoints, so the §5.4 time course is feasible.
+- ❓ O1: the main tree stays on `v4.0` for the ~18 h wave. A branch switch mid-run changes what the async checkpoint-render subprocess imports (not the dynamics). Say so in the diary launch row.
+- ❓ O2: the `d′ 0.94 → 0.66` table is the designer's own 2 M-draw simulation; not re-derived here.
+- ❓ O3: "paired" runs share only initial weights and the first reset — the first observation already differs (channel 2), so policies diverge at gradient step 1. The paired differences are not much stronger than the unpaired rule; fine as long as they stay secondary.
+- ❓ O4: C01 trained on node 101 (2080 Ti, full-float32 matmul), C02 on 106 (3090, TF32); the new runs land wherever is free. Every study carries this; the manifest's Node/GPU columns are the record.
+
+**Prior-art pass (done):** Known Bugs rows read — "Chasing rabbit stays glued" (OPEN, not cited → M3), "store replays exactly only in its own matmul mode" (not cited → M2), "five 2026-09-04 reference runs sit at a different level — spread only" (plan complies), "reset not bit-identical on `animal_property_sampled` (1 ulp)" (harmless to the pairing claim). No prior single-channel-smell plan in `docs/llm_wiki/` or `docs/develop/`; the sameProp and injury-gated-noise entries the plan cites are the right ones. Nothing new for `bug-curator`.
+
+**Project rules:** no reward metric anywhere; survival is headline, not criterion; no registry value changes (entity odour vectors are not a row — checked); no `scripts/` or schema change in this plan (the later tooling plan must run the dependency-map check); interpreter path correct; frontmatter present. Mechanical YAML validation is `env-config-reviewer`'s.
+
+**Cost of being wrong:** ~160 GPU-hours plus the top-up and two collection passes, arriving with ~80 % probability (at the plan's own minimum effect) at a P2 "inconclusive" that the verdict map as written promotes into "confusion alone is not sufficient for hypervigilance" — a claim that would enter the hypervigilance narrative. No data-loss hazard anywhere in the plan.
+
+**What flips the verdict:** rewrite §5.3 and the verdict map per C1 (a)–(d) and fold M1–M4 into §3 / §2.5 / §5.6. No config or code change is needed to launch.
+
+*Reviewed by: plan-reviewer*
