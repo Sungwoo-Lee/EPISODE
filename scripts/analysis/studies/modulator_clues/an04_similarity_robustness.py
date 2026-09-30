@@ -75,7 +75,7 @@ def main():
     house.apply()
     fig, axs = plt.subplots(len(layers), len(cols), figsize=(11.0, 1.9 * len(layers) + 2.6),
                             squeeze=False)
-    fig.subplots_adjust(left=0.19, right=0.99, top=0.9, bottom=0.2, hspace=0.75, wspace=0.18)
+    fig.subplots_adjust(left=0.19, right=0.99, top=0.9, bottom=0.2, hspace=0.75, wspace=0.32)
     drawn = {"OO": 0, "MO_diff": 0, "MM": 0, "MO_same": 0}
     for r, layer in enumerate(layers):
         pairs = doc["layers"][layer]["pairs"]

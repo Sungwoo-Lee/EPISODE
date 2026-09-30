@@ -39,6 +39,15 @@ DEFAULT = os.path.join(C.RESULTS, "algorithmic_null_wakeup", "b2_reading.json")
 NCOL = 4
 
 
+def counts(r: dict) -> str:
+    """The sign test's counts in words. k* is None when no number of worlds can reach the test's
+    alpha, which with n_def = 0 simply means no world has a defined lag."""
+    if not r["n_def"]:
+        return "no world with a defined lag"
+    base = f"{r['n_late']} late, {r['n_early']} early of {r['n_def']}"
+    return base + ("; too few for the test" if r["k_star"] is None else f"; needs {r['k_star']}")
+
+
 def main():
     a = C.cli(__doc__, DEFAULT)
     doc = C.load(a.source, policy_from_rules=True)
@@ -64,7 +73,7 @@ def main():
     house.apply()
     n_small = len(names) + 1
     n_rows = math.ceil(n_small / NCOL)
-    lag_h = max(0.33 * len(names), 1.6)
+    lag_h = max(0.52 * len(names), 1.6)     # two 11-pt label lines per measure fit in 0.52 in
     below = 3.4                              # inches under the lag panel: x label, legend, footer
     H = 2.45 * n_rows + lag_h + below + 0.4
     fig = plt.figure(figsize=(11.0, H))
@@ -115,8 +124,8 @@ def main():
         ax.set_xlabel("training episodes (M)", fontsize=house.FS_LABEL)
 
     # ---- lag summary --------------------------------------------------------------------------
-    lg = fig.add_subplot(gs[n_rows, :3])
-    tx = C.blank(fig.add_subplot(gs[n_rows, 3]))
+    lg = fig.add_subplot(gs[n_rows, :2])
+    tx = C.blank(fig.add_subplot(gs[n_rows, 2:]))
     ys = np.arange(len(names))[::-1]
     from matplotlib.transforms import blended_transform_factory
     row_tf = blended_transform_factory(tx.transAxes, lg.transData)   # text on the lag rows
@@ -135,10 +144,10 @@ def main():
         r = doc["reading"][name]
         if C.allowed(doc):
             w = C.verdict(doc, r["reading"], test)
-            txt = w if test else f"{w} ({r['n_late']} late, {r['n_early']} early of {r['n_def']}; k* {r['k_star']})"
+            txt = w if test else f"{w}\n{counts(r)}"
         else:
             txt = doc["verdict_statement"]
-        tx.text(0.0, y, C.wrap(txt, 34), transform=row_tf, ha="left",
+        tx.text(0.0, y, "\n".join(C.wrap(t, 60) for t in txt.split("\n")), transform=row_tf, ha="left",
                 va="center", fontsize=house.FS_LABEL, color=house.INK, linespacing=1.1)
     lg.set_yticks(ys)
     lg.set_yticklabels(names, fontsize=house.FS_LABEL)
