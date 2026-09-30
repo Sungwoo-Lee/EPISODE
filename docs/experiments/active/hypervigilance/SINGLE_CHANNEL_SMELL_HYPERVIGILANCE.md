@@ -9,11 +9,11 @@ wandb_tag: rppo_hv1ch / rppo_hv1chm / rppo_hv2ch
 
 # Single-channel smell: rabbit–predator confusion and hypervigilance
 
-> **Status**: PRE-REGISTERED, **Revision 2 (2026-10-01, pre-data; Revision 1 2026-09-30, pre-launch)** — a third world added (matched smell strength) and the decision rule rewritten after plan review (see [Revision 1](#revision-1) and [Response to plan-reviewer](#response-to-plan-reviewer)). Configs written and validated on the trainer's own loader; runs launching from 2026-10-01 (see the manifest); Revision 2 was written before any result existed.
+> **Status**: PRE-REGISTERED, **Revision 3 (2026-10-01, pre-data; Revision 2 same day, pre-data; Revision 1 2026-09-30, pre-launch)** — a third world added (matched smell strength) and the decision rule rewritten after plan review (see [Revision 1](#revision-1) and [Response to plan-reviewer](#response-to-plan-reviewer)). Configs written and validated on the trainer's own loader; runs launching from 2026-10-01 (see the manifest); Revision 2 was written before any result existed.
 > **Date**: 2026-09-30
 > **Author**: experiment-designer
 > **Base pages**: *What makes this agent hide?* ([[a01_hiding_drivers]], `docs/experiments/active/trajectory_factors/a01_hiding_drivers.html`) — where the scent false alarm and the aimed rabbit response were first measured; *Modulator clues* (`docs/experiments/active/modulator_clues/modulator_clues.html`) — where hypervigilance was re-analysed on the project's definition (commit `d29beb56`) and found absent under assigned injury.
-> **Related**: [[LEVEL05_BODY_INTERACTIONS]] (supplies the seed-42 control runs and the collection spec this study copies); [[sameprop_existing_run_survey]] and the sameProp rounds (identical smell for both animals: the agent still told them apart by how they move); the injury-gated smell-noise design of basic level 06 (wiki `20260630_1629_injury_gated_olfactory_noise_hypervig`); plan review [[plan_single_channel_smell_hypervigilance]].
+> **Related**: [[LEVEL05_BODY_INTERACTIONS]] (supplies the seed-42 control runs and the collection spec this study copies); [[sameprop_existing_run_survey]] and the sameProp rounds (identical smell for both animals: the agent still told them apart by how they move); the injury-gated smell-noise design of basic level 06 (wiki `20260630_1629_injury_gated_olfactory_noise_hypervig`); plan review [[plan_single_channel_smell_hypervigilance]]; analysis tooling plan [[HYPERVIGILANCE_ANALYSIS_TOOLING]] (`docs/develop/active/behavior/HYPERVIGILANCE_ANALYSIS_TOOLING.md`, which implements §5 of this doc).
 
 ---
 
@@ -387,9 +387,9 @@ criterion for Q1/Q2: the prediction is only that survival is **lower** in both t
 
 | ID | What | Definition |
 |---|---|---|
-| **S1** (the missing piece, *e*) | **Scent × injury interaction** — does the rabbit-scent false alarm grow with the assigned wound? | Episodes with **no predator and exactly one rabbit** (11.1 % of episodes in the seed-42 control store, ≈ 110 k per run — any hiding driven by that rabbit's scent is a pure false alarm). Outcome: bush share over the first 25 chosen steps. (i) **Quarter contrast:** the slope of that share on the rabbit's scent evidence (pp per nat, §2.2) in the top start-injury quarter minus the bottom quarter. (ii) **Model:** quasi-binomial GLM (the `hiding_drivers.fit_glms` framework) with scent evidence, start injury, their product, and the M1 exogenous covariates (start nutrition, bushes, rocks, food, ambush predators, spawn distance to bush); the product term reported in pp per nat per 100 injury. Repeated on one-predator-one-rabbit episodes as a sensitivity check. Prediction: larger in both treated worlds. |
-| **S2** | **Scent false alarm** (the a01 ladder) — hiding and survival as a function of the rabbit's randomised scent. | `hiding_drivers.py`: univariate rabbit scent (pp per nat and pp per SD) and model M3 (one predator + one rabbit). Plus the a01 extreme-row table (hiding, food per step, starved, killed, survival steps) for the rabbit's bottom vs top sixth of scent evidence **within each world**. Scent statistic: `x1 − x2` in the control (existing definition, unchanged), `x1` single-channel, `x1 + x2` matched. **Matched reading:** in the control, the same ladder on channel 1 alone with channel 2 as a covariate. |
-| **S3** | **Aimed response** — does predator-like rabbit scent raise hiding specifically when *that rabbit* is near? | The a01 three-way split on one-predator-one-rabbit episodes (nothing near / predator near / rabbit near), rabbit-like vs predator-like groups defined on the **shared evidence scale** (log-likelihood ratio < 0 vs ≥ +0.67): control `x1 − x2 < 0` vs `≥ 0.3` (a01's thresholds, unchanged); single-channel `x1 < 0.6` vs `≥ 0.9`; matched `x1 + x2 < 1.2` vs `≥ 1.63`. Group sizes reported. |
+| **S1** (the missing piece, *e*) | **Scent × injury interaction** — does the rabbit-scent false alarm grow with the assigned wound? | Episodes with **no predator and exactly one rabbit** (11.1 % of episodes in the seed-42 control store, ≈ 110 k per run — any hiding driven by that rabbit's scent is a pure false alarm). Outcome: bush share over the first 25 chosen steps. (i) **Quarter contrast — the primary estimator (Revision 3):** within the top start-injury quarter and within the bottom quarter separately, a weighted least-squares slope of the episode's early bush share (in pp) on the rabbit's scent evidence (nats, §2.2), weights = the episode's early step count; the contrast is top slope minus bottom slope, in pp per nat — the unit of the §5.3 minimum effect. (ii) **Model — descriptive only:** quasi-binomial GLM (the `hiding_drivers.fit_glms` framework) with scent evidence, start injury, their product, and the M1 exogenous covariates (start nutrition, bushes, rocks, food, ambush predators, spawn distance to bush); the product term reported in pp per nat per 100 injury. Repeated on one-predator-one-rabbit episodes as a sensitivity check. Prediction: larger in both treated worlds. |
+| **S2** | **Scent false alarm** (the a01 ladder) — hiding and survival as a function of the rabbit's randomised scent. | `hiding_drivers.py`: univariate rabbit scent (pp per nat and pp per SD) and model M3 (one predator + one rabbit). Plus the a01 extreme-row table (hiding, food per step, starved, killed, survival steps) for the rabbit's bottom vs top sixth of scent evidence **within each world** — **registered (Revision 3): within-world population sextiles** of the rabbit's scent statistic over that world's exactly-one-rabbit evaluation episodes (cut points per world; they are the same for every run of a world, because the evaluation reset draws depend only on the episode seed and the world — the tool asserts this), each row also reporting its mean scent evidence in nats; a01's fixed range bins (`< −0.2`, `≥ 0.6`) are reported in the control only, for continuity with the base page. Scent statistic: `x1 − x2` in the control (existing definition, unchanged), `x1` single-channel, `x1 + x2` matched. **Matched reading:** in the control, the same ladder on channel 1 alone with channel 2 as a covariate. |
+| **S3** | **Aimed response** — does predator-like rabbit scent raise hiding specifically when *that rabbit* is near? | The a01 three-way split on one-predator-one-rabbit episodes (nothing near / predator near / rabbit near), rabbit-like vs predator-like groups defined on the **shared evidence scale** (log-likelihood ratio < 0 vs ≥ +0.67): control `x1 − x2 < 0` vs `≥ 0.3` (a01's thresholds, unchanged); single-channel `x1 < 0.6` vs `≥ 0.9`; matched `x1 + x2 < 1.2` vs `≥ 1.63`. Group sizes reported. **Distance row (Revision 3):** primary = the **deciding row** (distances on row `t−1`, the bush state after the chosen action on row `t`), as for P1/P2 and the §5 preamble; the **same-row** reading (row `t` for both, as a01's `falsealarm.py` did) is the sensitivity reading and the one used to reproduce a01's published split. |
 | **S4** | **Predator response (detection readout)** — proximity effect for the predator (`pd` grids), killed-by-predator share, and the **confusion index** = rabbit proximity effect ÷ predator proximity effect. | Same sweep. **Read with sign** (Revision 2): only a *falling* predator proximity effect signals detection loss; on contrast B a rise is the expected consequence of the predator's +10 % strength and triggers nothing. **"S4 did not fall"** (used by the verdict map) = the one-sided 95 % lower confidence bound (Welch) of the predator proximity effect's Δ lies above −3 pp — the same bound construction as §5.3's refutation — evaluated at the stage at which the primary outcome was decided (3 v 3 or 5 v 5). Otherwise "S4 may have fallen". |
 | **S5** | **Observational injury readings** — the same P2/P2d shifts on the injury the agent carries at that moment. | `hiding_shift(d, "rdc")`; `rabbit_avoidance.py` `current.near_share_shift`. Reported, never decisive (a currently injured agent was usually just attacked). |
 | **S6** | **Sensitivity readings for the proximity sweep** (plan-review M3) | (a) the count and share of steps with a rabbit **on the agent's own square** per run, and P1/P2 recomputed with distance 0 removed from the near bin; (b) a **predator-free variant** of P1 and P2 using only steps with no predator within 2 squares (`dpred > 2`). The same §5.3 comparison is reported for both. If a primary verdict does not survive either reading, the verdict is reported with that caveat in its first sentence. |
@@ -522,7 +522,9 @@ added only where the top-up made the 5 v 5 test possible. The two agents are not
 ### 5.6 Analysis tooling required (not required for launch)
 
 The runs and the collection need nothing new. The analysis does; the user routes it through
-`feature-workflow` (`senior-developer` plans → `developer` implements) before the analysis.
+`feature-workflow` (`senior-developer` plans → `developer` implements) before the analysis. The
+plan is [[HYPERVIGILANCE_ANALYSIS_TOOLING]] (`docs/develop/active/behavior/HYPERVIGILANCE_ANALYSIS_TOOLING.md`,
+commit `27d63da3`); its open questions Q1–Q4 are answered in Revision 3 of this doc.
 
 1. **`smell_channels()` refuses both treated configs.** All **three** copies
    (`scripts/analysis/hiding_drivers.py:81`, `scripts/analysis/core/env.py:73` and
@@ -617,6 +619,31 @@ animal_property_std  all  [0,0.3,0.3,0,0]   all  [0,0.3,0,0,0]      all  [0,0.3,
   detection row, and "S4 did not fall" defined with the same one-sided 95 % bound as the refutation
   rule (N2); third `smell_channels` copy added to the tooling list (N3); tag-glob note (N4);
   refutation bound worded for either predicted sign (N5); test count 12 → 8 (C no longer tested).
+- **2026-10-01 — Revision 3, pre-data** (experiment-designer), answering the four questions the
+  analysis tooling plan ([[HYPERVIGILANCE_ANALYSIS_TOOLING]], `27d63da3`) put to the study owner.
+  Runs training, **no trajectory store exists**. No threshold, contrast or verdict rule changed.
+  - **Q1** (N1/N2/N5 in §5.3): confirmed already in Revision 2 — contrast C two-sided and
+    descriptive (§5.3, paragraph before stage 1, and the across-contrasts list); S4 read with sign
+    and "S4 did not fall" defined by the one-sided 95 % lower bound above −3 pp at the deciding
+    stage (§5.2 S4, verdict map); refutation bound on the predicted side for either sign (§5.3
+    stage 2). The verdict script may assert against those three texts.
+  - **Q2 — S2 extreme rows: within-world population sextiles are registered.** Fixed bins cannot
+    carry over: a01's top bin `x1 − x2 ≥ 0.6` is scent evidence ≥ +1.33 nats, which neither treated
+    world can reach at all (single-channel would need `x1 ≥ 1.2`, matched `x1 + x2 ≥ 2.06`, both
+    beyond the [0, 1] clip), so evidence-scale bins would leave their top row empty. Sextiles give equal-sized, always-defined groups in every world;
+    the cost — the top-vs-bottom evidence gap is narrower in the treated worlds — *is* the
+    manipulation, so each row reports its mean evidence in nats, and the evidence-normalised
+    comparison stays the per-nat slope. a01's fixed bins: control only, continuity.
+  - **Q3 — S1 slope: the weighted least-squares slope in pp per nat within the top and bottom
+    start-injury quarters is primary**; the quasi-binomial product term is descriptive. Reason: the
+    minimum effect is in pp per nat, and a logistic slope linearised at each quarter's own hiding
+    rate scales with `p(1−p)`, so a difference in baseline hiding between quarters would leak into
+    the contrast as if it were a change in scent sensitivity.
+  - **Q4 — S3 distances: the deciding row (`t−1`) is primary**, matching P1/P2 and the §5
+    preamble (the question is whether proximity *when choosing* predicts being in a bush after the
+    choice; same-row distance already includes the effect of the chosen move). Same-row is the
+    sensitivity reading and the a01 reproduction.
+  - Cross-link to the tooling plan added (header, §5.6).
 
 ---
 
