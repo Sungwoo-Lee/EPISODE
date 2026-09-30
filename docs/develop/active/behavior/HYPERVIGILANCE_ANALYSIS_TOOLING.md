@@ -8,7 +8,7 @@ last_updated: 2026-10-01
 
 # Hypervigilance analysis tooling
 
-> **Status**: PLANNED, **Revision 1 (2026-10-01)** after `plan-reviewer` NOT READY — see [Revision log](#revision-log) and [Response to plan-reviewer](#response-to-plan-reviewer). Not implemented; awaiting re-review, then user approval.
+> **Status**: IMPLEMENTING, **Revision 2 (2026-10-01)** — Revision 1 after `plan-reviewer` NOT READY, re-check SOUND WITH CONCERNS (`8646c0ce`); Revision 2 folds the re-check's N1–N4 in ([Revision 2 amendments](#revision-2-amendments-n1n4)). See [Revision log](#revision-log).
 > **Opened**: 2026-10-01
 > **Study text this plan is checked against:** study Revision 4 (commit `39420f2c`), which contains Revisions 2 (`7ec62720`) and 3 (`86ce3119`).
 > **Author**: senior-developer
@@ -241,6 +241,60 @@ The first draft blocked Checkpoint C9 on the study absorbing plan-review N1/N2/N
 deciding row (A5). The last open registration — which control reference S1's Δ uses — was made by study Revision 4
 (`39420f2c`): the matched control reading (A6).
 
+### Revision 2 amendments (N1–N4)
+
+*2026-10-01, folded in by `developer` at the user's request from the `plan-reviewer` re-check of
+Revision 1 (`8646c0ce`), before any code was written. Where this section and a File Changes bullet
+below disagree, this section wins; the bullets it supersedes are marked "(see Revision 2)".*
+
+- **N1 — who keeps the Launch Manifest status true, and a stale-status refusal.** The study's §3
+  Launch Manifest `Status` column is flipped `running` → `completed` by **the parent session that
+  runs training and then the trajectory collection** (collection is what makes a cell readable), in
+  the same edit that records the store path. The tooling never promotes a row itself.
+  `make_population.py --from-study-doc` adds a disk-consistency check per row: a row whose status is
+  `running` **and** whose run dir holds a final checkpoint (a `models/<N>` directory with
+  `N ≥` the saved config's top-level `episodes`) **and** that has a store under `--store-root` →
+  refuse the whole manifest with "stale status: <run> is marked running but has a final checkpoint
+  and a store — update the study's Launch Manifest"; a `completed` row with no store → refuse (as
+  already planned). Tests: both refusals, and a `running` row with a final checkpoint but no store
+  is accepted as `running` (training done, collection not yet).
+- **N2 — two-tier golden stamp.** The single stamp of §6/§8 is split in two, with the same
+  guarantee:
+  - **Sweep tier** (`golden_check.py --tier sweep`, hours): runs G1–G3's store sweeps and every
+    `golden.py` / `cmp` comparison. Its stamp `_golden_sweep_pass.json` records the sha256 of the
+    **sweep sources only** — `core/env.py`, `core/scan.py`, `core/store.py`, `hiding_drivers.py`,
+    `studies/sensor_ladder/collect_arm_data.py`, `ladder/_ladder.py`, `rabbit_avoidance.py`,
+    `aimed_response.py` — and the candidate outputs stay cached under
+    `_golden_scratch/sweep_<first 12 hex of the combined sweep hash>/`.
+  - **Assembly tier** (`golden_check.py --tier assembly`, seconds): requires a sweep stamp whose
+    hashes equal the current sweep sources and whose cache directory exists, then re-derives every
+    published value of A4 (a01 extreme rows, univariate +1.6/+1.7, aimed split; clue-page
+    `hiding_shift` values and the −1.9/+0.3 span) **through `readings.py`'s own functions** from the
+    cached candidate outputs. Its stamp `_golden_assembly_pass.json` records the sha256 of
+    `readings.py` and `make_population.py` plus the sweep stamp's hash.
+  - `readings.py` refuses any non-`a01` population unless **both** stamps exist and all recorded
+    hashes equal the current files. An edit to an assembly file re-requires only the seconds-long
+    tier; an edit to a sweep file re-requires the hours-long one.
+- **N3 — per-cell checkpoint and store root.** Each `population.json` cell carries `checkpoint` (the
+  actual checkpoint directory name of its store, e.g. `8000033`) and `store_root` next to `stores`.
+  `make_population.py --checkpoint-nearest N` picks, per run, the store checkpoint under
+  `--store-root` whose number is closest to N (ties → refuse) and records the actual number;
+  without it, a run with more than one store checkpoint is refused (as `find_stores` does).
+  `readings.py` **drops its `--checkpoint` flag** and reads the checkpoint from the manifest; a
+  population whose cells carry different checkpoints is fine (that is the point). Output of a
+  time-course population goes to its own population directory, never over the final-store one.
+  Test: two fake runs with store checkpoints `8000033` / `8000043` both resolve to their own
+  directories for N = 8,000,000.
+- **N4 — backtick-aware table parser.** `make_population.py` splits Launch Manifest rows on `|` only
+  outside backtick spans, and refuses (naming the row) any row whose cell count differs from the
+  header's. Test: a row with a `|` inside a backticked path parses; a row with one cell too many is
+  refused.
+- **A5 (budget) — recorded, not a code change.** C8 records the wall-clock per sweep; if one cell
+  exceeds about an hour, the Implementation Report states the serial-budget estimate. The user's
+  hand-off for this implementation allows the heavy sweeps to run on free lab nodes (not 114; not the
+  training nodes 102/106–112), so independent cells may run concurrently on different nodes, each
+  `readings.py` invocation still serial within itself.
+
 ### File Changes
 
 No new config keys. No registry setting touched (`CONFIG_CRITICAL_SETTINGS.md` unaffected).
@@ -378,7 +432,7 @@ Run-agnostic port of `supplementary/falsealarm.py` (study S3; §5.6 item 2).
 Per-run assembly over a **population manifest**; run-agnostic (any run whose store and saved config
 exist, including the next study's).
 
-- **CLI:** `--manifest <population.json>` (required), `--labels` (subset), `--checkpoint`,
+- **CLI:** `--manifest <population.json>` (required), `--labels` (subset), ~~`--checkpoint`~~ (see Revision 2, N3),
   `--stage {check, sweep, assemble, all}`, `--reuse-cache`, `--out-root` (required; must resolve under
   `<ROOT>/results/analysis/hypervigilance/`). **No `--max-blocks` / smoke mode** (Rev 1, R4 — dropped
   rather than adding a shard limit to the golden-gated `core/scan`, `hiding_drivers.py` and
@@ -398,7 +452,7 @@ exist, including the next study's).
   **from the store itself**, on the first episodes shard: every `animal_property_sampled` channel outside
   the spec's emitting set is exactly 0 for active animals, and the per-class empirical means of the
   emitting channels are recorded (verifies the store came from the world the config says).
-- **Golden stamp gate:** refuses every manifest whose population is not `a01` unless
+- **Golden stamp gate (see Revision 2, N2 — now two stamps):** refuses every manifest whose population is not `a01` unless
   `results/analysis/hypervigilance/_golden_pass.json` exists and its recorded sha256 of each analysis
   source (`core/env.py`, `core/scan.py`, `core/store.py`, `hiding_drivers.py`, `collect_arm_data.py`,
   `ladder/_ladder.py`, `rabbit_avoidance.py`, `aimed_response.py`, `make_population.py`, `readings.py`)
@@ -706,6 +760,11 @@ blocker to be discussed before merge.
   and restricted to its §5.2–§5.3 slice, `fit_glms(layout="single")` test (R8); `aimed_response.py`
   import path stated (R9); pytest via the project interpreter (R10); post-hoc hv-control seed SD printed
   beside the frozen yardstick (reviewer A1).
+- **2026-10-01 — Revision 2** (developer, at the user's request, before any code), after the
+  `plan-reviewer` re-check of Revision 1 (SOUND WITH CONCERNS, `8646c0ce`): status-column owner named
+  and stale-status refusal (N1); two-tier golden stamp (N2); per-cell `checkpoint` / `store_root` and
+  `--checkpoint-nearest` (N3); backtick-aware Launch Manifest parser (N4); serial-budget note (A5).
+  See [Revision 2 amendments](#revision-2-amendments-n1n4).
 
 ## Implementation Report
 
