@@ -3,13 +3,13 @@ title: "Water and thirst: a fixed pond per episode and a two-sided hydration axi
 topic: env_entities
 status: active
 created: 2026-09-29
-last_updated: 2026-09-29
+last_updated: 2026-09-30
 aliases: [thirst_water_plan]
 ---
 
 # Water and thirst: a fixed pond per episode and a two-sided hydration axis
 
-> **Status**: DRAFT, Revision 1 (plan only; nothing here is built). Revision 1 answers the plan-reviewer and math-reviewer blocks at the end of this file. Frontmatter says `active` because the develop-index validator accepts only `active` / `superseded` / `archive`, and `draft` would fail it. The same goes for the folder: `thirst` is not a registered topic, so the doc is filed under `env_entities`. Adding a topic means editing `scripts/claude/regen_dev_index.py`, which this plan may not do.
+> **Status**: APPROVED 2026-09-30 (Revision 1; see "Approval" at the end) — being implemented on branch `v5.0` in the worktree `.claude/worktrees/thirst`. Revision 1 answers the plan-reviewer and math-reviewer blocks at the end of this file. Frontmatter says `active` because the develop-index validator accepts only `active` / `superseded` / `archive`, and `draft` would fail it. The same goes for the folder: `thirst` is not a registered topic, so the doc is filed under `env_entities`. Adding a topic means editing `scripts/claude/regen_dev_index.py`, which this plan may not do.
 > **Opened**: 2026-09-29
 > **Related**: [[thermal_implementation_plan]] (method template: staged, byte-parity first) · [[warming_cooling_rate_scales]] (target-first calibration template) · [[STATE_DEPENDENT_BODY_MECHANICS]] (the parity-fixture and saved-config-compat pattern reused here) · [[BUSH_FIRE_CLEARANCE]] (placement post-pass pattern) · [[RENDERER_LAYOUT_REDESIGN]] (owner of the episode-video dashboard) · [[SAVED_RUN_CONFIG_COMPAT]] · Known Bugs registry: `docs/develop/active/issues/KNOWN_BUGS.md` (rows cited in §A11)
 > **Decision record**: user alignment session 2026-09-29, `tmp/20260929_173459_thirst_alignment.md` (gitignored; its decisions table is copied verbatim below)
@@ -816,3 +816,14 @@ The rendering session implemented §D8 against snapshot fields only, before any 
 - **§D8.8 audit gate, resolved:** the audit's `cell_overdraw` rule counted the pond's inset as an occupant (21 findings, none a real occlusion). The painter now tags the pond drawing `ground_cover`; the audit excludes tagged ground cover from the occupant count but fails with zero tolerance if ground cover is ever the last thing painted on an occupant pixel. Both directions are permanent tests in `tests/env/test_dashboard_water.py`.
 - **Setpoint mark** added as a vital-row option, on for hydration only. Turning it on for nutrition (two-sided since 09-22) is an open follow-up for the user.
 - The design page with the calculations and the three mock-up frames: `docs/develop/active/thirst/thirst_water.html`.
+
+---
+
+## Approval (2026-09-30)
+
+**Approved for implementation by the user on 2026-09-30**, after the design page ([[thirst_water]], published https://claude.ai/artifact/5wzcGrqcMRk97CzuFHjAQK). Implementation happens on branch **`v5.0`** in the git worktree `.claude/worktrees/thirst` (cut from `develop` at `711bdc22`); the shared folder is never switched. Nothing merges back into `v4.0`/`develop` without asking the user.
+
+What the approval covers, and what it does not change:
+- The plan as written through Revision 1 plus the user decisions above (full 0–200 start-hydration range kept). The design page's correction — the "~5 % dead by step 16 whatever the agent does" figure is an upper bound (simulated 1.8–2.4 %) — changes no code.
+- Grid size stays 10 × 10 at level 06; whether to grow the ladder is a separate, open decision.
+- **§D8 renderer work is already done** by the rendering session (`5818c086`, `7deaee53`; see "Renderer work done ahead of the environment"). The implementation must produce exactly the fields it reads — snapshot `water_pos` `[h*w, 2]` and `hydration`, static `params.water_max_hydration`, `params.water_enabled` — and must not redo the dashboard work. D8.1 (`build_sensory_viz` "Hydration" branch) is also done.
