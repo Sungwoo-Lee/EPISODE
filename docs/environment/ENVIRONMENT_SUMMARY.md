@@ -145,7 +145,7 @@ Authoritative sensor order (from `get_observation_breakdown()` in `sensor.py`).
 Default config observation dimension (all sensors enabled, `r=1`, `vis_r=0`, `action_dim=6`):
 - 1 + 1 + 1 + 1 + 5 + 5 + 6 + 8 + 0 = **28 dims** (location disabled by default)
 
-Olfaction pools 3 chemical signals: `res_chem + animal_chem + obs_chem` (resources, all animals unified, obstacles), plus a fourth — the pond, one source per cell carrying `water.properties / (h·w)` — when `water_enabled` ([[thirst_water_plan]]; see [05](05_body_homeostasis.md) "Hydration" and [09](09_sensors_and_observation.md) "Water in the senses"). The perceptual-noise system has 12 configured modalities; noise arrays are zero-padded to a fixed static shape of 13 for JIT stability (`state.py:222–226`). `interoceptive_nociception` sits at index 3 in the modality order. `injury` and `nutrition` noise are silenced by default (σ_base=0.0). See [10](10_perceptual_noise.md).
+Olfaction pools 3 chemical signals: `res_chem + animal_chem + obs_chem` (resources, all animals unified, obstacles), plus a fourth — the pond, one source per cell carrying `water.properties / (h·w)` — when `water_enabled` ([[thirst_water_plan]]; see [05](05_body_homeostasis.md) "Hydration" and [09](09_sensors_and_observation.md) "Water in the senses"). The perceptual-noise system has 13 configured modalities (`hydration` took the 13th on 2026-09-30); noise arrays have a fixed static shape of 13 for JIT stability, so all 13 slots are now used and none is padding. `interoceptive_nociception` sits at index 4 in the default modality order (after `body_temperature`). `injury` and `nutrition` noise are silenced by default (σ_base=0.0). See [10](10_perceptual_noise.md).
 
 ---
 
@@ -216,8 +216,8 @@ A: All entities now use `properties` (plural) as the canonical key. If you use t
 **Q: Why does my new sensor crash `apply_perceptual_noise` with a `KeyError`?**
 A: Every sensor present in `get_observation_breakdown` must have a corresponding entry in `perceptual_noise.modalities`. Set the mode to `none` if you want to skip noise for that sensor. Silent omission crashes. See [10](10_perceptual_noise.md#clarifications--faq).
 
-**Q: Why are noise arrays shape `[13]` when I only configured 12 modalities?**
-A: Zero-padded to a fixed static shape for JIT stability. **12 of the 13 slots are used as of 2026-09-14** (`body_temperature` took one), so one spare remains. The modality after that one forces `_NOISE_SLOTS` to widen, which is a static-shape change across every config in the tree; `config_loader.py` raises a named error at that point rather than silently producing a wider array. See [02](02_config_schema.md#clarifications--faq) and [10](10_perceptual_noise.md#clarifications--faq).
+**Q: Why are noise arrays shape `[13]`, and is there room for another modality?**
+A: A fixed static shape for JIT stability; a config with fewer modalities is zero-padded. **All 13 slots are used as of 2026-09-30** (`body_temperature` took the 12th on 2026-09-14, `hydration` the 13th — [[thirst_water_plan]]), so **no spare remains**: the next modality must widen `_NOISE_SLOTS` and the `EnvParams.noise_*` arrays together, which is a static-shape change across every config in the tree; `config_loader.py` raises a named error at that point rather than silently producing a wider array. See [02](02_config_schema.md#clarifications--faq) and [10](10_perceptual_noise.md#clarifications--faq).
 
 **Q: Why is there a `terminated` field on `EnvState` and a `done` return value?**
 A: `terminated` is stored for next-step logic (e.g. `ParallelEnv.auto_reset_step`); `done` is the per-step return. They carry the same information. The wrapper's auto-reset checks `done`. See [01](01_state_and_params.md#clarifications--faq) and [11](11_parallel_env_wrapper.md#clarifications--faq).

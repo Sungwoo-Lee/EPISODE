@@ -340,23 +340,25 @@ def apply_perceptual_noise(obs: jnp.ndarray, state: EnvState, params: EnvParams,
 
 ## Array Layout
 
-**Why 13, not 12**: the pad to `_NOISE_SLOTS` (`config_loader.py`) keeps array shapes static across configs with fewer modalities. Adding or removing modalities from the YAML changes `noise_modality_order` length (a static tuple field — triggers recompilation) but keeps the five noise arrays at shape `[13]`, avoiding GPU memory reallocations. The 3 extra slots are zero-padded and never accessed at runtime.
+**Why a fixed 13**: the pad to `_NOISE_SLOTS` (`config_loader.py`) keeps array shapes static across configs with fewer modalities. Adding or removing modalities from the YAML changes `noise_modality_order` length (a static tuple field — triggers recompilation) but keeps the five noise arrays at shape `[13]`, avoiding GPU memory reallocations. Any unused slots are zero-padded and never accessed at runtime. **As of 2026-09-30 the default config uses all 13** (`hydration` took the last one, [[thirst_water_plan]]), so there is no spare: the next modality must widen `_NOISE_SLOTS` and the `EnvParams.noise_*` arrays together (the loader raises a named error on a 14th).
 
-**Index assignment**: indices 0–11 correspond to YAML keys in their declaration order in the config file. With the default config (`configs/environment/default.yaml`):
+**Index assignment**: indices 0–12 correspond to YAML keys in their declaration order in the config file. With the default config (`configs/environment/default.yaml`, order as resolved by the loader on 2026-09-30):
 
 | Array index | YAML key | Sensor name |
 |-------------|----------|-------------|
 | 0 | `injury` | Injury |
 | 1 | `nutrition` | Nutrition |
 | 2 | `satiation` | Satiation |
-| 3 | `interoceptive_nociception` | Interoceptive Nociception |
-| 4 | `extero_nociception` | Extero Nociception |
-| 5 | `olfaction` | Olfaction |
-| 6 | `collision` | Collision |
-| 7 | `proprioception` | Proprioception |
-| 8 | `visual` | Visual |
-| 9 | `location` | Location |
-| 10–12 | — | Zero padding |
+| 3 | `body_temperature` | Body Temperature |
+| 4 | `interoceptive_nociception` | Interoceptive Nociception |
+| 5 | `extero_nociception` | Extero Nociception |
+| 6 | `thermoception` | Thermoception |
+| 7 | `olfaction` | Olfaction |
+| 8 | `collision` | Collision |
+| 9 | `proprioception` | Proprioception |
+| 10 | `visual` | Visual |
+| 11 | `location` | Location |
+| 12 | `hydration` | Hydration |
 
 ---
 

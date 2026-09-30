@@ -2369,7 +2369,7 @@ A: No. `config.get('key', default)` returns the default. Only `config.get_mandat
 A: No — you must explicitly point your training script at it (or merge it) via `Config.merge()`. There is no auto-loading.
 
 **Q: The noise array is padded to 13. Why 13?**
-A: 10 modalities defined + 3 spare slots. Padding keeps the array shape static regardless of how many modalities are configured, avoiding recompilation. The spare slots are always zero-valued and never indexed.
+A: A fixed static shape: padding keeps the array shape the same however many modalities a config lists, avoiding recompilation. Unused slots are zero-valued and never indexed. **Since 2026-09-30 the default config lists 13 modalities, so every slot is used** (`hydration` took the last); a 14th must widen `_NOISE_SLOTS` and the `EnvParams.noise_*` arrays together.
 
 **Q: What happens if my YAML lists a modality name not in `_YAML_KEY_TO_SENSOR_NAME`?**
 A: It is silently dropped from `noise_modality_order` (`config_loader.py:965`). No error is raised. Typos are silent — double-check the 10 valid keys in the table above.
