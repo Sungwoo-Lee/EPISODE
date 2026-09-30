@@ -3,7 +3,7 @@ title: "Single-channel smell: does a harder-to-read rabbit make the agent confus
 topic: hypervigilance
 status: active
 created: 2026-09-30
-last_updated: 2026-09-30
+last_updated: 2026-10-01
 wandb_tag: rppo_hv1ch / rppo_hv1chm / rppo_hv2ch
 ---
 
@@ -634,3 +634,97 @@ Severity legend: 🔴 Critical = fix before going further · 🟡 Moderate = lik
 The two new assumptions this revision introduces, stated for the next review: the matched world's
 values rest on the designer's own 2 M-draw simulation (d′ 0.652, average strength 1.178), and the
 power table rests on normal seed-to-seed variation at the registry's measured spreads.
+
+## Feedback from plan-reviewer — re-check of Revision 1
+
+*2026-10-01, on commit `298cfaba`. Exit-condition review of the NOT READY findings (C1, M1–M4, L1 in
+[[plan_single_channel_smell_hypervigilance]]) plus the matched-strength world added in Revision 1.*
+
+**Verdict: SOUND WITH CONCERNS.** Every prior finding is resolved and was re-verified independently
+rather than taken from the response table (see "What was re-verified"). No Critical remains, so no
+new review file is written. Two Moderate concerns are new, both in how the *third* world is read
+rather than in the world itself: the strength contrast (single-channel minus matched) is given no
+predicted direction while the plan's own reasoning uses both signs; and the primary contrast
+(matched minus control) holds the *average* animal smell but not the rabbit's, which is 11 % weaker
+than in the control — the plan says the detection confound is "removed by design", which overstates
+it. Both are fixable in this document alone; neither blocks the configs.
+
+Severity legend: 🔴 Critical = fix before going further · 🟡 Moderate = likely costs a re-run ·
+🟢 Low = cosmetic · ❓ Open = an assumption nobody has verified yet.
+
+### Prior findings — status
+
+| # | Status | How it was checked |
+|---|---|---|
+| C1 | **Resolved.** Row 2 of the verdict map fires only on a stage-2 refutation; refutation needs the one-sided 95 % Welch upper bound of Δ below the minimum effect (an equivalence-style bound: 5 % wrong refutation at the minimum effect by construction) or significance the other way; every non-established 3 v 3 goes to the top-up; the "positive in all three seeds" clause is gone; the power is printed. | Independent Monte-Carlo of the §5.3 rule, 40,000 draws per row: reproduces every cell of the power table within 1–2 points (P2 +2 pp, SD 1.5: 32 % at 3 v 3 → 51 % overall, 5 % wrongly refuted; null, SD 1.5: 3 % false positive, 59 % correctly refuted; P1 +3 pp: 46 → 60 %). The rows of the verdict map are now disjoint. |
+| M1 | **Resolved.** | `train.py:612` `config.set('seed', args.seed)`; `:786` reads `config.get_mandatory('seed')`; the banner dict carries `"Seed": seed`. Pre-flight 2 now reads the key the trainer writes. |
+| M2 | **Resolved.** | Spec rows 17–18 (`hv2ch_*_s42`) point at the two `20260927-0530xx_rppo_l05body_w0000_*` run dirs; `out_root` is the new `results/trajectories_hvsmell`; the collector's missing-`models/config.yaml` guard is real (`scripts/eval/traj_collect/run_collection.py:142-145`), so the sixteen `FILL_AT_LAUNCH` rows do block a premature collection. |
+| M3 | **Resolved as pre-registered sensitivity readings** (S6 a/b; §2.5 items 4–5; §5.6 item 4). | The near-bin clip is where the plan says (`scripts/analysis/studies/sensor_ladder/collect_arm_data.py:124`, `np.clip(drab, 1, DIST_MAX) − 1`); the `rd` grid gates on `has_r` only (`:81`, `:129`). |
+| M4 | **Resolved.** Row 4 requires "S4 unchanged"; otherwise "not separable from detection loss". See N2 for how that condition should be read on the matched world. | — |
+| L1 | **Resolved.** | Wording checked. |
+
+### New findings (Revision 1)
+
+| # | Sev | Where | Issue | Suggested fix |
+|---|---|---|---|---|
+| N1 | 🟡 | §5.3 outcomes table + "Across the three contrasts" paragraph; §2.5 item 1 | **Contrast C (single-channel − matched) has no stated predicted direction, and the plan uses both.** The outcomes table gives P1 one predicted sign (+) "for each contrast (A, B, C)". But §2.5 item 1 says detection loss pushes P1 **down**, so the detection prediction for C is **−**; the paragraph "A established, B not, C established → largely detection" needs C established in the **+** direction, while "B established and A not → strength loss masks confusion" needs C **negative**. A one-sided stage-1 rule cannot serve both readings — and if C is made two-sided, complete separation at 3 v 3 is p = 0.10, not 0.05, so C can never be "established" at stage 1. | State C's role explicitly. Cleanest: C is **two-sided and descriptive** (reported with its 5 v 5 two-sided Mann–Whitney, U ≤ 2, p ≈ 0.03, when the top-up runs; never "established" at stage 1), and the across-contrasts paragraph is rewritten in terms of C's *sign* ("C negative and |C| ≥ 3 pp → strength loss lowered P1 …"). Alternatively keep C one-sided with sign − (the detection prediction) and drop the "C established → largely detection" reading. Owner: `experiment-designer`. |
+| N2 | 🟡 | §2.1 contrast table ("held: average total animal smell"); §2.5 item 1 ("removes this by design"); S4 definition; verdict-map rows 4–5 on contrast B | **Contrast B holds the class-average strength, not the rabbit's.** Rabbit 1.05 vs 1.18 (−11 %), predator 1.30 vs 1.18 (+10 %) — the plan states this in §2.2 but then says the detection confound is "removed by design for contrast B". The detectability that matters for P1 is the *rabbit's*, which is weaker; the asymmetry is inherent (once the ratio carries no identity, strength must), so it is a reading fix, not a design change. Two consequences: (i) the residual works **against** H₁a on B (a weaker rabbit → lower P1), so an established B is conservative but a B null carries a small residual detection component and must say so; (ii) the S4 predator readout cannot see a rabbit-detection drop — on the matched world the predator is *stronger*, so S4 may **rise**, and rows 4–5 would then read a detection *gain* as "not separable from detection loss". Also, "S4 unchanged" is a point-estimate condition (|Δ| < 3 pp), inconsistent with C1's fix, which made every null claim need positive evidence. | (a) §2.5 item 1: "reduces the detection confound to −11 % on the rabbit / +10 % on the predator (vs −58 % / −42 % in the single-channel world)", not "removes". (b) Read S4 **with sign** on B: a rising predator proximity effect is the expected consequence of the +10 % and does not trigger row 5; only a *falling* S4 does. (c) Define "S4 unchanged" with the same one-sided 95 % bound used for refutation (upper bound of |Δ| below 3 pp), evaluated at the stage the primary was decided. Owner: `experiment-designer`. |
+| N3 | 🟢 | §5.6 item 1 ("both copies") | `smell_channels` has **three** copies, not two: `scripts/analysis/hiding_drivers.py:81`, `scripts/analysis/core/env.py:73`, and `scripts/analysis/figures/_common.py:57` (`core/env.py:9` records the merge). The tooling plan must cover all three or the figure scripts refuse the treated configs. | Wording; carry into the tooling plan. Owner: `senior-developer` (tooling plan). |
+| N4 | 🟢 | Tags | `rppo_hv1ch_` is a prefix of `rppo_hv1chm_`; any `*hv1ch*` glob in the study driver or a directory check picks up the matched runs. | Match on `hv1ch_` (trailing underscore) or on the full tag. Owner: `experiment-designer` → tooling plan. |
+| N5 | 🟢 | §5.3 stage 2 | The refutation bound is written for a + prediction ("upper bound … below the minimum effect"); P2d predicts −. P2d decides nothing on its own, so this is wording. | "the 95 % bound on the predicted side". |
+
+### Does the three-world logic separate confusion from detection?
+
+**Yes, at the level the plan claims, with N1/N2 as the caveats.** Re-simulated (2 M draws, clipping
+included): the matched world has the same ideal-observer separability as the single-channel world
+(d′ 0.652 vs 0.662; 38.4 % misreads in both) and the same class-average strength as the control
+(1.178 vs 1.176). So B changes identifiability at (nearly) constant strength and C changes strength
+at constant identifiability — the decomposition is real. The two things it does *not* hold: the
+per-class strength asymmetry (N2), and the representational demand (the matched agent must combine
+two independently-jittered channels, the single-channel agent reads one; ideal-observer d′ is the
+same but a learned policy need not reach it — this lands in C, listed below as ❓ O6). "Strength now
+carries identity" is the manipulation, not a confound: in both treated worlds a *near* rabbit is
+predator-like by construction, which is exactly the hypothesised route to confusion; S2/S3 are
+unaffected because they read the per-episode sampled recipe (`animal_property_sampled`), not the
+distance-attenuated observation. The clipping-rate differences (predator 13.5 % per channel in
+matched vs 15.9 % / 4.8 %) are second-order and already tabulated.
+
+### Assumptions (❓ Open unless marked verified)
+
+- *Verified this pass:* the §2.2 world table (independent re-simulation matches to the printed
+  precision); the §5.3 power table (independent Monte-Carlo); the log-likelihood-ratio scale
+  factors (`2.22(x1−x2)`, `2.22(x1−0.6)`, `1.56(x1+x2−1.2)` from Gaussian recipes with SD 0.3);
+  the sampler `clip(mean + std·N(0,1), 0, 1)` at `core.py:2044` with `property_key` split
+  independently of the means (the "same underlying draws" claim); no run-time code in `src/`
+  assumes the two-channel layout (the matched world cannot crash training or logging — only the
+  analysis tooling refuses it, as §5.6 says); working tree at `298cfaba` with the plan doc, the
+  three configs and the spec clean.
+- ❓ O5: sixteen free GPUs for "one wave" — live state is `gpu-status`'s; if the wave is split
+  across days, pre-flight 3 (ladder drift) is the safeguard and must actually be run, not assumed.
+- ❓ O6: contrast C also carries the one-channel-vs-two-channel representational difference (above).
+  Fine as long as C stays descriptive (N1).
+- ❓ O7: the power table assumes normal seed-to-seed variation at spreads measured on a *different*
+  configuration (`cmp10m`, five seeds); §5.3 freezes the study's own yardstick before unblinding,
+  which is the right hedge.
+
+**Prior-art pass (done):** Known Bugs rows re-read for smell / odour / animal properties / matmul /
+glued rabbit / log-name collision: all cited or harmless (the 1-second log-name collision is met by
+the ≥ 2 s launch spacing; the "saved config stops loading once a key becomes mandatory" row is what
+pre-flight 3 guards). Nothing new for `bug-curator`.
+
+**Project rules:** unchanged from the first pass — no reward metric, survival headline not
+criterion, no registry value change, no `scripts/` or schema change in this plan, interpreter path
+correct, frontmatter present. Mechanical YAML validation of the new config is
+`env-config-reviewer`'s.
+
+**Cost of being wrong:** ≈ 256 GPU-hours plus a partial top-up. If N1 is left as is, the most
+likely damage is a mis-read of contrast C in the "across the three contrasts" paragraph — a wrong
+*attribution* (detection vs identifiability) of a real effect, not a wrong primary verdict. If N2
+is left as is, a B null gets reported as "identifiability does not matter" when a fifth of it may
+be a quieter rabbit. Neither costs a rerun; both would cost a sentence in a paper. No data-loss
+hazard.
+
+**What would make this SOUND:** fold N1 and N2 into §5.3 / §2.5 / S4 (document-only); N3–N5 at
+the tooling plan. No config change is needed to launch.
+
+*Reviewed by: plan-reviewer*

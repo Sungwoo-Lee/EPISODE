@@ -3,7 +3,7 @@ title: "Plan review: single-channel smell hypervigilance study — NOT READY (Q2
 topic: hypervigilance
 status: active
 created: 2026-09-30
-last_updated: 2026-09-30
+last_updated: 2026-10-01
 reviewed_object: docs/experiments/active/hypervigilance/SINGLE_CHANNEL_SMELL_HYPERVIGILANCE.md @ 71b7480a
 ---
 
@@ -107,5 +107,18 @@ About 160 GPU-hours, the 4-run top-up, and two collection passes, to arrive — 
 probability at the plan's own minimum effect — at a P2 "inconclusive" that the verdict map as
 written promotes into "confusion alone is not sufficient for hypervigilance", a claim that would
 enter the project's hypervigilance narrative. No data-loss hazard anywhere in the plan.
+
+*Reviewed by: plan-reviewer*
+
+## Re-check of Revision 1 (2026-10-01, commit `298cfaba`)
+
+**SOUND WITH CONCERNS.** C1 and M1–M4 are resolved (each re-verified independently — the revised
+power table and the three-world simulation both reproduce). Two new Moderate findings concern how
+the added matched-strength world is *read*, not the world itself: the strength contrast has no
+stated direction while the plan's reasoning uses both signs, and the primary contrast holds the
+class-average smell but leaves the rabbit 11 % quieter than in the control, so "removes the
+detection confound by design" overstates it. Full table and the assumption list are appended to the
+plan doc under "Feedback from plan-reviewer — re-check of Revision 1". No Critical remains; this
+file's NOT READY verdict above applies to `71b7480a` only.
 
 *Reviewed by: plan-reviewer*
