@@ -15,7 +15,7 @@ __HOUSE_STYLE__
            font-size: 12.5px; letter-spacing: .02em; border: 1px solid var(--rule); color: var(--ink-2); }
   p.kind-calculation { border-color: var(--accent); color: var(--accent-text); }
   p.kind-simulation { border-color: var(--rule); color: var(--ink-2); }
-  p.kind-mockup { border-color: var(--warn); color: var(--warn); }
+  p.kind-recording { border-color: var(--warn); color: var(--warn); }
   .figscroll img { min-width: 685px; }
   /* F25/F65: the dashboard frames are 1440 px with ~11 px fine print; 1440 x 9 / 11 = 1180 keeps it >= 9 px */
   figure img[data-fig^="render_"] { min-width: 1180px; }
@@ -54,10 +54,10 @@ north-up. A pond that sat in the same place every episode could be found by a fi
 all. So the pond's place changes between episodes, drawn from a list of candidate spots in the config (or
 anywhere, or always the centre).</p>
 
-<p>The plan for all of this is written and reviewed but <strong>not approved for building</strong>
-(<code>docs/<wbr>develop/<wbr>active/<wbr>thirst/<wbr>THIRST_WATER_PLAN.md</code>). The user asked for this
-page first: calculations and a simulation of how the settings shape the difficulty, and the updated
-rendering.</p>
+<p>The plan for all of this (<code>docs/<wbr>develop/<wbr>active/<wbr>thirst/<wbr>THIRST_WATER_PLAN.md</code>)
+was approved on 30 September and is now implemented on the <code>v5.0</code> branch, where it is being reviewed
+and is not yet merged. The calculations and the simulation on this page were made <em>before</em> the code
+existed, to choose the settings; the dashboard frames in section 13 come from the implemented environment.</p>
 
 <div class="callout">
   <p class="eyebrow">The answer, in one paragraph</p>
@@ -216,7 +216,7 @@ argument, not a simulation result. It stays in the plan as a mode, but it should
 
 <section class="col">
 <h2><span class="num">06</span> What the simulation is, and is not</h2>
-<p>Water does not exist in the environment yet, so difficulty is measured on a reduced copy of level 06 run
+<p>These runs were made before water existed in the environment, so difficulty is measured on a reduced copy of level 06 run
 by a <strong>scripted agent</strong> — a fixed rule, not a trained policy. It is the same approach as the
 internal-state study, and reuses its pieces.</p>
 <ul>
@@ -454,97 +454,95 @@ kills. The pond is not cover, so every water step is exposed. This puts a price 
 <h3 class="group col">The episode dashboard</h3>
 
 <section class="col">
-<h2><span class="num">13</span> How the pond and hydration will be drawn</h2>
-<p>The rendering session added pond and hydration support to the episode dashboard ahead of the environment,
-keyed only on two new fields in a recording (the pond's cells and the hydration value), so it will draw real
-level-06 episodes the day they exist. Old recordings render exactly as before; the rendering session checked
-a real level-05 frame byte for byte. Because no level-06 episode exists yet, the three frames below are
-<strong>mock-ups</strong>: a real level-05 episode with a pond and a hydration value written into it.</p>
+<h2><span class="num">13</span> How the pond and hydration are drawn</h2>
+<p>The rendering session added the pond and a hydration row to the episode dashboard, and the environment
+now produces both. The three frames below are <strong>real level-06 episodes</strong>: the pond's position,
+hydration, the smell maps (including the pond's own odour on "Odour C"), vision, temperature and the cause of
+death all come from the environment. What is not real is the agent: no level-06 agent has been trained yet,
+so the episodes are driven by a <strong>seeded random policy</strong>, and the frame titles say so.</p>
 
 <div class="callout warn">
   <p class="eyebrow">What is settled, and what these frames do not show</p>
-  <p><b>The pond's look is final</b> (user decision, 29 September): the inset with two wave lines, keeping
-  the square's temperature colour as a rim. The dashboard's pixel audit first counted the water as an occupant
-  overlapping the agent; it now treats marked ground cover separately and fails if ground cover is ever
-  painted over an occupant (rendering commit <code>5818c086</code>, tests in
-  <code>tests/<wbr>env/<wbr>test_dashboard_water.py</code>). <b>The smell and vision maps are the level-05
-  recording's</b>: they were not recomputed with the pond, so the new "Odour C (water-leaning)" map is empty.
-  Only the channel labels are level 06's.</p>
+  <p><b>The pond's look is final</b> (user decision, 29 September): an inset with two wave lines, keeping the
+  square's temperature colour as a rim, drawn under every occupant. The dashboard's pixel audit treats that
+  drawing as ground cover and fails if it is ever painted over an occupant. <b>The agent's movements are
+  random</b>: where it goes, and whether it drinks, says nothing about how a trained agent will behave.</p>
 </div>
 
 <figure>
   <p class="cue" hidden>Wider than the column — scroll sideways to see the right-hand panels, or click to open it full size.</p>
-  <div class="scroll figscroll"><img data-fig="render_a_far_from_pond_low_hydration" alt="Episode dashboard at step 59. Interoception panel lists satiation 0.95, nutrition and injury not observed, body temperature minus 6 degrees, and a new Hydration row reading 0.17 observed and 0.17 true, each bar with a tick at the middle setpoint. The 5 by 5 grid view shows the agent at the top centre with no pond in view; the 10 by 10 world map in the lower left shows the pond as a 2 by 2 block of water squares below the agent's view window. The olfaction panel's last map is labelled Odour C, water-leaning, and is empty."></div>
+  <div class="scroll figscroll"><img data-fig="render_a_far_from_pond_low_hydration" alt="Episode dashboard titled Level 06, random policy, at step 74 of 102. The interoception panel shows satiation 0.59, injury 0.30 not observed, body temperature minus 12.2 degrees, and the Hydration row reading 0.15 observed and 0.15 true, well left of the tick at the middle. The 5 by 5 grid view shows the agent with no pond in view; the 10 by 10 world map below shows the pond as a 2 by 2 block of water squares in the upper right, outside the agent's view window. All five smell maps, including Odour C, water-leaning, carry readings."></div>
   <p class="zoomhint">Click the figure to open it full size.</p>
   __KIND:render_a_far_from_pond_low_hydration__
   <figcaption>
-    <span><b>Figure 10 — thirsty, and the pond out of sight.</b> Hydration reads 0.17 (34 of 200), well below
+    <span><b>Figure 10 — thirsty, and the pond out of sight.</b> Hydration reads 0.15 (30 of 200), well below
     the tick that marks the comfortable middle. The pond is not in the agent's 5 × 5 view but shows on the world
-    map below, five squares from the agent.</span>
+    map, four or more squares away; only its smell reaches the agent here.</span>
     <span><b>Axes.</b> Not a chart: a dashboard frame. Left column, the body readings, observed (what the agent
-    receives) beside true; Hydration is the new bottom row, drawn from 0 to 1 of its 0–200 range with a tick at
+    receives) beside true; Hydration is the bottom row, drawn from 0 to 1 of its 0–200 range with a tick at
     0.5. Centre, the agent's 5 × 5 view and the whole 10 × 10 world; right and bottom, the other senses.</span>
     __DATA:render_a_far_from_pond_low_hydration__
-    <span><b>How it is computed.</b> The frame is step 59 of a real level-05 evaluation episode (the ordinary
-    agent, final checkpoint, episode 2), re-drawn through the new dashboard with four fields written in by hand:
-    the pond's cells, fixed for the whole episode at array rows 5–6 and columns 4–5; a hydration value of 34;
-    the maximum of 200 the dashboard divides by; and one extra observation number, hydration ÷ 200 with no
-    noise, placed where the plan puts it (right after body temperature), so the row appears as observed rather
-    than hidden. Everything else — the agent's and animals' positions, its actions, its other body values,
-    and the smell and vision maps — is the real recording. The pond is drawn as ground cover: its colour sits
-    under anything standing on it. The dashboard reads the smell labels from the run's config, so Food's
-    second line and Odour C are level 06's labels. <b>What this frame does not show:</b> what a level-06 agent
-    would do here — the actions are a level-05 agent's that had no thirst — or the pond's smell, which the
-    maps were not recomputed to include.</span>
+    <span><b>How it is computed.</b> The rendering session recorded 400 level-06 episodes with the project's
+    fixture recorder (the level-06 test world, recorded as shipped), in two batches seeded 11 and 23, with a
+    random policy choosing each action. Its frame script then searched those episodes for three kinds of moment
+    and drew each through the new dashboard. This frame is step 74 of episode 260, chosen as a moment with the
+    agent at least four squares from the pond and hydration low while the episode continues. Every number and
+    map in it is the environment's own output: hydration is the true body value, and because level 06 delivers
+    hydration to the agent without noise, the observed value is the same. The five smell maps include the pond's
+    contribution — half on the food channel and half on the channel trees used — which is why "Odour C" now
+    carries readings. <b>What this frame does not show:</b> a decision — a random agent does not go to water
+    when thirsty — or anything about how often a trained agent will let its hydration fall this low.</span>
   </figcaption>
 </figure>
 
 <figure>
   <p class="cue" hidden>Wider than the column — scroll sideways to see the right-hand panels, or click to open it full size.</p>
-  <div class="scroll figscroll"><img data-fig="render_b_drinking_predator_in_pond" alt="Episode dashboard at step 264. The grid view shows two water squares with wave lines and, on the other two pond squares, a predator at the top left and the agent at the bottom right, each drawn on top of the water. Hydration reads 0.52 observed and true, just past the setpoint tick. The olfaction labels read Food, shared with water, and Odour C, water-leaning."></div>
+  <div class="scroll figscroll"><img data-fig="render_b_drinking_predator_in_pond" alt="Episode dashboard titled Level 06, random policy, at step 9 of 48. The grid view shows the 2 by 2 pond: two water squares with wave lines on the left, a predator on the upper right pond square and the agent on the lower right pond square, both drawn on top of the water. Hydration reads 0.50, on the setpoint tick; injury 0.06."></div>
   <p class="zoomhint">Click the figure to open it full size.</p>
   __KIND:render_b_drinking_predator_in_pond__
   <figcaption>
     <span><b>Figure 11 — drinking, with a predator in the pond.</b> The agent stands on one pond square and a
-    predator on another; both are drawn over the water, so neither is hidden by it. Hydration reads 0.52, just
-    past the middle.</span>
-    <span><b>Axes.</b> Not a chart: a dashboard frame, laid out as Figure 10. The four blue squares with the
-    agent and predator are the 2 × 2 pond.</span>
+    predator on the square next to it; both are drawn over the water, so neither is hidden by it. Hydration
+    reads 0.50 (101 of 200), right on the middle tick.</span>
+    <span><b>Axes.</b> Not a chart: a dashboard frame, laid out as Figure 10. The four blue squares with wave
+    lines or animals on them are the 2 × 2 pond.</span>
     __DATA:render_b_drinking_predator_in_pond__
-    <span><b>How it is computed.</b> Step 264 of the same real level-05 episode. The step was chosen because a
-    predator stood next to the agent; the pond was then placed so that both stand in it, rather than moving
-    either animal, since the positions are the recording's. The pond's squares keep their temperature colour as
-    a rim and add an inset with two wave lines; the agent and the predator are drawn on top in their usual
-    tokens. The rendering session's tests include one that fails if the water is ever drawn over the agent
-    (checked by forcing it on top: the agent's own-colour pixels drop from 1,003 to 409). Hydration is set to
-    104 of 200 and shown as observed, as in Figure 10. The labels under the smell maps come from the level-06
-    config: channel 0 is "Food (shared with water)" and channel 4, which trees used, is "Odour C
-    (water-leaning)". <b>What this frame does not show:</b> a real encounter at water — in the recording there
-    is no pond, and the predator's approach has nothing to do with drinking — or whether this pond style is
-    the final one (see the note above).</span>
+    <span><b>How it is computed.</b> From the same 400 recorded episodes, this is step 9 of episode 258, the
+    moment found by searching for the agent on a pond cell with a predator on an adjacent pond cell. A random
+    walker rarely stands in the pond with a predator beside it, which is why the second, larger batch was
+    recorded. Because the environment places the pond before everything else and predators may walk into it
+    (decision 9), nothing in the scene was arranged: the predator walked there under its own rules. The pond is
+    drawn as ground cover, so the tokens for the agent and the predator are painted on top, and the dashboard's
+    tests fail if the water is ever drawn over an occupant. Hydration here is the true value, delivered to the
+    agent unchanged. The smell labels come from the level-06 config: channel 0 is "Food (shared with water)" and
+    channel 4 is "Odour C (water-leaning)". <b>What this frame does not show:</b> whether predators will learn
+    to wait at water, or whether a trained agent will drink with one beside it — the agent's step into the pond
+    was random.</span>
   </figcaption>
 </figure>
 
 <figure>
   <p class="cue" hidden>Wider than the column — scroll sideways to see the right-hand panels, or click to open it full size.</p>
-  <div class="scroll figscroll"><img data-fig="render_c_hydration_zero_terminal" alt="Episode dashboard at step 333 of 333, the last frame. Hydration reads 0.00 observed and true, with empty bars. The agent is eating in the bottom-left corner of its view, four squares from the two visible pond squares at the top right; a predator stands two squares away. Injury and extero-nociception read zero."></div>
+  <div class="scroll figscroll"><img data-fig="render_c_hydration_zero_terminal" alt="Episode dashboard titled Level 06, random policy, at step 53 of 53, the last frame. Hydration reads 0.00 observed and true, with empty bars. Injury and extero-nociception read zero; satiation 0.52. The agent is at the top of its view beside a bush, with food and a rabbit nearby; the pond is outside the view, shown on the world map in the upper left."></div>
   <p class="zoomhint">Click the figure to open it full size.</p>
   __KIND:render_c_hydration_zero_terminal__
   <figcaption>
-    <span><b>Figure 12 — the last frame of a thirst death.</b> Hydration is 0 and the step counter (top right of the frame — scroll the frame or open it full size) reads 333 of 333. The pond is four squares away. The dashboard has no text for the cause of death, for this or any
-    cause.</span>
-    <span><b>Axes.</b> Not a chart: a dashboard frame, laid out as Figure 10; the step counter at the top right of the frame — off the visible part of the column, so scroll the frame or open it full size — reads the frame number over the episode's length.</span>
+    <span><b>Figure 12 — the last frame of a real thirst death.</b> Hydration is 0 and the step counter (top
+    right of the frame — scroll the frame or open it full size) reads 53 of 53. Injury is 0, so thirst is the
+    only cause. The episode started at hydration 33 of 200.</span>
+    <span><b>Axes.</b> Not a chart: a dashboard frame, laid out as Figure 10; the step counter at the top right of
+    the frame — off the visible part of the column, so scroll the frame or open it full size — reads the frame
+    number over the episode's length.</span>
     __DATA:render_c_hydration_zero_terminal__
-    <span><b>How it is computed.</b> The recorded episode really ends at step 336 with a predator kill, so its
-    last frame would show two lethal causes at once. Instead the rendering session took the latest step with no
-    injury, no predator on an adjacent square and the agent at least three squares from the pond — step 333 —
-    ended the episode there, and set hydration to 0. That is why the counter reads 333 of 333 and why a predator
-    is visible two squares away without having attacked. Hydration is shown as observed, as in the other two
-    frames. The environment will mark this as a thirst death with its own cause code, which training logs and
-    evaluation summaries will carry, but the dashboard itself prints no cause of death today, so the frame looks
-    the same as any other final step apart from the empty hydration bars. <b>What this frame does not
-    show:</b> a real thirst death — the agent in the recording was not thirsty and was eating, not heading for
-    water — or any on-screen death label, which is a possible later addition.</span>
+    <span><b>How it is computed.</b> From the same 400 recorded episodes, this is the final step of episode 97,
+    found by searching for an episode that the environment ended with the dehydration cause (code 6) and no
+    injury. Its starting hydration of 33 lasts 33 ÷ 0.625 = 52.8 steps with no drinking, so the random walker,
+    which never reached the pond, died on step 53 — exactly as the planned rule predicts. Nothing in the frame was
+    set by hand: the episode really ended here, for this reason. The environment records the cause of death with
+    its own code, which training logs and evaluation summaries carry; the dashboard itself prints no cause of
+    death today, so apart from the empty hydration bars the frame looks like any other final step. <b>What this
+    frame does not show:</b> a trained agent's thirst death — a random walker does not head for water — or any
+    on-screen death label, which is a possible later addition.</span>
   </figcaption>
 </figure>
 </section>
@@ -576,8 +574,9 @@ modulator is meant to exploit — the page suggests these levers, strongest firs
 <tr><td>thirst slower than hunger: 150–200 steps (planned 160)</td><td>whether hydration should couple to body temperature, as in EVAAA (off in the plan)</td></tr>
 <tr><td>smell stays 5 channels; the pond smells half food, half the old tree channel</td><td>the effect of that shared smell on finding the pond — needs training, not this simulation</td></tr>
 <tr><td>predators walk into the pond</td><td>whether a setpoint mark should also be added to the nutrition row of the dashboard</td></tr>
-<tr><td>new level 06 after the campfire world; sensory noise moves to 07</td><td>implementation: approved only after this page</td></tr>
+<tr><td>new level 06 after the campfire world; sensory noise moves to 07</td><td>merging v5.0 back: after the reviews, and only with the user's OK</td></tr>
 <tr><td>starting hydration drawn from the full 0–200</td><td></td></tr>
+<tr><td>implementation approved (30 September), built on the v5.0 branch</td><td></td></tr>
 </tbody></table></div>
 </section>
 
@@ -588,7 +587,7 @@ modulator is meant to exploit — the page suggests these levers, strongest firs
   <li>Simulator, sweep and one script per figure: <code>scripts/<wbr>analysis/<wbr>studies/<wbr>thirst_water/</code>. Run <code>python sweep.py</code> (about 15 minutes), then each <code>w*.py</code>, then <code>python build_page.py</code>.</li>
   <li>Sweep output: <code>results/<wbr>analysis/<wbr>thirst_water/<wbr>sweep.json</code></li>
   <li>Food and temperature rules, their validation and the measured map: <code>scripts/<wbr>analysis/<wbr>studies/<wbr>internal_state_interactions/</code> (<code>bodysim.py</code>, <code>validate.py</code>, <code>measure_world.py</code>) and <code>results/<wbr>analysis/<wbr>internal_state_interactions/</code></li>
-  <li>Dashboard renders: made by the rendering session with the dashboard package (<code>src/<wbr>environment/<wbr>dashboard/</code>); the command for each is printed under its figure.</li>
+  <li>Dashboard frames: <code>docs/<wbr>develop/<wbr>active/<wbr>thirst/<wbr>figures/<wbr>make_render_frames.py</code> (rendering session), from level-06 recordings it regenerates with <code>scripts/<wbr>eval/<wbr>make_render_fixture_recordings.py</code>; commands in its docstring.</li>
 </ul>
 <p>Departures from the House Style Sheet, as on the project's other analysis pages: the chrome accent and
 warning hues are moved off the figure palette; headings use Pretendard and code the reader's system

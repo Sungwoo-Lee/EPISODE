@@ -1,2 +1,1 @@
-frames from the recorded episode|1|336|0.3|real level-05 recording: ordinary agent (t1none), final checkpoint, episode 2, seed 8217; step 264; hydration set to 104 of 200; the pond placed at array rows 5-6, cols 4-5 so the agent and a predator both stand in it
-synthetic fields added to that frame|4|4|100.0|pond position, hydration value, the 200 maximum, one Hydration observation equal to hydration/200 (noise off)
+recorded level-06 episodes searched|1|400|0.2|one episode chosen per frame by the frame script's search; episode 258, step 9 of 48: agent on a pond cell with a predator on an adjacent pond cell; nothing set by hand

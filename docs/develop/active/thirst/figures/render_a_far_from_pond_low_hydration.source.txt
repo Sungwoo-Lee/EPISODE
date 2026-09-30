@@ -1,1 +1,1 @@
-python docs/develop/active/thirst/figures/make_render_frames.py (from the repo root; dashboard support in commit 5818c086)
+python docs/develop/active/thirst/figures/make_render_frames.py (from the repo root, on branch v5.0; recording commands in its docstring)
