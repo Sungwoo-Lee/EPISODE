@@ -353,7 +353,52 @@ top-up the expected path. Collection: 18 × 1 M episodes, plus the time-course c
 
 ## 4. Results
 
-*(Blank until training and collection finish.)*
+*(Results blank until training and collection finish. §4.0 was entered pre-data.)*
+
+### 4.0 Seed-noise yardstick (frozen pre-data, 2026-10-01)
+
+As §5.3 requires, the between-seed spread of the study's readings was measured on the five `cmp10m`
+plain-agent seeds (42–46) with the study's own analysis code and frozen **before any hv trajectory
+store or reading existed** (`results/analysis/hypervigilance/cmp10m/yardstick.json`, frozen
+2026-10-01 02:07; the file records that `results/trajectories_hvsmell/` did not exist at freeze).
+
+| Reading | between-seed SD (5 seeds) | mean over the 5 seeds | SD the §5.3 power table assumed |
+|---|---|---|---|
+| P1 rabbit proximity effect | **0.513 pp** | +2.43 pp | ≈ 1.4 pp |
+| P2 causal injury shift, hiding | **0.146 pp** | +0.29 pp | 1.05–2.67 pp |
+| P2d causal injury shift, distance | **0.161 pp** | +0.58 pp | — |
+| S1 scent × injury, matched control reading (the registered reference, Revision 4) | **0.253 pp per nat** | −1.33 | — |
+| S1, plain control reading (descriptive) | 0.224 pp per nat | −0.78 | — |
+| S2 scent ladder | 0.137 pp | +1.13 | — |
+
+**Caveat, as registered in §5.5.** `cmp10m`'s world differs in the way that matters for this
+study: smell is sampled at the agent's own cell only (no smell direction), and vision resolves
+identity with eight channels. Its agents identify animals by sight, so these SDs **may understate**
+the seed noise of the hv worlds, where identity must come from smell. They are 3–18× smaller than
+the SDs the power table assumed.
+
+**Nothing is changed by this entry.** Minimum effects, the two-stage rule, the refutation bound and
+the verdict map stand as registered. After the analysis, the hv control arm's own three-seed SD for
+every reading is printed beside this table, and the power statement is read against whichever of
+the two is larger.
+
+**Power implied by these SDs — descriptive only** (Monte-Carlo, 40,000 draws per cell, the §5.3
+rule unchanged; each cell = established overall / refuted, after the stage-2 top-up where it runs):
+
+| Reading (minimum effect), SD | true effect 0.5 × min | 0.8 × min | = min | 1.25 × min |
+|---|---|---|---|---|
+| P1 (3 pp), 0.513 | 0 % / 99 % | 9 % / 50 % | **61 % / 5 %** | 99 % / 0 % |
+| P2 (2 pp), 0.146 | 0 % / 100 % | 0 % / 99 % | **61 % / 5 %** | 100 % / 0 % |
+| P2d (1 pp), 0.161 | 0 % / 100 % | 7 % / 54 % | **61 % / 5 %** | 100 % / 0 % |
+| S1 (2 pp per nat), 0.253 | 0 % / 100 % | 3 % / 72 % | **61 % / 4 %** | 100 % / 0 % |
+
+What this means: at spreads this small, seed noise stops being the limit and **the registered
+minimum effects become the effective cut-offs**. An effect a quarter above its minimum is almost
+surely established; one exactly at the minimum about 60 % of the time (its estimate lands on either
+side of the line); one clearly below the minimum is almost surely refuted — which under this rule
+means "smaller than the registered size", not "absent". With no true effect nothing is falsely
+established. None of this holds if the hv worlds' seed noise is nearer the registry's spreads; the
+post-hoc control SD will show which regime applies.
 
 ### 4.1 Primary Metrics (Hypothesis Test)
 ### 4.2 Secondary Metrics
@@ -663,6 +708,9 @@ animal_property_std  all  [0,0.3,0.3,0,0]   all  [0,0.3,0,0,0]      all  [0,0.3,
     the registered (matched) one decides.
   - Every S1 reading carries `statistic_equals_intensity` (true in both treated worlds and in the
     matched control reading, false in the plain control reading), as the tooling writes it.
+- **2026-10-01 — seed-noise yardstick entered, pre-data** (experiment-designer): §4.0 records the
+  cmp10m between-seed SDs frozen at 02:07 before any hv store existed, with the registered caveat
+  and a descriptive power restatement. No threshold or rule changed.
 
 ---
 
