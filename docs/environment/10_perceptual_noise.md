@@ -66,7 +66,7 @@ perceptual_noise:
 
 **YAML key order is the single source of truth for noise array indices.** `config_loader.py:963–967` builds `noise_modality_order` by iterating `modalities_cfg` in YAML declaration order. Any reordering of YAML keys changes the array indices stored in `EnvParams` — see the Critical Invariant section below.
 
-**All 12 modalities** (values from `configs/environment/default.yaml`):
+**All 13 modalities** (values from `configs/environment/default.yaml`):
 
 | YAML key | Sensor name in code | Array index (default YAML order) | Mode | σ_base | α | clip |
 |----------|--------------------|---------------------------------|------|--------|---|------|
@@ -82,12 +82,14 @@ perceptual_noise:
 | `proprioception` | `Proprioception` | 9 | `constant` | 0.05 | 0.0 | [0, 1] |
 | `visual` | `Visual` | 10 | `state_dependent` | 0.2 | 1.5 | [0, 100] |
 | `location` | `Location` | 11 | `constant` | 0.01 | 0.0 | [-1, 1] |
+| `hydration` | `Hydration` | 12 | `state_dependent` | 0.1 | 1.5 | [0, 1] |
 
 **Notes on the default values:**
 - `injury` and `nutrition` have `σ_base = 0.0` — noise is declared but silenced. Mode is `state_dependent` so it activates immediately if `sigma` is raised in a derived config without changing `mode`.
 - `collision` and `proprioception` use `constant` mode — their noise is fixed regardless of injury level.
 - `visual` has `clip_max = 100.0` even though one-hot channels are nominally in [0, 1]; the permissive bound allows noisy one-hots to exceed 1.0 without hard-clipping.
 - `location` has `clip_min = -1.0` to match its `[-1, 1]` normalised coordinate range.
+- `hydration` (added with water, THIRST_WATER_PLAN) is appended last so no earlier index moves, and takes the 13th and last padded slot. Only a water world has a `Hydration` observation; the level-07 noise world restates it at σ 0.0.
 - `thermoception` is the one modality whose clips **must** be declared explicitly, and it
   is worth understanding why. Every modality is clipped whenever `perceptual_noise.enabled`
   is true — **including modalities in mode `none`**, because the clip is applied after the
