@@ -33,12 +33,15 @@ import _an_common as C                                                     # noq
 from _an_common import house                                               # noqa: E402
 
 STEM = "an04_similarity_robustness"
-DEFAULT = os.path.join(C.RESULTS, "algorithmic_null_mayrep_interim", "similarity_robustness.json")
+DEFAULT = os.path.join(C.RESULTS, "algorithmic_null_mayrep", "similarity_robustness.json")
 STRIPS = (("mutual", 2.0, "smaller of both"), ("a_to_b", 1.0, "ordinary \u2192 modulated"),
           ("b_to_a", 0.0, "modulated \u2192 ordinary\n(supporting read)"))
+#: R^2 below this is worse than predicting the mean; a panel holding such points is clipped here
+#: and says how many it leaves out, rather than letting one unstable fit flatten the panel
+CLIP = 0.0
 #: (variant, statistic, column title) - the four descriptive columns, in drawing order
-COLUMNS = (("all_columns", "weighted", "every unit kept (as the interim verdict)"),
-           ("admitted", "weighted", "rare units excluded (current rules, P1)"),
+COLUMNS = (("all_columns", "weighted", "every unit kept (the earlier rules' estimator)"),
+           ("admitted", "weighted", "rare units excluded (registered, rules P1)"),
            ("floored_scale", "weighted", "scale floored at the median unit SD"),
            ("all_columns", "unit_mean", "unweighted mean of per-unit R\u00b2"))
 
@@ -77,10 +80,12 @@ def main():
                             squeeze=False)
     fig.subplots_adjust(left=0.19, right=0.99, top=0.9, bottom=0.2, hspace=0.75, wspace=0.32)
     drawn = {"OO": 0, "MO_diff": 0, "MM": 0, "MO_same": 0}
+    clipped = []
     for r, layer in enumerate(layers):
         pairs = doc["layers"][layer]["pairs"]
         for k, (var, stat, ctitle) in enumerate(cols):
             ax = axs[r, k]
+            panel = []
             for key, y, _ in STRIPS:
                 for ps, col, face, dy in (("OO", C.ORD, C.ORD, 0.18), ("MO_diff", C.MOD, C.MOD, 0.0),
                                           ("MM", C.MOD, "white", -0.18)):
@@ -93,8 +98,14 @@ def main():
                             vals += [row[f"{stat}_a_to_b"]["point"], row[f"{stat}_b_to_a"]["point"]]
                         else:
                             vals.append(row[f"{stat}_{key}"]["point"])
+                    panel += vals
                     ax.plot(vals, [y + dy] * len(vals), "o", ms=4.5, mfc=face, mec=col, mew=1.2,
                             alpha=0.9)
+            below = [v for v in panel if v < CLIP]
+            if below:            # an unstable fit (R^2 far below 0) would flatten the panel
+                hi = max(panel)
+                ax.set_xlim(CLIP - 0.04 * (hi - CLIP), hi + 0.06 * (hi - CLIP))
+                clipped.append((layer, var, stat, len(below), len(panel), min(below)))
             ax.set_ylim(-0.6, 2.6)
             ax.set_yticks([s[1] for s in STRIPS])
             ax.set_yticklabels([s[2] for s in STRIPS] if k == 0 else [], fontsize=house.FS_LABEL)
@@ -104,8 +115,9 @@ def main():
             from matplotlib.ticker import MaxNLocator
             ax.xaxis.set_major_locator(MaxNLocator(nbins=2, min_n_ticks=2))
             t = (C.wrap(ctitle, 24) + "\n") if r == 0 else ""
-            ax.set_title(t + (layer if k == 0 else ""), fontsize=house.FS_LABEL, color=house.INK,
-                         loc="left", pad=6)
+            note = (f"\u2190 {len(below)} < {CLIP:g} not drawn, min {min(below):.0f}" if below else "")
+            ax.set_title(t + (layer if k == 0 else note), fontsize=house.FS_LABEL,
+                         color=house.INK if k == 0 else house.INK_2, loc="left", pad=6)
             if r == len(layers) - 1:
                 ax.set_xlabel("held-out R²", fontsize=house.FS_LABEL)
         for v in pairs.values():
@@ -143,6 +155,9 @@ def main():
     if total:
         rows.append(dict(what="predictor columns left out as rare, summed over admitted fits",
                          used=dropped, total=total, note="the rare-units-excluded column only"))
+    for layer, var, stat, nb, n, mn in clipped:
+        rows.append(dict(what=f"{layer}, {var}/{stat}: points below R\u00b2 {CLIP:g}, not drawn", used=nb,
+                         total=n, note=f"minimum {mn:,.1f}; stated on the panel"))
     lag = doc.get("row_lag_control") or {}
     if lag:
         rows.append(dict(what="pairs with a recorded cross-agent row-lag control", used=len(lag),

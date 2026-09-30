@@ -20,6 +20,7 @@ interim May-replication output). Nothing is recomputed. Verdict words come only 
     python scripts/analysis/studies/modulator_clues/an01_similarity_layers.py [--source ...] [--out ...]
 """
 import os
+import re
 import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -29,13 +30,24 @@ import _an_common as C                                                     # noq
 from _an_common import house                                               # noqa: E402
 
 STEM = "an01_similarity_layers"
-DEFAULT = os.path.join(C.RESULTS, "algorithmic_null_mayrep_interim", "similarity.json")
+DEFAULT = os.path.join(C.RESULTS, "algorithmic_null_mayrep", "similarity.json")
+INTERIM = os.path.join(C.RESULTS, "algorithmic_null_mayrep_interim", "similarity.json")
 LAYER_NAME = {"enc.out": "encoder output", "rnn.state": "memory state (GRU carry)",
               "rnn.out": "memory output", "actor.out": "actor hidden layer",
               "critic.out": "critic hidden layer"}
 STATS = (("predictivity", "MUTUAL LINEAR PREDICTIVITY (primary)"),
          ("cka", "LINEAR CKA (beside it)"))
 ROWS = (("OO", 4.0), ("MO_diff", 3.0), ("mean", 2.0), ("MM", 1.0), ("UNTRAINED", 0.0))
+
+
+def changed_phrase(doc) -> str:
+    """The wording the rules prescribe when an interim and an evidence verdict disagree, read from
+    the rules' interim policy (never typed here)."""
+    rule = C.rules_at(doc["decision_rules"]["sha256"])["evidence_status"]["interim"]["rule"]
+    m = re.search(r'worded as "([^"]+)"', rule)
+    if not m:
+        raise SystemExit(f"{STEM}: the rules' interim policy names no wording for a disagreement")
+    return m.group(1)
 
 
 def primary_cell(doc):
@@ -46,8 +58,17 @@ def primary_cell(doc):
 
 
 def main():
-    a = C.cli(__doc__, DEFAULT)
+    a = C.cli(__doc__, DEFAULT, extra=[("--interim", dict(
+        default=INTERIM, help="an interim similarity.json whose layer verdicts are shown beside the "
+                              "evidence ones, as the rules require when they differ; '' for none"))])
     doc = C.load(a.source)
+    inter = None
+    if a.interim and doc["evidence_status"] == "evidence":
+        inter = C.load(a.interim)
+        if inter["evidence_status"] != "interim":
+            raise SystemExit(f"{STEM}: --interim must be an interim output")
+    changed = changed_phrase(doc) if inter else None
+    ia1 = (((inter or {}).get("evaluation") or {}).get("A1") or {}).get("layers") or {}
     test = C.is_test_input(a.source, doc)
     out = C.check_out(a.out, test)
     cell = primary_cell(doc)
@@ -61,8 +82,8 @@ def main():
     a1 = (ev.get("A1") or {}).get("layers") or {}
 
     house.apply()
-    fig = plt.figure(figsize=(11.0, 2.6 * len(layers) + 1.4))
-    gs = fig.add_gridspec(len(layers), 3, width_ratios=[1.05, 1.5, 1.5], wspace=0.22, hspace=0.8,
+    fig = plt.figure(figsize=(11.0, 3.0 * len(layers) + 1.6))
+    gs = fig.add_gridspec(len(layers), 3, width_ratios=[1.05, 1.5, 1.5], wspace=0.22, hspace=0.6,
                           left=0.01, right=0.99, top=0.95, bottom=0.12)
     nonfinite, entries = 0, 0
     for r, layer in enumerate(layers):
@@ -70,14 +91,20 @@ def main():
         head = f"{layer}\n{LAYER_NAME.get(layer, '')}"
         if C.allowed(doc) and layer in a1:
             w = C.verdict(doc, a1[layer]["verdict"], test)
-            body = "layer verdict: " + w
+            lead = "end of training: " if inter else "layer verdict: "
+            body = lead + w
             if a1[layer].get("qualifier") and not test:
-                body += "\n\nqualifier: " + a1[layer]["qualifier"]
+                body += "\nqualifier: " + a1[layer]["qualifier"]
+            if inter and layer in ia1 and not test:
+                wi = C.verdict(inter, ia1[layer]["verdict"])
+                body += "\nend of stage 1 (interim): " + wi
+                if C.strip_prefix(inter, wi) != w:
+                    body += "\n" + changed
         else:
             body = doc["verdict_statement"]
         tx.set_title(head, fontsize=house.FS_BODY, color=house.INK, loc="left", pad=6)
-        tx.text(0.0, 1.0, "\n".join(C.wrap(p, 36) for p in body.split("\n")), ha="left",
-                va="top", fontsize=house.FS_LABEL, color=house.INK_2, linespacing=1.3)
+        tx.text(0.0, 1.0, "\n".join(C.wrap(p, 33) for p in body.split("\n")), ha="left",
+                va="top", fontsize=house.FS_LABEL, color=house.INK_2, linespacing=1.2)
         for k, (stat, title) in enumerate(STATS):
             ax = fig.add_subplot(gs[r, k + 1])
             pts = cell["layers"][layer][stat]
@@ -153,7 +180,8 @@ def main():
           Line2D([], [], marker="o", ls="", color=C.UNTR, label="untrained–untrained pair")]
     lax.legend(handles=hs, loc="center", ncol=3, frameon=False, fontsize=house.FS_LABEL)
     C.footer(fig, doc, test, y=0.035, width=135,
-             extra="Rows in every panel, top to bottom: ordinary–ordinary; modulated–ordinary "
+             extra=((f"Interim marks: {C.rel(a.interim)}, {C.status_text(inter)}, rules "
+                     f"{inter['decision_rules']['sha256'][:12]}. ") if inter else "") +"Rows in every panel, top to bottom: ordinary–ordinary; modulated–ordinary "
                    "(different seeds); their mean; modulated–modulated; untrained. Each panel has "
                    "its own horizontal range: compare positions within a panel, not across panels.")
     # the footer sits in the left third; make room for it below the legend
@@ -199,6 +227,10 @@ def main():
                          total=int(boot.get("cka_draws", 0)),
                          note=f"CKA; predictivity pools {boot.get('pooled_predictivity_draws')} over the "
                               f"split repeats; resampling unit: {boot.get('unit', '')}"))
+    if inter:
+        rows.append(dict(what="interim layer verdicts shown beside the evidence ones", used=len(ia1),
+                         total=len(layers), note=f"from {C.rel(a.interim)} (rules "
+                         f"{inter['decision_rules']['sha256'][:12]}); words only, no interim numbers drawn"))
     C.write_data(STEM, out, doc, a.source, test, rows)
     C.finish(fig, STEM, out)
 

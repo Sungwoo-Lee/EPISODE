@@ -60,8 +60,11 @@ ARM_NAME = {"ordinary": "ordinary agent", "modulated": "modulated agent"}
 
 
 # ------------------------------------------------------------------------------ CLI ---------
-def cli(doc: str, default_source: str) -> argparse.Namespace:
+def cli(doc: str, default_source: str, extra=()) -> argparse.Namespace:
+    """`extra`: (flag, argparse kwargs) pairs a script adds to the shared --source / --out."""
     ap = argparse.ArgumentParser(description=doc.strip().splitlines()[0])
+    for flag, kw in extra:
+        ap.add_argument(flag, **kw)
     ap.add_argument("--source", default=default_source,
                     help=f"driver output to draw (default: {os.path.relpath(default_source, ROOT)})")
     ap.add_argument("--out", default=FIG_DIR,

@@ -26,7 +26,7 @@ import _an_common as C                                                     # noq
 from _an_common import house                                               # noqa: E402
 
 STEM = "an02_decoding_profiles"
-DEFAULT = os.path.join(C.RESULTS, "algorithmic_null_mayrep_interim", "decoding.json")
+DEFAULT = os.path.join(C.RESULTS, "algorithmic_null_mayrep", "decoding.json")
 QUANT = (("satiation", "hunger (satiation)"), ("injury_level", "true injury level"),
          ("nearest_predator_manhattan", "distance to the nearest predator"),
          ("steps_remaining", "survival steps remaining (death-ended episodes)"))

@@ -32,7 +32,7 @@ import _an_common as C                                                     # noq
 from _an_common import house                                               # noqa: E402
 
 STEM = "an03_seed_yardstick"
-DEFAULT = os.path.join(C.RESULTS, "algorithmic_null_mayrep_interim", "similarity.json")
+DEFAULT = os.path.join(C.RESULTS, "algorithmic_null_mayrep", "similarity.json")
 SETS = (("OO", 3.0, C.ORD, C.ORD), ("MO_diff", 2.0, C.MOD, C.MOD),
         ("MO_same", 1.0, house.INK, house.INK), ("MM", 0.0, C.MOD, "white"))
 
