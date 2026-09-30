@@ -893,14 +893,102 @@ found and cut is decision 13. With the respawn repair removed entirely, level 06
 
 ## Verification Report
 
-> **Verified by**: —
-> **Date**: —
+> **Verified by**: senior-developer
+> **Date**: 2026-09-30, against `8e45df3a` (commits `359d192a`..`292a1450` + diary), worktree `.claude/worktrees/thirst`
+> **Verdict**: **VERIFIED WITH ISSUES**. Nothing blocks merging on correctness grounds. One item is the user's decision (the speed cost on water worlds); four are small follow-ups.
+
+### In plain words
+
+The code does what the plan says. The main promise is that every world with water switched off behaves exactly as before, and it holds: the rollout comparison was recorded from a commit whose `src/` and `configs/` are identical to the approved starting point `711bdc22` (`git diff 711bdc22 359d192a -- src configs` is empty). It covers all eight shipped water-off worlds, including the old noise level under its new number 07 with water forced off. Rollouts and the three traced graphs are equal byte for byte, and I re-ran that comparison myself (43/43). The new mechanics are pinned by tests that check against independent arithmetic, not against the code under test: death after exactly 160 steps away from water and after 20 steps in the pond, the pond never under an entity or the agent at start, and uniform pond choice. The one thing the user has to decide: **water worlds step about 12.6 % slower on a GPU and 7.4 % slower on a CPU than level 05.** That is above the 5 % line where the plan asks for discussion, and below the 15 % line where it blocks. Worlds without water are not slowed at all.
+
+### Re-run by the verifier (one process per module, CPU)
+
+| Module | Result |
+|---|---|
+| `test_water_parity.py` (T1) | 43 passed |
+| `test_water_placement.py` (T2) | 38 passed |
+| `test_hydration_dynamics.py` (T3) | 17 passed |
+| `test_water_observation.py` (T4) | 9 passed |
+| `test_ladder_worlds_load.py` (T5) | 9 passed |
+| `test_body_mechanics_parity.py`, `test_bush_fire_clearance.py` (older parity gates, fixtures untouched) | 21, 36 passed |
+| `test_saved_config_compat.py`, `test_two_sided_nutrition.py` | 22, 22 passed |
+| `test_unified_parity.py`, `test_thermal_parity.py` | 34 passed / 833 skipped; 12 passed / 520 skipped (skips are configs without a fixture, as at T0 per the report) |
+
+Separately, I checked the respawn repair's rank-skip fixed point (decision 13) by brute force: 20,000 random areas with 0–4 pond ranks, and every `u` maps to the u-th non-pond rank (0 mismatches). It is a bijection, so a uniform `u` gives an exactly uniform cell. The loop bound `h·w` is sufficient: the iteration settles after at most `m ≤ h·w` rounds.
+
+### Per-file table
 
 | File | Change | Status | Notes |
 |------|--------|:------:|-------|
-| | | | |
+| `src/environment/state.py` | 2 `None`-default `EnvState` fields, 14 static `EnvParams` fields, `WATER_OFF_FIELDS`, `EnvParams.__setstate__` | ⚠️ | Matches D2. `__setstate__` is an addition (decision 8), judged below (item B) |
+| `src/environment/config_loader.py` | gate via `get_mandatory`, `_load_water` (all D1 rules, three modes, refusals, capacity check), `hydration` sensor name, slot comment, missing-modality refusal | ⚠️ | Matches D3. Every conditional key is read with `get_mandatory`. `bool(config.get_mandatory('water.enabled'))` makes a quoted `"false"` switch water on (env-config-reviewer 🟡; `thermal.enabled` has the same gap already) |
+| `src/environment/core.py` | drive axis (static branch first), `pre_occupied`, pond draw / agent repair / start hydration, respawn repair, `drank`, 11-element `update_body`, reasons 6/7 after thermal, `drive_thirst`, fold-in constants `0xD81–0xD84` | ✅ | Matches D4 except the respawn-repair form (decision 13, accepted below). Off-paths are textually the old calls. The 10→11 unpack was extended (plan-reviewer M1) |
+| `src/environment/sensor.py` | 4th smell pool after obs, pond visual entities, Hydration obs + breakdown | ✅ | Matches A3/A4/A5. Cosmetic: the `# 4. Interoceptive Nociception` comment in `get_observation_breakdown` lost its indentation |
+| `src/environment/saved_config_compat.py` | `_ERA_WATER`, `water.enabled: false` row, always-checked block | ✅ | Matches D5 |
+| `src/behavior/episode_metrics.py`, `balance_metrics.py`, `train.py` (4 sites), `dreamer_srl_main.py` (1 site + fingerprint) | one `TERMINATION_REASONS`; 23 keys; `_TERM_*` removed; `water_enabled` in both fingerprints | ✅ | Matches D6 and A5. The grep for literal `(5, 'Thermal')` is asserted in a test. `Bal_LateDeath_{Dehydration,Overdrinking}` also appear, and are documented in `WANDB_METRICS_REFERENCE.md` |
+| `src/algorithms/dreamer_srl/dreamer_srl_main.py` (`sys.path`) | hard-coded shared-folder path → path derived from the file | ⚠️ | Not in the plan (decision 10). Accepted, but incomplete: see item C |
+| `src/utils/evaluation_core.py`, `trajectory_store.py`, `check_env.py`, `renderer.py`, `dashboard/episode.py` | Hydration CSV column; codes 6/7 text; old renderer docstring; `max <= 0` guard | ✅ | Matches D8.7 and the A6 table. The `episode.py` guard is needed because the field now always exists (decision 9) |
+| `configs/environment/default.yaml` | `water:` block off, `hydration` noise appended last | ✅ | Matches D1/D7.1 |
+| `configs/.../basic/06-pond_thirst_10x10.yaml` (new), `07-sensory_noise_10x10.yaml` (`git mv`) | new rung, re-parented rung, hydration σ 0.0 stated | ✅ | Matches D7.2/D7.3. The rename shows as a rename (82 % similarity). Cosmetic: one comment line (`# --- THREAT channel`) in 07 was de-indented |
+| `configs/verification/*` (6), `configs/continual/nmn_double_return_stages/*` (5), test fixture YAML, frozen-parity world + README row | `water: {enabled: false}` | ✅ | Matches D7.4/D7.5. Saved-run fixtures and archive untouched, as the plan requires |
+| `generate_thermal_probes.py`, `make_render_fixture_recordings.py`, `train_command-agent.sh` | 06→07 repoint; `POND_WORLD`/`W1`; the two live lines with dated notes | ✅ | `git grep 06-sensory_noise` outside docs/archive now returns only historical comments, the fixture generator (which must name the pre-change file) and the parity test's docstring. The rename is complete |
+| `scripts/fixtures/generate_water_parity_fixture.py` + `tests/env/fixtures/water_parity/*` | generator (imports the body-mechanics loop), 13 MB fixture, README with provenance + code-count table | ✅ | The fixture was committed once (`b9c4b569`) and never touched again. Source `359d192a` equals `711bdc22` in `src/`+`configs/` |
+| 5 new test modules + ~30 edited test modules | T1–T5; in-memory `water: {enabled: false}` for archived raw inputs; drift-check key list | ✅ | Judged below (item E) |
+| `docs/environment/CONFIG_GUIDE.md` §3.10, `02_config_schema.md`, `CONFIG_CRITICAL_SETTINGS.md` (4 rows + 2 dated change-log entries, incl. the `lvl06` hazard), `SCRIPTS_DEPENDENCY_MAP.md` (generator row, test-import row, render-fixture row) | maintenance contracts | ✅ | Each landed in the commit that made the change (C0, C2, C5), as D10 requires |
+| `docs/environment/01/03/05/06/09/10_*.md`, `TRAJECTORY_STORE_SCHEMA.md`, `WANDB_METRICS_REFERENCE.md`, `BASIC_LEVELS_Q2_DEFAULT.md` | describe the new behaviour | ⚠️ | `ENVIRONMENT_SUMMARY.md:220` still says "12 of the 13 [noise] slots are used … one spare remains". That is now false (env-config-reviewer 🟡) |
 
-**Conclusion**: —
+### The five items the requester asked me to judge
+
+**A. Respawn repair replaced (decision 13) and the speed cost — ⚠️ user's call.**
+- *The deviation is sound.* The plan's per-slot permutation measured −21 % on GPU and its named fallback −22 %, so the plan's own escape route did not escape. The shipped method is exact rather than approximate: it draws a rank uniformly from "area minus pond" and skips the pond's ranks (verified above). It also drops the fallback's "all areas must be equal" load-time restriction. The water-off graph is untouched (T1 re-run green), and a dedicated uniformity test exists (`test_respawn_repair_is_uniform_over_area_minus_pond`).
+- *The measurement is sound.* Same machine, before and after runs interleaved, a jitted scan of 300 steps, 5 reps, median. Level 05 shows no change (−0.3 % GPU, 0 % CPU, within spread), which is what an unchanged graph should show.
+- *The remaining cost:* level 06 against level 05 is **−12.6 % GPU / −7.4 % CPU**. It falls to −2.8 % / 0 % with the repair removed, so the repair itself costs about 10 % on GPU. That is between the plan's 5 % discussion line and 15 % block line, which makes it **the user's decision**. Three things to weigh:
+  1. It only affects worlds with water on.
+  2. It was measured on bare environment steps. In training, the network update takes most of the wall time, so the end-to-end cost is smaller, though that was not measured.
+  3. A cheaper form likely exists, but I have not measured it. Water-on worlds have no parity fixture to preserve, so the respawn draw itself could sample from "area minus pond" using the existing per-slot respawn keys. That removes the second random draw (the new `fold_in` + `randint`), which is the likely cost on GPU.
+
+  Options: accept as is; or have `developer` try that single-draw form and re-measure.
+
+**B. `EnvParams.__setstate__` (decision 8) — ✅ legitimate compatibility shim, not a fallback-default violation.**
+- *Why it is not a violation.* The no-fallback rule governs reading a **config**: a missing YAML key must raise. This hook never sees a config. It runs only when a pickled `EnvParams` from a recording's `run_meta.pkl` is unpickled. A pickle written after this change always carries all 14 fields (the dataclass pickles its whole `__dict__`), so the hook can only fire on a pickle written before water existed. For those pickles, "water off" is the true value, not a guess. That is the same reasoning `saved_config_compat` uses for `water.enabled: false`.
+- *Two gaps compared with that registry.* It is **silent**, whereas `saved_config_compat` logs a WARNING naming each supplied key. And it is **per-field `setdefault`**, whereas `saved_config_compat` is all-or-none per era. Recommended follow-up (🟢): fill only when *all* 14 water fields are missing, raise if some are present and others are not, and log one line. The shim does not cover pre-thermal pickles (the report says so, and `bug-curator` should record it).
+
+**C. `dreamer_srl_main.py` `sys.path` (decision 10) — ⚠️ accepted, incomplete.**
+- *Why accept.* Without the change, a Dreamer smoke run from this worktree (T6) imported the shared folder's `src/`, which has no water, so T6 would have tested the wrong code. In the shared folder the derived path equals the old literal, so no existing launch changes behaviour.
+- *What remains.* The same file still hard-codes `_project_root` at `:521`. From a worktree that still sends the results directory (`:1092`), the continual-schedule configs (`:546`, `:570`) and `eval.py:551`'s render script to the **shared folder**. This is out of scope but should be fixed together, in one small plan: a half-fixed trainer is harder to reason about than either state.
+- *Missing record.* `SCRIPTS_DEPENDENCY_MAP.md` is not affected (the file is under `src/`). The change is also not recorded anywhere except decision 10.
+
+**D. `index.lock` removals (decision 12) — ⚠️ self-reported compliance, not independently verifiable.**
+- The report states each lock was removed only when it was 0 bytes and more than 10 minutes old, which is the CLAUDE.md rule. The repository has no record that would confirm or refute that.
+- What I can confirm: the worktree index is healthy (`git status` and `git log` work, and the history is linear and complete), and there are no signs of corruption.
+- The root cause (a 10 s provenance-helper timeout against a ~28 s `git status` on this NAS) is worth a `bug-curator` row, as the report suggests.
+
+**E. In-memory `water: {enabled: false}` for archived raw configs (decision 3) — ✅.**
+- Every injection is `setdefault` or "only if absent", so it cannot overwrite a real water block. `test_unified_parity.py` also limits it to paths containing `/archive/`.
+- It supplies the same value `saved_config_compat` supplies to frozen runs, and water-off is proven byte-identical by T1, so the older parity gates still mean what they meant. It follows the project policy (archived configs are not migrated) better than the body-mechanics precedent, which edited archive files.
+
+### Other deviations recorded in the report, checked
+
+- Decisions 1, 6, 7, 14, 15, 16 are recorded with reasons, and I accept them. The `__trunc` variant is the right fix for the circular-coverage concern, since no shipped world ever reaches code 1 under the random policy.
+- C4's "eval-rollout codes ⊆ {1..7}" was checked on 200 real level-06 episodes instead of through `eval_rollout.py`, because no trained checkpoint exists. That is acceptable.
+- C2's `verify_noise.py` does not run, and fails the same way before the change (decision 5). That is acceptable.
+- The claim that T2–T5 fail on C2 is recorded with counts. I did not re-run them on C2 (that would need a checkout outside this worktree). By reading the code I confirmed each module needs the water-on loader path, which C2 refused, or a new file. T1's contrast half fails on pre-change code because `d["water"]` does not exist.
+
+### Open follow-ups (not blocking)
+
+1. 🟡 `water.enabled` (and `thermal.enabled`) accept truthy strings. Validate them as a bool the way `random_start_hydration` is (env-config-reviewer finding 1).
+2. 🟡 Correct `ENVIRONMENT_SUMMARY.md:220`: all 13 noise slots are now used, so the next modality must widen the pad.
+3. 🟢 Make `__setstate__` all-or-none and have it log (item B).
+4. 🟢 Replace the remaining hard-coded `_project_root` in `dreamer_srl_main.py:521` and `eval.py:551` (item C).
+5. 🟢 Re-indent the two comment lines (`sensor.py` breakdown, `07-sensory_noise` YAML).
+6. `math-reviewer` has not yet reviewed the implementation. `code-reviewer` and `env-config-reviewer` have: `docs/reviews/code_review_thirst_water.md` approved it with 4 low/open notes, and `docs/reviews/env_config_review_thirst_water.md` found 2 🟡 and no 🔴. Checkpoint C7's "reviews not yet run" note is out of date.
+7. `bug-curator` rows as listed in the report's follow-ups (row ~#116 extension, provenance timeout / lock files, pre-thermal pickles, `verify_noise.py`, editable-install mixing).
+
+**Speed verdict**: ⚠️ water-off worlds show no regression. Water-on worlds are 12.6 % slower on GPU and 7.4 % slower on CPU, inside the plan's discussion band; **user to accept or ask for the single-draw respawn variant**.
+
+**Conclusion**: VERIFIED WITH ISSUES. The plan is implemented as approved: parity holds, the mechanics are pinned by independent oracles, the rename is complete and the maintenance contracts were updated in the same change. Every deviation is recorded with a reason and I accept all of them. The speed cost on water worlds is the one item that needs the user's decision.
+
+Verified by: senior-developer
 
 ---
 
