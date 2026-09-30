@@ -350,8 +350,11 @@ def test_a_hunting_predator_walks_into_the_pond():
 ])
 def test_respawn_repair_is_uniform_over_area_minus_pond(area, allowed_n):
     """Force every resource to respawn on every step into an area that overlaps the pond
-    (pond at array rows/cols 1-2). The raw draw lands on the pond often; after the repair
-    every respawn is inside the area, off the pond, and the cells are hit uniformly."""
+    (pond at array rows/cols 1-2). A plain draw over the area would land on the pond often;
+    the water-world draw (since the 2026-09-30 fix batch a single draw over area-minus-pond,
+    decision 17; before it, a raw draw plus a repair) must put every respawn inside the
+    area, off the pond, with the cells hit uniformly. Replacing the water branch with the
+    plain area draw makes this test fail (pond cells appear)."""
     d = _lvl06_dict()
     d["water"]["candidates"] = [[2, 2]]
     p = _params(d)

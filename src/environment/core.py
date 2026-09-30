@@ -998,25 +998,23 @@ def jax_step(state: EnvState, action: int, params: EnvParams) -> tuple[EnvState,
     def sample_res_pos(rk, area):
         return jax.random.randint(rk, (2,), area[:2], area[2:])
 
-    new_potential_pos = jax.vmap(sample_res_pos)(res_keys, params.res_spawn_area)
-    # Only update position IF respawn_mask is true for that resource
-    res_pos_after_reg = jnp.where(respawn_mask[:, None], new_potential_pos, state.res_pos)
-
-    # Water: a respawn that landed on a pond cell is moved to a cell drawn uniformly
-    # from its own spawn area minus the pond (THIRST_WATER_PLAN §D4.6). A NEW stream,
-    # fold_in(respawn_key, _WATER_RESPAWN_KEY), so no existing draw moves. Excludes pond
-    # cells only (no general occupancy check, as before).
-    #
-    # HOW, and why not a permutation. Number the area's cells row-major 0..n_A-1; the
-    # pond's cells inside the area have ranks e_1..e_m (m <= h*w). Draw u uniformly in
-    # [0, n_A - m) and take v = the u-th rank that is not a pond rank, found by the
-    # fixed point v = u + #{e_j <= v} (monotone from v = u; exact after at most m + 1
-    # rounds, so h*w rounds always suffice). Exactly uniform over area-minus-pond, and it
-    # touches only the h*w pond cells, never every grid cell. Measured at §S (64 envs x
-    # 300 steps, level 06 vs level 05): a permutation per slot cost -21 % on GPU, one
-    # shared permutation -22 %, a Gumbel draw over all cells -14 % on GPU but -59 % on
-    # CPU. The load-time capacity check guarantees n_A - m >= 1.
     if params.water_enabled and num_res > 0:
+        # Water: a respawn is drawn DIRECTLY from its own spawn area minus the pond
+        # (THIRST_WATER_PLAN §D4.6; fix batch 2026-09-30, decision 17). Water worlds have
+        # no pre-change recording to match, so the respawn keys `res_keys` are used for
+        # this one draw instead of drawing a raw cell and repairing it with a second
+        # stream. Excludes pond cells only (no general occupancy check, as before).
+        #
+        # HOW. Number the area's cells row-major 0..n_A-1; the pond's cells inside the
+        # area have ranks e_1..e_m (m <= h*w). Draw u uniformly in [0, n_A - m) and take
+        # v = the u-th rank that is not a pond rank, found by the fixed point
+        # v = u + #{e_j <= v} (monotone from v = u; exact after at most m + 1 rounds, so
+        # h*w rounds always suffice). Exactly uniform over area-minus-pond, and it touches
+        # only the h*w pond cells, never every grid cell. Measured at §S (64 envs x 300
+        # steps, level 06 vs level 05): a permutation per slot cost -21 % on GPU, one
+        # shared permutation -22 %, a Gumbel draw over all cells -14 % on GPU but -59 % on
+        # CPU; decision 17 records the single-draw form against the raw-draw-then-repair
+        # form. The load-time capacity check guarantees n_A - m >= 1.
         _a = params.res_spawn_area                                          # [R, 4]
         _wA = _a[:, 3] - _a[:, 1]
         _nA = (_a[:, 2] - _a[:, 0]) * _wA
@@ -1025,17 +1023,17 @@ def jax_step(state: EnvState, action: int, params: EnvParams) -> tuple[EnvState,
                & (_pc[None] >= _a[:, 1:2]) & (_pc[None] < _a[:, 3:4]))      # [R, P]
         _e = jnp.where(_in, (_pr[None] - _a[:, 0:1]) * _wA[:, None]
                        + (_pc[None] - _a[:, 1:2]), _nA[:, None])            # pond ranks
-        _u = jax.random.randint(jax.random.fold_in(respawn_key, _WATER_RESPAWN_KEY),
-                                (num_res,), 0, jnp.maximum(_nA - _in.sum(-1), 1))
+        _u = jax.vmap(lambda rk, n: jax.random.randint(rk, (), 0, n))(
+            res_keys, jnp.maximum(_nA - _in.sum(-1), 1))
         _v = _u
         for _ in range(state.water_pos.shape[0]):                           # static: h*w
             _v = _u + (_e <= _v[:, None]).sum(-1)
-        _repaired = jnp.stack([_a[:, 0] + _v // _wA, _a[:, 1] + _v % _wA],
-                              axis=-1).astype(res_pos_after_reg.dtype)
-        _needs = respawn_mask & jnp.any(
-            jnp.all(res_pos_after_reg[:, None, :] == state.water_pos[None], axis=-1),
-            axis=-1)
-        res_pos_after_reg = jnp.where(_needs[:, None], _repaired, res_pos_after_reg)
+        new_potential_pos = jnp.stack([_a[:, 0] + _v // _wA, _a[:, 1] + _v % _wA],
+                                      axis=-1).astype(state.res_pos.dtype)
+    else:
+        new_potential_pos = jax.vmap(sample_res_pos)(res_keys, params.res_spawn_area)
+    # Only update position IF respawn_mask is true for that resource
+    res_pos_after_reg = jnp.where(respawn_mask[:, None], new_potential_pos, state.res_pos)
 
     # Re-sample chemical property for respawned resources
     noise = jax.random.normal(property_key, shape=params.res_property.shape)
@@ -1705,7 +1703,8 @@ _THERMAL_BUSH_KEY = 0xB05E    # bush-to-fire clearance pass (BUSH_FIRE_CLEARANCE
 # stream moves; every use sits inside a STATIC `if params.water_enabled:`.
 _WATER_POND_KEY = 0xD81      # which candidate top-left this episode (placement_key)
 _WATER_AGENT_KEY = 0xD82     # agent-start repair off the pond (agent_key)
-_WATER_RESPAWN_KEY = 0xD83   # respawn repair off the pond (respawn_key)
+# 0xD83 is retired, not reused: it keyed the respawn repair until the fix batch of
+# 2026-09-30 (decision 17), which draws the water-world respawn from `res_keys` directly.
 _WATER_START_KEY = 0xD84     # random start hydration (body_key)
 
 
