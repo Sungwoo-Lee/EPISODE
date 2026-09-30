@@ -1234,3 +1234,9 @@ What the approval covers, and what it does not change:
 - The plan as written through Revision 1 plus the user decisions above (full 0–200 start-hydration range kept). The design page's correction — the "~5 % dead by step 16 whatever the agent does" figure is an upper bound (simulated 1.8–2.4 %) — changes no code.
 - Grid size stays 10 × 10 at level 06; whether to grow the ladder is a separate, open decision.
 - **§D8 renderer work is already done** by the rendering session (`5818c086`, `7deaee53`; see "Renderer work done ahead of the environment"). The implementation must produce exactly the fields it reads — snapshot `water_pos` `[h*w, 2]` and `hydration`, static `params.water_max_hydration`, `params.water_enabled` — and must not redo the dashboard work. D8.1 (`build_sensory_viz` "Hydration" branch) is also done.
+
+---
+
+## User decision — speed (2026-10-01)
+
+The user **accepted** the measured cost of water worlds: level 06 runs 9.8 % slower than level 05 on GPU and 17.4 % faster on CPU (decision 17; bare environment steps, 64 envs × 300 steps). No further speed work. Next step chosen by the user: a short training pilot on level 06.
