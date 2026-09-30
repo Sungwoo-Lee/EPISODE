@@ -35,8 +35,8 @@ for y, (key, k, lab) in zip(ys, READ):
     axA.plot([-band, band], [y, y], color=C.BAND, lw=9, solid_capstyle="butt", zorder=1)
     axA.plot([-2 * r["se_raw"], 2 * r["se_raw"]], [y - 0.28] * 2, color=C.GREY, lw=1.4, zorder=2)
     for i, d in enumerate(r["pair_diffs"]):
-        axA.plot([d], [y + 0.30 - 0.09 * i], SEEDM[i], ms=5.2, mfc=house.PAPER, mec=house.INK, mew=1.1, zorder=3)
-    axA.plot([r["mean_diff"]], [y], "D", ms=7, color=house.INK, zorder=4)
+        axA.plot([d], [y + 0.30 - 0.09 * i], SEEDM[i], ms=8, mfc=house.PAPER, mec=house.INK, mew=1.1, zorder=3)
+    axA.plot([r["mean_diff"]], [y], "D", ms=7.5, mfc=house.PAPER, mec=house.INK, mew=1.6, zorder=4)
 axA.axvline(0, color=C.GREY, lw=0.9)
 axA.set_yticks(ys); axA.set_yticklabels([l for *_, l in READ], fontsize=C.SMALLEST_PT)
 axA.set_ylim(-0.7, len(READ) - 0.4); axA.set_xlim(-12, 12); axA.set_xticks([-10, -5, 0, 5, 10])
@@ -56,10 +56,10 @@ axB.grid(axis="x", visible=True); axB.grid(axis="y", visible=False)
 axB.set_xlabel("return advantage, steps", fontsize=C.SMALLEST_PT + 1)
 axB.set_title("(b) for scale: May vs the replication", fontsize=C.SMALLEST_PT + 1.5, loc="left", pad=8)
 C.assert_ticks_dont_collide(axB, "x")
-h = [Line2D([], [], marker="D", ms=7, color=house.INK, ls="none", label="mean of the 3 pairs"),
-     Line2D([], [], marker=C.SEED_MARKER[42], ms=5.6, mfc=house.PAPER, mec=house.INK, ls="none", label="seed 42"),
-     Line2D([], [], marker=C.SEED_MARKER[43], ms=5.6, mfc=house.PAPER, mec=house.INK, ls="none", label="seed 43"),
-     Line2D([], [], marker=C.SEED_MARKER[44], ms=5.6, mfc=house.PAPER, mec=house.INK, ls="none", label="seed 44"),
+h = [Line2D([], [], marker="D", ms=7.5, mfc=house.PAPER, mec=house.INK, mew=1.6, ls="none", label="mean of the 3 pairs"),
+     Line2D([], [], marker=C.SEED_MARKER[42], ms=8.4, mfc=house.PAPER, mec=house.INK, ls="none", label="seed 42"),
+     Line2D([], [], marker=C.SEED_MARKER[43], ms=8.4, mfc=house.PAPER, mec=house.INK, ls="none", label="seed 43"),
+     Line2D([], [], marker=C.SEED_MARKER[44], ms=8.4, mfc=house.PAPER, mec=house.INK, ls="none", label="seed 44"),
      Patch(color=C.BAND, label="registered noise band (± 2 × floored SE)"),
      Line2D([], [], color=C.GREY, lw=1.4, label="± 2 × raw SE between seeds"),
      Patch(color=C.GREY, label="(b) May, one run per agent"), Patch(color=house.INK, label="(b) replication mean"),

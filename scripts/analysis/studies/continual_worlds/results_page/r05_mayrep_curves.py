@@ -61,7 +61,7 @@ axB.set_ylim(420, 505); axB.set_yticks([420, 440, 460, 480, 500])
 axB.set_title("(b) the same curves, zoomed to 420–505 steps", fontsize=C.SMALLEST_PT + 1.5, loc="left", pad=6)
 for ax in (axA, axB):
     ax.set_ylabel("survival (steps per episode)", fontsize=C.SMALLEST_PT + 1)
-axC.axhline(80, color=C.GREY, lw=1.0, zorder=1)
+axC.axhline(80, color=C.GREY, lw=1.2, ls="-.", zorder=1)
 axC.set_ylim(0, 100); axC.set_yticks([0, 20, 40, 60, 80, 100])
 axC.set_ylabel("episodes at the cap (%)", fontsize=C.SMALLEST_PT + 1)
 axC.set_title("(c) share of episodes that lasted the full 500 steps", fontsize=C.SMALLEST_PT + 1.5, loc="left", pad=6)
@@ -71,7 +71,7 @@ h = [Line2D([], [], color=C.ORD, lw=2, label="ordinary agent"), Line2D([], [], c
      Line2D([], [], color=house.INK, lw=1.1, ls=LS[43], label="seed 43"),
      Line2D([], [], color=house.INK, lw=1.1, ls=LS[44], label="seed 44"),
      Line2D([], [], color=C.GREY, lw=2.2, label="500-step cap"),
-     Line2D([], [], color=C.GREY, lw=1.0, label="(c) 80 % ceiling label"),
+     Line2D([], [], color=C.GREY, lw=1.2, ls="-.", label="(c) 80 % ceiling label"),
      Patch(color=house.BG_SOFT, label="harmless stage")]
 fig.legend(handles=h, loc="lower center", ncol=4, frameon=False, fontsize=C.SMALLEST_PT + 0.5,
            bbox_to_anchor=(0.5, 0.0), handlelength=2.2, columnspacing=1.4)

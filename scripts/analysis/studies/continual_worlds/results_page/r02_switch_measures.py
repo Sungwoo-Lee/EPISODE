@@ -73,7 +73,7 @@ for i, (y, r) in enumerate(zip(ys, rows)):
         axC.plot([shown], [y], mk, ms=6, color=house.INK,
                  mfc=C.GREY if mk == "o" else house.PAPER, mew=1.3, zorder=3)
         if dx > 145:
-            axC.text(141, y - 0.2, f"{dx:.0f} →", ha="right", va="top", fontsize=C.SMALLEST_PT, color=house.INK)
+            axC.text(153, y, f"→ {dx:.0f}", ha="left", va="center", fontsize=C.SMALLEST_PT, color=house.INK)
     axV.text(0.02, y, VOTE[sw["dip_vote"]] + ("*" if bn else ""), ha="left", va="center",
              fontsize=C.SMALLEST_PT + 0.5, color=house.INK, transform=axV.get_yaxis_transform())
     axV.text(0.55, y, VOTE[sw["rec_vote_literal"]], ha="left", va="center",
@@ -82,7 +82,7 @@ for ax, lim, xl, t in ((axA, 32, "steps", "(a) first 20k episodes"),
                        (axB, 25, "percentage points", "(b) own-level drop"),
                        (axC, 150, "thousand episodes sooner", "(c) recovery")):
     ax.set_ylim(-0.6, n - 0.4)
-    ax.set_xlim(-lim if ax is not axC else -30, lim)
+    ax.set_xlim(-lim if ax is not axC else -30, lim if ax is not axC else 210)
     ax.axvline(0, color=house.INK_2 if hasattr(house, "INK_2") else C.GREY, lw=0.9, zorder=2)
     ax.grid(axis="x", visible=True); ax.grid(axis="y", visible=False)
     ax.set_yticks(ys)

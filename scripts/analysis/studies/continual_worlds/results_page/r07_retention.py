@@ -37,7 +37,7 @@ caps_after_harmless = []
 for r in R["runs"]:
     g = r["policies"]["greedy"]
     assert len(g["A"]) == 5
-    axA.plot(range(1, 6), g["A"], color=C.AGENT_COL[r["agent"]], ls=LS[r["seed"]], lw=1.4, marker=C.SEED_MARKER[r["seed"]], ms=4.5)
+    axA.plot(range(1, 6), g["A"], color=C.AGENT_COL[r["agent"]], ls=LS[r["seed"]], lw=1.4, marker=C.SEED_MARKER[r["seed"]], ms=6.8)
     caps_after_harmless += [g["cap_active"][1], g["cap_active"][3]]
 axA.axhline(500, color=C.GREY, lw=2.2, zorder=1)
 axA.set_xticks(range(1, 6))
@@ -60,7 +60,7 @@ for key, y in ys.items():
     axB.plot([gv["mean_diff"] - 2 * gv["se"], gv["mean_diff"] + 2 * gv["se"]], [y] * 2, color=C.BAND, lw=9,
              solid_capstyle="butt", zorder=1)
     for i, (p, mk) in enumerate(zip(gv["pairs"], [C.SEED_MARKER[q["seed"]] for q in gv["pairs"]])):
-        axB.plot([p["ZA"]], [y + 0.34 - 0.09 * i], mk, ms=5.2, mec=house.INK, mew=1.1,
+        axB.plot([p["ZA"]], [y + 0.36 - 0.1 * i], mk, ms=8, mec=house.INK, mew=1.1,
                  mfc=house.INK if p["beyond_eval_noise"] else house.PAPER, zorder=3)
     axB.plot([gv["mean_diff"]], [y], "D", ms=7, color=house.INK, zorder=4)
     axB.plot([sv["mean_diff"]], [y - 0.1], "D", ms=6, mfc=house.PAPER, mec=house.INK, mew=1.2, zorder=4)
@@ -74,16 +74,16 @@ axB.set_xlabel("steps less lost by the modulated agent", fontsize=C.SMALLEST_PT 
 axB.set_title("(b) modulated minus ordinary loss", fontsize=C.SMALLEST_PT + 1.5, loc="left", pad=8)
 C.assert_ticks_dont_collide(axB, "x")
 h = [Line2D([], [], color=C.ORD, lw=2, label="ordinary"), Line2D([], [], color=C.MOD, lw=2, label="modulated"),
-     Line2D([], [], color=house.INK, ls=LS[42], lw=1.4, marker=C.SEED_MARKER[42], ms=5.6, mfc=house.PAPER, label="seed 42 (a line, b marker)"),
-     Line2D([], [], color=house.INK, ls=LS[43], lw=1.4, marker=C.SEED_MARKER[43], ms=5.6, mfc=house.PAPER, label="seed 43 (a line, b marker)"),
-     Line2D([], [], color=house.INK, ls=LS[44], lw=1.4, marker=C.SEED_MARKER[44], ms=5.6, mfc=house.PAPER, label="seed 44 (a line, b marker)"),
+     Line2D([], [], color=house.INK, ls=LS[42], lw=1.4, marker=C.SEED_MARKER[42], ms=8.4, mfc=house.PAPER, label="seed 42 (a line, b marker)"),
+     Line2D([], [], color=house.INK, ls=LS[43], lw=1.4, marker=C.SEED_MARKER[43], ms=8.4, mfc=house.PAPER, label="seed 43 (a line, b marker)"),
+     Line2D([], [], color=house.INK, ls=LS[44], lw=1.4, marker=C.SEED_MARKER[44], ms=8.4, mfc=house.PAPER, label="seed 44 (a line, b marker)"),
      Line2D([], [], color=C.GREY, lw=2.2, label="500-step cap"),
      Line2D([], [], marker="D", ms=7, color=house.INK, ls="none", label="mean, most-likely action"),
      Line2D([], [], marker="D", ms=6, mfc=house.PAPER, mec=house.INK, ls="none", label="mean, sampled actions"),
      Patch(color=C.BAND, label="registered band, ± 2 × SE"),
      Line2D([], [], color=C.GREY, lw=1.4, label="3-seed 95 % interval (post hoc)"),
      Line2D([], [], color=C.GREY, lw=1.4, ls="-.", label="May-sized advantage"),
-     Line2D([], [], marker=C.SEED_MARKER[42], ms=5.6, color=house.INK, ls="none", label="filled: pair beyond test noise")]
+     Line2D([], [], marker=C.SEED_MARKER[42], ms=8.4, color=house.INK, ls="none", label="filled: pair beyond test noise")]
 fig.legend(handles=h, loc="lower center", ncol=4, frameon=False, fontsize=C.SMALLEST_PT + 0.2,
            bbox_to_anchor=(0.5, 0.0), handlelength=1.8, columnspacing=1.0)
 
