@@ -616,3 +616,33 @@ at most one falsely stopped run or a mis-sized speed/drinking read-out.
 (M2); windowed speed rate (M1); floor in the drinking pass line (M3).
 
 — plan-reviewer
+
+### Re-check of Revision 1 (plan-reviewer, 2026-10-01, commit `4deacc00`)
+
+**Verdict: SOUND WITH CONCERNS.** The Critical is closed. Every output now leaves the worktree,
+and I could find no path that still writes into it during a run: the run directory and everything
+under it (checkpoints, saved config, provenance, recordings, checkpoint videos, stats,
+experiment-eval) derive from `--results-dir` (`train.py:939-945`, `evaluation_core.py:279-280,315`,
+`async_render.py` `videos_dir`); WandB files follow `WANDB_DIR` (no `dir=` in `train.py:1023-1030`);
+the nohup log follows `--log`; stored episodes follow `--out-root`. No persistent JAX/XLA
+compilation cache is configured anywhere (trainer, `src/`, train configs; `~/.cache/jax*` absent),
+so there is nothing to relocate. The two other cwd-relative writers are off (`stats_during_training:
+false`, `auto_analysis: false`; experiment-eval has no config block). What remains in the worktree
+is the code and its `__pycache__`, which is why the "do not remove the worktree until all runs
+finish" diary row in §3.2 is the right closing step — checkpoint-time renders start new processes
+from it. The speed read-out (M1), the P5 gating (M2), the seed read and checkpoint naming (L2, L4)
+and the 2080 Ti pair on node 101 are all as asked.
+
+| # | Sev | Where | Issue → fix |
+|---|---|---|---|
+| R1 | 🟡 | §4.2 pond recomputation | The validation is weaker than it looks. The start cell depends on the pond only when the raw draw lands on a pond cell (≈ 4 % of episodes, `core.py:1904-1912`); in the other 96 % the start-cell check passes whatever pond the reader recomputed. It proves the seed → key recipe and grid size, not the pond. → Add the exact per-step cross-check from columns the store already has: for every step, "hydration rose from t to t+1" ⇔ "`agent_row`/`agent_col` at t+1 is a recomputed pond cell" (`core.py:599-604`, drinking = standing on a pond cell after the move, `core.py:1201`). It must hold on every step of every episode. And build the params exactly as the collector does — the run's `models/config.yaml` through `apply_sensor_compat` (`collect_trajectories.py:963-1000`) — not from the worktree's level-06 YAML. |
+| R2 | 🟢 | §2.7 P1 floor definition | Boundary: the drink on the arrival step is added before the death test (`core.py:599-604`), so an episode whose deadline equals the distance survives by arriving on that step. "Cannot reach" is ceil(1.6 × start hydration) ≤ distance − 1, not ≤ distance. Effect far below the 0.03 margin, but the number is pre-registered. Manhattan distance is the right metric (4-neighbour moves, `core.py:1072`). |
+| R3 | 🟢 | §2.7 P5(d) | `root` comes from WandB's git detection on the working directory (the worktree); `WANDB_DIR` only moves the files. Expect `root` = worktree, not the shared folder. Informational either way. |
+| R4 | ❓ | §2.5 consequence | The shared `results/JAX_RecurrentPPO/` now holds 59-wide water runs beside `v4.0` tools that glob that folder; a `v4.0` loader meeting their `water:` block will refuse or misread it. §4.4 covers the tools this pilot uses; any batch tool run from the shared folder before merge should exclude `*l06pilot*`. |
+| R5 | ❓ | §3 hardware | The modulated agent (`t16quad`) has not run on an 11 GB card in this series (`w0000 m` was a 3090). rPPO's footprint is small and preallocation is off, so it should fit; the runner's post-launch check covers it. |
+
+**Cost of being wrong now:** R1 could report a floor computed against the wrong pond — a wrong
+pre-registered number, caught only if someone notices; the per-step check makes that impossible.
+Nothing else costs more than a note in the results.
+
+— plan-reviewer
