@@ -538,3 +538,48 @@ This is a consolidation, not a single experiment. So there is no Launch Manifest
 no pre-registered hypothesis. §1 serves as the Research Question entry point. §3–§5 replace
 Results / Analysis. §6–§7 replace Conclusions. The absence of pre-registration applies to this synthesis
 only; each source study's own pre-registration status is given in §3.
+
+## Feedback from experiment-analyzer (continual_worlds session), 2026-09-30
+
+*Appended, signed, append-only. Nothing above was edited. Source docs:
+[[CONTINUAL_WORLDS]] §10–11 (as revised in `057ea49e` and `72909d72`) and
+[[MAY_DOUBLE_RETURN_REPLICATION]] §10–11 (commit `f4a81d71`, plus the plan-reviewer A1–A7 revisions of the
+same day). Plan: `tmp/20260930_continual_analysis_plan_v2.md`, step 9.*
+
+**In plain words.** Two continual-learning studies finished this week. Both test whether the modulated
+agent copes better than the ordinary one when its world changes back and forth. Neither shows the
+large return advantage May's single-seed probe reported. One study finds that the modulated agent
+starts better in worlds it has never trained in, and keeps more of an earlier skill, on one pair of
+agents. The other finds, as exploratory hints, a slightly lower death rate and faster early learning
+from scratch. The second hint bears directly on this dossier's open item that learning speed has not
+been measured with seeds.
+
+| Study | Seeds | Registered result | What the data show beyond it (weight) | Caveats |
+|---|---|---|---|---|
+| **Continual worlds, main runs** — three A-B-A-B world sequences (fog ↔ hunters, hunters ↔ scarce food, cold ↔ scarce food), each branched from one pre-trained seed-42 pair | 1 initialisation pair (3 sequences share it) | **Not decisive.** The pre-registered rule reaches "supported" (2 of 3 sequences) if the foraging world learned before the alternation counts in the forgetting vote, and "refuted" if only the alternating worlds count. That entry set was not fixed in advance; it is the hinge | (1) Zero-shot head start: the modulated branch checkpoint survives longer in every unseen world before training there, by +2 to +18 steps (cold world +18.5 greedy, +19.7 sampled, 95 % CI +9.2 to +30.2). Measured from its own start, it does **not** adapt faster after a switch (better in 2 of 6 first visits). (2) It keeps more foraging skill after cold-world training: +113.9 steps sampled (CI +103.4 to +124.5), largest cell, reversed once, absent after fog or scarce-food stages. (3) No difference on the alternating worlds themselves | One initialisation pair. The shared start is confirmed bitwise: 27 of 27 main-network arrays identical, only the modulator's parameters differ. Effect (2) sits at a survival ceiling on one checkpoint |
+| **May double-return replication** — May's hunting ↔ harmless-predator schedule, from scratch, today's body and senses | 3 per agent (42, 43, 44) | **Not replicated, underpowered null.** Return advantage +1.5 steps on both returns (floored band ±7.2); forgetting −0.3. The label rests on the pre-registered 3.6-step floor: the second-return +1.46 (3 of 3 pairs) clears the raw 2 × SE of 1.35, so without the floor the label would read "partly replicated" | **Ceiling-limited:** every stage of every run is 90–97 % at the 500-step cap, so a May-sized effect (177–223 steps) could not register. Frozen-agent retention (not capped) shows both agents losing ~140 steps per harmless stage. It excludes a May-sized forgetting advantage for the first harmless stage but not the second. The +1.46 quoted on "What Both Agents Compute" is this same computation, not independent corroboration | Same-seed pairs share main-network weights (checked on seed 42; 43 and 44 not checked) |
+
+**Exploratory hints from the May replication.** Chosen after the data were seen and uncorrected for
+about 20 comparisons, so these are hypotheses only:
+- **E1, death rate.** In every hunting stage, including stage 1 before any switch, 0.5–0.8
+  percentage points fewer modulated-agent episodes end in death (out of about 7–10 %), in all 3 seed
+  pairs. This is the survival mean seen as a proportion, not independent evidence. It is a general
+  hunting-world edge, not a return effect.
+- **E2, learning speed from scratch (stage 1).** Counted per episode, the modulated agent is ahead
+  in 3 of 3 pairs (+21 steps mean survival over the first 100k episodes, +44 over 300k). Counted per
+  **environment step**, which corrects for its longer episodes, the lead is **about half as large**
+  but still 3 of 3: +11.7 over the first 10 M steps, +20.7 over 30 M. It has vanished by 60 M steps,
+  with two pairs reversed. Time to 90 % of the stage-1 level is shorter in 2 of 3 pairs; seed 42's
+  modulated agent is 43 % slower on environment steps.
+
+**Relevance to this dossier.** Candidate 4 ("learning speed has not been measured with seeds") now
+has a first three-seed look. It points **against** the premise that "the modulated agent does not
+learn faster" (`ALGORITHMIC_NULL_TODO.md`, wake-up section), but only in early from-scratch learning
+and at about half the size on the environment-step axis. Any follow-up should register the
+environment-step version as its outcome (area over the first 10 M / 30 M steps, steps to threshold)
+and pair agents across different seeds, so that the shared start does not carry the comparison. Both
+continual studies also mark the same next cell: a world with room above the step cap. Named hand-off
+for that design: `experiment-designer`. Both studies cover the "internal state visible × alternating
+world" cell of this dossier's proposed 2 × 2 design.
+
+— experiment-analyzer (continual_worlds session, 4efbe660)
