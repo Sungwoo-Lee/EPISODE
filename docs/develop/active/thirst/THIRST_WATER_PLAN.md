@@ -1050,6 +1050,36 @@ Separately, I checked the respawn repair's rank-skip fixed point (decision 13) b
 
 Verified by: senior-developer
 
+### Fix-batch check (2026-09-30)
+
+> **Checked**: the seven fix-batch commits `2c52e29c`, `fc0e5d8e`, `7e876ae8`, `4f8791e6`, `2193bfaf`, `a12d22e8`, `d6c484a2`, at `1b978933`, worktree `.claude/worktrees/thirst`.
+> **Verdict**: **VERIFIED**. Every open follow-up above and every review finding is closed or has a recorded decision. One documentation table remains stale (below). The speed cost on water worlds is still the user's call, and it is now smaller.
+
+**In plain words.** The batch does what the report says. Worlds without water still behave exactly as before. I re-ran the byte-for-byte comparison: 43 of 43 pass. The faster pond-avoiding respawn is the same exact method as before, now drawn once instead of drawn and then repaired. The new tests catch the bugs they were written for: run against the code from before the fix, all of them fail. Water worlds now cost **9.8 % of GPU step speed** against level 05, down from 12.6 %. On CPU they are 17.4 % faster than level 05. That is still above the plan's 5 % discussion line and below its 15 % block line.
+
+**Diff scope.** Line counts match the nine listed fixes (largest: `core.py` +53/−37 for the respawn rewrite, mostly comment moves). No file outside the listed fixes was touched.
+
+**Re-run by the verifier** (CPU, one process per module): `test_water_parity` 43, `test_water_placement` 43, `test_saved_config_compat` 25, `test_hydration_dynamics` 17, `test_ladder_worlds_load` 9, `test_water_observation` 9. All pass.
+
+| # | Item | Status | Evidence |
+|---|---|:-:|---|
+| 1 | Single-draw respawn (decision 17) | ✅ | The water-off branch is textually the old code: `vmap(sample_res_pos)(res_keys, …)`, then the same `where`. T1 43/43 confirms it. The water branch uses the same rank-skip fixed point I brute-force checked above, drawing `u` per slot from `res_keys` over `[0, n_A − m)`, so it is still exactly uniform over the area minus the pond. The `num_res == 0` case falls through to the unchanged draw. `0xD83` is retired and marked in a comment. |
+| 1b | New tests fail on pre-fix code | ✅ | I extracted `2c52e29c^` with `git archive` into a scratch folder (no checkout) and ran the current test files against it, confirming the scratch `src/` was imported. On that code all 6 new or changed refusal cases fail: the two quoted-`"false"` and two integer gate cases do not raise, the noise-entry case has the old message, and the whole-grid pond is refused by the capacity check with a different message. The pickle tests also fail there: the "fill and warn" and "partial set refused" cases fail, and the round-trip case passes, as it should. The respawn test's failure without the repair was shown by the developer. |
+| 2 | Strict boolean gates | ✅ | All 694 non-archive YAMLs under `configs/` carry only real booleans for `water.enabled` / `thermal.enabled`. 494 environment-shaped configs load through `load_env_params`. The 2 that fail are under `level05_body_interactions/factors/` (not maintained) and fail on a missing `sensory.visual_value_mode`, which is unrelated. `saved_config_compat` supplies a Python `False`, and there is no command-line override that could inject a string. |
+| 3 | Dreamer repo root | ✅ | Run from the worktree, both `dreamer_srl_main.py` (`_project_root` and the `sys.path` insert) and the imported `eval.py` resolve to the worktree, and the render script exists there. For the shared-folder file path the derivation equals the old literal. No literal shared-folder path remains in `src/`. `SCRIPTS_DEPENDENCY_MAP.md` was updated (`eval.py:554`). |
+| 4 | All-or-none pickle hook | ✅ | All 14 fields missing → filled, one WARNING logged. Some missing → `ValueError` naming them. None missing → no log. This closes item B above. |
+| 5 | Keep the hydration noise entry when noise is off | ✅ agree | It fails early at the parent, where the table is authored. It is satisfied through `extends:` by every maintained config, and it is loud. Nit: the error message says "every modality is listed whatever the switch". That is a convention in `default.yaml`, not a loader rule; nothing enforces it for the other 12. Note also that `body_temperature` has no equivalent guard (a pre-existing asymmetry, not a regression). |
+| 6 | Cosmetic items (assert → `ValueError`, re-indents, level-06 smell-channel note) | ✅ | As described. |
+| 7 | Stale noise counts | ⚠️ | `ENVIRONMENT_SUMMARY.md`, `02_config_schema.md` and the `10_perceptual_noise.md` index table (0–12) are fixed. **Still stale:** the defaults table in `10_perceptual_noise.md` (~line 68), which is headed "All 12 modalities" and has no `hydration` row. It is a one-row doc fix and does not block. |
+
+**Two notes, neither blocking.**
+- The whole-grid-pond regression case uses level 06, which has entity slots. The old capacity check already refused that config, so the test only pins the new, earlier message. The truly unguarded case, a world with zero entity slots, is covered by reading the one-line check, not by a test.
+- With the Dreamer path fix, a Dreamer run started **from a worktree** now writes `results/` inside that worktree, and those results are gitignored. Normal lab launches go through `run_command.py`, which `cd`s to the shared folder, so they are unaffected. Anyone launching Dreamer by hand from a worktree should copy the results out before the worktree is removed.
+
+**Speed verdict**: ⚠️ water-off worlds show no regression. Water-on worlds lose 9.8 % on GPU and gain 17.4 % on CPU against level 05 (same harness, interleaved rounds, and the same number of episode endings in both versions). This is in the discussion band, so the **user decides**.
+
+Verified by: senior-developer
+
 ---
 
 ## Feedback from `math-reviewer` (2026-09-29, reviewed at commit `c7cb7e54`)
