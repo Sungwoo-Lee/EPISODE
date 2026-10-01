@@ -104,7 +104,7 @@ Ordering rules:
 3. **Only spawn a reviewer whose object exists.** Do not route `code-reviewer` at plan time or `plan-reviewer` at post-implementation time. If nothing math-shaped appears in the work, omit `math-reviewer` — do not spawn all four by reflex.
 4. **Parallelize same-stage reviewers.** `code-reviewer` + `math-reviewer` on one diff, or `plan-reviewer` + `math-reviewer` on an equation-bearing plan, are independent and should run concurrently.
 5. **Duplicate findings are a signal, not waste.** Tell the parent that two reviewers agreeing raises confidence; where they *disagree* on a verdict, the parent surfaces both to the user rather than arbitrating.
-6. **State the review budget.** Reviewers are Fable-backed and cheap relative to a wasted training run, but say in the plan how many you are recommending and why, so the user can cut one.
+6. **State the review budget.** Reviewers run on Opus; each still costs far less than a wasted training run, but say in the plan how many you are recommending and why, so the user can cut one.
 
 ## Routing Examples
 
