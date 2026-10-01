@@ -804,3 +804,84 @@ pre-registered verdict. That is how a wrong claim reaches a paper.
 **What flips the verdict.** C1 and C2 resolved in B5 / A7 / F5 (doc edits only). M1–M3 belong in
 the same edit, because they all live in B5. S0–S4 may proceed once M5 is resolved and M4's
 differential gate is added.
+
+---
+
+## Feedback from plan-reviewer — re-check of Revision 1
+
+> **Reviewed by**: plan-reviewer · 2026-10-01 · against commit `a829c4c9` · first review: [[plan_basic_behaviour_pipeline]]
+
+**Verdict: SOUND WITH CONCERNS. The NOT READY gate on S5 is lifted.** The user has clarified that
+the cross-run figure is exploratory screening, not a confirmatory verdict. Revision 1 rebuilds that
+figure as a standard two-stage, run-as-replicate analysis:
+
+- the hypervigilance smell terms are fitted per agent, on the smell study's registered reading;
+- those terms carry no tests;
+- the episode-level standard error is demoted to a column labelled "conditional on these runs".
+
+Every exit condition of the first review is met. Three new Moderate findings remain, and should be
+fixed before S5 is built:
+
+1. The variance-component shares, as specified, would favour factors with more degrees of freedom
+   even when nothing is happening.
+2. The new recovered ambient-temperature factor would silently shrink the "all episodes" models to a
+   subset of episodes.
+3. The screening step only works for designs with several seeds per cell, which the next obvious
+   population does not have.
+
+None blocks S0–S4.
+
+Severity legend: 🔴 Critical = fix before going further · 🟡 Moderate = likely costs a re-run · 🟢 Low = cosmetic · ❓ Open = an assumption nobody has verified yet.
+
+### Prior findings — status
+
+| Finding | Status | Evidence in Revision 1 |
+|---|---|---|
+| 🔴 C1 second test of the study's question | **Closed** (one tightening, N5) | A7 "Relation to the smell study"; B5 smell regressor = channel 1 in nats + channel 2 covariate in the control world; per agent; S5.6 forbids p-values; `test_control_smell_reading` |
+| 🔴 C2 episode-level primary SE | **Closed** | A7: run-level everywhere; episode SE only as "conditional on these runs"; `test_screen_uses_seed_variation` |
+| 🟡 M1 sandwich SE with 17 df, seed main effect | **Closed** | no sandwich; cell-means OLS on 18 runs with 12 residual df; seed only inside the variance decomposition (seed within agent); exact permutation |
+| 🟡 M2 additive model | **Closed** | cell-means coding estimates every cell; S5.4 rewritten per cell |
+| 🟡 M3 pp-per-SD units | **Closed** | logit scale, smell per nat, average marginal effects per run, interaction effect by finite difference, sum-to-zero coding stated |
+| 🟡 M4 gate covers the old path only | **Closed (partial coverage, acceptable)** — see below | second gate on an hv1ch store + target cross-identities |
+| 🟡 M5 precondition, golden command | **Closed** | A4 states both failure modes and the owner; command carries `--population` and `--agent` |
+| 🟡 M6 freeze decision, `t` contiguity | **Closed** | A6 + File Changes (`bug-curator`); B6 assertion |
+| 🟢 L1–L4 | **Closed** | line numbers verified against `hiding_drivers.py`; reference copied; warm band capped; survival = `length` |
+
+**Does the second gate exercise the generalised paths?** Mostly. It covers:
+
+- the per-name slot split for animals, bushes, food and hiding predators;
+- the single-channel scent statistic;
+- the duplicate-exclusion path;
+- three of the four new targets.
+
+It does **not** reach:
+
+- (a) the multivariate recipes on a new world, because every legacy M-model contains `n_rocks`,
+  which includes campfires;
+- (b) the matched-strength (sum) layout;
+- (c) the value of `n_campfire`, which is covered only by S0.2 and a unit test.
+
+The thermal paths are covered separately, and independently (S0.3, S0.4, S0.5b replay the
+environment's own reset). (a) is cheap to close inside `golden_gate.py` without any production
+flag: rebuild the new M1–M5 designs from `episodes.npz` with `n_rocks + n_campfire` summed back
+into the legacy `n_rock`, and require the legacy multivariate lines verbatim. Optional (🟢).
+
+### New findings
+
+| Sev | Location | Issue | Suggested fix | Owner |
+|---|---|---|---|---|
+| 🟡 N1 | B5 "Variance components"; F5(a) | **The shares are computed from raw sums of squares, which rank factors by their degrees of freedom when there is no effect.** With 17 degrees of freedom in total, pure seed noise is expected to give shares of world 2/17 ≈ 12 %, agent ≈ 6 %, world × agent ≈ 12 %, seed within agent 4/17 ≈ 24 %, remainder ≈ 47 %. Read as a ranking, "shared starting weights" would look like the second-biggest driver of every behaviour while doing nothing. Each share is also very imprecise: a component estimated on 2 df has a 95 % interval spanning more than an order of magnitude. | Report method-of-moments (expected-mean-square) estimates instead: for a factor f, (SS_f − df_f·MS_remainder) / (SS_total + MS_remainder), the ω²-type share. Truncate at 0, and flag truncated values. Draw each factor's null-expected share as a reference mark. Rank primarily by the standardised effects with their intervals, and treat the shares as a secondary description. Extend `test_screen_stage2_on_known_values` with a pure-noise case in which all estimated shares come out near 0. | senior-developer |
+| 🟡 N2 | B2 handler 6b; B4 M1/M4; B5 stage-1 covariates | **`ambient_temp` is NaN on episodes where it cannot be recovered, and `quasi_binomial_fit` drops any row with a NaN regressor** (`hiding_drivers.py:255`, `keep & isfinite(X).all(1)`). As an `episode`-role exogenous factor it would enter M1, M4 and the stage-1 covariate set. On thermal worlds, those "all episodes" models would then quietly run only on episodes where the agent spawned far from every fire, which is a spawn-location-selected subset. | Either give `ambient_temp` a univariate-only role, excluded from the M-recipes and the screening covariates, or recover it on **every** episode. Exact recovery is possible: campfire heat is `ratio·|baseline|` with `temperature_ratio` fixed at `[11, 11]` (`core.py:1614-1628`), and the blur is linear (`core.py:1578-1611`). So the field at any square is `baseline·(1 − 11·B)`, where `B` is the blurred indicator of active fires at that square, computable from the `t = 0` obstacle positions. That gives the baseline at the agent's own square for every episode wherever `1 − 11·B ≠ 0`. In either case add a checkpoint that M1's `n` on a thermal world equals the episode count. | senior-developer |
+| 🟡 N3 | B5 stage 2; `screen.py`; the claim to be run-agnostic | **Stage 2 is written for one design** (six cells, 12 df, 1,680 permutations). The natural next population, the level-05 body-interaction factorial, has 16 worlds × 2 agents × **1 seed** (`LEVEL05_BODY_INTERACTIONS.md:117`). It has no within-cell replication, so the seed-to-seed SD is undefined. The project's standing rule is that analysis tooling must work for any run, not only the one that motivated it. | Build the cells from the manifest's world × agent labels. Compute the df and the permutation count rather than hard-coding them. If any cell has fewer than 2 completed runs, `screen.py` refuses, and F5 says why (or uses an explicitly declared external seed-variation reference, named on the page). Add a unit test for the refusal. | senior-developer |
+| 🟢 N4 | B5 stage 2; S5.3 | Unweighted OLS with one pooled `s` assumes equal run-to-run variance in every cell. S5.3 compares the *median* stage-1 standard error with `s`. A world with a narrower smell-evidence range, or a rarer target, can have much noisier per-run slopes than the others. | Check the largest stage-1 SE per cell, report the per-cell SDs, and where they differ markedly add Welch contrasts as a sensitivity reading (the study's §5.3 uses Welch). | senior-developer |
+| 🟢 N5 | F5(a)/(b) vs S5.6 | F5(b) shows "the standardised effect of each contrast … with run-level 95 % intervals". For a smell contrast, an interval that excludes 0 is a test in all but name. In F5(a), the world share of a smell slope partly reflects the different control-world regressor, not the behaviour. | Exclude smell slopes from F5(a) and (b), or show them without intervals and with that caveat. They stay in F5(c), per agent, as planned. | senior-developer |
+| 🟢 N6 | A7 point 3 | The design is crossed: each seed appears in every world. Unrestricted relabeling of world labels is valid but conservative when shared starting weights matter. Also, the F statistic does not change when worlds are renamed, so the 1,680 relabelings give only 280 distinct values (smallest p = 1/280). | State both points. Optionally add the restricted version (permute worlds within each seed: 6³ = 216 relabelings, 36 distinct values, smallest p ≈ 0.028) as the design-matched reading. | senior-developer |
+| 🟢 N7 | B1 `warm_cell`; B2 audit test | (i) The warm band uses the static `k_exchange`. When `thermal.injury_heat_exchange_gain ≠ 0` (`core.py:481-490`), the equilibrium depends on injury. That is 0 in hv and in `default.yaml`, but not guaranteed in general: mark the target unavailable when it is non-zero. The warming / cooling rate scales do not matter: they scale the whole step, so the fixed point is unchanged (`core.py:506-519`, verified). (ii) `thermal_kernel_radius` is not in the saved config; take it from the rebuilt parameters. (iii) `test_audit_flags_unknown_draw` still expects `thermal.default_temp` to be flagged on hv1ch, which contradicts handler 6b. | Small doc and test edits. | senior-developer |
+
+**Cost of being wrong (now).** No longer a wrong claim about the study's question. The residual
+risk is a ranking figure that tells the user "seed matters about as much as world" when that is
+just the degrees-of-freedom split (N1). That could steer the next training round. Fixing it costs a
+formula change before S5, against a wasted training round after it.
+
+**What would raise this to SOUND.** N1–N3 addressed in B5 / B2 / `screen.py` (doc edits only). The
+🟢 items are at the author's discretion.

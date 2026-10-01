@@ -90,3 +90,40 @@ No training compute is at risk, and the infrastructure costs a few local CPU hou
 is an F5 figure that answers the project's central hypervigilance question with a confounded
 reading and overconfident p-values, in direct competition with the study's pre-registered verdict.
 That is how a wrong claim reaches a paper.
+
+---
+
+## Addendum — re-check of Revision 1 (commit `a829c4c9`), 2026-10-01
+
+Reviewed by: plan-reviewer
+
+**Verdict: SOUND WITH CONCERNS. The NOT READY gate is lifted.** The user clarified that the
+cross-run figure is exploratory screening that ranks which settings move each behaviour, not a
+verdict. Revision 1 replaced the pooled model with a two-stage analysis in which each training run
+is one replicate:
+
+- per-run log-odds coefficients;
+- a regression of the 18 per-run values on the six world × agent cells, with 12 degrees of freedom
+  and exact t;
+- an exact permutation test within each agent;
+- standardised effects and variance components;
+- the hypervigilance smell terms per agent, on the study's registered reading, with no tests.
+
+**C1 and C2 are closed, as are M1–M6 and L1–L4.** Three new Moderate findings should be fixed before
+S5 is built:
+
+- **N1:** variance-component shares from raw sums of squares rank factors by their degrees of
+  freedom under pure noise (seed within agent ≈ 24 %); use method-of-moments estimates with a null
+  reference mark.
+- **N2:** the recovered ambient temperature is undefined (NaN) on some episodes and would silently
+  turn the "all episodes" models into a spawn-selected subset. Make it univariate-only, or recover
+  it exactly on every episode: the field is linear in the baseline because the campfire heat ratio
+  is fixed at 11.
+- **N3:** stage 2 is written for six replicated cells; the body-interaction population (16 worlds,
+  1 seed) has no replication, so `screen.py` must build its cells from the population and refuse
+  with a stated reason when a cell has fewer than 2 runs.
+
+Low: N4 (unequal per-cell variance, Welch as a sensitivity reading), N5 (no intervals on smell
+contrasts), N6 (permutation granularity, restricted version), N7 (warm band with injury-dependent
+exchange; kernel radius source; one stale test expectation). Full table in the plan's
+"Feedback from plan-reviewer — re-check of Revision 1".
