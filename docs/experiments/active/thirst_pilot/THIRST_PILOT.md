@@ -380,6 +380,7 @@ informational (Revision 1).
   checkout, and `WANDB_DIR` only moves the files (re-check R3). After the first run, the runner reads its `wandb-metadata.json`, records the observed
   values here, and from then on only the commit (= (c)'s sha) is compared. A mismatch is reported,
   but it does not stop a run that passes (a)–(c) and (e).
+  - *Observed (training-runner, 2026-10-01, runs 1 `883s9cak` and 7 `ffjgdq7f`, `wandb-metadata.json`):* `program` = `<worktree>/train.py`, `commit` = `d35a3c67…` (= (c)), **`root` = the shared folder** `/media/nas01/projects/Interoceptive-AI/grid_world_pain`, not the worktree as expected. Reported per (d); not a stop (all seven pass (a)–(c)).
 - (e) The saved `models/config.yaml` and the WandB config show `water.enabled: true` on level 06
   and `false` on the control. On level 06, `Episode/Term_Dehydration` is non-zero in at least one
   logged window.
@@ -396,13 +397,13 @@ informational (Revision 1).
 
 | Run | Status | Cell | Tag (= wandb-name) | wandb-group | wandb-job-type | Seed | Node | GPU | Launched at | WandB run ID | Log path |
 |---|---|---|---|---|---|---|---|---|---|---|---|
-| 1 | planned | L06 ordinary (throughput pair A) | `rppo_l06pilot_t1none_s42` | thirst_pilot | pilot | 42 | 101 | cuda:1 | — | — | — |
-| 2 | planned | L06 ordinary | `rppo_l06pilot_t1none_s43` | thirst_pilot | pilot | 43 | 103 | cuda:0 | — | — | — |
-| 3 | planned | L06 ordinary | `rppo_l06pilot_t1none_s44` | thirst_pilot | pilot | 44 | 103 | cuda:1 | — | — | — |
-| 4 | planned | L06 modulated | `rppo_l06pilot_t16quad_s42` | thirst_pilot | pilot | 42 | 104 | cuda:0 | — | — | — |
-| 5 | planned | L06 modulated | `rppo_l06pilot_t16quad_s43` | thirst_pilot | pilot | 43 | 104 | cuda:1 | — | — | — |
-| 6 | planned | L06 modulated | `rppo_l06pilot_t16quad_s44` | thirst_pilot | pilot | 44 | 105 | cuda:0 | — | — | — |
-| 7 | planned | L05 control, `v5.0` code (throughput pair B) | `rppo_l06pilot_l05ctl_t1none_s42` | thirst_pilot | pilot | 42 | 101 | cuda:0 | — | — | — |
+| 1 | running | L06 ordinary (throughput pair A) | `rppo_l06pilot_t1none_s42` | thirst_pilot | pilot | 42 | 101 | cuda:1 | 2026-10-01T13:21:38 | `883s9cak` | `logs/20261001_132138_rppo_l06pilot_t1none_s42.log` (HEAD `d35a3c67`) |
+| 2 | running | L06 ordinary | `rppo_l06pilot_t1none_s43` | thirst_pilot | pilot | 43 | 103 | cuda:0 | 2026-10-01T13:21:59 | `1olnaeg8` | `logs/20261001_132158_rppo_l06pilot_t1none_s43.log` (HEAD `d35a3c67`) |
+| 3 | running | L06 ordinary | `rppo_l06pilot_t1none_s44` | thirst_pilot | pilot | 44 | 103 | cuda:1 | 2026-10-01T13:22:00 | `1dxqibr3` | `logs/20261001_132159_rppo_l06pilot_t1none_s44.log` (HEAD `d35a3c67`) |
+| 4 | running | L06 modulated | `rppo_l06pilot_t16quad_s42` | thirst_pilot | pilot | 42 | 104 | cuda:0 | 2026-10-01T13:22:00 | `z3ogjds3` | `logs/20261001_132200_rppo_l06pilot_t16quad_s42.log` (HEAD `d35a3c67`) |
+| 5 | running | L06 modulated | `rppo_l06pilot_t16quad_s43` | thirst_pilot | pilot | 43 | 104 | cuda:1 | 2026-10-01T13:22:01 | `rs8gq0w4` | `logs/20261001_132201_rppo_l06pilot_t16quad_s43.log` (HEAD `d35a3c67`) |
+| 6 | running | L06 modulated | `rppo_l06pilot_t16quad_s44` | thirst_pilot | pilot | 44 | 105 | cuda:0 | 2026-10-01T13:22:02 | `tpg1snlp` | `logs/20261001_132201_rppo_l06pilot_t16quad_s44.log` (HEAD `d35a3c67`) |
+| 7 | running | L05 control, `v5.0` code (throughput pair B) | `rppo_l06pilot_l05ctl_t1none_s42` | thirst_pilot | pilot | 42 | 101 | cuda:0 | 2026-10-01T13:21:37 | `ffjgdq7f` | `logs/20261001_132137_rppo_l06pilot_l05ctl_t1none_s42.log` (HEAD `d35a3c67`) |
 
 **Node and GPU assignment:** made by the user on 2026-10-01 from a live check. All seven cards are
 free RTX 2080 Ti (11 GB; level-05 rPPO trained on this card before, `w0000` ordinary). The

@@ -4869,3 +4869,71 @@ cd /media/nas01/projects/Interoceptive-AI/grid_world_pain
 #   --agent_config configs/models/recurrent_ppo/nmn_input_site_grid_gaenorm/nmngaenorm_t16quad_ALL.yaml \
 #   --seed 44 --device cuda:1 --tag rppo_cw_mayrep_t16quad_s44 --wandb-name rppo_cw_mayrep_t16quad_s44 \
 #   --wandb-group continual_worlds --wandb-job-type prod
+
+# ---------------------------------------------------------------------------
+# 2026-10-01 13:21-13:22 — THIRST_PILOT (level 06 pond + thirst), 7 runs, user-approved launch
+# (docs/experiments/active/thirst_pilot/THIRST_PILOT.md §2.5/§3). Code runs from THIS worktree
+# (.claude/worktrees/thirst, branch v5.0, HEAD d35a3c67, clean); outputs go to the SHARED folder
+# (--results-dir <shared>/results/JAX_RecurrentPPO/<TS>_<TAG>, WANDB_DIR=<shared>, --log <shared>/logs/<TS>_<TAG>.log).
+# Each run = unique /tmp script on the node: cd worktree -> v5.0 code-origin gate -> exec train.py (below).
+# Launched with: ./run_command.py --no-tail --log <shared>/logs/<TS>_<TAG>.log <NODE> "bash /tmp/train_cmd_<...>.sh"
+# Pre-flight: 101/103/104/105 cards idle (no compute apps), no train.py, no diary running rows; NAS mounted,
+# worktree train.py readable, /usr/bin/git present, JAX GPU-compile OK (0.9.0.1); no *l06pilot* results dir.
+# Seeds 43/44 pass --seed (flagged deviation per design §2.4); seed 42 config-owned.
+# ---------------------------------------------------------------------------
+# Run 7: rppo_l06pilot_l05ctl_t1none_s42 — node 101, cuda:0, TS 20261001_132137, bash /tmp/train_cmd_1790828497_25269_rppo_l06pilot_l05ctl_t1none_s42.sh
+#   exec "$PY" train.py \
+#     --config configs/environment/experiment/basic/05-campfire_thermal_10x10.yaml \
+#     --agent_config configs/models/recurrent_ppo/nmn_input_site_grid_gaenorm/nmngaenorm_t1none.yaml \
+#     --episodes 2000000 --device cuda:0 --log-interval 10 \
+#     --results-dir "$SHARED/results/JAX_RecurrentPPO/20261001_132137_rppo_l06pilot_l05ctl_t1none_s42" \
+#     --tag rppo_l06pilot_l05ctl_t1none_s42 --wandb-name rppo_l06pilot_l05ctl_t1none_s42 \
+#     --wandb-group thirst_pilot --wandb-job-type pilot
+# Run 1: rppo_l06pilot_t1none_s42 — node 101, cuda:1, TS 20261001_132138, bash /tmp/train_cmd_1790828498_4260_rppo_l06pilot_t1none_s42.sh
+#   exec "$PY" train.py \
+#     --config configs/environment/experiment/basic/06-pond_thirst_10x10.yaml \
+#     --agent_config configs/models/recurrent_ppo/nmn_input_site_grid_gaenorm/nmngaenorm_t1none.yaml \
+#     --episodes 2000000 --device cuda:1 --log-interval 10 \
+#     --results-dir "$SHARED/results/JAX_RecurrentPPO/20261001_132138_rppo_l06pilot_t1none_s42" \
+#     --tag rppo_l06pilot_t1none_s42 --wandb-name rppo_l06pilot_t1none_s42 \
+#     --wandb-group thirst_pilot --wandb-job-type pilot
+# Run 2: rppo_l06pilot_t1none_s43 — node 103, cuda:0, TS 20261001_132158, bash /tmp/train_cmd_1790828518_1104_rppo_l06pilot_t1none_s43.sh
+#   exec "$PY" train.py \
+#     --config configs/environment/experiment/basic/06-pond_thirst_10x10.yaml \
+#     --agent_config configs/models/recurrent_ppo/nmn_input_site_grid_gaenorm/nmngaenorm_t1none.yaml \
+#     --episodes 2000000 --device cuda:0 --log-interval 10 --seed 43 \
+#     --results-dir "$SHARED/results/JAX_RecurrentPPO/20261001_132158_rppo_l06pilot_t1none_s43" \
+#     --tag rppo_l06pilot_t1none_s43 --wandb-name rppo_l06pilot_t1none_s43 \
+#     --wandb-group thirst_pilot --wandb-job-type pilot
+# Run 3: rppo_l06pilot_t1none_s44 — node 103, cuda:1, TS 20261001_132159, bash /tmp/train_cmd_1790828519_20025_rppo_l06pilot_t1none_s44.sh
+#   exec "$PY" train.py \
+#     --config configs/environment/experiment/basic/06-pond_thirst_10x10.yaml \
+#     --agent_config configs/models/recurrent_ppo/nmn_input_site_grid_gaenorm/nmngaenorm_t1none.yaml \
+#     --episodes 2000000 --device cuda:1 --log-interval 10 --seed 44 \
+#     --results-dir "$SHARED/results/JAX_RecurrentPPO/20261001_132159_rppo_l06pilot_t1none_s44" \
+#     --tag rppo_l06pilot_t1none_s44 --wandb-name rppo_l06pilot_t1none_s44 \
+#     --wandb-group thirst_pilot --wandb-job-type pilot
+# Run 4: rppo_l06pilot_t16quad_s42 — node 104, cuda:0, TS 20261001_132200, bash /tmp/train_cmd_1790828520_21344_rppo_l06pilot_t16quad_s42.sh
+#   exec "$PY" train.py \
+#     --config configs/environment/experiment/basic/06-pond_thirst_10x10.yaml \
+#     --agent_config configs/models/recurrent_ppo/nmn_input_site_grid_gaenorm/nmngaenorm_t16quad_ALL.yaml \
+#     --episodes 2000000 --device cuda:0 --log-interval 10 \
+#     --results-dir "$SHARED/results/JAX_RecurrentPPO/20261001_132200_rppo_l06pilot_t16quad_s42" \
+#     --tag rppo_l06pilot_t16quad_s42 --wandb-name rppo_l06pilot_t16quad_s42 \
+#     --wandb-group thirst_pilot --wandb-job-type pilot
+# Run 5: rppo_l06pilot_t16quad_s43 — node 104, cuda:1, TS 20261001_132201, bash /tmp/train_cmd_1790828521_7865_rppo_l06pilot_t16quad_s43.sh
+#   exec "$PY" train.py \
+#     --config configs/environment/experiment/basic/06-pond_thirst_10x10.yaml \
+#     --agent_config configs/models/recurrent_ppo/nmn_input_site_grid_gaenorm/nmngaenorm_t16quad_ALL.yaml \
+#     --episodes 2000000 --device cuda:1 --log-interval 10 --seed 43 \
+#     --results-dir "$SHARED/results/JAX_RecurrentPPO/20261001_132201_rppo_l06pilot_t16quad_s43" \
+#     --tag rppo_l06pilot_t16quad_s43 --wandb-name rppo_l06pilot_t16quad_s43 \
+#     --wandb-group thirst_pilot --wandb-job-type pilot
+# Run 6: rppo_l06pilot_t16quad_s44 — node 105, cuda:0, TS 20261001_132201, bash /tmp/train_cmd_1790828521_22669_rppo_l06pilot_t16quad_s44.sh
+#   exec "$PY" train.py \
+#     --config configs/environment/experiment/basic/06-pond_thirst_10x10.yaml \
+#     --agent_config configs/models/recurrent_ppo/nmn_input_site_grid_gaenorm/nmngaenorm_t16quad_ALL.yaml \
+#     --episodes 2000000 --device cuda:0 --log-interval 10 --seed 44 \
+#     --results-dir "$SHARED/results/JAX_RecurrentPPO/20261001_132201_rppo_l06pilot_t16quad_s44" \
+#     --tag rppo_l06pilot_t16quad_s44 --wandb-name rppo_l06pilot_t16quad_s44 \
+#     --wandb-group thirst_pilot --wandb-job-type pilot
