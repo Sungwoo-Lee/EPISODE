@@ -43,21 +43,21 @@ batch_size: 5000
 shard_episodes: 5000
 blocks_per_cell: 200
 runs:
-  - {label: hv1ch_ordinary_s42,  path: results/JAX_RecurrentPPO/FILL_AT_LAUNCH_rppo_hv1ch_t1none_s42}
+  - {label: hv1ch_ordinary_s42,  path: results/JAX_RecurrentPPO/20261001-002402_rppo_hv1ch_t1none_s42}
   - {label: hv1ch_modulated_s42, path: results/JAX_RecurrentPPO/FILL_AT_LAUNCH_rppo_hv1ch_t16quad_s42}
-  - {label: hv1ch_ordinary_s43,  path: results/JAX_RecurrentPPO/FILL_AT_LAUNCH_rppo_hv1ch_t1none_s43}
+  - {label: hv1ch_ordinary_s43,  path: results/JAX_RecurrentPPO/20261001-002412_rppo_hv1ch_t1none_s43}
   - {label: hv1ch_modulated_s43, path: results/JAX_RecurrentPPO/FILL_AT_LAUNCH_rppo_hv1ch_t16quad_s43}
-  - {label: hv1ch_ordinary_s44,  path: results/JAX_RecurrentPPO/FILL_AT_LAUNCH_rppo_hv1ch_t1none_s44}
+  - {label: hv1ch_ordinary_s44,  path: results/JAX_RecurrentPPO/20261001-002423_rppo_hv1ch_t1none_s44}
   - {label: hv1ch_modulated_s44, path: results/JAX_RecurrentPPO/FILL_AT_LAUNCH_rppo_hv1ch_t16quad_s44}
-  - {label: hv2ch_ordinary_s43,  path: results/JAX_RecurrentPPO/FILL_AT_LAUNCH_rppo_hv2ch_t1none_s43}
+  - {label: hv2ch_ordinary_s43,  path: results/JAX_RecurrentPPO/20261001-002435_rppo_hv2ch_t1none_s43}
   - {label: hv2ch_modulated_s43, path: results/JAX_RecurrentPPO/FILL_AT_LAUNCH_rppo_hv2ch_t16quad_s43}
-  - {label: hv2ch_ordinary_s44,  path: results/JAX_RecurrentPPO/FILL_AT_LAUNCH_rppo_hv2ch_t1none_s44}
+  - {label: hv2ch_ordinary_s44,  path: results/JAX_RecurrentPPO/20261001-002444_rppo_hv2ch_t1none_s44}
   - {label: hv2ch_modulated_s44, path: results/JAX_RecurrentPPO/FILL_AT_LAUNCH_rppo_hv2ch_t16quad_s44}
-  - {label: hv1chm_ordinary_s42, path: results/JAX_RecurrentPPO/FILL_AT_LAUNCH_rppo_hv1chm_t1none_s42}
+  - {label: hv1chm_ordinary_s42, path: results/JAX_RecurrentPPO/20261001-002455_rppo_hv1chm_t1none_s42}
   - {label: hv1chm_modulated_s42, path: results/JAX_RecurrentPPO/FILL_AT_LAUNCH_rppo_hv1chm_t16quad_s42}
-  - {label: hv1chm_ordinary_s43, path: results/JAX_RecurrentPPO/FILL_AT_LAUNCH_rppo_hv1chm_t1none_s43}
+  - {label: hv1chm_ordinary_s43, path: results/JAX_RecurrentPPO/20261001-002509_rppo_hv1chm_t1none_s43}
   - {label: hv1chm_modulated_s43, path: results/JAX_RecurrentPPO/FILL_AT_LAUNCH_rppo_hv1chm_t16quad_s43}
-  - {label: hv1chm_ordinary_s44, path: results/JAX_RecurrentPPO/FILL_AT_LAUNCH_rppo_hv1chm_t1none_s44}
+  - {label: hv1chm_ordinary_s44, path: results/JAX_RecurrentPPO/20261001-002518_rppo_hv1chm_t1none_s44}
   - {label: hv1chm_modulated_s44, path: results/JAX_RecurrentPPO/FILL_AT_LAUNCH_rppo_hv1chm_t16quad_s44}
   - {label: hv2ch_ordinary_s42,  path: results/JAX_RecurrentPPO/20260927-053057_rppo_l05body_w0000_t1none_s42}    # C01, re-collection
   - {label: hv2ch_modulated_s42, path: results/JAX_RecurrentPPO/20260927-053059_rppo_l05body_w0000_t16quad_s42}   # C02, re-collection
