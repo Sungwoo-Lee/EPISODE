@@ -583,3 +583,46 @@ is written.
 - Context-exploration study: `docs/experiments/active/context_exploration/STUDY_PLAN.md`
 - Placement fallback: `docs/develop/active/placement/PLACEMENT_FIXES_PLAN.md`, Known Bugs ~#117
 - Critical-settings change-log entry for these local overrides: `docs/environment/CONFIG_CRITICAL_SETTINGS.md`, 2026-10-01
+
+## Feedback from plan-reviewer
+
+*plan-reviewer, 2026-10-01, on commit `c631d8fa`. Full report: [[plan_thirst_task]]
+(`docs/reviews/plan_thirst_task.md`). Appended; the design text above is unchanged.*
+
+Severity legend: 🔴 Critical = fix before going further · 🟡 Moderate = likely costs a re-run · 🟢 Low = cosmetic · ❓ Open = an assumption nobody has verified yet.
+
+**Verdict: NOT READY. There is one Critical finding, and the fix is a paragraph of text.** The
+configs do what they claim. I resolved all nine worlds through the trainer's loader: within each
+size they differ only in `sensory.sensor_radius`, and the larger worlds differ from level 06 only
+in size, areas, counts, pond and range. Every output goes outside the worktree. The stop rule can
+be computed from the logged `Episode/Steps` / `Episode/Number` / `Episode/_window_n`, which are
+written every 4,000 episodes.
+
+| # | Sev | Where | Issue | Fix |
+|---|---|---|---|---|
+| C1 | 🔴 | §3.4 "Code", §9.2 | No code freeze. The design pins no launch SHA, forbids no edits, and does not inherit the pilot's runner pre-flight or run-validity checks (THIRST_PILOT §3.2, §2.7 P5); §9.2 inherits only §2.5. PLACEMENT_FIXES_PLAN's start gate names only the pilot runs, which finished at 17:48, so the environment code may now be edited in this worktree. Running jobs are mostly safe (their code is already loaded), but late launches, §7 relaunches and the §5.4 seeds 43/44 would train in a different world without anyone noticing. | Add §9.3: one launch SHA for all 18 runs, relaunches and follow-ups (if the code moves first, the addendum re-runs seed 42); no edits to `src/`, `train.py`, `configs/` or runtime `scripts/` here until the last run ends (placement work goes in a separate worktree); a diary freeze note; pilot §3.2 pre-flight; P5-style validity per run, plus a check that the saved config shows `water.properties [1,0,0,0,0]` and the cell's size, `water.size` and `sensor_radius`. Add "THIRST_TASK runs finished" to PLACEMENT_FIXES_PLAN K0. |
+| M1 | 🟡 | §4, §9.2 | The stop is defined as "SIGINT right after the checkpoint", but checks will be late, and the ordinary run is about 20–25 % ahead of its modulated partner. Without a rule, the "last 1 M before the stop" differs between the two agents. Who checks, how often, with what tool, and what stop command are not stated. | Define the stop boundary b* retroactively. Final model = checkpoint b*; S_final and Δ read [b*−1 M, b*] for both runs; anything after b* is ignored. Name a reader script (test it on the pilot runs), a cadence and the exact stop command (full unique tag, sent once; a second SIGINT force-quits). Put both agents of a world on the same card class. |
+| M2 | 🟡 | §4 rule 2 | "Learned" is judged on survival only. A run that eats but does not yet drink can be stopped. A falling curve also counts as a plateau. | Require §5.1(a) to pass at the stop. Flag two consecutive falls rather than stopping. |
+| M3 | 🟡 | §5.3–5.4 | The 6 % line rests on 3 seeds at 2 M on the old smell (σ's 95 % range is about 1.4–16 %). In the pilot, one of three same-world seed pairs already gave +7.3 %. Across 9 worlds there is about a 38 % chance of at least one false lead. The follow-up's compute, its decision rule and the handling of the selected seed 42 (winner's curse) are not pre-registered, and it is one-sided. | Pre-register now: confirm on seeds 43/44 (or handle seed 42's selection); the 3-seed rule; a follow-up compute ceiling; whether ≤ −6 % worlds also get seeds. |
+| M4 | 🟡 | §5.2, §5.3, §5.4 | Claims stronger than one seed allows. The reach × size refutation conflicts with §5.4, and the noise of a difference of differences is about 5 %. The exploratory hypothesis is "supported" by one noise lead about 1/3 of the time and, read literally, when there are no leads at all. "≥ 10 % readable" uses the 10×10 σ. | Reword as descriptive, close the "if any" loophole, and condition on the spread seen at the larger sizes. |
+| M5 | 🟡 | §3.5, §5 | Only the episode-matched Δ is pre-registered. The agent that survives longer gets more updates per episode; the pilot measured a 25–31 % experience gap. | Pre-register an equal-environment-steps read-out for every Δ and for the size/reach costs. |
+| M6 | 🟡 | §3.3, §5.2 | `sensor_radius` cuts every smell channel (`sensor.py:37-51`), including predator odour. The "thirst, not starvation" mechanism and refutation clause ignore injury. | State it, and make §5.2's outcome three-way. |
+| M7 | 🟡 | §5, §6.4 | Drinking rate and survival by start hydration are not in the training log. The pilot got them from stored greedy episodes. There is no analysis-plan section. | Add §5.5 (checkpoints, collector run from the worktree, tools that must not be used), or drop those read-outs. |
+| L1 | 🟢 | §3.5 | Regrown food landing on a fire (~2 %) or a bush (~7 %) is not listed. | One row. |
+| L2 | 🟢 | §6 | The check evidence lives only in the worktree's gitignored `tmp/`. | Copy it to the shared `tmp/` or call it disposable. |
+
+**Answers to the specific questions.** Stopping both agents of a world together does not bias the
+comparison: neither agent is cut off while still improving. The remaining biases are the
+experience gap (M5) and the undefined overshoot window (M1). Comparability with the pilot and with
+context exploration is handled correctly. Project rules (survival steps only, no invented
+versions, the study-folder precedent, the change-log entry) are met.
+
+**Exit condition:** C1's paragraph, here and in PLACEMENT_FIXES_PLAN K0, flips the verdict to
+SOUND WITH CONCERNS. The Moderates can be fixed in the same edit or accepted knowingly.
+
+**Cost of being wrong:** a placement fix landing mid-series makes the later-launched, relaunched
+and follow-up runs train in a different world from the seed-42 runs, and nothing shows it in
+WandB. That means about 30–170 GPU-h of reruns per affected world, and a modulator lead judged on
+mismatched seeds. No data-loss hazard was found.
+
+Reviewed by: plan-reviewer
