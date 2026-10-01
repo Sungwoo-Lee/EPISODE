@@ -1,0 +1,1298 @@
+{
+ "g10sW": {
+  "config": "configs/environment/experiment/basic/06-pond_thirst_10x10.yaml",
+  "load": {
+   "grid": "10x10",
+   "sensor_radius": 20.0,
+   "decay_power": 1.0,
+   "pond_size": [
+    2,
+    2
+   ],
+   "pond_table_0based": [
+    [
+     1,
+     1
+    ],
+    [
+     1,
+     7
+    ],
+    [
+     7,
+     1
+    ],
+    [
+     7,
+     7
+    ]
+   ],
+   "pond_cell_property": [
+    0.25,
+    0.0,
+    0.0,
+    0.0,
+    0.0
+   ],
+   "pond_total_smell": [
+    1.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0
+   ],
+   "obs_breakdown": {
+    "Satiation": 1,
+    "Body Temperature": 1,
+    "Hydration": 1,
+    "Interoceptive Nociception": 1,
+    "Extero Nociception": 1,
+    "Thermoception": 5,
+    "Olfaction": 25,
+    "Collision": 5,
+    "Proprioception": 6,
+    "Visual": 13
+   },
+   "obs_width_breakdown": 59,
+   "obs_width_real": 59,
+   "noise_enabled": false,
+   "noise_missing_for_breakdown": [],
+   "noise_order_same_as_breakdown_INFO_ONLY_lookup_is_by_name": false,
+   "max_steps": 500
+  },
+  "placement": {
+   "resets": 2000,
+   "fallback_signature_active_outside_own_area": 0.0,
+   "active_slots_at_0_0_per_reset": 0.295,
+   "active_slots_at_0_0_expected_if_uniform": 0.2739400000000001,
+   "active_slots_at_other_corners_mean": 0.2908333333333333,
+   "resets_with_2plus_active_at_0_0": 0.0,
+   "inactive_slots_all_parked_off_grid": true,
+   "overlap_two_active_share_a_cell": 0.0,
+   "any_active_on_pond": 0.0,
+   "agent_starts_on_pond": 0.0,
+   "agent_starts_on_burning_fire": 0.0185,
+   "active_fire_pairs_closer_than_separation": 0.0,
+   "active_counts_mean": {
+    "food": 2.4345,
+    "ambushers": 6.947,
+    "fires": 2.0015,
+    "animals": 2.017
+   },
+   "slots_total": 45,
+   "spawn_areas_distinct": [
+    [
+     0,
+     0,
+     10,
+     10
+    ],
+    [
+     2,
+     2,
+     8,
+     8
+    ]
+   ],
+   "patrol_areas_distinct": [
+    [
+     0,
+     0,
+     10,
+     10
+    ]
+   ],
+   "pond_topleft_freq": {
+    "1,1": 0.249,
+    "1,7": 0.248,
+    "7,1": 0.2555,
+    "7,7": 0.2475
+   }
+  },
+  "smell": {
+   "any_channel0_smell_in_range_at_a_random_cell": 1.0,
+   "d=2": {
+    "n_cells": 36548,
+    "points_to_nearest": 0.9809839115683485,
+    "chance": 0.4641726861478963,
+    "smell_in_range": 1.0
+   },
+   "d=5": {
+    "n_cells": 20855,
+    "points_to_nearest": 0.9566530807959722,
+    "chance": 0.5353352513386095,
+    "smell_in_range": 1.0
+   },
+   "d=10": {
+    "n_cells": 1354,
+    "points_to_nearest": 1.0,
+    "chance": 0.6746061053668175,
+    "smell_in_range": 1.0
+   },
+   "d=15": {
+    "n_cells": 0
+   }
+  },
+  "walk": {
+   "start_to_pond_mean": 6.08,
+   "p50": 6.0,
+   "p95": 12.0,
+   "max": 14
+  },
+  "png": "/media/nas01/projects/Interoceptive-AI/grid_world_pain/.claude/worktrees/thirst/tmp/20261001_thirst_task/layout_g10sW.png"
+ },
+ "g10s5": {
+  "config": "configs/environment/experiment/thirst/pond_thirst_10x10_smell5.yaml",
+  "load": {
+   "grid": "10x10",
+   "sensor_radius": 5.0,
+   "decay_power": 1.0,
+   "pond_size": [
+    2,
+    2
+   ],
+   "pond_table_0based": [
+    [
+     1,
+     1
+    ],
+    [
+     1,
+     7
+    ],
+    [
+     7,
+     1
+    ],
+    [
+     7,
+     7
+    ]
+   ],
+   "pond_cell_property": [
+    0.25,
+    0.0,
+    0.0,
+    0.0,
+    0.0
+   ],
+   "pond_total_smell": [
+    1.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0
+   ],
+   "obs_breakdown": {
+    "Satiation": 1,
+    "Body Temperature": 1,
+    "Hydration": 1,
+    "Interoceptive Nociception": 1,
+    "Extero Nociception": 1,
+    "Thermoception": 5,
+    "Olfaction": 25,
+    "Collision": 5,
+    "Proprioception": 6,
+    "Visual": 13
+   },
+   "obs_width_breakdown": 59,
+   "obs_width_real": 59,
+   "noise_enabled": false,
+   "noise_missing_for_breakdown": [],
+   "noise_order_same_as_breakdown_INFO_ONLY_lookup_is_by_name": false,
+   "max_steps": 500
+  },
+  "placement": {
+   "resets": 2000,
+   "fallback_signature_active_outside_own_area": 0.0,
+   "active_slots_at_0_0_per_reset": 0.295,
+   "active_slots_at_0_0_expected_if_uniform": 0.2739400000000001,
+   "active_slots_at_other_corners_mean": 0.2908333333333333,
+   "resets_with_2plus_active_at_0_0": 0.0,
+   "inactive_slots_all_parked_off_grid": true,
+   "overlap_two_active_share_a_cell": 0.0,
+   "any_active_on_pond": 0.0,
+   "agent_starts_on_pond": 0.0,
+   "agent_starts_on_burning_fire": 0.0185,
+   "active_fire_pairs_closer_than_separation": 0.0,
+   "active_counts_mean": {
+    "food": 2.4345,
+    "ambushers": 6.947,
+    "fires": 2.0015,
+    "animals": 2.017
+   },
+   "slots_total": 45,
+   "spawn_areas_distinct": [
+    [
+     0,
+     0,
+     10,
+     10
+    ],
+    [
+     2,
+     2,
+     8,
+     8
+    ]
+   ],
+   "patrol_areas_distinct": [
+    [
+     0,
+     0,
+     10,
+     10
+    ]
+   ],
+   "pond_topleft_freq": {
+    "1,1": 0.249,
+    "1,7": 0.248,
+    "7,1": 0.2555,
+    "7,7": 0.2475
+   }
+  },
+  "smell": {
+   "any_channel0_smell_in_range_at_a_random_cell": 0.9202211140280201,
+   "d=2": {
+    "n_cells": 36548,
+    "points_to_nearest": 0.9538141621976579,
+    "chance": 0.4641726861478963,
+    "smell_in_range": 1.0
+   },
+   "d=5": {
+    "n_cells": 20855,
+    "points_to_nearest": 0.9236394150083913,
+    "chance": 0.5353352513386095,
+    "smell_in_range": 1.0
+   },
+   "d=10": {
+    "n_cells": 1354,
+    "points_to_nearest": 0.0,
+    "chance": 0.6746061053668175,
+    "smell_in_range": 0.0
+   },
+   "d=15": {
+    "n_cells": 0
+   }
+  },
+  "walk": {
+   "start_to_pond_mean": 6.08,
+   "p50": 6.0,
+   "p95": 12.0,
+   "max": 14
+  },
+  "png": "/media/nas01/projects/Interoceptive-AI/grid_world_pain/.claude/worktrees/thirst/tmp/20261001_thirst_task/layout_g10s5.png"
+ },
+ "g10s3": {
+  "config": "configs/environment/experiment/thirst/pond_thirst_10x10_smell3.yaml",
+  "load": {
+   "grid": "10x10",
+   "sensor_radius": 3.0,
+   "decay_power": 1.0,
+   "pond_size": [
+    2,
+    2
+   ],
+   "pond_table_0based": [
+    [
+     1,
+     1
+    ],
+    [
+     1,
+     7
+    ],
+    [
+     7,
+     1
+    ],
+    [
+     7,
+     7
+    ]
+   ],
+   "pond_cell_property": [
+    0.25,
+    0.0,
+    0.0,
+    0.0,
+    0.0
+   ],
+   "pond_total_smell": [
+    1.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0
+   ],
+   "obs_breakdown": {
+    "Satiation": 1,
+    "Body Temperature": 1,
+    "Hydration": 1,
+    "Interoceptive Nociception": 1,
+    "Extero Nociception": 1,
+    "Thermoception": 5,
+    "Olfaction": 25,
+    "Collision": 5,
+    "Proprioception": 6,
+    "Visual": 13
+   },
+   "obs_width_breakdown": 59,
+   "obs_width_real": 59,
+   "noise_enabled": false,
+   "noise_missing_for_breakdown": [],
+   "noise_order_same_as_breakdown_INFO_ONLY_lookup_is_by_name": false,
+   "max_steps": 500
+  },
+  "placement": {
+   "resets": 2000,
+   "fallback_signature_active_outside_own_area": 0.0,
+   "active_slots_at_0_0_per_reset": 0.295,
+   "active_slots_at_0_0_expected_if_uniform": 0.2739400000000001,
+   "active_slots_at_other_corners_mean": 0.2908333333333333,
+   "resets_with_2plus_active_at_0_0": 0.0,
+   "inactive_slots_all_parked_off_grid": true,
+   "overlap_two_active_share_a_cell": 0.0,
+   "any_active_on_pond": 0.0,
+   "agent_starts_on_pond": 0.0,
+   "agent_starts_on_burning_fire": 0.0185,
+   "active_fire_pairs_closer_than_separation": 0.0,
+   "active_counts_mean": {
+    "food": 2.4345,
+    "ambushers": 6.947,
+    "fires": 2.0015,
+    "animals": 2.017
+   },
+   "slots_total": 45,
+   "spawn_areas_distinct": [
+    [
+     0,
+     0,
+     10,
+     10
+    ],
+    [
+     2,
+     2,
+     8,
+     8
+    ]
+   ],
+   "patrol_areas_distinct": [
+    [
+     0,
+     0,
+     10,
+     10
+    ]
+   ],
+   "pond_topleft_freq": {
+    "1,1": 0.249,
+    "1,7": 0.248,
+    "7,1": 0.2555,
+    "7,7": 0.2475
+   }
+  },
+  "smell": {
+   "any_channel0_smell_in_range_at_a_random_cell": 0.7330563493291283,
+   "d=2": {
+    "n_cells": 36548,
+    "points_to_nearest": 0.9495047608624275,
+    "chance": 0.4641726861478963,
+    "smell_in_range": 1.0
+   },
+   "d=5": {
+    "n_cells": 20855,
+    "points_to_nearest": 0.3596739391033325,
+    "chance": 0.5353352513386095,
+    "smell_in_range": 0.3596739391033325
+   },
+   "d=10": {
+    "n_cells": 1354,
+    "points_to_nearest": 0.0,
+    "chance": 0.6746061053668175,
+    "smell_in_range": 0.0
+   },
+   "d=15": {
+    "n_cells": 0
+   }
+  },
+  "walk": {
+   "start_to_pond_mean": 6.08,
+   "p50": 6.0,
+   "p95": 12.0,
+   "max": 14
+  },
+  "png": "/media/nas01/projects/Interoceptive-AI/grid_world_pain/.claude/worktrees/thirst/tmp/20261001_thirst_task/layout_g10s3.png"
+ },
+ "g15sW": {
+  "config": "configs/environment/experiment/thirst/pond_thirst_15x15.yaml",
+  "load": {
+   "grid": "15x15",
+   "sensor_radius": 30.0,
+   "decay_power": 1.0,
+   "pond_size": [
+    3,
+    3
+   ],
+   "pond_table_0based": [
+    [
+     1,
+     1
+    ],
+    [
+     1,
+     11
+    ],
+    [
+     11,
+     1
+    ],
+    [
+     11,
+     11
+    ]
+   ],
+   "pond_cell_property": [
+    0.111111,
+    0.0,
+    0.0,
+    0.0,
+    0.0
+   ],
+   "pond_total_smell": [
+    1.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0
+   ],
+   "obs_breakdown": {
+    "Satiation": 1,
+    "Body Temperature": 1,
+    "Hydration": 1,
+    "Interoceptive Nociception": 1,
+    "Extero Nociception": 1,
+    "Thermoception": 5,
+    "Olfaction": 25,
+    "Collision": 5,
+    "Proprioception": 6,
+    "Visual": 13
+   },
+   "obs_width_breakdown": 59,
+   "obs_width_real": 59,
+   "noise_enabled": false,
+   "noise_missing_for_breakdown": [],
+   "noise_order_same_as_breakdown_INFO_ONLY_lookup_is_by_name": false,
+   "max_steps": 500
+  },
+  "placement": {
+   "resets": 2000,
+   "fallback_signature_active_outside_own_area": 0.0,
+   "active_slots_at_0_0_per_reset": 0.2995,
+   "active_slots_at_0_0_expected_if_uniform": 0.27856222222222227,
+   "active_slots_at_other_corners_mean": 0.30666666666666664,
+   "resets_with_2plus_active_at_0_0": 0.0,
+   "inactive_slots_all_parked_off_grid": true,
+   "overlap_two_active_share_a_cell": 0.0,
+   "any_active_on_pond": 0.0,
+   "agent_starts_on_pond": 0.0,
+   "agent_starts_on_burning_fire": 0.0215,
+   "active_fire_pairs_closer_than_separation": 0.0,
+   "active_counts_mean": {
+    "food": 5.4445,
+    "ambushers": 15.9245,
+    "fires": 4.515,
+    "animals": 5.056
+   },
+   "slots_total": 103,
+   "spawn_areas_distinct": [
+    [
+     0,
+     0,
+     15,
+     15
+    ],
+    [
+     2,
+     2,
+     13,
+     13
+    ]
+   ],
+   "patrol_areas_distinct": [
+    [
+     0,
+     0,
+     15,
+     15
+    ]
+   ],
+   "pond_topleft_freq": {
+    "1,1": 0.249,
+    "1,11": 0.248,
+    "11,1": 0.2555,
+    "11,11": 0.2475
+   }
+  },
+  "smell": {
+   "any_channel0_smell_in_range_at_a_random_cell": 1.0,
+   "d=2": {
+    "n_cells": 73615,
+    "points_to_nearest": 0.9592066834204985,
+    "chance": 0.43241074056464857,
+    "smell_in_range": 1.0
+   },
+   "d=5": {
+    "n_cells": 48489,
+    "points_to_nearest": 0.8930272845387613,
+    "chance": 0.5260041796421183,
+    "smell_in_range": 1.0
+   },
+   "d=10": {
+    "n_cells": 7502,
+    "points_to_nearest": 0.9610770461210344,
+    "chance": 0.5541189016262353,
+    "smell_in_range": 1.0
+   },
+   "d=15": {
+    "n_cells": 360,
+    "points_to_nearest": 1.0,
+    "chance": 0.6703703703703711,
+    "smell_in_range": 1.0
+   }
+  },
+  "walk": {
+   "start_to_pond_mean": 9.273,
+   "p50": 9.0,
+   "p95": 19.0,
+   "max": 22
+  },
+  "png": "/media/nas01/projects/Interoceptive-AI/grid_world_pain/.claude/worktrees/thirst/tmp/20261001_thirst_task/layout_g15sW.png"
+ },
+ "g15s5": {
+  "config": "configs/environment/experiment/thirst/pond_thirst_15x15_smell5.yaml",
+  "load": {
+   "grid": "15x15",
+   "sensor_radius": 5.0,
+   "decay_power": 1.0,
+   "pond_size": [
+    3,
+    3
+   ],
+   "pond_table_0based": [
+    [
+     1,
+     1
+    ],
+    [
+     1,
+     11
+    ],
+    [
+     11,
+     1
+    ],
+    [
+     11,
+     11
+    ]
+   ],
+   "pond_cell_property": [
+    0.111111,
+    0.0,
+    0.0,
+    0.0,
+    0.0
+   ],
+   "pond_total_smell": [
+    1.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0
+   ],
+   "obs_breakdown": {
+    "Satiation": 1,
+    "Body Temperature": 1,
+    "Hydration": 1,
+    "Interoceptive Nociception": 1,
+    "Extero Nociception": 1,
+    "Thermoception": 5,
+    "Olfaction": 25,
+    "Collision": 5,
+    "Proprioception": 6,
+    "Visual": 13
+   },
+   "obs_width_breakdown": 59,
+   "obs_width_real": 59,
+   "noise_enabled": false,
+   "noise_missing_for_breakdown": [],
+   "noise_order_same_as_breakdown_INFO_ONLY_lookup_is_by_name": false,
+   "max_steps": 500
+  },
+  "placement": {
+   "resets": 2000,
+   "fallback_signature_active_outside_own_area": 0.0,
+   "active_slots_at_0_0_per_reset": 0.2995,
+   "active_slots_at_0_0_expected_if_uniform": 0.27856222222222227,
+   "active_slots_at_other_corners_mean": 0.30666666666666664,
+   "resets_with_2plus_active_at_0_0": 0.0,
+   "inactive_slots_all_parked_off_grid": true,
+   "overlap_two_active_share_a_cell": 0.0,
+   "any_active_on_pond": 0.0,
+   "agent_starts_on_pond": 0.0,
+   "agent_starts_on_burning_fire": 0.0215,
+   "active_fire_pairs_closer_than_separation": 0.0,
+   "active_counts_mean": {
+    "food": 5.4445,
+    "ambushers": 15.9245,
+    "fires": 4.515,
+    "animals": 5.056
+   },
+   "slots_total": 103,
+   "spawn_areas_distinct": [
+    [
+     0,
+     0,
+     15,
+     15
+    ],
+    [
+     2,
+     2,
+     13,
+     13
+    ]
+   ],
+   "patrol_areas_distinct": [
+    [
+     0,
+     0,
+     15,
+     15
+    ]
+   ],
+   "pond_topleft_freq": {
+    "1,1": 0.249,
+    "1,11": 0.248,
+    "11,1": 0.2555,
+    "11,11": 0.2475
+   }
+  },
+  "smell": {
+   "any_channel0_smell_in_range_at_a_random_cell": 0.8861401553644861,
+   "d=2": {
+    "n_cells": 73615,
+    "points_to_nearest": 0.9371731304761258,
+    "chance": 0.43241074056464857,
+    "smell_in_range": 1.0
+   },
+   "d=5": {
+    "n_cells": 48489,
+    "points_to_nearest": 0.8962238858297759,
+    "chance": 0.5260041796421183,
+    "smell_in_range": 1.0
+   },
+   "d=10": {
+    "n_cells": 7502,
+    "points_to_nearest": 0.0,
+    "chance": 0.5541189016262353,
+    "smell_in_range": 0.0
+   },
+   "d=15": {
+    "n_cells": 360,
+    "points_to_nearest": 0.0,
+    "chance": 0.6703703703703711,
+    "smell_in_range": 0.0
+   }
+  },
+  "walk": {
+   "start_to_pond_mean": 9.273,
+   "p50": 9.0,
+   "p95": 19.0,
+   "max": 22
+  },
+  "png": "/media/nas01/projects/Interoceptive-AI/grid_world_pain/.claude/worktrees/thirst/tmp/20261001_thirst_task/layout_g15s5.png"
+ },
+ "g15s3": {
+  "config": "configs/environment/experiment/thirst/pond_thirst_15x15_smell3.yaml",
+  "load": {
+   "grid": "15x15",
+   "sensor_radius": 3.0,
+   "decay_power": 1.0,
+   "pond_size": [
+    3,
+    3
+   ],
+   "pond_table_0based": [
+    [
+     1,
+     1
+    ],
+    [
+     1,
+     11
+    ],
+    [
+     11,
+     1
+    ],
+    [
+     11,
+     11
+    ]
+   ],
+   "pond_cell_property": [
+    0.111111,
+    0.0,
+    0.0,
+    0.0,
+    0.0
+   ],
+   "pond_total_smell": [
+    1.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0
+   ],
+   "obs_breakdown": {
+    "Satiation": 1,
+    "Body Temperature": 1,
+    "Hydration": 1,
+    "Interoceptive Nociception": 1,
+    "Extero Nociception": 1,
+    "Thermoception": 5,
+    "Olfaction": 25,
+    "Collision": 5,
+    "Proprioception": 6,
+    "Visual": 13
+   },
+   "obs_width_breakdown": 59,
+   "obs_width_real": 59,
+   "noise_enabled": false,
+   "noise_missing_for_breakdown": [],
+   "noise_order_same_as_breakdown_INFO_ONLY_lookup_is_by_name": false,
+   "max_steps": 500
+  },
+  "placement": {
+   "resets": 2000,
+   "fallback_signature_active_outside_own_area": 0.0,
+   "active_slots_at_0_0_per_reset": 0.2995,
+   "active_slots_at_0_0_expected_if_uniform": 0.27856222222222227,
+   "active_slots_at_other_corners_mean": 0.30666666666666664,
+   "resets_with_2plus_active_at_0_0": 0.0,
+   "inactive_slots_all_parked_off_grid": true,
+   "overlap_two_active_share_a_cell": 0.0,
+   "any_active_on_pond": 0.0,
+   "agent_starts_on_pond": 0.0,
+   "agent_starts_on_burning_fire": 0.0215,
+   "active_fire_pairs_closer_than_separation": 0.0,
+   "active_counts_mean": {
+    "food": 5.4445,
+    "ambushers": 15.9245,
+    "fires": 4.515,
+    "animals": 5.056
+   },
+   "slots_total": 103,
+   "spawn_areas_distinct": [
+    [
+     0,
+     0,
+     15,
+     15
+    ],
+    [
+     2,
+     2,
+     13,
+     13
+    ]
+   ],
+   "patrol_areas_distinct": [
+    [
+     0,
+     0,
+     15,
+     15
+    ]
+   ],
+   "pond_topleft_freq": {
+    "1,1": 0.249,
+    "1,11": 0.248,
+    "11,1": 0.2555,
+    "11,11": 0.2475
+   }
+  },
+  "smell": {
+   "any_channel0_smell_in_range_at_a_random_cell": 0.6914814217129044,
+   "d=2": {
+    "n_cells": 73615,
+    "points_to_nearest": 0.9280309719486518,
+    "chance": 0.43241074056464857,
+    "smell_in_range": 1.0
+   },
+   "d=5": {
+    "n_cells": 48489,
+    "points_to_nearest": 0.4075151065190043,
+    "chance": 0.5260041796421183,
+    "smell_in_range": 0.4075151065190043
+   },
+   "d=10": {
+    "n_cells": 7502,
+    "points_to_nearest": 0.0,
+    "chance": 0.5541189016262353,
+    "smell_in_range": 0.0
+   },
+   "d=15": {
+    "n_cells": 360,
+    "points_to_nearest": 0.0,
+    "chance": 0.6703703703703711,
+    "smell_in_range": 0.0
+   }
+  },
+  "walk": {
+   "start_to_pond_mean": 9.273,
+   "p50": 9.0,
+   "p95": 19.0,
+   "max": 22
+  },
+  "png": "/media/nas01/projects/Interoceptive-AI/grid_world_pain/.claude/worktrees/thirst/tmp/20261001_thirst_task/layout_g15s3.png"
+ },
+ "g20sW": {
+  "config": "configs/environment/experiment/thirst/pond_thirst_20x20.yaml",
+  "load": {
+   "grid": "20x20",
+   "sensor_radius": 40.0,
+   "decay_power": 1.0,
+   "pond_size": [
+    4,
+    4
+   ],
+   "pond_table_0based": [
+    [
+     1,
+     1
+    ],
+    [
+     1,
+     15
+    ],
+    [
+     15,
+     1
+    ],
+    [
+     15,
+     15
+    ]
+   ],
+   "pond_cell_property": [
+    0.0625,
+    0.0,
+    0.0,
+    0.0,
+    0.0
+   ],
+   "pond_total_smell": [
+    1.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0
+   ],
+   "obs_breakdown": {
+    "Satiation": 1,
+    "Body Temperature": 1,
+    "Hydration": 1,
+    "Interoceptive Nociception": 1,
+    "Extero Nociception": 1,
+    "Thermoception": 5,
+    "Olfaction": 25,
+    "Collision": 5,
+    "Proprioception": 6,
+    "Visual": 13
+   },
+   "obs_width_breakdown": 59,
+   "obs_width_real": 59,
+   "noise_enabled": false,
+   "noise_missing_for_breakdown": [],
+   "noise_order_same_as_breakdown_INFO_ONLY_lookup_is_by_name": false,
+   "max_steps": 500
+  },
+  "placement": {
+   "resets": 2000,
+   "fallback_signature_active_outside_own_area": 0.0,
+   "active_slots_at_0_0_per_reset": 0.314,
+   "active_slots_at_0_0_expected_if_uniform": 0.27342875,
+   "active_slots_at_other_corners_mean": 0.29916666666666664,
+   "resets_with_2plus_active_at_0_0": 0.0,
+   "inactive_slots_all_parked_off_grid": true,
+   "overlap_two_active_share_a_cell": 0.0,
+   "any_active_on_pond": 0.0,
+   "agent_starts_on_pond": 0.0,
+   "agent_starts_on_burning_fire": 0.023,
+   "active_fire_pairs_closer_than_separation": 0.0,
+   "active_counts_mean": {
+    "food": 10.0665,
+    "ambushers": 27.636,
+    "fires": 8.0435,
+    "animals": 7.8955
+   },
+   "slots_total": 180,
+   "spawn_areas_distinct": [
+    [
+     0,
+     0,
+     20,
+     20
+    ],
+    [
+     2,
+     2,
+     18,
+     18
+    ]
+   ],
+   "patrol_areas_distinct": [
+    [
+     0,
+     0,
+     20,
+     20
+    ]
+   ],
+   "pond_topleft_freq": {
+    "1,1": 0.249,
+    "1,15": 0.248,
+    "15,1": 0.2555,
+    "15,15": 0.2475
+   }
+  },
+  "smell": {
+   "any_channel0_smell_in_range_at_a_random_cell": 1.0,
+   "d=2": {
+    "n_cells": 129497,
+    "points_to_nearest": 0.9457593612207232,
+    "chance": 0.4206918564394035,
+    "smell_in_range": 1.0
+   },
+   "d=5": {
+    "n_cells": 89538,
+    "points_to_nearest": 0.863019053362818,
+    "chance": 0.5223294392697311,
+    "smell_in_range": 1.0
+   },
+   "d=10": {
+    "n_cells": 11112,
+    "points_to_nearest": 0.9244960403167747,
+    "chance": 0.5729316654667601,
+    "smell_in_range": 1.0
+   },
+   "d=15": {
+    "n_cells": 1154,
+    "points_to_nearest": 0.9601386481802426,
+    "chance": 0.5903379549393419,
+    "smell_in_range": 1.0
+   }
+  },
+  "walk": {
+   "start_to_pond_mean": 12.6555,
+   "p50": 12.0,
+   "p95": 25.0,
+   "max": 30
+  },
+  "png": "/media/nas01/projects/Interoceptive-AI/grid_world_pain/.claude/worktrees/thirst/tmp/20261001_thirst_task/layout_g20sW.png"
+ },
+ "g20s5": {
+  "config": "configs/environment/experiment/thirst/pond_thirst_20x20_smell5.yaml",
+  "load": {
+   "grid": "20x20",
+   "sensor_radius": 5.0,
+   "decay_power": 1.0,
+   "pond_size": [
+    4,
+    4
+   ],
+   "pond_table_0based": [
+    [
+     1,
+     1
+    ],
+    [
+     1,
+     15
+    ],
+    [
+     15,
+     1
+    ],
+    [
+     15,
+     15
+    ]
+   ],
+   "pond_cell_property": [
+    0.0625,
+    0.0,
+    0.0,
+    0.0,
+    0.0
+   ],
+   "pond_total_smell": [
+    1.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0
+   ],
+   "obs_breakdown": {
+    "Satiation": 1,
+    "Body Temperature": 1,
+    "Hydration": 1,
+    "Interoceptive Nociception": 1,
+    "Extero Nociception": 1,
+    "Thermoception": 5,
+    "Olfaction": 25,
+    "Collision": 5,
+    "Proprioception": 6,
+    "Visual": 13
+   },
+   "obs_width_breakdown": 59,
+   "obs_width_real": 59,
+   "noise_enabled": false,
+   "noise_missing_for_breakdown": [],
+   "noise_order_same_as_breakdown_INFO_ONLY_lookup_is_by_name": false,
+   "max_steps": 500
+  },
+  "placement": {
+   "resets": 2000,
+   "fallback_signature_active_outside_own_area": 0.0,
+   "active_slots_at_0_0_per_reset": 0.314,
+   "active_slots_at_0_0_expected_if_uniform": 0.27342875,
+   "active_slots_at_other_corners_mean": 0.29916666666666664,
+   "resets_with_2plus_active_at_0_0": 0.0,
+   "inactive_slots_all_parked_off_grid": true,
+   "overlap_two_active_share_a_cell": 0.0,
+   "any_active_on_pond": 0.0,
+   "agent_starts_on_pond": 0.0,
+   "agent_starts_on_burning_fire": 0.023,
+   "active_fire_pairs_closer_than_separation": 0.0,
+   "active_counts_mean": {
+    "food": 10.0665,
+    "ambushers": 27.636,
+    "fires": 8.0435,
+    "animals": 7.8955
+   },
+   "slots_total": 180,
+   "spawn_areas_distinct": [
+    [
+     0,
+     0,
+     20,
+     20
+    ],
+    [
+     2,
+     2,
+     18,
+     18
+    ]
+   ],
+   "patrol_areas_distinct": [
+    [
+     0,
+     0,
+     20,
+     20
+    ]
+   ],
+   "pond_topleft_freq": {
+    "1,1": 0.249,
+    "1,15": 0.248,
+    "15,1": 0.2555,
+    "15,15": 0.2475
+   }
+  },
+  "smell": {
+   "any_channel0_smell_in_range_at_a_random_cell": 0.8966879349837779,
+   "d=2": {
+    "n_cells": 129497,
+    "points_to_nearest": 0.9373190112512259,
+    "chance": 0.4206918564394035,
+    "smell_in_range": 1.0
+   },
+   "d=5": {
+    "n_cells": 89538,
+    "points_to_nearest": 0.8879023431392258,
+    "chance": 0.5223294392697311,
+    "smell_in_range": 1.0
+   },
+   "d=10": {
+    "n_cells": 11112,
+    "points_to_nearest": 0.0,
+    "chance": 0.5729316654667601,
+    "smell_in_range": 0.0
+   },
+   "d=15": {
+    "n_cells": 1154,
+    "points_to_nearest": 0.0,
+    "chance": 0.5903379549393419,
+    "smell_in_range": 0.0
+   }
+  },
+  "walk": {
+   "start_to_pond_mean": 12.6555,
+   "p50": 12.0,
+   "p95": 25.0,
+   "max": 30
+  },
+  "png": "/media/nas01/projects/Interoceptive-AI/grid_world_pain/.claude/worktrees/thirst/tmp/20261001_thirst_task/layout_g20s5.png"
+ },
+ "g20s3": {
+  "config": "configs/environment/experiment/thirst/pond_thirst_20x20_smell3.yaml",
+  "load": {
+   "grid": "20x20",
+   "sensor_radius": 3.0,
+   "decay_power": 1.0,
+   "pond_size": [
+    4,
+    4
+   ],
+   "pond_table_0based": [
+    [
+     1,
+     1
+    ],
+    [
+     1,
+     15
+    ],
+    [
+     15,
+     1
+    ],
+    [
+     15,
+     15
+    ]
+   ],
+   "pond_cell_property": [
+    0.0625,
+    0.0,
+    0.0,
+    0.0,
+    0.0
+   ],
+   "pond_total_smell": [
+    1.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0
+   ],
+   "obs_breakdown": {
+    "Satiation": 1,
+    "Body Temperature": 1,
+    "Hydration": 1,
+    "Interoceptive Nociception": 1,
+    "Extero Nociception": 1,
+    "Thermoception": 5,
+    "Olfaction": 25,
+    "Collision": 5,
+    "Proprioception": 6,
+    "Visual": 13
+   },
+   "obs_width_breakdown": 59,
+   "obs_width_real": 59,
+   "noise_enabled": false,
+   "noise_missing_for_breakdown": [],
+   "noise_order_same_as_breakdown_INFO_ONLY_lookup_is_by_name": false,
+   "max_steps": 500
+  },
+  "placement": {
+   "resets": 2000,
+   "fallback_signature_active_outside_own_area": 0.0,
+   "active_slots_at_0_0_per_reset": 0.314,
+   "active_slots_at_0_0_expected_if_uniform": 0.27342875,
+   "active_slots_at_other_corners_mean": 0.29916666666666664,
+   "resets_with_2plus_active_at_0_0": 0.0,
+   "inactive_slots_all_parked_off_grid": true,
+   "overlap_two_active_share_a_cell": 0.0,
+   "any_active_on_pond": 0.0,
+   "agent_starts_on_pond": 0.0,
+   "agent_starts_on_burning_fire": 0.023,
+   "active_fire_pairs_closer_than_separation": 0.0,
+   "active_counts_mean": {
+    "food": 10.0665,
+    "ambushers": 27.636,
+    "fires": 8.0435,
+    "animals": 7.8955
+   },
+   "slots_total": 180,
+   "spawn_areas_distinct": [
+    [
+     0,
+     0,
+     20,
+     20
+    ],
+    [
+     2,
+     2,
+     18,
+     18
+    ]
+   ],
+   "patrol_areas_distinct": [
+    [
+     0,
+     0,
+     20,
+     20
+    ]
+   ],
+   "pond_topleft_freq": {
+    "1,1": 0.249,
+    "1,15": 0.248,
+    "15,1": 0.2555,
+    "15,15": 0.2475
+   }
+  },
+  "smell": {
+   "any_channel0_smell_in_range_at_a_random_cell": 0.6939985722909369,
+   "d=2": {
+    "n_cells": 129497,
+    "points_to_nearest": 0.9210406418681514,
+    "chance": 0.4206918564394035,
+    "smell_in_range": 1.0
+   },
+   "d=5": {
+    "n_cells": 89538,
+    "points_to_nearest": 0.4233063057026067,
+    "chance": 0.5223294392697311,
+    "smell_in_range": 0.4233063057026067
+   },
+   "d=10": {
+    "n_cells": 11112,
+    "points_to_nearest": 0.0,
+    "chance": 0.5729316654667601,
+    "smell_in_range": 0.0
+   },
+   "d=15": {
+    "n_cells": 1154,
+    "points_to_nearest": 0.0,
+    "chance": 0.5903379549393419,
+    "smell_in_range": 0.0
+   }
+  },
+  "walk": {
+   "start_to_pond_mean": 12.6555,
+   "p50": 12.0,
+   "p95": 25.0,
+   "max": 30
+  },
+  "png": "/media/nas01/projects/Interoceptive-AI/grid_world_pain/.claude/worktrees/thirst/tmp/20261001_thirst_task/layout_g20s3.png"
+ }
+}

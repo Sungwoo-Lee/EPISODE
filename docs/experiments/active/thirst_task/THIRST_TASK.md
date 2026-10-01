@@ -10,11 +10,13 @@ develop_link: docs/develop/active/thirst/THIRST_WATER_PLAN.md
 
 # Thirst task at three map sizes and three smell reaches
 
-> **Status**: DESIGNED 2026-10-01 (experiment-designer). Configs written and checked on real
-> resets (§6). Nothing launched; no nodes chosen. Needs `env-config-reviewer`, `plan-reviewer`
-> and the pre-launch PI consultation before the user authorizes a launch.
-> **Branch**: `v5.0`, worktree `.claude/worktrees/thirst` (water exists only there). Launch path
-> and output locations as in [[THIRST_PILOT]] §2.5.
+> **Status**: DESIGNED 2026-10-01, **Revision 1** the same day (answers the plan review and the
+> config review; §R1). Configs written and checked on real resets (§6). Nothing launched; no nodes
+> chosen. Before a launch: plan-reviewer re-check of Revision 1, the pre-launch PI consultation,
+> and the user's go.
+> **Code**: frozen at the pinned launch commit `PIN_SHA_SHORT` and run from the detached worktree
+> `.claude/worktrees/thirst-runs` (§9.3). Development continues in `.claude/worktrees/thirst`
+> (branch `v5.0`). Outputs go to the shared folder, as in [[THIRST_PILOT]] §2.5.
 > **Related**: [[THIRST_PILOT]] (level 06 is learnable; source of the speed and seed-spread
 > numbers) · [[THIRST_WATER_PLAN]] (how water was built; Revision 2 = the pond smells only of
 > food) · [[STUDY_PLAN]] in `context_exploration/` (larger worlds and smell reach, ordinary agent
@@ -47,8 +49,37 @@ episode**, never in reward.
 
 **What it can and cannot show.** One run per agent per world is a **screen**. In the level-06
 pilot, three runs of the same agent differed by about 2.6 % in survival, so a difference between
-two single runs is only readable when it is larger than about 6 %. Any world where the modulator
-looks ahead by that much is a **lead**, and gets two more seeds before anything is claimed (§5.4).
+two single runs is only readable when it is larger than about 6 %, and that noise figure was
+measured on the 10×10 map only. Any world where the modulated agent is ahead **or behind** by that
+much is a **lead**: it gets two more seeds for both agents, under a decision rule and a compute cap
+written down now (§5.4), before anything is claimed. The size and smell-reach patterns are
+described, never tested, at one seed.
+
+---
+
+## R1. Revision 1 — response to review (2026-10-01)
+
+Two reviews of the first version (commit `c631d8fa`) are kept intact at the end of this doc and
+in `docs/reviews/`: the plan review ([[plan_thirst_task]], verdict NOT READY on one Critical
+finding) and the config review ([[env_config_review_thirst_task]], safe to launch, one Moderate).
+Every finding is answered in the body; this table says where.
+
+| Finding | Answer | Where |
+|---|---|---|
+| Plan C1 🔴 / config M1 🟡: no code freeze | All 18 runs, every relaunch and every follow-up seed run from a **separate frozen worktree**, `.claude/worktrees/thirst-runs`, detached at one pinned launch commit (`PIN_SHA_SHORT`, the commit of this revision). Admin creates it with `git worktree add --detach`. Nobody edits it; it is removed only after the last run, follow-ups included, has ended and its outputs are confirmed in the shared folder. The launch script `cd`s there; the gate checks that `src` resolves under `thirst-runs`, that HEAD equals the pinned commit, and that no tracked file is modified. Gate tested: it fails on a wrong commit and on a modified tree, and passes its import checks. Pilot pre-flight and validity checks carried over, plus a check that each saved config has the Revision-2 smell and the cell's own size, pond and reach. The main worktree stays free for the placement fixes; a line in [[PLACEMENT_FIXES_PLAN]] K0 says the placement work never touches `thirst-runs` | §3.4, §9.2, §9.3, §7 |
+| Plan M1: stop timing undefined | Stop boundary b\* is defined on data up to the 1 M mark; `S_final` and Δ are read on (b\*−1 M, b\*] for both runs whatever happens after. Checker = this session, polling WandB at least hourly. Stop = one `SIGINT` per run via `./terminate_command.py <NODE> "wandb-name <TAG>" --yes`, sent to both agents of the world at the first check after the rule fires. A trailing modulated run may stop short of its partner's count; both counts are recorded | §4 |
+| Plan M2: "has learned" on survival only; a falling curve passes | "Has learned" also needs the thirst-death share under 0.10 in the latest block. The plateau needs each of the last two rises to be ≥ 0 and < 1 %. Two falls in a row are a flag | §4, §7 |
+| Plan M3: follow-up not pre-registered | Leads of ≥ 6 % **in either direction** trigger seeds 43 and 44 for both agents. Three-seed decision rule: both new seeds have the lead's sign, and the three-seed mean is ≥ 6 %. Seed 42 is kept, with the selection caveat stated; the unselected two-seed mean is reported as the effect size. Cap: 300 GPU-hours, leads taken largest first. About one false lead is expected | §5.3, §5.4 |
+| Plan M4: claims stronger than one seed allows | The size × reach refutation test is removed. §5.2 is descriptive only: at most "candidate for follow-up", never "supported". The exploratory pattern in §5.3 is "consistent / not consistent", and "not assessed" when there are no leads. The noise figure is marked 10×10-only, and the "≥ 10 % readable" line is made conditional on it | §5.2, §5.3, §5.4, Purpose |
+| Plan M5: only episode-matched Δ | Equal-environment-steps read-out pre-registered beside every episode-matched number. A lead it does not support is labelled experience-sensitive | §5, §5.3, §3.5 |
+| Plan M6: short reach also cuts predator, rabbit and bush odour | Stated. Injury added to the expected pattern (higher injury share at reach 5 and 3, at every size) | §3.3, §3.5, §5.2 |
+| Plan M7: drinking and start hydration are not in the log | Stored-episode plan modelled on pilot §4.2: collector run from `thirst-runs`; checkpoints nearest 2 M, 4 M and b\*; drinking bouts; survival by start-hydration band; pond integrity checks; and the tools that must not be used | §5.5 |
+| Plan L1: food regrowth on a fire / bush | Row added (≈ 2 % / ≈ 7 %) | §3.5 |
+| Plan L2: evidence only in gitignored `tmp/` | Scripts, JSON, tables and maps committed in `checks/` next to this doc | §6 |
+| Config O1 ❓: the (0,0) stop rule cannot fire | Reworded as an **accepted, unmonitored risk** (measured 0 / 2,000 resets per world), with a post-hoc check on the stored evaluation episodes | §3.5, §7, §5.5 |
+| Config L1: pond near-field smell weakens with size | Row added with the reviewer's numbers | §3.5 |
+| Config L2: registry wording | Entry tightened: `water.size` / `candidates` are set only in the two whole-map files | `CONFIG_CRITICAL_SETTINGS.md` |
+| Config L3: frozen copies of the level-05 lists | No change. §9.3 notes that the frozen worktree also freezes `basic/` for the series | §9.3 |
 
 ---
 
@@ -155,6 +186,13 @@ Euclidean maximum gives an identical world, so "whole map" is exact. The short r
 use the same semantics as the context-exploration worlds' "smell range 5 / 3". A source up to
 reach + 1 squares away can register on the nearest neighbour sample.
 
+**Short reach cuts every smell, not only food and pond (Revision 1, M6).** One `sensor_radius`
+feeds the resource, animal, obstacle and water kernels alike (`sensor.py:37-51`). At reach 5 or 3
+the agent also loses the odour of predators (`[0, 0.7, 0.5, 0, 0]`), rabbits (`[0, 0.5, 0.7, 0,
+0]`) and bushes (channel 3) beyond that distance. Sight (a 13-cell diamond, radius 2) is
+unchanged. So a short-reach world is harder in two ways: finding food and water, and getting early
+warning of predators (and of the bushes that are refuges from them). §5.2 predicts both.
+
 ### 3.4 Agents and fixed factors
 
 - Agents: `configs/models/recurrent_ppo/nmn_input_site_grid_gaenorm/nmngaenorm_t1none.yaml`
@@ -165,58 +203,103 @@ reach + 1 squares away can register on the nearest neighbour sample.
 - Launch flags: `--episodes 10000000 --log-interval 10`; no `--seed`, `--num-envs` or
   `--checkpoint-frequency` (config-owned).
 - Perceptual noise: off (level 06 inherits level 05's noise-off setting; noise is level 07).
-- Code: `v5.0` worktree HEAD at launch, through the pilot's code-origin gate.
+- Code: **frozen** at one pinned launch commit, run from a separate detached worktree
+  `.claude/worktrees/thirst-runs` that nobody edits (Revision 1, §9.3). Every run, relaunch and
+  follow-up seed uses it.
 
 ### 3.5 Confounds and limits
 
 | Confound | Effect | Handling |
 |---|---|---|
 | One seed per condition | Single-run differences under ~6 % are noise | §5.4: leads get two more seeds; nothing is claimed from one run |
-| Episode budget, not step budget | Worlds with shorter episodes get less experience | Report env steps with every comparison; plateau rule (§4) |
+| Episode budget, not step budget | Worlds with shorter episodes get less experience; within a world the longer-surviving agent gets more PPO updates per episode (pilot: 25–31 % less experience at equal episodes) | Equal-environment-steps read-out pre-registered beside every episode-matched one (§5, M5); plateau rule (§4) |
 | Early stop at different points per world | Final values come from different budgets | Both agents of a world stop together (§4); a common 4 M read-out is also reported |
-| Short reach changes the information, not the density | It is the intended manipulation | — |
+| Short reach changes the information, not the density | It is the intended manipulation; it removes predator, rabbit and bush odour as well as food and pond odour (§3.3) | Death causes read three ways: thirst, starvation, injury (§5.2) |
+| The pond's near-field smell weakens with size (the per-cell weight is 1/(h·w); config review L1) | "One food item" holds far away only. On the pond the field is 1.18 / 0.84 / 0.65 (2×2 / 3×3 / 4×4) against 2.0 on a food item; one step off its edge 0.66 / 0.53 / 0.43 against 1.0 | Decided design (D3); stated so a size effect on drinking is not read as a learning difference alone |
+| Regrown food lands on a fire (≈ 2 %) or a bush (≈ 7 %) (PLACEMENT_FIXES_PLAN, measured on 10×10 levels 05/06) | Some regrown food is unreachable alive or sits in a refuge; same for both agents of a world | Known, accepted for the series (the code is frozen without the fix, §9.3) |
 | Larger maps also have more predators in absolute number | Intended (density held) | Death-cause shares reported per world |
 | Pond start effect: random start hydration [0, 200) kills some episodes early whatever the agent does | Same in every world, but walks to the pond are longer on big maps, so the early-thirst floor rises with size (§6.4) | Report survival by start-hydration band (as the pilot did) |
-| The (0,0) placement fallback (Known Bugs ~#117) cannot be proved unreachable at 15×15 and 20×20 (fires) | A world could silently differ from its YAML | Measured: §6.2 |
+| The (0,0) placement fallback (Known Bugs ~#117) cannot be proved unreachable at 15×15 and 20×20 (fires) | A world could silently differ from its YAML | Measured 0 / 2,000 resets (§6.2). **Accepted, unmonitored risk** in training (nothing logs it); post-hoc check on the stored evaluation episodes (§5.5) |
 
-## 4. Training budget and early-stopping rule (D7)
+## 4. Training budget and early-stopping rule (D7; Revision 1, M1 and M2)
 
-Every run is launched for **10,000,000 episodes**. The trainer has no built-in early stop; a
-graceful stop is a `SIGINT`/`SIGTERM` to the training process, which finishes the current
-iteration and exits (`train.py:136-145`, `:464-465`) **without** writing an extra checkpoint. The
-stop is therefore made just after a checkpoint, and that checkpoint is the run's final model.
+Every run is launched for **10,000,000 episodes**. The trainer has no built-in early stop. A
+graceful stop is one `SIGINT` to the training process: it finishes the current iteration and exits
+(`train.py:136-145`, `:464-465`, break at `:1661`) **without** writing an extra checkpoint. A second
+`SIGINT` force-quits, so the signal is sent **once**. Every checkpoint is kept
+(`max_checkpoints_to_keep: null`), so the model at any earlier boundary stays available.
 
-**Quantity.** `S(b)` = mean `Episode/Steps` (survival steps of the training policy, the logged
-episode rows) over 1-million-episode block b. Rewards are never read.
+**Quantity.** `S(b)` = mean `Episode/Steps` (survival steps of the training policy, weighted by
+`Episode/_window_n`, from the episode rows logged every 4,000 episodes) over the 1-million-episode
+block that ends at boundary b. `D(b)` = the thirst-death share (`Episode/Term_Dehydration`, same
+weighting) over that block. Rewards are never read.
 
-**Rule, evaluated at every 1 M-episode boundary from 4 M on (4 M, 5 M, …):**
+**Rule, evaluated at every 1 M-episode boundary from 4 M on (4 M, 5 M, …), on data up to that
+boundary only:**
 
-1. *Plateau, per run:* the last two block-to-block rises are both below 1 %:
-   `S(b)/S(b−1) − 1 < 0.01` and `S(b−1)/S(b−2) − 1 < 0.01`.
-2. *Has learned, per run:* `S(b) ≥ 1.5 × S(block 1)`. A run that is flat because it never
-   learned (the context-exploration sparse-food runs sat flat for 1.8 M episodes before learning
-   to eat) does not stop; it runs to 10 M and is flagged.
-3. *Joint stop, per world:* a world's two runs (ordinary and modulated) stop **together**, at the
-   first boundary where **both** satisfy 1 and 2. The modulator comparison inside a world is then
-   always at equal episodes. Worlds stop independently of each other.
+1. *Plateau, per run:* the last two block-to-block changes are both **rises of at least 0 and
+   under 1 %**: `0 ≤ S(b)/S(b−1) − 1 < 0.01` and `0 ≤ S(b−1)/S(b−2) − 1 < 0.01`. A falling curve
+   is not a plateau. **Two consecutive falls** are a flag to the user, not a stop.
+2. *Has learned, per run:* `S(b) ≥ 1.5 × S(1 M)` **and** `D(b) < 0.10`. Survival alone is not
+   enough: a run that has learned to eat but not yet to drink can sit flat at a respectable level.
+   A run that never satisfies rule 2 runs to 10 M and is flagged.
+3. *Joint stop, per world:* the **stop boundary b\*** of a world is the first boundary at which
+   **both** of its runs (ordinary and modulated) satisfy rules 1 and 2. Worlds stop independently.
 4. A run with NaN, a value explosion or a crash is not "stopped"; it is a failed run (§7).
+
+**What b\* fixes, whenever the signal actually lands.** The final model of each run is the
+checkpoint nearest b\* (checkpoint keys are the actual episode count at save time, e.g.
+`4000123`). `S_final` and every Δ use episodes **(b\*−1 M, b\*]** for both runs. Anything a run
+trains after b\* is ignored. Both agents of a world are therefore always compared on the same
+episode window, even though the ordinary agent runs about 20–25 % faster (§8) and will be past b\*
+when the rule can first be evaluated (it needs the modulated run's data up to b\*).
+
+**Who checks, how often, how the stop is sent.**
+- **Checker:** this design session ("Dev: thirst"), polling WandB **at least hourly** for the
+  whole series (a `/wake` loop). It applies rules 1–3 to the latest complete boundary of every
+  world and writes each decision (world, b\*, both runs' `S` and `D` for the last three blocks) as a
+  dated line in §10 before stopping anything.
+- **Stop:** at the first check after the rule fires for a world, **both** of its runs get one
+  `SIGINT`, sent from the main `thirst` worktree with the project's terminator, one call per run:
+
+  ```bash
+  ./terminate_command.py <NODE> "wandb-name <TAG>" --yes
+  ```
+
+  `<NODE>` and `<TAG>` from the manifest row (§9). The pattern is the full, unique tag after
+  `wandb-name` (no leading dashes, which `pkill` would read as an option); `--yes` skips the
+  prompt; no `--force` (that would send SIGTERM). The checker confirms afterwards that the log
+  ends with the trainer's normal shutdown and that no `train.py` process with that tag remains.
+- **Trailing run.** The modulated run may receive the stop before it has reached the ordinary
+  run's episode count, or the ordinary run may be well past b\*. That is expected. The manifest
+  records, per run, the episode count and environment-step count **at b\*** and **at the actual
+  stop**; only the b\* values enter the analysis.
 
 **Calibration of the 1 % line.** The ordinary agent on level 05 over 10 M episodes rose
 233 → 241 → 243 → 246 → 247 → 247 → 250 steps from 2 M to 9 M (about 1 % per 1 M from 4 M to
 7 M, 0–1 % after). The rule would stop such a run at about 6–8 M with roughly 2 % of survival
 still to come; that is accepted. It is a plateau test, not a convergence proof.
 
-**Who applies it.** `experiment-analyzer` (or the user) reads WandB at each 1 M boundary; the
-`training-runner` sends the stop signal. Expected saving: about 20–40 % of the GPU-hours in §8,
-not counted there.
+Expected saving: about 20–40 % of the GPU-hours in §8, not counted there.
 
 ## 5. Hypotheses and pre-registered read-outs
 
-**Primary dependent variable:** survival steps per episode, training policy, mean over the last
-1 M episodes before the stop (`S_final`), per run. Secondary: survival at the common 4 M
-read-out; death-cause shares (`Episode/Term_*`); drinking and eating rates; step-limit share;
-survival by start-hydration band; environment steps used. **Temporal evolution is mandatory**:
-every read-out is also shown per 1 M block over the whole run.
+**Primary dependent variable:** survival steps per episode, training policy, over episodes
+(b\*−1 M, b\*] (`S_final`, §4), per run. **Two read-outs of every comparison are pre-registered
+(Revision 1, M5):**
+
+- **Episode-matched** (primary for the trigger rule): `S_final` as above.
+- **Environment-steps-matched** (required beside every episode-matched number): the trainer logs
+  cumulative environment steps (`timesteps`) on the episode rows. For a pair of runs, `E*` = the
+  smaller of their two step counts at b\*; each run is read over the episodes logged while its
+  `timesteps` lies in (0.9 E\*, E\*]. For the size and reach costs (§5.2), `E*` is the smallest
+  step count at b\* among the ordinary runs being compared. Equal steps also means an equal number
+  of PPO updates (every iteration is 128 worlds × 128 steps).
+
+Secondary: survival at the common 4 M-episode read-out; death-cause shares (`Episode/Term_*`, all
+seven); step-limit share; environment steps used; and, from stored greedy episodes (§5.5),
+drinking rate and survival by start-hydration band. **Temporal evolution is mandatory**: every
+read-out is also shown per 1 M block over the whole run.
 
 ### 5.1 Learnability (every world, both agents)
 
@@ -224,63 +307,138 @@ every read-out is also shown per 1 M block over the whole run.
 own peak 1 M-block value (peak-referenced, as the pilot recommended, not first-block-referenced);
 (b) no single cause of death above 0.60 of deaths in the final block; (c) over-drinking share
 below 0.10. *Prediction:* all nine worlds pass for the ordinary agent. A failure is a finding about
-that world (too hard at this budget), not about the modulator.
+that world (too hard at this budget), not about the modulator. A borderline world is reported to
+the user; it gets no automatic extra seeds.
 
-### 5.2 Cost of size and reach (ordinary agent; descriptive, one seed)
+### 5.2 Cost of size and reach (ordinary agent; descriptive only)
 
-*Predictions, made before training:*
-- **Size:** `S_final` falls with map size; 20×20 whole-map at 0.80–0.95 of 10×10 whole-map (C4,
-  without water, reached 0.88 of its 10×10 reference at 5 M).
-- **Reach at 10×10:** small cost; 5 and 3 within 10 % of whole-map (context-exploration
+**This single-seed series cannot test these expectations; it can only describe the pattern.**
+A difference between two size or reach costs is a difference of differences, with a seed noise of
+about 2 × 2.6 ≈ 5 % at 10×10 (§5.4), so no outcome here is "supported" or "refuted". Each
+expectation below is read as *consistent* or *not consistent* with the pattern, and any pattern
+that matters is at most a **candidate for follow-up** (more seeds under a new addendum).
+
+*Expectations, written before training:*
+- **Size:** `S_final` falls with map size; 20×20 whole-map at about 0.80–0.95 of 10×10 whole-map
+  (C4, without water, reached 0.88 of its 10×10 reference at 5 M).
+- **Reach at 10×10:** small cost; reach 5 and 3 within about 10 % of whole-map (context-exploration
   C2 / C6: 1.00 and 0.99 of the reference, with richer food).
-- **Reach × size:** the reach cost grows with size; on 20×20 the reach-3 world is at least 10 %
-  below whole-map. Reason, measured before training (§6.3): density is held, so *some* food or
-  pond smell is in range from about the same share of the map at every size (≈ 70 % at reach 3),
-  but the **pond's own** smell coverage at reach 3 falls from 37 % (10×10) to 14 % (20×20). The
-  predicted cost is therefore a thirst cost: more deaths by thirst, not by starvation.
-- *Refuted* if the reach cost is no larger at 20×20 than at 10×10 (difference of costs under
-  6 %, or in the other direction), or if the extra cost at 20×20 reach 3 shows up as starvation
-  rather than thirst.
+- **Reach at larger sizes, by cause of death (Revision 1, M6: three-way, not two-way):**
+  - *Thirst:* the reach cost grows with size and shows up mainly as thirst deaths. Measured before
+    training (§6.3): some food or pond smell stays in range from about the same share of the map
+    at every size (≈ 70 % at reach 3), but the pond's own coverage at reach 3 falls from 37 %
+    (10×10) to 14 % (20×20).
+  - *Injury:* short reach also removes predator odour beyond 5 or 3 squares (§3.3), so the injury
+    share of deaths is expected **higher at reach 3 and 5 than at whole-map, at every size**, by
+    a similar amount at each size (predator density is held).
+  - *Starvation:* little change with reach (food-or-pond smell coverage is similar across sizes).
 
 ### 5.3 Modulated minus ordinary (the screen)
 
-`Δ(world) = S_final(modulated) / S_final(ordinary) − 1`, both read at the same stop point.
+`Δ(world) = S_final(modulated) / S_final(ordinary) − 1`, episode-matched at b\*; `Δ_E(world)`, the
+same ratio steps-matched (§5).
 
-- **Lead:** `Δ ≥ +6 %` in a world. (Noise basis: §5.4.)
-- **Exploratory hypothesis:** Δ is larger in harder worlds (bigger map, shorter reach). It is
-  *supported* if the leads, if any, fall in the 15×15 / 20×20 or reach-3 / reach-5 worlds and
-  Δ in the 10×10 whole-map world is under 6 %; *not supported* if leads appear only at 10×10
-  whole-map or Δ shows no ordering with difficulty.
-- **Null screen:** no world reaches +6 %. That says "no effect large enough to see with one
-  seed", **not** "no effect".
-- Also reported: `Δ ≤ −6 %` worlds (modulator worse), with the same caution.
+- **Lead:** `|Δ| ≥ 6 %` in a world, **in either direction** (modulator ahead or behind). Every lead
+  triggers the follow-up of §5.4. If `Δ_E` has the opposite sign or is under 3 % in magnitude, the
+  lead is labelled **experience-sensitive** (it may come from more updates rather than a better
+  policy); it is still followed up.
+- **Exploratory pattern** (Δ larger in harder worlds: bigger map, shorter reach). Read only
+  descriptively: the leads are *consistent* with it if every lead is in a harder world (15×15 or
+  20×20, or reach 5 or 3) and the 10×10 whole-map Δ is under 6 % in magnitude; *not consistent*
+  if a lead appears at 10×10 whole-map, or the Δs show no ordering with difficulty. **If there are
+  no leads, the pattern is not assessed** (absence of leads is not evidence for it). With one seed
+  it is never "supported": 8 of the 9 worlds count as harder, so one noise lead would satisfy it
+  about one time in three. At most it marks worlds as candidates for follow-up.
+- **Null screen:** no world reaches 6 %. That says "no effect large enough to see with one seed",
+  **not** "no effect".
 
-### 5.4 What one seed can and cannot show (D9)
+### 5.4 What one seed can and cannot show (D9; Revision 1, M3 and M4)
 
-The pilot's three seeds per agent on level 06 gave a survival spread (s.d.) of about 2.6 %. The
-difference between two independent single runs then has a spread of about √2 × 2.6 ≈ 3.7 %, so:
+**The noise figure and its limits.** The pilot's three seeds per agent gave a survival spread
+(s.d.) of about 2.6 %. That figure was measured **at 10×10 only**, on the older pond smell, at 2 M
+episodes, from 3 seeds (with 2 degrees of freedom its 95 % range is roughly 1.4–16 %). Whether the
+15×15 and 20×20 worlds are as quiet is unknown until the follow-up seeds run there. With
+σ = 2.6 %, the difference between two single runs has a spread of about √2 × 2.6 ≈ 3.7 %, so:
 
-- **Below about 6 %** (1.6 spreads) a difference is not interpretable; it is the size seed noise
-  produces routinely.
+- **Below about 6 %** (1.6 spreads) a difference is not interpretable.
 - **6–7 %** is a lead, not a finding; the conventional 95 % line for a two-run difference is
-  about 7.2 %.
-- Large effects (≥ 10 %), learnability failures, death-cause shifts and qualitative behaviour
-  changes are readable from one run.
-- One seed **cannot** support any modulator claim, any interaction claim, or any
-  "no difference" claim.
+  about 7.2 %. In the pilot's own world one seed pair already differed by +7.3 %.
+- **Expect false leads.** At σ = 2.6 %, a world with no true effect gives `|Δ| ≥ 6 %` about 10 %
+  of the time; across 9 worlds, the chance of at least one false lead is about 60 %, and about
+  one is expected. The follow-up exists to sort these out.
+- **Larger effects** (≥ 10 %), learnability failures and death-cause shifts are readable from one
+  run **at 10×10**; at 15×15 and 20×20 only if the follow-up seeds show a spread no larger than
+  10×10's.
+- One seed **cannot** support any modulator claim, any interaction claim, any size × reach claim,
+  or any "no difference" claim.
 
-**Follow-up, named now:** every world with a lead (§5.3), and any world whose learnability
-(§5.1) is borderline, gets **two more seeds (43, 44) for both agents**, from scratch, under a
-separate pre-registered addendum with the same stop rule. The pilot's 10×10 runs with seeds
-42–44 used the older pond smell (half food, half another channel) and stopped at 2 M episodes,
-so they are not reusable as extra seeds here.
+**Follow-up, pre-registered now.**
+- *Trigger:* every lead (§5.3, `|Δ| ≥ 6 %`, either sign) triggers **seeds 43 and 44 for both
+  agents** in that world: 4 new runs, from scratch, at the same pinned code (§9.3), same configs,
+  same budget and stop rule (joint stop per seed pair), `--seed 43` / `--seed 44`, tags
+  `rppo_thirst_<cell>_<agent>_s43` / `_s44`, group `thirst_task`, job type `followup`.
+- *Decision rule on 3 seeds:* the lead is **confirmed** when (i) `Δ` for seed 43 and for seed 44
+  both have the lead's sign, **and** (ii) the mean `Δ` over seeds 42, 43 and 44 is at least 6 % in
+  magnitude, in the lead's direction. Otherwise it is **not confirmed**. The same rule is applied
+  to `Δ_E` and reported; a lead confirmed on `Δ` but not on `Δ_E` is reported as such.
+- *Seed 42 and selection:* seed 42 stays in the three-seed analysis, but it was the run that
+  **selected** the world, so it overstates the effect (winner's curse). Condition (i) depends only
+  on the two unselected seeds, and the **mean of seeds 43 and 44 alone** is reported beside the
+  three-seed mean as the effect-size estimate. A confirmed lead is three-seed evidence in one world;
+  any wider modulator claim goes to the user and the PI first.
+- *Compute cap:* follow-ups may use at most **300 GPU-hours** (RTX 3090 basis, at the full 10 M
+  budget; §8 rates: about 61 GPU-h for a 10×10 world, 82 for 15×15, 127 for 20×20). Leads are
+  taken in order of `|Δ|`, largest first, while the next world still fits under the cap. Any
+  follow-up beyond the cap needs the user's decision.
+- The pilot's 10×10 runs with seeds 42–44 used the older pond smell and stopped at 2 M episodes,
+  so they are not reusable as extra seeds.
+
+### 5.5 Stored-episode analysis (Revision 1, M7; modelled on THIRST_PILOT §4.2)
+
+Drinking and start hydration are **not** in the training log (no `Episode/*` or `Bal_*` key
+records them), so they come from stored greedy-policy episodes.
+
+- **Collector:** `scripts/eval/traj_collect/collect_trajectories.py` **in the frozen
+  `thirst-runs` worktree**, run from there, on CPU. Per run, three checkpoints: the one nearest
+  2 M, the one nearest 4 M (the common read-out), and the one nearest b\* (final). Checkpoint keys
+  are actual episode counts, so list `models/` and pass the nearest key. `--episodes 10000`,
+  `--obs-precision float32`, `--seed-base 1000000` for every run, `--run` = the shared-folder run
+  directory, out-root `<shared>/results/analysis/thirst_task/`. Measure the first store's size
+  before running the other 53 (18 runs × 3).
+- **Computed per store** (as the pilot): start hydration (200 × the Hydration column at t = 0);
+  drinking steps (hydration rises; only the pond raises it), bouts per episode and steps per bout;
+  the no-drink deadline (1.6 × start hydration); cause of death, all seven codes, shares summing to
+  1; **survival by start-hydration band** (0–50, 50–100, 100–150, 150–200); and the walk from the
+  start cell to the pond.
+- **Pond recomputation and its integrity checks** (pilot R1): reset the environment from each
+  episode's `episode_seed` with the collector's key recipe, building parameters from the run's own
+  saved `models/config.yaml` through `apply_sensor_compat`, never from a worktree YAML. Check over
+  every episode that the recomputed start cell matches the store, and over every step that
+  "hydration rose" holds exactly when the agent stands on a recomputed pond cell. Any exception:
+  the pond-dependent numbers are not reported.
+- **Post-hoc (0,0) check** (config review O1): from the same recomputed resets, count episodes in
+  which an active campfire sits at (0,0) (outside its inset area) or any active entity lies
+  outside its spawn area. Expected 0. A non-zero count is reported with its rate; it does not
+  invalidate a run (§7).
+- Greedy-store numbers and training-log numbers are reported side by side and **never pooled**.
+- **Must not be used** (they drop death codes 6 and 7): `scripts/analysis/ladder/lad03_how_it_ends.py`,
+  `scripts/analysis/studies/context_exploration/part4_readout.py`,
+  `scripts/analysis/studies/level05_body_interactions/pilot_pick.py`; and no `v4.0` tool from the
+  shared folder may read these runs. Shared-folder batch tools that glob
+  `results/JAX_RecurrentPPO/` should exclude `*rppo_thirst_*` until `v5.0` is merged.
+- A reader placed under `scripts/` updates `docs/environment/SCRIPTS_DEPENDENCY_MAP.md` in the same
+  commit, and starts with a known-input test (a synthetic hydration trace with 2 bouts returns 2).
+  It is written in the main `thirst` worktree, never in `thirst-runs`.
 
 ## 6. Checks run before commit (2026-10-01)
 
 All checks use the trainer's own loader (`load_env_config` → `load_env_params`), the real
 `jax_reset`, and the real smell kernel, on the `v5.0` worktree **after** the Revision-2 commit.
-Scripts and raw output: `tmp/20261001_thirst_task/` in the worktree (`validate_worlds.py`,
-`validate_all.json`, `layout_<cell>.png`, `walltime.py`, `wandb_speed.py`, `wandb_cap.py`).
+Scripts and raw output are committed next to this doc, in `checks/` (Revision 1, L2):
+`validate_worlds.py`, `validate_all.json`, `validate_all_stdout.txt`, `tables.py` / `tables.md`
+(every table below is generated, not typed), `pond_reach.py`, `walltime.py`, `wandb_speed.py`,
+`wandb_cap.py`, `wandb_tags.py`, `make_smell_variants.py`, `layout_<cell>.png`. The scripts were run
+from `tmp/20261001_thirst_task/` in the worktree and still write there.
 
 **Precondition met.** The Revision-2 implementation commit `c33d29b1` ("the pond smells only of
 food") is on `v5.0`, and the committed `default.yaml` reads `water.properties: [1.0, 0.0, 0.0,
@@ -296,7 +454,7 @@ food") is on `v5.0`, and the committed `default.yaml` reads `water.properties: [
 | 3b. Short reach | Any food-or-pond smell in range from ≈ 90 % (reach 5) and ≈ 70 % (reach 3) of the map at every size; the **pond alone** from 64 / 35 / 23 % (reach 5) and 37 / 21 / 14 % (reach 3) at 10 / 15 / 20 |
 | 4. Episode cap | **500 stays** (§6.4) |
 | 5. Compute | 406 GPU-h on 3090s, 554 on 2080 Tis, full 10 M (§8) |
-| 6. Sample maps | `tmp/20261001_thirst_task/layout_<cell>.png`, one per world |
+| 6. Sample maps | `checks/layout_<cell>.png`, one per world |
 
 ### 6.1 Load (check 1)
 
@@ -450,20 +608,22 @@ episodes, before any early stop.
 ### 6.6 Sample maps (check 6)
 
 One start layout per world, with its channel-0 smell field beside it:
-`tmp/20261001_thirst_task/layout_<cell>.png` in the worktree (`g10sW` … `g20s3`; gitignored,
-regenerate with `validate_worlds.py`). The three reaches of one size share the same layout (smell
+`checks/layout_<cell>.png` next to this doc (`g10sW` … `g20s3`; regenerate with
+`validate_worlds.py`). The three reaches of one size share the same layout (smell
 reach does not enter the reset), so the nine images show three maps under three smell fields.
 
 ## 7. Failure-mode catalogue (decided in advance)
 
 | Outcome | Reading |
 |---|---|
-| NaN / value explosion / crash in one run | That run failed, not the world. Relaunch once from scratch with the same seed after `bug-curator` is consulted; a second failure in the same world is reported as a world-specific instability. |
+| A run fails a validity check (§9.3: gate, width, pinned commit, saved world settings) | The run is **invalid**, not a result: stopped, never analysed, relaunched from scratch at the same pinned commit after the launch path is fixed. |
+| NaN / value explosion / crash in one run | That run failed, not the world. Relaunch once from scratch with the same seed **at the same pinned commit** (§9.3) after `bug-curator` is consulted; a second failure in the same world is reported as a world-specific instability. |
 | A world fails learnability (§5.1) for the ordinary agent | A finding about the world at this budget. Its Δ is not read. |
 | Run still rising at 10 M (rule 1 never fired) | Report as "not plateaued"; Δ read at 10 M with that label. |
-| Rule 2 blocks a stop (never learned) | Run continues to 10 M; flagged; compare with the context-exploration sparse-food runs. |
+| Rule 2 blocks a stop (never learned: survival under 1.5 × its first block, or thirst deaths ≥ 0.10) | Run continues to 10 M; flagged; compare with the context-exploration sparse-food runs. |
+| Survival falls two blocks in a row (§4 rule 1) | Not a stop. Flag to the user with the per-block causes of death. |
 | Step-limit share in the final block above 0.5 in any world | Survival is ceiling-compressed there; Δ in that world is reported with the step-limit shares of both agents and read with caution. |
-| Placement backstop / (0,0) cases appear in training (not seen in §6.2) | Stop and report; the world differs from its YAML. |
+| (0,0) fallback in training (Known Bugs ~#117) | **Accepted, unmonitored risk** (config review O1). Training cannot detect it: nothing raises or logs it. Measured 0 in 2,000 resets per world (95 % upper bound ≈ 0.15 % of resets), and its likely form is one campfire parked in the corner. Checked **after the fact** on the stored evaluation episodes (§5.5). A non-zero count is reported with its rate and does not invalidate the runs. |
 | Modulated agent ahead everywhere by 3–5 % | Consistent with a small effect; below the screen's resolution; seeds decide. |
 
 ## 8. Compute (check 5)
@@ -521,7 +681,11 @@ the actual columns are filled by `training-runner` at launch; **no nodes are cho
 | 18 | planned | g20s3 modulated | `rppo_thirst_g20s3_t16quad_s42` | thirst_task | prod | 42 | — | — | — | — | — |
 
 **Card guidance (not an assignment).** The 20×20 runs are the long ones; if cards are mixed,
-put them on the faster cards. Pack node-first (CLAUDE.md, GPU spec).
+put them on the faster cards. Both agents of a world go on the same card class (§9.3). Pack
+node-first (CLAUDE.md, GPU spec).
+
+**At the stop (§4),** the checker adds to each row's Status cell: b\*, and the run's episode and
+environment-step counts at b\* and at the actual stop.
 
 ### 9.1 Configs
 
@@ -547,11 +711,47 @@ areas and counts changed; `blocks_animals: true` is kept on the bush and the tre
 
 ### 9.2 For the training-runner
 
-Use the pilot's launch path unchanged ([[THIRST_PILOT]] §2.5): the `/tmp` script `cd`s into the
-worktree, runs the code-origin gate, then runs `train.py` with every output sent to the shared
-folder. Per row, the final command of that script is:
+The launch path is the pilot's ([[THIRST_PILOT]] §2.5) with one change: the code comes from the
+**frozen worktree** `.claude/worktrees/thirst-runs` (§9.3), not from the development worktree.
+Every output still goes to the shared folder. The `/tmp` launch script, per row (fill `<GPU>`,
+`<ENV_CFG>`, `<AGENT_CFG>`, `<TAG>`, `<TS>` from §9 / §9.1; follow-up seeds add `--seed 43` or
+`--seed 44` and use job type `followup`):
 
 ```bash
+#!/bin/bash
+set -euo pipefail
+RUNS=/media/nas01/projects/Interoceptive-AI/grid_world_pain/.claude/worktrees/thirst-runs
+SHARED=/media/nas01/projects/Interoceptive-AI/grid_world_pain
+PY=/home/vncuser/miniconda3/envs/grid_world_pain/bin/python
+PIN=PIN_SHA_FULL
+export WANDB_DIR="$SHARED"
+cd "$RUNS"
+# --- frozen-code gate (THIRST_TASK §9.3). CPU-only; never touches the GPU. ---
+PIN="$PIN" JAX_PLATFORMS=cpu "$PY" - <<'PYEOF'
+import os, sys, subprocess
+RUNS = os.path.realpath(os.getcwd())
+PIN = os.environ["PIN"]
+def fail(msg): sys.exit(f"[thirst-gate] FAIL: {msg}")
+if os.path.basename(RUNS) != "thirst-runs": fail(f"cwd is {RUNS}, not the thirst-runs worktree")
+def git(*a):
+    return subprocess.run(["git", *a], capture_output=True, text=True, cwd=RUNS, timeout=120).stdout.strip()
+head = git("rev-parse", "HEAD")
+if head != PIN: fail(f"HEAD is {head!r}, pinned commit is {PIN}")
+if git("status", "--porcelain", "--untracked-files=no"): fail("thirst-runs has modified tracked files")
+sys.argv = ["train.py"]
+import src
+paths = [os.path.realpath(p) for p in src.__path__]
+if paths != [os.path.join(RUNS, "src")]: fail(f"src resolves to {paths}")
+import train  # train.py's whole import graph; main() is guarded by __name__ == "__main__"
+bad = sorted({os.path.realpath(m.__file__) for m in list(sys.modules.values())
+              if getattr(m, "__file__", None) and "/src/" in os.path.realpath(m.__file__)
+              and not os.path.realpath(m.__file__).startswith(os.path.join(RUNS, "src") + "/")})
+if bad: fail(f"modules loaded from outside thirst-runs/src: {bad[:5]}")
+from src.environment.state import EnvParams
+if "water_enabled" not in EnvParams.__dataclass_fields__: fail("imported code has no water")
+print(f"[thirst-gate] OK src={paths[0]} head={head} train={os.path.realpath(train.__file__)} "
+      f"modules={len(sys.modules)}", flush=True)
+PYEOF
 exec "$PY" train.py \
   --config <ENV_CFG> \
   --agent_config <AGENT_CFG> \
@@ -561,10 +761,63 @@ exec "$PY" train.py \
   --wandb-group thirst_task --wandb-job-type prod
 ```
 
-launched with `./run_command.py --no-tail --log <shared>/logs/<TS>_<TAG>.log <NODE> "bash $TMP_SCRIPT"`
-from the worktree. The runner records `git rev-parse HEAD` of the worktree in the Log-path cell.
-Early stops (§4) are a `SIGINT` to the training process right after the 1 M-boundary checkpoint
-is written.
+As in the pilot, the gate runs in stdin mode (`python -`) so the working directory is first on
+`sys.path`; do not save it as a file elsewhere. Launch call, from the main `thirst` worktree, once
+per row: `./run_command.py --no-tail --log <shared>/logs/<TS>_<TAG>.log <NODE> "bash $TMP_SCRIPT"`.
+The runner appends each row's commented command block to the **main `thirst` worktree's**
+`train_command-agent.sh` (never to a file in `thirst-runs`), and records the pinned commit in the
+Log-path cell. Early stops are sent as in §4.
+
+### 9.3 Code pinning and run validity (Revision 1, C1)
+
+**The pinned launch commit is `PIN_SHA_SHORT`** on `v5.0` (subject "docs(thirst): 📝 THIRST_TASK
+Revision 1 — …"; full SHA `PIN_SHA_FULL`). It contains the Revision-2 smell (`c33d29b1`), the
+eight configs and this revision; its `src/`, `train.py` and `scripts/` are those of `c33d29b1`.
+
+1. **One frozen worktree.** The launching session (Admin) creates it once, before the first launch:
+
+   ```bash
+   git worktree add --detach .claude/worktrees/thirst-runs PIN_SHA_FULL
+   ```
+
+   All 18 runs, every relaunch (§7) and every follow-up seed (§5.4) execute from it. **Nobody edits
+   `thirst-runs`**: no commits, no checkouts, no file changes, no `git worktree remove` until the
+   **last** run of the series, follow-ups included, has ended and its outputs (results directory,
+   WandB folder, log) are confirmed in the shared folder. It is then removed by whoever closes the
+   series, after a dry-run check that it holds no run output. Development, the placement fixes
+   included, continues in the main `thirst` worktree and never touches `thirst-runs`
+   ([[PLACEMENT_FIXES_PLAN]] K0 says the same). Because the 10×10 worlds inherit `basic/05` and
+   `basic/06` through `extends:`, freezing the worktree also freezes those ladder files for the
+   series (config review M1). If the code must move before a follow-up, that follow-up re-runs
+   seed 42 at the new commit as well.
+2. **Pre-flight, per launch** (pilot §3.2, adapted), in addition to the runner's usual checks
+   (live GPU free-check, diary and `pgrep` for claimants nvidia-smi cannot see):
+   - the NAS is mounted on the node, and `<thirst-runs>/train.py` is readable from it;
+   - `which git` succeeds on the node (the gate and provenance need it);
+   - in `thirst-runs`: `git rev-parse HEAD` prints the pinned commit and
+     `git status --porcelain --untracked-files=no` prints nothing;
+   - no `<shared>/results/JAX_RecurrentPPO/*_<TAG>` directory exists yet;
+   - both agents of a world go on the same card class (the stop rule compares them at equal
+     episodes, and a mixed pair widens the episode gap at b\*).
+3. **Diary note at the first launch:** one `note` row saying the `rppo_thirst_*` runs execute code
+   from `.claude/worktrees/thirst-runs` at the pinned commit, that nobody may edit or remove that
+   worktree until the series (follow-ups included) has ended, and that the outputs are in the
+   shared folder.
+4. **Run validity, per run** (pilot P5, adapted). A run must pass (a), (b), (c) and (e); a run that
+   fails any of them is invalid (§7). (d) is informational.
+   - (a) The log **contains** `[thirst-gate] OK src=<thirst-runs>/src head=<pinned commit>`.
+   - (b) The banner prints `Observation Dim: 59 (… Hydration=1 …)`.
+   - (c) `models/provenance.json` shows `git_sha` = the pinned commit. The branch reads `HEAD`
+     (detached worktree), which is expected. A `"unknown"` sha (the helper's 10 s git timeout on
+     this NAS) falls back to (a).
+   - (d) WandB metadata `program` / `root` / `commit`: recorded; the commit should equal (c).
+   - (e) The saved `models/config.yaml` shows `water.enabled: true`, **`water.properties: [1.0,
+     0.0, 0.0, 0.0, 0.0]`** (the Revision-2 smell; the pilot's runs had the old one), and the
+     cell's own `environment.height` / `width`, `water.size` and `sensory.sensor_radius` (§3.1–3.3).
+     `Episode/Term_Dehydration` is non-zero in at least one logged window.
+
+   Post-launch, after the usual 3–8 minute wait, the runner checks (a) and (b) in the log, (c) and
+   (e) once the run directory is written, and records the WandB run ID in the manifest.
 
 ## 10. Results
 

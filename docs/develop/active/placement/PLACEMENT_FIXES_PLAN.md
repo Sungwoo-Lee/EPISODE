@@ -581,6 +581,7 @@ Protocol:
 ## Checkpoints
 
 - [ ] **K0** Pilot runs finished (or separate worktree). Pre-change SHA and baseline worktree recorded.
+  - *Appended by experiment-designer, 2026-10-01 ([[THIRST_TASK]] Revision 1 §9.3):* the placement work happens in the main `thirst` worktree only, never in `.claude/worktrees/thirst-runs`, which is frozen at the thirst-task launch commit for that series and its follow-up seeds.
 - [ ] **K1** Baseline fixture-backed test list saved; pre-change speed rounds saved.
 - [ ] **K2** C: the feasibility check refuses T-C1's worlds, proves every maintained level, and puts exactly the 17 worlds of §3.1 (or say why not) on the backstop;
   the list of refused and backstopped configs is in the report (expected: none refused; the 17 of §3.1 backstopped).
