@@ -3,7 +3,7 @@ title: "Thirst task at three map sizes and three smell reaches: ordinary vs modu
 topic: thirst_task
 status: active
 created: 2026-10-01
-last_updated: 2026-10-01
+last_updated: 2026-10-02
 wandb_tag: "rppo_thirst_*"
 develop_link: docs/develop/active/thirst/THIRST_WATER_PLAN.md
 ---
@@ -661,24 +661,24 @@ the actual columns are filled by `training-runner` at launch; **no nodes are cho
 
 | Run | Status | Cell | Tag (= wandb-name) | wandb-group | wandb-job-type | Seed | Node | GPU | Launched at | WandB run ID | Log path |
 |---|---|---|---|---|---|---|---|---|---|---|---|
-| 1 | planned | g10sW ordinary | `rppo_thirst_g10sW_t1none_s42` | thirst_task | prod | 42 | — | — | — | — | — |
-| 2 | planned | g10sW modulated | `rppo_thirst_g10sW_t16quad_s42` | thirst_task | prod | 42 | — | — | — | — | — |
-| 3 | planned | g10s5 ordinary | `rppo_thirst_g10s5_t1none_s42` | thirst_task | prod | 42 | — | — | — | — | — |
-| 4 | planned | g10s5 modulated | `rppo_thirst_g10s5_t16quad_s42` | thirst_task | prod | 42 | — | — | — | — | — |
-| 5 | planned | g10s3 ordinary | `rppo_thirst_g10s3_t1none_s42` | thirst_task | prod | 42 | — | — | — | — | — |
-| 6 | planned | g10s3 modulated | `rppo_thirst_g10s3_t16quad_s42` | thirst_task | prod | 42 | — | — | — | — | — |
-| 7 | planned | g15sW ordinary | `rppo_thirst_g15sW_t1none_s42` | thirst_task | prod | 42 | — | — | — | — | — |
-| 8 | planned | g15sW modulated | `rppo_thirst_g15sW_t16quad_s42` | thirst_task | prod | 42 | — | — | — | — | — |
-| 9 | planned | g15s5 ordinary | `rppo_thirst_g15s5_t1none_s42` | thirst_task | prod | 42 | — | — | — | — | — |
-| 10 | planned | g15s5 modulated | `rppo_thirst_g15s5_t16quad_s42` | thirst_task | prod | 42 | — | — | — | — | — |
-| 11 | planned | g15s3 ordinary | `rppo_thirst_g15s3_t1none_s42` | thirst_task | prod | 42 | — | — | — | — | — |
-| 12 | planned | g15s3 modulated | `rppo_thirst_g15s3_t16quad_s42` | thirst_task | prod | 42 | — | — | — | — | — |
-| 13 | planned | g20sW ordinary | `rppo_thirst_g20sW_t1none_s42` | thirst_task | prod | 42 | — | — | — | — | — |
-| 14 | planned | g20sW modulated | `rppo_thirst_g20sW_t16quad_s42` | thirst_task | prod | 42 | — | — | — | — | — |
-| 15 | planned | g20s5 ordinary | `rppo_thirst_g20s5_t1none_s42` | thirst_task | prod | 42 | — | — | — | — | — |
-| 16 | planned | g20s5 modulated | `rppo_thirst_g20s5_t16quad_s42` | thirst_task | prod | 42 | — | — | — | — | — |
-| 17 | planned | g20s3 ordinary | `rppo_thirst_g20s3_t1none_s42` | thirst_task | prod | 42 | — | — | — | — | — |
-| 18 | planned | g20s3 modulated | `rppo_thirst_g20s3_t16quad_s42` | thirst_task | prod | 42 | — | — | — | — | — |
+| 1 | running | g10sW ordinary | `rppo_thirst_g10sW_t1none_s42` | thirst_task | prod | 42 | 110 | cuda:0 | 2026-10-02T01:28:01 | `owuf2esi` | `logs/20261002_012801_rppo_thirst_g10sW_t1none_s42.log` (code `583b022f`, thirst-runs) |
+| 2 | running | g10sW modulated | `rppo_thirst_g10sW_t16quad_s42` | thirst_task | prod | 42 | 110 | cuda:1 | 2026-10-02T01:28:02 | `9asplwhj` | `logs/20261002_012802_rppo_thirst_g10sW_t16quad_s42.log` (code `583b022f`, thirst-runs) |
+| 3 | running | g10s5 ordinary | `rppo_thirst_g10s5_t1none_s42` | thirst_task | prod | 42 | 111 | cuda:0 | 2026-10-02T01:28:04 | `qbyodbnu` | `logs/20261002_012804_rppo_thirst_g10s5_t1none_s42.log` (code `583b022f`, thirst-runs) |
+| 4 | running | g10s5 modulated | `rppo_thirst_g10s5_t16quad_s42` | thirst_task | prod | 42 | 111 | cuda:1 | 2026-10-02T01:28:06 | `lahgxpt2` | `logs/20261002_012806_rppo_thirst_g10s5_t16quad_s42.log` (code `583b022f`, thirst-runs) |
+| 5 | running | g10s3 ordinary | `rppo_thirst_g10s3_t1none_s42` | thirst_task | prod | 42 | 112 | cuda:0 | 2026-10-02T01:28:08 | `6z2638tb` | `logs/20261002_012808_rppo_thirst_g10s3_t1none_s42.log` (code `583b022f`, thirst-runs) |
+| 6 | running | g10s3 modulated | `rppo_thirst_g10s3_t16quad_s42` | thirst_task | prod | 42 | 112 | cuda:1 | 2026-10-02T01:28:09 | `gynzsndn` | `logs/20261002_012809_rppo_thirst_g10s3_t16quad_s42.log` (code `583b022f`, thirst-runs) |
+| 7 | running | g15sW ordinary | `rppo_thirst_g15sW_t1none_s42` | thirst_task | prod | 42 | 106 | cuda:0 | 2026-10-02T01:27:49 | `l7ynopt2` | `logs/20261002_012749_rppo_thirst_g15sW_t1none_s42.log` (code `583b022f`, thirst-runs) |
+| 8 | running | g15sW modulated | `rppo_thirst_g15sW_t16quad_s42` | thirst_task | prod | 42 | 106 | cuda:1 | 2026-10-02T01:27:51 | `uvlkj77q` | `logs/20261002_012751_rppo_thirst_g15sW_t16quad_s42.log` (code `583b022f`, thirst-runs) |
+| 9 | running | g15s5 ordinary | `rppo_thirst_g15s5_t1none_s42` | thirst_task | prod | 42 | 107 | cuda:0 | 2026-10-02T01:27:53 | `nm5cs2os` | `logs/20261002_012753_rppo_thirst_g15s5_t1none_s42.log` (code `583b022f`, thirst-runs) |
+| 10 | running | g15s5 modulated | `rppo_thirst_g15s5_t16quad_s42` | thirst_task | prod | 42 | 107 | cuda:1 | 2026-10-02T01:27:55 | `e3evmiav` | `logs/20261002_012755_rppo_thirst_g15s5_t16quad_s42.log` (code `583b022f`, thirst-runs) |
+| 11 | running | g15s3 ordinary | `rppo_thirst_g15s3_t1none_s42` | thirst_task | prod | 42 | 109 | cuda:0 | 2026-10-02T01:27:57 | `bkw0ygyg` | `logs/20261002_012757_rppo_thirst_g15s3_t1none_s42.log` (code `583b022f`, thirst-runs) |
+| 12 | running | g15s3 modulated | `rppo_thirst_g15s3_t16quad_s42` | thirst_task | prod | 42 | 109 | cuda:1 | 2026-10-02T01:27:59 | `kxunjnyk` | `logs/20261002_012759_rppo_thirst_g15s3_t16quad_s42.log` (code `583b022f`, thirst-runs) |
+| 13 | running | g20sW ordinary | `rppo_thirst_g20sW_t1none_s42` | thirst_task | prod | 42 | 114 | cuda:0 | 2026-10-02T01:27:38 | `4ggpcu85` | `logs/20261002_012738_rppo_thirst_g20sW_t1none_s42.log` (code `583b022f`, thirst-runs) |
+| 14 | running | g20sW modulated | `rppo_thirst_g20sW_t16quad_s42` | thirst_task | prod | 42 | 114 | cuda:1 | 2026-10-02T01:27:40 | `3zvkndzz` | `logs/20261002_012740_rppo_thirst_g20sW_t16quad_s42.log` (code `583b022f`, thirst-runs) |
+| 15 | running | g20s5 ordinary | `rppo_thirst_g20s5_t1none_s42` | thirst_task | prod | 42 | 114 | cuda:2 | 2026-10-02T01:27:42 | `xt9nu52b` | `logs/20261002_012741_rppo_thirst_g20s5_t1none_s42.log` (code `583b022f`, thirst-runs) |
+| 16 | running | g20s5 modulated | `rppo_thirst_g20s5_t16quad_s42` | thirst_task | prod | 42 | 114 | cuda:3 | 2026-10-02T01:27:43 | `54kvi1kk` | `logs/20261002_012743_rppo_thirst_g20s5_t16quad_s42.log` (code `583b022f`, thirst-runs) |
+| 17 | running | g20s3 ordinary | `rppo_thirst_g20s3_t1none_s42` | thirst_task | prod | 42 | 113 | cuda:0 | 2026-10-02T01:27:45 | `1qi5123j` | `logs/20261002_012745_rppo_thirst_g20s3_t1none_s42.log` (code `583b022f`, thirst-runs) |
+| 18 | running | g20s3 modulated | `rppo_thirst_g20s3_t16quad_s42` | thirst_task | prod | 42 | 113 | cuda:1 | 2026-10-02T01:27:47 | `8bn6tdg0` | `logs/20261002_012747_rppo_thirst_g20s3_t16quad_s42.log` (code `583b022f`, thirst-runs) |
 
 **Card guidance (not an assignment).** The 20×20 runs are the long ones; if cards are mixed,
 put them on the faster cards. Both agents of a world go on the same card class (§9.3). Pack

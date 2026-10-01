@@ -4937,3 +4937,159 @@ cd /media/nas01/projects/Interoceptive-AI/grid_world_pain
 #     --results-dir "$SHARED/results/JAX_RecurrentPPO/20261001_132201_rppo_l06pilot_t16quad_s44" \
 #     --tag rppo_l06pilot_t16quad_s44 --wandb-name rppo_l06pilot_t16quad_s44 \
 #     --wandb-group thirst_pilot --wandb-job-type pilot
+
+# ---------------------------------------------------------------------------
+# 2026-10-02 01:27-01:28 — THIRST_TASK (3 map sizes x 3 smell reaches x 2 agents), 18 runs, user-approved launch
+# (docs/experiments/active/thirst_task/THIRST_TASK.md §9/§9.2/§9.3). Code runs from the FROZEN worktree
+# .claude/worktrees/thirst-runs (detached at 583b022f941647d362c5795012ad607ea422e3ab, clean); outputs go to the SHARED folder
+# (--results-dir <shared>/results/JAX_RecurrentPPO/<TS>_<TAG>, WANDB_DIR=<shared>, --log <shared>/logs/<TS>_<TAG>.log).
+# Each run = unique /tmp script on the node: cd thirst-runs -> §9.3 frozen-code gate -> exec train.py (below).
+# Launched with: ./run_command.py --no-tail --log <shared>/logs/<TS>_<TAG>.log <NODE> "bash /tmp/train_cmd_<...>.sh"
+# Pre-flight: all 18 target cards idle (no compute apps), no python/train.py on 106/107/109-114 (stale rppo_hv* diary
+# rows on 106-112 are finished runs); NAS mounted, /usr/bin/git present, JAX GPU-compile OK (0.9.0.1); no *rppo_thirst_* results dir.
+# Seed 42 config-owned (no --seed flag).
+# ---------------------------------------------------------------------------
+# Run 1: rppo_thirst_g10sW_t1none_s42 — node 110, cuda:0, TS 20261002_012801, bash /tmp/train_cmd_1790872081_18715_rppo_thirst_g10sW_t1none_s42.sh
+#   exec "$PY" train.py \
+#     --config configs/environment/experiment/basic/06-pond_thirst_10x10.yaml \
+#     --agent_config configs/models/recurrent_ppo/nmn_input_site_grid_gaenorm/nmngaenorm_t1none.yaml \
+#     --episodes 10000000 --device cuda:0 --log-interval 10 \
+#     --results-dir "$SHARED/results/JAX_RecurrentPPO/20261002_012801_rppo_thirst_g10sW_t1none_s42" \
+#     --tag rppo_thirst_g10sW_t1none_s42 --wandb-name rppo_thirst_g10sW_t1none_s42 \
+#     --wandb-group thirst_task --wandb-job-type prod
+# Run 2: rppo_thirst_g10sW_t16quad_s42 — node 110, cuda:1, TS 20261002_012802, bash /tmp/train_cmd_1790872082_28922_rppo_thirst_g10sW_t16quad_s42.sh
+#   exec "$PY" train.py \
+#     --config configs/environment/experiment/basic/06-pond_thirst_10x10.yaml \
+#     --agent_config configs/models/recurrent_ppo/nmn_input_site_grid_gaenorm/nmngaenorm_t16quad_ALL.yaml \
+#     --episodes 10000000 --device cuda:1 --log-interval 10 \
+#     --results-dir "$SHARED/results/JAX_RecurrentPPO/20261002_012802_rppo_thirst_g10sW_t16quad_s42" \
+#     --tag rppo_thirst_g10sW_t16quad_s42 --wandb-name rppo_thirst_g10sW_t16quad_s42 \
+#     --wandb-group thirst_task --wandb-job-type prod
+# Run 3: rppo_thirst_g10s5_t1none_s42 — node 111, cuda:0, TS 20261002_012804, bash /tmp/train_cmd_1790872084_22358_rppo_thirst_g10s5_t1none_s42.sh
+#   exec "$PY" train.py \
+#     --config configs/environment/experiment/thirst/pond_thirst_10x10_smell5.yaml \
+#     --agent_config configs/models/recurrent_ppo/nmn_input_site_grid_gaenorm/nmngaenorm_t1none.yaml \
+#     --episodes 10000000 --device cuda:0 --log-interval 10 \
+#     --results-dir "$SHARED/results/JAX_RecurrentPPO/20261002_012804_rppo_thirst_g10s5_t1none_s42" \
+#     --tag rppo_thirst_g10s5_t1none_s42 --wandb-name rppo_thirst_g10s5_t1none_s42 \
+#     --wandb-group thirst_task --wandb-job-type prod
+# Run 4: rppo_thirst_g10s5_t16quad_s42 — node 111, cuda:1, TS 20261002_012806, bash /tmp/train_cmd_1790872086_23222_rppo_thirst_g10s5_t16quad_s42.sh
+#   exec "$PY" train.py \
+#     --config configs/environment/experiment/thirst/pond_thirst_10x10_smell5.yaml \
+#     --agent_config configs/models/recurrent_ppo/nmn_input_site_grid_gaenorm/nmngaenorm_t16quad_ALL.yaml \
+#     --episodes 10000000 --device cuda:1 --log-interval 10 \
+#     --results-dir "$SHARED/results/JAX_RecurrentPPO/20261002_012806_rppo_thirst_g10s5_t16quad_s42" \
+#     --tag rppo_thirst_g10s5_t16quad_s42 --wandb-name rppo_thirst_g10s5_t16quad_s42 \
+#     --wandb-group thirst_task --wandb-job-type prod
+# Run 5: rppo_thirst_g10s3_t1none_s42 — node 112, cuda:0, TS 20261002_012808, bash /tmp/train_cmd_1790872088_22077_rppo_thirst_g10s3_t1none_s42.sh
+#   exec "$PY" train.py \
+#     --config configs/environment/experiment/thirst/pond_thirst_10x10_smell3.yaml \
+#     --agent_config configs/models/recurrent_ppo/nmn_input_site_grid_gaenorm/nmngaenorm_t1none.yaml \
+#     --episodes 10000000 --device cuda:0 --log-interval 10 \
+#     --results-dir "$SHARED/results/JAX_RecurrentPPO/20261002_012808_rppo_thirst_g10s3_t1none_s42" \
+#     --tag rppo_thirst_g10s3_t1none_s42 --wandb-name rppo_thirst_g10s3_t1none_s42 \
+#     --wandb-group thirst_task --wandb-job-type prod
+# Run 6: rppo_thirst_g10s3_t16quad_s42 — node 112, cuda:1, TS 20261002_012809, bash /tmp/train_cmd_1790872089_17832_rppo_thirst_g10s3_t16quad_s42.sh
+#   exec "$PY" train.py \
+#     --config configs/environment/experiment/thirst/pond_thirst_10x10_smell3.yaml \
+#     --agent_config configs/models/recurrent_ppo/nmn_input_site_grid_gaenorm/nmngaenorm_t16quad_ALL.yaml \
+#     --episodes 10000000 --device cuda:1 --log-interval 10 \
+#     --results-dir "$SHARED/results/JAX_RecurrentPPO/20261002_012809_rppo_thirst_g10s3_t16quad_s42" \
+#     --tag rppo_thirst_g10s3_t16quad_s42 --wandb-name rppo_thirst_g10s3_t16quad_s42 \
+#     --wandb-group thirst_task --wandb-job-type prod
+# Run 7: rppo_thirst_g15sW_t1none_s42 — node 106, cuda:0, TS 20261002_012749, bash /tmp/train_cmd_1790872069_10829_rppo_thirst_g15sW_t1none_s42.sh
+#   exec "$PY" train.py \
+#     --config configs/environment/experiment/thirst/pond_thirst_15x15.yaml \
+#     --agent_config configs/models/recurrent_ppo/nmn_input_site_grid_gaenorm/nmngaenorm_t1none.yaml \
+#     --episodes 10000000 --device cuda:0 --log-interval 10 \
+#     --results-dir "$SHARED/results/JAX_RecurrentPPO/20261002_012749_rppo_thirst_g15sW_t1none_s42" \
+#     --tag rppo_thirst_g15sW_t1none_s42 --wandb-name rppo_thirst_g15sW_t1none_s42 \
+#     --wandb-group thirst_task --wandb-job-type prod
+# Run 8: rppo_thirst_g15sW_t16quad_s42 — node 106, cuda:1, TS 20261002_012751, bash /tmp/train_cmd_1790872071_26300_rppo_thirst_g15sW_t16quad_s42.sh
+#   exec "$PY" train.py \
+#     --config configs/environment/experiment/thirst/pond_thirst_15x15.yaml \
+#     --agent_config configs/models/recurrent_ppo/nmn_input_site_grid_gaenorm/nmngaenorm_t16quad_ALL.yaml \
+#     --episodes 10000000 --device cuda:1 --log-interval 10 \
+#     --results-dir "$SHARED/results/JAX_RecurrentPPO/20261002_012751_rppo_thirst_g15sW_t16quad_s42" \
+#     --tag rppo_thirst_g15sW_t16quad_s42 --wandb-name rppo_thirst_g15sW_t16quad_s42 \
+#     --wandb-group thirst_task --wandb-job-type prod
+# Run 9: rppo_thirst_g15s5_t1none_s42 — node 107, cuda:0, TS 20261002_012753, bash /tmp/train_cmd_1790872073_28441_rppo_thirst_g15s5_t1none_s42.sh
+#   exec "$PY" train.py \
+#     --config configs/environment/experiment/thirst/pond_thirst_15x15_smell5.yaml \
+#     --agent_config configs/models/recurrent_ppo/nmn_input_site_grid_gaenorm/nmngaenorm_t1none.yaml \
+#     --episodes 10000000 --device cuda:0 --log-interval 10 \
+#     --results-dir "$SHARED/results/JAX_RecurrentPPO/20261002_012753_rppo_thirst_g15s5_t1none_s42" \
+#     --tag rppo_thirst_g15s5_t1none_s42 --wandb-name rppo_thirst_g15s5_t1none_s42 \
+#     --wandb-group thirst_task --wandb-job-type prod
+# Run 10: rppo_thirst_g15s5_t16quad_s42 — node 107, cuda:1, TS 20261002_012755, bash /tmp/train_cmd_1790872075_11328_rppo_thirst_g15s5_t16quad_s42.sh
+#   exec "$PY" train.py \
+#     --config configs/environment/experiment/thirst/pond_thirst_15x15_smell5.yaml \
+#     --agent_config configs/models/recurrent_ppo/nmn_input_site_grid_gaenorm/nmngaenorm_t16quad_ALL.yaml \
+#     --episodes 10000000 --device cuda:1 --log-interval 10 \
+#     --results-dir "$SHARED/results/JAX_RecurrentPPO/20261002_012755_rppo_thirst_g15s5_t16quad_s42" \
+#     --tag rppo_thirst_g15s5_t16quad_s42 --wandb-name rppo_thirst_g15s5_t16quad_s42 \
+#     --wandb-group thirst_task --wandb-job-type prod
+# Run 11: rppo_thirst_g15s3_t1none_s42 — node 109, cuda:0, TS 20261002_012757, bash /tmp/train_cmd_1790872077_17346_rppo_thirst_g15s3_t1none_s42.sh
+#   exec "$PY" train.py \
+#     --config configs/environment/experiment/thirst/pond_thirst_15x15_smell3.yaml \
+#     --agent_config configs/models/recurrent_ppo/nmn_input_site_grid_gaenorm/nmngaenorm_t1none.yaml \
+#     --episodes 10000000 --device cuda:0 --log-interval 10 \
+#     --results-dir "$SHARED/results/JAX_RecurrentPPO/20261002_012757_rppo_thirst_g15s3_t1none_s42" \
+#     --tag rppo_thirst_g15s3_t1none_s42 --wandb-name rppo_thirst_g15s3_t1none_s42 \
+#     --wandb-group thirst_task --wandb-job-type prod
+# Run 12: rppo_thirst_g15s3_t16quad_s42 — node 109, cuda:1, TS 20261002_012759, bash /tmp/train_cmd_1790872079_28873_rppo_thirst_g15s3_t16quad_s42.sh
+#   exec "$PY" train.py \
+#     --config configs/environment/experiment/thirst/pond_thirst_15x15_smell3.yaml \
+#     --agent_config configs/models/recurrent_ppo/nmn_input_site_grid_gaenorm/nmngaenorm_t16quad_ALL.yaml \
+#     --episodes 10000000 --device cuda:1 --log-interval 10 \
+#     --results-dir "$SHARED/results/JAX_RecurrentPPO/20261002_012759_rppo_thirst_g15s3_t16quad_s42" \
+#     --tag rppo_thirst_g15s3_t16quad_s42 --wandb-name rppo_thirst_g15s3_t16quad_s42 \
+#     --wandb-group thirst_task --wandb-job-type prod
+# Run 13: rppo_thirst_g20sW_t1none_s42 — node 114, cuda:0, TS 20261002_012738, bash /tmp/train_cmd_1790872058_12875_rppo_thirst_g20sW_t1none_s42.sh
+#   exec "$PY" train.py \
+#     --config configs/environment/experiment/thirst/pond_thirst_20x20.yaml \
+#     --agent_config configs/models/recurrent_ppo/nmn_input_site_grid_gaenorm/nmngaenorm_t1none.yaml \
+#     --episodes 10000000 --device cuda:0 --log-interval 10 \
+#     --results-dir "$SHARED/results/JAX_RecurrentPPO/20261002_012738_rppo_thirst_g20sW_t1none_s42" \
+#     --tag rppo_thirst_g20sW_t1none_s42 --wandb-name rppo_thirst_g20sW_t1none_s42 \
+#     --wandb-group thirst_task --wandb-job-type prod
+# Run 14: rppo_thirst_g20sW_t16quad_s42 — node 114, cuda:1, TS 20261002_012740, bash /tmp/train_cmd_1790872060_32459_rppo_thirst_g20sW_t16quad_s42.sh
+#   exec "$PY" train.py \
+#     --config configs/environment/experiment/thirst/pond_thirst_20x20.yaml \
+#     --agent_config configs/models/recurrent_ppo/nmn_input_site_grid_gaenorm/nmngaenorm_t16quad_ALL.yaml \
+#     --episodes 10000000 --device cuda:1 --log-interval 10 \
+#     --results-dir "$SHARED/results/JAX_RecurrentPPO/20261002_012740_rppo_thirst_g20sW_t16quad_s42" \
+#     --tag rppo_thirst_g20sW_t16quad_s42 --wandb-name rppo_thirst_g20sW_t16quad_s42 \
+#     --wandb-group thirst_task --wandb-job-type prod
+# Run 15: rppo_thirst_g20s5_t1none_s42 — node 114, cuda:2, TS 20261002_012741, bash /tmp/train_cmd_1790872062_10082_rppo_thirst_g20s5_t1none_s42.sh
+#   exec "$PY" train.py \
+#     --config configs/environment/experiment/thirst/pond_thirst_20x20_smell5.yaml \
+#     --agent_config configs/models/recurrent_ppo/nmn_input_site_grid_gaenorm/nmngaenorm_t1none.yaml \
+#     --episodes 10000000 --device cuda:2 --log-interval 10 \
+#     --results-dir "$SHARED/results/JAX_RecurrentPPO/20261002_012741_rppo_thirst_g20s5_t1none_s42" \
+#     --tag rppo_thirst_g20s5_t1none_s42 --wandb-name rppo_thirst_g20s5_t1none_s42 \
+#     --wandb-group thirst_task --wandb-job-type prod
+# Run 16: rppo_thirst_g20s5_t16quad_s42 — node 114, cuda:3, TS 20261002_012743, bash /tmp/train_cmd_1790872063_21878_rppo_thirst_g20s5_t16quad_s42.sh
+#   exec "$PY" train.py \
+#     --config configs/environment/experiment/thirst/pond_thirst_20x20_smell5.yaml \
+#     --agent_config configs/models/recurrent_ppo/nmn_input_site_grid_gaenorm/nmngaenorm_t16quad_ALL.yaml \
+#     --episodes 10000000 --device cuda:3 --log-interval 10 \
+#     --results-dir "$SHARED/results/JAX_RecurrentPPO/20261002_012743_rppo_thirst_g20s5_t16quad_s42" \
+#     --tag rppo_thirst_g20s5_t16quad_s42 --wandb-name rppo_thirst_g20s5_t16quad_s42 \
+#     --wandb-group thirst_task --wandb-job-type prod
+# Run 17: rppo_thirst_g20s3_t1none_s42 — node 113, cuda:0, TS 20261002_012745, bash /tmp/train_cmd_1790872065_19758_rppo_thirst_g20s3_t1none_s42.sh
+#   exec "$PY" train.py \
+#     --config configs/environment/experiment/thirst/pond_thirst_20x20_smell3.yaml \
+#     --agent_config configs/models/recurrent_ppo/nmn_input_site_grid_gaenorm/nmngaenorm_t1none.yaml \
+#     --episodes 10000000 --device cuda:0 --log-interval 10 \
+#     --results-dir "$SHARED/results/JAX_RecurrentPPO/20261002_012745_rppo_thirst_g20s3_t1none_s42" \
+#     --tag rppo_thirst_g20s3_t1none_s42 --wandb-name rppo_thirst_g20s3_t1none_s42 \
+#     --wandb-group thirst_task --wandb-job-type prod
+# Run 18: rppo_thirst_g20s3_t16quad_s42 — node 113, cuda:1, TS 20261002_012747, bash /tmp/train_cmd_1790872067_15251_rppo_thirst_g20s3_t16quad_s42.sh
+#   exec "$PY" train.py \
+#     --config configs/environment/experiment/thirst/pond_thirst_20x20_smell3.yaml \
+#     --agent_config configs/models/recurrent_ppo/nmn_input_site_grid_gaenorm/nmngaenorm_t16quad_ALL.yaml \
+#     --episodes 10000000 --device cuda:1 --log-interval 10 \
+#     --results-dir "$SHARED/results/JAX_RecurrentPPO/20261002_012747_rppo_thirst_g20s3_t16quad_s42" \
+#     --tag rppo_thirst_g20s3_t16quad_s42 --wandb-name rppo_thirst_g20s3_t16quad_s42 \
+#     --wandb-group thirst_task --wandb-job-type prod
