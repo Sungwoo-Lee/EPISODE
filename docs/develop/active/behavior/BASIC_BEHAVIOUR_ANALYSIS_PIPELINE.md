@@ -712,20 +712,20 @@ developer never calls `Artifact` directly — every publish goes through `publis
   steps; one cell value recomputed by a direct pandas read of one shard matches.
 
 **S5 — cross-run screening**
-- [ ] S5.1 Stage 2 reproduces a hand computation for one quantity (cell means, `s`, one contrast's t)
+- [x] S5.1 (hand t for start injury, single-ch. − control within ordinary, equals `contrasts.csv` to 1e-6 for all five behaviours, e.g. 0.553150 hiding.) Stage 2 reproduces a hand computation for one quantity (cell means, `s`, one contrast's t)
   done with pandas `groupby` in the Implementation Report.
-- [ ] S5.2 Residual df = 12 for every stage-2 regression; permutation count = 1,680 per agent.
-- [ ] S5.3 For the level and each slope, the median per-run episode-level SE is reported next to the
+- [x] S5.2 (df 12 in every regression; 1,680 / 216 relabelings per agent.) Residual df = 12 for every stage-2 regression; permutation count = 1,680 per agent.
+- [x] S5.3 (smell × injury is not below ½ of the seed SD in any behaviour; start injury / smell also not for eating, near rabbit / predator, warm square; reported automatically in F5's data statement.) For the level and each slope, the median per-run episode-level SE is reported next to the
   seed-to-seed SD; if the SE is not clearly smaller (< ½ of `s`), stage 1 noise is not negligible —
   report it and say so on the page.
-- [ ] S5.4 Per cell: the cell mean lies within the range of that cell's 3 per-run values (true by
+- [x] S5.4 (all cell means within their runs' range, all behaviours.) Per cell: the cell mean lies within the range of that cell's 3 per-run values (true by
   construction for a mean — a failure means a bookkeeping error), and each contrast equals the
   difference of its two cell means.
-- [ ] S5.5 The smell regressor per world matches B5 (control: channel 1 at 2.22 nats per unit, channel
+- [x] S5.5 (unit test `test_control_smell_reading` on the saved hv2ch / hv1ch / hv1chm configs.) The smell regressor per world matches B5 (control: channel 1 at 2.22 nats per unit, channel
   2 as covariate; treated: `spec.llr`), checked on one run of each world.
-- [ ] S5.6 No p-value or pass/fail appears for any smell term on F5 or in `contrasts.csv` for an hv
+- [x] S5.6 (no smell rows in any `contrasts.csv` / `variance.csv`; smell intervals blank.) No p-value or pass/fail appears for any smell term on F5 or in `contrasts.csv` for an hv
   population, and no smell slope appears in F5(a) or F5(b) (Revision 2, N5).
-- [ ] S5.7 (Revision 2, N1/N4) The method-of-moments shares, their truncation flags and the
+- [x] S5.7 (Welch rows where cell SDs differ > 3×: 3 / 2 / 10 / 17 / 13 per behaviour.) (Revision 2, N1/N4) The method-of-moments shares, their truncation flags and the
   `df_f / df_total` reference marks are in `variance.csv`; per-cell SDs and the largest per-run SE per
   cell are in `cells.csv`; Welch contrasts are present wherever largest / smallest cell SD > 3.
 
@@ -921,6 +921,42 @@ all 21.
 4. Q4 (observation-column cost, 3.5×) and D1 need a decision; the page's "golden gate" provenance
    line and the plan's own "rabbit-smell ladder" wording are for senior-developer to review.
 5. Publishing goes through `publish-page` (format gate) — not done here, by instruction.
+
+### Addendum 2026-10-02 — full population (18 runs), F5 and the full page
+
+The 8 modulated-agent runs were collected and marked completed (commits `5cc4652f`, `d0946ff2`).
+The population manifest was rebuilt (18 completed; the 10 earlier cells' runs and stores unchanged),
+the 8 new cells swept (≈ 14 min each, 3 workers) and fitted for all five behaviours (80 fits, no
+error), `screen.py` run for every behaviour (`--control-world hv2ch --reference-agent t1none`), all 26
+figures drawn, and the page built **complete** (no pending block). Golden stamp `51b1a90e2d35` and
+both hypervigilance stamps still validate; 38 tests pass.
+
+All 18 cells: 1,000,000 episodes, 35 factors, zero unhandled markers, ambient temperature defined on
+every episode, M1 sees every episode in all 90 cell × behaviour fits; only the expected exclusions
+(intensity duplicates in single-channel / matched worlds; outcome-defining consequences).
+
+**F5 headline (exploratory screening, run as replicate, df 12).** Across the five behaviours, 150
+setting contrasts were screened (30 each); 9 have p < 0.05, about the 7.5 expected by chance alone,
+and the behaviour levels differ between settings by at most ~0.8 percentage points (hiding 25.9–26.6 %,
+eating 16.2–16.3 %, near a rabbit 16.1–16.5 %, near a predator 13.3–13.8 %, warm square 20.3–20.6 %).
+So for most behaviours the settings do not move the run-level numbers beyond seed-to-seed variation.
+One exception stands out: **time within two squares of a predator is lower for the modulated agent
+than the ordinary one in the matched-strength world** (−3.9 seed SDs, 95 % interval −5.7 to −2.1,
+p = 0.0004; Welch p = 0.011), and the agent / world × agent components carry 31 % / 23 % of that
+level's run-to-run variation. Smell slopes (screening only, no test): positive for hiding in every
+setting (0.075–0.133 logit per nat), negative for being near a rabbit (−0.08 to −0.18), with the
+matched-strength world lowest in magnitude for both.
+
+**Page size.** The builder now embeds a lighter copy of each figure: at most 1,600 px wide, a
+256-colour palette with the house colours pinned exactly (an unpinned palette shifted the
+matched-strength green, which would break the colour = world encoding; verified 0 shift on all
+series pixels), nearest-colour mapping done exactly in numpy. It refuses to write a page over
+15.5 MB. Full-resolution PNG / SVG / PDF stay in `figures/`. Built page: **6,734,444 bytes** (was 17 MB
+for 21 figures). F2 cells now use short codes (uni / dup / con / few / out / unh) explained in the
+legend, because "outcome" no longer fit 18 columns; F5's layout was tightened.
+
+**Left uncommitted:** `docs/experiments/active/hypervigilance/basic_behaviour_hvsmell/figures/`
+(27 MB of full-resolution PNG / SVG / PDF + samples) — regenerable in ~3 min from the cached outputs.
 
 ## Verification Report
 
