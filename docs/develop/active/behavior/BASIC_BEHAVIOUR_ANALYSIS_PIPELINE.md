@@ -8,7 +8,7 @@ last_updated: 2026-10-01
 
 # Basic Behaviour Analysis pipeline
 
-> **Status**: PLANNED, **Revision 1 (2026-10-01)** — the cross-run analysis (F5) rewritten as exploratory screening after `plan-reviewer` returned NOT READY for it, plus the reviewer's other findings; awaiting a re-check by `plan-reviewer`, then user approval. See [Revision log](#revision-log).
+> **Status**: IN PROGRESS, **Revision 2 (2026-10-01)** — Revision 1 rebuilt the cross-run analysis (F5) as exploratory screening; the `plan-reviewer` re-check returned SOUND WITH CONCERNS, and Revision 2 folds in its findings N1–N7 and the optional multivariate extension of the second gate (text only). Steps S0–S4 approved for implementation; S5 not yet. See [Revision log](#revision-log).
 > **Opened**: 2026-10-01
 > **Author**: senior-developer
 > **Related**: [[HYPERVIGILANCE_ANALYSIS_TOOLING]] (population manifests, per-cell store resolution, the golden-gate pattern and the reference files this plan reuses) · [[a01_hiding_drivers]] ("What makes this agent hide?" — the analyses this page generalises) · [[SINGLE_CHANNEL_SMELL_HYPERVIGILANCE]] (the first population: 18 runs in three smell worlds) · [[TRAJECTORY_STORE_SCHEMA]] (what a store records, and what it does not) · [[TRAJECTORY_COLLECTION_PIPELINE]] · `docs/develop/active/meta/artifact_generation_guide.md` (§0a, §2.7, §11) · `docs/environment/SCRIPTS_DEPENDENCY_MAP.md` (updated by this change) · Known Bugs rows "hiding-drivers cross-tabs bin injury from the same step" and "lab-node env drift" (see A6)
@@ -81,7 +81,7 @@ Checked against [[TRAJECTORY_STORE_SCHEMA]] §3 and a real hv store manifest
 | near rabbit / near predator | step `animal_row/col` + episode `animal_active` + slot classes | yes |
 | temperature of the agent's own square | **no column.** Recoverable from `obs_true` when the world has thermal on, the thermoception sensor is present and body temperature is observable (hv worlds: `thermal.relative: true`, `body_temp_observable: true`): square temperature = thermoception reading at the agent's own cell + body temperature (with `relative: false` the reading is the square temperature itself) | yes, indirectly (B1, A2b) |
 | body temperature | inside `obs_true` at the `Body Temperature` index; `sensor.py:480` documents `Thermoception[centre] + BodyTemperature == thermal_field[own cell]` under `relative: true`, and the centre is the first of the five cells (`sensor.py:68-70`) | yes, when observable |
-| per-episode baseline world temperature (`thermal.default_temp`, hv: drawn from −31…−29) | not recorded as a column. Recoverable at `t = 0`: the field equals the baseline exactly on any square farther than the blur's kernel radius from every active campfire (`core.py` `_build_thermal_field`: fill, stamp, one blur), so any in-grid square of the agent's five thermoception cells that lies that far away gives it (square temperature = reading + body temperature) | yes, on episodes where such a square exists at spawn (exogenous: depends only on the spawn layout) → factor `ambient_temp` (B2 handler 6b) |
+| per-episode baseline world temperature (`thermal.default_temp`, hv: drawn from −31…−29) | not recorded as a column. Recoverable **exactly on every episode** at `t = 0` (Revision 2, N2): the field is fill, additive stamps, one weight-normalised blur (`core.py` `_build_thermal_field`), the blur is linear and preserves a constant, and each campfire stamps `ratio·|baseline|` with `temperature_ratio` fixed at `[11, 11]` (`core.py` `_entity_temperatures`). With a negative baseline the field at any square is therefore `baseline·(1 − 11·B)`, where `B` is the blurred indicator of the active fires at that square, computable from the `t = 0` obstacle positions and the blur kernel (σ from the saved config, kernel radius from the rebuilt params). At the agent's own square, `baseline = T_square(t=0) / (1 − 11·B_own)` | yes, on every episode where `1 − 11·B_own ≠ 0` (exogenous: depends only on the spawn layout and the draw) → factor `ambient_temp` (B2 handler 6b) |
 | hydration / water | no column; no water mechanic exists in `src/environment/` (only the `thirst_water` simulation study) | **no** → any water draw is flagged *unhandled* |
 | thermal hot-spot positions (`thermal.use_random_spots`) | not recorded | **no** → *unhandled* when enabled (hv worlds: disabled) |
 | visual-property draws (`visual_properties_std > 0`) | episode `animal_visual_property_sampled` | recorded, no handler in this plan → *unhandled* (no maintained world jitters them) |
@@ -182,6 +182,7 @@ accepts the single layout):
 | `near_predator` successes | `== n_pred_near` per episode |
 | `near_rabbit` successes − steps with a rabbit **and** a predator near | `== n_rab_near` per episode (the sweep stores the both-near count for this) |
 | intensity exclusion | `pred_olf_intensity`, `rab_olf_intensity` excluded as duplicates; the legacy file has no such rows either |
+| multivariate lines (Revision 2, re-check extension of M4) | the new recipe engine is run once more on this store's `episodes.npz` with the legacy factor set: `n_rocks + n_campfire` (and any other non-hiding obstacle count) summed back into the legacy `n_rocks`, and the factors the legacy script does not know (`start_body_temp`, `ambient_temp`, thermal consequences) left out. Every line of the legacy `multivariate.csv` must appear **verbatim** in that output. This exercises the M1–M5 recipes on a new world, which the a01 gate cannot |
 
 Not in either gate: cross-tables (`summary.json`), whose binning convention this plan changes on
 purpose (A6), and the cross-run screening, which has no legacy counterpart (its checks are in S5).
@@ -228,11 +229,30 @@ mixed-effects model with world and agent as fixed effects and run as the random 
    within-cell SD of the 18 values — the **seed-to-seed SD**.
 3. **Exact permutation, within agent.** For each agent, all 9!/(3!·3!·3!) = 1,680 relabelings of the
    world labels across its 9 runs give an assumption-free p-value for "the three worlds differ".
+   Two properties are stated on the page (Revision 2, N6): the between-world F does not change when
+   the worlds are merely renamed, so the 1,680 relabelings give only 280 distinct values (smallest
+   possible p = 1/280); and because each seed appears in every world (a crossed design), unrestricted
+   relabeling is valid but conservative when shared starting weights matter. The design-matched
+   version — permute world labels **within each seed** (6³ = 216 relabelings, 36 distinct values,
+   smallest p ≈ 0.028) — is reported beside it as an optional second reading.
 4. **Effect sizes and variance components.** Each setting contrast is also reported divided by the
-   seed-to-seed SD (a standardised effect size), and the run-to-run variation of each quantity is
-   split into the shares due to world, agent, world × agent, shared starting weights (seed within
-   agent — runs of one seed and one agent start from identical weights, study §2.4) and the remainder.
-   These two are what rank the settings.
+   seed-to-seed SD (a standardised effect size). The run-to-run variation of each quantity is
+   described by variance components for world, agent, world × agent, shared starting weights (seed
+   within agent — runs of one seed and one agent start from identical weights, study §2.4) and the
+   remainder, estimated by the **method of moments** (expected mean squares), not as raw shares of the
+   sum of squares (Revision 2, N1). Raw shares rank factors by their degrees of freedom when nothing
+   is happening — under pure seed noise they would give world ≈ 12 %, agent ≈ 6 %, world × agent ≈ 12 %,
+   seed within agent ≈ 24 %, remainder ≈ 47 % — so "shared starting weights" would look like the
+   second-biggest driver of every behaviour while doing nothing. **The ranking rests mainly on the
+   standardised effects with their run-level intervals; the variance components are a secondary
+   description**, each very imprecise (a component estimated on 2 df has a 95 % interval spanning more
+   than an order of magnitude).
+5. **The design comes from the manifest, not from this population (Revision 2, N3).** Cells are the
+   manifest's world × agent labels; the number of cells, the residual df and the permutation counts
+   are computed, never typed. Stage 2 needs at least 2 completed runs in **every** cell; when any cell
+   has fewer (for example the level-05 body-interaction factorial: 16 worlds × 2 agents × 1 seed), the
+   screening refuses and F5 states why. It does not borrow a seed-to-seed SD from elsewhere unless an
+   external reference is explicitly declared and named on the page.
 
 No sandwich (cluster-robust) estimator is used: with 3 runs per cell the two-stage regression has
 exact small-sample degrees of freedom, and a sandwich would add a second, more optimistic answer.
@@ -291,7 +311,7 @@ cell only when every requirement holds; otherwise F1 lists it as unavailable wit
 | `eating` | eating | `ate_food` | column present; `environment.eat_action_enabled` true; a resource declaration of type `food` |
 | `near_rabbit` | within two squares of a rabbit | any active neutral-class animal within Chebyshev distance 2 (`NEAR_D`, imported) | ≥ 1 neutral-class slot |
 | `near_predator` | within two squares of a predator | any active predator-class animal within Chebyshev distance 2 | ≥ 1 predator-class slot |
-| `warm_cell` | on a warm square | a body resting on the agent's own square (A2) would settle **at or above the comfort setpoint and at or below the survivable maximum**: with `T* = config_loader._thermal_equilibrium(T_square, k_exchange, k_loss, k_metabolic, temperature_setpoint)` (the environment's own function, imported, not re-implemented), success iff `temperature_setpoint ≤ T* ≤ max_temperature`. Squares whose equilibrium is lethally hot are not "warm". In the hv worlds (`k_metabolic = 0`, setpoint 0, maximum 15) this is 0 ° ≤ ⅔·T_square ≤ 15 °, against a baseline of about −30 ° | `thermal.enabled`; thermoception and body temperature in the observation (or `relative: false`); `obs_precision == float32` |
+| `warm_cell` | on a warm square | a body resting on the agent's own square (A2) would settle **at or above the comfort setpoint and at or below the survivable maximum**: with `T* = config_loader._thermal_equilibrium(T_square, k_exchange, k_loss, k_metabolic, temperature_setpoint)` (the environment's own function, imported, not re-implemented), success iff `temperature_setpoint ≤ T* ≤ max_temperature`. Squares whose equilibrium is lethally hot are not "warm". In the hv worlds (`k_metabolic = 0`, setpoint 0, maximum 15) this is 0 ° ≤ ⅔·T_square ≤ 15 °, against a baseline of about −30 °. The warming / cooling rate scales do not enter: they scale the whole per-step change, so the fixed point is unchanged (`core.py` body update) | `thermal.enabled`; thermoception and body temperature in the observation (or `relative: false`); `obs_precision == float32`; **`thermal.injury_heat_exchange_gain == 0`** (Revision 2, N7: with a non-zero gain the equilibrium depends on injury and the static band is wrong — the target is then unavailable with that reason) |
 
 Note on `near_rabbit`: the target counts every step with a rabbit within two squares. The legacy
 *consequence* factor `frac_time_rabbit_near` (kept for the gate) counts only steps with a rabbit near
@@ -315,7 +335,7 @@ produced it). Roles are emitted in this fixed order, which on a01 is the legacy 
 | 4 | each resource declaration with varying count, by name | `n_food`, `n_ambush_predators` (`hiding_predator`); unknown → `n_<name>` |
 | 5 | `environment.random_start_pos: true` and ≥ 1 hiding obstacle | `spawn_dist_to_bush` |
 | 6 | `thermal.enabled` and `random_start_body_temp` and `body_temp_observable` | `start_body_temp` (from `obs_true` at `t = 0`, index per A2b) |
-| 6b | `thermal.enabled` and `thermal.default_temp` is a range with low ≠ high, thermoception and body temperature observable | `ambient_temp` (A2: read at `t = 0` from a thermoception square beyond the kernel radius of every active campfire; undefined — NaN — on episodes with no such square, and its subset is "episodes where recoverable") |
+| 6b | `thermal.enabled` and `thermal.default_temp` is a range with low ≠ high, thermoception and body temperature observable, `use_random_spots` off, and every heat source declared by `temperature_ratio` with low = high (no absolute `temperature`) | `ambient_temp` (Revision 2, N2: recovered on **every** episode as `T_square(t=0) / (1 − ratio·B_own)`, A2; the kernel radius comes from the rebuilt params, since `thermal_kernel_radius` is not in the saved config). If it is non-finite on any episode, its role is demoted to **univariate-only** with that reason in `prefit.json` — it then enters neither M1 / M4 nor the screening covariates, so an "all episodes" model never silently runs on a spawn-selected subset. If a precondition fails, `thermal.default_temp` stays unclaimed and is listed as unhandled |
 | 7 | per predator-class declaration: each varying trait range in `TRAIT_COLUMNS` (`detection_range`→`animal_detect_sampled`, `attack_delay`, `attack_range`, `max_stamina`, `stamina_recovery_rate`→`animal_recovery_sampled`, `hunt_stamina_threshold`, `lose_interest_multiplier`, `move_interval`), mean over active slots; then smell statistic; then `spawn_dist_to_predator`; then smell intensity | `pred_detection_range`, `pred_attack_delay`, `pred_attack_range`, `pred_max_stamina`, `pred_smell_predatorness`, `spawn_dist_to_predator`, `pred_olf_intensity`; subset = exactly one predator |
 | 8 | per neutral-class declaration: varying traits, then smell statistic, then intensity | `rab_smell_predatorness`, `rab_olf_intensity`; subset = exactly one rabbit |
 | 9 | consequences (legacy `END`, same formulas) | `frac_time_injured`, `frac_time_inj_severe`, `mean_injury`, `peak_injury`, `frac_time_low_nutrition`, `mean_nutrition`, `total_damage_taken`, `eat_rate`, `rest_rate`, `episode_length`, `frac_time_predator_near`, `frac_time_rabbit_near` |
@@ -413,20 +433,38 @@ Method and rationale in A7. For each target:
   exact *t*₁₂: each treated world − control world **within each agent**, modulated − ordinary agent
   **within each world**, and the world and agent averages under sum-to-zero (effect) coding — stated
   as such, so an "average" effect means the unweighted average over cells, never a reference cell.
-- Standardised effect size of each contrast: contrast ÷ `s`.
-- Variance components (balanced design, sums of squares): shares of the run-to-run variation of `q`
-  due to world (2 df), agent (1), world × agent (2), shared starting weights = seed within agent (4),
-  and the remainder (8). These shares and the standardised effects are what F5 ranks.
-- Exact permutation p-value per agent for "the three worlds differ" (all 1,680 relabelings of world
-  labels across that agent's 9 runs; statistic = the between-world F).
+- Standardised effect size of each contrast: contrast ÷ `s`. **These, with their run-level 95 %
+  intervals, are the primary ranking** (Revision 2, N1).
+- Variance components (balanced design), by the method of moments (Revision 2, N1): for each factor
+  `f` — world (2 df on the first population), agent (1), world × agent (2), shared starting weights =
+  seed within agent (4), remainder (8) — the ω²-type share
+  `(SS_f − df_f·MS_remainder) / (SS_total + MS_remainder)`, **truncated at 0, with truncated values
+  flagged**. Beside each, as a reference mark, the share its raw sum of squares would take under pure
+  seed noise (`df_f / df_total`). The shares are a secondary description, never the primary ranking.
+- Per-cell SDs and the largest per-run stage-1 SE in each cell are reported next to the pooled `s`
+  (Revision 2, N4): the pooled-SD OLS assumes equal run-to-run variance in every cell. Where the
+  per-cell SDs differ markedly (largest / smallest > 3), Welch contrasts (each contrast's SE from its
+  own two cells' SDs, Welch–Satterthwaite df) are added as a sensitivity reading — the study's §5.3
+  uses Welch too.
+- Exact permutation p-value per agent for "the three worlds differ" (all relabelings of world labels
+  across that agent's runs — 1,680 on the first population, 280 distinct values; statistic = the
+  between-world F), plus the within-seed version (216 relabelings, 36 distinct values) as the
+  design-matched reading (Revision 2, N6).
 - Secondary column, labelled **"conditional on these runs"**: the cell mean's SE from the per-run
-  episode-level SEs alone (`√Σ se_r² / 3`).
+  episode-level SEs alone (`√Σ se_r² / n_cell`).
+- **Design from the manifest** (Revision 2, N3): cells, `n_cell`, residual df, contrast list and
+  permutation counts are built from the population manifest's world × agent × seed labels; a cell
+  with fewer than 2 completed runs makes `screen.py` refuse with that reason (F5 shows it).
 
 **Smell terms on the hv-study population.** For the rabbit-smell slope and the smell × start-injury
 slope, F5 shows per-run values and per-cell means ± seed-to-seed SD **per agent**, with no p-value
 and no pass/fail, under "exploratory screening — not the smell study's pre-registered verdict". The
 study's own S1 reading differs on purpose (first 25 steps, no-predator episodes, quarter contrast)
 and is the one that decides. Tests (t, permutation) are reported for the non-smell quantities only.
+**The smell slopes are also excluded from F5(a) (variance components) and F5(b) (standardised
+effects with intervals)** (Revision 2, N5): an interval that excludes 0 is a test in all but name, and
+the world share of a smell slope partly reflects the different control-world regressor rather than
+the behaviour. They appear in F5(c) only, per agent, as above.
 
 **Outputs** (`results/analysis/basic_behaviour/<population>/screen/<target>/`): `per_run.csv`
 (stage 1, one row per run × quantity), `cells.csv` (cell means, SEs, intervals, seed-to-seed SD,
@@ -526,7 +564,7 @@ first, sets no style of its own, and saves via `house.save(fig, <fig_dir>/<stem>
 | `f2_factor_inventory.py` | `f2_factor_inventory` | Rows = factors (registry order) + unhandled markers; columns = runs; cell = included / excluded (reason code) / not applicable / unhandled. The builder renders the full reason table from `inventory.json` + `prefit.json` |
 | `f3_univariate.py --target T` | `f3_univariate__<T>` | Rows = factors ranked by median `|Δpp per SD|` across runs; x = Δpp per +1 SD; one marker per run |
 | `f4_multivariate.py --target T` | `f4_multivariate__<T>` | One panel per M-model; same encoding; models skipped in a run listed in the samples rows |
-| `f5_settings.py --target T` | `f5_settings__<T>` | "Which settings move each behaviour" (exploratory screening). (a) Ranking: for the behaviour level and each slope, the variance-component shares (world, agent, world × agent, shared starting weights, remainder) as one stacked bar per quantity; (b) the standardised effect of each contrast (treated world − control within agent; modulated − ordinary within world), sorted, with run-level 95 % intervals; (c) per world × agent cell: the 3 per-run values as dots and the cell mean ± seed-to-seed SD, for the level, start injury, start nutrition, smell (per nat) and smell × injury — the two smell panels **per agent, no tests**, titled "exploratory screening — not the smell study's pre-registered verdict" |
+| `f5_settings.py --target T` | `f5_settings__<T>` | "Which settings move each behaviour" (exploratory screening). (a) The standardised effect of each contrast (treated world − control within agent; modulated − ordinary within world), sorted, with run-level 95 % intervals — the primary ranking; (b) secondary: for the behaviour level and each non-smell slope, the method-of-moments variance components (world, agent, world × agent, shared starting weights, remainder; truncated values flagged), each with its pure-noise reference mark `df_f / df_total`. Smell slopes appear in neither (a) nor (b) (Revision 2, N5); (c) per world × agent cell: the 3 per-run values as dots and the cell mean ± seed-to-seed SD, for the level, start injury, start nutrition, smell (per nat) and smell × injury — the two smell panels **per agent, no tests**, titled "exploratory screening — not the smell study's pre-registered verdict" |
 | `f6_crosstabs.py --target T` | `f6_crosstabs__<T>` | (a) injury band × nutrition band share per world × agent (trial-weighted over seeds; seed range in the cell label); (b) rabbit-smell ladder in nats, one line per run; (c) near / far rabbit × near / far predator share per run |
 
 #### `scripts/analysis/basic_behaviour/page_template.html` (new) and `build_page.py` (new)
@@ -563,13 +601,25 @@ entry section (`PURPOSE`) is plain-language per CLAUDE.md "Documentation framing
   counts only rock slots.
 - `test_audit_flags_unknown_draw`: the a01 config plus `body.random_start_hydration: true` → one
   unhandled row naming that path; plus `thermal.use_random_spots: true` → another; the hv1ch config →
-  `thermal.default_temp` flagged.
+  **no** unhandled row (`thermal.default_temp` is claimed by handler 6b — Revision 2, N7 (iii)
+  corrects the earlier expectation); the hv1ch config with `use_random_spots: true` →
+  `thermal.default_temp` and `thermal.use_random_spots` both unhandled (6b's precondition fails).
+- `test_warm_target_unavailable_with_injury_gain`: the hv1ch config with
+  `thermal.injury_heat_exchange_gain: 0.5` → `warm_cell` unavailable, reason names the key (N7).
+- `test_ambient_recovery_formula`: a synthetic 10 × 10 field built with the environment's own blur
+  from one baseline and two fires → `baseline` recovered exactly at every square from `B` (N2).
 - `test_prefit_duplicate_constant_outcome`: synthetic arrays where intensity == statistic, one column
   constant, and `eat_rate` with target `eating` → three exclusions with the stated reasons, nothing
   else.
 - `test_screen_stage2_on_known_values`: 18 synthetic per-run values with known cell means and
-  within-cell SD → cell means, `s`, the contrasts' t (df 12), the variance shares (summing to 1, and
-  a pure world effect giving the world share ≈ 1), and exactly 1,680 permutations per agent.
+  within-cell SD → cell means, `s`, the contrasts' t (df 12), the method-of-moments shares (a pure
+  world effect giving the world share ≈ 1), and exactly 1,680 permutations per agent (280 distinct
+  F values) and 216 within-seed ones. **Pure-noise case** (Revision 2, N1): many replicate draws of
+  pure seed noise → every estimated share's average is near 0 (while the raw sum-of-squares shares
+  average `df_f / df_total`).
+- `test_screen_refuses_unreplicated_cell` (N3): a manifest with one run in some cell → `screen.py`
+  refuses with a reason naming the cell; df and permutation counts follow the manifest on a 2 × 2 × 2
+  design.
 - `test_screen_uses_seed_variation`: synthetic runs whose slopes are +1 for two seeds and −1 for the
   third in every cell → the run-level SE of each cell mean is far larger than the "conditional on
   these runs" SE, and no contrast is reported as different from zero.
@@ -639,7 +689,10 @@ developer never calls `Artifact` directly — every publish goes through `publis
   Implementation Report. Expected: none on either; anything else → stop and report (a feature the
   plan missed).
 - [ ] S0.5b `ambient_temp`: on the 20 episodes of S0.4, equal to the replayed episode's baseline draw
-  to 1e-4 wherever defined; report the share of episodes where it is defined.
+  to 1e-4; report the share of episodes where it is defined (Revision 2: expected 100 %).
+- [ ] S0.5c (Revision 2, N2) On every swept thermal cell, M1's `n` equals the cell's episode count
+  (`ambient_temp` and `start_body_temp` finite everywhere); otherwise `ambient_temp` must show as
+  demoted to univariate-only in `prefit.json`.
 - [ ] S0.6 Gate 1: both a01 CSVs byte-identical; reference sha256s verified first.
 - [ ] S0.6b Gate 2 (hv1ch): every check of A5's second table passes.
 - [ ] S0.7 Golden gate: a01 `prefit.json` lists zero exclusions (otherwise stop and report; do not tune).
@@ -671,7 +724,10 @@ developer never calls `Artifact` directly — every publish goes through `publis
 - [ ] S5.5 The smell regressor per world matches B5 (control: channel 1 at 2.22 nats per unit, channel
   2 as covariate; treated: `spec.llr`), checked on one run of each world.
 - [ ] S5.6 No p-value or pass/fail appears for any smell term on F5 or in `contrasts.csv` for an hv
-  population.
+  population, and no smell slope appears in F5(a) or F5(b) (Revision 2, N5).
+- [ ] S5.7 (Revision 2, N1/N4) The method-of-moments shares, their truncation flags and the
+  `df_f / df_total` reference marks are in `variance.csv`; per-cell SDs and the largest per-run SE per
+  cell are in `cells.csv`; Welch contrasts are present wherever largest / smallest cell SD > 3.
 
 ---
 
@@ -715,6 +771,22 @@ developer never calls `Artifact` directly — every publish goes through `publis
   maximum and the ambient draw recovered (`ambient_temp`); L4 survival = `length`. Hard constraint on
   golden-stamped files added. Terminology: "yardstick" replaced by plain wording (project policy,
   commit `d94250b6`).
+- **2026-10-01, Revision 2 — after the `plan-reviewer` re-check of Revision 1 (SOUND WITH CONCERNS,
+  commit `a8fc3723`). Text only; written by the developer on the user's instruction before S0.**
+  N1: variance components by the method of moments (ω²-type share, truncated at 0 and flagged), each
+  with its pure-noise reference mark `df_f / df_total`; ranking rests mainly on the standardised
+  effects with intervals; a pure-noise unit test (A7 point 4, B5, F5, tests). N2: `ambient_temp`
+  recovered exactly on every episode as `T_square(t=0) / (1 − ratio·B_own)` from the `t = 0` fire
+  positions, demoted to univariate-only (with a reason) if it is ever non-finite; checkpoint S0.5c that
+  M1 sees every episode (A2, B2 handler 6b). N3: cells, df and permutation counts built from the
+  manifest; refusal with a reason when a cell has fewer than 2 runs; unit test (A7 point 5, B5). N4:
+  per-cell SDs, largest per-run SE per cell, Welch contrasts as a sensitivity reading (B5, S5.7). N5:
+  smell slopes excluded from F5(a)/(b) (B5, F5, S5.6). N6: permutation granularity stated; the
+  within-seed permutation added as the design-matched reading (A7 point 3, B5). N7: `warm_cell`
+  unavailable when `thermal.injury_heat_exchange_gain ≠ 0`; kernel radius from the rebuilt params; the
+  stale audit test expectation fixed (B1, B2, tests). Re-check extension of M4: the second gate also
+  runs the multivariate recipes with campfires and rocks recombined and requires the legacy
+  multivariate lines verbatim (A5).
 
 ---
 
