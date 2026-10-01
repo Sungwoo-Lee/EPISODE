@@ -10,14 +10,46 @@ develop_link: docs/develop/active/thirst/THIRST_WATER_PLAN.md
 
 # Level 06 (pond + thirst) training pilot
 
-> **Status**: DESIGNED, Revision 1 (answers the plan review, §1.1). Nothing launched. No new
-> config files are needed (§3.1). Nodes assigned by the user (§3).
+> **Status**: ANALYSED 2026-10-01 (experiment-analyzer). All seven runs finished; results in §7–§9.
+> One pre-registered flag tripped (P1, §7.3) and goes to the user. The verdict has not yet been
+> through `plan-reviewer`. Design: Revision 1 (answers the plan review, §1.1).
 > **Branch**: `v5.0`, worktree `.claude/worktrees/thirst`. Water exists only there. Every launch
 > runs the worktree's code, from the worktree. **Every output is written to the shared project
 > folder**, outside any worktree (§2.5).
 > **Related**: [[THIRST_WATER_PLAN]] (how water and thirst were built and verified) ·
 > [[thirst_water]] (design page with the simulated difficulty) · [[LEVEL05_BODY_INTERACTIONS]]
 > (source of the level-05 reference runs) · [[BASIC_LEVELS_Q2_DEFAULT]] (the ladder)
+
+---
+
+## Verdict (plain language, 2026-10-01)
+
+All seven training runs finished their 2 million episodes without errors. Every one ran the new
+pond-and-thirst code and not the older shared copy; this was checked five ways (§7.1).
+
+**The new world can be learned, and it behaves sensibly.** Both the ordinary agent and the agent
+with the modulator learned to drink. On the frozen, best-action policy, drinking bouts per episode
+rose from about 0.2 at 0.4 M episodes to about 5.5 at 2 M. In training, deaths from thirst
+peaked at about 1 episode in 5, a third of the way through training, and fell to about 1 in 16. No single cause of death
+dominates. The mix of causes looks like level 05 with a small thirst share added, and deaths from
+drinking too much are about 1 in 800.
+
+The ordinary agent in the pond world survives **197 steps** on average at the end of training (the
+modulated agent 203). The same ordinary agent in
+the campfire world survives 228 steps, so the drop is **13.5 %**, inside the predicted 5–25 %. Part
+of the gap is a budget effect. The budget is counted in episodes, and pond-world episodes are
+shorter, so these agents got **about 30 % fewer steps of experience**. Compared at equal
+experience, the gap is about **10 %**. Survival was still rising, by about 4 % per tenth of
+training, when the runs stopped. The level-05 control reproduced its older reference run **bit for
+bit**. Water costs about **5 %** in training speed (same machine, same card, same time).
+
+**One pre-registered check tripped, and the user must decide on it.** The "learned to drink" pass
+line asked that the end-of-training thirst-death share be at most half its first-tenth value. Five
+of six runs missed by 0.15–0.7 percentage points. The likely cause is the baseline. In the first
+tenth, most agents die of other causes before thirst can kill them, so the starting share (0.12)
+is low. The share then rose to 0.20 before falling to 0.06. Under the design's rules this is a
+"show the user" flag. It is not evidence that the world is broken. Nothing here is a claim about
+the modulator.
 
 ---
 
@@ -597,11 +629,409 @@ have them.
 
 ## 7. Results
 
-*(to be filled after training)*
+*Filled by experiment-analyzer, 2026-10-01. Training-policy numbers come from each run's local
+WandB binary under `<shared>/wandb/`. Every `Episode/*` value is `Episode/_window_n`-weighted, with
+rows selected by `lo < Episode/Number ≤ hi`, which is the `pilot_pick.py` rule. "Last tenth" means
+episodes 1.8–2.0 M. Greedy numbers come from the §4.2 stores and are never pooled with training
+numbers. Survival is in steps, and reward is never read. The tools banned in §4.4 were not used.
+All code and raw outputs are in `<shared>/results/analysis/thirst_pilot/readout/` (code in
+`readout/code/`).*
 
-## 8. Conclusions
+### 7.0 Completeness
 
-*(to be filled after training)*
+| Run | Cell | Final checkpoint | Last PPO iteration (logged) | Env steps | Wall time | NaN / traceback |
+|---|---|---|---|---|---|---|
+| 1 | L06 ordinary s42 (101:1) | 2,000,008 | 15,150 | 248.2 M | 2.24 h | none |
+| 2 | L06 ordinary s43 (103:0) | 2,000,049 | 14,350 | 235.1 M | 2.07 h | none |
+| 3 | L06 ordinary s44 (103:1) | 2,000,057 | 13,600 | 222.8 M | 1.99 h | none |
+| 4 | L06 modulated s42 (104:0) | 2,000,001 | 14,750 | 241.7 M | 2.87 h | none |
+| 5 | L06 modulated s43 (104:1) | 2,000,071 | 15,350 | 251.5 M | 2.98 h | none |
+| 6 | L06 modulated s44 (105:0) | 2,000,036 | 15,650 | 256.4 M | 2.98 h | none |
+| 7 | L05 control s42 (101:0) | 2,000,025 | 21,450 | 351.4 M | 3.04 h | none |
+
+All seven logs end with `Training complete`, and every WandB binary has exit code 0, with 500
+episode rows reaching `Episode/Number` = 2,000,000. Each run has ten checkpoints and its final key
+is at least 2,000,000 (L2). The §3 manifest still reads `running` in its Status column. That column
+belongs to `training-runner` and was not edited here.
+
+### 7.1 P5: the runs executed `v5.0` code. **PASS (all 7 valid)**
+
+| Check | Result |
+|---|---|
+| (a) gate line in log | All 7 contain `[v5-gate] OK src=<worktree>/src branch=v5.0 … modules=1939` |
+| (b) banner | Runs 1–6: `Observation Dim: 59 (… Hydration=1 …)`. Run 7: `58`, no Hydration |
+| (c) provenance | All 7: `branch: v5.0`, `git_sha: d35a3c67…` (= manifest HEAD), `git_dirty: "unknown"` (accepted) |
+| (d) WandB metadata, informational | All 7: `program` = `<worktree>/train.py`, `commit` = `d35a3c67…`, **`root` = the shared folder**, not the worktree that re-check R3 expected. Informational only, as the design says |
+| (e) water flag | Saved `models/config.yaml` and WandB `config.yaml`: `water.enabled: true` on runs 1–6, `false` on run 7. `Episode/Term_Dehydration` is non-zero in every level-06 window |
+| Seeds | Top-level `seed:` = 42/43/44 as planned, matching provenance `argv` (`--seed 43/44` where passed) |
+
+**P5b: the control reproduces level 05. PASS, and stronger than the band.** S_ctl = **227.8**,
+inside 228.3 ± 6. The control is also **bit-identical** to the first 2 M episodes of the older
+reference run `w0000` ordinary (same seed, same card model, older code). All 500 episode rows
+match exactly in `Episode/Steps`, all `Term_*` and `timesteps` (max abs difference 0). So `v5.0`
+with water off trains level 05 exactly as before.
+
+### 7.2 Temporal evolution (training policy, 200 k-episode tenths)
+
+Survival `Episode/Steps`:
+
+| Run | 0.0–0.2 | 0.2–0.4 | 0.4–0.6 | 0.6–0.8 | 0.8–1.0 | 1.0–1.2 | 1.2–1.4 | 1.4–1.6 | 1.6–1.8 | 1.8–2.0 M |
+|---|---|---|---|---|---|---|---|---|---|---|
+| L06 ordinary s42 | 38.0 | 49.3 | 69.5 | 83.8 | 112.7 | 147.2 | 169.9 | 179.9 | 192.2 | 199.8 |
+| L06 ordinary s43 | 35.6 | 44.7 | 54.1 | 77.1 | 101.8 | 133.4 | 160.5 | 179.4 | 191.4 | 199.7 |
+| L06 ordinary s44 | 34.8 | 52.3 | 60.6 | 74.5 | 98.0 | 116.5 | 141.2 | 164.0 | 183.5 | 190.8 |
+| L06 modulated s42 | 37.8 | 50.5 | 61.7 | 77.2 | 105.4 | 132.6 | 168.5 | 186.0 | 191.1 | 200.4 |
+| L06 modulated s43 | 36.5 | 43.9 | 57.5 | 82.0 | 119.6 | 153.9 | 176.9 | 189.7 | 197.3 | 203.5 |
+| L06 modulated s44 | 41.9 | 59.1 | 64.6 | 80.4 | 120.0 | 150.6 | 174.9 | 189.7 | 197.2 | 204.7 |
+| L05 control s42 | 50.6 | 88.1 | 157.3 | 179.4 | 189.2 | 203.2 | 214.6 | 220.4 | 226.4 | 227.8 |
+| L05 P0a s42 (ref) | 51.1 | 87.9 | 139.5 | 174.2 | 199.6 | 205.6 | 214.2 | 220.1 | 224.7 | 228.3 |
+
+Dehydration share `Term_Dehydration` (all episodes), and late-death dehydration
+`Bal_LateDeath_Dehydration` (share **among deaths after step 20**), seed means:
+
+| Tenth | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 |
+|---|---|---|---|---|---|---|---|---|---|---|
+| Dehydration, ordinary | 0.116 | 0.155 | 0.185 | **0.201** | 0.182 | 0.125 | 0.102 | 0.075 | 0.065 | 0.062 |
+| Dehydration, modulated | 0.125 | 0.163 | 0.186 | **0.197** | 0.156 | 0.101 | 0.077 | 0.071 | 0.067 | 0.064 |
+| Late dehydration, ordinary | 0.148 | 0.181 | 0.205 | **0.231** | 0.205 | 0.140 | 0.111 | 0.076 | 0.063 | 0.059 |
+| Late dehydration, modulated | 0.161 | 0.193 | 0.224 | **0.233** | 0.178 | 0.109 | 0.078 | 0.071 | 0.066 | 0.063 |
+| Over-drinking, ordinary | 0.0037 | 0.0042 | 0.0042 | 0.0036 | 0.0020 | 0.0022 | 0.0016 | 0.0015 | 0.0013 | 0.0012 |
+| Early-death share (≤ 20 steps), ordinary | 0.508 | 0.388 | 0.314 | 0.302 | 0.270 | 0.270 | 0.240 | 0.230 | 0.213 | 0.202 |
+| Early-death share, L05 control | 0.412 | 0.245 | 0.207 | 0.199 | 0.189 | 0.169 | 0.159 | 0.153 | 0.148 | 0.147 |
+
+Per-seed dehydration curves have the same rise-and-fall shape in all six runs. The peak falls in
+tenth 3 or 4 (tenth 5 for ordinary s44), at 0.18–0.22. The other causes, seed means, ordinary
+agent:
+
+| Tenth | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 |
+|---|---|---|---|---|---|---|---|---|---|---|
+| Starvation | 0.223 | 0.331 | 0.350 | 0.328 | 0.328 | 0.282 | 0.273 | 0.242 | 0.228 | 0.225 |
+| Injury | 0.547 | 0.406 | 0.363 | 0.383 | 0.384 | 0.445 | 0.433 | 0.465 | 0.465 | 0.462 |
+| Thermal | 0.110 | 0.104 | 0.098 | 0.079 | 0.072 | 0.055 | 0.050 | 0.035 | 0.029 | 0.024 |
+| Step limit | 0.000 | 0.000 | 0.000 | 0.006 | 0.032 | 0.092 | 0.140 | 0.181 | 0.211 | 0.227 |
+| `Bal_TimeBush` | 0.076 | 0.342 | 0.420 | 0.352 | 0.315 | 0.260 | 0.251 | 0.234 | 0.235 | 0.234 |
+| `Bal_TimeEat` | 0.003 | 0.005 | 0.026 | 0.066 | 0.096 | 0.122 | 0.135 | 0.144 | 0.150 | 0.152 |
+| `Bal_TimeWarm` | 0.047 | 0.087 | 0.096 | 0.109 | 0.123 | 0.147 | 0.158 | 0.174 | 0.180 | 0.184 |
+| `Bal_HideRatio_True` | 0.53 | 0.38 | 0.71 | 0.92 | 1.15 | 1.76 | 2.11 | 2.52 | 2.72 | 2.86 |
+
+Level 06 runs the same curriculum as level 05, a few tenths later. The step-limit share passes
+0.1 by tenth 3 on the control, but only by tenth 6–7 on level 06 (0.092, then 0.140). Eating time reaches 0.125 by
+tenth 3 on the control and by tenth 6 on level 06. The hiding ratio crosses 2 at tenth 4 on the
+control and at tenth 7 on level 06. By the last tenth every balance key is close to the control's
+(bush time 0.234 vs 0.263, eat time 0.152 vs 0.156, warm time 0.184 vs 0.207, hiding ratio 2.86
+vs 2.94). Full per-seed tables for every key: `readout/tenths_out.txt`.
+
+### 7.3 P1: both agents learn to drink. **FLAG (pass line missed by 5 of 6 runs, narrowly)**
+
+**Floor, R1 and integrity checks (stores).** The pond recomputation (params built from each run's
+saved config through `apply_saved_config_compat` → `load_env_params`, as the collector does) passed
+both R1 checks on **all 18 stores**. There were 0 start-cell mismatches in 180,000 episodes. The
+per-step "hydration rose ⇔ standing on a recomputed pond cell" test had 0 exceptions in
+**25.0 M** steps. The design names the helper `apply_sensor_compat`. The collector's actual
+params path for these runs, which pass no `--assume-pre-v3x` flag, is
+`apply_saved_config_compat` (`collect_trajectories.py:1007-1014`), and that path was used. The
+floor is valid: **0.0165** (165 of 10,000 episode starts cannot reach water under
+ceil(1.6 × H0) ≤ d − 1). It is identical in every store because all stores share
+`--seed-base 1000000`. The integrity check holds: **100 %** of episodes that outlived their own
+no-drink deadline drank, in all 18 stores (94–4,656 such episodes per store). The bout reader
+passed its known-input test (a synthetic trace with 2 bouts returns 2).
+
+**Pass line, per run** (last-tenth `Term_Dehydration` ≤ 0.10 **and** ≤ max(0.5 × first tenth,
+floor + 0.03 = 0.0465); bouts rise from 0.4 M to 2.0 M):
+
+| Run | First tenth | 0.5 × first | Threshold | Last tenth | ≤ 0.10 | ≤ threshold | Bouts/ep 0.4 M → 1.2 M → 2.0 M | P1 |
+|---|---|---|---|---|---|---|---|---|
+| ordinary s42 | 0.1146 | 0.0573 | 0.0573 | 0.0602 | yes | **no (+0.0029)** | 0.27 → 2.80 → 5.75 | fail |
+| ordinary s43 | 0.1188 | 0.0594 | 0.0594 | 0.0656 | yes | **no (+0.0062)** | 0.19 → 3.90 → 5.33 | fail |
+| ordinary s44 | 0.1152 | 0.0576 | 0.0576 | 0.0591 | yes | **no (+0.0015)** | 0.06 → 2.67 → 5.31 | fail |
+| modulated s42 | 0.1214 | 0.0607 | 0.0607 | 0.0677 | yes | **no (+0.0070)** | 0.35 → 2.79 → 5.58 | fail |
+| modulated s43 | 0.1195 | 0.0598 | 0.0598 | 0.0630 | yes | **no (+0.0032)** | 0.10 → 4.24 → 5.78 | fail |
+| modulated s44 | 0.1351 | 0.0676 | 0.0676 | 0.0603 | yes | yes | 0.17 → 4.02 → 5.76 | **pass** |
+
+The second flag clause, "flat over the last three tenths while above 0.10", does **not** trip.
+Every run is below 0.07 and still drifting down: the ordinary mean goes 0.075 → 0.065 → 0.062.
+
+**Drinking in the greedy stores** (seed means):
+
+| Checkpoint | Bouts / episode (ord / mod) | Bouts / 100 steps | Steps / bout | Share of episodes that drank | Greedy mean length |
+|---|---|---|---|---|---|
+| ≈ 0.4 M | 0.17 / 0.21 | 0.33 / 0.38 | 1.7–4.9 | 0.08 / 0.11 | 52 / 55 |
+| ≈ 1.2 M | 3.12 / 3.68 | 2.09 / 2.33 | 3.3–3.9 | 0.44 / 0.45 | 148 / 157 |
+| 2.0 M | 5.47 / 5.71 | 2.62 / 2.71 | 3.3–3.7 | 0.62 / 0.61 | 209 / 210 |
+
+At 2 M, bouts have a median of 3 steps and a 99th percentile of 13–15 steps. The longest bout in
+any 2 M store is 27 steps.
+
+**Anatomy of the remaining thirst deaths** (greedy, 2.0 M stores, per run). There are 502–750
+dehydration deaths per 10,000 episodes. Of these, 150–155 are the unreachable floor, 262–320
+happen within 20 steps, and 461–674 belong to episodes that **never drank at all**. In training,
+the last-tenth dehydration share of 0.059–0.068 splits into about **0.028 early** (≤ 20 steps; a thirst
+death that early needs a start hydration below 12.5, which is 6.25 % of starts) and **0.031–0.039 late**.
+
+**Prediction check.** The last-tenth share of 0.059–0.068 is **inside** the predicted 0.03–0.08.
+"Late dehydration falls monotonically after the first two tenths" is **refuted**: it **rises**
+through tenth 4 (peak 0.23 among late deaths) and falls monotonically only from tenth 4 or 5 on.
+"Within a factor of 2 of the scripted agent's 1.7 pond visits" is **refuted on the high side**:
+trained agents make 5.3–5.8 bouts per episode of about 3.5 steps each. That is frequent short
+sips, not 1–2 long drinks. A bout counts each separate arrival on the pond, so this is not an
+artefact of pausing on the pond.
+
+### 7.4 P2: no absurdly dominant cause of death. **PASS (no flag)**
+
+Last tenth, seed mean, all seven `Term_*` shares. Training policy, with the greedy 2.0 M store in a
+separate column:
+
+| Cause | Ordinary, training | Modulated, training | Ordinary, greedy | Modulated, greedy | L05 control, training | Flag line |
+|---|---|---|---|---|---|---|
+| Starvation | 0.225 | 0.231 | 0.209 | 0.224 | 0.283 | |
+| Injury | **0.462** | 0.445 | 0.462 | 0.427 | 0.415 | > 0.60 any cause |
+| Thermal | 0.024 | 0.024 | 0.022 | 0.026 | 0.032 | |
+| Step limit | 0.227 | 0.236 | 0.249 | 0.250 | 0.270 | |
+| Over-eating | 0.0000 | 0.0000 | 0.0000 | 0.0000 | 0.0000 | |
+| Dehydration | 0.062 | 0.064 | 0.056 | 0.071 | — | > 0.25 |
+| Over-drinking | 0.0012 | 0.0011 | 0.0015 | 0.0010 | — | > 0.10 |
+| **Sum** | 1.0000 | 1.0000 | 1.0000 | 1.0000 | 1.0000 | 1 ± 0.01 |
+
+The sum check holds on **every individual logged row** of every run (min/max 1 ± 2e-16), not only
+on window means. The stores have no reason code 0. Predictions: injury is the largest cause, as
+predicted, but at 0.462 for the ordinary agent it is just above the predicted 0.35–0.45 (modulated
+0.445 is inside). Starvation of 0.225–0.231 is inside 0.2–0.3. Dehydration is inside 0.03–0.12.
+Over-drinking is below 0.02. The step-limit share of 0.227–0.236 is below level 05's 0.27. All
+are as predicted.
+
+### 7.5 P3: survival against level 05. **Inside the predicted band; no flag; not converged**
+
+| | Seeds (last tenth) | Mean | Seed s.d. (% of mean) | 95 % CI (t, n = 3) | Ratio to S_05 | Ninth tenth → last tenth |
+|---|---|---|---|---|---|---|
+| L06 ordinary | 199.8, 199.7, 190.8 | **196.7** | 5.2 (2.6 %) | 183.9–209.5 | **0.865** (−13.5 %) | +3.9, +4.3, +4.0 % |
+| L06 modulated | 200.4, 203.5, 204.7 | **202.9** | 2.2 (1.1 %) | 197.4–208.4 | 0.888 vs `w0000 m` 228.4 (one seed) | +4.9, +3.1, +3.8 % |
+| L05 ordinary (P0a–c) | 228.3, 225.8, 228.6 | 227.5 | 1.5 | 223.8–231.3 | — | +1.6, +1.8, +1.9 % |
+
+- **Prediction** "5–25 % below S_05" holds: 13.5 % below, with every seed between 12.2 % and 16.1 %
+  below. "Seed spread below 3 % of S_06" holds (2.6 % and 1.1 %).
+- **Flag "too hard"** (S_06 < 114): no. **Flag "water does not bite"**: no (S_06 is 31 steps below
+  S_05, and pond bouts are 5.5 per episode).
+- **Not converged** (reported, not a flag): the last tenth beats the ninth by more than 2 % in **all
+  six** level-06 runs (3.1–4.9 %). The level-05 references are under 2 %. The 2 M gap is measured
+  on a curve that is still rising.
+- **Modulated minus ordinary, descriptive only:** +0.6, +3.9, +14.0 steps per seed pair, mean
+  +6.2, s.d. 7.0. One seed pair drives most of it (ordinary s44 is the low run). This is not
+  evidence about the modulator (§1).
+
+**Budget confound: fewer environment steps for the same number of episodes (parent fact (b),
+checked).** Every PPO iteration is 128 worlds × 128 steps = 16,384 environment steps. That is true
+on both levels, so env steps and PPO updates are proportional. Level-06 episodes are shorter
+(averaged over the whole run: 111–128 steps, against 176 on the control), so 2 M episodes buy fewer
+iterations:
+
+| Run | Iterations | Env steps | vs its level-05 reference |
+|---|---|---|---|
+| L06 ordinary s42 / s43 / s44 | 15,150 / 14,350 / 13,600 | 248.2 / 235.1 / 222.8 M | 0.711 / 0.719 / 0.636 of P0a / P0b / P0c; s42 is 0.706 of the same-seed control (21,450 iterations) |
+| L06 modulated s42 / s43 / s44 | 14,750 / 15,350 / 15,650 | 241.7 / 251.5 / 256.4 M | 0.730 / 0.760 / 0.775 of `w0000 m`'s first 2 M (331 M) |
+
+The ordinary level-06 agent therefore got **about 31 % fewer steps of experience and PPO updates**
+than its level-05 reference: 29 % for seed 42 against the control, which matches the parent's
+"≈ 28 %". For the modulated agent the figure is about 25 %. **Equal-experience comparison**
+(post hoc, labelled): each ordinary level-05 reference was read over the env-step window that
+the same-seed level-06 run covered in its last tenth. This also gives an equal number of PPO
+updates.
+
+| Pair | Env-step window | L05 survival there (L05 episodes) | L06 last tenth | Ratio |
+|---|---|---|---|---|
+| L06 s42 vs P0a | 209–248 M | 219.4 (1.38–1.56 M) | 199.8 | 0.910 |
+| L06 s43 vs P0b | 196–235 M | 218.1 (1.41–1.59 M) | 199.7 | 0.916 |
+| L06 s44 vs P0c | 186–223 M | 217.5 (1.27–1.43 M) | 190.8 | 0.877 |
+| L06 s42 vs control | 209–248 M | 219.7 (1.37–1.54 M) | 199.8 | 0.909 |
+
+At equal experience the gap is **about 10 %** (8.4–12.3 %), against 13.5 % at equal episodes. So
+roughly a quarter of the episode-matched gap is less training, not the harder world. Both readings
+are inside the predicted 5–25 %. The pre-registered number is the episode-matched one.
+
+**Survival by start hydration** (greedy, 2.0 M stores, seed means; table 4 of §4.3):
+
+| Start hydration band | Episodes | Ordinary: mean length / dehydration share | Modulated: mean length / dehydration share |
+|---|---|---|---|
+| 0–50 | 2,545 | 182.5 / 0.186 | 181.6 / 0.229 |
+| 50–100 | 2,538 | 216.1 / 0.027 | 219.0 / 0.039 |
+| 100–150 | 2,433 | 214.4 / 0.007 | 217.3 / 0.009 |
+| 150–200 | 2,484 | 222.9 / 0.002 | 224.7 / 0.002 |
+
+Almost all of the thirst cost sits in the quarter of episodes that start below 50 (deadline under 80
+steps). Above 50, survival is within about 10 steps across bands.
+
+### 7.6 P4: training-speed cost. **PASS (≈ 5 % slower; flag line 15 %)**
+
+| Read-out | L06 run 1 (101:1) | L05 control run 7 (101:0) | L06 / L05 |
+|---|---|---|---|
+| **Design method**: Δ`timesteps`/Δ`_runtime`, the row nearest 50 % of each run's own final timesteps → last row | 31,404 /s (67–134 min) | 32,105 /s (91–182 min) | **0.978 (−2.2 %)** |
+| **Same wall-clock window**, minutes 53–107 (both running) | 31,381 /s | 32,914 /s | **0.953 (−4.7 %)** |
+| Same wall-clock window, minutes 53–134 (until run 1 ends) | 31,398 /s | 32,931 /s | 0.953 (−4.7 %) |
+
+The parent's figure (a), 4.7 % slower in minutes 53–107, is **confirmed**. The design's own method
+gives 2.2 %, and it is biased toward a smaller cost. Its two windows are not simultaneous: level-06
+episodes are shorter, so run 1 finished at 134 min, while the control ran on to 182 min. The
+control's window therefore includes 48 minutes after run 1 had finished, and in that stretch the
+control **slowed** by 5.1 % (32.9 k → 31.3 k /s; 30.3 k in minutes 140–160). The cause is
+unknown: other load on node 101 cannot be checked after the fact. The control's speed was flat at
+32.9 k /s from minute 20 to minute 134, while both runs shared the node. The simultaneous window
+is the clean comparison, and its answer is **4.7 %**. Both readings are inside the predicted
+0–10 % and far from the 15 % flag, so the reset-cost split (A4) was not needed. Every level-06
+episode is shorter, so level 06 completes **more** episodes per second: 176 against 163 in the
+simultaneous window.
+
+Secondary:
+- **Hours per 2 M episodes:** level-06 ordinary 2.24 / 2.07 / 1.99 h, against 3.04 h for the
+  control on the same card type. The shorter episodes make a 2 M-episode level-06 run about
+  30 % faster in wall time, even though each step costs about 5 % more.
+- **Modulated / ordinary speed on level 06:** 23.5–24.0 k against 31.4–32.3 k env steps/s, a
+  ratio of about **0.74**. This is cross-node (104/105 against 101/103), but every card is an
+  RTX 2080 Ti.
+- The node-103 ordinary runs (seeds 43 and 44, design method) ran at 32.3 k and 31.8 k /s. That is
+  2–3 % below the control's simultaneous 32.9 k, which matches the parent's "2–3 %". Being
+  cross-node, it is indicative only.
+
+### 7.7 Context: placement behaviour (parent fact (c); not re-measured here)
+
+A separate placement audit ([[PLACEMENT_FIXES_PLAN]], `docs/develop/active/placement/`, 2,000
+resets per level) reports two current behaviours. About 2 % of food regrowths land on a burning
+campfire, where the food cannot be eaten (2.01 % level 05, 2.09 % level 06). The agent starts on a
+burning fire in about 1.8 % of episodes (1.70 % level 05, 1.85 % level 06). Both are present at
+almost the same rate in both worlds and in the references, so they do not bias the
+level-06-versus-level-05 comparison. They do add to the early-death share on both levels:
+0.20 (level 06) and 0.15 (control) in the last tenth. A fix is being planned. The pilot is not
+blocked.
+
+---
+
+## 8. Analysis
+
+**What the pre-registration asked and what came back.** P2–P5 came back clean, and P5b came back
+stronger than designed (bit-identical reproduction). P1 tripped its pass line in 5 of 6 runs by
+0.15–0.70 percentage points. Under §2.7, a flag means "stop and show the user", and it does not
+mean "the world is broken".
+
+**Why P1 trips, and the evidence for that.** The clause that fails is "≤ 0.5 × first-tenth share".
+It assumed that thirst deaths start high and fall. The data show a competing-risks shape instead:
+
+- In the first tenth, 51 % of all episodes end within 20 steps and injury takes 55 %. Most agents
+  die before their thirst deadline (1.6 × start hydration, a median of 160 steps) can arrive. The
+  first-tenth dehydration share of 0.115–0.135 is therefore a low baseline, not a measure of
+  "not drinking".
+- As agents learn to survive the other threats (seed-mean survival goes from 36 to 79 steps by tenth 4),
+  more of them live long enough to die of thirst. Dehydration climbs to **0.20** at tenth 4. Over
+  the same period the stores show almost no drinking: 0.17–0.21 bouts per episode at 0.4 M, and
+  only 8–11 % of episodes drank at all.
+- Drinking is then learned. Bouts go 0.17 → 3.1 → 5.5 per episode, and dehydration falls from
+  0.20 to 0.06, a **70 % drop from the peak**. The pre-registered line measures the fall from the first
+  tenth, not from the peak.
+- About 0.028 of the remaining 0.06 are deaths within 20 steps (start hydration below 12.5,
+  6.25 % of starts). In the stores, 1.65 % of starts cannot reach water at all. What remains above
+  the floor + 0.03 line (0.0465) is 0.013–0.021. In the greedy stores most thirst deaths come from
+  episodes that started below 50 (dehydration share in that band: 0.19 ordinary, 0.23 modulated).
+
+This reading is post hoc. It explains the miss, but it does not convert the failures into passes.
+The evidence that drinking is learned is the store bout counts (a pre-registered clause, passed
+by every run) and the 70 % fall of dehydration from its peak. The 100 % integrity check only
+validates the reader, and it is true by construction. The pass line remains failed as written.
+
+**Prediction scorecard.** Hits: P1 last-tenth range, P2 cause ranges (injury marginally over for
+the ordinary agent), P3 band and seed spread, P4 range. Misses: monotone fall of late dehydration
+after tenth 2 (it peaks at tenth 4); pond visits within 2× of the scripted 1.7 (the observed
+5.5 comes as short sips); and convergence. Level 06 is still rising at 2 M, while level 05 had
+flattened.
+
+**Seed dispersion.** Within each agent, the level-06 seeds agree closely in survival (s.d. 2.6 %
+and 1.1 %), in death shares (dehydration 0.059–0.068) and in drinking (5.3–5.8 bouts). None of
+the P1–P4 verdicts depends on a single seed. The one place a single seed matters is the descriptive
+modulated-minus-ordinary gap (+14 steps from seed 44 alone).
+
+**Failure-mode catalogue (§5) check.** No run is invalid (P5). There is no NaN or explosion. The
+dehydration share is below 0.10, so the "not converged, still falling above 0.10" row does not
+apply. Over-drinking is 0.001. Level-06 survival is not above level 05. The control is inside its
+band. The speed cost is 5 %. Both agents learn to drink. The only row hit is the P1 flag itself,
+which §2.7 sends to the user.
+
+**What this pilot cannot say.** Anything about the modulator, since it is neither powered nor
+designed for that. Where level-06 survival converges, since the runs are still rising. Whether
+drinking *tracks thirst* (state-dependent drinking). The declined `Bal_DrinkShare_*` metrics
+would answer that last question, and the start-hydration bands only hint at it: bouts per episode
+are highest in the 50–100 band and lowest in the 150–200 band.
+
+---
+
+## 9. Conclusions
+
+**Per question:**
+
+| Q | Verdict | One-line evidence |
+|---|---|---|
+| P1 learn to drink | **FLAG** (pass line missed by 5/6 runs by 0.15–0.70 pp; the other clauses pass) | Dehydration 0.20 → 0.06 from its tenth-4 peak; bouts 0.17 → 5.5 per episode; integrity 100 %; floor 0.0165, pond recomputation validated on 25.0 M steps |
+| P2 no dominant cause | **PASS** | Largest cause injury 0.46; dehydration 0.06; over-drinking 0.001; sums 1 ± 1e-15 |
+| P3 survival vs level 05 | **PASS, as predicted (no flag), not converged** | 196.7 vs 227.5 (−13.5 %); about −10 % at equal experience; still +4 % per tenth |
+| P4 speed | **PASS** | −4.7 % on the same node at the same time (design method −2.2 %, biased low) |
+| P5 / P5b | **PASS (all 7 valid); control bit-identical to the reference** | Gate, banner, provenance, water flag; 500/500 rows equal |
+
+**Is the world fit for the modulator comparison?** On this evidence, yes, with one open call for
+the user (P1 below). The world can be learned by both agents. Thirst is a real but minor cause of
+death that the agents learn to manage. No cause is absurd, and the code path is verified.
+
+### 9.1 Decisions for the user
+
+1. **P1 flag.** Accept "drinking is learned" on the passed clauses, recording the pass-line miss
+   and the competing-risks reason, **or** hold until more evidence. The design does not allow
+   re-scoring the line after the fact. If the line should change for later water experiments, a
+   peak-referenced or floor-referenced line would avoid the low first-tenth baseline, and that is
+   for `experiment-designer` to pre-register.
+2. **Not converged.** Survival is still rising about 4 % per tenth at 2 M. If the modulator
+   comparison needs plateau behaviour, it should run longer than 2 M on level 06. A resumed run
+   from the kept checkpoints is possible (`--load-checkpoint`). Alternatively, the budget could be
+   matched on env steps rather than episodes when comparing across levels.
+3. **Budget currency.** Across levels, an episode budget gives level 06 about 30 % less
+   experience. Future level-05 versus level-06 comparisons should state which currency they use,
+   or report both, as §7.5 does.
+4. **Speed method.** The P4 design method compares windows that are not simultaneous when the two
+   runs end at different times. Future throughput pairs should use a common wall-clock window.
+5. **Launch Manifest status** still reads `running` for all seven rows. `training-runner` owns
+   that column.
+
+### 9.2 Limitations
+
+- P1, P3 and the tables: the training policy explores, while the stores are greedy (never pooled).
+  The stores use 10,000 episodes per checkpoint at one fixed `--seed-base`.
+- The equal-experience comparison and the competing-risks explanation are post hoc.
+- The level-05 references ran on older code. P5b shows this does not matter, because the control is
+  bit-identical to `w0000` ordinary.
+- The P4 slow-down of the control after run 1 ended is unexplained (other load on node 101 is
+  suspected but not verified).
+
+### 9.3 Metrics requested
+
+These are repeated from §6, which was declined for this pilot. The analysis shows where each one
+would have helped.
+
+| Metric | Why now | Where it would live | Cost |
+|---|---|---|---|
+| `Bal_TimePond` (share of window steps on a pond cell) | The drinking curve was readable only at 3 stored checkpoints. The rise of bouts between 0.4 M and 1.2 M, when dehydration peaks and turns, is not resolved in time | `src/behavior/balance_metrics.py` | cheap |
+| `Bal_DrinkShare_Thirsty` / `_Sated` / `Bal_DrinkRatio` | Whether drinking tracks thirst (the state-dependence the modulator study needs) is open. The bands hint at it only indirectly | same file, thirst bins in `balance_calibration` | cheap |
+
+If the user accepts these, they go through `feature-workflow`. They are not requested from here
+directly.
+
+### 9.4 Related issues
+
+- [[PLACEMENT_FIXES_PLAN]]: food regrowth on burning fires and starts on fires (context, §7.7).
+- §4.4 / re-check R4 still stand. The pilot run folders sit in the shared `results/` with 59-wide
+  water configs. `v4.0` batch tools must exclude `*l06pilot*` until `v5.0` is merged. The stores
+  under `results/analysis/thirst_pilot/` (4.7 GB) are in the same position.
+- R3: the expected WandB `root` was wrong. WandB reports the shared folder for worktree launches,
+  so later designs should expect that.
+
+**Analysis artefacts.** WandB read-outs: `<shared>/results/analysis/thirst_pilot/readout/wandb_readout.json`,
+`tenths_out.txt`, `speed_out.txt`, `early_late_out.txt`. Store read-outs: `readout/<agent>_<seed>_<ckpt>.json`,
+`summary_all_stores.json`, `store_summary_out.txt`. Code: `readout/code/`. Stores:
+`<shared>/results/analysis/thirst_pilot/<run>/<ckpt>/<env fingerprint>/` (one fingerprint per run; all 18
+stores use `--episodes 10000 --seed-base 1000000 --obs-precision float32`, CPU, collected from the
+worktree at `e98a0689`).
 
 ---
 
