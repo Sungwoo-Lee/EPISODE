@@ -53,7 +53,7 @@ def main(argv=None):
         raise SystemExit("smell quantities found in contrasts / variance outputs (Revision 2, N5)")
     cmap = {c["label"]: c for c in D["cells"]}
     qs = [q for q in QLAB if (PR.quantity == q).any()]
-    hA, hB, hC = max(len(CO), 1) * 0.3 + 1.4, max(len(VA), 1) * 0.32 + 1.4, 6.0
+    hA, hB, hC = max(len(CO), 1) * 0.36 + 1.2, max(len(VA), 1) * 0.3 + 1.2, 6.0
     fig = plt.figure(figsize=(12.0, hA + hB + hC + 0.8))
     top, bot = fig.subfigures(2, 1, height_ratios=[hA + hB, hC])
     gs = top.add_gridspec(2, 1, height_ratios=[hA, hB])
@@ -115,7 +115,7 @@ def main(argv=None):
                  fontsize=H.FS_BODY, fontweight="semibold")
     bot.legend(handles=FG.legend_handles(D), loc="lower center", ncol=len(D["worlds"]) + len(D["agents"]),
                frameon=False, fontsize=H.FS_LABEL, bbox_to_anchor=(0.5, 0.0))
-    top.subplots_adjust(left=0.36, right=0.97, top=0.95, bottom=0.08, hspace=0.55)
+    top.subplots_adjust(left=0.36, right=0.97, top=0.97, bottom=0.05, hspace=0.18)
     bot.subplots_adjust(left=0.07, right=0.98, top=0.82, bottom=0.42, wspace=0.75)
     rows = []
     for r in PR[PR.quantity == "start_injury"].itertuples():

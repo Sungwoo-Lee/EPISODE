@@ -46,6 +46,41 @@ BLOCKS = {"F1": ("f1_behaviours_survival", False), "F2": ("f2_factor_inventory",
 HOWTO = "How it is computed"
 EXTS = ("png", "svg", "pdf", "samples.json")
 UNBREAKABLE_MAX = 40
+EMBED_WIDTH = 1600            # px: embedded copy only; full-resolution PNG / SVG / PDF stay on disk
+PAGE_MAX_BYTES = 15_500_000   # under the 16 MB artifact limit, with margin
+
+
+def embed_png(path: str) -> str:
+    """Base64 of a lighter copy of the figure for embedding: at most EMBED_WIDTH wide and quantised
+    to a 256-colour palette (the house figures use a handful of flat colours, so this is visually
+    lossless at page width). The files in the figure folder are not touched."""
+    import io
+    from PIL import Image
+    im = Image.open(path).convert("RGB")
+    if im.width > EMBED_WIDTH:
+        im = im.resize((EMBED_WIDTH, round(im.height * EMBED_WIDTH / im.width)), Image.LANCZOS)
+    # Palette = the house colours, exactly, plus 240 colours chosen by octree for everything else
+    # (anti-aliasing, the heat-map ramp). A free palette alone shifted the series green visibly,
+    # which would break the colour = world encoding; pinned entries cannot shift.
+    house = [FG.H.PAPER, FG.H.INK, FG.H.INK_2, FG.H.TEXT_LIGHT, FG.H.TICK_LINE, FG.H.RULE,
+             FG.H.BG_SOFT, *FG.H.SERIES, "#ffffff", "#000000"]
+    pinned = [int(h.lstrip("#")[i:i + 2], 16) for h in house for i in (0, 2, 4)]
+    rest = im.quantize(colors=256 - len(house), method=Image.Quantize.FASTOCTREE,
+                       dither=Image.Dither.NONE).getpalette()[: 3 * (256 - len(house))]
+    import numpy as np
+    P = np.array(pinned + rest, dtype=np.int32).reshape(-1, 3)
+    A = np.asarray(im, dtype=np.int32)
+    flat = A.reshape(-1, 3)
+    uniq, inv = np.unique(flat, axis=0, return_inverse=True)
+    idx = np.empty(len(uniq), dtype=np.uint8)
+    for i in range(0, len(uniq), 4096):              # exact nearest palette entry (PIL's is approximate)
+        d = ((uniq[i:i + 4096, None, :] - P[None, :, :]) ** 2).sum(2)
+        idx[i:i + 4096] = d.argmin(1)
+    im = Image.fromarray(idx[inv.ravel()].reshape(A.shape[:2]), mode="P")
+    im.putpalette(P.astype(np.uint8).ravel().tolist())
+    buf = io.BytesIO()
+    im.save(buf, format="PNG", optimize=True)
+    return base64.b64encode(buf.getvalue()).decode()
 
 
 class BuildError(SystemExit):
@@ -207,7 +242,7 @@ def build(population, out_root, page_dir):
             b = b.replace(f"{{{{CMD:{stem}}}}}", html.escape(cmd))
             if t is not None and f"{{{{REASONS:{t}}}}}" in b:
                 b = b.replace(f"{{{{REASONS:{t}}}}}", reasons_table(D, t))
-            png = base64.b64encode(open(os.path.join(fig_dir, f"{stem}.png"), "rb").read()).decode()
+            png = embed_png(os.path.join(fig_dir, f"{stem}.png"))
             b = b.replace(f'<img data-fig="{stem}"', f'<img data-fig="{stem}" src="data:image/png;base64,{png}"', 1)
             fig_html = re.search(r"<figure\b.*?</figure>", b, re.S).group(0)
             mirror.append((stem, axes_sentence(fig_html), rows))
@@ -237,6 +272,8 @@ def build(population, out_root, page_dir):
     left = re.findall(r"\{\{[^}]+\}\}", page)
     if left:
         fail(f"unsubstituted tokens remain: {sorted(set(left))}")
+    if len(page.encode()) > PAGE_MAX_BYTES:
+        fail(f"page would be {len(page.encode()):,} bytes, over {PAGE_MAX_BYTES:,} (artifact limit 16 MB)")
     os.makedirs(page_dir, exist_ok=True)
     open(os.path.join(page_dir, "basic_behaviour.html"), "w").write(page)
     md = [f"# Basic Behaviour Analysis — {D['population']} (generated; do not edit)", "",
@@ -250,7 +287,8 @@ def build(population, out_root, page_dir):
     if pending:
         md += ["## Not yet produced", "", ", ".join(pending), ""]
     open(os.path.join(page_dir, "basic_behaviour.md"), "w").write("\n".join(md))
-    print(f"{'partial' if pending else 'complete'}: present {present}, pending {pending}")
+    print(f"{'partial' if pending else 'complete'}: present {present}, pending {pending}; "
+          f"page {len(page.encode()):,} bytes")
     return present, pending
 
 

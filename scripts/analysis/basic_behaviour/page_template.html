@@ -54,7 +54,7 @@
 </section>
 <figure>
   <img data-fig="f1_behaviours_survival" alt="Dot plots, one panel per behaviour, of each run's share of chosen steps, then each run's mean survival in steps and the share of episodes ending in each way.">
-  <p class="zoomhint">Click the figure to view it full size</p>
+  <p class="zoomhint">Click the figure to view it larger (page copy is 1,600 px wide; full-resolution PNG, SVG and PDF are in the figures folder)</p>
   <figcaption>
     <span><b>Figure 1 &mdash; behaviours, survival and how episodes end.</b> <b>Axes.</b> Behaviour
     panels: horizontal, the world and agent type of the run (one marker per training seed); vertical,
@@ -98,13 +98,15 @@
 </section>
 <figure>
   <img data-fig="f2_factor_inventory__{{T}}" alt="A grid of factors by runs, each cell marking whether the factor is used, excluded with a reason, not present in that world, or unhandled.">
-  <p class="zoomhint">Click the figure to view it full size</p>
+  <p class="zoomhint">Click the figure to view it larger (page copy is 1,600 px wide; full-resolution PNG, SVG and PDF are in the figures folder)</p>
   <figcaption>
     <span><b>Figure 2 &mdash; factor inventory for {{TARGET_LABEL}}.</b> <b>Axes.</b> Horizontal: the
     run (world, agent type and training seed), one column each. Vertical: the factor, in the fixed
-    order the analysis uses, followed by any randomised setting it cannot handle. Each cell is a status
-    word, not a number: used, used on its own only, identical to an earlier factor, constant, defined
-    on too few episodes, part of the outcome, absent from that world, or unhandled.</span>
+    order the analysis uses, followed by any randomised setting it cannot handle. Each cell is a status,
+    not a number: used (dark, blank), or a short code explained in the legend &mdash; uni (used in
+    single-factor fits only), dup (identical to an earlier factor), con (constant), few (defined on
+    too few episodes), out (part of the outcome), unh (randomised but unmeasured); a pale blank cell
+    means the factor does not exist in that world.</span>
     <span>{{DATA:f2_factor_inventory__{{T}}}}</span>
   </figcaption>
   <p class="prov">Reproduce: <code>{{CMD:f2_factor_inventory__{{T}}}}</code></p>
@@ -137,7 +139,7 @@
 </section>
 <figure>
   <img data-fig="f3_univariate__{{T}}" alt="For each factor, one marker per run showing the change in the behaviour's share per one standard deviation of the factor.">
-  <p class="zoomhint">Click the figure to view it full size</p>
+  <p class="zoomhint">Click the figure to view it larger (page copy is 1,600 px wide; full-resolution PNG, SVG and PDF are in the figures folder)</p>
   <figcaption>
     <span><b>Figure 3 &mdash; single-factor effects on {{TARGET_LABEL}}.</b> <b>Axes.</b> Both panels:
     horizontal, the change in the run's share of chosen steps spent {{TARGET_LABEL}}, in percentage
@@ -175,7 +177,7 @@
 </section>
 <figure>
   <img data-fig="f4_multivariate__{{T}}" alt="One panel per model, each showing every term's effect per standard deviation with one marker per run.">
-  <p class="zoomhint">Click the figure to view it full size</p>
+  <p class="zoomhint">Click the figure to view it larger (page copy is 1,600 px wide; full-resolution PNG, SVG and PDF are in the figures folder)</p>
   <figcaption>
     <span><b>Figure 4 &mdash; multi-factor models of {{TARGET_LABEL}}.</b> <b>Axes.</b> Every panel:
     horizontal, the change in the run's share of chosen steps spent {{TARGET_LABEL}}, in percentage
@@ -216,7 +218,7 @@
 </section>
 <figure>
   <img data-fig="f5_settings__{{T}}" alt="Ranked standardised contrasts between settings with intervals, variance components with reference marks, and per-cell run values for the behaviour level and slopes.">
-  <p class="zoomhint">Click the figure to view it full size</p>
+  <p class="zoomhint">Click the figure to view it larger (page copy is 1,600 px wide; full-resolution PNG, SVG and PDF are in the figures folder)</p>
   <figcaption>
     <span><b>Figure 5 &mdash; settings that move {{TARGET_LABEL}}.</b> <b>Axes.</b> Panel (a):
     horizontal, a difference between two settings divided by the seed-to-seed standard deviation (no
@@ -257,7 +259,7 @@
 </section>
 <figure>
   <img data-fig="f6_crosstabs__{{T}}" alt="Heat maps of the behaviour's share by injury and nutrition band per setting, a line chart of the share by rabbit smell per run, and a dot plot by which animals are near.">
-  <p class="zoomhint">Click the figure to view it full size</p>
+  <p class="zoomhint">Click the figure to view it larger (page copy is 1,600 px wide; full-resolution PNG, SVG and PDF are in the figures folder)</p>
   <figcaption>
     <span><b>Figure 6 &mdash; {{TARGET_LABEL}} by state, smell and company.</b> <b>Axes.</b> Heat
     maps: horizontal, the agent's nutrition one step earlier (four bands); vertical, its injury one

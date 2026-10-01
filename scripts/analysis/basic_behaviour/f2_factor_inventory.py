@@ -23,6 +23,8 @@ import registry as REG                                                  # noqa: 
 
 STEM = "f2_factor_inventory"
 CODES = ["used", "univariate only", "dup", "constant", "few", "outcome", "n/a", "unhandled"]
+SHORT = {"univariate only": "uni", "dup": "dup", "constant": "con", "few": "few", "outcome": "out",
+         "unhandled": "unh"}                     # written in the cell; the legend gives the full word
 
 
 def code_of(reason: str) -> str:
@@ -100,7 +102,7 @@ def main(argv=None):
             code = CODES[M[i, j]]
             if code in ("used", "n/a"):
                 continue
-            ax.text(j, i, code, ha="center", va="center", fontsize=H.FS_LABEL,
+            ax.text(j, i, SHORT.get(code, code), ha="center", va="center", fontsize=H.FS_LABEL,
                     color=H.PAPER if code == "univariate only" else H.INK)
     ax.set_yticks(range(len(rowsn)))
     ax.set_yticklabels([n + ("  (consequence)" if kinds.get(n) == "consequence" else "") for n in rowsn],
@@ -113,11 +115,14 @@ def main(argv=None):
     ax.xaxis.set_label_position("top")
     ax.set_ylabel("factor (registry order) or unhandled config marker")
     from matplotlib.patches import Patch
-    hs = [Patch(facecolor=shades[CODES.index(k)], edgecolor=H.RULE, label=k)
-          for k in ("used", "univariate only", "dup", "constant", "few", "outcome", "n/a", "unhandled")]
-    fig.legend(handles=hs, loc="lower center", ncol=4, frameon=False, fontsize=H.FS_LABEL,
+    full = {"used": "used", "univariate only": "uni = single-factor fits only",
+            "dup": "dup = identical to an earlier factor", "constant": "con = constant in this run",
+            "few": "few = under 1,000 episodes", "outcome": "out = part of the outcome",
+            "n/a": "not in this world", "unhandled": "unh = randomised, no measurement"}
+    hs = [Patch(facecolor=shades[CODES.index(k)], edgecolor=H.RULE, label=full[k]) for k in full]
+    fig.legend(handles=hs, loc="lower center", ncol=2, frameon=False, fontsize=H.FS_LABEL,
                bbox_to_anchor=(0.5, -0.01))
-    fig.tight_layout(rect=(0, 0.05, 1, 1))
+    fig.tight_layout(rect=(0, 0.09, 1, 1))
     FG.record_samples(a.fig_dir, f"{STEM}__{a.target}", rows)
     json.dump({"target": a.target, "reasons": table, "unhandled": unh},
               open(os.path.join(a.out_root, f"f2_reasons__{a.target}.json"), "w"), indent=1)
