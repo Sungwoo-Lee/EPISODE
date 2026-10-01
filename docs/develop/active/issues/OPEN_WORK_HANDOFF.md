@@ -3,7 +3,7 @@ title: "Open-Work Handoff — carried-over work items"
 topic: issues
 status: active
 created: 2026-07-04
-last_updated: 2026-09-17
+last_updated: 2026-10-01
 ---
 
 # Open-Work Handoff — carried-over work items
@@ -102,6 +102,10 @@ the shipped settings; both are traps for whoever changes those settings next.
   algorithm keeps this knob or subsumes it is the open design question. Changing it is a
   critical-settings change and needs a same-commit dated entry in
   [[CONFIG_CRITICAL_SETTINGS]]. Ref: [[FOOD_FIRE_SEPARATION_MEASUREMENT]].
+  - 2026-10-01: [[PLACEMENT_FIXES_PLAN]] (planned, not implemented) is part of the entity-allocation
+    work: it makes regrown food avoid occupied cells and — if the user agrees (its U4) — honour
+    `food_min_fire_distance` too, which today protects only the first food layout. It keeps the value
+    at 0, so once it lands E2 reduces to choosing the value.
 
 ---
 
