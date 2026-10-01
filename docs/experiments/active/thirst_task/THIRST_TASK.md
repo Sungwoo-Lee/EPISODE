@@ -14,7 +14,7 @@ develop_link: docs/develop/active/thirst/THIRST_WATER_PLAN.md
 > config review; §R1). Configs written and checked on real resets (§6). Nothing launched; no nodes
 > chosen. Before a launch: plan-reviewer re-check of Revision 1, the pre-launch PI consultation,
 > and the user's go.
-> **Code**: frozen at the pinned launch commit `PIN_SHA_SHORT` and run from the detached worktree
+> **Code**: frozen at the pinned launch commit `583b022f` and run from the detached worktree
 > `.claude/worktrees/thirst-runs` (§9.3). Development continues in `.claude/worktrees/thirst`
 > (branch `v5.0`). Outputs go to the shared folder, as in [[THIRST_PILOT]] §2.5.
 > **Related**: [[THIRST_PILOT]] (level 06 is learnable; source of the speed and seed-spread
@@ -66,7 +66,7 @@ Every finding is answered in the body; this table says where.
 
 | Finding | Answer | Where |
 |---|---|---|
-| Plan C1 🔴 / config M1 🟡: no code freeze | All 18 runs, every relaunch and every follow-up seed run from a **separate frozen worktree**, `.claude/worktrees/thirst-runs`, detached at one pinned launch commit (`PIN_SHA_SHORT`, the commit of this revision). Admin creates it with `git worktree add --detach`. Nobody edits it; it is removed only after the last run, follow-ups included, has ended and its outputs are confirmed in the shared folder. The launch script `cd`s there; the gate checks that `src` resolves under `thirst-runs`, that HEAD equals the pinned commit, and that no tracked file is modified. Gate tested: it fails on a wrong commit and on a modified tree, and passes its import checks. Pilot pre-flight and validity checks carried over, plus a check that each saved config has the Revision-2 smell and the cell's own size, pond and reach. The main worktree stays free for the placement fixes; a line in [[PLACEMENT_FIXES_PLAN]] K0 says the placement work never touches `thirst-runs` | §3.4, §9.2, §9.3, §7 |
+| Plan C1 🔴 / config M1 🟡: no code freeze | All 18 runs, every relaunch and every follow-up seed run from a **separate frozen worktree**, `.claude/worktrees/thirst-runs`, detached at one pinned launch commit (`583b022f`, the commit of this revision). Admin creates it with `git worktree add --detach`. Nobody edits it; it is removed only after the last run, follow-ups included, has ended and its outputs are confirmed in the shared folder. The launch script `cd`s there; the gate checks that `src` resolves under `thirst-runs`, that HEAD equals the pinned commit, and that no tracked file is modified. Gate tested: it fails on a wrong commit and on a modified tree, and passes its import checks. Pilot pre-flight and validity checks carried over, plus a check that each saved config has the Revision-2 smell and the cell's own size, pond and reach. The main worktree stays free for the placement fixes; a line in [[PLACEMENT_FIXES_PLAN]] K0 says the placement work never touches `thirst-runs` | §3.4, §9.2, §9.3, §7 |
 | Plan M1: stop timing undefined | Stop boundary b\* is defined on data up to the 1 M mark; `S_final` and Δ are read on (b\*−1 M, b\*] for both runs whatever happens after. Checker = this session, polling WandB at least hourly. Stop = one `SIGINT` per run via `./terminate_command.py <NODE> "wandb-name <TAG>" --yes`, sent to both agents of the world at the first check after the rule fires. A trailing modulated run may stop short of its partner's count; both counts are recorded | §4 |
 | Plan M2: "has learned" on survival only; a falling curve passes | "Has learned" also needs the thirst-death share under 0.10 in the latest block. The plateau needs each of the last two rises to be ≥ 0 and < 1 %. Two falls in a row are a flag | §4, §7 |
 | Plan M3: follow-up not pre-registered | Leads of ≥ 6 % **in either direction** trigger seeds 43 and 44 for both agents. Three-seed decision rule: both new seeds have the lead's sign, and the three-seed mean is ≥ 6 %. Seed 42 is kept, with the selection caveat stated; the unselected two-seed mean is reported as the effect size. Cap: 300 GPU-hours, leads taken largest first. About one false lead is expected | §5.3, §5.4 |
@@ -723,7 +723,7 @@ set -euo pipefail
 RUNS=/media/nas01/projects/Interoceptive-AI/grid_world_pain/.claude/worktrees/thirst-runs
 SHARED=/media/nas01/projects/Interoceptive-AI/grid_world_pain
 PY=/home/vncuser/miniconda3/envs/grid_world_pain/bin/python
-PIN=PIN_SHA_FULL
+PIN=583b022f941647d362c5795012ad607ea422e3ab
 export WANDB_DIR="$SHARED"
 cd "$RUNS"
 # --- frozen-code gate (THIRST_TASK §9.3). CPU-only; never touches the GPU. ---
@@ -770,14 +770,19 @@ Log-path cell. Early stops are sent as in §4.
 
 ### 9.3 Code pinning and run validity (Revision 1, C1)
 
-**The pinned launch commit is `PIN_SHA_SHORT`** on `v5.0` (subject "docs(thirst): 📝 THIRST_TASK
-Revision 1 — …"; full SHA `PIN_SHA_FULL`). It contains the Revision-2 smell (`c33d29b1`), the
-eight configs and this revision; its `src/`, `train.py` and `scripts/` are those of `c33d29b1`.
+**The pinned launch commit is `583b022f`** on `v5.0` (subject "docs(thirst): 📝 THIRST_TASK
+Revision 1 — …"; full SHA `583b022f941647d362c5795012ad607ea422e3ab`). It contains the Revision-2 smell (`c33d29b1`), the
+eight configs and this revision; its `src/`, `train.py`, `scripts/`, `configs/train/`,
+`configs/models/`, `default.yaml` and `basic/` are byte-identical to `c33d29b1` (checked with
+`git diff c33d29b1 583b022f` on those paths: empty). The copy of this doc inside `thirst-runs`
+still shows placeholders where the hash now stands, because a commit cannot name itself; the hash
+was written in by the doc-only commit that follows it on `v5.0`, and the `v5.0` copy is the
+authoritative one.
 
 1. **One frozen worktree.** The launching session (Admin) creates it once, before the first launch:
 
    ```bash
-   git worktree add --detach .claude/worktrees/thirst-runs PIN_SHA_FULL
+   git worktree add --detach .claude/worktrees/thirst-runs 583b022f941647d362c5795012ad607ea422e3ab
    ```
 
    All 18 runs, every relaunch (§7) and every follow-up seed (§5.4) execute from it. **Nobody edits
