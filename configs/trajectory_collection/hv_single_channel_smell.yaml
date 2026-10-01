@@ -48,7 +48,7 @@ runs:
   - {label: hv1ch_ordinary_s43,  path: results/JAX_RecurrentPPO/20261001-002412_rppo_hv1ch_t1none_s43}
   - {label: hv1ch_modulated_s43, path: results/JAX_RecurrentPPO/20261001-002418_rppo_hv1ch_t16quad_s43}
   - {label: hv1ch_ordinary_s44,  path: results/JAX_RecurrentPPO/20261001-002423_rppo_hv1ch_t1none_s44}
-  - {label: hv1ch_modulated_s44, path: results/JAX_RecurrentPPO/FILL_AT_LAUNCH_rppo_hv1ch_t16quad_s44}
+  - {label: hv1ch_modulated_s44, path: results/JAX_RecurrentPPO/20261001-002429_rppo_hv1ch_t16quad_s44}
   - {label: hv2ch_ordinary_s43,  path: results/JAX_RecurrentPPO/20261001-002435_rppo_hv2ch_t1none_s43}
   - {label: hv2ch_modulated_s43, path: results/JAX_RecurrentPPO/20261001-002439_rppo_hv2ch_t16quad_s43}
   - {label: hv2ch_ordinary_s44,  path: results/JAX_RecurrentPPO/20261001-002444_rppo_hv2ch_t1none_s44}
