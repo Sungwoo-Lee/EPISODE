@@ -565,7 +565,7 @@ behind a static `if params.water_enabled:`, and `EnvState.hydration` / `water_po
 | `water.start_hydration` | enabled **and** the random flag false | `100.0` (`0 < start < max`) |
 | `water.start_hydration_low` / `_high` | enabled **and** the random flag true | `0.0` / `200.0` |
 | `water.drain_per_step` / `drink_gain_per_step` | enabled | `0.625` / `5.625` |
-| `water.properties` | enabled | `[0.5, 0.0, 0.0, 0.0, 0.5]` (length `sensory.vector_size`) |
+| `water.properties` | enabled | `[1.0, 0.0, 0.0, 0.0, 0.0]` — food channel only, one food item's strength (length `sensory.vector_size`; was `[0.5, 0, 0, 0, 0.5]` until 2026-10-01) |
 | `water.visual_properties` | enabled | `[1.0]` (length `sensory.visual_vector_size`) |
 | `perceptual_noise.modalities.hydration` | whenever noise is parsed; **required** when water is on | appended **last** |
 

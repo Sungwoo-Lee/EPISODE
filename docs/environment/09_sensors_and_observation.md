@@ -1008,11 +1008,14 @@ gate so a water-off observation is byte-identical to the pre-water one
   Body Temperature and before Interoceptive Nociception, keeping the directly-delivered body
   levels contiguous. The width grows by 1 (level 06: 59). Noise modality `hydration`.
 - **Olfaction**: a fourth pool, one source per pond cell, each carrying
-  `water.properties / (h·w)` (shipped `[0.125, 0, 0, 0, 0.125]` per cell), summed through the
-  same `sense_resource` kernel AFTER the three existing pools. From afar the 2×2 pond smells
-  like ONE source of `[0.5, 0, 0, 0, 0.5]` at its centre (within 3 % from about three cells);
-  up close it is quieter than one food (on a pond corner the food channel reads
-  `0.5 × 1.177 = 0.588`, against 2.0 on a food). Pinned in `tests/env/test_water_observation.py`.
+  `water.properties / (h·w)` (shipped `[0.25, 0, 0, 0, 0]` per cell), summed through the
+  same `sense_resource` kernel AFTER the three existing pools. The pond smells **only of food**
+  (channel 0; Revision 2 of the plan, user decision 2026-10-01 — before that it was
+  `[0.5, 0, 0, 0, 0.5]`, half on channel 4): smell says "something to eat or drink is there",
+  not which. From afar the 2×2 pond smells like ONE food item `[1.0, 0, 0, 0, 0]` at its
+  centre (within 3 % from about three cells); up close it is quieter than one food (on a pond
+  corner the food channel reads `1.177`, against 2.0 on a food). Channel 4 has no emitter in
+  any maintained level. Pinned in `tests/env/test_water_observation.py`.
 - **Vision**: one entity per pond cell, appended after the obstacles: always active, visual
   mask 0 (always visible), never blocks sight, property `water.visual_properties` (not
   normalised — vision reports presence per cell, like four rocks would).

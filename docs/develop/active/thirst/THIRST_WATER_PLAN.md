@@ -3,7 +3,7 @@ title: "Water and thirst: a fixed pond per episode and a two-sided hydration axi
 topic: env_entities
 status: active
 created: 2026-09-29
-last_updated: 2026-09-30
+last_updated: 2026-10-01
 aliases: [thirst_water_plan]
 ---
 
@@ -948,6 +948,27 @@ branch replaced by the plain area draw, then restored.
 `test_no_recompile` 3 · `test_dashboard_frames` 13 · `test_dashboard_water` 16, all
 passing (`tmp/20260930_fixbatch/final_*.log`). The Dreamer files were byte-compiled; no
 Dreamer run was launched (in the shared folder the derived path equals the old literal).
+
+Implemented by: developer
+
+### Revision 2 — implementation (2026-10-01)
+
+**In plain words.** The pond now smells only of food, at the strength of one food item;
+channel 4 is silent again and is labelled "Tree" as in every other world. Nothing else about
+water changed, and worlds without water are untouched (parity 43/43).
+
+**Files.**
+- `configs/environment/default.yaml` — `water.properties` `[0.5, 0, 0, 0, 0.5]` → `[1.0, 0.0, 0.0, 0.0, 0.0]`, comment rewritten.
+- `configs/environment/experiment/basic/06-pond_thirst_10x10.yaml` — header (smell bullet; notes that the `rppo_l06pilot_*` runs used the old smell); `olfactory_channel_names` keeps its full redeclaration (lists replace wholesale) with channel 0 "Food (shared with water)" and channel 4 back to `{Tree, ""}`, matching `default.yaml`. Level 07 (extends 06) checked: resolves to `[1.0, 0, 0, 0, 0]` and the same five labels.
+- `tests/env/test_water_observation.py` — expected near/far values now come from the real kernel (`sense_resource` over the four pond cells, each `[0.25, 0, 0, 0, 0]`), with the closed form kept as a cross-check: corner **1.176777**, beside **0.663580**, far field at (9, 9) **0.094387** vs one food item `[1.0, 0, 0, 0, 0]` at the centroid **0.094281** (0.11 %, tolerance 3 %). New: `test_shipped_water_vector_is_food_only`; `test_level06_pond_far_field_equals_one_food_item` (level 06's own food vector vs the pond, same distance); `test_level06_channel4_is_zero_everywhere_at_reset` (every olfaction cell, 8 reset seeds, exact 0). The channel-4 test is sensitive: with the old vector forced in memory, channel 4 reads 0.088 at reset.
+- `tests/env/test_water_placement.py:183` — per-cell vector pin `(0.125, 0, 0, 0, 0.125)` → `(0.25, 0, 0, 0, 0)` (found by the run; was not listed in the revision).
+- Docs: `09_sensors_and_observation.md` (water-in-the-senses bullet), `CONFIG_GUIDE.md` (`water.properties` row), `src/environment/state.py` comment. `CONFIG_CRITICAL_SETTINGS.md` not changed: `water.properties` is not a registry row. `git grep` for the old vector / "Odour C" finds only historical docs (this plan's earlier sections, the env-config review) and the design page (separate task).
+
+**Tests** (one process per module, CPU, `tmp/20261001_rev2_tests.log`): `test_water_parity` **43/43** · `test_water_observation` 12 · `test_water_placement` 43 (42 + 1 fail on the first run, the stale pin above; 43 after the fix) · `test_hydration_dynamics` 17 · `test_ladder_worlds_load` 9 · `test_saved_config_compat` 25 · `test_dashboard_water` 16 · `test_dashboard_frames` 13. All pass.
+
+**Dashboard.** `test_dashboard_water`'s level-06 case renders a recorded fixture whose labels were frozen at recording time, so it does not prove the new labels. Checked separately: a fresh level-06 recording rendered with `EpisodeRenderer`, labels from `channel_display_from_config` — the olfaction panel shows "Food / shared with water" and a blank "Tree" (`tmp/20261001_rev2_rec06/frame2.png`).
+
+**Speed.** Skipped: only a constant in a static param tuple changed; no code on the hot path.
 
 Implemented by: developer
 

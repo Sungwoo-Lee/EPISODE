@@ -645,10 +645,12 @@ water:
   # net is +5.0 per step, so setpoint -> over-drinking in 20 steps, refill 50 -> 100 in 10.
   drain_per_step: 0.625
   drink_gain_per_step: 5.625
-  # Smell: 5 olfactory channels, shared with food (channel 0) and channel 4. Each
-  # pond cell carries properties / (rows * cols), so the pond smells like ONE item
-  # of this vector from afar, not h*w of them.
-  properties: [0.5, 0.0, 0.0, 0.0, 0.5]
+  # Smell: the pond smells ONLY of food (channel 0), at the strength of one food
+  # item (THIRST_WATER_PLAN Revision 2, user decision 2026-10-01): smell says
+  # "something to eat or drink is there", not which. Each pond cell carries
+  # properties / (rows * cols), so the pond smells like ONE item of this vector
+  # from afar, not h*w of them.
+  properties: [1.0, 0.0, 0.0, 0.0, 0.0]
   # Vision: every pond cell writes this into the visual channel(s); not normalised.
   visual_properties: [1.0]
 

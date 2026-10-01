@@ -180,7 +180,7 @@ def test_level06_resolves_the_candidate_table():
     p = _params(_lvl06_dict())
     assert p.water_topleft_table == ((1, 1), (1, 7), (7, 1), (7, 7))
     assert (p.water_block_h, p.water_block_w) == (2, 2)
-    assert p.water_cell_property == (0.125, 0.0, 0.0, 0.0, 0.125)
+    assert p.water_cell_property == (0.25, 0.0, 0.0, 0.0, 0.0)   # [1.0, 0, 0, 0, 0] / 4 (Revision 2)
     assert p.water_visual_property == (1.0,)
 
 

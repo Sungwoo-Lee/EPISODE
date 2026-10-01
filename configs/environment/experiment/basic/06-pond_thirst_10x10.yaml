@@ -19,7 +19,7 @@
 #   - `water.enabled: true`, with every other water setting inherited from
 #     configs/environment/default.yaml's `water:` block (placement `list` over the four
 #     quadrant candidates, size 2x2, edge margin 1, drain 0.625, drink gain 5.625, max 200,
-#     setpoint 100, smell [0.5, 0, 0, 0, 0.5] per pond, vision [1.0] per cell).
+#     setpoint 100, smell [1.0, 0, 0, 0, 0] per pond, vision [1.0] per cell).
 #   - A RANDOM START HYDRATION drawn uniformly from [0, 200), mirroring level 03's random
 #     start nutrition. User decision (2026-09-29): the full range is kept so the agent
 #     meets every internal-state condition during training. Consequence for survival
@@ -29,13 +29,15 @@
 #   - OBSERVATION grows by one number, "Hydration" (hydration / 200, 0.5 at the comfortable
 #     level), right after Body Temperature: 59 numbers instead of 58.
 #   - Termination codes 6 (dehydration) and 7 (over-drinking) become possible.
-#   - SMELL: the pond smells on the food channel and channel 4, each pond cell carrying a
-#     quarter of the vector, so from afar the pond smells like ONE item, not four. Channel 4
-#     is renamed "Odour C (water-leaning)" below; channel 0 stays "Food", now shared with
-#     water. Deliberately less clear than a dedicated water channel (user decision).
-#     Channel 4 is also the `tree` channel (tree.properties [0, 0, 0, 0, 1.0]); trees have
-#     count 0 in every maintained level, so today only the pond emits on it. A water world
-#     that gives trees a count mixes the two sources on one channel.
+#   - SMELL: the pond smells ONLY of food (channel 0), each pond cell carrying a quarter of
+#     the vector, so from afar the pond smells exactly like ONE food item at its centre, not
+#     four. Smell therefore says "something to eat or drink is there" but not which: the
+#     agent must use its own state (thirsty -> pond, hungry -> food) and remember where the
+#     pond is. Channel 0's label below is "Food (shared with water)"; channel 4 keeps the
+#     default "Tree" label and has no emitter here (tree count 0). User decision
+#     2026-10-01 (THIRST_WATER_PLAN Revision 2). Before that date the pond smelled
+#     [0.5, 0, 0, 0, 0.5] (half food, half a channel-4 "Odour C (water-leaning)"); the
+#     `rppo_l06pilot_*` pilot runs were trained on THAT smell.
 #
 # It does NOT redeclare `obstacles:` (lists replace wholesale, so a partial list here would
 # drop level 05's campfires or the bush `blocks_animals` flag).
@@ -49,10 +51,10 @@ water:
 
 sensory:
   # Display names only (the episode video reads them; the environment never does). A list,
-  # so it is redeclared in full.
+  # so it is redeclared in full; only channel 0's qualifier differs from default.yaml.
   olfactory_channel_names:
     - {name: "Food",    qualifier: "shared with water"}
     - {name: "Odour A", qualifier: "predator-leaning"}
     - {name: "Odour B", qualifier: "neutral-leaning"}
     - {name: "Bush",    qualifier: ""}
-    - {name: "Odour C", qualifier: "water-leaning"}
+    - {name: "Tree",    qualifier: ""}

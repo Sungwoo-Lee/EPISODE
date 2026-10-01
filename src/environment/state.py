@@ -540,7 +540,8 @@ class EnvParams:
     water_drain: float = struct.field(pytree_node=False)          # hydration lost per step
     water_drink_gain: float = struct.field(pytree_node=False)     # gained per step on a pond cell
     # `water.properties` / (h*w): each pond cell smells of p/n, so the pond reads as
-    # ONE source of vector p in the far field (plan §A3). Length vector_size.
+    # ONE source of vector p in the far field (plan §A3). Length vector_size. Shipped
+    # p = [1.0, 0, 0, 0, 0]: food channel only, one food item (plan Revision 2).
     water_cell_property: tuple = struct.field(pytree_node=False)
     # `water.visual_properties`, NOT normalised (vision reports presence per cell,
     # plan §A4). Length visual_vector_size.
