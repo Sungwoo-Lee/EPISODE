@@ -1240,3 +1240,22 @@ What the approval covers, and what it does not change:
 ## User decision — speed (2026-10-01)
 
 The user **accepted** the measured cost of water worlds: level 06 runs 9.8 % slower than level 05 on GPU and 17.4 % faster on CPU (decision 17; bare environment steps, 64 envs × 300 steps). No further speed work. Next step chosen by the user: a short training pilot on level 06.
+
+---
+
+## Revision 2 — the pond smells only of food (user decision, 2026-10-01)
+
+**Plain language.** Until now the pond gave off two smells: half on the food smell (channel 0) and half on a fifth smell that only water used (channel 4, "Odour C"). That fifth smell let the agent recognise water by smell alone, without consulting its own body. The user's decision, modelled on the single-channel smell study for predator and rabbit (`docs/experiments/active/hypervigilance/SINGLE_CHANNEL_SMELL_HYPERVIGILANCE.md`), is to remove it: **the pond smells only of food, at the same total strength as one food item.** Smell then says "something to eat or drink is there" but not which. The agent has to decide from its own state whether that source is what it needs (thirsty → the pond, hungry → food) and remember where the pond is, since the pond is fixed and 2×2 while food moves. This is the state-dependent use of one sensory channel the modulator is meant to help with.
+
+**Decisions (user, 2026-10-01).**
+1. `water.properties` becomes `[1.0, 0.0, 0.0, 0.0, 0.0]`. With the per-cell weight 1/(h·w) unchanged, a 2×2 pond is `[0.25, 0, 0, 0, 0]` per cell, and from a distance it smells like one food item at its centre (food is `[1.0, 0, 0, 0, 0]` with SD 0).
+2. Level 06 is changed in place; no second world. The 7 trial runs (`rppo_l06pilot_*`, pond smell `[0.5, 0, 0, 0, 0.5]`) remain the "before" reference.
+3. Channel 4 has no emitter in any maintained level again (tree count 0). Its level-06 label "Odour C (water-leaning)" goes back to the default "Tree", and channel 0's label keeps "Food (shared with water)".
+
+**Changes required** (same commit, maintenance contracts included):
+- `configs/environment/default.yaml` `water.properties`, and the level-06 header and label override;
+- tests that pin the old vector or the channel-4 reading: `tests/env/test_water_observation.py` (~:203 and the A3 near-field and far-field smell values, recomputed for `[1.0, 0, 0, 0, 0]`), plus any `test_water_placement` case that depends on it;
+- docs: `docs/environment/09_sensors_and_observation.md` (~:1011-1013), `CONFIG_GUIDE.md` (~:568), `CONFIG_CRITICAL_SETTINGS.md` (a change-log entry if the water smell is registered), comments in `src/environment/state.py` (~:542);
+- the design page's smell sections (`thirst_water.template.html` §02 and §A3) carry a dated correction — this is a separate artifact update.
+
+**Not changing:** placement, hydration dynamics, vision (the pond and food both show as "something is here"), the drive, death codes. Water-off worlds stay byte-identical (the water smell is read only when `water.enabled`).
