@@ -14,6 +14,7 @@ last_updated: 2026-10-01
 > **Author**: senior-developer
 > **Related**: [[SINGLE_CHANNEL_SMELL_HYPERVIGILANCE]] (the study this serves; its §5.6 lists the tooling it needs, and both plan-reviewer passes at its end carry the findings N3/N4 and M3 this plan implements) · [[a01_hiding_drivers]] ("What makes this agent hide?", whose scent readings are re-done here) · the modulator-clues page `docs/experiments/active/modulator_clues/modulator_clues.html` ("Injury, Behaviour and the Modulator", whose Figure A3 hypervigilance reading is re-done here) · [[TRAJECTORY_COLLECTION_PIPELINE]] (where the stores come from) · `docs/environment/SCRIPTS_DEPENDENCY_MAP.md` (updated by this change)
 > **Back-link:** study §5.6 and header link here (added in study Revision 3). Review: [[plan_hypervigilance_analysis_tooling]].
+> **Follow-on (2026-10-01):** [[BASIC_BEHAVIOUR_ANALYSIS_PIPELINE]] reuses this plan's population manifests, `load_population` / `require_yardstick_for`, and the G3 reference files (`_golden_scratch/g3_reference/`) as its own byte-identity gate.
 
 ---
 
