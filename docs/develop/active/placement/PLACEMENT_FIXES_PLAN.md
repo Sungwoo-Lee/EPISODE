@@ -639,3 +639,83 @@ Protocol:
 | | | | |
 
 **Conclusion**: —
+
+---
+
+## Feedback from plan-reviewer (2026-10-01, on commit `e98a0689`)
+
+**Verdict: SOUND WITH CONCERNS. No Critical findings.** The design itself holds up. Regrown food goes
+only to free cells. Campfires are placed first, so a load-time check can prove that every maintained
+level can never trigger the cell-(0,0) fallback; I re-checked the separation arithmetic against
+`core.py:1527-1545`. The activation draw moves earlier without changing any random value. The
+reset-skip (part E) keeps the random key stream unchanged. Several problems remain, and each would
+cost a rerun or a wrong keep/drop decision. The main ones: the speed decision is deferred rather
+than pre-registered, and the "2-3 % of training" figure behind it is an estimate whose own arithmetic
+gives 3.6-5.2 %. The end-to-end check uses a speed metric already known to be biased. E would be
+judged in the training regime where it cannot help. One test belongs to the wrong commit. And the
+GPU timing uses a lab GPU (node 102, which is this container) with no claim step.
+
+Severity legend: 🔴 Critical = fix before going further · 🟡 Moderate = likely costs a re-run · 🟢 Low = cosmetic · ❓ Open = an assumption nobody has verified yet.
+
+| # | Sev | Location | Issue | Suggested fix | Owner |
+|---|---|---|---|---|---|
+| R1 | 🟡 | §0 U6, §A7 "Why a few percent…", §3.6 | **The speed decision is deferred, not pre-registered.** The plan expects A to miss 3 % on the GPU and says "stop and the user decides then", so the developer builds C+D+A before the user's real choice is asked. The figure meant to inform that choice ("bare step ≈ 2-3 % of training") is **estimated, not measured**: it divides a 64-env RTX 4090 harness rate (0.84-0.93 M/s) by a 128-env 2080 Ti/3090 training rate (33-44 k/s). Those cited numbers give **3.6-5.2 %**, not 2-3 % (only A6's 72 µs/128-env figure gives ~2 %), and a slower card raises the share. The conclusion (A costs < 1 % of training) probably survives: 14 % × 5.2 % ≈ 0.7 %. But it is not what the plan states. | Ask U6 **now** with a concrete rule, e.g. "accept A if (i) the bare-step GPU cost is ≤ 15 % and (ii) the measured rollout-phase throughput loss is ≤ 1 % on the card class training actually uses (3090 / 2080 Ti), else land C+D without A". Measure the env-step share directly: time `collect_trajectories` alone, or read the `rppo_env_step` / `rppo_env_reset` named scopes in a profile, rather than dividing across harnesses. Fix the 2-3 % arithmetic. | senior-developer / user |
+| R2 | 🟡 | §3.6 "End-to-end check", §3.4 keep rule | **The end-to-end evidence uses `Time/sps_env`.** THIRST_PILOT M1 (`docs/reviews/plan_thirst_pilot.md:53`) already showed this metric is `global_step / seconds since start`, a running mean that includes compile time. On a 10-minute run, compile and warm-up dominate it, and 2 runs per arm cannot resolve 3 % when the plan itself measured ~10 % spread between processes of the same code (A7). | Use a windowed rate (Δsteps / Δwall-time after warm-up) and ≥ 6 interleaved rounds, the same count §3.6 already requires for the bare harness. | senior-developer |
+| R3 | 🟡 | §3.4 keep rule, §3.6 "E" | **E would be judged in the regime where it cannot help.** A 10-minute run from scratch has short episodes: L ≈ 25 → the reset is skipped on 0.6 % of steps (A6's own table). The per-step GPU predicate sync is paid on every step, so the keep rule will most likely **drop E for the wrong reason**. | Measure E where episodes are long: roll out from a trained checkpoint (e.g. a finished pilot run), or force long episodes. Pre-register two numbers: "no slower than X % at L ≈ 25" and "faster by more than the base-vs-base spread at L ≈ 250". | senior-developer |
+| R4 | 🟡 | §3.5 T-C3, §3.8 commit 1 | **T-C3 cannot pass in commit 1.** It asserts that a fire leaves its raw cell only because of an earlier **active** fire. Until D lands in commit 2, unused fire slots still reserve their zones, so under C alone an active fire is still moved by an *unused* fire. Commit 1 is then red, or the test gets rewritten in commit 2. | In commit 1, phrase T-C3 against "any earlier fire slot"; tighten it to "active" in commit 2 along with T-D2. | senior-developer |
+| R5 | 🟡 | §3.1 piece 3, U9 | **The backstop drop is counted but nobody reads the count.** `placement_dropped` is a state leaf, and no trainer, logger or accumulator is wired to report it. The load-time WARNING is one line in a training log. In the 17 backstop worlds, a dropped fire therefore still means "the run trains on a world other than the YAML describes" with nothing visible, which is the very complaint in KNOWN_BUGS ~117. It is not a config-default fallback, so the `get_mandatory` rule does not apply literally, but it has the same effect. | Either report the per-episode count where some consumer will see it (for example rPPO episode-end stats, a small trainer change the plan must then list), or have the user accept explicitly that the count is reachable only by hand-written analysis. Also: the fallback-rate measurement covered 3 of the 17 worlds, so state the 0.00 % as covering those 3 only. | user / senior-developer |
+| R6 | 🟡 | §3.6 harness, §A7 | **A lab GPU is used for timing with no claim step.** "This machine's RTX 4090" is node 102 (`hostname` = `docker-102`), a lab node that training-runner assigns (102:0 and 102:1 carried context-exploration runs on 2026-09-29). The prototype round already used it for about an hour without asking. §3.6 pre-registers more of the same: 6 harness rounds, 4 end-to-end trainings, then E. It also skips the GPU pre-flight (gpu-status + diary + pgrep, per the project's GPU pre-flight rule). Another user's process sharing the GPU is also a live alternative explanation for A7's ~10 % spread between processes and its two unexplained "collapses". | Make the node and GPU a user decision. Add the pre-flight and a diary claim row for the timing window. Log `nvidia-smi` occupancy alongside each round. Rerun the A7 base-vs-prototype comparison on a confirmed-idle GPU before treating 4.5-14 % as the cost. | senior-developer / user |
+| R7 | 🟡 | §3.5b step 3 | **The fixture regeneration step contradicts itself.** It asks for regeneration "from the clean commit that contains the code change" **and** for the fixtures to be committed *with* that code change "so every commit is green", which cannot both hold. Recording a source SHA that is later amended away is how a fixture loses its provenance (rows ~290 / ~294 / ~328). | Either use two commits per part (code + tests, then fixtures whose README cites the code commit's SHA, accepting one red commit), or regenerate from a detached worktree of a code-only commit and record that SHA. Say which. | senior-developer |
+| R8 | 🟡 | §5 | **The comparability note names only the level-05 runs and the pilot.** The 17 backstop worlds belong to two active studies (`docs/experiments/active/context_exploration/`, `continual_worlds/`). Their runs so far come from the shared checkout on `v4.0`. Any continuation or extension moved onto `v5.0` would change world mid-series: fires-first order, unused slots, regrowth. | List both studies in §5 and add a dated note to each study doc when this lands. | senior-developer |
+| R9 | 🟢 | §3.5 T-D1 / T-D2 | Both tests recompute the raw draws "with the same splits as `jax_reset`", which re-derives the code under test. If the recomputation is wrong, the tests can pass without checking anything. | Anchor it: assert that the recomputed raw cells equal `jax_reset`'s output for every slot that did not move. Assert a minimum count of qualifying collisions, as T-A1 does with ≥ 1,000. | developer |
+| R10 | 🟢 | §3.4, §3.5 T-E1 | E edits plain PPO, DQN and DRQN, but T-E1 tests rPPO only, so three edited call sites go untested. Plain PPO's key order is `reset_key, key = split(key)` (`ppo_trainer.py:163`), the reverse of rPPO's, and the snippet shows only rPPO's. T-E1 also runs a policy in the loop, so a documented 1-ULP reset difference (row ~167) can carry into later float leaves. | Either limit E to rPPO (the live trainer; this is the surgical choice) or add a fixed-action equivalence test per edited site. In T-E1, require integer and bool leaves to match exactly and float leaves to agree within 1 ULP. | senior-developer |
+| R11 | 🟢 | §3.0 | The baseline worktree under `/tmp` will hold the pre-change test list and speed logs. `git worktree remove` deletes gitignored output; this is the same trap THIRST_PILOT hit. | Write every baseline capture to `thirst/tmp/…` by absolute path. | developer |
+| R12 | 🟢 | §3.7 | Fires-first changes where fires land, and two registry claims were measured on the old layout: "0 episodes without a survivable cell" (2026-09-19) and "worst first step +10.78" (2026-09-26). | Rerun those two 600-1,000-reset checks after C+D and cite the numbers in the change-log entry the plan already adds. | developer |
+
+**Answers to the specific questions.**
+1. *Speed budget:* see R1, R2 and R6. CPU passes easily. The GPU figure for the bare step is measured
+   (on a GPU whose occupancy was not checked). The share-of-training figure is an estimate, and the
+   arithmetic given for it is off by about 2×. The decision is deferred.
+2. *E's exactness:* sound. `key, reset_key = split(key)` stays outside the conditional, `reset_key`
+   has no other consumer, and when no world ended the existing `where(done, …)` already returns
+   `next_state` unchanged. I checked on CPU (levels 03, 05, 06) that `jax_step` and `jax_reset`
+   outputs have identical leaf dtypes, shapes and weak-types, so `lax.cond`'s two branches will
+   type-check and the eager DQN/DRQN skip cannot drift a dtype. `jax_step` builds its state with
+   `_replace`, so the optional `placement_dropped` leaf will carry through. Dreamer already resets per
+   env, and `wrapper.auto_reset_step` has no callers. I found no `vmap` over `collect_trajectories`
+   that would turn the conditional into a select.
+3. *Parity:* the protocol is good: a divergence locator, classification by part, and "anything else
+   → stop". The fixtures are deliberately regenerated once per part, from the post-change commit, not
+   recaptured from the pre-change commit. That is correct, but see R7. New tests fail on pre-change
+   code with real counts: T-A2 sees 28-30 fire landings per ~1,600 regrowths before the change. T-C1
+   fails trivially before the change (the field is absent), which is acceptable for a new refusal.
+4. *C:* the proof is correct for fires-first. A fire is forbidden within Manhattan distance < s,
+   D(4) = 25 cells, and `c_bound.py` enumerates every legal position, a superset of the positions
+   the scan can reach. With D, fewer active fires only removes constraints. The drop-and-count
+   backstop is not a config-default fallback, but in practice it is silent: see R5.
+5. *U1-U3:* no new silent behaviour in the maintained levels. Deferral is head-of-line by slot
+   number, so a slot with no free cell would block every slot after it. Check (iv) makes that
+   unreachable at load, so this is not a starvation trap, provided (iv) is a refusal as written, never
+   a warning.
+6. *Pilot ordering:* K0 gates on the runs having finished. Any post-hoc evaluation of the pilot
+   checkpoints should run on the pre-change SHA, or after this lands with all arms re-evaluated
+   together, as §5 says.
+7. *Known bugs, contracts, versions:* the rows (117, 167, 397, 483, 487) are cited correctly and the
+   key handling avoids reintroducing 397. The CONFIG_CRITICAL_SETTINGS change-log entry,
+   CONFIG_GUIDE, the config schema doc and the scripts map are all covered. The frontmatter is
+   complete. No version numbers appear.
+
+**Assumptions.** Verified in the plan or by me: the fires-first proof for the 11 maintained levels
+(script). P3's correctness under forced regrowth (script). Reset ≈ 90 % of env work per step (measured
+on node 102, occupancy unchecked). E's dtype parity (checked here). Unverified: the env-step share of
+training on the training GPU class (R1). That node 102 was idle during the A7 timings (R6). Per-episode
+regrowth frequency in trained agents (A1 says it is unmeasured). That the 17 worlds' fallback rate is
+0 beyond the 3 measured (R5). That the 20,000-node enumeration cap keeps config loading fast across
+the test suite (K-item reports levels 05/06 only).
+
+**Cost of being wrong.** Nothing here risks data loss or a wrong scientific claim. The realistic costs
+are an implementation that halts at the speed gate after C+D+A are built (about a day, if U6 is not
+settled first), a ~10-18 % training speed-up wrongly discarded by measuring E on short episodes, and
+one red commit plus a fixture whose provenance is muddled.
+
+Reviewed by: plan-reviewer
