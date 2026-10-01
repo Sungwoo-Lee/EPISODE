@@ -621,3 +621,71 @@ developer never calls `Artifact` directly — every publish goes through `publis
 | | | | |
 
 **Conclusion**:
+
+---
+
+## Feedback from plan-reviewer
+
+> **Reviewed by**: plan-reviewer · 2026-10-01 · against commit `d9ea3bf0` · full report: [[plan_basic_behaviour_pipeline]] (`docs/reviews/plan_basic_behaviour_pipeline.md`)
+
+**Verdict: NOT READY for S5 (the pooled model). S0–S4 are sound once M5 and M4 are addressed.**
+The per-run machinery is a faithful generalisation of the hiding page, and the golden gate is real
+ground truth: a frozen-commit script output whose sha256 is checked before comparison, so it is not
+circular. The pooled model is where things go wrong. Its smell × injury × world term re-tests the
+smell study's registered hypervigilance question. It uses a control-world smell reading the study
+itself rejected. It pools the two agents. And it attaches p-values outside the study's decision
+rule. Separately, the hypervigilance slope's "primary" uncertainty is episode-level.
+
+Severity legend: 🔴 Critical = fix before going further · 🟡 Moderate = likely costs a re-run · 🟢 Low = cosmetic · ❓ Open = an assumption nobody has verified yet.
+
+| Sev | Location | Issue | Suggested fix | Owner |
+|---|---|---|---|---|
+| 🔴 C1 | B5 terms; F5(b); [[SINGLE_CHANNEL_SMELL_HYPERVIGILANCE]] §5.2 S1 (Revision 4), §5.3, §2.1 | `rab_smell_llr:start_injury:world` is a second, unregistered test of the study's Q2 / S1 on the same runs. It uses the plain `x1 − x2` log-likelihood ratio (LLR) in the control world, which carries identity only. The study's Revision 4 rejected that reference because in both treated worlds the scent statistic *is* odour strength. The term also has no `:agent` (the study analyses agents separately), and it is judged by a cluster t on 17 degrees of freedom (df) rather than the study's §5.3 rule. | On hv populations, either (a) fit the smell terms per agent, using the study's matched-control reading in the control world (channel 1, with channel 2 as a covariate), and label F5 "descriptive — verdict lives in study §5.3"; or (b) show per-run slopes and per-cell means only, with no world-contrast p-values for smell terms. State the relation to S1 / §5.3 in B5. | senior-developer (+ experiment-designer as study owner) |
+| 🔴 C2 | A7 last paragraph; B5 `primary_se` rule | `primary_se = episode` for within-run slopes covers the hypervigilance term `rab_smell_llr:start_injury` and the injury / nutrition slopes. A Pearson-scaled SE on about 6 M episodes calls a small average significant even when the 18 seeds split in sign, which is the case your own unit test builds. Under treatment coding plus `x:world` and `x:agent`, that "main" slope is also the slope of the reference cell only (control world × ordinary agent). | Run-level SE becomes primary for every term the page interprets as a property of an agent type or world. Episode SE stays as a secondary column labelled "conditional on these runs". Re-confirm user decision 3 with this in view. | senior-developer |
+| 🟡 M1 | A7 guard 1; B5 `coef.csv` | CR1 (the ordinary cluster-robust sandwich with a small-sample correction) on a t with G − 1 = 17 df is optimistic here. There are 8 run-level parameters (intercept, world ×2, agent, world:agent ×2, seed ×2) on 18 runs, 3 per cell. High-leverage clusters shrink the residuals CR1 is built from, and the effective df for a cell contrast is about 10 or fewer, not 17. A wild cluster bootstrap is **not** a good substitute with only 3 clusters per cell (few-treated-clusters failure, MacKinnon & Webb 2017). `seed` as a main effect is mis-specified. Starting weights are shared only within seed × agent (study §2.4), and the study's rule is unpaired. The two-stage OLS omits seed, so the two guards fit different models. | Make the **two-stage seed-level regression primary** for every world or agent term and every generalised slope. Its df (12) is exact, and per-run slope SEs are negligible beside between-seed spread. Fit it on **logit-scale** per-run coefficients, on a common scale (nats, raw injury units), not on per-run SDs. If a sandwich is still wanted, use CR2 with Bell–McCaffrey df (Imbens & Kolesár 2016; Pustejovsky & Tipton 2018). Cheapest assumption-free addition: an exact run-level permutation of world labels within agent (9 runs per agent → 1,680 relabelings). Drop `seed`, or model it as seed × agent consistently in both guards. | senior-developer |
+| 🟡 M2 | B5 terms; F5(b); S5.4 | The model has `x:world + x:agent` but no `x:world:agent`, so the "per world × agent" slopes in F5(b) are imposed additive, not estimated. The two-stage OLS includes world:agent while the pooled model does not. S5.4 checks a reference-cell slope against all 18 per-run slopes, which does not test what it says. | Fit per agent, which also matches the study (C1), or include the full 3-way interactions. Derive F5(b) slopes as per-cell linear combinations with their own SE. Rewrite S5.4 per cell (pooled cell slope within that cell's 3 per-run slopes). | senior-developer |
+| 🟡 M3 | B5 "Coding"; F5(b) "pp per nat" vs `coef.csv` "pp per SD" | Answering the focus question: as specified, "pp per SD" does **not** stay interpretable across worlds. (i) One pooled-rate p̄(1 − p̄) conversion is applied to worlds and agents whose base rates differ. (ii) An interaction coefficient converted to pp is not a marginal effect in a logit model (Ai & Norton 2003). (iii) The claim that a main effect is "the effect at the average of the other factors" is false under treatment coding with interactions: it is the reference-cell effect. (iv) Standardisation is *pooled*, not per-world. For start injury and nutrition this is harmless (identical draws in every world), but for the smell LLR one pooled SD is a different share of each world's spread (rabbit-LLR SD ≈ 0.94 nats in the control vs ≈ 0.66 in the treated worlds, from d′ in study §2.2). The logit slope **per nat** is the comparable quantity. | Report terms on the logit scale (or as odds ratios), smell per nat everywhere, and pp only as average marginal effects per world × agent cell at that cell's own rate. Use sum-to-zero coding if the "average" reading is wanted. | senior-developer |
+| 🟡 M4 | A5; S0 checkpoints | The byte-identity gate exercises only the unchanged path: a01, `bush_dwell`, difference layout, zero exclusions. It never runs the per-name resource split (the legacy code splits by `damage > 0`, the plan by name), the single / sum layouts, the four new targets, or the exclusion path. S0.2 / S0.8 / S0.10 cover pieces only. | Add a **differential gate on one hv1ch store**. The frozen `hiding_drivers.py` accepts the single layout, so run it and require byte equality of every per-episode array and univariate row not involving the rock / campfire split. Also add cross-identities: `eating` successes == legacy `n_ate`; `near_predator` == `n_pred_near`; `near_rabbit` minus rabbit-and-predator-near steps == `n_rab_near`. | senior-developer → developer |
+| 🟡 M5 | A4 precondition; `golden_a01.py` | Checked against `make_population.py:153-187` and the Launch Manifest today: `--from-study-doc` **hard-fails** on C02 (status `completed`, no store in `results/trajectories_hvsmell/`), and on any H-row still `running` that has a final checkpoint and a store. "S0–S4 can run on the completed subset" is therefore not reachable until the hv session edits the manifest. Separately, `golden_a01.py`'s command omits the required `--population`, and the a01 tag carries no `t1none` / `t16quad`, so `--agent` is required too. | State the C02 condition explicitly. Name the fallback: either `--runs` per world with `--world`, or wait. Fix the golden command. | senior-developer |
+| 🟡 M6 | A6; B6 | The Known Bugs row "cross-tabs bin injury from the same step" is OPEN, with the **freeze-vs-fix decision handed to senior-developer**. This plan settles it as "freeze" without recording that. The `t−1` assertion checks `seed[i−1] == seed[i]` but not `t[i] == t[i−1] + 1`. | Ask `bug-curator` to record the freeze decision and the new consumer in the same change. Add the `t` contiguity assertion. | bug-curator; developer |
+| 🟢 L1 | A1 table, A6 | Line citations into `hiding_drivers.py` are stale. Actual: `aggregate` 127–243, `quasi_binomial_fit` 247–269, `fit_glms` 272–332, intensity drop 287–291, ranking 312, same-row binning 223 (not 214, which the registry row also cites). | Refresh the citations. | senior-developer |
+| 🟢 L2 | A5 | The reference CSVs live in the hv tooling's `_golden_scratch/g3_reference/`, which `golden_check.py --tier sweep` regenerates when `aggregate.npz` is absent. If it is regenerated at a different base commit, this gate hard-fails (loudly, not silently). | Copy the two CSVs, with their sha256s, into this pipeline's own tree at S0. | developer |
+| 🟢 L3 | B1 `warm_cell`; A2 | (i) "Equilibrium ≥ setpoint" also counts lethally hot squares (equilibrium > `max_temperature` 15). (ii) The ambient draw (−31…−29) is recoverable, from S0.4's reset replay or from far-from-fire thermoception cells, rather than having to be "unhandled". Borderline squares near a campfire flip with it. | Q1: consider the band [setpoint, max_temperature]. Optionally recover ambient as a factor. | user / senior-developer |
+| 🟢 L4 | F1 checkpoint | Survival must be the episode `length`. If F1 computes it from `n_steps`, the independent check can be off by one. | Define F1 survival as `length`. | developer |
+
+**Points checked and found sound.** The warm-square reconstruction holds: `sensor.py:480` documents
+`Thermoception[centre] + BodyTemperature == thermal_field[own cell]` under `relative: true`, and the
+centre is the first of the 5 cells (`sensor.py:68-70`). The thermal field is set only at reset
+(`core.py:2240`), so it is static per episode, and S0.4 is a genuinely independent path. The hv
+saved config has `temperature_setpoint 0`, `k_metabolic 0`, `default_temp [-31, -29]`. The
+alphabetical `observation_breakdown` trap is real (the hv1ch manifest lists `Body Temperature`
+first; widths sum to 58). The a01 set of varying traits equals the legacy set (detection, delay,
+range, stamina; `damage` is per hit). On local-only compute: correct given the node-env-drift row.
+On `MIN_EPISODES = 1000`: harmless on 1 M stores, but it is a degeneracy floor, not a power
+criterion. Do not describe it as one.
+
+**Hypervigilance golden stamps.** The plan does not invalidate them, provided its "Not changed" list
+holds. The hv stamps hash `SWEEP_SOURCES` (`core/env.py`, `core/scan.py`, `core/store.py`,
+`hiding_drivers.py`, `collect_arm_data.py`, `_ladder.py`, `rabbit_avoidance.py`,
+`aimed_response.py`) and `ASSEMBLY_SOURCES` (`readings.py`, `make_population.py`;
+`readings.py:66-72`). Any convenience edit to one of those files during implementation, for example
+exporting a constant from `hiding_drivers.py`, blocks every hv reading until `golden_check.py` is
+re-run. It also blocks this pipeline's own `fit.py` stamp. Make that an explicit hard constraint in
+"Not changed".
+
+**Assumptions the conclusion rests on**
+
+- ✅ Verified: a01 trait set = legacy; hv obstacle order `campfire, rock, tree, bush`; obs identity; static field; hv thermal constants; `obs_precision float32`; `seed_base 1,000,000` on the hv1ch store.
+- ❓ Open: common evaluation draws across runs (same `seed_base`, study §5) mean episodes with the same seed are correlated *across* clusters. One-way clustering ignores this. It is probably conservative for contrasts and optimistic for levels, and is never checked.
+- ❓ Open: C01 (and later C02) is equivalent to an hv2ch seed-42 run apart from launch week (study §2.4 validates the config, not the training trajectory). The seed-42 cell of the control world is the only one with different provenance, and the `seed` term partly absorbs it.
+- ❓ Open: the local statsmodels honours `df_correction` for `GLM` with `cov_type="cluster"` and `use_t=True`. S5.2 checks this, which is good. Keep it as a hard failure.
+- ❓ Open: the hv session will update the Launch Manifest statuses. Today all of H01–H16 read `running`.
+
+**Cost of being wrong.** No training compute is at risk, and the infrastructure is a few local CPU
+hours. The cost is an F5 figure that answers the project's central hypervigilance question with a
+confounded reading and overconfident p-values, published beside, and possibly against, the study's
+pre-registered verdict. That is how a wrong claim reaches a paper.
+
+**What flips the verdict.** C1 and C2 resolved in B5 / A7 / F5 (doc edits only). M1–M3 belong in
+the same edit, because they all live in B5. S0–S4 may proceed once M5 is resolved and M4's
+differential gate is added.
