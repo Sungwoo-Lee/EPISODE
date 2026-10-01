@@ -884,3 +884,43 @@ WandB. That means about 30–170 GPU-h of reruns per affected world, and a modul
 mismatched seeds. No data-loss hazard was found.
 
 Reviewed by: plan-reviewer
+
+### Re-check of Revision 1 (plan-reviewer, 2026-10-01, commits `583b022f` + `f1ef7cbd`)
+
+**Verdict: SOUND.** The Critical finding is closed, and M1–M7 are answered adequately. Three Low
+notes follow; none blocks launch.
+
+**C1, checked against the repository rather than the doc's own claim.**
+`git diff c33d29b1 583b022f -- src train.py scripts configs` lists only the eight new
+`configs/environment/experiment/thirst/` files. `src/`, `train.py`, `scripts/`, `configs/train/`,
+`configs/models/` (both agent configs), the other `configs/` layers, `default.yaml` and `basic/`
+are byte-identical to the Revision-2 commit. `f1ef7cbd` touches only this doc. `terminate_command.py`
+is the same at the pin. I ran the gate's import check (the `src.__path__` test and the "/src/
+outside the run tree" filter) against the current worktree. It loads 1,939 modules with 0 flagged,
+so the filter does not trip on site-packages. The HEAD-equals-pin and clean-tree checks, the
+P5-style validity list (including the Revision-2 smell in the saved config) and the K0 line in
+PLACEMENT_FIXES_PLAN are all present. `thirst-runs` does not exist yet. That is expected: Admin
+creates it at launch, and the gate refuses to run anywhere else.
+
+**M1–M7.** M1: closed. The stop boundary b\* is now defined from data, so a late check costs only
+GPU time and does not change the comparison window. M2: closed (the thirst-death share must be
+under 0.10, and a falling curve no longer counts as a plateau). M3: closed. The follow-up applies
+to leads in both directions, has a decision rule, reports the unselected seeds 43/44 separately,
+and has a 300 GPU-h cap. The false-lead arithmetic (about 10 % per world, about 60 % for at least
+one across 9) is correct. M4: closed. M5: closed (a steps-matched window is pre-registered). M6:
+closed. M7: closed (§5.5).
+
+**Low notes (no change required):**
+- 🟢 The hourly `/wake` checker belongs to one session and dies with it. Name a fallback checker
+  (the user, or a successor session reading §10). Because b\* is defined after the fact, a gap
+  costs only GPU time.
+- 🟢 Plateau rule 1 now needs two changes that are both **≥ 0** and under 1 %. At a true plateau,
+  about half of all changes are small falls, so the rule may fire late or never. Runs would then
+  go to 10 M, which is already the budgeted case, so this costs compute, not validity.
+- 🟢 The thirst-death bar (< 0.10) holds a floor of unavoidable deaths that rises with map size
+  (§6.4). A 20×20 run could be held to 10 M by that floor. Again this costs compute only, and §7
+  already flags it.
+
+Severity legend: 🔴 Critical = fix before going further · 🟡 Moderate = likely costs a re-run · 🟢 Low = cosmetic · ❓ Open = an assumption nobody has verified yet.
+
+Reviewed by: plan-reviewer
