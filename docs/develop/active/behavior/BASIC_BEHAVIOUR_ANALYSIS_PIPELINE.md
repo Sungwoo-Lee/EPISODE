@@ -675,40 +675,40 @@ developer never calls `Artifact` directly — every publish goes through `publis
 ## Checkpoints
 
 **S0 — infrastructure and gate**
-- [ ] S0.1 `pytest tests/analysis/test_basic_behaviour.py` passes locally (pytest is absent on lab nodes).
-- [ ] S0.2 Slot cross-check passes on a01 and one store of each hv world; a deliberately wrong slot map fails it.
-- [ ] S0.3 `obs_indices` on an hv1ch store: the body-temperature index differs from its alphabetical
+- [x] S0.1 `pytest tests/analysis/test_basic_behaviour.py` passes locally — 16/16 (plus the 22 existing `test_hiding_drivers_layout` / `test_core_env` tests). (pytest is absent on lab nodes).
+- [x] S0.2 (passes on a01 and on every swept hv cell, all three worlds; a deliberately wrong obstacle map fails it — `test_slot_cross_check_wrong_map_fails`.) Slot cross-check passes on a01 and one store of each hv world; a deliberately wrong slot map fails it.
+- [x] S0.3 (body temperature at index 1, alphabetical position 0; every start value in [−10, 5], variance 18.8.) `obs_indices` on an hv1ch store: the body-temperature index differs from its alphabetical
   position in the manifest (the trap is real), and **every** `t = 0` value read there lies in
   [−10, 5] with non-zero variance. A wrong index (satiation = 100, nociception = 0) fails this.
-- [ ] S0.4 Warm-square reconstruction, by an **independent path**: for 20 episodes of one hv1ch store,
+- [x] S0.4 (20 episodes, 5,336 steps, max |diff| 1.1e-5; t = 0 agent square matches the replay in all 20.) Warm-square reconstruction, by an **independent path**: for 20 episodes of one hv1ch store,
   rebuild the episode's `thermal_field` with the environment's own reset (episode seed → key, params
   from the saved config, as `traj_scan.py` does) and assert that the field at the agent's square equals
   the `obs_true` reconstruction at every step to 1e-4. This is what proves which thermoception cell is
   the agent's own.
-- [ ] S0.5 Audit on the 18-run population configs and on a01: list every unhandled marker in the
+- [x] S0.5 (zero unhandled on a01 and on the 10 swept cells; the 8 unswept modulated runs have world settings identical to their world's ordinary runs, so the result carries over. One extra NOT_A_DRAW entry was needed — see Implementation Report, deviation D2.) Audit on the 18-run population configs and on a01: list every unhandled marker in the
   Implementation Report. Expected: none on either; anything else → stop and report (a feature the
   plan missed).
-- [ ] S0.5b `ambient_temp`: on the 20 episodes of S0.4, equal to the replayed episode's baseline draw
+- [x] S0.5b (max |diff| 2.0e-5 on the 20 replayed episodes; defined on 100 % of episodes in all 10 cells.) `ambient_temp`: on the 20 episodes of S0.4, equal to the replayed episode's baseline draw
   to 1e-4; report the share of episodes where it is defined (Revision 2: expected 100 %).
-- [ ] S0.5c (Revision 2, N2) On every swept thermal cell, M1's `n` equals the cell's episode count
+- [x] S0.5c (M1 n = 1,000,000 = episode count in all 50 cell × behaviour fits; nothing demoted.) (Revision 2, N2) On every swept thermal cell, M1's `n` equals the cell's episode count
   (`ambient_temp` and `start_body_temp` finite everywhere); otherwise `ambient_temp` must show as
   demoted to univariate-only in `prefit.json`.
-- [ ] S0.6 Gate 1: both a01 CSVs byte-identical; reference sha256s verified first.
-- [ ] S0.6b Gate 2 (hv1ch): every check of A5's second table passes.
-- [ ] S0.7 Golden gate: a01 `prefit.json` lists zero exclusions (otherwise stop and report; do not tune).
-- [ ] S0.8 On an hv1ch cell, `pred_olf_intensity` and `rab_olf_intensity` are excluded as
+- [x] S0.6 Gate 1: both a01 CSVs byte-identical; reference sha256s verified first.
+- [x] S0.6b (38 arrays equal; 27 univariate and 76 recombined multivariate legacy lines verbatim; the three target identities hold.) Gate 2 (hv1ch): every check of A5's second table passes.
+- [x] S0.7 (zero exclusions — after declaring M5's by-construction identity, deviation D1.) Golden gate: a01 `prefit.json` lists zero exclusions (otherwise stop and report; do not tune).
+- [x] S0.8 (in all 6 single-channel / matched-strength cells excluded as stated; included in all 4 two-channel cells.) On an hv1ch cell, `pred_olf_intensity` and `rab_olf_intensity` are excluded as
   "identical to …_smell_predatorness"; on an hv2ch cell they are included.
-- [ ] S0.9 Speed: sweep wall-clock on a01 vs the legacy 346.7 s (same container), and on one hv store
+- [x] S0.9 (a01: 184 s vs legacy 346.7 s, 0.53×. hv stores: 554–705 s each with the observation column; on 20 shards 74 s with vs 21 s without, 3.5× — over the Q4 threshold, flagged.) Speed: sweep wall-clock on a01 vs the legacy 346.7 s (same container), and on one hv store
   with and without the `obs_true` read. > 1.5× on a01 is a discussion point.
-- [ ] S0.10 `bush_dwell` pooled share on a01 equals the reference `summary.json` `overall_dwell`.
+- [x] S0.10 (16.621123930336076 both.) `bush_dwell` pooled share on a01 equals the reference `summary.json` `overall_dwell`.
 
 **S1–S4, S6 — per figure**
-- [ ] Each figure script runs from caches only (no parquet reads) in under a minute.
-- [ ] Each writes SVG + PDF + PNG + `<stem>.samples.json`; `house.save` raised no floor / edge error.
-- [ ] `build_page.py` reports the expected present / pending split and exits 0.
-- [ ] F1: survival is defined as the episode-table `length` (not reconstructed from step counts); for
+- [x] Each figure script runs from caches only (21 figures in 120 s) (no parquet reads) in under a minute.
+- [x] Each writes SVG + PDF + PNG + `<stem>.samples.json`; `house.save` raised no floor / edge error.
+- [x] `build_page.py` reports (`partial: present [21 figures], pending [F5]`) the expected present / pending split and exits 0.
+- [x] F1 (hv2ch seed 43: 257.548354 from the episode shards = F1 value): survival is defined as the episode-table `length` (not reconstructed from step counts); for
   one cell it equals the mean of `length` read directly from that store's episode shards.
-- [ ] F6: for one cell, the trial total of the injury × nutrition table equals that cell's total chosen
+- [x] F6 (trials = chosen steps asserted in every cell; one shard recomputed with pandas: trials and successes equal in all 16 cells): for one cell, the trial total of the injury × nutrition table equals that cell's total chosen
   steps; one cell value recomputed by a direct pandas read of one shard matches.
 
 **S5 — cross-run screening**
@@ -792,11 +792,135 @@ developer never calls `Artifact` directly — every publish goes through `publis
 
 ## Implementation Report
 
-> **Implemented by**:
-> **Date**:
+> **Implemented by**: developer
+> **Date**: 2026-10-01
 
-<!-- Filled by the developer: per step S0–S6, what was done, deviations, checkpoint results
-     (with numbers), the unhandled-marker list (S0.5), and the timings (S0.9, S5.1). -->
+**In plain words.** The pipeline exists and is proven against the old hiding analysis. On the old
+agent (a01) it reproduces the published regression tables byte for byte; on a new-world store it
+agrees with the frozen old script everywhere the two should agree; and its reading of temperature
+matches the environment's own replay. All 10 runs whose recordings exist have been processed and
+fitted for all five behaviours, and Figures 1–4 and 6 are built into a partial page. Figure 5
+(which settings move each behaviour) is written and tested, but needs all 18 runs; the 8
+modulated-agent runs are not recorded yet.
+
+**Scope note.** The instruction was first S0–S4; it was widened mid-task by the user (via the
+parent) to all six figure scripts, `screen.py` and the full page, with F5 built once the population
+is complete. Commits: `56f91673` (Revision 2 text), `4ce12c77` (registry, sweep, fit, golden gate),
+`86c1a6a4` (screen, figures, builder, template, tests, dependency map). Not pushed.
+
+### What was implemented (file by file)
+
+| File | What it does |
+|---|---|
+| `scripts/analysis/basic_behaviour/registry.py` | targets (B1, incl. N7 gain check), per-declaration slots + manifest cross-check, factors in the fixed role order (B2), config audit with `NOT_A_DRAW`, observation indices from rebuilt params (A2b), thermal info + exact ambient recovery inputs (N2: heat sources via `core.heat_source_mask`, kernel radius from params), separable blur weights |
+| `.../sweep.py` | one pass per store: legacy arithmetic copied primitive for primitive; five targets; t−1 cross-tables with seed + `t` contiguity asserted; ambient temperature `T_square(t=0)/(1 − ratio·B_own)`; stale-cache guard; blinding guard; `--workers` |
+| `.../fit.py` | B3 pre-fit (few / constant / duplicate / outcome; non-finite episode factor demoted to univariate-only), univariate, M1–M5 recipes as data, in-design constant / duplicate / collinear checks, golden-stamp requirement |
+| `.../golden_gate.py` | Gate 1 (a01), Gate 2 (hv1ch incl. the Revision 2 multivariate extension), thermal replay (S0.3–S0.5c); writes `results/analysis/basic_behaviour/_golden_pass.json` |
+| `.../screen.py` | B5 with Revision 2: design from manifest + refusal, method-of-moments components with reference marks, per-cell SDs, largest per-run SE, Welch sensitivity, unrestricted + within-seed permutation, no tests / intervals / shares for smell terms |
+| `.../_fig.py`, `f1…f6_*.py` | shared loading, data accounting (`<stem>.samples.json`), colour = world, shape = agent; one script per figure, `house.apply()` / `house.save()` |
+| `.../page_template.html`, `build_page.py` | house style taken from the style sheet at build time; F2–F6 repeated per behaviour present; absent blocks shown as "not yet produced"; guide §11 checks (Axes sentence, data table, 150–250-word method note: 226 / 213 / 193 / 192 / 199 / 197 words); markdown mirror |
+| `tests/analysis/test_basic_behaviour.py` | 16 tests (plan list as revised, plus slot-map failure, alphabetical-index trap, demotion, smell-terms-carry-no-test) |
+| `docs/environment/SCRIPTS_DEPENDENCY_MAP.md` | §0 depth note, §1c test row, §1e compat-site row, folder row, importer edges on `hiding_drivers.py`, `core/env.py`, `readings.py`, `make_population.py` |
+
+No golden-stamped hypervigilance file was edited (checked: the hv stamp's source hashes are unchanged).
+
+### Golden gate (`_golden_pass.json`, sources hash `51b1a90e2d35`)
+
+| Check | Result |
+|---|---|
+| reference sha256 (copied to `_golden_reference/a01/`) | univariate `c3d7259c…`, multivariate `0ad912ee…`, summary `7ee3c8f5…` — match the hv stamp |
+| a01 univariate.csv / multivariate.csv | **byte-identical** |
+| a01 pre-fit exclusions / unhandled markers / legacy factor order | 0 / 0 / identical |
+| a01 pooled bush share vs `overall_dwell` | 16.621123930336076 = 16.621123930336076 |
+| hv1ch per-episode arrays vs frozen script | 38 equal; skipped by design `n_rock` (campfires counted as rocks), `IBb`/`NBb` (same-row tables), `*_olf_ch2` (NaN in one channel) |
+| hv1ch legacy univariate lines (27, `n_rocks` excepted) | all verbatim |
+| hv1ch legacy multivariate lines, campfires + rocks recombined (76) | all verbatim |
+| eating = `n_ate`; near predator = `n_pred_near`; near rabbit − both = `n_rab_near` | all equal |
+| thermal replay: field vs reconstruction (5,336 steps) / baseline draw / defined share / M1 n | 1.1e-5 / 2.0e-5 / 100 % / 1,000,000 of 1,000,000 |
+
+### Per-run outputs ready (population `hvsmell`, `results/analysis/basic_behaviour/hvsmell/`)
+
+All 10 completed cells are swept and fitted for all five behaviours, univariate and multivariate
+(100 fits): `hv1ch_t1none_s42/43/44`, `hv2ch_t1none_s42` (C01), `hv2ch_t1none_s43/44`,
+`hv1chm_t1none_s42/43/44`, `hv2ch_t16quad_s42` (C02). Each: 1,000,000 episodes, 35 factors, five
+behaviours available, zero unhandled markers, ambient temperature defined on every episode.
+Exclusions are exactly the expected ones: the two odour-intensity terms as duplicates of the scent
+statistic in the 6 single-channel / matched-strength cells (kept in the 4 two-channel cells), and the
+outcome-defining consequence for eating / near rabbit / near predator / warm square. No in-model
+exclusions, no skipped models. Page: `docs/experiments/active/hypervigilance/basic_behaviour_hvsmell/basic_behaviour.{html,md}` +
+`figures/` (21 figures; F5 pending) — **left uncommitted**: 17 MB HTML + 18 MB figures; whether to
+commit generated page outputs of this size is the parent's call.
+
+### Tests
+
+`pytest tests/analysis/test_basic_behaviour.py tests/analysis/test_hiding_drivers_layout.py tests/analysis/test_core_env.py` → 38 passed (local, `grid_world_pain` env).
+
+**S5 development test (TEST input, not on the page).** `screen.py` + F5 were run on a 9-run
+ordinary-agent subset (3 worlds × 3 seeds; output in `results/analysis/basic_behaviour/_TEST_screen_9ordinary/`).
+S5.1: hand computation with pandas `groupby` for the start-injury slope (single-channel − control)
+gives t = 0.688659, identical to `contrasts.csv`. S5.2 analogue: df 6 (9 runs, 3 cells), 1,680
+relabelings (280 distinct groupings), within seed 216 (36). S5.4: every cell mean lies within its
+runs' range. S5.6: no smell rows in `contrasts.csv` / `variance.csv`, smell intervals blank in
+`cells.csv`. **S5.3 finding:** for smell × start injury the median per-run episode-level SE
+(0.00071) is *not* below half the seed-to-seed SD (0.00076), so within-run noise is not negligible
+for that slope; F5's data statement says so automatically for any quantity where this holds.
+
+### Speed check
+
+Not a training-path change (analysis scripts only), so no training SPS measurement applies. Sweep
+timing: a01 184 s vs legacy 346.7 s (same container). hv stores 554–705 s each (2–3 concurrent
+processes). The observation column (needed for body temperature, ambient temperature and the warm
+square) costs **3.5×** on a like-for-like 20-shard run (74 s vs 21 s) — over the Q4 "more than
+doubles" threshold, so this is **flagged for the user's decision**; it was kept, as the warm target
+and both temperature factors depend on it. Fits: ~1–3 min per cell per behaviour; figures 120 s for
+all 21.
+
+### Deviations from the plan (none silent)
+
+- **D1 — M5's spread term is a by-construction identity.** `detect_spread = detect_keenest − detect_least_keen`,
+  so the plan's rank check would exclude it on a01 and fail S0.7 by construction (verified: without
+  the declaration it is dropped as "design rank < columns"). The legacy fit keeps all three terms
+  (minimum-norm solution). `fit.py` declares this identity for M5, asserts it holds exactly, and
+  records a note instead of an exclusion; F4's method note says the three terms are not separately
+  determined. Not a threshold change. Needs senior-developer sign-off.
+- **D2 — one extra `NOT_A_DRAW` entry.** The hv body block has `healing_hunger_low` 0 /
+  `healing_hunger_high` 100, which the `_low/_high` marker rule flags. These are fixed breakpoints of
+  the healing curve, not a per-episode draw; added with that reason. This is the only marker beyond the
+  plan's list (a heuristic false positive, not a missed feature).
+- **D3 — audit scope.** The audit walks the world blocks (`environment`, `body`, `thermal`, `sensory`,
+  `perceptual_noise`), not the agent / training / logging blocks, whose two-number lists (layer sizes)
+  are not world draws.
+- **D4 — Figure 2 is per behaviour** (`f2_factor_inventory__<target>`), like F3–F6, because the
+  "is the outcome" exclusion depends on the behaviour.
+- **D5 — `screen.py` takes `--control-world` and `--reference-agent`** (required, no defaults): the
+  contrasts need to know which world is the control and which agent the reference, and nothing in the
+  manifest says so.
+- **D6 — variance remainder.** Reported as 1 − Σ (truncated factor shares), with the untruncated
+  value in its own column; the plan's formula alone gives a remainder above 1 when factors truncate.
+  Zero-df components are omitted.
+- **D7 — `sweep.py --workers N`** (cells in parallel); the user allowed ≤ 3 workers. Fits were run
+  with the linear-algebra thread count capped at 2 per process.
+- **D8 — the permutation output reports `n_distinct_groupings`** (the structural 280 / 36 of N6)
+  separately from the data-dependent count of distinct F values.
+- **D9 — figure wording.** "Smell ladder" (plan B6) is shown as "smell sextiles" on the page, per the
+  conventional-terms policy; display labels use plain names (two-channel smell (control), ordinary
+  agent, …).
+
+### Blockers and follow-ups
+
+1. **F5 waits for the population**: H02–H16 (modulated) are `running` with no store. When they are
+   collected and marked completed: `make_population.py --from-study-doc … --out results/analysis/basic_behaviour/hvsmell/population.json`,
+   then `sweep.py` on the new cells, `fit.py` for them, `screen.py --target T --control-world hv2ch --reference-agent t1none`
+   for each behaviour, `f5_settings.py`, re-run F1–F4/F6 and `build_page.py`.
+2. **bug-curator** (I cannot spawn it): record on the Known Bugs row "The hiding-drivers cross-tabs
+   bin injury from the same step as the bush outcome" — decision **freeze** (`hiding_drivers.py`
+   unchanged, now the reference for two gates) and the new consumer `scripts/analysis/basic_behaviour/`,
+   which bins on row t−1.
+3. `registry.rebuild_params` is a seventh saved-config compat site; `tests/env/test_saved_config_compat.py`'s
+   `_CALL_SITES` was not extended (outside this plan's File Changes) — listed in the map's §1e.
+4. Q4 (observation-column cost, 3.5×) and D1 need a decision; the page's "golden gate" provenance
+   line and the plan's own "rabbit-smell ladder" wording are for senior-developer to review.
+5. Publishing goes through `publish-page` (format gate) — not done here, by instruction.
 
 ## Verification Report
 
