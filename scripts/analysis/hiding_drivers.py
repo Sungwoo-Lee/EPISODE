@@ -33,6 +33,9 @@ from __future__ import annotations
 import argparse, glob, json, os, sys, time
 import numpy as np, pyarrow.parquet as pq, yaml
 
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "core"))
+from env import scent_spec, smell_channels  # noqa: E402,F401  (smell_channels kept importable by name)
+
 INJ_EDGES = [1e-9, 25.0, 50.0]          # -> bins: 0, (0,25), [25,50), [50,inf)
 NUT_EDGES = [25.0, 50.0, 75.0]
 NEAR_D    = 2                            # Chebyshev radius for "an animal is near"
@@ -78,25 +81,6 @@ def slot_layout(cfg: dict) -> dict:
                 n_animal=len(pred) + len(neu))
 
 
-def smell_channels(cfg: dict) -> tuple[int, int]:
-    """Find the two odour channels that separate predators from neutrals.
-
-    `pred_predatorness` is defined as (channel A - channel B), where A is the channel on which
-    predators sit highest relative to neutrals and B the reverse. Hardcoding channels 1/2 would
-    silently compute nonsense on a run whose scent layout differs, so derive them and refuse if
-    the config does not actually separate the two classes.
-    """
-    ent = cfg["environment"]["entities"]
-    pm = np.mean([e["properties"] for e in ent if e["class"] == "predator"], axis=0)
-    nm = np.mean([e["properties"] for e in ent if e["class"] != "predator"], axis=0)
-    d = np.asarray(pm) - np.asarray(nm)
-    a, b = int(np.argmax(d)), int(np.argmin(d))
-    if a == b or d[a] <= 0 or d[b] >= 0:
-        raise SystemExit("this run's scent config does not separate predators from neutrals; "
-                         "the predator-likeness regressor is undefined here")
-    return a, b
-
-
 def find_stores(run: str, checkpoint: str | None, roots) -> list[str]:
     """Every store holding part of this run's episode population, one per collection pass.
 
@@ -140,7 +124,7 @@ def listcol(col, width):
 
 
 # -------------------------------------------------------------- aggregate ----
-def aggregate(stores, lay: dict, chans: tuple[int, int], verbose=True) -> dict:
+def aggregate(stores, lay: dict, spec, verbose=True) -> dict:
     """One sweep of the step table -> per-episode arrays. Assumes (and asserts) that
     episodes are shard-aligned, seeds contiguous, and rows sorted by seed."""
     stores = [stores] if isinstance(stores, str) else list(stores)
@@ -162,6 +146,9 @@ def aggregate(stores, lay: dict, chans: tuple[int, int], verbose=True) -> dict:
     P, R = lay["pred"], lay["neutral"]
     mean_over = lambda X, M: np.where(M.sum(1) > 0, (X * M).sum(1) / np.maximum(M.sum(1), 1), np.nan)
     pa, rb = act[:, P], act[:, R]
+    c1 = spec.channels[0]
+    c2 = spec.channels[1] if len(spec.channels) > 1 else None
+    nan_ep = np.full(nep, np.nan)          # single-channel: no second channel; key set unchanged
 
     A = dict(seed=seed, term=ep.column("termination_reason").to_numpy(zero_copy_only=False)[o],
              n_pred=pa.sum(1).astype(float), n_rab=rb.sum(1).astype(float),
@@ -175,14 +162,16 @@ def aggregate(stores, lay: dict, chans: tuple[int, int], verbose=True) -> dict:
              pred_stamina=mean_over(L("animal_max_stamina_sampled")[:, P], pa),
              # BOTH olfactory channels vary independently for every animal, so the
              # difference alone discards a second quantity: total odour strength. Keep both.
-             pred_predatorness=mean_over(prop[:, P, chans[0]] - prop[:, P, chans[1]], pa),
-             rab_predatorness=mean_over(prop[:, R, chans[0]] - prop[:, R, chans[1]], rb),
-             pred_olf_ch1=mean_over(prop[:, P, chans[0]], pa),
-             pred_olf_ch2=mean_over(prop[:, P, chans[1]], pa),
-             rab_olf_ch1=mean_over(prop[:, R, chans[0]], rb),
-             rab_olf_ch2=mean_over(prop[:, R, chans[1]], rb),
-             pred_olf_intensity=mean_over(prop[:, P, chans[0]] + prop[:, P, chans[1]], pa),
-             rab_olf_intensity=mean_over(prop[:, R, chans[0]] + prop[:, R, chans[1]], rb),
+             # `spec.statistic` is x_a - x_b in the two-channel layout (the same expression as
+             # before), x_a single-channel, x_1 + x_2 matched-strength (core/env.scent_spec).
+             pred_predatorness=mean_over(spec.statistic(prop[:, P]), pa),
+             rab_predatorness=mean_over(spec.statistic(prop[:, R]), rb),
+             pred_olf_ch1=mean_over(prop[:, P, c1], pa),
+             pred_olf_ch2=mean_over(prop[:, P, c2], pa) if c2 is not None else nan_ep,
+             rab_olf_ch1=mean_over(prop[:, R, c1], rb),
+             rab_olf_ch2=mean_over(prop[:, R, c2], rb) if c2 is not None else nan_ep,
+             pred_olf_intensity=mean_over(spec.intensity(prop[:, P]), pa),
+             rab_olf_intensity=mean_over(spec.intensity(prop[:, R]), rb),
              # per-slot detection range, so multi-predator episodes are analysable at all
              pred_detect_max=np.where(pa.sum(1) > 0,
                  np.nanmax(np.where(pa, L("animal_detect_sampled")[:, P], np.nan), axis=1), np.nan),
@@ -255,9 +244,33 @@ def aggregate(stores, lay: dict, chans: tuple[int, int], verbose=True) -> dict:
 
 
 # --------------------------------------------------------------------- fit ----
-def fit_glms(D: dict, out_dir: str):
+def quasi_binomial_fit(X, keep, label, Y, L):
+    """Quasi-binomial GLM of Y successes out of L trials on the columns of DataFrame X.
+
+    Lifted unchanged from `fit_glms` so the S1 / S2 readings fit the same model on other outcomes.
+    Effects are pp per unit and pp per SD at the pooled rate of the kept rows.
+    """
     import pandas as pd, statsmodels.api as sm
     from scipy import stats
+    k = keep & np.isfinite(X.to_numpy()).all(1)
+    Xc = sm.add_constant(X[k], has_constant="add")
+    y = np.column_stack([Y[k], (L - Y)[k]])
+    m = sm.GLM(y, Xc, family=sm.families.Binomial()).fit()
+    disp = m.pearson_chi2 / m.df_resid
+    se = m.bse * np.sqrt(disp); z = m.params / se
+    pbar = Y[k].sum() / L[k].sum(); s = pbar * (1 - pbar) * 100
+    sd = np.r_[1.0, X[k].std().to_numpy()]
+    null = sm.GLM(y, np.ones((int(k.sum()), 1)), family=sm.families.Binomial()).fit()
+    return pd.DataFrame({"model": label, "term": Xc.columns, "n": int(k.sum()),
+                         "coef": m.params, "se": se, "z": z,
+                         "p": 2 * stats.norm.sf(np.abs(z)),
+                         "dpp_per_unit": m.params * s, "dpp_per_sd": m.params * sd * s,
+                         "pseudo_r2": 1 - m.deviance / null.deviance,
+                         "overdispersion": disp})
+
+
+def fit_glms(D: dict, out_dir: str, *, layout: str):
+    import pandas as pd
     L, Y = D["n_steps"], D["bush_steps"]
     ns = np.maximum(L, 1)
     EXO = {"start_injury": D["inj0"], "start_nutrition": D["nut0"],
@@ -271,6 +284,12 @@ def fit_glms(D: dict, out_dir: str):
     EXO_R = {"rab_smell_predatorness": D["rab_predatorness"],
              "rab_olf_intensity": D["rab_olf_intensity"]}
     EXO_P["pred_olf_intensity"] = D["pred_olf_intensity"]
+    if layout != "difference":
+        # In the single-channel and matched-strength layouts the statistic IS the odour strength,
+        # so the intensity column is an exact copy of the predatorness column and the GLM would be
+        # singular. Plan A1 / study section 2.5 item 2.
+        del EXO_P["pred_olf_intensity"], EXO_R["rab_olf_intensity"]
+        print(f"layout '{layout}': predator-likeness equals odour intensity; intensity terms dropped")
     END = {"frac_time_injured": D["IB"][:, 1:].sum(1) / ns,
            "frac_time_inj_severe": D["IB"][:, 3] / ns,
            "mean_injury": (D["inj_sum"] - D["inj0"]) / ns, "peak_injury": D["inj_max"],
@@ -281,22 +300,7 @@ def fit_glms(D: dict, out_dir: str):
            "frac_time_predator_near": D["n_pred_near"] / ns,
            "frac_time_rabbit_near": D["n_rab_near"] / ns}
 
-    def fit(X, keep, label):
-        k = keep & np.isfinite(X.to_numpy()).all(1)
-        Xc = sm.add_constant(X[k], has_constant="add")
-        y = np.column_stack([Y[k], (L - Y)[k]])
-        m = sm.GLM(y, Xc, family=sm.families.Binomial()).fit()
-        disp = m.pearson_chi2 / m.df_resid
-        se = m.bse * np.sqrt(disp); z = m.params / se
-        pbar = Y[k].sum() / L[k].sum(); s = pbar * (1 - pbar) * 100
-        sd = np.r_[1.0, X[k].std().to_numpy()]
-        null = sm.GLM(y, np.ones((int(k.sum()), 1)), family=sm.families.Binomial()).fit()
-        return pd.DataFrame({"model": label, "term": Xc.columns, "n": int(k.sum()),
-                             "coef": m.params, "se": se, "z": z,
-                             "p": 2 * stats.norm.sf(np.abs(z)),
-                             "dpp_per_unit": m.params * s, "dpp_per_sd": m.params * sd * s,
-                             "pseudo_r2": 1 - m.deviance / null.deviance,
-                             "overdispersion": disp})
+    fit = lambda X, keep, label: quasi_binomial_fit(X, keep, label, Y, L)
 
     ALL = np.ones(len(L), bool); P1 = D["n_pred"] == 1; R1 = D["n_rab"] == 1
     uni = []
@@ -365,7 +369,7 @@ def main():
 
     cfg = yaml.safe_load(open(f"{a.run}/models/config.yaml"))
     lay = slot_layout(cfg)
-    chans = smell_channels(cfg)
+    spec = scent_spec(cfg)
     stores = find_stores(a.run, a.checkpoint, a.store_root)
     tag = os.path.basename(a.run.rstrip("/"))
     out = a.out or f"results/analysis/hiding_drivers/{tag}"
@@ -374,10 +378,11 @@ def main():
     print(f"slots predators={lay['pred']} neutrals={lay['neutral']} "
           f"bushes={len(lay['bush'])} rocks={len(lay['rock'])} "
           f"food={len(lay['food'])} ambush={len(lay['ambush'])}")
-    print(f"scent  predator-likeness = channel {chans[0]} minus channel {chans[1]}")
+    print(f"scent  layout {spec.layout}, channels {list(spec.channels)}, midpoint "
+          f"{spec.midpoint:.4g}, {spec.llr_scale:.4g} nats per unit")
 
     if a.stage in ("aggregate", "all") and not os.path.exists(cache):
-        D = aggregate(stores, lay, chans)
+        D = aggregate(stores, lay, spec)
         os.makedirs(out, exist_ok=True)
         np.savez_compressed(cache, **D)
         print(f"cached -> {cache}")
@@ -387,7 +392,8 @@ def main():
     s = cross_tabs(D, out)
     print(f"\nepisodes {s['episodes']:,}  mean survival {s['mean_survival_steps']:.1f} steps  "
           f"overall dwell {s['overall_dwell']:.2f}%")
-    uni, multi = fit_glms(D, out)
+    uni, multi = fit_glms(D, out, layout=spec.layout)
+    json.dump(spec.as_dict(), open(f"{out}/scent.json", "w"), indent=1)
     print("\n=== univariate, ranked by |Δ percentage-points per +1 SD| ===")
     print(f"{'factor':28}{'block':13}{'n':>10}{'Δpp/SD':>10}{'Δpp/unit':>11}{'pseudoR2':>10}")
     for _, r in uni.iterrows():
@@ -400,7 +406,8 @@ def main():
               f"pseudo-R2 {grp.pseudo_r2.iloc[0]:.4f}) ===")
         for _, r in g.iterrows():
             print(f"  {r.term:28}{r.dpp_per_sd:>+9.2f} pp/SD{r.dpp_per_unit:>+10.3f} pp/unit")
-    print(f"\nwritten: {out}/univariate.csv, {out}/multivariate.csv, {out}/summary.json")
+    print(f"\nwritten: {out}/univariate.csv, {out}/multivariate.csv, {out}/summary.json, "
+          f"{out}/scent.json")
 
 
 if __name__ == "__main__":

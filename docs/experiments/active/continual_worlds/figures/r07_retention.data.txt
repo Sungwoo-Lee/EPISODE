@@ -1,0 +1,2 @@
+frozen checkpoints|30|30|100.0|5 stage ends per run, 6 runs; 2,000 hunting-world test episodes each
+seed pairs in panel b|3|3|100.0|same-seed ordinary and modulated runs

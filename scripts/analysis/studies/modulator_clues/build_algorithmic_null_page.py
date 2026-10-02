@@ -21,6 +21,9 @@ FAILS LOUDLY, rather than writing a partial page, on:
   * a data statement with no `decision_rules:` line, a rules file other than the page's, or a sha
     that is neither the current rules file nor a registered revision's `sha256_before`
   * a data statement marked TEST INPUT (a synthetic or partial source), unless --preview
+  * an ILLUSTRATION figure (a primer toy example: status `illustration`, `decision_rules: none
+    (illustration)`) anywhere outside the primer block between `<!-- PRIMER START -->` and
+    `<!-- PRIMER END -->`, or a figure without that status inside it
   * any file in the page's OWN figure folder (figures/algorithmic_null/) the page never shows;
     the parent figures/ folder belongs to another page and is never listed
   * a class defined in the page's own CSS that the house block also defines       - register F54
@@ -77,6 +80,21 @@ REFS = {
               "NeurIPS 2017", "https://arxiv.org/abs/1706.05806",
               "No PDF held; cited from prior knowledge as a rescaling-robust comparison measure. "
               "Mentioned in other project reviews, not reviewed on its own."),
+    "kriegeskorte": ("Kriegeskorte, N., Mur, M. and Bandettini, P.",
+                     "Representational similarity analysis - connecting the branches of systems neuroscience",
+                     "Frontiers in Systems Neuroscience 2:4, 2008", "https://doi.org/10.3389/neuro.06.004.2008",
+                     "No PDF held; cited from prior knowledge for the primer's fMRI analogy only."),
+    "haxby": ("Haxby, J. V., Guntupalli, J. S., Connolly, A. C., Halchenko, Y. O., Conroy, B. R., "
+              "Gobbini, M. I., Hanke, M. and Ramadge, P. J.",
+              "A common, high-dimensional model of the representational space in human ventral temporal cortex",
+              "Neuron 72(2):404-416, 2011", "https://doi.org/10.1016/j.neuron.2011.08.026",
+              "No PDF held; cited from prior knowledge for hyperalignment in the primer's fMRI analogy only."),
+    "robert": ("Robert, P. and Escoufier, Y.",
+               "A unifying tool for linear multivariate statistical methods: the RV-coefficient",
+               "Journal of the Royal Statistical Society, Series C (Applied Statistics) 25(3):257-265, 1976",
+               "https://doi.org/10.2307/2347233",
+               "No PDF held; cited from prior knowledge for the identity of linear CKA and the RV "
+               "coefficient, which the primer states and which follows from the two formulas."),
 }
 
 
@@ -129,6 +147,8 @@ def parse_data(stem: str, path: str) -> dict:
             if len(cells) != 5:
                 fail(f"{stem}: data row does not have 5 cells: {line!r}")
             d["rows"].append(cells)
+        elif key == "decision_rules" and val == "none (illustration)":
+            d["rules"] = "illustration"
         elif key == "decision_rules":
             m = re.fullmatch(r"(\S+) ([0-9a-f]{64}) @ (\S+)", val)
             if not m:
@@ -142,6 +162,9 @@ def parse_data(stem: str, path: str) -> dict:
         fail(f"{stem}: data statement has no decision_rules line")
     if not (d["status"] and d["source"] and d["rows"]):
         fail(f"{stem}: data statement lacks a status, a source or used / available rows (guide 11b)")
+    if (d["rules"] == "illustration") != d["status"].startswith("illustration"):
+        fail(f"{stem}: 'decision_rules: none (illustration)' goes with, and only with, an "
+             f"illustration status")
     return d
 
 
@@ -183,14 +206,24 @@ def render_data(stem: str, d: dict, note: str) -> str:
     """The data statement as a caption block: status and provenance in words, then the table.
     Refuses a row whose used count exceeds its available count, and any cell that holds a run of
     more than UNBREAKABLE_MAX characters with no break opportunity."""
-    rfile, sha, commit = d["rules"]
     esc = html.escape
+    if d["rules"] == "illustration":
+        head = (f'<span><b>Data.</b> Illustration: toy numbers made by <code>{stem}.py</code> to explain '
+                f'the method. Not a study result, not read from any analysis output, and no decision '
+                f'rule applies. Source: {esc(d["source"])}.</span>')
+        return head + _table(stem, d)
+    rfile, sha, commit = d["rules"]
     status = d["status"].split(" Rules note:")[0].rstrip(".")   # the builder states the verified note
     head = (f'<span><b>Data.</b> Evidence status: {esc(status)}. Decision rules <code>{esc(rfile)}</code> '
             f'sha256 <code>{sha[:12]}</code> @ <code>{esc(commit if commit == "uncommitted" else commit[:8])}</code>{esc(note)}. '
             f'Read from <code>{esc(d["source"].split(" (")[0])}</code>'
             f'{esc(" (" + d["source"].split(" (", 1)[1]) if " (" in d["source"] else ""}; '
             f'counts emitted by <code>{stem}.py</code>.</span>')
+    return head + _table(stem, d)
+
+
+def _table(stem: str, d: dict) -> str:
+    esc = html.escape
     rows = []
     for w, u, t, p, n in d["rows"]:
         nu, nt = number(u), number(t)
@@ -204,7 +237,7 @@ def render_data(stem: str, d: dict, note: str) -> str:
                  f"characters: {long}")
         rows.append(f'<tr><td>{cw}</td><td class="n">{esc(u)}</td><td class="n">{esc(t)}</td>'
                     f'<td class="n">{esc(p)}{"" if p == "n/a" else "%"}</td><td>{cn}</td></tr>')
-    return (head + '<p class="cue" hidden>&larr; wider than the screen &mdash; scroll it sideways; '
+    return ('<p class="cue" hidden>&larr; wider than the screen &mdash; scroll it sideways; '
             'the right-hand columns are cut off</p><div class="scroll"><table class="wide datause"><thead><tr>'
             '<th>subset</th><th class="n">used</th><th class="n">available</th><th class="n">share</th>'
             f'<th>why</th></tr></thead><tbody>{"".join(rows)}</tbody></table></div>')
@@ -256,6 +289,8 @@ def main(argv=None):
     # ---- figures: one block at a time, never a pattern spanning two (register F16) ------------
     cur_sha, earlier = rules_shas()
     stems, earlier_used, test_used = [], [], []
+    pm = re.search(r"<!-- PRIMER START -->(.*?)<!-- PRIMER END -->", page, re.S)
+    primer_stems = set(re.findall(r'<img data-fig="([A-Za-z0-9_]+)"', pm.group(1))) if pm else set()
     for block in re.findall(r"<figure\b.*?</figure>", page, re.S):
         st = re.search(r'<img data-fig="([A-Za-z0-9_]+)"', block)
         if not st:
@@ -282,6 +317,13 @@ def main(argv=None):
             if not os.path.exists(f"{figs}/{stem}.{ext}"):
                 fail(f"{stem}: no {ext} in {figs} -- run python {HERE}/{stem}.py")
         d = parse_data(stem, f"{figs}/{stem}.data.txt")
+        if d["rules"] == "illustration" or stem in primer_stems:
+            if not (d["rules"] == "illustration" and stem in primer_stems):
+                fail(f"{stem}: an illustration figure belongs inside the primer block, and the "
+                     f"primer block holds illustration figures only")
+            page = page.replace(f"{{{{DATA:{stem}}}}}", render_data(stem, d, ""), 1)
+            print(f"  {stem}: how-it-is-computed {n} words; illustration (primer)")
+            continue
         rfile, sha, _ = d["rules"]
         if rfile != RULES:
             fail(f"{stem}: drawn under rules file {rfile}, not the page's {RULES}")

@@ -138,6 +138,13 @@ DOC_PATTERNS = [  # (regex that must match the design doc, what it pins)
 DEATH_CAUSES = ("Injury", "Starvation", "Thermal", "Overeating", "MaxSteps")   # Episode/Term_* (descriptive)
 AGENT_KIND = {"t1none": "ordinary", "t16quad": "modulated"}   # 3.4 / 4 tag scheme
 
+# NOT PRE-REGISTERED - analysis plan of 2026-09-30 (steps 4-5), adopted after the data were seen. Read-only
+# labelling and exploratory outcomes; no registered rule or verdict reads them. JSON keys: "ceiling_check",
+# "exploratory_post_data".
+CAP_KEY = "Episode/Term_MaxSteps"   # share of episodes ending at the step cap (environment.max_steps = 500)
+CEILING_FRAC = 0.80                 # step 4: last-200k cap share >= 80 % -> stage labelled "ceiling-limited"
+EXPLO_AUC_WINDOWS = (100_000, 300_000)   # step 5: mean survival over the first 100k / 300k episodes of a stage
+
 
 def _abs(p):
     return p if os.path.isabs(p) else os.path.join(ROOT, p)
@@ -299,16 +306,19 @@ class Series:
     def __init__(self, rows: list[dict], start: float):
         self.start = start
         keep, prev = [], start
-        for r in rows:
+        for i, r in enumerate(rows):
             e = r["Episode/Number"]
             w = e - prev
             prev = e
             if r.get("Episode/_window_n", 0) < MIN_WINDOW_N or w <= 0:
                 continue
-            keep.append((e, w, r))
+            keep.append((e, w, r, i))
         self.e = np.array([k[0] for k in keep])
         self.w = np.array([k[1] for k in keep])
         self.rows = [k[2] for k in keep]
+        # logged-row ordinal within this stage (0 = first row logged after the switch, skipped rows included):
+        # the 3.7.7 (a) tie test compares these, since episode counts carry the logging-grid jitter
+        self.row = np.array([k[3] for k in keep], dtype=int)
         self.s = np.array([r["Episode/Steps"] for r in self.rows])
         self.cum_steps = np.cumsum(self.w * self.s)
 
@@ -349,12 +359,14 @@ def plateau(ser: Series):
 
 
 def recovery(ser: Series, R: float | None, censor: float | None):
-    """First full 20k running-mean window reaching 0.9 x R, from the stage start (5.1)."""
+    """First full 20k running-mean window reaching 0.9 x R, from the stage start (5.1). `row` = the logged-row
+    ordinal of that window's last row within the stage (used by the 3.7.7 (a) tie rule)."""
     if R is None:
         return None
     for e, v in ser.trailing(DIP_WINDOW):
         if v >= RECOVERY_FRAC * R:
-            return {"ep": e - ser.start, "env_steps": ser.steps_to(e), "censored": False}
+            return {"ep": e - ser.start, "env_steps": ser.steps_to(e), "censored": False,
+                    "row": int(ser.row[ser.e == e][0])}
     return {"ep": None, "env_steps": None, "censored": True, "censor_at": censor,
             "note": "not recovered" + (f" by {censor:,.0f}" if censor else " yet")}
 
@@ -695,6 +707,7 @@ def analyse_sequence(d, rows, args, meta):
         st["dip_vs_prev_end"] = dip(ser, prev_end)
         st["recovery_to_0.9R"] = recovery(ser, R, st["length"] if done else None)
         st["plateau"] = plateau(ser)
+        stage_ceiling_explo(st, ser)
         if st["visit"] > 1 and st["level_last200k"] is not None and R is not None:
             first = next(s for s in stages if s["world"] == name and s["visit"] == 1)
             r1, r2 = first.get("recovery_to_0.9R") or {}, st["recovery_to_0.9R"] or {}
@@ -707,6 +720,75 @@ def analyse_sequence(d, rows, args, meta):
         stages.append(st)
         lo = hi
     d["stages"] = stages
+
+
+def stage_ceiling_explo(st: dict, ser: Series) -> None:
+    """Step 4 (read-only label) + step 5 (exploratory, post-data) quantities of one stage."""
+    cap = last_level(ser, CAP_KEY)
+    st["ceiling_check"] = {"cap_frac_last200k": cap, "cap_frac_stage": ser.mean(CAP_KEY, ser.start, ser.last),
+                           "ceiling_limited": None if cap is None else bool(cap >= CEILING_FRAC),
+                           "rule": f"last-200k cap share >= {CEILING_FRAC} (post-data label, plan 2026-09-30 step 4)"}
+    x = {"death_rate_last200k": None if cap is None else 1 - cap}
+    for w in EXPLO_AUC_WINDOWS:   # area under the survival curve = episode-weighted mean survival over the window
+        x[f"auc_first{w // 1000}k"] = ser.S(ser.start, ser.start + w) if ser.last - ser.start >= w else None
+    st["exploratory_post_data"] = x
+
+
+EXPLO_KEYS = ["death_rate_last200k"] + [f"auc_first{w // 1000}k" for w in EXPLO_AUC_WINDOWS]
+
+
+def exploratory_pairs(runs: list[dict], pairs: list[dict]) -> list[dict]:
+    """Step 5, per sequence pair and stage: modulated - ordinary for the death rate (lower favours the
+    modulator), the AUCs (higher favours it) and the common-reference recovery in episodes (lower favours it;
+    None if either agent is censored). Also the step-4 cap shares of both agents. Descriptive only."""
+    by_run = {d["run"]: d for d in runs}
+    out = []
+    for pr in pairs:
+        if pr["kind"] != "sequence":
+            continue
+        o, m = by_run[pr["runs"]["ordinary"]], by_run[pr["runs"]["modulated"]]
+        sw = {x["stage"]: x for x in pr["switches"]}
+        rows = []
+        for a, b in zip(o["stages"], m["stages"]):
+            if "exploratory_post_data" not in a or "exploratory_post_data" not in b:
+                continue
+            k = a["stage"]
+            r = {"stage": k, "world": a["world"], "visit": a["visit"],
+                 "cap_frac_last200k": {"ordinary": a["ceiling_check"]["cap_frac_last200k"],
+                                       "modulated": b["ceiling_check"]["cap_frac_last200k"]},
+                 "ceiling_limited": {"ordinary": a["ceiling_check"]["ceiling_limited"],
+                                     "modulated": b["ceiling_check"]["ceiling_limited"]}}
+            for key in EXPLO_KEYS:
+                vo, vm = a["exploratory_post_data"][key], b["exploratory_post_data"][key]
+                r[key] = {"ordinary": vo, "modulated": vm, "diff": None if vo is None or vm is None else vm - vo}
+            rc = (sw.get(k) or {}).get("recovery_common") or {}
+            eo, em = (rc.get("ordinary") or {}).get("ep"), (rc.get("modulated") or {}).get("ep")
+            r["recovery_common_ep"] = {"ordinary": eo, "modulated": em, "diff": None if eo is None or em is None else em - eo,
+                                       "censored": {a_: bool((rc.get(a_) or {}).get("censored")) for a_ in ("ordinary", "modulated")}}
+            rows.append(r)
+        out.append({"pair": pr["pair"], "role": pr["role"], "runs": pr["runs"], "stages": rows})
+    return out
+
+
+def render_ceiling_explo(ex: list[dict], title: str) -> str:
+    out = [title,
+           "  cap = share of episodes reaching the 500-step cap, last 200k of the stage (C = ceiling-limited, >= 80 %);",
+           "  death = 1 - cap; auc100k / auc300k = mean survival over the first 100k / 300k episodes of the stage;",
+           "  rec = common-reference recovery (k-episodes). Cells: ord / mod (mod - ord). Stages numbered from 1 in "
+           "schedule order. EXPLORATORY, POST-DATA."]
+    for pr in ex:
+        out.append(f"  pair {pr['pair']} (ord {pr['runs']['ordinary']} / mod {pr['runs']['modulated']})")
+        for r in pr["stages"]:
+            c, cl = r["cap_frac_last200k"], r["ceiling_limited"]
+            cell = lambda x, fn: f"{fn(x['ordinary'])} / {fn(x['modulated'])} ({fn(x['diff'])})"
+            pc = lambda v: "-" if v is None else f"{100 * v:.1f}%"
+            out.append(f"    st{r['stage'] + 1} {r['world']:<15} v{r['visit']} cap {pc(c['ordinary'])}{'C' if cl['ordinary'] else ''} / "
+                       f"{pc(c['modulated'])}{'C' if cl['modulated'] else ''}  death {cell(r['death_rate_last200k'], pc)}  "
+                       f"auc100k {cell(r['auc_first100k'], f)}  auc300k {cell(r['auc_first300k'], f)}  "
+                       f"rec {cell(r['recovery_common_ep'], lambda v: k_(v) if v is not None else '-')}")
+    if not ex:
+        out.append("  (no sequence pairs in this selection)")
+    return "\n".join(out)
 
 
 # --------------------------------------------------------------------------- stage lengths ---
@@ -763,11 +845,16 @@ def _sign(diff):
 
 def _rec_sign(r_ord, r_mod, unit, prog_ord, prog_mod):
     """Sign of a recovery difference in `unit` ('ep' | 'env_steps'), handling censoring. A run that has
-    not recovered yet still loses to one that recovered in less than it has trained so far."""
+    not recovered yet still loses to one that recovered in less than it has trained so far.
+    Tie (CONTINUAL_WORLDS.md 3.7.7 (a)): both agents recover in the SAME LOGGED ROW of the stage (episodes are
+    resolved only to the 4,000-episode logging interval) - not exact equality of the counts. The same row is
+    one recovery event, so the env-steps reading of that reference is a tie too."""
     if r_ord is None or r_mod is None:
         return "pending", None
     vo, vm = r_ord.get(unit), r_mod.get(unit)
     if vo is not None and vm is not None:
+        if r_ord.get("row") is not None and r_ord.get("row") == r_mod.get("row"):
+            return "tie", vm - vo
         return _sign(vm - vo), vm - vo
     if vo is None and vm is None:
         final = r_ord.get("censor_at") is not None and r_mod.get("censor_at") is not None
@@ -790,8 +877,8 @@ def _vote(signs: dict, ref_pairs, unit_pairs) -> dict:
     elif all(x == "ordinary" for x in vals):
         v, why = "unfavourable", "all readings favour the ordinary agent"
     else:
-        # A tie (equal values; recovery in episodes is resolved only to the 4,000-episode logging
-        # interval) is not a favourable sign, so the vote is not counted; it is named as a tie rather
+        # A tie (recovery: both agents recover in the same logged row, 3.7.7 (a); other readings: equal
+        # values) is not a favourable sign, so the vote is not counted; it is named as a tie rather
         # than as a 7.9 / 7.11 disagreement, which are checked between untied readings only.
         why = []
         split = lambda pairs: any(signs[a] != signs[b] and "tie" not in (signs[a], signs[b]) for a, b in pairs)
@@ -1069,7 +1156,8 @@ def mayrep_run(d: dict) -> dict:
         x = {"world": s["world"], "status": s["status"], "complete": done,
              "S": s["level_last200k"], "bites": s["bites_last200k"],
              "T": ser.S(s["to"] - MR_TAIL_FRAC * s["length"], s["to"]) if done else None,   # May-style tail T_k
-             "deaths_last200k": {c: last_level(ser, "Episode/Term_" + c) for c in DEATH_CAUSES}}
+             "deaths_last200k": {c: last_level(ser, "Episode/Term_" + c) for c in DEATH_CAUSES},
+             "ceiling_check": s["ceiling_check"], "exploratory_post_data": s["exploratory_post_data"]}
         if k in MR_RETURNS:
             x["S_first20k"], x["dip_own"], x["recovery_own"] = s["S_first20k"], s["dip"], s["recovery_to_0.9R"]
             R = s["R_X"]
@@ -1254,6 +1342,42 @@ def mayrep_aggregate(runs: list[dict], pairs: list[dict]) -> dict:
                       "verdict": ("pending" if not hh or None in hh.values() else
                                   "favourable" if sum(hh.values()) >= MR_MIN_PAIRS else "not favourable")}
 
+    # --- NOT PRE-REGISTERED (plan 2026-09-30 steps 4-5): ceiling label + ceiling-free outcomes ---
+    res["ceiling_check"] = {
+        "rule": f"a stage is 'ceiling-limited' if its last-200k cap share >= {CEILING_FRAC} (read-only label, post-data)",
+        "per_run": {p["run"]: {k: p["stages"][k].get("ceiling_check") for k in range(1, 6)} for p in per},
+        "limited_stages": {k: sorted(p["run"] for p in per if (p["stages"][k].get("ceiling_check") or {}).get("ceiling_limited"))
+                           for k in range(1, 6)}}
+    ex = {"label": "EXPLORATORY, chosen after the data were seen (plan 2026-09-30 step 5); not part of any verdict",
+          "aggregation": "5.2 / 5.3 seed-pair aggregation (mean(mod) - mean(ord), SE = sqrt(sd_o^2/n + sd_m^2/n), "
+                         "pair signs), SE floor none; 'favours' = the agent the mean difference favours; no verdict",
+          "death_rate_last200k": {}, "auc_first100k": {}, "auc_first300k": {}, "recovery_common_ep": {}}
+
+    def _explo(v, dd, lower_better):
+        r = _agg_rule(v, dd)
+        r.pop("verdict", None)
+        md = r.get("mean_diff")
+        r["favours"] = None if md is None else "tie" if md == 0 else (
+            "modulated" if (md < 0) == lower_better else "ordinary")
+        r["beyond_2se"] = r.pop("beyond_noise", None)
+        return r
+    xv = lambda p, k, key: (p["stages"][k].get("exploratory_post_data") or {}).get(key)
+    for k in range(1, 6):
+        fn = lambda p, k=k: xv(p, k, "death_rate_last200k")
+        ex["death_rate_last200k"][k] = _explo(vals(fn), pdiff(fn), True)
+    for k in range(2, 6):   # switches: stage 1 starts from scratch
+        for w in ("auc_first100k", "auc_first300k"):
+            fn = lambda p, k=k, w=w: xv(p, k, w)
+            ex[w][k] = _explo(vals(fn), pdiff(fn), False)
+        rce = {s_: {a: (((com.get((pair_key(v["ordinary"]["tag"]), k - 1)) or {}).get("recovery_common") or {}).get(a) or {}).get("ep")
+                    for a in ("ordinary", "modulated")} for s_, v in full_pairs.items()}
+        r = _explo({a: [x[a] for x in rce.values()] for a in ("ordinary", "modulated")},
+                   [None if x["ordinary"] is None or x["modulated"] is None else x["modulated"] - x["ordinary"] for x in rce.values()],
+                   True)
+        r["per_seed"] = rce
+        ex["recovery_common_ep"][k] = r
+    res["exploratory_post_data"] = ex
+
     # --- 5.4 comparison with May: decided on the tail T_k; the same readings on S_k as a reference column
     def may_cols(w):
         F, H = ("F_tail", "H_tail") if w == "T" else ("F", "H")
@@ -1345,6 +1469,29 @@ def render_mayrep(runs, res) -> str:
     out.append(f"  size (decided on the tail): {c['size']}; H tail mean mod {f(c['tail']['H_mean']['modulated'])} / ord "
                f"{f(c['tail']['H_mean']['ordinary'])} (May + / -); passive tail means "
                + "; ".join(f"T{k} ord {f(v['ordinary'])} mod {f(v['modulated'])}" for k, v in c["tail"]["passive_mean"].items()))
+    out.append("")
+    out.append("CEILING CHECK (plan 2026-09-30 step 4; read-only label, not pre-registered) - share of episodes reaching the "
+               "500-step cap, last 200k of each stage (C = ceiling-limited, >= 80 %)")
+    cc = res["ceiling_check"]["per_run"]
+    for p in res["per_run"]:
+        out.append(f"  {p['run']:>3} {p['tag']:<28} " + "  ".join(
+            f"st{k} " + ("-" if not cc[p['run']][k] or cc[p['run']][k]["cap_frac_last200k"] is None else
+                         f"{100 * cc[p['run']][k]['cap_frac_last200k']:.1f}%{'C' if cc[p['run']][k]['ceiling_limited'] else ''}")
+            for k in range(1, 6)))
+    ex = res["exploratory_post_data"]
+    out.append("EXPLORATORY, POST-DATA (plan step 5; seed-pair aggregation of 5.2, no SE floor, no verdict): mean mod - ord "
+               "+- SE, pair signs +/-, favours")
+    def er(name, r, pct=False):
+        return (f"  {name:<18} ord {f(r['mean_ord'], pct=pct)} "
+                f"mod {f(r['mean_mod'], pct=pct)}  diff {f(r['mean_diff'], pct=pct)} +- {f(r['se'], pct=pct)}  "
+                f"pairs +{r['n_pairs_pos']}/-{r['n_pairs_neg']} {[round(x, 4 if pct else 1) for x in r['pair_diffs']]}  "
+                f"-> favours {r.get('favours')}{' (> 2 SE)' if r.get('beyond_2se') else ''}")
+    for k in range(1, 6):
+        out.append(er(f"death rate st{k}", ex["death_rate_last200k"][k], pct=True))
+    for k in range(2, 6):
+        out.append(er(f"auc100k st{k}", ex["auc_first100k"][k]))
+        out.append(er(f"auc300k st{k}", ex["auc_first300k"][k]))
+        out.append(er(f"rec.common ep st{k}", ex["recovery_common_ep"][k]))
     return "\n".join(out)
 
 
@@ -1542,17 +1689,26 @@ def main():
     os.makedirs(os.path.dirname(_abs(a.json_out)), exist_ok=True)
     if a.study == "mayrep":
         res = mayrep_aggregate(runs, pairs)
+        res["exploratory_post_data"]["pairs"] = exploratory_pairs(runs, pairs)
         print(render_mayrep(runs, res))
         if runs:
+            print("\n" + render_ceiling_explo(res["exploratory_post_data"]["pairs"], "PER PAIR AND STAGE - ceiling "
+                                               "check (step 4) + exploratory ceiling-free outcomes (step 5, post-data)"))
             print("\n" + render_common(pairs))
         json.dump({"design_doc": a.design_doc, "study": "mayrep", "runs": runs, "common_reference": pairs,
                    "mayrep": res}, open(_abs(a.json_out), "w"), indent=1, default=float)
     else:
         L = stage_lengths(runs)
+        ex = exploratory_pairs(runs, pairs)
         print(render(runs, L, _HOME_CACHE, pairs))
+        print("\n" + render_ceiling_explo(ex, "CEILING CHECK (plan 2026-09-30 step 4, read-only label) + EXPLORATORY "
+                                             "CEILING-FREE OUTCOMES (step 5, post-data) - sequence pairs"))
         json.dump({"design_doc": a.design_doc, "home": _HOME_CACHE, "branch_points": _BRANCH_CACHE,
                    "home_leg_gate": HOME_GATE, "runs": runs,
-                   "stage_lengths": L, "common_reference": pairs},
+                   "stage_lengths": L, "common_reference": pairs,
+                   "exploratory_post_data": {"label": "NOT PRE-REGISTERED: ceiling label (step 4) + ceiling-free outcomes "
+                                                      "(step 5) of the 2026-09-30 analysis plan, chosen after the data were seen",
+                                             "pairs": ex}},
                   open(_abs(a.json_out), "w"), indent=1, default=float)
     print(f"\nwrote {a.json_out}")
 

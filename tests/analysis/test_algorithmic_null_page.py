@@ -22,7 +22,8 @@ MC = os.path.join(ROOT, "scripts/analysis/studies/modulator_clues")
 DOC = os.path.join(ROOT, "docs/experiments/active/modulator_clues")
 REAL_FIGS = os.path.join(DOC, "figures/algorithmic_null")
 PY = sys.executable
-REAL = ("an01_similarity_layers", "an02_decoding_profiles", "an03_seed_yardstick", "an06_pilot_controls")
+REAL = ("an01_similarity_layers", "an02_decoding_profiles", "an03_seed_yardstick", "an06_pilot_controls",
+        "pr01_cka_toy_geometry", "pr02_toy_scores", "pr03_verdict_rule")
 sys.path.insert(0, os.path.dirname(__file__))
 sys.path.insert(0, MC)
 import an_page_synthetic as S                                               # noqa: E402
@@ -89,7 +90,8 @@ def test_preview_builds_with_all_six_figures(page):
     build(page)
     html = page["out"].read_text()
     assert html.count('<img data-fig="an0') == 6
-    assert html.count('src="data:image/png;base64,') == 6
+    assert html.count('<img data-fig="pr0') == 3                          # the primer's toy figures
+    assert html.count('src="data:image/png;base64,') == 9
     assert 'id="lb"' in html and "full-size figure viewer" in html          # guide 2.6
     assert html.count("function updateCues()") == 1
     assert "Local preview" in html and "TEST INPUT" in html
@@ -227,3 +229,20 @@ def test_an_unbreakable_run_in_a_cell_is_refused(page):
 def test_used_above_available_is_refused(page):
     _row(page, "an03_seed_yardstick", ["held-out groups", "1,000", "500", "200.0", "gate minimum"])
     refused(page, r"uses 1,000 of 500 available")
+
+
+def test_illustration_outside_the_primer_is_refused(page):
+    """A primer toy figure placed among the results would pass as evidence; the builder refuses it."""
+    tpl = page["tpl"].read_text()
+    blk = re.search(r'<figure>(?:(?!</figure>).)*?data-fig="pr03_verdict_rule".*?</figure>', tpl, re.S).group(0)
+    tpl = tpl.replace(blk, "").replace("<!-- PRIMER END -->", "<!-- PRIMER END -->\n" + blk)
+    page["tpl"].write_text(tpl)
+    refused(page, r"pr03_verdict_rule: an illustration figure belongs inside the primer block")
+
+
+def test_results_figure_inside_the_primer_is_refused(page):
+    tpl = page["tpl"].read_text()
+    blk = re.search(r'<figure>(?:(?!</figure>).)*?data-fig="an06_pilot_controls".*?</figure>', tpl, re.S).group(0)
+    tpl = tpl.replace(blk, "").replace("<!-- PRIMER END -->", blk + "\n<!-- PRIMER END -->")
+    page["tpl"].write_text(tpl)
+    refused(page, r"an06_pilot_controls: an illustration figure belongs inside the primer block")

@@ -219,6 +219,37 @@ of the page itself, icons. If it encodes data or a result, it is a figure and it
 Hand-authored explanatory diagrams that encode no data are the one grey area; prefer a script there
 too, and never let one carry a number that a script computed elsewhere.
 
+### 2.8 Build order: figures first, look early, scale last (2026-10-02)
+
+**Make and look at the figures before building anything around them.** The failure this rule
+exists for: the Basic Behaviour Analysis page (2026-10-02) was built pipeline-first — all 26
+figures (six figure types × five behaviours), every caption, method note and data table, the full
+page — and only then rendered and looked at. Every defect found at that point (unreadable labels on
+a phone, colours that meant two things, raw code names, a panel plotting a quantity that was zero
+by construction) had to be fixed across all 26 figures and the whole page rebuilt and re-gated,
+four rounds over about a day. Looking at one figure early would have caught each defect once.
+
+The order, for any page with more than a handful of figures:
+
+1. **One instance of each figure type, no apparatus.** If a figure repeats across behaviours, worlds
+   or runs, draw it for **one** case only (e.g. one behaviour), with no caption, method note or data
+   table yet.
+2. **Look at them on a draft page.** Embed those figures in a bare draft page and render it at phone
+   (390 px) and desktop (1440 px) widths with `scripts/claude/check_artifact_layout.py`, and open
+   each figure at full size. Fix how each figure *reads* — label size, colour meaning (one meaning
+   per colour, shape and line style, §F11), empty or degenerate panels, plain names instead of code
+   names — **in the figure script**, until every figure type is right. Show the user this draft when
+   the work is figure-by-figure.
+3. **Scale out.** Only then generate the remaining instances (the other behaviours, worlds, runs)
+   from the same scripts. They inherit the fixes.
+4. **Add the apparatus last.** Captions with axes sentences, emitted data statements, "How it is
+   computed" blocks (§11), the contents list, collapsed data tables (F71). Then run the full format
+   gate (`artifact-format-reviewer`) once, on the finished page.
+
+**Page length is a design decision, made in step 2.** When a figure type repeats over many cases,
+decide then whether the page stacks them, uses one tab per case, or shows a single summary figure —
+not after a full build reveals a page tens of thousands of pixels tall.
+
 ## 3. Technical traps
 
 ### 3.1 A CSS class beats a `fill` attribute in SVG

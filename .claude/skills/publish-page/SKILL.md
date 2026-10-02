@@ -66,6 +66,14 @@ how much design the piece actually warrants.
 
 ## Step 2 — build the page
 
+**Build in the order of guide §2.8: figures first, look early, scale last.** Draw one instance of
+each figure type with no caption or tables, put them on a bare draft page, render it at 390 and
+1440 px and look at every figure at full size; fix how the figures read in their scripts; only then
+generate the repeated instances, and add captions, data statements and method notes last. The full
+format gate runs once, on the finished page. Building everything first and looking last turns every
+defect into an N-figure fix and a full rebuild.
+
+
 **Use the house style — required, not a suggestion (guide §0a).** [`house_style_sheet.template.html`](../../../docs/develop/active/meta/house_style_sheet.template.html)
 is the default look for every artifact page: Pretendard body text, IBM Plex Sans Condensed headings,
 the green-grey palette, `01`-style section numbers, callout boxes, tabs, glossaries, step lists and

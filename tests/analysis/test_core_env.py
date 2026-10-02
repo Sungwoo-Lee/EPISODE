@@ -145,3 +145,69 @@ def test_rest_delta_ignores_an_underpopulated_bin():
     assert out["delta_rest"] == pytest.approx(20.0), (
         "delta_rest must be 50% - 30% = 20 pp, not 50% - 4% = 46 pp from the 25-row bin")
     assert np.isnan(out["rows"][0]["rest_rate"])
+
+
+# ------------------------------------------------------------------ scent_spec (hypervigilance) ----
+# Literal odour recipes of the single-channel-smell study (study section 2.1 / Appendix B).
+def _world(pred, rab, sd_p, sd_r=None):
+    return {"environment": {"entities": [
+        {"class": "predator", "count_high": 2, "properties": pred, "properties_std": sd_p},
+        {"class": "neutral", "count_high": 2, "properties": rab,
+         "properties_std": sd_r if sd_r is not None else sd_p}]}}
+
+
+CONTROL = _world([0, 0.7, 0.5, 0, 0], [0, 0.5, 0.7, 0, 0], [0, 0.3, 0.3, 0, 0])
+SINGLE = _world([0, 0.7, 0, 0, 0], [0, 0.5, 0, 0, 0], [0, 0.3, 0, 0, 0])
+MATCHED = _world([0, 0.67, 0.67, 0, 0], [0, 0.53, 0.53, 0, 0], [0, 0.3, 0.3, 0, 0])
+
+
+@pytest.mark.parametrize("cfg, layout, channels, mid, k", [
+    (CONTROL, "difference", (1, 2), 0.0, 0.4 / 0.18),
+    (SINGLE, "single", (1,), 0.6, 0.2 / 0.09),
+    (MATCHED, "sum", (1, 2), 1.2, 0.28 / 0.18)])
+def test_scent_spec_three_study_layouts(cfg, layout, channels, mid, k):
+    s = E.scent_spec(cfg)
+    assert s.layout == layout and s.channels == channels
+    assert s.midpoint == pytest.approx(mid, abs=1e-12)
+    assert s.llr_scale == pytest.approx(k, rel=1e-12)
+    assert round(s.llr_scale, 2) == {"difference": 2.22, "single": 2.22, "sum": 1.56}[layout]
+    assert s.statistic_equals_intensity == (layout != "difference")
+
+
+def test_scent_spec_difference_statistic_is_bit_identical_to_the_old_expression():
+    rng = np.random.default_rng(0)
+    x = rng.random((50, 4, 5)).astype(np.float32).astype(np.float64)
+    s = E.scent_spec(CONTROL)
+    assert np.array_equal(s.statistic(x), x[..., 1] - x[..., 2])
+    assert np.array_equal(s.intensity(x), x[..., 1] + x[..., 2])
+
+
+@pytest.mark.parametrize("cfg", [
+    _world([0, 0.8, 0.6, 0, 0], [0, 0.5, 0.5, 0, 0], [0, 0.3, 0.3, 0, 0]),   # both predator-leaning, unequal
+    _world([0, 0.5, 0, 0, 0], [0, 0.7, 0, 0, 0], [0, 0.3, 0, 0, 0]),         # rabbit stronger, one channel
+    _world([0, 0.7, 0.5, 0.6, 0], [0, 0.5, 0.7, 0.4, 0], [0, 0.3, 0.3, 0.3, 0]),  # three channels, mixed
+    _world([0, 0.7, 0.5, 0, 0], [0, 0.5, 0.7, 0, 0], [0, 0.3, 0.3, 0, 0], [0, 0.2, 0.3, 0, 0]),  # spreads
+])
+def test_scent_spec_refuses_unrecognised_layouts(cfg):
+    with pytest.raises(SystemExit):
+        E.scent_spec(cfg)
+
+
+def test_scent_spec_refuses_a_missing_properties_std():
+    cfg = {"environment": {"entities": [
+        {"class": "predator", "properties": [0, 0.7, 0.5]},
+        {"class": "neutral", "properties": [0, 0.5, 0.7]}]}}
+    with pytest.raises(SystemExit, match="properties_std"):
+        E.scent_spec(cfg)
+
+
+def test_smell_channels_is_a_two_channel_only_wrapper():
+    assert E.smell_channels(CONTROL) == (1, 2)
+    for cfg in (SINGLE, MATCHED):
+        with pytest.raises(SystemExit, match="scent_spec"):
+            E.smell_channels(cfg)
+
+
+def test_channel_scale_of_the_matched_control_reading():
+    mid, k = E.scent_spec(CONTROL).channel_scale(1)
+    assert mid == pytest.approx(0.6) and k == pytest.approx(0.2 / 0.09)

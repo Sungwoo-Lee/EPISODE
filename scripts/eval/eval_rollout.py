@@ -288,8 +288,14 @@ def _run_episode_with_recording(
     return ep_data, recorder
 
 
-def _rollout_scan_jit(model, params, states0, h0, max_steps):
+def _rollout_scan_jit(model, params, states0, h0, act_keys0, max_steps, deterministic=True):
     """nnx.jit-wrapped scan body. MUST be entered via `nnx.jit`, not called eagerly.
+
+    `deterministic=True` (static): argmax action, `act_keys0` carried but unused.
+    `deterministic=False`: sampled action, mirroring the legacy `_run_episode` chain
+    exactly per env -- the chain starts at the episode's reset key PRNGKey(seed)
+    (`act_keys0`), and each step does `chain, act = split(chain)` then
+    `categorical(act, logits)`.
 
     Root-cause note (found empirically while building the parity harness — flag
     for `code-reviewer`): after `nnx.update(model, restored_tree)` restores a
@@ -313,9 +319,14 @@ def _rollout_scan_jit(model, params, states0, h0, max_steps):
     v_obs_true = jax.vmap(lambda s, p: get_observation(s, p, apply_noise=False), in_axes=(0, None))
 
     def scan_fn(carry, _):
-        state, h = carry
+        state, h, chain = carry
         logits, _value, h_new, _mod_info = model(v_obs(state, params), h)
-        action = jnp.argmax(logits, axis=-1)
+        if deterministic:
+            action = jnp.argmax(logits, axis=-1)
+        else:
+            pair = jax.vmap(jax.random.split)(chain)          # (num_envs, 2, <key>)
+            chain, act_key = pair[:, 0], pair[:, 1]
+            action = jax.vmap(jax.random.categorical)(act_key, logits)
         next_state, reward, done, info = v_step(state, action, params)
         next_obs = v_obs(next_state, params)
         next_true_obs = v_obs_true(next_state, params)
@@ -344,10 +355,10 @@ def _rollout_scan_jit(model, params, states0, h0, max_steps):
             "obs": next_obs,
             "true_obs": next_true_obs,
         }
-        return (next_state, h_new), step_out
+        return (next_state, h_new, chain), step_out
 
-    (_final_state, _final_h), scan_out = jax.lax.scan(
-        scan_fn, (states0, h0), None, length=max_steps
+    (_final_state, _final_h, _final_chain), scan_out = jax.lax.scan(
+        scan_fn, (states0, h0, act_keys0), None, length=max_steps
     )
     return scan_out
 
@@ -359,8 +370,12 @@ def _run_episodes_batched(
     max_steps: int,
     record: bool = False,
     record_n_episodes: int = 0,
+    deterministic: bool = True,
 ):
     """Batched (single-process, vmapped) rollout of ALL episodes at once (Tier 2).
+
+    `deterministic=False` samples actions with the legacy loop's per-episode key chain
+    (see `_rollout_scan_jit`), so sampled batched episodes match sampled legacy ones.
 
     Bit-for-bit parity contract with `_run_episode` / `_run_episode_with_recording`:
     see docs/develop/active/refactors/EVAL_ROLLOUT_BATCHING_PERF.md for the full
@@ -426,8 +441,8 @@ def _run_episodes_batched(
     # would itself be numerically unsafe.)
     action_dim = model.action_dim
 
-    scan_out = nnx.jit(_rollout_scan_jit, static_argnames=("max_steps",))(
-        model, params, states0, h0, max_steps
+    scan_out = nnx.jit(_rollout_scan_jit, static_argnames=("max_steps", "deterministic"))(
+        model, params, states0, h0, keys, max_steps, deterministic=deterministic
     )
     assert scan_out["action"].shape == (max_steps, num_envs), (
         f"Expected batched action shape (max_steps={max_steps}, num_envs={num_envs}), "
@@ -922,7 +937,10 @@ def main():
                              "path) instead of the legacy per-episode Python loop. Additive: "
                              "the legacy loop stays the default until parity is proven per "
                              "docs/develop/active/refactors/EVAL_ROLLOUT_BATCHING_PERF.md. "
-                             "Requires eval_policy_mode == 'deterministic'.")
+                             "rPPO: deterministic or stochastic; Dreamer: deterministic only.")
+    parser.add_argument("--eval-policy-mode", default=None, choices=["deterministic", "stochastic"],
+                        help="Override behavior_measures.eval_policy_mode of every config "
+                             "(recorded in metadata.json). Omitted: each config's own value.")
     args = parser.parse_args()
 
     if args.device == "cpu":
@@ -977,6 +995,9 @@ def main():
                       flush=True)
             config_i = Config(_cfg_load)
         bm_cfg_i = load_behavior_measure_cfg(config_i)
+        if bm_cfg_i is not None and args.eval_policy_mode is not None:
+            import dataclasses
+            bm_cfg_i = dataclasses.replace(bm_cfg_i, eval_policy_mode=args.eval_policy_mode)
         if bm_cfg_i is None:
             print(f"WARNING: behavior_measures block absent in config {config_arg}; "
                   "using defaults for eval.", flush=True)
@@ -988,7 +1009,7 @@ def main():
                 obs_window=5,
                 eval_n_episodes=args.eval_n_episodes or 10,
                 eval_seeds=tuple(range(args.eval_n_episodes or 10)),
-                eval_policy_mode="deterministic",
+                eval_policy_mode=args.eval_policy_mode or "deterministic",
                 eval_max_steps=500,
                 eval_obs_noise="training",
                 motif_window_K=7,
@@ -1011,17 +1032,6 @@ def main():
             extra = [seeds_i[-1] + i + 1 for i in range(n_eps_i - len(seeds_i))]
             seeds_i = seeds_i + extra
         seeds_i = seeds_i[:n_eps_i]
-
-        if args.batched and bm_cfg_i.eval_policy_mode != "deterministic":
-            raise NotImplementedError(
-                "--batched only supports eval_policy_mode == 'deterministic' (argmax). "
-                f"Got '{bm_cfg_i.eval_policy_mode}' for config {config_arg!r}. The batched "
-                "path's parity argument (docs/develop/active/refactors/"
-                "EVAL_ROLLOUT_BATCHING_PERF.md) relies on the eval policy being "
-                "deterministic argmax with the RNG key unused; stochastic batched "
-                "sampling is out of scope for this change. Drop --batched to use the "
-                "legacy per-episode loop."
-            )
 
         params_i = load_env_params(config_i)
         _assert_eval_obs_noise_supported(bm_cfg_i)
@@ -1276,6 +1286,7 @@ def main():
                 episodes, recorders = _run_episodes_batched(
                     params_e, model, seeds, max_steps,
                     record=args.record, record_n_episodes=rec_n_eps,
+                    deterministic=(bm_cfg.eval_policy_mode == "deterministic"),
                 )
                 for ep_idx, ep_data in enumerate(episodes):
                     ep_data["seed"] = np.int32(seeds[ep_idx])
@@ -1412,6 +1423,13 @@ def main():
         from src.algorithms.dreamer_srl.eval import dreamer_srl_eval_rollout
         if args.batched:
             from src.algorithms.dreamer_srl.eval import dreamer_srl_eval_rollout_batched
+            _stoch = [e["config_arg"] for e in entries if e["bm_cfg"].eval_policy_mode != "deterministic"]
+            if _stoch:
+                raise NotImplementedError(
+                    "--batched for Dreamer only supports eval_policy_mode == 'deterministic' "
+                    f"(argmax); stochastic for {_stoch}. Drop --batched to use the legacy "
+                    "per-episode loop. (rPPO --batched supports both modes.)"
+                )
 
         # --- Checkpoint-arg reconciliation: <run_dir>/checkpoints/<episode> ---
         # dreamer_srl's restore needs (run_dir, episode:int), not a single path,

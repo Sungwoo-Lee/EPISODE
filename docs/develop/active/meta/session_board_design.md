@@ -304,3 +304,15 @@ The earlier 7-day sweep deleted **any** card file untouched for 7 days, live or 
 **Caveat:** a worktree runs the script version **it** checked out. Worktrees created from a commit **before** this fix still write to a separate board. Create dev worktrees from a commit that includes it.
 
 **Still not covered by the board:** a worktree session's "editing" paths are relative to its own tree. The same relative path edited in the main tree and in a worktree raises the warning, which is useful as an early merge-conflict signal, but the warning does not say which tree.
+
+### Hook latency under NAS load (2026-09-30)
+
+After rollout, one board hook in a live session went past its 5 s limit, so its output was dropped; nothing was blocked. Measured with the host at load average ~29:
+
+| Cost | Before | After |
+|---|---|---|
+| Python start-up (the conda env's `site` imports a CUDA helper) | 819 ms | **24 ms with `python -S`**; the script uses only the standard library |
+| PostToolUse, one call | ~2.1 s | **~0.35 s** (the rest is NAS I/O: reading the script and the card files) |
+| PreToolUse on an edit | ~1.9 s | ~0.6 s |
+
+The hook commands now run `python -S`. SessionStart and UserPromptSubmit get a 10 s timeout, so their board text isn't dropped on a slow NAS moment; the per-tool hooks keep 5 s. Reading the 7 cards took 0.9 s under that load against a few ms when idle. The remaining latency is the NAS, and it varies with cluster load.
