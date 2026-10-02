@@ -30,1265 +30,1265 @@ Figure 1 — behaviours, survival and how episodes end. **Axes.** Behaviour pane
 
 ## f2_factor_inventory__bush_dwell
 
-Figure 2 — factor inventory for hiding in a bush. **Axes.** Horizontal: the run (world, agent type and training seed), one column each. Vertical: the factor, in the fixed order the analysis uses, followed by any randomised setting it cannot handle. Each cell is a status, not a number: used (dark, blank), or a short code explained in the legend — uni (used in single-factor fits only), dup (identical to an earlier factor), con (constant), few (defined on too few episodes), out (part of the outcome), unh (randomised but unmeasured); a pale blank cell means the factor does not exist in that world.
+Figure 2a — factor inventory: Bush dwell (time in a bush). **Axes.** Horizontal: the run (world, agent type and training seed), one column each. Vertical: the factor, in the fixed order the analysis uses, followed by any randomised setting it cannot handle. Each cell is a status, not a number: used (dark, blank), or a short code explained in the legend — uni (used in single-factor fits only), dup (identical to an earlier factor), con (constant), few (defined on too few episodes), out (part of the outcome), unh (randomised but unmeasured); a pale blank cell means the factor does not exist in that world.
 
 | subset | used | available | share | why |
 |---|---:|---:|---:|---|
-| factors used, two-channel smell (control), ordinary agent, seed 42 | 35 | 35 | 100.0% | none excluded; target hiding in a bush |
-| factors used, two-channel smell (control), ordinary agent, seed 43 | 35 | 35 | 100.0% | none excluded; target hiding in a bush |
-| factors used, two-channel smell (control), ordinary agent, seed 44 | 35 | 35 | 100.0% | none excluded; target hiding in a bush |
-| factors used, two-channel smell (control), modulated agent, seed 42 | 35 | 35 | 100.0% | none excluded; target hiding in a bush |
-| factors used, two-channel smell (control), modulated agent, seed 43 | 35 | 35 | 100.0% | none excluded; target hiding in a bush |
-| factors used, two-channel smell (control), modulated agent, seed 44 | 35 | 35 | 100.0% | none excluded; target hiding in a bush |
-| factors used, single-channel smell, ordinary agent, seed 42 | 33 | 35 | 94.3% | 2 excluded before fitting; target hiding in a bush |
-| factors used, single-channel smell, ordinary agent, seed 43 | 33 | 35 | 94.3% | 2 excluded before fitting; target hiding in a bush |
-| factors used, single-channel smell, ordinary agent, seed 44 | 33 | 35 | 94.3% | 2 excluded before fitting; target hiding in a bush |
-| factors used, single-channel smell, modulated agent, seed 42 | 33 | 35 | 94.3% | 2 excluded before fitting; target hiding in a bush |
-| factors used, single-channel smell, modulated agent, seed 43 | 33 | 35 | 94.3% | 2 excluded before fitting; target hiding in a bush |
-| factors used, single-channel smell, modulated agent, seed 44 | 33 | 35 | 94.3% | 2 excluded before fitting; target hiding in a bush |
-| factors used, matched-strength smell, ordinary agent, seed 42 | 33 | 35 | 94.3% | 2 excluded before fitting; target hiding in a bush |
-| factors used, matched-strength smell, ordinary agent, seed 43 | 33 | 35 | 94.3% | 2 excluded before fitting; target hiding in a bush |
-| factors used, matched-strength smell, ordinary agent, seed 44 | 33 | 35 | 94.3% | 2 excluded before fitting; target hiding in a bush |
-| factors used, matched-strength smell, modulated agent, seed 42 | 33 | 35 | 94.3% | 2 excluded before fitting; target hiding in a bush |
-| factors used, matched-strength smell, modulated agent, seed 43 | 33 | 35 | 94.3% | 2 excluded before fitting; target hiding in a bush |
-| factors used, matched-strength smell, modulated agent, seed 44 | 33 | 35 | 94.3% | 2 excluded before fitting; target hiding in a bush |
+| factors used, two-channel smell (control), ordinary agent, seed 42 | 35 | 35 | 100.0% | none excluded |
+| factors used, two-channel smell (control), ordinary agent, seed 43 | 35 | 35 | 100.0% | none excluded |
+| factors used, two-channel smell (control), ordinary agent, seed 44 | 35 | 35 | 100.0% | none excluded |
+| factors used, two-channel smell (control), modulated agent, seed 42 | 35 | 35 | 100.0% | none excluded |
+| factors used, two-channel smell (control), modulated agent, seed 43 | 35 | 35 | 100.0% | none excluded |
+| factors used, two-channel smell (control), modulated agent, seed 44 | 35 | 35 | 100.0% | none excluded |
+| factors used, single-channel smell, ordinary agent, seed 42 | 33 | 35 | 94.3% | 2 excluded before fitting |
+| factors used, single-channel smell, ordinary agent, seed 43 | 33 | 35 | 94.3% | 2 excluded before fitting |
+| factors used, single-channel smell, ordinary agent, seed 44 | 33 | 35 | 94.3% | 2 excluded before fitting |
+| factors used, single-channel smell, modulated agent, seed 42 | 33 | 35 | 94.3% | 2 excluded before fitting |
+| factors used, single-channel smell, modulated agent, seed 43 | 33 | 35 | 94.3% | 2 excluded before fitting |
+| factors used, single-channel smell, modulated agent, seed 44 | 33 | 35 | 94.3% | 2 excluded before fitting |
+| factors used, matched-strength smell, ordinary agent, seed 42 | 33 | 35 | 94.3% | 2 excluded before fitting |
+| factors used, matched-strength smell, ordinary agent, seed 43 | 33 | 35 | 94.3% | 2 excluded before fitting |
+| factors used, matched-strength smell, ordinary agent, seed 44 | 33 | 35 | 94.3% | 2 excluded before fitting |
+| factors used, matched-strength smell, modulated agent, seed 42 | 33 | 35 | 94.3% | 2 excluded before fitting |
+| factors used, matched-strength smell, modulated agent, seed 43 | 33 | 35 | 94.3% | 2 excluded before fitting |
+| factors used, matched-strength smell, modulated agent, seed 44 | 33 | 35 | 94.3% | 2 excluded before fitting |
 
 ## f2_factor_inventory__eating
 
-Figure 2 — factor inventory for eating. **Axes.** Horizontal: the run (world, agent type and training seed), one column each. Vertical: the factor, in the fixed order the analysis uses, followed by any randomised setting it cannot handle. Each cell is a status, not a number: used (dark, blank), or a short code explained in the legend — uni (used in single-factor fits only), dup (identical to an earlier factor), con (constant), few (defined on too few episodes), out (part of the outcome), unh (randomised but unmeasured); a pale blank cell means the factor does not exist in that world.
+Figure 2b — factor inventory: Eating. **Axes.** Horizontal: the run (world, agent type and training seed), one column each. Vertical: the factor, in the fixed order the analysis uses, followed by any randomised setting it cannot handle. Each cell is a status, not a number: used (dark, blank), or a short code explained in the legend — uni (used in single-factor fits only), dup (identical to an earlier factor), con (constant), few (defined on too few episodes), out (part of the outcome), unh (randomised but unmeasured); a pale blank cell means the factor does not exist in that world.
 
 | subset | used | available | share | why |
 |---|---:|---:|---:|---|
-| factors used, two-channel smell (control), ordinary agent, seed 42 | 34 | 35 | 97.1% | 1 excluded before fitting; target eating |
-| factors used, two-channel smell (control), ordinary agent, seed 43 | 34 | 35 | 97.1% | 1 excluded before fitting; target eating |
-| factors used, two-channel smell (control), ordinary agent, seed 44 | 34 | 35 | 97.1% | 1 excluded before fitting; target eating |
-| factors used, two-channel smell (control), modulated agent, seed 42 | 34 | 35 | 97.1% | 1 excluded before fitting; target eating |
-| factors used, two-channel smell (control), modulated agent, seed 43 | 34 | 35 | 97.1% | 1 excluded before fitting; target eating |
-| factors used, two-channel smell (control), modulated agent, seed 44 | 34 | 35 | 97.1% | 1 excluded before fitting; target eating |
-| factors used, single-channel smell, ordinary agent, seed 42 | 32 | 35 | 91.4% | 3 excluded before fitting; target eating |
-| factors used, single-channel smell, ordinary agent, seed 43 | 32 | 35 | 91.4% | 3 excluded before fitting; target eating |
-| factors used, single-channel smell, ordinary agent, seed 44 | 32 | 35 | 91.4% | 3 excluded before fitting; target eating |
-| factors used, single-channel smell, modulated agent, seed 42 | 32 | 35 | 91.4% | 3 excluded before fitting; target eating |
-| factors used, single-channel smell, modulated agent, seed 43 | 32 | 35 | 91.4% | 3 excluded before fitting; target eating |
-| factors used, single-channel smell, modulated agent, seed 44 | 32 | 35 | 91.4% | 3 excluded before fitting; target eating |
-| factors used, matched-strength smell, ordinary agent, seed 42 | 32 | 35 | 91.4% | 3 excluded before fitting; target eating |
-| factors used, matched-strength smell, ordinary agent, seed 43 | 32 | 35 | 91.4% | 3 excluded before fitting; target eating |
-| factors used, matched-strength smell, ordinary agent, seed 44 | 32 | 35 | 91.4% | 3 excluded before fitting; target eating |
-| factors used, matched-strength smell, modulated agent, seed 42 | 32 | 35 | 91.4% | 3 excluded before fitting; target eating |
-| factors used, matched-strength smell, modulated agent, seed 43 | 32 | 35 | 91.4% | 3 excluded before fitting; target eating |
-| factors used, matched-strength smell, modulated agent, seed 44 | 32 | 35 | 91.4% | 3 excluded before fitting; target eating |
+| factors used, two-channel smell (control), ordinary agent, seed 42 | 34 | 35 | 97.1% | 1 excluded before fitting |
+| factors used, two-channel smell (control), ordinary agent, seed 43 | 34 | 35 | 97.1% | 1 excluded before fitting |
+| factors used, two-channel smell (control), ordinary agent, seed 44 | 34 | 35 | 97.1% | 1 excluded before fitting |
+| factors used, two-channel smell (control), modulated agent, seed 42 | 34 | 35 | 97.1% | 1 excluded before fitting |
+| factors used, two-channel smell (control), modulated agent, seed 43 | 34 | 35 | 97.1% | 1 excluded before fitting |
+| factors used, two-channel smell (control), modulated agent, seed 44 | 34 | 35 | 97.1% | 1 excluded before fitting |
+| factors used, single-channel smell, ordinary agent, seed 42 | 32 | 35 | 91.4% | 3 excluded before fitting |
+| factors used, single-channel smell, ordinary agent, seed 43 | 32 | 35 | 91.4% | 3 excluded before fitting |
+| factors used, single-channel smell, ordinary agent, seed 44 | 32 | 35 | 91.4% | 3 excluded before fitting |
+| factors used, single-channel smell, modulated agent, seed 42 | 32 | 35 | 91.4% | 3 excluded before fitting |
+| factors used, single-channel smell, modulated agent, seed 43 | 32 | 35 | 91.4% | 3 excluded before fitting |
+| factors used, single-channel smell, modulated agent, seed 44 | 32 | 35 | 91.4% | 3 excluded before fitting |
+| factors used, matched-strength smell, ordinary agent, seed 42 | 32 | 35 | 91.4% | 3 excluded before fitting |
+| factors used, matched-strength smell, ordinary agent, seed 43 | 32 | 35 | 91.4% | 3 excluded before fitting |
+| factors used, matched-strength smell, ordinary agent, seed 44 | 32 | 35 | 91.4% | 3 excluded before fitting |
+| factors used, matched-strength smell, modulated agent, seed 42 | 32 | 35 | 91.4% | 3 excluded before fitting |
+| factors used, matched-strength smell, modulated agent, seed 43 | 32 | 35 | 91.4% | 3 excluded before fitting |
+| factors used, matched-strength smell, modulated agent, seed 44 | 32 | 35 | 91.4% | 3 excluded before fitting |
 
 ## f2_factor_inventory__near_rabbit
 
-Figure 2 — factor inventory for within two squares of a rabbit. **Axes.** Horizontal: the run (world, agent type and training seed), one column each. Vertical: the factor, in the fixed order the analysis uses, followed by any randomised setting it cannot handle. Each cell is a status, not a number: used (dark, blank), or a short code explained in the legend — uni (used in single-factor fits only), dup (identical to an earlier factor), con (constant), few (defined on too few episodes), out (part of the outcome), unh (randomised but unmeasured); a pale blank cell means the factor does not exist in that world.
+Figure 2c — factor inventory: Time near a rabbit (within 2 squares). **Axes.** Horizontal: the run (world, agent type and training seed), one column each. Vertical: the factor, in the fixed order the analysis uses, followed by any randomised setting it cannot handle. Each cell is a status, not a number: used (dark, blank), or a short code explained in the legend — uni (used in single-factor fits only), dup (identical to an earlier factor), con (constant), few (defined on too few episodes), out (part of the outcome), unh (randomised but unmeasured); a pale blank cell means the factor does not exist in that world.
 
 | subset | used | available | share | why |
 |---|---:|---:|---:|---|
-| factors used, two-channel smell (control), ordinary agent, seed 42 | 34 | 35 | 97.1% | 1 excluded before fitting; target within two squares of a rabbit |
-| factors used, two-channel smell (control), ordinary agent, seed 43 | 34 | 35 | 97.1% | 1 excluded before fitting; target within two squares of a rabbit |
-| factors used, two-channel smell (control), ordinary agent, seed 44 | 34 | 35 | 97.1% | 1 excluded before fitting; target within two squares of a rabbit |
-| factors used, two-channel smell (control), modulated agent, seed 42 | 34 | 35 | 97.1% | 1 excluded before fitting; target within two squares of a rabbit |
-| factors used, two-channel smell (control), modulated agent, seed 43 | 34 | 35 | 97.1% | 1 excluded before fitting; target within two squares of a rabbit |
-| factors used, two-channel smell (control), modulated agent, seed 44 | 34 | 35 | 97.1% | 1 excluded before fitting; target within two squares of a rabbit |
-| factors used, single-channel smell, ordinary agent, seed 42 | 32 | 35 | 91.4% | 3 excluded before fitting; target within two squares of a rabbit |
-| factors used, single-channel smell, ordinary agent, seed 43 | 32 | 35 | 91.4% | 3 excluded before fitting; target within two squares of a rabbit |
-| factors used, single-channel smell, ordinary agent, seed 44 | 32 | 35 | 91.4% | 3 excluded before fitting; target within two squares of a rabbit |
-| factors used, single-channel smell, modulated agent, seed 42 | 32 | 35 | 91.4% | 3 excluded before fitting; target within two squares of a rabbit |
-| factors used, single-channel smell, modulated agent, seed 43 | 32 | 35 | 91.4% | 3 excluded before fitting; target within two squares of a rabbit |
-| factors used, single-channel smell, modulated agent, seed 44 | 32 | 35 | 91.4% | 3 excluded before fitting; target within two squares of a rabbit |
-| factors used, matched-strength smell, ordinary agent, seed 42 | 32 | 35 | 91.4% | 3 excluded before fitting; target within two squares of a rabbit |
-| factors used, matched-strength smell, ordinary agent, seed 43 | 32 | 35 | 91.4% | 3 excluded before fitting; target within two squares of a rabbit |
-| factors used, matched-strength smell, ordinary agent, seed 44 | 32 | 35 | 91.4% | 3 excluded before fitting; target within two squares of a rabbit |
-| factors used, matched-strength smell, modulated agent, seed 42 | 32 | 35 | 91.4% | 3 excluded before fitting; target within two squares of a rabbit |
-| factors used, matched-strength smell, modulated agent, seed 43 | 32 | 35 | 91.4% | 3 excluded before fitting; target within two squares of a rabbit |
-| factors used, matched-strength smell, modulated agent, seed 44 | 32 | 35 | 91.4% | 3 excluded before fitting; target within two squares of a rabbit |
+| factors used, two-channel smell (control), ordinary agent, seed 42 | 34 | 35 | 97.1% | 1 excluded before fitting |
+| factors used, two-channel smell (control), ordinary agent, seed 43 | 34 | 35 | 97.1% | 1 excluded before fitting |
+| factors used, two-channel smell (control), ordinary agent, seed 44 | 34 | 35 | 97.1% | 1 excluded before fitting |
+| factors used, two-channel smell (control), modulated agent, seed 42 | 34 | 35 | 97.1% | 1 excluded before fitting |
+| factors used, two-channel smell (control), modulated agent, seed 43 | 34 | 35 | 97.1% | 1 excluded before fitting |
+| factors used, two-channel smell (control), modulated agent, seed 44 | 34 | 35 | 97.1% | 1 excluded before fitting |
+| factors used, single-channel smell, ordinary agent, seed 42 | 32 | 35 | 91.4% | 3 excluded before fitting |
+| factors used, single-channel smell, ordinary agent, seed 43 | 32 | 35 | 91.4% | 3 excluded before fitting |
+| factors used, single-channel smell, ordinary agent, seed 44 | 32 | 35 | 91.4% | 3 excluded before fitting |
+| factors used, single-channel smell, modulated agent, seed 42 | 32 | 35 | 91.4% | 3 excluded before fitting |
+| factors used, single-channel smell, modulated agent, seed 43 | 32 | 35 | 91.4% | 3 excluded before fitting |
+| factors used, single-channel smell, modulated agent, seed 44 | 32 | 35 | 91.4% | 3 excluded before fitting |
+| factors used, matched-strength smell, ordinary agent, seed 42 | 32 | 35 | 91.4% | 3 excluded before fitting |
+| factors used, matched-strength smell, ordinary agent, seed 43 | 32 | 35 | 91.4% | 3 excluded before fitting |
+| factors used, matched-strength smell, ordinary agent, seed 44 | 32 | 35 | 91.4% | 3 excluded before fitting |
+| factors used, matched-strength smell, modulated agent, seed 42 | 32 | 35 | 91.4% | 3 excluded before fitting |
+| factors used, matched-strength smell, modulated agent, seed 43 | 32 | 35 | 91.4% | 3 excluded before fitting |
+| factors used, matched-strength smell, modulated agent, seed 44 | 32 | 35 | 91.4% | 3 excluded before fitting |
 
 ## f2_factor_inventory__near_predator
 
-Figure 2 — factor inventory for within two squares of a predator. **Axes.** Horizontal: the run (world, agent type and training seed), one column each. Vertical: the factor, in the fixed order the analysis uses, followed by any randomised setting it cannot handle. Each cell is a status, not a number: used (dark, blank), or a short code explained in the legend — uni (used in single-factor fits only), dup (identical to an earlier factor), con (constant), few (defined on too few episodes), out (part of the outcome), unh (randomised but unmeasured); a pale blank cell means the factor does not exist in that world.
+Figure 2d — factor inventory: Time near a predator (within 2 squares). **Axes.** Horizontal: the run (world, agent type and training seed), one column each. Vertical: the factor, in the fixed order the analysis uses, followed by any randomised setting it cannot handle. Each cell is a status, not a number: used (dark, blank), or a short code explained in the legend — uni (used in single-factor fits only), dup (identical to an earlier factor), con (constant), few (defined on too few episodes), out (part of the outcome), unh (randomised but unmeasured); a pale blank cell means the factor does not exist in that world.
 
 | subset | used | available | share | why |
 |---|---:|---:|---:|---|
-| factors used, two-channel smell (control), ordinary agent, seed 42 | 34 | 35 | 97.1% | 1 excluded before fitting; target within two squares of a predator |
-| factors used, two-channel smell (control), ordinary agent, seed 43 | 34 | 35 | 97.1% | 1 excluded before fitting; target within two squares of a predator |
-| factors used, two-channel smell (control), ordinary agent, seed 44 | 34 | 35 | 97.1% | 1 excluded before fitting; target within two squares of a predator |
-| factors used, two-channel smell (control), modulated agent, seed 42 | 34 | 35 | 97.1% | 1 excluded before fitting; target within two squares of a predator |
-| factors used, two-channel smell (control), modulated agent, seed 43 | 34 | 35 | 97.1% | 1 excluded before fitting; target within two squares of a predator |
-| factors used, two-channel smell (control), modulated agent, seed 44 | 34 | 35 | 97.1% | 1 excluded before fitting; target within two squares of a predator |
-| factors used, single-channel smell, ordinary agent, seed 42 | 32 | 35 | 91.4% | 3 excluded before fitting; target within two squares of a predator |
-| factors used, single-channel smell, ordinary agent, seed 43 | 32 | 35 | 91.4% | 3 excluded before fitting; target within two squares of a predator |
-| factors used, single-channel smell, ordinary agent, seed 44 | 32 | 35 | 91.4% | 3 excluded before fitting; target within two squares of a predator |
-| factors used, single-channel smell, modulated agent, seed 42 | 32 | 35 | 91.4% | 3 excluded before fitting; target within two squares of a predator |
-| factors used, single-channel smell, modulated agent, seed 43 | 32 | 35 | 91.4% | 3 excluded before fitting; target within two squares of a predator |
-| factors used, single-channel smell, modulated agent, seed 44 | 32 | 35 | 91.4% | 3 excluded before fitting; target within two squares of a predator |
-| factors used, matched-strength smell, ordinary agent, seed 42 | 32 | 35 | 91.4% | 3 excluded before fitting; target within two squares of a predator |
-| factors used, matched-strength smell, ordinary agent, seed 43 | 32 | 35 | 91.4% | 3 excluded before fitting; target within two squares of a predator |
-| factors used, matched-strength smell, ordinary agent, seed 44 | 32 | 35 | 91.4% | 3 excluded before fitting; target within two squares of a predator |
-| factors used, matched-strength smell, modulated agent, seed 42 | 32 | 35 | 91.4% | 3 excluded before fitting; target within two squares of a predator |
-| factors used, matched-strength smell, modulated agent, seed 43 | 32 | 35 | 91.4% | 3 excluded before fitting; target within two squares of a predator |
-| factors used, matched-strength smell, modulated agent, seed 44 | 32 | 35 | 91.4% | 3 excluded before fitting; target within two squares of a predator |
+| factors used, two-channel smell (control), ordinary agent, seed 42 | 34 | 35 | 97.1% | 1 excluded before fitting |
+| factors used, two-channel smell (control), ordinary agent, seed 43 | 34 | 35 | 97.1% | 1 excluded before fitting |
+| factors used, two-channel smell (control), ordinary agent, seed 44 | 34 | 35 | 97.1% | 1 excluded before fitting |
+| factors used, two-channel smell (control), modulated agent, seed 42 | 34 | 35 | 97.1% | 1 excluded before fitting |
+| factors used, two-channel smell (control), modulated agent, seed 43 | 34 | 35 | 97.1% | 1 excluded before fitting |
+| factors used, two-channel smell (control), modulated agent, seed 44 | 34 | 35 | 97.1% | 1 excluded before fitting |
+| factors used, single-channel smell, ordinary agent, seed 42 | 32 | 35 | 91.4% | 3 excluded before fitting |
+| factors used, single-channel smell, ordinary agent, seed 43 | 32 | 35 | 91.4% | 3 excluded before fitting |
+| factors used, single-channel smell, ordinary agent, seed 44 | 32 | 35 | 91.4% | 3 excluded before fitting |
+| factors used, single-channel smell, modulated agent, seed 42 | 32 | 35 | 91.4% | 3 excluded before fitting |
+| factors used, single-channel smell, modulated agent, seed 43 | 32 | 35 | 91.4% | 3 excluded before fitting |
+| factors used, single-channel smell, modulated agent, seed 44 | 32 | 35 | 91.4% | 3 excluded before fitting |
+| factors used, matched-strength smell, ordinary agent, seed 42 | 32 | 35 | 91.4% | 3 excluded before fitting |
+| factors used, matched-strength smell, ordinary agent, seed 43 | 32 | 35 | 91.4% | 3 excluded before fitting |
+| factors used, matched-strength smell, ordinary agent, seed 44 | 32 | 35 | 91.4% | 3 excluded before fitting |
+| factors used, matched-strength smell, modulated agent, seed 42 | 32 | 35 | 91.4% | 3 excluded before fitting |
+| factors used, matched-strength smell, modulated agent, seed 43 | 32 | 35 | 91.4% | 3 excluded before fitting |
+| factors used, matched-strength smell, modulated agent, seed 44 | 32 | 35 | 91.4% | 3 excluded before fitting |
 
 ## f2_factor_inventory__warm_cell
 
-Figure 2 — factor inventory for on a warm square. **Axes.** Horizontal: the run (world, agent type and training seed), one column each. Vertical: the factor, in the fixed order the analysis uses, followed by any randomised setting it cannot handle. Each cell is a status, not a number: used (dark, blank), or a short code explained in the legend — uni (used in single-factor fits only), dup (identical to an earlier factor), con (constant), few (defined on too few episodes), out (part of the outcome), unh (randomised but unmeasured); a pale blank cell means the factor does not exist in that world.
+Figure 2e — factor inventory: Time on a warm square. **Axes.** Horizontal: the run (world, agent type and training seed), one column each. Vertical: the factor, in the fixed order the analysis uses, followed by any randomised setting it cannot handle. Each cell is a status, not a number: used (dark, blank), or a short code explained in the legend — uni (used in single-factor fits only), dup (identical to an earlier factor), con (constant), few (defined on too few episodes), out (part of the outcome), unh (randomised but unmeasured); a pale blank cell means the factor does not exist in that world.
 
 | subset | used | available | share | why |
 |---|---:|---:|---:|---|
-| factors used, two-channel smell (control), ordinary agent, seed 42 | 34 | 35 | 97.1% | 1 excluded before fitting; target on a warm square |
-| factors used, two-channel smell (control), ordinary agent, seed 43 | 34 | 35 | 97.1% | 1 excluded before fitting; target on a warm square |
-| factors used, two-channel smell (control), ordinary agent, seed 44 | 34 | 35 | 97.1% | 1 excluded before fitting; target on a warm square |
-| factors used, two-channel smell (control), modulated agent, seed 42 | 34 | 35 | 97.1% | 1 excluded before fitting; target on a warm square |
-| factors used, two-channel smell (control), modulated agent, seed 43 | 34 | 35 | 97.1% | 1 excluded before fitting; target on a warm square |
-| factors used, two-channel smell (control), modulated agent, seed 44 | 34 | 35 | 97.1% | 1 excluded before fitting; target on a warm square |
-| factors used, single-channel smell, ordinary agent, seed 42 | 32 | 35 | 91.4% | 3 excluded before fitting; target on a warm square |
-| factors used, single-channel smell, ordinary agent, seed 43 | 32 | 35 | 91.4% | 3 excluded before fitting; target on a warm square |
-| factors used, single-channel smell, ordinary agent, seed 44 | 32 | 35 | 91.4% | 3 excluded before fitting; target on a warm square |
-| factors used, single-channel smell, modulated agent, seed 42 | 32 | 35 | 91.4% | 3 excluded before fitting; target on a warm square |
-| factors used, single-channel smell, modulated agent, seed 43 | 32 | 35 | 91.4% | 3 excluded before fitting; target on a warm square |
-| factors used, single-channel smell, modulated agent, seed 44 | 32 | 35 | 91.4% | 3 excluded before fitting; target on a warm square |
-| factors used, matched-strength smell, ordinary agent, seed 42 | 32 | 35 | 91.4% | 3 excluded before fitting; target on a warm square |
-| factors used, matched-strength smell, ordinary agent, seed 43 | 32 | 35 | 91.4% | 3 excluded before fitting; target on a warm square |
-| factors used, matched-strength smell, ordinary agent, seed 44 | 32 | 35 | 91.4% | 3 excluded before fitting; target on a warm square |
-| factors used, matched-strength smell, modulated agent, seed 42 | 32 | 35 | 91.4% | 3 excluded before fitting; target on a warm square |
-| factors used, matched-strength smell, modulated agent, seed 43 | 32 | 35 | 91.4% | 3 excluded before fitting; target on a warm square |
-| factors used, matched-strength smell, modulated agent, seed 44 | 32 | 35 | 91.4% | 3 excluded before fitting; target on a warm square |
+| factors used, two-channel smell (control), ordinary agent, seed 42 | 34 | 35 | 97.1% | 1 excluded before fitting |
+| factors used, two-channel smell (control), ordinary agent, seed 43 | 34 | 35 | 97.1% | 1 excluded before fitting |
+| factors used, two-channel smell (control), ordinary agent, seed 44 | 34 | 35 | 97.1% | 1 excluded before fitting |
+| factors used, two-channel smell (control), modulated agent, seed 42 | 34 | 35 | 97.1% | 1 excluded before fitting |
+| factors used, two-channel smell (control), modulated agent, seed 43 | 34 | 35 | 97.1% | 1 excluded before fitting |
+| factors used, two-channel smell (control), modulated agent, seed 44 | 34 | 35 | 97.1% | 1 excluded before fitting |
+| factors used, single-channel smell, ordinary agent, seed 42 | 32 | 35 | 91.4% | 3 excluded before fitting |
+| factors used, single-channel smell, ordinary agent, seed 43 | 32 | 35 | 91.4% | 3 excluded before fitting |
+| factors used, single-channel smell, ordinary agent, seed 44 | 32 | 35 | 91.4% | 3 excluded before fitting |
+| factors used, single-channel smell, modulated agent, seed 42 | 32 | 35 | 91.4% | 3 excluded before fitting |
+| factors used, single-channel smell, modulated agent, seed 43 | 32 | 35 | 91.4% | 3 excluded before fitting |
+| factors used, single-channel smell, modulated agent, seed 44 | 32 | 35 | 91.4% | 3 excluded before fitting |
+| factors used, matched-strength smell, ordinary agent, seed 42 | 32 | 35 | 91.4% | 3 excluded before fitting |
+| factors used, matched-strength smell, ordinary agent, seed 43 | 32 | 35 | 91.4% | 3 excluded before fitting |
+| factors used, matched-strength smell, ordinary agent, seed 44 | 32 | 35 | 91.4% | 3 excluded before fitting |
+| factors used, matched-strength smell, modulated agent, seed 42 | 32 | 35 | 91.4% | 3 excluded before fitting |
+| factors used, matched-strength smell, modulated agent, seed 43 | 32 | 35 | 91.4% | 3 excluded before fitting |
+| factors used, matched-strength smell, modulated agent, seed 44 | 32 | 35 | 91.4% | 3 excluded before fitting |
 
 ## f3_univariate__bush_dwell
 
-Figure 3 — single-factor effects on hiding in a bush. **Axes.** Both panels: horizontal, the change in the run's share of chosen steps spent hiding in a bush, in percentage points, for a one-standard-deviation increase in the factor (zero marked by a vertical rule); vertical, the factor, ranked by its median absolute effect across runs, largest at the top. Left panel: factors drawn before the agent acts. Right panel: consequences produced during the episode.
+Figure 3a — single-factor effects: Bush dwell (time in a bush). **Axes.** Both panels: horizontal, the change in the run's share of chosen steps showing the behaviour (bush dwell), in percentage points, for a one-standard-deviation increase in the factor (zero marked by a vertical rule); the two panels have different horizontal scales, so compare positions within a panel only; vertical, the factor, ranked by its median absolute effect across runs, largest at the top. Left panel: factors drawn before the agent acts. Right panel: consequences produced during the episode.
 
 | subset | used | available | share | why |
 |---|---:|---:|---:|---|
-| all episodes, two-channel smell (control), ordinary agent, seed 42 | 1,000,000 | 1,000,000 | 100.0% | the episodes on which those factors are defined |
-| exactly one predator, two-channel smell (control), ordinary agent, seed 42 | 333,743 | 1,000,000 | 33.4% | the episodes on which those factors are defined |
-| exactly one rabbit, two-channel smell (control), ordinary agent, seed 42 | 333,766 | 1,000,000 | 33.4% | the episodes on which those factors are defined |
-| all episodes, two-channel smell (control), ordinary agent, seed 43 | 1,000,000 | 1,000,000 | 100.0% | the episodes on which those factors are defined |
-| exactly one predator, two-channel smell (control), ordinary agent, seed 43 | 333,743 | 1,000,000 | 33.4% | the episodes on which those factors are defined |
-| exactly one rabbit, two-channel smell (control), ordinary agent, seed 43 | 333,766 | 1,000,000 | 33.4% | the episodes on which those factors are defined |
-| all episodes, two-channel smell (control), ordinary agent, seed 44 | 1,000,000 | 1,000,000 | 100.0% | the episodes on which those factors are defined |
-| exactly one predator, two-channel smell (control), ordinary agent, seed 44 | 333,743 | 1,000,000 | 33.4% | the episodes on which those factors are defined |
-| exactly one rabbit, two-channel smell (control), ordinary agent, seed 44 | 333,766 | 1,000,000 | 33.4% | the episodes on which those factors are defined |
-| all episodes, two-channel smell (control), modulated agent, seed 42 | 1,000,000 | 1,000,000 | 100.0% | the episodes on which those factors are defined |
-| exactly one predator, two-channel smell (control), modulated agent, seed 42 | 333,743 | 1,000,000 | 33.4% | the episodes on which those factors are defined |
-| exactly one rabbit, two-channel smell (control), modulated agent, seed 42 | 333,766 | 1,000,000 | 33.4% | the episodes on which those factors are defined |
-| all episodes, two-channel smell (control), modulated agent, seed 43 | 1,000,000 | 1,000,000 | 100.0% | the episodes on which those factors are defined |
-| exactly one predator, two-channel smell (control), modulated agent, seed 43 | 333,743 | 1,000,000 | 33.4% | the episodes on which those factors are defined |
-| exactly one rabbit, two-channel smell (control), modulated agent, seed 43 | 333,766 | 1,000,000 | 33.4% | the episodes on which those factors are defined |
-| all episodes, two-channel smell (control), modulated agent, seed 44 | 1,000,000 | 1,000,000 | 100.0% | the episodes on which those factors are defined |
-| exactly one predator, two-channel smell (control), modulated agent, seed 44 | 333,743 | 1,000,000 | 33.4% | the episodes on which those factors are defined |
-| exactly one rabbit, two-channel smell (control), modulated agent, seed 44 | 333,766 | 1,000,000 | 33.4% | the episodes on which those factors are defined |
-| all episodes, single-channel smell, ordinary agent, seed 42 | 1,000,000 | 1,000,000 | 100.0% | the episodes on which those factors are defined |
-| exactly one predator, single-channel smell, ordinary agent, seed 42 | 333,743 | 1,000,000 | 33.4% | the episodes on which those factors are defined |
-| exactly one rabbit, single-channel smell, ordinary agent, seed 42 | 333,766 | 1,000,000 | 33.4% | the episodes on which those factors are defined |
-| all episodes, single-channel smell, ordinary agent, seed 43 | 1,000,000 | 1,000,000 | 100.0% | the episodes on which those factors are defined |
-| exactly one predator, single-channel smell, ordinary agent, seed 43 | 333,743 | 1,000,000 | 33.4% | the episodes on which those factors are defined |
-| exactly one rabbit, single-channel smell, ordinary agent, seed 43 | 333,766 | 1,000,000 | 33.4% | the episodes on which those factors are defined |
-| all episodes, single-channel smell, ordinary agent, seed 44 | 1,000,000 | 1,000,000 | 100.0% | the episodes on which those factors are defined |
-| exactly one predator, single-channel smell, ordinary agent, seed 44 | 333,743 | 1,000,000 | 33.4% | the episodes on which those factors are defined |
-| exactly one rabbit, single-channel smell, ordinary agent, seed 44 | 333,766 | 1,000,000 | 33.4% | the episodes on which those factors are defined |
-| all episodes, single-channel smell, modulated agent, seed 42 | 1,000,000 | 1,000,000 | 100.0% | the episodes on which those factors are defined |
-| exactly one predator, single-channel smell, modulated agent, seed 42 | 333,743 | 1,000,000 | 33.4% | the episodes on which those factors are defined |
-| exactly one rabbit, single-channel smell, modulated agent, seed 42 | 333,766 | 1,000,000 | 33.4% | the episodes on which those factors are defined |
-| all episodes, single-channel smell, modulated agent, seed 43 | 1,000,000 | 1,000,000 | 100.0% | the episodes on which those factors are defined |
-| exactly one predator, single-channel smell, modulated agent, seed 43 | 333,743 | 1,000,000 | 33.4% | the episodes on which those factors are defined |
-| exactly one rabbit, single-channel smell, modulated agent, seed 43 | 333,766 | 1,000,000 | 33.4% | the episodes on which those factors are defined |
-| all episodes, single-channel smell, modulated agent, seed 44 | 1,000,000 | 1,000,000 | 100.0% | the episodes on which those factors are defined |
-| exactly one predator, single-channel smell, modulated agent, seed 44 | 333,743 | 1,000,000 | 33.4% | the episodes on which those factors are defined |
-| exactly one rabbit, single-channel smell, modulated agent, seed 44 | 333,766 | 1,000,000 | 33.4% | the episodes on which those factors are defined |
-| all episodes, matched-strength smell, ordinary agent, seed 42 | 1,000,000 | 1,000,000 | 100.0% | the episodes on which those factors are defined |
-| exactly one predator, matched-strength smell, ordinary agent, seed 42 | 333,743 | 1,000,000 | 33.4% | the episodes on which those factors are defined |
-| exactly one rabbit, matched-strength smell, ordinary agent, seed 42 | 333,766 | 1,000,000 | 33.4% | the episodes on which those factors are defined |
-| all episodes, matched-strength smell, ordinary agent, seed 43 | 1,000,000 | 1,000,000 | 100.0% | the episodes on which those factors are defined |
-| exactly one predator, matched-strength smell, ordinary agent, seed 43 | 333,743 | 1,000,000 | 33.4% | the episodes on which those factors are defined |
-| exactly one rabbit, matched-strength smell, ordinary agent, seed 43 | 333,766 | 1,000,000 | 33.4% | the episodes on which those factors are defined |
-| all episodes, matched-strength smell, ordinary agent, seed 44 | 1,000,000 | 1,000,000 | 100.0% | the episodes on which those factors are defined |
-| exactly one predator, matched-strength smell, ordinary agent, seed 44 | 333,743 | 1,000,000 | 33.4% | the episodes on which those factors are defined |
-| exactly one rabbit, matched-strength smell, ordinary agent, seed 44 | 333,766 | 1,000,000 | 33.4% | the episodes on which those factors are defined |
-| all episodes, matched-strength smell, modulated agent, seed 42 | 1,000,000 | 1,000,000 | 100.0% | the episodes on which those factors are defined |
-| exactly one predator, matched-strength smell, modulated agent, seed 42 | 333,743 | 1,000,000 | 33.4% | the episodes on which those factors are defined |
-| exactly one rabbit, matched-strength smell, modulated agent, seed 42 | 333,766 | 1,000,000 | 33.4% | the episodes on which those factors are defined |
-| all episodes, matched-strength smell, modulated agent, seed 43 | 1,000,000 | 1,000,000 | 100.0% | the episodes on which those factors are defined |
-| exactly one predator, matched-strength smell, modulated agent, seed 43 | 333,743 | 1,000,000 | 33.4% | the episodes on which those factors are defined |
-| exactly one rabbit, matched-strength smell, modulated agent, seed 43 | 333,766 | 1,000,000 | 33.4% | the episodes on which those factors are defined |
-| all episodes, matched-strength smell, modulated agent, seed 44 | 1,000,000 | 1,000,000 | 100.0% | the episodes on which those factors are defined |
-| exactly one predator, matched-strength smell, modulated agent, seed 44 | 333,743 | 1,000,000 | 33.4% | the episodes on which those factors are defined |
-| exactly one rabbit, matched-strength smell, modulated agent, seed 44 | 333,766 | 1,000,000 | 33.4% | the episodes on which those factors are defined |
+| factors defined on every episode, two-channel smell (control), ordinary agent, seed 42 | 1,000,000 | 1,000,000 | 100.0% | all episodes |
+| predator traits and smell, two-channel smell (control), ordinary agent, seed 42 | 333,743 | 1,000,000 | 33.4% | episodes with exactly one predator: a single predator's traits are defined only there |
+| rabbit smell, two-channel smell (control), ordinary agent, seed 42 | 333,766 | 1,000,000 | 33.4% | episodes with exactly one rabbit: a single rabbit's smell is defined only there |
+| factors defined on every episode, two-channel smell (control), ordinary agent, seed 43 | 1,000,000 | 1,000,000 | 100.0% | all episodes |
+| predator traits and smell, two-channel smell (control), ordinary agent, seed 43 | 333,743 | 1,000,000 | 33.4% | episodes with exactly one predator: a single predator's traits are defined only there |
+| rabbit smell, two-channel smell (control), ordinary agent, seed 43 | 333,766 | 1,000,000 | 33.4% | episodes with exactly one rabbit: a single rabbit's smell is defined only there |
+| factors defined on every episode, two-channel smell (control), ordinary agent, seed 44 | 1,000,000 | 1,000,000 | 100.0% | all episodes |
+| predator traits and smell, two-channel smell (control), ordinary agent, seed 44 | 333,743 | 1,000,000 | 33.4% | episodes with exactly one predator: a single predator's traits are defined only there |
+| rabbit smell, two-channel smell (control), ordinary agent, seed 44 | 333,766 | 1,000,000 | 33.4% | episodes with exactly one rabbit: a single rabbit's smell is defined only there |
+| factors defined on every episode, two-channel smell (control), modulated agent, seed 42 | 1,000,000 | 1,000,000 | 100.0% | all episodes |
+| predator traits and smell, two-channel smell (control), modulated agent, seed 42 | 333,743 | 1,000,000 | 33.4% | episodes with exactly one predator: a single predator's traits are defined only there |
+| rabbit smell, two-channel smell (control), modulated agent, seed 42 | 333,766 | 1,000,000 | 33.4% | episodes with exactly one rabbit: a single rabbit's smell is defined only there |
+| factors defined on every episode, two-channel smell (control), modulated agent, seed 43 | 1,000,000 | 1,000,000 | 100.0% | all episodes |
+| predator traits and smell, two-channel smell (control), modulated agent, seed 43 | 333,743 | 1,000,000 | 33.4% | episodes with exactly one predator: a single predator's traits are defined only there |
+| rabbit smell, two-channel smell (control), modulated agent, seed 43 | 333,766 | 1,000,000 | 33.4% | episodes with exactly one rabbit: a single rabbit's smell is defined only there |
+| factors defined on every episode, two-channel smell (control), modulated agent, seed 44 | 1,000,000 | 1,000,000 | 100.0% | all episodes |
+| predator traits and smell, two-channel smell (control), modulated agent, seed 44 | 333,743 | 1,000,000 | 33.4% | episodes with exactly one predator: a single predator's traits are defined only there |
+| rabbit smell, two-channel smell (control), modulated agent, seed 44 | 333,766 | 1,000,000 | 33.4% | episodes with exactly one rabbit: a single rabbit's smell is defined only there |
+| factors defined on every episode, single-channel smell, ordinary agent, seed 42 | 1,000,000 | 1,000,000 | 100.0% | all episodes |
+| predator traits and smell, single-channel smell, ordinary agent, seed 42 | 333,743 | 1,000,000 | 33.4% | episodes with exactly one predator: a single predator's traits are defined only there |
+| rabbit smell, single-channel smell, ordinary agent, seed 42 | 333,766 | 1,000,000 | 33.4% | episodes with exactly one rabbit: a single rabbit's smell is defined only there |
+| factors defined on every episode, single-channel smell, ordinary agent, seed 43 | 1,000,000 | 1,000,000 | 100.0% | all episodes |
+| predator traits and smell, single-channel smell, ordinary agent, seed 43 | 333,743 | 1,000,000 | 33.4% | episodes with exactly one predator: a single predator's traits are defined only there |
+| rabbit smell, single-channel smell, ordinary agent, seed 43 | 333,766 | 1,000,000 | 33.4% | episodes with exactly one rabbit: a single rabbit's smell is defined only there |
+| factors defined on every episode, single-channel smell, ordinary agent, seed 44 | 1,000,000 | 1,000,000 | 100.0% | all episodes |
+| predator traits and smell, single-channel smell, ordinary agent, seed 44 | 333,743 | 1,000,000 | 33.4% | episodes with exactly one predator: a single predator's traits are defined only there |
+| rabbit smell, single-channel smell, ordinary agent, seed 44 | 333,766 | 1,000,000 | 33.4% | episodes with exactly one rabbit: a single rabbit's smell is defined only there |
+| factors defined on every episode, single-channel smell, modulated agent, seed 42 | 1,000,000 | 1,000,000 | 100.0% | all episodes |
+| predator traits and smell, single-channel smell, modulated agent, seed 42 | 333,743 | 1,000,000 | 33.4% | episodes with exactly one predator: a single predator's traits are defined only there |
+| rabbit smell, single-channel smell, modulated agent, seed 42 | 333,766 | 1,000,000 | 33.4% | episodes with exactly one rabbit: a single rabbit's smell is defined only there |
+| factors defined on every episode, single-channel smell, modulated agent, seed 43 | 1,000,000 | 1,000,000 | 100.0% | all episodes |
+| predator traits and smell, single-channel smell, modulated agent, seed 43 | 333,743 | 1,000,000 | 33.4% | episodes with exactly one predator: a single predator's traits are defined only there |
+| rabbit smell, single-channel smell, modulated agent, seed 43 | 333,766 | 1,000,000 | 33.4% | episodes with exactly one rabbit: a single rabbit's smell is defined only there |
+| factors defined on every episode, single-channel smell, modulated agent, seed 44 | 1,000,000 | 1,000,000 | 100.0% | all episodes |
+| predator traits and smell, single-channel smell, modulated agent, seed 44 | 333,743 | 1,000,000 | 33.4% | episodes with exactly one predator: a single predator's traits are defined only there |
+| rabbit smell, single-channel smell, modulated agent, seed 44 | 333,766 | 1,000,000 | 33.4% | episodes with exactly one rabbit: a single rabbit's smell is defined only there |
+| factors defined on every episode, matched-strength smell, ordinary agent, seed 42 | 1,000,000 | 1,000,000 | 100.0% | all episodes |
+| predator traits and smell, matched-strength smell, ordinary agent, seed 42 | 333,743 | 1,000,000 | 33.4% | episodes with exactly one predator: a single predator's traits are defined only there |
+| rabbit smell, matched-strength smell, ordinary agent, seed 42 | 333,766 | 1,000,000 | 33.4% | episodes with exactly one rabbit: a single rabbit's smell is defined only there |
+| factors defined on every episode, matched-strength smell, ordinary agent, seed 43 | 1,000,000 | 1,000,000 | 100.0% | all episodes |
+| predator traits and smell, matched-strength smell, ordinary agent, seed 43 | 333,743 | 1,000,000 | 33.4% | episodes with exactly one predator: a single predator's traits are defined only there |
+| rabbit smell, matched-strength smell, ordinary agent, seed 43 | 333,766 | 1,000,000 | 33.4% | episodes with exactly one rabbit: a single rabbit's smell is defined only there |
+| factors defined on every episode, matched-strength smell, ordinary agent, seed 44 | 1,000,000 | 1,000,000 | 100.0% | all episodes |
+| predator traits and smell, matched-strength smell, ordinary agent, seed 44 | 333,743 | 1,000,000 | 33.4% | episodes with exactly one predator: a single predator's traits are defined only there |
+| rabbit smell, matched-strength smell, ordinary agent, seed 44 | 333,766 | 1,000,000 | 33.4% | episodes with exactly one rabbit: a single rabbit's smell is defined only there |
+| factors defined on every episode, matched-strength smell, modulated agent, seed 42 | 1,000,000 | 1,000,000 | 100.0% | all episodes |
+| predator traits and smell, matched-strength smell, modulated agent, seed 42 | 333,743 | 1,000,000 | 33.4% | episodes with exactly one predator: a single predator's traits are defined only there |
+| rabbit smell, matched-strength smell, modulated agent, seed 42 | 333,766 | 1,000,000 | 33.4% | episodes with exactly one rabbit: a single rabbit's smell is defined only there |
+| factors defined on every episode, matched-strength smell, modulated agent, seed 43 | 1,000,000 | 1,000,000 | 100.0% | all episodes |
+| predator traits and smell, matched-strength smell, modulated agent, seed 43 | 333,743 | 1,000,000 | 33.4% | episodes with exactly one predator: a single predator's traits are defined only there |
+| rabbit smell, matched-strength smell, modulated agent, seed 43 | 333,766 | 1,000,000 | 33.4% | episodes with exactly one rabbit: a single rabbit's smell is defined only there |
+| factors defined on every episode, matched-strength smell, modulated agent, seed 44 | 1,000,000 | 1,000,000 | 100.0% | all episodes |
+| predator traits and smell, matched-strength smell, modulated agent, seed 44 | 333,743 | 1,000,000 | 33.4% | episodes with exactly one predator: a single predator's traits are defined only there |
+| rabbit smell, matched-strength smell, modulated agent, seed 44 | 333,766 | 1,000,000 | 33.4% | episodes with exactly one rabbit: a single rabbit's smell is defined only there |
 
 ## f3_univariate__eating
 
-Figure 3 — single-factor effects on eating. **Axes.** Both panels: horizontal, the change in the run's share of chosen steps spent eating, in percentage points, for a one-standard-deviation increase in the factor (zero marked by a vertical rule); vertical, the factor, ranked by its median absolute effect across runs, largest at the top. Left panel: factors drawn before the agent acts. Right panel: consequences produced during the episode.
+Figure 3b — single-factor effects: Eating. **Axes.** Both panels: horizontal, the change in the run's share of chosen steps showing the behaviour (eating), in percentage points, for a one-standard-deviation increase in the factor (zero marked by a vertical rule); the two panels have different horizontal scales, so compare positions within a panel only; vertical, the factor, ranked by its median absolute effect across runs, largest at the top. Left panel: factors drawn before the agent acts. Right panel: consequences produced during the episode.
 
 | subset | used | available | share | why |
 |---|---:|---:|---:|---|
-| all episodes, two-channel smell (control), ordinary agent, seed 42 | 1,000,000 | 1,000,000 | 100.0% | the episodes on which those factors are defined |
-| exactly one predator, two-channel smell (control), ordinary agent, seed 42 | 333,743 | 1,000,000 | 33.4% | the episodes on which those factors are defined |
-| exactly one rabbit, two-channel smell (control), ordinary agent, seed 42 | 333,766 | 1,000,000 | 33.4% | the episodes on which those factors are defined |
-| all episodes, two-channel smell (control), ordinary agent, seed 43 | 1,000,000 | 1,000,000 | 100.0% | the episodes on which those factors are defined |
-| exactly one predator, two-channel smell (control), ordinary agent, seed 43 | 333,743 | 1,000,000 | 33.4% | the episodes on which those factors are defined |
-| exactly one rabbit, two-channel smell (control), ordinary agent, seed 43 | 333,766 | 1,000,000 | 33.4% | the episodes on which those factors are defined |
-| all episodes, two-channel smell (control), ordinary agent, seed 44 | 1,000,000 | 1,000,000 | 100.0% | the episodes on which those factors are defined |
-| exactly one predator, two-channel smell (control), ordinary agent, seed 44 | 333,743 | 1,000,000 | 33.4% | the episodes on which those factors are defined |
-| exactly one rabbit, two-channel smell (control), ordinary agent, seed 44 | 333,766 | 1,000,000 | 33.4% | the episodes on which those factors are defined |
-| all episodes, two-channel smell (control), modulated agent, seed 42 | 1,000,000 | 1,000,000 | 100.0% | the episodes on which those factors are defined |
-| exactly one predator, two-channel smell (control), modulated agent, seed 42 | 333,743 | 1,000,000 | 33.4% | the episodes on which those factors are defined |
-| exactly one rabbit, two-channel smell (control), modulated agent, seed 42 | 333,766 | 1,000,000 | 33.4% | the episodes on which those factors are defined |
-| all episodes, two-channel smell (control), modulated agent, seed 43 | 1,000,000 | 1,000,000 | 100.0% | the episodes on which those factors are defined |
-| exactly one predator, two-channel smell (control), modulated agent, seed 43 | 333,743 | 1,000,000 | 33.4% | the episodes on which those factors are defined |
-| exactly one rabbit, two-channel smell (control), modulated agent, seed 43 | 333,766 | 1,000,000 | 33.4% | the episodes on which those factors are defined |
-| all episodes, two-channel smell (control), modulated agent, seed 44 | 1,000,000 | 1,000,000 | 100.0% | the episodes on which those factors are defined |
-| exactly one predator, two-channel smell (control), modulated agent, seed 44 | 333,743 | 1,000,000 | 33.4% | the episodes on which those factors are defined |
-| exactly one rabbit, two-channel smell (control), modulated agent, seed 44 | 333,766 | 1,000,000 | 33.4% | the episodes on which those factors are defined |
-| all episodes, single-channel smell, ordinary agent, seed 42 | 1,000,000 | 1,000,000 | 100.0% | the episodes on which those factors are defined |
-| exactly one predator, single-channel smell, ordinary agent, seed 42 | 333,743 | 1,000,000 | 33.4% | the episodes on which those factors are defined |
-| exactly one rabbit, single-channel smell, ordinary agent, seed 42 | 333,766 | 1,000,000 | 33.4% | the episodes on which those factors are defined |
-| all episodes, single-channel smell, ordinary agent, seed 43 | 1,000,000 | 1,000,000 | 100.0% | the episodes on which those factors are defined |
-| exactly one predator, single-channel smell, ordinary agent, seed 43 | 333,743 | 1,000,000 | 33.4% | the episodes on which those factors are defined |
-| exactly one rabbit, single-channel smell, ordinary agent, seed 43 | 333,766 | 1,000,000 | 33.4% | the episodes on which those factors are defined |
-| all episodes, single-channel smell, ordinary agent, seed 44 | 1,000,000 | 1,000,000 | 100.0% | the episodes on which those factors are defined |
-| exactly one predator, single-channel smell, ordinary agent, seed 44 | 333,743 | 1,000,000 | 33.4% | the episodes on which those factors are defined |
-| exactly one rabbit, single-channel smell, ordinary agent, seed 44 | 333,766 | 1,000,000 | 33.4% | the episodes on which those factors are defined |
-| all episodes, single-channel smell, modulated agent, seed 42 | 1,000,000 | 1,000,000 | 100.0% | the episodes on which those factors are defined |
-| exactly one predator, single-channel smell, modulated agent, seed 42 | 333,743 | 1,000,000 | 33.4% | the episodes on which those factors are defined |
-| exactly one rabbit, single-channel smell, modulated agent, seed 42 | 333,766 | 1,000,000 | 33.4% | the episodes on which those factors are defined |
-| all episodes, single-channel smell, modulated agent, seed 43 | 1,000,000 | 1,000,000 | 100.0% | the episodes on which those factors are defined |
-| exactly one predator, single-channel smell, modulated agent, seed 43 | 333,743 | 1,000,000 | 33.4% | the episodes on which those factors are defined |
-| exactly one rabbit, single-channel smell, modulated agent, seed 43 | 333,766 | 1,000,000 | 33.4% | the episodes on which those factors are defined |
-| all episodes, single-channel smell, modulated agent, seed 44 | 1,000,000 | 1,000,000 | 100.0% | the episodes on which those factors are defined |
-| exactly one predator, single-channel smell, modulated agent, seed 44 | 333,743 | 1,000,000 | 33.4% | the episodes on which those factors are defined |
-| exactly one rabbit, single-channel smell, modulated agent, seed 44 | 333,766 | 1,000,000 | 33.4% | the episodes on which those factors are defined |
-| all episodes, matched-strength smell, ordinary agent, seed 42 | 1,000,000 | 1,000,000 | 100.0% | the episodes on which those factors are defined |
-| exactly one predator, matched-strength smell, ordinary agent, seed 42 | 333,743 | 1,000,000 | 33.4% | the episodes on which those factors are defined |
-| exactly one rabbit, matched-strength smell, ordinary agent, seed 42 | 333,766 | 1,000,000 | 33.4% | the episodes on which those factors are defined |
-| all episodes, matched-strength smell, ordinary agent, seed 43 | 1,000,000 | 1,000,000 | 100.0% | the episodes on which those factors are defined |
-| exactly one predator, matched-strength smell, ordinary agent, seed 43 | 333,743 | 1,000,000 | 33.4% | the episodes on which those factors are defined |
-| exactly one rabbit, matched-strength smell, ordinary agent, seed 43 | 333,766 | 1,000,000 | 33.4% | the episodes on which those factors are defined |
-| all episodes, matched-strength smell, ordinary agent, seed 44 | 1,000,000 | 1,000,000 | 100.0% | the episodes on which those factors are defined |
-| exactly one predator, matched-strength smell, ordinary agent, seed 44 | 333,743 | 1,000,000 | 33.4% | the episodes on which those factors are defined |
-| exactly one rabbit, matched-strength smell, ordinary agent, seed 44 | 333,766 | 1,000,000 | 33.4% | the episodes on which those factors are defined |
-| all episodes, matched-strength smell, modulated agent, seed 42 | 1,000,000 | 1,000,000 | 100.0% | the episodes on which those factors are defined |
-| exactly one predator, matched-strength smell, modulated agent, seed 42 | 333,743 | 1,000,000 | 33.4% | the episodes on which those factors are defined |
-| exactly one rabbit, matched-strength smell, modulated agent, seed 42 | 333,766 | 1,000,000 | 33.4% | the episodes on which those factors are defined |
-| all episodes, matched-strength smell, modulated agent, seed 43 | 1,000,000 | 1,000,000 | 100.0% | the episodes on which those factors are defined |
-| exactly one predator, matched-strength smell, modulated agent, seed 43 | 333,743 | 1,000,000 | 33.4% | the episodes on which those factors are defined |
-| exactly one rabbit, matched-strength smell, modulated agent, seed 43 | 333,766 | 1,000,000 | 33.4% | the episodes on which those factors are defined |
-| all episodes, matched-strength smell, modulated agent, seed 44 | 1,000,000 | 1,000,000 | 100.0% | the episodes on which those factors are defined |
-| exactly one predator, matched-strength smell, modulated agent, seed 44 | 333,743 | 1,000,000 | 33.4% | the episodes on which those factors are defined |
-| exactly one rabbit, matched-strength smell, modulated agent, seed 44 | 333,766 | 1,000,000 | 33.4% | the episodes on which those factors are defined |
+| factors defined on every episode, two-channel smell (control), ordinary agent, seed 42 | 1,000,000 | 1,000,000 | 100.0% | all episodes |
+| predator traits and smell, two-channel smell (control), ordinary agent, seed 42 | 333,743 | 1,000,000 | 33.4% | episodes with exactly one predator: a single predator's traits are defined only there |
+| rabbit smell, two-channel smell (control), ordinary agent, seed 42 | 333,766 | 1,000,000 | 33.4% | episodes with exactly one rabbit: a single rabbit's smell is defined only there |
+| factors defined on every episode, two-channel smell (control), ordinary agent, seed 43 | 1,000,000 | 1,000,000 | 100.0% | all episodes |
+| predator traits and smell, two-channel smell (control), ordinary agent, seed 43 | 333,743 | 1,000,000 | 33.4% | episodes with exactly one predator: a single predator's traits are defined only there |
+| rabbit smell, two-channel smell (control), ordinary agent, seed 43 | 333,766 | 1,000,000 | 33.4% | episodes with exactly one rabbit: a single rabbit's smell is defined only there |
+| factors defined on every episode, two-channel smell (control), ordinary agent, seed 44 | 1,000,000 | 1,000,000 | 100.0% | all episodes |
+| predator traits and smell, two-channel smell (control), ordinary agent, seed 44 | 333,743 | 1,000,000 | 33.4% | episodes with exactly one predator: a single predator's traits are defined only there |
+| rabbit smell, two-channel smell (control), ordinary agent, seed 44 | 333,766 | 1,000,000 | 33.4% | episodes with exactly one rabbit: a single rabbit's smell is defined only there |
+| factors defined on every episode, two-channel smell (control), modulated agent, seed 42 | 1,000,000 | 1,000,000 | 100.0% | all episodes |
+| predator traits and smell, two-channel smell (control), modulated agent, seed 42 | 333,743 | 1,000,000 | 33.4% | episodes with exactly one predator: a single predator's traits are defined only there |
+| rabbit smell, two-channel smell (control), modulated agent, seed 42 | 333,766 | 1,000,000 | 33.4% | episodes with exactly one rabbit: a single rabbit's smell is defined only there |
+| factors defined on every episode, two-channel smell (control), modulated agent, seed 43 | 1,000,000 | 1,000,000 | 100.0% | all episodes |
+| predator traits and smell, two-channel smell (control), modulated agent, seed 43 | 333,743 | 1,000,000 | 33.4% | episodes with exactly one predator: a single predator's traits are defined only there |
+| rabbit smell, two-channel smell (control), modulated agent, seed 43 | 333,766 | 1,000,000 | 33.4% | episodes with exactly one rabbit: a single rabbit's smell is defined only there |
+| factors defined on every episode, two-channel smell (control), modulated agent, seed 44 | 1,000,000 | 1,000,000 | 100.0% | all episodes |
+| predator traits and smell, two-channel smell (control), modulated agent, seed 44 | 333,743 | 1,000,000 | 33.4% | episodes with exactly one predator: a single predator's traits are defined only there |
+| rabbit smell, two-channel smell (control), modulated agent, seed 44 | 333,766 | 1,000,000 | 33.4% | episodes with exactly one rabbit: a single rabbit's smell is defined only there |
+| factors defined on every episode, single-channel smell, ordinary agent, seed 42 | 1,000,000 | 1,000,000 | 100.0% | all episodes |
+| predator traits and smell, single-channel smell, ordinary agent, seed 42 | 333,743 | 1,000,000 | 33.4% | episodes with exactly one predator: a single predator's traits are defined only there |
+| rabbit smell, single-channel smell, ordinary agent, seed 42 | 333,766 | 1,000,000 | 33.4% | episodes with exactly one rabbit: a single rabbit's smell is defined only there |
+| factors defined on every episode, single-channel smell, ordinary agent, seed 43 | 1,000,000 | 1,000,000 | 100.0% | all episodes |
+| predator traits and smell, single-channel smell, ordinary agent, seed 43 | 333,743 | 1,000,000 | 33.4% | episodes with exactly one predator: a single predator's traits are defined only there |
+| rabbit smell, single-channel smell, ordinary agent, seed 43 | 333,766 | 1,000,000 | 33.4% | episodes with exactly one rabbit: a single rabbit's smell is defined only there |
+| factors defined on every episode, single-channel smell, ordinary agent, seed 44 | 1,000,000 | 1,000,000 | 100.0% | all episodes |
+| predator traits and smell, single-channel smell, ordinary agent, seed 44 | 333,743 | 1,000,000 | 33.4% | episodes with exactly one predator: a single predator's traits are defined only there |
+| rabbit smell, single-channel smell, ordinary agent, seed 44 | 333,766 | 1,000,000 | 33.4% | episodes with exactly one rabbit: a single rabbit's smell is defined only there |
+| factors defined on every episode, single-channel smell, modulated agent, seed 42 | 1,000,000 | 1,000,000 | 100.0% | all episodes |
+| predator traits and smell, single-channel smell, modulated agent, seed 42 | 333,743 | 1,000,000 | 33.4% | episodes with exactly one predator: a single predator's traits are defined only there |
+| rabbit smell, single-channel smell, modulated agent, seed 42 | 333,766 | 1,000,000 | 33.4% | episodes with exactly one rabbit: a single rabbit's smell is defined only there |
+| factors defined on every episode, single-channel smell, modulated agent, seed 43 | 1,000,000 | 1,000,000 | 100.0% | all episodes |
+| predator traits and smell, single-channel smell, modulated agent, seed 43 | 333,743 | 1,000,000 | 33.4% | episodes with exactly one predator: a single predator's traits are defined only there |
+| rabbit smell, single-channel smell, modulated agent, seed 43 | 333,766 | 1,000,000 | 33.4% | episodes with exactly one rabbit: a single rabbit's smell is defined only there |
+| factors defined on every episode, single-channel smell, modulated agent, seed 44 | 1,000,000 | 1,000,000 | 100.0% | all episodes |
+| predator traits and smell, single-channel smell, modulated agent, seed 44 | 333,743 | 1,000,000 | 33.4% | episodes with exactly one predator: a single predator's traits are defined only there |
+| rabbit smell, single-channel smell, modulated agent, seed 44 | 333,766 | 1,000,000 | 33.4% | episodes with exactly one rabbit: a single rabbit's smell is defined only there |
+| factors defined on every episode, matched-strength smell, ordinary agent, seed 42 | 1,000,000 | 1,000,000 | 100.0% | all episodes |
+| predator traits and smell, matched-strength smell, ordinary agent, seed 42 | 333,743 | 1,000,000 | 33.4% | episodes with exactly one predator: a single predator's traits are defined only there |
+| rabbit smell, matched-strength smell, ordinary agent, seed 42 | 333,766 | 1,000,000 | 33.4% | episodes with exactly one rabbit: a single rabbit's smell is defined only there |
+| factors defined on every episode, matched-strength smell, ordinary agent, seed 43 | 1,000,000 | 1,000,000 | 100.0% | all episodes |
+| predator traits and smell, matched-strength smell, ordinary agent, seed 43 | 333,743 | 1,000,000 | 33.4% | episodes with exactly one predator: a single predator's traits are defined only there |
+| rabbit smell, matched-strength smell, ordinary agent, seed 43 | 333,766 | 1,000,000 | 33.4% | episodes with exactly one rabbit: a single rabbit's smell is defined only there |
+| factors defined on every episode, matched-strength smell, ordinary agent, seed 44 | 1,000,000 | 1,000,000 | 100.0% | all episodes |
+| predator traits and smell, matched-strength smell, ordinary agent, seed 44 | 333,743 | 1,000,000 | 33.4% | episodes with exactly one predator: a single predator's traits are defined only there |
+| rabbit smell, matched-strength smell, ordinary agent, seed 44 | 333,766 | 1,000,000 | 33.4% | episodes with exactly one rabbit: a single rabbit's smell is defined only there |
+| factors defined on every episode, matched-strength smell, modulated agent, seed 42 | 1,000,000 | 1,000,000 | 100.0% | all episodes |
+| predator traits and smell, matched-strength smell, modulated agent, seed 42 | 333,743 | 1,000,000 | 33.4% | episodes with exactly one predator: a single predator's traits are defined only there |
+| rabbit smell, matched-strength smell, modulated agent, seed 42 | 333,766 | 1,000,000 | 33.4% | episodes with exactly one rabbit: a single rabbit's smell is defined only there |
+| factors defined on every episode, matched-strength smell, modulated agent, seed 43 | 1,000,000 | 1,000,000 | 100.0% | all episodes |
+| predator traits and smell, matched-strength smell, modulated agent, seed 43 | 333,743 | 1,000,000 | 33.4% | episodes with exactly one predator: a single predator's traits are defined only there |
+| rabbit smell, matched-strength smell, modulated agent, seed 43 | 333,766 | 1,000,000 | 33.4% | episodes with exactly one rabbit: a single rabbit's smell is defined only there |
+| factors defined on every episode, matched-strength smell, modulated agent, seed 44 | 1,000,000 | 1,000,000 | 100.0% | all episodes |
+| predator traits and smell, matched-strength smell, modulated agent, seed 44 | 333,743 | 1,000,000 | 33.4% | episodes with exactly one predator: a single predator's traits are defined only there |
+| rabbit smell, matched-strength smell, modulated agent, seed 44 | 333,766 | 1,000,000 | 33.4% | episodes with exactly one rabbit: a single rabbit's smell is defined only there |
 
 ## f3_univariate__near_rabbit
 
-Figure 3 — single-factor effects on within two squares of a rabbit. **Axes.** Both panels: horizontal, the change in the run's share of chosen steps spent within two squares of a rabbit, in percentage points, for a one-standard-deviation increase in the factor (zero marked by a vertical rule); vertical, the factor, ranked by its median absolute effect across runs, largest at the top. Left panel: factors drawn before the agent acts. Right panel: consequences produced during the episode.
+Figure 3c — single-factor effects: Time near a rabbit (within 2 squares). **Axes.** Both panels: horizontal, the change in the run's share of chosen steps showing the behaviour (time near a rabbit), in percentage points, for a one-standard-deviation increase in the factor (zero marked by a vertical rule); the two panels have different horizontal scales, so compare positions within a panel only; vertical, the factor, ranked by its median absolute effect across runs, largest at the top. Left panel: factors drawn before the agent acts. Right panel: consequences produced during the episode.
 
 | subset | used | available | share | why |
 |---|---:|---:|---:|---|
-| all episodes, two-channel smell (control), ordinary agent, seed 42 | 1,000,000 | 1,000,000 | 100.0% | the episodes on which those factors are defined |
-| exactly one predator, two-channel smell (control), ordinary agent, seed 42 | 333,743 | 1,000,000 | 33.4% | the episodes on which those factors are defined |
-| exactly one rabbit, two-channel smell (control), ordinary agent, seed 42 | 333,766 | 1,000,000 | 33.4% | the episodes on which those factors are defined |
-| all episodes, two-channel smell (control), ordinary agent, seed 43 | 1,000,000 | 1,000,000 | 100.0% | the episodes on which those factors are defined |
-| exactly one predator, two-channel smell (control), ordinary agent, seed 43 | 333,743 | 1,000,000 | 33.4% | the episodes on which those factors are defined |
-| exactly one rabbit, two-channel smell (control), ordinary agent, seed 43 | 333,766 | 1,000,000 | 33.4% | the episodes on which those factors are defined |
-| all episodes, two-channel smell (control), ordinary agent, seed 44 | 1,000,000 | 1,000,000 | 100.0% | the episodes on which those factors are defined |
-| exactly one predator, two-channel smell (control), ordinary agent, seed 44 | 333,743 | 1,000,000 | 33.4% | the episodes on which those factors are defined |
-| exactly one rabbit, two-channel smell (control), ordinary agent, seed 44 | 333,766 | 1,000,000 | 33.4% | the episodes on which those factors are defined |
-| all episodes, two-channel smell (control), modulated agent, seed 42 | 1,000,000 | 1,000,000 | 100.0% | the episodes on which those factors are defined |
-| exactly one predator, two-channel smell (control), modulated agent, seed 42 | 333,743 | 1,000,000 | 33.4% | the episodes on which those factors are defined |
-| exactly one rabbit, two-channel smell (control), modulated agent, seed 42 | 333,766 | 1,000,000 | 33.4% | the episodes on which those factors are defined |
-| all episodes, two-channel smell (control), modulated agent, seed 43 | 1,000,000 | 1,000,000 | 100.0% | the episodes on which those factors are defined |
-| exactly one predator, two-channel smell (control), modulated agent, seed 43 | 333,743 | 1,000,000 | 33.4% | the episodes on which those factors are defined |
-| exactly one rabbit, two-channel smell (control), modulated agent, seed 43 | 333,766 | 1,000,000 | 33.4% | the episodes on which those factors are defined |
-| all episodes, two-channel smell (control), modulated agent, seed 44 | 1,000,000 | 1,000,000 | 100.0% | the episodes on which those factors are defined |
-| exactly one predator, two-channel smell (control), modulated agent, seed 44 | 333,743 | 1,000,000 | 33.4% | the episodes on which those factors are defined |
-| exactly one rabbit, two-channel smell (control), modulated agent, seed 44 | 333,766 | 1,000,000 | 33.4% | the episodes on which those factors are defined |
-| all episodes, single-channel smell, ordinary agent, seed 42 | 1,000,000 | 1,000,000 | 100.0% | the episodes on which those factors are defined |
-| exactly one predator, single-channel smell, ordinary agent, seed 42 | 333,743 | 1,000,000 | 33.4% | the episodes on which those factors are defined |
-| exactly one rabbit, single-channel smell, ordinary agent, seed 42 | 333,766 | 1,000,000 | 33.4% | the episodes on which those factors are defined |
-| all episodes, single-channel smell, ordinary agent, seed 43 | 1,000,000 | 1,000,000 | 100.0% | the episodes on which those factors are defined |
-| exactly one predator, single-channel smell, ordinary agent, seed 43 | 333,743 | 1,000,000 | 33.4% | the episodes on which those factors are defined |
-| exactly one rabbit, single-channel smell, ordinary agent, seed 43 | 333,766 | 1,000,000 | 33.4% | the episodes on which those factors are defined |
-| all episodes, single-channel smell, ordinary agent, seed 44 | 1,000,000 | 1,000,000 | 100.0% | the episodes on which those factors are defined |
-| exactly one predator, single-channel smell, ordinary agent, seed 44 | 333,743 | 1,000,000 | 33.4% | the episodes on which those factors are defined |
-| exactly one rabbit, single-channel smell, ordinary agent, seed 44 | 333,766 | 1,000,000 | 33.4% | the episodes on which those factors are defined |
-| all episodes, single-channel smell, modulated agent, seed 42 | 1,000,000 | 1,000,000 | 100.0% | the episodes on which those factors are defined |
-| exactly one predator, single-channel smell, modulated agent, seed 42 | 333,743 | 1,000,000 | 33.4% | the episodes on which those factors are defined |
-| exactly one rabbit, single-channel smell, modulated agent, seed 42 | 333,766 | 1,000,000 | 33.4% | the episodes on which those factors are defined |
-| all episodes, single-channel smell, modulated agent, seed 43 | 1,000,000 | 1,000,000 | 100.0% | the episodes on which those factors are defined |
-| exactly one predator, single-channel smell, modulated agent, seed 43 | 333,743 | 1,000,000 | 33.4% | the episodes on which those factors are defined |
-| exactly one rabbit, single-channel smell, modulated agent, seed 43 | 333,766 | 1,000,000 | 33.4% | the episodes on which those factors are defined |
-| all episodes, single-channel smell, modulated agent, seed 44 | 1,000,000 | 1,000,000 | 100.0% | the episodes on which those factors are defined |
-| exactly one predator, single-channel smell, modulated agent, seed 44 | 333,743 | 1,000,000 | 33.4% | the episodes on which those factors are defined |
-| exactly one rabbit, single-channel smell, modulated agent, seed 44 | 333,766 | 1,000,000 | 33.4% | the episodes on which those factors are defined |
-| all episodes, matched-strength smell, ordinary agent, seed 42 | 1,000,000 | 1,000,000 | 100.0% | the episodes on which those factors are defined |
-| exactly one predator, matched-strength smell, ordinary agent, seed 42 | 333,743 | 1,000,000 | 33.4% | the episodes on which those factors are defined |
-| exactly one rabbit, matched-strength smell, ordinary agent, seed 42 | 333,766 | 1,000,000 | 33.4% | the episodes on which those factors are defined |
-| all episodes, matched-strength smell, ordinary agent, seed 43 | 1,000,000 | 1,000,000 | 100.0% | the episodes on which those factors are defined |
-| exactly one predator, matched-strength smell, ordinary agent, seed 43 | 333,743 | 1,000,000 | 33.4% | the episodes on which those factors are defined |
-| exactly one rabbit, matched-strength smell, ordinary agent, seed 43 | 333,766 | 1,000,000 | 33.4% | the episodes on which those factors are defined |
-| all episodes, matched-strength smell, ordinary agent, seed 44 | 1,000,000 | 1,000,000 | 100.0% | the episodes on which those factors are defined |
-| exactly one predator, matched-strength smell, ordinary agent, seed 44 | 333,743 | 1,000,000 | 33.4% | the episodes on which those factors are defined |
-| exactly one rabbit, matched-strength smell, ordinary agent, seed 44 | 333,766 | 1,000,000 | 33.4% | the episodes on which those factors are defined |
-| all episodes, matched-strength smell, modulated agent, seed 42 | 1,000,000 | 1,000,000 | 100.0% | the episodes on which those factors are defined |
-| exactly one predator, matched-strength smell, modulated agent, seed 42 | 333,743 | 1,000,000 | 33.4% | the episodes on which those factors are defined |
-| exactly one rabbit, matched-strength smell, modulated agent, seed 42 | 333,766 | 1,000,000 | 33.4% | the episodes on which those factors are defined |
-| all episodes, matched-strength smell, modulated agent, seed 43 | 1,000,000 | 1,000,000 | 100.0% | the episodes on which those factors are defined |
-| exactly one predator, matched-strength smell, modulated agent, seed 43 | 333,743 | 1,000,000 | 33.4% | the episodes on which those factors are defined |
-| exactly one rabbit, matched-strength smell, modulated agent, seed 43 | 333,766 | 1,000,000 | 33.4% | the episodes on which those factors are defined |
-| all episodes, matched-strength smell, modulated agent, seed 44 | 1,000,000 | 1,000,000 | 100.0% | the episodes on which those factors are defined |
-| exactly one predator, matched-strength smell, modulated agent, seed 44 | 333,743 | 1,000,000 | 33.4% | the episodes on which those factors are defined |
-| exactly one rabbit, matched-strength smell, modulated agent, seed 44 | 333,766 | 1,000,000 | 33.4% | the episodes on which those factors are defined |
+| factors defined on every episode, two-channel smell (control), ordinary agent, seed 42 | 1,000,000 | 1,000,000 | 100.0% | all episodes |
+| predator traits and smell, two-channel smell (control), ordinary agent, seed 42 | 333,743 | 1,000,000 | 33.4% | episodes with exactly one predator: a single predator's traits are defined only there |
+| rabbit smell, two-channel smell (control), ordinary agent, seed 42 | 333,766 | 1,000,000 | 33.4% | episodes with exactly one rabbit: a single rabbit's smell is defined only there |
+| factors defined on every episode, two-channel smell (control), ordinary agent, seed 43 | 1,000,000 | 1,000,000 | 100.0% | all episodes |
+| predator traits and smell, two-channel smell (control), ordinary agent, seed 43 | 333,743 | 1,000,000 | 33.4% | episodes with exactly one predator: a single predator's traits are defined only there |
+| rabbit smell, two-channel smell (control), ordinary agent, seed 43 | 333,766 | 1,000,000 | 33.4% | episodes with exactly one rabbit: a single rabbit's smell is defined only there |
+| factors defined on every episode, two-channel smell (control), ordinary agent, seed 44 | 1,000,000 | 1,000,000 | 100.0% | all episodes |
+| predator traits and smell, two-channel smell (control), ordinary agent, seed 44 | 333,743 | 1,000,000 | 33.4% | episodes with exactly one predator: a single predator's traits are defined only there |
+| rabbit smell, two-channel smell (control), ordinary agent, seed 44 | 333,766 | 1,000,000 | 33.4% | episodes with exactly one rabbit: a single rabbit's smell is defined only there |
+| factors defined on every episode, two-channel smell (control), modulated agent, seed 42 | 1,000,000 | 1,000,000 | 100.0% | all episodes |
+| predator traits and smell, two-channel smell (control), modulated agent, seed 42 | 333,743 | 1,000,000 | 33.4% | episodes with exactly one predator: a single predator's traits are defined only there |
+| rabbit smell, two-channel smell (control), modulated agent, seed 42 | 333,766 | 1,000,000 | 33.4% | episodes with exactly one rabbit: a single rabbit's smell is defined only there |
+| factors defined on every episode, two-channel smell (control), modulated agent, seed 43 | 1,000,000 | 1,000,000 | 100.0% | all episodes |
+| predator traits and smell, two-channel smell (control), modulated agent, seed 43 | 333,743 | 1,000,000 | 33.4% | episodes with exactly one predator: a single predator's traits are defined only there |
+| rabbit smell, two-channel smell (control), modulated agent, seed 43 | 333,766 | 1,000,000 | 33.4% | episodes with exactly one rabbit: a single rabbit's smell is defined only there |
+| factors defined on every episode, two-channel smell (control), modulated agent, seed 44 | 1,000,000 | 1,000,000 | 100.0% | all episodes |
+| predator traits and smell, two-channel smell (control), modulated agent, seed 44 | 333,743 | 1,000,000 | 33.4% | episodes with exactly one predator: a single predator's traits are defined only there |
+| rabbit smell, two-channel smell (control), modulated agent, seed 44 | 333,766 | 1,000,000 | 33.4% | episodes with exactly one rabbit: a single rabbit's smell is defined only there |
+| factors defined on every episode, single-channel smell, ordinary agent, seed 42 | 1,000,000 | 1,000,000 | 100.0% | all episodes |
+| predator traits and smell, single-channel smell, ordinary agent, seed 42 | 333,743 | 1,000,000 | 33.4% | episodes with exactly one predator: a single predator's traits are defined only there |
+| rabbit smell, single-channel smell, ordinary agent, seed 42 | 333,766 | 1,000,000 | 33.4% | episodes with exactly one rabbit: a single rabbit's smell is defined only there |
+| factors defined on every episode, single-channel smell, ordinary agent, seed 43 | 1,000,000 | 1,000,000 | 100.0% | all episodes |
+| predator traits and smell, single-channel smell, ordinary agent, seed 43 | 333,743 | 1,000,000 | 33.4% | episodes with exactly one predator: a single predator's traits are defined only there |
+| rabbit smell, single-channel smell, ordinary agent, seed 43 | 333,766 | 1,000,000 | 33.4% | episodes with exactly one rabbit: a single rabbit's smell is defined only there |
+| factors defined on every episode, single-channel smell, ordinary agent, seed 44 | 1,000,000 | 1,000,000 | 100.0% | all episodes |
+| predator traits and smell, single-channel smell, ordinary agent, seed 44 | 333,743 | 1,000,000 | 33.4% | episodes with exactly one predator: a single predator's traits are defined only there |
+| rabbit smell, single-channel smell, ordinary agent, seed 44 | 333,766 | 1,000,000 | 33.4% | episodes with exactly one rabbit: a single rabbit's smell is defined only there |
+| factors defined on every episode, single-channel smell, modulated agent, seed 42 | 1,000,000 | 1,000,000 | 100.0% | all episodes |
+| predator traits and smell, single-channel smell, modulated agent, seed 42 | 333,743 | 1,000,000 | 33.4% | episodes with exactly one predator: a single predator's traits are defined only there |
+| rabbit smell, single-channel smell, modulated agent, seed 42 | 333,766 | 1,000,000 | 33.4% | episodes with exactly one rabbit: a single rabbit's smell is defined only there |
+| factors defined on every episode, single-channel smell, modulated agent, seed 43 | 1,000,000 | 1,000,000 | 100.0% | all episodes |
+| predator traits and smell, single-channel smell, modulated agent, seed 43 | 333,743 | 1,000,000 | 33.4% | episodes with exactly one predator: a single predator's traits are defined only there |
+| rabbit smell, single-channel smell, modulated agent, seed 43 | 333,766 | 1,000,000 | 33.4% | episodes with exactly one rabbit: a single rabbit's smell is defined only there |
+| factors defined on every episode, single-channel smell, modulated agent, seed 44 | 1,000,000 | 1,000,000 | 100.0% | all episodes |
+| predator traits and smell, single-channel smell, modulated agent, seed 44 | 333,743 | 1,000,000 | 33.4% | episodes with exactly one predator: a single predator's traits are defined only there |
+| rabbit smell, single-channel smell, modulated agent, seed 44 | 333,766 | 1,000,000 | 33.4% | episodes with exactly one rabbit: a single rabbit's smell is defined only there |
+| factors defined on every episode, matched-strength smell, ordinary agent, seed 42 | 1,000,000 | 1,000,000 | 100.0% | all episodes |
+| predator traits and smell, matched-strength smell, ordinary agent, seed 42 | 333,743 | 1,000,000 | 33.4% | episodes with exactly one predator: a single predator's traits are defined only there |
+| rabbit smell, matched-strength smell, ordinary agent, seed 42 | 333,766 | 1,000,000 | 33.4% | episodes with exactly one rabbit: a single rabbit's smell is defined only there |
+| factors defined on every episode, matched-strength smell, ordinary agent, seed 43 | 1,000,000 | 1,000,000 | 100.0% | all episodes |
+| predator traits and smell, matched-strength smell, ordinary agent, seed 43 | 333,743 | 1,000,000 | 33.4% | episodes with exactly one predator: a single predator's traits are defined only there |
+| rabbit smell, matched-strength smell, ordinary agent, seed 43 | 333,766 | 1,000,000 | 33.4% | episodes with exactly one rabbit: a single rabbit's smell is defined only there |
+| factors defined on every episode, matched-strength smell, ordinary agent, seed 44 | 1,000,000 | 1,000,000 | 100.0% | all episodes |
+| predator traits and smell, matched-strength smell, ordinary agent, seed 44 | 333,743 | 1,000,000 | 33.4% | episodes with exactly one predator: a single predator's traits are defined only there |
+| rabbit smell, matched-strength smell, ordinary agent, seed 44 | 333,766 | 1,000,000 | 33.4% | episodes with exactly one rabbit: a single rabbit's smell is defined only there |
+| factors defined on every episode, matched-strength smell, modulated agent, seed 42 | 1,000,000 | 1,000,000 | 100.0% | all episodes |
+| predator traits and smell, matched-strength smell, modulated agent, seed 42 | 333,743 | 1,000,000 | 33.4% | episodes with exactly one predator: a single predator's traits are defined only there |
+| rabbit smell, matched-strength smell, modulated agent, seed 42 | 333,766 | 1,000,000 | 33.4% | episodes with exactly one rabbit: a single rabbit's smell is defined only there |
+| factors defined on every episode, matched-strength smell, modulated agent, seed 43 | 1,000,000 | 1,000,000 | 100.0% | all episodes |
+| predator traits and smell, matched-strength smell, modulated agent, seed 43 | 333,743 | 1,000,000 | 33.4% | episodes with exactly one predator: a single predator's traits are defined only there |
+| rabbit smell, matched-strength smell, modulated agent, seed 43 | 333,766 | 1,000,000 | 33.4% | episodes with exactly one rabbit: a single rabbit's smell is defined only there |
+| factors defined on every episode, matched-strength smell, modulated agent, seed 44 | 1,000,000 | 1,000,000 | 100.0% | all episodes |
+| predator traits and smell, matched-strength smell, modulated agent, seed 44 | 333,743 | 1,000,000 | 33.4% | episodes with exactly one predator: a single predator's traits are defined only there |
+| rabbit smell, matched-strength smell, modulated agent, seed 44 | 333,766 | 1,000,000 | 33.4% | episodes with exactly one rabbit: a single rabbit's smell is defined only there |
 
 ## f3_univariate__near_predator
 
-Figure 3 — single-factor effects on within two squares of a predator. **Axes.** Both panels: horizontal, the change in the run's share of chosen steps spent within two squares of a predator, in percentage points, for a one-standard-deviation increase in the factor (zero marked by a vertical rule); vertical, the factor, ranked by its median absolute effect across runs, largest at the top. Left panel: factors drawn before the agent acts. Right panel: consequences produced during the episode.
+Figure 3d — single-factor effects: Time near a predator (within 2 squares). **Axes.** Both panels: horizontal, the change in the run's share of chosen steps showing the behaviour (time near a predator), in percentage points, for a one-standard-deviation increase in the factor (zero marked by a vertical rule); the two panels have different horizontal scales, so compare positions within a panel only; vertical, the factor, ranked by its median absolute effect across runs, largest at the top. Left panel: factors drawn before the agent acts. Right panel: consequences produced during the episode.
 
 | subset | used | available | share | why |
 |---|---:|---:|---:|---|
-| all episodes, two-channel smell (control), ordinary agent, seed 42 | 1,000,000 | 1,000,000 | 100.0% | the episodes on which those factors are defined |
-| exactly one predator, two-channel smell (control), ordinary agent, seed 42 | 333,743 | 1,000,000 | 33.4% | the episodes on which those factors are defined |
-| exactly one rabbit, two-channel smell (control), ordinary agent, seed 42 | 333,766 | 1,000,000 | 33.4% | the episodes on which those factors are defined |
-| all episodes, two-channel smell (control), ordinary agent, seed 43 | 1,000,000 | 1,000,000 | 100.0% | the episodes on which those factors are defined |
-| exactly one predator, two-channel smell (control), ordinary agent, seed 43 | 333,743 | 1,000,000 | 33.4% | the episodes on which those factors are defined |
-| exactly one rabbit, two-channel smell (control), ordinary agent, seed 43 | 333,766 | 1,000,000 | 33.4% | the episodes on which those factors are defined |
-| all episodes, two-channel smell (control), ordinary agent, seed 44 | 1,000,000 | 1,000,000 | 100.0% | the episodes on which those factors are defined |
-| exactly one predator, two-channel smell (control), ordinary agent, seed 44 | 333,743 | 1,000,000 | 33.4% | the episodes on which those factors are defined |
-| exactly one rabbit, two-channel smell (control), ordinary agent, seed 44 | 333,766 | 1,000,000 | 33.4% | the episodes on which those factors are defined |
-| all episodes, two-channel smell (control), modulated agent, seed 42 | 1,000,000 | 1,000,000 | 100.0% | the episodes on which those factors are defined |
-| exactly one predator, two-channel smell (control), modulated agent, seed 42 | 333,743 | 1,000,000 | 33.4% | the episodes on which those factors are defined |
-| exactly one rabbit, two-channel smell (control), modulated agent, seed 42 | 333,766 | 1,000,000 | 33.4% | the episodes on which those factors are defined |
-| all episodes, two-channel smell (control), modulated agent, seed 43 | 1,000,000 | 1,000,000 | 100.0% | the episodes on which those factors are defined |
-| exactly one predator, two-channel smell (control), modulated agent, seed 43 | 333,743 | 1,000,000 | 33.4% | the episodes on which those factors are defined |
-| exactly one rabbit, two-channel smell (control), modulated agent, seed 43 | 333,766 | 1,000,000 | 33.4% | the episodes on which those factors are defined |
-| all episodes, two-channel smell (control), modulated agent, seed 44 | 1,000,000 | 1,000,000 | 100.0% | the episodes on which those factors are defined |
-| exactly one predator, two-channel smell (control), modulated agent, seed 44 | 333,743 | 1,000,000 | 33.4% | the episodes on which those factors are defined |
-| exactly one rabbit, two-channel smell (control), modulated agent, seed 44 | 333,766 | 1,000,000 | 33.4% | the episodes on which those factors are defined |
-| all episodes, single-channel smell, ordinary agent, seed 42 | 1,000,000 | 1,000,000 | 100.0% | the episodes on which those factors are defined |
-| exactly one predator, single-channel smell, ordinary agent, seed 42 | 333,743 | 1,000,000 | 33.4% | the episodes on which those factors are defined |
-| exactly one rabbit, single-channel smell, ordinary agent, seed 42 | 333,766 | 1,000,000 | 33.4% | the episodes on which those factors are defined |
-| all episodes, single-channel smell, ordinary agent, seed 43 | 1,000,000 | 1,000,000 | 100.0% | the episodes on which those factors are defined |
-| exactly one predator, single-channel smell, ordinary agent, seed 43 | 333,743 | 1,000,000 | 33.4% | the episodes on which those factors are defined |
-| exactly one rabbit, single-channel smell, ordinary agent, seed 43 | 333,766 | 1,000,000 | 33.4% | the episodes on which those factors are defined |
-| all episodes, single-channel smell, ordinary agent, seed 44 | 1,000,000 | 1,000,000 | 100.0% | the episodes on which those factors are defined |
-| exactly one predator, single-channel smell, ordinary agent, seed 44 | 333,743 | 1,000,000 | 33.4% | the episodes on which those factors are defined |
-| exactly one rabbit, single-channel smell, ordinary agent, seed 44 | 333,766 | 1,000,000 | 33.4% | the episodes on which those factors are defined |
-| all episodes, single-channel smell, modulated agent, seed 42 | 1,000,000 | 1,000,000 | 100.0% | the episodes on which those factors are defined |
-| exactly one predator, single-channel smell, modulated agent, seed 42 | 333,743 | 1,000,000 | 33.4% | the episodes on which those factors are defined |
-| exactly one rabbit, single-channel smell, modulated agent, seed 42 | 333,766 | 1,000,000 | 33.4% | the episodes on which those factors are defined |
-| all episodes, single-channel smell, modulated agent, seed 43 | 1,000,000 | 1,000,000 | 100.0% | the episodes on which those factors are defined |
-| exactly one predator, single-channel smell, modulated agent, seed 43 | 333,743 | 1,000,000 | 33.4% | the episodes on which those factors are defined |
-| exactly one rabbit, single-channel smell, modulated agent, seed 43 | 333,766 | 1,000,000 | 33.4% | the episodes on which those factors are defined |
-| all episodes, single-channel smell, modulated agent, seed 44 | 1,000,000 | 1,000,000 | 100.0% | the episodes on which those factors are defined |
-| exactly one predator, single-channel smell, modulated agent, seed 44 | 333,743 | 1,000,000 | 33.4% | the episodes on which those factors are defined |
-| exactly one rabbit, single-channel smell, modulated agent, seed 44 | 333,766 | 1,000,000 | 33.4% | the episodes on which those factors are defined |
-| all episodes, matched-strength smell, ordinary agent, seed 42 | 1,000,000 | 1,000,000 | 100.0% | the episodes on which those factors are defined |
-| exactly one predator, matched-strength smell, ordinary agent, seed 42 | 333,743 | 1,000,000 | 33.4% | the episodes on which those factors are defined |
-| exactly one rabbit, matched-strength smell, ordinary agent, seed 42 | 333,766 | 1,000,000 | 33.4% | the episodes on which those factors are defined |
-| all episodes, matched-strength smell, ordinary agent, seed 43 | 1,000,000 | 1,000,000 | 100.0% | the episodes on which those factors are defined |
-| exactly one predator, matched-strength smell, ordinary agent, seed 43 | 333,743 | 1,000,000 | 33.4% | the episodes on which those factors are defined |
-| exactly one rabbit, matched-strength smell, ordinary agent, seed 43 | 333,766 | 1,000,000 | 33.4% | the episodes on which those factors are defined |
-| all episodes, matched-strength smell, ordinary agent, seed 44 | 1,000,000 | 1,000,000 | 100.0% | the episodes on which those factors are defined |
-| exactly one predator, matched-strength smell, ordinary agent, seed 44 | 333,743 | 1,000,000 | 33.4% | the episodes on which those factors are defined |
-| exactly one rabbit, matched-strength smell, ordinary agent, seed 44 | 333,766 | 1,000,000 | 33.4% | the episodes on which those factors are defined |
-| all episodes, matched-strength smell, modulated agent, seed 42 | 1,000,000 | 1,000,000 | 100.0% | the episodes on which those factors are defined |
-| exactly one predator, matched-strength smell, modulated agent, seed 42 | 333,743 | 1,000,000 | 33.4% | the episodes on which those factors are defined |
-| exactly one rabbit, matched-strength smell, modulated agent, seed 42 | 333,766 | 1,000,000 | 33.4% | the episodes on which those factors are defined |
-| all episodes, matched-strength smell, modulated agent, seed 43 | 1,000,000 | 1,000,000 | 100.0% | the episodes on which those factors are defined |
-| exactly one predator, matched-strength smell, modulated agent, seed 43 | 333,743 | 1,000,000 | 33.4% | the episodes on which those factors are defined |
-| exactly one rabbit, matched-strength smell, modulated agent, seed 43 | 333,766 | 1,000,000 | 33.4% | the episodes on which those factors are defined |
-| all episodes, matched-strength smell, modulated agent, seed 44 | 1,000,000 | 1,000,000 | 100.0% | the episodes on which those factors are defined |
-| exactly one predator, matched-strength smell, modulated agent, seed 44 | 333,743 | 1,000,000 | 33.4% | the episodes on which those factors are defined |
-| exactly one rabbit, matched-strength smell, modulated agent, seed 44 | 333,766 | 1,000,000 | 33.4% | the episodes on which those factors are defined |
+| factors defined on every episode, two-channel smell (control), ordinary agent, seed 42 | 1,000,000 | 1,000,000 | 100.0% | all episodes |
+| predator traits and smell, two-channel smell (control), ordinary agent, seed 42 | 333,743 | 1,000,000 | 33.4% | episodes with exactly one predator: a single predator's traits are defined only there |
+| rabbit smell, two-channel smell (control), ordinary agent, seed 42 | 333,766 | 1,000,000 | 33.4% | episodes with exactly one rabbit: a single rabbit's smell is defined only there |
+| factors defined on every episode, two-channel smell (control), ordinary agent, seed 43 | 1,000,000 | 1,000,000 | 100.0% | all episodes |
+| predator traits and smell, two-channel smell (control), ordinary agent, seed 43 | 333,743 | 1,000,000 | 33.4% | episodes with exactly one predator: a single predator's traits are defined only there |
+| rabbit smell, two-channel smell (control), ordinary agent, seed 43 | 333,766 | 1,000,000 | 33.4% | episodes with exactly one rabbit: a single rabbit's smell is defined only there |
+| factors defined on every episode, two-channel smell (control), ordinary agent, seed 44 | 1,000,000 | 1,000,000 | 100.0% | all episodes |
+| predator traits and smell, two-channel smell (control), ordinary agent, seed 44 | 333,743 | 1,000,000 | 33.4% | episodes with exactly one predator: a single predator's traits are defined only there |
+| rabbit smell, two-channel smell (control), ordinary agent, seed 44 | 333,766 | 1,000,000 | 33.4% | episodes with exactly one rabbit: a single rabbit's smell is defined only there |
+| factors defined on every episode, two-channel smell (control), modulated agent, seed 42 | 1,000,000 | 1,000,000 | 100.0% | all episodes |
+| predator traits and smell, two-channel smell (control), modulated agent, seed 42 | 333,743 | 1,000,000 | 33.4% | episodes with exactly one predator: a single predator's traits are defined only there |
+| rabbit smell, two-channel smell (control), modulated agent, seed 42 | 333,766 | 1,000,000 | 33.4% | episodes with exactly one rabbit: a single rabbit's smell is defined only there |
+| factors defined on every episode, two-channel smell (control), modulated agent, seed 43 | 1,000,000 | 1,000,000 | 100.0% | all episodes |
+| predator traits and smell, two-channel smell (control), modulated agent, seed 43 | 333,743 | 1,000,000 | 33.4% | episodes with exactly one predator: a single predator's traits are defined only there |
+| rabbit smell, two-channel smell (control), modulated agent, seed 43 | 333,766 | 1,000,000 | 33.4% | episodes with exactly one rabbit: a single rabbit's smell is defined only there |
+| factors defined on every episode, two-channel smell (control), modulated agent, seed 44 | 1,000,000 | 1,000,000 | 100.0% | all episodes |
+| predator traits and smell, two-channel smell (control), modulated agent, seed 44 | 333,743 | 1,000,000 | 33.4% | episodes with exactly one predator: a single predator's traits are defined only there |
+| rabbit smell, two-channel smell (control), modulated agent, seed 44 | 333,766 | 1,000,000 | 33.4% | episodes with exactly one rabbit: a single rabbit's smell is defined only there |
+| factors defined on every episode, single-channel smell, ordinary agent, seed 42 | 1,000,000 | 1,000,000 | 100.0% | all episodes |
+| predator traits and smell, single-channel smell, ordinary agent, seed 42 | 333,743 | 1,000,000 | 33.4% | episodes with exactly one predator: a single predator's traits are defined only there |
+| rabbit smell, single-channel smell, ordinary agent, seed 42 | 333,766 | 1,000,000 | 33.4% | episodes with exactly one rabbit: a single rabbit's smell is defined only there |
+| factors defined on every episode, single-channel smell, ordinary agent, seed 43 | 1,000,000 | 1,000,000 | 100.0% | all episodes |
+| predator traits and smell, single-channel smell, ordinary agent, seed 43 | 333,743 | 1,000,000 | 33.4% | episodes with exactly one predator: a single predator's traits are defined only there |
+| rabbit smell, single-channel smell, ordinary agent, seed 43 | 333,766 | 1,000,000 | 33.4% | episodes with exactly one rabbit: a single rabbit's smell is defined only there |
+| factors defined on every episode, single-channel smell, ordinary agent, seed 44 | 1,000,000 | 1,000,000 | 100.0% | all episodes |
+| predator traits and smell, single-channel smell, ordinary agent, seed 44 | 333,743 | 1,000,000 | 33.4% | episodes with exactly one predator: a single predator's traits are defined only there |
+| rabbit smell, single-channel smell, ordinary agent, seed 44 | 333,766 | 1,000,000 | 33.4% | episodes with exactly one rabbit: a single rabbit's smell is defined only there |
+| factors defined on every episode, single-channel smell, modulated agent, seed 42 | 1,000,000 | 1,000,000 | 100.0% | all episodes |
+| predator traits and smell, single-channel smell, modulated agent, seed 42 | 333,743 | 1,000,000 | 33.4% | episodes with exactly one predator: a single predator's traits are defined only there |
+| rabbit smell, single-channel smell, modulated agent, seed 42 | 333,766 | 1,000,000 | 33.4% | episodes with exactly one rabbit: a single rabbit's smell is defined only there |
+| factors defined on every episode, single-channel smell, modulated agent, seed 43 | 1,000,000 | 1,000,000 | 100.0% | all episodes |
+| predator traits and smell, single-channel smell, modulated agent, seed 43 | 333,743 | 1,000,000 | 33.4% | episodes with exactly one predator: a single predator's traits are defined only there |
+| rabbit smell, single-channel smell, modulated agent, seed 43 | 333,766 | 1,000,000 | 33.4% | episodes with exactly one rabbit: a single rabbit's smell is defined only there |
+| factors defined on every episode, single-channel smell, modulated agent, seed 44 | 1,000,000 | 1,000,000 | 100.0% | all episodes |
+| predator traits and smell, single-channel smell, modulated agent, seed 44 | 333,743 | 1,000,000 | 33.4% | episodes with exactly one predator: a single predator's traits are defined only there |
+| rabbit smell, single-channel smell, modulated agent, seed 44 | 333,766 | 1,000,000 | 33.4% | episodes with exactly one rabbit: a single rabbit's smell is defined only there |
+| factors defined on every episode, matched-strength smell, ordinary agent, seed 42 | 1,000,000 | 1,000,000 | 100.0% | all episodes |
+| predator traits and smell, matched-strength smell, ordinary agent, seed 42 | 333,743 | 1,000,000 | 33.4% | episodes with exactly one predator: a single predator's traits are defined only there |
+| rabbit smell, matched-strength smell, ordinary agent, seed 42 | 333,766 | 1,000,000 | 33.4% | episodes with exactly one rabbit: a single rabbit's smell is defined only there |
+| factors defined on every episode, matched-strength smell, ordinary agent, seed 43 | 1,000,000 | 1,000,000 | 100.0% | all episodes |
+| predator traits and smell, matched-strength smell, ordinary agent, seed 43 | 333,743 | 1,000,000 | 33.4% | episodes with exactly one predator: a single predator's traits are defined only there |
+| rabbit smell, matched-strength smell, ordinary agent, seed 43 | 333,766 | 1,000,000 | 33.4% | episodes with exactly one rabbit: a single rabbit's smell is defined only there |
+| factors defined on every episode, matched-strength smell, ordinary agent, seed 44 | 1,000,000 | 1,000,000 | 100.0% | all episodes |
+| predator traits and smell, matched-strength smell, ordinary agent, seed 44 | 333,743 | 1,000,000 | 33.4% | episodes with exactly one predator: a single predator's traits are defined only there |
+| rabbit smell, matched-strength smell, ordinary agent, seed 44 | 333,766 | 1,000,000 | 33.4% | episodes with exactly one rabbit: a single rabbit's smell is defined only there |
+| factors defined on every episode, matched-strength smell, modulated agent, seed 42 | 1,000,000 | 1,000,000 | 100.0% | all episodes |
+| predator traits and smell, matched-strength smell, modulated agent, seed 42 | 333,743 | 1,000,000 | 33.4% | episodes with exactly one predator: a single predator's traits are defined only there |
+| rabbit smell, matched-strength smell, modulated agent, seed 42 | 333,766 | 1,000,000 | 33.4% | episodes with exactly one rabbit: a single rabbit's smell is defined only there |
+| factors defined on every episode, matched-strength smell, modulated agent, seed 43 | 1,000,000 | 1,000,000 | 100.0% | all episodes |
+| predator traits and smell, matched-strength smell, modulated agent, seed 43 | 333,743 | 1,000,000 | 33.4% | episodes with exactly one predator: a single predator's traits are defined only there |
+| rabbit smell, matched-strength smell, modulated agent, seed 43 | 333,766 | 1,000,000 | 33.4% | episodes with exactly one rabbit: a single rabbit's smell is defined only there |
+| factors defined on every episode, matched-strength smell, modulated agent, seed 44 | 1,000,000 | 1,000,000 | 100.0% | all episodes |
+| predator traits and smell, matched-strength smell, modulated agent, seed 44 | 333,743 | 1,000,000 | 33.4% | episodes with exactly one predator: a single predator's traits are defined only there |
+| rabbit smell, matched-strength smell, modulated agent, seed 44 | 333,766 | 1,000,000 | 33.4% | episodes with exactly one rabbit: a single rabbit's smell is defined only there |
 
 ## f3_univariate__warm_cell
 
-Figure 3 — single-factor effects on on a warm square. **Axes.** Both panels: horizontal, the change in the run's share of chosen steps spent on a warm square, in percentage points, for a one-standard-deviation increase in the factor (zero marked by a vertical rule); vertical, the factor, ranked by its median absolute effect across runs, largest at the top. Left panel: factors drawn before the agent acts. Right panel: consequences produced during the episode.
+Figure 3e — single-factor effects: Time on a warm square. **Axes.** Both panels: horizontal, the change in the run's share of chosen steps showing the behaviour (time on a warm square), in percentage points, for a one-standard-deviation increase in the factor (zero marked by a vertical rule); the two panels have different horizontal scales, so compare positions within a panel only; vertical, the factor, ranked by its median absolute effect across runs, largest at the top. Left panel: factors drawn before the agent acts. Right panel: consequences produced during the episode.
 
 | subset | used | available | share | why |
 |---|---:|---:|---:|---|
-| all episodes, two-channel smell (control), ordinary agent, seed 42 | 1,000,000 | 1,000,000 | 100.0% | the episodes on which those factors are defined |
-| exactly one predator, two-channel smell (control), ordinary agent, seed 42 | 333,743 | 1,000,000 | 33.4% | the episodes on which those factors are defined |
-| exactly one rabbit, two-channel smell (control), ordinary agent, seed 42 | 333,766 | 1,000,000 | 33.4% | the episodes on which those factors are defined |
-| all episodes, two-channel smell (control), ordinary agent, seed 43 | 1,000,000 | 1,000,000 | 100.0% | the episodes on which those factors are defined |
-| exactly one predator, two-channel smell (control), ordinary agent, seed 43 | 333,743 | 1,000,000 | 33.4% | the episodes on which those factors are defined |
-| exactly one rabbit, two-channel smell (control), ordinary agent, seed 43 | 333,766 | 1,000,000 | 33.4% | the episodes on which those factors are defined |
-| all episodes, two-channel smell (control), ordinary agent, seed 44 | 1,000,000 | 1,000,000 | 100.0% | the episodes on which those factors are defined |
-| exactly one predator, two-channel smell (control), ordinary agent, seed 44 | 333,743 | 1,000,000 | 33.4% | the episodes on which those factors are defined |
-| exactly one rabbit, two-channel smell (control), ordinary agent, seed 44 | 333,766 | 1,000,000 | 33.4% | the episodes on which those factors are defined |
-| all episodes, two-channel smell (control), modulated agent, seed 42 | 1,000,000 | 1,000,000 | 100.0% | the episodes on which those factors are defined |
-| exactly one predator, two-channel smell (control), modulated agent, seed 42 | 333,743 | 1,000,000 | 33.4% | the episodes on which those factors are defined |
-| exactly one rabbit, two-channel smell (control), modulated agent, seed 42 | 333,766 | 1,000,000 | 33.4% | the episodes on which those factors are defined |
-| all episodes, two-channel smell (control), modulated agent, seed 43 | 1,000,000 | 1,000,000 | 100.0% | the episodes on which those factors are defined |
-| exactly one predator, two-channel smell (control), modulated agent, seed 43 | 333,743 | 1,000,000 | 33.4% | the episodes on which those factors are defined |
-| exactly one rabbit, two-channel smell (control), modulated agent, seed 43 | 333,766 | 1,000,000 | 33.4% | the episodes on which those factors are defined |
-| all episodes, two-channel smell (control), modulated agent, seed 44 | 1,000,000 | 1,000,000 | 100.0% | the episodes on which those factors are defined |
-| exactly one predator, two-channel smell (control), modulated agent, seed 44 | 333,743 | 1,000,000 | 33.4% | the episodes on which those factors are defined |
-| exactly one rabbit, two-channel smell (control), modulated agent, seed 44 | 333,766 | 1,000,000 | 33.4% | the episodes on which those factors are defined |
-| all episodes, single-channel smell, ordinary agent, seed 42 | 1,000,000 | 1,000,000 | 100.0% | the episodes on which those factors are defined |
-| exactly one predator, single-channel smell, ordinary agent, seed 42 | 333,743 | 1,000,000 | 33.4% | the episodes on which those factors are defined |
-| exactly one rabbit, single-channel smell, ordinary agent, seed 42 | 333,766 | 1,000,000 | 33.4% | the episodes on which those factors are defined |
-| all episodes, single-channel smell, ordinary agent, seed 43 | 1,000,000 | 1,000,000 | 100.0% | the episodes on which those factors are defined |
-| exactly one predator, single-channel smell, ordinary agent, seed 43 | 333,743 | 1,000,000 | 33.4% | the episodes on which those factors are defined |
-| exactly one rabbit, single-channel smell, ordinary agent, seed 43 | 333,766 | 1,000,000 | 33.4% | the episodes on which those factors are defined |
-| all episodes, single-channel smell, ordinary agent, seed 44 | 1,000,000 | 1,000,000 | 100.0% | the episodes on which those factors are defined |
-| exactly one predator, single-channel smell, ordinary agent, seed 44 | 333,743 | 1,000,000 | 33.4% | the episodes on which those factors are defined |
-| exactly one rabbit, single-channel smell, ordinary agent, seed 44 | 333,766 | 1,000,000 | 33.4% | the episodes on which those factors are defined |
-| all episodes, single-channel smell, modulated agent, seed 42 | 1,000,000 | 1,000,000 | 100.0% | the episodes on which those factors are defined |
-| exactly one predator, single-channel smell, modulated agent, seed 42 | 333,743 | 1,000,000 | 33.4% | the episodes on which those factors are defined |
-| exactly one rabbit, single-channel smell, modulated agent, seed 42 | 333,766 | 1,000,000 | 33.4% | the episodes on which those factors are defined |
-| all episodes, single-channel smell, modulated agent, seed 43 | 1,000,000 | 1,000,000 | 100.0% | the episodes on which those factors are defined |
-| exactly one predator, single-channel smell, modulated agent, seed 43 | 333,743 | 1,000,000 | 33.4% | the episodes on which those factors are defined |
-| exactly one rabbit, single-channel smell, modulated agent, seed 43 | 333,766 | 1,000,000 | 33.4% | the episodes on which those factors are defined |
-| all episodes, single-channel smell, modulated agent, seed 44 | 1,000,000 | 1,000,000 | 100.0% | the episodes on which those factors are defined |
-| exactly one predator, single-channel smell, modulated agent, seed 44 | 333,743 | 1,000,000 | 33.4% | the episodes on which those factors are defined |
-| exactly one rabbit, single-channel smell, modulated agent, seed 44 | 333,766 | 1,000,000 | 33.4% | the episodes on which those factors are defined |
-| all episodes, matched-strength smell, ordinary agent, seed 42 | 1,000,000 | 1,000,000 | 100.0% | the episodes on which those factors are defined |
-| exactly one predator, matched-strength smell, ordinary agent, seed 42 | 333,743 | 1,000,000 | 33.4% | the episodes on which those factors are defined |
-| exactly one rabbit, matched-strength smell, ordinary agent, seed 42 | 333,766 | 1,000,000 | 33.4% | the episodes on which those factors are defined |
-| all episodes, matched-strength smell, ordinary agent, seed 43 | 1,000,000 | 1,000,000 | 100.0% | the episodes on which those factors are defined |
-| exactly one predator, matched-strength smell, ordinary agent, seed 43 | 333,743 | 1,000,000 | 33.4% | the episodes on which those factors are defined |
-| exactly one rabbit, matched-strength smell, ordinary agent, seed 43 | 333,766 | 1,000,000 | 33.4% | the episodes on which those factors are defined |
-| all episodes, matched-strength smell, ordinary agent, seed 44 | 1,000,000 | 1,000,000 | 100.0% | the episodes on which those factors are defined |
-| exactly one predator, matched-strength smell, ordinary agent, seed 44 | 333,743 | 1,000,000 | 33.4% | the episodes on which those factors are defined |
-| exactly one rabbit, matched-strength smell, ordinary agent, seed 44 | 333,766 | 1,000,000 | 33.4% | the episodes on which those factors are defined |
-| all episodes, matched-strength smell, modulated agent, seed 42 | 1,000,000 | 1,000,000 | 100.0% | the episodes on which those factors are defined |
-| exactly one predator, matched-strength smell, modulated agent, seed 42 | 333,743 | 1,000,000 | 33.4% | the episodes on which those factors are defined |
-| exactly one rabbit, matched-strength smell, modulated agent, seed 42 | 333,766 | 1,000,000 | 33.4% | the episodes on which those factors are defined |
-| all episodes, matched-strength smell, modulated agent, seed 43 | 1,000,000 | 1,000,000 | 100.0% | the episodes on which those factors are defined |
-| exactly one predator, matched-strength smell, modulated agent, seed 43 | 333,743 | 1,000,000 | 33.4% | the episodes on which those factors are defined |
-| exactly one rabbit, matched-strength smell, modulated agent, seed 43 | 333,766 | 1,000,000 | 33.4% | the episodes on which those factors are defined |
-| all episodes, matched-strength smell, modulated agent, seed 44 | 1,000,000 | 1,000,000 | 100.0% | the episodes on which those factors are defined |
-| exactly one predator, matched-strength smell, modulated agent, seed 44 | 333,743 | 1,000,000 | 33.4% | the episodes on which those factors are defined |
-| exactly one rabbit, matched-strength smell, modulated agent, seed 44 | 333,766 | 1,000,000 | 33.4% | the episodes on which those factors are defined |
+| factors defined on every episode, two-channel smell (control), ordinary agent, seed 42 | 1,000,000 | 1,000,000 | 100.0% | all episodes |
+| predator traits and smell, two-channel smell (control), ordinary agent, seed 42 | 333,743 | 1,000,000 | 33.4% | episodes with exactly one predator: a single predator's traits are defined only there |
+| rabbit smell, two-channel smell (control), ordinary agent, seed 42 | 333,766 | 1,000,000 | 33.4% | episodes with exactly one rabbit: a single rabbit's smell is defined only there |
+| factors defined on every episode, two-channel smell (control), ordinary agent, seed 43 | 1,000,000 | 1,000,000 | 100.0% | all episodes |
+| predator traits and smell, two-channel smell (control), ordinary agent, seed 43 | 333,743 | 1,000,000 | 33.4% | episodes with exactly one predator: a single predator's traits are defined only there |
+| rabbit smell, two-channel smell (control), ordinary agent, seed 43 | 333,766 | 1,000,000 | 33.4% | episodes with exactly one rabbit: a single rabbit's smell is defined only there |
+| factors defined on every episode, two-channel smell (control), ordinary agent, seed 44 | 1,000,000 | 1,000,000 | 100.0% | all episodes |
+| predator traits and smell, two-channel smell (control), ordinary agent, seed 44 | 333,743 | 1,000,000 | 33.4% | episodes with exactly one predator: a single predator's traits are defined only there |
+| rabbit smell, two-channel smell (control), ordinary agent, seed 44 | 333,766 | 1,000,000 | 33.4% | episodes with exactly one rabbit: a single rabbit's smell is defined only there |
+| factors defined on every episode, two-channel smell (control), modulated agent, seed 42 | 1,000,000 | 1,000,000 | 100.0% | all episodes |
+| predator traits and smell, two-channel smell (control), modulated agent, seed 42 | 333,743 | 1,000,000 | 33.4% | episodes with exactly one predator: a single predator's traits are defined only there |
+| rabbit smell, two-channel smell (control), modulated agent, seed 42 | 333,766 | 1,000,000 | 33.4% | episodes with exactly one rabbit: a single rabbit's smell is defined only there |
+| factors defined on every episode, two-channel smell (control), modulated agent, seed 43 | 1,000,000 | 1,000,000 | 100.0% | all episodes |
+| predator traits and smell, two-channel smell (control), modulated agent, seed 43 | 333,743 | 1,000,000 | 33.4% | episodes with exactly one predator: a single predator's traits are defined only there |
+| rabbit smell, two-channel smell (control), modulated agent, seed 43 | 333,766 | 1,000,000 | 33.4% | episodes with exactly one rabbit: a single rabbit's smell is defined only there |
+| factors defined on every episode, two-channel smell (control), modulated agent, seed 44 | 1,000,000 | 1,000,000 | 100.0% | all episodes |
+| predator traits and smell, two-channel smell (control), modulated agent, seed 44 | 333,743 | 1,000,000 | 33.4% | episodes with exactly one predator: a single predator's traits are defined only there |
+| rabbit smell, two-channel smell (control), modulated agent, seed 44 | 333,766 | 1,000,000 | 33.4% | episodes with exactly one rabbit: a single rabbit's smell is defined only there |
+| factors defined on every episode, single-channel smell, ordinary agent, seed 42 | 1,000,000 | 1,000,000 | 100.0% | all episodes |
+| predator traits and smell, single-channel smell, ordinary agent, seed 42 | 333,743 | 1,000,000 | 33.4% | episodes with exactly one predator: a single predator's traits are defined only there |
+| rabbit smell, single-channel smell, ordinary agent, seed 42 | 333,766 | 1,000,000 | 33.4% | episodes with exactly one rabbit: a single rabbit's smell is defined only there |
+| factors defined on every episode, single-channel smell, ordinary agent, seed 43 | 1,000,000 | 1,000,000 | 100.0% | all episodes |
+| predator traits and smell, single-channel smell, ordinary agent, seed 43 | 333,743 | 1,000,000 | 33.4% | episodes with exactly one predator: a single predator's traits are defined only there |
+| rabbit smell, single-channel smell, ordinary agent, seed 43 | 333,766 | 1,000,000 | 33.4% | episodes with exactly one rabbit: a single rabbit's smell is defined only there |
+| factors defined on every episode, single-channel smell, ordinary agent, seed 44 | 1,000,000 | 1,000,000 | 100.0% | all episodes |
+| predator traits and smell, single-channel smell, ordinary agent, seed 44 | 333,743 | 1,000,000 | 33.4% | episodes with exactly one predator: a single predator's traits are defined only there |
+| rabbit smell, single-channel smell, ordinary agent, seed 44 | 333,766 | 1,000,000 | 33.4% | episodes with exactly one rabbit: a single rabbit's smell is defined only there |
+| factors defined on every episode, single-channel smell, modulated agent, seed 42 | 1,000,000 | 1,000,000 | 100.0% | all episodes |
+| predator traits and smell, single-channel smell, modulated agent, seed 42 | 333,743 | 1,000,000 | 33.4% | episodes with exactly one predator: a single predator's traits are defined only there |
+| rabbit smell, single-channel smell, modulated agent, seed 42 | 333,766 | 1,000,000 | 33.4% | episodes with exactly one rabbit: a single rabbit's smell is defined only there |
+| factors defined on every episode, single-channel smell, modulated agent, seed 43 | 1,000,000 | 1,000,000 | 100.0% | all episodes |
+| predator traits and smell, single-channel smell, modulated agent, seed 43 | 333,743 | 1,000,000 | 33.4% | episodes with exactly one predator: a single predator's traits are defined only there |
+| rabbit smell, single-channel smell, modulated agent, seed 43 | 333,766 | 1,000,000 | 33.4% | episodes with exactly one rabbit: a single rabbit's smell is defined only there |
+| factors defined on every episode, single-channel smell, modulated agent, seed 44 | 1,000,000 | 1,000,000 | 100.0% | all episodes |
+| predator traits and smell, single-channel smell, modulated agent, seed 44 | 333,743 | 1,000,000 | 33.4% | episodes with exactly one predator: a single predator's traits are defined only there |
+| rabbit smell, single-channel smell, modulated agent, seed 44 | 333,766 | 1,000,000 | 33.4% | episodes with exactly one rabbit: a single rabbit's smell is defined only there |
+| factors defined on every episode, matched-strength smell, ordinary agent, seed 42 | 1,000,000 | 1,000,000 | 100.0% | all episodes |
+| predator traits and smell, matched-strength smell, ordinary agent, seed 42 | 333,743 | 1,000,000 | 33.4% | episodes with exactly one predator: a single predator's traits are defined only there |
+| rabbit smell, matched-strength smell, ordinary agent, seed 42 | 333,766 | 1,000,000 | 33.4% | episodes with exactly one rabbit: a single rabbit's smell is defined only there |
+| factors defined on every episode, matched-strength smell, ordinary agent, seed 43 | 1,000,000 | 1,000,000 | 100.0% | all episodes |
+| predator traits and smell, matched-strength smell, ordinary agent, seed 43 | 333,743 | 1,000,000 | 33.4% | episodes with exactly one predator: a single predator's traits are defined only there |
+| rabbit smell, matched-strength smell, ordinary agent, seed 43 | 333,766 | 1,000,000 | 33.4% | episodes with exactly one rabbit: a single rabbit's smell is defined only there |
+| factors defined on every episode, matched-strength smell, ordinary agent, seed 44 | 1,000,000 | 1,000,000 | 100.0% | all episodes |
+| predator traits and smell, matched-strength smell, ordinary agent, seed 44 | 333,743 | 1,000,000 | 33.4% | episodes with exactly one predator: a single predator's traits are defined only there |
+| rabbit smell, matched-strength smell, ordinary agent, seed 44 | 333,766 | 1,000,000 | 33.4% | episodes with exactly one rabbit: a single rabbit's smell is defined only there |
+| factors defined on every episode, matched-strength smell, modulated agent, seed 42 | 1,000,000 | 1,000,000 | 100.0% | all episodes |
+| predator traits and smell, matched-strength smell, modulated agent, seed 42 | 333,743 | 1,000,000 | 33.4% | episodes with exactly one predator: a single predator's traits are defined only there |
+| rabbit smell, matched-strength smell, modulated agent, seed 42 | 333,766 | 1,000,000 | 33.4% | episodes with exactly one rabbit: a single rabbit's smell is defined only there |
+| factors defined on every episode, matched-strength smell, modulated agent, seed 43 | 1,000,000 | 1,000,000 | 100.0% | all episodes |
+| predator traits and smell, matched-strength smell, modulated agent, seed 43 | 333,743 | 1,000,000 | 33.4% | episodes with exactly one predator: a single predator's traits are defined only there |
+| rabbit smell, matched-strength smell, modulated agent, seed 43 | 333,766 | 1,000,000 | 33.4% | episodes with exactly one rabbit: a single rabbit's smell is defined only there |
+| factors defined on every episode, matched-strength smell, modulated agent, seed 44 | 1,000,000 | 1,000,000 | 100.0% | all episodes |
+| predator traits and smell, matched-strength smell, modulated agent, seed 44 | 333,743 | 1,000,000 | 33.4% | episodes with exactly one predator: a single predator's traits are defined only there |
+| rabbit smell, matched-strength smell, modulated agent, seed 44 | 333,766 | 1,000,000 | 33.4% | episodes with exactly one rabbit: a single rabbit's smell is defined only there |
 
 ## f4_multivariate__bush_dwell
 
-Figure 4 — multi-factor models of hiding in a bush. **Axes.** Every panel: horizontal, the change in the run's share of chosen steps spent hiding in a bush, in percentage points, for a one-standard-deviation increase in the term with the model's other terms held fixed (zero marked by a vertical rule); vertical, the model's terms. One panel per model; panels use different episode subsets, so compare within a panel, not heights across panels.
+Figure 4a — multi-factor models: Bush dwell (time in a bush). **Axes.** Every panel: horizontal, the change in the run's share of chosen steps showing the behaviour (bush dwell), in percentage points, for a one-standard-deviation increase in the term with the model's other terms held fixed (zero marked by a vertical rule); vertical, the model's terms. One panel per model, M1 to M5. Each panel has its own horizontal scale and its own episodes, so compare positions within a panel, not across panels.
 
 | subset | used | available | share | why |
 |---|---:|---:|---:|---|
-| M1, two-channel smell (control), ordinary agent, seed 42 | 1,000,000 | 1,000,000 | 100.0% |  |
-| M2, two-channel smell (control), ordinary agent, seed 42 | 333,743 | 1,000,000 | 33.4% |  |
-| M3, two-channel smell (control), ordinary agent, seed 42 | 111,211 | 1,000,000 | 11.1% |  |
-| M5, two-channel smell (control), ordinary agent, seed 42 | 332,310 | 1,000,000 | 33.2% |  detect_spread = detect_keenest - detect_least_keen (fixed a01 recipe): the design is rank-deficient by construction; the three coefficients are the minimum-norm solution, as in the legacy fit |
-| M4, two-channel smell (control), ordinary agent, seed 42 | 1,000,000 | 1,000,000 | 100.0% |  |
-| M1, two-channel smell (control), ordinary agent, seed 43 | 1,000,000 | 1,000,000 | 100.0% |  |
-| M2, two-channel smell (control), ordinary agent, seed 43 | 333,743 | 1,000,000 | 33.4% |  |
-| M3, two-channel smell (control), ordinary agent, seed 43 | 111,211 | 1,000,000 | 11.1% |  |
-| M5, two-channel smell (control), ordinary agent, seed 43 | 332,310 | 1,000,000 | 33.2% |  detect_spread = detect_keenest - detect_least_keen (fixed a01 recipe): the design is rank-deficient by construction; the three coefficients are the minimum-norm solution, as in the legacy fit |
-| M4, two-channel smell (control), ordinary agent, seed 43 | 1,000,000 | 1,000,000 | 100.0% |  |
-| M1, two-channel smell (control), ordinary agent, seed 44 | 1,000,000 | 1,000,000 | 100.0% |  |
-| M2, two-channel smell (control), ordinary agent, seed 44 | 333,743 | 1,000,000 | 33.4% |  |
-| M3, two-channel smell (control), ordinary agent, seed 44 | 111,211 | 1,000,000 | 11.1% |  |
-| M5, two-channel smell (control), ordinary agent, seed 44 | 332,310 | 1,000,000 | 33.2% |  detect_spread = detect_keenest - detect_least_keen (fixed a01 recipe): the design is rank-deficient by construction; the three coefficients are the minimum-norm solution, as in the legacy fit |
-| M4, two-channel smell (control), ordinary agent, seed 44 | 1,000,000 | 1,000,000 | 100.0% |  |
-| M1, two-channel smell (control), modulated agent, seed 42 | 1,000,000 | 1,000,000 | 100.0% |  |
-| M2, two-channel smell (control), modulated agent, seed 42 | 333,743 | 1,000,000 | 33.4% |  |
-| M3, two-channel smell (control), modulated agent, seed 42 | 111,211 | 1,000,000 | 11.1% |  |
-| M5, two-channel smell (control), modulated agent, seed 42 | 332,310 | 1,000,000 | 33.2% |  detect_spread = detect_keenest - detect_least_keen (fixed a01 recipe): the design is rank-deficient by construction; the three coefficients are the minimum-norm solution, as in the legacy fit |
-| M4, two-channel smell (control), modulated agent, seed 42 | 1,000,000 | 1,000,000 | 100.0% |  |
-| M1, two-channel smell (control), modulated agent, seed 43 | 1,000,000 | 1,000,000 | 100.0% |  |
-| M2, two-channel smell (control), modulated agent, seed 43 | 333,743 | 1,000,000 | 33.4% |  |
-| M3, two-channel smell (control), modulated agent, seed 43 | 111,211 | 1,000,000 | 11.1% |  |
-| M5, two-channel smell (control), modulated agent, seed 43 | 332,310 | 1,000,000 | 33.2% |  detect_spread = detect_keenest - detect_least_keen (fixed a01 recipe): the design is rank-deficient by construction; the three coefficients are the minimum-norm solution, as in the legacy fit |
-| M4, two-channel smell (control), modulated agent, seed 43 | 1,000,000 | 1,000,000 | 100.0% |  |
-| M1, two-channel smell (control), modulated agent, seed 44 | 1,000,000 | 1,000,000 | 100.0% |  |
-| M2, two-channel smell (control), modulated agent, seed 44 | 333,743 | 1,000,000 | 33.4% |  |
-| M3, two-channel smell (control), modulated agent, seed 44 | 111,211 | 1,000,000 | 11.1% |  |
-| M5, two-channel smell (control), modulated agent, seed 44 | 332,310 | 1,000,000 | 33.2% |  detect_spread = detect_keenest - detect_least_keen (fixed a01 recipe): the design is rank-deficient by construction; the three coefficients are the minimum-norm solution, as in the legacy fit |
-| M4, two-channel smell (control), modulated agent, seed 44 | 1,000,000 | 1,000,000 | 100.0% |  |
-| M1, single-channel smell, ordinary agent, seed 42 | 1,000,000 | 1,000,000 | 100.0% |  |
-| M2, single-channel smell, ordinary agent, seed 42 | 333,743 | 1,000,000 | 33.4% |  |
-| M3, single-channel smell, ordinary agent, seed 42 | 111,211 | 1,000,000 | 11.1% |  |
-| M5, single-channel smell, ordinary agent, seed 42 | 332,310 | 1,000,000 | 33.2% |  detect_spread = detect_keenest - detect_least_keen (fixed a01 recipe): the design is rank-deficient by construction; the three coefficients are the minimum-norm solution, as in the legacy fit |
-| M4, single-channel smell, ordinary agent, seed 42 | 1,000,000 | 1,000,000 | 100.0% |  |
-| M1, single-channel smell, ordinary agent, seed 43 | 1,000,000 | 1,000,000 | 100.0% |  |
-| M2, single-channel smell, ordinary agent, seed 43 | 333,743 | 1,000,000 | 33.4% |  |
-| M3, single-channel smell, ordinary agent, seed 43 | 111,211 | 1,000,000 | 11.1% |  |
-| M5, single-channel smell, ordinary agent, seed 43 | 332,310 | 1,000,000 | 33.2% |  detect_spread = detect_keenest - detect_least_keen (fixed a01 recipe): the design is rank-deficient by construction; the three coefficients are the minimum-norm solution, as in the legacy fit |
-| M4, single-channel smell, ordinary agent, seed 43 | 1,000,000 | 1,000,000 | 100.0% |  |
-| M1, single-channel smell, ordinary agent, seed 44 | 1,000,000 | 1,000,000 | 100.0% |  |
-| M2, single-channel smell, ordinary agent, seed 44 | 333,743 | 1,000,000 | 33.4% |  |
-| M3, single-channel smell, ordinary agent, seed 44 | 111,211 | 1,000,000 | 11.1% |  |
-| M5, single-channel smell, ordinary agent, seed 44 | 332,310 | 1,000,000 | 33.2% |  detect_spread = detect_keenest - detect_least_keen (fixed a01 recipe): the design is rank-deficient by construction; the three coefficients are the minimum-norm solution, as in the legacy fit |
-| M4, single-channel smell, ordinary agent, seed 44 | 1,000,000 | 1,000,000 | 100.0% |  |
-| M1, single-channel smell, modulated agent, seed 42 | 1,000,000 | 1,000,000 | 100.0% |  |
-| M2, single-channel smell, modulated agent, seed 42 | 333,743 | 1,000,000 | 33.4% |  |
-| M3, single-channel smell, modulated agent, seed 42 | 111,211 | 1,000,000 | 11.1% |  |
-| M5, single-channel smell, modulated agent, seed 42 | 332,310 | 1,000,000 | 33.2% |  detect_spread = detect_keenest - detect_least_keen (fixed a01 recipe): the design is rank-deficient by construction; the three coefficients are the minimum-norm solution, as in the legacy fit |
-| M4, single-channel smell, modulated agent, seed 42 | 1,000,000 | 1,000,000 | 100.0% |  |
-| M1, single-channel smell, modulated agent, seed 43 | 1,000,000 | 1,000,000 | 100.0% |  |
-| M2, single-channel smell, modulated agent, seed 43 | 333,743 | 1,000,000 | 33.4% |  |
-| M3, single-channel smell, modulated agent, seed 43 | 111,211 | 1,000,000 | 11.1% |  |
-| M5, single-channel smell, modulated agent, seed 43 | 332,310 | 1,000,000 | 33.2% |  detect_spread = detect_keenest - detect_least_keen (fixed a01 recipe): the design is rank-deficient by construction; the three coefficients are the minimum-norm solution, as in the legacy fit |
-| M4, single-channel smell, modulated agent, seed 43 | 1,000,000 | 1,000,000 | 100.0% |  |
-| M1, single-channel smell, modulated agent, seed 44 | 1,000,000 | 1,000,000 | 100.0% |  |
-| M2, single-channel smell, modulated agent, seed 44 | 333,743 | 1,000,000 | 33.4% |  |
-| M3, single-channel smell, modulated agent, seed 44 | 111,211 | 1,000,000 | 11.1% |  |
-| M5, single-channel smell, modulated agent, seed 44 | 332,310 | 1,000,000 | 33.2% |  detect_spread = detect_keenest - detect_least_keen (fixed a01 recipe): the design is rank-deficient by construction; the three coefficients are the minimum-norm solution, as in the legacy fit |
-| M4, single-channel smell, modulated agent, seed 44 | 1,000,000 | 1,000,000 | 100.0% |  |
-| M1, matched-strength smell, ordinary agent, seed 42 | 1,000,000 | 1,000,000 | 100.0% |  |
-| M2, matched-strength smell, ordinary agent, seed 42 | 333,743 | 1,000,000 | 33.4% |  |
-| M3, matched-strength smell, ordinary agent, seed 42 | 111,211 | 1,000,000 | 11.1% |  |
-| M5, matched-strength smell, ordinary agent, seed 42 | 332,310 | 1,000,000 | 33.2% |  detect_spread = detect_keenest - detect_least_keen (fixed a01 recipe): the design is rank-deficient by construction; the three coefficients are the minimum-norm solution, as in the legacy fit |
-| M4, matched-strength smell, ordinary agent, seed 42 | 1,000,000 | 1,000,000 | 100.0% |  |
-| M1, matched-strength smell, ordinary agent, seed 43 | 1,000,000 | 1,000,000 | 100.0% |  |
-| M2, matched-strength smell, ordinary agent, seed 43 | 333,743 | 1,000,000 | 33.4% |  |
-| M3, matched-strength smell, ordinary agent, seed 43 | 111,211 | 1,000,000 | 11.1% |  |
-| M5, matched-strength smell, ordinary agent, seed 43 | 332,310 | 1,000,000 | 33.2% |  detect_spread = detect_keenest - detect_least_keen (fixed a01 recipe): the design is rank-deficient by construction; the three coefficients are the minimum-norm solution, as in the legacy fit |
-| M4, matched-strength smell, ordinary agent, seed 43 | 1,000,000 | 1,000,000 | 100.0% |  |
-| M1, matched-strength smell, ordinary agent, seed 44 | 1,000,000 | 1,000,000 | 100.0% |  |
-| M2, matched-strength smell, ordinary agent, seed 44 | 333,743 | 1,000,000 | 33.4% |  |
-| M3, matched-strength smell, ordinary agent, seed 44 | 111,211 | 1,000,000 | 11.1% |  |
-| M5, matched-strength smell, ordinary agent, seed 44 | 332,310 | 1,000,000 | 33.2% |  detect_spread = detect_keenest - detect_least_keen (fixed a01 recipe): the design is rank-deficient by construction; the three coefficients are the minimum-norm solution, as in the legacy fit |
-| M4, matched-strength smell, ordinary agent, seed 44 | 1,000,000 | 1,000,000 | 100.0% |  |
-| M1, matched-strength smell, modulated agent, seed 42 | 1,000,000 | 1,000,000 | 100.0% |  |
-| M2, matched-strength smell, modulated agent, seed 42 | 333,743 | 1,000,000 | 33.4% |  |
-| M3, matched-strength smell, modulated agent, seed 42 | 111,211 | 1,000,000 | 11.1% |  |
-| M5, matched-strength smell, modulated agent, seed 42 | 332,310 | 1,000,000 | 33.2% |  detect_spread = detect_keenest - detect_least_keen (fixed a01 recipe): the design is rank-deficient by construction; the three coefficients are the minimum-norm solution, as in the legacy fit |
-| M4, matched-strength smell, modulated agent, seed 42 | 1,000,000 | 1,000,000 | 100.0% |  |
-| M1, matched-strength smell, modulated agent, seed 43 | 1,000,000 | 1,000,000 | 100.0% |  |
-| M2, matched-strength smell, modulated agent, seed 43 | 333,743 | 1,000,000 | 33.4% |  |
-| M3, matched-strength smell, modulated agent, seed 43 | 111,211 | 1,000,000 | 11.1% |  |
-| M5, matched-strength smell, modulated agent, seed 43 | 332,310 | 1,000,000 | 33.2% |  detect_spread = detect_keenest - detect_least_keen (fixed a01 recipe): the design is rank-deficient by construction; the three coefficients are the minimum-norm solution, as in the legacy fit |
-| M4, matched-strength smell, modulated agent, seed 43 | 1,000,000 | 1,000,000 | 100.0% |  |
-| M1, matched-strength smell, modulated agent, seed 44 | 1,000,000 | 1,000,000 | 100.0% |  |
-| M2, matched-strength smell, modulated agent, seed 44 | 333,743 | 1,000,000 | 33.4% |  |
-| M3, matched-strength smell, modulated agent, seed 44 | 111,211 | 1,000,000 | 11.1% |  |
-| M5, matched-strength smell, modulated agent, seed 44 | 332,310 | 1,000,000 | 33.2% |  detect_spread = detect_keenest - detect_least_keen (fixed a01 recipe): the design is rank-deficient by construction; the three coefficients are the minimum-norm solution, as in the legacy fit |
-| M4, matched-strength smell, modulated agent, seed 44 | 1,000,000 | 1,000,000 | 100.0% |  |
+| M1, two-channel smell (control), ordinary agent, seed 42 | 1,000,000 | 1,000,000 | 100.0% | all episodes |
+| M2, two-channel smell (control), ordinary agent, seed 42 | 333,743 | 1,000,000 | 33.4% | episodes with exactly one predator |
+| M3, two-channel smell (control), ordinary agent, seed 42 | 111,211 | 1,000,000 | 11.1% | episodes with exactly one predator and exactly one rabbit |
+| M4, two-channel smell (control), ordinary agent, seed 42 | 1,000,000 | 1,000,000 | 100.0% | all episodes |
+| M5, two-channel smell (control), ordinary agent, seed 42 | 332,310 | 1,000,000 | 33.2% | episodes with exactly two predators |
+| M1, two-channel smell (control), ordinary agent, seed 43 | 1,000,000 | 1,000,000 | 100.0% | all episodes |
+| M2, two-channel smell (control), ordinary agent, seed 43 | 333,743 | 1,000,000 | 33.4% | episodes with exactly one predator |
+| M3, two-channel smell (control), ordinary agent, seed 43 | 111,211 | 1,000,000 | 11.1% | episodes with exactly one predator and exactly one rabbit |
+| M4, two-channel smell (control), ordinary agent, seed 43 | 1,000,000 | 1,000,000 | 100.0% | all episodes |
+| M5, two-channel smell (control), ordinary agent, seed 43 | 332,310 | 1,000,000 | 33.2% | episodes with exactly two predators |
+| M1, two-channel smell (control), ordinary agent, seed 44 | 1,000,000 | 1,000,000 | 100.0% | all episodes |
+| M2, two-channel smell (control), ordinary agent, seed 44 | 333,743 | 1,000,000 | 33.4% | episodes with exactly one predator |
+| M3, two-channel smell (control), ordinary agent, seed 44 | 111,211 | 1,000,000 | 11.1% | episodes with exactly one predator and exactly one rabbit |
+| M4, two-channel smell (control), ordinary agent, seed 44 | 1,000,000 | 1,000,000 | 100.0% | all episodes |
+| M5, two-channel smell (control), ordinary agent, seed 44 | 332,310 | 1,000,000 | 33.2% | episodes with exactly two predators |
+| M1, two-channel smell (control), modulated agent, seed 42 | 1,000,000 | 1,000,000 | 100.0% | all episodes |
+| M2, two-channel smell (control), modulated agent, seed 42 | 333,743 | 1,000,000 | 33.4% | episodes with exactly one predator |
+| M3, two-channel smell (control), modulated agent, seed 42 | 111,211 | 1,000,000 | 11.1% | episodes with exactly one predator and exactly one rabbit |
+| M4, two-channel smell (control), modulated agent, seed 42 | 1,000,000 | 1,000,000 | 100.0% | all episodes |
+| M5, two-channel smell (control), modulated agent, seed 42 | 332,310 | 1,000,000 | 33.2% | episodes with exactly two predators |
+| M1, two-channel smell (control), modulated agent, seed 43 | 1,000,000 | 1,000,000 | 100.0% | all episodes |
+| M2, two-channel smell (control), modulated agent, seed 43 | 333,743 | 1,000,000 | 33.4% | episodes with exactly one predator |
+| M3, two-channel smell (control), modulated agent, seed 43 | 111,211 | 1,000,000 | 11.1% | episodes with exactly one predator and exactly one rabbit |
+| M4, two-channel smell (control), modulated agent, seed 43 | 1,000,000 | 1,000,000 | 100.0% | all episodes |
+| M5, two-channel smell (control), modulated agent, seed 43 | 332,310 | 1,000,000 | 33.2% | episodes with exactly two predators |
+| M1, two-channel smell (control), modulated agent, seed 44 | 1,000,000 | 1,000,000 | 100.0% | all episodes |
+| M2, two-channel smell (control), modulated agent, seed 44 | 333,743 | 1,000,000 | 33.4% | episodes with exactly one predator |
+| M3, two-channel smell (control), modulated agent, seed 44 | 111,211 | 1,000,000 | 11.1% | episodes with exactly one predator and exactly one rabbit |
+| M4, two-channel smell (control), modulated agent, seed 44 | 1,000,000 | 1,000,000 | 100.0% | all episodes |
+| M5, two-channel smell (control), modulated agent, seed 44 | 332,310 | 1,000,000 | 33.2% | episodes with exactly two predators |
+| M1, single-channel smell, ordinary agent, seed 42 | 1,000,000 | 1,000,000 | 100.0% | all episodes |
+| M2, single-channel smell, ordinary agent, seed 42 | 333,743 | 1,000,000 | 33.4% | episodes with exactly one predator |
+| M3, single-channel smell, ordinary agent, seed 42 | 111,211 | 1,000,000 | 11.1% | episodes with exactly one predator and exactly one rabbit |
+| M4, single-channel smell, ordinary agent, seed 42 | 1,000,000 | 1,000,000 | 100.0% | all episodes |
+| M5, single-channel smell, ordinary agent, seed 42 | 332,310 | 1,000,000 | 33.2% | episodes with exactly two predators |
+| M1, single-channel smell, ordinary agent, seed 43 | 1,000,000 | 1,000,000 | 100.0% | all episodes |
+| M2, single-channel smell, ordinary agent, seed 43 | 333,743 | 1,000,000 | 33.4% | episodes with exactly one predator |
+| M3, single-channel smell, ordinary agent, seed 43 | 111,211 | 1,000,000 | 11.1% | episodes with exactly one predator and exactly one rabbit |
+| M4, single-channel smell, ordinary agent, seed 43 | 1,000,000 | 1,000,000 | 100.0% | all episodes |
+| M5, single-channel smell, ordinary agent, seed 43 | 332,310 | 1,000,000 | 33.2% | episodes with exactly two predators |
+| M1, single-channel smell, ordinary agent, seed 44 | 1,000,000 | 1,000,000 | 100.0% | all episodes |
+| M2, single-channel smell, ordinary agent, seed 44 | 333,743 | 1,000,000 | 33.4% | episodes with exactly one predator |
+| M3, single-channel smell, ordinary agent, seed 44 | 111,211 | 1,000,000 | 11.1% | episodes with exactly one predator and exactly one rabbit |
+| M4, single-channel smell, ordinary agent, seed 44 | 1,000,000 | 1,000,000 | 100.0% | all episodes |
+| M5, single-channel smell, ordinary agent, seed 44 | 332,310 | 1,000,000 | 33.2% | episodes with exactly two predators |
+| M1, single-channel smell, modulated agent, seed 42 | 1,000,000 | 1,000,000 | 100.0% | all episodes |
+| M2, single-channel smell, modulated agent, seed 42 | 333,743 | 1,000,000 | 33.4% | episodes with exactly one predator |
+| M3, single-channel smell, modulated agent, seed 42 | 111,211 | 1,000,000 | 11.1% | episodes with exactly one predator and exactly one rabbit |
+| M4, single-channel smell, modulated agent, seed 42 | 1,000,000 | 1,000,000 | 100.0% | all episodes |
+| M5, single-channel smell, modulated agent, seed 42 | 332,310 | 1,000,000 | 33.2% | episodes with exactly two predators |
+| M1, single-channel smell, modulated agent, seed 43 | 1,000,000 | 1,000,000 | 100.0% | all episodes |
+| M2, single-channel smell, modulated agent, seed 43 | 333,743 | 1,000,000 | 33.4% | episodes with exactly one predator |
+| M3, single-channel smell, modulated agent, seed 43 | 111,211 | 1,000,000 | 11.1% | episodes with exactly one predator and exactly one rabbit |
+| M4, single-channel smell, modulated agent, seed 43 | 1,000,000 | 1,000,000 | 100.0% | all episodes |
+| M5, single-channel smell, modulated agent, seed 43 | 332,310 | 1,000,000 | 33.2% | episodes with exactly two predators |
+| M1, single-channel smell, modulated agent, seed 44 | 1,000,000 | 1,000,000 | 100.0% | all episodes |
+| M2, single-channel smell, modulated agent, seed 44 | 333,743 | 1,000,000 | 33.4% | episodes with exactly one predator |
+| M3, single-channel smell, modulated agent, seed 44 | 111,211 | 1,000,000 | 11.1% | episodes with exactly one predator and exactly one rabbit |
+| M4, single-channel smell, modulated agent, seed 44 | 1,000,000 | 1,000,000 | 100.0% | all episodes |
+| M5, single-channel smell, modulated agent, seed 44 | 332,310 | 1,000,000 | 33.2% | episodes with exactly two predators |
+| M1, matched-strength smell, ordinary agent, seed 42 | 1,000,000 | 1,000,000 | 100.0% | all episodes |
+| M2, matched-strength smell, ordinary agent, seed 42 | 333,743 | 1,000,000 | 33.4% | episodes with exactly one predator |
+| M3, matched-strength smell, ordinary agent, seed 42 | 111,211 | 1,000,000 | 11.1% | episodes with exactly one predator and exactly one rabbit |
+| M4, matched-strength smell, ordinary agent, seed 42 | 1,000,000 | 1,000,000 | 100.0% | all episodes |
+| M5, matched-strength smell, ordinary agent, seed 42 | 332,310 | 1,000,000 | 33.2% | episodes with exactly two predators |
+| M1, matched-strength smell, ordinary agent, seed 43 | 1,000,000 | 1,000,000 | 100.0% | all episodes |
+| M2, matched-strength smell, ordinary agent, seed 43 | 333,743 | 1,000,000 | 33.4% | episodes with exactly one predator |
+| M3, matched-strength smell, ordinary agent, seed 43 | 111,211 | 1,000,000 | 11.1% | episodes with exactly one predator and exactly one rabbit |
+| M4, matched-strength smell, ordinary agent, seed 43 | 1,000,000 | 1,000,000 | 100.0% | all episodes |
+| M5, matched-strength smell, ordinary agent, seed 43 | 332,310 | 1,000,000 | 33.2% | episodes with exactly two predators |
+| M1, matched-strength smell, ordinary agent, seed 44 | 1,000,000 | 1,000,000 | 100.0% | all episodes |
+| M2, matched-strength smell, ordinary agent, seed 44 | 333,743 | 1,000,000 | 33.4% | episodes with exactly one predator |
+| M3, matched-strength smell, ordinary agent, seed 44 | 111,211 | 1,000,000 | 11.1% | episodes with exactly one predator and exactly one rabbit |
+| M4, matched-strength smell, ordinary agent, seed 44 | 1,000,000 | 1,000,000 | 100.0% | all episodes |
+| M5, matched-strength smell, ordinary agent, seed 44 | 332,310 | 1,000,000 | 33.2% | episodes with exactly two predators |
+| M1, matched-strength smell, modulated agent, seed 42 | 1,000,000 | 1,000,000 | 100.0% | all episodes |
+| M2, matched-strength smell, modulated agent, seed 42 | 333,743 | 1,000,000 | 33.4% | episodes with exactly one predator |
+| M3, matched-strength smell, modulated agent, seed 42 | 111,211 | 1,000,000 | 11.1% | episodes with exactly one predator and exactly one rabbit |
+| M4, matched-strength smell, modulated agent, seed 42 | 1,000,000 | 1,000,000 | 100.0% | all episodes |
+| M5, matched-strength smell, modulated agent, seed 42 | 332,310 | 1,000,000 | 33.2% | episodes with exactly two predators |
+| M1, matched-strength smell, modulated agent, seed 43 | 1,000,000 | 1,000,000 | 100.0% | all episodes |
+| M2, matched-strength smell, modulated agent, seed 43 | 333,743 | 1,000,000 | 33.4% | episodes with exactly one predator |
+| M3, matched-strength smell, modulated agent, seed 43 | 111,211 | 1,000,000 | 11.1% | episodes with exactly one predator and exactly one rabbit |
+| M4, matched-strength smell, modulated agent, seed 43 | 1,000,000 | 1,000,000 | 100.0% | all episodes |
+| M5, matched-strength smell, modulated agent, seed 43 | 332,310 | 1,000,000 | 33.2% | episodes with exactly two predators |
+| M1, matched-strength smell, modulated agent, seed 44 | 1,000,000 | 1,000,000 | 100.0% | all episodes |
+| M2, matched-strength smell, modulated agent, seed 44 | 333,743 | 1,000,000 | 33.4% | episodes with exactly one predator |
+| M3, matched-strength smell, modulated agent, seed 44 | 111,211 | 1,000,000 | 11.1% | episodes with exactly one predator and exactly one rabbit |
+| M4, matched-strength smell, modulated agent, seed 44 | 1,000,000 | 1,000,000 | 100.0% | all episodes |
+| M5, matched-strength smell, modulated agent, seed 44 | 332,310 | 1,000,000 | 33.2% | episodes with exactly two predators |
 
 ## f4_multivariate__eating
 
-Figure 4 — multi-factor models of eating. **Axes.** Every panel: horizontal, the change in the run's share of chosen steps spent eating, in percentage points, for a one-standard-deviation increase in the term with the model's other terms held fixed (zero marked by a vertical rule); vertical, the model's terms. One panel per model; panels use different episode subsets, so compare within a panel, not heights across panels.
+Figure 4b — multi-factor models: Eating. **Axes.** Every panel: horizontal, the change in the run's share of chosen steps showing the behaviour (eating), in percentage points, for a one-standard-deviation increase in the term with the model's other terms held fixed (zero marked by a vertical rule); vertical, the model's terms. One panel per model, M1 to M5. Each panel has its own horizontal scale and its own episodes, so compare positions within a panel, not across panels.
 
 | subset | used | available | share | why |
 |---|---:|---:|---:|---|
-| M1, two-channel smell (control), ordinary agent, seed 42 | 1,000,000 | 1,000,000 | 100.0% |  |
-| M2, two-channel smell (control), ordinary agent, seed 42 | 333,743 | 1,000,000 | 33.4% |  |
-| M3, two-channel smell (control), ordinary agent, seed 42 | 111,211 | 1,000,000 | 11.1% |  |
-| M5, two-channel smell (control), ordinary agent, seed 42 | 332,310 | 1,000,000 | 33.2% |  detect_spread = detect_keenest - detect_least_keen (fixed a01 recipe): the design is rank-deficient by construction; the three coefficients are the minimum-norm solution, as in the legacy fit |
-| M4, two-channel smell (control), ordinary agent, seed 42 | 1,000,000 | 1,000,000 | 100.0% |  |
-| M1, two-channel smell (control), ordinary agent, seed 43 | 1,000,000 | 1,000,000 | 100.0% |  |
-| M2, two-channel smell (control), ordinary agent, seed 43 | 333,743 | 1,000,000 | 33.4% |  |
-| M3, two-channel smell (control), ordinary agent, seed 43 | 111,211 | 1,000,000 | 11.1% |  |
-| M5, two-channel smell (control), ordinary agent, seed 43 | 332,310 | 1,000,000 | 33.2% |  detect_spread = detect_keenest - detect_least_keen (fixed a01 recipe): the design is rank-deficient by construction; the three coefficients are the minimum-norm solution, as in the legacy fit |
-| M4, two-channel smell (control), ordinary agent, seed 43 | 1,000,000 | 1,000,000 | 100.0% |  |
-| M1, two-channel smell (control), ordinary agent, seed 44 | 1,000,000 | 1,000,000 | 100.0% |  |
-| M2, two-channel smell (control), ordinary agent, seed 44 | 333,743 | 1,000,000 | 33.4% |  |
-| M3, two-channel smell (control), ordinary agent, seed 44 | 111,211 | 1,000,000 | 11.1% |  |
-| M5, two-channel smell (control), ordinary agent, seed 44 | 332,310 | 1,000,000 | 33.2% |  detect_spread = detect_keenest - detect_least_keen (fixed a01 recipe): the design is rank-deficient by construction; the three coefficients are the minimum-norm solution, as in the legacy fit |
-| M4, two-channel smell (control), ordinary agent, seed 44 | 1,000,000 | 1,000,000 | 100.0% |  |
-| M1, two-channel smell (control), modulated agent, seed 42 | 1,000,000 | 1,000,000 | 100.0% |  |
-| M2, two-channel smell (control), modulated agent, seed 42 | 333,743 | 1,000,000 | 33.4% |  |
-| M3, two-channel smell (control), modulated agent, seed 42 | 111,211 | 1,000,000 | 11.1% |  |
-| M5, two-channel smell (control), modulated agent, seed 42 | 332,310 | 1,000,000 | 33.2% |  detect_spread = detect_keenest - detect_least_keen (fixed a01 recipe): the design is rank-deficient by construction; the three coefficients are the minimum-norm solution, as in the legacy fit |
-| M4, two-channel smell (control), modulated agent, seed 42 | 1,000,000 | 1,000,000 | 100.0% |  |
-| M1, two-channel smell (control), modulated agent, seed 43 | 1,000,000 | 1,000,000 | 100.0% |  |
-| M2, two-channel smell (control), modulated agent, seed 43 | 333,743 | 1,000,000 | 33.4% |  |
-| M3, two-channel smell (control), modulated agent, seed 43 | 111,211 | 1,000,000 | 11.1% |  |
-| M5, two-channel smell (control), modulated agent, seed 43 | 332,310 | 1,000,000 | 33.2% |  detect_spread = detect_keenest - detect_least_keen (fixed a01 recipe): the design is rank-deficient by construction; the three coefficients are the minimum-norm solution, as in the legacy fit |
-| M4, two-channel smell (control), modulated agent, seed 43 | 1,000,000 | 1,000,000 | 100.0% |  |
-| M1, two-channel smell (control), modulated agent, seed 44 | 1,000,000 | 1,000,000 | 100.0% |  |
-| M2, two-channel smell (control), modulated agent, seed 44 | 333,743 | 1,000,000 | 33.4% |  |
-| M3, two-channel smell (control), modulated agent, seed 44 | 111,211 | 1,000,000 | 11.1% |  |
-| M5, two-channel smell (control), modulated agent, seed 44 | 332,310 | 1,000,000 | 33.2% |  detect_spread = detect_keenest - detect_least_keen (fixed a01 recipe): the design is rank-deficient by construction; the three coefficients are the minimum-norm solution, as in the legacy fit |
-| M4, two-channel smell (control), modulated agent, seed 44 | 1,000,000 | 1,000,000 | 100.0% |  |
-| M1, single-channel smell, ordinary agent, seed 42 | 1,000,000 | 1,000,000 | 100.0% |  |
-| M2, single-channel smell, ordinary agent, seed 42 | 333,743 | 1,000,000 | 33.4% |  |
-| M3, single-channel smell, ordinary agent, seed 42 | 111,211 | 1,000,000 | 11.1% |  |
-| M5, single-channel smell, ordinary agent, seed 42 | 332,310 | 1,000,000 | 33.2% |  detect_spread = detect_keenest - detect_least_keen (fixed a01 recipe): the design is rank-deficient by construction; the three coefficients are the minimum-norm solution, as in the legacy fit |
-| M4, single-channel smell, ordinary agent, seed 42 | 1,000,000 | 1,000,000 | 100.0% |  |
-| M1, single-channel smell, ordinary agent, seed 43 | 1,000,000 | 1,000,000 | 100.0% |  |
-| M2, single-channel smell, ordinary agent, seed 43 | 333,743 | 1,000,000 | 33.4% |  |
-| M3, single-channel smell, ordinary agent, seed 43 | 111,211 | 1,000,000 | 11.1% |  |
-| M5, single-channel smell, ordinary agent, seed 43 | 332,310 | 1,000,000 | 33.2% |  detect_spread = detect_keenest - detect_least_keen (fixed a01 recipe): the design is rank-deficient by construction; the three coefficients are the minimum-norm solution, as in the legacy fit |
-| M4, single-channel smell, ordinary agent, seed 43 | 1,000,000 | 1,000,000 | 100.0% |  |
-| M1, single-channel smell, ordinary agent, seed 44 | 1,000,000 | 1,000,000 | 100.0% |  |
-| M2, single-channel smell, ordinary agent, seed 44 | 333,743 | 1,000,000 | 33.4% |  |
-| M3, single-channel smell, ordinary agent, seed 44 | 111,211 | 1,000,000 | 11.1% |  |
-| M5, single-channel smell, ordinary agent, seed 44 | 332,310 | 1,000,000 | 33.2% |  detect_spread = detect_keenest - detect_least_keen (fixed a01 recipe): the design is rank-deficient by construction; the three coefficients are the minimum-norm solution, as in the legacy fit |
-| M4, single-channel smell, ordinary agent, seed 44 | 1,000,000 | 1,000,000 | 100.0% |  |
-| M1, single-channel smell, modulated agent, seed 42 | 1,000,000 | 1,000,000 | 100.0% |  |
-| M2, single-channel smell, modulated agent, seed 42 | 333,743 | 1,000,000 | 33.4% |  |
-| M3, single-channel smell, modulated agent, seed 42 | 111,211 | 1,000,000 | 11.1% |  |
-| M5, single-channel smell, modulated agent, seed 42 | 332,310 | 1,000,000 | 33.2% |  detect_spread = detect_keenest - detect_least_keen (fixed a01 recipe): the design is rank-deficient by construction; the three coefficients are the minimum-norm solution, as in the legacy fit |
-| M4, single-channel smell, modulated agent, seed 42 | 1,000,000 | 1,000,000 | 100.0% |  |
-| M1, single-channel smell, modulated agent, seed 43 | 1,000,000 | 1,000,000 | 100.0% |  |
-| M2, single-channel smell, modulated agent, seed 43 | 333,743 | 1,000,000 | 33.4% |  |
-| M3, single-channel smell, modulated agent, seed 43 | 111,211 | 1,000,000 | 11.1% |  |
-| M5, single-channel smell, modulated agent, seed 43 | 332,310 | 1,000,000 | 33.2% |  detect_spread = detect_keenest - detect_least_keen (fixed a01 recipe): the design is rank-deficient by construction; the three coefficients are the minimum-norm solution, as in the legacy fit |
-| M4, single-channel smell, modulated agent, seed 43 | 1,000,000 | 1,000,000 | 100.0% |  |
-| M1, single-channel smell, modulated agent, seed 44 | 1,000,000 | 1,000,000 | 100.0% |  |
-| M2, single-channel smell, modulated agent, seed 44 | 333,743 | 1,000,000 | 33.4% |  |
-| M3, single-channel smell, modulated agent, seed 44 | 111,211 | 1,000,000 | 11.1% |  |
-| M5, single-channel smell, modulated agent, seed 44 | 332,310 | 1,000,000 | 33.2% |  detect_spread = detect_keenest - detect_least_keen (fixed a01 recipe): the design is rank-deficient by construction; the three coefficients are the minimum-norm solution, as in the legacy fit |
-| M4, single-channel smell, modulated agent, seed 44 | 1,000,000 | 1,000,000 | 100.0% |  |
-| M1, matched-strength smell, ordinary agent, seed 42 | 1,000,000 | 1,000,000 | 100.0% |  |
-| M2, matched-strength smell, ordinary agent, seed 42 | 333,743 | 1,000,000 | 33.4% |  |
-| M3, matched-strength smell, ordinary agent, seed 42 | 111,211 | 1,000,000 | 11.1% |  |
-| M5, matched-strength smell, ordinary agent, seed 42 | 332,310 | 1,000,000 | 33.2% |  detect_spread = detect_keenest - detect_least_keen (fixed a01 recipe): the design is rank-deficient by construction; the three coefficients are the minimum-norm solution, as in the legacy fit |
-| M4, matched-strength smell, ordinary agent, seed 42 | 1,000,000 | 1,000,000 | 100.0% |  |
-| M1, matched-strength smell, ordinary agent, seed 43 | 1,000,000 | 1,000,000 | 100.0% |  |
-| M2, matched-strength smell, ordinary agent, seed 43 | 333,743 | 1,000,000 | 33.4% |  |
-| M3, matched-strength smell, ordinary agent, seed 43 | 111,211 | 1,000,000 | 11.1% |  |
-| M5, matched-strength smell, ordinary agent, seed 43 | 332,310 | 1,000,000 | 33.2% |  detect_spread = detect_keenest - detect_least_keen (fixed a01 recipe): the design is rank-deficient by construction; the three coefficients are the minimum-norm solution, as in the legacy fit |
-| M4, matched-strength smell, ordinary agent, seed 43 | 1,000,000 | 1,000,000 | 100.0% |  |
-| M1, matched-strength smell, ordinary agent, seed 44 | 1,000,000 | 1,000,000 | 100.0% |  |
-| M2, matched-strength smell, ordinary agent, seed 44 | 333,743 | 1,000,000 | 33.4% |  |
-| M3, matched-strength smell, ordinary agent, seed 44 | 111,211 | 1,000,000 | 11.1% |  |
-| M5, matched-strength smell, ordinary agent, seed 44 | 332,310 | 1,000,000 | 33.2% |  detect_spread = detect_keenest - detect_least_keen (fixed a01 recipe): the design is rank-deficient by construction; the three coefficients are the minimum-norm solution, as in the legacy fit |
-| M4, matched-strength smell, ordinary agent, seed 44 | 1,000,000 | 1,000,000 | 100.0% |  |
-| M1, matched-strength smell, modulated agent, seed 42 | 1,000,000 | 1,000,000 | 100.0% |  |
-| M2, matched-strength smell, modulated agent, seed 42 | 333,743 | 1,000,000 | 33.4% |  |
-| M3, matched-strength smell, modulated agent, seed 42 | 111,211 | 1,000,000 | 11.1% |  |
-| M5, matched-strength smell, modulated agent, seed 42 | 332,310 | 1,000,000 | 33.2% |  detect_spread = detect_keenest - detect_least_keen (fixed a01 recipe): the design is rank-deficient by construction; the three coefficients are the minimum-norm solution, as in the legacy fit |
-| M4, matched-strength smell, modulated agent, seed 42 | 1,000,000 | 1,000,000 | 100.0% |  |
-| M1, matched-strength smell, modulated agent, seed 43 | 1,000,000 | 1,000,000 | 100.0% |  |
-| M2, matched-strength smell, modulated agent, seed 43 | 333,743 | 1,000,000 | 33.4% |  |
-| M3, matched-strength smell, modulated agent, seed 43 | 111,211 | 1,000,000 | 11.1% |  |
-| M5, matched-strength smell, modulated agent, seed 43 | 332,310 | 1,000,000 | 33.2% |  detect_spread = detect_keenest - detect_least_keen (fixed a01 recipe): the design is rank-deficient by construction; the three coefficients are the minimum-norm solution, as in the legacy fit |
-| M4, matched-strength smell, modulated agent, seed 43 | 1,000,000 | 1,000,000 | 100.0% |  |
-| M1, matched-strength smell, modulated agent, seed 44 | 1,000,000 | 1,000,000 | 100.0% |  |
-| M2, matched-strength smell, modulated agent, seed 44 | 333,743 | 1,000,000 | 33.4% |  |
-| M3, matched-strength smell, modulated agent, seed 44 | 111,211 | 1,000,000 | 11.1% |  |
-| M5, matched-strength smell, modulated agent, seed 44 | 332,310 | 1,000,000 | 33.2% |  detect_spread = detect_keenest - detect_least_keen (fixed a01 recipe): the design is rank-deficient by construction; the three coefficients are the minimum-norm solution, as in the legacy fit |
-| M4, matched-strength smell, modulated agent, seed 44 | 1,000,000 | 1,000,000 | 100.0% |  |
+| M1, two-channel smell (control), ordinary agent, seed 42 | 1,000,000 | 1,000,000 | 100.0% | all episodes |
+| M2, two-channel smell (control), ordinary agent, seed 42 | 333,743 | 1,000,000 | 33.4% | episodes with exactly one predator |
+| M3, two-channel smell (control), ordinary agent, seed 42 | 111,211 | 1,000,000 | 11.1% | episodes with exactly one predator and exactly one rabbit |
+| M4, two-channel smell (control), ordinary agent, seed 42 | 1,000,000 | 1,000,000 | 100.0% | all episodes |
+| M5, two-channel smell (control), ordinary agent, seed 42 | 332,310 | 1,000,000 | 33.2% | episodes with exactly two predators |
+| M1, two-channel smell (control), ordinary agent, seed 43 | 1,000,000 | 1,000,000 | 100.0% | all episodes |
+| M2, two-channel smell (control), ordinary agent, seed 43 | 333,743 | 1,000,000 | 33.4% | episodes with exactly one predator |
+| M3, two-channel smell (control), ordinary agent, seed 43 | 111,211 | 1,000,000 | 11.1% | episodes with exactly one predator and exactly one rabbit |
+| M4, two-channel smell (control), ordinary agent, seed 43 | 1,000,000 | 1,000,000 | 100.0% | all episodes |
+| M5, two-channel smell (control), ordinary agent, seed 43 | 332,310 | 1,000,000 | 33.2% | episodes with exactly two predators |
+| M1, two-channel smell (control), ordinary agent, seed 44 | 1,000,000 | 1,000,000 | 100.0% | all episodes |
+| M2, two-channel smell (control), ordinary agent, seed 44 | 333,743 | 1,000,000 | 33.4% | episodes with exactly one predator |
+| M3, two-channel smell (control), ordinary agent, seed 44 | 111,211 | 1,000,000 | 11.1% | episodes with exactly one predator and exactly one rabbit |
+| M4, two-channel smell (control), ordinary agent, seed 44 | 1,000,000 | 1,000,000 | 100.0% | all episodes |
+| M5, two-channel smell (control), ordinary agent, seed 44 | 332,310 | 1,000,000 | 33.2% | episodes with exactly two predators |
+| M1, two-channel smell (control), modulated agent, seed 42 | 1,000,000 | 1,000,000 | 100.0% | all episodes |
+| M2, two-channel smell (control), modulated agent, seed 42 | 333,743 | 1,000,000 | 33.4% | episodes with exactly one predator |
+| M3, two-channel smell (control), modulated agent, seed 42 | 111,211 | 1,000,000 | 11.1% | episodes with exactly one predator and exactly one rabbit |
+| M4, two-channel smell (control), modulated agent, seed 42 | 1,000,000 | 1,000,000 | 100.0% | all episodes |
+| M5, two-channel smell (control), modulated agent, seed 42 | 332,310 | 1,000,000 | 33.2% | episodes with exactly two predators |
+| M1, two-channel smell (control), modulated agent, seed 43 | 1,000,000 | 1,000,000 | 100.0% | all episodes |
+| M2, two-channel smell (control), modulated agent, seed 43 | 333,743 | 1,000,000 | 33.4% | episodes with exactly one predator |
+| M3, two-channel smell (control), modulated agent, seed 43 | 111,211 | 1,000,000 | 11.1% | episodes with exactly one predator and exactly one rabbit |
+| M4, two-channel smell (control), modulated agent, seed 43 | 1,000,000 | 1,000,000 | 100.0% | all episodes |
+| M5, two-channel smell (control), modulated agent, seed 43 | 332,310 | 1,000,000 | 33.2% | episodes with exactly two predators |
+| M1, two-channel smell (control), modulated agent, seed 44 | 1,000,000 | 1,000,000 | 100.0% | all episodes |
+| M2, two-channel smell (control), modulated agent, seed 44 | 333,743 | 1,000,000 | 33.4% | episodes with exactly one predator |
+| M3, two-channel smell (control), modulated agent, seed 44 | 111,211 | 1,000,000 | 11.1% | episodes with exactly one predator and exactly one rabbit |
+| M4, two-channel smell (control), modulated agent, seed 44 | 1,000,000 | 1,000,000 | 100.0% | all episodes |
+| M5, two-channel smell (control), modulated agent, seed 44 | 332,310 | 1,000,000 | 33.2% | episodes with exactly two predators |
+| M1, single-channel smell, ordinary agent, seed 42 | 1,000,000 | 1,000,000 | 100.0% | all episodes |
+| M2, single-channel smell, ordinary agent, seed 42 | 333,743 | 1,000,000 | 33.4% | episodes with exactly one predator |
+| M3, single-channel smell, ordinary agent, seed 42 | 111,211 | 1,000,000 | 11.1% | episodes with exactly one predator and exactly one rabbit |
+| M4, single-channel smell, ordinary agent, seed 42 | 1,000,000 | 1,000,000 | 100.0% | all episodes |
+| M5, single-channel smell, ordinary agent, seed 42 | 332,310 | 1,000,000 | 33.2% | episodes with exactly two predators |
+| M1, single-channel smell, ordinary agent, seed 43 | 1,000,000 | 1,000,000 | 100.0% | all episodes |
+| M2, single-channel smell, ordinary agent, seed 43 | 333,743 | 1,000,000 | 33.4% | episodes with exactly one predator |
+| M3, single-channel smell, ordinary agent, seed 43 | 111,211 | 1,000,000 | 11.1% | episodes with exactly one predator and exactly one rabbit |
+| M4, single-channel smell, ordinary agent, seed 43 | 1,000,000 | 1,000,000 | 100.0% | all episodes |
+| M5, single-channel smell, ordinary agent, seed 43 | 332,310 | 1,000,000 | 33.2% | episodes with exactly two predators |
+| M1, single-channel smell, ordinary agent, seed 44 | 1,000,000 | 1,000,000 | 100.0% | all episodes |
+| M2, single-channel smell, ordinary agent, seed 44 | 333,743 | 1,000,000 | 33.4% | episodes with exactly one predator |
+| M3, single-channel smell, ordinary agent, seed 44 | 111,211 | 1,000,000 | 11.1% | episodes with exactly one predator and exactly one rabbit |
+| M4, single-channel smell, ordinary agent, seed 44 | 1,000,000 | 1,000,000 | 100.0% | all episodes |
+| M5, single-channel smell, ordinary agent, seed 44 | 332,310 | 1,000,000 | 33.2% | episodes with exactly two predators |
+| M1, single-channel smell, modulated agent, seed 42 | 1,000,000 | 1,000,000 | 100.0% | all episodes |
+| M2, single-channel smell, modulated agent, seed 42 | 333,743 | 1,000,000 | 33.4% | episodes with exactly one predator |
+| M3, single-channel smell, modulated agent, seed 42 | 111,211 | 1,000,000 | 11.1% | episodes with exactly one predator and exactly one rabbit |
+| M4, single-channel smell, modulated agent, seed 42 | 1,000,000 | 1,000,000 | 100.0% | all episodes |
+| M5, single-channel smell, modulated agent, seed 42 | 332,310 | 1,000,000 | 33.2% | episodes with exactly two predators |
+| M1, single-channel smell, modulated agent, seed 43 | 1,000,000 | 1,000,000 | 100.0% | all episodes |
+| M2, single-channel smell, modulated agent, seed 43 | 333,743 | 1,000,000 | 33.4% | episodes with exactly one predator |
+| M3, single-channel smell, modulated agent, seed 43 | 111,211 | 1,000,000 | 11.1% | episodes with exactly one predator and exactly one rabbit |
+| M4, single-channel smell, modulated agent, seed 43 | 1,000,000 | 1,000,000 | 100.0% | all episodes |
+| M5, single-channel smell, modulated agent, seed 43 | 332,310 | 1,000,000 | 33.2% | episodes with exactly two predators |
+| M1, single-channel smell, modulated agent, seed 44 | 1,000,000 | 1,000,000 | 100.0% | all episodes |
+| M2, single-channel smell, modulated agent, seed 44 | 333,743 | 1,000,000 | 33.4% | episodes with exactly one predator |
+| M3, single-channel smell, modulated agent, seed 44 | 111,211 | 1,000,000 | 11.1% | episodes with exactly one predator and exactly one rabbit |
+| M4, single-channel smell, modulated agent, seed 44 | 1,000,000 | 1,000,000 | 100.0% | all episodes |
+| M5, single-channel smell, modulated agent, seed 44 | 332,310 | 1,000,000 | 33.2% | episodes with exactly two predators |
+| M1, matched-strength smell, ordinary agent, seed 42 | 1,000,000 | 1,000,000 | 100.0% | all episodes |
+| M2, matched-strength smell, ordinary agent, seed 42 | 333,743 | 1,000,000 | 33.4% | episodes with exactly one predator |
+| M3, matched-strength smell, ordinary agent, seed 42 | 111,211 | 1,000,000 | 11.1% | episodes with exactly one predator and exactly one rabbit |
+| M4, matched-strength smell, ordinary agent, seed 42 | 1,000,000 | 1,000,000 | 100.0% | all episodes |
+| M5, matched-strength smell, ordinary agent, seed 42 | 332,310 | 1,000,000 | 33.2% | episodes with exactly two predators |
+| M1, matched-strength smell, ordinary agent, seed 43 | 1,000,000 | 1,000,000 | 100.0% | all episodes |
+| M2, matched-strength smell, ordinary agent, seed 43 | 333,743 | 1,000,000 | 33.4% | episodes with exactly one predator |
+| M3, matched-strength smell, ordinary agent, seed 43 | 111,211 | 1,000,000 | 11.1% | episodes with exactly one predator and exactly one rabbit |
+| M4, matched-strength smell, ordinary agent, seed 43 | 1,000,000 | 1,000,000 | 100.0% | all episodes |
+| M5, matched-strength smell, ordinary agent, seed 43 | 332,310 | 1,000,000 | 33.2% | episodes with exactly two predators |
+| M1, matched-strength smell, ordinary agent, seed 44 | 1,000,000 | 1,000,000 | 100.0% | all episodes |
+| M2, matched-strength smell, ordinary agent, seed 44 | 333,743 | 1,000,000 | 33.4% | episodes with exactly one predator |
+| M3, matched-strength smell, ordinary agent, seed 44 | 111,211 | 1,000,000 | 11.1% | episodes with exactly one predator and exactly one rabbit |
+| M4, matched-strength smell, ordinary agent, seed 44 | 1,000,000 | 1,000,000 | 100.0% | all episodes |
+| M5, matched-strength smell, ordinary agent, seed 44 | 332,310 | 1,000,000 | 33.2% | episodes with exactly two predators |
+| M1, matched-strength smell, modulated agent, seed 42 | 1,000,000 | 1,000,000 | 100.0% | all episodes |
+| M2, matched-strength smell, modulated agent, seed 42 | 333,743 | 1,000,000 | 33.4% | episodes with exactly one predator |
+| M3, matched-strength smell, modulated agent, seed 42 | 111,211 | 1,000,000 | 11.1% | episodes with exactly one predator and exactly one rabbit |
+| M4, matched-strength smell, modulated agent, seed 42 | 1,000,000 | 1,000,000 | 100.0% | all episodes |
+| M5, matched-strength smell, modulated agent, seed 42 | 332,310 | 1,000,000 | 33.2% | episodes with exactly two predators |
+| M1, matched-strength smell, modulated agent, seed 43 | 1,000,000 | 1,000,000 | 100.0% | all episodes |
+| M2, matched-strength smell, modulated agent, seed 43 | 333,743 | 1,000,000 | 33.4% | episodes with exactly one predator |
+| M3, matched-strength smell, modulated agent, seed 43 | 111,211 | 1,000,000 | 11.1% | episodes with exactly one predator and exactly one rabbit |
+| M4, matched-strength smell, modulated agent, seed 43 | 1,000,000 | 1,000,000 | 100.0% | all episodes |
+| M5, matched-strength smell, modulated agent, seed 43 | 332,310 | 1,000,000 | 33.2% | episodes with exactly two predators |
+| M1, matched-strength smell, modulated agent, seed 44 | 1,000,000 | 1,000,000 | 100.0% | all episodes |
+| M2, matched-strength smell, modulated agent, seed 44 | 333,743 | 1,000,000 | 33.4% | episodes with exactly one predator |
+| M3, matched-strength smell, modulated agent, seed 44 | 111,211 | 1,000,000 | 11.1% | episodes with exactly one predator and exactly one rabbit |
+| M4, matched-strength smell, modulated agent, seed 44 | 1,000,000 | 1,000,000 | 100.0% | all episodes |
+| M5, matched-strength smell, modulated agent, seed 44 | 332,310 | 1,000,000 | 33.2% | episodes with exactly two predators |
 
 ## f4_multivariate__near_rabbit
 
-Figure 4 — multi-factor models of within two squares of a rabbit. **Axes.** Every panel: horizontal, the change in the run's share of chosen steps spent within two squares of a rabbit, in percentage points, for a one-standard-deviation increase in the term with the model's other terms held fixed (zero marked by a vertical rule); vertical, the model's terms. One panel per model; panels use different episode subsets, so compare within a panel, not heights across panels.
+Figure 4c — multi-factor models: Time near a rabbit (within 2 squares). **Axes.** Every panel: horizontal, the change in the run's share of chosen steps showing the behaviour (time near a rabbit), in percentage points, for a one-standard-deviation increase in the term with the model's other terms held fixed (zero marked by a vertical rule); vertical, the model's terms. One panel per model, M1 to M5. Each panel has its own horizontal scale and its own episodes, so compare positions within a panel, not across panels.
 
 | subset | used | available | share | why |
 |---|---:|---:|---:|---|
-| M1, two-channel smell (control), ordinary agent, seed 42 | 1,000,000 | 1,000,000 | 100.0% |  |
-| M2, two-channel smell (control), ordinary agent, seed 42 | 333,743 | 1,000,000 | 33.4% |  |
-| M3, two-channel smell (control), ordinary agent, seed 42 | 111,211 | 1,000,000 | 11.1% |  |
-| M5, two-channel smell (control), ordinary agent, seed 42 | 332,310 | 1,000,000 | 33.2% |  detect_spread = detect_keenest - detect_least_keen (fixed a01 recipe): the design is rank-deficient by construction; the three coefficients are the minimum-norm solution, as in the legacy fit |
-| M4, two-channel smell (control), ordinary agent, seed 42 | 1,000,000 | 1,000,000 | 100.0% |  |
-| M1, two-channel smell (control), ordinary agent, seed 43 | 1,000,000 | 1,000,000 | 100.0% |  |
-| M2, two-channel smell (control), ordinary agent, seed 43 | 333,743 | 1,000,000 | 33.4% |  |
-| M3, two-channel smell (control), ordinary agent, seed 43 | 111,211 | 1,000,000 | 11.1% |  |
-| M5, two-channel smell (control), ordinary agent, seed 43 | 332,310 | 1,000,000 | 33.2% |  detect_spread = detect_keenest - detect_least_keen (fixed a01 recipe): the design is rank-deficient by construction; the three coefficients are the minimum-norm solution, as in the legacy fit |
-| M4, two-channel smell (control), ordinary agent, seed 43 | 1,000,000 | 1,000,000 | 100.0% |  |
-| M1, two-channel smell (control), ordinary agent, seed 44 | 1,000,000 | 1,000,000 | 100.0% |  |
-| M2, two-channel smell (control), ordinary agent, seed 44 | 333,743 | 1,000,000 | 33.4% |  |
-| M3, two-channel smell (control), ordinary agent, seed 44 | 111,211 | 1,000,000 | 11.1% |  |
-| M5, two-channel smell (control), ordinary agent, seed 44 | 332,310 | 1,000,000 | 33.2% |  detect_spread = detect_keenest - detect_least_keen (fixed a01 recipe): the design is rank-deficient by construction; the three coefficients are the minimum-norm solution, as in the legacy fit |
-| M4, two-channel smell (control), ordinary agent, seed 44 | 1,000,000 | 1,000,000 | 100.0% |  |
-| M1, two-channel smell (control), modulated agent, seed 42 | 1,000,000 | 1,000,000 | 100.0% |  |
-| M2, two-channel smell (control), modulated agent, seed 42 | 333,743 | 1,000,000 | 33.4% |  |
-| M3, two-channel smell (control), modulated agent, seed 42 | 111,211 | 1,000,000 | 11.1% |  |
-| M5, two-channel smell (control), modulated agent, seed 42 | 332,310 | 1,000,000 | 33.2% |  detect_spread = detect_keenest - detect_least_keen (fixed a01 recipe): the design is rank-deficient by construction; the three coefficients are the minimum-norm solution, as in the legacy fit |
-| M4, two-channel smell (control), modulated agent, seed 42 | 1,000,000 | 1,000,000 | 100.0% |  |
-| M1, two-channel smell (control), modulated agent, seed 43 | 1,000,000 | 1,000,000 | 100.0% |  |
-| M2, two-channel smell (control), modulated agent, seed 43 | 333,743 | 1,000,000 | 33.4% |  |
-| M3, two-channel smell (control), modulated agent, seed 43 | 111,211 | 1,000,000 | 11.1% |  |
-| M5, two-channel smell (control), modulated agent, seed 43 | 332,310 | 1,000,000 | 33.2% |  detect_spread = detect_keenest - detect_least_keen (fixed a01 recipe): the design is rank-deficient by construction; the three coefficients are the minimum-norm solution, as in the legacy fit |
-| M4, two-channel smell (control), modulated agent, seed 43 | 1,000,000 | 1,000,000 | 100.0% |  |
-| M1, two-channel smell (control), modulated agent, seed 44 | 1,000,000 | 1,000,000 | 100.0% |  |
-| M2, two-channel smell (control), modulated agent, seed 44 | 333,743 | 1,000,000 | 33.4% |  |
-| M3, two-channel smell (control), modulated agent, seed 44 | 111,211 | 1,000,000 | 11.1% |  |
-| M5, two-channel smell (control), modulated agent, seed 44 | 332,310 | 1,000,000 | 33.2% |  detect_spread = detect_keenest - detect_least_keen (fixed a01 recipe): the design is rank-deficient by construction; the three coefficients are the minimum-norm solution, as in the legacy fit |
-| M4, two-channel smell (control), modulated agent, seed 44 | 1,000,000 | 1,000,000 | 100.0% |  |
-| M1, single-channel smell, ordinary agent, seed 42 | 1,000,000 | 1,000,000 | 100.0% |  |
-| M2, single-channel smell, ordinary agent, seed 42 | 333,743 | 1,000,000 | 33.4% |  |
-| M3, single-channel smell, ordinary agent, seed 42 | 111,211 | 1,000,000 | 11.1% |  |
-| M5, single-channel smell, ordinary agent, seed 42 | 332,310 | 1,000,000 | 33.2% |  detect_spread = detect_keenest - detect_least_keen (fixed a01 recipe): the design is rank-deficient by construction; the three coefficients are the minimum-norm solution, as in the legacy fit |
-| M4, single-channel smell, ordinary agent, seed 42 | 1,000,000 | 1,000,000 | 100.0% |  |
-| M1, single-channel smell, ordinary agent, seed 43 | 1,000,000 | 1,000,000 | 100.0% |  |
-| M2, single-channel smell, ordinary agent, seed 43 | 333,743 | 1,000,000 | 33.4% |  |
-| M3, single-channel smell, ordinary agent, seed 43 | 111,211 | 1,000,000 | 11.1% |  |
-| M5, single-channel smell, ordinary agent, seed 43 | 332,310 | 1,000,000 | 33.2% |  detect_spread = detect_keenest - detect_least_keen (fixed a01 recipe): the design is rank-deficient by construction; the three coefficients are the minimum-norm solution, as in the legacy fit |
-| M4, single-channel smell, ordinary agent, seed 43 | 1,000,000 | 1,000,000 | 100.0% |  |
-| M1, single-channel smell, ordinary agent, seed 44 | 1,000,000 | 1,000,000 | 100.0% |  |
-| M2, single-channel smell, ordinary agent, seed 44 | 333,743 | 1,000,000 | 33.4% |  |
-| M3, single-channel smell, ordinary agent, seed 44 | 111,211 | 1,000,000 | 11.1% |  |
-| M5, single-channel smell, ordinary agent, seed 44 | 332,310 | 1,000,000 | 33.2% |  detect_spread = detect_keenest - detect_least_keen (fixed a01 recipe): the design is rank-deficient by construction; the three coefficients are the minimum-norm solution, as in the legacy fit |
-| M4, single-channel smell, ordinary agent, seed 44 | 1,000,000 | 1,000,000 | 100.0% |  |
-| M1, single-channel smell, modulated agent, seed 42 | 1,000,000 | 1,000,000 | 100.0% |  |
-| M2, single-channel smell, modulated agent, seed 42 | 333,743 | 1,000,000 | 33.4% |  |
-| M3, single-channel smell, modulated agent, seed 42 | 111,211 | 1,000,000 | 11.1% |  |
-| M5, single-channel smell, modulated agent, seed 42 | 332,310 | 1,000,000 | 33.2% |  detect_spread = detect_keenest - detect_least_keen (fixed a01 recipe): the design is rank-deficient by construction; the three coefficients are the minimum-norm solution, as in the legacy fit |
-| M4, single-channel smell, modulated agent, seed 42 | 1,000,000 | 1,000,000 | 100.0% |  |
-| M1, single-channel smell, modulated agent, seed 43 | 1,000,000 | 1,000,000 | 100.0% |  |
-| M2, single-channel smell, modulated agent, seed 43 | 333,743 | 1,000,000 | 33.4% |  |
-| M3, single-channel smell, modulated agent, seed 43 | 111,211 | 1,000,000 | 11.1% |  |
-| M5, single-channel smell, modulated agent, seed 43 | 332,310 | 1,000,000 | 33.2% |  detect_spread = detect_keenest - detect_least_keen (fixed a01 recipe): the design is rank-deficient by construction; the three coefficients are the minimum-norm solution, as in the legacy fit |
-| M4, single-channel smell, modulated agent, seed 43 | 1,000,000 | 1,000,000 | 100.0% |  |
-| M1, single-channel smell, modulated agent, seed 44 | 1,000,000 | 1,000,000 | 100.0% |  |
-| M2, single-channel smell, modulated agent, seed 44 | 333,743 | 1,000,000 | 33.4% |  |
-| M3, single-channel smell, modulated agent, seed 44 | 111,211 | 1,000,000 | 11.1% |  |
-| M5, single-channel smell, modulated agent, seed 44 | 332,310 | 1,000,000 | 33.2% |  detect_spread = detect_keenest - detect_least_keen (fixed a01 recipe): the design is rank-deficient by construction; the three coefficients are the minimum-norm solution, as in the legacy fit |
-| M4, single-channel smell, modulated agent, seed 44 | 1,000,000 | 1,000,000 | 100.0% |  |
-| M1, matched-strength smell, ordinary agent, seed 42 | 1,000,000 | 1,000,000 | 100.0% |  |
-| M2, matched-strength smell, ordinary agent, seed 42 | 333,743 | 1,000,000 | 33.4% |  |
-| M3, matched-strength smell, ordinary agent, seed 42 | 111,211 | 1,000,000 | 11.1% |  |
-| M5, matched-strength smell, ordinary agent, seed 42 | 332,310 | 1,000,000 | 33.2% |  detect_spread = detect_keenest - detect_least_keen (fixed a01 recipe): the design is rank-deficient by construction; the three coefficients are the minimum-norm solution, as in the legacy fit |
-| M4, matched-strength smell, ordinary agent, seed 42 | 1,000,000 | 1,000,000 | 100.0% |  |
-| M1, matched-strength smell, ordinary agent, seed 43 | 1,000,000 | 1,000,000 | 100.0% |  |
-| M2, matched-strength smell, ordinary agent, seed 43 | 333,743 | 1,000,000 | 33.4% |  |
-| M3, matched-strength smell, ordinary agent, seed 43 | 111,211 | 1,000,000 | 11.1% |  |
-| M5, matched-strength smell, ordinary agent, seed 43 | 332,310 | 1,000,000 | 33.2% |  detect_spread = detect_keenest - detect_least_keen (fixed a01 recipe): the design is rank-deficient by construction; the three coefficients are the minimum-norm solution, as in the legacy fit |
-| M4, matched-strength smell, ordinary agent, seed 43 | 1,000,000 | 1,000,000 | 100.0% |  |
-| M1, matched-strength smell, ordinary agent, seed 44 | 1,000,000 | 1,000,000 | 100.0% |  |
-| M2, matched-strength smell, ordinary agent, seed 44 | 333,743 | 1,000,000 | 33.4% |  |
-| M3, matched-strength smell, ordinary agent, seed 44 | 111,211 | 1,000,000 | 11.1% |  |
-| M5, matched-strength smell, ordinary agent, seed 44 | 332,310 | 1,000,000 | 33.2% |  detect_spread = detect_keenest - detect_least_keen (fixed a01 recipe): the design is rank-deficient by construction; the three coefficients are the minimum-norm solution, as in the legacy fit |
-| M4, matched-strength smell, ordinary agent, seed 44 | 1,000,000 | 1,000,000 | 100.0% |  |
-| M1, matched-strength smell, modulated agent, seed 42 | 1,000,000 | 1,000,000 | 100.0% |  |
-| M2, matched-strength smell, modulated agent, seed 42 | 333,743 | 1,000,000 | 33.4% |  |
-| M3, matched-strength smell, modulated agent, seed 42 | 111,211 | 1,000,000 | 11.1% |  |
-| M5, matched-strength smell, modulated agent, seed 42 | 332,310 | 1,000,000 | 33.2% |  detect_spread = detect_keenest - detect_least_keen (fixed a01 recipe): the design is rank-deficient by construction; the three coefficients are the minimum-norm solution, as in the legacy fit |
-| M4, matched-strength smell, modulated agent, seed 42 | 1,000,000 | 1,000,000 | 100.0% |  |
-| M1, matched-strength smell, modulated agent, seed 43 | 1,000,000 | 1,000,000 | 100.0% |  |
-| M2, matched-strength smell, modulated agent, seed 43 | 333,743 | 1,000,000 | 33.4% |  |
-| M3, matched-strength smell, modulated agent, seed 43 | 111,211 | 1,000,000 | 11.1% |  |
-| M5, matched-strength smell, modulated agent, seed 43 | 332,310 | 1,000,000 | 33.2% |  detect_spread = detect_keenest - detect_least_keen (fixed a01 recipe): the design is rank-deficient by construction; the three coefficients are the minimum-norm solution, as in the legacy fit |
-| M4, matched-strength smell, modulated agent, seed 43 | 1,000,000 | 1,000,000 | 100.0% |  |
-| M1, matched-strength smell, modulated agent, seed 44 | 1,000,000 | 1,000,000 | 100.0% |  |
-| M2, matched-strength smell, modulated agent, seed 44 | 333,743 | 1,000,000 | 33.4% |  |
-| M3, matched-strength smell, modulated agent, seed 44 | 111,211 | 1,000,000 | 11.1% |  |
-| M5, matched-strength smell, modulated agent, seed 44 | 332,310 | 1,000,000 | 33.2% |  detect_spread = detect_keenest - detect_least_keen (fixed a01 recipe): the design is rank-deficient by construction; the three coefficients are the minimum-norm solution, as in the legacy fit |
-| M4, matched-strength smell, modulated agent, seed 44 | 1,000,000 | 1,000,000 | 100.0% |  |
+| M1, two-channel smell (control), ordinary agent, seed 42 | 1,000,000 | 1,000,000 | 100.0% | all episodes |
+| M2, two-channel smell (control), ordinary agent, seed 42 | 333,743 | 1,000,000 | 33.4% | episodes with exactly one predator |
+| M3, two-channel smell (control), ordinary agent, seed 42 | 111,211 | 1,000,000 | 11.1% | episodes with exactly one predator and exactly one rabbit |
+| M4, two-channel smell (control), ordinary agent, seed 42 | 1,000,000 | 1,000,000 | 100.0% | all episodes |
+| M5, two-channel smell (control), ordinary agent, seed 42 | 332,310 | 1,000,000 | 33.2% | episodes with exactly two predators |
+| M1, two-channel smell (control), ordinary agent, seed 43 | 1,000,000 | 1,000,000 | 100.0% | all episodes |
+| M2, two-channel smell (control), ordinary agent, seed 43 | 333,743 | 1,000,000 | 33.4% | episodes with exactly one predator |
+| M3, two-channel smell (control), ordinary agent, seed 43 | 111,211 | 1,000,000 | 11.1% | episodes with exactly one predator and exactly one rabbit |
+| M4, two-channel smell (control), ordinary agent, seed 43 | 1,000,000 | 1,000,000 | 100.0% | all episodes |
+| M5, two-channel smell (control), ordinary agent, seed 43 | 332,310 | 1,000,000 | 33.2% | episodes with exactly two predators |
+| M1, two-channel smell (control), ordinary agent, seed 44 | 1,000,000 | 1,000,000 | 100.0% | all episodes |
+| M2, two-channel smell (control), ordinary agent, seed 44 | 333,743 | 1,000,000 | 33.4% | episodes with exactly one predator |
+| M3, two-channel smell (control), ordinary agent, seed 44 | 111,211 | 1,000,000 | 11.1% | episodes with exactly one predator and exactly one rabbit |
+| M4, two-channel smell (control), ordinary agent, seed 44 | 1,000,000 | 1,000,000 | 100.0% | all episodes |
+| M5, two-channel smell (control), ordinary agent, seed 44 | 332,310 | 1,000,000 | 33.2% | episodes with exactly two predators |
+| M1, two-channel smell (control), modulated agent, seed 42 | 1,000,000 | 1,000,000 | 100.0% | all episodes |
+| M2, two-channel smell (control), modulated agent, seed 42 | 333,743 | 1,000,000 | 33.4% | episodes with exactly one predator |
+| M3, two-channel smell (control), modulated agent, seed 42 | 111,211 | 1,000,000 | 11.1% | episodes with exactly one predator and exactly one rabbit |
+| M4, two-channel smell (control), modulated agent, seed 42 | 1,000,000 | 1,000,000 | 100.0% | all episodes |
+| M5, two-channel smell (control), modulated agent, seed 42 | 332,310 | 1,000,000 | 33.2% | episodes with exactly two predators |
+| M1, two-channel smell (control), modulated agent, seed 43 | 1,000,000 | 1,000,000 | 100.0% | all episodes |
+| M2, two-channel smell (control), modulated agent, seed 43 | 333,743 | 1,000,000 | 33.4% | episodes with exactly one predator |
+| M3, two-channel smell (control), modulated agent, seed 43 | 111,211 | 1,000,000 | 11.1% | episodes with exactly one predator and exactly one rabbit |
+| M4, two-channel smell (control), modulated agent, seed 43 | 1,000,000 | 1,000,000 | 100.0% | all episodes |
+| M5, two-channel smell (control), modulated agent, seed 43 | 332,310 | 1,000,000 | 33.2% | episodes with exactly two predators |
+| M1, two-channel smell (control), modulated agent, seed 44 | 1,000,000 | 1,000,000 | 100.0% | all episodes |
+| M2, two-channel smell (control), modulated agent, seed 44 | 333,743 | 1,000,000 | 33.4% | episodes with exactly one predator |
+| M3, two-channel smell (control), modulated agent, seed 44 | 111,211 | 1,000,000 | 11.1% | episodes with exactly one predator and exactly one rabbit |
+| M4, two-channel smell (control), modulated agent, seed 44 | 1,000,000 | 1,000,000 | 100.0% | all episodes |
+| M5, two-channel smell (control), modulated agent, seed 44 | 332,310 | 1,000,000 | 33.2% | episodes with exactly two predators |
+| M1, single-channel smell, ordinary agent, seed 42 | 1,000,000 | 1,000,000 | 100.0% | all episodes |
+| M2, single-channel smell, ordinary agent, seed 42 | 333,743 | 1,000,000 | 33.4% | episodes with exactly one predator |
+| M3, single-channel smell, ordinary agent, seed 42 | 111,211 | 1,000,000 | 11.1% | episodes with exactly one predator and exactly one rabbit |
+| M4, single-channel smell, ordinary agent, seed 42 | 1,000,000 | 1,000,000 | 100.0% | all episodes |
+| M5, single-channel smell, ordinary agent, seed 42 | 332,310 | 1,000,000 | 33.2% | episodes with exactly two predators |
+| M1, single-channel smell, ordinary agent, seed 43 | 1,000,000 | 1,000,000 | 100.0% | all episodes |
+| M2, single-channel smell, ordinary agent, seed 43 | 333,743 | 1,000,000 | 33.4% | episodes with exactly one predator |
+| M3, single-channel smell, ordinary agent, seed 43 | 111,211 | 1,000,000 | 11.1% | episodes with exactly one predator and exactly one rabbit |
+| M4, single-channel smell, ordinary agent, seed 43 | 1,000,000 | 1,000,000 | 100.0% | all episodes |
+| M5, single-channel smell, ordinary agent, seed 43 | 332,310 | 1,000,000 | 33.2% | episodes with exactly two predators |
+| M1, single-channel smell, ordinary agent, seed 44 | 1,000,000 | 1,000,000 | 100.0% | all episodes |
+| M2, single-channel smell, ordinary agent, seed 44 | 333,743 | 1,000,000 | 33.4% | episodes with exactly one predator |
+| M3, single-channel smell, ordinary agent, seed 44 | 111,211 | 1,000,000 | 11.1% | episodes with exactly one predator and exactly one rabbit |
+| M4, single-channel smell, ordinary agent, seed 44 | 1,000,000 | 1,000,000 | 100.0% | all episodes |
+| M5, single-channel smell, ordinary agent, seed 44 | 332,310 | 1,000,000 | 33.2% | episodes with exactly two predators |
+| M1, single-channel smell, modulated agent, seed 42 | 1,000,000 | 1,000,000 | 100.0% | all episodes |
+| M2, single-channel smell, modulated agent, seed 42 | 333,743 | 1,000,000 | 33.4% | episodes with exactly one predator |
+| M3, single-channel smell, modulated agent, seed 42 | 111,211 | 1,000,000 | 11.1% | episodes with exactly one predator and exactly one rabbit |
+| M4, single-channel smell, modulated agent, seed 42 | 1,000,000 | 1,000,000 | 100.0% | all episodes |
+| M5, single-channel smell, modulated agent, seed 42 | 332,310 | 1,000,000 | 33.2% | episodes with exactly two predators |
+| M1, single-channel smell, modulated agent, seed 43 | 1,000,000 | 1,000,000 | 100.0% | all episodes |
+| M2, single-channel smell, modulated agent, seed 43 | 333,743 | 1,000,000 | 33.4% | episodes with exactly one predator |
+| M3, single-channel smell, modulated agent, seed 43 | 111,211 | 1,000,000 | 11.1% | episodes with exactly one predator and exactly one rabbit |
+| M4, single-channel smell, modulated agent, seed 43 | 1,000,000 | 1,000,000 | 100.0% | all episodes |
+| M5, single-channel smell, modulated agent, seed 43 | 332,310 | 1,000,000 | 33.2% | episodes with exactly two predators |
+| M1, single-channel smell, modulated agent, seed 44 | 1,000,000 | 1,000,000 | 100.0% | all episodes |
+| M2, single-channel smell, modulated agent, seed 44 | 333,743 | 1,000,000 | 33.4% | episodes with exactly one predator |
+| M3, single-channel smell, modulated agent, seed 44 | 111,211 | 1,000,000 | 11.1% | episodes with exactly one predator and exactly one rabbit |
+| M4, single-channel smell, modulated agent, seed 44 | 1,000,000 | 1,000,000 | 100.0% | all episodes |
+| M5, single-channel smell, modulated agent, seed 44 | 332,310 | 1,000,000 | 33.2% | episodes with exactly two predators |
+| M1, matched-strength smell, ordinary agent, seed 42 | 1,000,000 | 1,000,000 | 100.0% | all episodes |
+| M2, matched-strength smell, ordinary agent, seed 42 | 333,743 | 1,000,000 | 33.4% | episodes with exactly one predator |
+| M3, matched-strength smell, ordinary agent, seed 42 | 111,211 | 1,000,000 | 11.1% | episodes with exactly one predator and exactly one rabbit |
+| M4, matched-strength smell, ordinary agent, seed 42 | 1,000,000 | 1,000,000 | 100.0% | all episodes |
+| M5, matched-strength smell, ordinary agent, seed 42 | 332,310 | 1,000,000 | 33.2% | episodes with exactly two predators |
+| M1, matched-strength smell, ordinary agent, seed 43 | 1,000,000 | 1,000,000 | 100.0% | all episodes |
+| M2, matched-strength smell, ordinary agent, seed 43 | 333,743 | 1,000,000 | 33.4% | episodes with exactly one predator |
+| M3, matched-strength smell, ordinary agent, seed 43 | 111,211 | 1,000,000 | 11.1% | episodes with exactly one predator and exactly one rabbit |
+| M4, matched-strength smell, ordinary agent, seed 43 | 1,000,000 | 1,000,000 | 100.0% | all episodes |
+| M5, matched-strength smell, ordinary agent, seed 43 | 332,310 | 1,000,000 | 33.2% | episodes with exactly two predators |
+| M1, matched-strength smell, ordinary agent, seed 44 | 1,000,000 | 1,000,000 | 100.0% | all episodes |
+| M2, matched-strength smell, ordinary agent, seed 44 | 333,743 | 1,000,000 | 33.4% | episodes with exactly one predator |
+| M3, matched-strength smell, ordinary agent, seed 44 | 111,211 | 1,000,000 | 11.1% | episodes with exactly one predator and exactly one rabbit |
+| M4, matched-strength smell, ordinary agent, seed 44 | 1,000,000 | 1,000,000 | 100.0% | all episodes |
+| M5, matched-strength smell, ordinary agent, seed 44 | 332,310 | 1,000,000 | 33.2% | episodes with exactly two predators |
+| M1, matched-strength smell, modulated agent, seed 42 | 1,000,000 | 1,000,000 | 100.0% | all episodes |
+| M2, matched-strength smell, modulated agent, seed 42 | 333,743 | 1,000,000 | 33.4% | episodes with exactly one predator |
+| M3, matched-strength smell, modulated agent, seed 42 | 111,211 | 1,000,000 | 11.1% | episodes with exactly one predator and exactly one rabbit |
+| M4, matched-strength smell, modulated agent, seed 42 | 1,000,000 | 1,000,000 | 100.0% | all episodes |
+| M5, matched-strength smell, modulated agent, seed 42 | 332,310 | 1,000,000 | 33.2% | episodes with exactly two predators |
+| M1, matched-strength smell, modulated agent, seed 43 | 1,000,000 | 1,000,000 | 100.0% | all episodes |
+| M2, matched-strength smell, modulated agent, seed 43 | 333,743 | 1,000,000 | 33.4% | episodes with exactly one predator |
+| M3, matched-strength smell, modulated agent, seed 43 | 111,211 | 1,000,000 | 11.1% | episodes with exactly one predator and exactly one rabbit |
+| M4, matched-strength smell, modulated agent, seed 43 | 1,000,000 | 1,000,000 | 100.0% | all episodes |
+| M5, matched-strength smell, modulated agent, seed 43 | 332,310 | 1,000,000 | 33.2% | episodes with exactly two predators |
+| M1, matched-strength smell, modulated agent, seed 44 | 1,000,000 | 1,000,000 | 100.0% | all episodes |
+| M2, matched-strength smell, modulated agent, seed 44 | 333,743 | 1,000,000 | 33.4% | episodes with exactly one predator |
+| M3, matched-strength smell, modulated agent, seed 44 | 111,211 | 1,000,000 | 11.1% | episodes with exactly one predator and exactly one rabbit |
+| M4, matched-strength smell, modulated agent, seed 44 | 1,000,000 | 1,000,000 | 100.0% | all episodes |
+| M5, matched-strength smell, modulated agent, seed 44 | 332,310 | 1,000,000 | 33.2% | episodes with exactly two predators |
 
 ## f4_multivariate__near_predator
 
-Figure 4 — multi-factor models of within two squares of a predator. **Axes.** Every panel: horizontal, the change in the run's share of chosen steps spent within two squares of a predator, in percentage points, for a one-standard-deviation increase in the term with the model's other terms held fixed (zero marked by a vertical rule); vertical, the model's terms. One panel per model; panels use different episode subsets, so compare within a panel, not heights across panels.
+Figure 4d — multi-factor models: Time near a predator (within 2 squares). **Axes.** Every panel: horizontal, the change in the run's share of chosen steps showing the behaviour (time near a predator), in percentage points, for a one-standard-deviation increase in the term with the model's other terms held fixed (zero marked by a vertical rule); vertical, the model's terms. One panel per model, M1 to M5. Each panel has its own horizontal scale and its own episodes, so compare positions within a panel, not across panels.
 
 | subset | used | available | share | why |
 |---|---:|---:|---:|---|
-| M1, two-channel smell (control), ordinary agent, seed 42 | 1,000,000 | 1,000,000 | 100.0% |  |
-| M2, two-channel smell (control), ordinary agent, seed 42 | 333,743 | 1,000,000 | 33.4% |  |
-| M3, two-channel smell (control), ordinary agent, seed 42 | 111,211 | 1,000,000 | 11.1% |  |
-| M5, two-channel smell (control), ordinary agent, seed 42 | 332,310 | 1,000,000 | 33.2% |  detect_spread = detect_keenest - detect_least_keen (fixed a01 recipe): the design is rank-deficient by construction; the three coefficients are the minimum-norm solution, as in the legacy fit |
-| M4, two-channel smell (control), ordinary agent, seed 42 | 1,000,000 | 1,000,000 | 100.0% |  |
-| M1, two-channel smell (control), ordinary agent, seed 43 | 1,000,000 | 1,000,000 | 100.0% |  |
-| M2, two-channel smell (control), ordinary agent, seed 43 | 333,743 | 1,000,000 | 33.4% |  |
-| M3, two-channel smell (control), ordinary agent, seed 43 | 111,211 | 1,000,000 | 11.1% |  |
-| M5, two-channel smell (control), ordinary agent, seed 43 | 332,310 | 1,000,000 | 33.2% |  detect_spread = detect_keenest - detect_least_keen (fixed a01 recipe): the design is rank-deficient by construction; the three coefficients are the minimum-norm solution, as in the legacy fit |
-| M4, two-channel smell (control), ordinary agent, seed 43 | 1,000,000 | 1,000,000 | 100.0% |  |
-| M1, two-channel smell (control), ordinary agent, seed 44 | 1,000,000 | 1,000,000 | 100.0% |  |
-| M2, two-channel smell (control), ordinary agent, seed 44 | 333,743 | 1,000,000 | 33.4% |  |
-| M3, two-channel smell (control), ordinary agent, seed 44 | 111,211 | 1,000,000 | 11.1% |  |
-| M5, two-channel smell (control), ordinary agent, seed 44 | 332,310 | 1,000,000 | 33.2% |  detect_spread = detect_keenest - detect_least_keen (fixed a01 recipe): the design is rank-deficient by construction; the three coefficients are the minimum-norm solution, as in the legacy fit |
-| M4, two-channel smell (control), ordinary agent, seed 44 | 1,000,000 | 1,000,000 | 100.0% |  |
-| M1, two-channel smell (control), modulated agent, seed 42 | 1,000,000 | 1,000,000 | 100.0% |  |
-| M2, two-channel smell (control), modulated agent, seed 42 | 333,743 | 1,000,000 | 33.4% |  |
-| M3, two-channel smell (control), modulated agent, seed 42 | 111,211 | 1,000,000 | 11.1% |  |
-| M5, two-channel smell (control), modulated agent, seed 42 | 332,310 | 1,000,000 | 33.2% |  detect_spread = detect_keenest - detect_least_keen (fixed a01 recipe): the design is rank-deficient by construction; the three coefficients are the minimum-norm solution, as in the legacy fit |
-| M4, two-channel smell (control), modulated agent, seed 42 | 1,000,000 | 1,000,000 | 100.0% |  |
-| M1, two-channel smell (control), modulated agent, seed 43 | 1,000,000 | 1,000,000 | 100.0% |  |
-| M2, two-channel smell (control), modulated agent, seed 43 | 333,743 | 1,000,000 | 33.4% |  |
-| M3, two-channel smell (control), modulated agent, seed 43 | 111,211 | 1,000,000 | 11.1% |  |
-| M5, two-channel smell (control), modulated agent, seed 43 | 332,310 | 1,000,000 | 33.2% |  detect_spread = detect_keenest - detect_least_keen (fixed a01 recipe): the design is rank-deficient by construction; the three coefficients are the minimum-norm solution, as in the legacy fit |
-| M4, two-channel smell (control), modulated agent, seed 43 | 1,000,000 | 1,000,000 | 100.0% |  |
-| M1, two-channel smell (control), modulated agent, seed 44 | 1,000,000 | 1,000,000 | 100.0% |  |
-| M2, two-channel smell (control), modulated agent, seed 44 | 333,743 | 1,000,000 | 33.4% |  |
-| M3, two-channel smell (control), modulated agent, seed 44 | 111,211 | 1,000,000 | 11.1% |  |
-| M5, two-channel smell (control), modulated agent, seed 44 | 332,310 | 1,000,000 | 33.2% |  detect_spread = detect_keenest - detect_least_keen (fixed a01 recipe): the design is rank-deficient by construction; the three coefficients are the minimum-norm solution, as in the legacy fit |
-| M4, two-channel smell (control), modulated agent, seed 44 | 1,000,000 | 1,000,000 | 100.0% |  |
-| M1, single-channel smell, ordinary agent, seed 42 | 1,000,000 | 1,000,000 | 100.0% |  |
-| M2, single-channel smell, ordinary agent, seed 42 | 333,743 | 1,000,000 | 33.4% |  |
-| M3, single-channel smell, ordinary agent, seed 42 | 111,211 | 1,000,000 | 11.1% |  |
-| M5, single-channel smell, ordinary agent, seed 42 | 332,310 | 1,000,000 | 33.2% |  detect_spread = detect_keenest - detect_least_keen (fixed a01 recipe): the design is rank-deficient by construction; the three coefficients are the minimum-norm solution, as in the legacy fit |
-| M4, single-channel smell, ordinary agent, seed 42 | 1,000,000 | 1,000,000 | 100.0% |  |
-| M1, single-channel smell, ordinary agent, seed 43 | 1,000,000 | 1,000,000 | 100.0% |  |
-| M2, single-channel smell, ordinary agent, seed 43 | 333,743 | 1,000,000 | 33.4% |  |
-| M3, single-channel smell, ordinary agent, seed 43 | 111,211 | 1,000,000 | 11.1% |  |
-| M5, single-channel smell, ordinary agent, seed 43 | 332,310 | 1,000,000 | 33.2% |  detect_spread = detect_keenest - detect_least_keen (fixed a01 recipe): the design is rank-deficient by construction; the three coefficients are the minimum-norm solution, as in the legacy fit |
-| M4, single-channel smell, ordinary agent, seed 43 | 1,000,000 | 1,000,000 | 100.0% |  |
-| M1, single-channel smell, ordinary agent, seed 44 | 1,000,000 | 1,000,000 | 100.0% |  |
-| M2, single-channel smell, ordinary agent, seed 44 | 333,743 | 1,000,000 | 33.4% |  |
-| M3, single-channel smell, ordinary agent, seed 44 | 111,211 | 1,000,000 | 11.1% |  |
-| M5, single-channel smell, ordinary agent, seed 44 | 332,310 | 1,000,000 | 33.2% |  detect_spread = detect_keenest - detect_least_keen (fixed a01 recipe): the design is rank-deficient by construction; the three coefficients are the minimum-norm solution, as in the legacy fit |
-| M4, single-channel smell, ordinary agent, seed 44 | 1,000,000 | 1,000,000 | 100.0% |  |
-| M1, single-channel smell, modulated agent, seed 42 | 1,000,000 | 1,000,000 | 100.0% |  |
-| M2, single-channel smell, modulated agent, seed 42 | 333,743 | 1,000,000 | 33.4% |  |
-| M3, single-channel smell, modulated agent, seed 42 | 111,211 | 1,000,000 | 11.1% |  |
-| M5, single-channel smell, modulated agent, seed 42 | 332,310 | 1,000,000 | 33.2% |  detect_spread = detect_keenest - detect_least_keen (fixed a01 recipe): the design is rank-deficient by construction; the three coefficients are the minimum-norm solution, as in the legacy fit |
-| M4, single-channel smell, modulated agent, seed 42 | 1,000,000 | 1,000,000 | 100.0% |  |
-| M1, single-channel smell, modulated agent, seed 43 | 1,000,000 | 1,000,000 | 100.0% |  |
-| M2, single-channel smell, modulated agent, seed 43 | 333,743 | 1,000,000 | 33.4% |  |
-| M3, single-channel smell, modulated agent, seed 43 | 111,211 | 1,000,000 | 11.1% |  |
-| M5, single-channel smell, modulated agent, seed 43 | 332,310 | 1,000,000 | 33.2% |  detect_spread = detect_keenest - detect_least_keen (fixed a01 recipe): the design is rank-deficient by construction; the three coefficients are the minimum-norm solution, as in the legacy fit |
-| M4, single-channel smell, modulated agent, seed 43 | 1,000,000 | 1,000,000 | 100.0% |  |
-| M1, single-channel smell, modulated agent, seed 44 | 1,000,000 | 1,000,000 | 100.0% |  |
-| M2, single-channel smell, modulated agent, seed 44 | 333,743 | 1,000,000 | 33.4% |  |
-| M3, single-channel smell, modulated agent, seed 44 | 111,211 | 1,000,000 | 11.1% |  |
-| M5, single-channel smell, modulated agent, seed 44 | 332,310 | 1,000,000 | 33.2% |  detect_spread = detect_keenest - detect_least_keen (fixed a01 recipe): the design is rank-deficient by construction; the three coefficients are the minimum-norm solution, as in the legacy fit |
-| M4, single-channel smell, modulated agent, seed 44 | 1,000,000 | 1,000,000 | 100.0% |  |
-| M1, matched-strength smell, ordinary agent, seed 42 | 1,000,000 | 1,000,000 | 100.0% |  |
-| M2, matched-strength smell, ordinary agent, seed 42 | 333,743 | 1,000,000 | 33.4% |  |
-| M3, matched-strength smell, ordinary agent, seed 42 | 111,211 | 1,000,000 | 11.1% |  |
-| M5, matched-strength smell, ordinary agent, seed 42 | 332,310 | 1,000,000 | 33.2% |  detect_spread = detect_keenest - detect_least_keen (fixed a01 recipe): the design is rank-deficient by construction; the three coefficients are the minimum-norm solution, as in the legacy fit |
-| M4, matched-strength smell, ordinary agent, seed 42 | 1,000,000 | 1,000,000 | 100.0% |  |
-| M1, matched-strength smell, ordinary agent, seed 43 | 1,000,000 | 1,000,000 | 100.0% |  |
-| M2, matched-strength smell, ordinary agent, seed 43 | 333,743 | 1,000,000 | 33.4% |  |
-| M3, matched-strength smell, ordinary agent, seed 43 | 111,211 | 1,000,000 | 11.1% |  |
-| M5, matched-strength smell, ordinary agent, seed 43 | 332,310 | 1,000,000 | 33.2% |  detect_spread = detect_keenest - detect_least_keen (fixed a01 recipe): the design is rank-deficient by construction; the three coefficients are the minimum-norm solution, as in the legacy fit |
-| M4, matched-strength smell, ordinary agent, seed 43 | 1,000,000 | 1,000,000 | 100.0% |  |
-| M1, matched-strength smell, ordinary agent, seed 44 | 1,000,000 | 1,000,000 | 100.0% |  |
-| M2, matched-strength smell, ordinary agent, seed 44 | 333,743 | 1,000,000 | 33.4% |  |
-| M3, matched-strength smell, ordinary agent, seed 44 | 111,211 | 1,000,000 | 11.1% |  |
-| M5, matched-strength smell, ordinary agent, seed 44 | 332,310 | 1,000,000 | 33.2% |  detect_spread = detect_keenest - detect_least_keen (fixed a01 recipe): the design is rank-deficient by construction; the three coefficients are the minimum-norm solution, as in the legacy fit |
-| M4, matched-strength smell, ordinary agent, seed 44 | 1,000,000 | 1,000,000 | 100.0% |  |
-| M1, matched-strength smell, modulated agent, seed 42 | 1,000,000 | 1,000,000 | 100.0% |  |
-| M2, matched-strength smell, modulated agent, seed 42 | 333,743 | 1,000,000 | 33.4% |  |
-| M3, matched-strength smell, modulated agent, seed 42 | 111,211 | 1,000,000 | 11.1% |  |
-| M5, matched-strength smell, modulated agent, seed 42 | 332,310 | 1,000,000 | 33.2% |  detect_spread = detect_keenest - detect_least_keen (fixed a01 recipe): the design is rank-deficient by construction; the three coefficients are the minimum-norm solution, as in the legacy fit |
-| M4, matched-strength smell, modulated agent, seed 42 | 1,000,000 | 1,000,000 | 100.0% |  |
-| M1, matched-strength smell, modulated agent, seed 43 | 1,000,000 | 1,000,000 | 100.0% |  |
-| M2, matched-strength smell, modulated agent, seed 43 | 333,743 | 1,000,000 | 33.4% |  |
-| M3, matched-strength smell, modulated agent, seed 43 | 111,211 | 1,000,000 | 11.1% |  |
-| M5, matched-strength smell, modulated agent, seed 43 | 332,310 | 1,000,000 | 33.2% |  detect_spread = detect_keenest - detect_least_keen (fixed a01 recipe): the design is rank-deficient by construction; the three coefficients are the minimum-norm solution, as in the legacy fit |
-| M4, matched-strength smell, modulated agent, seed 43 | 1,000,000 | 1,000,000 | 100.0% |  |
-| M1, matched-strength smell, modulated agent, seed 44 | 1,000,000 | 1,000,000 | 100.0% |  |
-| M2, matched-strength smell, modulated agent, seed 44 | 333,743 | 1,000,000 | 33.4% |  |
-| M3, matched-strength smell, modulated agent, seed 44 | 111,211 | 1,000,000 | 11.1% |  |
-| M5, matched-strength smell, modulated agent, seed 44 | 332,310 | 1,000,000 | 33.2% |  detect_spread = detect_keenest - detect_least_keen (fixed a01 recipe): the design is rank-deficient by construction; the three coefficients are the minimum-norm solution, as in the legacy fit |
-| M4, matched-strength smell, modulated agent, seed 44 | 1,000,000 | 1,000,000 | 100.0% |  |
+| M1, two-channel smell (control), ordinary agent, seed 42 | 1,000,000 | 1,000,000 | 100.0% | all episodes |
+| M2, two-channel smell (control), ordinary agent, seed 42 | 333,743 | 1,000,000 | 33.4% | episodes with exactly one predator |
+| M3, two-channel smell (control), ordinary agent, seed 42 | 111,211 | 1,000,000 | 11.1% | episodes with exactly one predator and exactly one rabbit |
+| M4, two-channel smell (control), ordinary agent, seed 42 | 1,000,000 | 1,000,000 | 100.0% | all episodes |
+| M5, two-channel smell (control), ordinary agent, seed 42 | 332,310 | 1,000,000 | 33.2% | episodes with exactly two predators |
+| M1, two-channel smell (control), ordinary agent, seed 43 | 1,000,000 | 1,000,000 | 100.0% | all episodes |
+| M2, two-channel smell (control), ordinary agent, seed 43 | 333,743 | 1,000,000 | 33.4% | episodes with exactly one predator |
+| M3, two-channel smell (control), ordinary agent, seed 43 | 111,211 | 1,000,000 | 11.1% | episodes with exactly one predator and exactly one rabbit |
+| M4, two-channel smell (control), ordinary agent, seed 43 | 1,000,000 | 1,000,000 | 100.0% | all episodes |
+| M5, two-channel smell (control), ordinary agent, seed 43 | 332,310 | 1,000,000 | 33.2% | episodes with exactly two predators |
+| M1, two-channel smell (control), ordinary agent, seed 44 | 1,000,000 | 1,000,000 | 100.0% | all episodes |
+| M2, two-channel smell (control), ordinary agent, seed 44 | 333,743 | 1,000,000 | 33.4% | episodes with exactly one predator |
+| M3, two-channel smell (control), ordinary agent, seed 44 | 111,211 | 1,000,000 | 11.1% | episodes with exactly one predator and exactly one rabbit |
+| M4, two-channel smell (control), ordinary agent, seed 44 | 1,000,000 | 1,000,000 | 100.0% | all episodes |
+| M5, two-channel smell (control), ordinary agent, seed 44 | 332,310 | 1,000,000 | 33.2% | episodes with exactly two predators |
+| M1, two-channel smell (control), modulated agent, seed 42 | 1,000,000 | 1,000,000 | 100.0% | all episodes |
+| M2, two-channel smell (control), modulated agent, seed 42 | 333,743 | 1,000,000 | 33.4% | episodes with exactly one predator |
+| M3, two-channel smell (control), modulated agent, seed 42 | 111,211 | 1,000,000 | 11.1% | episodes with exactly one predator and exactly one rabbit |
+| M4, two-channel smell (control), modulated agent, seed 42 | 1,000,000 | 1,000,000 | 100.0% | all episodes |
+| M5, two-channel smell (control), modulated agent, seed 42 | 332,310 | 1,000,000 | 33.2% | episodes with exactly two predators |
+| M1, two-channel smell (control), modulated agent, seed 43 | 1,000,000 | 1,000,000 | 100.0% | all episodes |
+| M2, two-channel smell (control), modulated agent, seed 43 | 333,743 | 1,000,000 | 33.4% | episodes with exactly one predator |
+| M3, two-channel smell (control), modulated agent, seed 43 | 111,211 | 1,000,000 | 11.1% | episodes with exactly one predator and exactly one rabbit |
+| M4, two-channel smell (control), modulated agent, seed 43 | 1,000,000 | 1,000,000 | 100.0% | all episodes |
+| M5, two-channel smell (control), modulated agent, seed 43 | 332,310 | 1,000,000 | 33.2% | episodes with exactly two predators |
+| M1, two-channel smell (control), modulated agent, seed 44 | 1,000,000 | 1,000,000 | 100.0% | all episodes |
+| M2, two-channel smell (control), modulated agent, seed 44 | 333,743 | 1,000,000 | 33.4% | episodes with exactly one predator |
+| M3, two-channel smell (control), modulated agent, seed 44 | 111,211 | 1,000,000 | 11.1% | episodes with exactly one predator and exactly one rabbit |
+| M4, two-channel smell (control), modulated agent, seed 44 | 1,000,000 | 1,000,000 | 100.0% | all episodes |
+| M5, two-channel smell (control), modulated agent, seed 44 | 332,310 | 1,000,000 | 33.2% | episodes with exactly two predators |
+| M1, single-channel smell, ordinary agent, seed 42 | 1,000,000 | 1,000,000 | 100.0% | all episodes |
+| M2, single-channel smell, ordinary agent, seed 42 | 333,743 | 1,000,000 | 33.4% | episodes with exactly one predator |
+| M3, single-channel smell, ordinary agent, seed 42 | 111,211 | 1,000,000 | 11.1% | episodes with exactly one predator and exactly one rabbit |
+| M4, single-channel smell, ordinary agent, seed 42 | 1,000,000 | 1,000,000 | 100.0% | all episodes |
+| M5, single-channel smell, ordinary agent, seed 42 | 332,310 | 1,000,000 | 33.2% | episodes with exactly two predators |
+| M1, single-channel smell, ordinary agent, seed 43 | 1,000,000 | 1,000,000 | 100.0% | all episodes |
+| M2, single-channel smell, ordinary agent, seed 43 | 333,743 | 1,000,000 | 33.4% | episodes with exactly one predator |
+| M3, single-channel smell, ordinary agent, seed 43 | 111,211 | 1,000,000 | 11.1% | episodes with exactly one predator and exactly one rabbit |
+| M4, single-channel smell, ordinary agent, seed 43 | 1,000,000 | 1,000,000 | 100.0% | all episodes |
+| M5, single-channel smell, ordinary agent, seed 43 | 332,310 | 1,000,000 | 33.2% | episodes with exactly two predators |
+| M1, single-channel smell, ordinary agent, seed 44 | 1,000,000 | 1,000,000 | 100.0% | all episodes |
+| M2, single-channel smell, ordinary agent, seed 44 | 333,743 | 1,000,000 | 33.4% | episodes with exactly one predator |
+| M3, single-channel smell, ordinary agent, seed 44 | 111,211 | 1,000,000 | 11.1% | episodes with exactly one predator and exactly one rabbit |
+| M4, single-channel smell, ordinary agent, seed 44 | 1,000,000 | 1,000,000 | 100.0% | all episodes |
+| M5, single-channel smell, ordinary agent, seed 44 | 332,310 | 1,000,000 | 33.2% | episodes with exactly two predators |
+| M1, single-channel smell, modulated agent, seed 42 | 1,000,000 | 1,000,000 | 100.0% | all episodes |
+| M2, single-channel smell, modulated agent, seed 42 | 333,743 | 1,000,000 | 33.4% | episodes with exactly one predator |
+| M3, single-channel smell, modulated agent, seed 42 | 111,211 | 1,000,000 | 11.1% | episodes with exactly one predator and exactly one rabbit |
+| M4, single-channel smell, modulated agent, seed 42 | 1,000,000 | 1,000,000 | 100.0% | all episodes |
+| M5, single-channel smell, modulated agent, seed 42 | 332,310 | 1,000,000 | 33.2% | episodes with exactly two predators |
+| M1, single-channel smell, modulated agent, seed 43 | 1,000,000 | 1,000,000 | 100.0% | all episodes |
+| M2, single-channel smell, modulated agent, seed 43 | 333,743 | 1,000,000 | 33.4% | episodes with exactly one predator |
+| M3, single-channel smell, modulated agent, seed 43 | 111,211 | 1,000,000 | 11.1% | episodes with exactly one predator and exactly one rabbit |
+| M4, single-channel smell, modulated agent, seed 43 | 1,000,000 | 1,000,000 | 100.0% | all episodes |
+| M5, single-channel smell, modulated agent, seed 43 | 332,310 | 1,000,000 | 33.2% | episodes with exactly two predators |
+| M1, single-channel smell, modulated agent, seed 44 | 1,000,000 | 1,000,000 | 100.0% | all episodes |
+| M2, single-channel smell, modulated agent, seed 44 | 333,743 | 1,000,000 | 33.4% | episodes with exactly one predator |
+| M3, single-channel smell, modulated agent, seed 44 | 111,211 | 1,000,000 | 11.1% | episodes with exactly one predator and exactly one rabbit |
+| M4, single-channel smell, modulated agent, seed 44 | 1,000,000 | 1,000,000 | 100.0% | all episodes |
+| M5, single-channel smell, modulated agent, seed 44 | 332,310 | 1,000,000 | 33.2% | episodes with exactly two predators |
+| M1, matched-strength smell, ordinary agent, seed 42 | 1,000,000 | 1,000,000 | 100.0% | all episodes |
+| M2, matched-strength smell, ordinary agent, seed 42 | 333,743 | 1,000,000 | 33.4% | episodes with exactly one predator |
+| M3, matched-strength smell, ordinary agent, seed 42 | 111,211 | 1,000,000 | 11.1% | episodes with exactly one predator and exactly one rabbit |
+| M4, matched-strength smell, ordinary agent, seed 42 | 1,000,000 | 1,000,000 | 100.0% | all episodes |
+| M5, matched-strength smell, ordinary agent, seed 42 | 332,310 | 1,000,000 | 33.2% | episodes with exactly two predators |
+| M1, matched-strength smell, ordinary agent, seed 43 | 1,000,000 | 1,000,000 | 100.0% | all episodes |
+| M2, matched-strength smell, ordinary agent, seed 43 | 333,743 | 1,000,000 | 33.4% | episodes with exactly one predator |
+| M3, matched-strength smell, ordinary agent, seed 43 | 111,211 | 1,000,000 | 11.1% | episodes with exactly one predator and exactly one rabbit |
+| M4, matched-strength smell, ordinary agent, seed 43 | 1,000,000 | 1,000,000 | 100.0% | all episodes |
+| M5, matched-strength smell, ordinary agent, seed 43 | 332,310 | 1,000,000 | 33.2% | episodes with exactly two predators |
+| M1, matched-strength smell, ordinary agent, seed 44 | 1,000,000 | 1,000,000 | 100.0% | all episodes |
+| M2, matched-strength smell, ordinary agent, seed 44 | 333,743 | 1,000,000 | 33.4% | episodes with exactly one predator |
+| M3, matched-strength smell, ordinary agent, seed 44 | 111,211 | 1,000,000 | 11.1% | episodes with exactly one predator and exactly one rabbit |
+| M4, matched-strength smell, ordinary agent, seed 44 | 1,000,000 | 1,000,000 | 100.0% | all episodes |
+| M5, matched-strength smell, ordinary agent, seed 44 | 332,310 | 1,000,000 | 33.2% | episodes with exactly two predators |
+| M1, matched-strength smell, modulated agent, seed 42 | 1,000,000 | 1,000,000 | 100.0% | all episodes |
+| M2, matched-strength smell, modulated agent, seed 42 | 333,743 | 1,000,000 | 33.4% | episodes with exactly one predator |
+| M3, matched-strength smell, modulated agent, seed 42 | 111,211 | 1,000,000 | 11.1% | episodes with exactly one predator and exactly one rabbit |
+| M4, matched-strength smell, modulated agent, seed 42 | 1,000,000 | 1,000,000 | 100.0% | all episodes |
+| M5, matched-strength smell, modulated agent, seed 42 | 332,310 | 1,000,000 | 33.2% | episodes with exactly two predators |
+| M1, matched-strength smell, modulated agent, seed 43 | 1,000,000 | 1,000,000 | 100.0% | all episodes |
+| M2, matched-strength smell, modulated agent, seed 43 | 333,743 | 1,000,000 | 33.4% | episodes with exactly one predator |
+| M3, matched-strength smell, modulated agent, seed 43 | 111,211 | 1,000,000 | 11.1% | episodes with exactly one predator and exactly one rabbit |
+| M4, matched-strength smell, modulated agent, seed 43 | 1,000,000 | 1,000,000 | 100.0% | all episodes |
+| M5, matched-strength smell, modulated agent, seed 43 | 332,310 | 1,000,000 | 33.2% | episodes with exactly two predators |
+| M1, matched-strength smell, modulated agent, seed 44 | 1,000,000 | 1,000,000 | 100.0% | all episodes |
+| M2, matched-strength smell, modulated agent, seed 44 | 333,743 | 1,000,000 | 33.4% | episodes with exactly one predator |
+| M3, matched-strength smell, modulated agent, seed 44 | 111,211 | 1,000,000 | 11.1% | episodes with exactly one predator and exactly one rabbit |
+| M4, matched-strength smell, modulated agent, seed 44 | 1,000,000 | 1,000,000 | 100.0% | all episodes |
+| M5, matched-strength smell, modulated agent, seed 44 | 332,310 | 1,000,000 | 33.2% | episodes with exactly two predators |
 
 ## f4_multivariate__warm_cell
 
-Figure 4 — multi-factor models of on a warm square. **Axes.** Every panel: horizontal, the change in the run's share of chosen steps spent on a warm square, in percentage points, for a one-standard-deviation increase in the term with the model's other terms held fixed (zero marked by a vertical rule); vertical, the model's terms. One panel per model; panels use different episode subsets, so compare within a panel, not heights across panels.
+Figure 4e — multi-factor models: Time on a warm square. **Axes.** Every panel: horizontal, the change in the run's share of chosen steps showing the behaviour (time on a warm square), in percentage points, for a one-standard-deviation increase in the term with the model's other terms held fixed (zero marked by a vertical rule); vertical, the model's terms. One panel per model, M1 to M5. Each panel has its own horizontal scale and its own episodes, so compare positions within a panel, not across panels.
 
 | subset | used | available | share | why |
 |---|---:|---:|---:|---|
-| M1, two-channel smell (control), ordinary agent, seed 42 | 1,000,000 | 1,000,000 | 100.0% |  |
-| M2, two-channel smell (control), ordinary agent, seed 42 | 333,743 | 1,000,000 | 33.4% |  |
-| M3, two-channel smell (control), ordinary agent, seed 42 | 111,211 | 1,000,000 | 11.1% |  |
-| M5, two-channel smell (control), ordinary agent, seed 42 | 332,310 | 1,000,000 | 33.2% |  detect_spread = detect_keenest - detect_least_keen (fixed a01 recipe): the design is rank-deficient by construction; the three coefficients are the minimum-norm solution, as in the legacy fit |
-| M4, two-channel smell (control), ordinary agent, seed 42 | 1,000,000 | 1,000,000 | 100.0% |  |
-| M1, two-channel smell (control), ordinary agent, seed 43 | 1,000,000 | 1,000,000 | 100.0% |  |
-| M2, two-channel smell (control), ordinary agent, seed 43 | 333,743 | 1,000,000 | 33.4% |  |
-| M3, two-channel smell (control), ordinary agent, seed 43 | 111,211 | 1,000,000 | 11.1% |  |
-| M5, two-channel smell (control), ordinary agent, seed 43 | 332,310 | 1,000,000 | 33.2% |  detect_spread = detect_keenest - detect_least_keen (fixed a01 recipe): the design is rank-deficient by construction; the three coefficients are the minimum-norm solution, as in the legacy fit |
-| M4, two-channel smell (control), ordinary agent, seed 43 | 1,000,000 | 1,000,000 | 100.0% |  |
-| M1, two-channel smell (control), ordinary agent, seed 44 | 1,000,000 | 1,000,000 | 100.0% |  |
-| M2, two-channel smell (control), ordinary agent, seed 44 | 333,743 | 1,000,000 | 33.4% |  |
-| M3, two-channel smell (control), ordinary agent, seed 44 | 111,211 | 1,000,000 | 11.1% |  |
-| M5, two-channel smell (control), ordinary agent, seed 44 | 332,310 | 1,000,000 | 33.2% |  detect_spread = detect_keenest - detect_least_keen (fixed a01 recipe): the design is rank-deficient by construction; the three coefficients are the minimum-norm solution, as in the legacy fit |
-| M4, two-channel smell (control), ordinary agent, seed 44 | 1,000,000 | 1,000,000 | 100.0% |  |
-| M1, two-channel smell (control), modulated agent, seed 42 | 1,000,000 | 1,000,000 | 100.0% |  |
-| M2, two-channel smell (control), modulated agent, seed 42 | 333,743 | 1,000,000 | 33.4% |  |
-| M3, two-channel smell (control), modulated agent, seed 42 | 111,211 | 1,000,000 | 11.1% |  |
-| M5, two-channel smell (control), modulated agent, seed 42 | 332,310 | 1,000,000 | 33.2% |  detect_spread = detect_keenest - detect_least_keen (fixed a01 recipe): the design is rank-deficient by construction; the three coefficients are the minimum-norm solution, as in the legacy fit |
-| M4, two-channel smell (control), modulated agent, seed 42 | 1,000,000 | 1,000,000 | 100.0% |  |
-| M1, two-channel smell (control), modulated agent, seed 43 | 1,000,000 | 1,000,000 | 100.0% |  |
-| M2, two-channel smell (control), modulated agent, seed 43 | 333,743 | 1,000,000 | 33.4% |  |
-| M3, two-channel smell (control), modulated agent, seed 43 | 111,211 | 1,000,000 | 11.1% |  |
-| M5, two-channel smell (control), modulated agent, seed 43 | 332,310 | 1,000,000 | 33.2% |  detect_spread = detect_keenest - detect_least_keen (fixed a01 recipe): the design is rank-deficient by construction; the three coefficients are the minimum-norm solution, as in the legacy fit |
-| M4, two-channel smell (control), modulated agent, seed 43 | 1,000,000 | 1,000,000 | 100.0% |  |
-| M1, two-channel smell (control), modulated agent, seed 44 | 1,000,000 | 1,000,000 | 100.0% |  |
-| M2, two-channel smell (control), modulated agent, seed 44 | 333,743 | 1,000,000 | 33.4% |  |
-| M3, two-channel smell (control), modulated agent, seed 44 | 111,211 | 1,000,000 | 11.1% |  |
-| M5, two-channel smell (control), modulated agent, seed 44 | 332,310 | 1,000,000 | 33.2% |  detect_spread = detect_keenest - detect_least_keen (fixed a01 recipe): the design is rank-deficient by construction; the three coefficients are the minimum-norm solution, as in the legacy fit |
-| M4, two-channel smell (control), modulated agent, seed 44 | 1,000,000 | 1,000,000 | 100.0% |  |
-| M1, single-channel smell, ordinary agent, seed 42 | 1,000,000 | 1,000,000 | 100.0% |  |
-| M2, single-channel smell, ordinary agent, seed 42 | 333,743 | 1,000,000 | 33.4% |  |
-| M3, single-channel smell, ordinary agent, seed 42 | 111,211 | 1,000,000 | 11.1% |  |
-| M5, single-channel smell, ordinary agent, seed 42 | 332,310 | 1,000,000 | 33.2% |  detect_spread = detect_keenest - detect_least_keen (fixed a01 recipe): the design is rank-deficient by construction; the three coefficients are the minimum-norm solution, as in the legacy fit |
-| M4, single-channel smell, ordinary agent, seed 42 | 1,000,000 | 1,000,000 | 100.0% |  |
-| M1, single-channel smell, ordinary agent, seed 43 | 1,000,000 | 1,000,000 | 100.0% |  |
-| M2, single-channel smell, ordinary agent, seed 43 | 333,743 | 1,000,000 | 33.4% |  |
-| M3, single-channel smell, ordinary agent, seed 43 | 111,211 | 1,000,000 | 11.1% |  |
-| M5, single-channel smell, ordinary agent, seed 43 | 332,310 | 1,000,000 | 33.2% |  detect_spread = detect_keenest - detect_least_keen (fixed a01 recipe): the design is rank-deficient by construction; the three coefficients are the minimum-norm solution, as in the legacy fit |
-| M4, single-channel smell, ordinary agent, seed 43 | 1,000,000 | 1,000,000 | 100.0% |  |
-| M1, single-channel smell, ordinary agent, seed 44 | 1,000,000 | 1,000,000 | 100.0% |  |
-| M2, single-channel smell, ordinary agent, seed 44 | 333,743 | 1,000,000 | 33.4% |  |
-| M3, single-channel smell, ordinary agent, seed 44 | 111,211 | 1,000,000 | 11.1% |  |
-| M5, single-channel smell, ordinary agent, seed 44 | 332,310 | 1,000,000 | 33.2% |  detect_spread = detect_keenest - detect_least_keen (fixed a01 recipe): the design is rank-deficient by construction; the three coefficients are the minimum-norm solution, as in the legacy fit |
-| M4, single-channel smell, ordinary agent, seed 44 | 1,000,000 | 1,000,000 | 100.0% |  |
-| M1, single-channel smell, modulated agent, seed 42 | 1,000,000 | 1,000,000 | 100.0% |  |
-| M2, single-channel smell, modulated agent, seed 42 | 333,743 | 1,000,000 | 33.4% |  |
-| M3, single-channel smell, modulated agent, seed 42 | 111,211 | 1,000,000 | 11.1% |  |
-| M5, single-channel smell, modulated agent, seed 42 | 332,310 | 1,000,000 | 33.2% |  detect_spread = detect_keenest - detect_least_keen (fixed a01 recipe): the design is rank-deficient by construction; the three coefficients are the minimum-norm solution, as in the legacy fit |
-| M4, single-channel smell, modulated agent, seed 42 | 1,000,000 | 1,000,000 | 100.0% |  |
-| M1, single-channel smell, modulated agent, seed 43 | 1,000,000 | 1,000,000 | 100.0% |  |
-| M2, single-channel smell, modulated agent, seed 43 | 333,743 | 1,000,000 | 33.4% |  |
-| M3, single-channel smell, modulated agent, seed 43 | 111,211 | 1,000,000 | 11.1% |  |
-| M5, single-channel smell, modulated agent, seed 43 | 332,310 | 1,000,000 | 33.2% |  detect_spread = detect_keenest - detect_least_keen (fixed a01 recipe): the design is rank-deficient by construction; the three coefficients are the minimum-norm solution, as in the legacy fit |
-| M4, single-channel smell, modulated agent, seed 43 | 1,000,000 | 1,000,000 | 100.0% |  |
-| M1, single-channel smell, modulated agent, seed 44 | 1,000,000 | 1,000,000 | 100.0% |  |
-| M2, single-channel smell, modulated agent, seed 44 | 333,743 | 1,000,000 | 33.4% |  |
-| M3, single-channel smell, modulated agent, seed 44 | 111,211 | 1,000,000 | 11.1% |  |
-| M5, single-channel smell, modulated agent, seed 44 | 332,310 | 1,000,000 | 33.2% |  detect_spread = detect_keenest - detect_least_keen (fixed a01 recipe): the design is rank-deficient by construction; the three coefficients are the minimum-norm solution, as in the legacy fit |
-| M4, single-channel smell, modulated agent, seed 44 | 1,000,000 | 1,000,000 | 100.0% |  |
-| M1, matched-strength smell, ordinary agent, seed 42 | 1,000,000 | 1,000,000 | 100.0% |  |
-| M2, matched-strength smell, ordinary agent, seed 42 | 333,743 | 1,000,000 | 33.4% |  |
-| M3, matched-strength smell, ordinary agent, seed 42 | 111,211 | 1,000,000 | 11.1% |  |
-| M5, matched-strength smell, ordinary agent, seed 42 | 332,310 | 1,000,000 | 33.2% |  detect_spread = detect_keenest - detect_least_keen (fixed a01 recipe): the design is rank-deficient by construction; the three coefficients are the minimum-norm solution, as in the legacy fit |
-| M4, matched-strength smell, ordinary agent, seed 42 | 1,000,000 | 1,000,000 | 100.0% |  |
-| M1, matched-strength smell, ordinary agent, seed 43 | 1,000,000 | 1,000,000 | 100.0% |  |
-| M2, matched-strength smell, ordinary agent, seed 43 | 333,743 | 1,000,000 | 33.4% |  |
-| M3, matched-strength smell, ordinary agent, seed 43 | 111,211 | 1,000,000 | 11.1% |  |
-| M5, matched-strength smell, ordinary agent, seed 43 | 332,310 | 1,000,000 | 33.2% |  detect_spread = detect_keenest - detect_least_keen (fixed a01 recipe): the design is rank-deficient by construction; the three coefficients are the minimum-norm solution, as in the legacy fit |
-| M4, matched-strength smell, ordinary agent, seed 43 | 1,000,000 | 1,000,000 | 100.0% |  |
-| M1, matched-strength smell, ordinary agent, seed 44 | 1,000,000 | 1,000,000 | 100.0% |  |
-| M2, matched-strength smell, ordinary agent, seed 44 | 333,743 | 1,000,000 | 33.4% |  |
-| M3, matched-strength smell, ordinary agent, seed 44 | 111,211 | 1,000,000 | 11.1% |  |
-| M5, matched-strength smell, ordinary agent, seed 44 | 332,310 | 1,000,000 | 33.2% |  detect_spread = detect_keenest - detect_least_keen (fixed a01 recipe): the design is rank-deficient by construction; the three coefficients are the minimum-norm solution, as in the legacy fit |
-| M4, matched-strength smell, ordinary agent, seed 44 | 1,000,000 | 1,000,000 | 100.0% |  |
-| M1, matched-strength smell, modulated agent, seed 42 | 1,000,000 | 1,000,000 | 100.0% |  |
-| M2, matched-strength smell, modulated agent, seed 42 | 333,743 | 1,000,000 | 33.4% |  |
-| M3, matched-strength smell, modulated agent, seed 42 | 111,211 | 1,000,000 | 11.1% |  |
-| M5, matched-strength smell, modulated agent, seed 42 | 332,310 | 1,000,000 | 33.2% |  detect_spread = detect_keenest - detect_least_keen (fixed a01 recipe): the design is rank-deficient by construction; the three coefficients are the minimum-norm solution, as in the legacy fit |
-| M4, matched-strength smell, modulated agent, seed 42 | 1,000,000 | 1,000,000 | 100.0% |  |
-| M1, matched-strength smell, modulated agent, seed 43 | 1,000,000 | 1,000,000 | 100.0% |  |
-| M2, matched-strength smell, modulated agent, seed 43 | 333,743 | 1,000,000 | 33.4% |  |
-| M3, matched-strength smell, modulated agent, seed 43 | 111,211 | 1,000,000 | 11.1% |  |
-| M5, matched-strength smell, modulated agent, seed 43 | 332,310 | 1,000,000 | 33.2% |  detect_spread = detect_keenest - detect_least_keen (fixed a01 recipe): the design is rank-deficient by construction; the three coefficients are the minimum-norm solution, as in the legacy fit |
-| M4, matched-strength smell, modulated agent, seed 43 | 1,000,000 | 1,000,000 | 100.0% |  |
-| M1, matched-strength smell, modulated agent, seed 44 | 1,000,000 | 1,000,000 | 100.0% |  |
-| M2, matched-strength smell, modulated agent, seed 44 | 333,743 | 1,000,000 | 33.4% |  |
-| M3, matched-strength smell, modulated agent, seed 44 | 111,211 | 1,000,000 | 11.1% |  |
-| M5, matched-strength smell, modulated agent, seed 44 | 332,310 | 1,000,000 | 33.2% |  detect_spread = detect_keenest - detect_least_keen (fixed a01 recipe): the design is rank-deficient by construction; the three coefficients are the minimum-norm solution, as in the legacy fit |
-| M4, matched-strength smell, modulated agent, seed 44 | 1,000,000 | 1,000,000 | 100.0% |  |
+| M1, two-channel smell (control), ordinary agent, seed 42 | 1,000,000 | 1,000,000 | 100.0% | all episodes |
+| M2, two-channel smell (control), ordinary agent, seed 42 | 333,743 | 1,000,000 | 33.4% | episodes with exactly one predator |
+| M3, two-channel smell (control), ordinary agent, seed 42 | 111,211 | 1,000,000 | 11.1% | episodes with exactly one predator and exactly one rabbit |
+| M4, two-channel smell (control), ordinary agent, seed 42 | 1,000,000 | 1,000,000 | 100.0% | all episodes |
+| M5, two-channel smell (control), ordinary agent, seed 42 | 332,310 | 1,000,000 | 33.2% | episodes with exactly two predators |
+| M1, two-channel smell (control), ordinary agent, seed 43 | 1,000,000 | 1,000,000 | 100.0% | all episodes |
+| M2, two-channel smell (control), ordinary agent, seed 43 | 333,743 | 1,000,000 | 33.4% | episodes with exactly one predator |
+| M3, two-channel smell (control), ordinary agent, seed 43 | 111,211 | 1,000,000 | 11.1% | episodes with exactly one predator and exactly one rabbit |
+| M4, two-channel smell (control), ordinary agent, seed 43 | 1,000,000 | 1,000,000 | 100.0% | all episodes |
+| M5, two-channel smell (control), ordinary agent, seed 43 | 332,310 | 1,000,000 | 33.2% | episodes with exactly two predators |
+| M1, two-channel smell (control), ordinary agent, seed 44 | 1,000,000 | 1,000,000 | 100.0% | all episodes |
+| M2, two-channel smell (control), ordinary agent, seed 44 | 333,743 | 1,000,000 | 33.4% | episodes with exactly one predator |
+| M3, two-channel smell (control), ordinary agent, seed 44 | 111,211 | 1,000,000 | 11.1% | episodes with exactly one predator and exactly one rabbit |
+| M4, two-channel smell (control), ordinary agent, seed 44 | 1,000,000 | 1,000,000 | 100.0% | all episodes |
+| M5, two-channel smell (control), ordinary agent, seed 44 | 332,310 | 1,000,000 | 33.2% | episodes with exactly two predators |
+| M1, two-channel smell (control), modulated agent, seed 42 | 1,000,000 | 1,000,000 | 100.0% | all episodes |
+| M2, two-channel smell (control), modulated agent, seed 42 | 333,743 | 1,000,000 | 33.4% | episodes with exactly one predator |
+| M3, two-channel smell (control), modulated agent, seed 42 | 111,211 | 1,000,000 | 11.1% | episodes with exactly one predator and exactly one rabbit |
+| M4, two-channel smell (control), modulated agent, seed 42 | 1,000,000 | 1,000,000 | 100.0% | all episodes |
+| M5, two-channel smell (control), modulated agent, seed 42 | 332,310 | 1,000,000 | 33.2% | episodes with exactly two predators |
+| M1, two-channel smell (control), modulated agent, seed 43 | 1,000,000 | 1,000,000 | 100.0% | all episodes |
+| M2, two-channel smell (control), modulated agent, seed 43 | 333,743 | 1,000,000 | 33.4% | episodes with exactly one predator |
+| M3, two-channel smell (control), modulated agent, seed 43 | 111,211 | 1,000,000 | 11.1% | episodes with exactly one predator and exactly one rabbit |
+| M4, two-channel smell (control), modulated agent, seed 43 | 1,000,000 | 1,000,000 | 100.0% | all episodes |
+| M5, two-channel smell (control), modulated agent, seed 43 | 332,310 | 1,000,000 | 33.2% | episodes with exactly two predators |
+| M1, two-channel smell (control), modulated agent, seed 44 | 1,000,000 | 1,000,000 | 100.0% | all episodes |
+| M2, two-channel smell (control), modulated agent, seed 44 | 333,743 | 1,000,000 | 33.4% | episodes with exactly one predator |
+| M3, two-channel smell (control), modulated agent, seed 44 | 111,211 | 1,000,000 | 11.1% | episodes with exactly one predator and exactly one rabbit |
+| M4, two-channel smell (control), modulated agent, seed 44 | 1,000,000 | 1,000,000 | 100.0% | all episodes |
+| M5, two-channel smell (control), modulated agent, seed 44 | 332,310 | 1,000,000 | 33.2% | episodes with exactly two predators |
+| M1, single-channel smell, ordinary agent, seed 42 | 1,000,000 | 1,000,000 | 100.0% | all episodes |
+| M2, single-channel smell, ordinary agent, seed 42 | 333,743 | 1,000,000 | 33.4% | episodes with exactly one predator |
+| M3, single-channel smell, ordinary agent, seed 42 | 111,211 | 1,000,000 | 11.1% | episodes with exactly one predator and exactly one rabbit |
+| M4, single-channel smell, ordinary agent, seed 42 | 1,000,000 | 1,000,000 | 100.0% | all episodes |
+| M5, single-channel smell, ordinary agent, seed 42 | 332,310 | 1,000,000 | 33.2% | episodes with exactly two predators |
+| M1, single-channel smell, ordinary agent, seed 43 | 1,000,000 | 1,000,000 | 100.0% | all episodes |
+| M2, single-channel smell, ordinary agent, seed 43 | 333,743 | 1,000,000 | 33.4% | episodes with exactly one predator |
+| M3, single-channel smell, ordinary agent, seed 43 | 111,211 | 1,000,000 | 11.1% | episodes with exactly one predator and exactly one rabbit |
+| M4, single-channel smell, ordinary agent, seed 43 | 1,000,000 | 1,000,000 | 100.0% | all episodes |
+| M5, single-channel smell, ordinary agent, seed 43 | 332,310 | 1,000,000 | 33.2% | episodes with exactly two predators |
+| M1, single-channel smell, ordinary agent, seed 44 | 1,000,000 | 1,000,000 | 100.0% | all episodes |
+| M2, single-channel smell, ordinary agent, seed 44 | 333,743 | 1,000,000 | 33.4% | episodes with exactly one predator |
+| M3, single-channel smell, ordinary agent, seed 44 | 111,211 | 1,000,000 | 11.1% | episodes with exactly one predator and exactly one rabbit |
+| M4, single-channel smell, ordinary agent, seed 44 | 1,000,000 | 1,000,000 | 100.0% | all episodes |
+| M5, single-channel smell, ordinary agent, seed 44 | 332,310 | 1,000,000 | 33.2% | episodes with exactly two predators |
+| M1, single-channel smell, modulated agent, seed 42 | 1,000,000 | 1,000,000 | 100.0% | all episodes |
+| M2, single-channel smell, modulated agent, seed 42 | 333,743 | 1,000,000 | 33.4% | episodes with exactly one predator |
+| M3, single-channel smell, modulated agent, seed 42 | 111,211 | 1,000,000 | 11.1% | episodes with exactly one predator and exactly one rabbit |
+| M4, single-channel smell, modulated agent, seed 42 | 1,000,000 | 1,000,000 | 100.0% | all episodes |
+| M5, single-channel smell, modulated agent, seed 42 | 332,310 | 1,000,000 | 33.2% | episodes with exactly two predators |
+| M1, single-channel smell, modulated agent, seed 43 | 1,000,000 | 1,000,000 | 100.0% | all episodes |
+| M2, single-channel smell, modulated agent, seed 43 | 333,743 | 1,000,000 | 33.4% | episodes with exactly one predator |
+| M3, single-channel smell, modulated agent, seed 43 | 111,211 | 1,000,000 | 11.1% | episodes with exactly one predator and exactly one rabbit |
+| M4, single-channel smell, modulated agent, seed 43 | 1,000,000 | 1,000,000 | 100.0% | all episodes |
+| M5, single-channel smell, modulated agent, seed 43 | 332,310 | 1,000,000 | 33.2% | episodes with exactly two predators |
+| M1, single-channel smell, modulated agent, seed 44 | 1,000,000 | 1,000,000 | 100.0% | all episodes |
+| M2, single-channel smell, modulated agent, seed 44 | 333,743 | 1,000,000 | 33.4% | episodes with exactly one predator |
+| M3, single-channel smell, modulated agent, seed 44 | 111,211 | 1,000,000 | 11.1% | episodes with exactly one predator and exactly one rabbit |
+| M4, single-channel smell, modulated agent, seed 44 | 1,000,000 | 1,000,000 | 100.0% | all episodes |
+| M5, single-channel smell, modulated agent, seed 44 | 332,310 | 1,000,000 | 33.2% | episodes with exactly two predators |
+| M1, matched-strength smell, ordinary agent, seed 42 | 1,000,000 | 1,000,000 | 100.0% | all episodes |
+| M2, matched-strength smell, ordinary agent, seed 42 | 333,743 | 1,000,000 | 33.4% | episodes with exactly one predator |
+| M3, matched-strength smell, ordinary agent, seed 42 | 111,211 | 1,000,000 | 11.1% | episodes with exactly one predator and exactly one rabbit |
+| M4, matched-strength smell, ordinary agent, seed 42 | 1,000,000 | 1,000,000 | 100.0% | all episodes |
+| M5, matched-strength smell, ordinary agent, seed 42 | 332,310 | 1,000,000 | 33.2% | episodes with exactly two predators |
+| M1, matched-strength smell, ordinary agent, seed 43 | 1,000,000 | 1,000,000 | 100.0% | all episodes |
+| M2, matched-strength smell, ordinary agent, seed 43 | 333,743 | 1,000,000 | 33.4% | episodes with exactly one predator |
+| M3, matched-strength smell, ordinary agent, seed 43 | 111,211 | 1,000,000 | 11.1% | episodes with exactly one predator and exactly one rabbit |
+| M4, matched-strength smell, ordinary agent, seed 43 | 1,000,000 | 1,000,000 | 100.0% | all episodes |
+| M5, matched-strength smell, ordinary agent, seed 43 | 332,310 | 1,000,000 | 33.2% | episodes with exactly two predators |
+| M1, matched-strength smell, ordinary agent, seed 44 | 1,000,000 | 1,000,000 | 100.0% | all episodes |
+| M2, matched-strength smell, ordinary agent, seed 44 | 333,743 | 1,000,000 | 33.4% | episodes with exactly one predator |
+| M3, matched-strength smell, ordinary agent, seed 44 | 111,211 | 1,000,000 | 11.1% | episodes with exactly one predator and exactly one rabbit |
+| M4, matched-strength smell, ordinary agent, seed 44 | 1,000,000 | 1,000,000 | 100.0% | all episodes |
+| M5, matched-strength smell, ordinary agent, seed 44 | 332,310 | 1,000,000 | 33.2% | episodes with exactly two predators |
+| M1, matched-strength smell, modulated agent, seed 42 | 1,000,000 | 1,000,000 | 100.0% | all episodes |
+| M2, matched-strength smell, modulated agent, seed 42 | 333,743 | 1,000,000 | 33.4% | episodes with exactly one predator |
+| M3, matched-strength smell, modulated agent, seed 42 | 111,211 | 1,000,000 | 11.1% | episodes with exactly one predator and exactly one rabbit |
+| M4, matched-strength smell, modulated agent, seed 42 | 1,000,000 | 1,000,000 | 100.0% | all episodes |
+| M5, matched-strength smell, modulated agent, seed 42 | 332,310 | 1,000,000 | 33.2% | episodes with exactly two predators |
+| M1, matched-strength smell, modulated agent, seed 43 | 1,000,000 | 1,000,000 | 100.0% | all episodes |
+| M2, matched-strength smell, modulated agent, seed 43 | 333,743 | 1,000,000 | 33.4% | episodes with exactly one predator |
+| M3, matched-strength smell, modulated agent, seed 43 | 111,211 | 1,000,000 | 11.1% | episodes with exactly one predator and exactly one rabbit |
+| M4, matched-strength smell, modulated agent, seed 43 | 1,000,000 | 1,000,000 | 100.0% | all episodes |
+| M5, matched-strength smell, modulated agent, seed 43 | 332,310 | 1,000,000 | 33.2% | episodes with exactly two predators |
+| M1, matched-strength smell, modulated agent, seed 44 | 1,000,000 | 1,000,000 | 100.0% | all episodes |
+| M2, matched-strength smell, modulated agent, seed 44 | 333,743 | 1,000,000 | 33.4% | episodes with exactly one predator |
+| M3, matched-strength smell, modulated agent, seed 44 | 111,211 | 1,000,000 | 11.1% | episodes with exactly one predator and exactly one rabbit |
+| M4, matched-strength smell, modulated agent, seed 44 | 1,000,000 | 1,000,000 | 100.0% | all episodes |
+| M5, matched-strength smell, modulated agent, seed 44 | 332,310 | 1,000,000 | 33.2% | episodes with exactly two predators |
 
 ## f5_settings__bush_dwell
 
-Figure 5 — settings that move hiding in a bush. **Axes.** Panel (a): horizontal, a difference between two settings divided by the seed-to-seed standard deviation (no unit), with its 95% interval; vertical, the contrast and quantity, sorted by size. Panel (b): horizontal, the share of run-to-run variation attributed to each source, from 0 to 1; vertical, the quantity and source. Panels (c): horizontal, the world and agent type; vertical, the quantity on the logit scale (the behaviour level, or a slope per 10 points of start injury or nutrition, or per nat of smell).
+Figure 5a — settings compared: Bush dwell (time in a bush). **Axes.** Panel (a): horizontal, a difference between two settings divided by the seed-to-seed standard deviation (no unit), with its 95% interval; vertical, the contrast and quantity, sorted by size. Panel (b): horizontal, the share of run-to-run variation attributed to each source, from 0 to 1; vertical, the quantity and source. Panels (c): horizontal, the world and agent type; vertical, the quantity on the logit scale (the behaviour level, or a slope per 10 points of start injury or nutrition, or per nat of smell). A vertical bar marks each standardised difference in (a); a horizontal dash with an error bar marks a setting's mean ± seed-to-seed standard deviation in (c).
 
 | subset | used | available | share | why |
 |---|---:|---:|---:|---|
-| within-run model episodes, single-channel smell, ordinary agent, seed 42 | 333,766 | 1,000,000 | 33.4% | exactly one rabbit, any number of predators |
-| within-run model episodes, single-channel smell, modulated agent, seed 42 | 333,766 | 1,000,000 | 33.4% | exactly one rabbit, any number of predators |
-| within-run model episodes, single-channel smell, ordinary agent, seed 43 | 333,766 | 1,000,000 | 33.4% | exactly one rabbit, any number of predators |
-| within-run model episodes, single-channel smell, modulated agent, seed 43 | 333,766 | 1,000,000 | 33.4% | exactly one rabbit, any number of predators |
-| within-run model episodes, single-channel smell, ordinary agent, seed 44 | 333,766 | 1,000,000 | 33.4% | exactly one rabbit, any number of predators |
-| within-run model episodes, single-channel smell, modulated agent, seed 44 | 333,766 | 1,000,000 | 33.4% | exactly one rabbit, any number of predators |
-| within-run model episodes, two-channel smell (control), ordinary agent, seed 43 | 333,766 | 1,000,000 | 33.4% | exactly one rabbit, any number of predators |
-| within-run model episodes, two-channel smell (control), modulated agent, seed 43 | 333,766 | 1,000,000 | 33.4% | exactly one rabbit, any number of predators |
-| within-run model episodes, two-channel smell (control), ordinary agent, seed 44 | 333,766 | 1,000,000 | 33.4% | exactly one rabbit, any number of predators |
-| within-run model episodes, two-channel smell (control), modulated agent, seed 44 | 333,766 | 1,000,000 | 33.4% | exactly one rabbit, any number of predators |
-| within-run model episodes, matched-strength smell, ordinary agent, seed 42 | 333,766 | 1,000,000 | 33.4% | exactly one rabbit, any number of predators |
-| within-run model episodes, matched-strength smell, modulated agent, seed 42 | 333,766 | 1,000,000 | 33.4% | exactly one rabbit, any number of predators |
-| within-run model episodes, matched-strength smell, ordinary agent, seed 43 | 333,766 | 1,000,000 | 33.4% | exactly one rabbit, any number of predators |
-| within-run model episodes, matched-strength smell, modulated agent, seed 43 | 333,766 | 1,000,000 | 33.4% | exactly one rabbit, any number of predators |
-| within-run model episodes, matched-strength smell, ordinary agent, seed 44 | 333,766 | 1,000,000 | 33.4% | exactly one rabbit, any number of predators |
-| within-run model episodes, matched-strength smell, modulated agent, seed 44 | 333,766 | 1,000,000 | 33.4% | exactly one rabbit, any number of predators |
-| within-run model episodes, two-channel smell (control), ordinary agent, seed 42 | 333,766 | 1,000,000 | 33.4% | exactly one rabbit, any number of predators |
-| within-run model episodes, two-channel smell (control), modulated agent, seed 42 | 333,766 | 1,000,000 | 33.4% | exactly one rabbit, any number of predators |
-| quantities whose within-run noise is small beside seed-to-seed variation | 4 | 5 | 80.0% | median per-run episode-level SE below half the seed-to-seed SD; not so for: smell_x_injury - for these, part of the spread between seeds is estimation noise inside each run |
+| episodes in the per-run model, single-channel smell, ordinary agent, seed 42 | 333,766 | 1,000,000 | 33.4% | episodes with exactly one rabbit (any number of predators): the rabbit's smell is defined only there |
+| episodes in the per-run model, single-channel smell, modulated agent, seed 42 | 333,766 | 1,000,000 | 33.4% | episodes with exactly one rabbit (any number of predators): the rabbit's smell is defined only there |
+| episodes in the per-run model, single-channel smell, ordinary agent, seed 43 | 333,766 | 1,000,000 | 33.4% | episodes with exactly one rabbit (any number of predators): the rabbit's smell is defined only there |
+| episodes in the per-run model, single-channel smell, modulated agent, seed 43 | 333,766 | 1,000,000 | 33.4% | episodes with exactly one rabbit (any number of predators): the rabbit's smell is defined only there |
+| episodes in the per-run model, single-channel smell, ordinary agent, seed 44 | 333,766 | 1,000,000 | 33.4% | episodes with exactly one rabbit (any number of predators): the rabbit's smell is defined only there |
+| episodes in the per-run model, single-channel smell, modulated agent, seed 44 | 333,766 | 1,000,000 | 33.4% | episodes with exactly one rabbit (any number of predators): the rabbit's smell is defined only there |
+| episodes in the per-run model, two-channel smell (control), ordinary agent, seed 43 | 333,766 | 1,000,000 | 33.4% | episodes with exactly one rabbit (any number of predators): the rabbit's smell is defined only there |
+| episodes in the per-run model, two-channel smell (control), modulated agent, seed 43 | 333,766 | 1,000,000 | 33.4% | episodes with exactly one rabbit (any number of predators): the rabbit's smell is defined only there |
+| episodes in the per-run model, two-channel smell (control), ordinary agent, seed 44 | 333,766 | 1,000,000 | 33.4% | episodes with exactly one rabbit (any number of predators): the rabbit's smell is defined only there |
+| episodes in the per-run model, two-channel smell (control), modulated agent, seed 44 | 333,766 | 1,000,000 | 33.4% | episodes with exactly one rabbit (any number of predators): the rabbit's smell is defined only there |
+| episodes in the per-run model, matched-strength smell, ordinary agent, seed 42 | 333,766 | 1,000,000 | 33.4% | episodes with exactly one rabbit (any number of predators): the rabbit's smell is defined only there |
+| episodes in the per-run model, matched-strength smell, modulated agent, seed 42 | 333,766 | 1,000,000 | 33.4% | episodes with exactly one rabbit (any number of predators): the rabbit's smell is defined only there |
+| episodes in the per-run model, matched-strength smell, ordinary agent, seed 43 | 333,766 | 1,000,000 | 33.4% | episodes with exactly one rabbit (any number of predators): the rabbit's smell is defined only there |
+| episodes in the per-run model, matched-strength smell, modulated agent, seed 43 | 333,766 | 1,000,000 | 33.4% | episodes with exactly one rabbit (any number of predators): the rabbit's smell is defined only there |
+| episodes in the per-run model, matched-strength smell, ordinary agent, seed 44 | 333,766 | 1,000,000 | 33.4% | episodes with exactly one rabbit (any number of predators): the rabbit's smell is defined only there |
+| episodes in the per-run model, matched-strength smell, modulated agent, seed 44 | 333,766 | 1,000,000 | 33.4% | episodes with exactly one rabbit (any number of predators): the rabbit's smell is defined only there |
+| episodes in the per-run model, two-channel smell (control), ordinary agent, seed 42 | 333,766 | 1,000,000 | 33.4% | episodes with exactly one rabbit (any number of predators): the rabbit's smell is defined only there |
+| episodes in the per-run model, two-channel smell (control), modulated agent, seed 42 | 333,766 | 1,000,000 | 33.4% | episodes with exactly one rabbit (any number of predators): the rabbit's smell is defined only there |
+| within-run noise check | 4 | 5 | 80.0% | median per-run standard error below half the seed-to-seed standard deviation; not so for: rabbit smell × injury at start - for these, part of the spread between seeds is estimation noise inside each run |
 | runs in the cross-run analysis | 18 | 18 | 100.0% | each training run is one replicate |
 
 ## f5_settings__eating
 
-Figure 5 — settings that move eating. **Axes.** Panel (a): horizontal, a difference between two settings divided by the seed-to-seed standard deviation (no unit), with its 95% interval; vertical, the contrast and quantity, sorted by size. Panel (b): horizontal, the share of run-to-run variation attributed to each source, from 0 to 1; vertical, the quantity and source. Panels (c): horizontal, the world and agent type; vertical, the quantity on the logit scale (the behaviour level, or a slope per 10 points of start injury or nutrition, or per nat of smell).
+Figure 5b — settings compared: Eating. **Axes.** Panel (a): horizontal, a difference between two settings divided by the seed-to-seed standard deviation (no unit), with its 95% interval; vertical, the contrast and quantity, sorted by size. Panel (b): horizontal, the share of run-to-run variation attributed to each source, from 0 to 1; vertical, the quantity and source. Panels (c): horizontal, the world and agent type; vertical, the quantity on the logit scale (the behaviour level, or a slope per 10 points of start injury or nutrition, or per nat of smell). A vertical bar marks each standardised difference in (a); a horizontal dash with an error bar marks a setting's mean ± seed-to-seed standard deviation in (c).
 
 | subset | used | available | share | why |
 |---|---:|---:|---:|---|
-| within-run model episodes, single-channel smell, ordinary agent, seed 42 | 333,766 | 1,000,000 | 33.4% | exactly one rabbit, any number of predators |
-| within-run model episodes, single-channel smell, modulated agent, seed 42 | 333,766 | 1,000,000 | 33.4% | exactly one rabbit, any number of predators |
-| within-run model episodes, single-channel smell, ordinary agent, seed 43 | 333,766 | 1,000,000 | 33.4% | exactly one rabbit, any number of predators |
-| within-run model episodes, single-channel smell, modulated agent, seed 43 | 333,766 | 1,000,000 | 33.4% | exactly one rabbit, any number of predators |
-| within-run model episodes, single-channel smell, ordinary agent, seed 44 | 333,766 | 1,000,000 | 33.4% | exactly one rabbit, any number of predators |
-| within-run model episodes, single-channel smell, modulated agent, seed 44 | 333,766 | 1,000,000 | 33.4% | exactly one rabbit, any number of predators |
-| within-run model episodes, two-channel smell (control), ordinary agent, seed 43 | 333,766 | 1,000,000 | 33.4% | exactly one rabbit, any number of predators |
-| within-run model episodes, two-channel smell (control), modulated agent, seed 43 | 333,766 | 1,000,000 | 33.4% | exactly one rabbit, any number of predators |
-| within-run model episodes, two-channel smell (control), ordinary agent, seed 44 | 333,766 | 1,000,000 | 33.4% | exactly one rabbit, any number of predators |
-| within-run model episodes, two-channel smell (control), modulated agent, seed 44 | 333,766 | 1,000,000 | 33.4% | exactly one rabbit, any number of predators |
-| within-run model episodes, matched-strength smell, ordinary agent, seed 42 | 333,766 | 1,000,000 | 33.4% | exactly one rabbit, any number of predators |
-| within-run model episodes, matched-strength smell, modulated agent, seed 42 | 333,766 | 1,000,000 | 33.4% | exactly one rabbit, any number of predators |
-| within-run model episodes, matched-strength smell, ordinary agent, seed 43 | 333,766 | 1,000,000 | 33.4% | exactly one rabbit, any number of predators |
-| within-run model episodes, matched-strength smell, modulated agent, seed 43 | 333,766 | 1,000,000 | 33.4% | exactly one rabbit, any number of predators |
-| within-run model episodes, matched-strength smell, ordinary agent, seed 44 | 333,766 | 1,000,000 | 33.4% | exactly one rabbit, any number of predators |
-| within-run model episodes, matched-strength smell, modulated agent, seed 44 | 333,766 | 1,000,000 | 33.4% | exactly one rabbit, any number of predators |
-| within-run model episodes, two-channel smell (control), ordinary agent, seed 42 | 333,766 | 1,000,000 | 33.4% | exactly one rabbit, any number of predators |
-| within-run model episodes, two-channel smell (control), modulated agent, seed 42 | 333,766 | 1,000,000 | 33.4% | exactly one rabbit, any number of predators |
-| quantities whose within-run noise is small beside seed-to-seed variation | 2 | 5 | 40.0% | median per-run episode-level SE below half the seed-to-seed SD; not so for: start_injury, smell, smell_x_injury - for these, part of the spread between seeds is estimation noise inside each run |
+| episodes in the per-run model, single-channel smell, ordinary agent, seed 42 | 333,766 | 1,000,000 | 33.4% | episodes with exactly one rabbit (any number of predators): the rabbit's smell is defined only there |
+| episodes in the per-run model, single-channel smell, modulated agent, seed 42 | 333,766 | 1,000,000 | 33.4% | episodes with exactly one rabbit (any number of predators): the rabbit's smell is defined only there |
+| episodes in the per-run model, single-channel smell, ordinary agent, seed 43 | 333,766 | 1,000,000 | 33.4% | episodes with exactly one rabbit (any number of predators): the rabbit's smell is defined only there |
+| episodes in the per-run model, single-channel smell, modulated agent, seed 43 | 333,766 | 1,000,000 | 33.4% | episodes with exactly one rabbit (any number of predators): the rabbit's smell is defined only there |
+| episodes in the per-run model, single-channel smell, ordinary agent, seed 44 | 333,766 | 1,000,000 | 33.4% | episodes with exactly one rabbit (any number of predators): the rabbit's smell is defined only there |
+| episodes in the per-run model, single-channel smell, modulated agent, seed 44 | 333,766 | 1,000,000 | 33.4% | episodes with exactly one rabbit (any number of predators): the rabbit's smell is defined only there |
+| episodes in the per-run model, two-channel smell (control), ordinary agent, seed 43 | 333,766 | 1,000,000 | 33.4% | episodes with exactly one rabbit (any number of predators): the rabbit's smell is defined only there |
+| episodes in the per-run model, two-channel smell (control), modulated agent, seed 43 | 333,766 | 1,000,000 | 33.4% | episodes with exactly one rabbit (any number of predators): the rabbit's smell is defined only there |
+| episodes in the per-run model, two-channel smell (control), ordinary agent, seed 44 | 333,766 | 1,000,000 | 33.4% | episodes with exactly one rabbit (any number of predators): the rabbit's smell is defined only there |
+| episodes in the per-run model, two-channel smell (control), modulated agent, seed 44 | 333,766 | 1,000,000 | 33.4% | episodes with exactly one rabbit (any number of predators): the rabbit's smell is defined only there |
+| episodes in the per-run model, matched-strength smell, ordinary agent, seed 42 | 333,766 | 1,000,000 | 33.4% | episodes with exactly one rabbit (any number of predators): the rabbit's smell is defined only there |
+| episodes in the per-run model, matched-strength smell, modulated agent, seed 42 | 333,766 | 1,000,000 | 33.4% | episodes with exactly one rabbit (any number of predators): the rabbit's smell is defined only there |
+| episodes in the per-run model, matched-strength smell, ordinary agent, seed 43 | 333,766 | 1,000,000 | 33.4% | episodes with exactly one rabbit (any number of predators): the rabbit's smell is defined only there |
+| episodes in the per-run model, matched-strength smell, modulated agent, seed 43 | 333,766 | 1,000,000 | 33.4% | episodes with exactly one rabbit (any number of predators): the rabbit's smell is defined only there |
+| episodes in the per-run model, matched-strength smell, ordinary agent, seed 44 | 333,766 | 1,000,000 | 33.4% | episodes with exactly one rabbit (any number of predators): the rabbit's smell is defined only there |
+| episodes in the per-run model, matched-strength smell, modulated agent, seed 44 | 333,766 | 1,000,000 | 33.4% | episodes with exactly one rabbit (any number of predators): the rabbit's smell is defined only there |
+| episodes in the per-run model, two-channel smell (control), ordinary agent, seed 42 | 333,766 | 1,000,000 | 33.4% | episodes with exactly one rabbit (any number of predators): the rabbit's smell is defined only there |
+| episodes in the per-run model, two-channel smell (control), modulated agent, seed 42 | 333,766 | 1,000,000 | 33.4% | episodes with exactly one rabbit (any number of predators): the rabbit's smell is defined only there |
+| within-run noise check | 2 | 5 | 40.0% | median per-run standard error below half the seed-to-seed standard deviation; not so for: injury-at-start slope, rabbit-smell slope, rabbit smell × injury at start - for these, part of the spread between seeds is estimation noise inside each run |
 | runs in the cross-run analysis | 18 | 18 | 100.0% | each training run is one replicate |
 
 ## f5_settings__near_rabbit
 
-Figure 5 — settings that move within two squares of a rabbit. **Axes.** Panel (a): horizontal, a difference between two settings divided by the seed-to-seed standard deviation (no unit), with its 95% interval; vertical, the contrast and quantity, sorted by size. Panel (b): horizontal, the share of run-to-run variation attributed to each source, from 0 to 1; vertical, the quantity and source. Panels (c): horizontal, the world and agent type; vertical, the quantity on the logit scale (the behaviour level, or a slope per 10 points of start injury or nutrition, or per nat of smell).
+Figure 5c — settings compared: Time near a rabbit (within 2 squares). **Axes.** Panel (a): horizontal, a difference between two settings divided by the seed-to-seed standard deviation (no unit), with its 95% interval; vertical, the contrast and quantity, sorted by size. Panel (b): horizontal, the share of run-to-run variation attributed to each source, from 0 to 1; vertical, the quantity and source. Panels (c): horizontal, the world and agent type; vertical, the quantity on the logit scale (the behaviour level, or a slope per 10 points of start injury or nutrition, or per nat of smell). A vertical bar marks each standardised difference in (a); a horizontal dash with an error bar marks a setting's mean ± seed-to-seed standard deviation in (c).
 
 | subset | used | available | share | why |
 |---|---:|---:|---:|---|
-| within-run model episodes, single-channel smell, ordinary agent, seed 42 | 333,766 | 1,000,000 | 33.4% | exactly one rabbit, any number of predators |
-| within-run model episodes, single-channel smell, modulated agent, seed 42 | 333,766 | 1,000,000 | 33.4% | exactly one rabbit, any number of predators |
-| within-run model episodes, single-channel smell, ordinary agent, seed 43 | 333,766 | 1,000,000 | 33.4% | exactly one rabbit, any number of predators |
-| within-run model episodes, single-channel smell, modulated agent, seed 43 | 333,766 | 1,000,000 | 33.4% | exactly one rabbit, any number of predators |
-| within-run model episodes, single-channel smell, ordinary agent, seed 44 | 333,766 | 1,000,000 | 33.4% | exactly one rabbit, any number of predators |
-| within-run model episodes, single-channel smell, modulated agent, seed 44 | 333,766 | 1,000,000 | 33.4% | exactly one rabbit, any number of predators |
-| within-run model episodes, two-channel smell (control), ordinary agent, seed 43 | 333,766 | 1,000,000 | 33.4% | exactly one rabbit, any number of predators |
-| within-run model episodes, two-channel smell (control), modulated agent, seed 43 | 333,766 | 1,000,000 | 33.4% | exactly one rabbit, any number of predators |
-| within-run model episodes, two-channel smell (control), ordinary agent, seed 44 | 333,766 | 1,000,000 | 33.4% | exactly one rabbit, any number of predators |
-| within-run model episodes, two-channel smell (control), modulated agent, seed 44 | 333,766 | 1,000,000 | 33.4% | exactly one rabbit, any number of predators |
-| within-run model episodes, matched-strength smell, ordinary agent, seed 42 | 333,766 | 1,000,000 | 33.4% | exactly one rabbit, any number of predators |
-| within-run model episodes, matched-strength smell, modulated agent, seed 42 | 333,766 | 1,000,000 | 33.4% | exactly one rabbit, any number of predators |
-| within-run model episodes, matched-strength smell, ordinary agent, seed 43 | 333,766 | 1,000,000 | 33.4% | exactly one rabbit, any number of predators |
-| within-run model episodes, matched-strength smell, modulated agent, seed 43 | 333,766 | 1,000,000 | 33.4% | exactly one rabbit, any number of predators |
-| within-run model episodes, matched-strength smell, ordinary agent, seed 44 | 333,766 | 1,000,000 | 33.4% | exactly one rabbit, any number of predators |
-| within-run model episodes, matched-strength smell, modulated agent, seed 44 | 333,766 | 1,000,000 | 33.4% | exactly one rabbit, any number of predators |
-| within-run model episodes, two-channel smell (control), ordinary agent, seed 42 | 333,766 | 1,000,000 | 33.4% | exactly one rabbit, any number of predators |
-| within-run model episodes, two-channel smell (control), modulated agent, seed 42 | 333,766 | 1,000,000 | 33.4% | exactly one rabbit, any number of predators |
-| quantities whose within-run noise is small beside seed-to-seed variation | 3 | 5 | 60.0% | median per-run episode-level SE below half the seed-to-seed SD; not so for: start_injury, smell_x_injury - for these, part of the spread between seeds is estimation noise inside each run |
+| episodes in the per-run model, single-channel smell, ordinary agent, seed 42 | 333,766 | 1,000,000 | 33.4% | episodes with exactly one rabbit (any number of predators): the rabbit's smell is defined only there |
+| episodes in the per-run model, single-channel smell, modulated agent, seed 42 | 333,766 | 1,000,000 | 33.4% | episodes with exactly one rabbit (any number of predators): the rabbit's smell is defined only there |
+| episodes in the per-run model, single-channel smell, ordinary agent, seed 43 | 333,766 | 1,000,000 | 33.4% | episodes with exactly one rabbit (any number of predators): the rabbit's smell is defined only there |
+| episodes in the per-run model, single-channel smell, modulated agent, seed 43 | 333,766 | 1,000,000 | 33.4% | episodes with exactly one rabbit (any number of predators): the rabbit's smell is defined only there |
+| episodes in the per-run model, single-channel smell, ordinary agent, seed 44 | 333,766 | 1,000,000 | 33.4% | episodes with exactly one rabbit (any number of predators): the rabbit's smell is defined only there |
+| episodes in the per-run model, single-channel smell, modulated agent, seed 44 | 333,766 | 1,000,000 | 33.4% | episodes with exactly one rabbit (any number of predators): the rabbit's smell is defined only there |
+| episodes in the per-run model, two-channel smell (control), ordinary agent, seed 43 | 333,766 | 1,000,000 | 33.4% | episodes with exactly one rabbit (any number of predators): the rabbit's smell is defined only there |
+| episodes in the per-run model, two-channel smell (control), modulated agent, seed 43 | 333,766 | 1,000,000 | 33.4% | episodes with exactly one rabbit (any number of predators): the rabbit's smell is defined only there |
+| episodes in the per-run model, two-channel smell (control), ordinary agent, seed 44 | 333,766 | 1,000,000 | 33.4% | episodes with exactly one rabbit (any number of predators): the rabbit's smell is defined only there |
+| episodes in the per-run model, two-channel smell (control), modulated agent, seed 44 | 333,766 | 1,000,000 | 33.4% | episodes with exactly one rabbit (any number of predators): the rabbit's smell is defined only there |
+| episodes in the per-run model, matched-strength smell, ordinary agent, seed 42 | 333,766 | 1,000,000 | 33.4% | episodes with exactly one rabbit (any number of predators): the rabbit's smell is defined only there |
+| episodes in the per-run model, matched-strength smell, modulated agent, seed 42 | 333,766 | 1,000,000 | 33.4% | episodes with exactly one rabbit (any number of predators): the rabbit's smell is defined only there |
+| episodes in the per-run model, matched-strength smell, ordinary agent, seed 43 | 333,766 | 1,000,000 | 33.4% | episodes with exactly one rabbit (any number of predators): the rabbit's smell is defined only there |
+| episodes in the per-run model, matched-strength smell, modulated agent, seed 43 | 333,766 | 1,000,000 | 33.4% | episodes with exactly one rabbit (any number of predators): the rabbit's smell is defined only there |
+| episodes in the per-run model, matched-strength smell, ordinary agent, seed 44 | 333,766 | 1,000,000 | 33.4% | episodes with exactly one rabbit (any number of predators): the rabbit's smell is defined only there |
+| episodes in the per-run model, matched-strength smell, modulated agent, seed 44 | 333,766 | 1,000,000 | 33.4% | episodes with exactly one rabbit (any number of predators): the rabbit's smell is defined only there |
+| episodes in the per-run model, two-channel smell (control), ordinary agent, seed 42 | 333,766 | 1,000,000 | 33.4% | episodes with exactly one rabbit (any number of predators): the rabbit's smell is defined only there |
+| episodes in the per-run model, two-channel smell (control), modulated agent, seed 42 | 333,766 | 1,000,000 | 33.4% | episodes with exactly one rabbit (any number of predators): the rabbit's smell is defined only there |
+| within-run noise check | 3 | 5 | 60.0% | median per-run standard error below half the seed-to-seed standard deviation; not so for: injury-at-start slope, rabbit smell × injury at start - for these, part of the spread between seeds is estimation noise inside each run |
 | runs in the cross-run analysis | 18 | 18 | 100.0% | each training run is one replicate |
 
 ## f5_settings__near_predator
 
-Figure 5 — settings that move within two squares of a predator. **Axes.** Panel (a): horizontal, a difference between two settings divided by the seed-to-seed standard deviation (no unit), with its 95% interval; vertical, the contrast and quantity, sorted by size. Panel (b): horizontal, the share of run-to-run variation attributed to each source, from 0 to 1; vertical, the quantity and source. Panels (c): horizontal, the world and agent type; vertical, the quantity on the logit scale (the behaviour level, or a slope per 10 points of start injury or nutrition, or per nat of smell).
+Figure 5d — settings compared: Time near a predator (within 2 squares). **Axes.** Panel (a): horizontal, a difference between two settings divided by the seed-to-seed standard deviation (no unit), with its 95% interval; vertical, the contrast and quantity, sorted by size. Panel (b): horizontal, the share of run-to-run variation attributed to each source, from 0 to 1; vertical, the quantity and source. Panels (c): horizontal, the world and agent type; vertical, the quantity on the logit scale (the behaviour level, or a slope per 10 points of start injury or nutrition, or per nat of smell). A vertical bar marks each standardised difference in (a); a horizontal dash with an error bar marks a setting's mean ± seed-to-seed standard deviation in (c).
 
 | subset | used | available | share | why |
 |---|---:|---:|---:|---|
-| within-run model episodes, single-channel smell, ordinary agent, seed 42 | 333,766 | 1,000,000 | 33.4% | exactly one rabbit, any number of predators |
-| within-run model episodes, single-channel smell, modulated agent, seed 42 | 333,766 | 1,000,000 | 33.4% | exactly one rabbit, any number of predators |
-| within-run model episodes, single-channel smell, ordinary agent, seed 43 | 333,766 | 1,000,000 | 33.4% | exactly one rabbit, any number of predators |
-| within-run model episodes, single-channel smell, modulated agent, seed 43 | 333,766 | 1,000,000 | 33.4% | exactly one rabbit, any number of predators |
-| within-run model episodes, single-channel smell, ordinary agent, seed 44 | 333,766 | 1,000,000 | 33.4% | exactly one rabbit, any number of predators |
-| within-run model episodes, single-channel smell, modulated agent, seed 44 | 333,766 | 1,000,000 | 33.4% | exactly one rabbit, any number of predators |
-| within-run model episodes, two-channel smell (control), ordinary agent, seed 43 | 333,766 | 1,000,000 | 33.4% | exactly one rabbit, any number of predators |
-| within-run model episodes, two-channel smell (control), modulated agent, seed 43 | 333,766 | 1,000,000 | 33.4% | exactly one rabbit, any number of predators |
-| within-run model episodes, two-channel smell (control), ordinary agent, seed 44 | 333,766 | 1,000,000 | 33.4% | exactly one rabbit, any number of predators |
-| within-run model episodes, two-channel smell (control), modulated agent, seed 44 | 333,766 | 1,000,000 | 33.4% | exactly one rabbit, any number of predators |
-| within-run model episodes, matched-strength smell, ordinary agent, seed 42 | 333,766 | 1,000,000 | 33.4% | exactly one rabbit, any number of predators |
-| within-run model episodes, matched-strength smell, modulated agent, seed 42 | 333,766 | 1,000,000 | 33.4% | exactly one rabbit, any number of predators |
-| within-run model episodes, matched-strength smell, ordinary agent, seed 43 | 333,766 | 1,000,000 | 33.4% | exactly one rabbit, any number of predators |
-| within-run model episodes, matched-strength smell, modulated agent, seed 43 | 333,766 | 1,000,000 | 33.4% | exactly one rabbit, any number of predators |
-| within-run model episodes, matched-strength smell, ordinary agent, seed 44 | 333,766 | 1,000,000 | 33.4% | exactly one rabbit, any number of predators |
-| within-run model episodes, matched-strength smell, modulated agent, seed 44 | 333,766 | 1,000,000 | 33.4% | exactly one rabbit, any number of predators |
-| within-run model episodes, two-channel smell (control), ordinary agent, seed 42 | 333,766 | 1,000,000 | 33.4% | exactly one rabbit, any number of predators |
-| within-run model episodes, two-channel smell (control), modulated agent, seed 42 | 333,766 | 1,000,000 | 33.4% | exactly one rabbit, any number of predators |
-| quantities whose within-run noise is small beside seed-to-seed variation | 2 | 5 | 40.0% | median per-run episode-level SE below half the seed-to-seed SD; not so for: start_injury, smell, smell_x_injury - for these, part of the spread between seeds is estimation noise inside each run |
+| episodes in the per-run model, single-channel smell, ordinary agent, seed 42 | 333,766 | 1,000,000 | 33.4% | episodes with exactly one rabbit (any number of predators): the rabbit's smell is defined only there |
+| episodes in the per-run model, single-channel smell, modulated agent, seed 42 | 333,766 | 1,000,000 | 33.4% | episodes with exactly one rabbit (any number of predators): the rabbit's smell is defined only there |
+| episodes in the per-run model, single-channel smell, ordinary agent, seed 43 | 333,766 | 1,000,000 | 33.4% | episodes with exactly one rabbit (any number of predators): the rabbit's smell is defined only there |
+| episodes in the per-run model, single-channel smell, modulated agent, seed 43 | 333,766 | 1,000,000 | 33.4% | episodes with exactly one rabbit (any number of predators): the rabbit's smell is defined only there |
+| episodes in the per-run model, single-channel smell, ordinary agent, seed 44 | 333,766 | 1,000,000 | 33.4% | episodes with exactly one rabbit (any number of predators): the rabbit's smell is defined only there |
+| episodes in the per-run model, single-channel smell, modulated agent, seed 44 | 333,766 | 1,000,000 | 33.4% | episodes with exactly one rabbit (any number of predators): the rabbit's smell is defined only there |
+| episodes in the per-run model, two-channel smell (control), ordinary agent, seed 43 | 333,766 | 1,000,000 | 33.4% | episodes with exactly one rabbit (any number of predators): the rabbit's smell is defined only there |
+| episodes in the per-run model, two-channel smell (control), modulated agent, seed 43 | 333,766 | 1,000,000 | 33.4% | episodes with exactly one rabbit (any number of predators): the rabbit's smell is defined only there |
+| episodes in the per-run model, two-channel smell (control), ordinary agent, seed 44 | 333,766 | 1,000,000 | 33.4% | episodes with exactly one rabbit (any number of predators): the rabbit's smell is defined only there |
+| episodes in the per-run model, two-channel smell (control), modulated agent, seed 44 | 333,766 | 1,000,000 | 33.4% | episodes with exactly one rabbit (any number of predators): the rabbit's smell is defined only there |
+| episodes in the per-run model, matched-strength smell, ordinary agent, seed 42 | 333,766 | 1,000,000 | 33.4% | episodes with exactly one rabbit (any number of predators): the rabbit's smell is defined only there |
+| episodes in the per-run model, matched-strength smell, modulated agent, seed 42 | 333,766 | 1,000,000 | 33.4% | episodes with exactly one rabbit (any number of predators): the rabbit's smell is defined only there |
+| episodes in the per-run model, matched-strength smell, ordinary agent, seed 43 | 333,766 | 1,000,000 | 33.4% | episodes with exactly one rabbit (any number of predators): the rabbit's smell is defined only there |
+| episodes in the per-run model, matched-strength smell, modulated agent, seed 43 | 333,766 | 1,000,000 | 33.4% | episodes with exactly one rabbit (any number of predators): the rabbit's smell is defined only there |
+| episodes in the per-run model, matched-strength smell, ordinary agent, seed 44 | 333,766 | 1,000,000 | 33.4% | episodes with exactly one rabbit (any number of predators): the rabbit's smell is defined only there |
+| episodes in the per-run model, matched-strength smell, modulated agent, seed 44 | 333,766 | 1,000,000 | 33.4% | episodes with exactly one rabbit (any number of predators): the rabbit's smell is defined only there |
+| episodes in the per-run model, two-channel smell (control), ordinary agent, seed 42 | 333,766 | 1,000,000 | 33.4% | episodes with exactly one rabbit (any number of predators): the rabbit's smell is defined only there |
+| episodes in the per-run model, two-channel smell (control), modulated agent, seed 42 | 333,766 | 1,000,000 | 33.4% | episodes with exactly one rabbit (any number of predators): the rabbit's smell is defined only there |
+| within-run noise check | 2 | 5 | 40.0% | median per-run standard error below half the seed-to-seed standard deviation; not so for: injury-at-start slope, rabbit-smell slope, rabbit smell × injury at start - for these, part of the spread between seeds is estimation noise inside each run |
 | runs in the cross-run analysis | 18 | 18 | 100.0% | each training run is one replicate |
 
 ## f5_settings__warm_cell
 
-Figure 5 — settings that move on a warm square. **Axes.** Panel (a): horizontal, a difference between two settings divided by the seed-to-seed standard deviation (no unit), with its 95% interval; vertical, the contrast and quantity, sorted by size. Panel (b): horizontal, the share of run-to-run variation attributed to each source, from 0 to 1; vertical, the quantity and source. Panels (c): horizontal, the world and agent type; vertical, the quantity on the logit scale (the behaviour level, or a slope per 10 points of start injury or nutrition, or per nat of smell).
+Figure 5e — settings compared: Time on a warm square. **Axes.** Panel (a): horizontal, a difference between two settings divided by the seed-to-seed standard deviation (no unit), with its 95% interval; vertical, the contrast and quantity, sorted by size. Panel (b): horizontal, the share of run-to-run variation attributed to each source, from 0 to 1; vertical, the quantity and source. Panels (c): horizontal, the world and agent type; vertical, the quantity on the logit scale (the behaviour level, or a slope per 10 points of start injury or nutrition, or per nat of smell). A vertical bar marks each standardised difference in (a); a horizontal dash with an error bar marks a setting's mean ± seed-to-seed standard deviation in (c).
 
 | subset | used | available | share | why |
 |---|---:|---:|---:|---|
-| within-run model episodes, single-channel smell, ordinary agent, seed 42 | 333,766 | 1,000,000 | 33.4% | exactly one rabbit, any number of predators |
-| within-run model episodes, single-channel smell, modulated agent, seed 42 | 333,766 | 1,000,000 | 33.4% | exactly one rabbit, any number of predators |
-| within-run model episodes, single-channel smell, ordinary agent, seed 43 | 333,766 | 1,000,000 | 33.4% | exactly one rabbit, any number of predators |
-| within-run model episodes, single-channel smell, modulated agent, seed 43 | 333,766 | 1,000,000 | 33.4% | exactly one rabbit, any number of predators |
-| within-run model episodes, single-channel smell, ordinary agent, seed 44 | 333,766 | 1,000,000 | 33.4% | exactly one rabbit, any number of predators |
-| within-run model episodes, single-channel smell, modulated agent, seed 44 | 333,766 | 1,000,000 | 33.4% | exactly one rabbit, any number of predators |
-| within-run model episodes, two-channel smell (control), ordinary agent, seed 43 | 333,766 | 1,000,000 | 33.4% | exactly one rabbit, any number of predators |
-| within-run model episodes, two-channel smell (control), modulated agent, seed 43 | 333,766 | 1,000,000 | 33.4% | exactly one rabbit, any number of predators |
-| within-run model episodes, two-channel smell (control), ordinary agent, seed 44 | 333,766 | 1,000,000 | 33.4% | exactly one rabbit, any number of predators |
-| within-run model episodes, two-channel smell (control), modulated agent, seed 44 | 333,766 | 1,000,000 | 33.4% | exactly one rabbit, any number of predators |
-| within-run model episodes, matched-strength smell, ordinary agent, seed 42 | 333,766 | 1,000,000 | 33.4% | exactly one rabbit, any number of predators |
-| within-run model episodes, matched-strength smell, modulated agent, seed 42 | 333,766 | 1,000,000 | 33.4% | exactly one rabbit, any number of predators |
-| within-run model episodes, matched-strength smell, ordinary agent, seed 43 | 333,766 | 1,000,000 | 33.4% | exactly one rabbit, any number of predators |
-| within-run model episodes, matched-strength smell, modulated agent, seed 43 | 333,766 | 1,000,000 | 33.4% | exactly one rabbit, any number of predators |
-| within-run model episodes, matched-strength smell, ordinary agent, seed 44 | 333,766 | 1,000,000 | 33.4% | exactly one rabbit, any number of predators |
-| within-run model episodes, matched-strength smell, modulated agent, seed 44 | 333,766 | 1,000,000 | 33.4% | exactly one rabbit, any number of predators |
-| within-run model episodes, two-channel smell (control), ordinary agent, seed 42 | 333,766 | 1,000,000 | 33.4% | exactly one rabbit, any number of predators |
-| within-run model episodes, two-channel smell (control), modulated agent, seed 42 | 333,766 | 1,000,000 | 33.4% | exactly one rabbit, any number of predators |
-| quantities whose within-run noise is small beside seed-to-seed variation | 1 | 5 | 20.0% | median per-run episode-level SE below half the seed-to-seed SD; not so for: start_injury, start_nutrition, smell, smell_x_injury - for these, part of the spread between seeds is estimation noise inside each run |
+| episodes in the per-run model, single-channel smell, ordinary agent, seed 42 | 333,766 | 1,000,000 | 33.4% | episodes with exactly one rabbit (any number of predators): the rabbit's smell is defined only there |
+| episodes in the per-run model, single-channel smell, modulated agent, seed 42 | 333,766 | 1,000,000 | 33.4% | episodes with exactly one rabbit (any number of predators): the rabbit's smell is defined only there |
+| episodes in the per-run model, single-channel smell, ordinary agent, seed 43 | 333,766 | 1,000,000 | 33.4% | episodes with exactly one rabbit (any number of predators): the rabbit's smell is defined only there |
+| episodes in the per-run model, single-channel smell, modulated agent, seed 43 | 333,766 | 1,000,000 | 33.4% | episodes with exactly one rabbit (any number of predators): the rabbit's smell is defined only there |
+| episodes in the per-run model, single-channel smell, ordinary agent, seed 44 | 333,766 | 1,000,000 | 33.4% | episodes with exactly one rabbit (any number of predators): the rabbit's smell is defined only there |
+| episodes in the per-run model, single-channel smell, modulated agent, seed 44 | 333,766 | 1,000,000 | 33.4% | episodes with exactly one rabbit (any number of predators): the rabbit's smell is defined only there |
+| episodes in the per-run model, two-channel smell (control), ordinary agent, seed 43 | 333,766 | 1,000,000 | 33.4% | episodes with exactly one rabbit (any number of predators): the rabbit's smell is defined only there |
+| episodes in the per-run model, two-channel smell (control), modulated agent, seed 43 | 333,766 | 1,000,000 | 33.4% | episodes with exactly one rabbit (any number of predators): the rabbit's smell is defined only there |
+| episodes in the per-run model, two-channel smell (control), ordinary agent, seed 44 | 333,766 | 1,000,000 | 33.4% | episodes with exactly one rabbit (any number of predators): the rabbit's smell is defined only there |
+| episodes in the per-run model, two-channel smell (control), modulated agent, seed 44 | 333,766 | 1,000,000 | 33.4% | episodes with exactly one rabbit (any number of predators): the rabbit's smell is defined only there |
+| episodes in the per-run model, matched-strength smell, ordinary agent, seed 42 | 333,766 | 1,000,000 | 33.4% | episodes with exactly one rabbit (any number of predators): the rabbit's smell is defined only there |
+| episodes in the per-run model, matched-strength smell, modulated agent, seed 42 | 333,766 | 1,000,000 | 33.4% | episodes with exactly one rabbit (any number of predators): the rabbit's smell is defined only there |
+| episodes in the per-run model, matched-strength smell, ordinary agent, seed 43 | 333,766 | 1,000,000 | 33.4% | episodes with exactly one rabbit (any number of predators): the rabbit's smell is defined only there |
+| episodes in the per-run model, matched-strength smell, modulated agent, seed 43 | 333,766 | 1,000,000 | 33.4% | episodes with exactly one rabbit (any number of predators): the rabbit's smell is defined only there |
+| episodes in the per-run model, matched-strength smell, ordinary agent, seed 44 | 333,766 | 1,000,000 | 33.4% | episodes with exactly one rabbit (any number of predators): the rabbit's smell is defined only there |
+| episodes in the per-run model, matched-strength smell, modulated agent, seed 44 | 333,766 | 1,000,000 | 33.4% | episodes with exactly one rabbit (any number of predators): the rabbit's smell is defined only there |
+| episodes in the per-run model, two-channel smell (control), ordinary agent, seed 42 | 333,766 | 1,000,000 | 33.4% | episodes with exactly one rabbit (any number of predators): the rabbit's smell is defined only there |
+| episodes in the per-run model, two-channel smell (control), modulated agent, seed 42 | 333,766 | 1,000,000 | 33.4% | episodes with exactly one rabbit (any number of predators): the rabbit's smell is defined only there |
+| within-run noise check | 1 | 5 | 20.0% | median per-run standard error below half the seed-to-seed standard deviation; not so for: injury-at-start slope, nutrition-at-start slope, rabbit-smell slope, rabbit smell × injury at start - for these, part of the spread between seeds is estimation noise inside each run |
 | runs in the cross-run analysis | 18 | 18 | 100.0% | each training run is one replicate |
 
 ## f6_crosstabs__bush_dwell
 
-Figure 6 — hiding in a bush by state, smell and company. **Axes.** Heat maps: horizontal, the agent's nutrition one step earlier (four bands); vertical, its injury one step earlier (four bands); colour and number, the share of chosen steps in percent, on one scale shared by all heat maps. Line chart: horizontal, the rabbit's smell as evidence that it is a predator, in nats (sextile means); vertical, the share of chosen steps in percent. Dot plot: horizontal, which animals were within two squares one step earlier; vertical, the share of chosen steps in percent.
+Figure 6a — by state, smell and nearby animals: Bush dwell (time in a bush). **Axes.** Heat maps: horizontal, the agent's nutrition one step earlier (four bands); vertical, its injury one step earlier (four bands); shade and number, the share of chosen steps in percent, on one grey scale shared by all heat maps that runs from the lowest to the highest cell, not from zero. Line charts, one per smell world: horizontal, the rabbit's smell as evidence that it is a predator, in nats (sextile means); vertical, the share of chosen steps in percent; one line per run, marker shape for the agent type. Dot plot: horizontal, which animals were within two squares one step earlier; vertical, the share of chosen steps in percent.
 
 | subset | used | available | share | why |
 |---|---:|---:|---:|---|
-| chosen steps, two-channel smell (control), ordinary agent, seed 42 | 254,074,885 | 255,074,885 | 99.6% | every step t >= 1, binned by the row before it; the reset row is not a step |
-| episodes in the smell sextiles, two-channel smell (control), ordinary agent, seed 42 | 111,751 | 1,000,000 | 11.2% | exactly one rabbit and no predator |
-| chosen steps, two-channel smell (control), ordinary agent, seed 43 | 257,548,354 | 258,548,354 | 99.6% | every step t >= 1, binned by the row before it; the reset row is not a step |
-| episodes in the smell sextiles, two-channel smell (control), ordinary agent, seed 43 | 111,751 | 1,000,000 | 11.2% | exactly one rabbit and no predator |
-| chosen steps, two-channel smell (control), ordinary agent, seed 44 | 255,105,287 | 256,105,287 | 99.6% | every step t >= 1, binned by the row before it; the reset row is not a step |
-| episodes in the smell sextiles, two-channel smell (control), ordinary agent, seed 44 | 111,751 | 1,000,000 | 11.2% | exactly one rabbit and no predator |
-| chosen steps, two-channel smell (control), modulated agent, seed 42 | 257,542,754 | 258,542,754 | 99.6% | every step t >= 1, binned by the row before it; the reset row is not a step |
-| episodes in the smell sextiles, two-channel smell (control), modulated agent, seed 42 | 111,751 | 1,000,000 | 11.2% | exactly one rabbit and no predator |
-| chosen steps, two-channel smell (control), modulated agent, seed 43 | 263,697,666 | 264,697,666 | 99.6% | every step t >= 1, binned by the row before it; the reset row is not a step |
-| episodes in the smell sextiles, two-channel smell (control), modulated agent, seed 43 | 111,751 | 1,000,000 | 11.2% | exactly one rabbit and no predator |
-| chosen steps, two-channel smell (control), modulated agent, seed 44 | 261,638,230 | 262,638,230 | 99.6% | every step t >= 1, binned by the row before it; the reset row is not a step |
-| episodes in the smell sextiles, two-channel smell (control), modulated agent, seed 44 | 111,751 | 1,000,000 | 11.2% | exactly one rabbit and no predator |
-| chosen steps, single-channel smell, ordinary agent, seed 42 | 257,372,460 | 258,372,460 | 99.6% | every step t >= 1, binned by the row before it; the reset row is not a step |
-| episodes in the smell sextiles, single-channel smell, ordinary agent, seed 42 | 111,751 | 1,000,000 | 11.2% | exactly one rabbit and no predator |
-| chosen steps, single-channel smell, ordinary agent, seed 43 | 257,412,664 | 258,412,664 | 99.6% | every step t >= 1, binned by the row before it; the reset row is not a step |
-| episodes in the smell sextiles, single-channel smell, ordinary agent, seed 43 | 111,751 | 1,000,000 | 11.2% | exactly one rabbit and no predator |
-| chosen steps, single-channel smell, ordinary agent, seed 44 | 255,587,976 | 256,587,976 | 99.6% | every step t >= 1, binned by the row before it; the reset row is not a step |
-| episodes in the smell sextiles, single-channel smell, ordinary agent, seed 44 | 111,751 | 1,000,000 | 11.2% | exactly one rabbit and no predator |
-| chosen steps, single-channel smell, modulated agent, seed 42 | 258,889,141 | 259,889,141 | 99.6% | every step t >= 1, binned by the row before it; the reset row is not a step |
-| episodes in the smell sextiles, single-channel smell, modulated agent, seed 42 | 111,751 | 1,000,000 | 11.2% | exactly one rabbit and no predator |
-| chosen steps, single-channel smell, modulated agent, seed 43 | 261,858,907 | 262,858,907 | 99.6% | every step t >= 1, binned by the row before it; the reset row is not a step |
-| episodes in the smell sextiles, single-channel smell, modulated agent, seed 43 | 111,751 | 1,000,000 | 11.2% | exactly one rabbit and no predator |
-| chosen steps, single-channel smell, modulated agent, seed 44 | 258,224,174 | 259,224,174 | 99.6% | every step t >= 1, binned by the row before it; the reset row is not a step |
-| episodes in the smell sextiles, single-channel smell, modulated agent, seed 44 | 111,751 | 1,000,000 | 11.2% | exactly one rabbit and no predator |
-| chosen steps, matched-strength smell, ordinary agent, seed 42 | 254,554,978 | 255,554,978 | 99.6% | every step t >= 1, binned by the row before it; the reset row is not a step |
-| episodes in the smell sextiles, matched-strength smell, ordinary agent, seed 42 | 111,751 | 1,000,000 | 11.2% | exactly one rabbit and no predator |
-| chosen steps, matched-strength smell, ordinary agent, seed 43 | 257,730,674 | 258,730,674 | 99.6% | every step t >= 1, binned by the row before it; the reset row is not a step |
-| episodes in the smell sextiles, matched-strength smell, ordinary agent, seed 43 | 111,751 | 1,000,000 | 11.2% | exactly one rabbit and no predator |
-| chosen steps, matched-strength smell, ordinary agent, seed 44 | 254,948,150 | 255,948,150 | 99.6% | every step t >= 1, binned by the row before it; the reset row is not a step |
-| episodes in the smell sextiles, matched-strength smell, ordinary agent, seed 44 | 111,751 | 1,000,000 | 11.2% | exactly one rabbit and no predator |
-| chosen steps, matched-strength smell, modulated agent, seed 42 | 255,800,920 | 256,800,920 | 99.6% | every step t >= 1, binned by the row before it; the reset row is not a step |
-| episodes in the smell sextiles, matched-strength smell, modulated agent, seed 42 | 111,751 | 1,000,000 | 11.2% | exactly one rabbit and no predator |
-| chosen steps, matched-strength smell, modulated agent, seed 43 | 260,696,433 | 261,696,433 | 99.6% | every step t >= 1, binned by the row before it; the reset row is not a step |
-| episodes in the smell sextiles, matched-strength smell, modulated agent, seed 43 | 111,751 | 1,000,000 | 11.2% | exactly one rabbit and no predator |
-| chosen steps, matched-strength smell, modulated agent, seed 44 | 259,291,480 | 260,291,480 | 99.6% | every step t >= 1, binned by the row before it; the reset row is not a step |
-| episodes in the smell sextiles, matched-strength smell, modulated agent, seed 44 | 111,751 | 1,000,000 | 11.2% | exactly one rabbit and no predator |
+| chosen steps, two-channel smell (control), ordinary agent, seed 42 | 254,074,885 | 255,074,885 | 99.6% | every chosen step, binned by the state one step earlier; the starting row is not a chosen step |
+| episodes in the smell sextiles, two-channel smell (control), ordinary agent, seed 42 | 111,751 | 1,000,000 | 11.2% | episodes with exactly one rabbit and no predator, so only the smell can signal danger |
+| chosen steps, two-channel smell (control), ordinary agent, seed 43 | 257,548,354 | 258,548,354 | 99.6% | every chosen step, binned by the state one step earlier; the starting row is not a chosen step |
+| episodes in the smell sextiles, two-channel smell (control), ordinary agent, seed 43 | 111,751 | 1,000,000 | 11.2% | episodes with exactly one rabbit and no predator, so only the smell can signal danger |
+| chosen steps, two-channel smell (control), ordinary agent, seed 44 | 255,105,287 | 256,105,287 | 99.6% | every chosen step, binned by the state one step earlier; the starting row is not a chosen step |
+| episodes in the smell sextiles, two-channel smell (control), ordinary agent, seed 44 | 111,751 | 1,000,000 | 11.2% | episodes with exactly one rabbit and no predator, so only the smell can signal danger |
+| chosen steps, two-channel smell (control), modulated agent, seed 42 | 257,542,754 | 258,542,754 | 99.6% | every chosen step, binned by the state one step earlier; the starting row is not a chosen step |
+| episodes in the smell sextiles, two-channel smell (control), modulated agent, seed 42 | 111,751 | 1,000,000 | 11.2% | episodes with exactly one rabbit and no predator, so only the smell can signal danger |
+| chosen steps, two-channel smell (control), modulated agent, seed 43 | 263,697,666 | 264,697,666 | 99.6% | every chosen step, binned by the state one step earlier; the starting row is not a chosen step |
+| episodes in the smell sextiles, two-channel smell (control), modulated agent, seed 43 | 111,751 | 1,000,000 | 11.2% | episodes with exactly one rabbit and no predator, so only the smell can signal danger |
+| chosen steps, two-channel smell (control), modulated agent, seed 44 | 261,638,230 | 262,638,230 | 99.6% | every chosen step, binned by the state one step earlier; the starting row is not a chosen step |
+| episodes in the smell sextiles, two-channel smell (control), modulated agent, seed 44 | 111,751 | 1,000,000 | 11.2% | episodes with exactly one rabbit and no predator, so only the smell can signal danger |
+| chosen steps, single-channel smell, ordinary agent, seed 42 | 257,372,460 | 258,372,460 | 99.6% | every chosen step, binned by the state one step earlier; the starting row is not a chosen step |
+| episodes in the smell sextiles, single-channel smell, ordinary agent, seed 42 | 111,751 | 1,000,000 | 11.2% | episodes with exactly one rabbit and no predator, so only the smell can signal danger |
+| chosen steps, single-channel smell, ordinary agent, seed 43 | 257,412,664 | 258,412,664 | 99.6% | every chosen step, binned by the state one step earlier; the starting row is not a chosen step |
+| episodes in the smell sextiles, single-channel smell, ordinary agent, seed 43 | 111,751 | 1,000,000 | 11.2% | episodes with exactly one rabbit and no predator, so only the smell can signal danger |
+| chosen steps, single-channel smell, ordinary agent, seed 44 | 255,587,976 | 256,587,976 | 99.6% | every chosen step, binned by the state one step earlier; the starting row is not a chosen step |
+| episodes in the smell sextiles, single-channel smell, ordinary agent, seed 44 | 111,751 | 1,000,000 | 11.2% | episodes with exactly one rabbit and no predator, so only the smell can signal danger |
+| chosen steps, single-channel smell, modulated agent, seed 42 | 258,889,141 | 259,889,141 | 99.6% | every chosen step, binned by the state one step earlier; the starting row is not a chosen step |
+| episodes in the smell sextiles, single-channel smell, modulated agent, seed 42 | 111,751 | 1,000,000 | 11.2% | episodes with exactly one rabbit and no predator, so only the smell can signal danger |
+| chosen steps, single-channel smell, modulated agent, seed 43 | 261,858,907 | 262,858,907 | 99.6% | every chosen step, binned by the state one step earlier; the starting row is not a chosen step |
+| episodes in the smell sextiles, single-channel smell, modulated agent, seed 43 | 111,751 | 1,000,000 | 11.2% | episodes with exactly one rabbit and no predator, so only the smell can signal danger |
+| chosen steps, single-channel smell, modulated agent, seed 44 | 258,224,174 | 259,224,174 | 99.6% | every chosen step, binned by the state one step earlier; the starting row is not a chosen step |
+| episodes in the smell sextiles, single-channel smell, modulated agent, seed 44 | 111,751 | 1,000,000 | 11.2% | episodes with exactly one rabbit and no predator, so only the smell can signal danger |
+| chosen steps, matched-strength smell, ordinary agent, seed 42 | 254,554,978 | 255,554,978 | 99.6% | every chosen step, binned by the state one step earlier; the starting row is not a chosen step |
+| episodes in the smell sextiles, matched-strength smell, ordinary agent, seed 42 | 111,751 | 1,000,000 | 11.2% | episodes with exactly one rabbit and no predator, so only the smell can signal danger |
+| chosen steps, matched-strength smell, ordinary agent, seed 43 | 257,730,674 | 258,730,674 | 99.6% | every chosen step, binned by the state one step earlier; the starting row is not a chosen step |
+| episodes in the smell sextiles, matched-strength smell, ordinary agent, seed 43 | 111,751 | 1,000,000 | 11.2% | episodes with exactly one rabbit and no predator, so only the smell can signal danger |
+| chosen steps, matched-strength smell, ordinary agent, seed 44 | 254,948,150 | 255,948,150 | 99.6% | every chosen step, binned by the state one step earlier; the starting row is not a chosen step |
+| episodes in the smell sextiles, matched-strength smell, ordinary agent, seed 44 | 111,751 | 1,000,000 | 11.2% | episodes with exactly one rabbit and no predator, so only the smell can signal danger |
+| chosen steps, matched-strength smell, modulated agent, seed 42 | 255,800,920 | 256,800,920 | 99.6% | every chosen step, binned by the state one step earlier; the starting row is not a chosen step |
+| episodes in the smell sextiles, matched-strength smell, modulated agent, seed 42 | 111,751 | 1,000,000 | 11.2% | episodes with exactly one rabbit and no predator, so only the smell can signal danger |
+| chosen steps, matched-strength smell, modulated agent, seed 43 | 260,696,433 | 261,696,433 | 99.6% | every chosen step, binned by the state one step earlier; the starting row is not a chosen step |
+| episodes in the smell sextiles, matched-strength smell, modulated agent, seed 43 | 111,751 | 1,000,000 | 11.2% | episodes with exactly one rabbit and no predator, so only the smell can signal danger |
+| chosen steps, matched-strength smell, modulated agent, seed 44 | 259,291,480 | 260,291,480 | 99.6% | every chosen step, binned by the state one step earlier; the starting row is not a chosen step |
+| episodes in the smell sextiles, matched-strength smell, modulated agent, seed 44 | 111,751 | 1,000,000 | 11.2% | episodes with exactly one rabbit and no predator, so only the smell can signal danger |
 
 ## f6_crosstabs__eating
 
-Figure 6 — eating by state, smell and company. **Axes.** Heat maps: horizontal, the agent's nutrition one step earlier (four bands); vertical, its injury one step earlier (four bands); colour and number, the share of chosen steps in percent, on one scale shared by all heat maps. Line chart: horizontal, the rabbit's smell as evidence that it is a predator, in nats (sextile means); vertical, the share of chosen steps in percent. Dot plot: horizontal, which animals were within two squares one step earlier; vertical, the share of chosen steps in percent.
+Figure 6b — by state, smell and nearby animals: Eating. **Axes.** Heat maps: horizontal, the agent's nutrition one step earlier (four bands); vertical, its injury one step earlier (four bands); shade and number, the share of chosen steps in percent, on one grey scale shared by all heat maps that runs from the lowest to the highest cell, not from zero. Line charts, one per smell world: horizontal, the rabbit's smell as evidence that it is a predator, in nats (sextile means); vertical, the share of chosen steps in percent; one line per run, marker shape for the agent type. Dot plot: horizontal, which animals were within two squares one step earlier; vertical, the share of chosen steps in percent.
 
 | subset | used | available | share | why |
 |---|---:|---:|---:|---|
-| chosen steps, two-channel smell (control), ordinary agent, seed 42 | 254,074,885 | 255,074,885 | 99.6% | every step t >= 1, binned by the row before it; the reset row is not a step |
-| episodes in the smell sextiles, two-channel smell (control), ordinary agent, seed 42 | 111,751 | 1,000,000 | 11.2% | exactly one rabbit and no predator |
-| chosen steps, two-channel smell (control), ordinary agent, seed 43 | 257,548,354 | 258,548,354 | 99.6% | every step t >= 1, binned by the row before it; the reset row is not a step |
-| episodes in the smell sextiles, two-channel smell (control), ordinary agent, seed 43 | 111,751 | 1,000,000 | 11.2% | exactly one rabbit and no predator |
-| chosen steps, two-channel smell (control), ordinary agent, seed 44 | 255,105,287 | 256,105,287 | 99.6% | every step t >= 1, binned by the row before it; the reset row is not a step |
-| episodes in the smell sextiles, two-channel smell (control), ordinary agent, seed 44 | 111,751 | 1,000,000 | 11.2% | exactly one rabbit and no predator |
-| chosen steps, two-channel smell (control), modulated agent, seed 42 | 257,542,754 | 258,542,754 | 99.6% | every step t >= 1, binned by the row before it; the reset row is not a step |
-| episodes in the smell sextiles, two-channel smell (control), modulated agent, seed 42 | 111,751 | 1,000,000 | 11.2% | exactly one rabbit and no predator |
-| chosen steps, two-channel smell (control), modulated agent, seed 43 | 263,697,666 | 264,697,666 | 99.6% | every step t >= 1, binned by the row before it; the reset row is not a step |
-| episodes in the smell sextiles, two-channel smell (control), modulated agent, seed 43 | 111,751 | 1,000,000 | 11.2% | exactly one rabbit and no predator |
-| chosen steps, two-channel smell (control), modulated agent, seed 44 | 261,638,230 | 262,638,230 | 99.6% | every step t >= 1, binned by the row before it; the reset row is not a step |
-| episodes in the smell sextiles, two-channel smell (control), modulated agent, seed 44 | 111,751 | 1,000,000 | 11.2% | exactly one rabbit and no predator |
-| chosen steps, single-channel smell, ordinary agent, seed 42 | 257,372,460 | 258,372,460 | 99.6% | every step t >= 1, binned by the row before it; the reset row is not a step |
-| episodes in the smell sextiles, single-channel smell, ordinary agent, seed 42 | 111,751 | 1,000,000 | 11.2% | exactly one rabbit and no predator |
-| chosen steps, single-channel smell, ordinary agent, seed 43 | 257,412,664 | 258,412,664 | 99.6% | every step t >= 1, binned by the row before it; the reset row is not a step |
-| episodes in the smell sextiles, single-channel smell, ordinary agent, seed 43 | 111,751 | 1,000,000 | 11.2% | exactly one rabbit and no predator |
-| chosen steps, single-channel smell, ordinary agent, seed 44 | 255,587,976 | 256,587,976 | 99.6% | every step t >= 1, binned by the row before it; the reset row is not a step |
-| episodes in the smell sextiles, single-channel smell, ordinary agent, seed 44 | 111,751 | 1,000,000 | 11.2% | exactly one rabbit and no predator |
-| chosen steps, single-channel smell, modulated agent, seed 42 | 258,889,141 | 259,889,141 | 99.6% | every step t >= 1, binned by the row before it; the reset row is not a step |
-| episodes in the smell sextiles, single-channel smell, modulated agent, seed 42 | 111,751 | 1,000,000 | 11.2% | exactly one rabbit and no predator |
-| chosen steps, single-channel smell, modulated agent, seed 43 | 261,858,907 | 262,858,907 | 99.6% | every step t >= 1, binned by the row before it; the reset row is not a step |
-| episodes in the smell sextiles, single-channel smell, modulated agent, seed 43 | 111,751 | 1,000,000 | 11.2% | exactly one rabbit and no predator |
-| chosen steps, single-channel smell, modulated agent, seed 44 | 258,224,174 | 259,224,174 | 99.6% | every step t >= 1, binned by the row before it; the reset row is not a step |
-| episodes in the smell sextiles, single-channel smell, modulated agent, seed 44 | 111,751 | 1,000,000 | 11.2% | exactly one rabbit and no predator |
-| chosen steps, matched-strength smell, ordinary agent, seed 42 | 254,554,978 | 255,554,978 | 99.6% | every step t >= 1, binned by the row before it; the reset row is not a step |
-| episodes in the smell sextiles, matched-strength smell, ordinary agent, seed 42 | 111,751 | 1,000,000 | 11.2% | exactly one rabbit and no predator |
-| chosen steps, matched-strength smell, ordinary agent, seed 43 | 257,730,674 | 258,730,674 | 99.6% | every step t >= 1, binned by the row before it; the reset row is not a step |
-| episodes in the smell sextiles, matched-strength smell, ordinary agent, seed 43 | 111,751 | 1,000,000 | 11.2% | exactly one rabbit and no predator |
-| chosen steps, matched-strength smell, ordinary agent, seed 44 | 254,948,150 | 255,948,150 | 99.6% | every step t >= 1, binned by the row before it; the reset row is not a step |
-| episodes in the smell sextiles, matched-strength smell, ordinary agent, seed 44 | 111,751 | 1,000,000 | 11.2% | exactly one rabbit and no predator |
-| chosen steps, matched-strength smell, modulated agent, seed 42 | 255,800,920 | 256,800,920 | 99.6% | every step t >= 1, binned by the row before it; the reset row is not a step |
-| episodes in the smell sextiles, matched-strength smell, modulated agent, seed 42 | 111,751 | 1,000,000 | 11.2% | exactly one rabbit and no predator |
-| chosen steps, matched-strength smell, modulated agent, seed 43 | 260,696,433 | 261,696,433 | 99.6% | every step t >= 1, binned by the row before it; the reset row is not a step |
-| episodes in the smell sextiles, matched-strength smell, modulated agent, seed 43 | 111,751 | 1,000,000 | 11.2% | exactly one rabbit and no predator |
-| chosen steps, matched-strength smell, modulated agent, seed 44 | 259,291,480 | 260,291,480 | 99.6% | every step t >= 1, binned by the row before it; the reset row is not a step |
-| episodes in the smell sextiles, matched-strength smell, modulated agent, seed 44 | 111,751 | 1,000,000 | 11.2% | exactly one rabbit and no predator |
+| chosen steps, two-channel smell (control), ordinary agent, seed 42 | 254,074,885 | 255,074,885 | 99.6% | every chosen step, binned by the state one step earlier; the starting row is not a chosen step |
+| episodes in the smell sextiles, two-channel smell (control), ordinary agent, seed 42 | 111,751 | 1,000,000 | 11.2% | episodes with exactly one rabbit and no predator, so only the smell can signal danger |
+| chosen steps, two-channel smell (control), ordinary agent, seed 43 | 257,548,354 | 258,548,354 | 99.6% | every chosen step, binned by the state one step earlier; the starting row is not a chosen step |
+| episodes in the smell sextiles, two-channel smell (control), ordinary agent, seed 43 | 111,751 | 1,000,000 | 11.2% | episodes with exactly one rabbit and no predator, so only the smell can signal danger |
+| chosen steps, two-channel smell (control), ordinary agent, seed 44 | 255,105,287 | 256,105,287 | 99.6% | every chosen step, binned by the state one step earlier; the starting row is not a chosen step |
+| episodes in the smell sextiles, two-channel smell (control), ordinary agent, seed 44 | 111,751 | 1,000,000 | 11.2% | episodes with exactly one rabbit and no predator, so only the smell can signal danger |
+| chosen steps, two-channel smell (control), modulated agent, seed 42 | 257,542,754 | 258,542,754 | 99.6% | every chosen step, binned by the state one step earlier; the starting row is not a chosen step |
+| episodes in the smell sextiles, two-channel smell (control), modulated agent, seed 42 | 111,751 | 1,000,000 | 11.2% | episodes with exactly one rabbit and no predator, so only the smell can signal danger |
+| chosen steps, two-channel smell (control), modulated agent, seed 43 | 263,697,666 | 264,697,666 | 99.6% | every chosen step, binned by the state one step earlier; the starting row is not a chosen step |
+| episodes in the smell sextiles, two-channel smell (control), modulated agent, seed 43 | 111,751 | 1,000,000 | 11.2% | episodes with exactly one rabbit and no predator, so only the smell can signal danger |
+| chosen steps, two-channel smell (control), modulated agent, seed 44 | 261,638,230 | 262,638,230 | 99.6% | every chosen step, binned by the state one step earlier; the starting row is not a chosen step |
+| episodes in the smell sextiles, two-channel smell (control), modulated agent, seed 44 | 111,751 | 1,000,000 | 11.2% | episodes with exactly one rabbit and no predator, so only the smell can signal danger |
+| chosen steps, single-channel smell, ordinary agent, seed 42 | 257,372,460 | 258,372,460 | 99.6% | every chosen step, binned by the state one step earlier; the starting row is not a chosen step |
+| episodes in the smell sextiles, single-channel smell, ordinary agent, seed 42 | 111,751 | 1,000,000 | 11.2% | episodes with exactly one rabbit and no predator, so only the smell can signal danger |
+| chosen steps, single-channel smell, ordinary agent, seed 43 | 257,412,664 | 258,412,664 | 99.6% | every chosen step, binned by the state one step earlier; the starting row is not a chosen step |
+| episodes in the smell sextiles, single-channel smell, ordinary agent, seed 43 | 111,751 | 1,000,000 | 11.2% | episodes with exactly one rabbit and no predator, so only the smell can signal danger |
+| chosen steps, single-channel smell, ordinary agent, seed 44 | 255,587,976 | 256,587,976 | 99.6% | every chosen step, binned by the state one step earlier; the starting row is not a chosen step |
+| episodes in the smell sextiles, single-channel smell, ordinary agent, seed 44 | 111,751 | 1,000,000 | 11.2% | episodes with exactly one rabbit and no predator, so only the smell can signal danger |
+| chosen steps, single-channel smell, modulated agent, seed 42 | 258,889,141 | 259,889,141 | 99.6% | every chosen step, binned by the state one step earlier; the starting row is not a chosen step |
+| episodes in the smell sextiles, single-channel smell, modulated agent, seed 42 | 111,751 | 1,000,000 | 11.2% | episodes with exactly one rabbit and no predator, so only the smell can signal danger |
+| chosen steps, single-channel smell, modulated agent, seed 43 | 261,858,907 | 262,858,907 | 99.6% | every chosen step, binned by the state one step earlier; the starting row is not a chosen step |
+| episodes in the smell sextiles, single-channel smell, modulated agent, seed 43 | 111,751 | 1,000,000 | 11.2% | episodes with exactly one rabbit and no predator, so only the smell can signal danger |
+| chosen steps, single-channel smell, modulated agent, seed 44 | 258,224,174 | 259,224,174 | 99.6% | every chosen step, binned by the state one step earlier; the starting row is not a chosen step |
+| episodes in the smell sextiles, single-channel smell, modulated agent, seed 44 | 111,751 | 1,000,000 | 11.2% | episodes with exactly one rabbit and no predator, so only the smell can signal danger |
+| chosen steps, matched-strength smell, ordinary agent, seed 42 | 254,554,978 | 255,554,978 | 99.6% | every chosen step, binned by the state one step earlier; the starting row is not a chosen step |
+| episodes in the smell sextiles, matched-strength smell, ordinary agent, seed 42 | 111,751 | 1,000,000 | 11.2% | episodes with exactly one rabbit and no predator, so only the smell can signal danger |
+| chosen steps, matched-strength smell, ordinary agent, seed 43 | 257,730,674 | 258,730,674 | 99.6% | every chosen step, binned by the state one step earlier; the starting row is not a chosen step |
+| episodes in the smell sextiles, matched-strength smell, ordinary agent, seed 43 | 111,751 | 1,000,000 | 11.2% | episodes with exactly one rabbit and no predator, so only the smell can signal danger |
+| chosen steps, matched-strength smell, ordinary agent, seed 44 | 254,948,150 | 255,948,150 | 99.6% | every chosen step, binned by the state one step earlier; the starting row is not a chosen step |
+| episodes in the smell sextiles, matched-strength smell, ordinary agent, seed 44 | 111,751 | 1,000,000 | 11.2% | episodes with exactly one rabbit and no predator, so only the smell can signal danger |
+| chosen steps, matched-strength smell, modulated agent, seed 42 | 255,800,920 | 256,800,920 | 99.6% | every chosen step, binned by the state one step earlier; the starting row is not a chosen step |
+| episodes in the smell sextiles, matched-strength smell, modulated agent, seed 42 | 111,751 | 1,000,000 | 11.2% | episodes with exactly one rabbit and no predator, so only the smell can signal danger |
+| chosen steps, matched-strength smell, modulated agent, seed 43 | 260,696,433 | 261,696,433 | 99.6% | every chosen step, binned by the state one step earlier; the starting row is not a chosen step |
+| episodes in the smell sextiles, matched-strength smell, modulated agent, seed 43 | 111,751 | 1,000,000 | 11.2% | episodes with exactly one rabbit and no predator, so only the smell can signal danger |
+| chosen steps, matched-strength smell, modulated agent, seed 44 | 259,291,480 | 260,291,480 | 99.6% | every chosen step, binned by the state one step earlier; the starting row is not a chosen step |
+| episodes in the smell sextiles, matched-strength smell, modulated agent, seed 44 | 111,751 | 1,000,000 | 11.2% | episodes with exactly one rabbit and no predator, so only the smell can signal danger |
 
 ## f6_crosstabs__near_rabbit
 
-Figure 6 — within two squares of a rabbit by state, smell and company. **Axes.** Heat maps: horizontal, the agent's nutrition one step earlier (four bands); vertical, its injury one step earlier (four bands); colour and number, the share of chosen steps in percent, on one scale shared by all heat maps. Line chart: horizontal, the rabbit's smell as evidence that it is a predator, in nats (sextile means); vertical, the share of chosen steps in percent. Dot plot: horizontal, which animals were within two squares one step earlier; vertical, the share of chosen steps in percent.
+Figure 6c — by state, smell and nearby animals: Time near a rabbit (within 2 squares). **Axes.** Heat maps: horizontal, the agent's nutrition one step earlier (four bands); vertical, its injury one step earlier (four bands); shade and number, the share of chosen steps in percent, on one grey scale shared by all heat maps that runs from the lowest to the highest cell, not from zero. Line charts, one per smell world: horizontal, the rabbit's smell as evidence that it is a predator, in nats (sextile means); vertical, the share of chosen steps in percent; one line per run, marker shape for the agent type. Dot plot: horizontal, which animals were within two squares one step earlier; vertical, the share of chosen steps in percent.
 
 | subset | used | available | share | why |
 |---|---:|---:|---:|---|
-| chosen steps, two-channel smell (control), ordinary agent, seed 42 | 254,074,885 | 255,074,885 | 99.6% | every step t >= 1, binned by the row before it; the reset row is not a step |
-| episodes in the smell sextiles, two-channel smell (control), ordinary agent, seed 42 | 111,751 | 1,000,000 | 11.2% | exactly one rabbit and no predator |
-| chosen steps, two-channel smell (control), ordinary agent, seed 43 | 257,548,354 | 258,548,354 | 99.6% | every step t >= 1, binned by the row before it; the reset row is not a step |
-| episodes in the smell sextiles, two-channel smell (control), ordinary agent, seed 43 | 111,751 | 1,000,000 | 11.2% | exactly one rabbit and no predator |
-| chosen steps, two-channel smell (control), ordinary agent, seed 44 | 255,105,287 | 256,105,287 | 99.6% | every step t >= 1, binned by the row before it; the reset row is not a step |
-| episodes in the smell sextiles, two-channel smell (control), ordinary agent, seed 44 | 111,751 | 1,000,000 | 11.2% | exactly one rabbit and no predator |
-| chosen steps, two-channel smell (control), modulated agent, seed 42 | 257,542,754 | 258,542,754 | 99.6% | every step t >= 1, binned by the row before it; the reset row is not a step |
-| episodes in the smell sextiles, two-channel smell (control), modulated agent, seed 42 | 111,751 | 1,000,000 | 11.2% | exactly one rabbit and no predator |
-| chosen steps, two-channel smell (control), modulated agent, seed 43 | 263,697,666 | 264,697,666 | 99.6% | every step t >= 1, binned by the row before it; the reset row is not a step |
-| episodes in the smell sextiles, two-channel smell (control), modulated agent, seed 43 | 111,751 | 1,000,000 | 11.2% | exactly one rabbit and no predator |
-| chosen steps, two-channel smell (control), modulated agent, seed 44 | 261,638,230 | 262,638,230 | 99.6% | every step t >= 1, binned by the row before it; the reset row is not a step |
-| episodes in the smell sextiles, two-channel smell (control), modulated agent, seed 44 | 111,751 | 1,000,000 | 11.2% | exactly one rabbit and no predator |
-| chosen steps, single-channel smell, ordinary agent, seed 42 | 257,372,460 | 258,372,460 | 99.6% | every step t >= 1, binned by the row before it; the reset row is not a step |
-| episodes in the smell sextiles, single-channel smell, ordinary agent, seed 42 | 111,751 | 1,000,000 | 11.2% | exactly one rabbit and no predator |
-| chosen steps, single-channel smell, ordinary agent, seed 43 | 257,412,664 | 258,412,664 | 99.6% | every step t >= 1, binned by the row before it; the reset row is not a step |
-| episodes in the smell sextiles, single-channel smell, ordinary agent, seed 43 | 111,751 | 1,000,000 | 11.2% | exactly one rabbit and no predator |
-| chosen steps, single-channel smell, ordinary agent, seed 44 | 255,587,976 | 256,587,976 | 99.6% | every step t >= 1, binned by the row before it; the reset row is not a step |
-| episodes in the smell sextiles, single-channel smell, ordinary agent, seed 44 | 111,751 | 1,000,000 | 11.2% | exactly one rabbit and no predator |
-| chosen steps, single-channel smell, modulated agent, seed 42 | 258,889,141 | 259,889,141 | 99.6% | every step t >= 1, binned by the row before it; the reset row is not a step |
-| episodes in the smell sextiles, single-channel smell, modulated agent, seed 42 | 111,751 | 1,000,000 | 11.2% | exactly one rabbit and no predator |
-| chosen steps, single-channel smell, modulated agent, seed 43 | 261,858,907 | 262,858,907 | 99.6% | every step t >= 1, binned by the row before it; the reset row is not a step |
-| episodes in the smell sextiles, single-channel smell, modulated agent, seed 43 | 111,751 | 1,000,000 | 11.2% | exactly one rabbit and no predator |
-| chosen steps, single-channel smell, modulated agent, seed 44 | 258,224,174 | 259,224,174 | 99.6% | every step t >= 1, binned by the row before it; the reset row is not a step |
-| episodes in the smell sextiles, single-channel smell, modulated agent, seed 44 | 111,751 | 1,000,000 | 11.2% | exactly one rabbit and no predator |
-| chosen steps, matched-strength smell, ordinary agent, seed 42 | 254,554,978 | 255,554,978 | 99.6% | every step t >= 1, binned by the row before it; the reset row is not a step |
-| episodes in the smell sextiles, matched-strength smell, ordinary agent, seed 42 | 111,751 | 1,000,000 | 11.2% | exactly one rabbit and no predator |
-| chosen steps, matched-strength smell, ordinary agent, seed 43 | 257,730,674 | 258,730,674 | 99.6% | every step t >= 1, binned by the row before it; the reset row is not a step |
-| episodes in the smell sextiles, matched-strength smell, ordinary agent, seed 43 | 111,751 | 1,000,000 | 11.2% | exactly one rabbit and no predator |
-| chosen steps, matched-strength smell, ordinary agent, seed 44 | 254,948,150 | 255,948,150 | 99.6% | every step t >= 1, binned by the row before it; the reset row is not a step |
-| episodes in the smell sextiles, matched-strength smell, ordinary agent, seed 44 | 111,751 | 1,000,000 | 11.2% | exactly one rabbit and no predator |
-| chosen steps, matched-strength smell, modulated agent, seed 42 | 255,800,920 | 256,800,920 | 99.6% | every step t >= 1, binned by the row before it; the reset row is not a step |
-| episodes in the smell sextiles, matched-strength smell, modulated agent, seed 42 | 111,751 | 1,000,000 | 11.2% | exactly one rabbit and no predator |
-| chosen steps, matched-strength smell, modulated agent, seed 43 | 260,696,433 | 261,696,433 | 99.6% | every step t >= 1, binned by the row before it; the reset row is not a step |
-| episodes in the smell sextiles, matched-strength smell, modulated agent, seed 43 | 111,751 | 1,000,000 | 11.2% | exactly one rabbit and no predator |
-| chosen steps, matched-strength smell, modulated agent, seed 44 | 259,291,480 | 260,291,480 | 99.6% | every step t >= 1, binned by the row before it; the reset row is not a step |
-| episodes in the smell sextiles, matched-strength smell, modulated agent, seed 44 | 111,751 | 1,000,000 | 11.2% | exactly one rabbit and no predator |
+| chosen steps, two-channel smell (control), ordinary agent, seed 42 | 254,074,885 | 255,074,885 | 99.6% | every chosen step, binned by the state one step earlier; the starting row is not a chosen step |
+| episodes in the smell sextiles, two-channel smell (control), ordinary agent, seed 42 | 111,751 | 1,000,000 | 11.2% | episodes with exactly one rabbit and no predator, so only the smell can signal danger |
+| chosen steps, two-channel smell (control), ordinary agent, seed 43 | 257,548,354 | 258,548,354 | 99.6% | every chosen step, binned by the state one step earlier; the starting row is not a chosen step |
+| episodes in the smell sextiles, two-channel smell (control), ordinary agent, seed 43 | 111,751 | 1,000,000 | 11.2% | episodes with exactly one rabbit and no predator, so only the smell can signal danger |
+| chosen steps, two-channel smell (control), ordinary agent, seed 44 | 255,105,287 | 256,105,287 | 99.6% | every chosen step, binned by the state one step earlier; the starting row is not a chosen step |
+| episodes in the smell sextiles, two-channel smell (control), ordinary agent, seed 44 | 111,751 | 1,000,000 | 11.2% | episodes with exactly one rabbit and no predator, so only the smell can signal danger |
+| chosen steps, two-channel smell (control), modulated agent, seed 42 | 257,542,754 | 258,542,754 | 99.6% | every chosen step, binned by the state one step earlier; the starting row is not a chosen step |
+| episodes in the smell sextiles, two-channel smell (control), modulated agent, seed 42 | 111,751 | 1,000,000 | 11.2% | episodes with exactly one rabbit and no predator, so only the smell can signal danger |
+| chosen steps, two-channel smell (control), modulated agent, seed 43 | 263,697,666 | 264,697,666 | 99.6% | every chosen step, binned by the state one step earlier; the starting row is not a chosen step |
+| episodes in the smell sextiles, two-channel smell (control), modulated agent, seed 43 | 111,751 | 1,000,000 | 11.2% | episodes with exactly one rabbit and no predator, so only the smell can signal danger |
+| chosen steps, two-channel smell (control), modulated agent, seed 44 | 261,638,230 | 262,638,230 | 99.6% | every chosen step, binned by the state one step earlier; the starting row is not a chosen step |
+| episodes in the smell sextiles, two-channel smell (control), modulated agent, seed 44 | 111,751 | 1,000,000 | 11.2% | episodes with exactly one rabbit and no predator, so only the smell can signal danger |
+| chosen steps, single-channel smell, ordinary agent, seed 42 | 257,372,460 | 258,372,460 | 99.6% | every chosen step, binned by the state one step earlier; the starting row is not a chosen step |
+| episodes in the smell sextiles, single-channel smell, ordinary agent, seed 42 | 111,751 | 1,000,000 | 11.2% | episodes with exactly one rabbit and no predator, so only the smell can signal danger |
+| chosen steps, single-channel smell, ordinary agent, seed 43 | 257,412,664 | 258,412,664 | 99.6% | every chosen step, binned by the state one step earlier; the starting row is not a chosen step |
+| episodes in the smell sextiles, single-channel smell, ordinary agent, seed 43 | 111,751 | 1,000,000 | 11.2% | episodes with exactly one rabbit and no predator, so only the smell can signal danger |
+| chosen steps, single-channel smell, ordinary agent, seed 44 | 255,587,976 | 256,587,976 | 99.6% | every chosen step, binned by the state one step earlier; the starting row is not a chosen step |
+| episodes in the smell sextiles, single-channel smell, ordinary agent, seed 44 | 111,751 | 1,000,000 | 11.2% | episodes with exactly one rabbit and no predator, so only the smell can signal danger |
+| chosen steps, single-channel smell, modulated agent, seed 42 | 258,889,141 | 259,889,141 | 99.6% | every chosen step, binned by the state one step earlier; the starting row is not a chosen step |
+| episodes in the smell sextiles, single-channel smell, modulated agent, seed 42 | 111,751 | 1,000,000 | 11.2% | episodes with exactly one rabbit and no predator, so only the smell can signal danger |
+| chosen steps, single-channel smell, modulated agent, seed 43 | 261,858,907 | 262,858,907 | 99.6% | every chosen step, binned by the state one step earlier; the starting row is not a chosen step |
+| episodes in the smell sextiles, single-channel smell, modulated agent, seed 43 | 111,751 | 1,000,000 | 11.2% | episodes with exactly one rabbit and no predator, so only the smell can signal danger |
+| chosen steps, single-channel smell, modulated agent, seed 44 | 258,224,174 | 259,224,174 | 99.6% | every chosen step, binned by the state one step earlier; the starting row is not a chosen step |
+| episodes in the smell sextiles, single-channel smell, modulated agent, seed 44 | 111,751 | 1,000,000 | 11.2% | episodes with exactly one rabbit and no predator, so only the smell can signal danger |
+| chosen steps, matched-strength smell, ordinary agent, seed 42 | 254,554,978 | 255,554,978 | 99.6% | every chosen step, binned by the state one step earlier; the starting row is not a chosen step |
+| episodes in the smell sextiles, matched-strength smell, ordinary agent, seed 42 | 111,751 | 1,000,000 | 11.2% | episodes with exactly one rabbit and no predator, so only the smell can signal danger |
+| chosen steps, matched-strength smell, ordinary agent, seed 43 | 257,730,674 | 258,730,674 | 99.6% | every chosen step, binned by the state one step earlier; the starting row is not a chosen step |
+| episodes in the smell sextiles, matched-strength smell, ordinary agent, seed 43 | 111,751 | 1,000,000 | 11.2% | episodes with exactly one rabbit and no predator, so only the smell can signal danger |
+| chosen steps, matched-strength smell, ordinary agent, seed 44 | 254,948,150 | 255,948,150 | 99.6% | every chosen step, binned by the state one step earlier; the starting row is not a chosen step |
+| episodes in the smell sextiles, matched-strength smell, ordinary agent, seed 44 | 111,751 | 1,000,000 | 11.2% | episodes with exactly one rabbit and no predator, so only the smell can signal danger |
+| chosen steps, matched-strength smell, modulated agent, seed 42 | 255,800,920 | 256,800,920 | 99.6% | every chosen step, binned by the state one step earlier; the starting row is not a chosen step |
+| episodes in the smell sextiles, matched-strength smell, modulated agent, seed 42 | 111,751 | 1,000,000 | 11.2% | episodes with exactly one rabbit and no predator, so only the smell can signal danger |
+| chosen steps, matched-strength smell, modulated agent, seed 43 | 260,696,433 | 261,696,433 | 99.6% | every chosen step, binned by the state one step earlier; the starting row is not a chosen step |
+| episodes in the smell sextiles, matched-strength smell, modulated agent, seed 43 | 111,751 | 1,000,000 | 11.2% | episodes with exactly one rabbit and no predator, so only the smell can signal danger |
+| chosen steps, matched-strength smell, modulated agent, seed 44 | 259,291,480 | 260,291,480 | 99.6% | every chosen step, binned by the state one step earlier; the starting row is not a chosen step |
+| episodes in the smell sextiles, matched-strength smell, modulated agent, seed 44 | 111,751 | 1,000,000 | 11.2% | episodes with exactly one rabbit and no predator, so only the smell can signal danger |
 
 ## f6_crosstabs__near_predator
 
-Figure 6 — within two squares of a predator by state, smell and company. **Axes.** Heat maps: horizontal, the agent's nutrition one step earlier (four bands); vertical, its injury one step earlier (four bands); colour and number, the share of chosen steps in percent, on one scale shared by all heat maps. Line chart: horizontal, the rabbit's smell as evidence that it is a predator, in nats (sextile means); vertical, the share of chosen steps in percent. Dot plot: horizontal, which animals were within two squares one step earlier; vertical, the share of chosen steps in percent.
+Figure 6d — by state, smell and nearby animals: Time near a predator (within 2 squares). **Axes.** Heat maps: horizontal, the agent's nutrition one step earlier (four bands); vertical, its injury one step earlier (four bands); shade and number, the share of chosen steps in percent, on one grey scale shared by all heat maps that runs from the lowest to the highest cell, not from zero. Line charts, one per smell world: horizontal, the rabbit's smell as evidence that it is a predator, in nats (sextile means); vertical, the share of chosen steps in percent; one line per run, marker shape for the agent type. Dot plot: horizontal, which animals were within two squares one step earlier; vertical, the share of chosen steps in percent.
 
 | subset | used | available | share | why |
 |---|---:|---:|---:|---|
-| chosen steps, two-channel smell (control), ordinary agent, seed 42 | 254,074,885 | 255,074,885 | 99.6% | every step t >= 1, binned by the row before it; the reset row is not a step |
-| episodes in the smell sextiles, two-channel smell (control), ordinary agent, seed 42 | 111,751 | 1,000,000 | 11.2% | exactly one rabbit and no predator |
-| chosen steps, two-channel smell (control), ordinary agent, seed 43 | 257,548,354 | 258,548,354 | 99.6% | every step t >= 1, binned by the row before it; the reset row is not a step |
-| episodes in the smell sextiles, two-channel smell (control), ordinary agent, seed 43 | 111,751 | 1,000,000 | 11.2% | exactly one rabbit and no predator |
-| chosen steps, two-channel smell (control), ordinary agent, seed 44 | 255,105,287 | 256,105,287 | 99.6% | every step t >= 1, binned by the row before it; the reset row is not a step |
-| episodes in the smell sextiles, two-channel smell (control), ordinary agent, seed 44 | 111,751 | 1,000,000 | 11.2% | exactly one rabbit and no predator |
-| chosen steps, two-channel smell (control), modulated agent, seed 42 | 257,542,754 | 258,542,754 | 99.6% | every step t >= 1, binned by the row before it; the reset row is not a step |
-| episodes in the smell sextiles, two-channel smell (control), modulated agent, seed 42 | 111,751 | 1,000,000 | 11.2% | exactly one rabbit and no predator |
-| chosen steps, two-channel smell (control), modulated agent, seed 43 | 263,697,666 | 264,697,666 | 99.6% | every step t >= 1, binned by the row before it; the reset row is not a step |
-| episodes in the smell sextiles, two-channel smell (control), modulated agent, seed 43 | 111,751 | 1,000,000 | 11.2% | exactly one rabbit and no predator |
-| chosen steps, two-channel smell (control), modulated agent, seed 44 | 261,638,230 | 262,638,230 | 99.6% | every step t >= 1, binned by the row before it; the reset row is not a step |
-| episodes in the smell sextiles, two-channel smell (control), modulated agent, seed 44 | 111,751 | 1,000,000 | 11.2% | exactly one rabbit and no predator |
-| chosen steps, single-channel smell, ordinary agent, seed 42 | 257,372,460 | 258,372,460 | 99.6% | every step t >= 1, binned by the row before it; the reset row is not a step |
-| episodes in the smell sextiles, single-channel smell, ordinary agent, seed 42 | 111,751 | 1,000,000 | 11.2% | exactly one rabbit and no predator |
-| chosen steps, single-channel smell, ordinary agent, seed 43 | 257,412,664 | 258,412,664 | 99.6% | every step t >= 1, binned by the row before it; the reset row is not a step |
-| episodes in the smell sextiles, single-channel smell, ordinary agent, seed 43 | 111,751 | 1,000,000 | 11.2% | exactly one rabbit and no predator |
-| chosen steps, single-channel smell, ordinary agent, seed 44 | 255,587,976 | 256,587,976 | 99.6% | every step t >= 1, binned by the row before it; the reset row is not a step |
-| episodes in the smell sextiles, single-channel smell, ordinary agent, seed 44 | 111,751 | 1,000,000 | 11.2% | exactly one rabbit and no predator |
-| chosen steps, single-channel smell, modulated agent, seed 42 | 258,889,141 | 259,889,141 | 99.6% | every step t >= 1, binned by the row before it; the reset row is not a step |
-| episodes in the smell sextiles, single-channel smell, modulated agent, seed 42 | 111,751 | 1,000,000 | 11.2% | exactly one rabbit and no predator |
-| chosen steps, single-channel smell, modulated agent, seed 43 | 261,858,907 | 262,858,907 | 99.6% | every step t >= 1, binned by the row before it; the reset row is not a step |
-| episodes in the smell sextiles, single-channel smell, modulated agent, seed 43 | 111,751 | 1,000,000 | 11.2% | exactly one rabbit and no predator |
-| chosen steps, single-channel smell, modulated agent, seed 44 | 258,224,174 | 259,224,174 | 99.6% | every step t >= 1, binned by the row before it; the reset row is not a step |
-| episodes in the smell sextiles, single-channel smell, modulated agent, seed 44 | 111,751 | 1,000,000 | 11.2% | exactly one rabbit and no predator |
-| chosen steps, matched-strength smell, ordinary agent, seed 42 | 254,554,978 | 255,554,978 | 99.6% | every step t >= 1, binned by the row before it; the reset row is not a step |
-| episodes in the smell sextiles, matched-strength smell, ordinary agent, seed 42 | 111,751 | 1,000,000 | 11.2% | exactly one rabbit and no predator |
-| chosen steps, matched-strength smell, ordinary agent, seed 43 | 257,730,674 | 258,730,674 | 99.6% | every step t >= 1, binned by the row before it; the reset row is not a step |
-| episodes in the smell sextiles, matched-strength smell, ordinary agent, seed 43 | 111,751 | 1,000,000 | 11.2% | exactly one rabbit and no predator |
-| chosen steps, matched-strength smell, ordinary agent, seed 44 | 254,948,150 | 255,948,150 | 99.6% | every step t >= 1, binned by the row before it; the reset row is not a step |
-| episodes in the smell sextiles, matched-strength smell, ordinary agent, seed 44 | 111,751 | 1,000,000 | 11.2% | exactly one rabbit and no predator |
-| chosen steps, matched-strength smell, modulated agent, seed 42 | 255,800,920 | 256,800,920 | 99.6% | every step t >= 1, binned by the row before it; the reset row is not a step |
-| episodes in the smell sextiles, matched-strength smell, modulated agent, seed 42 | 111,751 | 1,000,000 | 11.2% | exactly one rabbit and no predator |
-| chosen steps, matched-strength smell, modulated agent, seed 43 | 260,696,433 | 261,696,433 | 99.6% | every step t >= 1, binned by the row before it; the reset row is not a step |
-| episodes in the smell sextiles, matched-strength smell, modulated agent, seed 43 | 111,751 | 1,000,000 | 11.2% | exactly one rabbit and no predator |
-| chosen steps, matched-strength smell, modulated agent, seed 44 | 259,291,480 | 260,291,480 | 99.6% | every step t >= 1, binned by the row before it; the reset row is not a step |
-| episodes in the smell sextiles, matched-strength smell, modulated agent, seed 44 | 111,751 | 1,000,000 | 11.2% | exactly one rabbit and no predator |
+| chosen steps, two-channel smell (control), ordinary agent, seed 42 | 254,074,885 | 255,074,885 | 99.6% | every chosen step, binned by the state one step earlier; the starting row is not a chosen step |
+| episodes in the smell sextiles, two-channel smell (control), ordinary agent, seed 42 | 111,751 | 1,000,000 | 11.2% | episodes with exactly one rabbit and no predator, so only the smell can signal danger |
+| chosen steps, two-channel smell (control), ordinary agent, seed 43 | 257,548,354 | 258,548,354 | 99.6% | every chosen step, binned by the state one step earlier; the starting row is not a chosen step |
+| episodes in the smell sextiles, two-channel smell (control), ordinary agent, seed 43 | 111,751 | 1,000,000 | 11.2% | episodes with exactly one rabbit and no predator, so only the smell can signal danger |
+| chosen steps, two-channel smell (control), ordinary agent, seed 44 | 255,105,287 | 256,105,287 | 99.6% | every chosen step, binned by the state one step earlier; the starting row is not a chosen step |
+| episodes in the smell sextiles, two-channel smell (control), ordinary agent, seed 44 | 111,751 | 1,000,000 | 11.2% | episodes with exactly one rabbit and no predator, so only the smell can signal danger |
+| chosen steps, two-channel smell (control), modulated agent, seed 42 | 257,542,754 | 258,542,754 | 99.6% | every chosen step, binned by the state one step earlier; the starting row is not a chosen step |
+| episodes in the smell sextiles, two-channel smell (control), modulated agent, seed 42 | 111,751 | 1,000,000 | 11.2% | episodes with exactly one rabbit and no predator, so only the smell can signal danger |
+| chosen steps, two-channel smell (control), modulated agent, seed 43 | 263,697,666 | 264,697,666 | 99.6% | every chosen step, binned by the state one step earlier; the starting row is not a chosen step |
+| episodes in the smell sextiles, two-channel smell (control), modulated agent, seed 43 | 111,751 | 1,000,000 | 11.2% | episodes with exactly one rabbit and no predator, so only the smell can signal danger |
+| chosen steps, two-channel smell (control), modulated agent, seed 44 | 261,638,230 | 262,638,230 | 99.6% | every chosen step, binned by the state one step earlier; the starting row is not a chosen step |
+| episodes in the smell sextiles, two-channel smell (control), modulated agent, seed 44 | 111,751 | 1,000,000 | 11.2% | episodes with exactly one rabbit and no predator, so only the smell can signal danger |
+| chosen steps, single-channel smell, ordinary agent, seed 42 | 257,372,460 | 258,372,460 | 99.6% | every chosen step, binned by the state one step earlier; the starting row is not a chosen step |
+| episodes in the smell sextiles, single-channel smell, ordinary agent, seed 42 | 111,751 | 1,000,000 | 11.2% | episodes with exactly one rabbit and no predator, so only the smell can signal danger |
+| chosen steps, single-channel smell, ordinary agent, seed 43 | 257,412,664 | 258,412,664 | 99.6% | every chosen step, binned by the state one step earlier; the starting row is not a chosen step |
+| episodes in the smell sextiles, single-channel smell, ordinary agent, seed 43 | 111,751 | 1,000,000 | 11.2% | episodes with exactly one rabbit and no predator, so only the smell can signal danger |
+| chosen steps, single-channel smell, ordinary agent, seed 44 | 255,587,976 | 256,587,976 | 99.6% | every chosen step, binned by the state one step earlier; the starting row is not a chosen step |
+| episodes in the smell sextiles, single-channel smell, ordinary agent, seed 44 | 111,751 | 1,000,000 | 11.2% | episodes with exactly one rabbit and no predator, so only the smell can signal danger |
+| chosen steps, single-channel smell, modulated agent, seed 42 | 258,889,141 | 259,889,141 | 99.6% | every chosen step, binned by the state one step earlier; the starting row is not a chosen step |
+| episodes in the smell sextiles, single-channel smell, modulated agent, seed 42 | 111,751 | 1,000,000 | 11.2% | episodes with exactly one rabbit and no predator, so only the smell can signal danger |
+| chosen steps, single-channel smell, modulated agent, seed 43 | 261,858,907 | 262,858,907 | 99.6% | every chosen step, binned by the state one step earlier; the starting row is not a chosen step |
+| episodes in the smell sextiles, single-channel smell, modulated agent, seed 43 | 111,751 | 1,000,000 | 11.2% | episodes with exactly one rabbit and no predator, so only the smell can signal danger |
+| chosen steps, single-channel smell, modulated agent, seed 44 | 258,224,174 | 259,224,174 | 99.6% | every chosen step, binned by the state one step earlier; the starting row is not a chosen step |
+| episodes in the smell sextiles, single-channel smell, modulated agent, seed 44 | 111,751 | 1,000,000 | 11.2% | episodes with exactly one rabbit and no predator, so only the smell can signal danger |
+| chosen steps, matched-strength smell, ordinary agent, seed 42 | 254,554,978 | 255,554,978 | 99.6% | every chosen step, binned by the state one step earlier; the starting row is not a chosen step |
+| episodes in the smell sextiles, matched-strength smell, ordinary agent, seed 42 | 111,751 | 1,000,000 | 11.2% | episodes with exactly one rabbit and no predator, so only the smell can signal danger |
+| chosen steps, matched-strength smell, ordinary agent, seed 43 | 257,730,674 | 258,730,674 | 99.6% | every chosen step, binned by the state one step earlier; the starting row is not a chosen step |
+| episodes in the smell sextiles, matched-strength smell, ordinary agent, seed 43 | 111,751 | 1,000,000 | 11.2% | episodes with exactly one rabbit and no predator, so only the smell can signal danger |
+| chosen steps, matched-strength smell, ordinary agent, seed 44 | 254,948,150 | 255,948,150 | 99.6% | every chosen step, binned by the state one step earlier; the starting row is not a chosen step |
+| episodes in the smell sextiles, matched-strength smell, ordinary agent, seed 44 | 111,751 | 1,000,000 | 11.2% | episodes with exactly one rabbit and no predator, so only the smell can signal danger |
+| chosen steps, matched-strength smell, modulated agent, seed 42 | 255,800,920 | 256,800,920 | 99.6% | every chosen step, binned by the state one step earlier; the starting row is not a chosen step |
+| episodes in the smell sextiles, matched-strength smell, modulated agent, seed 42 | 111,751 | 1,000,000 | 11.2% | episodes with exactly one rabbit and no predator, so only the smell can signal danger |
+| chosen steps, matched-strength smell, modulated agent, seed 43 | 260,696,433 | 261,696,433 | 99.6% | every chosen step, binned by the state one step earlier; the starting row is not a chosen step |
+| episodes in the smell sextiles, matched-strength smell, modulated agent, seed 43 | 111,751 | 1,000,000 | 11.2% | episodes with exactly one rabbit and no predator, so only the smell can signal danger |
+| chosen steps, matched-strength smell, modulated agent, seed 44 | 259,291,480 | 260,291,480 | 99.6% | every chosen step, binned by the state one step earlier; the starting row is not a chosen step |
+| episodes in the smell sextiles, matched-strength smell, modulated agent, seed 44 | 111,751 | 1,000,000 | 11.2% | episodes with exactly one rabbit and no predator, so only the smell can signal danger |
 
 ## f6_crosstabs__warm_cell
 
-Figure 6 — on a warm square by state, smell and company. **Axes.** Heat maps: horizontal, the agent's nutrition one step earlier (four bands); vertical, its injury one step earlier (four bands); colour and number, the share of chosen steps in percent, on one scale shared by all heat maps. Line chart: horizontal, the rabbit's smell as evidence that it is a predator, in nats (sextile means); vertical, the share of chosen steps in percent. Dot plot: horizontal, which animals were within two squares one step earlier; vertical, the share of chosen steps in percent.
+Figure 6e — by state, smell and nearby animals: Time on a warm square. **Axes.** Heat maps: horizontal, the agent's nutrition one step earlier (four bands); vertical, its injury one step earlier (four bands); shade and number, the share of chosen steps in percent, on one grey scale shared by all heat maps that runs from the lowest to the highest cell, not from zero. Line charts, one per smell world: horizontal, the rabbit's smell as evidence that it is a predator, in nats (sextile means); vertical, the share of chosen steps in percent; one line per run, marker shape for the agent type. Dot plot: horizontal, which animals were within two squares one step earlier; vertical, the share of chosen steps in percent.
 
 | subset | used | available | share | why |
 |---|---:|---:|---:|---|
-| chosen steps, two-channel smell (control), ordinary agent, seed 42 | 254,074,885 | 255,074,885 | 99.6% | every step t >= 1, binned by the row before it; the reset row is not a step |
-| episodes in the smell sextiles, two-channel smell (control), ordinary agent, seed 42 | 111,751 | 1,000,000 | 11.2% | exactly one rabbit and no predator |
-| chosen steps, two-channel smell (control), ordinary agent, seed 43 | 257,548,354 | 258,548,354 | 99.6% | every step t >= 1, binned by the row before it; the reset row is not a step |
-| episodes in the smell sextiles, two-channel smell (control), ordinary agent, seed 43 | 111,751 | 1,000,000 | 11.2% | exactly one rabbit and no predator |
-| chosen steps, two-channel smell (control), ordinary agent, seed 44 | 255,105,287 | 256,105,287 | 99.6% | every step t >= 1, binned by the row before it; the reset row is not a step |
-| episodes in the smell sextiles, two-channel smell (control), ordinary agent, seed 44 | 111,751 | 1,000,000 | 11.2% | exactly one rabbit and no predator |
-| chosen steps, two-channel smell (control), modulated agent, seed 42 | 257,542,754 | 258,542,754 | 99.6% | every step t >= 1, binned by the row before it; the reset row is not a step |
-| episodes in the smell sextiles, two-channel smell (control), modulated agent, seed 42 | 111,751 | 1,000,000 | 11.2% | exactly one rabbit and no predator |
-| chosen steps, two-channel smell (control), modulated agent, seed 43 | 263,697,666 | 264,697,666 | 99.6% | every step t >= 1, binned by the row before it; the reset row is not a step |
-| episodes in the smell sextiles, two-channel smell (control), modulated agent, seed 43 | 111,751 | 1,000,000 | 11.2% | exactly one rabbit and no predator |
-| chosen steps, two-channel smell (control), modulated agent, seed 44 | 261,638,230 | 262,638,230 | 99.6% | every step t >= 1, binned by the row before it; the reset row is not a step |
-| episodes in the smell sextiles, two-channel smell (control), modulated agent, seed 44 | 111,751 | 1,000,000 | 11.2% | exactly one rabbit and no predator |
-| chosen steps, single-channel smell, ordinary agent, seed 42 | 257,372,460 | 258,372,460 | 99.6% | every step t >= 1, binned by the row before it; the reset row is not a step |
-| episodes in the smell sextiles, single-channel smell, ordinary agent, seed 42 | 111,751 | 1,000,000 | 11.2% | exactly one rabbit and no predator |
-| chosen steps, single-channel smell, ordinary agent, seed 43 | 257,412,664 | 258,412,664 | 99.6% | every step t >= 1, binned by the row before it; the reset row is not a step |
-| episodes in the smell sextiles, single-channel smell, ordinary agent, seed 43 | 111,751 | 1,000,000 | 11.2% | exactly one rabbit and no predator |
-| chosen steps, single-channel smell, ordinary agent, seed 44 | 255,587,976 | 256,587,976 | 99.6% | every step t >= 1, binned by the row before it; the reset row is not a step |
-| episodes in the smell sextiles, single-channel smell, ordinary agent, seed 44 | 111,751 | 1,000,000 | 11.2% | exactly one rabbit and no predator |
-| chosen steps, single-channel smell, modulated agent, seed 42 | 258,889,141 | 259,889,141 | 99.6% | every step t >= 1, binned by the row before it; the reset row is not a step |
-| episodes in the smell sextiles, single-channel smell, modulated agent, seed 42 | 111,751 | 1,000,000 | 11.2% | exactly one rabbit and no predator |
-| chosen steps, single-channel smell, modulated agent, seed 43 | 261,858,907 | 262,858,907 | 99.6% | every step t >= 1, binned by the row before it; the reset row is not a step |
-| episodes in the smell sextiles, single-channel smell, modulated agent, seed 43 | 111,751 | 1,000,000 | 11.2% | exactly one rabbit and no predator |
-| chosen steps, single-channel smell, modulated agent, seed 44 | 258,224,174 | 259,224,174 | 99.6% | every step t >= 1, binned by the row before it; the reset row is not a step |
-| episodes in the smell sextiles, single-channel smell, modulated agent, seed 44 | 111,751 | 1,000,000 | 11.2% | exactly one rabbit and no predator |
-| chosen steps, matched-strength smell, ordinary agent, seed 42 | 254,554,978 | 255,554,978 | 99.6% | every step t >= 1, binned by the row before it; the reset row is not a step |
-| episodes in the smell sextiles, matched-strength smell, ordinary agent, seed 42 | 111,751 | 1,000,000 | 11.2% | exactly one rabbit and no predator |
-| chosen steps, matched-strength smell, ordinary agent, seed 43 | 257,730,674 | 258,730,674 | 99.6% | every step t >= 1, binned by the row before it; the reset row is not a step |
-| episodes in the smell sextiles, matched-strength smell, ordinary agent, seed 43 | 111,751 | 1,000,000 | 11.2% | exactly one rabbit and no predator |
-| chosen steps, matched-strength smell, ordinary agent, seed 44 | 254,948,150 | 255,948,150 | 99.6% | every step t >= 1, binned by the row before it; the reset row is not a step |
-| episodes in the smell sextiles, matched-strength smell, ordinary agent, seed 44 | 111,751 | 1,000,000 | 11.2% | exactly one rabbit and no predator |
-| chosen steps, matched-strength smell, modulated agent, seed 42 | 255,800,920 | 256,800,920 | 99.6% | every step t >= 1, binned by the row before it; the reset row is not a step |
-| episodes in the smell sextiles, matched-strength smell, modulated agent, seed 42 | 111,751 | 1,000,000 | 11.2% | exactly one rabbit and no predator |
-| chosen steps, matched-strength smell, modulated agent, seed 43 | 260,696,433 | 261,696,433 | 99.6% | every step t >= 1, binned by the row before it; the reset row is not a step |
-| episodes in the smell sextiles, matched-strength smell, modulated agent, seed 43 | 111,751 | 1,000,000 | 11.2% | exactly one rabbit and no predator |
-| chosen steps, matched-strength smell, modulated agent, seed 44 | 259,291,480 | 260,291,480 | 99.6% | every step t >= 1, binned by the row before it; the reset row is not a step |
-| episodes in the smell sextiles, matched-strength smell, modulated agent, seed 44 | 111,751 | 1,000,000 | 11.2% | exactly one rabbit and no predator |
+| chosen steps, two-channel smell (control), ordinary agent, seed 42 | 254,074,885 | 255,074,885 | 99.6% | every chosen step, binned by the state one step earlier; the starting row is not a chosen step |
+| episodes in the smell sextiles, two-channel smell (control), ordinary agent, seed 42 | 111,751 | 1,000,000 | 11.2% | episodes with exactly one rabbit and no predator, so only the smell can signal danger |
+| chosen steps, two-channel smell (control), ordinary agent, seed 43 | 257,548,354 | 258,548,354 | 99.6% | every chosen step, binned by the state one step earlier; the starting row is not a chosen step |
+| episodes in the smell sextiles, two-channel smell (control), ordinary agent, seed 43 | 111,751 | 1,000,000 | 11.2% | episodes with exactly one rabbit and no predator, so only the smell can signal danger |
+| chosen steps, two-channel smell (control), ordinary agent, seed 44 | 255,105,287 | 256,105,287 | 99.6% | every chosen step, binned by the state one step earlier; the starting row is not a chosen step |
+| episodes in the smell sextiles, two-channel smell (control), ordinary agent, seed 44 | 111,751 | 1,000,000 | 11.2% | episodes with exactly one rabbit and no predator, so only the smell can signal danger |
+| chosen steps, two-channel smell (control), modulated agent, seed 42 | 257,542,754 | 258,542,754 | 99.6% | every chosen step, binned by the state one step earlier; the starting row is not a chosen step |
+| episodes in the smell sextiles, two-channel smell (control), modulated agent, seed 42 | 111,751 | 1,000,000 | 11.2% | episodes with exactly one rabbit and no predator, so only the smell can signal danger |
+| chosen steps, two-channel smell (control), modulated agent, seed 43 | 263,697,666 | 264,697,666 | 99.6% | every chosen step, binned by the state one step earlier; the starting row is not a chosen step |
+| episodes in the smell sextiles, two-channel smell (control), modulated agent, seed 43 | 111,751 | 1,000,000 | 11.2% | episodes with exactly one rabbit and no predator, so only the smell can signal danger |
+| chosen steps, two-channel smell (control), modulated agent, seed 44 | 261,638,230 | 262,638,230 | 99.6% | every chosen step, binned by the state one step earlier; the starting row is not a chosen step |
+| episodes in the smell sextiles, two-channel smell (control), modulated agent, seed 44 | 111,751 | 1,000,000 | 11.2% | episodes with exactly one rabbit and no predator, so only the smell can signal danger |
+| chosen steps, single-channel smell, ordinary agent, seed 42 | 257,372,460 | 258,372,460 | 99.6% | every chosen step, binned by the state one step earlier; the starting row is not a chosen step |
+| episodes in the smell sextiles, single-channel smell, ordinary agent, seed 42 | 111,751 | 1,000,000 | 11.2% | episodes with exactly one rabbit and no predator, so only the smell can signal danger |
+| chosen steps, single-channel smell, ordinary agent, seed 43 | 257,412,664 | 258,412,664 | 99.6% | every chosen step, binned by the state one step earlier; the starting row is not a chosen step |
+| episodes in the smell sextiles, single-channel smell, ordinary agent, seed 43 | 111,751 | 1,000,000 | 11.2% | episodes with exactly one rabbit and no predator, so only the smell can signal danger |
+| chosen steps, single-channel smell, ordinary agent, seed 44 | 255,587,976 | 256,587,976 | 99.6% | every chosen step, binned by the state one step earlier; the starting row is not a chosen step |
+| episodes in the smell sextiles, single-channel smell, ordinary agent, seed 44 | 111,751 | 1,000,000 | 11.2% | episodes with exactly one rabbit and no predator, so only the smell can signal danger |
+| chosen steps, single-channel smell, modulated agent, seed 42 | 258,889,141 | 259,889,141 | 99.6% | every chosen step, binned by the state one step earlier; the starting row is not a chosen step |
+| episodes in the smell sextiles, single-channel smell, modulated agent, seed 42 | 111,751 | 1,000,000 | 11.2% | episodes with exactly one rabbit and no predator, so only the smell can signal danger |
+| chosen steps, single-channel smell, modulated agent, seed 43 | 261,858,907 | 262,858,907 | 99.6% | every chosen step, binned by the state one step earlier; the starting row is not a chosen step |
+| episodes in the smell sextiles, single-channel smell, modulated agent, seed 43 | 111,751 | 1,000,000 | 11.2% | episodes with exactly one rabbit and no predator, so only the smell can signal danger |
+| chosen steps, single-channel smell, modulated agent, seed 44 | 258,224,174 | 259,224,174 | 99.6% | every chosen step, binned by the state one step earlier; the starting row is not a chosen step |
+| episodes in the smell sextiles, single-channel smell, modulated agent, seed 44 | 111,751 | 1,000,000 | 11.2% | episodes with exactly one rabbit and no predator, so only the smell can signal danger |
+| chosen steps, matched-strength smell, ordinary agent, seed 42 | 254,554,978 | 255,554,978 | 99.6% | every chosen step, binned by the state one step earlier; the starting row is not a chosen step |
+| episodes in the smell sextiles, matched-strength smell, ordinary agent, seed 42 | 111,751 | 1,000,000 | 11.2% | episodes with exactly one rabbit and no predator, so only the smell can signal danger |
+| chosen steps, matched-strength smell, ordinary agent, seed 43 | 257,730,674 | 258,730,674 | 99.6% | every chosen step, binned by the state one step earlier; the starting row is not a chosen step |
+| episodes in the smell sextiles, matched-strength smell, ordinary agent, seed 43 | 111,751 | 1,000,000 | 11.2% | episodes with exactly one rabbit and no predator, so only the smell can signal danger |
+| chosen steps, matched-strength smell, ordinary agent, seed 44 | 254,948,150 | 255,948,150 | 99.6% | every chosen step, binned by the state one step earlier; the starting row is not a chosen step |
+| episodes in the smell sextiles, matched-strength smell, ordinary agent, seed 44 | 111,751 | 1,000,000 | 11.2% | episodes with exactly one rabbit and no predator, so only the smell can signal danger |
+| chosen steps, matched-strength smell, modulated agent, seed 42 | 255,800,920 | 256,800,920 | 99.6% | every chosen step, binned by the state one step earlier; the starting row is not a chosen step |
+| episodes in the smell sextiles, matched-strength smell, modulated agent, seed 42 | 111,751 | 1,000,000 | 11.2% | episodes with exactly one rabbit and no predator, so only the smell can signal danger |
+| chosen steps, matched-strength smell, modulated agent, seed 43 | 260,696,433 | 261,696,433 | 99.6% | every chosen step, binned by the state one step earlier; the starting row is not a chosen step |
+| episodes in the smell sextiles, matched-strength smell, modulated agent, seed 43 | 111,751 | 1,000,000 | 11.2% | episodes with exactly one rabbit and no predator, so only the smell can signal danger |
+| chosen steps, matched-strength smell, modulated agent, seed 44 | 259,291,480 | 260,291,480 | 99.6% | every chosen step, binned by the state one step earlier; the starting row is not a chosen step |
+| episodes in the smell sextiles, matched-strength smell, modulated agent, seed 44 | 111,751 | 1,000,000 | 11.2% | episodes with exactly one rabbit and no predator, so only the smell can signal danger |

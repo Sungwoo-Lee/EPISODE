@@ -958,6 +958,31 @@ legend, because "outcome" no longer fit 18 columns; F5's layout was tightened.
 **Left uncommitted:** `docs/experiments/active/hypervigilance/basic_behaviour_hvsmell/figures/`
 (27 MB of full-resolution PNG / SVG / PDF + samples) — regenerable in ~3 min from the cached outputs.
 
+### Addendum 2026-10-02 (b) — format gate "FIX FIRST" fixes
+
+All 15 findings of the first format gate on the page were addressed, plus the project vocabulary
+("bush dwell", not "hiding"):
+
+- Every figure label now goes through a display-name table (`_fig.FACTOR_LABEL`, `TARGET_TITLE` /
+  `TARGET_NOUN`, `QUANTITY_LABEL`); this lives in `_fig.py`, not `registry.py`, so the golden stamp is
+  unaffected.
+- Data statements are collapsed under `<details>` with identical rows merged. The build fails on a
+  below-100 % row with no reason, and every F4 row now states its episode subset.
+- Each figure has a width floor (register F65) inside a scroll box with a cue.
+- There is a table of contents, per-behaviour numbering (2a–2e …) with a heading inside each figure,
+  and unique viewer names.
+- Page chrome is set to ink, so blue and orange mean only smell world.
+- F2 shows display names and short status codes; F4 is ordered M1–M5.
+- F5: a vertical-bar marker for contrasts, a grey dash-dot reference, and a 2,481 px canvas.
+- F6: a neutral grey ramp anchored at the data range, a colour bar in its own column, and one smell
+  panel per world.
+
+Built page **8,526,823 bytes**. `check_artifact_layout.py` is clean at 500 / 1440 px in both
+default and `--open-details` modes, with no overflow when pinned at 390 px. A probe at 390 px shows
+every figure at its floor with its cue shown; at 1440 px no cue shows. 39 tests pass, now including
+`test_data_table_requires_reason_and_merges_identical_rows`. Register entries added: F71, an F59
+amendment, an F18 amendment and the tool notes. Not published.
+
 ## Verification Report
 
 > **Verified by**:
