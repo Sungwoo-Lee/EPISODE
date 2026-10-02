@@ -1300,7 +1300,6 @@ Figure 7a — bush dwell in each probe scene across training, one chart per worl
 | subset | used | available | share | why |
 |---|---:|---:|---:|---|
 | checkpoints summarised, two-channel smell (control) (6 runs x 12 scenes) | 1,440 | 3,600 | 40.0% | the newest 20 saved checkpoints of each run and scene (pre-stated window); older checkpoints are drawn in the traces but not summarised |
-| values shown hollow, two-channel smell (control) | 70 | 72 | 97.2% | a hollow marker is reported, not interpreted (survival under 95 steps in a scene it uses, or bush dwell over 90 % with no animal) |
 | checkpoints summarised, single-channel smell (6 runs x 12 scenes) | 1,440 | 3,600 | 40.0% | the newest 20 saved checkpoints of each run and scene (pre-stated window); older checkpoints are drawn in the traces but not summarised |
 | checkpoints summarised, matched-strength smell (6 runs x 12 scenes) | 1,440 | 3,600 | 40.0% | the newest 20 saved checkpoints of each run and scene (pre-stated window); older checkpoints are drawn in the traces but not summarised |
 | episodes behind each checkpoint value | 30 | 30 | 100.0% | 30 evaluation episodes per checkpoint and scene, fixed episode seeds |
@@ -1313,7 +1312,6 @@ Figure 7a — bush dwell in each probe scene across training, one chart per worl
 |---|---:|---:|---:|---|
 | checkpoints summarised, two-channel smell (control) (6 runs x 12 scenes) | 1,440 | 3,600 | 40.0% | the newest 20 saved checkpoints of each run and scene (pre-stated window); older checkpoints are drawn in the traces but not summarised |
 | checkpoints summarised, single-channel smell (6 runs x 12 scenes) | 1,440 | 3,600 | 40.0% | the newest 20 saved checkpoints of each run and scene (pre-stated window); older checkpoints are drawn in the traces but not summarised |
-| values shown hollow, single-channel smell | 68 | 72 | 94.4% | a hollow marker is reported, not interpreted (survival under 95 steps in a scene it uses, or bush dwell over 90 % with no animal) |
 | checkpoints summarised, matched-strength smell (6 runs x 12 scenes) | 1,440 | 3,600 | 40.0% | the newest 20 saved checkpoints of each run and scene (pre-stated window); older checkpoints are drawn in the traces but not summarised |
 | episodes behind each checkpoint value | 30 | 30 | 100.0% | 30 evaluation episodes per checkpoint and scene, fixed episode seeds |
 
@@ -1326,7 +1324,6 @@ Figure 7a — bush dwell in each probe scene across training, one chart per worl
 | checkpoints summarised, two-channel smell (control) (6 runs x 12 scenes) | 1,440 | 3,600 | 40.0% | the newest 20 saved checkpoints of each run and scene (pre-stated window); older checkpoints are drawn in the traces but not summarised |
 | checkpoints summarised, single-channel smell (6 runs x 12 scenes) | 1,440 | 3,600 | 40.0% | the newest 20 saved checkpoints of each run and scene (pre-stated window); older checkpoints are drawn in the traces but not summarised |
 | checkpoints summarised, matched-strength smell (6 runs x 12 scenes) | 1,440 | 3,600 | 40.0% | the newest 20 saved checkpoints of each run and scene (pre-stated window); older checkpoints are drawn in the traces but not summarised |
-| values shown hollow, matched-strength smell | 68 | 72 | 94.4% | a hollow marker is reported, not interpreted (survival under 95 steps in a scene it uses, or bush dwell over 90 % with no animal) |
 | episodes behind each checkpoint value | 30 | 30 | 100.0% | 30 evaluation episodes per checkpoint and scene, fixed episode seeds |
 
 ## f7_probe_levels
@@ -1336,11 +1333,11 @@ Figure 7b — late-training bush dwell in each scene. **Axes.** Every panel: hor
 | subset | used | available | share | why |
 |---|---:|---:|---:|---|
 | checkpoints summarised, two-channel smell (control) (6 runs x 12 scenes) | 1,440 | 3,600 | 40.0% | the newest 20 saved checkpoints of each run and scene (pre-stated window); older checkpoints are drawn in the traces but not summarised |
-| values shown hollow, two-channel smell (control) | 70 | 72 | 97.2% | a hollow marker is reported, not interpreted (survival under 95 steps in a scene it uses, or bush dwell over 90 % with no animal) |
+| values shown hollow (not interpreted), two-channel smell (control) | 2 | 72 | 2.8% | a hollow marker is reported, not interpreted (survival under 95 steps in a scene it uses, or bush dwell over 90 % with no animal) |
 | checkpoints summarised, single-channel smell (6 runs x 12 scenes) | 1,440 | 3,600 | 40.0% | the newest 20 saved checkpoints of each run and scene (pre-stated window); older checkpoints are drawn in the traces but not summarised |
-| values shown hollow, single-channel smell | 68 | 72 | 94.4% | a hollow marker is reported, not interpreted (survival under 95 steps in a scene it uses, or bush dwell over 90 % with no animal) |
+| values shown hollow (not interpreted), single-channel smell | 4 | 72 | 5.6% | a hollow marker is reported, not interpreted (survival under 95 steps in a scene it uses, or bush dwell over 90 % with no animal) |
 | checkpoints summarised, matched-strength smell (6 runs x 12 scenes) | 1,440 | 3,600 | 40.0% | the newest 20 saved checkpoints of each run and scene (pre-stated window); older checkpoints are drawn in the traces but not summarised |
-| values shown hollow, matched-strength smell | 68 | 72 | 94.4% | a hollow marker is reported, not interpreted (survival under 95 steps in a scene it uses, or bush dwell over 90 % with no animal) |
+| values shown hollow (not interpreted), matched-strength smell | 4 | 72 | 5.6% | a hollow marker is reported, not interpreted (survival under 95 steps in a scene it uses, or bush dwell over 90 % with no animal) |
 | episodes behind each checkpoint value | 30 | 30 | 100.0% | 30 evaluation episodes per checkpoint and scene, fixed episode seeds |
 
 ## f7_probe_confusion
@@ -1363,11 +1360,11 @@ Figure 7d — how much more bush dwell a hunting predator, or a chasing rabbit, 
 |---|---:|---:|---:|---|
 | run-level differences drawn | 72 | 72 | 100.0% | every run, every panel |
 | checkpoints summarised (levels behind the differences), two-channel smell (control) (6 runs x 12 scenes) | 1,440 | 3,600 | 40.0% | the newest 20 saved checkpoints of each run and scene (pre-stated window); older checkpoints are drawn in the traces but not summarised |
-| values shown hollow, two-channel smell (control) | 22 | 24 | 91.7% | a hollow marker is reported, not interpreted (survival under 95 steps in a scene it uses, or bush dwell over 90 % with no animal) |
+| values shown hollow (not interpreted), two-channel smell (control) | 2 | 24 | 8.3% | a hollow marker is reported, not interpreted (survival under 95 steps in a scene it uses, or bush dwell over 90 % with no animal) |
 | checkpoints summarised (levels behind the differences), single-channel smell (6 runs x 12 scenes) | 1,440 | 3,600 | 40.0% | the newest 20 saved checkpoints of each run and scene (pre-stated window); older checkpoints are drawn in the traces but not summarised |
-| values shown hollow, single-channel smell | 20 | 24 | 83.3% | a hollow marker is reported, not interpreted (survival under 95 steps in a scene it uses, or bush dwell over 90 % with no animal) |
+| values shown hollow (not interpreted), single-channel smell | 4 | 24 | 16.7% | a hollow marker is reported, not interpreted (survival under 95 steps in a scene it uses, or bush dwell over 90 % with no animal) |
 | checkpoints summarised (levels behind the differences), matched-strength smell (6 runs x 12 scenes) | 1,440 | 3,600 | 40.0% | the newest 20 saved checkpoints of each run and scene (pre-stated window); older checkpoints are drawn in the traces but not summarised |
-| values shown hollow, matched-strength smell | 20 | 24 | 83.3% | a hollow marker is reported, not interpreted (survival under 95 steps in a scene it uses, or bush dwell over 90 % with no animal) |
+| values shown hollow (not interpreted), matched-strength smell | 4 | 24 | 16.7% | a hollow marker is reported, not interpreted (survival under 95 steps in a scene it uses, or bush dwell over 90 % with no animal) |
 | episodes behind each checkpoint value | 30 | 30 | 100.0% | 30 evaluation episodes per checkpoint and scene, fixed episode seeds |
 
 ## f7_probe_budget
@@ -1377,23 +1374,23 @@ Figure 7e — are the world differences larger than the noise? **Axes.** Every p
 | subset | used | available | share | why |
 |---|---:|---:|---:|---|
 | runs behind the threat discrimination, injury 0, ordinary agent | 9 | 9 | 100.0% | three seeds per world; every run-level value is a newest-20 checkpoint mean |
-| of those, runs shown hollow in Figures 7b-7d (threat discrimination, injury 0, ordinary agent) | 6 | 9 | 66.7% | 3 run(s) under the survival or ceiling rule are still counted here, since the budget describes spread, not an effect; read this quantity's world differences with that in mind |
+| of those, runs shown hollow in Figures 7b-7d (threat discrimination, injury 0, ordinary agent) | 3 | 9 | 33.3% | 3 run(s) under the survival or ceiling rule are still counted here, since the budget describes spread, not an effect; read this quantity's world differences with that in mind |
 | runs behind the wandering rabbit response, injury 0, ordinary agent | 9 | 9 | 100.0% | three seeds per world; every run-level value is a newest-20 checkpoint mean |
 | runs behind the confusion contrast, injury 0, ordinary agent | 9 | 9 | 100.0% | three seeds per world; every run-level value is a newest-20 checkpoint mean |
 | runs behind the confusion contrast, injury 70, ordinary agent | 9 | 9 | 100.0% | three seeds per world; every run-level value is a newest-20 checkpoint mean |
 | runs behind the injury shift of the confusion contrast, ordinary agent | 9 | 9 | 100.0% | three seeds per world; every run-level value is a newest-20 checkpoint mean |
 | runs behind the threat discrimination, injury 0, modulated agent | 9 | 9 | 100.0% | three seeds per world; every run-level value is a newest-20 checkpoint mean |
-| of those, runs shown hollow in Figures 7b-7d (threat discrimination, injury 0, modulated agent) | 7 | 9 | 77.8% | 2 run(s) under the survival or ceiling rule are still counted here, since the budget describes spread, not an effect; read this quantity's world differences with that in mind |
+| of those, runs shown hollow in Figures 7b-7d (threat discrimination, injury 0, modulated agent) | 2 | 9 | 22.2% | 2 run(s) under the survival or ceiling rule are still counted here, since the budget describes spread, not an effect; read this quantity's world differences with that in mind |
 | runs behind the wandering rabbit response, injury 0, modulated agent | 9 | 9 | 100.0% | three seeds per world; every run-level value is a newest-20 checkpoint mean |
 | runs behind the confusion contrast, injury 0, modulated agent | 9 | 9 | 100.0% | three seeds per world; every run-level value is a newest-20 checkpoint mean |
 | runs behind the confusion contrast, injury 70, modulated agent | 9 | 9 | 100.0% | three seeds per world; every run-level value is a newest-20 checkpoint mean |
 | runs behind the injury shift of the confusion contrast, modulated agent | 9 | 9 | 100.0% | three seeds per world; every run-level value is a newest-20 checkpoint mean |
 | checkpoints summarised, two-channel smell (control) (6 runs x 12 scenes) | 1,440 | 3,600 | 40.0% | the newest 20 saved checkpoints of each run and scene (pre-stated window); older checkpoints are drawn in the traces but not summarised |
-| values shown hollow, two-channel smell (control) | 29 | 30 | 96.7% | a hollow marker is reported, not interpreted (survival under 95 steps in a scene it uses, or bush dwell over 90 % with no animal) |
+| values shown hollow (not interpreted), two-channel smell (control) | 1 | 30 | 3.3% | a hollow marker is reported, not interpreted (survival under 95 steps in a scene it uses, or bush dwell over 90 % with no animal) |
 | checkpoints summarised, single-channel smell (6 runs x 12 scenes) | 1,440 | 3,600 | 40.0% | the newest 20 saved checkpoints of each run and scene (pre-stated window); older checkpoints are drawn in the traces but not summarised |
-| values shown hollow, single-channel smell | 28 | 30 | 93.3% | a hollow marker is reported, not interpreted (survival under 95 steps in a scene it uses, or bush dwell over 90 % with no animal) |
+| values shown hollow (not interpreted), single-channel smell | 2 | 30 | 6.7% | a hollow marker is reported, not interpreted (survival under 95 steps in a scene it uses, or bush dwell over 90 % with no animal) |
 | checkpoints summarised, matched-strength smell (6 runs x 12 scenes) | 1,440 | 3,600 | 40.0% | the newest 20 saved checkpoints of each run and scene (pre-stated window); older checkpoints are drawn in the traces but not summarised |
-| values shown hollow, matched-strength smell | 28 | 30 | 93.3% | a hollow marker is reported, not interpreted (survival under 95 steps in a scene it uses, or bush dwell over 90 % with no animal) |
+| values shown hollow (not interpreted), matched-strength smell | 2 | 30 | 6.7% | a hollow marker is reported, not interpreted (survival under 95 steps in a scene it uses, or bush dwell over 90 % with no animal) |
 | episodes behind each checkpoint value | 30 | 30 | 100.0% | 30 evaluation episodes per checkpoint and scene, fixed episode seeds |
 
 ## f7_probe_training
@@ -1424,15 +1421,12 @@ Figure 7f — does an agent that dwells in bushes more in its training world als
 
 ## f7_probe_other
 
-Figure 7g — other measures from the same scenes. **Axes.** All three panels: horizontal, the twelve scenes (six animal setups, each at injury 0 and 70); inside each scene, the six world and agent combinations side by side. Top: survival, the number of recorded steps, where 101 means the agent lived through the whole scene, with the 95-step validity floor as a grey dash-dot line. Middle: the closest the animal came to the agent, in grid squares counted along rows plus columns, starting at zero. Bottom: spatial spread, in squares. Each marker is the mean of the three seeds' newest-20-checkpoint values; the vertical line spans the lowest to the highest seed.
+Figure 7g — other measures from the same scenes. **Axes.** All three panels: horizontal, the twelve scenes (six animal setups, each at injury 0 and 70); inside each scene, the six world and agent combinations side by side. Top: survival, the number of recorded steps, where 101 means the agent lived through the whole scene, with the 95-step validity floor as a grey dash-dot line. Middle: the closest the animal came to the agent, in grid squares counted along rows plus columns, starting at zero. Bottom: spatial spread, in squares. Each marker is the mean of the three seeds' newest-20-checkpoint values; the dotted vertical line with end caps spans the lowest to the highest seed (a range of three seeds, not an interval).
 
 | subset | used | available | share | why |
 |---|---:|---:|---:|---|
 | closest distance in the no-animal scenes | 0 | 36 | 0.0% | not defined: there is no animal to be close to |
 | checkpoints summarised, two-channel smell (control) (6 runs x 12 scenes) | 1,440 | 3,600 | 40.0% | the newest 20 saved checkpoints of each run and scene (pre-stated window); older checkpoints are drawn in the traces but not summarised |
-| values shown hollow, two-channel smell (control) | 198 | 204 | 97.1% | a hollow marker is reported, not interpreted (survival under 95 steps in a scene it uses, or bush dwell over 90 % with no animal) |
 | checkpoints summarised, single-channel smell (6 runs x 12 scenes) | 1,440 | 3,600 | 40.0% | the newest 20 saved checkpoints of each run and scene (pre-stated window); older checkpoints are drawn in the traces but not summarised |
-| values shown hollow, single-channel smell | 192 | 204 | 94.1% | a hollow marker is reported, not interpreted (survival under 95 steps in a scene it uses, or bush dwell over 90 % with no animal) |
 | checkpoints summarised, matched-strength smell (6 runs x 12 scenes) | 1,440 | 3,600 | 40.0% | the newest 20 saved checkpoints of each run and scene (pre-stated window); older checkpoints are drawn in the traces but not summarised |
-| values shown hollow, matched-strength smell | 192 | 204 | 94.1% | a hollow marker is reported, not interpreted (survival under 95 steps in a scene it uses, or bush dwell over 90 % with no animal) |
 | episodes behind each checkpoint value | 30 | 30 | 100.0% | 30 evaluation episodes per checkpoint and scene, fixed episode seeds |

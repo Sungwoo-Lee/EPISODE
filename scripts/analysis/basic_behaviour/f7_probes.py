@@ -45,6 +45,9 @@ WSHORT = {"hv2ch": "control", "hv1ch": "single-channel", "hv1chm": "matched"}
 WLONG = {"hv2ch": "two-channel smell (control)", "hv1ch": "single-channel smell",
          "hv1chm": "matched-strength smell"}
 STEM = {f: f"f7_probe_{f}" for f in FIGS}
+SHORT_SCENE = {"none": "no animal", "pred": "hunting predator", "rabbit": "chasing rabbit",
+               "rabbit_olfzero": "chasing rabbit, no smell", "rabbitwander": "wandering rabbit",
+               "rabbitwander_predsmell": "predator-smelling rabbit"}
 NOTE_FLAG = ("a hollow marker is reported, not interpreted (survival under 95 steps in a scene it "
              "uses, or bush dwell over 90 % with no animal)")
 
@@ -111,10 +114,11 @@ def dot_panel(ax, sub, pos, ticks, labels, show_mean=True, ci=True):
     ax.grid(axis="x", visible=False)
 
 
-def legend(fig, extra=(), y=0.0, ncol=4, worlds=WORLDS):
+def legend(fig, extra=(), y=0.0, ncol=4, worlds=WORLDS, agents=True):
     from matplotlib.lines import Line2D
     hs = [Line2D([], [], ls="", marker="o", ms=8, color=COL[w], label=WLONG[w]) for w in worlds]
-    hs += [Line2D([], [], ls="", marker=MK[a], ms=8, color=H.INK_2, label=FG.alabel(a)) for a in AGENTS]
+    if agents:
+        hs += [Line2D([], [], ls="", marker=MK[a], ms=8, color=H.INK_2, label=FG.alabel(a)) for a in AGENTS]
     hs += list(extra)
     return fig.legend(handles=hs, loc="lower center", ncol=ncol, frameon=False, fontsize=H.FS_LABEL,
                       bbox_to_anchor=(0.5, y))
@@ -150,7 +154,7 @@ def zero(ax):
 
 # ------------------------------------------------------------------ data statements
 
-def window_rows(D, what_prefix, kind_filter):
+def window_rows(D, what_prefix, kind_filter, hollow=True):
     """Per world: newest-20 checkpoints used out of the checkpoints found, summed over runs."""
     rows = []
     comp = pd.DataFrame(D["comp"]["rows"])
@@ -169,8 +173,8 @@ def window_rows(D, what_prefix, kind_filter):
             rows.append({"what": f"checkpoints evaluated, {WLONG[w]}", "used": found, "total": exp,
                          "note": "DRAFT: the sweep has not finished every checkpoint"})
         nflag = int(R[(R.world == w)].apply(flag, axis=1).sum()) if len(R) else 0
-        if nflag:
-            rows.append({"what": f"values shown hollow, {WLONG[w]}", "used": len(R[R.world == w]) - nflag,
+        if nflag and hollow:
+            rows.append({"what": f"values shown hollow (not interpreted), {WLONG[w]}", "used": nflag,
                          "total": len(R[R.world == w]), "note": NOTE_FLAG})
     rows.append({"what": "episodes behind each checkpoint value", "used": 30, "total": 30,
                  "note": "30 evaluation episodes per checkpoint and scene, fixed episode seeds"})
@@ -213,10 +217,10 @@ def fig_traces(D, world):
     from matplotlib.lines import Line2D
     legend(fig, extra=[Line2D([], [], color=COL[world], lw=1.1, label="one line per training seed"),
                        Patch(color=H.INK_2, alpha=0.15, label="the newest 20 checkpoints (summarised)")],
-           y=-0.005, ncol=3, worlds=[world])
+           y=-0.005, ncol=3, worlds=[world], agents=False)
     fig.tight_layout(rect=(0.02, 0.06, 1, 1), h_pad=0.9, w_pad=0.9)
     return fig, window_rows(D, "checkpoints summarised", lambda R: (R.kind == "level") & (R.measure == "bush_hiding")
-                            & (R.world == world))
+                            & (R.world == world), hollow=False)
 
 
 def fig_levels(D):
@@ -230,7 +234,7 @@ def fig_levels(D):
         for j, inj in enumerate(PR.INJURIES):
             ax = axs[k // 2, (k % 2) * 2 + j]
             dot_panel(ax, R[(R.scene == scene) & (R.injury == inj)], pos, ticks, labels)
-            ax.set_title(wrap_title(f"{sname}, {PR.INJ_NAME[inj]}", 26), fontsize=H.FS_LABEL + 1, loc="left")
+            ax.set_title(f"{SHORT_SCENE[scene]} · inj. {int(inj)}", fontsize=H.FS_LABEL + 1, loc="left")
             ax.set_ylim(-4, 104)
             if (k % 2) * 2 + j == 0:
                 ax.set_ylabel("bush dwell (%)")
@@ -341,8 +345,8 @@ def fig_budget(D):
                 v = abs(float(r[c]))
                 if c.startswith("diff"):
                     sep = bool(r["sep" + c[4:]])
-                    ax.barh(k, v, height=0.62, color=H.INK if sep else H.INK_2)
-                    ax.text(v + 0.012 * xmax, k, f"{r[c]:+.1f}" + (" (seeds apart)" if sep else ""),
+                    ax.barh(k, v, height=0.62, color=H.INK if sep else H.TEXT_LIGHT)
+                    ax.text(v + 0.012 * xmax, k, f"{r[c]:+.1f}".replace("-", "\u2212") + (" (seeds apart)" if sep else ""),
                             va="center", fontsize=H.FS_LABEL, color=H.INK)
                 else:
                     ax.barh(k, v, height=0.62, color=H.BG_SOFT, edgecolor=H.TEXT_LIGHT, hatch="///", lw=0.6)
@@ -351,7 +355,7 @@ def fig_budget(D):
         ax.set_xlabel("percentage points of bush dwell", fontsize=H.FS_LABEL, color=H.INK_2,
                       fontweight="normal")
     from matplotlib.patches import Patch
-    fig.legend(handles=[Patch(color=H.INK_2, label="difference between worlds (mean of three seeds each)"),
+    fig.legend(handles=[Patch(color=H.TEXT_LIGHT, label="difference between worlds (mean of three seeds each)"),
                         Patch(color=H.INK, label="… with all three seeds of one world beyond all three of the other"),
                         Patch(facecolor=H.BG_SOFT, edgecolor=H.TEXT_LIGHT, hatch="///",
                               label="spread: seed-to-seed (between runs) or checkpoint-to-checkpoint (within a run)")],
@@ -368,7 +372,7 @@ def fig_budget(D):
             if len(sub) and int(sub["flagged_runs"].iloc[0]):
                 k = int(sub["flagged_runs"].iloc[0])
                 rows.append({"what": f"of those, runs shown hollow in Figures 7b-7d ({BUDGET_TITLE[q]}, {FG.alabel(a)})",
-                             "used": n - k, "total": n,
+                             "used": k, "total": n,
                              "note": f"{k} run(s) under the survival or ceiling rule are still counted here, since the "
                                      "budget describes spread, not an effect; read this quantity's world differences "
                                      "with that in mind"})
@@ -383,8 +387,7 @@ def fig_training(D):
     R = R[(R.kind == "level") & (R.measure == "bush_hiding")].copy()
     R["injury"] = R["injury"].map(inj_str)
     TW = D["TW"].set_index("label")
-    scenes = [("none", "no animal"), ("pred", "hunting predator"),
-              ("rabbitwander_predsmell", "wandering rabbit that\nsmells like a predator")]
+    scenes = [(k, SHORT_SCENE[k]) for k in ("none", "pred", "rabbitwander_predsmell")]
     fig, axs = plt.subplots(1, 3, figsize=(12.0, 5.6), sharey=True)
     xs_all = TW.bush_dwell.dropna()
     xlo, xhi = (float(xs_all.min()), float(xs_all.max())) if len(xs_all) else (0.0, 5.0)
@@ -405,8 +408,9 @@ def fig_training(D):
             xs.append(x); ys.append(r["mean"])
         nused = max(nused, len(xs))
         rho = stats.spearmanr(xs, ys).statistic if len(xs) >= 4 else np.nan
-        ax.set_title(f"{sname}, injury 0\nrank correlation across runs: {rho:+.2f}", fontsize=H.FS_LABEL + 1,
-                     loc="left")
+        rtxt = f"{rho:+.2f}".replace("-", "\u2212")
+        ax.set_title(f"{sname} · inj. 0\nrank correlation across runs: {rtxt}",
+                     fontsize=H.FS_LABEL + 1, loc="left")
         ax.set_xlim(xlo - xpad, xhi + xpad)
         ax.set_ylim(0, ymax)
         ax.set_xlabel("training-world bush dwell\n(% of chosen steps, final checkpoint;\naxis not from zero)")
@@ -444,10 +448,12 @@ def fig_other(D):
                 if not len(g):
                     continue
                 x = k + o
-                ax.plot([x, x], [g["mean"].min(), g["mean"].max()], color=COL[w], lw=1.4, alpha=0.8)
+                ax.plot([x, x], [g["mean"].min(), g["mean"].max()], color=COL[w], lw=1.4, alpha=0.85, ls=":")
+                for yv in (g["mean"].min(), g["mean"].max()):
+                    ax.plot([x - 0.035, x + 0.035], [yv, yv], color=COL[w], lw=1.4, alpha=0.85)
                 ax.plot(x, g["mean"].mean(), ls="", marker=MK[a], ms=6, color=COL[w])
         if m == "closest_approach":
-            ax.set_ylim(bottom=0)
+            ax.set_ylim(bottom=-0.12)
         if m == "survival_steps":
             ax.axhline(PR.SURVIVAL_FLOOR, color=H.TEXT_LIGHT, lw=1.4, ls="-.")
             ax.text(len(cells) - 0.5, PR.SURVIVAL_FLOOR - 1.5, "95 steps: validity floor", ha="right", va="top",
@@ -462,10 +468,12 @@ def fig_other(D):
     for ax in axs:
         ax.grid(axis="x", visible=False)
     from matplotlib.lines import Line2D
-    legend(fig, extra=[Line2D([], [], color=H.INK_2, lw=1.4, label="range of the three seeds (marker: their mean)")],
+    legend(fig, extra=[Line2D([], [], color=H.INK_2, lw=1.8, ls=":",
+                              label="range of 3 seeds, not an interval (marker: their mean)")],
            y=-0.005, ncol=3)
     fig.tight_layout(rect=(0, 0.06, 1, 1), h_pad=1.2)
-    rows = window_rows(D, "checkpoints summarised", lambda X: (X.kind == "level") & X.measure.isin([m for m, _ in meas]))
+    rows = window_rows(D, "checkpoints summarised", lambda X: (X.kind == "level") & X.measure.isin([m for m, _ in meas]),
+                       hollow=False)
     rows.insert(0, {"what": "closest distance in the no-animal scenes", "used": 0,
                     "total": 2 * 18, "note": "not defined: there is no animal to be close to"})
     return fig, rows

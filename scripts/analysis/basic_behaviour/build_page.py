@@ -167,8 +167,8 @@ def data_table(stem, rows):
             + "".join(out) + "</tbody></table></div></details>")
 
 
-TOC_TITLE = {"F1": "Behaviours and survival, per run", "F2": "Which features each run's analysis uses",
-             "F3": "Each feature on its own, per run", "F4": "The features fitted together, per run",
+TOC_TITLE = {"F1": "Behaviours and survival, per run", "F2": "Which factors each run's analysis uses",
+             "F3": "Each factor on its own, per run", "F4": "The factors fitted together, per run",
              "F5": "Which settings move each behaviour (screening)",
              "F6": "By state, rabbit smell and nearby animals",
              "F7": "Probe scenes (exploratory)"}
