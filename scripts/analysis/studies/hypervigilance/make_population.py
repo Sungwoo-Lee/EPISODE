@@ -38,9 +38,14 @@ ROOT = os.path.abspath(os.path.join(HERE, "..", "..", "..", ".."))
 sys.path.insert(0, os.path.join(ROOT, "scripts", "analysis"))
 from hiding_drivers import find_stores      # noqa: E402
 
-HV_ROOT = os.path.join(ROOT, "results", "analysis", "hypervigilance")
+# Data location: $BB_DATA_ROOT when set (a worktree without results/; BASIC_BEHAVIOUR_WATER D13),
+# else this checkout. Runs, stores and the default output resolve under it.
+DATA = os.path.realpath(os.environ["BB_DATA_ROOT"]) if os.environ.get("BB_DATA_ROOT") else ROOT
+HV_ROOT = os.path.join(DATA, "results", "analysis", "hypervigilance")
 STATUSES = ("completed", "running", "failed", "planned")
-CELL_WORLD = {"1ch": "hv1ch", "1chm": "hv1chm", "2ch": "hv2ch"}
+CELL_WORLD = {"1ch": "hv1ch", "1chm": "hv1chm", "2ch": "hv2ch",
+              # thirst task (THIRST_TASK section 9): map size x smell reach, names kept as they are
+              **{f"g{g}s{s}": f"g{g}s{s}" for g in (10, 15, 20) for s in ("W", "5", "3")}}
 CELL_AGENT = {"ordinary": "t1none", "modulated": "t16quad"}
 AGENT_RE = re.compile(r"_(?P<agent>t1none|t16quad)(_ALL)?_s(?P<seed>\d+)(_r\d+)?$")
 SEED_RE = re.compile(r"_s(?P<seed>\d+)(_r\d+)?$")
@@ -110,7 +115,7 @@ def store_checkpoints(run: str, roots) -> list[str]:
     tag = os.path.basename(run.rstrip("/"))
     out = set()
     for r in roots:
-        for d in glob.glob(os.path.join(ROOT, r, tag, "*", "*", "")):
+        for d in glob.glob(os.path.join(DATA, r, tag, "*", "*", "")):
             out.add(os.path.basename(os.path.dirname(os.path.dirname(d))))
     return sorted(out)
 
@@ -131,7 +136,7 @@ def resolve_stores(run: str, roots, nearest=None):
                              f"{nearest}; refusing to choose")
         ck = dist[0][1]
     cwd = os.getcwd()
-    os.chdir(ROOT)
+    os.chdir(DATA)
     try:
         stores = find_stores(run, ck, roots)
     finally:
@@ -142,11 +147,11 @@ def resolve_stores(run: str, roots, nearest=None):
 def final_checkpoint(run: str):
     """The run's largest saved checkpoint if it has reached the configured episode budget."""
     import yaml
-    cfgp = os.path.join(ROOT, run, "models", "config.yaml")
+    cfgp = os.path.join(DATA, run, "models", "config.yaml")
     if not os.path.exists(cfgp):
         return None
     budget = int(yaml.safe_load(open(cfgp))["episodes"])
-    steps = [int(d) for d in os.listdir(os.path.join(ROOT, run, "models")) if d.isdigit()]
+    steps = [int(d) for d in os.listdir(os.path.join(DATA, run, "models")) if d.isdigit()]
     return max(steps) if steps and max(steps) >= budget else None
 
 
@@ -163,7 +168,10 @@ def from_study_doc(md, roots, nearest=None) -> list[dict]:
     for r in parse_launch_manifest(md):
         st = parse_status(r["Status"])
         run = run_dir_of(r["Log path"])
-        wpart, apart = [x.strip() for x in r["Cell"].split("·")]
+        parts = [x for x in re.split(r"\s*·\s*|\s+", r["Cell"].strip()) if x]   # '1ch · ordinary', 'g10sW ordinary'
+        if len(parts) != 2:
+            raise SystemExit(f"row {r['Run']}: Cell {r['Cell']!r} is not '<world> <agent>'")
+        wpart, apart = parts
         world, agent = CELL_WORLD[wpart], CELL_AGENT[apart]
         tag = r["Tag (= wandb-name)"].strip("`")
         relaunch = re.search(r"(_r\d+)$", run) if run else None
@@ -200,7 +208,7 @@ def from_ladder_manifest(path, world, add_levels, wave_roots, nearest=None) -> l
         out.append(c)
     for lvl in add_levels:
         for wave, root in wave_roots:
-            for d in sorted(glob.glob(os.path.join(ROOT, root, f"*_lvl{lvl:02d}_*"))):
+            for d in sorted(glob.glob(os.path.join(DATA, root, f"*_lvl{lvl:02d}_*"))):
                 base = os.path.basename(d)
                 am = AGENT_RE.search(base)
                 if not am:
@@ -231,7 +239,7 @@ def from_runs(runs, world, roots, nearest=None, agent_flag=None) -> list[dict]:
             raise SystemExit(f"{base}: the tag carries no agent; pass --agent")
         if not sm:
             import yaml
-            seed = int(yaml.safe_load(open(os.path.join(ROOT, run, "models", "config.yaml")))["seed"])
+            seed = int(yaml.safe_load(open(os.path.join(DATA, run, "models", "config.yaml")))["seed"])
         else:
             seed = int(sm["seed"])
         out.append(cell(base.split("_", 1)[1], run, roots, world, agent, seed, "completed", nearest))
@@ -274,7 +282,7 @@ def main():
     out = a.out or os.path.join(HV_ROOT, a.population, "population.json")
     os.makedirs(os.path.dirname(os.path.abspath(out)), exist_ok=True)
     doc = {"population": a.population, "written": _dt.datetime.now().isoformat(timespec="seconds"),
-           "source": os.path.relpath(source, ROOT) if source else {"runs": a.runs},
+           "source": os.path.relpath(os.path.abspath(source), DATA) if source else {"runs": a.runs},
            "source_sha256": sha256(source) if source else None,
            "checkpoint_nearest": a.checkpoint_nearest, "cells": cells}
     json.dump(doc, open(out, "w"), indent=1)

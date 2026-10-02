@@ -34,9 +34,17 @@ import house as H                                                       # noqa: 
 WORLD_LABEL = {"hv1ch": "single-channel smell", "hv1chm": "matched-strength smell",
                "hv2ch": "two-channel smell (control)", "a01": "a01 world"}
 WORLD_ORDER = ["hv2ch", "hv1ch", "hv1chm"]
+# thirst task (THIRST_TASK section 3): map size x smell reach (W = the whole map, 5 or 3 squares)
+_REACH = {"W": "smell across the map", "5": "smell 5 squares", "3": "smell 3 squares"}
+for _g in (10, 15, 20):
+    for _s in ("W", "5", "3"):
+        WORLD_LABEL[f"g{_g}s{_s}"] = f"{_g}×{_g} map, {_REACH[_s]}"
+        WORLD_ORDER.append(f"g{_g}s{_s}")
 AGENT_LABEL = {"t1none": "ordinary agent", "t16quad": "modulated agent", "unmodulated": "ordinary agent"}
 AGENT_ORDER = ["t1none", "unmodulated", "t16quad"]
-WORLD_SHORT = {"hv1ch": "single-channel", "hv1chm": "matched-strength", "hv2ch": "two-channel (control)"}
+WORLD_SHORT = {"hv1ch": "single-channel", "hv1chm": "matched-strength", "hv2ch": "two-channel (control)",
+               **{f"g{g}s{s}": f"{g}×{g}, smell {'map' if s == 'W' else s}" for g in (10, 15, 20)
+                  for s in ("W", "5", "3")}}
 AGENT_SHORT = {"t1none": "ordinary", "t16quad": "modulated", "unmodulated": "ordinary"}
 MARKERS = ["o", "^", "s", "D", "v", "P"]
 # Markers reserved for non-run glyphs, so no shape means two things on the page (register F11, third
@@ -47,12 +55,13 @@ MEAN_MARKER, CONTRAST_MARKER = "_", "|"
 # Display names for behaviours: noun phrases, so they fit every sentence frame (register F59 amendment).
 # "Bush dwell" is the project's term for time spent in a bush.
 TARGET_NOUN = {"bush_dwell": "bush dwell", "eating": "eating", "near_rabbit": "time near a rabbit",
-               "near_predator": "time near a predator", "warm_cell": "time on a warm square"}
+               "near_predator": "time near a predator", "warm_cell": "time on a warm square",
+               "pond": "time on the pond (drinking)"}
 TARGET_TITLE = {"bush_dwell": "Bush dwell (time in a bush)", "eating": "Eating",
                 "near_rabbit": "Time near a rabbit (within 2 squares)",
                 "near_predator": "Time near a predator (within 2 squares)",
-                "warm_cell": "Time on a warm square"}
-TARGET_ORDER = ["bush_dwell", "eating", "near_rabbit", "near_predator", "warm_cell"]
+                "warm_cell": "Time on a warm square", "pond": "Time on the pond (drinking)"}
+TARGET_ORDER = ["bush_dwell", "eating", "near_rabbit", "near_predator", "warm_cell", "pond"]
 
 # Every factor shown on a figure goes through this table: no code names on the page.
 FACTOR_LABEL = {
@@ -76,7 +85,9 @@ FACTOR_LABEL = {
     "frac_time_rabbit_near": "share of time only a rabbit is near",
     "mean_body_temp": "average body temperature", "frac_time_warm_cell": "share of time on a warm square",
     "detect_keenest": "sight range of the keener predator", "detect_least_keen": "sight range of the less keen predator",
-    "detect_spread": "difference between the two sight ranges"}
+    "detect_spread": "difference between the two sight ranges",
+    "start_hydration": "hydration at start", "spawn_dist_to_pond": "start distance to the pond",
+    "mean_hydration": "average hydration", "frac_time_on_pond": "share of time on the pond"}
 QUANTITY_LABEL = {"level": "behaviour level", "start_injury": "injury-at-start slope",
                   "start_nutrition": "nutrition-at-start slope", "smell": "rabbit-smell slope",
                   "smell_x_injury": "rabbit smell × injury at start"}
@@ -88,6 +99,17 @@ def flabel(name: str) -> str:
     return FACTOR_LABEL[name]
 TERM_NAMES = {1: "reached the step limit", 2: "starved", 3: "over-ate",
               4: "injury reached maximum", 5: "body temperature out of range"}
+# the two water death causes (core.py codes 6 and 7), shown only for populations with water
+TERM_NAMES_WATER = {**TERM_NAMES, 6: "died of thirst", 7: "over-drank"}
+
+
+def has_water(cells) -> bool:
+    """True when any swept cell's world has water (its inventory carries a "water" block)."""
+    return any("water" in c["inv"] for c in cells)
+
+
+def term_names(cells) -> dict:
+    return TERM_NAMES_WATER if has_water(cells) else TERM_NAMES
 
 
 def args(extra=None, argv=None):

@@ -26,6 +26,7 @@ STEM = "f6_crosstabs"
 INJ = ["0", "0-25", "25-50", "50+"]
 NUT = ["<25", "25-50", "50-75", "75+"]
 NEAR = ["both far", "predator near", "rabbit near", "both near"]      # index rabbit*2 + predator
+HYD = ["<50", "50-100", "100-150", "150+"]                             # registry.HYD_EDGES
 
 
 def main(argv=None):
@@ -34,7 +35,10 @@ def main(argv=None):
     H.apply()
     import matplotlib.pyplot as plt
     D = FG.load_outputs(a.population, a.out_root, need_episodes=True)
-    cells = [c for c in D["cells"] if c["inv"]["targets"][a.target]["available"]]
+    cells = [c for c in D["cells"] if (c["inv"]["targets"].get(a.target) or {}).get("available")]
+    water = FG.has_water(cells)             # D8: hydration panels only for populations with water
+    onset = a.target == "pond"              # the pond is binned at bout onset (Revision 1, finding 3)
+    hheat = {}
     groups = [(w, ag) for w in D["worlds"] for ag in D["agents"]
               if any(c["world"] == w and c["agent"] == ag for c in cells)]
     rows, heat, near, ladder = [], {}, {}, {}
@@ -48,6 +52,15 @@ def main(argv=None):
         h = heat.setdefault(g, [np.zeros(16), np.zeros(16), []])
         h[0] += x[f"inj_nut__{a.target}"]; h[1] += tr; h[2].append(c["seed"])
         near[c["label"]] = 100 * x[f"near__{a.target}"] / np.maximum(x["near_trials"], 1)
+        if water and "hyd_nut_trials" in x.files:
+            ht = x["hyd_nut_onset_trials"] if onset else x["hyd_nut_trials"]
+            hy = x["hyd_nut_onset__pond"] if onset else x[f"hyd_nut__{a.target}"]
+            hh = hheat.setdefault(g, [np.zeros(16), np.zeros(16)])
+            hh[0] += hy; hh[1] += ht
+            rows.append({"what": f"chosen steps by hydration, {FG.run_label(c)}", "used": int(ht.sum()),
+                         "total": int(e["n_steps"].sum()),
+                         "note": ("bout onset: only steps where the agent was off the pond one step earlier"
+                                  if onset else "every chosen step, binned by hydration one step earlier")})
         rows.append({"what": f"chosen steps, {FG.run_label(c)}", "used": int(tr.sum()),
                      "total": int(e["n_rows"].sum()),
                      "note": "every chosen step, binned by the state one step earlier; the starting row is not a chosen step"})
@@ -69,11 +82,12 @@ def main(argv=None):
     ng = len(groups)
     nrow_h = int(np.ceil(ng / 3))
     worlds = D["worlds"]
-    fig = plt.figure(figsize=(12.0, 3.6 * nrow_h + 7.6))
+    nrow_w = nrow_h if water else 0         # one row of hydration maps per row of injury maps
+    fig = plt.figure(figsize=(12.0, 3.6 * (nrow_h + nrow_w) + 7.6))
     # heat maps in columns 0-2, a dedicated narrow column for the colour bar (it must not sit over a
     # panel title: register F18 amendment); then one smell panel per world; then the nearby-animals panel
-    gs = fig.add_gridspec(nrow_h + 2, 4, width_ratios=[1, 1, 1, 0.06],
-                          height_ratios=[1] * nrow_h + [1.15, 1.15], hspace=0.95, wspace=0.42)
+    gs = fig.add_gridspec(nrow_h + nrow_w + 2, 4, width_ratios=[1, 1, 1, 0.06],
+                          height_ratios=[1] * (nrow_h + nrow_w) + [1.15, 1.15], hspace=0.95, wspace=0.42)
     vals = {g: 100 * h[0] / np.maximum(h[1], 1) for g, h in heat.items()}
     lo = min(v[heat[g][1] > 0].min() for g, v in vals.items())
     hi = max(v[heat[g][1] > 0].max() for g, v in vals.items())
@@ -101,6 +115,8 @@ def main(argv=None):
     cb = fig.colorbar(im, cax=cax)
     cb.set_label("share of chosen steps (%)", fontsize=H.FS_LABEL)
     cb.outline.set_visible(False)
+    if water:
+        hydration_maps(fig, gs, groups, hheat, nrow_h, nrow_w, cm, onset, H)
     # one smell panel per world, the runs of both agents in it, shape = agent
     ys = [y for xs, yv in ladder.values() for y in yv]
     pad = 0.08 * (max(ys) - min(ys) + 1e-9)
@@ -108,13 +124,13 @@ def main(argv=None):
     # all-zero lines; say so instead of drawing them on a meaningless 1e-11 scale
     undefined = max(abs(y) for y in ys) < 1e-9
     if undefined:
-        ax = fig.add_subplot(gs[nrow_h, 0:3])
+        ax = fig.add_subplot(gs[nrow_h + nrow_w, 0:3])
         ax.axis("off")
         ax.text(0.5, 0.5, "By the rabbit's smell: not defined for this behaviour. These episodes contain "
                 "no predator,\nso the share of steps near a predator is zero by construction.",
                 ha="center", va="center", transform=ax.transAxes, fontsize=H.FS_BODY, color=H.INK_2)
     for k, w in enumerate([] if undefined else worlds[:3]):
-        ax = fig.add_subplot(gs[nrow_h, k])
+        ax = fig.add_subplot(gs[nrow_h + nrow_w, k])
         for c in [c for c in cells if c["world"] == w]:
             xs, yv = ladder[c["label"]]
             ax.plot(xs, yv, color=D["colour"][w], marker=D["marker"][c["agent"]], ms=5.5, lw=1.3, alpha=0.9)
@@ -125,7 +141,7 @@ def main(argv=None):
         ax.set_xlabel("rabbit smell (nats, sextile means)")
         if k == 0:
             ax.set_ylabel("share of chosen steps (%)")
-    ax = fig.add_subplot(gs[nrow_h + 1, 0:3])
+    ax = fig.add_subplot(gs[nrow_h + nrow_w + 1, 0:3])
     for j, c in enumerate(cells):
         off = (j - (len(cells) - 1) / 2) * (0.7 / max(len(cells), 1))
         for k in range(4):
@@ -142,6 +158,43 @@ def main(argv=None):
     stem = f"{STEM}__{a.target}"
     FG.record_samples(a.fig_dir, stem, rows)
     FG.save(fig, a.fig_dir, stem)
+
+
+def hydration_maps(fig, gs, groups, hheat, r0, nrow, cm, onset, H):
+    """D8: share of chosen steps by hydration band x nutrition band, both one step earlier, per world
+    x agent; for the pond, the bout-onset rate (steps off the pond one step earlier only)."""
+    have = [hheat[g] for g in groups if g in hheat]
+    vals = {g: 100 * h[0] / np.maximum(h[1], 1) for g, h in hheat.items()}
+    lo = min(v[hheat[g][1] > 0].min() for g, v in vals.items()) if have else 0
+    hi = max(v[hheat[g][1] > 0].max() for g, v in vals.items()) if have else 1
+    im = None
+    for k, g in enumerate(groups):
+        ax = fig.add_subplot(gs[r0 + k // 3, k % 3])
+        ax.grid(False)
+        title = f"{FG.WORLD_SHORT.get(g[0], g[0])}, {FG.AGENT_SHORT.get(g[1], g[1])}"
+        if g not in hheat:
+            ax.axis("off")
+            ax.set_title(title + "\nno water in this world", fontsize=H.FS_LABEL)
+            continue
+        V = vals[g].reshape(4, 4)
+        n = hheat[g][1].reshape(4, 4)
+        im = ax.imshow(V, cmap=cm, vmin=lo, vmax=hi, origin="upper", aspect="auto")
+        for i in range(4):
+            for j in range(4):
+                ax.text(j, i, f"{V[i, j]:.0f}" if n[i, j] > 0 else "-", ha="center", va="center",
+                        fontsize=H.FS_LABEL, color=H.INK, path_effects=H.halo())
+        ax.set_xticks(range(4)); ax.set_xticklabels(NUT, fontsize=H.FS_LABEL)
+        ax.set_yticks(range(4)); ax.set_yticklabels(HYD, fontsize=H.FS_LABEL)
+        ax.set_title(title + ("\narrivals: off the pond one step earlier" if onset else
+                              "\nby hydration"), fontsize=H.FS_LABEL)
+        ax.set_xlabel("nutrition one step earlier")
+        ax.set_ylabel("hydration one step earlier")
+    if im is not None:
+        cax = fig.add_subplot(gs[r0:r0 + nrow, 3])
+        cb = fig.colorbar(im, cax=cax)
+        cb.set_label("share of steps arriving on the pond (%)" if onset else "share of chosen steps (%)",
+                     fontsize=H.FS_LABEL)
+        cb.outline.set_visible(False)
 
 
 if __name__ == "__main__":

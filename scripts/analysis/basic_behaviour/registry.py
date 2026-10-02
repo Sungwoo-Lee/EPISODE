@@ -12,6 +12,8 @@ the trajectory store's manifest, never typed per world:
     audit(cfg, thermo)                       B2  every randomised-draw marker, claimed or unhandled
     obs_indices(cfg, manifest)               A2b body-temperature / own-thermoception indices
     thermal_info(cfg, params)                N2  what ambient-temperature recovery needs
+    water_info(cfg, params), pond_cells()    water worlds: world features and the per-episode pond
+                                             replay (docs/develop/active/behavior/BASIC_BEHAVIOUR_WATER.md)
 
 On a01 (the hiding page's agent) the factor names and their order are the legacy
 `hiding_drivers.fit_glms` ones; that is what the byte-identity gate relies on.
@@ -30,6 +32,18 @@ import numpy as np
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.abspath(os.path.join(HERE, "..", "..", ".."))       # two levels under scripts/
 A_DIR = os.path.join(ROOT, "scripts", "analysis")
+# Data location (BASIC_BEHAVIOUR_WATER D13). Unset: data and outputs live under the code's own
+# checkout, exactly as before. Set (a git worktree, which has no results/ and cannot symlink to it on
+# the NAS): runs, stores and references resolve under $BB_DATA_ROOT, and every output of this
+# pipeline goes under results/analysis/basic_behaviour/_water_dev/ there. Source hashes always use ROOT.
+DATA_ROOT = ROOT
+BB_ROOT = os.path.join(ROOT, "results", "analysis", "basic_behaviour")
+if os.environ.get("BB_DATA_ROOT"):
+    DATA_ROOT = os.path.realpath(os.environ["BB_DATA_ROOT"])
+    if not os.path.isdir(os.path.join(DATA_ROOT, "results")):
+        raise SystemExit(f"BB_DATA_ROOT={DATA_ROOT} has no results/ folder")
+    BB_ROOT = os.path.join(DATA_ROOT, "results", "analysis", "basic_behaviour", "_water_dev")
+DATA_BB_ROOT = os.path.join(DATA_ROOT, "results", "analysis", "basic_behaviour")   # references
 for p in (os.path.join(A_DIR, "core"), A_DIR, ROOT):
     if p not in sys.path:
         sys.path.insert(0, p)
@@ -68,19 +82,30 @@ TARGETS = {"bush_dwell": "hiding in a bush",
            "eating": "eating",
            "near_rabbit": "within two squares of a rabbit",
            "near_predator": "within two squares of a predator",
-           "warm_cell": "on a warm square"}
+           "warm_cell": "on a warm square",
+           "pond": "on the pond (drinking)"}           # water worlds only (BASIC_BEHAVIOUR_WATER D4)
 
 # consequences whose formula IS (part of) a target's indicator (B3 "is the outcome")
 OUTCOME_CONSEQUENCE = {"eating": ["eat_rate"], "near_predator": ["frac_time_predator_near"],
                        "near_rabbit": ["frac_time_rabbit_near"],
-                       "warm_cell": ["frac_time_warm_cell"]}
+                       "warm_cell": ["frac_time_warm_cell"], "pond": ["frac_time_on_pond"]}
+
+# hydration bands of the F6 cross-tables (D8): <50, 50-100, 100-150, 150+
+HYD_EDGES = [50.0, 100.0, 150.0]
+REPLAY_CHUNK = 2048                         # episodes per vmapped jax_reset (the pilot reader's chunk)
+
+
+def hyd_band(h):
+    """Hydration band index 0-3 (HYD_EDGES). Rounded to 1e-3 first, so a float32 round-trip of a
+    value on an edge (100.0 read back as 99.99998) cannot cross the edge (D8)."""
+    return np.digitize(np.round(h, 3), HYD_EDGES)
 
 CONSEQUENCES = ["frac_time_injured", "frac_time_inj_severe", "mean_injury", "peak_injury",
                 "frac_time_low_nutrition", "mean_nutrition", "total_damage_taken", "eat_rate",
                 "rest_rate", "episode_length", "frac_time_predator_near", "frac_time_rabbit_near"]
 
 # config blocks that describe the world (the audit walks these; agent / logging blocks hold no draws)
-WORLD_BLOCKS = ("environment", "body", "thermal", "sensory", "perceptual_noise")
+WORLD_BLOCKS = ("environment", "body", "thermal", "sensory", "perceptual_noise", "water")
 NOT_A_DRAW = {
     "damage": "drawn per hit, not per episode",
     "spawn_area": "placement region", "patrol_area": "placement region", "area": "placement region",
@@ -167,7 +192,8 @@ def obs_indices(cfg: dict, manifest: dict, params=None) -> dict | None:
     down, left); this is verified against the environment's own field by golden_gate.py (S0.4).
     """
     th = cfg.get("thermal") or {}
-    if not th.get("enabled"):
+    water = water_enabled(cfg)
+    if not th.get("enabled") and not water:
         return None
     from src.environment.sensor import get_observation_breakdown
     params = params if params is not None else rebuild_params(cfg)
@@ -193,7 +219,86 @@ def obs_indices(cfg: dict, manifest: dict, params=None) -> dict | None:
             if name == "Body Temperature":
                 out["alphabetical_body_temp"] = o
             o += mb[name]
+    if water:                                       # D1; keys absent on worlds without water
+        out["hydration"] = idx["Hydration"][0] if "Hydration" in idx else None
+        out["hydration_scale"] = float(cfg["water"]["max_hydration"])      # mandatory key
+        out["alphabetical_hydration"] = None
+        o = 0
+        for name in sorted(mb):
+            if name == "Hydration":
+                out["alphabetical_hydration"] = o
+            o += mb[name]
     return out
+
+
+def water_enabled(cfg: dict) -> bool:
+    """True when the saved config has a water block with enabled: true (a real YAML boolean)."""
+    w = cfg.get("water")
+    if not isinstance(w, dict):
+        return False
+    if not isinstance(w["enabled"], bool):
+        raise SystemExit(f"water.enabled is {w['enabled']!r}, not a boolean")
+    return w["enabled"]
+
+
+def water_info(cfg: dict, params) -> dict:
+    """World features of a water world (D6), from the saved config and the rebuilt params.
+
+    Constants within a run: they label worlds on the page, they are not regressors. The corner table
+    is the loader's 0-based top-left table (`params.water_topleft_table`), never re-typed here."""
+    w = cfg["water"]
+    table = [[int(r), int(c)] for r, c in params.water_topleft_table]
+    return {"map_size": [int(params.height), int(params.width)],
+            "pond_size": [int(x) for x in w["size"]],
+            "pond_cells": int(params.water_block_h) * int(params.water_block_w),
+            "placement": w["placement"], "pond_corners": table,
+            "sensor_radius": int(cfg["sensory"]["sensor_radius"]),
+            "max_hydration": float(w["max_hydration"]),
+            "random_start_hydration": bool(w["random_start_hydration"])}
+
+
+def pond_cells(params, seeds) -> dict:
+    """Replay each episode's reset (D2): the pond, the start cell and the pond's table row.
+
+    `jax.vmap(jax_reset)` over PRNGKey(episode_seed) in chunks of REPLAY_CHUNK, params rebuilt from
+    the saved config exactly as the collector builds them (the THIRST_PILOT section 4.2 method).
+    Returns water_pos [n, h*w, 2], agent_pos [n, 2], hydration [n] (the reset's start value), corner
+    [n] (row of the 0-based top-left table) and the per-corner flat pond masks [K, H*W]. Every episode
+    must match exactly one table row and lie on the grid, else a hard stop."""
+    import jax
+    from src.environment.core import jax_reset
+    seeds = np.asarray(seeds, dtype=np.int64)
+    f = jax.jit(lambda s: (lambda st: (st.water_pos, st.agent_pos, st.hydration))(
+        jax.vmap(jax_reset, in_axes=(None, 0))(params, jax.vmap(jax.random.PRNGKey)(s))))
+    wp, ap, hy = [], [], []
+    for i in range(0, len(seeds), REPLAY_CHUNK):
+        s = seeds[i:i + REPLAY_CHUNK]
+        pad = REPLAY_CHUNK - len(s)                 # one compiled shape for every chunk
+        a, b, c = f(np.concatenate([s, np.full(pad, s[-1], np.int64)]) if pad else s)
+        n = len(s)
+        wp.append(np.asarray(a)[:n]); ap.append(np.asarray(b)[:n]); hy.append(np.asarray(c)[:n])
+    wp, ap, hy = np.concatenate(wp), np.concatenate(ap), np.concatenate(hy)
+    H, W = int(params.height), int(params.width)
+    table = np.asarray(params.water_topleft_table, dtype=np.int64)            # [K, 2], 0-based
+    match = (wp[:, 0, None, :] == table[None, :, :]).all(-1)                 # [n, K]
+    if not (match.sum(1) == 1).all():
+        bad = np.flatnonzero(match.sum(1) != 1)[:10]
+        raise SystemExit(f"pond replay: {int((match.sum(1) != 1).sum())} episodes whose pond top-left "
+                         f"is not exactly one table row (seeds {seeds[bad].tolist()})")
+    corner = match.argmax(1)
+    offs = np.asarray([(r, c) for r in range(int(params.water_block_h))
+                       for c in range(int(params.water_block_w))], dtype=np.int64)
+    want = table[corner][:, None, :] + offs[None]
+    if not np.array_equal(wp, want):
+        raise SystemExit("pond replay: pond cells are not the table top-left plus the block offsets")
+    if (wp < 0).any() or (wp[..., 0] >= H).any() or (wp[..., 1] >= W).any():
+        raise SystemExit("pond replay: a pond cell lies outside the grid")
+    masks = np.zeros((len(table), H * W), bool)
+    for k in range(len(table)):
+        cells = table[k] + offs
+        masks[k, cells[:, 0] * W + cells[:, 1]] = True
+    return {"water_pos": wp, "agent_pos": ap, "hydration": hy.astype(np.float64), "corner": corner,
+            "masks": masks, "H": H, "W": W}
 
 
 def thermal_info(cfg: dict, params) -> dict:
@@ -295,6 +400,15 @@ def targets(cfg: dict, manifest: dict, step_cols, obs: dict | None, thermo: dict
         why = ("thermal.injury_heat_exchange_gain is non-zero, so the settling temperature depends "
                "on injury and the static warm band does not apply (plan Revision 2, N7)")
     put("warm_cell", why is None, why)
+    if water_enabled(cfg):                  # D4: the pond target exists only in worlds with water
+        why = None
+        if obs is None or obs.get("hydration") is None:
+            why = "no Hydration in the observation"
+        elif manifest.get("obs_precision") != "float32":
+            why = f"store obs_precision is {manifest.get('obs_precision')!r}, not float32"
+        elif "obs_true" not in cols:
+            why = "no step column obs_true"
+        put("pond", why is None, why)
     return out
 
 
@@ -408,6 +522,30 @@ def add_thermal_consequence(F: list, warm_available: bool) -> None:
                       kind="consequence"))
 
 
+def add_water_factors(F: list, cfg: dict, T: dict) -> None:
+    """D5: water factors and consequences, appended after every existing factor (so the order of a
+    world without water is untouched). Only when the pond target is available: the pond replay and
+    the hydration read that these need run only then."""
+    if "pond" not in T or not T["pond"]["available"]:
+        return
+    w, env = cfg["water"], cfg["environment"]
+    names = {f["name"] for f in F}
+
+    def add(name, block, role, source, kind):
+        if name in names:
+            raise SystemExit(f"two factors would be named {name!r}")
+        F.append(dict(name=name, block=block, role=role, subset="all", source=source, kind=kind))
+
+    if w["random_start_hydration"] is True:
+        add("start_hydration", "exogenous", "episode", "water.random_start_hydration", "start_hydration")
+    if env.get("random_start_pos") is True:
+        add("spawn_dist_to_pond", "exogenous", "episode", "environment.random_start_pos + water pond",
+            "spawn_dist_pond")
+    add("mean_hydration", "consequence", "consequence", "obs_true Hydration", "consequence")
+    add("frac_time_on_pond", "consequence", "consequence", "agent cell on the replayed pond",
+        "consequence")
+
+
 def m5_helpers(F: list, S: dict) -> dict | None:
     """The fixed M5 recipe's helpers for the first predator class, or None with a reason."""
     c1 = next((e for e in S["entities"] if e["predator"]), None)
@@ -457,12 +595,27 @@ def audit(cfg: dict, F: list[dict], thermo: dict | None, spec_ok: bool = True) -
     for block in WORLD_BLOCKS:
         if not isinstance(cfg.get(block), dict):
             continue
+        if block == "water" and not water_enabled(cfg):
+            continue                        # D7: walked only in worlds with water
         for kind, path, d in _walk(cfg[block], block):
             for k, v in d.items():
                 p = f"{path}.{k}"
                 leaf = k
+                if path == "water" and k == "placement":                         # D7 marker W2
+                    if v == "random" or (v == "list" and len(d["candidates"]) > 1):
+                        got = [n for n in ("spawn_dist_to_pond",) if n in names]
+                        row("pond placement drawn per episode", p,
+                            "handler W2 (pond_corner" + (", " + ", ".join(got) if got else "") + ")"
+                            if "frac_time_on_pond" in names else None,
+                            "the pond is not replayed (pond target unavailable)")
+                    else:
+                        row("pond placement", p, f"not a draw (placement {v!r}"
+                            + (", one candidate)" if v == "list" else ")"))
                 if leaf.startswith("random_") and v is True:
-                    if leaf == "random_start_pos":
+                    if path == "water" and leaf == "random_start_hydration":
+                        row("random_* true", p, "handler W1 (start_hydration)" if "start_hydration"
+                            in names else None, "Hydration is not read from the observation")
+                    elif leaf == "random_start_pos":
                         row("random_* true", p, "handler 5 / 7 (spawn distances)")
                     elif leaf == "random_start_body_temp":
                         row("random_* true", p, "handler 6 (start_body_temp)" if "start_body_temp" in names
@@ -488,10 +641,16 @@ def audit(cfg: dict, F: list[dict], thermo: dict | None, spec_ok: bool = True) -
                             in names else "not a draw (body temperature start not randomised)")
                     elif base.startswith("start_"):
                         x = base[len("start_"):]
-                        rnd = (cfg.get("body") or {}).get(f"random_start_{x}") is True
+                        # the switch lives in the same block as the pair (D7; W-b): body.* for the
+                        # body variables, water.random_start_hydration for start_hydration_low/_high
+                        rnd = d.get(f"random_start_{x}") is True
                         nm = next((n for xx, _, n in BODY_START if xx == x), None)
                         if not rnd:
                             row("_low/_high pair", pp, f"not a draw (random_start_{x} is false)")
+                        elif path == "water" and x == "hydration":
+                            row("_low/_high pair", pp, "handler W1 (start_hydration)" if
+                                "start_hydration" in names else None,
+                                "Hydration is not read from the observation")
                         else:
                             row("_low/_high pair", pp, f"handler 1 ({nm})" if nm in names else None,
                                 f"no store step column for body variable '{x}'")

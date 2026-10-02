@@ -12,6 +12,7 @@ last_updated: 2026-10-01
 > **Opened**: 2026-10-01
 > **Author**: senior-developer
 > **Related**: [[HYPERVIGILANCE_ANALYSIS_TOOLING]] (population manifests, per-cell store resolution, the golden-gate pattern and the reference files this plan reuses) · [[a01_hiding_drivers]] ("What makes this agent hide?" — the analyses this page generalises) · [[SINGLE_CHANNEL_SMELL_HYPERVIGILANCE]] (the first population: 18 runs in three smell worlds) · [[TRAJECTORY_STORE_SCHEMA]] (what a store records, and what it does not) · [[TRAJECTORY_COLLECTION_PIPELINE]] · `docs/develop/active/meta/artifact_generation_guide.md` (§0a, §2.7, §11) · `docs/environment/SCRIPTS_DEPENDENCY_MAP.md` (updated by this change) · Known Bugs rows "hiding-drivers cross-tabs bin injury from the same step" and "lab-node env drift" (see A6)
+> **Water (2026-10-03)**: worlds with a pond and thirst (a sixth behaviour, time on the pond; start hydration as a factor; the two water death causes; the water gate) are added by [[BASIC_BEHAVIOUR_WATER]].
 
 ---
 

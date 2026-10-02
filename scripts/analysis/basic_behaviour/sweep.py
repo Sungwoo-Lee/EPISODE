@@ -18,6 +18,12 @@ Writes, per completed cell of the population manifest:
     <cell>/inventory.json   targets available / unavailable, factors, audit rows, slot map, scent spec
     <cell>/_provenance.json run, stores, checkpoint, source sha256s, git HEAD, seconds
 
+Worlds with water (docs/develop/active/behavior/BASIC_BEHAVIOUR_WATER.md) add: the pond replayed
+from each episode's seed, the D3 integrity checks on every store (hard stop on any exception),
+y__pond / hyd0 / hyd_sum1 / d_pond0 / pond_corner, the hydration x nutrition cross-tables
+(hyd_nut__*, and hyd_nut_onset__pond binned at bout onset), inventory "water" and "water_checks".
+$BB_DATA_ROOT (D13): data read from there, outputs only under its basic_behaviour/_water_dev/.
+
 The per-episode arithmetic copies `hiding_drivers.aggregate()` primitive for primitive
 (np.add.reduceat over episode starts per shard, np.bincount with minlength, float64 casts of the
 same columns, the same mean_over) - the a01 byte-identity gate is what proves it.
@@ -50,7 +56,8 @@ import readings as RD                                                   # noqa: 
 from hiding_drivers import shard_files, NEAR_D, INJ_EDGES, NUT_EDGES    # noqa: E402
 from env import listcol                                                 # noqa: E402
 
-BB_ROOT = os.path.join(ROOT, "results", "analysis", "basic_behaviour")
+BB_ROOT = REG.BB_ROOT                     # under $BB_DATA_ROOT/.../_water_dev when that is set (D13)
+DATA = REG.DATA_ROOT                      # where runs and stores are read from
 SWEEP_SOURCES = ["scripts/analysis/basic_behaviour/registry.py",
                  "scripts/analysis/basic_behaviour/sweep.py",
                  "scripts/analysis/core/env.py", "scripts/analysis/hiding_drivers.py"]
@@ -86,7 +93,7 @@ def guard_out_root(path):
 
 
 def store_manifest(stores):
-    mans = [json.load(open(os.path.join(ROOT, s, "_manifest.json"))) for s in stores]
+    mans = [json.load(open(os.path.join(DATA, s, "_manifest.json"))) for s in stores]
     keys = ["animal_classes", "animal_tags", "obstacle_names", "res_type", "observation_breakdown",
             "dims", "obs_precision", "env_fp"]
     for m in mans[1:]:
@@ -98,7 +105,7 @@ def store_manifest(stores):
 
 def step_columns(stores):
     import pyarrow.parquet as pq
-    f = shard_files([os.path.join(ROOT, s) for s in stores], "steps")[0]
+    f = shard_files([os.path.join(DATA, s) for s in stores], "steps")[0]
     return [x.name for x in pq.read_schema(f)]
 
 
@@ -106,24 +113,28 @@ def step_columns(stores):
 def describe(c: dict) -> dict:
     """Everything the sweep needs to know about one cell, from config + store manifest only."""
     import yaml
-    cfg = yaml.safe_load(open(os.path.join(ROOT, c["run"], "models", "config.yaml")))
+    cfg = yaml.safe_load(open(os.path.join(DATA, c["run"], "models", "config.yaml")))
     man, n_ep = store_manifest(c["stores"])
     S = REG.slots(cfg, man)
     th = cfg.get("thermal") or {}
-    params = REG.rebuild_params(cfg) if th.get("enabled") else None
+    water_on = REG.water_enabled(cfg)
+    params = REG.rebuild_params(cfg) if (th.get("enabled") or water_on) else None
     obs = REG.obs_indices(cfg, man, params)
-    thermo = REG.thermal_info(cfg, params) if params is not None else None
+    thermo = REG.thermal_info(cfg, params) if th.get("enabled") else None
     cols = step_columns(c["stores"])
     T = REG.targets(cfg, man, cols, obs, thermo)
     F = REG.factors(cfg, man, obs, thermo)
     REG.add_thermal_consequence(F, T["warm_cell"]["available"])
+    REG.add_water_factors(F, cfg, T)
     rows = REG.audit(cfg, F, thermo)
     try:
         spec = REG.ENV.scent_spec(cfg)
     except SystemExit as e:
         raise SystemExit(f"{c['label']}: {e}")
+    water = REG.water_info(cfg, params) if water_on else None
     return dict(cfg=cfg, man=man, n_ep_manifest=n_ep, S=S, obs=obs, thermo=thermo, cols=cols, T=T,
-                F=F, audit=rows, spec=spec, m5=REG.m5_helpers(F, S))
+                F=F, audit=rows, spec=spec, m5=REG.m5_helpers(F, S), water=water,
+                params=params if water_on else None)
 
 
 # ----------------------------------------------------------------------------------- aggregate ----
@@ -134,7 +145,7 @@ def aggregate(stores, d: dict, verbose=True) -> tuple[dict, dict]:
     """
     import pyarrow.parquet as pq
     S, F, T, spec, obs, thermo = d["S"], d["F"], d["T"], d["spec"], d["obs"], d["thermo"]
-    stores = [os.path.join(ROOT, s) for s in stores]
+    stores = [os.path.join(DATA, s) for s in stores]
     kinds = {f["kind"] for f in F}
     trait_cols = sorted({f["column"] for f in F if f["kind"] == "trait"}
                         | ({"animal_detect_sampled"} if d["m5"] and "skip" not in d["m5"] else set()))
@@ -211,11 +222,27 @@ def aggregate(stores, d: dict, verbose=True) -> tuple[dict, dict]:
     for t_ in avail:
         XT[f"inj_nut__{t_}"] = np.zeros(16)
         XT[f"near__{t_}"] = np.zeros(4)
+    # water (BASIC_BEHAVIOUR_WATER D2-D5, D8): the pond is replayed from each episode's seed
+    water_on = "pond" in T and T["pond"]["available"]
+    if water_on:
+        PR = REG.pond_cells(d["params"], seed)
+        cmask, Wd = PR["masks"], PR["W"]
+        for k in ("y_pond", "hyd0", "hyd_sum1", "d_pond0"):
+            G[k] = z()
+        G["pond_corner"] = PR["corner"].astype(np.int64)
+        hscale = obs["hydration_scale"]
+        XT["hyd_nut_trials"] = np.zeros(16)
+        for t_ in avail:
+            XT[f"hyd_nut__{t_}"] = np.zeros(16)
+        XT["hyd_nut_onset_trials"] = np.zeros(16)
+        XT["hyd_nut_onset__pond"] = np.zeros(16)
+        WC = {"episodes_checked": 0, "start_cell_mismatches": 0, "steps_checked": 0,
+              "step_exceptions": 0, "reset_hydration_max_abs_diff": 0.0}
     cols = ["episode_seed", "t", "agent_in_bush", "injury_level", "nutrition", "damage", "ate_food",
             "rested", "agent_row", "agent_col", "obs_row", "obs_col", "animal_row", "animal_col"]
     if "start_satiation" in {f["name"] for f in F}:
         cols.append("satiation")
-    if thermal_on:
+    if thermal_on or water_on:
         cols.append("obs_true")
     hide_slots = S["bush"]
     files = shard_files(stores, "steps")
@@ -306,6 +333,33 @@ def aggregate(stores, d: dict, verbose=True) -> tuple[dict, dict]:
         idx = np.flatnonzero(m); prev = idx - 1
         if (prev < 0).any() or not (np.array_equal(sd[prev], sd[idx]) and np.array_equal(t[prev] + 1, t[idx])):
             raise SystemExit(f"{f}: a t >= 1 row's previous row is not the same episode at t - 1")
+        if water_on:
+            OTw = OT if thermal_on else listcol(tb.column("obs_true"), obs["D"])
+            hyd = OTw[:, obs["hydration"]].astype(np.float64) * hscale
+            on = cmask[G["pond_corner"][gi], ar.astype(np.int64) * Wd + ac.astype(np.int64)]
+            # D3 integrity checks, every episode, every step (the pilot's R1 checks)
+            WC["episodes_checked"] += len(st)
+            WC["start_cell_mismatches"] += int(((ar[st] != PR["agent_pos"][gidx, 0])
+                                                | (ac[st] != PR["agent_pos"][gidx, 1])).sum())
+            WC["reset_hydration_max_abs_diff"] = max(WC["reset_hydration_max_abs_diff"], float(
+                np.abs(hyd[st] - PR["hydration"][gidx]).max()))
+            WC["steps_checked"] += len(idx)
+            WC["step_exceptions"] += int((on[idx] != (hyd[idx] > hyd[prev])).sum())
+            G["y_pond"][gidx] += bc(on[m].astype(float))
+            G["hyd0"][gidx] = hyd[st]
+            G["hyd_sum1"][gidx] += bc(hyd[m])
+            pr0 = PR["water_pos"][gidx]                                     # [episodes, h*w, 2]
+            G["d_pond0"][gidx] = np.maximum(np.abs(pr0[..., 0] - ar[st][:, None]),
+                                            np.abs(pr0[..., 1] - ac[st][:, None])).min(1)
+            succ["pond"] = on.astype(float)
+            hcell = REG.hyd_band(hyd[prev]) * 4 + np.digitize(nut[prev], NUT_EDGES)
+            XT["hyd_nut_trials"] += np.bincount(hcell, minlength=16)
+            for t_ in avail:
+                XT[f"hyd_nut__{t_}"] += np.bincount(hcell, weights=succ[t_][idx], minlength=16)
+            off = ~on[prev]                     # bout onset (D8, Revision 1): off the pond at t-1
+            XT["hyd_nut_onset_trials"] += np.bincount(hcell[off], minlength=16)
+            XT["hyd_nut_onset__pond"] += np.bincount(hcell[off], weights=on[idx][off].astype(float),
+                                                     minlength=16)
         cell = np.digitize(inj[prev], INJ_EDGES) * 4 + np.digitize(nut[prev], NUT_EDGES)
         nr = rn_any[prev].astype(int) * 2 + pn[prev].astype(int)
         XT["inj_nut_trials"] += np.bincount(cell, minlength=16)
@@ -325,6 +379,16 @@ def aggregate(stores, d: dict, verbose=True) -> tuple[dict, dict]:
     if thermal_on and T["warm_cell"]["available"]:
         assert (G["y_warm"] <= G["n_steps"]).all()
     assert XT["inj_nut_trials"].sum() == G["n_steps"].sum()
+    if water_on:
+        assert (G["y_pond"] <= G["n_steps"]).all()
+        assert XT["hyd_nut_trials"].sum() == G["n_steps"].sum()
+        WC["episodes_expected"] = int(nep)
+        d["water_checks"] = WC
+        bad = (WC["episodes_checked"] != nep or WC["start_cell_mismatches"] or WC["step_exceptions"]
+               or WC["steps_checked"] != int(G["n_steps"].sum())
+               or WC["reset_hydration_max_abs_diff"] > 1e-4)
+        if bad:
+            raise SystemExit(f"water integrity checks failed (D3): {WC}")
     return dict(**E, **G, IB=IB, NB=NB, traits=traits), XT
 
 
@@ -356,6 +420,10 @@ def factor_arrays(A: dict, d: dict) -> dict:
             v = A["bt0"]
         elif k == "ambient_temp":
             v = A["ambient"]
+        elif k == "start_hydration":
+            v = A["hyd0"]
+        elif k == "spawn_dist_pond":
+            v = A["d_pond0"]
         elif k in ("trait", "smell", "intensity"):
             v = A["traits"][n]
         elif k == "consequence":
@@ -370,7 +438,9 @@ def factor_arrays(A: dict, d: dict) -> dict:
                  "frac_time_predator_near": lambda: A["n_pred_near"] / ns,
                  "frac_time_rabbit_near": lambda: A["n_rab_near"] / ns,
                  "mean_body_temp": lambda: A["bt_sum1"] / ns,
-                 "frac_time_warm_cell": lambda: A["y_warm"] / ns}[n]()
+                 "frac_time_warm_cell": lambda: A["y_warm"] / ns,
+                 "mean_hydration": lambda: A["hyd_sum1"] / ns,
+                 "frac_time_on_pond": lambda: A["y_pond"] / ns}[n]()
         else:
             raise SystemExit(f"unknown factor kind {k}")
         out[f"f__{n}"] = np.asarray(v, dtype=np.float64)
@@ -378,7 +448,7 @@ def factor_arrays(A: dict, d: dict) -> dict:
 
 
 TARGET_KEY = {"bush_dwell": "bush_steps", "eating": "y_eat", "near_rabbit": "y_near_rab",
-              "near_predator": "y_near_pred", "warm_cell": "y_warm"}
+              "near_predator": "y_near_pred", "warm_cell": "y_warm", "pond": "y_pond"}
 
 
 # -------------------------------------------------------------------------------------- cells ----
@@ -431,6 +501,13 @@ def sweep_cell(c: dict, out_root: str, reuse: bool, verbose=True) -> dict:
            "ambient_finite_share": (float(np.isfinite(A["ambient"]).mean()) if "ambient" in A else None),
            "constants": {"MIN_EPISODES": REG.MIN_EPISODES, "COLLINEAR_R": REG.COLLINEAR_R,
                          "NEAR_D": NEAR_D, "INJ_EDGES": INJ_EDGES, "NUT_EDGES": NUT_EDGES}}
+    if d["water"] is not None:              # worlds with water only, so other inventories are unchanged
+        inv["water"] = d["water"]
+        inv["water_checks"] = d.get("water_checks")
+        inv["constants"]["HYD_EDGES"] = REG.HYD_EDGES
+        if "pond_corner" in A:
+            inv["water"]["pond_corner_counts"] = np.bincount(
+                A["pond_corner"], minlength=len(d["water"]["pond_corners"])).tolist()
     json.dump(inv, open(os.path.join(dd, "inventory.json"), "w"), indent=1, default=float)
     pv = {"label": c["label"], "run": c["run"], "stores": c["stores"], "checkpoint": c.get("checkpoint"),
           "sources": cur, "git_head": git_head(), "seconds": round(time.time() - t0, 1),
