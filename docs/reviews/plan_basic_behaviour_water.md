@@ -123,3 +123,53 @@ in §Analysis and W-g, and "scenes stay about animals and cover" in D12 (iii).
 
 **Cost of being wrong:** a night of node time on the probe sweep that yields an empty or
 outcome-selected Figure 7. Nothing is lost, and C0–C6 are unaffected.
+
+## Re-check of Revision 2, probe part (2026-10-03, plan §R2)
+
+*Reviewed by: plan-reviewer.*
+
+**Verdict in plain words.** Revision 2 fixes the problem raised in the last re-check: no test
+result is thrown away any more, and the start hydration level is picked by a rule written down
+before the calibration numbers exist. One new defect would still leave Figure 7 empty in the
+morning. The collation script's built-in self-check compares its own bush-time average with the
+sweep's CSV to within 1e-9, but the sweep writes that CSV rounded to 4 decimals. So the self-check
+fails on almost every cell and stops the script. The overnight node time is **not** lost, because
+the per-episode recordings are kept and the collation runs locally, so this is a one-line fix.
+But it must be made before C7c's code is final. The local calibration (C7a) cannot catch it,
+because the calibration has no sweep CSV to compare against.
+
+Severity legend: 🔴 Critical = fix before going further · 🟡 Moderate = likely costs a re-run · 🟢 Low = cosmetic · ❓ Open = an assumption nobody has verified yet.
+
+| Part | Verdict |
+|---|---|
+| C7a calibration | SOUND WITH CONCERNS |
+| C7b scenes / specs onto `v5.0` | SOUND WITH CONCERNS |
+| C7c `probe_pond.py` + probes/f7 | **NOT READY** (finding R2-1) |
+| C8 sweep | SOUND WITH CONCERNS (may launch; the collate fix is local and later) |
+
+| # | Sev | Where | Issue | Fix |
+|---|---|---|---|---|
+| R2-1 | 🔴 | §R2.2 step 5 | The driver CSV stores `f"{agg[k]:.4f}"` (`scripts/eval/dwell_sweep/run_sweep.py:317`). A 1e-9 tolerance against a 4-decimal value fails whenever the true mean is not an exact multiple of 1e-4. That is almost every cell (for example 31/3000 = 0.010333…), so `collate` hard-stops on its first cell and Figure 7 is empty | Compare `abs(mean − float(csv)) ≤ 5e-5`, or compare the formatted strings (`f"{mean:.4f}" == csv`). Add a case to test 8 using a mean that is not a multiple of 1e-4 |
+| R2-2 | 🟡 | R2-f, C7b | The generator's `--check-only` replays the pond via `registry.pond_cells`, which exists only on `bb-water` (C1). On `v5.0`, `scripts/analysis/basic_behaviour/registry.py` has no `pond_cells`. A generator committed to `v5.0` therefore cannot run its check there, and a "`--check-only` passes" gate run from the shared folder would fail on the import. Also, if the `v5.0` and `bb-water` copies differ by one byte, C9 gets an add/add merge conflict | Generate and check in the worktree, then copy the 108 YAMLs, 9 specs and the generator **byte-identically** to `v5.0`. Say in C7b that the `v5.0` generator is not runnable until C9. Check with `cmp` before the C9 merge |
+| R2-3 | 🟢 | §R2.2 step 2 | One integrity hard stop among about 330 k episodes halts the whole collate overnight | Collect every failure in one pass and stop at the end with the full list (still a hard stop) |
+
+Verified here: the sweep never deletes `_scratch` (`run_sweep.py` has no rmtree; the hvsmell
+`_scratch` dirs still exist). `sweep_worker.sh:72-74` passes `--record --record-n-episodes $NEP
+--seed 0`, so the calibration seeds match the sweep's. The batched recorder writes snapshot 0 plus
+one snapshot per step with `true_obs` (`eval_rollout.py:491-524`). `episode_measures` averages
+`in_bush` over all snapshots 0..T (`avoidance_stats_heatmap.py:74-103`), so the no-visit identity
+in R2.2 step 3 holds. Hydration is clipped at the maximum, with over-drinking stamped at `W' ≥ max`
+(`core.py:599-604`), so the death step still shows a rise and passes the integrity check. Training
+used a random start in [0, 200) (`06-pond_thirst_10x10.yaml:48-50`), so 150/165/180 are within
+the trained range. Disk: about 330 k recordings at ≤ 0.23 MB each is ≤ 80 GB, with 28 TB free.
+
+❓ Open: the Hydration slot in `true_obs` is not quantised coarsely enough to make two consecutive
+pond steps look equal. C7a's calibration checks exercise this on real recordings before the
+sweep, which is the right place.
+
+**Flips C7c to SOUND WITH CONCERNS when** the R2.2 step 5 tolerance matches the CSV's 4-decimal
+rounding.
+
+**Cost of being wrong.** If R2-1 is not fixed, the night's sweep still completes and keeps its
+recordings, but the morning page has an empty Figure 7 until someone fixes one line and re-runs
+the local collation (tens of minutes). No node time and no data are lost.
